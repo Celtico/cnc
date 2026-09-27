@@ -1,8 +1,9 @@
 import { Button, Card, HStack, Heading, SimpleGrid, Switch, Text, VStack } from "@chakra-ui/react"
 import { useMemo, useState } from "react"
-import { LuBox, LuDownload, LuFileCode, LuFileSpreadsheet, LuFileJson } from "react-icons/lu"
+import { LuBox, LuDownload, LuFileCode, LuFileSpreadsheet, LuFileJson, LuScan } from "react-icons/lu"
 import { PanelDrawing } from "../../components/PanelDrawing"
 import { exportGlb } from "../../components/viewer/exportGlb"
+import { exportUsdz, openQuickLook, supportsQuickLook } from "../../components/viewer/exportUsdz"
 import { toaster } from "../../components/ui/toaster"
 import { toCutList } from "../../core/cutlist/toCutList"
 import { cutListToCsv } from "../../core/export/csv"
@@ -17,6 +18,8 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const nesting = useNesting(panels, project?.nesting)
   const [labels, setLabels] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [busyAr, setBusyAr] = useState(false)
+  const quickLook = supportsQuickLook()
   const layers = useMemo(() => dxfLayers(panels, labels), [panels, labels])
 
   if (!project) return null
@@ -44,9 +47,46 @@ export function ExportScreen({ projectId }: { projectId: number }) {
     }
   }
 
+  const doUsdz = async (open: boolean) => {
+    setBusyAr(true)
+    try {
+      const blob = await exportUsdz(panels, project.name)
+      if (open) openQuickLook(blob, `${base}.usdz`)
+      else downloadBlob(blob, `${base}.usdz`)
+    } catch (e) {
+      toaster.create({ title: "No s'ha pogut generar l'USDZ", description: String(e), type: "error" })
+    } finally {
+      setBusyAr(false)
+    }
+  }
+
   return (
     <VStack align="stretch" gap={6}>
       <Heading size="xl">Exportar «{project.name}»</Heading>
+
+      <Card.Root variant="outline" bg="wood.subtle">
+        <Card.Body gap={3}>
+          <HStack color="wood.fg" fontSize="xl">
+            <LuScan />
+            <Card.Title fontSize="md">Veure'l al racó amb AR</Card.Title>
+          </HStack>
+          <Card.Description>
+            {quickLook
+              ? "Obre el moble a mida real amb AR Quick Look: apunta la càmera al terra on ha d'anar i mou-lo amb el dit."
+              : "L'AR Quick Look funciona amb Safari a l'iPhone o l'iPad. Aquí pots descarregar l'USDZ i obrir-lo des de Fitxers."}
+          </Card.Description>
+        </Card.Body>
+        <Card.Footer gap={2} flexWrap="wrap">
+          {quickLook && (
+            <Button colorPalette="wood" onClick={() => void doUsdz(true)} loading={busyAr}>
+              <LuScan /> Veure en AR
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => void doUsdz(false)} loading={busyAr}>
+            <LuDownload /> Descarregar USDZ
+          </Button>
+        </Card.Footer>
+      </Card.Root>
 
       <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
         <ExportCard
