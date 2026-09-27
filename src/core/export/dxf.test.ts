@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { buildCabinet } from "../build/buildCabinet"
-import { DEFAULT_CABINET } from "../model"
+import { buildModule } from "../build/buildModule"
+import { DEFAULT_CABINET, DEFAULT_GRILLE, defaultModule } from "../model"
 import {
   arrangePanels,
   dxfLayers,
@@ -134,5 +135,31 @@ describe("panelToDxf i fmt", () => {
     expect(inserts).toHaveLength(1)
     expect(inserts[0]!.values[10]).toEqual(["0.0"])
     expect(inserts[0]!.values[20]).toEqual(["0.0"])
+  })
+})
+
+describe("talls passants → capa CUT_THROUGH", () => {
+  const m = {
+    ...defaultModule("g", "Reixeta", { width: 600, height: 700, depth: 300 }),
+    root: { id: "root", front: { kind: "grille" as const, pattern: DEFAULT_GRILLE, mount: "removable" as const, hinge: "left" as const, hatch: { x: 400, y: 100, w: 100, h: 100 } } },
+  }
+  const { panels } = buildModule(m)
+  const out = toDxf(panels)
+  const entities = parseDxfEntities(out)
+
+  it("declara la capa i hi posa les ranures (bulge 1 als semicercles), la trapa i cap forat", () => {
+    expect(dxfLayers(panels)).toContain("CUT_THROUGH")
+    const cut = entities.filter((e) => e.layer === "CUT_THROUGH")
+    const polys = cut.filter((e) => e.type === "POLYLINE")
+    const grille = panels.find((p) => p.role === "grille")!
+    expect(polys).toHaveLength(grille.cutouts!.length)
+    const bulges = cut.filter((e) => e.type === "VERTEX" && e.values[42]?.[0] === "1.0")
+    expect(bulges.length).toBe((grille.cutouts!.length - 1) * 2) // 2 semicercles per ranura, cap a la trapa
+    expect(cut.some((e) => e.type === "CIRCLE")).toBe(false)
+  })
+
+  it("el contorn continua a CONTOUR, separat", () => {
+    const contours = entities.filter((e) => e.type === "POLYLINE" && e.layer === "CONTOUR")
+    expect(contours).toHaveLength(panels.length)
   })
 })

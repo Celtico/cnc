@@ -19,6 +19,24 @@ export const PanelRoleSchema = z.enum([
   "back",
   "shelf",
   "door",
+  /** Divisor vertical entre zones. */
+  "divider",
+  /** Prestatge fix / travesser (divisió horitzontal). */
+  "fixedShelf",
+  /** Frontal de sòcol. */
+  "plinth",
+  "drawerFront",
+  "drawerSide",
+  "drawerBack",
+  "drawerBottom",
+  /** Porta abatible. */
+  "flap",
+  /** Front de reixeta CNC. */
+  "grille",
+  /** Trapa petita d'una reixeta. */
+  "hatch",
+  /** Front fix. */
+  "panel",
 ])
 export type PanelRole = z.infer<typeof PanelRoleSchema>
 
@@ -67,6 +85,25 @@ export const GrooveSchema = z.object({
 })
 export type Groove = z.infer<typeof GrooveSchema>
 
+/**
+ * Tall passant (travessa tot el gruix): ranures de reixeta, passacables, obertura d'una
+ * trapa. Al DXF va a la capa CUT_THROUGH; al taller, com a pocket amb depth = gruix.
+ */
+export const CutoutSchema = z.discriminatedUnion("kind", [
+  /** Ranura amb els extrems arrodonits (radi = min(w, h) / 2). x, y = cantonada inferior esquerra. */
+  z.object({ kind: z.literal("slot"), x: z.number(), y: z.number(), w: z.number().positive(), h: z.number().positive(), tag: z.string().optional() }),
+  z.object({ kind: z.literal("circle"), x: z.number(), y: z.number(), diameter: z.number().positive(), tag: z.string().optional() }),
+  z.object({ kind: z.literal("rect"), x: z.number(), y: z.number(), w: z.number().positive(), h: z.number().positive(), tag: z.string().optional() }),
+])
+export type Cutout = z.infer<typeof CutoutSchema>
+
+export function cutoutArea(c: Cutout): number {
+  if (c.kind === "circle") return (Math.PI * c.diameter * c.diameter) / 4
+  if (c.kind === "rect") return c.w * c.h
+  const r = Math.min(c.w, c.h) / 2
+  return c.w * c.h - (4 - Math.PI) * r * r
+}
+
 const Vec3Schema = z.tuple([z.number(), z.number(), z.number()])
 export type Vec3 = z.infer<typeof Vec3Schema>
 
@@ -109,6 +146,10 @@ export const PanelSchema = z.object({
   edges: EdgeBandingSchema,
   holes: z.array(HoleSchema),
   grooves: z.array(GrooveSchema),
+  /** Talls passants. Opcional: la majoria de peces no en tenen. */
+  cutouts: z.array(CutoutSchema).optional(),
+  /** Número de mòdul (1..n) dins de la composició, per a les refs del taller. */
+  module: z.number().int().positive().optional(),
   placement: PlacementSchema,
 })
 export type Panel = z.infer<typeof PanelSchema>

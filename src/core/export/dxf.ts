@@ -1,4 +1,4 @@
-import type { Groove, Hole, Panel } from "../model"
+import type { Cutout, Groove, Hole, Panel } from "../model"
 
 /**
  * Writer DXF R12 (AC1009) ASCII, escrit a mà.
@@ -14,6 +14,8 @@ import type { Groove, Hole, Panel } from "../model"
 
 export const LAYER_CONTOUR = "CONTOUR"
 export const LAYER_LABEL = "LABEL"
+/** Talls passants (ranures de reixeta, passacables, trapes): separats del contorn. */
+export const LAYER_CUT_THROUGH = "CUT_THROUGH"
 
 export interface DxfOptions {
   /** Separació entre peces en mm. */
@@ -55,6 +57,7 @@ export function dxfLayers(panels: Panel[], labels = true): string[] {
   for (const p of panels) {
     for (const h of p.holes) set.add(holeLayer(h))
     for (const g of p.grooves) set.add(grooveLayer(g))
+    if (p.cutouts?.length) set.add(LAYER_CUT_THROUGH)
   }
   return [...set].sort()
 }
@@ -71,13 +74,45 @@ function pairs(...items: Pair[]): string {
   return items.map(([code, value]) => `${code}${EOL}${value}`).join(EOL) + EOL
 }
 
-function polyline(layer: string, pts: [number, number][]): string {
+/** Polilínia tancada. Cada vèrtex pot portar `bulge` (codi 42) per a l'arc fins al següent. */
+function polyline(layer: string, pts: ([number, number] | [number, number, number])[]): string {
   let out = pairs([0, "POLYLINE"], [8, layer], [66, "1"], [70, "1"], [10, "0.0"], [20, "0.0"], [30, "0.0"])
-  for (const [x, y] of pts) {
+  for (const [x, y, bulge] of pts) {
     out += pairs([0, "VERTEX"], [8, layer], [10, fmt(x)], [20, fmt(y)], [30, "0.0"])
+    if (bulge) out += pairs([42, fmt(bulge)])
   }
   out += pairs([0, "SEQEND"], [8, layer])
   return out
+}
+
+/** Entitat DXF d'un tall passant. Les ranures fan servir bulge = 1 (semicercles exactes). */
+function cutoutEntity(c: Cutout): string {
+  if (c.kind === "circle") return circle(LAYER_CUT_THROUGH, c.x, c.y, c.diameter / 2)
+  if (c.kind === "rect") {
+    return polyline(LAYER_CUT_THROUGH, [
+      [c.x, c.y],
+      [c.x + c.w, c.y],
+      [c.x + c.w, c.y + c.h],
+      [c.x, c.y + c.h],
+    ])
+  }
+  const horizontal = c.w >= c.h
+  const rad = Math.min(c.w, c.h) / 2
+  if (horizontal) {
+    // Extrems rodons a esquerra i dreta.
+    return polyline(LAYER_CUT_THROUGH, [
+      [c.x + rad, c.y],
+      [c.x + c.w - rad, c.y, 1],
+      [c.x + c.w - rad, c.y + c.h],
+      [c.x + rad, c.y + c.h, 1],
+    ])
+  }
+  return polyline(LAYER_CUT_THROUGH, [
+    [c.x + c.w, c.y + rad],
+    [c.x + c.w, c.y + c.h - rad, 1],
+    [c.x, c.y + c.h - rad],
+    [c.x, c.y + rad, 1],
+  ])
 }
 
 function circle(layer: string, x: number, y: number, radius: number): string {
@@ -116,6 +151,7 @@ export function panelEntities(panel: Panel, labels = true): string {
   for (const h of panel.holes) {
     out += circle(holeLayer(h), h.x, h.y, h.diameter / 2)
   }
+  for (const c of panel.cutouts ?? []) out += cutoutEntity(c)
   if (labels) {
     const h = Math.max(5, Math.min(20, W / 12))
     out += text(LAYER_LABEL, h, h, h, `${panel.name} ${fmt(L)}x${fmt(W)}x${fmt(panel.thickness)}`)

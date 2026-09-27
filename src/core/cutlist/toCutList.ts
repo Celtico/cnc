@@ -14,6 +14,17 @@ export const ROLE_LABELS: Record<PanelRole, string> = {
   back: "Fons",
   shelf: "Prestatge",
   door: "Porta",
+  divider: "Divisor",
+  fixedShelf: "Prestatge fix",
+  plinth: "Sòcol",
+  drawerFront: "Front calaix",
+  drawerSide: "Lateral calaix",
+  drawerBack: "Darrere calaix",
+  drawerBottom: "Fons calaix",
+  flap: "Abatible",
+  grille: "Reixeta",
+  hatch: "Trapa",
+  panel: "Front fix",
 }
 
 export interface CutListItem {

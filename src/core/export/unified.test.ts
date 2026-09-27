@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest"
 import { z } from "zod"
 import { buildCabinet } from "../build/buildCabinet"
 import { DEFAULT_CABINET } from "../model"
+import { buildComposition } from "../build/buildComposition"
 import { nest } from "../nesting/nest"
-import { deriveJoins, panelAabb, toUnifiedData } from "./unified"
+import { defaultModule, DEFAULT_GRILLE } from "../model"
+import { cutoutPolygon, deriveJoins, panelAabb, toUnifiedData } from "./unified"
 
 // Esquema zod equivalent als tipus de `unified.types.ts` (contracte del taller).
 const RoleSchema = z.enum(["lateral", "horizontal", "front", "back", "hw"])
@@ -195,5 +197,37 @@ describe("toUnifiedData", () => {
     expect(extra.name).toBe("(sense col·locar)")
     const tabs = new Set(d.boards.map((b) => b.tab))
     for (const p of d.pieces) expect(tabs.has(p.tab)).toBe(true)
+  })
+
+  it("composició de dos mòduls: refs A.1.* i A.2.*, úniques, i el JSON valida", () => {
+    const comp = { modules: [defaultModule("a", "A"), { ...defaultModule("b", "B"), gapBefore: 20 }], references: [] }
+    const { panels } = buildComposition(comp)
+    const d = toUnifiedData(panels, { name: "Composició" })
+    expect(() => UnifiedDataSchema.parse(JSON.parse(JSON.stringify(d)))).not.toThrow()
+    const refs = d.pieces.map((p) => p.ref)
+    expect(new Set(refs).size).toBe(refs.length)
+    expect(refs.some((r) => r.startsWith("A.1."))).toBe(true)
+    expect(refs.some((r) => r.startsWith("A.2."))).toBe(true)
+    expect(refs.filter((r) => r.startsWith("A.2.")).map((r) => Number(r.split(".")[3]))).toEqual([1, 2, 3, 4, 5, 6])
+  })
+
+  it("els talls passants surten com a pockets de tota la fondària", () => {
+    const m = {
+      ...defaultModule("g", "Reixeta", { width: 600, height: 700, depth: 300 }),
+      root: { id: "root", front: { kind: "grille" as const, pattern: DEFAULT_GRILLE, mount: "removable" as const, hinge: "left" as const } },
+    }
+    const { panels } = buildComposition({ modules: [m], references: [] })
+    const d = toUnifiedData(panels, { name: "x" })
+    const grille = d.solids.find((s) => s.label === "reixeta")!
+    const through = grille.pockets!.filter((p) => p.depth === 19)
+    expect(through.length).toBeGreaterThan(5)
+    for (const p of through) expect(p.pts.length).toBe(18)
+    expect(() => UnifiedDataSchema.parse(JSON.parse(JSON.stringify(d)))).not.toThrow()
+  })
+
+  it("cutoutPolygon: cercle de 16 punts, rectangle de 4, ranura de 18", () => {
+    expect(cutoutPolygon({ kind: "circle", x: 0, y: 0, diameter: 10 })).toHaveLength(16)
+    expect(cutoutPolygon({ kind: "rect", x: 0, y: 0, w: 10, h: 5 })).toHaveLength(4)
+    expect(cutoutPolygon({ kind: "slot", x: 0, y: 0, w: 100, h: 8 })).toHaveLength(18)
   })
 })

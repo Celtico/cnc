@@ -17,6 +17,17 @@ const ROLE_COLOR: Record<PanelRole, number> = {
   shelf: 0xefdcb8,
   door: 0xd6b076,
   back: 0xc9b79a,
+  divider: 0xe6cfa6,
+  fixedShelf: 0xe6cfa6,
+  plinth: 0xb57a37,
+  drawerFront: 0xd6b076,
+  drawerSide: 0xefdcb8,
+  drawerBack: 0xefdcb8,
+  drawerBottom: 0xc9b79a,
+  flap: 0xd6b076,
+  grille: 0xd6b076,
+  hatch: 0xd6b076,
+  panel: 0xd6b076,
 }
 
 /** Escena three.js en METRES (per a AR / visors GLB) a partir de les peces. */

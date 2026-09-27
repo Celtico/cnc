@@ -19,6 +19,17 @@ const ROLE_COLOR: Record<PanelRole, string> = {
   shelf: "#efdcb8",
   door: "#d6b076",
   back: "#c9b79a",
+  divider: "#e6cfa6",
+  fixedShelf: "#e6cfa6",
+  plinth: "#b57a37",
+  drawerFront: "#d6b076",
+  drawerSide: "#efdcb8",
+  drawerBack: "#efdcb8",
+  drawerBottom: "#c9b79a",
+  flap: "#d6b076",
+  grille: "#d6b076",
+  hatch: "#d6b076",
+  panel: "#d6b076",
 }
 
 export interface CabinetViewerProps {

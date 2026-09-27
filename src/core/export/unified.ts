@@ -1,4 +1,4 @@
-import { EDGE_NUMBER, EDGE_SIDES, type Panel, type PanelRole } from "../model"
+import { EDGE_NUMBER, EDGE_SIDES, type Cutout, type Panel, type PanelRole } from "../model"
 import type { Nesting } from "../nesting/nest"
 import type { Board, Join, Piece, Role, Side, Solid, UnifiedData } from "./unified.types"
 
@@ -41,6 +41,17 @@ const ROLE_3D: Record<PanelRole, Role> = {
   shelf: "horizontal",
   back: "back",
   door: "front",
+  divider: "lateral",
+  fixedShelf: "horizontal",
+  plinth: "front",
+  drawerFront: "front",
+  drawerSide: "lateral",
+  drawerBack: "back",
+  drawerBottom: "horizontal",
+  flap: "front",
+  grille: "front",
+  hatch: "front",
+  panel: "front",
 }
 
 /** Lletra de tipus per a la ref: L lateral · H horitzontal · T trassera · F front. */
@@ -106,17 +117,58 @@ function toSolid(p: Panel): Solid {
         edge: EDGE_NUMBER[h.edge!],
         ...(h.tag ? { fit: h.tag } : {}),
       })),
-    pockets: p.grooves.map((g) => ({
-      depth: g.depth,
-      side: g.face === "A" ? "a" : "b",
-      pts: [
-        [g.x, g.y],
-        [g.x + g.w, g.y],
-        [g.x + g.w, g.y + g.h],
-        [g.x, g.y + g.h],
-      ] as [number, number][],
-    })),
+    pockets: [
+      ...p.grooves.map((g) => ({
+        depth: g.depth,
+        side: g.face === "A" ? ("a" as const) : ("b" as const),
+        pts: [
+          [g.x, g.y],
+          [g.x + g.w, g.y],
+          [g.x + g.w, g.y + g.h],
+          [g.x, g.y + g.h],
+        ] as [number, number][],
+      })),
+      // Talls passants: pocket de tota la fondària (depth = gruix), des de la cara A.
+      ...(p.cutouts ?? []).map((c) => ({ depth: p.thickness, side: "a" as const, pts: cutoutPolygon(c) })),
+    ],
   }
+}
+
+/** Perímetre aproximat d'un tall passant (els arcs, per 8 segments per semicercle). */
+export function cutoutPolygon(c: Cutout): [number, number][] {
+  const r2 = (v: number): number => Math.round(v * 100) / 100
+  if (c.kind === "rect") {
+    return [
+      [c.x, c.y],
+      [c.x + c.w, c.y],
+      [c.x + c.w, c.y + c.h],
+      [c.x, c.y + c.h],
+    ]
+  }
+  if (c.kind === "circle") {
+    const rad = c.diameter / 2
+    return Array.from({ length: 16 }, (_, i) => {
+      const a = (i / 16) * Math.PI * 2
+      return [r2(c.x + rad * Math.cos(a)), r2(c.y + rad * Math.sin(a))]
+    })
+  }
+  const horizontal = c.w >= c.h
+  const rad = Math.min(c.w, c.h) / 2
+  const pts: [number, number][] = []
+  const arc = (cx: number, cy: number, from: number): void => {
+    for (let i = 0; i <= 8; i++) {
+      const a = from + (i / 8) * Math.PI
+      pts.push([r2(cx + rad * Math.cos(a)), r2(cy + rad * Math.sin(a))])
+    }
+  }
+  if (horizontal) {
+    arc(c.x + c.w - rad, c.y + rad, -Math.PI / 2)
+    arc(c.x + rad, c.y + rad, Math.PI / 2)
+  } else {
+    arc(c.x + rad, c.y + c.h - rad, 0)
+    arc(c.x + rad, c.y + rad, Math.PI)
+  }
+  return pts
 }
 
 function toPiece(p: Panel, index: number, ref: string, pos: PiecePosition): Piece {
@@ -247,9 +299,14 @@ export function toUnifiedData(panels: Panel[], options: UnifiedOptions): Unified
     : virtualLayout(panels, options.sheet ?? DEFAULT_SHEET)
   const { boards } = layout
   const solids = panels.map(toSolid)
+  // Refs: A.<mòdul>.<tipus>.<n>, amb n consecutiu dins de cada mòdul.
+  const counters = new Map<number, number>()
   const pieces = panels.map((p, i) => {
     const letter = ROLE_LETTER[ROLE_3D[p.role]]
-    return toPiece(p, i, `A.${module}.${letter}.${i + 1}`, layout.positionOf(p))
+    const mod = p.module ?? module
+    const n = (counters.get(mod) ?? 0) + 1
+    counters.set(mod, n)
+    return toPiece(p, i, `A.${mod}.${letter}.${n}`, layout.positionOf(p))
   })
 
   const min = [Infinity, Infinity, Infinity]

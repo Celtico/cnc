@@ -59,6 +59,17 @@ const ROLE_FILL: Record<PanelRole, string> = {
   shelf: "#e6cfa6",
   door: "#b57a37",
   back: "#98602c",
+  divider: "#c6924f",
+  fixedShelf: "#c6924f",
+  plinth: "#98602c",
+  drawerFront: "#b57a37",
+  drawerSide: "#e6cfa6",
+  drawerBack: "#e6cfa6",
+  drawerBottom: "#c9b79a",
+  flap: "#b57a37",
+  grille: "#b57a37",
+  hatch: "#b57a37",
+  panel: "#b57a37",
 }
 
 export function PhotoScreen({ projectId }: { projectId: number }) {
