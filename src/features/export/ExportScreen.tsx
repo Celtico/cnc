@@ -9,11 +9,12 @@ import { cutListToCsv } from "../../core/export/csv"
 import { dxfLayers, toDxf } from "../../core/export/dxf"
 import { toUnifiedData } from "../../core/export/unified"
 import { downloadBlob, downloadText, slugify } from "../download"
-import { useCabinet, useProject } from "../useProject"
+import { useCabinet, useNesting, useProject } from "../useProject"
 
 export function ExportScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
   const panels = useCabinet(project?.params)
+  const nesting = useNesting(panels, project?.nesting)
   const [labels, setLabels] = useState(true)
   const [busy, setBusy] = useState(false)
   const layers = useMemo(() => dxfLayers(panels, labels), [panels, labels])
@@ -27,7 +28,11 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   }
   const doCsv = () => downloadText(cutListToCsv(toCutList(panels)), `${base}-peces.csv`, "text/csv")
   const doJson = () =>
-    downloadText(JSON.stringify(toUnifiedData(panels, { name: project.name }), null, 2), `${base}-unified.json`, "application/json")
+    downloadText(
+      JSON.stringify(toUnifiedData(panels, { name: project.name, nesting }), null, 2),
+      `${base}-unified.json`,
+      "application/json",
+    )
   const doGlb = async () => {
     setBusy(true)
     try {
@@ -93,7 +98,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
         <ExportCard
           icon={<LuFileJson />}
           title="JSON del taller (UnifiedData)"
-          description="Contracte de taller-cnc-nest amb peces, sòlids, mecanitzats i unions, sense nesting."
+          description={`Contracte de taller-cnc-nest amb peces, sòlids, mecanitzats, unions i el nesting actual (${nesting?.boards.length ?? 0} taulers).`}
           action={
             <Button variant="outline" onClick={doJson}>
               <LuDownload /> Descarregar JSON

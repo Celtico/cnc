@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import { z } from "zod"
 import { buildCabinet } from "../build/buildCabinet"
 import { DEFAULT_CABINET } from "../model"
+import { nest } from "../nesting/nest"
 import { deriveJoins, panelAabb, toUnifiedData } from "./unified"
 
 // Esquema zod equivalent als tipus de `unified.types.ts` (contracte del taller).
@@ -170,5 +171,29 @@ describe("toUnifiedData", () => {
     const d = toUnifiedData(panels, { name: "x", sheet: { w: 2440, h: 1220 } })
     expect(d.boards[0]).toMatchObject({ w: 2440, h: 1220 })
     expect(d.boards[0]!.name).toContain("2440x1220")
+  })
+
+  it("amb nesting: taulers reals i posició (centre, angle) de cada peça", () => {
+    const nesting = nest(panels, { sheet: { w: 2800, h: 2070 }, kerf: 6, margin: 10 })
+    const d = toUnifiedData(panels, { name: "x", nesting })
+    expect(() => UnifiedDataSchema.parse(JSON.parse(JSON.stringify(d)))).not.toThrow()
+    expect(d.boards.map((b) => b.tab)).toEqual(nesting.boards.map((b) => b.tab))
+    expect(d.boards[0]!.name).toBe("Melamina 19 2800x2070 #01")
+    for (const piece of d.pieces) {
+      const board = nesting.boards.find((b) => b.tab === piece.tab)!
+      const pl = board.placements.find((p) => p.panelId === panels[piece.solid]!.id)!
+      expect([piece.x, piece.y, piece.angle]).toEqual([pl.cx, pl.cy, pl.angle])
+    }
+  })
+
+  it("amb nesting: les peces que no caben van a un tauler extra i el JSON segueix vàlid", () => {
+    const nesting = nest(panels, { sheet: { w: 700, h: 700 }, kerf: 6, margin: 10 })
+    expect(nesting.unplaced.length).toBeGreaterThan(0)
+    const d = toUnifiedData(panels, { name: "x", nesting })
+    expect(() => UnifiedDataSchema.parse(d)).not.toThrow()
+    const extra = d.boards.at(-1)!
+    expect(extra.name).toBe("(sense col·locar)")
+    const tabs = new Set(d.boards.map((b) => b.tab))
+    for (const p of d.pieces) expect(tabs.has(p.tab)).toBe(true)
   })
 })

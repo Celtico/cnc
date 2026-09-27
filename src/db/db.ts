@@ -1,10 +1,13 @@
 import Dexie, { type EntityTable } from "dexie"
 import { DEFAULT_CABINET, parseCabinetParams, type CabinetParams } from "../core/model"
+import { DEFAULT_NEST_OPTIONS, NestOptionsSchema, type NestOptions } from "../core/nesting/nest"
 
 export interface Project {
   id: number
   name: string
   params: CabinetParams
+  /** Opcions de nesting (tauler, kerf, marge). Opcional: projectes antics no en tenen. */
+  nesting?: NestOptions
   createdAt: number
   updatedAt: number
 }
@@ -48,6 +51,16 @@ export async function deleteProject(id: number): Promise<void> {
 
 export async function updateProjectParams(id: number, params: CabinetParams): Promise<void> {
   await db.projects.update(id, { params, updatedAt: Date.now() })
+}
+
+export async function updateProjectNesting(id: number, nesting: NestOptions): Promise<void> {
+  await db.projects.update(id, { nesting, updatedAt: Date.now() })
+}
+
+/** Opcions de nesting guardades, completades amb els defectes si falten o són antigues. */
+export function safeNestOptions(n: unknown): NestOptions {
+  const res = NestOptionsSchema.safeParse(n)
+  return res.success ? res.data : DEFAULT_NEST_OPTIONS
 }
 
 export async function renameProject(id: number, name: string): Promise<void> {
