@@ -98,5 +98,21 @@ export function rectanglePoints(w: number, h: number): [Pt, Pt, Pt, Pt] {
  * rectangle de `w` × `h` mm, en el mateix ordre que `rectanglePoints`.
  */
 export function planeToImage(imagePts: readonly Pt[], w: number, h: number): Mat3 | null {
-  return computeHomography(rectanglePoints(w, h), imagePts)
+  if (imagePts.length !== 4) return null
+  return computeHomography(rectanglePoints(w, h), orderQuad(imagePts))
+}
+
+/**
+ * Ordena 4 punts de la imatge (y cap avall) com `rectanglePoints`: baix-esquerra,
+ * baix-dreta, dalt-dreta, dalt-esquerra, **sigui quin sigui l'ordre en què s'han
+ * marcat**. Si s'agafés l'ordre del clic, un rectangle marcat començant per dalt
+ * donaria el pla de cap per avall (Y avall i Z cap dins de la paret).
+ */
+export function orderQuad(pts: readonly Pt[]): [Pt, Pt, Pt, Pt] {
+  const byY = [...pts].sort((a, b) => a[1] - b[1])
+  const [tA, tB] = [byY[0]!, byY[1]!]
+  const [bA, bB] = [byY[2]!, byY[3]!]
+  const [tl, tr] = tA[0] <= tB[0] ? [tA, tB] : [tB, tA]
+  const [bl, br] = bA[0] <= bB[0] ? [bA, bB] : [bB, bA]
+  return [bl, br, tr, tl]
 }

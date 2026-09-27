@@ -7,6 +7,7 @@ import {
   Field,
   HStack,
   Heading,
+  IconButton,
   NativeSelect,
   SegmentGroup,
   SimpleGrid,
@@ -14,8 +15,9 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
-import { LuCamera, LuImagePlus, LuRotateCcw, LuTrash2 } from "react-icons/lu"
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react"
+import { createPortal } from "react-dom"
+import { LuCamera, LuImagePlus, LuLocateFixed, LuRotateCcw, LuTrash2, LuX } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import type { Panel, PanelRole } from "../../core/model"
 import {
@@ -23,6 +25,8 @@ import {
   cameraFromHomography,
   focalPx,
   imageToPlane,
+  imageToPlaneAt,
+  project,
   projectPanels,
   type ReferencePlane,
 } from "../../core/photo/camera"
@@ -37,10 +41,12 @@ import {
   type PhotoCalibration,
 } from "../../db/db"
 import { useLiveQuery } from "../../db/useLiveQuery"
+import { ResizeHandle } from "../../components/ResizeHandle"
 import { NumberField } from "../editor/ParamsForm"
+import { usePersistentNumber } from "../usePersistentNumber"
 import { useCabinet, useProject } from "../useProject"
 
-const REF_PRESETS: { label: string; w: number; h: number }[] = [
+const REF_PRESETS: { label: string; w: number; h: number; wall?: number }[] = [
   { label: "Full A4 vertical (210 × 297)", w: 210, h: 297 },
   { label: "Full A4 horitzontal (297 × 210)", w: 297, h: 210 },
   { label: "Rajola 300 × 300", w: 300, h: 300 },
@@ -48,6 +54,7 @@ const REF_PRESETS: { label: string; w: number; h: number }[] = [
   { label: "Rajola 600 × 300", w: 600, h: 300 },
   { label: "Porta 800 × 2030", w: 800, h: 2030 },
   { label: "Porta 700 × 2030", w: 700, h: 2030 },
+  { label: "TV Sony KD-55XD8505, pantalla sense peu (1231 × 717)", w: 1231, h: 717, wall: 200 },
 ]
 
 const POINT_NAMES = ["baix-esquerra", "baix-dreta", "dalt-dreta", "dalt-esquerra"]
@@ -72,9 +79,23 @@ const ROLE_FILL: Record<PanelRole, string> = {
   panel: "#b57a37",
 }
 
-export function PhotoScreen({ projectId }: { projectId: number }) {
+export function PhotoScreen({
+  projectId,
+  panels: livePanels,
+  embedded = false,
+  controlsTarget = null,
+}: {
+  projectId: number
+  /** Peces a superposar. A l'Editor, les dels paràmetres que s'estan editant. */
+  panels?: Panel[]
+  /** Dins de la pestanya de l'Editor: sense títol gran; els controls van a `controlsTarget`. */
+  embedded?: boolean
+  /** On es pinten els controls (botons de foto i calibratge) quan és `embedded`: el panell de l'Editor. */
+  controlsTarget?: HTMLElement | null
+}) {
   const project = useProject(projectId)
-  const panels = useCabinet(project?.params)
+  const savedPanels = useCabinet(project?.params)
+  const panels = livePanels ?? savedPanels
   const photoId = project?.photo?.photoId
   const photo = useLiveQuery(() => (photoId === undefined ? undefined : db.photos.get(photoId)), [photoId])
   const [uploading, setUploading] = useState(false)
@@ -120,9 +141,10 @@ export function PhotoScreen({ projectId }: { projectId: number }) {
   }
 
   return (
-    <VStack align="stretch" gap={5}>
-      <HStack justify="space-between" wrap="wrap" gap={3}>
-        <Heading size="xl">Foto del racó</Heading>
+    <VStack align="stretch" gap={embedded ? 3 : 5}>
+      <Controls embedded={embedded} target={controlsTarget}>
+      <HStack justify={embedded ? "flex-start" : "space-between"} wrap="wrap" gap={3} mb={embedded ? 3 : 0}>
+        {!embedded && <Heading size="xl">Foto del racó</Heading>}
         <HStack>
           <input
             ref={fileInput}
@@ -131,16 +153,17 @@ export function PhotoScreen({ projectId }: { projectId: number }) {
             hidden
             onChange={(e) => void onFile(e.target.files?.[0])}
           />
-          <Button variant={project.photo ? "outline" : "solid"} colorPalette="wood" loading={uploading} onClick={() => fileInput.current?.click()}>
+          <Button size={embedded ? "sm" : "md"} variant={project.photo ? "outline" : "solid"} colorPalette="wood" loading={uploading} onClick={() => fileInput.current?.click()}>
             <LuImagePlus /> {project.photo ? "Canviar foto" : "Carregar foto"}
           </Button>
           {project.photo && (
-            <Button variant="ghost" colorPalette="red" onClick={() => void removeProjectPhoto(projectId)}>
+            <Button size={embedded ? "sm" : "md"} variant="ghost" colorPalette="red" onClick={() => void removeProjectPhoto(projectId)}>
               <LuTrash2 /> Esborrar
             </Button>
           )}
         </HStack>
       </HStack>
+      </Controls>
 
       {!project.photo ? (
         <EmptyState.Root>
@@ -165,10 +188,21 @@ export function PhotoScreen({ projectId }: { projectId: number }) {
           initial={project.photo}
           panels={panels}
           totalDepth={totalDepthOf(panels)}
+          embedded={embedded}
+          controlsTarget={controlsTarget}
         />
       ) : null}
     </VStack>
   )
+}
+
+/** Un camp buit mentre s'escriu dona NaN: pel dibuix compta com a 0. */
+const fin = (v: number | undefined): number => (Number.isFinite(v) ? (v as number) : 0)
+
+/** Dins de l'Editor, els controls es pinten al panell de l'esquerra (portal). */
+function Controls({ embedded, target, children }: { embedded: boolean; target: HTMLElement | null; children: ReactNode }) {
+  if (!embedded) return <>{children}</>
+  return target ? createPortal(children, target) : null
 }
 
 function totalDepthOf(panels: Panel[]): number {
@@ -204,16 +238,30 @@ function PhotoCalibrator({
   initial,
   panels,
   totalDepth,
+  embedded = false,
+  controlsTarget = null,
 }: {
   projectId: number
   photo: Photo
   initial: PhotoCalibration
   panels: Panel[]
   totalDepth: number
+  embedded?: boolean
+  controlsTarget?: HTMLElement | null
 }) {
   const [cal, setCal] = useState<PhotoCalibration>(initial)
+  const [customRef, setCustomRef] = useState(false)
+  const [panelWidth, setPanelWidth] = usePersistentNumber("mobles:photo-panel-width", 340)
   const svgRef = useRef<SVGSVGElement>(null)
-  const drag = useRef<{ kind: "point"; index: number } | { kind: "cabinet"; start: Pt; offset0: Pt } | null>(null)
+  type Vec3m = [number, number, number]
+  const drag = useRef<
+    | { kind: "point"; index: number }
+    | { kind: "origin"; z: number }
+    | { kind: "axis"; axis: 0 | 1 | 2; start: Pt; o0: Vec3m; dir: Pt; pxPerMm: number }
+    | { kind: "cabinet"; start: Pt; offset0: Pt }
+    | null
+  >(null)
+  const [placingOrigin, setPlacingOrigin] = useState(false)
 
   // URL de la foto: es revoca l'anterior quan canvia el blob. No es revoca en desmuntar
   // perquè StrictMode desmunta i remunta sense tornar a renderitzar (deixaria la imatge
@@ -234,17 +282,51 @@ function PhotoCalibrator({
   const { width: W, height: H } = photo
   const calibrated = cal.points.length === 4
   const homography = useMemo(
-    () => (calibrated ? planeToImage(cal.points, cal.ref.w, cal.ref.h) : null),
+    () => (calibrated && fin(cal.ref.w) > 0 && fin(cal.ref.h) > 0 ? planeToImage(cal.points, cal.ref.w, cal.ref.h) : null),
     [calibrated, cal.points, cal.ref.w, cal.ref.h],
   )
   const camera = useMemo(
     () => (homography ? cameraFromHomography(homography, focalPx(cal.focal35, W, H), W / 2, H / 2) : null),
     [homography, cal.focal35, W, H],
   )
-  const faces = useMemo(
-    () => (camera ? projectPanels(panels, camera, { plane: cal.plane, offset: cal.offset, totalDepth }) : []),
-    [camera, panels, cal.plane, cal.offset, totalDepth],
+  // L'origen triat, passat al pla de la referència (mm). Sense origen: (0,0) = cantonada
+  // baix-esquerra de la referència.
+  const wallOffset = cal.plane === "wall" ? fin(cal.refWallOffset) : 0
+  // Punt de la imatge → pla on es recolza el moble (la paret real, no la referència).
+  const toSupport = (p: Pt): Pt | null =>
+    camera ? imageToPlaneAt(camera, p, -wallOffset) : homography ? imageToPlane(homography, p) : null
+  // Origen 3D (mm). Sense origen: cantonada baix-esquerra de la referència, a la paret.
+  const origin3 = useMemo<Vec3m | null>(() => {
+    if (cal.originMm) return cal.originMm
+    if (!cal.origin) return null
+    const q = toSupport(cal.origin)
+    return q ? [q[0], q[1], 0] : null
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cal.originMm, cal.origin, camera, homography, wallOffset])
+  const originPlane: Pt = origin3 ? [origin3[0], origin3[1]] : [0, 0]
+  const originZ = origin3 ? origin3[2] : 0
+  const sceneOffset = useMemo<Pt>(
+    () => [fin(originPlane[0]) + fin(cal.offset[0]), fin(originPlane[1]) + fin(cal.offset[1])],
+    [originPlane[0], originPlane[1], cal.offset],
   )
+  const faces = useMemo(
+    () => (camera ? projectPanels(panels, camera, { plane: cal.plane, offset: sceneOffset, totalDepth, wallOffset, offsetZ: fin(originZ) + fin(cal.offsetZ) }) : []),
+    [camera, panels, cal.plane, sceneOffset, totalDepth, wallOffset, cal.offsetZ, originZ],
+  )
+  // Eixos 3D = marcador de l'origen (0,0,0): X al llarg de la paret, Y amunt, Z cap a
+  // la càmera. 300 mm cadascun. El centre i cada fletxa s'arrosseguen.
+  const AXIS_MM = 300
+  const axes = useMemo(() => {
+    if (!camera || !calibrated || cal.plane !== "wall") return null
+    const o: Vec3m = [originPlane[0], originPlane[1], -wallOffset + originZ]
+    const at = (dx: number, dy: number, dz: number) => project(camera, [o[0] + dx, o[1] + dy, o[2] + dz])
+    const o2 = at(0, 0, 0)
+    const x = at(AXIS_MM, 0, 0)
+    const y = at(0, AXIS_MM, 0)
+    const z = at(0, 0, AXIS_MM)
+    if (!o2 || !x || !y || !z) return null
+    return { o: o2, ends: [x, y, z] as const }
+  }, [camera, calibrated, cal.plane, originPlane[0], originPlane[1], originZ, wallOffset])
   const refOutline = useMemo(
     () => (homography ? rectanglePoints(cal.ref.w, cal.ref.h).map((p) => applyHomography(homography, p)) : null),
     [homography, cal.ref.w, cal.ref.h],
@@ -264,7 +346,29 @@ function PhotoCalibrator({
     if (!p) return
     const target = e.target as SVGElement
     const idx = target.dataset.point
-    if (idx !== undefined) {
+    const axisAttr = target.dataset.axis
+    if (placingOrigin && calibrated) {
+      const q = toSupport(p)
+      if (q) setCal((c) => ({ ...c, originMm: [Math.round(q[0]), Math.round(q[1]), 0], origin: undefined, offset: [0, 0], offsetZ: 0 }))
+      setPlacingOrigin(false)
+      drag.current = { kind: "origin", z: 0 }
+    } else if (target.dataset.originCenter !== undefined) {
+      drag.current = { kind: "origin", z: originZ }
+    } else if (axisAttr !== undefined && axes) {
+      const axis = Number(axisAttr) as 0 | 1 | 2
+      const end = axes.ends[axis]
+      const dx = end[0] - axes.o[0]
+      const dy = end[1] - axes.o[1]
+      const len = Math.hypot(dx, dy) || 1
+      drag.current = {
+        kind: "axis",
+        axis,
+        start: p,
+        o0: [originPlane[0], originPlane[1], originZ],
+        dir: [dx / len, dy / len],
+        pxPerMm: len / AXIS_MM,
+      }
+    } else if (idx !== undefined) {
       drag.current = { kind: "point", index: Number(idx) }
     } else if (!calibrated) {
       setCal((c) => ({ ...c, points: [...c.points, p] }))
@@ -280,15 +384,24 @@ function PhotoCalibrator({
     if (!d) return
     const p = toImage(e)
     if (!p) return
-    if (d.kind === "point") {
+    if (d.kind === "origin") {
+      const q = camera ? imageToPlaneAt(camera, p, -wallOffset + d.z) : null
+      if (q) setCal((c) => ({ ...c, originMm: [Math.round(q[0]), Math.round(q[1]), d.z], origin: undefined }))
+    } else if (d.kind === "axis") {
+      const along = ((p[0] - d.start[0]) * d.dir[0] + (p[1] - d.start[1]) * d.dir[1]) / Math.max(d.pxPerMm, 1e-6)
+      const next: Vec3m = [...d.o0]
+      next[d.axis] = Math.round(d.o0[d.axis] + along)
+      if (d.axis === 2) next[2] = Math.max(0, next[2]) // no dins de la paret
+      setCal((c) => ({ ...c, originMm: next, origin: undefined }))
+    } else if (d.kind === "point") {
       setCal((c) => {
         const points = [...c.points]
         if (d.index < points.length) points[d.index] = p
         return { ...c, points }
       })
     } else if (homography) {
-      const a = imageToPlane(homography, d.start)
-      const b = imageToPlane(homography, p)
+      const a = toSupport(d.start)
+      const b = toSupport(p)
       if (a && b) {
         setCal((c) => ({
           ...c,
@@ -303,17 +416,20 @@ function PhotoCalibrator({
   }
 
   const presetKey = REF_PRESETS.findIndex((r) => r.w === cal.ref.w && r.h === cal.ref.h)
+  // "A mida" és una tria de l'usuari, no només "cap preset coincideix": si no ho
+  // recordem, el desplegable torna al preset i no deixa triar-la.
+  const refMode = customRef || presetKey < 0 ? "custom" : String(presetKey)
   const markerR = Math.max(W, H) / 90
   const stroke = Math.max(W, H) / 600
 
   return (
-    <Stack direction={{ base: "column", lg: "row" }} gap={5} align="flex-start">
+    <Stack direction={embedded ? "column" : { base: "column", lg: "row" }} gap={embedded ? 3 : 5} align={embedded ? "stretch" : "flex-start"}>
       <VStack align="stretch" gap={2} flex={1} w="full" minW={0}>
         <Box
           position="relative"
           w="full"
           mx="auto"
-          maxW={`calc(70vh * ${W / H})`}
+          maxW={embedded ? `calc((100dvh - 9rem) * ${W / H})` : `calc(70vh * ${W / H})`}
           style={{ aspectRatio: `${W} / ${H}` }}
           rounded="lg"
           overflow="hidden"
@@ -323,13 +439,13 @@ function PhotoCalibrator({
           <svg
             ref={svgRef}
             viewBox={`0 0 ${W} ${H}`}
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", touchAction: "none", cursor: calibrated ? "move" : "crosshair" }}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", touchAction: "none", cursor: placingOrigin || !calibrated ? "crosshair" : "move" }}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
           >
-            {faces.map((f, i) => (
+            {faces.filter((f) => f.pts.every(([x, y]) => Number.isFinite(x) && Number.isFinite(y))).map((f, i) => (
               <polygon
                 key={i}
                 points={f.pts.map(([x, y]) => `${x},${y}`).join(" ")}
@@ -357,6 +473,67 @@ function PhotoCalibrator({
                 </text>
               </g>
             ))}
+            {axes && (
+              <g fontFamily="system-ui, sans-serif" fontWeight="bold">
+                {(
+                  [
+                    ["X", "#ef4444"],
+                    ["Y", "#22c55e"],
+                    ["Z", "#3b82f6"],
+                  ] as const
+                ).map(([name, color], i) => {
+                  const end = axes.ends[i]!
+                  const dx = end[0] - axes.o[0]
+                  const dy = end[1] - axes.o[1]
+                  const len = Math.hypot(dx, dy) || 1
+                  const ux = dx / len
+                  const uy = dy / len
+                  const ah = markerR * 1.2
+                  const head = `${end[0]},${end[1]} ${end[0] - ux * ah - uy * ah * 0.55},${end[1] - uy * ah + ux * ah * 0.55} ${end[0] - ux * ah + uy * ah * 0.55},${end[1] - uy * ah - ux * ah * 0.55}`
+                  return (
+                    <g key={name}>
+                      <line x1={axes.o[0]} y1={axes.o[1]} x2={end[0]} y2={end[1]} stroke="white" strokeWidth={stroke * 5} strokeLinecap="round" pointerEvents="none" />
+                      <line x1={axes.o[0]} y1={axes.o[1]} x2={end[0]} y2={end[1]} stroke={color} strokeWidth={stroke * 3} strokeLinecap="round" pointerEvents="none" />
+                      {/* zona ampla i invisible per agafar l'eix */}
+                      <line
+                        x1={axes.o[0] + ux * markerR}
+                        y1={axes.o[1] + uy * markerR}
+                        x2={end[0]}
+                        y2={end[1]}
+                        stroke="transparent"
+                        strokeWidth={markerR * 1.6}
+                        data-axis={i}
+                        style={{ cursor: "grab" }}
+                      />
+                      <polygon points={head} fill={color} stroke="white" strokeWidth={stroke} data-axis={i} style={{ cursor: "grab" }} />
+                      <text
+                        x={end[0] + ux * markerR * 1.5}
+                        y={end[1] + uy * markerR * 1.5 + markerR * 0.45}
+                        textAnchor="middle"
+                        fontSize={markerR * 1.4}
+                        fill={color}
+                        stroke="white"
+                        strokeWidth={stroke}
+                        paintOrder="stroke"
+                        pointerEvents="none"
+                      >
+                        {name}
+                      </text>
+                    </g>
+                  )
+                })}
+                <circle
+                  cx={axes.o[0]}
+                  cy={axes.o[1]}
+                  r={markerR * 0.8}
+                  fill="#f97316"
+                  stroke="white"
+                  strokeWidth={stroke * 1.5}
+                  data-origin-center=""
+                  style={{ cursor: "grab" }}
+                />
+              </g>
+            )}
           </svg>
         </Box>
         {!calibrated ? (
@@ -371,22 +548,49 @@ function PhotoCalibrator({
           </Alert.Root>
         ) : (
           <Text fontSize="sm" color="fg.muted">
-            Arrossega el moble per moure'l pel {cal.plane === "wall" ? "pla de la paret" : "terra"}. Arrossega els punts verds per recalibrar.
+            {placingOrigin
+              ? "Toca on vols l'origen (0,0): p. ex. el racó on la paret toca el terra."
+              : `Arrossega el moble per moure'l pel ${cal.plane === "wall" ? "pla de la paret" : "terra"}. Arrossega els punts verds per recalibrar${origin3 ? ". Eixos: el centre taronja mou l'origen per la paret; cada fletxa, només en aquella direcció (Z = cap endavant)" : ""}.`}
             {!camera && " No s'ha pogut calcular la càmera: revisa l'ordre dels punts."}
           </Text>
         )}
       </VStack>
 
-      <Card.Root variant="outline" w={{ base: "full", lg: "340px" }} flexShrink={0}>
-        <Card.Body gap={4}>
+      {!embedded && <ResizeHandle
+        from="lg"
+        width={panelWidth}
+        onWidth={setPanelWidth}
+        min={280}
+        max={560}
+        defaultWidth={340}
+        panelSide="right"
+        label="Amplada del panell de la foto"
+      />}
+
+      <Controls embedded={embedded} target={controlsTarget}>
+      <Card.Root
+        variant="outline"
+        w={embedded ? "full" : { base: "full", lg: `${panelWidth}px` }}
+        flexShrink={0}
+        // Dins de l'acordió de l'Editor: sense fons ni vora, com la resta de seccions.
+        {...(embedded ? { bg: "transparent", borderWidth: 0, shadow: "none" } : {})}
+      >
+        <Card.Body gap={4} p={embedded ? 0 : undefined}>
           <Field.Root>
             <Field.Label>Rectangle de referència</Field.Label>
             <NativeSelect.Root size="sm">
               <NativeSelect.Field
-                value={presetKey >= 0 ? String(presetKey) : "custom"}
+                value={refMode}
                 onChange={(e) => {
+                  if (e.target.value === "custom") {
+                    setCustomRef(true)
+                    return
+                  }
                   const r = REF_PRESETS[Number(e.target.value)]
-                  if (r) setCal((c) => ({ ...c, ref: { w: r.w, h: r.h } }))
+                  if (r) {
+                    setCustomRef(false)
+                    setCal((c) => ({ ...c, ref: { w: r.w, h: r.h }, refWallOffset: r.wall ?? 0 }))
+                  }
                 }}
               >
                 {REF_PRESETS.map((r, i) => (
@@ -399,10 +603,24 @@ function PhotoCalibrator({
               <NativeSelect.Indicator />
             </NativeSelect.Root>
           </Field.Root>
+          <Text fontSize="sm" fontWeight="medium" mb={-2}>
+            Mida coneguda
+          </Text>
           <SimpleGrid columns={2} gap={3}>
-            <NumberField label="Ample real" value={cal.ref.w} min={10} max={5000} step={1} onChange={(w) => setCal((c) => ({ ...c, ref: { ...c.ref, w } }))} />
-            <NumberField label="Alt real" value={cal.ref.h} min={10} max={5000} step={1} onChange={(h) => setCal((c) => ({ ...c, ref: { ...c.ref, h } }))} />
+            <NumberField label="Amplada" value={cal.ref.w} min={10} max={5000} step={1} onChange={(w) => setCal((c) => ({ ...c, ref: { ...c.ref, w } }))} />
+            <NumberField label="Alçada" value={cal.ref.h} min={10} max={5000} step={1} onChange={(h) => setCal((c) => ({ ...c, ref: { ...c.ref, h } }))} />
           </SimpleGrid>
+          {cal.plane === "wall" && (
+            <NumberField
+              label="Distància a la paret"
+              value={cal.refWallOffset ?? 0}
+              min={0}
+              max={2000}
+              step={10}
+              help="De la referència a la paret. Una tele sobre un moble: uns 200."
+              onChange={(v) => setCal((c) => ({ ...c, refWallOffset: Number.isFinite(v) ? v : 0 }))}
+            />
+          )}
 
           <Field.Root>
             <Field.Label>El rectangle és a…</Field.Label>
@@ -428,13 +646,56 @@ function PhotoCalibrator({
             </Field.HelperText>
           </Field.Root>
 
+          <Field.Root>
+            <Field.Label>Origen (0,0)</Field.Label>
+            <HStack gap={2}>
+              <Button
+                size="sm"
+                variant={placingOrigin ? "solid" : "outline"}
+                colorPalette="wood"
+                disabled={!calibrated}
+                onClick={() => setPlacingOrigin((v) => !v)}
+              >
+                <LuLocateFixed /> {origin3 ? "Tornar a marcar l'origen" : "Marcar l'origen"}
+              </Button>
+              {origin3 && (
+                <IconButton
+                  size="sm"
+                  variant="ghost"
+                  aria-label="Treure l'origen"
+                  onClick={() => setCal((c) => ({ ...c, origin: undefined, originMm: undefined, offset: [0, 0], offsetZ: 0 }))}
+                >
+                  <LuX />
+                </IconButton>
+              )}
+            </HStack>
+            <Field.HelperText>
+              {origin3
+                ? `Origen a ${Math.round(originZ)} mm de la paret. El moble es compta des dels eixos.`
+                : "Sense origen, es compten des de la cantonada baix-esquerra de la referència. Marca el racó de la paret a terra."}
+            </Field.HelperText>
+          </Field.Root>
+
+          <Text fontSize="sm" fontWeight="medium" mb={-2}>
+            Posició del moble
+          </Text>
           <SimpleGrid columns={2} gap={3}>
-            <NumberField label="Moble: desplaçament X" value={cal.offset[0]} min={-10000} max={10000} step={10} onChange={(x) => setCal((c) => ({ ...c, offset: [x, c.offset[1]] }))} />
-            <NumberField label={cal.plane === "wall" ? "Moble: alçada Y" : "Moble: distància Y"} value={cal.offset[1]} min={-10000} max={10000} step={10} onChange={(y) => setCal((c) => ({ ...c, offset: [c.offset[0], y] }))} />
+            <NumberField label="X" value={cal.offset[0]} min={-10000} max={10000} step={10} onChange={(x) => setCal((c) => ({ ...c, offset: [x, c.offset[1]] }))} />
+            <NumberField label={cal.plane === "wall" ? "Y (alçada)" : "Y (distància)"} value={cal.offset[1]} min={-10000} max={10000} step={10} onChange={(y) => setCal((c) => ({ ...c, offset: [c.offset[0], y] }))} />
+            {cal.plane === "wall" && (
+              <NumberField
+                label="Z (paret)"
+                value={cal.offsetZ ?? 0}
+                min={0}
+                max={3000}
+                step={10}
+                onChange={(z) => setCal((c) => ({ ...c, offsetZ: Number.isFinite(z) ? z : 0 }))}
+              />
+            )}
           </SimpleGrid>
 
           <NumberField
-            label="Focal (equiv. 35 mm)"
+            label="Focal (35 mm)"
             value={cal.focal35}
             min={10}
             max={200}
@@ -448,6 +709,7 @@ function PhotoCalibrator({
           </Button>
         </Card.Body>
       </Card.Root>
+      </Controls>
     </Stack>
   )
 }

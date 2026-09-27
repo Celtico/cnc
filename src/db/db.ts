@@ -14,8 +14,22 @@ export interface PhotoCalibration {
   plane: ReferencePlane
   /** Focal equivalent a 35 mm (de l'EXIF o ajustada a mà). */
   focal35: number
-  /** Posició del moble respecte a l'origen del rectangle (mm). */
+  /**
+   * Origen (0,0) triat per l'usuari (px de la imatge), p. ex. el racó de la paret a
+   * terra. Si no n'hi ha, l'origen és la cantonada baix-esquerra de la referència.
+   */
+  origin?: Pt
+  /**
+   * Origen en 3D (mm): x, y sobre la paret (coordenades de la referència) i z =
+   * distància a la paret. Té prioritat sobre `origin`; es mou amb els eixos.
+   */
+  originMm?: [number, number, number]
+  /** Posició del moble respecte a l'origen (mm): X i Y (alçada o distància al terra). */
   offset: Pt
+  /** Separació del darrere del moble respecte a la paret (mm). Per defecte 0. */
+  offsetZ?: number
+  /** Distància de la referència a la paret (mm), si no hi toca (p. ex. una tele). Per defecte 0. */
+  refWallOffset?: number
 }
 
 export interface Photo {

@@ -1,7 +1,5 @@
 import {
-  Collapsible,
   Field,
-  HStack,
   Heading,
   Input,
   NumberInput,
@@ -10,7 +8,8 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react"
-import { LuChevronDown } from "react-icons/lu"
+import { LuHammer, LuLayoutPanelLeft, LuMoveDiagonal, LuSquareStack } from "react-icons/lu"
+import { PanelSection } from "../../components/PanelSection"
 import type { CabinetParams } from "../../core/model"
 
 /** Esborrany editable: com CabinetParams però els números poden ser NaN mentre s'escriu. */
@@ -31,16 +30,16 @@ export function ParamsForm({ draft, errors, onChange }: ParamsFormProps) {
   ) => onChange((d) => ({ ...d, [group]: { ...d[group], [field]: value } }))
 
   return (
-    <Stack gap={6}>
-      <Section title="Mides exteriors">
+    <Stack gap={0}>
+      <PanelSection id="mides" title="Mides exteriors" icon={LuMoveDiagonal}>
         <SimpleGrid columns={{ base: 3 }} gap={3}>
           <NumberField label="Amplada" value={draft.width} onChange={(v) => set("width", v)} min={100} max={2500} step={10} error={errors.width} />
           <NumberField label="Alçada" value={draft.height} onChange={(v) => set("height", v)} min={100} max={2800} step={10} error={errors.height} />
           <NumberField label="Fondària" value={draft.depth} onChange={(v) => set("depth", v)} min={100} max={1200} step={10} error={errors.depth} />
         </SimpleGrid>
-      </Section>
+      </PanelSection>
 
-      <Section title="Taulers">
+      <PanelSection id="taulers" title="Taulers" icon={LuSquareStack}>
         <SimpleGrid columns={2} gap={3}>
           <NumberField label="Gruix tauler" value={draft.panelThickness} onChange={(v) => set("panelThickness", v)} min={8} max={40} step={1} error={errors.panelThickness} help="Habituals: 10 · 12 · 16 · 19 · 30" />
           <NumberField label="Gruix fons" value={draft.backThickness} onChange={(v) => set("backThickness", v)} min={3} max={20} step={1} error={errors.backThickness} />
@@ -65,9 +64,9 @@ export function ParamsForm({ draft, errors, onChange }: ParamsFormProps) {
             </SegmentGroup.Item>
           </SegmentGroup.Root>
         </Field.Root>
-      </Section>
+      </PanelSection>
 
-      <Section title="Interior i front">
+      <PanelSection id="interior" title="Interior i front" icon={LuLayoutPanelLeft}>
         <SimpleGrid columns={2} gap={3}>
           <NumberField label="Prestatges" value={draft.shelves} onChange={(v) => set("shelves", v)} min={0} max={20} step={1} suffix="u" error={errors.shelves} />
           <Field.Root invalid={!!errors.doors}>
@@ -90,17 +89,10 @@ export function ParamsForm({ draft, errors, onChange }: ParamsFormProps) {
             </SegmentGroup.Root>
           </Field.Root>
         </SimpleGrid>
-      </Section>
+      </PanelSection>
 
-      <Collapsible.Root>
-        <Collapsible.Trigger asChild>
-          <HStack as="button" w="full" justify="space-between" py={2} cursor="pointer" color="fg.muted" _hover={{ color: "fg" }}>
-            <Heading size="sm">Fusteria (avançat)</Heading>
-            <LuChevronDown />
-          </HStack>
-        </Collapsible.Trigger>
-        <Collapsible.Content>
-          <Stack gap={5} pt={2}>
+      <PanelSection id="fusteria" title="Fusteria (avançat)" icon={LuHammer}>
+          <Stack gap={5}>
             <Section title="Materials" small>
               <SimpleGrid columns={2} gap={3}>
                 <Field.Root>
@@ -154,8 +146,7 @@ export function ParamsForm({ draft, errors, onChange }: ParamsFormProps) {
               </SimpleGrid>
             </Section>
           </Stack>
-        </Collapsible.Content>
-      </Collapsible.Root>
+      </PanelSection>
     </Stack>
   )
 }

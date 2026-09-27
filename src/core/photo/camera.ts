@@ -118,6 +118,14 @@ export interface SceneOptions {
   offset: Pt
   /** Fondària total del moble (per posar el front a tocar de l'origen quan el pla és el terra). */
   totalDepth: number
+  /**
+   * Distància (mm) de la referència a la paret, quan la referència és a la paret però
+   * no hi toca (p. ex. una tele 200 mm per davant). El moble es recolza a la paret real,
+   * és a dir, a z = −wallOffset del pla de la referència. Per defecte 0.
+   */
+  wallOffset?: number
+  /** Separació del darrere del moble respecte a la paret (mm, cap a la càmera). Per defecte 0. */
+  offsetZ?: number
 }
 
 /**
@@ -128,7 +136,7 @@ export interface SceneOptions {
  */
 export function cabinetToPlane(p: Vec3, o: SceneOptions): Vec3 {
   const [X, Y, Z] = p
-  if (o.plane === "wall") return [o.offset[0] + X, o.offset[1] + Y, Z]
+  if (o.plane === "wall") return [o.offset[0] + X, o.offset[1] + Y, Z - (o.wallOffset ?? 0) + (o.offsetZ ?? 0)]
   return [o.offset[0] + X, o.offset[1] + (o.totalDepth - Z), Y]
 }
 
@@ -209,4 +217,28 @@ export function imageToPlane(h: Mat3, p: Pt): Pt | null {
   const [x, y] = p
   const w = inv[6] * x + inv[7] * y + inv[8]
   return [(inv[0] * x + inv[1] * y + inv[2]) / w, (inv[3] * x + inv[4] * y + inv[5]) / w]
+}
+
+/**
+ * Punt de la imatge → punt 3D sobre el pla paral·lel a la referència a z = `z` (mm).
+ * Amb z = 0 equival a `imageToPlane`; amb z = −d dona el punt sobre la paret real quan
+ * la referència és d mm per davant. Null si el raig és paral·lel al pla o hi arriba
+ * per darrere de la càmera.
+ */
+export function imageToPlaneAt(cam: Camera, p: Pt, z: number): Pt | null {
+  const { r, t, f, cx, cy } = cam
+  const d: Vec3 = [(p[0] - cx) / f, (p[1] - cy) / f, 1]
+  // Rᵀ·v (r és per files: pla→càmera).
+  const rt = (v: Vec3): Vec3 => [
+    r[0] * v[0] + r[3] * v[1] + r[6] * v[2],
+    r[1] * v[0] + r[4] * v[1] + r[7] * v[2],
+    r[2] * v[0] + r[5] * v[1] + r[8] * v[2],
+  ]
+  const dw = rt(d)
+  const tw = rt(t)
+  if (Math.abs(dw[2]) < 1e-12) return null
+  // Punt = Rᵀ(λ·d − t); la seva z ha de ser `z`.
+  const lambda = (z + tw[2]) / dw[2]
+  if (lambda <= 0) return null
+  return [lambda * dw[0] - tw[0], lambda * dw[1] - tw[1]]
 }

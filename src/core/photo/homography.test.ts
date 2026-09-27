@@ -4,6 +4,7 @@ import {
   computeHomography,
   invertMat3,
   mulMat3,
+  orderQuad,
   planeToImage,
   rectanglePoints,
   solveLinear,
@@ -78,5 +79,19 @@ describe("computeHomography", () => {
     const h2 = planeToImage(dst, 600, 400)!
     close(applyHomography(h2, [0, 0]), dst[0]!)
     close(applyHomography(h2, [600, 400]), dst[2]!)
+  })
+})
+
+describe("orderQuad", () => {
+  // Rectangle en perspectiva (imatge, y avall): bl, br, tr, tl.
+  const bl: Pt = [100, 400], br: Pt = [520, 390], tr: Pt = [500, 120], tl: Pt = [130, 140]
+  it("dona sempre baix-esquerra, baix-dreta, dalt-dreta, dalt-esquerra", () => {
+    const orders: Pt[][] = [
+      [bl, br, tr, tl],
+      [tl, tr, br, bl],
+      [tr, tl, bl, br],
+      [br, bl, tl, tr],
+    ]
+    for (const o of orders) expect(orderQuad(o)).toEqual([bl, br, tr, tl])
   })
 })

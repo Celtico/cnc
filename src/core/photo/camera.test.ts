@@ -6,6 +6,7 @@ import {
   cameraFromHomography,
   focalPx,
   imageToPlane,
+  imageToPlaneAt,
   project,
   projectPanels,
   toCamera,
@@ -131,5 +132,26 @@ describe("projectPanels", () => {
   it("el mateix moble al terra també es projecta", () => {
     const floor = projectPanels(panels, recovered, { plane: "floor", offset: [0, 0], totalDepth: 579 })
     expect(floor.length).toBeGreaterThan(0)
+  })
+})
+
+describe("imageToPlaneAt", () => {
+  it("recupera un punt de la paret real quan la referència és per davant", () => {
+    const d = 200
+    const wallPoint: Vec3 = [350, -420, -d]
+    const px = project(truth, wallPoint)!
+    const back = imageToPlaneAt(truth, px, -d)!
+    expect(back[0]).toBeCloseTo(350, 3)
+    expect(back[1]).toBeCloseTo(-420, 3)
+  })
+  it("amb z = 0 coincideix amb el pla de la referència", () => {
+    const px = project(truth, [120, 80, 0])!
+    const back = imageToPlaneAt(truth, px, 0)!
+    expect(back[0]).toBeCloseTo(120, 3)
+    expect(back[1]).toBeCloseTo(80, 3)
+  })
+  it("el moble recolzat a la paret real queda wallOffset per darrere de la referència", () => {
+    const p = cabinetToPlane([0, 0, 0], { plane: "wall", offset: [0, 0], totalDepth: 560, wallOffset: 200 })
+    expect(p[2]).toBe(-200)
   })
 })

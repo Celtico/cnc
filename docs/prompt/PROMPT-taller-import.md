@@ -1,5 +1,7 @@
 # Prompt per a Claude Code — dins de `~/Desktop/taller-cnc-nest`
 
+> ⚠️ **OBSOLET.** Substituït per `PROMPT-export-taller.md` (el configurador exporta STEP + CSV en format TopSolid i el taller no necessita cap endpoint nou). Es conserva només com a referència.
+
 Obre Claude Code a **`~/Desktop/taller-cnc-nest`** (no a `cnc`) i enganxa-ho:
 
 ---
