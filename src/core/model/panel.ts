@@ -1,0 +1,125 @@
+import { z } from "zod"
+
+/**
+ * Totes les mides són en mil·límetres (number).
+ *
+ * Sistema de coordenades local d'una peça (convenció u/v del taller):
+ *  - x (u): sobre el costat LLARG (0..length). `length >= width` sempre.
+ *  - y (v): sobre el costat curt (0..width).
+ *  - `grain` diu si la veta va al llarg de x, de y o no importa.
+ *  - z: gruix (0..thickness). La cara A (mecanitzada, "cara vista cap amunt")
+ *    és a z = thickness; la cara B a z = 0.
+ *  - Origen: cantonada inferior esquerra vista des de la cara A.
+ */
+
+export const PanelRoleSchema = z.enum([
+  "side",
+  "bottom",
+  "top",
+  "back",
+  "shelf",
+  "door",
+])
+export type PanelRole = z.infer<typeof PanelRoleSchema>
+
+/** Costats d'una peça en coordenades locals. */
+export const EdgeSideSchema = z.enum(["left", "right", "bottom", "top"])
+export type EdgeSide = z.infer<typeof EdgeSideSchema>
+export const EDGE_SIDES: readonly EdgeSide[] = ["left", "right", "bottom", "top"]
+
+/** Numeració del taller: 1 = dalt · 2 = dreta · 3 = baix · 4 = esquerra. */
+export const EDGE_NUMBER: Record<EdgeSide, 1 | 2 | 3 | 4> = {
+  top: 1,
+  right: 2,
+  bottom: 3,
+  left: 4,
+}
+
+export const GrainSchema = z.enum(["x", "y", "none"])
+export type Grain = z.infer<typeof GrainSchema>
+
+export const HoleFaceSchema = z.enum(["A", "B", "edge"])
+export type HoleFace = z.infer<typeof HoleFaceSchema>
+
+export const HoleSchema = z.object({
+  /** Centre del forat en coordenades locals. Per a `face: "edge"`, punt sobre el contorn. */
+  x: z.number(),
+  y: z.number(),
+  diameter: z.number().positive(),
+  depth: z.number().positive(),
+  face: HoleFaceSchema,
+  /** Només per a forats horitzontals (`face: "edge"`): en quin costat es perfora. */
+  edge: EdgeSideSchema.optional(),
+  /** Etiqueta lliure per depurar/agrupar: "system32", "dowel", "hinge"... */
+  tag: z.string().optional(),
+})
+export type Hole = z.infer<typeof HoleSchema>
+
+/** Ranura rectangular fresada a una cara (per exemple la del fons). */
+export const GrooveSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+  w: z.number().positive(),
+  h: z.number().positive(),
+  depth: z.number().positive(),
+  face: z.enum(["A", "B"]),
+  tag: z.string().optional(),
+})
+export type Groove = z.infer<typeof GrooveSchema>
+
+const Vec3Schema = z.tuple([z.number(), z.number(), z.number()])
+export type Vec3 = z.infer<typeof Vec3Schema>
+
+/**
+ * Col·locació de la peça dins del moble. Base ortonormal dextrogira:
+ * punt_moble = origin + x·xAxis + y·yAxis + z·zAxis.
+ * Coordenades del moble: X amplada (esquerra→dreta), Y alçada (amunt), Z fondària
+ * (Z = 0 al darrere, creix cap al davant).
+ */
+export const PlacementSchema = z.object({
+  origin: Vec3Schema,
+  xAxis: Vec3Schema,
+  yAxis: Vec3Schema,
+  zAxis: Vec3Schema,
+  /** Direcció cap on s'aparta la peça en vista explosionada. */
+  explodeDir: Vec3Schema,
+})
+export type Placement = z.infer<typeof PlacementSchema>
+
+export const EdgeBandingSchema = z.object({
+  left: z.boolean(),
+  right: z.boolean(),
+  bottom: z.boolean(),
+  top: z.boolean(),
+})
+export type EdgeBanding = z.infer<typeof EdgeBandingSchema>
+
+export const PanelSchema = z.object({
+  id: z.string(),
+  /** Nom amb el vocabulari del taller (el reconeix `pieceRole` de taller-cnc-nest): "lat e". */
+  name: z.string(),
+  /** Nom llegible per a la UI: "Lateral esquerre". */
+  label: z.string(),
+  role: PanelRoleSchema,
+  length: z.number().positive(),
+  width: z.number().positive(),
+  thickness: z.number().positive(),
+  material: z.string(),
+  grain: GrainSchema,
+  edges: EdgeBandingSchema,
+  holes: z.array(HoleSchema),
+  grooves: z.array(GrooveSchema),
+  placement: PlacementSchema,
+})
+export type Panel = z.infer<typeof PanelSchema>
+
+export const NO_EDGES: EdgeBanding = {
+  left: false,
+  right: false,
+  bottom: false,
+  top: false,
+}
+
+export function edgeCount(edges: EdgeBanding): number {
+  return EDGE_SIDES.filter((s) => edges[s]).length
+}
