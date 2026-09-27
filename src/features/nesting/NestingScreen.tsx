@@ -17,7 +17,7 @@ import { BoardDrawing } from "../../components/BoardDrawing"
 import { STANDARD_SHEETS, type NestOptions } from "../../core/nesting/nest"
 import { updateProjectNesting } from "../../db/db"
 import { NumberField } from "../editor/ParamsForm"
-import { useCabinet, useNesting, useProject } from "../useProject"
+import { useCompositionPanels, useNesting, useProject } from "../useProject"
 
 export function NestingScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
@@ -27,7 +27,7 @@ export function NestingScreen({ projectId }: { projectId: number }) {
 
 function NestingView({ projectId, initial }: { projectId: number; initial: NestOptions }) {
   const project = useProject(projectId)
-  const panels = useCabinet(project?.params)
+  const panels = useCompositionPanels(project)
   const [options, setOptions] = useState<NestOptions>(initial)
   const nesting = useNesting(panels, options)
 

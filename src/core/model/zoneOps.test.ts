@@ -1,0 +1,89 @@
+import { describe, expect, it } from "vitest"
+import { buildComposition } from "../build/buildComposition"
+import { BUILTIN_TEMPLATES, type Zone } from "./index"
+import { addChild, countLeaves, parentOf, removeZone, setChildSize, setFront, setShelves, splitZone, unsplitZone } from "./zoneOps"
+
+describe("zoneOps", () => {
+  const leaf: Zone = { id: "root", shelves: { n: 2, adjustable: true }, front: { kind: "door", mode: "single", hinge: "left" } }
+
+  it("splitZone crea n fills auto i el primer hereta el contingut", () => {
+    const z = splitZone(leaf, "root", "v", 3)
+    expect(z.split?.dir).toBe("v")
+    expect(z.split?.children).toHaveLength(3)
+    expect(z.split?.sizes).toEqual(["auto", "auto", "auto"])
+    expect(z.split?.children[0]!.shelves).toEqual({ n: 2, adjustable: true })
+    expect(z.split?.children[1]!.front).toBeUndefined()
+    expect(countLeaves(z)).toBe(3)
+    // Immutable.
+    expect(leaf.split).toBeUndefined()
+  })
+
+  it("unsplitZone torna a una fulla amb el contingut del primer fill", () => {
+    const z = unsplitZone(splitZone(leaf, "root", "h"), "root")
+    expect(z.split).toBeUndefined()
+    expect(z.front).toEqual(leaf.front)
+  })
+
+  it("addChild, removeZone i parentOf", () => {
+    let z = splitZone(leaf, "root", "v", 2)
+    z = addChild(z, "root")
+    expect(z.split?.children).toHaveLength(3)
+    const childId = z.split!.children[1]!.id
+    expect(parentOf(z, childId)?.id).toBe("root")
+    z = removeZone(z, childId)
+    expect(z.split?.children).toHaveLength(2)
+    // Amb un sol fill, la divisió desapareix i el fill pren la id del pare.
+    z = removeZone(z, z.split!.children[1]!.id)
+    expect(z.split).toBeUndefined()
+    expect(z.id).toBe("root")
+    expect(z.shelves).toEqual({ n: 2, adjustable: true })
+  })
+
+  it("setChildSize, setShelves i setFront", () => {
+    let z = splitZone(leaf, "root", "v", 2)
+    z = setChildSize(z, "root", 1, 300)
+    expect(z.split?.sizes).toEqual(["auto", 300])
+    const c0 = z.split!.children[0]!.id
+    z = setShelves(z, c0, null)
+    expect(z.split!.children[0]!.shelves).toBeUndefined()
+    z = setShelves(z, c0, { n: 1, adjustable: false })
+    z = setFront(z, c0, { kind: "drawers", n: 3, heights: [] })
+    // Els calaixos treuen els prestatges.
+    expect(z.split!.children[0]!.shelves).toBeUndefined()
+    expect(z.split!.children[0]!.front?.kind).toBe("drawers")
+    z = setFront(z, c0, null)
+    expect(z.split!.children[0]!.front).toBeUndefined()
+  })
+})
+
+describe("plantilles", () => {
+  it("totes construeixen sense avisos bloquejants i amb ids úniques", () => {
+    for (const t of BUILTIN_TEMPLATES) {
+      const comp = t.make()
+      const { panels, warnings } = buildComposition(comp)
+      expect(panels.length, t.name).toBeGreaterThan(3)
+      const ids = panels.map((p) => p.id)
+      expect(new Set(ids).size, t.name).toBe(ids.length)
+      expect(warnings.filter((w) => w.code === "layout" || w.code === "collision"), t.name).toEqual([])
+    }
+  })
+
+  it("el moble TV del menjador: 3 portes, 3 prestatges, passacables, cobreradiador amb reixeta i trapa", () => {
+    const comp = BUILTIN_TEMPLATES.find((t) => t.id === "tv-living-room")!.make()
+    const { panels, warnings, modules } = buildComposition(comp)
+    const tv = panels.filter((p) => p.module === 1)
+    expect(tv.filter((p) => p.role === "door")).toHaveLength(3)
+    expect(tv.filter((p) => p.role === "shelf")).toHaveLength(3)
+    expect(tv.filter((p) => p.role === "divider")).toHaveLength(2)
+    expect(tv.find((p) => p.role === "plinth")).toBeDefined()
+    expect(tv.find((p) => p.role === "back")!.cutouts?.[0]).toMatchObject({ kind: "circle", diameter: 60 })
+    const rad = panels.filter((p) => p.module === 2)
+    expect(rad.find((p) => p.role === "grille")).toBeDefined()
+    expect(rad.find((p) => p.role === "hatch")).toBeDefined()
+    expect(rad.find((p) => p.role === "bottom")).toBeUndefined()
+    expect(modules[1]!.x).toBe(1900)
+    expect(modules[1]!.build.openRatios[comp.modules[1]!.root.id]).toBeGreaterThan(0.4)
+    expect(warnings.some((w) => w.code === "material-heat")).toBe(true)
+    expect(warnings.some((w) => w.code === "collision")).toBe(false)
+  })
+})

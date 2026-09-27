@@ -10,11 +10,11 @@ import { cutListToCsv } from "../../core/export/csv"
 import { dxfLayers, toDxf } from "../../core/export/dxf"
 import { toUnifiedData } from "../../core/export/unified"
 import { downloadBlob, downloadText, slugify } from "../download"
-import { useCabinet, useNesting, useProject } from "../useProject"
+import { useCompositionPanels, useNesting, useProject } from "../useProject"
 
 export function ExportScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
-  const panels = useCabinet(project?.params)
+  const panels = useCompositionPanels(project)
   const nesting = useNesting(panels, project?.nesting)
   const [labels, setLabels] = useState(true)
   const [busy, setBusy] = useState(false)

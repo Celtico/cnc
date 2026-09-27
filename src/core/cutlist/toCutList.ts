@@ -57,7 +57,25 @@ export interface CutList {
   totalEdgeLength: number
 }
 
-const ROLE_ORDER: PanelRole[] = ["side", "bottom", "top", "shelf", "door", "back"]
+const ROLE_ORDER: PanelRole[] = [
+  "side",
+  "divider",
+  "bottom",
+  "top",
+  "fixedShelf",
+  "shelf",
+  "plinth",
+  "door",
+  "flap",
+  "grille",
+  "hatch",
+  "panel",
+  "drawerFront",
+  "drawerSide",
+  "drawerBack",
+  "drawerBottom",
+  "back",
+]
 
 /**
  * Clau d'agrupació. Els cantells es comparen per nombre de costats llargs i curts

@@ -147,7 +147,8 @@ describe("calaixos", () => {
     expect(k1.map((p) => p.role).sort()).toEqual(["drawerBack", "drawerBottom", "drawerFront", "drawerSide", "drawerSide"])
     const sideL = k1.find((p) => p.id === "drawer-1-side-left")!
     expect(sideL.grooves).toHaveLength(1)
-    expect(sideL.width).toBe(600 - 2 * 19 - 2 * 12.5 > 0 ? sideL.width : 0)
+    // Alçada de la caixa = alçada del front (196,75) − 30.
+    expect(sideL.width).toBeCloseTo(196.75 - 30, 2)
     const cabinetSide = panels.find((p) => p.id === "side-left")!
     expect(cabinetSide.holes.filter((h) => h.tag === "slide").length).toBe(4 * 2)
   })

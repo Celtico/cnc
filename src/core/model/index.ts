@@ -1,3 +1,5 @@
 export * from "./panel"
 export * from "./cabinet"
 export * from "./composition"
+export * from "./zoneOps"
+export * from "./templates"

@@ -5,13 +5,13 @@ import { toCutList } from "../../core/cutlist/toCutList"
 import { cutListToCsv } from "../../core/export/csv"
 import type { Grain } from "../../core/model"
 import { downloadText, slugify } from "../download"
-import { useCabinet, useProject } from "../useProject"
+import { useCompositionPanels, useProject } from "../useProject"
 
 const GRAIN: Record<Grain, string> = { x: "Llarg", y: "Ample", none: "—" }
 
 export function CutListScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
-  const panels = useCabinet(project?.params)
+  const panels = useCompositionPanels(project)
   const list = useMemo(() => toCutList(panels), [panels])
 
   if (!project) return null

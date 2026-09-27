@@ -1,22 +1,28 @@
 import { Box, Container, Flex, HStack, Heading, IconButton, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useState } from "react"
 import type { IconType } from "react-icons"
-import { LuArrowLeft, LuBox, LuDownload, LuFolder, LuList } from "react-icons/lu"
+import { LuArrowLeft, LuBox, LuCamera, LuDownload, LuFolder, LuLayoutGrid, LuList, LuPencilRuler } from "react-icons/lu"
 import { ColorModeButton } from "./components/ui/color-mode"
 import { Toaster } from "./components/ui/toaster"
 import { db } from "./db/db"
+import { CompositionScreen } from "./features/composition/CompositionScreen"
 import { CutListScreen } from "./features/cutlist/CutListScreen"
 import { EditorScreen } from "./features/editor/EditorScreen"
 import { ExportScreen } from "./features/export/ExportScreen"
+import { NestingScreen } from "./features/nesting/NestingScreen"
+import { PhotoScreen } from "./features/photo/PhotoScreen"
 import { ProjectsScreen } from "./features/projects/ProjectsScreen"
 import { useProject } from "./features/useProject"
 
-type Screen = "projects" | "editor" | "cutlist" | "export"
+type Screen = "projects" | "design" | "editor" | "photo" | "cutlist" | "nesting" | "export"
 
 const NAV: { id: Screen; label: string; icon: IconType; needsProject: boolean }[] = [
   { id: "projects", label: "Mobles", icon: LuFolder, needsProject: false },
+  { id: "design", label: "Disseny", icon: LuPencilRuler, needsProject: true },
   { id: "editor", label: "Editor", icon: LuBox, needsProject: true },
+  { id: "photo", label: "Foto", icon: LuCamera, needsProject: true },
   { id: "cutlist", label: "Peces", icon: LuList, needsProject: true },
+  { id: "nesting", label: "Nesting", icon: LuLayoutGrid, needsProject: true },
   { id: "export", label: "Exportar", icon: LuDownload, needsProject: true },
 ]
 
@@ -69,10 +75,16 @@ export function App() {
   const content =
     screen === "projects" || projectId === null ? (
       <ProjectsScreen onOpen={openProject} />
+    ) : screen === "design" ? (
+      <CompositionScreen projectId={projectId} />
     ) : screen === "editor" ? (
       <EditorScreen projectId={projectId} />
+    ) : screen === "photo" ? (
+      <PhotoScreen projectId={projectId} />
     ) : screen === "cutlist" ? (
       <CutListScreen projectId={projectId} />
+    ) : screen === "nesting" ? (
+      <NestingScreen projectId={projectId} />
     ) : (
       <ExportScreen projectId={projectId} />
     )
