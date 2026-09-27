@@ -1,6 +1,33 @@
 import Dexie, { type EntityTable } from "dexie"
 import { DEFAULT_CABINET, parseCabinetParams, type CabinetParams } from "../core/model"
 import { DEFAULT_NEST_OPTIONS, NestOptionsSchema, type NestOptions } from "../core/nesting/nest"
+import type { Pt } from "../core/photo/homography"
+import type { ReferencePlane } from "../core/photo/camera"
+
+/** Calibració de la foto d'un projecte. Les mides reals les entra l'usuari. */
+export interface PhotoCalibration {
+  photoId: number
+  /** 4 punts (px de la imatge): baix-esquerra, baix-dreta, dalt-dreta, dalt-esquerra. */
+  points: Pt[]
+  /** Mida real del rectangle de referència (mm). */
+  ref: { w: number; h: number }
+  plane: ReferencePlane
+  /** Focal equivalent a 35 mm (de l'EXIF o ajustada a mà). */
+  focal35: number
+  /** Posició del moble respecte a l'origen del rectangle (mm). */
+  offset: Pt
+}
+
+export interface Photo {
+  id: number
+  projectId: number
+  blob: Blob
+  width: number
+  height: number
+  /** Focal 35 mm llegida de l'EXIF, si n'hi havia. */
+  exifFocal35: number | null
+  createdAt: number
+}
 
 export interface Project {
   id: number
@@ -8,6 +35,8 @@ export interface Project {
   params: CabinetParams
   /** Opcions de nesting (tauler, kerf, marge). Opcional: projectes antics no en tenen. */
   nesting?: NestOptions
+  /** Foto del racó i calibració. Opcional. */
+  photo?: PhotoCalibration
   createdAt: number
   updatedAt: number
 }
@@ -16,11 +45,16 @@ export type NewProject = Omit<Project, "id">
 
 class MoblesDB extends Dexie {
   projects!: EntityTable<Project, "id">
+  photos!: EntityTable<Photo, "id">
 
   constructor() {
     super("mobles-cnc")
     this.version(1).stores({
       projects: "++id, name, updatedAt",
+    })
+    this.version(2).stores({
+      projects: "++id, name, updatedAt",
+      photos: "++id, projectId",
     })
   }
 }
@@ -46,7 +80,26 @@ export async function duplicateProject(id: number): Promise<number | undefined> 
 }
 
 export async function deleteProject(id: number): Promise<void> {
-  await db.projects.delete(id)
+  await db.transaction("rw", db.projects, db.photos, async () => {
+    await db.photos.where("projectId").equals(id).delete()
+    await db.projects.delete(id)
+  })
+}
+
+export async function addPhoto(photo: Omit<Photo, "id">): Promise<number> {
+  return db.photos.add(photo as Photo)
+}
+
+export async function updateProjectPhoto(id: number, photo: PhotoCalibration | undefined): Promise<void> {
+  await db.projects.update(id, { photo, updatedAt: Date.now() })
+}
+
+/** Esborra la foto i la calibració del projecte. */
+export async function removeProjectPhoto(id: number): Promise<void> {
+  await db.transaction("rw", db.projects, db.photos, async () => {
+    await db.photos.where("projectId").equals(id).delete()
+    await db.projects.update(id, { photo: undefined, updatedAt: Date.now() })
+  })
 }
 
 export async function updateProjectParams(id: number, params: CabinetParams): Promise<void> {
