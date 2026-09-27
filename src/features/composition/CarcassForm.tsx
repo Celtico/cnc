@@ -1,5 +1,5 @@
-import { Card, Collapsible, Field, HStack, Heading, Input, NativeSelect, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
-import { LuChevronDown } from "react-icons/lu"
+import { Button, Card, Collapsible, Field, HStack, Heading, IconButton, Input, NativeSelect, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
+import { LuChevronDown, LuPlus, LuTrash2 } from "react-icons/lu"
 import { DEFAULT_GRILLE, type Base, type Carcass, type Module, type Top } from "../../core/model"
 import { NumberField } from "../editor/ParamsForm"
 
@@ -96,6 +96,51 @@ export function CarcassForm({ module, onChange }: { module: Module; onChange: (m
             <Switch.Label>Lateral dret</Switch.Label>
           </Switch.Root>
         </HStack>
+
+        <Stack gap={2}>
+          <HStack justify="space-between">
+            <Text fontSize="sm" fontWeight="semibold" color="fg.muted">
+              Passacables (Ø passant)
+            </Text>
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={() =>
+                onChange({
+                  ...module,
+                  extras: { ...module.extras, cableHoles: [...module.extras.cableHoles, { panel: "back", x: Math.round(c.width / 2), y: Math.round(c.height * 0.6), diameter: 60 }] },
+                })
+              }
+            >
+              <LuPlus /> Afegir
+            </Button>
+          </HStack>
+          {module.extras.cableHoles.map((h, i) => {
+            const update = (patch: Partial<typeof h>) =>
+              onChange({ ...module, extras: { ...module.extras, cableHoles: module.extras.cableHoles.map((x, k) => (k === i ? { ...x, ...patch } : x)) } })
+            return (
+              <HStack key={i} align="end" gap={2}>
+                <Field.Root flex={1}>
+                  <Field.Label>A</Field.Label>
+                  <NativeSelect.Root size="sm">
+                    <NativeSelect.Field value={h.panel} onChange={(e) => update({ panel: e.target.value as typeof h.panel })}>
+                      <option value="back">Fons</option>
+                      <option value="top">Tapa</option>
+                      <option value="bottom">Base</option>
+                    </NativeSelect.Field>
+                    <NativeSelect.Indicator />
+                  </NativeSelect.Root>
+                </Field.Root>
+                <NumberField label="X" value={h.x} min={0} max={3000} step={10} onChange={(x) => update({ x })} />
+                <NumberField label={h.panel === "back" ? "Y (alçada)" : "Y (des del darrere)"} value={h.y} min={0} max={3000} step={10} onChange={(y) => update({ y })} />
+                <NumberField label="Ø" value={h.diameter} min={10} max={200} step={5} onChange={(diameter) => update({ diameter })} />
+                <IconButton aria-label="Eliminar passacables" size="sm" variant="ghost" colorPalette="red" onClick={() => onChange({ ...module, extras: { ...module.extras, cableHoles: module.extras.cableHoles.filter((_, k) => k !== i) } })}>
+                  <LuTrash2 />
+                </IconButton>
+              </HStack>
+            )
+          })}
+        </Stack>
 
         <Collapsible.Root>
           <Collapsible.Trigger asChild>
