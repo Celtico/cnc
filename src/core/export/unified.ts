@@ -1,10 +1,15 @@
 import { EDGE_NUMBER, EDGE_SIDES, type Panel, type PanelRole } from "../model"
-import type { Join, Piece, Role, Side, Solid, UnifiedData } from "./unified.types"
+import type { Board, Join, Piece, Role, Side, Solid, UnifiedData } from "./unified.types"
 
 /**
  * Camí B: genera el contracte `UnifiedData` del taller directament des de les
- * peces del configurador, sense passar per TopSolid. Sense nesting encara:
- * `boards` i `tabs` buits, `tab` = 0 i posició al tauler a 0.
+ * peces del configurador, sense passar per TopSolid.
+ *
+ * Sense nesting encara: s'emet un **tauler virtual** per cada parella
+ * material/gruix (2800×2070 per defecte) i totes les peces hi van a la cantonada
+ * (centre de peça a L/2, W/2, angle 0). Així el JSON passa la validació de
+ * l'import del taller (`piece.tab` ha d'existir a `boards`). Quan hi hagi nesting
+ * real (Fase 2) aquestes posicions seran les de veritat.
  */
 
 export interface UnifiedOptions {
@@ -12,7 +17,11 @@ export interface UnifiedOptions {
   name: string
   /** Índex del mòdul dins del moble, per a la ref `A.<mòdul>.<tipus>.<n>`. */
   module?: number
+  /** Mida del tauler virtual (mm). Per defecte 2800 × 2070. */
+  sheet?: { w: number; h: number }
 }
+
+export const DEFAULT_SHEET: { w: number; h: number } = { w: 2800, h: 2070 }
 
 const ROLE_3D: Record<PanelRole, Role> = {
   side: "lateral",
@@ -99,7 +108,7 @@ function toSolid(p: Panel): Solid {
   }
 }
 
-function toPiece(p: Panel, index: number, ref: string): Piece {
+function toPiece(p: Panel, index: number, ref: string, tab: number): Piece {
   const role = ROLE_3D[p.role]
   const lam: (string | null)[] = [1, 2, 3, 4].map((n) => {
     const side = EDGE_SIDES.find((s) => EDGE_NUMBER[s] === n)!
@@ -109,9 +118,10 @@ function toPiece(p: Panel, index: number, ref: string): Piece {
     ref,
     name: p.name,
     thick: p.thickness,
-    tab: 0,
-    x: 0,
-    y: 0,
+    tab,
+    // Sense nesting: peça a la cantonada del tauler; x/y és el centre de la peça.
+    x: p.length / 2,
+    y: p.width / 2,
     angle: 0,
     L: p.length,
     W: p.width,
@@ -151,12 +161,34 @@ export function deriveJoins(panels: Panel[]): Join[] {
   return joins
 }
 
+/** Un tauler virtual per cada parella material/gruix, en ordre d'aparició. */
+export function virtualBoards(panels: Panel[], sheet = DEFAULT_SHEET): { boards: Board[]; tabOf: Map<string, number> } {
+  const boards: Board[] = []
+  const tabOf = new Map<string, number>()
+  for (const p of panels) {
+    const key = `${p.material}|${p.thickness}`
+    if (tabOf.has(key)) continue
+    const tab = boards.length + 1
+    tabOf.set(key, tab)
+    boards.push({
+      tab,
+      name: `${p.material} ${sheet.w}x${sheet.h} (sense nesting)`,
+      w: sheet.w,
+      h: sheet.h,
+      thick: p.thickness,
+    })
+  }
+  return { boards, tabOf }
+}
+
 export function toUnifiedData(panels: Panel[], options: UnifiedOptions): UnifiedData {
   const module = options.module ?? 1
+  const { boards, tabOf } = virtualBoards(panels, options.sheet ?? DEFAULT_SHEET)
   const solids = panels.map(toSolid)
   const pieces = panels.map((p, i) => {
     const letter = ROLE_LETTER[ROLE_3D[p.role]]
-    return toPiece(p, i, `A.${module}.${letter}.${i + 1}`)
+    const tab = tabOf.get(`${p.material}|${p.thickness}`) ?? 1
+    return toPiece(p, i, `A.${module}.${letter}.${i + 1}`, tab)
   })
 
   const min = [Infinity, Infinity, Infinity]
@@ -175,8 +207,8 @@ export function toUnifiedData(panels: Panel[], options: UnifiedOptions): Unified
   return {
     mueble: options.name,
     material,
-    boards: [],
-    tabs: [],
+    boards,
+    tabs: boards.map((b) => b.tab),
     pieces,
     solids,
     ctr,

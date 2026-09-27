@@ -151,9 +151,24 @@ describe("toUnifiedData", () => {
     expect(hinges[0]!.b).toBe(0) // lateral esquerre
   })
 
-  it("sense nesting: taulers buits i tab 0", () => {
-    expect(data.boards).toEqual([])
-    expect(data.tabs).toEqual([])
-    for (const p of data.pieces) expect(p.tab).toBe(0)
+  it("sense nesting: un tauler virtual 2800×2070 per material/gruix, i cada peça hi apunta", () => {
+    expect(data.boards).toHaveLength(2)
+    expect(data.boards[0]).toMatchObject({ tab: 1, w: 2800, h: 2070, thick: 19 })
+    expect(data.boards[1]).toMatchObject({ tab: 2, w: 2800, h: 2070, thick: 10 })
+    expect(data.tabs).toEqual([1, 2])
+    const tabs = new Set(data.boards.map((b) => b.tab))
+    for (const p of data.pieces) {
+      expect(tabs.has(p.tab)).toBe(true)
+      expect(p.tab).toBe(p.thick === 10 ? 2 : 1)
+      // Centre de la peça a la cantonada del tauler.
+      expect([p.x, p.y]).toEqual([p.L / 2, p.W / 2])
+      expect(p.angle).toBe(0)
+    }
+  })
+
+  it("mida de tauler configurable", () => {
+    const d = toUnifiedData(panels, { name: "x", sheet: { w: 2440, h: 1220 } })
+    expect(d.boards[0]).toMatchObject({ w: 2440, h: 1220 })
+    expect(d.boards[0]!.name).toContain("2440x1220")
   })
 })
