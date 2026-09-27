@@ -1,5 +1,5 @@
 import { Badge, Box, Button, Card, HStack, IconButton, Menu, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import { LuArrowLeft, LuArrowRight, LuBox, LuCopy, LuPlus, LuTrash2 } from "react-icons/lu"
+import { LuArrowLeft, LuArrowRight, LuBox, LuCopy, LuPlus, LuScan, LuTrash2 } from "react-icons/lu"
 import {
   BUILTIN_TEMPLATES,
   defaultModule,
@@ -145,9 +145,12 @@ function ReferencesEditor({ comp, onChange }: { comp: Composition; onChange: (c:
   return (
     <Stack gap={2}>
       <HStack justify="space-between">
-        <Text fontSize="sm" fontWeight="semibold" color="fg.muted">
-          Objectes de referència (fantasma)
-        </Text>
+        <HStack gap={2} color="fg.muted">
+          <LuScan />
+          <Text fontSize="sm" fontWeight="semibold">
+            Objectes de referència (fantasma)
+          </Text>
+        </HStack>
         <Button size="xs" variant="ghost" onClick={add}>
           <LuPlus /> Afegir
         </Button>

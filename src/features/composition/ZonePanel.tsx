@@ -1,5 +1,5 @@
 import { Button, Card, Field, HStack, NativeSelect, SegmentGroup, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
-import { LuColumns2, LuRows2, LuTrash2, LuUngroup, LuPlus } from "react-icons/lu"
+import { LuPlus, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
 import {
   DEFAULT_GRILLE,
   addChild,
@@ -116,10 +116,10 @@ export function ZonePanel({
           <Stack gap={4}>
             <HStack wrap="wrap">
               <Button size="sm" variant="outline" onClick={() => onChange(splitZone(root, zone.id, "v", 2))}>
-                <LuColumns2 /> Dividir en vertical
+                <LuSquareSplitHorizontal /> Dividir en vertical
               </Button>
               <Button size="sm" variant="outline" onClick={() => onChange(splitZone(root, zone.id, "h", 2))}>
-                <LuRows2 /> Dividir en horitzontal
+                <LuSquareSplitVertical /> Dividir en horitzontal
               </Button>
             </HStack>
 

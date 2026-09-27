@@ -1,54 +1,162 @@
-import { Badge, Box, Editable, Flex, HStack, IconButton, Stack, Text } from "@chakra-ui/react"
+import { Alert, Badge, Box, Button, Editable, Flex, HStack, IconButton, Input, Menu, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useState } from "react"
-import { LuCircleDot, LuExpand, LuShrink } from "react-icons/lu"
-import { CabinetViewer } from "../../components/viewer/CabinetViewer"
-import { CabinetParamsSchema, type CabinetParams } from "../../core/model"
-import { renameProject, updateProjectParams } from "../../db/db"
-import { useCabinet, useProject } from "../useProject"
-import { ParamsForm, type Draft } from "./ParamsForm"
+import {
+  LuBookmark,
+  LuBox,
+  LuCamera,
+  LuCircleDot,
+  LuExpand,
+  LuHammer,
+  LuLayoutDashboard,
+  LuLayoutPanelLeft,
+  LuLayoutTemplate,
+  LuMaximize2,
+  LuMinimize2,
+  LuMoveDiagonal,
+  LuRedo2,
+  LuShrink,
+  LuTriangleAlert,
+  LuUndo2,
+} from "react-icons/lu"
+import { PanelGroup, PanelSection, usePanelGroup } from "../../components/PanelSection"
+import { ResizeHandle } from "../../components/ResizeHandle"
+import { toaster } from "../../components/ui/toaster"
+import { CabinetViewer, type ViewerModule } from "../../components/viewer/CabinetViewer"
+import { BUILTIN_TEMPLATES, compositionWidth, defaultModule, findZone, newId, type Composition, type Module } from "../../core/model"
+import { loadUserTemplates, saveUserTemplate, updateProjectComposition } from "../../db/compositionStore"
+import { renameProject } from "../../db/db"
+import { CarcassForm, JoineryForm } from "../composition/CarcassForm"
+import { ElevationEditor } from "../composition/ElevationEditor"
+import { ModuleStrip } from "../composition/ModuleStrip"
+import { ZonePanel } from "../composition/ZonePanel"
+import { PhotoScreen } from "../photo/PhotoScreen"
+import { usePersistentFlag } from "../usePersistentFlag"
+import { usePersistentNumber } from "../usePersistentNumber"
+import { useComposition, useCompositionBuild, useProject } from "../useProject"
 
 export function EditorScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
-  if (!project) return null
-  return <Editor key={project.id} projectId={project.id} name={project.name} initial={project.params} />
+  const initial = useComposition(project)
+  if (!project || !initial) return null
+  return <Editor key={project.id} projectId={project.id} name={project.name} initial={initial} />
 }
 
-function Editor({ projectId, name, initial }: { projectId: number; name: string; initial: CabinetParams }) {
-  // `draft` és el que s'està escrivint; `valid` són els darrers paràmetres que han
-  // passat la validació i que alimenten el model 3D i la base de dades.
-  const [{ draft, valid }, setState] = useState<{ draft: Draft; valid: CabinetParams }>({
-    draft: initial,
-    valid: initial,
-  })
-  const [exploded, setExploded] = useState(false)
-  const [showHoles, setShowHoles] = useState(true)
+interface History {
+  past: Composition[]
+  present: Composition
+  future: Composition[]
+}
 
-  const update = (patch: (d: Draft) => Draft) =>
-    setState((s) => {
-      const draft = patch(s.draft)
-      const res = CabinetParamsSchema.safeParse(draft)
-      return { draft, valid: res.success ? res.data : s.valid }
+function Editor({ projectId, name, initial }: { projectId: number; name: string; initial: Composition }) {
+  // Composició amb desfer/refer (fins a 50 passos).
+  const [history, setHistory] = useState<History>({ past: [], present: initial, future: [] })
+  const comp = history.present
+  const setComp = (next: Composition | ((c: Composition) => Composition)) =>
+    setHistory((h) => {
+      const n = typeof next === "function" ? next(h.present) : next
+      if (n === h.present) return h
+      return { past: [...h.past.slice(-49), h.present], present: n, future: [] }
     })
+  const undo = () => setHistory((h) => (h.past.length ? { past: h.past.slice(0, -1), present: h.past.at(-1)!, future: [h.present, ...h.future] } : h))
+  const redo = () => setHistory((h) => (h.future.length ? { past: [...h.past, h.present], present: h.future[0]!, future: h.future.slice(1) } : h))
 
-  const errors = useMemo(() => {
-    const res = CabinetParamsSchema.safeParse(draft)
-    const errors: Record<string, string> = {}
-    if (!res.success) for (const issue of res.error.issues) errors[issue.path.join(".")] = issue.message
-    return errors
-  }, [draft])
-  const isValid = Object.keys(errors).length === 0
-  const params = valid
-  const panels = useCabinet(params)
+  const [selectedModule, setSelectedModule] = useState<string>(initial.modules[0]!.id)
+  const [selectedZone, setSelectedZone] = useState<string | null>(null)
+  const [exploded, setExploded] = useState(false)
+  const [showHoles, setShowHoles] = useState(false)
+  // Amaga el panell de paràmetres perquè el 3D ocupi tot l'espai.
+  const [formHidden, setFormHidden] = usePersistentFlag("mobles:editor-form-hidden")
+  const [formWidth, setFormWidth] = usePersistentNumber("mobles:editor-form-width", 380)
+  // Pestanya del visor: la composició en 3D o superposada a la foto del lloc.
+  const [photoTab, setPhotoTab] = usePersistentFlag("mobles:editor-tab-photo")
+  // Contenidor del panell esquerre on la pestanya Foto hi pinta els seus controls.
+  const [photoControls, setPhotoControls] = useState<HTMLDivElement | null>(null)
+  // En triar la pestanya Foto s'obre la secció "Adaptar mides a la imatge" (i es tanquen les altres).
+  const [openPhotoSection, setOpenPhotoSection] = useState(0)
+  const showPhotoTab = (on: boolean) => {
+    setPhotoTab(on)
+    if (on) setOpenPhotoSection((n) => n + 1)
+  }
+  const [templateName, setTemplateName] = useState("")
+  const [userTemplates, setUserTemplates] = useState(loadUserTemplates)
 
-  // Desa amb retard quan els paràmetres són vàlids i han canviat.
+  const build = useCompositionBuild(comp)
+  const panels = build?.panels ?? []
+
+  // Desa amb retard quan la composició canvia.
   useEffect(() => {
-    if (params === initial) return
-    const t = setTimeout(() => void updateProjectParams(projectId, params), 350)
+    if (comp === initial) return
+    const t = setTimeout(() => void updateProjectComposition(projectId, comp), 350)
     return () => clearTimeout(t)
-  }, [params, projectId, initial])
+  }, [comp, projectId, initial])
 
+  const module: Module = comp.modules.find((m) => m.id === selectedModule) ?? comp.modules[0]!
+  const moduleIndex = comp.modules.indexOf(module)
+  const moduleBuild = build?.modules[moduleIndex]?.build
+  const zone = selectedZone ? findZone(module.root, selectedZone) : undefined
+
+  const size = useMemo(() => {
+    let h = 0
+    let d = 0
+    for (const m of comp.modules) {
+      const legs = m.carcass.base.kind === "legs" ? m.carcass.base.height : 0
+      h = Math.max(h, m.carcass.height + legs)
+      d = Math.max(d, m.carcass.depth + m.carcass.thickness)
+    }
+    for (const g of comp.references) {
+      h = Math.max(h, g.y + g.h)
+      d = Math.max(d, g.z + g.d)
+    }
+    return { width: Math.max(compositionWidth(comp), ...comp.references.map((g) => g.x + g.w)), height: h, depth: d }
+  }, [comp])
+
+  const viewerModules: ViewerModule[] = useMemo(
+    () =>
+      (build?.modules ?? []).map((m) => {
+        const c = comp.modules[m.index - 1]!.carcass
+        return { id: m.id, index: m.index, x: m.x, y: m.y, width: c.width, height: c.height, depth: c.depth + c.thickness }
+      }),
+    [build, comp],
+  )
+
+  const updateModule = (m: Module) => setComp((c) => ({ ...c, modules: c.modules.map((x) => (x.id === m.id ? m : x)) }))
+
+  const selectModule = (id: string) => {
+    setSelectedModule(id)
+    setSelectedZone(null)
+  }
+
+  /** Enganxa un mòdul nou al costat del seleccionat, amb la mateixa alçada i fondària. */
+  const addModuleBeside = (side: "left" | "right") => {
+    const m = defaultModule(newId("m"), `Mòdul ${comp.modules.length + 1}`, {
+      width: 600,
+      height: module.carcass.height,
+      depth: module.carcass.depth,
+      material: module.carcass.material,
+      thickness: module.carcass.thickness,
+      base: module.carcass.base,
+      back: module.carcass.back,
+    })
+    const modules = [...comp.modules]
+    modules.splice(side === "left" ? moduleIndex : moduleIndex + 1, 0, { ...m, gapBefore: 0 })
+    setComp({ ...comp, modules })
+    selectModule(m.id)
+  }
+
+  const applyTemplate = (make: () => Composition) => {
+    const next = make()
+    setComp(next)
+    selectModule(next.modules[0]!.id)
+  }
+
+  const saveTemplate = () => {
+    setUserTemplates(saveUserTemplate(templateName || name, comp))
+    setTemplateName("")
+    toaster.create({ title: "Plantilla desada", type: "success" })
+  }
+
+  const warnings = build?.warnings ?? []
   const totalHoles = panels.reduce((n, p) => n + p.holes.length, 0)
-  const p = params
 
   return (
     <Flex direction={{ base: "column", md: "row" }} gap={{ base: 0, md: 6 }} h="full" minH={0}>
@@ -58,63 +166,244 @@ function Editor({ projectId, name, initial }: { projectId: number; name: string;
         flex={{ md: 1 }}
         position="sticky"
         top={{ base: "calc(52px + env(safe-area-inset-top, 0px))", md: 6 }}
-        alignSelf="flex-start"
+        alignSelf={{ base: "stretch", md: "flex-start" }}
         zIndex={1}
-        h={{ base: "42vh", md: "calc(100dvh - 3rem)" }}
+        h={
+          formHidden
+            ? { base: "calc(100dvh - 52px - 76px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))", md: "calc(100dvh - 3rem)" }
+            : { base: "42vh", md: "calc(100dvh - 3rem)" }
+        }
+        transition="height 0.2s"
         rounded={{ md: "xl" }}
         overflow="hidden"
         borderWidth={{ md: "1px" }}
         mx={{ base: -4, md: 0 }}
       >
-        <CabinetViewer
-          panels={panels}
-          size={{ width: p.width, height: p.height, depth: p.depth }}
-          exploded={exploded}
-          showHoles={showHoles}
-        />
-        <HStack position="absolute" top={3} right={3} gap={2}>
-          <IconButton
-            aria-label={showHoles ? "Amagar forats" : "Mostrar forats"}
-            size="sm"
-            variant={showHoles ? "solid" : "surface"}
-            colorPalette="wood"
-            onClick={() => setShowHoles((v) => !v)}
-          >
+        {photoTab ? (
+          <Box position="absolute" inset={0} overflowY="auto" pt={14} px={3} pb={3}>
+            <PhotoScreen projectId={projectId} panels={panels} embedded controlsTarget={photoControls} />
+          </Box>
+        ) : (
+          <CabinetViewer
+            panels={panels}
+            size={size}
+            exploded={exploded}
+            showHoles={showHoles}
+            modules={viewerModules}
+            selectedModuleId={module.id}
+            onSelectModule={selectModule}
+            onAddModule={addModuleBeside}
+            ghosts={comp.references}
+          />
+        )}
+        {/* La recepta del SegmentGroup força position: relative; el posicionem amb un embolcall. */}
+        <Box position="absolute" top={3} left="50%" transform="translateX(-50%)" zIndex={2}>
+          <SegmentGroup.Root size="sm" bg="bg.panel" value={photoTab ? "photo" : "3d"} onValueChange={(e) => showPhotoTab(e.value === "photo")}>
+            <SegmentGroup.Indicator />
+            <SegmentGroup.Item value="3d" aria-label="Composició en 3D">
+              <SegmentGroup.ItemText>
+                <HStack gap={1.5}>
+                  <LuBox /> 3D
+                </HStack>
+              </SegmentGroup.ItemText>
+              <SegmentGroup.ItemHiddenInput />
+            </SegmentGroup.Item>
+            <SegmentGroup.Item value="photo" aria-label="Composició sobre la foto">
+              <SegmentGroup.ItemText>
+                <HStack gap={1.5}>
+                  <LuCamera /> Foto
+                </HStack>
+              </SegmentGroup.ItemText>
+              <SegmentGroup.ItemHiddenInput />
+            </SegmentGroup.Item>
+          </SegmentGroup.Root>
+        </Box>
+        <IconButton
+          position="absolute"
+          top={3}
+          left={3}
+          aria-label={formHidden ? "Mostrar els paràmetres" : "Ampliar el 3D"}
+          aria-expanded={!formHidden}
+          size="sm"
+          variant="surface"
+          colorPalette="wood"
+          onClick={() => setFormHidden((v) => !v)}
+        >
+          {formHidden ? <LuMinimize2 /> : <LuMaximize2 />}
+        </IconButton>
+        <HStack position="absolute" top={3} right={3} gap={2} display={photoTab ? "none" : "flex"}>
+          <IconButton aria-label={showHoles ? "Amagar forats" : "Mostrar forats"} size="sm" variant={showHoles ? "solid" : "surface"} colorPalette="wood" onClick={() => setShowHoles((v) => !v)}>
             <LuCircleDot />
           </IconButton>
-          <IconButton
-            aria-label={exploded ? "Vista muntada" : "Vista explosionada"}
-            size="sm"
-            variant={exploded ? "solid" : "surface"}
-            colorPalette="wood"
-            onClick={() => setExploded((v) => !v)}
-          >
+          <IconButton aria-label={exploded ? "Vista muntada" : "Vista explosionada"} size="sm" variant={exploded ? "solid" : "surface"} colorPalette="wood" onClick={() => setExploded((v) => !v)}>
             {exploded ? <LuShrink /> : <LuExpand />}
           </IconButton>
         </HStack>
-        <HStack position="absolute" bottom={3} left={3} gap={2}>
+        <HStack position="absolute" bottom={3} left={3} gap={2} display={photoTab ? "none" : "flex"}>
+          {comp.modules.length > 1 && <Badge variant="surface">{comp.modules.length} mòduls · {size.width} mm</Badge>}
           <Badge variant="surface">{panels.length} peces</Badge>
           <Badge variant="surface">{totalHoles} forats</Badge>
         </HStack>
       </Box>
 
-      <Stack order={{ base: 1, md: 0 }} w={{ md: "360px", lg: "400px" }} flexShrink={0} gap={5} pt={{ base: 4, md: 0 }}>
-        <Editable.Root
-          defaultValue={name}
-          onValueCommit={(e) => void renameProject(projectId, e.value)}
-          fontSize="xl"
-          fontWeight="semibold"
-        >
-          <Editable.Preview />
-          <Editable.Input />
-        </Editable.Root>
-        {!isValid && (
-          <Text fontSize="sm" color="fg.error">
-            Hi ha valors fora de rang: el model mostra els darrers paràmetres vàlids.
-          </Text>
+      <Stack display={formHidden ? "none" : "flex"} order={{ base: 1, md: 0 }} w={{ md: `${formWidth}px` }} flexShrink={0} gap={4} pt={{ base: 4, md: 0 }}>
+        <HStack justify="space-between" gap={2}>
+          <Editable.Root defaultValue={name} onValueCommit={(e) => void renameProject(projectId, e.value)} fontSize="xl" fontWeight="semibold" flex={1}>
+            <Editable.Preview />
+            <Editable.Input />
+          </Editable.Root>
+          <HStack gap={1}>
+            <IconButton aria-label="Desfer" title="Desfer" size="sm" variant="ghost" disabled={history.past.length === 0} onClick={undo}>
+              <LuUndo2 />
+            </IconButton>
+            <IconButton aria-label="Refer" title="Refer" size="sm" variant="ghost" disabled={history.future.length === 0} onClick={redo}>
+              <LuRedo2 />
+            </IconButton>
+          </HStack>
+        </HStack>
+
+        <PanelGroup storageKey="mobles:editor-open-section" defaultOpen="compartiments">
+          <Stack gap={0}>
+            <PanelSection id="composicio" title="Composició" icon={LuLayoutDashboard}>
+              <HStack wrap="wrap" gap={2}>
+                <Menu.Root>
+                  <Menu.Trigger asChild>
+                    <Button size="sm" variant="outline">
+                      <LuLayoutTemplate /> Nou des de plantilla
+                    </Button>
+                  </Menu.Trigger>
+                  <Portal>
+                    <Menu.Positioner>
+                      <Menu.Content>
+                        {BUILTIN_TEMPLATES.map((t) => (
+                          <Menu.Item key={t.id} value={t.id} onClick={() => applyTemplate(t.make)}>
+                            <Stack gap={0}>
+                              <Text>{t.name}</Text>
+                              <Text fontSize="xs" color="fg.muted">
+                                {t.description}
+                              </Text>
+                            </Stack>
+                          </Menu.Item>
+                        ))}
+                        {userTemplates.length > 0 && <Menu.Separator />}
+                        {userTemplates.map((t) => (
+                          <Menu.Item key={t.id} value={t.id} onClick={() => applyTemplate(() => structuredClone(t.composition))}>
+                            {t.name}
+                          </Menu.Item>
+                        ))}
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Portal>
+                </Menu.Root>
+                <HStack gap={1} flex={1} minW="180px">
+                  <Input size="sm" placeholder="Nom de la plantilla" value={templateName} onChange={(e) => setTemplateName(e.target.value)} />
+                  <IconButton aria-label="Desar com a plantilla" title="Desar com a plantilla" size="sm" variant="outline" onClick={saveTemplate}>
+                    <LuBookmark />
+                  </IconButton>
+                </HStack>
+              </HStack>
+              <ModuleStrip comp={comp} selectedId={module.id} onSelect={selectModule} onChange={setComp} />
+            </PanelSection>
+
+            <PanelSection id="modul" title="Mòdul seleccionat" icon={LuMoveDiagonal}>
+              <CarcassForm module={module} onChange={updateModule} />
+            </PanelSection>
+
+            <PanelSection id="compartiments" title="Compartiments" icon={LuLayoutPanelLeft}>
+              {moduleBuild && (
+                <Box borderWidth="1px" rounded="lg" p={2} bg="bg.panel">
+                  <ElevationEditor
+                    module={module}
+                    build={moduleBuild}
+                    selectedZoneId={selectedZone}
+                    onSelectZone={setSelectedZone}
+                    references={comp.references}
+                    moduleX={build?.modules[moduleIndex]?.x ?? 0}
+                  />
+                  <Text fontSize="xs" color="fg.muted" textAlign="center">
+                    Toca un compartiment per editar-lo. Llums interiors en mm.
+                  </Text>
+                </Box>
+              )}
+              {zone ? (
+                <ZonePanel root={module.root} zone={zone} openRatio={moduleBuild?.openRatios[zone.id]} onChange={(root) => updateModule({ ...module, root })} onSelect={setSelectedZone} />
+              ) : (
+                <Text fontSize="sm" color="fg.muted">
+                  Toca un compartiment al dibuix per dividir-lo o donar-li contingut.
+                </Text>
+              )}
+            </PanelSection>
+
+            <PanelSection id="fusteria" title="Fusteria" icon={LuHammer}>
+              <JoineryForm module={module} onChange={updateModule} />
+            </PanelSection>
+
+            <OpenOnSignal id="foto" signal={openPhotoSection} />
+            <PanelSection id="foto" title="Adaptar mides a la imatge" icon={LuCamera}>
+              {photoTab ? (
+                <Box ref={setPhotoControls} />
+              ) : (
+                <Stack gap={2} align="flex-start">
+                  <Text fontSize="sm" color="fg.muted">
+                    Superposa la composició a una foto del lloc per ajustar-ne les mides a ull.
+                  </Text>
+                  <Button size="sm" variant="outline" colorPalette="wood" onClick={() => showPhotoTab(true)}>
+                    <LuCamera /> Veure-ho sobre la foto
+                  </Button>
+                </Stack>
+              )}
+            </PanelSection>
+          </Stack>
+        </PanelGroup>
+
+        {warnings.length > 0 && (
+          <Stack gap={2}>
+            <HStack gap={2} color="fg.muted">
+              <LuTriangleAlert />
+              <Text fontSize="sm" fontWeight="semibold">
+                Avisos de fusteria
+              </Text>
+            </HStack>
+            {warnings.map((w, i) => (
+              <Alert.Root key={i} status={w.code === "material-heat" ? "info" : "warning"} size="sm">
+                <Alert.Indicator />
+                <Alert.Content>
+                  <Alert.Description>
+                    {w.moduleId && comp.modules.length > 1 ? `${comp.modules.find((m) => m.id === w.moduleId)?.name ?? ""}: ` : ""}
+                    {w.message}
+                    {w.zoneId && (
+                      <Button
+                        size="xs"
+                        variant="plain"
+                        ml={2}
+                        onClick={() => {
+                          if (w.moduleId) setSelectedModule(w.moduleId)
+                          setSelectedZone(w.zoneId!)
+                        }}
+                      >
+                        Anar-hi
+                      </Button>
+                    )}
+                  </Alert.Description>
+                </Alert.Content>
+              </Alert.Root>
+            ))}
+          </Stack>
         )}
-        <ParamsForm draft={draft} errors={errors} onChange={update} />
       </Stack>
+      {!formHidden && (
+        <ResizeHandle width={formWidth} onWidth={setFormWidth} min={300} max={720} defaultWidth={380} panelSide="left" label="Amplada del panell de paràmetres" />
+      )}
     </Flex>
   )
+}
+
+/** Obre la secció `id` cada cop que canvia `signal` (sense tocar-la en el primer render). */
+function OpenOnSignal({ id, signal }: { id: string; signal: number }) {
+  const group = usePanelGroup()
+  useEffect(() => {
+    if (signal > 0) group?.setOpenId(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signal])
+  return null
 }

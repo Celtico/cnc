@@ -1,26 +1,25 @@
 import { Box, Container, Flex, HStack, Heading, IconButton, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useState } from "react"
 import type { IconType } from "react-icons"
-import { LuArrowLeft, LuBox, LuCamera, LuDownload, LuFolder, LuLayoutGrid, LuList, LuPencilRuler } from "react-icons/lu"
+import { LuArrowLeft, LuBox, LuDownload, LuFolder, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen } from "react-icons/lu"
 import { ColorModeButton } from "./components/ui/color-mode"
 import { Toaster } from "./components/ui/toaster"
+import { Tooltip } from "./components/ui/tooltip"
 import { db } from "./db/db"
-import { CompositionScreen } from "./features/composition/CompositionScreen"
 import { CutListScreen } from "./features/cutlist/CutListScreen"
 import { EditorScreen } from "./features/editor/EditorScreen"
 import { ExportScreen } from "./features/export/ExportScreen"
 import { NestingScreen } from "./features/nesting/NestingScreen"
 import { PhotoScreen } from "./features/photo/PhotoScreen"
 import { ProjectsScreen } from "./features/projects/ProjectsScreen"
+import { usePersistentFlag } from "./features/usePersistentFlag"
 import { useProject } from "./features/useProject"
 
-type Screen = "projects" | "design" | "editor" | "photo" | "cutlist" | "nesting" | "export"
+type Screen = "projects" | "editor" | "photo" | "cutlist" | "nesting" | "export"
 
 const NAV: { id: Screen; label: string; icon: IconType; needsProject: boolean }[] = [
   { id: "projects", label: "Mobles", icon: LuFolder, needsProject: false },
-  { id: "design", label: "Disseny", icon: LuPencilRuler, needsProject: true },
   { id: "editor", label: "Editor", icon: LuBox, needsProject: true },
-  { id: "photo", label: "Foto", icon: LuCamera, needsProject: true },
   { id: "cutlist", label: "Peces", icon: LuList, needsProject: true },
   { id: "nesting", label: "Nesting", icon: LuLayoutGrid, needsProject: true },
   { id: "export", label: "Exportar", icon: LuDownload, needsProject: true },
@@ -41,6 +40,7 @@ export function App() {
   const [screen, setScreen] = useState<Screen>("projects")
   const [projectId, setProjectId] = useState<number | null>(readStoredId)
   const project = useProject(projectId)
+  const [navCollapsed, setNavCollapsed] = usePersistentFlag("mobles:nav-collapsed")
 
   // Si el projecte guardat ja no existeix (esborrat), torna a la llista.
   useEffect(() => {
@@ -75,14 +75,12 @@ export function App() {
   const content =
     screen === "projects" || projectId === null ? (
       <ProjectsScreen onOpen={openProject} />
-    ) : screen === "design" ? (
-      <CompositionScreen projectId={projectId} />
     ) : screen === "editor" ? (
       <EditorScreen projectId={projectId} />
-    ) : screen === "photo" ? (
-      <PhotoScreen projectId={projectId} />
     ) : screen === "cutlist" ? (
       <CutListScreen projectId={projectId} />
+    ) : screen === "photo" ? (
+      <PhotoScreen projectId={projectId} />
     ) : screen === "nesting" ? (
       <NestingScreen projectId={projectId} />
     ) : (
@@ -91,41 +89,62 @@ export function App() {
 
   return (
     <Flex direction={{ base: "column", md: "row" }} flex={1} minH="100dvh">
-      {/* Barra lateral (escriptori) */}
+      {/* Barra lateral (escriptori), plegable a només icones */}
       <Stack
         display={{ base: "none", md: "flex" }}
         as="nav"
-        w="220px"
+        aria-label="Menú principal"
+        w={navCollapsed ? "64px" : "220px"}
+        transition="width 0.2s"
         flexShrink={0}
-        p={4}
+        p={navCollapsed ? 2 : 4}
         gap={1}
         borderRightWidth="1px"
         bg="bg.subtle"
         position="sticky"
         top={0}
         h="100dvh"
+        overflow="hidden"
       >
-        <HStack justify="space-between" mb={4} px={2}>
-          <Heading size="lg" color="wood.fg">
-            Mobles
-          </Heading>
-          <ColorModeButton />
+        <HStack justify={navCollapsed ? "center" : "space-between"} mb={4} px={navCollapsed ? 0 : 2} minH="40px">
+          {!navCollapsed && (
+            <Heading size="lg" color="wood.fg">
+              Mobles
+            </Heading>
+          )}
+          <Tooltip content={navCollapsed ? "Desplegar el menú" : "Plegar el menú"} positioning={{ placement: "right" }}>
+            <IconButton
+              aria-label={navCollapsed ? "Desplegar el menú" : "Plegar el menú"}
+              aria-expanded={!navCollapsed}
+              variant="ghost"
+              size="sm"
+              onClick={() => setNavCollapsed((v) => !v)}
+            >
+              {navCollapsed ? <LuPanelLeftOpen /> : <LuPanelLeftClose />}
+            </IconButton>
+          </Tooltip>
         </HStack>
         {NAV.map((n) => (
           <NavItem
             key={n.id}
             icon={n.icon}
             label={n.label}
+            collapsed={navCollapsed}
             active={screen === n.id}
             disabled={n.needsProject && projectId === null}
             onClick={() => go(n.id)}
           />
         ))}
-        {project && (
-          <Text mt="auto" px={2} fontSize="sm" color="fg.muted" truncate>
-            {project.name}
-          </Text>
-        )}
+        <Stack mt="auto" gap={2} align={navCollapsed ? "center" : "stretch"}>
+          {project && !navCollapsed && (
+            <Text px={2} fontSize="sm" color="fg.muted" truncate>
+              {project.name}
+            </Text>
+          )}
+          <HStack px={navCollapsed ? 0 : 1} justify={navCollapsed ? "center" : "flex-start"}>
+            <ColorModeButton />
+          </HStack>
+        </Stack>
       </Stack>
 
       <Flex direction="column" flex={1} minW={0}>
@@ -158,7 +177,7 @@ export function App() {
 
         <Container
           as="main"
-          maxW="7xl"
+          maxW="none"
           flex={1}
           px={4}
           py={{ base: 4, md: 6 }}
@@ -218,33 +237,43 @@ export function App() {
 function NavItem({
   icon: Icon,
   label,
+  collapsed,
   active,
   disabled,
   onClick,
 }: {
   icon: IconType
   label: string
+  collapsed: boolean
   active: boolean
   disabled: boolean
   onClick: () => void
 }) {
   return (
-    <HStack
-      asChild
-      px={3}
-      py={2}
-      rounded="md"
-      gap={3}
-      bg={active ? "wood.muted" : "transparent"}
-      color={active ? "wood.fg" : disabled ? "fg.subtle" : "fg"}
-      _hover={disabled ? {} : { bg: active ? "wood.muted" : "bg.muted" }}
-      cursor={disabled ? "not-allowed" : "pointer"}
-      fontWeight={active ? "semibold" : "normal"}
-    >
-      <button disabled={disabled} onClick={onClick} aria-current={active ? "page" : undefined}>
-        <Icon />
-        <Text>{label}</Text>
-      </button>
-    </HStack>
+    <Tooltip content={label} disabled={!collapsed} positioning={{ placement: "right" }}>
+      <HStack
+        asChild
+        px={3}
+        py={2}
+        rounded="md"
+        gap={3}
+        justify={collapsed ? "center" : "flex-start"}
+        bg={active ? "wood.muted" : "transparent"}
+        color={active ? "wood.fg" : disabled ? "fg.subtle" : "fg"}
+        _hover={disabled ? {} : { bg: active ? "wood.muted" : "bg.muted" }}
+        cursor={disabled ? "not-allowed" : "pointer"}
+        fontWeight={active ? "semibold" : "normal"}
+      >
+        <button
+          disabled={disabled}
+          onClick={onClick}
+          aria-current={active ? "page" : undefined}
+          aria-label={collapsed ? label : undefined}
+        >
+          <Icon />
+          {!collapsed && <Text>{label}</Text>}
+        </button>
+      </HStack>
+    </Tooltip>
   )
 }

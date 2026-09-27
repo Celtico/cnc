@@ -1,5 +1,5 @@
-import { Button, Card, Collapsible, Field, HStack, Heading, IconButton, Input, NativeSelect, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
-import { LuChevronDown, LuPlus, LuTrash2 } from "react-icons/lu"
+import { Button, Field, HStack, IconButton, Input, NativeSelect, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
+import { LuPlus, LuTrash2 } from "react-icons/lu"
 import { DEFAULT_GRILLE, type Base, type Carcass, type Module, type Top } from "../../core/model"
 import { NumberField } from "../editor/ParamsForm"
 
@@ -9,8 +9,7 @@ export function CarcassForm({ module, onChange }: { module: Module; onChange: (m
   const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
 
   return (
-    <Card.Root variant="outline">
-      <Card.Body gap={4}>
+    <Stack gap={4}>
         <Field.Root>
           <Field.Label>Nom del mòdul</Field.Label>
           <Input size="sm" value={module.name} onChange={(e) => onChange({ ...module, name: e.target.value })} />
@@ -141,41 +140,42 @@ export function CarcassForm({ module, onChange }: { module: Module; onChange: (m
             )
           })}
         </Stack>
+    </Stack>
+  )
+}
 
-        <Collapsible.Root>
-          <Collapsible.Trigger asChild>
-            <HStack as="button" w="full" justify="space-between" py={1} cursor="pointer" color="fg.muted" _hover={{ color: "fg" }}>
-              <Heading size="sm">Materials, gruixos i jocs</Heading>
-              <LuChevronDown />
-            </HStack>
-          </Collapsible.Trigger>
-          <Collapsible.Content>
-            <Stack gap={3} pt={2}>
-              <SimpleGrid columns={2} gap={3}>
-                <Field.Root>
-                  <Field.Label>Material tauler</Field.Label>
-                  <Input size="sm" value={c.material} onChange={(e) => set({ material: e.target.value })} />
-                </Field.Root>
-                <NumberField label="Gruix tauler" value={c.thickness} min={8} max={40} step={1} onChange={(thickness) => set({ thickness })} help="10 · 12 · 16 · 19 · 30" />
-                <Field.Root>
-                  <Field.Label>Material fons</Field.Label>
-                  <Input size="sm" value={c.backMaterial} onChange={(e) => set({ backMaterial: e.target.value })} />
-                </Field.Root>
-                <NumberField label="Gruix fons" value={c.backThickness} min={3} max={20} step={1} onChange={(backThickness) => set({ backThickness })} />
-              </SimpleGrid>
-              <SimpleGrid columns={2} gap={3}>
-                <NumberField label="Joc front–cos" value={module.fronts.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => onChange({ ...module, fronts: { ...module.fronts, outerGap } })} />
-                <NumberField label="Joc entre fronts" value={module.fronts.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => onChange({ ...module, fronts: { ...module.fronts, betweenGap } })} />
-                <NumberField label="Retranqueig prestatge" value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set({ shelfSetback })} />
-                <NumberField label="Ranura des del darrere" value={c.backSetback} min={0} max={60} step={1} onChange={(backSetback) => set({ backSetback })} />
-              </SimpleGrid>
-              <Text fontSize="xs" color="fg.muted">
-                Els ferratges (frontisses, System 32, espigues, guies) prenen els valors per defecte del mòdul.
-              </Text>
-            </Stack>
-          </Collapsible.Content>
-        </Collapsible.Root>
-      </Card.Body>
-    </Card.Root>
+/** Materials, gruixos, jocs: la secció "Fusteria" del mòdul seleccionat. */
+export function JoineryForm({ module, onChange }: { module: Module; onChange: (m: Module) => void }) {
+  const c = module.carcass
+  const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
+  return (
+    <Stack gap={3}>
+      <SimpleGrid columns={2} gap={3}>
+        <Field.Root>
+          <Field.Label>Material tauler</Field.Label>
+          <Input size="sm" value={c.material} onChange={(e) => set({ material: e.target.value })} />
+        </Field.Root>
+        <NumberField label="Gruix tauler" value={c.thickness} min={8} max={40} step={1} onChange={(thickness) => set({ thickness })} help="10 · 12 · 16 · 19 · 30" />
+        <Field.Root>
+          <Field.Label>Material fons</Field.Label>
+          <Input size="sm" value={c.backMaterial} onChange={(e) => set({ backMaterial: e.target.value })} />
+        </Field.Root>
+        <NumberField label="Gruix fons" value={c.backThickness} min={3} max={20} step={1} onChange={(backThickness) => set({ backThickness })} />
+      </SimpleGrid>
+      <SimpleGrid columns={2} gap={3}>
+        <NumberField label="Joc front–cos" value={module.fronts.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => onChange({ ...module, fronts: { ...module.fronts, outerGap } })} />
+        <NumberField label="Joc entre fronts" value={module.fronts.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => onChange({ ...module, fronts: { ...module.fronts, betweenGap } })} />
+        <NumberField label="Retranqueig prest." value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set({ shelfSetback })} />
+        <NumberField label="Ranura del fons" value={c.backSetback} min={0} max={60} step={1} onChange={(backSetback) => set({ backSetback })} help="Distància al cantell posterior" />
+      </SimpleGrid>
+      <SimpleGrid columns={3} gap={3}>
+        <NumberField label="Cassoleta Ø" value={module.hardware.hinge.cupDiameter} min={20} max={40} step={1} onChange={(cupDiameter) => onChange({ ...module, hardware: { ...module.hardware, hinge: { ...module.hardware.hinge, cupDiameter } } })} />
+        <NumberField label="S32 pas" value={module.hardware.system32.pitch} min={16} max={64} step={1} onChange={(pitch) => onChange({ ...module, hardware: { ...module.hardware, system32: { ...module.hardware.system32, pitch } } })} />
+        <NumberField label="Espiga Ø" value={module.hardware.dowel.diameter} min={5} max={12} step={1} onChange={(diameter) => onChange({ ...module, hardware: { ...module.hardware, dowel: { ...module.hardware.dowel, diameter } } })} />
+      </SimpleGrid>
+      <Text fontSize="xs" color="fg.muted">
+        Guies de calaix: {module.hardware.drawer.slideLengths.join(" · ")} mm, joc lateral {module.hardware.drawer.sideClearance} mm per costat.
+      </Text>
+    </Stack>
   )
 }
