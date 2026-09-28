@@ -1,5 +1,6 @@
 import { EDGE_NUMBER, EDGE_SIDES, type Cutout, type Panel, type PanelRole } from "../model"
 import type { Nesting } from "../nesting/nest"
+import { pieceRefs } from "./refs"
 import type { Board, Join, Piece, Role, Side, Solid, UnifiedData } from "./unified.types"
 
 /**
@@ -52,15 +53,6 @@ const ROLE_3D: Record<PanelRole, Role> = {
   grille: "front",
   hatch: "front",
   panel: "front",
-}
-
-/** Lletra de tipus per a la ref: L lateral · H horitzontal · T trassera · F front. */
-const ROLE_LETTER: Record<Role, string> = {
-  lateral: "L",
-  horizontal: "H",
-  back: "T",
-  front: "F",
-  hw: "W",
 }
 
 function sideOf(p: Panel): Side {
@@ -299,15 +291,9 @@ export function toUnifiedData(panels: Panel[], options: UnifiedOptions): Unified
     : virtualLayout(panels, options.sheet ?? DEFAULT_SHEET)
   const { boards } = layout
   const solids = panels.map(toSolid)
-  // Refs: A.<mòdul>.<tipus>.<n>, amb n consecutiu dins de cada mòdul.
-  const counters = new Map<number, number>()
-  const pieces = panels.map((p, i) => {
-    const letter = ROLE_LETTER[ROLE_3D[p.role]]
-    const mod = p.module ?? module
-    const n = (counters.get(mod) ?? 0) + 1
-    counters.set(mod, n)
-    return toPiece(p, i, `A.${mod}.${letter}.${n}`, layout.positionOf(p))
-  })
+  // Refs: A.<mòdul>.<tipus>.<n>, les mateixes que al CSV del taller.
+  const refs = pieceRefs(panels.map((p) => (p.module ? p : { ...p, module })))
+  const pieces = panels.map((p, i) => toPiece(p, i, refs.get(p.id)!, layout.positionOf(p)))
 
   const min = [Infinity, Infinity, Infinity]
   const max = [-Infinity, -Infinity, -Infinity]

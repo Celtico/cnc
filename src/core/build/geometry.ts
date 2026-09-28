@@ -85,6 +85,8 @@ export function addEdgeHole(
   const l = toLocal(panel, w)
   const edge = edgeAt(panel, l)
   if (!edge) return false
+  // El punt ha de ser sobre el contorn de la peça, no només sobre la seva recta.
+  if (l[0] < -EPS || l[0] > panel.length + EPS || l[1] < -EPS || l[1] > panel.width + EPS) return false
   return addHole(panel, {
     x: l[0],
     y: l[1],

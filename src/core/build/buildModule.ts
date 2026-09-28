@@ -301,7 +301,8 @@ class Builder {
       if (!v.outer) continue
       const xFace = near(v.xR, interior.x0) ? v.xR : v.xL
       if (!near(xFace, interior.x0) && !near(xFace, interior.x1)) continue
-      const zs = threeAlong(d.sideZ0, d.D, m.hardware.dowel.endOffset)
+      // Sobre la fondària real de la peça (la tapa amb ranura d'aire és més curta).
+      const zs = threeAlong(zRear, d.D, m.hardware.dowel.endOffset)
       dowelJoint(panel, v.panel, zs.map((z): Vec3 => [xFace, yMid, z]), m.hardware.dowel)
     }
   }
@@ -617,12 +618,15 @@ class Builder {
     const grille = this.buildFrontPanel(zone, ter, "grille", "reixeta", "Reixeta")
     const exclude: Rect[] = []
     let hatchLocal: Rect | undefined
+    // Trapa: obertura més 20 mm de solapament per costat (on van els imants), darrere del front.
+    const lip = 20
     if (front.hatch) {
       // Trapa en coordenades de la zona → locals del front (x local = Y, y local = X).
       const hx = rect.x0 + front.hatch.x
       const hy = rect.y0 + front.hatch.y
       hatchLocal = { x: r(hy - ter.y0), y: r(hx - ter.x0), w: front.hatch.h, h: front.hatch.w }
-      const g = front.pattern.slotGap
+      // Cap ranura dins del solapament de la trapa (hi van els imants) ni a menys d'un pas.
+      const g = lip + front.pattern.slotGap
       exclude.push({ x: hatchLocal.x - g, y: hatchLocal.y - g, w: hatchLocal.w + 2 * g, h: hatchLocal.h + 2 * g })
     }
     const result = grilleCutouts(grille.length, grille.width, front.pattern, exclude)
@@ -635,8 +639,6 @@ class Builder {
 
     if (hatchLocal) {
       grille.cutouts.push({ kind: "rect", ...hatchLocal, tag: "hatch" })
-      // Trapa: obertura més 20 mm de solapament per costat, darrere del front.
-      const lip = 20
       const hw = front.hatch!.w + 2 * lip
       const hh = front.hatch!.h + 2 * lip
       const hx0 = rect.x0 + front.hatch!.x - lip

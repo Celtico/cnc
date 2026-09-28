@@ -1,6 +1,6 @@
-import { Button, Card, HStack, Heading, SimpleGrid, Switch, Text, VStack } from "@chakra-ui/react"
+import { Alert, Button, Card, HStack, Heading, SimpleGrid, Switch, Text, VStack } from "@chakra-ui/react"
 import { useMemo, useState } from "react"
-import { LuBox, LuDownload, LuFileCode, LuFileSpreadsheet, LuFileJson, LuScan } from "react-icons/lu"
+import { LuBoxes, LuCuboid, LuDownload, LuFileDown, LuFileJson, LuLayoutGrid, LuScan, LuScissors } from "react-icons/lu"
 import { PanelDrawing } from "../../components/PanelDrawing"
 import { exportGlb } from "../../components/viewer/exportGlb"
 import { exportUsdz, openQuickLook, supportsQuickLook } from "../../components/viewer/exportUsdz"
@@ -8,6 +8,8 @@ import { toaster } from "../../components/ui/toaster"
 import { toCutList } from "../../core/cutlist/toCutList"
 import { cutListToCsv } from "../../core/export/csv"
 import { dxfLayers, toDxf } from "../../core/export/dxf"
+import { toStep } from "../../core/export/step"
+import { encodeUtf16le, toTopsolidCsv } from "../../core/export/topsolidCsv"
 import { toUnifiedData } from "../../core/export/unified"
 import { downloadBlob, downloadText, slugify } from "../download"
 import { useCompositionPanels, useNesting, useProject } from "../useProject"
@@ -25,6 +27,32 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   if (!project) return null
   const base = slugify(project.name)
 
+  const doStep = () => {
+    const step = toStep(panels, { name: project.name })
+    downloadBlob(new Blob([step.text], { type: "application/step" }), `${base}.step`)
+    if (step.warnings.length) {
+      toaster.create({
+        title: "STEP generat amb avisos",
+        description: `${step.warnings.length} mecanitzats no s'han modelat: ${step.warnings[0]}`,
+        type: "warning",
+      })
+    } else {
+      toaster.create({ title: "STEP generat", description: `${step.solids} sòlids en mm (X amplada, Y fondària, Z amunt)`, type: "success" })
+    }
+  }
+  const doTopsolidCsv = () => {
+    if (!nesting) return
+    const csv = toTopsolidCsv(panels, nesting, { project: project.name })
+    downloadBlob(new Blob([encodeUtf16le(csv.text)], { type: "text/csv" }), `${base}_res.csv`)
+    const tight = csv.rows.filter((r) => !r.labelFits).length
+    toaster.create({
+      title: "CSV de nesting generat",
+      description:
+        `${csv.rows.length} peces en ${nesting.boards.length + csv.unplaced.length} taulers` +
+        (tight ? `. ${tight} peces massa petites per a l'etiqueta (al centre).` : ""),
+      type: csv.unplaced.length ? "warning" : "success",
+    })
+  }
   const doDxf = () => {
     downloadText(toDxf(panels, { labels }), `${base}.dxf`, "application/dxf")
     toaster.create({ title: "DXF generat", description: `${panels.length} peces, ${layers.length} capes`, type: "success" })
@@ -67,6 +95,41 @@ export function ExportScreen({ projectId }: { projectId: number }) {
       <Card.Root variant="outline" bg="wood.subtle">
         <Card.Body gap={3}>
           <HStack color="wood.fg" fontSize="xl">
+            <LuCuboid />
+            <Card.Title fontSize="md">Per al taller (format TopSolid)</Card.Title>
+          </HStack>
+          <Card.Description>
+            Els dos fitxers que el taller carrega a la seva pàgina de pujada, com si sortissin del TopSolid: el STEP amb els
+            sòlids del moble muntat (forats, espigues i ranures inclosos) i el CSV de nesting amb peces, mides, taulers, posició
+            de l'etiqueta, cantells i referències.
+          </Card.Description>
+          {nesting?.unplaced.length ? (
+            <Alert.Root status="warning" size="sm">
+              <Alert.Indicator />
+              <Alert.Content>
+                <Alert.Description>
+                  {nesting.unplaced.length} peces no caben al tauler del nesting: al CSV sortiran en un tauler a mida.
+                </Alert.Description>
+              </Alert.Content>
+            </Alert.Root>
+          ) : null}
+        </Card.Body>
+        <Card.Footer gap={2} flexWrap="wrap">
+          <Button colorPalette="wood" onClick={doStep} disabled={!panels.length}>
+            <LuCuboid /> STEP 3D
+          </Button>
+          <Button colorPalette="wood" variant="outline" onClick={doTopsolidCsv} disabled={!nesting}>
+            <LuLayoutGrid /> CSV de nesting
+          </Button>
+          <Text fontSize="xs" color="fg.muted">
+            {base}.step · {base}_res.csv
+          </Text>
+        </Card.Footer>
+      </Card.Root>
+
+      <Card.Root variant="outline">
+        <Card.Body gap={3}>
+          <HStack color="wood.fg" fontSize="xl">
             <LuScan />
             <Card.Title fontSize="md">Veure'l al racó amb AR</Card.Title>
           </HStack>
@@ -90,12 +153,12 @@ export function ExportScreen({ projectId }: { projectId: number }) {
 
       <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
         <ExportCard
-          icon={<LuFileCode />}
+          icon={<LuScissors />}
           title="DXF per a la CNC"
           description="R12 ASCII. Una peça per bloc, contorn a CONTOUR i forats per diàmetre i profunditat (DRILL_D5_P12, DRILL_D35_P13…)."
           action={
-            <Button colorPalette="wood" onClick={doDxf}>
-              <LuDownload /> Descarregar DXF
+            <Button variant="outline" onClick={doDxf}>
+              <LuScissors /> Descarregar DXF
             </Button>
           }
         >
@@ -114,23 +177,23 @@ export function ExportScreen({ projectId }: { projectId: number }) {
         </ExportCard>
 
         <ExportCard
-          icon={<LuFileSpreadsheet />}
+          icon={<LuFileDown />}
           title="CSV de peces"
           description="Llista agrupada amb mides, quantitat, material, veta i cantells. Separador «;» i decimal amb coma."
           action={
             <Button variant="outline" onClick={doCsv}>
-              <LuDownload /> Descarregar CSV
+              <LuFileDown /> Descarregar CSV
             </Button>
           }
         />
 
         <ExportCard
-          icon={<LuBox />}
+          icon={<LuBoxes />}
           title="GLB (3D)"
           description="Model del moble en metres, per a visors 3D i com a base per a l'AR."
           action={
             <Button variant="outline" onClick={doGlb} loading={busy}>
-              <LuDownload /> Descarregar GLB
+              <LuBoxes /> Descarregar GLB
             </Button>
           }
         />
@@ -138,10 +201,10 @@ export function ExportScreen({ projectId }: { projectId: number }) {
         <ExportCard
           icon={<LuFileJson />}
           title="JSON del taller (UnifiedData)"
-          description={`Contracte de taller-cnc-nest amb peces, sòlids, mecanitzats, unions i el nesting actual (${nesting?.boards.length ?? 0} taulers).`}
+          description={`Per depurar: el contracte de taller-cnc-nest tal com quedaria després de llegir el STEP i el CSV (${nesting?.boards.length ?? 0} taulers). No és el camí de producció.`}
           action={
-            <Button variant="outline" onClick={doJson}>
-              <LuDownload /> Descarregar JSON
+            <Button variant="ghost" onClick={doJson}>
+              <LuFileJson /> Descarregar JSON
             </Button>
           }
         />
