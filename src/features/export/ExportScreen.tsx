@@ -12,6 +12,7 @@ import { toStep } from "../../core/export/step"
 import { encodeUtf16le, toTopsolidCsv } from "../../core/export/topsolidCsv"
 import { toUnifiedData } from "../../core/export/unified"
 import { downloadBlob, downloadText, slugify } from "../download"
+import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
 import { useSettings } from "../settings/SettingsContext"
 import { useCompositionPanels, useNesting, useProject } from "../useProject"
 
@@ -21,6 +22,10 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const nesting = useNesting(panels, project?.nesting)
   const { settings } = useSettings()
   const [labels, setLabels] = useState(true)
+  const estimated = useMemo(() => estimatedApplied(project?.photo), [project?.photo])
+  const warnEstimated = () => {
+    if (estimated.length) toaster.create({ title: ESTIMATED_WARNING, description: `Mides estimades de la foto: ${estimated.map((a) => a.label).join(", ")}.`, type: "warning", duration: 8000 })
+  }
   const [busy, setBusy] = useState(false)
   const [busyAr, setBusyAr] = useState(false)
   const quickLook = supportsQuickLook()
@@ -30,6 +35,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const base = slugify(project.name)
 
   const doStep = () => {
+    warnEstimated()
     const step = toStep(panels, { name: project.name })
     downloadBlob(new Blob([step.text], { type: "application/step" }), `${base}.step`)
     if (step.warnings.length) {
@@ -44,6 +50,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   }
   const doTopsolidCsv = () => {
     if (!nesting) return
+    warnEstimated()
     const csv = toTopsolidCsv(panels, nesting, { project: project.name, label: settings.label })
     downloadBlob(new Blob([encodeUtf16le(csv.text)], { type: "text/csv" }), `${base}_res.csv`)
     const tight = csv.rows.filter((r) => !r.labelFits).length
@@ -56,6 +63,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
     })
   }
   const doDxf = () => {
+    warnEstimated()
     downloadText(toDxf(panels, { labels }), `${base}.dxf`, "application/dxf")
     toaster.create({ title: "DXF generat", description: `${panels.length} peces, ${layers.length} capes`, type: "success" })
   }
@@ -105,6 +113,15 @@ export function ExportScreen({ projectId }: { projectId: number }) {
             sòlids del moble muntat (forats, espigues i ranures inclosos) i el CSV de nesting amb peces, mides, taulers, posició
             de l'etiqueta, cantells i referències.
           </Card.Description>
+          {estimated.length > 0 && (
+            <Alert.Root status="warning" size="sm">
+              <Alert.Indicator />
+              <Alert.Content>
+                <Alert.Title>{ESTIMATED_WARNING}</Alert.Title>
+                <Alert.Description>El moble es basa en mides estimades de la foto: {estimated.map((a) => a.label).join(", ")}. Mesura-les amb cinta abans de tallar.</Alert.Description>
+              </Alert.Content>
+            </Alert.Root>
+          )}
           {nesting?.unplaced.length ? (
             <Alert.Root status="warning" size="sm">
               <Alert.Indicator />

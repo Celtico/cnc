@@ -19,8 +19,7 @@ import {
   LuSave,
   LuShrink,
   LuTriangleAlert,
-  LuUndo2,
-} from "react-icons/lu"
+  LuUndo2, LuScan } from "react-icons/lu"
 import { PanelGroup, PanelSection, usePanelGroup } from "../../components/PanelSection"
 import { ResizeHandle } from "../../components/ResizeHandle"
 import { toaster } from "../../components/ui/toaster"
@@ -35,10 +34,11 @@ import { loadUserTemplates, saveUserTemplate, updateProjectComposition } from ".
 import { renameProject } from "../../db/db"
 import { CarcassForm, JoineryForm } from "../composition/CarcassForm"
 import { ElevationEditor } from "../composition/ElevationEditor"
-import { ModuleStrip } from "../composition/ModuleStrip"
+import { ModuleStrip, ReferencesEditor } from "../composition/ModuleStrip"
 import { ZonePanel } from "../composition/ZonePanel"
 import { SaveFileDialog } from "../file/SaveFileDialog"
 import { PhotoScreen } from "../photo/PhotoScreen"
+import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
 import type { Project } from "../../db/db"
 import { usePersistentFlag } from "../usePersistentFlag"
 import { usePersistentNumber } from "../usePersistentNumber"
@@ -251,6 +251,21 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
 
   const warnings = build?.warnings ?? []
   const totalHoles = panels.reduce((n, p) => n + p.holes.length, 0)
+  // Mesures de la foto aplicades al moble que encara són estimades.
+  const estimated = useMemo(() => estimatedApplied(project.photo), [project.photo])
+
+  /** Aplica una mesura de la foto (mm) a un paràmetre d'un mòdul o d'un objecte de referència. */
+  const applyMeasure = (target: string, value: number) => {
+    const [kind, id, field] = target.split(":")
+    if (kind === "module") {
+      setComp((c) => ({
+        ...c,
+        modules: c.modules.map((m) => (m.id === id && (field === "width" || field === "height" || field === "depth") ? { ...m, carcass: { ...m.carcass, [field]: value } } : m)),
+      }))
+    } else if (kind === "ref") {
+      setComp((c) => ({ ...c, references: c.references.map((r) => (r.id === id && (field === "w" || field === "h" || field === "d") ? { ...r, [field]: value } : r)) }))
+    }
+  }
 
   // Obertura: grups mòbils, els del compartiment seleccionat i les col·lisions.
   const groups = useMemo(() => movingGroups(panels), [panels])
@@ -312,7 +327,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
       >
         {photoTab ? (
           <Box position="absolute" inset={0} overflowY="auto" pt={14} px={3} pb={3}>
-            <PhotoScreen projectId={projectId} panels={panels} embedded controlsTarget={photoControls} />
+            <PhotoScreen projectId={projectId} panels={panels} embedded controlsTarget={photoControls} composition={comp} onApplyMeasure={applyMeasure} />
           </Box>
         ) : (
           <CabinetViewer
@@ -454,7 +469,11 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
               <ModuleStrip comp={comp} selectedId={module.id} onSelect={selectModule} onChange={setComp} newModule={(id, name) => applySettingsToModule(settings, defaultModule(id, name))} />
             </PanelSection>
 
-            <PanelSection id="modul" title="Mòdul seleccionat" icon={LuMoveDiagonal}>
+            <PanelSection id="referencies" title="Objectes de referència" icon={LuScan}>
+              <ReferencesEditor comp={comp} onChange={setComp} />
+            </PanelSection>
+
+            <PanelSection id="modul" title={`Mòdul: ${module.name}`} icon={LuMoveDiagonal}>
               <CarcassForm module={module} onChange={updateModule} />
             </PanelSection>
 
@@ -508,6 +527,16 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             </PanelSection>
           </Stack>
         </PanelGroup>
+
+        {estimated.length > 0 && (
+          <Alert.Root status="warning" size="sm">
+            <Alert.Indicator />
+            <Alert.Content>
+              <Alert.Title>{ESTIMATED_WARNING}</Alert.Title>
+              <Alert.Description>Basat en la foto: {estimated.map((a) => a.label).join(", ")}. Mesura-ho amb cinta abans de tallar.</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        )}
 
         {collisions.length > 0 && (
           <Stack gap={2}>

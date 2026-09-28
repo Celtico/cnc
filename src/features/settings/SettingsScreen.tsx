@@ -113,7 +113,7 @@ function SettingsEditor({ initial, save }: { initial: Settings; save: (s: Settin
   }
 
   return (
-    <Stack gap={5} maxW="760px">
+    <Stack gap={5} w="full">
       <HStack justify="space-between" wrap="wrap" gap={3}>
         <Heading size="xl">Preferències</Heading>
         <HStack>

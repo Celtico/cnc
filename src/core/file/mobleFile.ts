@@ -15,9 +15,23 @@ const mm = z.number().finite()
 const Pt = z.tuple([mm, mm])
 
 /** Calibratge de la foto (mateixos camps que `PhotoCalibration` de la base de dades, sense l'id de la foto). */
+const MeasureSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  kind: z.enum(["distance", "rect"]),
+  points: z.array(Pt),
+  tape: mm.nullable().optional(),
+})
+
 export const FileCalibrationSchema = z.object({
   points: z.array(Pt),
-  ref: z.object({ w: mm, h: mm }),
+  ref: z.object({ w: mm.nullable(), h: mm.nullable() }),
+  refAspect: mm.nullable().optional(),
+  measures: z.array(MeasureSchema).optional(),
+  floorLine: z.tuple([Pt, Pt]).optional(),
+  applied: z.array(z.object({ measureId: z.string(), target: z.string(), label: z.string() })).optional(),
+  opacity: mm.optional(),
+  layer: z.enum(["photo", "cabinet", "both"]).optional(),
   plane: z.enum(["wall", "floor"]),
   focal35: mm,
   origin: Pt.optional(),

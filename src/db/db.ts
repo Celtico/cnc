@@ -3,14 +3,33 @@ import { DEFAULT_CABINET, parseCabinetParams, type CabinetParams } from "../core
 import { DEFAULT_NEST_OPTIONS, NestOptionsSchema, type NestOptions } from "../core/nesting/nest"
 import type { Pt } from "../core/photo/homography"
 import type { ReferencePlane } from "../core/photo/camera"
+import type { Measure } from "../core/photo/measure"
+
+/** Una mesura de la foto aplicada a un paràmetre del moble: es recorda per avisar si és estimada. */
+export interface AppliedMeasure {
+  measureId: string
+  /** `module:<id>:width|height|depth` o `ref:<id>:w|h|d`. */
+  target: string
+  label: string
+}
 
 /** Calibració de la foto d'un projecte. Les mides reals les entra l'usuari. */
 export interface PhotoCalibration {
   photoId: number
   /** 4 punts (px de la imatge): baix-esquerra, baix-dreta, dalt-dreta, dalt-esquerra. */
   points: Pt[]
-  /** Mida real del rectangle de referència (mm). */
-  ref: { w: number; h: number }
+  /** Mides conegudes del rectangle de referència (mm); null si no se saben (només relatiu). */
+  ref: { w: number | null; h: number | null }
+  /** Forma coneguda (amplada/alçada) quan les mides no se saben (p. ex. un A4). */
+  refAspect?: number | null
+  /** Mesures sobre la foto (distàncies i rectangles), amb la mida amb cinta si n'hi ha. */
+  measures?: Measure[]
+  /** Línia del terra: 2 punts on la paret toca el terra. */
+  floorLine?: [Pt, Pt]
+  applied?: AppliedMeasure[]
+  /** Opacitat del moble superposat (0..1) i capes visibles. */
+  opacity?: number
+  layer?: "photo" | "cabinet" | "both"
   plane: ReferencePlane
   /** Focal equivalent a 35 mm (de l'EXIF o ajustada a mà). */
   focal35: number

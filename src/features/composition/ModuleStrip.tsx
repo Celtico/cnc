@@ -1,5 +1,5 @@
-import { Badge, Box, Button, Card, HStack, IconButton, Menu, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import { LuArrowLeft, LuArrowRight, LuBookmark, LuBox, LuCopy, LuPlus, LuScan, LuTrash2 } from "react-icons/lu"
+import { Badge, Box, Button, Card, HStack, IconButton, Input, Menu, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { LuArrowLeft, LuArrowRight, LuBookmark, LuBox, LuCopy, LuPlus, LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import {
   BUILTIN_TEMPLATES,
@@ -57,6 +57,9 @@ export function ModuleStrip({
     ;[modules[i], modules[j]] = [modules[j]!, modules[i]!]
     onChange({ ...comp, modules })
   }
+  const rename = (i: number, name: string) => {
+    onChange({ ...comp, modules: comp.modules.map((m, k) => (k === i ? { ...m, name } : m)) })
+  }
   const setGap = (i: number, gapBefore: number) => {
     const modules = comp.modules.map((m, k) => (k === i ? { ...m, gapBefore } : m))
     onChange({ ...comp, modules })
@@ -79,9 +82,23 @@ export function ModuleStrip({
             >
               <Card.Body gap={1} p={3}>
                 <HStack justify="space-between">
-                  <Text fontWeight="semibold" truncate>
-                    {i + 1}. {m.name}
-                  </Text>
+                  {selected ? (
+                    <HStack gap={1} flex={1} minW={0} onClick={(e) => e.stopPropagation()}>
+                      <Text fontWeight="semibold">{i + 1}.</Text>
+                      <Input
+                        size="xs"
+                        variant="flushed"
+                        fontWeight="semibold"
+                        aria-label="Nom del mòdul"
+                        value={m.name}
+                        onChange={(e) => rename(i, e.target.value)}
+                      />
+                    </HStack>
+                  ) : (
+                    <Text fontWeight="semibold" truncate>
+                      {i + 1}. {m.name}
+                    </Text>
+                  )}
                   <Badge variant="subtle" size="sm">
                     x {xs[i]}
                   </Badge>
@@ -137,12 +154,11 @@ export function ModuleStrip({
         </Menu.Root>
       </HStack>
 
-      <ReferencesEditor comp={comp} onChange={onChange} />
     </Stack>
   )
 }
 
-function ReferencesEditor({ comp, onChange }: { comp: Composition; onChange: (c: Composition) => void }) {
+export function ReferencesEditor({ comp, onChange }: { comp: Composition; onChange: (c: Composition) => void }) {
   const { settings, save } = useSettings()
   const presets = visibleReferences(settings)
   const update = (i: number, patch: Partial<RefObject>) =>
@@ -158,13 +174,10 @@ function ReferencesEditor({ comp, onChange }: { comp: Composition; onChange: (c:
 
   return (
     <Stack gap={2}>
-      <HStack justify="space-between">
-        <HStack gap={2} color="fg.muted">
-          <LuScan />
-          <Text fontSize="sm" fontWeight="semibold">
-            Objectes de referència (fantasma)
-          </Text>
-        </HStack>
+      <HStack justify="space-between" align="flex-start">
+        <Text fontSize="sm" color="fg.muted">
+          Objectes que no formen part del moble (radiador, tele...) i es veuen translúcids per comprovar que tot hi cap.
+        </Text>
         <Menu.Root>
           <Menu.Trigger asChild>
             <Button size="xs" variant="ghost">
@@ -216,13 +229,13 @@ function ReferencesEditor({ comp, onChange }: { comp: Composition; onChange: (c:
                 <LuTrash2 />
               </IconButton>
             </HStack>
-            <SimpleGrid columns={{ base: 3, md: 6 }} gap={2}>
+            <SimpleGrid columns={3} gap={2}>
               <NumberField label="Ample" value={o.w} min={1} max={5000} step={10} onChange={(w) => update(i, { w })} />
               <NumberField label="Alt" value={o.h} min={1} max={5000} step={10} onChange={(h) => update(i, { h })} />
               <NumberField label="Fondària" value={o.d} min={1} max={5000} step={10} onChange={(d) => update(i, { d })} />
               <NumberField label="X" value={o.x} min={-5000} max={10000} step={10} onChange={(x) => update(i, { x })} />
-              <NumberField label="Y (alçada)" value={o.y} min={-5000} max={5000} step={10} onChange={(y) => update(i, { y })} />
-              <NumberField label="Z (des del darrere)" value={o.z} min={-5000} max={5000} step={10} onChange={(z) => update(i, { z })} />
+              <NumberField label="Y" value={o.y} min={-5000} max={5000} step={10} onChange={(y) => update(i, { y })} />
+              <NumberField label="Z" value={o.z} min={-5000} max={5000} step={10} onChange={(z) => update(i, { z })} />
             </SimpleGrid>
           </Card.Body>
         </Card.Root>

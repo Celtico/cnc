@@ -35,12 +35,15 @@ export async function projectToMoble(project: Project, settings: Settings, inclu
   let photo: FilePhoto | undefined
   let calibration: MobleFile["project"]["photo"]
   if (project.photo) {
-    const { photoId: _id, origin, ...cal } = project.photo
+    const { photoId: _id, origin, measures, floorLine, ...cal } = project.photo
+    const pt = (p: readonly [number, number]): [number, number] => [p[0], p[1]]
     calibration = {
       ...cal,
-      points: cal.points.map((p) => [p[0], p[1]] as [number, number]),
-      offset: [cal.offset[0], cal.offset[1]],
-      ...(origin ? { origin: [origin[0], origin[1]] as [number, number] } : {}),
+      points: cal.points.map(pt),
+      offset: pt(cal.offset),
+      ...(origin ? { origin: pt(origin) } : {}),
+      ...(measures ? { measures: measures.map((m) => ({ ...m, points: m.points.map(pt) })) } : {}),
+      ...(floorLine ? { floorLine: [pt(floorLine[0]), pt(floorLine[1])] as [[number, number], [number, number]] } : {}),
     }
     if (includePhoto) {
       const p = await db.photos.get(project.photo.photoId)
