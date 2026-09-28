@@ -10,6 +10,12 @@ import type { Cutout, Groove, Hole, Panel } from "../model"
  * - Ranures: POLYLINE tancada a GROOVE_W{ample}_P{prof}.
  * - Etiqueta amb el nom a la capa LABEL.
  * Coordenades en mm, sense escalar.
+ *
+ * Amb `threeD` (per defecte), cada entitat porta alçada Z i gruix d'extrusió (codis 30/38 i
+ * 39), com fan els CAM de fusteria: el contorn és una llosa de 0 al gruix de la peça, els
+ * forats i ranures de la cara A baixen des de dalt (Z = gruix, gruix d'extrusió =
+ * −profunditat), els de la cara B pugen des de baix i els talls passants travessen tota la
+ * peça. Els visors el mostren en 3D i les capes continuen dient diàmetre i profunditat.
  */
 
 export const LAYER_CONTOUR = "CONTOUR"
@@ -24,6 +30,8 @@ export interface DxfOptions {
   maxRowWidth?: number
   /** Escriure el nom de la peça com a TEXT. */
   labels?: boolean
+  /** Z i gruix d'extrusió a cada entitat (DXF «3D» / 2,5D). Per defecte, sí. */
+  threeD?: boolean
 }
 
 const EOL = "\r\n"
@@ -74,11 +82,22 @@ function pairs(...items: Pair[]): string {
   return items.map(([code, value]) => `${code}${EOL}${value}`).join(EOL) + EOL
 }
 
-/** Polilínia tancada. Cada vèrtex pot portar `bulge` (codi 42) per a l'arc fins al següent. */
-function polyline(layer: string, pts: ([number, number] | [number, number, number])[]): string {
-  let out = pairs([0, "POLYLINE"], [8, layer], [66, "1"], [70, "1"], [10, "0.0"], [20, "0.0"], [30, "0.0"])
+/** Alçada i gruix d'extrusió d'una entitat (mm). */
+interface Z {
+  z: number
+  t: number
+}
+const FLAT: Z = { z: 0, t: 0 }
+
+/**
+ * Polilínia tancada. Cada vèrtex pot portar `bulge` (codi 42) per a l'arc fins al següent.
+ * `z` és l'elevació (codi 30 de la capçalera i dels vèrtexs) i `t` el gruix d'extrusió (39).
+ */
+function polyline(layer: string, pts: ([number, number] | [number, number, number])[], zz: Z = FLAT): string {
+  let out = pairs([0, "POLYLINE"], [8, layer], [66, "1"], [70, "1"], [10, "0.0"], [20, "0.0"], [30, fmt(zz.z)])
+  if (zz.t) out += pairs([39, fmt(zz.t)])
   for (const [x, y, bulge] of pts) {
-    out += pairs([0, "VERTEX"], [8, layer], [10, fmt(x)], [20, fmt(y)], [30, "0.0"])
+    out += pairs([0, "VERTEX"], [8, layer], [10, fmt(x)], [20, fmt(y)], [30, fmt(zz.z)])
     if (bulge) out += pairs([42, fmt(bulge)])
   }
   out += pairs([0, "SEQEND"], [8, layer])
@@ -86,75 +105,100 @@ function polyline(layer: string, pts: ([number, number] | [number, number, numbe
 }
 
 /** Entitat DXF d'un tall passant. Les ranures fan servir bulge = 1 (semicercles exactes). */
-function cutoutEntity(c: Cutout): string {
-  if (c.kind === "circle") return circle(LAYER_CUT_THROUGH, c.x, c.y, c.diameter / 2)
+function cutoutEntity(c: Cutout, zz: Z = FLAT): string {
+  if (c.kind === "circle") return circle(LAYER_CUT_THROUGH, c.x, c.y, c.diameter / 2, zz)
   if (c.kind === "rect") {
-    return polyline(LAYER_CUT_THROUGH, [
-      [c.x, c.y],
-      [c.x + c.w, c.y],
-      [c.x + c.w, c.y + c.h],
-      [c.x, c.y + c.h],
-    ])
+    return polyline(
+      LAYER_CUT_THROUGH,
+      [
+        [c.x, c.y],
+        [c.x + c.w, c.y],
+        [c.x + c.w, c.y + c.h],
+        [c.x, c.y + c.h],
+      ],
+      zz,
+    )
   }
   const horizontal = c.w >= c.h
   const rad = Math.min(c.w, c.h) / 2
   if (horizontal) {
     // Extrems rodons a esquerra i dreta.
-    return polyline(LAYER_CUT_THROUGH, [
-      [c.x + rad, c.y],
-      [c.x + c.w - rad, c.y, 1],
-      [c.x + c.w - rad, c.y + c.h],
-      [c.x + rad, c.y + c.h, 1],
-    ])
+    return polyline(
+      LAYER_CUT_THROUGH,
+      [
+        [c.x + rad, c.y],
+        [c.x + c.w - rad, c.y, 1],
+        [c.x + c.w - rad, c.y + c.h],
+        [c.x + rad, c.y + c.h, 1],
+      ],
+      zz,
+    )
   }
-  return polyline(LAYER_CUT_THROUGH, [
-    [c.x + c.w, c.y + rad],
-    [c.x + c.w, c.y + c.h - rad, 1],
-    [c.x, c.y + c.h - rad],
-    [c.x, c.y + rad, 1],
-  ])
+  return polyline(
+    LAYER_CUT_THROUGH,
+    [
+      [c.x + c.w, c.y + rad],
+      [c.x + c.w, c.y + c.h - rad, 1],
+      [c.x, c.y + c.h - rad],
+      [c.x, c.y + rad, 1],
+    ],
+    zz,
+  )
 }
 
-function circle(layer: string, x: number, y: number, radius: number): string {
-  return pairs([0, "CIRCLE"], [8, layer], [10, fmt(x)], [20, fmt(y)], [30, "0.0"], [40, fmt(radius)])
+function circle(layer: string, x: number, y: number, radius: number, zz: Z = FLAT): string {
+  return pairs([0, "CIRCLE"], [8, layer], ...(zz.t ? ([[39, fmt(zz.t)]] as Pair[]) : []), [10, fmt(x)], [20, fmt(y)], [30, fmt(zz.z)], [40, fmt(radius)])
 }
 
-function text(layer: string, x: number, y: number, height: number, value: string): string {
+function text(layer: string, x: number, y: number, height: number, value: string, z = 0): string {
   return pairs(
     [0, "TEXT"],
     [8, layer],
     [10, fmt(x)],
     [20, fmt(y)],
-    [30, "0.0"],
+    [30, fmt(z)],
     [40, fmt(height)],
     [1, value],
   )
 }
 
 /** Entitats d'una peça amb l'origen a (0,0). */
-export function panelEntities(panel: Panel, labels = true): string {
-  const { length: L, width: W } = panel
-  let out = polyline(LAYER_CONTOUR, [
-    [0, 0],
-    [L, 0],
-    [L, W],
-    [0, W],
-  ])
+export function panelEntities(panel: Panel, labels = true, threeD = true): string {
+  const { length: L, width: W, thickness: T } = panel
+  // Cara A a dalt (Z = T): hi baixen els mecanitzats; cara B a baix (Z = 0): hi pugen.
+  const down = (depth: number): Z => (threeD ? { z: T, t: -Math.min(depth, T) } : FLAT)
+  const up = (depth: number): Z => (threeD ? { z: 0, t: Math.min(depth, T) } : FLAT)
+  let out = polyline(
+    LAYER_CONTOUR,
+    [
+      [0, 0],
+      [L, 0],
+      [L, W],
+      [0, W],
+    ],
+    threeD ? { z: 0, t: T } : FLAT,
+  )
   for (const g of panel.grooves) {
-    out += polyline(grooveLayer(g), [
-      [g.x, g.y],
-      [g.x + g.w, g.y],
-      [g.x + g.w, g.y + g.h],
-      [g.x, g.y + g.h],
-    ])
+    out += polyline(
+      grooveLayer(g),
+      [
+        [g.x, g.y],
+        [g.x + g.w, g.y],
+        [g.x + g.w, g.y + g.h],
+        [g.x, g.y + g.h],
+      ],
+      g.face === "B" ? up(g.depth) : down(g.depth),
+    )
   }
   for (const h of panel.holes) {
-    out += circle(holeLayer(h), h.x, h.y, h.diameter / 2)
+    // Els de cantell (horitzontals) es marquen al punt d'entrada, a mig gruix.
+    const zz = h.face === "edge" ? (threeD ? { z: T / 2, t: 0 } : FLAT) : h.face === "B" ? up(h.depth) : down(h.depth)
+    out += circle(holeLayer(h), h.x, h.y, h.diameter / 2, zz)
   }
-  for (const c of panel.cutouts ?? []) out += cutoutEntity(c)
+  for (const c of panel.cutouts ?? []) out += cutoutEntity(c, threeD ? { z: 0, t: T } : FLAT)
   if (labels) {
     const h = Math.max(5, Math.min(20, W / 12))
-    out += text(LAYER_LABEL, h, h, h, `${panel.name} ${fmt(L)}x${fmt(W)}x${fmt(panel.thickness)}`)
+    out += text(LAYER_LABEL, h, h, h, `${panel.name} ${fmt(L)}x${fmt(W)}x${fmt(panel.thickness)}`, threeD ? T : 0)
   }
   return out
 }
@@ -184,7 +228,7 @@ export function arrangePanels(panels: Panel[], gap: number, maxRowWidth: number)
   return placed
 }
 
-function header(extMax: [number, number]): string {
+function header(extMax: [number, number, number]): string {
   return pairs(
     [0, "SECTION"],
     [2, "HEADER"],
@@ -197,7 +241,7 @@ function header(extMax: [number, number]): string {
     [9, "$EXTMAX"],
     [10, fmt(extMax[0])],
     [20, fmt(extMax[1])],
-    [30, "0.0"],
+    [30, fmt(extMax[2])],
     [0, "ENDSEC"],
   )
 }
@@ -228,12 +272,12 @@ function tables(layers: string[]): string {
   return out
 }
 
-function blocks(panels: Panel[], labels: boolean): string {
+function blocks(panels: Panel[], labels: boolean, threeD: boolean): string {
   let out = pairs([0, "SECTION"], [2, "BLOCKS"])
   for (const p of panels) {
     const name = blockName(p)
     out += pairs([0, "BLOCK"], [8, "0"], [2, name], [70, "0"], [10, "0.0"], [20, "0.0"], [30, "0.0"], [3, name])
-    out += panelEntities(p, labels)
+    out += panelEntities(p, labels, threeD)
     out += pairs([0, "ENDBLK"], [8, "0"])
   }
   out += pairs([0, "ENDSEC"])
@@ -254,17 +298,19 @@ export function toDxf(panels: Panel[], options: DxfOptions = {}): string {
   const gap = options.gap ?? 100
   const maxRowWidth = options.maxRowWidth ?? 3000
   const labels = options.labels ?? true
+  const threeD = options.threeD ?? true
 
   const placed = arrangePanels(panels, gap, maxRowWidth)
-  const extMax: [number, number] = [
+  const extMax: [number, number, number] = [
     Math.max(0, ...placed.map((p) => p.x + p.panel.length)),
     Math.max(0, ...placed.map((p) => p.y + p.panel.width)),
+    threeD ? Math.max(0, ...panels.map((p) => p.thickness)) : 0,
   ]
 
   return (
     header(extMax) +
     tables(dxfLayers(panels, labels)) +
-    blocks(panels, labels) +
+    blocks(panels, labels, threeD) +
     entities(placed) +
     pairs([0, "EOF"])
   )

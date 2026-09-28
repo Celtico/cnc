@@ -6,6 +6,7 @@ import {
   arrangePanels,
   dxfLayers,
   fmt,
+  holeLayer,
   panelToDxf,
   parseDxfEntities,
   parseDxfPairs,
@@ -161,5 +162,26 @@ describe("talls passants → capa CUT_THROUGH", () => {
   it("el contorn continua a CONTOUR, separat", () => {
     const contours = entities.filter((e) => e.type === "POLYLINE" && e.layer === "CONTOUR")
     expect(contours).toHaveLength(panels.length)
+  })
+})
+
+describe("DXF 3D (gruix i profunditats)", () => {
+  const p = panels.find((x) => x.holes.some((h) => h.face === "A"))!
+  const out = toDxf([p])
+  const flat = toDxf([p], { threeD: false })
+
+  it("el contorn és una llosa del gruix de la peça", () => {
+    expect(out).toMatch(new RegExp(`POLYLINE\\r\\n8\\r\\nCONTOUR\\r\\n66\\r\\n1\\r\\n70\\r\\n1\\r\\n10\\r\\n0\\.0\\r\\n20\\r\\n0\\.0\\r\\n30\\r\\n0\\.0\\r\\n39\\r\\n${fmt(p.thickness).replace(".", "\\.")}\\r\\n`))
+  })
+
+  it("els forats de la cara A baixen des de dalt: Z = gruix, extrusió = −profunditat", () => {
+    const h = p.holes.find((x) => x.face === "A")!
+    const block = out.slice(out.indexOf(holeLayer(h)) - 30)
+    expect(block).toContain(`39\r\n${fmt(-h.depth)}\r\n`)
+    expect(out).toContain(`30\r\n${fmt(p.thickness)}\r\n40\r\n${fmt(h.diameter / 2)}`)
+  })
+
+  it("sense 3D no hi ha cap gruix d'extrusió", () => {
+    expect(flat).not.toMatch(/\r\n39\r\n/)
   })
 })

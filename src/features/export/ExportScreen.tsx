@@ -1,5 +1,6 @@
 import { Alert, Box, Button, Card, HStack, Stack, Switch, Text, VStack } from "@chakra-ui/react"
 import { useMemo, useState } from "react"
+import { usePersistentFlag } from "../usePersistentFlag"
 import { LuBoxes, LuCuboid, LuDownload, LuFileDown, LuFileJson, LuScissors, LuWrench } from "react-icons/lu"
 import { PanelGroup, PanelSection } from "../../components/PanelSection"
 import { exportGlb } from "../../components/viewer/exportGlb"
@@ -22,6 +23,8 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const nesting = useNesting(panels, project?.nesting)
   const { settings } = useSettings()
   const [labels, setLabels] = useState(true)
+  // DXF «3D»: gruix de cada peça i profunditat de cada mecanitzat com a Z i extrusió.
+  const [dxf3d, setDxf3d] = usePersistentFlag("mobles:dxf-3d", true)
   const estimated = useMemo(() => estimatedApplied(project?.photo), [project?.photo])
   const warnEstimated = () => {
     if (estimated.length) toaster.create({ title: ESTIMATED_WARNING, description: `Mides estimades de la foto: ${estimated.map((a) => a.label).join(", ")}.`, type: "warning", duration: 8000 })
@@ -63,7 +66,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   }
   const doDxf = () => {
     warnEstimated()
-    downloadText(toDxf(panels, { labels }), `${base}.dxf`, "application/dxf")
+    downloadText(toDxf(panels, { labels, threeD: dxf3d }), `${base}.dxf`, "application/dxf")
     toaster.create({ title: "DXF generat", description: `${panels.length} peces, ${layers.length} capes`, type: "success" })
   }
   const doCsv = () => downloadText(cutListToCsv(toCutList(panels)), `${base}-peces.csv`, "text/csv")
@@ -160,6 +163,11 @@ export function ExportScreen({ projectId }: { projectId: number }) {
           <Switch.HiddenInput />
           <Switch.Control />
           <Switch.Label>Etiquetes amb el nom de la peça (capa LABEL)</Switch.Label>
+        </Switch.Root>
+        <Switch.Root checked={dxf3d} onCheckedChange={(e) => setDxf3d(e.checked)} size="sm">
+          <Switch.HiddenInput />
+          <Switch.Control />
+          <Switch.Label>3D: gruix de la peça i profunditat de forats i ranures (Z i extrusió)</Switch.Label>
         </Switch.Root>
       </ExportCard>
 
