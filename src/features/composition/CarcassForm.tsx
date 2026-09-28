@@ -1,7 +1,9 @@
 import { Button, Field, HStack, IconButton, Input, NativeSelect, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
 import { LuPlus, LuTrash2 } from "react-icons/lu"
-import { DEFAULT_GRILLE, type Base, type Carcass, type Module, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
 import { NumberField } from "../editor/ParamsForm"
+import { useSettings } from "../settings/SettingsContext"
+import { MaterialSelect } from "../settings/SettingsScreen"
 
 /** Formulari de la carcassa i dels jocs del mòdul seleccionat. */
 export function CarcassForm({ module, onChange }: { module: Module; onChange: (m: Module) => void }) {
@@ -147,21 +149,30 @@ export function CarcassForm({ module, onChange }: { module: Module; onChange: (m
 /** Materials, gruixos, jocs: la secció "Fusteria" del mòdul seleccionat. */
 export function JoineryForm({ module, onChange }: { module: Module; onChange: (m: Module) => void }) {
   const c = module.carcass
+  const { settings } = useSettings()
   const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
+  const mat = materialByName(settings, c.material)
+  const backMat = materialByName(settings, c.backMaterial)
+  /** En triar un material, si el gruix actual no és dels seus, s'agafa el més proper. */
+  const pickMaterial = (key: "material" | "backMaterial", thicknessKey: "thickness" | "backThickness") => (name: string) => {
+    const m = materialByName(settings, name)
+    const current = c[thicknessKey]
+    const thickness = m && !m.thicknesses.includes(current) ? m.thicknesses.reduce((a, b) => (Math.abs(b - current) < Math.abs(a - current) ? b : a)) : current
+    set({ [key]: name, [thicknessKey]: thickness })
+  }
   return (
     <Stack gap={3}>
       <SimpleGrid columns={2} gap={3}>
-        <Field.Root>
-          <Field.Label>Material tauler</Field.Label>
-          <Input size="sm" value={c.material} onChange={(e) => set({ material: e.target.value })} />
-        </Field.Root>
-        <NumberField label="Gruix tauler" value={c.thickness} min={8} max={40} step={1} onChange={(thickness) => set({ thickness })} help="10 · 12 · 16 · 19 · 30" />
-        <Field.Root>
-          <Field.Label>Material fons</Field.Label>
-          <Input size="sm" value={c.backMaterial} onChange={(e) => set({ backMaterial: e.target.value })} />
-        </Field.Root>
-        <NumberField label="Gruix fons" value={c.backThickness} min={3} max={20} step={1} onChange={(backThickness) => set({ backThickness })} />
+        <MaterialSelect label="Material tauler" materials={settings.materials.filter((m) => !m.forBacks)} value={c.material} onChange={pickMaterial("material", "thickness")} />
+        <NumberField label="Gruix tauler" value={c.thickness} min={8} max={40} step={1} onChange={(thickness) => set({ thickness })} help={mat ? mat.thicknesses.join(" · ") : "10 · 12 · 16 · 19 · 30"} />
+        <MaterialSelect label="Material fons" materials={settings.materials} value={c.backMaterial} onChange={pickMaterial("backMaterial", "backThickness")} />
+        <NumberField label="Gruix fons" value={c.backThickness} min={3} max={20} step={1} onChange={(backThickness) => set({ backThickness })} help={backMat ? backMat.thicknesses.join(" · ") : undefined} />
       </SimpleGrid>
+      {mat?.edge && (
+        <Text fontSize="xs" color="fg.muted">
+          Cantell del material: {mat.edge}
+        </Text>
+      )}
       <SimpleGrid columns={2} gap={3}>
         <NumberField label="Joc front–cos" value={module.fronts.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => onChange({ ...module, fronts: { ...module.fronts, outerGap } })} />
         <NumberField label="Joc entre fronts" value={module.fronts.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => onChange({ ...module, fronts: { ...module.fronts, betweenGap } })} />

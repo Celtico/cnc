@@ -19,7 +19,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { createPortal } from "react-dom"
 import { LuCamera, LuImagePlus, LuLocateFixed, LuRotateCcw, LuTrash2, LuX } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
-import type { Panel, PanelRole } from "../../core/model"
+import { visibleReferences, type Panel, type PanelRole } from "../../core/model"
 import {
   DEFAULT_FOCAL_35,
   cameraFromHomography,
@@ -44,18 +44,9 @@ import { useLiveQuery } from "../../db/useLiveQuery"
 import { ResizeHandle } from "../../components/ResizeHandle"
 import { NumberField } from "../editor/ParamsForm"
 import { usePersistentNumber } from "../usePersistentNumber"
+import { useSettings } from "../settings/SettingsContext"
 import { useCabinet, useProject } from "../useProject"
 
-const REF_PRESETS: { label: string; w: number; h: number; wall?: number }[] = [
-  { label: "Full A4 vertical (210 × 297)", w: 210, h: 297 },
-  { label: "Full A4 horitzontal (297 × 210)", w: 297, h: 210 },
-  { label: "Rajola 300 × 300", w: 300, h: 300 },
-  { label: "Rajola 600 × 600", w: 600, h: 600 },
-  { label: "Rajola 600 × 300", w: 600, h: 300 },
-  { label: "Porta 800 × 2030", w: 800, h: 2030 },
-  { label: "Porta 700 × 2030", w: 700, h: 2030 },
-  { label: "TV Sony KD-55XD8505, pantalla sense peu (1231 × 717)", w: 1231, h: 717, wall: 200 },
-]
 
 const POINT_NAMES = ["baix-esquerra", "baix-dreta", "dalt-dreta", "dalt-esquerra"]
 
@@ -94,6 +85,8 @@ export function PhotoScreen({
   controlsTarget?: HTMLElement | null
 }) {
   const project = useProject(projectId)
+  const { settings } = useSettings()
+  const firstRef = visibleReferences(settings)[0]
   const savedPanels = useCabinet(project?.params)
   const panels = livePanels ?? savedPanels
   const photoId = project?.photo?.photoId
@@ -122,8 +115,9 @@ export function PhotoScreen({
       await updateProjectPhoto(projectId, {
         photoId: id,
         points: [],
-        ref: { w: REF_PRESETS[0]!.w, h: REF_PRESETS[0]!.h },
-        plane: "wall",
+        ref: { w: firstRef?.w ?? 210, h: firstRef?.h ?? 297 },
+        plane: firstRef?.plane ?? "wall",
+        refWallOffset: firstRef?.wallOffset ?? 0,
         focal35: exif.focal35 ?? DEFAULT_FOCAL_35,
         offset: [0, 0],
       })
@@ -415,7 +409,9 @@ function PhotoCalibrator({
     drag.current = null
   }
 
-  const presetKey = REF_PRESETS.findIndex((r) => r.w === cal.ref.w && r.h === cal.ref.h)
+  const { settings } = useSettings()
+  const presets = visibleReferences(settings)
+  const presetKey = presets.findIndex((r) => r.w === cal.ref.w && r.h === cal.ref.h && (r.wallOffset ?? 0) === (cal.refWallOffset ?? 0))
   // "A mida" és una tria de l'usuari, no només "cap preset coincideix": si no ho
   // recordem, el desplegable torna al preset i no deixa triar-la.
   const refMode = customRef || presetKey < 0 ? "custom" : String(presetKey)
@@ -586,16 +582,16 @@ function PhotoCalibrator({
                     setCustomRef(true)
                     return
                   }
-                  const r = REF_PRESETS[Number(e.target.value)]
+                  const r = presets[Number(e.target.value)]
                   if (r) {
                     setCustomRef(false)
-                    setCal((c) => ({ ...c, ref: { w: r.w, h: r.h }, refWallOffset: r.wall ?? 0 }))
+                    setCal((c) => ({ ...c, ref: { w: r.w, h: r.h }, refWallOffset: r.wallOffset ?? 0, plane: r.plane }))
                   }
                 }}
               >
-                {REF_PRESETS.map((r, i) => (
-                  <option key={r.label} value={String(i)}>
-                    {r.label}
+                {presets.map((r, i) => (
+                  <option key={r.id} value={String(i)}>
+                    {r.name} ({r.w} × {r.h})
                   </option>
                 ))}
                 <option value="custom">A mida</option>

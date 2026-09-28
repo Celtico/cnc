@@ -1,0 +1,86 @@
+import { describe, expect, it } from "vitest"
+import { defaultModule } from "./composition"
+import {
+  BUILTIN_REFERENCES,
+  DEFAULT_SETTINGS,
+  SettingsSchema,
+  applySettingsToModule,
+  canBeGhost,
+  parseSettings,
+  settingsFromJson,
+  settingsToJson,
+  sheetFor,
+  visibleReferences,
+} from "./settings"
+
+describe("preferències", () => {
+  it("els valors inicials són vàlids", () => {
+    expect(SettingsSchema.safeParse(DEFAULT_SETTINGS).success).toBe(true)
+    const tv = DEFAULT_SETTINGS.references.find((r) => r.id === "tv-sony-55-screen")!
+    expect(tv).toMatchObject({ w: 1231, h: 717, d: 44, wallOffset: 200 })
+    expect(DEFAULT_SETTINGS.references.find((r) => r.id === "tv-sony-55-stand")).toMatchObject({ w: 1231, h: 770, d: 263 })
+  })
+
+  it("migra unes preferències d'una versió anterior (sense version i amb `wall`)", () => {
+    const old = {
+      references: [{ id: "x", name: "Tele vella", w: 1000, h: 600, plane: "wall", wall: 150 }],
+      hardware: DEFAULT_SETTINGS.hardware,
+    }
+    const res = parseSettings(old)
+    expect(res.migrated).toBe(true)
+    expect(res.problems).toEqual([])
+    expect(res.settings.version).toBe(1)
+    expect(res.settings.references[0]).toMatchObject({ name: "Tele vella", wallOffset: 150 })
+    // Els valors inicials no es perden mai.
+    for (const b of BUILTIN_REFERENCES) expect(res.settings.references.some((r) => r.id === b.id)).toBe(true)
+    expect(res.settings.label).toEqual({ w: 99, h: 68 })
+  })
+
+  it("importar un JSON invàlid no trenca res i ho diu", () => {
+    const bad = settingsFromJson("{ no és json")
+    expect(bad.settings).toEqual(DEFAULT_SETTINGS)
+    expect(bad.problems[0]).toMatch(/JSON/)
+
+    const partial = settingsFromJson(JSON.stringify({ version: 1, materials: [{ id: "m", name: "Sense gruixos", thicknesses: [], hasGrain: false, finish: { kind: "color", color: "#fff" }, edge: "" }], label: { w: 5, h: 5 } }))
+    expect(partial.problems.length).toBeGreaterThanOrEqual(2)
+    expect(partial.settings.materials.length).toBeGreaterThan(0)
+    expect(partial.settings.label).toEqual({ w: 99, h: 68 })
+    expect(SettingsSchema.safeParse(partial.settings).success).toBe(true)
+  })
+
+  it("exportar i tornar a importar és idèntic", () => {
+    const res = settingsFromJson(settingsToJson(DEFAULT_SETTINGS))
+    expect(res.settings).toEqual(DEFAULT_SETTINGS)
+    expect(res.problems).toEqual([])
+  })
+
+  it("una referència creada per l'usuari surt a la llista i les amagades no", () => {
+    const s = parseSettings({
+      ...DEFAULT_SETTINGS,
+      references: [{ id: "u1", name: "Radiador menjador", w: 650, h: 1100, d: 110, plane: "wall", wallOffset: 0 }, ...DEFAULT_SETTINGS.references.map((r) => (r.id === "a4-v" ? { ...r, hidden: true } : r))],
+    }).settings
+    const visible = visibleReferences(s)
+    expect(visible[0]!.name).toBe("Radiador menjador")
+    expect(visible.some((r) => r.id === "a4-v")).toBe(false)
+  })
+
+  it("només els objectes amb fondària poden ser fantasma 3D", () => {
+    expect(canBeGhost(DEFAULT_SETTINGS.references.find((r) => r.id === "a4-v")!)).toBe(false)
+    expect(canBeGhost(DEFAULT_SETTINGS.references.find((r) => r.id === "tv-sony-55-stand")!)).toBe(true)
+  })
+
+  it("un mòdul nou pren ferratges, jocs i materials de les preferències", () => {
+    const s = { ...DEFAULT_SETTINGS, gaps: { ...DEFAULT_SETTINGS.gaps, outerGap: 3 }, defaults: { ...DEFAULT_SETTINGS.defaults, material: "MDF lacat", thickness: 22 } }
+    const m = applySettingsToModule(s, defaultModule("m", "Nou"))
+    expect(m.fronts.outerGap).toBe(3)
+    expect(m.carcass.material).toBe("MDF lacat")
+    expect(m.carcass.thickness).toBe(22)
+    expect(m.hardware).toEqual(DEFAULT_SETTINGS.hardware)
+  })
+
+  it("mida de tauler per material, amb la regla buida com a comodí", () => {
+    const s = { ...DEFAULT_SETTINGS, boards: { ...DEFAULT_SETTINGS.boards, sheets: [{ material: "", w: 2800, h: 2070 }, { material: "DM (fons)", w: 2440, h: 1220 }] } }
+    expect(sheetFor(s, "DM (fons)")).toEqual({ w: 2440, h: 1220 })
+    expect(sheetFor(s, "Melamina blanca")).toEqual({ w: 2800, h: 2070 })
+  })
+})

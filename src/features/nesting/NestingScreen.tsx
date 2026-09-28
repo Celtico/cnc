@@ -9,6 +9,7 @@ import {
   SimpleGrid,
   Stack,
   Stat,
+  Switch,
   Text,
   VStack,
 } from "@chakra-ui/react"
@@ -17,6 +18,7 @@ import { BoardDrawing } from "../../components/BoardDrawing"
 import { STANDARD_SHEETS, type NestOptions } from "../../core/nesting/nest"
 import { updateProjectNesting } from "../../db/db"
 import { NumberField } from "../editor/ParamsForm"
+import { useSettings } from "../settings/SettingsContext"
 import { useCompositionPanels, useNesting, useProject } from "../useProject"
 
 export function NestingScreen({ projectId }: { projectId: number }) {
@@ -38,8 +40,15 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
   }, [options, projectId, initial])
 
   const byId = useMemo(() => new Map(panels.map((p) => [p.id, p])), [panels])
+  const { settings } = useSettings()
   const sheetKey = `${options.sheet.w}x${options.sheet.h}`
-  const standardKey = STANDARD_SHEETS.find((s) => `${s.w}x${s.h}` === sheetKey) ? sheetKey : "custom"
+  // Taulers estàndard més els de les preferències (sense repetir).
+  const sheets = useMemo(() => {
+    const out = [...STANDARD_SHEETS]
+    for (const s of settings.boards.sheets) if (!out.some((x) => x.w === s.w && x.h === s.h)) out.push({ label: `${s.w} × ${s.h}`, w: s.w, h: s.h })
+    return out
+  }, [settings])
+  const standardKey = sheets.find((s) => `${s.w}x${s.h}` === sheetKey) ? sheetKey : "custom"
 
   return (
     <VStack align="stretch" gap={5}>
@@ -53,12 +62,12 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
               size="sm"
               value={standardKey}
               onValueChange={(e) => {
-                const s = STANDARD_SHEETS.find((x) => `${x.w}x${x.h}` === e.value)
+                const s = sheets.find((x) => `${x.w}x${x.h}` === e.value)
                 if (s) setOptions((o) => ({ ...o, sheet: { w: s.w, h: s.h } }))
               }}
             >
               <SegmentGroup.Indicator />
-              {STANDARD_SHEETS.map((s) => (
+              {sheets.map((s) => (
                 <SegmentGroup.Item key={s.label} value={`${s.w}x${s.h}`}>
                   <SegmentGroup.ItemText>{s.label}</SegmentGroup.ItemText>
                   <SegmentGroup.ItemHiddenInput />
@@ -78,6 +87,19 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
             <NumberField label="Kerf (fresa)" value={options.kerf} min={0} max={30} step={0.5} onChange={(kerf) => setOptions((o) => ({ ...o, kerf }))} />
             <NumberField label="Marge tauler" value={options.margin} min={0} max={100} step={1} onChange={(margin) => setOptions((o) => ({ ...o, margin }))} />
           </SimpleGrid>
+          <Switch.Root size="sm" checked={!!options.ignoreGrain} onCheckedChange={(e) => setOptions((o) => ({ ...o, ignoreGrain: e.checked || undefined }))}>
+            <Switch.HiddenInput />
+            <Switch.Control />
+            <Switch.Label>Permetre girar les peces encara que tinguin veta</Switch.Label>
+          </Switch.Root>
+          {options.sheetsByMaterial && Object.keys(options.sheetsByMaterial).length > 0 && (
+            <Text fontSize="xs" color="fg.muted">
+              Taulers per material (de les preferències):{" "}
+              {Object.entries(options.sheetsByMaterial)
+                .map(([m, s]) => `${m} ${s.w} × ${s.h}`)
+                .join(" · ")}
+            </Text>
+          )}
         </Card.Body>
       </Card.Root>
 

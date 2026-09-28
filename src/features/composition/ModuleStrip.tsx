@@ -1,15 +1,19 @@
 import { Badge, Box, Button, Card, HStack, IconButton, Menu, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import { LuArrowLeft, LuArrowRight, LuBox, LuCopy, LuPlus, LuScan, LuTrash2 } from "react-icons/lu"
+import { LuArrowLeft, LuArrowRight, LuBookmark, LuBox, LuCopy, LuPlus, LuScan, LuTrash2 } from "react-icons/lu"
+import { toaster } from "../../components/ui/toaster"
 import {
   BUILTIN_TEMPLATES,
+  canBeGhost,
   defaultModule,
   moduleOrigins,
   newId,
+  visibleReferences,
   type Composition,
   type Module,
   type RefObject,
 } from "../../core/model"
 import { NumberField } from "../editor/ParamsForm"
+import { useSettings } from "../settings/SettingsContext"
 
 /** Franja de mòduls (d'esquerra a dreta) i objectes de referència. */
 export function ModuleStrip({
@@ -17,11 +21,14 @@ export function ModuleStrip({
   selectedId,
   onSelect,
   onChange,
+  newModule = defaultModule,
 }: {
   comp: Composition
   selectedId: string | null
   onSelect: (id: string) => void
   onChange: (c: Composition) => void
+  /** Com es crea una caixa buida (amb les preferències de l'usuari aplicades). */
+  newModule?: (id: string, name: string) => Module
 }) {
   const xs = moduleOrigins(comp)
 
@@ -116,7 +123,7 @@ export function ModuleStrip({
           <Portal>
             <Menu.Positioner>
               <Menu.Content>
-                <Menu.Item value="empty" onClick={() => addModule(defaultModule(newId("m"), `Mòdul ${comp.modules.length + 1}`))}>
+                <Menu.Item value="empty" onClick={() => addModule(newModule(newId("m"), `Mòdul ${comp.modules.length + 1}`))}>
                   <LuBox /> Caixa buida
                 </Menu.Item>
                 {BUILTIN_TEMPLATES.filter((t) => t.make().modules.length === 1).map((t) => (
@@ -136,11 +143,18 @@ export function ModuleStrip({
 }
 
 function ReferencesEditor({ comp, onChange }: { comp: Composition; onChange: (c: Composition) => void }) {
+  const { settings, save } = useSettings()
+  const presets = visibleReferences(settings)
   const update = (i: number, patch: Partial<RefObject>) =>
     onChange({ ...comp, references: comp.references.map((o, k) => (k === i ? { ...o, ...patch } : o)) })
   const remove = (i: number) => onChange({ ...comp, references: comp.references.filter((_, k) => k !== i) })
-  const add = () =>
-    onChange({ ...comp, references: [...comp.references, { id: newId("r"), name: "Objecte", w: 600, h: 600, d: 100, x: 0, y: 0, z: 0 }] })
+  const add = (o: Omit<RefObject, "id" | "x" | "y" | "z"> & Partial<Pick<RefObject, "z">>) =>
+    onChange({ ...comp, references: [...comp.references, { id: newId("r"), x: 0, y: 0, z: 0, ...o }] })
+  /** Desa l'objecte a la llista de preferències (foto i editor), p. ex. "Radiador menjador". */
+  const saveAsPreset = (o: RefObject) => {
+    void save({ ...settings, references: [{ id: newId("ref"), name: o.name, w: o.w, h: o.h, d: o.d, plane: "wall", wallOffset: Math.max(0, o.z) }, ...settings.references] })
+    toaster.create({ title: `«${o.name}» desat a les preferències`, type: "success" })
+  }
 
   return (
     <Stack gap={2}>
@@ -151,9 +165,38 @@ function ReferencesEditor({ comp, onChange }: { comp: Composition; onChange: (c:
             Objectes de referència (fantasma)
           </Text>
         </HStack>
-        <Button size="xs" variant="ghost" onClick={add}>
-          <LuPlus /> Afegir
-        </Button>
+        <Menu.Root>
+          <Menu.Trigger asChild>
+            <Button size="xs" variant="ghost">
+              <LuPlus /> Afegir
+            </Button>
+          </Menu.Trigger>
+          <Portal>
+            <Menu.Positioner>
+              <Menu.Content maxH="60vh" overflowY="auto">
+                <Menu.Item value="custom" onClick={() => add({ name: "Objecte", w: 600, h: 600, d: 100 })}>
+                  Objecte a mida
+                </Menu.Item>
+                {presets.filter(canBeGhost).length > 0 && <Menu.Separator />}
+                {presets.filter(canBeGhost).map((r) => (
+                  <Menu.Item key={r.id} value={r.id} onClick={() => add({ name: r.name, w: r.w, h: r.h, d: r.d!, z: r.wallOffset })}>
+                    <Stack gap={0}>
+                      <Text>{r.name}</Text>
+                      <Text fontSize="xs" color="fg.muted">
+                        {r.w} × {r.h} × {r.d}
+                      </Text>
+                    </Stack>
+                  </Menu.Item>
+                ))}
+                {presets.some((r) => !canBeGhost(r)) && (
+                  <Text fontSize="xs" color="fg.muted" px={3} py={2}>
+                    Les referències sense fondària (A4, rajoles) només serveixen per a la foto.
+                  </Text>
+                )}
+              </Menu.Content>
+            </Menu.Positioner>
+          </Portal>
+        </Menu.Root>
       </HStack>
       {comp.references.map((o, i) => (
         <Card.Root key={o.id} variant="subtle" size="sm">
@@ -166,6 +209,9 @@ function ReferencesEditor({ comp, onChange }: { comp: Composition; onChange: (c:
                   style={{ background: "transparent", border: "none", outline: "none", fontWeight: 600, fontSize: 16, color: "inherit", width: "100%" }}
                 />
               </Box>
+              <IconButton aria-label="Desar a les preferències" title="Desar a les preferències" size="xs" variant="ghost" onClick={() => saveAsPreset(o)}>
+                <LuBookmark />
+              </IconButton>
               <IconButton aria-label="Eliminar objecte" size="xs" variant="ghost" colorPalette="red" onClick={() => remove(i)}>
                 <LuTrash2 />
               </IconButton>

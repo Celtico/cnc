@@ -1,5 +1,5 @@
 import { Alert, Badge, Box, Button, Editable, Flex, HStack, IconButton, Input, Menu, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   LuBookmark,
   LuBox,
@@ -22,7 +22,8 @@ import { PanelGroup, PanelSection, usePanelGroup } from "../../components/PanelS
 import { ResizeHandle } from "../../components/ResizeHandle"
 import { toaster } from "../../components/ui/toaster"
 import { CabinetViewer, type ViewerModule } from "../../components/viewer/CabinetViewer"
-import { BUILTIN_TEMPLATES, compositionWidth, defaultModule, findZone, newId, type Composition, type Module } from "../../core/model"
+import { BUILTIN_TEMPLATES, applySettingsToModule, compositionWidth, defaultModule, findZone, newId, type Composition, type Module } from "../../core/model"
+import { useSettings } from "../settings/SettingsContext"
 import { loadUserTemplates, saveUserTemplate, updateProjectComposition } from "../../db/compositionStore"
 import { renameProject } from "../../db/db"
 import { CarcassForm, JoineryForm } from "../composition/CarcassForm"
@@ -79,16 +80,42 @@ function Editor({ projectId, name, initial }: { projectId: number; name: string;
   }
   const [templateName, setTemplateName] = useState("")
   const [userTemplates, setUserTemplates] = useState(loadUserTemplates)
+  const { settings } = useSettings()
 
   const build = useCompositionBuild(comp)
   const panels = build?.panels ?? []
 
-  // Desa amb retard quan la composició canvia.
+  // Desa amb retard quan la composició canvia. Si se surt de l'Editor (o es tanca
+  // l'app) abans del retard, el canvi pendent es desa igualment: si no, Exportar
+  // llegiria la versió anterior.
+  const pendingSave = useRef<Composition | null>(null)
   useEffect(() => {
     if (comp === initial) return
-    const t = setTimeout(() => void updateProjectComposition(projectId, comp), 350)
+    pendingSave.current = comp
+    const t = setTimeout(() => {
+      pendingSave.current = null
+      void updateProjectComposition(projectId, comp)
+    }, 350)
     return () => clearTimeout(t)
   }, [comp, projectId, initial])
+  useEffect(() => {
+    const flush = () => {
+      const c = pendingSave.current
+      if (!c) return
+      pendingSave.current = null
+      void updateProjectComposition(projectId, c)
+    }
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flush()
+    }
+    document.addEventListener("visibilitychange", onHide)
+    window.addEventListener("pagehide", flush)
+    return () => {
+      document.removeEventListener("visibilitychange", onHide)
+      window.removeEventListener("pagehide", flush)
+      flush() // en sortir de l'Editor
+    }
+  }, [projectId])
 
   const module: Module = comp.modules.find((m) => m.id === selectedModule) ?? comp.modules[0]!
   const moduleIndex = comp.modules.indexOf(module)
@@ -128,15 +155,20 @@ function Editor({ projectId, name, initial }: { projectId: number; name: string;
 
   /** Enganxa un mòdul nou al costat del seleccionat, amb la mateixa alçada i fondària. */
   const addModuleBeside = (side: "left" | "right") => {
-    const m = defaultModule(newId("m"), `Mòdul ${comp.modules.length + 1}`, {
-      width: 600,
-      height: module.carcass.height,
-      depth: module.carcass.depth,
-      material: module.carcass.material,
-      thickness: module.carcass.thickness,
-      base: module.carcass.base,
-      back: module.carcass.back,
-    })
+    const fresh = applySettingsToModule(settings, defaultModule(newId("m"), `Mòdul ${comp.modules.length + 1}`))
+    const m: Module = {
+      ...fresh,
+      carcass: {
+        ...fresh.carcass,
+        width: 600,
+        height: module.carcass.height,
+        depth: module.carcass.depth,
+        material: module.carcass.material,
+        thickness: module.carcass.thickness,
+        base: module.carcass.base,
+        back: module.carcass.back,
+      },
+    }
     const modules = [...comp.modules]
     modules.splice(side === "left" ? moduleIndex : moduleIndex + 1, 0, { ...m, gapBefore: 0 })
     setComp({ ...comp, modules })
@@ -302,7 +334,7 @@ function Editor({ projectId, name, initial }: { projectId: number; name: string;
                   </IconButton>
                 </HStack>
               </HStack>
-              <ModuleStrip comp={comp} selectedId={module.id} onSelect={selectModule} onChange={setComp} />
+              <ModuleStrip comp={comp} selectedId={module.id} onSelect={selectModule} onChange={setComp} newModule={(id, name) => applySettingsToModule(settings, defaultModule(id, name))} />
             </PanelSection>
 
             <PanelSection id="modul" title="Mòdul seleccionat" icon={LuMoveDiagonal}>

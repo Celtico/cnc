@@ -1,7 +1,7 @@
 import { Box, Container, Flex, HStack, Heading, IconButton, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useState } from "react"
 import type { IconType } from "react-icons"
-import { LuArrowLeft, LuBox, LuDownload, LuFolder, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen } from "react-icons/lu"
+import { LuArrowLeft, LuBox, LuDownload, LuFolder, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSettings } from "react-icons/lu"
 import { ColorModeButton } from "./components/ui/color-mode"
 import { Toaster } from "./components/ui/toaster"
 import { Tooltip } from "./components/ui/tooltip"
@@ -12,10 +12,13 @@ import { ExportScreen } from "./features/export/ExportScreen"
 import { NestingScreen } from "./features/nesting/NestingScreen"
 import { PhotoScreen } from "./features/photo/PhotoScreen"
 import { ProjectsScreen } from "./features/projects/ProjectsScreen"
+import { SettingsScreen } from "./features/settings/SettingsScreen"
+import { useSettings } from "./features/settings/SettingsContext"
+import { UnitContext } from "./features/units"
 import { usePersistentFlag } from "./features/usePersistentFlag"
 import { useProject } from "./features/useProject"
 
-type Screen = "projects" | "editor" | "photo" | "cutlist" | "nesting" | "export"
+type Screen = "projects" | "editor" | "photo" | "cutlist" | "nesting" | "export" | "settings"
 
 const NAV: { id: Screen; label: string; icon: IconType; needsProject: boolean }[] = [
   { id: "projects", label: "Mobles", icon: LuFolder, needsProject: false },
@@ -23,6 +26,7 @@ const NAV: { id: Screen; label: string; icon: IconType; needsProject: boolean }[
   { id: "cutlist", label: "Peces", icon: LuList, needsProject: true },
   { id: "nesting", label: "Nesting", icon: LuLayoutGrid, needsProject: true },
   { id: "export", label: "Exportar", icon: LuDownload, needsProject: true },
+  { id: "settings", label: "Preferències", icon: LuSettings, needsProject: false },
 ]
 
 const STORAGE_KEY = "mobles:current-project"
@@ -40,6 +44,7 @@ export function App() {
   const [screen, setScreen] = useState<Screen>("projects")
   const [projectId, setProjectId] = useState<number | null>(readStoredId)
   const project = useProject(projectId)
+  const { settings } = useSettings()
   const [navCollapsed, setNavCollapsed] = usePersistentFlag("mobles:nav-collapsed")
 
   // Si el projecte guardat ja no existeix (esborrat), torna a la llista.
@@ -73,7 +78,9 @@ export function App() {
   }
 
   const content =
-    screen === "projects" || projectId === null ? (
+    screen === "settings" ? (
+      <SettingsScreen />
+    ) : screen === "projects" || projectId === null ? (
       <ProjectsScreen onOpen={openProject} />
     ) : screen === "editor" ? (
       <EditorScreen projectId={projectId} />
@@ -88,6 +95,7 @@ export function App() {
     )
 
   return (
+    <UnitContext.Provider value={settings.display.unit}>
     <Flex direction={{ base: "column", md: "row" }} flex={1} minH="100dvh">
       {/* Barra lateral (escriptori), plegable a només icones */}
       <Stack
@@ -169,7 +177,7 @@ export function App() {
               </IconButton>
             )}
             <Heading size="md" truncate>
-              {screen === "projects" ? "Mobles" : project?.name ?? "Mobles"}
+              {screen === "projects" ? "Mobles" : screen === "settings" ? "Preferències" : project?.name ?? "Mobles"}
             </Heading>
           </HStack>
           <ColorModeButton />
@@ -231,6 +239,7 @@ export function App() {
 
       <Toaster />
     </Flex>
+    </UnitContext.Provider>
   )
 }
 

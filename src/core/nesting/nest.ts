@@ -34,6 +34,10 @@ export const NestOptionsSchema = z.object({
   kerf: z.number().min(0).max(30),
   /** Marge de tauler que no s'aprofita (cantell danyat, subjecció). */
   margin: z.number().min(0).max(100),
+  /** Mida de tauler per a materials concrets (la resta fan servir `sheet`). */
+  sheetsByMaterial: z.record(z.string(), SheetSchema).optional(),
+  /** Permet girar les peces 90° encara que tinguin veta. */
+  ignoreGrain: z.boolean().optional(),
 })
 export type NestOptions = z.infer<typeof NestOptionsSchema>
 
@@ -79,9 +83,10 @@ export interface Nesting {
 }
 
 /** Orientacions permeses per la veta: [w, h, angle] de la petjada. */
-function orientations(p: Panel): [number, number, 0 | 90][] {
+function orientations(p: Panel, ignoreGrain = false): [number, number, 0 | 90][] {
   const flat: [number, number, 0 | 90] = [p.length, p.width, 0]
   const turned: [number, number, 0 | 90] = [p.width, p.length, 90]
+  if (ignoreGrain) return [flat, turned]
   if (p.grain === "x") return [flat]
   if (p.grain === "y") return [turned]
   return [flat, turned]
@@ -106,9 +111,8 @@ interface OpenBoard {
 const r = (v: number): number => Math.round(v * 100) / 100
 
 export function nest(panels: Panel[], options: NestOptions = DEFAULT_NEST_OPTIONS): Nesting {
-  const { sheet, kerf, margin } = options
-  const usableW = sheet.w - 2 * margin
-  const usableH = sheet.h - 2 * margin
+  const { kerf, margin } = options
+  const ignoreGrain = options.ignoreGrain ?? false
 
   // Agrupa per material i gruix, en ordre d'aparició.
   const groups = new Map<string, Panel[]>()
@@ -125,18 +129,21 @@ export function nest(panels: Panel[], options: NestOptions = DEFAULT_NEST_OPTION
 
   for (const group of groups.values()) {
     const first = group[0]!
+    const sheet = options.sheetsByMaterial?.[first.material] ?? options.sheet
+    const usableW = sheet.w - 2 * margin
+    const usableH = sheet.h - 2 * margin
     const open: OpenBoard[] = []
 
     // Ordre: alçada de la petjada preferida descendent, després àrea descendent.
     const sorted = [...group].sort((a, b) => {
-      const ha = orientations(a)[0]![1]
-      const hb = orientations(b)[0]![1]
+      const ha = orientations(a, ignoreGrain)[0]![1]
+      const hb = orientations(b, ignoreGrain)[0]![1]
       if (hb !== ha) return hb - ha
       return b.length * b.width - a.length * a.width
     })
 
     for (const p of sorted) {
-      const fits = orientations(p).filter(([w, h]) => w <= usableW && h <= usableH)
+      const fits = orientations(p, ignoreGrain).filter(([w, h]) => w <= usableW && h <= usableH)
       if (fits.length === 0) {
         unplaced.push(p.id)
         continue

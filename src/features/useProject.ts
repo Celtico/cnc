@@ -6,6 +6,8 @@ import { compositionOf } from "../db/compositionStore"
 import { nest, type Nesting, type NestOptions } from "../core/nesting/nest"
 import { db, safeNestOptions, safeParams, type Project } from "../db/db"
 import { useLiveQuery } from "../db/useLiveQuery"
+import { type Settings } from "../core/model"
+import { useSettings } from "./settings/SettingsContext"
 
 export function useProjects(): Project[] | undefined {
   return useLiveQuery(() => db.projects.orderBy("updatedAt").reverse().toArray(), [])
@@ -14,14 +16,29 @@ export function useProjects(): Project[] | undefined {
 /** Projecte amb `params` i `nesting` sempre complets (defectes aplicats). */
 export type LoadedProject = Project & { nesting: NestOptions }
 
+/** Opcions de nesting per a un projecte que encara no en té: de les preferències. */
+export function nestOptionsFromSettings(s: Settings): NestOptions {
+  const general = s.boards.sheets.find((x) => x.material === "") ?? s.boards.sheets[0]!
+  const byMaterial: Record<string, { w: number; h: number }> = {}
+  for (const x of s.boards.sheets) if (x.material) byMaterial[x.material] = { w: x.w, h: x.h }
+  return {
+    sheet: { w: general.w, h: general.h },
+    kerf: s.boards.kerf,
+    margin: s.boards.margin,
+    ...(Object.keys(byMaterial).length ? { sheetsByMaterial: byMaterial } : {}),
+    ...(s.boards.ignoreGrain ? { ignoreGrain: true } : {}),
+  }
+}
+
 export function useProject(id: number | null): LoadedProject | undefined {
   const project = useLiveQuery(() => (id === null ? undefined : db.projects.get(id)), [id])
+  const { settings } = useSettings()
   return useMemo(
     () =>
       project
-        ? { ...project, params: safeParams(project.params), nesting: safeNestOptions(project.nesting) }
+        ? { ...project, params: safeParams(project.params), nesting: safeNestOptions(project.nesting, nestOptionsFromSettings(settings)) }
         : undefined,
-    [project],
+    [project, settings],
   )
 }
 

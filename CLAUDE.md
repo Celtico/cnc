@@ -29,6 +29,9 @@ amb mobles reals de casa meva, no que ho faci tot.
   amb referència, mesures **relatives / estimades / reals**, recalibratge i moble superposat.
 - [`docs/prompt/PROMPT-preferencies.md`](docs/prompt/PROMPT-preferencies.md): pantalla de
   **Preferències** (referències de foto, materials, taulers, ferratges, jocs, etiquetes).
+- [`docs/prompt/PROMPT-fitxer-moble.md`](docs/prompt/PROMPT-fitxer-moble.md): **desar i
+  obrir mobles com a fitxer `.moble`** (JSON versionat, amb foto opcional). Després de
+  l'editor de compartiments.
 - [`docs/prompt/PROMPT-moble-tv-radiador.md`](docs/prompt/PROMPT-moble-tv-radiador.md):
   **substituït** per l'editor de compartiments (referència del disseny del cobreradiador).
 - [`docs/prompt/PROMPT-export-taller.md`](docs/prompt/PROMPT-export-taller.md): **export
@@ -199,6 +202,7 @@ Accions principals: icona + text.
 | Composició | Plantilles · Desar com a plantilla | `LuLayoutTemplate` · `LuBookmark` |
 | Panell | Mides exteriors · Taulers · Interior i front · Fusteria · Adaptar a la imatge | `LuMoveDiagonal` · `LuSquareStack` · `LuLayoutPanelLeft` · `LuHammer` · `LuCamera` |
 | Panell | Composició (mòduls i objectes de referència) · Compartiments (alçat) | `LuLayoutDashboard` · `LuLayoutPanelLeft` |
+| Fitxer | Desar com a fitxer · Obrir fitxer | `LuSave` · `LuFolderOpen` |
 | Estat | Avisos de fusteria · Desfer · Refer | `LuTriangleAlert` · `LuUndo2` · `LuRedo2` |
 | Foto | Foto · Referència · Distància · Rectangle | `LuCamera` · `LuCrosshair` · `LuMoveHorizontal` · `LuRectangleHorizontal` |
 | Foto | Origen (0,0) · Treure/tancar | `LuLocateFixed` · `LuX` |

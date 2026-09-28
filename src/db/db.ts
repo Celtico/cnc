@@ -57,9 +57,17 @@ export interface Project {
 
 export type NewProject = Omit<Project, "id">
 
+/** Fila única de preferències (id = "user"). El contingut es valida amb zod en llegir-lo. */
+export interface SettingsRow {
+  id: string
+  data: unknown
+  updatedAt: number
+}
+
 class MoblesDB extends Dexie {
   projects!: EntityTable<Project, "id">
   photos!: EntityTable<Photo, "id">
+  settings!: EntityTable<SettingsRow, "id">
 
   constructor() {
     super("mobles-cnc")
@@ -70,15 +78,21 @@ class MoblesDB extends Dexie {
       projects: "++id, name, updatedAt",
       photos: "++id, projectId",
     })
+    this.version(3).stores({
+      projects: "++id, name, updatedAt",
+      photos: "++id, projectId",
+      settings: "id",
+    })
   }
 }
 
 export const db = new MoblesDB()
 
-export async function createProject(name?: string, params?: CabinetParams): Promise<number> {
+export async function createProject(name?: string, params?: CabinetParams, extra: Partial<Project> = {}): Promise<number> {
   const count = await db.projects.count()
   const now = Date.now()
   const id = await db.projects.add({
+    ...extra,
     name: name ?? `Mòdul ${count + 1}`,
     params: params ?? DEFAULT_CABINET,
     createdAt: now,
@@ -90,7 +104,8 @@ export async function createProject(name?: string, params?: CabinetParams): Prom
 export async function duplicateProject(id: number): Promise<number | undefined> {
   const src = await db.projects.get(id)
   if (!src) return undefined
-  return createProject(`${src.name} (còpia)`, src.params)
+  const { id: _id, name: _name, params: _params, createdAt: _c, updatedAt: _u, photo: _photo, ...rest } = src
+  return createProject(`${src.name} (còpia)`, src.params, rest)
 }
 
 export async function deleteProject(id: number): Promise<void> {
@@ -125,9 +140,9 @@ export async function updateProjectNesting(id: number, nesting: NestOptions): Pr
 }
 
 /** Opcions de nesting guardades, completades amb els defectes si falten o són antigues. */
-export function safeNestOptions(n: unknown): NestOptions {
+export function safeNestOptions(n: unknown, fallback: NestOptions = DEFAULT_NEST_OPTIONS): NestOptions {
   const res = NestOptionsSchema.safeParse(n)
-  return res.success ? res.data : DEFAULT_NEST_OPTIONS
+  return res.success ? res.data : fallback
 }
 
 export async function renameProject(id: number, name: string): Promise<void> {

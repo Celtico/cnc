@@ -12,12 +12,14 @@ import { toStep } from "../../core/export/step"
 import { encodeUtf16le, toTopsolidCsv } from "../../core/export/topsolidCsv"
 import { toUnifiedData } from "../../core/export/unified"
 import { downloadBlob, downloadText, slugify } from "../download"
+import { useSettings } from "../settings/SettingsContext"
 import { useCompositionPanels, useNesting, useProject } from "../useProject"
 
 export function ExportScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
   const panels = useCompositionPanels(project)
   const nesting = useNesting(panels, project?.nesting)
+  const { settings } = useSettings()
   const [labels, setLabels] = useState(true)
   const [busy, setBusy] = useState(false)
   const [busyAr, setBusyAr] = useState(false)
@@ -42,7 +44,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   }
   const doTopsolidCsv = () => {
     if (!nesting) return
-    const csv = toTopsolidCsv(panels, nesting, { project: project.name })
+    const csv = toTopsolidCsv(panels, nesting, { project: project.name, label: settings.label })
     downloadBlob(new Blob([encodeUtf16le(csv.text)], { type: "text/csv" }), `${base}_res.csv`)
     const tight = csv.rows.filter((r) => !r.labelFits).length
     toaster.create({

@@ -11,6 +11,7 @@ import {
 import { LuHammer, LuLayoutPanelLeft, LuMoveDiagonal, LuSquareStack } from "react-icons/lu"
 import { PanelSection } from "../../components/PanelSection"
 import type { CabinetParams } from "../../core/model"
+import { useUnit } from "../units"
 
 /** Esborrany editable: com CabinetParams però els números poden ser NaN mentre s'escriu. */
 export type Draft = CabinetParams
@@ -178,16 +179,21 @@ interface NumberFieldProps {
   error?: string
 }
 
+/** Camp numèric de mides. Amb `suffix="mm"` respecta la unitat de pantalla (mm o cm); el valor sempre és en mm. */
 export function NumberField({ label, value, onChange, min, max, step = 1, suffix = "mm", help, error }: NumberFieldProps) {
+  const unit = useUnit()
+  const cm = suffix === "mm" && unit === "cm"
+  const k = cm ? 10 : 1
+  const shown = Number.isFinite(value) ? String(Math.round((value / k) * 1000) / 1000) : ""
   return (
     <Field.Root invalid={!!error}>
       <Field.Label fontSize="sm">{label}</Field.Label>
       <NumberInput.Root
-        value={Number.isFinite(value) ? String(value) : ""}
-        onValueChange={(e) => onChange(e.valueAsNumber)}
-        min={min}
-        max={max}
-        step={step}
+        value={shown}
+        onValueChange={(e) => onChange(Number.isFinite(e.valueAsNumber) ? Math.round(e.valueAsNumber * k * 1000) / 1000 : e.valueAsNumber)}
+        min={min === undefined ? undefined : min / k}
+        max={max === undefined ? undefined : max / k}
+        step={step / k}
         allowMouseWheel
         w="full"
         position="relative"
@@ -202,7 +208,7 @@ export function NumberField({ label, value, onChange, min, max, step = 1, suffix
           color="fg.muted"
           pointerEvents="none"
         >
-          {suffix}
+          {cm ? "cm" : suffix}
         </Text>
         <NumberInput.Control />
       </NumberInput.Root>
