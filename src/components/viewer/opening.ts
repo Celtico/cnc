@@ -1,0 +1,176 @@
+import type { Panel, RefObject, Vec3 } from "../../core/model"
+
+/**
+ * Moviment d'obertura de les peces mòbils (només per al visor: no toca el `core`):
+ *  - portes (i reixetes amb frontisses): giren sobre l'eix de les frontisses, fins a 95°;
+ *  - abatibles: giren sobre el cantell inferior (cap avall) o superior (cap amunt);
+ *  - calaixos: el front i la caixa surten fins a la llargada de la guia.
+ * El costat de la frontissa es dedueix de les cassoletes; la direcció de l'abatible,
+ * dels seus forats; la llargada de guia, del lateral de la caixa.
+ */
+
+export const MAX_DOOR_ANGLE = (95 * Math.PI) / 180
+
+export type Motion =
+  | { kind: "hinge"; pivot: Vec3; axis: "x" | "y"; sign: 1 | -1; maxAngle: number }
+  | { kind: "slide"; dir: Vec3; distance: number }
+
+/** Grup de peces que es mouen juntes (una porta, un calaix sencer). */
+export interface MovingGroup {
+  id: string
+  label: string
+  panelIds: string[]
+  motion: Motion
+}
+
+const box = (p: Panel): { min: Vec3; max: Vec3 } => {
+  const { origin: o, xAxis: x, yAxis: y, zAxis: z } = p.placement
+  const min: [number, number, number] = [Infinity, Infinity, Infinity]
+  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
+  for (const cx of [0, p.length])
+    for (const cy of [0, p.width])
+      for (const cz of [0, p.thickness])
+        for (let i = 0; i < 3; i++) {
+          const v = o[i]! + cx * x[i]! + cy * y[i]! + cz * z[i]!
+          min[i] = Math.min(min[i]!, v)
+          max[i] = Math.max(max[i]!, v)
+        }
+  return { min, max }
+}
+
+/** Peces mòbils de la composició, agrupades. */
+export function movingGroups(panels: Panel[]): MovingGroup[] {
+  const groups: MovingGroup[] = []
+  const drawers = new Map<string, Panel[]>()
+
+  for (const p of panels) {
+    const m = /^(.*?:)?drawer-(\d+)-/.exec(p.id)
+    if (m) {
+      const key = `${m[1] ?? ""}drawer-${m[2]}`
+      const list = drawers.get(key)
+      if (list) list.push(p)
+      else drawers.set(key, [p])
+      continue
+    }
+    if (p.role === "door" || (p.role === "grille" && p.holes.some((h) => h.tag === "hinge"))) {
+      const cups = p.holes.filter((h) => h.tag === "hinge")
+      if (!cups.length) continue
+      const b = box(p)
+      // Cassoletes a y local petita → frontissa al costat de y = 0 (esquerra en X del moble).
+      const left = cups.every((h) => h.y < p.width / 2)
+      const pivot: Vec3 = [left ? b.min[0] : b.max[0], b.min[1], b.min[2]]
+      groups.push({ id: p.id, label: p.label, panelIds: [p.id], motion: { kind: "hinge", pivot, axis: "y", sign: left ? -1 : 1, maxAngle: MAX_DOOR_ANGLE } })
+      continue
+    }
+    if (p.role === "flap") {
+      const b = box(p)
+      const holes = p.holes.filter((h) => h.tag === "flap")
+      // Forats a x local petita (baix) → gira cap avall sobre el cantell inferior.
+      const down = holes.length ? holes.every((h) => h.x < p.length / 2) : true
+      const pivot: Vec3 = [b.min[0], down ? b.min[1] : b.max[1], b.min[2]]
+      groups.push({ id: p.id, label: p.label, panelIds: [p.id], motion: { kind: "hinge", pivot, axis: "x", sign: down ? 1 : -1, maxAngle: Math.PI / 2 } })
+    }
+  }
+
+  for (const [key, parts] of drawers) {
+    const side = parts.find((p) => p.role === "drawerSide")
+    const front = parts.find((p) => p.role === "drawerFront")
+    const distance = side ? side.length : front ? Math.min(front.length, 400) : 400
+    groups.push({ id: key, label: front?.label ?? key, panelIds: parts.map((p) => p.id), motion: { kind: "slide", dir: [0, 0, 1], distance } })
+  }
+  return groups
+}
+
+export interface Transform {
+  /** Rotació (rad) al voltant de l'eix, aplicada respecte al pivot. */
+  pivot: Vec3
+  rotation: Vec3
+  translation: Vec3
+}
+
+/** Transformació d'un grup per a una obertura `t` (0..1). */
+export function transformAt(motion: Motion, t: number): Transform {
+  if (motion.kind === "slide") return { pivot: [0, 0, 0], rotation: [0, 0, 0], translation: [motion.dir[0] * motion.distance * t, motion.dir[1] * motion.distance * t, motion.dir[2] * motion.distance * t] }
+  const a = motion.sign * motion.maxAngle * t
+  return { pivot: motion.pivot, rotation: motion.axis === "y" ? [0, a, 0] : [a, 0, 0], translation: [0, 0, 0] }
+}
+
+function applyTransform(tr: Transform, p: Vec3): Vec3 {
+  let [x, y, z] = [p[0] - tr.pivot[0], p[1] - tr.pivot[1], p[2] - tr.pivot[2]]
+  const [rx, ry] = tr.rotation
+  if (rx) {
+    const c = Math.cos(rx)
+    const s = Math.sin(rx)
+    ;[y, z] = [y * c - z * s, y * s + z * c]
+  }
+  if (ry) {
+    const c = Math.cos(ry)
+    const s = Math.sin(ry)
+    ;[x, z] = [x * c + z * s, -x * s + z * c]
+  }
+  return [x + tr.pivot[0] + tr.translation[0], y + tr.pivot[1] + tr.translation[1], z + tr.pivot[2] + tr.translation[2]]
+}
+
+/** Caixa englobant d'una peça un cop aplicat el moviment. */
+export function movedBox(p: Panel, tr: Transform): { min: Vec3; max: Vec3 } {
+  const { origin: o, xAxis: x, yAxis: y, zAxis: z } = p.placement
+  const min: [number, number, number] = [Infinity, Infinity, Infinity]
+  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
+  for (const cx of [0, p.length])
+    for (const cy of [0, p.width])
+      for (const cz of [0, p.thickness]) {
+        const w: Vec3 = [
+          o[0] + cx * x[0] + cy * y[0] + cz * z[0],
+          o[1] + cx * x[1] + cy * y[1] + cz * z[1],
+          o[2] + cx * x[2] + cy * y[2] + cz * z[2],
+        ]
+        const q = applyTransform(tr, w)
+        for (let i = 0; i < 3; i++) {
+          min[i] = Math.min(min[i]!, q[i]!)
+          max[i] = Math.max(max[i]!, q[i]!)
+        }
+      }
+  return { min, max }
+}
+
+function overlap(a: { min: Vec3; max: Vec3 }, b: { min: Vec3; max: Vec3 }, tol: number): boolean {
+  for (let i = 0; i < 3; i++) if (a.max[i]! <= b.min[i]! + tol || b.max[i]! <= a.min[i]! + tol) return false
+  return true
+}
+
+export interface OpeningCollision {
+  groupId: string
+  message: string
+}
+
+/**
+ * Col·lisions amb l'obertura `t`: una peça mòbil que toca una peça fixa (que no sigui
+ * del seu propi buit), una peça d'un altre mòdul o un objecte de referència.
+ */
+export function openingCollisions(panels: Panel[], groups: MovingGroup[], t: number, ghosts: RefObject[] = [], only?: Set<string>): OpeningCollision[] {
+  if (t <= 0) return []
+  const out: OpeningCollision[] = []
+  const moving = new Set(groups.filter((g) => !only || only.has(g.id)).flatMap((g) => g.panelIds))
+  const byId = new Map(panels.map((p) => [p.id, p]))
+  const staticBoxes = panels.filter((p) => !moving.has(p.id)).map((p) => ({ p, b: box(p) }))
+  for (const g of groups) {
+    if (only && !only.has(g.id)) continue
+    const tr = transformAt(g.motion, t)
+    const hits = new Set<string>()
+    for (const id of g.panelIds) {
+      const p = byId.get(id)
+      if (!p) continue
+      const mb = movedBox(p, tr)
+      for (const s of staticBoxes) {
+        // Un calaix o una porta sempre toca la seva pròpia carcassa quan és tancat: només
+        // compta si hi entra de debò (més de 2 mm) un cop en moviment.
+        if (overlap(mb, s.b, 2)) hits.add(s.p.label + (s.p.module && s.p.module !== p.module ? ` (mòdul ${s.p.module})` : ""))
+      }
+      for (const gh of ghosts) {
+        if (overlap(mb, { min: [gh.x, gh.y, gh.z], max: [gh.x + gh.w, gh.y + gh.h, gh.z + gh.d] }, 2)) hits.add(`«${gh.name}»`)
+      }
+    }
+    if (hits.size) out.push({ groupId: g.id, message: `${g.label} oberta toca ${[...hits].slice(0, 3).join(", ")}.` })
+  }
+  return out
+}

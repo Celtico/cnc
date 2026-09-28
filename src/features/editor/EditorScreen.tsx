@@ -1,10 +1,11 @@
 import { Alert, Badge, Box, Button, Editable, Flex, HStack, IconButton, Input, Menu, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   LuBookmark,
   LuBox,
   LuCamera,
   LuCircleDot,
+  LuDoorOpen,
   LuExpand,
   LuHammer,
   LuLayoutDashboard,
@@ -14,6 +15,7 @@ import {
   LuMinimize2,
   LuMoveDiagonal,
   LuRedo2,
+  LuRotate3D,
   LuSave,
   LuShrink,
   LuTriangleAlert,
@@ -22,7 +24,11 @@ import {
 import { PanelGroup, PanelSection, usePanelGroup } from "../../components/PanelSection"
 import { ResizeHandle } from "../../components/ResizeHandle"
 import { toaster } from "../../components/ui/toaster"
-import { CabinetViewer, type ViewerModule } from "../../components/viewer/CabinetViewer"
+import { CabinetViewer, type ViewerModule, type ZoneLight } from "../../components/viewer/CabinetViewer"
+import { movingGroups, openingCollisions } from "../../components/viewer/opening"
+import { panelBox } from "../../core/build/buildComposition"
+import { downloadBlob, slugify } from "../download"
+import { ViewBar, ViewerControls, type ViewerState } from "./ViewerControls"
 import { BUILTIN_TEMPLATES, applySettingsToModule, compositionWidth, defaultModule, findZone, newId, type Composition, type Module } from "../../core/model"
 import { useSettings } from "../settings/SettingsContext"
 import { loadUserTemplates, saveUserTemplate, updateProjectComposition } from "../../db/compositionStore"
@@ -108,6 +114,19 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const [selectedZone, setSelectedZone] = useState<string | null>(null)
   const [exploded, setExploded] = useState(false)
   const [showHoles, setShowHoles] = useState(false)
+  // Visor: vista, obertura de portes i calaixos, colors.
+  const [roleColors, setRoleColors] = usePersistentFlag("mobles:viewer-role-colors")
+  const [viewer, setViewerState] = useState<Omit<ViewerState, "materialMode">>({ view: "3d", opening: 0, openOnlySelected: false })
+  const viewerState: ViewerState = { ...viewer, materialMode: roleColors ? "role" : "material" }
+  const setViewer = (patch: Partial<ViewerState>) => {
+    const { materialMode, ...rest } = patch
+    if (materialMode) setRoleColors(materialMode === "role")
+    if (Object.keys(rest).length) setViewerState((v) => ({ ...v, ...rest }))
+  }
+  const capture = useRef<(() => Promise<Blob>) | null>(null)
+  const registerCapture = useCallback((fn: () => Promise<Blob>) => {
+    capture.current = fn
+  }, [])
   // Amaga el panell de paràmetres perquè el 3D ocupi tot l'espai.
   const [formHidden, setFormHidden] = usePersistentFlag("mobles:editor-form-hidden")
   const [formWidth, setFormWidth] = usePersistentNumber("mobles:editor-form-width", 380)
@@ -233,6 +252,43 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const warnings = build?.warnings ?? []
   const totalHoles = panels.reduce((n, p) => n + p.holes.length, 0)
 
+  // Obertura: grups mòbils, els del compartiment seleccionat i les col·lisions.
+  const groups = useMemo(() => movingGroups(panels), [panels])
+  const zoneRect = selectedZone ? moduleBuild?.layout.rects.get(selectedZone) : undefined
+  const openOnly = useMemo(() => {
+    if (!viewer.openOnlySelected || !zoneRect || !build) return null
+    const mod = build.modules[moduleIndex]
+    if (!mod) return null
+    const x0 = mod.x + zoneRect.x0
+    const x1 = mod.x + zoneRect.x1
+    const y0 = mod.y + zoneRect.y0
+    const y1 = mod.y + zoneRect.y1
+    const ids = new Set<string>()
+    for (const g of groups) {
+      const p = panels.find((x) => x.id === g.panelIds[0])
+      if (!p) continue
+      const b = panelBox(p)
+      if (b.max[0] > x0 + 1 && b.min[0] < x1 - 1 && b.max[1] > y0 + 1 && b.min[1] < y1 - 1) ids.add(g.id)
+    }
+    return ids
+  }, [viewer.openOnlySelected, zoneRect, build, moduleIndex, groups, panels])
+  const collisions = useMemo(() => openingCollisions(panels, groups, viewer.opening, comp.references, openOnly ?? undefined), [panels, groups, viewer.opening, comp.references, openOnly])
+  const lights = useMemo<ZoneLight[]>(
+    () => (build?.modules ?? []).flatMap((m) => m.build.layout.leaves.map((z) => {
+      const r = m.build.layout.rects.get(z.id)!
+      return { x0: m.x + r.x0, x1: m.x + r.x1, y0: m.y + r.y0, y1: m.y + r.y1 }
+    })),
+    [build],
+  )
+  const downloadImage = async () => {
+    if (!capture.current) return
+    try {
+      downloadBlob(await capture.current(), `${slugify(name)}-${viewer.view}.png`)
+    } catch (e) {
+      toaster.create({ title: "No s'ha pogut generar la imatge", description: String(e), type: "error" })
+    }
+  }
+
   return (
     <Flex direction={{ base: "column", md: "row" }} gap={{ base: 0, md: 6 }} h="full" minH={0}>
       {/* Visor: a dalt al mòbil (fix), a la dreta a l'escriptori. */}
@@ -269,7 +325,19 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             onSelectModule={selectModule}
             onAddModule={addModuleBeside}
             ghosts={comp.references}
+            view={viewer.view}
+            opening={viewer.opening}
+            openOnly={openOnly}
+            materialMode={viewerState.materialMode}
+            materials={settings.materials}
+            lights={lights}
+            onCapture={registerCapture}
           />
+        )}
+        {!photoTab && (
+          <Box position="absolute" bottom={3} left="50%" transform="translateX(-50%)" zIndex={2}>
+            <ViewBar view={viewer.view} onChange={(view) => setViewer({ view })} />
+          </Box>
         )}
         {/* La recepta del SegmentGroup força position: relative; el posicionem amb un embolcall. */}
         <Box position="absolute" top={3} left="50%" transform="translateX(-50%)" zIndex={2}>
@@ -314,7 +382,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             {exploded ? <LuShrink /> : <LuExpand />}
           </IconButton>
         </HStack>
-        <HStack position="absolute" bottom={3} left={3} gap={2} display={photoTab ? "none" : "flex"}>
+        <HStack position="absolute" bottom={3} right={3} gap={2} display={{ base: "none", md: photoTab ? "none" : "flex" }}>
           {comp.modules.length > 1 && <Badge variant="surface">{comp.modules.length} mòduls · {size.width} mm</Badge>}
           <Badge variant="surface">{panels.length} peces</Badge>
           <Badge variant="surface">{totalHoles} forats</Badge>
@@ -419,6 +487,10 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
               <JoineryForm module={module} onChange={updateModule} />
             </PanelSection>
 
+            <PanelSection id="visor" title="Visor 3D" icon={LuRotate3D}>
+              <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} />
+            </PanelSection>
+
             <OpenOnSignal id="foto" signal={openPhotoSection} />
             <PanelSection id="foto" title="Adaptar mides a la imatge" icon={LuCamera}>
               {photoTab ? (
@@ -436,6 +508,25 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             </PanelSection>
           </Stack>
         </PanelGroup>
+
+        {collisions.length > 0 && (
+          <Stack gap={2}>
+            <HStack gap={2} color="fg.muted">
+              <LuDoorOpen />
+              <Text fontSize="sm" fontWeight="semibold">
+                Amb l'obertura actual
+              </Text>
+            </HStack>
+            {collisions.map((c) => (
+              <Alert.Root key={c.groupId} status="warning" size="sm">
+                <Alert.Indicator />
+                <Alert.Content>
+                  <Alert.Description>{c.message}</Alert.Description>
+                </Alert.Content>
+              </Alert.Root>
+            ))}
+          </Stack>
+        )}
 
         {warnings.length > 0 && (
           <Stack gap={2}>
