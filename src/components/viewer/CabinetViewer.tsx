@@ -5,7 +5,7 @@ import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
 import { ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
 import { LuPlus } from "react-icons/lu"
-import { Group, Matrix4, MeshStandardMaterial, Vector3, type Object3D, type Texture, WebGLRenderTarget } from "three"
+import { Group, Matrix4, MeshStandardMaterial, Vector3, type Object3D, type Texture } from "three"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 import type { Hole, MaterialPref, Panel, PanelRole, RefObject } from "../../core/model"
@@ -381,43 +381,62 @@ function CameraRig({ size, view }: { size: CabinetViewerProps["size"]; view: Vie
   )
 }
 
-/** Captura la vista actual en PNG a 2× amb fons transparent i sense graella. */
+/**
+ * Captura la vista actual en PNG, tal com es veu: mateix fons, llum, to i antialiàsing
+ * (es renderitza al mateix canvas a resolució alta), sense la graella i amb les cotes.
+ */
 function Capture({ onCapture, gridRef }: { onCapture: (fn: () => Promise<Blob>) => void; gridRef: React.RefObject<Object3D | null> }) {
   const { gl, scene, camera, size } = useThree()
   useEffect(() => {
     onCapture(async () => {
-      const width = size.width * 2
-      const height = size.height * 2
-      const target = new WebGLRenderTarget(width, height)
-      const bgBefore = scene.background
+      const ratio = Math.max(2, gl.getPixelRatio())
+      const prevRatio = gl.getPixelRatio()
       const grid = gridRef.current
       const gridVisible = grid?.visible ?? true
       if (grid) grid.visible = false
-      scene.background = null
-      const prev = gl.getRenderTarget()
-      gl.setRenderTarget(target)
-      gl.setClearColor(0x000000, 0)
-      gl.clear()
+      gl.setPixelRatio(ratio)
+      gl.setSize(size.width, size.height, false)
       gl.render(scene, camera)
-      const pixels = new Uint8Array(width * height * 4)
-      gl.readRenderTargetPixels(target, 0, 0, width, height, pixels)
-      gl.setRenderTarget(prev)
-      scene.background = bgBefore
-      if (grid) grid.visible = gridVisible
-      target.dispose()
-      // WebGL llegeix de baix a dalt: es gira.
+      // Còpia síncrona abans que el bucle de r3f torni a pintar a la resolució normal.
       const canvas = document.createElement("canvas")
-      canvas.width = width
-      canvas.height = height
+      canvas.width = gl.domElement.width
+      canvas.height = gl.domElement.height
       const ctx = canvas.getContext("2d")!
-      const img = ctx.createImageData(width, height)
-      const row = width * 4
-      for (let y = 0; y < height; y++) img.data.set(pixels.subarray((height - 1 - y) * row, (height - y) * row), y * row)
-      ctx.putImageData(img, 0, 0)
+      ctx.drawImage(gl.domElement, 0, 0)
+      gl.setPixelRatio(prevRatio)
+      gl.setSize(size.width, size.height, false)
+      if (grid) grid.visible = gridVisible
+      gl.render(scene, camera)
+      drawLabels(ctx, gl.domElement, canvas.width / size.width)
       return new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("No s'ha pogut generar el PNG"))), "image/png"))
     })
-  }, [onCapture, gl, scene, camera, size])
+  }, [onCapture, gl, scene, camera, size, gridRef])
   return null
+}
+
+/** Pinta al PNG les etiquetes HTML de les cotes (són DOM, no surten al WebGL). */
+function drawLabels(ctx: CanvasRenderingContext2D, glCanvas: HTMLCanvasElement, k: number) {
+  const host = glCanvas.parentElement?.parentElement
+  if (!host) return
+  const origin = glCanvas.getBoundingClientRect()
+  for (const el of host.querySelectorAll<HTMLElement>("[data-dim-label]")) {
+    const r = el.getBoundingClientRect()
+    if (r.width === 0 || r.right < origin.left || r.left > origin.right || r.bottom < origin.top || r.top > origin.bottom) continue
+    const cs = getComputedStyle(el)
+    const x = (r.left - origin.left) * k
+    const y = (r.top - origin.top) * k
+    const w = r.width * k
+    const h = r.height * k
+    ctx.fillStyle = cs.backgroundColor
+    ctx.beginPath()
+    ctx.roundRect(x, y, w, h, 4 * k)
+    ctx.fill()
+    ctx.fillStyle = cs.color
+    ctx.font = `${cs.fontWeight} ${parseFloat(cs.fontSize) * k}px ${cs.fontFamily}`
+    ctx.textAlign = "center"
+    ctx.textBaseline = "middle"
+    ctx.fillText(el.textContent ?? "", x + w / 2, y + h / 2)
+  }
 }
 
 type P3 = [number, number, number]
@@ -528,6 +547,7 @@ function Dim({ spec, normal, color, labelBg }: { spec: DimSpec; normal: P3; colo
       {ext?.map((e, i) => e && <Line key={i} points={e} color={color} lineWidth={0.8} transparent opacity={0.7} />)}
       <Html position={mid} center zIndexRange={[5, 0]} style={{ pointerEvents: "none" }}>
         <span
+          data-dim-label
           style={{
             fontFamily: "system-ui, sans-serif",
             fontSize: spec.inner ? 11 : 12,

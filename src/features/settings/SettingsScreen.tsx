@@ -44,6 +44,7 @@ import {
 import { downloadText } from "../download"
 import { NumberField } from "../editor/ParamsForm"
 import { useSettings } from "./SettingsContext"
+import { fileAccept } from "../file/fileAccept"
 
 type SectionKey = keyof Omit<Settings, "version">
 
@@ -104,7 +105,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
       <HStack justify="space-between" wrap="wrap" gap={3}>
         <Heading size="xl">Preferències</Heading>
         <HStack>
-          <input ref={fileInput} type="file" accept="application/json,.json" hidden onChange={(e) => void doImport(e.target.files?.[0])} />
+          <input ref={fileInput} type="file" accept={fileAccept("application/json,.json")} hidden onChange={(e) => void doImport(e.target.files?.[0])} />
           <Button size="sm" variant="outline" onClick={() => fileInput.current?.click()}>
             <LuUpload /> Importar
           </Button>

@@ -24,6 +24,7 @@ import { compositionOf } from "../../db/compositionStore"
 import { useProjects } from "../useProject"
 import { useSettings } from "../settings/SettingsContext"
 import { toaster } from "../../components/ui/toaster"
+import { fileAccept } from "../file/fileAccept"
 
 /** Acció demanada des del menú de l'esquerra (Nou moble / Obrir fitxer); `n` la fa única. */
 export type ProjectsRequest = { kind: "new" | "open"; n: number } | null
@@ -105,7 +106,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
     <VStack align="stretch" gap={5}>
       <HStack justify="space-between" wrap="wrap" gap={3}>
         <Heading size="xl">Mobles</Heading>
-        <input ref={fileInput} type="file" accept=".moble,.json,application/json" hidden onChange={(e) => void handleOpenFile(e.target.files?.[0])} />
+        <input ref={fileInput} type="file" accept={fileAccept(".moble,.json,application/json")} hidden onChange={(e) => void handleOpenFile(e.target.files?.[0])} />
         {/* A l'ordinador aquests botons són al menú de l'esquerra; al mòbil, aquí. */}
         <HStack display={{ base: "flex", md: "none" }}>
           <Button variant="outline" onClick={() => fileInput.current?.click()}>
