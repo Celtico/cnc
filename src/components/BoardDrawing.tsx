@@ -1,6 +1,7 @@
 import { Box } from "@chakra-ui/react"
 import type { Panel } from "../core/model"
 import type { NestedBoard } from "../core/nesting/nest"
+import { localToBoard } from "../core/export/topsolidCsv"
 
 /**
  * Tauler de nesting en SVG: contorn, marge útil i cada peça amb el seu nom i mides.
@@ -52,6 +53,29 @@ export function BoardDrawing({
                   stroke="var(--chakra-colors-wood-fg)"
                   strokeWidth={stroke}
                 />
+                {/* Talls passants (reixetes, forats de pica i vitro, passacables), girats com la peça. */}
+                {p?.cutouts?.map((c, i) => {
+                  if (c.kind === "circle") {
+                    const q = localToBoard(pl, c.x, c.y)
+                    return <circle key={`c${i}`} cx={q.x} cy={q.y} r={c.diameter / 2} fill="var(--chakra-colors-bg-muted)" stroke="var(--chakra-colors-wood-fg)" strokeWidth={stroke / 2} />
+                  }
+                  const a = localToBoard(pl, c.x, c.y)
+                  const b = localToBoard(pl, c.x + c.w, c.y + c.h)
+                  const rr = c.kind === "slot" ? Math.min(c.w, c.h) / 2 : 0
+                  return (
+                    <rect
+                      key={`c${i}`}
+                      x={Math.min(a.x, b.x)}
+                      y={Math.min(a.y, b.y)}
+                      width={Math.abs(b.x - a.x)}
+                      height={Math.abs(b.y - a.y)}
+                      rx={rr}
+                      fill="var(--chakra-colors-bg-muted)"
+                      stroke="var(--chakra-colors-wood-fg)"
+                      strokeWidth={stroke / 2}
+                    />
+                  )
+                })}
                 {/* Marca de veta: ratlles fines en la direcció de la veta (X si angle 0). */}
                 {p?.grain !== "none" && (
                   <line

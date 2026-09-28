@@ -43,6 +43,14 @@ export function PanelDrawing({ panel }: { panel: Panel }) {
               strokeDasharray={h.face === "edge" ? `${stroke * 3} ${stroke * 3}` : undefined}
             />
           ))}
+          {/* Talls passants: forats que travessen la peça. */}
+          {panel.cutouts?.map((c, i) =>
+            c.kind === "circle" ? (
+              <circle key={`c${i}`} cx={c.x} cy={c.y} r={c.diameter / 2} fill="var(--chakra-colors-bg)" stroke="currentColor" strokeWidth={stroke} />
+            ) : (
+              <rect key={`c${i}`} x={c.x} y={c.y} width={c.w} height={c.h} rx={c.kind === "slot" ? Math.min(c.w, c.h) / 2 : 0} fill="var(--chakra-colors-bg)" stroke="currentColor" strokeWidth={stroke} />
+            ),
+          )}
           {/* Cantells folrats: línia gruixuda. */}
           {panel.edges.bottom && <line x1={0} y1={0} x2={L} y2={0} stroke="var(--chakra-colors-wood-solid)" strokeWidth={stroke * 5} />}
           {panel.edges.top && <line x1={0} y1={W} x2={L} y2={W} stroke="var(--chakra-colors-wood-solid)" strokeWidth={stroke * 5} />}
@@ -52,7 +60,7 @@ export function PanelDrawing({ panel }: { panel: Panel }) {
         </svg>
       </Box>
       <Text fontSize="sm" color="fg.muted" textAlign="center">
-        {panel.label} · {panel.length} × {panel.width} × {panel.thickness} mm · {panel.holes.length} forats
+        {panel.label} · {panel.length} × {panel.width} × {panel.thickness} mm · {panel.holes.length} forats{panel.cutouts?.length ? ` · ${panel.cutouts.length} talls passants` : ""}
       </Text>
     </VStack>
   )

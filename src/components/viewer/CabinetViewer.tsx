@@ -5,7 +5,7 @@ import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
 import { ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
 import { LuPlus } from "react-icons/lu"
-import { Group, Matrix4, MeshStandardMaterial, Vector3, type Object3D, type Texture, WebGLRenderTarget } from "three"
+import { ExtrudeGeometry, Group, Matrix4, MeshStandardMaterial, Path, Shape, Vector3, type Object3D, type Texture, WebGLRenderTarget } from "three"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 import type { Hole, MaterialPref, Panel, PanelRole, RefObject } from "../../core/model"
@@ -695,6 +695,20 @@ export function PanelMesh({
   }, [panel.placement])
 
   const mats = useMemo(() => panelMaterials(panel, materialMode, materials, dimmed), [panel, materialMode, materials, dimmed])
+  // Peces amb talls passants (reixetes, taulell amb pica i vitro, passacables): geometria
+  // extruïda amb els forats de debò, perquè es vegi a través.
+  const cut = useMemo(() => (panel.cutouts?.length ? cutoutGeometry(panel) : null), [panel])
+  const cutMats = useMemo(() => (cut ? cutoutMaterials(panel, materialMode, materials, dimmed) : null), [cut, panel, materialMode, materials, dimmed])
+  useEffect(
+    () => () => {
+      cut?.dispose()
+      for (const m of cutMats ?? []) {
+        m.map?.dispose()
+        m.dispose()
+      }
+    },
+    [cut, cutMats],
+  )
   useEffect(
     () => () => {
       for (const m of new Set(mats)) {
@@ -722,16 +736,17 @@ export function PanelMesh({
     <group ref={group}>
       <group matrix={matrix} matrixAutoUpdate={false}>
         <mesh
-          position={[L / 2, W / 2, T / 2]}
+          position={cut ? [0, 0, 0] : [L / 2, W / 2, T / 2]}
           castShadow
           receiveShadow
-          material={mats}
+          material={cut && cutMats ? cutMats : mats}
+          geometry={cut ?? undefined}
           onClick={onClick ? (e: ThreeEvent<MouseEvent>) => {
             e.stopPropagation()
             onClick(e.point)
           } : undefined}
         >
-          <boxGeometry args={[L, W, T]} />
+          {!cut && <boxGeometry args={[L, W, T]} />}
           {edges && <Edges color={dimmed ? "#a08a6a" : "#6b5a3e"} threshold={15} />}
         </mesh>
         {showHoles && panel.holes.map((h, i) => <HoleMark key={i} hole={h} thickness={T} />)}
@@ -741,7 +756,7 @@ export function PanelMesh({
             <meshStandardMaterial color="#8a7150" roughness={1} />
           </mesh>
         ))}
-        {panel.cutouts?.map((c, i) => <CutoutMark key={`c${i}`} cutout={c} thickness={T} />)}
+
       </group>
     </group>
   )
@@ -751,21 +766,59 @@ const HOLE_COLOR = "#3b2f1f"
 const EPS = 0.0004
 
 /** Marca d'un tall passant: forma fosca a la cara A (passacables, ranures de reixeta, trapa). */
-function CutoutMark({ cutout: c, thickness }: { cutout: NonNullable<Panel["cutouts"]>[number]; thickness: number }) {
-  if (c.kind === "circle") {
-    return (
-      <mesh position={[c.x * S, c.y * S, thickness + EPS]}>
-        <circleGeometry args={[(c.diameter / 2) * S, 24]} />
-        <meshBasicMaterial color={HOLE_COLOR} />
-      </mesh>
-    )
+/**
+ * Geometria d'una peça amb talls passants: el contorn extruït amb els forats (ranures amb
+ * els extrems rodons, rectangles i cercles). Coordenades en m, origen a la cantonada.
+ */
+function cutoutGeometry(p: Panel): ExtrudeGeometry {
+  const L = p.length * S
+  const W = p.width * S
+  const shape = new Shape()
+  shape.moveTo(0, 0)
+  shape.lineTo(L, 0)
+  shape.lineTo(L, W)
+  shape.lineTo(0, W)
+  shape.closePath()
+  for (const c of p.cutouts ?? []) {
+    const hole = new Path()
+    if (c.kind === "circle") {
+      hole.absarc(c.x * S, c.y * S, (c.diameter / 2) * S, 0, Math.PI * 2, true)
+    } else if (c.kind === "rect") {
+      const x0 = c.x * S, y0 = c.y * S, x1 = (c.x + c.w) * S, y1 = (c.y + c.h) * S
+      hole.moveTo(x0, y0)
+      hole.lineTo(x0, y1)
+      hole.lineTo(x1, y1)
+      hole.lineTo(x1, y0)
+      hole.closePath()
+    } else {
+      // Ranura: dos semicercles units per rectes.
+      const rad = (Math.min(c.w, c.h) / 2) * S
+      const x0 = c.x * S, y0 = c.y * S, x1 = (c.x + c.w) * S, y1 = (c.y + c.h) * S
+      if (c.w >= c.h) {
+        hole.absarc(x0 + rad, y0 + rad, rad, Math.PI / 2, (Math.PI * 3) / 2, false)
+        hole.absarc(x1 - rad, y0 + rad, rad, -Math.PI / 2, Math.PI / 2, false)
+      } else {
+        hole.absarc(x0 + rad, y0 + rad, rad, Math.PI, Math.PI * 2, false)
+        hole.absarc(x0 + rad, y1 - rad, rad, 0, Math.PI, false)
+      }
+      hole.closePath()
+    }
+    shape.holes.push(hole)
   }
-  return (
-    <mesh position={[(c.x + c.w / 2) * S, (c.y + c.h / 2) * S, thickness + EPS]}>
-      <planeGeometry args={[c.w * S, c.h * S]} />
-      <meshBasicMaterial color={HOLE_COLOR} />
-    </mesh>
-  )
+  return new ExtrudeGeometry(shape, { depth: p.thickness * S, bevelEnabled: false, curveSegments: 10 })
+}
+
+/** Materials per a la geometria extruïda: [0] cares (A/B), [1] cantells i parets dels forats. UV en metres. */
+function cutoutMaterials(p: Panel, mode: "material" | "role", materials: MaterialPref[], dimmed: boolean): MeshStandardMaterial[] {
+  const opts = { transparent: dimmed, opacity: dimmed ? 0.45 : 1 }
+  if (mode === "role") {
+    const m = new MeshStandardMaterial({ color: ROLE_COLOR[p.role], roughness: 0.85, metalness: 0, ...opts })
+    return [m, m]
+  }
+  // UV en metres: 1000 mm per unitat de textura.
+  const face = makeMaterial(resolveFinish(materials, p.material), 1000, 1000, p.grain === "y", opts)
+  const edge = makeMaterial(resolveEdgeFinish(materials, p.material), 1000, 1000, false, opts)
+  return [face, edge]
 }
 
 function HoleMark({ hole, thickness }: { hole: Hole; thickness: number }) {
