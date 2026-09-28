@@ -40,6 +40,10 @@ amb mobles reals de casa meva, no que ho faci tot.
   (substituït per l'export STEP + CSV). Prompt per a
   `taller-cnc-nest` (endpoint `POST /api/nesting/import`). **No s'executa en aquest
   repo.**
+- [`docs/export-taller.md`](docs/export-taller.md): decisions de l'export STEP + CSV
+  (eixos, numeració de cantells del taller, geometria dels forats i ranures, etiqueta).
+- [`docs/foto-mesures.md`](docs/foto-mesures.md): model de mesures de la foto
+  (relativa / estimada / real, recalibratge, qualitat, línia del terra i fondària).
 - Els prompts van a `docs/prompt/`. La resta de documentació nova (decisions, notes de fusteria) va a `docs/` en
   Markdown. El `CLAUDE.md` es queda a l'arrel i només hi enllaça.
 
