@@ -15,40 +15,80 @@ const WOOD_TONES: Record<"oak" | "walnut", string[]> = {
   walnut: ["#6e4a30", "#5f3f28", "#7a5337", "#654430", "#734d33", "#58392a"],
 }
 
+/** Costat de la tessel·la de parquet (m). */
+const PARQUET_TILE = 2.4
+
 /**
- * Parquet de roure clar generat amb un canvas (sense descarregar imatges): lames de
- * 15 cm amb llargades variades, tons lleugerament diferents, veta i junts. Cada tessel·la
- * representa 1,2 × 1,2 m.
+ * Parquet generat amb un canvas (sense descarregar imatges): lames de 15 cm × 0,8–1,6 m,
+ * tons lleugerament diferents, veta i junts. La tessel·la (2,4 × 2,4 m) és contínua: cada
+ * filera suma exactament l'amplada i les lames que passen de la vora continuen per l'altre
+ * costat, així no es veuen costures ni lames tallades en repetir-se.
  */
 function makeParquet(tones: string[]): CanvasTexture {
-  const px = 1024
+  const px = 2048
+  const rows = 16
+  const perM = px / PARQUET_TILE
   const c = document.createElement("canvas")
   c.width = px
   c.height = px
   const g = c.getContext("2d")!
-  const plankW = px / 8 // 15 cm
+  const plankW = px / rows // 15 cm
   let seed = 7
   const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
-  for (let row = 0; row < 8; row++) {
+
+  /** Dibuixa `fn` a x i als seus desplaçaments de ±px (continuïtat horitzontal). */
+  const wrapped = (fn: (dx: number) => void) => {
+    for (const dx of [-px, 0, px]) fn(dx)
+  }
+
+  for (let row = 0; row < rows; row++) {
     const y0 = row * plankW
-    let x = -rnd() * px * 0.6
-    while (x < px) {
-      const len = px * (0.35 + rnd() * 0.65)
-      g.fillStyle = tones[Math.floor(rnd() * tones.length)]!
-      g.fillRect(x, y0, len, plankW)
-      // veta: línies fines i lleugerament ondulades al llarg de la lama
-      for (let k = 0; k < 14; k++) {
-        const yy = y0 + rnd() * plankW
-        g.strokeStyle = `rgba(90, 60, 30, ${0.04 + rnd() * 0.08})`
-        g.lineWidth = 0.6 + rnd() * 1.4
+    // Llargades que sumen exactament px (s'escalen), començant en un punt aleatori.
+    const lens: number[] = []
+    let sum = 0
+    while (sum < px) {
+      const l = perM * (0.8 + rnd() * 0.8)
+      lens.push(l)
+      sum += l
+    }
+    const k = px / sum
+    let x = rnd() * px
+    for (const raw of lens) {
+      const len = raw * k
+      const tone = tones[Math.floor(rnd() * tones.length)]!
+      const shade = (rnd() - 0.5) * 0.08
+      const lines = Array.from({ length: 16 }, (_, i) => ({
+        y: y0 + rnd() * plankW,
+        a: 0.04 + rnd() * 0.08,
+        w: 0.6 + rnd() * 1.4,
+        amp: 1 + rnd() * 2,
+        ph: i + rnd() * 3,
+      }))
+      wrapped((dx) => {
+        const x0 = x + dx
+        if (x0 + len < 0 || x0 > px) return
+        g.save()
         g.beginPath()
-        g.moveTo(x, yy)
-        for (let t = 0; t <= 1; t += 0.1) g.lineTo(x + len * t, yy + Math.sin(t * 6 + k) * (1 + rnd() * 2))
-        g.stroke()
-      }
-      // junt entre lames (testa)
-      g.fillStyle = "rgba(60, 40, 20, 0.45)"
-      g.fillRect(x + len - 1, y0, 2, plankW)
+        g.rect(x0, y0, len, plankW)
+        g.clip()
+        g.fillStyle = tone
+        g.fillRect(x0, y0, len, plankW)
+        g.fillStyle = shade > 0 ? `rgba(255,255,255,${shade})` : `rgba(0,0,0,${-shade})`
+        g.fillRect(x0, y0, len, plankW)
+        // veta: línies fines i lleugerament ondulades al llarg de la lama
+        for (const ln of lines) {
+          g.strokeStyle = `rgba(90, 60, 30, ${ln.a})`
+          g.lineWidth = ln.w
+          g.beginPath()
+          g.moveTo(x0, ln.y)
+          for (let t = 0; t <= 1.001; t += 0.05) g.lineTo(x0 + len * t, ln.y + Math.sin(t * 6 + ln.ph) * ln.amp)
+          g.stroke()
+        }
+        g.restore()
+        // junt de testa
+        g.fillStyle = "rgba(60, 40, 20, 0.45)"
+        g.fillRect(x0 + len - 1, y0, 2, plankW)
+      })
       x += len
     }
     // junt longitudinal
@@ -58,7 +98,7 @@ function makeParquet(tones: string[]): CanvasTexture {
   const tex = new CanvasTexture(c)
   tex.wrapS = tex.wrapT = RepeatWrapping
   tex.colorSpace = SRGBColorSpace
-  tex.anisotropy = 8
+  tex.anisotropy = 16
   return tex
 }
 
@@ -106,7 +146,7 @@ function makeConcrete(): CanvasTexture {
 }
 
 function makeFloor(id: FloorId): { map: CanvasTexture | null; repeat: number; roughness: number } {
-  if (id === "oak" || id === "walnut") return { map: makeParquet(WOOD_TONES[id]), repeat: ROOM / 1.2, roughness: 0.55 }
+  if (id === "oak" || id === "walnut") return { map: makeParquet(WOOD_TONES[id]), repeat: ROOM / PARQUET_TILE, roughness: 0.55 }
   if (id === "concrete") return { map: makeConcrete(), repeat: ROOM / 2, roughness: 0.8 }
   return { map: null, repeat: 1, roughness: 0.7 }
 }
@@ -123,7 +163,7 @@ export function floorSwatchUrl(id: FloorId): string | null {
       const c = document.createElement("canvas")
       c.width = c.height = 96
       // un tros de ~40 cm perquè es vegin les lames
-      c.getContext("2d")!.drawImage(src, 0, 0, src.width / 3, src.height / 3, 0, 0, 96, 96)
+      c.getContext("2d")!.drawImage(src, 0, 0, src.width / 6, src.height / 6, 0, 0, 96, 96)
       url = c.toDataURL("image/jpeg", 0.85)
     }
     f.map?.dispose()
