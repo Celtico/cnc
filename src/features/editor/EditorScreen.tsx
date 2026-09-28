@@ -14,6 +14,7 @@ import {
   LuMinimize2,
   LuMoveDiagonal,
   LuRedo2,
+  LuSave,
   LuShrink,
   LuTriangleAlert,
   LuUndo2,
@@ -30,7 +31,9 @@ import { CarcassForm, JoineryForm } from "../composition/CarcassForm"
 import { ElevationEditor } from "../composition/ElevationEditor"
 import { ModuleStrip } from "../composition/ModuleStrip"
 import { ZonePanel } from "../composition/ZonePanel"
+import { SaveFileDialog } from "../file/SaveFileDialog"
 import { PhotoScreen } from "../photo/PhotoScreen"
+import type { Project } from "../../db/db"
 import { usePersistentFlag } from "../usePersistentFlag"
 import { usePersistentNumber } from "../usePersistentNumber"
 import { useComposition, useCompositionBuild, useProject } from "../useProject"
@@ -39,7 +42,7 @@ export function EditorScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
   const initial = useComposition(project)
   if (!project || !initial) return null
-  return <Editor key={project.id} projectId={project.id} name={project.name} initial={initial} />
+  return <Editor key={project.id} projectId={project.id} name={project.name} initial={initial} project={project} />
 }
 
 interface History {
@@ -48,18 +51,58 @@ interface History {
   future: Composition[]
 }
 
-function Editor({ projectId, name, initial }: { projectId: number; name: string; initial: Composition }) {
+/** Símbol de la tecla de drecera: ⌘ al Mac/iPad, Ctrl a la resta. */
+const MOD = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? "⌘" : "Ctrl+"
+
+function Editor({ projectId, name, initial, project }: { projectId: number; name: string; initial: Composition; project: Project }) {
+  const [saveOpen, setSaveOpen] = useState(false)
   // Composició amb desfer/refer (fins a 50 passos).
   const [history, setHistory] = useState<History>({ past: [], present: initial, future: [] })
   const comp = history.present
+  // Canvis seguits (menys de 500 ms entre ells, p. ex. escriure "1180" o arrossegar)
+  // compten com un sol pas de desfer.
+  const lastEdit = useRef(0)
   const setComp = (next: Composition | ((c: Composition) => Composition)) =>
     setHistory((h) => {
       const n = typeof next === "function" ? next(h.present) : next
       if (n === h.present) return h
+      const now = Date.now()
+      const coalesce = now - lastEdit.current < 500 && h.past.length > 0
+      lastEdit.current = now
+      if (coalesce) return { past: h.past, present: n, future: [] }
       return { past: [...h.past.slice(-49), h.present], present: n, future: [] }
     })
-  const undo = () => setHistory((h) => (h.past.length ? { past: h.past.slice(0, -1), present: h.past.at(-1)!, future: [h.present, ...h.future] } : h))
-  const redo = () => setHistory((h) => (h.future.length ? { past: [...h.past, h.present], present: h.future[0]!, future: h.future.slice(1) } : h))
+  const undo = () => {
+    lastEdit.current = 0
+    setHistory((h) => (h.past.length ? { past: h.past.slice(0, -1), present: h.past.at(-1)!, future: [h.present, ...h.future] } : h))
+  }
+  const redo = () => {
+    lastEdit.current = 0
+    setHistory((h) => (h.future.length ? { past: [...h.past, h.present], present: h.future[0]!, future: h.future.slice(1) } : h))
+  }
+
+  // Dreceres: ⌘Z / Ctrl+Z desfer; ⇧⌘Z / Ctrl+Shift+Z / Ctrl+Y refer. Als camps de text
+  // lliure (nom del moble, plantilla) es deixa el desfer propi del navegador; als
+  // numèrics es desfà el moble.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return
+      const k = e.key.toLowerCase()
+      if (k !== "z" && k !== "y") return
+      const t = e.target as HTMLElement | null
+      if (t) {
+        const tag = t.tagName
+        const numeric = tag === "INPUT" && /decimal|numeric/.test((t as HTMLInputElement).inputMode)
+        if (tag === "TEXTAREA" || t.isContentEditable || (tag === "INPUT" && !numeric)) return
+      }
+      e.preventDefault()
+      if (k === "y" || e.shiftKey) redo()
+      else undo()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const [selectedModule, setSelectedModule] = useState<string>(initial.modules[0]!.id)
   const [selectedZone, setSelectedZone] = useState<string | null>(null)
@@ -285,14 +328,20 @@ function Editor({ projectId, name, initial }: { projectId: number; name: string;
             <Editable.Input />
           </Editable.Root>
           <HStack gap={1}>
-            <IconButton aria-label="Desfer" title="Desfer" size="sm" variant="ghost" disabled={history.past.length === 0} onClick={undo}>
+            <IconButton aria-label="Desar com a fitxer" title="Desar com a fitxer (.moble)" size="sm" variant="ghost" onClick={() => setSaveOpen(true)}>
+              <LuSave />
+            </IconButton>
+            <IconButton aria-label="Desfer" title={`Desfer (${MOD}Z)`} size="sm" variant="ghost" disabled={history.past.length === 0} onClick={undo}>
               <LuUndo2 />
             </IconButton>
-            <IconButton aria-label="Refer" title="Refer" size="sm" variant="ghost" disabled={history.future.length === 0} onClick={redo}>
+            <IconButton aria-label="Refer" title={`Refer (⇧${MOD}Z)`} size="sm" variant="ghost" disabled={history.future.length === 0} onClick={redo}>
               <LuRedo2 />
             </IconButton>
           </HStack>
         </HStack>
+
+        {/* El fitxer porta la composició que s'està editant, encara que el desat amb retard no hagi passat. */}
+        <SaveFileDialog project={{ ...project, composition: comp }} open={saveOpen} onClose={() => setSaveOpen(false)} />
 
         <PanelGroup storageKey="mobles:editor-open-section" defaultOpen="compartiments">
           <Stack gap={0}>

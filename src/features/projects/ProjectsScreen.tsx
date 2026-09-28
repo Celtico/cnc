@@ -11,8 +11,10 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { useState } from "react"
-import { LuBox, LuCopy, LuPlus, LuTrash2 } from "react-icons/lu"
+import { useRef, useState } from "react"
+import { LuBox, LuCopy, LuFolderOpen, LuPlus, LuSave, LuTrash2 } from "react-icons/lu"
+import { SaveFileDialog } from "../file/SaveFileDialog"
+import { openMobleFile } from "../file/mobleIo"
 import { applySettingsToModule, defaultModule, newId } from "../../core/model"
 import { createProject, deleteProject, duplicateProject, safeParams, type Project } from "../../db/db"
 import { compositionOf } from "../../db/compositionStore"
@@ -22,8 +24,22 @@ import { toaster } from "../../components/ui/toaster"
 
 export function ProjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
   const projects = useProjects()
-  const { settings } = useSettings()
+  const { settings, save } = useSettings()
   const [toDelete, setToDelete] = useState<Project | null>(null)
+  const [toSave, setToSave] = useState<Project | null>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
+
+  const handleOpenFile = async (file: File | undefined) => {
+    if (fileInput.current) fileInput.current.value = ""
+    if (!file) return
+    const res = await openMobleFile(await file.text(), settings, save)
+    if (!res.ok) {
+      toaster.create({ title: "No s'ha pogut obrir el fitxer", description: res.error, type: "error" })
+      return
+    }
+    toaster.create({ title: `«${res.name}» obert`, description: res.warnings.join(" ") || undefined, type: res.warnings.length ? "warning" : "success", duration: res.warnings.length ? 8000 : undefined })
+    onOpen(res.projectId)
+  }
 
   const handleNew = async () => {
     // El mòdul nou pren materials, ferratges i jocs de les preferències.
@@ -48,9 +64,15 @@ export function ProjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
     <VStack align="stretch" gap={5}>
       <HStack justify="space-between" wrap="wrap" gap={3}>
         <Heading size="xl">Mobles</Heading>
-        <Button colorPalette="wood" onClick={handleNew}>
-          <LuPlus /> Nou mòdul
-        </Button>
+        <HStack>
+          <input ref={fileInput} type="file" accept=".moble,.json,application/json" hidden onChange={(e) => void handleOpenFile(e.target.files?.[0])} />
+          <Button variant="outline" onClick={() => fileInput.current?.click()}>
+            <LuFolderOpen /> Obrir fitxer
+          </Button>
+          <Button colorPalette="wood" onClick={handleNew}>
+            <LuPlus /> Nou mòdul
+          </Button>
+        </HStack>
       </HStack>
 
       {projects === undefined ? null : projects.length === 0 ? (
@@ -79,10 +101,13 @@ export function ProjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
               onOpen={() => onOpen(p.id)}
               onDuplicate={() => handleDuplicate(p.id)}
               onDelete={() => setToDelete(p)}
+              onSaveFile={() => setToSave(p)}
             />
           ))}
         </SimpleGrid>
       )}
+
+      <SaveFileDialog project={toSave} open={toSave !== null} onClose={() => setToSave(null)} />
 
       <Dialog.Root
         role="alertdialog"
@@ -122,11 +147,13 @@ function ProjectCard({
   onOpen,
   onDuplicate,
   onDelete,
+  onSaveFile,
 }: {
   project: Project
   onOpen: () => void
   onDuplicate: () => void
   onDelete: () => void
+  onSaveFile: () => void
 }) {
   const p = safeParams(project.params)
   const comp = compositionOf(project)
@@ -156,6 +183,9 @@ function ProjectCard({
         </Text>
       </Card.Body>
       <Card.Footer justifyContent="flex-end" gap={2}>
+        <IconButton aria-label="Desar com a fitxer" title="Desar com a fitxer" variant="ghost" onClick={onSaveFile}>
+          <LuSave />
+        </IconButton>
         <IconButton aria-label="Duplicar moble" variant="ghost" onClick={onDuplicate}>
           <LuCopy />
         </IconButton>
