@@ -12,6 +12,16 @@ const config = defineConfig({
       overscrollBehavior: "none",
     },
     "#root": { minHeight: "100dvh", display: "flex", flexDirection: "column" },
+    // Peu dels diàlegs: si els botons no hi caben, baixen de línia; al mòbil, un per fila
+    // a tota l'amplada (l'acció principal a dalt, Cancel·lar a baix).
+    ".chakra-dialog__footer": {
+      flexWrap: "wrap",
+      "@media (max-width: 30em)": {
+        flexDirection: "column-reverse",
+        alignItems: "stretch",
+        "& > *": { width: "100%" },
+      },
+    },
     // Etiquetes de camp sempre en una línia: si no hi caben, punts suspensius (i el text
     // sencer al passar-hi per sobre, vegeu truncatedTitles.ts).
     "[data-scope=field][data-part=label]": {

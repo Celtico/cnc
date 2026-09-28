@@ -13,6 +13,8 @@ import {
   Card,
   Dialog,
   Field,
+  Grid,
+  GridItem,
   HStack,
   Heading,
   IconButton,
@@ -25,7 +27,7 @@ import {
   Switch,
   Text,
 } from "@chakra-ui/react"
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { LuArrowDown, LuArrowUp, LuCheck, LuCopy, LuDownload, LuEye, LuEyeOff, LuFileDown, LuGrid3X3, LuHammer, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRuler, LuScan, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { PanelGroup, PanelSection } from "../../components/PanelSection"
@@ -130,18 +132,18 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
 
       <PanelGroup storageKey="mobles:settings-open-section" defaultOpen="references">
         <Stack gap={0}>
-          <Section id="references" title="Objectes de referència" icon={LuScan} onReset={() => setReset({ key: "references", label: "Objectes de referència" })}>
-            <Text fontSize="sm" color="fg.muted">
+          <Section id="references" wide title="Objectes de referència" icon={LuScan} onReset={() => setReset({ key: "references", label: "Objectes de referència" })}>
+            <Text fontSize="sm" color="fg.muted" maxW="3xl">
               Una sola llista per a la foto (es calibra amb la cara del davant, amplada × alçada) i per a l'editor (fantasma 3D,
               cal fondària). La distància a la paret corregeix l'escala si l'objecte no hi toca.
             </Text>
             <ReferencesList refs={draft.references} onChange={(references) => set("references", references)} />
           </Section>
 
-          <Section id="materials" title="Materials" icon={LuPalette} onReset={() => setReset({ key: "materials", label: "Materials" })}>
+          <Section id="materials" wide title="Materials" icon={LuPalette} onReset={() => setReset({ key: "materials", label: "Materials" })}>
             <MaterialsList materials={draft.materials} onChange={(materials) => set("materials", materials)} />
             <Heading size="sm">Per defecte als mòduls nous</Heading>
-            <SimpleGrid columns={2} gap={3}>
+            <SimpleGrid columns={2} gap={3} maxW="xl">
               <MaterialSelect label="Tauler" materials={draft.materials.filter((m) => !m.forBacks)} value={draft.defaults.material} onChange={(material) => set("defaults", { ...draft.defaults, material })} />
               <NumberField label="Gruix tauler" value={draft.defaults.thickness} min={8} max={40} step={1} onChange={(thickness) => set("defaults", { ...draft.defaults, thickness })} />
               <MaterialSelect label="Fons" materials={draft.materials} value={draft.defaults.backMaterial} onChange={(backMaterial) => set("defaults", { ...draft.defaults, backMaterial })} />
@@ -150,37 +152,41 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
           </Section>
 
           <Section id="boards" title="Taulers i nesting" icon={LuLayoutGrid} onReset={() => setReset({ key: "boards", label: "Taulers i nesting" })}>
-            <Stack gap={2}>
+            <Heading size="sm">Mides de tauler</Heading>
+            {/* Taula en graella: capçalera una sola vegada i una fila per mida. */}
+            <Grid templateColumns={{ base: "minmax(0, 1fr) minmax(0, 1fr) 32px", sm: "minmax(0, 1fr) 150px 150px 32px" }} gap={2} alignItems="center">
+              <Text textStyle="xs" color="fg.muted" display={{ base: "none", sm: "block" }}>Material</Text>
+              <Text textStyle="xs" color="fg.muted">Llarg</Text>
+              <Text textStyle="xs" color="fg.muted">Ample</Text>
+              <span />
               {draft.boards.sheets.map((s, i) => {
                 const update = (patch: Partial<typeof s>) => set("boards", { ...draft.boards, sheets: draft.boards.sheets.map((x, k) => (k === i ? { ...x, ...patch } : x)) })
                 return (
-                  <HStack key={i} align="end" gap={2}>
-                    <Field.Root flex={1}>
-                      <Field.Label fontSize="sm">Material</Field.Label>
-                      <NativeSelect.Root size="sm">
-                        <NativeSelect.Field value={s.material} onChange={(e) => update({ material: e.target.value })}>
-                          <option value="">Tots els altres</option>
-                          {draft.materials.map((m) => (
-                            <option key={m.id} value={m.name}>
-                              {m.name}
-                            </option>
-                          ))}
-                        </NativeSelect.Field>
-                        <NativeSelect.Indicator />
-                      </NativeSelect.Root>
-                    </Field.Root>
-                    <NumberField label="Llarg" value={s.w} min={300} max={6000} step={10} onChange={(w) => update({ w })} />
-                    <NumberField label="Ample" value={s.h} min={300} max={6000} step={10} onChange={(h) => update({ h })} />
+                  <Fragment key={i}>
+                    {/* Al mòbil, el material ocupa tota la fila i les mides van a sota. */}
+                    <NativeSelect.Root size="sm" gridColumn={{ base: "1 / -1", sm: "auto" }} mt={{ base: i > 0 ? 2 : 0, sm: 0 }}>
+                      <NativeSelect.Field aria-label="Material" value={s.material} onChange={(e) => update({ material: e.target.value })}>
+                        <option value="">Tots els altres</option>
+                        {draft.materials.map((m) => (
+                          <option key={m.id} value={m.name}>
+                            {m.name}
+                          </option>
+                        ))}
+                      </NativeSelect.Field>
+                      <NativeSelect.Indicator />
+                    </NativeSelect.Root>
+                    <NumberField label="" value={s.w} min={300} max={6000} step={10} onChange={(w) => update({ w })} />
+                    <NumberField label="" value={s.h} min={300} max={6000} step={10} onChange={(h) => update({ h })} />
                     <IconButton aria-label="Eliminar tauler" size="sm" variant="ghost" colorPalette="red" disabled={draft.boards.sheets.length <= 1} onClick={() => set("boards", { ...draft.boards, sheets: draft.boards.sheets.filter((_, k) => k !== i) })}>
                       <LuTrash2 />
                     </IconButton>
-                  </HStack>
+                  </Fragment>
                 )
               })}
-              <Button size="xs" variant="ghost" alignSelf="flex-start" onClick={() => set("boards", { ...draft.boards, sheets: [...draft.boards.sheets, { material: "", w: 2440, h: 1220 }] })}>
-                <LuPlus /> Afegir mida de tauler
-              </Button>
-            </Stack>
+            </Grid>
+            <Button size="xs" variant="ghost" alignSelf="flex-start" onClick={() => set("boards", { ...draft.boards, sheets: [...draft.boards.sheets, { material: "", w: 2440, h: 1220 }] })}>
+              <LuPlus /> Afegir mida de tauler
+            </Button>
             <SimpleGrid columns={2} gap={3}>
               <NumberField label="Kerf (fresa)" value={draft.boards.kerf} min={0} max={30} step={0.5} onChange={(kerf) => set("boards", { ...draft.boards, kerf })} />
               <NumberField label="Marge del tauler" value={draft.boards.margin} min={0} max={100} step={1} onChange={(margin) => set("boards", { ...draft.boards, margin })} />
@@ -274,16 +280,25 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
   )
 }
 
-function Section({ id, title, icon, onReset, children }: { id: string; title: string; icon: IconType; onReset: () => void; children: ReactNode }) {
+/**
+ * Secció de preferències. L'interior no ocupa tota l'amplada (els camps queden a una
+ * mida llegible); les llistes de targetes (`wide`) sí, perquè es reparteixen en graella.
+ */
+function Section({ id, title, icon, onReset, wide, children }: { id: string; title: string; icon: IconType; onReset: () => void; wide?: boolean; children: ReactNode }) {
   return (
     <PanelSection id={id} title={title} icon={icon}>
-      {children}
-      <Button size="xs" variant="ghost" colorPalette="red" alignSelf="flex-start" onClick={onReset}>
-        <LuRotateCcw /> Restaurar valors inicials
-      </Button>
+      <Stack gap={3} w="full" maxW={wide ? "none" : "3xl"}>
+        {children}
+        <Button size="xs" variant="ghost" colorPalette="red" alignSelf="flex-start" onClick={onReset}>
+          <LuRotateCcw /> Restaurar valors inicials
+        </Button>
+      </Stack>
     </PanelSection>
   )
 }
+
+/** Graella de targetes: tantes columnes com hi càpiguen. */
+const CARD_GRID = { minChildWidth: "320px", gap: 3 } as const
 
 // --- Objectes de referència --------------------------------------------------------------
 
@@ -309,7 +324,8 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
       <Button size="xs" variant="outline" alignSelf="flex-start" onClick={add}>
         <LuPlus /> Afegir objecte
       </Button>
-      {refs.map((r, i) => (
+      <SimpleGrid {...CARD_GRID} minChildWidth="380px">
+        {refs.map((r, i) => (
         <Card.Root key={r.id} variant="subtle" size="sm" opacity={r.hidden ? 0.55 : 1}>
           <Card.Body p={3} gap={2}>
             <HStack justify="space-between" gap={2}>
@@ -340,11 +356,17 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
                 )}
               </HStack>
             </HStack>
-            <SimpleGrid columns={{ base: 2, md: 5 }} gap={2}>
-              <NumberField label="Amplada" value={r.w} min={1} max={10000} step={10} onChange={(w) => update(i, { w })} />
-              <NumberField label="Alçada" value={r.h} min={1} max={10000} step={10} onChange={(h) => update(i, { h })} />
-              <NumberField label="Fondària" value={r.d ?? NaN} min={1} max={10000} step={10} help={r.d ? undefined : "Buida: només per a la foto"} onChange={(d) => update(i, { d: Number.isFinite(d) && d > 0 ? d : undefined })} />
-              <Field.Root>
+            <Grid templateColumns="repeat(6, minmax(0, 1fr))" gap={2}>
+              <GridItem colSpan={2}>
+                <NumberField label="Amplada" value={r.w} min={1} max={10000} step={10} onChange={(w) => update(i, { w })} />
+              </GridItem>
+              <GridItem colSpan={2}>
+                <NumberField label="Alçada" value={r.h} min={1} max={10000} step={10} onChange={(h) => update(i, { h })} />
+              </GridItem>
+              <GridItem colSpan={2}>
+                <NumberField label="Fondària" value={r.d ?? NaN} min={1} max={10000} step={10} help={r.d ? undefined : "Buida: només foto"} onChange={(d) => update(i, { d: Number.isFinite(d) && d > 0 ? d : undefined })} />
+              </GridItem>
+              <Field.Root gridColumn="span 3">
                 <Field.Label fontSize="sm">Pla</Field.Label>
                 <NativeSelect.Root size="sm">
                   <NativeSelect.Field value={r.plane} onChange={(e) => update(i, { plane: e.target.value as RefPreset["plane"] })}>
@@ -354,11 +376,14 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
                   <NativeSelect.Indicator />
                 </NativeSelect.Root>
               </Field.Root>
-              <NumberField label="A la paret" value={r.wallOffset} min={0} max={5000} step={10} onChange={(wallOffset) => update(i, { wallOffset })} />
-            </SimpleGrid>
+              <GridItem colSpan={3}>
+                <NumberField label="A la paret" value={r.wallOffset} min={0} max={5000} step={10} onChange={(wallOffset) => update(i, { wallOffset })} />
+              </GridItem>
+            </Grid>
           </Card.Body>
         </Card.Root>
-      ))}
+        ))}
+      </SimpleGrid>
     </Stack>
   )
 }
@@ -386,13 +411,15 @@ function MaterialsList({ materials, onChange }: { materials: MaterialPref[]; onC
       <Button size="xs" variant="outline" alignSelf="flex-start" onClick={add}>
         <LuPlus /> Afegir material
       </Button>
-      {materials.map((m, i) => (
+      <SimpleGrid {...CARD_GRID}>
+        {materials.map((m, i) => (
         <MaterialCard key={m.id} m={m} onChange={(patch) => update(i, patch)} onDuplicate={() => {
           const next = [...materials]
           next.splice(i + 1, 0, { ...m, id: newId("mat"), name: `${m.name} (còpia)` })
           onChange(next)
         }} onDelete={() => onChange(materials.filter((_, k) => k !== i))} canDelete={materials.length > 1} />
-      ))}
+        ))}
+      </SimpleGrid>
     </Stack>
   )
 }
@@ -414,7 +441,7 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
             <LuTrash2 />
           </IconButton>
         </HStack>
-        <SimpleGrid columns={{ base: 2, md: 4 }} gap={2}>
+        <SimpleGrid columns={2} gap={2}>
           <Field.Root invalid={m.thicknesses.length === 0}>
             <Field.Label fontSize="sm">Gruixos</Field.Label>
             <Input
