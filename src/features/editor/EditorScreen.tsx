@@ -40,7 +40,7 @@ import { ResizeHandle } from "../../components/ResizeHandle"
 import { TopBarActions } from "../../components/TopBar"
 import { toaster } from "../../components/ui/toaster"
 import { CabinetViewer, type ViewerModule, type ZoneLight } from "../../components/viewer/CabinetViewer"
-import { exportUsdz, openQuickLook, supportsQuickLook } from "../../components/viewer/exportUsdz"
+import { ArDialog } from "../../components/viewer/ArDialog"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox } from "../../core/build/buildComposition"
@@ -150,22 +150,8 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const [mobilePane, setMobilePane] = useState<"tree" | "props">("props")
   const [exploded, setExploded] = useState(false)
   const [showHoles, setShowHoles] = useState(false)
-  // «Veure a casa»: el moble a mida real amb AR Quick Look (Safari a l'iPhone/iPad).
-  const [busyAr, setBusyAr] = useState(false)
-  const viewAr = async () => {
-    if (!supportsQuickLook()) {
-      toaster.create({ title: "Veure a casa (AR)", description: "Obre aquesta app amb Safari a l'iPhone o l'iPad i prem aquest botó: el moble apareixerà a mida real a l'habitació.", type: "info", duration: 7000 })
-      return
-    }
-    setBusyAr(true)
-    try {
-      openQuickLook(await exportUsdz(panelsRef.current, name), `${name || "moble"}.usdz`)
-    } catch (e) {
-      toaster.create({ title: "No s'ha pogut preparar l'AR", description: String(e), type: "error" })
-    } finally {
-      setBusyAr(false)
-    }
-  }
+  // «Veure a casa»: visor 3D amb el botó d'AR Quick Look (Safari a l'iPhone/iPad).
+  const [arOpen, setArOpen] = useState(false)
   // Visor: vista, obertura de portes i calaixos, colors.
   const [roleColors, setRoleColors] = usePersistentFlag("mobles:viewer-role-colors")
   const [quality, setQuality] = useRenderQuality()
@@ -933,15 +919,15 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
         >
           <IconButton
             aria-label="Veure a casa (AR)"
-            title={supportsQuickLook() ? "Veure a casa (AR)" : "Veure a casa (AR): obre l'app a l'iPhone o l'iPad"}
+            title="Veure a casa (AR)"
             size="sm"
             variant="surface"
             colorPalette="wood"
-            loading={busyAr}
-            onClick={() => void viewAr()}
+            onClick={() => setArOpen(true)}
           >
             <LuView />
           </IconButton>
+          <ArDialog open={arOpen} onClose={() => setArOpen(false)} panels={panels} name={name} />
           <IconButton aria-label={showHoles ? "Amagar forats" : "Mostrar forats"} title={showHoles ? "Amagar forats" : "Mostrar forats"} size="sm" variant={showHoles ? "solid" : "surface"} colorPalette="wood" onClick={() => setShowHoles((v) => !v)}>
             <LuCircleDot />
           </IconButton>
