@@ -321,8 +321,11 @@ class Builder {
     const c = m.carcass
     const { interior } = d
     if (c.back === "screwed") {
+      // Cargolat per darrere, els seus quatre cantells es veuen de costat i de dalt. Si és
+      // del mateix tauler que el cos (no un DM de fons), es cantegen com la resta.
+      const visible = c.backMaterial === c.material
       this.add(
-        this.basePanel("back", "trassera", "Fons", "back", d.W, d.H, d.tb, c.backMaterial, "none", { ...NO_EDGES }, placement([0, 0, 0], X, Y, Z, neg(Z))),
+        this.basePanel("back", "trassera", "Fons", "back", d.W, d.H, d.tb, c.backMaterial, "none", visible ? edges("top", "bottom", "left", "right") : { ...NO_EDGES }, placement([0, 0, 0], X, Y, Z, neg(Z))),
       )
       return
     }
