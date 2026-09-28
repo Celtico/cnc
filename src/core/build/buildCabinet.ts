@@ -381,6 +381,15 @@ export function normalizePanel(p: Panel): Panel {
       w: g.h,
       h: g.w,
     })),
+    // Talls passants (reixetes, trapes, passacables): el mateix gir. Les ranures i els
+    // rectangles tenen la cantonada a (x, y); els cercles, el centre.
+    ...(p.cutouts
+      ? {
+          cutouts: p.cutouts.map((c) =>
+            c.kind === "circle" ? { ...c, x: c.y, y: r(L - c.x) } : { ...c, x: c.y, y: r(L - c.x - c.w), w: c.h, h: c.w },
+          ),
+        }
+      : {}),
     placement: {
       origin: [
         r(origin[0] + L * xAxis[0]),

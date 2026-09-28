@@ -630,6 +630,21 @@ class Builder {
       const g = lip + front.pattern.slotGap
       exclude.push({ x: hatchLocal.x - g, y: hatchLocal.y - g, w: hatchLocal.w + 2 * g, h: hatchLocal.h + 2 * g })
     }
+    // Imants (reixeta desmuntable): cap ranura a sobre ni a tocar dels forats dels imants.
+    // Si no, amb un marge petit les ranures els travessen i la peça no es pot fer.
+    if (front.mount !== "hinged") {
+      const mg = m.hardware.magnet
+      const clear = mg.diameter / 2 + Math.max(6, front.pattern.slotGap / 2)
+      for (const ref of [left, right]) {
+        if (!ref) continue
+        const xMid = (ref.xL + ref.xR) / 2
+        for (const y of [rect.y0 + mg.cornerOffset, rect.y1 - mg.cornerOffset]) {
+          const lx = y - ter.y0
+          const ly = xMid - ter.x0
+          exclude.push({ x: lx - clear, y: ly - clear, w: 2 * clear, h: 2 * clear })
+        }
+      }
+    }
     const result = grilleCutouts(grille.length, grille.width, front.pattern, exclude)
     grille.cutouts = [...result.cutouts]
     this.openRatios[zone.id] = result.openRatio

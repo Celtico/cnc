@@ -32,6 +32,8 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const [busy, setBusy] = useState(false)
   const [busyAr, setBusyAr] = useState(false)
   const layers = useMemo(() => dxfLayers(panels, labels), [panels, labels])
+  // Els avisos del STEP es calculen abans de descarregar, per veure'ls de seguida.
+  const stepWarnings = useMemo(() => (panels.length ? toStep(panels, { name: "check" }).warnings : []), [panels])
 
   if (!project) return null
   const base = slugify(project.name)
@@ -40,15 +42,11 @@ export function ExportScreen({ projectId }: { projectId: number }) {
     warnEstimated()
     const step = toStep(panels, { name: project.name })
     downloadBlob(new Blob([step.text], { type: "application/step" }), `${base}.step`)
-    if (step.warnings.length) {
-      toaster.create({
-        title: "STEP generat amb avisos",
-        description: `${step.warnings.length} mecanitzats no s'han modelat: ${step.warnings[0]}`,
-        type: "warning",
-      })
-    } else {
-      toaster.create({ title: "STEP generat", description: `${step.solids} sòlids en mm (X amplada, Y fondària, Z amunt)`, type: "success" })
-    }
+    toaster.create({
+      title: "STEP generat",
+      description: `${step.solids} sòlids en mm (X amplada, Y fondària, Z amunt)` + (step.warnings.length ? ` · ${step.warnings.length} avisos (vegeu la pàgina)` : ""),
+      type: step.warnings.length ? "warning" : "success",
+    })
   }
   const doTopsolidCsv = () => {
     if (!nesting) return
@@ -125,6 +123,26 @@ export function ExportScreen({ projectId }: { projectId: number }) {
           </Alert.Content>
         </Alert.Root>
       ) : null}
+
+      {stepWarnings.length > 0 && (
+        <Alert.Root status="warning" size="sm">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Title>
+              El STEP sortirà amb {stepWarnings.length} {stepWarnings.length === 1 ? "avís" : "avisos"}: {stepWarnings.length === 1 ? "un mecanitzat no es pot" : "hi ha mecanitzats que no es poden"} modelar en 3D
+            </Alert.Title>
+            <Alert.Description>
+              <Stack as="ul" gap={0.5} mt={1} ps={4} listStyleType="disc">
+                {stepWarnings.slice(0, 5).map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </Stack>
+              {stepWarnings.length > 5 && <Text mt={1}>… i {stepWarnings.length - 5} més.</Text>}
+              <Text mt={1}>El DXF i el CSV sí que els porten; revisa aquestes peces a l'editor (forats massa a prop de la vora o de la ranura del fons).</Text>
+            </Alert.Description>
+          </Alert.Content>
+        </Alert.Root>
+      )}
 
       {/* Per destinació: cada grup, una acció principal. */}
       <ExportCard
