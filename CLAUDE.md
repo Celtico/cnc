@@ -224,6 +224,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     compartiments) amb contorn taronja; la resta del moble, sòlida. Compartiment
     seleccionat: contorn taronja amb vel. Al 3D, el primer clic selecciona el mòdul i el
     segon (amb el mòdul ja seleccionat) entra al compartiment tocat (`selectFrom3D`).
+    Tornar a clicar el compartiment seleccionat puja al pare (fins al mòdul); clicar la
+    carcassa (laterals, tapa, base) torna al mòdul.
   - **Alçat**: el mòdul en edició i, translúcids, una franja dels mòduls veïns (costats,
     a sobre i a sota) per orientar-se; clicar un veí hi passa (`neighbors` a `ElevationEditor`).
   - **Peces corregudes** (`comp.runs`, `core/build/runs.ts`): **taulell** (d'una peça sobre
@@ -320,6 +322,5 @@ pnpm dev         # servidor de desenvolupament
 pnpm build       # build de producció + service worker
 pnpm test        # vitest
 pnpm typecheck   # tsc --noEmit
-pnpm audit       # vulnerabilitats conegudes (alta o crítica fa fallar; també al Docker)
 pnpm lint
 ```

@@ -44,7 +44,7 @@ import { ArDialog } from "../../components/viewer/ArDialog"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox } from "../../core/build/buildComposition"
-import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, findZone, rowOf, walkZones, newId, type Composition, type Module } from "../../core/model"
+import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, findZone, parentOf, rowOf, walkZones, newId, type Composition, type Module } from "../../core/model"
 import { updateProjectComposition } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -320,13 +320,21 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
    * Clic al 3D. El primer clic selecciona el mòdul; si el mòdul ja estava seleccionat (o un
    * compartiment seu), el clic entra a dins i selecciona el compartiment tocat.
    */
+  /**
+   * Clic al 3D. Un mòdul no seleccionat → el mòdul. Dins del mòdul seleccionat → el
+   * compartiment on s'ha clicat. Sobre la carcassa (laterals, tapa, base) → el mòdul. Tornar
+   * a clicar el compartiment ja seleccionat → puja al pare (fins al mòdul).
+   */
   const selectFrom3D = (id: string, at?: [number, number, number]) => {
     const inside = (selection.kind === "module" && selection.id === id) || (selection.kind === "zone" && selection.moduleId === id)
     const idx = comp.modules.findIndex((m) => m.id === id)
     const mb = build?.modules[idx]
-    if (!inside || !at || !mb) return selectModule(id)
+    const mod = comp.modules[idx]
+    if (!inside || !at || !mb || !mod) return selectModule(id)
     const lx = at[0] - mb.x
     const ly = at[1] - mb.y
+    const inner = mb.build.layout.rects.get(mod.root.id)
+    if (inner && (lx < inner.x0 || lx > inner.x1 || ly < inner.y0 || ly > inner.y1)) return selectModule(id)
     const tol = 25
     let best: { id: string; area: number } | null = null
     for (const z of mb.build.layout.leaves) {
@@ -335,8 +343,16 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
       const area = (r.x1 - r.x0) * (r.y1 - r.y0)
       if (!best || area < best.area) best = { id: z.id, area }
     }
-    if (best) select({ kind: "zone", moduleId: id, zoneId: best.id })
-    else selectModule(id)
+    if (!best) return selectModule(id)
+    // El mateix compartiment (o un dels seus fills) ja seleccionat: un nivell amunt.
+    if (selection.kind === "zone" && selection.moduleId === id) {
+      const sel = findZone(mod.root, selection.zoneId)
+      if (sel && (sel.id === best.id || findZone(sel, best.id))) {
+        const parent = parentOf(mod.root, sel.id)
+        return parent && parent.id !== mod.root.id ? select({ kind: "zone", moduleId: id, zoneId: parent.id }) : selectModule(id)
+      }
+    }
+    select({ kind: "zone", moduleId: id, zoneId: best.id })
   }
 
   /**
