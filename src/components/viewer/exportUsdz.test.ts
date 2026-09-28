@@ -36,4 +36,21 @@ describe("exportUsdz", () => {
     expect(text).toContain("metersPerUnit = 1")
     expect(text.match(/def Mesh/g)?.length).toBe(panels.length)
   })
+
+  it("les peces amb retalls s'exporten amb els forats (reixa, taulell…)", async () => {
+    const base = panels[0]!
+    const holed = { ...base, id: "reixa", cutouts: [{ kind: "slot" as const, x: 50, y: 50, w: 200, h: 10 }] }
+    const scene = buildScene([holed], "reixa")
+    let mesh: import("three").Mesh | undefined
+    scene.traverse((o) => {
+      if ((o as import("three").Mesh).isMesh) mesh = o as import("three").Mesh
+    })
+    expect(mesh!.geometry.type).toBe("ExtrudeGeometry")
+    mesh!.geometry.computeBoundingBox()
+    const bb = mesh!.geometry.boundingBox!
+    expect(bb.max.x).toBeCloseTo(base.length / 1000, 6)
+    expect(bb.max.z).toBeCloseTo(base.thickness / 1000, 6)
+    const blob = await exportUsdz([holed], "reixa")
+    expect(blob.size).toBeGreaterThan(1000)
+  })
 })
