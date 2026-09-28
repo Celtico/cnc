@@ -36,6 +36,7 @@ export interface BuildWarning {
     | "shelf-span"
     | "drawer-no-slide"
     | "grille-open-ratio"
+    | "back-groove"
     | "layout"
     | "no-side"
     | "material-heat"
@@ -188,6 +189,13 @@ class Builder {
     if (d.hasTop) this.buildHorizontal("top")
     if (c.back !== "none") this.buildBack()
     if (c.base.kind === "plinth") this.buildPlinth()
+    // Fons en ranura massa gruixut: la ranura deixaria el lateral sense material.
+    if (c.back === "groove" && d.tb > d.t - 6) {
+      this.warnings.push({
+        code: "back-groove",
+        message: `Fons de ${d.tb} mm en ranura en un cos de ${d.t} mm: la ranura buidaria el lateral. Amb un fons gruixut, posa'l cargolat.`,
+      })
+    }
   }
 
   private buildSide(isLeft: boolean): void {

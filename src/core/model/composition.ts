@@ -104,7 +104,7 @@ export const CarcassSchema = z.object({
   /** Material de portes, fronts de calaix, abatibles, reixetes i fronts fixos. Buit = el del cos. */
   frontMaterial: z.string().optional(),
   backMaterial: z.string(),
-  backThickness: mm.min(3).max(20),
+  backThickness: mm.min(3).max(40),
   base: BaseSchema,
   back: z.enum(["groove", "screwed", "none"]),
   top: TopSchema,

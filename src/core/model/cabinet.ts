@@ -9,7 +9,7 @@ export const CabinetParamsSchema = z.object({
   depth: mm.min(100).max(1200),
 
   panelThickness: mm.min(8).max(40),
-  backThickness: mm.min(3).max(20),
+  backThickness: mm.min(3).max(40),
 
   shelves: z.number().int().min(0).max(20),
   doors: z.union([z.literal(0), z.literal(1), z.literal(2)]),

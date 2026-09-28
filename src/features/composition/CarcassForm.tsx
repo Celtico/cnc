@@ -185,17 +185,30 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
  * Materials del cos, dels fronts i del fons. Es fa servir per a un mòdul i també per al
  * moble sencer (aplica el canvi a tots els mòduls).
  */
+/** Valor del desplegable del fons per a «Com el cos» (mateix material i gruix). */
+const SAME = "__com-el-cos__"
+
 export function MaterialsForm({ carcass: c, onPatch, mixed }: { carcass: Carcass; onPatch: (patch: Partial<Carcass>) => void; mixed?: boolean }) {
   const { settings } = useSettings()
   const mat = materialByName(settings, c.material)
   const backMat = materialByName(settings, c.backMaterial)
   /** En triar un material, si el gruix actual no és dels seus, s'agafa el més proper. */
   const pickMaterial = (key: "material" | "backMaterial", thicknessKey: "thickness" | "backThickness") => (name: string) => {
+    // Fons del mateix material que el cos: també el mateix gruix, perquè comparteixin
+    // tauler al nesting (s'agrupa per material i gruix).
+    if (key === "backMaterial" && (name === SAME || name === c.material)) {
+      onPatch({ backMaterial: c.material, backThickness: c.thickness })
+      return
+    }
     const m = materialByName(settings, name)
     const current = c[thicknessKey]
     const thickness = m && !m.thicknesses.includes(current) ? m.thicknesses.reduce((a, b) => (Math.abs(b - current) < Math.abs(a - current) ? b : a)) : current
-    onPatch({ [key]: name, [thicknessKey]: thickness })
+    // Fons «com el cos»: segueix el cos quan aquest canvia.
+    onPatch(key === "material" && sameBack ? { material: name, thickness, backMaterial: name, backThickness: thickness } : { [key]: name, [thicknessKey]: thickness })
   }
+  const sameBack = c.backMaterial === c.material && c.backThickness === c.thickness
+  // Mateix material però un altre gruix: al nesting van a taulers diferents.
+  const backApart = c.backMaterial === c.material && c.backThickness !== c.thickness
   const boards = settings.materials.filter((m) => !m.forBacks)
   return (
     <Stack gap={3}>
@@ -206,7 +219,7 @@ export function MaterialsForm({ carcass: c, onPatch, mixed }: { carcass: Carcass
       )}
       <SimpleGrid columns={2} gap={3}>
         <MaterialSelect label="Cos" materials={boards} value={c.material} onChange={pickMaterial("material", "thickness")} />
-        <NumberField label="Gruix" value={c.thickness} min={8} max={40} step={1} onChange={(thickness) => onPatch({ thickness })} help={mat ? mat.thicknesses.join(" · ") : undefined} />
+        <NumberField label="Gruix" value={c.thickness} min={8} max={40} step={1} onChange={(thickness) => onPatch(sameBack ? { thickness, backThickness: thickness } : { thickness })} help={mat ? mat.thicknesses.join(" · ") : undefined} />
       </SimpleGrid>
       <Field.Root>
         <Field.Label fontSize="sm">Fronts (portes, calaixos, abatibles)</Field.Label>
@@ -224,9 +237,33 @@ export function MaterialsForm({ carcass: c, onPatch, mixed }: { carcass: Carcass
         <Field.HelperText>Mateix gruix que el cos.</Field.HelperText>
       </Field.Root>
       <SimpleGrid columns={2} gap={3}>
-        <MaterialSelect label="Fons" materials={settings.materials} value={c.backMaterial} onChange={pickMaterial("backMaterial", "backThickness")} />
-        <NumberField label="Gruix" value={c.backThickness} min={3} max={20} step={1} onChange={(backThickness) => onPatch({ backThickness })} help={backMat ? backMat.thicknesses.join(" · ") : undefined} />
+        <Field.Root>
+          <Field.Label fontSize="sm">Fons</Field.Label>
+          <NativeSelect.Root size="sm">
+            <NativeSelect.Field value={sameBack ? SAME : c.backMaterial} onChange={(e) => pickMaterial("backMaterial", "backThickness")(e.target.value)}>
+              <option value={SAME}>Com el cos</option>
+              {!settings.materials.some((m) => m.name === c.backMaterial) && <option value={c.backMaterial}>{c.backMaterial || "(sense material)"}</option>}
+              {settings.materials.map((m) => (
+                <option key={m.id} value={m.name}>
+                  {m.name}
+                </option>
+              ))}
+            </NativeSelect.Field>
+            <NativeSelect.Indicator />
+          </NativeSelect.Root>
+        </Field.Root>
+        <NumberField label="Gruix" value={c.backThickness} min={3} max={40} step={1} onChange={(backThickness) => onPatch({ backThickness })} help={backMat ? backMat.thicknesses.join(" · ") : undefined} />
       </SimpleGrid>
+      {backApart && (
+        <HStack gap={2} fontSize="xs" color="fg.muted" wrap="wrap">
+          <Text>
+            El fons és de {c.backMaterial} però de {c.backThickness} mm: no comparteix tauler amb el cos ({c.thickness} mm).
+          </Text>
+          <Button size="2xs" variant="outline" colorPalette="wood" onClick={() => onPatch({ backThickness: c.thickness })}>
+            Posar {c.thickness} mm
+          </Button>
+        </HStack>
+      )}
       {mat?.edge && (
         <Text fontSize="xs" color="fg.muted">
           Cantell del cos: {mat.edge}

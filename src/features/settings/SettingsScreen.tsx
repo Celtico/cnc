@@ -147,7 +147,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
               <MaterialSelect label="Tauler" materials={draft.materials.filter((m) => !m.forBacks)} value={draft.defaults.material} onChange={(material) => set("defaults", { ...draft.defaults, material })} />
               <NumberField label="Gruix tauler" value={draft.defaults.thickness} min={8} max={40} step={1} onChange={(thickness) => set("defaults", { ...draft.defaults, thickness })} />
               <MaterialSelect label="Fons" materials={draft.materials} value={draft.defaults.backMaterial} onChange={(backMaterial) => set("defaults", { ...draft.defaults, backMaterial })} />
-              <NumberField label="Gruix fons" value={draft.defaults.backThickness} min={3} max={20} step={1} onChange={(backThickness) => set("defaults", { ...draft.defaults, backThickness })} />
+              <NumberField label="Gruix fons" value={draft.defaults.backThickness} min={3} max={40} step={1} onChange={(backThickness) => set("defaults", { ...draft.defaults, backThickness })} />
             </SimpleGrid>
           </Section>
 
