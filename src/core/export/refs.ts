@@ -19,6 +19,7 @@ const ROLE_LETTER: Record<PanelRole, string> = {
   grille: "F",
   hatch: "F",
   panel: "F",
+  worktop: "H",
 }
 
 /**

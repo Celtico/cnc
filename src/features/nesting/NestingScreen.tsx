@@ -4,7 +4,6 @@ import {
   Card,
   Field,
   HStack,
-  Heading,
   SegmentGroup,
   SimpleGrid,
   Stack,
@@ -52,7 +51,6 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
 
   return (
     <VStack align="stretch" gap={5}>
-      <Heading size="xl">Nesting</Heading>
 
       <Card.Root variant="outline">
         <Card.Body gap={4}>

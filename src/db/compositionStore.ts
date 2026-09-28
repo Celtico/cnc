@@ -1,4 +1,4 @@
-import { CompositionSchema, cabinetToComposition, type Composition } from "../core/model"
+import { CompositionSchema, cabinetToComposition, normalizeComposition, type Composition } from "../core/model"
 import { db, safeParams, type Project } from "./db"
 
 /**
@@ -17,7 +17,7 @@ declare module "./db" {
 export function compositionOf(project: Pick<Project, "params" | "composition" | "name">): Composition {
   if (project.composition) {
     const res = CompositionSchema.safeParse(project.composition)
-    if (res.success && res.data.modules.length > 0) return res.data
+    if (res.success && res.data.modules.length > 0) return normalizeComposition(res.data)
   }
   return cabinetToComposition(safeParams(project.params), project.name)
 }
@@ -73,4 +73,27 @@ export function deleteUserTemplate(id: string): UserTemplate[] {
     /* sense localStorage */
   }
   return next
+}
+
+function writeTemplates(list: UserTemplate[]): UserTemplate[] {
+  try {
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(list))
+  } catch {
+    /* sense localStorage */
+  }
+  return list
+}
+
+export function renameUserTemplate(id: string, name: string): UserTemplate[] {
+  const n = name.trim()
+  if (!n) return loadUserTemplates()
+  return writeTemplates(loadUserTemplates().map((t) => (t.id === id ? { ...t, name: n } : t)))
+}
+
+export function duplicateUserTemplate(id: string): UserTemplate[] {
+  const list = loadUserTemplates()
+  const src = list.find((t) => t.id === id)
+  if (!src) return list
+  const copy: UserTemplate = { ...structuredClone(src), id: `t${Date.now().toString(36)}`, name: `${src.name} (còpia)`, createdAt: Date.now() }
+  return writeTemplates([copy, ...list])
 }

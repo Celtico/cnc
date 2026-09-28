@@ -56,6 +56,8 @@ export const MobleFileSchema = z.object({
   format: z.literal(MOBLE_FORMAT),
   version: z.literal(MOBLE_VERSION),
   exportedAt: z.string(),
+  /** "plantilla" si s'ha exportat des de les plantilles; en obrir-lo es proposa afegir-lo com a plantilla. */
+  kind: z.enum(["moble", "plantilla"]).optional(),
   project: z.object({
     name: z.string(),
     composition: CompositionSchema,
@@ -76,6 +78,7 @@ export interface MobleInput {
   references: RefPreset[]
   photo?: FilePhoto
   exportedAt?: string
+  kind?: "moble" | "plantilla"
 }
 
 /** Una referència "és la mateixa" si coincideixen nom i mides. */
@@ -99,6 +102,7 @@ export function buildMobleFile(input: MobleInput): MobleFile {
     format: MOBLE_FORMAT,
     version: MOBLE_VERSION,
     exportedAt: input.exportedAt ?? new Date().toISOString(),
+    ...(input.kind === "plantilla" ? { kind: "plantilla" as const } : {}),
     project: {
       name: input.name,
       composition: input.composition,

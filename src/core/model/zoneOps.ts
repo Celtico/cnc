@@ -47,6 +47,46 @@ export function unsplitZone(root: Zone, id: string): Zone {
   })
 }
 
+/** Còpia d'una zona (i els seus fills) amb ids nous. */
+export function cloneZone(z: Zone): Zone {
+  const { id: _old, split, ...rest } = z
+  void _old
+  return split
+    ? { ...rest, id: newId(), split: { ...split, sizes: [...split.sizes], children: split.children.map(cloneZone) } }
+    : { ...structuredClone(rest), id: newId() }
+}
+
+/**
+ * Duplica una zona al costat (`v`, a la dreta) o a sobre (`h`). Si la zona ja és dins
+ * d'una divisió en aquella direcció, la còpia s'hi insereix just després, amb mida auto;
+ * si no, la zona es divideix en dues i totes dues porten el mateix contingut.
+ * Retorna l'arbre nou i l'id de la còpia.
+ */
+export function duplicateZone(root: Zone, id: string, dir: "v" | "h"): { root: Zone; copyId: string | null } {
+  const parent = parentOf(root, id)
+  if (parent?.split && parent.split.dir === dir) {
+    const idx = parent.split.children.findIndex((c) => c.id === id)
+    const copy = cloneZone(parent.split.children[idx]!)
+    const next = updateZone(root, parent.id, (p) => {
+      if (!p.split) return p
+      const children = [...p.split.children]
+      const sizes = [...p.split.sizes]
+      children.splice(idx + 1, 0, copy)
+      sizes.splice(idx + 1, 0, "auto")
+      return { ...p, split: { ...p.split, children, sizes } }
+    })
+    return { root: next, copyId: copy.id }
+  }
+  let copyId: string | null = null
+  const next = updateZone(root, id, (z) => {
+    const a = cloneZone(z)
+    const b = cloneZone(z)
+    copyId = b.id
+    return { id: z.id, split: { dir, sizes: ["auto", "auto"], children: [a, b] } }
+  })
+  return { root: next, copyId }
+}
+
 /** Afegeix una zona "auto" al final d'una divisió. */
 export function addChild(root: Zone, id: string): Zone {
   return updateZone(root, id, (z) => {

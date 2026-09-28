@@ -5,13 +5,20 @@ import { NumberField } from "../editor/ParamsForm"
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/SettingsScreen"
 
-/** Formulari de la carcassa i dels jocs del mòdul seleccionat. */
-export function CarcassForm({ module, onChange }: { module: Module; onChange: (m: Module) => void }) {
+export type CarcassSection = "dims" | "structure" | "cables"
+
+/**
+ * Formulari de la carcassa del mòdul seleccionat, per seccions (l'inspector en fa una
+ * secció plegable per a cadascuna): mides, estructura (base, fons, tapa, laterals) i
+ * passacables.
+ */
+export function CarcassForm({ module, onChange, section }: { module: Module; onChange: (m: Module) => void; section: CarcassSection }) {
   const c = module.carcass
   const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
 
-  return (
-    <Stack gap={4}>
+  if (section === "dims")
+    return (
+      <Stack gap={4}>
         <Field.Root>
           <Field.Label>Nom del mòdul</Field.Label>
           <Input size="sm" value={module.name} onChange={(e) => onChange({ ...module, name: e.target.value })} />
@@ -21,15 +28,24 @@ export function CarcassForm({ module, onChange }: { module: Module; onChange: (m
           <NumberField label="Alçada" value={c.height} min={100} max={2800} step={10} onChange={(height) => set({ height })} />
           <NumberField label="Fondària" value={c.depth} min={100} max={1200} step={10} onChange={(depth) => set({ depth })} />
         </SimpleGrid>
-
-        <SimpleGrid columns={2} gap={3}>
+      </Stack>
+    )
+  if (section === "structure")
+    return (
+      <Stack gap={4}>
+        {/* «Penjat a la paret» és una posició, no una base: es tria a la secció Posició. */}
+        {c.base.kind === "wall" ? (
+          <Text fontSize="sm" color="fg.muted">
+            Base: cap (penjat a la paret, a {c.base.height} mm del terra). Es canvia a Posició.
+          </Text>
+        ) : (
           <Field.Root>
             <Field.Label>Base</Field.Label>
             <NativeSelect.Root size="sm">
               <NativeSelect.Field
                 value={c.base.kind}
                 onChange={(e) => {
-                  const k = e.target.value as Base["kind"]
+                  const k = e.target.value as Exclude<Base["kind"], "wall">
                   const base: Base = k === "plinth" ? { kind: "plinth", height: 60, setback: 30 } : k === "legs" ? { kind: "legs", height: 100 } : { kind: k }
                   set({ base })
                 }}
@@ -42,14 +58,20 @@ export function CarcassForm({ module, onChange }: { module: Module; onChange: (m
               <NativeSelect.Indicator />
             </NativeSelect.Root>
           </Field.Root>
-          {c.base.kind === "plinth" && (
-            <HStack align="end" gap={2}>
-              <NumberField label="Alçada sòcol" value={c.base.height} min={20} max={300} step={5} onChange={(height) => set({ base: { kind: "plinth", height, setback: (c.base as { setback: number }).setback } })} />
-              <NumberField label="Retranqueig" value={c.base.setback} min={0} max={100} step={5} onChange={(setback) => set({ base: { kind: "plinth", height: (c.base as { height: number }).height, setback } })} />
-            </HStack>
-          )}
-          {c.base.kind === "legs" && <NumberField label="Alçada potes" value={c.base.height} min={20} max={400} step={5} onChange={(height) => set({ base: { kind: "legs", height } })} />}
-        </SimpleGrid>
+        )}
+        {/* Base a tota l'amplada i les seves mides a sota, en dues columnes: així els camps
+            numèrics tenen prou espai i les etiquetes no es tallen. */}
+        {c.base.kind === "plinth" && (
+          <SimpleGrid columns={2} gap={3}>
+            <NumberField label="Alçada sòcol" value={c.base.height} min={20} max={300} step={5} onChange={(height) => set({ base: { kind: "plinth", height, setback: (c.base as { setback: number }).setback } })} />
+            <NumberField label="Retranqueig" value={c.base.setback} min={0} max={100} step={5} onChange={(setback) => set({ base: { kind: "plinth", height: (c.base as { height: number }).height, setback } })} />
+          </SimpleGrid>
+        )}
+        {c.base.kind === "legs" && (
+          <SimpleGrid columns={2} gap={3}>
+            <NumberField label="Alçada potes" value={c.base.height} min={20} max={400} step={5} onChange={(height) => set({ base: { kind: "legs", height } })} />
+          </SimpleGrid>
+        )}
 
         <SimpleGrid columns={2} gap={3}>
           <Field.Root>
@@ -85,23 +107,29 @@ export function CarcassForm({ module, onChange }: { module: Module; onChange: (m
           {c.top.kind === "ventSlot" && <NumberField label="Ranura d'aire" value={c.top.gap} min={20} max={200} step={5} onChange={(gap) => set({ top: { kind: "ventSlot", gap } })} />}
         </SimpleGrid>
 
-        <HStack gap={6}>
-          <Switch.Root size="sm" checked={c.sides.left} onCheckedChange={(e) => set({ sides: { ...c.sides, left: e.checked } })}>
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label>Lateral esquerre</Switch.Label>
-          </Switch.Root>
-          <Switch.Root size="sm" checked={c.sides.right} onCheckedChange={(e) => set({ sides: { ...c.sides, right: e.checked } })}>
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label>Lateral dret</Switch.Label>
-          </Switch.Root>
-        </HStack>
-
+        <Field.Root>
+          <Field.Label>Laterals</Field.Label>
+          <SimpleGrid columns={2} gap={3} w="full">
+            <Switch.Root size="sm" checked={c.sides.left} onCheckedChange={(e) => set({ sides: { ...c.sides, left: e.checked } })}>
+              <Switch.HiddenInput />
+              <Switch.Control />
+              <Switch.Label>Esquerre</Switch.Label>
+            </Switch.Root>
+            <Switch.Root size="sm" checked={c.sides.right} onCheckedChange={(e) => set({ sides: { ...c.sides, right: e.checked } })}>
+              <Switch.HiddenInput />
+              <Switch.Control />
+              <Switch.Label>Dret</Switch.Label>
+            </Switch.Root>
+          </SimpleGrid>
+        </Field.Root>
+      </Stack>
+    )
+  return (
+    <Stack gap={4}>
         <Stack gap={2}>
           <HStack justify="space-between">
-            <Text fontSize="sm" fontWeight="semibold" color="fg.muted">
-              Passacables (Ø passant)
+            <Text fontSize="xs" color="fg.muted">
+              Forats passants per als cables.
             </Text>
             <Button
               size="xs"
@@ -120,25 +148,32 @@ export function CarcassForm({ module, onChange }: { module: Module; onChange: (m
             const update = (patch: Partial<typeof h>) =>
               onChange({ ...module, extras: { ...module.extras, cableHoles: module.extras.cableHoles.map((x, k) => (k === i ? { ...x, ...patch } : x)) } })
             return (
-              <HStack key={i} align="end" gap={2}>
-                <Field.Root flex={1}>
-                  <Field.Label>A</Field.Label>
-                  <NativeSelect.Root size="sm">
-                    <NativeSelect.Field value={h.panel} onChange={(e) => update({ panel: e.target.value as typeof h.panel })}>
-                      <option value="back">Fons</option>
-                      <option value="top">Tapa</option>
-                      <option value="bottom">Base</option>
-                    </NativeSelect.Field>
-                    <NativeSelect.Indicator />
-                  </NativeSelect.Root>
-                </Field.Root>
-                <NumberField label="X" value={h.x} min={0} max={3000} step={10} onChange={(x) => update({ x })} />
-                <NumberField label={h.panel === "back" ? "Y (alçada)" : "Y (des del darrere)"} value={h.y} min={0} max={3000} step={10} onChange={(y) => update({ y })} />
-                <NumberField label="Ø" value={h.diameter} min={10} max={200} step={5} onChange={(diameter) => update({ diameter })} />
-                <IconButton aria-label="Eliminar passacables" size="sm" variant="ghost" colorPalette="red" onClick={() => onChange({ ...module, extras: { ...module.extras, cableHoles: module.extras.cableHoles.filter((_, k) => k !== i) } })}>
-                  <LuTrash2 />
-                </IconButton>
-              </HStack>
+              <Stack key={i} gap={2} borderTopWidth="1px" pt={2}>
+                <HStack align="end" gap={2}>
+                  <Field.Root flex={1}>
+                    <Field.Label>Passacables {i + 1} a</Field.Label>
+                    <NativeSelect.Root size="sm">
+                      <NativeSelect.Field value={h.panel} onChange={(e) => update({ panel: e.target.value as typeof h.panel })}>
+                        <option value="back">Fons</option>
+                        <option value="top">Tapa</option>
+                        <option value="bottom">Base</option>
+                      </NativeSelect.Field>
+                      <NativeSelect.Indicator />
+                    </NativeSelect.Root>
+                  </Field.Root>
+                  <IconButton aria-label="Eliminar passacables" size="sm" variant="ghost" colorPalette="red" onClick={() => onChange({ ...module, extras: { ...module.extras, cableHoles: module.extras.cableHoles.filter((_, k) => k !== i) } })}>
+                    <LuTrash2 />
+                  </IconButton>
+                </HStack>
+                <SimpleGrid columns={3} gap={2}>
+                  <NumberField label="X" value={h.x} min={0} max={3000} step={10} onChange={(x) => update({ x })} />
+                  <NumberField label="Y" value={h.y} min={0} max={3000} step={10} onChange={(y) => update({ y })} />
+                  <NumberField label="Ø" value={h.diameter} min={10} max={200} step={5} onChange={(diameter) => update({ diameter })} />
+                </SimpleGrid>
+                <Text fontSize="xs" color="fg.muted">
+                  X des de l'esquerra; Y {h.panel === "back" ? "des de baix" : "des del darrere"}.
+                </Text>
+              </Stack>
             )
           })}
         </Stack>
@@ -146,11 +181,12 @@ export function CarcassForm({ module, onChange }: { module: Module; onChange: (m
   )
 }
 
-/** Materials, gruixos, jocs: la secció "Fusteria" del mòdul seleccionat. */
-export function JoineryForm({ module, onChange }: { module: Module; onChange: (m: Module) => void }) {
-  const c = module.carcass
+/**
+ * Materials del cos, dels fronts i del fons. Es fa servir per a un mòdul i també per al
+ * moble sencer (aplica el canvi a tots els mòduls).
+ */
+export function MaterialsForm({ carcass: c, onPatch, mixed }: { carcass: Carcass; onPatch: (patch: Partial<Carcass>) => void; mixed?: boolean }) {
   const { settings } = useSettings()
-  const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
   const mat = materialByName(settings, c.material)
   const backMat = materialByName(settings, c.backMaterial)
   /** En triar un material, si el gruix actual no és dels seus, s'agafa el més proper. */
@@ -158,21 +194,54 @@ export function JoineryForm({ module, onChange }: { module: Module; onChange: (m
     const m = materialByName(settings, name)
     const current = c[thicknessKey]
     const thickness = m && !m.thicknesses.includes(current) ? m.thicknesses.reduce((a, b) => (Math.abs(b - current) < Math.abs(a - current) ? b : a)) : current
-    set({ [key]: name, [thicknessKey]: thickness })
+    onPatch({ [key]: name, [thicknessKey]: thickness })
   }
+  const boards = settings.materials.filter((m) => !m.forBacks)
   return (
     <Stack gap={3}>
+      {mixed && (
+        <Text fontSize="xs" color="fg.muted">
+          Els mòduls tenen materials diferents; es mostren els del primer. El que triïs s'aplica a tots.
+        </Text>
+      )}
       <SimpleGrid columns={2} gap={3}>
-        <MaterialSelect label="Material tauler" materials={settings.materials.filter((m) => !m.forBacks)} value={c.material} onChange={pickMaterial("material", "thickness")} />
-        <NumberField label="Gruix tauler" value={c.thickness} min={8} max={40} step={1} onChange={(thickness) => set({ thickness })} help={mat ? mat.thicknesses.join(" · ") : "10 · 12 · 16 · 19 · 30"} />
-        <MaterialSelect label="Material fons" materials={settings.materials} value={c.backMaterial} onChange={pickMaterial("backMaterial", "backThickness")} />
-        <NumberField label="Gruix fons" value={c.backThickness} min={3} max={20} step={1} onChange={(backThickness) => set({ backThickness })} help={backMat ? backMat.thicknesses.join(" · ") : undefined} />
+        <MaterialSelect label="Cos" materials={boards} value={c.material} onChange={pickMaterial("material", "thickness")} />
+        <NumberField label="Gruix" value={c.thickness} min={8} max={40} step={1} onChange={(thickness) => onPatch({ thickness })} help={mat ? mat.thicknesses.join(" · ") : undefined} />
+      </SimpleGrid>
+      <Field.Root>
+        <Field.Label fontSize="sm">Fronts (portes, calaixos, abatibles)</Field.Label>
+        <NativeSelect.Root size="sm">
+          <NativeSelect.Field value={c.frontMaterial ?? ""} onChange={(e) => onPatch({ frontMaterial: e.target.value || undefined })}>
+            <option value="">Com el cos</option>
+            {boards.map((m) => (
+              <option key={m.id} value={m.name}>
+                {m.name}
+              </option>
+            ))}
+          </NativeSelect.Field>
+          <NativeSelect.Indicator />
+        </NativeSelect.Root>
+        <Field.HelperText>Mateix gruix que el cos.</Field.HelperText>
+      </Field.Root>
+      <SimpleGrid columns={2} gap={3}>
+        <MaterialSelect label="Fons" materials={settings.materials} value={c.backMaterial} onChange={pickMaterial("backMaterial", "backThickness")} />
+        <NumberField label="Gruix" value={c.backThickness} min={3} max={20} step={1} onChange={(backThickness) => onPatch({ backThickness })} help={backMat ? backMat.thicknesses.join(" · ") : undefined} />
       </SimpleGrid>
       {mat?.edge && (
         <Text fontSize="xs" color="fg.muted">
-          Cantell del material: {mat.edge}
+          Cantell del cos: {mat.edge}
         </Text>
       )}
+    </Stack>
+  )
+}
+
+/** Jocs i ferratges del mòdul seleccionat (secció «Fusteria (avançat)»). */
+export function JoineryForm({ module, onChange }: { module: Module; onChange: (m: Module) => void }) {
+  const c = module.carcass
+  const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
+  return (
+    <Stack gap={3}>
       <SimpleGrid columns={2} gap={3}>
         <NumberField label="Joc front–cos" value={module.fronts.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => onChange({ ...module, fronts: { ...module.fronts, outerGap } })} />
         <NumberField label="Joc entre fronts" value={module.fronts.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => onChange({ ...module, fronts: { ...module.fronts, betweenGap } })} />

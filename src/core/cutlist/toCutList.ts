@@ -25,6 +25,7 @@ export const ROLE_LABELS: Record<PanelRole, string> = {
   grille: "Reixeta",
   hatch: "Trapa",
   panel: "Front fix",
+  worktop: "Taulell",
 }
 
 export interface CutListItem {
@@ -65,6 +66,7 @@ const ROLE_ORDER: PanelRole[] = [
   "fixedShelf",
   "shelf",
   "plinth",
+  "worktop",
   "door",
   "flap",
   "grille",

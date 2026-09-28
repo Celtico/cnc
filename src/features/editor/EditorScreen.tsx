@@ -1,48 +1,80 @@
-import { Alert, Badge, Box, Button, Editable, Flex, HStack, IconButton, Input, Menu, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Alert, Badge, Box, Button, Field, Flex, HStack, IconButton, NativeSelect, Popover, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
-  LuBookmark,
   LuBox,
+  LuCable,
+  LuFrame,
+  LuMove,
+  LuChevronLeft,
+  LuChevronRight,
+  LuColumns2,
+  LuRows2,
+  LuPalette,
+  LuPanelLeftClose,
+  LuPanelLeftOpen,
+  LuPanelRightClose,
+  LuPanelRightOpen,
+  LuPanelTop,
   LuCamera,
   LuCircleDot,
   LuDoorOpen,
   LuExpand,
   LuHammer,
-  LuLayoutDashboard,
   LuLayoutPanelLeft,
-  LuLayoutTemplate,
+  LuListTree,
   LuMaximize2,
   LuMinimize2,
   LuMoveDiagonal,
   LuRedo2,
-  LuRotate3D,
-  LuSave,
+  LuScan,
   LuShrink,
+  LuSlidersHorizontal,
+  LuSlidersVertical,
+  LuSquare,
   LuTriangleAlert,
-  LuUndo2, LuScan } from "react-icons/lu"
-import { PanelGroup, PanelSection, usePanelGroup } from "../../components/PanelSection"
+  LuUndo2,
+  LuView,
+} from "react-icons/lu"
+import { PanelSection } from "../../components/PanelSection"
 import { ResizeHandle } from "../../components/ResizeHandle"
+import { TopBarActions } from "../../components/TopBar"
 import { toaster } from "../../components/ui/toaster"
 import { CabinetViewer, type ViewerModule, type ZoneLight } from "../../components/viewer/CabinetViewer"
+import { exportUsdz, openQuickLook, supportsQuickLook } from "../../components/viewer/exportUsdz"
+import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox } from "../../core/build/buildComposition"
-import { downloadBlob, slugify } from "../download"
-import { ViewBar, ViewerControls, type ViewerState } from "./ViewerControls"
-import { BUILTIN_TEMPLATES, applySettingsToModule, compositionWidth, defaultModule, findZone, newId, type Composition, type Module } from "../../core/model"
-import { useSettings } from "../settings/SettingsContext"
-import { loadUserTemplates, saveUserTemplate, updateProjectComposition } from "../../db/compositionStore"
-import { renameProject } from "../../db/db"
-import { CarcassForm, JoineryForm } from "../composition/CarcassForm"
-import { ElevationEditor } from "../composition/ElevationEditor"
-import { ModuleStrip, ReferencesEditor } from "../composition/ModuleStrip"
-import { ZonePanel } from "../composition/ZonePanel"
-import { SaveFileDialog } from "../file/SaveFileDialog"
-import { PhotoScreen } from "../photo/PhotoScreen"
-import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
+import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, findZone, rowOf, walkZones, newId, type Composition, type Module } from "../../core/model"
+import { updateProjectComposition } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
+import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
+import { ElevationEditor } from "../composition/ElevationEditor"
+import { RefActions, RefInspector } from "../composition/RefInspector"
+import { StructureTree, type Selection } from "../composition/StructureTree"
+import { Tooltip } from "../../components/ui/tooltip"
+import { ZoneActions, ZonePanel } from "../composition/ZonePanel"
+import { RunsForm } from "../composition/RunsForm"
+import { zoneLabel } from "../composition/zoneLabel"
+import { downloadBlob, slugify } from "../download"
+import { NumberField } from "./ParamsForm"
+import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
+import { PhotoScreen } from "../photo/PhotoScreen"
+import { useSettings } from "../settings/SettingsContext"
 import { usePersistentFlag } from "../usePersistentFlag"
 import { usePersistentNumber } from "../usePersistentNumber"
 import { useComposition, useCompositionBuild, useProject } from "../useProject"
+import { ViewBar, ViewerControls, type ViewerState } from "./ViewerControls"
+
+type ViewTab = "3d" | "elevation" | "photo"
+const TAB_KEY = "mobles:editor-view-tab"
+function readTab(): ViewTab {
+  try {
+    const v = localStorage.getItem(TAB_KEY)
+    return v === "elevation" || v === "photo" ? v : "3d"
+  } catch {
+    return "3d"
+  }
+}
 
 export function EditorScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
@@ -61,7 +93,6 @@ interface History {
 const MOD = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? "⌘" : "Ctrl+"
 
 function Editor({ projectId, name, initial, project }: { projectId: number; name: string; initial: Composition; project: Project }) {
-  const [saveOpen, setSaveOpen] = useState(false)
   // Composició amb desfer/refer (fins a 50 passos).
   const [history, setHistory] = useState<History>({ past: [], present: initial, future: [] })
   const comp = history.present
@@ -110,12 +141,34 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Selecció única (arbre, 3D i alçat van sincronitzats): moble, mòdul, compartiment o objecte.
   const [selectedModule, setSelectedModule] = useState<string>(initial.modules[0]!.id)
   const [selectedZone, setSelectedZone] = useState<string | null>(null)
+  const [selKind, setSelKind] = useState<"moble" | "module" | "zone" | "ref">("module")
+  const [selectedRef, setSelectedRef] = useState<string | null>(null)
+  // Mòbil: sota el visor, pestanyes Estructura / Propietats.
+  const [mobilePane, setMobilePane] = useState<"tree" | "props">("props")
   const [exploded, setExploded] = useState(false)
   const [showHoles, setShowHoles] = useState(false)
+  // «Veure a casa»: el moble a mida real amb AR Quick Look (Safari a l'iPhone/iPad).
+  const [busyAr, setBusyAr] = useState(false)
+  const viewAr = async () => {
+    if (!supportsQuickLook()) {
+      toaster.create({ title: "Veure a casa (AR)", description: "Obre aquesta app amb Safari a l'iPhone o l'iPad i prem aquest botó: el moble apareixerà a mida real a l'habitació.", type: "info", duration: 7000 })
+      return
+    }
+    setBusyAr(true)
+    try {
+      openQuickLook(await exportUsdz(panelsRef.current, name), `${name || "moble"}.usdz`)
+    } catch (e) {
+      toaster.create({ title: "No s'ha pogut preparar l'AR", description: String(e), type: "error" })
+    } finally {
+      setBusyAr(false)
+    }
+  }
   // Visor: vista, obertura de portes i calaixos, colors.
   const [roleColors, setRoleColors] = usePersistentFlag("mobles:viewer-role-colors")
+  const [quality, setQuality] = useRenderQuality()
   const [viewer, setViewerState] = useState<Omit<ViewerState, "materialMode">>({ view: "3d", opening: 0, openOnlySelected: false })
   const viewerState: ViewerState = { ...viewer, materialMode: roleColors ? "role" : "material" }
   const setViewer = (patch: Partial<ViewerState>) => {
@@ -129,23 +182,45 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   }, [])
   // Amaga el panell de paràmetres perquè el 3D ocupi tot l'espai.
   const [formHidden, setFormHidden] = usePersistentFlag("mobles:editor-form-hidden")
-  const [formWidth, setFormWidth] = usePersistentNumber("mobles:editor-form-width", 380)
-  // Pestanya del visor: la composició en 3D o superposada a la foto del lloc.
-  const [photoTab, setPhotoTab] = usePersistentFlag("mobles:editor-tab-photo")
-  // Contenidor del panell esquerre on la pestanya Foto hi pinta els seus controls.
-  const [photoControls, setPhotoControls] = useState<HTMLDivElement | null>(null)
-  // En triar la pestanya Foto s'obre la secció "Adaptar mides a la imatge" (i es tanquen les altres).
-  const [openPhotoSection, setOpenPhotoSection] = useState(0)
-  const showPhotoTab = (on: boolean) => {
-    setPhotoTab(on)
-    if (on) setOpenPhotoSection((n) => n + 1)
+  // A l'ordinador, cada panell lateral es plega pel seu compte (com les barres laterals
+  // d'una app d'escriptori): l'arbre a l'esquerra i les propietats a la dreta.
+  const [treeHidden, setTreeHidden] = usePersistentFlag("mobles:editor-tree-hidden")
+  const [propsHidden, setPropsHidden] = usePersistentFlag("mobles:editor-props-hidden")
+  // Amplades dels panells laterals: s'arrosseguen per la vora (com el separador de l'app de
+  // Claude) i es recorden. Si la finestra és estreta, els panells s'encongeixen fins al seu
+  // mínim abans que el visor es faci més petit que el seu mínim.
+  const [formWidth, setFormWidth] = usePersistentNumber("mobles:editor-inspector-width", 340)
+  const [treeWidth, setTreeWidth] = usePersistentNumber("mobles:editor-tree-width", 280)
+  // Visor estret (finestra petita o panells amples): les pestanyes queden només amb icona
+  // perquè no les tapin els botons de la dreta.
+  const viewerBox = useRef<HTMLDivElement>(null)
+  const [viewerNarrow, setViewerNarrow] = useState(false)
+  useEffect(() => {
+    const el = viewerBox.current
+    if (!el) return
+    const ro = new ResizeObserver(([e]) => setViewerNarrow((e?.contentRect.width ?? 999) < 640))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  // Pestanya del visor: 3D, alçat (compartiments) o sobre la foto del lloc.
+  const [viewTab, setViewTabState] = useState<ViewTab>(readTab)
+  const setViewTab = (t: ViewTab) => {
+    setViewTabState(t)
+    try {
+      localStorage.setItem(TAB_KEY, t)
+    } catch {
+      /* sense localStorage */
+    }
   }
-  const [templateName, setTemplateName] = useState("")
-  const [userTemplates, setUserTemplates] = useState(loadUserTemplates)
+  const photoTab = viewTab === "photo"
+  // Contenidor de l'inspector on la pestanya Foto hi pinta els seus controls.
+  const [photoControls, setPhotoControls] = useState<HTMLDivElement | null>(null)
   const { settings } = useSettings()
 
   const build = useCompositionBuild(comp)
   const panels = build?.panels ?? []
+  const panelsRef = useRef(panels)
+  panelsRef.current = panels
 
   // Desa amb retard quan la composició canvia. Si se surt de l'Editor (o es tanca
   // l'app) abans del retard, el canvi pendent es desa igualment: si no, Exportar
@@ -172,26 +247,28 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
     }
     document.addEventListener("visibilitychange", onHide)
     window.addEventListener("pagehide", flush)
+    window.addEventListener("mobles:flush-save", flush)
     return () => {
       document.removeEventListener("visibilitychange", onHide)
       window.removeEventListener("pagehide", flush)
+      window.removeEventListener("mobles:flush-save", flush)
       flush() // en sortir de l'Editor
     }
   }, [projectId])
 
   const module: Module = comp.modules.find((m) => m.id === selectedModule) ?? comp.modules[0]!
   const moduleIndex = comp.modules.indexOf(module)
+  // Posició dins de la seva fila (a terra o penjats) i el mòdul anterior de la fila.
+  const rowMates = comp.modules.filter((m) => rowOf(m) === rowOf(module))
+  const rowIndex = rowMates.indexOf(module)
+  const rowPrev = rowIndex > 0 ? rowMates[rowIndex - 1] : undefined
   const moduleBuild = build?.modules[moduleIndex]?.build
   const zone = selectedZone ? findZone(module.root, selectedZone) : undefined
 
   const size = useMemo(() => {
-    let h = 0
+    let h = compositionHeight(comp)
     let d = 0
-    for (const m of comp.modules) {
-      const legs = m.carcass.base.kind === "legs" ? m.carcass.base.height : 0
-      h = Math.max(h, m.carcass.height + legs)
-      d = Math.max(d, m.carcass.depth + m.carcass.thickness)
-    }
+    for (const m of comp.modules) d = Math.max(d, m.carcass.depth + m.carcass.thickness)
     for (const g of comp.references) {
       h = Math.max(h, g.y + g.h)
       d = Math.max(d, g.z + g.d)
@@ -210,10 +287,94 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
 
   const updateModule = (m: Module) => setComp((c) => ({ ...c, modules: c.modules.map((x) => (x.id === m.id ? m : x)) }))
 
-  const selectModule = (id: string) => {
-    setSelectedModule(id)
-    setSelectedZone(null)
+  const selection: Selection =
+    selKind === "moble"
+      ? { kind: "moble" }
+      : selKind === "ref" && selectedRef && comp.references.some((r) => r.id === selectedRef)
+        ? { kind: "ref", id: selectedRef }
+        : selectedZone && zone
+          ? { kind: "zone", moduleId: module.id, zoneId: selectedZone }
+          : { kind: "module", id: module.id }
+  const select = (s: Selection, fromPanel = false) => {
+    if (s.kind === "moble") setSelKind("moble")
+    else if (s.kind === "ref") {
+      setSelectedRef(s.id)
+      setSelKind("ref")
+    } else if (s.kind === "module") {
+      setSelectedModule(s.id)
+      setSelectedZone(null)
+      setSelKind("module")
+    } else {
+      setSelectedModule(s.moduleId)
+      setSelectedZone(s.zoneId)
+      setSelKind("zone")
+    }
+    // Al mòbil, triar a l'arbre porta a les propietats.
+    if (fromPanel) setMobilePane("props")
   }
+  const selectModule = (id: string) => select({ kind: "module", id })
+  // Esc: treure la selecció (queda el moble sencer), si no s'està escrivint en un camp.
+  const deselectRef = useRef(() => select({ kind: "moble" }))
+  deselectRef.current = () => select({ kind: "moble" })
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return
+      // Si hi ha un menú o un diàleg obert, Esc el tanca a ell.
+      if (document.querySelector('[data-part="content"][data-state="open"], [role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]')) return
+      deselectRef.current()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
+  const selectZone = (id: string) => select({ kind: "zone", moduleId: module.id, zoneId: id })
+
+  /**
+   * Clic al 3D. El primer clic selecciona el mòdul; si el mòdul ja estava seleccionat (o un
+   * compartiment seu), el clic entra a dins i selecciona el compartiment tocat.
+   */
+  const selectFrom3D = (id: string, at?: [number, number, number]) => {
+    const inside = (selection.kind === "module" && selection.id === id) || (selection.kind === "zone" && selection.moduleId === id)
+    const idx = comp.modules.findIndex((m) => m.id === id)
+    const mb = build?.modules[idx]
+    if (!inside || !at || !mb) return selectModule(id)
+    const lx = at[0] - mb.x
+    const ly = at[1] - mb.y
+    const tol = 25
+    let best: { id: string; area: number } | null = null
+    for (const z of mb.build.layout.leaves) {
+      const r = mb.build.layout.rects.get(z.id)
+      if (!r || lx < r.x0 - tol || lx > r.x1 + tol || ly < r.y0 - tol || ly > r.y1 + tol) continue
+      const area = (r.x1 - r.x0) * (r.y1 - r.y0)
+      if (!best || area < best.area) best = { id: z.id, area }
+    }
+    if (best) select({ kind: "zone", moduleId: id, zoneId: best.id })
+    else selectModule(id)
+  }
+
+  /**
+   * Anterior / següent de la mateixa mena que la selecció: compartiments del mòdul en
+   * ordre de lectura (de dalt a baix i d'esquerra a dreta), mòduls o objectes.
+   */
+  const siblings = useMemo((): { prev: Selection | null; next: Selection | null; pos: string } | null => {
+    const around = <T,>(list: T[], i: number, to: (t: T) => Selection) =>
+      i < 0 || list.length < 2 ? null : { prev: i > 0 ? to(list[i - 1]!) : null, next: i < list.length - 1 ? to(list[i + 1]!) : null, pos: `${i + 1}/${list.length}` }
+    if (selection.kind === "module") return around(comp.modules, comp.modules.findIndex((m) => m.id === selection.id), (m) => ({ kind: "module", id: m.id }))
+    if (selection.kind === "ref") return around(comp.references, comp.references.findIndex((r) => r.id === selection.id), (r) => ({ kind: "ref", id: r.id }))
+    if (selection.kind === "zone" && zone && moduleBuild) {
+      const wantLeaves = !zone.split
+      const list: { id: string; cx: number; cy: number }[] = []
+      walkZones(module.root, (z) => {
+        if (!!z.split === wantLeaves || z.id === module.root.id) return
+        const r = moduleBuild.layout.rects.get(z.id)
+        if (r) list.push({ id: z.id, cx: (r.x0 + r.x1) / 2, cy: (r.y0 + r.y1) / 2 })
+      })
+      list.sort((a, b) => (Math.abs(a.cy - b.cy) > 1 ? b.cy - a.cy : a.cx - b.cx))
+      return around(list, list.findIndex((z) => z.id === zone.id), (z) => ({ kind: "zone", moduleId: module.id, zoneId: z.id }))
+    }
+    return null
+  }, [selection, comp.modules, comp.references, zone, module, moduleBuild])
 
   /** Enganxa un mòdul nou al costat del seleccionat, amb la mateixa alçada i fondària. */
   const addModuleBeside = (side: "left" | "right") => {
@@ -237,17 +398,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
     selectModule(m.id)
   }
 
-  const applyTemplate = (make: () => Composition) => {
-    const next = make()
-    setComp(next)
-    selectModule(next.modules[0]!.id)
-  }
 
-  const saveTemplate = () => {
-    setUserTemplates(saveUserTemplate(templateName || name, comp))
-    setTemplateName("")
-    toaster.create({ title: "Plantilla desada", type: "success" })
-  }
 
   const warnings = build?.warnings ?? []
   const totalHoles = panels.reduce((n, p) => n + p.holes.length, 0)
@@ -270,6 +421,18 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   // Obertura: grups mòbils, els del compartiment seleccionat i les col·lisions.
   const groups = useMemo(() => movingGroups(panels), [panels])
   const zoneRect = selectedZone ? moduleBuild?.layout.rects.get(selectedZone) : undefined
+  // Caixa del compartiment seleccionat per ressaltar-lo al 3D (fins al front del mòdul).
+  const highlightZone = useMemo(() => {
+    if (!build) return null
+    const mod = build.modules[moduleIndex]
+    if (!mod) return null
+    const c = module.carcass
+    // Mòdul seleccionat: només el contorn, sense vel (el mòdul ja es veu translúcid).
+    if (selection.kind === "module")
+      return { x0: mod.x, x1: mod.x + c.width, y0: mod.y, y1: mod.y + c.height, z0: 0, z1: c.depth + c.thickness, veil: false }
+    if (selection.kind !== "zone" || !zoneRect) return null
+    return { x0: mod.x + zoneRect.x0, x1: mod.x + zoneRect.x1, y0: mod.y + zoneRect.y0, y1: mod.y + zoneRect.y1, z0: 0, z1: c.depth + c.thickness }
+  }, [selection.kind, zoneRect, build, moduleIndex, module.carcass, comp.modules.length])
   const openOnly = useMemo(() => {
     if (!viewer.openOnlySelected || !zoneRect || !build) return null
     const mod = build.modules[moduleIndex]
@@ -291,7 +454,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const lights = useMemo<ZoneLight[]>(
     () => (build?.modules ?? []).flatMap((m) => m.build.layout.leaves.map((z) => {
       const r = m.build.layout.rects.get(z.id)!
-      return { x0: m.x + r.x0, x1: m.x + r.x1, y0: m.y + r.y0, y1: m.y + r.y1 }
+      return { module: m.index, x0: m.x + r.x0, x1: m.x + r.x1, y0: m.y + r.y0, y1: m.y + r.y1 }
     })),
     [build],
   )
@@ -304,232 +467,179 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
     }
   }
 
-  return (
-    <Flex direction={{ base: "column", md: "row" }} gap={{ base: 0, md: 6 }} h="full" minH={0}>
-      {/* Visor: a dalt al mòbil (fix), a la dreta a l'escriptori. */}
-      <Box
-        order={{ base: 0, md: 1 }}
-        flex={{ md: 1 }}
-        position="sticky"
-        top={{ base: "calc(52px + env(safe-area-inset-top, 0px))", md: 6 }}
-        alignSelf={{ base: "stretch", md: "flex-start" }}
-        zIndex={1}
-        h={
-          formHidden
-            ? { base: "calc(100dvh - 52px - 76px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))", md: "calc(100dvh - 3rem)" }
-            : { base: "42vh", md: "calc(100dvh - 3rem)" }
-        }
-        transition="height 0.2s"
-        rounded={{ md: "xl" }}
-        overflow="hidden"
-        borderWidth={{ md: "1px" }}
-        mx={{ base: -4, md: 0 }}
-      >
-        {photoTab ? (
-          <Box position="absolute" inset={0} overflowY="auto" pt={14} px={3} pb={3}>
-            <PhotoScreen projectId={projectId} panels={panels} embedded controlsTarget={photoControls} composition={comp} onApplyMeasure={applyMeasure} />
-          </Box>
-        ) : (
-          <CabinetViewer
-            panels={panels}
-            size={size}
-            exploded={exploded}
-            showHoles={showHoles}
-            modules={viewerModules}
-            selectedModuleId={module.id}
-            onSelectModule={selectModule}
-            onAddModule={addModuleBeside}
-            ghosts={comp.references}
-            view={viewer.view}
-            opening={viewer.opening}
-            openOnly={openOnly}
-            materialMode={viewerState.materialMode}
-            materials={settings.materials}
-            lights={lights}
-            onCapture={registerCapture}
-          />
-        )}
-        {!photoTab && (
-          <Box position="absolute" bottom={3} left="50%" transform="translateX(-50%)" zIndex={2}>
-            <ViewBar view={viewer.view} onChange={(view) => setViewer({ view })} />
-          </Box>
-        )}
-        {/* La recepta del SegmentGroup força position: relative; el posicionem amb un embolcall. */}
-        <Box position="absolute" top={3} left="50%" transform="translateX(-50%)" zIndex={2}>
-          <SegmentGroup.Root size="sm" bg="bg.panel" value={photoTab ? "photo" : "3d"} onValueChange={(e) => showPhotoTab(e.value === "photo")}>
-            <SegmentGroup.Indicator />
-            <SegmentGroup.Item value="3d" aria-label="Composició en 3D">
-              <SegmentGroup.ItemText>
-                <HStack gap={1.5}>
-                  <LuBox /> 3D
-                </HStack>
-              </SegmentGroup.ItemText>
-              <SegmentGroup.ItemHiddenInput />
-            </SegmentGroup.Item>
-            <SegmentGroup.Item value="photo" aria-label="Composició sobre la foto">
-              <SegmentGroup.ItemText>
-                <HStack gap={1.5}>
-                  <LuCamera /> Foto
-                </HStack>
-              </SegmentGroup.ItemText>
-              <SegmentGroup.ItemHiddenInput />
-            </SegmentGroup.Item>
-          </SegmentGroup.Root>
-        </Box>
-        <IconButton
-          position="absolute"
-          top={3}
-          left={3}
-          aria-label={formHidden ? "Mostrar els paràmetres" : "Ampliar el 3D"}
-          aria-expanded={!formHidden}
-          size="sm"
-          variant="surface"
-          colorPalette="wood"
-          onClick={() => setFormHidden((v) => !v)}
-        >
-          {formHidden ? <LuMinimize2 /> : <LuMaximize2 />}
-        </IconButton>
-        <HStack position="absolute" top={3} right={3} gap={2} display={photoTab ? "none" : "flex"}>
-          <IconButton aria-label={showHoles ? "Amagar forats" : "Mostrar forats"} size="sm" variant={showHoles ? "solid" : "surface"} colorPalette="wood" onClick={() => setShowHoles((v) => !v)}>
-            <LuCircleDot />
-          </IconButton>
-          <IconButton aria-label={exploded ? "Vista muntada" : "Vista explosionada"} size="sm" variant={exploded ? "solid" : "surface"} colorPalette="wood" onClick={() => setExploded((v) => !v)}>
-            {exploded ? <LuShrink /> : <LuExpand />}
-          </IconButton>
-        </HStack>
-        <HStack position="absolute" bottom={3} right={3} gap={2} display={{ base: "none", md: photoTab ? "none" : "flex" }}>
-          {comp.modules.length > 1 && <Badge variant="surface">{comp.modules.length} mòduls · {size.width} mm</Badge>}
-          <Badge variant="surface">{panels.length} peces</Badge>
-          <Badge variant="surface">{totalHoles} forats</Badge>
-        </HStack>
-      </Box>
+  // Avisos de la selecció: del mòdul (inclosos els xocs d'objectes amb les seves peces),
+  // de l'objecte de referència seleccionat, o tots si és el moble.
+  const moduleWarnings =
+    selection.kind === "module" || selection.kind === "zone"
+      ? warnings.filter((w) => !w.moduleId || w.moduleId === module.id)
+      : selection.kind === "ref"
+        ? warnings.filter((w) => w.refId === selection.id)
+        : warnings
+  const collidingRefs = useMemo(() => new Set(warnings.flatMap((w) => (w.refId ? [w.refId] : []))), [warnings])
 
-      <Stack display={formHidden ? "none" : "flex"} order={{ base: 1, md: 0 }} w={{ md: `${formWidth}px` }} flexShrink={0} gap={4} pt={{ base: 4, md: 0 }}>
-        <HStack justify="space-between" gap={2}>
-          <Editable.Root defaultValue={name} onValueCommit={(e) => void renameProject(projectId, e.value)} fontSize="xl" fontWeight="semibold" flex={1}>
-            <Editable.Preview />
-            <Editable.Input />
-          </Editable.Root>
-          <HStack gap={1}>
-            <IconButton aria-label="Desar com a fitxer" title="Desar com a fitxer (.moble)" size="sm" variant="ghost" onClick={() => setSaveOpen(true)}>
-              <LuSave />
-            </IconButton>
-            <IconButton aria-label="Desfer" title={`Desfer (${MOD}Z)`} size="sm" variant="ghost" disabled={history.past.length === 0} onClick={undo}>
-              <LuUndo2 />
-            </IconButton>
-            <IconButton aria-label="Refer" title={`Refer (⇧${MOD}Z)`} size="sm" variant="ghost" disabled={history.future.length === 0} onClick={redo}>
-              <LuRedo2 />
-            </IconButton>
+  // --- Inspector: propietats del que hi ha seleccionat ---------------------------
+  // A la pestanya Foto, l'inspector mostra el calibratge quan no hi ha res seleccionat (el
+  // moble sencer); si es tria un mòdul, un compartiment o un objecte, en mostra les propietats.
+  const photoInspector = photoTab && selection.kind === "moble"
+  // Títol en dues línies: on és (petit i apagat) i què és (el nom), perquè no es talli.
+  const inspectorTitle: { icon: ReactNode; text: string; parent?: string } = photoInspector
+    ? { icon: <LuCamera />, text: "Foto del lloc" }
+    : selection.kind === "moble"
+      ? { icon: <LuBox />, text: name || "Moble" }
+      : selection.kind === "ref"
+        ? { icon: <LuScan />, text: comp.references.find((r) => r.id === selection.id)?.name ?? "Objecte", parent: "Objecte de referència" }
+        : selection.kind === "zone" && zone
+          ? { icon: zone.split ? zone.split.dir === "v" ? <LuColumns2 /> : <LuRows2 /> : <LuSquare />, text: zoneLabel(zone), parent: module.name }
+          : { icon: <LuBox />, text: module.name, parent: name || "Moble" }
+
+  // Sense separació entre blocs: les seccions plegables van enganxades (totes amb la
+  // mateixa alçada de capçalera); els elements que no són secció porten el seu marge.
+  const inspector = (
+    <Stack gap={0}>
+      {/* Capçalera: icona, on és i què és (dues línies), anterior/següent i ⋯ amb les accions. */}
+      <HStack gap={2} color="wood.fg" pb={2} mb={2} borderBottomWidth="1px">
+        <Box fontSize="lg">{inspectorTitle.icon}</Box>
+        <Stack gap={0} flex={1} minW={0}>
+          {inspectorTitle.parent && (
+            <Text fontSize="xs" color="fg.muted" truncate data-truncate="">
+              {inspectorTitle.parent}
+            </Text>
+          )}
+          <Text fontSize="sm" fontWeight="semibold" color="fg" truncate data-truncate="">
+            {inspectorTitle.text}
+          </Text>
+        </Stack>
+        {!photoInspector && siblings && (
+          <HStack gap={0} flexShrink={0} color="fg.muted">
+            <Tooltip content={`Anterior (${siblings.pos})`}>
+              <IconButton size="xs" variant="ghost" aria-label="Anterior" disabled={!siblings.prev} onClick={() => siblings.prev && select(siblings.prev)}>
+                <LuChevronLeft />
+              </IconButton>
+            </Tooltip>
+            <Tooltip content={`Següent (${siblings.pos})`}>
+              <IconButton size="xs" variant="ghost" aria-label="Següent" disabled={!siblings.next} onClick={() => siblings.next && select(siblings.next)}>
+                <LuChevronRight />
+              </IconButton>
+            </Tooltip>
           </HStack>
-        </HStack>
+        )}
+        {!photoInspector && selection.kind === "zone" && zone && (
+          <ZoneActions root={module.root} zone={zone} onChange={(root) => updateModule({ ...module, root })} onSelect={selectZone} />
+        )}
+        {!photoInspector && selection.kind === "ref" && (
+          <RefActions comp={comp} id={selection.id} onChange={setComp} onRemoved={() => select({ kind: "moble" })} />
+        )}
+      </HStack>
 
-        {/* El fitxer porta la composició que s'està editant, encara que el desat amb retard no hagi passat. */}
-        <SaveFileDialog project={{ ...project, composition: comp }} open={saveOpen} onClose={() => setSaveOpen(false)} />
-
-        <PanelGroup storageKey="mobles:editor-open-section" defaultOpen="compartiments">
-          <Stack gap={0}>
-            <PanelSection id="composicio" title="Composició" icon={LuLayoutDashboard}>
-              <HStack wrap="wrap" gap={2}>
-                <Menu.Root>
-                  <Menu.Trigger asChild>
-                    <Button size="sm" variant="outline">
-                      <LuLayoutTemplate /> Nou des de plantilla
-                    </Button>
-                  </Menu.Trigger>
-                  <Portal>
-                    <Menu.Positioner>
-                      <Menu.Content>
-                        {BUILTIN_TEMPLATES.map((t) => (
-                          <Menu.Item key={t.id} value={t.id} onClick={() => applyTemplate(t.make)}>
-                            <Stack gap={0}>
-                              <Text>{t.name}</Text>
-                              <Text fontSize="xs" color="fg.muted">
-                                {t.description}
-                              </Text>
-                            </Stack>
-                          </Menu.Item>
-                        ))}
-                        {userTemplates.length > 0 && <Menu.Separator />}
-                        {userTemplates.map((t) => (
-                          <Menu.Item key={t.id} value={t.id} onClick={() => applyTemplate(() => structuredClone(t.composition))}>
-                            {t.name}
-                          </Menu.Item>
-                        ))}
-                      </Menu.Content>
-                    </Menu.Positioner>
-                  </Portal>
-                </Menu.Root>
-                <HStack gap={1} flex={1} minW="180px">
-                  <Input size="sm" placeholder="Nom de la plantilla" value={templateName} onChange={(e) => setTemplateName(e.target.value)} />
-                  <IconButton aria-label="Desar com a plantilla" title="Desar com a plantilla" size="sm" variant="outline" onClick={saveTemplate}>
-                    <LuBookmark />
-                  </IconButton>
-                </HStack>
-              </HStack>
-              <ModuleStrip comp={comp} selectedId={module.id} onSelect={selectModule} onChange={setComp} newModule={(id, name) => applySettingsToModule(settings, defaultModule(id, name))} />
-            </PanelSection>
-
-            <PanelSection id="referencies" title="Objectes de referència" icon={LuScan}>
-              <ReferencesEditor comp={comp} onChange={setComp} />
-            </PanelSection>
-
-            <PanelSection id="modul" title={`Mòdul: ${module.name}`} icon={LuMoveDiagonal}>
-              <CarcassForm module={module} onChange={updateModule} />
-            </PanelSection>
-
-            <PanelSection id="compartiments" title="Compartiments" icon={LuLayoutPanelLeft}>
-              {moduleBuild && (
-                <Box borderWidth="1px" rounded="lg" p={2} bg="bg.panel">
-                  <ElevationEditor
-                    module={module}
-                    build={moduleBuild}
-                    selectedZoneId={selectedZone}
-                    onSelectZone={setSelectedZone}
-                    references={comp.references}
-                    moduleX={build?.modules[moduleIndex]?.x ?? 0}
-                  />
-                  <Text fontSize="xs" color="fg.muted" textAlign="center">
-                    Toca un compartiment per editar-lo. Llums interiors en mm.
-                  </Text>
-                </Box>
+      {photoTab && !photoInspector && (
+        <Button size="xs" variant="outline" alignSelf="flex-start" mb={2} onClick={() => select({ kind: "moble" })}>
+          <LuCamera /> Tornar a la foto del lloc
+        </Button>
+      )}
+      {photoInspector ? (
+        <Box ref={setPhotoControls} />
+      ) : selection.kind === "moble" ? (
+        <Stack gap={0}>
+          <PanelSection id="moble-summary" title="Resum" icon={LuBox}>
+            <Text fontSize="sm" color="fg.muted">
+              {comp.modules.length} {comp.modules.length === 1 ? "mòdul" : "mòduls"} · {size.width} × {size.height} × {size.depth} mm
+            </Text>
+            <HStack gap={2} wrap="wrap">
+              <Badge variant="subtle">{panels.length} peces</Badge>
+              <Badge variant="subtle">{totalHoles} forats</Badge>
+              {comp.references.length > 0 && <Badge variant="subtle">{comp.references.length} objectes de referència</Badge>}
+            </HStack>
+            <Text fontSize="xs" color="fg.muted">
+              Selecciona un mòdul, un compartiment o un objecte a l'estructura (o clica'l al 3D) per editar-lo.
+            </Text>
+          </PanelSection>
+          <PanelSection id="moble-runs" title="Taulell i sòcol" icon={LuPanelTop} badge={comp.runs?.length || undefined}>
+            <RunsForm comp={comp} onChange={setComp} />
+          </PanelSection>
+          <PanelSection id="moble-materials" title="Materials de tot el moble" icon={LuPalette}>
+            <MaterialsForm
+              carcass={comp.modules[0]!.carcass}
+              mixed={comp.modules.some((m) => {
+                const a = m.carcass
+                const b = comp.modules[0]!.carcass
+                return a.material !== b.material || (a.frontMaterial ?? "") !== (b.frontMaterial ?? "") || a.backMaterial !== b.backMaterial || a.thickness !== b.thickness || a.backThickness !== b.backThickness
+              })}
+              onPatch={(patch) => setComp((c) => ({ ...c, modules: c.modules.map((m) => ({ ...m, carcass: { ...m.carcass, ...patch } })) }))}
+            />
+          </PanelSection>
+        </Stack>
+      ) : selection.kind === "ref" ? (
+        <RefInspector comp={comp} id={selection.id} onChange={setComp} />
+      ) : selection.kind === "zone" && zone ? (
+        <Stack gap={3}>
+          <ZonePanel root={module.root} zone={zone} openRatio={moduleBuild?.openRatios[zone.id]} onChange={(root) => updateModule({ ...module, root })} />
+        </Stack>
+      ) : (
+        // Seccions plegables independents (com Figma o Fusion): es poden tenir diverses
+        // obertes i cada una recorda el seu estat.
+        <Stack gap={0}>
+          <PanelSection id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
+            <CarcassForm module={module} onChange={updateModule} section="dims" />
+          </PanelSection>
+            <PanelSection id="mod-position" title="Posició" icon={LuMove} badge={module.carcass.base.kind === "wall" ? `Penjat a ${module.carcass.base.height}` : "A terra"}>
+              {/* Dues files, com les cuines: a terra (baixos) i penjats (alts). Dins de cada
+                  fila, l'ordre és el de l'arbre (d'esquerra a dreta) i cada mòdul va al costat
+                  de l'anterior de la seva fila. */}
+              <Field.Root>
+                <Field.Label>Fila</Field.Label>
+                <NativeSelect.Root size="sm">
+                  <NativeSelect.Field
+                    value={module.carcass.base.kind === "wall" ? "wall" : "floor"}
+                    onChange={(e) => {
+                      const c = module.carcass
+                      if (e.target.value === "wall") updateModule({ ...module, gapBefore: 0, carcass: { ...c, base: { kind: "wall", height: 1450 } } })
+                      else updateModule({ ...module, gapBefore: 0, carcass: { ...c, base: { kind: "none" } } })
+                    }}
+                  >
+                    <option value="floor">A terra</option>
+                    <option value="wall">Penjat a la paret</option>
+                  </NativeSelect.Field>
+                  <NativeSelect.Indicator />
+                </NativeSelect.Root>
+              </Field.Root>
+              {module.carcass.base.kind === "wall" && (
+                <NumberField
+                  label="Alçada del terra"
+                  value={module.carcass.base.height}
+                  min={0}
+                  max={2800}
+                  step={10}
+                  onChange={(height) => updateModule({ ...module, carcass: { ...module.carcass, base: { kind: "wall", height } } })}
+                  help="Fins a la part de baix del mòdul."
+                />
               )}
-              {zone ? (
-                <ZonePanel root={module.root} zone={zone} openRatio={moduleBuild?.openRatios[zone.id]} onChange={(root) => updateModule({ ...module, root })} onSelect={setSelectedZone} />
-              ) : (
-                <Text fontSize="sm" color="fg.muted">
-                  Toca un compartiment al dibuix per dividir-lo o donar-li contingut.
-                </Text>
-              )}
+              <NumberField
+                label={rowIndex > 0 ? "Separació amb l'anterior" : "Separació des de l'inici"}
+                value={module.gapBefore}
+                min={0}
+                max={5000}
+                step={10}
+                onChange={(g) => updateModule({ ...module, gapBefore: g })}
+                help={rowIndex > 0 ? `Des de «${rowPrev!.name}», a l'esquerra en la mateixa fila.` : "És el primer de la fila: la distància des de l'esquerra del moble."}
+              />
             </PanelSection>
-
-            <PanelSection id="fusteria" title="Fusteria" icon={LuHammer}>
-              <JoineryForm module={module} onChange={updateModule} />
-            </PanelSection>
-
-            <PanelSection id="visor" title="Visor 3D" icon={LuRotate3D}>
-              <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} />
-            </PanelSection>
-
-            <OpenOnSignal id="foto" signal={openPhotoSection} />
-            <PanelSection id="foto" title="Adaptar mides a la imatge" icon={LuCamera}>
-              {photoTab ? (
-                <Box ref={setPhotoControls} />
-              ) : (
-                <Stack gap={2} align="flex-start">
-                  <Text fontSize="sm" color="fg.muted">
-                    Superposa la composició a una foto del lloc per ajustar-ne les mides a ull.
-                  </Text>
-                  <Button size="sm" variant="outline" colorPalette="wood" onClick={() => showPhotoTab(true)}>
-                    <LuCamera /> Veure-ho sobre la foto
-                  </Button>
-                </Stack>
-              )}
-            </PanelSection>
-          </Stack>
-        </PanelGroup>
+          <PanelSection id="mod-structure" title="Estructura" icon={LuFrame}>
+            <CarcassForm module={module} onChange={updateModule} section="structure" />
+          </PanelSection>
+          <PanelSection id="mod-materials" title="Materials" icon={LuPalette}>
+            <MaterialsForm carcass={module.carcass} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
+          </PanelSection>
+          <PanelSection id="mod-cables" title="Passacables" badge={module.extras.cableHoles.length || undefined} icon={LuCable} defaultOpen={false}>
+            <CarcassForm module={module} onChange={updateModule} section="cables" />
+          </PanelSection>
+          <PanelSection id="mod-joinery" title="Fusteria (avançat)" icon={LuHammer} defaultOpen={false}>
+            <JoineryForm module={module} onChange={updateModule} />
+          </PanelSection>
+        </Stack>
+      )}
 
         {estimated.length > 0 && (
-          <Alert.Root status="warning" size="sm">
+          <Alert.Root status="warning" size="sm" mt={3}>
             <Alert.Indicator />
             <Alert.Content>
               <Alert.Title>{ESTIMATED_WARNING}</Alert.Title>
@@ -539,7 +649,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
         )}
 
         {collisions.length > 0 && (
-          <Stack gap={2}>
+          <Stack gap={2} mt={3}>
             <HStack gap={2} color="fg.muted">
               <LuDoorOpen />
               <Text fontSize="sm" fontWeight="semibold">
@@ -557,30 +667,26 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           </Stack>
         )}
 
-        {warnings.length > 0 && (
-          <Stack gap={2}>
-            <HStack gap={2} color="fg.muted">
-              <LuTriangleAlert />
-              <Text fontSize="sm" fontWeight="semibold">
-                Avisos de fusteria
-              </Text>
-            </HStack>
-            {warnings.map((w, i) => (
+        {moduleWarnings.length > 0 && (
+          <PanelSection id="warnings" title="Avisos de fusteria" icon={LuTriangleAlert} badge={moduleWarnings.length} badgePalette="orange">
+            {moduleWarnings.map((w, i) => (
               <Alert.Root key={i} status={w.code === "material-heat" ? "info" : "warning"} size="sm">
                 <Alert.Indicator />
                 <Alert.Content>
                   <Alert.Description>
                     {w.moduleId && comp.modules.length > 1 ? `${comp.modules.find((m) => m.id === w.moduleId)?.name ?? ""}: ` : ""}
                     {w.message}
+                    {w.refId && selection.kind !== "ref" && (
+                      <Button size="xs" variant="plain" ml={2} onClick={() => select({ kind: "ref", id: w.refId! })}>
+                        Veure l'objecte
+                      </Button>
+                    )}
                     {w.zoneId && (
                       <Button
                         size="xs"
                         variant="plain"
                         ml={2}
-                        onClick={() => {
-                          if (w.moduleId) setSelectedModule(w.moduleId)
-                          setSelectedZone(w.zoneId!)
-                        }}
+                        onClick={() => select({ kind: "zone", moduleId: w.moduleId ?? module.id, zoneId: w.zoneId! })}
                       >
                         Anar-hi
                       </Button>
@@ -589,22 +695,324 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                 </Alert.Content>
               </Alert.Root>
             ))}
-          </Stack>
+          </PanelSection>
         )}
-      </Stack>
-      {!formHidden && (
-        <ResizeHandle width={formWidth} onWidth={setFormWidth} min={300} max={720} defaultWidth={380} panelSide="left" label="Amplada del panell de paràmetres" />
+    </Stack>
+  )
+
+  // L'editor omple l'espai de l'app (h de la finestra menys la barra superior): el visor va
+  // de dalt a baix i l'arbre i les propietats tenen cadascun el seu desplaçament.
+  const panelH = { md: "full" }
+
+  return (
+    <Flex direction={{ base: "column", md: "row" }} gap={{ base: 0, md: 1.5 }} minH={0} h={panelH} flex={{ md: 1 }}>
+      <TopBarActions>
+        <HStack gap={1}>
+          <IconButton aria-label="Desfer" title={`Desfer (${MOD}Z)`} size="sm" variant="ghost" disabled={history.past.length === 0} onClick={undo}>
+            <LuUndo2 />
+          </IconButton>
+          <IconButton aria-label="Refer" title={`Refer (⇧${MOD}Z)`} size="sm" variant="ghost" disabled={history.future.length === 0} onClick={redo}>
+            <LuRedo2 />
+          </IconButton>
+        </HStack>
+      </TopBarActions>
+
+      {/* Esquerra: estructura */}
+      <Box
+        order={{ base: 3, md: 0 }}
+        minW={0}
+        flexShrink={{ md: 1 }}
+        display={{ base: mobilePane === "tree" ? "block" : "none", md: treeHidden ? "none" : "block" }}
+        w={{ md: `${treeWidth}px` }}
+        overflowY={{ md: "auto" }}
+        overflowX={{ md: "auto" }}
+        // Barra de desplaçament fina i amb lloc reservat: l'arbre i les propietats es
+        // desplacen cadascun pel seu compte i no «salten» quan apareix la barra.
+        css={{ scrollbarWidth: "thin", scrollbarGutter: "stable" }}
+        pt={{ base: 3, md: 0 }}
+        pr={{ md: 1 }}
+      >
+        {/* Sense límit per arrossegar (com IntelliJ): si el panell és més estret que el
+            contingut, apareix la barra de desplaçament horitzontal. */}
+        <Box minW="240px">
+        <StructureTree
+          name={name}
+          comp={comp}
+          selection={selection}
+          onSelect={(s) => select(s, true)}
+          onChange={setComp}
+          newModule={(id, n) => applySettingsToModule(settings, defaultModule(id, n))}
+        />
+        </Box>
+      </Box>
+
+      {!treeHidden && (
+        <Box order={{ md: 1 }} display={{ base: "none", md: "flex" }}>
+          <ResizeHandle width={treeWidth} onWidth={setTreeWidth} min={48} max={900} defaultWidth={280} panelSide="left" label="Amplada de l'estructura" />
+        </Box>
       )}
+
+      {/* Centre: visor amb pestanyes 3D · Alçat · Foto */}
+      <Box
+        ref={viewerBox}
+        order={{ base: 0, md: 2 }}
+        flex={{ md: 1 }}
+        minW={{ base: 0, md: "320px" }}
+        position="relative"
+        h={formHidden ? { base: "calc(100dvh - 52px - 76px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))", md: "full" } : { base: "42vh", md: "full" }}
+        rounded={{ md: "xl" }}
+        overflow="hidden"
+        borderWidth={{ md: "1px" }}
+        mx={{ base: -4, md: 0 }}
+        bg="bg.subtle"
+      >
+        {viewTab === "photo" ? (
+          <Box position="absolute" inset={0} overflowY="auto" pt={14} px={3} pb={3}>
+            <PhotoScreen
+              projectId={projectId}
+              panels={panels}
+              embedded
+              controlsTarget={photoControls}
+              composition={comp}
+              onApplyMeasure={applyMeasure}
+              selectedModule={selection.kind === "module" || selection.kind === "zone" ? moduleIndex + 1 : null}
+            />
+          </Box>
+        ) : viewTab === "elevation" ? (
+          <Box position="absolute" inset={0} overflow="hidden" pt={14} px={4} pb={4} display="flex" flexDirection="column" alignItems="center" gap={2}>
+            {moduleBuild && (
+              <Box
+                w="full"
+                maxW="900px"
+                flex={1}
+                minH={0}
+                display="flex"
+                alignItems="center"
+                // Alçada disponible per al dibuix: el visor menys la barra de pestanyes i el peu.
+                css={{ "--elev-h": { base: formHidden ? "calc(100dvh - 20rem)" : "calc(42vh - 6rem)", md: "calc(100dvh - 48px - 0.75rem - 8rem)" } }}
+              >
+                <ElevationEditor
+                  module={module}
+                  build={moduleBuild}
+                  selectedZoneId={selectedZone}
+                  onSelectZone={(id) => select({ kind: "zone", moduleId: module.id, zoneId: id })}
+                  references={comp.references}
+                  moduleX={build?.modules[moduleIndex]?.x ?? 0}
+                  moduleY={build?.modules[moduleIndex]?.y ?? 0}
+                  neighbors={comp.modules
+                    .filter((m) => m.id !== module.id)
+                    .map((m) => {
+                      const idx = comp.modules.indexOf(m) + 1
+                      return { id: m.id, name: m.name, panels: panels.filter((p) => p.module === idx) }
+                    })}
+                  onSelectModule={selectModule}
+                  maxH="var(--elev-h)"
+                />
+              </Box>
+            )}
+            <Text fontSize="xs" color="fg.muted" textAlign="center" display={{ base: "none", md: "block" }}>
+              Alçat de «{module.name}». Toca un compartiment per editar-lo; llums interiors en mm.
+              {comp.modules.length > 1 && " Els mòduls del costat surten translúcids: clica'n un per passar-hi."}
+            </Text>
+          </Box>
+        ) : (
+          <CabinetViewer
+            panels={panels}
+            size={size}
+            exploded={exploded}
+            showHoles={showHoles}
+            modules={viewerModules}
+            selectedModuleId={selection.kind === "module" || selection.kind === "zone" ? module.id : null}
+            onSelectModule={selectFrom3D}
+            onAddModule={addModuleBeside}
+            ghosts={comp.references}
+            view={viewer.view}
+            opening={viewer.opening}
+            openOnly={openOnly}
+            materialMode={viewerState.materialMode}
+            materials={settings.materials}
+            lights={lights}
+            onCapture={registerCapture}
+            quality={quality}
+            onDeselect={() => select({ kind: "moble" })}
+            selectedRefId={selection.kind === "ref" ? selection.id : null}
+            collidingRefIds={collidingRefs}
+            highlightZone={highlightZone}
+            onSelectRef={(id) => select({ kind: "ref", id })}
+          />
+        )}
+        {/* Amb el visor estret, les vistes es trien a «Opcions de vista» (no hi caben a baix). */}
+        {viewTab === "3d" && !viewerNarrow && (
+          <Box position="absolute" bottom={3} left="50%" transform="translateX(-50%)" zIndex={2}>
+            <ViewBar view={viewer.view} onChange={(view) => setViewer({ view })} />
+          </Box>
+        )}
+        {/* La recepta del SegmentGroup força position: relative; el posicionem amb un embolcall. */}
+        <Box position="absolute" top={3} left="50%" transform="translateX(-50%)" zIndex={2}>
+          <SegmentGroup.Root size="sm" bg="bg.panel" value={viewTab} onValueChange={(e) => e.value && setViewTab(e.value as ViewTab)}>
+            <SegmentGroup.Indicator />
+            {(
+              [
+                ["3d", "3D", LuBox, "Composició en 3D"],
+                ["elevation", "Alçat", LuLayoutPanelLeft, "Alçat frontal del mòdul (compartiments)"],
+                ["photo", "Foto", LuCamera, "Composició sobre la foto"],
+              ] as const
+            ).map(([v, label, Icon, aria]) => (
+              <SegmentGroup.Item key={v} value={v} aria-label={aria}>
+                <SegmentGroup.ItemText>
+                  <HStack gap={1.5}>
+                    <Icon /> {!viewerNarrow && <Box display={{ base: "none", sm: "inline" }}>{label}</Box>}
+                  </HStack>
+                </SegmentGroup.ItemText>
+                <SegmentGroup.ItemHiddenInput />
+              </SegmentGroup.Item>
+            ))}
+          </SegmentGroup.Root>
+        </Box>
+        {/* Mòbil: ampliar el visor (amaga les pestanyes de sota). */}
+        <IconButton
+          position="absolute"
+          top={3}
+          left={3}
+          zIndex={2}
+          display={{ base: "inline-flex", md: "none" }}
+          aria-label={formHidden ? "Mostrar els panells" : "Ampliar el visor"}
+          aria-expanded={!formHidden}
+          size="sm"
+          variant="surface"
+          colorPalette="wood"
+          onClick={() => setFormHidden((v) => !v)}
+        >
+          {formHidden ? <LuMinimize2 /> : <LuMaximize2 />}
+        </IconButton>
+        {/* Ordinador: plegar/desplegar l'arbre (esquerra) i les propietats (dreta). */}
+        <Tooltip content={treeHidden ? "Mostrar l'estructura" : "Amagar l'estructura"}>
+          <IconButton
+            position="absolute"
+            top={3}
+            left={3}
+            zIndex={2}
+            display={{ base: "none", md: "inline-flex" }}
+            aria-label={treeHidden ? "Mostrar l'estructura" : "Amagar l'estructura"}
+            aria-expanded={!treeHidden}
+            size="sm"
+            variant="surface"
+            colorPalette="wood"
+            onClick={() => setTreeHidden((v) => !v)}
+          >
+            {treeHidden ? <LuPanelLeftOpen /> : <LuPanelLeftClose />}
+          </IconButton>
+        </Tooltip>
+        <Tooltip content={propsHidden ? "Mostrar les propietats" : "Amagar les propietats"}>
+          <IconButton
+            position="absolute"
+            top={3}
+            right={3}
+            zIndex={2}
+            display={{ base: "none", md: "inline-flex" }}
+            aria-label={propsHidden ? "Mostrar les propietats" : "Amagar les propietats"}
+            aria-expanded={!propsHidden}
+            size="sm"
+            variant="surface"
+            colorPalette="wood"
+            onClick={() => setPropsHidden((v) => !v)}
+          >
+            {propsHidden ? <LuPanelRightOpen /> : <LuPanelRightClose />}
+          </IconButton>
+        </Tooltip>
+        {/* Botons del visor: en fila a dalt; si el visor és estret, en columna a la dreta
+            (com les barres d'eines dels programes de CAD) perquè no tapin les pestanyes. */}
+        <Stack
+          position="absolute"
+          top={viewerNarrow ? 14 : 3}
+          right={viewerNarrow ? 3 : { base: 3, md: 14 }}
+          gap={2}
+          zIndex={2}
+          direction={viewerNarrow ? "column" : "row"}
+          display={viewTab === "3d" ? "flex" : "none"}
+        >
+          <IconButton
+            aria-label="Veure a casa (AR)"
+            title={supportsQuickLook() ? "Veure a casa (AR)" : "Veure a casa (AR): obre l'app a l'iPhone o l'iPad"}
+            size="sm"
+            variant="surface"
+            colorPalette="wood"
+            loading={busyAr}
+            onClick={() => void viewAr()}
+          >
+            <LuView />
+          </IconButton>
+          <IconButton aria-label={showHoles ? "Amagar forats" : "Mostrar forats"} title={showHoles ? "Amagar forats" : "Mostrar forats"} size="sm" variant={showHoles ? "solid" : "surface"} colorPalette="wood" onClick={() => setShowHoles((v) => !v)}>
+            <LuCircleDot />
+          </IconButton>
+          <IconButton aria-label={exploded ? "Vista muntada" : "Vista explosionada"} title={exploded ? "Vista muntada" : "Vista explosionada"} size="sm" variant={exploded ? "solid" : "surface"} colorPalette="wood" onClick={() => setExploded((v) => !v)}>
+            {exploded ? <LuShrink /> : <LuExpand />}
+          </IconButton>
+          <Popover.Root positioning={{ placement: "bottom-end" }}>
+            <Popover.Trigger asChild>
+              <IconButton aria-label="Opcions de vista" title="Opcions de vista" size="sm" variant="surface" colorPalette="wood">
+                <LuSlidersVertical />
+              </IconButton>
+            </Popover.Trigger>
+            <Portal>
+              <Popover.Positioner>
+                <Popover.Content w="320px">
+                  <Popover.Body>
+                    <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} quality={quality} onQuality={setQuality} />
+                  </Popover.Body>
+                </Popover.Content>
+              </Popover.Positioner>
+            </Portal>
+          </Popover.Root>
+        </Stack>
+      </Box>
+
+      {/* Mòbil: pestanyes sota el visor */}
+      <Box order={2} display={{ base: "block", md: "none" }} pt={3}>
+        <SegmentGroup.Root size="sm" w="full" value={mobilePane} onValueChange={(e) => (e.value === "tree" || e.value === "props") && setMobilePane(e.value)}>
+          <SegmentGroup.Indicator />
+          <SegmentGroup.Item value="tree" flex={1} justifyContent="center">
+            <SegmentGroup.ItemText>
+              <HStack gap={1.5}>
+                <LuListTree /> Estructura
+              </HStack>
+            </SegmentGroup.ItemText>
+            <SegmentGroup.ItemHiddenInput />
+          </SegmentGroup.Item>
+          <SegmentGroup.Item value="props" flex={1} justifyContent="center">
+            <SegmentGroup.ItemText>
+              <HStack gap={1.5}>
+                <LuSlidersHorizontal /> Propietats
+              </HStack>
+            </SegmentGroup.ItemText>
+            <SegmentGroup.ItemHiddenInput />
+          </SegmentGroup.Item>
+        </SegmentGroup.Root>
+      </Box>
+
+      {!propsHidden && (
+        <Box order={{ md: 3 }} display={{ base: "none", md: "flex" }}>
+          <ResizeHandle width={formWidth} onWidth={setFormWidth} min={48} max={900} defaultWidth={340} panelSide="right" label="Amplada de les propietats" />
+        </Box>
+      )}
+
+      {/* Dreta: propietats del que hi ha seleccionat */}
+      <Box
+        order={{ base: 4, md: 4 }}
+        minW={0}
+        flexShrink={{ md: 1 }}
+        display={{ base: mobilePane === "props" ? "block" : "none", md: propsHidden ? "none" : "block" }}
+        w={{ md: `${formWidth}px` }}
+        overflowY={{ md: "auto" }}
+        overflowX={{ md: "auto" }}
+        css={{ scrollbarWidth: "thin", scrollbarGutter: "stable" }}
+        pt={{ base: 3, md: 0 }}
+        pl={{ md: 3 }}
+      >
+        <Box minW="300px">{inspector}</Box>
+      </Box>
     </Flex>
   )
 }
 
-/** Obre la secció `id` cada cop que canvia `signal` (sense tocar-la en el primer render). */
-function OpenOnSignal({ id, signal }: { id: string; signal: number }) {
-  const group = usePanelGroup()
-  useEffect(() => {
-    if (signal > 0) group?.setOpenId(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signal])
-  return null
-}
+

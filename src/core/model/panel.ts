@@ -37,6 +37,8 @@ export const PanelRoleSchema = z.enum([
   "hatch",
   /** Front fix. */
   "panel",
+  /** Taulell (peça correguda sobre els baixos). */
+  "worktop",
 ])
 export type PanelRole = z.infer<typeof PanelRoleSchema>
 

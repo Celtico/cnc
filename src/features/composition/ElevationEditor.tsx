@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react"
 import type { ModuleBuild } from "../../core/build/buildModule"
 import type { ZoneRect } from "../../core/build/layout"
-import { walkZones, type Module, type RefObject, type Zone } from "../../core/model"
+import { moduleElevation, walkZones, type Module, type RefObject, type Zone } from "../../core/model"
 
 /**
  * Alçat frontal 2D del mòdul: carcassa, divisors, zones (llums acotades) i fronts.
@@ -14,7 +14,15 @@ export function ElevationEditor({
   onSelectZone,
   references,
   moduleX,
+  moduleY,
+  neighbors = [],
+  onSelectModule,
+  maxH = "60vh",
 }: {
+  /** Altres mòduls de la composició (peces en coordenades de la composició), per orientar-se. */
+  neighbors?: { id: string; name: string; panels: { placement: { origin: readonly number[]; xAxis: readonly number[]; yAxis: readonly number[]; zAxis: readonly number[] }; length: number; width: number; thickness: number; role: string }[] }[]
+  /** Clic a un mòdul veí: passar a editar-lo. */
+  onSelectModule?: (id: string) => void
   module: Module
   build: ModuleBuild
   selectedZoneId: string | null
@@ -22,9 +30,14 @@ export function ElevationEditor({
   /** Objectes fantasma en coordenades de la composició. */
   references: RefObject[]
   moduleX: number
+  /** Alçada de la base del mòdul sobre el terra (potes, penjat o apilat). */
+  moduleY?: number
+  /** Alçada màxima del dibuix (CSS). L'amplada s'hi adapta. */
+  maxH?: string
 }) {
   const { width: W, height: H } = module.carcass
-  const legs = module.carcass.base.kind === "legs" ? module.carcass.base.height : 0
+  const legs = moduleY ?? moduleElevation(module.carcass)
+  const hasLegs = module.carcass.base.kind === "legs"
   const pad = Math.max(W, H) * 0.08
   const total = H + legs
   const stroke = Math.max(W, H) / 500
@@ -39,17 +52,73 @@ export function ElevationEditor({
     else leaves.push({ zone: z, rect })
   })
 
+  // Veïns: peces frontals en coordenades locals d'aquest mòdul (només se'n veu una franja
+  // a cada costat, i a sobre si n'hi ha d'apilats).
+  const baseY = legs
+  const side = Math.max(W, H) * 0.45
+  const neigh = neighbors
+    .map((n) => {
+      const rects = n.panels
+        .filter((p) => p.role !== "back")
+        .map((p) => frontFootprint(p))
+        .filter((r): r is Rect => r !== null)
+        .map((r) => ({ ...r, x: r.x - moduleX, y: r.y - baseY }))
+      if (!rects.length) return null
+      const x0 = Math.min(...rects.map((r) => r.x))
+      const x1 = Math.max(...rects.map((r) => r.x + r.w))
+      const y0 = Math.min(...rects.map((r) => r.y))
+      const y1 = Math.max(...rects.map((r) => r.y + r.h))
+      return { id: n.id, name: n.name, rects, x0, x1, y0, y1 }
+    })
+    .filter((n): n is NonNullable<typeof n> => n !== null && n.x1 > -side && n.x0 < W + side && n.y0 < H + side)
+  const vx0 = Math.min(0, ...neigh.map((n) => Math.max(n.x0, -side)))
+  const vx1 = Math.max(W, ...neigh.map((n) => Math.min(n.x1, W + side)))
+  const vTop = Math.max(total, ...neigh.map((n) => Math.min(n.y1 + legs, total + side)))
+  // Per sota del terra del dibuix (mòdul penjat o apilat: els de sota també es veuen).
+  const vBot = Math.min(0, ...neigh.map((n) => Math.max(n.y0 + legs, -side)))
+  const vH = vTop - vBot
+
   const panelRects = build.panels
     .filter((p) => ["side", "bottom", "top", "divider", "fixedShelf", "plinth"].includes(p.role))
     .map((p) => frontFootprint(p))
     .filter((r): r is Rect => r !== null)
 
   return (
-    <Box asChild w="full" mx="auto" maxW={`calc(60vh * ${(W + 2 * pad) / (total + 2 * pad)})`} color="fg" style={{ aspectRatio: `${W + 2 * pad} / ${total + 2 * pad}` }} userSelect="none">
-      <svg viewBox={`${-pad} ${-pad} ${W + 2 * pad} ${total + 2 * pad}`} style={{ touchAction: "manipulation" }}>
-        <g transform={`translate(0 ${total}) scale(1 -1)`}>
+    // La caixa té la mida del mòdul (com sempre); l'SVG en surt pels costats per mostrar
+    // els veïns sense fer el mòdul més petit.
+    <Box position="relative" w="full" mx="auto" maxW={`calc(${maxH} * ${(W + 2 * pad) / (total + 2 * pad)})`} color="fg" style={{ aspectRatio: `${W + 2 * pad} / ${total + 2 * pad}` }} userSelect="none">
+      <svg
+        viewBox={`${vx0 - pad} ${-pad} ${vx1 - vx0 + 2 * pad} ${vH + 2 * pad}`}
+        style={{
+          touchAction: "manipulation",
+          position: "absolute",
+          overflow: "visible",
+          left: `${(vx0 / (W + 2 * pad)) * 100}%`,
+          width: `${((vx1 - vx0 + 2 * pad) / (W + 2 * pad)) * 100}%`,
+          top: `${(-(vTop - total) / (total + 2 * pad)) * 100}%`,
+          height: `${((vH + 2 * pad) / (total + 2 * pad)) * 100}%`,
+        }}
+      >
+        <g transform={`translate(0 ${vTop}) scale(1 -1)`}>
+          {/* Mòduls veïns, translúcids: per orientar-se. Un clic hi passa. */}
+          <g transform={`translate(0 ${legs})`}>
+            {neigh.map((n) => (
+              <g key={n.id} onClick={onSelectModule ? () => onSelectModule(n.id) : undefined} style={{ cursor: onSelectModule ? "pointer" : undefined }} opacity={0.35}>
+                <title>{`${n.name} — clica per editar-lo`}</title>
+                <rect x={n.x0} y={n.y0} width={n.x1 - n.x0} height={n.y1 - n.y0} fill="var(--chakra-colors-bg-muted)" stroke="var(--chakra-colors-border)" strokeWidth={stroke} />
+                {n.rects.map((r, i) => (
+                  <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} fill="var(--chakra-colors-wood-muted)" stroke="var(--chakra-colors-wood-fg)" strokeWidth={stroke * 0.7} />
+                ))}
+                <g transform={`translate(${n.x0 < 0 ? Math.max(n.x0, -side) + Math.min(n.x1 - Math.max(n.x0, -side), side) / 2 : Math.min(n.x0, W + side) + (Math.min(n.x1, W + side) - n.x0) / 2} ${Math.min(n.y1, H + side) - font * 1.6}) scale(1 -1)`}>
+                  <text textAnchor="middle" fontSize={font} fill="currentColor" fontFamily="system-ui, sans-serif" fontWeight="bold">
+                    {n.name}
+                  </text>
+                </g>
+              </g>
+            ))}
+          </g>
           {/* Potes */}
-          {legs > 0 && (
+          {hasLegs && legs > 0 && (
             <>
               <rect x={30} y={0} width={40} height={legs} fill="var(--chakra-colors-fg-muted)" opacity={0.5} />
               <rect x={W - 70} y={0} width={40} height={legs} fill="var(--chakra-colors-fg-muted)" opacity={0.5} />

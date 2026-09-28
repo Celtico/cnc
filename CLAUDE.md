@@ -150,22 +150,103 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
 - Calibració: l'usuari marca 4 punts d'un rectangle de mides conegudes (rajola,
   porta, A4) → homografia → escala i pla del terra/paret.
 - Llegir EXIF (focal) si existeix; si no, continuar sense.
+- Aspecte del moble sobre la foto (`cal.render`): **Línies** (SVG de cares projectades,
+  per encaixar) o **Realista** (`photo/PhotoRender.tsx`: three.js amb la càmera calibrada
+  convertida a matriu, materials reals, llum de Preferències › Visor 3D i ombres sobre
+  plans invisibles de terra i paret). L'SVG de controls va sempre a sobre.
 - AR: export USDZ + `<model-viewer>` amb AR Quick Look a l'iPhone. Res de WebXR.
 
 ## UI (Chakra v3 + react-icons)
 - Mobile-first: la faig servir sobretot a l'iPhone. Mínim breakpoints `base` i `md`.
-- **Panell esquerre = acordió** (`components/PanelSection.tsx` + `PanelGroup`): totes les
-  seccions iguals (icona + títol + fletxa, sense fons), **només una oberta alhora**, i es
-  recorda quina. Seccions noves (p. ex. l'alçat de compartiments) fan servir el mateix.
-- **Editor = panell esquerre (paràmetres) + visor amb pestanyes `3D` · `Foto`**, les
-  dues amb la mateixa disposició. Els controls de la pestanya activa van al panell
-  esquerre, no en botons o finestres a part. La foto no té entrada pròpia al menú.
+- **Menú principal en dos nivells** (`App.tsx`): a la llista de Mobles, només `Mobles` i
+  `Preferències`. Amb un moble obert: les seves
+  pàgines (`PROJECT_NAV`: Editor, Peces, Nesting, Exportar) i `Preferències` separat a
+  baix. Pàgines noves d'un moble van a `PROJECT_NAV`; les generals, a baix.
+- **Barra superior del moble obert** (`components/TopBar.tsx`), com Figma/Onshape/Notion:
+  `Mobles › Nom del moble` a l'esquerra (nom editable; "Mobles" torna a la llista) i les
+  accions del document a la dreta. Cada pàgina hi posa les seves amb `<TopBarActions>`
+  (l'Editor: desar, desfer, refer). **Les pàgines no porten títol propi**: l'apartat ja es
+  veu marcat al menú. Al mòbil, la mateixa barra amb fletxa enrere.
+- **Plantilles com a les apps professionals**: es trien a **Mobles › Nou moble** (galeria:
+  En blanc · les teves · les de l'app, amb miniatura `CompositionThumb`) i les teves es
+  gestionen allà (menú ⋯: duplicar, desar com a fitxer, eliminar; nom editable). Es creen
+  amb el **menú ⋯ de la barra superior** («Desar com a plantilla»). Una plantilla exportada
+  és un `.moble` amb `kind: "plantilla"`; en obrir un `.moble` es pregunta «Obrir com a
+  moble» o «Afegir a plantilles». **No** van a Preferències ni dins l'Editor.
+- **Pàgines del moble, cadascuna amb un sol propòsit**:
+  - **Peces**: taula (peces iguals agrupades) + **plànol de la peça seleccionada** al costat.
+    Els plànols no van a Exportar.
+  - **Exportar**: per destinació (Taller · CNC · Llista de tall · Model 3D), una acció
+    principal per grup; les eines de depuració (JSON UnifiedData) plegades a «Avançat».
+  - **AR («Veure a casa»)**: botó del visor 3D (`LuView`), no una exportació.
+- **Editor en tres columnes, com Figma / Fusion 360** (`features/editor/EditorScreen.tsx`):
+  - **Esquerra — Estructura** (`composition/StructureTree.tsx`): arbre moble › mòduls ›
+    compartiments, i objectes de referència. Afegir/duplicar/moure/eliminar amb el menú ⋯.
+  - **Centre — Visor** amb pestanyes `3D` · `Alçat` · `Foto`. Les opcions de visualització
+    (forats, explosionat, AR, obertura, colors, imatge) són a la barra del visor, no al panell.
+  - **Dreta — Propietats** del que hi ha seleccionat i **només d'això**: moble (resum i
+    avisos) · mòdul (carcassa; fusteria plegada a «Avançat») · compartiment (`ZonePanel`) ·
+    objecte (`RefInspector`) · a la pestanya Foto, el calibratge. Propietats a 340 px per defecte,
+    amb vora arrossegable sense límit (`ResizeHandle`, nansa al mig) a l'arbre i a les propietats; si el panell és més estret que el contingut apareix el desplaçament horitzontal (com IntelliJ). Com el separador de
+    l'app de Claude; amplades recordades. Visor amb mínim de 320 px; si fa menys de 640 px,
+    pestanyes només amb icona, botons en columna a la dreta i la barra de vistes s'amaga
+    (les vistes, a «Opcions de vista»).
+  - **L'app ocupa just la finestra** (a l'ordinador): res fa desplaçar la pàgina sencera. A
+    l'editor, el visor va de dalt a baix i l'arbre (280 px) i les propietats tenen cadascun
+    la seva barra de desplaçament, fina i amb lloc reservat (`scrollbarGutter: stable`).
+    Cada panell lateral es plega pel seu compte amb els botons de les cantonades del visor
+    (`LuPanelLeftClose/Open` · `LuPanelRightClose/Open`); al mòbil, «Ampliar el visor».
+  - **Materials** visibles a les propietats (no amagats): cos, **fronts** (`frontMaterial`,
+    buit = el del cos; portes, fronts de calaix, abatibles, reixetes, fixos i trapes) i
+    fons. Al moble, «Materials de tot el moble» aplica el canvi a tots els mòduls.
+  - **Qualitat del 3D** (`viewer/renderQuality.ts`): Ràpida · Equilibrada · Alta · Presentació
+    (sense perfils, graella ni botons; el moble va sobre un terra i contra una paret amb
+    llum d'estudi, `viewer/PresentationRoom.tsx`, tot procedural i sense xarxa), a
+    Opcions de vista i a Preferències › Visor 3D. L'escena (terra, color de paret, llum)
+    és a `viewer/presentationScene.ts`. Tot és preferència del dispositiu (localStorage).
+  - **Inspector en seccions plegables independents** (`PanelSection` fora d'un
+    `PanelGroup`): se'n poden tenir diverses obertes i cada una recorda el seu estat
+    (`mobles:section:<id>`). Mòdul: Mides · Estructura · Materials ·
+    Passacables · Fusteria (avançat). Compartiment: accions com a icones a la capçalera de l'inspector (Pare · Duplicar ·
+    Eliminar; a l'objecte, Desar a preferències · Eliminar) i
+    Front · Prestatges · Mida · Dividir. Moble: Resum · Materials de tot el moble. Objecte:
+    General · Mides · Posició. Avisos de fusteria: també secció. Les preferències sí que fan d'acordió (una oberta). Res de botons «Veure a l'alçat»: les
+    pestanyes 3D · Alçat · Foto ja són a dalt del visor.
+  - **Base del mòdul** (Estructura): a terra · sòcol · potes · sense base. Avís `hanging` si
+    un penjat té el fons prim.
+  - **Posició: dues files, com a les cuines** — *A terra* (baixos) i *Penjats a la paret*
+    (alts, `base.kind = "wall"` amb l'alçada des del terra). Dins de cada fila, l'ordre és el
+    de l'arbre (d'esquerra a dreta) i cada mòdul va al costat de l'anterior de la seva fila
+    amb `gapBefore`. L'arbre agrupa per fila i «Moure» canvia l'ordre dins de la fila.
+    Posició sempre amb `modulePlacements()` / `compositionWidth/Height`, mai a mà. Els
+    ancoratges antics (`anchor`) es converteixen en carregar (`normalizeComposition`).
+  - **Mòdul seleccionat al 3D i a la foto: translúcid** (per veure'n l'interior i els
+    compartiments) amb contorn taronja; la resta del moble, sòlida. Compartiment
+    seleccionat: contorn taronja amb vel. Al 3D, el primer clic selecciona el mòdul i el
+    segon (amb el mòdul ja seleccionat) entra al compartiment tocat (`selectFrom3D`).
+  - **Alçat**: el mòdul en edició i, translúcids, una franja dels mòduls veïns (costats,
+    a sobre i a sota) per orientar-se; clicar un veí hi passa (`neighbors` a `ElevationEditor`).
+  - **Peces corregudes** (`comp.runs`, `core/build/runs.ts`): **taulell** (d'una peça sobre
+    els baixos de la fila, amb voladís i forats d'encastar de placa, pica o a mida, que surten
+    com a talls passants al DXF/STEP/CSV) i **sòcol corregut** (davant de les potes, de punta a
+    punta, retranquejat). Es numeren com un mòdul més (n + 1) per a les refs del taller. Es
+    configuren al moble, secció «Taulell i sòcol».
+  - **Una sola selecció** (`Selection`), sincronitzada entre arbre, 3D i alçat. Controls
+    nous: decideix a quin nivell pertanyen i posa'ls a l'inspector d'aquell nivell.
+  - **Mòbil**: visor a dalt i, a sota, pestanyes `Estructura` · `Propietats` (triar a
+    l'arbre porta a Propietats).
+- **Seccions plegables** (`components/PanelSection.tsx` + `PanelGroup`): totes iguals
+  (icona + títol + fletxa, sense fons), una oberta alhora; per a opcions avançades dins
+  d'un inspector o a Preferències.
 - **És una app, no una web**: el contingut ocupa **tota l'amplada** (sense `Container`
   amb `maxW` centrat). El 3D, la foto, l'alçat i el nesting s'estiren tant com la
   pantalla. Només es limita l'amplada dels panells de formulari (p. ex. 360–400 px) i
   dels textos llargs.
 - **Inputs a 16px sempre** (globalCss a `createSystem`) per evitar el zoom d'iOS.
 - Tokens semàntics (`bg.subtle`, `fg.muted`...) i `colorPalette`, no colors crus.
+- **Color principal = paleta `wood`** sempre (`colorPalette="wood"`, `wood.fg`...). L'usuari el canvia a
+  Preferències → Tema (`theme/accent.ts` redirigeix les variables CSS de `wood`). No facis servir
+  `blue`, `orange`... per al color principal. Dia/nit també és a Preferències, no al menú.
 - Mode fosc suportat.
 - Icones dins dels components de Chakra v3 com a **children**, no amb la prop `icon`:
   ```tsx
@@ -177,7 +258,14 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
 - **Etiquetes curtes, que no saltin de línia** als panells (360–400 px, dues columnes):
   agrupa amb un títol i abrevia el camp ("Posició del moble" → `X` · `Y (alçada)`;
   "Mida coneguda" → `Amplada` · `Alçada`). L'explicació llarga va al `HelperText`.
-- Camps numèrics de mides amb `NumberInput` i sufix "mm".
+  Xarxa de seguretat global: tota `Field.Label` és d'una línia amb punts suspensius
+  (`theme/system.ts`) i mostra el text sencer al passar-hi per sobre
+  (`theme/truncatedTitles.ts`; per a altres textos, afegeix `data-truncate`).
+- Camps numèrics de mides amb `NumberInput` i sufix "mm". En columnes estretes (< 130 px)
+  s'amaga el sufix (no els botons + −) automàticament (container query a `NumberField`).
+- Un selector (`select` o `SegmentGroup`) no pot desbordar el seu contenidor: si les
+  opcions no hi caben (popovers, inspector), fes servir un `NativeSelect`. A l'inspector,
+  cada `SegmentGroup` va sol a la seva fila i a tota l'amplada (mai dos de costat).
 
 ## Com treballar
 - Abans de codi nou al `core/`, escriu o actualitza els tests (Vitest).
@@ -198,20 +286,27 @@ Accions principals: icona + text.
 | Navegació | Tornar · Plegar/desplegar menú · Preferències | `LuArrowLeft` · `LuPanelLeftClose` / `LuPanelLeftOpen` · `LuSettings` |
 | Zones | Dividir en vertical (divisor vertical, zones esquerra/dreta) | `LuSquareSplitHorizontal` |
 | Zones | Dividir en horitzontal (travesser, zones dalt/baix) | `LuSquareSplitVertical` |
+| Zones | Divisió vertical (zones de costat) · Divisió horitzontal (zones una sobre l'altra) · Compartiment | `LuColumns2` · `LuRows2` · `LuSquare` |
 | Zones | Eliminar divisió · Mida | `LuUngroup` · `LuRuler` |
 | Contingut | Obert · Prestatges · Porta · Calaixos | `LuSquareDashed` · `LuRows3` · `LuDoorClosed` · `LuArchive` |
 | Contingut | Abatible · Reixeta · Front fix | `LuPanelBottom` · `LuGrid3X3` · `LuSquare` |
 | Composició | Afegir · Duplicar · Eliminar · Reordenar | `LuPlus` · `LuCopy` · `LuTrash2` · `LuGripVertical` |
 | Composició | Objecte de referència · Radiador · TV | `LuScan` · `LuHeater` · `LuTv` |
-| Composició | Plantilles · Desar com a plantilla | `LuLayoutTemplate` · `LuBookmark` |
+| Composició | Plantilles · Desar com a plantilla · Menú del document | `LuLayoutTemplate` · `LuBookmark` · `LuEllipsis` |
 | Panell | Mides exteriors · Taulers · Interior i front · Fusteria · Adaptar a la imatge | `LuMoveDiagonal` · `LuSquareStack` · `LuLayoutPanelLeft` · `LuHammer` · `LuCamera` |
 | Panell | Composició (mòduls i objectes de referència) · Compartiments (alçat) | `LuLayoutDashboard` · `LuLayoutPanelLeft` |
+| Inspector | Estructura (base, fons, tapa, laterals) · Passacables · Front · Pare | `LuFrame` · `LuCable` · `LuDoorClosed` · `LuArrowUp` |
+| Inspector | Resum del moble · Posició | `LuBox` · `LuMove` |
+| Inspector | Anterior · Següent · Accions de la selecció (menú) | `LuChevronLeft` · `LuChevronRight` · `LuEllipsis` |
+| Preferències | Tema (dia/nit/sistema) · Color principal | `LuSunMoon` (`LuSun` · `LuMoon` · `LuMonitor`) · `LuCheck` a la mostra triada |
 | Fitxer | Desar com a fitxer · Obrir fitxer | `LuSave` · `LuFolderOpen` |
+| Editor | Estructura · Propietats · Opcions de vista · Alçat | `LuListTree` · `LuSlidersHorizontal` · `LuSlidersVertical` · `LuLayoutPanelLeft` |
 | Estat | Avisos de fusteria · Desfer · Refer | `LuTriangleAlert` · `LuUndo2` · `LuRedo2` |
 | Foto | Foto · Referència · Distància · Rectangle | `LuCamera` · `LuCrosshair` · `LuMoveHorizontal` · `LuRectangleHorizontal` |
 | Foto | Origen (0,0) · Treure/tancar | `LuLocateFixed` · `LuX` |
 | Foto | Mida estimada · Mida real (cinta) · Línia del terra · Fondària | `LuEye` · `LuCircleCheck` · `LuArrowDownToLine` · `LuArrowUpFromLine` |
 | Visor | Forats · Explosionat / muntat · Ampliar / reduir 3D | `LuCircleDot` · `LuExpand` / `LuShrink` · `LuMaximize2` / `LuMinimize2` |
+| Visor | Veure a casa (AR) | `LuView` |
 | Visor | Vista 3D · Obertura portes · Materials · Per tipus de peça · Imatge | `LuRotate3D` · `LuDoorOpen` · `LuPalette` · `LuLayers` · `LuImageDown` |
 | Exportar | DXF (CNC) · STEP 3D · CSV de nesting · CSV de peces · GLB | `LuScissors` · `LuCuboid` · `LuLayoutGrid` · `LuFileDown` · `LuBoxes` |
 

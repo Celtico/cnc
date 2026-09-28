@@ -59,6 +59,8 @@ export function ResizeHandle({ width, onWidth, min, max, defaultWidth, panelSide
       display={{ base: "none", [from]: "flex" }}
       alignSelf="stretch"
       justifyContent="center"
+      alignItems="center"
+      position="relative"
       w="12px"
       mx="-6px"
       flexShrink={0}
@@ -71,13 +73,18 @@ export function ResizeHandle({ width, onWidth, min, max, defaultWidth, panelSide
       onPointerCancel={onPointerUp}
       onDoubleClick={() => onWidth(defaultWidth)}
       onKeyDown={onKeyDown}
+      // Com el separador de l'app de Claude: una nansa curta al mig; en passar-hi per sobre,
+      // tota la vora s'il·lumina.
       css={{
-        "& > div": { transition: "background 0.15s" },
-        "&:hover > div, &:focus-visible > div": { background: "var(--chakra-colors-wood-solid, var(--chakra-colors-border-emphasized))" },
+        "& > .rh-line": { transition: "background 0.15s", background: "transparent" },
+        "& > .rh-grip": { transition: "background 0.15s, height 0.15s" },
+        "&:hover > .rh-line, &:focus-visible > .rh-line": { background: "var(--chakra-colors-wood-solid)" },
+        "&:hover > .rh-grip, &:focus-visible > .rh-grip": { background: "var(--chakra-colors-wood-solid)", height: "48px" },
       }}
       _focusVisible={{ outline: "none" }}
     >
-      <Box w="3px" h="full" rounded="full" bg="border" />
+      <Box className="rh-line" position="absolute" top={0} bottom={0} left="50%" w="2px" ml="-1px" rounded="full" />
+      <Box className="rh-grip" w="4px" h="36px" rounded="full" bg="border.emphasized" />
     </Box>
   )
 }

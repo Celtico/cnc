@@ -11,28 +11,61 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { useRef, useState } from "react"
-import { LuBox, LuCopy, LuFolderOpen, LuPlus, LuSave, LuTrash2 } from "react-icons/lu"
+import { useEffect, useRef, useState } from "react"
+import { LuBox, LuCopy, LuFolderOpen, LuLayoutTemplate, LuPlus, LuSave, LuTrash2 } from "react-icons/lu"
 import { SaveFileDialog } from "../file/SaveFileDialog"
-import { openMobleFile } from "../file/mobleIo"
-import { applySettingsToModule, defaultModule, newId } from "../../core/model"
-import { createProject, deleteProject, duplicateProject, safeParams, type Project } from "../../db/db"
+import { addMobleAsTemplate, openMobleFile } from "../file/mobleIo"
+import { parseMobleFile, uniqueName, type MobleFile } from "../../core/file/mobleFile"
+import { NewMobleDialog } from "./NewMobleDialog"
+import { CompositionThumb } from "../../components/CompositionThumb"
+import { compositionHeight, compositionWidth, type Composition } from "../../core/model"
+import { createProject, db, deleteProject, duplicateProject, safeParams, type Project } from "../../db/db"
 import { compositionOf } from "../../db/compositionStore"
 import { useProjects } from "../useProject"
 import { useSettings } from "../settings/SettingsContext"
 import { toaster } from "../../components/ui/toaster"
 
-export function ProjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
+/** Acció demanada des del menú de l'esquerra (Nou moble / Obrir fitxer); `n` la fa única. */
+export type ProjectsRequest = { kind: "new" | "open"; n: number } | null
+
+export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOpen: (id: number) => void; request?: ProjectsRequest; onRequestDone?: () => void }) {
   const projects = useProjects()
   const { settings, save } = useSettings()
   const [toDelete, setToDelete] = useState<Project | null>(null)
   const [toSave, setToSave] = useState<Project | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
+  const [newOpen, setNewOpen] = useState(false)
+  // Botons del menú de l'esquerra: obren la galeria o el selector de fitxers.
+  const handled = useRef<number | null>(null)
+  useEffect(() => {
+    if (!request || handled.current === request.n) return
+    handled.current = request.n
+    // Es consumeix: si no, en tornar a la llista (la pantalla es torna a muntar) es
+    // tornaria a obrir la finestra de fitxers.
+    onRequestDone?.()
+    if (request.kind === "new") setNewOpen(true)
+    else fileInput.current?.click()
+  }, [request, onRequestDone])
+  // Fitxer obert pendent de decidir: moble nou o plantilla.
+  const [pendingFile, setPendingFile] = useState<{ text: string; file: MobleFile } | null>(null)
+
   const handleOpenFile = async (file: File | undefined) => {
     if (fileInput.current) fileInput.current.value = ""
     if (!file) return
-    const res = await openMobleFile(await file.text(), settings, save)
+    const text = await file.text()
+    const res = parseMobleFile(text)
+    if (!res.ok) {
+      toaster.create({ title: "No s'ha pogut obrir el fitxer", description: res.error, type: "error" })
+      return
+    }
+    setPendingFile({ text, file: res.file })
+  }
+
+  const openAsMoble = async () => {
+    if (!pendingFile) return
+    const res = await openMobleFile(pendingFile.text, settings, save)
+    setPendingFile(null)
     if (!res.ok) {
       toaster.create({ title: "No s'ha pogut obrir el fitxer", description: res.error, type: "error" })
       return
@@ -41,10 +74,18 @@ export function ProjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
     onOpen(res.projectId)
   }
 
-  const handleNew = async () => {
-    // El mòdul nou pren materials, ferratges i jocs de les preferències.
-    const module = applySettingsToModule(settings, defaultModule(newId("m"), "Mòdul 1"))
-    const id = await createProject(undefined, undefined, { composition: { modules: [module], references: [] } })
+  const addAsTemplate = async () => {
+    if (!pendingFile) return
+    const r = await addMobleAsTemplate(pendingFile.file, settings, save)
+    setPendingFile(null)
+    toaster.create({ title: `«${r.name}» afegida a les plantilles`, description: [...r.warnings, "La trobaràs a «Nou moble»."].join(" "), type: "success" })
+  }
+
+  /** Crea un moble a partir d'una composició (en blanc o de plantilla) i l'obre. */
+  const handleCreate = async (composition: Composition, name: string) => {
+    setNewOpen(false)
+    const existing = (await db.projects.toArray()).map((p) => p.name)
+    const id = await createProject(uniqueName(name, existing), undefined, { composition })
     onOpen(id)
   }
 
@@ -64,13 +105,14 @@ export function ProjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
     <VStack align="stretch" gap={5}>
       <HStack justify="space-between" wrap="wrap" gap={3}>
         <Heading size="xl">Mobles</Heading>
-        <HStack>
-          <input ref={fileInput} type="file" accept=".moble,.json,application/json" hidden onChange={(e) => void handleOpenFile(e.target.files?.[0])} />
+        <input ref={fileInput} type="file" accept=".moble,.json,application/json" hidden onChange={(e) => void handleOpenFile(e.target.files?.[0])} />
+        {/* A l'ordinador aquests botons són al menú de l'esquerra; al mòbil, aquí. */}
+        <HStack display={{ base: "flex", md: "none" }}>
           <Button variant="outline" onClick={() => fileInput.current?.click()}>
             <LuFolderOpen /> Obrir fitxer
           </Button>
-          <Button colorPalette="wood" onClick={handleNew}>
-            <LuPlus /> Nou mòdul
+          <Button colorPalette="wood" onClick={() => setNewOpen(true)}>
+            <LuPlus /> Nou moble
           </Button>
         </HStack>
       </HStack>
@@ -84,11 +126,11 @@ export function ProjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
             <VStack textAlign="center">
               <EmptyState.Title>Encara no tens cap moble</EmptyState.Title>
               <EmptyState.Description>
-                Crea un mòdul de caixa i ajusta'n les mides, prestatges i portes.
+                Comença en blanc o des d'una plantilla (armari, calaixera, moble de TV...).
               </EmptyState.Description>
             </VStack>
-            <Button colorPalette="wood" onClick={handleNew}>
-              <LuPlus /> Crear el primer mòdul
+            <Button colorPalette="wood" onClick={() => setNewOpen(true)}>
+              <LuPlus /> Crear el primer moble
             </Button>
           </EmptyState.Content>
         </EmptyState.Root>
@@ -108,6 +150,38 @@ export function ProjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
       )}
 
       <SaveFileDialog project={toSave} open={toSave !== null} onClose={() => setToSave(null)} />
+      <NewMobleDialog open={newOpen} onClose={() => setNewOpen(false)} onCreate={(c, n) => void handleCreate(c, n)} />
+
+      <Dialog.Root open={pendingFile !== null} onOpenChange={(e) => !e.open && setPendingFile(null)}>
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Obrir «{pendingFile?.file.project.name}»</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <Text>
+                  {pendingFile?.file.kind === "plantilla"
+                    ? "Aquest fitxer és una plantilla. La vols afegir a les teves plantilles o obrir-la com a moble?"
+                    : "Vols obrir-lo com a moble nou o afegir-lo a les teves plantilles?"}
+                </Text>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Button variant="outline" onClick={() => setPendingFile(null)}>
+                  Cancel·lar
+                </Button>
+                <Button variant={pendingFile?.file.kind === "plantilla" ? "outline" : "solid"} colorPalette="wood" onClick={() => void openAsMoble()}>
+                  <LuFolderOpen /> Obrir com a moble
+                </Button>
+                <Button variant={pendingFile?.file.kind === "plantilla" ? "solid" : "outline"} colorPalette="wood" onClick={() => void addAsTemplate()}>
+                  <LuLayoutTemplate /> Afegir a plantilles
+                </Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
 
       <Dialog.Root
         role="alertdialog"
@@ -158,8 +232,10 @@ function ProjectCard({
   const p = safeParams(project.params)
   const comp = compositionOf(project)
   const first = comp.modules[0]!.carcass
-  const width = comp.modules.reduce((s, m) => s + m.gapBefore + m.carcass.width, 0)
-  const height = Math.max(...comp.modules.map((m) => m.carcass.height))
+  // Mides de conjunt amb les posicions reals (files, potes, penjats).
+  const width = Math.round(compositionWidth(comp))
+  const height = Math.round(compositionHeight(comp))
+  const depth = Math.max(...comp.modules.map((m) => m.carcass.depth))
   const date = new Date(project.updatedAt).toLocaleDateString("ca-ES", {
     day: "numeric",
     month: "short",
@@ -168,9 +244,10 @@ function ProjectCard({
   return (
     <Card.Root variant="outline">
       <Card.Body gap={1} cursor="pointer" onClick={onOpen}>
-        <Card.Title>{project.name}</Card.Title>
+        <CompositionThumb composition={comp} h="120px" />
+        <Card.Title mt={2}>{project.name}</Card.Title>
         <Text color="fg.muted" fontSize="sm">
-          {width} × {height} × {first.depth} mm
+          {width} × {height} × {depth} mm
         </Text>
         <Text color="fg.muted" fontSize="sm">
           {comp.modules.length === 1

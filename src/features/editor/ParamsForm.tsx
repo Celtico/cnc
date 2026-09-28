@@ -186,8 +186,19 @@ export function NumberField({ label, value, onChange, min, max, step = 1, suffix
   const k = cm ? 10 : 1
   const shown = Number.isFinite(value) ? String(Math.round((value / k) * 1000) / 1000) : ""
   return (
-    <Field.Root invalid={!!error}>
-      <Field.Label fontSize="sm">{label}</Field.Label>
+    <Field.Root
+      invalid={!!error}
+      // Si la columna és estreta (tres camps en fila a l'inspector), s'amaga la unitat
+      // (els botons + i − es queden) perquè el número no quedi tapat.
+      css={{
+        containerType: "inline-size",
+        "@container (max-width: 130px)": {
+          "& .nf-unit": { display: "none" },
+          "& [data-scope=number-input][data-part=input]": { paddingInlineEnd: "7" },
+        },
+      }}
+    >
+      {label && <Field.Label fontSize="sm">{label}</Field.Label>}
       <NumberInput.Root
         value={shown}
         onValueChange={(e) => onChange(Number.isFinite(e.valueAsNumber) ? Math.round(e.valueAsNumber * k * 1000) / 1000 : e.valueAsNumber)}
@@ -200,6 +211,7 @@ export function NumberField({ label, value, onChange, min, max, step = 1, suffix
       >
         <NumberInput.Input inputMode="decimal" pe="14" />
         <Text
+          className="nf-unit"
           position="absolute"
           right="9"
           top="50%"

@@ -1,0 +1,170 @@
+import { Box, Button, Field, HStack, IconButton, NativeSelect, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { LuPlus, LuTrash2 } from "react-icons/lu"
+import { CUTOUT_PRESETS, newId, type Composition, type Run, type WorktopCutout, type WorktopRun } from "../../core/model"
+import { NumberField } from "../editor/ParamsForm"
+import { MaterialSelect } from "../settings/SettingsScreen"
+import { useSettings } from "../settings/SettingsContext"
+
+/**
+ * Taulells i sòcols correguts del moble: peces d'una sola tirada que van d'un mòdul a un
+ * altre de la fila (p. ex. el taulell de la cuina amb els forats de la pica i la vitro).
+ */
+export function RunsForm({ comp, onChange }: { comp: Composition; onChange: (c: Composition) => void }) {
+  const { settings } = useSettings()
+  const runs = comp.runs ?? []
+  const row = comp.modules.filter((m) => m.carcass.base.kind !== "wall")
+  const setRuns = (next: Run[]) => onChange({ ...comp, runs: next })
+  const update = (id: string, patch: Partial<Run>) => setRuns(runs.map((r) => (r.id === id ? ({ ...r, ...patch } as Run) : r)))
+  const first = row[0]
+  const last = row.at(-1)
+
+  const addWorktop = () =>
+    first &&
+    last &&
+    setRuns([
+      ...runs,
+      { id: newId("run"), kind: "worktop", from: first.id, to: last.id, material: "Roure massís / xapat", thickness: 30, overhangFront: 20, overhangLeft: 0, overhangRight: 0, cutouts: [] },
+    ])
+  const addPlinth = () =>
+    first && last && setRuns([...runs, { id: newId("run"), kind: "plinth", from: first.id, to: last.id, material: first.carcass.frontMaterial ?? first.carcass.material, thickness: 16, setback: 50 }])
+
+  const moduleSelect = (label: string, value: string, onPick: (id: string) => void) => (
+    <Field.Root>
+      <Field.Label>{label}</Field.Label>
+      <NativeSelect.Root size="sm">
+        <NativeSelect.Field value={value} onChange={(e) => onPick(e.target.value)}>
+          {row.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </NativeSelect.Field>
+        <NativeSelect.Indicator />
+      </NativeSelect.Root>
+    </Field.Root>
+  )
+
+  return (
+    <Stack gap={4}>
+      {runs.length === 0 && (
+        <Text fontSize="sm" color="fg.muted">
+          Peces d'una sola tirada per sobre o per sota de diversos mòduls: el taulell (amb els forats de la pica i la vitro) i el sòcol de davant de les potes.
+        </Text>
+      )}
+      {runs.map((r) => (
+        <Stack key={r.id} gap={3} borderWidth="1px" rounded="md" p={3}>
+          <HStack justify="space-between">
+            <Text fontWeight="semibold" fontSize="sm">
+              {r.kind === "worktop" ? "Taulell" : "Sòcol corregut"}
+            </Text>
+            <IconButton size="xs" variant="ghost" colorPalette="red" aria-label="Eliminar" onClick={() => setRuns(runs.filter((x) => x.id !== r.id))}>
+              <LuTrash2 />
+            </IconButton>
+          </HStack>
+          <SimpleGrid columns={2} gap={3}>
+            {moduleSelect("Des de", r.from, (from) => update(r.id, { from }))}
+            {moduleSelect("Fins a", r.to, (to) => update(r.id, { to }))}
+          </SimpleGrid>
+          <SimpleGrid columns={2} gap={3}>
+            <MaterialSelect label="Material" materials={settings.materials.filter((m) => !m.forBacks)} value={r.material} onChange={(material) => update(r.id, { material })} />
+            <NumberField label="Gruix" value={r.thickness} min={10} max={60} step={1} onChange={(thickness) => update(r.id, { thickness })} />
+          </SimpleGrid>
+          {r.kind === "plinth" ? (
+            <>
+              <NumberField label="Retranqueig" value={r.setback} min={0} max={150} step={5} onChange={(setback) => update(r.id, { setback })} help="Des de la cara dels fronts. L'alçada és la de les potes." />
+            </>
+          ) : (
+            <WorktopFields run={r} comp={comp} onChange={(patch) => update(r.id, patch)} />
+          )}
+        </Stack>
+      ))}
+      <HStack wrap="wrap" gap={2}>
+        <Button size="xs" variant="outline" disabled={!first} onClick={addWorktop}>
+          <LuPlus /> Taulell
+        </Button>
+        <Button size="xs" variant="outline" disabled={!first} onClick={addPlinth}>
+          <LuPlus /> Sòcol corregut
+        </Button>
+      </HStack>
+    </Stack>
+  )
+}
+
+function WorktopFields({ run, comp, onChange }: { run: WorktopRun; comp: Composition; onChange: (patch: Partial<WorktopRun>) => void }) {
+  const setCut = (id: string, patch: Partial<WorktopCutout>) => onChange({ cutouts: run.cutouts.map((c) => (c.id === id ? { ...c, ...patch } : c)) })
+  const addCut = (kind: WorktopCutout["kind"]) => {
+    const p = CUTOUT_PRESETS[kind]
+    const target = comp.modules.find((m) => m.id === run.from) ?? comp.modules[0]!
+    onChange({ cutouts: [...run.cutouts, { id: newId("cut"), kind, module: target.id, w: p.w, d: p.d, dx: 0 }] })
+  }
+  return (
+    <>
+      <SimpleGrid columns={3} gap={2}>
+        <NumberField label="Voladís" value={run.overhangFront} min={0} max={200} step={5} onChange={(overhangFront) => onChange({ overhangFront })} />
+        <NumberField label="Esquerra" value={run.overhangLeft} min={0} max={500} step={5} onChange={(overhangLeft) => onChange({ overhangLeft })} />
+        <NumberField label="Dreta" value={run.overhangRight} min={0} max={500} step={5} onChange={(overhangRight) => onChange({ overhangRight })} />
+      </SimpleGrid>
+      <Text fontSize="xs" color="fg.muted" mt={-1}>
+        Voladís per davant dels fronts i per cada costat.
+      </Text>
+      {run.cutouts.map((c) => (
+        <Box key={c.id} borderTopWidth="1px" pt={3}>
+          <Stack gap={2}>
+            <HStack align="end" gap={2}>
+              <Field.Root flex={1}>
+                <Field.Label>Forat</Field.Label>
+                <NativeSelect.Root size="sm">
+                  <NativeSelect.Field value={c.kind} onChange={(e) => setCut(c.id, { kind: e.target.value as WorktopCutout["kind"] })}>
+                    {(Object.keys(CUTOUT_PRESETS) as WorktopCutout["kind"][]).map((k) => (
+                      <option key={k} value={k}>
+                        {CUTOUT_PRESETS[k].label}
+                      </option>
+                    ))}
+                  </NativeSelect.Field>
+                  <NativeSelect.Indicator />
+                </NativeSelect.Root>
+              </Field.Root>
+              <IconButton size="sm" variant="ghost" colorPalette="red" aria-label="Treure el forat" onClick={() => onChange({ cutouts: run.cutouts.filter((x) => x.id !== c.id) })}>
+                <LuTrash2 />
+              </IconButton>
+            </HStack>
+            <Field.Root>
+              <Field.Label>Sobre</Field.Label>
+              <NativeSelect.Root size="sm">
+                <NativeSelect.Field value={c.module} onChange={(e) => setCut(c.id, { module: e.target.value })}>
+                  {comp.modules
+                    .filter((m) => m.carcass.base.kind !== "wall")
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                </NativeSelect.Field>
+                <NativeSelect.Indicator />
+              </NativeSelect.Root>
+            </Field.Root>
+            <SimpleGrid columns={3} gap={2}>
+              <NumberField label="Ample" value={c.w} min={50} max={2000} step={5} onChange={(w) => setCut(c.id, { w })} />
+              <NumberField label="Fons" value={c.d} min={50} max={1000} step={5} onChange={(d) => setCut(c.id, { d })} />
+              <NumberField label="Despl." value={c.dx} min={-1000} max={1000} step={5} onChange={(dx) => setCut(c.id, { dx })} />
+            </SimpleGrid>
+            <Text fontSize="xs" color="fg.muted">
+              Mida del forat d'encastar (la del full d'instruccions de l'aparell), centrat al mòdul; «Despl.» el mou a la dreta (+) o a l'esquerra (−).
+            </Text>
+          </Stack>
+        </Box>
+      ))}
+      <HStack wrap="wrap" gap={2}>
+        <Button size="xs" variant="ghost" onClick={() => addCut("hob")}>
+          <LuPlus /> Forat de placa
+        </Button>
+        <Button size="xs" variant="ghost" onClick={() => addCut("sink")}>
+          <LuPlus /> Forat de pica
+        </Button>
+        <Button size="xs" variant="ghost" onClick={() => addCut("custom")}>
+          <LuPlus /> A mida
+        </Button>
+      </HStack>
+    </>
+  )
+}

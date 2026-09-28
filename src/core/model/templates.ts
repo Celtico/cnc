@@ -14,6 +14,12 @@ function withRoot(m: Module, root: Module["root"]): Module {
 
 export const BUILTIN_TEMPLATES: Template[] = [
   {
+    id: "modern-kitchen",
+    name: "Cuina moderna",
+    description: "3000 mm lineal: baixos sobre potes (calaixos, fregadera, fogons, forn i rebost) amb taulell de roure d'una peça (forats de pica i vitro) i sòcol corregut; alts penjats a 1450. Cos blanc, fronts de roure.",
+    make: () => kitchen(),
+  },
+  {
     id: "wardrobe-2-doors",
     name: "Armari 2 portes",
     description: "1000 × 2000 × 600, 4 prestatges regulables, dues portes.",
@@ -139,4 +145,67 @@ export function radiatorModule(): Module {
       hatch: { x: 790 - 2 * 19 - 200, y: 900, w: 150, h: 150 },
     },
   })
+}
+
+/**
+ * Cuina lineal moderna (calaixos · fregadera · fogons · forn · rebost). Mides estàndard: baixos de
+ * 770 sobre potes de 100 (+ taulell de 30 = 900), fondària 560, sòcol corregut; alts de 720 × 330 penjats a 1450 (deixen 540 sobre el
+ * taulell), a la fila dels penjats, cadascun sobre el seu baix. Fons de 10 mm cargolat als alts (per penjar-los).
+ */
+function kitchen(): Composition {
+  const body = { material: "Melamina blanca", thickness: 19, frontMaterial: "Melamina roure" }
+  // Baixos sobre potes regulables de 100: el sòcol és una sola peça correguda (runs).
+  const base = (name: string, width: number) => defaultModule(newId("m"), name, { ...body, width, height: 770, depth: 560, base: { kind: "legs", height: 100 } })
+  // Alts: fila dels penjats, cadascun a sobre del seu baix (la separació salta el forat de
+  // la campana).
+  const wall = (name: string, width: number, gapBefore = 0): Module => ({
+    ...defaultModule(newId("m"), name, { ...body, width, height: 720, depth: 330, back: "screwed", backThickness: 10, base: { kind: "wall", height: 1450 } }),
+    gapBefore,
+  })
+
+  const drawers = withRoot(base("Calaixos", 600), { id: newId(), front: { kind: "drawers", n: 3, heights: ["auto", "auto", "auto"] } })
+  // Fregadera i fogons sense tapa: la pica i la placa van encastades al taulell i ocupen
+  // l'espai de sota; la tapa del mòdul hi xocaria.
+  const open = (m: Module): Module => ({ ...m, carcass: { ...m.carcass, top: { kind: "none" } } })
+  const sink = withRoot(open(base("Fregadera", 800)), { id: newId(), front: { kind: "door", mode: "double", hinge: "left" } })
+  // Forn: calaix a baix i el buit del forn a sobre (595 mm, estàndard d'encastar).
+  const oven = withRoot(base("Forn", 600), {
+    id: newId(),
+    split: {
+      dir: "h",
+      sizes: ["auto", 595],
+      children: [{ id: newId(), front: { kind: "drawers", n: 1, heights: ["auto"] } }, { id: newId() }],
+    },
+  })
+  // Fogons: la placa va encastada al taulell; a sota, dos calaixos grans per a cassoles.
+  const hob = withRoot(open(base("Fogons", 600)), { id: newId(), front: { kind: "drawers", n: 2, heights: ["auto", "auto"] } })
+  const pantry = withRoot(base("Rebost", 400), { id: newId(), shelves: { n: 2, adjustable: true }, front: { kind: "door", mode: "single", hinge: "right" } })
+
+  const w1 = withRoot(wall("Alt 1", 600), { id: newId(), shelves: { n: 1, adjustable: true }, front: { kind: "door", mode: "single", hinge: "left" } })
+  const w2 = withRoot(wall("Alt escorreplats", 800), { id: newId(), shelves: { n: 1, adjustable: true }, front: { kind: "flap", dir: "up" } })
+  const w3 = withRoot(wall("Alt 3", 600, 600), { id: newId(), shelves: { n: 1, adjustable: true }, front: { kind: "door", mode: "single", hinge: "right" } })
+  const w4 = withRoot(wall("Alt 4", 400), { id: newId(), shelves: { n: 1, adjustable: true }, front: { kind: "door", mode: "single", hinge: "right" } })
+
+  // Sobre els fogons no hi ha alt: hi va la campana (≥ 650 mm per sobre de la placa).
+  // Taulell de roure de 30 d'una peça, amb el forat de la pica i el de la placa, i sòcol
+  // corregut de punta a punta retranquejat 50 mm.
+  const runs: Composition["runs"] = [
+    {
+      id: newId("run"),
+      kind: "worktop",
+      from: drawers.id,
+      to: pantry.id,
+      material: "Roure massís / xapat",
+      thickness: 30,
+      overhangFront: 20,
+      overhangLeft: 0,
+      overhangRight: 0,
+      cutouts: [
+        { id: newId("cut"), kind: "sink", module: sink.id, w: 740, d: 440, dx: 0 },
+        { id: newId("cut"), kind: "hob", module: hob.id, w: 560, d: 490, dx: 0 },
+      ],
+    },
+    { id: newId("run"), kind: "plinth", from: drawers.id, to: pantry.id, material: "Melamina roure", thickness: 16, setback: 50 },
+  ]
+  return { modules: [drawers, sink, hob, oven, pantry, w1, w2, w3, w4], references: [], runs }
 }

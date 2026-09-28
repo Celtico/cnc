@@ -1,3 +1,10 @@
+import { useTheme } from "next-themes"
+import { ACCENTS, useAccent } from "../../theme/accent"
+import { QUALITY_LABELS, useRenderQuality, type RenderQuality } from "../../components/viewer/renderQuality"
+import { FLOORS, LIGHTS, SKIRTINGS, WALLS, usePresentationScene, type FloorId } from "../../components/viewer/presentationScene"
+import { floorSwatchUrl } from "../../components/viewer/PresentationRoom"
+import type { Composition } from "../../core/model"
+import { ScenePreview } from "./ScenePreview"
 import {
   Alert,
   Badge,
@@ -19,27 +26,7 @@ import {
   Text,
 } from "@chakra-ui/react"
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import {
-  LuArrowDown,
-  LuArrowUp,
-  LuCopy,
-  LuDownload,
-  LuEye,
-  LuEyeOff,
-  LuFileDown,
-  LuGrid3X3,
-  LuHammer,
-  LuLayoutGrid,
-  LuPalette,
-  LuPlus,
-  LuRotateCcw,
-  LuRuler,
-  LuScan,
-  LuSquareStack,
-  LuTag,
-  LuTrash2,
-  LuUpload,
-} from "react-icons/lu"
+import { LuArrowDown, LuArrowUp, LuCheck, LuCopy, LuDownload, LuEye, LuEyeOff, LuFileDown, LuGrid3X3, LuHammer, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRuler, LuScan, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { PanelGroup, PanelSection } from "../../components/PanelSection"
 import { toaster } from "../../components/ui/toaster"
@@ -69,13 +56,13 @@ function issueText(issue: { path: PropertyKey[]; code: string; message: string; 
   return `${path}: ${issue.message}`
 }
 
-export function SettingsScreen() {
+export function SettingsScreen({ previewComposition }: { previewComposition?: Composition }) {
   const { settings, loading, save } = useSettings()
   if (loading) return null
-  return <SettingsEditor key={JSON.stringify(settings.version)} initial={settings} save={save} />
+  return <SettingsEditor key={JSON.stringify(settings.version)} initial={settings} save={save} previewComposition={previewComposition} />
 }
 
-function SettingsEditor({ initial, save }: { initial: Settings; save: (s: Settings) => Promise<void> }) {
+function SettingsEditor({ initial, save, previewComposition }: { initial: Settings; save: (s: Settings) => Promise<void>; previewComposition?: Composition }) {
   const [draft, setDraft] = useState<Settings>(initial)
   const [reset, setReset] = useState<{ key: SectionKey; label: string } | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -247,6 +234,15 @@ function SettingsEditor({ initial, save }: { initial: Settings; save: (s: Settin
               <Field.HelperText>Internament tot es guarda en mm; els fitxers per al taller sempre van en mm.</Field.HelperText>
             </Field.Root>
           </Section>
+
+          <PanelSection id="theme" title="Tema" icon={LuSunMoon}>
+            <ThemeField />
+            <AccentField />
+          </PanelSection>
+
+          <PanelSection id="viewer3d" title="Visor 3D" icon={LuLampFloor}>
+            <SceneFields previewComposition={previewComposition} />
+          </PanelSection>
         </Stack>
       </PanelGroup>
 
@@ -587,6 +583,200 @@ function Group({ title, icon: Icon, children }: { title: string; icon: IconType;
         </Text>
       </HStack>
       {children}
+    </Stack>
+  )
+}
+
+/**
+ * Aparença (clar / fosc / com el sistema). És una preferència del dispositiu, no de les
+ * dades: la desa next-themes al navegador, no s'exporta amb les preferències.
+ */
+function ThemeField() {
+  const { theme, setTheme } = useTheme()
+  return (
+    <Field.Root>
+      <Field.Label>Aparença</Field.Label>
+      <SegmentGroup.Root size="sm" value={theme ?? "system"} onValueChange={(e) => e.value && setTheme(e.value)}>
+        <SegmentGroup.Indicator />
+        {(
+          [
+            ["light", "Dia", LuSun],
+            ["dark", "Nit", LuMoon],
+            ["system", "Com el sistema", LuMonitor],
+          ] as const
+        ).map(([v, label, Icon]) => (
+          <SegmentGroup.Item key={v} value={v}>
+            <SegmentGroup.ItemText>
+              <HStack gap={1.5}>
+                <Icon /> {label}
+              </HStack>
+            </SegmentGroup.ItemText>
+            <SegmentGroup.ItemHiddenInput />
+          </SegmentGroup.Item>
+        ))}
+      </SegmentGroup.Root>
+    </Field.Root>
+  )
+}
+
+function AccentField() {
+  const [accent, setAccent] = useAccent()
+  return (
+    <Field.Root>
+      <Field.Label>Color principal</Field.Label>
+      <HStack gap={2} wrap="wrap" role="radiogroup" aria-label="Color principal">
+        {ACCENTS.map((a) => {
+          const on = a.id === accent
+          return (
+            <Box
+              key={a.id}
+              asChild
+              w="36px"
+              h="36px"
+              rounded="full"
+              borderWidth="2px"
+              borderColor={on ? "fg" : "transparent"}
+              p="3px"
+              cursor="pointer"
+            >
+              <button type="button" role="radio" aria-checked={on} aria-label={a.label} title={a.label} onClick={() => setAccent(a.id)}>
+                <Box w="full" h="full" rounded="full" bg={a.swatch} display="flex" alignItems="center" justifyContent="center" color="white">
+                  {on && <LuCheck />}
+                </Box>
+              </button>
+            </Box>
+          )
+        })}
+      </HStack>
+      <Field.HelperText>Botons, seleccions i ressaltats. Es guarda en aquest dispositiu.</Field.HelperText>
+    </Field.Root>
+  )
+}
+
+function isLight(hex: string): boolean {
+  const n = parseInt(hex.slice(1), 16)
+  return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 160
+}
+
+/** Una fila de mostres de color rodones (com el color principal). */
+function Swatches<T extends string>({ label, items, value, onChange }: { label: string; items: { id: T; label: string; swatch: string }[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <HStack gap={2} wrap="wrap" role="radiogroup" aria-label={label}>
+      {items.map((a) => {
+        const on = a.id === value
+        return (
+          <Box key={a.id} asChild w="36px" h="36px" rounded="full" borderWidth="2px" borderColor={on ? "fg" : "transparent"} p="3px" cursor="pointer">
+            <button type="button" role="radio" aria-checked={on} aria-label={a.label} title={a.label} onClick={() => onChange(a.id)}>
+              <Box w="full" h="full" rounded="full" bg={a.swatch} borderWidth="1px" borderColor="blackAlpha.200" display="flex" alignItems="center" justifyContent="center" color={isLight(a.swatch) ? "gray.800" : "white"}>
+                {on && <LuCheck />}
+              </Box>
+            </button>
+          </Box>
+        )
+      })}
+    </HStack>
+  )
+}
+
+/** Mostres de terra: rajoles amb la textura real i el nom a sota. */
+function FloorTiles({ value, onChange }: { value: FloorId; onChange: (v: FloorId) => void }) {
+  return (
+    <HStack gap={2} wrap="wrap" role="radiogroup" aria-label="Terra">
+      {FLOORS.map((f) => {
+        const on = f.id === value
+        const img = floorSwatchUrl(f.id)
+        return (
+          <Stack key={f.id} asChild gap={1} align="center" cursor="pointer">
+            <button type="button" role="radio" aria-checked={on} onClick={() => onChange(f.id)}>
+              <Box w="72px" h="52px" rounded="md" borderWidth="2px" borderColor={on ? "colorPalette.solid" : "border"} colorPalette="wood" p="2px">
+                <Box w="full" h="full" rounded="sm" bg={f.swatch} bgImage={img ? `url(${img})` : undefined} bgSize="cover" />
+              </Box>
+              <Text textStyle="xs" color={on ? "fg" : "fg.muted"} fontWeight={on ? "medium" : "normal"}>
+                {f.label}
+              </Text>
+            </button>
+          </Stack>
+        )
+      })}
+    </HStack>
+  )
+}
+
+/**
+ * Qualitat del visor i escena del mode Presentació. Preferències del dispositiu (es
+ * desen al navegador): no s'exporten amb la resta de preferències.
+ */
+function SceneFields({ previewComposition }: { previewComposition?: Composition }) {
+  const [quality, setQuality] = useRenderQuality()
+  const [scene, setScene] = usePresentationScene()
+  const wallName = WALLS.find((w) => w.color === scene.wall)?.label
+  return (
+    <Stack gap={4}>
+      <Field.Root>
+        <Field.Label>Qualitat</Field.Label>
+        <SegmentGroup.Root size="sm" value={quality} onValueChange={(e) => e.value && e.value in QUALITY_LABELS && setQuality(e.value as RenderQuality)}>
+          <SegmentGroup.Indicator />
+          {(Object.keys(QUALITY_LABELS) as RenderQuality[]).map((k) => (
+            <SegmentGroup.Item key={k} value={k}>
+              <SegmentGroup.ItemText>{QUALITY_LABELS[k]}</SegmentGroup.ItemText>
+              <SegmentGroup.ItemHiddenInput />
+            </SegmentGroup.Item>
+          ))}
+        </SegmentGroup.Root>
+        <Field.HelperText>També es pot canviar des d'Opcions de vista, al visor.</Field.HelperText>
+      </Field.Root>
+
+      <SimpleGrid columns={{ base: 1, lg: 2 }} gap={6} alignItems="start">
+        <Stack gap={4}>
+          <Text textStyle="sm" color="fg.muted">
+            Escena de «Presentació»: on es posa el moble per ensenyar-lo o fer-ne una imatge.
+          </Text>
+
+          <Field.Root>
+            <Field.Label>Terra</Field.Label>
+            <FloorTiles value={scene.floor} onChange={(floor) => setScene({ floor })} />
+          </Field.Root>
+
+          <Field.Root>
+            <Field.Label>Paret · {wallName ?? "Personalitzada"}</Field.Label>
+            <Swatches label="Paret" items={WALLS.map((w) => ({ id: w.color, label: w.label, swatch: w.color }))} value={scene.wall} onChange={(wall) => setScene({ wall })} />
+          </Field.Root>
+
+          <Field.Root>
+            <Field.Label>Sòcol de paret</Field.Label>
+            <SegmentGroup.Root size="sm" value={scene.skirting} onValueChange={(e) => {
+              const k = SKIRTINGS.find((x) => x.id === e.value)
+              if (k) setScene({ skirting: k.id })
+            }}>
+              <SegmentGroup.Indicator />
+              {SKIRTINGS.map((k) => (
+                <SegmentGroup.Item key={k.id} value={k.id}>
+                  <SegmentGroup.ItemText>{k.label}</SegmentGroup.ItemText>
+                  <SegmentGroup.ItemHiddenInput />
+                </SegmentGroup.Item>
+              ))}
+            </SegmentGroup.Root>
+          </Field.Root>
+
+          <Field.Root>
+            <Field.Label>Llum</Field.Label>
+            <SegmentGroup.Root size="sm" value={scene.light} onValueChange={(e) => {
+              const l = LIGHTS.find((x) => x.id === e.value)
+              if (l) setScene({ light: l.id })
+            }}>
+              <SegmentGroup.Indicator />
+              {LIGHTS.map((l) => (
+                <SegmentGroup.Item key={l.id} value={l.id}>
+                  <SegmentGroup.ItemText>{l.label}</SegmentGroup.ItemText>
+                  <SegmentGroup.ItemHiddenInput />
+                </SegmentGroup.Item>
+              ))}
+            </SegmentGroup.Root>
+            <Field.HelperText>{LIGHTS.find((l) => l.id === scene.light)?.help}</Field.HelperText>
+          </Field.Root>
+        </Stack>
+        <ScenePreview composition={previewComposition} />
+      </SimpleGrid>
     </Stack>
   )
 }

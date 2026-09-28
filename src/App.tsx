@@ -1,17 +1,20 @@
-import { Box, Container, Flex, HStack, Heading, IconButton, Stack, Text } from "@chakra-ui/react"
-import { useEffect, useState } from "react"
+import { Box, Button, Container, Flex, HStack, Heading, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import type { IconType } from "react-icons"
-import { LuArrowLeft, LuBox, LuDownload, LuFolder, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSettings } from "react-icons/lu"
-import { ColorModeButton } from "./components/ui/color-mode"
+import { LuArrowLeft, LuBookmark, LuBox, LuDownload, LuEllipsis, LuFolder, LuFolderOpen, LuPlus, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings } from "react-icons/lu"
 import { Toaster } from "./components/ui/toaster"
 import { Tooltip } from "./components/ui/tooltip"
+import { TopBar, TopBarActionsProvider } from "./components/TopBar"
+import { SaveFileDialog } from "./features/file/SaveFileDialog"
+import { SaveTemplateDialog } from "./features/file/SaveTemplateDialog"
 import { db } from "./db/db"
+import { compositionOf } from "./db/compositionStore"
 import { CutListScreen } from "./features/cutlist/CutListScreen"
 import { EditorScreen } from "./features/editor/EditorScreen"
 import { ExportScreen } from "./features/export/ExportScreen"
 import { NestingScreen } from "./features/nesting/NestingScreen"
 import { PhotoScreen } from "./features/photo/PhotoScreen"
-import { ProjectsScreen } from "./features/projects/ProjectsScreen"
+import { ProjectsScreen, type ProjectsRequest } from "./features/projects/ProjectsScreen"
 import { SettingsScreen } from "./features/settings/SettingsScreen"
 import { useSettings } from "./features/settings/SettingsContext"
 import { UnitContext } from "./features/units"
@@ -20,14 +23,17 @@ import { useProject } from "./features/useProject"
 
 type Screen = "projects" | "editor" | "photo" | "cutlist" | "nesting" | "export" | "settings"
 
-const NAV: { id: Screen; label: string; icon: IconType; needsProject: boolean }[] = [
-  { id: "projects", label: "Mobles", icon: LuFolder, needsProject: false },
-  { id: "editor", label: "Editor", icon: LuBox, needsProject: true },
-  { id: "cutlist", label: "Peces", icon: LuList, needsProject: true },
-  { id: "nesting", label: "Nesting", icon: LuLayoutGrid, needsProject: true },
-  { id: "export", label: "Exportar", icon: LuDownload, needsProject: true },
-  { id: "settings", label: "Preferències", icon: LuSettings, needsProject: false },
+type NavEntry = { id: Screen; label: string; icon: IconType }
+
+/** Pàgines del moble obert. Només surten quan n'hi ha un d'obert. */
+const PROJECT_NAV: NavEntry[] = [
+  { id: "editor", label: "Editor", icon: LuBox },
+  { id: "cutlist", label: "Peces", icon: LuList },
+  { id: "nesting", label: "Nesting", icon: LuLayoutGrid },
+  { id: "export", label: "Exportar", icon: LuDownload },
 ]
+const PROJECTS_ENTRY: NavEntry = { id: "projects", label: "Mobles", icon: LuFolder }
+const SETTINGS_ENTRY: NavEntry = { id: "settings", label: "Preferències", icon: LuSettings }
 
 const STORAGE_KEY = "mobles:current-project"
 
@@ -41,11 +47,20 @@ function readStoredId(): number | null {
 }
 
 export function App() {
-  const [screen, setScreen] = useState<Screen>("projects")
   const [projectId, setProjectId] = useState<number | null>(readStoredId)
+  // Si hi havia un moble obert, es torna al seu Editor; si no, a la llista.
+  const [screen, setScreen] = useState<Screen>(() => (readStoredId() === null ? "projects" : "editor"))
   const project = useProject(projectId)
+  const previewComposition = useMemo(() => (project ? compositionOf(project) : undefined), [project])
   const { settings } = useSettings()
   const [navCollapsed, setNavCollapsed] = usePersistentFlag("mobles:nav-collapsed")
+  // «Nou moble» i «Obrir fitxer» del menú: van a la llista de mobles i hi obren l'acció.
+  const [projectsRequest, setProjectsRequest] = useState<ProjectsRequest>(null)
+  const clearProjectsRequest = useCallback(() => setProjectsRequest(null), [])
+  const requestProjects = (kind: "new" | "open") => {
+    setProjectsRequest({ kind, n: Date.now() })
+    setScreen("projects")
+  }
 
   // Si el projecte guardat ja no existeix (esborrat), torna a la llista.
   useEffect(() => {
@@ -72,16 +87,27 @@ export function App() {
     setScreen("editor")
   }
 
+  const inProject = projectId !== null
+  // Barra superior «Mobles › nom» a les pàgines del moble (no a Preferències).
+  const showTopBar = inProject && screen !== "settings" && screen !== "projects"
+  const [topActions, setTopActions] = useState<HTMLDivElement | null>(null)
+  const [saveOpen, setSaveOpen] = useState(false)
+  const [templateOpen, setTemplateOpen] = useState(false)
   const go = (s: Screen) => {
-    if (NAV.find((n) => n.id === s)?.needsProject && projectId === null) return
+    if (PROJECT_NAV.some((n) => n.id === s) && projectId === null) return
     setScreen(s)
+  }
+  /** Tanca el moble obert i torna a la llista: el menú torna a ser el general. */
+  const backToProjects = () => {
+    setProjectId(null)
+    setScreen("projects")
   }
 
   const content =
     screen === "settings" ? (
-      <SettingsScreen />
+      <SettingsScreen previewComposition={previewComposition} />
     ) : screen === "projects" || projectId === null ? (
-      <ProjectsScreen onOpen={openProject} />
+      <ProjectsScreen onOpen={openProject} request={projectsRequest} onRequestDone={clearProjectsRequest} />
     ) : screen === "editor" ? (
       <EditorScreen projectId={projectId} />
     ) : screen === "cutlist" ? (
@@ -116,8 +142,8 @@ export function App() {
       >
         <HStack justify={navCollapsed ? "center" : "space-between"} mb={4} px={navCollapsed ? 0 : 2} minH="40px">
           {!navCollapsed && (
-            <Heading size="lg" color="wood.fg">
-              Mobles
+            <Heading size="md" color="wood.fg">
+              Mobles CNC
             </Heading>
           )}
           <Tooltip content={navCollapsed ? "Desplegar el menú" : "Plegar el menú"} positioning={{ placement: "right" }}>
@@ -132,33 +158,98 @@ export function App() {
             </IconButton>
           </Tooltip>
         </HStack>
-        {NAV.map((n) => (
+        {inProject ? (
+          <>
+            {/* Moble obert: «Mobles» (tornar a la llista) i, a sota, les pàgines del moble. */}
+            <NavItem icon={PROJECTS_ENTRY.icon} label={PROJECTS_ENTRY.label} collapsed={navCollapsed} active={false} disabled={false} onClick={backToProjects} />
+            <Box borderTopWidth="1px" my={1} />
+            {PROJECT_NAV.map((n) => (
+              <NavItem
+                key={n.id}
+                icon={n.icon}
+                label={n.label}
+                collapsed={navCollapsed}
+                active={screen === n.id || (n.id === "editor" && screen === "photo")}
+                disabled={false}
+                onClick={() => go(n.id)}
+              />
+            ))}
+          </>
+        ) : (
+          <Stack gap={1}>
+            {/* «Mobles» sempre a dalt de tot, separat; a sota, Obrir fitxer i Nou moble. */}
+            <NavItem
+              icon={PROJECTS_ENTRY.icon}
+              label={PROJECTS_ENTRY.label}
+              collapsed={navCollapsed}
+              active={screen === "projects"}
+              disabled={false}
+              onClick={() => go("projects")}
+            />
+            {/* Les accions de la llista només a la llista (a Preferències confonien). */}
+            {screen === "projects" && (
+              <>
+              <Box borderTopWidth="1px" my={1} />
+              <NavItem icon={LuFolderOpen} label="Obrir fitxer" collapsed={navCollapsed} active={false} disabled={false} onClick={() => requestProjects("open")} />
+              <Tooltip content="Nou moble" disabled={!navCollapsed} positioning={{ placement: "right" }}>
+                <Button colorPalette="wood" size="sm" my={1} px={navCollapsed ? 0 : 3} justifyContent={navCollapsed ? "center" : "flex-start"} aria-label={navCollapsed ? "Nou moble" : undefined} onClick={() => requestProjects("new")}>
+                  <LuPlus /> {!navCollapsed && "Nou moble"}
+                </Button>
+              </Tooltip>
+              </>
+            )}
+          </Stack>
+        )}
+        {/* General: sempre a baix, separat del moble */}
+        <Stack mt="auto" gap={1} pt={2} borderTopWidth="1px" align={navCollapsed ? "center" : "stretch"}>
           <NavItem
-            key={n.id}
-            icon={n.icon}
-            label={n.label}
+            icon={SETTINGS_ENTRY.icon}
+            label={SETTINGS_ENTRY.label}
             collapsed={navCollapsed}
-            active={screen === n.id}
-            disabled={n.needsProject && projectId === null}
-            onClick={() => go(n.id)}
+            active={screen === "settings"}
+            disabled={false}
+            onClick={() => go("settings")}
           />
-        ))}
-        <Stack mt="auto" gap={2} align={navCollapsed ? "center" : "stretch"}>
-          {project && !navCollapsed && (
-            <Text px={2} fontSize="sm" color="fg.muted" truncate>
-              {project.name}
-            </Text>
-          )}
-          <HStack px={navCollapsed ? 0 : 1} justify={navCollapsed ? "center" : "flex-start"}>
-            <ColorModeButton />
-          </HStack>
         </Stack>
       </Stack>
 
-      <Flex direction="column" flex={1} minW={0}>
-        {/* Capçalera (mòbil) */}
+      {/* A l'ordinador, l'app ocupa just la finestra: cada zona fa el seu propi desplaçament
+          (llista, preferències, i a l'editor l'arbre i les propietats per separat). */}
+      <Flex direction="column" flex={1} minW={0} h={{ md: "100dvh" }}>
+        {showTopBar && projectId !== null && (
+          <TopBar
+            projectId={projectId}
+            onBack={backToProjects}
+            onSettings={() => go("settings")}
+            actionsRef={setTopActions}
+            menu={
+              <Menu.Root positioning={{ placement: "bottom-end" }}>
+                <Menu.Trigger asChild>
+                  <IconButton aria-label="Menú del moble" title="Menú del moble" size="sm" variant="ghost">
+                    <LuEllipsis />
+                  </IconButton>
+                </Menu.Trigger>
+                <Portal>
+                  <Menu.Positioner>
+                    <Menu.Content>
+                      <Menu.Item value="file" onClick={() => (window.dispatchEvent(new Event("mobles:flush-save")), setSaveOpen(true))}>
+                        <LuSave /> Desar com a fitxer…
+                      </Menu.Item>
+                      <Menu.Item value="template" onClick={() => (window.dispatchEvent(new Event("mobles:flush-save")), setTemplateOpen(true))}>
+                        <LuBookmark /> Desar com a plantilla…
+                      </Menu.Item>
+                    </Menu.Content>
+                  </Menu.Positioner>
+                </Portal>
+              </Menu.Root>
+            }
+          />
+        )}
+        {project && <SaveFileDialog project={saveOpen ? project : null} open={saveOpen} onClose={() => setSaveOpen(false)} />}
+        {project && <SaveTemplateDialog project={project} open={templateOpen} onClose={() => setTemplateOpen(false)} />}
+        {/* Capçalera (mòbil) fora d'un moble */}
         <HStack
-          display={{ base: "flex", md: "none" }}
+          display={{ base: showTopBar ? "none" : "flex", md: "none" }}
           as="header"
           px={4}
           pt="env(safe-area-inset-top, 0px)"
@@ -171,27 +262,41 @@ export function App() {
           justify="space-between"
         >
           <HStack gap={1}>
-            {screen !== "projects" && (
-              <IconButton aria-label="Tornar als mobles" variant="ghost" size="sm" onClick={() => setScreen("projects")}>
+            {screen === "settings" && inProject ? (
+              <IconButton aria-label="Tornar al moble" variant="ghost" size="sm" onClick={() => setScreen("editor")}>
                 <LuArrowLeft />
               </IconButton>
-            )}
+            ) : inProject || screen === "settings" ? (
+              <IconButton aria-label="Tornar als mobles" variant="ghost" size="sm" onClick={backToProjects}>
+                <LuArrowLeft />
+              </IconButton>
+            ) : null}
             <Heading size="md" truncate>
-              {screen === "projects" ? "Mobles" : screen === "settings" ? "Preferències" : project?.name ?? "Mobles"}
+              {screen === "settings" ? "Preferències" : inProject ? project?.name ?? "Mobles" : "Mobles"}
             </Heading>
           </HStack>
-          <ColorModeButton />
+          <HStack gap={0}>
+            {inProject && screen !== "settings" && (
+              <IconButton aria-label="Preferències" variant="ghost" size="sm" onClick={() => go("settings")}>
+                <LuSettings />
+              </IconButton>
+            )}
+          </HStack>
         </HStack>
 
         <Container
           as="main"
           maxW="none"
           flex={1}
-          px={4}
-          py={{ base: 4, md: 6 }}
-          pb={{ base: "calc(76px + env(safe-area-inset-bottom, 0px))", md: 6 }}
+          minH={0}
+          overflowY={{ md: "auto" }}
+          display="flex"
+          flexDirection="column"
+          px={{ base: 4, md: screen === "editor" ? 2 : 4 }}
+          py={{ base: 4, md: screen === "editor" ? 1.5 : 6 }}
+          pb={{ base: "calc(76px + env(safe-area-inset-bottom, 0px))", md: screen === "editor" ? 1.5 : 6 }}
         >
-          {content}
+          <TopBarActionsProvider value={topActions}>{content}</TopBarActionsProvider>
         </Container>
       </Flex>
 
@@ -209,8 +314,8 @@ export function App() {
         pb="env(safe-area-inset-bottom, 0px)"
         justify="space-around"
       >
-        {NAV.map((n) => {
-          const disabled = n.needsProject && projectId === null
+        {(inProject ? PROJECT_NAV : [PROJECTS_ENTRY, SETTINGS_ENTRY]).map((n) => {
+          const disabled = false
           const active = screen === n.id
           return (
             <Box

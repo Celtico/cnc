@@ -30,6 +30,10 @@ export interface PhotoCalibration {
   /** Opacitat del moble superposat (0..1) i capes visibles. */
   opacity?: number
   layer?: "photo" | "cabinet" | "both"
+  /** Com es dibuixa el moble: línies (ràpid, per encaixar) o render realista. */
+  render?: "lines" | "realistic"
+  /** Ombres del render realista sobre el terra i la paret. Per defecte sí. */
+  shadows?: boolean
   plane: ReferencePlane
   /** Focal equivalent a 35 mm (de l'EXIF o ajustada a mà). */
   focal35: number

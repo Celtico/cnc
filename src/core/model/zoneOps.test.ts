@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "../build/buildComposition"
 import { BUILTIN_TEMPLATES, type Zone } from "./index"
-import { addChild, countLeaves, parentOf, removeZone, setChildSize, setFront, setShelves, splitZone, unsplitZone } from "./zoneOps"
+import { addChild, countLeaves, duplicateZone, parentOf, removeZone, setChildSize, setFront, setShelves, splitZone, unsplitZone } from "./zoneOps"
 
 describe("zoneOps", () => {
   const leaf: Zone = { id: "root", shelves: { n: 2, adjustable: true }, front: { kind: "door", mode: "single", hinge: "left" } }
@@ -85,5 +85,26 @@ describe("plantilles", () => {
     expect(modules[1]!.build.openRatios[comp.modules[1]!.root.id]).toBeGreaterThan(0.4)
     expect(warnings.some((w) => w.code === "material-heat")).toBe(true)
     expect(warnings.some((w) => w.code === "collision")).toBe(false)
+  })
+
+  it("duplicateZone insereix una còpia al costat dins d'una divisió de la mateixa direcció", () => {
+    const grille: Zone = { id: "g", front: { kind: "grille", pattern: { kind: "slotsH", slotWidth: 10, slotGap: 10, margin: 40, holeDiameter: 8, holePitch: 16 }, mount: "removable", hinge: "left" } }
+    const root: Zone = { id: "root", split: { dir: "v", sizes: [300, "auto"], children: [{ id: "a" }, grille] } }
+    const { root: z, copyId } = duplicateZone(root, "g", "v")
+    expect(z.split?.children.map((c) => c.id)).toEqual(["a", "g", copyId])
+    expect(z.split?.sizes).toEqual([300, "auto", "auto"])
+    expect(z.split?.children[2]!.front).toEqual(grille.front)
+    expect(z.split?.children[2]!.front).not.toBe(grille.front)
+  })
+
+  it("duplicateZone divideix la zona si la direcció no coincideix", () => {
+    const door: Zone = { id: "root", front: { kind: "door", mode: "single", hinge: "left" } }
+    const { root: z, copyId } = duplicateZone(door, "root", "h")
+    expect(z.id).toBe("root")
+    expect(z.split?.dir).toBe("h")
+    expect(z.split?.children).toHaveLength(2)
+    expect(z.split?.children[1]!.id).toBe(copyId)
+    expect(z.split?.children.every((c) => c.front?.kind === "door")).toBe(true)
+    expect(new Set(z.split?.children.map((c) => c.id)).size).toBe(2)
   })
 })

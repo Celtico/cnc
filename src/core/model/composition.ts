@@ -62,6 +62,8 @@ export const BaseSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("legs"), height: mm.positive() }),
   /** Sense base: laterals fins a terra i el buit obert (cobreradiador). */
   z.object({ kind: z.literal("open") }),
+  /** Penjat a la paret: cap peça de base; `height` = alçada de la base del mòdul des del terra. */
+  z.object({ kind: z.literal("wall"), height: mm.min(0) }),
 ])
 export type Base = z.infer<typeof BaseSchema>
 
@@ -99,6 +101,8 @@ export const CarcassSchema = z.object({
   depth: mm.min(100).max(1200),
   material: z.string(),
   thickness: mm.min(8).max(40),
+  /** Material de portes, fronts de calaix, abatibles, reixetes i fronts fixos. Buit = el del cos. */
+  frontMaterial: z.string().optional(),
   backMaterial: z.string(),
   backThickness: mm.min(3).max(20),
   base: BaseSchema,
@@ -166,13 +170,25 @@ export type CarcassExtras = z.infer<typeof CarcassExtrasSchema>
 export const ModuleSchema = z.object({
   id: z.string(),
   name: z.string(),
-  /** Separació respecte al mòdul anterior (o a l'origen si és el primer). */
+  /** Separació respecte al mòdul anterior de la seva fila (o a l'origen si és el primer). */
   gapBefore: mm.min(0),
   carcass: CarcassSchema,
   root: ZoneSchema,
   fronts: z.object({ outerGap: mm.min(0).max(10), betweenGap: mm.min(0).max(10) }),
   hardware: HardwareSchema,
   extras: CarcassExtrasSchema,
+  /**
+   * OBSOLET: ancoratge a un altre mòdul (versions anteriors). Ja no es crea: en carregar
+   * es converteix a les dues files amb `normalizeComposition`.
+   */
+  anchor: z
+    .object({
+      module: z.string(),
+      dx: mm,
+      /** On es col·loca respecte a l'altre: a sobre (per defecte), a la dreta o a l'esquerra. */
+      at: z.enum(["top", "right", "left"]).optional(),
+    })
+    .optional(),
 })
 export type Module = z.infer<typeof ModuleSchema>
 
@@ -190,9 +206,66 @@ export const RefObjectSchema = z.object({
 })
 export type RefObject = z.infer<typeof RefObjectSchema>
 
+/** Forat d'encastar al taulell (placa, pica o a mida), centrat al mòdul de sota. */
+export const WorktopCutoutSchema = z.object({
+  id: z.string(),
+  kind: z.enum(["hob", "sink", "custom"]),
+  /** Mòdul de sota: el forat es centra en la seva amplada. */
+  module: z.string(),
+  w: mm.positive(),
+  d: mm.positive(),
+  /** Desplaçament del centre respecte al centre del mòdul (+ a la dreta). */
+  dx: mm,
+  /** Distància del cantell de davant del taulell al forat; buit = centrat en fondària. */
+  front: mm.min(0).optional(),
+})
+export type WorktopCutout = z.infer<typeof WorktopCutoutSchema>
+
+/**
+ * Peces corregudes que van d'un mòdul a un altre (de la fila): el taulell de sobre dels
+ * baixos i el sòcol de davant de les potes, d'una sola peça «de punta a punta».
+ */
+export const RunSchema = z.discriminatedUnion("kind", [
+  z.object({
+    id: z.string(),
+    kind: z.literal("worktop"),
+    from: z.string(),
+    to: z.string(),
+    material: z.string(),
+    thickness: mm.positive(),
+    /** Voladís per davant dels fronts (mm). */
+    overhangFront: mm.min(0),
+    overhangLeft: mm.min(0),
+    overhangRight: mm.min(0),
+    cutouts: z.array(WorktopCutoutSchema),
+  }),
+  z.object({
+    id: z.string(),
+    kind: z.literal("plinth"),
+    from: z.string(),
+    to: z.string(),
+    material: z.string(),
+    thickness: mm.positive(),
+    /** Retranqueig respecte a la cara dels fronts (mm). */
+    setback: mm.min(0),
+  }),
+])
+export type Run = z.infer<typeof RunSchema>
+export type WorktopRun = Extract<Run, { kind: "worktop" }>
+export type PlinthRun = Extract<Run, { kind: "plinth" }>
+
+/** Mides estàndard d'encastar (mm): vitro de 60 i pica d'una cubeta. */
+export const CUTOUT_PRESETS: Record<WorktopCutout["kind"], { w: number; d: number; label: string }> = {
+  hob: { w: 560, d: 490, label: "Placa (vitro / inducció)" },
+  sink: { w: 740, d: 440, label: "Pica" },
+  custom: { w: 400, d: 300, label: "A mida" },
+}
+
 export const CompositionSchema = z.object({
   modules: z.array(ModuleSchema),
   references: z.array(RefObjectSchema),
+  /** Taulells i sòcols correguts. Opcional (els mobles antics no en tenen). */
+  runs: z.array(RunSchema).optional(),
 })
 export type Composition = z.infer<typeof CompositionSchema>
 
@@ -222,22 +295,106 @@ export function findZone(root: Zone, id: string): Zone | undefined {
   return found
 }
 
-/** X d'inici de cada mòdul dins de la composició. */
-export function moduleOrigins(comp: Composition): number[] {
-  const xs: number[] = []
-  let x = 0
-  for (const m of comp.modules) {
-    x += m.gapBefore
-    xs.push(x)
-    x += m.carcass.width
-  }
-  return xs
+/** Alçada de la base del mòdul sobre el terra (potes o penjat a la paret), sense comptar ancoratges. */
+export function moduleElevation(c: { base: Base }): number {
+  return c.base.kind === "legs" || c.base.kind === "wall" ? c.base.height : 0
 }
 
+/** Cantonada baix-esquerra-darrere de cada mòdul dins de la composició (mm). */
+export interface ModulePlacement {
+  x: number
+  y: number
+}
+
+/** Fila d'un mòdul: a terra (baixos) o penjat a la paret (alts). */
+export type ModuleRow = "floor" | "wall"
+export const rowOf = (m: Module): ModuleRow => (m.carcass.base.kind === "wall" ? "wall" : "floor")
+
+/**
+ * Posició de cada mòdul. Hi ha dues files, cadascuna d'esquerra a dreta en l'ordre de la
+ * composició (el mateix de l'arbre): la de terra i la dels penjats a la paret. Cada mòdul
+ * va al costat de l'anterior de la seva fila, amb la seva separació; y = potes o alçada
+ * del penjat.
+ */
+export function modulePlacements(comp: Composition): ModulePlacement[] {
+  const cursor: Record<ModuleRow, number> = { floor: 0, wall: 0 }
+  return comp.modules.map((m) => {
+    const row = rowOf(m)
+    const x = cursor[row] + m.gapBefore
+    cursor[row] = x + m.carcass.width
+    return { x, y: moduleElevation(m.carcass) }
+  })
+}
+
+/** Posicions amb els ancoratges antics (`anchor`), només per migrar mobles guardats. */
+function legacyPlacements(comp: Composition): ModulePlacement[] {
+  const n = comp.modules.length
+  const anchored = (m: Module) => !!m.anchor && m.anchor.module !== m.id && comp.modules.some((t) => t.id === m.anchor!.module)
+  const out: (ModulePlacement | undefined)[] = new Array(n)
+  let x = 0
+  comp.modules.forEach((m, i) => {
+    if (anchored(m)) return
+    x += m.gapBefore
+    out[i] = { x, y: moduleElevation(m.carcass) }
+    x += m.carcass.width
+  })
+  for (let pass = 0; pass < n; pass++) {
+    comp.modules.forEach((m, i) => {
+      if (out[i] || !m.anchor) return
+      const ti = comp.modules.findIndex((t) => t.id === m.anchor!.module)
+      const t = out[ti]
+      if (!t) return
+      const target = comp.modules[ti]!
+      const at = m.anchor.at ?? "top"
+      const wall = m.carcass.base.kind === "wall" ? m.carcass.base.height : null
+      if (at === "top") out[i] = { x: t.x + m.anchor.dx, y: wall ?? t.y + target.carcass.height + moduleElevation(m.carcass) }
+      else out[i] = { x: at === "right" ? t.x + target.carcass.width + m.anchor.dx : t.x - m.carcass.width - m.anchor.dx, y: wall ?? t.y }
+    })
+  }
+  return out.map((p, i) => p ?? { x: 0, y: moduleElevation(comp.modules[i]!.carcass) })
+}
+
+/**
+ * Converteix els mòduls ancorats (versions anteriors) a les dues files: els que eren a
+ * sobre d'un altre passen a penjats a l'alçada on eren; l'ordre de cada fila es refà
+ * d'esquerra a dreta i les separacions es recalculen perquè tot quedi on era.
+ */
+export function normalizeComposition(comp: Composition): Composition {
+  if (!comp.modules.some((m) => m.anchor)) return comp
+  const ps = legacyPlacements(comp)
+  const items = comp.modules.map((m, i) => {
+    const { anchor: _a, ...rest } = m
+    void _a
+    const y = ps[i]!.y
+    const mod: Module = m.anchor && m.carcass.base.kind !== "wall" && y > 0 ? { ...rest, carcass: { ...rest.carcass, base: { kind: "wall", height: y } } } : rest
+    return { mod, x: ps[i]!.x }
+  })
+  const modules: Module[] = []
+  for (const row of ["floor", "wall"] as const) {
+    let right = 0
+    for (const it of items.filter((t) => rowOf(t.mod) === row).sort((a, b) => a.x - b.x)) {
+      modules.push({ ...it.mod, gapBefore: Math.max(0, Math.round(it.x - right)) })
+      right = Math.max(right, it.x + it.mod.carcass.width)
+    }
+  }
+  return { ...comp, modules }
+}
+
+/** X d'inici de cada mòdul dins de la composició. */
+export function moduleOrigins(comp: Composition): number[] {
+  return modulePlacements(comp).map((p) => p.x)
+}
+
+/** Amplada total: fins a la dreta del mòdul que arriba més lluny. */
 export function compositionWidth(comp: Composition): number {
-  const xs = moduleOrigins(comp)
-  const last = comp.modules.at(-1)
-  return last ? xs.at(-1)! + last.carcass.width : 0
+  const ps = modulePlacements(comp)
+  return comp.modules.reduce((w, m, i) => Math.max(w, ps[i]!.x + m.carcass.width), 0)
+}
+
+/** Alçada total: fins a dalt del mòdul més alt (tenint en compte potes, penjats i apilats). */
+export function compositionHeight(comp: Composition): number {
+  const ps = modulePlacements(comp)
+  return comp.modules.reduce((h, m, i) => Math.max(h, ps[i]!.y + m.carcass.height), 0)
 }
 
 // --- Migració del mòdul de caixa (CabinetParams) ----------------------------------

@@ -28,6 +28,7 @@ const ROLE_COLOR: Record<PanelRole, number> = {
   grille: 0xd6b076,
   hatch: 0xd6b076,
   panel: 0xd6b076,
+  worktop: 0xc6924f,
 }
 
 /** Escena three.js en METRES (per a AR / visors GLB) a partir de les peces. */

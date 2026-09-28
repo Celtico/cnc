@@ -41,6 +41,7 @@ export interface BuildWarning {
     | "material-heat"
     | "collision"
     | "overlap"
+    | "hanging"
   message: string
   zoneId?: string
   panelId?: string
@@ -538,7 +539,7 @@ class Builder {
   private frontPanel(id: string, name: string, label: string, role: PanelRole, x0: number, y0: number, w: number, h: number): Panel {
     const { m, d } = this
     return this.add(
-      this.basePanel(id, name, label, role, h, w, d.t, m.carcass.material, "x", edges("left", "right", "bottom", "top"), placement([x0, y0, d.D + d.t], Y, X, neg(Z), Z)),
+      this.basePanel(id, name, label, role, h, w, d.t, frontMaterialOf(m), "x", edges("left", "right", "bottom", "top"), placement([x0, y0, d.D + d.t], Y, X, neg(Z), Z)),
     )
   }
 
@@ -644,7 +645,7 @@ class Builder {
       const hx0 = rect.x0 + front.hatch!.x - lip
       const hy0 = rect.y0 + front.hatch!.y - lip
       const hatch = this.add(
-        this.basePanel(`hatch-${this.frontCount}`, "trapa", "Trapa", "hatch", hh, hw, d.t, m.carcass.material, "x", edges("left", "right", "bottom", "top"), placement([hx0, hy0, d.D], Y, X, neg(Z), Z)),
+        this.basePanel(`hatch-${this.frontCount}`, "trapa", "Trapa", "hatch", hh, hw, d.t, frontMaterialOf(m), "x", edges("left", "right", "bottom", "top"), placement([hx0, hy0, d.D], Y, X, neg(Z), Z)),
       )
       const mg = m.hardware.magnet
       for (const [lx, ly] of [[lip / 2, lip / 2], [hh - lip / 2, lip / 2], [lip / 2, hw - lip / 2], [hh - lip / 2, hw - lip / 2]] as [number, number][]) {
@@ -715,7 +716,7 @@ class Builder {
       const fw = r(ter.x1 - ter.x0)
       // Front (cara A cap a dins, x local = amplada).
       const frontPanel = this.add(
-        this.basePanel(`drawer-${k}-front`, "frontal calaix", `Front calaix ${k}`, "drawerFront", fw, fh, d.t, c.material, "x", edges("left", "right", "bottom", "top"), placement([ter.x0, y + fh, d.D + d.t], X, neg(Y), neg(Z), Z)),
+        this.basePanel(`drawer-${k}-front`, "frontal calaix", `Front calaix ${k}`, "drawerFront", fw, fh, d.t, frontMaterialOf(this.m), "x", edges("left", "right", "bottom", "top"), placement([ter.x0, y + fh, d.D + d.t], X, neg(Y), neg(Z), Z)),
       )
       const boxH = r(fh - hw.boxDrop)
       const boxY0 = r(y + (fh - boxH) / 2)
@@ -787,4 +788,9 @@ export function buildModule(m: Module): ModuleBuild {
   const layout = b.buildZones()
   const panels = b.panels.map((p) => normalizePanel(p.cutouts && p.cutouts.length === 0 ? { ...p, cutouts: undefined } : p))
   return { panels, warnings: b.warnings, layout, openRatios: b.openRatios }
+}
+
+/** Material dels fronts (portes, calaixos, abatibles, reixetes, fixos): el propi o, si no n'hi ha, el del cos. */
+export function frontMaterialOf(m: { carcass: { material: string; frontMaterial?: string } }): string {
+  return m.carcass.frontMaterial?.trim() || m.carcass.material
 }

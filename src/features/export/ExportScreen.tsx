@@ -1,9 +1,9 @@
-import { Alert, Button, Card, HStack, Heading, SimpleGrid, Switch, Text, VStack } from "@chakra-ui/react"
+import { Alert, Box, Button, Card, HStack, Stack, Switch, Text, VStack } from "@chakra-ui/react"
 import { useMemo, useState } from "react"
-import { LuBoxes, LuCuboid, LuDownload, LuFileDown, LuFileJson, LuLayoutGrid, LuScan, LuScissors } from "react-icons/lu"
-import { PanelDrawing } from "../../components/PanelDrawing"
+import { LuBoxes, LuCuboid, LuDownload, LuFileDown, LuFileJson, LuScissors, LuWrench } from "react-icons/lu"
+import { PanelGroup, PanelSection } from "../../components/PanelSection"
 import { exportGlb } from "../../components/viewer/exportGlb"
-import { exportUsdz, openQuickLook, supportsQuickLook } from "../../components/viewer/exportUsdz"
+import { exportUsdz, openQuickLook } from "../../components/viewer/exportUsdz"
 import { toaster } from "../../components/ui/toaster"
 import { toCutList } from "../../core/cutlist/toCutList"
 import { cutListToCsv } from "../../core/export/csv"
@@ -28,7 +28,6 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   }
   const [busy, setBusy] = useState(false)
   const [busyAr, setBusyAr] = useState(false)
-  const quickLook = supportsQuickLook()
   const layers = useMemo(() => dxfLayers(panels, labels), [panels, labels])
 
   if (!project) return null
@@ -98,153 +97,114 @@ export function ExportScreen({ projectId }: { projectId: number }) {
     }
   }
 
+  /** Els dos fitxers del taller d'un cop (el navegador pot demanar permís per a descàrregues múltiples). */
+  const doWorkshop = () => {
+    doStep()
+    if (nesting) setTimeout(doTopsolidCsv, 400)
+  }
+
   return (
-    <VStack align="stretch" gap={6}>
-      <Heading size="xl">Exportar «{project.name}»</Heading>
+    <VStack align="stretch" gap={4}>
+      {estimated.length > 0 && (
+        <Alert.Root status="warning" size="sm">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Title>{ESTIMATED_WARNING}</Alert.Title>
+            <Alert.Description>El moble es basa en mides estimades de la foto: {estimated.map((a) => a.label).join(", ")}. Mesura-les amb cinta abans de tallar.</Alert.Description>
+          </Alert.Content>
+        </Alert.Root>
+      )}
+      {nesting?.unplaced.length ? (
+        <Alert.Root status="warning" size="sm">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Description>{nesting.unplaced.length} peces no caben al tauler del nesting: al CSV sortiran en un tauler a mida.</Alert.Description>
+          </Alert.Content>
+        </Alert.Root>
+      ) : null}
 
-      <Card.Root variant="outline" bg="wood.subtle">
-        <Card.Body gap={3}>
-          <HStack color="wood.fg" fontSize="xl">
-            <LuCuboid />
-            <Card.Title fontSize="md">Per al taller (format TopSolid)</Card.Title>
-          </HStack>
-          <Card.Description>
-            Els dos fitxers que el taller carrega a la seva pàgina de pujada, com si sortissin del TopSolid: el STEP amb els
-            sòlids del moble muntat (forats, espigues i ranures inclosos) i el CSV de nesting amb peces, mides, taulers, posició
-            de l'etiqueta, cantells i referències.
-          </Card.Description>
-          {estimated.length > 0 && (
-            <Alert.Root status="warning" size="sm">
-              <Alert.Indicator />
-              <Alert.Content>
-                <Alert.Title>{ESTIMATED_WARNING}</Alert.Title>
-                <Alert.Description>El moble es basa en mides estimades de la foto: {estimated.map((a) => a.label).join(", ")}. Mesura-les amb cinta abans de tallar.</Alert.Description>
-              </Alert.Content>
-            </Alert.Root>
-          )}
-          {nesting?.unplaced.length ? (
-            <Alert.Root status="warning" size="sm">
-              <Alert.Indicator />
-              <Alert.Content>
-                <Alert.Description>
-                  {nesting.unplaced.length} peces no caben al tauler del nesting: al CSV sortiran en un tauler a mida.
-                </Alert.Description>
-              </Alert.Content>
-            </Alert.Root>
-          ) : null}
-        </Card.Body>
-        <Card.Footer gap={2} flexWrap="wrap">
-          <Button colorPalette="wood" onClick={doStep} disabled={!panels.length}>
-            <LuCuboid /> STEP 3D
-          </Button>
-          <Button colorPalette="wood" variant="outline" onClick={doTopsolidCsv} disabled={!nesting}>
-            <LuLayoutGrid /> CSV de nesting
-          </Button>
-          <Text fontSize="xs" color="fg.muted">
-            {base}.step · {base}_res.csv
-          </Text>
-        </Card.Footer>
-      </Card.Root>
-
-      <Card.Root variant="outline">
-        <Card.Body gap={3}>
-          <HStack color="wood.fg" fontSize="xl">
-            <LuScan />
-            <Card.Title fontSize="md">Veure'l al racó amb AR</Card.Title>
-          </HStack>
-          <Card.Description>
-            {quickLook
-              ? "Obre el moble a mida real amb AR Quick Look: apunta la càmera al terra on ha d'anar i mou-lo amb el dit."
-              : "L'AR Quick Look funciona amb Safari a l'iPhone o l'iPad. Aquí pots descarregar l'USDZ i obrir-lo des de Fitxers."}
-          </Card.Description>
-        </Card.Body>
-        <Card.Footer gap={2} flexWrap="wrap">
-          {quickLook && (
-            <Button colorPalette="wood" onClick={() => void doUsdz(true)} loading={busyAr}>
-              <LuScan /> Veure en AR
+      {/* Per destinació: cada grup, una acció principal. */}
+      <ExportCard
+        highlight
+        icon={<LuCuboid />}
+        title="Taller (format TopSolid)"
+        description="Els dos fitxers que el taller carrega a la seva pàgina de pujada: STEP amb els sòlids del moble i CSV de nesting amb peces, taulers, etiquetes, cantells i referències."
+        files={`${base}.step · ${base}_res.csv`}
+        action={
+          <HStack gap={2} wrap="wrap">
+            <Button colorPalette="wood" onClick={doWorkshop} disabled={!panels.length || !nesting}>
+              <LuDownload /> Descarregar per al taller
             </Button>
-          )}
-          <Button variant="outline" onClick={() => void doUsdz(false)} loading={busyAr}>
-            <LuDownload /> Descarregar USDZ
-          </Button>
-        </Card.Footer>
-      </Card.Root>
-
-      <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-        <ExportCard
-          icon={<LuScissors />}
-          title="DXF per a la CNC"
-          description="R12 ASCII. Una peça per bloc, contorn a CONTOUR i forats per diàmetre i profunditat (DRILL_D5_P12, DRILL_D35_P13…)."
-          action={
-            <Button variant="outline" onClick={doDxf}>
-              <LuScissors /> Descarregar DXF
+            <Button size="sm" variant="ghost" onClick={doStep} disabled={!panels.length}>
+              Només STEP
             </Button>
-          }
-        >
-          <Switch.Root checked={labels} onCheckedChange={(e) => setLabels(e.checked)} size="sm">
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label>Etiquetes amb el nom (capa LABEL)</Switch.Label>
-          </Switch.Root>
-          <HStack wrap="wrap" gap={1}>
-            {layers.map((l) => (
-              <Text key={l} fontSize="xs" fontFamily="mono" px={1.5} py={0.5} bg="bg.muted" rounded="sm">
-                {l}
-              </Text>
-            ))}
+            <Button size="sm" variant="ghost" onClick={doTopsolidCsv} disabled={!nesting}>
+              Només CSV
+            </Button>
           </HStack>
-        </ExportCard>
+        }
+      />
 
-        <ExportCard
-          icon={<LuFileDown />}
-          title="CSV de peces"
-          description="Llista agrupada amb mides, quantitat, material, veta i cantells. Separador «;» i decimal amb coma."
-          action={
-            <Button variant="outline" onClick={doCsv}>
-              <LuFileDown /> Descarregar CSV
-            </Button>
-          }
-        />
+      <ExportCard
+        icon={<LuScissors />}
+        title="CNC (DXF)"
+        description="Una peça per bloc, contorn a CONTOUR i forats per diàmetre i profunditat."
+        files={`${base}.dxf · ${layers.length} capes`}
+        action={
+          <Button variant="outline" onClick={doDxf} disabled={!panels.length}>
+            <LuScissors /> Descarregar DXF
+          </Button>
+        }
+      >
+        <Switch.Root checked={labels} onCheckedChange={(e) => setLabels(e.checked)} size="sm">
+          <Switch.HiddenInput />
+          <Switch.Control />
+          <Switch.Label>Etiquetes amb el nom de la peça (capa LABEL)</Switch.Label>
+        </Switch.Root>
+      </ExportCard>
 
-        <ExportCard
-          icon={<LuBoxes />}
-          title="GLB (3D)"
-          description="Model del moble en metres, per a visors 3D i com a base per a l'AR."
-          action={
-            <Button variant="outline" onClick={doGlb} loading={busy}>
+      <ExportCard
+        icon={<LuFileDown />}
+        title="Llista de tall (CSV)"
+        description="Peces agrupades amb mides, quantitat, material, veta i cantells. Per a una fusteria que talla a mida o per a un full de càlcul."
+        files={`${base}-peces.csv`}
+        action={
+          <Button variant="outline" onClick={doCsv} disabled={!panels.length}>
+            <LuFileDown /> Descarregar CSV
+          </Button>
+        }
+      />
+
+      <ExportCard
+        icon={<LuBoxes />}
+        title="Model 3D"
+        description="El moble en metres per a altres programes 3D (GLB) o per a l'AR de l'iPhone (USDZ). Per veure'l a casa, fes servir «Veure a casa» del visor 3D."
+        files={`${base}.glb · ${base}.usdz`}
+        action={
+          <HStack gap={2} wrap="wrap">
+            <Button variant="outline" onClick={doGlb} loading={busy} disabled={!panels.length}>
               <LuBoxes /> Descarregar GLB
             </Button>
-          }
-        />
+            <Button size="sm" variant="ghost" onClick={() => void doUsdz(false)} loading={busyAr} disabled={!panels.length}>
+              USDZ
+            </Button>
+          </HStack>
+        }
+      />
 
-        <ExportCard
-          icon={<LuFileJson />}
-          title="JSON del taller (UnifiedData)"
-          description={`Per depurar: el contracte de taller-cnc-nest tal com quedaria després de llegir el STEP i el CSV (${nesting?.boards.length ?? 0} taulers). No és el camí de producció.`}
-          action={
-            <Button variant="ghost" onClick={doJson}>
+      <PanelGroup storageKey="mobles:export-open-section" defaultOpen="">
+        <PanelSection id="advanced" title="Avançat" icon={LuWrench}>
+          <HStack justify="space-between" gap={3} wrap="wrap">
+            <Text fontSize="sm" color="fg.muted" flex={1} minW="240px">
+              JSON del taller (UnifiedData): el que el taller obtindria en llegir el STEP i el CSV ({nesting?.boards.length ?? 0} taulers). Només
+              per depurar la integració.
+            </Text>
+            <Button size="sm" variant="ghost" onClick={doJson}>
               <LuFileJson /> Descarregar JSON
             </Button>
-          }
-        />
-      </SimpleGrid>
-
-      <VStack align="stretch" gap={3}>
-        <Heading size="md">Plànols de les peces</Heading>
-        <Text fontSize="sm" color="fg.muted">
-          El que anirà al DXF, vist des de la cara mecanitzada. Cercles plens: forats de cara. Cercles
-          discontinus: forats de cantell. Línia gruixuda: cantell folrat.
-        </Text>
-        <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} gap={4}>
-          {panels.map((p) => (
-            <Card.Root key={p.id} variant="subtle" size="sm">
-              <Card.Body>
-                <PanelDrawing panel={p} />
-              </Card.Body>
-            </Card.Root>
-          ))}
-        </SimpleGrid>
-      </VStack>
+          </HStack>
+        </PanelSection>
+      </PanelGroup>
     </VStack>
   )
 }
@@ -253,26 +213,43 @@ function ExportCard({
   icon,
   title,
   description,
+  files,
   action,
+  highlight,
   children,
 }: {
   icon: React.ReactNode
   title: string
   description: string
+  files?: string
   action: React.ReactNode
+  highlight?: boolean
   children?: React.ReactNode
 }) {
   return (
-    <Card.Root variant="outline">
+    <Card.Root variant="outline" bg={highlight ? "wood.subtle" : undefined}>
       <Card.Body gap={3}>
-        <HStack color="wood.fg" fontSize="xl">
-          {icon}
-          <Card.Title fontSize="md">{title}</Card.Title>
-        </HStack>
-        <Card.Description>{description}</Card.Description>
+        <Stack direction={{ base: "column", md: "row" }} gap={4} justify="space-between" align={{ base: "stretch", md: "center" }}>
+          <Stack gap={1} flex={1} minW={0}>
+            <HStack color="wood.fg" fontSize="lg" gap={2}>
+              {icon}
+              <Text fontWeight="semibold" fontSize="md" color="fg">
+                {title}
+              </Text>
+            </HStack>
+            <Text fontSize="sm" color="fg.muted">
+              {description}
+            </Text>
+            {files && (
+              <Text fontSize="xs" color="fg.subtle" fontFamily="mono">
+                {files}
+              </Text>
+            )}
+          </Stack>
+          <Box flexShrink={0}>{action}</Box>
+        </Stack>
         {children}
       </Card.Body>
-      <Card.Footer>{action}</Card.Footer>
     </Card.Root>
   )
 }

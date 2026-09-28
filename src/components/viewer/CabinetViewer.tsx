@@ -1,6 +1,9 @@
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
+import { QUALITY, type RenderQuality } from "./renderQuality"
+import { PresentationRoom } from "./PresentationRoom"
+import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
 import { ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
-import { useEffect, useMemo, useRef, type ComponentRef } from "react"
+import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
 import { LuPlus } from "react-icons/lu"
 import { Group, Matrix4, MeshStandardMaterial, Vector3, type Object3D, type Texture, WebGLRenderTarget } from "three"
 
@@ -9,6 +12,9 @@ import type { Hole, MaterialPref, Panel, PanelRole, RefObject } from "../../core
 import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { RAW_EDGE_COLOR, TILE_MM, resolveEdgeFinish, resolveFinish, woodTexture, type FinishSpec } from "./textures"
+
+/** Color de selecció (el mateix taronja que els botons + del 3D). */
+const SELECT_COLOR = "#b57a37"
 
 /** Escala mm → m per a l'escena. */
 const S = 0.001
@@ -33,6 +39,7 @@ const ROLE_COLOR: Record<PanelRole, string> = {
   grille: "#d6b076",
   hatch: "#d6b076",
   panel: "#d6b076",
+  worktop: "#c6924f",
 }
 
 export type ViewName = "3d" | "front" | "back" | "left" | "right" | "top"
@@ -53,6 +60,8 @@ export interface ViewerModule {
 
 /** Llum d'un compartiment (mm, coordenades de la composició), per acotar-la a la vista de davant. */
 export interface ZoneLight {
+  /** Mòdul al qual pertany (`ViewerModule.index`). */
+  module?: number
   x0: number
   x1: number
   y0: number
@@ -68,7 +77,8 @@ export interface CabinetViewerProps {
   /** Mòduls de la composició: el seleccionat es ressalta i té botons + als costats. */
   modules?: ViewerModule[]
   selectedModuleId?: string | null
-  onSelectModule?: (id: string) => void
+  /** Clic a una peça d'un mòdul; `at` = punt tocat en mm de la composició. */
+  onSelectModule?: (id: string, at?: [number, number, number]) => void
   onAddModule?: (side: "left" | "right") => void
   /** Objectes fantasma (translúcids). */
   ghosts?: RefObject[]
@@ -86,6 +96,17 @@ export interface CabinetViewerProps {
   lights?: ZoneLight[]
   /** Rep la funció de captura (PNG a 2×, fons net). */
   onCapture?: (capture: () => Promise<Blob>) => void
+  /** Qualitat del render (resolució i ombres). */
+  quality?: RenderQuality
+  /** Objecte de referència seleccionat i clic sobre un objecte al 3D. */
+  selectedRefId?: string | null
+  onSelectRef?: (id: string) => void
+  /** Objectes que xoquen amb alguna peça: es pinten de vermell. */
+  collidingRefIds?: Set<string>
+  /** Compartiment seleccionat (mm, coordenades de la composició): contorn taronja. */
+  highlightZone?: { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number; veil?: boolean } | null
+  /** Clic a l'espai buit (sense arrossegar): treure la selecció. */
+  onDeselect?: () => void
 }
 
 export function CabinetViewer({
@@ -105,7 +126,18 @@ export function CabinetViewer({
   materials = [],
   lights = [],
   onCapture,
+  quality = "balanced",
+  onDeselect,
+  selectedRefId,
+  onSelectRef,
+  collidingRefIds,
+  highlightZone,
 }: CabinetViewerProps) {
+  // Per distingir un clic a l'espai buit d'un gir de càmera (arrossegar).
+  const downAt = useRef<[number, number] | null>(null)
+  const q = QUALITY[quality]
+  const [scene] = usePresentationScene()
+  const light = LIGHT_SPEC[scene.light]
   const bg = useColorModeValue("#f4f1ea", "#1b1a17")
   const gridCell = useColorModeValue("#d8d2c4", "#33302a")
   const gridSection = useColorModeValue("#b9b1a0", "#4a463d")
@@ -123,10 +155,36 @@ export function CabinetViewer({
   const ortho = view !== "3d"
 
   return (
-    <Canvas shadows dpr={[1, 2]} style={{ touchAction: "none" }} gl={{ preserveDrawingBuffer: true, alpha: true }}>
-      <color attach="background" args={[bg]} />
-      <hemisphereLight intensity={0.55} groundColor="#8a7a60" />
-      <directionalLight position={[2.5, 4, 3]} intensity={1.4} castShadow shadow-mapSize={1024} />
+    // Canviar la qualitat recrea el renderitzador: les ombres no es poden activar en calent.
+    <Canvas
+      key={quality}
+      shadows={q.shadows ? "soft" : false}
+      dpr={q.dpr}
+      style={{ touchAction: "none" }}
+      gl={{ preserveDrawingBuffer: true, alpha: true }}
+      onPointerDown={(e) => {
+        downAt.current = [e.clientX, e.clientY]
+      }}
+      onPointerMissed={(e) => {
+        const d = downAt.current
+        if (onDeselect && d && Math.hypot(e.clientX - d[0], e.clientY - d[1]) < 5) onDeselect()
+      }}
+    >
+      {/* Les vistes ortogràfiques són plànols: sempre fons de dibuix, també a Presentació. */}
+      <color attach="background" args={[q.guides || ortho ? bg : scene.wall]} />
+      <hemisphereLight intensity={q.guides ? 0.55 : light.ambient} groundColor="#8a7a60" />
+      {!q.guides && !ortho && <PresentationRoom backZ={-size.depth * S * 0.5} scene={scene} />}
+      {/* bias i normalBias eviten les ratlles (shadow acne) de les cares que s'ombregen a si mateixes. */}
+      <directionalLight
+        key={q.shadowMap}
+        position={[2.5, 4, 3]}
+        color={q.guides ? "#ffffff" : light.key}
+        intensity={q.guides ? 1.4 : light.keyIntensity}
+        castShadow={q.shadows}
+        shadow-mapSize={q.shadowMap}
+        shadow-bias={-0.0004}
+        shadow-normalBias={0.015}
+      />
       <directionalLight position={[-3, 2, -2]} intensity={0.35} />
 
       <group position={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}>
@@ -141,37 +199,78 @@ export function CabinetViewer({
                 panel={p}
                 exploded={exploded}
                 showHoles={showHoles}
-                dimmed={selectedIndex !== undefined && (modules?.length ?? 0) > 1 && p.module !== selectedIndex}
+                dimmed={q.guides && selectedIndex !== undefined && p.module === selectedIndex}
+                edges={q.guides}
                 materialMode={materialMode}
                 materials={materials}
-                onClick={onSelectModule ? () => {
+                onClick={onSelectModule ? (pt) => {
                   const id = moduleIdOf(p)
-                  if (id) onSelectModule(id)
+                  // Punt clicat en mm de la composició (el grup està centrat a l'escena).
+                  if (id) onSelectModule(id, [pt.x / S + size.width / 2, pt.y / S, pt.z / S + size.depth / 2])
                 } : undefined}
               />
             </MovingPanel>
           )
         })}
-        {ghosts?.map((g) => (
-          <mesh key={g.id} position={[(g.x + g.w / 2) * S, (g.y + g.h / 2) * S, (g.z + g.d / 2) * S]}>
-            <boxGeometry args={[g.w * S, g.h * S, g.d * S]} />
-            <meshStandardMaterial color="#3b82f6" transparent opacity={0.22} depthWrite={false} />
-            <Edges color="#3b82f6" />
-          </mesh>
-        ))}
-        {selected && onAddModule && !ortho && (
+        {ghosts?.map((g) => {
+          const on = g.id === selectedRefId
+          const hit = collidingRefIds?.has(g.id) ?? false
+          const tint = hit ? "#dc2626" : on ? SELECT_COLOR : "#3b82f6"
+          return (
+            <mesh
+              key={g.id}
+              position={[(g.x + g.w / 2) * S, (g.y + g.h / 2) * S, (g.z + g.d / 2) * S]}
+              onClick={onSelectRef ? (e: ThreeEvent<MouseEvent>) => {
+                e.stopPropagation()
+                onSelectRef(g.id)
+              } : undefined}
+              onPointerOver={onSelectRef ? (e: ThreeEvent<PointerEvent>) => {
+                e.stopPropagation()
+                document.body.style.cursor = "pointer"
+              } : undefined}
+              onPointerOut={onSelectRef ? () => {
+                document.body.style.cursor = ""
+              } : undefined}
+            >
+              <boxGeometry args={[g.w * S, g.h * S, g.d * S]} />
+              <meshStandardMaterial color={tint} transparent opacity={on || hit ? 0.38 : 0.22} depthWrite={false} />
+              {(q.guides || on || hit) && <Edges color={on ? SELECT_COLOR : tint} />}
+            </mesh>
+          )
+        })}
+        {highlightZone && <ZoneHighlight box={highlightZone} />}
+        {selected && onAddModule && !ortho && q.guides && (
           <>
             <AddButton x={selected.x - 120} y={selected.y + selected.height / 2} z={selected.depth / 2} side="left" onClick={() => onAddModule("left")} />
             <AddButton x={selected.x + selected.width + 120} y={selected.y + selected.height / 2} z={selected.depth / 2} side="right" onClick={() => onAddModule("right")} />
           </>
         )}
-        {ortho && <Dimensions view={view} size={size} lights={lights} color={dimColor} />}
+        {ortho && (
+          <Dimensions
+            view={view}
+            size={size}
+            modules={modules ?? []}
+            lights={selectedIndex === undefined ? [] : lights.filter((l) => l.module === undefined || l.module === selectedIndex)}
+            color={dimColor}
+            labelBg={bg}
+          />
+        )}
       </group>
 
-      <group ref={gridRef}>
+      <group ref={gridRef} visible={q.guides}>
         <Grid position={[0, -0.001, 0]} args={[10, 10]} cellSize={0.1} sectionSize={0.5} cellColor={gridCell} sectionColor={gridSection} fadeDistance={6} infiniteGrid />
       </group>
-      <ContactShadows position={[0, 0.0005, 0]} opacity={0.35} scale={Math.max(size.width, size.depth) * S * 2.2} blur={2.2} far={size.height * S + 0.5} resolution={256} />
+      {q.contactResolution > 0 && (
+        <ContactShadows
+          key={q.contactResolution}
+          position={[0, 0.0005, 0]}
+          opacity={0.35}
+          scale={Math.max(size.width, size.depth) * S * 2.2}
+          blur={q.contactBlur}
+          far={size.height * S + 0.5}
+          resolution={q.contactResolution}
+        />
+      )}
       <CameraRig size={size} view={view} />
       {onCapture && <Capture onCapture={onCapture} gridRef={gridRef} />}
     </Canvas>
@@ -250,7 +349,9 @@ function CameraRig({ size, view }: { size: CabinetViewerProps["size"]; view: Vie
       dist = radius * 4 + 1
       // Extensió visible segons la vista, amb marge per a les cotes.
       const [ew, eh] = view === "top" ? [w, d] : view === "left" || view === "right" ? [d, h] : [w, h]
-      zoom = Math.min(viewport.width / (ew + 0.35), viewport.height / (eh + 0.35))
+      // Marge per a les cotes (fins a 2 línies a cada costat) i per a les barres del visor
+      // (pestanyes a dalt i vistes a baix, ~56 px cadascuna), perquè no tapin cap cota.
+      zoom = Math.min((viewport.width - 40) / (ew + 0.5), (viewport.height - 120) / (eh + 0.5))
     }
     const pos = new Vector3((dir[0] / len) * dist, targetY + (dir[1] / len) * dist, (dir[2] / len) * dist)
     goal.current = { pos, zoom }
@@ -318,30 +419,77 @@ function Capture({ onCapture, gridRef }: { onCapture: (fn: () => Promise<Blob>) 
   return null
 }
 
-/** Cotes generals (i llums dels compartiments a la vista de davant). */
-function Dimensions({ view, size, lights, color }: { view: ViewName; size: CabinetViewerProps["size"]; lights: ZoneLight[]; color: string }) {
+type P3 = [number, number, number]
+interface DimSpec {
+  a: P3
+  b: P3
+  label: string
+  /** Punts de l'objecte d'on surten les línies de referència cap a `a` i `b`. */
+  from?: [P3, P3]
+  /** Cota interior (llum d'un compartiment): etiqueta fosca sobre el material. */
+  inner?: boolean
+}
+
+/**
+ * Cotes de les vistes ortogràfiques, com en un plànol de fusteria:
+ *  - exteriors (fora del moble): cadena d'amplades de cada mòdul i total a sota, alçada
+ *    total a la dreta; línies de referència i marques a 45° als extrems;
+ *  - interiors: llums (amplada × alçada) dels compartiments del mòdul seleccionat, en creu
+ *    dins de cada compartiment. Les massa petites per llegir-se s'ometen.
+ * Les etiquetes porten fons: es llegeixen sobre qualsevol material i en tots dos temes.
+ */
+function Dimensions({ view, size, modules, lights, color, labelBg }: { view: ViewName; size: CabinetViewerProps["size"]; modules: ViewerModule[]; lights: ZoneLight[]; color: string; labelBg: string }) {
+  // Píxels per mm a la pantalla (zoom de la càmera ortogràfica), per ometre les cotes que
+  // no s'hi poden llegir. Es refresca quan el zoom canvia més d'un 8 %.
+  const { camera } = useThree()
+  const [pxPerMm, setPxPerMm] = useState(() => camera.zoom * S)
+  useFrame(() => {
+    const v = camera.zoom * S
+    if (Math.abs(v - pxPerMm) / pxPerMm > 0.08) setPxPerMm(v)
+  })
   const W = size.width
   const H = size.height
   const D = size.depth
-  const off = 90
-  const dims: { a: [number, number, number]; b: [number, number, number]; label: string; small?: boolean }[] = []
+  const near = 80 // primera línia de cota
+  const far = 170 // segona línia (totals)
+  const dims: DimSpec[] = []
+  const normal: P3 = VIEW_DIR[view]
   if (view === "front" || view === "back") {
-    const z = view === "front" ? D : 0
-    dims.push({ a: [0, -off, z], b: [W, -off, z], label: `${round(W)}` })
-    dims.push({ a: [W + off, 0, z], b: [W + off, H, z], label: `${round(H)}` })
-    if (view === "front") for (const l of lights) dims.push({ a: [l.x0, l.y0 + 40, D + 1], b: [l.x1, l.y0 + 40, D + 1], label: `${round(l.x1 - l.x0)}`, small: true })
+    const z = view === "front" ? D + 1 : -1
+    const chain = modules.length > 1
+    if (chain)
+      for (const m of modules)
+        dims.push({ a: [m.x, -near, z], b: [m.x + m.width, -near, z], label: round(m.width), from: [[m.x, 0, z], [m.x + m.width, 0, z]] })
+    const yw = chain ? -far : -near
+    dims.push({ a: [0, yw, z], b: [W, yw, z], label: round(W), from: [[0, 0, z], [W, 0, z]] })
+    dims.push({ a: [W + near, 0, z], b: [W + near, H, z], label: round(H), from: [[W, 0, z], [W, H, z]] })
+    if (view === "front")
+      for (const l of lights) {
+        const cw = l.x1 - l.x0
+        const ch = l.y1 - l.y0
+        const cx = (l.x0 + l.x1) / 2
+        const cy = (l.y0 + l.y1) / 2
+        // Mínim en píxels: l'etiqueta ha de cabre al llarg de la cota i el compartiment ha
+        // de tenir prou gruix per no tapar-ne els veïns.
+        const pw = cw * pxPerMm
+        const ph = ch * pxPerMm
+        if (pw >= 48 && ph >= 22) dims.push({ a: [l.x0, cy, z + 1], b: [l.x1, cy, z + 1], label: round(cw), inner: true })
+        if (ph >= 48 && pw >= 36) dims.push({ a: [cx, l.y0, z + 1], b: [cx, l.y1, z + 1], label: round(ch), inner: true })
+      }
   } else if (view === "left" || view === "right") {
-    const x = view === "left" ? 0 : W
-    dims.push({ a: [x, -off, 0], b: [x, -off, D], label: `${round(D)}` })
-    dims.push({ a: [x, 0, D + off], b: [x, H, D + off], label: `${round(H)}` })
+    const x = view === "left" ? -1 : W + 1
+    dims.push({ a: [x, -near, 0], b: [x, -near, D], label: round(D), from: [[x, 0, 0], [x, 0, D]] })
+    const zh = view === "left" ? D + near : -near
+    const zf = view === "left" ? D : 0
+    dims.push({ a: [x, 0, zh], b: [x, H, zh], label: round(H), from: [[x, 0, zf], [x, H, zf]] })
   } else if (view === "top") {
-    dims.push({ a: [0, H + 1, D + off], b: [W, H + 1, D + off], label: `${round(W)}` })
-    dims.push({ a: [W + off, H + 1, 0], b: [W + off, H + 1, D], label: `${round(D)}` })
+    dims.push({ a: [0, H + 1, D + near], b: [W, H + 1, D + near], label: round(W), from: [[0, H + 1, D], [W, H + 1, D]] })
+    dims.push({ a: [W + near, H + 1, 0], b: [W + near, H + 1, D], label: round(D), from: [[W, H + 1, 0], [W, H + 1, D]] })
   }
   return (
     <>
       {dims.map((dm, i) => (
-        <Dim key={i} a={dm.a} b={dm.b} label={dm.label} color={color} small={dm.small} />
+        <Dim key={i} spec={dm} normal={normal} color={color} labelBg={labelBg} />
       ))}
     </>
   )
@@ -349,29 +497,91 @@ function Dimensions({ view, size, lights, color }: { view: ViewName; size: Cabin
 
 const round = (v: number): string => String(Math.round(v))
 
-function Dim({ a, b, label, color, small }: { a: [number, number, number]; b: [number, number, number]; label: string; color: string; small?: boolean }) {
-  const pa = new Vector3(a[0] * S, a[1] * S, a[2] * S)
-  const pb = new Vector3(b[0] * S, b[1] * S, b[2] * S)
+const v3 = (p: P3) => new Vector3(p[0] * S, p[1] * S, p[2] * S)
+
+function Dim({ spec, normal, color, labelBg }: { spec: DimSpec; normal: P3; color: string; labelBg: string }) {
+  const pa = v3(spec.a)
+  const pb = v3(spec.b)
   const mid = pa.clone().add(pb).multiplyScalar(0.5)
+  const dir = pb.clone().sub(pa).normalize()
+  // Marca a 45° (convenció de fusteria/arquitectura): diagonal entre la cota i la perpendicular.
+  const perp = new Vector3(...normal).normalize().cross(dir)
+  const tick = dir.clone().add(perp).normalize().multiplyScalar((spec.inner ? 22 : 35) * S)
+  const lineColor = spec.inner ? "#ffffff" : color
+  const ext = spec.from?.map((f, i) => {
+    const end = i === 0 ? pa : pb
+    const start = v3(f)
+    // la línia de referència deixa un petit buit a l'objecte i passa una mica la cota
+    const d = end.clone().sub(start)
+    const len = d.length()
+    if (len < 1e-6) return null
+    d.normalize()
+    return [start.clone().addScaledVector(d, 15 * S), end.clone().addScaledVector(d, 25 * S)] as [Vector3, Vector3]
+  })
   return (
     <group>
-      <Line points={[pa, pb]} color={color} lineWidth={small ? 1 : 1.5} />
+      {spec.inner && <Line points={[pa, pb]} color="#000000" lineWidth={3} transparent opacity={0.35} />}
+      <Line points={[pa, pb]} color={lineColor} lineWidth={1.2} />
+      <Line points={[pa.clone().sub(tick), pa.clone().add(tick)]} color={lineColor} lineWidth={1.6} />
+      <Line points={[pb.clone().sub(tick), pb.clone().add(tick)]} color={lineColor} lineWidth={1.6} />
+      {ext?.map((e, i) => e && <Line key={i} points={e} color={color} lineWidth={0.8} transparent opacity={0.7} />)}
       <Html position={mid} center zIndexRange={[5, 0]} style={{ pointerEvents: "none" }}>
         <span
           style={{
             fontFamily: "system-ui, sans-serif",
-            fontSize: small ? 11 : 13,
+            fontSize: spec.inner ? 11 : 12,
             fontWeight: 600,
-            color,
-            background: small ? "transparent" : "rgba(255,255,255,0.75)",
-            padding: small ? 0 : "0 4px",
-            borderRadius: 3,
+            fontVariantNumeric: "tabular-nums",
+            color: spec.inner ? "#ffffff" : color,
+            background: spec.inner ? "rgba(20, 16, 12, 0.72)" : labelBg,
+            padding: "1px 5px",
+            borderRadius: 4,
             whiteSpace: "nowrap",
+            lineHeight: "16px",
+            display: "block",
           }}
         >
-          {label}
+          {spec.label}
         </span>
       </Html>
+    </group>
+  )
+}
+
+/**
+ * Contorn del compartiment seleccionat: arestes taronges que es veuen a través de les
+ * portes (sense prova de profunditat) i un vel molt suau a dins.
+ */
+function ZoneHighlight({ box: b }: { box: { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number; veil?: boolean } }) {
+  const inset = b.veil === false ? -2 : 3
+  const x0 = (b.x0 + inset) * S
+  const x1 = (b.x1 - inset) * S
+  const y0 = (b.y0 + inset) * S
+  const y1 = (b.y1 - inset) * S
+  const z0 = b.z0 * S
+  const z1 = b.z1 * S
+  const c = (x: number, y: number, z: number) => new Vector3(x, y, z)
+  const front = [c(x0, y0, z1), c(x1, y0, z1), c(x1, y1, z1), c(x0, y1, z1), c(x0, y0, z1)]
+  const back = [c(x0, y0, z0), c(x1, y0, z0), c(x1, y1, z0), c(x0, y1, z0), c(x0, y0, z0)]
+  const sides: [Vector3, Vector3][] = [
+    [c(x0, y0, z0), c(x0, y0, z1)],
+    [c(x1, y0, z0), c(x1, y0, z1)],
+    [c(x1, y1, z0), c(x1, y1, z1)],
+    [c(x0, y1, z0), c(x0, y1, z1)],
+  ]
+  return (
+    <group renderOrder={10}>
+      {b.veil !== false && (
+      <mesh position={[(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2]} renderOrder={10}>
+        <boxGeometry args={[x1 - x0, y1 - y0, z1 - z0]} />
+        <meshBasicMaterial color={SELECT_COLOR} transparent opacity={0.22} depthWrite={false} depthTest={false} />
+      </mesh>
+      )}
+      <Line points={front} color={SELECT_COLOR} lineWidth={4} depthTest={false} renderOrder={11} />
+      <Line points={back} color={SELECT_COLOR} lineWidth={1.5} depthTest={false} transparent opacity={0.6} renderOrder={11} />
+      {sides.map((pts, i) => (
+        <Line key={i} points={pts} color={SELECT_COLOR} lineWidth={1.5} depthTest={false} transparent opacity={0.6} renderOrder={11} />
+      ))}
     </group>
   )
 }
@@ -452,7 +662,7 @@ function panelMaterials(p: Panel, mode: "material" | "role", materials: Material
   return [edgeX(p.edges.right), edgeX(p.edges.left), edgeY(p.edges.top), edgeY(p.edges.bottom), big(), big()]
 }
 
-function PanelMesh({
+export function PanelMesh({
   panel,
   exploded,
   showHoles,
@@ -460,15 +670,19 @@ function PanelMesh({
   materialMode,
   materials,
   onClick,
+  edges = true,
 }: {
   panel: Panel
   exploded: boolean
   showHoles: boolean
-  /** Fora del mòdul seleccionat: més apagat. */
+  /** Perfil de les arestes (no en mode presentació). */
+  edges?: boolean
+  /** Peça del mòdul seleccionat: translúcida, per veure'n l'interior. */
   dimmed?: boolean
   materialMode: "material" | "role"
   materials: MaterialPref[]
-  onClick?: () => void
+  /** Clic a la peça, amb el punt tocat (coordenades del món, m). */
+  onClick?: (point: Vector3) => void
 }) {
   const group = useRef<Group>(null)
   const amount = useRef(exploded ? 1 : 0)
@@ -514,11 +728,11 @@ function PanelMesh({
           material={mats}
           onClick={onClick ? (e: ThreeEvent<MouseEvent>) => {
             e.stopPropagation()
-            onClick()
+            onClick(e.point)
           } : undefined}
         >
           <boxGeometry args={[L, W, T]} />
-          <Edges color={dimmed ? "#a08a6a" : "#6b5a3e"} threshold={15} />
+          {edges && <Edges color={dimmed ? "#a08a6a" : "#6b5a3e"} threshold={15} />}
         </mesh>
         {showHoles && panel.holes.map((h, i) => <HoleMark key={i} hole={h} thickness={T} />)}
         {panel.grooves.map((g, i) => (

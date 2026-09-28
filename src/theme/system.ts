@@ -12,6 +12,16 @@ const config = defineConfig({
       overscrollBehavior: "none",
     },
     "#root": { minHeight: "100dvh", display: "flex", flexDirection: "column" },
+    // Etiquetes de camp sempre en una línia: si no hi caben, punts suspensius (i el text
+    // sencer al passar-hi per sobre, vegeu truncatedTitles.ts).
+    "[data-scope=field][data-part=label]": {
+      display: "block",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      maxWidth: "100%",
+      minWidth: 0,
+    },
   },
   theme: {
     tokens: {

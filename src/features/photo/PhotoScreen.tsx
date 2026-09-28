@@ -15,6 +15,7 @@ import {
   Stack,
   Text,
   VStack,
+  Switch,
 } from "@chakra-ui/react"
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react"
 import { createPortal } from "react-dom"
@@ -30,8 +31,16 @@ import {
   LuRotateCcw,
   LuTrash2,
   LuX,
+  LuCrosshair,
+  LuMove,
+  LuPaintbrush,
+  LuWrench,
 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
+import { PanelSection } from "../../components/PanelSection"
+import { usePresentationScene } from "../../components/viewer/presentationScene"
+import { panelBox } from "../../core/build/buildComposition"
+import { PhotoRender } from "./PhotoRender"
 import { visibleReferences, type Composition, type Panel, type PanelRole } from "../../core/model"
 import {
   DEFAULT_FOCAL_35,
@@ -89,6 +98,7 @@ const ROLE_FILL: Record<PanelRole, string> = {
   grille: "#b57a37",
   hatch: "#b57a37",
   panel: "#b57a37",
+  worktop: "#d6b076",
 }
 
 export type Tool = "none" | "origin" | "distance" | "rect" | "floor" | "depth"
@@ -100,8 +110,11 @@ export function PhotoScreen({
   controlsTarget = null,
   composition,
   onApplyMeasure,
+  selectedModule = null,
 }: {
   projectId: number
+  /** Mòdul seleccionat a l'Editor (`Panel.module`): es ressalta i la resta s'apaga. */
+  selectedModule?: number | null
   /** Peces a superposar. A l'Editor, les dels paràmetres que s'estan editant. */
   panels?: Panel[]
   /** Dins de la pestanya de l'Editor: sense títol gran; els controls van a `controlsTarget`. */
@@ -212,6 +225,7 @@ export function PhotoScreen({
           controlsTarget={controlsTarget}
           composition={composition}
           onApplyMeasure={onApplyMeasure}
+          selectedModule={selectedModule}
         />
       ) : null}
     </VStack>
@@ -283,6 +297,7 @@ function PhotoCalibrator({
   controlsTarget = null,
   composition,
   onApplyMeasure,
+  selectedModule = null,
 }: {
   projectId: number
   projectName: string
@@ -294,6 +309,7 @@ function PhotoCalibrator({
   controlsTarget?: HTMLElement | null
   composition?: Composition
   onApplyMeasure?: (target: string, valueMm: number) => void
+  selectedModule?: number | null
 }) {
   const [cal, setCal] = useState<PhotoCalibration>(initial)
   const [customRef, setCustomRef] = useState(false)
@@ -355,10 +371,30 @@ function PhotoCalibrator({
   const originPlane: Pt = origin3 ? [origin3[0], origin3[1]] : [0, 0]
   const originZ = origin3 ? origin3[2] : 0
   const sceneOffset = useMemo<Pt>(() => [fin(originPlane[0]) + fin(cal.offset[0]), fin(originPlane[1]) + fin(cal.offset[1])], [originPlane[0], originPlane[1], cal.offset])
-  const faces = useMemo(
-    () => (camera ? projectPanels(panels, camera, { plane: cal.plane, offset: sceneOffset, totalDepth, wallOffset, offsetZ: fin(originZ) + fin(cal.offsetZ) }) : []),
-    [camera, panels, cal.plane, sceneOffset, totalDepth, wallOffset, cal.offsetZ, originZ],
+  const sceneOpts = useMemo(
+    () => ({ plane: cal.plane, offset: sceneOffset, totalDepth, wallOffset, offsetZ: fin(originZ) + fin(cal.offsetZ) }),
+    [cal.plane, sceneOffset, totalDepth, wallOffset, cal.offsetZ, originZ],
   )
+  const faces = useMemo(() => (camera ? projectPanels(panels, camera, sceneOpts) : []), [camera, panels, sceneOpts])
+  // Render realista: mida del moble (per a la llum i les ombres) i canvas WebGL per a la imatge.
+  const renderMode = cal.render ?? "lines"
+  const renderShadows = cal.shadows ?? true
+  const [marksInRender, setMarksInRender] = useState(false)
+  // Mòdul seleccionat a l'Editor: translúcid i amb vora taronja (per veure'n l'interior);
+  // la resta, normal. El mateix criteri que al 3D.
+  const moduleOf = useMemo(() => new Map(panels.map((p) => [p.id, p.module])), [panels])
+  const highlightPanel = (id: string) => selectedModule !== null && moduleOf.get(id) === selectedModule
+  const dimmedPanel = highlightPanel
+  const [presentation] = usePresentationScene()
+  const glCanvas = useRef<HTMLCanvasElement | null>(null)
+  const cabinetSize = useMemo(() => {
+    let w = 0, h = 0, d = 0
+    for (const p of panels) {
+      const b = panelBox(p)
+      w = Math.max(w, b.max[0]); h = Math.max(h, b.max[1]); d = Math.max(d, b.max[2])
+    }
+    return { width: w, height: h, depth: d }
+  }, [panels])
   // Eixos 3D = marcador de l'origen (0,0,0): X al llarg de la paret, Y amunt, Z cap a la càmera.
   const AXIS_MM = 300
   const axes = useMemo(() => {
@@ -545,7 +581,7 @@ function PhotoCalibrator({
 
   const downloadPng = async () => {
     try {
-      const blob = await renderComposite(photo.blob, W, H, layer, opacity, faces, stroke)
+      const blob = await renderComposite(photo.blob, W, H, layer, opacity, renderMode === "realistic" ? [] : faces, stroke, renderMode === "realistic" ? glCanvas.current : null)
       downloadBlob(blob, `${slugify(projectName)}-foto.png`)
     } catch (e) {
       toaster.create({ title: "No s'ha pogut generar la imatge", description: String(e), type: "error" })
@@ -568,8 +604,12 @@ function PhotoCalibrator({
     </Button>
   )
 
+  const showMarks = renderMode === "lines" || !calibrated || tool !== "none" || pending.length > 0 || marksInRender
+
   const hint = !calibrated
     ? null
+    : !showMarks
+      ? "Arrossega el moble per moure'l. Activa «Mostrar les marques» per afinar els punts i l'origen."
     : tool === "origin"
       ? "Toca on vols l'origen (0,0): p. ex. el racó on la paret toca el terra."
       : tool === "distance"
@@ -587,6 +627,22 @@ function PhotoCalibrator({
       <VStack align="stretch" gap={2} flex={1} w="full" minW={0}>
         <Box position="relative" w="full" mx="auto" maxW={embedded ? `calc((100dvh - 9rem) * ${W / H})` : `calc(70vh * ${W / H})`} style={{ aspectRatio: `${W} / ${H}` }} rounded="lg" overflow="hidden" bg="bg.muted">
           {url && layer !== "cabinet" && <img src={url} alt="Foto del racó" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />}
+          {camera && layer !== "photo" && renderMode === "realistic" && (
+            <PhotoRender
+              panels={panels}
+              camera={camera}
+              scene={sceneOpts}
+              width={W}
+              height={H}
+              size={cabinetSize}
+              materials={settings.materials}
+              light={presentation.light}
+              shadows={renderShadows}
+              opacity={opacity}
+              selectedModule={selectedModule}
+              onCanvas={(c) => (glCanvas.current = c)}
+            />
+          )}
           <svg
             ref={svgRef}
             viewBox={`0 0 ${W} ${H}`}
@@ -597,6 +653,7 @@ function PhotoCalibrator({
             onPointerCancel={onPointerUp}
           >
             {layer !== "photo" &&
+              renderMode === "lines" &&
               faces
                 .filter((f) => f.pts.every(([x, y]) => Number.isFinite(x) && Number.isFinite(y)))
                 .map((f, i) => (
@@ -604,83 +661,89 @@ function PhotoCalibrator({
                     key={i}
                     points={f.pts.map(([x, y]) => `${x},${y}`).join(" ")}
                     fill={ROLE_FILL[f.role]}
-                    fillOpacity={opacity * (0.55 + 0.45 * f.facing)}
-                    stroke="#2f1a10"
-                    strokeOpacity={Math.min(1, opacity + 0.2)}
-                    strokeWidth={stroke}
+                    fillOpacity={opacity * (0.55 + 0.45 * f.facing) * (dimmedPanel(f.panelId) ? 0.35 : 1)}
+                    stroke={highlightPanel(f.panelId) ? "#f97316" : "#2f1a10"}
+                    strokeOpacity={Math.min(1, opacity + 0.2) * (dimmedPanel(f.panelId) ? 0.4 : 1)}
+                    strokeWidth={highlightPanel(f.panelId) ? stroke * 1.8 : stroke}
                     strokeLinejoin="round"
                   />
                 ))}
-            {refOutline && <polygon points={refOutline.map(([x, y]) => `${x},${y}`).join(" ")} fill="none" stroke="#22c55e" strokeWidth={stroke * 1.5} strokeDasharray={`${stroke * 8} ${stroke * 6}`} />}
-            {/* Línia del terra */}
-            {cal.floorLine && (
-              <g>
-                <line x1={cal.floorLine[0][0]} y1={cal.floorLine[0][1]} x2={cal.floorLine[1][0]} y2={cal.floorLine[1][1]} stroke="#16a34a" strokeWidth={stroke * 2.5} strokeLinecap="round" />
-                {cal.floorLine.map(([x, y], i) => (
-                  <circle key={i} cx={x} cy={y} r={markerR * 0.7} fill="#16a34a" stroke="white" strokeWidth={stroke * 1.5} data-floor={i} style={{ cursor: "grab" }} />
-                ))}
-              </g>
-            )}
-            {/* Mesures */}
-            {measures.map((m) => (
-              <MeasureShape key={m.id} measure={m} value={values.find((v) => v.id === m.id)} stroke={stroke} r={markerR * 0.6} font={font} />
-            ))}
-            {/* Mesura en curs */}
-            {pending.length > 0 && (
-              <g>
-                {pending.length > 1 && <polyline points={pending.map(([x, y]) => `${x},${y}`).join(" ")} fill="none" stroke="#f59e0b" strokeWidth={stroke * 2} />}
-                {pending.map(([x, y], i) => (
-                  <circle key={i} cx={x} cy={y} r={markerR * 0.6} fill="#f59e0b" stroke="white" strokeWidth={stroke * 1.5} />
-                ))}
-              </g>
-            )}
-            {depthResult && (
-              <g>
-                <circle cx={depthResult.at[0]} cy={depthResult.at[1]} r={markerR * 0.7} fill="#0ea5e9" stroke="white" strokeWidth={stroke * 1.5} />
-                <text x={depthResult.at[0]} y={depthResult.at[1] - markerR} textAnchor="middle" fontSize={font} fill="#0ea5e9" stroke="white" strokeWidth={stroke} paintOrder="stroke" fontWeight="bold" fontFamily="system-ui, sans-serif">
-                  {depthResult.depth} mm ±{Math.round(depthResult.error * 100)} %
-                </text>
-              </g>
-            )}
-            {cal.points.map(([x, y], i) => (
-              <g key={i}>
-                <circle cx={x} cy={y} r={markerR} fill="#22c55e" fillOpacity={0.85} stroke="white" strokeWidth={stroke * 1.5} data-point={i} style={{ cursor: "grab" }} />
-                <text x={x} y={y + markerR * 0.4} textAnchor="middle" fontSize={markerR * 1.2} fill="white" fontWeight="bold" pointerEvents="none" fontFamily="system-ui, sans-serif">
-                  {i + 1}
-                </text>
-              </g>
-            ))}
-            {axes && (
-              <g fontFamily="system-ui, sans-serif" fontWeight="bold">
-                {(
-                  [
-                    ["X", "#ef4444"],
-                    ["Y", "#22c55e"],
-                    ["Z", "#3b82f6"],
-                  ] as const
-                ).map(([name, color], i) => {
-                  const end = axes.ends[i]!
-                  const dx = end[0] - axes.o[0]
-                  const dy = end[1] - axes.o[1]
-                  const len = Math.hypot(dx, dy) || 1
-                  const ux = dx / len
-                  const uy = dy / len
-                  const ah = markerR * 1.2
-                  const head = `${end[0]},${end[1]} ${end[0] - ux * ah - uy * ah * 0.55},${end[1] - uy * ah + ux * ah * 0.55} ${end[0] - ux * ah + uy * ah * 0.55},${end[1] - uy * ah - ux * ah * 0.55}`
-                  return (
-                    <g key={name}>
-                      <line x1={axes.o[0]} y1={axes.o[1]} x2={end[0]} y2={end[1]} stroke="white" strokeWidth={stroke * 5} strokeLinecap="round" pointerEvents="none" />
-                      <line x1={axes.o[0]} y1={axes.o[1]} x2={end[0]} y2={end[1]} stroke={color} strokeWidth={stroke * 3} strokeLinecap="round" pointerEvents="none" />
-                      <line x1={axes.o[0] + ux * markerR} y1={axes.o[1] + uy * markerR} x2={end[0]} y2={end[1]} stroke="transparent" strokeWidth={markerR * 1.6} data-axis={i} style={{ cursor: "grab" }} />
-                      <polygon points={head} fill={color} stroke="white" strokeWidth={stroke} data-axis={i} style={{ cursor: "grab" }} />
-                      <text x={end[0] + ux * markerR * 1.5} y={end[1] + uy * markerR * 1.5 + markerR * 0.45} textAnchor="middle" fontSize={markerR * 1.4} fill={color} stroke="white" strokeWidth={stroke} paintOrder="stroke" pointerEvents="none">
-                        {name}
-                      </text>
-                    </g>
-                  )
-                })}
-                <circle cx={axes.o[0]} cy={axes.o[1]} r={markerR * 0.8} fill="#f97316" stroke="white" strokeWidth={stroke * 1.5} data-origin-center="" style={{ cursor: "grab" }} />
-              </g>
+            {/* En mode realista les marques s'amaguen (és una imatge per ensenyar); tornen
+                a sortir si es tria una eina, si falta calibrar o si es demanen. */}
+            {showMarks && (
+              <>
+              {refOutline && <polygon points={refOutline.map(([x, y]) => `${x},${y}`).join(" ")} fill="none" stroke="#22c55e" strokeWidth={stroke * 1.5} strokeDasharray={`${stroke * 8} ${stroke * 6}`} />}
+              {/* Línia del terra */}
+              {cal.floorLine && (
+                <g>
+                  <line x1={cal.floorLine[0][0]} y1={cal.floorLine[0][1]} x2={cal.floorLine[1][0]} y2={cal.floorLine[1][1]} stroke="#16a34a" strokeWidth={stroke * 2.5} strokeLinecap="round" />
+                  {cal.floorLine.map(([x, y], i) => (
+                    <circle key={i} cx={x} cy={y} r={markerR * 0.7} fill="#16a34a" stroke="white" strokeWidth={stroke * 1.5} data-floor={i} style={{ cursor: "grab" }} />
+                  ))}
+                </g>
+              )}
+              {/* Mesures */}
+              {measures.map((m) => (
+                <MeasureShape key={m.id} measure={m} value={values.find((v) => v.id === m.id)} stroke={stroke} r={markerR * 0.6} font={font} />
+              ))}
+              {/* Mesura en curs */}
+              {pending.length > 0 && (
+                <g>
+                  {pending.length > 1 && <polyline points={pending.map(([x, y]) => `${x},${y}`).join(" ")} fill="none" stroke="#f59e0b" strokeWidth={stroke * 2} />}
+                  {pending.map(([x, y], i) => (
+                    <circle key={i} cx={x} cy={y} r={markerR * 0.6} fill="#f59e0b" stroke="white" strokeWidth={stroke * 1.5} />
+                  ))}
+                </g>
+              )}
+              {depthResult && (
+                <g>
+                  <circle cx={depthResult.at[0]} cy={depthResult.at[1]} r={markerR * 0.7} fill="#0ea5e9" stroke="white" strokeWidth={stroke * 1.5} />
+                  <text x={depthResult.at[0]} y={depthResult.at[1] - markerR} textAnchor="middle" fontSize={font} fill="#0ea5e9" stroke="white" strokeWidth={stroke} paintOrder="stroke" fontWeight="bold" fontFamily="system-ui, sans-serif">
+                    {depthResult.depth} mm ±{Math.round(depthResult.error * 100)} %
+                  </text>
+                </g>
+              )}
+              {cal.points.map(([x, y], i) => (
+                <g key={i}>
+                  <circle cx={x} cy={y} r={markerR} fill="#22c55e" fillOpacity={0.85} stroke="white" strokeWidth={stroke * 1.5} data-point={i} style={{ cursor: "grab" }} />
+                  <text x={x} y={y + markerR * 0.4} textAnchor="middle" fontSize={markerR * 1.2} fill="white" fontWeight="bold" pointerEvents="none" fontFamily="system-ui, sans-serif">
+                    {i + 1}
+                  </text>
+                </g>
+              ))}
+              {axes && (
+                <g fontFamily="system-ui, sans-serif" fontWeight="bold">
+                  {(
+                    [
+                      ["X", "#ef4444"],
+                      ["Y", "#22c55e"],
+                      ["Z", "#3b82f6"],
+                    ] as const
+                  ).map(([name, color], i) => {
+                    const end = axes.ends[i]!
+                    const dx = end[0] - axes.o[0]
+                    const dy = end[1] - axes.o[1]
+                    const len = Math.hypot(dx, dy) || 1
+                    const ux = dx / len
+                    const uy = dy / len
+                    const ah = markerR * 1.2
+                    const head = `${end[0]},${end[1]} ${end[0] - ux * ah - uy * ah * 0.55},${end[1] - uy * ah + ux * ah * 0.55} ${end[0] - ux * ah + uy * ah * 0.55},${end[1] - uy * ah - ux * ah * 0.55}`
+                    return (
+                      <g key={name}>
+                        <line x1={axes.o[0]} y1={axes.o[1]} x2={end[0]} y2={end[1]} stroke="white" strokeWidth={stroke * 5} strokeLinecap="round" pointerEvents="none" />
+                        <line x1={axes.o[0]} y1={axes.o[1]} x2={end[0]} y2={end[1]} stroke={color} strokeWidth={stroke * 3} strokeLinecap="round" pointerEvents="none" />
+                        <line x1={axes.o[0] + ux * markerR} y1={axes.o[1] + uy * markerR} x2={end[0]} y2={end[1]} stroke="transparent" strokeWidth={markerR * 1.6} data-axis={i} style={{ cursor: "grab" }} />
+                        <polygon points={head} fill={color} stroke="white" strokeWidth={stroke} data-axis={i} style={{ cursor: "grab" }} />
+                        <text x={end[0] + ux * markerR * 1.5} y={end[1] + uy * markerR * 1.5 + markerR * 0.45} textAnchor="middle" fontSize={markerR * 1.4} fill={color} stroke="white" strokeWidth={stroke} paintOrder="stroke" pointerEvents="none">
+                          {name}
+                        </text>
+                      </g>
+                    )
+                  })}
+                  <circle cx={axes.o[0]} cy={axes.o[1]} r={markerR * 0.8} fill="#f97316" stroke="white" strokeWidth={stroke * 1.5} data-origin-center="" style={{ cursor: "grab" }} />
+                </g>
+              )}
+              </>
             )}
             {/* Lupa: el dit tapa el punt al mòbil */}
             {lens && url && <Lens url={url} at={lens} W={W} H={H} r={markerR * 3.2} stroke={stroke} />}
@@ -768,72 +831,86 @@ function PhotoCalibrator({
               </Alert.Root>
             )}
 
-            <Field.Root>
-              <Field.Label>Rectangle de referència</Field.Label>
-              <NativeSelect.Root size="sm">
-                <NativeSelect.Field
-                  value={refMode}
-                  onChange={(e) => {
-                    if (e.target.value === "custom") {
-                      setCustomRef(true)
-                      return
-                    }
-                    const r = presets[Number(e.target.value)]
-                    if (r) {
-                      setCustomRef(false)
-                      setCal((c) => ({ ...c, ref: { w: r.w, h: r.h }, refAspect: r.w / r.h, refWallOffset: r.wallOffset ?? 0, plane: r.plane }))
-                    }
-                  }}
-                >
-                  {presets.map((r, i) => (
-                    <option key={r.id} value={String(i)}>
-                      {r.name} ({r.w} × {r.h})
-                    </option>
-                  ))}
-                  <option value="custom">A mida</option>
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
-            <Text fontSize="sm" fontWeight="medium" mb={-2}>
-              Mida coneguda
-            </Text>
-            <SimpleGrid columns={2} gap={3}>
-              <NumberField label="Amplada" value={cal.ref.w ?? NaN} min={10} max={5000} step={1} onChange={(w) => setCal((c) => ({ ...c, ref: { ...c.ref, w: known(w) } }))} />
-              <NumberField label="Alçada" value={cal.ref.h ?? NaN} min={10} max={5000} step={1} onChange={(h) => setCal((c) => ({ ...c, ref: { ...c.ref, h: known(h) } }))} />
-            </SimpleGrid>
-            <Text fontSize="xs" color="fg.muted" mt={-2}>
-              {refW && refH
-                ? effective && (effective.w !== refW || effective.h !== refH)
-                  ? `Recalibrada amb cinta: ${effective.w} × ${effective.h} mm.`
-                  : "Donen l'escala de la foto. Es poden deixar en blanc per treballar només amb proporcions."
-                : effective
-                  ? `Sense mides: l'escala surt de la cinta (${effective.w} × ${effective.h} mm).`
-                  : "En blanc: només mesures relatives fins que hi hagi una mida amb cinta."}
-            </Text>
-            {cal.plane === "wall" && (
-              <NumberField label="Distància a la paret" value={cal.refWallOffset ?? 0} min={0} max={2000} step={10} help="De la referència a la paret. Una tele sobre un moble: uns 200." onChange={(v) => setCal((c) => ({ ...c, refWallOffset: Number.isFinite(v) ? v : 0 }))} />
-            )}
-
-            <Field.Root>
-              <Field.Label>El rectangle és a…</Field.Label>
-              <SegmentGroup.Root size="sm" value={cal.plane} onValueChange={(e) => (e.value === "wall" || e.value === "floor") && setCal((c) => ({ ...c, plane: e.value as ReferencePlane }))}>
-                <SegmentGroup.Indicator />
-                <SegmentGroup.Item value="wall">
-                  <SegmentGroup.ItemText>La paret</SegmentGroup.ItemText>
-                  <SegmentGroup.ItemHiddenInput />
-                </SegmentGroup.Item>
-                <SegmentGroup.Item value="floor">
-                  <SegmentGroup.ItemText>El terra</SegmentGroup.ItemText>
-                  <SegmentGroup.ItemHiddenInput />
-                </SegmentGroup.Item>
-              </SegmentGroup.Root>
-            </Field.Root>
-
-            <Stack gap={2}>
-              <Text fontSize="sm" fontWeight="medium">
-                Eines
+            {/* Seccions plegables, com la resta de l'inspector. */}
+            <Stack gap={0}>
+              <PanelSection id="photo-ref" title="Referència" icon={LuCrosshair}>
+              <Field.Root>
+                <Field.Label>Rectangle de referència</Field.Label>
+                <NativeSelect.Root size="sm">
+                  <NativeSelect.Field
+                    value={refMode}
+                    onChange={(e) => {
+                      if (e.target.value === "custom") {
+                        setCustomRef(true)
+                        return
+                      }
+                      const r = presets[Number(e.target.value)]
+                      if (r) {
+                        setCustomRef(false)
+                        setCal((c) => ({ ...c, ref: { w: r.w, h: r.h }, refAspect: r.w / r.h, refWallOffset: r.wallOffset ?? 0, plane: r.plane }))
+                      }
+                    }}
+                  >
+                    {presets.map((r, i) => (
+                      <option key={r.id} value={String(i)}>
+                        {r.name} ({r.w} × {r.h})
+                      </option>
+                    ))}
+                    <option value="custom">A mida</option>
+                  </NativeSelect.Field>
+                  <NativeSelect.Indicator />
+                </NativeSelect.Root>
+              </Field.Root>
+              <Text fontSize="sm" fontWeight="medium" mb={-2}>
+                Mida coneguda
               </Text>
+              <SimpleGrid columns={2} gap={3}>
+                <NumberField label="Amplada" value={cal.ref.w ?? NaN} min={10} max={5000} step={1} onChange={(w) => setCal((c) => ({ ...c, ref: { ...c.ref, w: known(w) } }))} />
+                <NumberField label="Alçada" value={cal.ref.h ?? NaN} min={10} max={5000} step={1} onChange={(h) => setCal((c) => ({ ...c, ref: { ...c.ref, h: known(h) } }))} />
+              </SimpleGrid>
+              <Text fontSize="xs" color="fg.muted" mt={-2}>
+                {refW && refH
+                  ? effective && (effective.w !== refW || effective.h !== refH)
+                    ? `Recalibrada amb cinta: ${effective.w} × ${effective.h} mm.`
+                    : "Donen l'escala de la foto. Es poden deixar en blanc per treballar només amb proporcions."
+                  : effective
+                    ? `Sense mides: l'escala surt de la cinta (${effective.w} × ${effective.h} mm).`
+                    : "En blanc: només mesures relatives fins que hi hagi una mida amb cinta."}
+              </Text>
+              {cal.plane === "wall" && (
+                <NumberField label="Distància a la paret" value={cal.refWallOffset ?? 0} min={0} max={2000} step={10} help="De la referència a la paret. Una tele sobre un moble: uns 200." onChange={(v) => setCal((c) => ({ ...c, refWallOffset: Number.isFinite(v) ? v : 0 }))} />
+              )}
+
+              <Field.Root>
+                <Field.Label>El rectangle és a…</Field.Label>
+                <SegmentGroup.Root size="sm" value={cal.plane} onValueChange={(e) => (e.value === "wall" || e.value === "floor") && setCal((c) => ({ ...c, plane: e.value as ReferencePlane }))}>
+                  <SegmentGroup.Indicator />
+                  <SegmentGroup.Item value="wall">
+                    <SegmentGroup.ItemText>La paret</SegmentGroup.ItemText>
+                    <SegmentGroup.ItemHiddenInput />
+                  </SegmentGroup.Item>
+                  <SegmentGroup.Item value="floor">
+                    <SegmentGroup.ItemText>El terra</SegmentGroup.ItemText>
+                    <SegmentGroup.ItemHiddenInput />
+                  </SegmentGroup.Item>
+                </SegmentGroup.Root>
+              </Field.Root>
+              <NumberField
+                label="Focal (35 mm)"
+                value={cal.focal35}
+                min={10}
+                max={200}
+                step={1}
+                suffix="mm"
+                help={photo.exifFocal35 ? `Llegida de l'EXIF: ${photo.exifFocal35} mm` : "La foto no porta EXIF; 26 mm és la càmera principal d'un mòbil"}
+                onChange={(focal35) => setCal((c) => ({ ...c, focal35 }))}
+              />
+
+              <Button variant="outline" size="sm" onClick={() => setCal((c) => ({ ...c, points: [] }))}>
+                <LuRotateCcw /> Tornar a marcar els punts
+              </Button>
+              </PanelSection>
+              <PanelSection id="photo-tools" title="Eines" icon={LuWrench}>
               <HStack wrap="wrap" gap={1.5}>
                 {toolButton("origin", "Origen", <LuLocateFixed />)}
                 {toolButton("distance", "Distància", <LuMoveHorizontal />)}
@@ -850,71 +927,86 @@ function PhotoCalibrator({
                 {origin3 ? `Origen a ${Math.round(originZ)} mm de la paret${floor ? "; terra a la línia verda" : ""}.` : "Sense origen, es compta des de la cantonada baix-esquerra de la referència."}
                 {!floor && cal.plane === "wall" && " Marca la línia del terra per mesurar fondàries i recolzar-hi el moble."}
               </Text>
-            </Stack>
-
-            <Stack gap={2}>
-              <Text fontSize="sm" fontWeight="medium">
-                Mesures
-              </Text>
+              </PanelSection>
+              <PanelSection id="photo-measures" title="Mesures" icon={LuMoveHorizontal} badge={measures.length || undefined}>
               <MeasureTable measures={measures} values={values} targets={targets} applied={appliedByMeasure} onChange={updateMeasure} onRemove={removeMeasure} onApply={applyMeasure} />
-            </Stack>
+              </PanelSection>
+              <PanelSection id="photo-position" title="Posició del moble" icon={LuMove}>
+              <SimpleGrid columns={2} gap={3}>
+                <NumberField label="X" value={cal.offset[0]} min={-10000} max={10000} step={10} onChange={(x) => setCal((c) => ({ ...c, offset: [x, c.offset[1]] }))} />
+                <NumberField label={cal.plane === "wall" ? "Y (alçada)" : "Y (distància)"} value={cal.offset[1]} min={-10000} max={10000} step={10} onChange={(y) => setCal((c) => ({ ...c, offset: [c.offset[0], y] }))} />
+                {cal.plane === "wall" && <NumberField label="Z (paret)" value={cal.offsetZ ?? 0} min={0} max={3000} step={10} onChange={(z) => setCal((c) => ({ ...c, offsetZ: Number.isFinite(z) ? z : 0 }))} />}
+              </SimpleGrid>
+              </PanelSection>
+              <PanelSection id="photo-look" title="Aspecte" icon={LuPaintbrush} badge={renderMode === "realistic" ? "Realista" : "Línies"}>
+              <Field.Root>
+                <Field.Label>Aspecte del moble</Field.Label>
+                <SegmentGroup.Root size="sm" value={renderMode} onValueChange={(e) => (e.value === "lines" || e.value === "realistic") && setCal((c) => ({ ...c, render: e.value as "lines" | "realistic" }))}>
+                  <SegmentGroup.Indicator />
+                  <SegmentGroup.Item value="lines">
+                    <SegmentGroup.ItemText>Línies</SegmentGroup.ItemText>
+                    <SegmentGroup.ItemHiddenInput />
+                  </SegmentGroup.Item>
+                  <SegmentGroup.Item value="realistic">
+                    <SegmentGroup.ItemText>Realista</SegmentGroup.ItemText>
+                    <SegmentGroup.ItemHiddenInput />
+                  </SegmentGroup.Item>
+                </SegmentGroup.Root>
+                <Field.HelperText>
+                  {renderMode === "lines"
+                    ? "Ràpid i transparent: per encaixar el moble amb la foto."
+                    : "Materials, llum i ombres. La llum és la de Preferències › Visor 3D."}
+                </Field.HelperText>
+              </Field.Root>
+              {renderMode === "realistic" && (
+                <Switch.Root size="sm" checked={renderShadows} onCheckedChange={(e) => setCal((c) => ({ ...c, shadows: e.checked }))}>
+                  <Switch.HiddenInput />
+                  <Switch.Control />
+                  <Switch.Label>Ombres a terra i a la paret</Switch.Label>
+                </Switch.Root>
+              )}
+              {renderMode === "realistic" && (
+                <Switch.Root size="sm" checked={marksInRender} onCheckedChange={(e) => setMarksInRender(e.checked)}>
+                  <Switch.HiddenInput />
+                  <Switch.Control />
+                  <Switch.Label>Mostrar les marques</Switch.Label>
+                </Switch.Root>
+              )}
 
-            <Text fontSize="sm" fontWeight="medium" mb={-2}>
-              Posició del moble
-            </Text>
-            <SimpleGrid columns={2} gap={3}>
-              <NumberField label="X" value={cal.offset[0]} min={-10000} max={10000} step={10} onChange={(x) => setCal((c) => ({ ...c, offset: [x, c.offset[1]] }))} />
-              <NumberField label={cal.plane === "wall" ? "Y (alçada)" : "Y (distància)"} value={cal.offset[1]} min={-10000} max={10000} step={10} onChange={(y) => setCal((c) => ({ ...c, offset: [c.offset[0], y] }))} />
-              {cal.plane === "wall" && <NumberField label="Z (paret)" value={cal.offsetZ ?? 0} min={0} max={3000} step={10} onChange={(z) => setCal((c) => ({ ...c, offsetZ: Number.isFinite(z) ? z : 0 }))} />}
-            </SimpleGrid>
-
-            <Slider.Root size="sm" value={[Math.round(opacity * 100)]} min={10} max={100} step={5} onValueChange={(e) => setCal((c) => ({ ...c, opacity: (e.value[0] ?? 70) / 100 }))}>
-              <HStack justify="space-between">
-                <Slider.Label>Opacitat del moble</Slider.Label>
-                <Slider.ValueText />
+              <Slider.Root size="sm" value={[Math.round(opacity * 100)]} min={10} max={100} step={5} onValueChange={(e) => setCal((c) => ({ ...c, opacity: (e.value[0] ?? 70) / 100 }))}>
+                <HStack justify="space-between">
+                  <Slider.Label>Opacitat del moble</Slider.Label>
+                  <Slider.ValueText />
+                </HStack>
+                <Slider.Control>
+                  <Slider.Track>
+                    <Slider.Range />
+                  </Slider.Track>
+                  <Slider.Thumbs />
+                </Slider.Control>
+              </Slider.Root>
+              <HStack justify="space-between" wrap="wrap" gap={2}>
+                <SegmentGroup.Root size="xs" value={layer} onValueChange={(e) => (e.value === "photo" || e.value === "cabinet" || e.value === "both") && setCal((c) => ({ ...c, layer: e.value as PhotoCalibration["layer"] }))}>
+                  <SegmentGroup.Indicator />
+                  <SegmentGroup.Item value="photo">
+                    <SegmentGroup.ItemText>Foto</SegmentGroup.ItemText>
+                    <SegmentGroup.ItemHiddenInput />
+                  </SegmentGroup.Item>
+                  <SegmentGroup.Item value="cabinet">
+                    <SegmentGroup.ItemText>Moble</SegmentGroup.ItemText>
+                    <SegmentGroup.ItemHiddenInput />
+                  </SegmentGroup.Item>
+                  <SegmentGroup.Item value="both">
+                    <SegmentGroup.ItemText>Tots dos</SegmentGroup.ItemText>
+                    <SegmentGroup.ItemHiddenInput />
+                  </SegmentGroup.Item>
+                </SegmentGroup.Root>
+                <Button size="xs" variant="outline" disabled={!camera} onClick={() => void downloadPng()}>
+                  <LuImageDown /> Imatge PNG
+                </Button>
               </HStack>
-              <Slider.Control>
-                <Slider.Track>
-                  <Slider.Range />
-                </Slider.Track>
-                <Slider.Thumbs />
-              </Slider.Control>
-            </Slider.Root>
-            <HStack justify="space-between" wrap="wrap" gap={2}>
-              <SegmentGroup.Root size="xs" value={layer} onValueChange={(e) => (e.value === "photo" || e.value === "cabinet" || e.value === "both") && setCal((c) => ({ ...c, layer: e.value as PhotoCalibration["layer"] }))}>
-                <SegmentGroup.Indicator />
-                <SegmentGroup.Item value="photo">
-                  <SegmentGroup.ItemText>Foto</SegmentGroup.ItemText>
-                  <SegmentGroup.ItemHiddenInput />
-                </SegmentGroup.Item>
-                <SegmentGroup.Item value="cabinet">
-                  <SegmentGroup.ItemText>Moble</SegmentGroup.ItemText>
-                  <SegmentGroup.ItemHiddenInput />
-                </SegmentGroup.Item>
-                <SegmentGroup.Item value="both">
-                  <SegmentGroup.ItemText>Tots dos</SegmentGroup.ItemText>
-                  <SegmentGroup.ItemHiddenInput />
-                </SegmentGroup.Item>
-              </SegmentGroup.Root>
-              <Button size="xs" variant="outline" disabled={!camera} onClick={() => void downloadPng()}>
-                <LuImageDown /> Imatge PNG
-              </Button>
-            </HStack>
-
-            <NumberField
-              label="Focal (35 mm)"
-              value={cal.focal35}
-              min={10}
-              max={200}
-              step={1}
-              suffix="mm"
-              help={photo.exifFocal35 ? `Llegida de l'EXIF: ${photo.exifFocal35} mm` : "La foto no porta EXIF; 26 mm és la càmera principal d'un mòbil"}
-              onChange={(focal35) => setCal((c) => ({ ...c, focal35 }))}
-            />
-
-            <Button variant="outline" size="sm" onClick={() => setCal((c) => ({ ...c, points: [] }))}>
-              <LuRotateCcw /> Tornar a marcar els punts
-            </Button>
+              </PanelSection>
+            </Stack>
           </Card.Body>
         </Card.Root>
       </Controls>
@@ -973,7 +1065,7 @@ function Lens({ url, at, W, H, r, stroke }: { url: string; at: Pt; W: number; H:
 }
 
 /** Foto + moble superposat en un PNG a mida de la foto. */
-async function renderComposite(blob: Blob, W: number, H: number, layer: "photo" | "cabinet" | "both", opacity: number, faces: ProjectedFace[], stroke: number): Promise<Blob> {
+async function renderComposite(blob: Blob, W: number, H: number, layer: "photo" | "cabinet" | "both", opacity: number, faces: ProjectedFace[], stroke: number, render: HTMLCanvasElement | null = null): Promise<Blob> {
   const canvas = document.createElement("canvas")
   canvas.width = W
   canvas.height = H
@@ -985,6 +1077,11 @@ async function renderComposite(blob: Blob, W: number, H: number, layer: "photo" 
   } else {
     ctx.fillStyle = "#f4f1ea"
     ctx.fillRect(0, 0, W, H)
+  }
+  if (layer !== "photo" && render) {
+    ctx.globalAlpha = opacity
+    ctx.drawImage(render, 0, 0, W, H)
+    ctx.globalAlpha = 1
   }
   if (layer !== "photo") {
     ctx.lineJoin = "round"

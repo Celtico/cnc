@@ -1,8 +1,11 @@
-import { moduleOrigins, type Composition, type Panel, type RefObject, type Vec3 } from "../model"
+import { modulePlacements, type Composition, type Panel, type RefObject, type Vec3 } from "../model"
 import { buildModule, type BuildWarning, type ModuleBuild } from "./buildModule"
+import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
 
 export interface CompositionWarning extends BuildWarning {
   moduleId?: string
+  /** Objecte de referència implicat (avisos de xoc). */
+  refId?: string
 }
 
 export interface CompositionBuild {
@@ -37,20 +40,19 @@ export function refBox(o: RefObject): { min: Vec3; max: Vec3 } {
 }
 
 /**
- * Construeix tota la composició: cada mòdul al seu lloc (x per ordre i separacions;
- * y = alçada de les potes si en té), ids prefixats amb l'id del mòdul i el número de
+ * Construeix tota la composició: cada mòdul al seu lloc (`modulePlacements`: fila,
+ * potes, penjats i apilats), ids prefixats amb l'id del mòdul i el número de
  * mòdul a cada peça per a les refs del taller.
  */
 export function buildComposition(comp: Composition): CompositionBuild {
-  const xs = moduleOrigins(comp)
+  const places = modulePlacements(comp)
   const panels: Panel[] = []
   const warnings: CompositionWarning[] = []
   const modules: CompositionBuild["modules"] = []
 
   comp.modules.forEach((m, i) => {
     const build = buildModule(m)
-    const x = xs[i]!
-    const y = m.carcass.base.kind === "legs" ? m.carcass.base.height : 0
+    const { x, y } = places[i]!
     for (const p of build.panels) {
       const o = p.placement.origin
       panels.push({
@@ -61,14 +63,34 @@ export function buildComposition(comp: Composition): CompositionBuild {
       })
     }
     for (const w of build.warnings) warnings.push({ ...w, moduleId: m.id })
+    // Mòdul penjat: el pes el porta el darrere. Cal fons cargolat o en ranura prou gruixut
+    // i penjadors de moble; amb un fons prim o sense fons no s'aguanta.
+    if (m.carcass.base.kind === "wall" && (m.carcass.back === "none" || m.carcass.backThickness < 8))
+      warnings.push({
+        code: "hanging",
+        moduleId: m.id,
+        message: "Mòdul penjat: posa-hi penjadors de moble (regulables) i un fons d'almenys 8 mm o un travesser de penjar al darrere.",
+      })
     modules.push({ id: m.id, index: i + 1, x, y, build })
   })
+
+  // Peces corregudes (taulell, sòcol): numerades com un «mòdul» més per a les refs del taller.
+  const runWarnings: RunWarning[] = []
+  for (const run of comp.runs ?? []) {
+    const n = comp.modules.length + 1
+    const p = run.kind === "worktop" ? buildWorktop(comp, run, places, n, runWarnings) : buildPlinthRun(comp, run, places, n, runWarnings)
+    if (p) panels.push(p)
+  }
+  for (const w of runWarnings) warnings.push({ code: "layout", message: w.message })
 
   // Objectes fantasma que xoquen amb alguna peça.
   for (const ref of comp.references) {
     const rb = refBox(ref)
     const hit = panels.find((p) => boxesOverlap(panelBox(p), rb))
-    if (hit) warnings.push({ code: "collision", message: `«${ref.name}» xoca amb ${hit.label}.`, panelId: hit.id })
+    if (hit) {
+      const moduleId = modules.find((m) => m.index === hit.module)?.id
+      warnings.push({ code: "collision", message: `«${ref.name}» xoca amb ${hit.label}.`, panelId: hit.id, refId: ref.id, ...(moduleId ? { moduleId } : {}) })
+    }
   }
 
   return { panels, warnings, modules }

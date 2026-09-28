@@ -31,51 +31,140 @@ export const SPECIES_LABEL: Record<WoodSpecies, string> = { oak: "Roure", walnut
 /** Mida real d'un tile de textura (mm). */
 export const TILE_MM = 600
 
-/** Soroll periòdic 1D (suma de sinus) perquè la textura sigui repetible. */
-function periodic(t: number, seed: number): number {
-  return (
-    0.5 * Math.sin(2 * Math.PI * t + seed) +
-    0.3 * Math.sin(2 * Math.PI * 3 * t + seed * 1.7) +
-    0.2 * Math.sin(2 * Math.PI * 7 * t + seed * 2.3)
-  )
+/** Aleatori determinista (cada espècie surt sempre igual). */
+function rng(seed: number): () => number {
+  let s = seed
+  return () => (s = (s * 16807) % 2147483647) / 2147483647
 }
+
+const rgb = (c: [number, number, number], a = 1) => `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${a})`
+const mix = (a: [number, number, number], b: [number, number, number], t: number): [number, number, number] => [
+  Math.round(a[0] + (b[0] - a[0]) * t),
+  Math.round(a[1] + (b[1] - a[1]) * t),
+  Math.round(a[2] + (b[2] - a[2]) * t),
+]
 
 const cache = new Map<WoodSpecies, Texture>()
 
-/** Textura de fusta amb la veta en horitzontal (eix u). */
+/**
+ * Textura de xapa de fusta amb la veta en horitzontal (eix u), repetible en u i en v.
+ * Es pinta com un xapat real: franges amples de to, centenars de fibres fines de gruix i
+ * contrast variables, alguna veta «de catedral» més ondulada i porus curts.
+ */
 export function woodTexture(species: WoodSpecies): Texture {
   const hit = cache.get(species)
   if (hit) return hit
-  const size = 512
+  const size = 1024
   const canvas = document.createElement("canvas")
   canvas.width = size
   canvas.height = size
-  const ctx = canvas.getContext("2d")!
-  const img = ctx.createImageData(size, size)
+  const g = canvas.getContext("2d")!
   const p = WOOD[species]
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const u = x / size
-      const v = y / size
-      // Vetes: bandes en v, ondulades segons u; línies fines a sobre.
-      const w = v + p.wobble * periodic(u, 3) * (0.6 + 0.4 * periodic(v, 9))
-      const band = 0.5 + 0.5 * Math.sin(2 * Math.PI * p.lines * w)
-      const fine = 0.5 + 0.5 * Math.sin(2 * Math.PI * p.lines * 4.3 * w + periodic(u, 5))
-      const shade = Math.pow(band, 3) * 0.75 + fine * 0.12 + 0.06 * periodic(u * 2 + v, 11)
-      const k = Math.max(0, Math.min(1, shade))
-      const i = (y * size + x) * 4
-      img.data[i] = p.base[0] + (p.dark[0] - p.base[0]) * k
-      img.data[i + 1] = p.base[1] + (p.dark[1] - p.base[1]) * k
-      img.data[i + 2] = p.base[2] + (p.dark[2] - p.base[2]) * k
-      img.data[i + 3] = 255
+  const rnd = rng(species === "oak" ? 101 : species === "walnut" ? 202 : 303)
+
+  g.fillStyle = rgb(p.base)
+  g.fillRect(0, 0, size, size)
+
+  // Dibuixa a y, y - size i y + size perquè la textura no tingui costura vertical.
+  const wrapY = (draw: (dy: number) => void) => {
+    for (const dy of [-size, 0, size]) draw(dy)
+  }
+  // Ondulació periòdica en u (freqüències enteres: sense costura horitzontal).
+  const wave = (u: number, amp: number, ph: number, f1: number, f2: number) =>
+    amp * (Math.sin(2 * Math.PI * f1 * u + ph) * 0.7 + Math.sin(2 * Math.PI * f2 * u + ph * 1.9) * 0.3)
+
+  // 1. Franges amples de to (clar/fosc) al llarg de la veta.
+  for (let i = 0; i < 26; i++) {
+    const y = rnd() * size
+    const h = 8 + rnd() * 60
+    const light = rnd() > 0.5
+    const a = 0.05 + rnd() * 0.1
+    const ph = rnd() * 10
+    wrapY((dy) => {
+      g.fillStyle = light ? `rgba(255, 245, 225, ${a})` : rgb(p.dark, a)
+      g.beginPath()
+      g.moveTo(0, y + dy + wave(0, 12, ph, 1, 2))
+      for (let x = 0; x <= size; x += 16) g.lineTo(x, y + dy + wave(x / size, 12, ph, 1, 2))
+      for (let x = size; x >= 0; x -= 16) g.lineTo(x, y + dy + h + wave(x / size, 12, ph + 0.4, 1, 2))
+      g.closePath()
+      g.fill()
+    })
+  }
+
+  // 2. Fibres fines.
+  const fibres = Math.round(p.lines * 9)
+  for (let i = 0; i < fibres; i++) {
+    const y = rnd() * size
+    const amp = 2 + rnd() * p.wobble * 120
+    const ph = rnd() * 10
+    const f1 = 1 + Math.floor(rnd() * 2)
+    const f2 = 2 + Math.floor(rnd() * 3)
+    const strong = rnd() < 0.18
+    const col = mix(p.dark, [0, 0, 0], strong ? 0.25 : 0)
+    const a = strong ? 0.25 + rnd() * 0.3 : 0.06 + rnd() * 0.14
+    const w = strong ? 1 + rnd() * 2.2 : 0.5 + rnd() * 1.1
+    wrapY((dy) => {
+      g.strokeStyle = rgb(col, a)
+      g.lineWidth = w
+      g.beginPath()
+      for (let x = 0; x <= size; x += 8) {
+        const yy = y + dy + wave(x / size, amp, ph, f1, f2)
+        if (x === 0) g.moveTo(x, yy)
+        else g.lineTo(x, yy)
+      }
+      g.stroke()
+    })
+  }
+
+  // 3. Vetes de catedral: arcs amples i foscos (poques, com en un xapat pla).
+  const arches = species === "ash" ? 3 : 2
+  for (let i = 0; i < arches; i++) {
+    const cy = rnd() * size
+    const ph = rnd() * 10
+    for (let k = 0; k < 7; k++) {
+      const off = k * (6 + rnd() * 5)
+      const amp = 40 + k * 9
+      wrapY((dy) => {
+        g.strokeStyle = rgb(p.dark, 0.1 + rnd() * 0.12)
+        g.lineWidth = 1 + rnd() * 2
+        g.beginPath()
+        for (let x = 0; x <= size; x += 8) {
+          const u = x / size
+          const yy = cy + dy + off + amp * Math.pow(Math.sin(Math.PI * u * 2 + ph), 2) * -1
+          if (x === 0) g.moveTo(x, yy)
+          else g.lineTo(x, yy)
+        }
+        g.stroke()
+      })
     }
   }
-  ctx.putImageData(img, 0, 0)
+
+  // 4. Porus: traços curts i foscos al llarg de la veta.
+  const pores = species === "walnut" ? 1400 : 2200
+  for (let i = 0; i < pores; i++) {
+    const x = rnd() * size
+    const y = rnd() * size
+    const len = 3 + rnd() * 12
+    g.fillStyle = rgb(mix(p.dark, [0, 0, 0], 0.3), 0.12 + rnd() * 0.25)
+    g.fillRect(x, y, len, 0.8 + rnd() * 0.7)
+    if (x + len > size) g.fillRect(x - size, y, len, 1)
+  }
+
+  // 5. Gra fi.
+  const img = g.getImageData(0, 0, size, size)
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (rnd() - 0.5) * 8
+    img.data[i]! += n
+    img.data[i + 1]! += n
+    img.data[i + 2]! += n
+  }
+  g.putImageData(img, 0, 0)
+
   const tex = new CanvasTexture(canvas)
   tex.wrapS = RepeatWrapping
   tex.wrapT = RepeatWrapping
   tex.colorSpace = SRGBColorSpace
-  tex.anisotropy = 4
+  tex.anisotropy = 8
   cache.set(species, tex)
   return tex
 }
