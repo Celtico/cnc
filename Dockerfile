@@ -6,6 +6,8 @@ WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
+# Si alguna dependència té una vulnerabilitat alta o crítica coneguda, la build s'atura.
+RUN pnpm audit --audit-level high
 COPY . .
 # tsc + vite build (el test d'anada i tornada amb el taller queda fora del tsc).
 RUN pnpm build

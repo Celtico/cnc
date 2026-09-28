@@ -320,5 +320,6 @@ pnpm dev         # servidor de desenvolupament
 pnpm build       # build de producció + service worker
 pnpm test        # vitest
 pnpm typecheck   # tsc --noEmit
+pnpm audit       # vulnerabilitats conegudes (alta o crítica fa fallar; també al Docker)
 pnpm lint
 ```
