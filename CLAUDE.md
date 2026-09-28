@@ -242,7 +242,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   amb `maxW` centrat). El 3D, la foto, l'alçat i el nesting s'estiren tant com la
   pantalla. Només es limita l'amplada dels panells de formulari (p. ex. 360–400 px) i
   dels textos llargs.
-- **Inputs a 16px sempre** (globalCss a `createSystem`) per evitar el zoom d'iOS.
+- **Inputs a 16px sempre** (`src/theme/inputs.css`, CSS sense capa: el globalCss de Chakra
+  va a `@layer base` i les receptes `sm`/`xs` el rebaixaven) per evitar el zoom d'iOS.
 - Tokens semàntics (`bg.subtle`, `fg.muted`...) i `colorPalette`, no colors crus.
 - **Color principal = paleta `wood`** sempre (`colorPalette="wood"`, `wood.fg`...). L'usuari el canvia a
   Preferències → Tema (`theme/accent.ts` redirigeix les variables CSS de `wood`). No facis servir

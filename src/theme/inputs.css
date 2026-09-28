@@ -1,0 +1,10 @@
+/*
+ * Tots els camps a 16px: amb menys, Safari de l'iPhone fa zoom en entrar-hi.
+ * Va fora de les capes de Chakra (@layer base/recipes) a propòsit: el CSS sense capa
+ * guanya a qualsevol capa, i així cap mida de camp (sm, xs…) el pot rebaixar.
+ */
+input,
+select,
+textarea {
+  font-size: 16px;
+}

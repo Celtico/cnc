@@ -2,8 +2,6 @@ import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react"
 
 const config = defineConfig({
   globalCss: {
-    // Evita el zoom automàtic d'iOS en enfocar un camp (< 16px el dispara).
-    "input, select, textarea": { fontSize: "16px" },
     html: { height: "100%" },
     body: {
       minHeight: "100dvh",
