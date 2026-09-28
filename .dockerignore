@@ -1,0 +1,7 @@
+node_modules
+dist
+_to_delete
+.git
+.idea
+.vscode
+*.log

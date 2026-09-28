@@ -1,0 +1,14 @@
+# Mobles CNC — PWA estàtica servida amb nginx.
+#   docker compose up -d --build   →  http://localhost:7214
+# Per a l'iPhone (PWA i «Afegir a la pantalla d'inici», càmera), cal HTTPS: posa-hi
+# davant el teu proxy invers (Traefik, Caddy, Nginx Proxy Manager) apuntant al port 80.
+services:
+  mobles:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mobles-cnc:latest
+    container_name: mobles-cnc
+    restart: unless-stopped
+    ports:
+      - "${MOBLES_PORT:-7214}:80"
