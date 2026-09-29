@@ -91,4 +91,21 @@ describe("objectes que tallen", () => {
     expect(buildComposition(comp(col)).warnings.some((w) => w.code === "collision")).toBe(false)
     expect(buildComposition(comp({ ...col, shape: undefined, profile: undefined })).warnings.some((w) => w.code === "collision")).toBe(true)
   })
+
+  it("perfil de Bézier (el·lipse): talla amb arcs i el STEP és net", () => {
+    const k = 0.5522847498, a = 100, b = 60
+    const ellipse = [
+      { x: 2 * a, y: b, in: [0, -k * b] as [number, number], out: [0, k * b] as [number, number] },
+      { x: a, y: 2 * b, in: [k * a, 0] as [number, number], out: [-k * a, 0] as [number, number] },
+      { x: 0, y: b, in: [0, k * b] as [number, number], out: [0, -k * b] as [number, number] },
+      { x: a, y: 0, in: [-k * a, 0] as [number, number], out: [k * a, 0] as [number, number] },
+    ]
+    const bb = buildComposition(comp({ id: "e", name: "El·lipse", w: 200, h: 120, d: 40, x: 300, y: 300, z: -10, effect: "cut", shape: "profile", profile: ellipse }))
+    const c = bb.panels.find((p) => p.role === "back")!.cutouts![0]!
+    expect(c.kind).toBe("polygon")
+    if (c.kind === "polygon") expect(c.points.every((p) => p.length === 3)).toBe(true)
+    const step = toStep(bb.panels, { name: "e" })
+    expect(step.warnings).toEqual([])
+    for (const s of stepSolids(step.text)) expect(s.badEdges).toBe(0)
+  })
 })

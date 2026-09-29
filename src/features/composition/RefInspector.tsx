@@ -4,7 +4,7 @@ import { ProfileEditor } from "./ProfileEditor"
 import { LuBookmark, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuPlus, LuScan, LuTrash2 } from "react-icons/lu"
 import { PanelSection } from "../../components/PanelSection"
 import { toaster } from "../../components/ui/toaster"
-import { AXIS_INDEX, SECTION_AXES, canBeGhost, compositionWidth, newId, visibleReferences, type Composition, type RefObject } from "../../core/model"
+import { AXIS_INDEX, SECTION_AXES, toNodes, canBeGhost, compositionWidth, newId, visibleReferences, type Composition, type RefObject } from "../../core/model"
 import { NumberField } from "../editor/ParamsForm"
 import { useSettings } from "../settings/SettingsContext"
 
@@ -191,7 +191,7 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
       {o.shape === "profile" && o.profile && (
         <ProfileEditor
           open={editing}
-          initial={o.profile}
+          initial={toNodes(o.profile)}
           axes={AXIS_NAMES[o.axis ?? "z"]}
           onClose={() => setEditing(false)}
           onApply={({ points, w, h }) => {
@@ -244,7 +244,7 @@ function sizePatch(o: RefObject, c: { su?: number; sv?: number; length?: number 
 /** Passa a perfil: el rectangle de la secció actual. */
 function profilePatch(o: RefObject): Partial<RefObject> {
   const { su, sv } = sectionOf(o)
-  return { shape: "profile", profile: [[0, 0], [su, 0], [su, sv], [0, sv]] }
+  return { shape: "profile", profile: [{ x: 0, y: 0 }, { x: su, y: 0 }, { x: su, y: sv }, { x: 0, y: sv }] }
 }
 
 /** Canvia la direcció d'un perfil: la secció es conserva i el llarg passa al nou eix. */

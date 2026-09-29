@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { DEFAULT_CABINET, type CabinetParams } from "./cabinet"
-import { BPtSchema } from "./panel"
-import { flatten, type BPt } from "./polygon"
+import { BPtSchema, ProfileNodeSchema } from "./panel"
+import { flatten, profileToOutline, toNodes, type BPt } from "./polygon"
 
 /**
  * Model de composició: mòduls d'esquerra a dreta, cadascun amb una carcassa i un
@@ -247,7 +247,7 @@ export const RefObjectSchema = z.object({
    * Perfil (forma «profile»): contorn de la secció en mm, amb la cantonada mínima a (0, 0).
    * Coordenades (u, v) del pla perpendicular a la direcció: z → (x, y), y → (x, z), x → (z, y).
    */
-  profile: z.array(BPtSchema).min(3).optional(),
+  profile: z.array(z.union([ProfileNodeSchema, BPtSchema])).min(3).optional(),
   /**
    * Direcció: eix del cilindre i, als objectes que tallen, la direcció del tall (només foraden
    * les peces perpendiculars). z cap a la paret (per defecte), y vertical, x de costat.
@@ -292,7 +292,7 @@ export function refSection(o: RefObject): {
     return { a, u, v, range, circle: { cu, cv, r }, poly }
   }
   if (o.shape === "profile" && o.profile && o.profile.length >= 3) {
-    const outline = o.profile.map((p): BPt => (p[2] ? [u0 + p[0], v0 + p[1], p[2]] : [u0 + p[0], v0 + p[1]]))
+    const outline = profileToOutline(toNodes(o.profile).map((p) => ({ ...p, x: u0 + p.x, y: v0 + p.y })))
     return { a, u, v, range, poly: flatten(outline), outline }
   }
   return { a, u, v, range, poly: [[u0, v0], [u0 + su, v0], [u0 + su, v0 + sv], [u0, v0 + sv]] }

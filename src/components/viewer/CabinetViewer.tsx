@@ -8,7 +8,7 @@ import { LuPlus } from "react-icons/lu"
 import { DoubleSide, ExtrudeGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Shape, Vector3, type Object3D, type Texture } from "three"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
-import { AXIS_INDEX, SECTION_AXES, flatten, type Hole, type MaterialPref, type Panel, type PanelRole, type RefObject } from "../../core/model"
+import { AXIS_INDEX, SECTION_AXES, flatten, sampleProfile, toNodes, type Hole, type MaterialPref, type Panel, type PanelRole, type RefObject } from "../../core/model"
 import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { cutoutGeometry } from "./cutoutGeometry"
@@ -453,7 +453,7 @@ function profileGeometry(g: RefObject): ExtrudeGeometry {
   const size = [g.w, g.h, g.d]
   const su = size[u]!, sv = size[v]!, len = size[a]!
   const shape = new Shape()
-  const pts = flatten(g.profile!)
+  const pts = sampleProfile(toNodes(g.profile!))
   shape.moveTo((pts[0]![0] - su / 2) * S, (pts[0]![1] - sv / 2) * S)
   for (const [pu, pv] of pts.slice(1)) shape.lineTo((pu - su / 2) * S, (pv - sv / 2) * S)
   shape.closePath()

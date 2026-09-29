@@ -1,52 +1,66 @@
-import { Badge, Box, Button, CloseButton, Dialog, HStack, IconButton, Portal, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, CloseButton, Dialog, HStack, IconButton, Kbd, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
-import { LuSpline, LuTrash2 } from "react-icons/lu"
+import { LuEraser, LuMousePointer2, LuPenTool, LuSpline, LuTrash2 } from "react-icons/lu"
 import {
-  arcOf,
+  autoHandles,
+  bendEdge,
   bounds,
-  bulgeFromSagitta,
-  bulgeOf,
-  filletCorner,
-  flatten,
-  normalizeProfile,
+  edgeOf,
+  filletNode,
+  moveHandle,
+  normalizeNodes,
   polygonArea,
-  sagittaOf,
+  sampleProfile,
   selfIntersects,
-  signedArea,
-  type BPt,
+  splitEdge,
+  cubicAt,
+  arcOf,
+  type PNode,
+  type Vec2,
 } from "../../core/model"
 import { NumberField } from "../editor/ParamsForm"
 
 const r1 = (v: number) => Math.round(v * 10) / 10
+/** Blau dels nodes i manegadors (com a Figma). */
+const HANDLE = "#1e88e5"
+/** Constant del cercle amb cúbiques: manegador = k · radi. */
+const KAPPA = 0.5522847498
 
-/** Rectangle amb les quatre cantonades arrodonides. */
-function rounded(w: number, h: number, r: number): BPt[] {
-  let p: BPt[] = [[0, 0], [w, 0], [w, h], [0, h]]
-  for (const i of [3, 2, 1, 0]) p = filletCorner(p, i, r) ?? p
-  return p
-}
+const rect = (w: number, h: number): PNode[] => [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }]
 
 /** Formes de partida (mm), amb la cantonada mínima a (0, 0). */
-const PRESETS: { id: string; label: string; make: (w: number, h: number) => BPt[] }[] = [
-  { id: "rect", label: "Rectangle", make: (w, h) => [[0, 0], [w, 0], [w, h], [0, h]] },
-  { id: "round", label: "Arrodonit", make: (w, h) => rounded(w, h, Math.round(Math.min(w, h) / 6)) },
-  // Arc a dalt: el costat de dalt va de (w, h) a (0, h) en sentit antihorari.
-  { id: "arch", label: "Arc", make: (w, h) => [[0, 0], [w, 0], [w, h * 0.6, bulgeFromSagitta(h * 0.4, w)], [0, h * 0.6]] },
+const PRESETS: { id: string; label: string; make: (w: number, h: number) => PNode[] }[] = [
+  { id: "rect", label: "Rectangle", make: rect },
+  {
+    id: "round",
+    label: "Arrodonit",
+    make: (w, h) => {
+      let p = rect(w, h)
+      const r = Math.round(Math.min(w, h) / 6)
+      for (const i of [3, 2, 1, 0]) p = filletNode(p, i, r) ?? p
+      return p
+    },
+  },
+  {
+    id: "ellipse",
+    label: "El·lipse",
+    make: (w, h) => {
+      const a = w / 2, b = h / 2
+      return [
+        { x: w, y: b, in: [0, -KAPPA * b], out: [0, KAPPA * b], t: "smooth" },
+        { x: a, y: h, in: [KAPPA * a, 0], out: [-KAPPA * a, 0], t: "smooth" },
+        { x: 0, y: b, in: [0, KAPPA * b], out: [0, -KAPPA * b], t: "smooth" },
+        { x: a, y: 0, in: [-KAPPA * a, 0], out: [KAPPA * a, 0], t: "smooth" },
+      ]
+    },
+  },
+  { id: "arch", label: "Arc", make: (w, h) => bendEdge([{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h * 0.6 }, { x: 0, y: h * 0.6 }], 2, [w / 2, h]) },
   {
     id: "l",
     label: "L",
     make: (w, h) => {
       const t = Math.round(Math.min(w, h) / 3)
-      return [[0, 0], [w, 0], [w, t], [t, t], [t, h], [0, h]]
-    },
-  },
-  {
-    id: "t",
-    label: "T",
-    make: (w, h) => {
-      const t = Math.round(Math.min(w, h) / 3)
-      const x0 = Math.round((w - t) / 2)
-      return [[x0, 0], [x0 + t, 0], [x0 + t, h - t], [w, h - t], [w, h], [0, h], [0, h - t], [x0, h - t]]
+      return [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: t }, { x: t, y: t }, { x: t, y: h }, { x: 0, y: h }]
     },
   },
   {
@@ -54,7 +68,7 @@ const PRESETS: { id: string; label: string; make: (w: number, h: number) => BPt[
     label: "U",
     make: (w, h) => {
       const t = Math.round(Math.min(w, h) / 4)
-      return [[0, 0], [w, 0], [w, h], [w - t, h], [w - t, t], [t, t], [t, h], [0, h]]
+      return [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: w - t, y: h }, { x: w - t, y: t }, { x: t, y: t }, { x: t, y: h }, { x: 0, y: h }]
     },
   },
   {
@@ -62,36 +76,40 @@ const PRESETS: { id: string; label: string; make: (w: number, h: number) => BPt[
     label: "Bisell",
     make: (w, h) => {
       const c = Math.round(Math.min(w, h) / 4)
-      return [[0, 0], [w, 0], [w, h - c], [w - c, h], [0, h]]
-    },
-  },
-  {
-    id: "trap",
-    label: "Trapezi",
-    make: (w, h) => {
-      const c = Math.round(w / 5)
-      return [[0, 0], [w, 0], [w - c, h], [c, h]]
+      return [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h - c }, { x: w - c, y: h }, { x: 0, y: h }]
     },
   },
 ]
 
-/** Punt mig d'un costat (a l'arc, si és corbat). */
-function edgeMid(p: BPt, q: BPt): [number, number] {
-  const b = bulgeOf(p)
-  if (Math.abs(b) < 1e-9) return [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]
-  const a = arcOf(p, q, b)
-  const t = a.start + a.sweep / 2
-  return [a.cx + a.r * Math.cos(t), a.cy + a.r * Math.sin(t)]
+type Drag =
+  | { kind: "node"; i: number; x: number; y: number; moved: boolean }
+  | { kind: "handle"; i: number; which: "in" | "out"; moved: boolean }
+  | { kind: "edge"; i: number; x: number; y: number; moved: boolean }
+  | { kind: "pen"; i: number; x: number; y: number; moved: boolean }
+
+/** Punt mig d'un costat (sobre la corba). */
+function edgeMid(nodes: PNode[], i: number): Vec2 {
+  const a = nodes[i]!
+  const c = nodes[(i + 1) % nodes.length]!
+  const e = edgeOf(nodes, i)
+  if (e.kind === "cubic") return cubicAt([a.x, a.y], e.p1, e.p2, [c.x, c.y], 0.5)
+  if (e.kind === "arc") {
+    const f = arcOf([a.x, a.y], [c.x, c.y], e.b)
+    const t = f.start + f.sweep / 2
+    return [f.cx + f.r * Math.cos(t), f.cy + f.r * Math.sin(t)]
+  }
+  return [(a.x + c.x) / 2, (a.y + c.y) / 2]
 }
 
-const withBulge = (p: BPt, b: number): BPt => (Math.abs(b) < 1e-6 ? [p[0], p[1]] : [p[0], p[1], b])
-
 /**
- * Editor de perfil 2D (secció d'un objecte), amb rectes i arcs:
- * - punts arrossegables amb imant a la quadrícula (Maj: 1 mm); fletxes per afinar; Supr;
- * - el cercle del mig de cada costat: clic hi afegeix un punt; arrossegar-lo corba el costat;
- * - «Arrodonir» la cantonada seleccionada amb un radi; «Fletxa» de cada costat a la llista.
- * No deixa aplicar un contorn que es talli a si mateix.
+ * Editor de perfil 2D amb corbes de Bézier cúbiques compostes (com la ploma d'Illustrator o
+ * Figma):
+ * - Editar: arrossega nodes i manegadors; doble clic a un node el fa suau o cantonada; el
+ *   cercle del mig d'un costat hi afegeix un node (clic) o el corba (arrossegar); Alt en
+ *   arrossegar un manegador el trenca (cantonada); Supr, fletxes.
+ * - Ploma: clic = node de cantonada, clic i arrossegar = node suau amb manegadors; clicar el
+ *   primer node tanca la forma.
+ * Imant a la quadrícula (Maj: 1 mm). No deixa aplicar un contorn que es talli a si mateix.
  */
 export function ProfileEditor({
   open,
@@ -101,41 +119,49 @@ export function ProfileEditor({
   onApply,
 }: {
   open: boolean
-  initial: BPt[]
+  initial: PNode[]
   /** Noms dels eixos (u, v) per als rètols, p. ex. ["Ample", "Alt"]. */
   axes: [string, string]
   onClose: () => void
-  onApply: (p: { points: BPt[]; w: number; h: number }) => void
+  onApply: (p: { points: PNode[]; w: number; h: number }) => void
 }) {
-  const [pts, setPts] = useState<BPt[]>(initial)
+  const [nodes, setNodes] = useState<PNode[]>(initial)
   const [sel, setSel] = useState<number | null>(null)
+  const [tool, setTool] = useState<"edit" | "pen" | "bend" | "erase">("edit")
   const [radius, setRadius] = useState(20)
-  // Arrossegament: d'un punt, o del mig d'un costat (per corbar-lo o, si no es mou, afegir-hi un punt).
-  const [drag, setDrag] = useState<{ kind: "point" | "edge"; i: number; x: number; y: number; moved: boolean } | null>(null)
+  const [drag, setDrag] = useState<Drag | null>(null)
+  const [cursor, setCursor] = useState<Vec2 | null>(null)
+  const before = useRef<PNode[]>(initial)
   const svg = useRef<SVGSVGElement>(null)
+  // Només en obrir-se: el pare pot tornar a renderitzar amb un `initial` nou (mateix contingut).
+  const initialRef = useRef(initial)
+  initialRef.current = initial
   useEffect(() => {
     if (open) {
-      setPts(initial)
+      setNodes(initialRef.current)
+      setView(viewOf(initialRef.current))
       setSel(null)
+      setTool("edit")
     }
-  }, [open, initial])
+  }, [open])
 
-  // Vista: es congela mentre s'arrossega perquè el dibuix no salti.
+  const drawing = tool === "pen"
+  const closed = !drawing && nodes.length >= 3
+  // Vista: es congela mentre s'arrossega o es dibuixa perquè el dibuix no salti.
   const [view, setView] = useState(() => viewOf(initial))
   useEffect(() => {
-    if (drag === null) setView(viewOf(pts))
-  }, [pts, drag])
+    if (drag === null && !drawing && nodes.length >= 2) setView(viewOf(nodes))
+  }, [nodes, drag, drawing])
 
-  const flat = useMemo(() => flatten(pts), [pts])
-  const bad = selfIntersects(flat)
-  const b = bounds(flat)
-  const area = polygonArea(flat)
+  const sample = useMemo(() => (nodes.length >= 2 ? sampleProfile(nodes) : nodes.map((n) => [n.x, n.y] as Vec2)), [nodes])
+  const bad = closed && selfIntersects(sample)
+  const b = bounds(sample.length ? sample : [[0, 0]])
+  const area = closed ? polygonArea(sample) : 0
   const unit = view.span / 100
   const minor = view.span > 1500 ? 50 : view.span > 400 ? 10 : 5
   const major = minor * 10
-  const orient = signedArea(flat) >= 0 ? 1 : -1
 
-  const toMm = (e: { clientX: number; clientY: number }): [number, number] => {
+  const toMm = (e: { clientX: number; clientY: number }): Vec2 => {
     const el = svg.current
     if (!el) return [0, 0]
     const pt = el.createSVGPoint()
@@ -144,41 +170,63 @@ export function ProfileEditor({
     const q = pt.matrixTransform(el.getScreenCTM()!.inverse())
     return [q.x, -q.y]
   }
-  const snap = (v: number, fine: boolean) => (fine ? Math.round(v) : Math.round(v / minor) * minor)
+  const snap = (v: number, fine: boolean) => (fine ? r1(v) : Math.round(v / minor) * minor)
+  const set = (i: number, n: PNode) => setNodes((cur) => cur.map((q, k) => (k === i ? n : q)))
 
-  const setPoint = (i: number, x: number, y: number) => setPts((cur) => cur.map((q, k) => (k === i ? (withBulge([x, y], bulgeOf(q))) : q)))
-  const setBulge = (i: number, bulge: number) => setPts((cur) => cur.map((q, k) => (k === i ? withBulge(q, bulge) : q)))
   const remove = (i: number) => {
-    if (pts.length <= 3) return
-    setPts((cur) => cur.filter((_, k) => k !== i))
+    if (nodes.length <= 3) return
+    setNodes((cur) => cur.filter((_, k) => k !== i))
     setSel(null)
   }
-  /** Afegeix un punt al mig del costat i (si és un arc, el parteix en dos arcs iguals). */
-  const insert = (i: number) => {
-    const p = pts[i]!
-    const q = pts[(i + 1) % pts.length]!
-    const bl = bulgeOf(p)
-    const half = Math.abs(bl) < 1e-9 ? 0 : Math.tan(Math.atan(bl) / 2)
-    const [mx, my] = edgeMid(p, q)
-    setPts((cur) => [...cur.slice(0, i), withBulge(p, half), withBulge([r1(mx), r1(my)], half), ...cur.slice(i + 1)])
-    setSel(i + 1)
+  const toggleSmooth = (i: number) => {
+    const n = nodes[i]!
+    if (n.in || n.out) set(i, { x: n.x, y: n.y })
+    else set(i, autoHandles(nodes, i))
   }
-  const fillet = () => {
-    if (sel === null) return
-    const next = filletCorner(pts, sel, radius)
-    if (next) {
-      setPts(next)
-      setSel(null)
+  const setType = (i: number, t: "corner" | "smooth" | "symmetric") => {
+    const n = nodes[i]!
+    if (!n.in && !n.out && t !== "corner") {
+      set(i, { ...autoHandles(nodes, i), t })
+      return
+    }
+    let next: PNode = { ...n, t }
+    // En passar a suau o simètric, alinea el manegador d'entrada amb el de sortida.
+    if (t !== "corner" && n.out) next = moveHandle(next, "out", n.out)
+    set(i, next)
+  }
+  const startPen = () => {
+    before.current = nodes
+    setNodes([])
+    setSel(null)
+    setTool("pen")
+  }
+  const cancelPen = () => {
+    setNodes(before.current)
+    setTool("edit")
+    setCursor(null)
+  }
+  const finishPen = () => {
+    if (nodes.length >= 3) {
+      setTool("edit")
+      setCursor(null)
     }
   }
 
-  // Teclat: Supr treu el punt; fletxes el mouen (1 mm, Maj 10 mm).
+  // Teclat.
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (sel === null) return
       const t = e.target as HTMLElement | null
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return
+      if (drawing) {
+        if (e.key === "Escape") {
+          e.preventDefault()
+          e.stopPropagation()
+          cancelPen()
+        } else if (e.key === "Enter") finishPen()
+        return
+      }
+      if (sel === null) return
       if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault()
         remove(sel)
@@ -188,42 +236,62 @@ export function ProfileEditor({
       const d = { ArrowLeft: [-k, 0], ArrowRight: [k, 0], ArrowUp: [0, k], ArrowDown: [0, -k] }[e.key]
       if (!d) return
       e.preventDefault()
-      const p = pts[sel]!
-      setPoint(sel, r1(p[0] + d[0]!), r1(p[1] + d[1]!))
+      const p = nodes[sel]!
+      set(sel, { ...p, x: r1(p.x + d[0]!), y: r1(p.y + d[1]!) })
     }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
+    window.addEventListener("keydown", onKey, true)
+    return () => window.removeEventListener("keydown", onKey, true)
   })
 
-  const start = (kind: "point" | "edge", i: number) => (e: ReactPointerEvent) => {
+  const capture = (e: ReactPointerEvent) => {
     e.stopPropagation()
     ;(e.target as Element).setPointerCapture(e.pointerId)
-    if (kind === "point") setSel(i)
-    setDrag({ kind, i, x: e.clientX, y: e.clientY, moved: false })
   }
-  const onMove = (e: ReactPointerEvent) => {
-    if (!drag) return
-    if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 3) return
-    if (!drag.moved) setDrag({ ...drag, moved: true })
-    const [x, y] = toMm(e)
-    if (drag.kind === "point") {
-      setPoint(drag.i, snap(x, e.shiftKey), snap(y, e.shiftKey))
+  const onBackgroundDown = (e: ReactPointerEvent) => {
+    if (!drawing) {
+      setSel(null)
       return
     }
-    // Corbar el costat: la fletxa és la distància (amb signe) del ratolí a la corda.
-    const p = pts[drag.i]!
-    const q = pts[(drag.i + 1) % pts.length]!
-    const cx = q[0] - p[0]
-    const cy = q[1] - p[1]
-    const c = Math.hypot(cx, cy)
-    if (c < 1e-6) return
-    // Bulge positiu = arc antihorari = la panxa a la dreta de P→Q.
-    const right = -(cx * (y - p[1]) - cy * (x - p[0])) / c
-    const s = e.shiftKey ? Math.round(right) : Math.round(right / minor) * minor
-    setBulge(drag.i, Math.max(-1, Math.min(1, bulgeFromSagitta(s, c))))
+    // Ploma: nou node (si és a prop del primer, tanca la forma).
+    const [x, y] = toMm(e)
+    const first = nodes[0]
+    if (first && nodes.length >= 3 && Math.hypot(first.x - x, first.y - y) < unit * 2.5) {
+      finishPen()
+      return
+    }
+    ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
+    const p: PNode = { x: snap(x, e.shiftKey), y: snap(y, e.shiftKey) }
+    setNodes((cur) => [...cur, p])
+    setDrag({ kind: "pen", i: nodes.length, x: e.clientX, y: e.clientY, moved: false })
+  }
+  const onMove = (e: ReactPointerEvent) => {
+    const at = toMm(e)
+    if (drawing) setCursor(at)
+    if (!drag) return
+    if (!drag.moved && drag.kind !== "handle" && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 3) return
+    if (!drag.moved) setDrag({ ...drag, moved: true })
+    const [x, y] = at
+    if (drag.kind === "node") {
+      const n = nodes[drag.i]!
+      set(drag.i, { ...n, x: snap(x, e.shiftKey), y: snap(y, e.shiftKey) })
+    } else if (drag.kind === "handle") {
+      const n = nodes[drag.i]!
+      const h: Vec2 = [r1(x - n.x), r1(y - n.y)]
+      set(drag.i, moveHandle(e.altKey ? { ...n, t: "corner" } : n, drag.which, h))
+    } else if (drag.kind === "edge") {
+      setNodes((cur) => bendEdge(cur, drag.i, [x, y]))
+    } else {
+      // Ploma arrossegant: manegadors simètrics del node nou.
+      const n = nodes[drag.i]!
+      const h: Vec2 = [r1(x - n.x), r1(y - n.y)]
+      set(drag.i, { x: n.x, y: n.y, out: h, in: [-h[0], -h[1]], t: "symmetric" })
+    }
   }
   const onUp = () => {
-    if (drag && drag.kind === "edge" && !drag.moved) insert(drag.i)
+    if (drag?.kind === "edge" && !drag.moved) {
+      setNodes((cur) => splitEdge(cur, drag.i))
+      setSel(drag.i + 1)
+    }
     setDrag(null)
   }
 
@@ -237,134 +305,286 @@ export function ProfileEditor({
     return out
   }, [view, minor, major])
 
-  const selCanFillet = sel !== null && filletCorner(pts, sel, radius) !== null
+  // Nodes amb manegadors visibles: el seleccionat i els seus veïns (com a Illustrator).
+  const showHandles = new Set<number>()
+  if (sel !== null && nodes.length) {
+    const n = nodes.length
+    showHandles.add(sel)
+    showHandles.add((sel + 1) % n)
+    showHandles.add((sel - 1 + n) % n)
+  }
+  if (drawing && nodes.length) showHandles.add(nodes.length - 1)
+
+  // Tram provisional de la ploma: de l'últim node al cursor.
+  const last = nodes[nodes.length - 1]
+  const preview = drawing && last && cursor && !drag ? `M ${last.x} ${-last.y} C ${last.x + (last.out?.[0] ?? 0)} ${-(last.y + (last.out?.[1] ?? 0))} ${cursor[0]} ${-cursor[1]} ${cursor[0]} ${-cursor[1]}` : null
+  const selNode = sel !== null ? nodes[sel] : undefined
+  const selType = selNode ? (selNode.in || selNode.out ? (selNode.t ?? "corner") : "corner") : "corner"
+  const canFillet = sel !== null && filletNode(nodes, sel, radius) !== null
+  const stroke = bad ? "#dc2626" : "#6b7280"
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size="xl" placement="center">
+    <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size="xl" placement="center" closeOnEscape={!drawing} closeOnInteractOutside={false}>
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content>
+          <Dialog.Content maxW="1000px">
             <Dialog.Header>
               <Dialog.Title>Forma de la secció</Dialog.Title>
             </Dialog.Header>
             <Dialog.Body>
               <Stack gap={3}>
-                <HStack gap={1} wrap="wrap">
-                  {PRESETS.map((p) => (
-                    <Button
-                      key={p.id}
-                      size="xs"
-                      variant="outline"
-                      onClick={() => {
-                        setPts(p.make(Math.max(50, r1(b.x1 - b.x0)), Math.max(50, r1(b.y1 - b.y0))))
-                        setSel(null)
-                      }}
-                    >
-                      {p.label}
-                    </Button>
-                  ))}
+                <HStack gap={2} wrap="wrap" justify="space-between">
+                  {/* Eines, com al mode d'edició de vectors de Figma. */}
+                  <HStack gap={0.5} p={0.5} rounded="md" bg="bg.muted">
+                    {(
+                      [
+                        ["edit", "Moure", LuMousePointer2, "Arrossega nodes i manegadors"],
+                        ["pen", "Ploma", LuPenTool, "Dibuixa una forma nova node a node"],
+                        ["bend", "Corbar", LuSpline, "Arrossega un costat per corbar-lo; clic a un node el fa suau o cantonada"],
+                        ["erase", "Esborrar", LuEraser, "Clic a un node per treure'l"],
+                      ] as const
+                    ).map(([id, label, Icon, title]) => (
+                      <Button
+                        key={id}
+                        size="xs"
+                        title={title}
+                        variant={tool === id ? "solid" : "ghost"}
+                        colorPalette={tool === id ? "blue" : "gray"}
+                        disabled={drawing && id !== "pen" && nodes.length < 3}
+                        onClick={() => {
+                          if (id === "pen") {
+                            if (drawing) cancelPen()
+                            else startPen()
+                            return
+                          }
+                          if (drawing) finishPen()
+                          setTool(id)
+                        }}
+                      >
+                        <Icon /> {id === "pen" && drawing ? "Cancel·lar" : label}
+                      </Button>
+                    ))}
+                  </HStack>
+                  <HStack gap={1} wrap="wrap">
+                    {PRESETS.map((p) => (
+                      <Button
+                        key={p.id}
+                        size="xs"
+                        variant="ghost"
+                        disabled={drawing}
+                        onClick={() => {
+                          setNodes(p.make(Math.max(50, r1(b.x1 - b.x0)), Math.max(50, r1(b.y1 - b.y0))))
+                          setSel(null)
+                        }}
+                      >
+                        {p.label}
+                      </Button>
+                    ))}
+                  </HStack>
                 </HStack>
                 <Stack direction={{ base: "column", md: "row" }} gap={3} align="stretch">
                   <Box flex={1} minW={0} borderWidth="1px" rounded="md" bg="bg.subtle" overflow="hidden">
                     <svg
                       ref={svg}
                       viewBox={`${view.x0} ${-(view.y0 + view.span)} ${view.span} ${view.span}`}
-                      style={{ width: "100%", aspectRatio: "1", display: "block", touchAction: "none", userSelect: "none" }}
+                      style={{ width: "100%", aspectRatio: "1", display: "block", touchAction: "none", userSelect: "none", cursor: drawing ? "crosshair" : "default" }}
                       onPointerMove={onMove}
                       onPointerUp={onUp}
-                      onPointerDown={() => setSel(null)}
+                      onPointerDown={onBackgroundDown}
+                      onPointerLeave={() => setCursor(null)}
                     >
                       {gridLines.map((l, i) => (
                         <line key={i} {...l} stroke="var(--chakra-colors-border)" strokeWidth={l.major ? unit * 0.25 : unit * 0.1} />
                       ))}
-                      <polygon
-                        points={flat.map(([x, y]) => `${x},${-y}`).join(" ")}
-                        fill={bad ? "rgba(220,38,38,0.15)" : "rgba(124,58,237,0.15)"}
-                        stroke={bad ? "#dc2626" : "#7c3aed"}
-                        strokeWidth={unit * 0.4}
-                        strokeLinejoin="round"
-                      />
-                      {pts.map((p, i) => {
-                        const q = pts[(i + 1) % pts.length]!
-                        const [mx, my] = edgeMid(p, q)
-                        const bl = bulgeOf(p)
-                        const chord = Math.hypot(q[0] - p[0], q[1] - p[1])
-                        const label = Math.abs(bl) < 1e-9 ? `${Math.round(chord)}` : `R${Math.round(arcOf(p, q, bl).r)}`
-                        // Rètol a fora del costat.
-                        const nx = chord ? ((q[1] - p[1]) / chord) * orient : 0
-                        const ny = chord ? (-(q[0] - p[0]) / chord) * orient : 1
-                        return (
-                          <g key={`e${i}`}>
-                            <text x={mx + nx * unit * 4} y={-(my + ny * unit * 4) + unit * 0.9} fontSize={unit * 2.6} textAnchor="middle" fill="var(--chakra-colors-fg-muted)" style={{ pointerEvents: "none" }}>
-                              {label}
-                            </text>
-                            <g onPointerDown={start("edge", i)} style={{ cursor: "pointer" }}>
-                              <title>Clic: afegir un punt · Arrossegar: corbar el costat</title>
-                              <circle cx={mx} cy={-my} r={unit * 1.5} fill="var(--chakra-colors-bg)" stroke="#7c3aed" strokeWidth={unit * 0.25} />
-                              <path d={`M ${mx - unit * 0.7} ${-my} H ${mx + unit * 0.7} M ${mx} ${-my - unit * 0.7} V ${-my + unit * 0.7}`} stroke="#7c3aed" strokeWidth={unit * 0.25} />
+                      {closed ? (
+                        <polygon points={sample.map(([x, y]) => `${x},${-y}`).join(" ")} fill={bad ? "rgba(220,38,38,0.12)" : "rgba(124,58,237,0.08)"} stroke={stroke} strokeWidth={unit * 0.3} strokeLinejoin="round" />
+                      ) : (
+                        nodes.length >= 2 && <path d={openPath(nodes)} fill="none" stroke={stroke} strokeWidth={unit * 0.4} />
+                      )}
+                      {preview && <path d={preview} fill="none" stroke={stroke} strokeWidth={unit * 0.3} strokeDasharray={`${unit} ${unit}`} />}
+                      {/* Costats: mida i cercle del mig (clic = node nou, arrossegar = corbar). */}
+                      {closed &&
+                        nodes.map((a, i) => {
+                          const c = nodes[(i + 1) % nodes.length]!
+                          const [mx, my] = edgeMid(nodes, i)
+                          const e = edgeOf(nodes, i)
+                          const chord = Math.hypot(c.x - a.x, c.y - a.y)
+                          return (
+                            <g key={`e${i}`}>
+                              {e.kind === "line" && (
+                                <text x={mx} y={-my - unit * 2.4} fontSize={unit * 2.4} textAnchor="middle" fill="var(--chakra-colors-fg-muted)" style={{ pointerEvents: "none" }}>
+                                  {Math.round(chord)}
+                                </text>
+                              )}
+                              <g
+                                onPointerDown={(ev) => {
+                                  capture(ev)
+                                  setDrag({ kind: "edge", i, x: ev.clientX, y: ev.clientY, moved: false })
+                                }}
+                                style={{ cursor: "pointer" }}
+                              >
+                                <title>Clic: afegir un node · Arrossegar: corbar el costat</title>
+                                <circle cx={mx} cy={-my} r={unit * (tool === "bend" ? 1.4 : 0.9)} fill={tool === "bend" ? HANDLE : "#fff"} fillOpacity={tool === "bend" ? 0.25 : 1} stroke={HANDLE} strokeWidth={unit * 0.2} strokeDasharray={tool === "bend" ? undefined : `${unit * 0.4} ${unit * 0.3}`} />
+                              </g>
                             </g>
-                          </g>
-                        )
+                          )
+                        })}
+                      {/* Manegadors. */}
+                      {nodes.map((n, i) =>
+                        showHandles.has(i)
+                          ? (["in", "out"] as const).map((which) => {
+                              const h = n[which]
+                              if (!h) return null
+                              const hx = n.x + h[0], hy = n.y + h[1]
+                              return (
+                                <g key={`h${i}${which}`}>
+                                  <line x1={n.x} y1={-n.y} x2={hx} y2={-hy} stroke="#9ca3af" strokeWidth={unit * 0.2} />
+                                  {/* Manegador en rombe (com a Figma). */}
+                                  <rect
+                                    x={hx - unit * 0.9}
+                                    y={-hy - unit * 0.9}
+                                    width={unit * 1.8}
+                                    height={unit * 1.8}
+                                    transform={`rotate(45 ${hx} ${-hy})`}
+                                    fill="#fff"
+                                    stroke={HANDLE}
+                                    strokeWidth={unit * 0.3}
+                                    style={{ cursor: "grab" }}
+                                    onPointerDown={(ev) => {
+                                      if (drawing) return
+                                      capture(ev)
+                                      setSel(i)
+                                      setDrag({ kind: "handle", i, which, moved: false })
+                                    }}
+                                  />
+                                </g>
+                              )
+                            })
+                          : null,
+                      )}
+                      {/* Nodes: quadrat = cantonada, cercle = suau. */}
+                      {nodes.map((n, i) => {
+                        const smooth = !!(n.in || n.out)
+                        const s = unit * (sel === i ? 1.9 : 1.5)
+                        const common = {
+                          fill: sel === i ? HANDLE : drawing && i === 0 && nodes.length >= 3 ? "#16a34a" : "#fff",
+                          stroke: HANDLE,
+                          strokeWidth: unit * 0.35,
+                          style: { cursor: drawing ? (i === 0 ? "pointer" : "default") : tool === "erase" ? "not-allowed" : tool === "bend" ? "pointer" : "grab" },
+                          onPointerDown: (ev: ReactPointerEvent) => {
+                            if (drawing) {
+                              if (i === 0 && nodes.length >= 3) {
+                                ev.stopPropagation()
+                                finishPen()
+                              }
+                              return
+                            }
+                            if (tool === "erase") {
+                              ev.stopPropagation()
+                              remove(i)
+                              return
+                            }
+                            if (tool === "bend") {
+                              ev.stopPropagation()
+                              setSel(i)
+                              toggleSmooth(i)
+                              return
+                            }
+                            capture(ev)
+                            setSel(i)
+                            setDrag({ kind: "node", i, x: ev.clientX, y: ev.clientY, moved: false })
+                          },
+                          onDoubleClick: () => !drawing && toggleSmooth(i),
+                        }
+                        return smooth ? <circle key={`n${i}`} cx={n.x} cy={-n.y} r={s} {...common} /> : <rect key={`n${i}`} x={n.x - s} y={-n.y - s} width={2 * s} height={2 * s} {...common} />
                       })}
-                      {pts.map((p, i) => (
-                        <circle
-                          key={`p${i}`}
-                          cx={p[0]}
-                          cy={-p[1]}
-                          r={unit * (sel === i ? 2 : 1.6)}
-                          fill={sel === i ? "#b57a37" : "#7c3aed"}
-                          stroke="white"
-                          strokeWidth={unit * 0.35}
-                          style={{ cursor: "grab" }}
-                          onPointerDown={start("point", i)}
-                        />
-                      ))}
                     </svg>
                   </Box>
-                  <Stack w={{ base: "full", md: "300px" }} gap={1} maxH={{ md: "460px" }} overflowY="auto" flexShrink={0}>
+                  <Stack w={{ base: "full", md: "280px" }} gap={2} maxH={{ md: "560px" }} overflowY="auto" flexShrink={0}>
                     <HStack justify="space-between">
                       <Text textStyle="sm" fontWeight="semibold">
-                        Punts
+                        {drawing ? "Dibuixant" : sel !== null ? `Node ${sel + 1}` : "Forma"}
                       </Text>
                       <Badge size="sm" colorPalette={bad ? "red" : "wood"}>
                         {Math.round(b.x1 - b.x0)} × {Math.round(b.y1 - b.y0)}
                       </Badge>
                     </HStack>
-                    <HStack gap={1} align="end">
-                      <NumberField label="Radi" value={radius} min={1} max={2000} step={5} onChange={(v) => Number.isFinite(v) && v > 0 && setRadius(v)} />
-                      <Button size="sm" variant="outline" disabled={!selCanFillet} onClick={fillet} title={sel === null ? "Tria una cantonada (un punt)" : undefined}>
-                        <LuSpline /> Arrodonir
-                      </Button>
-                    </HStack>
-                    {pts.map((p, i) => {
-                      const q = pts[(i + 1) % pts.length]!
-                      const chord = Math.hypot(q[0] - p[0], q[1] - p[1])
-                      return (
-                        <HStack key={i} gap={1} align="end" bg={sel === i ? "wood.subtle" : undefined} rounded="sm" px={1} onFocus={() => setSel(i)}>
-                          <Text textStyle="xs" color="fg.muted" w="4" pb={2}>
-                            {i + 1}
-                          </Text>
-                          <NumberField label={i === 0 ? axes[0] : ""} value={p[0]} step={1} onChange={(v) => Number.isFinite(v) && setPoint(i, v, p[1])} />
-                          <NumberField label={i === 0 ? axes[1] : ""} value={p[1]} step={1} onChange={(v) => Number.isFinite(v) && setPoint(i, p[0], v)} />
-                          <NumberField
-                            label={i === 0 ? "Fletxa" : ""}
-                            value={r1(sagittaOf(bulgeOf(p), chord))}
-                            step={1}
-                            onChange={(v) => Number.isFinite(v) && setBulge(i, Math.max(-1, Math.min(1, bulgeFromSagitta(v, chord))))}
-                          />
-                          <IconButton aria-label={`Treure el punt ${i + 1}`} size="xs" variant="ghost" disabled={pts.length <= 3} onClick={() => remove(i)}>
+                    {drawing ? (
+                      <Text textStyle="xs" color="fg.muted">
+                        Clic: node de cantonada. Clic i arrossegar: node suau (defineixes la corba). Clica el primer node (verd) o prem <Kbd>Retorn</Kbd> per tancar la forma; <Kbd>Esc</Kbd> la descarta.
+                      </Text>
+                    ) : selNode ? (
+                      <>
+                        <HStack gap={1} align="end">
+                          <NumberField label={axes[0]} value={selNode.x} step={1} onChange={(v) => Number.isFinite(v) && set(sel!, { ...selNode, x: v })} />
+                          <NumberField label={axes[1]} value={selNode.y} step={1} onChange={(v) => Number.isFinite(v) && set(sel!, { ...selNode, y: v })} />
+                          <IconButton aria-label="Treure el node" size="sm" variant="ghost" disabled={nodes.length <= 3} onClick={() => remove(sel!)}>
                             <LuTrash2 />
                           </IconButton>
                         </HStack>
-                      )
-                    })}
+                        <Text textStyle="xs" color="fg.muted">
+                          Reflex dels manegadors
+                        </Text>
+                        <SegmentGroup.Root size="xs" w="full" value={selType} onValueChange={(e) => e.value && setType(sel!, e.value as "corner" | "smooth" | "symmetric")}>
+                          <SegmentGroup.Indicator />
+                          {(
+                            [
+                              ["corner", "Sense reflex"],
+                              ["smooth", "Angle"],
+                              ["symmetric", "Angle i llarg"],
+                            ] as const
+                          ).map(([v, label]) => (
+                            <SegmentGroup.Item key={v} value={v} flex={1}>
+                              <SegmentGroup.ItemText>{label}</SegmentGroup.ItemText>
+                              <SegmentGroup.ItemHiddenInput />
+                            </SegmentGroup.Item>
+                          ))}
+                        </SegmentGroup.Root>
+                        <HStack gap={1} align="end">
+                          <NumberField label="Radi de cantonada" value={radius} min={1} max={2000} step={5} onChange={(v) => Number.isFinite(v) && v > 0 && setRadius(v)} />
+                          <Button size="sm" variant="outline" disabled={!canFillet} onClick={() => {
+                            const next = filletNode(nodes, sel!, radius)
+                            if (next) {
+                              setNodes(next)
+                              setSel(null)
+                            }
+                          }}>
+                            <LuSpline /> Arrodonir
+                          </Button>
+                        </HStack>
+                        {(selNode.in || selNode.out) && (
+                          <Button size="xs" variant="ghost" alignSelf="flex-start" onClick={() => set(sel!, { x: selNode.x, y: selNode.y })}>
+                            Treure els manegadors (cantonada recta)
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      <Text textStyle="xs" color="fg.muted">
+                        Tria un node per moure'l amb precisió, canviar-ne el tipus o arrodonir-lo.
+                      </Text>
+                    )}
+                    <Stack gap={0.5} borderTopWidth="1px" pt={2}>
+                      <Text textStyle="xs" color="fg.muted">
+                        Com funciona
+                      </Text>
+                      <Text textStyle="xs" color="fg.muted">
+                        · Quadrat = cantonada; cercle = node amb corba. Doble clic (o l'eina Corbar) canvia l'un per l'altre.
+                      </Text>
+                      <Text textStyle="xs" color="fg.muted">
+                        · Els manegadors (taronja) donen la direcció i la força de la corba; amb <Kbd>Alt</Kbd> es trenquen.
+                      </Text>
+                      <Text textStyle="xs" color="fg.muted">
+                        · El punt del mig d'un costat: clic hi afegeix un node; arrossegar-lo corba el costat.
+                      </Text>
+                      <Text textStyle="xs" color="fg.muted">
+                        · Imant de {minor} mm (<Kbd>Maj</Kbd>: lliure). <Kbd>Supr</Kbd> treu el node; fletxes l'afinen.
+                      </Text>
+                    </Stack>
                   </Stack>
                 </Stack>
                 <Text textStyle="xs" color={bad ? "fg.error" : "fg.muted"}>
-                  {bad
-                    ? "El contorn es talla a si mateix: mou algun punt."
-                    : `Arrossega els punts (imant de ${minor} mm; Maj: 1 mm). El cercle del mig d'un costat: clic hi afegeix un punt, arrossegar-lo el corba. «Fletxa» = com de corbat és el costat que surt del punt (0 = recte). Àrea ${(area / 1e6).toFixed(3)} m².`}
+                  {bad ? "El contorn es talla a si mateix: mou algun node o manegador." : closed ? `${nodes.length} nodes · àrea ${(area / 1e6).toFixed(3)} m². Les corbes es tallen com a arcs (error < 0,02 mm).` : " "}
                 </Text>
               </Stack>
             </Dialog.Body>
@@ -372,7 +592,7 @@ export function ProfileEditor({
               <Button variant="outline" onClick={onClose}>
                 Cancel·lar
               </Button>
-              <Button colorPalette="wood" disabled={bad} onClick={() => onApply(normalizeProfile(pts))}>
+              <Button colorPalette="wood" disabled={bad || drawing || nodes.length < 3} onClick={() => onApply(normalizeNodes(nodes))}>
                 Aplicar
               </Button>
             </Dialog.Footer>
@@ -386,9 +606,23 @@ export function ProfileEditor({
   )
 }
 
-/** Vista quadrada que conté el perfil (amb els arcs) amb marge. */
-function viewOf(pts: BPt[]): { x0: number; y0: number; span: number } {
-  const b = bounds(flatten(pts))
+/** Traç obert (mentre es dibuixa amb la ploma): cada costat com a cúbica o recta, sense tancar. */
+function openPath(nodes: PNode[]): string {
+  let d = `M ${nodes[0]!.x} ${-nodes[0]!.y}`
+  for (let i = 0; i < nodes.length - 1; i++) {
+    const a = nodes[i]!
+    const c = nodes[i + 1]!
+    const e = edgeOf(nodes, i)
+    d += e.kind === "cubic" ? ` C ${e.p1[0]} ${-e.p1[1]} ${e.p2[0]} ${-e.p2[1]} ${c.x} ${-c.y}` : ` L ${c.x} ${-c.y}`
+    void a
+  }
+  return d
+}
+
+/** Vista quadrada que conté el perfil (amb les corbes) amb marge. */
+function viewOf(nodes: PNode[]): { x0: number; y0: number; span: number } {
+  const pts = nodes.length >= 2 ? sampleProfile(nodes) : nodes.map((n) => [n.x, n.y] as Vec2)
+  const b = bounds(pts.length ? pts : [[0, 0]])
   const w = b.x1 - b.x0
   const h = b.y1 - b.y0
   const span = Math.max(w, h, 100) * 1.3

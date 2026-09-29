@@ -196,16 +196,18 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     dels mòduls ja no tenen UI: es migren a objectes que tallen (`migrateCableHoles`, a
     `compositionOf` i a `buildComposition`). Al 3D, els forats del mòdul seleccionat es marquen
     en taronja a través de les portes (`CableMarks`).
-  - **Perfil 2D** (`shape: "profile"`, `profile` en (u, v) de `SECTION_AXES`): secció
-    qualsevol extrudida en la direcció de l'objecte. Editor `composition/ProfileEditor.tsx`
-    (punts arrossegables amb imant a la quadrícula; el cercle del mig d'un costat: clic hi
-    afegeix un punt, arrossegar-lo el corba; «Arrodonir» una cantonada amb radi; «Fletxa» per
-    costat; Supr, fletxes, llista de coordenades; formes de partida rectangle/arrodonit/arc/L/
-    T/U/bisell/trapezi; no deixa aplicar un contorn que es talli). Els arcs es guarden com al
-    DXF: `[x, y, bulge]` (`BPt`, `model/polygon.ts`: `flatten`, `arcOf`, `filletCorner`,
-    `reverseB`). Obstacle: xoc amb el polígon aplanat (`polygonTouchesRect`). Talla: tall
-    passant `kind: "polygon"` amb arcs exactes al DXF (bulge) i al STEP (cares cilíndriques;
-    `outward` si l'arc entra al forat); al 3D i als dibuixos, aplanat.
+  - **Perfil 2D** (`shape: "profile"`): corba de Bézier cúbica composta i tancada, extrudida
+    en la direcció de l'objecte. Nodes `PNode` (`model/polygon.ts`): punt, manegadors `in`/`out`
+    relatius, `t` = reflex (cantonada · angle · angle i llarg, com a Figma/C4D), i `b` (bulge)
+    per als arcs de «Arrodonir». Els perfils antics `[x, y, bulge]` es llegeixen amb `toNodes`.
+    Editor `composition/ProfileEditor.tsx`, com el mode vector de Figma: eines **Moure** (nodes
+    i manegadors en rombe; Alt trenca el reflex; doble clic node ↔ corba), **Ploma** (clic =
+    cantonada, clic i arrossegar = node amb manegadors simètrics, clicar el primer node o Retorn
+    tanca, Esc descarta), **Corbar** (arrossegar el punt del mig d'un costat el corba, `bendEdge`;
+    clic a un node commuta corba/cantonada) i **Esborrar**; clic al punt del mig afegeix un node
+    sense canviar la forma (`splitEdge`, de Casteljau); radi de cantonada; imant a la quadrícula.
+    Per tallar, les cúbiques es converteixen en arcs i rectes (`cubicToArcs`, error < 0,02 mm):
+    DXF amb bulge (G2/G3) i STEP amb cares cilíndriques. Xocs i 3D amb el contorn mostrejat.
     Pendent: rebaixos de contorn i peces lliures als mòduls.
   - **Centre — Visor** amb pestanyes `3D` · `Alçat` · `Foto`. Les opcions de visualització
     (forats, explosionat, AR, obertura, colors, imatge) són a la barra del visor, no al panell.

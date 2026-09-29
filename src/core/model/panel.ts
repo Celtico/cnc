@@ -95,6 +95,17 @@ export type Groove = z.infer<typeof GrooveSchema>
 /** Punt de contorn amb bulge opcional ([x, y] o [x, y, bulge]). */
 export const BPtSchema = z.union([z.tuple([z.number(), z.number()]), z.tuple([z.number(), z.number(), z.number()])])
 
+const Vec2Schema = z.tuple([z.number(), z.number()])
+/** Node d'un perfil de Bézier (`PNode`): punt, manegadors relatius, bulge i tipus. */
+export const ProfileNodeSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+  in: Vec2Schema.optional(),
+  out: Vec2Schema.optional(),
+  b: z.number().optional(),
+  t: z.enum(["corner", "smooth", "symmetric"]).optional(),
+})
+
 export const CutoutSchema = z.discriminatedUnion("kind", [
   /** Ranura amb els extrems arrodonits (radi = min(w, h) / 2). x, y = cantonada inferior esquerra. */
   z.object({ kind: z.literal("slot"), x: z.number(), y: z.number(), w: z.number().positive(), h: z.number().positive(), tag: z.string().optional() }),
