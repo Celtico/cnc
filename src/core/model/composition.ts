@@ -205,6 +205,11 @@ export const ModuleSchema = z.object({
   name: z.string(),
   /** Separació respecte al mòdul anterior de la seva fila (o a l'origen si és el primer). */
   gapBefore: mm.min(0),
+  /**
+   * Només a terra. Sense: «A la paret» (arrambat, el darrere tocant la paret). Amb valor:
+   * «Al terra», lliure: a aquesta distància de la paret (mm) i es mou pel terra.
+   */
+  wallGap: mm.min(0).optional(),
   carcass: CarcassSchema,
   root: ZoneSchema,
   fronts: z.object({ outerGap: mm.min(0).max(10), betweenGap: mm.min(0).max(10) }),
@@ -406,7 +411,13 @@ export function moduleElevation(c: { base: Base }): number {
 export interface ModulePlacement {
   x: number
   y: number
+  /** Separació de la paret (mòduls «Al terra»); 0 o absent: arrambat. */
+  z?: number
 }
+
+/** On va un mòdul: arrambat a la paret, penjat, o al terra lliure. */
+export type ModuleMount = "wall" | "hung" | "floor"
+export const mountOf = (m: Module): ModuleMount => (m.carcass.base.kind === "wall" ? "hung" : m.wallGap !== undefined ? "floor" : "wall")
 
 /** Fila d'un mòdul: a terra (baixos) o penjat a la paret (alts). */
 export type ModuleRow = "floor" | "wall"
@@ -424,7 +435,7 @@ export function modulePlacements(comp: Composition): ModulePlacement[] {
     const row = rowOf(m)
     const x = cursor[row] + m.gapBefore
     cursor[row] = x + m.carcass.width
-    return { x, y: moduleElevation(m.carcass) }
+    return { x, y: moduleElevation(m.carcass), ...(row === "floor" && m.wallGap ? { z: m.wallGap } : {}) }
   })
 }
 

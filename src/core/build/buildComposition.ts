@@ -12,7 +12,7 @@ export interface CompositionWarning extends BuildWarning {
 export interface CompositionBuild {
   panels: Panel[]
   warnings: CompositionWarning[]
-  modules: { id: string; index: number; x: number; y: number; build: ModuleBuild }[]
+  modules: { id: string; index: number; x: number; y: number; z: number; build: ModuleBuild }[]
 }
 
 /** Caixa englobant d'una peça (coordenades de la composició). */
@@ -50,6 +50,7 @@ export function buildComposition(input: Composition): CompositionBuild {
 
   comp.modules.forEach((m, i) => {
     const { x, y } = places[i]!
+    const z = places[i]!.z ?? 0
     const build = buildModule(m)
     for (const p of build.panels) {
       const o = p.placement.origin
@@ -57,7 +58,7 @@ export function buildComposition(input: Composition): CompositionBuild {
         ...p,
         id: `${m.id}:${p.id}`,
         module: i + 1,
-        placement: { ...p.placement, origin: [o[0] + x, o[1] + y, o[2]] },
+        placement: { ...p.placement, origin: [o[0] + x, o[1] + y, o[2] + z] },
       })
     }
     for (const w of build.warnings) warnings.push({ ...w, moduleId: m.id })
@@ -69,7 +70,7 @@ export function buildComposition(input: Composition): CompositionBuild {
         moduleId: m.id,
         message: "Mòdul penjat: posa-hi penjadors de moble (regulables) i un fons d'almenys 8 mm o un travesser de penjar al darrere.",
       })
-    modules.push({ id: m.id, index: i + 1, x, y, build })
+    modules.push({ id: m.id, index: i + 1, x, y, z, build })
   })
 
   // Peces corregudes (taulell, sòcol): numerades com un «mòdul» més per a les refs del taller.

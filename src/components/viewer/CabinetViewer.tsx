@@ -39,6 +39,10 @@ export interface ViewerModule {
   depth: number
   /** Penjat a la paret: també es pot moure amunt i avall. */
   wall?: boolean
+  /** Separació de la paret en mm (mòduls «Al terra»). */
+  z?: number
+  /** «Al terra» lliure: es mou pel terra (de costat i endavant/enrere). */
+  free?: boolean
 }
 
 /** Llum d'un compartiment (mm, coordenades de la composició), per acotar-la a la vista de davant. */
@@ -85,7 +89,7 @@ export interface CabinetViewerProps {
   selectedRefId?: string | null
   onSelectRef?: (id: string) => void
   /** Arrossegar el mòdul seleccionat (o tot el moble, `all`) amb la nansa: desplaçament en mm. */
-  onMoveModule?: (id: string, dx: number, dy: number, all: boolean) => void
+  onMoveModule?: (id: string, dx: number, dy: number, all: boolean, dz: number) => void
   /** Arrossegar l'objecte seleccionat al 3D: posició nova (mm) en deixar-lo anar. */
   onMoveRef?: (id: string, pos: { x: number; y: number; z: number }) => void
   /** Objectes que xoquen amb alguna peça: es pinten de vermell. */
@@ -148,7 +152,7 @@ export function CabinetViewer({
   }, [groups])
   const gridRef = useRef<Object3D>(null)
   // Mòdul (o moble sencer) que s'està arrossegant amb la nansa: desplaçament en viu.
-  const [moduleDrag, setModuleDrag] = useState<{ index: number; dx: number; dy: number; all: boolean } | null>(null)
+  const [moduleDrag, setModuleDrag] = useState<{ index: number; dx: number; dy: number; dz: number; all: boolean } | null>(null)
   // Arestes on s'enganxen els objectes en arrossegar-los: mòduls, altres objectes, terra i paret.
   const snapTargets = useMemo((): SnapTargets => {
     const t: SnapTargets = { x: [0, size.width], y: [0, size.height], z: [0, size.depth] }
@@ -202,7 +206,7 @@ export function CabinetViewer({
           const tr = g ? transformAt(g.motion, t) : null
           const shifted = moduleDrag && (moduleDrag.all || p.module === moduleDrag.index)
           return (
-            <group key={p.id} position={shifted ? [moduleDrag.dx * S, moduleDrag.dy * S, 0] : [0, 0, 0]}>
+            <group key={p.id} position={shifted ? [moduleDrag.dx * S, moduleDrag.dy * S, moduleDrag.dz * S] : [0, 0, 0]}>
             <MovingPanel transform={tr}>
               <PanelMesh
                 panel={p}
@@ -245,16 +249,16 @@ export function CabinetViewer({
             m={selected}
             others={[...(modules ?? []).filter((o) => o.id !== selected.id).flatMap((o) => [o.x, o.x + o.width]), ...(ghosts ?? []).flatMap((g) => [g.x, g.x + g.w])]}
             onDrag={setModuleDrag}
-            onDrop={(dx, dy, all) => {
+            onDrop={(dx, dy, dz, all) => {
               setModuleDrag(null)
-              if (dx || dy) onMoveModule(selected.id, dx, dy, all)
+              if (dx || dy || dz) onMoveModule(selected.id, dx, dy, all, dz)
             }}
           />
         )}
         {selected && onAddModule && !ortho && q.guides && (
           <>
-            <AddButton x={selected.x - 120} y={selected.y + selected.height / 2} z={selected.depth / 2} side="left" onClick={() => onAddModule("left")} />
-            <AddButton x={selected.x + selected.width + 120} y={selected.y + selected.height / 2} z={selected.depth / 2} side="right" onClick={() => onAddModule("right")} />
+            <AddButton x={selected.x - 120} y={selected.y + selected.height / 2} z={(selected.z ?? 0) + selected.depth / 2} side="left" onClick={() => onAddModule("left")} />
+            <AddButton x={selected.x + selected.width + 120} y={selected.y + selected.height / 2} z={(selected.z ?? 0) + selected.depth / 2} side="right" onClick={() => onAddModule("right")} />
           </>
         )}
         {ortho && (
@@ -951,15 +955,15 @@ function MoveHandle({
 }: {
   m: ViewerModule
   others: number[]
-  onDrag: (d: { index: number; dx: number; dy: number; all: boolean } | null) => void
-  onDrop: (dx: number, dy: number, all: boolean) => void
+  onDrag: (d: { index: number; dx: number; dy: number; dz: number; all: boolean } | null) => void
+  onDrop: (dx: number, dy: number, dz: number, all: boolean) => void
 }) {
   const controls = useThree((st) => st.controls) as unknown as { enabled: boolean } | null
   const start = useRef<{ p: Vector3; plane: Plane; all: boolean } | null>(null)
-  const latest = useRef<{ dx: number; dy: number; all: boolean } | null>(null)
-  const [live, setLive] = useState<{ dx: number; dy: number; all: boolean } | null>(null)
+  const latest = useRef<{ dx: number; dy: number; dz: number; all: boolean } | null>(null)
+  const [live, setLive] = useState<{ dx: number; dy: number; dz: number; all: boolean } | null>(null)
   const [hover, setHover] = useState(false)
-  const pos: [number, number, number] = [(m.x + m.width / 2) * S, (m.y + m.height) * S + 0.08, m.depth * S]
+  const pos: [number, number, number] = [(m.x + m.width / 2) * S, (m.y + m.height) * S + 0.08, ((m.z ?? 0) + m.depth) * S]
   // Mida constant a la pantalla (uns 30 px), s'allunyi o s'acosti la càmera.
   const scaler = useRef<Group>(null)
   usePixelScale(scaler, 14)
@@ -970,6 +974,8 @@ function MoveHandle({
     if (!s0 || !p) return null
     let dx = (p.x - s0.p.x) / S
     const dy = m.wall && !s0.all ? Math.round((p.y - s0.p.y) / S) : 0
+    // «Al terra»: endavant i enrere, sense passar la paret.
+    const dz = m.free && !s0.all ? Math.max(-(m.z ?? 0), Math.round((p.z - s0.p.z) / S)) : 0
     if (!e.altKey) {
       let best: number | null = null
       for (const t of others) for (const edge of [m.x + dx, m.x + m.width + dx]) {
@@ -978,7 +984,7 @@ function MoveHandle({
       }
       if (best !== null) dx += best
     }
-    return { dx: Math.round(dx), dy, all: s0.all }
+    return { dx: Math.round(dx), dy, dz, all: s0.all }
   }
   const end = (e: ThreeEvent<PointerEvent>) => {
     if (!start.current) return
@@ -988,13 +994,13 @@ function MoveHandle({
     const d = latest.current
     latest.current = null
     setLive(null)
-    onDrop(d?.dx ?? 0, d?.dy ?? 0, d?.all ?? false)
+    onDrop(d?.dx ?? 0, d?.dy ?? 0, d?.dz ?? 0, d?.all ?? false)
   }
   const sign = (v: number) => `${v > 0 ? "+" : ""}${v}`
-  const label = live ? (live.all ? `Tot el moble ${sign(live.dx)} mm` : `${sign(live.dx)} mm${live.dy ? ` · ${sign(live.dy)} mm` : ""}`) : null
+  const label = live ? (live.all ? `Tot el moble ${sign(live.dx)} mm` : `${sign(live.dx)} mm${live.dy ? ` · ${sign(live.dy)} mm` : ""}${live.dz ? ` · paret ${(m.z ?? 0) + live.dz} mm` : ""}`) : null
 
   return (
-    <group position={[pos[0] + (live?.dx ?? 0) * S, pos[1] + (live?.dy ?? 0) * S, pos[2]]}>
+    <group position={[pos[0] + (live?.dx ?? 0) * S, pos[1] + (live?.dy ?? 0) * S, pos[2] + (live?.dz ?? 0) * S]}>
       <Billboard>
         <group ref={scaler}>
         <mesh
@@ -1010,7 +1016,8 @@ function MoveHandle({
           onPointerDown={(e) => {
             e.stopPropagation()
             ;(e.target as Element | null)?.setPointerCapture?.(e.pointerId)
-            const plane = new Plane().setFromNormalAndCoplanarPoint(new Vector3(0, 0, 1), e.point)
+            // «Al terra»: arrossega sobre un pla horitzontal (pel terra); la resta, pel pla de la paret.
+            const plane = new Plane().setFromNormalAndCoplanarPoint(m.free && !e.shiftKey ? new Vector3(0, 1, 0) : new Vector3(0, 0, 1), e.point)
             start.current = { p: e.point.clone(), plane, all: e.shiftKey }
             if (controls) controls.enabled = false
             document.body.style.cursor = "grabbing"
@@ -1033,7 +1040,7 @@ function MoveHandle({
           <meshBasicMaterial color={hover || live ? "#98602c" : "#b57a37"} depthTest={false} depthWrite={false} transparent />
         </mesh>
         {/* Fletxes blanques ←→ (i ↑↓ als penjats): barres i triangles plans. */}
-        {(m.wall ? [0, Math.PI / 2] : [0]).map((rot) => (
+        {(m.wall || m.free ? [0, Math.PI / 2] : [0]).map((rot) => (
           <group key={rot} rotation={[0, 0, rot]}>
             <mesh position={[0, 0, 0.01]} renderOrder={21}>
               <planeGeometry args={[0.9, 0.13]} />

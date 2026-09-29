@@ -31,7 +31,7 @@ export function deleteZone(root: Zone, id: string): Zone {
  * Mou un mòdul `dx` mm a la seva fila (i `dy` mm si és penjat: alçada del terra). Els
  * mòduls de la dreta es queden on eren (el següent perd la separació que aquest guanya).
  */
-export function moveModuleBy(comp: Composition, id: string, dx: number, dy = 0): Composition {
+export function moveModuleBy(comp: Composition, id: string, dx: number, dy = 0, dz = 0): Composition {
   const i = comp.modules.findIndex((m) => m.id === id)
   if (i < 0) return comp
   const m = comp.modules[i]!
@@ -42,7 +42,8 @@ export function moveModuleBy(comp: Composition, id: string, dx: number, dy = 0):
   const modules = comp.modules.map((x, k) => {
     if (k === i) {
       const base = x.carcass.base.kind === "wall" && dy ? { ...x.carcass.base, height: Math.max(0, Math.round(x.carcass.base.height + dy)) } : x.carcass.base
-      return { ...x, gapBefore: gap, carcass: { ...x.carcass, base } }
+      const wallGap = x.wallGap !== undefined && x.carcass.base.kind !== "wall" ? Math.max(0, Math.round(x.wallGap + dz)) : x.wallGap
+      return { ...x, gapBefore: gap, ...(wallGap !== undefined ? { wallGap } : {}), carcass: { ...x.carcass, base } }
     }
     if (k === j) return { ...x, gapBefore: Math.max(0, x.gapBefore - actual) }
     return x

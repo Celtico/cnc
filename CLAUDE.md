@@ -192,8 +192,11 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     avall; amb Maj, tot el moble (`moveAllBy`). Imant a les vores dels mòduls i dels objectes.
     Nanses i botons «+» són malles 3D amb mida constant a la pantalla (`usePixelScale`), no
     `Html` de drei (els Html fallaven en muntar-se i desmuntar-se amb React 19). La nansa surt
-    també en mode Presentació (els «+» no). A Posició, la fila és amb dos botons «A terra» /
-    «Penjat a la paret» amb l'ajuda de com es mou al 3D.
+    també en mode Presentació (els «+» no). A Posició, tres botons (`mountOf`): **A la paret**
+    (a terra, arrambat; es mou de costat), **Penjat** (fila dels penjats; de costat i amunt/avall)
+    i **Al terra** (lliure: `Module.wallGap` = separació de la paret; `modulePlacements` dona `z`,
+    les peces es desplacen i la nansa arrossega sobre el terra, de costat i endavant/enrere,
+    `moveModuleBy(…, dz)`). Taulell i sòcol correguts no tenen en compte `wallGap`.
   - **Teclat a l'editor**: Ctrl/⌘ C · X · V · D (copiar, retallar, enganxar, duplicar) i Supr
     per al mòdul, l'objecte o el compartiment seleccionat (`editOps.ts`). El porta-retalls és
     a localStorage (`mobles:clipboard`): es pot enganxar en un altre moble.

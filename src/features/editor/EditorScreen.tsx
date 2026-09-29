@@ -44,7 +44,7 @@ import { ArDialog } from "../../components/viewer/ArDialog"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox } from "../../core/build/buildComposition"
-import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, parentOf, pasteZone, rowOf, walkZones, newId, type Composition, type Module, type RefObject, type Zone } from "../../core/model"
+import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, parentOf, pasteZone, rowOf, walkZones, newId, type Composition, type Module, type RefObject, type Zone } from "../../core/model"
 import { updateProjectComposition } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -285,7 +285,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const size = useMemo(() => {
     let h = compositionHeight(comp)
     let d = 0
-    for (const m of comp.modules) d = Math.max(d, m.carcass.depth + m.carcass.thickness)
+    for (const m of comp.modules) d = Math.max(d, (mountOf(m) === "floor" ? (m.wallGap ?? 0) : 0) + m.carcass.depth + m.carcass.thickness)
     for (const g of comp.references) {
       h = Math.max(h, g.y + g.h)
       d = Math.max(d, g.z + g.d)
@@ -297,7 +297,8 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
     () =>
       (build?.modules ?? []).map((m) => {
         const c = comp.modules[m.index - 1]!.carcass
-        return { id: m.id, index: m.index, x: m.x, y: m.y, width: c.width, height: c.height, depth: c.depth + c.thickness, wall: c.base.kind === "wall" }
+        const mod = comp.modules[m.index - 1]!
+        return { id: m.id, index: m.index, x: m.x, y: m.y, z: m.z, width: c.width, height: c.height, depth: c.depth + c.thickness, wall: c.base.kind === "wall", free: mountOf(mod) === "floor" }
       }),
     [build, comp],
   )
@@ -583,9 +584,9 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
     const c = module.carcass
     // Mòdul seleccionat: només el contorn, sense vel (el mòdul ja es veu translúcid).
     if (selection.kind === "module")
-      return { x0: mod.x, x1: mod.x + c.width, y0: mod.y, y1: mod.y + c.height, z0: 0, z1: c.depth + c.thickness, veil: false }
+      return { x0: mod.x, x1: mod.x + c.width, y0: mod.y, y1: mod.y + c.height, z0: mod.z, z1: mod.z + c.depth + c.thickness, veil: false }
     if (selection.kind !== "zone" || !zoneRect) return null
-    return { x0: mod.x + zoneRect.x0, x1: mod.x + zoneRect.x1, y0: mod.y + zoneRect.y0, y1: mod.y + zoneRect.y1, z0: 0, z1: c.depth + c.thickness }
+    return { x0: mod.x + zoneRect.x0, x1: mod.x + zoneRect.x1, y0: mod.y + zoneRect.y0, y1: mod.y + zoneRect.y1, z0: mod.z, z1: mod.z + c.depth + c.thickness }
   }, [selection.kind, zoneRect, build, moduleIndex, module.carcass, comp.modules.length])
   const openOnly = useMemo(() => {
     if (!viewer.openOnlySelected || !zoneRect || !build) return null
@@ -734,32 +735,40 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           <PanelSection id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
             <CarcassForm module={module} onChange={updateModule} section="dims" />
           </PanelSection>
-            <PanelSection id="mod-position" title="Posició" icon={LuMove} badge={module.carcass.base.kind === "wall" ? `Penjat a ${module.carcass.base.height}` : "A terra"}>
+            <PanelSection id="mod-position" title="Posició" icon={LuMove} badge={module.carcass.base.kind === "wall" ? `Penjat a ${module.carcass.base.height}` : mountOf(module) === "floor" ? `Al terra · ${module.wallGap ?? 0} de la paret` : "A la paret"}>
               {/* Dues files, com les cuines: a terra (baixos) i penjats (alts). Dins de cada
                   fila, l'ordre és el de l'arbre (d'esquerra a dreta) i cada mòdul va al costat
                   de l'anterior de la seva fila. */}
               <Field.Root>
                 <Field.Label>Fila</Field.Label>
-                <SimpleGrid columns={2} gap={2}>
+                <SimpleGrid columns={3} gap={1.5}>
                   {(
                     [
-                      ["floor", "A terra", LuArrowDownToLine],
-                      ["wall", "Penjat a la paret", LuBrickWall],
+                      ["wall", "A la paret", LuBrickWall, "A terra, arrambat a la paret: es mou de costat"],
+                      ["hung", "Penjat", LuPanelTop, "Penjat a la paret: es mou de costat i amunt/avall"],
+                      ["floor", "Al terra", LuArrowDownToLine, "Al terra, lliure: es mou pel terra, també separat de la paret"],
                     ] as const
-                  ).map(([v, label, Icon]) => {
-                    const on = (module.carcass.base.kind === "wall" ? "wall" : "floor") === v
+                  ).map(([v, label, Icon, tip]) => {
+                    const on = mountOf(module) === v
                     return (
                       <Button
                         key={v}
                         size="sm"
+                        px={2}
                         variant={on ? "solid" : "outline"}
                         colorPalette="wood"
                         aria-pressed={on}
+                        title={tip}
                         onClick={() => {
                           if (on) return
                           const c = module.carcass
-                          if (v === "wall") updateModule({ ...module, gapBefore: 0, carcass: { ...c, base: { kind: "wall", height: 1450 } } })
-                          else updateModule({ ...module, gapBefore: 0, carcass: { ...c, base: { kind: "none" } } })
+                          const wasHung = c.base.kind === "wall"
+                          const { wallGap: _old, ...rest } = module
+                          if (v === "hung") updateModule({ ...rest, gapBefore: 0, carcass: { ...c, base: { kind: "wall", height: 1450 } } })
+                          else {
+                            const base = wasHung ? ({ kind: "none" } as const) : c.base
+                            updateModule({ ...rest, ...(v === "floor" ? { wallGap: 0 } : {}), gapBefore: wasHung ? 0 : module.gapBefore, carcass: { ...c, base } })
+                          }
                         }}
                       >
                         <Icon /> {label}
@@ -768,9 +777,11 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                   })}
                 </SimpleGrid>
                 <Field.HelperText>
-                  {module.carcass.base.kind === "wall"
+                  {mountOf(module) === "hung"
                     ? "Al 3D, arrossega la maneta del mòdul: es mou per la paret, de costat i amunt/avall (Maj: tot el moble)."
-                    : "Al 3D, arrossega la maneta del mòdul: llisca pel terra, de costat (Maj: tot el moble)."}
+                    : mountOf(module) === "floor"
+                      ? "Al 3D, arrossega la maneta del mòdul: es mou pel terra, de costat i endavant/enrere (Maj: tot el moble)."
+                      : "Al 3D, arrossega la maneta del mòdul: llisca de costat tocant la paret (Maj: tot el moble)."}
                 </Field.HelperText>
               </Field.Root>
               {module.carcass.base.kind === "wall" && (
@@ -782,6 +793,17 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                   step={10}
                   onChange={(height) => updateModule({ ...module, carcass: { ...module.carcass, base: { kind: "wall", height } } })}
                   help="Fins a la part de baix del mòdul."
+                />
+              )}
+              {mountOf(module) === "floor" && (
+                <NumberField
+                  label="Separació de la paret"
+                  value={module.wallGap ?? 0}
+                  min={0}
+                  max={10000}
+                  step={10}
+                  onChange={(wallGap) => updateModule({ ...module, wallGap })}
+                  help="Del darrere del mòdul a la paret."
                 />
               )}
               <NumberField
@@ -1010,7 +1032,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             fitKey={fitKey}
             onFramedChange={setFramed}
             onMoveRef={moveRef}
-            onMoveModule={(id, dx, dy, all) => setComp((c) => (all ? moveAllBy(c, dx) : moveModuleBy(c, id, dx, dy)))}
+            onMoveModule={(id, dx, dy, all, dz) => setComp((c) => (all ? moveAllBy(c, dx) : moveModuleBy(c, id, dx, dy, dz)))}
           />
         )}
         {viewTab === "3d" && viewerState.materialMode === "role" && (
