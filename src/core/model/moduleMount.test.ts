@@ -26,3 +26,19 @@ describe("mòduls a la paret, penjats o al terra", () => {
     expect(moveModuleBy(comp(), "a", 0, 0, 250).modules[0]!.wallGap).toBeUndefined()
   })
 })
+
+describe("al terra amb X pròpia (illa)", async () => {
+  const { defaultModule, modulePlacements } = await import("./composition")
+  const { moveModuleBy } = await import("./editOps")
+  const a = defaultModule("a", "A", { width: 600 })
+  const b = defaultModule("b", "B", { width: 800 })
+  const island = { ...defaultModule("i", "Illa", { width: 1800 }), wallGap: 1500, x: 300 }
+  const comp = { modules: [a, island, b], references: [] }
+  it("no segueix la fila ni empeny els altres", () => {
+    expect(modulePlacements(comp).map((p) => [p.x, p.z ?? 0])).toEqual([[0, 0], [300, 1500], [600, 0]])
+  })
+  it("en moure'l només canvia ell", () => {
+    const c = moveModuleBy(comp, "i", 100, 0, -200)
+    expect(modulePlacements(c).map((p) => [p.x, p.z ?? 0])).toEqual([[0, 0], [400, 1300], [600, 0]])
+  })
+})

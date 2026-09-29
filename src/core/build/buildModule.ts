@@ -709,8 +709,10 @@ class Builder {
     const width = rect.x1 - rect.x0
     const length = width - c.shelfClearance
     // A ras del davant (a sang): sense retranqueig. Amb fronts encastats no hi cabria la porta.
-    const flush = !!zone.shelves!.flush && !d.inset
-    if (zone.shelves!.flush && d.inset) this.warnings.push({ code: "inset", message: "Prestatges a ras del davant amb fronts encastats: toparien amb el front. Es retiren com sempre.", zoneId: zone.id })
+    // Amb fronts encastats, a ras només es pot si el compartiment és obert (sense front).
+    const blocked = d.inset && !!zone.front
+    const flush = !!zone.shelves!.flush && !blocked
+    if (zone.shelves!.flush && blocked) this.warnings.push({ code: "inset", message: "Prestatges a ras del davant amb fronts encastats: toparien amb el front. Es retiren com sempre.", zoneId: zone.id })
     const setback = flush ? 0 : c.shelfSetback
     const depth = d.availDepth - setback
     const innerH = rect.y1 - rect.y0

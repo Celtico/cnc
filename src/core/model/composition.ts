@@ -241,6 +241,11 @@ export const ModuleSchema = z.object({
    * «Al terra», lliure: a aquesta distància de la paret (mm) i es mou pel terra.
    */
   wallGap: mm.min(0).optional(),
+  /**
+   * Només «Al terra» (lliure): posició X pròpia (mm des de l'origen). No segueix la fila ni
+   * n'empeny els altres: així es pot posar una illa davant de la cuina. Sense: segueix la fila.
+   */
+  x: mm.optional(),
   carcass: CarcassSchema,
   root: ZoneSchema,
   fronts: z.object({
@@ -468,6 +473,9 @@ export interface ModulePlacement {
 
 /** On va un mòdul: arrambat a la paret, penjat, o al terra lliure. */
 export type ModuleMount = "wall" | "hung" | "floor"
+/** Mòdul al terra lliure amb posició X pròpia (fora de la fila). */
+export const freeX = (m: Module): boolean => m.x !== undefined && m.carcass.base.kind !== "wall" && m.wallGap !== undefined
+
 export const mountOf = (m: Module): ModuleMount => (m.carcass.base.kind === "wall" ? "hung" : m.wallGap !== undefined ? "floor" : "wall")
 
 /** Fila d'un mòdul: a terra (baixos) o penjat a la paret (alts). */
@@ -484,6 +492,8 @@ export function modulePlacements(comp: Composition): ModulePlacement[] {
   const cursor: Record<ModuleRow, number> = { floor: 0, wall: 0 }
   return comp.modules.map((m) => {
     const row = rowOf(m)
+    // Al terra amb X pròpia (illa): fora de la fila, no mou el cursor.
+    if (freeX(m)) return { x: m.x!, y: moduleElevation(m.carcass), ...(m.wallGap ? { z: m.wallGap } : {}) }
     const x = cursor[row] + m.gapBefore
     cursor[row] = x + m.carcass.width
     return { x, y: moduleElevation(m.carcass), ...(row === "floor" && m.wallGap ? { z: m.wallGap } : {}) }

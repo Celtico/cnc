@@ -1,4 +1,4 @@
-import { newId, rowOf, type Composition, type Module, type RefObject, type Zone } from "./composition"
+import { freeX, newId, rowOf, type Composition, type Module, type RefObject, type Zone } from "./composition"
 import { cloneZone, removeZone, updateZone } from "./zoneOps"
 import { partSize, partsBox, type FreePart } from "./freePart"
 
@@ -36,6 +36,11 @@ export function moveModuleBy(comp: Composition, id: string, dx: number, dy = 0, 
   const i = comp.modules.findIndex((m) => m.id === id)
   if (i < 0) return comp
   const m = comp.modules[i]!
+  // Al terra amb X pròpia: només ell es mou (de costat i endavant/enrere).
+  if (freeX(m)) {
+    const modules = comp.modules.map((x, k) => (k === i ? { ...x, x: Math.round(x.x! + dx), wallGap: Math.max(0, Math.round((x.wallGap ?? 0) + dz)) } : x))
+    return { ...comp, modules }
+  }
   const row = rowOf(m)
   const gap = Math.max(0, Math.round(m.gapBefore + dx))
   const actual = gap - m.gapBefore
@@ -61,7 +66,7 @@ export function moveAllBy(comp: Composition, dx: number): Composition {
   const firsts = new Map<string, number>()
   comp.modules.forEach((m, k) => {
     const row = rowOf(m)
-    if (!firsts.has(row)) firsts.set(row, k)
+    if (!freeX(m) && !firsts.has(row)) firsts.set(row, k)
   })
   const minGap = Math.min(...[...firsts.values()].map((k) => comp.modules[k]!.gapBefore))
   const applied = Math.max(dx, -minGap)
@@ -69,7 +74,9 @@ export function moveAllBy(comp: Composition, dx: number): Composition {
   const firstIdx = new Set(firsts.values())
   return {
     ...comp,
-    modules: comp.modules.map((m, k) => (firstIdx.has(k) ? { ...m, gapBefore: Math.max(0, Math.round(m.gapBefore + applied)) } : m)),
+    modules: comp.modules.map((m, k) => (firstIdx.has(k) ? { ...m, gapBefore: Math.max(0, Math.round(m.gapBefore + applied)) } : freeX(m) ? { ...m, x: Math.round(m.x! + applied) } : m)),
+    // Les peces lliures són del moble: es mouen amb ell.
+    ...(comp.parts ? { parts: comp.parts.map((p) => ({ ...p, x: p.x + applied })) } : {}),
     references: rest ? comp.references.map((r) => ({ ...r, x: r.x + rest })) : comp.references,
   }
 }

@@ -28,3 +28,20 @@ describe("prestatges a ras del davant", () => {
     expect(shelfZ(false)).toBeLessThan(400)
   })
 })
+
+describe("a ras amb fronts encastats", () => {
+  const m = defaultModule("m", "M", { width: 600, height: 700, depth: 400 })
+  const inset = { ...m, fronts: { ...m.fronts, style: "inset" as const } }
+  const z = (front?: { kind: "door"; mode: "single"; hinge: "left" }) => {
+    const b = buildModule({ ...inset, root: { ...inset.root, shelves: { n: 1, adjustable: false, flush: true }, ...(front ? { front } : {}) } })
+    return { z: b.panels.find((p) => p.role === "shelf")!.placement.origin[2], warn: b.warnings.some((w) => w.code === "inset" && w.message.includes("ras")) }
+  }
+  it("compartiment obert: a ras, encara que el mòdul tingui fronts encastats", () => {
+    expect(z()).toEqual({ z: 400, warn: false })
+  })
+  it("amb porta encastada: es retiren i avisa", () => {
+    const r = z({ kind: "door", mode: "single", hinge: "left" })
+    expect(r.z).toBeLessThan(400)
+    expect(r.warn).toBe(true)
+  })
+})

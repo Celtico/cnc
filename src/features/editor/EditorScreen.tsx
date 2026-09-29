@@ -48,7 +48,7 @@ import { ArDialog } from "../../components/viewer/ArDialog"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox } from "../../core/build/buildComposition"
-import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, moveGroupBy, partBox, type Composition, type FreePart, type Module, type RefObject, type Zone } from "../../core/model"
+import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, moveGroupBy, freeX, partBox, type Composition, type FreePart, type Module, type RefObject, type Zone } from "../../core/model"
 import { updateProjectComposition } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -299,7 +299,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const module: Module = comp.modules.find((m) => m.id === selectedModule) ?? comp.modules[0]!
   const moduleIndex = comp.modules.indexOf(module)
   // Posició dins de la seva fila (a terra o penjats) i el mòdul anterior de la fila.
-  const rowMates = comp.modules.filter((m) => rowOf(m) === rowOf(module))
+  const rowMates = comp.modules.filter((m) => rowOf(m) === rowOf(module) && !freeX(m))
   const rowIndex = rowMates.indexOf(module)
   const rowPrev = rowIndex > 0 ? rowMates[rowIndex - 1] : undefined
   const moduleBuild = build?.modules[moduleIndex]?.build
@@ -935,11 +935,13 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                           if (on) return
                           const c = module.carcass
                           const wasHung = c.base.kind === "wall"
-                          const { wallGap: _old, ...rest } = module
+                          const { wallGap: _old, x: _x, ...rest } = module
+                          // Al terra: surt de la fila i es queda on és (X pròpia).
+                          const here = Math.round(build?.modules[moduleIndex]?.x ?? 0)
                           if (v === "hung") updateModule({ ...rest, gapBefore: 0, carcass: { ...c, base: { kind: "wall", height: 1450 } } })
                           else {
                             const base = wasHung ? ({ kind: "none" } as const) : c.base
-                            updateModule({ ...rest, ...(v === "floor" ? { wallGap: 0 } : {}), gapBefore: wasHung ? 0 : module.gapBefore, carcass: { ...c, base } })
+                            updateModule({ ...rest, ...(v === "floor" ? { wallGap: 0, x: here } : {}), gapBefore: wasHung ? 0 : module.gapBefore, carcass: { ...c, base } })
                           }
                         }}
                       >
@@ -978,15 +980,27 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                   help="Del darrere del mòdul a la paret."
                 />
               )}
+              {freeX(module) ? (
+                <NumberField
+                  label="De costat (X)"
+                  value={module.x!}
+                  min={-20000}
+                  max={20000}
+                  step={10}
+                  onChange={(x) => Number.isFinite(x) && updateModule({ ...module, x })}
+                  help="Des de l'inici del moble. Fora de la fila: no empeny els altres (una illa, un moble solt)."
+                />
+              ) : (
               <NumberField
-                label={rowIndex > 0 ? "Separació amb l'anterior" : "Separació des de l'inici"}
-                value={module.gapBefore}
-                min={0}
-                max={5000}
-                step={10}
-                onChange={(g) => updateModule({ ...module, gapBefore: g })}
-                help={rowIndex > 0 ? `Des de «${rowPrev!.name}», a l'esquerra en la mateixa fila.` : "És el primer de la fila: la distància des de l'esquerra del moble."}
-              />
+                  label={rowIndex > 0 ? "Separació amb l'anterior" : "Separació des de l'inici"}
+                  value={module.gapBefore}
+                  min={0}
+                  max={5000}
+                  step={10}
+                  onChange={(g) => updateModule({ ...module, gapBefore: g })}
+                  help={rowIndex > 0 ? `Des de «${rowPrev!.name}», a l'esquerra en la mateixa fila.` : "És el primer de la fila: la distància des de l'esquerra del moble."}
+                />
+              )}
             </PanelSection>
           <PanelSection id="mod-structure" title="Estructura" icon={LuFrame}>
             <CarcassForm module={module} onChange={updateModule} section="structure" />

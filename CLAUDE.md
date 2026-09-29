@@ -197,7 +197,10 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     (a terra, arrambat; es mou de costat), **Penjat** (fila dels penjats; de costat i amunt/avall)
     i **Al terra** (lliure: `Module.wallGap` = separació de la paret; `modulePlacements` dona `z`,
     les peces es desplacen i la nansa arrossega sobre el terra, de costat i endavant/enrere,
-    `moveModuleBy(…, dz)`). Taulell i sòcol correguts no tenen en compte `wallGap`.
+    `moveModuleBy(…, dz)`). Taulell i sòcol correguts no tenen en compte `wallGap`. En passar a
+    «Al terra» el mòdul agafa **X pròpia** (`Module.x`, `freeX`): surt de la fila, no empeny els
+    altres ni els segueix (una illa davant de la cuina); a Posició, camp «De costat (X)». Els
+    antics «Al terra» sense `x` continuen a la fila.
   - **Teclat a l'editor**: Ctrl/⌘ C · X · V · D (copiar, retallar, enganxar, duplicar) i Supr
     per al mòdul, l'objecte o el compartiment seleccionat (`editOps.ts`). El porta-retalls és
     a localStorage (`mobles:clipboard`): es pot enganxar en un altre moble.
@@ -288,7 +291,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   - **Prestatges gruixuts** (`zone.shelves.thickness`, «Gruixuts (buits)» a Prestatges):
     pell de baix i de dalt, tira al davant i llistons; el repartiment compta el gruix aparent.
     Queden bé sobretot sense porta. **A ras del davant (a sang)** (`zone.shelves.flush`): sense retranqueig, el
-    cantell enrasat amb el davant de la caixa (no amb fronts encastats).
+    cantell enrasat amb el davant de la caixa. Amb fronts encastats, només als compartiments
+    oberts (sense front); si el compartiment té front, es retiren i avisa.
   - **Peces**: sense botó d'exportar (tot és a Exportar).
   - **Nesting i plànol de peça amb forma**: les peces amb `outline` es dibuixen amb el contorn
     real (el rectangle que ocupen, discontinu); el nesting encara reserva el rectangle.
@@ -315,7 +319,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     inox (tauler amb forma + potes d'inox sense nesting), Aparador sobre ferro (inglet, fronts
     encastats, prestatges gruixuts, passacables que talla, bastidor de ferro), Moble TV flotant
     (parets buides, prestatge gruixut a ras, reixeta, tele a la paret), Moble de bany amb pedra
-    (penjat, calaixos encastats, taulell de pedra, desguàs) i Escriptori flat-pack (laterals amb
+    (penjat, calaixos encastats, taulell de pedra, desguàs), Cuina amb illa de pedra (illa al
+    terra amb X pròpia) i Escriptori flat-pack (laterals amb
     arc que travessen el tauler amb pestanyes). `showcase.test.ts` comprova que no fan avisos de
     xoc ni de talls.
   - **Materials que no són de CNC** (`MaterialPref.cnc = false`; ferro, inox, pedra, vidre

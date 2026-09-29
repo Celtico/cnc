@@ -1,7 +1,7 @@
 import { flatPackDesk, flatPackShelf, flatPackStool } from "./flatPack"
 import type { FreePart } from "./freePart"
 import type { PNode } from "./polygon"
-import { DEFAULT_GRILLE, defaultModule, newId, tableModule, type Composition, type CompositionKind, type Module } from "./composition"
+import { DEFAULT_GRILLE, defaultModule, newId, tableModule, type Composition, type CompositionKind, type Module, type Zone } from "./composition"
 
 export interface Template {
   id: string
@@ -34,7 +34,7 @@ const SHOWCASE: Template[] = [
     id: "sideboard-iron",
     kind: "moble",
     name: "Aparador sobre ferro",
-    description: "1800 × 700 × 450 de noguera, cantonades a inglet, portes i calaixos encastats, prestatges gruixuts, passacables i bastidor de ferro negre (sense nesting).",
+    description: "1800 × 700 × 450 de noguera, cantonades a inglet, portes i calaixos encastats, prestatges gruixuts a ras, passacables i bastidor de ferro negre (sense nesting).",
     make: sideboardIron,
   },
   {
@@ -50,6 +50,13 @@ const SHOWCASE: Template[] = [
     name: "Moble de bany amb pedra",
     description: "1200 × 480 × 480 penjat, calaixos encastats de freixe, taulell de pedra (sense nesting), pica i desguàs que talla el fons.",
     make: bathVanity,
+  },
+  {
+    id: "kitchen-island",
+    kind: "cuina",
+    name: "Cuina amb illa de pedra",
+    description: "La cuina moderna (taulell amb pica i vitro, sòcol corregut, alts) i, davant, una illa de calaixos al terra (X pròpia) amb taulell de pedra sense nesting.",
+    make: kitchenIsland,
   },
   {
     id: "flatpack-desk",
@@ -355,7 +362,8 @@ function sideboardIron(): Composition {
         children: [
           { id: newId(), shelves: { n: 1, adjustable: true }, front: { kind: "door", mode: "double", hinge: "left" } },
           { id: newId(), front: { kind: "drawers", n: 3, heights: ["auto", "auto", "auto"] } },
-          { id: newId(), shelves: { n: 2, adjustable: false, thickness: 50 } },
+          // Obert: prestatges gruixuts a ras del davant (els fronts encastats són als altres).
+          { id: newId(), shelves: { n: 2, adjustable: false, thickness: 50, flush: true } },
         ],
       },
     },
@@ -452,4 +460,21 @@ function bathVanity(): Composition {
     ],
     parts: [stone],
   }
+}
+
+/** Cuina moderna amb una illa de calaixos davant (al terra, X pròpia) i taulell de pedra. */
+function kitchenIsland(): Composition {
+  const k = kitchen()
+  const IW = 1800, ID = 900, gap = 1560, X = 600
+  const drawers = (): Zone => ({ id: newId(), front: { kind: "drawers", n: 3, heights: ["auto", "auto", "auto"] } })
+  const island: Module = {
+    ...withRoot(defaultModule(newId("m"), "Illa", { material: "Melamina blanca", frontMaterial: "Melamina roure", thickness: 19, width: IW, height: 770, depth: ID, base: { kind: "legs", height: 100 } }), {
+      id: newId(),
+      split: { dir: "v", sizes: ["auto", "auto", "auto"], children: [drawers(), drawers(), drawers()] },
+    }),
+    wallGap: gap,
+    x: X,
+  }
+  const stone: FreePart = { id: newId("p"), name: "Taulell de pedra", material: "Pedra", nest: false, orient: "flat", w: IW + 100, h: ID + 60, thickness: 30, x: X - 50, y: 870, z: gap - 20 }
+  return { ...k, kind: "cuina", modules: [...k.modules, island], parts: [stone] }
 }
