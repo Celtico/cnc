@@ -68,6 +68,7 @@ només porta els valors inicials.
 - **zod** per validar el model de moble.
 - **Vitest** per als tests del nucli.
 - Gestor de paquets: **pnpm**.
+- **polygon-clipping** (booleans de polígons) per als encaixos de les peces lliures.
 
 ## Arquitectura
 ```
@@ -228,7 +229,7 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     sense canviar la forma (`splitEdge`, de Casteljau); radi de cantonada; imant a la quadrícula.
     Per tallar, les cúbiques es converteixen en arcs i rectes (`cubicToArcs`, error < 0,02 mm):
     DXF amb bulge (G2/G3) i STEP amb cares cilíndriques. Xocs i 3D amb el contorn mostrejat.
-    Pendent: rebaixos de contorn i peces lliures als mòduls.
+    Pendent: rebaixos de contorn.
   - **Centre — Visor** amb pestanyes `3D` · `Alçat` · `Foto`. Les opcions de visualització
     (forats, explosionat, AR, obertura, colors, imatge) són a la barra del visor, no al panell.
   - **Dreta — Propietats** del que hi ha seleccionat i **només d'això**: moble (resum i
@@ -291,6 +292,30 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   - **Peces**: sense botó d'exportar (tot és a Exportar).
   - **Nesting i plànol de peça amb forma**: les peces amb `outline` es dibuixen amb el contorn
     real (el rectangle que ocupen, discontinu); el nesting encara reserva el rectangle.
+  - **Peces lliures i flat-pack** (`Composition.parts`, `model/freePart.ts`, `build/freeParts.ts`):
+    taulers solts que es col·loquen com els objectes (X/Y/Z, gizmo al 3D amb `RefGhost outline`,
+    fletxes del teclat, arrossegar a l'arbre) però són peces de debò (rol `part`, un «mòdul»
+    més per a les refs). Orientació `front` (pla X·Y) · `side` (Z·Y) · `flat` (X·Z, v cap al
+    fons); `w × h` al seu pla, gruix, material, veta, forma amb l'editor de perfils (`shape`,
+    escalada a w × h). **Encaixos automàtics** entre peces d'orientació diferent, per geometria:
+    entra i hi acaba → pestanyes + mortalles (passants si la travessa, si no ranures cegues
+    `tag: "mortise"`); s'encreuen → mitja fusta; totes dues hi acaben → dits; cantell contra cara
+    → espigues. `Composition.joinery` (`DEFAULT_JOINERY`): joc (eixampla mortalles i osques), Ø
+    fresa per als **dogbones** a les cantonades interiors, ample de pestanya. El contorn resultant
+    es calcula amb `polygon-clipping` (forma − osques; forats interiors → talls `polygon`).
+    `build.joints` els llista (inspector de la peça). Tipus de moble **Flat-pack** (`kind:
+    "lliure"`): no es fan mòduls (es guarden), l'arbre només mostra peces i objectes.
+    Plantilles «Prestatgeria d'encaix» i «Tamboret flat-pack» (`model/flatPack.ts`).
+  - **Materials que no són de CNC** (`MaterialPref.cnc = false`; ferro, inox, pedra, vidre
+    afegits a la v2 de les preferències; acabats `metal` i `glass`): una peça lliure d'aquest
+    material porta `nest: false` (es posa sol en triar-lo) i va a `build.extras`: es veu al 3D,
+    surt a Peces › «Elements sense nesting» i no va al nesting ni als fitxers del taller, ni fa
+    encaixos.
+  - **Opcions que no toquen s'amaguen**: sense fons no surten el material i el gruix del fons
+    ni la ranura del fons; sense laterals (o sense tapa, si no són parets buides), no surt
+    Cantonades.
+  - **Forma del tauler**: `shapeOutline` escala per l'extensió real de la corba (mostrejada),
+    no pels nodes: si no, les cúbiques sortien del rectangle del nesting.
   - **Compte amb `Field.Root`**: no hi posis dos interruptors a dins (el Field els dona el
     mateix id i els dos rètols activen el mateix): passava amb Laterals Esquerre/Dret.
   - **Post-processos** (`core/process/processes.ts`): `panelProcesses` dedueix el que toca a

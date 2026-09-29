@@ -3,7 +3,7 @@ import { useMemo, useState } from "react"
 import { PanelDrawing } from "../../components/PanelDrawing"
 import { toCutList } from "../../core/cutlist/toCutList"
 import type { Grain } from "../../core/model"
-import { useCompositionPanels, useProject } from "../useProject"
+import { useCompositionExtras, useCompositionPanels, useProject } from "../useProject"
 
 const GRAIN: Record<Grain, string> = { x: "Llarg", y: "Ample", none: "—" }
 
@@ -11,6 +11,18 @@ export function CutListScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
   const panels = useCompositionPanels(project)
   const list = useMemo(() => toCutList(panels), [panels])
+  const extras = useCompositionExtras(project)
+  // Elements iguals (material i mides) agrupats.
+  const extraRows = useMemo(() => {
+    const rows = new Map<string, { label: string; material: string; l: number; w: number; t: number; qty: number }>()
+    for (const p of extras) {
+      const key = `${p.material}|${p.length}|${p.width}|${p.thickness}|${p.label}`
+      const r = rows.get(key)
+      if (r) r.qty += 1
+      else rows.set(key, { label: p.label, material: p.material, l: p.length, w: p.width, t: p.thickness, qty: 1 })
+    }
+    return [...rows.values()]
+  }, [extras])
   // Peça seleccionada a la taula: se'n mostra el plànol al costat (com als programes de CAM).
   const [selected, setSelected] = useState(0)
   const sel = list.items[Math.min(selected, list.items.length - 1)]
@@ -115,6 +127,41 @@ export function CutListScreen({ projectId }: { projectId: number }) {
         </Card.Root>
       )}
       </Stack>
+
+      {extraRows.length > 0 && (
+        <Stack gap={2}>
+          <Text fontWeight="semibold">Elements sense nesting</Text>
+          <Table.ScrollArea borderWidth="1px" rounded="lg">
+            <Table.Root size="sm" variant="line" striped>
+              <Table.Header>
+                <Table.Row>
+                  <Table.ColumnHeader>Element</Table.ColumnHeader>
+                  <Table.ColumnHeader textAlign="end">Qt</Table.ColumnHeader>
+                  <Table.ColumnHeader textAlign="end">Llarg</Table.ColumnHeader>
+                  <Table.ColumnHeader textAlign="end">Ample</Table.ColumnHeader>
+                  <Table.ColumnHeader textAlign="end">Gruix</Table.ColumnHeader>
+                  <Table.ColumnHeader>Material</Table.ColumnHeader>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
+                {extraRows.map((r, i) => (
+                  <Table.Row key={i}>
+                    <Table.Cell fontWeight="medium">{r.label}</Table.Cell>
+                    <Table.Cell textAlign="end">{r.qty}</Table.Cell>
+                    <Table.Cell textAlign="end">{r.l}</Table.Cell>
+                    <Table.Cell textAlign="end">{r.w}</Table.Cell>
+                    <Table.Cell textAlign="end">{r.t}</Table.Cell>
+                    <Table.Cell>{r.material}</Table.Cell>
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table.Root>
+          </Table.ScrollArea>
+          <Text fontSize="xs" color="fg.muted">
+            Peces d'un material que no es talla a la CNC (ferro, pedra, vidre…): es fan a part. No van al nesting ni als fitxers del taller.
+          </Text>
+        </Stack>
+      )}
     </VStack>
   )
 }

@@ -340,7 +340,7 @@ export function RefActions({ comp, id, onChange, onRemoved, onSelected }: { comp
 /** Mateixos colors que les fletxes del 3D: vermell de costat, verd amunt, blau endavant. */
 const AXIS_TINT: Record<string, string> = { X: "#e5484d", Y: "#30a46c", Z: "#0090ff" }
 
-function AxisLabel({ icon: Icon, name, axis, hint }: { icon: IconType; name: string; axis: string; hint: string }) {
+export function AxisLabel({ icon: Icon, name, axis, hint }: { icon: IconType; name: string; axis: string; hint: string }) {
   return (
     <HStack as="span" gap={1} title={`${name} (${axis}): ${hint}`}>
       <Box as="span" color={AXIS_TINT[axis]} display="inline-flex">

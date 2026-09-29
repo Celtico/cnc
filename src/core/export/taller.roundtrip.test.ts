@@ -181,3 +181,19 @@ describe.skipIf(!existsSync(TALLER))("2a cara: el taller rep el programa de les 
     }
   })
 })
+
+describe.skipIf(!existsSync(TALLER))("flat-pack: peces lliures amb encaixos al taller", async () => {
+  const { assemble } = (await import(/* @vite-ignore */ TALLER)) as { assemble: Assemble }
+  const { flatPackShelf, flatPackStool } = await import("../model")
+  it("prestatgeria d'encaix i tamboret: totes les peces lligades a un sòlid", () => {
+    for (const comp of [flatPackShelf(), flatPackStool()]) {
+      const ps = buildComposition(comp).panels
+      const ns = nest(ps, DEFAULT_NEST_OPTIONS)
+      const c = toTopsolidCsv(ps, ns, { project: "FP" })
+      const s = toStep(ps, { name: "FP" })
+      const d = assemble(c.text, s.text, "FP")
+      expect(d.pieces).toHaveLength(ps.length)
+      expect(d.pieces.filter((p) => p.match === "none")).toEqual([])
+    }
+  })
+})

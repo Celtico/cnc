@@ -14,15 +14,19 @@ import {
   LuTrash2,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcon"
-import { compositionKind, insertRefCopy, modulePresetsFor, newId, reorderModule, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
+import { compositionKind, insertPartCopy, insertRefCopy, modulePresetsFor, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
+import { ORIENT_ICON, PartAddMenu } from "./PartInspector"
 import { RefAddMenu } from "./RefInspector"
 import { zoneLabel } from "./zoneLabel"
+
+type DragKind = "module" | "ref" | "part"
 
 export type Selection =
   | { kind: "moble" }
   | { kind: "module"; id: string }
   | { kind: "zone"; moduleId: string; zoneId: string }
   | { kind: "ref"; id: string }
+  | { kind: "part"; id: string }
 
 /**
  * Arbre d'estructura (com l'outliner de Figma o Fusion): el moble, els seus mòduls amb
@@ -36,6 +40,7 @@ export function StructureTree({
   onSelect,
   onChange,
   newModule,
+  partCenter,
 }: {
   name: string
   comp: Composition
@@ -43,6 +48,8 @@ export function StructureTree({
   onSelect: (s: Selection) => void
   onChange: (c: Composition) => void
   newModule: (id: string, name: string) => Module
+  /** On apareix una peça lliure nova (mm). */
+  partCenter: { x: number; y: number; z: number }
 }) {
   const selModuleId = selection.kind === "module" ? selection.id : selection.kind === "zone" ? selection.moduleId : null
   // Com un acordió: només un mòdul desplegat alhora. En desplegar-ne un es pleguen els
@@ -88,16 +95,16 @@ export function StructureTree({
     onChange({ ...comp, modules })
   }
   // Arrossegar per ordenar (mòduls dins de la seva fila, i objectes).
-  const [drag, setDrag] = useState<{ kind: "module" | "ref"; id: string } | null>(null)
+  const [drag, setDrag] = useState<{ kind: DragKind; id: string } | null>(null)
   const [over, setOver] = useState<{ id: string; after: boolean } | null>(null)
-  const canDrop = (kind: "module" | "ref", id: string) => {
+  const canDrop = (kind: DragKind, id: string) => {
     if (!drag || drag.kind !== kind || drag.id === id) return false
-    if (kind === "ref") return true
+    if (kind !== "module") return true
     const a = comp.modules.find((m) => m.id === drag.id)
     const b = comp.modules.find((m) => m.id === id)
     return !!a && !!b && rowOf(a) === rowOf(b)
   }
-  const dnd = (kind: "module" | "ref", id: string): RowDnd => ({
+  const dnd = (kind: DragKind, id: string): RowDnd => ({
     dragging: drag?.id === id,
     indicator: over?.id === id && canDrop(kind, id) ? (over.after ? "after" : "before") : null,
     onStart: () => setDrag({ kind, id }),
@@ -107,7 +114,7 @@ export function StructureTree({
       return true
     },
     onDrop: (after) => {
-      if (drag && canDrop(kind, id)) onChange(kind === "module" ? reorderModule(comp, drag.id, id, after) : reorderRef(comp, drag.id, id, after))
+      if (drag && canDrop(kind, id)) onChange(kind === "module" ? reorderModule(comp, drag.id, id, after) : kind === "part" ? reorderPart(comp, drag.id, id, after) : reorderRef(comp, drag.id, id, after))
       setDrag(null)
       setOver(null)
     },
@@ -123,6 +130,12 @@ export function StructureTree({
         { row: "wall", label: "Penjats a la paret" },
       ]
     : [{ row: "floor", label: "" }]
+  const onlyParts = compositionKind(comp) === "lliure"
+  const parts = comp.parts ?? []
+  const removePart = (id: string) => {
+    onChange({ ...comp, parts: parts.filter((r) => r.id !== id) })
+    if (selection.kind === "part" && selection.id === id) onSelect({ kind: "moble" })
+  }
   const removeRef = (id: string) => {
     onChange({ ...comp, references: comp.references.filter((r) => r.id !== id) })
     if (selection.kind === "ref" && selection.id === id) onSelect({ kind: "moble" })
@@ -132,7 +145,7 @@ export function StructureTree({
     <Stack gap={0.5} role="tree" aria-label="Estructura del moble" fontSize="sm">
       <Row icon={<LuBox />} label={name || "Moble"} bold selected={selection.kind === "moble"} onClick={() => onSelect({ kind: "moble" })} depth={0} />
 
-      {rows.map(({ row, label }) => (
+      {!onlyParts && rows.map(({ row, label }) => (
         <Box key={row}>
           {label && (
             <Text fontSize="2xs" fontWeight="semibold" color="fg.subtle" textTransform="uppercase" letterSpacing="wider" pl="20px" pt={2} pb={0.5}>
@@ -178,7 +191,7 @@ export function StructureTree({
         </Box>
       ))}
 
-      <Menu.Root>
+      {!onlyParts && <Menu.Root>
         <Menu.Trigger asChild>
           <HStack as="button" gap={2} pl={7} py={1.5} color="fg.muted" _hover={{ color: "fg" }} rounded="md" cursor="pointer">
             <LuPlus /> <Text>Afegir mòdul</Text>
@@ -202,7 +215,52 @@ export function StructureTree({
             </Menu.Content>
           </Menu.Positioner>
         </Portal>
-      </Menu.Root>
+      </Menu.Root>}
+
+      {/* Peces lliures (flat-pack): com els objectes, però són peces de debò amb encaixos. */}
+      <HStack justify="space-between" pt={3} pb={1} px={1}>
+        <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
+          Peces lliures
+        </Text>
+        <PartAddMenu comp={comp} onChange={onChange} center={partCenter} onAdded={(id) => onSelect({ kind: "part", id })} />
+      </HStack>
+      {parts.length === 0 && (
+        <Text fontSize="xs" color="fg.subtle" px={2}>
+          {onlyParts ? "Cap. Afegeix-ne amb el +: on dues peces es toquen o s'encreuen, s'hi fa l'encaix sol." : "Cap. Taulers solts que van al nesting (prestatges, travessers, potes…), amb encaixos entre ells."}
+        </Text>
+      )}
+      {parts.map((r) => {
+        const Icon = ORIENT_ICON[r.orient]
+        return (
+          <Row
+            key={r.id}
+            depth={1}
+            icon={<Icon />}
+            label={r.name}
+            hint={`${r.w} × ${r.h}`}
+            selected={selection.kind === "part" && selection.id === r.id}
+            onClick={() => onSelect({ kind: "part", id: r.id })}
+            dnd={dnd("part", r.id)}
+            menu={
+              <RowMenu label={`Opcions de «${r.name}»`}>
+                <Menu.Item
+                  value="dup"
+                  onClick={() => {
+                    const res = insertPartCopy(comp, r)
+                    onChange(res.comp)
+                    onSelect({ kind: "part", id: res.id })
+                  }}
+                >
+                  <LuCopy /> Duplicar
+                </Menu.Item>
+                <Menu.Item value="del" color="fg.error" onClick={() => removePart(r.id)}>
+                  <LuTrash2 /> Eliminar
+                </Menu.Item>
+              </RowMenu>
+            }
+          />
+        )
+      })}
 
       <HStack justify="space-between" pt={3} pb={1} px={1}>
         <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">

@@ -44,6 +44,8 @@ export const PanelRoleSchema = z.enum([
   "spacer",
   /** Tira frontal que tapa el davant d'una paret buida. */
   "facing",
+  /** Peça lliure (flat-pack, encaixos). */
+  "part",
 ])
 export type PanelRole = z.infer<typeof PanelRoleSchema>
 

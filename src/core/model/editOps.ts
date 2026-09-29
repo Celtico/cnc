@@ -1,5 +1,6 @@
 import { newId, rowOf, type Composition, type Module, type RefObject, type Zone } from "./composition"
 import { cloneZone, removeZone, updateZone } from "./zoneOps"
+import { partSize, type FreePart } from "./freePart"
 
 /** Còpia d'un mòdul just després de `afterId` (o al final). */
 export function insertModuleCopy(comp: Composition, src: Module, afterId?: string): { comp: Composition; id: string } {
@@ -96,4 +97,21 @@ export function reorderRef(comp: Composition, id: string, targetId: string, afte
   const rest = comp.references.filter((x) => x.id !== id)
   const at = rest.indexOf(t) + (after ? 1 : 0)
   return { ...comp, references: [...rest.slice(0, at), r, ...rest.slice(at)] }
+}
+
+/** Còpia d'una peça lliure al costat (desplaçada el seu ample en X). */
+export function insertPartCopy(comp: Composition, src: FreePart): { comp: Composition; id: string } {
+  const copy: FreePart = { ...structuredClone(src), id: newId("p"), name: src.name.endsWith("(còpia)") ? src.name : `${src.name} (còpia)`, x: src.x + partSize(src)[0] + 20 }
+  return { comp: { ...comp, parts: [...(comp.parts ?? []), copy] }, id: copy.id }
+}
+
+/** Mou la peça lliure `id` just abans (o després) de `targetId`. */
+export function reorderPart(comp: Composition, id: string, targetId: string, after: boolean): Composition {
+  const list = comp.parts ?? []
+  const r = list.find((x) => x.id === id)
+  const t = list.find((x) => x.id === targetId)
+  if (!r || !t || id === targetId) return comp
+  const rest = list.filter((x) => x.id !== id)
+  const at = rest.indexOf(t) + (after ? 1 : 0)
+  return { ...comp, parts: [...rest.slice(0, at), r, ...rest.slice(at)] }
 }

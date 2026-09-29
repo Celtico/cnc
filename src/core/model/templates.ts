@@ -1,3 +1,4 @@
+import { flatPackShelf, flatPackStool } from "./flatPack"
 import { DEFAULT_GRILLE, defaultModule, newId, tableModule, type Composition, type CompositionKind, type Module } from "./composition"
 
 export interface Template {
@@ -15,6 +16,20 @@ function withRoot(m: Module, root: Module["root"]): Module {
 }
 
 export const BUILTIN_TEMPLATES: Template[] = [
+  {
+    id: "flatpack-shelf",
+    kind: "lliure",
+    name: "Prestatgeria d'encaix",
+    description: "800 × 900 × 300: prestatges amb pestanyes passants als laterals i travesser, sense cargols.",
+    make: flatPackShelf,
+  },
+  {
+    id: "flatpack-stool",
+    kind: "lliure",
+    name: "Tamboret flat-pack",
+    description: "Dues potes encreuades a mitja fusta i seient rodó amb pestanyes passants.",
+    make: flatPackStool,
+  },
   {
     id: "console",
     kind: "taula",

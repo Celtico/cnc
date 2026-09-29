@@ -42,3 +42,23 @@ describe("tauler de taula", () => {
     expect(toDxf([top])).toMatch(/\r\n42\r\n/)
   })
 })
+
+describe("forma del tauler: la corba no surt del rectangle", () => {
+  it("una ona amb manegadors que sobresurten queda dins de llarg × ample", async () => {
+    const { shapeOutline } = await import("./buildModule")
+    const { flatten } = await import("../model")
+    const wave = [
+      { x: 0, y: 0 },
+      { x: 1000, y: 0, out: [0, 0] as [number, number] },
+      { x: 1000, y: 400, in: [300, -200] as [number, number], out: [-300, 300] as [number, number], t: "smooth" as const },
+      { x: 0, y: 400, in: [300, 300] as [number, number] },
+    ]
+    const pts = flatten(shapeOutline(wave, 1460, 460))
+    for (const [x, y] of pts) {
+      expect(x).toBeGreaterThanOrEqual(-0.1)
+      expect(x).toBeLessThanOrEqual(1460.1)
+      expect(y).toBeGreaterThanOrEqual(-0.1)
+      expect(y).toBeLessThanOrEqual(460.1)
+    }
+  })
+})

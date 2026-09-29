@@ -475,6 +475,8 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
                 <option value="lacquer">Lacat</option>
                 <option value="wood">Fusta</option>
                 <option value="image">Foto real</option>
+                <option value="metal">Metall</option>
+                <option value="glass">Vidre</option>
               </NativeSelect.Field>
               <NativeSelect.Indicator />
             </NativeSelect.Root>
@@ -542,6 +544,11 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
             <Switch.HiddenInput />
             <Switch.Control />
             <Switch.Label>Per a fons</Switch.Label>
+          </Switch.Root>
+          <Switch.Root size="sm" checked={m.cnc !== false} onCheckedChange={(e) => onChange({ cnc: e.checked ? undefined : false })}>
+            <Switch.HiddenInput />
+            <Switch.Control />
+            <Switch.Label>Es talla a la CNC</Switch.Label>
           </Switch.Root>
         </HStack>
       </Card.Body>

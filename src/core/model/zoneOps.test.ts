@@ -61,7 +61,7 @@ describe("plantilles", () => {
     for (const t of BUILTIN_TEMPLATES) {
       const comp = t.make()
       const { panels, warnings } = buildComposition(comp)
-      expect(panels.length, t.name).toBeGreaterThan(t.kind === "taula" ? 2 : 3)
+      expect(panels.length, t.name).toBeGreaterThan(t.kind === "taula" || t.kind === "lliure" ? 2 : 3)
       const ids = panels.map((p) => p.id)
       expect(new Set(ids).size, t.name).toBe(ids.length)
       expect(warnings.filter((w) => w.code === "layout" || w.code === "collision"), t.name).toEqual([])

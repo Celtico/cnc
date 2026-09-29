@@ -125,7 +125,8 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
 
         {/* Acabats: com s'uneix la tapa amb els laterals i com van els fronts. */}
         <SimpleGrid columns={2} gap={3}>
-          {c.hollow ? (
+          {/* Sense laterals (o sense tapa, si no són parets buides) no hi ha cantonades a unir. */}
+          {!(c.sides.left || c.sides.right) || (!c.hollow && c.top.kind === "none") ? null : c.hollow ? (
             // Amb parets buides les cantonades són sempre a inglet (com un bloc massís).
             <Stack gap={1.5}>
               <HStack gap={1.5} fontSize="sm">
@@ -189,7 +190,7 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
 /** Valor del desplegable del fons per a «Com el cos» (mateix material i gruix). */
 const SAME = "__com-el-cos__"
 
-export function MaterialsForm({ carcass: c, onPatch, mixed }: { carcass: Carcass; onPatch: (patch: Partial<Carcass>) => void; mixed?: boolean }) {
+export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !== "none" }: { carcass: Carcass; onPatch: (patch: Partial<Carcass>) => void; mixed?: boolean; /** Sense fons: no surten les opcions del fons. */ hasBack?: boolean }) {
   const { settings } = useSettings()
   const mat = materialByName(settings, c.material)
   const backMat = materialByName(settings, c.backMaterial)
@@ -237,7 +238,7 @@ export function MaterialsForm({ carcass: c, onPatch, mixed }: { carcass: Carcass
         </NativeSelect.Root>
         <Field.HelperText>Mateix gruix que el cos.</Field.HelperText>
       </Field.Root>
-      <SimpleGrid columns={2} gap={3}>
+      {hasBack && <SimpleGrid columns={2} gap={3}>
         <Field.Root>
           <Field.Label fontSize="sm">Fons</Field.Label>
           <NativeSelect.Root size="sm">
@@ -254,8 +255,8 @@ export function MaterialsForm({ carcass: c, onPatch, mixed }: { carcass: Carcass
           </NativeSelect.Root>
         </Field.Root>
         <NumberField label="Gruix" value={c.backThickness} min={3} max={40} step={1} onChange={(backThickness) => onPatch({ backThickness })} help={backMat ? backMat.thicknesses.join(" · ") : undefined} />
-      </SimpleGrid>
-      {backApart && (
+      </SimpleGrid>}
+      {hasBack && backApart && (
         <HStack gap={2} fontSize="xs" color="fg.muted" wrap="wrap">
           <Text>
             El fons és de {c.backMaterial} però de {c.backThickness} mm: no comparteix tauler amb el cos ({c.thickness} mm).
@@ -284,7 +285,7 @@ export function JoineryForm({ module, onChange }: { module: Module; onChange: (m
         <NumberField label="Joc front–cos" value={module.fronts.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => onChange({ ...module, fronts: { ...module.fronts, outerGap } })} />
         <NumberField label="Joc entre fronts" value={module.fronts.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => onChange({ ...module, fronts: { ...module.fronts, betweenGap } })} />
         <NumberField label="Retranqueig prest." value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set({ shelfSetback })} />
-        <NumberField label="Ranura del fons" value={c.backSetback} min={0} max={60} step={1} onChange={(backSetback) => set({ backSetback })} help="Distància al cantell posterior" />
+        {c.back === "groove" && <NumberField label="Ranura del fons" value={c.backSetback} min={0} max={60} step={1} onChange={(backSetback) => set({ backSetback })} help="Distància al cantell posterior" />}
       </SimpleGrid>
       <SimpleGrid columns={3} gap={3}>
         <NumberField label="Cassoleta Ø" value={module.hardware.hinge.cupDiameter} min={20} max={40} step={1} onChange={(cupDiameter) => onChange({ ...module, hardware: { ...module.hardware, hinge: { ...module.hardware.hinge, cupDiameter } } })} />

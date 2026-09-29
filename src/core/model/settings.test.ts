@@ -29,7 +29,7 @@ describe("preferències", () => {
     const res = parseSettings(old)
     expect(res.migrated).toBe(true)
     expect(res.problems).toEqual([])
-    expect(res.settings.version).toBe(1)
+    expect(res.settings.version).toBe(2)
     expect(res.settings.references[0]).toMatchObject({ name: "Tele vella", wallOffset: 150 })
     // Els valors inicials no es perden mai.
     for (const b of BUILTIN_REFERENCES) expect(res.settings.references.some((r) => r.id === b.id)).toBe(true)

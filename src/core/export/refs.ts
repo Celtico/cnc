@@ -22,6 +22,7 @@ const ROLE_LETTER: Record<PanelRole, string> = {
   worktop: "H",
   spacer: "H",
   facing: "F",
+  part: "P",
 }
 
 /**

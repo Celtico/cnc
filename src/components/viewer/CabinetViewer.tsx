@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
 import { DoubleSide, ExtrudeGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Shape, Vector3, type Object3D, type Texture } from "three"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
-import { AXIS_INDEX, SECTION_AXES, flatten, sampleProfile, toNodes, type Hole, type MaterialPref, type Panel, type RefObject } from "../../core/model"
+import { AXIS_INDEX, SECTION_AXES, flatten, partSize, sampleProfile, toNodes, type FreePart, type Hole, type MaterialPref, type Panel, type RefObject } from "../../core/model"
 import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { ROLE_COLOR } from "./roleColors"
@@ -94,6 +94,11 @@ export interface CabinetViewerProps {
   onMoveModule?: (id: string, dx: number, dy: number, all: boolean, dz: number) => void
   /** Arrossegar l'objecte seleccionat al 3D: posició nova (mm) en deixar-lo anar. */
   onMoveRef?: (id: string, pos: { x: number; y: number; z: number }) => void
+  /** Peces lliures: clic a la peça la selecciona; la seleccionada porta el gizmo per moure-la. */
+  parts?: FreePart[]
+  selectedPartId?: string | null
+  onSelectPart?: (id: string) => void
+  onMovePart?: (id: string, pos: { x: number; y: number; z: number }) => void
   /** Objectes que xoquen amb alguna peça: es pinten de vermell. */
   collidingRefIds?: Set<string>
   /** Compartiment seleccionat (mm, coordenades de la composició): contorn taronja. */
@@ -129,6 +134,10 @@ export function CabinetViewer({
   onSelectRef,
   onMoveRef,
   onMoveModule,
+  parts,
+  selectedPartId,
+  onSelectPart,
+  onMovePart,
   collidingRefIds,
   highlightZone,
   fitKey = 0,
@@ -166,6 +175,12 @@ export function CabinetViewer({
     return t
   }, [modules, size.width, size.height, size.depth])
   const ortho = view !== "3d"
+  // Caixa de cada peça lliure com a «objecte» (per reutilitzar l'arrossegament i el gizmo).
+  const partBoxes = useMemo((): RefObject[] => (parts ?? []).map((p) => {
+    const s = partSize(p)
+    return { id: p.id, name: p.name, x: p.x, y: p.y, z: p.z, w: s[0], h: s[1], d: s[2] }
+  }), [parts])
+  const selectedPartBox = partBoxes.find((b) => b.id === selectedPartId)
 
   return (
     // Canviar la qualitat recrea el renderitzador: les ombres no es poden activar en calent.
@@ -218,7 +233,7 @@ export function CabinetViewer({
                 edges={q.guides}
                 materialMode={materialMode}
                 materials={materials}
-                onClick={onSelectModule ? (pt) => {
+                onClick={p.id.startsWith("part:") ? (onSelectPart ? () => onSelectPart(p.id.slice(5)) : undefined) : onSelectModule ? (pt) => {
                   const id = moduleIdOf(p)
                   // Punt clicat en mm de la composició (el grup està centrat a l'escena).
                   if (id) onSelectModule(id, [pt.x / S + size.width / 2, pt.y / S, pt.z / S + size.depth / 2])
@@ -244,6 +259,23 @@ export function CabinetViewer({
             onMove={onMoveRef}
           />
         ))}
+        {/* Peça lliura seleccionada: caixa taronja amb el gizmo (com un objecte). */}
+        {selectedPartBox && (
+          <RefGhost
+            key={`part-${selectedPartBox.id}`}
+            g={selectedPartBox}
+            selected
+            hit={false}
+            guides={q.guides}
+            view={view}
+            offset={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}
+            targets={snapTargets}
+            others={[...partBoxes, ...(ghosts ?? [])]}
+            onSelect={onSelectPart}
+            onMove={onMovePart}
+            outline
+          />
+        )}
         {highlightZone && <ZoneHighlight box={highlightZone} />}
         {selectedIndex !== undefined && q.guides && <CableMarks panels={panels.filter((p) => p.module === selectedIndex)} />}
         {selected && onMoveModule && view !== "top" && (
@@ -542,7 +574,10 @@ function RefGhost({
   others,
   onSelect,
   onMove,
+  outline = false,
 }: {
+  /** Només el contorn (peça lliure: la peça de debò ja es veu a sota). */
+  outline?: boolean
   g: RefObject
   selected: boolean
   hit: boolean
@@ -673,7 +708,7 @@ function RefGhost({
     >
       {profileGeo ? <primitive object={profileGeo} attach="geometry" /> : cyl ? <cylinderGeometry args={[radius * S, radius * S, len * S, 40]} /> : <boxGeometry args={[g.w * S, g.h * S, g.d * S]} />}
       {/* Els que tallen solen quedar dins del fons o darrere de les portes: es veuen a través. */}
-      <meshStandardMaterial side={DoubleSide} color={tint} transparent opacity={selected || hit ? 0.38 : g.effect === "cut" ? 0.45 : 0.22} depthWrite={false} depthTest={g.effect !== "cut"} />
+      <meshStandardMaterial side={DoubleSide} color={tint} transparent opacity={outline ? 0.08 : selected || hit ? 0.38 : g.effect === "cut" ? 0.45 : 0.22} depthWrite={false} depthTest={g.effect !== "cut"} />
       {(guides || selected || hit || g.effect === "cut") && <Edges color={selected ? SELECT_COLOR : tint} threshold={cyl ? 30 : 1} depthTest={g.effect !== "cut"} renderOrder={g.effect === "cut" ? 9 : 0} />}
     </mesh>
       {draggable && <MoveGizmo axes={gizmoAxes} active={drag?.axes.length === 1 ? drag.axes[0]! : null} onStart={startAxis} onMove={moveEvt} onEnd={end} />}
@@ -1173,7 +1208,9 @@ function makeMaterial(finish: FinishSpec, uMm: number, vMm: number, rotate: bool
   if (finish.kind === "image") {
     return new MeshStandardMaterial({ map: faceTexture(photoTexture(finish.src), uMm, vMm, rotate, finish.tileMm), roughness: 0.7, metalness: 0, ...opts })
   }
-  return new MeshStandardMaterial({ color: finish.color, roughness: finish.roughness, metalness: 0, ...opts })
+  // Vidre: translúcid sempre (també sense vel).
+  const glass = finish.opacity !== undefined && finish.opacity < 1
+  return new MeshStandardMaterial({ color: finish.color, roughness: finish.roughness, metalness: finish.metalness ?? 0, ...opts, ...(glass ? { transparent: true, opacity: Math.min(opts.opacity, finish.opacity!), depthWrite: false } : {}) })
 }
 
 /**

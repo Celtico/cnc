@@ -9,7 +9,7 @@ import type { Finish, MaterialPref } from "../../core/model"
 
 export type WoodSpecies = Extract<Finish, { kind: "wood" }>["species"]
 
-export type FinishSpec = { kind: "color"; color: string; roughness: number } | { kind: "wood"; species: WoodSpecies } | { kind: "image"; src: string; tileMm: number }
+export type FinishSpec = { kind: "color"; color: string; roughness: number; metalness?: number; opacity?: number } | { kind: "wood"; species: WoodSpecies } | { kind: "image"; src: string; tileMm: number }
 
 interface WoodParams {
   base: [number, number, number]
@@ -173,6 +173,8 @@ export function woodTexture(species: WoodSpecies): Texture {
 export function finishOfPref(m: MaterialPref): FinishSpec {
   if (m.finish.kind === "wood") return { kind: "wood", species: m.finish.species }
   if (m.finish.kind === "image") return { kind: "image", src: m.finish.src, tileMm: m.finish.tileMm }
+  if (m.finish.kind === "metal") return { kind: "color", color: m.finish.color, roughness: 0.35, metalness: 0.85 }
+  if (m.finish.kind === "glass") return { kind: "color", color: m.finish.color, roughness: 0.05, opacity: 0.35 }
   return { kind: "color", color: m.finish.color, roughness: m.finish.kind === "lacquer" ? 0.35 : 0.8 }
 }
 
@@ -180,6 +182,9 @@ const KEYWORDS: [RegExp, FinishSpec][] = [
   [/roure|oak/i, { kind: "wood", species: "oak" }],
   [/noguer|walnut/i, { kind: "wood", species: "walnut" }],
   [/freixe|ash/i, { kind: "wood", species: "ash" }],
+  [/ferro|acer|inox|metall/i, { kind: "color", color: "#5b5d60", roughness: 0.35, metalness: 0.85 }],
+  [/vidre|glass/i, { kind: "color", color: "#cfe6e3", roughness: 0.05, opacity: 0.35 }],
+  [/pedra|marbre|granit/i, { kind: "color", color: "#d9d4ca", roughness: 0.6 }],
   [/negr/i, { kind: "color", color: "#2b2b2b", roughness: 0.8 }],
   [/gris|grey|gray/i, { kind: "color", color: "#9a9a96", roughness: 0.8 }],
   [/blanc|white|lacat/i, { kind: "color", color: "#f2f0eb", roughness: 0.8 }],

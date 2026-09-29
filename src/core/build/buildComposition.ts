@@ -2,17 +2,24 @@ import { compositionKind, modulePlacements, type Composition, type Panel, type R
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { buildModule, type BuildWarning, type ModuleBuild } from "./buildModule"
 import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
+import { buildFreeParts, type PartJoint } from "./freeParts"
 
 export interface CompositionWarning extends BuildWarning {
   moduleId?: string
   /** Objecte de referència implicat (avisos de xoc). */
   refId?: string
+  /** Peça lliure implicada. */
+  partId?: string
 }
 
 export interface CompositionBuild {
   panels: Panel[]
   warnings: CompositionWarning[]
   modules: { id: string; index: number; x: number; y: number; z: number; build: ModuleBuild }[]
+  /** Encaixos entre peces lliures. */
+  joints: PartJoint[]
+  /** Elements sense nesting (peces lliures de ferro, pedra, vidre…): 3D i llista, no taller. */
+  extras: Panel[]
 }
 
 /** Caixa englobant d'una peça (coordenades de la composició). */
@@ -48,7 +55,9 @@ export function buildComposition(input: Composition): CompositionBuild {
   const warnings: CompositionWarning[] = []
   const modules: CompositionBuild["modules"] = []
 
-  comp.modules.forEach((m, i) => {
+  // Tipus «Lliure» (flat-pack): només peces lliures; els mòduls es guarden però no es fan.
+  const onlyParts = compositionKind(comp) === "lliure"
+  ;(onlyParts ? [] : comp.modules).forEach((m, i) => {
     const { x, y } = places[i]!
     const z = places[i]!.z ?? 0
     const build = buildModule(m)
@@ -76,12 +85,18 @@ export function buildComposition(input: Composition): CompositionBuild {
   // Peces corregudes (taulell, sòcol): numerades com un «mòdul» més per a les refs del taller.
   const runWarnings: RunWarning[] = []
   // Només a la cuina: si es canvia de tipus, es conserven però no es fan (es recuperen en tornar-hi).
-  for (const run of compositionKind(comp) === "cuina" ? (comp.runs ?? []) : []) {
+  const runs = compositionKind(comp) === "cuina" ? (comp.runs ?? []) : []
+  for (const run of runs) {
     const n = comp.modules.length + 1
     const p = run.kind === "worktop" ? buildWorktop(comp, run, places, n, runWarnings) : buildPlinthRun(comp, run, places, n, runWarnings)
     if (p) panels.push(p)
   }
   for (const w of runWarnings) warnings.push({ code: "layout", message: w.message })
+
+  // Peces lliures, amb els encaixos entre elles: un «mòdul» més per a les refs del taller.
+  const free = buildFreeParts(comp, onlyParts ? 1 : comp.modules.length + (runs.length ? 1 : 0) + 1)
+  panels.push(...free.panels)
+  for (const w of free.warnings) warnings.push({ code: "layout", message: w.message, partId: w.partId })
 
   // Objectes que tallen: forat a cada peça que travessen.
   for (const pr of applyRefCuts(panels, comp.references, panelBox)) {
@@ -99,5 +114,5 @@ export function buildComposition(input: Composition): CompositionBuild {
     }
   }
 
-  return { panels, warnings, modules }
+  return { panels, warnings, modules, joints: free.joints, extras: free.extras }
 }

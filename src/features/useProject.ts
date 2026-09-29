@@ -66,4 +66,11 @@ export function useCompositionPanels(project: Pick<Project, "params" | "composit
   return build?.panels ?? EMPTY
 }
 
+/** Elements sense nesting (peces lliures de ferro, pedra, vidre…): només llista i 3D. */
+export function useCompositionExtras(project: Pick<Project, "params" | "composition" | "name"> | undefined): Panel[] {
+  const comp = useComposition(project)
+  const build = useCompositionBuild(comp)
+  return build?.extras ?? EMPTY
+}
+
 const EMPTY: Panel[] = []

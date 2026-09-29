@@ -13,7 +13,7 @@ import { DEFAULT_HARDWARE, HardwareSchema, type Module } from "./composition"
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 1
+export const SETTINGS_VERSION = 2
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -40,6 +40,10 @@ export const FinishSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("color"), color: z.string() }),
   z.object({ kind: z.literal("lacquer"), color: z.string() }),
   z.object({ kind: z.literal("wood"), species: z.enum(["oak", "walnut", "ash"]) }),
+  /** Metall (ferro, inox, llautó): brillant i reflectant. */
+  z.object({ kind: z.literal("metal"), color: z.string() }),
+  /** Vidre: translúcid. */
+  z.object({ kind: z.literal("glass"), color: z.string() }),
   /**
    * Foto real del tauler (textura): imatge reduïda en data URL i l'amplada real que hi surt
    * (mm), perquè la veta tingui la mida de debò al 3D.
@@ -58,6 +62,11 @@ export const MaterialPrefSchema = z.object({
   edge: z.string(),
   /** Apte per a fons (DM 10, contraxapat...). */
   forBacks: z.boolean().optional(),
+  /**
+   * false: no es talla a la CNC (ferro, pedra, vidre…). Les peces lliures d'aquest material
+   * no van al nesting: surten a «Elements sense nesting».
+   */
+  cnc: z.boolean().optional(),
 })
 export type MaterialPref = z.infer<typeof MaterialPrefSchema>
 
@@ -136,6 +145,14 @@ export const BUILTIN_REFERENCES: RefPreset[] = [
   ref("tv-sony-55-stand", "TV Sony KD-55XD8505 (amb peu)", 1231, 770, { d: 263, wallOffset: 0 }),
 ]
 
+/** Materials que no es tallen a la CNC (peces lliures sense nesting). Afegits a la v2. */
+export const NON_CNC_MATERIALS: MaterialPref[] = [
+  { id: "iron-black", name: "Ferro negre", thicknesses: [3, 5, 10, 20, 40], hasGrain: false, finish: { kind: "metal", color: "#3b3b3d" }, edge: "", cnc: false },
+  { id: "steel-inox", name: "Acer inox", thicknesses: [3, 5, 10, 20, 40], hasGrain: false, finish: { kind: "metal", color: "#c3c7cb" }, edge: "", cnc: false },
+  { id: "stone", name: "Pedra", thicknesses: [20, 30], hasGrain: false, finish: { kind: "color", color: "#d9d4ca" }, edge: "", cnc: false },
+  { id: "glass", name: "Vidre", thicknesses: [4, 5, 6, 8, 10], hasGrain: false, finish: { kind: "glass", color: "#cfe6e3" }, edge: "", cnc: false },
+]
+
 export const BUILTIN_MATERIALS: MaterialPref[] = [
   { id: "mel-white", name: "Melamina blanca", thicknesses: [10, 16, 19], hasGrain: false, finish: { kind: "color", color: "#f2f0eb" }, edge: "PVC blanc 1 mm" },
   { id: "mel-grey", name: "Melamina gris", thicknesses: [16, 19], hasGrain: false, finish: { kind: "color", color: "#9a9a96" }, edge: "PVC gris 1 mm" },
@@ -147,6 +164,7 @@ export const BUILTIN_MATERIALS: MaterialPref[] = [
   { id: "ash", name: "Freixe xapat", thicknesses: [19], hasGrain: true, finish: { kind: "wood", species: "ash" }, edge: "Xapa de freixe" },
   { id: "mdf-back", name: "DM (fons)", thicknesses: [10, 12], hasGrain: false, finish: { kind: "color", color: "#c9b79a" }, edge: "", forBacks: true },
   { id: "plywood-back", name: "Contraxapat (fons)", thicknesses: [10, 12, 15], hasGrain: true, finish: { kind: "wood", species: "ash" }, edge: "", forBacks: true },
+  ...NON_CNC_MATERIALS,
 ]
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -230,7 +248,12 @@ export function parseSettings(raw: unknown): SettingsParse {
 
   const references = withBuiltins(list("references", RefPresetSchema, BUILTIN_REFERENCES, "Objectes de referència"), BUILTIN_REFERENCES)
   const materialsRaw = list("materials", MaterialPrefSchema, BUILTIN_MATERIALS, "Materials")
-  const materials = materialsRaw.length ? materialsRaw : BUILTIN_MATERIALS
+  // v2: materials que no són de CNC (ferro, inox, pedra, vidre), per a les peces lliures.
+  const materials = materialsRaw.length
+    ? version < 2
+      ? [...materialsRaw, ...NON_CNC_MATERIALS.filter((m) => !materialsRaw.some((x) => x.id === m.id || x.name === m.name))]
+      : materialsRaw
+    : BUILTIN_MATERIALS
   const settings: Settings = {
     version: SETTINGS_VERSION,
     references,

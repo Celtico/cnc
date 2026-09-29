@@ -29,6 +29,7 @@ export const ROLE_LABELS: Record<PanelRole, string> = {
   worktop: "Taulell",
   spacer: "Llistó interior",
   facing: "Tira frontal",
+  part: "Peça lliure",
 }
 
 export interface CutListItem {
@@ -70,6 +71,7 @@ const ROLE_ORDER: PanelRole[] = [
   "divider",
   "facing",
   "spacer",
+  "part",
   "bottom",
   "top",
   "fixedShelf",
@@ -96,7 +98,9 @@ const ROLE_ORDER: PanelRole[] = [
 function groupKey(p: Panel): string {
   const longEdges = Number(p.edges.top) + Number(p.edges.bottom)
   const shortEdges = Number(p.edges.left) + Number(p.edges.right)
-  return [p.role, p.length, p.width, p.thickness, p.material, p.grain, longEdges, shortEdges, (p.mitres ?? []).length, p.assembly ?? ""].join("|")
+  // Peces lliures: només s'agrupen si són iguals de debò (contorn, talls i mecanitzats).
+  const shape = p.role === "part" ? JSON.stringify([p.outline ?? null, p.cutouts ?? null, p.holes.length, p.grooves.length]) : ""
+  return [p.role, p.length, p.width, p.thickness, p.material, p.grain, longEdges, shortEdges, (p.mitres ?? []).length, p.assembly ?? "", shape].join("|")
 }
 
 /** Mil·límetres de cantell d'una peça. */
@@ -121,10 +125,12 @@ export function toCutList(panels: Panel[]): CutList {
       existing.qty += 1
       existing.panelIds.push(p.id)
       existing.holes += p.holes.length
+      // Peces lliures: els seus noms («Prestatge 1, Prestatge 3»).
+      if (p.role === "part" && !existing.label.split(", ").includes(p.label)) existing.label += `, ${p.label}`
       continue
     }
     groups.set(key, {
-      label: ROLE_LABELS[p.role],
+      label: p.role === "part" ? p.label : ROLE_LABELS[p.role],
       role: p.role,
       length: p.length,
       width: p.width,

@@ -1,5 +1,5 @@
 import type { IconType } from "react-icons"
-import { LuBox, LuCookingPot, LuDoorClosed, LuTable } from "react-icons/lu"
+import { LuBox, LuCookingPot, LuDoorClosed, LuPuzzle, LuTable } from "react-icons/lu"
 import type { CompositionKind } from "../../core/model"
 
 /** Tipus de moble, amb icona i el que aporta cadascun (per a la galeria i l'inspector). */
@@ -8,4 +8,5 @@ export const KINDS: { value: CompositionKind; label: string; icon: IconType; hin
   { value: "cuina", label: "Cuina", icon: LuCookingPot, hint: "Cuina: baixos i alts amb taulell i sòcol correguts" },
   { value: "armari", label: "Armari", icon: LuDoorClosed, hint: "Armari: mòduls alts de terra a sostre" },
   { value: "taula", label: "Taula", icon: LuTable, hint: "Taula o consola: tauler i laterals de panell, sense caixa" },
+  { value: "lliure", label: "Flat-pack", icon: LuPuzzle, hint: "Flat-pack: peces lliures amb encaixos (pestanyes, mitja fusta, dits, espigues), sense mòduls" },
 ]

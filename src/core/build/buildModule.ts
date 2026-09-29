@@ -3,6 +3,7 @@ import {
   type CableHole,
   NO_EDGES,
   profileToOutline,
+  sampleProfile,
   type PNode,
   type Cutout,
   type EdgeBanding,
@@ -150,9 +151,12 @@ function derive(m: Module): Derived {
 }
 
 /** Perfil del tauler (mm, amb la seva mida) escalat a llarg × ample i passat a rectes i arcs. */
-function shapeOutline(shape: PNode[], length: number, width: number): BPt[] {
-  const xs = shape.map((n) => n.x)
-  const ys = shape.map((n) => n.y)
+export function shapeOutline(shape: PNode[], length: number, width: number): BPt[] {
+  // Extensió real de la corba (les cúbiques poden sortir dels nodes): si no, la peça
+  // quedaria més gran que el rectangle que ocupa al nesting.
+  const pts = sampleProfile(shape, 64)
+  const xs = pts.map((q) => q[0])
+  const ys = pts.map((q) => q[1])
   const x0 = Math.min(...xs), y0 = Math.min(...ys)
   const sx = length / Math.max(1, Math.max(...xs) - x0)
   const sy = width / Math.max(1, Math.max(...ys) - y0)

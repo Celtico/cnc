@@ -49,7 +49,7 @@ export function NewMobleDialog({
   const blank = () => {
     const k = kind === "all" ? "moble" : kind
     const m = k === "taula" ? tableModule(newId("m"), "Taula") : applySettingsToModule(settings, defaultModule(newId("m"), "Mòdul 1"))
-    const names: Record<CompositionKind, string> = { moble: "Moble nou", cuina: "Cuina nova", armari: "Armari nou", taula: "Taula nova" }
+    const names: Record<CompositionKind, string> = { moble: "Moble nou", cuina: "Cuina nova", armari: "Armari nou", taula: "Taula nova", lliure: "Flat-pack nou" }
     onCreate({ kind: k, modules: [m], references: [] }, names[k])
   }
 

@@ -2,6 +2,7 @@ import { z } from "zod"
 import { DEFAULT_CABINET, type CabinetParams } from "./cabinet"
 import { BPtSchema, ProfileNodeSchema } from "./panel"
 import { flatten, profileToOutline, toNodes, type BPt } from "./polygon"
+import { FreePartSchema, JoinerySchema } from "./freePart"
 
 /**
  * Model de composició: mòduls d'esquerra a dreta, cadascun amb una carcassa i un
@@ -410,7 +411,7 @@ export const CUTOUT_PRESETS: Record<WorktopCutout["kind"], { w: number; d: numbe
  * Tipus de moble: decideix quines opcions de conjunt surten (taulell i sòcol a la cuina…) i
  * què s'afegeix amb «Afegir mòdul». Opcional: els antics es dedueixen (`compositionKind`).
  */
-export const CompositionKindSchema = z.enum(["moble", "cuina", "armari", "taula"])
+export const CompositionKindSchema = z.enum(["moble", "cuina", "armari", "taula", "lliure"])
 export type CompositionKind = z.infer<typeof CompositionKindSchema>
 
 export const CompositionSchema = z.object({
@@ -419,6 +420,10 @@ export const CompositionSchema = z.object({
   references: z.array(RefObjectSchema),
   /** Taulells i sòcols correguts. Opcional (els mobles antics no en tenen). */
   runs: z.array(RunSchema).optional(),
+  /** Peces lliures (flat-pack, encaixos). Opcional. */
+  parts: z.array(FreePartSchema).optional(),
+  /** Encaixos de les peces lliures (joc, fresa, pestanyes). Sense: `DEFAULT_JOINERY`. */
+  joinery: JoinerySchema.optional(),
 })
 export type Composition = z.infer<typeof CompositionSchema>
 
