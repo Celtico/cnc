@@ -292,7 +292,7 @@ export function applySettingsToModule(s: Settings, m: Module): Module {
       backSetback: s.gaps.backSetback,
       grooveDepth: s.gaps.grooveDepth,
     },
-    fronts: { outerGap: s.gaps.outerGap, betweenGap: s.gaps.betweenGap },
+    fronts: { ...m.fronts, outerGap: s.gaps.outerGap, betweenGap: s.gaps.betweenGap },
     hardware: structuredClone(s.hardware),
   }
 }

@@ -75,8 +75,13 @@ export function CutListScreen({ projectId }: { projectId: number }) {
                 <Table.Cell>{GRAIN[it.grain]}</Table.Cell>
                 <Table.Cell>
                   <HStack gap={1}>
+                    {it.mitreNumbers.map((n) => (
+                      <Badge key={`m${n}`} colorPalette="purple" variant="subtle" size="sm" title="Cantell a inglet (45°)">
+                        {n}∠45°
+                      </Badge>
+                    ))}
                     {it.edgeNumbers.length === 0 ? (
-                      <Text color="fg.subtle">—</Text>
+                      it.mitreNumbers.length ? null : <Text color="fg.subtle">—</Text>
                     ) : (
                       it.edgeNumbers.map((n) => (
                         <Badge key={n} colorPalette="wood" variant="subtle" size="sm">

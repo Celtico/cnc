@@ -49,7 +49,7 @@ export function cutListToCsv(list: CutList, options: CsvOptions = {}): string {
     it.thickness,
     it.material,
     GRAIN_LABEL[it.grain],
-    it.edgeNumbers.join("+") || "-",
+    [it.edgeNumbers.join("+"), it.mitreNumbers.map((n) => `${n}(45°)`).join("+")].filter(Boolean).join(" ") || "-",
     it.edgeLength,
     it.holes,
     it.area,

@@ -255,6 +255,19 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     `mobles:viewer-role-colors-fast`. L'escena és a `viewer/presentationScene.ts`.
   - **Nom a la capçalera de l'inspector**: el nom del mòdul i de l'objecte es canvia clicant-lo
     a la capçalera (`Editable`, com a Figma), no a les seccions; el del moble, a la barra de dalt.
+  - **Tipus de moble** (`Composition.kind`, `compositionKind`, `features/composition/kinds.tsx`):
+    Moble, Cuina, Armari, Taula. Es tria a la galeria «Nou moble» (filtre per tipus; «En blanc»
+    crea el del tipus) i a l'inspector del moble (secció Tipus). Taulell i sòcol correguts només
+    surten a la Cuina (o si el moble ja en té). Taula: `tableModule` (tauler + dos laterals de
+    panell, sense base ni fons, cantonades a inglet); «Afegir mòdul» n'afegeix una. Plantilles
+    amb `kind` (Consola, Taula de menjador). Els antics: cuina si tenen runs, si no moble.
+  - **Acabats** (Estructura del mòdul): **Cantonades** Normals / A inglet (`Carcass.joint`): la
+    tapa arriba a fora dels laterals, `Panel.mitres` als cantells (sense cantell ni espigues,
+    avís informatiu), capa DXF `MITRE_45`, «n∠45°» al llistat i al CSV, i al 3D/GLB la secció
+    en trapezi (`mitreGeometry`). El STEP encara les dibuixa rectes. **Fronts** Recobrents /
+    Encastats (`fronts.style`): encastats dins de la llum amb el joc a tot el voltant, a nivell
+    amb el davant (`frontZ`), caixa del calaix un gruix més curta i avís si els prestatges no
+    es retiren prou.
   - **Opcions amb icona** (`components/IconChoice.tsx`): poques opcions → botons d'icona amb
     el nom al tooltip i l'opció triada al costat del títol. Base, Fons, Tapa (mòdul), Patró de
     reixeta, Direcció dels objectes; Efecte i Forma dels objectes són segments amb icona i text.

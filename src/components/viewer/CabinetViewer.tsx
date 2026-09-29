@@ -11,7 +11,7 @@ import { AXIS_INDEX, SECTION_AXES, flatten, sampleProfile, toNodes, type Hole, t
 import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { ROLE_COLOR } from "./roleColors"
-import { cutoutGeometry } from "./cutoutGeometry"
+import { cutoutGeometry, mitreGeometry } from "./cutoutGeometry"
 import { RAW_EDGE_COLOR, TILE_MM, resolveEdgeFinish, resolveFinish, woodTexture, type FinishSpec } from "./textures"
 
 /** Color de selecció (el mateix taronja que els botons + del 3D). */
@@ -1146,8 +1146,14 @@ export function PanelMesh({
   const mats = useMemo(() => panelMaterials(panel, materialMode, materials, dimmed), [panel, materialMode, materials, dimmed])
   // Peces amb talls passants (reixetes, taulell amb pica i vitro, passacables): geometria
   // extruïda amb els forats de debò, perquè es vegi a través.
-  const cut = useMemo(() => (panel.cutouts?.length ? cutoutGeometry(panel) : null), [panel])
-  const cutMats = useMemo(() => (cut ? cutoutMaterials(panel, materialMode, materials, dimmed) : null), [cut, panel, materialMode, materials, dimmed])
+  // Peces a inglet (sense talls): secció en trapezi, perquè la cantonada es vegi a 45°.
+  const cut = useMemo(() => (panel.cutouts?.length ? cutoutGeometry(panel) : panel.mitres?.length ? mitreGeometry(panel) : null), [panel])
+  const cutMats = useMemo(() => {
+    if (!cut) return null
+    const m = cutoutMaterials(panel, materialMode, materials, dimmed)
+    // A la geometria d'inglet els grups van al revés: [0] puntes (cantell), [1] cares.
+    return panel.cutouts?.length ? m : [m[1]!, m[0]!]
+  }, [cut, panel, materialMode, materials, dimmed])
   useEffect(
     () => () => {
       cut?.dispose()

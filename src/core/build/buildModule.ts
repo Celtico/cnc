@@ -40,6 +40,8 @@ export interface BuildWarning {
     | "back-groove"
     | "cable-hole"
     | "ref-cut"
+    | "mitre"
+    | "inset"
     | "layout"
     | "no-side"
     | "material-heat"
@@ -76,6 +78,12 @@ interface Derived {
   hasTop: boolean
   /** Y de la cara inferior de la base (0 o alçada del sòcol). */
   baseY: number
+  /** Tapa a inglet amb els laterals (a cada costat on hi ha lateral). */
+  mitreTop: boolean
+  /** Fronts encastats (dins de la llum) en lloc de recobrents. */
+  inset: boolean
+  /** Z de la cara de davant dels fronts (encastats: el davant de la caixa). */
+  frontZ: number
 }
 
 function derive(m: Module): Derived {
@@ -108,6 +116,9 @@ function derive(m: Module): Derived {
     hasBase,
     hasTop,
     baseY,
+    mitreTop: c.joint === "mitre" && hasTop && (c.sides.left || c.sides.right),
+    inset: m.fronts.style === "inset",
+    frontZ: m.fronts.style === "inset" ? D : D + t,
   }
 }
 
@@ -192,6 +203,12 @@ class Builder {
     if (d.hasTop) this.buildHorizontal("top")
     if (c.back !== "none") this.buildBack()
     if (c.base.kind === "plinth") this.buildPlinth()
+    // Fronts encastats: van dins de la llum, a nivell amb el davant de la caixa.
+    if (d.inset) {
+      this.warnings.push({ code: "inset", message: "Fronts encastats: van dins de la llum amb el joc a tot el voltant; calen frontisses per a porta encastada." })
+      if (c.shelfSetback < d.t)
+        this.warnings.push({ code: "inset", message: `Els prestatges van retirats ${c.shelfSetback} mm i el front encastat entra ${d.t} mm: retira'ls almenys ${d.t} mm (Fusteria › Retranqueig dels prestatges).` })
+    }
     // Fons en ranura massa gruixut: la ranura deixaria el lateral sense material.
     if (c.back === "groove" && d.tb > d.t - 6) {
       this.warnings.push({
@@ -234,10 +251,11 @@ class Builder {
         t,
         c.material,
         "x",
-        edges(isLeft ? "top" : "bottom", "right"),
+        d.mitreTop ? edges(isLeft ? "top" : "bottom") : edges(isLeft ? "top" : "bottom", "right"),
         pl,
       ),
       grooves,
+      ...(d.mitreTop ? { mitres: ["right" as const] } : {}),
     })
     this.verticals.push({
       panel,
@@ -256,7 +274,11 @@ class Builder {
     const c = m.carcass
     const { t, interior } = d
     const isBottom = which === "bottom"
-    const length = interior.x1 - interior.x0
+    // Tapa a inglet: arriba fins a fora de cada lateral (x = 0 / W), amb el cantell a 45°.
+    const mitreL = !isBottom && d.mitreTop && c.sides.left
+    const mitreR = !isBottom && d.mitreTop && c.sides.right
+    const px0 = mitreL ? 0 : interior.x0
+    const length = (mitreR ? d.W : interior.x1) - px0
     let width = d.sideDepth
     let zRear = d.sideZ0
     let cutouts: Cutout[] | undefined
@@ -267,9 +289,9 @@ class Builder {
     const grooves: Panel["grooves"] = []
     if (c.back === "groove" && !(c.top.kind === "ventSlot" && !isBottom)) {
       grooves.push({
-        x: 0,
+        x: mitreL ? t : 0,
         y: isBottom ? r(d.sideDepth - c.backSetback - d.tb) : r(c.backSetback),
-        w: r(length),
+        w: r(interior.x1 - interior.x0),
         h: d.tb,
         depth: c.grooveDepth,
         face: "A",
@@ -279,7 +301,7 @@ class Builder {
     const yBottom = isBottom ? d.baseY : d.H - t
     const pl = isBottom
       ? placement([interior.x0, yBottom, d.D], X, neg(Z), Y, neg(Y))
-      : placement([interior.x0, d.H, zRear], X, Z, neg(Y), Y)
+      : placement([px0, d.H, zRear], X, Z, neg(Y), Y)
     const panel = this.add({
       ...this.basePanel(
         which,
@@ -295,6 +317,7 @@ class Builder {
         pl,
       ),
       grooves,
+      ...(mitreL || mitreR ? { mitres: [...(mitreL ? (["left"] as const) : []), ...(mitreR ? (["right"] as const) : [])] } : {}),
     })
     if (!isBottom && c.top.kind === "grille") {
       const g = grilleCutouts(panel.length, panel.width, c.top.pattern)
@@ -307,10 +330,13 @@ class Builder {
     if (cutouts?.length) panel.cutouts = cutouts
     this.horizontals.push({ panel, yBottom, yTop: yBottom + t, xL: interior.x0, xR: interior.x1, outer: true })
 
-    // Espigues amb els laterals (la base/tapa hi topa; el lateral continua).
+    // Espigues amb els laterals (la base/tapa hi topa; el lateral continua). A inglet no:
+    // s'encola amb lamel·les o Clamex, que es fan a mà o amb una eina a 45°.
     const yMid = yBottom + t / 2
+    if (mitreL || mitreR)
+      this.warnings.push({ code: "mitre", message: "Tapa a inglet: tall a 45° als cantells de la tapa i dels laterals; encolar amb lamel·les o Clamex (no porta espigues).", panelId: panel.id })
     for (const v of this.verticals) {
-      if (!v.outer) continue
+      if (!v.outer || mitreL || mitreR) continue
       const xFace = near(v.xR, interior.x0) ? v.xR : v.xL
       if (!near(xFace, interior.x0) && !near(xFace, interior.x1)) continue
       // Sobre la fondària real de la peça (la tapa amb ranura d'aire és més curta).
@@ -536,6 +562,8 @@ class Builder {
     const bg = m.fronts.betweenGap
     const below = this.findBelow(rect)
     const above = this.findAbove(rect)
+    // Encastats: dins de la llum, amb el joc a cada costat.
+    if (d.inset) return { x0: r(rect.x0 + og), x1: r(rect.x1 - og), y0: r(rect.y0 + og), y1: r(rect.y1 - og) }
     const x0 = left ? (left.outer ? rect.x0 - t + og : rect.x0 - t / 2 + bg / 2) : rect.x0 + og
     const x1 = right ? (right.outer ? rect.x1 + t - og : rect.x1 + t / 2 - bg / 2) : rect.x1 - og
     const y0 = below ? (below.outer ? rect.y0 - t + og : rect.y0 - t / 2 + bg / 2) : rect.y0 + og
@@ -553,7 +581,7 @@ class Builder {
   private frontPanel(id: string, name: string, label: string, role: PanelRole, x0: number, y0: number, w: number, h: number): Panel {
     const { m, d } = this
     return this.add(
-      this.basePanel(id, name, label, role, h, w, d.t, frontMaterialOf(m), "x", edges("left", "right", "bottom", "top"), placement([x0, y0, d.D + d.t], Y, X, neg(Z), Z)),
+      this.basePanel(id, name, label, role, h, w, d.t, frontMaterialOf(m), "x", edges("left", "right", "bottom", "top"), placement([x0, y0, d.frontZ], Y, X, neg(Z), Z)),
     )
   }
 
@@ -727,7 +755,8 @@ class Builder {
     const heights = sizes.map((v) => r(v === "auto" ? auto : v))
 
     const boxW = r(rect.x1 - rect.x0 - 2 * hw.sideClearance)
-    const maxLen = d.availDepth - hw.backClearance
+    // Amb el front encastat, la caixa del calaix comença un gruix més endins.
+    const maxLen = d.availDepth - hw.backClearance - (d.inset ? d.t : 0)
     const slide = [...hw.slideLengths].sort((a, b) => b - a).find((l) => l <= maxLen)
     if (slide === undefined) {
       this.warnings.push({ code: "drawer-no-slide", message: `Cap guia de calaix (${hw.slideLengths.join(", ")}) cap en ${r(maxLen)} mm de fondària útil.`, zoneId: zone.id })
@@ -745,12 +774,12 @@ class Builder {
       const fw = r(ter.x1 - ter.x0)
       // Front (cara A cap a dins, x local = amplada).
       const frontPanel = this.add(
-        this.basePanel(`drawer-${k}-front`, "frontal calaix", `Front calaix ${k}`, "drawerFront", fw, fh, d.t, frontMaterialOf(this.m), "x", edges("left", "right", "bottom", "top"), placement([ter.x0, y + fh, d.D + d.t], X, neg(Y), neg(Z), Z)),
+        this.basePanel(`drawer-${k}-front`, "frontal calaix", `Front calaix ${k}`, "drawerFront", fw, fh, d.t, frontMaterialOf(this.m), "x", edges("left", "right", "bottom", "top"), placement([ter.x0, y + fh, d.frontZ], X, neg(Y), neg(Z), Z)),
       )
       const boxH = r(fh - hw.boxDrop)
       const boxY0 = r(y + (fh - boxH) / 2)
       const boxX0 = r(rect.x0 + hw.sideClearance)
-      const zFront = d.D // cara posterior del front
+      const zFront = d.frontZ - d.t // cara posterior del front
       const zBack = r(zFront - boxL)
       // Laterals de la caixa (cara A cap a dins de la caixa), amb ranura per al fons.
       const sideGroove = { x: 0, y: hw.bottomOffset, w: boxL, h: tbb, depth: g, face: "A" as const, tag: "drawer-bottom" }

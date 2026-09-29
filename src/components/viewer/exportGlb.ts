@@ -7,7 +7,7 @@ import {
   Scene,
   Vector3,
 } from "three"
-import { cutoutGeometry } from "./cutoutGeometry"
+import { cutoutGeometry, mitreGeometry } from "./cutoutGeometry"
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js"
 import type { Panel, PanelRole } from "../../core/model"
 
@@ -51,8 +51,8 @@ export function buildScene(panels: Panel[], name: string): Scene {
     holder.matrix.copy(m)
 
     // Amb retalls (reixa, forats de taulell…): extrusió amb forats; si no, una caixa.
-    const geo = p.cutouts?.length ? cutoutGeometry(p) : new BoxGeometry(p.length / 1000, p.width / 1000, p.thickness / 1000)
-    if (!p.cutouts?.length) geo.translate(p.length / 2000, p.width / 2000, p.thickness / 2000)
+    const geo = p.cutouts?.length ? cutoutGeometry(p) : p.mitres?.length ? mitreGeometry(p) : new BoxGeometry(p.length / 1000, p.width / 1000, p.thickness / 1000)
+    if (!p.cutouts?.length && !p.mitres?.length) geo.translate(p.length / 2000, p.width / 2000, p.thickness / 2000)
     const mesh = new Mesh(geo, new MeshStandardMaterial({ color: ROLE_COLOR[p.role], roughness: 0.85 }))
     mesh.name = p.id
     holder.add(mesh)

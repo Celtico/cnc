@@ -1,7 +1,9 @@
-import { DEFAULT_GRILLE, defaultModule, newId, type Composition, type Module } from "./composition"
+import { DEFAULT_GRILLE, defaultModule, newId, tableModule, type Composition, type CompositionKind, type Module } from "./composition"
 
 export interface Template {
   id: string
+  /** Tipus de moble (per filtrar la galeria i fixar-lo a la composició nova). */
+  kind: CompositionKind
   name: string
   description: string
   /** Genera una composició nova amb ids únics. */
@@ -14,13 +16,29 @@ function withRoot(m: Module, root: Module["root"]): Module {
 
 export const BUILTIN_TEMPLATES: Template[] = [
   {
+    id: "console",
+    kind: "taula",
+    name: "Consola",
+    description: "1400 × 760 × 400: tauler i dos laterals de panell a inglet, com un bloc massís.",
+    make: () => ({ kind: "taula", modules: [tableModule(newId("m"), "Consola")], references: [] }),
+  },
+  {
+    id: "dining-table",
+    kind: "taula",
+    name: "Taula de menjador",
+    description: "2000 × 750 × 900: tauler gruixut i laterals de panell a inglet (waterfall).",
+    make: () => ({ kind: "taula", modules: [tableModule(newId("m"), "Taula", { width: 2000, height: 750, depth: 900, thickness: 30 })], references: [] }),
+  },
+  {
     id: "modern-kitchen",
+    kind: "cuina",
     name: "Cuina moderna",
     description: "3000 mm lineal: baixos sobre potes (calaixos, fregadera, fogons, forn i rebost) amb taulell de roure d'una peça (forats de pica i vitro) i sòcol corregut; alts penjats a 1450. Cos blanc, fronts de roure.",
     make: () => kitchen(),
   },
   {
     id: "wardrobe-2-doors",
+    kind: "armari",
     name: "Armari 2 portes",
     description: "1000 × 2000 × 600, 4 prestatges regulables, dues portes.",
     make: () => ({
@@ -36,6 +54,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
   },
   {
     id: "drawers-4",
+    kind: "moble",
     name: "Calaixera 4 calaixos",
     description: "600 × 800 × 500, quatre calaixos d'alçada automàtica.",
     make: () => ({
@@ -50,6 +69,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
   },
   {
     id: "open-shelving",
+    kind: "moble",
     name: "Prestatgeria oberta",
     description: "800 × 1800 × 300, sense portes, 4 prestatges fixos.",
     make: () => ({
@@ -68,6 +88,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
   },
   {
     id: "tv-3-doors",
+    kind: "moble",
     name: "Moble TV 3 portes",
     description: "1850 × 480 × 420 amb sòcol, tres portes i un prestatge regulable per compartiment.",
     make: () => ({
@@ -77,6 +98,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
   },
   {
     id: "radiator-cover",
+    kind: "moble",
     name: "Cobreradiador",
     description: "790 × 1390 × 420, sense base ni fons, tapa amb ranura d'aire i reixeta desmuntable amb trapa.",
     make: () => ({
@@ -86,6 +108,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
   },
   {
     id: "tv-living-room",
+    kind: "moble",
     name: "Moble TV menjador (TV + cobreradiador)",
     description: "El moble de TV de 3 portes amb el cobreradiador al costat, radiador i tele com a objectes fantasma.",
     make: () => {

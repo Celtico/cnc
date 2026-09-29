@@ -2,7 +2,7 @@ import { Button, Field, HStack, NativeSelect, SimpleGrid, Stack, Switch, Text } 
 import { DEFAULT_GRILLE, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
 import { NumberField } from "../editor/ParamsForm"
 import { IconChoice } from "../../components/IconChoice"
-import { LuArrowDownToLine, LuDrill, LuGrid3X3, LuLayers2, LuPanelBottom, LuPanelTop, LuSquareDashed, LuSquareDashedBottom, LuTable, LuWind } from "react-icons/lu"
+import { LuArrowDownToLine, LuDrill, LuGrid3X3, LuLayers2, LuPanelBottom, LuPanelTop, LuSquareDashed, LuSquare, LuSquareDashedBottom, LuSquareSquare, LuSquareStack, LuTable, LuTriangleRight, LuWind } from "react-icons/lu"
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/SettingsScreen"
 
@@ -91,6 +91,28 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
             }}
           />
           {c.top.kind === "ventSlot" && <NumberField label="Ranura d'aire" value={c.top.gap} min={20} max={200} step={5} onChange={(gap) => set({ top: { kind: "ventSlot", gap } })} />}
+        </SimpleGrid>
+
+        {/* Acabats: com s'uneix la tapa amb els laterals i com van els fronts. */}
+        <SimpleGrid columns={2} gap={3}>
+          <IconChoice
+            label="Cantonades"
+            value={c.joint ?? "butt"}
+            options={[
+              { value: "butt", label: "Normals", icon: LuSquare, hint: "Normals: la tapa entre els laterals, amb espigues" },
+              { value: "mitre", label: "A inglet", icon: LuTriangleRight, hint: "A inglet: tapa i laterals tallats a 45°, no es veu cap cantell" },
+            ]}
+            onChange={(joint) => set({ joint: joint === "butt" ? undefined : joint })}
+          />
+          <IconChoice
+            label="Fronts"
+            value={module.fronts.style ?? "overlay"}
+            options={[
+              { value: "overlay", label: "Recobrents", icon: LuSquareStack, hint: "Recobrents: per davant de la caixa, tapant els cantells" },
+              { value: "inset", label: "Encastats", icon: LuSquareSquare, hint: "Encastats: dins de la llum, a nivell amb el davant de la caixa" },
+            ]}
+            onChange={(style) => onChange({ ...module, fronts: { ...module.fronts, style: style === "overlay" ? undefined : style } })}
+          />
         </SimpleGrid>
 
         <Field.Root>

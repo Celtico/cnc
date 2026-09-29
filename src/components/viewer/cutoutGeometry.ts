@@ -1,4 +1,4 @@
-import { ExtrudeGeometry, Path, Shape } from "three"
+import { ExtrudeGeometry, Matrix4, Path, Shape } from "three"
 import { ccw, flatten, type Panel } from "../../core/model"
 
 const S = 0.001
@@ -49,4 +49,28 @@ export function cutoutGeometry(p: Panel): ExtrudeGeometry {
     shape.holes.push(hole)
   }
   return new ExtrudeGeometry(shape, { depth: p.thickness * S, bevelEnabled: false, curveSegments: 10 })
+}
+
+/**
+ * Peça amb els extrems (cantells esquerre/dret) a inglet: la secció (llarg × gruix) és un
+ * trapezi, amb la cara de fora (z = 0) llarga, extruït al llarg de l'amplada. Materials:
+ * [0] les dues puntes (cantells de l'amplada), [1] les cares i els bisells.
+ */
+export function mitreGeometry(p: Panel): ExtrudeGeometry {
+  const L = p.length * S
+  const W = p.width * S
+  const T = p.thickness * S
+  const left = p.mitres?.includes("left") ? T : 0
+  const right = p.mitres?.includes("right") ? T : 0
+  // Secció en (x, z): z = 0 la cara de fora.
+  const shape = new Shape()
+  shape.moveTo(0, 0)
+  shape.lineTo(L, 0)
+  shape.lineTo(L - right, T)
+  shape.lineTo(left, T)
+  shape.closePath()
+  const g = new ExtrudeGeometry(shape, { depth: W, bevelEnabled: false })
+  // (sx, sy, e) → (x = sx, y = W − e, z = sy): gir sense mirall.
+  g.applyMatrix4(new Matrix4().set(1, 0, 0, 0, 0, 0, -1, W, 0, 1, 0, 0, 0, 0, 0, 1))
+  return g
 }

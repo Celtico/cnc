@@ -46,7 +46,7 @@ import { ArDialog } from "../../components/viewer/ArDialog"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox } from "../../core/build/buildComposition"
-import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, parentOf, pasteZone, rowOf, walkZones, newId, type Composition, type Module, type RefObject, type Zone } from "../../core/model"
+import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, type Composition, type Module, type RefObject, type Zone } from "../../core/model"
 import { updateProjectComposition } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -67,6 +67,8 @@ import { usePersistentFlag } from "../usePersistentFlag"
 import { usePersistentNumber } from "../usePersistentNumber"
 import { useComposition, useCompositionBuild, useProject } from "../useProject"
 import { RoleLegend } from "../../components/viewer/roleColors"
+import { IconChoice } from "../../components/IconChoice"
+import { KINDS } from "../composition/kinds"
 import { ViewBar, ViewerControls, type ViewerState } from "./ViewerControls"
 
 type ViewTab = "3d" | "elevation" | "photo"
@@ -288,6 +290,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
     }
   }, [projectId])
 
+  const kind = compositionKind(comp)
   const module: Module = comp.modules.find((m) => m.id === selectedModule) ?? comp.modules[0]!
   const moduleIndex = comp.modules.indexOf(module)
   // Posició dins de la seva fila (a terra o penjats) i el mòdul anterior de la fila.
@@ -743,9 +746,24 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
               Selecciona un mòdul, un compartiment o un objecte a l'estructura (o clica'l al 3D) per editar-lo.
             </Text>
           </PanelSection>
-          <PanelSection id="moble-runs" title="Taulell i sòcol" icon={LuPanelTop} badge={comp.runs?.length || undefined}>
-            <RunsForm comp={comp} onChange={setComp} />
+          {/* Tipus de moble: decideix les opcions de conjunt (taulell i sòcol només a la cuina). */}
+          <PanelSection id="moble-kind" title="Tipus" icon={KINDS.find((k) => k.value === kind)!.icon} badge={KINDS.find((k) => k.value === kind)!.label}>
+            <IconChoice label="Tipus de moble" value={kind} options={KINDS} onChange={(k) => setComp((c) => ({ ...c, kind: k }))} />
+            <Text fontSize="xs" color="fg.muted">
+              {kind === "cuina"
+                ? "Cuina: baixos a terra i alts penjats, amb taulell i sòcol correguts per sobre i per sota de diversos mòduls."
+                : kind === "armari"
+                  ? "Armari: mòduls alts; les portes i els prestatges van a cada mòdul."
+                  : kind === "taula"
+                    ? "Taula o consola: cada mòdul és un tauler amb dos laterals de panell. Les mides, a Mides; les cantonades a inglet i els laterals, a Estructura."
+                    : "Moble: mòduls lliures (TV, calaixera, prestatgeria…)."}
+            </Text>
           </PanelSection>
+          {(kind === "cuina" || !!comp.runs?.length) && (
+            <PanelSection id="moble-runs" title="Taulell i sòcol" icon={LuPanelTop} badge={comp.runs?.length || undefined}>
+              <RunsForm comp={comp} onChange={setComp} />
+            </PanelSection>
+          )}
           <PanelSection id="moble-materials" title="Materials de tot el moble" icon={LuPalette}>
             <MaterialsForm
               carcass={comp.modules[0]!.carcass}
@@ -896,7 +914,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
         {moduleWarnings.length > 0 && (
           <PanelSection id="warnings" title="Avisos de fusteria" icon={LuTriangleAlert} badge={moduleWarnings.length} badgePalette="orange">
             {moduleWarnings.map((w, i) => (
-              <Alert.Root key={i} status={w.code === "material-heat" ? "info" : "warning"} size="sm">
+              <Alert.Root key={i} status={w.code === "material-heat" || w.code === "mitre" || (w.code === "inset" && w.message.startsWith("Fronts")) ? "info" : "warning"} size="sm">
                 <Alert.Indicator />
                 <Alert.Content>
                   <Alert.Description>
@@ -967,7 +985,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           selection={selection}
           onSelect={(s) => select(s, true)}
           onChange={setComp}
-          newModule={(id, n) => applySettingsToModule(settings, defaultModule(id, n))}
+          newModule={(id, n) => (kind === "taula" ? tableModule(id, n) : applySettingsToModule(settings, defaultModule(id, n)))}
         />
         </Box>
       </Box>

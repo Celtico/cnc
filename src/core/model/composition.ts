@@ -111,6 +111,12 @@ export const CarcassSchema = z.object({
   back: z.enum(["groove", "screwed", "none"]),
   top: TopSchema,
   sides: z.object({ left: z.boolean(), right: z.boolean() }),
+  /**
+   * Unió de la tapa amb els laterals. Normal (per defecte): la tapa entre laterals, amb
+   * espigues. Inglet: tapa i laterals tallats a 45° a la cantonada (no es veu cap cantell),
+   * encolats amb lamel·les o Clamex.
+   */
+  joint: z.enum(["butt", "mitre"]).optional(),
   // Fusteria
   backSetback: mm.min(0).max(60),
   grooveDepth: mm.min(3).max(15),
@@ -212,7 +218,15 @@ export const ModuleSchema = z.object({
   wallGap: mm.min(0).optional(),
   carcass: CarcassSchema,
   root: ZoneSchema,
-  fronts: z.object({ outerGap: mm.min(0).max(10), betweenGap: mm.min(0).max(10) }),
+  fronts: z.object({
+    outerGap: mm.min(0).max(10),
+    betweenGap: mm.min(0).max(10),
+    /**
+     * Com van els fronts respecte a la caixa. Recobrents (per defecte): per davant, tapant els
+     * cantells dels laterals. Encastats: dins de la llum, a nivell amb el davant de la caixa.
+     */
+    style: z.enum(["overlay", "inset"]).optional(),
+  }),
   hardware: HardwareSchema,
   extras: CarcassExtrasSchema,
   /**
@@ -368,7 +382,15 @@ export const CUTOUT_PRESETS: Record<WorktopCutout["kind"], { w: number; d: numbe
   custom: { w: 400, d: 300, label: "A mida" },
 }
 
+/**
+ * Tipus de moble: decideix quines opcions de conjunt surten (taulell i sòcol a la cuina…) i
+ * què s'afegeix amb «Afegir mòdul». Opcional: els antics es dedueixen (`compositionKind`).
+ */
+export const CompositionKindSchema = z.enum(["moble", "cuina", "armari", "taula"])
+export type CompositionKind = z.infer<typeof CompositionKindSchema>
+
 export const CompositionSchema = z.object({
+  kind: CompositionKindSchema.optional(),
   modules: z.array(ModuleSchema),
   references: z.array(RefObjectSchema),
   /** Taulells i sòcols correguts. Opcional (els mobles antics no en tenen). */
@@ -559,6 +581,20 @@ export function cabinetToComposition(p: CabinetParams, name = "Mòdul"): Composi
 }
 
 /** Mòdul nou amb valors per defecte (caixa buida amb prestatges regulables). */
+/** Tipus d'una composició: el triat o, als antics, cuina si té taulell/sòcol corregut. */
+export function compositionKind(c: Composition): CompositionKind {
+  return c.kind ?? (c.runs?.length ? "cuina" : "moble")
+}
+
+/**
+ * Taula o consola de panells: tauler a dalt i dos laterals que fan de potes, sense base
+ * ni fons, amb les cantonades a inglet (com un bloc massís).
+ */
+export function tableModule(id: string, name: string, overrides: Partial<Carcass> = {}): Module {
+  const m = defaultModule(id, name, { width: 1400, height: 760, depth: 400, base: { kind: "open" }, back: "none", joint: "mitre", ...overrides })
+  return { ...m, root: { id: newId() } }
+}
+
 export function defaultModule(id: string, name: string, overrides: Partial<Carcass> = {}): Module {
   const m = cabinetToModule({ ...DEFAULT_CABINET, doors: 0, shelves: 1 }, id, name)
   return { ...m, carcass: { ...m.carcass, ...overrides } }

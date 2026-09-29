@@ -22,6 +22,8 @@ export const LAYER_CONTOUR = "CONTOUR"
 export const LAYER_LABEL = "LABEL"
 /** Talls passants (ranures de reixeta, passacables, trapes): separats del contorn. */
 export const LAYER_CUT_THROUGH = "CUT_THROUGH"
+/** Cantells a tallar a 45° (unió a inglet): una línia sobre el cantell. */
+export const LAYER_MITRE = "MITRE_45"
 
 export interface DxfOptions {
   /** Separació entre peces en mm. */
@@ -66,6 +68,7 @@ export function dxfLayers(panels: Panel[], labels = true): string[] {
     for (const h of p.holes) set.add(holeLayer(h))
     for (const g of p.grooves) set.add(grooveLayer(g))
     if (p.cutouts?.length) set.add(LAYER_CUT_THROUGH)
+    if (p.mitres?.length) set.add(LAYER_MITRE)
   }
   return [...set].sort()
 }
@@ -197,6 +200,10 @@ export function panelEntities(panel: Panel, labels = true, threeD = true): strin
     out += circle(holeLayer(h), h.x, h.y, h.diameter / 2, zz)
   }
   for (const c of panel.cutouts ?? []) out += cutoutEntity(c, threeD ? { z: 0, t: T } : FLAT)
+  for (const e of panel.mitres ?? []) {
+    const [a, b] = e === "left" ? [[0, 0], [0, W]] : e === "right" ? [[L, 0], [L, W]] : e === "bottom" ? [[0, 0], [L, 0]] : [[0, W], [L, W]]
+    out += pairs([0, "LINE"], [8, LAYER_MITRE], [10, fmt(a![0]!)], [20, fmt(a![1]!)], [30, "0.0"], [11, fmt(b![0]!)], [21, fmt(b![1]!)], [31, "0.0"])
+  }
   if (labels) {
     const h = Math.max(5, Math.min(20, W / 12))
     out += text(LAYER_LABEL, h, h, h, `${panel.name} ${fmt(L)}x${fmt(W)}x${fmt(panel.thickness)}`, threeD ? T : 0)

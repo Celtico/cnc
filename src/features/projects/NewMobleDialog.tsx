@@ -1,9 +1,10 @@
-import { Badge, Box, Button, Card, Dialog, Editable, HStack, IconButton, Menu, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, Card, Dialog, Editable, HStack, IconButton, Menu, Portal, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useMemo, useState } from "react"
 import { LuCopy, LuEllipsis, LuPlus, LuShare2, LuTrash2 } from "react-icons/lu"
 import { CompositionThumb } from "../../components/CompositionThumb"
 import { toaster } from "../../components/ui/toaster"
-import { applySettingsToModule, BUILTIN_TEMPLATES, compositionHeight, compositionWidth, defaultModule, newId, type Composition } from "../../core/model"
+import { applySettingsToModule, BUILTIN_TEMPLATES, compositionHeight, compositionKind, compositionWidth, defaultModule, newId, tableModule, type Composition, type CompositionKind } from "../../core/model"
+import { KINDS } from "../composition/kinds"
 import { deleteUserTemplate, duplicateUserTemplate, loadUserTemplates, renameUserTemplate, type UserTemplate } from "../../db/compositionStore"
 import { saveTemplateAsFile } from "../file/mobleIo"
 import { useSettings } from "../settings/SettingsContext"
@@ -37,8 +38,18 @@ export function NewMobleDialog({
     if (open) setMine(loadUserTemplates())
   }
   const builtin = useMemo(() => BUILTIN_TEMPLATES.map((t) => ({ t, comp: t.make() })), [])
+  // Filtre per tipus de moble (Tot, Moble, Cuina, Armari, Taula).
+  const [kind, setKind] = useState<CompositionKind | "all">("all")
+  const kindLabel = (k: CompositionKind) => KINDS.find((x) => x.value === k)!.label
+  const shownBuiltin = builtin.filter(({ t }) => kind === "all" || t.kind === kind)
+  const shownMine = mine.filter((t) => kind === "all" || compositionKind(t.composition) === kind)
 
-  const blank = () => onCreate({ modules: [applySettingsToModule(settings, defaultModule(newId("m"), "Mòdul 1"))], references: [] }, "Moble nou")
+  const blank = () => {
+    const k = kind === "all" ? "moble" : kind
+    const m = k === "taula" ? tableModule(newId("m"), "Taula") : applySettingsToModule(settings, defaultModule(newId("m"), "Mòdul 1"))
+    const names: Record<CompositionKind, string> = { moble: "Moble nou", cuina: "Cuina nova", armari: "Armari nou", taula: "Taula nova" }
+    onCreate({ kind: k, modules: [m], references: [] }, names[k])
+  }
 
   return (
     <>
@@ -52,6 +63,23 @@ export function NewMobleDialog({
               </Dialog.Header>
               <Dialog.Body>
                 <Stack gap={5}>
+                  <SegmentGroup.Root size="sm" value={kind} onValueChange={(e) => e.value && setKind(e.value as CompositionKind | "all")} alignSelf="flex-start" maxW="full" overflowX="auto">
+                    <SegmentGroup.Indicator />
+                    <SegmentGroup.Item value="all">
+                      <SegmentGroup.ItemText>Tot</SegmentGroup.ItemText>
+                      <SegmentGroup.ItemHiddenInput />
+                    </SegmentGroup.Item>
+                    {KINDS.map((k) => (
+                      <SegmentGroup.Item key={k.value} value={k.value} title={k.hint}>
+                        <SegmentGroup.ItemText>
+                          <HStack gap={1.5}>
+                            <k.icon /> {k.label}
+                          </HStack>
+                        </SegmentGroup.ItemText>
+                        <SegmentGroup.ItemHiddenInput />
+                      </SegmentGroup.Item>
+                    ))}
+                  </SegmentGroup.Root>
                   <SimpleGrid columns={{ base: 2, md: 3 }} gap={3}>
                     <Card.Root asChild variant="outline" size="sm" cursor="pointer" _hover={{ borderColor: "wood.solid" }}>
                       <button type="button" onClick={blank}>
@@ -61,20 +89,20 @@ export function NewMobleDialog({
                           </Box>
                           <Text fontWeight="semibold">En blanc</Text>
                           <Text fontSize="xs" color="fg.muted">
-                            Un mòdul amb els valors de les preferències.
+                            {kind === "taula" ? "Un tauler amb dos laterals de panell." : "Un mòdul amb els valors de les preferències."}
                           </Text>
                         </Card.Body>
                       </button>
                     </Card.Root>
                   </SimpleGrid>
 
-                  {mine.length > 0 && (
+                  {shownMine.length > 0 && (
                     <Stack gap={2}>
                       <Text fontSize="sm" fontWeight="semibold">
                         Les teves plantilles
                       </Text>
                       <SimpleGrid columns={{ base: 2, md: 3 }} gap={3}>
-                        {mine.map((t) => (
+                        {shownMine.map((t) => (
                           <Card.Root key={t.id} variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }}>
                             <Card.Body p={3} gap={2}>
                               <Box cursor="pointer" onClick={() => onCreate(structuredClone(t.composition), t.name)}>
@@ -139,9 +167,9 @@ export function NewMobleDialog({
                       Plantilles de l'app
                     </Text>
                     <SimpleGrid columns={{ base: 2, md: 3 }} gap={3}>
-                      {builtin.map(({ t, comp }) => (
+                      {shownBuiltin.map(({ t, comp }) => (
                         <Card.Root key={t.id} asChild variant="outline" size="sm" cursor="pointer" _hover={{ borderColor: "wood.solid" }}>
-                          <button type="button" onClick={() => onCreate(t.make(), t.name)}>
+                          <button type="button" onClick={() => onCreate({ ...t.make(), kind: t.kind }, t.name)}>
                             <Card.Body p={3} gap={2} alignItems="stretch" textAlign="left">
                               <CompositionThumb composition={comp} />
                               <HStack justify="space-between" gap={1}>
@@ -149,7 +177,7 @@ export function NewMobleDialog({
                                   {t.name}
                                 </Text>
                                 <Badge size="xs" variant="subtle" flexShrink={0}>
-                                  app
+                                  {kindLabel(t.kind)}
                                 </Badge>
                               </HStack>
                               <Text fontSize="xs" color="fg.muted" lineClamp={2}>

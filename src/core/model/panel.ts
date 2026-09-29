@@ -171,6 +171,8 @@ export const PanelSchema = z.object({
   grooves: z.array(GrooveSchema),
   /** Talls passants. Opcional: la majoria de peces no en tenen. */
   cutouts: z.array(CutoutSchema).optional(),
+  /** Cantells tallats a 45° (unió a inglet); la cara llarga és la de fora del moble. */
+  mitres: z.array(EdgeSideSchema).optional(),
   /** Número de mòdul (1..n) dins de la composició, per a les refs del taller. */
   module: z.number().int().positive().optional(),
   placement: PlacementSchema,
