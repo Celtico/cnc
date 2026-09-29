@@ -41,7 +41,9 @@ export function NewMobleDialog({
   // Filtre per tipus de moble (Tot, Moble, Cuina, Armari, Taula).
   const [kind, setKind] = useState<CompositionKind | "all">("all")
   const kindLabel = (k: CompositionKind) => KINDS.find((x) => x.value === k)!.label
-  const shownBuiltin = builtin.filter(({ t }) => kind === "all" || t.kind === kind)
+  // Ordenades pel tipus (Moble, Cuina, Armari, Taula), i dins de cada tipus com a la llista.
+  const kindOrder = (k: CompositionKind) => KINDS.findIndex((x) => x.value === k)
+  const shownBuiltin = builtin.filter(({ t }) => kind === "all" || t.kind === kind).sort((a, b) => kindOrder(a.t.kind) - kindOrder(b.t.kind))
   const shownMine = mine.filter((t) => kind === "all" || compositionKind(t.composition) === kind)
 
   const blank = () => {
@@ -63,17 +65,21 @@ export function NewMobleDialog({
               </Dialog.Header>
               <Dialog.Body>
                 <Stack gap={5}>
-                  <SegmentGroup.Root size="sm" value={kind} onValueChange={(e) => e.value && setKind(e.value as CompositionKind | "all")} alignSelf="flex-start" maxW="full" overflowX="auto">
+                  <SegmentGroup.Root size="sm" value={kind} onValueChange={(e) => e.value && setKind(e.value as CompositionKind | "all")} alignSelf={{ base: "stretch", sm: "flex-start" }}>
                     <SegmentGroup.Indicator />
-                    <SegmentGroup.Item value="all">
+                    <SegmentGroup.Item value="all" flex={{ base: 1, sm: "initial" }} justifyContent="center">
                       <SegmentGroup.ItemText>Tot</SegmentGroup.ItemText>
                       <SegmentGroup.ItemHiddenInput />
                     </SegmentGroup.Item>
                     {KINDS.map((k) => (
-                      <SegmentGroup.Item key={k.value} value={k.value} title={k.hint}>
+                      <SegmentGroup.Item key={k.value} value={k.value} title={k.hint} aria-label={k.label} flex={{ base: 1, sm: "initial" }} justifyContent="center">
                         <SegmentGroup.ItemText>
+                          {/* Al mòbil només la icona (el nom, al títol i a la insígnia de cada plantilla). */}
                           <HStack gap={1.5}>
-                            <k.icon /> {k.label}
+                            <k.icon />
+                            <Box as="span" display={{ base: "none", sm: "inline" }}>
+                              {k.label}
+                            </Box>
                           </HStack>
                         </SegmentGroup.ItemText>
                         <SegmentGroup.ItemHiddenInput />
