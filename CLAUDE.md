@@ -253,6 +253,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     d'estudi, `viewer/PresentationRoom.tsx`, procedural). Per dins són la qualitat
     (`viewer/renderQuality.ts`: fast / presentation, també a Preferències › Visor 3D) més
     `mobles:viewer-role-colors-fast`. L'escena és a `viewer/presentationScene.ts`.
+  - **Nom a la capçalera de l'inspector**: el nom del mòdul i de l'objecte es canvia clicant-lo
+    a la capçalera (`Editable`, com a Figma), no a les seccions; el del moble, a la barra de dalt.
   - **Opcions amb icona** (`components/IconChoice.tsx`): poques opcions → botons d'icona amb
     el nom al tooltip i l'opció triada al costat del títol. Base, Fons, Tapa (mòdul), Patró de
     reixeta, Direcció dels objectes; Efecte i Forma dels objectes són segments amb icona i text.

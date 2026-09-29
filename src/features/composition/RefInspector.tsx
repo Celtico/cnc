@@ -1,4 +1,4 @@
-import { Button, Field, HStack, IconButton, Input, Menu, Portal, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Button, Field, HStack, IconButton, Menu, Portal, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState } from "react"
 import { ProfileEditor } from "./ProfileEditor"
 import type { IconType } from "react-icons"
@@ -82,10 +82,6 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
   return (
     <Stack gap={0}>
       <PanelSection id="ref-general" title="General" icon={LuScan}>
-        <Field.Root>
-          <Field.Label>Nom</Field.Label>
-          <Input size="sm" value={o.name} onChange={(e) => update({ name: e.target.value })} />
-        </Field.Root>
         <Field.Root>
           <Field.Label>Efecte</Field.Label>
           <Segments

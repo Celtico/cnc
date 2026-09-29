@@ -1,4 +1,4 @@
-import { Button, Field, HStack, Input, NativeSelect, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
+import { Button, Field, HStack, NativeSelect, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
 import { DEFAULT_GRILLE, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
 import { NumberField } from "../editor/ParamsForm"
 import { IconChoice } from "../../components/IconChoice"
@@ -20,10 +20,6 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
   if (section === "dims")
     return (
       <Stack gap={4}>
-        <Field.Root>
-          <Field.Label>Nom del mòdul</Field.Label>
-          <Input size="sm" value={module.name} onChange={(e) => onChange({ ...module, name: e.target.value })} />
-        </Field.Root>
         <SimpleGrid columns={3} gap={3}>
           <NumberField label="Amplada" value={c.width} min={100} max={3000} step={10} onChange={(width) => set({ width })} />
           <NumberField label="Alçada" value={c.height} min={100} max={2800} step={10} onChange={(height) => set({ height })} />

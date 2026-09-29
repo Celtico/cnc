@@ -1,4 +1,4 @@
-import { Alert, Badge, Box, Button, Group, CloseButton, Drawer, Field, Flex, HStack, IconButton, Popover, Portal, SegmentGroup, SimpleGrid, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
+import { Alert, Badge, Box, Button, Editable, Group, CloseButton, Drawer, Field, Flex, HStack, IconButton, Popover, Portal, SegmentGroup, SimpleGrid, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
 import { createElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   LuArrowDownToLine,
@@ -652,15 +652,16 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   // moble sencer); si es tria un mòdul, un compartiment o un objecte, en mostra les propietats.
   const photoInspector = photoTab && selection.kind === "moble"
   // Títol en dues línies: on és (petit i apagat) i què és (el nom), perquè no es talli.
-  const inspectorTitle: { icon: ReactNode; text: string; parent?: string } = photoInspector
+  const renameRef = (id: string, v: string) => setComp((c) => ({ ...c, references: c.references.map((r) => (r.id === id ? { ...r, name: v } : r)) }))
+  const inspectorTitle: { icon: ReactNode; text: string; parent?: string; onRename?: (v: string) => void } = photoInspector
     ? { icon: <LuCamera />, text: "Foto del lloc" }
     : selection.kind === "moble"
       ? { icon: <LuBox />, text: name || "Moble" }
       : selection.kind === "ref"
-        ? { icon: <LuScan />, text: comp.references.find((r) => r.id === selection.id)?.name ?? "Objecte", parent: "Objecte de referència" }
+        ? { icon: <LuScan />, text: comp.references.find((r) => r.id === selection.id)?.name ?? "Objecte", parent: "Objecte de referència", onRename: (v) => renameRef(selection.id, v) }
         : selection.kind === "zone" && zone
           ? { icon: createElement(zoneIcon(zone)), text: zoneLabel(zone), parent: module.name }
-          : { icon: <LuBox />, text: module.name, parent: name || "Moble" }
+          : { icon: <LuBox />, text: module.name, parent: name || "Moble", onRename: (v) => updateModule({ ...module, name: v }) }
 
   // Sense separació entre blocs: les seccions plegables van enganxades (totes amb la
   // mateixa alçada de capçalera); els elements que no són secció porten el seu marge.
@@ -674,9 +675,29 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
               {inspectorTitle.parent}
             </Text>
           )}
-          <Text fontSize="sm" fontWeight="semibold" color="fg" truncate data-truncate="">
-            {inspectorTitle.text}
-          </Text>
+          {inspectorTitle.onRename ? (
+            // El nom es canvia aquí, a la capçalera (clic al nom), com a Figma.
+            <Editable.Root
+              key={`${selection.kind}:${inspectorTitle.text}`}
+              defaultValue={inspectorTitle.text}
+              onValueCommit={(e) => {
+                const v = e.value.trim()
+                if (v && v !== inspectorTitle.text) inspectorTitle.onRename!(v)
+              }}
+              fontSize="sm"
+              fontWeight="semibold"
+              color="fg"
+              minW={0}
+              aria-label="Nom"
+            >
+              <Editable.Preview title="Clica per canviar el nom" truncate px={1} mx={-1} py={0} minH="auto" _hover={{ bg: "bg.muted" }} />
+              <Editable.Input px={1} mx={-1} py={0} h="22px" />
+            </Editable.Root>
+          ) : (
+            <Text fontSize="sm" fontWeight="semibold" color="fg" truncate data-truncate="">
+              {inspectorTitle.text}
+            </Text>
+          )}
         </Stack>
         {!photoInspector && siblings && (
           <HStack gap={0} flexShrink={0} color="fg.muted">
