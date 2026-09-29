@@ -1,7 +1,6 @@
 import { Button, Field, HStack, Menu, NativeSelect, Portal, SegmentGroup, Slider, Stack, Switch, Text } from "@chakra-ui/react"
 import { LuChevronDown, LuDoorOpen, LuImageDown, LuLayers, LuPalette } from "react-icons/lu"
 import { VIEW_LABELS, type ViewName } from "../../components/viewer/CabinetViewer"
-import { QUALITY_LABELS, type RenderQuality } from "../../components/viewer/renderQuality"
 
 const VIEWS: ViewName[] = ["front", "back", "left", "right", "top", "3d"]
 
@@ -54,16 +53,15 @@ export function ViewerControls({
   hasMoving,
   hasSelectedZone,
   onImage,
-  quality,
-  onQuality,
+  colorsLocked = false,
 }: {
   state: ViewerState
   onChange: (patch: Partial<ViewerState>) => void
   hasMoving: boolean
   hasSelectedZone: boolean
   onImage: () => void
-  quality: RenderQuality
-  onQuality: (q: RenderQuality) => void
+  /** En mode Presentació els colors són sempre els materials. */
+  colorsLocked?: boolean
 }) {
   return (
     <Stack gap={4}>
@@ -119,7 +117,7 @@ export function ViewerControls({
 
       <Field.Root>
         <Field.Label>Colors</Field.Label>
-        <SegmentGroup.Root size="sm" value={state.materialMode} onValueChange={(e) => (e.value === "material" || e.value === "role") && onChange({ materialMode: e.value })}>
+        <SegmentGroup.Root size="sm" disabled={colorsLocked} value={state.materialMode} onValueChange={(e) => (e.value === "material" || e.value === "role") && onChange({ materialMode: e.value })}>
           <SegmentGroup.Indicator />
           <SegmentGroup.Item value="material" aria-label="Veure com a fusta">
             <SegmentGroup.ItemText>
@@ -138,34 +136,10 @@ export function ViewerControls({
             <SegmentGroup.ItemHiddenInput />
           </SegmentGroup.Item>
         </SegmentGroup.Root>
-        <Field.HelperText>Amb materials, la veta segueix la direcció de cada peça i els cantells porten el seu material.</Field.HelperText>
-      </Field.Root>
-
-      <Field.Root>
-        <Field.Label>Qualitat</Field.Label>
-        {/* Desplegable i no botons: «Presentació» no hi cabia dins l'amplada del popover. */}
-        <NativeSelect.Root size="sm">
-          <NativeSelect.Field value={quality} onChange={(e) => {
-            const v = e.currentTarget.value
-            if (v === "fast" || v === "balanced" || v === "high" || v === "presentation") onQuality(v)
-          }}>
-            {(["fast", "balanced", "high", "presentation"] as const).map((v) => (
-              <option key={v} value={v}>
-                {QUALITY_LABELS[v]}
-              </option>
-            ))}
-          </NativeSelect.Field>
-          <NativeSelect.Indicator />
-        </NativeSelect.Root>
         <Field.HelperText>
-          {quality === "fast"
-            ? "Sense ombres i a resolució normal: per a mòbils o mobles grans."
-            : quality === "high"
-              ? "Ombres fines i màxima resolució: per revisar acabats. Gasta més bateria."
-              : quality === "presentation"
-                ? "Com l'alta, però sense perfils, graella ni botons: per ensenyar el moble o descarregar-ne una imatge."
-                : "Ombres suaus: bon equilibri entre aspecte i velocitat."}{" "}
-          Es desa en aquest dispositiu.
+          {colorsLocked
+            ? "En mode Presentació es veuen sempre els materials. Els colors per peça són del mode Ràpida."
+            : "Per tipus de peça: cada tipus (costat, balda, fons, front…) d'un color. Materials: veta i cantells reals."}
         </Field.HelperText>
       </Field.Root>
 

@@ -751,7 +751,7 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
             </SegmentGroup.Item>
           ))}
         </SegmentGroup.Root>
-        <Field.HelperText>També es pot canviar des d'Opcions de vista, al visor.</Field.HelperText>
+        <Field.HelperText>Ràpida per treballar (colors per tipus de peça); Presentació per ensenyar-lo (materials reals). Al visor es commuta amb el botó ✦ de la barra.</Field.HelperText>
       </Field.Root>
 
       <SimpleGrid columns={{ base: 1, lg: 2 }} gap={6} alignItems="start">

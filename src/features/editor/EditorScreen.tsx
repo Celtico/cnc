@@ -26,6 +26,7 @@ import {
   LuRedo2,
   LuScan,
   LuShrink,
+  LuSparkles,
   LuSlidersHorizontal,
   LuSlidersVertical,
   LuTriangleAlert,
@@ -61,6 +62,7 @@ import { useSettings } from "../settings/SettingsContext"
 import { usePersistentFlag } from "../usePersistentFlag"
 import { usePersistentNumber } from "../usePersistentNumber"
 import { useComposition, useCompositionBuild, useProject } from "../useProject"
+import { RoleLegend } from "../../components/viewer/roleColors"
 import { ViewBar, ViewerControls, type ViewerState } from "./ViewerControls"
 
 type ViewTab = "3d" | "elevation" | "photo"
@@ -176,10 +178,12 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   // «Veure a casa»: visor 3D amb el botó d'AR Quick Look (Safari a l'iPhone/iPad).
   const [arOpen, setArOpen] = useState(false)
   // Visor: vista, obertura de portes i calaixos, colors.
-  const [roleColors, setRoleColors] = usePersistentFlag("mobles:viewer-role-colors")
+  // En mode Ràpida, per defecte colors per tipus de peça (més clar per treballar);
+  // en mode Presentació sempre els materials reals.
+  const [roleColors, setRoleColors] = usePersistentFlag("mobles:viewer-role-colors-fast", true)
   const [quality, setQuality] = useRenderQuality()
   const [viewer, setViewerState] = useState<Omit<ViewerState, "materialMode">>({ view: "3d", opening: 0, openOnlySelected: false })
-  const viewerState: ViewerState = { ...viewer, materialMode: roleColors ? "role" : "material" }
+  const viewerState: ViewerState = { ...viewer, materialMode: quality === "fast" && roleColors ? "role" : "material" }
   const setViewer = (patch: Partial<ViewerState>) => {
     const { materialMode, ...rest } = patch
     if (materialMode) setRoleColors(materialMode === "role")
@@ -986,6 +990,11 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             onMoveModule={(id, dx, dy, all) => setComp((c) => (all ? moveAllBy(c, dx) : moveModuleBy(c, id, dx, dy)))}
           />
         )}
+        {viewTab === "3d" && viewerState.materialMode === "role" && (
+          <Box position="absolute" bottom={3} left={3} zIndex={2} display={{ base: "none", md: "block" }}>
+            <RoleLegend panels={panels} />
+          </Box>
+        )}
         {/* Amb el visor estret, les vistes es trien a «Opcions de vista» (no hi caben a baix). */}
         {viewTab === "3d" && !viewerNarrow && (
           <Box position="absolute" bottom={3} left="50%" transform="translateX(-50%)" zIndex={2}>
@@ -1093,6 +1102,16 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           <IconButton aria-label={exploded ? "Vista muntada" : "Vista explosionada"} title={exploded ? "Vista muntada" : "Vista explosionada"} size="sm" variant={exploded ? "solid" : "surface"} colorPalette="wood" onClick={() => setExploded((v) => !v)}>
             {exploded ? <LuShrink /> : <LuExpand />}
           </IconButton>
+          <IconButton
+            aria-label={quality === "presentation" ? "Tornar al mode de treball" : "Mode presentació"}
+            title={quality === "presentation" ? "Presentació (clic: tornar al mode de treball, ràpid i amb guies)" : "Mode presentació: ombres i aspecte de catàleg, sense guies"}
+            size="sm"
+            variant={quality === "presentation" ? "solid" : "surface"}
+            colorPalette="wood"
+            onClick={() => setQuality(quality === "presentation" ? "fast" : "presentation")}
+          >
+            <LuSparkles />
+          </IconButton>
           <IconButton aria-label="Encuadrar el moble" title="Encuadrar el moble (la càmera ja no es mou sola en editar)" size="sm" variant="surface" colorPalette="wood" onClick={() => setFitKey((k) => k + 1)}>
             <LuFocus />
           </IconButton>
@@ -1113,7 +1132,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                       <Drawer.Title>Opcions de vista</Drawer.Title>
                     </Drawer.Header>
                     <Drawer.Body overflowY="auto" pb={6}>
-                      <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} quality={quality} onQuality={setQuality} />
+                      <ViewerControls colorsLocked={quality === "presentation"} state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} />
                     </Drawer.Body>
                     <Drawer.CloseTrigger asChild>
                       <CloseButton size="sm" />
@@ -1133,7 +1152,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                 <Popover.Positioner>
                   <Popover.Content w="320px">
                     <Popover.Body>
-                      <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} quality={quality} onQuality={setQuality} />
+                      <ViewerControls colorsLocked={quality === "presentation"} state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} />
                     </Popover.Body>
                   </Popover.Content>
                 </Popover.Positioner>

@@ -7,9 +7,10 @@ import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
 import { DoubleSide, ExtrudeGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Shape, Vector3, type Object3D, type Texture } from "three"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
-import { AXIS_INDEX, SECTION_AXES, flatten, sampleProfile, toNodes, type Hole, type MaterialPref, type Panel, type PanelRole, type RefObject } from "../../core/model"
+import { AXIS_INDEX, SECTION_AXES, flatten, sampleProfile, toNodes, type Hole, type MaterialPref, type Panel, type RefObject } from "../../core/model"
 import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
+import { ROLE_COLOR } from "./roleColors"
 import { cutoutGeometry } from "./cutoutGeometry"
 import { RAW_EDGE_COLOR, TILE_MM, resolveEdgeFinish, resolveFinish, woodTexture, type FinishSpec } from "./textures"
 
@@ -21,26 +22,6 @@ const S = 0.001
 /** Separació en vista explosionada (mm). */
 const EXPLODE_MM = 160
 
-const ROLE_COLOR: Record<PanelRole, string> = {
-  side: "#e6cfa6",
-  bottom: "#e6cfa6",
-  top: "#e6cfa6",
-  shelf: "#efdcb8",
-  door: "#d6b076",
-  back: "#c9b79a",
-  divider: "#e6cfa6",
-  fixedShelf: "#e6cfa6",
-  plinth: "#b57a37",
-  drawerFront: "#d6b076",
-  drawerSide: "#efdcb8",
-  drawerBack: "#efdcb8",
-  drawerBottom: "#c9b79a",
-  flap: "#d6b076",
-  grille: "#d6b076",
-  hatch: "#d6b076",
-  panel: "#d6b076",
-  worktop: "#c6924f",
-}
 
 export type ViewName = "3d" | "front" | "back" | "left" | "right" | "top"
 export const VIEW_LABELS: Record<ViewName, string> = { "3d": "3D", front: "Davant", back: "Darrere", left: "Esquerra", right: "Dreta", top: "Dalt" }
@@ -134,7 +115,7 @@ export function CabinetViewer({
   materials = [],
   lights = [],
   onCapture,
-  quality = "balanced",
+  quality = "fast",
   onDeselect,
   selectedRefId,
   onSelectRef,
