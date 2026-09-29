@@ -1,6 +1,8 @@
 import {
   BoxGeometry,
+  CylinderGeometry,
   Group,
+  type BufferGeometry,
   Matrix4,
   Mesh,
   MeshStandardMaterial,
@@ -9,7 +11,7 @@ import {
 } from "three"
 import { cutoutGeometry, mitreGeometry } from "./cutoutGeometry"
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js"
-import type { Panel, PanelRole } from "../../core/model"
+import type { MaterialPref, Panel, PanelRole } from "../../core/model"
 
 const ROLE_COLOR: Record<PanelRole, number> = {
   side: 0xe6cfa6,
@@ -35,8 +37,12 @@ const ROLE_COLOR: Record<PanelRole, number> = {
   part: 0xd9b98a,
 }
 
-/** Escena three.js en METRES (per a AR / visors GLB) a partir de les peces. */
-export function buildScene(panels: Panel[], name: string): Scene {
+/**
+ * Escena three.js en METRES (per a AR / visors GLB) a partir de les peces. Amb `real` (al
+ * navegador): els materials i les textures del visor, i els tiradors; sense (tests, node):
+ * colors per tipus de peça.
+ */
+export function buildScene(panels: Panel[], name: string, real?: { materials: MaterialPref[]; make: (p: Panel, m: MaterialPref[]) => { geometry: BufferGeometry; material: MeshStandardMaterial[] } }): Scene {
   const scene = new Scene()
   scene.name = name
   const root = new Group()
@@ -53,6 +59,15 @@ export function buildScene(panels: Panel[], name: string): Scene {
     holder.matrixAutoUpdate = false
     holder.matrix.copy(m)
 
+    if (real) {
+      const { geometry, material } = real.make(p, real.materials)
+      const mesh = new Mesh(geometry, material)
+      mesh.name = p.id
+      holder.add(mesh)
+      for (const h of handleMeshes(p)) holder.add(h)
+      root.add(holder)
+      continue
+    }
     // Amb retalls (reixa, forats de taulell…): extrusió amb forats; si no, una caixa.
     const shaped = !!p.cutouts?.length || !!p.outline
     const geo = shaped ? cutoutGeometry(p) : p.mitres?.length ? mitreGeometry(p) : new BoxGeometry(p.length / 1000, p.width / 1000, p.thickness / 1000)
@@ -65,9 +80,52 @@ export function buildScene(panels: Panel[], name: string): Scene {
   return scene
 }
 
+const METAL = new MeshStandardMaterial({ color: 0xb9bdc2, metalness: 0.85, roughness: 0.3, name: "Inox" })
+
+/** Tirador de barra als fronts (el mateix criteri que `PanelHardware` del visor), en m. */
+function handleMeshes(p: Panel): Mesh[] {
+  if (p.role !== "door" && p.role !== "drawerFront" && p.role !== "flap") return []
+  const L = p.length, W = p.width, T = p.thickness
+  const cups = p.holes.filter((h) => h.tag === "hinge")
+  const inner = cups[0]?.face === "B" ? 0 : T
+  const outZ = inner === T ? 0 : T
+  const dir = inner === T ? -1 : 1
+  let cx = L / 2, cy = W / 2, vertical = false
+  let len = Math.min(192, L * 0.4)
+  const hh = (p.cutouts ?? []).filter((c): c is Extract<typeof c, { kind: "circle" }> => c.kind === "circle" && c.tag === "handle")
+  if (hh.length === 2) {
+    const [a, b] = hh as [(typeof hh)[number], (typeof hh)[number]]
+    vertical = Math.abs(a.y - b.y) > Math.abs(a.x - b.x)
+    cx = (a.x + b.x) / 2
+    cy = (a.y + b.y) / 2
+    len = Math.hypot(a.x - b.x, a.y - b.y) + 40
+  } else if (cups.length) {
+    const mx = cups.reduce((a, h) => a + h.x, 0) / cups.length
+    const my = cups.reduce((a, h) => a + h.y, 0) / cups.length
+    const alongX = Math.abs(my - W / 2) / W > Math.abs(mx - L / 2) / L
+    len = Math.min(192, (alongX ? L : W) * 0.4)
+    if (alongX) cy = my < W / 2 ? W - 45 : 45
+    else {
+      cx = mx < L / 2 ? L - 45 : 45
+      vertical = true
+    }
+  }
+  const k = 1 / 1000
+  const bar = new Mesh(new CylinderGeometry(6 * k, 6 * k, len * k, 16), METAL)
+  bar.position.set(cx * k, cy * k, (outZ + dir * 28) * k)
+  if (!vertical) bar.rotation.z = Math.PI / 2
+  const feet = [-(len / 2 - 12), len / 2 - 12].map((f) => {
+    const m = new Mesh(new CylinderGeometry(4 * k, 4 * k, 28 * k, 10), METAL)
+    m.position.set((vertical ? cx : cx + f) * k, (vertical ? cy + f : cy) * k, (outZ + dir * 14) * k)
+    m.rotation.x = Math.PI / 2
+    return m
+  })
+  return [bar, ...feet]
+}
+
 /** GLB binari (ArrayBuffer) del moble en metres. */
-export async function exportGlb(panels: Panel[], name: string): Promise<Blob> {
-  const scene = buildScene(panels, name)
+export async function exportGlb(panels: Panel[], name: string, real?: Parameters<typeof buildScene>[2]): Promise<Blob> {
+  const scene = buildScene(panels, name, real)
   const exporter = new GLTFExporter()
   const result = await exporter.parseAsync(scene, { binary: true })
   if (result instanceof ArrayBuffer) return new Blob([result], { type: "model/gltf-binary" })

@@ -1,9 +1,11 @@
 import { Box, Button, CloseButton, Dialog, HStack, Portal, Spinner, Stack, Text } from "@chakra-ui/react"
-import { useEffect, useState, type DetailedHTMLProps, type HTMLAttributes } from "react"
+import { useEffect, useMemo, useState, type DetailedHTMLProps, type HTMLAttributes } from "react"
 import { LuView } from "react-icons/lu"
 import type { Panel } from "../../core/model"
 import { exportGlb } from "./exportGlb"
 import { exportUsdz, supportsQuickLook } from "./exportUsdz"
+import { exportablePanel } from "./CabinetViewer"
+import { useSettings } from "../../features/settings/SettingsContext"
 
 type ModelViewerProps = DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {
   src?: string
@@ -16,6 +18,8 @@ type ModelViewerProps = DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLEleme
   "shadow-intensity"?: string
   exposure?: string
   "environment-image"?: string
+  "shadow-softness"?: string
+  "tone-mapping"?: string
   "camera-orbit"?: string
   alt?: string
 }
@@ -42,6 +46,9 @@ export function ArDialog({ open, onClose, panels, name }: { open: boolean; onClo
   const [urls, setUrls] = useState<Urls | null>(null)
   const [error, setError] = useState<string | null>(null)
   const ios = supportsQuickLook()
+  // Els mateixos materials i textures que el visor (i els tiradors), no colors per tipus.
+  const { settings } = useSettings()
+  const real = useMemo(() => ({ materials: settings.materials, make: exportablePanel }), [settings.materials])
 
   useEffect(() => {
     if (!open) return
@@ -53,8 +60,8 @@ export function ArDialog({ open, onClose, panels, name }: { open: boolean; onClo
       try {
         const [, glb, usdz] = await Promise.all([
           import("@google/model-viewer"),
-          exportGlb(panels, name),
-          ios ? exportUsdz(panels, name) : Promise.resolve(null),
+          exportGlb(panels, name, real),
+          ios ? exportUsdz(panels, name, real) : Promise.resolve(null),
         ])
         made = { glb: URL.createObjectURL(glb), ...(usdz ? { usdz: URL.createObjectURL(usdz) } : {}) }
         if (cancelled) return
@@ -70,7 +77,7 @@ export function ArDialog({ open, onClose, panels, name }: { open: boolean; onClo
         if (made.usdz) URL.revokeObjectURL(made.usdz)
       }
     }
-  }, [open, panels, name, ios])
+  }, [open, panels, name, ios, real])
 
   return (
     <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size="xl" placement="center">
@@ -98,7 +105,10 @@ export function ArDialog({ open, onClose, panels, name }: { open: boolean; onClo
                       camera-controls
                       touch-action="pan-y"
                       shadow-intensity="1"
+                      shadow-softness="0.8"
                       exposure="1"
+                      environment-image="neutral"
+                      tone-mapping="neutral"
                       camera-orbit="-25deg 75deg auto"
                       alt={name}
                       style={{ width: "100%", height: "100%", display: "block" }}

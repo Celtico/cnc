@@ -1349,7 +1349,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           direction="row"
           display={viewTab === "3d" ? "flex" : "none"}
         >
-          <ArDialog open={arOpen} onClose={() => setArOpen(false)} panels={panels} name={name} />
+          <ArDialog open={arOpen} onClose={() => setArOpen(false)} panels={viewerPanels} name={name} />
           {isMobile ? (
             // Al mòbil, les opcions surten en un calaix de baix amb el seu propi desplaçament
             // (el popover feia desplaçar tota la pàgina).

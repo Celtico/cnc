@@ -477,7 +477,9 @@ class Builder {
     const onTop = !isBottom && !!d.tableTop
     const px0 = onTop ? -ov : mitreL ? 0 : interior.x0
     const length = onTop ? d.W + 2 * ov : (mitreR ? d.W : interior.x1) - px0
-    let width = d.sideDepth + (onTop ? 2 * ov : 0)
+    // Fronts de calaix a inglet: la tapa i la base també arriben a la cara dels fronts.
+    const ext = d.mitreFronts && (isBottom ? d.mitreBottom : d.mitreTop) ? t : 0
+    let width = d.sideDepth + ext + (onTop ? 2 * ov : 0)
     let zRear = d.sideZ0 - (onTop ? ov : 0)
     let cutouts: Cutout[] | undefined
     if (!isBottom && c.top.kind === "ventSlot") {
@@ -488,7 +490,7 @@ class Builder {
     if (c.back === "groove" && !(c.top.kind === "ventSlot" && !isBottom)) {
       grooves.push({
         x: onTop ? interior.x0 - px0 : mitreL ? t : 0,
-        y: isBottom ? r(d.sideDepth - c.backSetback - d.tb) : r(c.backSetback + ov),
+        y: isBottom ? r(d.sideDepth + ext - c.backSetback - d.tb) : r(c.backSetback + ov),
         w: r(interior.x1 - interior.x0),
         h: d.tb,
         depth: c.grooveDepth,
@@ -498,7 +500,7 @@ class Builder {
     }
     const yBottom = isBottom ? d.baseY : d.H - t
     const pl = isBottom
-      ? placement([px0, yBottom, d.D], X, neg(Z), Y, neg(Y))
+      ? placement([px0, yBottom, d.D + ext], X, neg(Z), Y, neg(Y))
       : placement([px0, d.H, zRear], X, Z, neg(Y), Y)
     const panel = this.add({
       ...this.basePanel(
@@ -511,12 +513,15 @@ class Builder {
         t,
         c.material,
         "x",
-        onTop ? edges("top", "bottom", "left", "right") : edges(isBottom ? "bottom" : "top"),
+        onTop ? edges("top", "bottom", "left", "right") : ext ? edges() : edges(isBottom ? "bottom" : "top"),
         pl,
       ),
       grooves,
       ...(onTop && d.tableTop!.shape ? { outline: shapeOutline(d.tableTop!.shape, length, width) } : {}),
-      ...(mitreL || mitreR ? { mitres: [...(mitreL ? (["left"] as const) : []), ...(mitreR ? (["right"] as const) : [])] } : {}),
+      // El cantell de davant: «bottom» a la base (y local cap enrere), «top» a la tapa.
+      ...(mitreL || mitreR || ext
+        ? { mitres: [...(mitreL ? (["left"] as const) : []), ...(mitreR ? (["right"] as const) : []), ...(ext ? [isBottom ? ("bottom" as const) : ("top" as const)] : [])] }
+        : {}),
     })
     if (!isBottom && c.top.kind === "grille") {
       const g = grilleCutouts(panel.length, panel.width, c.top.pattern)
@@ -851,8 +856,10 @@ class Builder {
     const ogL = d.mitreFronts ? 0 : og
     const x0 = left ? (left.outer ? rect.x0 - (left.xR - left.xL) + ogL : rect.x0 - t / 2 + bg / 2) : rect.x0 + og
     const x1 = right ? (right.outer ? rect.x1 + (right.xR - right.xL) - ogL : rect.x1 + t / 2 - bg / 2) : rect.x1 - og
-    const y0 = below ? (below.outer ? rect.y0 - (below.yTop - below.yBottom) + og : rect.y0 - t / 2 + bg / 2) : rect.y0 + og
-    const y1 = above ? (above.outer ? rect.y1 + (above.yTop - above.yBottom) - og : rect.y1 + t / 2 - bg / 2) : rect.y1 - og
+    const ogB = d.mitreFronts && d.mitreBottom ? 0 : og
+    const ogT = d.mitreFronts && d.mitreTop ? 0 : og
+    const y0 = below ? (below.outer ? rect.y0 - (below.yTop - below.yBottom) + ogB : rect.y0 - t / 2 + bg / 2) : rect.y0 + og
+    const y1 = above ? (above.outer ? rect.y1 + (above.yTop - above.yBottom) - ogT : rect.y1 + t / 2 - bg / 2) : rect.y1 - og
     return { x0: r(x0), x1: r(x1), y0: r(y0), y1: r(y1) }
   }
 
@@ -911,6 +918,8 @@ class Builder {
       if (w > 600) this.warnings.push({ code: "door-too-wide", message: `Porta de ${w} mm d'amplada (màxim recomanat 600).`, zoneId: zone.id })
       const door = this.frontPanel(id, name, label, "door", x0, ter.y0, w, doorH)
       this.addCups(door, doorH, hinge, w, rowYs, ter.y0)
+      // Tirador al costat contrari de les frontisses, vertical i a mitja alçada.
+      addHandle(door, doorH / 2, hinge === "left" ? w - 40 : 40, "x")
     }
     if (front.mode === "single") {
       make(`door${suffix}`, "porta", "Porta", ter.x0, r(ter.x1 - ter.x0), front.hinge)
@@ -931,6 +940,8 @@ class Builder {
     for (const y of [100, r(across - 100)]) {
       flap.holes.push({ x, y, diameter: 8, depth: 12, face: "A", tag: "flap" })
     }
+    // Tirador al cantell que obre (el contrari del gir), horitzontal i centrat.
+    addHandle(flap, front.dir === "down" ? along - 40 : 40, across / 2, "y")
   }
 
   private buildGrille(
@@ -1061,12 +1072,22 @@ class Builder {
       // A inglet amb els laterals: el costat que arriba a fora del moble, tallat a 45°.
       const mL = d.mitreFronts && ter.x0 <= 0.01 && c.sides.left
       const mR = d.mitreFronts && ter.x1 >= d.W - 0.01 && c.sides.right
+      // Primer i últim calaix: també a inglet amb la tapa i la base (y local cap avall: el
+      // cantell de dalt és «bottom» i el de baix, «top»).
+      const mT = d.mitreFronts && d.mitreTop && y + fh >= d.H - 0.01
+      const mB = d.mitreFronts && d.mitreBottom && y <= d.baseY + 0.01
       const frontPanel = this.add({
-        ...this.basePanel(`drawer-${k}-front`, "frontal calaix", `Front calaix ${k}`, "drawerFront", fw, fh, d.t, frontMaterialOf(this.m), "x", edges(...(["bottom", "top"] as const), ...(mL ? [] : (["left"] as const)), ...(mR ? [] : (["right"] as const))), placement([ter.x0, y + fh, d.frontZ], X, neg(Y), neg(Z), Z)),
-        ...(mL || mR ? { mitres: [...(mL ? (["left"] as const) : []), ...(mR ? (["right"] as const) : [])] } : {}),
+        ...this.basePanel(`drawer-${k}-front`, "frontal calaix", `Front calaix ${k}`, "drawerFront", fw, fh, d.t, frontMaterialOf(this.m), "x", edges(...(mT ? [] : (["bottom"] as const)), ...(mB ? [] : (["top"] as const)), ...(mL ? [] : (["left"] as const)), ...(mR ? [] : (["right"] as const))), placement([ter.x0, y + fh, d.frontZ], X, neg(Y), neg(Z), Z)),
+        ...(mL || mR || mT || mB ? { mitres: [...(mL ? (["left"] as const) : []), ...(mR ? (["right"] as const) : []), ...(mT ? (["bottom"] as const) : []), ...(mB ? (["top"] as const) : [])] } : {}),
       })
-      const boxH = r(fh - hw.boxDrop)
-      const boxY0 = r(y + (fh - boxH) / 2)
+      // Tirador centrat (x local = amplada, y local = cap avall).
+      addHandle(frontPanel, fw / 2, fh / 2, "x")
+      // Caixa centrada al front però sempre dins de la llum (el front del primer i de l'últim
+      // calaix sobresurt per sobre de la tapa o la base i la caixa hi toparia).
+      const by0 = Math.max(y + (fh - (fh - hw.boxDrop)) / 2, rect.y0 + 1)
+      const by1 = Math.min(y + (fh + (fh - hw.boxDrop)) / 2, rect.y1 - 1)
+      const boxH = r(by1 - by0)
+      const boxY0 = r(by0)
       const boxX0 = r(rect.x0 + hw.sideClearance)
       const zFront = d.frontZ - d.t // cara posterior del front
       const zBack = r(zFront - boxL)
@@ -1178,4 +1199,17 @@ function onlyDrawers(root: Zone): boolean {
   }
   walk(root)
   return drawers > 0 && other === 0
+}
+
+/**
+ * Forats d'un tirador de barra: dos forats passants Ø5 a la distància estàndard (128 o, si no
+ * hi cap, 96 / 64) al voltant de (cx, cy), al llarg de l'eix local `along`. Van com a talls
+ * passants (com els passacables): així els llegeix el taller i es fan al nesting.
+ */
+function addHandle(p: Panel, cx: number, cy: number, along: "x" | "y"): void {
+  const room = along === "x" ? p.length : p.width
+  const spacing = room >= 260 ? 128 : room >= 200 ? 96 : 64
+  for (const s of [-spacing / 2, spacing / 2]) {
+    ;(p.cutouts ??= []).push({ kind: "circle", x: r(along === "x" ? cx + s : cx), y: r(along === "y" ? cy + s : cy), diameter: 5, tag: "handle" })
+  }
 }

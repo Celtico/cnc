@@ -72,10 +72,11 @@ describe("fronts de calaix a inglet", () => {
     const b = buildModule(drawers("mitre"))
     const fronts = b.panels.filter((p) => p.role === "drawerFront")
     expect(fronts).toHaveLength(3)
-    for (const f of fronts) {
-      expect(f.mitres?.length).toBe(2)
-      expect(Math.max(f.length, f.width)).toBe(600)
-    }
+    // Els del mig, pels dos costats; el primer i l'últim, també amb la tapa i la base.
+    expect(fronts.map((f) => f.mitres?.length).sort()).toEqual([2, 3, 3])
+    for (const f of fronts) expect(Math.max(f.length, f.width)).toBe(600)
+    const top = b.panels.find((p) => p.role === "top")!
+    expect(top.mitres).toContain("top")
     const side = b.panels.find((p) => p.id === "side-left")!
     expect(side.mitres).toContain("top")
     const t = side.thickness

@@ -4,6 +4,7 @@ import { usePersistentFlag } from "../usePersistentFlag"
 import { LuBoxes, LuCuboid, LuDownload, LuFileDown, LuFileJson, LuScissors, LuWrench } from "react-icons/lu"
 import { PanelGroup, PanelSection } from "../../components/PanelSection"
 import { exportGlb } from "../../components/viewer/exportGlb"
+import { exportablePanel } from "../../components/viewer/CabinetViewer"
 import { exportUsdz, openQuickLook } from "../../components/viewer/exportUsdz"
 import { toaster } from "../../components/ui/toaster"
 import { toCutList } from "../../core/cutlist/toCutList"
@@ -77,7 +78,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const doGlb = async () => {
     setBusy(true)
     try {
-      downloadBlob(await exportGlb(panels, project.name), `${base}.glb`)
+      downloadBlob(await exportGlb(panels, project.name, { materials: settings.materials, make: exportablePanel }), `${base}.glb`)
     } catch (e) {
       toaster.create({ title: "No s'ha pogut generar el GLB", description: String(e), type: "error" })
     } finally {
@@ -88,7 +89,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const doUsdz = async (open: boolean) => {
     setBusyAr(true)
     try {
-      const blob = await exportUsdz(panels, project.name)
+      const blob = await exportUsdz(panels, project.name, { materials: settings.materials, make: exportablePanel })
       if (open) openQuickLook(blob, `${base}.usdz`)
       else downloadBlob(blob, `${base}.usdz`)
     } catch (e) {

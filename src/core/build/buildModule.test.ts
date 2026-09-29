@@ -147,8 +147,10 @@ describe("calaixos", () => {
     expect(k1.map((p) => p.role).sort()).toEqual(["drawerBack", "drawerBottom", "drawerFront", "drawerSide", "drawerSide"])
     const sideL = k1.find((p) => p.id === "drawer-1-side-left")!
     expect(sideL.grooves).toHaveLength(1)
-    // Alçada de la caixa = alçada del front (196,75) − 30.
-    expect(sideL.width).toBeCloseTo(196.75 - 30, 2)
+    // Alçada de la caixa = alçada del front (196,75) − 30, però sempre dins de la llum: el
+    // primer calaix té el front per davant de la base i la caixa no hi pot entrar.
+    expect(sideL.width).toBeLessThanOrEqual(196.75 - 30 + 0.01)
+    expect(sideL.width).toBeGreaterThan(196.75 - 40)
     const cabinetSide = panels.find((p) => p.id === "side-left")!
     expect(cabinetSide.holes.filter((h) => h.tag === "slide").length).toBe(4 * 2)
   })

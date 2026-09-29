@@ -47,7 +47,13 @@ export function PanelHardware({ panel }: { panel: Panel }) {
     const outZ = inner === T ? 0 : T
     // Cantell de les frontisses: el costat on són les cassoletes.
     let handle: { cx: number; cy: number; vertical: boolean; len: number }
-    if (cups.length) {
+    // Els forats del tirador (talls Ø5 «handle») diuen on va i la seva mida.
+    const hh = (panel.cutouts ?? []).filter((c): c is Extract<typeof c, { kind: "circle" }> => c.kind === "circle" && c.tag === "handle")
+    if (hh.length === 2) {
+      const [a, b] = hh as [(typeof hh)[number], (typeof hh)[number]]
+      const vertical = Math.abs(a.y - b.y) > Math.abs(a.x - b.x)
+      handle = { cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, vertical, len: Math.hypot(a.x - b.x, a.y - b.y) + 40 }
+    } else if (cups.length) {
       const mx = cups.reduce((a, h) => a + h.x, 0) / cups.length
       const my = cups.reduce((a, h) => a + h.y, 0) / cups.length
       const alongX = Math.abs(my - W / 2) / W > Math.abs(mx - L / 2) / L // frontisses a y ≈ 0 o W

@@ -5,7 +5,7 @@ import { ModuleLegs, PanelHardware } from "./Hardware"
 import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
 import { Billboard, ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
-import { NeutralToneMapping, PMREMGenerator, DoubleSide, ExtrudeGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Shape, Vector3, type Object3D, type Texture } from "three"
+import { BoxGeometry, NeutralToneMapping, PMREMGenerator, DoubleSide, type BufferGeometry, ExtrudeGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Shape, Vector3, type Object3D, type Texture } from "three"
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
@@ -1320,12 +1320,15 @@ export function PanelMesh({
   // Peces amb talls passants (reixetes, taulell amb pica i vitro, passacables): geometria
   // extruïda amb els forats de debò, perquè es vegi a través.
   // Peces a inglet (sense talls): secció en trapezi, perquè la cantonada es vegi a 45°.
-  const cut = useMemo(() => (panel.cutouts?.length || panel.outline ? cutoutGeometry(panel) : panel.mitres?.length ? mitreGeometry(panel) : null), [panel])
+  // Els forats dels tiradors no es buiden al 3D (els tapa el tirador): així una peça a inglet
+  // amb tirador continua sent un prisma a 45°.
+  const vis = useMemo(() => visualPanel(panel), [panel])
+  const cut = useMemo(() => (vis.cutouts?.length || vis.outline ? cutoutGeometry(vis) : vis.mitres?.length ? mitreGeometry(vis) : null), [vis])
   const cutMats = useMemo(() => {
     if (!cut) return null
     const m = cutoutMaterials(panel, materialMode, materials, dimmed)
     // A la geometria d'inglet els grups van al revés: [0] puntes (cantell), [1] cares.
-    return panel.cutouts?.length || panel.outline ? m : [m[1]!, m[0]!]
+    return vis.cutouts?.length || vis.outline ? m : [m[1]!, m[0]!]
   }, [cut, panel, materialMode, materials, dimmed])
   useEffect(
     () => () => {
@@ -1488,4 +1491,30 @@ function StudioEnvironment({ intensity }: { intensity: number }) {
     }
   }, [gl, scene, intensity])
   return null
+}
+
+/**
+ * Geometria i materials reals d'una peça (els mateixos del visor, amb textures i veta) per
+ * exportar-la (GLB / USDZ de «Veure a casa»). Coordenades en m, origen a la cantonada.
+ */
+export function exportablePanel(full: Panel, materials: MaterialPref[]): { geometry: BufferGeometry; material: MeshStandardMaterial[] } {
+  const panel = visualPanel(full)
+  const shaped = !!panel.cutouts?.length || !!panel.outline
+  if (shaped) return { geometry: cutoutGeometry(panel), material: cutoutMaterials(panel, "material", materials, false) }
+  if (panel.mitres?.length) {
+    const m = cutoutMaterials(panel, "material", materials, false)
+    return { geometry: mitreGeometry(panel), material: [m[1]!, m[0]!] }
+  }
+  const g = new BoxGeometry(panel.length * S, panel.width * S, panel.thickness * S)
+  g.translate((panel.length * S) / 2, (panel.width * S) / 2, (panel.thickness * S) / 2)
+  return { geometry: g, material: panelMaterials(panel, "material", materials, false) }
+}
+
+/** La peça per dibuixar-la: sense els forats dels tiradors (el tirador els tapa). */
+export function visualPanel(p: Panel): Panel {
+  if (!p.cutouts?.some((c) => c.tag === "handle")) return p
+  const cutouts = p.cutouts.filter((c) => c.tag !== "handle")
+  const { cutouts: _c, ...rest } = p
+  void _c
+  return cutouts.length ? { ...rest, cutouts } : rest
 }

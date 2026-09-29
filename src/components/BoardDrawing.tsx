@@ -97,6 +97,24 @@ export function BoardDrawing({
                     />
                   )
                 })}
+                {/* Forats de cara (frontisses, System 32, espigues, tiradors): els fa la CNC al
+                    nesting; els de la cara B (2a cara), buits. Els de cantell no es veuen des de dalt. */}
+                {p?.holes.map((hole, i) => {
+                  if (hole.face === "edge") return null
+                  const q = localToBoard(pl, hole.x, hole.y)
+                  return (
+                    <circle
+                      key={`h${i}`}
+                      cx={q.x}
+                      cy={q.y}
+                      r={Math.max(hole.diameter / 2, stroke)}
+                      fill={hole.face === "A" ? "var(--chakra-colors-wood-fg)" : "none"}
+                      stroke="var(--chakra-colors-wood-fg)"
+                      strokeWidth={stroke / 2}
+                      opacity={hole.face === "A" ? 0.75 : 0.9}
+                    />
+                  )
+                })}
                 {/* Marca de veta: ratlles fines en la direcció de la veta (X si angle 0). */}
                 {p?.grain !== "none" && (
                   <line

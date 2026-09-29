@@ -275,7 +275,10 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     (sense laterals, o sense tapa i amb sòcol o sense base). Si el mòdul només té calaixos i els
     fronts són recobrents, també **els fronts dels calaixos van a inglet** amb els laterals
     (`mitreFronts`): laterals fins a la cara dels fronts (+ gruix) amb el cantell de davant a 45° i
-    fronts de fora a fora; amb portes no (toparien en obrir). `mitreGeometry` fa el prisma amb
+    fronts de fora a fora; el primer i l'últim calaix, també a inglet amb la tapa i la base (que
+    arriben a la cara dels fronts); amb portes no (toparien en obrir). La caixa del calaix queda
+    sempre dins de la llum. El tall a 45° és un post-procés (després del nesting, que talla el
+    rectangle sencer). `mitreGeometry` fa el prisma amb
     qualsevol dels 4 cantells a 45°; `Panel.mitres` als cantells (sense cantell ni espigues,
     avís informatiu), capa DXF `MITRE_45`, «n∠45°» al llistat i al CSV, i al 3D/GLB la secció
     en trapezi (`mitreGeometry`). El STEP encara les dibuixa rectes. **Fronts** Recobrents /
@@ -359,6 +362,11 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     procedural (`RoomEnvironment` + PMREM, offline) com a `scene.environment` i to `Neutral`;
     l'hemisfèrica queda baixa. **Ray tracing descartat**: `three-gpu-pathtracer` (WebGL) necessita
     més de 16 unitats de textura i als Mac/iPhone (límit 16) les textures surten malament.
+  - **Tiradors mecanitzats**: portes (costat contrari de les frontisses, a mitja alçada),
+    calaixos (centrats) i abatibles (al cantell que obre) porten dos forats passants Ø5 a 128 /
+    96 / 64 com a talls `circle` `tag: "handle"` (com els passacables, perquè el taller els
+    llegeixi); el 3D no els buida (`visualPanel`) i el tirador es col·loca als forats. El nesting
+    (`BoardDrawing`) ja dibuixa els forats de cara (plens a la cara A, buits a la B).
   - **Ferratges visuals** (`viewer/Hardware.tsx`, botó «Ferratges» a Opcions de vista,
     `mobles:viewer-hardware`): frontisses (cassoleta + braç a les cassoletes `hinge`), tirador de
     barra a portes (al costat contrari de les frontisses), calaixos i abatibles (centrat), i potes
