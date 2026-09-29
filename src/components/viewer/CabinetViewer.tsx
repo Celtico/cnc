@@ -2,6 +2,7 @@ import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import { QUALITY, type RenderQuality } from "./renderQuality"
 import { PresentationRoom } from "./PresentationRoom"
 import { ModuleLegs, PanelHardware } from "./Hardware"
+import type { SceneGetter } from "./render/RenderDialog"
 import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
 import { Billboard, ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
@@ -91,6 +92,8 @@ export interface CabinetViewerProps {
   onCapture?: (capture: () => Promise<Blob>) => void
   /** Qualitat del render (resolució i ombres). */
   quality?: RenderQuality
+  /** Rep una funció que dona l'escena i la càmera actuals (per al render per CPU). */
+  onSceneAccess?: (get: SceneGetter) => void
   /** Ferratges visuals (frontisses, tiradors, potes). */
   hardware?: boolean
   /** Objecte de referència seleccionat i clic sobre un objecte al 3D. */
@@ -139,6 +142,7 @@ export function CabinetViewer({
   onCapture,
   quality = "fast",
   hardware = true,
+  onSceneAccess,
   onDeselect,
   selectedRefId,
   onSelectRef,
@@ -364,6 +368,7 @@ export function CabinetViewer({
       )}
       <CameraRig size={size} view={view} fitKey={fitKey} onFramedChange={onFramedChange} />
       {onCapture && <Capture onCapture={onCapture} gridRef={gridRef} />}
+      {onSceneAccess && <SceneAccess onAccess={onSceneAccess} />}
     </Canvas>
   )
 }
@@ -1251,7 +1256,10 @@ function makeMaterial(finish: FinishSpec, uMm: number, vMm: number, rotate: bool
   }
   // Vidre: translúcid sempre (també sense vel).
   const glass = finish.opacity !== undefined && finish.opacity < 1
-  return new MeshStandardMaterial({ color: finish.color, roughness: finish.roughness, metalness: finish.metalness ?? 0, ...opts, ...(glass ? { transparent: true, opacity: Math.min(opts.opacity, finish.opacity!), depthWrite: false } : {}) })
+  const mat = new MeshStandardMaterial({ color: finish.color, roughness: finish.roughness, metalness: finish.metalness ?? 0, ...opts, ...(glass ? { transparent: true, opacity: Math.min(opts.opacity, finish.opacity!), depthWrite: false } : {}) })
+  // El render per CPU distingeix el vidre dels fantasmes (tots dos transparents).
+  if (glass) mat.userData.glass = true
+  return mat
 }
 
 /**
@@ -1517,4 +1525,16 @@ export function visualPanel(p: Panel): Panel {
   const { cutouts: _c, ...rest } = p
   void _c
   return cutouts.length ? { ...rest, cutouts } : rest
+}
+
+/** Dona accés a l'escena, la càmera i la mida del visor (per al render per CPU). */
+function SceneAccess({ onAccess }: { onAccess: (get: SceneGetter) => void }) {
+  const get = useThree((st) => st.get)
+  useEffect(() => {
+    onAccess(() => {
+      const st = get()
+      return { scene: st.scene, camera: st.camera, width: st.size.width, height: st.size.height }
+    })
+  }, [onAccess, get])
+  return null
 }

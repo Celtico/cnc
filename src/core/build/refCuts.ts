@@ -48,7 +48,18 @@ export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Pane
       const b = boxOf(p)
       // Només talla les peces que travessa en la seva direcció (un tub cap a la paret forada
       // el fons, no el cantell dels prestatges; un desguàs vertical, la base i els prestatges).
-      if (normalIndex(p) !== sec.a) continue
+      if (normalIndex(p) !== sec.a) {
+        // Peça lliure que talla però travessa la peça de costat: no és un forat passant (seria
+        // un forat al cantell o un buidat en 3D); s'avisa perquè es giri.
+        if (o.id.startsWith("part:") && refTouchesBox(o, b)) {
+          const lo = [0, 1, 2].map((a) => Math.max(o[(["x", "y", "z"] as const)[a]!], b.min[a]!))
+          const size = [o.w, o.h, o.d]
+          const hi = [0, 1, 2].map((a) => Math.min(o[(["x", "y", "z"] as const)[a]!] + size[a]!, b.max[a]!))
+          if (hi.every((h, a) => h - lo[a]! > 1))
+            problems.push({ refId: o.id, panel: p, message: `«${o.name}» travessa ${p.label} de costat, no en la direcció del seu gruix: no s'hi pot fer un forat passant. Posa la peça que talla amb la mateixa orientació que ${p.label}.` })
+        }
+        continue
+      }
       if (!refTouchesBox(o, b)) continue
       const mid = (b.min[sec.a]! + b.max[sec.a]!) / 2
       const local = (pu: number, pv: number): [number, number] => {

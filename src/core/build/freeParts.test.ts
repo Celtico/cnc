@@ -169,3 +169,13 @@ describe("peça lliure que talla (booleana)", () => {
     expect([Math.round(bb.x0), Math.round(bb.x1), Math.round(bb.y0), Math.round(bb.y1)]).toEqual([100, 200, 280, 380])
   })
 })
+
+describe("peça que talla travessant de costat", () => {
+  it("avisa en lloc de no fer res", () => {
+    const front = part({ id: "front", orient: "front", w: 600, h: 400 })
+    const rod = part({ id: "rod", orient: "flat", w: 50, h: 50, x: 200, y: -100, z: -10, thickness: 700, effect: "cut" })
+    const b = buildComposition(comp([front, rod]))
+    expect(b.panels[0]!.cutouts ?? []).toHaveLength(0)
+    expect(b.warnings.some((w) => w.partId === "rod" && w.message.includes("de costat"))).toBe(true)
+  })
+})

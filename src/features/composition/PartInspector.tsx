@@ -155,7 +155,7 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
           </SegmentGroup.Root>
           <Field.HelperText>
             {cutter
-              ? "Talla: no és una peça. Fa un forat passant, amb la seva forma, a cada peça que travessa en la direcció del gruix (un rebaix no). Surt al nesting, al DXF i al STEP de les peces tallades."
+              ? "Talla: no és una peça. Fa un forat passant, amb la seva forma, a cada peça que travessa en la direcció del seu gruix: per foradar un tauler estirat, posa-la estirada; un de cara, de cara. Surt al nesting, al DXF i al STEP de les peces tallades."
               : "Peça: un tauler de debò (nesting, DXF, STEP, CSV)."}
           </Field.HelperText>
         </Field.Root>

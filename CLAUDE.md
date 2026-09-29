@@ -339,6 +339,13 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     el gruix; a l'estirada la v es gira) i `applyRefCuts` fa el forat passant a les peces que
     travessa (també a les altres peces lliures). Al 3D, fantasma violeta amb el gizmo (id
     `part:<id>` als fantasmes); avisos `ref-cut` amb `partId`. Icona `LuScissors` a l'arbre.
+    Només fora les peces amb la mateixa normal (forat passant); si en travessa una de costat,
+    avisa (no és un booleà 3D). També talla les peces que no són de CNC (`extras`).
+  - **Render per CPU** (`viewer/render/`, botó «Render» a Opcions de vista, com Cinema 4D):
+    `extractScene` passa l'escena del visor a triangles + materials + textures (píxels) i
+    `pathWorker` (un per nucli, BVH propi) fa path tracing progressiu: cel d'estudi, sol amb
+    ombres suaus, difús, reflex segons la rugositat, metalls i vidre. `RenderDialog` acumula les
+    passades (to ACES), s'atura/continua i desa el PNG. No depèn de la GPU.
   - **Peça enganxada a un mòdul** (`FreePart.module`, `resolveParts`, `partOffset`): a General,
     «Enganxada a»; x/y/z passen a ser relatives al mòdul i el segueixen (el taulell de pedra de
     l'illa). Tot el que dibuixa o construeix fa servir `resolveParts` (coordenades de la

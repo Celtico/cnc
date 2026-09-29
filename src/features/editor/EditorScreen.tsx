@@ -10,6 +10,7 @@ import {
   LuChevronRight,
   LuPalette,
   LuPuzzle,
+  LuAperture,
   LuWrench,
   LuGroup,
   LuPanelLeftClose,
@@ -46,6 +47,7 @@ import { TopBarActions } from "../../components/TopBar"
 import { toaster } from "../../components/ui/toaster"
 import { CabinetViewer, type ViewerModule, type ZoneLight } from "../../components/viewer/CabinetViewer"
 import { ArDialog } from "../../components/viewer/ArDialog"
+import { RenderDialog, type SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox } from "../../core/build/buildComposition"
@@ -219,6 +221,12 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
     if (Object.keys(rest).length) setViewerState((v) => ({ ...v, ...rest }))
   }
   const capture = useRef<(() => Promise<Blob>) | null>(null)
+  // Render per CPU: accés a l'escena del visor.
+  const sceneGetter = useRef<SceneGetter | null>(null)
+  const registerScene = useCallback((g: SceneGetter) => {
+    sceneGetter.current = g
+  }, [])
+  const [renderOpen, setRenderOpen] = useState(false)
   const registerCapture = useCallback((fn: () => Promise<Blob>) => {
     capture.current = fn
   }, [])
@@ -777,11 +785,12 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
       <SimpleGrid columns={3} gap={1.5}>
         {VIEW_MODES.map(([v, label, tip, Icon]) => tile(v, label, <Icon />, viewMode === v, () => setViewMode(v), `${label}: ${tip}`))}
       </SimpleGrid>
-      <SimpleGrid columns={5} gap={1.5}>
+      <SimpleGrid columns={6} gap={1.5}>
         {tile("fit", "Encuadrar", <LuVideo />, framed, () => setFitKey((k) => k + 1), framed ? "Càmera encuadrada (no es mou sola en editar)" : "Encuadrar el moble")}
         {tile("holes", "Forats", <LuCircleDot />, showHoles, () => setShowHoles((v) => !v), showHoles ? "Amagar forats" : "Mostrar forats")}
         {tile("explode", "Explosió", exploded ? <LuShrink /> : <LuExpand />, exploded, () => setExploded((v) => !v), exploded ? "Vista muntada" : "Vista explosionada")}
         {tile("hardware", "Ferratges", <LuWrench />, hardware, () => setHardware((v) => !v), hardware ? "Amagar frontisses, tiradors i potes" : "Mostrar frontisses, tiradors i potes")}
+        {tile("render", "Render", <LuAperture />, false, () => setRenderOpen(true), "Render fotorealista per CPU (com Cinema 4D): es va afinant i es desa en PNG")}
         {tile("ar", "A casa (AR)", <LuView />, false, () => setArOpen(true), "Veure a casa (realitat augmentada)")}
       </SimpleGrid>
     </Stack>
@@ -1245,6 +1254,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             onFramedChange={setFramed}
             onMoveRef={(id, pos) => (id.startsWith("part:") ? movePart(id.slice(5), pos) : moveRef(id, pos))}
             hardware={hardware}
+            onSceneAccess={registerScene}
             parts={solidParts}
             selectedPartId={selection.kind === "part" ? selection.id : null}
             onSelectPart={selectPartFrom3D}
@@ -1349,6 +1359,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           direction="row"
           display={viewTab === "3d" ? "flex" : "none"}
         >
+          <RenderDialog open={renderOpen} onClose={() => setRenderOpen(false)} getScene={() => sceneGetter.current?.() ?? null} name={name} />
           <ArDialog open={arOpen} onClose={() => setArOpen(false)} panels={viewerPanels} name={name} />
           {isMobile ? (
             // Al mòbil, les opcions surten en un calaix de baix amb el seu propi desplaçament
