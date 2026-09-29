@@ -1,6 +1,6 @@
 import { Badge, Box, Button, CloseButton, Dialog, HStack, IconButton, Kbd, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
-import { LuEraser, LuMousePointer2, LuPenTool, LuSpline, LuTrash2 } from "react-icons/lu"
+import { LuEraser, LuMousePointer2, LuPenTool, LuSpline, LuTrash2, LuX } from "react-icons/lu"
 import {
   autoHandles,
   bendEdge,
@@ -82,7 +82,7 @@ const PRESETS: { id: string; label: string; make: (w: number, h: number) => PNod
 ]
 
 type Drag =
-  | { kind: "node"; i: number; x: number; y: number; moved: boolean }
+  | { kind: "node"; i: number; x: number; y: number; moved: boolean; from?: "bend" | "erase" }
   | { kind: "handle"; i: number; which: "in" | "out"; moved: boolean }
   | { kind: "edge"; i: number; x: number; y: number; moved: boolean }
   | { kind: "pen"; i: number; x: number; y: number; moved: boolean }
@@ -250,6 +250,8 @@ export function ProfileEditor({
   const onBackgroundDown = (e: ReactPointerEvent) => {
     if (!drawing) {
       setSel(null)
+      // Clic fora dels punts amb Corbar o Esborrar: torna a Moure.
+      if (tool !== "edit") setTool("edit")
       return
     }
     // Ploma: nou node (si és a prop del primer, tanca la forma).
@@ -269,7 +271,10 @@ export function ProfileEditor({
     if (drawing) setCursor(at)
     if (!drag) return
     if (!drag.moved && drag.kind !== "handle" && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 3) return
-    if (!drag.moved) setDrag({ ...drag, moved: true })
+    if (!drag.moved) {
+      setDrag({ ...drag, moved: true })
+      if (drag.kind === "node" && drag.from) setTool("edit")
+    }
     const [x, y] = at
     if (drag.kind === "node") {
       const n = nodes[drag.i]!
@@ -288,6 +293,8 @@ export function ProfileEditor({
     }
   }
   const onUp = () => {
+    if (drag?.kind === "node" && !drag.moved && drag.from === "bend") toggleSmooth(drag.i)
+    if (drag?.kind === "node" && !drag.moved && drag.from === "erase") remove(drag.i)
     if (drag?.kind === "edge" && !drag.moved) {
       setNodes((cur) => splitEdge(cur, drag.i))
       setSel(drag.i + 1)
@@ -350,7 +357,7 @@ export function ProfileEditor({
                         size="xs"
                         title={title}
                         variant={tool === id ? "solid" : "ghost"}
-                        colorPalette={tool === id ? "blue" : "gray"}
+                        colorPalette={id === "pen" && drawing ? "red" : tool === id ? "blue" : "gray"}
                         disabled={drawing && id !== "pen" && nodes.length < 3}
                         onClick={() => {
                           if (id === "pen") {
@@ -362,7 +369,7 @@ export function ProfileEditor({
                           setTool(id)
                         }}
                       >
-                        <Icon /> {id === "pen" && drawing ? "Cancel·lar" : label}
+                        {id === "pen" && drawing ? <LuX /> : <Icon />} {id === "pen" && drawing ? "Cancel·lar" : label}
                       </Button>
                     ))}
                   </HStack>
@@ -372,13 +379,14 @@ export function ProfileEditor({
                         key={p.id}
                         size="xs"
                         variant="ghost"
+                        title={`Començar amb: ${p.label}`}
                         disabled={drawing}
                         onClick={() => {
                           setNodes(p.make(Math.max(50, r1(b.x1 - b.x0)), Math.max(50, r1(b.y1 - b.y0))))
                           setSel(null)
                         }}
                       >
-                        {p.label}
+                        <PresetIcon make={p.make} /> {p.label}
                       </Button>
                     ))}
                   </HStack>
@@ -480,20 +488,11 @@ export function ProfileEditor({
                               }
                               return
                             }
-                            if (tool === "erase") {
-                              ev.stopPropagation()
-                              remove(i)
-                              return
-                            }
-                            if (tool === "bend") {
-                              ev.stopPropagation()
-                              setSel(i)
-                              toggleSmooth(i)
-                              return
-                            }
+                            // A Corbar i Esborrar, el clic fa l'acció en deixar anar; si s'arrossega, mou el node
+                            // i torna a l'eina Moure.
                             capture(ev)
                             setSel(i)
-                            setDrag({ kind: "node", i, x: ev.clientX, y: ev.clientY, moved: false })
+                            setDrag({ kind: "node", i, x: ev.clientX, y: ev.clientY, moved: false, from: tool === "bend" || tool === "erase" ? tool : undefined })
                           },
                           onDoubleClick: () => !drawing && toggleSmooth(i),
                         }
@@ -616,6 +615,19 @@ export function ProfileEditor({
         </Dialog.Positioner>
       </Portal>
     </Dialog.Root>
+  )
+}
+
+/** Icona d'una forma de partida: la mateixa forma, petita (així sempre coincideix). */
+function PresetIcon({ make }: { make: (w: number, h: number) => PNode[] }) {
+  const d = useMemo(() => {
+    const pts = sampleProfile(make(100, 100), 8)
+    return pts.map(([x, y], i) => `${i ? "L" : "M"} ${x} ${100 - y}`).join(" ") + " Z"
+  }, [make])
+  return (
+    <svg viewBox="-10 -10 120 120" width="14" height="14" aria-hidden style={{ flexShrink: 0 }}>
+      <path d={d} fill="currentColor" fillOpacity={0.15} stroke="currentColor" strokeWidth={10} strokeLinejoin="round" />
+    </svg>
   )
 }
 
