@@ -272,7 +272,11 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   - **Acabats** (Estructura del mòdul): **Cantonades** Normals / A inglet (`Carcass.joint`): la
     tapa arriba a fora dels laterals; la base també (`mitreBottom`) si és a baix de tot dels
     laterals (a terra, potes o penjat; amb sòcol no). Cantonades no surt si no hi ha res a unir
-    (sense laterals, o sense tapa i amb sòcol o sense base); `Panel.mitres` als cantells (sense cantell ni espigues,
+    (sense laterals, o sense tapa i amb sòcol o sense base). Si el mòdul només té calaixos i els
+    fronts són recobrents, també **els fronts dels calaixos van a inglet** amb els laterals
+    (`mitreFronts`): laterals fins a la cara dels fronts (+ gruix) amb el cantell de davant a 45° i
+    fronts de fora a fora; amb portes no (toparien en obrir). `mitreGeometry` fa el prisma amb
+    qualsevol dels 4 cantells a 45°; `Panel.mitres` als cantells (sense cantell ni espigues,
     avís informatiu), capa DXF `MITRE_45`, «n∠45°» al llistat i al CSV, i al 3D/GLB la secció
     en trapezi (`mitreGeometry`). El STEP encara les dibuixa rectes. **Fronts** Recobrents /
     Encastats (`fronts.style`): encastats dins de la llum amb el joc a tot el voltant, a nivell
@@ -378,7 +382,7 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     peces («Després del nesting») i al CSV de peces (Processos). El test d'anada i tornada ho
     comprova amb els parsers del taller (`~/Desktop/taller-cnc-nest`).
   - **Barra del visor**: fora només «Opcions de vista» (i amagar propietats); a dins, a dalt,
-    accions ràpides amb icona i nom (`viewQuick`): els 3 modes, Encuadrar, Forats, Explosió i
+    accions ràpides només amb icona i el nom al tooltip (`viewQuick`, el text no hi cabia): els 3 modes, Encuadrar, Forats, Explosió i
     Veure a casa (AR); a sota, la vista, l'obertura i la imatge. Al mòbil, el visor amb els
     marges de la pàgina i sense marge a dalt.
   - **Versió** (com a rack): `__APP_VERSION__` = nombre de commits i `__APP_COMMIT__` (git en

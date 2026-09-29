@@ -62,3 +62,28 @@ describe("base a inglet", () => {
     expect(ps.find((p) => p.role === "bottom")!.mitres).toBeUndefined()
   })
 })
+
+describe("fronts de calaix a inglet", () => {
+  const drawers = (joint: "mitre" | "butt"): Module => ({
+    ...defaultModule("m", "M", { width: 600, height: 720, depth: 500, joint }),
+    root: { id: "r", front: { kind: "drawers", n: 3, heights: ["auto", "auto", "auto"] } },
+  })
+  it("amb cantonades a inglet i només calaixos: fronts de fora a fora i laterals fins a la cara", () => {
+    const b = buildModule(drawers("mitre"))
+    const fronts = b.panels.filter((p) => p.role === "drawerFront")
+    expect(fronts).toHaveLength(3)
+    for (const f of fronts) {
+      expect(f.mitres?.length).toBe(2)
+      expect(Math.max(f.length, f.width)).toBe(600)
+    }
+    const side = b.panels.find((p) => p.id === "side-left")!
+    expect(side.mitres).toContain("top")
+    const t = side.thickness
+    expect(Math.min(side.length, side.width)).toBe(500 + t)
+  })
+  it("amb una porta al mòdul, no (la porta toparia en obrir)", () => {
+    const m = drawers("mitre")
+    const b = buildModule({ ...m, root: { id: "r", split: { dir: "h", sizes: ["auto", "auto"], children: [{ id: "a", front: { kind: "drawers", n: 1, heights: ["auto"] } }, { id: "b", front: { kind: "door", mode: "single", hinge: "left" } }] } } })
+    expect(b.panels.filter((p) => p.role === "drawerFront").every((p) => !p.mitres)).toBe(true)
+  })
+})

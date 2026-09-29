@@ -91,6 +91,12 @@ interface Derived {
   mitreTop: boolean
   /** Base a inglet amb els laterals (quan la base és a baix de tot dels laterals: no amb sòcol). */
   mitreBottom: boolean
+  /**
+   * Fronts de calaix a inglet amb els laterals: cantonades a inglet, fronts recobrents i només
+   * calaixos (les portes, en obrir-se, toparien amb el lateral). Els laterals arriben fins a la
+   * cara dels fronts amb el cantell de davant a 45°; els fronts, de fora a fora.
+   */
+  mitreFronts: boolean
   /** Fronts encastats (dins de la llum) en lloc de recobrents. */
   inset: boolean
   /** Tauler de taula: tapa per sobre dels laterals, amb voladís i forma. */
@@ -145,6 +151,7 @@ function derive(m: Module): Derived {
     baseY,
     mitreTop: !hollow && !tableTop && c.joint === "mitre" && hasTop && (c.sides.left || c.sides.right),
     mitreBottom: !hollow && c.joint === "mitre" && hasBase && baseY === 0 && (c.sides.left || c.sides.right),
+    mitreFronts: !hollow && c.joint === "mitre" && m.fronts.style !== "inset" && (c.sides.left || c.sides.right) && onlyDrawers(m.root),
     inset: m.fronts.style === "inset",
     frontZ: m.fronts.style === "inset" ? D : D + t,
     tableTop,
@@ -300,9 +307,12 @@ class Builder {
         tag: "back",
       })
     }
+    // Fronts de calaix a inglet: el lateral arriba fins a la cara dels fronts.
+    const ext = d.mitreFronts ? t : 0
     const pl = isLeft
       ? placement([0, 0, d.sideZ0], Y, Z, X, neg(X))
-      : placement([d.W, 0, d.D], Y, neg(Z), neg(X), X)
+      : placement([d.W, 0, d.D + ext], Y, neg(Z), neg(X), X)
+    if (ext && !isLeft) for (const g of grooves) g.y = r(g.y + ext)
     const panel = this.add({
       ...this.basePanel(
         isLeft ? "side-left" : "side-right",
@@ -310,16 +320,19 @@ class Builder {
         isLeft ? "Lateral esquerre" : "Lateral dret",
         "side",
         H,
-        sideDepth,
+        sideDepth + ext,
         t,
         c.material,
         "x",
-        d.mitreTop ? edges(isLeft ? "top" : "bottom") : edges(isLeft ? "top" : "bottom", "right"),
+        d.mitreTop ? edges(...(ext ? [] : [isLeft ? ("top" as const) : ("bottom" as const)])) : edges(...(ext ? [] : [isLeft ? ("top" as const) : ("bottom" as const)]), "right"),
         pl,
       ),
       grooves,
-      // Local x = alçada: «right» és el cap de dalt (tapa) i «left» el de baix (base).
-      ...(d.mitreTop || d.mitreBottom ? { mitres: [...(d.mitreTop ? (["right"] as const) : []), ...(d.mitreBottom ? (["left"] as const) : [])] } : {}),
+      // Local x = alçada: «right» és el cap de dalt (tapa) i «left» el de baix (base); el cantell
+      // de davant és «top» a l'esquerre i «bottom» al dret.
+      ...(d.mitreTop || d.mitreBottom || ext
+        ? { mitres: [...(d.mitreTop ? (["right"] as const) : []), ...(d.mitreBottom ? (["left"] as const) : []), ...(ext ? [isLeft ? ("top" as const) : ("bottom" as const)] : [])] }
+        : {}),
     })
     this.verticals.push({
       panel,
@@ -600,6 +613,8 @@ class Builder {
 
     // 4) Passacables i extres.
     for (const hole of m.extras.cableHoles) this.cableHole(hole)
+    if (d.mitreFronts)
+      this.warnings.push({ code: "mitre", message: "Fronts dels calaixos a inglet amb els laterals: els laterals arriben fins a la cara dels fronts i tots dos es tallen a 45°. Cal un joc de 1–2 mm al tall perquè el calaix obri." })
     return layout
   }
 
@@ -832,8 +847,10 @@ class Builder {
     // Encastats: dins de la llum, amb el joc a cada costat.
     if (d.inset) return { x0: r(rect.x0 + og), x1: r(rect.x1 - og), y0: r(rect.y0 + og), y1: r(rect.y1 - og) }
     // Les parets exteriors poden ser més gruixudes que el tauler (parets buides).
-    const x0 = left ? (left.outer ? rect.x0 - (left.xR - left.xL) + og : rect.x0 - t / 2 + bg / 2) : rect.x0 + og
-    const x1 = right ? (right.outer ? rect.x1 + (right.xR - right.xL) - og : rect.x1 + t / 2 - bg / 2) : rect.x1 - og
+    // Fronts de calaix a inglet: de fora a fora als laterals (el tall a 45° fa el joc).
+    const ogL = d.mitreFronts ? 0 : og
+    const x0 = left ? (left.outer ? rect.x0 - (left.xR - left.xL) + ogL : rect.x0 - t / 2 + bg / 2) : rect.x0 + og
+    const x1 = right ? (right.outer ? rect.x1 + (right.xR - right.xL) - ogL : rect.x1 + t / 2 - bg / 2) : rect.x1 - og
     const y0 = below ? (below.outer ? rect.y0 - (below.yTop - below.yBottom) + og : rect.y0 - t / 2 + bg / 2) : rect.y0 + og
     const y1 = above ? (above.outer ? rect.y1 + (above.yTop - above.yBottom) - og : rect.y1 + t / 2 - bg / 2) : rect.y1 - og
     return { x0: r(x0), x1: r(x1), y0: r(y0), y1: r(y1) }
@@ -1041,9 +1058,13 @@ class Builder {
       const fh = heights[i]!
       const fw = r(ter.x1 - ter.x0)
       // Front (cara A cap a dins, x local = amplada).
-      const frontPanel = this.add(
-        this.basePanel(`drawer-${k}-front`, "frontal calaix", `Front calaix ${k}`, "drawerFront", fw, fh, d.t, frontMaterialOf(this.m), "x", edges("left", "right", "bottom", "top"), placement([ter.x0, y + fh, d.frontZ], X, neg(Y), neg(Z), Z)),
-      )
+      // A inglet amb els laterals: el costat que arriba a fora del moble, tallat a 45°.
+      const mL = d.mitreFronts && ter.x0 <= 0.01 && c.sides.left
+      const mR = d.mitreFronts && ter.x1 >= d.W - 0.01 && c.sides.right
+      const frontPanel = this.add({
+        ...this.basePanel(`drawer-${k}-front`, "frontal calaix", `Front calaix ${k}`, "drawerFront", fw, fh, d.t, frontMaterialOf(this.m), "x", edges(...(["bottom", "top"] as const), ...(mL ? [] : (["left"] as const)), ...(mR ? [] : (["right"] as const))), placement([ter.x0, y + fh, d.frontZ], X, neg(Y), neg(Z), Z)),
+        ...(mL || mR ? { mitres: [...(mL ? (["left"] as const) : []), ...(mR ? (["right"] as const) : [])] } : {}),
+      })
       const boxH = r(fh - hw.boxDrop)
       const boxY0 = r(y + (fh - boxH) / 2)
       const boxX0 = r(rect.x0 + hw.sideClearance)
@@ -1142,4 +1163,19 @@ export function buildModule(m: Module): ModuleBuild {
 /** Material dels fronts (portes, calaixos, abatibles, reixetes, fixos): el propi o, si no n'hi ha, el del cos. */
 export function frontMaterialOf(m: { carcass: { material: string; frontMaterial?: string } }): string {
   return m.carcass.frontMaterial?.trim() || m.carcass.material
+}
+
+/** Tots els fronts del mòdul són calaixos (n'hi ha almenys un). */
+function onlyDrawers(root: Zone): boolean {
+  let drawers = 0
+  let other = 0
+  const walk = (z: Zone) => {
+    if (z.front) {
+      if (z.front.kind === "drawers") drawers++
+      else other++
+    }
+    z.split?.children.forEach(walk)
+  }
+  walk(root)
+  return drawers > 0 && other === 0
 }

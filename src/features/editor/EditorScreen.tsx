@@ -764,11 +764,13 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
 
   // Accions ràpides del visor, a dalt de «Opcions de vista» (com el menú de visualització
   // de Fusion o Blender): el mode en un grup i la resta com a botons amb icona i nom.
+  // Només icona (el text no hi cabia): el nom i l'explicació, al tooltip.
   const tile = (key: string, label: string, icon: ReactNode, on: boolean, onClick: () => void, tip?: string) => (
-    <Button key={key} size="xs" h="auto" py={2} px={1} flexDirection="column" gap={1} variant={on ? "solid" : "outline"} colorPalette={on ? "wood" : "gray"} aria-pressed={on} title={tip ?? label} onClick={onClick} fontSize="2xs" fontWeight="medium" whiteSpace="normal" lineHeight="1.1">
-      {icon}
-      {label}
-    </Button>
+    <Tooltip key={key} content={tip ?? label}>
+      <IconButton size="sm" w="full" variant={on ? "solid" : "outline"} colorPalette={on ? "wood" : "gray"} aria-pressed={on} aria-label={label} onClick={onClick}>
+        {icon}
+      </IconButton>
+    </Tooltip>
   )
   const viewQuick = (
     <Stack gap={3} mb={4} pb={4} borderBottomWidth="1px">
