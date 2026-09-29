@@ -7,6 +7,7 @@ import {
   LuChevronDown,
   LuChevronRight,
   LuCopy,
+  LuDoorClosed,
   LuEllipsis,
   LuPlus,
   LuScan,
@@ -240,7 +241,8 @@ function ZoneRows({
     )
   }
   const selected = selection.kind === "zone" && selection.zoneId === zone.id
-  const icon = zone.split ? zone.split.dir === "v" ? <LuColumns2 /> : <LuRows2 /> : <LuSquare />
+  // Compartiment amb front: la mateixa icona que la secció «Front» de les propietats.
+  const icon = zone.split ? zone.split.dir === "v" ? <LuColumns2 /> : <LuRows2 /> : zone.front ? <LuDoorClosed /> : <LuSquare />
   return (
     <>
       <Row depth={depth} icon={icon} label={zoneLabel(zone)} selected={selected} onClick={() => onSelect({ kind: "zone", moduleId, zoneId: zone.id })} muted />

@@ -17,6 +17,7 @@ import {
   LuCamera,
   LuCircleDot,
   LuDoorOpen,
+  LuDoorClosed,
   LuExpand,
   LuFocus,
   LuHammer,
@@ -637,7 +638,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
       : selection.kind === "ref"
         ? { icon: <LuScan />, text: comp.references.find((r) => r.id === selection.id)?.name ?? "Objecte", parent: "Objecte de referència" }
         : selection.kind === "zone" && zone
-          ? { icon: zone.split ? zone.split.dir === "v" ? <LuColumns2 /> : <LuRows2 /> : <LuSquare />, text: zoneLabel(zone), parent: module.name }
+          ? { icon: zone.split ? zone.split.dir === "v" ? <LuColumns2 /> : <LuRows2 /> : zone.front ? <LuDoorClosed /> : <LuSquare />, text: zoneLabel(zone), parent: module.name }
           : { icon: <LuBox />, text: module.name, parent: name || "Moble" }
 
   // Sense separació entre blocs: les seccions plegables van enganxades (totes amb la
