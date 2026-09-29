@@ -45,8 +45,8 @@ importers:
         specifier: ^0.186.1
         version: 0.186.1
       three-gpu-pathtracer:
-        specifier: 0.0.26
-        version: 0.0.26(three-mesh-bvh@0.9.15(three@0.186.1))(three@0.186.1)(xatlas-web@0.1.0)
+        specifier: 0.0.25
+        version: 0.0.25(three-mesh-bvh@0.9.15(three@0.186.1))(three@0.186.1)(xatlas-web@0.1.0)
       three-mesh-bvh:
         specifier: ^0.9.15
         version: 0.9.15(three@0.186.1)
@@ -2544,8 +2544,8 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
-  three-gpu-pathtracer@0.0.26:
-    resolution: {integrity: sha512-LtLnv7xu39HjwvH9JGD5a0PISLOBcPHBYp6BcxE2+Unp5xhUGxC0U0UWhlE3dZSk32fBN3K2BnjtNjHE7ayvkQ==}
+  three-gpu-pathtracer@0.0.25:
+    resolution: {integrity: sha512-cyJCZdRi3/C5hKQu9txz9u3Jf/emd4ykHyOsPJxYiFD3mUYeZ0ZuP8lgeOYiMb/nwE2AoSoMX1gN8fDAaL4QWQ==}
     peerDependencies:
       three: '>=0.185.0'
       three-mesh-bvh: '>=0.9.15'
@@ -5908,7 +5908,7 @@ snapshots:
       commander: 2.20.3
       source-map-support: 0.5.21
 
-  three-gpu-pathtracer@0.0.26(three-mesh-bvh@0.9.15(three@0.186.1))(three@0.186.1)(xatlas-web@0.1.0):
+  three-gpu-pathtracer@0.0.25(three-mesh-bvh@0.9.15(three@0.186.1))(three@0.186.1)(xatlas-web@0.1.0):
     dependencies:
       three: 0.186.1
       three-mesh-bvh: 0.9.15(three@0.186.1)
