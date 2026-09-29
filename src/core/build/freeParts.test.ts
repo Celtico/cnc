@@ -138,3 +138,13 @@ describe("peces que no són de CNC", () => {
     expect(b.warnings).toEqual([])
   })
 })
+
+describe("encaixos només al Flat-pack", () => {
+  it("en un moble normal les peces lliures no fan encaixos", () => {
+    const side = part({ id: "side", orient: "side", w: 300, h: 600, x: 1000 })
+    const shelf = part({ id: "shelf", orient: "flat", w: 400, h: 300, x: 1000, y: 300 })
+    const b = buildComposition(comp([side, shelf], { kind: "moble" }))
+    expect(b.joints).toEqual([])
+    expect(b.panels.find((p) => p.id === "part:side")!.cutouts ?? []).toHaveLength(0)
+  })
+})

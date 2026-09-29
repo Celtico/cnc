@@ -8,6 +8,7 @@ import {
   partBox,
   polygonArea,
   resolveParts,
+  compositionKind,
   type Composition,
   type Cutout,
   type EdgeSide,
@@ -162,7 +163,9 @@ export function buildFreeParts(comp: Composition, moduleNumber: number): FreePar
   const warnings: FreePartsBuild["warnings"] = []
   const dowel = comp.modules[0]?.hardware?.dowel ?? DOWEL
 
-  for (let i = 0; i < parts.length; i++) {
+  // Els encaixos són del Flat-pack: a la resta de mobles les peces lliures van soles.
+  const joinery = compositionKind(comp) === "lliure"
+  for (let i = 0; i < (joinery ? parts.length : 0); i++) {
     for (let k = i + 1; k < parts.length; k++) {
       const A = parts[i]!
       const B = parts[k]!

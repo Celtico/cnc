@@ -244,7 +244,7 @@ export function StructureTree({
       </HStack>
       {parts.length === 0 && (
         <Text fontSize="xs" color="fg.subtle" px={2}>
-          {onlyParts ? "Cap. Afegeix-ne amb el +: on dues peces es toquen o s'encreuen, s'hi fa l'encaix sol." : "Cap. Taulers solts que van al nesting (prestatges, travessers, potes…), amb encaixos entre ells."}
+          {onlyParts ? "Cap. Afegeix-ne amb el +: on dues peces es toquen o s'encreuen, s'hi fa l'encaix sol." : "Cap. Taulers solts (prestatges, travessers, potes…) o elements de ferro, pedra o vidre. Els encaixos automàtics són del tipus Flat-pack."}
         </Text>
       )}
       {(() => {

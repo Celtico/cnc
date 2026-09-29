@@ -883,7 +883,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
               <RunsForm comp={comp} onChange={setComp} />
             </PanelSection>
           )}
-          {(comp.parts?.length ?? 0) > 0 && (
+          {kind === "lliure" && (comp.parts?.length ?? 0) > 0 && (
             <PanelSection id="moble-joinery" title="Encaixos" icon={LuPuzzle} badge={build?.joints.length || undefined}>
               <PartJoineryForm comp={comp} onChange={setComp} />
             </PanelSection>

@@ -307,7 +307,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     → espigues. `Composition.joinery` (`DEFAULT_JOINERY`): joc (eixampla mortalles i osques), Ø
     fresa per als **dogbones** a les cantonades interiors, ample de pestanya. El contorn resultant
     es calcula amb `polygon-clipping` (forma − osques; forats interiors → talls `polygon`).
-    `build.joints` els llista (inspector de la peça). Tipus de moble **Flat-pack** (`kind:
+    `build.joints` els llista (inspector de la peça). **Només al tipus Flat-pack**: a la resta
+    de mobles les peces lliures no fan encaixos i no surten les opcions d'encaix. Tipus de moble **Flat-pack** (`kind:
     "lliure"`): no es fan mòduls (es guarden), l'arbre només mostra peces i objectes.
     Plantilles «Prestatgeria d'encaix» i «Tamboret flat-pack» (`model/flatPack.ts`).
   - **Grups de peces lliures** (`FreePart.group`, `moveGroupBy`, `duplicateGroup`): menú … de la

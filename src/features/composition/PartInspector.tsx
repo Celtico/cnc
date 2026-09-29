@@ -31,6 +31,7 @@ import {
   reorientPart,
   PART_AXES,
   partsBox,
+  compositionKind,
   partOffset,
   resolveParts,
   partGroups,
@@ -113,6 +114,8 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
   const ax = PART_AXES[p.orient]
   const size = partSize(p)
   const cnc = p.nest !== false
+  // Els encaixos només són del Flat-pack.
+  const flatPack = compositionKind(comp) === "lliure"
   const mat = materialByName(settings, p.material)
   const mine = joints.filter((j) => j.a === id || j.b === id)
   const nameOf = (pid: string) => comp.parts?.find((x) => x.id === pid)?.name ?? "?"
@@ -184,12 +187,12 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
         )}
         {/* Ferro, pedra, vidre…: sense veta ni encaixos. */}
         {cnc && <IconChoice label="Veta" value={p.grain ?? "u"} options={GRAIN} onChange={(g) => update({ grain: g === "u" ? undefined : g })} />}
-        {cnc && (<Switch.Root size="sm" disabled={p.nest === false} checked={p.joints !== false && p.nest !== false} onCheckedChange={(e) => update({ joints: e.checked ? undefined : false })}>
+        {cnc && flatPack && (<Switch.Root size="sm" disabled={p.nest === false} checked={p.joints !== false && p.nest !== false} onCheckedChange={(e) => update({ joints: e.checked ? undefined : false })}>
           <Switch.HiddenInput />
           <Switch.Control />
           <Switch.Label>Encaixos amb les altres peces</Switch.Label>
         </Switch.Root>)}
-        {p.joints !== false && p.nest !== false && (
+        {flatPack && p.joints !== false && p.nest !== false && (
           <Stack gap={1}>
             {mine.length === 0 ? (
               <Text fontSize="xs" color="fg.muted">
@@ -295,9 +298,11 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
           {p.module && comp.kind !== "lliure" ? `Respecte al mòdul «${comp.modules.find((m) => m.id === p.module)?.name ?? "?"}» (el segueix). ` : ""}Cantonada esquerra, de baix i del darrere. Al 3D, arrossega-la amb les fletxes (s'enganxa a les vores de les altres peces; Alt: lliure). Fletxes del teclat: 1 mm (Maj: 10); Re Pàg / Av Pàg: fons.
         </Text>
       </PanelSection>
-      <PanelSection id="part-joinery" title="Encaixos (tot el moble)" icon={LuPuzzle}>
-        <PartJoineryForm comp={comp} onChange={onChange} />
-      </PanelSection>
+      {flatPack && (
+        <PanelSection id="part-joinery" title="Encaixos (tot el moble)" icon={LuPuzzle}>
+          <PartJoineryForm comp={comp} onChange={onChange} />
+        </PanelSection>
+      )}
     </Stack>
   )
 }
