@@ -316,6 +316,29 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   }, [])
   const selectZone = (id: string) => select({ kind: "zone", moduleId: module.id, zoneId: id })
 
+  /** Mou un objecte de referència (arrossegat al 3D o amb les fletxes). */
+  const moveRef = (id: string, pos: { x: number; y: number; z: number }) =>
+    setComp((c) => ({ ...c, references: c.references.map((r) => (r.id === id ? { ...r, ...pos } : r)) }))
+  // Fletxes amb un objecte seleccionat: ←→ X, ↑↓ Y, Re Pàg / Av Pàg Z. 1 mm; amb Maj, 10 mm.
+  const nudgeRef = useRef<(e: KeyboardEvent) => void>(() => {})
+  nudgeRef.current = (e: KeyboardEvent) => {
+    if (selection.kind !== "ref" || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return
+    const t = e.target as HTMLElement | null
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return
+    const r = comp.references.find((o) => o.id === selection.id)
+    if (!r) return
+    const k = e.shiftKey ? 10 : 1
+    const d = { ArrowLeft: [-k, 0, 0], ArrowRight: [k, 0, 0], ArrowUp: [0, k, 0], ArrowDown: [0, -k, 0], PageUp: [0, 0, k], PageDown: [0, 0, -k] }[e.key]
+    if (!d) return
+    e.preventDefault()
+    moveRef(r.id, { x: r.x + d[0]!, y: Math.max(0, r.y + d[1]!), z: r.z + d[2]! })
+  }
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => nudgeRef.current(e)
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
+
   /**
    * Clic al 3D. El primer clic selecciona el mòdul; si el mòdul ja estava seleccionat (o un
    * compartiment seu), el clic entra a dins i selecciona el compartiment tocat.
@@ -841,6 +864,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             collidingRefIds={collidingRefs}
             highlightZone={highlightZone}
             onSelectRef={(id) => select({ kind: "ref", id })}
+            onMoveRef={moveRef}
           />
         )}
         {/* Amb el visor estret, les vistes es trien a «Opcions de vista» (no hi caben a baix). */}

@@ -182,6 +182,11 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
 - **Editor en tres columnes, com Figma / Fusion 360** (`features/editor/EditorScreen.tsx`):
   - **Esquerra — Estructura** (`composition/StructureTree.tsx`): arbre moble › mòduls ›
     compartiments, i objectes de referència. Afegir/duplicar/moure/eliminar amb el menú ⋯.
+  - **Objectes de referència al 3D** (`RefGhost` a `CabinetViewer`): seleccionat, s'arrossega
+    en el pla de la paret (X·Y); Maj o vista de dalt, pel terra (X·Z); vistes laterals, Z·Y.
+    Imant de 15 mm a les vores dels mòduls, dels altres objectes, del terra i de la paret (Alt:
+    sense imant); etiqueta amb la posició mentre s'arrossega. Fletxes 1 mm (Maj 10), Re Pàg /
+    Av Pàg per a Z. Es desa en deixar-lo anar (un sol pas de desfer).
   - **Centre — Visor** amb pestanyes `3D` · `Alçat` · `Foto`. Les opcions de visualització
     (forats, explosionat, AR, obertura, colors, imatge) són a la barra del visor, no al panell.
   - **Dreta — Propietats** del que hi ha seleccionat i **només d'això**: moble (resum i

@@ -79,6 +79,9 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
         <Text fontSize="xs" color="fg.muted">
           X des de l'esquerra del moble, Y des del terra, Z des del darrere (paret).
         </Text>
+        <Text fontSize="xs" color="fg.muted">
+          Al 3D, arrossega'l: s'enganxa a les vores dels mòduls i dels altres objectes (Alt: lliure; Maj: pel terra). Fletxes: 1 mm (Maj: 10 mm); Re Pàg / Av Pàg: fondària.
+        </Text>
       </PanelSection>
     </Stack>
   )

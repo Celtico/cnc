@@ -5,7 +5,7 @@ import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
 import { ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
 import { LuPlus } from "react-icons/lu"
-import { Group, Matrix4, MeshStandardMaterial, Vector3, type Object3D, type Texture } from "three"
+import { Group, Matrix4, MeshStandardMaterial, Plane, Vector3, type Object3D, type Texture } from "three"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 import type { Hole, MaterialPref, Panel, PanelRole, RefObject } from "../../core/model"
@@ -102,6 +102,8 @@ export interface CabinetViewerProps {
   /** Objecte de referència seleccionat i clic sobre un objecte al 3D. */
   selectedRefId?: string | null
   onSelectRef?: (id: string) => void
+  /** Arrossegar l'objecte seleccionat al 3D: posició nova (mm) en deixar-lo anar. */
+  onMoveRef?: (id: string, pos: { x: number; y: number; z: number }) => void
   /** Objectes que xoquen amb alguna peça: es pinten de vermell. */
   collidingRefIds?: Set<string>
   /** Compartiment seleccionat (mm, coordenades de la composició): contorn taronja. */
@@ -131,6 +133,7 @@ export function CabinetViewer({
   onDeselect,
   selectedRefId,
   onSelectRef,
+  onMoveRef,
   collidingRefIds,
   highlightZone,
 }: CabinetViewerProps) {
@@ -153,6 +156,16 @@ export function CabinetViewer({
     return m
   }, [groups])
   const gridRef = useRef<Object3D>(null)
+  // Arestes on s'enganxen els objectes en arrossegar-los: mòduls, altres objectes, terra i paret.
+  const snapTargets = useMemo((): SnapTargets => {
+    const t: SnapTargets = { x: [0, size.width], y: [0, size.height], z: [0, size.depth] }
+    for (const m of modules ?? []) {
+      t.x.push(m.x, m.x + m.width)
+      t.y.push(m.y, m.y + m.height)
+      t.z.push(m.depth)
+    }
+    return t
+  }, [modules, size.width, size.height, size.depth])
   const ortho = view !== "3d"
 
   return (
@@ -213,32 +226,21 @@ export function CabinetViewer({
             </MovingPanel>
           )
         })}
-        {ghosts?.map((g) => {
-          const on = g.id === selectedRefId
-          const hit = collidingRefIds?.has(g.id) ?? false
-          const tint = hit ? "#dc2626" : on ? SELECT_COLOR : "#3b82f6"
-          return (
-            <mesh
-              key={g.id}
-              position={[(g.x + g.w / 2) * S, (g.y + g.h / 2) * S, (g.z + g.d / 2) * S]}
-              onClick={onSelectRef ? (e: ThreeEvent<MouseEvent>) => {
-                e.stopPropagation()
-                onSelectRef(g.id)
-              } : undefined}
-              onPointerOver={onSelectRef ? (e: ThreeEvent<PointerEvent>) => {
-                e.stopPropagation()
-                document.body.style.cursor = "pointer"
-              } : undefined}
-              onPointerOut={onSelectRef ? () => {
-                document.body.style.cursor = ""
-              } : undefined}
-            >
-              <boxGeometry args={[g.w * S, g.h * S, g.d * S]} />
-              <meshStandardMaterial color={tint} transparent opacity={on || hit ? 0.38 : 0.22} depthWrite={false} />
-              {(q.guides || on || hit) && <Edges color={on ? SELECT_COLOR : tint} />}
-            </mesh>
-          )
-        })}
+        {ghosts?.map((g) => (
+          <RefGhost
+            key={g.id}
+            g={g}
+            selected={g.id === selectedRefId}
+            hit={collidingRefIds?.has(g.id) ?? false}
+            guides={q.guides}
+            view={view}
+            offset={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}
+            targets={snapTargets}
+            others={ghosts}
+            onSelect={onSelectRef}
+            onMove={onMoveRef}
+          />
+        ))}
         {highlightZone && <ZoneHighlight box={highlightZone} />}
         {selected && onAddModule && !ortho && q.guides && (
           <>
@@ -437,6 +439,171 @@ function drawLabels(ctx: CanvasRenderingContext2D, glCanvas: HTMLCanvasElement, 
     ctx.textBaseline = "middle"
     ctx.fillText(el.textContent ?? "", x + w / 2, y + h / 2)
   }
+}
+
+interface SnapTargets {
+  x: number[]
+  y: number[]
+  z: number[]
+}
+
+/** Distància (mm) a la qual una aresta de l'objecte s'enganxa a una aresta de referència. */
+const SNAP_MM = 15
+
+/** Posició (mm, arrodonida a 1) i si s'ha enganxat: prova les dues arestes de l'objecte. */
+function snapAxis(pos: number, size: number, targets: number[], free: boolean): { v: number; snapped: boolean } {
+  if (free) return { v: Math.round(pos), snapped: false }
+  let best: number | null = null
+  for (const t of targets) {
+    for (const edge of [pos, pos + size]) {
+      const delta = t - edge
+      if (Math.abs(delta) <= SNAP_MM && (best === null || Math.abs(delta) < Math.abs(best))) best = delta
+    }
+  }
+  return best === null ? { v: Math.round(pos), snapped: false } : { v: Math.round(pos + best), snapped: true }
+}
+
+type Axis = "x" | "y" | "z"
+
+/**
+ * Objecte de referència (translúcid). Seleccionat, s'arrossega: per defecte en el pla de la
+ * paret (X i Y); amb Maj o a la vista de dalt, pel terra (X i Z); a les vistes laterals, Z i
+ * Y. S'enganxa a les arestes dels mòduls i dels altres objectes (Alt: sense imant).
+ */
+function RefGhost({
+  g,
+  selected,
+  hit,
+  guides,
+  view,
+  offset,
+  targets,
+  others,
+  onSelect,
+  onMove,
+}: {
+  g: RefObject
+  selected: boolean
+  hit: boolean
+  guides: boolean
+  view: ViewName
+  offset: [number, number, number]
+  targets: SnapTargets
+  /** Tots els objectes: les arestes dels altres també enganxen. */
+  others: RefObject[]
+  onSelect?: (id: string) => void
+  onMove?: (id: string, pos: { x: number; y: number; z: number }) => void
+}) {
+  const controls = useThree((st) => st.controls) as unknown as { enabled: boolean } | null
+  const [drag, setDrag] = useState<{ x: number; y: number; z: number; axes: Axis[]; snapped: Axis[] } | null>(null)
+  const latest = useRef(drag)
+  latest.current = drag
+  const state = useRef<{ plane: Plane; grab: Vector3; axes: Axis[]; start: [number, number]; moved: boolean } | null>(null)
+  const snap = useMemo((): SnapTargets => {
+    const t = { x: [...targets.x], y: [...targets.y], z: [...targets.z] }
+    for (const o of others) {
+      if (o.id === g.id) continue
+      t.x.push(o.x, o.x + o.w)
+      t.y.push(o.y, o.y + o.h)
+      t.z.push(o.z, o.z + o.d)
+    }
+    return t
+  }, [targets, others, g.id])
+  const pos = drag ?? g
+  const tint = hit ? "#dc2626" : selected ? SELECT_COLOR : "#3b82f6"
+  const draggable = selected && !!onMove
+
+  const end = (e: ThreeEvent<PointerEvent>) => {
+    const st = state.current
+    if (!st) return
+    state.current = null
+    if (controls) controls.enabled = true
+    ;(e.target as Element | null)?.releasePointerCapture?.(e.pointerId)
+    const d = latest.current
+    if (st.moved && d && onMove) onMove(g.id, { x: d.x, y: d.y, z: d.z })
+    setDrag(null)
+  }
+
+  return (
+    <mesh
+      position={[(pos.x + g.w / 2) * S, (pos.y + g.h / 2) * S, (pos.z + g.d / 2) * S]}
+      onClick={onSelect ? (e: ThreeEvent<MouseEvent>) => {
+        e.stopPropagation()
+        onSelect(g.id)
+      } : undefined}
+      onPointerOver={onSelect ? (e: ThreeEvent<PointerEvent>) => {
+        e.stopPropagation()
+        document.body.style.cursor = draggable ? "move" : "pointer"
+      } : undefined}
+      onPointerOut={onSelect ? () => {
+        if (!state.current) document.body.style.cursor = ""
+      } : undefined}
+      onPointerDown={draggable ? (e: ThreeEvent<PointerEvent>) => {
+        e.stopPropagation()
+        const floor = view === "top" || e.shiftKey
+        const side = view === "left" || view === "right"
+        const normal = floor ? new Vector3(0, 1, 0) : side ? new Vector3(1, 0, 0) : new Vector3(0, 0, 1)
+        const corner = new Vector3(g.x * S + offset[0], g.y * S + offset[1], g.z * S + offset[2])
+        state.current = {
+          plane: new Plane().setFromNormalAndCoplanarPoint(normal, e.point),
+          grab: e.point.clone().sub(corner),
+          axes: floor ? ["x", "z"] : side ? ["z", "y"] : ["x", "y"],
+          start: [e.clientX, e.clientY],
+          moved: false,
+        }
+        ;(e.target as Element | null)?.setPointerCapture?.(e.pointerId)
+        if (controls) controls.enabled = false
+      } : undefined}
+      onPointerMove={draggable ? (e: ThreeEvent<PointerEvent>) => {
+        const st = state.current
+        if (!st) return
+        e.stopPropagation()
+        if (!st.moved && Math.hypot(e.clientX - st.start[0], e.clientY - st.start[1]) < 3) return
+        st.moved = true
+        const at = e.ray.intersectPlane(st.plane, new Vector3())
+        if (!at) return
+        at.sub(st.grab)
+        const raw = { x: (at.x - offset[0]) / S, y: (at.y - offset[1]) / S, z: (at.z - offset[2]) / S }
+        const next = { x: g.x, y: g.y, z: g.z, axes: st.axes, snapped: [] as Axis[] }
+        for (const a of st.axes) {
+          const size = a === "x" ? g.w : a === "y" ? g.h : g.d
+          const r = snapAxis(raw[a], size, snap[a], e.altKey)
+          next[a] = r.v
+          if (r.snapped) next.snapped.push(a)
+        }
+        // No es pot enfonsar al terra.
+        next.y = Math.max(0, next.y)
+        setDrag(next)
+      } : undefined}
+      onPointerUp={draggable ? end : undefined}
+      onPointerCancel={draggable ? end : undefined}
+    >
+      <boxGeometry args={[g.w * S, g.h * S, g.d * S]} />
+      <meshStandardMaterial color={tint} transparent opacity={selected || hit ? 0.38 : 0.22} depthWrite={false} />
+      {(guides || selected || hit) && <Edges color={selected ? SELECT_COLOR : tint} />}
+      {drag && (
+        <Html position={[0, (g.h / 2) * S, 0]} center zIndexRange={[30, 20]} style={{ pointerEvents: "none" }}>
+          <span
+            style={{
+              fontFamily: "system-ui, sans-serif",
+              fontSize: 12,
+              fontWeight: 600,
+              fontVariantNumeric: "tabular-nums",
+              color: "#fff",
+              background: SELECT_COLOR,
+              padding: "2px 6px",
+              borderRadius: 4,
+              whiteSpace: "nowrap",
+              display: "block",
+              transform: "translateY(-18px)",
+            }}
+          >
+            {drag.axes.map((a) => `${a.toUpperCase()} ${drag[a]}${drag.snapped.includes(a) ? " ⟂" : ""}`).join(" · ")}
+          </span>
+        </Html>
+      )}
+    </mesh>
+  )
 }
 
 type P3 = [number, number, number]
