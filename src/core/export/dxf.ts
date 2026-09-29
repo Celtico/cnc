@@ -172,9 +172,10 @@ export function panelEntities(panel: Panel, labels = true, threeD = true): strin
   // Cara A a dalt (Z = T): hi baixen els mecanitzats; cara B a baix (Z = 0): hi pugen.
   const down = (depth: number): Z => (threeD ? { z: T, t: -Math.min(depth, T) } : FLAT)
   const up = (depth: number): Z => (threeD ? { z: 0, t: Math.min(depth, T) } : FLAT)
+  // Contorn: el rectangle o, si la peça té forma, les seves rectes i arcs (bulge).
   let out = polyline(
     LAYER_CONTOUR,
-    [
+    panel.outline ?? [
       [0, 0],
       [L, 0],
       [L, W],

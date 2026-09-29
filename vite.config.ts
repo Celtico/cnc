@@ -2,9 +2,26 @@
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 import { VitePWA } from "vite-plugin-pwa"
+import { execSync } from "node:child_process"
+
+/** Versió que només puja: el nombre de commits de la branca, llegit de git en construir (com a rack). */
+function gitVersion(): { version: string; commit: string } {
+  const run = (cmd: string) => execSync(cmd, { stdio: ["ignore", "pipe", "ignore"] }).toString().trim()
+  try {
+    return { version: run("git rev-list --count HEAD"), commit: run("git rev-parse --short HEAD") }
+  } catch {
+    // Sense git (una build sense el repositori): el que digui l'entorn, o «dev».
+    return { version: process.env.APP_VERSION ?? "dev", commit: process.env.APP_COMMIT ?? "" }
+  }
+}
+const { version, commit } = gitVersion()
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+    __APP_COMMIT__: JSON.stringify(commit),
+  },
   plugins: [
     react(),
     VitePWA({
@@ -14,6 +31,8 @@ export default defineConfig({
         name: "Mobles",
         short_name: "Mobles",
         description: "Configurador paramètric de mobles de cos per tallar a la CNC",
+        // No és un camp estàndard (els navegadors l'ignoren), però diu quina build hi ha instal·lada.
+        ...({ version, commit } as object),
         lang: "ca",
         theme_color: "#1a202c",
         background_color: "#1a202c",

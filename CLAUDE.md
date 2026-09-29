@@ -282,15 +282,33 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     interior; `frontTerritory` usa el gruix real de cada paret exterior. Sense espigues entre
     parets (s'encolen); calen ≥ 2·gruix + 6 mm (si no, avís i es fan massisses). Inglet i
     parets buides no es combinen.
-  - **Post-processos i etiquetes** (`core/process/`): `panelProcesses` dedueix el que toca a
-    cada peça després del nesting, en ordre: Inglet 45° → Cantell → Forats de cantell →
-    Encolar (`Panel.assembly`, p. ex. les parets buides). Surt a la llista de peces
-    («Després del nesting») i al CSV (columna Processos). Exportar › Etiquetes
-    (`labelSheetHtml`): una etiqueta de peça (ref, nom, mides, material, tauler) i, si en té,
-    una de PROCÉS; mida de Preferències › Etiqueta, una per pàgina per a la impressora.
+  - **Post-processos** (`core/process/processes.ts`): `panelProcesses` dedueix el que toca a
+    cada peça després del nesting, en ordre: 2a cara → Inglet 45° → Cantell → Forats de cantell →
+    Encolar (`Panel.assembly`). L'app NO fa etiquetes (les fa el taller-cnc-nest): només ho
+    anota. **2a cara** (`needsSecondFace`: forats o ranures a la cara B) → columna
+    `SEGUNDO_NOMBRE_DE_FICHERO_DE_MECANIZADO` del CSV TopSolid amb `<ref>Volt` (com TopSolid;
+    el taller en fa l'etiqueta «PROGRAMA 2a CARA» amb Code128). La resta surt a la llista de
+    peces («Després del nesting») i al CSV de peces (Processos). El test d'anada i tornada ho
+    comprova amb els parsers del taller (`~/Desktop/taller-cnc-nest`).
+  - **Barra del visor**: fora només «Opcions de vista» (i amagar propietats); a dins, a dalt,
+    accions ràpides amb icona i nom (`viewQuick`): els 3 modes, Encuadrar, Forats, Explosió i
+    Veure a casa (AR); a sota, la vista, l'obertura i la imatge. Al mòbil, el visor amb els
+    marges de la pàgina i sense marge a dalt.
+  - **Versió** (com a rack): `__APP_VERSION__` = nombre de commits i `__APP_COMMIT__` (git en
+    construir, `vite.config.ts`; sense git, `APP_VERSION` o «dev»), petita al costat del nom al
+    menú i al manifest. El Dockerfile instal·la git i el `.git` no s'ignora.
+  - **Textures reals** (`Finish.kind = "image"`): a Preferències › Materials, Acabat «Foto
+    real»: es tria una foto (reduïda a 1024 px JPEG) i l'amplada real que mostra (mm);
+    `photoTexture` (repetició en mirall perquè no es vegin costures).
+  - **Tauler de taula** (`Carcass.tableTop`): la tapa per sobre dels laterals (més curts),
+    voladís a tot el voltant i forma (rectangle, arrodonit, oval o a mida amb l'editor de
+    perfil; `shape` en mm s'escala al tauler). `Panel.outline` (rectes i arcs): 3D/GLB
+    extruït, DXF amb bulge, STEP prisma amb cares cilíndriques (`outlineSolid`; els
+    mecanitzats d'aquestes peces només al DXF/CSV). Preset «Taula oval».
   - **Opcions amb icona** (`components/IconChoice.tsx`): poques opcions → botons d'icona amb
     el nom al tooltip i l'opció triada al costat del títol. Base, Fons, Tapa (mòdul), Patró de
-    reixeta, Direcció dels objectes; Efecte i Forma dels objectes són segments amb icona i text.
+    reixeta, Direcció dels objectes; Efecte i Forma dels objectes, portes (una/dues, frontisses),
+    abatible i muntatge de la reixeta són segments amb icona i text.
   - **Arbre: arrossegar per ordenar** (`reorderModule`, `reorderRef`): mòduls dins de la
     seva fila i objectes; una línia marca on cau. El menu … manté «Moure amunt/avall».
   - **Inspector en seccions plegables independents** (`PanelSection` fora d'un

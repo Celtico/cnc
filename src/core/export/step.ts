@@ -248,6 +248,59 @@ interface PanelSolid {
   warnings: string[]
 }
 
+/**
+ * Peça amb contorn (tauler de taula oval, arrodonit…): prisma del contorn (rectes i arcs,
+ * cares planes i cilíndriques cap enfora). Els mecanitzats d'aquestes peces no es modelen
+ * al STEP (surten al DXF i al CSV): s'avisa.
+ */
+function outlineSolid(p: Panel): PanelSolid {
+  const T = p.thickness
+  const pts = ccwB(p.outline!)
+  const n = pts.length
+  const at = (i: number, z: number): V3 => [pts[i]![0], pts[i]![1], z]
+  const arcs = pts.map((q, i) => {
+    const b = bulgeOf(q)
+    if (Math.abs(b) < 1e-9) return null
+    const a = arcOf(q, pts[(i + 1) % n]!, b)
+    return { b, r: a.r, top: [a.cx, a.cy, T] as V3, bot: [a.cx, a.cy, 0] as V3, ax: b > 0 ? Z : neg(Z) }
+  })
+  const faces: Face[] = pts.map((_, i) => {
+    const j = (i + 1) % n
+    const arc = arcs[i]
+    if (arc)
+      return {
+        kind: "cyl",
+        loc: arc.bot,
+        axis: Z,
+        ref: unit(sub(at(i, 0), arc.bot)),
+        radius: arc.r,
+        // Arc convex (bulge +, contorn antihorari): el material és a dins, la cara mira enfora.
+        outward: arc.b > 0,
+        loop: [{ p: at(i, 0), arc: { center: arc.bot, axis: arc.ax } }, { p: at(j, 0) }, { p: at(j, T), arc: { center: arc.top, axis: neg(arc.ax) } }, { p: at(i, T) }],
+      } satisfies CylFace
+    const normal = unit(cross(sub(at(j, 0), at(i, 0)), Z))
+    return { kind: "plane", loc: at(i, 0), normal, loops: [[{ p: at(i, 0) }, { p: at(j, 0) }, { p: at(j, T) }, { p: at(i, T) }]] } satisfies PlaneFace
+  })
+  // Cara A (dalt, +Z): el contorn en sentit antihorari; cara B (baix, −Z): al revés.
+  const loopA: Loop = pts.map((_, i) => {
+    const arc = arcs[i]
+    return arc ? { p: at(i, T), arc: { center: arc.top, axis: arc.ax } } : { p: at(i, T) }
+  })
+  const loopB: Loop = []
+  for (let k = 0; k < n; k++) {
+    const j = (n - k) % n
+    const i = (j - 1 + n) % n
+    const arc = arcs[i]
+    loopB.push(arc ? { p: at(j, 0), arc: { center: arc.bot, axis: neg(arc.ax) } } : { p: at(j, 0) })
+  }
+  faces.push({ kind: "plane", loc: at(0, T), normal: Z, loops: [loopA] })
+  faces.push({ kind: "plane", loc: at(0, 0), normal: neg(Z), loops: [loopB] })
+  const warnings: string[] = []
+  const features = p.holes.length + p.grooves.length + (p.cutouts?.length ?? 0)
+  if (features) warnings.push(`${p.name} (${p.id}): peça amb forma; els seus ${features} mecanitzats no es modelen al STEP (surten al DXF i al CSV).`)
+  return { faces, warnings }
+}
+
 function panelSolid(p: Panel): PanelSolid {
   const L = p.length
   const W = p.width
@@ -668,7 +721,7 @@ export function toStep(panels: Panel[], options: StepOptions): StepResult {
     const name = stepString(p.name)
     const frame = tallerFrame(p)
     const sw = new SolidWriter(w, frame)
-    const solid = panelSolid(p)
+    const solid = p.outline ? outlineSolid(p) : panelSolid(p)
     warnings.push(...solid.warnings)
     const faceIds = solid.faces.map((f) => sw.face(f))
     const shell = w.add(`CLOSED_SHELL('',(${faceIds.map((f) => `#${f}`).join(",")}))`)

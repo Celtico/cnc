@@ -1,4 +1,4 @@
-import { Alert, Badge, Box, Button, Editable, Group, CloseButton, Drawer, Field, Flex, HStack, IconButton, Popover, Portal, SegmentGroup, SimpleGrid, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
+import { Alert, Badge, Box, Button, Editable, CloseButton, Drawer, Field, Flex, HStack, IconButton, Popover, Portal, SegmentGroup, SimpleGrid, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
 import { createElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   LuArrowDownToLine,
@@ -666,6 +666,28 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           ? { icon: createElement(zoneIcon(zone)), text: zoneLabel(zone), parent: module.name }
           : { icon: <LuBox />, text: module.name, parent: name || "Moble", onRename: (v) => updateModule({ ...module, name: v }) }
 
+  // Accions ràpides del visor, a dalt de «Opcions de vista» (com el menú de visualització
+  // de Fusion o Blender): el mode en un grup i la resta com a botons amb icona i nom.
+  const tile = (key: string, label: string, icon: ReactNode, on: boolean, onClick: () => void, tip?: string) => (
+    <Button key={key} size="xs" h="auto" py={2} px={1} flexDirection="column" gap={1} variant={on ? "solid" : "outline"} colorPalette={on ? "wood" : "gray"} aria-pressed={on} title={tip ?? label} onClick={onClick} fontSize="2xs" fontWeight="medium" whiteSpace="normal" lineHeight="1.1">
+      {icon}
+      {label}
+    </Button>
+  )
+  const viewQuick = (
+    <Stack gap={3} mb={4} pb={4} borderBottomWidth="1px">
+      <SimpleGrid columns={3} gap={1.5}>
+        {VIEW_MODES.map(([v, label, tip, Icon]) => tile(v, label, <Icon />, viewMode === v, () => setViewMode(v), `${label}: ${tip}`))}
+      </SimpleGrid>
+      <SimpleGrid columns={4} gap={1.5}>
+        {tile("fit", "Encuadrar", <LuVideo />, framed, () => setFitKey((k) => k + 1), framed ? "Càmera encuadrada (no es mou sola en editar)" : "Encuadrar el moble")}
+        {tile("holes", "Forats", <LuCircleDot />, showHoles, () => setShowHoles((v) => !v), showHoles ? "Amagar forats" : "Mostrar forats")}
+        {tile("explode", "Explosió", exploded ? <LuShrink /> : <LuExpand />, exploded, () => setExploded((v) => !v), exploded ? "Vista muntada" : "Vista explosionada")}
+        {tile("ar", "A casa (AR)", <LuView />, false, () => setArOpen(true), "Veure a casa (realitat augmentada)")}
+      </SimpleGrid>
+    </Stack>
+  )
+
   // Sense separació entre blocs: les seccions plegables van enganxades (totes amb la
   // mateixa alçada de capçalera); els elements que no són secció porten el seu marge.
   const inspector = (
@@ -1007,10 +1029,12 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
         minW={{ base: 0, md: "320px" }}
         position="relative"
         h={formHidden ? { base: "calc(100dvh - 52px - 76px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))", md: "full" } : { base: "42vh", md: "full" }}
-        rounded={{ md: "xl" }}
+        // Al mòbil, amb els marges de la pàgina (no a tota l'amplada) i cantonades de baix
+        // arrodonides: a dalt toca la barra.
+        rounded={{ base: "0 0 var(--chakra-radii-xl) var(--chakra-radii-xl)", md: "xl" }}
         overflow="hidden"
-        borderWidth={{ md: "1px" }}
-        mx={{ base: -4, md: 0 }}
+        borderWidth="1px"
+        borderTopWidth={{ base: 0, md: "1px" }}
         bg="bg.subtle"
       >
         {viewTab === "photo" ? (
@@ -1180,49 +1204,14 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             (com les barres d'eines dels programes de CAD) perquè no tapin les pestanyes. */}
         <Stack
           position="absolute"
-          top={viewerNarrow ? 14 : 3}
-          right={viewerNarrow ? 3 : { base: 3, md: 14 }}
+          top={3}
+          right={{ base: 3, md: 14 }}
           gap={2}
           zIndex={2}
-          direction={viewerNarrow ? "column" : "row"}
+          direction="row"
           display={viewTab === "3d" ? "flex" : "none"}
         >
-          <IconButton
-            aria-label="Veure a casa (AR)"
-            title="Veure a casa (AR)"
-            size="sm"
-            variant="surface"
-            colorPalette="wood"
-            onClick={() => setArOpen(true)}
-          >
-            <LuView />
-          </IconButton>
           <ArDialog open={arOpen} onClose={() => setArOpen(false)} panels={panels} name={name} />
-          <IconButton aria-label={showHoles ? "Amagar forats" : "Mostrar forats"} title={showHoles ? "Amagar forats" : "Mostrar forats"} size="sm" variant={showHoles ? "solid" : "surface"} colorPalette="wood" onClick={() => setShowHoles((v) => !v)}>
-            <LuCircleDot />
-          </IconButton>
-          <IconButton aria-label={exploded ? "Vista muntada" : "Vista explosionada"} title={exploded ? "Vista muntada" : "Vista explosionada"} size="sm" variant={exploded ? "solid" : "surface"} colorPalette="wood" onClick={() => setExploded((v) => !v)}>
-            {exploded ? <LuShrink /> : <LuExpand />}
-          </IconButton>
-          {/* Mode del visor: tres botons junts (Per peça / Textura / Presentació). */}
-          <Group attached orientation="vertical">
-            {VIEW_MODES.map(([v, label, tip, Icon]) => (
-              <IconButton key={v} aria-label={label} aria-pressed={viewMode === v} title={`${label}: ${tip}`} size="sm" variant={viewMode === v ? "solid" : "surface"} colorPalette="wood" onClick={() => setViewMode(v)}>
-                <Icon />
-              </IconButton>
-            ))}
-          </Group>
-          <IconButton
-            aria-label="Encuadrar el moble"
-            aria-pressed={framed}
-            title={framed ? "Càmera encuadrada (la càmera no es mou sola en editar)" : "Encuadrar el moble"}
-            size="sm"
-            variant={framed ? "solid" : "surface"}
-            colorPalette="wood"
-            onClick={() => setFitKey((k) => k + 1)}
-          >
-            <LuVideo />
-          </IconButton>
           {isMobile ? (
             // Al mòbil, les opcions surten en un calaix de baix amb el seu propi desplaçament
             // (el popover feia desplaçar tota la pàgina).
@@ -1240,6 +1229,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                       <Drawer.Title>Opcions de vista</Drawer.Title>
                     </Drawer.Header>
                     <Drawer.Body overflowY="auto" pb={6}>
+                      {viewQuick}
                       <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} />
                     </Drawer.Body>
                     <Drawer.CloseTrigger asChild>
@@ -1260,6 +1250,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                 <Popover.Positioner>
                   <Popover.Content w="320px">
                     <Popover.Body>
+                      {viewQuick}
                       <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} />
                     </Popover.Body>
                   </Popover.Content>

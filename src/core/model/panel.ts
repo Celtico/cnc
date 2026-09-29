@@ -175,6 +175,11 @@ export const PanelSchema = z.object({
   grooves: z.array(GrooveSchema),
   /** Talls passants. Opcional: la majoria de peces no en tenen. */
   cutouts: z.array(CutoutSchema).optional(),
+  /**
+   * Contorn de la peça si no és un rectangle (p. ex. un tauler de taula oval): punts amb
+   * bulge, en coordenades locals dins de llarg × ample. Sense: el rectangle.
+   */
+  outline: z.array(BPtSchema).min(3).optional(),
   /** Conjunt que s'encola abans de muntar el moble (p. ex. «Lateral esquerre (paret buida)»). */
   assembly: z.string().optional(),
   /** Cantells tallats a 45° (unió a inglet); la cara llarga és la de fora del moble. */

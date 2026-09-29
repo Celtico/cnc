@@ -1,9 +1,7 @@
 import { Alert, Box, Button, Card, HStack, Stack, Switch, Text, VStack } from "@chakra-ui/react"
 import { useMemo, useState } from "react"
 import { usePersistentFlag } from "../usePersistentFlag"
-import { LuBoxes, LuCuboid, LuDownload, LuFileDown, LuFileJson, LuPrinter, LuScissors, LuTag, LuWrench } from "react-icons/lu"
-import { labelSheetHtml } from "../../core/process/labels"
-import { panelProcesses } from "../../core/process/processes"
+import { LuBoxes, LuCuboid, LuDownload, LuFileDown, LuFileJson, LuScissors, LuWrench } from "react-icons/lu"
 import { PanelGroup, PanelSection } from "../../components/PanelSection"
 import { exportGlb } from "../../components/viewer/exportGlb"
 import { exportUsdz, openQuickLook } from "../../components/viewer/exportUsdz"
@@ -63,19 +61,6 @@ export function ExportScreen({ projectId }: { projectId: number }) {
         (tight ? `. ${tight} peces massa petites per a l'etiqueta (al centre).` : ""),
       type: csv.unplaced.length ? "warning" : "success",
     })
-  }
-  // Etiquetes: la de la peça i, si en té, la del procés (post-procés després del nesting).
-  const withProcess = useMemo(() => panels.filter((p) => panelProcesses(p).length).length, [panels])
-  const labelHtml = () => labelSheetHtml(panels, nesting ?? null, { project: project?.name ?? "Moble", w: settings.label.w, h: settings.label.h })
-  const printLabels = () => {
-    const url = URL.createObjectURL(new Blob([labelHtml()], { type: "text/html" }))
-    const win = window.open(url, "_blank")
-    if (!win) {
-      downloadText(labelHtml(), `${base}-etiquetes.html`, "text/html")
-      return
-    }
-    win.addEventListener("load", () => setTimeout(() => win.print(), 300))
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
   }
   const doDxf = () => {
     warnEstimated()
@@ -176,23 +161,6 @@ export function ExportScreen({ projectId }: { projectId: number }) {
             </Button>
             <Button size="sm" variant="ghost" onClick={doTopsolidCsv} disabled={!nesting}>
               Només CSV
-            </Button>
-          </HStack>
-        }
-      />
-
-      <ExportCard
-        icon={<LuTag />}
-        title="Etiquetes"
-        description={`Una etiqueta per peça (ref, nom, mides, material i tauler) i, a les ${withProcess} peces que després del nesting passen per un altre procés (inglet, cantell, forats de cantell, encolar), una segona etiqueta amb el procés que els toca.`}
-        files={`${base}-etiquetes.html · ${settings.label.w} × ${settings.label.h} mm`}
-        action={
-          <HStack gap={2} wrap="wrap">
-            <Button variant="outline" onClick={printLabels} disabled={!panels.length}>
-              <LuPrinter /> Imprimir etiquetes
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => downloadText(labelHtml(), `${base}-etiquetes.html`, "text/html")} disabled={!panels.length}>
-              Descarregar
             </Button>
           </HStack>
         }

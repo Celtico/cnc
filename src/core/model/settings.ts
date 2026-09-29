@@ -40,6 +40,11 @@ export const FinishSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("color"), color: z.string() }),
   z.object({ kind: z.literal("lacquer"), color: z.string() }),
   z.object({ kind: z.literal("wood"), species: z.enum(["oak", "walnut", "ash"]) }),
+  /**
+   * Foto real del tauler (textura): imatge reduïda en data URL i l'amplada real que hi surt
+   * (mm), perquè la veta tingui la mida de debò al 3D.
+   */
+  z.object({ kind: z.literal("image"), src: z.string().startsWith("data:image/"), tileMm: mm.min(50).max(5000) }),
 ])
 export type Finish = z.infer<typeof FinishSchema>
 

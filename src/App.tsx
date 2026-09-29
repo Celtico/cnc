@@ -142,9 +142,15 @@ export function App() {
       >
         <HStack justify={navCollapsed ? "center" : "space-between"} mb={4} px={navCollapsed ? 0 : 2} minH="40px">
           {!navCollapsed && (
-            <Heading size="md" color="wood.fg">
-              Mobles CNC
-            </Heading>
+            <HStack gap={1.5} align="baseline" minW={0}>
+              <Heading size="md" color="wood.fg">
+                Mobles CNC
+              </Heading>
+              {/* Quina build és: el nombre de commits, petit, al costat del nom; el commit en passar-hi per sobre. */}
+              <Text as="span" fontSize="2xs" color="fg.subtle" title={__APP_COMMIT__ ? `commit ${__APP_COMMIT__}` : undefined}>
+                v{__APP_VERSION__}
+              </Text>
+            </HStack>
           )}
           <Tooltip content={navCollapsed ? "Desplegar el menú" : "Plegar el menú"} positioning={{ placement: "right" }}>
             <IconButton
@@ -200,8 +206,8 @@ export function App() {
             )}
           </Stack>
         )}
-        {/* General: sempre a baix, separat del moble */}
-        <Stack mt="auto" gap={1} pt={2} borderTopWidth="1px" align={navCollapsed ? "center" : "stretch"}>
+        {/* General: just a sota de les pàgines, separat amb una línia. */}
+        <Stack gap={1} mt={1} pt={2} borderTopWidth="1px" align={navCollapsed ? "center" : "stretch"}>
           <NavItem
             icon={SETTINGS_ENTRY.icon}
             label={SETTINGS_ENTRY.label}
@@ -293,7 +299,8 @@ export function App() {
           display="flex"
           flexDirection="column"
           px={{ base: 4, md: screen === "editor" ? 2 : 4 }}
-          py={{ base: 4, md: screen === "editor" ? 1.5 : 6 }}
+          // Al mòbil, l'editor enganxa el visor a la barra de dalt (sense marge superior).
+          pt={{ base: screen === "editor" ? 0 : 4, md: screen === "editor" ? 1.5 : 6 }}
           pb={{ base: "calc(76px + env(safe-area-inset-bottom, 0px))", md: screen === "editor" ? 1.5 : 6 }}
         >
           <TopBarActionsProvider value={topActions}>{content}</TopBarActionsProvider>

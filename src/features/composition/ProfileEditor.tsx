@@ -29,7 +29,7 @@ const KAPPA = 0.5522847498
 const rect = (w: number, h: number): PNode[] => [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }]
 
 /** Formes de partida (mm), amb la cantonada mínima a (0, 0). */
-const PRESETS: { id: string; label: string; make: (w: number, h: number) => PNode[] }[] = [
+export const PRESETS: { id: string; label: string; make: (w: number, h: number) => PNode[] }[] = [
   { id: "rect", label: "Rectangle", make: rect },
   {
     id: "round",

@@ -1,6 +1,9 @@
 import {
+  type BPt,
   type CableHole,
   NO_EDGES,
+  profileToOutline,
+  type PNode,
   type Cutout,
   type EdgeBanding,
   type EdgeSide,
@@ -43,6 +46,7 @@ export interface BuildWarning {
     | "mitre"
     | "inset"
     | "hollow"
+    | "table"
     | "layout"
     | "no-side"
     | "material-heat"
@@ -83,6 +87,10 @@ interface Derived {
   mitreTop: boolean
   /** Fronts encastats (dins de la llum) en lloc de recobrents. */
   inset: boolean
+  /** Tauler de taula: tapa per sobre dels laterals, amb voladís i forma. */
+  tableTop: { overhang: number; shape?: PNode[] } | null
+  /** Alçada dels laterals (més curts si la tapa hi va per sobre). */
+  sideH: number
   /** Parets buides: gruix aparent (null si són massisses). */
   hollow: number | null
   /** Gruix de cada paret exterior (el del tauler o l'aparent si és buida). */
@@ -105,10 +113,11 @@ function derive(m: Module): Derived {
   const hasTop = c.top.kind !== "none"
   const baseY = c.base.kind === "plinth" ? c.base.height : 0
   // Paret buida: cal lloc per a dues pells i un llistó (almenys 6 mm entre pells).
+  const tableTop = c.tableTop && c.top.kind === "full" ? c.tableTop : null
   const hollow = c.hollow && c.hollow.thickness >= 2 * t + 6 ? c.hollow.thickness : null
   const ws = hollow ?? t
   const wb = hollow ?? t
-  const wt = hollow && c.top.kind === "full" ? hollow : t
+  const wt = hollow && c.top.kind === "full" && !tableTop ? hollow : t
   return {
     t,
     tb,
@@ -128,14 +137,33 @@ function derive(m: Module): Derived {
     hasBase,
     hasTop,
     baseY,
-    mitreTop: !hollow && c.joint === "mitre" && hasTop && (c.sides.left || c.sides.right),
+    mitreTop: !hollow && !tableTop && c.joint === "mitre" && hasTop && (c.sides.left || c.sides.right),
     inset: m.fronts.style === "inset",
     frontZ: m.fronts.style === "inset" ? D : D + t,
+    tableTop,
+    sideH: tableTop ? H - t : H,
     hollow,
     ws,
     wb,
     wt,
   }
+}
+
+/** Perfil del tauler (mm, amb la seva mida) escalat a llarg × ample i passat a rectes i arcs. */
+function shapeOutline(shape: PNode[], length: number, width: number): BPt[] {
+  const xs = shape.map((n) => n.x)
+  const ys = shape.map((n) => n.y)
+  const x0 = Math.min(...xs), y0 = Math.min(...ys)
+  const sx = length / Math.max(1, Math.max(...xs) - x0)
+  const sy = width / Math.max(1, Math.max(...ys) - y0)
+  const scaled: PNode[] = shape.map((n) => ({
+    ...n,
+    x: (n.x - x0) * sx,
+    y: (n.y - y0) * sy,
+    ...(n.in ? { in: [n.in[0] * sx, n.in[1] * sy] as [number, number] } : {}),
+    ...(n.out ? { out: [n.out[0] * sx, n.out[1] * sy] as [number, number] } : {}),
+  }))
+  return profileToOutline(scaled)
 }
 
 function edges(...sides: EdgeSide[]): EdgeBanding {
@@ -242,7 +270,8 @@ class Builder {
     if (this.d.hollow) return this.buildHollowSide(isLeft)
     const { m, d } = this
     const c = m.carcass
-    const { t, H, sideDepth } = d
+    const { t, sideDepth } = d
+    const H = d.sideH
     const grooves: Panel["grooves"] = []
     if (c.back === "groove") {
       const g = c.grooveDepth
@@ -305,7 +334,8 @@ class Builder {
   private buildHollowSide(isLeft: boolean): void {
     const { m, d } = this
     const c = m.carcass
-    const { t, H, W, D, sideZ0, ws } = d
+    const { t, W, D, sideZ0, ws } = d
+    const H = d.sideH
     const k = isLeft ? "left" : "right"
     const nm = isLeft ? "Lateral esquerre" : "Lateral dret"
     const skinDepth = D - t - sideZ0
@@ -369,7 +399,7 @@ class Builder {
   }
 
   private buildHorizontal(which: "bottom" | "top"): void {
-    if (this.d.hollow && (which === "bottom" || this.m.carcass.top.kind === "full")) return this.buildHollowHorizontal(which)
+    if (this.d.hollow && (which === "bottom" || (this.m.carcass.top.kind === "full" && !this.d.tableTop))) return this.buildHollowHorizontal(which)
     const { m, d } = this
     const c = m.carcass
     const { t, interior } = d
@@ -377,10 +407,13 @@ class Builder {
     // Tapa a inglet: arriba fins a fora de cada lateral (x = 0 / W), amb el cantell a 45°.
     const mitreL = !isBottom && d.mitreTop && c.sides.left
     const mitreR = !isBottom && d.mitreTop && c.sides.right
-    const px0 = mitreL ? 0 : interior.x0
-    const length = (mitreR ? d.W : interior.x1) - px0
-    let width = d.sideDepth
-    let zRear = d.sideZ0
+    // Tauler de taula: per sobre dels laterals, amb voladís a tot el voltant.
+    const ov = !isBottom && d.tableTop ? d.tableTop.overhang : 0
+    const onTop = !isBottom && !!d.tableTop
+    const px0 = onTop ? -ov : mitreL ? 0 : interior.x0
+    const length = onTop ? d.W + 2 * ov : (mitreR ? d.W : interior.x1) - px0
+    let width = d.sideDepth + (onTop ? 2 * ov : 0)
+    let zRear = d.sideZ0 - (onTop ? ov : 0)
     let cutouts: Cutout[] | undefined
     if (!isBottom && c.top.kind === "ventSlot") {
       width = d.sideDepth - c.top.gap
@@ -389,8 +422,8 @@ class Builder {
     const grooves: Panel["grooves"] = []
     if (c.back === "groove" && !(c.top.kind === "ventSlot" && !isBottom)) {
       grooves.push({
-        x: mitreL ? t : 0,
-        y: isBottom ? r(d.sideDepth - c.backSetback - d.tb) : r(c.backSetback),
+        x: onTop ? interior.x0 - px0 : mitreL ? t : 0,
+        y: isBottom ? r(d.sideDepth - c.backSetback - d.tb) : r(c.backSetback + ov),
         w: r(interior.x1 - interior.x0),
         h: d.tb,
         depth: c.grooveDepth,
@@ -413,10 +446,11 @@ class Builder {
         t,
         c.material,
         "x",
-        edges(isBottom ? "bottom" : "top"),
+        onTop ? edges("top", "bottom", "left", "right") : edges(isBottom ? "bottom" : "top"),
         pl,
       ),
       grooves,
+      ...(onTop && d.tableTop!.shape ? { outline: shapeOutline(d.tableTop!.shape, length, width) } : {}),
       ...(mitreL || mitreR ? { mitres: [...(mitreL ? (["left"] as const) : []), ...(mitreR ? (["right"] as const) : [])] } : {}),
     })
     if (!isBottom && c.top.kind === "grille") {
@@ -433,10 +467,12 @@ class Builder {
     // Espigues amb els laterals (la base/tapa hi topa; el lateral continua). A inglet no:
     // s'encola amb lamel·les o Clamex, que es fan a mà o amb una eina a 45°.
     const yMid = yBottom + t / 2
+    if (onTop)
+      this.warnings.push({ code: "table", message: "Tauler de taula per sobre dels laterals: es fixa per sota amb cargols o ferratges d'unió (no porta espigues).", panelId: panel.id })
     if (mitreL || mitreR)
       this.warnings.push({ code: "mitre", message: "Tapa a inglet: tall a 45° als cantells de la tapa i dels laterals; encolar amb lamel·les o Clamex (no porta espigues).", panelId: panel.id })
     for (const v of this.verticals) {
-      if (!v.outer || mitreL || mitreR) continue
+      if (!v.outer || mitreL || mitreR || onTop) continue
       const xFace = near(v.xR, interior.x0) ? v.xR : v.xL
       if (!near(xFace, interior.x0) && !near(xFace, interior.x1)) continue
       // Sobre la fondària real de la peça (la tapa amb ranura d'aire és més curta).

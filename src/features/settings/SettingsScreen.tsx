@@ -28,7 +28,7 @@ import {
   Text,
 } from "@chakra-ui/react"
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { LuArrowDown, LuArrowUp, LuCheck, LuCopy, LuDownload, LuEye, LuEyeOff, LuFileDown, LuGrid3X3, LuHammer, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRuler, LuScan, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
+import { LuArrowDown, LuArrowUp, LuCheck, LuCopy, LuDownload, LuEye, LuEyeOff, LuFileDown, LuGrid3X3, LuHammer, LuImage, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRuler, LuScan, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { PanelGroup, PanelSection } from "../../components/PanelSection"
 import { toaster } from "../../components/ui/toaster"
@@ -427,12 +427,12 @@ function MaterialsList({ materials, onChange }: { materials: MaterialPref[]; onC
 function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: MaterialPref; onChange: (p: Partial<MaterialPref>) => void; onDuplicate: () => void; onDelete: () => void; canDelete: boolean }) {
   const [thickText, setThickText] = useState(m.thicknesses.join(" · "))
   const finish = m.finish
-  const swatch = finish.kind === "wood" ? undefined : finish.color
+  const swatch = finish.kind === "wood" || finish.kind === "image" ? undefined : finish.color
   return (
     <Card.Root variant="subtle" size="sm">
       <Card.Body p={3} gap={2}>
         <HStack justify="space-between" gap={2}>
-          <Box w="18px" h="18px" rounded="sm" borderWidth="1px" flexShrink={0} bg={swatch} bgImage={finish.kind === "wood" ? "repeating-linear-gradient(90deg, #b98b57 0 2px, #a3763f 2px 3px)" : undefined} />
+          <Box w="18px" h="18px" rounded="sm" borderWidth="1px" flexShrink={0} bg={swatch} bgImage={finish.kind === "wood" ? "repeating-linear-gradient(90deg, #b98b57 0 2px, #a3763f 2px 3px)" : finish.kind === "image" ? `url(${finish.src})` : undefined} bgSize="cover" />
           <Input size="sm" value={m.name} onChange={(e) => onChange({ name: e.target.value })} fontWeight="semibold" />
           <IconButton aria-label="Duplicar material" size="xs" variant="ghost" onClick={onDuplicate}>
             <LuCopy />
@@ -463,17 +463,51 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
                 value={finish.kind}
                 onChange={(e) => {
                   const k = e.target.value as Finish["kind"]
+                  if (k === "image") {
+                    // Primer cal triar la foto; si es cancel·la, l'acabat no canvia.
+                    void pickTexture().then((src) => src && onChange({ finish: { kind: "image", src, tileMm: 800 } }))
+                    return
+                  }
                   onChange({ finish: k === "wood" ? { kind: "wood", species: "oak" } : { kind: k, color: swatch ?? "#e5e5e5" } })
                 }}
               >
                 <option value="color">Color llis</option>
                 <option value="lacquer">Lacat</option>
                 <option value="wood">Fusta</option>
+                <option value="image">Foto real</option>
               </NativeSelect.Field>
               <NativeSelect.Indicator />
             </NativeSelect.Root>
           </Field.Root>
-          {finish.kind === "wood" ? (
+          {finish.kind === "image" ? (
+            <Field.Root>
+              <Field.Label fontSize="sm">Amplada de la foto</Field.Label>
+              <HStack gap={1.5} w="full">
+                <Input
+                  size="sm"
+                  type="number"
+                  inputMode="numeric"
+                  value={finish.tileMm}
+                  min={50}
+                  max={5000}
+                  onChange={(e) => {
+                    const v = Number(e.target.value)
+                    if (v >= 50 && v <= 5000) onChange({ finish: { ...finish, tileMm: v } })
+                  }}
+                  title="Quants mm de tauler de debò surten a la foto (d'esquerra a dreta)"
+                />
+                <IconButton
+                  size="sm"
+                  variant="outline"
+                  aria-label="Canviar la foto"
+                  title="Canviar la foto"
+                  onClick={() => void pickTexture().then((src) => src && onChange({ finish: { ...finish, src } }))}
+                >
+                  <LuImage />
+                </IconButton>
+              </HStack>
+            </Field.Root>
+          ) : finish.kind === "wood" ? (
             <Field.Root>
               <Field.Label fontSize="sm">Espècie</Field.Label>
               <NativeSelect.Root size="sm">
@@ -807,4 +841,37 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
       </SimpleGrid>
     </Stack>
   )
+}
+
+/**
+ * Tria una foto del tauler (galeria o càmera al mòbil) i la redueix a 1024 px en JPEG, perquè
+ * càpiga a les preferències sense ocupar massa.
+ */
+function pickTexture(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement("input")
+    input.type = "file"
+    input.accept = "image/*"
+    input.onchange = () => {
+      const file = input.files?.[0]
+      if (!file) return resolve(null)
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        const k = Math.min(1, 1024 / Math.max(img.width, img.height))
+        const c = document.createElement("canvas")
+        c.width = Math.round(img.width * k)
+        c.height = Math.round(img.height * k)
+        c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height)
+        URL.revokeObjectURL(url)
+        resolve(c.toDataURL("image/jpeg", 0.85))
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        resolve(null)
+      }
+      img.src = url
+    }
+    input.click()
+  })
 }

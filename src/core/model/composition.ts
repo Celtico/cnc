@@ -123,6 +123,12 @@ export const CarcassSchema = z.object({
    * calaixos, prestatges) va igual, contra la pell de dins.
    */
   hollow: z.object({ thickness: mm.min(20).max(300) }).optional(),
+  /**
+   * Tauler de taula: la tapa va per sobre dels laterals (que fan de potes), sobresurt
+   * `overhang` mm per tot el voltant i pot tenir forma (`shape`: perfil de Bézier en mm,
+   * s'escala a la mida del tauler). Només amb la tapa sencera.
+   */
+  tableTop: z.object({ overhang: mm.min(0).max(1000), shape: z.array(ProfileNodeSchema).min(3).optional() }).optional(),
   // Fusteria
   backSetback: mm.min(0).max(60),
   grooveDepth: mm.min(3).max(15),

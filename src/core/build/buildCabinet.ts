@@ -364,6 +364,9 @@ export function normalizePanel(p: Panel): Panel {
     length: p.width,
     width: L,
     grain: p.grain === "x" ? "y" : p.grain === "y" ? "x" : "none",
+    // Cantells a inglet i contorn: el mateix gir (el gir no canvia el sentit dels arcs).
+    ...(p.mitres ? { mitres: p.mitres.map((e) => edgeMap[e]) } : {}),
+    ...(p.outline ? { outline: p.outline.map((q) => (q.length === 3 ? ([q[1], r(L - q[0]), q[2]] as [number, number, number]) : ([q[1], r(L - q[0])] as [number, number]))) } : {}),
     edges: {
       left: p.edges.bottom,
       right: p.edges.top,
@@ -389,7 +392,7 @@ export function normalizePanel(p: Panel): Panel {
             c.kind === "circle"
               ? { ...c, x: c.y, y: r(L - c.x) }
               : c.kind === "polygon"
-                ? { ...c, points: c.points.map(([x, y]) => [y, r(L - x)] as [number, number]) }
+                ? { ...c, points: c.points.map((q) => (q.length === 3 ? ([q[1], r(L - q[0]), q[2]] as [number, number, number]) : ([q[1], r(L - q[0])] as [number, number]))) }
                 : { ...c, x: c.y, y: r(L - c.x - c.w), w: c.h, h: c.w },
           ),
         }

@@ -1,4 +1,4 @@
-import { CanvasTexture, RepeatWrapping, SRGBColorSpace, type Texture } from "three"
+import { CanvasTexture, MirroredRepeatWrapping, RepeatWrapping, SRGBColorSpace, TextureLoader, type Texture } from "three"
 import type { Finish, MaterialPref } from "../../core/model"
 
 /**
@@ -9,7 +9,7 @@ import type { Finish, MaterialPref } from "../../core/model"
 
 export type WoodSpecies = Extract<Finish, { kind: "wood" }>["species"]
 
-export type FinishSpec = { kind: "color"; color: string; roughness: number } | { kind: "wood"; species: WoodSpecies }
+export type FinishSpec = { kind: "color"; color: string; roughness: number } | { kind: "wood"; species: WoodSpecies } | { kind: "image"; src: string; tileMm: number }
 
 interface WoodParams {
   base: [number, number, number]
@@ -172,6 +172,7 @@ export function woodTexture(species: WoodSpecies): Texture {
 /** Acabat d'una preferència de material. */
 export function finishOfPref(m: MaterialPref): FinishSpec {
   if (m.finish.kind === "wood") return { kind: "wood", species: m.finish.species }
+  if (m.finish.kind === "image") return { kind: "image", src: m.finish.src, tileMm: m.finish.tileMm }
   return { kind: "color", color: m.finish.color, roughness: m.finish.kind === "lacquer" ? 0.35 : 0.8 }
 }
 
@@ -207,3 +208,19 @@ export function resolveEdgeFinish(materials: MaterialPref[], name: string): Fini
 
 /** Color del cantell sense folrar (tauler vist). */
 export const RAW_EDGE_COLOR = "#cdb48c"
+
+const photoCache = new Map<string, Texture>()
+
+/** Textura d'una foto real (data URL), en repetició. Es carrega una sola vegada per imatge. */
+export function photoTexture(src: string): Texture {
+  const hit = photoCache.get(src)
+  if (hit) return hit
+  const tex = new TextureLoader().load(src)
+  // En mirall: una foto qualsevol (no feta per repetir) no deixa costures a cada tile.
+  tex.wrapS = MirroredRepeatWrapping
+  tex.wrapT = MirroredRepeatWrapping
+  tex.colorSpace = SRGBColorSpace
+  tex.anisotropy = 8
+  photoCache.set(src, tex)
+  return tex
+}

@@ -3,6 +3,7 @@ import type { Nesting, Placement } from "../nesting/nest"
 import { labelPoint, type LabelSize } from "./labelPoint"
 import { tallerEdgeNumbers } from "./step"
 import { pieceRefs } from "./refs"
+import { needsSecondFace, secondFaceProgram } from "../process/processes"
 
 /**
  * CSV de nesting amb el format de TopSolid V6 (`<moble>_res.csv`), tal com el llegeix
@@ -186,7 +187,8 @@ export function toTopsolidCsv(panels: Panel[], nesting: Nesting, options: Topsol
           canto[3],
           canto[4],
           ref,
-          "",
+          // 2a mecanització: la peça té forats o ranures a la cara B.
+          needsSecondFace(p) && ref ? secondFaceProgram(ref) : "",
         ].join(";"),
       )
     }

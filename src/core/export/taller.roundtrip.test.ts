@@ -163,3 +163,21 @@ describe.skipIf(!existsSync(TALLER))("anada i tornada amb els parsers del taller
     expect((shelf.lam ?? []).filter(Boolean)).toHaveLength(1)
   })
 })
+
+describe.skipIf(!existsSync(TALLER))("2a cara: el taller rep el programa de les peces amb mecanitzats a la cara B", async () => {
+  const { assemble } = (await import(/* @vite-ignore */ TALLER)) as { assemble: (csv: string, step: string, mueble: string) => { pieces: { ref: string; mec2?: string | null }[] } }
+  const { needsSecondFace } = await import("../process/processes")
+  const comp = BUILTIN_TEMPLATES.find((t) => t.id === "tv-living-room")!.make()
+  const panels = buildComposition(comp).panels
+  const nesting = nest(panels, DEFAULT_NEST_OPTIONS)
+  const csv = toTopsolidCsv(panels, nesting, { project: "Prova" })
+  const data = assemble(csv.text, toStep(panels, { name: "Prova" }).text, "Prova")
+  it("mec2 = <ref>Volt a les peces amb cara B, i buit a la resta", () => {
+    const withB = csv.rows.filter((r) => needsSecondFace(panels.find((p) => p.id === r.panelId)!))
+    expect(withB.length).toBeGreaterThan(0)
+    for (const r of csv.rows) {
+      const piece = data.pieces.find((p) => p.ref === r.ref)!
+      expect(piece.mec2 ?? null).toBe(withB.includes(r) ? `${r.ref}Volt` : null)
+    }
+  })
+})

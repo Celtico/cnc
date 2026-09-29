@@ -3,12 +3,14 @@ import { EDGE_NUMBER, EDGE_SIDES, type Panel } from "../model"
 /**
  * Post-processos: el que li toca a cada peça després de sortir tallada del nesting, en
  * l'ordre del taller. Es dedueixen de la peça (no es desen):
+ *  - 2a cara: mecanitzats a la cara B, cal girar la peça i passar el programa `<ref>Volt`
+ *    (columna SEGUNDO_NOMBRE_DE_FICHERO_DE_MECANIZADO; el taller-cnc-nest en fa l'etiqueta);
  *  - inglet: serra a 45° als cantells `mitres`;
  *  - cantell: cantejadora als cantells folrats;
  *  - forats de cantell: perforadora horitzontal (espigues, excèntriques…);
  *  - encolar: muntar un conjunt abans del moble (p. ex. les parets buides).
  */
-export type ProcessKind = "mitre" | "edge" | "edgeDrill" | "glue"
+export type ProcessKind = "secondFace" | "mitre" | "edge" | "edgeDrill" | "glue"
 
 export interface Process {
   kind: ProcessKind
@@ -19,6 +21,7 @@ export interface Process {
 }
 
 export const PROCESS_LABELS: Record<ProcessKind, string> = {
+  secondFace: "2a cara",
   mitre: "Inglet 45°",
   edge: "Cantell",
   edgeDrill: "Forats de cantell",
@@ -31,8 +34,17 @@ const nums = (sides: readonly (typeof EDGE_SIDES)[number][]): string =>
     .sort((a, b) => a - b)
     .join("+")
 
+/** Té mecanitzats a la cara B (forats o ranures): cal un segon programa amb la peça girada. */
+export function needsSecondFace(p: Panel): boolean {
+  return p.holes.some((h) => h.face === "B") || p.grooves.some((g) => g.face === "B")
+}
+
+/** Nom del programa de 2a cara, com el de TopSolid: la ref + «Volt». */
+export const secondFaceProgram = (ref: string): string => `${ref}Volt`
+
 export function panelProcesses(p: Panel): Process[] {
   const out: Process[] = []
+  if (needsSecondFace(p)) out.push({ kind: "secondFace", label: PROCESS_LABELS.secondFace, detail: "girar i mecanitzar la cara B" })
   if (p.mitres?.length) out.push({ kind: "mitre", label: PROCESS_LABELS.mitre, detail: `cantell ${nums(p.mitres)}` })
   const banded = EDGE_SIDES.filter((s) => p.edges[s])
   if (banded.length) out.push({ kind: "edge", label: PROCESS_LABELS.edge, detail: nums(banded) })

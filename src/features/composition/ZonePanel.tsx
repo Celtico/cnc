@@ -19,7 +19,8 @@ import { NumberField } from "../editor/ParamsForm"
 import { FRONT_ICONS } from "./zoneIcon"
 import { Tooltip } from "../../components/ui/tooltip"
 import { IconChoice } from "../../components/IconChoice"
-import { LuColumns3, LuGrip } from "react-icons/lu"
+import { LuArrowDown, LuColumns3, LuDoorOpen, LuGrip, LuMagnet, LuPanelLeft, LuPanelRight, LuRectangleVertical } from "react-icons/lu"
+import type { IconType } from "react-icons"
 
 const FRONT_LABELS: Record<Front["kind"] | "none", string> = {
   none: "Obert",
@@ -228,8 +229,8 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
             <Field.Label>Portes</Field.Label>
             <SegmentGroup.Root size="sm" w="full" value={front.mode} onValueChange={(e) => onChange({ ...front, mode: e.value as "single" | "double" })}>
               <SegmentGroup.Indicator />
-              <SegItem value="single" label="Una" />
-              <SegItem value="double" label="Dues" />
+              <SegItem value="single" label="Una" icon={LuRectangleVertical} />
+              <SegItem value="double" label="Dues" icon={LuColumns2} />
             </SegmentGroup.Root>
           </Field.Root>
           {front.mode === "single" && (
@@ -237,8 +238,8 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
               <Field.Label>Frontisses</Field.Label>
               <SegmentGroup.Root size="sm" w="full" value={front.hinge} onValueChange={(e) => onChange({ ...front, hinge: e.value as "left" | "right" })}>
                 <SegmentGroup.Indicator />
-                <SegItem value="left" label="Esquerra" />
-                <SegItem value="right" label="Dreta" />
+                <SegItem value="left" label="Esquerra" icon={LuPanelLeft} />
+                <SegItem value="right" label="Dreta" icon={LuPanelRight} />
               </SegmentGroup.Root>
             </Field.Root>
           )}
@@ -259,8 +260,8 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
           <Field.Label>Obre cap a</Field.Label>
           <SegmentGroup.Root size="sm" w="full" value={front.dir} onValueChange={(e) => onChange({ ...front, dir: e.value as "down" | "up" })}>
             <SegmentGroup.Indicator />
-            <SegItem value="down" label="Avall" />
-            <SegItem value="up" label="Amunt" />
+            <SegItem value="down" label="Avall" icon={LuArrowDown} />
+            <SegItem value="up" label="Amunt" icon={LuArrowUp} />
           </SegmentGroup.Root>
         </Field.Root>
       )
@@ -284,8 +285,8 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
             <Field.Label>Muntatge</Field.Label>
             <SegmentGroup.Root size="sm" w="full" value={front.mount} onValueChange={(e) => onChange({ ...front, mount: e.value as "removable" | "hinged" })}>
               <SegmentGroup.Indicator />
-              <SegItem value="removable" label="Imants" />
-              <SegItem value="hinged" label="Frontisses" />
+              <SegItem value="removable" label="Imants" icon={LuMagnet} />
+              <SegItem value="hinged" label="Frontisses" icon={LuDoorOpen} />
             </SegmentGroup.Root>
           </Field.Root>
 
@@ -333,10 +334,15 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
   }
 }
 
-function SegItem({ value, label }: { value: string; label: string }) {
+function SegItem({ value, label, icon: Icon }: { value: string; label: string; icon?: IconType }) {
   return (
     <SegmentGroup.Item value={value} flex={1} justifyContent="center">
-      <SegmentGroup.ItemText>{label}</SegmentGroup.ItemText>
+      <SegmentGroup.ItemText>
+        <HStack gap={1.5}>
+          {Icon && <Icon />}
+          {label}
+        </HStack>
+      </SegmentGroup.ItemText>
       <SegmentGroup.ItemHiddenInput />
     </SegmentGroup.Item>
   )

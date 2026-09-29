@@ -11,10 +11,17 @@ export function cutoutGeometry(p: Panel): ExtrudeGeometry {
   const L = p.length * S
   const W = p.width * S
   const shape = new Shape()
-  shape.moveTo(0, 0)
-  shape.lineTo(L, 0)
-  shape.lineTo(L, W)
-  shape.lineTo(0, W)
+  if (p.outline) {
+    // Contorn amb forma (tauler oval, arrodonit…): rectes i arcs aplanats.
+    const pts = ccw(flatten(p.outline))
+    shape.moveTo(pts[0]![0] * S, pts[0]![1] * S)
+    for (const [x, y] of pts.slice(1)) shape.lineTo(x * S, y * S)
+  } else {
+    shape.moveTo(0, 0)
+    shape.lineTo(L, 0)
+    shape.lineTo(L, W)
+    shape.lineTo(0, W)
+  }
   shape.closePath()
   for (const c of p.cutouts ?? []) {
     const hole = new Path()

@@ -2,6 +2,9 @@ import { Button, Field, HStack, NativeSelect, SimpleGrid, Stack, Switch, Text } 
 import { DEFAULT_GRILLE, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
 import { NumberField } from "../editor/ParamsForm"
 import { IconChoice } from "../../components/IconChoice"
+import { useState } from "react"
+import { PRESETS, ProfileEditor } from "./ProfileEditor"
+import { LuCircle, LuPencilRuler, LuRectangleHorizontal } from "react-icons/lu"
 import { LuArrowDownToLine, LuDrill, LuGrid3X3, LuLayers2, LuPanelBottom, LuPanelTop, LuSquareDashed, LuSquare, LuSquareDashedBottom, LuSquareSquare, LuSquareStack, LuTable, LuTriangleRight, LuWind } from "react-icons/lu"
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/SettingsScreen"
@@ -92,6 +95,9 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
           />
           {c.top.kind === "ventSlot" && <NumberField label="Ranura d'aire" value={c.top.gap} min={20} max={200} step={5} onChange={(gap) => set({ top: { kind: "ventSlot", gap } })} />}
         </SimpleGrid>
+
+        {/* Tauler de taula: tapa per sobre dels laterals, amb voladís i forma. */}
+        {c.top.kind === "full" && <TableTopFields module={module} onChange={onChange} />}
 
         {/* Parets buides: caixa de dues pells que fa el moble com si fos de fusta gruixuda. */}
         <Stack gap={2}>
@@ -271,6 +277,59 @@ export function JoineryForm({ module, onChange }: { module: Module; onChange: (m
       <Text fontSize="xs" color="fg.muted">
         Guies de calaix: {module.hardware.drawer.slideLengths.join(" · ")} mm, joc lateral {module.hardware.drawer.sideClearance} mm per costat.
       </Text>
+    </Stack>
+  )
+}
+
+/** Tauler de taula: per sobre dels laterals (potes), voladís i forma (rectangle, arrodonit, oval o a mida). */
+function TableTopFields({ module, onChange }: { module: Module; onChange: (m: Module) => void }) {
+  const c = module.carcass
+  const [editing, setEditing] = useState(false)
+  const tt = c.tableTop
+  const set = (tableTop: Carcass["tableTop"]) => onChange({ ...module, carcass: { ...c, tableTop } })
+  const ov = tt?.overhang ?? 0
+  const L = c.width + 2 * ov
+  const D = c.depth + 2 * ov
+  const preset = (id: string) => PRESETS.find((p) => p.id === id)!.make(L, D)
+  return (
+    <Stack gap={2}>
+      <Switch.Root size="sm" checked={!!tt} onCheckedChange={(e) => set(e.checked ? { overhang: 30 } : undefined)}>
+        <Switch.HiddenInput />
+        <Switch.Control />
+        <Switch.Label>Tauler de taula (per sobre dels laterals)</Switch.Label>
+      </Switch.Root>
+      {tt && (
+        <>
+          <NumberField label="Voladís a tot el voltant" value={tt.overhang} min={0} max={1000} step={10} onChange={(overhang) => set({ ...tt, overhang })} help={`Tauler de ${L} × ${D} mm. Les cantonades a inglet no s'hi apliquen.`} />
+          <HStack gap={1.5} wrap="wrap">
+            <Text fontSize="sm" fontWeight="medium" mr={1}>
+              Forma
+            </Text>
+            <Button size="xs" variant={!tt.shape ? "solid" : "outline"} colorPalette="wood" onClick={() => set({ overhang: tt.overhang })}>
+              <LuRectangleHorizontal /> Rectangle
+            </Button>
+            <Button size="xs" variant="outline" colorPalette="wood" onClick={() => set({ ...tt, shape: preset("round") })}>
+              <LuSquare /> Arrodonit
+            </Button>
+            <Button size="xs" variant="outline" colorPalette="wood" onClick={() => set({ ...tt, shape: preset("ellipse") })}>
+              <LuCircle /> Oval
+            </Button>
+            <Button size="xs" variant="outline" onClick={() => setEditing(true)}>
+              <LuPencilRuler /> Editar…
+            </Button>
+          </HStack>
+          <ProfileEditor
+            open={editing}
+            initial={tt.shape ?? PRESETS[0]!.make(L, D)}
+            axes={["Ample", "Fondària"]}
+            onClose={() => setEditing(false)}
+            onApply={({ points }) => {
+              set({ ...tt, shape: points })
+              setEditing(false)
+            }}
+          />
+        </>
+      )}
     </Stack>
   )
 }

@@ -12,7 +12,7 @@ import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { ROLE_COLOR } from "./roleColors"
 import { cutoutGeometry, mitreGeometry } from "./cutoutGeometry"
-import { RAW_EDGE_COLOR, TILE_MM, resolveEdgeFinish, resolveFinish, woodTexture, type FinishSpec } from "./textures"
+import { RAW_EDGE_COLOR, TILE_MM, photoTexture, resolveEdgeFinish, resolveFinish, woodTexture, type FinishSpec } from "./textures"
 
 /** Color de selecció (el mateix taronja que els botons + del 3D). */
 const SELECT_COLOR = "#b57a37"
@@ -1068,18 +1068,22 @@ function MoveHandle({
 }
 
 /** Textura clonada amb repetició segons la mida real de la cara i la veta girada si cal. */
-function faceTexture(base: Texture, uMm: number, vMm: number, rotate: boolean): Texture {
+function faceTexture(base: Texture, uMm: number, vMm: number, rotate: boolean, tileMm = TILE_MM): Texture {
   const t = base.clone()
   t.needsUpdate = true
   t.center.set(0.5, 0.5)
   t.rotation = rotate ? Math.PI / 2 : 0
-  t.repeat.set(uMm / TILE_MM, vMm / TILE_MM)
+  t.repeat.set(uMm / tileMm, vMm / tileMm)
   return t
 }
 
 function makeMaterial(finish: FinishSpec, uMm: number, vMm: number, rotate: boolean, opts: { transparent: boolean; opacity: number }): MeshStandardMaterial {
   if (finish.kind === "wood") {
     return new MeshStandardMaterial({ map: faceTexture(woodTexture(finish.species), uMm, vMm, rotate), roughness: 0.7, metalness: 0, ...opts })
+  }
+  // Foto real del tauler: la mateixa escala que al tauler de debò (tileMm = amplada de la foto).
+  if (finish.kind === "image") {
+    return new MeshStandardMaterial({ map: faceTexture(photoTexture(finish.src), uMm, vMm, rotate, finish.tileMm), roughness: 0.7, metalness: 0, ...opts })
   }
   return new MeshStandardMaterial({ color: finish.color, roughness: finish.roughness, metalness: 0, ...opts })
 }
@@ -1147,12 +1151,12 @@ export function PanelMesh({
   // Peces amb talls passants (reixetes, taulell amb pica i vitro, passacables): geometria
   // extruïda amb els forats de debò, perquè es vegi a través.
   // Peces a inglet (sense talls): secció en trapezi, perquè la cantonada es vegi a 45°.
-  const cut = useMemo(() => (panel.cutouts?.length ? cutoutGeometry(panel) : panel.mitres?.length ? mitreGeometry(panel) : null), [panel])
+  const cut = useMemo(() => (panel.cutouts?.length || panel.outline ? cutoutGeometry(panel) : panel.mitres?.length ? mitreGeometry(panel) : null), [panel])
   const cutMats = useMemo(() => {
     if (!cut) return null
     const m = cutoutMaterials(panel, materialMode, materials, dimmed)
     // A la geometria d'inglet els grups van al revés: [0] puntes (cantell), [1] cares.
-    return panel.cutouts?.length ? m : [m[1]!, m[0]!]
+    return panel.cutouts?.length || panel.outline ? m : [m[1]!, m[0]!]
   }, [cut, panel, materialMode, materials, dimmed])
   useEffect(
     () => () => {
