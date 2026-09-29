@@ -1,4 +1,5 @@
 import { flatPackDesk, flatPackShelf, flatPackStool } from "./flatPack"
+import { INSPIRED_TEMPLATES } from "./inspiredTemplates"
 import type { FreePart } from "./freePart"
 import type { PNode } from "./polygon"
 import { DEFAULT_GRILLE, defaultModule, moduleOrigins3, newId, tableModule, type Composition, type CompositionKind, type Module, type Zone } from "./composition"
@@ -76,6 +77,7 @@ const SHOWCASE: Template[] = [
 
 export const BUILTIN_TEMPLATES: Template[] = [
   ...SHOWCASE,
+  ...INSPIRED_TEMPLATES,
   {
     id: "flatpack-shelf",
     kind: "lliure",

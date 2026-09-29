@@ -336,8 +336,12 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     (penjat, calaixos encastats, taulell de pedra, desguàs), Cuina amb illa de pedra (illa al
     terra amb X pròpia, taulell de pedra enganxat a l'illa), Vestidor amb barres (portes de dalt
     a baix, barres d'inox, doble barra) i Escriptori flat-pack (laterals amb
-    arc que travessen el tauler amb pestanyes). `showcase.test.ts` comprova que no fan avisos de
-    xoc ni de talls.
+    arc que travessen el tauler amb pestanyes). Després, les **inspirades en fotos d'interiors**
+    (`INSPIRED_TEMPLATES` a `inspiredTemplates.ts`): Moble TV llarg amb prestatges flotants,
+    Llibreria amb baixos negres, Lliteres encastades (parets buides, barana, escala de graons
+    gruixuts, matalassos de referència), Consola de noguera a inglet (potes en U de peces lliures),
+    Moble penjat de noguera, Tauleta cub i Cuina de roure amb illa de calaixos (pedra tallada per
+    la pica i la placa). `showcase.test.ts` comprova que no fan avisos de xoc ni de talls.
   - **Peça lliure que talla** (`FreePart.effect = "cut"`, Efecte Peça/Talla a General): no és
     una peça; `partCutters` la converteix en objecte que talla (perfil = la seva forma, direcció =
     el gruix; a l'estirada la v es gira) i `applyRefCuts` fa el forat passant a les peces que
