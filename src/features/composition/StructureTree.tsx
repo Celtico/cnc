@@ -17,7 +17,7 @@ import {
   LuTrash2,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcon"
-import { compositionKind, duplicateGroup, newGroupName, partGroups, insertPartCopy, insertRefCopy, modulePresetsFor, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
+import { compositionKind, duplicateGroup, newGroupName, partGroups, insertPartCopy, insertRefCopy, modulePresetsFor, movePartToGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
 import { ORIENT_ICON, PartAddMenu } from "./PartInspector"
 import { RefAddMenu } from "./RefInspector"
 import { zoneLabel } from "./zoneLabel"
@@ -128,6 +128,33 @@ export function StructureTree({
       setOver(null)
     },
   })
+  // La fila d'un grup: s'hi pot deixar una peça (entra al grup).
+  const groupDnd = (g: string): RowDnd => {
+    const ok = () => drag?.kind === "part" && (comp.parts ?? []).find((q) => q.id === drag.id)?.group !== g
+    return {
+      noDrag: true,
+      dragging: false,
+      indicator: over?.id === `g:${g}` && ok() ? "inside" : null,
+      onStart: () => {},
+      onOver: () => {
+        if (!ok()) return false
+        if (over?.id !== `g:${g}`) setOver({ id: `g:${g}`, after: false })
+        return true
+      },
+      onDrop: () => {
+        if (drag && ok()) {
+          onChange(movePartToGroup(comp, drag.id, g))
+          setOpenGroups((o) => new Set([...o, g]))
+        }
+        setDrag(null)
+        setOver(null)
+      },
+      onEnd: () => {
+        setDrag(null)
+        setOver(null)
+      },
+    }
+  }
   const hasWall = comp.modules.some((m) => rowOf(m) === "wall")
   const rows: { row: "floor" | "wall"; label: string }[] = hasWall
     ? [
@@ -314,6 +341,7 @@ export function StructureTree({
                 toggleLabel={open ? `Plegar «${g}»` : `Desplegar «${g}»`}
                 label={g}
                 hint={`${members.length} peces`}
+                dnd={groupDnd(g)}
                 selected={selection.kind === "group" && selection.id === g}
                 onClick={() => onSelect({ kind: "group", id: g })}
                 menu={
@@ -435,14 +463,19 @@ function ZoneRows({
 }
 
 interface RowDnd {
+  /** Només s'hi pot deixar (la fila no s'arrossega). */
+  noDrag?: boolean
   dragging: boolean
-  indicator: "before" | "after" | null
+  indicator: DropIndicator
   onStart: () => void
   /** Torna false si no s'hi pot deixar (p. ex. un mòdul d'una altra fila). */
   onOver: (after: boolean) => boolean
   onDrop: (after: boolean) => void
   onEnd: () => void
 }
+
+/** Indicador de la fila de destí: línia abans/després, o la fila marcada si hi entra (grup). */
+type DropIndicator = "before" | "after" | "inside" | null
 
 function Row({
   icon,
@@ -491,7 +524,7 @@ function Row({
       minH="30px"
       position="relative"
       opacity={dnd?.dragging ? 0.4 : 1}
-      draggable={!!dnd}
+      draggable={!!dnd && !dnd.noDrag}
       onDragStart={
         dnd
           ? (e) => {
@@ -522,8 +555,11 @@ function Row({
           : undefined
       }
       onDragEnd={dnd?.onEnd}
+      outline={dnd?.indicator === "inside" ? "2px solid" : undefined}
+      outlineColor={dnd?.indicator === "inside" ? "wood.solid" : undefined}
+      outlineOffset="-2px"
       _before={
-        dnd?.indicator
+        dnd?.indicator && dnd.indicator !== "inside"
           ? { content: '""', position: "absolute", left: `${depth * 14 + 6}px`, right: 1, height: "2px", bg: "wood.solid", borderRadius: "full", pointerEvents: "none", ...(dnd.indicator === "before" ? { top: "-1px" } : { bottom: "-1px" }) }
           : undefined
       }

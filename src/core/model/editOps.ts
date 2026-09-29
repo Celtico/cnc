@@ -120,7 +120,22 @@ export function reorderPart(comp: Composition, id: string, targetId: string, aft
   if (!r || !t || id === targetId) return comp
   const rest = list.filter((x) => x.id !== id)
   const at = rest.indexOf(t) + (after ? 1 : 0)
-  return { ...comp, parts: [...rest.slice(0, at), r, ...rest.slice(at)] }
+  // Deixada al costat d'una peça, n'agafa el grup (entra al grup, en surt o canvia de grup).
+  const { group: _g, ...plain } = r
+  void _g
+  const moved = t.group ? { ...plain, group: t.group } : plain
+  return { ...comp, parts: [...rest.slice(0, at), moved, ...rest.slice(at)] }
+}
+
+/** Posa una peça dins d'un grup (arrossegada sobre la fila del grup): va darrere de l'última. */
+export function movePartToGroup(comp: Composition, id: string, group: string): Composition {
+  const list = comp.parts ?? []
+  const r = list.find((x) => x.id === id)
+  if (!r) return comp
+  const rest = list.filter((x) => x.id !== id)
+  let at = rest.length
+  for (let i = rest.length - 1; i >= 0; i--) if (rest[i]!.group === group) { at = i + 1; break }
+  return { ...comp, parts: [...rest.slice(0, at), { ...r, group }, ...rest.slice(at)] }
 }
 
 /** Mou totes les peces d'un grup (mm). No deixa que cap quedi sota terra. */

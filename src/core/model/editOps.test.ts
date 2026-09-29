@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule, type Composition } from "./composition"
-import { insertModuleCopy, insertRefCopy, moveAllBy, moveModuleBy, pasteZone } from "./editOps"
+import { insertModuleCopy, insertRefCopy, moveAllBy, moveModuleBy, movePartToGroup, pasteZone, reorderPart } from "./editOps"
 
 const comp = (): Composition => ({
   modules: [
@@ -69,5 +69,22 @@ describe("grups de peces lliures", async () => {
     expect(r.group).toBe("G (còpia)")
     expect(r.comp.parts!.filter((q) => q.group === r.group).map((q) => q.x)).toEqual([350, 550])
     expect(newGroupName(comp)).toBe("Grup 1")
+  })
+})
+
+describe("arrossegar peces lliures i grups", () => {
+  const p = (id: string, group?: string) => ({ id, name: id, orient: "front" as const, w: 100, h: 100, thickness: 18, material: "Blanc", x: 0, y: 0, z: 0, ...(group ? { group } : {}) })
+  const c = { modules: [], references: [], parts: [p("a", "G"), p("b", "G"), p("c")] }
+
+  it("deixada sobre la fila del grup, hi entra (darrere de l'última)", () => {
+    const r = movePartToGroup(c, "c", "G")
+    expect(r.parts!.map((q) => [q.id, q.group])).toEqual([["a", "G"], ["b", "G"], ["c", "G"]])
+  })
+
+  it("deixada al costat d'una peça, n'agafa el grup; al costat d'una solta, en surt", () => {
+    expect(reorderPart(c, "c", "a", false).parts!.find((q) => q.id === "c")!.group).toBe("G")
+    const out = reorderPart(c, "a", "c", true)
+    expect(out.parts!.find((q) => q.id === "a")!.group).toBeUndefined()
+    expect(out.parts!.map((q) => q.id)).toEqual(["b", "c", "a"])
   })
 })

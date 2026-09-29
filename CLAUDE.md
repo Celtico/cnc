@@ -324,7 +324,9 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   - **Grups de peces lliures** (`FreePart.group`, `moveGroupBy`, `duplicateGroup`): menú … de la
     peça (grup nou, posar a un grup, treure) o camp Grup a General. A l'arbre, fila plegable del
     grup; seleccionat (`Selection` `group`), l'inspector mou tot el grup (X/Y/Z de la seva caixa),
-    llista les peces i desagrupa. Al 3D, caixa del grup amb el gizmo; el primer clic a una peça
+    llista les peces i desagrupa. A l'arbre, **arrossegar** una peça sobre la fila d'un grup la hi posa
+    (`movePartToGroup`, la fila es marca); deixar-la al costat d'una peça n'agafa el grup (`reorderPart`):
+    així s'entra, se surt (al costat d'una peça solta) o es canvia de grup. Al 3D, caixa del grup amb el gizmo; el primer clic a una peça
     agrupada selecciona el grup i el segon, la peça (com Figma). Fletxes i Supr també al grup.
   - **Plantilles vitrina** (`SHOWCASE` a `templates.ts`, primer a la galeria): Consola ona sobre
     inox (tauler amb forma + potes d'inox sense nesting), Aparador sobre ferro (inglet, fronts
