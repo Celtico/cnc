@@ -345,7 +345,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     `extractScene` passa l'escena del visor a triangles + materials + textures (píxels) i
     `pathWorker` (un per nucli, BVH propi) fa path tracing progressiu: cel d'estudi, sol amb
     ombres suaus, difús, reflex segons la rugositat, metalls i vidre. `RenderDialog` acumula les
-    passades (to ACES), s'atura/continua i desa el PNG. No depèn de la GPU.
+    passades (to ACES), s'atura/continua i desa el PNG. Control «Exposició» (−2…+2 EV): només
+    retoca el to, no torna a calcular. No depèn de la GPU.
   - **Peça enganxada a un mòdul** (`FreePart.module`, `resolveParts`, `partOffset`): a General,
     «Enganxada a»; x/y/z passen a ser relatives al mòdul i el segueixen (el taulell de pedra de
     l'illa). Tot el que dibuixa o construeix fa servir `resolveParts` (coordenades de la
