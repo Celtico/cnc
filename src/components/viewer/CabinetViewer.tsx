@@ -605,14 +605,16 @@ function RefGhost({
       } : undefined}
       onPointerDown={draggable ? (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation()
-        const floor = view === "top" || e.shiftKey
-        const side = view === "left" || view === "right"
+        // Enganxat al terra: llisca pel terra. A la paret: es mou pel pla de la paret.
+        const floor = !g.onWall && (g.onFloor || view === "top" || e.shiftKey)
+        const side = !g.onWall && !g.onFloor && (view === "left" || view === "right")
         const normal = floor ? new Vector3(0, 1, 0) : side ? new Vector3(1, 0, 0) : new Vector3(0, 0, 1)
+        const fixed: Axis[] = [...(g.onFloor ? (["y"] as Axis[]) : []), ...(g.onWall ? (["z"] as Axis[]) : [])]
         const corner = new Vector3(g.x * S + offset[0], g.y * S + offset[1], g.z * S + offset[2])
         state.current = {
           plane: new Plane().setFromNormalAndCoplanarPoint(normal, e.point),
           grab: e.point.clone().sub(corner),
-          axes: floor ? ["x", "z"] : side ? ["z", "y"] : ["x", "y"],
+          axes: (floor ? (["x", "z"] as Axis[]) : side ? (["z", "y"] as Axis[]) : (["x", "y"] as Axis[])).filter((a) => !fixed.includes(a)),
           start: [e.clientX, e.clientY],
           moved: false,
         }

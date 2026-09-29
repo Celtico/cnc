@@ -42,7 +42,7 @@ import { ArDialog } from "../../components/viewer/ArDialog"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox } from "../../core/build/buildComposition"
-import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, parentOf, pasteZone, rowOf, walkZones, newId, type Composition, type Module, type RefObject, type Zone } from "../../core/model"
+import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, parentOf, pasteZone, rowOf, walkZones, newId, type Composition, type Module, type RefObject, type Zone } from "../../core/model"
 import { updateProjectComposition } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -347,7 +347,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
 
   /** Mou un objecte de referència (arrossegat al 3D o amb les fletxes). */
   const moveRef = (id: string, pos: { x: number; y: number; z: number }) =>
-    setComp((c) => ({ ...c, references: c.references.map((r) => (r.id === id ? { ...r, ...pos } : r)) }))
+    setComp((c) => ({ ...c, references: c.references.map((r) => (r.id === id ? anchorRef({ ...r, ...pos }) : r)) }))
   // Fletxes amb un objecte seleccionat: ←→ X, ↑↓ Y, Re Pàg / Av Pàg Z. 1 mm; amb Maj, 10 mm.
   // Copiar, enganxar, duplicar i esborrar amb el teclat (mòduls, objectes i compartiments).
   // El porta-retalls es desa a localStorage: es pot enganxar en un altre moble.

@@ -198,6 +198,10 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   - **Càmera**: s'encuadra en obrir, canviar de vista, redimensionar o amb el botó «Encuadrar»
     (càmera de vídeo, `LuVideo`); editar no la mou. El botó surt **marcat** mentre la càmera és a
     l'encuadrament (`onFramedChange`): es desmarca en orbitar/fer zoom/desplaçar o si el moble canvia de mida. Opcions de vista: popover a l'ordinador, calaix de baix al mòbil.
+  - **Enganxar objectes** (`RefObject.onFloor`, `onWall`, `anchorRef`): botons «Al terra» (y = 0,
+    al 3D llisca pel terra) i «A la paret» (z = 0, penjat: al 3D es mou per la paret); tots dos
+    alhora només de costat. El camp fixat queda desactivat; `anchorRef` s'aplica a l'inspector,
+    a l'arrossegament i a les fletxes.
   - **Efecte dels objectes** (`RefObject.effect`, `shape`, `axis`): **Obstacle** (per defecte,
     avisa si xoca; el cilindre xoca amb la seva secció rodona, `refTouchesBox`) o **Talla**
     (`build/refCuts.ts`, `applyRefCuts`): forat passant a cada peça perpendicular a la seva

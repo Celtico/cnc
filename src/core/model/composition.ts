@@ -253,8 +253,18 @@ export const RefObjectSchema = z.object({
    * les peces perpendiculars). z cap a la paret (per defecte), y vertical, x de costat.
    */
   axis: z.enum(["x", "y", "z"]).optional(),
+  /** Enganxat al terra: y = 0 sempre; al 3D només es mou pel terra. */
+  onFloor: z.boolean().optional(),
+  /** Enganxat a la paret: z = 0 sempre (tocant la paret); al 3D només es mou per la paret. */
+  onWall: z.boolean().optional(),
 })
 export type RefObject = z.infer<typeof RefObjectSchema>
+
+/** Aplica els enganxaments (terra: y = 0; paret: z = 0). */
+export function anchorRef<T extends RefObject>(o: T): T {
+  if (!o.onFloor && !o.onWall) return o
+  return { ...o, ...(o.onFloor ? { y: 0 } : {}), ...(o.onWall ? { z: 0 } : {}) }
+}
 
 /** Índex de cada eix (0 = x, 1 = y, 2 = z). */
 export const AXIS_INDEX = { x: 0, y: 1, z: 2 } as const

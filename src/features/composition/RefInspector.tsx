@@ -1,10 +1,10 @@
 import { Button, Field, IconButton, Input, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState } from "react"
 import { ProfileEditor } from "./ProfileEditor"
-import { LuBookmark, LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuPlus, LuScan, LuTrash2 } from "react-icons/lu"
+import { LuArrowDownToLine, LuBrickWall, LuBookmark, LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuPlus, LuScan, LuTrash2 } from "react-icons/lu"
 import { PanelSection } from "../../components/PanelSection"
 import { toaster } from "../../components/ui/toaster"
-import { AXIS_INDEX, SECTION_AXES, insertRefCopy, toNodes, canBeGhost, compositionWidth, newId, visibleReferences, type Composition, type RefObject } from "../../core/model"
+import { AXIS_INDEX, SECTION_AXES, anchorRef, insertRefCopy, toNodes, canBeGhost, compositionWidth, newId, visibleReferences, type Composition, type RefObject } from "../../core/model"
 import { NumberField } from "../editor/ParamsForm"
 import { useSettings } from "../settings/SettingsContext"
 
@@ -75,7 +75,7 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
   const [editing, setEditing] = useState(false)
   const o = comp.references.find((r) => r.id === id)
   if (!o) return null
-  const update = (patch: Partial<RefObject>) => onChange({ ...comp, references: comp.references.map((r) => (r.id === id ? { ...r, ...patch } : r)) })
+  const update = (patch: Partial<RefObject>) => onChange({ ...comp, references: comp.references.map((r) => (r.id === id ? anchorRef({ ...r, ...patch }) : r)) })
   // Mateix patró que la resta de l'inspector: accions a la capçalera (RefActions) i seccions plegables.
   return (
     <Stack gap={0}>
@@ -201,16 +201,31 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
         />
       )}
       <PanelSection id="ref-position" title="Posició" icon={LuMove}>
+        <SimpleGrid columns={2} gap={2}>
+          <Button size="sm" variant={o.onFloor ? "solid" : "outline"} colorPalette="wood" aria-pressed={!!o.onFloor} title="Sempre a terra (Y = 0): al 3D només es mou pel terra" onClick={() => update({ onFloor: o.onFloor ? undefined : true })}>
+            <LuArrowDownToLine /> Al terra
+          </Button>
+          <Button size="sm" variant={o.onWall ? "solid" : "outline"} colorPalette="wood" aria-pressed={!!o.onWall} title="Sempre tocant la paret (Z = 0): al 3D només es mou per la paret" onClick={() => update({ onWall: o.onWall ? undefined : true })}>
+            <LuBrickWall /> A la paret
+          </Button>
+        </SimpleGrid>
         <SimpleGrid columns={3} gap={2}>
           <NumberField label="X" value={o.x} min={-30000} max={30000} step={10} onChange={(x) => update({ x })} />
-          <NumberField label="Y" value={o.y} min={-30000} max={30000} step={10} onChange={(y) => update({ y })} />
-          <NumberField label="Z" value={o.z} min={-30000} max={30000} step={10} onChange={(z) => update({ z })} />
+          <NumberField label="Y" value={o.y} min={-30000} max={30000} step={10} disabled={!!o.onFloor} onChange={(y) => update({ y })} />
+          <NumberField label="Z" value={o.z} min={-30000} max={30000} step={10} disabled={!!o.onWall} onChange={(z) => update({ z })} />
         </SimpleGrid>
         <Text fontSize="xs" color="fg.muted">
           X des de l'esquerra del moble, Y des del terra, Z des del darrere (paret).
         </Text>
         <Text fontSize="xs" color="fg.muted">
-          Al 3D, arrossega'l: s'enganxa a les vores dels mòduls i dels altres objectes (Alt: lliure; Maj: pel terra). Fletxes: 1 mm (Maj: 10 mm); Re Pàg / Av Pàg: fondària.
+          {o.onFloor && o.onWall
+            ? "Al terra i a la paret: al 3D només es mou de costat."
+            : o.onFloor
+              ? "Al terra: al 3D es mou lliscant pel terra."
+              : o.onWall
+                ? "A la paret: al 3D es mou per la paret (amunt, avall i de costat)."
+                : "Al 3D, arrossega'l: s'enganxa a les vores dels mòduls i dels altres objectes (Alt: lliure; Maj: pel terra)."}{" "}
+          Fletxes: 1 mm (Maj: 10 mm); Re Pàg / Av Pàg: fondària.
         </Text>
       </PanelSection>
     </Stack>
