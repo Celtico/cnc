@@ -306,6 +306,18 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     `build.joints` els llista (inspector de la peça). Tipus de moble **Flat-pack** (`kind:
     "lliure"`): no es fan mòduls (es guarden), l'arbre només mostra peces i objectes.
     Plantilles «Prestatgeria d'encaix» i «Tamboret flat-pack» (`model/flatPack.ts`).
+  - **Grups de peces lliures** (`FreePart.group`, `moveGroupBy`, `duplicateGroup`): menú … de la
+    peça (grup nou, posar a un grup, treure) o camp Grup a General. A l'arbre, fila plegable del
+    grup; seleccionat (`Selection` `group`), l'inspector mou tot el grup (X/Y/Z de la seva caixa),
+    llista les peces i desagrupa. Al 3D, caixa del grup amb el gizmo; el primer clic a una peça
+    agrupada selecciona el grup i el segon, la peça (com Figma). Fletxes i Supr també al grup.
+  - **Plantilles vitrina** (`SHOWCASE` a `templates.ts`, primer a la galeria): Consola ona sobre
+    inox (tauler amb forma + potes d'inox sense nesting), Aparador sobre ferro (inglet, fronts
+    encastats, prestatges gruixuts, passacables que talla, bastidor de ferro), Moble TV flotant
+    (parets buides, prestatge gruixut a ras, reixeta, tele a la paret), Moble de bany amb pedra
+    (penjat, calaixos encastats, taulell de pedra, desguàs) i Escriptori flat-pack (laterals amb
+    arc que travessen el tauler amb pestanyes). `showcase.test.ts` comprova que no fan avisos de
+    xoc ni de talls.
   - **Materials que no són de CNC** (`MaterialPref.cnc = false`; ferro, inox, pedra, vidre
     afegits a la v2 de les preferències; acabats `metal` i `glass`): una peça lliure d'aquest
     material porta `nest: false` (es posa sol en triar-lo) i va a `build.extras`: es veu al 3D,

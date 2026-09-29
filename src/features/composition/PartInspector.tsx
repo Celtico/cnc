@@ -19,6 +19,7 @@ import {
   LuSpline,
   LuSquare,
   LuTrash2,
+  LuUngroup,
 } from "react-icons/lu"
 import { IconChoice, type IconOption } from "../../components/IconChoice"
 import { PanelSection } from "../../components/PanelSection"
@@ -29,6 +30,9 @@ import {
   newFreePart,
   reorientPart,
   PART_AXES,
+  partsBox,
+  partGroups,
+  newGroupName,
   partSize,
   type Composition,
   type FreePart,
@@ -49,6 +53,8 @@ export const ORIENTS: IconOption<PartOrient>[] = [
   { value: "flat", label: "Estirada", icon: LuRectangleHorizontal, hint: "Estirada: horitzontal (prestatge, tapa, seient)" },
 ]
 export const ORIENT_ICON: Record<PartOrient, IconType> = { front: LuRectangleVertical, side: LuPanelLeft, flat: LuRectangleHorizontal }
+
+const NEW_GROUP = "__new_group__"
 
 /** Noms de les dues mides del pla segons l'orientació. */
 const DIM_NAMES: Record<PartOrient, [string, string]> = { front: ["Ample", "Alt"], side: ["Fondària", "Alt"], flat: ["Ample", "Fondària"] }
@@ -120,6 +126,24 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
       <PanelSection id="part-general" title="General" icon={LuPuzzle} badge={ORIENTS.find((o) => o.value === p.orient)!.label}>
         <IconChoice label="Orientació" value={p.orient} options={ORIENTS} onChange={(o) => onChange({ ...comp, parts: (comp.parts ?? []).map((x) => (x.id === id ? reorientPart(x, o) : x)) })} />
         <MaterialSelect label="Material" materials={boards} value={p.material} onChange={pickMaterial} />
+        <Field.Root>
+          <Field.Label fontSize="sm">Grup</Field.Label>
+          <NativeSelect.Root size="sm">
+            <NativeSelect.Field
+              value={p.group ?? ""}
+              onChange={(e) => update({ group: e.target.value === NEW_GROUP ? newGroupName(comp) : e.target.value || undefined })}
+            >
+              <option value="">Sense grup</option>
+              {partGroups(comp.parts ?? []).map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+              <option value={NEW_GROUP}>+ Grup nou</option>
+            </NativeSelect.Field>
+            <NativeSelect.Indicator />
+          </NativeSelect.Root>
+        </Field.Root>
         <Switch.Root size="sm" checked={p.nest !== false} onCheckedChange={(e) => update({ nest: e.checked ? undefined : false })}>
           <Switch.HiddenInput />
           <Switch.Control />
@@ -316,5 +340,47 @@ export function PartActions({ comp, id, onChange, onRemoved, onSelected }: { com
         </Menu.Positioner>
       </Portal>
     </Menu.Root>
+  )
+}
+
+/** Grup de peces lliures: posició de tot el grup (es mouen juntes), peces i accions. */
+export function GroupInspector({ comp, group, onChange, onSelectPart, onMove }: { comp: Composition; group: string; onChange: (c: Composition) => void; onSelectPart: (id: string) => void; onMove: (dx: number, dy: number, dz: number) => void }) {
+  const members = (comp.parts ?? []).filter((p) => p.group === group)
+  if (!members.length) return null
+  const b = partsBox(members)
+  const size = [0, 1, 2].map((a) => Math.round(b.max[a]! - b.min[a]!))
+  return (
+    <Stack gap={0}>
+      <PanelSection id="group-position" title="Posició del grup" icon={LuMove} badge={size.join(" × ")}>
+        <SimpleGrid columns={3} gap={2}>
+          <NumberField label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra" />} value={b.min[0]} min={-30000} max={30000} step={10} onChange={(x) => Number.isFinite(x) && onMove(x - b.min[0], 0, 0)} />
+          <NumberField label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} value={b.min[1]} min={0} max={30000} step={10} onChange={(y) => Number.isFinite(y) && onMove(0, y - b.min[1], 0)} />
+          <NumberField label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} value={b.min[2]} min={-30000} max={30000} step={10} onChange={(z) => Number.isFinite(z) && onMove(0, 0, z - b.min[2])} />
+        </SimpleGrid>
+        <Text fontSize="xs" color="fg.muted">
+          Tot el grup es mou junt: amb les fletxes del 3D, del teclat o aquí. Al 3D, el primer clic selecciona el grup i el segon, la peça.
+        </Text>
+      </PanelSection>
+      <PanelSection id="group-parts" title="Peces" icon={LuPuzzle} badge={members.length}>
+        <Stack gap={0.5}>
+          {members.map((p) => {
+            const Icon = ORIENT_ICON[p.orient]
+            return (
+              <Button key={p.id} size="xs" variant="ghost" justifyContent="flex-start" onClick={() => onSelectPart(p.id)}>
+                <Icon /> {p.name}
+                <Text as="span" color="fg.muted" ms="auto">
+                  {p.w} × {p.h}
+                </Text>
+              </Button>
+            )
+          })}
+        </Stack>
+        <HStack gap={2}>
+          <Button size="xs" variant="outline" onClick={() => onChange({ ...comp, parts: (comp.parts ?? []).map((q) => (q.group === group ? { ...q, group: undefined } : q)) })}>
+            <LuUngroup /> Desagrupar
+          </Button>
+        </HStack>
+      </PanelSection>
+    </Stack>
   )
 }

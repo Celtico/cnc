@@ -41,6 +41,8 @@ export const FreePartSchema = z.object({
    * en triar un material de les preferències que no és de CNC.
    */
   nest: z.boolean().optional(),
+  /** Grup (nom): les peces del mateix grup es mouen juntes; a l'arbre surten plegades a sota. */
+  group: z.string().optional(),
   /** false: la peça no fa encaixos amb les altres (per defecte, sí). */
   joints: z.boolean().optional(),
   /** Veta al llarg de u (per defecte), de v o sense. */
@@ -100,4 +102,17 @@ export function reorientPart(p: FreePart, orient: PartOrient): FreePart {
   const n: FreePart = { ...p, orient }
   const s = partSize(n)
   return { ...n, x: Math.round(c[0]! - s[0] / 2), y: Math.max(0, Math.round(c[1]! - s[1] / 2)), z: Math.round(c[2]! - s[2] / 2) }
+}
+
+/** Caixa que engloba unes quantes peces (un grup). */
+export function partsBox(parts: FreePart[]): { min: Vec3; max: Vec3 } {
+  const bs = parts.map(partBox)
+  const min = [0, 1, 2].map((a) => Math.min(...bs.map((b) => b.min[a]!))) as unknown as Vec3
+  const max = [0, 1, 2].map((a) => Math.max(...bs.map((b) => b.max[a]!))) as unknown as Vec3
+  return { min, max }
+}
+
+/** Noms dels grups de peces, en l'ordre en què surten. */
+export function partGroups(parts: FreePart[]): string[] {
+  return [...new Set(parts.flatMap((p) => (p.group ? [p.group] : [])))]
 }

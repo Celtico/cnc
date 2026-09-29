@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
 import { DoubleSide, ExtrudeGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Shape, Vector3, type Object3D, type Texture } from "three"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
-import { AXIS_INDEX, SECTION_AXES, flatten, partSize, sampleProfile, toNodes, type FreePart, type Hole, type MaterialPref, type Panel, type RefObject } from "../../core/model"
+import { AXIS_INDEX, SECTION_AXES, flatten, partSize, partsBox, sampleProfile, toNodes, type FreePart, type Hole, type MaterialPref, type Panel, type RefObject } from "../../core/model"
 import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { ROLE_COLOR } from "./roleColors"
@@ -99,6 +99,9 @@ export interface CabinetViewerProps {
   selectedPartId?: string | null
   onSelectPart?: (id: string) => void
   onMovePart?: (id: string, pos: { x: number; y: number; z: number }) => void
+  /** Grup de peces lliures seleccionat: caixa del grup amb el gizmo; es mou tot junt (delta en mm). */
+  selectedGroup?: string | null
+  onMoveGroup?: (group: string, dx: number, dy: number, dz: number) => void
   /** Objectes que xoquen amb alguna peça: es pinten de vermell. */
   collidingRefIds?: Set<string>
   /** Compartiment seleccionat (mm, coordenades de la composició): contorn taronja. */
@@ -138,6 +141,8 @@ export function CabinetViewer({
   selectedPartId,
   onSelectPart,
   onMovePart,
+  selectedGroup,
+  onMoveGroup,
   collidingRefIds,
   highlightZone,
   fitKey = 0,
@@ -181,6 +186,12 @@ export function CabinetViewer({
     return { id: p.id, name: p.name, x: p.x, y: p.y, z: p.z, w: s[0], h: s[1], d: s[2] }
   }), [parts])
   const selectedPartBox = partBoxes.find((b) => b.id === selectedPartId)
+  const groupBox = useMemo((): RefObject | null => {
+    const members = (parts ?? []).filter((p) => p.group && p.group === selectedGroup)
+    if (!members.length) return null
+    const b = partsBox(members)
+    return { id: `group:${selectedGroup}`, name: selectedGroup!, x: b.min[0], y: b.min[1], z: b.min[2], w: b.max[0] - b.min[0], h: b.max[1] - b.min[1], d: b.max[2] - b.min[2] }
+  }, [parts, selectedGroup])
 
   return (
     // Canviar la qualitat recrea el renderitzador: les ombres no es poden activar en calent.
@@ -273,6 +284,21 @@ export function CabinetViewer({
             others={[...partBoxes, ...(ghosts ?? [])]}
             onSelect={onSelectPart}
             onMove={onMovePart}
+            outline
+          />
+        )}
+        {groupBox && (
+          <RefGhost
+            key={groupBox.id}
+            g={groupBox}
+            selected
+            hit={false}
+            guides={q.guides}
+            view={view}
+            offset={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}
+            targets={snapTargets}
+            others={[...partBoxes.filter((b) => !(parts ?? []).some((p) => p.id === b.id && p.group === selectedGroup)), ...(ghosts ?? [])]}
+            onMove={onMoveGroup ? (_, pos) => onMoveGroup(selectedGroup!, pos.x - groupBox.x, pos.y - groupBox.y, pos.z - groupBox.z) : undefined}
             outline
           />
         )}

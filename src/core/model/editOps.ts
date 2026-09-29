@@ -1,6 +1,6 @@
 import { newId, rowOf, type Composition, type Module, type RefObject, type Zone } from "./composition"
 import { cloneZone, removeZone, updateZone } from "./zoneOps"
-import { partSize, type FreePart } from "./freePart"
+import { partSize, partsBox, type FreePart } from "./freePart"
 
 /** Còpia d'un mòdul just després de `afterId` (o al final). */
 export function insertModuleCopy(comp: Composition, src: Module, afterId?: string): { comp: Composition; id: string } {
@@ -114,4 +114,33 @@ export function reorderPart(comp: Composition, id: string, targetId: string, aft
   const rest = list.filter((x) => x.id !== id)
   const at = rest.indexOf(t) + (after ? 1 : 0)
   return { ...comp, parts: [...rest.slice(0, at), r, ...rest.slice(at)] }
+}
+
+/** Mou totes les peces d'un grup (mm). No deixa que cap quedi sota terra. */
+export function moveGroupBy(comp: Composition, group: string, dx: number, dy: number, dz: number): Composition {
+  const members = (comp.parts ?? []).filter((p) => p.group === group)
+  if (!members.length) return comp
+  const minY = partsBox(members).min[1]
+  const ddy = Math.max(dy, -minY)
+  return { ...comp, parts: (comp.parts ?? []).map((p) => (p.group === group ? { ...p, x: p.x + dx, y: p.y + ddy, z: p.z + dz } : p)) }
+}
+
+/** Duplica un grup sencer al costat (nom nou). */
+export function duplicateGroup(comp: Composition, group: string): { comp: Composition; group: string } {
+  const members = (comp.parts ?? []).filter((p) => p.group === group)
+  const b = partsBox(members)
+  const taken = new Set((comp.parts ?? []).map((p) => p.group))
+  let name = `${group} (còpia)`
+  for (let n = 2; taken.has(name); n++) name = `${group} (còpia ${n})`
+  const dx = b.max[0] - b.min[0] + 50
+  const copies = members.map((p) => ({ ...structuredClone(p), id: newId("p"), group: name, x: p.x + dx }))
+  return { comp: { ...comp, parts: [...(comp.parts ?? []), ...copies] }, group: name }
+}
+
+/** Nom lliure per a un grup nou («Grup 1», «Grup 2»…). */
+export function newGroupName(comp: Composition): string {
+  const taken = new Set((comp.parts ?? []).map((p) => p.group))
+  let n = 1
+  while (taken.has(`Grup ${n}`)) n++
+  return `Grup ${n}`
 }

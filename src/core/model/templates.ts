@@ -1,4 +1,6 @@
-import { flatPackShelf, flatPackStool } from "./flatPack"
+import { flatPackDesk, flatPackShelf, flatPackStool } from "./flatPack"
+import type { FreePart } from "./freePart"
+import type { PNode } from "./polygon"
 import { DEFAULT_GRILLE, defaultModule, newId, tableModule, type Composition, type CompositionKind, type Module } from "./composition"
 
 export interface Template {
@@ -15,7 +17,51 @@ function withRoot(m: Module, root: Module["root"]): Module {
   return { ...m, root }
 }
 
+/**
+ * Plantilles «vitrina»: mobles reals que combinen les eines de l'app (parets buides, inglet,
+ * tauler amb forma, fronts encastats, prestatges a sang, reixeta, objectes que tallen,
+ * peces lliures de CNC i de ferro/pedra, encaixos…). Van primer a la galeria.
+ */
+const SHOWCASE: Template[] = [
+  {
+    id: "wave-console",
+    kind: "taula",
+    name: "Consola ona sobre inox",
+    description: "1400 × 760 × 400: tauler ondulat (forma de Bézier) sobre dues potes ovals d'acer inox (peces lliures sense nesting).",
+    make: waveConsole,
+  },
+  {
+    id: "sideboard-iron",
+    kind: "moble",
+    name: "Aparador sobre ferro",
+    description: "1800 × 700 × 450 de noguera, cantonades a inglet, portes i calaixos encastats, prestatges gruixuts, passacables i bastidor de ferro negre (sense nesting).",
+    make: sideboardIron,
+  },
+  {
+    id: "floating-tv",
+    kind: "moble",
+    name: "Moble TV flotant",
+    description: "2000 × 450 × 400 penjat, parets buides de 50 (gruix aparent), calaixos, obert amb prestatge gruixut a ras, reixeta desmuntable per als aparells, tele i passacables.",
+    make: floatingTv,
+  },
+  {
+    id: "bath-vanity",
+    kind: "moble",
+    name: "Moble de bany amb pedra",
+    description: "1200 × 480 × 480 penjat, calaixos encastats de freixe, taulell de pedra (sense nesting), pica i desguàs que talla el fons.",
+    make: bathVanity,
+  },
+  {
+    id: "flatpack-desk",
+    kind: "lliure",
+    name: "Escriptori flat-pack",
+    description: "1200 × 740 × 600: laterals amb arc que travessen el tauler amb pestanyes, travesser i prestatge encaixats, sense cargols.",
+    make: flatPackDesk,
+  },
+]
+
 export const BUILTIN_TEMPLATES: Template[] = [
+  ...SHOWCASE,
   {
     id: "flatpack-shelf",
     kind: "lliure",
@@ -246,4 +292,164 @@ function kitchen(): Composition {
     { id: newId("run"), kind: "plinth", from: drawers.id, to: pantry.id, material: "Melamina roure", thickness: 16, setback: 50 },
   ]
   return { modules: [drawers, sink, hob, oven, pantry, w1, w2, w3, w4], references: [], runs }
+}
+
+const inox = (p: Omit<FreePart, "id" | "material" | "nest">): FreePart => ({ id: newId("p"), material: "Acer inox", nest: false, ...p })
+const iron = (p: Omit<FreePart, "id" | "material" | "nest">): FreePart => ({ id: newId("p"), material: "Ferro negre", nest: false, ...p })
+
+/** El·lipse de w × h (secció de les potes ovals). */
+function oval(w: number, h: number): PNode[] {
+  const K = 0.5522847498
+  const a = w / 2, b = h / 2
+  return [
+    { x: w, y: b, in: [0, -K * b], out: [0, K * b], t: "smooth" },
+    { x: a, y: h, in: [K * a, 0], out: [-K * a, 0], t: "smooth" },
+    { x: 0, y: b, in: [0, K * b], out: [0, -K * b], t: "smooth" },
+    { x: a, y: 0, in: [-K * a, 0], out: [K * a, 0], t: "smooth" },
+  ]
+}
+
+/** Consola: tauler ondulat (sense laterals) sobre dues potes ovals d'inox. */
+function waveConsole(): Composition {
+  const wave: PNode[] = [
+    { x: 930, y: 52.8, in: [0, -127.03], out: [0, 127.03], t: "smooth" },
+    { x: 430, y: 167.86, in: [403.17, 0], out: [-403.17, 0], t: "smooth" },
+    { x: 0, y: 202.8, in: [0, 127.03], out: [0, -127.03], t: "smooth" },
+    { x: 430, y: 67.86, in: [-403.17, 0], out: [403.17, 0], t: "smooth" },
+  ]
+  const gap = 150
+  const m: Module = {
+    ...tableModule(newId("m"), "Consola", { thickness: 30, material: "Noguera xapada", sides: { left: false, right: false }, tableTop: { overhang: 30, shape: wave } }),
+    wallGap: gap,
+  }
+  // Les potes arriben just a sota del tauler (760 − 30).
+  const legH = 760 - 30
+  const leg = (x: number, z: number): FreePart => inox({ name: "Pota d'inox", orient: "flat", w: 50, h: 100, thickness: legH, x, y: 0, z: gap + z, shape: oval(50, 100) })
+  return { kind: "taula", modules: [m], references: [], parts: [leg(150, 190), leg(1200, 40)] }
+}
+
+/** Aparador de noguera sobre bastidor de ferro. */
+function sideboardIron(): Composition {
+  const W = 1800, H = 700, D = 450, LEG = 300, gap = 30
+  const m = withRoot(
+    {
+      ...defaultModule(newId("m"), "Aparador", {
+        width: W,
+        height: H,
+        depth: D,
+        material: "Noguera xapada",
+        thickness: 19,
+        joint: "mitre",
+        back: "screwed",
+        backMaterial: "Contraxapat (fons)",
+        backThickness: 10,
+        base: { kind: "legs", height: LEG },
+      }),
+      wallGap: gap,
+    },
+    {
+      id: newId(),
+      split: {
+        dir: "v",
+        sizes: ["auto", 500, "auto"],
+        children: [
+          { id: newId(), shelves: { n: 1, adjustable: true }, front: { kind: "door", mode: "double", hinge: "left" } },
+          { id: newId(), front: { kind: "drawers", n: 3, heights: ["auto", "auto", "auto"] } },
+          { id: newId(), shelves: { n: 2, adjustable: false, thickness: 50 } },
+        ],
+      },
+    },
+  )
+  const fm: Module = { ...m, fronts: { ...m.fronts, style: "inset" } }
+  const T = 30
+  const z0 = gap + 20, z1 = gap + D - 20 - T
+  const legs = [20, W - 20 - T].flatMap((x) => [z0, z1].map((z) => iron({ name: "Pota de ferro", orient: "front", w: T, h: LEG, thickness: T, x, y: 0, z })))
+  const bars = [z0, z1].map((z) => iron({ name: "Travesser de ferro", orient: "flat", w: W - 40, h: T, thickness: 10, x: 20, y: LEG - 10, z }))
+  return {
+    kind: "moble",
+    modules: [fm],
+    references: [{ id: newId("r"), name: "Passacables Ø60", w: 60, h: 60, d: 40, x: 350, y: LEG + 120, z: gap - 10, effect: "cut", shape: "cylinder", axis: "z" }],
+    parts: [...legs, ...bars],
+  }
+}
+
+/** Moble TV penjat de parets buides amb reixeta per als aparells. */
+function floatingTv(): Composition {
+  const W = 2000, H = 450, D = 400, Y = 350
+  const m = withRoot(
+    defaultModule(newId("m"), "Moble TV", {
+      width: W,
+      height: H,
+      depth: D,
+      material: "Melamina blanca",
+      frontMaterial: "Melamina roure",
+      thickness: 19,
+      hollow: { thickness: 50 },
+      back: "screwed",
+      backThickness: 10,
+      base: { kind: "wall", height: Y },
+    }),
+    {
+      id: newId(),
+      split: {
+        dir: "v",
+        sizes: [500, "auto", 600],
+        children: [
+          { id: newId(), front: { kind: "drawers", n: 2, heights: ["auto", "auto"] } },
+          // Obert al mig, amb un prestatge gruixut com les parets i a ras del davant.
+          { id: newId(), shelves: { n: 1, adjustable: false, thickness: 50, flush: true } },
+          { id: newId(), shelves: { n: 1, adjustable: true }, front: { kind: "grille", pattern: { ...DEFAULT_GRILLE, margin: 40, slotWidth: 12, slotGap: 6 }, mount: "removable", hinge: "left" } },
+        ],
+      },
+    },
+  )
+  return {
+    kind: "moble",
+    modules: [m],
+    references: [
+      { id: newId("r"), name: "TV 65\"", w: 1450, h: 830, d: 30, x: (W - 1450) / 2, y: Y + H + 200, z: 0, onWall: true },
+      { id: newId("r"), name: "Passacables Ø80", w: 80, h: 80, d: 40, x: W / 2 - 40, y: Y + H - 120, z: -10, effect: "cut", shape: "cylinder", axis: "z" },
+    ],
+  }
+}
+
+/** Moble de lavabo penjat, fronts encastats, amb taulell de pedra i la pica a sobre. */
+function bathVanity(): Composition {
+  const W = 1200, H = 480, D = 480, Y = 380
+  const m = withRoot(
+    defaultModule(newId("m"), "Lavabo", {
+      width: W,
+      height: H,
+      depth: D,
+      material: "Melamina blanca",
+      frontMaterial: "Freixe xapat",
+      thickness: 19,
+      back: "screwed",
+      backThickness: 10,
+      top: { kind: "none" },
+      base: { kind: "wall", height: Y },
+    }),
+    {
+      id: newId(),
+      split: {
+        dir: "v",
+        sizes: ["auto", "auto"],
+        children: [
+          { id: newId(), front: { kind: "drawers", n: 2, heights: ["auto", "auto"] } },
+          { id: newId(), front: { kind: "drawers", n: 2, heights: ["auto", "auto"] } },
+        ],
+      },
+    },
+  )
+  const fm: Module = { ...m, fronts: { ...m.fronts, style: "inset" } }
+  const stone: FreePart = { id: newId("p"), name: "Taulell de pedra", material: "Pedra", nest: false, orient: "flat", w: W, h: D + 20, thickness: 20, x: 0, y: Y + H, z: 0 }
+  return {
+    kind: "moble",
+    modules: [fm],
+    references: [
+      { id: newId("r"), name: "Pica sobre taulell", w: 500, h: 150, d: 380, x: (W - 500) / 2, y: Y + H + 20, z: 60 },
+      { id: newId("r"), name: "Desguàs Ø50", w: 50, h: 50, d: 40, x: W / 2 - 25, y: Y + 250, z: -10, effect: "cut", shape: "cylinder", axis: "z" },
+    ],
+    parts: [stone],
+  }
 }

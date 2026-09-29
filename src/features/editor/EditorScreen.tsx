@@ -10,6 +10,7 @@ import {
   LuChevronRight,
   LuPalette,
   LuPuzzle,
+  LuGroup,
   LuPanelLeftClose,
   LuPanelLeftOpen,
   LuPanelRightClose,
@@ -47,13 +48,13 @@ import { ArDialog } from "../../components/viewer/ArDialog"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox } from "../../core/build/buildComposition"
-import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, partBox, type Composition, type FreePart, type Module, type RefObject, type Zone } from "../../core/model"
+import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, moveGroupBy, partBox, type Composition, type FreePart, type Module, type RefObject, type Zone } from "../../core/model"
 import { updateProjectComposition } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
 import { ElevationEditor } from "../composition/ElevationEditor"
 import { RefActions, RefInspector } from "../composition/RefInspector"
-import { ORIENT_ICON, PartActions, PartInspector, PartJoineryForm } from "../composition/PartInspector"
+import { GroupInspector, ORIENT_ICON, PartActions, PartInspector, PartJoineryForm } from "../composition/PartInspector"
 import { StructureTree, type Selection } from "../composition/StructureTree"
 import { Tooltip } from "../../components/ui/tooltip"
 import { ZoneActions, ZonePanel } from "../composition/ZonePanel"
@@ -181,9 +182,10 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   // Selecció única (arbre, 3D i alçat van sincronitzats): moble, mòdul, compartiment o objecte.
   const [selectedModule, setSelectedModule] = useState<string>(initial.modules[0]!.id)
   const [selectedZone, setSelectedZone] = useState<string | null>(null)
-  const [selKind, setSelKind] = useState<"moble" | "module" | "zone" | "ref" | "part">(compositionKind(initial) === "lliure" ? "moble" : "module")
+  const [selKind, setSelKind] = useState<"moble" | "module" | "zone" | "ref" | "part" | "group">(compositionKind(initial) === "lliure" ? "moble" : "module")
   const [selectedRef, setSelectedRef] = useState<string | null>(null)
   const [selectedPart, setSelectedPart] = useState<string | null>(null)
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   // Mòbil: sota el visor, pestanyes Estructura / Propietats.
   const [mobilePane, setMobilePane] = useState<"tree" | "props">("props")
   const [exploded, setExploded] = useState(false)
@@ -343,7 +345,9 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
         ? { kind: "ref", id: selectedRef }
         : selKind === "part" && selectedPart && comp.parts?.some((r) => r.id === selectedPart)
           ? { kind: "part", id: selectedPart }
-          : kind === "lliure" || selKind === "ref" || selKind === "part"
+          : selKind === "group" && selectedGroup && comp.parts?.some((r) => r.group === selectedGroup)
+            ? { kind: "group", id: selectedGroup }
+          : kind === "lliure" || selKind === "ref" || selKind === "part" || selKind === "group"
             ? { kind: "moble" }
             : selectedZone && zone
           ? { kind: "zone", moduleId: module.id, zoneId: selectedZone }
@@ -356,6 +360,9 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
     } else if (s.kind === "part") {
       setSelectedPart(s.id)
       setSelKind("part")
+    } else if (s.kind === "group") {
+      setSelectedGroup(s.id)
+      setSelKind("group")
     } else if (s.kind === "module") {
       setSelectedModule(s.id)
       setSelectedZone(null)
@@ -386,6 +393,17 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   }, [])
   const selectZone = (id: string) => select({ kind: "zone", moduleId: module.id, zoneId: id })
 
+  /** Mou un grup de peces lliures (desplaçament en mm). */
+  const moveGroup = (group: string, dx: number, dy: number, dz: number) => setComp((c) => moveGroupBy(c, group, dx, dy, dz))
+  /**
+   * Clic a una peça lliure al 3D (com Figma): si és d'un grup i no hi ha res del grup
+   * seleccionat, selecciona el grup; si el grup (o una peça seva) ja ho està, la peça.
+   */
+  const selectPartFrom3D = (id: string) => {
+    const g = comp.parts?.find((p) => p.id === id)?.group
+    const inside = g && ((selection.kind === "group" && selection.id === g) || (selection.kind === "part" && comp.parts?.find((p) => p.id === selection.id)?.group === g))
+    select(g && !inside ? { kind: "group", id: g } : { kind: "part", id })
+  }
   /** Mou una peça lliure (arrossegada al 3D o amb les fletxes). */
   const movePart = (id: string, pos: { x: number; y: number; z: number }) =>
     setComp((c) => ({ ...c, parts: (c.parts ?? []).map((r) => (r.id === id ? { ...r, ...pos, y: Math.max(0, pos.y) } : r)) }))
@@ -488,6 +506,9 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
       } else if (selection.kind === "part") {
         setComp({ ...comp, parts: (comp.parts ?? []).filter((r) => r.id !== selection.id) })
         select({ kind: "moble" })
+      } else if (selection.kind === "group") {
+        setComp({ ...comp, parts: (comp.parts ?? []).filter((r) => r.group !== selection.id) })
+        select({ kind: "moble" })
       } else if (selection.kind === "zone") {
         const parent = parentOf(module.root, selection.zoneId)
         updateModule({ ...module, root: deleteZone(module.root, selection.zoneId) })
@@ -504,9 +525,17 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
 
   const nudgeRef = useRef<(e: KeyboardEvent) => void>(() => {})
   nudgeRef.current = (e: KeyboardEvent) => {
-    if ((selection.kind !== "ref" && selection.kind !== "part") || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return
+    if ((selection.kind !== "ref" && selection.kind !== "part" && selection.kind !== "group") || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return
     const t = e.target as HTMLElement | null
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return
+    if (selection.kind === "group") {
+      const k = e.shiftKey ? 10 : 1
+      const d = { ArrowLeft: [-k, 0, 0], ArrowRight: [k, 0, 0], ArrowUp: [0, k, 0], ArrowDown: [0, -k, 0], PageUp: [0, 0, k], PageDown: [0, 0, -k] }[e.key]
+      if (!d) return
+      e.preventDefault()
+      moveGroup(selection.id, d[0]!, d[1]!, d[2]!)
+      return
+    }
     const r = selection.kind === "part" ? comp.parts?.find((o) => o.id === selection.id) : comp.references.find((o) => o.id === selection.id)
     if (!r) return
     const k = e.shiftKey ? 10 : 1
@@ -701,6 +730,12 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
     ? { icon: <LuCamera />, text: "Foto del lloc" }
     : selection.kind === "moble"
       ? { icon: <LuBox />, text: name || "Moble" }
+      : selection.kind === "group"
+        ? { icon: <LuGroup />, text: selection.id, parent: "Grup de peces", onRename: (v) => {
+            const old = selection.id
+            setComp((c) => ({ ...c, parts: (c.parts ?? []).map((q) => (q.group === old ? { ...q, group: v } : q)) }))
+            select({ kind: "group", id: v })
+          } }
       : selection.kind === "part" && selPart
         ? { icon: createElement(ORIENT_ICON[selPart.orient]), text: selPart.name, parent: "Peça lliure", onRename: (v) => renamePart(selPart.id, v) }
       : selection.kind === "ref"
@@ -857,6 +892,8 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
         </Stack>
       ) : selection.kind === "ref" ? (
         <RefInspector comp={comp} id={selection.id} onChange={setComp} />
+      ) : selection.kind === "group" ? (
+        <GroupInspector comp={comp} group={selection.id} onChange={setComp} onSelectPart={(id) => select({ kind: "part", id })} onMove={(dx, dy, dz) => moveGroup(selection.id, dx, dy, dz)} />
       ) : selection.kind === "part" ? (
         <PartInspector comp={comp} id={selection.id} joints={build?.joints ?? []} onChange={setComp} />
       ) : selection.kind === "zone" && zone ? (
@@ -1172,7 +1209,9 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             onMoveRef={moveRef}
             parts={comp.parts}
             selectedPartId={selection.kind === "part" ? selection.id : null}
-            onSelectPart={(id) => select({ kind: "part", id })}
+            onSelectPart={selectPartFrom3D}
+            selectedGroup={selection.kind === "group" ? selection.id : null}
+            onMoveGroup={(g, dx, dy, dz) => moveGroup(g, dx, dy, dz)}
             onMovePart={movePart}
             onMoveModule={(id, dx, dy, all, dz) => setComp((c) => (all ? moveAllBy(c, dx) : moveModuleBy(c, id, dx, dy, dz)))}
           />

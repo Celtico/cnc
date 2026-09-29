@@ -78,3 +78,26 @@ export function newFreePart(orient: PartOrient, at: { x: number; y: number; z: n
   const s = partSize(p)
   return { ...p, x: Math.round(at.x - s[0] / 2) }
 }
+
+/**
+ * Escriptori flat-pack: laterals amb arc i cantonada arrodonida que travessen el tauler
+ * (pestanyes passants vistes), travesser del darrere i prestatge de sota amb pestanyes.
+ */
+export function flatPackDesk(): Composition {
+  const W = 1200, H = 740, D = 600
+  const sideShape: PNode[] = [
+    { x: 0, y: 0 },
+    { x: 90, y: 0, b: -0.55 },
+    { x: D - 90, y: 0 },
+    { x: D, y: 0 },
+    { x: D, y: H - 60, out: [0, 33] },
+    { x: D - 60, y: H, in: [33, 0] },
+    { x: 0, y: H },
+  ]
+  const sides = [0, W - T].map((x, i) => part({ name: i ? "Lateral dret" : "Lateral esquerre", orient: "side", w: D, h: H, x, y: 0, z: 0, shape: sideShape }))
+  // El tauler sobresurt 40 mm pels costats: els laterals el travessen i les pestanyes es veuen a sobre.
+  const top = part({ name: "Tauler", orient: "flat", w: W + 80, h: D, x: -40, y: H - T, z: 0 })
+  const rail = part({ name: "Travesser", orient: "front", w: W, h: 160, x: 0, y: 480, z: 40 })
+  const shelf = part({ name: "Prestatge de sota", orient: "flat", w: W, h: 320, x: 0, y: 160, z: 40 })
+  return flatPack([...sides, top, rail, shelf])
+}

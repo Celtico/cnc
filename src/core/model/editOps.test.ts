@@ -55,3 +55,19 @@ describe("arrossegar per ordenar", () => {
     expect(reorderRef(c, "s", "r", false).references.map((r) => r.id)).toEqual(["s", "r"])
   })
 })
+
+describe("grups de peces lliures", async () => {
+  const { moveGroupBy, duplicateGroup, newGroupName } = await import("./editOps")
+  const p = (id: string, x: number, group?: string) => ({ id, name: id, orient: "front" as const, w: 100, h: 100, thickness: 19, material: "M", x, y: 10, z: 0, ...(group ? { group } : {}) })
+  const comp = { modules: [], references: [], parts: [p("a", 0, "G"), p("b", 200, "G"), p("c", 500)] }
+  it("es mouen juntes i no baixen de terra", () => {
+    const c = moveGroupBy(comp, "G", 10, -50, 5)
+    expect(c.parts!.map((q) => [q.x, q.y, q.z])).toEqual([[10, 0, 5], [210, 0, 5], [500, 10, 0]])
+  })
+  it("duplicar el grup: peces noves amb un grup nou, al costat", () => {
+    const r = duplicateGroup(comp, "G")
+    expect(r.group).toBe("G (còpia)")
+    expect(r.comp.parts!.filter((q) => q.group === r.group).map((q) => q.x)).toEqual([350, 550])
+    expect(newGroupName(comp)).toBe("Grup 1")
+  })
+})

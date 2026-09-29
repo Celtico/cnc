@@ -9,12 +9,14 @@ import {
   LuChevronRight,
   LuCopy,
   LuEllipsis,
+  LuGroup,
+  LuUngroup,
   LuPlus,
   LuScan,
   LuTrash2,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcon"
-import { compositionKind, insertPartCopy, insertRefCopy, modulePresetsFor, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
+import { compositionKind, duplicateGroup, newGroupName, partGroups, insertPartCopy, insertRefCopy, modulePresetsFor, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
 import { ORIENT_ICON, PartAddMenu } from "./PartInspector"
 import { RefAddMenu } from "./RefInspector"
 import { zoneLabel } from "./zoneLabel"
@@ -27,6 +29,8 @@ export type Selection =
   | { kind: "zone"; moduleId: string; zoneId: string }
   | { kind: "ref"; id: string }
   | { kind: "part"; id: string }
+  /** Grup de peces lliures (id = nom del grup). */
+  | { kind: "group"; id: string }
 
 /**
  * Arbre d'estructura (com l'outliner de Figma o Fusion): el moble, els seus mòduls amb
@@ -132,6 +136,20 @@ export function StructureTree({
     : [{ row: "floor", label: "" }]
   const onlyParts = compositionKind(comp) === "lliure"
   const parts = comp.parts ?? []
+  // Grups de peces: plegats; s'obre sol el de la peça seleccionada.
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+  const selGroup = selection.kind === "part" ? parts.find((q) => q.id === selection.id)?.group : undefined
+  if (selGroup && !openGroups.has(selGroup)) setOpenGroups(new Set([...openGroups, selGroup]))
+  const toggleGroup = (g: string) => setOpenGroups((o) => {
+    const n = new Set(o)
+    if (n.has(g)) n.delete(g)
+    else n.add(g)
+    return n
+  })
+  const setPartGroup = (id: string, group: string | undefined) => {
+    onChange({ ...comp, parts: parts.map((q) => (q.id === id ? { ...q, group } : q)) })
+    if (group) setOpenGroups((o) => new Set([...o, group]))
+  }
   const removePart = (id: string) => {
     onChange({ ...comp, parts: parts.filter((r) => r.id !== id) })
     if (selection.kind === "part" && selection.id === id) onSelect({ kind: "moble" })
@@ -229,38 +247,108 @@ export function StructureTree({
           {onlyParts ? "Cap. Afegeix-ne amb el +: on dues peces es toquen o s'encreuen, s'hi fa l'encaix sol." : "Cap. Taulers solts que van al nesting (prestatges, travessers, potes…), amb encaixos entre ells."}
         </Text>
       )}
-      {parts.map((r) => {
-        const Icon = ORIENT_ICON[r.orient]
-        return (
-          <Row
-            key={r.id}
-            depth={1}
-            icon={<Icon />}
-            label={r.name}
-            hint={`${r.w} × ${r.h}`}
-            selected={selection.kind === "part" && selection.id === r.id}
-            onClick={() => onSelect({ kind: "part", id: r.id })}
-            dnd={dnd("part", r.id)}
-            menu={
-              <RowMenu label={`Opcions de «${r.name}»`}>
-                <Menu.Item
-                  value="dup"
-                  onClick={() => {
-                    const res = insertPartCopy(comp, r)
-                    onChange(res.comp)
-                    onSelect({ kind: "part", id: res.id })
-                  }}
-                >
-                  <LuCopy /> Duplicar
-                </Menu.Item>
-                <Menu.Item value="del" color="fg.error" onClick={() => removePart(r.id)}>
-                  <LuTrash2 /> Eliminar
-                </Menu.Item>
-              </RowMenu>
-            }
-          />
-        )
-      })}
+      {(() => {
+        const seen = new Set<string>()
+        const partRow = (r: (typeof parts)[number], depth: number) => {
+          const Icon = ORIENT_ICON[r.orient]
+          const groups = partGroups(parts).filter((g) => g !== r.group)
+          return (
+            <Row
+              key={r.id}
+              depth={depth}
+              icon={<Icon />}
+              label={r.name}
+              hint={`${r.w} × ${r.h}`}
+              selected={selection.kind === "part" && selection.id === r.id}
+              onClick={() => onSelect({ kind: "part", id: r.id })}
+              dnd={dnd("part", r.id)}
+              menu={
+                <RowMenu label={`Opcions de «${r.name}»`}>
+                  <Menu.Item
+                    value="dup"
+                    onClick={() => {
+                      const res = insertPartCopy(comp, r)
+                      onChange(res.comp)
+                      onSelect({ kind: "part", id: res.id })
+                    }}
+                  >
+                    <LuCopy /> Duplicar
+                  </Menu.Item>
+                  <Menu.Separator />
+                  <Menu.Item value="group-new" onClick={() => setPartGroup(r.id, newGroupName(comp))}>
+                    <LuGroup /> Agrupar en un grup nou
+                  </Menu.Item>
+                  {groups.map((g) => (
+                    <Menu.Item key={g} value={`group-${g}`} onClick={() => setPartGroup(r.id, g)}>
+                      <LuGroup /> Posar a «{g}»
+                    </Menu.Item>
+                  ))}
+                  {r.group && (
+                    <Menu.Item value="ungroup" onClick={() => setPartGroup(r.id, undefined)}>
+                      <LuUngroup /> Treure del grup
+                    </Menu.Item>
+                  )}
+                  <Menu.Separator />
+                  <Menu.Item value="del" color="fg.error" onClick={() => removePart(r.id)}>
+                    <LuTrash2 /> Eliminar
+                  </Menu.Item>
+                </RowMenu>
+              }
+            />
+          )
+        }
+        return parts.map((r) => {
+          if (!r.group) return partRow(r, 1)
+          if (seen.has(r.group)) return null
+          const g = r.group
+          seen.add(g)
+          const members = parts.filter((q) => q.group === g)
+          const open = openGroups.has(g)
+          return (
+            <Box key={`g:${g}`}>
+              <Row
+                depth={1}
+                icon={open ? <LuChevronDown /> : <LuChevronRight />}
+                onToggle={() => toggleGroup(g)}
+                toggleLabel={open ? `Plegar «${g}»` : `Desplegar «${g}»`}
+                label={g}
+                hint={`${members.length} peces`}
+                selected={selection.kind === "group" && selection.id === g}
+                onClick={() => onSelect({ kind: "group", id: g })}
+                menu={
+                  <RowMenu label={`Opcions de «${g}»`}>
+                    <Menu.Item
+                      value="dup"
+                      onClick={() => {
+                        const res = duplicateGroup(comp, g)
+                        onChange(res.comp)
+                        onSelect({ kind: "group", id: res.group })
+                      }}
+                    >
+                      <LuCopy /> Duplicar el grup
+                    </Menu.Item>
+                    <Menu.Item value="ungroup" onClick={() => onChange({ ...comp, parts: parts.map((q) => (q.group === g ? { ...q, group: undefined } : q)) })}>
+                      <LuUngroup /> Desagrupar
+                    </Menu.Item>
+                    <Menu.Separator />
+                    <Menu.Item
+                      value="del"
+                      color="fg.error"
+                      onClick={() => {
+                        onChange({ ...comp, parts: parts.filter((q) => q.group !== g) })
+                        onSelect({ kind: "moble" })
+                      }}
+                    >
+                      <LuTrash2 /> Eliminar el grup
+                    </Menu.Item>
+                  </RowMenu>
+                }
+              />
+              {open && members.map((q) => partRow(q, 2))}
+            </Box>
+          )
+        })
+      })()}
 
       <HStack justify="space-between" pt={3} pb={1} px={1}>
         <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
