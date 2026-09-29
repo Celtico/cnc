@@ -331,6 +331,20 @@ class Builder {
     return this.add({ ...this.basePanel(id, name, label, role, length, width, this.d.t, c.material, grain, eb, pl), assembly })
   }
 
+  /**
+   * Cantonades de les parets buides: sempre a inglet on un lateral es troba amb la tapa o la
+   * base (com un bloc massís, sense cap cantell). Les pells de fora del sostre i de la base
+   * van de fora a fora amb el cantell a 45°, igual que les dels laterals; les tires del davant
+   * fan un marc amb els talls a 45° en el seu pla (contorn, es fa al nesting).
+   */
+  private hollowCorners(): { top: boolean; bottom: boolean } {
+    const { m, d } = this
+    return {
+      top: !!d.hollow && d.hasTop && m.carcass.top.kind === "full" && !d.tableTop,
+      bottom: !!d.hollow && d.hasBase && d.baseY === 0,
+    }
+  }
+
   private buildHollowSide(isLeft: boolean): void {
     const { m, d } = this
     const c = m.carcass
@@ -339,39 +353,50 @@ class Builder {
     const k = isLeft ? "left" : "right"
     const nm = isLeft ? "Lateral esquerre" : "Lateral dret"
     const skinDepth = D - t - sideZ0
+    const mc = this.hollowCorners()
+    // La pell de dins queda entre les pells de fora de la base i del sostre quan són a inglet.
+    const yi0 = mc.bottom ? t : 0
+    const yi1 = mc.top ? H - t : H
     const grooves: Panel["grooves"] = []
     if (c.back === "groove") {
       const g = c.grooveDepth
       const gy0 = d.hasBase ? d.interior.y0 - g : d.interior.y0
       const gy1 = d.hasTop ? d.interior.y1 + g : d.interior.y1
-      grooves.push({ x: r(gy0), y: isLeft ? r(c.backSetback) : r(skinDepth - c.backSetback - d.tb), w: r(gy1 - gy0), h: d.tb, depth: g, face: "A", tag: "back" })
+      grooves.push({ x: r(gy0 - yi0), y: isLeft ? r(c.backSetback) : r(skinDepth - c.backSetback - d.tb), w: r(gy1 - gy0), h: d.tb, depth: g, face: "A", tag: "back" })
     }
     // Pells: la de fora a x = 0 / W, la de dins a la cara interior (x = ws / W − ws), cara A cap a dins.
     const outer = isLeft
       ? placement([0, 0, sideZ0], Y, Z, X, neg(X))
       : placement([W, 0, D - t], Y, neg(Z), neg(X), X)
     const inner = isLeft
-      ? placement([ws - t, 0, sideZ0], Y, Z, X, neg(X))
-      : placement([W - ws + t, 0, D - t], Y, neg(Z), neg(X), X)
-    this.hollowPiece(`side-${k}`, isLeft ? "lat e" : "lat d", `${nm} (pell de fora)`, "side", H, skinDepth, edges("right"), outer)
-    const innerPanel = this.add({ ...this.basePanel(`side-${k}-inner`, isLeft ? "lat e int" : "lat d int", `${nm} (pell de dins)`, "side", H, skinDepth, t, c.material, "x", edges("right"), inner), grooves, assembly: `${nm} (paret buida)` })
-    // Tira del davant: tota l'alçada i tot el gruix aparent.
+      ? placement([ws - t, yi0, sideZ0], Y, Z, X, neg(X))
+      : placement([W - ws + t, yi0, D - t], Y, neg(Z), neg(X), X)
+    const outerMitres = [...(mc.bottom ? (["left"] as const) : []), ...(mc.top ? (["right"] as const) : [])]
+    const outerPanel = this.hollowPiece(`side-${k}`, isLeft ? "lat e" : "lat d", `${nm} (pell de fora)`, "side", H, skinDepth, mc.top ? { ...NO_EDGES } : edges("right"), outer)
+    if (outerMitres.length) outerPanel.mitres = [...outerMitres]
+    const innerPanel = this.add({ ...this.basePanel(`side-${k}-inner`, isLeft ? "lat e int" : "lat d int", `${nm} (pell de dins)`, "side", yi1 - yi0, skinDepth, t, c.material, "x", mc.top ? { ...NO_EDGES } : edges("right"), inner), grooves, assembly: `${nm} (paret buida)` })
+    // Tira del davant: tota l'alçada i tot el gruix aparent; a les cantonades, tall a 45° en el seu pla.
     const xMax = isLeft ? ws : W
-    this.hollowPiece(`side-${k}-facing`, "tira", `${nm} (tira del davant)`, "facing", H, ws, edges("right", isLeft ? "top" : "bottom"), placement([xMax, 0, D - t], Y, neg(X), Z, Z))
-    // Llistons: darrere (tota l'alçada) i als dos extrems (dalt i baix).
+    const yOut = isLeft ? ws : 0
+    const yIn = isLeft ? 0 : ws
+    const facing = this.hollowPiece(`side-${k}-facing`, "tira", `${nm} (tira del davant)`, "facing", H, ws, edges(...(mc.top ? [] : (["right"] as const)), isLeft ? "top" : "bottom"), placement([xMax, 0, D - t], Y, neg(X), Z, Z))
+    if (mc.top || mc.bottom) facing.outline = [[0, yOut], [H, yOut], [mc.top ? H - d.wt : H, yIn], [mc.bottom ? d.wb : 0, yIn]]
+    // Llistons: darrere (entre les pells de fora de base i sostre) i als extrems que no tanca cap pell.
     const xIn = isLeft ? ws - t : W - t
     const gap = ws - 2 * t
-    this.hollowPiece(`side-${k}-spacer-back`, "llistó", `${nm} (llistó del darrere)`, "spacer", H, gap, { ...NO_EDGES }, placement([xIn, 0, sideZ0], Y, neg(X), Z, neg(Z)))
+    this.hollowPiece(`side-${k}-spacer-back`, "llistó", `${nm} (llistó del darrere)`, "spacer", yi1 - yi0, gap, { ...NO_EDGES }, placement([xIn, yi0, sideZ0], Y, neg(X), Z, neg(Z)))
     const spL = D - t - sideZ0 - t
-    for (const [end, y] of [["bottom", t], ["top", H]] as const)
+    for (const [end, y] of [["bottom", t], ["top", H]] as const) {
+      if ((end === "top" && mc.top) || (end === "bottom" && mc.bottom)) continue
       this.hollowPiece(`side-${k}-spacer-${end}`, "llistó", `${nm} (llistó ${end === "top" ? "de dalt" : "de baix"})`, "spacer", spL, gap, { ...NO_EDGES }, placement([xIn, y, sideZ0 + t], Z, neg(X), neg(Y), end === "top" ? Y : neg(Y)))
+    }
     this.verticals.push({ panel: innerPanel, xL: isLeft ? 0 : W - ws, xR: isLeft ? ws : W, yB: 0, yT: H, zRear: sideZ0, zFront: D, outer: true })
   }
 
   private buildHollowHorizontal(which: "bottom" | "top"): void {
     const { m, d } = this
     const c = m.carcass
-    const { t, D, sideZ0, interior } = d
+    const { t, D, sideZ0, interior, ws } = d
     const isBottom = which === "bottom"
     const w = isBottom ? d.wb : d.wt
     const y0 = isBottom ? d.baseY : d.H - w
@@ -379,16 +404,29 @@ class Builder {
     const len = interior.x1 - interior.x0
     const skinDepth = D - t - sideZ0
     const nm = isBottom ? "Base" : "Sostre"
+    const mc = this.hollowCorners()
+    const mitred = isBottom ? mc.bottom : mc.top
+    // A inglet: la pell de fora i la tira van de fora a fora (fins a x = 0 / W on hi ha lateral).
+    const mL = mitred && c.sides.left
+    const mR = mitred && c.sides.right
+    const ox0 = mL ? 0 : x0
+    const olen = (mR ? d.W : interior.x1) - ox0
     const grooves: Panel["grooves"] = []
     if (c.back === "groove")
       grooves.push({ x: 0, y: isBottom ? r(skinDepth - c.backSetback - d.tb) : r(c.backSetback), w: r(len), h: d.tb, depth: c.grooveDepth, face: "A", tag: "back" })
     // Pells: la de fora (a baix a la base, a dalt al sostre) i la de dins, cara A cap a l'interior.
-    const outerPl = isBottom ? placement([x0, y0, D - t], X, neg(Z), Y, neg(Y)) : placement([x0, d.H, sideZ0], X, Z, neg(Y), Y)
+    const outerPl = isBottom ? placement([ox0, y0, D - t], X, neg(Z), Y, neg(Y)) : placement([ox0, d.H, sideZ0], X, Z, neg(Y), Y)
     const innerPl = isBottom ? placement([x0, y0 + w - t, D - t], X, neg(Z), Y, neg(Y)) : placement([x0, d.H - w + t, sideZ0], X, Z, neg(Y), Y)
-    this.hollowPiece(which, isBottom ? "baix" : "dalt", `${nm} (pell de fora)`, which, len, skinDepth, { ...NO_EDGES }, outerPl)
+    const outerPanel = this.hollowPiece(which, isBottom ? "baix" : "dalt", `${nm} (pell de fora)`, which, olen, skinDepth, { ...NO_EDGES }, outerPl)
+    if (mL || mR) outerPanel.mitres = [...(mL ? (["left"] as const) : []), ...(mR ? (["right"] as const) : [])]
     const innerPanel = this.add({ ...this.basePanel(`${which}-inner`, isBottom ? "baix int" : "dalt int", `${nm} (pell de dins)`, which, len, skinDepth, t, c.material, "x", { ...NO_EDGES }, innerPl), grooves, assembly: `${nm} (paret buida)` })
-    // Tira del davant (el cantell que es veu, de gruix aparent).
-    this.hollowPiece(`${which}-facing`, "tira", `${nm} (tira del davant)`, "facing", len, w, edges(isBottom ? "bottom" : "top"), placement([x0, y0, D - t], X, Y, Z, Z))
+    // Tira del davant (el cantell que es veu, de gruix aparent), amb els talls a 45° del marc.
+    const facing = this.hollowPiece(`${which}-facing`, "tira", `${nm} (tira del davant)`, "facing", olen, w, edges(isBottom ? "bottom" : "top"), placement([ox0, y0, D - t], X, Y, Z, Z))
+    if (mL || mR) {
+      const yOut = isBottom ? 0 : w
+      const yIn = isBottom ? w : 0
+      facing.outline = [[0, yOut], [olen, yOut], [mR ? olen - ws : olen, yIn], [mL ? ws : 0, yIn]]
+    }
     // Llistons: darrere i als dos extrems.
     const gap = w - 2 * t
     this.hollowPiece(`${which}-spacer-back`, "llistó", `${nm} (llistó del darrere)`, "spacer", len, gap, { ...NO_EDGES }, placement([x0, y0 + t, sideZ0], X, Y, Z, neg(Z)))
@@ -659,34 +697,44 @@ class Builder {
     const c = m.carcass
     const n = zone.shelves!.n
     const t = d.t
+    // Gruix aparent (prestatges buits): cal lloc per a dues pells i un llistó.
+    const want = zone.shelves!.thickness
+    const T = want && want >= 2 * t + 6 ? want : t
+    const hollow = T > t
+    if (want && !hollow) this.warnings.push({ code: "hollow", message: `Prestatges de ${want} mm: amb tauler de ${t} cal un gruix d'almenys ${2 * t + 6} mm. Es fan massissos.`, zoneId: zone.id })
     const width = rect.x1 - rect.x0
     const length = width - c.shelfClearance
     const depth = d.availDepth - c.shelfSetback
     const innerH = rect.y1 - rect.y0
-    const gap = (innerH - n * t) / (n + 1)
-    if (width > 800 && t <= 19) {
+    const gap = (innerH - n * T) / (n + 1)
+    if (width > 800 && t <= 19 && !hollow) {
       this.warnings.push({ code: "shelf-span", message: `Prestatge de ${t} mm amb una llum de ${r(width)} mm: es vinclarà (màxim recomanat 800).`, zoneId: zone.id })
     }
+    const x0 = rect.x0 + c.shelfClearance / 2
+    const zF = d.D - c.shelfSetback
     for (let k = 1; k <= n; k++) {
       this.shelfCount += 1
-      const target = rect.y0 + k * gap + (k - 1) * t
+      const target = rect.y0 + k * gap + (k - 1) * T
       const y = zone.shelves!.adjustable && rowYs.length ? snap(target, rowYs) : r(target)
       const idx = this.shelfCount
-      this.add(
-        this.basePanel(
-          `shelf-${idx}`,
-          this.shelfCount === 1 && n === 1 ? "estanter" : `estanter ${idx}`,
-          this.shelfCount === 1 && n === 1 ? "Prestatge" : `Prestatge ${idx}`,
-          "shelf",
-          length,
-          depth,
-          t,
-          c.material,
-          "x",
-          edges("bottom"),
-          placement([rect.x0 + c.shelfClearance / 2, y, d.D - c.shelfSetback], X, neg(Z), Y, Z),
-        ),
-      )
+      const nm = this.shelfCount === 1 && n === 1 ? "Prestatge" : `Prestatge ${idx}`
+      const code = this.shelfCount === 1 && n === 1 ? "estanter" : `estanter ${idx}`
+      if (!hollow) {
+        this.add(this.basePanel(`shelf-${idx}`, code, nm, "shelf", length, depth, t, c.material, "x", edges("bottom"), placement([x0, y, zF], X, neg(Z), Y, Z)))
+        continue
+      }
+      // Prestatge buit: pell de baix i de dalt, tira al davant i llistons (darrere i extrems).
+      const assembly = `${nm} (buit)`
+      const piece = (id: string, label: string, role: PanelRole, L: number, Wd: number, eb: EdgeBanding, pl: Panel["placement"]) =>
+        this.add({ ...this.basePanel(id, code, label, role, L, Wd, t, c.material, "x", eb, pl), assembly })
+      const skinD = depth - t
+      piece(`shelf-${idx}`, `${nm} (pell de baix)`, "shelf", length, skinD, { ...NO_EDGES }, placement([x0, y, zF - t], X, neg(Z), Y, Z))
+      piece(`shelf-${idx}-top`, `${nm} (pell de dalt)`, "shelf", length, skinD, { ...NO_EDGES }, placement([x0, y + T - t, zF - t], X, neg(Z), Y, Z))
+      piece(`shelf-${idx}-facing`, `${nm} (tira del davant)`, "facing", length, T, edges("bottom", "top", "left", "right"), placement([x0, y, zF - t], X, Y, Z, Z))
+      const zBack = zF - depth
+      piece(`shelf-${idx}-spacer-back`, `${nm} (llistó del darrere)`, "spacer", length, T - 2 * t, { ...NO_EDGES }, placement([x0, y + t, zBack], X, Y, Z, neg(Z)))
+      for (const [end, x] of [["left", x0], ["right", x0 + length - t]] as const)
+        piece(`shelf-${idx}-spacer-${end}`, `${nm} (llistó ${end === "left" ? "esquerre" : "dret"})`, "spacer", depth - 2 * t, T - 2 * t, { ...NO_EDGES }, placement([x, y + t, zF - t], neg(Z), Y, X, end === "left" ? neg(X) : X))
     }
   }
 

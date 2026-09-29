@@ -280,8 +280,14 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     guies, ranura del fons), llistons entre pells (rol `spacer`) i tira del davant (rol
     `facing`) del gruix aparent. `derive` dona `ws/wb/wt` (gruix de cada paret) i la llum
     interior; `frontTerritory` usa el gruix real de cada paret exterior. Sense espigues entre
-    parets (s'encolen); calen ≥ 2·gruix + 6 mm (si no, avís i es fan massisses). Inglet i
-    parets buides no es combinen.
+    parets (s'encolen); calen ≥ 2·gruix + 6 mm (si no, avís i es fan massisses). Les
+    cantonades són **sempre a inglet** (`hollowCorners`: sostre sencer; base si és a terra,
+    baseY 0): pells de fora de fora a fora amb el cantell a 45°, pell de dins entre elles i
+    tires del davant en marc amb el tall a 45° en el seu pla (`outline`, es fa al nesting).
+  - **Prestatges gruixuts** (`zone.shelves.thickness`, «Gruixuts (buits)» a Prestatges):
+    pell de baix i de dalt, tira al davant i llistons; el repartiment compta el gruix aparent.
+    Queden bé sobretot sense porta.
+  - **Peces**: sense botó d'exportar (tot és a Exportar).
   - **Post-processos** (`core/process/processes.ts`): `panelProcesses` dedueix el que toca a
     cada peça després del nesting, en ordre: 2a cara → Inglet 45° → Cantell → Forats de cantell →
     Encolar (`Panel.assembly`). L'app NO fa etiquetes (les fa el taller-cnc-nest): només ho

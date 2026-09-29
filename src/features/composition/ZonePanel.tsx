@@ -183,9 +183,9 @@ export function ZonePanel({
                 min={0}
                 max={20}
                 step={1}
-                onChange={(n) => onChange(setShelves(root, zone.id, n > 0 || zone.shelves ? { n: Math.max(0, n), adjustable: zone.shelves?.adjustable ?? true } : null))}
+                onChange={(n) => onChange(setShelves(root, zone.id, n > 0 || zone.shelves ? { ...zone.shelves, n: Math.max(0, n), adjustable: zone.shelves?.adjustable ?? true } : null))}
               />
-              <Switch.Root size="sm" checked={zone.shelves?.adjustable ?? true} onCheckedChange={(e) => onChange(setShelves(root, zone.id, { n: zone.shelves?.n ?? 0, adjustable: e.checked }))}>
+              <Switch.Root size="sm" checked={zone.shelves?.adjustable ?? true} onCheckedChange={(e) => onChange(setShelves(root, zone.id, { ...zone.shelves, n: zone.shelves?.n ?? 0, adjustable: e.checked }))}>
                 <Switch.HiddenInput />
                 <Switch.Control />
                 <Switch.Label>Regulables</Switch.Label>
@@ -194,6 +194,27 @@ export function ZonePanel({
                 <Text textStyle="xs" color="fg.muted">
                   Forats System 32 als laterals per moure'ls.
                 </Text>
+              )}
+              {/* Prestatges gruixuts (buits): queden més bé a la vista, sense porta. */}
+              <Switch.Root
+                size="sm"
+                checked={!!zone.shelves?.thickness}
+                onCheckedChange={(e) => onChange(setShelves(root, zone.id, { n: zone.shelves?.n ?? 0, adjustable: zone.shelves?.adjustable ?? true, ...(e.checked ? { thickness: 50 } : {}) }))}
+              >
+                <Switch.HiddenInput />
+                <Switch.Control />
+                <Switch.Label>Gruixuts (buits)</Switch.Label>
+              </Switch.Root>
+              {zone.shelves?.thickness && (
+                <NumberField
+                  label="Gruix aparent"
+                  value={zone.shelves.thickness}
+                  min={20}
+                  max={200}
+                  step={5}
+                  onChange={(thickness) => onChange(setShelves(root, zone.id, { ...zone.shelves!, thickness }))}
+                  help={zone.front ? "Dues pells, llistons i una tira al davant. Sense porta es veuen més bé." : "Dues pells, llistons i una tira al davant: fan el prestatge com si fos de fusta gruixuda."}
+                />
               )}
             </PanelSection>
           )}

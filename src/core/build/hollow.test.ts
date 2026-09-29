@@ -12,6 +12,10 @@ const mod = (): Module => {
 const overlap = (a: ReturnType<typeof panelBox>, b: ReturnType<typeof panelBox>) =>
   [0, 1, 2].every((i) => Math.min(a.max[i]!, b.max[i]!) - Math.max(a.min[i]!, b.min[i]!) > 0.5)
 
+// A les cantonades a inglet, dues pells (o dues tires amb el tall a 45°) comparteixen la caixa
+// de la cantonada: cadascuna n'ocupa mig triangle.
+const cornerPair = (a: { mitres?: unknown[]; outline?: unknown[] }, b: { mitres?: unknown[]; outline?: unknown[] }) => (!!a.mitres && !!b.mitres) || (!!a.outline && !!b.outline)
+
 describe("parets buides", () => {
   it("cada paret és una caixa: dues pells, tira del davant i llistons", () => {
     const b = buildModule(mod())
@@ -21,7 +25,8 @@ describe("parets buides", () => {
       expect(ids).toContain(`${w}-inner`)
       expect(ids).toContain(`${w}-facing`)
     }
-    expect(b.panels.filter((p) => p.role === "spacer").length).toBe(12)
+    // Els extrems dels laterals els tanquen les pells de fora de base i sostre (a inglet).
+    expect(b.panels.filter((p) => p.role === "spacer").length).toBe(8)
     expect(b.panels.find((p) => p.id === "side-left-facing")!.width).toBe(60)
   })
   it("cap peça es trepitja amb una altra", () => {
@@ -29,7 +34,7 @@ describe("parets buides", () => {
     // El fons entra a la ranura de les pells de dins: no compta.
     const boxes = panels.filter((p) => p.role !== "back").map((p) => ({ p, b: panelBox(p) }))
     const hits: string[] = []
-    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) if (overlap(boxes[i]!.b, boxes[j]!.b)) hits.push(`${boxes[i]!.p.id} × ${boxes[j]!.p.id}`)
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) if (overlap(boxes[i]!.b, boxes[j]!.b) && !cornerPair(boxes[i]!.p, boxes[j]!.p)) hits.push(`${boxes[i]!.p.id} × ${boxes[j]!.p.id}`)
     expect(hits).toEqual([])
   })
   it("l'interior i els fronts compten el gruix aparent", () => {
@@ -39,5 +44,19 @@ describe("parets buides", () => {
     const doors = b.panels.filter((p) => p.role === "door")
     const x0 = Math.min(...doors.map((p) => panelBox(p).min[0]))
     expect(x0).toBeLessThan(5) // tapen també la paret gruixuda
+  })
+})
+
+describe("parets buides a inglet", () => {
+  it("pells de fora a 45° a les cantonades i tires del davant en marc", () => {
+    const b = buildModule(mod())
+    const top = b.panels.find((p) => p.id === "top")!
+    const side = b.panels.find((p) => p.id === "side-left")!
+    expect(top.length).toBe(800)
+    expect(top.mitres).toEqual(["left", "right"])
+    expect(side.mitres).toEqual(["left", "right"])
+    const f = b.panels.find((p) => p.id === "side-left-facing")!
+    expect(f.outline).toHaveLength(4)
+    expect(b.panels.find((p) => p.id === "top-facing")!.length).toBe(800)
   })
 })

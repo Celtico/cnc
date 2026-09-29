@@ -125,15 +125,28 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
 
         {/* Acabats: com s'uneix la tapa amb els laterals i com van els fronts. */}
         <SimpleGrid columns={2} gap={3}>
-          <IconChoice
-            label="Cantonades"
-            value={c.joint ?? "butt"}
-            options={[
-              { value: "butt", label: "Normals", icon: LuSquare, hint: "Normals: la tapa entre els laterals, amb espigues" },
-              { value: "mitre", label: "A inglet", icon: LuTriangleRight, hint: "A inglet: tapa i laterals tallats a 45°, no es veu cap cantell" },
-            ]}
-            onChange={(joint) => set({ joint: joint === "butt" ? undefined : joint })}
-          />
+          {c.hollow ? (
+            // Amb parets buides les cantonades són sempre a inglet (com un bloc massís).
+            <Stack gap={1.5}>
+              <HStack gap={1.5} fontSize="sm">
+                <Text fontWeight="medium">Cantonades</Text>
+                <Text color="fg.muted">· A inglet</Text>
+              </HStack>
+              <Text fontSize="xs" color="fg.muted">
+                Amb parets buides, sempre a inglet: pells de fora a 45° i tires del davant en marc.
+              </Text>
+            </Stack>
+          ) : (
+            <IconChoice
+              label="Cantonades"
+              value={c.joint ?? "butt"}
+              options={[
+                { value: "butt", label: "Normals", icon: LuSquare, hint: "Normals: la tapa entre els laterals, amb espigues" },
+                { value: "mitre", label: "A inglet", icon: LuTriangleRight, hint: "A inglet: tapa i laterals tallats a 45°, no es veu cap cantell" },
+              ]}
+              onChange={(joint) => set({ joint: joint === "butt" ? undefined : joint })}
+            />
+          )}
           <IconChoice
             label="Fronts"
             value={module.fronts.style ?? "overlay"}

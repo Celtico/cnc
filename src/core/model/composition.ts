@@ -159,7 +159,7 @@ export type Front = z.infer<typeof FrontSchema>
 export interface Zone {
   id: string
   split?: { dir: "v" | "h"; sizes: (number | "auto")[]; children: Zone[] }
-  shelves?: { n: number; adjustable: boolean }
+  shelves?: { n: number; adjustable: boolean; thickness?: number }
   front?: Front
 }
 
@@ -173,7 +173,17 @@ export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
         children: z.array(ZoneSchema).min(2),
       })
       .optional(),
-    shelves: z.object({ n: z.number().int().min(0).max(20), adjustable: z.boolean() }).optional(),
+    shelves: z
+      .object({
+        n: z.number().int().min(0).max(20),
+        adjustable: z.boolean(),
+        /**
+         * Prestatges gruixuts (buits): gruix aparent en mm. Dues pells, llistons i una tira al
+         * davant, com les parets buides. Sense: del gruix del tauler.
+         */
+        thickness: mm.min(20).max(200).optional(),
+      })
+      .optional(),
     front: FrontSchema.optional(),
   }),
 )

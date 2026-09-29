@@ -1,11 +1,8 @@
-import { Badge, Box, Button, Card, HStack, SimpleGrid, Stack, Stat, Table, Text, VStack } from "@chakra-ui/react"
+import { Badge, Box, Card, HStack, SimpleGrid, Stack, Stat, Table, Text, VStack } from "@chakra-ui/react"
 import { useMemo, useState } from "react"
-import { LuDownload } from "react-icons/lu"
 import { PanelDrawing } from "../../components/PanelDrawing"
 import { toCutList } from "../../core/cutlist/toCutList"
-import { cutListToCsv } from "../../core/export/csv"
 import type { Grain } from "../../core/model"
-import { downloadText, slugify } from "../download"
 import { useCompositionPanels, useProject } from "../useProject"
 
 const GRAIN: Record<Grain, string> = { x: "Llarg", y: "Ample", none: "—" }
@@ -21,18 +18,8 @@ export function CutListScreen({ projectId }: { projectId: number }) {
 
   if (!project) return null
 
-  const exportCsv = () => {
-    downloadText(cutListToCsv(list), `${slugify(project.name)}-peces.csv`, "text/csv")
-  }
-
   return (
     <VStack align="stretch" gap={5}>
-      <HStack justify="flex-end" wrap="wrap" gap={3}>
-        <Button colorPalette="wood" onClick={exportCsv}>
-          <LuDownload /> Exportar CSV
-        </Button>
-      </HStack>
-
       <SimpleGrid columns={3} gap={3}>
         <StatBox label="Peces" value={String(list.totalPanels)} />
         <StatBox label="Superfície" value={`${list.totalArea.toFixed(2)} m²`} />
