@@ -311,6 +311,9 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     material porta `nest: false` (es posa sol en triar-lo) i va a `build.extras`: es veu al 3D,
     surt a Peces › «Elements sense nesting» i no va al nesting ni als fitxers del taller, ni fa
     encaixos.
+    A l'inspector de la peça, **Mides** és sempre Ample · Alt · Fondària (X · Y · Z; la del gruix
+    depèn de l'orientació): de CNC, el gruix es tria entre els del tauler; si no és de CNC, les
+    tres lliures i sense Veta ni interruptor d'encaixos.
   - **Opcions que no toquen s'amaguen**: sense fons no surten el material i el gruix del fons
     ni la ranura del fons; sense laterals (o sense tapa, si no són parets buides), no surt
     Cantonades.

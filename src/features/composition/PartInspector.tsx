@@ -1,4 +1,4 @@
-import { Badge, Button, HStack, IconButton, Menu, Portal, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
+import { Badge, Button, Field, HStack, IconButton, Menu, NativeSelect, Portal, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
 import { useState } from "react"
 import type { IconType } from "react-icons"
 import {
@@ -28,6 +28,8 @@ import {
   materialByName,
   newFreePart,
   reorientPart,
+  PART_AXES,
+  partSize,
   type Composition,
   type FreePart,
   type Joinery,
@@ -100,13 +102,16 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
   if (!p) return null
   const update = (patch: Partial<FreePart>) => onChange({ ...comp, parts: (comp.parts ?? []).map((x) => (x.id === id ? { ...x, ...patch } : x)) })
   const [un, vn] = DIM_NAMES[p.orient]
+  const ax = PART_AXES[p.orient]
+  const size = partSize(p)
+  const cnc = p.nest !== false
   const mat = materialByName(settings, p.material)
   const mine = joints.filter((j) => j.a === id || j.b === id)
   const nameOf = (pid: string) => comp.parts?.find((x) => x.id === pid)?.name ?? "?"
   const boards = settings.materials.filter((m) => !m.forBacks)
   const pickMaterial = (name: string) => {
     const m = materialByName(settings, name)
-    const t = m && !m.thicknesses.includes(p.thickness) ? m.thicknesses.reduce((a, b) => (Math.abs(b - p.thickness) < Math.abs(a - p.thickness) ? b : a)) : p.thickness
+    const t = m && m.cnc !== false && !m.thicknesses.includes(p.thickness) ? m.thicknesses.reduce((a, b) => (Math.abs(b - p.thickness) < Math.abs(a - p.thickness) ? b : a)) : p.thickness
     // Si el material no es talla a la CNC (ferro, pedra, vidre…), la peça surt del nesting.
     update({ material: name, thickness: t, nest: m?.cnc === false ? false : undefined })
   }
@@ -114,10 +119,7 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
     <Stack gap={0}>
       <PanelSection id="part-general" title="General" icon={LuPuzzle} badge={ORIENTS.find((o) => o.value === p.orient)!.label}>
         <IconChoice label="Orientació" value={p.orient} options={ORIENTS} onChange={(o) => onChange({ ...comp, parts: (comp.parts ?? []).map((x) => (x.id === id ? reorientPart(x, o) : x)) })} />
-        <SimpleGrid columns={2} gap={3}>
-          <MaterialSelect label="Material" materials={boards} value={p.material} onChange={pickMaterial} />
-          <NumberField label="Gruix" value={p.thickness} min={3} max={60} step={1} onChange={(thickness) => update({ thickness })} help={mat ? mat.thicknesses.join(" · ") : undefined} />
-        </SimpleGrid>
+        <MaterialSelect label="Material" materials={boards} value={p.material} onChange={pickMaterial} />
         <Switch.Root size="sm" checked={p.nest !== false} onCheckedChange={(e) => update({ nest: e.checked ? undefined : false })}>
           <Switch.HiddenInput />
           <Switch.Control />
@@ -128,12 +130,13 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
             No és de CNC ({p.material}): es veu al 3D però no va al nesting ni als fitxers del taller. Surt a Peces, a «Elements sense nesting». Sense encaixos.
           </Text>
         )}
-        <IconChoice label="Veta" value={p.grain ?? "u"} options={GRAIN} onChange={(g) => update({ grain: g === "u" ? undefined : g })} />
-        <Switch.Root size="sm" disabled={p.nest === false} checked={p.joints !== false && p.nest !== false} onCheckedChange={(e) => update({ joints: e.checked ? undefined : false })}>
+        {/* Ferro, pedra, vidre…: sense veta ni encaixos. */}
+        {cnc && <IconChoice label="Veta" value={p.grain ?? "u"} options={GRAIN} onChange={(g) => update({ grain: g === "u" ? undefined : g })} />}
+        {cnc && (<Switch.Root size="sm" disabled={p.nest === false} checked={p.joints !== false && p.nest !== false} onCheckedChange={(e) => update({ joints: e.checked ? undefined : false })}>
           <Switch.HiddenInput />
           <Switch.Control />
           <Switch.Label>Encaixos amb les altres peces</Switch.Label>
-        </Switch.Root>
+        </Switch.Root>)}
         {p.joints !== false && p.nest !== false && (
           <Stack gap={1}>
             {mine.length === 0 ? (
@@ -159,11 +162,52 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
           </Stack>
         )}
       </PanelSection>
-      <PanelSection id="part-size" title="Mides" icon={LuMoveDiagonal} badge={`${p.w} × ${p.h}`}>
-        <SimpleGrid columns={2} gap={2}>
-          <NumberField label={un} value={p.w} min={10} max={3000} step={10} onChange={(w) => update({ w })} />
-          <NumberField label={vn} value={p.h} min={10} max={3000} step={10} onChange={(h) => update({ h })} />
+      <PanelSection id="part-size" title="Mides" icon={LuMoveDiagonal} badge={size.join(" × ")}>
+        {/* Sempre ample (X), alt (Y) i fondària (Z) com la resta de l'app; la del gruix depèn de
+            l'orientació. De CNC: el gruix, només els del tauler. Si no és de CNC: tot lliure. */}
+        <SimpleGrid columns={3} gap={2}>
+          {(["Ample", "Alt", "Fondària"] as const).map((label, a) => {
+            const isT = a === ax.n
+            if (isT && cnc && mat)
+              return (
+                <Field.Root key={label}>
+                  <Field.Label fontSize="sm">{label}</Field.Label>
+                  <NativeSelect.Root size="sm">
+                    <NativeSelect.Field value={String(p.thickness)} onChange={(e) => update({ thickness: Number(e.target.value) })}>
+                      {!mat.thicknesses.includes(p.thickness) && <option value={p.thickness}>{p.thickness}</option>}
+                      {mat.thicknesses.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </NativeSelect.Field>
+                    <NativeSelect.Indicator />
+                  </NativeSelect.Root>
+                  <Field.HelperText>Gruix del tauler</Field.HelperText>
+                </Field.Root>
+              )
+            return (
+              <NumberField
+                key={label}
+                label={label}
+                value={size[a]!}
+                min={1}
+                max={10000}
+                step={isT ? 1 : 10}
+                help={isT ? "Gruix" : undefined}
+                onChange={(v) => {
+                  if (!Number.isFinite(v) || v <= 0) return
+                  update(isT ? { thickness: v } : a === ax.u ? { w: v } : { h: v })
+                }}
+              />
+            )
+          })}
         </SimpleGrid>
+        {!cnc && (
+          <Text fontSize="xs" color="fg.muted">
+            No és de CNC: les tres mides són lliures (també el gruix).
+          </Text>
+        )}
       </PanelSection>
       <PanelSection id="part-shape" title="Forma" icon={LuSpline} badge={p.shape ? "A mida" : "Rectangle"}>
         <HStack gap={2}>
