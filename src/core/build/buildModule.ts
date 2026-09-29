@@ -1,4 +1,5 @@
 import {
+  type CableHole,
   NO_EDGES,
   type Cutout,
   type EdgeBanding,
@@ -37,6 +38,7 @@ export interface BuildWarning {
     | "drawer-no-slide"
     | "grille-open-ratio"
     | "back-groove"
+    | "cable-hole"
     | "layout"
     | "no-side"
     | "material-heat"
@@ -791,19 +793,42 @@ class Builder {
     }
   }
 
-  private cableHole(hole: Module["extras"]["cableHoles"][number]): void {
+  private cableHole(hole: CableHole): void {
     const { d } = this
-    const target = this.panels.find((p) => p.role === hole.panel)
-    if (!target) return
-    // Punt sobre la cara A del panell: fons → (x, y, cara interior); tapa/base → (x, cara, z des del darrere).
-    const w: Vec3 =
-      hole.panel === "back"
-        ? [hole.x, hole.y, r(target.placement.origin[2] + d.tb)]
-        : hole.panel === "top"
-          ? [hole.x, d.H - d.t, hole.y]
-          : [hole.x, d.baseY + d.t, hole.y]
-    const l = toLocal(target, w)
-    ;(target.cutouts ??= []).push({ kind: "circle", x: l[0], y: l[1], diameter: hole.diameter, tag: "cable" })
+    const target =
+      hole.panel === "left" ? this.panels.find((p) => p.id === "side-left")
+      : hole.panel === "right" ? this.panels.find((p) => p.id === "side-right")
+      : this.panels.find((p) => p.role === hole.panel)
+    const what = { back: "al fons", top: "a la tapa", bottom: "a la base", left: "al lateral esquerre", right: "al lateral dret" }[hole.panel]
+    if (!target) {
+      this.warnings.push({ code: "cable-hole", message: `El passacables ${what} no té peça on anar (el mòdul no en té).` })
+      return
+    }
+    // Punt del pla de la peça per a (u, v) del passacables, en coordenades del mòdul. Els
+    // retalls són passants: la posició en el gruix no importa.
+    const at = (u: number, v: number): Vec3 =>
+      hole.panel === "back" ? [u, v, r(target.placement.origin[2] + d.tb)]
+      : hole.panel === "top" ? [u, d.H - d.t, v]
+      : hole.panel === "bottom" ? [u, d.baseY + d.t, v]
+      : hole.panel === "left" ? [0, v, u]
+      : [d.W, v, u]
+    const rect = hole.shape === "rect"
+    const hw = (rect ? (hole.w ?? hole.diameter) : hole.diameter) / 2
+    const hh = (rect ? (hole.h ?? hole.diameter) : hole.diameter) / 2
+    const a = toLocal(target, at(hole.x - hw, hole.y - hh))
+    const b = toLocal(target, at(hole.x + hw, hole.y + hh))
+    const x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0])
+    const y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1])
+    // Fora de la peça (o tocant-ne la vora): no es fa, i s'avisa.
+    if (x0 < 1 || y0 < 1 || x1 > target.length - 1 || y1 > target.width - 1) {
+      this.warnings.push({ code: "cable-hole", message: `El passacables ${what} surt de la peça: no s'ha fet. Mou-lo o fes-lo més petit.`, panelId: target.id })
+      return
+    }
+    ;(target.cutouts ??= []).push(
+      rect
+        ? { kind: "rect", x: r(x0), y: r(y0), w: r(x1 - x0), h: r(y1 - y0), tag: "cable" }
+        : { kind: "circle", x: r((x0 + x1) / 2), y: r((y0 + y1) / 2), diameter: hole.diameter, tag: "cable" },
+    )
   }
 }
 

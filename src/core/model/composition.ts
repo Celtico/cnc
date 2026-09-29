@@ -158,12 +158,43 @@ export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
   }),
 )
 
+/**
+ * Passacables: forat passant al centre (x, y) d'una peça de la carcassa, en coordenades
+ * del mòdul segons la peça: fons → x des de l'esquerra, y des de baix; tapa i base → x des
+ * de l'esquerra, y des del darrere; laterals → x des del darrere, y des de baix.
+ * Rodó (Ø) o rectangular (w × h: w en la direcció de x). Amb `ref`, el centre segueix
+ * l'objecte de referència (x i y es recalculen en construir la composició).
+ */
+export const CableHoleSchema = z.object({
+  panel: z.enum(["back", "top", "bottom", "left", "right"]),
+  x: mm,
+  y: mm,
+  diameter: mm.positive(),
+  shape: z.enum(["circle", "rect"]).optional(),
+  w: mm.positive().optional(),
+  h: mm.positive().optional(),
+  ref: z.string().optional(),
+})
+export type CableHole = z.infer<typeof CableHoleSchema>
+
+/**
+ * Centre (i mida de l'objecte, per a «mida de l'objecte») d'un objecte de referència
+ * projectat sobre una peça de la carcassa, en les coordenades del passacables.
+ * `at` = cantonada baix-esquerra-darrere del mòdul a la composició.
+ */
+export function refOnPanel(r: RefObject, panel: CableHole["panel"], at: { x: number; y: number }): { x: number; y: number; w: number; h: number } {
+  const cx = r.x + r.w / 2 - at.x
+  const cy = r.y + r.h / 2 - at.y
+  const cz = r.z + r.d / 2
+  if (panel === "back") return { x: cx, y: cy, w: r.w, h: r.h }
+  if (panel === "top" || panel === "bottom") return { x: cx, y: cz, w: r.w, h: r.d }
+  return { x: cz, y: cy, w: r.d, h: r.h }
+}
+
 /** Mecanitzats extra de la carcassa que no depenen de cap zona. */
 export const CarcassExtrasSchema = z.object({
-  /** Passacables Ø (mm) al fons o a la tapa, en coordenades del mòdul (x des de l'esquerra, y des de baix o des del darrere). */
-  cableHoles: z.array(
-    z.object({ panel: z.enum(["back", "top", "bottom"]), x: mm, y: mm, diameter: mm.positive() }),
-  ),
+  /** Passacables (forats passants) a les peces de la carcassa. */
+  cableHoles: z.array(CableHoleSchema),
 })
 export type CarcassExtras = z.infer<typeof CarcassExtrasSchema>
 

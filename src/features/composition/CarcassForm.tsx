@@ -1,16 +1,15 @@
-import { Button, Field, HStack, IconButton, Input, NativeSelect, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
-import { LuPlus, LuTrash2 } from "react-icons/lu"
+import { Button, Field, HStack, Input, NativeSelect, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
 import { DEFAULT_GRILLE, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
 import { NumberField } from "../editor/ParamsForm"
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/SettingsScreen"
 
-export type CarcassSection = "dims" | "structure" | "cables"
+export type CarcassSection = "dims" | "structure"
 
 /**
  * Formulari de la carcassa del mòdul seleccionat, per seccions (l'inspector en fa una
- * secció plegable per a cadascuna): mides, estructura (base, fons, tapa, laterals) i
- * passacables.
+ * secció plegable per a cadascuna): mides i estructura (base, fons, tapa, laterals). Els
+ * passacables són a `CableHolesForm`.
  */
 export function CarcassForm({ module, onChange, section }: { module: Module; onChange: (m: Module) => void; section: CarcassSection }) {
   const c = module.carcass
@@ -124,61 +123,7 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
         </Field.Root>
       </Stack>
     )
-  return (
-    <Stack gap={4}>
-        <Stack gap={2}>
-          <HStack justify="space-between">
-            <Text fontSize="xs" color="fg.muted">
-              Forats passants per als cables.
-            </Text>
-            <Button
-              size="xs"
-              variant="ghost"
-              onClick={() =>
-                onChange({
-                  ...module,
-                  extras: { ...module.extras, cableHoles: [...module.extras.cableHoles, { panel: "back", x: Math.round(c.width / 2), y: Math.round(c.height * 0.6), diameter: 60 }] },
-                })
-              }
-            >
-              <LuPlus /> Afegir
-            </Button>
-          </HStack>
-          {module.extras.cableHoles.map((h, i) => {
-            const update = (patch: Partial<typeof h>) =>
-              onChange({ ...module, extras: { ...module.extras, cableHoles: module.extras.cableHoles.map((x, k) => (k === i ? { ...x, ...patch } : x)) } })
-            return (
-              <Stack key={i} gap={2} borderTopWidth="1px" pt={2}>
-                <HStack align="end" gap={2}>
-                  <Field.Root flex={1}>
-                    <Field.Label>Passacables {i + 1} a</Field.Label>
-                    <NativeSelect.Root size="sm">
-                      <NativeSelect.Field value={h.panel} onChange={(e) => update({ panel: e.target.value as typeof h.panel })}>
-                        <option value="back">Fons</option>
-                        <option value="top">Tapa</option>
-                        <option value="bottom">Base</option>
-                      </NativeSelect.Field>
-                      <NativeSelect.Indicator />
-                    </NativeSelect.Root>
-                  </Field.Root>
-                  <IconButton aria-label="Eliminar passacables" size="sm" variant="ghost" colorPalette="red" onClick={() => onChange({ ...module, extras: { ...module.extras, cableHoles: module.extras.cableHoles.filter((_, k) => k !== i) } })}>
-                    <LuTrash2 />
-                  </IconButton>
-                </HStack>
-                <SimpleGrid columns={3} gap={2}>
-                  <NumberField label="X" value={h.x} min={0} max={3000} step={10} onChange={(x) => update({ x })} />
-                  <NumberField label="Y" value={h.y} min={0} max={3000} step={10} onChange={(y) => update({ y })} />
-                  <NumberField label="Ø" value={h.diameter} min={10} max={200} step={5} onChange={(diameter) => update({ diameter })} />
-                </SimpleGrid>
-                <Text fontSize="xs" color="fg.muted">
-                  X des de l'esquerra; Y {h.panel === "back" ? "des de baix" : "des del darrere"}.
-                </Text>
-              </Stack>
-            )
-          })}
-        </Stack>
-    </Stack>
-  )
+  return null
 }
 
 /**

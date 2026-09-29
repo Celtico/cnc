@@ -1,4 +1,4 @@
-import { modulePlacements, type Composition, type Panel, type RefObject, type Vec3 } from "../model"
+import { modulePlacements, refOnPanel, type Composition, type Module, type Panel, type RefObject, type Vec3 } from "../model"
 import { buildModule, type BuildWarning, type ModuleBuild } from "./buildModule"
 import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
 
@@ -40,6 +40,26 @@ export function refBox(o: RefObject): { min: Vec3; max: Vec3 } {
 }
 
 /**
+ * Passacables que segueixen un objecte de referència: el centre surt de l'objecte
+ * (projectat sobre la peça). Si l'objecte ja no hi és, es queda on era.
+ */
+export function withRefHoles(m: Module, refs: RefObject[], at: { x: number; y: number }): Module {
+  if (!m.extras.cableHoles.some((h) => h.ref)) return m
+  return {
+    ...m,
+    extras: {
+      ...m.extras,
+      cableHoles: m.extras.cableHoles.map((h) => {
+        const r = h.ref ? refs.find((o) => o.id === h.ref) : undefined
+        if (!r) return h
+        const c = refOnPanel(r, h.panel, at)
+        return { ...h, x: Math.round(c.x * 10) / 10, y: Math.round(c.y * 10) / 10 }
+      }),
+    },
+  }
+}
+
+/**
  * Construeix tota la composició: cada mòdul al seu lloc (`modulePlacements`: fila,
  * potes, penjats i apilats), ids prefixats amb l'id del mòdul i el número de
  * mòdul a cada peça per a les refs del taller.
@@ -50,9 +70,10 @@ export function buildComposition(comp: Composition): CompositionBuild {
   const warnings: CompositionWarning[] = []
   const modules: CompositionBuild["modules"] = []
 
-  comp.modules.forEach((m, i) => {
-    const build = buildModule(m)
+  comp.modules.forEach((mod, i) => {
     const { x, y } = places[i]!
+    const m = withRefHoles(mod, comp.references, { x, y })
+    const build = buildModule(m)
     for (const p of build.panels) {
       const o = p.placement.origin
       panels.push({

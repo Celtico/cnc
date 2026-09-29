@@ -177,10 +177,12 @@ interface NumberFieldProps {
   suffix?: string
   help?: string
   error?: string
+  /** Només lectura (valor calculat, p. ex. un passacables que segueix un objecte). */
+  disabled?: boolean
 }
 
 /** Camp numèric de mides. Amb `suffix="mm"` respecta la unitat de pantalla (mm o cm); el valor sempre és en mm. */
-export function NumberField({ label, value, onChange, min, max, step = 1, suffix = "mm", help, error }: NumberFieldProps) {
+export function NumberField({ label, value, onChange, min, max, step = 1, suffix = "mm", help, error, disabled }: NumberFieldProps) {
   const unit = useUnit()
   const cm = suffix === "mm" && unit === "cm"
   const k = cm ? 10 : 1
@@ -206,6 +208,7 @@ export function NumberField({ label, value, onChange, min, max, step = 1, suffix
         max={max === undefined ? undefined : max / k}
         step={step / k}
         allowMouseWheel
+        disabled={disabled}
         w="full"
         position="relative"
       >
