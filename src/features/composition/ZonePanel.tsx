@@ -17,6 +17,7 @@ import {
 } from "../../core/model"
 import { NumberField } from "../editor/ParamsForm"
 import { FRONT_ICONS } from "./zoneIcon"
+import { Tooltip } from "../../components/ui/tooltip"
 
 const FRONT_LABELS: Record<Front["kind"] | "none", string> = {
   none: "Obert",
@@ -144,25 +145,29 @@ export function ZonePanel({
       ) : (
         <>
           <PanelSection id="zone-front" title="Front" badge={FRONT_LABELS[zone.front?.kind ?? "none"]} icon={FRONT_ICONS[zone.front?.kind ?? "none"]}>
-            <Field.Root>
-              <Field.Label>Tipus</Field.Label>
-              <NativeSelect.Root size="sm">
-                <NativeSelect.Field
-                  value={zone.front?.kind ?? "none"}
-                  onChange={(e) => {
-                    const k = e.target.value as Front["kind"] | "none"
-                    onChange(setFront(root, zone.id, k === "none" ? null : defaultFront(k)))
-                  }}
-                >
-                  {(Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[]).map((k) => (
-                    <option key={k} value={k}>
-                      {FRONT_LABELS[k]}
-                    </option>
-                  ))}
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
+            {/* Tipus de front: un botó amb la icona de cada tipus (el nom, al tooltip i a la insígnia). */}
+            <HStack gap={1} role="radiogroup" aria-label="Tipus de front">
+              {(Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[]).map((k) => {
+                const Icon = FRONT_ICONS[k]
+                const on = (zone.front?.kind ?? "none") === k
+                return (
+                  <Tooltip key={k} content={FRONT_LABELS[k]}>
+                    <IconButton
+                      flex={1}
+                      size="sm"
+                      role="radio"
+                      aria-checked={on}
+                      aria-label={FRONT_LABELS[k]}
+                      variant={on ? "solid" : "outline"}
+                      colorPalette={on ? "wood" : "gray"}
+                      onClick={() => !on && onChange(setFront(root, zone.id, k === "none" ? null : defaultFront(k)))}
+                    >
+                      <Icon />
+                    </IconButton>
+                  </Tooltip>
+                )
+              })}
+            </HStack>
             {zone.front && <FrontFields front={zone.front} openRatio={openRatio} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
           </PanelSection>
 
