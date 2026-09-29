@@ -272,6 +272,9 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     Encastats (`fronts.style`): encastats dins de la llum amb el joc a tot el voltant, a nivell
     amb el davant (`frontZ`), caixa del calaix un gruix més curta i avís si els prestatges no
     es retiren prou.
+  - **Taulell i sòcol en acordió** (`RunsForm`, `Fold`): cada peça correguda és plegable amb
+    un resum (de → fins a · gruix · forats); dins del taulell, cada forat també. Una oberta
+    alhora; la nova s'obre sola.
   - **Opcions amb icona** (`components/IconChoice.tsx`): poques opcions → botons d'icona amb
     el nom al tooltip i l'opció triada al costat del títol. Base, Fons, Tapa (mòdul), Patró de
     reixeta, Direcció dels objectes; Efecte i Forma dels objectes són segments amb icona i text.
