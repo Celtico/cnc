@@ -12,6 +12,7 @@ import {
   setShelves,
   splitZone,
   unsplitZone,
+  updateZone,
   type Front,
   type Zone,
 } from "../../core/model"
@@ -143,36 +144,13 @@ export function ZonePanel({
               </Button>
             </HStack>
           </PanelSection>
+          {/* Portes que tapen tota la zona dividida (armari: penjador i maleter darrere). */}
+          <ZoneFrontSection root={root} zone={zone} onChange={onChange} kinds={["none", "door", "panel"]} title="Front de tota la zona" />
           {sizeField}
         </>
       ) : (
         <>
-          <PanelSection id="zone-front" title="Front" badge={FRONT_LABELS[zone.front?.kind ?? "none"]} icon={FRONT_ICONS[zone.front?.kind ?? "none"]}>
-            {/* Tipus de front: un botó amb la icona de cada tipus (el nom, al tooltip i a la insígnia). */}
-            <HStack gap={1} role="radiogroup" aria-label="Tipus de front">
-              {(Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[]).map((k) => {
-                const Icon = FRONT_ICONS[k]
-                const on = (zone.front?.kind ?? "none") === k
-                return (
-                  <Tooltip key={k} content={FRONT_LABELS[k]}>
-                    <IconButton
-                      flex={1}
-                      size="sm"
-                      role="radio"
-                      aria-checked={on}
-                      aria-label={FRONT_LABELS[k]}
-                      variant={on ? "solid" : "outline"}
-                      colorPalette={on ? "wood" : "gray"}
-                      onClick={() => !on && onChange(setFront(root, zone.id, k === "none" ? null : defaultFront(k)))}
-                    >
-                      <Icon />
-                    </IconButton>
-                  </Tooltip>
-                )
-              })}
-            </HStack>
-            {zone.front && <FrontFields front={zone.front} openRatio={openRatio} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
-          </PanelSection>
+          <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} />
 
           {zone.front?.kind !== "drawers" && (
             <PanelSection id="zone-shelves" title="Prestatges" badge={zone.shelves?.n || undefined} icon={LuRows3}>
@@ -221,6 +199,19 @@ export function ZonePanel({
                   onChange={(thickness) => onChange(setShelves(root, zone.id, { ...zone.shelves!, thickness }))}
                   help={zone.front ? "Dues pells, llistons i una tira al davant. Sense porta es veuen més bé." : "Dues pells, llistons i una tira al davant: fan el prestatge com si fos de fusta gruixuda."}
                 />
+              )}
+              {/* Barra de penjar (armaris): no és de CNC, surt a «Elements sense nesting». */}
+              {!zone.split && (
+                <Switch.Root size="sm" checked={!!zone.rail} onCheckedChange={(e) => onChange(updateZone(root, zone.id, (z) => ({ ...z, rail: e.checked || undefined })))}>
+                  <Switch.HiddenInput />
+                  <Switch.Control />
+                  <Switch.Label>Barra de penjar</Switch.Label>
+                </Switch.Root>
+              )}
+              {zone.rail && (
+                <Text textStyle="xs" color="fg.muted">
+                  Tub d'inox Ø25 a 50 mm del sostre, de lateral a lateral. Surt a Peces, a «Elements sense nesting».
+                </Text>
               )}
             </PanelSection>
           )}
@@ -372,5 +363,41 @@ function SegItem({ value, label, icon: Icon }: { value: string; label: string; i
       </SegmentGroup.ItemText>
       <SegmentGroup.ItemHiddenInput />
     </SegmentGroup.Item>
+  )
+}
+
+/**
+ * Tipus de front d'una zona (botons d'icona) i els seus camps. En una zona dividida, només
+ * portes o front fix, que tapen tota la zona (les fulles de dins queden darrere).
+ */
+export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title = "Front" }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; kinds?: (Front["kind"] | "none")[]; title?: string }) {
+  const options = kinds ?? (Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[])
+  return (
+          <PanelSection id={kinds ? "zone-parent-front" : "zone-front"} title={title} badge={FRONT_LABELS[zone.front?.kind ?? "none"]} icon={FRONT_ICONS[zone.front?.kind ?? "none"]}>
+            {/* Tipus de front: un botó amb la icona de cada tipus (el nom, al tooltip i a la insígnia). */}
+            <HStack gap={1} role="radiogroup" aria-label="Tipus de front">
+              {options.map((k) => {
+                const Icon = FRONT_ICONS[k]
+                const on = (zone.front?.kind ?? "none") === k
+                return (
+                  <Tooltip key={k} content={FRONT_LABELS[k]}>
+                    <IconButton
+                      flex={1}
+                      size="sm"
+                      role="radio"
+                      aria-checked={on}
+                      aria-label={FRONT_LABELS[k]}
+                      variant={on ? "solid" : "outline"}
+                      colorPalette={on ? "wood" : "gray"}
+                      onClick={() => !on && onChange(setFront(root, zone.id, k === "none" ? null : defaultFront(k)))}
+                    >
+                      <Icon />
+                    </IconButton>
+                  </Tooltip>
+                )
+              })}
+            </HStack>
+            {zone.front && <FrontFields front={zone.front} openRatio={openRatio} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
+          </PanelSection>
   )
 }

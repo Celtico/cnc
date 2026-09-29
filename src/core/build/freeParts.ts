@@ -7,6 +7,7 @@ import {
   flatten,
   partBox,
   polygonArea,
+  resolveParts,
   type Composition,
   type Cutout,
   type EdgeSide,
@@ -152,7 +153,8 @@ function tabCentres(r: Range, width: number): { centres: number[]; tw: number } 
  * les osques, mortalles passants com a talls, ranures cegues i espigues).
  */
 export function buildFreeParts(comp: Composition, moduleNumber: number): FreePartsBuild {
-  const parts = comp.parts ?? []
+  // Coordenades de la composició (les enganxades a un mòdul el segueixen).
+  const parts = resolveParts(comp)
   const j = joineryOf(comp)
   const cl = j.clearance
   const work = new Map<string, Work>(parts.map((p) => [p.id, { part: p, removals: [], grooves: [], holes: [] }]))

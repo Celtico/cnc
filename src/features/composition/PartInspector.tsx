@@ -31,6 +31,8 @@ import {
   reorientPart,
   PART_AXES,
   partsBox,
+  partOffset,
+  resolveParts,
   partGroups,
   newGroupName,
   partSize,
@@ -126,6 +128,32 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
       <PanelSection id="part-general" title="General" icon={LuPuzzle} badge={ORIENTS.find((o) => o.value === p.orient)!.label}>
         <IconChoice label="Orientació" value={p.orient} options={ORIENTS} onChange={(o) => onChange({ ...comp, parts: (comp.parts ?? []).map((x) => (x.id === id ? reorientPart(x, o) : x)) })} />
         <MaterialSelect label="Material" materials={boards} value={p.material} onChange={pickMaterial} />
+        {comp.kind !== "lliure" && comp.modules.length > 0 && (
+          <Field.Root>
+            <Field.Label fontSize="sm">Enganxada a</Field.Label>
+            <NativeSelect.Root size="sm">
+              <NativeSelect.Field
+                value={p.module ?? ""}
+                onChange={(e) => {
+                  // Es queda on és: les coordenades passen a ser relatives al mòdul nou.
+                  const from = partOffset(comp, p)
+                  const next = { ...p, module: e.target.value || undefined }
+                  const to = partOffset(comp, next)
+                  update({ module: next.module, x: p.x + from[0] - to[0], y: p.y + from[1] - to[1], z: p.z + from[2] - to[2] })
+                }}
+              >
+                <option value="">Res (lliure al moble)</option>
+                {comp.modules.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    Mòdul «{m.name}»
+                  </option>
+                ))}
+              </NativeSelect.Field>
+              <NativeSelect.Indicator />
+            </NativeSelect.Root>
+            <Field.HelperText>Enganxada a un mòdul, el segueix quan es mou (el taulell de l'illa).</Field.HelperText>
+          </Field.Root>
+        )}
         <Field.Root>
           <Field.Label fontSize="sm">Grup</Field.Label>
           <NativeSelect.Root size="sm">
@@ -264,7 +292,7 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
           <NumberField label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} value={p.z} min={-30000} max={30000} step={1} onChange={(z) => update({ z })} />
         </SimpleGrid>
         <Text fontSize="xs" color="fg.muted">
-          Cantonada esquerra, de baix i del darrere. Al 3D, arrossega-la amb les fletxes (s'enganxa a les vores de les altres peces; Alt: lliure). Fletxes del teclat: 1 mm (Maj: 10); Re Pàg / Av Pàg: fons.
+          {p.module && comp.kind !== "lliure" ? `Respecte al mòdul «${comp.modules.find((m) => m.id === p.module)?.name ?? "?"}» (el segueix). ` : ""}Cantonada esquerra, de baix i del darrere. Al 3D, arrossega-la amb les fletxes (s'enganxa a les vores de les altres peces; Alt: lliure). Fletxes del teclat: 1 mm (Maj: 10); Re Pàg / Av Pàg: fons.
         </Text>
       </PanelSection>
       <PanelSection id="part-joinery" title="Encaixos (tot el moble)" icon={LuPuzzle}>
@@ -347,7 +375,8 @@ export function PartActions({ comp, id, onChange, onRemoved, onSelected }: { com
 export function GroupInspector({ comp, group, onChange, onSelectPart, onMove }: { comp: Composition; group: string; onChange: (c: Composition) => void; onSelectPart: (id: string) => void; onMove: (dx: number, dy: number, dz: number) => void }) {
   const members = (comp.parts ?? []).filter((p) => p.group === group)
   if (!members.length) return null
-  const b = partsBox(members)
+  // Posició a la composició (les enganxades a un mòdul, sumant-hi la seva).
+  const b = partsBox(resolveParts(comp).filter((p) => p.group === group))
   const size = [0, 1, 2].map((a) => Math.round(b.max[a]! - b.min[a]!))
   return (
     <Stack gap={0}>

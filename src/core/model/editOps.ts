@@ -1,4 +1,4 @@
-import { freeX, newId, rowOf, type Composition, type Module, type RefObject, type Zone } from "./composition"
+import { freeX, newId, resolveParts, rowOf, type Composition, type Module, type RefObject, type Zone } from "./composition"
 import { cloneZone, removeZone, updateZone } from "./zoneOps"
 import { partSize, partsBox, type FreePart } from "./freePart"
 
@@ -127,7 +127,7 @@ export function reorderPart(comp: Composition, id: string, targetId: string, aft
 export function moveGroupBy(comp: Composition, group: string, dx: number, dy: number, dz: number): Composition {
   const members = (comp.parts ?? []).filter((p) => p.group === group)
   if (!members.length) return comp
-  const minY = partsBox(members).min[1]
+  const minY = partsBox(resolveParts(comp).filter((p) => p.group === group)).min[1]
   const ddy = Math.max(dy, -minY)
   return { ...comp, parts: (comp.parts ?? []).map((p) => (p.group === group ? { ...p, x: p.x + dx, y: p.y + ddy, z: p.z + dz } : p)) }
 }

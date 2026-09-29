@@ -11,6 +11,7 @@ export function zoneLabel(z: Zone): string {
   else if (f.kind === "flap") parts.push("Abatible")
   else if (f.kind === "grille") parts.push("Reixeta")
   else if (f.kind === "panel") parts.push("Front fix")
+  if (z.rail) parts.push("barra")
   if (z.shelves && z.shelves.n > 0) parts.push(`${z.shelves.n} ${z.shelves.n === 1 ? "prestatge" : "prestatges"}`)
   return parts.join(" · ")
 }

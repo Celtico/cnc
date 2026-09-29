@@ -53,6 +53,7 @@ export interface BuildWarning {
     | "material-heat"
     | "collision"
     | "overlap"
+    | "rail"
     | "hanging"
   message: string
   zoneId?: string
@@ -61,6 +62,8 @@ export interface BuildWarning {
 
 export interface ModuleBuild {
   panels: Panel[]
+  /** Elements que no són de CNC (barres de penjar): 3D i llista, sense nesting. */
+  extras: Panel[]
   warnings: BuildWarning[]
   layout: Layout
   /** % d'àrea oberta de cada reixeta, per id de zona (o "top" per a la tapa). */
@@ -207,6 +210,9 @@ class Builder {
   readonly panels: Panel[] = []
   readonly warnings: BuildWarning[] = []
   readonly openRatios: Record<string, number> = {}
+  readonly extras: Panel[] = []
+  /** Zones que queden darrere del front d'una zona pare. */
+  readonly covered = new Set<string>()
   readonly verticals: VerticalRef[] = []
   readonly horizontals: HorizontalRef[] = []
   private shelfCount = 0
@@ -573,8 +579,20 @@ class Builder {
     // 2) Unions dels divisors amb el que tenen a sota i a sobre, i dels fixos amb els costats.
     for (const v of this.verticals) if (!v.outer) this.joinDivider(v)
     for (const h of this.horizontals) if (!h.outer) this.joinFixedShelf(h)
-    // 3) Fulles: fileres, prestatges regulables i fronts.
-    for (const zone of layout.leaves) this.buildLeaf(zone, layout.rects.get(zone.id)!)
+    // 3) Fulles: fileres, prestatges regulables i fronts. Les que són darrere del front d'una
+    // zona dividida (portes d'armari de dalt a baix) no en fan: el front és el del pare.
+    const walk = (z: Zone, covered: boolean) => {
+      if (covered) this.covered.add(z.id)
+      if (z.split) for (const c of z.split.children) walk(c, covered || !!z.front)
+    }
+    walk(m.root, false)
+    for (const zone of layout.leaves) this.buildLeaf(this.covered.has(zone.id) ? { ...zone, front: undefined } : zone, layout.rects.get(zone.id)!)
+    const parents = (z: Zone) => {
+      if (!z.split) return
+      if (z.front && !this.covered.has(z.id)) this.buildParentFront(z, layout.rects.get(z.id)!)
+      z.split.children.forEach(parents)
+    }
+    parents(m.root)
 
     // 4) Passacables i extres.
     for (const hole of m.extras.cableHoles) this.cableHole(hole)
@@ -672,9 +690,24 @@ class Builder {
 
     // Prestatges.
     if (zone.shelves && zone.shelves.n > 0) this.buildShelves(zone, rect, rowYs)
+    if (zone.rail) this.buildRail(zone, rect)
 
     // Front.
     if (!front) return
+    this.buildFront(zone, front, rect, left, right, rowYs)
+    void d
+  }
+
+  /**
+   * Front d'una zona dividida (p. ex. les portes d'un armari que tapen el penjador i el
+   * maleter): cobreix tota la zona; les fulles de dins queden darrere.
+   */
+  private buildParentFront(zone: Zone, rect: ZoneRect): void {
+    const s = this.m.hardware.system32
+    this.buildFront(zone, zone.front!, rect, this.findLeft(rect), this.findRight(rect), system32Ys(rect.y0, rect.y1, s.edgeOffset, s.pitch))
+  }
+
+  private buildFront(zone: Zone, front: Front, rect: ZoneRect, left: VerticalRef | undefined, right: VerticalRef | undefined, rowYs: number[]): void {
     const territory = this.frontTerritory(rect, left, right)
     switch (front.kind) {
       case "door":
@@ -693,7 +726,43 @@ class Builder {
         this.buildFrontPanel(zone, territory, "panel", "frontal fix", "Front fix")
         break
     }
-    void d
+  }
+
+  /**
+   * Barra de penjar: tub d'inox Ø25 de lateral a lateral, a 50 mm del sostre del compartiment
+   * i centrat en la fondària útil. No és de CNC: va a `extras` (3D i llista). Els suports es
+   * cargolen als laterals.
+   */
+  private buildRail(zone: Zone, rect: ZoneRect): void {
+    const { d } = this
+    const R = 25
+    const len = r(rect.x1 - rect.x0 - 2)
+    const cy = rect.y1 - 50
+    const cz = d.backInnerZ + (d.D - d.backInnerZ) / 2
+    if (rect.y1 - rect.y0 < 900) this.warnings.push({ code: "rail", message: "Barra de penjar en un compartiment de menys de 900 mm: la roba llarga no hi cap.", zoneId: zone.id })
+    const b = Math.tan(Math.PI / 8)
+    this.extras.push({
+      id: `rail-${zone.id}`,
+      name: "barra",
+      label: "Barra de penjar",
+      role: "part",
+      length: R,
+      width: R,
+      thickness: len,
+      material: "Acer inox",
+      grain: "none",
+      edges: { ...NO_EDGES },
+      holes: [],
+      grooves: [],
+      outline: [
+        [R, R / 2, b],
+        [R / 2, R, b],
+        [0, R / 2, b],
+        [R / 2, 0, b],
+      ],
+      // Secció al pla Z·Y i el llarg (gruix local) cap a −X, des del lateral dret.
+      placement: { origin: [r(rect.x1 - 1), r(cy - R / 2), r(cz - R / 2)], xAxis: [0, 0, 1], yAxis: [0, 1, 0], zAxis: [-1, 0, 0], explodeDir: [0, 0, 1] },
+    })
   }
 
   private buildShelves(zone: Zone, rect: ZoneRect, rowYs: number[]): void {
@@ -710,7 +779,7 @@ class Builder {
     const length = width - c.shelfClearance
     // A ras del davant (a sang): sense retranqueig. Amb fronts encastats no hi cabria la porta.
     // Amb fronts encastats, a ras només es pot si el compartiment és obert (sense front).
-    const blocked = d.inset && !!zone.front
+    const blocked = d.inset && (!!zone.front || this.covered.has(zone.id))
     const flush = !!zone.shelves!.flush && !blocked
     if (zone.shelves!.flush && blocked) this.warnings.push({ code: "inset", message: "Prestatges a ras del davant amb fronts encastats: toparien amb el front. Es retiren com sempre.", zoneId: zone.id })
     const setback = flush ? 0 : c.shelfSetback
@@ -1063,7 +1132,7 @@ export function buildModule(m: Module): ModuleBuild {
   b.buildCarcass()
   const layout = b.buildZones()
   const panels = b.panels.map((p) => normalizePanel(p.cutouts && p.cutouts.length === 0 ? { ...p, cutouts: undefined } : p))
-  return { panels, warnings: b.warnings, layout, openRatios: b.openRatios }
+  return { panels, extras: b.extras, warnings: b.warnings, layout, openRatios: b.openRatios }
 }
 
 /** Material dels fronts (portes, calaixos, abatibles, reixetes, fixos): el propi o, si no n'hi ha, el del cos. */

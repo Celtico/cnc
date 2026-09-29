@@ -1,7 +1,7 @@
 import { flatPackDesk, flatPackShelf, flatPackStool } from "./flatPack"
 import type { FreePart } from "./freePart"
 import type { PNode } from "./polygon"
-import { DEFAULT_GRILLE, defaultModule, newId, tableModule, type Composition, type CompositionKind, type Module, type Zone } from "./composition"
+import { DEFAULT_GRILLE, defaultModule, moduleOrigins3, newId, tableModule, type Composition, type CompositionKind, type Module, type Zone } from "./composition"
 
 export interface Template {
   id: string
@@ -57,6 +57,13 @@ const SHOWCASE: Template[] = [
     name: "Cuina amb illa de pedra",
     description: "La cuina moderna (taulell amb pica i vitro, sòcol corregut, alts) i, davant, una illa de calaixos al terra (X pròpia) amb taulell de pedra sense nesting.",
     make: kitchenIsland,
+  },
+  {
+    id: "walk-in-wardrobe",
+    kind: "armari",
+    name: "Vestidor amb barres",
+    description: "2800 × 2400 × 600: penjador llarg amb maleter, calaixos i prestatges, i doble barra per a camises; barres d'inox (sense nesting).",
+    make: walkInWardrobe,
   },
   {
     id: "flatpack-desk",
@@ -475,6 +482,36 @@ function kitchenIsland(): Composition {
     wallGap: gap,
     x: X,
   }
-  const stone: FreePart = { id: newId("p"), name: "Taulell de pedra", material: "Pedra", nest: false, orient: "flat", w: IW + 100, h: ID + 60, thickness: 30, x: X - 50, y: 870, z: gap - 20 }
-  return { ...k, kind: "cuina", modules: [...k.modules, island], parts: [stone] }
+  // Enganxat a l'illa (coordenades relatives): si l'illa es mou, el taulell la segueix.
+  const modules = [...k.modules, island]
+  const o = moduleOrigins3({ ...k, modules }).get(island.id)!
+  const stone: FreePart = { id: newId("p"), name: "Taulell de pedra", material: "Pedra", nest: false, orient: "flat", w: IW + 100, h: ID + 60, thickness: 30, module: island.id, x: -50, y: 870 - o[1], z: -20 }
+  return { ...k, kind: "cuina", modules, parts: [stone] }
+}
+
+/** Vestidor de tres cossos amb barres de penjar (tubs d'inox, fora del nesting). */
+function walkInWardrobe(): Composition {
+  const body = { height: 2400, depth: 600, material: "Melamina blanca", frontMaterial: "Melamina roure", thickness: 19, base: { kind: "plinth" as const, height: 80, setback: 30 } }
+  const long = withRoot(defaultModule(newId("m"), "Penjador llarg", { ...body, width: 1000 }), {
+    id: newId(),
+    front: { kind: "door", mode: "double", hinge: "left" },
+    split: { dir: "h", sizes: ["auto", 400], children: [{ id: newId(), rail: true }, { id: newId() }] },
+  })
+  const mid = withRoot(defaultModule(newId("m"), "Calaixos i prestatges", { ...body, width: 800 }), {
+    id: newId(),
+    split: {
+      dir: "h",
+      sizes: [700, "auto"],
+      children: [
+        { id: newId(), front: { kind: "drawers", n: 3, heights: ["auto", "auto", "auto"] } },
+        { id: newId(), shelves: { n: 4, adjustable: true }, front: { kind: "door", mode: "single", hinge: "right" } },
+      ],
+    },
+  })
+  const double = withRoot(defaultModule(newId("m"), "Doble barra", { ...body, width: 1000 }), {
+    id: newId(),
+    front: { kind: "door", mode: "double", hinge: "left" },
+    split: { dir: "h", sizes: ["auto", "auto", 400], children: [{ id: newId(), rail: true }, { id: newId(), rail: true }, { id: newId() }] },
+  })
+  return { kind: "armari", modules: [long, mid, double], references: [] }
 }

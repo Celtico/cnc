@@ -54,6 +54,7 @@ export function buildComposition(input: Composition): CompositionBuild {
   const panels: Panel[] = []
   const warnings: CompositionWarning[] = []
   const modules: CompositionBuild["modules"] = []
+  const moduleExtras: Panel[] = []
 
   // Tipus «Lliure» (flat-pack): només peces lliures; els mòduls es guarden però no es fan.
   const onlyParts = compositionKind(comp) === "lliure"
@@ -69,6 +70,10 @@ export function buildComposition(input: Composition): CompositionBuild {
         module: i + 1,
         placement: { ...p.placement, origin: [o[0] + x, o[1] + y, o[2] + z] },
       })
+    }
+    for (const p of build.extras) {
+      const o = p.placement.origin
+      moduleExtras.push({ ...p, id: `${m.id}:${p.id}`, module: i + 1, placement: { ...p.placement, origin: [o[0] + x, o[1] + y, o[2] + z] } })
     }
     for (const w of build.warnings) warnings.push({ ...w, moduleId: m.id })
     // Mòdul penjat: el pes el porta el darrere. Cal fons cargolat o en ranura prou gruixut
@@ -114,5 +119,5 @@ export function buildComposition(input: Composition): CompositionBuild {
     }
   }
 
-  return { panels, warnings, modules, joints: free.joints, extras: free.extras }
+  return { panels, warnings, modules, joints: free.joints, extras: [...moduleExtras, ...free.extras] }
 }

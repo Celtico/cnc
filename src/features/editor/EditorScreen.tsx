@@ -48,7 +48,7 @@ import { ArDialog } from "../../components/viewer/ArDialog"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox } from "../../core/build/buildComposition"
-import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, moveGroupBy, freeX, partBox, type Composition, type FreePart, type Module, type RefObject, type Zone } from "../../core/model"
+import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, moveGroupBy, freeX, resolveParts, partOffset, partBox, type Composition, type FreePart, type Module, type RefObject, type Zone } from "../../core/model"
 import { updateProjectComposition } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -57,7 +57,7 @@ import { RefActions, RefInspector } from "../composition/RefInspector"
 import { GroupInspector, ORIENT_ICON, PartActions, PartInspector, PartJoineryForm } from "../composition/PartInspector"
 import { StructureTree, type Selection } from "../composition/StructureTree"
 import { Tooltip } from "../../components/ui/tooltip"
-import { ZoneActions, ZonePanel } from "../composition/ZonePanel"
+import { ZoneActions, ZoneFrontSection, ZonePanel } from "../composition/ZonePanel"
 import { RunsForm } from "../composition/RunsForm"
 import { zoneLabel } from "../composition/zoneLabel"
 import { zoneIcon } from "../composition/zoneIcon"
@@ -317,7 +317,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
       d = Math.max(d, g.z + g.d)
       w = Math.max(w, g.x + g.w)
     }
-    for (const p of comp.parts ?? []) {
+    for (const p of resolveParts(comp)) {
       const b = partBox(p)
       w = Math.max(w, b.max[0])
       h = Math.max(h, b.max[1])
@@ -405,8 +405,19 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
     select(g && !inside ? { kind: "group", id: g } : { kind: "part", id })
   }
   /** Mou una peça lliure (arrossegada al 3D o amb les fletxes). */
+  // `pos` en coordenades de la composició: si és enganxada a un mòdul, es passa a relativa.
   const movePart = (id: string, pos: { x: number; y: number; z: number }) =>
-    setComp((c) => ({ ...c, parts: (c.parts ?? []).map((r) => (r.id === id ? { ...r, ...pos, y: Math.max(0, pos.y) } : r)) }))
+    setComp((c) =>
+      ({
+        ...c,
+        parts: (c.parts ?? []).map((r) => {
+          if (r.id !== id) return r
+          const o = partOffset(c, r)
+          return { ...r, x: pos.x - o[0], y: Math.max(0, pos.y) - o[1], z: pos.z - o[2] }
+        }),
+      }),
+    )
+  const absParts = useMemo(() => resolveParts(comp), [comp])
   /** Mou un objecte de referència (arrossegat al 3D o amb les fletxes). */
   const moveRef = (id: string, pos: { x: number; y: number; z: number }) =>
     setComp((c) => ({ ...c, references: c.references.map((r) => (r.id === id ? anchorRef({ ...r, ...pos }) : r)) }))
@@ -536,7 +547,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
       moveGroup(selection.id, d[0]!, d[1]!, d[2]!)
       return
     }
-    const r = selection.kind === "part" ? comp.parts?.find((o) => o.id === selection.id) : comp.references.find((o) => o.id === selection.id)
+    const r = selection.kind === "part" ? absParts.find((o) => o.id === selection.id) : comp.references.find((o) => o.id === selection.id)
     if (!r) return
     const k = e.shiftKey ? 10 : 1
     const d = { ArrowLeft: [-k, 0, 0], ArrowRight: [k, 0, 0], ArrowUp: [0, k, 0], ArrowDown: [0, -k, 0], PageUp: [0, 0, k], PageDown: [0, 0, -k] }[e.key]
@@ -1005,6 +1016,8 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           <PanelSection id="mod-structure" title="Estructura" icon={LuFrame}>
             <CarcassForm module={module} onChange={updateModule} section="structure" />
           </PanelSection>
+          {/* Mòdul dividit: portes que el tapen tot (armari amb penjador i maleter). */}
+          {module.root.split && <ZoneFrontSection root={module.root} zone={module.root} onChange={(root) => updateModule({ ...module, root })} kinds={["none", "door", "panel"]} title="Front de tot el mòdul" />}
           <PanelSection id="mod-materials" title="Materials" icon={LuPalette}>
             <MaterialsForm carcass={module.carcass} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
           </PanelSection>
@@ -1221,7 +1234,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             fitKey={fitKey}
             onFramedChange={setFramed}
             onMoveRef={moveRef}
-            parts={comp.parts}
+            parts={absParts}
             selectedPartId={selection.kind === "part" ? selection.id : null}
             onSelectPart={selectPartFrom3D}
             selectedGroup={selection.kind === "group" ? selection.id : null}

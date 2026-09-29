@@ -320,9 +320,21 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     encastats, prestatges gruixuts, passacables que talla, bastidor de ferro), Moble TV flotant
     (parets buides, prestatge gruixut a ras, reixeta, tele a la paret), Moble de bany amb pedra
     (penjat, calaixos encastats, taulell de pedra, desguàs), Cuina amb illa de pedra (illa al
-    terra amb X pròpia) i Escriptori flat-pack (laterals amb
+    terra amb X pròpia, taulell de pedra enganxat a l'illa), Vestidor amb barres (portes de dalt
+    a baix, barres d'inox, doble barra) i Escriptori flat-pack (laterals amb
     arc que travessen el tauler amb pestanyes). `showcase.test.ts` comprova que no fan avisos de
     xoc ni de talls.
+  - **Peça enganxada a un mòdul** (`FreePart.module`, `resolveParts`, `partOffset`): a General,
+    «Enganxada a»; x/y/z passen a ser relatives al mòdul i el segueixen (el taulell de pedra de
+    l'illa). Tot el que dibuixa o construeix fa servir `resolveParts` (coordenades de la
+    composició); en arrossegar-la es torna a relativa.
+  - **Barra de penjar** (`Zone.rail`, switch a Prestatges): tub d'inox Ø25 a 50 mm del sostre del
+    compartiment, de lateral a lateral; va a `ModuleBuild.extras` → «Elements sense nesting».
+    Avís `rail` si el compartiment fa menys de 900 mm. Icona `LuShirt`.
+  - **Front d'una zona dividida** (portes d'armari de dalt a baix amb penjador i maleter
+    darrere): `buildParentFront`; les fulles de sota queden `covered` (sense front propi).
+    Es tria a la zona dividida («Front de tota la zona») i, per al mòdul sencer, a l'inspector
+    del mòdul («Front de tot el mòdul»): només portes o front fix.
   - **Materials que no són de CNC** (`MaterialPref.cnc = false`; ferro, inox, pedra, vidre
     afegits a la v2 de les preferències; acabats `metal` i `glass`): una peça lliure d'aquest
     material porta `nest: false` (es posa sol en triar-lo) i va a `build.extras`: es veu al 3D,

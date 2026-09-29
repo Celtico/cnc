@@ -41,6 +41,11 @@ export const FreePartSchema = z.object({
    * en triar un material de les preferències que no és de CNC.
    */
   nest: z.boolean().optional(),
+  /**
+   * Enganxada a un mòdul (id): x, y, z són relatives a la posició del mòdul i la peça el
+   * segueix quan es mou (el taulell de pedra de l'illa). Sense: a la composició.
+   */
+  module: z.string().optional(),
   /** Grup (nom): les peces del mateix grup es mouen juntes; a l'arbre surten plegades a sota. */
   group: z.string().optional(),
   /** false: la peça no fa encaixos amb les altres (per defecte, sí). */

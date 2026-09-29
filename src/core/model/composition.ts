@@ -2,7 +2,7 @@ import { z } from "zod"
 import { DEFAULT_CABINET, type CabinetParams } from "./cabinet"
 import { BPtSchema, ProfileNodeSchema } from "./panel"
 import { flatten, profileToOutline, toNodes, type BPt } from "./polygon"
-import { FreePartSchema, JoinerySchema } from "./freePart"
+import { FreePartSchema, JoinerySchema, type FreePart } from "./freePart"
 
 /**
  * Model de composició: mòduls d'esquerra a dreta, cadascun amb una carcassa i un
@@ -162,6 +162,8 @@ export interface Zone {
   split?: { dir: "v" | "h"; sizes: (number | "auto")[]; children: Zone[] }
   shelves?: { n: number; adjustable: boolean; thickness?: number; flush?: boolean }
   front?: Front
+  /** Barra de penjar (tub d'inox Ø25 a 50 mm del sostre del compartiment). */
+  rail?: boolean
 }
 
 export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
@@ -188,6 +190,7 @@ export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
       })
       .optional(),
     front: FrontSchema.optional(),
+    rail: z.boolean().optional(),
   }),
 )
 
@@ -637,4 +640,30 @@ export function tableModule(id: string, name: string, overrides: Partial<Carcass
 export function defaultModule(id: string, name: string, overrides: Partial<Carcass> = {}): Module {
   const m = cabinetToModule({ ...DEFAULT_CABINET, doors: 0, shelves: 1 }, id, name)
   return { ...m, carcass: { ...m.carcass, ...overrides } }
+}
+
+/** Origen (mm) de cada mòdul a la composició, per id. */
+export function moduleOrigins3(comp: Composition): Map<string, [number, number, number]> {
+  const ps = modulePlacements(comp)
+  return new Map(comp.modules.map((m, i) => [m.id, [ps[i]!.x, ps[i]!.y, ps[i]!.z ?? 0] as [number, number, number]]))
+}
+
+/**
+ * Peces lliures amb coordenades de la composició: les enganxades a un mòdul se sumen a la
+ * seva posició. Al Flat-pack (sense mòduls fets) o si el mòdul ja no hi és, van soles.
+ */
+export function resolveParts(comp: Composition): FreePart[] {
+  const parts = comp.parts ?? []
+  if (!parts.some((p) => p.module) || compositionKind(comp) === "lliure") return parts
+  const origins = moduleOrigins3(comp)
+  return parts.map((p) => {
+    const o = p.module ? origins.get(p.module) : undefined
+    return o ? { ...p, x: p.x + o[0], y: p.y + o[1], z: p.z + o[2] } : p
+  })
+}
+
+/** Desplaçament que cal sumar a una peça per passar-la a coordenades de la composició. */
+export function partOffset(comp: Composition, p: FreePart): [number, number, number] {
+  if (!p.module || compositionKind(comp) === "lliure") return [0, 0, 0]
+  return moduleOrigins3(comp).get(p.module) ?? [0, 0, 0]
 }
