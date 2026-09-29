@@ -48,7 +48,16 @@ export const FinishSchema = z.discriminatedUnion("kind", [
    * Foto real del tauler (textura): imatge reduïda en data URL i l'amplada real que hi surt
    * (mm), perquè la veta tingui la mida de debò al 3D.
    */
-  z.object({ kind: z.literal("image"), src: z.string().startsWith("data:image/"), tileMm: mm.min(50).max(5000) }),
+  z.object({
+    kind: z.literal("image"),
+    src: z.string().startsWith("data:image/"),
+    /** Amplada de tauler de debò que mostra la foto (mm, d'esquerra a dreta). */
+    tileMm: mm.min(50).max(5000),
+    /** Alçada ÷ amplada de la foto: l'alçada real és tileMm × aspect (sense, quadrada). */
+    aspect: z.number().positive().optional(),
+    /** Textura feta per repetir (seamless): es repeteix normal; si no, en mirall (sense costures). */
+    seamless: z.boolean().optional(),
+  }),
 ])
 export type Finish = z.infer<typeof FinishSchema>
 

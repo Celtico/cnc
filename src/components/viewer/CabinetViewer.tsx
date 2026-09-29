@@ -1236,13 +1236,20 @@ function MoveHandle({
   )
 }
 
-/** Textura clonada amb repetició segons la mida real de la cara i la veta girada si cal. */
-function faceTexture(base: Texture, uMm: number, vMm: number, rotate: boolean, tileMm = TILE_MM): Texture {
+/**
+ * Textura clonada amb repetició segons la mida real de la cara i la veta girada si cal.
+ * `tileMm` = amplada real d'una repetició (la veta hi va d'esquerra a dreta) i `aspect` =
+ * alçada ÷ amplada de la imatge. Girada (veta en v), l'horitzontal de la imatge cobreix la v de
+ * la cara (three escala després de girar), per això es creuen les repeticions.
+ */
+function faceTexture(base: Texture, uMm: number, vMm: number, rotate: boolean, tileMm = TILE_MM, aspect = 1): Texture {
   const t = base.clone()
   t.needsUpdate = true
   t.center.set(0.5, 0.5)
   t.rotation = rotate ? Math.PI / 2 : 0
-  t.repeat.set(uMm / tileMm, vMm / tileMm)
+  const tw = tileMm, th = tileMm * aspect
+  if (rotate) t.repeat.set(vMm / tw, uMm / th)
+  else t.repeat.set(uMm / tw, vMm / th)
   return t
 }
 
@@ -1252,7 +1259,7 @@ function makeMaterial(finish: FinishSpec, uMm: number, vMm: number, rotate: bool
   }
   // Foto real del tauler: la mateixa escala que al tauler de debò (tileMm = amplada de la foto).
   if (finish.kind === "image") {
-    return new MeshStandardMaterial({ map: faceTexture(photoTexture(finish.src), uMm, vMm, rotate, finish.tileMm), roughness: 0.7, metalness: 0, ...opts })
+    return new MeshStandardMaterial({ map: faceTexture(photoTexture(finish.src, finish.seamless), uMm, vMm, rotate, finish.tileMm, finish.aspect), roughness: 0.7, metalness: 0, ...opts })
   }
   // Vidre: translúcid sempre (també sense vel).
   const glass = finish.opacity !== undefined && finish.opacity < 1

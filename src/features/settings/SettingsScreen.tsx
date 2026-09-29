@@ -468,6 +468,15 @@ const FINISH_LABEL: Record<Finish["kind"], string> = { color: "color llis", lacq
 function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: MaterialPref; onChange: (p: Partial<MaterialPref>) => void; onDuplicate: () => void; onDelete: () => void; canDelete: boolean }) {
   const [thickText, setThickText] = useState(m.thicknesses.join(" · "))
   const finish = m.finish
+  // Fotos d'abans (sense proporció): es mesura la imatge un cop.
+  const needsAspect = finish.kind === "image" && finish.aspect === undefined ? finish.src : null
+  useEffect(() => {
+    if (!needsAspect || finish.kind !== "image") return
+    const img = new Image()
+    img.onload = () => img.width && onChange({ finish: { ...finish, aspect: Math.round((img.height / img.width) * 1000) / 1000 } })
+    img.src = needsAspect
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsAspect])
   const swatch = finish.kind === "wood" || finish.kind === "image" ? undefined : finish.color
   const sw = <Box w="18px" h="18px" rounded="sm" borderWidth="1px" flexShrink={0} bg={swatch} bgImage={finish.kind === "wood" ? "repeating-linear-gradient(90deg, #b98b57 0 2px, #a3763f 2px 3px)" : finish.kind === "image" ? `url(${finish.src})` : undefined} bgSize="cover" />
   return (
@@ -528,7 +537,7 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
                   const k = e.target.value as Finish["kind"]
                   if (k === "image") {
                     // Primer cal triar la foto; si es cancel·la, l'acabat no canvia.
-                    void pickTexture().then((src) => src && onChange({ finish: { kind: "image", src, tileMm: 800 } }))
+                    void pickTexture().then((t) => t && onChange({ finish: { kind: "image", tileMm: 800, ...t } }))
                     return
                   }
                   onChange({ finish: k === "wood" ? { kind: "wood", species: "oak" } : { kind: k, color: swatch ?? "#e5e5e5" } })
@@ -566,7 +575,7 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
                   variant="outline"
                   aria-label="Canviar la foto"
                   title="Canviar la foto"
-                  onClick={() => void pickTexture().then((src) => src && onChange({ finish: { ...finish, src } }))}
+                  onClick={() => void pickTexture().then((t) => t && onChange({ finish: { ...finish, ...t } }))}
                 >
                   <LuImage />
                 </IconButton>
@@ -603,10 +612,16 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
             <Box w="72px" h="48px" rounded="sm" borderWidth="1px" flexShrink={0} bgImage={`url(${finish.src})`} bgSize="cover" backgroundPosition="center" />
             <Stack gap={1} flex={1} minW={0}>
               <Text fontSize="xs" color="fg.muted">
-                Textura de foto: es repeteix en mirall cada {finish.tileMm} mm.
+                {finish.tileMm} × {Math.round(finish.tileMm * (finish.aspect ?? 1))} mm de tauler per repetició,{" "}
+                {finish.seamless ? "repetida tal qual" : "en mirall"}.
               </Text>
+              <Switch.Root size="sm" checked={!!finish.seamless} onCheckedChange={(e) => onChange({ finish: { ...finish, seamless: e.checked || undefined } })}>
+                <Switch.HiddenInput />
+                <Switch.Control />
+                <Switch.Label fontSize="xs">Sense costures (seamless): repetir sense mirall</Switch.Label>
+              </Switch.Root>
               <HStack gap={1.5}>
-                <Button size="xs" variant="outline" onClick={() => void pickTexture().then((src) => src && onChange({ finish: { ...finish, src } }))}>
+                <Button size="xs" variant="outline" onClick={() => void pickTexture().then((t) => t && onChange({ finish: { ...finish, ...t } }))}>
                   <LuImagePlus /> Canviar la foto
                 </Button>
                 <Button size="xs" variant="ghost" colorPalette="red" onClick={() => onChange({ finish: m.hasGrain ? { kind: "wood", species: "oak" } : { kind: "color", color: "#e5e5e5" } })}>
@@ -617,7 +632,7 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
           </HStack>
         ) : (
           <HStack gap={2} wrap="wrap">
-            <Button size="xs" variant="outline" onClick={() => void pickTexture().then((src) => src && onChange({ finish: { kind: "image", src, tileMm: 800 } }))}>
+            <Button size="xs" variant="outline" onClick={() => void pickTexture().then((t) => t && onChange({ finish: { kind: "image", tileMm: 800, ...t } }))}>
               <LuImagePlus /> Posar una foto de textura
             </Button>
             <Text fontSize="xs" color="fg.muted">
@@ -942,7 +957,7 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
  * Tria una foto del tauler (galeria o càmera al mòbil) i la redueix a 1024 px en JPEG, perquè
  * càpiga a les preferències sense ocupar massa.
  */
-function pickTexture(): Promise<string | null> {
+function pickTexture(): Promise<{ src: string; aspect: number } | null> {
   return new Promise((resolve) => {
     const input = document.createElement("input")
     input.type = "file"
@@ -959,7 +974,7 @@ function pickTexture(): Promise<string | null> {
         c.height = Math.round(img.height * k)
         c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height)
         URL.revokeObjectURL(url)
-        resolve(c.toDataURL("image/jpeg", 0.85))
+        resolve({ src: c.toDataURL("image/jpeg", 0.85), aspect: Math.round((c.height / c.width) * 1000) / 1000 })
       }
       img.onerror = () => {
         URL.revokeObjectURL(url)

@@ -422,7 +422,11 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     menú i al manifest. El Dockerfile instal·la git i el `.git` no s'ignora.
   - **Textures reals** (`Finish.kind = "image"`): a Preferències › Materials, Acabat «Foto
     real»: es tria una foto (reduïda a 1024 px JPEG) i l'amplada real que mostra (mm);
-    `photoTexture` (repetició en mirall perquè no es vegin costures).
+    `photoTexture`: en mirall (una foto qualsevol, sense costures) o, amb «Sense costures (seamless)»
+    (`Finish.seamless`), repetició normal. `Finish.aspect` (alçada ÷ amplada, es mesura en triar-la
+    o, a les antigues, en obrir la targeta) fa que l'alçada real sigui `tileMm × aspect`: abans
+    s'estirava si la foto no era quadrada. `faceTexture` creua les repeticions quan la veta va en v
+    (three escala després de girar).
   - **Tauler de taula** (`Carcass.tableTop`): la tapa per sobre dels laterals (més curts),
     voladís a tot el voltant i forma (rectangle, arrodonit, oval o a mida amb l'editor de
     perfil; `shape` en mm s'escala al tauler). `Panel.outline` (rectes i arcs): 3D/GLB
