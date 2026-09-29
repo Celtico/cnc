@@ -89,6 +89,8 @@ interface Derived {
   baseY: number
   /** Tapa a inglet amb els laterals (a cada costat on hi ha lateral). */
   mitreTop: boolean
+  /** Base a inglet amb els laterals (quan la base és a baix de tot dels laterals: no amb sòcol). */
+  mitreBottom: boolean
   /** Fronts encastats (dins de la llum) en lloc de recobrents. */
   inset: boolean
   /** Tauler de taula: tapa per sobre dels laterals, amb voladís i forma. */
@@ -142,6 +144,7 @@ function derive(m: Module): Derived {
     hasTop,
     baseY,
     mitreTop: !hollow && !tableTop && c.joint === "mitre" && hasTop && (c.sides.left || c.sides.right),
+    mitreBottom: !hollow && c.joint === "mitre" && hasBase && baseY === 0 && (c.sides.left || c.sides.right),
     inset: m.fronts.style === "inset",
     frontZ: m.fronts.style === "inset" ? D : D + t,
     tableTop,
@@ -315,7 +318,8 @@ class Builder {
         pl,
       ),
       grooves,
-      ...(d.mitreTop ? { mitres: ["right" as const] } : {}),
+      // Local x = alçada: «right» és el cap de dalt (tapa) i «left» el de baix (base).
+      ...(d.mitreTop || d.mitreBottom ? { mitres: [...(d.mitreTop ? (["right"] as const) : []), ...(d.mitreBottom ? (["left"] as const) : [])] } : {}),
     })
     this.verticals.push({
       panel,
@@ -453,8 +457,8 @@ class Builder {
     const { t, interior } = d
     const isBottom = which === "bottom"
     // Tapa a inglet: arriba fins a fora de cada lateral (x = 0 / W), amb el cantell a 45°.
-    const mitreL = !isBottom && d.mitreTop && c.sides.left
-    const mitreR = !isBottom && d.mitreTop && c.sides.right
+    const mitreL = (isBottom ? d.mitreBottom : d.mitreTop) && c.sides.left
+    const mitreR = (isBottom ? d.mitreBottom : d.mitreTop) && c.sides.right
     // Tauler de taula: per sobre dels laterals, amb voladís a tot el voltant.
     const ov = !isBottom && d.tableTop ? d.tableTop.overhang : 0
     const onTop = !isBottom && !!d.tableTop
@@ -481,7 +485,7 @@ class Builder {
     }
     const yBottom = isBottom ? d.baseY : d.H - t
     const pl = isBottom
-      ? placement([interior.x0, yBottom, d.D], X, neg(Z), Y, neg(Y))
+      ? placement([px0, yBottom, d.D], X, neg(Z), Y, neg(Y))
       : placement([px0, d.H, zRear], X, Z, neg(Y), Y)
     const panel = this.add({
       ...this.basePanel(
@@ -518,7 +522,7 @@ class Builder {
     if (onTop)
       this.warnings.push({ code: "table", message: "Tauler de taula per sobre dels laterals: es fixa per sota amb cargols o ferratges d'unió (no porta espigues).", panelId: panel.id })
     if (mitreL || mitreR)
-      this.warnings.push({ code: "mitre", message: "Tapa a inglet: tall a 45° als cantells de la tapa i dels laterals; encolar amb lamel·les o Clamex (no porta espigues).", panelId: panel.id })
+      this.warnings.push({ code: "mitre", message: `${isBottom ? "Base" : "Tapa"} a inglet: tall a 45° als cantells de la ${isBottom ? "base" : "tapa"} i dels laterals; encolar amb lamel·les o Clamex (no porta espigues).`, panelId: panel.id })
     for (const v of this.verticals) {
       if (!v.outer || mitreL || mitreR || onTop) continue
       const xFace = near(v.xR, interior.x0) ? v.xR : v.xL

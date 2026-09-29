@@ -125,8 +125,9 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
 
         {/* Acabats: com s'uneix la tapa amb els laterals i com van els fronts. */}
         <SimpleGrid columns={2} gap={3}>
-          {/* Sense laterals (o sense tapa, si no són parets buides) no hi ha cantonades a unir. */}
-          {!(c.sides.left || c.sides.right) || (!c.hollow && c.top.kind === "none") ? null : c.hollow ? (
+          {/* Sense laterals, o sense tapa ni base a baix dels laterals (amb sòcol la base queda
+              entre els laterals), no hi ha cantonades a unir a inglet. */}
+          {!(c.sides.left || c.sides.right) || (!c.hollow && c.top.kind === "none" && (c.base.kind === "open" || c.base.kind === "plinth")) ? null : c.hollow ? (
             // Amb parets buides les cantonades són sempre a inglet (com un bloc massís).
             <Stack gap={1.5}>
               <HStack gap={1.5} fontSize="sm">
@@ -143,7 +144,7 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
               value={c.joint ?? "butt"}
               options={[
                 { value: "butt", label: "Normals", icon: LuSquare, hint: "Normals: la tapa entre els laterals, amb espigues" },
-                { value: "mitre", label: "A inglet", icon: LuTriangleRight, hint: "A inglet: tapa i laterals tallats a 45°, no es veu cap cantell" },
+                { value: "mitre", label: "A inglet", icon: LuTriangleRight, hint: "A inglet: tapa i base (si és a baix de tot, sense sòcol) tallades a 45° amb els laterals, no es veu cap cantell" },
               ]}
               onChange={(joint) => set({ joint: joint === "butt" ? undefined : joint })}
             />

@@ -270,7 +270,9 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     maleter, calaixos i prestatges), taula (consola, menjador, centre, banc); al Moble, les
     plantilles d'un sol mòdul. Els antics: cuina si tenen runs, si no moble.
   - **Acabats** (Estructura del mòdul): **Cantonades** Normals / A inglet (`Carcass.joint`): la
-    tapa arriba a fora dels laterals, `Panel.mitres` als cantells (sense cantell ni espigues,
+    tapa arriba a fora dels laterals; la base també (`mitreBottom`) si és a baix de tot dels
+    laterals (a terra, potes o penjat; amb sòcol no). Cantonades no surt si no hi ha res a unir
+    (sense laterals, o sense tapa i amb sòcol o sense base); `Panel.mitres` als cantells (sense cantell ni espigues,
     avís informatiu), capa DXF `MITRE_45`, «n∠45°» al llistat i al CSV, i al 3D/GLB la secció
     en trapezi (`mitreGeometry`). El STEP encara les dibuixa rectes. **Fronts** Recobrents /
     Encastats (`fronts.style`): encastats dins de la llum amb el joc a tot el voltant, a nivell
@@ -345,8 +347,7 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     depèn de l'orientació): de CNC, el gruix es tria entre els del tauler; si no és de CNC, les
     tres lliures i sense Veta ni interruptor d'encaixos.
   - **Opcions que no toquen s'amaguen**: sense fons no surten el material i el gruix del fons
-    ni la ranura del fons; sense laterals (o sense tapa, si no són parets buides), no surt
-    Cantonades.
+    ni la ranura del fons; Cantonades, només si hi ha tapa o base a unir amb els laterals.
   - **Forma del tauler**: `shapeOutline` escala per l'extensió real de la corba (mostrejada),
     no pels nodes: si no, les cúbiques sortien del rectangle del nesting.
   - **Compte amb `Field.Root`**: no hi posis dos interruptors a dins (el Field els dona el
