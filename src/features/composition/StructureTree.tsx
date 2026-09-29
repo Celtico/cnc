@@ -1,5 +1,6 @@
 import { Box, HStack, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
+import { KINDS } from "./kinds"
 import {
   LuArrowDown,
   LuArrowUp,
@@ -13,7 +14,7 @@ import {
   LuTrash2,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcon"
-import { BUILTIN_TEMPLATES, insertRefCopy, newId, reorderModule, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
+import { compositionKind, insertRefCopy, modulePresetsFor, newId, reorderModule, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
 import { RefAddMenu } from "./RefInspector"
 import { zoneLabel } from "./zoneLabel"
 
@@ -189,11 +190,15 @@ export function StructureTree({
               <Menu.Item value="empty" onClick={() => addModule(newModule(newId("m"), `Mòdul ${comp.modules.length + 1}`))}>
                 <LuBox /> Caixa buida
               </Menu.Item>
-              {BUILTIN_TEMPLATES.filter((t) => t.make().modules.length === 1).map((t) => (
-                <Menu.Item key={t.id} value={t.id} onClick={() => addModule({ ...t.make().modules[0]!, id: newId("m") })}>
-                  {t.name}
-                </Menu.Item>
-              ))}
+              {/* Mòduls especials del tipus de moble (cuina: baixos, alts, columnes…). */}
+              <Menu.ItemGroup>
+                <Menu.ItemGroupLabel>{KINDS.find((k) => k.value === compositionKind(comp))!.label}</Menu.ItemGroupLabel>
+                {modulePresetsFor(compositionKind(comp)).map((p) => (
+                  <Menu.Item key={p.id} value={p.id} onClick={() => addModule({ ...p.make(), id: newId("m") })}>
+                    {p.name}
+                  </Menu.Item>
+                ))}
+              </Menu.ItemGroup>
             </Menu.Content>
           </Menu.Positioner>
         </Portal>

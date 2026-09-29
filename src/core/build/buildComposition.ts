@@ -1,4 +1,4 @@
-import { modulePlacements, type Composition, type Panel, type RefObject, type Vec3 } from "../model"
+import { compositionKind, modulePlacements, type Composition, type Panel, type RefObject, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { buildModule, type BuildWarning, type ModuleBuild } from "./buildModule"
 import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
@@ -75,7 +75,8 @@ export function buildComposition(input: Composition): CompositionBuild {
 
   // Peces corregudes (taulell, sòcol): numerades com un «mòdul» més per a les refs del taller.
   const runWarnings: RunWarning[] = []
-  for (const run of comp.runs ?? []) {
+  // Només a la cuina: si es canvia de tipus, es conserven però no es fan (es recuperen en tornar-hi).
+  for (const run of compositionKind(comp) === "cuina" ? (comp.runs ?? []) : []) {
     const n = comp.modules.length + 1
     const p = run.kind === "worktop" ? buildWorktop(comp, run, places, n, runWarnings) : buildPlinthRun(comp, run, places, n, runWarnings)
     if (p) panels.push(p)

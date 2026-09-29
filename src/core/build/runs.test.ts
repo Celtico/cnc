@@ -44,3 +44,15 @@ describe("peces corregudes (taulell i sòcol)", () => {
     expect(b.warnings.some((w) => /sòcol corregut/.test(w.message))).toBe(true)
   })
 })
+
+describe("taulell i sòcol segons el tipus", () => {
+  it("només es construeixen a la cuina", async () => {
+    const { BUILTIN_TEMPLATES } = await import("../model")
+    const { buildComposition } = await import("./buildComposition")
+    const k = BUILTIN_TEMPLATES.find((t) => t.id === "modern-kitchen")!.make()
+    const has = (c: typeof k) => buildComposition(c).panels.some((p) => p.role === "worktop")
+    expect(has(k)).toBe(true)
+    expect(has({ ...k, kind: "moble" })).toBe(false)
+    expect(has({ ...k, kind: "cuina" })).toBe(true)
+  })
+})

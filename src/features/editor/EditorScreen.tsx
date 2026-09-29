@@ -750,6 +750,9 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           <PanelSection id="moble-kind" title="Tipus" icon={KINDS.find((k) => k.value === kind)!.icon} badge={KINDS.find((k) => k.value === kind)!.label}>
             <IconChoice label="Tipus de moble" value={kind} options={KINDS} onChange={(k) => setComp((c) => ({ ...c, kind: k }))} />
             <Text fontSize="xs" color="fg.muted">
+              {kind !== "cuina" && comp.runs?.length
+                ? `Aquest moble té ${comp.runs.length === 1 ? "un taulell o sòcol corregut" : `${comp.runs.length} taulells o sòcols correguts`}: només es fan a la Cuina. Es guarden per si hi tornes. `
+                : ""}
               {kind === "cuina"
                 ? "Cuina: baixos a terra i alts penjats, amb taulell i sòcol correguts per sobre i per sota de diversos mòduls."
                 : kind === "armari"
@@ -759,7 +762,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                     : "Moble: mòduls lliures (TV, calaixera, prestatgeria…)."}
             </Text>
           </PanelSection>
-          {(kind === "cuina" || !!comp.runs?.length) && (
+          {kind === "cuina" && (
             <PanelSection id="moble-runs" title="Taulell i sòcol" icon={LuPanelTop} badge={comp.runs?.length || undefined}>
               <RunsForm comp={comp} onChange={setComp} />
             </PanelSection>

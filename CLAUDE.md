@@ -258,9 +258,13 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   - **Tipus de moble** (`Composition.kind`, `compositionKind`, `features/composition/kinds.tsx`):
     Moble, Cuina, Armari, Taula. Es tria a la galeria «Nou moble» (filtre per tipus; «En blanc»
     crea el del tipus) i a l'inspector del moble (secció Tipus). Taulell i sòcol correguts només
-    surten a la Cuina (o si el moble ja en té). Taula: `tableModule` (tauler + dos laterals de
+    surten i es construeixen a la Cuina; en canviar de tipus es guarden (no es fan) i tornen. Taula: `tableModule` (tauler + dos laterals de
     panell, sense base ni fons, cantonades a inglet); «Afegir mòdul» n'afegeix una. Plantilles
-    amb `kind` (Consola, Taula de menjador). Els antics: cuina si tenen runs, si no moble.
+    amb `kind` (Consola, Taula de menjador). **Mòduls especials** per tipus (`core/model/modulePresets.ts`,
+    `modulePresetsFor`) al menú «Afegir mòdul»: cuina (baixos calaixos/porta/fregadera/fogons/
+    forn, columnes forn i rebost, alts porta/abatible), armari (prestatges, penjador amb
+    maleter, calaixos i prestatges), taula (consola, menjador, centre, banc); al Moble, les
+    plantilles d'un sol mòdul. Els antics: cuina si tenen runs, si no moble.
   - **Acabats** (Estructura del mòdul): **Cantonades** Normals / A inglet (`Carcass.joint`): la
     tapa arriba a fora dels laterals, `Panel.mitres` als cantells (sense cantell ni espigues,
     avís informatiu), capa DXF `MITRE_45`, «n∠45°» al llistat i al CSV, i al 3D/GLB la secció
