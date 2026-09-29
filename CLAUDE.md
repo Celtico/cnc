@@ -69,6 +69,7 @@ només porta els valors inicials.
 - **Vitest** per als tests del nucli.
 - Gestor de paquets: **pnpm**.
 - **polygon-clipping** (booleans de polígons) per als encaixos de les peces lliures.
+- **three-bvh-csg** (+ `three-mesh-bvh`) per als booleans 3D de les peces que tallen de costat.
 
 ## Arquitectura
 ```
@@ -339,14 +340,23 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     el gruix; a l'estirada la v es gira) i `applyRefCuts` fa el forat passant a les peces que
     travessa (també a les altres peces lliures). Al 3D, fantasma violeta amb el gizmo (id
     `part:<id>` als fantasmes); avisos `ref-cut` amb `partId`. Icona `LuScissors` a l'arbre.
-    Només fora les peces amb la mateixa normal (forat passant); si en travessa una de costat,
-    avisa (no és un booleà 3D). També talla les peces que no són de CNC (`extras`).
+    Amb la mateixa normal: forat passant. **De costat** (`sidewaysCut`): si la travessa de cara
+    a cara amb secció recta, rectangle al pla de la peça (forat, o osca del contorn a les peces
+    lliures i les que no són de CNC, amb `polygon-clipping`; avisa si la parteix); si no (un tub
+    pel cantell d'un bloc), **booleà 3D**: `Panel.solidCuts` (prismes en coordenades locals) que
+    el visor, l'AR i el render resten amb **three-bvh-csg** (`solidCutGeometry`); a les peces de
+    CNC avisa que no es mecanitza. Els objectes de referència només foraden en la seva direcció.
+    També talla les peces que no són de CNC (`extras`).
   - **Render per CPU** (`viewer/render/`, botó «Render» a Opcions de vista, com Cinema 4D):
     `extractScene` passa l'escena del visor a triangles + materials + textures (píxels) i
     `pathWorker` (un per nucli, BVH propi) fa path tracing progressiu: cel d'estudi, sol amb
     ombres suaus, difús, reflex segons la rugositat, metalls i vidre. `RenderDialog` acumula les
-    passades (to ACES), s'atura/continua i desa el PNG. Control «Exposició» (−2…+2 EV): només
-    retoca el to, no torna a calcular. No depèn de la GPU.
+    passades (to ACES), s'atura/continua i desa el PNG. No depèn de la GPU. Opcions (columna de la
+    dreta): **Qualitat** (resolució, rebots de llum, aturar-se a N passades), **Escena**
+    (habitació de Presentació / només terra / cap: `userData.room` a `PresentationRoom`),
+    **Llum** (`RenderOpts`: direcció i alçada del sol, intensitat, ombres dures–suaus, cel) —
+    aquestes tornen a començar— i **Imatge** (exposició EV, contrast, saturació, fons estudi /
+    blanc / transparent amb l'alfa de cobertura del worker), a l'instant.
   - **Peça enganxada a un mòdul** (`FreePart.module`, `resolveParts`, `partOffset`): a General,
     «Enganxada a»; x/y/z passen a ser relatives al mòdul i el segueixen (el taulell de pedra de
     l'illa). Tot el que dibuixa o construeix fa servir `resolveParts` (coordenades de la

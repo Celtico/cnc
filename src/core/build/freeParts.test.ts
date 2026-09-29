@@ -171,11 +171,43 @@ describe("peça lliure que talla (booleana)", () => {
 })
 
 describe("peça que talla travessant de costat", () => {
-  it("avisa en lloc de no fer res", () => {
-    const front = part({ id: "front", orient: "front", w: 600, h: 400 })
-    const rod = part({ id: "rod", orient: "flat", w: 50, h: 50, x: 200, y: -100, z: -10, thickness: 700, effect: "cut" })
-    const b = buildComposition(comp([front, rod]))
-    expect(b.panels[0]!.cutouts ?? []).toHaveLength(0)
-    expect(b.warnings.some((w) => w.partId === "rod" && w.message.includes("de costat"))).toBe(true)
+  const front = part({ id: "front", orient: "front", w: 600, h: 400 })
+  // Barra quadrada vertical (estirada: gruix = alçada) que passa per davant i per darrere del tauler.
+  const rod = (y: number, t: number) => part({ id: "rod", orient: "flat", w: 50, h: 50, x: 200, y, z: -10, thickness: t, effect: "cut" })
+
+  it("de cara a cara i sense arribar a la vora: forat rectangular", () => {
+    const b = buildComposition(comp([front, rod(100, 200)]))
+    const c = b.panels[0]!.cutouts ?? []
+    expect(c).toHaveLength(1)
+    expect(c[0]).toMatchObject({ kind: "rect", w: 50, h: 200 })
+    expect(b.warnings.filter((w) => w.partId === "rod")).toEqual([])
+  })
+
+  it("de cara a cara fins a la vora: osca al contorn", () => {
+    const b = buildComposition(comp([front, rod(200, 700)]))
+    const o = b.panels[0]!.outline!
+    expect(o).toHaveLength(8)
+    expect(b.warnings.filter((w) => w.partId === "rod")).toEqual([])
+  })
+
+  it("de dalt a baix: la parteix i avisa", () => {
+    const b = buildComposition(comp([front, rod(-100, 700)]))
+    expect(b.warnings.some((w) => w.partId === "rod" && w.message.includes("trossos"))).toBe(true)
+  })
+
+  it("un tub rodó dins d'un bloc: booleà al 3D; a la CNC avisa, a la pedra no", () => {
+    const block = part({ id: "block", orient: "front", w: 600, h: 100, thickness: 600 })
+    const tube = part({ id: "tube", orient: "flat", w: 50, h: 50, x: 200, y: -100, z: 200, thickness: 400, effect: "cut", shape: [{ x: 0, y: 0 }, { x: 50, y: 0 }, { x: 50, y: 50 }, { x: 0, y: 50 }].map((q) => ({ ...q, t: "corner" as const })) })
+    const wood = buildComposition(comp([block, { ...tube, shape: undefined }]))
+    expect(wood.panels[0]!.solidCuts).toHaveLength(1)
+    expect(wood.panels[0]!.cutouts ?? []).toHaveLength(0)
+    expect(wood.warnings.some((w) => w.partId === "tube" && w.message.includes("cantell"))).toBe(true)
+    const stone = buildComposition(comp([{ ...block, nest: false }, { ...tube, shape: undefined }]))
+    expect(stone.extras[0]!.solidCuts).toHaveLength(1)
+    expect(stone.warnings.filter((w) => w.partId === "tube")).toEqual([])
+    // Els 4 vèrtexs de la secció, en coordenades de la peça, i el vector travessa els 100 mm d'alçada.
+    const sc = wood.panels[0]!.solidCuts![0]!
+    expect(sc.points).toHaveLength(4)
+    expect(Math.abs(sc.dir[1])).toBe(400)
   })
 })

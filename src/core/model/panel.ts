@@ -182,6 +182,13 @@ export const PanelSchema = z.object({
    * bulge, en coordenades locals dins de llarg × ample. Sense: el rectangle.
    */
   outline: z.array(BPtSchema).min(3).optional(),
+  /**
+   * Talls en 3D que no es poden fer com a forat passant a la CNC (un tub que travessa un bloc
+   * de pedra pel cantell, un tall que no arriba de cara a cara): prismes en coordenades locals
+   * de la peça, secció (`points`, en un pla) estirada pel vector `dir`. Només el 3D els resta
+   * (booleà); el nesting, el DXF i el STEP no.
+   */
+  solidCuts: z.array(z.object({ points: z.array(Vec3Schema).min(3), dir: Vec3Schema })).optional(),
   /** Conjunt que s'encola abans de muntar el moble (p. ex. «Lateral esquerre (paret buida)»). */
   assembly: z.string().optional(),
   /** Cantells tallats a 45° (unió a inglet); la cara llarga és la de fora del moble. */

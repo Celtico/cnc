@@ -1,4 +1,5 @@
-import { BufferGeometry, ExtrudeGeometry, Float32BufferAttribute, Path, Shape } from "three"
+import { BufferGeometry, ExtrudeGeometry, Float32BufferAttribute, Matrix4, MeshBasicMaterial, Path, Shape, Vector3, type Material } from "three"
+import { Brush, Evaluator, SUBTRACTION } from "three-bvh-csg"
 import { ccw, flatten, type Panel } from "../../core/model"
 
 const S = 0.001
@@ -111,4 +112,68 @@ export function mitreGeometry(p: Panel): BufferGeometry {
   g.addGroup(edges, pos.length / 3 - edges, 1)
   g.computeVertexNormals()
   return g
+}
+
+/** La peça té forma (contorn, talls o booleans 3D): es dibuixa extruïda, amb [cares, cantells]. */
+export function isShaped(p: Panel): boolean {
+  return !!p.cutouts?.length || !!p.outline || !!p.solidCuts?.length
+}
+
+/** Geometria extruïda de la peça i, si en té, els booleans 3D restats. */
+export function shapedGeometry(p: Panel): BufferGeometry {
+  return p.solidCuts?.length ? solidCutGeometry(p) : cutoutGeometry(p)
+}
+
+/** Prisma d'un tall 3D (`Panel.solidCuts`), en m i coordenades locals de la peça. */
+function prismGeometry(sc: NonNullable<Panel["solidCuts"]>[number]): BufferGeometry {
+  const d = new Vector3(...sc.dir)
+  const len = d.length()
+  d.normalize()
+  // Base dextrogira (U, V, D): U i V són els altres dos eixos (els talls són alineats als eixos).
+  const ax = [new Vector3(1, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 0, 1)]
+  const di = [Math.abs(d.x), Math.abs(d.y), Math.abs(d.z)].indexOf(Math.max(Math.abs(d.x), Math.abs(d.y), Math.abs(d.z)))
+  const others = ax.filter((_, i) => i !== di)
+  let U = others[0]!, V = others[1]!
+  if (new Vector3().crossVectors(U, V).dot(d) < 0) [U, V] = [V, U]
+  const pts = sc.points.map((q) => new Vector3(...q))
+  const shape = new Shape()
+  pts.forEach((q, i) => (i ? shape.lineTo(q.dot(U) * S, q.dot(V) * S) : shape.moveTo(q.dot(U) * S, q.dot(V) * S)))
+  shape.closePath()
+  // Una mica més llarg pels dos costats: així no queden cares coplanàries amb la peça.
+  const g = new ExtrudeGeometry(shape, { depth: (len + 2) * S, bevelEnabled: false, curveSegments: 1 })
+  const m = new Matrix4().makeBasis(U, V, d)
+  m.setPosition(d.clone().multiplyScalar((pts[0]!.dot(d) - 1) * S))
+  g.applyMatrix4(m)
+  return g
+}
+
+/**
+ * Booleans en 3D (three-bvh-csg): la peça extruïda menys els prismes dels talls que no són
+ * passants de cara a cara (un tub pel cantell d'un bloc de pedra). Grups: [0] cares, [1]
+ * cantells i parets dels talls, com `cutoutGeometry`.
+ */
+export function solidCutGeometry(p: Panel): BufferGeometry {
+  const base = cutoutGeometry(p)
+  const face = new MeshBasicMaterial()
+  const edge = new MeshBasicMaterial()
+  const ev = new Evaluator()
+  ev.useGroups = true
+  ev.attributes = ["position", "uv", "normal"]
+  let a = new Brush(base, [face, edge])
+  a.updateMatrixWorld()
+  for (const sc of p.solidCuts ?? []) {
+    const b = new Brush(prismGeometry(sc), edge)
+    b.updateMatrixWorld()
+    const next = ev.evaluate(a, b, SUBTRACTION)
+    b.geometry.dispose()
+    if (a.geometry !== base) a.geometry.dispose()
+    a = next
+  }
+  base.dispose()
+  const out = a.geometry
+  const mats = (Array.isArray(a.material) ? a.material : [a.material]) as Material[]
+  for (const gr of out.groups) gr.materialIndex = mats[gr.materialIndex ?? 0] === face ? 0 : 1
+  face.dispose()
+  edge.dispose()
+  return out
 }

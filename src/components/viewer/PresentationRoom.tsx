@@ -206,18 +206,18 @@ export function PresentationRoom({ backZ, scene }: { backZ: number; scene: Prese
         <Lightformer form="rect" color={sky} intensity={0.4 * env} position={[0, 1, 6]} scale={[10, 2, 1]} />
       </Environment>
 
-      <mesh rotation-x={-Math.PI / 2} position={[0, -0.0005, 0]} receiveShadow>
+      <mesh rotation-x={-Math.PI / 2} position={[0, -0.0005, 0]} receiveShadow userData={{ room: "floor" }}>
         <planeGeometry args={[ROOM, ROOM]} />
         <meshStandardMaterial key={scene.floor} map={floor.map} color={floor.map ? "#ffffff" : "#eeeeec"} roughness={floor.roughness} metalness={0} envMapIntensity={0.6} />
       </mesh>
 
-      <mesh position={[0, 2, backZ - 0.002]} receiveShadow>
+      <mesh position={[0, 2, backZ - 0.002]} receiveShadow userData={{ room: "wall" }}>
         <planeGeometry args={[ROOM, 4]} />
         <meshStandardMaterial color={scene.wall} roughness={0.95} envMapIntensity={0.4} />
       </mesh>
 
       {scene.skirting !== "none" && (
-        <mesh position={[0, SK_H / 2, backZ + SK_T / 2]} receiveShadow castShadow>
+        <mesh position={[0, SK_H / 2, backZ + SK_T / 2]} receiveShadow castShadow userData={{ room: "wall" }}>
           <boxGeometry args={[ROOM, SK_H, SK_T]} />
           {scene.skirting === "floor" && skirtingMap ? (
             <meshStandardMaterial key="sk-tex" map={skirtingMap} roughness={floor.roughness} />

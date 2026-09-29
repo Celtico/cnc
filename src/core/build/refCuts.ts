@@ -1,7 +1,11 @@
-import { bounds, bulgeOf, ccwB, polygonTouchesRect, refSection, signedArea, type BPt, type Composition, type Cutout, type Panel, type RefObject, type Vec3 } from "../model"
+import { bounds, bulgeOf, ccw, ccwB, flatten, polygonArea, polygonTouchesRect, refSection, signedArea, type BPt, type Composition, type Cutout, type Panel, type RefObject, type Vec3 } from "../model"
 import { buildModule } from "./buildModule"
 import { toLocal } from "./geometry"
 import { modulePlacements, refOnPanel } from "../model"
+import * as pcNs from "polygon-clipping"
+
+// El paquet només té export per defecte (el .d.ts declara els noms): acceptem les dues formes.
+const pc = ((pcNs as unknown as { default?: typeof pcNs }).default ?? pcNs) as typeof pcNs
 
 type Box = { min: Vec3; max: Vec3 }
 
@@ -38,7 +42,7 @@ export interface RefCutProblem {
  * o polígon (perfil). Si arribaria a la vora de la peça (seria un rebaix del contorn) no es
  * fa i es retorna com a problema. Modifica les peces (afegeix `cutouts`).
  */
-export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Panel) => Box): RefCutProblem[] {
+export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Panel) => Box, isExtra?: (p: Panel) => boolean): RefCutProblem[] {
   const problems: RefCutProblem[] = []
   const r1 = (v: number) => Math.round(v * 10) / 10
   for (const o of refs) {
@@ -49,15 +53,12 @@ export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Pane
       // Només talla les peces que travessa en la seva direcció (un tub cap a la paret forada
       // el fons, no el cantell dels prestatges; un desguàs vertical, la base i els prestatges).
       if (normalIndex(p) !== sec.a) {
-        // Peça lliure que talla però travessa la peça de costat: no és un forat passant (seria
-        // un forat al cantell o un buidat en 3D); s'avisa perquè es giri.
-        if (o.id.startsWith("part:") && refTouchesBox(o, b)) {
-          const lo = [0, 1, 2].map((a) => Math.max(o[(["x", "y", "z"] as const)[a]!], b.min[a]!))
-          const size = [o.w, o.h, o.d]
-          const hi = [0, 1, 2].map((a) => Math.min(o[(["x", "y", "z"] as const)[a]!] + size[a]!, b.max[a]!))
-          if (hi.every((h, a) => h - lo[a]! > 1))
-            problems.push({ refId: o.id, panel: p, message: `«${o.name}» travessa ${p.label} de costat, no en la direcció del seu gruix: no s'hi pot fer un forat passant. Posa la peça que talla amb la mateixa orientació que ${p.label}.` })
-        }
+        // Els objectes de referència només foraden en la seva direcció (un tub cap a la paret
+        // forada el fons, no el cantell dels prestatges); les peces lliures que tallen, també
+        // de costat (booleà).
+        if (!o.id.startsWith("part:") || !refTouchesBox(o, b)) continue
+        const side = sidewaysCut(o, sec, p, b, isExtra?.(p) ?? false)
+        if (side) problems.push({ refId: o.id, panel: p, message: side })
         continue
       }
       if (!refTouchesBox(o, b)) continue
@@ -161,4 +162,111 @@ export function migrateCableHoles(comp: Composition, boxOf: (p: Panel) => Box): 
     return { ...m, extras: { ...m.extras, cableHoles: [] } }
   })
   return { ...comp, modules, references: refs }
+}
+
+type Section = ReturnType<typeof refSection>
+
+/** Intervals (en e) on el polígon talla la recta n = `at`; `ni` = índex de n al punt (0 o 1). */
+function slice(poly: [number, number][], ni: 0 | 1, at: number): [number, number][] {
+  const ei = ni === 0 ? 1 : 0
+  const xs: number[] = []
+  for (let i = 0; i < poly.length; i++) {
+    const p = poly[i]!, q = poly[(i + 1) % poly.length]!
+    if ((p[ni] <= at) === (q[ni] <= at)) continue
+    const t = (at - p[ni]) / (q[ni] - p[ni])
+    xs.push(p[ei] + t * (q[ei] - p[ei]))
+  }
+  xs.sort((a, b) => a - b)
+  const out: [number, number][] = []
+  for (let i = 0; i + 1 < xs.length; i += 2) out.push([xs[i]!, xs[i + 1]!])
+  return out
+}
+
+function intersectIntervals(a: [number, number][], b: [number, number][]): [number, number][] {
+  const out: [number, number][] = []
+  for (const [a0, a1] of a) for (const [b0, b1] of b) {
+    const lo = Math.max(a0, b0), hi = Math.min(a1, b1)
+    if (hi - lo > 0.01) out.push([lo, hi])
+  }
+  return out
+}
+const total = (iv: [number, number][]) => iv.reduce((s, [a, b]) => s + b - a, 0)
+
+/**
+ * Objecte que talla i travessa la peça de costat (la seva direcció és al pla de la peça):
+ *  - Si la travessa de cara a cara amb una secció recta (una caixa, una barra quadrada), el
+ *    tall és un rectangle al pla de la peça: forat o, a les peces lliures, osca del contorn.
+ *  - Si no (un tub que passa pel cantell d'un bloc, un tall que no arriba d'una cara a l'altra),
+ *    és un booleà en 3D: es resta al 3D (`solidCuts`) i, si la peça és de CNC, s'avisa que no es
+ *    mecanitza. Retorna el missatge d'avís, si n'hi ha.
+ */
+function sidewaysCut(o: RefObject, sec: Section, p: Panel, b: Box, extra: boolean): string | undefined {
+  const n = normalIndex(p)
+  const ni: 0 | 1 = n === sec.u ? 0 : 1
+  const e = ni === 0 ? sec.v : sec.u
+  const n0 = b.min[n]!, n1 = b.max[n]!
+  const a0 = Math.max(sec.range[0], b.min[sec.a]!), a1 = Math.min(sec.range[1], b.max[sec.a]!)
+  if (a1 - a0 < 0.5) return
+  // Llesques a les dues cares, al mig i a cada vèrtex de la secció que cau dins del gruix.
+  const levels = [n0 + 0.01, (n0 + n1) / 2, n1 - 0.01, ...sec.poly.map((q) => q[ni]).filter((t) => t > n0 && t < n1)]
+  const slices = levels.map((t) => slice(sec.poly, ni, t))
+  const full = slices.reduce(intersectIntervals)
+  const eRange: [number, number] = [b.min[e]!, b.max[e]!]
+  const clip = (iv: [number, number][]) => intersectIntervals(iv, [eRange])
+  const exact = full.length > 0 && slices.every((sl) => Math.abs(total(clip(sl)) - total(clip(full))) < 0.5)
+  if (exact) {
+    const rects = clip(full).map(([e0, e1]) => {
+      const corner = (av: number, ev: number) => {
+        const q: [number, number, number] = [0, 0, 0]
+        q[sec.a] = av
+        q[e] = ev
+        q[n] = (n0 + n1) / 2
+        const l = toLocal(p, q)
+        return [l[0], l[1]] as [number, number]
+      }
+      const pts = [corner(a0, e0), corner(a1, e0), corner(a1, e1), corner(a0, e1)]
+      return bounds(pts)
+    })
+    for (const bb of rects) {
+      const r1 = (v: number) => Math.round(v * 10) / 10
+      if (bb.x0 >= 1 && bb.y0 >= 1 && bb.x1 <= p.length - 1 && bb.y1 <= p.width - 1) {
+        p.cutouts = [...(p.cutouts ?? []), { kind: "rect", x: r1(bb.x0), y: r1(bb.y0), w: r1(bb.x1 - bb.x0), h: r1(bb.y1 - bb.y0), tag: "ref" }]
+        continue
+      }
+      // Arriba a la vora: a les peces lliures i a les que no són de CNC, osca del contorn.
+      if (!(p.role === "part" || extra)) return `«${o.name}» toca la vora de ${p.label}: caldria un rebaix del contorn (encara no es fa).`
+      const msg = notch(p, bb)
+      if (msg) return `«${o.name}» ${msg}`
+    }
+    return
+  }
+  // Booleà en 3D: el prisma de l'objecte en coordenades de la peça.
+  const start = sec.poly.map(([pu, pv]) => {
+    const q: [number, number, number] = [0, 0, 0]
+    q[sec.u] = pu
+    q[sec.v] = pv
+    q[sec.a] = sec.range[0]
+    return toLocal(p, q)
+  })
+  const q0: [number, number, number] = [0, 0, 0]
+  const q1: [number, number, number] = [0, 0, 0]
+  q1[sec.a] = sec.range[1] - sec.range[0]
+  const l0 = toLocal(p, q0), l1 = toLocal(p, q1)
+  p.solidCuts = [...(p.solidCuts ?? []), { points: start, dir: [l1[0] - l0[0], l1[1] - l0[1], l1[2] - l0[2]] }]
+  if (extra) return
+  return `«${o.name}» travessa ${p.label} pel cantell (no de cara a cara): es veu al 3D, però a la CNC no es pot fer com a forat passant (seria un forat de cantell o un buidat).`
+}
+
+/** Resta un rectangle (coordenades locals) del contorn de la peça. Retorna un avís si la parteix. */
+function notch(p: Panel, bb: { x0: number; y0: number; x1: number; y1: number }): string | undefined {
+  const base: [number, number][] = p.outline ? flatten(p.outline) : [[0, 0], [p.length, 0], [p.length, p.width], [0, p.width]]
+  const res = pc.difference([base], [[[bb.x0, bb.y0], [bb.x1, bb.y0], [bb.x1, bb.y1], [bb.x0, bb.y1]]])
+  if (!res.length) return `es menja tota la peça ${p.label}.`
+  const main = res.reduce((best, poly) => (polygonArea(poly[0] as [number, number][]) > polygonArea(best[0] as [number, number][]) ? poly : best))
+  const ring = (main[0] as [number, number][]).map(([x, y]) => [Math.round(x * 100) / 100, Math.round(y * 100) / 100] as [number, number])
+  const last = ring[ring.length - 1]!
+  if (ring.length > 1 && last[0] === ring[0]![0] && last[1] === ring[0]![1]) ring.pop()
+  p.outline = ccw(ring)
+  for (const h of main.slice(1)) p.cutouts = [...(p.cutouts ?? []), { kind: "polygon", points: ccw((h as [number, number][]).slice(0, -1)), tag: "ref" }]
+  return res.length > 1 ? `parteix ${p.label} en ${res.length} trossos (al 3D i al nesting només queda el més gran).` : undefined
 }

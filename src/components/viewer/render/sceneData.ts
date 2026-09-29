@@ -43,6 +43,22 @@ export interface RenderScene {
   background: [number, number, number]
 }
 
+/** Opcions del render que canvien el càlcul (en canviar-les es torna a començar). */
+export interface RenderOpts {
+  /** Rebots de la llum (llum indirecta: racons, sota els prestatges). */
+  bounces: number
+  /** Direcció del sol: azimut (0 = de davant, + = des de la dreta) i alçada, en graus. */
+  sunAzimuth: number
+  sunElevation: number
+  /** Multiplicadors de la llum del sol i del cel. */
+  sunIntensity: number
+  skyIntensity: number
+  /** Mida aparent del sol: 0 = ombres dures; 1 = molt suaus. */
+  softness: number
+}
+
+export const DEFAULT_RENDER_OPTS: RenderOpts = { bounces: 6, sunAzimuth: 40, sunElevation: 45, sunIntensity: 1, skyIntensity: 1, softness: 0.15 }
+
 const MAX_TEX = 512
 
 function visibleChain(o: Object3D): boolean {
@@ -50,7 +66,10 @@ function visibleChain(o: Object3D): boolean {
   return true
 }
 
-export function extractScene(scene: Scene, camera: Camera, aspect: number): RenderScene {
+/** Escenari del render: l'habitació de Presentació sencera, només el terra o res (fons llis). */
+export type RenderRoom = "room" | "floor" | "none"
+
+export function extractScene(scene: Scene, camera: Camera, aspect: number, room: RenderRoom = "room"): RenderScene {
   scene.updateMatrixWorld(true)
   camera.updateMatrixWorld(true)
   const pos: number[] = []
@@ -105,6 +124,8 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number): Rend
   scene.traverse((o) => {
     const mesh = o as Mesh
     if (!mesh.isMesh || !visibleChain(mesh)) return
+    const part = mesh.userData.room as "floor" | "wall" | undefined
+    if (part && (room === "none" || (room === "floor" && part === "wall"))) return
     const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
     // Només materials PBR normals: fora graella, ombres de contacte, nanses i fantasmes.
     if (!list.every((m) => (m as MeshStandardMaterial).isMeshStandardMaterial)) return

@@ -9,7 +9,7 @@ import {
   Scene,
   Vector3,
 } from "three"
-import { cutoutGeometry, mitreGeometry } from "./cutoutGeometry"
+import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js"
 import type { MaterialPref, Panel, PanelRole } from "../../core/model"
 
@@ -69,8 +69,8 @@ export function buildScene(panels: Panel[], name: string, real?: { materials: Ma
       continue
     }
     // Amb retalls (reixa, forats de taulell…): extrusió amb forats; si no, una caixa.
-    const shaped = !!p.cutouts?.length || !!p.outline
-    const geo = shaped ? cutoutGeometry(p) : p.mitres?.length ? mitreGeometry(p) : new BoxGeometry(p.length / 1000, p.width / 1000, p.thickness / 1000)
+    const shaped = isShaped(p)
+    const geo = shaped ? shapedGeometry(p) : p.mitres?.length ? mitreGeometry(p) : new BoxGeometry(p.length / 1000, p.width / 1000, p.thickness / 1000)
     if (!shaped && !p.mitres?.length) geo.translate(p.length / 2000, p.width / 2000, p.thickness / 2000)
     const mesh = new Mesh(geo, new MeshStandardMaterial({ color: ROLE_COLOR[p.role], roughness: 0.85 }))
     mesh.name = p.id

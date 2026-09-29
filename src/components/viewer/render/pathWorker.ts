@@ -5,9 +5,14 @@
  * d'estudi + sol amb ombres suaus; materials difusos amb una mica de reflex, metalls i
  * transparència. Triangles en un BVH propi.
  */
-import type { RenderScene } from "./sceneData"
+import type { RenderOpts, RenderScene } from "./sceneData"
 
-type Msg = { type: "scene"; scene: RenderScene; width: number; height: number; seed: number } | { type: "stop" }
+type Msg = { type: "scene"; scene: RenderScene; width: number; height: number; seed: number; opts: RenderOpts } | { type: "stop" }
+
+let O: RenderOpts = { bounces: 6, sunAzimuth: 40, sunElevation: 45, sunIntensity: 1, skyIntensity: 1, softness: 0.15 }
+let sunDir: [number, number, number] = [0, 1, 0]
+let sunCol: [number, number, number] = [0, 0, 0]
+let jitter = 0.06
 
 let S: RenderScene | null = null
 let W = 0
@@ -219,14 +224,18 @@ const env = [0, 0, 0]
 function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, out: Float32Array, o: number) {
   let tr = 1, tg = 1, tb = 1
   let r = 0, g = 0, b = 0
-  const sun = S!.sun
-  for (let bounce = 0; bounce < 6; bounce++) {
+  const sun = sunDir
+  const sky0 = O.skyIntensity
+  let alpha = 1
+  for (let bounce = 0; bounce < O.bounces; bounce++) {
     if (!intersect(ox, oy, oz, dx, dy, dz, 1e9, false)) {
       if (bounce === 0) {
+        // Fons: el color de l'escena i alfa 0 (fons blanc o transparent al diàleg).
         r += S!.background[0]; g += S!.background[1]; b += S!.background[2]
+        alpha = 0
       } else {
         sky(dx, dy, dz, env)
-        r += tr * env[0]!; g += tg * env[1]!; b += tb * env[2]!
+        r += tr * env[0]! * sky0; g += tg * env[1]! * sky0; b += tb * env[2]! * sky0
       }
       break
     }
@@ -264,14 +273,14 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
     }
     // Difús: llum directa del sol (ombra suau: el sol té una mica de mida) i rebot cosinus.
     const ar = alb[0]!, ag = alb[1]!, ab = alb[2]!
-    const jx = sun[0] + (random() - 0.5) * 0.06, jy = sun[1] + (random() - 0.5) * 0.06, jz = sun[2] + (random() - 0.5) * 0.06
+    const jx = sun[0] + (random() - 0.5) * jitter, jy = sun[1] + (random() - 0.5) * jitter, jz = sun[2] + (random() - 0.5) * jitter
     const jl = Math.hypot(jx, jy, jz)
     const sx = jx / jl, sy = jy / jl, sz = jz / jl
     const cos = nx * sx + ny * sy + nz * sz
     if (cos > 0 && !intersect(px, py, pz, sx, sy, sz, 1e9, true)) {
-      r += tr * ar * SUN[0]! * cos / Math.PI
-      g += tg * ag * SUN[1]! * cos / Math.PI
-      b += tb * ab * SUN[2]! * cos / Math.PI
+      r += tr * ar * sunCol[0] * cos / Math.PI
+      g += tg * ag * sunCol[1] * cos / Math.PI
+      b += tb * ab * sunCol[2] * cos / Math.PI
     }
     tr *= ar; tg *= ag; tb *= ab
     // Rebot cosinus.
@@ -298,10 +307,11 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
   out[o] = r
   out[o + 1] = g
   out[o + 2] = b
+  out[o + 3] = alpha
 }
 
 function pass(): Float32Array {
-  const out = new Float32Array(W * H * 3)
+  const out = new Float32Array(W * H * 4)
   const c = S!.camera
   const m = c.matrix
   for (let y = 0; y < H; y++) {
@@ -324,7 +334,7 @@ function pass(): Float32Array {
         dx /= l; dy /= l; dz /= l
         ox = m[12]!; oy = m[13]!; oz = m[14]!
       }
-      trace(ox, oy, oz, dx, dy, dz, out, (y * W + x) * 3)
+      trace(ox, oy, oz, dx, dy, dz, out, (y * W + x) * 4)
     }
   }
   return out
@@ -347,6 +357,11 @@ self.onmessage = (e: MessageEvent<Msg>) => {
   W = msg.width
   H = msg.height
   rng = msg.seed | 1
+  O = msg.opts
+  const az = (O.sunAzimuth * Math.PI) / 180, el = (O.sunElevation * Math.PI) / 180
+  sunDir = [Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az)]
+  sunCol = [SUN[0]! * O.sunIntensity, SUN[1]! * O.sunIntensity, SUN[2]! * O.sunIntensity]
+  jitter = 0.01 + O.softness * 0.35
   buildBVH(S.positions)
   running = true
   loop()

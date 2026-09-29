@@ -14,7 +14,7 @@ import { AXIS_INDEX, SECTION_AXES, flatten, partSize, partsBox, sampleProfile, t
 import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { ROLE_COLOR } from "./roleColors"
-import { cutoutGeometry, mitreGeometry } from "./cutoutGeometry"
+import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
 import { RAW_EDGE_COLOR, TILE_MM, photoTexture, resolveEdgeFinish, resolveFinish, woodTexture, type FinishSpec } from "./textures"
 
 /** Color de selecció (el mateix taronja que els botons + del 3D). */
@@ -1331,12 +1331,12 @@ export function PanelMesh({
   // Els forats dels tiradors no es buiden al 3D (els tapa el tirador): així una peça a inglet
   // amb tirador continua sent un prisma a 45°.
   const vis = useMemo(() => visualPanel(panel), [panel])
-  const cut = useMemo(() => (vis.cutouts?.length || vis.outline ? cutoutGeometry(vis) : vis.mitres?.length ? mitreGeometry(vis) : null), [vis])
+  const cut = useMemo(() => (isShaped(vis) ? shapedGeometry(vis) : vis.mitres?.length ? mitreGeometry(vis) : null), [vis])
   const cutMats = useMemo(() => {
     if (!cut) return null
     const m = cutoutMaterials(panel, materialMode, materials, dimmed)
     // A la geometria d'inglet els grups van al revés: [0] puntes (cantell), [1] cares.
-    return vis.cutouts?.length || vis.outline ? m : [m[1]!, m[0]!]
+    return isShaped(vis) ? m : [m[1]!, m[0]!]
   }, [cut, panel, materialMode, materials, dimmed])
   useEffect(
     () => () => {
@@ -1507,8 +1507,7 @@ function StudioEnvironment({ intensity }: { intensity: number }) {
  */
 export function exportablePanel(full: Panel, materials: MaterialPref[]): { geometry: BufferGeometry; material: MeshStandardMaterial[] } {
   const panel = visualPanel(full)
-  const shaped = !!panel.cutouts?.length || !!panel.outline
-  if (shaped) return { geometry: cutoutGeometry(panel), material: cutoutMaterials(panel, "material", materials, false) }
+  if (isShaped(panel)) return { geometry: shapedGeometry(panel), material: cutoutMaterials(panel, "material", materials, false) }
   if (panel.mitres?.length) {
     const m = cutoutMaterials(panel, "material", materials, false)
     return { geometry: mitreGeometry(panel), material: [m[1]!, m[0]!] }
