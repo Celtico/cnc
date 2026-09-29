@@ -158,8 +158,12 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
           />
         </SimpleGrid>
 
-        <Field.Root>
-          <Field.Label>Laterals</Field.Label>
+        {/* No dins d'un Field.Root: el Field dona el mateix id als dos interruptors i els dos
+            rètols activaven el mateix (no es podia treure el lateral dret). */}
+        <Stack gap={1.5}>
+          <Text fontSize="sm" fontWeight="medium">
+            Laterals
+          </Text>
           <SimpleGrid columns={2} gap={3} w="full">
             <Switch.Root size="sm" checked={c.sides.left} onCheckedChange={(e) => set({ sides: { ...c.sides, left: e.checked } })}>
               <Switch.HiddenInput />
@@ -172,7 +176,7 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
               <Switch.Label>Dret</Switch.Label>
             </Switch.Root>
           </SimpleGrid>
-        </Field.Root>
+        </Stack>
       </Stack>
     )
   return null

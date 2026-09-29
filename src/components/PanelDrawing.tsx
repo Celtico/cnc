@@ -17,7 +17,11 @@ export function PanelDrawing({ panel }: { panel: Panel }) {
         <svg viewBox={viewBox}>
         {/* Y cap amunt: girem el sistema de coordenades. */}
         <g transform={`translate(0 ${W}) scale(1 -1)`}>
-          <rect x={0} y={0} width={L} height={W} fill="var(--chakra-colors-wood-subtle)" stroke="currentColor" strokeWidth={stroke * 1.5} />
+          {panel.outline ? (
+            <polygon points={flatten(panel.outline).map(([x, y]) => `${x},${y}`).join(" ")} fill="var(--chakra-colors-wood-subtle)" stroke="currentColor" strokeWidth={stroke * 1.5} />
+          ) : (
+            <rect x={0} y={0} width={L} height={W} fill="var(--chakra-colors-wood-subtle)" stroke="currentColor" strokeWidth={stroke * 1.5} />
+          )}
           {panel.grooves.map((g, i) => (
             <rect
               key={`g${i}`}

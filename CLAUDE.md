@@ -289,6 +289,10 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     Queden bé sobretot sense porta. **A ras del davant (a sang)** (`zone.shelves.flush`): sense retranqueig, el
     cantell enrasat amb el davant de la caixa (no amb fronts encastats).
   - **Peces**: sense botó d'exportar (tot és a Exportar).
+  - **Nesting i plànol de peça amb forma**: les peces amb `outline` es dibuixen amb el contorn
+    real (el rectangle que ocupen, discontinu); el nesting encara reserva el rectangle.
+  - **Compte amb `Field.Root`**: no hi posis dos interruptors a dins (el Field els dona el
+    mateix id i els dos rètols activen el mateix): passava amb Laterals Esquerre/Dret.
   - **Post-processos** (`core/process/processes.ts`): `panelProcesses` dedueix el que toca a
     cada peça després del nesting, en ordre: 2a cara → Inglet 45° → Cantell → Forats de cantell →
     Encolar (`Panel.assembly`). L'app NO fa etiquetes (les fa el taller-cnc-nest): només ho

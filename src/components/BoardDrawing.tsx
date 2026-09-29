@@ -44,15 +44,32 @@ export function BoardDrawing({
             const textUp = pl.w < pl.h * 0.8
             return (
               <g key={pl.panelId}>
-                <rect
-                  x={pl.x}
-                  y={pl.y}
-                  width={pl.w}
-                  height={pl.h}
-                  fill={p?.role === "back" ? "var(--chakra-colors-wood-emphasized)" : "var(--chakra-colors-wood-subtle)"}
-                  stroke="var(--chakra-colors-wood-fg)"
-                  strokeWidth={stroke}
-                />
+                {/* Peça amb forma (tauler oval, tires a 45°…): el contorn de debò, girat com la peça;
+                    el rectangle que ocupa, en traç fi. */}
+                {p?.outline ? (
+                  <>
+                    <rect x={pl.x} y={pl.y} width={pl.w} height={pl.h} fill="none" stroke="var(--chakra-colors-wood-fg)" strokeWidth={stroke / 2} strokeDasharray={`${stroke * 4} ${stroke * 3}`} opacity={0.5} />
+                    <polygon
+                      points={flatten(p.outline)
+                        .map(([x, y]) => localToBoard(pl, x, y))
+                        .map((q) => `${q.x},${q.y}`)
+                        .join(" ")}
+                      fill="var(--chakra-colors-wood-subtle)"
+                      stroke="var(--chakra-colors-wood-fg)"
+                      strokeWidth={stroke}
+                    />
+                  </>
+                ) : (
+                  <rect
+                    x={pl.x}
+                    y={pl.y}
+                    width={pl.w}
+                    height={pl.h}
+                    fill={p?.role === "back" ? "var(--chakra-colors-wood-emphasized)" : "var(--chakra-colors-wood-subtle)"}
+                    stroke="var(--chakra-colors-wood-fg)"
+                    strokeWidth={stroke}
+                  />
+                )}
                 {/* Talls passants (reixetes, forats de pica i vitro, passacables), girats com la peça. */}
                 {p?.cutouts?.map((c, i) => {
                   if (c.kind === "circle") {
