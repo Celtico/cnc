@@ -69,6 +69,7 @@ només porta els valors inicials.
 - **Vitest** per als tests del nucli.
 - Gestor de paquets: **pnpm**.
 - **polygon-clipping** (booleans de polígons) per als encaixos de les peces lliures.
+- **three-gpu-pathtracer** + **three-mesh-bvh** per al mode Ray tracing del visor.
 
 ## Arquitectura
 ```
@@ -346,6 +347,20 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     A l'inspector de la peça, **Mides** és sempre Ample · Alt · Fondària (X · Y · Z; la del gruix
     depèn de l'orientació): de CNC, el gruix es tria entre els del tauler; si no és de CNC, les
     tres lliures i sense Veta ni interruptor d'encaixos.
+  - **Llum com model-viewer** (`StudioEnvironment` a `CabinetViewer`): entorn d'estudi
+    procedural (`RoomEnvironment` + PMREM, offline) com a `scene.environment` i to `Neutral`;
+    l'hemisfèrica queda baixa. **Ray tracing** (4t mode del visor, `QUALITY.raytrace`,
+    `viewer/PathTracer.tsx`, `three-gpu-pathtracer` + `three-mesh-bvh`): path tracing progressiu
+    a la GPU; es reconstrueix quan canvia l'escena i torna a començar en moure la càmera; comptador
+    de mostres a baix a l'esquerra. Sense ombres de mapa ni de contacte (les fa el path tracer).
+  - **Ferratges visuals** (`viewer/Hardware.tsx`, botó «Ferratges» a Opcions de vista,
+    `mobles:viewer-hardware`): frontisses (cassoleta + braç a les cassoletes `hinge`), tirador de
+    barra a portes (al costat contrari de les frontisses), calaixos i abatibles (centrat), i potes
+    regulables dels mòduls amb base de potes. Només es dibuixen, no es fabriquen.
+  - **Preferències amb acordions de segon nivell** (`components/SubFold.tsx`): cada material i
+    cada objecte de referència és una fila plegable (resum: gruixos, acabat, cantell / mides);
+    també «Per defecte als mòduls nous», Mides de tauler · Tall, Jocs (Fronts · Prestatges i fons),
+    Ferratges (cada grup), Tema (Aparença · Color) i Visor 3D (Qualitat · Escena).
   - **Opcions que no toquen s'amaguen**: sense fons no surten el material i el gruix del fons
     ni la ranura del fons; Cantonades, només si hi ha tapa o base a unir amb els laterals.
   - **Forma del tauler**: `shapeOutline` escala per l'extensió real de la corba (mostrejada),

@@ -44,6 +44,12 @@ importers:
       three:
         specifier: ^0.186.1
         version: 0.186.1
+      three-gpu-pathtracer:
+        specifier: 0.0.26
+        version: 0.0.26(three-mesh-bvh@0.9.15(three@0.186.1))(three@0.186.1)(xatlas-web@0.1.0)
+      three-mesh-bvh:
+        specifier: ^0.9.15
+        version: 0.9.15(three@0.186.1)
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -2538,8 +2544,20 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
+  three-gpu-pathtracer@0.0.26:
+    resolution: {integrity: sha512-LtLnv7xu39HjwvH9JGD5a0PISLOBcPHBYp6BcxE2+Unp5xhUGxC0U0UWhlE3dZSk32fBN3K2BnjtNjHE7ayvkQ==}
+    peerDependencies:
+      three: '>=0.185.0'
+      three-mesh-bvh: '>=0.9.15'
+      xatlas-web: ^0.1.0
+
   three-mesh-bvh@0.8.3:
     resolution: {integrity: sha512-4G5lBaF+g2auKX3P0yqx+MJC6oVt6sB5k+CchS6Ob0qvH0YIhuUk1eYr7ktsIpY+albCqE80/FVQGV190PmiAg==}
+    peerDependencies:
+      three: '>= 0.159.0'
+
+  three-mesh-bvh@0.9.15:
+    resolution: {integrity: sha512-9xdEDkCzFoT8VPFH9DznwFSdbaIEjMvM106Iqq7TJurrIheUKDcdW4prfJTCxryih4XS/UxWs0H3K4MLMRFyOQ==}
     peerDependencies:
       three: '>= 0.159.0'
 
@@ -2836,6 +2854,9 @@ packages:
 
   workbox-window@7.4.1:
     resolution: {integrity: sha512-notZDH2u8VXaqyuD7xaqIfEFi6SRM4SUSd7ewe9PDsVqADuepxX2ZMY3uvuZGxzY5ZOsGC/vD3A/3smFtJt4/A==}
+
+  xatlas-web@0.1.0:
+    resolution: {integrity: sha512-PprVfuXbaIskxLTLBUQRaWfgSy9xUQqAMIRooOw0P6NYqwgh6T0voeer6+Z5M7AFt5SGXUybuww/uDGs1yw8vQ==}
 
   yallist@3.1.1:
     resolution: {integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==}
@@ -5887,7 +5908,17 @@ snapshots:
       commander: 2.20.3
       source-map-support: 0.5.21
 
+  three-gpu-pathtracer@0.0.26(three-mesh-bvh@0.9.15(three@0.186.1))(three@0.186.1)(xatlas-web@0.1.0):
+    dependencies:
+      three: 0.186.1
+      three-mesh-bvh: 0.9.15(three@0.186.1)
+      xatlas-web: 0.1.0
+
   three-mesh-bvh@0.8.3(three@0.186.1):
+    dependencies:
+      three: 0.186.1
+
+  three-mesh-bvh@0.9.15(three@0.186.1):
     dependencies:
       three: 0.186.1
 
@@ -6221,6 +6252,8 @@ snapshots:
     dependencies:
       '@types/trusted-types': 2.0.7
       workbox-core: 7.4.1
+
+  xatlas-web@0.1.0: {}
 
   yallist@3.1.1: {}
 

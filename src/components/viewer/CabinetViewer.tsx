@@ -1,10 +1,13 @@
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import { QUALITY, type RenderQuality } from "./renderQuality"
 import { PresentationRoom } from "./PresentationRoom"
+import { PathTracer } from "./PathTracer"
+import { ModuleLegs, PanelHardware } from "./Hardware"
 import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
 import { Billboard, ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
-import { DoubleSide, ExtrudeGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Shape, Vector3, type Object3D, type Texture } from "three"
+import { NeutralToneMapping, PMREMGenerator, DoubleSide, ExtrudeGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Shape, Vector3, type Object3D, type Texture } from "three"
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 import { AXIS_INDEX, SECTION_AXES, flatten, partSize, partsBox, sampleProfile, toNodes, type FreePart, type Hole, type MaterialPref, type Panel, type RefObject } from "../../core/model"
@@ -45,6 +48,8 @@ export interface ViewerModule {
   z?: number
   /** «Al terra» lliure: es mou pel terra (de costat i endavant/enrere). */
   free?: boolean
+  /** Potes regulables: alçada (mm) i fondària de la caixa, per dibuixar-les. */
+  legs?: { height: number; depth: number }
 }
 
 /** Llum d'un compartiment (mm, coordenades de la composició), per acotar-la a la vista de davant. */
@@ -87,6 +92,10 @@ export interface CabinetViewerProps {
   onCapture?: (capture: () => Promise<Blob>) => void
   /** Qualitat del render (resolució i ombres). */
   quality?: RenderQuality
+  /** Ferratges visuals (frontisses, tiradors, potes). */
+  hardware?: boolean
+  /** Ray tracing: mostres acumulades (cada mig segon). */
+  onSamples?: (n: number) => void
   /** Objecte de referència seleccionat i clic sobre un objecte al 3D. */
   selectedRefId?: string | null
   onSelectRef?: (id: string) => void
@@ -132,6 +141,8 @@ export function CabinetViewer({
   lights = [],
   onCapture,
   quality = "fast",
+  hardware = true,
+  onSamples,
   onDeselect,
   selectedRefId,
   onSelectRef,
@@ -201,6 +212,10 @@ export function CabinetViewer({
       dpr={q.dpr}
       style={{ touchAction: "none" }}
       gl={{ preserveDrawingBuffer: true, alpha: true }}
+      // Com model-viewer: to «neutral» (colors fidels, sense cremar els blancs).
+      onCreated={({ gl }) => {
+        gl.toneMapping = NeutralToneMapping
+      }}
       onPointerDown={(e) => {
         downAt.current = [e.clientX, e.clientY]
       }}
@@ -211,7 +226,9 @@ export function CabinetViewer({
     >
       {/* Les vistes ortogràfiques són plànols: sempre fons de dibuix, també a Presentació. */}
       <color attach="background" args={[q.guides || ortho ? bg : scene.wall]} />
-      <hemisphereLight intensity={q.guides ? 0.55 : light.ambient} groundColor="#8a7a60" />
+      {/* Llum d'entorn (IBL) d'un estudi procedural, com model-viewer: reflexos i ombrejat suau. */}
+      {!q.pathTrace && <StudioEnvironment intensity={q.guides ? 0.6 : 0.5} />}
+      <hemisphereLight intensity={(q.guides ? 0.55 : light.ambient) * 0.45} groundColor="#8a7a60" />
       {!q.guides && !ortho && <PresentationRoom backZ={-size.depth * S * 0.5} scene={scene} />}
       {/* bias i normalBias eviten les ratlles (shadow acne) de les cares que s'ombregen a si mateixes. */}
       <directionalLight
@@ -244,6 +261,7 @@ export function CabinetViewer({
                 edges={q.guides}
                 materialMode={materialMode}
                 materials={materials}
+                hardware={hardware}
                 onClick={p.id.startsWith("part:") ? (onSelectPart ? () => onSelectPart(p.id.slice(5)) : undefined) : onSelectModule ? (pt) => {
                   const id = moduleIdOf(p)
                   // Punt clicat en mm de la composició (el grup està centrat a l'escena).
@@ -302,6 +320,7 @@ export function CabinetViewer({
             outline
           />
         )}
+        {hardware && modules?.map((m) => m.legs && !(moduleDrag && (moduleDrag.all || moduleDrag.index === m.index)) && <ModuleLegs key={`legs-${m.id}`} x={m.x} z={m.z ?? 0} width={m.width} depth={m.legs.depth} height={m.legs.height} />)}
         {highlightZone && <ZoneHighlight box={highlightZone} />}
         {selectedIndex !== undefined && q.guides && <CableMarks panels={panels.filter((p) => p.module === selectedIndex)} />}
         {selected && onMoveModule && view !== "top" && (
@@ -348,6 +367,7 @@ export function CabinetViewer({
         />
       )}
       <CameraRig size={size} view={view} fitKey={fitKey} onFramedChange={onFramedChange} />
+      {q.pathTrace && <PathTracer version={[panels, materialMode, materials, opening, exploded, selectedModuleId, selectedRefId, selectedPartId, scene]} onSamples={onSamples} />}
       {onCapture && <Capture onCapture={onCapture} gridRef={gridRef} />}
     </Canvas>
   )
@@ -1275,7 +1295,10 @@ export function PanelMesh({
   materials,
   onClick,
   edges = true,
+  hardware = false,
 }: {
+  /** Ferratges visuals de la peça (frontisses i tirador als fronts). */
+  hardware?: boolean
   panel: Panel
   exploded: boolean
   showHoles: boolean
@@ -1360,6 +1383,7 @@ export function PanelMesh({
           {edges && <Edges color={dimmed ? "#a08a6a" : "#6b5a3e"} threshold={15} />}
         </mesh>
         {showHoles && panel.holes.map((h, i) => <HoleMark key={i} hole={h} thickness={T} />)}
+        {hardware && <PanelHardware panel={panel} />}
         {panel.grooves.map((g, i) => (
           <mesh key={`g${i}`} position={[(g.x + g.w / 2) * S, (g.y + g.h / 2) * S, g.face === "A" ? T - (g.depth * S) / 2 + 0.0002 : (g.depth * S) / 2 - 0.0002]}>
             <boxGeometry args={[g.w * S, g.h * S, g.depth * S]} />
@@ -1445,4 +1469,28 @@ function HoleMark({ hole, thickness }: { hole: Hole; thickness: number }) {
     default:
       return null
   }
+}
+
+/**
+ * Entorn d'estudi procedural (`RoomEnvironment` de three, sense descàrregues: funciona
+ * offline) filtrat amb PMREM: dona la llum difusa i els reflexos que fan que els materials
+ * es vegin com a model-viewer.
+ */
+function StudioEnvironment({ intensity }: { intensity: number }) {
+  const gl = useThree((st) => st.gl)
+  const scene = useThree((st) => st.scene)
+  useEffect(() => {
+    const pmrem = new PMREMGenerator(gl)
+    const room = new RoomEnvironment()
+    const env = pmrem.fromScene(room, 0.04).texture
+    scene.environment = env
+    scene.environmentIntensity = intensity
+    return () => {
+      if (scene.environment === env) scene.environment = null
+      env.dispose()
+      pmrem.dispose()
+      room.dispose()
+    }
+  }, [gl, scene, intensity])
+  return null
 }

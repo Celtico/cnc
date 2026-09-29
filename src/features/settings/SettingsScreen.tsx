@@ -10,7 +10,6 @@ import {
   Badge,
   Box,
   Button,
-  Card,
   Dialog,
   Field,
   Grid,
@@ -28,9 +27,10 @@ import {
   Text,
 } from "@chakra-ui/react"
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { LuArrowDown, LuArrowUp, LuCheck, LuCopy, LuDownload, LuEye, LuEyeOff, LuFileDown, LuGrid3X3, LuHammer, LuImage, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRuler, LuScan, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
+import { LuArrowDown, LuArrowUp, LuCheck, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff, LuFileDown, LuGrid3X3, LuHammer, LuImage, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRows3, LuRuler, LuScan, LuScissors, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { PanelGroup, PanelSection } from "../../components/PanelSection"
+import { SubFold } from "../../components/SubFold"
 import { toaster } from "../../components/ui/toaster"
 import {
   DEFAULT_SETTINGS,
@@ -142,17 +142,18 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
 
           <Section id="materials" wide title="Materials" icon={LuPalette} onReset={() => setReset({ key: "materials", label: "Materials" })}>
             <MaterialsList materials={draft.materials} onChange={(materials) => set("materials", materials)} />
-            <Heading size="sm">Per defecte als mòduls nous</Heading>
+            <SubFold icon={<LuSquareStack />} title="Per defecte als mòduls nous" summary={`${draft.defaults.material} ${draft.defaults.thickness} · fons ${draft.defaults.backMaterial} ${draft.defaults.backThickness}`}>
             <SimpleGrid columns={2} gap={3} maxW="xl">
               <MaterialSelect label="Tauler" materials={draft.materials.filter((m) => !m.forBacks)} value={draft.defaults.material} onChange={(material) => set("defaults", { ...draft.defaults, material })} />
               <NumberField label="Gruix tauler" value={draft.defaults.thickness} min={8} max={40} step={1} onChange={(thickness) => set("defaults", { ...draft.defaults, thickness })} />
               <MaterialSelect label="Fons" materials={draft.materials} value={draft.defaults.backMaterial} onChange={(backMaterial) => set("defaults", { ...draft.defaults, backMaterial })} />
               <NumberField label="Gruix fons" value={draft.defaults.backThickness} min={3} max={40} step={1} onChange={(backThickness) => set("defaults", { ...draft.defaults, backThickness })} />
             </SimpleGrid>
+            </SubFold>
           </Section>
 
           <Section id="boards" title="Taulers i nesting" icon={LuLayoutGrid} onReset={() => setReset({ key: "boards", label: "Taulers i nesting" })}>
-            <Heading size="sm">Mides de tauler</Heading>
+            <SubFold icon={<LuLayoutGrid />} title="Mides de tauler" summary={draft.boards.sheets.map((x) => `${x.w}×${x.h}`).join(" · ")}>
             {/* Taula en graella: capçalera una sola vegada i una fila per mida. */}
             <Grid templateColumns={{ base: "minmax(0, 1fr) minmax(0, 1fr) 32px", sm: "minmax(0, 1fr) 150px 150px 32px" }} gap={2} alignItems="center">
               <Text textStyle="xs" color="fg.muted" display={{ base: "none", sm: "block" }}>Material</Text>
@@ -187,6 +188,8 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             <Button size="xs" variant="ghost" alignSelf="flex-start" onClick={() => set("boards", { ...draft.boards, sheets: [...draft.boards.sheets, { material: "", w: 2440, h: 1220 }] })}>
               <LuPlus /> Afegir mida de tauler
             </Button>
+            </SubFold>
+            <SubFold icon={<LuScissors />} title="Tall" summary={`kerf ${draft.boards.kerf} · marge ${draft.boards.margin}${draft.boards.ignoreGrain ? " · gira amb veta" : ""}`}>
             <SimpleGrid columns={2} gap={3}>
               <NumberField label="Kerf (fresa)" value={draft.boards.kerf} min={0} max={30} step={0.5} onChange={(kerf) => set("boards", { ...draft.boards, kerf })} />
               <NumberField label="Marge del tauler" value={draft.boards.margin} min={0} max={100} step={1} onChange={(margin) => set("boards", { ...draft.boards, margin })} />
@@ -196,6 +199,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
               <Switch.Control />
               <Switch.Label>Permetre girar les peces encara que tinguin veta</Switch.Label>
             </Switch.Root>
+            </SubFold>
           </Section>
 
           <Section id="hardware" title="Ferratges i mecanitzats" icon={LuHammer} onReset={() => setReset({ key: "hardware", label: "Ferratges i mecanitzats" })}>
@@ -203,15 +207,21 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
           </Section>
 
           <Section id="gaps" title="Jocs per defecte" icon={LuRuler} onReset={() => setReset({ key: "gaps", label: "Jocs per defecte" })}>
+            <SubFold icon={<LuDoorClosed />} title="Fronts" summary={`porta–cos ${draft.gaps.outerGap} · entre fronts ${draft.gaps.betweenGap}`}>
             <SimpleGrid columns={2} gap={3}>
               <NumberField label="Porta–cos" value={draft.gaps.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => set("gaps", { ...draft.gaps, outerGap })} />
               <NumberField label="Entre fronts" value={draft.gaps.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => set("gaps", { ...draft.gaps, betweenGap })} />
+            </SimpleGrid>
+            </SubFold>
+            <SubFold icon={<LuRows3 />} title="Prestatges i fons" summary={`prestatge ${draft.gaps.shelfClearance} / ${draft.gaps.shelfSetback} · ranura ${draft.gaps.backSetback} × ${draft.gaps.grooveDepth}`}>
+            <SimpleGrid columns={2} gap={3}>
               <NumberField label="Prestatge (joc)" value={draft.gaps.shelfClearance} min={0} max={5} step={0.5} onChange={(shelfClearance) => set("gaps", { ...draft.gaps, shelfClearance })} />
               <NumberField label="Prestatge (retranq.)" value={draft.gaps.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set("gaps", { ...draft.gaps, shelfSetback })} />
               <NumberField label="Fons (joc)" value={draft.gaps.backClearance} min={0} max={4} step={0.5} onChange={(backClearance) => set("gaps", { ...draft.gaps, backClearance })} />
               <NumberField label="Ranura del fons" value={draft.gaps.backSetback} min={0} max={60} step={1} help="Distància al cantell posterior" onChange={(backSetback) => set("gaps", { ...draft.gaps, backSetback })} />
               <NumberField label="Fondària ranura" value={draft.gaps.grooveDepth} min={3} max={15} step={1} onChange={(grooveDepth) => set("gaps", { ...draft.gaps, grooveDepth })} />
             </SimpleGrid>
+            </SubFold>
           </Section>
 
           <Section id="label" title="Etiquetes" icon={LuTag} onReset={() => setReset({ key: "label", label: "Etiquetes" })}>
@@ -243,8 +253,14 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
           </Section>
 
           <PanelSection id="theme" title="Tema" icon={LuSunMoon}>
-            <ThemeField />
-            <AccentField />
+            <Stack gap={1.5}>
+              <SubFold icon={<LuSunMoon />} title="Aparença" summary="Dia · Nit · Com el sistema">
+                <ThemeField />
+              </SubFold>
+              <SubFold icon={<LuPalette />} title="Color principal" summary="Botons, seleccions i ressaltats">
+                <AccentField />
+              </SubFold>
+            </Stack>
           </PanelSection>
 
           <PanelSection id="viewer3d" title="Visor 3D" icon={LuLampFloor}>
@@ -297,8 +313,6 @@ function Section({ id, title, icon, onReset, wide, children }: { id: string; tit
   )
 }
 
-/** Graella de targetes: tantes columnes com hi càpiguen. */
-const CARD_GRID = { minChildWidth: "min(320px, 100%)", gap: 3 } as const
 
 // --- Objectes de referència --------------------------------------------------------------
 
@@ -324,18 +338,23 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
       <Button size="xs" variant="outline" alignSelf="flex-start" onClick={add}>
         <LuPlus /> Afegir objecte
       </Button>
-      <SimpleGrid {...CARD_GRID} minChildWidth="min(380px, 100%)">
+      <Stack gap={1.5}>
         {refs.map((r, i) => (
-        <Card.Root key={r.id} variant="subtle" size="sm" opacity={r.hidden ? 0.55 : 1}>
-          <Card.Body p={3} gap={2}>
-            <HStack justify="space-between" gap={2}>
-              <Input size="sm" value={r.name} onChange={(e) => update(i, { name: e.target.value })} fontWeight="semibold" />
+        <Box key={r.id} opacity={r.hidden ? 0.55 : 1}>
+        <SubFold
+          icon={<LuScan />}
+          title={
+            <HStack gap={1.5} as="span">
+              <span>{r.name}</span>
               {r.builtin && (
                 <Badge size="sm" variant="subtle">
                   inicial
                 </Badge>
               )}
-              <HStack gap={0}>
+            </HStack>
+          }
+          summary={`${r.w} × ${r.h}${r.d ? ` × ${r.d}` : ""} mm · ${r.plane === "floor" ? "terra" : "paret"}`}
+          actions={<>
                 <IconButton aria-label="Pujar" size="xs" variant="ghost" disabled={i === 0} onClick={() => move(i, -1)}>
                   <LuArrowUp />
                 </IconButton>
@@ -354,8 +373,12 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
                     <LuTrash2 />
                   </IconButton>
                 )}
-              </HStack>
-            </HStack>
+</>}
+        >
+          <Field.Root>
+            <Field.Label fontSize="sm">Nom</Field.Label>
+            <Input size="sm" value={r.name} onChange={(e) => update(i, { name: e.target.value })} />
+          </Field.Root>
             <Grid templateColumns="repeat(6, minmax(0, 1fr))" gap={2}>
               <GridItem colSpan={2}>
                 <NumberField label="Amplada" value={r.w} min={1} max={10000} step={10} onChange={(w) => update(i, { w })} />
@@ -380,10 +403,10 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
                 <NumberField label="A la paret" value={r.wallOffset} min={0} max={5000} step={10} onChange={(wallOffset) => update(i, { wallOffset })} />
               </GridItem>
             </Grid>
-          </Card.Body>
-        </Card.Root>
+        </SubFold>
+        </Box>
         ))}
-      </SimpleGrid>
+      </Stack>
     </Stack>
   )
 }
@@ -411,7 +434,7 @@ function MaterialsList({ materials, onChange }: { materials: MaterialPref[]; onC
       <Button size="xs" variant="outline" alignSelf="flex-start" onClick={add}>
         <LuPlus /> Afegir material
       </Button>
-      <SimpleGrid {...CARD_GRID}>
+      <Stack gap={1.5}>
         {materials.map((m, i) => (
         <MaterialCard key={m.id} m={m} onChange={(patch) => update(i, patch)} onDuplicate={() => {
           const next = [...materials]
@@ -419,28 +442,52 @@ function MaterialsList({ materials, onChange }: { materials: MaterialPref[]; onC
           onChange(next)
         }} onDelete={() => onChange(materials.filter((_, k) => k !== i))} canDelete={materials.length > 1} />
         ))}
-      </SimpleGrid>
+      </Stack>
     </Stack>
   )
 }
+
+const FINISH_LABEL: Record<Finish["kind"], string> = { color: "color llis", lacquer: "lacat", wood: "fusta", image: "foto real", metal: "metall", glass: "vidre" }
 
 function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: MaterialPref; onChange: (p: Partial<MaterialPref>) => void; onDuplicate: () => void; onDelete: () => void; canDelete: boolean }) {
   const [thickText, setThickText] = useState(m.thicknesses.join(" · "))
   const finish = m.finish
   const swatch = finish.kind === "wood" || finish.kind === "image" ? undefined : finish.color
+  const sw = <Box w="18px" h="18px" rounded="sm" borderWidth="1px" flexShrink={0} bg={swatch} bgImage={finish.kind === "wood" ? "repeating-linear-gradient(90deg, #b98b57 0 2px, #a3763f 2px 3px)" : finish.kind === "image" ? `url(${finish.src})` : undefined} bgSize="cover" />
   return (
-    <Card.Root variant="subtle" size="sm">
-      <Card.Body p={3} gap={2}>
-        <HStack justify="space-between" gap={2}>
-          <Box w="18px" h="18px" rounded="sm" borderWidth="1px" flexShrink={0} bg={swatch} bgImage={finish.kind === "wood" ? "repeating-linear-gradient(90deg, #b98b57 0 2px, #a3763f 2px 3px)" : finish.kind === "image" ? `url(${finish.src})` : undefined} bgSize="cover" />
-          <Input size="sm" value={m.name} onChange={(e) => onChange({ name: e.target.value })} fontWeight="semibold" />
+    <SubFold
+      icon={sw}
+      title={
+        <HStack gap={1.5} as="span">
+          <span>{m.name}</span>
+          {m.cnc === false && (
+            <Badge size="sm" variant="subtle" colorPalette="gray">
+              sense CNC
+            </Badge>
+          )}
+          {m.forBacks && (
+            <Badge size="sm" variant="subtle">
+              fons
+            </Badge>
+          )}
+        </HStack>
+      }
+      summary={`${m.thicknesses.join(" · ")} mm · ${FINISH_LABEL[finish.kind]}${m.edge ? ` · ${m.edge}` : ""}`}
+      actions={
+        <>
           <IconButton aria-label="Duplicar material" size="xs" variant="ghost" onClick={onDuplicate}>
             <LuCopy />
           </IconButton>
           <IconButton aria-label="Eliminar material" size="xs" variant="ghost" colorPalette="red" disabled={!canDelete} onClick={onDelete}>
             <LuTrash2 />
           </IconButton>
-        </HStack>
+        </>
+      }
+    >
+      <Field.Root>
+        <Field.Label fontSize="sm">Nom</Field.Label>
+        <Input size="sm" value={m.name} onChange={(e) => onChange({ name: e.target.value })} />
+      </Field.Root>
         <SimpleGrid columns={2} gap={2}>
           <Field.Root invalid={m.thicknesses.length === 0}>
             <Field.Label fontSize="sm">Gruixos</Field.Label>
@@ -551,8 +598,7 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
             <Switch.Label>Es talla a la CNC</Switch.Label>
           </Switch.Root>
         </HStack>
-      </Card.Body>
-    </Card.Root>
+    </SubFold>
   )
 }
 
@@ -582,7 +628,7 @@ function HardwareForm({ hardware: h, onChange }: { hardware: Settings["hardware"
   const [slides, setSlides] = useState(h.drawer.slideLengths.join(" · "))
   const sub = <K extends keyof Settings["hardware"]>(key: K, patch: Partial<Settings["hardware"][K]>) => onChange({ ...h, [key]: { ...h[key], ...patch } })
   return (
-    <Stack gap={4}>
+    <Stack gap={1.5}>
       <Group title="Cassoleta de frontissa" icon={LuSquareStack}>
         <SimpleGrid columns={3} gap={3}>
           <NumberField label="Ø" value={h.hinge.cupDiameter} min={20} max={40} step={1} onChange={(cupDiameter) => sub("hinge", { cupDiameter })} />
@@ -644,15 +690,9 @@ function HardwareForm({ hardware: h, onChange }: { hardware: Settings["hardware"
 
 function Group({ title, icon: Icon, children }: { title: string; icon: IconType; children: ReactNode }) {
   return (
-    <Stack gap={2}>
-      <HStack gap={2} color="fg.muted">
-        <Icon />
-        <Text fontSize="sm" fontWeight="semibold">
-          {title}
-        </Text>
-      </HStack>
+    <SubFold icon={<Icon />} title={title}>
       {children}
-    </Stack>
+    </SubFold>
   )
 }
 
@@ -780,7 +820,8 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
   const [scene, setScene] = usePresentationScene()
   const wallName = WALLS.find((w) => w.color === scene.wall)?.label
   return (
-    <Stack gap={4}>
+    <Stack gap={1.5}>
+      <SubFold icon={<LuSparkles />} title="Qualitat" summary={QUALITY_LABELS[quality]}>
       <Field.Root>
         <Field.Label>Qualitat</Field.Label>
         <SegmentGroup.Root size="sm" value={quality} onValueChange={(e) => e.value && e.value in QUALITY_LABELS && setQuality(e.value as RenderQuality)}>
@@ -792,9 +833,11 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
             </SegmentGroup.Item>
           ))}
         </SegmentGroup.Root>
-        <Field.HelperText>Ràpida per treballar (al visor, modes «Per peça» i «Textura»); Presentació per ensenyar-lo. Es canvia amb els tres botons de la barra del visor. Al visor es commuta amb el botó ✦ de la barra.</Field.HelperText>
+        <Field.HelperText>Ràpida per treballar (al visor, modes «Per peça» i «Textura»); Presentació per ensenyar-lo; Ray tracing per a la imatge més real (llum rebotada, es va afinant amb la càmera quieta). També es canvia a «Opcions de vista» del visor.</Field.HelperText>
       </Field.Root>
+      </SubFold>
 
+      <SubFold icon={<LuLampFloor />} title="Escena de presentació" summary={`${wallName ?? "Paret personalitzada"} · ${LIGHTS.find((l) => l.id === scene.light)?.label ?? ""}`}>
       <SimpleGrid columns={{ base: 1, lg: 2 }} gap={6} alignItems="start">
         <Stack gap={4}>
           <Text textStyle="sm" color="fg.muted">
@@ -846,6 +889,7 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
         </Stack>
         <ScenePreview composition={previewComposition} />
       </SimpleGrid>
+      </SubFold>
     </Stack>
   )
 }

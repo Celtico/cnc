@@ -10,6 +10,8 @@ import {
   LuChevronRight,
   LuPalette,
   LuPuzzle,
+  LuAperture,
+  LuWrench,
   LuGroup,
   LuPanelLeftClose,
   LuPanelLeftOpen,
@@ -85,11 +87,12 @@ function readTab(): ViewTab {
   }
 }
 
-type ViewMode = "pieces" | "texture" | "presentation"
+type ViewMode = "pieces" | "texture" | "presentation" | "raytrace"
 const VIEW_MODES: [ViewMode, string, string, typeof LuShapes][] = [
   ["pieces", "Per peça", "cada tipus de peça d'un color, ràpid i amb guies", LuShapes],
   ["texture", "Textura", "materials i veta, ràpid i amb guies", LuTrees],
   ["presentation", "Presentació", "ombres, terra i paret, sense guies", LuSparkles],
+  ["raytrace", "Ray tracing", "llum rebotada i ombres de debò; es va afinant mentre la càmera està quieta", LuAperture],
 ]
 
 export function EditorScreen({ projectId }: { projectId: number }) {
@@ -205,11 +208,14 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const [viewer, setViewerState] = useState<Omit<ViewerState, "materialMode">>({ view: "3d", opening: 0, openOnlySelected: false })
   const viewerState: ViewerState = { ...viewer, materialMode: quality === "fast" && roleColors ? "role" : "material" }
   // Mode del visor: Per peça (ràpid, colors per tipus), Textura (ràpid, materials) o Presentació.
-  const viewMode: ViewMode = quality === "presentation" ? "presentation" : roleColors ? "pieces" : "texture"
+  const viewMode: ViewMode = quality === "presentation" ? "presentation" : quality === "raytrace" ? "raytrace" : roleColors ? "pieces" : "texture"
   const setViewMode = (m: ViewMode) => {
-    setQuality(m === "presentation" ? "presentation" : "fast")
-    if (m !== "presentation") setRoleColors(m === "pieces")
+    setQuality(m === "presentation" || m === "raytrace" ? m : "fast")
+    if (m !== "presentation" && m !== "raytrace") setRoleColors(m === "pieces")
   }
+  // Ferratges visuals (frontisses, tiradors, potes) i mostres del ray tracing.
+  const [hardware, setHardware] = usePersistentFlag("mobles:viewer-hardware", true)
+  const [samples, setSamples] = useState(0)
   const setViewer = (patch: Partial<ViewerState>) => {
     const { materialMode, ...rest } = patch
     if (materialMode) setRoleColors(materialMode === "role")
@@ -331,7 +337,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
       (build?.modules ?? []).map((m) => {
         const c = comp.modules[m.index - 1]!.carcass
         const mod = comp.modules[m.index - 1]!
-        return { id: m.id, index: m.index, x: m.x, y: m.y, z: m.z, width: c.width, height: c.height, depth: c.depth + c.thickness, wall: c.base.kind === "wall", free: mountOf(mod) === "floor" }
+        return { id: m.id, index: m.index, x: m.x, y: m.y, z: m.z, width: c.width, height: c.height, depth: c.depth + c.thickness, wall: c.base.kind === "wall", free: mountOf(mod) === "floor", ...(c.base.kind === "legs" ? { legs: { height: c.base.height, depth: c.depth } } : {}) }
       }),
     [build, comp],
   )
@@ -765,13 +771,14 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   )
   const viewQuick = (
     <Stack gap={3} mb={4} pb={4} borderBottomWidth="1px">
-      <SimpleGrid columns={3} gap={1.5}>
+      <SimpleGrid columns={4} gap={1.5}>
         {VIEW_MODES.map(([v, label, tip, Icon]) => tile(v, label, <Icon />, viewMode === v, () => setViewMode(v), `${label}: ${tip}`))}
       </SimpleGrid>
-      <SimpleGrid columns={4} gap={1.5}>
+      <SimpleGrid columns={5} gap={1.5}>
         {tile("fit", "Encuadrar", <LuVideo />, framed, () => setFitKey((k) => k + 1), framed ? "Càmera encuadrada (no es mou sola en editar)" : "Encuadrar el moble")}
         {tile("holes", "Forats", <LuCircleDot />, showHoles, () => setShowHoles((v) => !v), showHoles ? "Amagar forats" : "Mostrar forats")}
         {tile("explode", "Explosió", exploded ? <LuShrink /> : <LuExpand />, exploded, () => setExploded((v) => !v), exploded ? "Vista muntada" : "Vista explosionada")}
+        {tile("hardware", "Ferratges", <LuWrench />, hardware, () => setHardware((v) => !v), hardware ? "Amagar frontisses, tiradors i potes" : "Mostrar frontisses, tiradors i potes")}
         {tile("ar", "A casa (AR)", <LuView />, false, () => setArOpen(true), "Veure a casa (realitat augmentada)")}
       </SimpleGrid>
     </Stack>
@@ -1234,6 +1241,8 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             fitKey={fitKey}
             onFramedChange={setFramed}
             onMoveRef={moveRef}
+            hardware={hardware}
+            onSamples={quality === "raytrace" ? setSamples : undefined}
             parts={absParts}
             selectedPartId={selection.kind === "part" ? selection.id : null}
             onSelectPart={selectPartFrom3D}
@@ -1242,6 +1251,13 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             onMovePart={movePart}
             onMoveModule={(id, dx, dy, all, dz) => setComp((c) => (all ? moveAllBy(c, dx) : moveModuleBy(c, id, dx, dy, dz)))}
           />
+        )}
+        {viewTab === "3d" && quality === "raytrace" && (
+          <Box position="absolute" bottom={3} left={3} zIndex={2} fontSize="xs" px={2} py={1} rounded="md" bg="bg.panel/85" borderWidth="1px" color="fg.muted" pointerEvents="none">
+            <HStack gap={1.5}>
+              <LuAperture /> Ray tracing · {samples} {samples === 1 ? "mostra" : "mostres"}
+            </HStack>
+          </Box>
         )}
         {viewTab === "3d" && viewerState.materialMode === "role" && (
           <Box position="absolute" bottom={3} left={3} zIndex={2} display={{ base: "none", md: "block" }}>
