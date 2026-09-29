@@ -13,6 +13,7 @@ import {
   LuUngroup,
   LuPlus,
   LuScan,
+  LuScissors,
   LuTrash2,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcon"
@@ -250,7 +251,7 @@ export function StructureTree({
       {(() => {
         const seen = new Set<string>()
         const partRow = (r: (typeof parts)[number], depth: number) => {
-          const Icon = ORIENT_ICON[r.orient]
+          const Icon = r.effect === "cut" ? LuScissors : ORIENT_ICON[r.orient]
           const groups = partGroups(parts).filter((g) => g !== r.group)
           return (
             <Row

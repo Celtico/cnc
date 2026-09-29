@@ -155,7 +155,8 @@ function tabCentres(r: Range, width: number): { centres: number[]; tw: number } 
  */
 export function buildFreeParts(comp: Composition, moduleNumber: number): FreePartsBuild {
   // Coordenades de la composició (les enganxades a un mòdul el segueixen).
-  const parts = resolveParts(comp)
+  // Les que tallen no són peces: les fa `partCutters` (a `buildComposition`).
+  const parts = resolveParts(comp).filter((p) => p.effect !== "cut")
   const j = joineryOf(comp)
   const cl = j.clearance
   const work = new Map<string, Work>(parts.map((p) => [p.id, { part: p, removals: [], grooves: [], holes: [] }]))

@@ -833,7 +833,7 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
             </SegmentGroup.Item>
           ))}
         </SegmentGroup.Root>
-        <Field.HelperText>Ràpida per treballar (al visor, modes «Per peça» i «Textura»); Presentació per ensenyar-lo; Ray tracing per a la imatge més real (llum rebotada, es va afinant amb la càmera quieta). També es canvia a «Opcions de vista» del visor.</Field.HelperText>
+        <Field.HelperText>Ràpida per treballar (al visor, modes «Per peça» i «Textura»); Presentació per ensenyar-lo. També es canvia a «Opcions de vista» del visor.</Field.HelperText>
       </Field.Root>
       </SubFold>
 

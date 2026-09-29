@@ -1,8 +1,8 @@
 import { z } from "zod"
 import { DEFAULT_CABINET, type CabinetParams } from "./cabinet"
 import { BPtSchema, ProfileNodeSchema } from "./panel"
-import { flatten, profileToOutline, toNodes, type BPt } from "./polygon"
-import { FreePartSchema, JoinerySchema, type FreePart } from "./freePart"
+import { flatten, profileToOutline, sampleProfile, toNodes, type BPt } from "./polygon"
+import { FreePartSchema, JoinerySchema, PART_AXES as PART_AXES_C, type FreePart } from "./freePart"
 
 /**
  * Model de composició: mòduls d'esquerra a dreta, cadascun amb una carcassa i un
@@ -666,4 +666,61 @@ export function resolveParts(comp: Composition): FreePart[] {
 export function partOffset(comp: Composition, p: FreePart): [number, number, number] {
   if (!p.module || compositionKind(comp) === "lliure") return [0, 0, 0]
   return moduleOrigins3(comp).get(p.module) ?? [0, 0, 0]
+}
+
+/**
+ * Peces lliures en mode «Talla», com a objectes que tallen (perfil = la seva forma o el
+ * rectangle; direcció = el gruix). Id `part:<id>`.
+ */
+export function partCutters(comp: Composition): RefObject[] {
+  return resolveParts(comp)
+    .filter((p) => p.effect === "cut")
+    .map((p) => {
+      const ax = PART_AXES_C[p.orient]
+      const size = [0, 0, 0]
+      size[ax.n] = p.thickness
+      size[ax.u] = p.w
+      size[ax.v] = p.h
+      // Secció (u, v) de l'objecte: estirada, la v del perfil va cap al fons (z creixent) i la
+      // de la peça cap al davant: es gira.
+      const flip = p.orient === "flat"
+      const nodes = toNodes(p.shape ?? [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }])
+      const ys = nodes.map((n) => n.y)
+      const y0 = Math.min(...ys), y1 = Math.max(...ys)
+      const profile = flip
+        ? nodes.map((n) => ({ ...n, y: y0 + y1 - n.y, ...(n.in ? { in: [n.in[0], -n.in[1]] as [number, number] } : {}), ...(n.out ? { out: [n.out[0], -n.out[1]] as [number, number] } : {}) }))
+        : nodes
+      return {
+        id: `part:${p.id}`,
+        name: p.name,
+        x: p.x,
+        y: p.y,
+        z: p.z,
+        w: size[0]!,
+        h: size[1]!,
+        d: size[2]!,
+        effect: "cut" as const,
+        shape: "profile" as const,
+        axis: (["x", "y", "z"] as const)[ax.n],
+        profile: scaleProfile(profile, p.shape ? size[ax.u]! : size[ax.u]!, size[ax.v]!),
+      }
+    })
+}
+
+/** Escala un perfil perquè ocupi exactament w × h (cantonada mínima a 0, 0). */
+function scaleProfile(nodes: ReturnType<typeof toNodes>, w: number, h: number): ReturnType<typeof toNodes> {
+  // Extensió real de la corba (com `shapeOutline`), no només dels nodes.
+  const pts = sampleProfile(nodes, 64)
+  const xs = pts.map((q) => q[0])
+  const ys = pts.map((q) => q[1])
+  const x0 = Math.min(...xs), y0 = Math.min(...ys)
+  const sx = w / Math.max(1e-6, Math.max(...xs) - x0)
+  const sy = h / Math.max(1e-6, Math.max(...ys) - y0)
+  return nodes.map((n) => ({
+    ...n,
+    x: (n.x - x0) * sx,
+    y: (n.y - y0) * sy,
+    ...(n.in ? { in: [n.in[0] * sx, n.in[1] * sy] as [number, number] } : {}),
+    ...(n.out ? { out: [n.out[0] * sx, n.out[1] * sy] as [number, number] } : {}),
+  }))
 }

@@ -1,7 +1,6 @@
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import { QUALITY, type RenderQuality } from "./renderQuality"
 import { PresentationRoom } from "./PresentationRoom"
-import { PathTracer } from "./PathTracer"
 import { ModuleLegs, PanelHardware } from "./Hardware"
 import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
 import { Billboard, ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
@@ -94,8 +93,6 @@ export interface CabinetViewerProps {
   quality?: RenderQuality
   /** Ferratges visuals (frontisses, tiradors, potes). */
   hardware?: boolean
-  /** Ray tracing: mostres acumulades (cada mig segon). */
-  onSamples?: (n: number) => void
   /** Objecte de referència seleccionat i clic sobre un objecte al 3D. */
   selectedRefId?: string | null
   onSelectRef?: (id: string) => void
@@ -142,7 +139,6 @@ export function CabinetViewer({
   onCapture,
   quality = "fast",
   hardware = true,
-  onSamples,
   onDeselect,
   selectedRefId,
   onSelectRef,
@@ -227,7 +223,7 @@ export function CabinetViewer({
       {/* Les vistes ortogràfiques són plànols: sempre fons de dibuix, també a Presentació. */}
       <color attach="background" args={[q.guides || ortho ? bg : scene.wall]} />
       {/* Llum d'entorn (IBL) d'un estudi procedural, com model-viewer: reflexos i ombrejat suau. */}
-      {!q.pathTrace && <StudioEnvironment intensity={q.guides ? 0.6 : 0.5} />}
+      <StudioEnvironment intensity={q.guides ? 0.6 : 0.5} />
       <hemisphereLight intensity={(q.guides ? 0.55 : light.ambient) * 0.45} groundColor="#8a7a60" />
       {!q.guides && !ortho && <PresentationRoom backZ={-size.depth * S * 0.5} scene={scene} />}
       {/* bias i normalBias eviten les ratlles (shadow acne) de les cares que s'ombregen a si mateixes. */}
@@ -367,7 +363,6 @@ export function CabinetViewer({
         />
       )}
       <CameraRig size={size} view={view} fitKey={fitKey} onFramedChange={onFramedChange} />
-      {q.pathTrace && <PathTracer version={[panels, materialMode, materials, opening, exploded, selectedModuleId, selectedRefId, selectedPartId, scene]} onSamples={onSamples} />}
       {onCapture && <Capture onCapture={onCapture} gridRef={gridRef} />}
     </Canvas>
   )

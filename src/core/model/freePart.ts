@@ -48,6 +48,11 @@ export const FreePartSchema = z.object({
   module: z.string().optional(),
   /** Grup (nom): les peces del mateix grup es mouen juntes; a l'arbre surten plegades a sota. */
   group: z.string().optional(),
+  /**
+   * «Talla» (booleana): no és una peça, és un forat. Fa un tall passant a cada peça que
+   * travessa en la direcció del seu gruix, amb la seva forma (com els objectes que tallen).
+   */
+  effect: z.literal("cut").optional(),
   /** false: la peça no fa encaixos amb les altres (per defecte, sí). */
   joints: z.boolean().optional(),
   /** Veta al llarg de u (per defecte), de v o sense. */

@@ -7,9 +7,9 @@ import { useEffect, useState } from "react"
  *  - presentation: 2×, ombres suaus i sense perfils, graella ni botons: aspecte de catàleg,
  *    per ensenyar el moble o fer-ne una imatge. Es commuta amb el botó del visor.
  */
-export type RenderQuality = "fast" | "presentation" | "raytrace"
+export type RenderQuality = "fast" | "presentation"
 
-export const QUALITY_LABELS: Record<RenderQuality, string> = { fast: "Ràpida", presentation: "Presentació", raytrace: "Ray tracing" }
+export const QUALITY_LABELS: Record<RenderQuality, string> = { fast: "Ràpida", presentation: "Presentació" }
 
 export interface QualitySpec {
   dpr: [number, number]
@@ -19,15 +19,11 @@ export interface QualitySpec {
   contactBlur: number
   /** Perfils (arestes) de les peces, graella de terra i botons d'edició. */
   guides: boolean
-  /** Ray tracing progressiu (path tracing): llum rebotada i ombres de debò. */
-  pathTrace?: boolean
 }
 
 export const QUALITY: Record<RenderQuality, QualitySpec> = {
   fast: { dpr: [1, 2], shadows: false, shadowMap: 512, contactResolution: 256, contactBlur: 2.2, guides: true },
   presentation: { dpr: [2, 2], shadows: true, shadowMap: 4096, contactResolution: 1024, contactBlur: 3, guides: false },
-  // El path tracer fa les ombres i la llum: sense mapa d'ombres ni ombra de contacte.
-  raytrace: { dpr: [1, 2], shadows: false, shadowMap: 512, contactResolution: 0, contactBlur: 0, guides: false, pathTrace: true },
 }
 
 const KEY = "mobles:render-quality"
@@ -37,7 +33,7 @@ function read(): RenderQuality {
   try {
     const v = localStorage.getItem(KEY)
     // Els modes antics (equilibrada, alta) passen a «Ràpida».
-    return v === "presentation" || v === "raytrace" ? v : "fast"
+    return v === "presentation" ? "presentation" : "fast"
   } catch {
     return "fast"
   }

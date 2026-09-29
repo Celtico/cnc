@@ -10,7 +10,6 @@ import {
   LuChevronRight,
   LuPalette,
   LuPuzzle,
-  LuAperture,
   LuWrench,
   LuGroup,
   LuPanelLeftClose,
@@ -50,7 +49,7 @@ import { ArDialog } from "../../components/viewer/ArDialog"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox } from "../../core/build/buildComposition"
-import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, moveGroupBy, freeX, resolveParts, partOffset, partBox, type Composition, type FreePart, type Module, type RefObject, type Zone } from "../../core/model"
+import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, partBox, type Composition, type FreePart, type Module, type RefObject, type Zone } from "../../core/model"
 import { updateProjectComposition } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -87,12 +86,11 @@ function readTab(): ViewTab {
   }
 }
 
-type ViewMode = "pieces" | "texture" | "presentation" | "raytrace"
+type ViewMode = "pieces" | "texture" | "presentation"
 const VIEW_MODES: [ViewMode, string, string, typeof LuShapes][] = [
   ["pieces", "Per peça", "cada tipus de peça d'un color, ràpid i amb guies", LuShapes],
   ["texture", "Textura", "materials i veta, ràpid i amb guies", LuTrees],
   ["presentation", "Presentació", "ombres, terra i paret, sense guies", LuSparkles],
-  ["raytrace", "Ray tracing", "llum rebotada i ombres de debò; es va afinant mentre la càmera està quieta", LuAperture],
 ]
 
 export function EditorScreen({ projectId }: { projectId: number }) {
@@ -208,14 +206,13 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const [viewer, setViewerState] = useState<Omit<ViewerState, "materialMode">>({ view: "3d", opening: 0, openOnlySelected: false })
   const viewerState: ViewerState = { ...viewer, materialMode: quality === "fast" && roleColors ? "role" : "material" }
   // Mode del visor: Per peça (ràpid, colors per tipus), Textura (ràpid, materials) o Presentació.
-  const viewMode: ViewMode = quality === "presentation" ? "presentation" : quality === "raytrace" ? "raytrace" : roleColors ? "pieces" : "texture"
+  const viewMode: ViewMode = quality === "presentation" ? "presentation" : roleColors ? "pieces" : "texture"
   const setViewMode = (m: ViewMode) => {
-    setQuality(m === "presentation" || m === "raytrace" ? m : "fast")
-    if (m !== "presentation" && m !== "raytrace") setRoleColors(m === "pieces")
+    setQuality(m === "presentation" ? "presentation" : "fast")
+    if (m !== "presentation") setRoleColors(m === "pieces")
   }
   // Ferratges visuals (frontisses, tiradors, potes) i mostres del ray tracing.
   const [hardware, setHardware] = usePersistentFlag("mobles:viewer-hardware", true)
-  const [samples, setSamples] = useState(0)
   const setViewer = (patch: Partial<ViewerState>) => {
     const { materialMode, ...rest } = patch
     if (materialMode) setRoleColors(materialMode === "role")
@@ -424,6 +421,10 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
       }),
     )
   const absParts = useMemo(() => resolveParts(comp), [comp])
+  // Les peces que tallen es veuen com els objectes que tallen (fantasma violeta, amb el gizmo).
+  const solidParts = useMemo(() => absParts.filter((p) => p.effect !== "cut"), [absParts])
+  const cutPartIds = useMemo(() => new Set(absParts.filter((p) => p.effect === "cut").map((p) => p.id)), [absParts])
+  const ghosts = useMemo(() => (cutPartIds.size ? [...comp.references, ...partCutters(comp)] : comp.references), [comp, cutPartIds])
   /** Mou un objecte de referència (arrossegat al 3D o amb les fletxes). */
   const moveRef = (id: string, pos: { x: number; y: number; z: number }) =>
     setComp((c) => ({ ...c, references: c.references.map((r) => (r.id === id ? anchorRef({ ...r, ...pos }) : r)) }))
@@ -771,7 +772,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   )
   const viewQuick = (
     <Stack gap={3} mb={4} pb={4} borderBottomWidth="1px">
-      <SimpleGrid columns={4} gap={1.5}>
+      <SimpleGrid columns={3} gap={1.5}>
         {VIEW_MODES.map(([v, label, tip, Icon]) => tile(v, label, <Icon />, viewMode === v, () => setViewMode(v), `${label}: ${tip}`))}
       </SimpleGrid>
       <SimpleGrid columns={5} gap={1.5}>
@@ -1224,7 +1225,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             selectedModuleId={selection.kind === "module" || selection.kind === "zone" ? module.id : null}
             onSelectModule={selectFrom3D}
             onAddModule={addModuleBeside}
-            ghosts={comp.references}
+            ghosts={ghosts}
             view={viewer.view}
             opening={viewer.opening}
             openOnly={openOnly}
@@ -1234,16 +1235,15 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             onCapture={registerCapture}
             quality={quality}
             onDeselect={() => select({ kind: "moble" })}
-            selectedRefId={selection.kind === "ref" ? selection.id : null}
+            selectedRefId={selection.kind === "ref" ? selection.id : selection.kind === "part" && cutPartIds.has(selection.id) ? `part:${selection.id}` : null}
             collidingRefIds={collidingRefs}
             highlightZone={highlightZone}
-            onSelectRef={(id) => select({ kind: "ref", id })}
+            onSelectRef={(id) => select(id.startsWith("part:") ? { kind: "part", id: id.slice(5) } : { kind: "ref", id })}
             fitKey={fitKey}
             onFramedChange={setFramed}
-            onMoveRef={moveRef}
+            onMoveRef={(id, pos) => (id.startsWith("part:") ? movePart(id.slice(5), pos) : moveRef(id, pos))}
             hardware={hardware}
-            onSamples={quality === "raytrace" ? setSamples : undefined}
-            parts={absParts}
+            parts={solidParts}
             selectedPartId={selection.kind === "part" ? selection.id : null}
             onSelectPart={selectPartFrom3D}
             selectedGroup={selection.kind === "group" ? selection.id : null}
@@ -1251,13 +1251,6 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             onMovePart={movePart}
             onMoveModule={(id, dx, dy, all, dz) => setComp((c) => (all ? moveAllBy(c, dx) : moveModuleBy(c, id, dx, dy, dz)))}
           />
-        )}
-        {viewTab === "3d" && quality === "raytrace" && (
-          <Box position="absolute" bottom={3} left={3} zIndex={2} fontSize="xs" px={2} py={1} rounded="md" bg="bg.panel/85" borderWidth="1px" color="fg.muted" pointerEvents="none">
-            <HStack gap={1.5}>
-              <LuAperture /> Ray tracing · {samples} {samples === 1 ? "mostra" : "mostres"}
-            </HStack>
-          </Box>
         )}
         {viewTab === "3d" && viewerState.materialMode === "role" && (
           <Box position="absolute" bottom={3} left={3} zIndex={2} display={{ base: "none", md: "block" }}>

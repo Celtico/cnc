@@ -69,7 +69,6 @@ només porta els valors inicials.
 - **Vitest** per als tests del nucli.
 - Gestor de paquets: **pnpm**.
 - **polygon-clipping** (booleans de polígons) per als encaixos de les peces lliures.
-- **three-gpu-pathtracer** + **three-mesh-bvh** per al mode Ray tracing del visor.
 
 ## Arquitectura
 ```
@@ -328,6 +327,11 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     a baix, barres d'inox, doble barra) i Escriptori flat-pack (laterals amb
     arc que travessen el tauler amb pestanyes). `showcase.test.ts` comprova que no fan avisos de
     xoc ni de talls.
+  - **Peça lliure que talla** (`FreePart.effect = "cut"`, Efecte Peça/Talla a General): no és
+    una peça; `partCutters` la converteix en objecte que talla (perfil = la seva forma, direcció =
+    el gruix; a l'estirada la v es gira) i `applyRefCuts` fa el forat passant a les peces que
+    travessa (també a les altres peces lliures). Al 3D, fantasma violeta amb el gizmo (id
+    `part:<id>` als fantasmes); avisos `ref-cut` amb `partId`. Icona `LuScissors` a l'arbre.
   - **Peça enganxada a un mòdul** (`FreePart.module`, `resolveParts`, `partOffset`): a General,
     «Enganxada a»; x/y/z passen a ser relatives al mòdul i el segueixen (el taulell de pedra de
     l'illa). Tot el que dibuixa o construeix fa servir `resolveParts` (coordenades de la
@@ -349,10 +353,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     tres lliures i sense Veta ni interruptor d'encaixos.
   - **Llum com model-viewer** (`StudioEnvironment` a `CabinetViewer`): entorn d'estudi
     procedural (`RoomEnvironment` + PMREM, offline) com a `scene.environment` i to `Neutral`;
-    l'hemisfèrica queda baixa. **Ray tracing** (4t mode del visor, `QUALITY.raytrace`,
-    `viewer/PathTracer.tsx`, `three-gpu-pathtracer` + `three-mesh-bvh`): path tracing progressiu
-    a la GPU; es reconstrueix quan canvia l'escena i torna a començar en moure la càmera; comptador
-    de mostres a baix a l'esquerra. Sense ombres de mapa ni de contacte (les fa el path tracer).
+    l'hemisfèrica queda baixa. **Ray tracing descartat**: `three-gpu-pathtracer` (WebGL) necessita
+    més de 16 unitats de textura i als Mac/iPhone (límit 16) les textures surten malament.
   - **Ferratges visuals** (`viewer/Hardware.tsx`, botó «Ferratges» a Opcions de vista,
     `mobles:viewer-hardware`): frontisses (cassoleta + braç a les cassoletes `hinge`), tirador de
     barra a portes (al costat contrari de les frontisses), calaixos i abatibles (centrat), i potes

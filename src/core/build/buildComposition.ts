@@ -1,4 +1,4 @@
-import { compositionKind, modulePlacements, type Composition, type Panel, type RefObject, type Vec3 } from "../model"
+import { compositionKind, modulePlacements, partCutters, type Composition, type Panel, type RefObject, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { buildModule, type BuildWarning, type ModuleBuild } from "./buildModule"
 import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
@@ -104,9 +104,11 @@ export function buildComposition(input: Composition): CompositionBuild {
   for (const w of free.warnings) warnings.push({ code: "layout", message: w.message, partId: w.partId })
 
   // Objectes que tallen: forat a cada peça que travessen.
-  for (const pr of applyRefCuts(panels, comp.references, panelBox)) {
+  // Peces lliures en mode «Talla»: fan forats com els objectes que tallen.
+  for (const pr of applyRefCuts(panels, [...comp.references, ...partCutters(comp)], panelBox)) {
     const moduleId = modules.find((m) => m.index === pr.panel.module)?.id
-    warnings.push({ code: "ref-cut", message: pr.message, panelId: pr.panel.id, refId: pr.refId, ...(moduleId ? { moduleId } : {}) })
+    const owner = pr.refId.startsWith("part:") ? { partId: pr.refId.slice(5) } : { refId: pr.refId }
+    warnings.push({ code: "ref-cut", message: pr.message, panelId: pr.panel.id, ...owner, ...(moduleId ? { moduleId } : {}) })
   }
 
   // Obstacles que xoquen amb alguna peça.

@@ -148,3 +148,24 @@ describe("encaixos només al Flat-pack", () => {
     expect(b.panels.find((p) => p.id === "part:side")!.cutouts ?? []).toHaveLength(0)
   })
 })
+
+describe("peça lliure que talla (booleana)", () => {
+  it("fa un forat passant a la peça que travessa en la direcció del gruix i no és peça", () => {
+    const back = part({ id: "back", orient: "front", w: 800, h: 600 })
+    const hole = part({ id: "hole", orient: "front", w: 100, h: 100, x: 300, y: 200, z: -10, thickness: 40, effect: "cut" })
+    const b = buildComposition(comp([back, hole]))
+    expect(b.panels.map((p) => p.id)).toEqual(["part:back"])
+    const cut = b.panels[0]!.cutouts ?? []
+    expect(cut).toHaveLength(1)
+  })
+  it("amb forma: l'estirada (v cap al davant) talla al lloc bo", () => {
+    const shelf = part({ id: "shelf", orient: "flat", w: 800, h: 400, y: 300 })
+    const hole = part({ id: "hole", orient: "flat", w: 100, h: 100, x: 100, y: 290, z: 20, thickness: 40, effect: "cut" })
+    const b = buildComposition(comp([shelf, hole]))
+    const c = b.panels[0]!.cutouts![0]!
+    if (c.kind !== "polygon") throw new Error(c.kind)
+    const bb = bounds(c.points as Pt[])
+    // x = 100..200 · z = 20..120 del fons → v (des del davant, z = 400) = 280..380.
+    expect([Math.round(bb.x0), Math.round(bb.x1), Math.round(bb.y0), Math.round(bb.y1)]).toEqual([100, 200, 280, 380])
+  })
+})

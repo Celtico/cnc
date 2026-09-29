@@ -1,4 +1,4 @@
-import { Badge, Button, Field, HStack, IconButton, Menu, NativeSelect, Portal, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
+import { Badge, Button, Field, HStack, IconButton, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
 import { useState } from "react"
 import type { IconType } from "react-icons"
 import {
@@ -17,6 +17,7 @@ import {
   LuRectangleHorizontal,
   LuRectangleVertical,
   LuSpline,
+  LuScissors,
   LuSquare,
   LuTrash2,
   LuUngroup,
@@ -113,7 +114,8 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
   const [un, vn] = DIM_NAMES[p.orient]
   const ax = PART_AXES[p.orient]
   const size = partSize(p)
-  const cnc = p.nest !== false
+  const cutter = p.effect === "cut"
+  const cnc = p.nest !== false && !cutter
   // Els encaixos només són del Flat-pack.
   const flatPack = compositionKind(comp) === "lliure"
   const mat = materialByName(settings, p.material)
@@ -130,7 +132,34 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
     <Stack gap={0}>
       <PanelSection id="part-general" title="General" icon={LuPuzzle} badge={ORIENTS.find((o) => o.value === p.orient)!.label}>
         <IconChoice label="Orientació" value={p.orient} options={ORIENTS} onChange={(o) => onChange({ ...comp, parts: (comp.parts ?? []).map((x) => (x.id === id ? reorientPart(x, o) : x)) })} />
-        <MaterialSelect label="Material" materials={boards} value={p.material} onChange={pickMaterial} />
+        {/* Peça o forat (booleana), com els objectes de referència. */}
+        <Field.Root>
+          <Field.Label>Efecte</Field.Label>
+          <SegmentGroup.Root size="sm" w="full" value={cutter ? "cut" : "part"} onValueChange={(e) => e.value && update({ effect: e.value === "cut" ? "cut" : undefined })}>
+            <SegmentGroup.Indicator />
+            {(
+              [
+                ["part", "Peça", LuSquare],
+                ["cut", "Talla", LuScissors],
+              ] as const
+            ).map(([v, label, Icon]) => (
+              <SegmentGroup.Item key={v} value={v} flex={1}>
+                <SegmentGroup.ItemText>
+                  <HStack gap={1.5}>
+                    <Icon /> {label}
+                  </HStack>
+                </SegmentGroup.ItemText>
+                <SegmentGroup.ItemHiddenInput />
+              </SegmentGroup.Item>
+            ))}
+          </SegmentGroup.Root>
+          <Field.HelperText>
+            {cutter
+              ? "Talla: no és una peça. Fa un forat passant, amb la seva forma, a cada peça que travessa en la direcció del gruix (un rebaix no). Surt al nesting, al DXF i al STEP de les peces tallades."
+              : "Peça: un tauler de debò (nesting, DXF, STEP, CSV)."}
+          </Field.HelperText>
+        </Field.Root>
+        {!cutter && <MaterialSelect label="Material" materials={boards} value={p.material} onChange={pickMaterial} />}
         {comp.kind !== "lliure" && comp.modules.length > 0 && (
           <Field.Root>
             <Field.Label fontSize="sm">Enganxada a</Field.Label>
@@ -175,12 +204,12 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
             <NativeSelect.Indicator />
           </NativeSelect.Root>
         </Field.Root>
-        <Switch.Root size="sm" checked={p.nest !== false} onCheckedChange={(e) => update({ nest: e.checked ? undefined : false })}>
+        {!cutter && <Switch.Root size="sm" checked={p.nest !== false} onCheckedChange={(e) => update({ nest: e.checked ? undefined : false })}>
           <Switch.HiddenInput />
           <Switch.Control />
           <Switch.Label>Es talla a la CNC (va al nesting)</Switch.Label>
-        </Switch.Root>
-        {p.nest === false && (
+        </Switch.Root>}
+        {p.nest === false && !cutter && (
           <Text fontSize="xs" color="fg.muted">
             No és de CNC ({p.material}): es veu al 3D però no va al nesting ni als fitxers del taller. Surt a Peces, a «Elements sense nesting». Sense encaixos.
           </Text>
@@ -258,7 +287,7 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
             )
           })}
         </SimpleGrid>
-        {!cnc && (
+        {!cnc && !cutter && (
           <Text fontSize="xs" color="fg.muted">
             No és de CNC: les tres mides són lliures (també el gruix).
           </Text>
