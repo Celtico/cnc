@@ -54,6 +54,8 @@ const ROLE_3D: Record<PanelRole, Role> = {
   hatch: "front",
   panel: "front",
   worktop: "horizontal",
+  spacer: "horizontal",
+  facing: "front",
 }
 
 function sideOf(p: Panel): Side {

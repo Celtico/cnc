@@ -54,6 +54,7 @@ export function CutListScreen({ projectId }: { projectId: number }) {
               <Table.ColumnHeader>Veta</Table.ColumnHeader>
               <Table.ColumnHeader>Cantells</Table.ColumnHeader>
               <Table.ColumnHeader textAlign="end">Forats</Table.ColumnHeader>
+              <Table.ColumnHeader>Després del nesting</Table.ColumnHeader>
             </Table.Row>
           </Table.Header>
           <Table.Body>
@@ -92,6 +93,9 @@ export function CutListScreen({ projectId }: { projectId: number }) {
                   </HStack>
                 </Table.Cell>
                 <Table.Cell textAlign="end">{it.holes}</Table.Cell>
+                <Table.Cell fontSize="xs" color={it.processes ? "fg" : "fg.subtle"} maxW="280px" whiteSpace="normal">
+                  {it.processes || "—"}
+                </Table.Cell>
               </Table.Row>
             ))}
           </Table.Body>

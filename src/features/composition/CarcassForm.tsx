@@ -93,6 +93,30 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
           {c.top.kind === "ventSlot" && <NumberField label="Ranura d'aire" value={c.top.gap} min={20} max={200} step={5} onChange={(gap) => set({ top: { kind: "ventSlot", gap } })} />}
         </SimpleGrid>
 
+        {/* Parets buides: caixa de dues pells que fa el moble com si fos de fusta gruixuda. */}
+        <Stack gap={2}>
+          <Switch.Root
+            size="sm"
+            checked={!!c.hollow}
+            onCheckedChange={(e) => set({ hollow: e.checked ? { thickness: Math.max(60, 2 * c.thickness + 20) } : undefined })}
+          >
+            <Switch.HiddenInput />
+            <Switch.Control />
+            <Switch.Label>Parets buides (gruix aparent)</Switch.Label>
+          </Switch.Root>
+          {c.hollow && (
+            <NumberField
+              label="Gruix aparent de les parets"
+              value={c.hollow.thickness}
+              min={2 * c.thickness + 6}
+              max={300}
+              step={5}
+              onChange={(thickness) => set({ hollow: { thickness } })}
+              help={`Laterals, base i tapa: pell de fora i de dins de ${c.thickness} mm, llistons a dins i una tira al davant. L'interior va igual.`}
+            />
+          )}
+        </Stack>
+
         {/* Acabats: com s'uneix la tapa amb els laterals i com van els fronts. */}
         <SimpleGrid columns={2} gap={3}>
           <IconChoice

@@ -117,6 +117,12 @@ export const CarcassSchema = z.object({
    * encolats amb lamel·les o Clamex.
    */
   joint: z.enum(["butt", "mitre"]).optional(),
+  /**
+   * Parets buides: laterals, base i tapa (sencera) fetes com una caixa de dues pells amb
+   * llistons a dins i una tira al davant, amb aquest gruix aparent (mm). L'interior (portes,
+   * calaixos, prestatges) va igual, contra la pell de dins.
+   */
+  hollow: z.object({ thickness: mm.min(20).max(300) }).optional(),
   // Fusteria
   backSetback: mm.min(0).max(60),
   grooveDepth: mm.min(3).max(15),

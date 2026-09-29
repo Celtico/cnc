@@ -40,6 +40,7 @@ export function cutListToCsv(list: CutList, options: CsvOptions = {}): string {
     "Cantell (m)",
     "Forats",
     "Superfície (m²)",
+    "Processos",
   ]
   const rows = list.items.map((it) => [
     it.label,
@@ -53,6 +54,7 @@ export function cutListToCsv(list: CutList, options: CsvOptions = {}): string {
     it.edgeLength,
     it.holes,
     it.area,
+    it.processes || "-",
   ])
   const lines = [header, ...rows].map((r) => r.map((v) => cell(v, o)).join(o.separator))
   // BOM perquè Excel/Numbers reconeguin l'UTF-8 dels accents.

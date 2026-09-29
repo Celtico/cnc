@@ -40,6 +40,10 @@ export const PanelRoleSchema = z.enum([
   "panel",
   /** Taulell (peça correguda sobre els baixos). */
   "worktop",
+  /** Llistó interior d'una paret buida (entre les dues pells). */
+  "spacer",
+  /** Tira frontal que tapa el davant d'una paret buida. */
+  "facing",
 ])
 export type PanelRole = z.infer<typeof PanelRoleSchema>
 
@@ -171,6 +175,8 @@ export const PanelSchema = z.object({
   grooves: z.array(GrooveSchema),
   /** Talls passants. Opcional: la majoria de peces no en tenen. */
   cutouts: z.array(CutoutSchema).optional(),
+  /** Conjunt que s'encola abans de muntar el moble (p. ex. «Lateral esquerre (paret buida)»). */
+  assembly: z.string().optional(),
   /** Cantells tallats a 45° (unió a inglet); la cara llarga és la de fora del moble. */
   mitres: z.array(EdgeSideSchema).optional(),
   /** Número de mòdul (1..n) dins de la composició, per a les refs del taller. */

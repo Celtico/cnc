@@ -12,14 +12,14 @@ describe("cutListToCsv", () => {
   it("comença amb BOM i capçalera en català", () => {
     expect(csv.startsWith("﻿")).toBe(true)
     expect(lines[0]).toBe(
-      "Peça;Quantitat;Llarg (mm);Ample (mm);Gruix (mm);Material;Veta;Cantells;Cantell (m);Forats;Superfície (m²)",
+      "Peça;Quantitat;Llarg (mm);Ample (mm);Gruix (mm);Material;Veta;Cantells;Cantell (m);Forats;Superfície (m²);Processos",
     )
   })
 
   it("una fila per grup, amb decimal coma", () => {
     expect(lines).toHaveLength(1 + list.items.length)
     const door = lines.find((l) => l.startsWith("Porta;"))!
-    expect(door).toBe("Porta;2;716;296,5;19;Melamina 19;Llarg;1+2+3+4;4,05;4;0,4246")
+    expect(door).toBe("Porta;2;716;296,5;19;Melamina 19;Llarg;1+2+3+4;4,05;4;0,4246;Cantell (1+2+3+4)")
   })
 
   it("permet separador i decimal alternatius", () => {

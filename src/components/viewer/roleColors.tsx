@@ -6,7 +6,7 @@ import type { Panel, PanelRole } from "../../core/model"
  * (estructura, prestatges, fons, fronts, calaixos…) i suaus per no cansar.
  */
 export const ROLE_GROUPS: { label: string; color: string; roles: PanelRole[] }[] = [
-  { label: "Estructura", color: "#e3dccf", roles: ["side", "top", "bottom", "divider", "fixedShelf"] },
+  { label: "Estructura", color: "#e3dccf", roles: ["side", "top", "bottom", "divider", "fixedShelf", "facing", "spacer"] },
   { label: "Prestatges", color: "#b7d99b", roles: ["shelf"] },
   { label: "Fons", color: "#c8bfe3", roles: ["back"] },
   { label: "Portes i fronts", color: "#8fc1ea", roles: ["door", "flap", "hatch", "panel"] },

@@ -99,6 +99,8 @@ const ROLE_FILL: Record<PanelRole, string> = {
   hatch: "#b57a37",
   panel: "#b57a37",
   worktop: "#d6b076",
+  spacer: "#c6924f",
+  facing: "#c6924f",
 }
 
 export type Tool = "none" | "origin" | "distance" | "rect" | "floor" | "depth"

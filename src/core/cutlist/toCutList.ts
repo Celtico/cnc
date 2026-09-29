@@ -1,3 +1,4 @@
+import { processSummary } from "../process/processes"
 import {
   EDGE_NUMBER,
   EDGE_SIDES,
@@ -26,6 +27,8 @@ export const ROLE_LABELS: Record<PanelRole, string> = {
   hatch: "Trapa",
   panel: "Front fix",
   worktop: "Taulell",
+  spacer: "Llistó interior",
+  facing: "Tira frontal",
 }
 
 export interface CutListItem {
@@ -40,6 +43,8 @@ export interface CutListItem {
   edges: EdgeBanding
   /** Cantells folrats en numeració del taller (1 dalt · 2 dreta · 3 baix · 4 esquerra). */
   edgeNumbers: number[]
+  /** Post-processos després del nesting, en ordre («Inglet 45° (cantell 2) → Cantell (1+3)»). */
+  processes: string
   /** Cantells a inglet (45°) en la mateixa numeració. */
   mitreNumbers: number[]
   /** Metres lineals de cantell de la fila (qty inclosa). */
@@ -63,6 +68,8 @@ export interface CutList {
 const ROLE_ORDER: PanelRole[] = [
   "side",
   "divider",
+  "facing",
+  "spacer",
   "bottom",
   "top",
   "fixedShelf",
@@ -89,7 +96,7 @@ const ROLE_ORDER: PanelRole[] = [
 function groupKey(p: Panel): string {
   const longEdges = Number(p.edges.top) + Number(p.edges.bottom)
   const shortEdges = Number(p.edges.left) + Number(p.edges.right)
-  return [p.role, p.length, p.width, p.thickness, p.material, p.grain, longEdges, shortEdges, (p.mitres ?? []).length].join("|")
+  return [p.role, p.length, p.width, p.thickness, p.material, p.grain, longEdges, shortEdges, (p.mitres ?? []).length, p.assembly ?? ""].join("|")
 }
 
 /** Mil·límetres de cantell d'una peça. */
@@ -128,6 +135,7 @@ export function toCutList(panels: Panel[]): CutList {
       edgeNumbers: EDGE_SIDES.filter((s) => p.edges[s])
         .map((s) => EDGE_NUMBER[s])
         .sort((a, b) => a - b),
+      processes: processSummary(p),
       mitreNumbers: (p.mitres ?? []).map((s) => EDGE_NUMBER[s]).sort((a, b) => a - b),
       edgeLength: 0,
       qty: 1,

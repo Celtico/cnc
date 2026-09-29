@@ -275,6 +275,19 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   - **Taulell i sòcol en acordió** (`RunsForm`, `Fold`): cada peça correguda és plegable amb
     un resum (de → fins a · gruix · forats); dins del taulell, cada forat també. Una oberta
     alhora; la nova s'obre sola.
+  - **Parets buides** (`Carcass.hollow.thickness`, switch a Estructura): laterals, base i tapa
+    sencera fets de pell de fora + pell de dins (`*-inner`, fa de paret per a l'interior: forats,
+    guies, ranura del fons), llistons entre pells (rol `spacer`) i tira del davant (rol
+    `facing`) del gruix aparent. `derive` dona `ws/wb/wt` (gruix de cada paret) i la llum
+    interior; `frontTerritory` usa el gruix real de cada paret exterior. Sense espigues entre
+    parets (s'encolen); calen ≥ 2·gruix + 6 mm (si no, avís i es fan massisses). Inglet i
+    parets buides no es combinen.
+  - **Post-processos i etiquetes** (`core/process/`): `panelProcesses` dedueix el que toca a
+    cada peça després del nesting, en ordre: Inglet 45° → Cantell → Forats de cantell →
+    Encolar (`Panel.assembly`, p. ex. les parets buides). Surt a la llista de peces
+    («Després del nesting») i al CSV (columna Processos). Exportar › Etiquetes
+    (`labelSheetHtml`): una etiqueta de peça (ref, nom, mides, material, tauler) i, si en té,
+    una de PROCÉS; mida de Preferències › Etiqueta, una per pàgina per a la impressora.
   - **Opcions amb icona** (`components/IconChoice.tsx`): poques opcions → botons d'icona amb
     el nom al tooltip i l'opció triada al costat del títol. Base, Fons, Tapa (mòdul), Patró de
     reixeta, Direcció dels objectes; Efecte i Forma dels objectes són segments amb icona i text.
