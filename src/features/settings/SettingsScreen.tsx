@@ -27,7 +27,7 @@ import {
   Text,
 } from "@chakra-ui/react"
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { LuArrowDown, LuArrowUp, LuCheck, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff, LuFileDown, LuGrid3X3, LuHammer, LuImage, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRows3, LuRuler, LuScan, LuScissors, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
+import { LuArrowDown, LuArrowUp, LuCheck, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff, LuFileDown, LuGrid3X3, LuHammer, LuImage, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRows3, LuRuler, LuScan, LuScissors, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { PanelGroup, PanelSection } from "../../components/PanelSection"
 import { SubFold } from "../../components/SubFold"
@@ -153,6 +153,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
           </Section>
 
           <Section id="boards" title="Taulers i nesting" icon={LuLayoutGrid} onReset={() => setReset({ key: "boards", label: "Taulers i nesting" })}>
+            <FoldGrid>
             <SubFold icon={<LuLayoutGrid />} title="Mides de tauler" summary={draft.boards.sheets.map((x) => `${x.w}×${x.h}`).join(" · ")}>
             {/* Taula en graella: capçalera una sola vegada i una fila per mida. */}
             <Grid templateColumns={{ base: "minmax(0, 1fr) minmax(0, 1fr) 32px", sm: "minmax(0, 1fr) 150px 150px 32px" }} gap={2} alignItems="center">
@@ -200,13 +201,15 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
               <Switch.Label>Permetre girar les peces encara que tinguin veta</Switch.Label>
             </Switch.Root>
             </SubFold>
+            </FoldGrid>
           </Section>
 
-          <Section id="hardware" title="Ferratges i mecanitzats" icon={LuHammer} onReset={() => setReset({ key: "hardware", label: "Ferratges i mecanitzats" })}>
+          <Section id="hardware" wide title="Ferratges i mecanitzats" icon={LuHammer} onReset={() => setReset({ key: "hardware", label: "Ferratges i mecanitzats" })}>
             <HardwareForm hardware={draft.hardware} onChange={(hardware) => set("hardware", hardware)} />
           </Section>
 
           <Section id="gaps" title="Jocs per defecte" icon={LuRuler} onReset={() => setReset({ key: "gaps", label: "Jocs per defecte" })}>
+            <FoldGrid>
             <SubFold icon={<LuDoorClosed />} title="Fronts" summary={`porta–cos ${draft.gaps.outerGap} · entre fronts ${draft.gaps.betweenGap}`}>
             <SimpleGrid columns={2} gap={3}>
               <NumberField label="Porta–cos" value={draft.gaps.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => set("gaps", { ...draft.gaps, outerGap })} />
@@ -222,6 +225,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
               <NumberField label="Fondària ranura" value={draft.gaps.grooveDepth} min={3} max={15} step={1} onChange={(grooveDepth) => set("gaps", { ...draft.gaps, grooveDepth })} />
             </SimpleGrid>
             </SubFold>
+            </FoldGrid>
           </Section>
 
           <Section id="label" title="Etiquetes" icon={LuTag} onReset={() => setReset({ key: "label", label: "Etiquetes" })}>
@@ -253,14 +257,14 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
           </Section>
 
           <PanelSection id="theme" title="Tema" icon={LuSunMoon}>
-            <Stack gap={1.5}>
+            <FoldGrid>
               <SubFold icon={<LuSunMoon />} title="Aparença" summary="Dia · Nit · Com el sistema">
                 <ThemeField />
               </SubFold>
               <SubFold icon={<LuPalette />} title="Color principal" summary="Botons, seleccions i ressaltats">
                 <AccentField />
               </SubFold>
-            </Stack>
+            </FoldGrid>
           </PanelSection>
 
           <PanelSection id="viewer3d" title="Visor 3D" icon={LuLampFloor}>
@@ -314,6 +318,18 @@ function Section({ id, title, icon, onReset, wide, children }: { id: string; tit
 }
 
 
+/**
+ * Graella de files plegables: a l'ordinador, tantes columnes com hi càpiguen (mín. 340 px);
+ * al mòbil, una. Cada una s'obre pel seu compte i no estira les del costat.
+ */
+function FoldGrid({ children }: { children: ReactNode }) {
+  return (
+    <Grid templateColumns="repeat(auto-fill, minmax(min(100%, 340px), 1fr))" gap={1.5} alignItems="start">
+      {children}
+    </Grid>
+  )
+}
+
 // --- Objectes de referència --------------------------------------------------------------
 
 function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: RefPreset[]) => void }) {
@@ -338,7 +354,7 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
       <Button size="xs" variant="outline" alignSelf="flex-start" onClick={add}>
         <LuPlus /> Afegir objecte
       </Button>
-      <Stack gap={1.5}>
+      <FoldGrid>
         {refs.map((r, i) => (
         <Box key={r.id} opacity={r.hidden ? 0.55 : 1}>
         <SubFold
@@ -406,7 +422,7 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
         </SubFold>
         </Box>
         ))}
-      </Stack>
+      </FoldGrid>
     </Stack>
   )
 }
@@ -434,7 +450,7 @@ function MaterialsList({ materials, onChange }: { materials: MaterialPref[]; onC
       <Button size="xs" variant="outline" alignSelf="flex-start" onClick={add}>
         <LuPlus /> Afegir material
       </Button>
-      <Stack gap={1.5}>
+      <FoldGrid>
         {materials.map((m, i) => (
         <MaterialCard key={m.id} m={m} onChange={(patch) => update(i, patch)} onDuplicate={() => {
           const next = [...materials]
@@ -442,7 +458,7 @@ function MaterialsList({ materials, onChange }: { materials: MaterialPref[]; onC
           onChange(next)
         }} onDelete={() => onChange(materials.filter((_, k) => k !== i))} canDelete={materials.length > 1} />
         ))}
-      </Stack>
+      </FoldGrid>
     </Stack>
   )
 }
@@ -521,7 +537,7 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
                 <option value="color">Color llis</option>
                 <option value="lacquer">Lacat</option>
                 <option value="wood">Fusta</option>
-                <option value="image">Foto real</option>
+                <option value="image">Foto (textura)</option>
                 <option value="metal">Metall</option>
                 <option value="glass">Vidre</option>
               </NativeSelect.Field>
@@ -581,6 +597,34 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
             <Input size="sm" value={m.edge} onChange={(e) => onChange({ edge: e.target.value })} placeholder="PVC blanc 1 mm" />
           </Field.Root>
         </SimpleGrid>
+        {/* Textura amb imatge: a la vista, no només com a opció de l'Acabat. */}
+        {finish.kind === "image" ? (
+          <HStack gap={3} align="center">
+            <Box w="72px" h="48px" rounded="sm" borderWidth="1px" flexShrink={0} bgImage={`url(${finish.src})`} bgSize="cover" backgroundPosition="center" />
+            <Stack gap={1} flex={1} minW={0}>
+              <Text fontSize="xs" color="fg.muted">
+                Textura de foto: es repeteix en mirall cada {finish.tileMm} mm.
+              </Text>
+              <HStack gap={1.5}>
+                <Button size="xs" variant="outline" onClick={() => void pickTexture().then((src) => src && onChange({ finish: { ...finish, src } }))}>
+                  <LuImagePlus /> Canviar la foto
+                </Button>
+                <Button size="xs" variant="ghost" colorPalette="red" onClick={() => onChange({ finish: m.hasGrain ? { kind: "wood", species: "oak" } : { kind: "color", color: "#e5e5e5" } })}>
+                  <LuTrash2 /> Treure-la
+                </Button>
+              </HStack>
+            </Stack>
+          </HStack>
+        ) : (
+          <HStack gap={2} wrap="wrap">
+            <Button size="xs" variant="outline" onClick={() => void pickTexture().then((src) => src && onChange({ finish: { kind: "image", src, tileMm: 800 } }))}>
+              <LuImagePlus /> Posar una foto de textura
+            </Button>
+            <Text fontSize="xs" color="fg.muted">
+              Una foto del tauler de debò (fusta, laminat, pedra).
+            </Text>
+          </HStack>
+        )}
         <HStack gap={5} wrap="wrap">
           <Switch.Root size="sm" checked={m.hasGrain} onCheckedChange={(e) => onChange({ hasGrain: e.checked })}>
             <Switch.HiddenInput />
@@ -628,7 +672,7 @@ function HardwareForm({ hardware: h, onChange }: { hardware: Settings["hardware"
   const [slides, setSlides] = useState(h.drawer.slideLengths.join(" · "))
   const sub = <K extends keyof Settings["hardware"]>(key: K, patch: Partial<Settings["hardware"][K]>) => onChange({ ...h, [key]: { ...h[key], ...patch } })
   return (
-    <Stack gap={1.5}>
+    <FoldGrid>
       <Group title="Cassoleta de frontissa" icon={LuSquareStack}>
         <SimpleGrid columns={3} gap={3}>
           <NumberField label="Ø" value={h.hinge.cupDiameter} min={20} max={40} step={1} onChange={(cupDiameter) => sub("hinge", { cupDiameter })} />
@@ -684,7 +728,7 @@ function HardwareForm({ hardware: h, onChange }: { hardware: Settings["hardware"
           <NumberField label="A la cantonada" value={h.magnet.cornerOffset} min={20} max={200} step={5} onChange={(cornerOffset) => sub("magnet", { cornerOffset })} />
         </SimpleGrid>
       </Group>
-    </Stack>
+    </FoldGrid>
   )
 }
 
@@ -820,7 +864,7 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
   const [scene, setScene] = usePresentationScene()
   const wallName = WALLS.find((w) => w.color === scene.wall)?.label
   return (
-    <Stack gap={1.5}>
+    <FoldGrid>
       <SubFold icon={<LuSparkles />} title="Qualitat" summary={QUALITY_LABELS[quality]}>
       <Field.Root>
         <Field.Label>Qualitat</Field.Label>
@@ -890,7 +934,7 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
         <ScenePreview composition={previewComposition} />
       </SimpleGrid>
       </SubFold>
-    </Stack>
+    </FoldGrid>
   )
 }
 

@@ -396,6 +396,9 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     cada objecte de referència és una fila plegable (resum: gruixos, acabat, cantell / mides);
     també «Per defecte als mòduls nous», Mides de tauler · Tall, Jocs (Fronts · Prestatges i fons),
     Ferratges (cada grup), Tema (Aparença · Color) i Visor 3D (Qualitat · Escena).
+    Aquestes files van en **graella** (`FoldGrid`: tantes columnes de ≥ 340 px com hi càpiguen,
+    una al mòbil; cadascuna s'obre sola). Al material, botó visible «Posar una foto de textura»
+    (a més de l'Acabat «Foto (textura)»), amb miniatura, «Canviar la foto» i «Treure-la».
   - **Opcions que no toquen s'amaguen**: sense fons no surten el material i el gruix del fons
     ni la ranura del fons; Cantonades, només si hi ha tapa o base a unir amb els laterals.
   - **Forma del tauler**: `shapeOutline` escala per l'extensió real de la corba (mostrejada),
