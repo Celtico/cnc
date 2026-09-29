@@ -1,8 +1,10 @@
-import { Field, IconButton, Input, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import { LuBookmark, LuEllipsis, LuMove, LuMoveDiagonal, LuPlus, LuScan, LuTrash2 } from "react-icons/lu"
+import { Button, Field, IconButton, Input, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { useState } from "react"
+import { ProfileEditor } from "./ProfileEditor"
+import { LuBookmark, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuPlus, LuScan, LuTrash2 } from "react-icons/lu"
 import { PanelSection } from "../../components/PanelSection"
 import { toaster } from "../../components/ui/toaster"
-import { canBeGhost, compositionWidth, newId, visibleReferences, type Composition, type RefObject } from "../../core/model"
+import { AXIS_INDEX, SECTION_AXES, canBeGhost, compositionWidth, newId, visibleReferences, type Composition, type RefObject } from "../../core/model"
 import { NumberField } from "../editor/ParamsForm"
 import { useSettings } from "../settings/SettingsContext"
 
@@ -70,6 +72,7 @@ export function RefAddMenu({ comp, onChange, onAdded }: { comp: Composition; onC
 
 /** Propietats d'un objecte de referència (fantasma): nom, mides i posició. */
 export function RefInspector({ comp, id, onChange }: { comp: Composition; id: string; onChange: (c: Composition) => void }) {
+  const [editing, setEditing] = useState(false)
   const o = comp.references.find((r) => r.id === id)
   if (!o) return null
   const update = (patch: Partial<RefObject>) => onChange({ ...comp, references: comp.references.map((r) => (r.id === id ? { ...r, ...patch } : r)) })
@@ -99,10 +102,22 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
             items={[
               ["box", "Caixa"],
               ["cylinder", "Cilindre"],
+              ["profile", "Perfil"],
             ]}
-            onChange={(v) => update(v === "cylinder" ? cylinderPatch(o, o.axis ?? "z") : { shape: undefined, axis: undefined })}
+            onChange={(v) => {
+              if (v === "cylinder") update(cylinderPatch(o, o.axis ?? "z"))
+              else if (v === "profile") {
+                update(profilePatch(o))
+                setEditing(true)
+              } else update({ shape: undefined, axis: undefined, profile: undefined })
+            }}
           />
         </Field.Root>
+        {o.shape === "profile" && (
+          <Button size="xs" variant="outline" alignSelf="flex-start" onClick={() => setEditing(true)}>
+            <LuPencilRuler /> Editar la forma…
+          </Button>
+        )}
         <Text fontSize="xs" color="fg.muted">
           {o.effect === "cut"
             ? "Fa un forat passant a cada peça que travessa (tub, endoll, passacables…). Si el mous, el forat el segueix; surt al nesting, al DXF i al STEP."
@@ -110,7 +125,29 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
         </Text>
       </PanelSection>
       <PanelSection id="ref-size" title="Mides" icon={LuMoveDiagonal}>
-        {o.shape === "cylinder" ? (
+        {o.shape === "profile" ? (
+          <>
+            <Field.Root>
+              <Field.Label>Direcció</Field.Label>
+              <NativeSelect.Root size="sm">
+                <NativeSelect.Field value={o.axis ?? "z"} onChange={(e) => update(profileAxisPatch(o, e.target.value as Axis))}>
+                  <option value="z">Cap a la paret</option>
+                  <option value="y">Vertical</option>
+                  <option value="x">De costat</option>
+                </NativeSelect.Field>
+                <NativeSelect.Indicator />
+              </NativeSelect.Root>
+            </Field.Root>
+            <SimpleGrid columns={2} gap={2}>
+              <NumberField label="Llarg" value={sectionOf(o).length} min={1} max={5000} step={10} onChange={(length) => update(sizePatch(o, { length }))} />
+              <Stack gap={0} justify="end" pb={2}>
+                <Text textStyle="xs" color="fg.muted">
+                  Secció {Math.round(sectionOf(o).su)} × {Math.round(sectionOf(o).sv)} · {o.profile?.length ?? 0} punts
+                </Text>
+              </Stack>
+            </SimpleGrid>
+          </>
+        ) : o.shape === "cylinder" ? (
           <>
             <Field.Root>
               <Field.Label>Direcció</Field.Label>
@@ -151,6 +188,18 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
           </>
         )}
       </PanelSection>
+      {o.shape === "profile" && o.profile && (
+        <ProfileEditor
+          open={editing}
+          initial={o.profile}
+          axes={AXIS_NAMES[o.axis ?? "z"]}
+          onClose={() => setEditing(false)}
+          onApply={({ points, w, h }) => {
+            update({ profile: points, ...sizePatch(o, { su: w, sv: h }) })
+            setEditing(false)
+          }}
+        />
+      )}
       <PanelSection id="ref-position" title="Posició" icon={LuMove}>
         <SimpleGrid columns={3} gap={2}>
           <NumberField label="X" value={o.x} min={-5000} max={10000} step={10} onChange={(x) => update({ x })} />
@@ -169,6 +218,41 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
 }
 
 type Axis = "x" | "y" | "z"
+
+/** Noms dels eixos (u, v) de la secció per a cada direcció (`SECTION_AXES`). */
+const AXIS_NAMES: Record<Axis, [string, string]> = { z: ["Ample", "Alt"], y: ["Ample", "Fondària"], x: ["Fondària", "Alt"] }
+
+/** Mida de la secció (u, v) i llarg (direcció) d'un objecte. */
+function sectionOf(o: RefObject): { su: number; sv: number; length: number } {
+  const axis = o.axis ?? "z"
+  const [u, v] = SECTION_AXES[axis]
+  const size = [o.w, o.h, o.d]
+  return { su: size[u]!, sv: size[v]!, length: size[AXIS_INDEX[axis]]! }
+}
+
+/** Canvia la mida de la secció i/o el llarg, mantenint la posició (cantonada mínima). */
+function sizePatch(o: RefObject, c: { su?: number; sv?: number; length?: number }): Partial<RefObject> {
+  const axis = o.axis ?? "z"
+  const [u, v] = SECTION_AXES[axis]
+  const size = [o.w, o.h, o.d]
+  if (c.su !== undefined) size[u] = c.su
+  if (c.sv !== undefined) size[v] = c.sv
+  if (c.length !== undefined) size[AXIS_INDEX[axis]] = c.length
+  return { w: size[0]!, h: size[1]!, d: size[2]! }
+}
+
+/** Passa a perfil: el rectangle de la secció actual. */
+function profilePatch(o: RefObject): Partial<RefObject> {
+  const { su, sv } = sectionOf(o)
+  return { shape: "profile", profile: [[0, 0], [su, 0], [su, sv], [0, sv]] }
+}
+
+/** Canvia la direcció d'un perfil: la secció es conserva i el llarg passa al nou eix. */
+function profileAxisPatch(o: RefObject, axis: Axis): Partial<RefObject> {
+  const { su, sv, length } = sectionOf(o)
+  const n: RefObject = { ...o, axis }
+  return { axis: axis === "z" ? undefined : axis, ...sizePatch(n, { su, sv, length }) }
+}
 
 /** Ø i llarg d'un cilindre a partir de la seva caixa. */
 function cylinderDims(o: RefObject): { diameter: number; length: number } {

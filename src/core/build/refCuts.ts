@@ -1,4 +1,4 @@
-import { type Composition, type Cutout, type Panel, type RefObject, type Vec3, AXIS_INDEX } from "../model"
+import { bounds, ccw, polygonTouchesRect, refSection, type Composition, type Cutout, type Panel, type RefObject, type Vec3 } from "../model"
 import { buildModule } from "./buildModule"
 import { toLocal } from "./geometry"
 import { modulePlacements, refOnPanel } from "../model"
@@ -12,22 +12,18 @@ function normalIndex(p: Panel): 0 | 1 | 2 {
   return a[0]! >= a[1]! && a[0]! >= a[2]! ? 0 : a[1]! >= a[2]! ? 1 : 2
 }
 
-/** L'objecte i la caixa de la peça es toquen (el cilindre, amb la seva secció rodona). */
+/** L'objecte i la caixa de la peça es toquen (amb la secció real: rodona o de perfil). */
 export function refTouchesBox(o: RefObject, b: Box, tol = 0.5): boolean {
-  const min: Vec3 = [o.x, o.y, o.z]
-  const max: Vec3 = [o.x + o.w, o.y + o.h, o.z + o.d]
-  for (let i = 0; i < 3; i++) if (max[i]! <= b.min[i]! + tol || b.max[i]! <= min[i]! + tol) return false
-  if (o.shape !== "cylinder") return true
-  // Secció rodona: distància del centre del cercle al rectangle de la caixa, en el pla
-  // perpendicular a l'eix.
-  const a = AXIS_INDEX[o.axis ?? "z"]
-  const [i, j] = ([0, 1, 2] as const).filter((k) => k !== a) as [number, number]
-  const r = Math.min(max[i]! - min[i]!, max[j]! - min[j]!) / 2
-  const ci = (min[i]! + max[i]!) / 2
-  const cj = (min[j]! + max[j]!) / 2
-  const di = Math.max(b.min[i]! - ci, 0, ci - b.max[i]!)
-  const dj = Math.max(b.min[j]! - cj, 0, cj - b.max[j]!)
-  return di * di + dj * dj < (r - tol) * (r - tol)
+  const sec = refSection(o)
+  if (sec.range[1] <= b.min[sec.a]! + tol || b.max[sec.a]! <= sec.range[0] + tol) return false
+  const { u, v } = sec
+  if (sec.circle) {
+    const { cu, cv, r } = sec.circle
+    const du = Math.max(b.min[u]! - cu, 0, cu - b.max[u]!)
+    const dv = Math.max(b.min[v]! - cv, 0, cv - b.max[v]!)
+    return du * du + dv * dv < (r - tol) * (r - tol)
+  }
+  return polygonTouchesRect(sec.poly, b.min[u]!, b.min[v]!, b.max[u]!, b.max[v]!, tol)
 }
 
 export interface RefCutProblem {
@@ -38,49 +34,50 @@ export interface RefCutProblem {
 
 /**
  * Objectes que tallen: a cada peça que travessen en la seva direcció (`axis`, per defecte cap
- * a la paret) hi fan un forat passant amb la seva secció (cercle o rectangle). Si
- * el forat arribaria a la vora de la peça (seria un rebaix del contorn) no es fa i es
- * retorna com a problema. Modifica les peces (afegeix `cutouts`).
+ * a la paret) hi fan un forat passant amb la seva secció: cercle (cilindre), rectangle (caixa)
+ * o polígon (perfil). Si arribaria a la vora de la peça (seria un rebaix del contorn) no es
+ * fa i es retorna com a problema. Modifica les peces (afegeix `cutouts`).
  */
 export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Panel) => Box): RefCutProblem[] {
   const problems: RefCutProblem[] = []
+  const r1 = (v: number) => Math.round(v * 10) / 10
   for (const o of refs) {
     if (o.effect !== "cut") continue
-    const min: Vec3 = [o.x, o.y, o.z]
-    const max: Vec3 = [o.x + o.w, o.y + o.h, o.z + o.d]
+    const sec = refSection(o)
     for (const p of panels) {
       const b = boxOf(p)
-      if (!refTouchesBox(o, b)) continue
-      const n = normalIndex(p)
       // Només talla les peces que travessa en la seva direcció (un tub cap a la paret forada
       // el fons, no el cantell dels prestatges; un desguàs vertical, la base i els prestatges).
-      if (AXIS_INDEX[o.axis ?? "z"] !== n) continue
-      const mid = (b.min[n]! + b.max[n]!) / 2
-      const point = (v: Vec3): Vec3 => {
-        const q: [number, number, number] = [v[0], v[1], v[2]]
-        q[n] = mid
-        return q
+      if (normalIndex(p) !== sec.a) continue
+      if (!refTouchesBox(o, b)) continue
+      const mid = (b.min[sec.a]! + b.max[sec.a]!) / 2
+      const local = (pu: number, pv: number): [number, number] => {
+        const q: [number, number, number] = [0, 0, 0]
+        q[sec.u] = pu
+        q[sec.v] = pv
+        q[sec.a] = mid
+        const l = toLocal(p, q)
+        return [l[0], l[1]]
       }
       let cut: Cutout
-      if (o.shape === "cylinder") {
-        const [i, j] = ([0, 1, 2] as const).filter((k) => k !== n) as [number, number]
-        const c = toLocal(p, point([(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2]))
-        const d = Math.min(max[i]! - min[i]!, max[j]! - min[j]!)
-        cut = { kind: "circle", x: c[0], y: c[1], diameter: Math.round(d * 10) / 10, tag: "ref" }
-        if (c[0] - d / 2 < 1 || c[1] - d / 2 < 1 || c[0] + d / 2 > p.length - 1 || c[1] + d / 2 > p.width - 1) {
-          problems.push({ refId: o.id, panel: p, message: `«${o.name}» toca la vora de ${p.label}: caldria un rebaix del contorn (encara no es fa).` })
-          continue
-        }
+      let pts: [number, number][]
+      if (sec.circle) {
+        const c = local(sec.circle.cu, sec.circle.cv)
+        const r = sec.circle.r
+        cut = { kind: "circle", x: c[0], y: c[1], diameter: r1(2 * r), tag: "ref" }
+        pts = [[c[0] - r, c[1] - r], [c[0] + r, c[1] + r]]
       } else {
-        const a = toLocal(p, point(min))
-        const c = toLocal(p, point(max))
-        const x0 = Math.min(a[0], c[0]), x1 = Math.max(a[0], c[0])
-        const y0 = Math.min(a[1], c[1]), y1 = Math.max(a[1], c[1])
-        if (x0 < 1 || y0 < 1 || x1 > p.length - 1 || y1 > p.width - 1) {
-          problems.push({ refId: o.id, panel: p, message: `«${o.name}» toca la vora de ${p.label}: caldria un rebaix del contorn (encara no es fa).` })
-          continue
+        pts = sec.poly.map(([pu, pv]) => local(pu, pv))
+        if (o.shape === "profile") cut = { kind: "polygon", points: ccw(pts.map(([x, y]) => [r1(x), r1(y)] as [number, number])), tag: "ref" }
+        else {
+          const bb = bounds(pts)
+          cut = { kind: "rect", x: bb.x0, y: bb.y0, w: r1(bb.x1 - bb.x0), h: r1(bb.y1 - bb.y0), tag: "ref" }
         }
-        cut = { kind: "rect", x: x0, y: y0, w: Math.round((x1 - x0) * 10) / 10, h: Math.round((y1 - y0) * 10) / 10, tag: "ref" }
+      }
+      const bb = bounds(pts)
+      if (bb.x0 < 1 || bb.y0 < 1 || bb.x1 > p.length - 1 || bb.y1 > p.width - 1) {
+        problems.push({ refId: o.id, panel: p, message: `«${o.name}» toca la vora de ${p.label}: caldria un rebaix del contorn (encara no es fa).` })
+        continue
       }
       p.cutouts = [...(p.cutouts ?? []), cut]
     }

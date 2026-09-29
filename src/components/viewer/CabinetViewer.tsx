@@ -5,10 +5,10 @@ import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
 import { ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
 import { LuPlus } from "react-icons/lu"
-import { Group, Matrix4, MeshStandardMaterial, Plane, Vector3, type Object3D, type Texture } from "three"
+import { DoubleSide, ExtrudeGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Shape, Vector3, type Object3D, type Texture } from "three"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
-import type { Hole, MaterialPref, Panel, PanelRole, RefObject } from "../../core/model"
+import { AXIS_INDEX, SECTION_AXES, type Hole, type MaterialPref, type Panel, type PanelRole, type RefObject } from "../../core/model"
 import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { cutoutGeometry } from "./cutoutGeometry"
@@ -442,6 +442,29 @@ function drawLabels(ctx: CanvasRenderingContext2D, glCanvas: HTMLCanvasElement, 
   }
 }
 
+/**
+ * Perfil 2D extrudit en la direcció de l'objecte, centrat a la seva caixa (metres). El perfil
+ * és en (u, v) del pla de la secció (`SECTION_AXES`); l'extrusió va per l'eix de la direcció.
+ */
+function profileGeometry(g: RefObject): ExtrudeGeometry {
+  const axis = g.axis ?? "z"
+  const [u, v] = SECTION_AXES[axis]
+  const a = AXIS_INDEX[axis]
+  const size = [g.w, g.h, g.d]
+  const su = size[u]!, sv = size[v]!, len = size[a]!
+  const shape = new Shape()
+  const pts = g.profile!
+  shape.moveTo((pts[0]![0] - su / 2) * S, (pts[0]![1] - sv / 2) * S)
+  for (const [pu, pv] of pts.slice(1)) shape.lineTo((pu - su / 2) * S, (pv - sv / 2) * S)
+  shape.closePath()
+  const geo = new ExtrudeGeometry(shape, { depth: len * S, bevelEnabled: false })
+  geo.translate(0, 0, (-len / 2) * S)
+  const e = [new Vector3(1, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 0, 1)]
+  geo.applyMatrix4(new Matrix4().makeBasis(e[u]!, e[v]!, e[a]!))
+  geo.computeVertexNormals()
+  return geo
+}
+
 interface SnapTargets {
   x: number[]
   y: number[]
@@ -515,6 +538,8 @@ function RefGhost({
   const tint = hit ? "#dc2626" : selected ? SELECT_COLOR : g.effect === "cut" ? "#7c3aed" : "#3b82f6"
   const draggable = selected && !!onMove
   const cyl = g.shape === "cylinder"
+  const profileGeo = useMemo(() => (g.shape === "profile" && g.profile && g.profile.length >= 3 ? profileGeometry(g) : null), [g])
+  useEffect(() => () => profileGeo?.dispose(), [profileGeo])
   const axis = g.axis ?? "z"
   const len = axis === "x" ? g.w : axis === "y" ? g.h : g.d
   const radius = (axis === "x" ? Math.min(g.h, g.d) : axis === "y" ? Math.min(g.w, g.d) : Math.min(g.w, g.h)) / 2
@@ -587,9 +612,9 @@ function RefGhost({
       onPointerUp={draggable ? end : undefined}
       onPointerCancel={draggable ? end : undefined}
     >
-      {cyl ? <cylinderGeometry args={[radius * S, radius * S, len * S, 40]} /> : <boxGeometry args={[g.w * S, g.h * S, g.d * S]} />}
+      {profileGeo ? <primitive object={profileGeo} attach="geometry" /> : cyl ? <cylinderGeometry args={[radius * S, radius * S, len * S, 40]} /> : <boxGeometry args={[g.w * S, g.h * S, g.d * S]} />}
       {/* Els que tallen solen quedar dins del fons o darrere de les portes: es veuen a través. */}
-      <meshStandardMaterial color={tint} transparent opacity={selected || hit ? 0.38 : g.effect === "cut" ? 0.45 : 0.22} depthWrite={false} depthTest={g.effect !== "cut"} />
+      <meshStandardMaterial side={DoubleSide} color={tint} transparent opacity={selected || hit ? 0.38 : g.effect === "cut" ? 0.45 : 0.22} depthWrite={false} depthTest={g.effect !== "cut"} />
       {(guides || selected || hit || g.effect === "cut") && <Edges color={selected ? SELECT_COLOR : tint} threshold={cyl ? 30 : 1} depthTest={g.effect !== "cut"} renderOrder={g.effect === "cut" ? 9 : 0} />}
     </mesh>
       {drag && (
@@ -768,6 +793,8 @@ function CableMarks({ panels }: { panels: Panel[] }) {
         if (c.kind === "circle") {
           const r = c.diameter / 2
           out.push(Array.from({ length: 33 }, (_, i) => world(c.x + r * Math.cos((i / 32) * Math.PI * 2), c.y + r * Math.sin((i / 32) * Math.PI * 2))))
+        } else if (c.kind === "polygon") {
+          out.push([...c.points, c.points[0]!].map(([x, y]) => world(x, y)))
         } else {
           out.push([world(c.x, c.y), world(c.x + c.w, c.y), world(c.x + c.w, c.y + c.h), world(c.x, c.y + c.h), world(c.x, c.y)])
         }

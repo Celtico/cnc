@@ -30,7 +30,7 @@ describe("reixeta ampla (front girat)", () => {
       const g = b.panels.find((p) => p.role === "grille")!
       expect(g.length).toBeGreaterThanOrEqual(g.width)
       for (const c of g.cutouts ?? []) {
-        if (c.kind === "circle") continue
+        if (c.kind === "circle" || c.kind === "polygon") continue
         expect(c.x).toBeGreaterThan(0)
         expect(c.y).toBeGreaterThan(0)
         expect(c.x + c.w).toBeLessThan(g.length)

@@ -59,6 +59,10 @@ export function BoardDrawing({
                     const q = localToBoard(pl, c.x, c.y)
                     return <circle key={`c${i}`} cx={q.x} cy={q.y} r={c.diameter / 2} fill="var(--chakra-colors-bg-muted)" stroke="var(--chakra-colors-wood-fg)" strokeWidth={stroke / 2} />
                   }
+                  if (c.kind === "polygon") {
+                    const pts = c.points.map(([x, y]) => localToBoard(pl, x, y)).map((q) => `${q.x},${q.y}`).join(" ")
+                    return <polygon key={`c${i}`} points={pts} fill="var(--chakra-colors-bg-muted)" stroke="var(--chakra-colors-wood-fg)" strokeWidth={stroke / 2} />
+                  }
                   const a = localToBoard(pl, c.x, c.y)
                   const b = localToBoard(pl, c.x + c.w, c.y + c.h)
                   const rr = c.kind === "slot" ? Math.min(c.w, c.h) / 2 : 0

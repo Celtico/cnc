@@ -386,7 +386,11 @@ export function normalizePanel(p: Panel): Panel {
     ...(p.cutouts
       ? {
           cutouts: p.cutouts.map((c) =>
-            c.kind === "circle" ? { ...c, x: c.y, y: r(L - c.x) } : { ...c, x: c.y, y: r(L - c.x - c.w), w: c.h, h: c.w },
+            c.kind === "circle"
+              ? { ...c, x: c.y, y: r(L - c.x) }
+              : c.kind === "polygon"
+                ? { ...c, points: c.points.map(([x, y]) => [y, r(L - x)] as [number, number]) }
+                : { ...c, x: c.y, y: r(L - c.x - c.w), w: c.h, h: c.w },
           ),
         }
       : {}),

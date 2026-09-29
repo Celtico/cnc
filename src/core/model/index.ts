@@ -1,4 +1,5 @@
 export * from "./panel"
+export * from "./polygon"
 export * from "./cabinet"
 export * from "./composition"
 export * from "./zoneOps"

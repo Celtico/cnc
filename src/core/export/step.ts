@@ -239,6 +239,17 @@ function slotThrough(c1: V3, c2: V3, r: number, n: V3, T: number): { loop: Loop;
   return { loop, exit, faces }
 }
 
+/** Àrea amb signe d'un polígon 2D (positiva si és antihorari). */
+function signedArea2(pts: [number, number][]): number {
+  let a = 0
+  for (let i = 0; i < pts.length; i++) {
+    const [x0, y0] = pts[i]!
+    const [x1, y1] = pts[(i + 1) % pts.length]!
+    a += x0 * y1 - x1 * y0
+  }
+  return a / 2
+}
+
 // --- Sòlid d'una peça -------------------------------------------------------------
 
 interface PanelSolid {
@@ -347,6 +358,36 @@ function panelSolid(p: Panel): PanelSolid {
     }
     const fA = frames.A
     const fB = frames.B
+    if (c.kind === "polygon") {
+      // Polígon passant: bucle a la cara A (horari respecte a +Z), sortida a la B i una cara
+      // plana per costat, amb la normal cap a dins del forat (fora del material).
+      const pts = signedArea2(c.points) < 0 ? [...c.points].reverse() : c.points
+      const top = pts.map(([x, y]): V3 => [x, y, T])
+      const bot = pts.map(([x, y]): V3 => [x, y, 0])
+      const sides: Face[] = pts.map((_, i) => {
+        const j = (i + 1) % pts.length
+        const normal = unit(cross(Z, sub(top[j]!, top[i]!)))
+        return { kind: "plane", loc: top[i]!, normal, loops: [[{ p: top[i]! }, { p: top[j]! }, { p: bot[j]! }, { p: bot[i]! }]] }
+      })
+      const e0 = sub(top[1]!, top[0]!)
+      const inward = unit(cross(Z, e0))
+      const mid = add(mul(add(top[0]!, top[1]!), 0.5), mul(inward, 0.05))
+      const cA = to2D(fA, mid)
+      const cB = to2D(fB, [mid[0], mid[1], 0])
+      const bb = (f: Frame, zz: number): Rect2 => {
+        const q = pts.map(([x, y]) => to2D(f, [x, y, zz]))
+        return { a0: Math.min(...q.map((v) => v[0])), a1: Math.max(...q.map((v) => v[0])), b0: Math.min(...q.map((v) => v[1])), b1: Math.max(...q.map((v) => v[1])) }
+      }
+      rounds.A.push({
+        bbox: bb(fA, T),
+        center: cA,
+        loop: [...top].reverse().map((q) => ({ p: q })),
+        faces: sides,
+        exit: { face: "B", loop: bot.map((q) => ({ p: q })), center: cB, bbox: bb(fB, 0) },
+        what: `tall de ${pts.length} costats`,
+      })
+      continue
+    }
     if (c.kind === "circle") {
       const r = c.diameter / 2
       const centre: V3 = [c.x, c.y, T]

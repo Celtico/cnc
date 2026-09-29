@@ -239,8 +239,13 @@ export const RefObjectSchema = z.object({
    * forat passant a cada peça que travessa (tubs, endolls, passacables…).
    */
   effect: z.enum(["obstacle", "cut"]).optional(),
-  /** Caixa (per defecte) o cilindre dins de la caixa w × h × d. */
-  shape: z.enum(["box", "cylinder"]).optional(),
+  /** Caixa (per defecte), cilindre o perfil 2D extrudit, dins de la caixa w × h × d. */
+  shape: z.enum(["box", "cylinder", "profile"]).optional(),
+  /**
+   * Perfil (forma «profile»): contorn de la secció en mm, amb la cantonada mínima a (0, 0).
+   * Coordenades (u, v) del pla perpendicular a la direcció: z → (x, y), y → (x, z), x → (z, y).
+   */
+  profile: z.array(z.tuple([z.number(), z.number()])).min(3).optional(),
   /**
    * Direcció: eix del cilindre i, als objectes que tallen, la direcció del tall (només foraden
    * les peces perpendiculars). z cap a la paret (per defecte), y vertical, x de costat.
@@ -249,8 +254,43 @@ export const RefObjectSchema = z.object({
 })
 export type RefObject = z.infer<typeof RefObjectSchema>
 
-/** Mides d'un objecte segons l'eix: [eix, perpendicular 1, perpendicular 2] com a índexs 0 = x, 1 = y, 2 = z. */
+/** Índex de cada eix (0 = x, 1 = y, 2 = z). */
 export const AXIS_INDEX = { x: 0, y: 1, z: 2 } as const
+
+/** Eixos (u, v) del pla de la secció per a cada direcció, com a índexs 0 = x, 1 = y, 2 = z. */
+export const SECTION_AXES = { z: [0, 1], y: [0, 2], x: [2, 1] } as const
+
+/**
+ * Secció d'un objecte en el pla perpendicular a la seva direcció, en coordenades de la
+ * composició: `u`, `v` = índexs dels eixos del pla, `a` = eix de la direcció (i el seu
+ * interval), i el contorn (polígon, o cercle si és un cilindre).
+ */
+export function refSection(o: RefObject): {
+  a: 0 | 1 | 2
+  u: 0 | 1 | 2
+  v: 0 | 1 | 2
+  range: [number, number]
+  circle?: { cu: number; cv: number; r: number }
+  poly: [number, number][]
+} {
+  const axis = o.axis ?? "z"
+  const a = AXIS_INDEX[axis]
+  const [u, v] = SECTION_AXES[axis]
+  const min = [o.x, o.y, o.z]
+  const size = [o.w, o.h, o.d]
+  const range: [number, number] = [min[a]!, min[a]! + size[a]!]
+  const u0 = min[u]!, v0 = min[v]!, su = size[u]!, sv = size[v]!
+  if (o.shape === "cylinder") {
+    const r = Math.min(su, sv) / 2
+    const cu = u0 + su / 2, cv = v0 + sv / 2
+    const poly = Array.from({ length: 32 }, (_, i) => [cu + r * Math.cos((i / 32) * Math.PI * 2), cv + r * Math.sin((i / 32) * Math.PI * 2)] as [number, number])
+    return { a, u, v, range, circle: { cu, cv, r }, poly }
+  }
+  if (o.shape === "profile" && o.profile && o.profile.length >= 3) {
+    return { a, u, v, range, poly: o.profile.map(([pu, pv]) => [u0 + pu, v0 + pv] as [number, number]) }
+  }
+  return { a, u, v, range, poly: [[u0, v0], [u0 + su, v0], [u0 + su, v0 + sv], [u0, v0 + sv]] }
+}
 
 /** Forat d'encastar al taulell (placa, pica o a mida), centrat al mòdul de sota. */
 export const WorktopCutoutSchema = z.object({

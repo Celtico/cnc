@@ -196,6 +196,13 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     dels mòduls ja no tenen UI: es migren a objectes que tallen (`migrateCableHoles`, a
     `compositionOf` i a `buildComposition`). Al 3D, els forats del mòdul seleccionat es marquen
     en taronja a través de les portes (`CableMarks`).
+  - **Perfil 2D** (`shape: "profile"`, `profile` en (u, v) de `SECTION_AXES`): secció
+    qualsevol extrudida en la direcció de l'objecte. Editor `composition/ProfileEditor.tsx`
+    (punts arrossegables amb imant a la quadrícula, «+» per afegir, Supr, fletxes, llista de
+    coordenades, formes de partida L/T/U/bisell/trapezi; no deixa aplicar un contorn que es
+    talli). Obstacle: xoc amb el polígon (`polygonTouchesRect`). Talla: tall passant
+    `kind: "polygon"` (3D, dibuixos, DXF polilínia, STEP amb una cara per costat).
+    Pendent: arcs/arrodoniments al perfil, rebaixos de contorn i peces lliures als mòduls.
   - **Centre — Visor** amb pestanyes `3D` · `Alçat` · `Foto`. Les opcions de visualització
     (forats, explosionat, AR, obertura, colors, imatge) són a la barra del visor, no al panell.
   - **Dreta — Propietats** del que hi ha seleccionat i **només d'això**: moble (resum i

@@ -107,6 +107,7 @@ function polyline(layer: string, pts: ([number, number] | [number, number, numbe
 /** Entitat DXF d'un tall passant. Les ranures fan servir bulge = 1 (semicercles exactes). */
 function cutoutEntity(c: Cutout, zz: Z = FLAT): string {
   if (c.kind === "circle") return circle(LAYER_CUT_THROUGH, c.x, c.y, c.diameter / 2, zz)
+  if (c.kind === "polygon") return polyline(LAYER_CUT_THROUGH, c.points, zz)
   if (c.kind === "rect") {
     return polyline(
       LAYER_CUT_THROUGH,

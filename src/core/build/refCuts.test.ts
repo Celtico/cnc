@@ -70,4 +70,25 @@ describe("objectes que tallen", () => {
     expect(cut).toContain("top")
     expect(cut).not.toContain("back")
   })
+
+  it("perfil en L: talla amb la seva forma i el STEP és net", () => {
+    const L: [number, number][] = [[0, 0], [200, 0], [200, 60], [60, 60], [60, 200], [0, 200]]
+    const b = buildComposition(comp({ id: "l", name: "L", w: 200, h: 200, d: 40, x: 300, y: 250, z: -10, effect: "cut", shape: "profile", profile: L }))
+    const bk = b.panels.find((p) => p.role === "back")!
+    const c = bk.cutouts![0]!
+    expect(c.kind).toBe("polygon")
+    if (c.kind === "polygon") expect(c.points).toHaveLength(6)
+    const step = toStep(b.panels, { name: "l" })
+    expect(step.warnings).toEqual([])
+    for (const s of stepSolids(step.text)) expect(s.badEdges).toBe(0)
+  })
+
+  it("obstacle en L: no xoca pel buit de la L", () => {
+    // Columna en L vista des de dalt (u = x, v = z): braç a l'esquerra del mòdul i braç per
+    // davant del mòdul; el buit de la L abraça la cantonada del mòdul.
+    const L: [number, number][] = [[0, 0], [100, 0], [100, 300], [400, 300], [400, 400], [0, 400]]
+    const col: RefObject = { id: "c", name: "Columna", w: 400, h: 2500, d: 400, x: -120, y: 0, z: 150, shape: "profile", axis: "y", profile: L }
+    expect(buildComposition(comp(col)).warnings.some((w) => w.code === "collision")).toBe(false)
+    expect(buildComposition(comp({ ...col, shape: undefined, profile: undefined })).warnings.some((w) => w.code === "collision")).toBe(true)
+  })
 })

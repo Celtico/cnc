@@ -138,6 +138,7 @@ export function cutoutPolygon(c: Cutout): [number, number][] {
       [c.x, c.y + c.h],
     ]
   }
+  if (c.kind === "polygon") return c.points.map(([x, y]) => [r2(x), r2(y)] as [number, number])
   if (c.kind === "circle") {
     const rad = c.diameter / 2
     return Array.from({ length: 16 }, (_, i) => {
