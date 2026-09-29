@@ -205,15 +205,15 @@ function sky(dx: number, dy: number, dz: number, out: number[]) {
   void dx; void dz
   const t = Math.max(-1, Math.min(1, dy))
   if (t >= 0) {
-    out[0] = 0.85 + 0.35 * t
-    out[1] = 0.83 + 0.33 * t
-    out[2] = 0.8 + 0.34 * t
+    out[0] = 0.55 + 0.25 * t
+    out[1] = 0.54 + 0.25 * t
+    out[2] = 0.53 + 0.28 * t
   } else {
-    out[0] = 0.35; out[1] = 0.33; out[2] = 0.3
+    out[0] = 0.22; out[1] = 0.21; out[2] = 0.2
   }
 }
 
-const SUN = [3.2, 3.0, 2.75]
+const SUN = [2.3, 2.15, 1.95]
 const env = [0, 0, 0]
 
 function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, out: Float32Array, o: number) {

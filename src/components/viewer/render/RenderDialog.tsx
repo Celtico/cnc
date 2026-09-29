@@ -9,9 +9,9 @@ export type SceneGetter = () => { scene: Scene; camera: Camera; width: number; h
 /** Màxim de píxels d'amplada del render (qualitat vs. temps). */
 const MAX_W = 1600
 
-/** To (ACES aproximat) i gamma sRGB de la mitjana acumulada. */
-function toneMap(v: number): number {
-  const a = v * 0.9
+/** To (ACES aproximat) i gamma sRGB de la mitjana acumulada; `exp` = multiplicador d'exposició. */
+function toneMap(v: number, exp: number): number {
+  const a = v * exp
   const x = (a * (2.51 * a + 0.03)) / (a * (2.43 * a + 0.59) + 0.14)
   const c = Math.min(1, Math.max(0, x))
   return c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055
@@ -29,6 +29,9 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
   const [error, setError] = useState<string | null>(null)
   const [started, setStarted] = useState(0)
   const [elapsed, setElapsed] = useState(0)
+  // Exposició en passos (EV): es pot ajustar sense tornar a calcular (només el to).
+  const [ev, setEv] = useState(0)
+  const exposure = useRef(0)
   const workers = useRef<Worker[]>([])
   const job = useRef<{ w: number; h: number; accum: Float32Array; count: number; scene: ReturnType<typeof extractScene> } | null>(null)
 
@@ -49,10 +52,11 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     const ctx = c.getContext("2d")!
     const img = ctx.createImageData(j.w, j.h)
     const k = 1 / j.count
+    const expo = 0.7 * Math.pow(2, exposure.current)
     for (let i = 0, n = j.w * j.h; i < n; i++) {
-      img.data[i * 4] = toneMap(j.accum[i * 3]! * k) * 255
-      img.data[i * 4 + 1] = toneMap(j.accum[i * 3 + 1]! * k) * 255
-      img.data[i * 4 + 2] = toneMap(j.accum[i * 3 + 2]! * k) * 255
+      img.data[i * 4] = toneMap(j.accum[i * 3]! * k, expo) * 255
+      img.data[i * 4 + 1] = toneMap(j.accum[i * 3 + 1]! * k, expo) * 255
+      img.data[i * 4 + 2] = toneMap(j.accum[i * 3 + 2]! * k, expo) * 255
       img.data[i * 4 + 3] = 255
     }
     ctx.putImageData(img, 0, 0)
@@ -159,6 +163,28 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                   {passes} {passes === 1 ? "passada" : "passades"} · {elapsed} s · {workers.current.length || "—"} fils. Es va afinant: com més passades, menys soroll.
                 </Text>
                 <HStack gap={2}>
+                  <HStack gap={2} fontSize="sm" color="fg.muted">
+                    <Text>Exposició</Text>
+                    <input
+                      type="range"
+                      min={-2}
+                      max={2}
+                      step={0.1}
+                      value={ev}
+                      aria-label="Exposició"
+                      onChange={(e) => {
+                        const v = Number(e.target.value)
+                        setEv(v)
+                        exposure.current = v
+                        draw()
+                      }}
+                      style={{ width: 120 }}
+                    />
+                    <Text minW="3ch" textAlign="right">
+                      {ev > 0 ? "+" : ""}
+                      {ev.toFixed(1)}
+                    </Text>
+                  </HStack>
                   <Button size="sm" variant="outline" onClick={() => (running ? stopWorkers() : startWorkers())} disabled={!!error}>
                     {running ? <LuPause /> : <LuPlay />} {running ? "Aturar" : "Continuar"}
                   </Button>
