@@ -1,4 +1,4 @@
-import { Alert, Badge, Box, Button, Field, Flex, HStack, IconButton, NativeSelect, Popover, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
+import { Alert, Badge, Box, Button, CloseButton, Drawer, Field, Flex, HStack, IconButton, NativeSelect, Popover, Portal, SegmentGroup, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   LuBox,
@@ -18,6 +18,7 @@ import {
   LuCircleDot,
   LuDoorOpen,
   LuExpand,
+  LuFocus,
   LuHammer,
   LuLayoutPanelLeft,
   LuListTree,
@@ -43,7 +44,7 @@ import { ArDialog } from "../../components/viewer/ArDialog"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox } from "../../core/build/buildComposition"
-import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, findZone, parentOf, rowOf, walkZones, newId, type Composition, type Module } from "../../core/model"
+import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, parentOf, pasteZone, rowOf, walkZones, newId, type Composition, type Module, type RefObject, type Zone } from "../../core/model"
 import { updateProjectComposition } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -86,6 +87,28 @@ interface History {
   past: Composition[]
   present: Composition
   future: Composition[]
+}
+
+/** Porta-retalls de l'editor (mòdul, objecte o compartiment). */
+type Clip = { kind: "module"; data: Module; label: string } | { kind: "ref"; data: RefObject; label: string } | { kind: "zone"; data: Zone; label: string }
+const CLIP_KEY = "mobles:clipboard"
+let memClip: Clip | null = null
+function writeClip(c: Clip) {
+  memClip = structuredClone(c)
+  try {
+    localStorage.setItem(CLIP_KEY, JSON.stringify(c))
+  } catch {
+    /* només en memòria */
+  }
+}
+function readClip(): Clip | null {
+  try {
+    const raw = localStorage.getItem(CLIP_KEY)
+    if (raw) return JSON.parse(raw) as Clip
+  } catch {
+    /* només en memòria */
+  }
+  return memClip
 }
 
 /** Símbol de la tecla de drecera: ⌘ al Mac/iPad, Ctrl a la resta. */
@@ -148,6 +171,9 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   // Mòbil: sota el visor, pestanyes Estructura / Propietats.
   const [mobilePane, setMobilePane] = useState<"tree" | "props">("props")
   const [exploded, setExploded] = useState(false)
+  // Tornar a encuadrar la càmera (editar ja no la mou).
+  const [fitKey, setFitKey] = useState(0)
+  const isMobile = useBreakpointValue({ base: true, md: false }) ?? false
   const [showHoles, setShowHoles] = useState(false)
   // «Veure a casa»: visor 3D amb el botó d'AR Quick Look (Safari a l'iPhone/iPad).
   const [arOpen, setArOpen] = useState(false)
@@ -265,7 +291,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
     () =>
       (build?.modules ?? []).map((m) => {
         const c = comp.modules[m.index - 1]!.carcass
-        return { id: m.id, index: m.index, x: m.x, y: m.y, width: c.width, height: c.height, depth: c.depth + c.thickness }
+        return { id: m.id, index: m.index, x: m.x, y: m.y, width: c.width, height: c.height, depth: c.depth + c.thickness, wall: c.base.kind === "wall" }
       }),
     [build, comp],
   )
@@ -319,6 +345,104 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const moveRef = (id: string, pos: { x: number; y: number; z: number }) =>
     setComp((c) => ({ ...c, references: c.references.map((r) => (r.id === id ? { ...r, ...pos } : r)) }))
   // Fletxes amb un objecte seleccionat: ←→ X, ↑↓ Y, Re Pàg / Av Pàg Z. 1 mm; amb Maj, 10 mm.
+  // Copiar, enganxar, duplicar i esborrar amb el teclat (mòduls, objectes i compartiments).
+  // El porta-retalls es desa a localStorage: es pot enganxar en un altre moble.
+  const editKeysRef = useRef<(e: KeyboardEvent) => void>(() => {})
+  editKeysRef.current = (e: KeyboardEvent) => {
+    if (e.defaultPrevented) return
+    const t = e.target as HTMLElement | null
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return
+    if (document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]')) return
+    const mod = e.metaKey || e.ctrlKey
+    const key = e.key.toLowerCase()
+    const current = (): Clip | null => {
+      if (selection.kind === "module") {
+        const m = comp.modules.find((x) => x.id === selection.id)
+        return m ? { kind: "module", data: m, label: m.name } : null
+      }
+      if (selection.kind === "ref") {
+        const r = comp.references.find((x) => x.id === selection.id)
+        return r ? { kind: "ref", data: r, label: r.name } : null
+      }
+      if (selection.kind === "zone" && zone) return { kind: "zone", data: zone, label: zoneLabel(zone) }
+      return null
+    }
+    const paste = (clip: Clip) => {
+      if (clip.kind === "module") {
+        const res = insertModuleCopy(comp, clip.data, selection.kind === "module" ? selection.id : selection.kind === "zone" ? selection.moduleId : undefined)
+        setComp(res.comp)
+        select({ kind: "module", id: res.id })
+      } else if (clip.kind === "ref") {
+        const res = insertRefCopy(comp, clip.data)
+        setComp(res.comp)
+        select({ kind: "ref", id: res.id })
+      } else {
+        // Un compartiment s'enganxa dins del compartiment (o del mòdul) seleccionat.
+        const target = selection.kind === "zone" ? { m: module, zoneId: selection.zoneId } : selection.kind === "module" ? { m: comp.modules.find((x) => x.id === selection.id), zoneId: undefined } : null
+        if (!target?.m) {
+          toaster.create({ title: "Tria on enganxar el compartiment", description: "Selecciona un compartiment o un mòdul.", type: "info" })
+          return
+        }
+        const zid = target.zoneId ?? target.m.root.id
+        updateModule({ ...target.m, root: pasteZone(target.m.root, zid, clip.data) })
+        select({ kind: "zone", moduleId: target.m.id, zoneId: zid })
+      }
+    }
+    if (mod && (key === "c" || key === "x")) {
+      const clip = current()
+      if (!clip) return
+      e.preventDefault()
+      writeClip(clip)
+      toaster.create({ title: `Copiat: ${clip.label}`, type: "info", duration: 1500 })
+      if (key === "x") remove()
+      return
+    }
+    if (mod && key === "v") {
+      const clip = readClip()
+      if (!clip) return
+      e.preventDefault()
+      paste(clip)
+      return
+    }
+    if (mod && key === "d") {
+      const clip = current()
+      if (!clip) return
+      e.preventDefault()
+      paste(clip)
+      return
+    }
+    if (!mod && (e.key === "Delete" || e.key === "Backspace")) {
+      if (selection.kind === "moble") return
+      e.preventDefault()
+      remove()
+    }
+    function remove() {
+      if (selection.kind === "module") {
+        if (comp.modules.length <= 1) {
+          toaster.create({ title: "El moble ha de tenir almenys un mòdul", type: "info" })
+          return
+        }
+        const i = comp.modules.findIndex((x) => x.id === selection.id)
+        const modules = comp.modules.filter((x) => x.id !== selection.id)
+        setComp({ ...comp, modules })
+        select({ kind: "module", id: modules[Math.max(0, i - 1)]!.id })
+      } else if (selection.kind === "ref") {
+        setComp({ ...comp, references: comp.references.filter((r) => r.id !== selection.id) })
+        select({ kind: "moble" })
+      } else if (selection.kind === "zone") {
+        const parent = parentOf(module.root, selection.zoneId)
+        updateModule({ ...module, root: deleteZone(module.root, selection.zoneId) })
+        if (parent && parent.id !== module.root.id) select({ kind: "zone", moduleId: module.id, zoneId: parent.id })
+        else select({ kind: "module", id: module.id })
+      }
+    }
+  }
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => editKeysRef.current(e)
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
+
   const nudgeRef = useRef<(e: KeyboardEvent) => void>(() => {})
   nudgeRef.current = (e: KeyboardEvent) => {
     if (selection.kind !== "ref" || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return
@@ -520,9 +644,8 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   // mateixa alçada de capçalera); els elements que no són secció porten el seu marge.
   const inspector = (
     <Stack gap={0}>
-      {/* Capçalera: icona, on és i què és (dues línies), anterior/següent i ⋯ amb les accions. */}
+      {/* Capçalera: on és i què és (dues línies), anterior/següent i ⋯ amb les accions. */}
       <HStack gap={2} color="wood.fg" pb={2} mb={2} borderBottomWidth="1px">
-        <Box fontSize="lg">{inspectorTitle.icon}</Box>
         <Stack gap={0} flex={1} minW={0}>
           {inspectorTitle.parent && (
             <Text fontSize="xs" color="fg.muted" truncate data-truncate="">
@@ -551,7 +674,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           <ZoneActions root={module.root} zone={zone} onChange={(root) => updateModule({ ...module, root })} onSelect={selectZone} />
         )}
         {!photoInspector && selection.kind === "ref" && (
-          <RefActions comp={comp} id={selection.id} onChange={setComp} onRemoved={() => select({ kind: "moble" })} />
+          <RefActions comp={comp} id={selection.id} onChange={setComp} onRemoved={() => select({ kind: "moble" })} onSelected={(id) => select({ kind: "ref", id })} />
         )}
       </HStack>
 
@@ -860,7 +983,9 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             collidingRefIds={collidingRefs}
             highlightZone={highlightZone}
             onSelectRef={(id) => select({ kind: "ref", id })}
+            fitKey={fitKey}
             onMoveRef={moveRef}
+            onMoveModule={(id, dx, dy, all) => setComp((c) => (all ? moveAllBy(c, dx) : moveModuleBy(c, id, dx, dy)))}
           />
         )}
         {/* Amb el visor estret, les vistes es trien a «Opcions de vista» (no hi caben a baix). */}
@@ -970,22 +1095,53 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           <IconButton aria-label={exploded ? "Vista muntada" : "Vista explosionada"} title={exploded ? "Vista muntada" : "Vista explosionada"} size="sm" variant={exploded ? "solid" : "surface"} colorPalette="wood" onClick={() => setExploded((v) => !v)}>
             {exploded ? <LuShrink /> : <LuExpand />}
           </IconButton>
+          <IconButton aria-label="Encuadrar el moble" title="Encuadrar el moble (la càmera ja no es mou sola en editar)" size="sm" variant="surface" colorPalette="wood" onClick={() => setFitKey((k) => k + 1)}>
+            <LuFocus />
+          </IconButton>
+          {isMobile ? (
+            // Al mòbil, les opcions surten en un calaix de baix amb el seu propi desplaçament
+            // (el popover feia desplaçar tota la pàgina).
+            <Drawer.Root placement="bottom">
+              <Drawer.Trigger asChild>
+                <IconButton aria-label="Opcions de vista" title="Opcions de vista" size="sm" variant="surface" colorPalette="wood">
+                  <LuSlidersVertical />
+                </IconButton>
+              </Drawer.Trigger>
+              <Portal>
+                <Drawer.Backdrop />
+                <Drawer.Positioner>
+                  <Drawer.Content roundedTop="l3" maxH="75dvh">
+                    <Drawer.Header>
+                      <Drawer.Title>Opcions de vista</Drawer.Title>
+                    </Drawer.Header>
+                    <Drawer.Body overflowY="auto" pb={6}>
+                      <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} quality={quality} onQuality={setQuality} />
+                    </Drawer.Body>
+                    <Drawer.CloseTrigger asChild>
+                      <CloseButton size="sm" />
+                    </Drawer.CloseTrigger>
+                  </Drawer.Content>
+                </Drawer.Positioner>
+              </Portal>
+            </Drawer.Root>
+          ) : (
           <Popover.Root positioning={{ placement: "bottom-end" }}>
-            <Popover.Trigger asChild>
-              <IconButton aria-label="Opcions de vista" title="Opcions de vista" size="sm" variant="surface" colorPalette="wood">
-                <LuSlidersVertical />
-              </IconButton>
-            </Popover.Trigger>
-            <Portal>
-              <Popover.Positioner>
-                <Popover.Content w="320px">
-                  <Popover.Body>
-                    <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} quality={quality} onQuality={setQuality} />
-                  </Popover.Body>
-                </Popover.Content>
-              </Popover.Positioner>
-            </Portal>
-          </Popover.Root>
+              <Popover.Trigger asChild>
+                <IconButton aria-label="Opcions de vista" title="Opcions de vista" size="sm" variant="surface" colorPalette="wood">
+                  <LuSlidersVertical />
+                </IconButton>
+              </Popover.Trigger>
+              <Portal>
+                <Popover.Positioner>
+                  <Popover.Content w="320px">
+                    <Popover.Body>
+                      <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} quality={quality} onQuality={setQuality} />
+                    </Popover.Body>
+                  </Popover.Content>
+                </Popover.Positioner>
+              </Portal>
+            </Popover.Root>
+          )}
         </Stack>
       </Box>
 

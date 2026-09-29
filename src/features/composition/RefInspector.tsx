@@ -1,10 +1,10 @@
 import { Button, Field, IconButton, Input, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState } from "react"
 import { ProfileEditor } from "./ProfileEditor"
-import { LuBookmark, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuPlus, LuScan, LuTrash2 } from "react-icons/lu"
+import { LuBookmark, LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuPlus, LuScan, LuTrash2 } from "react-icons/lu"
 import { PanelSection } from "../../components/PanelSection"
 import { toaster } from "../../components/ui/toaster"
-import { AXIS_INDEX, SECTION_AXES, toNodes, canBeGhost, compositionWidth, newId, visibleReferences, type Composition, type RefObject } from "../../core/model"
+import { AXIS_INDEX, SECTION_AXES, insertRefCopy, toNodes, canBeGhost, compositionWidth, newId, visibleReferences, type Composition, type RefObject } from "../../core/model"
 import { NumberField } from "../editor/ParamsForm"
 import { useSettings } from "../settings/SettingsContext"
 
@@ -139,7 +139,7 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
               </NativeSelect.Root>
             </Field.Root>
             <SimpleGrid columns={2} gap={2}>
-              <NumberField label="Llarg" value={sectionOf(o).length} min={1} max={5000} step={10} onChange={(length) => update(sizePatch(o, { length }))} />
+              <NumberField label="Llarg" value={sectionOf(o).length} min={1} max={20000} step={10} onChange={(length) => update(sizePatch(o, { length }))} />
               <Stack gap={0} justify="end" pb={2}>
                 <Text textStyle="xs" color="fg.muted">
                   Secció {Math.round(sectionOf(o).su)} × {Math.round(sectionOf(o).sv)} · {o.profile?.length ?? 0} punts
@@ -161,8 +161,8 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
               </NativeSelect.Root>
             </Field.Root>
             <SimpleGrid columns={2} gap={2}>
-              <NumberField label="Ø" value={cylinderDims(o).diameter} min={1} max={2000} step={5} onChange={(diameter) => update(cylinderPatch(o, o.axis ?? "z", { diameter }))} />
-              <NumberField label="Llarg" value={cylinderDims(o).length} min={1} max={5000} step={10} onChange={(length) => update(cylinderPatch(o, o.axis ?? "z", { length }))} />
+              <NumberField label="Ø" value={cylinderDims(o).diameter} min={1} max={20000} step={5} onChange={(diameter) => update(cylinderPatch(o, o.axis ?? "z", { diameter }))} />
+              <NumberField label="Llarg" value={cylinderDims(o).length} min={1} max={20000} step={10} onChange={(length) => update(cylinderPatch(o, o.axis ?? "z", { length }))} />
             </SimpleGrid>
           </>
         ) : (
@@ -181,9 +181,9 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
             </Field.Root>
           )}
           <SimpleGrid columns={3} gap={2}>
-            <NumberField label="Ample" value={o.w} min={1} max={5000} step={10} onChange={(w) => update({ w })} />
-            <NumberField label="Alt" value={o.h} min={1} max={5000} step={10} onChange={(h) => update({ h })} />
-            <NumberField label="Fondària" value={o.d} min={1} max={5000} step={10} onChange={(d) => update({ d })} />
+            <NumberField label="Ample" value={o.w} min={1} max={20000} step={10} onChange={(w) => update({ w })} />
+            <NumberField label="Alt" value={o.h} min={1} max={20000} step={10} onChange={(h) => update({ h })} />
+            <NumberField label="Fondària" value={o.d} min={1} max={20000} step={10} onChange={(d) => update({ d })} />
           </SimpleGrid>
           </>
         )}
@@ -202,9 +202,9 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
       )}
       <PanelSection id="ref-position" title="Posició" icon={LuMove}>
         <SimpleGrid columns={3} gap={2}>
-          <NumberField label="X" value={o.x} min={-5000} max={10000} step={10} onChange={(x) => update({ x })} />
-          <NumberField label="Y" value={o.y} min={-5000} max={5000} step={10} onChange={(y) => update({ y })} />
-          <NumberField label="Z" value={o.z} min={-5000} max={5000} step={10} onChange={(z) => update({ z })} />
+          <NumberField label="X" value={o.x} min={-30000} max={30000} step={10} onChange={(x) => update({ x })} />
+          <NumberField label="Y" value={o.y} min={-30000} max={30000} step={10} onChange={(y) => update({ y })} />
+          <NumberField label="Z" value={o.z} min={-30000} max={30000} step={10} onChange={(z) => update({ z })} />
         </SimpleGrid>
         <Text fontSize="xs" color="fg.muted">
           X des de l'esquerra del moble, Y des del terra, Z des del darrere (paret).
@@ -291,7 +291,7 @@ function Segments({ value, items, onChange }: { value: string; items: [string, s
 }
 
 /** Accions de l'objecte seleccionat, a la capçalera de l'inspector. */
-export function RefActions({ comp, id, onChange, onRemoved }: { comp: Composition; id: string; onChange: (c: Composition) => void; onRemoved: () => void }) {
+export function RefActions({ comp, id, onChange, onRemoved, onSelected }: { comp: Composition; id: string; onChange: (c: Composition) => void; onRemoved: () => void; onSelected?: (id: string) => void }) {
   const { settings, save } = useSettings()
   const o = comp.references.find((r) => r.id === id)
   if (!o) return null
@@ -309,6 +309,16 @@ export function RefActions({ comp, id, onChange, onRemoved }: { comp: Compositio
       <Portal>
         <Menu.Positioner>
           <Menu.Content>
+            <Menu.Item
+              value="dup"
+              onClick={() => {
+                const res = insertRefCopy(comp, o)
+                onChange(res.comp)
+                onSelected?.(res.id)
+              }}
+            >
+              <LuCopy /> Duplicar
+            </Menu.Item>
             <Menu.Item value="save" onClick={saveAsPreset}>
               <LuBookmark /> Desar a les preferències
             </Menu.Item>

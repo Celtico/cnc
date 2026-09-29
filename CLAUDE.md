@@ -187,12 +187,22 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     Imant de 15 mm a les vores dels mòduls, dels altres objectes, del terra i de la paret (Alt:
     sense imant); etiqueta amb la posició mentre s'arrossega. Fletxes 1 mm (Maj 10), Re Pàg /
     Av Pàg per a Z. Es desa en deixar-lo anar (un sol pas de desfer).
+  - **Mòduls al 3D**: nansa ↔ (`MoveHandle`) sobre el mòdul seleccionat; arrossegar-la el mou a
+    la seva fila (`moveModuleBy`: els de la dreta es queden on eren) i, si és penjat, amunt i
+    avall; amb Maj, tot el moble (`moveAllBy`). Imant a les vores dels mòduls i dels objectes.
+    Nanses i botons «+» són malles 3D amb mida constant a la pantalla (`usePixelScale`), no
+    `Html` de drei (els Html fallaven en muntar-se i desmuntar-se amb React 19).
+  - **Teclat a l'editor**: Ctrl/⌘ C · X · V · D (copiar, retallar, enganxar, duplicar) i Supr
+    per al mòdul, l'objecte o el compartiment seleccionat (`editOps.ts`). El porta-retalls és
+    a localStorage (`mobles:clipboard`): es pot enganxar en un altre moble.
+  - **Càmera**: s'encuadra en obrir, canviar de vista, redimensionar o amb el botó «Encuadrar»;
+    editar no la mou. Opcions de vista: popover a l'ordinador, calaix de baix al mòbil.
   - **Efecte dels objectes** (`RefObject.effect`, `shape`, `axis`): **Obstacle** (per defecte,
     avisa si xoca; el cilindre xoca amb la seva secció rodona, `refTouchesBox`) o **Talla**
     (`build/refCuts.ts`, `applyRefCuts`): forat passant a cada peça perpendicular a la seva
     direcció (z cap a la paret: fons i portes; y: base, tapa, prestatges; x: laterals). Caixa →
     forat rectangular; cilindre → rodó. Si arribaria a la vora (seria un rebaix) no es fa i
-    avisa (`ref-cut`). Els que tallen es veuen en violeta a través del moble. Els **passacables**
+    avisa (`ref-cut`). Els que tallen només es veuen seleccionats (en violeta, a través del moble). Els **passacables**
     dels mòduls ja no tenen UI: es migren a objectes que tallen (`migrateCableHoles`, a
     `compositionOf` i a `buildComposition`). Al 3D, els forats del mòdul seleccionat es marquen
     en taronja a través de les portes (`CableMarks`).

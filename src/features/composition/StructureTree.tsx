@@ -15,7 +15,7 @@ import {
   LuRows2,
   LuTrash2,
 } from "react-icons/lu"
-import { BUILTIN_TEMPLATES, newId, rowOf, type Composition, type Module, type Zone } from "../../core/model"
+import { BUILTIN_TEMPLATES, insertRefCopy, newId, rowOf, type Composition, type Module, type Zone } from "../../core/model"
 import { RefAddMenu } from "./RefInspector"
 import { zoneLabel } from "./zoneLabel"
 
@@ -193,6 +193,16 @@ export function StructureTree({
           onClick={() => onSelect({ kind: "ref", id: r.id })}
           menu={
             <RowMenu label={`Opcions de «${r.name}»`}>
+              <Menu.Item
+                value="dup"
+                onClick={() => {
+                  const res = insertRefCopy(comp, r)
+                  onChange(res.comp)
+                  onSelect({ kind: "ref", id: res.id })
+                }}
+              >
+                <LuCopy /> Duplicar
+              </Menu.Item>
               <Menu.Item value="del" color="fg.error" onClick={() => removeRef(r.id)}>
                 <LuTrash2 /> Eliminar
               </Menu.Item>

@@ -2,9 +2,8 @@ import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import { QUALITY, type RenderQuality } from "./renderQuality"
 import { PresentationRoom } from "./PresentationRoom"
 import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
-import { ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
+import { Billboard, ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
-import { LuPlus } from "react-icons/lu"
 import { DoubleSide, ExtrudeGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Shape, Vector3, type Object3D, type Texture } from "three"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
@@ -57,6 +56,8 @@ export interface ViewerModule {
   width: number
   height: number
   depth: number
+  /** Penjat a la paret: també es pot moure amunt i avall. */
+  wall?: boolean
 }
 
 /** Llum d'un compartiment (mm, coordenades de la composició), per acotar-la a la vista de davant. */
@@ -102,6 +103,8 @@ export interface CabinetViewerProps {
   /** Objecte de referència seleccionat i clic sobre un objecte al 3D. */
   selectedRefId?: string | null
   onSelectRef?: (id: string) => void
+  /** Arrossegar el mòdul seleccionat (o tot el moble, `all`) amb la nansa: desplaçament en mm. */
+  onMoveModule?: (id: string, dx: number, dy: number, all: boolean) => void
   /** Arrossegar l'objecte seleccionat al 3D: posició nova (mm) en deixar-lo anar. */
   onMoveRef?: (id: string, pos: { x: number; y: number; z: number }) => void
   /** Objectes que xoquen amb alguna peça: es pinten de vermell. */
@@ -110,6 +113,8 @@ export interface CabinetViewerProps {
   highlightZone?: { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number; veil?: boolean } | null
   /** Clic a l'espai buit (sense arrossegar): treure la selecció. */
   onDeselect?: () => void
+  /** Canviar-lo torna a encuadrar la càmera (la resta de canvis no la mouen). */
+  fitKey?: number
 }
 
 export function CabinetViewer({
@@ -134,8 +139,10 @@ export function CabinetViewer({
   selectedRefId,
   onSelectRef,
   onMoveRef,
+  onMoveModule,
   collidingRefIds,
   highlightZone,
+  fitKey = 0,
 }: CabinetViewerProps) {
   // Per distingir un clic a l'espai buit d'un gir de càmera (arrossegar).
   const downAt = useRef<[number, number] | null>(null)
@@ -156,6 +163,8 @@ export function CabinetViewer({
     return m
   }, [groups])
   const gridRef = useRef<Object3D>(null)
+  // Mòdul (o moble sencer) que s'està arrossegant amb la nansa: desplaçament en viu.
+  const [moduleDrag, setModuleDrag] = useState<{ index: number; dx: number; dy: number; all: boolean } | null>(null)
   // Arestes on s'enganxen els objectes en arrossegar-los: mòduls, altres objectes, terra i paret.
   const snapTargets = useMemo((): SnapTargets => {
     const t: SnapTargets = { x: [0, size.width], y: [0, size.height], z: [0, size.depth] }
@@ -207,8 +216,10 @@ export function CabinetViewer({
           const active = !!g && (!openOnly || openOnly.has(g.id))
           const t = active ? opening : 0
           const tr = g ? transformAt(g.motion, t) : null
+          const shifted = moduleDrag && (moduleDrag.all || p.module === moduleDrag.index)
           return (
-            <MovingPanel key={p.id} transform={tr}>
+            <group key={p.id} position={shifted ? [moduleDrag.dx * S, moduleDrag.dy * S, 0] : [0, 0, 0]}>
+            <MovingPanel transform={tr}>
               <PanelMesh
                 panel={p}
                 exploded={exploded}
@@ -224,9 +235,11 @@ export function CabinetViewer({
                 } : undefined}
               />
             </MovingPanel>
+            </group>
           )
         })}
-        {ghosts?.map((g) => (
+        {/* Els que tallen només es veuen seleccionats: el 3D queda net i es veu el forat. */}
+        {ghosts?.filter((g) => g.effect !== "cut" || g.id === selectedRefId).map((g) => (
           <RefGhost
             key={g.id}
             g={g}
@@ -243,6 +256,17 @@ export function CabinetViewer({
         ))}
         {highlightZone && <ZoneHighlight box={highlightZone} />}
         {selectedIndex !== undefined && q.guides && <CableMarks panels={panels.filter((p) => p.module === selectedIndex)} />}
+        {selected && onMoveModule && q.guides && view !== "top" && (
+          <MoveHandle
+            m={selected}
+            others={[...(modules ?? []).filter((o) => o.id !== selected.id).flatMap((o) => [o.x, o.x + o.width]), ...(ghosts ?? []).flatMap((g) => [g.x, g.x + g.w])]}
+            onDrag={setModuleDrag}
+            onDrop={(dx, dy, all) => {
+              setModuleDrag(null)
+              if (dx || dy) onMoveModule(selected.id, dx, dy, all)
+            }}
+          />
+        )}
         {selected && onAddModule && !ortho && q.guides && (
           <>
             <AddButton x={selected.x - 120} y={selected.y + selected.height / 2} z={selected.depth / 2} side="left" onClick={() => onAddModule("left")} />
@@ -275,7 +299,7 @@ export function CabinetViewer({
           resolution={q.contactResolution}
         />
       )}
-      <CameraRig size={size} view={view} />
+      <CameraRig size={size} view={view} fitKey={fitKey} />
       {onCapture && <Capture onCapture={onCapture} gridRef={gridRef} />}
     </Canvas>
   )
@@ -328,7 +352,11 @@ const VIEW_DIR: Record<ViewName, [number, number, number]> = {
  * Enquadra el moble sencer: perspectiva 3/4 a la vista 3D, càmera ortogràfica a les
  * vistes estàndard (zoom perquè hi càpiga tot), amb transició suau.
  */
-function CameraRig({ size, view }: { size: CabinetViewerProps["size"]; view: ViewName }) {
+/**
+ * Càmera: s'encuadra en muntar-se, en canviar de vista, en redimensionar el visor i quan
+ * canvia `fitKey`. Editar el moble (mides, mòduls, objectes) no la mou: es queda on l'has deixat.
+ */
+function CameraRig({ size, view, fitKey }: { size: CabinetViewerProps["size"]; view: ViewName; fitKey: number }) {
   const controls = useRef<OrbitControlsImpl>(null)
   const { camera, size: viewport } = useThree()
   const w = size.width * S
@@ -361,7 +389,9 @@ function CameraRig({ size, view }: { size: CabinetViewerProps["size"]; view: Vie
     goal.current = { pos, zoom }
     controls.current?.target.set(0, targetY, 0)
     controls.current?.update()
-  }, [camera, w, h, d, targetY, aspect, view, ortho, viewport.width, viewport.height])
+    // Les mides es llegeixen però no disparen el reencuadrament.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [camera, view, ortho, viewport.width, viewport.height, fitKey])
 
   useFrame((_, dt) => {
     const g = goal.current
@@ -847,34 +877,183 @@ function ZoneHighlight({ box: b }: { box: { x0: number; x1: number; y0: number; 
 }
 
 /** Botó + ancorat a un punt del 3D, per afegir un mòdul a un costat del seleccionat. */
+/** Escala un grup perquè 1 unitat sigui `px` píxels a la pantalla (nanses i botons 3D). */
+function usePixelScale(ref: React.RefObject<Group | null>, px: number) {
+  const tmp = useMemo(() => new Vector3(), [])
+  useFrame(({ camera, size }) => {
+    const g = ref.current
+    if (!g) return
+    const k =
+      "isOrthographicCamera" in camera && camera.isOrthographicCamera
+        ? px / (camera as { zoom: number }).zoom
+        : (px * 2 * camera.position.distanceTo(g.getWorldPosition(tmp)) * Math.tan((((camera as { fov?: number }).fov ?? 38) * Math.PI) / 360)) / Math.max(1, size.height)
+    g.scale.setScalar(k)
+  })
+}
+
 function AddButton({ x, y, z, side, onClick }: { x: number; y: number; z: number; side: "left" | "right"; onClick: () => void }) {
-  const label = side === "left" ? "Afegir mòdul a l'esquerra" : "Afegir mòdul a la dreta"
-  // L'Html de drei munta el contingut en un arrel React a part, sense el context de
-  // Chakra: aquí només hi van elements HTML plans.
+  // Botó 3D (no Html): mida constant a la pantalla, sempre per sobre del moble.
+  const scaler = useRef<Group>(null)
+  const [hover, setHover] = useState(false)
+  usePixelScale(scaler, 15)
+  const white = <meshBasicMaterial color="white" depthTest={false} depthWrite={false} transparent />
   return (
-    <Html position={[x * S, y * S, z * S]} center zIndexRange={[20, 10]} style={{ pointerEvents: "auto" }}>
-      <button
-        type="button"
-        aria-label={label}
-        title={label}
-        onClick={onClick}
-        style={{
-          width: 32,
-          height: 32,
-          borderRadius: 999,
-          border: "2px solid white",
-          background: "#b57a37",
-          color: "white",
-          display: "grid",
-          placeItems: "center",
-          cursor: "pointer",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
-          fontSize: 18,
-        }}
-      >
-        <LuPlus />
-      </button>
-    </Html>
+    <group position={[x * S, y * S, z * S]}>
+      <Billboard>
+        <group ref={scaler}>
+          <mesh
+            renderOrder={20}
+            onPointerOver={(e) => {
+              e.stopPropagation()
+              setHover(true)
+              document.body.style.cursor = "pointer"
+            }}
+            onPointerOut={() => {
+              setHover(false)
+              document.body.style.cursor = ""
+            }}
+            onClick={(e) => {
+              e.stopPropagation()
+              onClick()
+            }}
+            name={side === "left" ? "Afegir mòdul a l'esquerra" : "Afegir mòdul a la dreta"}
+          >
+            <circleGeometry args={[1, 40]} />
+            <meshBasicMaterial color={hover ? "#98602c" : "#b57a37"} depthTest={false} depthWrite={false} transparent />
+          </mesh>
+          <mesh position={[0, 0, 0.01]} renderOrder={21}>
+            <planeGeometry args={[1, 0.14]} />
+            {white}
+          </mesh>
+          <mesh position={[0, 0, 0.01]} renderOrder={21}>
+            <planeGeometry args={[0.14, 1]} />
+            {white}
+          </mesh>
+        </group>
+      </Billboard>
+    </group>
+  )
+}
+
+/**
+ * Nansa per moure el mòdul seleccionat (o, amb Maj, tot el moble) arrossegant-la: al llarg de
+ * la fila i, si és penjat, amunt i avall. S'enganxa a les vores dels altres mòduls i dels
+ * objectes (Alt: lliure).
+ */
+function MoveHandle({
+  m,
+  others,
+  onDrag,
+  onDrop,
+}: {
+  m: ViewerModule
+  others: number[]
+  onDrag: (d: { index: number; dx: number; dy: number; all: boolean } | null) => void
+  onDrop: (dx: number, dy: number, all: boolean) => void
+}) {
+  const controls = useThree((st) => st.controls) as unknown as { enabled: boolean } | null
+  const start = useRef<{ p: Vector3; plane: Plane; all: boolean } | null>(null)
+  const latest = useRef<{ dx: number; dy: number; all: boolean } | null>(null)
+  const [live, setLive] = useState<{ dx: number; dy: number; all: boolean } | null>(null)
+  const [hover, setHover] = useState(false)
+  const pos: [number, number, number] = [(m.x + m.width / 2) * S, (m.y + m.height) * S + 0.08, m.depth * S]
+  // Mida constant a la pantalla (uns 30 px), s'allunyi o s'acosti la càmera.
+  const scaler = useRef<Group>(null)
+  usePixelScale(scaler, 14)
+
+  const compute = (e: ThreeEvent<PointerEvent>) => {
+    const s0 = start.current
+    const p = s0 && e.ray.intersectPlane(s0.plane, new Vector3())
+    if (!s0 || !p) return null
+    let dx = (p.x - s0.p.x) / S
+    const dy = m.wall && !s0.all ? Math.round((p.y - s0.p.y) / S) : 0
+    if (!e.altKey) {
+      let best: number | null = null
+      for (const t of others) for (const edge of [m.x + dx, m.x + m.width + dx]) {
+        const d = t - edge
+        if (Math.abs(d) <= 15 && (best === null || Math.abs(d) < Math.abs(best))) best = d
+      }
+      if (best !== null) dx += best
+    }
+    return { dx: Math.round(dx), dy, all: s0.all }
+  }
+  const end = (e: ThreeEvent<PointerEvent>) => {
+    if (!start.current) return
+    start.current = null
+    ;(e.target as Element | null)?.releasePointerCapture?.(e.pointerId)
+    if (controls) controls.enabled = true
+    const d = latest.current
+    latest.current = null
+    setLive(null)
+    onDrop(d?.dx ?? 0, d?.dy ?? 0, d?.all ?? false)
+  }
+  const sign = (v: number) => `${v > 0 ? "+" : ""}${v}`
+  const label = live ? (live.all ? `Tot el moble ${sign(live.dx)} mm` : `${sign(live.dx)} mm${live.dy ? ` · ${sign(live.dy)} mm` : ""}`) : null
+
+  return (
+    <group position={[pos[0] + (live?.dx ?? 0) * S, pos[1] + (live?.dy ?? 0) * S, pos[2]]}>
+      <Billboard>
+        <group ref={scaler}>
+        <mesh
+          onPointerOver={(e) => {
+            e.stopPropagation()
+            setHover(true)
+            document.body.style.cursor = "grab"
+          }}
+          onPointerOut={() => {
+            setHover(false)
+            if (!start.current) document.body.style.cursor = ""
+          }}
+          onPointerDown={(e) => {
+            e.stopPropagation()
+            ;(e.target as Element | null)?.setPointerCapture?.(e.pointerId)
+            const plane = new Plane().setFromNormalAndCoplanarPoint(new Vector3(0, 0, 1), e.point)
+            start.current = { p: e.point.clone(), plane, all: e.shiftKey }
+            if (controls) controls.enabled = false
+            document.body.style.cursor = "grabbing"
+          }}
+          onPointerMove={(e) => {
+            if (!start.current) return
+            e.stopPropagation()
+            const d = compute(e)
+            if (!d) return
+            latest.current = d
+            setLive(d)
+            onDrag({ index: m.index, ...d })
+          }}
+          onPointerUp={end}
+          onPointerCancel={end}
+          onClick={(e) => e.stopPropagation()}
+          renderOrder={20}
+        >
+          <circleGeometry args={[1, 40]} />
+          <meshBasicMaterial color={hover || live ? "#98602c" : "#b57a37"} depthTest={false} depthWrite={false} transparent />
+        </mesh>
+        {/* Fletxes blanques ←→ (i ↑↓ als penjats): barres i triangles plans. */}
+        {(m.wall ? [0, Math.PI / 2] : [0]).map((rot) => (
+          <group key={rot} rotation={[0, 0, rot]}>
+            <mesh position={[0, 0, 0.01]} renderOrder={21}>
+              <planeGeometry args={[0.9, 0.13]} />
+              <meshBasicMaterial color="white" depthTest={false} depthWrite={false} transparent />
+            </mesh>
+            <mesh position={[0.5, 0, 0.01]} renderOrder={21}>
+              <circleGeometry args={[0.26, 3]} />
+              <meshBasicMaterial color="white" depthTest={false} depthWrite={false} transparent />
+            </mesh>
+            <mesh position={[-0.5, 0, 0.01]} rotation={[0, 0, Math.PI]} renderOrder={21}>
+              <circleGeometry args={[0.26, 3]} />
+              <meshBasicMaterial color="white" depthTest={false} depthWrite={false} transparent />
+            </mesh>
+          </group>
+        ))}
+        </group>
+      </Billboard>
+      {label && (
+        <Html position={[0, 0.05, 0]} center zIndexRange={[30, 20]} style={{ pointerEvents: "none" }}>
+          <span style={{ fontFamily: "system-ui, sans-serif", fontSize: 12, fontWeight: 600, color: "#fff", background: "#b57a37", padding: "2px 6px", borderRadius: 4, whiteSpace: "nowrap", display: "block" }}>{label}</span>
+        </Html>
+      )}
+    </group>
   )
 }
 
