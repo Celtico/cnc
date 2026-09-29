@@ -286,7 +286,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     tires del davant en marc amb el tall a 45° en el seu pla (`outline`, es fa al nesting).
   - **Prestatges gruixuts** (`zone.shelves.thickness`, «Gruixuts (buits)» a Prestatges):
     pell de baix i de dalt, tira al davant i llistons; el repartiment compta el gruix aparent.
-    Queden bé sobretot sense porta.
+    Queden bé sobretot sense porta. **A ras del davant (a sang)** (`zone.shelves.flush`): sense retranqueig, el
+    cantell enrasat amb el davant de la caixa (no amb fronts encastats).
   - **Peces**: sense botó d'exportar (tot és a Exportar).
   - **Post-processos** (`core/process/processes.ts`): `panelProcesses` dedueix el que toca a
     cada peça després del nesting, en ordre: 2a cara → Inglet 45° → Cantell → Forats de cantell →

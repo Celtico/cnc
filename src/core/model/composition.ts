@@ -159,7 +159,7 @@ export type Front = z.infer<typeof FrontSchema>
 export interface Zone {
   id: string
   split?: { dir: "v" | "h"; sizes: (number | "auto")[]; children: Zone[] }
-  shelves?: { n: number; adjustable: boolean; thickness?: number }
+  shelves?: { n: number; adjustable: boolean; thickness?: number; flush?: boolean }
   front?: Front
 }
 
@@ -182,6 +182,8 @@ export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
          * davant, com les parets buides. Sense: del gruix del tauler.
          */
         thickness: mm.min(20).max(200).optional(),
+        /** A ras del davant de la caixa (a sang), sense retranqueig: per als compartiments oberts. */
+        flush: z.boolean().optional(),
       })
       .optional(),
     front: FrontSchema.optional(),

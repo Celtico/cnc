@@ -704,14 +704,18 @@ class Builder {
     if (want && !hollow) this.warnings.push({ code: "hollow", message: `Prestatges de ${want} mm: amb tauler de ${t} cal un gruix d'almenys ${2 * t + 6} mm. Es fan massissos.`, zoneId: zone.id })
     const width = rect.x1 - rect.x0
     const length = width - c.shelfClearance
-    const depth = d.availDepth - c.shelfSetback
+    // A ras del davant (a sang): sense retranqueig. Amb fronts encastats no hi cabria la porta.
+    const flush = !!zone.shelves!.flush && !d.inset
+    if (zone.shelves!.flush && d.inset) this.warnings.push({ code: "inset", message: "Prestatges a ras del davant amb fronts encastats: toparien amb el front. Es retiren com sempre.", zoneId: zone.id })
+    const setback = flush ? 0 : c.shelfSetback
+    const depth = d.availDepth - setback
     const innerH = rect.y1 - rect.y0
     const gap = (innerH - n * T) / (n + 1)
     if (width > 800 && t <= 19 && !hollow) {
       this.warnings.push({ code: "shelf-span", message: `Prestatge de ${t} mm amb una llum de ${r(width)} mm: es vinclarà (màxim recomanat 800).`, zoneId: zone.id })
     }
     const x0 = rect.x0 + c.shelfClearance / 2
-    const zF = d.D - c.shelfSetback
+    const zF = d.D - setback
     for (let k = 1; k <= n; k++) {
       this.shelfCount += 1
       const target = rect.y0 + k * gap + (k - 1) * T

@@ -16,3 +16,15 @@ describe("prestatges gruixuts (buits)", () => {
     expect(b.warnings.some((w) => w.code === "shelf-span")).toBe(false)
   })
 })
+
+describe("prestatges a ras del davant", () => {
+  it("sense retranqueig: el cantell enrasat amb la caixa", () => {
+    const m = defaultModule("m", "M", { width: 600, height: 700, depth: 400 })
+    const shelfZ = (flush: boolean) => {
+      const b = buildModule({ ...m, root: { ...m.root, shelves: { n: 1, adjustable: false, flush } } })
+      return b.panels.find((p) => p.role === "shelf")!.placement.origin[2]
+    }
+    expect(shelfZ(true)).toBe(400)
+    expect(shelfZ(false)).toBeLessThan(400)
+  })
+})

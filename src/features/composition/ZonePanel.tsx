@@ -195,11 +195,17 @@ export function ZonePanel({
                   Forats System 32 als laterals per moure'ls.
                 </Text>
               )}
+              {/* A ras del davant (a sang): el cantell del prestatge enrasat amb el de la caixa. */}
+              <Switch.Root size="sm" checked={!!zone.shelves?.flush} onCheckedChange={(e) => onChange(setShelves(root, zone.id, { n: zone.shelves?.n ?? 0, adjustable: zone.shelves?.adjustable ?? true, ...(zone.shelves?.thickness ? { thickness: zone.shelves.thickness } : {}), ...(e.checked ? { flush: true } : {}) }))}>
+                <Switch.HiddenInput />
+                <Switch.Control />
+                <Switch.Label>A ras del davant (a sang)</Switch.Label>
+              </Switch.Root>
               {/* Prestatges gruixuts (buits): queden més bé a la vista, sense porta. */}
               <Switch.Root
                 size="sm"
                 checked={!!zone.shelves?.thickness}
-                onCheckedChange={(e) => onChange(setShelves(root, zone.id, { n: zone.shelves?.n ?? 0, adjustable: zone.shelves?.adjustable ?? true, ...(e.checked ? { thickness: 50 } : {}) }))}
+                onCheckedChange={(e) => onChange(setShelves(root, zone.id, { n: zone.shelves?.n ?? 0, adjustable: zone.shelves?.adjustable ?? true, ...(zone.shelves?.flush ? { flush: true } : {}), ...(e.checked ? { thickness: 50 } : {}) }))}
               >
                 <Switch.HiddenInput />
                 <Switch.Control />
