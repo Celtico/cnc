@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "../../core/build/buildComposition"
-import { BUILTIN_TEMPLATES, DEFAULT_CABINET, cabinetToComposition, defaultModule } from "../../core/model"
+import { TV_LIVING_ROOM, DEFAULT_CABINET, cabinetToComposition, defaultModule } from "../../core/model"
 import { movedBox, movingGroups, openingCollisions, transformAt } from "./opening"
 
 describe("obertura de portes i calaixos", () => {
@@ -37,7 +37,7 @@ describe("obertura de portes i calaixos", () => {
   })
 
   it("tancat no hi ha col·lisions; el moble de TV obert avisa que la porta toca el cobreradiador", () => {
-    const comp = BUILTIN_TEMPLATES.find((t) => t.id === "tv-living-room")!.make()
+    const comp = TV_LIVING_ROOM.make()
     const panels = buildComposition(comp).panels
     const groups = movingGroups(panels)
     expect(openingCollisions(panels, groups, 0, comp.references)).toEqual([])
@@ -47,7 +47,7 @@ describe("obertura de portes i calaixos", () => {
   })
 
   it("amb `only`, només es miren els grups triats", () => {
-    const comp = BUILTIN_TEMPLATES.find((t) => t.id === "tv-living-room")!.make()
+    const comp = TV_LIVING_ROOM.make()
     const panels = buildComposition(comp).panels
     const groups = movingGroups(panels)
     const first = groups[0]!

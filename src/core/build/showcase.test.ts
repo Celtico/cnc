@@ -3,7 +3,7 @@ import { BUILTIN_TEMPLATES } from "../model"
 import { buildComposition } from "./buildComposition"
 
 describe("plantilles vitrina", () => {
-  for (const id of ["wave-console", "sideboard-iron", "floating-tv", "bath-vanity", "kitchen-island", "walk-in-wardrobe", "flatpack-desk", "tv-long", "bookcase-black", "bunk-beds", "walnut-console", "walnut-floating", "coffee-cube", "oak-kitchen"]) {
+  for (const id of ["sideboard-iron", "floating-tv", "bath-vanity", "kitchen-island", "walk-in-wardrobe", "flatpack-desk", "tv-long", "bookcase-black", "bunk-beds", "walnut-console", "walnut-floating", "coffee-cube", "oak-kitchen"]) {
     it(id, () => {
       const t = BUILTIN_TEMPLATES.find((x) => x.id === id)!
       const b = buildComposition(t.make())

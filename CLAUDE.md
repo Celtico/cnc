@@ -329,8 +329,7 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     així s'entra, se surt (al costat d'una peça solta, o a la zona «Treure del grup» que surt sota
     les peces mentre s'arrossega una d'un grup, `removePartFromGroup`) o es canvia de grup. Al 3D, caixa del grup amb el gizmo; el primer clic a una peça
     agrupada selecciona el grup i el segon, la peça (com Figma). Fletxes i Supr també al grup.
-  - **Plantilles vitrina** (`SHOWCASE` a `templates.ts`, primer a la galeria): Consola ona sobre
-    inox (tauler amb forma + potes d'inox sense nesting), Aparador sobre ferro (inglet, fronts
+  - **Plantilles vitrina** (`SHOWCASE` a `templates.ts`, primer a la galeria): Aparador sobre ferro (inglet, fronts
     encastats, prestatges gruixuts, passacables que talla, bastidor de ferro), Moble TV flotant
     (parets buides, prestatge gruixut a ras, reixeta, tele a la paret), Moble de bany amb pedra
     (penjat, calaixos encastats, taulell de pedra, desguàs), Cuina amb illa de pedra (illa al
@@ -342,6 +341,9 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     gruixuts, matalassos de referència), Consola de noguera a inglet (potes en U de peces lliures),
     Moble penjat de noguera, Tauleta cub i Cuina de roure amb illa de calaixos (pedra tallada per
     la pica i la placa). `showcase.test.ts` comprova que no fan avisos de xoc ni de talls.
+    Tretes de la galeria (per decisió de l'usuari): Consola ona, Moble TV 3 portes i Moble TV
+    menjador; aquest últim es queda com a `TV_LIVING_ROOM` per als tests i la vista prèvia de
+    l'escena a Preferències.
   - **Peça lliure que talla** (`FreePart.effect = "cut"`, Efecte Peça/Talla a General): no és
     una peça; `partCutters` la converteix en objecte que talla (perfil = la seva forma, direcció =
     el gruix; a l'estirada la v es gira) i `applyRefCuts` fa el forat passant a les peces que

@@ -9,7 +9,7 @@ import { existsSync } from "node:fs"
 import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "../build/buildComposition"
-import { BUILTIN_TEMPLATES, DEFAULT_CABINET, cabinetToComposition, type Panel } from "../model"
+import { BUILTIN_TEMPLATES, TV_LIVING_ROOM, DEFAULT_CABINET, cabinetToComposition, type Panel } from "../model"
 import { DEFAULT_NEST_OPTIONS, nest } from "../nesting/nest"
 import { toStep } from "./step"
 import { toTopsolidCsv } from "./topsolidCsv"
@@ -131,7 +131,7 @@ describe.skipIf(!existsSync(TALLER))("anada i tornada amb els parsers del taller
   })
 
   it("moble de TV + cobreradiador (portes, reixeta, passacables) i calaixera: tot lligat", () => {
-    const tv = BUILTIN_TEMPLATES.find((t) => t.id === "tv-living-room")!.make()
+    const tv = TV_LIVING_ROOM.make()
     const drawers = BUILTIN_TEMPLATES.find((t) => t.name.startsWith("Calaixera"))!.make()
     for (const comp of [tv, drawers]) {
       const ps = buildComposition(comp).panels
@@ -167,7 +167,7 @@ describe.skipIf(!existsSync(TALLER))("anada i tornada amb els parsers del taller
 describe.skipIf(!existsSync(TALLER))("2a cara: el taller rep el programa de les peces amb mecanitzats a la cara B", async () => {
   const { assemble } = (await import(/* @vite-ignore */ TALLER)) as { assemble: (csv: string, step: string, mueble: string) => { pieces: { ref: string; mec2?: string | null }[] } }
   const { needsSecondFace } = await import("../process/processes")
-  const comp = BUILTIN_TEMPLATES.find((t) => t.id === "tv-living-room")!.make()
+  const comp = TV_LIVING_ROOM.make()
   const panels = buildComposition(comp).panels
   const nesting = nest(panels, DEFAULT_NEST_OPTIONS)
   const csv = toTopsolidCsv(panels, nesting, { project: "Prova" })

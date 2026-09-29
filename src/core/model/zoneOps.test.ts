@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "../build/buildComposition"
-import { BUILTIN_TEMPLATES, type Zone } from "./index"
+import { BUILTIN_TEMPLATES, TV_LIVING_ROOM, type Zone } from "./index"
 import { addChild, countLeaves, duplicateZone, parentOf, removeZone, setChildSize, setFront, setShelves, splitZone, unsplitZone } from "./zoneOps"
 
 describe("zoneOps", () => {
@@ -69,7 +69,7 @@ describe("plantilles", () => {
   })
 
   it("el moble TV del menjador: 3 portes, 3 prestatges, passacables, cobreradiador amb reixeta i trapa", () => {
-    const comp = BUILTIN_TEMPLATES.find((t) => t.id === "tv-living-room")!.make()
+    const comp = TV_LIVING_ROOM.make()
     const { panels, warnings, modules } = buildComposition(comp)
     const tv = panels.filter((p) => p.module === 1)
     expect(tv.filter((p) => p.role === "door")).toHaveLength(3)

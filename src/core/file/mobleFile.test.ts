@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "../build/buildComposition"
-import { BUILTIN_TEMPLATES, DEFAULT_SETTINGS, type RefPreset } from "../model"
+import { TV_LIVING_ROOM, DEFAULT_SETTINGS, type RefPreset } from "../model"
 import { DEFAULT_NEST_OPTIONS } from "../nesting/nest"
 import { buildMobleFile, missingReferences, mobleFileName, mobleToJson, parseMobleFile, uniqueName, usedReferences } from "./mobleFile"
 
-const comp = BUILTIN_TEMPLATES.find((t) => t.id === "tv-living-room")!.make()
+const comp = TV_LIVING_ROOM.make()
 const radiator: RefPreset = { id: "u-rad", name: "Radiador 650 × 1100 × 110", w: 650, h: 1100, d: 110, plane: "wall", wallOffset: 0 }
 const references = [...DEFAULT_SETTINGS.references, radiator]
 const photo = { mime: "image/jpeg", width: 40, height: 30, exifFocal35: 26, data: btoa("\xff\xd8\xff\xe0fake-jpeg-bytes") }

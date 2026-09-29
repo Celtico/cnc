@@ -1,7 +1,6 @@
 import { flatPackDesk, flatPackShelf, flatPackStool } from "./flatPack"
 import { INSPIRED_TEMPLATES } from "./inspiredTemplates"
 import type { FreePart } from "./freePart"
-import type { PNode } from "./polygon"
 import { DEFAULT_GRILLE, defaultModule, moduleOrigins3, newId, tableModule, type Composition, type CompositionKind, type Module, type Zone } from "./composition"
 
 export interface Template {
@@ -24,13 +23,6 @@ function withRoot(m: Module, root: Module["root"]): Module {
  * peces lliures de CNC i de ferro/pedra, encaixos…). Van primer a la galeria.
  */
 const SHOWCASE: Template[] = [
-  {
-    id: "wave-console",
-    kind: "taula",
-    name: "Consola ona sobre inox",
-    description: "1400 × 760 × 400: tauler ondulat (forma de Bézier) sobre dues potes ovals d'acer inox (peces lliures sense nesting).",
-    make: waveConsole,
-  },
   {
     id: "sideboard-iron",
     kind: "moble",
@@ -164,16 +156,6 @@ export const BUILTIN_TEMPLATES: Template[] = [
     }),
   },
   {
-    id: "tv-3-doors",
-    kind: "moble",
-    name: "Moble TV 3 portes",
-    description: "1850 × 480 × 420 amb sòcol, tres portes i un prestatge regulable per compartiment.",
-    make: () => ({
-      modules: [tvModule()],
-      references: [],
-    }),
-  },
-  {
     id: "radiator-cover",
     kind: "moble",
     name: "Cobreradiador",
@@ -183,7 +165,13 @@ export const BUILTIN_TEMPLATES: Template[] = [
       references: [],
     }),
   },
-  {
+]
+
+/**
+ * El moble de TV del menjador amb el cobreradiador (la prova d'acceptació de l'editor). Ja no
+ * surt a la galeria; el fan servir els tests i la vista prèvia de l'escena a Preferències.
+ */
+export const TV_LIVING_ROOM: Template = {
     id: "tv-living-room",
     kind: "moble",
     name: "Moble TV menjador (TV + cobreradiador)",
@@ -199,8 +187,7 @@ export const BUILTIN_TEMPLATES: Template[] = [
         ],
       }
     },
-  },
-]
+  }
 
 export function tvModule(): Module {
   const m = defaultModule(newId("m"), "Moble TV", {
@@ -310,39 +297,7 @@ function kitchen(): Composition {
   return { modules: [drawers, sink, hob, oven, pantry, w1, w2, w3, w4], references: [], runs }
 }
 
-const inox = (p: Omit<FreePart, "id" | "material" | "nest">): FreePart => ({ id: newId("p"), material: "Acer inox", nest: false, ...p })
 const iron = (p: Omit<FreePart, "id" | "material" | "nest">): FreePart => ({ id: newId("p"), material: "Ferro negre", nest: false, ...p })
-
-/** El·lipse de w × h (secció de les potes ovals). */
-function oval(w: number, h: number): PNode[] {
-  const K = 0.5522847498
-  const a = w / 2, b = h / 2
-  return [
-    { x: w, y: b, in: [0, -K * b], out: [0, K * b], t: "smooth" },
-    { x: a, y: h, in: [K * a, 0], out: [-K * a, 0], t: "smooth" },
-    { x: 0, y: b, in: [0, K * b], out: [0, -K * b], t: "smooth" },
-    { x: a, y: 0, in: [-K * a, 0], out: [K * a, 0], t: "smooth" },
-  ]
-}
-
-/** Consola: tauler ondulat (sense laterals) sobre dues potes ovals d'inox. */
-function waveConsole(): Composition {
-  const wave: PNode[] = [
-    { x: 930, y: 52.8, in: [0, -127.03], out: [0, 127.03], t: "smooth" },
-    { x: 430, y: 167.86, in: [403.17, 0], out: [-403.17, 0], t: "smooth" },
-    { x: 0, y: 202.8, in: [0, 127.03], out: [0, -127.03], t: "smooth" },
-    { x: 430, y: 67.86, in: [-403.17, 0], out: [403.17, 0], t: "smooth" },
-  ]
-  const gap = 150
-  const m: Module = {
-    ...tableModule(newId("m"), "Consola", { thickness: 30, material: "Noguera xapada", sides: { left: false, right: false }, tableTop: { overhang: 30, shape: wave } }),
-    wallGap: gap,
-  }
-  // Les potes arriben just a sota del tauler (760 − 30).
-  const legH = 760 - 30
-  const leg = (x: number, z: number): FreePart => inox({ name: "Pota d'inox", orient: "flat", w: 50, h: 100, thickness: legH, x, y: 0, z: gap + z, shape: oval(50, 100) })
-  return { kind: "taula", modules: [m], references: [], parts: [leg(150, 190), leg(1200, 40)] }
-}
 
 /** Aparador de noguera sobre bastidor de ferro. */
 function sideboardIron(): Composition {

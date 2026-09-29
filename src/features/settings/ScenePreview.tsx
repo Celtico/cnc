@@ -1,7 +1,7 @@
 import { Box, Text } from "@chakra-ui/react"
 import { useMemo } from "react"
 import { buildComposition } from "../../core/build/buildComposition"
-import { BUILTIN_TEMPLATES, compositionHeight, compositionWidth, type Composition } from "../../core/model"
+import { TV_LIVING_ROOM, compositionHeight, compositionWidth, type Composition } from "../../core/model"
 import { CabinetViewer } from "../../components/viewer/CabinetViewer"
 import { useSettings } from "./SettingsContext"
 
@@ -11,7 +11,7 @@ import { useSettings } from "./SettingsContext"
  */
 export function ScenePreview({ composition }: { composition?: Composition }) {
   const { settings } = useSettings()
-  const comp = useMemo(() => composition ?? (BUILTIN_TEMPLATES.find((t) => t.id === "tv-living-room") ?? BUILTIN_TEMPLATES[0]!).make(), [composition])
+  const comp = useMemo(() => composition ?? TV_LIVING_ROOM.make(), [composition])
   const data = useMemo(() => {
     try {
       const panels = buildComposition(comp).panels
