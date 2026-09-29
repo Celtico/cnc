@@ -1,5 +1,5 @@
 import { Button, Field, HStack, IconButton, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
-import { LuArrowUp, LuCopy, LuEllipsis, LuColumns2, LuDoorClosed, LuRows2, LuPlus, LuRows3, LuRuler, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
+import { LuArrowUp, LuCopy, LuEllipsis, LuColumns2, LuRows2, LuPlus, LuRows3, LuRuler, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
 import { PanelSection } from "../../components/PanelSection"
 import {
   DEFAULT_GRILLE,
@@ -16,6 +16,7 @@ import {
   type Zone,
 } from "../../core/model"
 import { NumberField } from "../editor/ParamsForm"
+import { FRONT_ICONS } from "./zoneIcon"
 
 const FRONT_LABELS: Record<Front["kind"] | "none", string> = {
   none: "Obert",
@@ -142,7 +143,7 @@ export function ZonePanel({
         </>
       ) : (
         <>
-          <PanelSection id="zone-front" title="Front" badge={FRONT_LABELS[zone.front?.kind ?? "none"]} icon={LuDoorClosed}>
+          <PanelSection id="zone-front" title="Front" badge={FRONT_LABELS[zone.front?.kind ?? "none"]} icon={FRONT_ICONS[zone.front?.kind ?? "none"]}>
             <Field.Root>
               <Field.Label>Tipus</Field.Label>
               <NativeSelect.Root size="sm">

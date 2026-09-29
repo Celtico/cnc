@@ -326,7 +326,7 @@ Accions principals: icona + text.
 | Navegació | Tornar · Plegar/desplegar menú · Preferències | `LuArrowLeft` · `LuPanelLeftClose` / `LuPanelLeftOpen` · `LuSettings` |
 | Zones | Dividir en vertical (divisor vertical, zones esquerra/dreta) | `LuSquareSplitHorizontal` |
 | Zones | Dividir en horitzontal (travesser, zones dalt/baix) | `LuSquareSplitVertical` |
-| Zones | Divisió vertical (zones de costat) · Divisió horitzontal (zones una sobre l'altra) · Compartiment · Compartiment amb front (com la secció «Front») | `LuColumns2` · `LuRows2` · `LuSquare` · `LuDoorClosed` |
+| Zones | Divisió vertical (zones de costat) · Divisió horitzontal (zones una sobre l'altra); un compartiment porta la icona del seu contingut (fila «Contingut»), igual a l'arbre, a la capçalera i a la secció «Front» (`composition/zoneIcon.tsx`) | `LuColumns2` · `LuRows2` |
 | Zones | Eliminar divisió · Mida | `LuUngroup` · `LuRuler` |
 | Contingut | Obert · Prestatges · Porta · Calaixos | `LuSquareDashed` · `LuRows3` · `LuDoorClosed` · `LuArchive` |
 | Contingut | Abatible · Reixeta · Front fix | `LuPanelBottom` · `LuGrid3X3` · `LuSquare` |

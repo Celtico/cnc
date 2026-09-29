@@ -1,13 +1,11 @@
 import { Alert, Badge, Box, Button, CloseButton, Drawer, Field, Flex, HStack, IconButton, NativeSelect, Popover, Portal, SegmentGroup, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { createElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   LuBox,
   LuFrame,
   LuMove,
   LuChevronLeft,
   LuChevronRight,
-  LuColumns2,
-  LuRows2,
   LuPalette,
   LuPanelLeftClose,
   LuPanelLeftOpen,
@@ -17,7 +15,6 @@ import {
   LuCamera,
   LuCircleDot,
   LuDoorOpen,
-  LuDoorClosed,
   LuExpand,
   LuFocus,
   LuHammer,
@@ -31,7 +28,6 @@ import {
   LuShrink,
   LuSlidersHorizontal,
   LuSlidersVertical,
-  LuSquare,
   LuTriangleAlert,
   LuUndo2,
   LuView,
@@ -56,6 +52,7 @@ import { Tooltip } from "../../components/ui/tooltip"
 import { ZoneActions, ZonePanel } from "../composition/ZonePanel"
 import { RunsForm } from "../composition/RunsForm"
 import { zoneLabel } from "../composition/zoneLabel"
+import { zoneIcon } from "../composition/zoneIcon"
 import { downloadBlob, slugify } from "../download"
 import { NumberField } from "./ParamsForm"
 import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
@@ -638,7 +635,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
       : selection.kind === "ref"
         ? { icon: <LuScan />, text: comp.references.find((r) => r.id === selection.id)?.name ?? "Objecte", parent: "Objecte de referència" }
         : selection.kind === "zone" && zone
-          ? { icon: zone.split ? zone.split.dir === "v" ? <LuColumns2 /> : <LuRows2 /> : zone.front ? <LuDoorClosed /> : <LuSquare />, text: zoneLabel(zone), parent: module.name }
+          ? { icon: createElement(zoneIcon(zone)), text: zoneLabel(zone), parent: module.name }
           : { icon: <LuBox />, text: module.name, parent: name || "Moble" }
 
   // Sense separació entre blocs: les seccions plegables van enganxades (totes amb la

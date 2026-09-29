@@ -7,15 +7,12 @@ import {
   LuChevronDown,
   LuChevronRight,
   LuCopy,
-  LuDoorClosed,
   LuEllipsis,
   LuPlus,
   LuScan,
-  LuSquare,
-  LuColumns2,
-  LuRows2,
   LuTrash2,
 } from "react-icons/lu"
+import { zoneIcon } from "./zoneIcon"
 import { BUILTIN_TEMPLATES, insertRefCopy, newId, rowOf, type Composition, type Module, type Zone } from "../../core/model"
 import { RefAddMenu } from "./RefInspector"
 import { zoneLabel } from "./zoneLabel"
@@ -241,8 +238,9 @@ function ZoneRows({
     )
   }
   const selected = selection.kind === "zone" && selection.zoneId === zone.id
-  // Compartiment amb front: la mateixa icona que la secció «Front» de les propietats.
-  const icon = zone.split ? zone.split.dir === "v" ? <LuColumns2 /> : <LuRows2 /> : zone.front ? <LuDoorClosed /> : <LuSquare />
+  // Icona segons el contingut (la mateixa que a les propietats).
+  const Icon = zoneIcon(zone)
+  const icon = <Icon />
   return (
     <>
       <Row depth={depth} icon={icon} label={zoneLabel(zone)} selected={selected} onClick={() => onSelect({ kind: "zone", moduleId, zoneId: zone.id })} muted />
