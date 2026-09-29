@@ -242,6 +242,7 @@ export function CabinetViewer({
           />
         ))}
         {highlightZone && <ZoneHighlight box={highlightZone} />}
+        {selectedIndex !== undefined && q.guides && <CableMarks panels={panels.filter((p) => p.module === selectedIndex)} />}
         {selected && onAddModule && !ortho && q.guides && (
           <>
             <AddButton x={selected.x - 120} y={selected.y + selected.height / 2} z={selected.depth / 2} side="left" onClick={() => onAddModule("left")} />
@@ -740,6 +741,39 @@ function Dim({ spec, normal, color, labelBg }: { spec: DimSpec; normal: P3; colo
  * Contorn del compartiment seleccionat: arestes taronges que es veuen a través de les
  * portes (sense prova de profunditat) i un vel molt suau a dins.
  */
+/**
+ * Passacables del mòdul seleccionat: contorn taronja que es veu a través de les portes i
+ * dels laterals (sense prova de profunditat), perquè sovint són al fons, amagats.
+ */
+function CableMarks({ panels }: { panels: Panel[] }) {
+  const loops = useMemo(() => {
+    const out: Vector3[][] = []
+    for (const p of panels) {
+      const { origin: o, xAxis: xa, yAxis: ya, zAxis: za } = p.placement
+      const z = p.thickness / 2
+      const world = (x: number, y: number) =>
+        new Vector3((o[0] + x * xa[0] + y * ya[0] + z * za[0]) * S, (o[1] + x * xa[1] + y * ya[1] + z * za[1]) * S, (o[2] + x * xa[2] + y * ya[2] + z * za[2]) * S)
+      for (const c of p.cutouts ?? []) {
+        if (c.tag !== "cable") continue
+        if (c.kind === "circle") {
+          const r = c.diameter / 2
+          out.push(Array.from({ length: 33 }, (_, i) => world(c.x + r * Math.cos((i / 32) * Math.PI * 2), c.y + r * Math.sin((i / 32) * Math.PI * 2))))
+        } else {
+          out.push([world(c.x, c.y), world(c.x + c.w, c.y), world(c.x + c.w, c.y + c.h), world(c.x, c.y + c.h), world(c.x, c.y)])
+        }
+      }
+    }
+    return out
+  }, [panels])
+  return (
+    <>
+      {loops.map((pts, i) => (
+        <Line key={i} points={pts} color={SELECT_COLOR} lineWidth={3} depthTest={false} renderOrder={10} />
+      ))}
+    </>
+  )
+}
+
 function ZoneHighlight({ box: b }: { box: { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number; veil?: boolean } }) {
   const inset = b.veil === false ? -2 : 3
   const x0 = (b.x0 + inset) * S

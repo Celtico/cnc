@@ -190,7 +190,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   - **Passacables** (`CableHolesForm`, `CableHoleSchema`): rodons o rectangulars, al fons, la
     tapa, la base o els laterals. «Segueix l'objecte» (`ref`): el centre surt de l'objecte
     projectat sobre la peça (`refOnPanel`, resolt a `withRefHoles` dins `buildComposition`) i
-    el segueix quan es mou. Si surt de la peça no es fa i avisa (`cable-hole`).
+    el segueix quan es mou. Si surt de la peça no es fa i avisa (`cable-hole`). Al 3D, els
+    passacables del mòdul seleccionat es marquen en taronja a través de les portes (`CableMarks`).
   - **Centre — Visor** amb pestanyes `3D` · `Alçat` · `Foto`. Les opcions de visualització
     (forats, explosionat, AR, obertura, colors, imatge) són a la barra del visor, no al panell.
   - **Dreta — Propietats** del que hi ha seleccionat i **només d'això**: moble (resum i
