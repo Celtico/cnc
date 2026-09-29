@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule, type Composition } from "./composition"
-import { insertModuleCopy, insertRefCopy, moveAllBy, moveModuleBy, movePartToGroup, pasteZone, reorderPart } from "./editOps"
+import { insertModuleCopy, insertRefCopy, moveAllBy, moveModuleBy, movePartToGroup, pasteZone, removePartFromGroup, reorderPart } from "./editOps"
 
 const comp = (): Composition => ({
   modules: [
@@ -86,5 +86,10 @@ describe("arrossegar peces lliures i grups", () => {
     const out = reorderPart(c, "a", "c", true)
     expect(out.parts!.find((q) => q.id === "a")!.group).toBeUndefined()
     expect(out.parts!.map((q) => q.id)).toEqual(["b", "c", "a"])
+  })
+
+  it("arrossegada a «Treure del grup», queda solta al final", () => {
+    const r = removePartFromGroup(c, "a")
+    expect(r.parts!.map((q) => [q.id, q.group])).toEqual([["b", "G"], ["c", undefined], ["a", undefined]])
   })
 })

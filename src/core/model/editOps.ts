@@ -127,6 +127,16 @@ export function reorderPart(comp: Composition, id: string, targetId: string, aft
   return { ...comp, parts: [...rest.slice(0, at), moved, ...rest.slice(at)] }
 }
 
+/** Treu una peça del seu grup (arrossegada a «Treure del grup»): queda solta, al final. */
+export function removePartFromGroup(comp: Composition, id: string): Composition {
+  const list = comp.parts ?? []
+  const r = list.find((x) => x.id === id)
+  if (!r || !r.group) return comp
+  const { group: _g, ...plain } = r
+  void _g
+  return { ...comp, parts: [...list.filter((x) => x.id !== id), plain] }
+}
+
 /** Posa una peça dins d'un grup (arrossegada sobre la fila del grup): va darrere de l'última. */
 export function movePartToGroup(comp: Composition, id: string, group: string): Composition {
   const list = comp.parts ?? []

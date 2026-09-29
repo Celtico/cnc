@@ -17,7 +17,7 @@ import {
   LuTrash2,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcon"
-import { compositionKind, duplicateGroup, newGroupName, partGroups, insertPartCopy, insertRefCopy, modulePresetsFor, movePartToGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
+import { compositionKind, duplicateGroup, newGroupName, partGroups, insertPartCopy, insertRefCopy, modulePresetsFor, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
 import { ORIENT_ICON, PartAddMenu } from "./PartInspector"
 import { RefAddMenu } from "./RefInspector"
 import { zoneLabel } from "./zoneLabel"
@@ -378,6 +378,37 @@ export function StructureTree({
           )
         })
       })()}
+      {/* Arrossegant una peça d'un grup: zona per treure-la'n (queda solta). */}
+      {drag?.kind === "part" && parts.find((q) => q.id === drag.id)?.group && (
+        <HStack
+          mt={1}
+          mx={1}
+          px={2}
+          py={1.5}
+          gap={2}
+          rounded="md"
+          fontSize="xs"
+          borderWidth="1px"
+          borderStyle="dashed"
+          borderColor={over?.id === "ungroup" ? "wood.solid" : "border.emphasized"}
+          bg={over?.id === "ungroup" ? "wood.muted" : undefined}
+          color={over?.id === "ungroup" ? "wood.fg" : "fg.muted"}
+          onDragOver={(e) => {
+            e.preventDefault()
+            e.dataTransfer.dropEffect = "move"
+            if (over?.id !== "ungroup") setOver({ id: "ungroup", after: false })
+          }}
+          onDragLeave={() => over?.id === "ungroup" && setOver(null)}
+          onDrop={(e) => {
+            e.preventDefault()
+            onChange(removePartFromGroup(comp, drag.id))
+            setDrag(null)
+            setOver(null)
+          }}
+        >
+          <LuUngroup /> Deixa-la aquí per treure-la del grup
+        </HStack>
+      )}
 
       <HStack justify="space-between" pt={3} pb={1} px={1}>
         <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
