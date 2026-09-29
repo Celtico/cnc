@@ -375,19 +375,20 @@ export function ProfileEditor({
                   </HStack>
                   <HStack gap={1} wrap="wrap">
                     {PRESETS.map((p) => (
-                      <Button
+                      <IconButton
                         key={p.id}
                         size="xs"
                         variant="ghost"
                         title={`Començar amb: ${p.label}`}
+                        aria-label={`Començar amb: ${p.label}`}
                         disabled={drawing}
                         onClick={() => {
                           setNodes(p.make(Math.max(50, r1(b.x1 - b.x0)), Math.max(50, r1(b.y1 - b.y0))))
                           setSel(null)
                         }}
                       >
-                        <PresetIcon make={p.make} /> {p.label}
-                      </Button>
+                        <PresetIcon make={p.make} />
+                      </IconButton>
                     ))}
                   </HStack>
                 </HStack>
@@ -625,7 +626,7 @@ function PresetIcon({ make }: { make: (w: number, h: number) => PNode[] }) {
     return pts.map(([x, y], i) => `${i ? "L" : "M"} ${x} ${100 - y}`).join(" ") + " Z"
   }, [make])
   return (
-    <svg viewBox="-10 -10 120 120" width="14" height="14" aria-hidden style={{ flexShrink: 0 }}>
+    <svg viewBox="-10 -10 120 120" width="16" height="16" aria-hidden style={{ flexShrink: 0 }}>
       <path d={d} fill="currentColor" fillOpacity={0.15} stroke="currentColor" strokeWidth={10} strokeLinejoin="round" />
     </svg>
   )
