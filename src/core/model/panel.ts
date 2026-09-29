@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { polygonArea } from "./polygon"
+import { flatten, polygonArea } from "./polygon"
 
 /**
  * Totes les mides són en mil·límetres (number).
@@ -92,20 +92,26 @@ export type Groove = z.infer<typeof GrooveSchema>
  * Tall passant (travessa tot el gruix): ranures de reixeta, passacables, obertura d'una
  * trapa. Al DXF va a la capa CUT_THROUGH; al taller, com a pocket amb depth = gruix.
  */
+/** Punt de contorn amb bulge opcional ([x, y] o [x, y, bulge]). */
+export const BPtSchema = z.union([z.tuple([z.number(), z.number()]), z.tuple([z.number(), z.number(), z.number()])])
+
 export const CutoutSchema = z.discriminatedUnion("kind", [
   /** Ranura amb els extrems arrodonits (radi = min(w, h) / 2). x, y = cantonada inferior esquerra. */
   z.object({ kind: z.literal("slot"), x: z.number(), y: z.number(), w: z.number().positive(), h: z.number().positive(), tag: z.string().optional() }),
   z.object({ kind: z.literal("circle"), x: z.number(), y: z.number(), diameter: z.number().positive(), tag: z.string().optional() }),
   z.object({ kind: z.literal("rect"), x: z.number(), y: z.number(), w: z.number().positive(), h: z.number().positive(), tag: z.string().optional() }),
-  /** Contorn qualsevol (antihorari), en coordenades locals de la peça. */
-  z.object({ kind: z.literal("polygon"), points: z.array(z.tuple([z.number(), z.number()])).min(3), tag: z.string().optional() }),
+  /**
+   * Contorn qualsevol (antihorari), en coordenades locals de la peça. Cada punt pot portar el
+   * bulge del costat que en surt (arc, com al DXF).
+   */
+  z.object({ kind: z.literal("polygon"), points: z.array(BPtSchema).min(3), tag: z.string().optional() }),
 ])
 export type Cutout = z.infer<typeof CutoutSchema>
 
 export function cutoutArea(c: Cutout): number {
   if (c.kind === "circle") return (Math.PI * c.diameter * c.diameter) / 4
   if (c.kind === "rect") return c.w * c.h
-  if (c.kind === "polygon") return polygonArea(c.points)
+  if (c.kind === "polygon") return polygonArea(flatten(c.points))
   const r = Math.min(c.w, c.h) / 2
   return c.w * c.h - (4 - Math.PI) * r * r
 }

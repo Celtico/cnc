@@ -1,5 +1,5 @@
 import { Box, Text, VStack } from "@chakra-ui/react"
-import type { Panel } from "../core/model"
+import { flatten, type Panel } from "../core/model"
 
 /**
  * Plànol 2D d'una peça (el mateix que anirà al DXF): contorn, forats i ranures,
@@ -48,7 +48,7 @@ export function PanelDrawing({ panel }: { panel: Panel }) {
             c.kind === "circle" ? (
               <circle key={`c${i}`} cx={c.x} cy={c.y} r={c.diameter / 2} fill="var(--chakra-colors-bg)" stroke="currentColor" strokeWidth={stroke} />
             ) : c.kind === "polygon" ? (
-              <polygon key={`c${i}`} points={c.points.map(([x, y]) => `${x},${y}`).join(" ")} fill="var(--chakra-colors-bg)" stroke="currentColor" strokeWidth={stroke} />
+              <polygon key={`c${i}`} points={flatten(c.points).map(([x, y]) => `${x},${y}`).join(" ")} fill="var(--chakra-colors-bg)" stroke="currentColor" strokeWidth={stroke} />
             ) : (
               <rect key={`c${i}`} x={c.x} y={c.y} width={c.w} height={c.h} rx={c.kind === "slot" ? Math.min(c.w, c.h) / 2 : 0} fill="var(--chakra-colors-bg)" stroke="currentColor" strokeWidth={stroke} />
             ),

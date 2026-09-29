@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react"
-import type { Panel } from "../core/model"
+import { flatten, type Panel } from "../core/model"
 import type { NestedBoard } from "../core/nesting/nest"
 import { localToBoard } from "../core/export/topsolidCsv"
 
@@ -60,7 +60,7 @@ export function BoardDrawing({
                     return <circle key={`c${i}`} cx={q.x} cy={q.y} r={c.diameter / 2} fill="var(--chakra-colors-bg-muted)" stroke="var(--chakra-colors-wood-fg)" strokeWidth={stroke / 2} />
                   }
                   if (c.kind === "polygon") {
-                    const pts = c.points.map(([x, y]) => localToBoard(pl, x, y)).map((q) => `${q.x},${q.y}`).join(" ")
+                    const pts = flatten(c.points).map(([x, y]) => localToBoard(pl, x, y)).map((q) => `${q.x},${q.y}`).join(" ")
                     return <polygon key={`c${i}`} points={pts} fill="var(--chakra-colors-bg-muted)" stroke="var(--chakra-colors-wood-fg)" strokeWidth={stroke / 2} />
                   }
                   const a = localToBoard(pl, c.x, c.y)

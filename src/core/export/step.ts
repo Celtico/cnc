@@ -1,4 +1,4 @@
-import type { EdgeSide, Panel, Vec3 } from "../model"
+import { arcOf, bulgeOf, ccwB, flatten, type EdgeSide, type Panel, type Vec3 } from "../model"
 import { pointInRing, rectsOverlap, subtractRects, type Poly2, type Pt2, type Rect2 } from "./region2d"
 
 /**
@@ -129,6 +129,8 @@ interface CylFace {
   ref: V3
   radius: number
   loop: Loop
+  /** El material és a dins del cilindre (arc que entra al forat): la cara mira enfora. */
+  outward?: boolean
 }
 type Face = PlaneFace | CylFace
 
@@ -237,17 +239,6 @@ function slotThrough(c1: V3, c2: V3, r: number, n: V3, T: number): { loop: Loop;
     halfCyl(c1, n, s, r, T),
   ]
   return { loop, exit, faces }
-}
-
-/** Àrea amb signe d'un polígon 2D (positiva si és antihorari). */
-function signedArea2(pts: [number, number][]): number {
-  let a = 0
-  for (let i = 0; i < pts.length; i++) {
-    const [x0, y0] = pts[i]!
-    const [x1, y1] = pts[(i + 1) % pts.length]!
-    a += x0 * y1 - x1 * y0
-  }
-  return a / 2
 }
 
 // --- Sòlid d'una peça -------------------------------------------------------------
@@ -359,32 +350,64 @@ function panelSolid(p: Panel): PanelSolid {
     const fA = frames.A
     const fB = frames.B
     if (c.kind === "polygon") {
-      // Polígon passant: bucle a la cara A (horari respecte a +Z), sortida a la B i una cara
-      // plana per costat, amb la normal cap a dins del forat (fora del material).
-      const pts = signedArea2(c.points) < 0 ? [...c.points].reverse() : c.points
-      const top = pts.map(([x, y]): V3 => [x, y, T])
-      const bot = pts.map(([x, y]): V3 => [x, y, 0])
-      const sides: Face[] = pts.map((_, i) => {
-        const j = (i + 1) % pts.length
-        const normal = unit(cross(Z, sub(top[j]!, top[i]!)))
-        return { kind: "plane", loc: top[i]!, normal, loops: [[{ p: top[i]! }, { p: top[j]! }, { p: bot[j]! }, { p: bot[i]! }]] }
+      // Contorn passant (rectes i arcs): bucle a la cara A (horari respecte a +Z), sortida a
+      // la B, i per cada costat una cara plana o cilíndrica, orientada cap a dins del forat.
+      const pts = ccwB(c.points)
+      const n = pts.length
+      const at = (i: number, z: number): V3 => [pts[i]![0], pts[i]![1], z]
+      const arcs = pts.map((q, i) => {
+        const b = bulgeOf(q)
+        if (Math.abs(b) < 1e-9) return null
+        const a = arcOf(q, pts[(i + 1) % n]!, b)
+        return { b, r: a.r, top: [a.cx, a.cy, T] as V3, bot: [a.cx, a.cy, 0] as V3, ax: b > 0 ? Z : neg(Z) }
       })
-      const e0 = sub(top[1]!, top[0]!)
+      const sides: Face[] = pts.map((_, i) => {
+        const j = (i + 1) % n
+        const arc = arcs[i]
+        if (arc) {
+          return {
+            kind: "cyl",
+            loc: arc.bot,
+            axis: Z,
+            ref: unit(sub(at(i, 0), arc.bot)),
+            radius: arc.r,
+            outward: arc.b < 0,
+            loop: [{ p: at(i, T), arc: { center: arc.top, axis: arc.ax } }, { p: at(j, T) }, { p: at(j, 0), arc: { center: arc.bot, axis: neg(arc.ax) } }, { p: at(i, 0) }],
+          }
+        }
+        const normal = unit(cross(Z, sub(at(j, T), at(i, T))))
+        return { kind: "plane", loc: at(i, T), normal, loops: [[{ p: at(i, T) }, { p: at(j, T) }, { p: at(j, 0) }, { p: at(i, 0) }]] }
+      })
+      // Bucle d'entrada (cara A): recorregut al revés; cada arc surt del seu punt final.
+      const loopA: Loop = []
+      for (let k = 0; k < n; k++) {
+        const j = (n - k) % n
+        const i = (j - 1 + n) % n
+        const arc = arcs[i]
+        loopA.push(arc ? { p: at(j, T), arc: { center: arc.top, axis: neg(arc.ax) } } : { p: at(j, T) })
+      }
+      const loopB: Loop = pts.map((_, i) => {
+        const arc = arcs[i]
+        return arc ? { p: at(i, 0), arc: { center: arc.bot, axis: arc.ax } } : { p: at(i, 0) }
+      })
+      // Punt interior per assignar el bucle a la regió de la cara: tocant el primer costat.
+      const flat = flatten(pts)
+      const e0 = sub([flat[1]![0], flat[1]![1], T], [flat[0]![0], flat[0]![1], T])
       const inward = unit(cross(Z, e0))
-      const mid = add(mul(add(top[0]!, top[1]!), 0.5), mul(inward, 0.05))
+      const mid = add([(flat[0]![0] + flat[1]![0]) / 2, (flat[0]![1] + flat[1]![1]) / 2, T], mul(inward, 0.05))
       const cA = to2D(fA, mid)
       const cB = to2D(fB, [mid[0], mid[1], 0])
       const bb = (f: Frame, zz: number): Rect2 => {
-        const q = pts.map(([x, y]) => to2D(f, [x, y, zz]))
+        const q = flat.map(([x, y]) => to2D(f, [x, y, zz]))
         return { a0: Math.min(...q.map((v) => v[0])), a1: Math.max(...q.map((v) => v[0])), b0: Math.min(...q.map((v) => v[1])), b1: Math.max(...q.map((v) => v[1])) }
       }
       rounds.A.push({
         bbox: bb(fA, T),
         center: cA,
-        loop: [...top].reverse().map((q) => ({ p: q })),
+        loop: loopA,
         faces: sides,
-        exit: { face: "B", loop: bot.map((q) => ({ p: q })), center: cB, bbox: bb(fB, 0) },
-        what: `tall de ${pts.length} costats`,
+        exit: { face: "B", loop: loopB, center: cB, bbox: bb(fB, 0) },
+        what: `tall de ${n} costats`,
       })
       continue
     }
@@ -613,7 +636,7 @@ class SolidWriter {
     if (face.kind === "cyl") {
       const surf = this.w.add(`CYLINDRICAL_SURFACE('',#${this.axis2(face.loc, face.axis, face.ref)},${stepReal(face.radius)})`)
       const bound = this.w.add(`FACE_OUTER_BOUND('',#${this.loop(face.loop)},.T.)`)
-      return this.w.add(`ADVANCED_FACE('',(#${bound}),#${surf},.F.)`)
+      return this.w.add(`ADVANCED_FACE('',(#${bound}),#${surf},${face.outward ? ".T." : ".F."})`)
     }
     const ref = Math.abs(face.normal[2]) > 0.5 ? X : Z
     const surf = this.w.add(`PLANE('',#${this.axis2(face.loc, face.normal, ref)})`)

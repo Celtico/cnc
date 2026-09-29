@@ -1,5 +1,5 @@
 import { ExtrudeGeometry, Path, Shape } from "three"
-import { ccw, type Panel } from "../../core/model"
+import { ccw, flatten, type Panel } from "../../core/model"
 
 const S = 0.001
 
@@ -22,7 +22,7 @@ export function cutoutGeometry(p: Panel): ExtrudeGeometry {
       hole.absarc(c.x * S, c.y * S, (c.diameter / 2) * S, 0, Math.PI * 2, true)
     } else if (c.kind === "polygon") {
       // Els forats de three van en sentit horari.
-      const pts = ccw(c.points).slice().reverse()
+      const pts = ccw(flatten(c.points)).slice().reverse()
       hole.moveTo(pts[0]![0] * S, pts[0]![1] * S)
       for (const [x, y] of pts.slice(1)) hole.lineTo(x * S, y * S)
       hole.closePath()

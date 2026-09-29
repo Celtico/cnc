@@ -1,4 +1,4 @@
-import { bounds, type Panel } from "../model"
+import { bounds, flatten, type Panel } from "../model"
 import { rectsOverlap, type Rect2 } from "./region2d"
 
 /**
@@ -38,7 +38,7 @@ export function keepOutRects(p: Panel, clearance: number): Rect2[] {
       const r = c.diameter / 2 + clearance
       out.push({ a0: c.x - r, a1: c.x + r, b0: c.y - r, b1: c.y + r })
     } else if (c.kind === "polygon") {
-      const b = bounds(c.points)
+      const b = bounds(flatten(c.points))
       out.push({ a0: b.x0 - clearance, a1: b.x1 + clearance, b0: b.y0 - clearance, b1: b.y1 + clearance })
     } else out.push({ a0: c.x - clearance, a1: c.x + c.w + clearance, b0: c.y - clearance, b1: c.y + c.h + clearance })
   }

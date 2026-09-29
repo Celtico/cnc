@@ -8,7 +8,7 @@ import { LuPlus } from "react-icons/lu"
 import { DoubleSide, ExtrudeGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Shape, Vector3, type Object3D, type Texture } from "three"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
-import { AXIS_INDEX, SECTION_AXES, type Hole, type MaterialPref, type Panel, type PanelRole, type RefObject } from "../../core/model"
+import { AXIS_INDEX, SECTION_AXES, flatten, type Hole, type MaterialPref, type Panel, type PanelRole, type RefObject } from "../../core/model"
 import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { cutoutGeometry } from "./cutoutGeometry"
@@ -453,7 +453,7 @@ function profileGeometry(g: RefObject): ExtrudeGeometry {
   const size = [g.w, g.h, g.d]
   const su = size[u]!, sv = size[v]!, len = size[a]!
   const shape = new Shape()
-  const pts = g.profile!
+  const pts = flatten(g.profile!)
   shape.moveTo((pts[0]![0] - su / 2) * S, (pts[0]![1] - sv / 2) * S)
   for (const [pu, pv] of pts.slice(1)) shape.lineTo((pu - su / 2) * S, (pv - sv / 2) * S)
   shape.closePath()
@@ -794,7 +794,8 @@ function CableMarks({ panels }: { panels: Panel[] }) {
           const r = c.diameter / 2
           out.push(Array.from({ length: 33 }, (_, i) => world(c.x + r * Math.cos((i / 32) * Math.PI * 2), c.y + r * Math.sin((i / 32) * Math.PI * 2))))
         } else if (c.kind === "polygon") {
-          out.push([...c.points, c.points[0]!].map(([x, y]) => world(x, y)))
+          const f = flatten(c.points)
+          out.push([...f, f[0]!].map(([x, y]) => world(x, y)))
         } else {
           out.push([world(c.x, c.y), world(c.x + c.w, c.y), world(c.x + c.w, c.y + c.h), world(c.x, c.y + c.h), world(c.x, c.y)])
         }

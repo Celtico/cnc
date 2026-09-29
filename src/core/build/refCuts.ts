@@ -1,4 +1,4 @@
-import { bounds, ccw, polygonTouchesRect, refSection, type Composition, type Cutout, type Panel, type RefObject, type Vec3 } from "../model"
+import { bounds, bulgeOf, ccwB, polygonTouchesRect, refSection, signedArea, type BPt, type Composition, type Cutout, type Panel, type RefObject, type Vec3 } from "../model"
 import { buildModule } from "./buildModule"
 import { toLocal } from "./geometry"
 import { modulePlacements, refOnPanel } from "../model"
@@ -68,8 +68,17 @@ export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Pane
         pts = [[c[0] - r, c[1] - r], [c[0] + r, c[1] + r]]
       } else {
         pts = sec.poly.map(([pu, pv]) => local(pu, pv))
-        if (o.shape === "profile") cut = { kind: "polygon", points: ccw(pts.map(([x, y]) => [r1(x), r1(y)] as [number, number])), tag: "ref" }
-        else {
+        if (sec.outline) {
+          // Contorn exacte (amb arcs) a les coordenades de la peça. Si el pas (u, v) → peça
+          // fa de mirall, els arcs giren al revés.
+          const mirror = Math.sign(signedArea(pts)) !== Math.sign(signedArea(sec.poly))
+          const outline = sec.outline.map((q): BPt => {
+            const [x, y] = local(q[0], q[1])
+            const b = bulgeOf(q) * (mirror ? -1 : 1)
+            return b ? [r1(x), r1(y), b] : [r1(x), r1(y)]
+          })
+          cut = { kind: "polygon", points: ccwB(outline), tag: "ref" }
+        } else {
           const bb = bounds(pts)
           cut = { kind: "rect", x: bb.x0, y: bb.y0, w: r1(bb.x1 - bb.x0), h: r1(bb.y1 - bb.y0), tag: "ref" }
         }

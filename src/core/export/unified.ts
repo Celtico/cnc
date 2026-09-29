@@ -1,4 +1,4 @@
-import { EDGE_NUMBER, EDGE_SIDES, type Cutout, type Panel, type PanelRole } from "../model"
+import { EDGE_NUMBER, EDGE_SIDES, flatten, type Cutout, type Panel, type PanelRole } from "../model"
 import type { Nesting } from "../nesting/nest"
 import { pieceRefs } from "./refs"
 import type { Board, Join, Piece, Role, Side, Solid, UnifiedData } from "./unified.types"
@@ -138,7 +138,7 @@ export function cutoutPolygon(c: Cutout): [number, number][] {
       [c.x, c.y + c.h],
     ]
   }
-  if (c.kind === "polygon") return c.points.map(([x, y]) => [r2(x), r2(y)] as [number, number])
+  if (c.kind === "polygon") return flatten(c.points, Math.PI / 16).map(([x, y]) => [r2(x), r2(y)] as [number, number])
   if (c.kind === "circle") {
     const rad = c.diameter / 2
     return Array.from({ length: 16 }, (_, i) => {
