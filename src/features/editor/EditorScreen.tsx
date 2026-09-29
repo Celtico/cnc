@@ -16,7 +16,6 @@ import {
   LuCircleDot,
   LuDoorOpen,
   LuExpand,
-  LuFocus,
   LuHammer,
   LuLayoutPanelLeft,
   LuListTree,
@@ -27,6 +26,7 @@ import {
   LuScan,
   LuShrink,
   LuSparkles,
+  LuVideo,
   LuSlidersHorizontal,
   LuSlidersVertical,
   LuTriangleAlert,
@@ -173,6 +173,8 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const [exploded, setExploded] = useState(false)
   // Tornar a encuadrar la càmera (editar ja no la mou).
   const [fitKey, setFitKey] = useState(0)
+  // El botó d'encuadrar surt marcat mentre la càmera és a l'encuadrament.
+  const [framed, setFramed] = useState(true)
   const isMobile = useBreakpointValue({ base: true, md: false }) ?? false
   const [showHoles, setShowHoles] = useState(false)
   // «Veure a casa»: visor 3D amb el botó d'AR Quick Look (Safari a l'iPhone/iPad).
@@ -986,6 +988,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             highlightZone={highlightZone}
             onSelectRef={(id) => select({ kind: "ref", id })}
             fitKey={fitKey}
+            onFramedChange={setFramed}
             onMoveRef={moveRef}
             onMoveModule={(id, dx, dy, all) => setComp((c) => (all ? moveAllBy(c, dx) : moveModuleBy(c, id, dx, dy)))}
           />
@@ -1112,8 +1115,16 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           >
             <LuSparkles />
           </IconButton>
-          <IconButton aria-label="Encuadrar el moble" title="Encuadrar el moble (la càmera ja no es mou sola en editar)" size="sm" variant="surface" colorPalette="wood" onClick={() => setFitKey((k) => k + 1)}>
-            <LuFocus />
+          <IconButton
+            aria-label="Encuadrar el moble"
+            aria-pressed={framed}
+            title={framed ? "Càmera encuadrada (la càmera no es mou sola en editar)" : "Encuadrar el moble"}
+            size="sm"
+            variant={framed ? "solid" : "surface"}
+            colorPalette="wood"
+            onClick={() => setFitKey((k) => k + 1)}
+          >
+            <LuVideo />
           </IconButton>
           {isMobile ? (
             // Al mòbil, les opcions surten en un calaix de baix amb el seu propi desplaçament

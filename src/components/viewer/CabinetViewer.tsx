@@ -96,6 +96,8 @@ export interface CabinetViewerProps {
   onDeselect?: () => void
   /** Canviar-lo torna a encuadrar la càmera (la resta de canvis no la mouen). */
   fitKey?: number
+  /** Avisa si la càmera és a l'encuadrament automàtic (true) o l'usuari l'ha moguda / el moble ha canviat de mida (false). */
+  onFramedChange?: (framed: boolean) => void
 }
 
 export function CabinetViewer({
@@ -124,6 +126,7 @@ export function CabinetViewer({
   collidingRefIds,
   highlightZone,
   fitKey = 0,
+  onFramedChange,
 }: CabinetViewerProps) {
   // Per distingir un clic a l'espai buit d'un gir de càmera (arrossegar).
   const downAt = useRef<[number, number] | null>(null)
@@ -280,7 +283,7 @@ export function CabinetViewer({
           resolution={q.contactResolution}
         />
       )}
-      <CameraRig size={size} view={view} fitKey={fitKey} />
+      <CameraRig size={size} view={view} fitKey={fitKey} onFramedChange={onFramedChange} />
       {onCapture && <Capture onCapture={onCapture} gridRef={gridRef} />}
     </Canvas>
   )
@@ -337,7 +340,7 @@ const VIEW_DIR: Record<ViewName, [number, number, number]> = {
  * Càmera: s'encuadra en muntar-se, en canviar de vista, en redimensionar el visor i quan
  * canvia `fitKey`. Editar el moble (mides, mòduls, objectes) no la mou: es queda on l'has deixat.
  */
-function CameraRig({ size, view, fitKey }: { size: CabinetViewerProps["size"]; view: ViewName; fitKey: number }) {
+function CameraRig({ size, view, fitKey, onFramedChange }: { size: CabinetViewerProps["size"]; view: ViewName; fitKey: number; onFramedChange?: (framed: boolean) => void }) {
   const controls = useRef<OrbitControlsImpl>(null)
   const { camera, size: viewport } = useThree()
   const w = size.width * S
@@ -347,6 +350,18 @@ function CameraRig({ size, view, fitKey }: { size: CabinetViewerProps["size"]; v
   const aspect = viewport.width / Math.max(viewport.height, 1)
   const goal = useRef<{ pos: Vector3; zoom: number } | null>(null)
   const ortho = view !== "3d"
+  // Encuadrat = la càmera és on l'ha deixat l'últim encuadrament i el moble té la mateixa mida.
+  const fittedSize = useRef("")
+  const framedRef = useRef(true)
+  const setFramed = (v: boolean) => {
+    if (framedRef.current === v) return
+    framedRef.current = v
+    onFramedChange?.(v)
+  }
+  useEffect(() => {
+    if (fittedSize.current && fittedSize.current !== `${size.width}x${size.height}x${size.depth}`) setFramed(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [size.width, size.height, size.depth])
 
   useEffect(() => {
     const radius = 0.5 * Math.sqrt(w * w + h * h + d * d)
@@ -368,6 +383,8 @@ function CameraRig({ size, view, fitKey }: { size: CabinetViewerProps["size"]; v
     }
     const pos = new Vector3((dir[0] / len) * dist, targetY + (dir[1] / len) * dist, (dir[2] / len) * dist)
     goal.current = { pos, zoom }
+    fittedSize.current = `${size.width}x${size.height}x${size.depth}`
+    setFramed(true)
     controls.current?.target.set(0, targetY, 0)
     controls.current?.update()
     // Les mides es llegeixen però no disparen el reencuadrament.
@@ -390,7 +407,10 @@ function CameraRig({ size, view, fitKey }: { size: CabinetViewerProps["size"]; v
   return (
     <>
       {ortho ? <OrthographicCamera makeDefault near={-50} far={100} position={[0, targetY, 5]} zoom={80} /> : <PerspectiveCamera makeDefault fov={38} near={0.01} far={100} position={[1.4, 1.1, 1.9]} />}
-      <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={12} maxPolarAngle={Math.PI * 0.55} enableRotate={!ortho} />
+      <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={12} maxPolarAngle={Math.PI * 0.55} enableRotate={!ortho} onStart={() => {
+          goal.current = null
+          setFramed(false)
+        }} />
     </>
   )
 }
