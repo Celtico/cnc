@@ -524,35 +524,48 @@ export function ProfileEditor({
                           </IconButton>
                         </HStack>
                         <Text textStyle="xs" color="fg.muted">
-                          Reflex dels manegadors
+                          Manegadors
                         </Text>
                         <SegmentGroup.Root size="xs" w="full" value={selType} onValueChange={(e) => e.value && setType(sel!, e.value as "corner" | "smooth" | "symmetric")}>
                           <SegmentGroup.Indicator />
                           {(
                             [
-                              ["corner", "Sense reflex"],
-                              ["smooth", "Angle"],
-                              ["symmetric", "Angle i llarg"],
+                              ["corner", "Lliures", "Cada manegador va per lliure (fa punxa)"],
+                              ["smooth", "Alineats", "Mateixa direcció, cada un amb la seva llargada (corba suau)"],
+                              ["symmetric", "Simètrics", "Mateixa direcció i mateixa llargada"],
                             ] as const
-                          ).map(([v, label]) => (
-                            <SegmentGroup.Item key={v} value={v} flex={1}>
+                          ).map(([v, label, title]) => (
+                            <SegmentGroup.Item key={v} value={v} flex={1} title={title} whiteSpace="nowrap">
                               <SegmentGroup.ItemText>{label}</SegmentGroup.ItemText>
                               <SegmentGroup.ItemHiddenInput />
                             </SegmentGroup.Item>
                           ))}
                         </SegmentGroup.Root>
-                        <HStack gap={1} align="end">
-                          <NumberField label="Radi de cantonada" value={radius} min={1} max={2000} step={5} onChange={(v) => Number.isFinite(v) && v > 0 && setRadius(v)} />
-                          <Button size="sm" variant="outline" disabled={!canFillet} onClick={() => {
-                            const next = filletNode(nodes, sel!, radius)
-                            if (next) {
-                              setNodes(next)
-                              setSel(null)
-                            }
-                          }}>
-                            <LuSpline /> Arrodonir
-                          </Button>
-                        </HStack>
+                        {edgeOf(nodes, (sel! - 1 + nodes.length) % nodes.length).kind === "line" && edgeOf(nodes, sel!).kind === "line" && (
+                          <Stack gap={1} borderTopWidth="1px" pt={2}>
+                            <Text textStyle="xs" color="fg.muted">
+                              Arrodonir la punta: la cantonada passa a ser un arc d'aquest radi, tangent als dos costats.
+                            </Text>
+                            <HStack gap={1} align="end">
+                              <NumberField label="Radi" value={radius} min={1} max={2000} step={5} onChange={(v) => Number.isFinite(v) && v > 0 && setRadius(v)} />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={!canFillet}
+                                title={canFillet ? undefined : "El radi és massa gran per als costats"}
+                                onClick={() => {
+                                  const next = filletNode(nodes, sel!, radius)
+                                  if (next) {
+                                    setNodes(next)
+                                    setSel(null)
+                                  }
+                                }}
+                              >
+                                <LuSpline /> Arrodonir
+                              </Button>
+                            </HStack>
+                          </Stack>
+                        )}
                         {(selNode.in || selNode.out) && (
                           <Button size="xs" variant="ghost" alignSelf="flex-start" onClick={() => set(sel!, { x: selNode.x, y: selNode.y })}>
                             Treure els manegadors (cantonada recta)
@@ -572,7 +585,7 @@ export function ProfileEditor({
                         · Quadrat = cantonada; cercle = node amb corba. Doble clic (o l'eina Corbar) canvia l'un per l'altre.
                       </Text>
                       <Text textStyle="xs" color="fg.muted">
-                        · Els manegadors (taronja) donen la direcció i la força de la corba; amb <Kbd>Alt</Kbd> es trenquen.
+                        · Els manegadors (rombes blaus) donen la direcció i la força de la corba; amb <Kbd>Alt</Kbd> es trenquen.
                       </Text>
                       <Text textStyle="xs" color="fg.muted">
                         · El punt del mig d'un costat: clic hi afegeix un node; arrossegar-lo corba el costat.
