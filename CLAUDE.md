@@ -305,6 +305,9 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     perfil; `shape` en mm s'escala al tauler). `Panel.outline` (rectes i arcs): 3D/GLB
     extruït, DXF amb bulge, STEP prisma amb cares cilíndriques (`outlineSolid`; els
     mecanitzats d'aquestes peces només al DXF/CSV). Preset «Taula oval».
+  - **Posició dels objectes**: els camps són «↔ De costat X», «↕ Alçada Y» i «⤢ Fons Z»
+    (`AxisLabel`, mateixes icones que la Direcció) i l'etiqueta d'arrossegar al 3D fa servir
+    les mateixes fletxes. `NumberField.label` accepta un ReactNode.
   - **Opcions amb icona** (`components/IconChoice.tsx`): poques opcions → botons d'icona amb
     el nom al tooltip i l'opció triada al costat del títol. Base, Fons, Tapa (mòdul), Patró de
     reixeta, Direcció dels objectes; Efecte i Forma dels objectes, portes (una/dues, frontisses),

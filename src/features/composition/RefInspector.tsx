@@ -178,12 +178,13 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
           </Button>
         </SimpleGrid>
         <SimpleGrid columns={3} gap={2}>
-          <NumberField label="X" value={o.x} min={-30000} max={30000} step={10} onChange={(x) => update({ x })} />
-          <NumberField label="Y" value={o.y} min={-30000} max={30000} step={10} disabled={!!o.onFloor} onChange={(y) => update({ y })} />
-          <NumberField label="Z" value={o.z} min={-30000} max={30000} step={10} disabled={!!o.onWall} onChange={(z) => update({ z })} />
+          {/* Cada direcció amb la seva icona i un nom, no només la lletra de l'eix. */}
+          <NumberField label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra del moble" />} value={o.x} min={-30000} max={30000} step={10} onChange={(x) => update({ x })} />
+          <NumberField label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} value={o.y} min={-30000} max={30000} step={10} disabled={!!o.onFloor} onChange={(y) => update({ y })} />
+          <NumberField label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} value={o.z} min={-30000} max={30000} step={10} disabled={!!o.onWall} onChange={(z) => update({ z })} />
         </SimpleGrid>
         <Text fontSize="xs" color="fg.muted">
-          X des de l'esquerra del moble, Y des del terra, Z des del darrere (paret).
+          De costat (X) des de l'esquerra del moble · Alçada (Y) des del terra · Fons (Z) des de la paret cap endavant.
         </Text>
         <Text fontSize="xs" color="fg.muted">
           {o.onFloor && o.onWall
@@ -332,5 +333,18 @@ export function RefActions({ comp, id, onChange, onRemoved, onSelected }: { comp
         </Menu.Positioner>
       </Portal>
     </Menu.Root>
+  )
+}
+
+/** Rètol d'una direcció de moviment: icona + nom, i la lletra de l'eix en petit. */
+function AxisLabel({ icon: Icon, name, axis, hint }: { icon: IconType; name: string; axis: string; hint: string }) {
+  return (
+    <HStack as="span" gap={1} title={`${name} (${axis}): ${hint}`}>
+      <Icon />
+      <span>{name}</span>
+      <Text as="span" color="fg.subtle" fontSize="2xs">
+        {axis}
+      </Text>
+    </HStack>
   )
 }

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import {
   Field,
   Heading,
@@ -168,7 +169,8 @@ function Section({ title, small, children }: { title: string; small?: boolean; c
 }
 
 interface NumberFieldProps {
-  label: string
+  /** Text o, si cal, icona + text (p. ex. la direcció d'un moviment). */
+  label: ReactNode
   value: number
   onChange: (value: number) => void
   min?: number

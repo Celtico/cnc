@@ -19,6 +19,8 @@ const SELECT_COLOR = "#b57a37"
 
 /** Escala mm → m per a l'escena. */
 const S = 0.001
+/** Fletxa de cada direcció a l'etiqueta d'arrossegar un objecte (com les icones de Posició). */
+const AXIS_ARROW = { x: "↔", y: "↕", z: "⤢" } as const
 /** Separació en vista explosionada (mm). */
 const EXPLODE_MM = 160
 
@@ -671,7 +673,7 @@ function RefGhost({
               transform: "translateY(-18px)",
             }}
           >
-            {drag.axes.map((a) => `${a.toUpperCase()} ${drag[a]}${drag.snapped.includes(a) ? " ⟂" : ""}`).join(" · ")}
+            {drag.axes.map((a) => `${AXIS_ARROW[a]} ${drag[a]}${drag.snapped.includes(a) ? " ⟂" : ""}`).join(" · ")}
           </span>
         </Html>
       )}
