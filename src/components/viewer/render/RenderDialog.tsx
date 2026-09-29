@@ -1,4 +1,4 @@
-import { Box, Button, CloseButton, Dialog, HStack, NativeSelect, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, CloseButton, Dialog, HStack, NativeSelect, Portal, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { LuDownload, LuPause, LuPlay, LuRotateCcw } from "react-icons/lu"
 import type { Camera, Scene } from "three"
@@ -366,19 +366,16 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                 </Group>
 
                 <Group title="Escena" hint="torna a començar">
-                  <SegmentGroup.Root size="xs" value={room} onValueChange={(e) => setRoom(e.value as RenderRoom)} w="full">
-                    <SegmentGroup.Indicator />
-                    <SegmentGroup.Items
-                      flex={1}
-                      items={[
-                        { value: "room", label: "Habitació" },
-                        { value: "floor", label: "Només terra" },
-                        { value: "none", label: "Cap" },
-                      ]}
-                    />
-                  </SegmentGroup.Root>
+                  <NativeSelect.Root size="sm">
+                    <NativeSelect.Field value={room} onChange={(e) => setRoom(e.currentTarget.value as RenderRoom)}>
+                      <option value="room">Habitació (terra i paret)</option>
+                      <option value="floor">Només el terra</option>
+                      <option value="none">Cap (només el moble)</option>
+                    </NativeSelect.Field>
+                    <NativeSelect.Indicator />
+                  </NativeSelect.Root>
                   <Text fontSize="2xs" color="fg.subtle">
-                    L'habitació és la del mode Presentació. Amb «Cap» i fons blanc o transparent, per a catàlegs.
+                    L'habitació és la del mode Presentació. Per a catàlegs: «Cap» amb fons blanc o transparent.
                   </Text>
                 </Group>
 
@@ -398,17 +395,14 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                     <Text fontSize="xs" color="fg.muted">
                       Fons
                     </Text>
-                    <SegmentGroup.Root size="xs" value={look.background} onValueChange={(e) => setLook({ background: e.value as Background })} w="full">
-                      <SegmentGroup.Indicator />
-                      <SegmentGroup.Items
-                        flex={1}
-                        items={[
-                          { value: "scene", label: "Estudi" },
-                          { value: "white", label: "Blanc" },
-                          { value: "transparent", label: "Transparent" },
-                        ]}
-                      />
-                    </SegmentGroup.Root>
+                    <NativeSelect.Root size="sm">
+                      <NativeSelect.Field value={look.background} onChange={(e) => setLook({ background: e.currentTarget.value as Background })}>
+                        <option value="scene">Estudi</option>
+                        <option value="white">Blanc</option>
+                        <option value="transparent">Transparent (PNG amb alfa)</option>
+                      </NativeSelect.Field>
+                      <NativeSelect.Indicator />
+                    </NativeSelect.Root>
                   </Stack>
                 </Group>
 
