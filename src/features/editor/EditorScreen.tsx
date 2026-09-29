@@ -2,7 +2,6 @@ import { Alert, Badge, Box, Button, Field, Flex, HStack, IconButton, NativeSelec
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   LuBox,
-  LuCable,
   LuFrame,
   LuMove,
   LuChevronLeft,
@@ -41,7 +40,6 @@ import { TopBarActions } from "../../components/TopBar"
 import { toaster } from "../../components/ui/toaster"
 import { CabinetViewer, type ViewerModule, type ZoneLight } from "../../components/viewer/CabinetViewer"
 import { ArDialog } from "../../components/viewer/ArDialog"
-import { CableHolesForm } from "../composition/CableHolesForm"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox } from "../../core/build/buildComposition"
@@ -654,9 +652,6 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           </PanelSection>
           <PanelSection id="mod-materials" title="Materials" icon={LuPalette}>
             <MaterialsForm carcass={module.carcass} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
-          </PanelSection>
-          <PanelSection id="mod-cables" title="Passacables" badge={module.extras.cableHoles.length || undefined} icon={LuCable} defaultOpen={false}>
-            <CableHolesForm module={module} onChange={updateModule} refs={comp.references} at={build?.modules.find((b) => b.id === module.id) ?? { x: 0, y: 0 }} />
           </PanelSection>
           <PanelSection id="mod-joinery" title="Fusteria (avançat)" icon={LuHammer} defaultOpen={false}>
             <JoineryForm module={module} onChange={updateModule} />

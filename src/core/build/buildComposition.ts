@@ -1,4 +1,5 @@
-import { modulePlacements, refOnPanel, type Composition, type Module, type Panel, type RefObject, type Vec3 } from "../model"
+import { modulePlacements, type Composition, type Panel, type RefObject, type Vec3 } from "../model"
+import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { buildModule, type BuildWarning, type ModuleBuild } from "./buildModule"
 import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
 
@@ -30,33 +31,8 @@ export function panelBox(p: Panel): { min: Vec3; max: Vec3 } {
   return { min, max }
 }
 
-function boxesOverlap(a: { min: Vec3; max: Vec3 }, b: { min: Vec3; max: Vec3 }, tol = 0.5): boolean {
-  for (let i = 0; i < 3; i++) if (a.max[i]! <= b.min[i]! + tol || b.max[i]! <= a.min[i]! + tol) return false
-  return true
-}
-
 export function refBox(o: RefObject): { min: Vec3; max: Vec3 } {
   return { min: [o.x, o.y, o.z], max: [o.x + o.w, o.y + o.h, o.z + o.d] }
-}
-
-/**
- * Passacables que segueixen un objecte de referència: el centre surt de l'objecte
- * (projectat sobre la peça). Si l'objecte ja no hi és, es queda on era.
- */
-export function withRefHoles(m: Module, refs: RefObject[], at: { x: number; y: number }): Module {
-  if (!m.extras.cableHoles.some((h) => h.ref)) return m
-  return {
-    ...m,
-    extras: {
-      ...m.extras,
-      cableHoles: m.extras.cableHoles.map((h) => {
-        const r = h.ref ? refs.find((o) => o.id === h.ref) : undefined
-        if (!r) return h
-        const c = refOnPanel(r, h.panel, at)
-        return { ...h, x: Math.round(c.x * 10) / 10, y: Math.round(c.y * 10) / 10 }
-      }),
-    },
-  }
 }
 
 /**
@@ -64,15 +40,16 @@ export function withRefHoles(m: Module, refs: RefObject[], at: { x: number; y: n
  * potes, penjats i apilats), ids prefixats amb l'id del mòdul i el número de
  * mòdul a cada peça per a les refs del taller.
  */
-export function buildComposition(comp: Composition): CompositionBuild {
+export function buildComposition(input: Composition): CompositionBuild {
+  // Passacables de la versió anterior → objectes que tallen.
+  const comp = migrateCableHoles(input, panelBox)
   const places = modulePlacements(comp)
   const panels: Panel[] = []
   const warnings: CompositionWarning[] = []
   const modules: CompositionBuild["modules"] = []
 
-  comp.modules.forEach((mod, i) => {
+  comp.modules.forEach((m, i) => {
     const { x, y } = places[i]!
-    const m = withRefHoles(mod, comp.references, { x, y })
     const build = buildModule(m)
     for (const p of build.panels) {
       const o = p.placement.origin
@@ -104,10 +81,16 @@ export function buildComposition(comp: Composition): CompositionBuild {
   }
   for (const w of runWarnings) warnings.push({ code: "layout", message: w.message })
 
-  // Objectes fantasma que xoquen amb alguna peça.
+  // Objectes que tallen: forat a cada peça que travessen.
+  for (const pr of applyRefCuts(panels, comp.references, panelBox)) {
+    const moduleId = modules.find((m) => m.index === pr.panel.module)?.id
+    warnings.push({ code: "ref-cut", message: pr.message, panelId: pr.panel.id, refId: pr.refId, ...(moduleId ? { moduleId } : {}) })
+  }
+
+  // Obstacles que xoquen amb alguna peça.
   for (const ref of comp.references) {
-    const rb = refBox(ref)
-    const hit = panels.find((p) => boxesOverlap(panelBox(p), rb))
+    if (ref.effect === "cut") continue
+    const hit = panels.find((p) => refTouchesBox(ref, panelBox(p)))
     if (hit) {
       const moduleId = modules.find((m) => m.index === hit.module)?.id
       warnings.push({ code: "collision", message: `«${ref.name}» xoca amb ${hit.label}.`, panelId: hit.id, refId: ref.id, ...(moduleId ? { moduleId } : {}) })

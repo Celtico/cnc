@@ -187,11 +187,15 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     Imant de 15 mm a les vores dels mòduls, dels altres objectes, del terra i de la paret (Alt:
     sense imant); etiqueta amb la posició mentre s'arrossega. Fletxes 1 mm (Maj 10), Re Pàg /
     Av Pàg per a Z. Es desa en deixar-lo anar (un sol pas de desfer).
-  - **Passacables** (`CableHolesForm`, `CableHoleSchema`): rodons o rectangulars, al fons, la
-    tapa, la base o els laterals. «Segueix l'objecte» (`ref`): el centre surt de l'objecte
-    projectat sobre la peça (`refOnPanel`, resolt a `withRefHoles` dins `buildComposition`) i
-    el segueix quan es mou. Si surt de la peça no es fa i avisa (`cable-hole`). Al 3D, els
-    passacables del mòdul seleccionat es marquen en taronja a través de les portes (`CableMarks`).
+  - **Efecte dels objectes** (`RefObject.effect`, `shape`, `axis`): **Obstacle** (per defecte,
+    avisa si xoca; el cilindre xoca amb la seva secció rodona, `refTouchesBox`) o **Talla**
+    (`build/refCuts.ts`, `applyRefCuts`): forat passant a cada peça perpendicular a la seva
+    direcció (z cap a la paret: fons i portes; y: base, tapa, prestatges; x: laterals). Caixa →
+    forat rectangular; cilindre → rodó. Si arribaria a la vora (seria un rebaix) no es fa i
+    avisa (`ref-cut`). Els que tallen es veuen en violeta a través del moble. Els **passacables**
+    dels mòduls ja no tenen UI: es migren a objectes que tallen (`migrateCableHoles`, a
+    `compositionOf` i a `buildComposition`). Al 3D, els forats del mòdul seleccionat es marquen
+    en taronja a través de les portes (`CableMarks`).
   - **Centre — Visor** amb pestanyes `3D` · `Alçat` · `Foto`. Les opcions de visualització
     (forats, explosionat, AR, obertura, colors, imatge) són a la barra del visor, no al panell.
   - **Dreta — Propietats** del que hi ha seleccionat i **només d'això**: moble (resum i
@@ -217,7 +221,7 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   - **Inspector en seccions plegables independents** (`PanelSection` fora d'un
     `PanelGroup`): se'n poden tenir diverses obertes i cada una recorda el seu estat
     (`mobles:section:<id>`). Mòdul: Mides · Estructura · Materials ·
-    Passacables · Fusteria (avançat). Compartiment: accions com a icones a la capçalera de l'inspector (Pare · Duplicar ·
+    Fusteria (avançat). Compartiment: accions com a icones a la capçalera de l'inspector (Pare · Duplicar ·
     Eliminar; a l'objecte, Desar a preferències · Eliminar) i
     Front · Prestatges · Mida · Dividir. Moble: Resum · Materials de tot el moble. Objecte:
     General · Mides · Posició. Avisos de fusteria: també secció. Les preferències sí que fan d'acordió (una oberta). Res de botons «Veure a l'alçat»: les
@@ -308,7 +312,7 @@ Accions principals: icona + text.
 | Composició | Plantilles · Desar com a plantilla · Menú del document | `LuLayoutTemplate` · `LuBookmark` · `LuEllipsis` |
 | Panell | Mides exteriors · Taulers · Interior i front · Fusteria · Adaptar a la imatge | `LuMoveDiagonal` · `LuSquareStack` · `LuLayoutPanelLeft` · `LuHammer` · `LuCamera` |
 | Panell | Composició (mòduls i objectes de referència) · Compartiments (alçat) | `LuLayoutDashboard` · `LuLayoutPanelLeft` |
-| Inspector | Estructura (base, fons, tapa, laterals) · Passacables · Front · Pare | `LuFrame` · `LuCable` · `LuDoorClosed` · `LuArrowUp` |
+| Inspector | Estructura (base, fons, tapa, laterals) · Front · Pare | `LuFrame` · `LuDoorClosed` · `LuArrowUp` |
 | Inspector | Resum del moble · Posició | `LuBox` · `LuMove` |
 | Inspector | Anterior · Següent · Accions de la selecció (menú) | `LuChevronLeft` · `LuChevronRight` · `LuEllipsis` |
 | Preferències | Tema (dia/nit/sistema) · Color principal | `LuSunMoon` (`LuSun` · `LuMoon` · `LuMonitor`) · `LuCheck` a la mostra triada |

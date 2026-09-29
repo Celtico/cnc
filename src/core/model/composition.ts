@@ -234,8 +234,23 @@ export const RefObjectSchema = z.object({
   x: mm,
   y: mm,
   z: mm,
+  /**
+   * Obstacle (per defecte): no toca la fusta, avisa si xoca amb el moble. Talla: fa un
+   * forat passant a cada peça que travessa (tubs, endolls, passacables…).
+   */
+  effect: z.enum(["obstacle", "cut"]).optional(),
+  /** Caixa (per defecte) o cilindre dins de la caixa w × h × d. */
+  shape: z.enum(["box", "cylinder"]).optional(),
+  /**
+   * Direcció: eix del cilindre i, als objectes que tallen, la direcció del tall (només foraden
+   * les peces perpendiculars). z cap a la paret (per defecte), y vertical, x de costat.
+   */
+  axis: z.enum(["x", "y", "z"]).optional(),
 })
 export type RefObject = z.infer<typeof RefObjectSchema>
+
+/** Mides d'un objecte segons l'eix: [eix, perpendicular 1, perpendicular 2] com a índexs 0 = x, 1 = y, 2 = z. */
+export const AXIS_INDEX = { x: 0, y: 1, z: 2 } as const
 
 /** Forat d'encastar al taulell (placa, pica o a mida), centrat al mòdul de sota. */
 export const WorktopCutoutSchema = z.object({

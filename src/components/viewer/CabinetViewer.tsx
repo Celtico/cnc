@@ -511,8 +511,14 @@ function RefGhost({
     return t
   }, [targets, others, g.id])
   const pos = drag ?? g
-  const tint = hit ? "#dc2626" : selected ? SELECT_COLOR : "#3b82f6"
+  // Obstacle en blau; objecte que talla en violeta; seleccionat en taronja; amb problema en vermell.
+  const tint = hit ? "#dc2626" : selected ? SELECT_COLOR : g.effect === "cut" ? "#7c3aed" : "#3b82f6"
   const draggable = selected && !!onMove
+  const cyl = g.shape === "cylinder"
+  const axis = g.axis ?? "z"
+  const len = axis === "x" ? g.w : axis === "y" ? g.h : g.d
+  const radius = (axis === "x" ? Math.min(g.h, g.d) : axis === "y" ? Math.min(g.w, g.d) : Math.min(g.w, g.h)) / 2
+  const rotation: [number, number, number] = axis === "z" ? [Math.PI / 2, 0, 0] : axis === "x" ? [0, 0, Math.PI / 2] : [0, 0, 0]
 
   const end = (e: ThreeEvent<PointerEvent>) => {
     const st = state.current
@@ -526,8 +532,10 @@ function RefGhost({
   }
 
   return (
+    <group position={[(pos.x + g.w / 2) * S, (pos.y + g.h / 2) * S, (pos.z + g.d / 2) * S]}>
     <mesh
-      position={[(pos.x + g.w / 2) * S, (pos.y + g.h / 2) * S, (pos.z + g.d / 2) * S]}
+      rotation={cyl ? rotation : [0, 0, 0]}
+      renderOrder={g.effect === "cut" ? 8 : 0}
       onClick={onSelect ? (e: ThreeEvent<MouseEvent>) => {
         e.stopPropagation()
         onSelect(g.id)
@@ -579,9 +587,11 @@ function RefGhost({
       onPointerUp={draggable ? end : undefined}
       onPointerCancel={draggable ? end : undefined}
     >
-      <boxGeometry args={[g.w * S, g.h * S, g.d * S]} />
-      <meshStandardMaterial color={tint} transparent opacity={selected || hit ? 0.38 : 0.22} depthWrite={false} />
-      {(guides || selected || hit) && <Edges color={selected ? SELECT_COLOR : tint} />}
+      {cyl ? <cylinderGeometry args={[radius * S, radius * S, len * S, 40]} /> : <boxGeometry args={[g.w * S, g.h * S, g.d * S]} />}
+      {/* Els que tallen solen quedar dins del fons o darrere de les portes: es veuen a través. */}
+      <meshStandardMaterial color={tint} transparent opacity={selected || hit ? 0.38 : g.effect === "cut" ? 0.45 : 0.22} depthWrite={false} depthTest={g.effect !== "cut"} />
+      {(guides || selected || hit || g.effect === "cut") && <Edges color={selected ? SELECT_COLOR : tint} threshold={cyl ? 30 : 1} depthTest={g.effect !== "cut"} renderOrder={g.effect === "cut" ? 9 : 0} />}
+    </mesh>
       {drag && (
         <Html position={[0, (g.h / 2) * S, 0]} center zIndexRange={[30, 20]} style={{ pointerEvents: "none" }}>
           <span
@@ -603,7 +613,7 @@ function RefGhost({
           </span>
         </Html>
       )}
-    </mesh>
+    </group>
   )
 }
 
@@ -754,7 +764,7 @@ function CableMarks({ panels }: { panels: Panel[] }) {
       const world = (x: number, y: number) =>
         new Vector3((o[0] + x * xa[0] + y * ya[0] + z * za[0]) * S, (o[1] + x * xa[1] + y * ya[1] + z * za[1]) * S, (o[2] + x * xa[2] + y * ya[2] + z * za[2]) * S)
       for (const c of p.cutouts ?? []) {
-        if (c.tag !== "cable") continue
+        if (c.tag !== "cable" && c.tag !== "ref") continue
         if (c.kind === "circle") {
           const r = c.diameter / 2
           out.push(Array.from({ length: 33 }, (_, i) => world(c.x + r * Math.cos((i / 32) * Math.PI * 2), c.y + r * Math.sin((i / 32) * Math.PI * 2))))

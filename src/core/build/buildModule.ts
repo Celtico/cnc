@@ -39,6 +39,7 @@ export interface BuildWarning {
     | "grille-open-ratio"
     | "back-groove"
     | "cable-hole"
+    | "ref-cut"
     | "layout"
     | "no-side"
     | "material-heat"

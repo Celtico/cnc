@@ -1,4 +1,6 @@
 import { CompositionSchema, cabinetToComposition, normalizeComposition, type Composition } from "../core/model"
+import { panelBox } from "../core/build/buildComposition"
+import { migrateCableHoles } from "../core/build/refCuts"
 import { db, safeParams, type Project } from "./db"
 
 /**
@@ -17,7 +19,8 @@ declare module "./db" {
 export function compositionOf(project: Pick<Project, "params" | "composition" | "name">): Composition {
   if (project.composition) {
     const res = CompositionSchema.safeParse(project.composition)
-    if (res.success && res.data.modules.length > 0) return normalizeComposition(res.data)
+    // Els passacables dels mòduls (versió anterior) passen a ser objectes que tallen.
+    if (res.success && res.data.modules.length > 0) return migrateCableHoles(normalizeComposition(res.data), panelBox)
   }
   return cabinetToComposition(safeParams(project.params), project.name)
 }
