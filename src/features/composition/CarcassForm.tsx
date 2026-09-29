@@ -1,6 +1,8 @@
 import { Button, Field, HStack, Input, NativeSelect, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
 import { DEFAULT_GRILLE, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
 import { NumberField } from "../editor/ParamsForm"
+import { IconChoice } from "../../components/IconChoice"
+import { LuArrowDownToLine, LuDrill, LuGrid3X3, LuLayers2, LuPanelBottom, LuPanelTop, LuSquareDashed, LuSquareDashedBottom, LuTable, LuWind } from "react-icons/lu"
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/SettingsScreen"
 
@@ -38,25 +40,20 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
             Base: cap (penjat a la paret, a {c.base.height} mm del terra). Es canvia a Posició.
           </Text>
         ) : (
-          <Field.Root>
-            <Field.Label>Base</Field.Label>
-            <NativeSelect.Root size="sm">
-              <NativeSelect.Field
-                value={c.base.kind}
-                onChange={(e) => {
-                  const k = e.target.value as Exclude<Base["kind"], "wall">
-                  const base: Base = k === "plinth" ? { kind: "plinth", height: 60, setback: 30 } : k === "legs" ? { kind: "legs", height: 100 } : { kind: k }
-                  set({ base })
-                }}
-              >
-                <option value="none">A terra</option>
-                <option value="plinth">Sòcol</option>
-                <option value="legs">Potes</option>
-                <option value="open">Sense base (obert)</option>
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
-          </Field.Root>
+          <IconChoice
+            label="Base"
+            value={c.base.kind as Exclude<Base["kind"], "wall">}
+            options={[
+              { value: "none", label: "Directe a terra", icon: LuArrowDownToLine, hint: "Directe a terra, sense sòcol ni potes" },
+              { value: "plinth", label: "Sòcol", icon: LuPanelBottom, hint: "Sòcol retranquejat a sota" },
+              { value: "legs", label: "Potes", icon: LuTable, hint: "Potes regulables" },
+              { value: "open", label: "Sense base (obert)", icon: LuSquareDashedBottom, hint: "Sense base: obert per sota" },
+            ]}
+            onChange={(k) => {
+              const base: Base = k === "plinth" ? { kind: "plinth", height: 60, setback: 30 } : k === "legs" ? { kind: "legs", height: 100 } : { kind: k }
+              set({ base })
+            }}
+          />
         )}
         {/* Base a tota l'amplada i les seves mides a sota, en dues columnes: així els camps
             numèrics tenen prou espai i les etiquetes no es tallen. */}
@@ -73,36 +70,30 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
         )}
 
         <SimpleGrid columns={2} gap={3}>
-          <Field.Root>
-            <Field.Label>Fons</Field.Label>
-            <NativeSelect.Root size="sm">
-              <NativeSelect.Field value={c.back} onChange={(e) => set({ back: e.target.value as Carcass["back"] })}>
-                <option value="groove">En ranura</option>
-                <option value="screwed">Cargolat darrere</option>
-                <option value="none">Sense fons</option>
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
-          </Field.Root>
-          <Field.Root>
-            <Field.Label>Tapa</Field.Label>
-            <NativeSelect.Root size="sm">
-              <NativeSelect.Field
-                value={c.top.kind}
-                onChange={(e) => {
-                  const k = e.target.value as Top["kind"]
-                  const top: Top = k === "ventSlot" ? { kind: "ventSlot", gap: 60 } : k === "grille" ? { kind: "grille", pattern: DEFAULT_GRILLE } : { kind: k }
-                  set({ top })
-                }}
-              >
-                <option value="full">Sencera</option>
-                <option value="ventSlot">Amb ranura d'aire al darrere</option>
-                <option value="grille">Amb reixeta</option>
-                <option value="none">Sense tapa</option>
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
-          </Field.Root>
+          <IconChoice
+            label="Fons"
+            value={c.back}
+            options={[
+              { value: "groove", label: "En ranura", icon: LuLayers2, hint: "Fons encaixat en una ranura" },
+              { value: "screwed", label: "Cargolat darrere", icon: LuDrill, hint: "Fons cargolat per darrere" },
+              { value: "none", label: "Sense fons", icon: LuSquareDashed },
+            ]}
+            onChange={(back) => set({ back })}
+          />
+          <IconChoice
+            label="Tapa"
+            value={c.top.kind}
+            options={[
+              { value: "full", label: "Sencera", icon: LuPanelTop },
+              { value: "ventSlot", label: "Ranura d'aire", icon: LuWind, hint: "Amb ranura d'aire al darrere" },
+              { value: "grille", label: "Reixeta", icon: LuGrid3X3, hint: "Amb reixeta" },
+              { value: "none", label: "Sense tapa", icon: LuSquareDashed },
+            ]}
+            onChange={(k) => {
+              const top: Top = k === "ventSlot" ? { kind: "ventSlot", gap: 60 } : k === "grille" ? { kind: "grille", pattern: DEFAULT_GRILLE } : { kind: k }
+              set({ top })
+            }}
+          />
           {c.top.kind === "ventSlot" && <NumberField label="Ranura d'aire" value={c.top.gap} min={20} max={200} step={5} onChange={(gap) => set({ top: { kind: "ventSlot", gap } })} />}
         </SimpleGrid>
 

@@ -13,7 +13,7 @@ import {
   LuTrash2,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcon"
-import { BUILTIN_TEMPLATES, insertRefCopy, newId, rowOf, type Composition, type Module, type Zone } from "../../core/model"
+import { BUILTIN_TEMPLATES, insertRefCopy, newId, reorderModule, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
 import { RefAddMenu } from "./RefInspector"
 import { zoneLabel } from "./zoneLabel"
 
@@ -86,6 +86,35 @@ export function StructureTree({
     ;[modules[i], modules[j]] = [modules[j]!, modules[i]!]
     onChange({ ...comp, modules })
   }
+  // Arrossegar per ordenar (mòduls dins de la seva fila, i objectes).
+  const [drag, setDrag] = useState<{ kind: "module" | "ref"; id: string } | null>(null)
+  const [over, setOver] = useState<{ id: string; after: boolean } | null>(null)
+  const canDrop = (kind: "module" | "ref", id: string) => {
+    if (!drag || drag.kind !== kind || drag.id === id) return false
+    if (kind === "ref") return true
+    const a = comp.modules.find((m) => m.id === drag.id)
+    const b = comp.modules.find((m) => m.id === id)
+    return !!a && !!b && rowOf(a) === rowOf(b)
+  }
+  const dnd = (kind: "module" | "ref", id: string): RowDnd => ({
+    dragging: drag?.id === id,
+    indicator: over?.id === id && canDrop(kind, id) ? (over.after ? "after" : "before") : null,
+    onStart: () => setDrag({ kind, id }),
+    onOver: (after) => {
+      if (!canDrop(kind, id)) return false
+      if (over?.id !== id || over.after !== after) setOver({ id, after })
+      return true
+    },
+    onDrop: (after) => {
+      if (drag && canDrop(kind, id)) onChange(kind === "module" ? reorderModule(comp, drag.id, id, after) : reorderRef(comp, drag.id, id, after))
+      setDrag(null)
+      setOver(null)
+    },
+    onEnd: () => {
+      setDrag(null)
+      setOver(null)
+    },
+  })
   const hasWall = comp.modules.some((m) => rowOf(m) === "wall")
   const rows: { row: "floor" | "wall"; label: string }[] = hasWall
     ? [
@@ -122,6 +151,7 @@ export function StructureTree({
               hint={`${m.carcass.width} × ${m.carcass.height}`}
               selected={selection.kind === "module" && selection.id === m.id}
               onClick={() => onSelect({ kind: "module", id: m.id })}
+              dnd={dnd("module", m.id)}
               menu={
                 <RowMenu label={`Opcions de «${m.name}»`}>
                   <Menu.Item value="up" disabled={neighbourIndex(i, -1) < 0} onClick={() => move(i, -1)}>
@@ -189,6 +219,7 @@ export function StructureTree({
           hint={`${r.w} × ${r.h}`}
           selected={selection.kind === "ref" && selection.id === r.id}
           onClick={() => onSelect({ kind: "ref", id: r.id })}
+          dnd={dnd("ref", r.id)}
           menu={
             <RowMenu label={`Opcions de «${r.name}»`}>
               <Menu.Item
@@ -251,6 +282,16 @@ function ZoneRows({
   )
 }
 
+interface RowDnd {
+  dragging: boolean
+  indicator: "before" | "after" | null
+  onStart: () => void
+  /** Torna false si no s'hi pot deixar (p. ex. un mòdul d'una altra fila). */
+  onOver: (after: boolean) => boolean
+  onDrop: (after: boolean) => void
+  onEnd: () => void
+}
+
 function Row({
   icon,
   label,
@@ -263,7 +304,10 @@ function Row({
   menu,
   onToggle,
   toggleLabel,
+  dnd,
 }: {
+  /** Arrossegar per ordenar: la fila es pot agafar i deixar abans/després d'una altra. */
+  dnd?: RowDnd
   /** Si hi és, la icona és una fletxa que plega/desplega sense seleccionar la fila. */
   onToggle?: () => void
   toggleLabel?: string
@@ -293,6 +337,44 @@ function Row({
       onClick={onClick}
       className="group"
       minH="30px"
+      position="relative"
+      opacity={dnd?.dragging ? 0.4 : 1}
+      draggable={!!dnd}
+      onDragStart={
+        dnd
+          ? (e) => {
+              e.dataTransfer.effectAllowed = "move"
+              e.dataTransfer.setData("text/plain", label)
+              dnd.onStart()
+            }
+          : undefined
+      }
+      onDragOver={
+        dnd
+          ? (e) => {
+              const r = e.currentTarget.getBoundingClientRect()
+              if (dnd.onOver(e.clientY > r.top + r.height / 2)) {
+                e.preventDefault()
+                e.dataTransfer.dropEffect = "move"
+              }
+            }
+          : undefined
+      }
+      onDrop={
+        dnd
+          ? (e) => {
+              e.preventDefault()
+              const r = e.currentTarget.getBoundingClientRect()
+              dnd.onDrop(e.clientY > r.top + r.height / 2)
+            }
+          : undefined
+      }
+      onDragEnd={dnd?.onEnd}
+      _before={
+        dnd?.indicator
+          ? { content: '""', position: "absolute", left: `${depth * 14 + 6}px`, right: 1, height: "2px", bg: "wood.solid", borderRadius: "full", pointerEvents: "none", ...(dnd.indicator === "before" ? { top: "-1px" } : { bottom: "-1px" }) }
+          : undefined
+      }
     >
       {onToggle ? (
         <Box

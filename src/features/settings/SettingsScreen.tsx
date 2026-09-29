@@ -298,7 +298,7 @@ function Section({ id, title, icon, onReset, wide, children }: { id: string; tit
 }
 
 /** Graella de targetes: tantes columnes com hi càpiguen. */
-const CARD_GRID = { minChildWidth: "320px", gap: 3 } as const
+const CARD_GRID = { minChildWidth: "min(320px, 100%)", gap: 3 } as const
 
 // --- Objectes de referència --------------------------------------------------------------
 
@@ -324,7 +324,7 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
       <Button size="xs" variant="outline" alignSelf="flex-start" onClick={add}>
         <LuPlus /> Afegir objecte
       </Button>
-      <SimpleGrid {...CARD_GRID} minChildWidth="380px">
+      <SimpleGrid {...CARD_GRID} minChildWidth="min(380px, 100%)">
         {refs.map((r, i) => (
         <Card.Root key={r.id} variant="subtle" size="sm" opacity={r.hidden ? 0.55 : 1}>
           <Card.Body p={3} gap={2}>
@@ -751,7 +751,7 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
             </SegmentGroup.Item>
           ))}
         </SegmentGroup.Root>
-        <Field.HelperText>Ràpida per treballar (colors per tipus de peça); Presentació per ensenyar-lo (materials reals). Al visor es commuta amb el botó ✦ de la barra.</Field.HelperText>
+        <Field.HelperText>Ràpida per treballar (al visor, modes «Per peça» i «Textura»); Presentació per ensenyar-lo. Es canvia amb els tres botons de la barra del visor. Al visor es commuta amb el botó ✦ de la barra.</Field.HelperText>
       </Field.Root>
 
       <SimpleGrid columns={{ base: 1, lg: 2 }} gap={6} alignItems="start">

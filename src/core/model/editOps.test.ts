@@ -42,3 +42,16 @@ describe("edició: moure, copiar i enganxar", () => {
     expect(z2.front).toBeTruthy()
   })
 })
+
+describe("arrossegar per ordenar", () => {
+  it("mòduls dins de la fila", async () => {
+    const { reorderModule } = await import("./editOps")
+    expect(reorderModule(comp(), "c", "a", false).modules.map((m) => m.id)).toEqual(["c", "a", "b"])
+    expect(reorderModule(comp(), "a", "c", true).modules.map((m) => m.id)).toEqual(["b", "c", "a"])
+  })
+  it("objectes", async () => {
+    const { reorderRef } = await import("./editOps")
+    const c = { ...comp(), references: [...comp().references, { ...comp().references[0]!, id: "s" }] }
+    expect(reorderRef(c, "s", "r", false).references.map((r) => r.id)).toEqual(["s", "r"])
+  })
+})

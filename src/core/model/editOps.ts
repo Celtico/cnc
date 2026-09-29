@@ -72,3 +72,28 @@ export function moveAllBy(comp: Composition, dx: number): Composition {
     references: rest ? comp.references.map((r) => ({ ...r, x: r.x + rest })) : comp.references,
   }
 }
+
+/**
+ * Arrossegar per ordenar: posa el mòdul `id` just abans (o després) de `targetId`. Només
+ * dins de la mateixa fila (a terra / penjats); si són de files diferents no fa res.
+ */
+export function reorderModule(comp: Composition, id: string, targetId: string, after: boolean): Composition {
+  if (id === targetId) return comp
+  const m = comp.modules.find((x) => x.id === id)
+  const t = comp.modules.find((x) => x.id === targetId)
+  if (!m || !t || rowOf(m) !== rowOf(t)) return comp
+  const rest = comp.modules.filter((x) => x.id !== id)
+  const at = rest.indexOf(t) + (after ? 1 : 0)
+  return { ...comp, modules: [...rest.slice(0, at), m, ...rest.slice(at)] }
+}
+
+/** Arrossegar per ordenar els objectes de referència. */
+export function reorderRef(comp: Composition, id: string, targetId: string, after: boolean): Composition {
+  if (id === targetId) return comp
+  const r = comp.references.find((x) => x.id === id)
+  const t = comp.references.find((x) => x.id === targetId)
+  if (!r || !t) return comp
+  const rest = comp.references.filter((x) => x.id !== id)
+  const at = rest.indexOf(t) + (after ? 1 : 0)
+  return { ...comp, references: [...rest.slice(0, at), r, ...rest.slice(at)] }
+}

@@ -1,7 +1,9 @@
-import { Button, Field, IconButton, Input, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Button, Field, HStack, IconButton, Input, Menu, Portal, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState } from "react"
 import { ProfileEditor } from "./ProfileEditor"
-import { LuArrowDownToLine, LuBrickWall, LuBookmark, LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuPlus, LuScan, LuTrash2 } from "react-icons/lu"
+import type { IconType } from "react-icons"
+import { IconChoice, type IconOption } from "../../components/IconChoice"
+import { LuBox, LuCylinder, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuScissors, LuShield, LuSpline, LuArrowDownToLine, LuBrickWall, LuBookmark, LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuPlus, LuScan, LuTrash2 } from "react-icons/lu"
 import { PanelSection } from "../../components/PanelSection"
 import { toaster } from "../../components/ui/toaster"
 import { AXIS_INDEX, SECTION_AXES, anchorRef, insertRefCopy, toNodes, canBeGhost, compositionWidth, newId, visibleReferences, type Composition, type RefObject } from "../../core/model"
@@ -89,8 +91,8 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
           <Segments
             value={o.effect ?? "obstacle"}
             items={[
-              ["obstacle", "Obstacle"],
-              ["cut", "Talla la fusta"],
+              ["obstacle", "Obstacle", LuShield],
+              ["cut", "Talla", LuScissors],
             ]}
             onChange={(v) => update({ effect: v === "cut" ? "cut" : undefined })}
           />
@@ -100,9 +102,9 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
           <Segments
             value={o.shape ?? "box"}
             items={[
-              ["box", "Caixa"],
-              ["cylinder", "Cilindre"],
-              ["profile", "Perfil"],
+              ["box", "Caixa", LuBox],
+              ["cylinder", "Cilindre", LuCylinder],
+              ["profile", "Perfil", LuSpline],
             ]}
             onChange={(v) => {
               if (v === "cylinder") update(cylinderPatch(o, o.axis ?? "z"))
@@ -127,17 +129,7 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
       <PanelSection id="ref-size" title="Mides" icon={LuMoveDiagonal}>
         {o.shape === "profile" ? (
           <>
-            <Field.Root>
-              <Field.Label>Direcció</Field.Label>
-              <NativeSelect.Root size="sm">
-                <NativeSelect.Field value={o.axis ?? "z"} onChange={(e) => update(profileAxisPatch(o, e.target.value as Axis))}>
-                  <option value="z">Cap a la paret</option>
-                  <option value="y">Vertical</option>
-                  <option value="x">De costat</option>
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
+            <IconChoice label="Direcció" value={(o.axis ?? "z") as Axis} options={AXIS_OPTIONS} onChange={(a) => update(profileAxisPatch(o, a))} />
             <SimpleGrid columns={2} gap={2}>
               <NumberField label="Llarg" value={sectionOf(o).length} min={1} max={20000} step={10} onChange={(length) => update(sizePatch(o, { length }))} />
               <Stack gap={0} justify="end" pb={2}>
@@ -149,17 +141,7 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
           </>
         ) : o.shape === "cylinder" ? (
           <>
-            <Field.Root>
-              <Field.Label>Direcció</Field.Label>
-              <NativeSelect.Root size="sm">
-                <NativeSelect.Field value={o.axis ?? "z"} onChange={(e) => update(cylinderPatch(o, e.target.value as Axis))}>
-                  <option value="z">Cap a la paret</option>
-                  <option value="y">Vertical</option>
-                  <option value="x">De costat</option>
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
+            <IconChoice label="Direcció" value={(o.axis ?? "z") as Axis} options={AXIS_OPTIONS} onChange={(a) => update(cylinderPatch(o, a))} />
             <SimpleGrid columns={2} gap={2}>
               <NumberField label="Ø" value={cylinderDims(o).diameter} min={1} max={20000} step={5} onChange={(diameter) => update(cylinderPatch(o, o.axis ?? "z", { diameter }))} />
               <NumberField label="Llarg" value={cylinderDims(o).length} min={1} max={20000} step={10} onChange={(length) => update(cylinderPatch(o, o.axis ?? "z", { length }))} />
@@ -168,17 +150,7 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
         ) : (
           <>
           {o.effect === "cut" && (
-            <Field.Root>
-              <Field.Label>Direcció del tall</Field.Label>
-              <NativeSelect.Root size="sm">
-                <NativeSelect.Field value={o.axis ?? "z"} onChange={(e) => update({ axis: e.target.value === "z" ? undefined : (e.target.value as Axis) })}>
-                  <option value="z">Cap a la paret (fons, portes)</option>
-                  <option value="y">Vertical (base, tapa, prestatges)</option>
-                  <option value="x">De costat (laterals, divisions)</option>
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
+            <IconChoice label="Direcció del tall" value={(o.axis ?? "z") as Axis} options={AXIS_OPTIONS} onChange={(a) => update({ axis: a === "z" ? undefined : a })} />
           )}
           <SimpleGrid columns={3} gap={2}>
             <NumberField label="Ample" value={o.w} min={1} max={20000} step={10} onChange={(w) => update({ w })} />
@@ -233,6 +205,13 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
 }
 
 type Axis = "x" | "y" | "z"
+
+/** Direcció (eix) amb icona; el tooltip diu quines peces talla. */
+const AXIS_OPTIONS: IconOption<Axis>[] = [
+  { value: "z", label: "Cap a la paret", icon: LuMoveDiagonal2, hint: "Cap a la paret (talla fons i portes)" },
+  { value: "y", label: "Vertical", icon: LuMoveVertical, hint: "Vertical (talla base, tapa i prestatges)" },
+  { value: "x", label: "De costat", icon: LuMoveHorizontal, hint: "De costat (talla laterals i divisions)" },
+]
 
 /** Noms dels eixos (u, v) de la secció per a cada direcció (`SECTION_AXES`). */
 const AXIS_NAMES: Record<Axis, [string, string]> = { z: ["Ample", "Alt"], y: ["Ample", "Fondària"], x: ["Fondària", "Alt"] }
@@ -291,13 +270,18 @@ function cylinderPatch(o: RefObject, axis: Axis, change: { diameter?: number; le
   return { shape: "cylinder", axis, w, h, d, x: Math.round(cx - w / 2), y: Math.max(0, Math.round(cy - h / 2)), z: Math.round(cz - d / 2) }
 }
 
-function Segments({ value, items, onChange }: { value: string; items: [string, string][]; onChange: (v: string) => void }) {
+function Segments({ value, items, onChange }: { value: string; items: [string, string, IconType?][]; onChange: (v: string) => void }) {
   return (
     <SegmentGroup.Root size="sm" w="full" value={value} onValueChange={(e) => e.value && onChange(e.value)}>
       <SegmentGroup.Indicator />
-      {items.map(([v, label]) => (
+      {items.map(([v, label, Icon]) => (
         <SegmentGroup.Item key={v} value={v} flex={1}>
-          <SegmentGroup.ItemText>{label}</SegmentGroup.ItemText>
+          <SegmentGroup.ItemText>
+            <HStack gap={1.5}>
+              {Icon && <Icon />}
+              {label}
+            </HStack>
+          </SegmentGroup.ItemText>
           <SegmentGroup.ItemHiddenInput />
         </SegmentGroup.Item>
       ))}

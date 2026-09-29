@@ -1,5 +1,5 @@
 import { Button, Field, HStack, Menu, NativeSelect, Portal, SegmentGroup, Slider, Stack, Switch, Text } from "@chakra-ui/react"
-import { LuChevronDown, LuDoorOpen, LuImageDown, LuLayers, LuPalette } from "react-icons/lu"
+import { LuChevronDown, LuDoorOpen, LuImageDown } from "react-icons/lu"
 import { VIEW_LABELS, type ViewName } from "../../components/viewer/CabinetViewer"
 
 const VIEWS: ViewName[] = ["front", "back", "left", "right", "top", "3d"]
@@ -53,15 +53,12 @@ export function ViewerControls({
   hasMoving,
   hasSelectedZone,
   onImage,
-  colorsLocked = false,
 }: {
   state: ViewerState
   onChange: (patch: Partial<ViewerState>) => void
   hasMoving: boolean
   hasSelectedZone: boolean
   onImage: () => void
-  /** En mode Presentació els colors són sempre els materials. */
-  colorsLocked?: boolean
 }) {
   return (
     <Stack gap={4}>
@@ -115,33 +112,6 @@ export function ViewerControls({
         <Switch.Label>Obrir només el compartiment seleccionat</Switch.Label>
       </Switch.Root>
 
-      <Field.Root>
-        <Field.Label>Colors</Field.Label>
-        <SegmentGroup.Root size="sm" disabled={colorsLocked} value={state.materialMode} onValueChange={(e) => (e.value === "material" || e.value === "role") && onChange({ materialMode: e.value })}>
-          <SegmentGroup.Indicator />
-          <SegmentGroup.Item value="material" aria-label="Veure com a fusta">
-            <SegmentGroup.ItemText>
-              <HStack gap={1.5}>
-                <LuPalette /> Materials
-              </HStack>
-            </SegmentGroup.ItemText>
-            <SegmentGroup.ItemHiddenInput />
-          </SegmentGroup.Item>
-          <SegmentGroup.Item value="role" aria-label="Veure per tipus de peça">
-            <SegmentGroup.ItemText>
-              <HStack gap={1.5}>
-                <LuLayers /> Per tipus de peça
-              </HStack>
-            </SegmentGroup.ItemText>
-            <SegmentGroup.ItemHiddenInput />
-          </SegmentGroup.Item>
-        </SegmentGroup.Root>
-        <Field.HelperText>
-          {colorsLocked
-            ? "En mode Presentació es veuen sempre els materials. Els colors per peça són del mode Ràpida."
-            : "Per tipus de peça: cada tipus (costat, balda, fons, front…) d'un color. Materials: veta i cantells reals."}
-        </Field.HelperText>
-      </Field.Root>
 
       <Button size="sm" variant="outline" colorPalette="wood" alignSelf="flex-start" onClick={onImage}>
         <LuImageDown /> Descarregar imatge

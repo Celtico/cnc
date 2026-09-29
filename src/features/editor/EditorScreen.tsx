@@ -1,4 +1,4 @@
-import { Alert, Badge, Box, Button, CloseButton, Drawer, Field, Flex, HStack, IconButton, Popover, Portal, SegmentGroup, SimpleGrid, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
+import { Alert, Badge, Box, Button, Group, CloseButton, Drawer, Field, Flex, HStack, IconButton, Popover, Portal, SegmentGroup, SimpleGrid, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
 import { createElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   LuArrowDownToLine,
@@ -28,6 +28,8 @@ import {
   LuScan,
   LuShrink,
   LuSparkles,
+  LuShapes,
+  LuTrees,
   LuVideo,
   LuSlidersHorizontal,
   LuSlidersVertical,
@@ -77,6 +79,13 @@ function readTab(): ViewTab {
     return "3d"
   }
 }
+
+type ViewMode = "pieces" | "texture" | "presentation"
+const VIEW_MODES: [ViewMode, string, string, typeof LuShapes][] = [
+  ["pieces", "Per peça", "cada tipus de peça d'un color, ràpid i amb guies", LuShapes],
+  ["texture", "Textura", "materials i veta, ràpid i amb guies", LuTrees],
+  ["presentation", "Presentació", "ombres, terra i paret, sense guies", LuSparkles],
+]
 
 export function EditorScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
@@ -188,6 +197,12 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const [quality, setQuality] = useRenderQuality()
   const [viewer, setViewerState] = useState<Omit<ViewerState, "materialMode">>({ view: "3d", opening: 0, openOnlySelected: false })
   const viewerState: ViewerState = { ...viewer, materialMode: quality === "fast" && roleColors ? "role" : "material" }
+  // Mode del visor: Per peça (ràpid, colors per tipus), Textura (ràpid, materials) o Presentació.
+  const viewMode: ViewMode = quality === "presentation" ? "presentation" : roleColors ? "pieces" : "texture"
+  const setViewMode = (m: ViewMode) => {
+    setQuality(m === "presentation" ? "presentation" : "fast")
+    if (m !== "presentation") setRoleColors(m === "pieces")
+  }
   const setViewer = (patch: Partial<ViewerState>) => {
     const { materialMode, ...rest } = patch
     if (materialMode) setRoleColors(materialMode === "role")
@@ -1147,16 +1162,14 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           <IconButton aria-label={exploded ? "Vista muntada" : "Vista explosionada"} title={exploded ? "Vista muntada" : "Vista explosionada"} size="sm" variant={exploded ? "solid" : "surface"} colorPalette="wood" onClick={() => setExploded((v) => !v)}>
             {exploded ? <LuShrink /> : <LuExpand />}
           </IconButton>
-          <IconButton
-            aria-label={quality === "presentation" ? "Tornar al mode de treball" : "Mode presentació"}
-            title={quality === "presentation" ? "Presentació (clic: tornar al mode de treball, ràpid i amb guies)" : "Mode presentació: ombres i aspecte de catàleg, sense guies"}
-            size="sm"
-            variant={quality === "presentation" ? "solid" : "surface"}
-            colorPalette="wood"
-            onClick={() => setQuality(quality === "presentation" ? "fast" : "presentation")}
-          >
-            <LuSparkles />
-          </IconButton>
+          {/* Mode del visor: tres botons junts (Per peça / Textura / Presentació). */}
+          <Group attached orientation="vertical">
+            {VIEW_MODES.map(([v, label, tip, Icon]) => (
+              <IconButton key={v} aria-label={label} aria-pressed={viewMode === v} title={`${label}: ${tip}`} size="sm" variant={viewMode === v ? "solid" : "surface"} colorPalette="wood" onClick={() => setViewMode(v)}>
+                <Icon />
+              </IconButton>
+            ))}
+          </Group>
           <IconButton
             aria-label="Encuadrar el moble"
             aria-pressed={framed}
@@ -1185,7 +1198,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                       <Drawer.Title>Opcions de vista</Drawer.Title>
                     </Drawer.Header>
                     <Drawer.Body overflowY="auto" pb={6}>
-                      <ViewerControls colorsLocked={quality === "presentation"} state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} />
+                      <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} />
                     </Drawer.Body>
                     <Drawer.CloseTrigger asChild>
                       <CloseButton size="sm" />
@@ -1205,7 +1218,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                 <Popover.Positioner>
                   <Popover.Content w="320px">
                     <Popover.Body>
-                      <ViewerControls colorsLocked={quality === "presentation"} state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} />
+                      <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} />
                     </Popover.Body>
                   </Popover.Content>
                 </Popover.Positioner>

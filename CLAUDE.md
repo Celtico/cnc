@@ -246,15 +246,18 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   - **Materials** visibles a les propietats (no amagats): cos, **fronts** (`frontMaterial`,
     buit = el del cos; portes, fronts de calaix, abatibles, reixetes, fixos i trapes) i
     fons. Al moble, «Materials de tot el moble» aplica el canvi a tots els mòduls.
-  - **Mode del 3D** (`viewer/renderQuality.ts`): només dos, **Ràpida** (per treballar, amb
-    guies) i **Presentació** (sense perfils, graella ni botons; el moble va sobre un terra i
-    contra una paret amb llum d'estudi, `viewer/PresentationRoom.tsx`, tot procedural i sense
-    xarxa). Es commuta amb el botó ✦ (`LuSparkles`) de la barra del visor, fora del menú
-    perquè s'usa molt; també a Preferències › Visor 3D. L'escena (terra, color de paret, llum)
-    és a `viewer/presentationScene.ts`. Tot és preferència del dispositiu (localStorage).
-    Colors: en **Ràpida** per defecte **per tipus de peça** (paleta i llegenda a `viewer/roleColors.tsx`; `mobles:viewer-role-colors-fast`,
-    es pot canviar a Materials al menú de vista); en **Presentació** sempre materials reals
-    (el selector de colors queda desactivat, `colorsLocked`).
+  - **Mode del visor**: tres botons junts a la barra del visor (`VIEW_MODES` a
+    `EditorScreen`): **Per peça** (`LuShapes`: ràpid, colors per tipus de peça, paleta i
+    llegenda a `viewer/roleColors.tsx`), **Textura** (`LuTrees`: ràpid, materials i veta) i
+    **Presentació** (`LuSparkles`: ombres, sense perfils, graella ni «+»; terra i paret amb llum
+    d'estudi, `viewer/PresentationRoom.tsx`, procedural). Per dins són la qualitat
+    (`viewer/renderQuality.ts`: fast / presentation, també a Preferències › Visor 3D) més
+    `mobles:viewer-role-colors-fast`. L'escena és a `viewer/presentationScene.ts`.
+  - **Opcions amb icona** (`components/IconChoice.tsx`): poques opcions → botons d'icona amb
+    el nom al tooltip i l'opció triada al costat del títol. Base, Fons, Tapa (mòdul), Patró de
+    reixeta, Direcció dels objectes; Efecte i Forma dels objectes són segments amb icona i text.
+  - **Arbre: arrossegar per ordenar** (`reorderModule`, `reorderRef`): mòduls dins de la
+    seva fila i objectes; una línia marca on cau. El menu … manté «Moure amunt/avall».
   - **Inspector en seccions plegables independents** (`PanelSection` fora d'un
     `PanelGroup`): se'n poden tenir diverses obertes i cada una recorda el seu estat
     (`mobles:section:<id>`). Mòdul: Mides · Estructura · Materials ·

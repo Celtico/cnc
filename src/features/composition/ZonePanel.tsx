@@ -1,4 +1,4 @@
-import { Button, Field, HStack, IconButton, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
+import { Button, Field, HStack, IconButton, Menu, Portal, SegmentGroup, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
 import { LuArrowUp, LuCopy, LuEllipsis, LuColumns2, LuRows2, LuPlus, LuRows3, LuRuler, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
 import { PanelSection } from "../../components/PanelSection"
 import {
@@ -18,6 +18,8 @@ import {
 import { NumberField } from "../editor/ParamsForm"
 import { FRONT_ICONS } from "./zoneIcon"
 import { Tooltip } from "../../components/ui/tooltip"
+import { IconChoice } from "../../components/IconChoice"
+import { LuColumns3, LuGrip } from "react-icons/lu"
 
 const FRONT_LABELS: Record<Front["kind"] | "none", string> = {
   none: "Obert",
@@ -268,17 +270,16 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
       return (
         <Stack gap={3}>
           {/* Una fila per camp: el panell és estret i les opcions són llargues. */}
-          <Field.Root>
-            <Field.Label>Patró</Field.Label>
-            <NativeSelect.Root size="sm">
-              <NativeSelect.Field value={p.kind} onChange={(e) => setP({ kind: e.target.value as typeof p.kind })}>
-                <option value="slotsV">Ranures verticals</option>
-                <option value="slotsH">Ranures horitzontals</option>
-                <option value="holes">Forats al tresbolillo</option>
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
-          </Field.Root>
+          <IconChoice
+            label="Patró"
+            value={p.kind}
+            options={[
+              { value: "slotsV", label: "Ranures verticals", icon: LuColumns3 },
+              { value: "slotsH", label: "Ranures horitzontals", icon: LuRows3 },
+              { value: "holes", label: "Forats al tresbolillo", icon: LuGrip },
+            ]}
+            onChange={(kind) => setP({ kind })}
+          />
           <Field.Root>
             <Field.Label>Muntatge</Field.Label>
             <SegmentGroup.Root size="sm" w="full" value={front.mount} onValueChange={(e) => onChange({ ...front, mount: e.value as "removable" | "hinged" })}>
