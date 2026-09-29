@@ -306,8 +306,13 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     extruït, DXF amb bulge, STEP prisma amb cares cilíndriques (`outlineSolid`; els
     mecanitzats d'aquestes peces només al DXF/CSV). Preset «Taula oval».
   - **Posició dels objectes**: els camps són «↔ De costat X», «↕ Alçada Y» i «⤢ Fons Z»
-    (`AxisLabel`, mateixes icones que la Direcció) i l'etiqueta d'arrossegar al 3D fa servir
+    (`AxisLabel`, icones de colors com les fletxes) i l'etiqueta d'arrossegar al 3D fa servir
     les mateixes fletxes. `NumberField.label` accepta un ReactNode.
+  - **Gizmo de moviment** (`MoveGizmo`): l'objecte seleccionat porta tres fletxes al 3D
+    (vermella X de costat, verda Y amunt, blava Z endavant), de mida constant a la pantalla i per
+    sobre de tot; cada una arrossega només en la seva direcció (pla que conté l'eix i mira a
+    la càmera), amb el mateix imant. S'amaguen les fixades (al terra: Y; a la paret: Z) i les
+    que miren a la càmera en vistes ortogràfiques. Arrossegar el cos continua movent en el pla.
   - **Opcions amb icona** (`components/IconChoice.tsx`): poques opcions → botons d'icona amb
     el nom al tooltip i l'opció triada al costat del títol. Base, Fons, Tapa (mòdul), Patró de
     reixeta, Direcció dels objectes; Efecte i Forma dels objectes, portes (una/dues, frontisses),

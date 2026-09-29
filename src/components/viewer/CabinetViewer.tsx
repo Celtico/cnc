@@ -593,6 +593,46 @@ function RefGhost({
     setDrag(null)
   }
 
+  const moveEvt = (e: ThreeEvent<PointerEvent>) => {
+        const st = state.current
+        if (!st) return
+        e.stopPropagation()
+        if (!st.moved && Math.hypot(e.clientX - st.start[0], e.clientY - st.start[1]) < 3) return
+        st.moved = true
+        const at = e.ray.intersectPlane(st.plane, new Vector3())
+        if (!at) return
+        at.sub(st.grab)
+        const raw = { x: (at.x - offset[0]) / S, y: (at.y - offset[1]) / S, z: (at.z - offset[2]) / S }
+        const next = { x: g.x, y: g.y, z: g.z, axes: st.axes, snapped: [] as Axis[] }
+        for (const a of st.axes) {
+          const size = a === "x" ? g.w : a === "y" ? g.h : g.d
+          const r = snapAxis(raw[a], size, snap[a], e.altKey)
+          next[a] = r.v
+          if (r.snapped) next.snapped.push(a)
+        }
+        // No es pot enfonsar al terra.
+        next.y = Math.max(0, next.y)
+        setDrag(next)
+  }
+  // Fletxes de moviment (com el gizmo de Blender o Fusion): cada una mou només en la seva
+  // direcció. Pla que conté l'eix i mira cap a la càmera.
+  const camera = useThree((st) => st.camera)
+  const startAxis = (a: Axis, e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation()
+    const dir = a === "x" ? new Vector3(1, 0, 0) : a === "y" ? new Vector3(0, 1, 0) : new Vector3(0, 0, 1)
+    const toCam = camera.getWorldDirection(new Vector3()).negate()
+    const n = dir.clone().cross(toCam).cross(dir)
+    if (n.lengthSq() < 1e-6) return
+    const corner = new Vector3(g.x * S + offset[0], g.y * S + offset[1], g.z * S + offset[2])
+    state.current = { plane: new Plane().setFromNormalAndCoplanarPoint(n.normalize(), e.point), grab: e.point.clone().sub(corner), axes: [a], start: [e.clientX, e.clientY], moved: false }
+    ;(e.target as Element | null)?.setPointerCapture?.(e.pointerId)
+    if (controls) controls.enabled = false
+  }
+  // Direccions que es poden moure (els enganxaments en fixen alguna) i visibles des d'aquesta vista.
+  const gizmoAxes = (["x", "y", "z"] as Axis[]).filter(
+    (a) => !(a === "y" && g.onFloor) && !(a === "z" && g.onWall) && !(a === "z" && (view === "front" || view === "back")) && !(a === "y" && view === "top") && !(a === "x" && (view === "left" || view === "right")),
+  )
+
   return (
     <group position={[(pos.x + g.w / 2) * S, (pos.y + g.h / 2) * S, (pos.z + g.d / 2) * S]}>
     <mesh
@@ -627,27 +667,7 @@ function RefGhost({
         ;(e.target as Element | null)?.setPointerCapture?.(e.pointerId)
         if (controls) controls.enabled = false
       } : undefined}
-      onPointerMove={draggable ? (e: ThreeEvent<PointerEvent>) => {
-        const st = state.current
-        if (!st) return
-        e.stopPropagation()
-        if (!st.moved && Math.hypot(e.clientX - st.start[0], e.clientY - st.start[1]) < 3) return
-        st.moved = true
-        const at = e.ray.intersectPlane(st.plane, new Vector3())
-        if (!at) return
-        at.sub(st.grab)
-        const raw = { x: (at.x - offset[0]) / S, y: (at.y - offset[1]) / S, z: (at.z - offset[2]) / S }
-        const next = { x: g.x, y: g.y, z: g.z, axes: st.axes, snapped: [] as Axis[] }
-        for (const a of st.axes) {
-          const size = a === "x" ? g.w : a === "y" ? g.h : g.d
-          const r = snapAxis(raw[a], size, snap[a], e.altKey)
-          next[a] = r.v
-          if (r.snapped) next.snapped.push(a)
-        }
-        // No es pot enfonsar al terra.
-        next.y = Math.max(0, next.y)
-        setDrag(next)
-      } : undefined}
+      onPointerMove={draggable ? moveEvt : undefined}
       onPointerUp={draggable ? end : undefined}
       onPointerCancel={draggable ? end : undefined}
     >
@@ -656,6 +676,7 @@ function RefGhost({
       <meshStandardMaterial side={DoubleSide} color={tint} transparent opacity={selected || hit ? 0.38 : g.effect === "cut" ? 0.45 : 0.22} depthWrite={false} depthTest={g.effect !== "cut"} />
       {(guides || selected || hit || g.effect === "cut") && <Edges color={selected ? SELECT_COLOR : tint} threshold={cyl ? 30 : 1} depthTest={g.effect !== "cut"} renderOrder={g.effect === "cut" ? 9 : 0} />}
     </mesh>
+      {draggable && <MoveGizmo axes={gizmoAxes} active={drag?.axes.length === 1 ? drag.axes[0]! : null} onStart={startAxis} onMove={moveEvt} onEnd={end} />}
       {drag && (
         <Html position={[0, (g.h / 2) * S, 0]} center zIndexRange={[30, 20]} style={{ pointerEvents: "none" }}>
           <span
@@ -887,6 +908,71 @@ function ZoneHighlight({ box: b }: { box: { x0: number; x1: number; y0: number; 
 
 /** Botó + ancorat a un punt del 3D, per afegir un mòdul a un costat del seleccionat. */
 /** Escala un grup perquè 1 unitat sigui `px` píxels a la pantalla (nanses i botons 3D). */
+const AXIS_COLOR: Record<Axis, string> = { x: "#e5484d", y: "#30a46c", z: "#0090ff" }
+
+/**
+ * Gizmo de moviment d'un objecte: una fletxa per direcció (vermella de costat, verda amunt,
+ * blava endavant), de mida constant a la pantalla i sempre per sobre de tot.
+ */
+function MoveGizmo({
+  axes,
+  active,
+  onStart,
+  onMove,
+  onEnd,
+}: {
+  axes: Axis[]
+  active: Axis | null
+  onStart: (a: Axis, e: ThreeEvent<PointerEvent>) => void
+  onMove: (e: ThreeEvent<PointerEvent>) => void
+  onEnd: (e: ThreeEvent<PointerEvent>) => void
+}) {
+  const scaler = useRef<Group>(null)
+  usePixelScale(scaler, 16)
+  const [hover, setHover] = useState<Axis | null>(null)
+  const rot: Record<Axis, [number, number, number]> = { x: [0, 0, -Math.PI / 2], y: [0, 0, 0], z: [Math.PI / 2, 0, 0] }
+  return (
+    <group ref={scaler}>
+      {axes.map((a) => {
+        const on = hover === a || active === a
+        const mat = <meshBasicMaterial color={AXIS_COLOR[a]} transparent opacity={active && active !== a ? 0.25 : on ? 1 : 0.85} depthTest={false} depthWrite={false} />
+        return (
+          <group
+            key={a}
+            rotation={rot[a]}
+            onPointerOver={(e) => {
+              e.stopPropagation()
+              setHover(a)
+              document.body.style.cursor = "grab"
+            }}
+            onPointerOut={() => {
+              setHover(null)
+              if (!active) document.body.style.cursor = ""
+            }}
+            onPointerDown={(e) => onStart(a, e)}
+            onPointerMove={onMove}
+            onPointerUp={onEnd}
+            onPointerCancel={onEnd}
+          >
+            {/* Tija i punta; un cilindre invisible més gruixut per agafar-la fàcilment. */}
+            <mesh position={[0, 2, 0]} renderOrder={30}>
+              <cylinderGeometry args={[on ? 0.14 : 0.1, on ? 0.14 : 0.1, 3, 10]} />
+              {mat}
+            </mesh>
+            <mesh position={[0, 3.9, 0]} renderOrder={30}>
+              <coneGeometry args={[on ? 0.5 : 0.4, 1.1, 16]} />
+              {mat}
+            </mesh>
+            <mesh position={[0, 2.5, 0]} visible={false}>
+              <cylinderGeometry args={[0.6, 0.6, 4.2, 8]} />
+            </mesh>
+          </group>
+        )
+      })}
+    </group>
+  )
+}
+
 function usePixelScale(ref: React.RefObject<Group | null>, px: number) {
   const tmp = useMemo(() => new Vector3(), [])
   useFrame(({ camera, size }) => {
