@@ -240,7 +240,7 @@ export function CabinetViewer({
         ))}
         {highlightZone && <ZoneHighlight box={highlightZone} />}
         {selectedIndex !== undefined && q.guides && <CableMarks panels={panels.filter((p) => p.module === selectedIndex)} />}
-        {selected && onMoveModule && q.guides && view !== "top" && (
+        {selected && onMoveModule && view !== "top" && (
           <MoveHandle
             m={selected}
             others={[...(modules ?? []).filter((o) => o.id !== selected.id).flatMap((o) => [o.x, o.x + o.width]), ...(ghosts ?? []).flatMap((g) => [g.x, g.x + g.w])]}

@@ -1,7 +1,9 @@
-import { Alert, Badge, Box, Button, CloseButton, Drawer, Field, Flex, HStack, IconButton, NativeSelect, Popover, Portal, SegmentGroup, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
+import { Alert, Badge, Box, Button, CloseButton, Drawer, Field, Flex, HStack, IconButton, Popover, Portal, SegmentGroup, SimpleGrid, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
 import { createElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
+  LuArrowDownToLine,
   LuBox,
+  LuBrickWall,
   LuFrame,
   LuMove,
   LuChevronLeft,
@@ -738,20 +740,38 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                   de l'anterior de la seva fila. */}
               <Field.Root>
                 <Field.Label>Fila</Field.Label>
-                <NativeSelect.Root size="sm">
-                  <NativeSelect.Field
-                    value={module.carcass.base.kind === "wall" ? "wall" : "floor"}
-                    onChange={(e) => {
-                      const c = module.carcass
-                      if (e.target.value === "wall") updateModule({ ...module, gapBefore: 0, carcass: { ...c, base: { kind: "wall", height: 1450 } } })
-                      else updateModule({ ...module, gapBefore: 0, carcass: { ...c, base: { kind: "none" } } })
-                    }}
-                  >
-                    <option value="floor">A terra</option>
-                    <option value="wall">Penjat a la paret</option>
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
+                <SimpleGrid columns={2} gap={2}>
+                  {(
+                    [
+                      ["floor", "A terra", LuArrowDownToLine],
+                      ["wall", "Penjat a la paret", LuBrickWall],
+                    ] as const
+                  ).map(([v, label, Icon]) => {
+                    const on = (module.carcass.base.kind === "wall" ? "wall" : "floor") === v
+                    return (
+                      <Button
+                        key={v}
+                        size="sm"
+                        variant={on ? "solid" : "outline"}
+                        colorPalette="wood"
+                        aria-pressed={on}
+                        onClick={() => {
+                          if (on) return
+                          const c = module.carcass
+                          if (v === "wall") updateModule({ ...module, gapBefore: 0, carcass: { ...c, base: { kind: "wall", height: 1450 } } })
+                          else updateModule({ ...module, gapBefore: 0, carcass: { ...c, base: { kind: "none" } } })
+                        }}
+                      >
+                        <Icon /> {label}
+                      </Button>
+                    )
+                  })}
+                </SimpleGrid>
+                <Field.HelperText>
+                  {module.carcass.base.kind === "wall"
+                    ? "Al 3D, arrossega la maneta del mòdul: es mou per la paret, de costat i amunt/avall (Maj: tot el moble)."
+                    : "Al 3D, arrossega la maneta del mòdul: llisca pel terra, de costat (Maj: tot el moble)."}
+                </Field.HelperText>
               </Field.Root>
               {module.carcass.base.kind === "wall" && (
                 <NumberField
