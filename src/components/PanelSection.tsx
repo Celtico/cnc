@@ -5,8 +5,8 @@ import { LuChevronDown } from "react-icons/lu"
 
 /**
  * Seccions plegables. Dins d'un `PanelGroup` (Preferències) fan d'acordió: només una
- * oberta alhora. Fora d'un grup (l'inspector de l'editor) són independents i cada una
- * recorda el seu estat.
+ * oberta alhora. Fora d'un grup (l'inspector de l'editor) són independents. Totes comencen
+ * tancades en obrir l'app; l'estat es recorda només mentre dura la sessió (sessionStorage).
  *
  * Acordió del panell esquerre: només una secció oberta alhora. En obrir-ne una es
  * tanquen les altres. La secció oberta es recorda (preferència de vista).
@@ -20,7 +20,7 @@ const GroupContext = createContext<Group | null>(null)
 export function PanelGroup({ storageKey, defaultOpen, children }: { storageKey: string; defaultOpen: string; children: ReactNode }) {
   const [openId, setOpenId] = useState<string | null>(() => {
     try {
-      const v = localStorage.getItem(storageKey)
+      const v = sessionStorage.getItem(storageKey)
       return v === null ? defaultOpen : v === "" ? null : v
     } catch {
       return defaultOpen
@@ -28,9 +28,9 @@ export function PanelGroup({ storageKey, defaultOpen, children }: { storageKey: 
   })
   useEffect(() => {
     try {
-      localStorage.setItem(storageKey, openId ?? "")
+      sessionStorage.setItem(storageKey, openId ?? "")
     } catch {
-      /* sense localStorage: només en memòria */
+      /* sense sessionStorage: només en memòria */
     }
   }, [storageKey, openId])
   return <GroupContext.Provider value={{ openId, setOpenId }}>{children}</GroupContext.Provider>
@@ -50,7 +50,7 @@ export function PanelSection({
   title,
   id,
   icon: Icon,
-  defaultOpen = true,
+  defaultOpen = false,
   actions,
   badge,
   badgePalette = "wood",
@@ -59,7 +59,7 @@ export function PanelSection({
   title: string
   id: string
   icon?: IconType
-  /** Fora d'un grup: si comença oberta (després es recorda el que triï l'usuari). */
+  /** Fora d'un grup: si comença oberta (per defecte, tancada; després es recorda el que triï l'usuari durant la sessió). */
   defaultOpen?: boolean
   /** Botons a la dreta del títol (p. ex. «Afegir»). No pleguen la secció. */
   actions?: ReactNode
@@ -75,7 +75,7 @@ export function PanelSection({
   const key = `mobles:section:${id}`
   const [localOpen, setLocalOpen] = useState(() => {
     try {
-      const v = localStorage.getItem(key)
+      const v = sessionStorage.getItem(key)
       return v === null ? defaultOpen : v === "1"
     } catch {
       return defaultOpen
@@ -88,7 +88,7 @@ export function PanelSection({
     else {
       setLocalOpen(!isOpen)
       try {
-        localStorage.setItem(key, isOpen ? "0" : "1")
+        sessionStorage.setItem(key, isOpen ? "0" : "1")
       } catch {
         /* només en memòria */
       }

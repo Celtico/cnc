@@ -320,8 +320,9 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   - **Arbre: arrossegar per ordenar** (`reorderModule`, `reorderRef`): mòduls dins de la
     seva fila i objectes; una línia marca on cau. El menu … manté «Moure amunt/avall».
   - **Inspector en seccions plegables independents** (`PanelSection` fora d'un
-    `PanelGroup`): se'n poden tenir diverses obertes i cada una recorda el seu estat
-    (`mobles:section:<id>`). Mòdul: Mides · Estructura · Materials ·
+    `PanelGroup`): se'n poden tenir diverses obertes. **Totes comencen tancades** en obrir
+    l'app (també les de Preferències i Exportar) i l'estat es recorda només durant la sessió
+    (sessionStorage, `mobles:section:<id>`). Mòdul: Mides · Estructura · Materials ·
     Fusteria (avançat). Compartiment: accions com a icones a la capçalera de l'inspector (Pare · Duplicar ·
     Eliminar; a l'objecte, Desar a preferències · Eliminar) i
     Front · Prestatges · Mida · Dividir. Moble: Resum · Materials de tot el moble. Objecte:

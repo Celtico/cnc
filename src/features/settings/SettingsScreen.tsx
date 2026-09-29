@@ -130,7 +130,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
         </Alert.Root>
       )}
 
-      <PanelGroup storageKey="mobles:settings-open-section" defaultOpen="references">
+      <PanelGroup storageKey="mobles:settings-open-section" defaultOpen="">
         <Stack gap={0}>
           <Section id="references" wide title="Objectes de referència" icon={LuScan} onReset={() => setReset({ key: "references", label: "Objectes de referència" })}>
             <Text fontSize="sm" color="fg.muted" maxW="3xl">
