@@ -877,3 +877,6 @@ export const STORE_CATALOG: StoreCategory[] = [
 
 /** Totes les plantilles de botiga en una llista (per als tests i la cerca). */
 export const STORE_TEMPLATES: Template[] = STORE_CATALOG.flatMap((c) => c.types.flatMap((t) => t.items))
+
+/** Constructors del catàleg, per a altres plantilles (mobles de les escenes de revista). */
+export const storeBuilders = { box, drawers, door, doors, flap, open, fixed, panel, v, h, auto, onFloor, plinth, legs, hung, part, metal, kitchen, bookcase, wardrobe, sideboard, one, row, stoneTop, legTable, loose }

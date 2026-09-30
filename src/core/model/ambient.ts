@@ -1,7 +1,8 @@
 import { z } from "zod"
 import { DEFAULT_JOINERY, type FreePart } from "./freePart"
 import { defaultModule, newId, type Composition, type Module, type Zone } from "./composition"
-import type { PNode } from "./polygon"
+import { MAG_OBJECTS } from "./magObjects"
+import { ellipse, objectComposition } from "./objectShapes"
 import type { Template } from "./templates"
 
 /**
@@ -20,6 +21,23 @@ const mm = z.number().finite()
 const Pt = z.tuple([mm, mm])
 export type PlanPt = z.infer<typeof Pt>
 
+/**
+ * Obertura d'una paret: finestra (amb ampit), porta (fins a terra) o vidriera (de terra a sostre,
+ * perfils prims). `at` = centre des de l'extrem `a` de la paret; `sill` = alçada de l'ampit.
+ */
+export const OpeningSchema = z.object({
+  kind: z.enum(["window", "door", "glazing"]),
+  at: mm,
+  w: mm.positive(),
+  h: mm.positive(),
+  sill: mm.min(0),
+  /** Travessers verticals (fulles) del vidre. */
+  panes: z.number().int().min(1).max(12).optional(),
+  /** Material dels perfils (nom de preferències); sense, alumini negre. */
+  frame: z.string().optional(),
+})
+export type Opening = z.infer<typeof OpeningSchema>
+
 export const WallSchema = z.object({
   id: z.string(),
   /** Eix de la paret (de a a b); el gruix es reparteix a banda i banda. */
@@ -27,6 +45,9 @@ export const WallSchema = z.object({
   b: Pt,
   thickness: mm.positive(),
   height: mm.positive(),
+  /** Material propi (sense, el de les parets de l'ambient). */
+  material: z.string().optional(),
+  openings: z.array(OpeningSchema).optional(),
 })
 export type Wall = z.infer<typeof WallSchema>
 
@@ -178,24 +199,7 @@ export function blockComposition(b: Pick<BlockItem, "shape" | "w" | "h" | "d" | 
 
 // --- Plantilles d'objectes ------------------------------------------------------------------
 
-const obj = (parts: Omit<FreePart, "id" | "nest" | "joints">[]): Composition => ({
-  kind: "objecte",
-  modules: [defaultModule(newId("m"), "Mòdul 1")],
-  references: [],
-  parts: parts.map((q) => ({ id: newId("p"), nest: false, joints: false, ...q })),
-})
-
-/** El·lipse de w × h (peces rodones). */
-function ellipse(w: number, h: number): PNode[] {
-  const K = 0.5522847498
-  const a = w / 2, b = h / 2
-  return [
-    { x: w, y: b, in: [0, -K * b], out: [0, K * b], t: "smooth" },
-    { x: a, y: h, in: [K * a, 0], out: [-K * a, 0], t: "smooth" },
-    { x: 0, y: b, in: [0, K * b], out: [0, -K * b], t: "smooth" },
-    { x: a, y: 0, in: [-K * a, 0], out: [K * a, 0], t: "smooth" },
-  ]
-}
+const obj = objectComposition
 
 /**
  * Plantilles d'objectes per als ambients: els blocs habituals (sofà, llit, nevera…) i alguns
@@ -253,7 +257,7 @@ export const OBJECT_TEMPLATES: Template[] = [
     kind: "objecte",
     name: "Mirall rodó",
     description: "Ø 800 mm · per penjar (posa'l a l'alçada amb «Del terra»).",
-    make: () => obj([{ name: "Mirall", orient: "front", material: "Vidre", w: 800, h: 800, thickness: 20, x: 0, y: 0, z: 0, shape: ellipse(800, 800) }]),
+    make: () => obj([{ name: "Mirall", orient: "front", material: "Mirall", w: 800, h: 800, thickness: 20, x: 0, y: 0, z: 0, shape: ellipse(800, 800) }]),
   },
   {
     id: "object-round-table",
@@ -267,6 +271,7 @@ export const OBJECT_TEMPLATES: Template[] = [
         { name: "Base", orient: "flat", material: "Ferro negre", w: 550, h: 550, thickness: 20, x: 275, y: 0, z: 275, shape: ellipse(550, 550) },
       ]),
   },
+  ...MAG_OBJECTS,
 ]
 
 // --- Geometria del plànol ---------------------------------------------------------------
@@ -305,6 +310,38 @@ export function wallCorners(w: Wall): PlanPt[] {
     [w.b[0] - nx, w.b[1] - ny],
     [w.a[0] - nx, w.a[1] - ny],
   ]
+}
+
+/** Obertures d'una paret retallades a la seva llargada i ordenades (sense solapaments). */
+export function wallOpenings(w: Wall): (Opening & { u0: number; u1: number })[] {
+  const L = wallLength(w)
+  const out: (Opening & { u0: number; u1: number })[] = []
+  for (const o of [...(w.openings ?? [])].sort((p, q) => p.at - q.at)) {
+    const u0 = Math.max(0, o.at - o.w / 2, out.at(-1)?.u1 ?? 0), u1 = Math.min(L, o.at + o.w / 2)
+    const sill = Math.min(o.sill, w.height)
+    const h = Math.min(o.h, w.height - sill)
+    if (u1 - u0 < 10 || h < 10) continue
+    out.push({ ...o, sill, h, u0, u1 })
+  }
+  return out
+}
+
+/**
+ * Trossos massissos d'una paret amb obertures, en coordenades de la paret (u al llarg des de
+ * l'extrem `a`, v amunt). La paret s'allarga mig gruix per banda perquè les cantonades tanquin.
+ */
+export function wallSegments(w: Wall): { u0: number; u1: number; v0: number; v1: number }[] {
+  const L = wallLength(w), t = w.thickness / 2, H = w.height
+  const segs: { u0: number; u1: number; v0: number; v1: number }[] = []
+  let u = -t
+  for (const o of wallOpenings(w)) {
+    if (o.u0 > u) segs.push({ u0: u, u1: o.u0, v0: 0, v1: H })
+    if (o.sill > 0) segs.push({ u0: o.u0, u1: o.u1, v0: 0, v1: o.sill })
+    if (o.sill + o.h < H) segs.push({ u0: o.u0, u1: o.u1, v0: o.sill + o.h, v1: H })
+    u = o.u1
+  }
+  if (L + t > u) segs.push({ u0: u, u1: L + t, v0: 0, v1: H })
+  return segs
 }
 
 /** Quatre parets d'una habitació rectangular (eixos pel mig de les parets). */

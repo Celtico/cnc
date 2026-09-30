@@ -1,4 +1,5 @@
-import { OBJECT_TEMPLATES } from "./ambient"
+import { OBJECT_TEMPLATES, roomWalls, type Opening, type Wall } from "./ambient"
+import { MAG_FURNITURE } from "./magFurniture"
 import { STORE_CATALOG } from "./storeCatalog"
 import { BUILTIN_TEMPLATES, type Template } from "./templates"
 
@@ -8,7 +9,8 @@ import { BUILTIN_TEMPLATES, type Template } from "./templates"
  * En crear-ne un, cada moble i objecte es crea a Mobles / Objectes (un per plantilla, encara que
  * surti diverses vegades) i es col·loca a l'ambient.
  *
- * Referències: `store:<categoria>:<Tipus «Nom»>`, `app:<id>` o `object:<id>`.
+ * Referències: `store:<categoria>:<Tipus «Nom»>`, `app:<id>`, `object:<id>` o `mag:<id>` (mobles de les
+ * escenes de revista, `MAG_FURNITURE`).
  * Col·locació: arrambat a una paret (`wall` N/S/E/O, amb el darrere a la paret; `at` = centre al
  * llarg de la paret, `gap` = separació) o lliure (`x`, `y` = centre, `rot`).
  */
@@ -35,7 +37,30 @@ export interface AmbientTemplate {
   d: number
   floor: string
   wall: string
+  /** Alçada de les parets (per defecte 2600). */
+  height?: number
+  /** Material d'una paret concreta (la del fons de pedra, la negra de les golfes…). */
+  walls?: Partial<Record<WallSide, string>>
+  /** Parets baixes (ampit d'una terrassa): alçada en mm. */
+  low?: Partial<Record<WallSide, number>>
+  /** Costats sense paret (pati obert). */
+  open?: WallSide[]
+  /** Finestres, portes i vidrieres: `at` = centre, en x (N, S) o en y (E, O) de l'habitació. */
+  openings?: (Omit<Opening, "at"> & { side: WallSide; at: number })[]
   items: AmbientTemplateItem[]
+}
+
+/** Parets d'una plantilla: les quatre de l'habitació amb els materials, alçades i obertures. */
+export function templateWalls(t: AmbientTemplate): Wall[] {
+  const sides: WallSide[] = ["N", "E", "S", "W"] // ordre de `roomWalls`
+  return roomWalls(0, 0, t.w, t.d, TEMPLATE_WALL, t.height ?? 2600).flatMap((w, i) => {
+    const side = sides[i]!
+    if (t.open?.includes(side)) return []
+    // `at` de la paret: des de l'extrem a (N: x, E: y, S: w − x, O: d − y).
+    const along = (at: number) => (side === "N" ? at : side === "E" ? at : side === "S" ? t.w - at : t.d - at)
+    const openings = (t.openings ?? []).filter((o) => o.side === side).map(({ side: _s, at, ...o }) => ({ ...o, at: along(at) }))
+    return [{ ...w, ...(t.low?.[side] ? { height: t.low[side]! } : {}), ...(t.walls?.[side] ? { material: t.walls[side] } : {}), ...(openings.length ? { openings } : {}) }]
+  })
 }
 
 /** Gruix de les parets de les plantilles: les cares de dins són a 50 mm de l'eix. */
@@ -45,6 +70,7 @@ export function resolveTemplateRef(ref: string): Template | undefined {
   const [kind, a, ...rest] = ref.split(":")
   if (kind === "app") return BUILTIN_TEMPLATES.find((t) => t.id === a)
   if (kind === "object") return OBJECT_TEMPLATES.find((t) => t.id === a)
+  if (kind === "mag") return MAG_FURNITURE.find((t) => t.id === a)
   if (kind === "store") {
     const name = rest.join(":")
     return STORE_CATALOG.find((c) => c.id === a)?.types.flatMap((t) => t.items).find((t) => t.name === name)
@@ -71,15 +97,320 @@ export function placeTemplateItem(t: Pick<AmbientTemplate, "w" | "d">, it: Ambie
   }
 }
 
-const chairsAround = (cx: number, cy: number, len: number, depth: number, n: number, group: string): AmbientTemplateItem[] => {
+const chairsAround = (cx: number, cy: number, len: number, depth: number, n: number, group: string, ref = "object:object-chair"): AmbientTemplateItem[] => {
   const xs = Array.from({ length: n }, (_, i) => cx - len / 2 + (len / n) * (i + 0.5))
   return [
-    ...xs.map((x) => ({ ref: "object:object-chair", x, y: cy - depth / 2 - 300, rot: 0, group })),
-    ...xs.map((x) => ({ ref: "object:object-chair", x, y: cy + depth / 2 + 300, rot: 180, group })),
+    ...xs.map((x) => ({ ref, x, y: cy - depth / 2 - 300, rot: 0, group })),
+    ...xs.map((x) => ({ ref, x, y: cy + depth / 2 + 300, rot: 180, group })),
   ]
 }
 
+const O = (id: string) => `object:object-${id}`
+/** Llum de sostre penjat perquè toqui el sostre (objectes de 1100 d'alt). */
+const pendant = (id: string, x: number, y: number, group: string, ceiling = 2600, h = 1100): AmbientTemplateItem => ({ ref: O(id), x, y, elevation: ceiling - h, group })
+
+/**
+ * Escenes de revista (fetes a partir de fotos d'interiors): materials de paret per costat,
+ * finestres, vidrieres i portes, cortines, coixins, plantes i llums.
+ */
+const MAG_SCENES: AmbientTemplate[] = [
+  {
+    id: "amb-mag-stucco",
+    name: "Saló d'estuc",
+    description: "5,6 × 4,6 m · parets d'estuc greige: sofà en L de bouclé, taula cub de noguera, moble penjat amb quadre, finestra amb cortines de lli.",
+    w: 5600,
+    d: 4600,
+    floor: "Parquet de roure",
+    wall: "Estuc greige",
+    openings: [{ side: "E", kind: "window", at: 2300, w: 1500, h: 1700, sill: 600 }],
+    items: [
+      { ref: O("rug-jute"), x: 2800, y: 2500 },
+      { ref: "app:walnut-floating", wall: "N", at: 2600 },
+      { ref: O("art-abstract"), wall: "N", at: 2600, elevation: 1050 },
+      { ref: O("plant-small"), wall: "N", at: 3150, gap: 60, elevation: 730 },
+      { ref: O("sofa-l"), wall: "S", at: 2700, gap: 150 },
+      { ref: O("cube-walnut"), x: 2700, y: 2350 },
+      { ref: O("books"), x: 2550, y: 2300, elevation: 400 },
+      { ref: O("floor-lamp-arc"), wall: "S", at: 900, gap: 200 },
+      { ref: O("plant-tropical"), wall: "N", at: 4900, gap: 150 },
+      { ref: O("lounge-chair"), x: 4500, y: 3000, rot: 90 },
+      { ref: O("curtain-linen"), wall: "E", at: 950, group: "Cortines" },
+      { ref: O("curtain-linen"), wall: "E", at: 3650, group: "Cortines" },
+    ],
+  },
+  {
+    id: "amb-mag-attic",
+    name: "Golfes amb daybeds",
+    description: "5 × 4 m · paret del fons negra i terra de fusta rentada: llibreria negra i noguera, dos daybeds amb coixins rodons, catifa de jute i puf.",
+    w: 5000,
+    d: 4000,
+    height: 2500,
+    floor: "Fusta rentada",
+    wall: "Pintura blanca",
+    walls: { N: "Pintura negra" },
+    openings: [{ side: "W", kind: "window", at: 2000, w: 1200, h: 900, sill: 1100 }],
+    items: [
+      { ref: "mag:attic-bookcase", wall: "N", at: 2500 },
+      { ref: O("daybed"), wall: "W", at: 2100 },
+      { ref: O("daybed"), wall: "E", at: 2100 },
+      { ref: O("rug-jute"), x: 2500, y: 2300 },
+      { ref: O("pouf"), x: 2500, y: 2400 },
+      { ref: O("floor-lamp-arc"), wall: "S", at: 4500, gap: 150 },
+      { ref: O("plant-tropical-small"), wall: "N", at: 4200, gap: 100 },
+    ],
+  },
+  {
+    id: "amb-mag-hall",
+    name: "Rebedor amb consola de noguera",
+    description: "3,2 × 2,4 m · terra de porcellànic negre i estuc gris: consola de noguera a inglet, mirall d'arc de llautó, gerro amb branques, butaca i catifa blanca.",
+    w: 3200,
+    d: 2400,
+    floor: "Porcellànic negre",
+    wall: "Estuc gris clar",
+    openings: [{ side: "E", kind: "door", at: 1300, w: 900, h: 2100, sill: 0 }],
+    items: [
+      { ref: O("rug-white"), x: 1500, y: 1450, rot: 90 },
+      { ref: "app:walnut-console", wall: "N", at: 1500 },
+      { ref: O("mirror-arch"), wall: "N", at: 1500, elevation: 900 },
+      { ref: O("branches-vase"), wall: "N", at: 1000, gap: 60, elevation: 760 },
+      { ref: O("table-lamp"), wall: "N", at: 2000, gap: 30, elevation: 760 },
+      { ref: O("armchair-grey"), x: 600, y: 1650, rot: 60 },
+    ],
+  },
+  {
+    id: "amb-mag-patio",
+    name: "Pati amb cuina exterior",
+    description: "7 × 5 m obert per davant · formigó clar: cuina d'exterior amb portes de noguera, armari de noguera, taula oval blanca amb vuit cadires de cuir, pi i plantes tropicals.",
+    w: 7000,
+    d: 5000,
+    height: 2800,
+    floor: "Formigó clar",
+    wall: "Estuc gris clar",
+    open: ["S"],
+    items: [
+      { ref: "mag:outdoor-kitchen", wall: "N", at: 2600 },
+      { ref: "mag:walnut-cabinet", wall: "N", at: 5800 },
+      { ref: O("oval-white"), x: 3200, y: 2900 },
+      ...chairsAround(3200, 2900, 2400, 1100, 4, "Cadires", O("chair-leather")),
+      { ref: O("plant-tropical"), wall: "W", at: 1200, gap: 150 },
+      { ref: O("plant-tropical-small"), wall: "W", at: 1800, gap: 150 },
+      { ref: O("pine"), x: 5500, y: 3600 },
+      { ref: O("olive"), wall: "E", at: 1500, gap: 100 },
+    ],
+  },
+  {
+    id: "amb-mag-kilim",
+    name: "Saló amb kilim",
+    description: "6 × 4,8 m · sofà de vellut oliva en L, catifa kilim, taula de llautó, moble TV flotant de roure, butaca lounge i finestra amb cortines.",
+    w: 6000,
+    d: 4800,
+    floor: "Parquet de roure",
+    wall: "Pintura blanca",
+    openings: [{ side: "W", kind: "window", at: 2400, w: 2000, h: 1800, sill: 500 }],
+    items: [
+      { ref: O("rug-kilim"), x: 3000, y: 2600, rot: 90 },
+      { ref: "mag:tv-floating", wall: "N", at: 3000 },
+      { ref: O("tv-65"), wall: "N", at: 3000, elevation: 1000 },
+      { ref: O("sofa-olive"), wall: "S", at: 3000, gap: 150 },
+      { ref: O("coffee-brass"), x: 3000, y: 2450 },
+      { ref: O("lounge-chair"), x: 5000, y: 2300, rot: 90 },
+      { ref: O("floor-lamp-arc"), wall: "S", at: 1000, gap: 200 },
+      { ref: O("plant-tropical"), wall: "N", at: 5400, gap: 150 },
+      { ref: O("curtain-linen"), wall: "W", at: 850, group: "Cortines" },
+      { ref: O("curtain-linen"), wall: "W", at: 3950, group: "Cortines" },
+    ],
+  },
+  {
+    id: "amb-mag-terrace",
+    name: "Terrassa amb vistes",
+    description: "7 × 4,2 m · travertí i ampit baix: banc d'obra amb coixins blaus, taula baixa negra, pufs, pi pinyoner i jardineres; vidriera cap a casa.",
+    w: 7000,
+    d: 4200,
+    height: 2800,
+    floor: "Travertí",
+    wall: "Estuc gris clar",
+    low: { E: 1000, S: 1000 },
+    open: ["W"],
+    openings: [{ side: "N", kind: "glazing", at: 4600, w: 2800, h: 2400, sill: 0, panes: 3 }],
+    items: [
+      { ref: O("bench-builtin"), wall: "E", at: 2100 },
+      { ref: O("low-table-black"), x: 5700, y: 2100, rot: 90 },
+      { ref: O("pouf"), x: 4700, y: 1500 },
+      { ref: O("pouf"), x: 4700, y: 2700 },
+      { ref: O("pine"), x: 1600, y: 2700 },
+      { ref: O("planter"), wall: "S", at: 4200 },
+      { ref: O("planter"), wall: "S", at: 5700 },
+      { ref: O("olive"), wall: "N", at: 2200, gap: 100 },
+    ],
+  },
+  {
+    id: "amb-mag-green-kitchen",
+    name: "Cuina verd fosc i roure",
+    description: "5,4 × 4,2 m · cuina lacada verd fosc amb taulell de roure, armari de roure amb fornícula, taula de pagès amb cadires de corda i llum de lli.",
+    w: 5400,
+    d: 4200,
+    floor: "Parquet de roure",
+    wall: "Pintura blanca",
+    openings: [{ side: "E", kind: "window", at: 2700, w: 1200, h: 1300, sill: 1000 }],
+    items: [
+      { ref: "mag:green-kitchen", wall: "N", at: 2700 },
+      { ref: "mag:oak-niche", wall: "W", at: 2700 },
+      { ref: "mag:farm-table", x: 2900, y: 2800 },
+      ...chairsAround(2900, 2800, 2200, 950, 3, "Cadires", O("chair-oak")),
+      pendant("pendant-drum", 2900, 2800, "Llums", 2600, 1000),
+      { ref: O("plant-small"), x: 2600, y: 2800, elevation: 760 },
+      { ref: O("stool"), wall: "E", at: 1500, gap: 200 },
+    ],
+  },
+  {
+    id: "amb-mag-black-island",
+    name: "Cuina oberta amb illa negra",
+    description: "7 × 5,2 m · paret de pedra: cuina de roure amb prestatges, columnes negres, illa negra amb barra i tamborets, llums negres, taula rodona i vidriera.",
+    w: 7000,
+    d: 5200,
+    floor: "Parquet de roure",
+    wall: "Pintura blanca",
+    walls: { N: "Pedra de paret" },
+    openings: [{ side: "E", kind: "glazing", at: 2800, w: 3000, h: 2400, sill: 0, panes: 3 }],
+    items: [
+      { ref: "mag:oak-run", wall: "N", at: 3200 },
+      { ref: "mag:black-talls", wall: "W", at: 2100 },
+      { ref: "mag:black-island", x: 3200, y: 2500 },
+      { ref: O("stool"), x: 2500, y: 1650, group: "Tamborets" },
+      { ref: O("stool"), x: 3200, y: 1650, group: "Tamborets" },
+      { ref: O("stool"), x: 3900, y: 1650, group: "Tamborets" },
+      pendant("pendant-black", 2600, 2600, "Llums"),
+      pendant("pendant-black", 3800, 2600, "Llums"),
+      { ref: O("round-table"), x: 5600, y: 4000 },
+      { ref: O("chair-oak"), x: 5600, y: 3200, rot: 0, group: "Cadires" },
+      { ref: O("chair-oak"), x: 4800, y: 4000, rot: 270, group: "Cadires" },
+      { ref: O("plant-tropical"), wall: "S", at: 1000, gap: 150 },
+    ],
+  },
+  {
+    id: "amb-mag-greige-kitchen",
+    name: "Cuina greige",
+    description: "5,8 × 5 m · estuc greige i pedra calcària: cuina greige amb columnes i alts, illa de pedra, llums de cúpula sàlvia i cadires de cuir.",
+    w: 5800,
+    d: 5000,
+    floor: "Pedra calcària",
+    wall: "Estuc greige",
+    openings: [{ side: "W", kind: "window", at: 3600, w: 1400, h: 1500, sill: 900 }],
+    items: [
+      { ref: "mag:greige-kitchen", wall: "N", at: 2900 },
+      pendant("pendant-dome", 2500, 2150, "Llums"),
+      pendant("pendant-dome", 3300, 2150, "Llums"),
+      { ref: O("chair-leather"), x: 2200, y: 3000, rot: 180, group: "Cadires" },
+      { ref: O("chair-leather"), x: 2900, y: 3000, rot: 180, group: "Cadires" },
+      { ref: O("chair-leather"), x: 3600, y: 3000, rot: 180, group: "Cadires" },
+      { ref: O("branches-vase"), x: 3300, y: 2200, elevation: 900 },
+      { ref: O("plant-tropical"), wall: "E", at: 4200, gap: 150 },
+    ],
+  },
+  {
+    id: "amb-mag-stone-dining",
+    name: "Menjador de pedra",
+    description: "6,4 × 5 m · taula de pedra calcària amb vuit cadires de cuir verd, armari de paret blanc, aparador flotant gris amb quadre, llums negres i planta.",
+    w: 6400,
+    d: 5000,
+    floor: "Pedra calcària",
+    wall: "Pintura blanca",
+    openings: [{ side: "E", kind: "window", at: 2400, w: 1600, h: 1700, sill: 700 }],
+    items: [
+      { ref: "mag:white-closet", wall: "N", at: 3200 },
+      { ref: O("stone-table"), x: 3300, y: 2800 },
+      ...chairsAround(3300, 2800, 2600, 1000, 4, "Cadires", O("chair-leather")),
+      { ref: "mag:floating-grey", wall: "W", at: 2800 },
+      { ref: O("art-dark"), wall: "W", at: 2800, elevation: 1150 },
+      { ref: O("plant-tropical"), wall: "E", at: 4300, gap: 150 },
+      pendant("pendant-black", 2800, 2800, "Llums"),
+      pendant("pendant-black", 3800, 2800, "Llums"),
+      { ref: O("branches-vase"), x: 3300, y: 2800, elevation: 750 },
+    ],
+  },
+  {
+    id: "amb-mag-wardrobe",
+    name: "Vestidor gris",
+    description: "4,4 × 3,6 m · vestidor lacat gris de quatre cossos, butaca, taula de formigó amb rodes, catifa rodona i mirall de noguera.",
+    w: 4400,
+    d: 3600,
+    floor: "Parquet de roure",
+    wall: "Pintura blanca",
+    openings: [{ side: "W", kind: "window", at: 2300, w: 1000, h: 1400, sill: 900 }],
+    items: [
+      { ref: "mag:grey-wardrobe", wall: "N", at: 2200 },
+      { ref: O("rug-round"), x: 2200, y: 2300 },
+      { ref: O("armchair-grey"), x: 1200, y: 2600, rot: 30 },
+      { ref: O("concrete-cart"), x: 2400, y: 2350 },
+      { ref: O("mirror-rect"), wall: "E", at: 2000, elevation: 250 },
+      { ref: O("floor-lamp-arc"), wall: "S", at: 3800, gap: 150 },
+      { ref: O("plant-small"), x: 2500, y: 2350, elevation: 320 },
+    ],
+  },
+  {
+    id: "amb-mag-bunks",
+    name: "Habitació de lliteres",
+    description: "4,8 × 3,8 m · parets rosa pàl·lid: lliteres encastades de noguera, pufs de lona, catifa rodona i quadre.",
+    w: 4800,
+    d: 3800,
+    floor: "Parquet de roure",
+    wall: "Pintura rosa pàl·lid",
+    openings: [{ side: "E", kind: "window", at: 2500, w: 1000, h: 1200, sill: 900 }],
+    items: [
+      { ref: "app:bunk-beds", wall: "N", at: 2400 },
+      { ref: O("rug-round"), x: 2400, y: 2600 },
+      { ref: O("pouf-bean"), x: 1600, y: 2700 },
+      { ref: O("pouf-bean"), x: 3000, y: 3000 },
+      { ref: O("art-abstract"), wall: "W", at: 2700, elevation: 900 },
+      { ref: O("plant-tropical-small"), wall: "S", at: 4300, gap: 100 },
+    ],
+  },
+  {
+    id: "amb-mag-oak-kitchen",
+    name: "Cuina de roure amb illa",
+    description: "6 × 5,2 m · paret revestida de roure: cuina de roure amb illa de calaixos, taula amb estovalles de lli, cadires de corda, llums sàlvia i vidriera.",
+    w: 6000,
+    d: 5200,
+    floor: "Parquet de roure",
+    wall: "Pintura blanca",
+    walls: { N: "Revestiment de roure" },
+    openings: [{ side: "W", kind: "glazing", at: 2600, w: 2400, h: 2300, sill: 0, panes: 2 }],
+    items: [
+      { ref: "app:oak-kitchen", wall: "N", at: 3000 },
+      pendant("pendant-dome", 3000, 2000, "Llums"),
+      { ref: O("table-cloth"), x: 3000, y: 3950 },
+      ...chairsAround(3000, 3950, 2040, 990, 3, "Cadires", O("chair-oak")),
+      pendant("pendant-dome", 3000, 3950, "Llums"),
+      { ref: O("plant-small"), x: 3000, y: 3950, elevation: 762 },
+      { ref: O("plant-tropical"), wall: "E", at: 4500, gap: 150 },
+    ],
+  },
+  {
+    id: "amb-mag-curtains",
+    name: "Menjador amb cortines",
+    description: "6,2 × 5 m · vidriera de terra a sostre amb cortines de lli i tul, taula amb estovalles i sis cadires, llums de lli, llibreria i sofà.",
+    w: 6200,
+    d: 5000,
+    floor: "Parquet de roure",
+    wall: "Pintura blanca",
+    openings: [{ side: "E", kind: "glazing", at: 2500, w: 4400, h: 2500, sill: 0, panes: 4 }],
+    items: [
+      { ref: "store:salo:Llibreria «Grid»", wall: "N", at: 2500 },
+      { ref: O("plant-tropical"), wall: "N", at: 4500, gap: 150 },
+      { ref: O("table-cloth"), x: 3200, y: 2600 },
+      ...chairsAround(3200, 2600, 2040, 990, 3, "Cadires", O("chair-oak")),
+      pendant("pendant-drum", 2700, 2600, "Llums", 2600, 1000),
+      pendant("pendant-drum", 3700, 2600, "Llums", 2600, 1000),
+      { ref: O("sofa-linen"), wall: "W", at: 2600 },
+      { ref: O("curtain-linen"), wall: "E", at: 850, group: "Cortines" },
+      { ref: O("curtain-tulle"), wall: "E", at: 2500, group: "Cortines" },
+      { ref: O("curtain-linen"), wall: "E", at: 4150, group: "Cortines" },
+    ],
+  },
+]
+
 export const AMBIENT_TEMPLATES: AmbientTemplate[] = [
+  ...MAG_SCENES,
   {
     id: "amb-nordic-living",
     name: "Saló nòrdic",

@@ -1,13 +1,13 @@
 import { OrbitControls } from "@react-three/drei"
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import { useEffect, useMemo, useRef, type ComponentRef } from "react"
-import { BoxGeometry, Group, Mesh, NeutralToneMapping, PlaneGeometry, Vector3, type MeshStandardMaterial, type Object3D } from "three"
+import { BoxGeometry, Group, Mesh, MeshStandardMaterial, NeutralToneMapping, PlaneGeometry, Vector3, type Object3D } from "three"
 import { exportablePanel } from "../../components/viewer/CabinetViewer"
 import { buildScene } from "../../components/viewer/exportGlb"
 import { SceneAccess, StudioEnvironment } from "../../components/viewer/SceneHelpers"
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
-import { rad, wallLength, type Ambient, type MaterialPref } from "../../core/model"
+import { rad, wallLength, wallOpenings, wallSegments, type Ambient, type MaterialPref, type Opening } from "../../core/model"
 import type { ItemGeometry } from "./ambientData"
 import { ambientBox } from "./planGeom"
 
@@ -112,6 +112,49 @@ const shadowsOn = (o: Object3D) =>
     }
   })
 
+/**
+ * Finestra, porta o vidriera dins del forat de la paret (grup de la paret: x al llarg, y amunt,
+ * z pel gruix): marc de perfils, travessers i vidre (o la fulla de fusta de la porta).
+ */
+function addOpening(wg: Group, o: Opening & { u0: number; u1: number }, thickness: number, materials: MaterialPref[]) {
+  const W = o.u1 - o.u0
+  const f = o.kind === "glazing" ? 40 : 55
+  const fd = Math.min(thickness, o.kind === "glazing" ? 60 : 70)
+  const frameMat = surfaceMaterial(materials, o.frame ?? (o.kind === "door" ? "Roure massís / xapat" : "Alumini negre"), 200, 200)
+  const box = (x0: number, x1: number, y0: number, y1: number, d: number, mat: MeshStandardMaterial, z = 0) => {
+    const m = new Mesh(new BoxGeometry((x1 - x0) / 1000, (y1 - y0) / 1000, d / 1000), mat)
+    m.position.set((x0 + x1) / 2000, (y0 + y1) / 2000, z / 1000)
+    m.castShadow = true
+    m.receiveShadow = true
+    m.userData.room = "wall"
+    wg.add(m)
+  }
+  const y0 = o.sill, y1 = o.sill + o.h
+  // Marc
+  box(o.u0, o.u0 + f, y0, y1, fd, frameMat)
+  box(o.u1 - f, o.u1, y0, y1, fd, frameMat)
+  box(o.u0 + f, o.u1 - f, y1 - f, y1, fd, frameMat)
+  if (o.kind !== "door" || o.sill > 0) box(o.u0 + f, o.u1 - f, y0, y0 + f, fd, frameMat)
+  // Ampit de pedra a les finestres.
+  if (o.kind === "window" && o.sill > 0) box(o.u0 - 40, o.u1 + 40, y0 - 30, y0, thickness + 60, surfaceMaterial(materials, "Pedra calcària", W, 100))
+  if (o.kind === "door") {
+    box(o.u0 + f, o.u1 - f, y0, y1 - f, 40, surfaceMaterial(materials, o.frame ?? "Roure massís / xapat", W, o.h))
+    return
+  }
+  const panes = o.panes ?? Math.max(1, Math.round(W / (o.kind === "glazing" ? 1200 : 900)))
+  for (let i = 1; i < panes; i++) {
+    const x = o.u0 + (W * i) / panes
+    box(x - f / 2, x + f / 2, y0 + f, y1 - f, fd, frameMat)
+  }
+  const glass = new MeshStandardMaterial({ color: "#dbe7e8", roughness: 0.03, metalness: 0, transparent: true, opacity: 0.18, depthWrite: false })
+  glass.userData.glass = true
+  glass.userData.baseOpacity = 0.18
+  const m = new Mesh(new BoxGeometry((W - 2 * f) / 1000, (o.h - 2 * f) / 1000, 0.008), glass)
+  m.position.set((o.u0 + o.u1) / 2000, (y0 + y1) / 2000, 0)
+  m.userData.room = "wall"
+  wg.add(m)
+}
+
 function Room({
   ambient,
   geos,
@@ -146,20 +189,29 @@ function Room({
     for (const w of ambient.walls) {
       const L = wallLength(w)
       if (L < 1) continue
-      // Una mica més llarga (mig gruix per banda) perquè les cantonades tanquin.
-      const len = L + w.thickness
-      const mesh = new Mesh(new BoxGeometry(len / 1000, w.height / 1000, w.thickness / 1000), surfaceMaterial(materials, ambient.wallMaterial ?? "Pintura blanca", len, w.height))
-      mesh.position.set((w.a[0] + w.b[0]) / 2000, w.height / 2000, (w.a[1] + w.b[1]) / 2000)
-      mesh.rotation.y = -Math.atan2(w.b[1] - w.a[1], w.b[0] - w.a[0])
-      mesh.castShadow = true
-      mesh.receiveShadow = true
+      const wg = new Group()
+      wg.position.set(w.a[0] / 1000, 0, w.a[1] / 1000)
+      wg.rotation.y = -Math.atan2(w.b[1] - w.a[1], w.b[0] - w.a[0])
+      const matName = w.material ?? ambient.wallMaterial ?? "Pintura blanca"
+      // Trossos massissos (la paret sencera o el que queda al voltant de finestres i portes).
+      for (const sg of wallSegments(w)) {
+        const len = sg.u1 - sg.u0, hh = sg.v1 - sg.v0
+        if (len < 1 || hh < 1) continue
+        const mesh = new Mesh(new BoxGeometry(len / 1000, hh / 1000, w.thickness / 1000), surfaceMaterial(materials, matName, len, hh))
+        mesh.position.set((sg.u0 + sg.u1) / 2000, (sg.v0 + sg.v1) / 2000, 0)
+        mesh.castShadow = true
+        mesh.receiveShadow = true
+        mesh.userData.room = "wall"
+        wg.add(mesh)
+      }
+      for (const o of wallOpenings(w)) addOpening(wg, o, w.thickness, materials)
       // Normal cap a fora de l'habitació (per fer-la transparent si tapa la vista).
       const nx = -(w.b[1] - w.a[1]) / L, nz = (w.b[0] - w.a[0]) / L
       const mx = (w.a[0] + w.b[0]) / 2 - (box.x0 + box.x1) / 2, mz = (w.a[1] + w.b[1]) / 2 - (box.y0 + box.y1) / 2
       const out = nx * mx + nz * mz >= 0 ? 1 : -1
-      mesh.userData.normal = new Vector3(nx * out, 0, nz * out)
-      mesh.userData.room = "wall"
-      g.add(mesh)
+      wg.userData.normal = new Vector3(nx * out, 0, nz * out)
+      wg.userData.center = new Vector3((w.a[0] + w.b[0]) / 2000, w.height / 2000, (w.a[1] + w.b[1]) / 2000)
+      g.add(wg)
     }
     return g
   }, [ambient.walls, ambient.wallMaterial, materials, box.x0, box.x1, box.y0, box.y1])
@@ -167,19 +219,25 @@ function Room({
   // Com una casa de nines: les parets entre la càmera i l'habitació es fan gairebé transparents.
   const tmp = useMemo(() => new Vector3(), [])
   useFrame(({ camera }) => {
-    for (const m of walls.children as Mesh[]) {
-      const n = m.userData.normal as Vector3 | undefined
-      if (!n) continue
-      const facing = dollhouse && tmp.copy(camera.position).sub(m.position).dot(n) > 0
-      const mat = m.material as MeshStandardMaterial
-      const target = facing ? 0.12 : 1
-      if (mat.opacity !== target) {
-        mat.transparent = target < 1
-        mat.opacity = target
-        mat.depthWrite = target === 1
-        m.castShadow = target === 1
-        mat.needsUpdate = true
-      }
+    for (const wg of walls.children) {
+      const n = wg.userData.normal as Vector3 | undefined
+      const c = wg.userData.center as Vector3 | undefined
+      if (!n || !c) continue
+      const facing = dollhouse && tmp.copy(camera.position).sub(c).dot(n) > 0
+      wg.traverse((o) => {
+        const m = o as Mesh
+        if (!m.isMesh) return
+        const mat = m.material as MeshStandardMaterial
+        const base = (mat.userData.baseOpacity as number | undefined) ?? 1
+        const target = facing ? Math.min(base, 0.12) : base
+        if (mat.opacity !== target) {
+          mat.transparent = target < 1
+          mat.opacity = target
+          mat.depthWrite = target === 1
+          m.castShadow = target === 1
+          mat.needsUpdate = true
+        }
+      })
     }
   })
 

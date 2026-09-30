@@ -13,7 +13,7 @@ import { DEFAULT_HARDWARE, HardwareSchema, type Module } from "./composition"
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 3
+export const SETTINGS_VERSION = 4
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -212,6 +212,45 @@ export const SIM_MATERIALS: MaterialPref[] = [
   sim("sim-paint-terracotta", "Pintura terracota", { kind: "color", color: "#c98a6b" }),
   sim("sim-steel-appliance", "Electrodomèstic inox", { kind: "metal", color: "#c8ccd0" }),
   sim("sim-appliance-white", "Electrodomèstic blanc", { kind: "lacquer", color: "#f4f4f2" }),
+  // v4: materials de les escenes de revista (estucs, pedres, teixits, plantes, cortines…).
+  sim("sim-stucco-greige", "Estuc greige", { kind: "color", color: "#b9ad9d" }),
+  sim("sim-stucco-grey", "Estuc gris clar", { kind: "color", color: "#cdcac4" }),
+  sim("sim-concrete-light", "Formigó clar", { kind: "color", color: "#bdb9b1" }),
+  sim("sim-travertine", "Travertí", { kind: "tiles", color: "#d8cbb5", grout: "#cbbda6", size: 600 }),
+  sim("sim-limestone", "Pedra calcària", { kind: "tiles", color: "#d9d2c4", grout: "#c9c1b2", size: 800 }),
+  sim("sim-porcelain-black", "Porcellànic negre", { kind: "tiles", color: "#232325", grout: "#1a1a1b", size: 1200 }),
+  sim("sim-stone-wall", "Pedra de paret", { kind: "tiles", color: "#b9a888", grout: "#8f8068", size: 350 }),
+  sim("sim-paint-black", "Pintura negra", { kind: "color", color: "#2a2a2a" }),
+  sim("sim-paint-pink", "Pintura rosa pàl·lid", { kind: "color", color: "#dcc6bd" }),
+  sim("sim-paint-dark-green", "Pintura verd fosc", { kind: "color", color: "#34413a" }),
+  sim("sim-oak-cladding", "Revestiment de roure", { kind: "wood", species: "oak" }, true),
+  sim("sim-washed-wood", "Fusta rentada", { kind: "wood", species: "ash" }, true),
+  sim("sim-velvet-olive", "Vellut verd oliva", { kind: "fabric", color: "#5d6446" }),
+  sim("sim-fabric-navy", "Teixit blau marí", { kind: "fabric", color: "#1f2a44" }),
+  sim("sim-fabric-sand", "Teixit sorra", { kind: "fabric", color: "#cfc2ad" }),
+  sim("sim-fabric-red", "Teixit vermell", { kind: "fabric", color: "#8b2a2a" }),
+  sim("sim-fabric-ochre", "Teixit ocre", { kind: "fabric", color: "#b58a45" }),
+  sim("sim-boucle", "Bouclé blanc", { kind: "fabric", color: "#ebe5da" }),
+  sim("sim-tulle", "Tul blanc", { kind: "fabric", color: "#f5f2ec" }),
+  sim("sim-leather-green", "Cuir verd", { kind: "color", color: "#5d7466" }),
+  sim("sim-leather-black", "Cuir negre", { kind: "color", color: "#262422" }),
+  sim("sim-jute", "Jute", { kind: "fabric", color: "#b8a58a" }),
+  sim("sim-kilim", "Catifa kilim", { kind: "tiles", color: "#a8564a", grout: "#caa27f", size: 250 }),
+  sim("sim-rug-grey", "Catifa gris", { kind: "fabric", color: "#9d9a94" }),
+  sim("sim-leaves", "Fulles", { kind: "fabric", color: "#3e5a38" }),
+  sim("sim-leaves-light", "Fulles clares", { kind: "fabric", color: "#6b8a4e" }),
+  sim("sim-pine", "Pi", { kind: "fabric", color: "#2f4a30" }),
+  sim("sim-bark", "Escorça", { kind: "color", color: "#6d5a47" }),
+  sim("sim-soil", "Terra de test", { kind: "color", color: "#4a3a2c" }),
+  sim("sim-ceramic-white", "Ceràmica blanca", { kind: "lacquer", color: "#eeebe4" }),
+  sim("sim-ceramic-black", "Ceràmica negra", { kind: "lacquer", color: "#2b2a28" }),
+  sim("sim-brass", "Llautó", { kind: "metal", color: "#b8954a" }),
+  sim("sim-frame-black", "Alumini negre", { kind: "metal", color: "#2a2b2d" }),
+  sim("sim-canvas-art", "Llenç abstracte", { kind: "tiles", color: "#d9cbb4", grout: "#9a6b4b", size: 400 }),
+  sim("sim-canvas-dark", "Llenç fosc", { kind: "fabric", color: "#3b3631" }),
+  sim("sim-screen", "Pantalla negra", { kind: "lacquer", color: "#111214" }),
+  sim("sim-mirror", "Mirall", { kind: "metal", color: "#e4e8e8" }),
+  sim("sim-book", "Llibres", { kind: "tiles", color: "#a49781", grout: "#5b4a3a", size: 60 }),
 ]
 
 export const BUILTIN_MATERIALS: MaterialPref[] = [
@@ -314,7 +353,7 @@ export function parseSettings(raw: unknown): SettingsParse {
   // v3: materials de simulació (teixits, parquet, rajola, pintura) per als ambients.
   const missing = (list: MaterialPref[], from: MaterialPref[]) => list.filter((m) => !from.some((x) => x.id === m.id || x.name === m.name))
   const v2 = materialsRaw.length && version < 2 ? [...materialsRaw, ...missing(NON_CNC_MATERIALS, materialsRaw)] : materialsRaw
-  const materials = v2.length ? (version < 3 ? [...v2, ...missing(SIM_MATERIALS, v2)] : v2) : BUILTIN_MATERIALS
+  const materials = v2.length ? (version < SETTINGS_VERSION ? [...v2, ...missing(SIM_MATERIALS, v2)] : v2) : BUILTIN_MATERIALS
   const settings: Settings = {
     version: SETTINGS_VERSION,
     references,

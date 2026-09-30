@@ -175,7 +175,14 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   categories), però **no es fabrica** (`buildComposition` en treu el nesting i els encaixos; al menú
   només hi ha l'Editor; la molla de pa diu «Objectes»). `OBJECT_TEMPLATES` (`ambient.ts`): els blocs
   d'abans (sofà, llit, nevera…) i cadira, làmpada de peu, planta, mirall i taula rodona amb peces
-  rodones. Pàgina `objects/ObjectsScreen` (`ObjectsGallery`: cercador, En blanc, els teus i
+  rodones. **Objectes de revista** (`magObjects.ts`, `MAG_OBJECTS`, amb les formes de `objectShapes.ts`:
+  `ellipse`, `roundRect` per als coixins, `leaf`, `wave` per als plecs de les cortines, `blob` per a
+  capçades i pufs): sofàs amb coixins i en L, daybed, butaques, cadires, quadres, miralls, tele, cortines,
+  llums de sostre, plantes (tropical, olivera, pi pinyoner, jardinera), catifes, taules… Tot és geometria
+  (perfils extrudits), no física ni shaders: així el render per CPU ho veu igual que el visor. Materials de
+  simulació nous a la **v4** de les preferències (estucs, travertí, pedra de paret, vellut oliva, bouclé,
+  tul, cuir, jute, kilim, fulles, escorça, ceràmica, llautó, mirall…; la migració afegeix els que falten).
+  Pàgina `objects/ObjectsScreen` (`ObjectsGallery`: cercador, En blanc, els teus i
   plantilles). No surten a l'historial de Mobles (`isObject`). Als ambients, «Objecte» obre la
   galeria a pantalla completa; s'hi col·loquen com els mobles (enllaçats). Els blocs antics
   (`kind: "block"`) es continuen veient.
@@ -228,6 +235,16 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   `app:<id>`, `object:<id>`), col·locades arrambades a una paret (N/S/E/O, `placeTemplateItem`) o
   lliures. `createAmbientFromTemplate` (`features/ambients/fromTemplate.ts`) crea cada moble i objecte
   (un per plantilla) i l'ambient enllaçat; `templatePreview` fa la miniatura.
+- **Escenes de revista** (`MAG_SCENES` a `ambientTemplates.ts`, primer al catàleg): 14 habitacions fetes
+  a partir de fotos d'interiors (saló d'estuc, golfes, rebedor, pati amb cuina exterior, saló amb kilim,
+  terrassa, cuines verd fosc / illa negra / greige / roure, menjador de pedra, vestidor, lliteres, menjador
+  amb cortines). La plantilla pot dur `height`, `walls` (material per costat), `low` (ampits), `open`
+  (costats sense paret) i `openings`; `templateWalls` en fa les parets. Mobles nous amb `mag:<id>`
+  (`magFurniture.ts`, `MAG_FURNITURE`, fets amb `storeBuilders` del catàleg de botiga).
+- **Parets amb material propi i obertures** (`Wall.material`, `Wall.openings`: finestra amb ampit de pedra,
+  porta amb fulla, vidriera de terra a sostre amb travessers): `wallOpenings`, `wallSegments` (trossos
+  massissos al voltant dels forats) al 3D; al plànol, el forat amb el vidre o l'arc de la porta. El vidre
+  porta `userData.glass` (el render per CPU el fa translúcid) i `baseOpacity` (la casa de nines el respecta).
 - **3D**: la mateixa navegació que l'editor (esmorteïment, roda, botó dret per desplaçar), clic per
   seleccionar (caixa taronja; Supr, Ctrl/⌘ D, R i fletxes com al plànol), «Encuadrar» i «Render».
 - **3D** (`Ambient3D`): terra i parets amb `surfaceMaterial` (textura a mida real), mobles i blocs

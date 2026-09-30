@@ -1,7 +1,7 @@
 import { Box, HStack, IconButton, Text } from "@chakra-ui/react"
 import { LuMinus, LuPlus } from "react-icons/lu"
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as RPointerEvent } from "react"
-import { footprintBox, newId, roomWalls, snapToWalls, wallCorners, wallLength, type Ambient, type AmbientItem, type PlanPt, type Wall } from "../../core/model"
+import { footprintBox, newId, roomWalls, snapToWalls, wallCorners, wallLength, wallOpenings, type Ambient, type AmbientItem, type PlanPt, type Wall } from "../../core/model"
 import { formatLength, useUnit } from "../units"
 import type { ItemGeometry } from "./ambientData"
 import { ambientBox, fitView, nearestEndpoint, samePt, snapAngle, snapGrid, type Selection, type Tool, type View } from "./planGeom"
@@ -452,6 +452,27 @@ export function PlanCanvas({
                 style={{ cursor: tool === "select" ? "move" : undefined }}
                 onPointerDown={(e) => startWall(e, w)}
               />
+            )
+          })}
+          {/* Finestres, portes i vidrieres: el forat de la paret amb el vidre (o la fulla) al mig. */}
+          {ambient.walls.map((w) => {
+            const ops = wallOpenings(w)
+            if (!ops.length) return null
+            const deg = (Math.atan2(w.b[1] - w.a[1], w.b[0] - w.a[0]) * 180) / Math.PI
+            const t = w.thickness
+            return (
+              <g key={`o-${w.id}`} transform={`translate(${w.a[0]} ${w.a[1]}) rotate(${deg})`} style={{ pointerEvents: "none" }}>
+                {ops.map((o, i) => (
+                  <g key={i}>
+                    <rect x={o.u0} y={-t / 2} width={o.u1 - o.u0} height={t} fill="var(--chakra-colors-bg)" stroke={C.wall} strokeWidth={px(1)} />
+                    {o.kind === "door" ? (
+                      <path d={`M ${o.u0} ${t / 2} L ${o.u0} ${t / 2 + (o.u1 - o.u0)} A ${o.u1 - o.u0} ${o.u1 - o.u0} 0 0 0 ${o.u1} ${t / 2}`} fill="none" stroke={C.muted} strokeWidth={px(1)} />
+                    ) : (
+                      <line x1={o.u0} y1={0} x2={o.u1} y2={0} stroke={C.wall} strokeWidth={px(1.5)} />
+                    )}
+                  </g>
+                ))}
+              </g>
             )
           })}
 

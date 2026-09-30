@@ -1,6 +1,6 @@
 import { buildBounds, buildComposition } from "../../core/build/buildComposition"
 import { uniqueName } from "../../core/file/mobleFile"
-import { layoutTemplate, newId, resolveTemplateRef, roomWalls, TEMPLATE_WALL, type Ambient, type AmbientItem, type AmbientTemplate } from "../../core/model"
+import { layoutTemplate, newId, resolveTemplateRef, templateWalls, type Ambient, type AmbientItem, type AmbientTemplate } from "../../core/model"
 import { createAmbient, createProject, db } from "../../db/db"
 
 const sizeOfRef = (ref: string) => {
@@ -12,8 +12,8 @@ const sizeOfRef = (ref: string) => {
 export function templatePreview(t: AmbientTemplate): Ambient {
   const sizes = new Map<string, { w: number; d: number }>()
   const size = (ref: string) => sizes.get(ref) ?? (sizes.set(ref, sizeOfRef(ref)), sizes.get(ref)!)
-  const items: AmbientItem[] = layoutTemplate(t, size).map((p) => ({ id: newId("i"), kind: "block", name: p.ref, shape: "box", w: size(p.ref).w, h: 100, d: size(p.ref).d, material: "", x: p.x, y: p.y, rot: p.rot }))
-  return { walls: roomWalls(0, 0, t.w, t.d, TEMPLATE_WALL), items, floorMaterial: t.floor, wallMaterial: t.wall }
+  const items: AmbientItem[] = layoutTemplate(t, size).map((p) => ({ id: newId("i"), kind: "block", name: p.ref, shape: "box", w: size(p.ref).w, h: 100, d: size(p.ref).d, material: "", x: p.x, y: p.y, rot: p.rot, ...(p.elevation ? { elevation: p.elevation } : {}) }))
+  return { walls: templateWalls(t), items, floorMaterial: t.floor, wallMaterial: t.wall }
 }
 
 /**
@@ -38,6 +38,6 @@ export async function createAmbientFromTemplate(t: AmbientTemplate): Promise<num
     return m ? [{ id: newId("i"), kind: "moble" as const, projectId: m.id, x: Math.round(p.x), y: Math.round(p.y), rot: p.rot, ...(p.elevation ? { elevation: p.elevation } : {}), ...(p.group ? { group: p.group } : {}) }] : []
   })
   const ambients = (await db.ambients.toArray()).map((a) => a.name)
-  const data: Ambient = { walls: roomWalls(0, 0, t.w, t.d, TEMPLATE_WALL), items, floorMaterial: t.floor, wallMaterial: t.wall }
+  const data: Ambient = { walls: templateWalls(t), items, floorMaterial: t.floor, wallMaterial: t.wall }
   return createAmbient(uniqueName(t.name, ambients), data)
 }
