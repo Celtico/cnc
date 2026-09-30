@@ -2,7 +2,7 @@ import { useTheme } from "next-themes"
 import { ACCENTS, useAccent } from "../../theme/accent"
 import { QUALITY_LABELS, useRenderQuality, type RenderQuality } from "../../components/viewer/renderQuality"
 import { FLOORS, LIGHTS, SKIRTINGS, WALLS, usePresentationScene, type FloorId } from "../../components/viewer/presentationScene"
-import { floorSwatchUrl } from "../../components/viewer/PresentationRoom"
+import { floorSwatchUrl } from "../../components/viewer/floorTextures"
 import type { Composition } from "../../core/model"
 import { ScenePreview } from "./ScenePreview"
 import {

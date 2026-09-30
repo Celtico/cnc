@@ -223,12 +223,13 @@ export function App() {
   // de dalt; al mòbil, en una franja sota la barra (la barra de baix és sempre el menú general).
   const projectTabs = (full: boolean) =>
     showTopBar && projectNav.length > 1 ? (
-      <SegmentGroup.Root size="sm" w={full ? "full" : undefined} value={screen === "photo" ? "editor" : screen} onValueChange={(e) => e.value && go(e.value as Screen)}>
+      // Al mòbil (full), les 4 pestanyes a parts iguals i més petites: a 375 px «Exportar» quedava tallat.
+      <SegmentGroup.Root size={full ? "xs" : "sm"} w={full ? "full" : undefined} value={screen === "photo" ? "editor" : screen} onValueChange={(e) => e.value && go(e.value as Screen)}>
         <SegmentGroup.Indicator />
         {projectNav.map((n) => (
-          <SegmentGroup.Item key={n.id} value={n.id} flex={full ? 1 : undefined} justifyContent="center">
+          <SegmentGroup.Item key={n.id} value={n.id} flex={full ? 1 : undefined} minW={0} px={full ? 1 : undefined} justifyContent="center">
             <SegmentGroup.ItemText>
-              <HStack gap={1.5}>
+              <HStack gap={full ? 1 : 1.5}>
                 <n.icon /> {n.label}
               </HStack>
             </SegmentGroup.ItemText>

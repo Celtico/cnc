@@ -242,7 +242,6 @@ export async function duplicateAmbient(id: number, client?: string): Promise<num
       const p = await db.projects.get(it.projectId)
       if (!p) continue
       const { id: _id, createdAt: _c, updatedAt: _u, photo: _photo, folder: _f, ...rest } = p
-      void _id, void _c, void _u, void _photo, void _f
       const projectNames = (await db.projects.toArray()).map((x) => x.name)
       const pBase = who ? `${p.name.replace(/ · .*$/, "").replace(/ \(\d+\)$/, "")} · ${who}` : `${p.name} (còpia)`
       let pName = pBase

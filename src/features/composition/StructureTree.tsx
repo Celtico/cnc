@@ -1,5 +1,5 @@
 import { Box, HStack, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
-import { useState, type ReactNode } from "react"
+import { createElement, useState, type ReactNode } from "react"
 import { KINDS } from "./kinds"
 import {
   LuArrowDown,
@@ -482,8 +482,7 @@ function ZoneRows({
   }
   const selected = selection.kind === "zone" && selection.zoneId === zone.id
   // Icona segons el contingut (la mateixa que a les propietats).
-  const Icon = zoneIcon(zone)
-  const icon = <Icon />
+  const icon = createElement(zoneIcon(zone))
   return (
     <>
       <Row depth={depth} icon={icon} label={zoneLabel(zone)} selected={selected} onClick={() => onSelect({ kind: "zone", moduleId, zoneId: zone.id })} muted />
