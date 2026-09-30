@@ -746,8 +746,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     amb `gapBefore`. L'arbre agrupa per fila i «Moure» canvia l'ordre dins de la fila.
     Posició sempre amb `modulePlacements()` / `compositionWidth/Height`, mai a mà. Els
     ancoratges antics (`anchor`) es converteixen en carregar (`normalizeComposition`).
-  - **Mòdul seleccionat al 3D i a la foto: translúcid** (per veure'n l'interior i els
-    compartiments) amb contorn taronja; la resta del moble, sòlida. Compartiment
+  - **Mòdul seleccionat al 3D: sòlid amb contorn taronja** (com Figma o SketchUp; per decisió de l'usuari: translúcid
+    semblava que canviés de color). Només es fa **translúcid amb un compartiment triat**, per veure'l a dins. Compartiment
     seleccionat: contorn taronja amb vel. Al 3D, el primer clic selecciona el mòdul i el
     segon (amb el mòdul ja seleccionat) entra al compartiment tocat (`selectFrom3D`).
     Tornar a clicar el compartiment seleccionat puja al pare (fins al mòdul); clicar la
