@@ -383,7 +383,9 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const createAndAdd = (c: Composition, n: string, what: "moble" | "object") =>
     void (async () => {
       const existing = (await db.projects.toArray()).map((p) => p.name)
-      const id = await createProject(uniqueName(n, existing), undefined, { composition: c })
+      // Al grup de l'ambient, com els que porta una escena del catàleg.
+      const folder = (await db.ambients.get(ambientId))?.name
+      const id = await createProject(uniqueName(n, existing), undefined, { composition: c, ...(folder ? { folder } : {}) })
       const p = await db.projects.get(id)
       if (p) addMoble(p)
       if (what === "moble") setPicker(false)

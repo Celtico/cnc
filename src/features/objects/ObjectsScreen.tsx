@@ -49,21 +49,35 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
             count: shown.length,
             node: shown.length ? (
               <Stack gap={2}>
-                <ClearHistory
-                  count={free.length}
-                  kept={shown.length - free.length}
-                  noun={["objecte", "objectes"]}
-                  keptNote="Es conserven els {n} que són en algun ambient."
-                  onConfirm={async () => {
-                    for (const p of free) await deleteProject(p.id)
-                    toaster.create({ title: "Historial esborrat", type: "info" })
-                  }}
-                />
                 <FolderedGrid
                   items={shown}
                   folderOf={(p) => p.folder}
                   keyOf={(p) => p.id}
                   storageKey="mobles:folders-objects"
+                  toolbar={
+                    <ClearHistory
+                      count={free.length}
+                      kept={shown.length - free.length}
+                      noun={["objecte", "objectes"]}
+                      keptNote="Es conserven els {n} que són en algun ambient."
+                      onConfirm={async () => {
+                        for (const p of free) await deleteProject(p.id)
+                        toaster.create({ title: "Historial esborrat", type: "info" })
+                      }}
+                    />
+                  }
+                  selection={{
+                    noun: ["objecte", "objectes"],
+                    folders: [...new Set((projects ?? []).filter((p) => isObject(p) && p.folder).map((p) => p.folder!))].sort(),
+                    onMove: (ids, f) => void setProjectsFolder(ids as number[], f),
+                    onDelete: async (ids) => {
+                      // Els que són en algun ambient es conserven (si no, l'ambient perdria el moble).
+                      const del = (ids as number[]).filter((id) => !membership.has(id))
+                      for (const id of del) await deleteProject(id)
+                      const kept = ids.length - del.length
+                      toaster.create({ title: `${del.length} esborrats`, description: kept ? `Es conserven els ${kept} que són en algun ambient.` : undefined, type: "info" })
+                    },
+                  }}
                   searching={searching}
                   onRenameFolder={(from, to) => void setProjectsFolder(shown.filter((p) => p.folder === from).map((p) => p.id), to)}
                   onUngroup={(name) => void setProjectsFolder(shown.filter((p) => p.folder === name).map((p) => p.id), undefined)}

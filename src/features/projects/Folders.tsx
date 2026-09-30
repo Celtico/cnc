@@ -1,6 +1,6 @@
 import { Accordion, Box, Button, Dialog, HStack, IconButton, Input, Menu, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useState, type ReactNode } from "react"
-import { LuEllipsis, LuFolder, LuFolderMinus, LuFolderPlus, LuPencil } from "react-icons/lu"
+import { LuCircle, LuCircleCheck, LuEllipsis, LuFolder, LuFolderInput, LuFolderMinus, LuFolderPlus, LuListChecks, LuPencil, LuTrash2, LuX } from "react-icons/lu"
 import { FoldTitle } from "./FoldTitle"
 import { GALLERY_COLS, groupByFolder, useSessionList } from "./galleryGrid"
 
@@ -18,7 +18,21 @@ export function FolderedGrid<T>({
   searching,
   onRenameFolder,
   onUngroup,
+  toolbar,
+  selection,
 }: {
+  /** A la dreta de la fila d'eines (p. ex. «Esborrar l'historial»). */
+  toolbar?: ReactNode
+  /**
+   * Seleccionar-ne diversos (botó «Seleccionar»): moure'ls tots a un grup o esborrar-los alhora.
+   * `folders`: els grups que ja hi ha; `noun`: [singular, plural].
+   */
+  selection?: {
+    noun: [string, string]
+    folders: string[]
+    onMove: (keys: (string | number)[], folder: string | undefined) => void
+    onDelete?: (keys: (string | number)[]) => Promise<void>
+  }
   items: T[]
   folderOf: (t: T) => string | undefined
   keyOf: (t: T) => string | number
@@ -31,8 +45,107 @@ export function FolderedGrid<T>({
   const { folders, loose } = groupByFolder(items, folderOf)
   const [open, setOpen] = useSessionList(storageKey)
   const [renaming, setRenaming] = useState<string | null>(null)
+  // Mode selecció: cada targeta es marca en tocar-la (no s'obre).
+  const [picking, setPicking] = useState(false)
+  const [picked, setPicked] = useState<Set<string | number>>(new Set())
+  const [moving, setMoving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  // «Grup nou»: primer el nom i després es trien les targetes que hi van.
+  const [naming, setNaming] = useState(false)
+  const [target, setTarget] = useState<string | null>(null)
+  const stopPicking = () => (setPicking(false), setPicked(new Set()), setTarget(null))
+  const toggle = (k: string | number) =>
+    setPicked((cur) => {
+      const next = new Set(cur)
+      if (next.has(k)) next.delete(k)
+      else next.add(k)
+      return next
+    })
+  const n = picked.size
+  const noun = selection ? (n === 1 ? selection.noun[0] : selection.noun[1]) : ""
+  const cell = (t: T) => {
+    const k = keyOf(t)
+    if (!picking) return <Box key={k}>{render(t)}</Box>
+    const on = picked.has(k)
+    return (
+      <Box key={k} position="relative">
+        {render(t)}
+        {/* Capa per sobre de la targeta: marcar-la en lloc d'obrir-la. */}
+        <Box
+          as="button"
+          position="absolute"
+          inset={0}
+          rounded="lg"
+          borderWidth="2px"
+          borderColor={on ? "wood.solid" : "transparent"}
+          bg={on ? "wood.solid/10" : "transparent"}
+          _hover={{ bg: on ? "wood.solid/15" : "bg.muted/40" }}
+          onClick={() => toggle(k)}
+          aria-pressed={on}
+          aria-label={on ? "Treure de la selecció" : "Seleccionar"}
+        >
+          <Box position="absolute" top={2} left={2} fontSize="xl" color={on ? "wood.solid" : "fg.muted"} bg="bg.panel" rounded="full" display="inline-flex">
+            {on ? <LuCircleCheck /> : <LuCircle />}
+          </Box>
+        </Box>
+      </Box>
+    )
+  }
   return (
     <Stack gap={3}>
+      {(toolbar || selection) && (
+        <HStack justify="flex-end" gap={1} wrap="wrap">
+          {picking && selection ? (
+            <>
+              <Text fontSize="sm" color="fg.muted" mr="auto">
+                {target && !n ? `Toca els que van al grup «${target}»` : n ? `${n} ${noun} seleccionat${n === 1 ? "" : "s"}` : "Toca les targetes per seleccionar-les"}
+              </Text>
+              <Button size="xs" variant="ghost" onClick={() => setPicked(new Set(items.map(keyOf)))}>
+                Tots
+              </Button>
+              {target ? (
+                <Button
+                  size="xs"
+                  colorPalette="wood"
+                  disabled={!n}
+                  onClick={() => {
+                    selection.onMove([...picked], target)
+                    stopPicking()
+                  }}
+                >
+                  <LuFolderInput /> Posar a «{target}»
+                </Button>
+              ) : (
+                <Button size="xs" variant="outline" disabled={!n} onClick={() => setMoving(true)}>
+                  <LuFolderInput /> Moure a un grup…
+                </Button>
+              )}
+              {!target && selection.onDelete && (
+                <Button size="xs" variant="ghost" colorPalette="red" disabled={!n} onClick={() => setDeleting(true)}>
+                  <LuTrash2 /> Esborrar
+                </Button>
+              )}
+              <IconButton size="xs" variant="ghost" aria-label="Acabar la selecció" title="Acabar la selecció" onClick={stopPicking}>
+                <LuX />
+              </IconButton>
+            </>
+          ) : (
+            <>
+              {selection && (
+                <Button size="xs" variant="ghost" onClick={() => setNaming(true)}>
+                  <LuFolderPlus /> Grup nou
+                </Button>
+              )}
+              {selection && items.length > 1 && (
+                <Button size="xs" variant="ghost" onClick={() => setPicking(true)}>
+                  <LuListChecks /> Seleccionar
+                </Button>
+              )}
+              {toolbar}
+            </>
+          )}
+        </HStack>
+      )}
       {folders.length > 0 && (
         <Accordion.Root multiple collapsible lazyMount variant="plain" value={searching ? folders.map((f) => f[0]) : open} onValueChange={(e) => !searching && setOpen(e.value)}>
           {folders.map(([name, list]) => (
@@ -65,9 +178,7 @@ export function FolderedGrid<T>({
               <Accordion.ItemContent>
                 <Accordion.ItemBody>
                   <SimpleGrid columns={GALLERY_COLS} gap={3}>
-                    {list.map((t) => (
-                      <Box key={keyOf(t)}>{render(t)}</Box>
-                    ))}
+                    {list.map(cell)}
                   </SimpleGrid>
                 </Accordion.ItemBody>
               </Accordion.ItemContent>
@@ -77,11 +188,71 @@ export function FolderedGrid<T>({
       )}
       {loose.length > 0 && (
         <SimpleGrid columns={GALLERY_COLS} gap={3}>
-          {loose.map((t) => (
-            <Box key={keyOf(t)}>{render(t)}</Box>
-          ))}
+          {loose.map(cell)}
         </SimpleGrid>
       )}
+      {selection && (
+        <>
+          <MoveToFolderDialog
+            open={moving}
+            what={`${n} ${noun}`}
+            folders={selection.folders}
+            current={(() => {
+              // Si tots són del mateix grup, es pot «Treure del grup».
+              const fs = new Set(items.filter((t) => picked.has(keyOf(t))).map(folderOf))
+              return fs.size === 1 ? [...fs][0] : undefined
+            })()}
+            onPick={(f) => {
+              selection.onMove([...picked], f)
+              stopPicking()
+            }}
+            onClose={() => setMoving(false)}
+          />
+          <Dialog.Root role="alertdialog" open={deleting} onOpenChange={(e) => !e.open && setDeleting(false)}>
+            <Portal>
+              <Dialog.Backdrop />
+              <Dialog.Positioner>
+                <Dialog.Content>
+                  <Dialog.Header>
+                    <Dialog.Title>Esborrar {n} {noun}?</Dialog.Title>
+                  </Dialog.Header>
+                  <Dialog.Body>
+                    <Text>No es pot desfer.</Text>
+                  </Dialog.Body>
+                  <Dialog.Footer>
+                    <Button variant="outline" onClick={() => setDeleting(false)}>
+                      Cancel·lar
+                    </Button>
+                    <Button
+                      colorPalette="red"
+                      onClick={async () => {
+                        await selection.onDelete?.([...picked])
+                        setDeleting(false)
+                        stopPicking()
+                      }}
+                    >
+                      <LuTrash2 /> Esborrar
+                    </Button>
+                  </Dialog.Footer>
+                </Dialog.Content>
+              </Dialog.Positioner>
+            </Portal>
+          </Dialog.Root>
+        </>
+      )}
+      <FolderNameDialog
+        open={naming}
+        title="Grup nou"
+        initial=""
+        placeholder="P. ex. el nom d'un client o d'un projecte"
+        onClose={() => setNaming(false)}
+        onSave={(name) => {
+          setNaming(false)
+          if (!name) return
+          setTarget(name)
+          setPicking(true)
+        }}
+      />
       <FolderNameDialog
         open={renaming !== null}
         title="Canviar el nom del grup"
@@ -161,7 +332,7 @@ export function MoveToFolderDialog({ open, what, folders, current, onPick, onClo
   )
 }
 
-function FolderNameDialog({ open, title, initial, onClose, onSave }: { open: boolean; title: string; initial: string; onClose: () => void; onSave: (name: string) => void }) {
+function FolderNameDialog({ open, title, initial, placeholder, onClose, onSave }: { open: boolean; title: string; initial: string; placeholder?: string; onClose: () => void; onSave: (name: string) => void }) {
   const [v, setV] = useState(initial)
   useEffect(() => {
     if (open) setV(initial)
@@ -182,7 +353,7 @@ function FolderNameDialog({ open, title, initial, onClose, onSave }: { open: boo
                 <Dialog.Title>{title}</Dialog.Title>
               </Dialog.Header>
               <Dialog.Body>
-                <Input value={v} onChange={(e) => setV(e.target.value)} aria-label="Nom del grup" autoFocus />
+                <Input value={v} onChange={(e) => setV(e.target.value)} aria-label="Nom del grup" placeholder={placeholder} autoFocus />
               </Dialog.Body>
               <Dialog.Footer>
                 <Button variant="outline" onClick={onClose}>

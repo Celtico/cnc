@@ -1,9 +1,10 @@
-import { Button, Dialog, HStack, Portal, Text } from "@chakra-ui/react"
+import { Button, Dialog, Portal, Text } from "@chakra-ui/react"
 import { useState } from "react"
 import { LuTrash2 } from "react-icons/lu"
 
 /**
- * «Esborrar l'historial» (el mateix a Mobles, Objectes i Ambients): botó a dalt de l'historial i
+ * «Esborrar l'historial» (el mateix a Mobles, Objectes i Ambients): botó a la fila d'eines de
+ * l'historial (`FolderedGrid toolbar`) i
  * confirmació amb quants se n'esborraran i quants es conserven (els que són en un ambient).
  */
 export function ClearHistory({ count, kept = 0, noun, keptNote, onConfirm }: { count: number; kept?: number; noun: [string, string]; keptNote?: string; onConfirm: () => Promise<void> }) {
@@ -13,11 +14,9 @@ export function ClearHistory({ count, kept = 0, noun, keptNote, onConfirm }: { c
   const n = (k: number) => `${k} ${k === 1 ? noun[0] : noun[1]}`
   return (
     <>
-      <HStack justify="flex-end">
-        <Button size="xs" variant="ghost" colorPalette="red" onClick={() => setOpen(true)} disabled={!count}>
-          <LuTrash2 /> Esborrar l'historial
-        </Button>
-      </HStack>
+      <Button size="xs" variant="ghost" colorPalette="red" onClick={() => setOpen(true)} disabled={!count}>
+        <LuTrash2 /> Esborrar l'historial
+      </Button>
       <Dialog.Root role="alertdialog" open={open} onOpenChange={(e) => !e.open && setOpen(false)}>
         <Portal>
           <Dialog.Backdrop />

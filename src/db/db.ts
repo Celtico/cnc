@@ -213,11 +213,40 @@ export async function deleteAmbient(id: number): Promise<void> {
   await db.ambients.delete(id)
 }
 
-export async function duplicateAmbient(id: number): Promise<number | undefined> {
+/**
+ * Còpia d'un ambient **amb els seus mobles i objectes propis**: cada moble enllaçat es duplica i la
+ * còpia apunta als nous (així canviar-ne un a la còpia no toca l'original, p. ex. dos clients amb la
+ * mateixa escena). Amb `client`, la còpia es diu «nom · client» i tot va al grup del client.
+ */
+export async function duplicateAmbient(id: number, client?: string): Promise<number | undefined> {
   const src = await db.ambients.get(id)
   if (!src) return undefined
-  const copy = await createAmbient(`${src.name} (còpia)`, structuredClone(src.data))
-  if (src.folder) await db.ambients.update(copy, { folder: src.folder })
+  const who = client?.trim() || undefined
+  const names = (await db.ambients.toArray()).map((a) => a.name)
+  const base = who ? `${src.name.replace(/ · .*$/, "")} · ${who}` : `${src.name} (còpia)`
+  let name = base
+  for (let n = 2; names.includes(name); n++) name = `${base} (${n})`
+  const folder = who ?? name
+  const data = structuredClone(src.data) as { items?: { kind?: string; projectId?: number }[] }
+  const map = new Map<number, number>()
+  for (const it of data.items ?? []) {
+    if (it.kind !== "moble" || typeof it.projectId !== "number") continue
+    if (!map.has(it.projectId)) {
+      const p = await db.projects.get(it.projectId)
+      if (!p) continue
+      const { id: _id, createdAt: _c, updatedAt: _u, photo: _photo, folder: _f, ...rest } = p
+      void _id, void _c, void _u, void _photo, void _f
+      const projectNames = (await db.projects.toArray()).map((x) => x.name)
+      const pBase = who ? `${p.name.replace(/ · .*$/, "").replace(/ \(\d+\)$/, "")} · ${who}` : `${p.name} (còpia)`
+      let pName = pBase
+      for (let n = 2; projectNames.includes(pName); n++) pName = `${pBase} (${n})`
+      map.set(it.projectId, await createProject(pName, p.params, { ...rest, name: pName, folder }))
+    }
+    it.projectId = map.get(it.projectId)
+  }
+  const copy = await createAmbient(name, data)
+  const ambientFolder = who ?? src.folder
+  if (ambientFolder) await db.ambients.update(copy, { folder: ambientFolder })
   return copy
 }
 

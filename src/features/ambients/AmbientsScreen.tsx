@@ -38,10 +38,14 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
     const data: Ambient = { ...EMPTY_AMBIENT, walls: roomWalls(0, 0, 4000, 3000) }
     onOpen(await createAmbient(uniqueName("Ambient nou", names), data))
   }
-  const fromTemplate = async (t: AmbientTemplate) => {
+  // Escena del catàleg: primer es pregunta per a qui és (client o projecte, opcional).
+  const [asking, setAsking] = useState<{ t: AmbientTemplate } | { row: AmbientRow } | null>(null)
+  const [client, setClient] = useState("")
+  const clients = [...new Set((rows ?? []).filter((r) => r.folder).map((r) => r.folder!))].sort()
+  const fromTemplate = async (t: AmbientTemplate, who?: string) => {
     setBusy(t.id)
     try {
-      const id = await createAmbientFromTemplate(t)
+      const id = await createAmbientFromTemplate(t, who)
       // Els del catàleg són per veure'ls: s'obren al 3D.
       try {
         localStorage.setItem(AMBIENT_TAB_KEY, "3d")
@@ -49,7 +53,7 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
         /* sense emmagatzematge */
       }
       onOpen(id)
-      toaster.create({ title: `«${t.name}» creat`, description: "Els seus mobles i objectes s'han creat a Mobles i Objectes, enllaçats a l'ambient.", type: "success" })
+      toaster.create({ title: `«${t.name}» creat`, description: who ? `Els seus mobles i objectes són al grup «${who.trim()}» de Mobles i Objectes, enllaçats a l'ambient.` : "Els seus mobles i objectes són a Mobles i Objectes (al grup de l'ambient), enllaçats a l'ambient.", type: "success" })
     } finally {
       setBusy(null)
     }
@@ -83,19 +87,30 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                   </Text>
                 ) : (
                   <Stack gap={2}>
-                    <ClearHistory
-                      count={shownRows.length}
-                      noun={["ambient", "ambients"]}
-                      onConfirm={async () => {
-                        for (const r of shownRows) await deleteAmbient(r.id)
-                        toaster.create({ title: "Historial esborrat", description: "Els mobles i objectes que hi havia es queden a Mobles i Objectes.", type: "info" })
-                      }}
-                    />
                     <FolderedGrid
                       items={shownRows}
                       folderOf={(r) => r.folder}
                       keyOf={(r) => r.id}
                       storageKey="mobles:folders-ambients"
+                      toolbar={
+                        <ClearHistory
+                          count={shownRows.length}
+                          noun={["ambient", "ambients"]}
+                          onConfirm={async () => {
+                            for (const r of shownRows) await deleteAmbient(r.id)
+                            toaster.create({ title: "Historial esborrat", description: "Els mobles i objectes que hi havia es queden a Mobles i Objectes.", type: "info" })
+                          }}
+                        />
+                      }
+                      selection={{
+                        noun: ["ambient", "ambients"],
+                        folders: [...new Set((rows ?? []).filter((r) => r.folder).map((r) => r.folder!))].sort(),
+                        onMove: (ids, f) => void setAmbientsFolder(ids as number[], f),
+                        onDelete: async (ids) => {
+                          for (const id of ids as number[]) await deleteAmbient(id)
+                          toaster.create({ title: `${ids.length} esborrats`, description: "Els mobles i objectes que hi havia es queden a Mobles i Objectes.", type: "info" })
+                        },
+                      }}
                       searching={!!q}
                       onRenameFolder={(from, to) => void setAmbientsFolder(shownRows.filter((r) => r.folder === from).map((r) => r.id), to)}
                       onUngroup={(name) => void setAmbientsFolder(shownRows.filter((r) => r.folder === name).map((r) => r.id), undefined)}
@@ -125,8 +140,8 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                                 <Portal>
                                   <Menu.Positioner>
                                     <Menu.Content>
-                                      <Menu.Item value="dup" onClick={() => void duplicateAmbient(r.id).then(() => toaster.create({ title: "Ambient duplicat", type: "success" }))}>
-                                        <LuCopy /> Duplicar
+                                      <Menu.Item value="dup" onClick={() => (setClient(""), setAsking({ row: r }))}>
+                                        <LuCopy /> Duplicar (per a un client)…
                                       </Menu.Item>
                                       <Menu.Item value="move" onClick={() => setToMove(r)}>
                                         <LuFolderInput /> Moure a un grup…
@@ -174,7 +189,7 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                             <Accordion.ItemBody>
                               <SimpleGrid columns={GALLERY_COLS} gap={3}>
                                 {list.map((t) => (
-                                  <CatalogCard key={t.id} t={t} busy={busy === t.id} onPick={() => void fromTemplate(t)} />
+                                  <CatalogCard key={t.id} t={t} busy={busy === t.id} onPick={() => (setClient(""), setAsking({ t }))} />
                                 ))}
                               </SimpleGrid>
                             </Accordion.ItemBody>
@@ -190,6 +205,53 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
         </Accordion.Root>
       </Stack>
 
+      <Dialog.Root open={asking !== null} onOpenChange={(e) => !e.open && setAsking(null)} size="sm">
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  const a = asking
+                  setAsking(null)
+                  if (a && "t" in a) void fromTemplate(a.t, client)
+                  else if (a) void duplicateAmbient(a.row.id, client).then((id) => {
+                    toaster.create({ title: "Ambient duplicat", description: "Amb còpies pròpies dels seus mobles i objectes: canviar-los no toca l'original.", type: "success" })
+                    if (id) onOpen(id)
+                  })
+                }}
+              >
+                <Dialog.Header>
+                  <Dialog.Title>«{asking ? ("t" in asking ? asking.t.name : asking.row.name) : ""}» per a…</Dialog.Title>
+                </Dialog.Header>
+                <Dialog.Body>
+                  <Stack gap={3}>
+                    <Text fontSize="sm" color="fg.muted">
+                      Es fa una còpia nova de l'escena amb els seus mobles i objectes. Si és per a un client o un projecte, posa-hi el
+                      nom: tot anirà al seu grup (a Ambients, Mobles i Objectes) i no es barrejarà amb el d'altres clients.
+                    </Text>
+                    <Input value={client} onChange={(e) => setClient(e.target.value)} placeholder="Client o projecte (opcional)" aria-label="Client o projecte" autoFocus list="ambient-clients" />
+                    <datalist id="ambient-clients">
+                      {clients.map((c) => (
+                        <option key={c} value={c} />
+                      ))}
+                    </datalist>
+                  </Stack>
+                </Dialog.Body>
+                <Dialog.Footer>
+                  <Button variant="outline" onClick={() => setAsking(null)}>
+                    Cancel·lar
+                  </Button>
+                  <Button type="submit" colorPalette="wood">
+                    <LuPlus /> Crear l'ambient
+                  </Button>
+                </Dialog.Footer>
+              </form>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
       <MoveToFolderDialog
         open={toMove !== null}
         what={toMove?.name ?? ""}

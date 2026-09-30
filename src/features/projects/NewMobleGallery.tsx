@@ -156,6 +156,11 @@ export function NewMobleGallery({
                   folderOf={(t) => t.folder}
                   keyOf={(t) => t.id}
                   storageKey={`${storageKey}:folders-mine`}
+                  selection={{
+                    noun: ["plantilla", "plantilles"],
+                    folders: [...new Set(mine.filter((t) => t.folder).map((t) => t.folder!))].sort(),
+                    onMove: (ids, f) => setMine(setUserTemplatesFolder(ids as string[], f)),
+                  }}
                   searching={!!q}
                   onRenameFolder={(from, to) => setMine(setUserTemplatesFolder(mine.filter((t) => t.folder === from).map((t) => t.id), to))}
                   onUngroup={(name) => setMine(setUserTemplatesFolder(mine.filter((t) => t.folder === name).map((t) => t.id), undefined))}
