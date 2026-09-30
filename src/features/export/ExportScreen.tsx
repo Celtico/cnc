@@ -1,7 +1,7 @@
 import { Alert, Box, Button, Card, HStack, Stack, Switch, Text, VStack } from "@chakra-ui/react"
 import { useMemo, useState } from "react"
 import { usePersistentFlag } from "../usePersistentFlag"
-import { LuBoxes, LuCuboid, LuDownload, LuFileDown, LuFileJson, LuScissors, LuWrench } from "react-icons/lu"
+import { LuBoxes, LuCuboid, LuDownload, LuFileDown, LuFileJson, LuLayoutGrid, LuScissors, LuWrench } from "react-icons/lu"
 import { PanelGroup, PanelSection } from "../../components/PanelSection"
 import { exportGlb } from "../../components/viewer/exportGlb"
 import { exportablePanel } from "../../components/viewer/CabinetViewer"
@@ -114,11 +114,6 @@ export function ExportScreen({ projectId }: { projectId: number }) {
     }
   }
 
-  /** Els dos fitxers del taller d'un cop (el navegador pot demanar permís per a descàrregues múltiples). */
-  const doWorkshop = () => {
-    doStep()
-    if (nesting) setTimeout(doTopsolidCsv, 400)
-  }
 
   return (
     <VStack align="stretch" gap={4}>
@@ -164,32 +159,29 @@ export function ExportScreen({ projectId }: { projectId: number }) {
       <ExportCard
         highlight
         icon={<LuCuboid />}
-        title="Taller (format TopSolid)"
-        description="Els dos fitxers que el taller carrega a la seva pàgina de pujada: STEP amb els sòlids del moble i CSV de nesting amb peces, taulers, etiquetes, cantells i referències."
-        files={`${base}.step · ${base}_res.csv`}
+        title="TopSolid (per continuar el disseny)"
+        description="El moble en 3D per obrir-lo a TopSolid i continuar-lo treballant: un conjunt per mòdul, cada peça amb el seu nom, material i color, ingletes a 45°, talls i forats, peces sense nesting (ferro, pedra, vidre) i booleans 3D. El taller fa servir «STEP per al taller»: el format de TopSolid V6, amb tots els forats tal com els llegeix per fer el DXF."
+        files={`${base}-topsolid.step · ${base}.step`}
         action={
           <HStack gap={2} wrap="wrap">
-            <Button colorPalette="wood" onClick={doWorkshop} disabled={!panels.length || !nesting}>
-              <LuDownload /> Descarregar per al taller
+            <Button colorPalette="wood" onClick={doStepCad} disabled={!panels.length}>
+              <LuDownload /> STEP per a TopSolid
             </Button>
             <Button size="sm" variant="ghost" onClick={doStep} disabled={!panels.length}>
-              Només STEP
-            </Button>
-            <Button size="sm" variant="ghost" onClick={doTopsolidCsv} disabled={!nesting}>
-              Només CSV
+              STEP per al taller
             </Button>
           </HStack>
         }
       />
 
       <ExportCard
-        icon={<LuCuboid />}
-        title="TopSolid (per continuar el disseny)"
-        description="El moble per obrir-lo a TopSolid i seguir-lo treballant: un conjunt per mòdul, cada peça amb el seu nom, material i color, els ingletes a 45°, els talls i forats, les peces sense nesting (ferro, pedra, vidre) i els booleans 3D. No és per al taller: per tallar, el de dalt."
-        files={`${base}-topsolid.step`}
+        icon={<LuLayoutGrid />}
+        title="CSV de TopSolid"
+        description="El CSV de nesting com el que treu TopSolid (_res.csv): peces, taulers, etiquetes, cantells i referències. El taller el carrega a la seva pàgina de pujada juntament amb el «STEP per al taller»."
+        files={`${base}_res.csv`}
         action={
-          <Button variant="outline" onClick={doStepCad} disabled={!panels.length}>
-            <LuCuboid /> Descarregar STEP per a TopSolid
+          <Button variant="outline" onClick={doTopsolidCsv} disabled={!nesting}>
+            <LuLayoutGrid /> Descarregar CSV
           </Button>
         }
       />

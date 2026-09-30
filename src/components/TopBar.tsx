@@ -11,7 +11,9 @@ import { useProject } from "../features/useProject"
  * document a la dreta. Cada pàgina hi pot posar les seves accions amb <TopBarActions>.
  */
 const ActionsTarget = createContext<HTMLElement | null>(null)
-export const TopBarActionsProvider = ActionsTarget.Provider
+export function TopBarActionsProvider({ value, children }: { value: HTMLElement | null; children: ReactNode }) {
+  return <ActionsTarget.Provider value={value}>{children}</ActionsTarget.Provider>
+}
 
 /** Pinta els fills a la dreta de la barra superior (p. ex. desfer/refer de l'Editor). */
 export function TopBarActions({ children }: { children: ReactNode }) {

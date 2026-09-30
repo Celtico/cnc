@@ -18,7 +18,8 @@ import {
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcon"
 import { compositionKind, duplicateGroup, newGroupName, partGroups, insertPartCopy, insertRefCopy, modulePresetsFor, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
-import { ORIENT_ICON, PartAddMenu } from "./PartInspector"
+import { PartAddMenu } from "./PartInspector"
+import { ORIENT_ICON } from "./partOrient"
 import { RefAddMenu } from "./RefInspector"
 import { zoneLabel } from "./zoneLabel"
 

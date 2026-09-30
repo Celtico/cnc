@@ -1,6 +1,5 @@
 import { Badge, Button, Field, HStack, IconButton, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
 import { useState } from "react"
-import type { IconType } from "react-icons"
 import {
   LuBan,
   LuCopy,
@@ -10,12 +9,9 @@ import {
   LuMoveDiagonal2,
   LuMoveHorizontal,
   LuMoveVertical,
-  LuPanelLeft,
   LuPencilRuler,
   LuPlus,
   LuPuzzle,
-  LuRectangleHorizontal,
-  LuRectangleVertical,
   LuSpline,
   LuScissors,
   LuSquare,
@@ -49,14 +45,9 @@ import { MaterialSelect } from "../settings/SettingsScreen"
 import { useSettings } from "../settings/SettingsContext"
 import { ProfileEditor } from "./ProfileEditor"
 import { AxisLabel } from "./RefInspector"
+import { ORIENT_ICON, ORIENTS } from "./partOrient"
 
 /** Orientació d'una peça lliure: com està posada (el pla del tauler). */
-export const ORIENTS: IconOption<PartOrient>[] = [
-  { value: "front", label: "De cara", icon: LuRectangleVertical, hint: "De cara: dreta, mirant endavant (fons, travesser, pota de davant)" },
-  { value: "side", label: "De costat", icon: LuPanelLeft, hint: "De costat: dreta, de perfil (lateral, divisor, pota de costat)" },
-  { value: "flat", label: "Estirada", icon: LuRectangleHorizontal, hint: "Estirada: horitzontal (prestatge, tapa, seient)" },
-]
-export const ORIENT_ICON: Record<PartOrient, IconType> = { front: LuRectangleVertical, side: LuPanelLeft, flat: LuRectangleHorizontal }
 
 const NEW_GROUP = "__new_group__"
 

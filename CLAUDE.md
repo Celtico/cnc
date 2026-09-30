@@ -178,8 +178,14 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
 - **Pàgines del moble, cadascuna amb un sol propòsit**:
   - **Peces**: taula (peces iguals agrupades) + **plànol de la peça seleccionada** al costat.
     Els plànols no van a Exportar.
-  - **Exportar**: per destinació (Taller · TopSolid · CNC · Llista de tall · Model 3D), una acció
+  - **Exportar**: per destinació (TopSolid · CSV de TopSolid · CNC · Llista de tall · Model 3D), una acció
     principal per grup; les eines de depuració (JSON UnifiedData) plegades a «Avançat».
+    La targeta **TopSolid (per continuar el disseny)** porta «STEP per a TopSolid» (`toStepCad`) i,
+    secundari, «STEP per al taller» (`toStep`, format TopSolid V6: el taller en llegeix els forats
+    per fer el DXF, i el de TopSolid en fusiona o en descarta alguns). **CSV de TopSolid** només
+    porta el `_res.csv`.
+  - **Fast Refresh**: un fitxer `.tsx` només exporta components; constants i utilitats a part
+    (`composition/partOrient.ts`), si no Vite fa «hmr invalidate» i recarrega la pàgina.
   - **STEP per a TopSolid** (`toStepCad` a `export/step.ts`, conjunts de `stepCadGroups`): per obrir
     el moble a TopSolid i continuar-lo treballant, **separat del STEP del taller** (que no canvia).
     Conjunt arrel (el moble) › un subconjunt per mòdul («1. Baix»), «Taulell i sòcol» i les peces
