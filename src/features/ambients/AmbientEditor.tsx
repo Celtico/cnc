@@ -402,7 +402,7 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
         left={
           <Stack gap={3}>
           <HStack gap={2}>
-              <Button size="sm" colorPalette="wood" flex={1} onClick={() => setPicker(true)}>
+              <Button size="sm" variant="outline" flex={1} onClick={() => setPicker(true)}>
                 <LuBox /> Moble
               </Button>
               <Button size="sm" variant="outline" flex={1} onClick={() => setObjPicker(true)}>
