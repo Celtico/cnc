@@ -1,10 +1,14 @@
-import { Button, Card, Dialog, EmptyState, HStack, Heading, IconButton, Portal, SimpleGrid, Text, VStack } from "@chakra-ui/react"
-import { useState } from "react"
-import { LuCopy, LuHouse, LuPlus, LuTrash2 } from "react-icons/lu"
+import { Accordion, Badge, Box, Button, Card, CloseButton, Dialog, Heading, HStack, IconButton, Input, InputGroup, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
+import { useMemo, useState } from "react"
+import { LuBookOpen, LuCopy, LuHistory, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
-import { EMPTY_AMBIENT, footprintCorners, parseAmbient, roomWalls, wallCorners, type Ambient } from "../../core/model"
+import { uniqueName } from "../../core/file/mobleFile"
+import { AMBIENT_TEMPLATES, EMPTY_AMBIENT, footprintCorners, parseAmbient, roomWalls, wallCorners, type Ambient, type AmbientTemplate } from "../../core/model"
 import { createAmbient, db, deleteAmbient, duplicateAmbient, type AmbientRow } from "../../db/db"
 import { useLiveQuery } from "../../db/useLiveQuery"
+import { FoldTitle } from "../projects/NewMobleGallery"
+import { GALLERY_COLS, fold, useSessionList } from "../projects/galleryGrid"
+import { createAmbientFromTemplate, templatePreview } from "./fromTemplate"
 
 /**
  * Ambients: plànols de la casa on es col·loquen els mobles (els de la llista, enllaçats) i
@@ -14,66 +18,123 @@ import { useLiveQuery } from "../../db/useLiveQuery"
 export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
   const rows = useLiveQuery(() => db.ambients.orderBy("updatedAt").reverse().toArray(), [])
   const [toDelete, setToDelete] = useState<AmbientRow | null>(null)
+  const [query, setQuery] = useState("")
+  const [busy, setBusy] = useState<string | null>(null)
+  const q = fold(query.trim())
+  const matches = (text: string) => !q || fold(text).includes(q)
+  const shownRows = (rows ?? []).filter((r) => matches(r.name))
+  const shownTemplates = AMBIENT_TEMPLATES.filter((t) => matches(`${t.name} ${t.description}`))
+  const [open, setOpen] = useSessionList("mobles:ambients")
+  const found = [...(shownRows.length ? ["history"] : []), ...(shownTemplates.length ? ["catalog"] : [])]
   const create = async () => {
-    const n = (await db.ambients.count()) + 1
+    const names = (await db.ambients.toArray()).map((a) => a.name)
     const data: Ambient = { ...EMPTY_AMBIENT, walls: roomWalls(0, 0, 4000, 3000) }
-    onOpen(await createAmbient(`Ambient ${n}`, data))
+    onOpen(await createAmbient(uniqueName("Ambient nou", names), data))
+  }
+  const fromTemplate = async (t: AmbientTemplate) => {
+    setBusy(t.id)
+    try {
+      onOpen(await createAmbientFromTemplate(t))
+      toaster.create({ title: `«${t.name}» creat`, description: "Els seus mobles i objectes s'han creat a Mobles i Objectes, enllaçats a l'ambient.", type: "success" })
+    } finally {
+      setBusy(null)
+    }
   }
   return (
     <VStack align="stretch" gap={5}>
-      <HStack justify="space-between" wrap="wrap" gap={3}>
-        <Heading size="xl">Ambients</Heading>
-        <Button colorPalette="wood" onClick={() => void create()}>
-          <LuPlus /> Ambient nou
-        </Button>
-      </HStack>
+      <Heading size="xl">Ambients</Heading>
       <Text fontSize="sm" color="fg.muted" maxW="640px" mt={-3}>
-        El plànol de la casa amb els mobles al seu lloc: dibuixa les parets (o posa-hi la imatge d'un plànol), col·loca-hi els teus mobles i blocs (sofà, llit, nevera…) i mira-ho en 3D.
+        El plànol de la casa amb els mobles al seu lloc: dibuixa les parets (o posa-hi la imatge d'un plànol), col·loca-hi els teus mobles i objectes i mira-ho en 3D o fes-ne un render. Al catàleg hi ha habitacions moblades, a punt per a renders.
       </Text>
-      {rows === undefined ? null : rows.length === 0 ? (
-        <EmptyState.Root>
-          <EmptyState.Content>
-            <EmptyState.Indicator>
-              <LuHouse />
-            </EmptyState.Indicator>
-            <VStack textAlign="center">
-              <EmptyState.Title>Encara no tens cap ambient</EmptyState.Title>
-              <EmptyState.Description>Crea'n un i hi dibuixes el plànol del pis o de l'habitació.</EmptyState.Description>
-            </VStack>
-          </EmptyState.Content>
-        </EmptyState.Root>
-      ) : (
-        <SimpleGrid columns={{ base: 1, md: 2, lg: 3, "2xl": 4 }} gap={4}>
-          {rows.map((r) => {
-            const a = parseAmbient(r.data)
-            return (
-              <Card.Root key={r.id} variant="outline">
-                <Card.Body gap={1} cursor="pointer" onClick={() => onOpen(r.id)}>
-                  <AmbientThumb a={a} />
-                  <Card.Title mt={2}>{r.name}</Card.Title>
-                  <Text color="fg.muted" fontSize="sm">
-                    {a.walls.length} {a.walls.length === 1 ? "paret" : "parets"} · {a.items.length} {a.items.length === 1 ? "element" : "elements"}
-                  </Text>
-                  <Text color="fg.subtle" fontSize="xs">
-                    Modificat el {new Date(r.updatedAt).toLocaleDateString("ca-ES", { day: "numeric", month: "short", year: "numeric" })}
-                  </Text>
-                </Card.Body>
-                <Card.Footer justifyContent="flex-end" gap={2}>
-                  <IconButton aria-label="Duplicar l'ambient" variant="ghost" onClick={() => void duplicateAmbient(r.id).then(() => toaster.create({ title: "Ambient duplicat", type: "success" }))}>
-                    <LuCopy />
-                  </IconButton>
-                  <IconButton aria-label="Esborrar l'ambient" variant="ghost" colorPalette="red" onClick={() => setToDelete(r)}>
-                    <LuTrash2 />
-                  </IconButton>
-                  <Button size="sm" colorPalette="wood" onClick={() => onOpen(r.id)}>
-                    Obrir
-                  </Button>
-                </Card.Footer>
-              </Card.Root>
-            )
-          })}
+      <Stack gap={4}>
+        <InputGroup maxW={{ base: "full", md: "420px" }} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => setQuery("")} /> : undefined}>
+          <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar ambients: nom, habitació, material…" aria-label="Cercar ambients" />
+        </InputGroup>
+        <SimpleGrid columns={GALLERY_COLS} gap={3}>
+          <Card.Root asChild variant="outline" size="sm" cursor="pointer" _hover={{ borderColor: "wood.solid" }}>
+            <button type="button" onClick={() => void create()}>
+              <Card.Body p={3} gap={2} alignItems="stretch" textAlign="left">
+                <Box h="96px" rounded="md" borderWidth="2px" borderStyle="dashed" display="flex" alignItems="center" justifyContent="center" color="fg.muted" fontSize="2xl">
+                  <LuPlus />
+                </Box>
+                <Text fontWeight="semibold">En blanc</Text>
+                <Text fontSize="xs" color="fg.muted">
+                  Una habitació de 4 × 3 m per començar: mou-ne les parets o dibuixa'n de noves.
+                </Text>
+              </Card.Body>
+            </button>
+          </Card.Root>
         </SimpleGrid>
-      )}
+        <Accordion.Root multiple collapsible lazyMount variant="enclosed" value={q ? found : open} onValueChange={(e) => !q && setOpen(e.value)}>
+          <Accordion.Item value="history">
+            <Accordion.ItemTrigger cursor="pointer">
+              <FoldTitle icon={<LuHistory />} title="Historial" count={shownRows.length} />
+              <Accordion.ItemIndicator />
+            </Accordion.ItemTrigger>
+            <Accordion.ItemContent>
+              <Accordion.ItemBody>
+                {shownRows.length === 0 ? (
+                  <Text fontSize="sm" color="fg.muted">
+                    {rows?.length ? "Cap ambient no coincideix amb la cerca." : "Encara no en tens: comença en blanc o des del catàleg."}
+                  </Text>
+                ) : (
+                  <SimpleGrid columns={GALLERY_COLS} gap={3}>
+                    {shownRows.map((r) => {
+                      const a = parseAmbient(r.data)
+                      return (
+                        <Card.Root key={r.id} variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }}>
+                          <Card.Body p={3} gap={2} cursor="pointer" onClick={() => onOpen(r.id)}>
+                            <AmbientThumb a={a} />
+                            <Text fontWeight="semibold" fontSize="sm" truncate title={r.name}>
+                              {r.name}
+                            </Text>
+                            <Text fontSize="xs" color="fg.muted">
+                              {a.walls.length} {a.walls.length === 1 ? "paret" : "parets"} · {a.items.length} {a.items.length === 1 ? "element" : "elements"}
+                            </Text>
+                          </Card.Body>
+                          <Card.Footer px={3} pb={3} pt={0} gap={0.5} justifyContent="space-between">
+                            <Text fontSize="xs" color="fg.subtle" truncate>
+                              {new Date(r.updatedAt).toLocaleDateString("ca-ES", { day: "numeric", month: "short", year: "numeric" })}
+                            </Text>
+                            <HStack gap={0}>
+                              <IconButton aria-label="Duplicar l'ambient" title="Duplicar" size="xs" variant="ghost" onClick={() => void duplicateAmbient(r.id).then(() => toaster.create({ title: "Ambient duplicat", type: "success" }))}>
+                                <LuCopy />
+                              </IconButton>
+                              <IconButton aria-label="Esborrar l'ambient" title="Esborrar" size="xs" variant="ghost" colorPalette="red" onClick={() => setToDelete(r)}>
+                                <LuTrash2 />
+                              </IconButton>
+                            </HStack>
+                          </Card.Footer>
+                        </Card.Root>
+                      )
+                    })}
+                  </SimpleGrid>
+                )}
+              </Accordion.ItemBody>
+            </Accordion.ItemContent>
+          </Accordion.Item>
+          <Accordion.Item value="catalog">
+            <Accordion.ItemTrigger cursor="pointer">
+              <FoldTitle icon={<LuBookOpen />} title="Catàleg d'ambients" count={shownTemplates.length} />
+              <Accordion.ItemIndicator />
+            </Accordion.ItemTrigger>
+            <Accordion.ItemContent>
+              <Accordion.ItemBody>
+                <Stack gap={3}>
+                  <Text fontSize="xs" color="fg.muted">
+                    Habitacions moblades amb mobles de les plantilles i objectes, per fer-ne renders per a la web o el catàleg. En triar-ne una, els mobles es creen a Mobles i Objectes i queden enllaçats.
+                  </Text>
+                  <SimpleGrid columns={GALLERY_COLS} gap={3}>
+                    {shownTemplates.map((t) => (
+                      <CatalogCard key={t.id} t={t} busy={busy === t.id} onPick={() => void fromTemplate(t)} />
+                    ))}
+                  </SimpleGrid>
+                </Stack>
+              </Accordion.ItemBody>
+            </Accordion.ItemContent>
+          </Accordion.Item>
+        </Accordion.Root>
+      </Stack>
 
       <Dialog.Root role="alertdialog" open={toDelete !== null} onOpenChange={(e) => !e.open && setToDelete(null)}>
         <Portal>
@@ -84,7 +145,7 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                 <Dialog.Title>Esborrar «{toDelete?.name}»?</Dialog.Title>
               </Dialog.Header>
               <Dialog.Body>
-                <Text>Els mobles que hi ha no s'esborren: continuen a la llista de Mobles.</Text>
+                <Text>Els mobles i objectes que hi ha no s'esborren: continuen a Mobles i Objectes.</Text>
               </Dialog.Body>
               <Dialog.Footer>
                 <Button variant="outline" onClick={() => setToDelete(null)}>
@@ -108,6 +169,31 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
   )
 }
 
+/** Targeta del catàleg: miniatura del plànol moblat (es calcula en obrir el catàleg). */
+function CatalogCard({ t, busy, onPick }: { t: AmbientTemplate; busy: boolean; onPick: () => void }) {
+  const preview = useMemo(() => templatePreview(t), [t])
+  return (
+    <Card.Root asChild variant="outline" size="sm" cursor="pointer" _hover={{ borderColor: "wood.solid" }} opacity={busy ? 0.6 : 1}>
+      <button type="button" onClick={onPick} disabled={busy}>
+        <Card.Body p={3} gap={2} alignItems="stretch" textAlign="left">
+          <AmbientThumb a={preview} />
+          <HStack justify="space-between" gap={1}>
+            <Text fontWeight="semibold" fontSize="sm" truncate title={t.name}>
+              {t.name}
+            </Text>
+            <Badge size="xs" variant="subtle" flexShrink={0}>
+              {t.items.length} elements
+            </Badge>
+          </HStack>
+          <Text fontSize="xs" color="fg.muted" lineClamp={2} title={t.description}>
+            {t.description}
+          </Text>
+        </Card.Body>
+      </button>
+    </Card.Root>
+  )
+}
+
 /** Miniatura: parets i elements (els mobles, amb una petjada aproximada). */
 function AmbientThumb({ a }: { a: Ambient }) {
   const polys = [
@@ -118,7 +204,7 @@ function AmbientThumb({ a }: { a: Ambient }) {
   const x0 = Math.min(0, ...xs), y0 = Math.min(0, ...ys), x1 = Math.max(1000, ...xs), y1 = Math.max(1000, ...ys)
   const pad = Math.max(x1 - x0, y1 - y0) * 0.06
   return (
-    <svg viewBox={`${x0 - pad} ${y0 - pad} ${x1 - x0 + 2 * pad} ${y1 - y0 + 2 * pad}`} style={{ width: "100%", height: 120, background: "var(--chakra-colors-bg-subtle)", borderRadius: 6 }} aria-hidden>
+    <svg viewBox={`${x0 - pad} ${y0 - pad} ${x1 - x0 + 2 * pad} ${y1 - y0 + 2 * pad}`} style={{ width: "100%", height: 96, background: "var(--chakra-colors-bg-subtle)", borderRadius: 6 }} aria-hidden>
       {polys.map((p, i) => (
         <polygon key={i} points={p.pts.map((q) => q.join(",")).join(" ")} fill={p.wall ? "var(--chakra-colors-fg)" : "var(--chakra-colors-wood-muted)"} stroke={p.wall ? "none" : "var(--chakra-colors-wood-solid)"} strokeWidth={(x1 - x0) / 300} />
       ))}

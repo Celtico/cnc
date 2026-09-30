@@ -220,6 +220,14 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   i render; al 3D encuadrar, casa de nines, ombres i render.
 - **Plànol**: la roda fa zoom al punt del ratolí (com al 3D), pessigar també, arrossegar el fons
   desplaça; − / + i l'escala de pantalla (1:50…) a baix a la dreta; la barra d'eines flota a dalt.
+- **Les tres pàgines (Mobles, Objectes, Ambients) fan igual**: títol, text descriptiu, cercador,
+  «En blanc», **Historial** (els que ja tens) i acordions tancats (plantilles / catàleg).
+- **Catàleg d'ambients** (`core/model/ambientTemplates.ts`, `AMBIENT_TEMPLATES`): habitacions «de
+  revista» per fer renders per a la web (saló nòrdic, saló de noguera, menjador, cuina amb illa,
+  dormitori, juvenil, despatx, rebedor, bany). Referències a plantilles (`store:<cat>:<nom>`,
+  `app:<id>`, `object:<id>`), col·locades arrambades a una paret (N/S/E/O, `placeTemplateItem`) o
+  lliures. `createAmbientFromTemplate` (`features/ambients/fromTemplate.ts`) crea cada moble i objecte
+  (un per plantilla) i l'ambient enllaçat; `templatePreview` fa la miniatura.
 - **3D**: la mateixa navegació que l'editor (esmorteïment, roda, botó dret per desplaçar), clic per
   seleccionar (caixa taronja; Supr, Ctrl/⌘ D, R i fletxes com al plànol), «Encuadrar» i «Render».
 - **3D** (`Ambient3D`): terra i parets amb `surfaceMaterial` (textura a mida real), mobles i blocs

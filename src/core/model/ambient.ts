@@ -237,11 +237,15 @@ export const OBJECT_TEMPLATES: Template[] = [
     id: "object-plant",
     kind: "objecte",
     name: "Planta en test",
-    description: "Ø 600 × 1100 mm · test de terracota.",
+    description: "Ø 600 × 1200 mm · test de terracota i capçada en tres pisos.",
     make: () =>
       obj([
         { name: "Test", orient: "flat", material: "Pintura terracota", w: 380, h: 380, thickness: 400, x: 110, y: 0, z: 110, shape: ellipse(380, 380) },
-        { name: "Fulles", orient: "flat", material: "Vellut verd", w: 600, h: 600, thickness: 700, x: 0, y: 400, z: 0, shape: ellipse(600, 600) },
+        // Capçada en tres pisos cada cop més petits (silueta d'arbust).
+        { name: "Tronc", orient: "flat", material: "Roure massís / xapat", w: 40, h: 40, thickness: 250, x: 280, y: 400, z: 280, shape: ellipse(40, 40) },
+        { name: "Fulles", orient: "flat", material: "Vellut verd", w: 600, h: 600, thickness: 260, x: 0, y: 560, z: 0, shape: ellipse(600, 600) },
+        { name: "Fulles", orient: "flat", material: "Vellut verd", w: 460, h: 460, thickness: 220, x: 70, y: 820, z: 70, shape: ellipse(460, 460) },
+        { name: "Fulles", orient: "flat", material: "Vellut verd", w: 280, h: 280, thickness: 160, x: 160, y: 1040, z: 160, shape: ellipse(280, 280) },
       ]),
   },
   {

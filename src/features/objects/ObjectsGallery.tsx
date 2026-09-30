@@ -1,7 +1,7 @@
 import { Accordion, Box, Card, CloseButton, Input, InputGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 import { useState } from "react"
-import { LuLayoutTemplate, LuPlus, LuSearch, LuSofa } from "react-icons/lu"
+import { LuHistory, LuLayoutTemplate, LuPlus, LuSearch } from "react-icons/lu"
 import { OBJECT_TEMPLATES, defaultModule, newId, type Composition, type Template } from "../../core/model"
 import { FoldTitle, TemplateCard } from "../projects/NewMobleGallery"
 import { GALLERY_COLS, fold, useSessionList } from "../projects/galleryGrid"
@@ -60,7 +60,7 @@ export function ObjectsGallery({
       <Accordion.Root multiple collapsible lazyMount variant="enclosed" value={q ? found : open} onValueChange={(e) => !q && setOpen(e.value)}>
         <Accordion.Item value="mine">
           <Accordion.ItemTrigger cursor="pointer">
-            <FoldTitle icon={<LuSofa />} title="Els teus objectes" count={hist.count} />
+            <FoldTitle icon={<LuHistory />} title="Historial" count={hist.count} />
             <Accordion.ItemIndicator />
           </Accordion.ItemTrigger>
           <Accordion.ItemContent>
