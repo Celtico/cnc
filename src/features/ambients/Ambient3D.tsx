@@ -233,10 +233,7 @@ function Room({
     mesh.userData.room = "floor"
     return mesh
   }, [box.x0, box.x1, box.y0, box.y1, materials, ambient.floorMaterial])
-  useEffect(() => () => {
-    floor.geometry.dispose()
-    ;(floor.material as Material).dispose()
-  }, [floor])
+  useEffect(() => () => disposeTree(floor), [floor])
 
   const walls = useMemo(() => {
     const g = new Group()
@@ -289,6 +286,8 @@ function Room({
     mesh.userData.renderOnly = "ceiling"
     return mesh
   }, [ambient.walls, ambient.ceilingMaterial, materials, showCeiling])
+  useEffect(() => () => disposeTree(walls), [walls])
+  useEffect(() => () => (ceiling ? disposeTree(ceiling) : undefined), [ceiling])
   const scene = useThree((s) => s.scene)
   useEffect(() => {
     scene.userData.daylight = true
