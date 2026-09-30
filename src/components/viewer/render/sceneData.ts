@@ -1,4 +1,4 @@
-import { Camera, Mesh, MeshStandardMaterial, MirroredRepeatWrapping, OrthographicCamera, PerspectiveCamera, RepeatWrapping, Vector3, type BufferGeometry, type Object3D, type Scene, type Texture } from "three"
+import { BoxGeometry, Camera, Mesh, MeshStandardMaterial, MirroredRepeatWrapping, OrthographicCamera, PerspectiveCamera, RepeatWrapping, Vector3, type BufferGeometry, type Object3D, type Scene, type Texture } from "three"
 
 /**
  * Escena en dades planes per al render per CPU (`pathWorker`): triangles en coordenades del
@@ -41,6 +41,22 @@ export interface RenderScene {
   camera: RenderCamera
   sun: [number, number, number]
   background: [number, number, number]
+  /**
+   * Finestres (vidres) com a «portals» de llum: centre i els dos costats (9 per finestra, m).
+   * Només en interiors (amb sostre): la llum del cel es mostreja a través seu (menys soroll).
+   */
+  portals: Float32Array
+  /** Interior tancat (s'hi ha posat el sostre): la llum entra per les finestres. */
+  interior: boolean
+  /** Escena d'ambient: cel de dia (blau, horitzó clar, sol amb halo) en lloc del d'estudi. */
+  daylight: boolean
+}
+
+/** Cel HDRI (equirectangular, RGB lineal) reduït, per als workers. */
+export interface RenderEnv {
+  w: number
+  h: number
+  data: Float32Array
 }
 
 /** Opcions del render que canvien el càlcul (en canviar-les es torna a començar). */
@@ -55,9 +71,13 @@ export interface RenderOpts {
   skyIntensity: number
   /** Mida aparent del sol: 0 = ombres dures; 1 = molt suaus. */
   softness: number
+  /** Obertura de la lent (radi en mm): 0 = tot enfocat; més, fons desenfocat (enfoca al centre). */
+  aperture?: number
+  /** Gir del cel HDRI (graus). */
+  envRotation?: number
 }
 
-export const DEFAULT_RENDER_OPTS: RenderOpts = { bounces: 6, sunAzimuth: 40, sunElevation: 45, sunIntensity: 1, skyIntensity: 1, softness: 0.15 }
+export const DEFAULT_RENDER_OPTS: RenderOpts = { bounces: 6, sunAzimuth: 40, sunElevation: 45, sunIntensity: 1, skyIntensity: 1, softness: 0.15, aperture: 0, envRotation: 0 }
 
 const MAX_TEX = 512
 
@@ -121,9 +141,26 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
   }
 
   const v = new Vector3()
+  const camPos = new Vector3().setFromMatrixPosition(camera.matrixWorld)
+  const portals: number[] = []
+  let interior = false
   scene.traverse((o) => {
     const mesh = o as Mesh
-    if (!mesh.isMesh || !visibleChain(mesh)) return
+    if (!mesh.isMesh) return
+    // Només per al render (el sostre dels ambients): si la càmera és a sota, és un interior.
+    const renderOnly = mesh.userData.renderOnly === "ceiling"
+    if (renderOnly) {
+      if (room !== "room" || camPos.y >= mesh.getWorldPosition(new Vector3()).y - 0.05) return
+      interior = true
+    } else if (!visibleChain(mesh)) return
+    if (mesh.userData.portal && visibleChain(mesh)) {
+      const g = mesh.geometry as BoxGeometry
+      const { width = 1, height = 1 } = g.parameters ?? {}
+      const c = new Vector3().setFromMatrixPosition(mesh.matrixWorld)
+      const u = new Vector3().setFromMatrixColumn(mesh.matrixWorld, 0).multiplyScalar(width)
+      const w = new Vector3().setFromMatrixColumn(mesh.matrixWorld, 1).multiplyScalar(height)
+      portals.push(c.x, c.y, c.z, u.x, u.y, u.z, w.x, w.y, w.z)
+    }
     const part = mesh.userData.room as "floor" | "wall" | undefined
     if (part && (room === "none" || (room === "floor" && part === "wall"))) return
     const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
@@ -174,5 +211,8 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
     camera: cam,
     sun: [sun.x, sun.y, sun.z],
     background: bg && bg.r !== undefined ? [bg.r!, bg.g!, bg.b!] : [0.9, 0.88, 0.85],
+    portals: new Float32Array(interior ? portals : []),
+    interior,
+    daylight: !!scene.userData.daylight,
   }
 }

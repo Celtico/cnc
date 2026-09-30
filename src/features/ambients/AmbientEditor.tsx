@@ -606,7 +606,7 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
                 ) : (
                   <>
                     <ViewTile label="Encuadrar" icon={<LuVideo />} on={false} onClick={() => setFit((n) => n + 1)} />
-                    <ViewTile label="Interior" icon={<LuEye />} on={false} onClick={() => setEye((n) => n + 1)} tip="Entrar a l'habitació: càmera a l'alçada dels ulls (1,6 m), mirant la paret del fons" />
+                    <ViewTile label="Interior" icon={<LuEye />} on={false} onClick={() => setEye((n) => n + 1)} tip="Entrar a l'habitació: càmera anivellada a 1,35 m, mirant la paret del fons, com les fotos d'interiors" />
                     <ViewTile label="Casa de nines" icon={<LuHouse />} on={dollhouse} onClick={() => setDollhouse((v) => !v)} tip="Parets de davant transparents" />
                     <ViewTile label="Ombres" icon={<LuSun />} on={shadows} onClick={() => setShadows((v) => !v)} />
                     <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => setRenderOpen(true)} tip="Render fotorealista per CPU (com Cinema 4D): es va afinant i es desa en PNG" />

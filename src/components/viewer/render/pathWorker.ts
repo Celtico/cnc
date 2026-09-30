@@ -5,9 +5,12 @@
  * d'estudi + sol amb ombres suaus; materials difusos amb una mica de reflex, metalls i
  * transparència. Triangles en un BVH propi.
  */
-import type { RenderOpts, RenderScene } from "./sceneData"
+import type { RenderEnv, RenderOpts, RenderScene } from "./sceneData"
 
-type Msg = { type: "scene"; scene: RenderScene; width: number; height: number; seed: number; opts: RenderOpts } | { type: "stop" }
+type Msg = { type: "scene"; scene: RenderScene; width: number; height: number; seed: number; opts: RenderOpts; env?: RenderEnv | null } | { type: "stop" }
+
+let ENV: RenderEnv | null = null
+let envRot = 0
 
 let O: RenderOpts = { bounces: 6, sunAzimuth: 40, sunElevation: 45, sunIntensity: 1, skyIntensity: 1, softness: 0.15 }
 let sunDir: [number, number, number] = [0, 1, 0]
@@ -114,7 +117,7 @@ const stack = new Int32Array(128)
 // Resultat de la intersecció.
 let hitT = 0, hitTri = -1, hitU = 0, hitV = 0
 
-function intersect(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, tMax: number, any: boolean): boolean {
+function intersect(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, tMax: number, any: boolean, skipGlass = false): boolean {
   hitT = tMax
   hitTri = -1
   if (!triCount) return false
@@ -155,6 +158,8 @@ function intersect(ox: number, oy: number, oz: number, dx: number, dy: number, d
         if (v < 0 || u + v > 1) continue
         const d = (e2x * qx + e2y * qy + e2z * qz) * inv
         if (d > 1e-5 && d < hitT) {
+          // Rajos d'ombra: el vidre no fa ombra.
+          if (skipGlass && S!.materials[S!.matIndex[t]!]!.opacity < 1) continue
           hitT = d
           hitTri = t
           hitU = u
@@ -206,8 +211,7 @@ function albedo(t: number) {
 }
 
 // Cel d'estudi (lineal): clar a dalt, més fosc a baix.
-function sky(dx: number, dy: number, dz: number, out: number[]) {
-  void dx; void dz
+function studioSky(dy: number, out: number[]) {
   const t = Math.max(-1, Math.min(1, dy))
   if (t >= 0) {
     out[0] = 0.55 + 0.25 * t
@@ -218,22 +222,99 @@ function sky(dx: number, dy: number, dz: number, out: number[]) {
   }
 }
 
+/** Cel de dia (ambients): zenit blau, horitzó clar, halo del sol i terra llunyà. */
+function daySky(dx: number, dy: number, dz: number, out: number[]) {
+  const s = sunDir
+  const cs = Math.max(0, dx * s[0] + dy * s[1] + dz * s[2])
+  if (dy >= 0) {
+    const k = Math.pow(1 - dy, 2.5)
+    out[0] = 0.32 + (0.95 - 0.32) * k
+    out[1] = 0.48 + (0.97 - 0.48) * k
+    out[2] = 0.85 + (1.0 - 0.85) * k
+  } else {
+    const k = Math.min(1, -dy * 5)
+    out[0] = 0.62 + (0.3 - 0.62) * k
+    out[1] = 0.64 + (0.31 - 0.64) * k
+    out[2] = 0.64 + (0.26 - 0.64) * k
+  }
+  const glow = Math.pow(cs, 48) * 5 + Math.pow(cs, 6) * 0.35
+  out[0] += glow; out[1] += glow * 0.92; out[2] += glow * 0.78
+}
+
+/** Cel HDRI (equirectangular) girat `envRot`. */
+function envSky(dx: number, dy: number, dz: number, out: number[]) {
+  const e = ENV!
+  const u = (Math.atan2(dx, -dz) / (2 * Math.PI) + 0.5 + envRot) % 1
+  const v = Math.acos(Math.max(-1, Math.min(1, dy))) / Math.PI
+  const x = Math.min(e.w - 1, Math.floor(((u + 1) % 1) * e.w)), y = Math.min(e.h - 1, Math.floor(v * e.h))
+  const i = (y * e.w + x) * 3
+  out[0] = e.data[i]!; out[1] = e.data[i + 1]!; out[2] = e.data[i + 2]!
+}
+
+function sky(dx: number, dy: number, dz: number, out: number[]) {
+  if (ENV) envSky(dx, dy, dz, out)
+  else if (S!.daylight) daySky(dx, dy, dz, out)
+  else studioSky(dy, out)
+}
+
+/** Raig d'ombra fins a tMax: 0 si el tapa res opac; el vidre no fa ombra (deixa passar el 88 %). */
+function transmit(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, tMax: number): number {
+  return intersect(ox, oy, oz, dx, dy, dz, tMax, true, true) ? 0 : 0.88
+}
+
 const SUN = [2.3, 2.15, 1.95]
 const env = [0, 0, 0]
+const env2 = [0, 0, 0]
+/** Llum del cel a través d'una finestra triada a l'atzar (portal): menys soroll a dins. */
+function portalLight(px: number, py: number, pz: number, nx: number, ny: number, nz: number, out: number[]): void {
+  out[0] = 0; out[1] = 0; out[2] = 0
+  const P = S!.portals
+  const np = P.length / 9
+  const i = Math.min(np - 1, Math.floor(random() * np)) * 9
+  const r1 = random() - 0.5, r2 = random() - 0.5
+  const qx = P[i]! + r1 * P[i + 3]! + r2 * P[i + 6]!, qy = P[i + 1]! + r1 * P[i + 4]! + r2 * P[i + 7]!, qz = P[i + 2]! + r1 * P[i + 5]! + r2 * P[i + 8]!
+  let lx = qx - px, ly = qy - py, lz = qz - pz
+  const d2 = lx * lx + ly * ly + lz * lz
+  const d = Math.sqrt(d2)
+  lx /= d; ly /= d; lz /= d
+  const cosS = nx * lx + ny * ly + nz * lz
+  if (cosS <= 0) return
+  // Normal del portal (u × v) i àrea.
+  const ux = P[i + 3]!, uy = P[i + 4]!, uz = P[i + 5]!, vx = P[i + 6]!, vy = P[i + 7]!, vz = P[i + 8]!
+  const cx = uy * vz - uz * vy, cy = uz * vx - ux * vz, cz = ux * vy - uy * vx
+  const area = Math.hypot(cx, cy, cz)
+  const cosP = Math.abs(cx * lx + cy * ly + cz * lz) / (area || 1)
+  if (cosP < 1e-3) return
+  const T = transmit(px, py, pz, lx, ly, lz, d - 0.02)
+  if (T <= 0) return
+  sky(lx, ly, lz, env2)
+  const k = (T * cosS * area * cosP * np) / (d2 * Math.PI) * O.skyIntensity
+  out[0] = env2[0]! * k; out[1] = env2[1]! * k; out[2] = env2[2]! * k
+}
+const pl = [0, 0, 0]
+
+/** AOV de la primera superfície (per al filtre de soroll): albedo i normal. */
+let aovA0 = 0, aovA1 = 0, aovA2 = 0, aovN0 = 0, aovN1 = 0, aovN2 = 0
 
 function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, out: Float32Array, o: number) {
   let tr = 1, tg = 1, tb = 1
   let r = 0, g = 0, b = 0
   const sun = sunDir
   const sky0 = O.skyIntensity
+  const portals = S!.interior && S!.portals.length > 0
   let alpha = 1
+  let aov = false
+  let lastDiffuse = false
+  let viaGlass = false
+  aovA0 = 1; aovA1 = 1; aovA2 = 1; aovN0 = 0; aovN1 = 0; aovN2 = 0
   for (let bounce = 0; bounce < O.bounces; bounce++) {
     if (!intersect(ox, oy, oz, dx, dy, dz, 1e9, false)) {
       if (bounce === 0) {
         // Fons: el color de l'escena i alfa 0 (fons blanc o transparent al diàleg).
         r += S!.background[0]; g += S!.background[1]; b += S!.background[2]
         alpha = 0
-      } else {
+      } else if (!(portals && lastDiffuse && viaGlass)) {
+        // (Si ha sortit per una finestra després d'un rebot difús, ja s'ha comptat amb el portal.)
         sky(dx, dy, dz, env)
         r += tr * env[0]! * sky0; g += tg * env[1]! * sky0; b += tb * env[2]! * sky0
       }
@@ -254,8 +335,15 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
     if (m.opacity < 1 && random() > m.opacity) {
       ox = px - nx * 2e-4; oy = py - ny * 2e-4; oz = pz - nz * 2e-4
       tr *= 0.95 * (0.5 + 0.5 * alb[0]!); tg *= 0.95 * (0.5 + 0.5 * alb[1]!); tb *= 0.95 * (0.5 + 0.5 * alb[2]!)
+      viaGlass = true
       continue
     }
+    if (!aov) {
+      aov = true
+      aovA0 = alb[0]!; aovA1 = alb[1]!; aovA2 = alb[2]!
+      aovN0 = nx; aovN1 = ny; aovN2 = nz
+    }
+    viaGlass = false
     const metal = m.metalness > 0.5
     const specP = metal ? 1 : 0.04 + 0.1 * (1 - m.roughness)
     if (random() < specP) {
@@ -269,6 +357,7 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
       if (dx * nx + dy * ny + dz * nz <= 0) break
       if (metal) { tr *= alb[0]!; tg *= alb[1]!; tb *= alb[2]! }
       ox = px; oy = py; oz = pz
+      lastDiffuse = false
       continue
     }
     // Difús: llum directa del sol (ombra suau: el sol té una mica de mida) i rebot cosinus.
@@ -277,11 +366,20 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
     const jl = Math.hypot(jx, jy, jz)
     const sx = jx / jl, sy = jy / jl, sz = jz / jl
     const cos = nx * sx + ny * sy + nz * sz
-    if (cos > 0 && !intersect(px, py, pz, sx, sy, sz, 1e9, true)) {
-      r += tr * ar * sunCol[0] * cos / Math.PI
-      g += tg * ag * sunCol[1] * cos / Math.PI
-      b += tb * ab * sunCol[2] * cos / Math.PI
+    if (cos > 0) {
+      // El sol també entra per les finestres (el vidre en deixa passar gairebé tota la llum).
+      const T = portals ? transmit(px, py, pz, sx, sy, sz, 1e9) : intersect(px, py, pz, sx, sy, sz, 1e9, true) ? 0 : 1
+      if (T > 0) {
+        r += tr * ar * sunCol[0] * cos * T / Math.PI
+        g += tg * ag * sunCol[1] * cos * T / Math.PI
+        b += tb * ab * sunCol[2] * cos * T / Math.PI
+      }
     }
+    if (portals) {
+      portalLight(px, py, pz, nx, ny, nz, pl)
+      r += tr * ar * pl[0]!; g += tg * ag * pl[1]!; b += tb * ab * pl[2]!
+    }
+    lastDiffuse = true
     tr *= ar; tg *= ag; tb *= ab
     // Rebot cosinus.
     const u1 = random(), u2 = random()
@@ -304,16 +402,22 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
       tr /= pmax; tg /= pmax; tb /= pmax
     }
   }
+  // Sense «ateses» (fireflies): una mostra no pot valer més de 12.
+  const mx = Math.max(r, g, b)
+  if (mx > 12) { const k = 12 / mx; r *= k; g *= k; b *= k }
   out[o] = r
   out[o + 1] = g
   out[o + 2] = b
   out[o + 3] = alpha
 }
 
-function pass(): Float32Array {
+let focus = 0
+function pass(): { color: Float32Array; aux: Float32Array } {
   const out = new Float32Array(W * H * 4)
+  const aux = new Float32Array(W * H * 6)
   const c = S!.camera
   const m = c.matrix
+  const ap = (O.aperture ?? 0) / 1000
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const nxp = ((x + random()) / W) * 2 - 1
@@ -333,17 +437,32 @@ function pass(): Float32Array {
         const l = Math.hypot(dx, dy, dz)
         dx /= l; dy /= l; dz /= l
         ox = m[12]!; oy = m[13]!; oz = m[14]!
+        if (ap > 0 && focus > 0) {
+          // Lent fina: el punt enfocat és al pla de focus; l'origen es mou pel disc de la lent.
+          const fwd = -(dx * m[8]! + dy * m[9]! + dz * m[10]!)
+          const t = focus / Math.max(1e-3, fwd)
+          const fx = ox + dx * t, fy = oy + dy * t, fz = oz + dz * t
+          const rr = Math.sqrt(random()) * ap, ph = random() * 2 * Math.PI
+          const du = rr * Math.cos(ph), dv = rr * Math.sin(ph)
+          ox += m[0]! * du + m[4]! * dv; oy += m[1]! * du + m[5]! * dv; oz += m[2]! * du + m[6]! * dv
+          dx = fx - ox; dy = fy - oy; dz = fz - oz
+          const q = Math.hypot(dx, dy, dz)
+          dx /= q; dy /= q; dz /= q
+        }
       }
-      trace(ox, oy, oz, dx, dy, dz, out, (y * W + x) * 4)
+      const i = y * W + x
+      trace(ox, oy, oz, dx, dy, dz, out, i * 4)
+      aux[i * 6] = aovA0; aux[i * 6 + 1] = aovA1; aux[i * 6 + 2] = aovA2
+      aux[i * 6 + 3] = aovN0; aux[i * 6 + 4] = aovN1; aux[i * 6 + 5] = aovN2
     }
   }
-  return out
+  return { color: out, aux }
 }
 
 function loop() {
   if (!running) return
-  const buf = pass()
-  ;(self as unknown as Worker).postMessage({ type: "pass", data: buf }, [buf.buffer])
+  const { color, aux } = pass()
+  ;(self as unknown as Worker).postMessage({ type: "pass", data: color, aux }, [color.buffer, aux.buffer])
   setTimeout(loop, 0)
 }
 
@@ -360,9 +479,18 @@ self.onmessage = (e: MessageEvent<Msg>) => {
   O = msg.opts
   const az = (O.sunAzimuth * Math.PI) / 180, el = (O.sunElevation * Math.PI) / 180
   sunDir = [Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az)]
-  sunCol = [SUN[0]! * O.sunIntensity, SUN[1]! * O.sunIntensity, SUN[2]! * O.sunIntensity]
+  // De dia (ambients) el sol és unes tres vegades més fort que el cel, com a fora.
+  const sunK = O.sunIntensity * (S.daylight ? 3 : 1)
+  sunCol = [SUN[0]! * sunK, SUN[1]! * sunK, SUN[2]! * sunK]
   jitter = 0.01 + O.softness * 0.35
+  ENV = msg.env ?? null
+  envRot = (O.envRotation ?? 0) / 360
   buildBVH(S.positions)
+  // Enfocament: la distància del centre de la imatge.
+  {
+    const m = S.camera.matrix
+    focus = intersect(m[12]!, m[13]!, m[14]!, -m[8]!, -m[9]!, -m[10]!, 1e9, false) ? hitT : 0
+  }
   running = true
   loop()
 }

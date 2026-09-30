@@ -5,6 +5,7 @@ import {
   Heading,
   Portal,
   SimpleGrid,
+  Stack,
   Text,
   VStack,
 } from "@chakra-ui/react"
@@ -19,6 +20,7 @@ import { ProjectCard } from "./ProjectCard"
 import { isObject } from "../objects/isObject"
 import { useAmbientMembership } from "../ambients/useAmbientMembership"
 import { compositionKind, type Composition } from "../../core/model"
+import { ClearHistory } from "./ClearHistory"
 import { createProject, db, deleteProject, duplicateProject, type Project } from "../../db/db"
 import { compositionOf } from "../../db/compositionStore"
 import { useProjects } from "../useProject"
@@ -118,6 +120,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
         onCreate={(c, n) => void handleCreate(c, n)}
         history={(kind, matches) => {
           const shown = (projects ?? []).filter((p) => !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
+          const free = shown.filter((p) => !membership.has(p.id))
           return {
             count: shown.length,
             node:
@@ -126,7 +129,18 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
                   {projects?.length ? "Cap moble no coincideix amb el tipus o la cerca." : "Encara no tens cap moble: comença en blanc o des d'una plantilla."}
                 </Text>
               ) : (
-                <SimpleGrid columns={GALLERY_COLS} gap={3}>
+                <Stack gap={2}>
+                  <ClearHistory
+                    count={free.length}
+                    kept={shown.length - free.length}
+                    noun={["moble", "mobles"]}
+                    keptNote="Es conserven els {n} que són en algun ambient."
+                    onConfirm={async () => {
+                      for (const p of free) await deleteProject(p.id)
+                      toaster.create({ title: "Historial esborrat", type: "info" })
+                    }}
+                  />
+                  <SimpleGrid columns={GALLERY_COLS} gap={3}>
                   {shown.map((p) => (
                     <ProjectCard
                       key={p.id}
@@ -138,7 +152,8 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
                       ambients={membership.get(p.id)}
                     />
                   ))}
-                </SimpleGrid>
+                  </SimpleGrid>
+                </Stack>
               ),
           }
         }}

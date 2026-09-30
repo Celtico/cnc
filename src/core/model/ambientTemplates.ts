@@ -28,8 +28,24 @@ export interface AmbientTemplateItem {
   group?: string
 }
 
+/** Categories del catàleg d'ambients (acordions de la pàgina Ambients). */
+export const AMBIENT_CATEGORIES = [
+  { id: "salo", label: "Salons" },
+  { id: "cuina", label: "Cuines" },
+  { id: "menjador", label: "Menjadors" },
+  { id: "dormitori", label: "Dormitoris" },
+  { id: "infantil", label: "Habitacions infantils i juvenils" },
+  { id: "vestidor", label: "Vestidors" },
+  { id: "entrada", label: "Rebedors" },
+  { id: "despatx", label: "Despatxos" },
+  { id: "bany", label: "Banys" },
+  { id: "exterior", label: "Exteriors: terrasses i patis" },
+] as const
+export type AmbientCategory = (typeof AMBIENT_CATEGORIES)[number]["id"]
+
 export interface AmbientTemplate {
   id: string
+  category: AmbientCategory
   name: string
   description: string
   /** Mides interiors de l'habitació (mm). */
@@ -116,6 +132,7 @@ const pendant = (id: string, x: number, y: number, group: string, ceiling = 2600
 const MAG_SCENES: AmbientTemplate[] = [
   {
     id: "amb-mag-stucco",
+    category: "salo",
     name: "Saló d'estuc",
     description: "5,6 × 4,6 m · parets d'estuc greige: sofà en L de bouclé, taula cub de noguera, moble penjat amb quadre, finestra amb cortines de lli.",
     w: 5600,
@@ -140,6 +157,7 @@ const MAG_SCENES: AmbientTemplate[] = [
   },
   {
     id: "amb-mag-attic",
+    category: "salo",
     name: "Golfes amb daybeds",
     description: "5 × 4 m · paret del fons negra i terra de fusta rentada: llibreria negra i noguera, dos daybeds amb coixins rodons, catifa de jute i puf.",
     w: 5000,
@@ -161,6 +179,7 @@ const MAG_SCENES: AmbientTemplate[] = [
   },
   {
     id: "amb-mag-hall",
+    category: "entrada",
     name: "Rebedor amb consola de noguera",
     description: "3,2 × 2,4 m · terra de porcellànic negre i estuc gris: consola de noguera a inglet, mirall d'arc de llautó, gerro amb branques, butaca i catifa blanca.",
     w: 3200,
@@ -179,6 +198,7 @@ const MAG_SCENES: AmbientTemplate[] = [
   },
   {
     id: "amb-mag-patio",
+    category: "exterior",
     name: "Pati amb cuina exterior",
     description: "7 × 5 m obert per davant · formigó clar: cuina d'exterior amb portes de noguera, armari de noguera, taula oval blanca amb vuit cadires de cuir, pi i plantes tropicals.",
     w: 7000,
@@ -200,6 +220,7 @@ const MAG_SCENES: AmbientTemplate[] = [
   },
   {
     id: "amb-mag-kilim",
+    category: "salo",
     name: "Saló amb kilim",
     description: "6 × 4,8 m · sofà de vellut oliva en L, catifa kilim, taula de llautó, moble TV flotant de roure, butaca lounge i finestra amb cortines.",
     w: 6000,
@@ -222,6 +243,7 @@ const MAG_SCENES: AmbientTemplate[] = [
   },
   {
     id: "amb-mag-terrace",
+    category: "exterior",
     name: "Terrassa amb vistes",
     description: "7 × 4,2 m · travertí i ampit baix: banc d'obra amb coixins blaus, taula baixa negra, pufs, pi pinyoner i jardineres; vidriera cap a casa.",
     w: 7000,
@@ -245,6 +267,7 @@ const MAG_SCENES: AmbientTemplate[] = [
   },
   {
     id: "amb-mag-green-kitchen",
+    category: "cuina",
     name: "Cuina verd fosc i roure",
     description: "5,4 × 4,2 m · cuina lacada verd fosc amb taulell de roure, armari de roure amb fornícula, taula de pagès amb cadires de corda i llum de lli.",
     w: 5400,
@@ -264,6 +287,7 @@ const MAG_SCENES: AmbientTemplate[] = [
   },
   {
     id: "amb-mag-black-island",
+    category: "cuina",
     name: "Cuina oberta amb illa negra",
     description: "7 × 5,2 m · paret de pedra: cuina de roure amb prestatges, columnes negres, illa negra amb barra i tamborets, llums negres, taula rodona i vidriera.",
     w: 7000,
@@ -289,6 +313,7 @@ const MAG_SCENES: AmbientTemplate[] = [
   },
   {
     id: "amb-mag-greige-kitchen",
+    category: "cuina",
     name: "Cuina greige",
     description: "5,8 × 5 m · estuc greige i pedra calcària: cuina greige amb columnes i alts, illa de pedra, llums de cúpula sàlvia i cadires de cuir.",
     w: 5800,
@@ -309,6 +334,7 @@ const MAG_SCENES: AmbientTemplate[] = [
   },
   {
     id: "amb-mag-stone-dining",
+    category: "menjador",
     name: "Menjador de pedra",
     description: "6,4 × 5 m · taula de pedra calcària amb vuit cadires de cuir verd, armari de paret blanc, aparador flotant gris amb quadre, llums negres i planta.",
     w: 6400,
@@ -330,6 +356,7 @@ const MAG_SCENES: AmbientTemplate[] = [
   },
   {
     id: "amb-mag-wardrobe",
+    category: "vestidor",
     name: "Vestidor gris",
     description: "4,4 × 3,6 m · vestidor lacat gris de quatre cossos, butaca, taula de formigó amb rodes, catifa rodona i mirall de noguera.",
     w: 4400,
@@ -349,6 +376,7 @@ const MAG_SCENES: AmbientTemplate[] = [
   },
   {
     id: "amb-mag-bunks",
+    category: "infantil",
     name: "Habitació de lliteres",
     description: "4,8 × 3,8 m · parets rosa pàl·lid: lliteres encastades de noguera, pufs de lona, catifa rodona i quadre.",
     w: 4800,
@@ -367,6 +395,7 @@ const MAG_SCENES: AmbientTemplate[] = [
   },
   {
     id: "amb-mag-oak-kitchen",
+    category: "cuina",
     name: "Cuina de roure amb illa",
     description: "6 × 5,2 m · paret revestida de roure: cuina de roure amb illa de calaixos, taula amb estovalles de lli, cadires de corda, llums sàlvia i vidriera.",
     w: 6000,
@@ -387,6 +416,7 @@ const MAG_SCENES: AmbientTemplate[] = [
   },
   {
     id: "amb-mag-curtains",
+    category: "menjador",
     name: "Menjador amb cortines",
     description: "6,2 × 5 m · vidriera de terra a sostre amb cortines de lli i tul, taula amb estovalles i sis cadires, llums de lli, llibreria i sofà.",
     w: 6200,
@@ -413,6 +443,7 @@ export const AMBIENT_TEMPLATES: AmbientTemplate[] = [
   ...MAG_SCENES,
   {
     id: "amb-nordic-living",
+    category: "salo",
     name: "Saló nòrdic",
     description: "5,2 × 4,2 m · parquet de roure i parets blanques: moble TV «Oslo», sofà de tres places, taula de centre oval, llibreria i làmpada de peu.",
     w: 5200,
@@ -431,6 +462,7 @@ export const AMBIENT_TEMPLATES: AmbientTemplate[] = [
   },
   {
     id: "amb-walnut-living",
+    category: "salo",
     name: "Saló de noguera",
     description: "5,6 × 4 m · parquet de noguera i parets verd sàlvia: moble TV «Monolit» a inglet, aparador sobre ferro, sofà, butaca i taula auxiliar.",
     w: 5600,
@@ -450,6 +482,7 @@ export const AMBIENT_TEMPLATES: AmbientTemplate[] = [
   },
   {
     id: "amb-dining",
+    category: "menjador",
     name: "Menjador obert",
     description: "5 × 4 m · microciment: taula «Cascada» de roure a inglet amb sis cadires, aparador lacat i planta.",
     w: 5000,
@@ -466,6 +499,7 @@ export const AMBIENT_TEMPLATES: AmbientTemplate[] = [
   },
   {
     id: "amb-kitchen",
+    category: "cuina",
     name: "Cuina amb illa",
     description: "5,6 × 4,6 m · rajola gris: cuina «Àgora» amb columnes, alts i illa de pedra, i taula rodona d'esmorzar.",
     w: 5600,
@@ -482,6 +516,7 @@ export const AMBIENT_TEMPLATES: AmbientTemplate[] = [
   },
   {
     id: "amb-bedroom",
+    category: "dormitori",
     name: "Dormitori suite",
     description: "4,6 × 4,2 m · parquet de roure i parets terracota: llit «Serena» amb capçal ample, armari, còmoda de noguera i catifa.",
     w: 4600,
@@ -499,6 +534,7 @@ export const AMBIENT_TEMPLATES: AmbientTemplate[] = [
   },
   {
     id: "amb-kids",
+    category: "infantil",
     name: "Habitació juvenil",
     description: "3,8 × 3,6 m · lliteres de freixe amb calaixos i escala, escriptori amb cadira i prestatgeria de cubs.",
     w: 3800,
@@ -515,6 +551,7 @@ export const AMBIENT_TEMPLATES: AmbientTemplate[] = [
   },
   {
     id: "amb-office",
+    category: "despatx",
     name: "Despatx",
     description: "4,4 × 3,8 m · parquet de noguera: llibreria de despatx amb portes, escriptori directiu, calaixera i cadira.",
     w: 4400,
@@ -531,6 +568,7 @@ export const AMBIENT_TEMPLATES: AmbientTemplate[] = [
   },
   {
     id: "amb-hall",
+    category: "entrada",
     name: "Rebedor",
     description: "3 × 2,4 m · rajola de fang: consola «Tall» amb mirall rodó, penjador obert i sabater prim.",
     w: 3000,
@@ -547,6 +585,7 @@ export const AMBIENT_TEMPLATES: AmbientTemplate[] = [
   },
   {
     id: "amb-bath",
+    category: "bany",
     name: "Bany",
     description: "3 × 2,6 m · rajola blanca i microciment: moble de lavabo amb pedra, armari de mirall penjat, columna i tovalloler.",
     w: 3000,

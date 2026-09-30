@@ -93,7 +93,7 @@ function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance }: { ta
   }, [fitSignal])
   // Interior: angular (com les fotos de revista) i des de dins; orbitar hi gira al voltant del punt mirat.
   useEffect(() => {
-    if (eyeSignal && eye) pose(eye.pos, eye.target, 62)
+    if (eyeSignal && eye) pose(eye.pos, eye.target, 55)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eyeSignal])
   return <OrbitControls ref={ref} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={maxDistance} maxPolarAngle={Math.PI / 2 - 0.02} target={target} />
@@ -165,7 +165,18 @@ function addOpening(wg: Group, o: Opening & { u0: number; u1: number }, thicknes
   const m = new Mesh(new BoxGeometry((W - 2 * f) / 1000, (o.h - 2 * f) / 1000, 0.008), glass)
   m.position.set((o.u0 + o.u1) / 2000, (y0 + y1) / 2000, 0)
   m.userData.room = "wall"
+  // Per al render: la llum del cel entra per aquí (portal).
+  m.userData.portal = true
   wg.add(m)
+}
+
+/** Parets que tanquen una habitació (cada extrem compartit) i altes: les terrasses i els patis no tenen sostre. */
+function closedRoom(walls: Ambient["walls"]): boolean {
+  if (walls.length < 3 || walls.some((w) => w.height < 2000)) return false
+  const key = (p: readonly number[]) => `${Math.round(p[0]!)},${Math.round(p[1]!)}`
+  const n = new Map<string, number>()
+  for (const w of walls) for (const p of [w.a, w.b]) n.set(key(p), (n.get(key(p)) ?? 0) + 1)
+  return [...n.values()].every((c) => c >= 2)
 }
 
 function Room({
@@ -229,9 +240,34 @@ function Room({
     return g
   }, [ambient.walls, ambient.wallMaterial, materials, box.x0, box.x1, box.y0, box.y1])
 
+  // Sostre de les habitacions tancades: només quan la càmera és a dins (al visor i al render; des de
+  // dalt no es veu). Al render tanca la llum: entra per les finestres, com a les fotos.
+  const ceiling = useMemo(() => {
+    if (!closedRoom(ambient.walls)) return null
+    const xs = ambient.walls.flatMap((w) => [w.a[0], w.b[0]]), ys = ambient.walls.flatMap((w) => [w.a[1], w.b[1]])
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys)
+    const H = Math.min(...ambient.walls.map((w) => w.height))
+    const mesh = new Mesh(new BoxGeometry((x1 - x0) / 1000, 0.05, (y1 - y0) / 1000), new MeshStandardMaterial({ color: "#f4f2ee", roughness: 0.9 }))
+    mesh.position.set((x0 + x1) / 2000, H / 1000 + 0.025, (y0 + y1) / 2000)
+    mesh.visible = false
+    mesh.userData.renderOnly = "ceiling"
+    return mesh
+  }, [ambient.walls])
+  const scene = useThree((s) => s.scene)
+  useEffect(() => {
+    scene.userData.daylight = true
+  }, [scene])
+
   // Com una casa de nines: les parets entre la càmera i l'habitació es fan gairebé transparents.
   const tmp = useMemo(() => new Vector3(), [])
   useFrame(({ camera }) => {
+    // El sostre es veu quan la càmera és a dins de l'habitació (vista d'interior).
+    if (ceiling) {
+      const b = ceiling.geometry as BoxGeometry
+      const { width, depth } = b.parameters
+      const p = ceiling.position
+      ceiling.visible = camera.position.y < p.y - 0.05 && Math.abs(camera.position.x - p.x) < width / 2 && Math.abs(camera.position.z - p.z) < depth / 2
+    }
     for (const wg of walls.children) {
       const n = wg.userData.normal as Vector3 | undefined
       const c = wg.userData.center as Vector3 | undefined
@@ -276,6 +312,7 @@ function Room({
     <>
       <primitive object={floor} />
       <primitive object={walls} />
+      {ceiling && <primitive object={ceiling} />}
       {scenes.map((s) => (
         <primitive
           key={s.id}

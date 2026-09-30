@@ -1,8 +1,9 @@
 import { Box, Button, CloseButton, Dialog, HStack, NativeSelect, Portal, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { LuDownload, LuPause, LuPlay, LuRotateCcw } from "react-icons/lu"
+import { LuDownload, LuImageUp, LuPause, LuPlay, LuRotateCcw, LuX } from "react-icons/lu"
 import type { Camera, Scene } from "three"
-import { DEFAULT_RENDER_OPTS, extractScene, type RenderOpts, type RenderRoom } from "./sceneData"
+import { parseHdr } from "./hdr"
+import { DEFAULT_RENDER_OPTS, extractScene, type RenderEnv, type RenderOpts, type RenderRoom } from "./sceneData"
 
 export type SceneGetter = () => { scene: Scene; camera: Camera; width: number; height: number } | null
 
@@ -15,14 +16,24 @@ const RESOLUTIONS = {
 } as const
 type Resolution = keyof typeof RESOLUTIONS
 
+/** Format de la imatge (com les càmeres): el del visor o una proporció fixa (amplada ÷ alçada). */
+const FORMATS = { view: { label: "El del visor", r: 0 }, "3:2": { label: "3:2 (foto)", r: 3 / 2 }, "4:5": { label: "4:5 (revista, vertical)", r: 4 / 5 }, "16:9": { label: "16:9 (web)", r: 16 / 9 }, "1:1": { label: "1:1", r: 1 } } as const
+type Format = keyof typeof FORMATS
+
 type Background = "scene" | "white" | "transparent"
 interface Look {
   exposure: number
   contrast: number
   saturation: number
   background: Background
+  /** Exposició automàtica (com una càmera): la llum mitjana de la imatge queda a un gris mitjà. */
+  auto: boolean
+  /** Temperatura: − fred, + càlid. */
+  warmth: number
+  /** Filtre de soroll (guiat per l'albedo i les normals). */
+  denoise: boolean
 }
-const DEFAULT_LOOK: Look = { exposure: 0, contrast: 1, saturation: 1, background: "scene" }
+const DEFAULT_LOOK: Look = { exposure: 0, contrast: 1, saturation: 1, background: "scene", auto: false, warmth: 0, denoise: true }
 
 /** To ACES aproximat (lineal → [0, 1] lineal); `exp` = multiplicador d'exposició. */
 function aces(v: number, exp: number): number {
@@ -89,13 +100,19 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
   const [res, setRes] = useState<Resolution>("normal")
   const [limit, setLimit] = useState(0)
   const [room, setRoom] = useState<RenderRoom>("room")
+  const [format, setFormat] = useState<Format>("view")
+  const [env, setEnv] = useState<{ name: string; env: RenderEnv } | null>(null)
+  const envRef = useRef(env)
+  envRef.current = env
   const [look, setLookState] = useState<Look>(DEFAULT_LOOK)
   const lookRef = useRef(look)
   const limitRef = useRef(limit)
   limitRef.current = limit
   const workers = useRef<Worker[]>([])
-  const source = useRef<{ scene: ReturnType<typeof extractScene>; aspect: number; viewW: number; room?: RenderRoom } | null>(null)
-  const job = useRef<{ w: number; h: number; accum: Float32Array; count: number } | null>(null)
+  const source = useRef<{ scene: ReturnType<typeof extractScene>; aspect: number; long: number; room?: RenderRoom; format?: Format } | null>(null)
+  const job = useRef<{ w: number; h: number; accum: Float32Array; aux: Float32Array; count: number } | null>(null)
+  // Filtre de soroll: un fil a part; el resultat val per a les passades amb què s'ha calculat.
+  const dn = useRef<{ worker: Worker | null; busy: boolean; id: number; data: Float32Array | null; count: number }>({ worker: null, busy: false, id: 0, data: null, count: 0 })
 
   const stopWorkers = () => {
     for (const w of workers.current) w.terminate()
@@ -115,12 +132,26 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     const img = ctx.createImageData(j.w, j.h)
     const k = 1 / j.count
     const L = lookRef.current
-    const expo = 0.7 * Math.pow(2, L.exposure)
+    const D = L.denoise && dn.current.data && dn.current.data.length === j.w * j.h * 3 ? dn.current.data : null
+    const col = (i: number, c: number) => (D ? D[i * 3 + c]! : j.accum[i * 4 + c]! * k)
+    // Exposició automàtica: mitjana geomètrica de la llum (com el fotòmetre d'una càmera).
+    let autoK = 1
+    if (L.auto) {
+      let sum = 0, cnt = 0
+      for (let i = 0, n = j.w * j.h; i < n; i += 7) {
+        const y = 0.2126 * col(i, 0) + 0.7152 * col(i, 1) + 0.0722 * col(i, 2)
+        sum += Math.log(1e-4 + y)
+        cnt++
+      }
+      autoK = Math.min(8, Math.max(0.25, 0.3 / Math.exp(sum / Math.max(1, cnt))))
+    }
+    const expo = 0.7 * Math.pow(2, L.exposure) * autoK
     const tone = (v: number) => aces(v, expo)
+    const wr = 1 + 0.12 * L.warmth, wb = 1 - 0.12 * L.warmth
     for (let i = 0, n = j.w * j.h; i < n; i++) {
-      let r = tone(j.accum[i * 4]! * k)
-      let g = tone(j.accum[i * 4 + 1]! * k)
-      let b = tone(j.accum[i * 4 + 2]! * k)
+      let r = tone(col(i, 0) * wr)
+      let g = tone(col(i, 1))
+      let b = tone(col(i, 2) * wb)
       const a = j.accum[i * 4 + 3]! * k
       if (L.saturation !== 1) {
         const y = 0.2126 * r + 0.7152 * g + 0.0722 * b
@@ -170,6 +201,40 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     draw()
   }
 
+  /** Filtra el soroll de les passades acumulades (cada cop menys sovint: 4, 8, 16… passades). */
+  const scheduleDenoise = (force = false) => {
+    const j = job.current
+    const D = dn.current
+    if (!j || !lookRef.current.denoise || D.busy || j.count < 2) return
+    if (!force && j.count < D.count * 1.5 + 2) return
+    D.worker ??= new Worker(new URL("./denoiseWorker.ts", import.meta.url), { type: "module" })
+    const n = j.w * j.h
+    const color = new Float32Array(n * 3), albedo = new Float32Array(n * 3), normal = new Float32Array(n * 3)
+    const k = 1 / j.count
+    for (let i = 0; i < n; i++) {
+      for (let c = 0; c < 3; c++) {
+        color[i * 3 + c] = j.accum[i * 4 + c]! * k
+        albedo[i * 3 + c] = j.aux[i * 6 + c]! * k
+      }
+      const nx = j.aux[i * 6 + 3]!, ny = j.aux[i * 6 + 4]!, nz = j.aux[i * 6 + 5]!
+      const l = Math.hypot(nx, ny, nz)
+      if (l > 1e-6) {
+        normal[i * 3] = nx / l; normal[i * 3 + 1] = ny / l; normal[i * 3 + 2] = nz / l
+      }
+    }
+    D.busy = true
+    const id = ++D.id
+    const count = j.count
+    D.worker.onmessage = (e: MessageEvent<{ id: number; data: Float32Array }>) => {
+      D.busy = false
+      if (e.data.id !== D.id || job.current !== j) return
+      D.data = e.data.data
+      D.count = count
+      draw()
+    }
+    D.worker.postMessage({ id, w: j.w, h: j.h, color, albedo, normal, strength: Math.min(1, 1.6 / Math.sqrt(count)) }, [color.buffer, albedo.buffer, normal.buffer])
+  }
+
   const startWorkers = (o: RenderOpts) => {
     const j = job.current
     const src = source.current
@@ -178,14 +243,17 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     let pending = false
     for (let i = 0; i < n; i++) {
       const w = new Worker(new URL("./pathWorker.ts", import.meta.url), { type: "module" })
-      w.onmessage = (e: MessageEvent<{ type: string; data: Float32Array }>) => {
+      w.onmessage = (e: MessageEvent<{ type: string; data: Float32Array; aux: Float32Array }>) => {
         const jj = job.current
         if (!jj || e.data.type !== "pass" || jj.accum.length !== e.data.data.length) return
         const d = e.data.data
         for (let q = 0; q < d.length; q++) jj.accum[q]! += d[q]!
+        const a = e.data.aux
+        if (a && a.length === jj.aux.length) for (let q = 0; q < a.length; q++) jj.aux[q]! += a[q]!
         jj.count += 1
         setPasses(jj.count)
         if (limitRef.current && jj.count >= limitRef.current) stopWorkers()
+        scheduleDenoise()
         if (!pending) {
           pending = true
           requestAnimationFrame(() => {
@@ -195,7 +263,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
         }
       }
       w.onerror = (ev) => setError(ev.message || "Error al render")
-      w.postMessage({ type: "scene", scene: src.scene, width: j.w, height: j.h, seed: (Math.random() * 2 ** 31) | 0, opts: o })
+      w.postMessage({ type: "scene", scene: src.scene, width: j.w, height: j.h, seed: (Math.random() * 2 ** 31) | 0, opts: o, env: envRef.current?.env ?? null })
       workers.current.push(w)
     }
     setRunning(true)
@@ -207,9 +275,15 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     if (!src) return
     stopWorkers()
     const R = RESOLUTIONS[r]
-    const w = Math.min(R.max, Math.round(src.viewW * R.k))
-    const h = Math.round(w / src.aspect)
-    job.current = { w, h, accum: new Float32Array(w * h * 4), count: 0 }
+    // El costat llarg segons la resolució; l'altre, segons el format.
+    const L = Math.min(R.max, Math.round(src.long * R.k))
+    const w = src.aspect >= 1 ? L : Math.round(L * src.aspect)
+    const h = src.aspect >= 1 ? Math.round(L / src.aspect) : L
+    job.current = { w, h, accum: new Float32Array(w * h * 4), aux: new Float32Array(w * h * 6), count: 0 }
+    dn.current.id++
+    dn.current.data = null
+    dn.current.count = 0
+    dn.current.busy = false
     setPasses(0)
     setStarted(Date.now())
     setElapsed(0)
@@ -217,15 +291,16 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
   }
 
   /** Passa l'escena del visor a dades per als workers. */
-  const extract = (r: RenderRoom): boolean => {
+  const extract = (r: RenderRoom, f: Format = format): boolean => {
     const got = getScene()
     if (!got) {
       setError("El visor 3D no està a punt.")
       return false
     }
     try {
-      const aspect = got.width / got.height
-      source.current = { scene: extractScene(got.scene, got.camera, aspect, r), aspect, viewW: got.width, room: r }
+      const aspect = FORMATS[f].r || got.width / got.height
+      const scene = extractScene(got.scene, got.camera, aspect, r)
+      source.current = { scene, aspect, long: Math.max(got.width, got.height), room: r, format: f }
       return true
     } catch (e) {
       setError(String(e))
@@ -237,9 +312,19 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     if (!open) return
     setError(null)
     setPasses(0)
-    if (extract(room)) restart(opts, res)
+    if (extract(room)) {
+      // Als ambients (llum de dia), exposició automàtica i una mica càlid, com les fotos d'interiors.
+      if (source.current?.scene.daylight) {
+        const next = { ...lookRef.current, auto: true, warmth: 0.25 }
+        lookRef.current = next
+        setLookState(next)
+      }
+      restart(opts, res)
+    }
     return () => {
       stopWorkers()
+      dn.current.worker?.terminate()
+      dn.current.worker = null
       job.current = null
       source.current = null
     }
@@ -255,12 +340,12 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     }
     if (!open || !source.current) return
     const id = window.setTimeout(() => {
-      if (source.current?.room !== room && !extract(room)) return
+      if ((source.current?.room !== room || source.current?.format !== format) && !extract(room, format)) return
       restart(opts, res)
     }, 300)
     return () => window.clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opts, res, room])
+  }, [opts, res, room, format, env])
 
   useEffect(() => {
     if (!running) return
@@ -365,6 +450,28 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                   </Stack>
                 </Group>
 
+                <Group title="Càmera" hint="torna a començar">
+                  <Stack gap={0.5}>
+                    <Text fontSize="xs" color="fg.muted">
+                      Format
+                    </Text>
+                    <NativeSelect.Root size="sm">
+                      <NativeSelect.Field value={format} onChange={(e) => setFormat(e.currentTarget.value as Format)}>
+                        {(Object.keys(FORMATS) as Format[]).map((k) => (
+                          <option key={k} value={k}>
+                            {FORMATS[k].label}
+                          </option>
+                        ))}
+                      </NativeSelect.Field>
+                      <NativeSelect.Indicator />
+                    </NativeSelect.Root>
+                  </Stack>
+                  <Range label="Desenfocament del fons" value={opts.aperture ?? 0} min={0} max={20} step={1} format={(v) => (v ? `f/${(35 / (2 * v)).toFixed(1)}` : "tot enfocat")} onChange={(v) => set({ aperture: v })} />
+                  <Text fontSize="2xs" color="fg.subtle">
+                    Enfoca el que hi ha al centre de la imatge. Per a interiors: «Interior» a Opcions de vista (càmera a l'alçada dels ulls).
+                  </Text>
+                </Group>
+
                 <Group title="Escena" hint="torna a començar">
                   <NativeSelect.Root size="sm">
                     <NativeSelect.Field value={room} onChange={(e) => setRoom(e.currentTarget.value as RenderRoom)}>
@@ -385,9 +492,63 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                   <Range label="Sol · intensitat" value={opts.sunIntensity} min={0} max={3} step={0.1} format={x} onChange={(v) => set({ sunIntensity: v })} />
                   <Range label="Ombres (dures → suaus)" value={opts.softness} min={0} max={1} step={0.05} format={(v) => `${Math.round(v * 100)} %`} onChange={(v) => set({ softness: v })} />
                   <Range label="Cel (llum ambient)" value={opts.skyIntensity} min={0} max={3} step={0.1} format={x} onChange={(v) => set({ skyIntensity: v })} />
+                  <Stack gap={1}>
+                    <Text fontSize="xs" color="fg.muted">
+                      Cel HDRI {env ? `· ${env.name}` : "(opcional)"}
+                    </Text>
+                    <HStack gap={2}>
+                      <Button size="xs" variant="outline" asChild>
+                        <label>
+                          <LuImageUp /> {env ? "Canviar" : "Carregar .hdr"}
+                          <input
+                            type="file"
+                            accept=".hdr"
+                            hidden
+                            onChange={async (e) => {
+                              const f = e.currentTarget.files?.[0]
+                              e.currentTarget.value = ""
+                              if (!f) return
+                              try {
+                                setEnv({ name: f.name, env: parseHdr(await f.arrayBuffer()) })
+                              } catch (err) {
+                                setError(String(err))
+                              }
+                            }}
+                          />
+                        </label>
+                      </Button>
+                      {env && (
+                        <Button size="xs" variant="ghost" onClick={() => setEnv(null)}>
+                          <LuX /> Treure
+                        </Button>
+                      )}
+                    </HStack>
+                    {env && <Range label="Gir del cel" value={opts.envRotation ?? 0} min={0} max={360} step={5} format={deg} onChange={(v) => set({ envRotation: v })} />}
+                    <Text fontSize="2xs" color="fg.subtle">
+                      Un cel de 360° (p. ex. de polyhaven.com, 1k o 2k): llum i reflexos de debò i el que es veu per les finestres. Sense, un cel de dia.
+                    </Text>
+                  </Stack>
                 </Group>
 
                 <Group title="Imatge" hint="a l'instant">
+                  <HStack justify="space-between" fontSize="xs">
+                    <Text color="fg.muted">Exposició automàtica</Text>
+                    <input type="checkbox" aria-label="Exposició automàtica" checked={look.auto} onChange={(e) => setLook({ auto: e.currentTarget.checked })} style={{ accentColor: "var(--chakra-colors-wood-solid)" }} />
+                  </HStack>
+                  <HStack justify="space-between" fontSize="xs">
+                    <Text color="fg.muted">Reduir el soroll</Text>
+                    <input
+                      type="checkbox"
+                      aria-label="Reduir el soroll"
+                      checked={look.denoise}
+                      onChange={(e) => {
+                        setLook({ denoise: e.currentTarget.checked })
+                        if (e.currentTarget.checked) scheduleDenoise(true)
+                      }}
+                      style={{ accentColor: "var(--chakra-colors-wood-solid)" }}
+                    />
+                  </HStack>
+                  <Range label="Temperatura (fred → càlid)" value={look.warmth} min={-1} max={1} step={0.05} format={(v) => (v > 0 ? `+${v.toFixed(2)}` : v.toFixed(2))} onChange={(v) => setLook({ warmth: v })} />
                   <Range label="Exposició" value={look.exposure} min={-2} max={2} step={0.1} format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} EV`} onChange={(v) => setLook({ exposure: v })} />
                   <Range label="Contrast" value={look.contrast} min={0.6} max={1.6} step={0.05} format={x} onChange={(v) => setLook({ contrast: v })} />
                   <Range label="Saturació" value={look.saturation} min={0} max={2} step={0.05} format={x} onChange={(v) => setLook({ saturation: v })} />
@@ -415,7 +576,8 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                     setRes("normal")
                     setLimit(0)
                     setRoom("room")
-                    setLook(DEFAULT_LOOK)
+                    setFormat("view")
+                    setLook({ ...DEFAULT_LOOK, auto: !!source.current?.scene.daylight, warmth: source.current?.scene.daylight ? 0.25 : 0 })
                   }}
                 >
                   <LuRotateCcw /> Restablir

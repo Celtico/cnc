@@ -1,9 +1,10 @@
-import { Button, Dialog, Heading, HStack, Portal, SimpleGrid, Text, VStack } from "@chakra-ui/react"
+import { Button, Dialog, Heading, HStack, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
 import { useState } from "react"
 import { LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { uniqueName } from "../../core/file/mobleFile"
 import type { Composition } from "../../core/model"
+import { ClearHistory } from "../projects/ClearHistory"
 import { createProject, db, deleteProject, duplicateProject, type Project } from "../../db/db"
 import { useAmbientMembership } from "../ambients/useAmbientMembership"
 import { ProjectCard } from "../projects/ProjectCard"
@@ -36,10 +37,22 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
         onCreate={(c, n) => void create(c, n)}
         history={(matches) => {
           const shown = (projects ?? []).filter((p) => isObject(p) && matches(p.name))
+          const free = shown.filter((p) => !membership.has(p.id))
           return {
             count: shown.length,
             node: shown.length ? (
-              <SimpleGrid columns={GALLERY_COLS} gap={3}>
+              <Stack gap={2}>
+                <ClearHistory
+                  count={free.length}
+                  kept={shown.length - free.length}
+                  noun={["objecte", "objectes"]}
+                  keptNote="Es conserven els {n} que són en algun ambient."
+                  onConfirm={async () => {
+                    for (const p of free) await deleteProject(p.id)
+                    toaster.create({ title: "Historial esborrat", type: "info" })
+                  }}
+                />
+                <SimpleGrid columns={GALLERY_COLS} gap={3}>
                 {shown.map((p) => (
                   <ProjectCard
                     key={p.id}
@@ -50,7 +63,8 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                     onDelete={() => setToDelete(p)}
                   />
                 ))}
-              </SimpleGrid>
+                </SimpleGrid>
+              </Stack>
             ) : (
               <Text fontSize="sm" color="fg.muted">
                 Encara no en tens: comença en blanc o des d'una plantilla.

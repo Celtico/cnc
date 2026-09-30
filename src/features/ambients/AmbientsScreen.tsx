@@ -3,11 +3,12 @@ import { useMemo, useState } from "react"
 import { LuBookOpen, LuCopy, LuHistory, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { uniqueName } from "../../core/file/mobleFile"
-import { AMBIENT_TEMPLATES, EMPTY_AMBIENT, footprintCorners, parseAmbient, roomWalls, wallCorners, type Ambient, type AmbientTemplate } from "../../core/model"
+import { AMBIENT_CATEGORIES, AMBIENT_TEMPLATES, EMPTY_AMBIENT, footprintCorners, parseAmbient, roomWalls, wallCorners, type Ambient, type AmbientTemplate } from "../../core/model"
 import { createAmbient, db, deleteAmbient, duplicateAmbient, type AmbientRow } from "../../db/db"
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { FoldTitle } from "../projects/NewMobleGallery"
 import { GALLERY_COLS, fold, useSessionList } from "../projects/galleryGrid"
+import { ClearHistory } from "../projects/ClearHistory"
 import { createAmbientFromTemplate, templatePreview } from "./fromTemplate"
 import { AMBIENT_TAB_KEY } from "./planGeom"
 
@@ -24,7 +25,10 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
   const q = fold(query.trim())
   const matches = (text: string) => !q || fold(text).includes(q)
   const shownRows = (rows ?? []).filter((r) => matches(r.name))
-  const shownTemplates = AMBIENT_TEMPLATES.filter((t) => matches(`${t.name} ${t.description}`))
+  const catLabel = (id: string) => AMBIENT_CATEGORIES.find((c) => c.id === id)?.label ?? ""
+  const shownTemplates = AMBIENT_TEMPLATES.filter((t) => matches(`${t.name} ${t.description} ${catLabel(t.category)}`))
+  const shownCats = AMBIENT_CATEGORIES.filter((c) => shownTemplates.some((t) => t.category === c.id))
+  const [openCats, setOpenCats] = useSessionList("mobles:ambients-categories")
   const [open, setOpen] = useSessionList("mobles:ambients")
   const found = [...(shownRows.length ? ["history"] : []), ...(shownTemplates.length ? ["catalog"] : [])]
   const create = async () => {
@@ -86,7 +90,16 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                     {rows?.length ? "Cap ambient no coincideix amb la cerca." : "Encara no en tens: comença en blanc o des del catàleg."}
                   </Text>
                 ) : (
-                  <SimpleGrid columns={GALLERY_COLS} gap={3}>
+                  <Stack gap={2}>
+                    <ClearHistory
+                      count={shownRows.length}
+                      noun={["ambient", "ambients"]}
+                      onConfirm={async () => {
+                        for (const r of shownRows) await deleteAmbient(r.id)
+                        toaster.create({ title: "Historial esborrat", description: "Els mobles i objectes que hi havia es queden a Mobles i Objectes.", type: "info" })
+                      }}
+                    />
+                    <SimpleGrid columns={GALLERY_COLS} gap={3}>
                     {shownRows.map((r) => {
                       const a = parseAmbient(r.data)
                       return (
@@ -116,7 +129,8 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                         </Card.Root>
                       )
                     })}
-                  </SimpleGrid>
+                    </SimpleGrid>
+                  </Stack>
                 )}
               </Accordion.ItemBody>
             </Accordion.ItemContent>
@@ -132,11 +146,29 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                   <Text fontSize="xs" color="fg.muted">
                     Habitacions moblades amb mobles de les plantilles i objectes, per fer-ne renders per a la web o el catàleg. En triar-ne una, els mobles es creen a Mobles i Objectes i queden enllaçats.
                   </Text>
-                  <SimpleGrid columns={GALLERY_COLS} gap={3}>
-                    {shownTemplates.map((t) => (
-                      <CatalogCard key={t.id} t={t} busy={busy === t.id} onPick={() => void fromTemplate(t)} />
-                    ))}
-                  </SimpleGrid>
+                  {/* Una categoria per acordió (com les plantilles de botiga); la cerca obre les que coincideixen. */}
+                  <Accordion.Root multiple collapsible lazyMount variant="plain" value={q ? shownCats.map((c) => c.id) : openCats} onValueChange={(e) => !q && setOpenCats(e.value)}>
+                    {shownCats.map((c) => {
+                      const list = shownTemplates.filter((t) => t.category === c.id)
+                      return (
+                        <Accordion.Item key={c.id} value={c.id}>
+                          <Accordion.ItemTrigger cursor="pointer">
+                            <FoldTitle title={c.label} count={list.length} />
+                            <Accordion.ItemIndicator />
+                          </Accordion.ItemTrigger>
+                          <Accordion.ItemContent>
+                            <Accordion.ItemBody>
+                              <SimpleGrid columns={GALLERY_COLS} gap={3}>
+                                {list.map((t) => (
+                                  <CatalogCard key={t.id} t={t} busy={busy === t.id} onPick={() => void fromTemplate(t)} />
+                                ))}
+                              </SimpleGrid>
+                            </Accordion.ItemBody>
+                          </Accordion.ItemContent>
+                        </Accordion.Item>
+                      )
+                    })}
+                  </Accordion.Root>
                 </Stack>
               </Accordion.ItemBody>
             </Accordion.ItemContent>

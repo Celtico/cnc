@@ -235,6 +235,12 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   `app:<id>`, `object:<id>`), col·locades arrambades a una paret (N/S/E/O, `placeTemplateItem`) o
   lliures. `createAmbientFromTemplate` (`features/ambients/fromTemplate.ts`) crea cada moble i objecte
   (un per plantilla) i l'ambient enllaçat; `templatePreview` fa la miniatura.
+- **Catàleg per categories** (`AMBIENT_CATEGORIES`, `AmbientTemplate.category`: salons, cuines, menjadors,
+  dormitoris, infantils, vestidors, rebedors, despatxos, banys, exteriors), un acordió per categoria; la
+  cerca també busca la categoria i obre les que coincideixen.
+- **Esborrar l'historial** (`projects/ClearHistory.tsx`, el mateix a Mobles, Objectes i Ambients): a dalt de
+  l'historial, amb confirmació. A Mobles i Objectes es conserven els que són en algun ambient; a Ambients
+  s'esborren els ambients (els seus mobles es queden). Respecta la cerca.
 - **Escenes de revista** (`MAG_SCENES` a `ambientTemplates.ts`, primer al catàleg): 14 habitacions fetes
   a partir de fotos d'interiors (saló d'estuc, golfes, rebedor, pati amb cuina exterior, saló amb kilim,
   terrassa, cuines verd fosc / illa negra / greige / roure, menjador de pedra, vestidor, lliteres, menjador
@@ -247,8 +253,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   porta `userData.glass` (el render per CPU el fa translúcid) i `baseOpacity` (la casa de nines el respecta).
 - **3D**: la mateixa navegació que l'editor (esmorteïment, roda, botó dret per desplaçar), clic per
   seleccionar (caixa taronja; Supr, Ctrl/⌘ D, R i fletxes com al plànol), «Encuadrar» i «Render».
-  **Interior** (Opcions de vista, `LuEye`, `eyePose`): entra a l'habitació, càmera a 1,6 m al costat de la
-  paret de davant mirant la del fons, angular (fov 62; «Encuadrar» torna a 40), per als renders de revista.
+  **Interior** (Opcions de vista, `LuEye`, `eyePose`): entra a l'habitació, càmera anivellada a 1,35 m (verticals rectes) al costat de la
+  paret de davant mirant la del fons, angular (fov 55; «Encuadrar» torna a 40), per als renders de revista.
   La pestanya Plànol · 3D es recorda (`AMBIENT_TAB_KEY`); els ambients creats del catàleg s'obren al 3D.
 - **3D** (`Ambient3D`): terra i parets amb `surfaceMaterial` (textura a mida real), mobles i blocs
   amb les textures del visor; les parets entre la càmera i l'habitació es fan transparents
@@ -515,6 +521,16 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     **Llum** (`RenderOpts`: direcció i alçada del sol, intensitat, ombres dures–suaus, cel) —
     aquestes tornen a començar— i **Imatge** (exposició EV, contrast, saturació, fons estudi /
     blanc / transparent amb l'alfa de cobertura del worker), a l'instant.
+    **Interiors com les fotos de revista**: als ambients, cel de dia (`daySky`: zenit blau, horitzó clar,
+    halo del sol; `scene.userData.daylight`) i sol tres vegades més fort que el cel; les habitacions
+    tancades porten **sostre** (`userData.renderOnly = "ceiling"`, es veu quan la càmera és a dins, al visor
+    i al render) i llavors la llum entra per les finestres: els vidres són **portals** (`userData.portal`,
+    `RenderScene.portals`: llum del cel mostrejada a través seu) i no fan ombra (el sol hi passa). A la
+    imatge: **reducció de soroll** (`denoise.ts`, À-Trous guiat per l'albedo i la normal de la primera
+    superfície, en un worker a part, cada cop menys sovint), **exposició automàtica** (mitjana geomètrica)
+    i temperatura (càlid per defecte als ambients). Càmera: **format** (visor, 3:2, 4:5, 16:9, 1:1) i
+    desenfocament (lent fina, enfoca el centre). **Cel HDRI** opcional: es carrega un `.hdr` (`hdr.ts`,
+    RGBE; p. ex. de Poly Haven) i es pot girar; sense, el cel de dia. Límit de 12 per mostra (sense ateses).
   - **Peça enganxada a un mòdul** (`FreePart.module`, `resolveParts`, `partOffset`): a General,
     «Enganxada a»; x/y/z passen a ser relatives al mòdul i el segueixen (el taulell de pedra de
     l'illa). Tot el que dibuixa o construeix fa servir `resolveParts` (coordenades de la
