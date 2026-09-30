@@ -6,6 +6,7 @@ import { toaster } from "../../components/ui/toaster"
 import { applySettingsToModule, BUILTIN_TEMPLATES, compositionHeight, compositionKind, compositionWidth, defaultModule, newId, STORE_CATALOG, tableModule, type Composition, type CompositionKind, type Template } from "../../core/model"
 import { KINDS } from "../composition/kinds"
 import { deleteUserTemplate, duplicateUserTemplate, loadUserTemplates, renameUserTemplate, type UserTemplate } from "../../db/compositionStore"
+import { GALLERY_COLS } from "./galleryGrid"
 import { saveTemplateAsFile } from "../file/mobleIo"
 import { useSettings } from "../settings/SettingsContext"
 
@@ -22,13 +23,18 @@ const euros = (n: number) => `${n.toLocaleString("ca-ES")} €`
 const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
 
 /** Targeta d'una plantilla de l'app: la miniatura es calcula en muntar-la (les de botiga, en obrir la categoria). */
-function TemplateCard({ t, title, onPick }: { t: Template; title?: string; onPick: (t: Template) => void }) {
+function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?: string; kicker?: string; onPick: (t: Template) => void }) {
   const comp = useMemo(() => t.make(), [t])
   return (
     <Card.Root asChild variant="outline" size="sm" cursor="pointer" _hover={{ borderColor: "wood.solid" }}>
       <button type="button" onClick={() => onPick(t)}>
         <Card.Body p={3} gap={2} alignItems="stretch" textAlign="left">
           <CompositionThumb composition={comp} />
+          {kicker && (
+            <Text fontSize="2xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide" truncate mb={-1.5}>
+              {kicker}
+            </Text>
+          )}
           <HStack justify="space-between" gap={1}>
             <Text fontWeight="semibold" fontSize="sm" truncate title={t.name}>
               {title ?? t.name}
@@ -37,7 +43,7 @@ function TemplateCard({ t, title, onPick }: { t: Template; title?: string; onPic
               {kindLabel(t.kind)}
             </Badge>
           </HStack>
-          <Text fontSize="xs" color="fg.muted" lineClamp={t.price ? 3 : 2} title={t.description}>
+          <Text fontSize="xs" color="fg.muted" lineClamp={2} title={t.description}>
             {t.description}
           </Text>
           {t.price !== undefined && (
@@ -70,7 +76,7 @@ function FoldTitle({ icon, title, count }: { icon?: ReactNode; title: string; co
   )
 }
 
-const COLS = { base: 2, md: 3, lg: 4, "2xl": 5 }
+const COLS = GALLERY_COLS
 
 /** Acordions oberts: comencen tancats i es recorden només durant la sessió (com les seccions). */
 function useSessionList(key: string): [string[], (v: string[]) => void] {
@@ -102,7 +108,7 @@ export function NewMobleGallery({
 }: {
   onCreate: (composition: Composition, name: string) => void
   /** Historial: els mobles que ja tens (del tipus triat), al primer acordió. */
-  history: (kind: CompositionKind | "all") => { count: number; node: ReactNode }
+  history: (kind: CompositionKind | "all", query: (text: string) => boolean) => { count: number; node: ReactNode }
 }) {
   const { settings } = useSettings()
   const [mine, setMine] = useState<UserTemplate[]>(loadUserTemplates)
@@ -117,11 +123,12 @@ export function NewMobleGallery({
   const [kind, setKind] = useState<CompositionKind | "all">("all")
   const fits = (t: Template) => kind === "all" || t.kind === kind
   // Ordenades pel tipus, i dins de cada tipus com a la llista.
-  const shownBuiltin = BUILTIN_TEMPLATES.filter(fits).sort((a, b) => kindOrder(a.kind) - kindOrder(b.kind))
-  const shownMine = mine.filter((t) => kind === "all" || compositionKind(t.composition) === kind)
-  // Plantilles per a botigues: per categoria › tipus de moble, amb el filtre i la cerca.
+  // Cercador de tota la pàgina: historial, les teves, les de l'app i les de botiga (sense accents).
   const [query, setQuery] = useState("")
   const q = fold(query.trim())
+  const matches = (text: string) => !q || fold(text).includes(q)
+  const shownBuiltin = BUILTIN_TEMPLATES.filter((t) => fits(t) && matches(`${t.name} ${t.description}`)).sort((a, b) => kindOrder(a.kind) - kindOrder(b.kind))
+  const shownMine = mine.filter((t) => (kind === "all" || compositionKind(t.composition) === kind) && matches(t.name))
   const store = STORE_CATALOG.map((c) => ({
     ...c,
     types: c.types
@@ -131,7 +138,9 @@ export function NewMobleGallery({
   const storeCount = store.reduce((n, c) => n + c.types.reduce((m, ty) => m + ty.items.length, 0), 0)
   const [openSections, setOpenSections] = useSessionList("mobles:gallery")
   const [openCats, setOpenCats] = useSessionList("mobles:gallery-store")
-  const hist = history(kind)
+  const hist = history(kind, matches)
+  // Amb cerca, s'obren les seccions que tenen resultats.
+  const found = [...(hist.count ? ["history"] : []), ...(shownMine.length ? ["mine"] : []), ...(shownBuiltin.length ? ["app"] : []), ...(storeCount ? ["store"] : [])]
   const pick = (t: Template) => onCreate({ ...t.make(), kind: t.kind }, t.name)
 
   const blank = () => {
@@ -143,27 +152,38 @@ export function NewMobleGallery({
 
   return (
     <Stack gap={4}>
-      <SegmentGroup.Root size="sm" value={kind} onValueChange={(e) => e.value && setKind(e.value as CompositionKind | "all")} alignSelf={{ base: "stretch", sm: "flex-start" }}>
-        <SegmentGroup.Indicator />
-        <SegmentGroup.Item value="all" flex={{ base: 1, sm: "initial" }} justifyContent="center">
-          <SegmentGroup.ItemText>Tot</SegmentGroup.ItemText>
-          <SegmentGroup.ItemHiddenInput />
-        </SegmentGroup.Item>
-        {KINDS.map((k) => (
-          <SegmentGroup.Item key={k.value} value={k.value} title={k.hint} aria-label={k.label} flex={{ base: 1, sm: "initial" }} justifyContent="center">
-            <SegmentGroup.ItemText>
-              {/* Al mòbil només la icona (el nom, al títol i a la insígnia de cada plantilla). */}
-              <HStack gap={1.5}>
-                <k.icon />
-                <Box as="span" display={{ base: "none", sm: "inline" }}>
-                  {k.label}
-                </Box>
-              </HStack>
-            </SegmentGroup.ItemText>
+      <HStack gap={3} wrap="wrap" align="center">
+        <SegmentGroup.Root size="sm" value={kind} onValueChange={(e) => e.value && setKind(e.value as CompositionKind | "all")} alignSelf={{ base: "stretch", sm: "flex-start" }}>
+          <SegmentGroup.Indicator />
+          <SegmentGroup.Item value="all" flex={{ base: 1, sm: "initial" }} justifyContent="center">
+            <SegmentGroup.ItemText>Tot</SegmentGroup.ItemText>
             <SegmentGroup.ItemHiddenInput />
           </SegmentGroup.Item>
-        ))}
-      </SegmentGroup.Root>
+          {KINDS.map((k) => (
+            <SegmentGroup.Item key={k.value} value={k.value} title={k.hint} aria-label={k.label} flex={{ base: 1, sm: "initial" }} justifyContent="center">
+              <SegmentGroup.ItemText>
+                {/* Al mòbil només la icona (el nom, al títol i a la insígnia de cada plantilla). */}
+                <HStack gap={1.5}>
+                  <k.icon />
+                  <Box as="span" display={{ base: "none", sm: "inline" }}>
+                    {k.label}
+                  </Box>
+                </HStack>
+              </SegmentGroup.ItemText>
+              <SegmentGroup.ItemHiddenInput />
+            </SegmentGroup.Item>
+          ))}
+        </SegmentGroup.Root>
+
+        <InputGroup flex="1" minW="240px" maxW={{ base: "full", md: "420px" }} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => setQuery("")} /> : undefined}>
+          <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar mobles i plantilles: nom, estil, material, color…" aria-label="Cercar mobles i plantilles" />
+        </InputGroup>
+      </HStack>
+      {q && !found.length && (
+        <Text fontSize="sm" color="fg.muted">
+          Cap moble ni plantilla no coincideix amb «{query.trim()}».
+        </Text>
+      )}
 
       <SimpleGrid columns={COLS} gap={3}>
         <Card.Root asChild variant="outline" size="sm" cursor="pointer" _hover={{ borderColor: "wood.solid" }}>
@@ -181,7 +201,7 @@ export function NewMobleGallery({
         </Card.Root>
       </SimpleGrid>
 
-      <Accordion.Root multiple collapsible lazyMount variant="enclosed" value={openSections} onValueChange={(e) => setOpenSections(e.value)}>
+      <Accordion.Root multiple collapsible lazyMount variant="enclosed" value={q ? found : openSections} onValueChange={(e) => !q && setOpenSections(e.value)}>
         <Accordion.Item value="history">
           <Accordion.ItemTrigger cursor="pointer">
             <FoldTitle icon={<LuHistory />} title="Historial" count={hist.count} />
@@ -294,38 +314,21 @@ export function NewMobleGallery({
                 <Text fontSize="xs" color="fg.muted">
                   Catàleg de mostra: tres dissenys per a cada tipus de moble, amb estil, materials, colors, públic i preu orientatiu.
                 </Text>
-                <InputGroup maxW="480px" startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => setQuery("")} /> : undefined}>
-                  <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar: nom, estil, material, color…" aria-label="Cercar plantilles de botiga" />
-                </InputGroup>
-                {store.length === 0 && (
-                  <Text fontSize="sm" color="fg.muted">
-                    Cap plantilla no coincideix amb la cerca o el tipus.
-                  </Text>
-                )}
+
                 {/* Amb cerca, totes les categories que coincideixen, obertes. */}
-                <Accordion.Root multiple collapsible lazyMount variant="enclosed" size="sm" value={q ? store.map((c) => c.id) : openCats} onValueChange={(e) => !q && setOpenCats(e.value)}>
+                <Accordion.Root multiple collapsible lazyMount variant="plain" size="sm" value={q ? store.map((c) => c.id) : openCats} onValueChange={(e) => !q && setOpenCats(e.value)}>
                   {store.map((c) => (
                     <Accordion.Item key={c.id} value={c.id}>
-                      <Accordion.ItemTrigger cursor="pointer">
+                      <Accordion.ItemTrigger cursor="pointer" borderBottomWidth="1px" rounded="none" px={0}>
                         <FoldTitle title={c.name} count={c.types.reduce((m, ty) => m + ty.items.length, 0)} />
                         <Accordion.ItemIndicator />
                       </Accordion.ItemTrigger>
                       <Accordion.ItemContent>
-                        <Accordion.ItemBody>
-                          <Stack gap={4}>
-                            {c.types.map((ty) => (
-                              <Stack key={ty.name} gap={2}>
-                                <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
-                                  {ty.name}
-                                </Text>
-                                <SimpleGrid columns={COLS} gap={3}>
-                                  {ty.items.map((t) => (
-                                    <TemplateCard key={t.id} t={t} title={t.name.replace(`${ty.name} `, "")} onPick={pick} />
-                                  ))}
-                                </SimpleGrid>
-                              </Stack>
-                            ))}
-                          </Stack>
+                        <Accordion.ItemBody px={0}>
+                          {/* Una sola graella per categoria (com les altres); el tipus va a la targeta. */}
+                          <SimpleGrid columns={COLS} gap={3}>
+                            {c.types.flatMap((ty) => ty.items.map((t) => <TemplateCard key={t.id} t={t} kicker={ty.name} title={t.name.replace(`${ty.name} `, "")} onPick={pick} />))}
+                          </SimpleGrid>
                         </Accordion.ItemBody>
                       </Accordion.ItemContent>
                     </Accordion.Item>

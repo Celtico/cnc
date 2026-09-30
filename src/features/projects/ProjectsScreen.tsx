@@ -16,6 +16,7 @@ import { SaveFileDialog } from "../file/SaveFileDialog"
 import { addMobleAsTemplate, openMobleFile } from "../file/mobleIo"
 import { parseMobleFile, uniqueName, type MobleFile } from "../../core/file/mobleFile"
 import { NewMobleGallery } from "./NewMobleGallery"
+import { GALLERY_COLS } from "./galleryGrid"
 import { CompositionThumb } from "../../components/CompositionThumb"
 import { compositionHeight, compositionKind, compositionWidth, type Composition } from "../../core/model"
 import { createProject, db, deleteProject, duplicateProject, safeParams, type Project } from "../../db/db"
@@ -111,17 +112,17 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
 
       <NewMobleGallery
         onCreate={(c, n) => void handleCreate(c, n)}
-        history={(kind) => {
-          const shown = (projects ?? []).filter((p) => kind === "all" || compositionKind(compositionOf(p)) === kind)
+        history={(kind, matches) => {
+          const shown = (projects ?? []).filter((p) => (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
           return {
             count: shown.length,
             node:
               shown.length === 0 ? (
                 <Text fontSize="sm" color="fg.muted">
-                  {projects?.length ? "Cap moble d'aquest tipus." : "Encara no tens cap moble: comença en blanc o des d'una plantilla."}
+                  {projects?.length ? "Cap moble no coincideix amb el tipus o la cerca." : "Encara no tens cap moble: comença en blanc o des d'una plantilla."}
                 </Text>
               ) : (
-                <SimpleGrid columns={{ base: 1, md: 2, lg: 3, "2xl": 4 }} gap={4}>
+                <SimpleGrid columns={GALLERY_COLS} gap={3}>
                   {shown.map((p) => (
                     <ProjectCard
                       key={p.id}
@@ -230,36 +231,34 @@ function ProjectCard({
     year: "numeric",
   })
   return (
-    <Card.Root variant="outline">
-      <Card.Body gap={1} cursor="pointer" onClick={onOpen}>
-        <CompositionThumb composition={comp} h="120px" />
-        <Card.Title mt={2}>{project.name}</Card.Title>
-        <Text color="fg.muted" fontSize="sm">
-          {width} × {height} × {depth} mm
+    // Mateixa targeta que les plantilles (mida sm, miniatura, nom i dues línies), amb les accions a sota.
+    <Card.Root variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }}>
+      <Card.Body p={3} gap={2} cursor="pointer" onClick={onOpen}>
+        <CompositionThumb composition={comp} />
+        <Text fontWeight="semibold" fontSize="sm" truncate title={project.name}>
+          {project.name}
         </Text>
-        <Text color="fg.muted" fontSize="sm">
-          {comp.modules.length === 1
-            ? `1 mòdul · ${first.material}`
-            : `${comp.modules.length} mòduls: ${comp.modules.map((m) => m.name).join(", ")}`}
+        <Text fontSize="xs" color="fg.muted" lineClamp={2}>
+          {width} × {height} × {depth} mm ·{" "}
+          {comp.modules.length === 1 ? `1 mòdul · ${first.material}` : `${comp.modules.length} mòduls: ${comp.modules.map((m) => m.name).join(", ")}`}
           {!project.composition && ` · ${p.shelves} ${p.shelves === 1 ? "prestatge" : "prestatges"} · ${p.doors} ${p.doors === 1 ? "porta" : "portes"}`}
         </Text>
-        <Text color="fg.subtle" fontSize="xs">
-          Modificat el {date}
-        </Text>
       </Card.Body>
-      <Card.Footer justifyContent="flex-end" gap={2}>
-        <IconButton aria-label="Desar com a fitxer" title="Desar com a fitxer" variant="ghost" onClick={onSaveFile}>
-          <LuSave />
-        </IconButton>
-        <IconButton aria-label="Duplicar moble" variant="ghost" onClick={onDuplicate}>
-          <LuCopy />
-        </IconButton>
-        <IconButton aria-label="Esborrar moble" variant="ghost" colorPalette="red" onClick={onDelete}>
-          <LuTrash2 />
-        </IconButton>
-        <Button size="sm" colorPalette="wood" onClick={onOpen}>
-          Obrir
-        </Button>
+      <Card.Footer px={3} pb={3} pt={0} gap={0.5} justifyContent="space-between">
+        <Text fontSize="xs" color="fg.subtle" truncate>
+          {date}
+        </Text>
+        <HStack gap={0}>
+          <IconButton aria-label="Desar com a fitxer" title="Desar com a fitxer" size="xs" variant="ghost" onClick={onSaveFile}>
+            <LuSave />
+          </IconButton>
+          <IconButton aria-label="Duplicar moble" title="Duplicar" size="xs" variant="ghost" onClick={onDuplicate}>
+            <LuCopy />
+          </IconButton>
+          <IconButton aria-label="Esborrar moble" title="Esborrar" size="xs" variant="ghost" colorPalette="red" onClick={onDelete}>
+            <LuTrash2 />
+          </IconButton>
+        </HStack>
       </Card.Footer>
     </Card.Root>
   )

@@ -211,7 +211,10 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   botó «Nou moble» ni diàleg): filtre per tipus, targeta «En blanc» i acordions **tots tancats**
   en obrir l'app (l'estat es recorda durant la sessió, `mobles:gallery`): **Historial** (els
   mobles que ja tens, `ProjectCard`), **Les teves plantilles**, **Plantilles de l'app** i
-  **Plantilles per a botigues de mobles**; el filtre de tipus val per a tots. Les teves es
+  **Plantilles per a botigues de mobles**; el filtre de tipus i el **cercador** (sense accents; obre
+  les seccions i categories amb resultats) valen per a tots. Totes les graelles fan servir
+  `GALLERY_COLS` (`projects/galleryGrid.ts`) i la mateixa targeta petita (les del historial, amb
+  les accions a sota; les de botiga, en una sola graella per categoria amb el tipus a la targeta). Les teves es
   gestionen allà (menú ⋯: duplicar, desar com a fitxer, eliminar; nom editable). Es creen
   amb el **menú ⋯ de la barra superior** («Desar com a plantilla»). Una plantilla exportada
   és un `.moble` amb `kind: "plantilla"`; en obrir un `.moble` es pregunta «Obrir com a
