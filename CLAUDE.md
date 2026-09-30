@@ -602,7 +602,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     a l'esquerra la llista d'apartats per categories (`SETTINGS_GROUPS`: **Fabricació** — Materials, Taulers i
     nesting, Ferratges, Jocs, Etiquetes —, **Foto i visor 3D** — Objectes de referència, Visor 3D — i **App** —
     Visualització, Tema; no és un acordió, com la Configuració de macOS) i a la dreta la pàgina triada (icona, títol,
-    explicació i «Restaurar valors inicials»); dins, **grups sempre oberts** (`components/SettingsGroup`:
+    explicació i «Restaurar valors inicials»); dins, **una sola columna de 760 px** (`FoldGrid` = pila; res de
+    graelles de targetes, que deixaven forats) de **grups sempre oberts** (`components/SettingsGroup`:
     targeta amb capçalera, res no s'obre de cop). Materials i objectes de referència fan **llista i detall**
     (`components/MasterDetail`: llista agrupada per categoria amb mostra, cercador i «Afegir»; el triat
     s'edita a la dreta). Al mòbil, navegació en profunditat: apartats › pàgina › element, amb «‹ Tornar».

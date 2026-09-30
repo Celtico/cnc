@@ -214,7 +214,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             </Stack>
           </Pane>
 
-          <Pane id="hardware" wide title="Ferratges i mecanitzats" icon={LuHammer} desc="Frontisses, guies, espigues i forats." onReset={() => setReset({ key: "hardware", label: "Ferratges i mecanitzats" })}>
+          <Pane id="hardware" title="Ferratges i mecanitzats" icon={LuHammer} desc="Frontisses, guies, espigues i forats." onReset={() => setReset({ key: "hardware", label: "Ferratges i mecanitzats" })}>
             <HardwareForm hardware={draft.hardware} onChange={(hardware) => set("hardware", hardware)} />
           </Pane>
 
@@ -411,7 +411,7 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
         <Button display={{ base: "inline-flex", md: "none" }} variant="ghost" size="sm" alignSelf="flex-start" ml={-2} onClick={() => setActive(null)}>
           <LuChevronLeft /> Preferències
         </Button>
-        <HStack justify="space-between" gap={3} wrap="wrap">
+        <HStack justify="space-between" gap={3} wrap="wrap" w="full" maxW={shown.wide ? "none" : "760px"}>
           <HStack gap={2.5}>
             <Box color="wood.fg" fontSize="xl" display="inline-flex">
               <Icon />
@@ -431,7 +431,7 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
             </Button>
           )}
         </HStack>
-        <Stack gap={3} w="full" maxW={shown.wide ? "none" : "3xl"}>
+        <Stack gap={3} w="full" maxW={shown.wide ? "none" : "760px"}>
           {shown.children}
         </Stack>
       </Stack>
@@ -441,15 +441,11 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
 }
 
 /**
- * Graella de files plegables: a l'ordinador, tantes columnes com hi càpiguen (mín. 340 px);
- * al mòbil, una. Cada una s'obre pel seu compte i no estira les del costat.
+ * Grups d'una pàgina de Preferències: una sola columna, un sota l'altre (com la Configuració de
+ * macOS o Figma): es llegeix de dalt a baix, sense forats, i tots els camps tenen el mateix ample.
  */
 function FoldGrid({ children }: { children: ReactNode }) {
-  return (
-    <Grid templateColumns="repeat(auto-fill, minmax(min(100%, 340px), 1fr))" gap={1.5} alignItems="start">
-      {children}
-    </Grid>
-  )
+  return <Stack gap={3}>{children}</Stack>
 }
 
 // --- Objectes de referència --------------------------------------------------------------
