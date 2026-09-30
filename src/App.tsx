@@ -22,6 +22,7 @@ import { compositionKind } from "./core/model"
 import { SettingsScreen } from "./features/settings/SettingsScreen"
 import { useSettings } from "./features/settings/SettingsContext"
 import { UnitContext } from "./features/units"
+import { usePersistentNumber } from "./features/usePersistentNumber"
 import { usePersistentFlag } from "./features/usePersistentFlag"
 import { useProject } from "./features/useProject"
 
@@ -64,8 +65,11 @@ function readStoredId(): number | null {
 
 export function App() {
   const [projectId, setProjectId] = useState<number | null>(readStoredId)
-  // Si hi havia un moble obert, es torna al seu Editor; si no, a la llista.
-  const [screen, setScreen] = useState<Screen>(() => (readStoredId() === null ? "projects" : "editor"))
+  // Si hi havia un moble obert, es torna al seu Editor; si no, a Ambients (el primer del menú).
+  const [screen, setScreen] = useState<Screen>(() => (readStoredId() !== null ? "editor" : readAmbientId() !== null ? "ambient" : "ambients"))
+  // L'últim moble i l'últim objecte oberts (com l'ambient): el menú hi torna directament.
+  const [lastMoble, setLastMoble] = usePersistentNumber("mobles:last-moble", 0)
+  const [lastObject, setLastObject] = usePersistentNumber("mobles:last-object", 0)
   const project = useProject(projectId)
   // Ambient obert (a Ambients); es recorda com el moble.
   const [ambientId, setAmbientId] = useState<number | null>(readAmbientId)
@@ -124,12 +128,36 @@ export function App() {
   const [topActions, setTopActions] = useState<HTMLDivElement | null>(null)
   const [saveOpen, setSaveOpen] = useState(false)
   const [templateOpen, setTemplateOpen] = useState(false)
+  useEffect(() => {
+    if (projectId === null || !previewComposition) return
+    if (isObject) setLastObject(projectId)
+    else setLastMoble(projectId)
+  }, [projectId, previewComposition, isObject, setLastMoble, setLastObject])
+  /** Mobles / Objectes del menú: l'últim obert (si encara existeix) o la llista. */
+  const goRoot = (kind: "projects" | "objects") => {
+    const id = kind === "objects" ? lastObject : lastMoble
+    if (id > 0)
+      void db.projects.get(id).then((p) => {
+        if (p) openProject(id)
+        else {
+          setProjectId(null)
+          setScreen(kind)
+        }
+      })
+    else {
+      setProjectId(null)
+      setScreen(kind)
+    }
+  }
   const go = (s: Screen) => {
     if (PROJECT_NAV.some((n) => n.id === s) && projectId === null) return
     setScreen(s)
   }
   /** Tanca el moble obert i torna a la llista: el menú torna a ser el general. */
   const backToProjects = () => {
+    // Com «Ambients ›»: tornar a la llista deixa de recordar-lo.
+    if (isObject) setLastObject(0)
+    else setLastMoble(0)
     setProjectId(null)
     setScreen(rootScreen)
   }
@@ -229,16 +257,7 @@ export function App() {
           </>
         ) : (
           <Stack gap={1}>
-            {/* «Mobles» sempre a dalt de tot, separat; a sota, Obrir fitxer. */}
-            <NavItem
-              icon={PROJECTS_ENTRY.icon}
-              label={PROJECTS_ENTRY.label}
-              collapsed={navCollapsed}
-              active={screen === "projects"}
-              disabled={false}
-              onClick={() => go("projects")}
-            />
-            <NavItem icon={OBJECTS_ENTRY.icon} label={OBJECTS_ENTRY.label} collapsed={navCollapsed} active={screen === "objects"} disabled={false} onClick={() => go("objects")} />
+            {/* Ordre: Ambients (les escenes), Objectes i Mobles; a sota, Obrir fitxer. */}
             <NavItem
               icon={AMBIENTS_ENTRY.icon}
               label={AMBIENTS_ENTRY.label}
@@ -246,6 +265,15 @@ export function App() {
               active={screen === "ambients" || screen === "ambient"}
               disabled={false}
               onClick={goAmbients}
+            />
+            <NavItem icon={OBJECTS_ENTRY.icon} label={OBJECTS_ENTRY.label} collapsed={navCollapsed} active={screen === "objects"} disabled={false} onClick={() => goRoot("objects")} />
+            <NavItem
+              icon={PROJECTS_ENTRY.icon}
+              label={PROJECTS_ENTRY.label}
+              collapsed={navCollapsed}
+              active={screen === "projects"}
+              disabled={false}
+              onClick={() => goRoot("projects")}
             />
             {/* Les accions de la llista només a la llista (a Preferències confonien). */}
             {screen === "projects" && (
@@ -258,9 +286,9 @@ export function App() {
         )}
         {/* General: just a sota de les pàgines, separat amb una línia. */}
         <Stack gap={1} mt={1} pt={2} borderTopWidth="1px" align={navCollapsed ? "center" : "stretch"}>
-          {inProject && !isObject && <NavItem icon={OBJECTS_ENTRY.icon} label={OBJECTS_ENTRY.label} collapsed={navCollapsed} active={false} disabled={false} onClick={() => (setProjectId(null), setScreen("objects"))} />}
-          {inProject && isObject && <NavItem icon={PROJECTS_ENTRY.icon} label={PROJECTS_ENTRY.label} collapsed={navCollapsed} active={false} disabled={false} onClick={() => (setProjectId(null), setScreen("projects"))} />}
           {inProject && <NavItem icon={AMBIENTS_ENTRY.icon} label={AMBIENTS_ENTRY.label} collapsed={navCollapsed} active={false} disabled={false} onClick={goAmbients} />}
+          {inProject && !isObject && <NavItem icon={OBJECTS_ENTRY.icon} label={OBJECTS_ENTRY.label} collapsed={navCollapsed} active={false} disabled={false} onClick={() => goRoot("objects")} />}
+          {inProject && isObject && <NavItem icon={PROJECTS_ENTRY.icon} label={PROJECTS_ENTRY.label} collapsed={navCollapsed} active={false} disabled={false} onClick={() => goRoot("projects")} />}
           <NavItem
             icon={SETTINGS_ENTRY.icon}
             label={SETTINGS_ENTRY.label}
@@ -375,7 +403,7 @@ export function App() {
         pb="env(safe-area-inset-bottom, 0px)"
         justify="space-around"
       >
-        {(inProject ? projectNav : [PROJECTS_ENTRY, OBJECTS_ENTRY, AMBIENTS_ENTRY, SETTINGS_ENTRY]).map((n) => {
+        {(inProject ? projectNav : [AMBIENTS_ENTRY, OBJECTS_ENTRY, PROJECTS_ENTRY, SETTINGS_ENTRY]).map((n) => {
           const disabled = false
           const active = screen === n.id || (n.id === "ambients" && screen === "ambient")
           return (
@@ -388,7 +416,7 @@ export function App() {
               opacity={disabled ? 0.5 : 1}
               cursor={disabled ? "not-allowed" : "pointer"}
             >
-              <button disabled={disabled} onClick={() => (n.id === "ambients" ? goAmbients() : go(n.id))} aria-current={active ? "page" : undefined}>
+              <button disabled={disabled} onClick={() => (n.id === "ambients" ? goAmbients() : n.id === "projects" || n.id === "objects" ? goRoot(n.id) : go(n.id))} aria-current={active ? "page" : undefined}>
                 <Stack align="center" gap={0.5}>
                   <Box fontSize="xl">
                     <n.icon />

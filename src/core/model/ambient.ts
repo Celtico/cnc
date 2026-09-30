@@ -107,6 +107,8 @@ export const AmbientSchema = z.object({
   /** Materials de simulació del terra i de les parets (nom de preferències). */
   floorMaterial: z.string().optional(),
   wallMaterial: z.string().optional(),
+  /** Material del sostre (sense, pintura blanca). */
+  ceilingMaterial: z.string().optional(),
 })
 export type Ambient = z.infer<typeof AmbientSchema>
 
@@ -126,6 +128,7 @@ export function parseAmbient(raw: unknown): Ambient {
     ...(plan.success ? { plan: plan.data } : {}),
     ...(typeof o.floorMaterial === "string" ? { floorMaterial: o.floorMaterial } : {}),
     ...(typeof o.wallMaterial === "string" ? { wallMaterial: o.wallMaterial } : {}),
+    ...(typeof o.ceilingMaterial === "string" ? { ceilingMaterial: o.ceilingMaterial } : {}),
   }
 }
 

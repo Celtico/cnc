@@ -26,7 +26,10 @@ export function Ambient3D({
   onSelect,
   dollhouse = true,
   shadows = true,
+  ceiling: showCeiling = true,
 }: {
+  /** Sostre a les habitacions tancades (es veu quan la càmera és a dins). */
+  ceiling?: boolean
   /** Parets de davant transparents (casa de nines) i ombres. */
   dollhouse?: boolean
   shadows?: boolean
@@ -62,7 +65,7 @@ export function Ambient3D({
       <StudioEnvironment intensity={0.55} />
       <hemisphereLight args={["#ffffff", "#b9ad9c", 0.35]} />
       <directionalLight position={[cx + 4, 7, cz + 3]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-span} shadow-camera-right={span} shadow-camera-top={span} shadow-camera-bottom={-span} shadow-bias={-0.0004} />
-      <Room ambient={ambient} geos={geos} materials={materials} box={box} selectedIds={selectedIds} onSelect={onSelect} dollhouse={dollhouse} />
+      <Room ambient={ambient} geos={geos} materials={materials} box={box} selectedIds={selectedIds} onSelect={onSelect} dollhouse={dollhouse} showCeiling={showCeiling} />
       {/* Com al visor de l'editor: esmorteïment, botó dret o dos dits per desplaçar, roda per apropar. */}
       <Controls target={[cx, 0.9, cz]} home={[cx + span * 0.5, span * 1.1 + 2, cz + span * 1.4 + 2]} fitSignal={fitSignal} eye={eyePose(ambient)} eyeSignal={eyeSignal} maxDistance={span * 4 + 10} />
       {onSceneAccess && <SceneAccess onAccess={onSceneAccess} />}
@@ -187,8 +190,10 @@ function Room({
   selectedIds,
   onSelect,
   dollhouse,
+  showCeiling,
 }: {
   dollhouse: boolean
+  showCeiling: boolean
   ambient: Ambient
   geos: Map<string, ItemGeometry | null>
   materials: MaterialPref[]
@@ -243,16 +248,22 @@ function Room({
   // Sostre de les habitacions tancades: només quan la càmera és a dins (al visor i al render; des de
   // dalt no es veu). Al render tanca la llum: entra per les finestres, com a les fotos.
   const ceiling = useMemo(() => {
-    if (!closedRoom(ambient.walls)) return null
+    if (!showCeiling || !closedRoom(ambient.walls)) return null
     const xs = ambient.walls.flatMap((w) => [w.a[0], w.b[0]]), ys = ambient.walls.flatMap((w) => [w.a[1], w.b[1]])
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys)
     const H = Math.min(...ambient.walls.map((w) => w.height))
-    const mesh = new Mesh(new BoxGeometry((x1 - x0) / 1000, 0.05, (y1 - y0) / 1000), new MeshStandardMaterial({ color: "#f4f2ee", roughness: 0.9 }))
+    const mesh = new Mesh(new BoxGeometry((x1 - x0) / 1000, 0.05, (y1 - y0) / 1000), surfaceMaterial(materials, ambient.ceilingMaterial ?? "Pintura blanca", x1 - x0, y1 - y0))
     mesh.position.set((x0 + x1) / 2000, H / 1000 + 0.025, (y0 + y1) / 2000)
+    // Al visor la llum ve de dalt i la cara de sota quedaria fosca: una mica de llum pròpia (el
+    // render per CPU no la fa servir, hi arriba la de les finestres).
+    const mat = mesh.material as MeshStandardMaterial
+    mat.emissive.copy(mat.color)
+    mat.emissiveMap = mat.map
+    mat.emissiveIntensity = 0.55
     mesh.visible = false
     mesh.userData.renderOnly = "ceiling"
     return mesh
-  }, [ambient.walls])
+  }, [ambient.walls, ambient.ceilingMaterial, materials, showCeiling])
   const scene = useThree((s) => s.scene)
   useEffect(() => {
     scene.userData.daylight = true

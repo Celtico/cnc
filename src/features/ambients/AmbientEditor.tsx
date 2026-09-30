@@ -35,6 +35,7 @@ import {
   LuUndo2,
   LuVideo,
   LuEye,
+  LuPanelTop,
 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { RenderDialog, type SceneGetter } from "../../components/viewer/render/RenderDialog"
@@ -146,6 +147,7 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
   const [showPlan, setShowPlan] = usePersistentFlag("mobles:ambient-plan", true)
   const [dollhouse, setDollhouse] = usePersistentFlag("mobles:ambient-dollhouse", true)
   const [shadows, setShadows] = usePersistentFlag("mobles:ambient-shadows", true)
+  const [ceiling, setCeiling] = usePersistentFlag("mobles:ambient-ceiling", true)
   // Seleccionar porta a Propietats al mòbil (com a l'editor).
   const select = (x: Selection) => {
     setSel(x)
@@ -551,7 +553,7 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
             />
           ) : (
             <Box position="absolute" inset={0} rounded="md" overflow="hidden" borderWidth="1px">
-              <Ambient3D ambient={amb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} dollhouse={dollhouse} shadows={shadows} />
+              <Ambient3D ambient={amb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} dollhouse={dollhouse} shadows={shadows} ceiling={ceiling} />
             </Box>
           )}
             {chrome}
@@ -609,6 +611,7 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
                     <ViewTile label="Interior" icon={<LuEye />} on={false} onClick={() => setEye((n) => n + 1)} tip="Entrar a l'habitació: càmera anivellada a 1,35 m, mirant la paret del fons, com les fotos d'interiors" />
                     <ViewTile label="Casa de nines" icon={<LuHouse />} on={dollhouse} onClick={() => setDollhouse((v) => !v)} tip="Parets de davant transparents" />
                     <ViewTile label="Ombres" icon={<LuSun />} on={shadows} onClick={() => setShadows((v) => !v)} />
+                    <ViewTile label="Sostre" icon={<LuPanelTop />} on={ceiling} onClick={() => setCeiling((v) => !v)} tip="Sostre a les habitacions tancades: es veu des de dins («Interior») i al render la llum entra per les finestres" />
                     <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => setRenderOpen(true)} tip="Render fotorealista per CPU (com Cinema 4D): es va afinant i es desa en PNG" />
                   </>
                 )
@@ -984,6 +987,7 @@ function AmbientInspector({
         <SectionTitle>Acabats</SectionTitle>
         <MaterialPick label="Terra" value={amb.floorMaterial ?? "Parquet de roure"} materials={materials} onChange={(floorMaterial) => onChange({ ...amb, floorMaterial })} onlySim />
         <MaterialPick label="Parets" value={amb.wallMaterial ?? "Pintura blanca"} materials={materials} onChange={(wallMaterial) => onChange({ ...amb, wallMaterial })} onlySim />
+        <MaterialPick label="Sostre" value={amb.ceilingMaterial ?? "Pintura blanca"} materials={materials} onChange={(ceilingMaterial) => onChange({ ...amb, ceilingMaterial })} onlySim />
       </Stack>
 
       <Stack gap={2}>

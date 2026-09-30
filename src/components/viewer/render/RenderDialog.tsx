@@ -1,6 +1,8 @@
 import { Box, Button, CloseButton, Dialog, HStack, NativeSelect, Portal, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { LuDownload, LuImageUp, LuPause, LuPlay, LuRotateCcw, LuX } from "react-icons/lu"
+import type { IconType } from "react-icons"
+import { LuCamera, LuDownload, LuGauge, LuHouse, LuImage, LuImageUp, LuPause, LuPlay, LuRotateCcw, LuSun, LuX } from "react-icons/lu"
+import { PanelSection } from "../../PanelSection"
 import type { Camera, Scene } from "three"
 import { parseHdr } from "./hdr"
 import { DEFAULT_RENDER_OPTS, extractScene, type RenderEnv, type RenderOpts, type RenderRoom } from "./sceneData"
@@ -64,21 +66,17 @@ function Range({ label, value, min, max, step, format, onChange }: { label: stri
   )
 }
 
-function Group({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+/** Secció plegable de les opcions (la mateixa `PanelSection` dels inspectors): comencen tancades i es recorden durant la sessió. */
+function Sec({ id, title, icon, hint, badge, children }: { id: string; title: string; icon: IconType; hint: string; badge?: ReactNode; children: ReactNode }) {
   return (
-    <Stack gap={2}>
-      <HStack justify="space-between">
-        <Text fontSize="xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="wide" color="fg.muted">
-          {title}
+    <PanelSection id={`render-${id}`} title={title} icon={icon} badge={badge}>
+      <Stack gap={3}>
+        {children}
+        <Text fontSize="2xs" color="fg.subtle">
+          {hint}
         </Text>
-        {hint && (
-          <Text fontSize="2xs" color="fg.subtle">
-            {hint}
-          </Text>
-        )}
-      </HStack>
-      {children}
-    </Stack>
+      </Stack>
+    </PanelSection>
   )
 }
 
@@ -370,18 +368,20 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
   const j = job.current
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size="cover" placement="center">
+    <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size={{ base: "full", md: "cover" }} placement="center">
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content>
+          <Dialog.Content h={{ base: "100dvh", md: undefined }} maxH="100dvh" display="flex" flexDirection="column" overflow="hidden">
             <Dialog.Header>
               <Dialog.Title>Render</Dialog.Title>
             </Dialog.Header>
-            <Dialog.Body display="flex" flexDirection={{ base: "column", md: "row" }} gap={4} minH={0}>
-              <Stack flex={1} minH={0} minW={0} gap={3}>
+            {/* Al mòbil: la imatge a dalt (més de mitja pantalla) i les opcions a sota, tot amb desplaçament. */}
+            <Dialog.Body flex={1} display="flex" flexDirection={{ base: "column", md: "row" }} gap={4} minH={0} overflowY={{ base: "auto", md: "hidden" }} px={{ base: 3, md: 6 }}>
+              <Stack flex={{ base: "none", md: 1 }} minH={0} minW={0} gap={3}>
                 <Box
-                  flex={1}
+                  flex={{ md: 1 }}
+                  h={{ base: "55vh", md: "auto" }}
                   minH="200px"
                   display="flex"
                   alignItems="center"
@@ -416,8 +416,8 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                 </HStack>
               </Stack>
 
-              <Stack w={{ base: "full", md: "260px" }} flexShrink={0} gap={5} overflowY="auto" pr={1}>
-                <Group title="Qualitat" hint="torna a començar">
+              <Stack w={{ base: "full", md: "300px" }} flexShrink={0} gap={1} overflowY={{ base: "visible", md: "auto" }} pr={1} pb={{ base: 4, md: 0 }}>
+                <Sec id="quality" title="Qualitat" icon={LuGauge} hint="Els canvis tornen a començar el render." badge={`${RESOLUTIONS[res].label} · ${opts.bounces} rebots`}>
                   <Stack gap={0.5}>
                     <Text fontSize="xs" color="fg.muted">
                       Resolució
@@ -448,9 +448,9 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                       <NativeSelect.Indicator />
                     </NativeSelect.Root>
                   </Stack>
-                </Group>
+                </Sec>
 
-                <Group title="Càmera" hint="torna a començar">
+                <Sec id="camera" title="Càmera" icon={LuCamera} hint="Els canvis tornen a començar el render." badge={format === "view" ? "Visor" : format}>
                   <Stack gap={0.5}>
                     <Text fontSize="xs" color="fg.muted">
                       Format
@@ -470,9 +470,9 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                   <Text fontSize="2xs" color="fg.subtle">
                     Enfoca el que hi ha al centre de la imatge. Per a interiors: «Interior» a Opcions de vista (càmera a l'alçada dels ulls).
                   </Text>
-                </Group>
+                </Sec>
 
-                <Group title="Escena" hint="torna a començar">
+                <Sec id="scene" title="Escena" icon={LuHouse} hint="Els canvis tornen a començar el render." badge={room === "room" ? "Habitació" : room === "floor" ? "Terra" : "Cap"}>
                   <NativeSelect.Root size="sm">
                     <NativeSelect.Field value={room} onChange={(e) => setRoom(e.currentTarget.value as RenderRoom)}>
                       <option value="room">Habitació (terra i paret)</option>
@@ -484,9 +484,9 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                   <Text fontSize="2xs" color="fg.subtle">
                     L'habitació és la del mode Presentació. Per a catàlegs: «Cap» amb fons blanc o transparent.
                   </Text>
-                </Group>
+                </Sec>
 
-                <Group title="Llum" hint="torna a començar">
+                <Sec id="light" title="Llum" icon={LuSun} hint="Els canvis tornen a començar el render." badge={env ? "HDRI" : undefined}>
                   <Range label="Sol · direcció" value={opts.sunAzimuth} min={-180} max={180} step={5} format={deg} onChange={(v) => set({ sunAzimuth: v })} />
                   <Range label="Sol · alçada" value={opts.sunElevation} min={5} max={85} step={1} format={deg} onChange={(v) => set({ sunElevation: v })} />
                   <Range label="Sol · intensitat" value={opts.sunIntensity} min={0} max={3} step={0.1} format={x} onChange={(v) => set({ sunIntensity: v })} />
@@ -528,9 +528,9 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                       Un cel de 360° (p. ex. de polyhaven.com, 1k o 2k): llum i reflexos de debò i el que es veu per les finestres. Sense, un cel de dia.
                     </Text>
                   </Stack>
-                </Group>
+                </Sec>
 
-                <Group title="Imatge" hint="a l'instant">
+                <Sec id="image" title="Imatge" icon={LuImage} hint="S'aplica a l'instant, sense tornar a començar." badge={look.denoise ? "Sense soroll" : undefined}>
                   <HStack justify="space-between" fontSize="xs">
                     <Text color="fg.muted">Exposició automàtica</Text>
                     <input type="checkbox" aria-label="Exposició automàtica" checked={look.auto} onChange={(e) => setLook({ auto: e.currentTarget.checked })} style={{ accentColor: "var(--chakra-colors-wood-solid)" }} />
@@ -565,7 +565,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                       <NativeSelect.Indicator />
                     </NativeSelect.Root>
                   </Stack>
-                </Group>
+                </Sec>
 
                 <Button
                   size="xs"

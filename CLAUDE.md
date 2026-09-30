@@ -187,6 +187,13 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   galeria a pantalla completa; s'hi col·loquen com els mobles (enllaçats). Els blocs antics
   (`kind: "block"`) es continuen veient.
 
+## Menú principal
+- Ordre: **Ambients · Objectes · Mobles** (i Preferències a sota; igual a la barra de baix del mòbil).
+  L'app s'obre a Ambients si no hi havia res obert.
+- Cada apartat **recorda l'últim obert** (com Ambients): clicar Objectes o Mobles torna a l'últim
+  objecte / moble obert (`mobles:last-object`, `mobles:last-moble`) si encara existeix; tornar a la llista
+  («Mobles ›» o la fletxa) el deixa d'obrir.
+
 ## Ambients (plànol de la casa amb els mobles)
 - Apartat propi al menú (**Mobles · Ambients · Preferències**; al mòbil, a la barra de baix):
   els Mobles es dissenyen i es fabriquen; els Ambients són on es col·loquen.
@@ -531,6 +538,10 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     i temperatura (càlid per defecte als ambients). Càmera: **format** (visor, 3:2, 4:5, 16:9, 1:1) i
     desenfocament (lent fina, enfoca el centre). **Cel HDRI** opcional: es carrega un `.hdr` (`hdr.ts`,
     RGBE; p. ex. de Poly Haven) i es pot girar; sense, el cel de dia. Límit de 12 per mostra (sense ateses).
+    Opcions del render en seccions plegables (`PanelSection`, com els inspectors: Qualitat, Càmera,
+    Escena, Llum, Imatge, amb el resum a la insígnia); al mòbil, pantalla completa amb la imatge a dalt.
+    **Sostre**: opció de vista «Sostre» (`mobles:ambient-ceiling`) i material a Acabats
+    (`Ambient.ceilingMaterial`); al visor té una mica de llum pròpia (emissive) perquè des de sota no quedi fosc.
   - **Peça enganxada a un mòdul** (`FreePart.module`, `resolveParts`, `partOffset`): a General,
     «Enganxada a»; x/y/z passen a ser relatives al mòdul i el segueixen (el taulell de pedra de
     l'illa). Tot el que dibuixa o construeix fa servir `resolveParts` (coordenades de la
