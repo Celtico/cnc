@@ -572,7 +572,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
             />
           ) : (
             <Box position="absolute" inset={0} rounded="md" overflow="hidden" borderWidth="1px">
-              <Ambient3D ambient={amb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} dollhouse={dollhouse} shadows={shadows} ceiling={ceiling} />
+              <Ambient3D ambient={amb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} onPick={pickItem} onChange={change} snap={snapOn} dollhouse={dollhouse} shadows={shadows} ceiling={ceiling} />
             </Box>
           )}
             {chrome}

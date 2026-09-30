@@ -1,15 +1,15 @@
 import { OrbitControls } from "@react-three/drei"
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import { useEffect, useMemo, useRef, type ComponentRef } from "react"
-import { BoxGeometry, Group, Mesh, MeshStandardMaterial, NeutralToneMapping, PerspectiveCamera, PlaneGeometry, Vector3, type Object3D } from "three"
+import { BoxGeometry, Group, Mesh, MeshStandardMaterial, NeutralToneMapping, PerspectiveCamera, Plane, PlaneGeometry, Raycaster, Vector2, Vector3, type Material, type Object3D } from "three"
 import { exportablePanel } from "../../components/viewer/CabinetViewer"
 import { buildScene } from "../../components/viewer/exportGlb"
 import { SceneAccess, StudioEnvironment } from "../../components/viewer/SceneHelpers"
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
-import { rad, wallLength, wallOpenings, wallSegments, type Ambient, type MaterialPref, type Opening } from "../../core/model"
+import { rad, snapToWalls, wallLength, wallOpenings, wallSegments, type Ambient, type MaterialPref, type Opening } from "../../core/model"
 import type { ItemGeometry } from "./ambientData"
-import { ambientBox, eyePose } from "./planGeom"
+import { ambientBox, eyePose, snapGrid } from "./planGeom"
 
 /**
  * Vista 3D de l'ambient (m): terra i parets amb els materials de simulació i cada moble o bloc
@@ -24,6 +24,9 @@ export function Ambient3D({
   eyeSignal = 0,
   selectedIds = [],
   onSelect,
+  onPick,
+  onChange,
+  snap = true,
   dollhouse = true,
   shadows = true,
   ceiling: showCeiling = true,
@@ -36,6 +39,14 @@ export function Ambient3D({
   /** Elements seleccionats (els mateixos que al plànol) i clic per seleccionar-ne un. */
   selectedIds?: string[]
   onSelect?: (id: string | null) => void
+  /**
+   * Arrossegar elements pel terra (com al plànol): `onPick` tria l'element tocat (o el seu grup, com
+   * Figma) i en torna els ids que es mouen; `onChange` rep l'ambient (commit en deixar-los anar).
+   */
+  onPick?: (id: string) => string[]
+  onChange?: (a: Ambient, commit: boolean) => void
+  /** Imant a les parets (el de les opcions de vista; Alt: sense). */
+  snap?: boolean
   ambient: Ambient
   geos: Map<string, ItemGeometry | null>
   materials: MaterialPref[]
@@ -65,7 +76,7 @@ export function Ambient3D({
       <StudioEnvironment intensity={0.55} />
       <hemisphereLight args={["#ffffff", "#b9ad9c", 0.35]} />
       <directionalLight position={[cx + 4, 7, cz + 3]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-span} shadow-camera-right={span} shadow-camera-top={span} shadow-camera-bottom={-span} shadow-bias={-0.0004} />
-      <Room ambient={ambient} geos={geos} materials={materials} box={box} selectedIds={selectedIds} onSelect={onSelect} dollhouse={dollhouse} showCeiling={showCeiling} />
+      <Room ambient={ambient} geos={geos} materials={materials} box={box} selectedIds={selectedIds} onSelect={onSelect} onPick={onPick} onChange={onChange} snap={snap} dollhouse={dollhouse} showCeiling={showCeiling} />
       {/* Com al visor de l'editor: esmorteïment, botó dret o dos dits per desplaçar, roda per apropar. */}
       <Controls target={[cx, 0.9, cz]} home={[cx + span * 0.5, span * 1.1 + 2, cz + span * 1.4 + 2]} fitSignal={fitSignal} eye={eyePose(ambient)} eyeSignal={eyeSignal} maxDistance={span * 4 + 10} />
       {onSceneAccess && <SceneAccess onAccess={onSceneAccess} />}
@@ -88,7 +99,11 @@ function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance }: { ta
   const first = useRef(true)
   useEffect(() => {
     if (first.current) {
+      // El punt on es mira només es posa en obrir (i amb «Encuadrar»): si seguís la caixa de l'ambient,
+      // moure un element cap a fora mouria la càmera.
       first.current = false
+      ref.current?.target.set(...target)
+      ref.current?.update()
       return
     }
     pose(home, target, 40)
@@ -99,7 +114,7 @@ function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance }: { ta
     if (eyeSignal && eye) pose(eye.pos, eye.target, 55)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eyeSignal])
-  return <OrbitControls ref={ref} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={maxDistance} maxPolarAngle={Math.PI / 2 - 0.02} target={target} />
+  return <OrbitControls ref={ref} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={maxDistance} maxPolarAngle={Math.PI / 2 - 0.02} />
 }
 
 /** Caixa taronja de l'element seleccionat (com el contorn de selecció del visor de l'editor). */
@@ -189,9 +204,15 @@ function Room({
   box,
   selectedIds,
   onSelect,
+  onPick,
+  onChange,
+  snap,
   dollhouse,
   showCeiling,
 }: {
+  onPick?: (id: string) => string[]
+  onChange?: (a: Ambient, commit: boolean) => void
+  snap: boolean
   dollhouse: boolean
   showCeiling: boolean
   ambient: Ambient
@@ -212,6 +233,10 @@ function Room({
     mesh.userData.room = "floor"
     return mesh
   }, [box.x0, box.x1, box.y0, box.y1, materials, ambient.floorMaterial])
+  useEffect(() => () => {
+    floor.geometry.dispose()
+    ;(floor.material as Material).dispose()
+  }, [floor])
 
   const walls = useMemo(() => {
     const g = new Group()
@@ -301,23 +326,96 @@ function Room({
     }
   })
 
-  // Mobles i blocs: la seva escena (m) centrada a la petjada, al seu lloc i girada.
-  const scenes = useMemo(
-    () =>
-      ambient.items.flatMap((it) => {
-        const g = geos.get(it.id)
-        if (!g) return []
+  // Mobles i blocs: la seva escena (m) centrada a la petjada, al seu lloc i girada. Les peces d'un element
+  // només es refan si en canvia la geometria o els materials: moure'l (arrossegar-lo) només en canvia la
+  // posició. Les que ja no hi són s'alliberen (memòria gràfica: a l'iPhone compta).
+  const built = useRef(new Map<string, { geo: ItemGeometry; materials: MaterialPref[]; obj: Group }>())
+  const scenes = useMemo(() => {
+    const prev = built.current
+    const next = new Map<string, { geo: ItemGeometry; materials: MaterialPref[]; obj: Group }>()
+    const out: { id: string; obj: Group }[] = []
+    for (const it of ambient.items) {
+      const g = geos.get(it.id)
+      if (!g) continue
+      let entry = prev.get(it.id)
+      if (!entry || entry.geo !== g || entry.materials !== materials) {
         const inner = buildScene([...g.build.panels, ...g.build.extras], it.id, { materials, make: exportablePanel })
         inner.position.set(-(g.min[0] + g.max[0]) / 2000, 0, -(g.min[2] + g.max[2]) / 2000)
         shadowsOn(inner)
         const outer = new Group()
         outer.add(inner)
-        outer.position.set(it.x / 1000, (it.elevation ?? 0) / 1000, it.y / 1000)
-        outer.rotation.y = -rad(it.rot)
-        return [{ id: it.id, obj: outer }]
-      }),
-    [ambient.items, geos, materials],
-  )
+        entry = { geo: g, materials, obj: outer }
+      }
+      entry.obj.position.set(it.x / 1000, (it.elevation ?? 0) / 1000, it.y / 1000)
+      entry.obj.rotation.y = -rad(it.rot)
+      next.set(it.id, entry)
+      out.push({ id: it.id, obj: entry.obj })
+    }
+    for (const [id, e] of prev) if (next.get(id)?.obj !== e.obj) disposeTree(e.obj)
+    built.current = next
+    return out
+  }, [ambient.items, geos, materials])
+  useEffect(() => () => {
+    for (const e of built.current.values()) disposeTree(e.obj)
+    built.current = new Map()
+  }, [])
+
+  // Arrossegar pel terra: el pla y = 0 sota el punter; la resta, com al plànol (quadrícula, imant a
+  // les parets per a un sol element, Alt sense imant, un sol pas de desfer en deixar-lo anar).
+  const { camera, gl, controls } = useThree()
+  const startDrag = (id: string, e: ThreeEvent<PointerEvent>) => {
+    if (!onPick || !onChange || e.button !== 0) return
+    e.stopPropagation()
+    const ids = onPick(id)
+    const plane = new Plane(new Vector3(0, 1, 0), 0)
+    const ray = new Raycaster()
+    const ndc = new Vector2()
+    const hit = (cx: number, cy: number): Vector3 | null => {
+      const r = gl.domElement.getBoundingClientRect()
+      ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1)
+      ray.setFromCamera(ndc, camera)
+      return ray.ray.intersectPlane(plane, new Vector3())
+    }
+    const start = hit(e.nativeEvent.clientX, e.nativeEvent.clientY)
+    if (!start) return
+    const from = new Map(ambient.items.filter((it) => ids.includes(it.id)).map((it) => [it.id, [it.x, it.y] as const]))
+    const orbit = controls as unknown as { enabled: boolean } | null
+    if (orbit) orbit.enabled = false
+    let moved = false
+    let last = ambient
+    const move = (ev: PointerEvent) => {
+      const p = hit(ev.clientX, ev.clientY)
+      if (!p) return
+      let ox = snapGrid((p.x - start.x) * 1000), oy = snapGrid((p.z - start.z) * 1000)
+      moved = moved || Math.hypot(ev.clientX - e.nativeEvent.clientX, ev.clientY - e.nativeEvent.clientY) > 4
+      if (!moved) return
+      if (ids.length === 1 && snap && !ev.altKey) {
+        const it = ambient.items.find((x) => x.id === ids[0])
+        const geo = geos.get(ids[0]!)
+        const f = from.get(ids[0]!)
+        if (it && geo && f) {
+          const sn = snapToWalls(f[0] + ox, f[1] + oy, geo.w, geo.d, it.rot, ambient.walls, 60)
+          ox = Math.round(sn.x - f[0])
+          oy = Math.round(sn.y - f[1])
+        }
+      }
+      last = { ...ambient, items: ambient.items.map((it) => {
+        const f = from.get(it.id)
+        return f ? { ...it, x: f[0] + ox, y: f[1] + oy } : it
+      }) }
+      onChange(last, false)
+    }
+    const up = () => {
+      window.removeEventListener("pointermove", move)
+      window.removeEventListener("pointerup", up)
+      window.removeEventListener("pointercancel", up)
+      if (orbit) orbit.enabled = true
+      if (moved) onChange(last, true)
+    }
+    window.addEventListener("pointermove", move)
+    window.addEventListener("pointerup", up)
+    window.addEventListener("pointercancel", up)
+  }
 
   return (
     <>
@@ -328,11 +426,13 @@ function Room({
         <primitive
           key={s.id}
           object={s.obj}
+          onPointerDown={onPick && onChange ? (e: ThreeEvent<PointerEvent>) => startDrag(s.id, e) : undefined}
           onClick={(e: ThreeEvent<MouseEvent>) => {
-            // Un clic (no un arrossegament de la càmera) selecciona l'element, com a l'editor.
+            // Un clic (no un arrossegament de la càmera) selecciona l'element, com a l'editor. Si es pot
+            // arrossegar, ja s'ha triat en prémer.
             if (e.delta > 4) return
             e.stopPropagation()
-            onSelect?.(s.id)
+            if (!(onPick && onChange)) onSelect?.(s.id)
           }}
         />
       ))}
@@ -341,4 +441,18 @@ function Room({
       ))}
     </>
   )
+}
+
+/** Allibera la geometria, els materials i les textures d'un element que ja no es dibuixa. */
+function disposeTree(root: Object3D) {
+  root.traverse((o) => {
+    const m = o as Mesh
+    if (!m.isMesh) return
+    m.geometry?.dispose()
+    const mats = (Array.isArray(m.material) ? m.material : [m.material]) as Material[]
+    for (const mat of new Set(mats)) {
+      ;(mat as MeshStandardMaterial).map?.dispose()
+      mat.dispose()
+    }
+  })
 }

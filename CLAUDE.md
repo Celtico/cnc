@@ -287,7 +287,11 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   massissos al voltant dels forats) al 3D; al plànol, el forat amb el vidre o l'arc de la porta. El vidre
   porta `userData.glass` (el render per CPU el fa translúcid) i `baseOpacity` (la casa de nines el respecta).
 - **3D**: la mateixa navegació que l'editor (esmorteïment, roda, botó dret per desplaçar), clic per
-  seleccionar (caixa taronja; Supr, Ctrl/⌘ D, R i fletxes com al plànol), «Encuadrar» i «Render».
+  seleccionar (caixa taronja; Supr, Ctrl/⌘ D, R i fletxes com al plànol), «Encuadrar» i «Render». **Arrossegar un
+  element el mou pel terra** (`startDrag` a `Ambient3D`, pla y = 0; com al plànol: el primer toc tria el grup,
+  quadrícula, imant a les parets amb un sol element, Alt sense imant, un sol pas de desfer). Les peces d'un element
+  només es refan si en canvia la geometria o els materials (moure'l només en canvia la posició) i les que ja no es
+  dibuixen s'alliberen. La càmera mira el punt de l'obertura (o d'«Encuadrar»), no segueix la caixa de l'ambient.
   **Interior** (Opcions de vista, `LuEye`, `eyePose`): entra a l'habitació, càmera anivellada a 1,35 m (verticals rectes) al costat de la
   paret de davant mirant la del fons, angular (fov 55; «Encuadrar» torna a 40), per als renders de revista.
   La pestanya Plànol · 3D es recorda (`AMBIENT_TAB_KEY`); els ambients creats del catàleg s'obren al 3D.
