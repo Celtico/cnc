@@ -1,7 +1,7 @@
 import { Box, Container, Flex, HStack, Heading, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import type { IconType } from "react-icons"
-import { LuArrowLeft, LuBookmark, LuBox, LuDownload, LuEllipsis, LuFolder, LuFolderOpen, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings } from "react-icons/lu"
+import { LuArrowLeft, LuBookmark, LuBox, LuDownload, LuEllipsis, LuFolder, LuFolderOpen, LuHouse, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings } from "react-icons/lu"
 import { Toaster } from "./components/ui/toaster"
 import { Tooltip } from "./components/ui/tooltip"
 import { TopBar, TopBarActionsProvider } from "./components/TopBar"
@@ -15,13 +15,15 @@ import { ExportScreen } from "./features/export/ExportScreen"
 import { NestingScreen } from "./features/nesting/NestingScreen"
 import { PhotoScreen } from "./features/photo/PhotoScreen"
 import { ProjectsScreen, type ProjectsRequest } from "./features/projects/ProjectsScreen"
+import { AmbientEditor } from "./features/ambients/AmbientEditor"
+import { AmbientsScreen } from "./features/ambients/AmbientsScreen"
 import { SettingsScreen } from "./features/settings/SettingsScreen"
 import { useSettings } from "./features/settings/SettingsContext"
 import { UnitContext } from "./features/units"
 import { usePersistentFlag } from "./features/usePersistentFlag"
 import { useProject } from "./features/useProject"
 
-type Screen = "projects" | "editor" | "photo" | "cutlist" | "nesting" | "export" | "settings"
+type Screen = "projects" | "editor" | "photo" | "cutlist" | "nesting" | "export" | "settings" | "ambients" | "ambient"
 
 type NavEntry = { id: Screen; label: string; icon: IconType }
 
@@ -33,9 +35,20 @@ const PROJECT_NAV: NavEntry[] = [
   { id: "export", label: "Exportar", icon: LuDownload },
 ]
 const PROJECTS_ENTRY: NavEntry = { id: "projects", label: "Mobles", icon: LuFolder }
+const AMBIENTS_ENTRY: NavEntry = { id: "ambients", label: "Ambients", icon: LuHouse }
 const SETTINGS_ENTRY: NavEntry = { id: "settings", label: "Preferències", icon: LuSettings }
 
 const STORAGE_KEY = "mobles:current-project"
+const AMBIENT_KEY = "mobles:current-ambient"
+
+function readAmbientId(): number | null {
+  try {
+    const v = localStorage.getItem(AMBIENT_KEY)
+    return v ? Number(v) : null
+  } catch {
+    return null
+  }
+}
 
 function readStoredId(): number | null {
   try {
@@ -51,6 +64,16 @@ export function App() {
   // Si hi havia un moble obert, es torna al seu Editor; si no, a la llista.
   const [screen, setScreen] = useState<Screen>(() => (readStoredId() === null ? "projects" : "editor"))
   const project = useProject(projectId)
+  // Ambient obert (a Ambients); es recorda com el moble.
+  const [ambientId, setAmbientId] = useState<number | null>(readAmbientId)
+  useEffect(() => {
+    try {
+      if (ambientId === null) localStorage.removeItem(AMBIENT_KEY)
+      else localStorage.setItem(AMBIENT_KEY, String(ambientId))
+    } catch {
+      /* sense localStorage */
+    }
+  }, [ambientId])
   const previewComposition = useMemo(() => (project ? compositionOf(project) : undefined), [project])
   const { settings } = useSettings()
   const [navCollapsed, setNavCollapsed] = usePersistentFlag("mobles:nav-collapsed")
@@ -103,10 +126,23 @@ export function App() {
     setScreen("projects")
   }
 
+  const openAmbient = (id: number) => {
+    setAmbientId(id)
+    setScreen("ambient")
+  }
+  const goAmbients = () => {
+    setProjectId(null)
+    setScreen(ambientId !== null ? "ambient" : "ambients")
+  }
+
   const content =
-    screen === "settings" ? (
+    screen === "ambients" ? (
+      <AmbientsScreen onOpen={openAmbient} />
+    ) : screen === "ambient" && ambientId !== null ? (
+      <AmbientEditor ambientId={ambientId} onBack={() => (setAmbientId(null), setScreen("ambients"))} onOpenProject={openProject} />
+    ) : screen === "settings" ? (
       <SettingsScreen previewComposition={previewComposition} />
-    ) : screen === "projects" || projectId === null ? (
+    ) : screen === "projects" || screen === "ambient" || projectId === null ? (
       <ProjectsScreen onOpen={openProject} request={projectsRequest} onRequestDone={clearProjectsRequest} />
     ) : screen === "editor" ? (
       <EditorScreen projectId={projectId} />
@@ -192,6 +228,14 @@ export function App() {
               disabled={false}
               onClick={() => go("projects")}
             />
+            <NavItem
+              icon={AMBIENTS_ENTRY.icon}
+              label={AMBIENTS_ENTRY.label}
+              collapsed={navCollapsed}
+              active={screen === "ambients" || screen === "ambient"}
+              disabled={false}
+              onClick={goAmbients}
+            />
             {/* Les accions de la llista només a la llista (a Preferències confonien). */}
             {screen === "projects" && (
               <>
@@ -203,6 +247,7 @@ export function App() {
         )}
         {/* General: just a sota de les pàgines, separat amb una línia. */}
         <Stack gap={1} mt={1} pt={2} borderTopWidth="1px" align={navCollapsed ? "center" : "stretch"}>
+          {inProject && <NavItem icon={AMBIENTS_ENTRY.icon} label={AMBIENTS_ENTRY.label} collapsed={navCollapsed} active={false} disabled={false} onClick={goAmbients} />}
           <NavItem
             icon={SETTINGS_ENTRY.icon}
             label={SETTINGS_ENTRY.label}
@@ -273,7 +318,7 @@ export function App() {
               </IconButton>
             ) : null}
             <Heading size="md" truncate>
-              {screen === "settings" ? "Preferències" : inProject ? project?.name ?? "Mobles" : "Mobles"}
+              {screen === "settings" ? "Preferències" : inProject ? project?.name ?? "Mobles" : screen === "ambients" || screen === "ambient" ? "Ambients" : "Mobles"}
             </Heading>
           </HStack>
           <HStack gap={0}>
@@ -293,10 +338,10 @@ export function App() {
           overflowY={{ md: "auto" }}
           display="flex"
           flexDirection="column"
-          px={{ base: 4, md: screen === "editor" ? 2 : 4 }}
+          px={{ base: 4, md: screen === "editor" || screen === "ambient" ? 2 : 4 }}
           // Al mòbil, l'editor enganxa el visor a la barra de dalt (sense marge superior).
-          pt={{ base: screen === "editor" ? 0 : 4, md: screen === "editor" ? 1.5 : 6 }}
-          pb={{ base: "calc(76px + env(safe-area-inset-bottom, 0px))", md: screen === "editor" ? 1.5 : 6 }}
+          pt={{ base: screen === "editor" ? 0 : 4, md: screen === "editor" || screen === "ambient" ? 1.5 : 6 }}
+          pb={{ base: "calc(76px + env(safe-area-inset-bottom, 0px))", md: screen === "editor" || screen === "ambient" ? 1.5 : 6 }}
         >
           <TopBarActionsProvider value={topActions}>{content}</TopBarActionsProvider>
         </Container>
@@ -316,9 +361,9 @@ export function App() {
         pb="env(safe-area-inset-bottom, 0px)"
         justify="space-around"
       >
-        {(inProject ? PROJECT_NAV : [PROJECTS_ENTRY, SETTINGS_ENTRY]).map((n) => {
+        {(inProject ? PROJECT_NAV : [PROJECTS_ENTRY, AMBIENTS_ENTRY, SETTINGS_ENTRY]).map((n) => {
           const disabled = false
-          const active = screen === n.id
+          const active = screen === n.id || (n.id === "ambients" && screen === "ambient")
           return (
             <Box
               key={n.id}
@@ -329,7 +374,7 @@ export function App() {
               opacity={disabled ? 0.5 : 1}
               cursor={disabled ? "not-allowed" : "pointer"}
             >
-              <button disabled={disabled} onClick={() => go(n.id)} aria-current={active ? "page" : undefined}>
+              <button disabled={disabled} onClick={() => (n.id === "ambients" ? goAmbients() : go(n.id))} aria-current={active ? "page" : undefined}>
                 <Stack align="center" gap={0.5}>
                   <Box fontSize="xl">
                     <n.icon />

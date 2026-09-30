@@ -10,6 +10,8 @@ import type { Finish, MaterialPref } from "../../core/model"
 export type WoodSpecies = Extract<Finish, { kind: "wood" }>["species"]
 
 export type FinishSpec = { kind: "color"; color: string; roughness: number; metalness?: number; opacity?: number } | { kind: "wood"; species: WoodSpecies } | { kind: "image"; src: string; tileMm: number; aspect?: number; seamless?: boolean }
+  /** Textura procedural dels materials de simulació: teixit (trama) o rajola (peces i junta). */
+  | { kind: "pattern"; pattern: "fabric" | "tiles"; color: string; grout?: string; tileMm: number; roughness: number }
 
 interface WoodParams {
   base: [number, number, number]
@@ -173,9 +175,71 @@ export function woodTexture(species: WoodSpecies): Texture {
 export function finishRgb(f: FinishSpec): [number, number, number] {
   if (f.kind === "wood") return WOOD[f.species].base.map((v) => v / 255) as [number, number, number]
   if (f.kind === "image") return [0.72, 0.6, 0.45]
-  const hex = f.color.replace("#", "")
-  const n = parseInt(hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex, 16)
+  return hexRgb(f.color)
+}
+
+function hexRgb(color: string): [number, number, number] {
+  const hex = color.replace("#", "")
+  const n = parseInt(hex.length === 3 ? hex.split("").map((c: string) => c + c).join("") : hex, 16)
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]
+}
+
+const patternCache = new Map<string, Texture>()
+
+/**
+ * Textures procedurals dels materials de simulació (sense imatges): el teixit és una trama
+ * d'ordit i trama amb soroll; la rajola, una peça per tile amb la junta i una mica de variació.
+ * Un tile = `tileMm` del material (200 mm de teixit, la mida de la rajola).
+ */
+export function patternTexture(pattern: "fabric" | "tiles", color: string, grout = "#cccccc"): Texture {
+  const key = `${pattern}:${color}:${grout}`
+  const hit = patternCache.get(key)
+  if (hit) return hit
+  const size = 512
+  const canvas = document.createElement("canvas")
+  canvas.width = size
+  canvas.height = size
+  const g = canvas.getContext("2d")!
+  const [r, gg, b] = hexRgb(color).map((v) => v * 255) as [number, number, number]
+  const rand = rng(pattern === "fabric" ? 7 : 11)
+  if (pattern === "fabric") {
+    const img = g.createImageData(size, size)
+    const threads = 96
+    for (let y = 0; y < size; y++)
+      for (let x = 0; x < size; x++) {
+        const tx = Math.floor((x / size) * threads), ty = Math.floor((y / size) * threads)
+        const fx = ((x / size) * threads) % 1, fy = ((y / size) * threads) % 1
+        // Ordit i trama alterns: un fil passa per sobre de l'altre.
+        const over = (tx + ty) % 2 === 0
+        const shade = over ? 0.55 + 0.45 * Math.sin(fy * Math.PI) : 0.55 + 0.45 * Math.sin(fx * Math.PI)
+        const k = 0.82 + 0.18 * shade + (rand() - 0.5) * 0.06
+        const i = (y * size + x) * 4
+        img.data[i] = Math.min(255, r * k)
+        img.data[i + 1] = Math.min(255, gg * k)
+        img.data[i + 2] = Math.min(255, b * k)
+        img.data[i + 3] = 255
+      }
+    g.putImageData(img, 0, 0)
+  } else {
+    g.fillStyle = grout
+    g.fillRect(0, 0, size, size)
+    const j = 6
+    const k = 0.96 + rand() * 0.06
+    g.fillStyle = `rgb(${r * k}, ${gg * k}, ${b * k})`
+    g.fillRect(j / 2, j / 2, size - j, size - j)
+    // Una mica de variació (esmalt) perquè no sigui pla.
+    for (let n = 0; n < 900; n++) {
+      g.fillStyle = `rgba(255,255,255,${rand() * 0.035})`
+      g.fillRect(j / 2 + rand() * (size - j), j / 2 + rand() * (size - j), 2 + rand() * 30, 2 + rand() * 30)
+    }
+  }
+  const tex = new CanvasTexture(canvas)
+  tex.wrapS = RepeatWrapping
+  tex.wrapT = RepeatWrapping
+  tex.colorSpace = SRGBColorSpace
+  tex.anisotropy = 8
+  patternCache.set(key, tex)
+  return tex
 }
 
 /** Acabat d'una preferència de material. */
@@ -184,6 +248,8 @@ export function finishOfPref(m: MaterialPref): FinishSpec {
   if (m.finish.kind === "image") return { kind: "image", src: m.finish.src, tileMm: m.finish.tileMm, aspect: m.finish.aspect, seamless: m.finish.seamless }
   if (m.finish.kind === "metal") return { kind: "color", color: m.finish.color, roughness: 0.35, metalness: 0.85 }
   if (m.finish.kind === "glass") return { kind: "color", color: m.finish.color, roughness: 0.05, opacity: 0.35 }
+  if (m.finish.kind === "fabric") return { kind: "pattern", pattern: "fabric", color: m.finish.color, tileMm: 200, roughness: 0.95 }
+  if (m.finish.kind === "tiles") return { kind: "pattern", pattern: "tiles", color: m.finish.color, grout: m.finish.grout, tileMm: m.finish.size, roughness: 0.3 }
   return { kind: "color", color: m.finish.color, roughness: m.finish.kind === "lacquer" ? 0.35 : 0.8 }
 }
 
@@ -199,6 +265,7 @@ const KEYWORDS: [RegExp, FinishSpec][] = [
   [/terracota/i, { kind: "color", color: "#b8664a", roughness: 0.75 }],
   [/blau fosc|marí|navy/i, { kind: "color", color: "#2c3a52", roughness: 0.75 }],
   [/greige/i, { kind: "color", color: "#c8bfb2", roughness: 0.8 }],
+  [/beix/i, { kind: "color", color: "#cbbca2", roughness: 0.9 }],
   [/negr/i, { kind: "color", color: "#2b2b2b", roughness: 0.8 }],
   [/gris|grey|gray/i, { kind: "color", color: "#9a9a96", roughness: 0.8 }],
   [/blanc|white|lacat/i, { kind: "color", color: "#f2f0eb", roughness: 0.8 }],

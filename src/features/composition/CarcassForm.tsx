@@ -212,7 +212,7 @@ export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !==
   const sameBack = c.backMaterial === c.material && c.backThickness === c.thickness
   // Mateix material però un altre gruix: al nesting van a taulers diferents.
   const backApart = c.backMaterial === c.material && c.backThickness !== c.thickness
-  const boards = settings.materials.filter((m) => !m.forBacks)
+  const boards = settings.materials.filter((m) => !m.forBacks && m.category !== "sim")
   return (
     <Stack gap={3}>
       {mixed && (
@@ -246,7 +246,7 @@ export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !==
             <NativeSelect.Field value={sameBack ? SAME : c.backMaterial} onChange={(e) => pickMaterial("backMaterial", "backThickness")(e.target.value)}>
               <option value={SAME}>Com el cos</option>
               {!settings.materials.some((m) => m.name === c.backMaterial) && <option value={c.backMaterial}>{c.backMaterial || "(sense material)"}</option>}
-              {settings.materials.map((m) => (
+              {settings.materials.filter((m) => m.category !== "sim").map((m) => (
                 <option key={m.id} value={m.name}>
                   {m.name}
                 </option>

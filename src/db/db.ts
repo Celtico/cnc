@@ -80,6 +80,16 @@ export interface Project {
 
 export type NewProject = Omit<Project, "id">
 
+/** Ambient: plànol de la casa amb mobles col·locats (`core/model/ambient.ts`). */
+export interface AmbientRow {
+  id: number
+  name: string
+  /** Contingut (`Ambient`); es valida amb `parseAmbient` en llegir-lo. */
+  data: unknown
+  createdAt: number
+  updatedAt: number
+}
+
 /** Fila única de preferències (id = "user"). El contingut es valida amb zod en llegir-lo. */
 export interface SettingsRow {
   id: string
@@ -91,6 +101,7 @@ class MoblesDB extends Dexie {
   projects!: EntityTable<Project, "id">
   photos!: EntityTable<Photo, "id">
   settings!: EntityTable<SettingsRow, "id">
+  ambients!: EntityTable<AmbientRow, "id">
 
   constructor() {
     super("mobles-cnc")
@@ -105,6 +116,12 @@ class MoblesDB extends Dexie {
       projects: "++id, name, updatedAt",
       photos: "++id, projectId",
       settings: "id",
+    })
+    this.version(4).stores({
+      projects: "++id, name, updatedAt",
+      photos: "++id, projectId",
+      settings: "id",
+      ambients: "++id, name, updatedAt",
     })
   }
 }
@@ -179,4 +196,29 @@ export function safeParams(p: unknown): CabinetParams {
   } catch {
     return DEFAULT_CABINET
   }
+}
+
+// --- Ambients ------------------------------------------------------------------------------
+
+export async function createAmbient(name: string, data: unknown): Promise<number> {
+  const now = Date.now()
+  return db.ambients.add({ name, data, createdAt: now, updatedAt: now } as AmbientRow)
+}
+
+export async function updateAmbient(id: number, patch: Partial<Pick<AmbientRow, "name" | "data">>): Promise<void> {
+  await db.ambients.update(id, { ...patch, updatedAt: Date.now() })
+}
+
+export async function deleteAmbient(id: number): Promise<void> {
+  await db.ambients.delete(id)
+}
+
+export async function duplicateAmbient(id: number): Promise<number | undefined> {
+  const src = await db.ambients.get(id)
+  if (!src) return undefined
+  return createAmbient(`${src.name} (còpia)`, structuredClone(src.data))
+}
+
+export async function renameAmbient(id: number, name: string): Promise<void> {
+  await db.ambients.update(id, { name: name.trim() || "Sense nom", updatedAt: Date.now() })
 }

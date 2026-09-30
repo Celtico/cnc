@@ -13,7 +13,7 @@ import { DEFAULT_HARDWARE, HardwareSchema, type Module } from "./composition"
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 2
+export const SETTINGS_VERSION = 3
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -44,6 +44,10 @@ export const FinishSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("metal"), color: z.string() }),
   /** Vidre: translúcid. */
   z.object({ kind: z.literal("glass"), color: z.string() }),
+  /** Teixit (sofàs, cortines, catifes): trama procedural del color. Materials de simulació. */
+  z.object({ kind: z.literal("fabric"), color: z.string() }),
+  /** Rajola: peces quadrades de `size` mm amb junta. Materials de simulació (terres, parets). */
+  z.object({ kind: z.literal("tiles"), color: z.string(), grout: z.string(), size: mm.min(20).max(1500) }),
   /**
    * Foto real del tauler (textura): imatge reduïda en data URL i l'amplada real que hi surt
    * (mm), perquè la veta tingui la mida de debò al 3D.
@@ -76,8 +80,32 @@ export const MaterialPrefSchema = z.object({
    * no van al nesting: surten a «Elements sense nesting».
    */
   cnc: z.boolean().optional(),
+  /**
+   * Categoria (Preferències › Materials i selectors). Sense: es dedueix (`materialCategory`).
+   * `sim` = de simulació: només es veu (blocs i parets dels ambients, coixins…), no es fabrica.
+   */
+  category: z.enum(["board", "back", "hard", "sim"]).optional(),
 })
 export type MaterialPref = z.infer<typeof MaterialPrefSchema>
+export type MaterialCategory = NonNullable<MaterialPref["category"]>
+
+export const MATERIAL_CATEGORIES: { id: MaterialCategory; label: string; hint: string }[] = [
+  { id: "board", label: "Taulers", hint: "Es tallen a la CNC: cossos, fronts, taulells." },
+  { id: "back", label: "Fons", hint: "Taulers prims per als fons." },
+  { id: "hard", label: "Metall, pedra i vidre", hint: "No es tallen a la CNC: surten a «Elements sense nesting»." },
+  { id: "sim", label: "Simulació", hint: "Només es veuen: teixits, parquet, rajola, pintura… per als ambients i els blocs." },
+]
+
+/** Categoria d'un material: la triada o, als antics, deduïda dels interruptors. */
+export function materialCategory(m: Pick<MaterialPref, "category" | "forBacks" | "cnc">): MaterialCategory {
+  return m.category ?? (m.forBacks ? "back" : m.cnc === false ? "hard" : "board")
+}
+
+/** Canvia la categoria d'un material mantenint coherents `forBacks` i `cnc`. */
+export function withCategory(m: MaterialPref, category: MaterialCategory): MaterialPref {
+  const { forBacks: _f, cnc: _c, category: _k, ...rest } = m
+  return { ...rest, category, ...(category === "back" ? { forBacks: true } : {}), ...(category === "hard" || category === "sim" ? { cnc: false } : {}) }
+}
 
 // --- Taulers i nesting ---------------------------------------------------------------
 
@@ -162,6 +190,30 @@ export const NON_CNC_MATERIALS: MaterialPref[] = [
   { id: "glass", name: "Vidre", thicknesses: [4, 5, 6, 8, 10], hasGrain: false, finish: { kind: "glass", color: "#cfe6e3" }, edge: "", cnc: false },
 ]
 
+/** Materials de simulació: només per veure (ambients, blocs, coixins). Afegits a la v3. */
+const sim = (id: string, name: string, finish: Finish, hasGrain = false): MaterialPref => ({ id, name, thicknesses: [10], hasGrain, finish, edge: "", cnc: false, category: "sim" })
+export const SIM_MATERIALS: MaterialPref[] = [
+  sim("sim-fabric-grey", "Teixit gris", { kind: "fabric", color: "#8e8e8a" }),
+  sim("sim-fabric-beige", "Teixit beix", { kind: "fabric", color: "#cbbca2" }),
+  sim("sim-fabric-blue", "Teixit blau", { kind: "fabric", color: "#44597a" }),
+  sim("sim-velvet-green", "Vellut verd", { kind: "fabric", color: "#4d6a4b" }),
+  sim("sim-linen-white", "Lli blanc", { kind: "fabric", color: "#ece6da" }),
+  sim("sim-rug-beige", "Catifa beix", { kind: "fabric", color: "#d6c7ac" }),
+  sim("sim-leather", "Cuir conyac", { kind: "color", color: "#8a5634" }),
+  sim("sim-parquet-oak", "Parquet de roure", { kind: "wood", species: "oak" }, true),
+  sim("sim-parquet-walnut", "Parquet de noguera", { kind: "wood", species: "walnut" }, true),
+  sim("sim-tile-white", "Rajola blanca 600", { kind: "tiles", color: "#efece6", grout: "#cfcac0", size: 600 }),
+  sim("sim-tile-grey", "Rajola gris 600", { kind: "tiles", color: "#a9a7a2", grout: "#8d8b86", size: 600 }),
+  sim("sim-tile-terracotta", "Rajola de fang 300", { kind: "tiles", color: "#b86e4b", grout: "#d8c7b3", size: 300 }),
+  sim("sim-microcement", "Microciment gris", { kind: "color", color: "#a7a39b" }),
+  sim("sim-concrete", "Formigó", { kind: "color", color: "#9c9a95" }),
+  sim("sim-paint-white", "Pintura blanca", { kind: "color", color: "#f3f1ec" }),
+  sim("sim-paint-sage", "Pintura verd sàlvia", { kind: "color", color: "#b5c0aa" }),
+  sim("sim-paint-terracotta", "Pintura terracota", { kind: "color", color: "#c98a6b" }),
+  sim("sim-steel-appliance", "Electrodomèstic inox", { kind: "metal", color: "#c8ccd0" }),
+  sim("sim-appliance-white", "Electrodomèstic blanc", { kind: "lacquer", color: "#f4f4f2" }),
+]
+
 export const BUILTIN_MATERIALS: MaterialPref[] = [
   { id: "mel-white", name: "Melamina blanca", thicknesses: [10, 16, 19], hasGrain: false, finish: { kind: "color", color: "#f2f0eb" }, edge: "PVC blanc 1 mm" },
   { id: "mel-grey", name: "Melamina gris", thicknesses: [16, 19], hasGrain: false, finish: { kind: "color", color: "#9a9a96" }, edge: "PVC gris 1 mm" },
@@ -174,6 +226,7 @@ export const BUILTIN_MATERIALS: MaterialPref[] = [
   { id: "mdf-back", name: "DM (fons)", thicknesses: [10, 12], hasGrain: false, finish: { kind: "color", color: "#c9b79a" }, edge: "", forBacks: true },
   { id: "plywood-back", name: "Contraxapat (fons)", thicknesses: [10, 12, 15], hasGrain: true, finish: { kind: "wood", species: "ash" }, edge: "", forBacks: true },
   ...NON_CNC_MATERIALS,
+  ...SIM_MATERIALS,
 ]
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -258,11 +311,10 @@ export function parseSettings(raw: unknown): SettingsParse {
   const references = withBuiltins(list("references", RefPresetSchema, BUILTIN_REFERENCES, "Objectes de referència"), BUILTIN_REFERENCES)
   const materialsRaw = list("materials", MaterialPrefSchema, BUILTIN_MATERIALS, "Materials")
   // v2: materials que no són de CNC (ferro, inox, pedra, vidre), per a les peces lliures.
-  const materials = materialsRaw.length
-    ? version < 2
-      ? [...materialsRaw, ...NON_CNC_MATERIALS.filter((m) => !materialsRaw.some((x) => x.id === m.id || x.name === m.name))]
-      : materialsRaw
-    : BUILTIN_MATERIALS
+  // v3: materials de simulació (teixits, parquet, rajola, pintura) per als ambients.
+  const missing = (list: MaterialPref[], from: MaterialPref[]) => list.filter((m) => !from.some((x) => x.id === m.id || x.name === m.name))
+  const v2 = materialsRaw.length && version < 2 ? [...materialsRaw, ...missing(NON_CNC_MATERIALS, materialsRaw)] : materialsRaw
+  const materials = v2.length ? (version < 3 ? [...v2, ...missing(SIM_MATERIALS, v2)] : v2) : BUILTIN_MATERIALS
   const settings: Settings = {
     version: SETTINGS_VERSION,
     references,

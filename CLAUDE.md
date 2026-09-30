@@ -158,6 +158,33 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   plans invisibles de terra i paret). L'SVG de controls va sempre a sobre.
 - AR: export USDZ + `<model-viewer>` amb AR Quick Look a l'iPhone. Res de WebXR.
 
+## Ambients (plànol de la casa amb els mobles)
+- Apartat propi al menú (**Mobles · Ambients · Preferències**; al mòbil, a la barra de baix):
+  els Mobles es dissenyen i es fabriquen; els Ambients són on es col·loquen.
+- Model a `core/model/ambient.ts` (`Ambient`: `walls`, `items`, `plan`, materials del terra i de
+  les parets), Dexie v4 (`ambients`, `data` validat amb `parseAmbient`). Plànol en mm, x a la
+  dreta i y avall; al 3D X = x, Z = y. Els elements van pel **centre** de la petjada i giren al
+  voltant del centre (graus, horari vist des de dalt); sense girar, el darrere mira amunt.
+- **Mobles enllaçats** (`item.kind = "moble"`, `projectId`): és el mateix moble de la llista.
+  A l'ambient només se'n toquen les **mides generals** (`resizeComposition`: escala amplades,
+  separacions, alçades amb potes/sòcol/penjats, fondàries, mides fixes de zones i calaixos, peces
+  lliures i objectes; els gruixos no) i la posició; «Obrir a l'editor» per a l'interior.
+- **Blocs** (`kind = "block"`, `BLOCK_PRESETS`, `blockComposition`): caixa, sofà, llit i taula fets
+  de peces lliures sense nesting amb materials de simulació (i un segon material: matalàs,
+  coixins). Tot (mobles i blocs) es dibuixa amb el mateix camí: build → peces → `buildScene`.
+- **Editor** (`features/ambients/AmbientEditor.tsx`): plànol SVG (`PlanCanvas`) com Figma: roda o
+  dos dits per desplaçar, Ctrl/⌘ + roda o pessigar per fer zoom, espai + arrossegar. Eines
+  **Seleccionar** (V), **Paret** (P, ploma: clic a clic, angle a 15°, imant als extrems, clicar
+  el primer punt tanca, Retorn/Esc/doble clic acaben), **Habitació** (H, rectangle → 4 parets),
+  **Calibrar** (dos punts del plànol de fons i la mida real). Maj: sense angles; Alt: sense
+  imant. Arrossegar una paret mou les enganxades; els extrems de la seleccionada s'arrosseguen.
+  Els elements s'arramben a les cares de les parets (`snapToWalls`), R gira 90°, fletxes (Maj ×10),
+  Supr, Ctrl/⌘ D, desfer/refer (Ctrl/⌘ Z). Es desa sol. **Plànol de fons**: imatge (2400 px,
+  JPEG) escalada amb la calibració, opacitat i bloqueig.
+- **3D** (`Ambient3D`): terra i parets amb `surfaceMaterial` (textura a mida real), mobles i blocs
+  amb les textures del visor; les parets entre la càmera i l'habitació es fan transparents
+  (casa de nines).
+
 ## Icona i pantalla d'inici de la PWA
 - **Icones a sang**: quadrat sencer amb el fons `#1a202c`, **sense cantonades rodones ni
   transparència** (iOS i Android hi posen la màscara; si l'icona ja és arrodonida, les puntes
@@ -447,6 +474,15 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     `mobles:viewer-hardware`): frontisses (cassoleta + braç a les cassoletes `hinge`), tirador de
     barra a portes (al costat contrari de les frontisses), calaixos i abatibles (centrat), i potes
     regulables dels mòduls amb base de potes. Només es dibuixen, no es fabriquen.
+  - **Materials per categories** (`MaterialPref.category`, `materialCategory`, `withCategory`,
+    `MATERIAL_CATEGORIES`): **Taulers** · **Fons** · **Metall, pedra i vidre** · **Simulació**. Als
+    antics es dedueix de `forBacks` / `cnc`. A Preferències es llisten per categoria (camp Categoria
+    en lloc dels interruptors «Per a fons» i «Es talla a la CNC») i els selectors fan `optgroup`.
+    Els de **simulació** (`SIM_MATERIALS`, v3 de les preferències: teixits, vellut, cuir, parquet,
+    rajoles, microciment, pintures, electrodomèstics) només es veuen: `cnc: false`, no surten als
+    selectors del cos ni del taulell. Acabats nous `fabric` (trama) i `tiles` (rajola amb junta i
+    mida), procedurals (`patternTexture`). Els materials que no són de CNC pinten els cantells amb
+    el mateix material (no «tauler vist»).
   - **Preferències amb acordions de segon nivell** (`components/SubFold.tsx`): cada material i
     cada objecte de referència és una fila plegable (resum: gruixos, acabat, cantell / mides);
     també «Per defecte als mòduls nous», Mides de tauler · Tall, Jocs (Fronts · Prestatges i fons),
@@ -609,6 +645,8 @@ Accions principals: icona + text.
 | Visor | Forats · Explosionat / muntat · Ampliar / reduir 3D | `LuCircleDot` · `LuExpand` / `LuShrink` · `LuMaximize2` / `LuMinimize2` |
 | Visor | Veure a casa (AR) | `LuView` |
 | Visor | Vista 3D · Obertura portes · Materials · Per tipus de peça · Imatge | `LuRotate3D` · `LuDoorOpen` · `LuPalette` · `LuLayers` · `LuImageDown` |
+| Ambients | Ambients · Seleccionar · Paret (ploma) · Habitació · Calibrar · Plànol de fons | `LuHouse` · `LuMousePointer2` · `LuPenTool` · `LuBrickWall` · `LuPencilRuler` · `LuImageUp` |
+| Ambients | Afegir moble · Bloc · Plànol · 3D · Girar | `LuBox` · `LuSofa` · `LuMap` · `LuRotate3D` · `LuRotateCw` / `LuRotateCcw` |
 | Exportar | DXF (CNC) · STEP 3D · CSV de nesting · CSV de peces · GLB | `LuScissors` · `LuCuboid` · `LuLayoutGrid` · `LuFileDown` · `LuBoxes` |
 
 Les vistes Davant, Darrere, Esquerra, Dreta i Dalt van amb **text**, sense icona. Compte:

@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest"
 import { defaultModule } from "./composition"
 import {
   BUILTIN_REFERENCES,
+  SETTINGS_VERSION,
+  materialCategory,
+  withCategory,
   DEFAULT_SETTINGS,
   SettingsSchema,
   applySettingsToModule,
@@ -29,7 +32,7 @@ describe("preferències", () => {
     const res = parseSettings(old)
     expect(res.migrated).toBe(true)
     expect(res.problems).toEqual([])
-    expect(res.settings.version).toBe(2)
+    expect(res.settings.version).toBe(SETTINGS_VERSION)
     expect(res.settings.references[0]).toMatchObject({ name: "Tele vella", wallOffset: 150 })
     // Els valors inicials no es perden mai.
     for (const b of BUILTIN_REFERENCES) expect(res.settings.references.some((r) => r.id === b.id)).toBe(true)
@@ -82,5 +85,19 @@ describe("preferències", () => {
     const s = { ...DEFAULT_SETTINGS, boards: { ...DEFAULT_SETTINGS.boards, sheets: [{ material: "", w: 2800, h: 2070 }, { material: "DM (fons)", w: 2440, h: 1220 }] } }
     expect(sheetFor(s, "DM (fons)")).toEqual({ w: 2440, h: 1220 })
     expect(sheetFor(s, "Melamina blanca")).toEqual({ w: 2800, h: 2070 })
+  })
+})
+
+describe("categories de materials", () => {
+  it("dedueix la categoria dels antics i afegeix els de simulació (v3)", () => {
+    expect(materialCategory({ forBacks: true })).toBe("back")
+    expect(materialCategory({ cnc: false })).toBe("hard")
+    expect(materialCategory({})).toBe("board")
+    const v2 = { version: 2, materials: [{ id: "m", name: "Meu", thicknesses: [19], hasGrain: false, finish: { kind: "color", color: "#fff" }, edge: "" }] }
+    const res = parseSettings(v2)
+    expect(res.settings.materials.some((m) => m.name === "Teixit gris" && m.category === "sim" && m.cnc === false)).toBe(true)
+    expect(res.settings.materials[0]!.name).toBe("Meu")
+    expect(withCategory(res.settings.materials[0]!, "back")).toMatchObject({ category: "back", forBacks: true })
+    expect(withCategory({ ...res.settings.materials[0]!, forBacks: true }, "board").forBacks).toBeUndefined()
   })
 })

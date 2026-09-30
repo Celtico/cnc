@@ -15,7 +15,7 @@ import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { ROLE_COLOR } from "./roleColors"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
-import { RAW_EDGE_COLOR, TILE_MM, photoTexture, resolveEdgeFinish, resolveFinish, woodTexture, type FinishSpec } from "./textures"
+import { RAW_EDGE_COLOR, TILE_MM, patternTexture, photoTexture, resolveEdgeFinish, resolveFinish, woodTexture, type FinishSpec } from "./textures"
 
 /** Color de selecció (el mateix taronja que els botons + del 3D). */
 const SELECT_COLOR = "#b57a37"
@@ -1261,6 +1261,9 @@ function makeMaterial(finish: FinishSpec, uMm: number, vMm: number, rotate: bool
   if (finish.kind === "image") {
     return new MeshStandardMaterial({ map: faceTexture(photoTexture(finish.src, finish.seamless), uMm, vMm, rotate, finish.tileMm, finish.aspect), roughness: 0.7, metalness: 0, ...opts })
   }
+  if (finish.kind === "pattern") {
+    return new MeshStandardMaterial({ map: faceTexture(patternTexture(finish.pattern, finish.color, finish.grout), uMm, vMm, false, finish.tileMm), roughness: finish.roughness, metalness: 0, ...opts })
+  }
   // Vidre: translúcid sempre (també sense vel).
   const glass = finish.opacity !== undefined && finish.opacity < 1
   const mat = new MeshStandardMaterial({ color: finish.color, roughness: finish.roughness, metalness: finish.metalness ?? 0, ...opts, ...(glass ? { transparent: true, opacity: Math.min(opts.opacity, finish.opacity!), depthWrite: false } : {}) })
@@ -1288,7 +1291,9 @@ function panelMaterials(p: Panel, mode: "material" | "role", materials: Material
   const grainY = p.grain === "y"
   // Cares grans: u al llarg de x local (BoxGeometry), veta en x llevat que la peça la tingui en y.
   const big = () => makeMaterial(finish, L, W, grainY, opts)
-  const raw = () => new MeshStandardMaterial({ color: RAW_EDGE_COLOR, roughness: 0.95, metalness: 0, ...opts })
+  // Materials massissos (ferro, pedra, vidre, teixits de simulació): el cantell és el mateix material.
+  const solid = materials.find((m) => m.name === p.material)?.cnc === false
+  const raw = () => (solid ? makeMaterial(finish, L, T, false, opts) : new MeshStandardMaterial({ color: RAW_EDGE_COLOR, roughness: 0.95, metalness: 0, ...opts }))
   // +x / −x: cara T × W (u = gruix, v = amplada): la veta ha d'anar en v.
   const edgeX = (banded: boolean) => (banded ? makeMaterial(edgeFinish, T, W, true, opts) : raw())
   // +y / −y: cara L × T (u = llargada): la veta va en u.

@@ -133,3 +133,18 @@ export function buildComposition(input: Composition): CompositionBuild {
 
   return { panels, warnings, modules, joints: free.joints, extras: [...moduleExtras, ...free.extras] }
 }
+
+/** Caixa de tot el moble (peces i elements sense nesting), en mm de la composició. */
+export function buildBounds(b: Pick<CompositionBuild, "panels" | "extras">): { min: Vec3; max: Vec3 } {
+  const min: [number, number, number] = [Infinity, Infinity, Infinity]
+  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
+  for (const p of [...b.panels, ...b.extras]) {
+    const bx = panelBox(p)
+    for (let i = 0; i < 3; i++) {
+      min[i] = Math.min(min[i]!, bx.min[i]!)
+      max[i] = Math.max(max[i]!, bx.max[i]!)
+    }
+  }
+  if (!Number.isFinite(min[0])) return { min: [0, 0, 0], max: [0, 0, 0] }
+  return { min, max }
+}

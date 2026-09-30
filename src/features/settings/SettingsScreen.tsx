@@ -34,6 +34,10 @@ import { SubFold } from "../../components/SubFold"
 import { toaster } from "../../components/ui/toaster"
 import {
   DEFAULT_SETTINGS,
+  MATERIAL_CATEGORIES,
+  materialCategory,
+  withCategory,
+  type MaterialCategory,
   SettingsSchema,
   newId,
   settingsFromJson,
@@ -144,7 +148,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             <MaterialsList materials={draft.materials} onChange={(materials) => set("materials", materials)} />
             <SubFold icon={<LuSquareStack />} title="Per defecte als mòduls nous" summary={`${draft.defaults.material} ${draft.defaults.thickness} · fons ${draft.defaults.backMaterial} ${draft.defaults.backThickness}`}>
             <SimpleGrid columns={2} gap={3} maxW="xl">
-              <MaterialSelect label="Tauler" materials={draft.materials.filter((m) => !m.forBacks)} value={draft.defaults.material} onChange={(material) => set("defaults", { ...draft.defaults, material })} />
+              <MaterialSelect label="Tauler" materials={draft.materials.filter((m) => !m.forBacks && m.category !== "sim")} value={draft.defaults.material} onChange={(material) => set("defaults", { ...draft.defaults, material })} />
               <NumberField label="Gruix tauler" value={draft.defaults.thickness} min={8} max={40} step={1} onChange={(thickness) => set("defaults", { ...draft.defaults, thickness })} />
               <MaterialSelect label="Fons" materials={draft.materials} value={draft.defaults.backMaterial} onChange={(backMaterial) => set("defaults", { ...draft.defaults, backMaterial })} />
               <NumberField label="Gruix fons" value={draft.defaults.backThickness} min={3} max={40} step={1} onChange={(backThickness) => set("defaults", { ...draft.defaults, backThickness })} />
@@ -450,20 +454,40 @@ function MaterialsList({ materials, onChange }: { materials: MaterialPref[]; onC
       <Button size="xs" variant="outline" alignSelf="flex-start" onClick={add}>
         <LuPlus /> Afegir material
       </Button>
-      <FoldGrid>
-        {materials.map((m, i) => (
-        <MaterialCard key={m.id} m={m} onChange={(patch) => update(i, patch)} onDuplicate={() => {
-          const next = [...materials]
-          next.splice(i + 1, 0, { ...m, id: newId("mat"), name: `${m.name} (còpia)` })
-          onChange(next)
-        }} onDelete={() => onChange(materials.filter((_, k) => k !== i))} canDelete={materials.length > 1} />
-        ))}
-      </FoldGrid>
+      {/* Per categories: Taulers · Fons · Metall, pedra i vidre · Simulació. */}
+      {MATERIAL_CATEGORIES.map((c) => {
+        const inCat = materials.map((m, i) => ({ m, i })).filter(({ m }) => materialCategory(m) === c.id)
+        if (!inCat.length) return null
+        return (
+          <Stack key={c.id} gap={1.5} mt={2}>
+            <HStack gap={2}>
+              <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
+                {c.label}
+              </Text>
+              <Badge size="xs" variant="subtle" colorPalette="gray">
+                {inCat.length}
+              </Badge>
+            </HStack>
+            <Text fontSize="xs" color="fg.muted">
+              {c.hint}
+            </Text>
+            <FoldGrid>
+              {inCat.map(({ m, i }) => (
+                <MaterialCard key={m.id} m={m} onChange={(patch) => update(i, patch)} onDuplicate={() => {
+                  const next = [...materials]
+                  next.splice(i + 1, 0, { ...m, id: newId("mat"), name: `${m.name} (còpia)` })
+                  onChange(next)
+                }} onDelete={() => onChange(materials.filter((_, k) => k !== i))} canDelete={materials.length > 1} />
+              ))}
+            </FoldGrid>
+          </Stack>
+        )
+      })}
     </Stack>
   )
 }
 
-const FINISH_LABEL: Record<Finish["kind"], string> = { color: "color llis", lacquer: "lacat", wood: "fusta", image: "foto real", metal: "metall", glass: "vidre" }
+const FINISH_LABEL: Record<Finish["kind"], string> = { color: "color llis", lacquer: "lacat", wood: "fusta", image: "foto real", metal: "metall", glass: "vidre", fabric: "teixit", tiles: "rajola" }
 
 function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: MaterialPref; onChange: (p: Partial<MaterialPref>) => void; onDuplicate: () => void; onDelete: () => void; canDelete: boolean }) {
   const [thickText, setThickText] = useState(m.thicknesses.join(" · "))
@@ -485,16 +509,6 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
       title={
         <HStack gap={1.5} as="span">
           <span>{m.name}</span>
-          {m.cnc === false && (
-            <Badge size="sm" variant="subtle" colorPalette="gray">
-              sense CNC
-            </Badge>
-          )}
-          {m.forBacks && (
-            <Badge size="sm" variant="subtle">
-              fons
-            </Badge>
-          )}
         </HStack>
       }
       summary={`${m.thicknesses.join(" · ")} mm · ${FINISH_LABEL[finish.kind]}${m.edge ? ` · ${m.edge}` : ""}`}
@@ -540,7 +554,8 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
                     void pickTexture().then((t) => t && onChange({ finish: { kind: "image", tileMm: 800, ...t } }))
                     return
                   }
-                  onChange({ finish: k === "wood" ? { kind: "wood", species: "oak" } : { kind: k, color: swatch ?? "#e5e5e5" } })
+                  const color = swatch ?? "#e5e5e5"
+                  onChange({ finish: k === "wood" ? { kind: "wood", species: "oak" } : k === "tiles" ? { kind: "tiles", color, grout: "#cfcac0", size: 600 } : { kind: k, color } })
                 }}
               >
                 <option value="color">Color llis</option>
@@ -549,6 +564,8 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
                 <option value="image">Foto (textura)</option>
                 <option value="metal">Metall</option>
                 <option value="glass">Vidre</option>
+                <option value="fabric">Teixit</option>
+                <option value="tiles">Rajola</option>
               </NativeSelect.Field>
               <NativeSelect.Indicator />
             </NativeSelect.Root>
@@ -598,8 +615,17 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
           ) : (
             <Field.Root>
               <Field.Label fontSize="sm">Color</Field.Label>
-              <Input size="sm" type="color" value={finish.color} onChange={(e) => onChange({ finish: { kind: finish.kind, color: e.target.value } })} p={0.5} />
+              <Input size="sm" type="color" value={finish.color} onChange={(e) => onChange({ finish: { ...finish, color: e.target.value } })} p={0.5} />
             </Field.Root>
+          )}
+          {finish.kind === "tiles" && (
+            <>
+              <NumberField label="Mida de la rajola" value={finish.size} min={20} max={1500} step={10} onChange={(size) => onChange({ finish: { ...finish, size } })} />
+              <Field.Root>
+                <Field.Label fontSize="sm">Junta</Field.Label>
+                <Input size="sm" type="color" value={finish.grout} onChange={(e) => onChange({ finish: { ...finish, grout: e.target.value } })} p={0.5} />
+              </Field.Root>
+            </>
           )}
           <Field.Root>
             <Field.Label fontSize="sm">Cantell</Field.Label>
@@ -646,17 +672,28 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
             <Switch.Control />
             <Switch.Label>Té veta</Switch.Label>
           </Switch.Root>
-          <Switch.Root size="sm" checked={!!m.forBacks} onCheckedChange={(e) => onChange({ forBacks: e.checked || undefined })}>
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label>Per a fons</Switch.Label>
-          </Switch.Root>
-          <Switch.Root size="sm" checked={m.cnc !== false} onCheckedChange={(e) => onChange({ cnc: e.checked ? undefined : false })}>
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label>Es talla a la CNC</Switch.Label>
-          </Switch.Root>
         </HStack>
+        <Field.Root>
+          <Field.Label fontSize="sm">Categoria</Field.Label>
+          <NativeSelect.Root size="sm">
+            <NativeSelect.Field
+              value={materialCategory(m)}
+              onChange={(e) => {
+                const next = withCategory(m, e.target.value as MaterialCategory)
+                // Replaça tot el material: `forBacks` i `cnc` poden desaparèixer.
+                onChange({ ...next, forBacks: next.forBacks, cnc: next.cnc, category: next.category })
+              }}
+            >
+              {MATERIAL_CATEGORIES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </NativeSelect.Field>
+            <NativeSelect.Indicator />
+          </NativeSelect.Root>
+          <Field.HelperText>{MATERIAL_CATEGORIES.find((c) => c.id === materialCategory(m))!.hint}</Field.HelperText>
+        </Field.Root>
     </SubFold>
   )
 }
@@ -669,11 +706,18 @@ export function MaterialSelect({ label, materials, value, onChange }: { label: s
       <NativeSelect.Root size="sm">
         <NativeSelect.Field value={value} onChange={(e) => onChange(e.target.value)}>
           {!known && <option value={value}>{value || "(sense material)"}</option>}
-          {materials.map((m) => (
-            <option key={m.id} value={m.name}>
-              {m.name}
-            </option>
-          ))}
+          {MATERIAL_CATEGORIES.map((c) => {
+            const list = materials.filter((m) => materialCategory(m) === c.id)
+            return list.length ? (
+              <optgroup key={c.id} label={c.label}>
+                {list.map((m) => (
+                  <option key={m.id} value={m.name}>
+                    {m.name}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null
+          })}
         </NativeSelect.Field>
         <NativeSelect.Indicator />
       </NativeSelect.Root>

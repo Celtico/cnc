@@ -77,7 +77,7 @@ export function RunsForm({ comp, onChange }: { comp: Composition; onChange: (c: 
             {moduleSelect("Fins a", r.to, (to) => update(r.id, { to }))}
           </SimpleGrid>
           <SimpleGrid columns={2} gap={3}>
-            <MaterialSelect label="Material" materials={settings.materials.filter((m) => !m.forBacks)} value={r.material} onChange={(material) => update(r.id, { material })} />
+            <MaterialSelect label="Material" materials={settings.materials.filter((m) => !m.forBacks && m.category !== "sim")} value={r.material} onChange={(material) => update(r.id, { material })} />
             <NumberField label="Gruix" value={r.thickness} min={10} max={60} step={1} onChange={(thickness) => update(r.id, { thickness })} />
           </SimpleGrid>
           {r.kind === "plinth" ? (
