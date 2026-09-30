@@ -1199,13 +1199,30 @@ function ElementRow({
         <Box color={iconColor} flexShrink={0}>
           {icon}
         </Box>
-        <Text fontSize="sm" truncate flex={1} fontWeight={onFold ? "semibold" : undefined}>
-          {label}
-        </Text>
-        {right && (
-          <Text fontSize="xs" color="fg.muted" flexShrink={0}>
-            {right}
-          </Text>
+        {/* El nom sencer a la primera línia i la mida a sota (no li treu lloc al nom); els grups, el
+            nombre d'elements al costat. */}
+        {onFold ? (
+          <>
+            <Text fontSize="sm" truncate flex={1} fontWeight="semibold" title={label}>
+              {label}
+            </Text>
+            {right && (
+              <Text fontSize="xs" color="fg.muted" flexShrink={0}>
+                {right}
+              </Text>
+            )}
+          </>
+        ) : (
+          <Stack gap={0} flex={1} minW={0}>
+            <Text fontSize="sm" truncate title={label}>
+              {label}
+            </Text>
+            {right && (
+              <Text fontSize="xs" color="fg.muted" truncate>
+                {right}
+              </Text>
+            )}
+          </Stack>
         )}
       </HStack>
       <Menu.Root positioning={{ placement: "bottom-end" }}>

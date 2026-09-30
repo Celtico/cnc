@@ -201,7 +201,9 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   // Visor: vista, obertura de portes i calaixos, colors.
   // En mode Ràpida, per defecte colors per tipus de peça (més clar per treballar);
   // en mode Presentació sempre els materials reals.
-  const [roleColors, setRoleColors] = usePersistentFlag("mobles:viewer-role-colors-fast", true)
+  // Els objectes (sofàs, plantes…) només es veuen, no es fabriquen: s'obren amb la textura, no amb
+  // els colors per peça (tenen la seva pròpia preferència).
+  const [roleColors, setRoleColors] = usePersistentFlag(compositionKind(initial) === "objecte" ? "mobles:viewer-role-colors-object" : "mobles:viewer-role-colors-fast", compositionKind(initial) !== "objecte")
   const [quality, setQuality] = useRenderQuality()
   const [viewer, setViewerState] = useState<Omit<ViewerState, "materialMode">>({ view: "3d", opening: 0, openOnlySelected: false })
   const viewerState: ViewerState = { ...viewer, materialMode: quality === "fast" && roleColors ? "role" : "material" }

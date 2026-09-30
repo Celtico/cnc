@@ -20,6 +20,15 @@ const config = defineConfig({
         "& > *": { width: "100%" },
       },
     },
+    // Controls segmentats (Plànol · 3D, 3D · Alçat · Foto…): en mode fosc, l'opció triada es
+    // distingeix clarament (per defecte l'indicador és del mateix negre que el fons).
+    ".dark [data-scope=segment-group][data-part=indicator]": {
+      bg: "gray.600",
+      boxShadow: "0 0 0 1px {colors.gray.500}",
+    },
+    ".dark [data-scope=segment-group][data-part=item][data-state=checked]": {
+      color: "white",
+    },
     // Etiquetes de camp sempre en una línia: si no hi caben, punts suspensius (i el text
     // sencer al passar-hi per sobre, vegeu truncatedTitles.ts).
     "[data-scope=field][data-part=label]": {

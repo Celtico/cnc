@@ -7,6 +7,28 @@ import { useCompositionExtras, useCompositionPanels, useProject } from "../usePr
 
 const GRAIN: Record<Grain, string> = { x: "Llarg", y: "Ample", none: "—" }
 
+/** Cantells de la peça: els a inglet (45°) i els folrats, com a etiquetes. */
+function EdgeBadges({ it }: { it: { mitreNumbers: number[]; edgeNumbers: number[] } }) {
+  return (
+    <HStack gap={1} wrap="wrap">
+      {it.mitreNumbers.map((n) => (
+        <Badge key={`m${n}`} colorPalette="purple" variant="subtle" size="sm" title="Cantell a inglet (45°)">
+          {n}∠45°
+        </Badge>
+      ))}
+      {it.edgeNumbers.length === 0 ? (
+        it.mitreNumbers.length ? null : <Text color="fg.subtle">—</Text>
+      ) : (
+        it.edgeNumbers.map((n) => (
+          <Badge key={n} colorPalette="wood" variant="subtle" size="sm">
+            {n}
+          </Badge>
+        ))
+      )}
+    </HStack>
+  )
+}
+
 export function CutListScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
   const panels = useCompositionPanels(project)
@@ -40,7 +62,63 @@ export function CutListScreen({ projectId }: { projectId: number }) {
 
       <Stack direction={{ base: "column", lg: "row" }} gap={4} align="flex-start">
       <Box flex={1} minW={0} w="full">
-      <Table.ScrollArea borderWidth="1px" rounded="lg">
+      {/* Mòbil: una targeta per peça (la taula no hi cap); la triada mostra el plànol a dins. */}
+      <Stack gap={2} display={{ base: "flex", md: "none" }}>
+        {list.items.map((it, i) => {
+          const on = i === selected
+          const panel = on ? selPanel : undefined
+          return (
+            <Box
+              key={i}
+              as="button"
+              textAlign="left"
+              borderWidth="1px"
+              rounded="lg"
+              px={3.5}
+              py={3}
+              bg={on ? "wood.subtle" : "bg.panel"}
+              borderColor={on ? "wood.solid" : undefined}
+              onClick={() => setSelected(i)}
+              aria-pressed={on}
+            >
+              <Stack gap={1.5}>
+                <HStack justify="space-between" gap={2}>
+                  <Text fontWeight="semibold" truncate>
+                    {it.label}
+                  </Text>
+                  <Badge variant="subtle" flexShrink={0}>
+                    × {it.qty}
+                  </Badge>
+                </HStack>
+                <Text fontSize="sm">
+                  {it.length} × {it.width} × {it.thickness} mm
+                </Text>
+                <Text fontSize="sm" color="fg.muted" truncate>
+                  {it.material}
+                  {it.grain !== "none" ? ` · veta ${GRAIN[it.grain].toLowerCase()}` : ""} · {it.holes} forats
+                </Text>
+                <HStack gap={2} wrap="wrap">
+                  <Text fontSize="xs" color="fg.muted">
+                    Cantells
+                  </Text>
+                  <EdgeBadges it={it} />
+                </HStack>
+                {it.processes && (
+                  <Text fontSize="xs" color="fg.muted">
+                    {it.processes}
+                  </Text>
+                )}
+                {panel && (
+                  <Box bg="bg.muted" rounded="md" p={2} mt={1}>
+                    <PanelDrawing panel={panel} />
+                  </Box>
+                )}
+              </Stack>
+            </Box>
+          )
+        })}
+      </Stack>
+      <Table.ScrollArea borderWidth="1px" rounded="lg" display={{ base: "none", md: "block" }}>
         <Table.Root size="sm" variant="line" striped>
           <Table.Header>
             <Table.Row>
@@ -74,22 +152,7 @@ export function CutListScreen({ projectId }: { projectId: number }) {
                 <Table.Cell>{it.material}</Table.Cell>
                 <Table.Cell>{GRAIN[it.grain]}</Table.Cell>
                 <Table.Cell>
-                  <HStack gap={1}>
-                    {it.mitreNumbers.map((n) => (
-                      <Badge key={`m${n}`} colorPalette="purple" variant="subtle" size="sm" title="Cantell a inglet (45°)">
-                        {n}∠45°
-                      </Badge>
-                    ))}
-                    {it.edgeNumbers.length === 0 ? (
-                      it.mitreNumbers.length ? null : <Text color="fg.subtle">—</Text>
-                    ) : (
-                      it.edgeNumbers.map((n) => (
-                        <Badge key={n} colorPalette="wood" variant="subtle" size="sm">
-                          {n}
-                        </Badge>
-                      ))
-                    )}
-                  </HStack>
+                  <EdgeBadges it={it} />
                 </Table.Cell>
                 <Table.Cell textAlign="end">{it.holes}</Table.Cell>
                 <Table.Cell fontSize="xs" color={it.processes ? "fg" : "fg.subtle"} maxW="280px" whiteSpace="normal">
@@ -102,12 +165,12 @@ export function CutListScreen({ projectId }: { projectId: number }) {
       </Table.ScrollArea>
       <Text fontSize="xs" color="fg.muted" mt={2}>
         Mides en mm. Cantells: 1 dalt · 2 dreta · 3 baix · 4 esquerra, vist des de la cara mecanitzada. Les peces iguals
-        (i les mirall, com els laterals esquerre i dret) van a la mateixa fila. Clica una fila per veure'n el plànol.
+        (i les mirall, com els laterals esquerre i dret) van a la mateixa fila. Clica una peça per veure'n el plànol.
       </Text>
       </Box>
 
       {sel && selPanel && (
-        <Card.Root variant="outline" w={{ base: "full", lg: "400px" }} flexShrink={0} position={{ lg: "sticky" }} top={{ lg: "calc(48px + 1.5rem)" }}>
+        <Card.Root variant="outline" display={{ base: "none", md: "flex" }} w={{ base: "full", lg: "400px" }} flexShrink={0} position={{ lg: "sticky" }} top={{ lg: "calc(48px + 1.5rem)" }}>
           <Card.Body gap={3}>
             <HStack justify="space-between" gap={2}>
               <Text fontWeight="semibold">{sel.label}</Text>

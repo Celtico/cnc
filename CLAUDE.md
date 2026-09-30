@@ -324,6 +324,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   moble» o «Afegir a plantilles». **No** van a Preferències ni dins l'Editor.
 - **Pàgines del moble, cadascuna amb un sol propòsit**:
   - **Peces**: taula (peces iguals agrupades) + **plànol de la peça seleccionada** al costat.
+    Al mòbil, una **targeta per peça** (mides, material, veta, forats, cantells) i la triada porta el plànol a dins.
     Els plànols no van a Exportar.
   - **Exportar**: per destinació (STEP de TopSolid · CSV de TopSolid · CNC · Llista de tall · Model
     3D), una acció principal per grup; les eines de depuració (JSON UnifiedData) plegades a «Avançat».
@@ -425,7 +426,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     **Presentació** (`LuSparkles`: ombres, sense perfils, graella ni «+»; terra i paret amb llum
     d'estudi, `viewer/PresentationRoom.tsx`, procedural). Per dins són la qualitat
     (`viewer/renderQuality.ts`: fast / presentation, també a Preferències › Visor 3D) més
-    `mobles:viewer-role-colors-fast`. L'escena és a `viewer/presentationScene.ts`.
+    `mobles:viewer-role-colors-fast` (els **objectes** tenen la seva, `mobles:viewer-role-colors-object`, i
+    s'obren amb la textura). L'escena és a `viewer/presentationScene.ts`.
   - **Nom a la capçalera de l'inspector**: el nom del mòdul i de l'objecte es canvia clicant-lo
     a la capçalera (`Editable`, com a Figma), no a les seccions; el del moble, a la barra de dalt.
   - **Tipus de moble** (`Composition.kind`, `compositionKind`, `features/composition/kinds.tsx`):
@@ -740,6 +742,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   amb `maxW` centrat). El 3D, la foto, l'alçat i el nesting s'estiren tant com la
   pantalla. Només es limita l'amplada dels panells de formulari (p. ex. 360–400 px) i
   dels textos llargs.
+- **Controls segmentats en mode fosc** (`theme/system.ts`): l'indicador de l'opció triada és gris clar (per
+  defecte era del mateix negre que el fons i no es veia quina estava triada).
 - **Inputs a 16px sempre** (`src/theme/inputs.css`, CSS sense capa: el globalCss de Chakra
   va a `@layer base` i les receptes `sm`/`xs` el rebaixaven) per evitar el zoom d'iOS.
 - Tokens semàntics (`bg.subtle`, `fg.muted`...) i `colorPalette`, no colors crus.

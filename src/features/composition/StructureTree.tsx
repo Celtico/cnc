@@ -209,7 +209,7 @@ export function StructureTree({
               onToggle={() => toggle(m.id)}
               toggleLabel={open ? `Plegar «${m.name}»` : `Desplegar «${m.name}»`}
               label={`${k + 1}. ${m.name}`}
-              hint={`${m.carcass.width} × ${m.carcass.height}`}
+              hint={`${Math.round(m.carcass.width)} × ${Math.round(m.carcass.height)}`}
               selected={selection.kind === "module" && selection.id === m.id}
               onClick={() => onSelect({ kind: "module", id: m.id })}
               dnd={dnd("module", m.id)}
@@ -286,8 +286,8 @@ export function StructureTree({
               key={r.id}
               depth={depth}
               icon={<Icon />}
-              label={r.name}
-              hint={`${r.w} × ${r.h}`}
+              label={r.name.trim() || "Peça"}
+              hint={`${Math.round(r.w)} × ${Math.round(r.h)}`}
               selected={selection.kind === "part" && selection.id === r.id}
               onClick={() => onSelect({ kind: "part", id: r.id })}
               dnd={dnd("part", r.id)}
@@ -428,7 +428,7 @@ export function StructureTree({
           depth={1}
           icon={<LuScan />}
           label={r.name}
-          hint={`${r.w} × ${r.h}`}
+          hint={`${Math.round(r.w)} × ${Math.round(r.h)}`}
           selected={selection.kind === "ref" && selection.id === r.id}
           onClick={() => onSelect({ kind: "ref", id: r.id })}
           dnd={dnd("ref", r.id)}
@@ -623,8 +623,9 @@ function Row({
       <Text flex={1} truncate fontWeight={bold || selected ? "semibold" : "normal"}>
         {label}
       </Text>
+      {/* Mides arrodonides al mm i, si no hi caben, tallades: el nom té preferència. */}
       {hint && (
-        <Text fontSize="xs" color="fg.subtle" flexShrink={0}>
+        <Text fontSize="xs" color="fg.subtle" flexShrink={1} maxW="45%" truncate>
           {hint}
         </Text>
       )}
