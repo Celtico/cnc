@@ -1126,7 +1126,10 @@ class Builder {
       for (const [ref, sidePanel, xBox] of [[left, sideL, boxX0], [right, sideR, boxX0 + boxW]] as [VerticalRef | undefined, Panel, number][]) {
         for (const z of zs) {
           if (ref) addFaceHole(ref.panel, [ref === left ? ref.xR : ref.xL, ySlide, r(z)], { diameter: 5, depth: 12, tag: "slide" })
-          addFaceHole(sidePanel, [xBox, ySlide, r(z)], { diameter: 4, depth: 10, tag: "slide" })
+          // Si cau a l'alçada de la ranura del fons (per l'altra cara), no pot arribar-hi: es
+          // limita la fondària perquè quedi 1 mm de matèria.
+          const inGroove = ySlide - 2 < boxY0 + hw.bottomOffset + tbb && ySlide + 2 > boxY0 + hw.bottomOffset
+          addFaceHole(sidePanel, [xBox, ySlide, r(z)], { diameter: 4, depth: inGroove ? Math.min(10, r(bt - g - 1)) : 10, tag: "slide" })
         }
       }
       y = r(y + fh + bg)

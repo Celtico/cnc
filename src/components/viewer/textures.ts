@@ -169,6 +169,15 @@ export function woodTexture(species: WoodSpecies): Texture {
   return tex
 }
 
+/** Color RGB (0–1) representatiu d'un acabat: per als colors del STEP de TopSolid. */
+export function finishRgb(f: FinishSpec): [number, number, number] {
+  if (f.kind === "wood") return WOOD[f.species].base.map((v) => v / 255) as [number, number, number]
+  if (f.kind === "image") return [0.72, 0.6, 0.45]
+  const hex = f.color.replace("#", "")
+  const n = parseInt(hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex, 16)
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]
+}
+
 /** Acabat d'una preferència de material. */
 export function finishOfPref(m: MaterialPref): FinishSpec {
   if (m.finish.kind === "wood") return { kind: "wood", species: m.finish.species }

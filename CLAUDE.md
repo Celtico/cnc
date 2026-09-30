@@ -178,8 +178,19 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
 - **Pàgines del moble, cadascuna amb un sol propòsit**:
   - **Peces**: taula (peces iguals agrupades) + **plànol de la peça seleccionada** al costat.
     Els plànols no van a Exportar.
-  - **Exportar**: per destinació (Taller · CNC · Llista de tall · Model 3D), una acció
+  - **Exportar**: per destinació (Taller · TopSolid · CNC · Llista de tall · Model 3D), una acció
     principal per grup; les eines de depuració (JSON UnifiedData) plegades a «Avançat».
+  - **STEP per a TopSolid** (`toStepCad` a `export/step.ts`, conjunts de `stepCadGroups`): per obrir
+    el moble a TopSolid i continuar-lo treballant, **separat del STEP del taller** (que no canvia).
+    Conjunt arrel (el moble) › un subconjunt per mòdul («1. Baix»), «Taulell i sòcol» i les peces
+    lliures (per grup) › una peça per tauler amb el nom (`label`), el material i les mides a la
+    descripció i el color del material (`STYLED_ITEM`, `finishRgb`). A més del del taller: ingletes
+    de debò (cara A retallada i cares a 45°; els buidats s'escurcen fins a l'inglet), booleans 3D
+    (`solidCuts`: prisma passant o cec), talls i forats de les peces amb forma, peces sense nesting,
+    forats A+B iguals al mateix lloc com un de passant, i es descarten (amb avís) els mecanitzats
+    que es creuen per dins. Validat amb OpenCascade (sòlids vàlids, volum positiu, sense
+    autointerseccions). Les peces amb base mirall s'escriuen amb els bucles girats (abans una sortia
+    del revés).
   - **AR («Veure a casa»)**: botó del visor 3D (`LuView`), no una exportació.
 - **Editor en tres columnes, com Figma / Fusion 360** (`features/editor/EditorScreen.tsx`):
   - **Esquerra — Estructura** (`composition/StructureTree.tsx`): arbre moble › mòduls ›
@@ -282,7 +293,7 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     rectangle sencer). `mitreGeometry` fa el prisma amb
     qualsevol dels 4 cantells a 45°; `Panel.mitres` als cantells (sense cantell ni espigues,
     avís informatiu), capa DXF `MITRE_45`, «n∠45°» al llistat i al CSV, i al 3D/GLB la secció
-    en trapezi (`mitreGeometry`). El STEP encara les dibuixa rectes. **Fronts** Recobrents /
+    en trapezi (`mitreGeometry`). El STEP del taller les dibuixa rectes; el de TopSolid, a 45°. **Fronts** Recobrents /
     Encastats (`fronts.style`): encastats dins de la llum amb el joc a tot el voltant, a nivell
     amb el davant (`frontZ`), caixa del calaix un gruix més curta i avís si els prestatges no
     es retiren prou.

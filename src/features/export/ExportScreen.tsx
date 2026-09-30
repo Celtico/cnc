@@ -10,17 +10,21 @@ import { toaster } from "../../components/ui/toaster"
 import { toCutList } from "../../core/cutlist/toCutList"
 import { cutListToCsv } from "../../core/export/csv"
 import { dxfLayers, toDxf } from "../../core/export/dxf"
-import { toStep } from "../../core/export/step"
+import { toStep, toStepCad } from "../../core/export/step"
+import { stepCadGroups } from "../../core/export/stepGroups"
+import { finishRgb, resolveFinish } from "../../components/viewer/textures"
 import { encodeUtf16le, toTopsolidCsv } from "../../core/export/topsolidCsv"
 import { toUnifiedData } from "../../core/export/unified"
 import { downloadBlob, downloadText, slugify } from "../download"
 import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
 import { useSettings } from "../settings/SettingsContext"
-import { useCompositionPanels, useNesting, useProject } from "../useProject"
+import { useComposition, useCompositionBuild, useNesting, useProject } from "../useProject"
 
 export function ExportScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
-  const panels = useCompositionPanels(project)
+  const comp = useComposition(project)
+  const build = useCompositionBuild(comp)
+  const panels = useMemo(() => build?.panels ?? [], [build])
   const nesting = useNesting(panels, project?.nesting)
   const { settings } = useSettings()
   const [labels, setLabels] = useState(true)
@@ -46,6 +50,17 @@ export function ExportScreen({ projectId }: { projectId: number }) {
     toaster.create({
       title: "STEP generat",
       description: `${step.solids} sòlids en mm (X amplada, Y fondària, Z amunt)` + (step.warnings.length ? ` · ${step.warnings.length} avisos (vegeu la pàgina)` : ""),
+      type: step.warnings.length ? "warning" : "success",
+    })
+  }
+  const doStepCad = () => {
+    if (!comp || !build) return
+    warnEstimated()
+    const step = toStepCad(stepCadGroups(comp, build), { name: project.name, color: (p) => finishRgb(resolveFinish(settings.materials, p.material)) })
+    downloadBlob(new Blob([step.text], { type: "application/step" }), `${base}-topsolid.step`)
+    toaster.create({
+      title: "STEP per a TopSolid generat",
+      description: `${step.solids} peces en conjunts per mòdul, amb ingletes i colors` + (step.warnings.length ? ` · ${step.warnings.length} avisos` : ""),
       type: step.warnings.length ? "warning" : "success",
     })
   }
@@ -164,6 +179,18 @@ export function ExportScreen({ projectId }: { projectId: number }) {
               Només CSV
             </Button>
           </HStack>
+        }
+      />
+
+      <ExportCard
+        icon={<LuCuboid />}
+        title="TopSolid (per continuar el disseny)"
+        description="El moble per obrir-lo a TopSolid i seguir-lo treballant: un conjunt per mòdul, cada peça amb el seu nom, material i color, els ingletes a 45°, els talls i forats, les peces sense nesting (ferro, pedra, vidre) i els booleans 3D. No és per al taller: per tallar, el de dalt."
+        files={`${base}-topsolid.step`}
+        action={
+          <Button variant="outline" onClick={doStepCad} disabled={!panels.length}>
+            <LuCuboid /> Descarregar STEP per a TopSolid
+          </Button>
         }
       />
 

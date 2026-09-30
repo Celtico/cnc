@@ -1,5 +1,9 @@
 import { arcOf, bulgeOf, ccwB, flatten, type EdgeSide, type Panel, type Vec3 } from "../model"
-import { pointInRing, rectsOverlap, subtractRects, type Poly2, type Pt2, type Rect2 } from "./region2d"
+import * as pcNs from "polygon-clipping"
+import { pointInRing, rectsOverlap, signedArea, subtractRects, type Poly2, type Pt2, type Rect2 } from "./region2d"
+
+// El paquet només té export per defecte (el .d.ts declara els noms): acceptem les dues formes.
+const pc = ((pcNs as unknown as { default?: typeof pcNs }).default ?? pcNs) as typeof pcNs
 
 /**
  * Escriptor STEP AP214 (text, sense motor CAD) amb el format que llegeixen els parsers
@@ -241,6 +245,174 @@ function slotThrough(c1: V3, c2: V3, r: number, n: V3, T: number): { loop: Loop;
   return { loop, exit, faces }
 }
 
+/** Caixa local (conservadora) d'un mecanitzat: tots els punts dels seus bucles i, als arcs, el radi. */
+function featureBox(rf: RoundFeature): { min: V3; max: V3 } {
+  const min: V3 = [Infinity, Infinity, Infinity]
+  const max: V3 = [-Infinity, -Infinity, -Infinity]
+  // Els arcs ocupen el seu radi només en el pla perpendicular al seu eix.
+  const take = (q: V3, r = 0, axis?: V3) => {
+    for (let k = 0; k < 3; k++) {
+      const rk = axis && Math.abs(axis[k]!) > 0.5 ? 0 : r
+      min[k] = Math.min(min[k]!, q[k]! - rk)
+      max[k] = Math.max(max[k]!, q[k]! + rk)
+    }
+  }
+  const loops: Loop[] = [rf.loop, ...(rf.exit ? [rf.exit.loop] : []), ...rf.faces.flatMap((f) => (f.kind === "cyl" ? [f.loop] : f.loops))]
+  for (const l of loops)
+    for (const q of l) {
+      take(q.p)
+      if (q.arc) take(q.arc.center, len(sub(q.p, q.arc.center)), q.arc.axis)
+    }
+  return { min, max }
+}
+
+/** Normal de Newell d'un polígon 3D (no normalitzada): segueix el sentit del recorregut. */
+function newell(ring: V3[]): V3 {
+  const n: V3 = [0, 0, 0]
+  for (let i = 0; i < ring.length; i++) {
+    const a = ring[i]!
+    const b = ring[(i + 1) % ring.length]!
+    n[0] += (a[1] - b[1]) * (a[2] + b[2])
+    n[1] += (a[2] - b[2]) * (a[0] + b[0])
+    n[2] += (a[0] - b[0]) * (a[1] + b[1])
+  }
+  return n
+}
+
+/** Polígon (antihorari) menys rectangles: anells exteriors antihoraris i forats horaris. */
+function regionMinusRects(poly: Pt2[], rects: Rect2[]): Poly2[] {
+  if (!rects.length) return [{ outer: poly, inners: [] }]
+  const res = pc.difference([poly], ...rects.map((r) => [[[r.a0, r.b0], [r.a1, r.b0], [r.a1, r.b1], [r.a0, r.b1]] as Pt2[]]))
+  const open = (r: Pt2[]): Pt2[] => {
+    const q = r.map(([x, y]) => [Math.round(x * 1e4) / 1e4, Math.round(y * 1e4) / 1e4] as Pt2)
+    const last = q[q.length - 1]!
+    if (q.length > 1 && last[0] === q[0]![0] && last[1] === q[0]![1]) q.pop()
+    return q
+  }
+  return res.map((pg) => {
+    const outer = open(pg[0] as Pt2[])
+    return {
+      outer: signedArea(outer) < 0 ? [...outer].reverse() : outer,
+      inners: pg.slice(1).map((h) => {
+        const r = open(h as Pt2[])
+        return signedArea(r) > 0 ? [...r].reverse() : r
+      }),
+    }
+  })
+}
+
+/** Tall passant que no és rectangular (polígon, cercle, ranura): bucle a A, sortida a B i parets. */
+function cutoutFeature(c: Exclude<NonNullable<Panel["cutouts"]>[number], { kind: "rect" }>, T: number): RoundFeature {
+  const fA = frameFor(Z, [0, 0, T])
+  const fB = frameFor(neg(Z), [0, 0, 0])
+  if (c.kind === "polygon") {
+    // Contorn passant (rectes i arcs): bucle a la cara A (horari respecte a +Z), sortida a
+    // la B, i per cada costat una cara plana o cilíndrica, orientada cap a dins del forat.
+    const pts = ccwB(c.points)
+    const n = pts.length
+    const at = (i: number, z: number): V3 => [pts[i]![0], pts[i]![1], z]
+    const arcs = pts.map((q, i) => {
+      const b = bulgeOf(q)
+      if (Math.abs(b) < 1e-9) return null
+      const a = arcOf(q, pts[(i + 1) % n]!, b)
+      return { b, r: a.r, top: [a.cx, a.cy, T] as V3, bot: [a.cx, a.cy, 0] as V3, ax: b > 0 ? Z : neg(Z) }
+    })
+    const sides: Face[] = pts.map((_, i) => {
+      const j = (i + 1) % n
+      const arc = arcs[i]
+      if (arc) {
+        return {
+          kind: "cyl",
+          loc: arc.bot,
+          axis: Z,
+          ref: unit(sub(at(i, 0), arc.bot)),
+          radius: arc.r,
+          outward: arc.b < 0,
+          loop: [{ p: at(i, T), arc: { center: arc.top, axis: arc.ax } }, { p: at(j, T) }, { p: at(j, 0), arc: { center: arc.bot, axis: neg(arc.ax) } }, { p: at(i, 0) }],
+        }
+      }
+      const normal = unit(cross(Z, sub(at(j, T), at(i, T))))
+      return { kind: "plane", loc: at(i, T), normal, loops: [[{ p: at(i, T) }, { p: at(j, T) }, { p: at(j, 0) }, { p: at(i, 0) }]] }
+    })
+    // Bucle d'entrada (cara A): recorregut al revés; cada arc surt del seu punt final.
+    const loopA: Loop = []
+    for (let k = 0; k < n; k++) {
+      const j = (n - k) % n
+      const i = (j - 1 + n) % n
+      const arc = arcs[i]
+      loopA.push(arc ? { p: at(j, T), arc: { center: arc.top, axis: neg(arc.ax) } } : { p: at(j, T) })
+    }
+    const loopB: Loop = pts.map((_, i) => {
+      const arc = arcs[i]
+      return arc ? { p: at(i, 0), arc: { center: arc.bot, axis: arc.ax } } : { p: at(i, 0) }
+    })
+    // Punt interior per assignar el bucle a la regió de la cara: tocant el primer costat.
+    const flat = flatten(pts)
+    const e0 = sub([flat[1]![0], flat[1]![1], T], [flat[0]![0], flat[0]![1], T])
+    const inward = unit(cross(Z, e0))
+    const mid = add([(flat[0]![0] + flat[1]![0]) / 2, (flat[0]![1] + flat[1]![1]) / 2, T], mul(inward, 0.05))
+    const cA = to2D(fA, mid)
+    const cB = to2D(fB, [mid[0], mid[1], 0])
+    const bb = (f: Frame, zz: number): Rect2 => {
+      const q = flat.map(([x, y]) => to2D(f, [x, y, zz]))
+      return { a0: Math.min(...q.map((v) => v[0])), a1: Math.max(...q.map((v) => v[0])), b0: Math.min(...q.map((v) => v[1])), b1: Math.max(...q.map((v) => v[1])) }
+    }
+    return ({
+      bbox: bb(fA, T),
+      center: cA,
+      loop: loopA,
+      faces: sides,
+      exit: { face: "B", loop: loopB, center: cB, bbox: bb(fB, 0) },
+      what: `tall de ${n} costats`,
+    })
+  }
+  if (c.kind === "circle") {
+    const r = c.diameter / 2
+    const centre: V3 = [c.x, c.y, T]
+    const pocket = cylPocket(centre, Z, X, r, T, true)
+    const cA = to2D(fA, centre)
+    const cB = to2D(fB, [c.x, c.y, 0])
+    return ({
+      bbox: { a0: cA[0] - r, a1: cA[0] + r, b0: cA[1] - r, b1: cA[1] + r },
+      center: cA,
+      loop: pocket.loop,
+      faces: pocket.faces,
+      exit: { face: "B", loop: pocket.exit, center: cB, bbox: { a0: cB[0] - r, a1: cB[0] + r, b0: cB[1] - r, b1: cB[1] + r } },
+      what: `passacables Ø${c.diameter} a (${c.x}, ${c.y})`,
+    })
+  }
+  // Ranura passant amb extrems rodons.
+  const r = Math.min(c.w, c.h) / 2
+  const horizontal = c.w >= c.h
+  const c1: V3 = horizontal ? [c.x + r, c.y + r, T] : [c.x + r, c.y + r, T]
+  const c2: V3 = horizontal ? [c.x + c.w - r, c.y + r, T] : [c.x + r, c.y + c.h - r, T]
+  if (len(sub(c2, c1)) < EPS) {
+    // Degenera en un cercle.
+    const pocket = cylPocket(c1, Z, X, r, T, true)
+    const cA = to2D(fA, c1)
+    const cB = to2D(fB, [c1[0], c1[1], 0])
+    return ({
+      bbox: { a0: cA[0] - r, a1: cA[0] + r, b0: cA[1] - r, b1: cA[1] + r },
+      center: cA,
+      loop: pocket.loop,
+      faces: pocket.faces,
+      exit: { face: "B", loop: pocket.exit, center: cB, bbox: { a0: cB[0] - r, a1: cB[0] + r, b0: cB[1] - r, b1: cB[1] + r } },
+      what: `ranura a (${c.x}, ${c.y})`,
+    })
+  }
+  const slot = slotThrough(c1, c2, r, Z, T)
+  const cA: Pt2 = [c.x + c.w / 2, c.y + c.h / 2]
+  const cB = to2D(fB, [cA[0], cA[1], 0])
+  return ({
+    bbox: { a0: c.x, a1: c.x + c.w, b0: c.y, b1: c.y + c.h },
+    center: cA,
+    loop: slot.loop,
+    faces: slot.faces,
+    exit: { face: "B", loop: slot.exit, center: cB, bbox: { a0: c.y, a1: c.y + c.h, b0: c.x, b1: c.x + c.w } },
+    what: `ranura ${c.w}×${c.h} a (${c.x}, ${c.y})`,
+  })
+}
+
 // --- Sòlid d'una peça -------------------------------------------------------------
 
 interface PanelSolid {
@@ -253,7 +425,7 @@ interface PanelSolid {
  * cares planes i cilíndriques cap enfora). Els mecanitzats d'aquestes peces no es modelen
  * al STEP (surten al DXF i al CSV): s'avisa.
  */
-function outlineSolid(p: Panel): PanelSolid {
+function outlineSolid(p: Panel, cad = false): PanelSolid {
   const T = p.thickness
   const pts = ccwB(p.outline!)
   const n = pts.length
@@ -293,19 +465,74 @@ function outlineSolid(p: Panel): PanelSolid {
     const arc = arcs[i]
     loopB.push(arc ? { p: at(j, 0), arc: { center: arc.bot, axis: neg(arc.ax) } } : { p: at(j, 0) })
   }
-  faces.push({ kind: "plane", loc: at(0, T), normal: Z, loops: [loopA] })
-  faces.push({ kind: "plane", loc: at(0, 0), normal: neg(Z), loops: [loopB] })
   const warnings: string[] = []
-  const features = p.holes.length + p.grooves.length + (p.cutouts?.length ?? 0)
-  if (features) warnings.push(`${p.name} (${p.id}): peça amb forma; els seus ${features} mecanitzats no es modelen al STEP (surten al DXF i al CSV).`)
+  const loopsA: Loop[] = [loopA]
+  const loopsB: Loop[] = [loopB]
+  if (cad) {
+    // STEP per a TopSolid: talls passants (encaixos, mortalles) i forats de cara dins del contorn.
+    const ring = flatten(pts)
+    const taken: Rect2[] = []
+    let skipped = p.grooves.length + p.holes.filter((h) => h.face === "edge").length
+    const place = (bbox: Rect2, probe: Pt2[]): boolean => {
+      if (!probe.every((q) => pointInRing(q, ring))) return false
+      if (taken.some((r) => rectsOverlap(r, bbox, 0.01))) return false
+      taken.push(bbox)
+      return true
+    }
+    for (const c of p.cutouts ?? []) {
+      const cc = c.kind === "rect" ? { kind: "polygon" as const, points: [[c.x, c.y], [c.x + c.w, c.y], [c.x + c.w, c.y + c.h], [c.x, c.y + c.h]] as [number, number][], tag: c.tag } : c
+      const rf = cutoutFeature(cc, T)
+      const probe: Pt2[] =
+        cc.kind === "polygon" ? flatten(cc.points) : cc.kind === "circle" ? Array.from({ length: 8 }, (_, i) => [cc.x + (cc.diameter / 2) * Math.cos((i * Math.PI) / 4), cc.y + (cc.diameter / 2) * Math.sin((i * Math.PI) / 4)] as Pt2) : [[cc.x, cc.y], [cc.x + cc.w, cc.y], [cc.x + cc.w, cc.y + cc.h], [cc.x, cc.y + cc.h]]
+      if (!place(rf.bbox, probe)) {
+        skipped += 1
+        continue
+      }
+      loopsA.push(rf.loop)
+      if (rf.exit) loopsB.push(rf.exit.loop)
+      faces.push(...rf.faces)
+    }
+    for (const h of p.holes) {
+      if (h.face === "edge") continue
+      const r = h.diameter / 2
+      const top = h.face === "A"
+      const pocket = cylPocket([h.x, h.y, top ? T : 0], top ? Z : neg(Z), X, r, Math.min(h.depth, T - 0.5), false)
+      const bbox: Rect2 = { a0: h.x - r, a1: h.x + r, b0: h.y - r, b1: h.y + r }
+      if (!place(bbox, [[h.x - r, h.y - r], [h.x + r, h.y - r], [h.x + r, h.y + r], [h.x - r, h.y + r]])) {
+        skipped += 1
+        continue
+      }
+      ;(top ? loopsA : loopsB).push(pocket.loop)
+      faces.push(...pocket.faces)
+    }
+    if (skipped) warnings.push(`${p.name} (${p.id}): peça amb forma; ${skipped} mecanitzats (ranures, forats de cantell o que surten del contorn) no es modelen al STEP.`)
+  } else {
+    const features = p.holes.length + p.grooves.length + (p.cutouts?.length ?? 0)
+    if (features) warnings.push(`${p.name} (${p.id}): peça amb forma; els seus ${features} mecanitzats no es modelen al STEP (surten al DXF i al CSV).`)
+  }
+  faces.push({ kind: "plane", loc: at(0, T), normal: Z, loops: loopsA })
+  faces.push({ kind: "plane", loc: at(0, 0), normal: neg(Z), loops: loopsB })
   return { faces, warnings }
 }
 
-function panelSolid(p: Panel): PanelSolid {
+/**
+ * Sòlid d'una peça rectangular amb els seus mecanitzats. `cad` (STEP per a TopSolid) afegeix el
+ * que el taller no necessita: els ingletes de debò (cares a 45°) i els booleans 3D
+ * (`solidCuts`).
+ */
+function panelSolid(p: Panel, cad = false): PanelSolid {
   const L = p.length
   const W = p.width
   const T = p.thickness
   const warnings: string[] = []
+  // Ingletes: la cara B (z = 0, la de fora) sencera i la A (z = T) retallada T a cada cantell a
+  // 45°, com `mitreGeometry` al 3D. Els buidats no poden entrar a la falca que es treu.
+  const mit = new Set(cad ? (p.mitres ?? []) : [])
+  const il = mit.has("left") ? T : 0
+  const ir = mit.has("right") ? T : 0
+  const ib = mit.has("bottom") ? T : 0
+  const itp = mit.has("top") ? T : 0
+  let clamped = false
 
   const frames: Record<BoxFace, Frame> = {
     A: frameFor(Z, [0, 0, T]),
@@ -324,11 +551,21 @@ function panelSolid(p: Panel): PanelSolid {
     ymax: [T, L],
   }
   const rects: Record<BoxFace, Rect2[]> = { A: [], B: [], xmin: [], xmax: [], ymin: [], ymax: [] }
+  // Volums dels forats i talls rodons ja acceptats (caixes locals): dos que es creuen per dins
+  // (un forat de cara que toca una espiga) farien un sòlid que s'autointerseca.
+  const volumes: { min: V3; max: V3 }[] = []
   const rounds: Record<BoxFace, RoundFeature[]> = { A: [], B: [], xmin: [], xmax: [], ymin: [], ymax: [] }
   const extra: Face[] = []
 
   // Buidat rectangular: ranura (cec) o tall rectangular (passant), en Z local [zlo, zhi].
   const rectPocket = (x0: number, x1: number, y0: number, y1: number, zlo: number, zhi: number, entry: "A" | "B" | "through") => {
+    if (mit.size) {
+      const c = [il && x0 < il + 0.5 ? il + 0.5 : x0, ir && x1 > L - ir - 0.5 ? L - ir - 0.5 : x1, ib && y0 < ib + 0.5 ? ib + 0.5 : y0, itp && y1 > W - itp - 0.5 ? W - itp - 0.5 : y1]
+      if (c[0] !== x0 || c[1] !== x1 || c[2] !== y0 || c[3] !== y1) clamped = true
+      ;[x0, x1, y0, y1] = c as [number, number, number, number]
+      if (x1 - x0 <= EPS || y1 - y0 <= EPS) return
+    }
+    if (cad) volumes.push({ min: [x0, y0, zlo], max: [x1, y1, zhi] })
     if (zhi >= T - EPS) rects.A.push({ a0: x0, a1: x1, b0: y0, b1: y1 })
     if (zlo <= EPS) rects.B.push({ a0: y0, a1: y1, b0: x0, b1: x1 })
     if (x0 <= EPS) rects.xmin.push({ a0: zlo, a1: zhi, b0: y0, b1: y1 })
@@ -354,8 +591,21 @@ function panelSolid(p: Panel): PanelSolid {
     else rectPocket(x0, x1, y0, y1, 0, d, "B")
   }
 
-  // Forats de cara i de cantell.
-  for (const h of p.holes) {
+  // Forats de cara i de cantell. Al STEP per a TopSolid, dos forats iguals a la mateixa posició
+  // per les dues cares que es troben (System 32 a les dues cares d'un divisor) són un forat passant.
+  const through = new Set<number>()
+  const skip = new Set<number>()
+  if (cad)
+    p.holes.forEach((h, i) => {
+      if (h.face !== "A" || skip.has(i)) return
+      const j = p.holes.findIndex((o, k) => k !== i && !skip.has(k) && o.face === "B" && Math.abs(o.x - h.x) < 0.01 && Math.abs(o.y - h.y) < 0.01 && o.diameter === h.diameter)
+      if (j >= 0 && h.depth + p.holes[j]!.depth >= T) {
+        through.add(i)
+        skip.add(j)
+      }
+    })
+  for (const [hi, h] of p.holes.entries()) {
+    if (skip.has(hi)) continue
     const r = h.diameter / 2
     const depth = Math.min(h.depth, h.face === "edge" ? Math.max(L, W) : T - 0.5)
     if (h.face === "edge") {
@@ -379,13 +629,16 @@ function panelSolid(p: Panel): PanelSolid {
     const face: BoxFace = h.face === "A" ? "A" : "B"
     const f = frames[face]
     const c: V3 = [h.x, h.y, face === "A" ? T : 0]
-    const pocket = cylPocket(c, f.n, X, r, depth, false)
+    const thru = through.has(hi)
+    const pocket = cylPocket(c, f.n, X, r, thru ? T : depth, thru)
     const center = to2D(f, c)
+    const cB = to2D(frames.B, [h.x, h.y, 0])
     rounds[face].push({
       bbox: { a0: center[0] - r, a1: center[0] + r, b0: center[1] - r, b1: center[1] + r },
       center,
       loop: pocket.loop,
       faces: pocket.faces,
+      ...(thru ? { exit: { face: "B" as const, loop: pocket.exit, center: cB, bbox: { a0: cB[0] - r, a1: cB[0] + r, b0: cB[1] - r, b1: cB[1] + r } } } : {}),
       what: `forat Ø${h.diameter} a (${h.x}, ${h.y}) cara ${h.face}`,
     })
   }
@@ -400,118 +653,100 @@ function panelSolid(p: Panel): PanelSolid {
       if (x1 - x0 > EPS && y1 - y0 > EPS) rectPocket(x0, x1, y0, y1, 0, T, "through")
       continue
     }
-    const fA = frames.A
-    const fB = frames.B
-    if (c.kind === "polygon") {
-      // Contorn passant (rectes i arcs): bucle a la cara A (horari respecte a +Z), sortida a
-      // la B, i per cada costat una cara plana o cilíndrica, orientada cap a dins del forat.
-      const pts = ccwB(c.points)
-      const n = pts.length
-      const at = (i: number, z: number): V3 => [pts[i]![0], pts[i]![1], z]
-      const arcs = pts.map((q, i) => {
-        const b = bulgeOf(q)
-        if (Math.abs(b) < 1e-9) return null
-        const a = arcOf(q, pts[(i + 1) % n]!, b)
-        return { b, r: a.r, top: [a.cx, a.cy, T] as V3, bot: [a.cx, a.cy, 0] as V3, ax: b > 0 ? Z : neg(Z) }
-      })
-      const sides: Face[] = pts.map((_, i) => {
-        const j = (i + 1) % n
-        const arc = arcs[i]
-        if (arc) {
-          return {
-            kind: "cyl",
-            loc: arc.bot,
-            axis: Z,
-            ref: unit(sub(at(i, 0), arc.bot)),
-            radius: arc.r,
-            outward: arc.b < 0,
-            loop: [{ p: at(i, T), arc: { center: arc.top, axis: arc.ax } }, { p: at(j, T) }, { p: at(j, 0), arc: { center: arc.bot, axis: neg(arc.ax) } }, { p: at(i, 0) }],
-          }
-        }
-        const normal = unit(cross(Z, sub(at(j, T), at(i, T))))
-        return { kind: "plane", loc: at(i, T), normal, loops: [[{ p: at(i, T) }, { p: at(j, T) }, { p: at(j, 0) }, { p: at(i, 0) }]] }
-      })
-      // Bucle d'entrada (cara A): recorregut al revés; cada arc surt del seu punt final.
-      const loopA: Loop = []
-      for (let k = 0; k < n; k++) {
-        const j = (n - k) % n
-        const i = (j - 1 + n) % n
-        const arc = arcs[i]
-        loopA.push(arc ? { p: at(j, T), arc: { center: arc.top, axis: neg(arc.ax) } } : { p: at(j, T) })
-      }
-      const loopB: Loop = pts.map((_, i) => {
-        const arc = arcs[i]
-        return arc ? { p: at(i, 0), arc: { center: arc.bot, axis: arc.ax } } : { p: at(i, 0) }
-      })
-      // Punt interior per assignar el bucle a la regió de la cara: tocant el primer costat.
-      const flat = flatten(pts)
-      const e0 = sub([flat[1]![0], flat[1]![1], T], [flat[0]![0], flat[0]![1], T])
-      const inward = unit(cross(Z, e0))
-      const mid = add([(flat[0]![0] + flat[1]![0]) / 2, (flat[0]![1] + flat[1]![1]) / 2, T], mul(inward, 0.05))
-      const cA = to2D(fA, mid)
-      const cB = to2D(fB, [mid[0], mid[1], 0])
-      const bb = (f: Frame, zz: number): Rect2 => {
-        const q = flat.map(([x, y]) => to2D(f, [x, y, zz]))
-        return { a0: Math.min(...q.map((v) => v[0])), a1: Math.max(...q.map((v) => v[0])), b0: Math.min(...q.map((v) => v[1])), b1: Math.max(...q.map((v) => v[1])) }
-      }
-      rounds.A.push({
-        bbox: bb(fA, T),
-        center: cA,
-        loop: loopA,
-        faces: sides,
-        exit: { face: "B", loop: loopB, center: cB, bbox: bb(fB, 0) },
-        what: `tall de ${n} costats`,
-      })
-      continue
-    }
-    if (c.kind === "circle") {
-      const r = c.diameter / 2
-      const centre: V3 = [c.x, c.y, T]
-      const pocket = cylPocket(centre, Z, X, r, T, true)
-      const cA = to2D(fA, centre)
-      const cB = to2D(fB, [c.x, c.y, 0])
-      rounds.A.push({
-        bbox: { a0: cA[0] - r, a1: cA[0] + r, b0: cA[1] - r, b1: cA[1] + r },
-        center: cA,
-        loop: pocket.loop,
-        faces: pocket.faces,
-        exit: { face: "B", loop: pocket.exit, center: cB, bbox: { a0: cB[0] - r, a1: cB[0] + r, b0: cB[1] - r, b1: cB[1] + r } },
-        what: `passacables Ø${c.diameter} a (${c.x}, ${c.y})`,
-      })
-      continue
-    }
-    // Ranura passant amb extrems rodons.
-    const r = Math.min(c.w, c.h) / 2
-    const horizontal = c.w >= c.h
-    const c1: V3 = horizontal ? [c.x + r, c.y + r, T] : [c.x + r, c.y + r, T]
-    const c2: V3 = horizontal ? [c.x + c.w - r, c.y + r, T] : [c.x + r, c.y + c.h - r, T]
-    if (len(sub(c2, c1)) < EPS) {
-      // Degenera en un cercle.
-      const pocket = cylPocket(c1, Z, X, r, T, true)
-      const cA = to2D(fA, c1)
-      const cB = to2D(fB, [c1[0], c1[1], 0])
-      rounds.A.push({
-        bbox: { a0: cA[0] - r, a1: cA[0] + r, b0: cA[1] - r, b1: cA[1] + r },
-        center: cA,
-        loop: pocket.loop,
-        faces: pocket.faces,
-        exit: { face: "B", loop: pocket.exit, center: cB, bbox: { a0: cB[0] - r, a1: cB[0] + r, b0: cB[1] - r, b1: cB[1] + r } },
-        what: `ranura a (${c.x}, ${c.y})`,
-      })
-      continue
-    }
-    const slot = slotThrough(c1, c2, r, Z, T)
-    const cA: Pt2 = [c.x + c.w / 2, c.y + c.h / 2]
-    const cB = to2D(fB, [cA[0], cA[1], 0])
-    rounds.A.push({
-      bbox: { a0: c.x, a1: c.x + c.w, b0: c.y, b1: c.y + c.h },
-      center: cA,
-      loop: slot.loop,
-      faces: slot.faces,
-      exit: { face: "B", loop: slot.exit, center: cB, bbox: { a0: c.y, a1: c.y + c.h, b0: c.x, b1: c.x + c.w } },
-      what: `ranura ${c.w}×${c.h} a (${c.x}, ${c.y})`,
-    })
+    rounds.A.push(cutoutFeature(c, T))
   }
+
+  // Booleans 3D (STEP per a TopSolid): prisma de secció poligonal que entra per una cara i
+  // en surt per l'oposada (passant) o s'atura a dins (cec). Alineat als eixos de la peça.
+  if (cad)
+    for (const sc of p.solidCuts ?? []) {
+      let pts = sc.points
+      let d = sc.dir
+      const k = [0, 1, 2].reduce((best, i) => (Math.abs(d[i]!) > Math.abs(d[best]!) ? i : best), 0)
+      if (d[k]! < 0) {
+        pts = pts.map((q) => add(q, d))
+        d = neg(d)
+      }
+      const E = [L, W, T][k]!
+      const s0 = pts[0]![k]!
+      const s1 = s0 + d[k]!
+      const minFace: BoxFace = k === 0 ? "xmin" : k === 1 ? "ymin" : "B"
+      const maxFace: BoxFace = k === 0 ? "xmax" : k === 1 ? "ymax" : "A"
+      const fromMin = s0 <= EPS
+      const toMax = s1 >= E - EPS
+      if ((!fromMin && !toMax) || s1 <= EPS || s0 >= E - EPS) {
+        warnings.push(`${p.name} (${p.id}): booleà 3D que no arriba a cap cara; no s'ha modelat al STEP.`)
+        continue
+      }
+      const at = (q: V3, c: number): V3 => {
+        const r: V3 = [q[0], q[1], q[2]]
+        r[k] = c
+        return r
+      }
+      const entry: BoxFace = fromMin ? minFace : maxFace
+      const cEntry = fromMin ? 0 : E
+      const cOther = fromMin ? (toMax ? E : s1) : s0
+      const nE = frames[entry].n
+      let P = pts.map((q) => at(q, cEntry))
+      if (dot(newell(P), nE) > 0) P = [...P].reverse()
+      const Q = P.map((q) => at(q, cOther))
+      const n = P.length
+      const C = mul(P.reduce((acc, q) => add(acc, q), [0, 0, 0] as V3), 1 / n)
+      const sides: Face[] = []
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n
+        let quad = [P[i]!, P[j]!, Q[j]!, Q[i]!]
+        const mid = mul(add(P[i]!, P[j]!), 0.5)
+        if (dot(newell(quad), sub(C, mid)) < 0) quad = [...quad].reverse()
+        sides.push({ kind: "plane", loc: quad[0]!, normal: unit(newell(quad)), loops: [quad.map((q) => ({ p: q }))] })
+      }
+      const fE = frames[entry]
+      const q2 = P.map((q) => to2D(fE, q))
+      const bbox: Rect2 = { a0: Math.min(...q2.map((v) => v[0])), a1: Math.max(...q2.map((v) => v[0])), b0: Math.min(...q2.map((v) => v[1])), b1: Math.max(...q2.map((v) => v[1])) }
+      const center = to2D(fE, C)
+      const through = fromMin ? toMax : true
+      if (through && cOther === (fromMin ? E : 0)) {
+        const exitFace: BoxFace = fromMin ? maxFace : minFace
+        const fX = frames[exitFace]
+        let X2 = Q
+        if (dot(newell(X2), fX.n) > 0) X2 = [...X2].reverse()
+        const x2 = X2.map((q) => to2D(fX, q))
+        rounds[entry].push({
+          bbox,
+          center,
+          loop: P.map((q) => ({ p: q })),
+          faces: sides,
+          exit: { face: exitFace, loop: X2.map((q) => ({ p: q })), center: to2D(fX, at(C, cOther)), bbox: { a0: Math.min(...x2.map((v) => v[0])), a1: Math.max(...x2.map((v) => v[0])), b0: Math.min(...x2.map((v) => v[1])), b1: Math.max(...x2.map((v) => v[1])) } },
+          what: "booleà 3D passant",
+        })
+      } else {
+        // Cec: fons pla mirant cap a l'entrada.
+        let bottom = Q
+        if (dot(newell(bottom), nE) < 0) bottom = [...bottom].reverse()
+        sides.push({ kind: "plane", loc: bottom[0]!, normal: nE, loops: [bottom.map((q) => ({ p: q }))] })
+        rounds[entry].push({ bbox, center, loop: P.map((q) => ({ p: q })), faces: sides, what: "booleà 3D cec" })
+      }
+    }
+
+  // Contorn de cada cara de la caixa, amb els ingletes: la A retallada i les laterals en trapezi
+  // (o a 45° si el seu cantell és a inglet). Coordenades 2D del marc de la cara.
+  const o3: V3[] = [[0, 0, 0], [L, 0, 0], [L, W, 0], [0, W, 0]]
+  const i3: V3[] = [[il, ib, T], [L - ir, ib, T], [L - ir, W - itp, T], [il, W - itp, T]]
+  const sideOf: Record<"ymin" | "xmax" | "ymax" | "xmin", [number, number, EdgeSide]> = { ymin: [0, 1, "bottom"], xmax: [1, 2, "right"], ymax: [2, 3, "top"], xmin: [3, 0, "left"] }
+  const facePoly = (face: BoxFace): Pt2[] | null => {
+    if (!mit.size || face === "B") return null
+    const f = frames[face]
+    const ring =
+      face === "A"
+        ? i3.map((q) => to2D(f, q))
+        : (() => {
+            const [a, b] = sideOf[face as keyof typeof sideOf]
+            return [o3[a]!, o3[b]!, i3[b]!, i3[a]!].map((q) => to2D(f, q))
+          })()
+    return signedArea(ring) < 0 ? [...ring].reverse() : ring
+  }
+  const slanted = (face: BoxFace): boolean => face !== "A" && face !== "B" && mit.has(sideOf[face as keyof typeof sideOf][2])
+  if (clamped) warnings.push(`${p.name} (${p.id}): ranura o tall escurçat fins a l'inglet (al STEP no entra a la falca de 45°).`)
 
   // Valida els mecanitzats rodons: dins de la cara i sense tocar cap altre mecanitzat.
   const accepted: Record<BoxFace, RoundFeature[]> = { A: [], B: [], xmin: [], xmax: [], ymin: [], ymax: [] }
@@ -519,13 +754,22 @@ function panelSolid(p: Panel): PanelSolid {
   const fits = (face: BoxFace, bbox: Rect2): boolean => {
     const [A, B] = extent[face]
     if (bbox.a0 <= EPS || bbox.b0 <= EPS || bbox.a1 >= A - EPS || bbox.b1 >= B - EPS) return false
+    if (slanted(face)) return false
+    const poly = facePoly(face)
+    if (poly) {
+      const corners: Pt2[] = [[bbox.a0, bbox.b0], [bbox.a1, bbox.b0], [bbox.a1, bbox.b1], [bbox.a0, bbox.b1]]
+      if (!corners.every((c) => pointInRing(c, poly))) return false
+    }
     if (rects[face].some((r) => rectsOverlap(r, bbox, 0.01))) return false
     if (occupied[face].some((r) => rectsOverlap(r, bbox, 0.01))) return false
     return true
   }
   for (const face of Object.keys(rounds) as BoxFace[]) {
     for (const rf of rounds[face]) {
-      const ok = fits(face, rf.bbox) && (!rf.exit || fits(rf.exit.face, rf.exit.bbox))
+      const vol = featureBox(rf)
+      const clash = cad && volumes.some((v) => [0, 1, 2].every((k) => vol.min[k]! < v.max[k]! - 0.01 && v.min[k]! < vol.max[k]! - 0.01))
+      const ok = !clash && fits(face, rf.bbox) && (!rf.exit || fits(rf.exit.face, rf.exit.bbox))
+      if (ok) volumes.push(vol)
       if (!ok) {
         warnings.push(`${p.name} (${p.id}): ${rf.what} no s'ha modelat al STEP (surt de la peça o toca un altre mecanitzat).`)
         continue
@@ -549,7 +793,17 @@ function panelSolid(p: Panel): PanelSolid {
   for (const face of Object.keys(frames) as BoxFace[]) {
     const f = frames[face]
     const [A, B] = extent[face]
-    const polys: Poly2[] = subtractRects(A, B, rects[face])
+    if (slanted(face)) {
+      // Cara a 45°: el quadrilàter entre el cantell de fora (z = 0) i el de dins (z = T).
+      const [a, b] = sideOf[face as keyof typeof sideOf]
+      let quad = [o3[a]!, o3[b]!, i3[b]!, i3[a]!]
+      const mid = mul(quad.reduce((acc, q) => add(acc, q), [0, 0, 0] as V3), 0.25)
+      if (dot(newell(quad), sub(mid, [L / 2, W / 2, T / 2])) < 0) quad = [...quad].reverse()
+      faces.push({ kind: "plane", loc: quad[0]!, normal: unit(newell(quad)), loops: [quad.map((q) => ({ p: q }))] })
+      continue
+    }
+    const poly0 = facePoly(face)
+    const polys: Poly2[] = poly0 ? regionMinusRects(poly0, rects[face]) : subtractRects(A, B, rects[face])
     for (const poly of polys) {
       const loops: Loop[] = [poly.outer.map((q) => ({ p: to3D(f, q) }))]
       for (const ring of poly.inners) loops.push(ring.map((q) => ({ p: to3D(f, q) })))
@@ -614,9 +868,24 @@ class SolidWriter {
   private readonly edges = new Map<string, { id: number; start: number }>()
   private readonly w: Writer
   private readonly frame: TallerFrame
+  /** Base local de la peça de mà esquerra (mirall): cal girar els bucles i el sentit dels arcs. */
+  private readonly mirrored: boolean
   constructor(w: Writer, frame: TallerFrame) {
     this.w = w
     this.frame = frame
+    this.mirrored = dot(cross(frame.xAxis, frame.yAxis), frame.zAxis) < 0
+  }
+
+  /** Bucle recorregut al revés: cada arc passa al punt on ara comença el tram, amb l'eix girat. */
+  private reversed(loop: Loop): Loop {
+    const n = loop.length
+    const out: Loop = []
+    for (let k = 0; k < n; k++) {
+      const j = (n - k) % n
+      const prev = loop[(j - 1 + n) % n]!
+      out.push(prev.arc ? { p: loop[j]!.p, arc: { center: prev.arc.center, axis: neg(prev.arc.axis) } } : { p: loop[j]!.p })
+    }
+    return out
   }
 
   point(local: V3): number {
@@ -665,7 +934,8 @@ class SolidWriter {
       let curve: number
       if (a.arc) {
         const ra = sub(a.p, a.arc.center)
-        const placement = this.axis2(a.arc.center, a.arc.axis, unit(ra))
+        // En una base mirall, el sentit antihorari local és horari al món: s'inverteix l'eix.
+        const placement = this.axis2(a.arc.center, this.mirrored ? neg(a.arc.axis) : a.arc.axis, unit(ra))
         curve = this.w.add(`CIRCLE('',#${placement},${stepReal(len(ra))})`)
       } else {
         const vec = this.w.add(`VECTOR('',#${this.direction(unit(sub(b.p, a.p)))},1.)`)
@@ -679,7 +949,8 @@ class SolidWriter {
     return this.w.add(`ORIENTED_EDGE('',*,*,#${edge.id},${same ? ".T." : ".F."})`)
   }
 
-  loop(loop: Loop): number {
+  loop(loop0: Loop): number {
+    const loop = this.mirrored ? this.reversed(loop0) : loop0
     const ids: number[] = []
     for (let i = 0; i < loop.length; i++) ids.push(this.orientedEdge(loop[i]!, loop[(i + 1) % loop.length]!))
     return this.w.add(`EDGE_LOOP('',(${ids.map((i) => `#${i}`).join(",")}))`)
@@ -691,19 +962,24 @@ class SolidWriter {
       const bound = this.w.add(`FACE_OUTER_BOUND('',#${this.loop(face.loop)},.T.)`)
       return this.w.add(`ADVANCED_FACE('',(#${bound}),#${surf},${face.outward ? ".T." : ".F."})`)
     }
-    const ref = Math.abs(face.normal[2]) > 0.5 ? X : Z
+    const axisAligned = Math.max(...face.normal.map(Math.abs)) > 0.999
+    const l0 = face.loops[0]!
+    const ref = axisAligned ? (Math.abs(face.normal[2]) > 0.5 ? X : Z) : unit(sub(l0[1]!.p, l0[0]!.p))
     const surf = this.w.add(`PLANE('',#${this.axis2(face.loc, face.normal, ref)})`)
     const bounds = face.loops.map((l, i) => this.w.add(`${i === 0 ? "FACE_OUTER_BOUND" : "FACE_BOUND"}('',#${this.loop(l)},.T.)`))
     return this.w.add(`ADVANCED_FACE('',(${bounds.map((b) => `#${b}`).join(",")}),#${surf},.T.)`)
   }
 }
 
-/** Genera el STEP de totes les peces (coordenades del moble muntat, marc del taller). */
-export function toStep(panels: Panel[], options: StepOptions): StepResult {
-  const w = new Writer()
-  const warnings: string[] = []
-  const date = options.date ?? new Date().toISOString().slice(0, 19)
+interface StepContext {
+  w: Writer
+  ctx: number
+  prodCtx: number
+  defCtx: number
+}
 
+function stepContext(): StepContext {
+  const w = new Writer()
   const appCtx = w.add(`APPLICATION_CONTEXT('automotive design')`)
   w.add(`APPLICATION_PROTOCOL_DEFINITION('international standard','automotive_design',2010,#${appCtx})`)
   const prodCtx = w.add(`PRODUCT_CONTEXT('',#${appCtx},'mechanical')`)
@@ -715,41 +991,153 @@ export function toStep(panels: Panel[], options: StepOptions): StepResult {
   const ctx = w.add(
     `(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#${uncertainty}))GLOBAL_UNIT_ASSIGNED_CONTEXT((#${lengthUnit},#${angleUnit},#${solidAngleUnit}))REPRESENTATION_CONTEXT('','3D'))`,
   )
-  const products: number[] = []
+  return { w, ctx, prodCtx, defCtx }
+}
 
-  panels.forEach((p, i) => {
-    const name = stepString(p.name)
-    const frame = tallerFrame(p)
-    const sw = new SolidWriter(w, frame)
-    const solid = p.outline ? outlineSolid(p) : panelSolid(p)
-    warnings.push(...solid.warnings)
-    const faceIds = solid.faces.map((f) => sw.face(f))
-    const shell = w.add(`CLOSED_SHELL('',(${faceIds.map((f) => `#${f}`).join(",")}))`)
-    const brep = w.add(`MANIFOLD_SOLID_BREP('${name}',#${shell})`)
-    const origin = w.add(`CARTESIAN_POINT('',(0.,0.,0.))`)
-    const dz = w.add(`DIRECTION('',(0.,0.,1.))`)
-    const dx = w.add(`DIRECTION('',(1.,0.,0.))`)
-    const axis = w.add(`AXIS2_PLACEMENT_3D('',#${origin},#${dz},#${dx})`)
-    const rep = w.add(`ADVANCED_BREP_SHAPE_REPRESENTATION('${name}',(#${brep},#${axis}),#${ctx})`)
-    const productId = stepString(`${p.id}`)
-    const product = w.add(`PRODUCT('${name}','${name}','${productId} (${i + 1})',(#${prodCtx}))`)
-    products.push(product)
-    const formation = w.add(`PRODUCT_DEFINITION_FORMATION('','',#${product})`)
-    const definition = w.add(`PRODUCT_DEFINITION('design','',#${formation},#${defCtx})`)
-    const shape = w.add(`PRODUCT_DEFINITION_SHAPE('','',#${definition})`)
-    w.add(`SHAPE_DEFINITION_REPRESENTATION(#${shape},#${rep})`)
-  })
-  if (products.length) w.add(`PRODUCT_RELATED_PRODUCT_CATEGORY('part','',(${products.map((p) => `#${p}`).join(",")}))`)
+function identityAxis(w: Writer): number {
+  const origin = w.add(`CARTESIAN_POINT('',(0.,0.,0.))`)
+  const dz = w.add(`DIRECTION('',(0.,0.,1.))`)
+  const dx = w.add(`DIRECTION('',(1.,0.,0.))`)
+  return w.add(`AXIS2_PLACEMENT_3D('',#${origin},#${dz},#${dx})`)
+}
 
+/** Producte amb la seva definició: PRODUCT → FORMATION → DEFINITION → DEFINITION_SHAPE. */
+function product(c: StepContext, id: string, name: string, description: string): { product: number; pd: number; pds: number } {
+  const product = c.w.add(`PRODUCT('${stepString(id)}','${stepString(name)}','${stepString(description)}',(#${c.prodCtx}))`)
+  const formation = c.w.add(`PRODUCT_DEFINITION_FORMATION('','',#${product})`)
+  const pd = c.w.add(`PRODUCT_DEFINITION('design','',#${formation},#${c.defCtx})`)
+  const pds = c.w.add(`PRODUCT_DEFINITION_SHAPE('','',#${pd})`)
+  return { product, pd, pds }
+}
+
+function stepText(c: StepContext, name: string, date: string): string {
   const header = [
     "ISO-10303-21;",
     "HEADER;",
     "FILE_DESCRIPTION(('STEP AP214'),'2;1');",
-    `FILE_NAME('${stepString(options.name)}.step','${date}',('Mobles CNC'),(''),'Mobles CNC configurador','','');`,
+    `FILE_NAME('${stepString(name)}.step','${date}',('Mobles CNC'),(''),'Mobles CNC configurador','','');`,
     "FILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));",
     "ENDSEC;",
     "DATA;",
   ]
-  const text = [...header, ...w.lines, "ENDSEC;", "END-ISO-10303-21;", ""].join("\r\n")
-  return { text, warnings, solids: panels.length }
+  return [...header, ...c.w.lines, "ENDSEC;", "END-ISO-10303-21;", ""].join("\r\n")
+}
+
+/** Sòlid B-rep d'una peça (coordenades del moble muntat, marc del taller). */
+function writeBrep(c: StepContext, p: Panel, cad: boolean): { brep: number; warnings: string[] } {
+  const sw = new SolidWriter(c.w, tallerFrame(p))
+  const solid = p.outline ? outlineSolid(p, cad) : panelSolid(p, cad)
+  const faceIds = solid.faces.map((f) => sw.face(f))
+  const shell = c.w.add(`CLOSED_SHELL('',(${faceIds.map((f) => `#${f}`).join(",")}))`)
+  const brep = c.w.add(`MANIFOLD_SOLID_BREP('${stepString(p.name)}',#${shell})`)
+  return { brep, warnings: solid.warnings }
+}
+
+/** Genera el STEP de totes les peces (coordenades del moble muntat, marc del taller). */
+export function toStep(panels: Panel[], options: StepOptions): StepResult {
+  const c = stepContext()
+  const { w, ctx } = c
+  const warnings: string[] = []
+  const date = options.date ?? new Date().toISOString().slice(0, 19)
+  const products: number[] = []
+
+  panels.forEach((p, i) => {
+    const name = stepString(p.name)
+    const { brep, warnings: ws } = writeBrep(c, p, false)
+    warnings.push(...ws)
+    const axis = identityAxis(w)
+    const rep = w.add(`ADVANCED_BREP_SHAPE_REPRESENTATION('${name}',(#${brep},#${axis}),#${ctx})`)
+    const pr = product(c, p.name, p.name, `${p.id} (${i + 1})`)
+    products.push(pr.product)
+    w.add(`SHAPE_DEFINITION_REPRESENTATION(#${pr.pds},#${rep})`)
+  })
+  if (products.length) w.add(`PRODUCT_RELATED_PRODUCT_CATEGORY('part','',(${products.map((p) => `#${p}`).join(",")}))`)
+  return { text: stepText(c, options.name, date), warnings, solids: panels.length }
+}
+
+export interface StepCadGroup {
+  /** Nom del conjunt (mòdul, peces lliures…). */
+  name: string
+  panels: Panel[]
+}
+
+export interface StepCadOptions extends StepOptions {
+  /** Color RGB (0–1) de cada peça: el del seu material. */
+  color?: (p: Panel) => [number, number, number]
+}
+
+/**
+ * STEP per obrir el moble a TopSolid (o qualsevol CAD) i continuar-lo treballant: un conjunt
+ * (el moble) amb un subconjunt per mòdul i una peça per tauler, amb el nom i el material, el
+ * color del material, els ingletes de debò i els booleans 3D. Les peces van ja col·locades
+ * (transformacions identitat), en mm, amb Z amunt com el STEP del taller.
+ */
+export function toStepCad(groups: StepCadGroup[], options: StepCadOptions): StepResult {
+  const c = stepContext()
+  const { w, ctx } = c
+  const warnings: string[] = []
+  const date = options.date ?? new Date().toISOString().slice(0, 19)
+  const styled: number[] = []
+  const colours = new Map<string, number>()
+  const colourStyle = (rgb: [number, number, number]): number => {
+    const key = rgb.map((v) => v.toFixed(3)).join(",")
+    const hit = colours.get(key)
+    if (hit) return hit
+    const col = w.add(`COLOUR_RGB('',${rgb.map(stepReal).join(",")})`)
+    const fasc = w.add(`FILL_AREA_STYLE_COLOUR('',#${col})`)
+    const fas = w.add(`FILL_AREA_STYLE('',(#${fasc}))`)
+    const ssfa = w.add(`SURFACE_STYLE_FILL_AREA(#${fas})`)
+    const sss = w.add(`SURFACE_SIDE_STYLE('',(#${ssfa}))`)
+    const ssu = w.add(`SURFACE_STYLE_USAGE(.BOTH.,#${sss})`)
+    const psa = w.add(`PRESENTATION_STYLE_ASSIGNMENT((#${ssu}))`)
+    colours.set(key, psa)
+    return psa
+  }
+
+  // Arrel: el moble.
+  const root = product(c, options.name, options.name, "Moble")
+  const rootAxis = identityAxis(w)
+  const rootRep = w.add(`SHAPE_REPRESENTATION('${stepString(options.name)}',(#${rootAxis}),#${ctx})`)
+  w.add(`SHAPE_DEFINITION_REPRESENTATION(#${root.pds},#${rootRep})`)
+  const assemblies = [root.product]
+  const parts: number[] = []
+  let solids = 0
+  let occ = 0
+
+  /** Posa `child` dins de `parent` (transformació identitat entre els seus eixos). */
+  const place = (parentPd: number, parentRep: number, parentAxis: number, childPd: number, childRep: number, childAxis: number, name: string) => {
+    occ += 1
+    const nauo = w.add(`NEXT_ASSEMBLY_USAGE_OCCURRENCE('${occ}','${stepString(name)}','',#${parentPd},#${childPd},$)`)
+    const pds = w.add(`PRODUCT_DEFINITION_SHAPE('','',#${nauo})`)
+    const idt = w.add(`ITEM_DEFINED_TRANSFORMATION('','',#${parentAxis},#${childAxis})`)
+    const rel = w.add(`(REPRESENTATION_RELATIONSHIP('','',#${childRep},#${parentRep})REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(#${idt})SHAPE_REPRESENTATION_RELATIONSHIP())`)
+    w.add(`CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#${rel},#${pds})`)
+  }
+
+  for (const g of groups) {
+    if (!g.panels.length) continue
+    const sub = product(c, g.name, g.name, "Conjunt")
+    assemblies.push(sub.product)
+    const subAxis = identityAxis(w)
+    const subRep = w.add(`SHAPE_REPRESENTATION('${stepString(g.name)}',(#${subAxis}),#${ctx})`)
+    w.add(`SHAPE_DEFINITION_REPRESENTATION(#${sub.pds},#${subRep})`)
+    place(root.pd, rootRep, rootAxis, sub.pd, subRep, subAxis, g.name)
+    for (const p of g.panels) {
+      const { brep, warnings: ws } = writeBrep(c, p, true)
+      warnings.push(...ws)
+      solids += 1
+      const axis = identityAxis(w)
+      const label = p.label || p.name
+      const rep = w.add(`ADVANCED_BREP_SHAPE_REPRESENTATION('${stepString(label)}',(#${brep},#${axis}),#${ctx})`)
+      const pr = product(c, label, label, `${p.material} · ${p.length} × ${p.width} × ${p.thickness} mm`)
+      parts.push(pr.product)
+      w.add(`SHAPE_DEFINITION_REPRESENTATION(#${pr.pds},#${rep})`)
+      place(sub.pd, subRep, subAxis, pr.pd, rep, axis, label)
+      if (options.color) styled.push(w.add(`STYLED_ITEM('color',(#${colourStyle(options.color(p))}),#${brep})`))
+    }
+  }
+  if (styled.length) w.add(`MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION('',(${styled.map((s) => `#${s}`).join(",")}),#${ctx})`)
+  w.add(`PRODUCT_RELATED_PRODUCT_CATEGORY('assembly','',(${assemblies.map((a) => `#${a}`).join(",")}))`)
+  if (parts.length) w.add(`PRODUCT_RELATED_PRODUCT_CATEGORY('part','',(${parts.map((p) => `#${p}`).join(",")}))`)
+  return { text: stepText(c, options.name, date), warnings, solids }
 }
