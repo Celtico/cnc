@@ -610,9 +610,13 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     targeta amb capçalera, marges amples (px 6) i 24 px entre targetes, icones alineades a dalt amb el títol; res no s'obre de cop). Materials i objectes de referència fan **llista i detall**
     (`components/MasterDetail`: llista agrupada per categoria amb mostra, cercador, filtres per categoria en
     pastilles i «Afegir», amb desplaçament propi; el triat s'edita a la dreta, fix i de 680 px com a molt).
-    Materials: «Per defecte als mòduls nous» a dalt; al detall, **mostra a escala real** (`MaterialPreview`,
-    `materialPreview.ts`: 600 mm d'ample amb la textura de debò, la foto, la trama o les rajoles), gruixos
-    com a etiquetes (`ThicknessChips`), color amb mostra petita i codi; un material nou té nom únic
+    Materials: «Per defecte als mòduls nous» a dalt; a la llista, miniatura amb la textura (`MaterialThumb`) i
+    resum «Acabat · gruixos · cantell» (sense l'explicació de la categoria, que és al detall). El detall és una
+    targeta amb la **mostra a escala real a tota l'amplada** (`MaterialHero`, mesura l'amplada i sempre són
+    600 mm; `materialPreview.ts`), el nom gran editable amb Duplicar/Eliminar i dues seccions de files
+    etiqueta · control (`FormSection`/`FormRow`): **Aspecte** (Acabat, Color/Espècie/Foto, Rajola, Textura:
+    «Editar la textura» i «Posar una foto») i **Fabricació** (Gruixos com a etiquetes `ThicknessChips`,
+    Cantell, Veta, Categoria amb la seva explicació); controls de 280 px com a molt; un material nou té nom únic
     («Material nou 2»), va a la categoria filtrada i deixa el nom seleccionat.
   - **Biblioteca de materials** (`settings/materialLibrary.ts`, `MATERIAL_LIBRARY`; diàleg `MaterialLibrary`):
     «Afegir» obre una graella de materials fets amb la mostra (fustes i lacats, pedres, metalls, vidres,

@@ -28,12 +28,12 @@ import {
   Text,
 } from "@chakra-ui/react"
 import { Children, Fragment, isValidElement, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { LuArrowDown, LuArrowUp, LuCheck, LuPaintbrush, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff, LuFileDown, LuGrid3X3, LuHammer, LuImage, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRows3, LuRuler, LuScan, LuScissors, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
+import { LuArrowDown, LuArrowUp, LuCheck, LuPaintbrush, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff, LuFileDown, LuGrid3X3, LuHammer, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRows3, LuRuler, LuScan, LuScissors, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { MasterDetail } from "../../components/MasterDetail"
 import { useSessionString } from "./useSessionString"
-import { MaterialPreview, ThicknessChips } from "./MaterialBits"
+import { MaterialHero, MaterialThumb, ThicknessChips } from "./MaterialBits"
 import { TextureEditor } from "./TextureEditor"
 import { MaterialLibrary } from "./MaterialLibrary"
 import type { LibraryItem } from "./materialLibrary"
@@ -646,10 +646,10 @@ function MaterialsList({ materials, onChange }: { materials: MaterialPref[]; onC
       groups={MATERIAL_CATEGORIES.filter((c) => filterId === "all" || c.id === filterId).map((c) => ({
         id: c.id,
         label: c.label,
-        hint: c.hint,
+        // L'explicació de cada categoria és al detall (Categoria), no sota cada grup de la llista.
         items: materials
           .filter((x) => materialCategory(x) === c.id && (!q || x.name.toLowerCase().includes(q)))
-          .map((x) => ({ id: x.id, lead: <MaterialSwatch m={x} />, title: x.name, subtitle: `${x.thicknesses.join(" · ")} mm · ${FINISH_LABEL[x.finish.kind]}${x.edge ? ` · ${x.edge}` : ""}` })),
+          .map((x) => ({ id: x.id, lead: <MaterialThumb m={x} />, title: x.name, subtitle: materialSummary(x) })),
       }))}
       selected={m ? m.id : null}
       onSelect={setSel}
@@ -687,14 +687,43 @@ function MaterialsList({ materials, onChange }: { materials: MaterialPref[]; onC
   )
 }
 
-/** Mostra del material (color, fusta o la foto de la textura). */
-function MaterialSwatch({ m, size = "18px" }: { m: MaterialPref; size?: string }) {
-  const f = m.finish
-  const swatch = f.kind === "wood" || f.kind === "image" ? undefined : f.color
-  return <Box w={size} h={size} rounded="sm" borderWidth="1px" flexShrink={0} bg={swatch} bgImage={f.kind === "wood" ? "repeating-linear-gradient(90deg, #b98b57 0 2px, #a3763f 2px 3px)" : f.kind === "image" ? `url(${f.src})` : undefined} bgSize="cover" />
+const FINISH_LABEL: Record<Finish["kind"], string> = { color: "Color llis", lacquer: "Lacat", wood: "Fusta", image: "Foto real", metal: "Metall", glass: "Vidre", fabric: "Teixit", tiles: "Rajola", stone: "Pedra" }
+
+/** Resum d'una línia: acabat, gruixos i cantell. */
+function materialSummary(m: MaterialPref): string {
+  return `${FINISH_LABEL[m.finish.kind]} · ${m.thicknesses.join(" · ")} mm${m.edge ? ` · ${m.edge}` : ""}`
 }
 
-const FINISH_LABEL: Record<Finish["kind"], string> = { color: "color llis", lacquer: "lacat", wood: "fusta", image: "foto real", metal: "metall", glass: "vidre", fabric: "teixit", tiles: "rajola", stone: "pedra" }
+/** Secció del detall (com les de l'inspector de Figma): títol petit i files etiqueta · control. */
+function FormSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <Stack gap={3.5} px={{ base: 4, sm: 6 }} py={5} borderTopWidth="1px">
+      <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
+        {title}
+      </Text>
+      {children}
+    </Stack>
+  )
+}
+
+/** Fila de formulari: etiqueta a l'esquerra (a sobre al mòbil), control i ajuda a la dreta. */
+function FormRow({ label, help, children }: { label: string; help?: ReactNode; children: ReactNode }) {
+  return (
+    <Grid templateColumns={{ base: "1fr", sm: "120px minmax(0, 1fr)" }} columnGap={4} rowGap={1.5} alignItems="start">
+      <Text fontSize="sm" color="fg.muted" pt={{ sm: "7px" }}>
+        {label}
+      </Text>
+      <Stack gap={1} minW={0}>
+        {children}
+        {help && (
+          <Text fontSize="xs" color="fg.subtle">
+            {help}
+          </Text>
+        )}
+      </Stack>
+    </Grid>
+  )
+}
 
 function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocusName }: { m: MaterialPref; onChange: (p: Partial<MaterialPref>) => void; onDuplicate: () => void; onDelete: () => void; canDelete: boolean; autoFocusName?: boolean }) {
   const [editing, setEditing] = useState(false)
@@ -709,92 +738,88 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needsAspect])
   const swatch = finish.kind === "wood" || finish.kind === "image" ? undefined : finish.color
+  const setKind = (k: Finish["kind"]) => {
+    if (k === "image") {
+      // Primer cal triar la foto; si es cancel·la, l'acabat no canvia.
+      void pickTexture().then((t) => t && onChange({ finish: { kind: "image", tileMm: 800, ...t } }))
+      return
+    }
+    const color = swatch ?? "#e5e5e5"
+    onChange({
+      finish:
+        k === "wood"
+          ? { kind: "wood", species: "oak" }
+          : k === "tiles"
+            ? { kind: "tiles", color, grout: "#cfcac0", size: 600 }
+            : k === "stone"
+              ? { kind: "stone", color: swatch ?? "#e8e4dc", vein: "#8f8a82", veins: 0.5, size: 1200, seed: 7 }
+              : k === "fabric"
+                ? { kind: "fabric", color }
+                : { kind: k, color },
+    })
+  }
+  const category = MATERIAL_CATEGORIES.find((c) => c.id === materialCategory(m))!
   return (
-    <SettingsGroup
-      icon={<MaterialSwatch m={m} size="22px" />}
-      title={
-        <HStack gap={1.5} as="span">
-          <span>{m.name}</span>
-        </HStack>
-      }
-      summary={`${m.thicknesses.join(" · ")} mm · ${FINISH_LABEL[finish.kind]}${m.edge ? ` · ${m.edge}` : ""}`}
-      actions={
-        <>
-          <IconButton aria-label="Duplicar material" size="xs" variant="ghost" onClick={onDuplicate}>
+    <Box borderWidth="1px" rounded="xl" bg="bg.panel" overflow="hidden">
+      {/* Capçalera: la mostra a tota l'amplada, a escala real. */}
+      <MaterialHero m={m} />
+      <TextureEditor m={m} open={editing} onClose={() => setEditing(false)} onApply={(f) => onChange({ finish: f })} />
+
+      {/* Nom (editable, gran) i accions. */}
+      <HStack gap={2} px={{ base: 4, sm: 6 }} pt={4} pb={4} align="flex-start">
+        <Stack gap={0.5} flex={1} minW={0}>
+          <Input
+            variant="flushed"
+            size="md"
+            fontSize="lg"
+            fontWeight="semibold"
+            value={m.name}
+            onChange={(e) => onChange({ name: e.target.value })}
+            autoFocus={autoFocusName}
+            onFocus={(e) => autoFocusName && e.currentTarget.select()}
+            aria-label="Nom del material"
+            borderColor="transparent"
+            _hover={{ borderColor: "border" }}
+            _focus={{ borderColor: "wood.solid" }}
+          />
+          <Text fontSize="xs" color="fg.muted" truncate>
+            {materialSummary(m)}
+          </Text>
+        </Stack>
+        <HStack gap={0} flexShrink={0} pt={1.5}>
+          <IconButton aria-label="Duplicar material" title="Duplicar" size="sm" variant="ghost" onClick={onDuplicate}>
             <LuCopy />
           </IconButton>
-          <IconButton aria-label="Eliminar material" size="xs" variant="ghost" colorPalette="red" disabled={!canDelete} onClick={onDelete}>
+          <IconButton aria-label="Eliminar material" title="Eliminar" size="sm" variant="ghost" colorPalette="red" disabled={!canDelete} onClick={onDelete}>
             <LuTrash2 />
           </IconButton>
-        </>
-      }
-    >
-      {/* A dalt: la mostra a escala real al costat del nom i els gruixos. */}
-      <Flex gap={4} direction={{ base: "column", sm: "row" }} align={{ sm: "flex-start" }}>
-        <Stack gap={2} flexShrink={0}>
-          <MaterialPreview m={m} />
-          {isEditable(finish) && (
-            <Button size="sm" variant="outline" colorPalette="wood" onClick={() => setEditing(true)}>
-              <LuPaintbrush /> Editar la textura
-            </Button>
-          )}
-        </Stack>
-        <TextureEditor m={m} open={editing} onClose={() => setEditing(false)} onApply={(f) => onChange({ finish: f })} />
-        <Stack gap={3} flex={1} minW={0}>
-          <Field.Root>
-            <Field.Label fontSize="sm">Nom</Field.Label>
-            <Input size="sm" value={m.name} onChange={(e) => onChange({ name: e.target.value })} autoFocus={autoFocusName} onFocus={(e) => autoFocusName && e.currentTarget.select()} />
-          </Field.Root>
-          <ThicknessChips value={m.thicknesses} onChange={(thicknesses) => onChange({ thicknesses })} />
-        </Stack>
-      </Flex>
-        <SimpleGrid columns={2} gap={2}>
-          <Field.Root>
-            <Field.Label fontSize="sm">Acabat</Field.Label>
-            <NativeSelect.Root size="sm">
-              <NativeSelect.Field
-                value={finish.kind}
-                onChange={(e) => {
-                  const k = e.target.value as Finish["kind"]
-                  if (k === "image") {
-                    // Primer cal triar la foto; si es cancel·la, l'acabat no canvia.
-                    void pickTexture().then((t) => t && onChange({ finish: { kind: "image", tileMm: 800, ...t } }))
-                    return
-                  }
-                  const color = swatch ?? "#e5e5e5"
-                  onChange({
-                    finish:
-                      k === "wood"
-                        ? { kind: "wood", species: "oak" }
-                        : k === "tiles"
-                          ? { kind: "tiles", color, grout: "#cfcac0", size: 600 }
-                          : k === "stone"
-                            ? { kind: "stone", color: swatch ?? "#e8e4dc", vein: "#8f8a82", veins: 0.5, size: 1200, seed: 7 }
-                            : k === "fabric"
-                              ? { kind: "fabric", color }
-                              : { kind: k, color },
-                  })
-                }}
-              >
-                <option value="color">Color llis</option>
-                <option value="lacquer">Lacat</option>
-                <option value="wood">Fusta</option>
-                <option value="image">Foto (textura)</option>
-                <option value="metal">Metall</option>
-                <option value="glass">Vidre</option>
-                <option value="fabric">Teixit</option>
-                <option value="tiles">Rajola</option>
-                <option value="stone">Pedra / marbre</option>
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
-          </Field.Root>
-          {finish.kind === "image" ? (
-            <Field.Root>
-              <Field.Label fontSize="sm">Amplada de la foto</Field.Label>
-              <HStack gap={1.5} w="full">
+        </HStack>
+      </HStack>
+
+      <FormSection title="Aspecte">
+        <FormRow label="Acabat">
+          <NativeSelect.Root size="sm" maxW="280px">
+            <NativeSelect.Field value={finish.kind} onChange={(e) => setKind(e.target.value as Finish["kind"])}>
+              <option value="color">Color llis</option>
+              <option value="lacquer">Lacat</option>
+              <option value="wood">Fusta</option>
+              <option value="image">Foto (textura)</option>
+              <option value="metal">Metall</option>
+              <option value="glass">Vidre</option>
+              <option value="fabric">Teixit</option>
+              <option value="tiles">Rajola</option>
+              <option value="stone">Pedra / marbre</option>
+            </NativeSelect.Field>
+            <NativeSelect.Indicator />
+          </NativeSelect.Root>
+        </FormRow>
+        {finish.kind === "image" ? (
+          <FormRow label="Foto" help={`${finish.tileMm} × ${Math.round(finish.tileMm * (finish.aspect ?? 1))} mm de tauler per repetició, ${finish.seamless ? "repetida tal qual" : "en mirall"}.`}>
+            <HStack gap={2} wrap="wrap">
+              <HStack gap={1.5}>
                 <Input
                   size="sm"
+                  w="96px"
                   type="number"
                   inputMode="numeric"
                   value={finish.tileMm}
@@ -804,103 +829,94 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
                     const v = Number(e.target.value)
                     if (v >= 50 && v <= 5000) onChange({ finish: { ...finish, tileMm: v } })
                   }}
+                  aria-label="Amplada de la foto (mm)"
                   title="Quants mm de tauler de debò surten a la foto (d'esquerra a dreta)"
                 />
-                <IconButton
-                  size="sm"
-                  variant="outline"
-                  aria-label="Canviar la foto"
-                  title="Canviar la foto"
-                  onClick={() => void pickTexture().then((t) => t && onChange({ finish: { ...finish, ...t } }))}
-                >
-                  <LuImage />
-                </IconButton>
+                <Text fontSize="sm" color="fg.muted">
+                  mm d'amplada
+                </Text>
               </HStack>
-            </Field.Root>
-          ) : finish.kind === "wood" ? (
-            <Field.Root>
-              <Field.Label fontSize="sm">Espècie</Field.Label>
-              <NativeSelect.Root size="sm">
-                <NativeSelect.Field value={finish.species} onChange={(e) => onChange({ finish: { kind: "wood", species: e.target.value as typeof finish.species } })}>
-                  {SPECIES.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
-          ) : (
-            <Field.Root>
-              <Field.Label fontSize="sm">Color</Field.Label>
-              {/* Mostra de color compacta amb el codi al costat (no una barra de punta a punta). */}
-              <HStack gap={2}>
-                <Input size="sm" type="color" value={finish.color} onChange={(e) => onChange({ finish: { ...finish, color: e.target.value } })} p={0.5} w="44px" flexShrink={0} aria-label="Color" />
-                <Input size="sm" key={finish.color} defaultValue={finish.color} onBlur={(e) => /^#[0-9a-f]{6}$/i.test(e.target.value.trim()) && onChange({ finish: { ...finish, color: e.target.value.trim() } })} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} fontFamily="mono" aria-label="Codi del color" />
-              </HStack>
-            </Field.Root>
-          )}
-          {finish.kind === "tiles" && (
-            <>
-              <NumberField label="Mida de la rajola" value={finish.size} min={20} max={1500} step={10} onChange={(size) => onChange({ finish: { ...finish, size } })} />
-              <Field.Root>
-                <Field.Label fontSize="sm">Junta</Field.Label>
-                <Input size="sm" type="color" value={finish.grout} onChange={(e) => onChange({ finish: { ...finish, grout: e.target.value } })} p={0.5} w="44px" aria-label="Color de la junta" />
-              </Field.Root>
-            </>
-          )}
-          <Field.Root>
-            <Field.Label fontSize="sm">Cantell</Field.Label>
-            <Input size="sm" value={m.edge} onChange={(e) => onChange({ edge: e.target.value })} placeholder="PVC blanc 1 mm" />
-          </Field.Root>
-        </SimpleGrid>
-        {/* Textura amb imatge: a la vista, no només com a opció de l'Acabat. */}
-        {finish.kind === "image" ? (
-          <HStack gap={3} align="center">
-            <Box w="72px" h="48px" rounded="sm" borderWidth="1px" flexShrink={0} bgImage={`url(${finish.src})`} bgSize="cover" backgroundPosition="center" />
-            <Stack gap={1} flex={1} minW={0}>
-              <Text fontSize="xs" color="fg.muted">
-                {finish.tileMm} × {Math.round(finish.tileMm * (finish.aspect ?? 1))} mm de tauler per repetició,{" "}
-                {finish.seamless ? "repetida tal qual" : "en mirall"}.
-              </Text>
-              <Switch.Root size="sm" checked={!!finish.seamless} onCheckedChange={(e) => onChange({ finish: { ...finish, seamless: e.checked || undefined } })}>
-                <Switch.HiddenInput />
-                <Switch.Control />
-                <Switch.Label fontSize="xs">Sense costures (seamless): repetir sense mirall</Switch.Label>
-              </Switch.Root>
-              <HStack gap={1.5}>
-                <Button size="xs" variant="outline" onClick={() => void pickTexture().then((t) => t && onChange({ finish: { ...finish, ...t } }))}>
-                  <LuImagePlus /> Canviar la foto
-                </Button>
-                <Button size="xs" variant="ghost" colorPalette="red" onClick={() => onChange({ finish: m.hasGrain ? { kind: "wood", species: "oak" } : { kind: "color", color: "#e5e5e5" } })}>
-                  <LuTrash2 /> Treure-la
-                </Button>
-              </HStack>
-            </Stack>
-          </HStack>
+              <Button size="sm" variant="outline" onClick={() => void pickTexture().then((t) => t && onChange({ finish: { ...finish, ...t } }))}>
+                <LuImagePlus /> Canviar
+              </Button>
+              <Button size="sm" variant="ghost" colorPalette="red" onClick={() => onChange({ finish: m.hasGrain ? { kind: "wood", species: "oak" } : { kind: "color", color: "#e5e5e5" } })}>
+                <LuTrash2 /> Treure
+              </Button>
+            </HStack>
+            <Switch.Root size="sm" mt={1} checked={!!finish.seamless} onCheckedChange={(e) => onChange({ finish: { ...finish, seamless: e.checked || undefined } })}>
+              <Switch.HiddenInput />
+              <Switch.Control />
+              <Switch.Label fontSize="sm">Sense costures (repetir sense mirall)</Switch.Label>
+            </Switch.Root>
+          </FormRow>
+        ) : finish.kind === "wood" ? (
+          <FormRow label="Espècie">
+            <NativeSelect.Root size="sm" maxW="280px">
+              <NativeSelect.Field value={finish.species} onChange={(e) => onChange({ finish: { kind: "wood", species: e.target.value as typeof finish.species } })}>
+                {SPECIES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </NativeSelect.Field>
+              <NativeSelect.Indicator />
+            </NativeSelect.Root>
+          </FormRow>
         ) : (
-          <HStack gap={2} wrap="wrap">
-            <Button size="xs" variant="outline" onClick={() => void pickTexture().then((t) => t && onChange({ finish: { kind: "image", tileMm: 800, ...t } }))}>
-              <LuImagePlus /> Posar una foto de textura
-            </Button>
-            <Text fontSize="xs" color="fg.muted">
-              Una foto del tauler de debò (fusta, laminat, pedra).
-            </Text>
-          </HStack>
+          <FormRow label="Color">
+            {/* Mostra de color compacta amb el codi al costat. */}
+            <HStack gap={2} maxW="280px">
+              <Input size="sm" type="color" value={finish.color} onChange={(e) => onChange({ finish: { ...finish, color: e.target.value } })} p={0.5} w="44px" flexShrink={0} aria-label="Color" />
+              <Input size="sm" key={finish.color} defaultValue={finish.color} onBlur={(e) => /^#[0-9a-f]{6}$/i.test(e.target.value.trim()) && onChange({ finish: { ...finish, color: e.target.value.trim() } })} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} fontFamily="mono" aria-label="Codi del color" />
+            </HStack>
+          </FormRow>
         )}
-        <HStack gap={5} wrap="wrap">
-          <Switch.Root size="sm" checked={m.hasGrain} onCheckedChange={(e) => onChange({ hasGrain: e.checked })}>
+        {finish.kind === "tiles" && (
+          <FormRow label="Rajola">
+            <HStack gap={3} wrap="wrap">
+              <HStack gap={1.5}>
+                <Input size="sm" w="96px" type="number" inputMode="numeric" value={finish.size} min={20} max={1500} onChange={(e) => { const v = Number(e.target.value); if (v >= 20 && v <= 1500) onChange({ finish: { ...finish, size: v } }) }} aria-label="Mida de la rajola (mm)" />
+                <Text fontSize="sm" color="fg.muted">mm</Text>
+              </HStack>
+              <HStack gap={1.5}>
+                <Input size="sm" type="color" value={finish.grout} onChange={(e) => onChange({ finish: { ...finish, grout: e.target.value } })} p={0.5} w="44px" aria-label="Color de la junta" />
+                <Text fontSize="sm" color="fg.muted">junta</Text>
+              </HStack>
+            </HStack>
+          </FormRow>
+        )}
+        {isEditable(finish) && (
+          <FormRow label="Textura" help="Dissenya-la (veta, nusos, vetes del marbre, trama…) o posa-hi una foto del tauler de debò.">
+            <HStack gap={2} wrap="wrap">
+              <Button size="sm" variant="outline" colorPalette="wood" onClick={() => setEditing(true)}>
+                <LuPaintbrush /> Editar la textura
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => void pickTexture().then((t) => t && onChange({ finish: { kind: "image", tileMm: 800, ...t } }))}>
+                <LuImagePlus /> Posar una foto
+              </Button>
+            </HStack>
+          </FormRow>
+        )}
+      </FormSection>
+
+      <FormSection title="Fabricació">
+        <FormRow label="Gruixos" help="Els que es poden triar a les peces d'aquest material.">
+          <ThicknessChips value={m.thicknesses} onChange={(thicknesses) => onChange({ thicknesses })} label={false} />
+        </FormRow>
+        <FormRow label="Cantell">
+          <Input size="sm" maxW="280px" value={m.edge} onChange={(e) => onChange({ edge: e.target.value })} placeholder="PVC blanc 1 mm" />
+        </FormRow>
+        <FormRow label="Veta" help="Té una direcció (fusta, xapa) que cal respectar en tallar.">
+          <Switch.Root size="sm" pt={1.5} checked={m.hasGrain} onCheckedChange={(e) => onChange({ hasGrain: e.checked })}>
             <Switch.HiddenInput />
             <Switch.Control />
-            <Switch.Label>Té veta</Switch.Label>
+            <Switch.Label fontSize="sm">Té veta</Switch.Label>
           </Switch.Root>
-        </HStack>
-        <Field.Root>
-          <Field.Label fontSize="sm">Categoria</Field.Label>
-          <NativeSelect.Root size="sm">
+        </FormRow>
+        <FormRow label="Categoria" help={category.hint}>
+          <NativeSelect.Root size="sm" maxW="280px">
             <NativeSelect.Field
-              value={materialCategory(m)}
+              value={category.id}
               onChange={(e) => {
                 const next = withCategory(m, e.target.value as MaterialCategory)
                 // Replaça tot el material: `forBacks` i `cnc` poden desaparèixer.
@@ -915,9 +931,9 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
             </NativeSelect.Field>
             <NativeSelect.Indicator />
           </NativeSelect.Root>
-          <Field.HelperText>{MATERIAL_CATEGORIES.find((c) => c.id === materialCategory(m))!.hint}</Field.HelperText>
-        </Field.Root>
-    </SettingsGroup>
+        </FormRow>
+      </FormSection>
+    </Box>
   )
 }
 

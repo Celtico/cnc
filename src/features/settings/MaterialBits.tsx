@@ -1,5 +1,5 @@
 import { Badge, Box, HStack, IconButton, Input, Stack, Text } from "@chakra-ui/react"
-import { useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { LuPlus, LuX } from "react-icons/lu"
 import type { MaterialPref } from "../../core/model"
 import { PREVIEW_MM, previewStyle } from "./materialPreview"
@@ -18,8 +18,37 @@ export function MaterialPreview({ m, w = 240, h = 150, caption = true }: { m: Ma
   )
 }
 
+/**
+ * Mostra gran de capçalera (a tota l'amplada de la targeta), a escala real: l'amplada es mesura
+ * i sempre representa `PREVIEW_MM` mm. A sota, a la dreta, la mida que es veu.
+ */
+export function MaterialHero({ m, h = 176, children }: { m: MaterialPref; h?: number; children?: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [w, setW] = useState(600)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const ro = new ResizeObserver(([e]) => e && e.contentRect.width > 0 && setW(Math.round(e.contentRect.width)))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return (
+    <Box ref={ref} position="relative" h={`${h}px`} style={previewStyle(m, w)} backgroundRepeat="repeat" borderBottomWidth="1px">
+      {children}
+      <Text position="absolute" right={3} bottom={2.5} fontSize="2xs" fontWeight="medium" color="white" bg="blackAlpha.600" px={2} py={0.5} rounded="full" backdropFilter="blur(6px)">
+        {PREVIEW_MM} × {Math.round((PREVIEW_MM * h) / w)} mm
+      </Text>
+    </Box>
+  )
+}
+
+/** Miniatura de la llista (un tros de 300 mm, prou per veure'n la textura). */
+export function MaterialThumb({ m, size = 36 }: { m: MaterialPref; size?: number }) {
+  return <Box w={`${size}px`} h={`${size}px`} rounded="md" borderWidth="1px" borderColor="border.emphasized" flexShrink={0} style={previewStyle(m, size * 2)} backgroundRepeat="repeat" />
+}
+
 /** Gruixos com a etiquetes (treure amb ×, afegir amb «+»), ordenats. */
-export function ThicknessChips({ value, onChange }: { value: number[]; onChange: (v: number[]) => void }) {
+export function ThicknessChips({ value, onChange, label = true }: { value: number[]; onChange: (v: number[]) => void; label?: boolean }) {
   const [text, setText] = useState("")
   const add = () => {
     const n = Number(text.replace(",", "."))
@@ -28,9 +57,11 @@ export function ThicknessChips({ value, onChange }: { value: number[]; onChange:
   }
   return (
     <Stack gap={1}>
-      <Text fontSize="sm" fontWeight="medium">
-        Gruixos
-      </Text>
+      {label && (
+        <Text fontSize="sm" fontWeight="medium">
+          Gruixos
+        </Text>
+      )}
       <HStack gap={1.5} wrap="wrap">
         {value.map((t) => (
           <Badge key={t} size="lg" variant="subtle" colorPalette="wood" pr={0.5}>
