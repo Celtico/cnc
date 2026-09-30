@@ -249,10 +249,11 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   (l'Editor: desar, desfer, refer). **Les pàgines no porten títol propi**: l'apartat ja es
   veu marcat al menú. Al mòbil, la mateixa barra amb fletxa enrere.
 - **Pàgina Mobles = inici, com Figma o Google Docs** (`projects/NewMobleGallery.tsx`, sense
-  botó «Nou moble» ni diàleg): filtre per tipus, targeta «En blanc» i acordions **tots tancats**
+  botó «Nou moble» ni diàleg): text descriptiu, **cercador** (sense filtre de tipus: el tipus també
+  es busca), targeta «En blanc» i acordions **tots tancats**
   en obrir l'app (l'estat es recorda durant la sessió, `mobles:gallery`): **Historial** (els
   mobles que ja tens, `ProjectCard`), **Les teves plantilles**, **Plantilles de l'app** i
-  **Plantilles per a botigues de mobles**; el filtre de tipus i el **cercador** (sense accents; obre
+  **Plantilles per a botigues de mobles**; el **cercador** (sense accents; obre
   les seccions i categories amb resultats) valen per a tots. Totes les graelles fan servir
   `GALLERY_COLS` (`projects/galleryGrid.ts`) i la mateixa targeta petita (les del historial, amb
   les accions a sota; les de botiga, en una sola graella per categoria amb el tipus a la targeta). Les teves es

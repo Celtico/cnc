@@ -1,10 +1,10 @@
-import { Accordion, Badge, Box, Button, Card, CloseButton, Dialog, Editable, HStack, IconButton, Input, InputGroup, Menu, Portal, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Accordion, Badge, Box, Button, Card, CloseButton, Dialog, Editable, HStack, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { LuBookmark, LuCopy, LuEllipsis, LuHistory, LuLayoutTemplate, LuPlus, LuSearch, LuShare2, LuStore, LuTrash2 } from "react-icons/lu"
 import { CompositionThumb } from "../../components/CompositionThumb"
 import { toaster } from "../../components/ui/toaster"
 import { applySettingsToModule, BUILTIN_TEMPLATES, compositionHeight, compositionKind, compositionWidth, defaultModule, newId, STORE_CATALOG, tableModule, type Composition, type CompositionKind, type Template } from "../../core/model"
-import { KINDS, MOBLE_KINDS } from "../composition/kinds"
+import { KINDS } from "../composition/kinds"
 import { deleteUserTemplate, duplicateUserTemplate, loadUserTemplates, renameUserTemplate, type UserTemplate } from "../../db/compositionStore"
 import { GALLERY_COLS, fold, useSessionList } from "./galleryGrid"
 import { saveTemplateAsFile } from "../file/mobleIo"
@@ -103,19 +103,20 @@ export function NewMobleGallery({
     return () => window.removeEventListener("focus", reload)
   }, [])
   // Filtre per tipus de moble (Tot, Moble, Cuina, Armari, Taula, Flat-pack).
-  const [kind, setKind] = useState<CompositionKind | "all">("all")
+  // Sense filtre de tipus: el cercador també troba pel tipus («cuina», «armari», «taula»…).
+  const kind = "all" as CompositionKind | "all"
   const fits = (t: Template) => kind === "all" || t.kind === kind
   // Ordenades pel tipus, i dins de cada tipus com a la llista.
   // Cercador de tota la pàgina: historial, les teves, les de l'app i les de botiga (sense accents).
   const [query, setQuery] = useState("")
   const q = fold(query.trim())
   const matches = (text: string) => !q || fold(text).includes(q)
-  const shownBuiltin = BUILTIN_TEMPLATES.filter((t) => fits(t) && matches(`${t.name} ${t.description}`)).sort((a, b) => kindOrder(a.kind) - kindOrder(b.kind))
+  const shownBuiltin = BUILTIN_TEMPLATES.filter((t) => fits(t) && matches(`${t.name} ${t.description} ${kindLabel(t.kind)}`)).sort((a, b) => kindOrder(a.kind) - kindOrder(b.kind))
   const shownMine = mine.filter((t) => (kind === "all" || compositionKind(t.composition) === kind) && matches(t.name))
   const store = STORE_CATALOG.map((c) => ({
     ...c,
     types: c.types
-      .map((ty) => ({ ...ty, items: ty.items.filter((t) => fits(t) && (!q || fold(`${c.name} ${t.name} ${t.description}`).includes(q))) }))
+      .map((ty) => ({ ...ty, items: ty.items.filter((t) => fits(t) && (!q || fold(`${c.name} ${t.name} ${t.description} ${kindLabel(t.kind)}`).includes(q))) }))
       .filter((ty) => ty.items.length > 0),
   })).filter((c) => c.types.length > 0)
   const storeCount = store.reduce((n, c) => n + c.types.reduce((m, ty) => m + ty.items.length, 0), 0)
@@ -135,33 +136,10 @@ export function NewMobleGallery({
 
   return (
     <Stack gap={4}>
-      <HStack gap={3} wrap="wrap" align="center">
-        <SegmentGroup.Root size="sm" value={kind} onValueChange={(e) => e.value && setKind(e.value as CompositionKind | "all")} alignSelf={{ base: "stretch", sm: "flex-start" }}>
-          <SegmentGroup.Indicator />
-          <SegmentGroup.Item value="all" flex={{ base: 1, sm: "initial" }} justifyContent="center">
-            <SegmentGroup.ItemText>Tot</SegmentGroup.ItemText>
-            <SegmentGroup.ItemHiddenInput />
-          </SegmentGroup.Item>
-          {MOBLE_KINDS.map((k) => (
-            <SegmentGroup.Item key={k.value} value={k.value} title={k.hint} aria-label={k.label} flex={{ base: 1, sm: "initial" }} justifyContent="center">
-              <SegmentGroup.ItemText>
-                {/* Al mòbil només la icona (el nom, al títol i a la insígnia de cada plantilla). */}
-                <HStack gap={1.5}>
-                  <k.icon />
-                  <Box as="span" display={{ base: "none", sm: "inline" }}>
-                    {k.label}
-                  </Box>
-                </HStack>
-              </SegmentGroup.ItemText>
-              <SegmentGroup.ItemHiddenInput />
-            </SegmentGroup.Item>
-          ))}
-        </SegmentGroup.Root>
 
-        <InputGroup flex="1" minW="240px" maxW={{ base: "full", md: "420px" }} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => setQuery("")} /> : undefined}>
-          <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar mobles i plantilles: nom, estil, material, color…" aria-label="Cercar mobles i plantilles" />
-        </InputGroup>
-      </HStack>
+      <InputGroup maxW={{ base: "full", md: "420px" }} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => setQuery("")} /> : undefined}>
+        <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar: nom, tipus, estil, material, color…" aria-label="Cercar mobles i plantilles" />
+      </InputGroup>
       {q && !found.length && (
         <Text fontSize="sm" color="fg.muted">
           Cap moble ni plantilla no coincideix amb «{query.trim()}».

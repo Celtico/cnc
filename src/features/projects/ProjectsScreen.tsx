@@ -110,6 +110,9 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
           <LuFolderOpen /> Obrir fitxer
         </Button>
       </HStack>
+      <Text fontSize="sm" color="fg.muted" maxW="640px" mt={-3}>
+        Els mobles que dissenyes i fabriques: comença en blanc o des d'una plantilla (de l'app o de botiga) i continua'l a l'editor. A l'historial hi tens els que ja has fet; el cercador busca a tot arreu (nom, tipus, estil, material, color).
+      </Text>
 
       <NewMobleGallery
         onCreate={(c, n) => void handleCreate(c, n)}
