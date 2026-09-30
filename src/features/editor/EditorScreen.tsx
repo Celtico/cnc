@@ -850,7 +850,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
 
       {photoTab && !photoInspector && (
         <Button size="xs" variant="outline" alignSelf="flex-start" mb={2} onClick={() => select({ kind: "moble" })}>
-          <LuCamera /> Tornar a la foto del lloc
+          <LuCamera /> {project.photo ? "Tornar a la foto del lloc" : "Opcions de la foto"}
         </Button>
       )}
       {photoInspector ? (

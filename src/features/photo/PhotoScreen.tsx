@@ -182,11 +182,12 @@ export function PhotoScreen({
 
   return (
     <VStack align="stretch" gap={embedded ? 3 : 5}>
+      {/* Fora dels controls: així «Carregar foto» funciona també des del centre quan els controls no es veuen. */}
+      <input ref={fileInput} type="file" accept="image/*" hidden onChange={(e) => void onFile(e.target.files?.[0])} />
       <Controls embedded={embedded} target={controlsTarget}>
         <HStack justify={embedded ? "flex-start" : "space-between"} wrap="wrap" gap={3} mb={embedded ? 3 : 0}>
           {!embedded && <Heading size="xl">Foto del racó</Heading>}
           <HStack>
-            <input ref={fileInput} type="file" accept="image/*" hidden onChange={(e) => void onFile(e.target.files?.[0])} />
             <Button size={embedded ? "sm" : "md"} variant={project.photo ? "outline" : "solid"} colorPalette="wood" loading={uploading} onClick={() => fileInput.current?.click()}>
               <LuImagePlus /> {project.photo ? "Canviar foto" : "Carregar foto"}
             </Button>
@@ -212,6 +213,9 @@ export function PhotoScreen({
                 una rajola, una porta). Serveix per veure proporcions, no per fabricar.
               </EmptyState.Description>
             </VStack>
+            <Button colorPalette="wood" loading={uploading} onClick={() => fileInput.current?.click()}>
+              <LuImagePlus /> Carregar foto
+            </Button>
           </EmptyState.Content>
         </EmptyState.Root>
       ) : photo ? (

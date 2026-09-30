@@ -142,12 +142,17 @@ export function ElevationEditor({
                     strokeWidth={selected ? stroke * 3 : stroke}
                   />
                   <FrontGlyph zone={zone} rect={rect} stroke={stroke} font={font} />
-                  {/* Cotes de la llum */}
+                  {/* Cotes de la llum (amb un halo del color del fons: es llegeixen encara que passin per sobre d'un tirador) */}
                   <g transform={`translate(${rect.x0 + w / 2} ${rect.y0 + h / 2}) scale(1 -1)`}>
-                    <text textAnchor="middle" fontSize={font} fill="currentColor" fontFamily="system-ui, sans-serif" y={-font * 0.2}>
+                    {/* Fons darrere del text: tapa el tirador del calaix del mig si hi passa per sota. */}
+                    {(() => {
+                      const bw = Math.min(w - stroke * 4, Math.max(`${Math.round(w)} × ${Math.round(h)}`.length, describeZone(zone).length * 0.8) * font * 0.58 + font)
+                      return bw > 0 ? <rect x={-bw / 2} y={-font * 1.25} width={bw} height={font * 2.55} rx={font * 0.3} fill={selected ? "var(--chakra-colors-wood-emphasized)" : "var(--chakra-colors-bg-muted)"} /> : null
+                    })()}
+                    <text textAnchor="middle" fontSize={font} fill="currentColor" fontFamily="system-ui, sans-serif" y={-font * 0.2} stroke={selected ? "var(--chakra-colors-wood-emphasized)" : "var(--chakra-colors-bg-muted)"} strokeWidth={font * 0.3} paintOrder="stroke" strokeLinejoin="round">
                       {Math.round(w)} × {Math.round(h)}
                     </text>
-                    <text textAnchor="middle" fontSize={font * 0.8} fill="currentColor" opacity={0.7} fontFamily="system-ui, sans-serif" y={font * 0.9}>
+                    <text textAnchor="middle" fontSize={font * 0.8} fill="currentColor" opacity={0.7} fontFamily="system-ui, sans-serif" y={font * 0.9} stroke={selected ? "var(--chakra-colors-wood-emphasized)" : "var(--chakra-colors-bg-muted)"} strokeWidth={font * 0.3} paintOrder="stroke" strokeLinejoin="round">
                       {describeZone(zone)}
                     </text>
                   </g>
