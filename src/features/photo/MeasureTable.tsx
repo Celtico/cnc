@@ -35,6 +35,8 @@ export function MeasureTable({
   const byId = new Map(values.map((v) => [v.id, v]))
   return (
     <Stack gap={2}>
+      {/* Dins del panell de propietats (340 px) la taula no hi cap sencera: es desplaça ella, no el panell. */}
+      <Table.ScrollArea>
       <Table.Root size="sm" variant="line" interactive={false}>
         <Table.Header>
           <Table.Row>
@@ -156,6 +158,7 @@ export function MeasureTable({
           })}
         </Table.Body>
       </Table.Root>
+      </Table.ScrollArea>
       <HStack gap={3} fontSize="xs" color="fg.muted" wrap="wrap">
         <HStack gap={1}>
           <LuEye /> estimada

@@ -127,12 +127,13 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
                   const del = (ids as number[]).filter((id) => !membership.has(id))
                   for (const id of del) await deleteProject(id)
                   const kept = ids.length - del.length
-                  toaster.create({ title: `${del.length} esborrats`, description: kept ? `Es conserven els ${kept} que són en algun ambient.` : undefined, type: "info" })
+                  toaster.create({ title: del.length === 1 ? "1 esborrat" : `${del.length} esborrats`, description: kept ? `Es conserven els ${kept} que són en algun ambient.` : undefined, type: "info" })
                 },
               }}
               searching={searching}
-              onRenameFolder={(from, to) => void setProjectsFolder(shown.filter((p) => p.folder === from).map((p) => p.id), to)}
-              onUngroup={(name) => void setProjectsFolder(shown.filter((p) => p.folder === name).map((p) => p.id), undefined)}
+              // Tot el grup, no només el que es veu amb la cerca (també els objectes del mateix client).
+              onRenameFolder={(from, to) => void setProjectsFolder((projects ?? []).filter((p) => p.folder === from).map((p) => p.id), to)}
+              onUngroup={(name) => void setProjectsFolder((projects ?? []).filter((p) => !isObject(p) && p.folder === name).map((p) => p.id), undefined)}
               render={(p) => (
                 <ProjectCard
                   project={p}
@@ -213,7 +214,11 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
                 <Dialog.Title>Esborrar «{toDelete?.name}»?</Dialog.Title>
               </Dialog.Header>
               <Dialog.Body>
-                <Text>Aquesta acció no es pot desfer.</Text>
+                <Text>
+                  {toDelete && membership.get(toDelete.id)?.length
+                    ? `És a ${membership.get(toDelete.id)!.map((a) => `«${a.name}»`).join(", ")}: hi sortirà com a «Element esborrat». No es pot desfer.`
+                    : "Aquesta acció no es pot desfer."}
+                </Text>
               </Dialog.Body>
               <Dialog.Footer>
                 <Button variant="outline" onClick={() => setToDelete(null)}>

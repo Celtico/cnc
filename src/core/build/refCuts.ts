@@ -156,7 +156,9 @@ export function migrateCableHoles(comp: Composition, boxOf: (p: Panel) => Box): 
         y: Math.round(lo[1] * 10) / 10,
         z: Math.round(lo[2] * 10) / 10,
         effect: "cut",
-        ...(rect ? {} : { shape: "cylinder" as const, axis: (["x", "y", "z"] as const)[n] }),
+        // La direcció sempre (també els rectangulars: sense, anaven en z i no tallaven la tapa ni els laterals).
+        axis: (["x", "y", "z"] as const)[n],
+        ...(rect ? {} : { shape: "cylinder" as const }),
       })
     })
     return { ...m, extras: { ...m.extras, cableHoles: [] } }

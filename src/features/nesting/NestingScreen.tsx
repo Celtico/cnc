@@ -11,7 +11,7 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { StatBox } from "../../components/StatBox"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { BoardDrawing } from "../../components/BoardDrawing"
 import { STANDARD_SHEETS, type NestOptions } from "../../core/nesting/nest"
 import { updateProjectNesting } from "../../db/db"
@@ -19,6 +19,7 @@ import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { NumRow } from "../editor/ParamsForm"
 import { useSettings } from "../settings/SettingsContext"
 import { useCompositionPanels, useNesting, useProject } from "../useProject"
+import { useDebouncedSave } from "../useDebouncedSave"
 
 export function NestingScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
@@ -32,11 +33,7 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
   const [options, setOptions] = useState<NestOptions>(initial)
   const nesting = useNesting(panels, options)
 
-  useEffect(() => {
-    if (options === initial) return
-    const t = setTimeout(() => void updateProjectNesting(projectId, options), 300)
-    return () => clearTimeout(t)
-  }, [options, projectId, initial])
+  useDebouncedSave(options, (o) => void updateProjectNesting(projectId, o), 300)
 
   const byId = useMemo(() => new Map(panels.map((p) => [p.id, p])), [panels])
   const { settings } = useSettings()

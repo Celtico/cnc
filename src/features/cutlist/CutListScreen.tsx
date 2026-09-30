@@ -48,7 +48,9 @@ export function CutListScreen({ projectId }: { projectId: number }) {
   }, [extras])
   // Peça seleccionada a la taula: se'n mostra el plànol al costat (com als programes de CAM).
   const [selected, setSelected] = useState(0)
-  const sel = list.items[Math.min(selected, list.items.length - 1)]
+  // Si la llista s'escurça (s'ha editat el moble), queda triada l'última (la mateixa a la taula i al plànol).
+  const selIdx = Math.max(0, Math.min(selected, list.items.length - 1))
+  const sel = list.items[selIdx]
   const selPanel = sel ? panels.find((p) => p.id === sel.panelIds[0]) : undefined
 
   if (!project) return null
@@ -66,7 +68,7 @@ export function CutListScreen({ projectId }: { projectId: number }) {
       {/* Mòbil: una targeta per peça (la taula no hi cap); la triada mostra el plànol a dins. */}
       <Stack gap={2} display={{ base: "flex", md: "none" }}>
         {list.items.map((it, i) => {
-          const on = i === selected
+          const on = i === selIdx
           const panel = on ? selPanel : undefined
           return (
             <Box
@@ -141,9 +143,9 @@ export function CutListScreen({ projectId }: { projectId: number }) {
                 key={i}
                 cursor="pointer"
                 onClick={() => setSelected(i)}
-                aria-selected={i === selected}
-                bg={i === selected ? "wood.subtle" : undefined}
-                _hover={{ bg: i === selected ? "wood.subtle" : "bg.muted" }}
+                aria-selected={i === selIdx}
+                bg={i === selIdx ? "wood.subtle" : undefined}
+                _hover={{ bg: i === selIdx ? "wood.subtle" : "bg.muted" }}
               >
                 <Table.Cell fontWeight="medium">{it.label}</Table.Cell>
                 <Table.Cell textAlign="end">{it.qty}</Table.Cell>

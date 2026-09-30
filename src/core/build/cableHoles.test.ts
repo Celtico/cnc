@@ -60,3 +60,11 @@ describe("passacables", () => {
     expect(b[0]).toBeCloseTo(640, 0)
   })
 })
+
+describe("passacables antics rectangulars", () => {
+  it("a la tapa: també fan el forat (la direcció és la de la peça, no sempre z)", () => {
+    const m = mod([{ panel: "top", x: 400, y: 200, diameter: 60, shape: "rect", w: 120, h: 80 }])
+    const top = buildComposition({ modules: [{ ...m, gapBefore: 0 }], references: [] }).panels.find((p) => p.role === "top")!
+    expect(top.cutouts ?? []).toHaveLength(1)
+  })
+})

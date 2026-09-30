@@ -269,7 +269,11 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
     case "drawers":
       return (
         <Stack gap={3}>
-          <NumRow label="Calaixos" help="Alçades de front: auto (iguals). Caixa amb guia genèrica de la llargada més gran que hi cap." suffix="u" value={front.n} min={1} max={10} step={1} onChange={(n) => onChange({ ...front, n: Math.max(1, Math.min(10, Math.round(n))), heights: Array.from({ length: n }, (_, i) => front.heights[i] ?? "auto") })} />
+          <NumRow label="Calaixos" help="Alçades de front: auto (iguals). Caixa amb guia genèrica de la llargada més gran que hi cap." suffix="u" value={front.n} min={1} max={10} step={1} onChange={(n) => {
+            if (!Number.isFinite(n)) return
+            const k = Math.max(1, Math.min(10, Math.round(n)))
+            onChange({ ...front, n: k, heights: Array.from({ length: k }, (_, i) => front.heights[i] ?? "auto") })
+          }} />
         </Stack>
       )
     case "flap":

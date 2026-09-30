@@ -108,3 +108,11 @@ describe("plantilles", () => {
     expect(new Set(z.split?.children.map((c) => c.id)).size).toBe(2)
   })
 })
+
+describe("zoneOps: barra de penjar", () => {
+  it("dividir i desfer la divisió conserven la barra", () => {
+    const z = splitZone({ id: "a", rail: true, shelves: { n: 1, adjustable: true } }, "a", "h")
+    expect(z.split!.children[0]!.rail).toBe(true)
+    expect(unsplitZone(z, "a").rail).toBe(true)
+  })
+})

@@ -57,6 +57,7 @@ import { downloadText } from "../download"
 import { NumberField, NumRow } from "../editor/ParamsForm"
 import { useSettings } from "./SettingsContext"
 import { fileAccept } from "../file/fileAccept"
+import { useDebouncedSave } from "../useDebouncedSave"
 
 type SectionKey = keyof Omit<Settings, "version">
 
@@ -82,16 +83,15 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
   const validation = useMemo(() => SettingsSchema.safeParse(draft), [draft])
   const problems = validation.success ? [] : validation.error.issues.map(issueText)
 
-  // Desa amb retard, només si és vàlid.
-  const last = useRef(initial)
-  useEffect(() => {
-    if (draft === last.current || !validation.success) return
-    const t = setTimeout(() => {
-      last.current = validation.data
-      void save(validation.data)
-    }, 400)
-    return () => clearTimeout(t)
-  }, [draft, validation, save])
+  // Desa amb retard, només si és vàlid (també el que queda pendent en sortir de Preferències).
+  useDebouncedSave(
+    draft,
+    (d) => {
+      const r = SettingsSchema.safeParse(d)
+      if (r.success) void save(r.data)
+    },
+    400,
+  )
 
   const set = <K extends SectionKey>(key: K, value: Settings[K]) => setDraft((d) => ({ ...d, [key]: value }))
 
@@ -984,7 +984,8 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
 // --- Ferratges -----------------------------------------------------------------------------
 
 function HardwareForm({ hardware: h, onChange }: { hardware: Settings["hardware"]; onChange: (h: Settings["hardware"]) => void }) {
-  const [slides, setSlides] = useState(h.drawer.slideLengths.join(" · "))
+  // Mentre s'escriu, el text tal com és; si no, el de les preferències (així «Restaurar» i «Importar» es veuen).
+  const [slides, setSlides] = useState<string | null>(null)
   const sub = <K extends keyof Settings["hardware"]>(key: K, patch: Partial<Settings["hardware"][K]>) => onChange({ ...h, [key]: { ...h[key], ...patch } })
   return (
     <FoldGrid>
@@ -1010,13 +1011,13 @@ function HardwareForm({ hardware: h, onChange }: { hardware: Settings["hardware"
           <Input
             size="sm"
             aria-invalid={h.drawer.slideLengths.length === 0 || undefined}
-            value={slides}
+            value={slides ?? h.drawer.slideLengths.join(" · ")}
             onChange={(e) => {
               setSlides(e.target.value)
               const list = parseList(e.target.value)
               if (list.length) sub("drawer", { slideLengths: list })
             }}
-            onBlur={() => setSlides(h.drawer.slideLengths.join(" · "))}
+            onBlur={() => setSlides(null)}
             placeholder="250 · 300 · 350 · 400 · 450 · 500 · 550"
           />
         </FormRow>

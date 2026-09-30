@@ -808,6 +808,12 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   opcions no hi caben (popovers, inspector), fes servir un `NativeSelect`. A l'inspector,
   cada `SegmentGroup` va sol a la seva fila i a tota l'amplada (mai dos de costat).
 
+## Desar
+- **Tot el que es desa sol fa servir `useDebouncedSave`** (`features/useDebouncedSave.ts`): Editor, Foto, Nesting,
+  Ambients i Preferències. Desa amb retard, compara amb **l'últim valor desat** (no amb el que torna Dexie: cada
+  desada en tornava un objecte nou i es desava sense parar) i desa el pendent en sortir de la pàgina, en amagar l'app
+  i amb `mobles:flush-save`. Obrir una cosa no la desa (no puja amunt de la llista ni surt «Modificat»).
+
 ## Com treballar
 - Abans de codi nou al `core/`, escriu o actualitza els tests (Vitest).
 - Canvis petits i verificables. Després de cada fase: `pnpm typecheck`, `pnpm test`,

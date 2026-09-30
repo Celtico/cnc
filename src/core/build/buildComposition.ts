@@ -1,6 +1,7 @@
 import { compositionKind, modulePlacements, partsOnlyKind, partCutters, type Composition, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { buildModule, type BuildWarning, type ModuleBuild } from "./buildModule"
+import { normalizePanel } from "./buildCabinet"
 import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
 import { buildFreeParts, type PartJoint } from "./freeParts"
 import { resolveHoleClashes } from "./holeClash"
@@ -93,7 +94,8 @@ export function buildComposition(input: Composition): CompositionBuild {
   for (const run of runs) {
     const n = comp.modules.length + 1
     const p = run.kind === "worktop" ? buildWorktop(comp, run, places, n, runWarnings) : buildPlinthRun(comp, run, places, n, runWarnings)
-    if (p) panels.push(p)
+    // Com totes les peces: llarg ≥ ample (un taulell sobre un sol mòdul estret sortia girat).
+    if (p) panels.push(normalizePanel(p))
   }
   for (const w of runWarnings) warnings.push({ code: "layout", message: w.message })
 

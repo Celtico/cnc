@@ -28,6 +28,14 @@ export function runModules(comp: Composition, from: string, to: string): { modul
 const r1 = (v: number) => Math.round(v * 10) / 10
 
 /**
+ * Cara dels fronts d'un mòdul (des de la paret): recobrents, per davant de la caixa (gruix = el del cos);
+ * encastats, a nivell amb el davant de la caixa.
+ */
+function frontFace(m: Composition["modules"][number]): number {
+  return m.carcass.depth + (m.fronts.style === "inset" ? 0 : m.carcass.thickness)
+}
+
+/**
  * Taulell: una peça de punta a punta sobre els baixos. Local: x al llarg, y del cantell de
  * davant cap a la paret, z (gruix) cap amunt. Els forats d'encastar són talls passants.
  */
@@ -37,8 +45,8 @@ export function buildWorktop(comp: Composition, run: WorktopRun, places: ModuleP
   const x0 = Math.min(...r.indices.map((i) => places[i]!.x)) - run.overhangLeft
   const x1 = Math.max(...r.indices.map((i) => places[i]!.x + comp.modules[i]!.carcass.width)) + run.overhangRight
   const top = Math.max(...r.indices.map((i) => places[i]!.y + comp.modules[i]!.carcass.height))
-  // Fins a la cara dels fronts (portes de gruix = el del cos) més el voladís.
-  const front = Math.max(...r.modules.map((m) => m.carcass.depth + m.carcass.thickness)) + run.overhangFront
+  // Fins a la cara dels fronts més el voladís.
+  const front = Math.max(...r.modules.map(frontFace)) + run.overhangFront
   const L = r1(x1 - x0)
   const W = r1(front)
   const cutouts: NonNullable<Panel["cutouts"]> = []
@@ -85,7 +93,7 @@ export function buildPlinthRun(comp: Composition, run: PlinthRun, places: Module
     warnings.push({ runId: run.id, message: "El sòcol corregut necessita mòduls amb potes (ara toquen a terra)." })
     return null
   }
-  const face = Math.max(...r.modules.map((m) => m.carcass.depth + m.carcass.thickness)) - run.setback
+  const face = Math.max(...r.modules.map(frontFace)) - run.setback
   return {
     id: `run:${run.id}`,
     name: "socol",

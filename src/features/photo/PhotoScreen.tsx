@@ -78,6 +78,7 @@ import { useCabinet, useProject } from "../useProject"
 import { ESTIMATED_WARNING, estimatedApplied } from "./appliedState"
 import { MeasureTable } from "./MeasureTable"
 import { applyTargets, type ApplyTarget } from "./applyTargets"
+import { useDebouncedSave } from "../useDebouncedSave"
 
 const POINT_NAMES = ["baix-esquerra", "baix-dreta", "dalt-dreta", "dalt-esquerra"]
 
@@ -342,11 +343,7 @@ function PhotoCalibrator({
     prevUrl.current = url
   }, [url])
 
-  useEffect(() => {
-    if (cal === initial) return
-    const t = setTimeout(() => void updateProjectPhoto(projectId, cal), 300)
-    return () => clearTimeout(t)
-  }, [cal, projectId, initial])
+  useDebouncedSave(cal, (c) => void updateProjectPhoto(projectId, c), 300)
 
   const { width: W, height: H } = photo
   const calibrated = cal.points.length === 4

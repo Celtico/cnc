@@ -60,6 +60,7 @@ export function useItemGeometries(items: AmbientItem[], projects: Project[] | un
   const cache = useMemo(() => new Map<string, { key: string; geo: ItemGeometry }>(), [])
   return useMemo(() => {
     const out = new Map<string, ItemGeometry | null>()
+    const used = new Set<string>()
     for (const it of items) {
       let key: string
       let make: () => Composition
@@ -75,6 +76,7 @@ export function useItemGeometries(items: AmbientItem[], projects: Project[] | un
         key = blockKey(it)
         make = () => blockComposition(it)
       }
+      used.add(key)
       const hit = cache.get(key)
       if (hit) out.set(it.id, hit.geo)
       else {
@@ -83,6 +85,8 @@ export function useItemGeometries(items: AmbientItem[], projects: Project[] | un
         out.set(it.id, geo)
       }
     }
+    // Només es guarden les que es fan servir ara (cada canvi de mida o de moble en feia una de nova).
+    for (const k of cache.keys()) if (!used.has(k)) cache.delete(k)
     return out
   }, [items, projects, cache])
 }
@@ -90,5 +94,5 @@ export function useItemGeometries(items: AmbientItem[], projects: Project[] | un
 /** Nom que es mostra d'un element. */
 export function itemName(it: AmbientItem, projects: Project[] | undefined): string {
   if (it.kind === "block") return it.name
-  return projects?.find((p) => p.id === it.projectId)?.name ?? "Moble esborrat"
+  return projects?.find((p) => p.id === it.projectId)?.name ?? "Element esborrat"
 }

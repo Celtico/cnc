@@ -75,8 +75,8 @@ export function moveAllBy(comp: Composition, dx: number): Composition {
   return {
     ...comp,
     modules: comp.modules.map((m, k) => (firstIdx.has(k) ? { ...m, gapBefore: Math.max(0, Math.round(m.gapBefore + applied)) } : freeX(m) ? { ...m, x: Math.round(m.x! + applied) } : m)),
-    // Les peces lliures són del moble: es mouen amb ell.
-    ...(comp.parts ? { parts: comp.parts.map((p) => ({ ...p, x: p.x + applied })) } : {}),
+    // Les peces lliures són del moble: es mouen amb ell. Les enganxades a un mòdul ja el segueixen (x relativa).
+    ...(comp.parts ? { parts: comp.parts.map((p) => (p.module && comp.modules.some((m) => m.id === p.module) ? p : { ...p, x: p.x + applied })) } : {}),
     references: rest ? comp.references.map((r) => ({ ...r, x: r.x + rest })) : comp.references,
   }
 }

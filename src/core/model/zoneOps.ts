@@ -28,11 +28,12 @@ export function parentOf(root: Zone, id: string): Zone | undefined {
 export function splitZone(root: Zone, id: string, dir: "v" | "h", n = 2): Zone {
   return updateZone(root, id, (z) => {
     if (z.split) return z
-    const { shelves, front } = z
+    const { shelves, front, rail } = z
     const children: Zone[] = Array.from({ length: n }, (_, i) => ({
       id: newId(),
       ...(i === 0 && shelves ? { shelves } : {}),
       ...(i === 0 && front ? { front } : {}),
+      ...(i === 0 && rail ? { rail } : {}),
     }))
     return { id: z.id, split: { dir, sizes: children.map(() => "auto" as const), children } }
   })
@@ -43,7 +44,7 @@ export function unsplitZone(root: Zone, id: string): Zone {
   return updateZone(root, id, (z) => {
     if (!z.split) return z
     const first = z.split.children[0]!
-    return { id: z.id, ...(first.shelves ? { shelves: first.shelves } : {}), ...(first.front ? { front: first.front } : {}) }
+    return { id: z.id, ...(first.shelves ? { shelves: first.shelves } : {}), ...(first.front ? { front: first.front } : {}), ...(first.rail ? { rail: first.rail } : {}) }
   })
 }
 

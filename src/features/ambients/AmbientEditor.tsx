@@ -94,6 +94,7 @@ import { Ambient3D } from "./Ambient3D"
 import { itemName, useItemGeometries, type ItemGeometry } from "./ambientData"
 import { PlanCanvas } from "./PlanCanvas"
 import { AMBIENT_TAB_KEY, ambientBox, type Selection, type Tool } from "./planGeom"
+import { useDebouncedSave } from "../useDebouncedSave"
 
 const TOOLS: { id: Tool; label: string; key: string; icon: typeof LuPenTool }[] = [
   { id: "select", label: "Seleccionar i moure", key: "V", icon: LuMousePointer2 },
@@ -184,11 +185,8 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const [hist, setHist] = useState({ undo: 0, redo: 0 })
   const syncHist = () => setHist({ undo: past.current.length, redo: future.current.length })
 
-  // Desar (esperant una mica mentre s'arrossega).
-  useEffect(() => {
-    const t = setTimeout(() => void updateAmbient(ambientId, { data: amb }), 350)
-    return () => clearTimeout(t)
-  }, [amb, ambientId])
+  // Desar (esperant una mica mentre s'arrossega; el que queda pendent, en sortir). Obrir-lo no el desa.
+  useDebouncedSave(amb, (a) => void updateAmbient(ambientId, { data: a }))
 
   const change = useCallback((next: Ambient, commit: boolean) => {
     setAmbState(next)
@@ -242,9 +240,12 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const patchItem = (id: string, patch: Partial<AmbientItem>, commit = true) => change({ ...amb, items: amb.items.map((it) => (it.id === id ? ({ ...it, ...patch } as AmbientItem) : it)) }, commit)
   const patchWall = (id: string, patch: Partial<Wall>) => change({ ...amb, walls: amb.walls.map((w) => (w.id === id ? { ...w, ...patch } : w)) }, true)
   // Elements seleccionats: un, o tots els del grup (les accions valen per a tots dos casos).
-  const selIds = sel?.kind === "item" ? [sel.id] : sel?.kind === "group" ? groupIds(amb, sel.id) : []
+  // Després de desfer, la selecció pot apuntar a un element que ja no hi és: llavors no es fa res (si no,
+  // una fletxa o Supr afegien un pas buit de desfer i es perdia el refer).
+  const selIds = sel?.kind === "item" ? (amb.items.some((i) => i.id === sel.id) ? [sel.id] : []) : sel?.kind === "group" ? groupIds(amb, sel.id) : []
   const remove = () => {
     if (!sel) return
+    if (sel.kind === "wall" ? !amb.walls.some((w) => w.id === sel.id) : !selIds.length) return setSel(null)
     if (sel.kind === "wall") change({ ...amb, walls: amb.walls.filter((w) => w.id !== sel.id) }, true)
     else change(removeItems(amb, selIds), true)
     setSel(null)
@@ -316,7 +317,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                 <LuUngroup /> Treure del grup
               </Menu.Item>
             )}
-            {it.kind === "moble" && (
+            {it.kind === "moble" && projects?.some((p) => p.id === it.projectId) && (
               <Menu.Item value="open" onClick={() => onOpenProject(it.projectId)}>
                 <LuExternalLink /> Obrir a l'editor
               </Menu.Item>
@@ -725,7 +726,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                           </SimpleGrid>
                         ) : (
                           <Text fontSize="sm" color="fg.muted">
-                            Encara no tens cap objecte: tria'n un de les plantilles o comença en blanc.
+                            {projects?.some(isObject) ? "Cap objecte no coincideix amb la cerca." : "Encara no tens cap objecte: tria'n un de les plantilles o comença en blanc."}
                           </Text>
                         ),
                       }
@@ -1089,7 +1090,7 @@ function AmbientInspector({
         )}
       </Stack>
       <Text fontSize="xs" color="fg.muted">
-        <LuPlus style={{ display: "inline" }} /> Afegeix mobles i blocs des de l'esquerra. Selecciona'ls per moure'ls, girar-los (R) o canviar-ne les mides.
+        <LuPlus style={{ display: "inline" }} /> Afegeix mobles i objectes des de l'esquerra. Selecciona'ls per moure'ls, girar-los (R) o canviar-ne les mides.
       </Text>
     </Stack>
   )

@@ -222,17 +222,24 @@ function Room({
   selectedIds: string[]
   onSelect?: (id: string | null) => void
 }) {
-  // Terra: la caixa de tot amb un marge.
+  // Terra: la caixa de tot amb un marge, arrodonida al metre (arrossegar un element no el refà a cada pas).
+  const fx0 = Math.floor((box.x0 - 600) / 1000) * 1000, fx1 = Math.ceil((box.x1 + 600) / 1000) * 1000
+  const fy0 = Math.floor((box.y0 - 600) / 1000) * 1000, fy1 = Math.ceil((box.y1 + 600) / 1000) * 1000
   const floor = useMemo(() => {
-    const m = 600
-    const w = box.x1 - box.x0 + 2 * m, d = box.y1 - box.y0 + 2 * m
+    const w = fx1 - fx0, d = fy1 - fy0
     const mesh = new Mesh(new PlaneGeometry(w / 1000, d / 1000), surfaceMaterial(materials, ambient.floorMaterial ?? "Parquet de roure", w, d))
     mesh.rotation.x = -Math.PI / 2
-    mesh.position.set((box.x0 + box.x1) / 2000, 0, (box.y0 + box.y1) / 2000)
+    mesh.position.set((fx0 + fx1) / 2000, 0, (fy0 + fy1) / 2000)
     mesh.receiveShadow = true
     mesh.userData.room = "floor"
     return mesh
-  }, [box.x0, box.x1, box.y0, box.y1, materials, ambient.floorMaterial])
+  }, [fx0, fx1, fy0, fy1, materials, ambient.floorMaterial])
+  // Les parets només depenen de les parets (el centre de l'habitació per saber cap on és «fora»).
+  const wx = ambient.walls.flatMap((w) => [w.a[0], w.b[0]]), wy = ambient.walls.flatMap((w) => [w.a[1], w.b[1]])
+  // Amb una o dues parets soltes, el centre de tot (amb els elements) diu millor on és l'habitació.
+  const closed = ambient.walls.length >= 3
+  const rcx = closed ? (Math.min(...wx) + Math.max(...wx)) / 2 : (box.x0 + box.x1) / 2
+  const rcy = closed ? (Math.min(...wy) + Math.max(...wy)) / 2 : (box.y0 + box.y1) / 2
   useEffect(() => () => disposeTree(floor), [floor])
 
   const walls = useMemo(() => {
@@ -258,14 +265,14 @@ function Room({
       for (const o of wallOpenings(w)) addOpening(wg, o, w.thickness, materials)
       // Normal cap a fora de l'habitació (per fer-la transparent si tapa la vista).
       const nx = -(w.b[1] - w.a[1]) / L, nz = (w.b[0] - w.a[0]) / L
-      const mx = (w.a[0] + w.b[0]) / 2 - (box.x0 + box.x1) / 2, mz = (w.a[1] + w.b[1]) / 2 - (box.y0 + box.y1) / 2
+      const mx = (w.a[0] + w.b[0]) / 2 - rcx, mz = (w.a[1] + w.b[1]) / 2 - rcy
       const out = nx * mx + nz * mz >= 0 ? 1 : -1
       wg.userData.normal = new Vector3(nx * out, 0, nz * out)
       wg.userData.center = new Vector3((w.a[0] + w.b[0]) / 2000, w.height / 2000, (w.a[1] + w.b[1]) / 2000)
       g.add(wg)
     }
     return g
-  }, [ambient.walls, ambient.wallMaterial, materials, box.x0, box.x1, box.y0, box.y1])
+  }, [ambient.walls, ambient.wallMaterial, materials, rcx, rcy])
 
   // Sostre de les habitacions tancades: només quan la càmera és a dins (al visor i al render; des de
   // dalt no es veu). Al render tanca la llum: entra per les finestres, com a les fotos.

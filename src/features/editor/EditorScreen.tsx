@@ -73,6 +73,7 @@ import { RoleLegend } from "../../components/viewer/roleColors"
 import { IconChoice } from "../../components/IconChoice"
 import { KINDS, MOBLE_KINDS } from "../composition/kinds"
 import { ViewBar, ViewerControls, type ViewerState } from "./ViewerControls"
+import { useDebouncedSave } from "../useDebouncedSave"
 
 type ViewTab = "3d" | "elevation" | "photo"
 const TAB_KEY = "mobles:editor-view-tab"
@@ -273,39 +274,9 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const panelsRef = useRef(panels)
   panelsRef.current = panels
 
-  // Desa amb retard quan la composició canvia. Si se surt de l'Editor (o es tanca
-  // l'app) abans del retard, el canvi pendent es desa igualment: si no, Exportar
-  // llegiria la versió anterior.
-  const pendingSave = useRef<Composition | null>(null)
-  useEffect(() => {
-    if (comp === initial) return
-    pendingSave.current = comp
-    const t = setTimeout(() => {
-      pendingSave.current = null
-      void updateProjectComposition(projectId, comp)
-    }, 350)
-    return () => clearTimeout(t)
-  }, [comp, projectId, initial])
-  useEffect(() => {
-    const flush = () => {
-      const c = pendingSave.current
-      if (!c) return
-      pendingSave.current = null
-      void updateProjectComposition(projectId, c)
-    }
-    const onHide = () => {
-      if (document.visibilityState === "hidden") flush()
-    }
-    document.addEventListener("visibilitychange", onHide)
-    window.addEventListener("pagehide", flush)
-    window.addEventListener("mobles:flush-save", flush)
-    return () => {
-      document.removeEventListener("visibilitychange", onHide)
-      window.removeEventListener("pagehide", flush)
-      window.removeEventListener("mobles:flush-save", flush)
-      flush() // en sortir de l'Editor
-    }
-  }, [projectId])
+  // Desa amb retard quan la composició canvia; el que queda pendent es desa en sortir de l'Editor (si
+  // no, Exportar llegiria la versió anterior).
+  useDebouncedSave(comp, (c) => void updateProjectComposition(projectId, c))
 
   const kind = compositionKind(comp)
   const module: Module = comp.modules.find((m) => m.id === selectedModule) ?? comp.modules[0]!

@@ -264,7 +264,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
           })
         }
       }
-      w.onerror = (ev) => setError(ev.message || "Error al render")
+      w.onerror = (ev) => setError(ev.message || "Error en el render")
       w.postMessage({ type: "scene", scene: src.scene, width: j.w, height: j.h, seed: (Math.random() * 2 ** 31) | 0, opts: o, env: envRef.current?.env ?? null })
       workers.current.push(w)
     }

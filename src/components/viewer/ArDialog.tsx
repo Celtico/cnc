@@ -63,8 +63,8 @@ export function ArDialog({ open, onClose, panels, name }: { open: boolean; onClo
           exportGlb(panels, name, real),
           ios ? exportUsdz(panels, name, real) : Promise.resolve(null),
         ])
+        if (cancelled) return // tancat abans d'acabar: no es creen les URL (quedarien sense alliberar)
         made = { glb: URL.createObjectURL(glb), ...(usdz ? { usdz: URL.createObjectURL(usdz) } : {}) }
-        if (cancelled) return
         setUrls(made)
       } catch (e) {
         if (!cancelled) setError(String(e))

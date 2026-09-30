@@ -56,3 +56,12 @@ describe("taulell i sòcol segons el tipus", () => {
     expect(has({ ...k, kind: "cuina" })).toBe(true)
   })
 })
+
+describe("taulell amb fronts encastats", () => {
+  it("arriba a la cara dels fronts (el davant de la caixa) més el voladís, no un gruix més enllà", () => {
+    const c = kitchen()
+    const inset = { ...c, modules: c.modules.map((m) => ({ ...m, fronts: { ...m.fronts, style: "inset" as const } })) }
+    const t = buildComposition(inset).panels.find((p) => p.role === "worktop")!
+    expect(t.width).toBe(580) // 560 de caixa + 20 de voladís
+  })
+})

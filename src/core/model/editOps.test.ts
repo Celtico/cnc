@@ -93,3 +93,13 @@ describe("arrossegar peces lliures i grups", () => {
     expect(r.parts!.map((q) => [q.id, q.group])).toEqual([["b", "G"], ["c", undefined], ["a", undefined]])
   })
 })
+
+describe("moure tot el moble amb peces enganxades", () => {
+  it("una peça enganxada a un mòdul el segueix una sola vegada; una de solta es mou amb el moble", () => {
+    const part = (id: string, module?: string) => ({ id, name: id, orient: "front" as const, w: 100, h: 100, thickness: 19, material: "M", x: 10, y: 0, z: 0, ...(module ? { module } : {}) })
+    const c = moveAllBy({ ...comp(), parts: [part("p", "a"), part("q")] }, 100)
+    expect(c.modules[0]!.gapBefore).toBe(200)
+    expect(c.parts!.find((x) => x.id === "p")!.x).toBe(10)
+    expect(c.parts!.find((x) => x.id === "q")!.x).toBe(110)
+  })
+})

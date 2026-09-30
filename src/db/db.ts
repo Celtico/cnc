@@ -150,7 +150,8 @@ export async function createProject(name?: string, params?: CabinetParams, extra
 export async function duplicateProject(id: number): Promise<number | undefined> {
   const src = await db.projects.get(id)
   if (!src) return undefined
-  const { id: _id, name: _name, params: _params, createdAt: _c, updatedAt: _u, photo: _photo, ...rest } = src
+  // La còpia és nova: sense la marca «Modificat».
+  const { id: _id, name: _name, params: _params, createdAt: _c, updatedAt: _u, photo: _photo, edited: _e, ...rest } = src
   return createProject(`${src.name} (còpia)`, src.params, rest)
 }
 
@@ -241,7 +242,7 @@ export async function duplicateAmbient(id: number, client?: string): Promise<num
     if (!map.has(it.projectId)) {
       const p = await db.projects.get(it.projectId)
       if (!p) continue
-      const { id: _id, createdAt: _c, updatedAt: _u, photo: _photo, folder: _f, ...rest } = p
+      const { id: _id, createdAt: _c, updatedAt: _u, photo: _photo, folder: _f, edited: _e, ...rest } = p
       const projectNames = (await db.projects.toArray()).map((x) => x.name)
       const pBase = who ? `${p.name.replace(/ · .*$/, "").replace(/ \(\d+\)$/, "")} · ${who}` : `${p.name} (còpia)`
       let pName = pBase

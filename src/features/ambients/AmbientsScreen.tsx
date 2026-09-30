@@ -75,12 +75,12 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
         onMove: (ids, f) => void setAmbientsFolder(ids as number[], f),
         onDelete: async (ids) => {
           for (const id of ids as number[]) await deleteAmbient(id)
-          toaster.create({ title: `${ids.length} esborrats`, description: "Els mobles i objectes que hi havia es queden a Mobles i Objectes.", type: "info" })
+          toaster.create({ title: ids.length === 1 ? "1 esborrat" : `${ids.length} esborrats`, description: "Els mobles i objectes que hi havia es queden a Mobles i Objectes.", type: "info" })
         },
       }}
       searching={!!q}
-      onRenameFolder={(from, to) => void setAmbientsFolder(shownRows.filter((r) => r.folder === from).map((r) => r.id), to)}
-      onUngroup={(name) => void setAmbientsFolder(shownRows.filter((r) => r.folder === name).map((r) => r.id), undefined)}
+      onRenameFolder={(from, to) => void setAmbientsFolder((rows ?? []).filter((r) => r.folder === from).map((r) => r.id), to)}
+      onUngroup={(name) => void setAmbientsFolder((rows ?? []).filter((r) => r.folder === name).map((r) => r.id), undefined)}
       render={(r) => {
         const a = parseAmbient(r.data)
         return (

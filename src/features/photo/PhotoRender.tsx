@@ -1,7 +1,7 @@
 import { Environment, Lightformer, PerspectiveCamera } from "@react-three/drei"
 import { Canvas } from "@react-three/fiber"
-import { useEffect, useMemo, useRef } from "react"
-import { Matrix4, Object3D, type DirectionalLight } from "three"
+import { useEffect, useMemo } from "react"
+import { Matrix4, Object3D } from "three"
 import { PanelMesh } from "../../components/viewer/CabinetViewer"
 import { LIGHT_SPEC, type LightId } from "../../components/viewer/presentationScene"
 import { cabinetToPlane, type Camera, type SceneOptions } from "../../core/photo/camera"
@@ -67,10 +67,10 @@ export function PhotoRender({ panels, camera, scene, width, height, size, materi
   const h = size.height * S
   const d = size.depth * S
   const target = useMemo(() => new Object3D(), [])
-  const key = useRef<DirectionalLight>(null)
+  // La llum apunta al centre del moble (`target` com a prop: amb una ref, l'efecte corria abans que
+  // el Canvas creés la llum i apuntava a l'origen).
   useEffect(() => {
     target.position.set(w / 2, h / 2, d / 2)
-    if (key.current) key.current.target = target
   }, [target, w, h, d])
   useEffect(() => () => onCanvas?.(null), [onCanvas])
 
@@ -92,7 +92,7 @@ export function PhotoRender({ panels, camera, scene, width, height, size, materi
         <primitive object={target} />
         <hemisphereLight position={[0, 1, 0]} intensity={spec.ambient + 0.15} groundColor="#8a7a60" />
         <directionalLight
-          ref={key}
+          target={target}
           position={[w / 2 + 1.2, h + 1.8, d + 2]}
           color={spec.key}
           intensity={spec.keyIntensity}

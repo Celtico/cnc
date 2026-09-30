@@ -290,8 +290,11 @@ export function PlanCanvas({
       if (!g.moved) return
       const ox = snapGrid(dx), oy = snapGrid(dy)
       const na: PlanPt = [g.a[0] + ox, g.a[1] + oy], nb: PlanPt = [g.b[0] + ox, g.b[1] + oy]
-      // Les parets enganxades als extrems el segueixen (les cantonades no s'obren).
-      onChange({ ...ambient, walls: ambient.walls.map((w) => (w.id === g.id ? { ...w, a: na, b: nb } : moveJoined(moveJoined(w, g.a, na, ambient, g.id), g.b, nb, ambient, g.id))) }, false)
+      // Les parets enganxades als extrems el segueixen (les cantonades no s'obren). Es busquen on és ara la
+      // paret (el pas anterior de l'arrossegament), no on era en començar: si no, només seguien el primer pas.
+      const cur = ambient.walls.find((w) => w.id === g.id)
+      const ca = cur?.a ?? g.a, cb = cur?.b ?? g.b
+      onChange({ ...ambient, walls: ambient.walls.map((w) => (w.id === g.id ? { ...w, a: na, b: nb } : moveJoined(moveJoined(w, ca, na, ambient, g.id), cb, nb, ambient, g.id))) }, false)
     } else if (g.kind === "end") {
       g.moved = true
       const w = ambient.walls.find((x) => x.id === g.id)
