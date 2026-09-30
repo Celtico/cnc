@@ -34,7 +34,17 @@ export function MasterDetail({
   backLabel,
   detail,
   empty,
+  filters,
+  filter,
+  onFilter,
+  detailMaxW = "680px",
 }: {
+  /** Filtre per categoria (pastilles a dalt de la llista): «Tots» i una per grup. */
+  filters?: { id: string; label: string; count: number }[]
+  filter?: string
+  onFilter?: (id: string) => void
+  /** Amplada màxima del detall (els camps no s'estiren fins a la vora). */
+  detailMaxW?: string
   groups: MasterGroup[]
   selected: string | null
   onSelect: (id: string | null) => void
@@ -48,6 +58,8 @@ export function MasterDetail({
 }) {
   const list = (
     <Stack gap={3} minW={0}>
+      {/* Cercador i filtres sempre a dalt de la llista (la llista es desplaça per sota). */}
+      <Stack gap={2} position="sticky" top={0} zIndex={1} bg="bg" pb={1}>
       <HStack gap={2}>
         <InputGroup flex={1} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => onQuery("")} /> : undefined}>
           <Input size="sm" value={query} onChange={(e) => onQuery(e.target.value)} placeholder="Cercar…" aria-label="Cercar" />
@@ -56,6 +68,19 @@ export function MasterDetail({
           <LuPlus /> {addLabel}
         </Button>
       </HStack>
+      {filters && (
+        <HStack gap={1} wrap="wrap">
+          {filters.map((f) => (
+            <Button key={f.id} size="2xs" rounded="full" variant={filter === f.id ? "solid" : "outline"} colorPalette={filter === f.id ? "wood" : "gray"} onClick={() => onFilter?.(f.id)}>
+              {f.label}
+              <Text as="span" opacity={0.7}>
+                {f.count}
+              </Text>
+            </Button>
+          ))}
+        </HStack>
+      )}
+      </Stack>
       {groups.map((g) =>
         g.items.length ? (
           <Stack key={g.id} gap={1}>
@@ -125,10 +150,22 @@ export function MasterDetail({
   return (
     <Flex gap={5} align="flex-start">
       {/* Llista: sempre a l'ordinador gran; al mòbil i a pantalles estretes, només si no n'hi ha cap de triat. */}
-      <Box w={{ base: "full", lg: "320px" }} flexShrink={0} display={{ base: selected ? "none" : "block", lg: "block" }} position={{ lg: "sticky" }} top={{ lg: 0 }}>
+      {/* A l'ordinador, la llista té el seu propi desplaçament i el detall queda fix al costat: triar
+          un element de baix de tot no deixa el detall fora de la vista. */}
+      <Box
+        w={{ base: "full", lg: "320px" }}
+        flexShrink={0}
+        display={{ base: selected ? "none" : "block", lg: "block" }}
+        position={{ lg: "sticky" }}
+        top={{ lg: 0 }}
+        maxH={{ lg: "calc(100dvh - 150px)" }}
+        overflowY={{ lg: "auto" }}
+        pr={{ lg: 1 }}
+        css={{ scrollbarWidth: "thin" }}
+      >
         {list}
       </Box>
-      <Box flex={1} minW={0} display={{ base: selected ? "block" : "none", lg: "block" }}>
+      <Box flex={1} minW={0} maxW={detailMaxW} display={{ base: selected ? "block" : "none", lg: "block" }} position={{ lg: "sticky" }} top={{ lg: 0 }}>
         <Button display={{ base: "inline-flex", lg: "none" }} variant="ghost" size="sm" mb={2} ml={-2} onClick={() => onSelect(null)}>
           <LuChevronLeft /> {backLabel}
         </Button>

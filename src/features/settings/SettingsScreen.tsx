@@ -33,6 +33,7 @@ import type { IconType } from "react-icons"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { MasterDetail } from "../../components/MasterDetail"
 import { useSessionString } from "./useSessionString"
+import { MaterialPreview, ThicknessChips } from "./MaterialBits"
 import { toaster } from "../../components/ui/toaster"
 import {
   DEFAULT_SETTINGS,
@@ -151,15 +152,15 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
           </Pane>
 
           <Pane id="materials" wide title="Materials" icon={LuPalette} desc="Taulers, fons, metall, pedra i vidre, i els de simulació per als ambients." onReset={() => setReset({ key: "materials", label: "Materials" })}>
-            <MaterialsList materials={draft.materials} onChange={(materials) => set("materials", materials)} />
             <SettingsGroup icon={<LuSquareStack />} title="Per defecte als mòduls nous" summary={`${draft.defaults.material} ${draft.defaults.thickness} · fons ${draft.defaults.backMaterial} ${draft.defaults.backThickness}`}>
-            <SimpleGrid columns={2} gap={3} maxW="xl">
+            <SimpleGrid columns={{ base: 2, md: 4 }} gap={3}>
               <MaterialSelect label="Tauler" materials={draft.materials.filter((m) => !m.forBacks && m.category !== "sim")} value={draft.defaults.material} onChange={(material) => set("defaults", { ...draft.defaults, material })} />
               <NumberField label="Gruix tauler" value={draft.defaults.thickness} min={8} max={40} step={1} onChange={(thickness) => set("defaults", { ...draft.defaults, thickness })} />
               <MaterialSelect label="Fons" materials={draft.materials} value={draft.defaults.backMaterial} onChange={(backMaterial) => set("defaults", { ...draft.defaults, backMaterial })} />
               <NumberField label="Gruix fons" value={draft.defaults.backThickness} min={3} max={40} step={1} onChange={(backThickness) => set("defaults", { ...draft.defaults, backThickness })} />
             </SimpleGrid>
             </SettingsGroup>
+            <MaterialsList materials={draft.materials} onChange={(materials) => set("materials", materials)} />
           </Pane>
 
           <Pane id="boards" title="Taulers i nesting" icon={LuLayoutGrid} desc="Mides dels taulers i com es talla." onReset={() => setReset({ key: "boards", label: "Taulers i nesting" })}>
@@ -597,20 +598,36 @@ function parseList(text: string): number[] {
 
 function MaterialsList({ materials, onChange }: { materials: MaterialPref[]; onChange: (m: MaterialPref[]) => void }) {
   const [sel, setSel] = useSessionString("mobles:settings-material")
+  const [cat, setCat] = useSessionString("mobles:settings-material-cat")
   const [query, setQuery] = useState("")
+  const [justAdded, setJustAdded] = useState<string | null>(null)
   const update = (i: number, patch: Partial<MaterialPref>) => onChange(materials.map((m, k) => (k === i ? { ...m, ...patch } : m)))
+  const uniqueName = (base: string) => {
+    const names = new Set(materials.map((m) => m.name))
+    if (!names.has(base)) return base
+    let n = 2
+    while (names.has(`${base} ${n}`)) n++
+    return `${base} ${n}`
+  }
   const add = () => {
-    const m: MaterialPref = { id: newId("mat"), name: "Material nou", thicknesses: [19], hasGrain: false, finish: { kind: "color", color: "#e5e5e5" }, edge: "" }
+    // A la categoria que es mira (si n'hi ha una de triada); amb nom únic i el nom a punt d'escriure.
+    const base: MaterialPref = { id: newId("mat"), name: uniqueName("Material nou"), thicknesses: [19], hasGrain: false, finish: { kind: "color", color: "#e5e5e5" }, edge: "" }
+    const m = cat && cat !== "all" ? withCategory(base, cat as MaterialCategory) : base
     onChange([m, ...materials])
     setSel(m.id)
+    setJustAdded(m.id)
   }
   const q = query.trim().toLowerCase()
+  const filterId = cat ?? "all"
   const i = materials.findIndex((m) => m.id === sel)
   const m = i >= 0 ? materials[i]! : null
   return (
     <MasterDetail
       // Per categories: Taulers · Fons · Metall, pedra i vidre · Simulació.
-      groups={MATERIAL_CATEGORIES.map((c) => ({
+      filters={[{ id: "all", label: "Tots", count: materials.length }, ...MATERIAL_CATEGORIES.map((c) => ({ id: c.id, label: c.label, count: materials.filter((x) => materialCategory(x) === c.id).length }))]}
+      filter={filterId}
+      onFilter={setCat}
+      groups={MATERIAL_CATEGORIES.filter((c) => filterId === "all" || c.id === filterId).map((c) => ({
         id: c.id,
         label: c.label,
         hint: c.hint,
@@ -632,8 +649,9 @@ function MaterialsList({ materials, onChange }: { materials: MaterialPref[]; onC
             key={m.id}
             m={m}
             onChange={(patch) => update(i, patch)}
+            autoFocusName={justAdded === m.id}
             onDuplicate={() => {
-              const copy = { ...m, id: newId("mat"), name: `${m.name} (còpia)` }
+              const copy = { ...m, id: newId("mat"), name: uniqueName(`${m.name} (còpia)`) }
               const next = [...materials]
               next.splice(i + 1, 0, copy)
               onChange(next)
@@ -660,8 +678,7 @@ function MaterialSwatch({ m, size = "18px" }: { m: MaterialPref; size?: string }
 
 const FINISH_LABEL: Record<Finish["kind"], string> = { color: "color llis", lacquer: "lacat", wood: "fusta", image: "foto real", metal: "metall", glass: "vidre", fabric: "teixit", tiles: "rajola" }
 
-function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: MaterialPref; onChange: (p: Partial<MaterialPref>) => void; onDuplicate: () => void; onDelete: () => void; canDelete: boolean }) {
-  const [thickText, setThickText] = useState(m.thicknesses.join(" · "))
+function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocusName }: { m: MaterialPref; onChange: (p: Partial<MaterialPref>) => void; onDuplicate: () => void; onDelete: () => void; canDelete: boolean; autoFocusName?: boolean }) {
   const finish = m.finish
   // Fotos d'abans (sense proporció): es mesura la imatge un cop.
   const needsAspect = finish.kind === "image" && finish.aspect === undefined ? finish.src : null
@@ -693,25 +710,18 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
         </>
       }
     >
-      <Field.Root>
-        <Field.Label fontSize="sm">Nom</Field.Label>
-        <Input size="sm" value={m.name} onChange={(e) => onChange({ name: e.target.value })} />
-      </Field.Root>
-        <SimpleGrid columns={2} gap={2}>
-          <Field.Root invalid={m.thicknesses.length === 0}>
-            <Field.Label fontSize="sm">Gruixos</Field.Label>
-            <Input
-              size="sm"
-              value={thickText}
-              onChange={(e) => {
-                setThickText(e.target.value)
-                onChange({ thicknesses: parseList(e.target.value) })
-              }}
-              onBlur={() => setThickText(m.thicknesses.join(" · "))}
-              placeholder="10 · 16 · 19"
-            />
-            {m.thicknesses.length === 0 && <Field.ErrorText>Cal almenys un gruix (3–60 mm)</Field.ErrorText>}
+      {/* A dalt: la mostra a escala real al costat del nom i els gruixos. */}
+      <Flex gap={4} direction={{ base: "column", sm: "row" }} align={{ sm: "flex-start" }}>
+        <MaterialPreview m={m} />
+        <Stack gap={3} flex={1} minW={0}>
+          <Field.Root>
+            <Field.Label fontSize="sm">Nom</Field.Label>
+            <Input size="sm" value={m.name} onChange={(e) => onChange({ name: e.target.value })} autoFocus={autoFocusName} onFocus={(e) => autoFocusName && e.currentTarget.select()} />
           </Field.Root>
+          <ThicknessChips value={m.thicknesses} onChange={(thicknesses) => onChange({ thicknesses })} />
+        </Stack>
+      </Flex>
+        <SimpleGrid columns={2} gap={2}>
           <Field.Root>
             <Field.Label fontSize="sm">Acabat</Field.Label>
             <NativeSelect.Root size="sm">
@@ -785,7 +795,11 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
           ) : (
             <Field.Root>
               <Field.Label fontSize="sm">Color</Field.Label>
-              <Input size="sm" type="color" value={finish.color} onChange={(e) => onChange({ finish: { ...finish, color: e.target.value } })} p={0.5} />
+              {/* Mostra de color compacta amb el codi al costat (no una barra de punta a punta). */}
+              <HStack gap={2}>
+                <Input size="sm" type="color" value={finish.color} onChange={(e) => onChange({ finish: { ...finish, color: e.target.value } })} p={0.5} w="44px" flexShrink={0} aria-label="Color" />
+                <Input size="sm" key={finish.color} defaultValue={finish.color} onBlur={(e) => /^#[0-9a-f]{6}$/i.test(e.target.value.trim()) && onChange({ finish: { ...finish, color: e.target.value.trim() } })} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} fontFamily="mono" aria-label="Codi del color" />
+              </HStack>
             </Field.Root>
           )}
           {finish.kind === "tiles" && (
@@ -793,7 +807,7 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
               <NumberField label="Mida de la rajola" value={finish.size} min={20} max={1500} step={10} onChange={(size) => onChange({ finish: { ...finish, size } })} />
               <Field.Root>
                 <Field.Label fontSize="sm">Junta</Field.Label>
-                <Input size="sm" type="color" value={finish.grout} onChange={(e) => onChange({ finish: { ...finish, grout: e.target.value } })} p={0.5} />
+                <Input size="sm" type="color" value={finish.grout} onChange={(e) => onChange({ finish: { ...finish, grout: e.target.value } })} p={0.5} w="44px" aria-label="Color de la junta" />
               </Field.Root>
             </>
           )}

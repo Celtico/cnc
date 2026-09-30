@@ -605,8 +605,12 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     explicació i «Restaurar valors inicials»); dins, **una sola columna de 760 px** (`FoldGrid` = pila; res de
     graelles de targetes, que deixaven forats) de **grups sempre oberts** (`components/SettingsGroup`:
     targeta amb capçalera, res no s'obre de cop). Materials i objectes de referència fan **llista i detall**
-    (`components/MasterDetail`: llista agrupada per categoria amb mostra, cercador i «Afegir»; el triat
-    s'edita a la dreta). Al mòbil, navegació en profunditat: apartats › pàgina › element, amb «‹ Tornar».
+    (`components/MasterDetail`: llista agrupada per categoria amb mostra, cercador, filtres per categoria en
+    pastilles i «Afegir», amb desplaçament propi; el triat s'edita a la dreta, fix i de 680 px com a molt).
+    Materials: «Per defecte als mòduls nous» a dalt; al detall, **mostra a escala real** (`MaterialPreview`,
+    `materialPreview.ts`: 600 mm d'ample amb la textura de debò, la foto, la trama o les rajoles), gruixos
+    com a etiquetes (`ThicknessChips`), color amb mostra petita i codi; un material nou té nom únic
+    («Material nou 2»), va a la categoria filtrada i deixa el nom seleccionat. Al mòbil, navegació en profunditat: apartats › pàgina › element, amb «‹ Tornar».
     L'apartat i l'element triats es recorden durant la sessió (`useSessionString`). Al material, botó
     visible «Posar una foto de textura» (a més de l'Acabat «Foto (textura)»), amb miniatura, «Canviar la
     foto» i «Treure-la».
