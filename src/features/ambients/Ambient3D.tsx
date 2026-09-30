@@ -21,11 +21,16 @@ export function Ambient3D({
   materials,
   onSceneAccess,
   fitSignal = 0,
-  selectedId = null,
+  selectedIds = [],
   onSelect,
+  dollhouse = true,
+  shadows = true,
 }: {
-  /** Element seleccionat (el mateix que al plànol) i clic per seleccionar-ne un. */
-  selectedId?: string | null
+  /** Parets de davant transparents (casa de nines) i ombres. */
+  dollhouse?: boolean
+  shadows?: boolean
+  /** Elements seleccionats (els mateixos que al plànol) i clic per seleccionar-ne un. */
+  selectedIds?: string[]
   onSelect?: (id: string | null) => void
   ambient: Ambient
   geos: Map<string, ItemGeometry | null>
@@ -40,7 +45,7 @@ export function Ambient3D({
   const span = Math.max(box.x1 - box.x0, box.y1 - box.y0) / 1000
   return (
     <Canvas
-      shadows="soft"
+      shadows={shadows ? "soft" : false}
       dpr={[1, 2]}
       camera={{ fov: 40, position: [cx + span * 0.5, span * 1.1 + 2, cz + span * 1.4 + 2], near: 0.05, far: 500 }}
       gl={{ preserveDrawingBuffer: true }}
@@ -54,7 +59,7 @@ export function Ambient3D({
       <StudioEnvironment intensity={0.55} />
       <hemisphereLight args={["#ffffff", "#b9ad9c", 0.35]} />
       <directionalLight position={[cx + 4, 7, cz + 3]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-span} shadow-camera-right={span} shadow-camera-top={span} shadow-camera-bottom={-span} shadow-bias={-0.0004} />
-      <Room ambient={ambient} geos={geos} materials={materials} box={box} selectedId={selectedId} onSelect={onSelect} />
+      <Room ambient={ambient} geos={geos} materials={materials} box={box} selectedIds={selectedIds} onSelect={onSelect} dollhouse={dollhouse} />
       {/* Com al visor de l'editor: esmorteïment, botó dret o dos dits per desplaçar, roda per apropar. */}
       <Controls target={[cx, 0.9, cz]} home={[cx + span * 0.5, span * 1.1 + 2, cz + span * 1.4 + 2]} fitSignal={fitSignal} maxDistance={span * 4 + 10} />
       {onSceneAccess && <SceneAccess onAccess={onSceneAccess} />}
@@ -112,14 +117,16 @@ function Room({
   geos,
   materials,
   box,
-  selectedId,
+  selectedIds,
   onSelect,
+  dollhouse,
 }: {
+  dollhouse: boolean
   ambient: Ambient
   geos: Map<string, ItemGeometry | null>
   materials: MaterialPref[]
   box: { x0: number; y0: number; x1: number; y1: number }
-  selectedId: string | null
+  selectedIds: string[]
   onSelect?: (id: string | null) => void
 }) {
   // Terra: la caixa de tot amb un marge.
@@ -163,7 +170,7 @@ function Room({
     for (const m of walls.children as Mesh[]) {
       const n = m.userData.normal as Vector3 | undefined
       if (!n) continue
-      const facing = tmp.copy(camera.position).sub(m.position).dot(n) > 0
+      const facing = dollhouse && tmp.copy(camera.position).sub(m.position).dot(n) > 0
       const mat = m.material as MeshStandardMaterial
       const target = facing ? 0.12 : 1
       if (mat.opacity !== target) {
@@ -210,7 +217,9 @@ function Room({
           }}
         />
       ))}
-      <Selected ambient={ambient} geos={geos} id={selectedId} />
+      {selectedIds.map((id) => (
+        <Selected key={id} ambient={ambient} geos={geos} id={id} />
+      ))}
     </>
   )
 }

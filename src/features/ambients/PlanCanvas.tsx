@@ -1,7 +1,7 @@
 import { Box, HStack, IconButton, Text } from "@chakra-ui/react"
 import { LuMinus, LuPlus } from "react-icons/lu"
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as RPointerEvent } from "react"
-import { newId, roomWalls, snapToWalls, wallCorners, wallLength, type Ambient, type AmbientItem, type PlanPt, type Wall } from "../../core/model"
+import { footprintBox, newId, roomWalls, snapToWalls, wallCorners, wallLength, type Ambient, type AmbientItem, type PlanPt, type Wall } from "../../core/model"
 import { formatLength, useUnit } from "../units"
 import type { ItemGeometry } from "./ambientData"
 import { ambientBox, fitView, nearestEndpoint, samePt, snapAngle, snapGrid, type Selection, type Tool, type View } from "./planGeom"
@@ -17,9 +17,19 @@ const C = {
   gridMajor: "var(--chakra-colors-border-emphasized)",
 }
 
+export interface PlanShow {
+  grid: boolean
+  dims: boolean
+  labels: boolean
+  detail: boolean
+  snap: boolean
+  plan: boolean
+}
+const PLAN_SHOW_ALL: PlanShow = { grid: true, dims: true, labels: true, detail: true, snap: true, plan: true }
+
 type Drag =
   | { kind: "pan"; x: number; y: number; view: View }
-  | { kind: "item"; id: string; start: PlanPt; x: number; y: number; moved: boolean }
+  | { kind: "item"; ids: string[]; start: PlanPt; from: Map<string, PlanPt>; moved: boolean }
   | { kind: "wall"; id: string; start: PlanPt; a: PlanPt; b: PlanPt; moved: boolean }
   | { kind: "end"; id: string; end: "a" | "b"; start: PlanPt; orig: PlanPt; moved: boolean }
   | { kind: "room"; start: PlanPt; cur: PlanPt }
@@ -39,19 +49,28 @@ export function PlanCanvas({
   geos,
   names,
   selection,
+  selectedIds,
   onSelect,
+  onPickItem,
   tool,
   onToolDone,
   onChange,
   wallDefaults,
   onCalibrate,
   fitSignal,
+  show = PLAN_SHOW_ALL,
 }: {
+  /** Opcions de vista: graella, mides de les parets, noms, detall de les peces, imant. */
+  show?: PlanShow
   ambient: Ambient
   geos: Map<string, ItemGeometry | null>
   names: Map<string, string>
   selection: Selection
+  /** Elements seleccionats (un, o tots els d'un grup). */
+  selectedIds: string[]
   onSelect: (s: Selection) => void
+  /** Clic a un element: tria què se selecciona (el grup o l'element, com Figma) i torna els ids a moure. */
+  onPickItem: (id: string) => string[]
   tool: Tool
   onToolDone: () => void
   /** `commit`: afegir un pas de desfer (en deixar anar); si no, és un canvi en viu. */
@@ -144,14 +163,11 @@ export function PlanCanvas({
     return () => el.removeEventListener("wheel", wheel)
   }, [])
 
-  const setItem = (id: string, patch: Partial<AmbientItem>, commit: boolean) =>
-    onChange({ ...ambient, items: ambient.items.map((it) => (it.id === id ? ({ ...it, ...patch } as AmbientItem) : it)) }, commit)
-
   const tolMm = 12 / view.s
 
   /** Punt de la ploma: imant als extrems i angle a 15° (Maj: lliure; Alt: sense imant). */
   const penPoint = (raw: PlanPt, e: { shiftKey: boolean; altKey: boolean }): PlanPt => {
-    if (!e.altKey) {
+    if (!e.altKey && show.snap) {
       const first = chain[0]
       if (first && chain.length >= 2 && Math.hypot(raw[0] - first[0], raw[1] - first[1]) < tolMm) return first
       const near = nearestEndpoint(ambient.walls, raw, tolMm)
@@ -243,16 +259,22 @@ export function PlanCanvas({
     } else if (g.kind === "item") {
       g.moved = g.moved || Math.hypot(dx, dy) * view.s > 3
       if (!g.moved) return
-      const it = ambient.items.find((x) => x.id === g.id)
-      const geo = geos.get(g.id)
-      if (!it || !geo) return
-      let x = snapGrid(g.x + dx), y = snapGrid(g.y + dy)
-      if (!e.altKey) {
-        const s = snapToWalls(x, y, geo.w, geo.d, it.rot, ambient.walls, 14 / view.s)
-        x = Math.round(s.x)
-        y = Math.round(s.y)
+      let ox = snapGrid(dx), oy = snapGrid(dy)
+      // Un sol element: s'arramba a les parets (Alt: sense imant). Un grup es mou sencer.
+      if (g.ids.length === 1 && !e.altKey && show.snap) {
+        const it = ambient.items.find((x) => x.id === g.ids[0])
+        const geo = geos.get(g.ids[0]!)
+        const f = g.from.get(g.ids[0]!)
+        if (it && geo && f) {
+          const sn = snapToWalls(f[0] + ox, f[1] + oy, geo.w, geo.d, it.rot, ambient.walls, 14 / view.s)
+          ox = Math.round(sn.x - f[0])
+          oy = Math.round(sn.y - f[1])
+        }
       }
-      setItem(g.id, { x, y }, false)
+      onChange({ ...ambient, items: ambient.items.map((it) => {
+        const f = g.from.get(it.id)
+        return f ? { ...it, x: f[0] + ox, y: f[1] + oy } : it
+      }) }, false)
     } else if (g.kind === "wall") {
       g.moved = g.moved || Math.hypot(dx, dy) * view.s > 3
       if (!g.moved) return
@@ -300,8 +322,9 @@ export function PlanCanvas({
     e.stopPropagation()
     ;(host.current as Element).setPointerCapture?.(e.pointerId)
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
-    onSelect({ kind: "item", id: it.id })
-    drag.current = { kind: "item", id: it.id, start: toWorld(e.clientX, e.clientY), x: it.x, y: it.y, moved: false }
+    const ids = onPickItem(it.id)
+    const from = new Map(ambient.items.filter((x) => ids.includes(x.id)).map((x) => [x.id, [x.x, x.y] as PlanPt]))
+    drag.current = { kind: "item", ids, start: toWorld(e.clientX, e.clientY), from, moved: false }
   }
   const startWall = (e: RPointerEvent, w: Wall) => {
     if (tool !== "select" || e.button === 1 || space.current) return
@@ -364,9 +387,9 @@ export function PlanCanvas({
           </pattern>
         </defs>
         <g transform={`translate(${view.tx} ${view.ty}) scale(${view.s})`}>
-          <rect x={(-view.tx) / view.s} y={(-view.ty) / view.s} width={size.w / view.s} height={size.h / view.s} fill={view.s > 0.03 ? "url(#amb-grid-major)" : "none"} />
+          <rect x={(-view.tx) / view.s} y={(-view.ty) / view.s} width={size.w / view.s} height={size.h / view.s} fill={show.grid && view.s > 0.03 ? "url(#amb-grid-major)" : "none"} />
 
-          {ambient.plan && (
+          {ambient.plan && show.plan && (
             <image
               href={ambient.plan.src}
               x={ambient.plan.x}
@@ -383,16 +406,16 @@ export function PlanCanvas({
           {/* Elements (mobles i blocs) sota les parets, en vista de dalt. */}
           {ambient.items.map((it) => {
             const g = geos.get(it.id)
-            const sel = selection?.kind === "item" && selection.id === it.id
+            const sel = selectedIds.includes(it.id)
             const w = g?.w ?? 600, d = g?.d ?? 600
             return (
               <g key={it.id} transform={`translate(${it.x} ${it.y}) rotate(${it.rot})`} style={{ cursor: tool === "select" ? "move" : undefined }} onPointerDown={(e) => startItem(e, it)}>
                 <rect x={-w / 2} y={-d / 2} width={w} height={d} fill={C.item} fillOpacity={0.92} stroke={sel ? C.accent : C.wall} strokeWidth={px(sel ? 2 : 1)} strokeDasharray={g ? undefined : `${px(4)} ${px(3)}`} />
-                {g && view.s > 0.04 &&
+                {g && show.detail && view.s > 0.04 &&
                   g.rects.map((r, i) => <rect key={i} x={r.x0} y={r.z0} width={Math.max(0.1, r.x1 - r.x0)} height={Math.max(0.1, r.z1 - r.z0)} fill="none" stroke={C.line} strokeWidth={px(0.6)} />)}
                 {/* El davant: línia gruixuda. */}
                 <line x1={-w / 2} y1={d / 2} x2={w / 2} y2={d / 2} stroke={sel ? C.accent : C.wall} strokeWidth={px(3)} />
-                <g transform={`rotate(${-it.rot})`} style={{ pointerEvents: "none" }}>
+                {show.labels && <g transform={`rotate(${-it.rot})`} style={{ pointerEvents: "none" }}>
                   <text textAnchor="middle" style={{ fontSize: px(12) }} fill={C.wall} fontWeight={600} y={px(-2)}>
                     {names.get(it.id)}
                   </text>
@@ -401,11 +424,22 @@ export function PlanCanvas({
                       {Math.round(w)} × {Math.round(d)}
                     </text>
                   )}
-                </g>
+                </g>}
               </g>
             )
           })}
 
+          {/* Caixa del grup seleccionat (discontínua), com a l'editor. */}
+          {selection?.kind === "group" &&
+            (() => {
+              const bs = ambient.items.filter((i) => selectedIds.includes(i.id)).flatMap((i) => {
+                const g = geos.get(i.id)
+                return g ? [footprintBox(i.x, i.y, g.w, g.d, i.rot)] : []
+              })
+              if (!bs.length) return null
+              const x0 = Math.min(...bs.map((b) => b.x0)), y0 = Math.min(...bs.map((b) => b.y0)), x1 = Math.max(...bs.map((b) => b.x1)), y1 = Math.max(...bs.map((b) => b.y1))
+              return <rect x={x0 - px(6)} y={y0 - px(6)} width={x1 - x0 + px(12)} height={y1 - y0 + px(12)} fill="none" stroke={C.accent} strokeWidth={px(1.5)} strokeDasharray={`${px(6)} ${px(4)}`} style={{ pointerEvents: "none" }} />
+            })()}
           {ambient.walls.map((w) => {
             const sel = selWall?.id === w.id
             return (
@@ -422,7 +456,7 @@ export function PlanCanvas({
           })}
 
           {/* Mides de les parets (quan hi caben). */}
-          {view.s > 0.035 &&
+          {show.dims && view.s > 0.035 &&
             ambient.walls.map((w) => {
               const L = wallLength(w)
               if (L * view.s < 60) return null

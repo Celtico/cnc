@@ -208,6 +208,15 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   Els elements s'arramben a les cares de les parets (`snapToWalls`), R gira 90°, fletxes (Maj ×10),
   Supr, Ctrl/⌘ D, desfer/refer (Ctrl/⌘ Z). Es desa sol. **Plànol de fons**: imatge (2400 px,
   JPEG) escalada amb la calibració, opacitat i bloqueig.
+- **Grups d'elements** (`AmbientItem.group`; `setItemGroup`, `moveItems`, `rotateItems`,
+  `duplicateItems`, `removeItems`): la llista d'elements és com l'arbre de l'editor (grups plegables
+  i menú ⋯ a cada fila: duplicar, grup nou, posar a un grup, treure del grup, obrir a l'editor,
+  treure de l'ambient). Com Figma, el primer clic a un element agrupat (al plànol o al 3D) tria el
+  grup i el segon l'element; Supr, Ctrl/⌘ D, R i les fletxes valen per a tot el grup; inspector del
+  grup (nom, posició, girar, duplicar, desagrupar, eliminar).
+- **Opcions de vista** (`components/ViewOptions`: `ViewOptions` + `ViewTile`, els mateixos botons que
+  l'editor), a dalt a la dreta: al plànol encabir, graella, mides, noms, peces, imant, plànol de fons
+  i render; al 3D encuadrar, casa de nines, ombres i render.
 - **Plànol**: la roda fa zoom al punt del ratolí (com al 3D), pessigar també, arrossegar el fons
   desplaça; − / + i l'escala de pantalla (1:50…) a baix a la dreta; la barra d'eines flota a dalt.
 - **3D**: la mateixa navegació que l'editor (esmorteïment, roda, botó dret per desplaçar), clic per

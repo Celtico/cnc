@@ -33,7 +33,14 @@ export type Wall = z.infer<typeof WallSchema>
 export const BlockShapeSchema = z.enum(["box", "sofa", "bed", "table"])
 export type BlockShape = z.infer<typeof BlockShapeSchema>
 
-const Placement = { x: mm, y: mm, rot: mm, elevation: mm.min(0).optional() }
+const Placement = {
+  x: mm,
+  y: mm,
+  rot: mm,
+  elevation: mm.min(0).optional(),
+  /** Grup (nom): els elements del mateix grup es mouen, giren, dupliquen i esborren junts. */
+  group: z.string().optional(),
+}
 
 export const AmbientItemSchema = z.discriminatedUnion("kind", [
   /** Un moble de la llista (enllaç): es dibuixa amb les peces de debò. */
@@ -374,4 +381,55 @@ export function resizeComposition(comp: Composition, cur: { w: number; h: number
   const references = comp.references.map((o) => ({ ...o, x: r(o.x * sx), y: r(o.y * sy), z: r(o.z * sz), w: r(o.w * sx), h: r(o.h * sy), d: r(o.d * sz) }))
   const runs = comp.runs?.map((run) => (run.kind === "worktop" ? { ...run, cutouts: run.cutouts.map((c) => ({ ...c, dx: r(c.dx * sx) })) } : run))
   return { ...comp, modules, references, ...(parts ? { parts } : {}), ...(runs ? { runs } : {}) }
+}
+
+// --- Grups d'elements (com les peces lliures de l'editor) -----------------------------------
+
+/** Ids dels elements d'un grup. */
+export const groupIds = (a: Ambient, group: string) => a.items.filter((i) => i.group === group).map((i) => i.id)
+
+/** Nom de grup nou que no existeixi («Grup 1», «Grup 2»…). */
+export function newItemGroupName(a: Ambient): string {
+  const used = new Set(a.items.map((i) => i.group).filter(Boolean))
+  let n = 1
+  while (used.has(`Grup ${n}`)) n++
+  return `Grup ${n}`
+}
+
+export function setItemGroup(a: Ambient, ids: string[], group: string | undefined): Ambient {
+  return { ...a, items: a.items.map((i) => (ids.includes(i.id) ? { ...i, group } : i)) }
+}
+
+export function moveItems(a: Ambient, ids: string[], dx: number, dy: number): Ambient {
+  return { ...a, items: a.items.map((i) => (ids.includes(i.id) ? { ...i, x: i.x + dx, y: i.y + dy } : i)) }
+}
+
+/** Gira els elements `deg` graus al voltant del centre dels seus centres (el grup gira sencer). */
+export function rotateItems(a: Ambient, ids: string[], deg: number): Ambient {
+  const sel = a.items.filter((i) => ids.includes(i.id))
+  if (!sel.length) return a
+  const cx = (Math.min(...sel.map((i) => i.x)) + Math.max(...sel.map((i) => i.x))) / 2
+  const cy = (Math.min(...sel.map((i) => i.y)) + Math.max(...sel.map((i) => i.y))) / 2
+  const c = Math.cos(rad(deg)), s = Math.sin(rad(deg))
+  return {
+    ...a,
+    items: a.items.map((i) => {
+      if (!ids.includes(i.id)) return i
+      const u = i.x - cx, v = i.y - cy
+      return { ...i, x: Math.round(cx + u * c - v * s), y: Math.round(cy + u * s + v * c), rot: (((i.rot + deg) % 360) + 360) % 360 }
+    }),
+  }
+}
+
+/** Duplica els elements (desplaçats); si eren un grup, la còpia és un grup nou. Retorna els ids nous. */
+export function duplicateItems(a: Ambient, ids: string[], offset = 300): { ambient: Ambient; ids: string[]; group?: string } {
+  const src = a.items.filter((i) => ids.includes(i.id))
+  const groups = new Set(src.map((i) => i.group))
+  const group = groups.size === 1 && src[0]?.group ? newItemGroupName(a) : undefined
+  const copies = src.map((i) => ({ ...i, id: newId("i"), x: i.x + offset, y: i.y + offset, ...(group ? { group } : {}) }))
+  return { ambient: { ...a, items: [...a.items, ...copies] }, ids: copies.map((c) => c.id), group }
+}
+
+export function removeItems(a: Ambient, ids: string[]): Ambient {
+  return { ...a, items: a.items.filter((i) => !ids.includes(i.id)) }
 }

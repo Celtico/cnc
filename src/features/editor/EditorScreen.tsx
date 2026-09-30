@@ -37,6 +37,7 @@ import {
 } from "react-icons/lu"
 import { PanelSection } from "../../components/PanelSection"
 import { Workspace } from "../../components/Workspace"
+import { ViewTile } from "../../components/ViewOptions"
 import { useWorkspace } from "../../components/useWorkspace"
 import { TopBarActions } from "../../components/TopBar"
 import { toaster } from "../../components/ui/toaster"
@@ -766,13 +767,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   // Accions ràpides del visor, a dalt de «Opcions de vista» (com el menú de visualització
   // de Fusion o Blender): el mode en un grup i la resta com a botons amb icona i nom.
   // Només icona (el text no hi cabia): el nom i l'explicació, al tooltip.
-  const tile = (key: string, label: string, icon: ReactNode, on: boolean, onClick: () => void, tip?: string) => (
-    <Tooltip key={key} content={tip ?? label}>
-      <IconButton size="sm" w="full" variant={on ? "solid" : "outline"} colorPalette={on ? "wood" : "gray"} aria-pressed={on} aria-label={label} onClick={onClick}>
-        {icon}
-      </IconButton>
-    </Tooltip>
-  )
+  const tile = (key: string, label: string, icon: ReactNode, on: boolean, onClick: () => void, tip?: string) => <ViewTile key={key} label={label} icon={icon} on={on} onClick={onClick} tip={tip} />
   const viewQuick = (
     <Stack gap={3} mb={4} pb={4} borderBottomWidth="1px">
       <SimpleGrid columns={3} gap={1.5}>

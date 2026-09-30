@@ -61,3 +61,23 @@ describe("plantilles d'objectes", async () => {
     }
   })
 })
+
+describe("grups d'elements", async () => {
+  const m = await import("./ambient")
+  const base = { ...m.EMPTY_AMBIENT, items: [
+    { id: "a", kind: "block" as const, name: "A", shape: "box" as const, w: 100, h: 100, d: 100, material: "x", x: 0, y: 0, rot: 0 },
+    { id: "b", kind: "block" as const, name: "B", shape: "box" as const, w: 100, h: 100, d: 100, material: "x", x: 1000, y: 0, rot: 0 },
+  ] }
+  it("agrupar, moure, girar, duplicar i esborrar", () => {
+    const g = m.setItemGroup(base, ["a", "b"], m.newItemGroupName(base))
+    expect(m.groupIds(g, "Grup 1")).toEqual(["a", "b"])
+    const mv = m.moveItems(g, ["a", "b"], 10, 20)
+    expect(mv.items.map((i) => [i.x, i.y])).toEqual([[10, 20], [1010, 20]])
+    const r = m.rotateItems(g, ["a", "b"], 90)
+    expect(r.items.map((i) => [i.x, i.y, i.rot])).toEqual([[500, -500, 90], [500, 500, 90]])
+    const d = m.duplicateItems(g, ["a", "b"])
+    expect(d.group).toBe("Grup 2")
+    expect(d.ambient.items).toHaveLength(4)
+    expect(m.removeItems(d.ambient, d.ids).items).toHaveLength(2)
+  })
+})
