@@ -8,10 +8,10 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { LuFolderOpen, LuPlus, LuLayoutTemplate, LuTrash2 } from "react-icons/lu"
+import { LuFolderOpen, LuPlus, LuTrash2 } from "react-icons/lu"
 import { SaveFileDialog } from "../file/SaveFileDialog"
-import { addMobleAsTemplate, openMobleFile } from "../file/mobleIo"
-import { parseMobleFile, uniqueName, type MobleFile } from "../../core/file/mobleFile"
+import { openMobleFile } from "../file/mobleIo"
+import { uniqueName } from "../../core/file/mobleFile"
 import { NewMobleGallery } from "./NewMobleGallery"
 import { ProjectCard } from "./ProjectCard"
 import { isObject } from "../objects/isObject"
@@ -49,38 +49,18 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
     onRequestDone?.()
     fileInput.current?.click()
   }, [request, onRequestDone])
-  // Fitxer obert pendent de decidir: moble nou o plantilla.
-  const [pendingFile, setPendingFile] = useState<{ text: string; file: MobleFile } | null>(null)
-
   const handleOpenFile = async (file: File | undefined) => {
     if (fileInput.current) fileInput.current.value = ""
     if (!file) return
     const text = await file.text()
-    const res = parseMobleFile(text)
-    if (!res.ok) {
-      toaster.create({ title: "No s'ha pogut obrir el fitxer", description: res.error, type: "error" })
-      return
-    }
-    setPendingFile({ text, file: res.file })
-  }
-
-  const openAsMoble = async () => {
-    if (!pendingFile) return
-    const res = await openMobleFile(pendingFile.text, settings, save)
-    setPendingFile(null)
+    // Un .moble (també les plantilles exportades abans) s'obre sempre com a moble.
+    const res = await openMobleFile(text, settings, save)
     if (!res.ok) {
       toaster.create({ title: "No s'ha pogut obrir el fitxer", description: res.error, type: "error" })
       return
     }
     toaster.create({ title: `«${res.name}» obert`, description: res.warnings.join(" ") || undefined, type: res.warnings.length ? "warning" : "success", duration: res.warnings.length ? 8000 : undefined })
     onOpen(res.projectId)
-  }
-
-  const addAsTemplate = async () => {
-    if (!pendingFile) return
-    const r = await addMobleAsTemplate(pendingFile.file, settings, save)
-    setPendingFile(null)
-    toaster.create({ title: `«${r.name}» afegida a les plantilles`, description: [...r.warnings, "La trobaràs a Mobles › Les teves plantilles."].join(" "), type: "success" })
   }
 
   /** Crea un moble a partir d'una composició (en blanc o de plantilla) i l'obre. */
@@ -217,37 +197,6 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
         onPick={(f) => toMove && void setProjectsFolder([toMove.id], f)}
         onClose={() => setToMove(null)}
       />
-
-      <Dialog.Root open={pendingFile !== null} onOpenChange={(e) => !e.open && setPendingFile(null)}>
-        <Portal>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>Obrir «{pendingFile?.file.project.name}»</Dialog.Title>
-              </Dialog.Header>
-              <Dialog.Body>
-                <Text>
-                  {pendingFile?.file.kind === "plantilla"
-                    ? "Aquest fitxer és una plantilla. La vols afegir a les teves plantilles o obrir-la com a moble?"
-                    : "Vols obrir-lo com a moble nou o afegir-lo a les teves plantilles?"}
-                </Text>
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Button variant="outline" onClick={() => setPendingFile(null)}>
-                  Cancel·lar
-                </Button>
-                <Button variant={pendingFile?.file.kind === "plantilla" ? "outline" : "solid"} colorPalette="wood" onClick={() => void openAsMoble()}>
-                  <LuFolderOpen /> Obrir com a moble
-                </Button>
-                <Button variant={pendingFile?.file.kind === "plantilla" ? "solid" : "outline"} colorPalette="wood" onClick={() => void addAsTemplate()}>
-                  <LuLayoutTemplate /> Afegir a plantilles
-                </Button>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Portal>
-      </Dialog.Root>
 
       <Dialog.Root
         role="alertdialog"

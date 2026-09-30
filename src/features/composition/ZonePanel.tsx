@@ -21,6 +21,7 @@ import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { FRONT_ICONS } from "./zoneIcon"
 import { Tooltip } from "../../components/ui/tooltip"
 import { IconChoice } from "../../components/IconChoice"
+import { segGroup, segItem } from "../../components/segmented"
 import { LuArrowDown, LuColumns3, LuDoorOpen, LuGrip, LuMagnet, LuPanelLeft, LuPanelRight, LuRectangleVertical } from "react-icons/lu"
 import type { IconType } from "react-icons"
 
@@ -381,20 +382,17 @@ export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title
   return (
           <PanelSection id={kinds ? "zone-parent-front" : "zone-front"} title={title} badge={FRONT_LABELS[zone.front?.kind ?? "none"]} icon={FRONT_ICONS[zone.front?.kind ?? "none"]}>
             {/* Tipus de front: un botó amb la icona de cada tipus (el nom, al tooltip i a la insígnia). */}
-            <HStack gap={1} role="radiogroup" aria-label="Tipus de front">
+            <HStack {...segGroup} role="radiogroup" aria-label="Tipus de front">
               {options.map((k) => {
                 const Icon = FRONT_ICONS[k]
                 const on = (zone.front?.kind ?? "none") === k
                 return (
                   <Tooltip key={k} content={FRONT_LABELS[k]}>
                     <IconButton
-                      flex={1}
-                      size="sm"
+                      {...segItem(on)}
                       role="radio"
                       aria-checked={on}
                       aria-label={FRONT_LABELS[k]}
-                      variant={on ? "solid" : "outline"}
-                      colorPalette={on ? "wood" : "gray"}
                       onClick={() => !on && onChange(setFront(root, zone.id, k === "none" ? null : defaultFront(k)))}
                     >
                       <Icon />

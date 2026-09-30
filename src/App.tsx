@@ -1,12 +1,12 @@
 import { Box, Button, Container, Flex, HStack, Heading, IconButton, Menu, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import type { IconType } from "react-icons"
-import { LuBookmark, LuChevronLeft, LuBox, LuDownload, LuDraftingCompass, LuEllipsis, LuHouse, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings, LuSofa } from "react-icons/lu"
-import { Toaster } from "./components/ui/toaster"
+import { LuChevronLeft, LuBox, LuDownload, LuDraftingCompass, LuEllipsis, LuHouse, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings, LuSofa } from "react-icons/lu"
+import { Toaster, toaster } from "./components/ui/toaster"
+import { migrateUserTemplates } from "./db/compositionStore"
 import { Tooltip } from "./components/ui/tooltip"
 import { TopBar, TopBarActionsProvider } from "./components/TopBar"
 import { SaveFileDialog } from "./features/file/SaveFileDialog"
-import { SaveTemplateDialog } from "./features/file/SaveTemplateDialog"
 import { db } from "./db/db"
 import { compositionOf } from "./db/compositionStore"
 import { CutListScreen } from "./features/cutlist/CutListScreen"
@@ -70,6 +70,12 @@ function readStoredId(): number | null {
 }
 
 export function App() {
+  // Les antigues «teves plantilles» passen a mobles del grup «Les meves plantilles» (un sol cop).
+  useEffect(() => {
+    void migrateUserTemplates().then((n) => {
+      if (n) toaster.create({ title: `${n === 1 ? "1 plantilla teva" : `${n} plantilles teves`} a Projectes`, description: "Ara són mobles del grup «Les meves plantilles» (Mobles › Projectes).", type: "info", duration: 8000 })
+    })
+  }, [])
   const [projectId, setProjectId] = useState<number | null>(readStoredId)
   // Si hi havia un moble obert, es torna al seu Editor; si no, a Ambients (el primer del menú).
   const [screen, setScreen] = useState<Screen>(() => (readStoredId() !== null ? "editor" : readAmbientId() !== null ? "ambient" : "ambients"))
@@ -133,7 +139,6 @@ export function App() {
   const settingsBackBar = screen === "settings" && inProject && settingsPane === null
   const [topActions, setTopActions] = useState<HTMLDivElement | null>(null)
   const [saveOpen, setSaveOpen] = useState(false)
-  const [templateOpen, setTemplateOpen] = useState(false)
   useEffect(() => {
     // Només quan el projecte carregat és el que hi ha obert (si no, en canviar d'un objecte a un
     // moble es recordava el moble com a «últim objecte» i Objectes obria un moble).
@@ -311,9 +316,6 @@ export function App() {
                       <Menu.Item value="file" onClick={() => (window.dispatchEvent(new Event("mobles:flush-save")), setSaveOpen(true))}>
                         <LuSave /> Desar com a fitxer…
                       </Menu.Item>
-                      <Menu.Item value="template" onClick={() => (window.dispatchEvent(new Event("mobles:flush-save")), setTemplateOpen(true))}>
-                        <LuBookmark /> Desar com a plantilla…
-                      </Menu.Item>
                     </Menu.Content>
                   </Menu.Positioner>
                 </Portal>
@@ -325,7 +327,6 @@ export function App() {
           <AmbientTopBar ambientId={ambientId} onBack={() => (setAmbientId(null), setScreen("ambients"))} onSettings={() => go("settings")} actionsRef={setTopActions} />
         )}
         {project && <SaveFileDialog project={saveOpen ? project : null} open={saveOpen} onClose={() => setSaveOpen(false)} />}
-        {project && <SaveTemplateDialog project={project} open={templateOpen} onClose={() => setTemplateOpen(false)} />}
         {/* Mòbil: les pàgines d'inici porten el seu títol gran (com iOS); aquí només hi ha barra quan cal
             tornar enrere (Preferències obertes des d'un moble). */}
         {settingsBackBar && (

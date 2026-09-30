@@ -1,25 +1,13 @@
-import { Accordion, Badge, Box, Button, Card, CloseButton, Dialog, Editable, HStack, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { LuBookmark, LuFolders, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuLayoutTemplate, LuSearch, LuShare2, LuStore, LuTrash2 } from "react-icons/lu"
+import { Accordion, Badge, Card, CloseButton, HStack, Input, InputGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { useMemo, useState, type ReactNode } from "react"
+import { LuFolders, LuHistory, LuSearch, LuStore } from "react-icons/lu"
 import { CompositionThumb } from "../../components/CompositionThumb"
-import { toaster } from "../../components/ui/toaster"
-import { BUILTIN_TEMPLATES, compositionHeight, compositionKind, compositionWidth, STORE_CATALOG, type Composition, type CompositionKind, type Template } from "../../core/model"
+import { STORE_CATALOG, type Composition, type CompositionKind, type Template } from "../../core/model"
 import { KINDS } from "../composition/kinds"
-import { deleteUserTemplate, duplicateUserTemplate, loadUserTemplates, renameUserTemplate, setUserTemplatesFolder, type UserTemplate } from "../../db/compositionStore"
 import { FoldTitle } from "./FoldTitle"
-import { FolderedGrid, MoveToFolderDialog } from "./Folders"
 import { GALLERY_COLS, fold, useSessionList } from "./galleryGrid"
-import { saveTemplateAsFile } from "../file/mobleIo"
-import { useSettings } from "../settings/SettingsContext"
-
-const size = (c: Composition) => {
-  const h = Math.round(compositionHeight(c))
-  const d = Math.max(...c.modules.map((m) => m.carcass.depth))
-  return `${Math.round(compositionWidth(c))} × ${h} × ${d}`
-}
 
 const kindLabel = (k: CompositionKind) => KINDS.find((x) => x.value === k)!.label
-const kindOrder = (k: CompositionKind) => KINDS.findIndex((x) => x.value === k)
 const euros = (n: number) => `${n.toLocaleString("ca-ES")} €`
 
 /** Targeta d'una plantilla de l'app: la miniatura es calcula en muntar-la (les de botiga, en obrir la categoria). */
@@ -64,9 +52,8 @@ const COLS = GALLERY_COLS
 
 
 /**
- * Pàgina de Mobles, com l'inici de Figma o Google Docs: començar en blanc, filtre per tipus i
- * acordions (tots tancats en obrir l'app): Historial (els mobles que ja tens), les teves
- * plantilles (es gestionen aquí, menú ⋯), les de l'app i les de botigues de mobles.
+ * Pàgina de Mobles, com l'inici de Figma o Google Docs: cercador i acordions (tots tancats en
+ * obrir l'app): Historial (el que és de pas), Projectes (els grups) i el catàleg de botigues.
  */
 export function NewMobleGallery({
   onCreate,
@@ -79,16 +66,6 @@ export function NewMobleGallery({
   /** Clau de sessió dels acordions oberts (la pàgina Mobles i la finestra dels ambients, per separat). */
   storageKey?: string
 }) {
-  const { settings } = useSettings()
-  const [mine, setMine] = useState<UserTemplate[]>(loadUserTemplates)
-  const [confirmDelete, setConfirmDelete] = useState<UserTemplate | null>(null)
-  const [moving, setMoving] = useState<UserTemplate | null>(null)
-  // Es poden haver desat plantilles des de l'Editor: es tornen a llegir en tornar a la finestra.
-  useEffect(() => {
-    const reload = () => setMine(loadUserTemplates())
-    window.addEventListener("focus", reload)
-    return () => window.removeEventListener("focus", reload)
-  }, [])
   // Filtre per tipus de moble (Tot, Moble, Cuina, Armari, Taula, Flat-pack).
   // Sense filtre de tipus: el cercador també troba pel tipus («cuina», «armari», «taula»…).
   const kind = "all" as CompositionKind | "all"
@@ -98,8 +75,6 @@ export function NewMobleGallery({
   const [query, setQuery] = useState("")
   const q = fold(query.trim())
   const matches = (text: string) => !q || fold(text).includes(q)
-  const shownBuiltin = BUILTIN_TEMPLATES.filter((t) => fits(t) && matches(`${t.name} ${t.description} ${kindLabel(t.kind)}`)).sort((a, b) => kindOrder(a.kind) - kindOrder(b.kind))
-  const shownMine = mine.filter((t) => (kind === "all" || compositionKind(t.composition) === kind) && matches(t.name))
   const store = STORE_CATALOG.map((c) => ({
     ...c,
     types: c.types
@@ -111,7 +86,7 @@ export function NewMobleGallery({
   const [openCats, setOpenCats] = useSessionList(`${storageKey}-store`)
   const hist = history(kind, matches, !!q)
   // Amb cerca, s'obren les seccions que tenen resultats.
-  const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["history"] : []), ...(shownMine.length ? ["mine"] : []), ...(shownBuiltin.length ? ["app"] : []), ...(storeCount ? ["store"] : [])]
+  const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["history"] : []), ...(storeCount ? ["store"] : [])]
   const pick = (t: Template) => onCreate({ ...t.make(), kind: t.kind }, t.name)
 
 
@@ -150,112 +125,6 @@ export function NewMobleGallery({
           </Accordion.Item>
         )}
 
-        <Accordion.Item value="mine">
-          <Accordion.ItemTrigger cursor="pointer">
-            <FoldTitle icon={<LuBookmark />} title="Les teves plantilles" count={shownMine.length} />
-            <Accordion.ItemIndicator />
-          </Accordion.ItemTrigger>
-          <Accordion.ItemContent>
-            <Accordion.ItemBody>
-              {shownMine.length === 0 ? (
-                <Text fontSize="sm" color="fg.muted">
-                  {mine.length === 0 ? "Encara no en tens. Obre un moble i, a la barra de dalt, ⋯ → Desar com a plantilla." : "Cap plantilla teva d'aquest tipus."}
-                </Text>
-              ) : (
-                <FolderedGrid
-                  items={shownMine}
-                  folderOf={(t) => t.folder}
-                  keyOf={(t) => t.id}
-                  storageKey={`${storageKey}:folders-mine`}
-                  selection={{
-                    noun: ["plantilla", "plantilles"],
-                    folders: [...new Set(mine.filter((t) => t.folder).map((t) => t.folder!))].sort(),
-                    onMove: (ids, f) => setMine(setUserTemplatesFolder(ids as string[], f)),
-                  }}
-                  searching={!!q}
-                  onRenameFolder={(from, to) => setMine(setUserTemplatesFolder(mine.filter((t) => t.folder === from).map((t) => t.id), to))}
-                  onUngroup={(name) => setMine(setUserTemplatesFolder(mine.filter((t) => t.folder === name).map((t) => t.id), undefined))}
-                  render={(t) => (
-                    <Card.Root variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }}>
-                      <Card.Body p={3} gap={2}>
-                        <Box cursor="pointer" onClick={() => onCreate(structuredClone(t.composition), t.name)}>
-                          <CompositionThumb composition={t.composition} />
-                        </Box>
-                        <HStack gap={1} align="center">
-                          <Editable.Root
-                            defaultValue={t.name}
-                            onValueCommit={(e) => setMine(renameUserTemplate(t.id, e.value))}
-                            fontWeight="semibold"
-                            fontSize="sm"
-                            flex={1}
-                            minW={0}
-                            aria-label="Nom de la plantilla"
-                          >
-                            <Editable.Preview truncate title="Clica per canviar el nom" />
-                            <Editable.Input />
-                          </Editable.Root>
-                          <Menu.Root>
-                            <Menu.Trigger asChild>
-                              <IconButton aria-label={`Opcions de «${t.name}»`} size="xs" variant="ghost">
-                                <LuEllipsis />
-                              </IconButton>
-                            </Menu.Trigger>
-                            <Portal>
-                              <Menu.Positioner>
-                                <Menu.Content>
-                                  <Menu.Item value="dup" onClick={() => setMine(duplicateUserTemplate(t.id))}>
-                                    <LuCopy /> Duplicar
-                                  </Menu.Item>
-                                  <Menu.Item
-                                    value="file"
-                                    onClick={() =>
-                                      void saveTemplateAsFile(t, settings).then((r) =>
-                                        toaster.create({ title: r.how === "shared" ? "Plantilla compartida" : "Plantilla desada", description: r.filename, type: "success" }),
-                                      )
-                                    }
-                                  >
-                                    <LuShare2 /> Desar com a fitxer
-                                  </Menu.Item>
-                                  <Menu.Item value="move" onClick={() => setMoving(t)}>
-                                    <LuFolderInput /> Moure a un grup…
-                                  </Menu.Item>
-                                  <Menu.Separator />
-                                  <Menu.Item value="del" color="fg.error" onClick={() => setConfirmDelete(t)}>
-                                    <LuTrash2 /> Eliminar
-                                  </Menu.Item>
-                                </Menu.Content>
-                              </Menu.Positioner>
-                            </Portal>
-                          </Menu.Root>
-                        </HStack>
-                        <Text fontSize="xs" color="fg.muted">
-                          {t.composition.modules.length} {t.composition.modules.length === 1 ? "mòdul" : "mòduls"} · {size(t.composition)}
-                        </Text>
-                      </Card.Body>
-                    </Card.Root>
-                  )}
-                />
-              )}
-            </Accordion.ItemBody>
-          </Accordion.ItemContent>
-        </Accordion.Item>
-
-        <Accordion.Item value="app">
-          <Accordion.ItemTrigger cursor="pointer">
-            <FoldTitle icon={<LuLayoutTemplate />} title="Plantilles de l'app" count={shownBuiltin.length} />
-            <Accordion.ItemIndicator />
-          </Accordion.ItemTrigger>
-          <Accordion.ItemContent>
-            <Accordion.ItemBody>
-              <SimpleGrid columns={COLS} gap={3}>
-                {shownBuiltin.map((t) => (
-                  <TemplateCard key={t.id} t={t} onPick={pick} />
-                ))}
-              </SimpleGrid>
-            </Accordion.ItemBody>
-          </Accordion.ItemContent>
-        </Accordion.Item>
-
         <Accordion.Item value="store">
           <Accordion.ItemTrigger cursor="pointer">
             <FoldTitle icon={<LuStore />} title="Plantilles per a botigues de mobles" count={storeCount} />
@@ -293,43 +162,6 @@ export function NewMobleGallery({
         </Accordion.Item>
       </Accordion.Root>
 
-      <MoveToFolderDialog
-        open={moving !== null}
-        what={moving?.name ?? ""}
-        folders={[...new Set(mine.filter((t) => t.folder).map((t) => t.folder!))].sort()}
-        current={moving?.folder}
-        onPick={(f) => moving && setMine(setUserTemplatesFolder([moving.id], f))}
-        onClose={() => setMoving(null)}
-      />
-      <Dialog.Root role="alertdialog" open={confirmDelete !== null} onOpenChange={(e) => !e.open && setConfirmDelete(null)}>
-        <Portal>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>Eliminar la plantilla «{confirmDelete?.name}»?</Dialog.Title>
-              </Dialog.Header>
-              <Dialog.Body>
-                <Text>Els mobles que ja has fet amb aquesta plantilla no canvien.</Text>
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Button variant="outline" onClick={() => setConfirmDelete(null)}>
-                  Cancel·lar
-                </Button>
-                <Button
-                  colorPalette="red"
-                  onClick={() => {
-                    if (confirmDelete) setMine(deleteUserTemplate(confirmDelete.id))
-                    setConfirmDelete(null)
-                  }}
-                >
-                  <LuTrash2 /> Eliminar
-                </Button>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Portal>
-      </Dialog.Root>
     </Stack>
   )
 }

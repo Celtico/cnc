@@ -40,6 +40,7 @@ import { Workspace } from "../../components/Workspace"
 import { ViewTile } from "../../components/ViewOptions"
 import { useWorkspace } from "../../components/useWorkspace"
 import { TopBarActions } from "../../components/TopBar"
+import { segGroup, segItem } from "../../components/segmented"
 import { toaster } from "../../components/ui/toaster"
 import { CabinetViewer, type ViewerModule, type ZoneLight } from "../../components/viewer/CabinetViewer"
 import { ArDialog } from "../../components/viewer/ArDialog"
@@ -964,7 +965,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                 }
               >
                 {/* Salten de línia si el panell és estret (tres botons amb icona i text). */}
-                <HStack gap={1.5} wrap="wrap" role="group" aria-label="Fila">
+                <HStack {...segGroup} role="group" aria-label="Fila">
                   {(
                     [
                       ["wall", "A la paret", LuBrickWall, "A terra, arrambat a la paret: es mou de costat"],
@@ -976,10 +977,8 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                     return (
                       <Button
                         key={v}
-                        size="sm"
+                        {...segItem(on)}
                         px={2}
-                        variant={on ? "solid" : "outline"}
-                        colorPalette="wood"
                         aria-pressed={on}
                         title={tip}
                         onClick={() => {

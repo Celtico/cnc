@@ -1,6 +1,7 @@
 import { HStack, IconButton, Stack, Text } from "@chakra-ui/react"
 import type { IconType } from "react-icons"
 import { Tooltip } from "./ui/tooltip"
+import { segGroup, segItem } from "./segmented"
 
 export interface IconOption<T extends string> {
   value: T
@@ -24,20 +25,17 @@ export function IconChoice<T extends string>({ label, value, options, onChange, 
           {current && <Text color="fg.muted">· {current.label}</Text>}
         </HStack>
       )}
-      <HStack gap={1} role="radiogroup" aria-label={label}>
+      <HStack {...segGroup} role="radiogroup" aria-label={label}>
         {options.map((o) => {
           const on = o.value === value
           const Icon = o.icon
           return (
             <Tooltip key={o.value} content={o.hint ?? o.label}>
               <IconButton
-                flex={1}
-                size="sm"
+                {...segItem(on)}
                 role="radio"
                 aria-checked={on}
                 aria-label={o.label}
-                variant={on ? "solid" : "outline"}
-                colorPalette={on ? "wood" : "gray"}
                 onClick={() => !on && onChange(o.value)}
               >
                 <Icon />

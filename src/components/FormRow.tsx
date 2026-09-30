@@ -1,5 +1,6 @@
 import { Box, Button, Grid, HStack, Stack, Text } from "@chakra-ui/react"
 import type { ReactNode } from "react"
+import { segGroup, segItem } from "./segmented"
 
 /**
  * Fila de formulari, la mateixa a tota l'app (com la Configuració de macOS o l'inspector de Figma):
@@ -58,11 +59,11 @@ export function FormSection({ title, children }: { title: string; children: Reac
  */
 export function ChoiceChips<T extends string>({ label, options, value, onChange }: { label: string; options: { id: T; label: ReactNode }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <HStack gap={1.5} wrap="wrap" role="radiogroup" aria-label={label}>
+    <HStack {...segGroup} role="radiogroup" aria-label={label}>
       {options.map((o) => {
         const on = o.id === value
         return (
-          <Button key={o.id} size="sm" rounded="full" role="radio" aria-checked={on} variant={on ? "solid" : "outline"} colorPalette={on ? "wood" : "gray"} onClick={() => onChange(o.id)}>
+          <Button key={o.id} {...segItem(on)} px={2.5} role="radio" aria-checked={on} onClick={() => onChange(o.id)}>
             {o.label}
           </Button>
         )

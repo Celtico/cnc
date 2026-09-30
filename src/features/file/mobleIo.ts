@@ -9,7 +9,7 @@ import {
   type MobleFile,
 } from "../../core/file/mobleFile"
 import { DEFAULT_CABINET, newId, type Settings } from "../../core/model"
-import { compositionOf, saveUserTemplate, type UserTemplate } from "../../db/compositionStore"
+import { compositionOf } from "../../db/compositionStore"
 import { addPhoto, createProject, db, safeNestOptions, updateProjectPhoto, type Photo, type Project } from "../../db/db"
 import { downloadBlob } from "../download"
 
@@ -127,27 +127,3 @@ export async function openMobleFile(text: string, settings: Settings, saveSettin
   return { ok: true, projectId, name, warnings }
 }
 
-/** Exporta una plantilla com a `.moble` (marcat com a plantilla). */
-export async function saveTemplateAsFile(t: UserTemplate, settings: Settings): Promise<{ filename: string; how: "shared" | "downloaded" }> {
-  const file = buildMobleFile({ name: t.name, composition: t.composition, references: settings.references, kind: "plantilla" })
-  const filename = mobleFileName(t.name)
-  const how = await shareOrDownload(mobleBlob(file), filename)
-  return { filename, how }
-}
-
-/** Afegeix un `.moble` ja llegit a les plantilles (i les referències que faltin a les preferències). */
-export async function addMobleAsTemplate(
-  file: MobleFile,
-  settings: Settings,
-  saveSettings: (s: Settings) => Promise<void>,
-): Promise<{ name: string; warnings: string[] }> {
-  const warnings: string[] = []
-  const name = file.project.name.trim() || "Plantilla"
-  saveUserTemplate(name, file.project.composition)
-  const missing = missingReferences(file, settings.references)
-  if (missing.length) {
-    await saveSettings({ ...settings, references: [...missing.map((r) => ({ ...r, id: newId("ref") })), ...settings.references] })
-    warnings.push(`${missing.length === 1 ? "S'ha afegit una referència" : `S'han afegit ${missing.length} referències`} a les preferències.`)
-  }
-  return { name, warnings }
-}

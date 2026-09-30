@@ -1,10 +1,13 @@
 /*
- * Tots els camps a 16px: amb menys, Safari de l'iPhone fa zoom en entrar-hi.
- * Va fora de les capes de Chakra (@layer base/recipes) a propòsit: el CSS sense capa
- * guanya a qualsevol capa, i així cap mida de camp (sm, xs…) el pot rebaixar.
+ * Només els camps on s'escriu (text, números, cercadors…) a 16px, i només a les pantalles tàctils
+ * (iPhone, iPad): amb menys, Safari fa zoom en entrar-hi i desquadra la vista. La resta (botons,
+ * desplegables, interruptors) i tot a l'ordinador (ratolí) tenen la mida normal de Chakra (sm = 14px).
+ * Va fora de les capes de Chakra (@layer base/recipes) a propòsit: el CSS sense capa guanya a
+ * qualsevol capa, i així cap mida de camp (sm, xs…) el pot rebaixar a l'iPhone.
  */
-input,
-select,
-textarea {
-  font-size: 16px;
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  textarea {
+    font-size: 16px;
+  }
 }

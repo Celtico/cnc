@@ -30,81 +30,44 @@ export async function updateProjectComposition(id: number, composition: Composit
   await db.projects.update(id, { composition, updatedAt: Date.now(), edited: true })
 }
 
-// --- Plantilles de l'usuari (JSON a localStorage) -----------------------------------
-
-export interface UserTemplate {
-  id: string
-  name: string
-  composition: Composition
-  /** Grup (carpeta) de «Les teves plantilles». */
-  folder?: string
-  createdAt: number
-}
+// --- Plantilles de l'usuari (antigues) ------------------------------------------------
 
 const TEMPLATES_KEY = "mobles:templates"
 
-export function loadUserTemplates(): UserTemplate[] {
+/**
+ * Les «teves plantilles» ja no existeixen (Historial i Projectes les substitueixen): les que hi
+ * havia a localStorage es converteixen en mobles del grup «Les meves plantilles» (Projectes) i
+ * s'esborren de localStorage. Es fa un sol cop, en obrir l'app. Torna quantes n'ha passat.
+ */
+export async function migrateUserTemplates(): Promise<number> {
+  let raw: string | null = null
   try {
-    const raw = localStorage.getItem(TEMPLATES_KEY)
-    if (!raw) return []
-    const parsed: unknown = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter((t): t is UserTemplate => {
-      if (typeof t !== "object" || t === null) return false
-      const o = t as Record<string, unknown>
-      return typeof o.id === "string" && typeof o.name === "string" && CompositionSchema.safeParse(o.composition).success
-    })
+    raw = localStorage.getItem(TEMPLATES_KEY)
   } catch {
-    return []
+    return 0
   }
-}
-
-export function saveUserTemplate(name: string, composition: Composition): UserTemplate[] {
-  const list = loadUserTemplates()
-  const t: UserTemplate = { id: `t${Date.now().toString(36)}`, name: name.trim() || "Plantilla", composition, createdAt: Date.now() }
-  const next = [t, ...list]
+  if (!raw) return 0
+  // Es treu abans de crear els mobles: si s'executa dues vegades seguides (React en mode estricte
+  // munta l'App dos cops), la segona ja no troba res i no es dupliquen.
   try {
-    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(next))
+    localStorage.removeItem(TEMPLATES_KEY)
   } catch {
     /* sense localStorage */
   }
-  return next
-}
-
-export function deleteUserTemplate(id: string): UserTemplate[] {
-  const next = loadUserTemplates().filter((t) => t.id !== id)
+  let list: unknown = []
   try {
-    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(next))
+    list = JSON.parse(raw)
   } catch {
-    /* sense localStorage */
+    list = []
   }
-  return next
-}
-
-function writeTemplates(list: UserTemplate[]): UserTemplate[] {
-  try {
-    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(list))
-  } catch {
-    /* sense localStorage */
+  let n = 0
+  for (const t of Array.isArray(list) ? list : []) {
+    const o = t as { name?: unknown; composition?: unknown; createdAt?: unknown }
+    const comp = CompositionSchema.safeParse(o.composition)
+    if (!comp.success || typeof o.name !== "string") continue
+    const now = Date.now()
+    await db.projects.add({ name: o.name, params: safeParams(undefined), composition: comp.data, folder: "Les meves plantilles", createdAt: typeof o.createdAt === "number" ? o.createdAt : now, updatedAt: now } as Project)
+    n++
   }
-  return list
-}
-
-export function renameUserTemplate(id: string, name: string): UserTemplate[] {
-  const n = name.trim()
-  if (!n) return loadUserTemplates()
-  return writeTemplates(loadUserTemplates().map((t) => (t.id === id ? { ...t, name: n } : t)))
-}
-
-/** Posa (o treu) plantilles d'un grup. */
-export function setUserTemplatesFolder(ids: string[], folder: string | undefined): UserTemplate[] {
-  return writeTemplates(loadUserTemplates().map((t) => (ids.includes(t.id) ? { ...t, folder } : t)))
-}
-
-export function duplicateUserTemplate(id: string): UserTemplate[] {
-  const list = loadUserTemplates()
-  const src = list.find((t) => t.id === id)
-  if (!src) return list
-  const copy: UserTemplate = { ...structuredClone(src), id: `t${Date.now().toString(36)}`, name: `${src.name} (còpia)`, createdAt: Date.now() }
-  return writeTemplates([copy, ...list])
+  return n
 }

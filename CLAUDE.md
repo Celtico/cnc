@@ -249,7 +249,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Catàleg per categories** (`AMBIENT_CATEGORIES`, `AmbientTemplate.category`: salons, cuines, menjadors,
   dormitoris, infantils, vestidors, rebedors, despatxos, banys, exteriors), un acordió per categoria; la
   cerca també busca la categoria i obre les que coincideixen.
-- **Grups (carpetes)** a l'historial de Mobles, Objectes i Ambients i a «Les teves plantilles»
+- **Grups (carpetes)** a l'historial de Mobles, Objectes i Ambients
   (`Project.folder`, `AmbientRow.folder`, `UserTemplate.folder`; `setProjectsFolder`, `setAmbientsFolder`,
   `setUserTemplatesFolder`): menú ⋯ de cada targeta (desar com a fitxer, duplicar, **moure a un grup…**,
   esborrar; el mateix a totes) i `MoveToFolderDialog` (un grup existent, un de nou o treure'l). Es
@@ -331,16 +331,14 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Pàgina Mobles = inici, com Figma o Google Docs** (`projects/NewMobleGallery.tsx`, sense
   botó «Nou moble» ni diàleg): text descriptiu, **cercador** (sense filtre de tipus: el tipus també
   es busca), botó «Nou moble» a la capçalera i acordions **tots tancats**
-  en obrir l'app (l'estat es recorda durant la sessió, `mobles:gallery`): **Historial** (els
-  mobles que ja tens, `ProjectCard`), **Les teves plantilles**, **Plantilles de l'app** i
-  **Plantilles per a botigues de mobles**; el **cercador** (sense accents; obre
+  en obrir l'app (l'estat es recorda durant la sessió, `mobles:gallery`): **Historial**, **Projectes**
+  i **Plantilles per a botigues de mobles** (les «teves plantilles» i les «de l'app» ja no hi són: les teves
+  es van convertir en mobles del grup «Les meves plantilles», `migrateUserTemplates`); el **cercador** (sense accents; obre
   les seccions i categories amb resultats) valen per a tots. Totes les graelles fan servir
   `GALLERY_COLS` (`projects/galleryGrid.ts`) i la mateixa targeta petita (les del historial, amb
-  les accions a sota; les de botiga, en una sola graella per categoria amb el tipus a la targeta). Les teves es
-  gestionen allà (menú ⋯: duplicar, desar com a fitxer, eliminar; nom editable). Es creen
-  amb el **menú ⋯ de la barra superior** («Desar com a plantilla»). Una plantilla exportada
-  és un `.moble` amb `kind: "plantilla"`; en obrir un `.moble` es pregunta «Obrir com a
-  moble» o «Afegir a plantilles». **No** van a Preferències ni dins l'Editor.
+  les accions a sota; les de botiga, en una sola graella per categoria amb el tipus a la targeta). Un `.moble`
+  (també les plantilles exportades abans, `kind: "plantilla"`) **s'obre sempre com a moble**; el menú ⋯ de la barra
+  superior ja no té «Desar com a plantilla».
 - **Pàgines del moble, cadascuna amb un sol propòsit**:
   - **Peces**: taula (peces iguals agrupades) + **plànol de la peça seleccionada** al costat.
     Al mòbil, una **targeta per peça** (mides, material, veta, forats, cantells) i la triada porta el plànol a dins.
@@ -715,7 +713,10 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     la càmera), amb el mateix imant. S'amaguen les fixades (al terra: Y; a la paret: Z) i les
     que miren a la càmera en vistes ortogràfiques. Arrossegar el cos continua movent en el pla.
   - **Opcions amb icona** (`components/IconChoice.tsx`): poques opcions → botons d'icona amb
-    el nom al tooltip i l'opció triada al costat del títol. Base, Fons, Tapa (mòdul), Patró de
+    el nom al tooltip i l'opció triada al costat del títol (o a sota, amb `hideLabel`). **Estil discret i comú**
+    (`components/segmented.ts`, `segGroup` + `segItem(on)`): control segmentat petit (botons xs, fons suau, la triada
+    amb fons clar, ombra i icona del color principal), **sense ocupar tota l'amplada** i sense botons plens de
+    color; el fan servir IconChoice, el tipus de front, la «Fila» del mòdul i `ChoiceChips`. Base, Fons, Tapa (mòdul), Patró de
     reixeta, Direcció dels objectes; Efecte i Forma dels objectes, portes (una/dues, frontisses),
     abatible i muntatge de la reixeta són segments amb icona i text.
   - **Arbre: arrossegar per ordenar** (`reorderModule`, `reorderRef`): mòduls dins de la
@@ -763,8 +764,10 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   dels textos llargs.
 - **Controls segmentats en mode fosc** (`theme/system.ts`): l'indicador de l'opció triada és gris clar (per
   defecte era del mateix negre que el fons i no es veia quina estava triada).
-- **Inputs a 16px sempre** (`src/theme/inputs.css`, CSS sense capa: el globalCss de Chakra
-  va a `@layer base` i les receptes `sm`/`xs` el rebaixaven) per evitar el zoom d'iOS.
+- **Només els camps on s'escriu a 16px, i només a les pantalles tàctils** (`src/theme/inputs.css`,
+  `@media (pointer: coarse)`, CSS sense capa: el globalCss de Chakra va a `@layer base` i les receptes `sm`/`xs` el
+  rebaixaven) per evitar el zoom d'iOS. Botons, desplegables, interruptors i tot a l'ordinador: la mida normal de
+  Chakra (per decisió de l'usuari; si un desplegable fa zoom a l'iPhone, afegir-hi `select`).
 - Tokens semàntics (`bg.subtle`, `fg.muted`...) i `colorPalette`, no colors crus.
 - **Color principal = paleta `wood`** sempre (`colorPalette="wood"`, `wood.fg`...). L'usuari el canvia a
   Preferències → Tema (`theme/accent.ts` redirigeix les variables CSS de `wood`). No facis servir
@@ -814,7 +817,7 @@ Accions principals: icona + text.
 | Contingut | Abatible · Reixeta · Front fix | `LuPanelBottom` · `LuGrid3X3` · `LuSquare` |
 | Composició | Afegir · Duplicar · Eliminar · Reordenar | `LuPlus` · `LuCopy` · `LuTrash2` · `LuGripVertical` |
 | Composició | Objecte de referència · Radiador · TV | `LuScan` · `LuHeater` · `LuTv` |
-| Composició | Plantilles · Desar com a plantilla · Menú del document | `LuLayoutTemplate` · `LuBookmark` · `LuEllipsis` |
+| Composició | Plantilles · Menú del document | `LuLayoutTemplate` · `LuEllipsis` |
 | Panell | Mides exteriors · Taulers · Interior i front · Fusteria · Adaptar a la imatge | `LuMoveDiagonal` · `LuSquareStack` · `LuLayoutPanelLeft` · `LuHammer` · `LuCamera` |
 | Panell | Composició (mòduls i objectes de referència) · Compartiments (alçat) | `LuLayoutDashboard` · `LuLayoutPanelLeft` |
 | Inspector | Estructura (base, fons, tapa, laterals) · Front · Pare | `LuFrame` · `LuDoorClosed` · `LuArrowUp` |

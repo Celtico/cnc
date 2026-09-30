@@ -29,6 +29,17 @@ const config = defineConfig({
     ".dark [data-scope=segment-group][data-part=item][data-state=checked]": {
       color: "white",
     },
+    // Textos d'interruptors i caselles que salten de línia: interlineat còmode (per defecte quedaven
+    // enganxats) i l'interruptor alineat amb la primera línia.
+    "[data-scope=switch][data-part=label], [data-scope=checkbox][data-part=label]": {
+      lineHeight: "1.4",
+    },
+    "[data-scope=switch][data-part=root], [data-scope=checkbox][data-part=root]": {
+      alignItems: "flex-start",
+    },
+    "[data-scope=switch][data-part=control], [data-scope=checkbox][data-part=control]": {
+      marginTop: "1px",
+    },
     // Etiquetes de camp sempre en una línia: si no hi caben, punts suspensius (i el text
     // sencer al passar-hi per sobre, vegeu truncatedTitles.ts).
     "[data-scope=field][data-part=label]": {

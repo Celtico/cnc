@@ -225,7 +225,7 @@ export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !==
       <FormRow label="Cos" maxW="280px">
         <MaterialSelect label="Cos" hideLabel materials={boards} value={c.material} onChange={pickMaterial("material", "thickness")} />
       </FormRow>
-      <NumRow label="Gruix" value={c.thickness} min={8} max={40} step={1} onChange={(thickness) => onPatch(sameBack ? { thickness, backThickness: thickness } : { thickness })} help={mat ? mat.thicknesses.join(" · ") : undefined} />
+      <NumRow label="Gruix" value={c.thickness} min={8} max={40} step={1} onChange={(thickness) => onPatch(sameBack ? { thickness, backThickness: thickness } : { thickness })} help={mat ? `Gruixos del material: ${mat.thicknesses.join(" · ")} mm` : undefined} />
       <FormRow label="Fronts" help="Portes, calaixos i abatibles. Mateix gruix que el cos." maxW="280px">
         <NativeSelect.Root size="sm">
           <NativeSelect.Field aria-label="Fronts (portes, calaixos, abatibles)" value={c.frontMaterial ?? ""} onChange={(e) => onPatch({ frontMaterial: e.target.value || undefined })}>
