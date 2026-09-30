@@ -1,4 +1,5 @@
 import { CanvasTexture, MirroredRepeatWrapping, RepeatWrapping, SRGBColorSpace, TextureLoader, type Texture } from "three"
+import { TEXTURE_CACHE_MAX } from "./deviceLimits"
 import { WOOD_PRESETS, type Finish, type MaterialPref, type WoodGen } from "../../core/model"
 
 /**
@@ -51,13 +52,18 @@ const mix = (a: [number, number, number], b: [number, number, number], t: number
   Math.round(a[2] + (b[2] - a[2]) * t),
 ]
 
-/** Memòria de textures generades (les últimes; en moure un control se'n fan moltes). */
+/**
+ * Memòria de textures generades (les últimes; en moure un control se'n fan moltes). Les que en surten
+ * s'alliberen (`dispose`): si algun material encara la fa servir, three la torna a pujar.
+ */
 const cache = new Map<string, Texture>()
-function remember<T>(map: Map<string, T>, key: string, v: T, max = 48): T {
+function remember(map: Map<string, Texture>, key: string, v: Texture, max = TEXTURE_CACHE_MAX): Texture {
   map.set(key, v)
-  if (map.size > max) {
+  while (map.size > max) {
     const first = map.keys().next().value
-    if (first !== undefined) map.delete(first)
+    if (first === undefined) break
+    map.get(first)?.dispose()
+    map.delete(first)
   }
   return v
 }
@@ -458,6 +464,5 @@ export function photoTexture(src: string, seamless = false): Texture {
   tex.wrapT = seamless ? RepeatWrapping : MirroredRepeatWrapping
   tex.colorSpace = SRGBColorSpace
   tex.anisotropy = 8
-  photoCache.set(key, tex)
-  return tex
+  return remember(photoCache, key, tex)
 }

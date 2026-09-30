@@ -1,4 +1,5 @@
 import { Box, Button, CloseButton, Dialog, HStack, NativeSelect, Portal, Stack, Text } from "@chakra-ui/react"
+import { LOW_MEMORY } from "../deviceLimits"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import type { IconType } from "react-icons"
 import { LuCamera, LuDownload, LuGauge, LuHouse, LuImage, LuImageUp, LuPause, LuPlay, LuRotateCcw, LuSun, LuX } from "react-icons/lu"
@@ -239,7 +240,8 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     const j = job.current
     const src = source.current
     if (!j || !src) return
-    const n = Math.max(1, Math.min(8, (navigator.hardwareConcurrency || 4) - 1))
+    // Cada procés porta una còpia de l'escena: a l'iPhone, com a molt 2 (si no, iOS tanca la pàgina).
+    const n = Math.max(1, Math.min(LOW_MEMORY ? 2 : 8, (navigator.hardwareConcurrency || 4) - 1))
     let pending = false
     for (let i = 0; i < n; i++) {
       const w = new Worker(new URL("./pathWorker.ts", import.meta.url), { type: "module" })

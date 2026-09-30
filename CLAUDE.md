@@ -770,6 +770,10 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   amb `maxW` centrat). El 3D, la foto, l'alçat i el nesting s'estiren tant com la
   pantalla. Només es limita l'amplada dels panells de formulari (p. ex. 360–400 px) i
   dels textos llargs.
+- **Memòria a l'iPhone** (`components/viewer/deviceLimits.ts`, `LOW_MEMORY` = pantalla tàctil): Safari dona poca
+  memòria per pàgina i, si se supera, iOS la tanca i la recarrega. Per això, a les pantalles tàctils, Presentació fa
+  l'ombra a 2048 (no 4096) i fins a 2×, les memòries de textures (`remember` a `textures.ts`, també les fotos) en
+  guarden 12 i alliberen (`dispose`) les que en surten, i el render per CPU fa com a molt 2 processos.
 - **Controls segmentats en mode fosc** (`theme/system.ts`): l'indicador de l'opció triada és gris clar (per
   defecte era del mateix negre que el fons i no es veia quina estava triada).
 - **Només els camps on s'escriu a 16px, i només a les pantalles tàctils** (`src/theme/inputs.css`,

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { LOW_MEMORY } from "./deviceLimits"
 
 /**
  * Mode del visor 3D (preferència del dispositiu, es desa al navegador):
@@ -23,7 +24,10 @@ export interface QualitySpec {
 
 export const QUALITY: Record<RenderQuality, QualitySpec> = {
   fast: { dpr: [1, 2], shadows: false, shadowMap: 512, contactResolution: 256, contactBlur: 2.2, guides: true },
-  presentation: { dpr: [2, 2], shadows: true, shadowMap: 4096, contactResolution: 1024, contactBlur: 3, guides: false },
+  // A l'iPhone, l'ombra de 4096 (64 MB) i 2× fan que iOS tanqui la pàgina: 2048 i fins a 2×.
+  presentation: LOW_MEMORY
+    ? { dpr: [1.5, 2], shadows: true, shadowMap: 2048, contactResolution: 512, contactBlur: 3, guides: false }
+    : { dpr: [2, 2], shadows: true, shadowMap: 4096, contactResolution: 1024, contactBlur: 3, guides: false },
 }
 
 const KEY = "mobles:render-quality"
