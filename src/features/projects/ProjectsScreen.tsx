@@ -4,11 +4,10 @@ import {
   HStack,
   Heading,
   Portal,
-  Stack,
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { LuFolderOpen, LuPlus, LuLayoutTemplate, LuTrash2 } from "react-icons/lu"
 import { SaveFileDialog } from "../file/SaveFileDialog"
 import { addMobleAsTemplate, openMobleFile } from "../file/mobleIo"
@@ -126,63 +125,80 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
       <NewMobleGallery
         onCreate={(c, n) => void handleCreate(c, n)}
         history={(kind, matches, searching) => {
-          const shown = (projects ?? []).filter((p) => !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
-          const free = shown.filter((p) => !membership.has(p.id))
+          const shown = (projects ?? []).filter((p) => !p.auto && !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
+          // Historial = el que és de pas (sense grup); el que es desa en un grup passa a Projectes.
+          const loose = shown.filter((p) => !p.folder)
+          const grouped = shown.filter((p) => p.folder)
+          const free = loose.filter((p) => !membership.has(p.id))
+          const grid = (show: "folders" | "loose", list: typeof shown, toolbar?: ReactNode) => (
+            <FolderedGrid
+              show={show}
+              items={list}
+              folderOf={(p) => p.folder}
+              keyOf={(p) => p.id}
+              storageKey="mobles:folders-projects"
+              toolbar={toolbar}
+              selection={{
+                noun: ["moble", "mobles"],
+                folders: [...new Set((projects ?? []).filter((p) => !isObject(p) && p.folder).map((p) => p.folder!))].sort(),
+                onMove: (ids, f) => void setProjectsFolder(ids as number[], f),
+                onDelete: async (ids) => {
+                  // Els que són en algun ambient es conserven (si no, l'ambient perdria el moble).
+                  const del = (ids as number[]).filter((id) => !membership.has(id))
+                  for (const id of del) await deleteProject(id)
+                  const kept = ids.length - del.length
+                  toaster.create({ title: `${del.length} esborrats`, description: kept ? `Es conserven els ${kept} que són en algun ambient.` : undefined, type: "info" })
+                },
+              }}
+              searching={searching}
+              onRenameFolder={(from, to) => void setProjectsFolder(shown.filter((p) => p.folder === from).map((p) => p.id), to)}
+              onUngroup={(name) => void setProjectsFolder(shown.filter((p) => p.folder === name).map((p) => p.id), undefined)}
+              render={(p) => (
+                <ProjectCard
+                  project={p}
+                  onOpen={() => onOpen(p.id)}
+                  onDuplicate={() => handleDuplicate(p.id)}
+                  onDelete={() => setToDelete(p)}
+                  onSaveFile={() => setToSave(p)}
+                  onMove={() => setToMove(p)}
+                  ambients={membership.get(p.id)}
+                />
+              )}
+            />
+          )
           return {
-            count: shown.length,
+            count: loose.length,
             node:
-              shown.length === 0 ? (
+              loose.length === 0 ? (
                 <Text fontSize="sm" color="fg.muted">
-                  {projects?.length ? "Cap moble no coincideix amb el tipus o la cerca." : "Encara no tens cap moble: comença en blanc o des d'una plantilla."}
+                  {shown.length ? "L'historial és buit: el que tens és a Projectes." : projects?.length ? "Cap moble no coincideix amb el tipus o la cerca." : "Encara no tens cap moble: comença en blanc o des d'una plantilla."}
                 </Text>
               ) : (
-                <Stack gap={2}>
-                  <FolderedGrid
-                    items={shown}
-                    folderOf={(p) => p.folder}
-                    keyOf={(p) => p.id}
-                    storageKey="mobles:folders-projects"
-                    toolbar={
-                      <ClearHistory
-                        count={free.length}
-                        kept={shown.length - free.length}
-                        noun={["moble", "mobles"]}
-                        keptNote="Es conserven els {n} que són en algun ambient."
-                        onConfirm={async () => {
-                          for (const p of free) await deleteProject(p.id)
-                          toaster.create({ title: "Historial esborrat", type: "info" })
-                        }}
-                      />
-                    }
-                    selection={{
-                      noun: ["moble", "mobles"],
-                      folders: [...new Set((projects ?? []).filter((p) => !isObject(p) && p.folder).map((p) => p.folder!))].sort(),
-                      onMove: (ids, f) => void setProjectsFolder(ids as number[], f),
-                      onDelete: async (ids) => {
-                        // Els que són en algun ambient es conserven (si no, l'ambient perdria el moble).
-                        const del = (ids as number[]).filter((id) => !membership.has(id))
-                        for (const id of del) await deleteProject(id)
-                        const kept = ids.length - del.length
-                        toaster.create({ title: `${del.length} esborrats`, description: kept ? `Es conserven els ${kept} que són en algun ambient.` : undefined, type: "info" })
-                      },
+                grid(
+                  "loose",
+                  loose,
+                  <ClearHistory
+                    count={free.length}
+                    kept={loose.length - free.length}
+                    noun={["moble", "mobles"]}
+                    keptNote="Es conserven els {n} que són en algun ambient. Els dels Projectes no es toquen."
+                    onConfirm={async () => {
+                      for (const p of free) await deleteProject(p.id)
+                      toaster.create({ title: "Historial esborrat", description: "Els dels Projectes es conserven.", type: "info" })
                     }}
-                    searching={searching}
-                    onRenameFolder={(from, to) => void setProjectsFolder(shown.filter((p) => p.folder === from).map((p) => p.id), to)}
-                    onUngroup={(name) => void setProjectsFolder(shown.filter((p) => p.folder === name).map((p) => p.id), undefined)}
-                    render={(p) => (
-                      <ProjectCard
-                        project={p}
-                        onOpen={() => onOpen(p.id)}
-                        onDuplicate={() => handleDuplicate(p.id)}
-                        onDelete={() => setToDelete(p)}
-                        onSaveFile={() => setToSave(p)}
-                        onMove={() => setToMove(p)}
-                        ambients={membership.get(p.id)}
-                      />
-                    )}
-                  />
-                </Stack>
+                  />,
+                )
               ),
+            projects: {
+              count: grouped.length,
+              node: grouped.length ? (
+                grid("folders", grouped)
+              ) : (
+                <Text fontSize="sm" color="fg.muted">
+                  Encara no n'hi ha cap. A l'Historial, «Grup nou» o el menú ⋯ d'un moble › «Moure a un grup…» (p. ex. el nom d'un client): el que hi desis queda aquí i «Esborrar l'historial» no el toca.
+                </Text>
+              ),
+            },
           }
         }}
       />

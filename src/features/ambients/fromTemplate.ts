@@ -37,7 +37,8 @@ export async function createAmbientFromTemplate(t: AmbientTemplate, client?: str
     const name = uniqueName(tpl.name, names)
     names.push(name)
     // Al grup de l'ambient (a Mobles i a Objectes): així no s'escampen per l'historial.
-    const id = await createProject(name, undefined, { composition: comp, folder })
+    // `auto`: no surt a Mobles / Objectes fins que es toca (és part de l'escena).
+    const id = await createProject(name, undefined, { composition: comp, folder, auto: true })
     const b = buildBounds(buildComposition(comp))
     made.set(ref, { id, w: b.max[0] - b.min[0], d: b.max[2] - b.min[2] })
   }

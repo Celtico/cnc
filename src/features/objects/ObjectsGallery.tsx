@@ -1,7 +1,7 @@
 import { Accordion, CloseButton, Input, InputGroup, SimpleGrid, Stack } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 import { useState } from "react"
-import { LuHistory, LuLayoutTemplate, LuSearch } from "react-icons/lu"
+import { LuFolders, LuHistory, LuLayoutTemplate, LuSearch } from "react-icons/lu"
 import { OBJECT_TEMPLATES, type Composition, type Template } from "../../core/model"
 import { FoldTitle, TemplateCard } from "../projects/NewMobleGallery"
 import { GALLERY_COLS, fold, useSessionList } from "../projects/galleryGrid"
@@ -17,7 +17,7 @@ export function ObjectsGallery({
   storageKey = "mobles:objects",
 }: {
   onCreate: (composition: Composition, name: string) => void
-  history: (query: (text: string) => boolean, searching: boolean) => { count: number; node: ReactNode }
+  history: (query: (text: string) => boolean, searching: boolean) => { count: number; node: ReactNode; projects?: { count: number; node: ReactNode } }
   storageKey?: string
 }) {
   const [query, setQuery] = useState("")
@@ -26,7 +26,7 @@ export function ObjectsGallery({
   const templates = OBJECT_TEMPLATES.filter((t) => matches(`${t.name} ${t.description}`))
   const hist = history(matches, !!q)
   const [open, setOpen] = useSessionList(storageKey)
-  const found = [...(hist.count ? ["mine"] : []), ...(templates.length ? ["templates"] : [])]
+  const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["mine"] : []), ...(templates.length ? ["templates"] : [])]
   const pick = (t: Template) => onCreate({ ...t.make(), kind: "objecte" }, t.name)
   return (
     <Stack gap={4}>
@@ -34,6 +34,17 @@ export function ObjectsGallery({
         <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar objectes: nom, material…" aria-label="Cercar objectes" />
       </InputGroup>
       <Accordion.Root multiple collapsible lazyMount variant="enclosed" value={q ? found : open} onValueChange={(e) => !q && setOpen(e.value)}>
+        {hist.projects && (
+          <Accordion.Item value="projects">
+            <Accordion.ItemTrigger cursor="pointer">
+              <FoldTitle icon={<LuFolders />} title="Projectes" count={hist.projects.count} />
+              <Accordion.ItemIndicator />
+            </Accordion.ItemTrigger>
+            <Accordion.ItemContent>
+              <Accordion.ItemBody>{hist.projects.node}</Accordion.ItemBody>
+            </Accordion.ItemContent>
+          </Accordion.Item>
+        )}
         <Accordion.Item value="mine">
           <Accordion.ItemTrigger cursor="pointer">
             <FoldTitle icon={<LuHistory />} title="Historial" count={hist.count} />

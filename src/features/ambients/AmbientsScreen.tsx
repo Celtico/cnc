@@ -1,6 +1,6 @@
 import { Accordion, Badge, Button, Card, CloseButton, Dialog, Heading, HStack, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
-import { useMemo, useState } from "react"
-import { LuBookOpen, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu"
+import { useMemo, useState, type ReactNode } from "react"
+import { LuBookOpen, LuFolders, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { uniqueName } from "../../core/file/mobleFile"
 import { AMBIENT_CATEGORIES, AMBIENT_TEMPLATES, EMPTY_AMBIENT, footprintCorners, parseAmbient, roomWalls, wallCorners, type Ambient, type AmbientTemplate } from "../../core/model"
@@ -27,12 +27,14 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
   const q = fold(query.trim())
   const matches = (text: string) => !q || fold(text).includes(q)
   const shownRows = (rows ?? []).filter((r) => matches(r.name))
+  const looseRows = shownRows.filter((r) => !r.folder)
+  const groupedRows = shownRows.filter((r) => r.folder)
   const catLabel = (id: string) => AMBIENT_CATEGORIES.find((c) => c.id === id)?.label ?? ""
   const shownTemplates = AMBIENT_TEMPLATES.filter((t) => matches(`${t.name} ${t.description} ${catLabel(t.category)}`))
   const shownCats = AMBIENT_CATEGORIES.filter((c) => shownTemplates.some((t) => t.category === c.id))
   const [openCats, setOpenCats] = useSessionList("mobles:ambients-categories")
   const [open, setOpen] = useSessionList("mobles:ambients")
-  const found = [...(shownRows.length ? ["history"] : []), ...(shownTemplates.length ? ["catalog"] : [])]
+  const found = [...(groupedRows.length ? ["projects"] : []), ...(looseRows.length ? ["history"] : []), ...(shownTemplates.length ? ["catalog"] : [])]
   const create = async () => {
     const names = (await db.ambients.toArray()).map((a) => a.name)
     const data: Ambient = { ...EMPTY_AMBIENT, walls: roomWalls(0, 0, 4000, 3000) }
@@ -58,6 +60,74 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
       setBusy(null)
     }
   }
+  // Historial = el que és de pas (sense grup); el que es desa en un grup passa a Projectes.
+  const ambGrid = (show: "folders" | "loose", list: AmbientRow[], toolbar?: ReactNode) => (
+    <FolderedGrid
+      show={show}
+      items={list}
+      folderOf={(r) => r.folder}
+      keyOf={(r) => r.id}
+      storageKey="mobles:folders-ambients"
+      toolbar={toolbar}
+      selection={{
+        noun: ["ambient", "ambients"],
+        folders: [...new Set((rows ?? []).filter((r) => r.folder).map((r) => r.folder!))].sort(),
+        onMove: (ids, f) => void setAmbientsFolder(ids as number[], f),
+        onDelete: async (ids) => {
+          for (const id of ids as number[]) await deleteAmbient(id)
+          toaster.create({ title: `${ids.length} esborrats`, description: "Els mobles i objectes que hi havia es queden a Mobles i Objectes.", type: "info" })
+        },
+      }}
+      searching={!!q}
+      onRenameFolder={(from, to) => void setAmbientsFolder(shownRows.filter((r) => r.folder === from).map((r) => r.id), to)}
+      onUngroup={(name) => void setAmbientsFolder(shownRows.filter((r) => r.folder === name).map((r) => r.id), undefined)}
+      render={(r) => {
+        const a = parseAmbient(r.data)
+        return (
+          <Card.Root variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }}>
+            <Card.Body p={3} gap={2} cursor="pointer" onClick={() => onOpen(r.id)}>
+              <AmbientThumb a={a} />
+              <Text fontWeight="semibold" fontSize="sm" truncate title={r.name}>
+                {r.name}
+              </Text>
+              <Text fontSize="xs" color="fg.muted">
+                {a.walls.length} {a.walls.length === 1 ? "paret" : "parets"} · {a.items.length} {a.items.length === 1 ? "element" : "elements"}
+              </Text>
+            </Card.Body>
+            <Card.Footer px={3} pb={3} pt={0} gap={0.5} justifyContent="space-between">
+              <Text fontSize="xs" color="fg.subtle" truncate>
+                {new Date(r.updatedAt).toLocaleDateString("ca-ES", { day: "numeric", month: "short", year: "numeric" })}
+              </Text>
+              <Menu.Root positioning={{ placement: "bottom-end" }}>
+                <Menu.Trigger asChild>
+                  <IconButton aria-label={`Opcions de «${r.name}»`} size="xs" variant="ghost">
+                    <LuEllipsis />
+                  </IconButton>
+                </Menu.Trigger>
+                <Portal>
+                  <Menu.Positioner>
+                    <Menu.Content>
+                      <Menu.Item value="dup" onClick={() => (setClient(""), setAsking({ row: r }))}>
+                        <LuCopy /> Duplicar (per a un client)…
+                      </Menu.Item>
+                      <Menu.Item value="move" onClick={() => setToMove(r)}>
+                        <LuFolderInput /> Moure a un grup…
+                      </Menu.Item>
+                      <Menu.Separator />
+                      <Menu.Item value="del" color="fg.error" onClick={() => setToDelete(r)}>
+                        <LuTrash2 /> Esborrar
+                      </Menu.Item>
+                    </Menu.Content>
+                  </Menu.Positioner>
+                </Portal>
+              </Menu.Root>
+            </Card.Footer>
+          </Card.Root>
+        )
+      }}
+    />
+  )
+
   return (
     <VStack align="stretch" gap={5}>
       <HStack justify="space-between" gap={3}>
@@ -74,92 +144,47 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
           <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar ambients: nom, habitació, material…" aria-label="Cercar ambients" />
         </InputGroup>
         <Accordion.Root multiple collapsible lazyMount variant="enclosed" value={q ? found : open} onValueChange={(e) => !q && setOpen(e.value)}>
-          <Accordion.Item value="history">
+          <Accordion.Item value="projects">
             <Accordion.ItemTrigger cursor="pointer">
-              <FoldTitle icon={<LuHistory />} title="Historial" count={shownRows.length} />
+              <FoldTitle icon={<LuFolders />} title="Projectes" count={groupedRows.length} />
               <Accordion.ItemIndicator />
             </Accordion.ItemTrigger>
             <Accordion.ItemContent>
               <Accordion.ItemBody>
-                {shownRows.length === 0 ? (
+                {groupedRows.length ? (
+                  ambGrid("folders", groupedRows)
+                ) : (
                   <Text fontSize="sm" color="fg.muted">
-                    {rows?.length ? "Cap ambient no coincideix amb la cerca." : "Encara no en tens: comença en blanc o des del catàleg."}
+                    Encara no n'hi ha cap. En crear una escena del catàleg per a un client, o amb «Grup nou» a l'Historial: el que hi desis queda aquí i «Esborrar l'historial» no el toca.
+                  </Text>
+                )}
+              </Accordion.ItemBody>
+            </Accordion.ItemContent>
+          </Accordion.Item>
+          <Accordion.Item value="history">
+            <Accordion.ItemTrigger cursor="pointer">
+              <FoldTitle icon={<LuHistory />} title="Historial" count={looseRows.length} />
+              <Accordion.ItemIndicator />
+            </Accordion.ItemTrigger>
+            <Accordion.ItemContent>
+              <Accordion.ItemBody>
+                {looseRows.length === 0 ? (
+                  <Text fontSize="sm" color="fg.muted">
+                    {shownRows.length ? "L'historial és buit: el que tens és a Projectes." : rows?.length ? "Cap ambient no coincideix amb la cerca." : "Encara no en tens: comença en blanc o des del catàleg."}
                   </Text>
                 ) : (
-                  <Stack gap={2}>
-                    <FolderedGrid
-                      items={shownRows}
-                      folderOf={(r) => r.folder}
-                      keyOf={(r) => r.id}
-                      storageKey="mobles:folders-ambients"
-                      toolbar={
+                  ambGrid(
+                    "loose",
+                    looseRows,
                         <ClearHistory
-                          count={shownRows.length}
+                          count={looseRows.length}
                           noun={["ambient", "ambients"]}
                           onConfirm={async () => {
-                            for (const r of shownRows) await deleteAmbient(r.id)
-                            toaster.create({ title: "Historial esborrat", description: "Els mobles i objectes que hi havia es queden a Mobles i Objectes.", type: "info" })
+                            for (const r of looseRows) await deleteAmbient(r.id)
+                            toaster.create({ title: "Historial esborrat", description: "Els dels Projectes es conserven; els mobles i objectes que hi havia es queden a Mobles i Objectes.", type: "info" })
                           }}
-                        />
-                      }
-                      selection={{
-                        noun: ["ambient", "ambients"],
-                        folders: [...new Set((rows ?? []).filter((r) => r.folder).map((r) => r.folder!))].sort(),
-                        onMove: (ids, f) => void setAmbientsFolder(ids as number[], f),
-                        onDelete: async (ids) => {
-                          for (const id of ids as number[]) await deleteAmbient(id)
-                          toaster.create({ title: `${ids.length} esborrats`, description: "Els mobles i objectes que hi havia es queden a Mobles i Objectes.", type: "info" })
-                        },
-                      }}
-                      searching={!!q}
-                      onRenameFolder={(from, to) => void setAmbientsFolder(shownRows.filter((r) => r.folder === from).map((r) => r.id), to)}
-                      onUngroup={(name) => void setAmbientsFolder(shownRows.filter((r) => r.folder === name).map((r) => r.id), undefined)}
-                      render={(r) => {
-                        const a = parseAmbient(r.data)
-                        return (
-                          <Card.Root variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }}>
-                            <Card.Body p={3} gap={2} cursor="pointer" onClick={() => onOpen(r.id)}>
-                              <AmbientThumb a={a} />
-                              <Text fontWeight="semibold" fontSize="sm" truncate title={r.name}>
-                                {r.name}
-                              </Text>
-                              <Text fontSize="xs" color="fg.muted">
-                                {a.walls.length} {a.walls.length === 1 ? "paret" : "parets"} · {a.items.length} {a.items.length === 1 ? "element" : "elements"}
-                              </Text>
-                            </Card.Body>
-                            <Card.Footer px={3} pb={3} pt={0} gap={0.5} justifyContent="space-between">
-                              <Text fontSize="xs" color="fg.subtle" truncate>
-                                {new Date(r.updatedAt).toLocaleDateString("ca-ES", { day: "numeric", month: "short", year: "numeric" })}
-                              </Text>
-                              <Menu.Root positioning={{ placement: "bottom-end" }}>
-                                <Menu.Trigger asChild>
-                                  <IconButton aria-label={`Opcions de «${r.name}»`} size="xs" variant="ghost">
-                                    <LuEllipsis />
-                                  </IconButton>
-                                </Menu.Trigger>
-                                <Portal>
-                                  <Menu.Positioner>
-                                    <Menu.Content>
-                                      <Menu.Item value="dup" onClick={() => (setClient(""), setAsking({ row: r }))}>
-                                        <LuCopy /> Duplicar (per a un client)…
-                                      </Menu.Item>
-                                      <Menu.Item value="move" onClick={() => setToMove(r)}>
-                                        <LuFolderInput /> Moure a un grup…
-                                      </Menu.Item>
-                                      <Menu.Separator />
-                                      <Menu.Item value="del" color="fg.error" onClick={() => setToDelete(r)}>
-                                        <LuTrash2 /> Esborrar
-                                      </Menu.Item>
-                                    </Menu.Content>
-                                  </Menu.Positioner>
-                                </Portal>
-                              </Menu.Root>
-                            </Card.Footer>
-                          </Card.Root>
-                        )
-                      }}
-                    />
-                  </Stack>
+                        />,
+                  )
                 )}
               </Accordion.ItemBody>
             </Accordion.ItemContent>

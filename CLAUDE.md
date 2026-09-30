@@ -255,6 +255,12 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   esborrar; el mateix a totes) i `MoveToFolderDialog` (un grup existent, un de nou o treure'l). Es
   mostren amb `FolderedGrid` (`projects/Folders.tsx`): primer els grups plegables (⋯: canviar el nom,
   desagrupar) i després els que no en tenen; la cerca obre els grups amb resultats.
+  **Historial i Projectes** (Mobles, Objectes i Ambients): l'**Historial** és el que és de pas (sense grup) i
+  «Esborrar l'historial» només esborra aquests; el que es desa en un grup surt a la secció **Projectes**
+  (`FolderedGrid show="folders"|"loose"`) i no es toca. **Mobles d'escena sense tocar** (`Project.auto`): els que
+  crea una escena del catàleg no surten a Mobles ni a Objectes (són part de l'ambient) fins que es modifiquen
+  (`updateProjectComposition` treu la marca i passen al grup de Projectes); `deleteAmbient` esborra els seus `auto`
+  que cap altre ambient fa servir.
   **Grups propis** (p. ex. un per client): **«Grup nou»** (nom i després es toquen les targetes que hi van) i
   «Seleccionar» a la fila d'eines de l'historial (`FolderedGrid selection`,
   amb `toolbar` per a «Esborrar l'historial») marca diverses targetes i les **mou totes a un grup** (un que ja hi

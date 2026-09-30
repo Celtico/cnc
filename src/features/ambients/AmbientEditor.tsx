@@ -670,7 +670,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                     storageKey="mobles:ambient-picker"
                     onCreate={(c, n) => createAndAdd(c, n, "moble")}
                     history={(kind, matches) => {
-                      const shown = (projects ?? []).filter((p) => !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
+                      const shown = (projects ?? []).filter((p) => !p.auto && !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
                       return {
                         count: shown.length,
                         node: shown.length ? (
@@ -716,7 +716,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                     storageKey="mobles:ambient-objects"
                     onCreate={(c, n) => createAndAdd(c, n, "object")}
                     history={(matches) => {
-                      const shown = (projects ?? []).filter((p) => isObject(p) && matches(p.name))
+                      const shown = (projects ?? []).filter((p) => !p.auto && isObject(p) && matches(p.name))
                       return {
                         count: shown.length,
                         node: shown.length ? (

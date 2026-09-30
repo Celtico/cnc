@@ -20,7 +20,13 @@ export function FolderedGrid<T>({
   onUngroup,
   toolbar,
   selection,
+  show = "all",
 }: {
+  /**
+   * Què es mostra: tot, només els grups (secció «Projectes») o només els que no en tenen
+   * (secció «Historial»). La selecció i «Grup nou» treballen amb el que es veu.
+   */
+  show?: "all" | "folders" | "loose"
   /** A la dreta de la fila d'eines (p. ex. «Esborrar l'historial»). */
   toolbar?: ReactNode
   /**
@@ -42,7 +48,10 @@ export function FolderedGrid<T>({
   onRenameFolder: (from: string, to: string) => void
   onUngroup: (name: string) => void
 }) {
-  const { folders, loose } = groupByFolder(items, folderOf)
+  const grouped = groupByFolder(items, folderOf)
+  const folders = show === "loose" ? [] : grouped.folders
+  const loose = show === "folders" ? [] : grouped.loose
+  const visible = [...folders.flatMap(([, l]) => l), ...loose]
   const [open, setOpen] = useSessionList(storageKey)
   const [renaming, setRenaming] = useState<string | null>(null)
   // Mode selecció: cada targeta es marca en tocar-la (no s'obre).
@@ -100,7 +109,7 @@ export function FolderedGrid<T>({
               <Text fontSize="sm" color="fg.muted" mr="auto">
                 {target && !n ? `Toca els que van al grup «${target}»` : n ? `${n} ${noun} seleccionat${n === 1 ? "" : "s"}` : "Toca les targetes per seleccionar-les"}
               </Text>
-              <Button size="xs" variant="ghost" onClick={() => setPicked(new Set(items.map(keyOf)))}>
+              <Button size="xs" variant="ghost" onClick={() => setPicked(new Set(visible.map(keyOf)))}>
                 Tots
               </Button>
               {target ? (
@@ -136,7 +145,7 @@ export function FolderedGrid<T>({
                   <LuFolderPlus /> Grup nou
                 </Button>
               )}
-              {selection && items.length > 1 && (
+              {selection && visible.length > 1 && (
                 <Button size="xs" variant="ghost" onClick={() => setPicking(true)}>
                   <LuListChecks /> Seleccionar
                 </Button>
@@ -199,7 +208,7 @@ export function FolderedGrid<T>({
             folders={selection.folders}
             current={(() => {
               // Si tots són del mateix grup, es pot «Treure del grup».
-              const fs = new Set(items.filter((t) => picked.has(keyOf(t))).map(folderOf))
+              const fs = new Set(visible.filter((t) => picked.has(keyOf(t))).map(folderOf))
               return fs.size === 1 ? [...fs][0] : undefined
             })()}
             onPick={(f) => {

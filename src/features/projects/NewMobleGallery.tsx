@@ -1,6 +1,6 @@
 import { Accordion, Badge, Box, Button, Card, CloseButton, Dialog, Editable, HStack, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { LuBookmark, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuLayoutTemplate, LuSearch, LuShare2, LuStore, LuTrash2 } from "react-icons/lu"
+import { LuBookmark, LuFolders, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuLayoutTemplate, LuSearch, LuShare2, LuStore, LuTrash2 } from "react-icons/lu"
 import { CompositionThumb } from "../../components/CompositionThumb"
 import { toaster } from "../../components/ui/toaster"
 import { BUILTIN_TEMPLATES, compositionHeight, compositionKind, compositionWidth, STORE_CATALOG, type Composition, type CompositionKind, type Template } from "../../core/model"
@@ -75,7 +75,7 @@ export function NewMobleGallery({
 }: {
   onCreate: (composition: Composition, name: string) => void
   /** Historial: els mobles que ja tens (del tipus triat), al primer acordió. */
-  history: (kind: CompositionKind | "all", query: (text: string) => boolean, searching: boolean) => { count: number; node: ReactNode }
+  history: (kind: CompositionKind | "all", query: (text: string) => boolean, searching: boolean) => { count: number; node: ReactNode; projects?: { count: number; node: ReactNode } }
   /** Clau de sessió dels acordions oberts (la pàgina Mobles i la finestra dels ambients, per separat). */
   storageKey?: string
 }) {
@@ -111,7 +111,7 @@ export function NewMobleGallery({
   const [openCats, setOpenCats] = useSessionList(`${storageKey}-store`)
   const hist = history(kind, matches, !!q)
   // Amb cerca, s'obren les seccions que tenen resultats.
-  const found = [...(hist.count ? ["history"] : []), ...(shownMine.length ? ["mine"] : []), ...(shownBuiltin.length ? ["app"] : []), ...(storeCount ? ["store"] : [])]
+  const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["history"] : []), ...(shownMine.length ? ["mine"] : []), ...(shownBuiltin.length ? ["app"] : []), ...(storeCount ? ["store"] : [])]
   const pick = (t: Template) => onCreate({ ...t.make(), kind: t.kind }, t.name)
 
 
@@ -129,6 +129,17 @@ export function NewMobleGallery({
 
 
       <Accordion.Root multiple collapsible lazyMount variant="enclosed" value={q ? found : openSections} onValueChange={(e) => !q && setOpenSections(e.value)}>
+        {hist.projects && (
+          <Accordion.Item value="projects">
+            <Accordion.ItemTrigger cursor="pointer">
+              <FoldTitle icon={<LuFolders />} title="Projectes" count={hist.projects.count} />
+              <Accordion.ItemIndicator />
+            </Accordion.ItemTrigger>
+            <Accordion.ItemContent>
+              <Accordion.ItemBody>{hist.projects.node}</Accordion.ItemBody>
+            </Accordion.ItemContent>
+          </Accordion.Item>
+        )}
         <Accordion.Item value="history">
           <Accordion.ItemTrigger cursor="pointer">
             <FoldTitle icon={<LuHistory />} title="Historial" count={hist.count} />
