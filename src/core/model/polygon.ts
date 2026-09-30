@@ -82,20 +82,6 @@ export function polygonTouchesRect(pts: Pt[], x0: number, y0: number, x1: number
   return false
 }
 
-/**
- * Desplaça el perfil perquè la cantonada mínima (arcs inclosos) sigui (0, 0); en retorna la
- * mida. Conserva els bulges.
- */
-export function normalizeProfile(pts: BPt[]): { points: BPt[]; w: number; h: number } {
-  const b = bounds(flatten(pts, Math.PI / 90))
-  const r = (v: number) => Math.round(v * 10) / 10
-  return {
-    points: pts.map((p) => (bulgeOf(p) ? [r(p[0] - b.x0), r(p[1] - b.y0), p[2]!] : [r(p[0] - b.x0), r(p[1] - b.y0)]) as BPt),
-    w: r(b.x1 - b.x0),
-    h: r(b.y1 - b.y0),
-  }
-}
-
 // --- Contorns amb arcs (bulge, com al DXF) ---------------------------------------------
 
 /**
@@ -120,10 +106,6 @@ export function arcOf(p: BPt, q: BPt, b: number): { cx: number; cy: number; r: n
   const r = Math.hypot(p[0] - cx, p[1] - cy)
   return { cx, cy, r, start: Math.atan2(p[1] - cy, p[0] - cx), sweep: 4 * Math.atan(b) }
 }
-
-/** Fletxa (mm, amb signe) d'un bulge sobre una corda de llargada c, i a la inversa. */
-export const sagittaOf = (b: number, c: number): number => (b * c) / 2
-export const bulgeFromSagitta = (s: number, c: number): number => (c > 0 ? (2 * s) / c : 0)
 
 /** Contorn amb arcs → polígon (els arcs, en segments d'uns `step` radiants com a màxim). */
 export function flatten(pts: BPt[], step = Math.PI / 24): Pt[] {

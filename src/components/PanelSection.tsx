@@ -36,11 +36,6 @@ export function PanelGroup({ storageKey, defaultOpen, children }: { storageKey: 
   return <GroupContext.Provider value={{ openId, setOpenId }}>{children}</GroupContext.Provider>
 }
 
-/** Obre una secció des de fora (p. ex. en triar la pestanya Foto). */
-export function usePanelGroup() {
-  return useContext(GroupContext)
-}
-
 /**
  * Sense animació d'alçada: el contingut es munta en obrir. (El Collapsible de Chakra
  * mesura l'alçada en obrir i, si el contingut arriba després, p. ex. per un portal,

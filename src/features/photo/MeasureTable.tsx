@@ -1,29 +1,7 @@
 import { Badge, Box, Button, HStack, IconButton, Input, Menu, Portal, Stack, Table, Text } from "@chakra-ui/react"
 import { LuCircleCheck, LuEye, LuMoveHorizontal, LuRectangleHorizontal, LuTrash2, LuWand } from "react-icons/lu"
-import type { Composition } from "../../core/model"
+import type { ApplyTarget } from "./applyTargets"
 import type { Measure, MeasureValue } from "../../core/photo/measure"
-
-/** Objectius on es pot aplicar una mesura: paràmetres dels mòduls i dels objectes de referència. */
-export interface ApplyTarget {
-  id: string
-  label: string
-}
-
-export function applyTargets(comp: Composition | undefined): ApplyTarget[] {
-  if (!comp) return []
-  const out: ApplyTarget[] = []
-  for (const m of comp.modules) {
-    out.push({ id: `module:${m.id}:width`, label: `${m.name} · amplada` })
-    out.push({ id: `module:${m.id}:height`, label: `${m.name} · alçada` })
-    out.push({ id: `module:${m.id}:depth`, label: `${m.name} · fondària` })
-  }
-  for (const r of comp.references) {
-    out.push({ id: `ref:${r.id}:w`, label: `${r.name} · amplada` })
-    out.push({ id: `ref:${r.id}:h`, label: `${r.name} · alçada` })
-    out.push({ id: `ref:${r.id}:d`, label: `${r.name} · fondària` })
-  }
-  return out
-}
 
 const fmt = (v: number | null | undefined): string => (v === null || v === undefined ? "" : Math.round(v).toLocaleString("ca-ES"))
 const fmtRel = (v: number): string => v.toLocaleString("ca-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })

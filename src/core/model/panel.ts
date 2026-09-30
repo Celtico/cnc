@@ -205,7 +205,3 @@ export const NO_EDGES: EdgeBanding = {
   bottom: false,
   top: false,
 }
-
-export function edgeCount(edges: EdgeBanding): number {
-  return EDGE_SIDES.filter((s) => edges[s]).length
-}

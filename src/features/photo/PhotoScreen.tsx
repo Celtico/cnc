@@ -75,7 +75,8 @@ import { useSettings } from "../settings/SettingsContext"
 import { usePersistentNumber } from "../usePersistentNumber"
 import { useCabinet, useProject } from "../useProject"
 import { ESTIMATED_WARNING, estimatedApplied } from "./appliedState"
-import { MeasureTable, applyTargets, type ApplyTarget } from "./MeasureTable"
+import { MeasureTable } from "./MeasureTable"
+import { applyTargets, type ApplyTarget } from "./applyTargets"
 
 const POINT_NAMES = ["baix-esquerra", "baix-dreta", "dalt-dreta", "dalt-esquerra"]
 

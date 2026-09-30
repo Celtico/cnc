@@ -387,7 +387,7 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
     const lx = rr * Math.cos(phi), ly = rr * Math.sin(phi), lz = Math.sqrt(1 - u1)
     // Base ortonormal al voltant de n.
     const ax = Math.abs(nx) > 0.9 ? 0 : 1, ay = Math.abs(nx) > 0.9 ? 1 : 0
-    let tx = ay * nz - 0 * ny, ty = 0 * nx - ax * nz, tz = ax * ny - ay * nx
+    let tx = ay * nz, ty = -ax * nz, tz = ax * ny - ay * nx
     const tl = Math.hypot(tx, ty, tz) || 1
     tx /= tl; ty /= tl; tz /= tl
     const bx = ny * tz - nz * ty, by = nz * tx - nx * tz, bz = nx * ty - ny * tx

@@ -87,9 +87,6 @@ export const DEFAULT_CABINET: CabinetParams = {
   backMaterial: "DM 10",
 }
 
-/** Gruixos habituals del taller. */
-export const COMMON_THICKNESSES = [10, 12, 16, 19, 30] as const
-
 /** Valida i completa uns paràmetres parcials amb els valors per defecte. */
 export function parseCabinetParams(input: unknown): CabinetParams {
   const merged =

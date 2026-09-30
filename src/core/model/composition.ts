@@ -443,10 +443,6 @@ export function newId(prefix = "z"): string {
   return `${prefix}${Date.now().toString(36)}${counter.toString(36)}`
 }
 
-export function isLeaf(zone: Zone): boolean {
-  return !zone.split
-}
-
 /** Recorre l'arbre de zones (pre-ordre). */
 export function walkZones(zone: Zone, fn: (z: Zone, parent: Zone | null) => void, parent: Zone | null = null): void {
   fn(zone, parent)
@@ -558,11 +554,6 @@ export function normalizeComposition(input: Composition): Composition {
     }
   }
   return { ...comp, modules }
-}
-
-/** X d'inici de cada mòdul dins de la composició. */
-export function moduleOrigins(comp: Composition): number[] {
-  return modulePlacements(comp).map((p) => p.x)
 }
 
 /** Amplada total: fins a la dreta del mòdul que arriba més lluny. */

@@ -328,7 +328,8 @@ interface PaneProps {
 }
 
 /** Una pàgina de Preferències (només en llegeix les propietats `SettingsPages`). */
-function Pane(_: PaneProps): ReactNode {
+function Pane(props: PaneProps): ReactNode {
+  void props
   return null
 }
 

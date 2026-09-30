@@ -35,8 +35,6 @@ const hexToRgb = (h: string): [number, number, number] => {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
-export const SPECIES_LABEL: Record<WoodSpecies, string> = { oak: "Roure", walnut: "Noguera", ash: "Freixe" }
-
 /** Mida real d'un tile de textura (mm). */
 export const TILE_MM = 600
 

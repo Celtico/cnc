@@ -88,7 +88,7 @@ export function mitreGeometry(p: Panel): BufferGeometry {
     const n = [e1[1]! * e2[2]! - e1[2]! * e2[1]!, e1[2]! * e2[0]! - e1[0]! * e2[2]!, e1[0]! * e2[1]! - e1[1]! * e2[0]!]
     const f = [(a[0]! + c[0]!) / 2 - cx, (a[1]! + c[1]!) / 2 - cy, (a[2]! + c[2]!) / 2 - cz]
     if (n[0]! * f[0]! + n[1]! * f[1]! + n[2]! * f[2]! < 0) {
-      ;[a, b, c, d] = [a, d, c, b]
+      ;[b, d] = [d, b]
       uvq = [uv0[0]!, uv0[3]!, uv0[2]!, uv0[1]!]
     }
     for (const [v, t] of [[a, uvq[0]], [b, uvq[1]], [c, uvq[2]], [a, uvq[0]], [c, uvq[2]], [d, uvq[3]]] as const) {

@@ -75,9 +75,6 @@ export function nearestEndpoint(walls: Wall[], p: PlanPt, tol: number, skip?: (w
 
 export const samePt = (a: PlanPt, b: PlanPt) => Math.abs(a[0] - b[0]) < 0.5 && Math.abs(a[1] - b[1]) < 0.5
 
-/** Text de mida (mm o cm segons la unitat de pantalla). */
-export const fmtLen = (mm: number, unit: "mm" | "cm") => (unit === "cm" ? `${Math.round(mm / 10)} cm` : `${Math.round(mm)} mm`)
-
 /** Vista recordada de l'editor d'ambients (Plànol · 3D). */
 export const AMBIENT_TAB_KEY = "mobles:ambient-tab"
 

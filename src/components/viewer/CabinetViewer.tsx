@@ -8,12 +8,14 @@ import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
 import { Billboard, ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
 import { BoxGeometry, NeutralToneMapping, DoubleSide, type BufferGeometry, ExtrudeGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Shape, Vector3, type Object3D, type Texture } from "three"
+import { type ViewName } from "./viewNames"
+export type { ViewName } from "./viewNames"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 import { AXIS_INDEX, SECTION_AXES, flatten, partSize, partsBox, sampleProfile, toNodes, type FreePart, type Hole, type MaterialPref, type Panel, type RefObject } from "../../core/model"
 import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
-import { ROLE_COLOR } from "./roleColors"
+import { ROLE_COLOR } from "./roleColorMap"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
 import { RAW_EDGE_COLOR, TILE_MM, patternTexture, photoTexture, resolveEdgeFinish, resolveFinish, woodGenOf, woodTexture, type FinishSpec } from "./textures"
 
@@ -28,8 +30,6 @@ const AXIS_ARROW = { x: "↔", y: "↕", z: "⤢" } as const
 const EXPLODE_MM = 160
 
 
-export type ViewName = "3d" | "front" | "back" | "left" | "right" | "top"
-export const VIEW_LABELS: Record<ViewName, string> = { "3d": "3D", front: "Davant", back: "Darrere", left: "Esquerra", right: "Dreta", top: "Dalt" }
 
 /** Mòdul de la composició, per ressaltar-lo, seleccionar-lo i afegir-ne al costat. */
 export interface ViewerModule {

@@ -1,4 +1,4 @@
-import { compositionKind, modulePlacements, partsOnlyKind, partCutters, type Composition, type Panel, type RefObject, type Vec3 } from "../model"
+import { compositionKind, modulePlacements, partsOnlyKind, partCutters, type Composition, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { buildModule, type BuildWarning, type ModuleBuild } from "./buildModule"
 import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
@@ -37,10 +37,6 @@ export function panelBox(p: Panel): { min: Vec3; max: Vec3 } {
           max[i] = Math.max(max[i]!, v)
         }
   return { min, max }
-}
-
-export function refBox(o: RefObject): { min: Vec3; max: Vec3 } {
-  return { min: [o.x, o.y, o.z], max: [o.x + o.w, o.y + o.h, o.z + o.d] }
 }
 
 /**

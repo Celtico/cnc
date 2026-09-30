@@ -175,10 +175,6 @@ export async function removeProjectPhoto(id: number): Promise<void> {
   })
 }
 
-export async function updateProjectParams(id: number, params: CabinetParams): Promise<void> {
-  await db.projects.update(id, { params, updatedAt: Date.now() })
-}
-
 export async function updateProjectNesting(id: number, nesting: NestOptions): Promise<void> {
   await db.projects.update(id, { nesting, updatedAt: Date.now() })
 }

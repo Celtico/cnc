@@ -46,8 +46,8 @@ import { ArDialog } from "../../components/viewer/ArDialog"
 import { RenderDialog, type SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
-import { panelBox } from "../../core/build/buildComposition"
-import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, partBox, type Composition, type FreePart, type Module, type RefObject, type Zone } from "../../core/model"
+import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
+import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, partBox, type Composition, type FreePart, type Module, type Panel, type RefObject, type Zone } from "../../core/model"
 import { updateProjectComposition } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -86,6 +86,10 @@ function readTab(): ViewTab {
 }
 
 type ViewMode = "pieces" | "texture" | "presentation"
+/** Llista buida estable (mentre no hi ha moble construït). */
+const NO_PANELS: Panel[] = []
+const NO_WARNINGS: CompositionWarning[] = []
+
 const VIEW_MODES: [ViewMode, string, string, typeof LuShapes][] = [
   ["pieces", "Per peça", "cada tipus de peça d'un color, ràpid i amb guies", LuShapes],
   ["texture", "Textura", "materials i veta, ràpid i amb guies", LuTrees],
@@ -265,7 +269,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const { settings } = useSettings()
 
   const build = useCompositionBuild(comp)
-  const panels = build?.panels ?? []
+  const panels = build?.panels ?? NO_PANELS
   const panelsRef = useRef(panels)
   panelsRef.current = panels
 
@@ -346,7 +350,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
 
   const updateModule = (m: Module) => setComp((c) => ({ ...c, modules: c.modules.map((x) => (x.id === m.id ? m : x)) }))
 
-  const selection: Selection =
+  const selectionNow: Selection =
     selKind === "moble"
       ? { kind: "moble" }
       : selKind === "ref" && selectedRef && comp.references.some((r) => r.id === selectedRef)
@@ -360,6 +364,11 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             : selectedZone && zone
           ? { kind: "zone", moduleId: module.id, zoneId: selectedZone }
           : { kind: "module", id: module.id }
+  // La mateixa selecció ha de ser el mateix objecte d'un render a l'altre: si no, tots els càlculs
+  // que en depenen (useMemo) es refarien a cada render.
+  const selectionKey = JSON.stringify(selectionNow)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const selection = useMemo(() => selectionNow, [selectionKey])
   const select = (s: Selection, fromPanel = false) => {
     if (s.kind === "moble") setSelKind("moble")
     else if (s.kind === "ref") {
@@ -660,7 +669,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
 
 
 
-  const warnings = build?.warnings ?? []
+  const warnings = build?.warnings ?? NO_WARNINGS
   // Al 3D també els elements sense nesting (ferro, pedra, vidre…).
   const viewerPanels = useMemo(() => (build?.extras.length ? [...panels, ...build.extras] : panels), [build, panels])
   const totalHoles = panels.reduce((n, p) => n + p.holes.length, 0)
@@ -694,7 +703,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
       return { x0: mod.x, x1: mod.x + c.width, y0: mod.y, y1: mod.y + c.height, z0: mod.z, z1: mod.z + c.depth + c.thickness, veil: false }
     if (selection.kind !== "zone" || !zoneRect) return null
     return { x0: mod.x + zoneRect.x0, x1: mod.x + zoneRect.x1, y0: mod.y + zoneRect.y0, y1: mod.y + zoneRect.y1, z0: mod.z, z1: mod.z + c.depth + c.thickness }
-  }, [selection.kind, zoneRect, build, moduleIndex, module.carcass, comp.modules.length])
+  }, [selection.kind, zoneRect, build, moduleIndex, module.carcass])
   const openOnly = useMemo(() => {
     if (!viewer.openOnlySelected || !zoneRect || !build) return null
     const mod = build.modules[moduleIndex]

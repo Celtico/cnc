@@ -1,7 +1,7 @@
 import { Button, HStack, Menu, NativeSelect, Portal, SegmentGroup, Slider, Stack, Switch } from "@chakra-ui/react"
 import { LuChevronDown, LuDoorOpen, LuImageDown } from "react-icons/lu"
 import { FormRow } from "../../components/FormRow"
-import { VIEW_LABELS, type ViewName } from "../../components/viewer/CabinetViewer"
+import { VIEW_LABELS, type ViewName } from "../../components/viewer/viewNames"
 
 const VIEWS: ViewName[] = ["front", "back", "left", "right", "top", "3d"]
 
