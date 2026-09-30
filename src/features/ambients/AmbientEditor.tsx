@@ -1,4 +1,4 @@
-import { Badge, Box, Button, Dialog, Editable, Field, Flex, HStack, IconButton, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Slider, Stack, Switch, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, CloseButton, Dialog, Drawer, Editable, Field, Flex, HStack, IconButton, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Slider, Stack, Switch, Text } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   LuArrowLeft,
@@ -27,6 +27,7 @@ import {
   BLOCK_PRESETS,
   BlockShapeSchema,
   CompositionSchema,
+  compositionKind,
   materialCategory,
   newId,
   parseAmbient,
@@ -40,7 +41,12 @@ import {
   type Wall,
 } from "../../core/model"
 import { compositionOf, updateProjectComposition } from "../../db/compositionStore"
-import { db, renameAmbient, updateAmbient, type Project } from "../../db/db"
+import { createProject, db, renameAmbient, updateAmbient, type Project } from "../../db/db"
+import { uniqueName } from "../../core/file/mobleFile"
+import { NewMobleGallery } from "../projects/NewMobleGallery"
+import { ProjectCard } from "../projects/ProjectCard"
+import { GALLERY_COLS } from "../projects/galleryGrid"
+import { useAmbientMembership } from "./useAmbientMembership"
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { NumberField } from "../editor/ParamsForm"
 import { useSettings } from "../settings/SettingsContext"
@@ -83,6 +89,8 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
   const [fit, setFit] = useState(0)
   const [calib, setCalib] = useState<{ a: PlanPt; b: PlanPt } | null>(null)
   const [wallDefaults, setWallDefaults] = useState({ thickness: 100, height: 2600 })
+  const [picker, setPicker] = useState(false)
+  const membership = useAmbientMembership()
   const past = useRef<Ambient[]>([])
   const future = useRef<Ambient[]>([])
   const committed = useRef<Ambient>(initial)
@@ -303,25 +311,9 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
             </Tooltip>
           </HStack>
           <HStack gap={2}>
-            <Menu.Root positioning={{ placement: "bottom-start" }}>
-              <Menu.Trigger asChild>
-                <Button size="sm" colorPalette="wood" flex={1}>
-                  <LuBox /> Moble
-                </Button>
-              </Menu.Trigger>
-              <Portal>
-                <Menu.Positioner>
-                  <Menu.Content maxH="60vh" overflowY="auto">
-                    {!projects?.length && <Menu.Item value="none" disabled>Encara no tens cap moble</Menu.Item>}
-                    {projects?.map((p) => (
-                      <Menu.Item key={p.id} value={String(p.id)} onClick={() => addMoble(p)}>
-                        <LuBox /> {p.name}
-                      </Menu.Item>
-                    ))}
-                  </Menu.Content>
-                </Menu.Positioner>
-              </Portal>
-            </Menu.Root>
+            <Button size="sm" colorPalette="wood" flex={1} onClick={() => setPicker(true)}>
+              <LuBox /> Moble
+            </Button>
             <Menu.Root positioning={{ placement: "bottom-start" }}>
               <Menu.Trigger asChild>
                 <Button size="sm" variant="outline" flex={1}>
@@ -448,6 +440,57 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
           )}
         </Stack>
       </Flex>
+
+      {/* Afegir un moble: la mateixa pàgina de Mobles (historial i plantilles) a pantalla completa. */}
+      <Drawer.Root open={picker} onOpenChange={(e) => setPicker(e.open)} size="full" placement="bottom">
+        <Portal>
+          <Drawer.Backdrop />
+          <Drawer.Positioner>
+            <Drawer.Content>
+              <Drawer.Header>
+                <Drawer.Title>Afegir un moble a «{name}»</Drawer.Title>
+                <Drawer.CloseTrigger asChild>
+                  <CloseButton size="sm" aria-label="Tancar" />
+                </Drawer.CloseTrigger>
+              </Drawer.Header>
+              <Drawer.Body>
+                {picker && (
+                  <NewMobleGallery
+                    storageKey="mobles:ambient-picker"
+                    onCreate={(c, n) =>
+                      void (async () => {
+                        const existing = (await db.projects.toArray()).map((p) => p.name)
+                        const id = await createProject(uniqueName(n, existing), undefined, { composition: c })
+                        const p = await db.projects.get(id)
+                        if (p) addMoble(p)
+                        setPicker(false)
+                        toaster.create({ title: `«${p?.name ?? n}» afegit`, description: "S'ha creat a Mobles i s'ha col·locat a l'ambient.", type: "success" })
+                      })()
+                    }
+                    history={(kind, matches) => {
+                      const shown = (projects ?? []).filter((p) => (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
+                      return {
+                        count: shown.length,
+                        node: shown.length ? (
+                          <SimpleGrid columns={GALLERY_COLS} gap={3}>
+                            {shown.map((p) => (
+                              <ProjectCard key={p.id} project={p} ambients={membership.get(p.id)} currentAmbient={ambientId} onAdd={() => (addMoble(p), setPicker(false))} />
+                            ))}
+                          </SimpleGrid>
+                        ) : (
+                          <Text fontSize="sm" color="fg.muted">
+                            {projects?.length ? "Cap moble no coincideix amb el tipus o la cerca." : "Encara no tens cap moble: comença en blanc o des d'una plantilla."}
+                          </Text>
+                        ),
+                      }
+                    }}
+                  />
+                )}
+              </Drawer.Body>
+            </Drawer.Content>
+          </Drawer.Positioner>
+        </Portal>
+      </Drawer.Root>
 
       <CalibrateDialog open={calib !== null} measured={calib ? Math.hypot(calib.b[0] - calib.a[0], calib.b[1] - calib.a[1]) : 0} onClose={() => (setCalib(null), setTool("select"))} onApply={applyCalibration} />
     </Flex>

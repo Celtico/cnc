@@ -1,25 +1,24 @@
 import {
   Button,
-  Card,
   Dialog,
   HStack,
   Heading,
-  IconButton,
   Portal,
   SimpleGrid,
   Text,
   VStack,
 } from "@chakra-ui/react"
 import { useEffect, useRef, useState } from "react"
-import { LuCopy, LuFolderOpen, LuLayoutTemplate, LuSave, LuTrash2 } from "react-icons/lu"
+import { LuFolderOpen, LuLayoutTemplate, LuTrash2 } from "react-icons/lu"
 import { SaveFileDialog } from "../file/SaveFileDialog"
 import { addMobleAsTemplate, openMobleFile } from "../file/mobleIo"
 import { parseMobleFile, uniqueName, type MobleFile } from "../../core/file/mobleFile"
 import { NewMobleGallery } from "./NewMobleGallery"
 import { GALLERY_COLS } from "./galleryGrid"
-import { CompositionThumb } from "../../components/CompositionThumb"
-import { compositionHeight, compositionKind, compositionWidth, type Composition } from "../../core/model"
-import { createProject, db, deleteProject, duplicateProject, safeParams, type Project } from "../../db/db"
+import { ProjectCard } from "./ProjectCard"
+import { useAmbientMembership } from "../ambients/useAmbientMembership"
+import { compositionKind, type Composition } from "../../core/model"
+import { createProject, db, deleteProject, duplicateProject, type Project } from "../../db/db"
 import { compositionOf } from "../../db/compositionStore"
 import { useProjects } from "../useProject"
 import { useSettings } from "../settings/SettingsContext"
@@ -31,6 +30,7 @@ export type ProjectsRequest = { kind: "open"; n: number } | null
 
 export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOpen: (id: number) => void; request?: ProjectsRequest; onRequestDone?: () => void }) {
   const projects = useProjects()
+  const membership = useAmbientMembership()
   const { settings, save } = useSettings()
   const [toDelete, setToDelete] = useState<Project | null>(null)
   const [toSave, setToSave] = useState<Project | null>(null)
@@ -131,6 +131,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
                       onDuplicate={() => handleDuplicate(p.id)}
                       onDelete={() => setToDelete(p)}
                       onSaveFile={() => setToSave(p)}
+                      ambients={membership.get(p.id)}
                     />
                   ))}
                 </SimpleGrid>
@@ -202,64 +203,5 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
         </Portal>
       </Dialog.Root>
     </VStack>
-  )
-}
-
-function ProjectCard({
-  project,
-  onOpen,
-  onDuplicate,
-  onDelete,
-  onSaveFile,
-}: {
-  project: Project
-  onOpen: () => void
-  onDuplicate: () => void
-  onDelete: () => void
-  onSaveFile: () => void
-}) {
-  const p = safeParams(project.params)
-  const comp = compositionOf(project)
-  const first = comp.modules[0]!.carcass
-  // Mides de conjunt amb les posicions reals (files, potes, penjats).
-  const width = Math.round(compositionWidth(comp))
-  const height = Math.round(compositionHeight(comp))
-  const depth = Math.max(...comp.modules.map((m) => m.carcass.depth))
-  const date = new Date(project.updatedAt).toLocaleDateString("ca-ES", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  })
-  return (
-    // Mateixa targeta que les plantilles (mida sm, miniatura, nom i dues línies), amb les accions a sota.
-    <Card.Root variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }}>
-      <Card.Body p={3} gap={2} cursor="pointer" onClick={onOpen}>
-        <CompositionThumb composition={comp} />
-        <Text fontWeight="semibold" fontSize="sm" truncate title={project.name}>
-          {project.name}
-        </Text>
-        <Text fontSize="xs" color="fg.muted" lineClamp={2}>
-          {width} × {height} × {depth} mm ·{" "}
-          {comp.modules.length === 1 ? `1 mòdul · ${first.material}` : `${comp.modules.length} mòduls: ${comp.modules.map((m) => m.name).join(", ")}`}
-          {!project.composition && ` · ${p.shelves} ${p.shelves === 1 ? "prestatge" : "prestatges"} · ${p.doors} ${p.doors === 1 ? "porta" : "portes"}`}
-        </Text>
-      </Card.Body>
-      <Card.Footer px={3} pb={3} pt={0} gap={0.5} justifyContent="space-between">
-        <Text fontSize="xs" color="fg.subtle" truncate>
-          {date}
-        </Text>
-        <HStack gap={0}>
-          <IconButton aria-label="Desar com a fitxer" title="Desar com a fitxer" size="xs" variant="ghost" onClick={onSaveFile}>
-            <LuSave />
-          </IconButton>
-          <IconButton aria-label="Duplicar moble" title="Duplicar" size="xs" variant="ghost" onClick={onDuplicate}>
-            <LuCopy />
-          </IconButton>
-          <IconButton aria-label="Esborrar moble" title="Esborrar" size="xs" variant="ghost" colorPalette="red" onClick={onDelete}>
-            <LuTrash2 />
-          </IconButton>
-        </HStack>
-      </Card.Footer>
-    </Card.Root>
   )
 }

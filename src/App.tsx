@@ -1,7 +1,7 @@
 import { Box, Container, Flex, HStack, Heading, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import type { IconType } from "react-icons"
-import { LuArrowLeft, LuBookmark, LuBox, LuDownload, LuEllipsis, LuFolder, LuFolderOpen, LuHouse, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings } from "react-icons/lu"
+import { LuArrowLeft, LuBookmark, LuBox, LuDownload, LuDraftingCompass, LuEllipsis, LuFolderOpen, LuHouse, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings } from "react-icons/lu"
 import { Toaster } from "./components/ui/toaster"
 import { Tooltip } from "./components/ui/tooltip"
 import { TopBar, TopBarActionsProvider } from "./components/TopBar"
@@ -29,12 +29,12 @@ type NavEntry = { id: Screen; label: string; icon: IconType }
 
 /** Pàgines del moble obert. Només surten quan n'hi ha un d'obert. */
 const PROJECT_NAV: NavEntry[] = [
-  { id: "editor", label: "Editor", icon: LuBox },
+  { id: "editor", label: "Editor", icon: LuDraftingCompass },
   { id: "cutlist", label: "Peces", icon: LuList },
   { id: "nesting", label: "Nesting", icon: LuLayoutGrid },
   { id: "export", label: "Exportar", icon: LuDownload },
 ]
-const PROJECTS_ENTRY: NavEntry = { id: "projects", label: "Mobles", icon: LuFolder }
+const PROJECTS_ENTRY: NavEntry = { id: "projects", label: "Mobles", icon: LuBox }
 const AMBIENTS_ENTRY: NavEntry = { id: "ambients", label: "Ambients", icon: LuHouse }
 const SETTINGS_ENTRY: NavEntry = { id: "settings", label: "Preferències", icon: LuSettings }
 

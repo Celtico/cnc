@@ -105,10 +105,13 @@ function useSessionList(key: string): [string[], (v: string[]) => void] {
 export function NewMobleGallery({
   onCreate,
   history,
+  storageKey = "mobles:gallery",
 }: {
   onCreate: (composition: Composition, name: string) => void
   /** Historial: els mobles que ja tens (del tipus triat), al primer acordió. */
   history: (kind: CompositionKind | "all", query: (text: string) => boolean) => { count: number; node: ReactNode }
+  /** Clau de sessió dels acordions oberts (la pàgina Mobles i la finestra dels ambients, per separat). */
+  storageKey?: string
 }) {
   const { settings } = useSettings()
   const [mine, setMine] = useState<UserTemplate[]>(loadUserTemplates)
@@ -136,8 +139,8 @@ export function NewMobleGallery({
       .filter((ty) => ty.items.length > 0),
   })).filter((c) => c.types.length > 0)
   const storeCount = store.reduce((n, c) => n + c.types.reduce((m, ty) => m + ty.items.length, 0), 0)
-  const [openSections, setOpenSections] = useSessionList("mobles:gallery")
-  const [openCats, setOpenCats] = useSessionList("mobles:gallery-store")
+  const [openSections, setOpenSections] = useSessionList(storageKey)
+  const [openCats, setOpenCats] = useSessionList(`${storageKey}-store`)
   const hist = history(kind, matches)
   // Amb cerca, s'obren les seccions que tenen resultats.
   const found = [...(hist.count ? ["history"] : []), ...(shownMine.length ? ["mine"] : []), ...(shownBuiltin.length ? ["app"] : []), ...(storeCount ? ["store"] : [])]

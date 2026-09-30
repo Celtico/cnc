@@ -169,6 +169,11 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   A l'ambient només se'n toquen les **mides generals** (`resizeComposition`: escala amplades,
   separacions, alçades amb potes/sòcol/penjats, fondàries, mides fixes de zones i calaixos, peces
   lliures i objectes; els gruixos no) i la posició; «Obrir a l'editor» per a l'interior.
+  «Moble» obre una **finestra a pantalla completa** (`Drawer` full) amb la mateixa pàgina de
+  Mobles (`NewMobleGallery`: historial, les teves, les de l'app i les de botiga, amb filtre i
+  cercador); a l'historial, «Afegir»; una plantilla crea el moble a Mobles i el col·loca. Els
+  mobles que ja són en un ambient porten la marca de l'ambient (`useAmbientMembership`,
+  `ProjectCard`): a la pàgina Mobles i, destacada (✓ i vora), a la finestra de l'ambient obert.
 - **Blocs** (`kind = "block"`, `BLOCK_PRESETS`, `blockComposition`): caixa, sofà, llit i taula fets
   de peces lliures sense nesting amb materials de simulació (i un segon material: matalàs,
   coixins). Tot (mobles i blocs) es dibuixa amb el mateix camí: build → peces → `buildScene`.
@@ -622,7 +627,7 @@ Accions principals: icona + text.
 
 | Àmbit | Acció | Icona |
 |---|---|---|
-| Navegació | Mobles · Editor · Peces · Nesting · Exportar | `LuFolder` · `LuBox` · `LuList` · `LuLayoutGrid` · `LuDownload` |
+| Navegació | Mobles (el cub: un moble) · Editor · Peces · Nesting · Exportar | `LuBox` · `LuDraftingCompass` · `LuList` · `LuLayoutGrid` · `LuDownload` |
 | Navegació | Tornar · Plegar/desplegar menú · Preferències | `LuArrowLeft` · `LuPanelLeftClose` / `LuPanelLeftOpen` · `LuSettings` |
 | Zones | Dividir en vertical (divisor vertical, zones esquerra/dreta) | `LuSquareSplitHorizontal` |
 | Zones | Dividir en horitzontal (travesser, zones dalt/baix) | `LuSquareSplitVertical` |
