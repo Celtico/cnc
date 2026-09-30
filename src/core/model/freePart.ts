@@ -126,3 +126,20 @@ export function partsBox(parts: FreePart[]): { min: Vec3; max: Vec3 } {
 export function partGroups(parts: FreePart[]): string[] {
   return [...new Set(parts.flatMap((p) => (p.group ? [p.group] : [])))]
 }
+
+/**
+ * Mida neta en mm: un valor amb més d'un decimal (restes de calcular formes, p. ex. 453,5763…)
+ * s'arrodoneix al mm; els que ha escrit l'usuari (22,5) es queden com són.
+ */
+export function tidyMm(v: number): number {
+  return Number.isFinite(v) && Math.abs(v * 10 - Math.round(v * 10)) > 1e-6 ? Math.round(v) : v
+}
+
+/** La peça amb les mides i la posició netes (`tidyMm`); la mateixa peça si no canvia res. */
+export function tidyPart<T extends FreePart | Omit<FreePart, "id" | "nest" | "joints">>(p: T): T {
+  const keys = ["x", "y", "z", "w", "h", "thickness"] as const
+  if (keys.every((k) => tidyMm(p[k]) === p[k])) return p
+  const out = { ...p }
+  for (const k of keys) out[k] = tidyMm(p[k])
+  return out
+}

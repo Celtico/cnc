@@ -2,7 +2,7 @@ import { z } from "zod"
 import { DEFAULT_CABINET, type CabinetParams } from "./cabinet"
 import { BPtSchema, ProfileNodeSchema } from "./panel"
 import { flatten, profileToOutline, sampleProfile, toNodes, type BPt } from "./polygon"
-import { FreePartSchema, JoinerySchema, PART_AXES as PART_AXES_C, type FreePart } from "./freePart"
+import { FreePartSchema, JoinerySchema, PART_AXES as PART_AXES_C, tidyPart, type FreePart } from "./freePart"
 
 /**
  * Model de composició: mòduls d'esquerra a dreta, cadascun amb una carcassa i un
@@ -536,7 +536,10 @@ function legacyPlacements(comp: Composition): ModulePlacement[] {
  * sobre d'un altre passen a penjats a l'alçada on eren; l'ordre de cada fila es refà
  * d'esquerra a dreta i les separacions es recalculen perquè tot quedi on era.
  */
-export function normalizeComposition(comp: Composition): Composition {
+export function normalizeComposition(input: Composition): Composition {
+  // Peces lliures amb decimals llargs (objectes fets abans d'arrodonir): al mm.
+  const tidy = input.parts?.map(tidyPart)
+  const comp = tidy && tidy.some((p, i) => p !== input.parts![i]) ? { ...input, parts: tidy } : input
   if (!comp.modules.some((m) => m.anchor)) return comp
   const ps = legacyPlacements(comp)
   const items = comp.modules.map((m, i) => {

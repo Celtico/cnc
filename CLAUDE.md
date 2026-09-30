@@ -179,7 +179,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   `ellipse`, `roundRect` per als coixins, `leaf`, `wave` per als plecs de les cortines, `blob` per a
   capçades i pufs): sofàs amb coixins i en L, daybed, butaques, cadires, quadres, miralls, tele, cortines,
   llums de sostre, plantes (tropical, olivera, pi pinyoner, jardinera), catifes, taules… Tot és geometria
-  (perfils extrudits), no física ni shaders: així el render per CPU ho veu igual que el visor. Materials de
+  (perfils extrudits), no física ni shaders: així el render per CPU ho veu igual que el visor. **Mides al mm**: les formes calculades
+  donen decimals llargs; `tidyMm`/`tidyPart` (`freePart.ts`) arrodoneixen al mm els valors amb més d'un decimal
+  (els de l'usuari, com 22,5, es queden) en crear l'objecte i en carregar-lo (`normalizeComposition`). Materials de
   simulació nous a la **v4** de les preferències (estucs, travertí, pedra de paret, vellut oliva, bouclé,
   tul, cuir, jute, kilim, fulles, escorça, ceràmica, llautó, mirall…; la migració afegeix els que falten).
   Pàgina `objects/ObjectsScreen` (`ObjectsGallery`: cercador, En blanc, els teus i

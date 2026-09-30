@@ -1,4 +1,4 @@
-import { DEFAULT_JOINERY, type FreePart } from "./freePart"
+import { DEFAULT_JOINERY, tidyPart, type FreePart } from "./freePart"
 import { defaultModule, newId, type Composition } from "./composition"
 import type { PNode } from "./polygon"
 
@@ -70,7 +70,8 @@ export const objectComposition = (parts: Q[]): Composition => ({
   kind: "objecte",
   modules: [defaultModule(newId("m"), "Mòdul 1")],
   references: [],
-  parts: parts.map((q) => ({ id: newId("p"), nest: false, joints: false, ...q })),
+  // Mides al mm (les formes calculades donen decimals llargs).
+  parts: parts.map((q) => ({ id: newId("p"), nest: false, joints: false, ...tidyPart(q) })),
   joinery: { ...DEFAULT_JOINERY },
 })
 
