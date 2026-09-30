@@ -16,7 +16,7 @@ export function SaveTemplateDialog({ project, open, onClose }: { project: Projec
   const save = () => {
     if (!project) return
     saveUserTemplate(name.trim() || project.name, structuredClone(compositionOf(project)))
-    toaster.create({ title: "Plantilla desada", description: "La trobaràs a Mobles › Nou moble.", type: "success" })
+    toaster.create({ title: "Plantilla desada", description: "La trobaràs a Mobles › Les teves plantilles.", type: "success" })
     onClose()
   }
   return (

@@ -1,7 +1,7 @@
-import { Box, Button, Container, Flex, HStack, Heading, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
+import { Box, Container, Flex, HStack, Heading, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import type { IconType } from "react-icons"
-import { LuArrowLeft, LuBookmark, LuBox, LuDownload, LuEllipsis, LuFolder, LuFolderOpen, LuPlus, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings } from "react-icons/lu"
+import { LuArrowLeft, LuBookmark, LuBox, LuDownload, LuEllipsis, LuFolder, LuFolderOpen, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings } from "react-icons/lu"
 import { Toaster } from "./components/ui/toaster"
 import { Tooltip } from "./components/ui/tooltip"
 import { TopBar, TopBarActionsProvider } from "./components/TopBar"
@@ -54,10 +54,10 @@ export function App() {
   const previewComposition = useMemo(() => (project ? compositionOf(project) : undefined), [project])
   const { settings } = useSettings()
   const [navCollapsed, setNavCollapsed] = usePersistentFlag("mobles:nav-collapsed")
-  // «Nou moble» i «Obrir fitxer» del menú: van a la llista de mobles i hi obren l'acció.
+  // «Obrir fitxer» del menú: va a la llista de mobles i hi obre el selector de fitxers.
   const [projectsRequest, setProjectsRequest] = useState<ProjectsRequest>(null)
   const clearProjectsRequest = useCallback(() => setProjectsRequest(null), [])
-  const requestProjects = (kind: "new" | "open") => {
+  const requestProjects = (kind: "open") => {
     setProjectsRequest({ kind, n: Date.now() })
     setScreen("projects")
   }
@@ -183,7 +183,7 @@ export function App() {
           </>
         ) : (
           <Stack gap={1}>
-            {/* «Mobles» sempre a dalt de tot, separat; a sota, Obrir fitxer i Nou moble. */}
+            {/* «Mobles» sempre a dalt de tot, separat; a sota, Obrir fitxer. */}
             <NavItem
               icon={PROJECTS_ENTRY.icon}
               label={PROJECTS_ENTRY.label}
@@ -197,11 +197,6 @@ export function App() {
               <>
               <Box borderTopWidth="1px" my={1} />
               <NavItem icon={LuFolderOpen} label="Obrir fitxer" collapsed={navCollapsed} active={false} disabled={false} onClick={() => requestProjects("open")} />
-              <Tooltip content="Nou moble" disabled={!navCollapsed} positioning={{ placement: "right" }}>
-                <Button colorPalette="wood" size="sm" my={1} px={navCollapsed ? 0 : 3} justifyContent={navCollapsed ? "center" : "flex-start"} aria-label={navCollapsed ? "Nou moble" : undefined} onClick={() => requestProjects("new")}>
-                  <LuPlus /> {!navCollapsed && "Nou moble"}
-                </Button>
-              </Tooltip>
               </>
             )}
           </Stack>

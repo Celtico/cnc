@@ -180,8 +180,11 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   accions del document a la dreta. Cada pàgina hi posa les seves amb `<TopBarActions>`
   (l'Editor: desar, desfer, refer). **Les pàgines no porten títol propi**: l'apartat ja es
   veu marcat al menú. Al mòbil, la mateixa barra amb fletxa enrere.
-- **Plantilles com a les apps professionals**: es trien a **Mobles › Nou moble** (galeria:
-  En blanc · les teves · les de l'app, amb miniatura `CompositionThumb`) i les teves es
+- **Pàgina Mobles = inici, com Figma o Google Docs** (`projects/NewMobleGallery.tsx`, sense
+  botó «Nou moble» ni diàleg): filtre per tipus, targeta «En blanc» i acordions **tots tancats**
+  en obrir l'app (l'estat es recorda durant la sessió, `mobles:gallery`): **Historial** (els
+  mobles que ja tens, `ProjectCard`), **Les teves plantilles**, **Plantilles de l'app** i
+  **Plantilles per a botigues de mobles**; el filtre de tipus val per a tots. Les teves es
   gestionen allà (menú ⋯: duplicar, desar com a fitxer, eliminar; nom editable). Es creen
   amb el **menú ⋯ de la barra superior** («Desar com a plantilla»). Una plantilla exportada
   és un `.moble` amb `kind: "plantilla"`; en obrir un `.moble` es pregunta «Obrir com a
@@ -290,7 +293,7 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   - **Nom a la capçalera de l'inspector**: el nom del mòdul i de l'objecte es canvia clicant-lo
     a la capçalera (`Editable`, com a Figma), no a les seccions; el del moble, a la barra de dalt.
   - **Tipus de moble** (`Composition.kind`, `compositionKind`, `features/composition/kinds.tsx`):
-    Moble, Cuina, Armari, Taula. Es tria a la galeria «Nou moble» (filtre per tipus; «En blanc»
+    Moble, Cuina, Armari, Taula. Es tria a la pàgina Mobles (filtre per tipus; «En blanc»
     crea el del tipus) i a l'inspector del moble (secció Tipus). Taulell i sòcol correguts només
     surten i es construeixen a la Cuina; en canviar de tipus es guarden (no es fan) i tornen. Taula: `tableModule` (tauler + dos laterals de
     panell, sense base ni fons, cantonades a inglet); «Afegir mòdul» n'afegeix una. Plantilles
@@ -373,8 +376,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     Tretes de la galeria (per decisió de l'usuari): Consola ona, Moble TV 3 portes i Moble TV
     menjador; aquest últim es queda com a `TV_LIVING_ROOM` per als tests i la vista prèvia de
     l'escena a Preferències.
-  - **Galeria «Nou moble» en acordions** (`NewMobleDialog`, `Accordion` de Chakra amb `lazyMount`):
-    «Plantilles de l'app» (oberta) i, a sota, **«Plantilles per a botigues de mobles»**
+  - **Plantilles en acordions** (`NewMobleGallery`, `Accordion` de Chakra amb `lazyMount`):
+    «Plantilles de l'app» i, a sota, **«Plantilles per a botigues de mobles»**
     (`model/storeCatalog.ts`, `STORE_CATALOG` / `STORE_TEMPLATES`, a partir de
     [`cad-mobles-cataleg.md`](cad-mobles-cataleg.md)): 9 categories (Saló, Menjador, Dormitori, Juvenil,
     Despatx, Entrada, Emmagatzematge, Bany, Exterior) › tipus de moble › 3 dissenys (nom comercial,
