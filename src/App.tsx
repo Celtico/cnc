@@ -23,6 +23,7 @@ import { SettingsScreen } from "./features/settings/SettingsScreen"
 import { useSettings } from "./features/settings/SettingsContext"
 import { UnitContext } from "./features/units"
 import { usePersistentNumber } from "./features/usePersistentNumber"
+import { isObject as projectIsObject } from "./features/objects/isObject"
 import { usePersistentFlag } from "./features/usePersistentFlag"
 import { useProject } from "./features/useProject"
 
@@ -129,16 +130,19 @@ export function App() {
   const [saveOpen, setSaveOpen] = useState(false)
   const [templateOpen, setTemplateOpen] = useState(false)
   useEffect(() => {
-    if (projectId === null || !previewComposition) return
+    // Només quan el projecte carregat és el que hi ha obert (si no, en canviar d'un objecte a un
+    // moble es recordava el moble com a «últim objecte» i Objectes obria un moble).
+    if (projectId === null || !previewComposition || project?.id !== projectId) return
     if (isObject) setLastObject(projectId)
     else setLastMoble(projectId)
-  }, [projectId, previewComposition, isObject, setLastMoble, setLastObject])
+  }, [projectId, project?.id, previewComposition, isObject, setLastMoble, setLastObject])
   /** Mobles / Objectes del menú: l'últim obert (si encara existeix) o la llista. */
   const goRoot = (kind: "projects" | "objects") => {
     const id = kind === "objects" ? lastObject : lastMoble
     if (id > 0)
       void db.projects.get(id).then((p) => {
-        if (p) openProject(id)
+        // Només si encara existeix i és del mateix apartat (objecte o moble).
+        if (p && projectIsObject(p) === (kind === "objects")) openProject(id)
         else {
           setProjectId(null)
           setScreen(kind)
