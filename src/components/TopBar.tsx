@@ -27,7 +27,10 @@ export function TopBar({
   onSettings,
   actionsRef,
   menu,
+  rootLabel = "Mobles",
 }: {
+  /** On torna la molla de pa («Mobles» o «Objectes»). */
+  rootLabel?: string
   projectId: number
   onBack: () => void
   onSettings: () => void
@@ -54,7 +57,7 @@ export function TopBar({
     >
       <HStack gap={1} minW={0} flex={1}>
         {/* Mòbil: fletxa enrere. Escriptori: molla de pa «Mobles ›». */}
-        <IconButton display={{ base: "inline-flex", md: "none" }} aria-label="Tornar als mobles" variant="ghost" size="sm" onClick={onBack}>
+        <IconButton display={{ base: "inline-flex", md: "none" }} aria-label={`Tornar a ${rootLabel}`} variant="ghost" size="sm" onClick={onBack}>
           <LuChevronLeft />
         </IconButton>
         <HStack display={{ base: "none", md: "flex" }} gap={1} flexShrink={0}>
@@ -69,7 +72,7 @@ export function TopBar({
             _hover={{ color: "fg", bg: "bg.muted" }}
           >
             <button type="button" onClick={onBack}>
-              Mobles
+              {rootLabel}
             </button>
           </Box>
           <Box color="fg.subtle" aria-hidden>

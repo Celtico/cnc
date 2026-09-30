@@ -28,7 +28,7 @@ import {
   reorientPart,
   PART_AXES,
   partsBox,
-  compositionKind,
+  compositionKind, partsOnlyKind,
   partOffset,
   resolveParts,
   partGroups,
@@ -66,10 +66,12 @@ export function PartAddMenu({ comp, onChange, onAdded, center }: { comp: Composi
   const base = comp.modules[0]?.carcass
   const add = (o: PartOrient) => {
     const mat = comp.parts?.at(-1)
-    const p = newFreePart(o, center, mat?.material ?? (comp.kind === "lliure" ? undefined : base?.material), mat?.thickness ?? (comp.kind === "lliure" ? undefined : base?.thickness))
+    const object = compositionKind(comp) === "objecte"
+    const loose = partsOnlyKind(compositionKind(comp))
+    const p = newFreePart(o, center, mat?.material ?? (loose ? (object ? "Microciment gris" : undefined) : base?.material), mat?.thickness ?? (loose ? undefined : base?.thickness))
     // Si el material no és de les preferències, el primer de la llista.
     const known = materialByName(settings, p.material)
-    const fresh = known ? { ...p, ...(known.cnc === false ? { nest: false } : {}) } : { ...p, material: settings.materials.find((m) => !m.forBacks && m.cnc !== false)?.name ?? p.material }
+    const fresh = known ? { ...p, ...(known.cnc === false || object ? { nest: false } : {}) } : { ...p, material: settings.materials.find((m) => !m.forBacks && m.cnc !== false)?.name ?? p.material, ...(object ? { nest: false } : {}) }
     onChange({ ...comp, parts: [...(comp.parts ?? []), fresh] })
     onAdded?.(p.id)
   }
@@ -109,6 +111,8 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
   const cnc = p.nest !== false && !cutter
   // Els encaixos només són del Flat-pack.
   const flatPack = compositionKind(comp) === "lliure"
+  // Objecte (ambients): les peces només es veuen.
+  const object = compositionKind(comp) === "objecte"
   const mat = materialByName(settings, p.material)
   const mine = joints.filter((j) => j.a === id || j.b === id)
   const nameOf = (pid: string) => comp.parts?.find((x) => x.id === pid)?.name ?? "?"
@@ -117,7 +121,7 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
     const m = materialByName(settings, name)
     const t = m && m.cnc !== false && !m.thicknesses.includes(p.thickness) ? m.thicknesses.reduce((a, b) => (Math.abs(b - p.thickness) < Math.abs(a - p.thickness) ? b : a)) : p.thickness
     // Si el material no es talla a la CNC (ferro, pedra, vidre…), la peça surt del nesting.
-    update({ material: name, thickness: t, nest: m?.cnc === false ? false : undefined })
+    update({ material: name, thickness: object ? p.thickness : t, nest: m?.cnc === false || object ? false : undefined })
   }
   return (
     <Stack gap={0}>
@@ -147,11 +151,11 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
           <Field.HelperText>
             {cutter
               ? "Talla: no és una peça. Fa un forat passant, amb la seva forma, a cada peça que travessa en la direcció del seu gruix: per foradar un tauler estirat, posa-la estirada; un de cara, de cara. Surt al nesting, al DXF i al STEP de les peces tallades."
-              : "Peça: un tauler de debò (nesting, DXF, STEP, CSV)."}
+              : object ? "Peça de l'objecte: només es veu (no es fabrica)." : "Peça: un tauler de debò (nesting, DXF, STEP, CSV)."}
           </Field.HelperText>
         </Field.Root>
         {!cutter && <MaterialSelect label="Material" materials={boards} value={p.material} onChange={pickMaterial} />}
-        {comp.kind !== "lliure" && comp.modules.length > 0 && (
+        {!partsOnlyKind(compositionKind(comp)) && comp.modules.length > 0 && (
           <Field.Root>
             <Field.Label fontSize="sm">Enganxada a</Field.Label>
             <NativeSelect.Root size="sm">
@@ -315,7 +319,7 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
           <NumberField label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} value={p.z} min={-30000} max={30000} step={1} onChange={(z) => update({ z })} />
         </SimpleGrid>
         <Text fontSize="xs" color="fg.muted">
-          {p.module && comp.kind !== "lliure" ? `Respecte al mòdul «${comp.modules.find((m) => m.id === p.module)?.name ?? "?"}» (el segueix). ` : ""}Cantonada esquerra, de baix i del darrere. Al 3D, arrossega-la amb les fletxes (s'enganxa a les vores de les altres peces; Alt: lliure). Fletxes del teclat: 1 mm (Maj: 10); Re Pàg / Av Pàg: fons.
+          {p.module && !partsOnlyKind(compositionKind(comp)) ? `Respecte al mòdul «${comp.modules.find((m) => m.id === p.module)?.name ?? "?"}» (el segueix). ` : ""}Cantonada esquerra, de baix i del darrere. Al 3D, arrossega-la amb les fletxes (s'enganxa a les vores de les altres peces; Alt: lliure). Fletxes del teclat: 1 mm (Maj: 10); Re Pàg / Av Pàg: fons.
         </Text>
       </PanelSection>
       {flatPack && (

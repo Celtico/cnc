@@ -158,6 +158,28 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   plans invisibles de terra i paret). L'SVG de controls va sempre a sobre.
 - AR: export USDZ + `<model-viewer>` amb AR Quick Look a l'iPhone. Res de WebXR.
 
+## Mòduls compartits (com les apps professionals)
+Tots els editors fan servir les mateixes peces, no còpies: **`Workspace`** + `useWorkspace(id)`
+(`components/`: estructura · visor · propietats, vores arrossegables, plegar amb els botons de les
+cantonades, pestanyes Estructura · Propietats al mòbil, amplades recordades per editor) a l'Editor
+de mobles i objectes i als Ambients; **`SceneHelpers`** (`StudioEnvironment`, `SceneAccess`) als
+visors 3D; el **`RenderDialog`** (render per CPU) a l'editor i als ambients; **`NewMobleGallery`**,
+`TemplateCard`, `ProjectCard` i `GALLERY_COLS` a Mobles, Objectes i a les finestres dels ambients;
+el **`MaterialSelect`** de Preferències (per categories) a tot arreu. Una funcionalitat nova d'un
+editor es fa al mòdul compartit perquè la tinguin tots.
+
+## Objectes (per als ambients)
+- Menú **Mobles · Objectes · Ambients · Preferències**. Un objecte (sofà, làmpada, planta…) és un
+  moble del tipus **`objecte`** (`partsOnlyKind`: només peces lliures, com el Flat-pack): s'edita
+  amb el **mateix Editor** (peces amb forma, «Talla» per als forats, materials de preferències per
+  categories), però **no es fabrica** (`buildComposition` en treu el nesting i els encaixos; al menú
+  només hi ha l'Editor; la molla de pa diu «Objectes»). `OBJECT_TEMPLATES` (`ambient.ts`): els blocs
+  d'abans (sofà, llit, nevera…) i cadira, làmpada de peu, planta, mirall i taula rodona amb peces
+  rodones. Pàgina `objects/ObjectsScreen` (`ObjectsGallery`: cercador, En blanc, els teus i
+  plantilles). No surten a l'historial de Mobles (`isObject`). Als ambients, «Objecte» obre la
+  galeria a pantalla completa; s'hi col·loquen com els mobles (enllaçats). Els blocs antics
+  (`kind: "block"`) es continuen veient.
+
 ## Ambients (plànol de la casa amb els mobles)
 - Apartat propi al menú (**Mobles · Ambients · Preferències**; al mòbil, a la barra de baix):
   els Mobles es dissenyen i es fabriquen; els Ambients són on es col·loquen.
@@ -186,6 +208,10 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   Els elements s'arramben a les cares de les parets (`snapToWalls`), R gira 90°, fletxes (Maj ×10),
   Supr, Ctrl/⌘ D, desfer/refer (Ctrl/⌘ Z). Es desa sol. **Plànol de fons**: imatge (2400 px,
   JPEG) escalada amb la calibració, opacitat i bloqueig.
+- **Plànol**: la roda fa zoom al punt del ratolí (com al 3D), pessigar també, arrossegar el fons
+  desplaça; − / + i l'escala de pantalla (1:50…) a baix a la dreta; la barra d'eines flota a dalt.
+- **3D**: la mateixa navegació que l'editor (esmorteïment, roda, botó dret per desplaçar), clic per
+  seleccionar (caixa taronja; Supr, Ctrl/⌘ D, R i fletxes com al plànol), «Encuadrar» i «Render».
 - **3D** (`Ambient3D`): terra i parets amb `surfaceMaterial` (textura a mida real), mobles i blocs
   amb les textures del visor; les parets entre la càmera i l'habitació es fan transparents
   (casa de nines).

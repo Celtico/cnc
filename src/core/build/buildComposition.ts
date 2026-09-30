@@ -1,4 +1,4 @@
-import { compositionKind, modulePlacements, partCutters, type Composition, type Panel, type RefObject, type Vec3 } from "../model"
+import { compositionKind, modulePlacements, partsOnlyKind, partCutters, type Composition, type Panel, type RefObject, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { buildModule, type BuildWarning, type ModuleBuild } from "./buildModule"
 import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
@@ -50,7 +50,9 @@ export function refBox(o: RefObject): { min: Vec3; max: Vec3 } {
  */
 export function buildComposition(input: Composition): CompositionBuild {
   // Passacables de la versió anterior → objectes que tallen.
-  const comp = migrateCableHoles(input, panelBox)
+  const migrated = migrateCableHoles(input, panelBox)
+  // Objecte: les peces només es veuen (mai van al nesting ni fan encaixos).
+  const comp = compositionKind(migrated) === "objecte" ? { ...migrated, parts: migrated.parts?.map((p) => ({ ...p, nest: false, joints: false })) } : migrated
   const places = modulePlacements(comp)
   const panels: Panel[] = []
   const warnings: CompositionWarning[] = []
@@ -58,7 +60,7 @@ export function buildComposition(input: Composition): CompositionBuild {
   const moduleExtras: Panel[] = []
 
   // Tipus «Lliure» (flat-pack): només peces lliures; els mòduls es guarden però no es fan.
-  const onlyParts = compositionKind(comp) === "lliure"
+  const onlyParts = partsOnlyKind(compositionKind(comp))
   ;(onlyParts ? [] : comp.modules).forEach((m, i) => {
     const { x, y } = places[i]!
     const z = places[i]!.z ?? 0

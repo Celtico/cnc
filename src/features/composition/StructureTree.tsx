@@ -17,7 +17,7 @@ import {
   LuTrash2,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcon"
-import { compositionKind, duplicateGroup, newGroupName, partGroups, insertPartCopy, insertRefCopy, modulePresetsFor, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
+import { compositionKind, partsOnlyKind, duplicateGroup, newGroupName, partGroups, insertPartCopy, insertRefCopy, modulePresetsFor, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
 import { PartAddMenu } from "./PartInspector"
 import { ORIENT_ICON } from "./partOrient"
 import { RefAddMenu } from "./RefInspector"
@@ -163,7 +163,7 @@ export function StructureTree({
         { row: "wall", label: "Penjats a la paret" },
       ]
     : [{ row: "floor", label: "" }]
-  const onlyParts = compositionKind(comp) === "lliure"
+  const onlyParts = partsOnlyKind(compositionKind(comp))
   const parts = comp.parts ?? []
   // Grups de peces: plegats; s'obre sol el de la peça seleccionada.
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())

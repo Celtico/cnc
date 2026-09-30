@@ -419,7 +419,7 @@ export const CUTOUT_PRESETS: Record<WorktopCutout["kind"], { w: number; d: numbe
  * Tipus de moble: decideix quines opcions de conjunt surten (taulell i sòcol a la cuina…) i
  * què s'afegeix amb «Afegir mòdul». Opcional: els antics es dedueixen (`compositionKind`).
  */
-export const CompositionKindSchema = z.enum(["moble", "cuina", "armari", "taula", "lliure"])
+export const CompositionKindSchema = z.enum(["moble", "cuina", "armari", "taula", "lliure", "objecte"])
 export type CompositionKind = z.infer<typeof CompositionKindSchema>
 
 export const CompositionSchema = z.object({
@@ -629,6 +629,13 @@ export function compositionKind(c: Composition): CompositionKind {
 }
 
 /**
+ * Només peces lliures (sense mòduls): el Flat-pack (amb encaixos, es fabrica) i l'**Objecte**
+ * (sofà, làmpada, planta… per als ambients: peces amb forma, booleanes i textures, que només es
+ * veuen i no es fabriquen).
+ */
+export const partsOnlyKind = (k: CompositionKind) => k === "lliure" || k === "objecte"
+
+/**
  * Taula o consola de panells: tauler a dalt i dos laterals que fan de potes, sense base
  * ni fons, amb les cantonades a inglet (com un bloc massís).
  */
@@ -654,7 +661,7 @@ export function moduleOrigins3(comp: Composition): Map<string, [number, number, 
  */
 export function resolveParts(comp: Composition): FreePart[] {
   const parts = comp.parts ?? []
-  if (!parts.some((p) => p.module) || compositionKind(comp) === "lliure") return parts
+  if (!parts.some((p) => p.module) || partsOnlyKind(compositionKind(comp))) return parts
   const origins = moduleOrigins3(comp)
   return parts.map((p) => {
     const o = p.module ? origins.get(p.module) : undefined
@@ -664,7 +671,7 @@ export function resolveParts(comp: Composition): FreePart[] {
 
 /** Desplaçament que cal sumar a una peça per passar-la a coordenades de la composició. */
 export function partOffset(comp: Composition, p: FreePart): [number, number, number] {
-  if (!p.module || compositionKind(comp) === "lliure") return [0, 0, 0]
+  if (!p.module || partsOnlyKind(compositionKind(comp))) return [0, 0, 0]
   return moduleOrigins3(comp).get(p.module) ?? [0, 0, 0]
 }
 

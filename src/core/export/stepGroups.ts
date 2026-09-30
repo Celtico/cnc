@@ -1,5 +1,5 @@
 import type { CompositionBuild } from "../build/buildComposition"
-import { compositionKind, type Composition, type Panel } from "../model"
+import { compositionKind, partsOnlyKind, type Composition, type Panel } from "../model"
 import type { StepCadGroup } from "./step"
 
 /**
@@ -14,7 +14,7 @@ export function stepCadGroups(comp: Composition, build: CompositionBuild): StepC
     if (list) list.push(p)
     else groups.set(name, [p])
   }
-  const modulesBuilt = compositionKind(comp) !== "lliure"
+  const modulesBuilt = !partsOnlyKind(compositionKind(comp))
   const parts = new Map((comp.parts ?? []).map((q) => [q.id, q]))
   for (const p of [...build.panels, ...build.extras]) {
     if (p.id.startsWith("part:")) {

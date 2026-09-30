@@ -1,4 +1,5 @@
-import { Box } from "@chakra-ui/react"
+import { Box, HStack, IconButton, Text } from "@chakra-ui/react"
+import { LuMinus, LuPlus } from "react-icons/lu"
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as RPointerEvent } from "react"
 import { newId, roomWalls, snapToWalls, wallCorners, wallLength, type Ambient, type AmbientItem, type PlanPt, type Wall } from "../../core/model"
 import { formatLength, useUnit } from "../units"
@@ -25,8 +26,9 @@ type Drag =
   | { kind: "plan"; start: PlanPt; x: number; y: number }
 
 /**
- * Plànol de l'ambient (SVG, vista de dalt), amb la manera de fer de Figma: roda o dos dits per
- * desplaçar, Ctrl/⌘ + roda o pessigar per fer zoom, arrossegar el fons per desplaçar. Eines:
+ * Plànol de l'ambient (SVG, vista de dalt): la roda fa zoom al punt del ratolí (com al 3D),
+ * pessigar també; arrossegar el fons (o espai + arrossegar) desplaça; Maj + roda, de costat.
+ * Botons − / + amb el percentatge a baix a la dreta. Eines:
  * **Seleccionar** (moure elements i parets, arrossegar els extrems de les parets), **Paret**
  * (ploma: clic a clic, angle a 15° i imant als extrems; clicar el primer punt tanca; Retorn,
  * Esc o doble clic acaben), **Habitació** (arrossegar un rectangle: quatre parets) i
@@ -131,12 +133,11 @@ export function PlanCanvas({
       const r = el.getBoundingClientRect()
       const px = e.clientX - r.left, py = e.clientY - r.top
       setView((v) => {
-        if (e.ctrlKey || e.metaKey) {
-          const k = Math.exp(-e.deltaY * 0.01)
-          const s = Math.min(3, Math.max(0.005, v.s * k))
-          return { s, tx: px - ((px - v.tx) / v.s) * s, ty: py - ((py - v.ty) / v.s) * s }
-        }
-        return { ...v, tx: v.tx - e.deltaX, ty: v.ty - e.deltaY }
+        // Com al 3D: la roda fa zoom al punt del ratolí (pessigar al trackpad, més fi). Maj + roda: desplaçar.
+        if (e.shiftKey) return { ...v, tx: v.tx - (e.deltaX || e.deltaY), ty: v.ty }
+        const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY
+        const k = Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0015))
+        return zoomAt(v, px, py, k)
       })
     }
     el.addEventListener("wheel", wheel, { passive: false })
@@ -480,8 +481,26 @@ export function PlanCanvas({
       </svg>
       {/* Escala. */}
       <ScaleBar s={view.s} />
+      <HStack position="absolute" right={3} bottom={3} gap={1} bg="bg.panel" rounded="md" borderWidth="1px" p={0.5} onPointerDown={(e) => e.stopPropagation()}>
+        <IconButton aria-label="Allunyar" title="Allunyar" size="xs" variant="ghost" onClick={() => setView((v) => zoomAt(v, size.w / 2, size.h / 2, 1 / 1.4))}>
+          <LuMinus />
+        </IconButton>
+        {/* Escala de pantalla (96 ppp: 1 px = 0,2646 mm), com als plànols: 1:50, 1:100… */}
+        <Text fontSize="xs" color="fg.muted" minW="52px" textAlign="center" title="Escala a la pantalla">
+          1:{Math.max(1, Math.round(1 / (view.s * 0.2646)))}
+        </Text>
+        <IconButton aria-label="Apropar" title="Apropar" size="xs" variant="ghost" onClick={() => setView((v) => zoomAt(v, size.w / 2, size.h / 2, 1.4))}>
+          <LuPlus />
+        </IconButton>
+      </HStack>
     </Box>
   )
+}
+
+/** Zoom de la vista al voltant d'un punt de la pantalla. */
+function zoomAt(v: View, px: number, py: number, k: number): View {
+  const s = Math.min(3, Math.max(0.005, v.s * k))
+  return { s, tx: px - ((px - v.tx) / v.s) * s, ty: py - ((py - v.ty) / v.s) * s }
 }
 
 /** Mou l'extrem de `w` que era a `from` (una paret enganxada a la que s'arrossega). */

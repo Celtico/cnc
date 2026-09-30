@@ -4,9 +4,9 @@ import { LuBookmark, LuCopy, LuEllipsis, LuHistory, LuLayoutTemplate, LuPlus, Lu
 import { CompositionThumb } from "../../components/CompositionThumb"
 import { toaster } from "../../components/ui/toaster"
 import { applySettingsToModule, BUILTIN_TEMPLATES, compositionHeight, compositionKind, compositionWidth, defaultModule, newId, STORE_CATALOG, tableModule, type Composition, type CompositionKind, type Template } from "../../core/model"
-import { KINDS } from "../composition/kinds"
+import { KINDS, MOBLE_KINDS } from "../composition/kinds"
 import { deleteUserTemplate, duplicateUserTemplate, loadUserTemplates, renameUserTemplate, type UserTemplate } from "../../db/compositionStore"
-import { GALLERY_COLS } from "./galleryGrid"
+import { GALLERY_COLS, fold, useSessionList } from "./galleryGrid"
 import { saveTemplateAsFile } from "../file/mobleIo"
 import { useSettings } from "../settings/SettingsContext"
 
@@ -19,11 +19,9 @@ const size = (c: Composition) => {
 const kindLabel = (k: CompositionKind) => KINDS.find((x) => x.value === k)!.label
 const kindOrder = (k: CompositionKind) => KINDS.findIndex((x) => x.value === k)
 const euros = (n: number) => `${n.toLocaleString("ca-ES")} €`
-/** Per cercar sense accents ni majúscules. */
-const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
 
 /** Targeta d'una plantilla de l'app: la miniatura es calcula en muntar-la (les de botiga, en obrir la categoria). */
-function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?: string; kicker?: string; onPick: (t: Template) => void }) {
+export function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?: string; kicker?: string; onPick: (t: Template) => void }) {
   const comp = useMemo(() => t.make(), [t])
   return (
     <Card.Root asChild variant="outline" size="sm" cursor="pointer" _hover={{ borderColor: "wood.solid" }}>
@@ -58,7 +56,7 @@ function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?: strin
 }
 
 /** Títol d'un acordió de la galeria: icona, nom i quantitat. */
-function FoldTitle({ icon, title, count }: { icon?: ReactNode; title: string; count: number }) {
+export function FoldTitle({ icon, title, count }: { icon?: ReactNode; title: string; count: number }) {
   return (
     <HStack flex={1} gap={2} minW={0}>
       {icon && (
@@ -78,24 +76,6 @@ function FoldTitle({ icon, title, count }: { icon?: ReactNode; title: string; co
 
 const COLS = GALLERY_COLS
 
-/** Acordions oberts: comencen tancats i es recorden només durant la sessió (com les seccions). */
-function useSessionList(key: string): [string[], (v: string[]) => void] {
-  const [v, setV] = useState<string[]>(() => {
-    try {
-      return JSON.parse(sessionStorage.getItem(key) ?? "[]") as string[]
-    } catch {
-      return []
-    }
-  })
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(key, JSON.stringify(v))
-    } catch {
-      /* sense sessionStorage: només en memòria */
-    }
-  }, [key, v])
-  return [v, setV]
-}
 
 /**
  * Pàgina de Mobles, com l'inici de Figma o Google Docs: començar en blanc, filtre per tipus i
@@ -149,7 +129,7 @@ export function NewMobleGallery({
   const blank = () => {
     const k = kind === "all" ? "moble" : kind
     const m = k === "taula" ? tableModule(newId("m"), "Taula") : applySettingsToModule(settings, defaultModule(newId("m"), "Mòdul 1"))
-    const names: Record<CompositionKind, string> = { moble: "Moble nou", cuina: "Cuina nova", armari: "Armari nou", taula: "Taula nova", lliure: "Flat-pack nou" }
+    const names: Record<CompositionKind, string> = { moble: "Moble nou", cuina: "Cuina nova", armari: "Armari nou", taula: "Taula nova", lliure: "Flat-pack nou", objecte: "Objecte nou" }
     onCreate({ kind: k, modules: [m], references: [] }, names[k])
   }
 
@@ -162,7 +142,7 @@ export function NewMobleGallery({
             <SegmentGroup.ItemText>Tot</SegmentGroup.ItemText>
             <SegmentGroup.ItemHiddenInput />
           </SegmentGroup.Item>
-          {KINDS.map((k) => (
+          {MOBLE_KINDS.map((k) => (
             <SegmentGroup.Item key={k.value} value={k.value} title={k.hint} aria-label={k.label} flex={{ base: 1, sm: "initial" }} justifyContent="center">
               <SegmentGroup.ItemText>
                 {/* Al mòbil només la icona (el nom, al títol i a la insígnia de cada plantilla). */}

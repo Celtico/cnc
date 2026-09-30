@@ -1,6 +1,8 @@
 import { z } from "zod"
 import { DEFAULT_JOINERY, type FreePart } from "./freePart"
 import { defaultModule, newId, type Composition, type Module, type Zone } from "./composition"
+import type { PNode } from "./polygon"
+import type { Template } from "./templates"
 
 /**
  * Ambients: el plànol d'una casa (parets dibuixades i, a sota, la imatge d'un plànol escalada)
@@ -164,8 +166,97 @@ export function blockComposition(b: Pick<BlockItem, "shape" | "w" | "h" | "d" | 
     ].map(([x, z]) => p({ name: "Pota", orient: "flat", material: m, w: leg, h: leg, thickness: h - t, x: x!, y: 0, z: z! }))
     parts = [p({ name: "Tauler", orient: "flat", material: m, w, h: d, thickness: t, x: 0, y: h - t, z: 0 }), ...legs]
   } else parts = [p({ name: b.name, orient: "flat", material: m, w, h: d, thickness: h, x: 0, y: 0, z: 0 })]
-  return { kind: "lliure", modules: [defaultModule(newId("m"), "Mòdul 1")], references: [], parts, joinery: { ...DEFAULT_JOINERY } }
+  return { kind: "objecte", modules: [defaultModule(newId("m"), "Mòdul 1")], references: [], parts, joinery: { ...DEFAULT_JOINERY } }
 }
+
+// --- Plantilles d'objectes ------------------------------------------------------------------
+
+const obj = (parts: Omit<FreePart, "id" | "nest" | "joints">[]): Composition => ({
+  kind: "objecte",
+  modules: [defaultModule(newId("m"), "Mòdul 1")],
+  references: [],
+  parts: parts.map((q) => ({ id: newId("p"), nest: false, joints: false, ...q })),
+})
+
+/** El·lipse de w × h (peces rodones). */
+function ellipse(w: number, h: number): PNode[] {
+  const K = 0.5522847498
+  const a = w / 2, b = h / 2
+  return [
+    { x: w, y: b, in: [0, -K * b], out: [0, K * b], t: "smooth" },
+    { x: a, y: h, in: [K * a, 0], out: [-K * a, 0], t: "smooth" },
+    { x: 0, y: b, in: [0, K * b], out: [0, -K * b], t: "smooth" },
+    { x: a, y: 0, in: [-K * a, 0], out: [K * a, 0], t: "smooth" },
+  ]
+}
+
+/**
+ * Plantilles d'objectes per als ambients: els blocs habituals (sofà, llit, nevera…) i alguns
+ * de peces amb forma (cadira, làmpada, planta, mirall, taula rodona). Es fan com els mobles
+ * flat-pack (peces lliures, forma, booleanes) però amb materials de simulació i sense fabricar.
+ */
+export const OBJECT_TEMPLATES: Template[] = [
+  ...BLOCK_PRESETS.map((b) => ({ id: `object-${b.id}`, kind: "objecte" as const, name: b.name, description: `${b.w} × ${b.h} × ${b.d} mm · ${b.material}${b.material2 ? ` i ${b.material2}` : ""}.`, make: () => blockComposition(b) })),
+  {
+    id: "object-chair",
+    kind: "objecte",
+    name: "Cadira",
+    description: "450 × 850 × 500 mm · roure i seient de teixit.",
+    make: () =>
+      obj([
+        ...[
+          [20, 20],
+          [395, 20],
+          [20, 445],
+          [395, 445],
+        ].map(([x, z]) => ({ name: "Pota", orient: "flat" as const, material: "Roure massís / xapat", w: 35, h: 35, thickness: 430, x: x!, y: 0, z: z! })),
+        { name: "Seient", orient: "flat", material: "Teixit beix", w: 450, h: 500, thickness: 40, x: 0, y: 430, z: 0 },
+        { name: "Respatller", orient: "front", material: "Roure massís / xapat", w: 450, h: 380, thickness: 25, x: 0, y: 470, z: 0 },
+      ]),
+  },
+  {
+    id: "object-floor-lamp",
+    kind: "objecte",
+    name: "Làmpada de peu",
+    description: "Ø 400 × 1750 mm · peu de ferro i pantalla de lli.",
+    make: () =>
+      obj([
+        { name: "Base", orient: "flat", material: "Ferro negre", w: 300, h: 300, thickness: 20, x: 50, y: 0, z: 50, shape: ellipse(300, 300) },
+        { name: "Pal", orient: "flat", material: "Ferro negre", w: 20, h: 20, thickness: 1450, x: 190, y: 20, z: 190, shape: ellipse(20, 20) },
+        { name: "Pantalla", orient: "flat", material: "Lli blanc", w: 400, h: 400, thickness: 300, x: 0, y: 1450, z: 0, shape: ellipse(400, 400) },
+      ]),
+  },
+  {
+    id: "object-plant",
+    kind: "objecte",
+    name: "Planta en test",
+    description: "Ø 600 × 1100 mm · test de terracota.",
+    make: () =>
+      obj([
+        { name: "Test", orient: "flat", material: "Pintura terracota", w: 380, h: 380, thickness: 400, x: 110, y: 0, z: 110, shape: ellipse(380, 380) },
+        { name: "Fulles", orient: "flat", material: "Vellut verd", w: 600, h: 600, thickness: 700, x: 0, y: 400, z: 0, shape: ellipse(600, 600) },
+      ]),
+  },
+  {
+    id: "object-mirror",
+    kind: "objecte",
+    name: "Mirall rodó",
+    description: "Ø 800 mm · per penjar (posa'l a l'alçada amb «Del terra»).",
+    make: () => obj([{ name: "Mirall", orient: "front", material: "Vidre", w: 800, h: 800, thickness: 20, x: 0, y: 0, z: 0, shape: ellipse(800, 800) }]),
+  },
+  {
+    id: "object-round-table",
+    kind: "objecte",
+    name: "Taula rodona",
+    description: "Ø 1100 × 750 mm · tauler de roure sobre peu central.",
+    make: () =>
+      obj([
+        { name: "Tauler", orient: "flat", material: "Roure massís / xapat", w: 1100, h: 1100, thickness: 30, x: 0, y: 720, z: 0, shape: ellipse(1100, 1100) },
+        { name: "Peu", orient: "flat", material: "Ferro negre", w: 120, h: 120, thickness: 700, x: 490, y: 20, z: 490, shape: ellipse(120, 120) },
+        { name: "Base", orient: "flat", material: "Ferro negre", w: 550, h: 550, thickness: 20, x: 275, y: 0, z: 275, shape: ellipse(550, 550) },
+      ]),
+  },
+]
 
 // --- Geometria del plànol ---------------------------------------------------------------
 

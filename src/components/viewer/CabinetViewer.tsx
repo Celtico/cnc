@@ -3,11 +3,11 @@ import { QUALITY, type RenderQuality } from "./renderQuality"
 import { PresentationRoom } from "./PresentationRoom"
 import { ModuleLegs, PanelHardware } from "./Hardware"
 import type { SceneGetter } from "./render/RenderDialog"
+import { SceneAccess, StudioEnvironment } from "./SceneHelpers"
 import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
 import { Billboard, ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
-import { BoxGeometry, NeutralToneMapping, PMREMGenerator, DoubleSide, type BufferGeometry, ExtrudeGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Shape, Vector3, type Object3D, type Texture } from "three"
-import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
+import { BoxGeometry, NeutralToneMapping, DoubleSide, type BufferGeometry, ExtrudeGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Shape, Vector3, type Object3D, type Texture } from "three"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 import { AXIS_INDEX, SECTION_AXES, flatten, partSize, partsBox, sampleProfile, toNodes, type FreePart, type Hole, type MaterialPref, type Panel, type RefObject } from "../../core/model"
@@ -1489,29 +1489,6 @@ function HoleMark({ hole, thickness }: { hole: Hole; thickness: number }) {
   }
 }
 
-/**
- * Entorn d'estudi procedural (`RoomEnvironment` de three, sense descàrregues: funciona
- * offline) filtrat amb PMREM: dona la llum difusa i els reflexos que fan que els materials
- * es vegin com a model-viewer.
- */
-function StudioEnvironment({ intensity }: { intensity: number }) {
-  const gl = useThree((st) => st.gl)
-  const scene = useThree((st) => st.scene)
-  useEffect(() => {
-    const pmrem = new PMREMGenerator(gl)
-    const room = new RoomEnvironment()
-    const env = pmrem.fromScene(room, 0.04).texture
-    scene.environment = env
-    scene.environmentIntensity = intensity
-    return () => {
-      if (scene.environment === env) scene.environment = null
-      env.dispose()
-      pmrem.dispose()
-      room.dispose()
-    }
-  }, [gl, scene, intensity])
-  return null
-}
 
 /**
  * Geometria i materials reals d'una peça (els mateixos del visor, amb textures i veta) per
@@ -1539,13 +1516,3 @@ export function visualPanel(p: Panel): Panel {
 }
 
 /** Dona accés a l'escena, la càmera i la mida del visor (per al render per CPU). */
-function SceneAccess({ onAccess }: { onAccess: (get: SceneGetter) => void }) {
-  const get = useThree((st) => st.get)
-  useEffect(() => {
-    onAccess(() => {
-      const st = get()
-      return { scene: st.scene, camera: st.camera, width: st.size.width, height: st.size.height }
-    })
-  }, [onAccess, get])
-  return null
-}

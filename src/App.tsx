@@ -1,7 +1,7 @@
 import { Box, Container, Flex, HStack, Heading, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import type { IconType } from "react-icons"
-import { LuArrowLeft, LuBookmark, LuBox, LuDownload, LuDraftingCompass, LuEllipsis, LuFolderOpen, LuHouse, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings } from "react-icons/lu"
+import { LuArrowLeft, LuBookmark, LuBox, LuDownload, LuDraftingCompass, LuEllipsis, LuFolderOpen, LuHouse, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings, LuSofa } from "react-icons/lu"
 import { Toaster } from "./components/ui/toaster"
 import { Tooltip } from "./components/ui/tooltip"
 import { TopBar, TopBarActionsProvider } from "./components/TopBar"
@@ -17,13 +17,15 @@ import { PhotoScreen } from "./features/photo/PhotoScreen"
 import { ProjectsScreen, type ProjectsRequest } from "./features/projects/ProjectsScreen"
 import { AmbientEditor } from "./features/ambients/AmbientEditor"
 import { AmbientsScreen } from "./features/ambients/AmbientsScreen"
+import { ObjectsScreen } from "./features/objects/ObjectsScreen"
+import { compositionKind } from "./core/model"
 import { SettingsScreen } from "./features/settings/SettingsScreen"
 import { useSettings } from "./features/settings/SettingsContext"
 import { UnitContext } from "./features/units"
 import { usePersistentFlag } from "./features/usePersistentFlag"
 import { useProject } from "./features/useProject"
 
-type Screen = "projects" | "editor" | "photo" | "cutlist" | "nesting" | "export" | "settings" | "ambients" | "ambient"
+type Screen = "projects" | "objects" | "editor" | "photo" | "cutlist" | "nesting" | "export" | "settings" | "ambients" | "ambient"
 
 type NavEntry = { id: Screen; label: string; icon: IconType }
 
@@ -35,6 +37,7 @@ const PROJECT_NAV: NavEntry[] = [
   { id: "export", label: "Exportar", icon: LuDownload },
 ]
 const PROJECTS_ENTRY: NavEntry = { id: "projects", label: "Mobles", icon: LuBox }
+const OBJECTS_ENTRY: NavEntry = { id: "objects", label: "Objectes", icon: LuSofa }
 const AMBIENTS_ENTRY: NavEntry = { id: "ambients", label: "Ambients", icon: LuHouse }
 const SETTINGS_ENTRY: NavEntry = { id: "settings", label: "Preferències", icon: LuSettings }
 
@@ -111,6 +114,11 @@ export function App() {
   }
 
   const inProject = projectId !== null
+  // Un objecte (per als ambients) s'edita amb el mateix Editor, però no té peces, nesting ni export.
+  const isObject = !!previewComposition && compositionKind(previewComposition) === "objecte"
+  const projectNav = isObject ? PROJECT_NAV.filter((n) => n.id === "editor") : PROJECT_NAV
+  const rootScreen: Screen = isObject ? "objects" : "projects"
+  const rootEntry = isObject ? OBJECTS_ENTRY : PROJECTS_ENTRY
   // Barra superior «Mobles › nom» a les pàgines del moble (no a Preferències).
   const showTopBar = inProject && screen !== "settings" && screen !== "projects"
   const [topActions, setTopActions] = useState<HTMLDivElement | null>(null)
@@ -123,7 +131,7 @@ export function App() {
   /** Tanca el moble obert i torna a la llista: el menú torna a ser el general. */
   const backToProjects = () => {
     setProjectId(null)
-    setScreen("projects")
+    setScreen(rootScreen)
   }
 
   const openAmbient = (id: number) => {
@@ -136,7 +144,9 @@ export function App() {
   }
 
   const content =
-    screen === "ambients" ? (
+    screen === "objects" ? (
+      <ObjectsScreen onOpen={openProject} />
+    ) : screen === "ambients" ? (
       <AmbientsScreen onOpen={openAmbient} />
     ) : screen === "ambient" && ambientId !== null ? (
       <AmbientEditor ambientId={ambientId} onBack={() => (setAmbientId(null), setScreen("ambients"))} onOpenProject={openProject} />
@@ -203,9 +213,9 @@ export function App() {
         {inProject ? (
           <>
             {/* Moble obert: «Mobles» (tornar a la llista) i, a sota, les pàgines del moble. */}
-            <NavItem icon={PROJECTS_ENTRY.icon} label={PROJECTS_ENTRY.label} collapsed={navCollapsed} active={false} disabled={false} onClick={backToProjects} />
+            <NavItem icon={rootEntry.icon} label={rootEntry.label} collapsed={navCollapsed} active={false} disabled={false} onClick={backToProjects} />
             <Box borderTopWidth="1px" my={1} />
-            {PROJECT_NAV.map((n) => (
+            {projectNav.map((n) => (
               <NavItem
                 key={n.id}
                 icon={n.icon}
@@ -228,6 +238,7 @@ export function App() {
               disabled={false}
               onClick={() => go("projects")}
             />
+            <NavItem icon={OBJECTS_ENTRY.icon} label={OBJECTS_ENTRY.label} collapsed={navCollapsed} active={screen === "objects"} disabled={false} onClick={() => go("objects")} />
             <NavItem
               icon={AMBIENTS_ENTRY.icon}
               label={AMBIENTS_ENTRY.label}
@@ -247,6 +258,8 @@ export function App() {
         )}
         {/* General: just a sota de les pàgines, separat amb una línia. */}
         <Stack gap={1} mt={1} pt={2} borderTopWidth="1px" align={navCollapsed ? "center" : "stretch"}>
+          {inProject && !isObject && <NavItem icon={OBJECTS_ENTRY.icon} label={OBJECTS_ENTRY.label} collapsed={navCollapsed} active={false} disabled={false} onClick={() => (setProjectId(null), setScreen("objects"))} />}
+          {inProject && isObject && <NavItem icon={PROJECTS_ENTRY.icon} label={PROJECTS_ENTRY.label} collapsed={navCollapsed} active={false} disabled={false} onClick={() => (setProjectId(null), setScreen("projects"))} />}
           {inProject && <NavItem icon={AMBIENTS_ENTRY.icon} label={AMBIENTS_ENTRY.label} collapsed={navCollapsed} active={false} disabled={false} onClick={goAmbients} />}
           <NavItem
             icon={SETTINGS_ENTRY.icon}
@@ -265,6 +278,7 @@ export function App() {
         {showTopBar && projectId !== null && (
           <TopBar
             projectId={projectId}
+            rootLabel={rootEntry.label}
             onBack={backToProjects}
             onSettings={() => go("settings")}
             actionsRef={setTopActions}
@@ -318,7 +332,7 @@ export function App() {
               </IconButton>
             ) : null}
             <Heading size="md" truncate>
-              {screen === "settings" ? "Preferències" : inProject ? project?.name ?? "Mobles" : screen === "ambients" || screen === "ambient" ? "Ambients" : "Mobles"}
+              {screen === "settings" ? "Preferències" : inProject ? project?.name ?? "Mobles" : screen === "ambients" || screen === "ambient" ? "Ambients" : screen === "objects" ? "Objectes" : "Mobles"}
             </Heading>
           </HStack>
           <HStack gap={0}>
@@ -361,7 +375,7 @@ export function App() {
         pb="env(safe-area-inset-bottom, 0px)"
         justify="space-around"
       >
-        {(inProject ? PROJECT_NAV : [PROJECTS_ENTRY, AMBIENTS_ENTRY, SETTINGS_ENTRY]).map((n) => {
+        {(inProject ? projectNav : [PROJECTS_ENTRY, OBJECTS_ENTRY, AMBIENTS_ENTRY, SETTINGS_ENTRY]).map((n) => {
           const disabled = false
           const active = screen === n.id || (n.id === "ambients" && screen === "ambient")
           return (

@@ -1,4 +1,4 @@
-import { Alert, Badge, Box, Button, Editable, CloseButton, Drawer, Field, Flex, HStack, IconButton, Popover, Portal, SegmentGroup, SimpleGrid, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
+import { Alert, Badge, Box, Button, Editable, CloseButton, Drawer, Field, HStack, IconButton, Popover, Portal, SegmentGroup, SimpleGrid, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
 import { createElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   LuArrowDownToLine,
@@ -13,10 +13,6 @@ import {
   LuAperture,
   LuWrench,
   LuGroup,
-  LuPanelLeftClose,
-  LuPanelLeftOpen,
-  LuPanelRightClose,
-  LuPanelRightOpen,
   LuPanelTop,
   LuCamera,
   LuCircleDot,
@@ -24,7 +20,6 @@ import {
   LuExpand,
   LuHammer,
   LuLayoutPanelLeft,
-  LuListTree,
   LuMaximize2,
   LuMinimize2,
   LuMoveDiagonal,
@@ -35,14 +30,14 @@ import {
   LuShapes,
   LuTrees,
   LuVideo,
-  LuSlidersHorizontal,
   LuSlidersVertical,
   LuTriangleAlert,
   LuUndo2,
   LuView,
 } from "react-icons/lu"
 import { PanelSection } from "../../components/PanelSection"
-import { ResizeHandle } from "../../components/ResizeHandle"
+import { Workspace } from "../../components/Workspace"
+import { useWorkspace } from "../../components/useWorkspace"
 import { TopBarActions } from "../../components/TopBar"
 import { toaster } from "../../components/ui/toaster"
 import { CabinetViewer, type ViewerModule, type ZoneLight } from "../../components/viewer/CabinetViewer"
@@ -51,7 +46,7 @@ import { RenderDialog, type SceneGetter } from "../../components/viewer/render/R
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox } from "../../core/build/buildComposition"
-import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, partBox, type Composition, type FreePart, type Module, type RefObject, type Zone } from "../../core/model"
+import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, partBox, type Composition, type FreePart, type Module, type RefObject, type Zone } from "../../core/model"
 import { updateProjectComposition } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -71,11 +66,10 @@ import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
 import { PhotoScreen } from "../photo/PhotoScreen"
 import { useSettings } from "../settings/SettingsContext"
 import { usePersistentFlag } from "../usePersistentFlag"
-import { usePersistentNumber } from "../usePersistentNumber"
 import { useComposition, useCompositionBuild, useProject } from "../useProject"
 import { RoleLegend } from "../../components/viewer/roleColors"
 import { IconChoice } from "../../components/IconChoice"
-import { KINDS } from "../composition/kinds"
+import { KINDS, MOBLE_KINDS } from "../composition/kinds"
 import { ViewBar, ViewerControls, type ViewerState } from "./ViewerControls"
 
 type ViewTab = "3d" | "elevation" | "photo"
@@ -186,12 +180,13 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   // Selecció única (arbre, 3D i alçat van sincronitzats): moble, mòdul, compartiment o objecte.
   const [selectedModule, setSelectedModule] = useState<string>(initial.modules[0]!.id)
   const [selectedZone, setSelectedZone] = useState<string | null>(null)
-  const [selKind, setSelKind] = useState<"moble" | "module" | "zone" | "ref" | "part" | "group">(compositionKind(initial) === "lliure" ? "moble" : "module")
+  const [selKind, setSelKind] = useState<"moble" | "module" | "zone" | "ref" | "part" | "group">(partsOnlyKind(compositionKind(initial)) ? "moble" : "module")
   const [selectedRef, setSelectedRef] = useState<string | null>(null)
   const [selectedPart, setSelectedPart] = useState<string | null>(null)
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
-  // Mòbil: sota el visor, pestanyes Estructura / Propietats.
-  const [mobilePane, setMobilePane] = useState<"tree" | "props">("props")
+  // Espai de treball compartit (Workspace): panells, amplades i pestanya del mòbil.
+  const ws = useWorkspace("editor", { tree: 280, form: 340 })
+  const { setMobilePane } = ws
   const [exploded, setExploded] = useState(false)
   // Tornar a encuadrar la càmera (editar ja no la mou).
   const [fitKey, setFitKey] = useState(0)
@@ -235,13 +230,10 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const [formHidden, setFormHidden] = usePersistentFlag("mobles:editor-form-hidden")
   // A l'ordinador, cada panell lateral es plega pel seu compte (com les barres laterals
   // d'una app d'escriptori): l'arbre a l'esquerra i les propietats a la dreta.
-  const [treeHidden, setTreeHidden] = usePersistentFlag("mobles:editor-tree-hidden")
-  const [propsHidden, setPropsHidden] = usePersistentFlag("mobles:editor-props-hidden")
+
   // Amplades dels panells laterals: s'arrosseguen per la vora (com el separador de l'app de
   // Claude) i es recorden. Si la finestra és estreta, els panells s'encongeixen fins al seu
   // mínim abans que el visor es faci més petit que el seu mínim.
-  const [formWidth, setFormWidth] = usePersistentNumber("mobles:editor-inspector-width", 340)
-  const [treeWidth, setTreeWidth] = usePersistentNumber("mobles:editor-tree-width", 280)
   // Visor estret (finestra petita o panells amples): les pestanyes queden només amb icona
   // perquè no les tapin els botons de la dreta.
   const viewerBox = useRef<HTMLDivElement>(null)
@@ -319,7 +311,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
 
   const size = useMemo(() => {
     // Flat-pack: només les peces lliures (els mòduls es guarden però no es fan).
-    const onlyParts = compositionKind(comp) === "lliure"
+    const onlyParts = partsOnlyKind(compositionKind(comp))
     let h = onlyParts ? 0 : compositionHeight(comp)
     let d = 0
     let w = onlyParts ? 0 : compositionWidth(comp)
@@ -359,7 +351,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           ? { kind: "part", id: selectedPart }
           : selKind === "group" && selectedGroup && comp.parts?.some((r) => r.group === selectedGroup)
             ? { kind: "group", id: selectedGroup }
-          : kind === "lliure" || selKind === "ref" || selKind === "part" || selKind === "group"
+          : partsOnlyKind(kind) || selKind === "ref" || selKind === "part" || selKind === "group"
             ? { kind: "moble" }
             : selectedZone && zone
           ? { kind: "zone", moduleId: module.id, zoneId: selectedZone }
@@ -881,8 +873,13 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             </Text>
           </PanelSection>
           {/* Tipus de moble: decideix les opcions de conjunt (taulell i sòcol només a la cuina). */}
+          {kind === "objecte" ? (
+            <Text fontSize="xs" color="fg.muted" px={1} py={2}>
+              Objecte per als ambients: fes-lo amb peces lliures (forma amb l'editor de perfils, «Talla» per als forats i buidats) i materials de simulació. Només es veu: no va al nesting ni als fitxers del taller.
+            </Text>
+          ) : (
           <PanelSection id="moble-kind" title="Tipus" icon={KINDS.find((k) => k.value === kind)!.icon} badge={KINDS.find((k) => k.value === kind)!.label}>
-            <IconChoice label="Tipus de moble" value={kind} options={KINDS} onChange={(k) => setComp((c) => ({ ...c, kind: k }))} />
+            <IconChoice label="Tipus de moble" value={kind} options={MOBLE_KINDS} onChange={(k) => setComp((c) => ({ ...c, kind: k }))} />
             <Text fontSize="xs" color="fg.muted">
               {kind !== "cuina" && comp.runs?.length
                 ? `Aquest moble té ${comp.runs.length === 1 ? "un taulell o sòcol corregut" : `${comp.runs.length} taulells o sòcols correguts`}: només es fan a la Cuina. Es guarden per si hi tornes. `
@@ -898,6 +895,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                     : "Moble: mòduls lliures (TV, calaixera, prestatgeria…)."}
             </Text>
           </PanelSection>
+          )}
           {kind === "cuina" && (
             <PanelSection id="moble-runs" title="Taulell i sòcol" icon={LuPanelTop} badge={comp.runs?.length || undefined}>
               <RunsForm comp={comp} onChange={setComp} />
@@ -908,7 +906,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
               <PartJoineryForm comp={comp} onChange={setComp} />
             </PanelSection>
           )}
-          {kind !== "lliure" && <PanelSection id="moble-materials" title="Materials de tot el moble" icon={LuPalette}>
+          {!partsOnlyKind(kind) && <PanelSection id="moble-materials" title="Materials de tot el moble" icon={LuPalette}>
             <MaterialsForm
               carcass={comp.modules[0]!.carcass}
               hasBack={comp.modules.some((m) => m.carcass.back !== "none")}
@@ -1109,12 +1107,9 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
     </Stack>
   )
 
-  // L'editor omple l'espai de l'app (h de la finestra menys la barra superior): el visor va
-  // de dalt a baix i l'arbre i les propietats tenen cadascun el seu desplaçament.
-  const panelH = { md: "full" }
 
   return (
-    <Flex direction={{ base: "column", md: "row" }} gap={{ base: 0, md: 1.5 }} minH={0} h={panelH} flex={{ md: 1 }}>
+    <>
       <TopBarActions>
         <HStack gap={1}>
           <IconButton aria-label="Desfer" title={`Desfer (${MOD}Z)`} size="sm" variant="ghost" disabled={history.past.length === 0} onClick={undo}>
@@ -1126,24 +1121,9 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
         </HStack>
       </TopBarActions>
 
-      {/* Esquerra: estructura */}
-      <Box
-        order={{ base: 3, md: 0 }}
-        minW={0}
-        flexShrink={{ md: 1 }}
-        display={{ base: mobilePane === "tree" ? "block" : "none", md: treeHidden ? "none" : "block" }}
-        w={{ md: `${treeWidth}px` }}
-        overflowY={{ md: "auto" }}
-        overflowX={{ md: "auto" }}
-        // Barra de desplaçament fina i amb lloc reservat: l'arbre i les propietats es
-        // desplacen cadascun pel seu compte i no «salten» quan apareix la barra.
-        css={{ scrollbarWidth: "thin", scrollbarGutter: "stable" }}
-        pt={{ base: 3, md: 0 }}
-        pr={{ md: 1 }}
-      >
-        {/* Sense límit per arrossegar (com IntelliJ): si el panell és més estret que el
-            contingut, apareix la barra de desplaçament horitzontal. */}
-        <Box minW="240px">
+      <Workspace
+        ws={ws}
+        left={
         <StructureTree
           name={name}
           comp={comp}
@@ -1151,18 +1131,11 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           onSelect={(s) => select(s, true)}
           onChange={setComp}
           newModule={(id, n) => (kind === "taula" ? tableModule(id, n) : applySettingsToModule(settings, defaultModule(id, n)))}
-          partCenter={{ x: Math.round(size.width / 2), y: kind === "lliure" ? 0 : Math.round(size.height / 2), z: kind === "lliure" ? 0 : Math.round(size.depth + 50) }}
+          partCenter={{ x: Math.round(size.width / 2), y: partsOnlyKind(kind) ? 0 : Math.round(size.height / 2), z: partsOnlyKind(kind) ? 0 : Math.round(size.depth + 50) }}
         />
-        </Box>
-      </Box>
-
-      {!treeHidden && (
-        <Box order={{ md: 1 }} display={{ base: "none", md: "flex" }}>
-          <ResizeHandle width={treeWidth} onWidth={setTreeWidth} min={48} max={900} defaultWidth={280} panelSide="left" label="Amplada de l'estructura" />
-        </Box>
-      )}
-
-      {/* Centre: visor amb pestanyes 3D · Alçat · Foto */}
+        }
+        right={inspector}
+        center={(chrome) => (
       <Box
         ref={viewerBox}
         order={{ base: 0, md: 2 }}
@@ -1315,40 +1288,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           {formHidden ? <LuMinimize2 /> : <LuMaximize2 />}
         </IconButton>
         {/* Ordinador: plegar/desplegar l'arbre (esquerra) i les propietats (dreta). */}
-        <Tooltip content={treeHidden ? "Mostrar l'estructura" : "Amagar l'estructura"}>
-          <IconButton
-            position="absolute"
-            top={3}
-            left={3}
-            zIndex={2}
-            display={{ base: "none", md: "inline-flex" }}
-            aria-label={treeHidden ? "Mostrar l'estructura" : "Amagar l'estructura"}
-            aria-expanded={!treeHidden}
-            size="sm"
-            variant="surface"
-            colorPalette="wood"
-            onClick={() => setTreeHidden((v) => !v)}
-          >
-            {treeHidden ? <LuPanelLeftOpen /> : <LuPanelLeftClose />}
-          </IconButton>
-        </Tooltip>
-        <Tooltip content={propsHidden ? "Mostrar les propietats" : "Amagar les propietats"}>
-          <IconButton
-            position="absolute"
-            top={3}
-            right={3}
-            zIndex={2}
-            display={{ base: "none", md: "inline-flex" }}
-            aria-label={propsHidden ? "Mostrar les propietats" : "Amagar les propietats"}
-            aria-expanded={!propsHidden}
-            size="sm"
-            variant="surface"
-            colorPalette="wood"
-            onClick={() => setPropsHidden((v) => !v)}
-          >
-            {propsHidden ? <LuPanelRightOpen /> : <LuPanelRightClose />}
-          </IconButton>
-        </Tooltip>
+        {chrome}
         {/* Botons del visor: en fila a dalt; si el visor és estret, en columna a la dreta
             (com les barres d'eines dels programes de CAD) perquè no tapin les pestanyes. */}
         <Stack
@@ -1410,52 +1350,9 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           )}
         </Stack>
       </Box>
-
-      {/* Mòbil: pestanyes sota el visor */}
-      <Box order={2} display={{ base: "block", md: "none" }} pt={3}>
-        <SegmentGroup.Root size="sm" w="full" value={mobilePane} onValueChange={(e) => (e.value === "tree" || e.value === "props") && setMobilePane(e.value)}>
-          <SegmentGroup.Indicator />
-          <SegmentGroup.Item value="tree" flex={1} justifyContent="center">
-            <SegmentGroup.ItemText>
-              <HStack gap={1.5}>
-                <LuListTree /> Estructura
-              </HStack>
-            </SegmentGroup.ItemText>
-            <SegmentGroup.ItemHiddenInput />
-          </SegmentGroup.Item>
-          <SegmentGroup.Item value="props" flex={1} justifyContent="center">
-            <SegmentGroup.ItemText>
-              <HStack gap={1.5}>
-                <LuSlidersHorizontal /> Propietats
-              </HStack>
-            </SegmentGroup.ItemText>
-            <SegmentGroup.ItemHiddenInput />
-          </SegmentGroup.Item>
-        </SegmentGroup.Root>
-      </Box>
-
-      {!propsHidden && (
-        <Box order={{ md: 3 }} display={{ base: "none", md: "flex" }}>
-          <ResizeHandle width={formWidth} onWidth={setFormWidth} min={48} max={900} defaultWidth={340} panelSide="right" label="Amplada de les propietats" />
-        </Box>
-      )}
-
-      {/* Dreta: propietats del que hi ha seleccionat */}
-      <Box
-        order={{ base: 4, md: 4 }}
-        minW={0}
-        flexShrink={{ md: 1 }}
-        display={{ base: mobilePane === "props" ? "block" : "none", md: propsHidden ? "none" : "block" }}
-        w={{ md: `${formWidth}px` }}
-        overflowY={{ md: "auto" }}
-        overflowX={{ md: "auto" }}
-        css={{ scrollbarWidth: "thin", scrollbarGutter: "stable" }}
-        pt={{ base: 3, md: 0 }}
-        pl={{ md: 3 }}
-      >
-        <Box minW="300px">{inspector}</Box>
-      </Box>
-    </Flex>
+        )}
+      />
+    </>
   )
 }
 

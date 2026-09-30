@@ -2,6 +2,8 @@ import { Box } from "@chakra-ui/react"
 import { useMemo } from "react"
 import { buildComposition } from "../core/build/buildComposition"
 import type { Composition, PanelRole } from "../core/model"
+import { useSettings } from "../features/settings/SettingsContext"
+import { finishRgb, resolveFinish } from "./viewer/textures"
 
 const FRONT: ReadonlySet<PanelRole> = new Set<PanelRole>(["door", "drawerFront", "flap", "grille", "hatch", "panel"])
 
@@ -10,14 +12,20 @@ const FRONT: ReadonlySet<PanelRole> = new Set<PanelRole>(["door", "drawerFront",
  * llista de mobles). Projecta cada peça sobre X/Y i les pinta de darrere a davant.
  */
 export function CompositionThumb({ composition, h = "96px" }: { composition: Composition; h?: string }) {
+  const { settings } = useSettings()
+  const materials = settings.materials
   const shapes = useMemo(() => {
     let panels
+    let extras
     try {
-      panels = buildComposition(composition).panels
+      const b = buildComposition(composition)
+      panels = b.panels
+      // Peces sense nesting (ferro, pedra, objectes): amb el color del seu material.
+      extras = b.extras
     } catch {
       return null
     }
-    const rects = panels.map((p) => {
+    const rects = [...panels, ...extras].map((p) => {
       const { origin, xAxis, yAxis, zAxis } = p.placement
       let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, z1 = -Infinity
       for (const a of [0, p.length])
@@ -28,7 +36,9 @@ export function CompositionThumb({ composition, h = "96px" }: { composition: Com
             const z = origin[2] + a * xAxis[2] + b * yAxis[2] + c * zAxis[2]
             x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); z1 = Math.max(z1, z)
           }
-      return { x0, x1, y0, y1, z1, front: FRONT.has(p.role) }
+      const extra = extras.includes(p)
+      const [r, g, b] = extra ? finishRgb(resolveFinish(materials, p.material)) : [0, 0, 0]
+      return { x0, x1, y0, y1, z1, front: FRONT.has(p.role), fill: extra ? `rgb(${r * 255}, ${g * 255}, ${b * 255})` : undefined }
     })
     if (!rects.length) return null
     const minX = Math.min(...rects.map((r) => r.x0))
@@ -37,7 +47,7 @@ export function CompositionThumb({ composition, h = "96px" }: { composition: Com
     const maxY = Math.max(...rects.map((r) => r.y1))
     rects.sort((a, b) => a.z1 - b.z1)
     return { rects, minX, maxX, minY, maxY }
-  }, [composition])
+  }, [composition, materials])
 
   if (!shapes) return <Box h={h} bg="bg.muted" rounded="md" />
   const pad = Math.max(shapes.maxX - shapes.minX, shapes.maxY - shapes.minY) * 0.06
@@ -52,7 +62,7 @@ export function CompositionThumb({ composition, h = "96px" }: { composition: Com
             y={-r.y1}
             width={Math.max(r.x1 - r.x0, 1)}
             height={Math.max(r.y1 - r.y0, 1)}
-            fill={r.front ? "var(--chakra-colors-wood-emphasized)" : "var(--chakra-colors-wood-muted)"}
+            fill={r.fill ?? (r.front ? "var(--chakra-colors-wood-emphasized)" : "var(--chakra-colors-wood-muted)")}
             stroke="var(--chakra-colors-fg-muted)"
             // 1 px de pantalla: amb non-scaling-stroke el gruix ja no depèn de l'escala.
             strokeWidth={1}

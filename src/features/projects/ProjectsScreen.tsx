@@ -16,6 +16,7 @@ import { parseMobleFile, uniqueName, type MobleFile } from "../../core/file/mobl
 import { NewMobleGallery } from "./NewMobleGallery"
 import { GALLERY_COLS } from "./galleryGrid"
 import { ProjectCard } from "./ProjectCard"
+import { isObject } from "../objects/isObject"
 import { useAmbientMembership } from "../ambients/useAmbientMembership"
 import { compositionKind, type Composition } from "../../core/model"
 import { createProject, db, deleteProject, duplicateProject, type Project } from "../../db/db"
@@ -113,7 +114,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
       <NewMobleGallery
         onCreate={(c, n) => void handleCreate(c, n)}
         history={(kind, matches) => {
-          const shown = (projects ?? []).filter((p) => (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
+          const shown = (projects ?? []).filter((p) => !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
           return {
             count: shown.length,
             node:

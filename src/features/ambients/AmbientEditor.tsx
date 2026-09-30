@@ -1,4 +1,4 @@
-import { Badge, Box, Button, CloseButton, Dialog, Drawer, Editable, Field, Flex, HStack, IconButton, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Slider, Stack, Switch, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, CloseButton, Dialog, Drawer, Editable, Field, Flex, HStack, IconButton, NativeSelect, Portal, SegmentGroup, SimpleGrid, Slider, Stack, Switch, Text } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   LuArrowLeft,
@@ -17,18 +17,18 @@ import {
   LuRotateCcw,
   LuRotateCw,
   LuSofa,
+  LuAperture,
   LuTrash2,
   LuUndo2,
   LuVideo,
 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
+import { RenderDialog, type SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { Tooltip } from "../../components/ui/tooltip"
 import {
-  BLOCK_PRESETS,
   BlockShapeSchema,
   CompositionSchema,
   compositionKind,
-  materialCategory,
   newId,
   parseAmbient,
   resizeComposition,
@@ -47,8 +47,13 @@ import { NewMobleGallery } from "../projects/NewMobleGallery"
 import { ProjectCard } from "../projects/ProjectCard"
 import { GALLERY_COLS } from "../projects/galleryGrid"
 import { useAmbientMembership } from "./useAmbientMembership"
+import { ObjectsGallery } from "../objects/ObjectsGallery"
+import { isObject } from "../objects/isObject"
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { NumberField } from "../editor/ParamsForm"
+import { Workspace } from "../../components/Workspace"
+import { useWorkspace } from "../../components/useWorkspace"
+import { MaterialSelect } from "../settings/SettingsScreen"
 import { useSettings } from "../settings/SettingsContext"
 import { formatLength, useUnit } from "../units"
 import { useProjects } from "../useProject"
@@ -90,6 +95,20 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
   const [calib, setCalib] = useState<{ a: PlanPt; b: PlanPt } | null>(null)
   const [wallDefaults, setWallDefaults] = useState({ thickness: 100, height: 2600 })
   const [picker, setPicker] = useState(false)
+  // El mateix espai de treball que l'editor de mobles (panells arrossegables i plegables).
+  const ws = useWorkspace("ambient", { tree: 260, form: 320 })
+  // Seleccionar porta a Propietats al mòbil (com a l'editor).
+  const select = (x: Selection) => {
+    setSel(x)
+    if (x) ws.setMobilePane("props")
+  }
+  const [objPicker, setObjPicker] = useState(false)
+  // Render per CPU (path tracing), el mateix de l'editor.
+  const [renderOpen, setRenderOpen] = useState(false)
+  const sceneGetter = useRef<SceneGetter | null>(null)
+  const onSceneAccess = useCallback((g: SceneGetter) => {
+    sceneGetter.current = g
+  }, [])
   const membership = useAmbientMembership()
   const past = useRef<Ambient[]>([])
   const future = useRef<Ambient[]>([])
@@ -131,6 +150,7 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
 
   const geos = useItemGeometries(amb.items, projects)
   const names = useMemo(() => new Map(amb.items.map((it) => [it.id, itemName(it, projects)])), [amb.items, projects])
+  const isObjItem = (it: AmbientItem) => it.kind === "block" || !!projects?.some((p) => p.id === it.projectId && isObject(p))
   const item = sel?.kind === "item" ? amb.items.find((i) => i.id === sel.id) : undefined
   const wall = sel?.kind === "wall" ? amb.walls.find((w) => w.id === sel.id) : undefined
 
@@ -138,7 +158,10 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
     const b = ambientBox({ ...amb, items: [] }, geos)
     return b ? [Math.round((b.x0 + b.x1) / 2), Math.round((b.y0 + b.y1) / 2)] : [2000, 1500]
   }
-  const addItem = (it: AmbientItem) => {
+  const addItem = (raw: AmbientItem) => {
+    // Cada element nou, una mica desplaçat perquè no quedin tots un sobre l'altre.
+    const k = amb.items.length % 6
+    const it = { ...raw, x: raw.x + k * 250, y: raw.y + k * 250 }
     change({ ...amb, items: [...amb.items, it] }, true)
     setSel({ kind: "item", id: it.id })
     setTool("select")
@@ -147,11 +170,7 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
     const [x, y] = center()
     addItem({ id: newId("i"), kind: "moble", projectId: p.id, x, y, rot: 0 })
   }
-  const addBlock = (preset: (typeof BLOCK_PRESETS)[number]) => {
-    const [x, y] = center()
-    const { id: _id, ...rest } = preset
-    addItem({ id: newId("i"), kind: "block", ...rest, x, y, rot: 0 })
-  }
+
   const patchItem = (id: string, patch: Partial<AmbientItem>, commit = true) => change({ ...amb, items: amb.items.map((it) => (it.id === id ? ({ ...it, ...patch } as AmbientItem) : it)) }, commit)
   const patchWall = (id: string, patch: Partial<Wall>) => change({ ...amb, walls: amb.walls.map((w) => (w.id === id ? { ...w, ...patch } : w)) }, true)
   const remove = () => {
@@ -293,104 +312,104 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
         </SegmentGroup.Root>
       </HStack>
 
-      <Flex direction={{ base: "column", md: "row" }} flex={1} minH={0} gap={3}>
-        {/* Esquerra: eines, afegir i llista d'elements. */}
-        <Stack w={{ base: "full", md: "240px" }} flexShrink={0} gap={3} overflowY={{ md: "auto" }} order={{ base: 1, md: 0 }}>
-          <HStack gap={1} wrap="wrap">
-            {TOOLS.map((t) => (
-              <Tooltip key={t.id} content={`${t.label} (${t.key})`}>
-                <IconButton aria-label={t.label} size="sm" variant={tool === t.id ? "solid" : "outline"} colorPalette={tool === t.id ? "wood" : undefined} onClick={() => (setTab("plan"), setTool(t.id))}>
-                  <t.icon />
-                </IconButton>
-              </Tooltip>
-            ))}
-            <Tooltip content="Encabir el plànol">
-              <IconButton aria-label="Encabir el plànol" size="sm" variant="outline" onClick={() => setFit((n) => n + 1)}>
-                <LuVideo />
-              </IconButton>
-            </Tooltip>
-          </HStack>
+      <Workspace
+        ws={ws}
+        left={
+          <Stack gap={3}>
           <HStack gap={2}>
-            <Button size="sm" colorPalette="wood" flex={1} onClick={() => setPicker(true)}>
-              <LuBox /> Moble
-            </Button>
-            <Menu.Root positioning={{ placement: "bottom-start" }}>
-              <Menu.Trigger asChild>
-                <Button size="sm" variant="outline" flex={1}>
-                  <LuSofa /> Bloc
-                </Button>
-              </Menu.Trigger>
-              <Portal>
-                <Menu.Positioner>
-                  <Menu.Content maxH="60vh" overflowY="auto">
-                    {BLOCK_PRESETS.map((b) => (
-                      <Menu.Item key={b.id} value={b.id} onClick={() => addBlock(b)}>
-                        {b.name}
-                        <Text as="span" ms="auto" ps={3} fontSize="xs" color="fg.muted">
-                          {b.w} × {b.d}
-                        </Text>
-                      </Menu.Item>
-                    ))}
-                  </Menu.Content>
-                </Menu.Positioner>
-              </Portal>
-            </Menu.Root>
-          </HStack>
+              <Button size="sm" colorPalette="wood" flex={1} onClick={() => setPicker(true)}>
+                <LuBox /> Moble
+              </Button>
+              <Button size="sm" variant="outline" flex={1} onClick={() => setObjPicker(true)}>
+                <LuSofa /> Objecte
+              </Button>
+            </HStack>
 
-          <Stack gap={0.5}>
-            <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
-              Elements
-            </Text>
-            {amb.items.length === 0 && (
-              <Text fontSize="sm" color="fg.muted">
-                Dibuixa les parets (P o H) i afegeix-hi mobles i blocs.
+            <Stack gap={0.5}>
+              <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
+                Elements
               </Text>
-            )}
-            {amb.items.map((it) => {
-              const g = geos.get(it.id)
-              const active = sel?.kind === "item" && sel.id === it.id
-              return (
-                <HStack
-                  key={it.id}
-                  as="button"
-                  gap={2}
-                  px={2}
-                  py={1.5}
-                  rounded="md"
-                  textAlign="left"
-                  bg={active ? "wood.subtle" : undefined}
-                  _hover={{ bg: active ? "wood.subtle" : "bg.muted" }}
-                  onClick={() => (setSel({ kind: "item", id: it.id }), setTool("select"))}
-                >
-                  <Box color={it.kind === "moble" ? "wood.fg" : "fg.muted"}>{it.kind === "moble" ? <LuBox /> : <LuSofa />}</Box>
-                  <Text fontSize="sm" truncate flex={1}>
-                    {names.get(it.id)}
-                  </Text>
-                  {g && (
-                    <Text fontSize="xs" color="fg.muted" flexShrink={0}>
-                      {Math.round(g.w)} × {Math.round(g.d)}
+              {amb.items.length === 0 && (
+                <Text fontSize="sm" color="fg.muted">
+                  Dibuixa les parets (P o H) i afegeix-hi mobles i blocs.
+                </Text>
+              )}
+              {amb.items.map((it) => {
+                const g = geos.get(it.id)
+                const active = sel?.kind === "item" && sel.id === it.id
+                return (
+                  <HStack
+                    key={it.id}
+                    as="button"
+                    gap={2}
+                    px={2}
+                    py={1.5}
+                    rounded="md"
+                    textAlign="left"
+                    bg={active ? "wood.subtle" : undefined}
+                    _hover={{ bg: active ? "wood.subtle" : "bg.muted" }}
+                    onClick={() => (select({ kind: "item", id: it.id }), setTool("select"))}
+                  >
+                    <Box color={isObjItem(it) ? "fg.muted" : "wood.fg"}>{isObjItem(it) ? <LuSofa /> : <LuBox />}</Box>
+                    <Text fontSize="sm" truncate flex={1}>
+                      {names.get(it.id)}
                     </Text>
-                  )}
-                </HStack>
-              )
-            })}
-            {amb.walls.length > 0 && (
-              <Text fontSize="xs" color="fg.muted" mt={2}>
-                {amb.walls.length} {amb.walls.length === 1 ? "paret" : "parets"} · {formatLength(Math.round(amb.walls.reduce((n, w) => n + wallLength(w), 0)), unit)}
-              </Text>
+                    {g && (
+                      <Text fontSize="xs" color="fg.muted" flexShrink={0}>
+                        {Math.round(g.w)} × {Math.round(g.d)}
+                      </Text>
+                    )}
+                  </HStack>
+                )
+              })}
+              {amb.walls.length > 0 && (
+                <Text fontSize="xs" color="fg.muted" mt={2}>
+                  {amb.walls.length} {amb.walls.length === 1 ? "paret" : "parets"} · {formatLength(Math.round(amb.walls.reduce((n, w) => n + wallLength(w), 0)), unit)}
+                </Text>
+              )}
+            </Stack>
+          </Stack>
+        }
+        right={
+          <Stack gap={4} pb={2}>
+          {item ? (
+              <ItemInspector
+                key={item.id}
+                item={item}
+                geo={geos.get(item.id) ?? null}
+                name={names.get(item.id) ?? ""}
+                project={item.kind === "moble" ? projects?.find((p) => p.id === item.projectId) : undefined}
+                materials={simMaterials}
+                onPatch={(p) => patchItem(item.id, p)}
+                onOpen={() => item.kind === "moble" && onOpenProject(item.projectId)}
+                onDuplicate={duplicate}
+                onDelete={remove}
+              />
+            ) : wall ? (
+              <WallInspector key={wall.id} wall={wall} onPatch={(p) => patchWall(wall.id, p)} onDelete={remove} />
+            ) : (
+              <AmbientInspector
+                amb={amb}
+                materials={simMaterials}
+                wallDefaults={wallDefaults}
+                onWallDefaults={setWallDefaults}
+                onChange={(a) => change(a, true)}
+                onImportPlan={() => void importPlan()}
+                onCalibrate={() => (setTab("plan"), setTool("calibrate"))}
+              />
             )}
           </Stack>
-        </Stack>
-
-        {/* Centre: plànol o 3D. */}
-        <Box flex={1} minW={0} minH={{ base: "56vh", md: 0 }} h={{ base: "56vh", md: "auto" }} position="relative" order={{ base: 0, md: 1 }}>
+        }
+        center={(chrome) => (
+          // Centre: plànol o 3D, amb la barra d'eines flotant (com Figma) i els botons de plegar.
+          <Box order={{ base: 0, md: 2 }} flex={{ md: 1 }} minW={0} minH={{ base: "56vh", md: 0 }} h={{ base: "56vh", md: "full" }} position="relative">
           {tab === "plan" ? (
             <PlanCanvas
               ambient={amb}
               geos={geos}
               names={names}
               selection={sel}
-              onSelect={setSel}
+              onSelect={select}
               tool={tool}
               onToolDone={toolDone}
               onChange={change}
@@ -400,46 +419,51 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
             />
           ) : (
             <Box position="absolute" inset={0} rounded="md" overflow="hidden" borderWidth="1px">
-              <Ambient3D ambient={amb} geos={geos} materials={settings.materials} />
+              <Ambient3D ambient={amb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} selectedId={sel?.kind === "item" ? sel.id : null} onSelect={(id) => select(id ? { kind: "item", id } : null)} />
             </Box>
           )}
+            {chrome}
+          {/* Barra d'eines: al plànol, les eines de dibuix; al 3D, encuadrar i render. */}
+          <HStack position="absolute" top={3} left="50%" transform="translateX(-50%)" zIndex={2} gap={0.5} bg="bg.panel" rounded="md" borderWidth="1px" p={0.5} shadow="sm">
+            {tab === "plan" ? (
+              <>
+                {TOOLS.map((t) => (
+                  <Tooltip key={t.id} content={`${t.label} (${t.key})`}>
+                    <IconButton aria-label={t.label} size="sm" variant={tool === t.id ? "solid" : "ghost"} colorPalette={tool === t.id ? "wood" : undefined} onClick={() => setTool(t.id)}>
+                      <t.icon />
+                    </IconButton>
+                  </Tooltip>
+                ))}
+                <Box w="1px" h="20px" bg="border" mx={0.5} />
+                <Tooltip content="Encabir el plànol">
+                  <IconButton aria-label="Encabir el plànol" size="sm" variant="ghost" onClick={() => setFit((n) => n + 1)}>
+                    <LuVideo />
+                  </IconButton>
+                </Tooltip>
+              </>
+            ) : (
+              <>
+                <Tooltip content="Encuadrar">
+                  <IconButton aria-label="Encuadrar" size="sm" variant="ghost" onClick={() => setFit((n) => n + 1)}>
+                    <LuVideo />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip content="Render fotorealista per CPU: es va afinant i es desa en PNG">
+                  <Button size="sm" variant="ghost" onClick={() => setRenderOpen(true)}>
+                    <LuAperture /> Render
+                  </Button>
+                </Tooltip>
+              </>
+            )}
+          </HStack>
           {tab === "plan" && tool !== "select" && (
-            <Badge position="absolute" top={3} left="50%" transform="translateX(-50%)" colorPalette="wood" size="md" pointerEvents="none">
+            <Badge position="absolute" bottom={3} left="50%" transform="translateX(-50%)" colorPalette="wood" size="md" pointerEvents="none" maxW="90%" whiteSpace="normal" textAlign="center">
               {tool === "wall" ? "Paret: clica punt a punt · clica el primer per tancar · Retorn o Esc per acabar" : tool === "room" ? "Habitació: arrossega un rectangle" : "Calibrar: clica dos punts d'una mida coneguda"}
             </Badge>
           )}
-        </Box>
-
-        {/* Dreta: propietats de la selecció (o de l'ambient). */}
-        <Stack w={{ base: "full", md: "320px" }} flexShrink={0} gap={4} overflowY={{ md: "auto" }} order={{ base: 2, md: 2 }} pb={2}>
-          {item ? (
-            <ItemInspector
-              key={item.id}
-              item={item}
-              geo={geos.get(item.id) ?? null}
-              name={names.get(item.id) ?? ""}
-              project={item.kind === "moble" ? projects?.find((p) => p.id === item.projectId) : undefined}
-              materials={simMaterials}
-              onPatch={(p) => patchItem(item.id, p)}
-              onOpen={() => item.kind === "moble" && onOpenProject(item.projectId)}
-              onDuplicate={duplicate}
-              onDelete={remove}
-            />
-          ) : wall ? (
-            <WallInspector key={wall.id} wall={wall} onPatch={(p) => patchWall(wall.id, p)} onDelete={remove} />
-          ) : (
-            <AmbientInspector
-              amb={amb}
-              materials={simMaterials}
-              wallDefaults={wallDefaults}
-              onWallDefaults={setWallDefaults}
-              onChange={(a) => change(a, true)}
-              onImportPlan={() => void importPlan()}
-              onCalibrate={() => (setTab("plan"), setTool("calibrate"))}
-            />
-          )}
-        </Stack>
-      </Flex>
+          </Box>
+        )}
+      />
 
       {/* Afegir un moble: la mateixa pàgina de Mobles (historial i plantilles) a pantalla completa. */}
       <Drawer.Root open={picker} onOpenChange={(e) => setPicker(e.open)} size="full" placement="bottom">
@@ -468,7 +492,7 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
                       })()
                     }
                     history={(kind, matches) => {
-                      const shown = (projects ?? []).filter((p) => (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
+                      const shown = (projects ?? []).filter((p) => !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
                       return {
                         count: shown.length,
                         node: shown.length ? (
@@ -492,6 +516,59 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
         </Portal>
       </Drawer.Root>
 
+      {/* Afegir un objecte: la galeria d'objectes (els teus i les plantilles) a pantalla completa. */}
+      <Drawer.Root open={objPicker} onOpenChange={(e) => setObjPicker(e.open)} size="full" placement="bottom">
+        <Portal>
+          <Drawer.Backdrop />
+          <Drawer.Positioner>
+            <Drawer.Content>
+              <Drawer.Header>
+                <Drawer.Title>Afegir un objecte a «{name}»</Drawer.Title>
+                <Drawer.CloseTrigger asChild>
+                  <CloseButton size="sm" aria-label="Tancar" />
+                </Drawer.CloseTrigger>
+              </Drawer.Header>
+              <Drawer.Body>
+                {objPicker && (
+                  <ObjectsGallery
+                    storageKey="mobles:ambient-objects"
+                    onCreate={(c, n) =>
+                      void (async () => {
+                        const existing = (await db.projects.toArray()).map((p) => p.name)
+                        const id = await createProject(uniqueName(n, existing), undefined, { composition: c })
+                        const p = await db.projects.get(id)
+                        if (p) addMoble(p)
+                        setObjPicker(false)
+                        toaster.create({ title: `«${p?.name ?? n}» afegit`, description: "S'ha creat a Objectes i s'ha col·locat a l'ambient.", type: "success" })
+                      })()
+                    }
+                    history={(matches) => {
+                      const shown = (projects ?? []).filter((p) => isObject(p) && matches(p.name))
+                      return {
+                        count: shown.length,
+                        node: shown.length ? (
+                          <SimpleGrid columns={GALLERY_COLS} gap={3}>
+                            {shown.map((p) => (
+                              <ProjectCard key={p.id} project={p} ambients={membership.get(p.id)} currentAmbient={ambientId} onAdd={() => (addMoble(p), setObjPicker(false))} />
+                            ))}
+                          </SimpleGrid>
+                        ) : (
+                          <Text fontSize="sm" color="fg.muted">
+                            Encara no tens cap objecte: tria'n un de les plantilles o comença en blanc.
+                          </Text>
+                        ),
+                      }
+                    }}
+                  />
+                )}
+              </Drawer.Body>
+            </Drawer.Content>
+          </Drawer.Positioner>
+        </Portal>
+      </Drawer.Root>
+
+      <RenderDialog open={renderOpen} onClose={() => setRenderOpen(false)} getScene={() => sceneGetter.current?.() ?? null} name={name} />
+
       <CalibrateDialog open={calib !== null} measured={calib ? Math.hypot(calib.b[0] - calib.a[0], calib.b[1] - calib.a[1]) : 0} onClose={() => (setCalib(null), setTool("select"))} onApply={applyCalibration} />
     </Flex>
   )
@@ -507,32 +584,9 @@ function SectionTitle({ children }: { children: ReactNode }) {
   )
 }
 
-function MaterialPick({ label, value, materials, onChange, onlySim }: { label: string; value: string; materials: MaterialPref[]; onChange: (v: string) => void; onlySim?: boolean }) {
-  const list = onlySim ? materials.filter((m) => materialCategory(m) === "sim") : materials
-  const known = list.some((m) => m.name === value)
-  return (
-    <Field.Root>
-      <Field.Label fontSize="sm">{label}</Field.Label>
-      <NativeSelect.Root size="sm">
-        <NativeSelect.Field value={value} onChange={(e) => onChange(e.target.value)}>
-          {!known && <option value={value}>{value}</option>}
-          {(["sim", "board", "hard", "back"] as const).map((c) => {
-            const ms = list.filter((m) => materialCategory(m) === c)
-            return ms.length ? (
-              <optgroup key={c} label={{ sim: "Simulació", board: "Taulers", hard: "Metall, pedra i vidre", back: "Fons" }[c]}>
-                {ms.map((m) => (
-                  <option key={m.id} value={m.name}>
-                    {m.name}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null
-          })}
-        </NativeSelect.Field>
-        <NativeSelect.Indicator />
-      </NativeSelect.Root>
-    </Field.Root>
-  )
+/** Material de les preferències, agrupat per categories (el mateix selector que a Preferències). */
+function MaterialPick({ label, value, materials, onChange }: { label: string; value: string; materials: MaterialPref[]; onChange: (v: string) => void; onlySim?: boolean }) {
+  return <MaterialSelect label={label} materials={materials} value={value} onChange={onChange} />
 }
 
 function Placement({ item, onPatch }: { item: AmbientItem; onPatch: (p: Partial<AmbientItem>) => void }) {
