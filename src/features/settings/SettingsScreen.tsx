@@ -307,6 +307,9 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
   )
 }
 
+/** Clau de l'element obert a les pàgines de llista i detall (per saber quin «Tornar» es veu). */
+const DETAIL_KEYS = { materials: "mobles:settings-material", references: "mobles:settings-ref" } as const
+
 /** Categories dels apartats de Preferències. */
 const SETTINGS_GROUPS: { label: string; ids: string[] }[] = [
   { label: "Fabricació", ids: ["materials", "boards", "hardware", "gaps", "label"] },
@@ -339,6 +342,10 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
     .filter(isValidElement)
     .map((c) => c.props as PaneProps)
   const [active, setActive] = useSessionString("mobles:settings-section")
+  // Al mòbil, un sol «‹ Tornar» a la vista: amb un element obert (material, objecte) només el seu.
+  const [matSel] = useSessionString(DETAIL_KEYS.materials)
+  const [refSel] = useSessionString(DETAIL_KEYS.references)
+  const detailOpen = (active === "materials" && matSel !== null) || (active === "references" && refSel !== null)
   // Apartats agrupats per categoria (com la Configuració de macOS): el que no hi surti, a «Altres».
   const groups = SETTINGS_GROUPS.map((g) => ({ label: g.label, panes: g.ids.flatMap((id) => panes.filter((p) => p.id === id)) }))
   const rest = panes.filter((p) => !SETTINGS_GROUPS.some((g) => g.ids.includes(p.id)))
@@ -406,7 +413,7 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
         ))}
       </Stack>
       <Stack flex={1} minW={0} gap={4} display={{ base: cur ? "flex" : "none", md: "flex" }}>
-        <Button display={{ base: "inline-flex", md: "none" }} variant="ghost" size="sm" alignSelf="flex-start" ml={-2} onClick={() => setActive(null)}>
+        <Button display={{ base: detailOpen ? "none" : "inline-flex", md: "none" }} variant="ghost" size="sm" alignSelf="flex-start" ml={-2} onClick={() => setActive(null)}>
           <LuChevronLeft /> Preferències
         </Button>
         {!shown.wide && <PaneHeader pane={shown} />}
@@ -461,7 +468,7 @@ function FoldGrid({ children }: { children: ReactNode }) {
 
 function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: RefPreset[]) => void }) {
   const head = useContext(PaneHeadContext)
-  const [sel, setSel] = useSessionString("mobles:settings-ref")
+  const [sel, setSel] = useSessionString(DETAIL_KEYS.references)
   const [query, setQuery] = useState("")
   const update = (i: number, patch: Partial<RefPreset>) => onChange(refs.map((r, k) => (k === i ? { ...r, ...patch } : r)))
   const move = (i: number, dir: -1 | 1) => {
@@ -488,6 +495,10 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
   const shown = refs.filter((r) => !q || r.name.toLowerCase().includes(q))
   const i = refs.findIndex((r) => r.id === sel)
   const r = i >= 0 ? refs[i]! : null
+  // Un element que ja no existeix no compta com a obert.
+  useEffect(() => {
+    if (sel !== null && i < 0) setSel(null)
+  }, [sel, i, setSel])
   return (
     <MasterDetail
       head={
@@ -604,7 +615,7 @@ function parseList(text: string): number[] {
 
 function MaterialsList({ materials, onChange, footer }: { materials: MaterialPref[]; onChange: (m: MaterialPref[]) => void; footer?: ReactNode }) {
   const head = useContext(PaneHeadContext)
-  const [sel, setSel] = useSessionString("mobles:settings-material")
+  const [sel, setSel] = useSessionString(DETAIL_KEYS.materials)
   const [cat, setCat] = useSessionString("mobles:settings-material-cat")
   const [query, setQuery] = useState("")
   const [justAdded, setJustAdded] = useState<string | null>(null)
@@ -635,6 +646,9 @@ function MaterialsList({ materials, onChange, footer }: { materials: MaterialPre
   const filterId = cat ?? "all"
   const i = materials.findIndex((m) => m.id === sel)
   const m = i >= 0 ? materials[i]! : null
+  useEffect(() => {
+    if (sel !== null && i < 0) setSel(null)
+  }, [sel, i, setSel])
   return (
     <>
     <MasterDetail

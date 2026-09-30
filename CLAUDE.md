@@ -302,6 +302,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   fitxer» a Mobles), mai al menú. Clicar l'apartat del document obert torna a la llista.
 - **Mòbil sense títols repetits**: les pàgines d'inici porten el seu títol gran (com iOS) i no hi ha
   barra de dalt; només n'hi ha quan cal tornar enrere (Preferències des d'un moble: «‹ nom del moble»).
+  **Un sol «‹ Tornar» a la vista**: a la llista d'apartats «‹ nom del moble», dins d'un apartat «‹ Preferències»
+  i amb un element obert «‹ Materials» (`useSessionString` es manté igual entre components amb la mateixa clau;
+  `DETAIL_KEYS`).
   Els diàlegs i calaixos a pantalla completa respecten la zona segura (`env(safe-area-inset-top)`), també
   el botó de tancar.
 - **Barra superior del moble obert** (`components/TopBar.tsx`), com Figma/Onshape/Notion:

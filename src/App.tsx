@@ -16,6 +16,7 @@ import { NestingScreen } from "./features/nesting/NestingScreen"
 import { PhotoScreen } from "./features/photo/PhotoScreen"
 import { ProjectsScreen, type ProjectsRequest } from "./features/projects/ProjectsScreen"
 import { AmbientEditor, AmbientTopBar } from "./features/ambients/AmbientEditor"
+import { useSessionString } from "./features/settings/useSessionString"
 import { AmbientsScreen } from "./features/ambients/AmbientsScreen"
 import { ObjectsScreen } from "./features/objects/ObjectsScreen"
 import { compositionKind } from "./core/model"
@@ -126,6 +127,10 @@ export function App() {
   const rootEntry = isObject ? OBJECTS_ENTRY : PROJECTS_ENTRY
   // Barra superior «Mobles › nom» a les pàgines del moble (no a Preferències).
   const showTopBar = inProject && screen !== "settings" && screen !== "projects"
+  // Preferències obertes des d'un moble (mòbil): «‹ nom del moble» només a la llista d'apartats; dins
+  // d'un apartat ja hi ha el seu «‹ Preferències» (un sol «Tornar» a la vista).
+  const [settingsPane] = useSessionString("mobles:settings-section")
+  const settingsBackBar = screen === "settings" && inProject && settingsPane === null
   const [topActions, setTopActions] = useState<HTMLDivElement | null>(null)
   const [saveOpen, setSaveOpen] = useState(false)
   const [templateOpen, setTemplateOpen] = useState(false)
@@ -323,7 +328,7 @@ export function App() {
         {project && <SaveTemplateDialog project={project} open={templateOpen} onClose={() => setTemplateOpen(false)} />}
         {/* Mòbil: les pàgines d'inici porten el seu títol gran (com iOS); aquí només hi ha barra quan cal
             tornar enrere (Preferències obertes des d'un moble). */}
-        {screen === "settings" && inProject && (
+        {settingsBackBar && (
           <HStack
             display={{ base: "flex", md: "none" }}
             as="header"
@@ -352,7 +357,7 @@ export function App() {
           flexDirection="column"
           px={{ base: 4, md: screen === "editor" || screen === "ambient" ? 2 : 4 }}
           // Al mòbil, l'editor enganxa el visor a la barra de dalt (sense marge superior).
-          pt={{ base: screen === "editor" ? 0 : showTopBar || screen === "ambient" || (screen === "settings" && inProject) ? 4 : "calc(16px + env(safe-area-inset-top, 0px))", md: screen === "editor" || screen === "ambient" ? 1.5 : 6 }}
+          pt={{ base: screen === "editor" ? 0 : showTopBar || screen === "ambient" || settingsBackBar ? 4 : "calc(16px + env(safe-area-inset-top, 0px))", md: screen === "editor" || screen === "ambient" ? 1.5 : 6 }}
           pb={{ base: "calc(76px + env(safe-area-inset-bottom, 0px))", md: screen === "editor" || screen === "ambient" ? 1.5 : 6 }}
         >
           <TopBarActionsProvider value={topActions}>{content}</TopBarActionsProvider>
