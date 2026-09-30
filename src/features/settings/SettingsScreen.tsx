@@ -309,6 +309,13 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
   )
 }
 
+/** Categories dels apartats de Preferències. */
+const SETTINGS_GROUPS: { label: string; ids: string[] }[] = [
+  { label: "Fabricació", ids: ["materials", "boards", "hardware", "gaps", "label"] },
+  { label: "Foto i visor 3D", ids: ["references", "viewer3d"] },
+  { label: "App", ids: ["display", "theme"] },
+]
+
 interface PaneProps {
   id: string
   title: string
@@ -334,8 +341,13 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
     .filter(isValidElement)
     .map((c) => c.props as PaneProps)
   const [active, setActive] = useSessionString("mobles:settings-section")
+  // Apartats agrupats per categoria (com la Configuració de macOS): el que no hi surti, a «Altres».
+  const groups = SETTINGS_GROUPS.map((g) => ({ label: g.label, panes: g.ids.flatMap((id) => panes.filter((p) => p.id === id)) }))
+  const rest = panes.filter((p) => !SETTINGS_GROUPS.some((g) => g.ids.includes(p.id)))
+  if (rest.length) groups.push({ label: "Altres", panes: rest })
+  const ordered = groups.flatMap((g) => g.panes)
   const cur = panes.find((p) => p.id === active) ?? null
-  const shown = cur ?? panes[0]!
+  const shown = cur ?? ordered[0]!
   const Icon = shown.icon
   return (
     <Stack gap={5}>
@@ -344,8 +356,13 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
     <Flex gap={6} align="flex-start">
       {/* Llista d'apartats: a l'ordinador sempre; al mòbil, només si no n'hi ha cap d'obert. */}
       <Stack as="nav" aria-label="Apartats de Preferències" w={{ base: "full", md: "230px" }} flexShrink={0} gap={0.5} display={{ base: cur ? "none" : "flex", md: "flex" }} position={{ md: "sticky" }} top={{ md: 0 }}>
+        {groups.map((g) => (
+        <Stack key={g.label} gap={1} mb={{ base: 3, md: 2 }}>
+        <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide" px={{ base: 1, md: 3 }}>
+          {g.label}
+        </Text>
         <Box borderWidth={{ base: "1px", md: 0 }} rounded="lg" overflow="hidden" bg={{ base: "bg.panel", md: "transparent" }}>
-          {panes.map((p, i) => {
+          {g.panes.map((p, i) => {
             const on = p.id === shown.id
             const PIcon = p.icon
             return (
@@ -387,6 +404,8 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
             )
           })}
         </Box>
+        </Stack>
+        ))}
       </Stack>
       <Stack flex={1} minW={0} gap={4} display={{ base: cur ? "flex" : "none", md: "flex" }}>
         <Button display={{ base: "inline-flex", md: "none" }} variant="ghost" size="sm" alignSelf="flex-start" ml={-2} onClick={() => setActive(null)}>

@@ -599,8 +599,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     mida), procedurals (`patternTexture`). Els materials que no són de CNC pinten els cantells amb
     el mateix material (no «tauler vist»).
   - **Preferències com Configuració de macOS / Figma** (`SettingsPages` + `Pane` a `SettingsScreen`):
-    a l'esquerra la llista d'apartats (Objectes de referència, Materials, Taulers i nesting, Ferratges,
-    Jocs, Etiquetes, Visualització, Tema, Visor 3D) i a la dreta la pàgina triada (icona, títol,
+    a l'esquerra la llista d'apartats per categories (`SETTINGS_GROUPS`: **Fabricació** — Materials, Taulers i
+    nesting, Ferratges, Jocs, Etiquetes —, **Foto i visor 3D** — Objectes de referència, Visor 3D — i **App** —
+    Visualització, Tema; no és un acordió, com la Configuració de macOS) i a la dreta la pàgina triada (icona, títol,
     explicació i «Restaurar valors inicials»); dins, **grups sempre oberts** (`components/SettingsGroup`:
     targeta amb capçalera, res no s'obre de cop). Materials i objectes de referència fan **llista i detall**
     (`components/MasterDetail`: llista agrupada per categoria amb mostra, cercador i «Afegir»; el triat
