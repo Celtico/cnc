@@ -77,3 +77,19 @@ export const samePt = (a: PlanPt, b: PlanPt) => Math.abs(a[0] - b[0]) < 0.5 && M
 
 /** Text de mida (mm o cm segons la unitat de pantalla). */
 export const fmtLen = (mm: number, unit: "mm" | "cm") => (unit === "cm" ? `${Math.round(mm / 10)} cm` : `${Math.round(mm)} mm`)
+
+/** Vista recordada de l'editor d'ambients (Plànol · 3D). */
+export const AMBIENT_TAB_KEY = "mobles:ambient-tab"
+
+/**
+ * Càmera d'interior (m): a l'alçada dels ulls, a prop de la paret de davant (y gran) i mirant la del
+ * fons (y petita), al mig de l'habitació. `null` si no hi ha parets.
+ */
+export function eyePose(a: Ambient): { pos: [number, number, number]; target: [number, number, number] } | null {
+  if (!a.walls.length) return null
+  const xs = a.walls.flatMap((w) => [w.a[0], w.b[0]]), ys = a.walls.flatMap((w) => [w.a[1], w.b[1]])
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys)
+  const cx = (x0 + x1) / 2000
+  const back = Math.min(200, (y1 - y0) * 0.1)
+  return { pos: [cx, 1.6, (y1 - back) / 1000], target: [cx, 1.25, y0 / 1000] }
+}

@@ -141,7 +141,8 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
     const count = index ? index.count : p.count
     const groups = geo.groups.length ? geo.groups : [{ start: 0, count, materialIndex: 0 }]
     for (const gr of groups) {
-      const m = list[gr.materialIndex ?? 0] as MeshStandardMaterial | undefined
+      // Un sol material val per a tots els grups (BoxGeometry en porta sis: les parets només sortien per una cara).
+      const m = (Array.isArray(mesh.material) ? list[gr.materialIndex ?? 0] : list[0]) as MeshStandardMaterial | undefined
       if (!m || ghost(m)) continue
       const id = matId(m)
       const end = Math.min(count, gr.start + gr.count)

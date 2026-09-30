@@ -34,6 +34,7 @@ import {
   LuTrash2,
   LuUndo2,
   LuVideo,
+  LuEye,
 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { RenderDialog, type SceneGetter } from "../../components/viewer/render/RenderDialog"
@@ -82,7 +83,7 @@ import { useProjects } from "../useProject"
 import { Ambient3D } from "./Ambient3D"
 import { itemName, useItemGeometries, type ItemGeometry } from "./ambientData"
 import { PlanCanvas } from "./PlanCanvas"
-import { ambientBox, type Selection, type Tool } from "./planGeom"
+import { AMBIENT_TAB_KEY, ambientBox, type Selection, type Tool } from "./planGeom"
 
 const TOOLS: { id: Tool; label: string; key: string; icon: typeof LuPenTool }[] = [
   { id: "select", label: "Seleccionar i moure", key: "V", icon: LuMousePointer2 },
@@ -112,8 +113,25 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
   const [amb, setAmbState] = useState<Ambient>(initial)
   const [sel, setSel] = useState<Selection>(null)
   const [tool, setTool] = useState<Tool>("select")
-  const [tab, setTab] = useState<"plan" | "3d">("plan")
+  // La vista (Plànol · 3D) es recorda; els ambients del catàleg s'obren al 3D.
+  const [tab, setTabState] = useState<"plan" | "3d">(() => {
+    try {
+      return localStorage.getItem(AMBIENT_TAB_KEY) === "3d" ? "3d" : "plan"
+    } catch {
+      return "plan"
+    }
+  })
+  const setTab = (t: "plan" | "3d") => {
+    setTabState(t)
+    try {
+      localStorage.setItem(AMBIENT_TAB_KEY, t)
+    } catch {
+      /* sense emmagatzematge */
+    }
+  }
   const [fit, setFit] = useState(0)
+  // Vista d'interior: la càmera a l'alçada dels ulls, dins de l'habitació (per als renders).
+  const [eye, setEye] = useState(0)
   const [calib, setCalib] = useState<{ a: PlanPt; b: PlanPt } | null>(null)
   const [wallDefaults, setWallDefaults] = useState({ thickness: 100, height: 2600 })
   const [picker, setPicker] = useState(false)
@@ -533,7 +551,7 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
             />
           ) : (
             <Box position="absolute" inset={0} rounded="md" overflow="hidden" borderWidth="1px">
-              <Ambient3D ambient={amb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} dollhouse={dollhouse} shadows={shadows} />
+              <Ambient3D ambient={amb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} dollhouse={dollhouse} shadows={shadows} />
             </Box>
           )}
             {chrome}
@@ -588,6 +606,7 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
                 ) : (
                   <>
                     <ViewTile label="Encuadrar" icon={<LuVideo />} on={false} onClick={() => setFit((n) => n + 1)} />
+                    <ViewTile label="Interior" icon={<LuEye />} on={false} onClick={() => setEye((n) => n + 1)} tip="Entrar a l'habitació: càmera a l'alçada dels ulls (1,6 m), mirant la paret del fons" />
                     <ViewTile label="Casa de nines" icon={<LuHouse />} on={dollhouse} onClick={() => setDollhouse((v) => !v)} tip="Parets de davant transparents" />
                     <ViewTile label="Ombres" icon={<LuSun />} on={shadows} onClick={() => setShadows((v) => !v)} />
                     <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => setRenderOpen(true)} tip="Render fotorealista per CPU (com Cinema 4D): es va afinant i es desa en PNG" />

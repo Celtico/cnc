@@ -9,6 +9,7 @@ import { useLiveQuery } from "../../db/useLiveQuery"
 import { FoldTitle } from "../projects/NewMobleGallery"
 import { GALLERY_COLS, fold, useSessionList } from "../projects/galleryGrid"
 import { createAmbientFromTemplate, templatePreview } from "./fromTemplate"
+import { AMBIENT_TAB_KEY } from "./planGeom"
 
 /**
  * Ambients: plànols de la casa on es col·loquen els mobles (els de la llista, enllaçats) i
@@ -34,7 +35,14 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
   const fromTemplate = async (t: AmbientTemplate) => {
     setBusy(t.id)
     try {
-      onOpen(await createAmbientFromTemplate(t))
+      const id = await createAmbientFromTemplate(t)
+      // Els del catàleg són per veure'ls: s'obren al 3D.
+      try {
+        localStorage.setItem(AMBIENT_TAB_KEY, "3d")
+      } catch {
+        /* sense emmagatzematge */
+      }
+      onOpen(id)
       toaster.create({ title: `«${t.name}» creat`, description: "Els seus mobles i objectes s'han creat a Mobles i Objectes, enllaçats a l'ambient.", type: "success" })
     } finally {
       setBusy(null)

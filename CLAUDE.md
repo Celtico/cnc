@@ -247,6 +247,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   porta `userData.glass` (el render per CPU el fa translúcid) i `baseOpacity` (la casa de nines el respecta).
 - **3D**: la mateixa navegació que l'editor (esmorteïment, roda, botó dret per desplaçar), clic per
   seleccionar (caixa taronja; Supr, Ctrl/⌘ D, R i fletxes com al plànol), «Encuadrar» i «Render».
+  **Interior** (Opcions de vista, `LuEye`, `eyePose`): entra a l'habitació, càmera a 1,6 m al costat de la
+  paret de davant mirant la del fons, angular (fov 62; «Encuadrar» torna a 40), per als renders de revista.
+  La pestanya Plànol · 3D es recorda (`AMBIENT_TAB_KEY`); els ambients creats del catàleg s'obren al 3D.
 - **3D** (`Ambient3D`): terra i parets amb `surfaceMaterial` (textura a mida real), mobles i blocs
   amb les textures del visor; les parets entre la càmera i l'habitació es fan transparents
   (casa de nines).

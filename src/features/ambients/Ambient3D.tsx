@@ -1,7 +1,7 @@
 import { OrbitControls } from "@react-three/drei"
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import { useEffect, useMemo, useRef, type ComponentRef } from "react"
-import { BoxGeometry, Group, Mesh, MeshStandardMaterial, NeutralToneMapping, PlaneGeometry, Vector3, type Object3D } from "three"
+import { BoxGeometry, Group, Mesh, MeshStandardMaterial, NeutralToneMapping, PerspectiveCamera, PlaneGeometry, Vector3, type Object3D } from "three"
 import { exportablePanel } from "../../components/viewer/CabinetViewer"
 import { buildScene } from "../../components/viewer/exportGlb"
 import { SceneAccess, StudioEnvironment } from "../../components/viewer/SceneHelpers"
@@ -9,7 +9,7 @@ import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
 import { rad, wallLength, wallOpenings, wallSegments, type Ambient, type MaterialPref, type Opening } from "../../core/model"
 import type { ItemGeometry } from "./ambientData"
-import { ambientBox } from "./planGeom"
+import { ambientBox, eyePose } from "./planGeom"
 
 /**
  * Vista 3D de l'ambient (m): terra i parets amb els materials de simulació i cada moble o bloc
@@ -21,6 +21,7 @@ export function Ambient3D({
   materials,
   onSceneAccess,
   fitSignal = 0,
+  eyeSignal = 0,
   selectedIds = [],
   onSelect,
   dollhouse = true,
@@ -39,6 +40,8 @@ export function Ambient3D({
   onSceneAccess?: (get: SceneGetter) => void
   /** Canvia per tornar a encuadrar la càmera. */
   fitSignal?: number
+  /** Canvia per entrar a l'habitació (càmera d'interior a l'alçada dels ulls). */
+  eyeSignal?: number
 }) {
   const box = ambientBox(ambient, geos) ?? { x0: 0, y0: 0, x1: 5000, y1: 4000 }
   const cx = (box.x0 + box.x1) / 2000, cz = (box.y0 + box.y1) / 2000
@@ -61,7 +64,7 @@ export function Ambient3D({
       <directionalLight position={[cx + 4, 7, cz + 3]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-span} shadow-camera-right={span} shadow-camera-top={span} shadow-camera-bottom={-span} shadow-bias={-0.0004} />
       <Room ambient={ambient} geos={geos} materials={materials} box={box} selectedIds={selectedIds} onSelect={onSelect} dollhouse={dollhouse} />
       {/* Com al visor de l'editor: esmorteïment, botó dret o dos dits per desplaçar, roda per apropar. */}
-      <Controls target={[cx, 0.9, cz]} home={[cx + span * 0.5, span * 1.1 + 2, cz + span * 1.4 + 2]} fitSignal={fitSignal} maxDistance={span * 4 + 10} />
+      <Controls target={[cx, 0.9, cz]} home={[cx + span * 0.5, span * 1.1 + 2, cz + span * 1.4 + 2]} fitSignal={fitSignal} eye={eyePose(ambient)} eyeSignal={eyeSignal} maxDistance={span * 4 + 10} />
       {onSceneAccess && <SceneAccess onAccess={onSceneAccess} />}
     </Canvas>
   )
@@ -69,20 +72,30 @@ export function Ambient3D({
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 
-function Controls({ target, home, fitSignal, maxDistance }: { target: [number, number, number]; home: [number, number, number]; fitSignal: number; maxDistance: number }) {
+function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance }: { target: [number, number, number]; home: [number, number, number]; fitSignal: number; eye: ReturnType<typeof eyePose>; eyeSignal: number; maxDistance: number }) {
   const ref = useRef<OrbitControlsImpl>(null)
-  const camera = useThree((s) => s.camera)
+  const camera = useThree((s) => s.camera) as PerspectiveCamera
+  const pose = (pos: [number, number, number], tgt: [number, number, number], fov: number) => {
+    camera.position.set(...pos)
+    camera.fov = fov
+    camera.updateProjectionMatrix()
+    ref.current?.target.set(...tgt)
+    ref.current?.update()
+  }
   const first = useRef(true)
   useEffect(() => {
     if (first.current) {
       first.current = false
       return
     }
-    camera.position.set(...home)
-    ref.current?.target.set(...target)
-    ref.current?.update()
+    pose(home, target, 40)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitSignal])
+  // Interior: angular (com les fotos de revista) i des de dins; orbitar hi gira al voltant del punt mirat.
+  useEffect(() => {
+    if (eyeSignal && eye) pose(eye.pos, eye.target, 62)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eyeSignal])
   return <OrbitControls ref={ref} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={maxDistance} maxPolarAngle={Math.PI / 2 - 0.02} target={target} />
 }
 
