@@ -395,31 +395,6 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
             </IconButton>
           </Tooltip>
         </HStack>
-        <SegmentGroup.Root size="sm" value={tab} onValueChange={(e) => e.value && setTab(e.value as "plan" | "3d")}>
-          <SegmentGroup.Indicator />
-          <SegmentGroup.Item value="plan" aria-label="Plànol">
-            <SegmentGroup.ItemText>
-              <HStack gap={1.5}>
-                <LuMap />
-                <Box as="span" display={{ base: "none", sm: "inline" }}>
-                  Plànol
-                </Box>
-              </HStack>
-            </SegmentGroup.ItemText>
-            <SegmentGroup.ItemHiddenInput />
-          </SegmentGroup.Item>
-          <SegmentGroup.Item value="3d" aria-label="3D">
-            <SegmentGroup.ItemText>
-              <HStack gap={1.5}>
-                <LuRotate3D />
-                <Box as="span" display={{ base: "none", sm: "inline" }}>
-                  3D
-                </Box>
-              </HStack>
-            </SegmentGroup.ItemText>
-            <SegmentGroup.ItemHiddenInput />
-          </SegmentGroup.Item>
-        </SegmentGroup.Root>
       </HStack>
 
       <Workspace
@@ -562,17 +537,38 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
             </Box>
           )}
             {chrome}
-          {/* Barra d'eines del plànol (com Figma): seleccionar, paret, habitació. */}
+          {/* Pestanyes del visor (com a l'editor): Plànol · 3D, a dalt al mig. */}
+          <Box position="absolute" top={3} left="50%" transform="translateX(-50%)" zIndex={2}>
+            <SegmentGroup.Root size="sm" bg="bg.panel" value={tab} onValueChange={(e) => e.value && setTab(e.value as "plan" | "3d")}>
+              <SegmentGroup.Indicator />
+              {(
+                [
+                  ["plan", "Plànol", LuMap, "Plànol (vista de dalt)"],
+                  ["3d", "3D", LuRotate3D, "Ambient en 3D"],
+                ] as const
+              ).map(([v, label, Icon, aria]) => (
+                <SegmentGroup.Item key={v} value={v} aria-label={aria}>
+                  <SegmentGroup.ItemText>
+                    <HStack gap={1.5}>
+                      <Icon /> <Box as="span" display={{ base: "none", sm: "inline" }}>{label}</Box>
+                    </HStack>
+                  </SegmentGroup.ItemText>
+                  <SegmentGroup.ItemHiddenInput />
+                </SegmentGroup.Item>
+              ))}
+            </SegmentGroup.Root>
+          </Box>
+          {/* Eines de dibuix del plànol (com les barres d'eines dels CAD): en columna a l'esquerra. */}
           {tab === "plan" && (
-            <HStack position="absolute" top={3} left="50%" transform="translateX(-50%)" zIndex={2} gap={0.5} bg="bg.panel" rounded="md" borderWidth="1px" p={0.5} shadow="sm">
+            <Stack position="absolute" top={{ base: 3, md: 14 }} left={3} zIndex={2} gap={0.5} bg="bg.panel" rounded="md" borderWidth="1px" p={0.5} shadow="sm">
               {TOOLS.map((t) => (
-                <Tooltip key={t.id} content={`${t.label} (${t.key})`}>
+                <Tooltip key={t.id} content={`${t.label} (${t.key})`} positioning={{ placement: "right" }}>
                   <IconButton aria-label={t.label} size="sm" variant={tool === t.id ? "solid" : "ghost"} colorPalette={tool === t.id ? "wood" : undefined} onClick={() => setTool(t.id)}>
                     <t.icon />
                   </IconButton>
                 </Tooltip>
               ))}
-            </HStack>
+            </Stack>
           )}
           {/* Opcions de vista (com a l'editor), a dalt a la dreta. */}
           <Box position="absolute" top={3} right={{ base: 3, md: 14 }} zIndex={2}>

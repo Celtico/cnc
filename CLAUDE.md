@@ -214,6 +214,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   treure de l'ambient). Com Figma, el primer clic a un element agrupat (al plànol o al 3D) tria el
   grup i el segon l'element; Supr, Ctrl/⌘ D, R i les fletxes valen per a tot el grup; inspector del
   grup (nom, posició, girar, duplicar, desagrupar, eliminar).
+- **Pestanyes Plànol · 3D** a dalt al mig del visor (com 3D · Alçat · Foto a l'editor) i les eines de dibuix en columna a l'esquerra del plànol.
 - **Opcions de vista** (`components/ViewOptions`: `ViewOptions` + `ViewTile`, els mateixos botons que
   l'editor), a dalt a la dreta: al plànol encabir, graella, mides, noms, peces, imant, plànol de fons
   i render; al 3D encuadrar, casa de nines, ombres i render.
