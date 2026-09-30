@@ -654,8 +654,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     «Editar la textura» i «Posar una foto») i **Fabricació** (Gruixos com a etiquetes `ThicknessChips`,
     Cantell, Veta, Categoria amb la seva explicació); controls de 280 px com a molt; un material nou té nom únic
     («Material nou 2»), va a la categoria filtrada i deixa el nom seleccionat.
-  - **Objectes de referència inicials** (`BUILTIN_REFERENCES`): genèrics (A4, rajoles, portes, teles de 43″ a 75″
-    penjades i una de 55″ amb peu, radiador, endoll). Les teles Sony de les proves del principi es treuen de les
+  - **Objectes de referència inicials** (`BUILTIN_REFERENCES`): genèrics (A4, rajoles, portes, **una sola tele** de 55″,
+    radiador, endoll; per decisió de l'usuari, no una llista de teles). Les teles antigues (Sony de les proves del principi) es treuen de les
     preferències desades (`RETIRED_REFERENCES`, només les `builtin`: si l'usuari n'havia fet una de pròpia, es queda).
   - **Biblioteca de materials** (`settings/libraryItems.ts`, `MATERIAL_LIBRARY`; diàleg `MaterialLibrary`):
     «Afegir» obre una graella de materials fets amb la mostra (fustes i lacats, pedres, metalls, vidres,

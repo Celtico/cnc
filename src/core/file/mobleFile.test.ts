@@ -8,7 +8,7 @@ const comp = TV_LIVING_ROOM.make()
 const radiator: RefPreset = { id: "u-rad", name: "Radiador 650 × 1100 × 110", w: 650, h: 1100, d: 110, plane: "wall", wallOffset: 0 }
 const references = [...DEFAULT_SETTINGS.references, radiator]
 const photo = { mime: "image/jpeg", width: 40, height: 30, exifFocal35: 26, data: btoa("\xff\xd8\xff\xe0fake-jpeg-bytes") }
-const calibration = { points: [[1, 2], [3, 4], [5, 6], [7, 8]] as [number, number][], ref: { w: 1230, h: 710 }, plane: "wall" as const, focal35: 26, offset: [0, 0] as [number, number], refWallOffset: 30 }
+const calibration = { points: [[1, 2], [3, 4], [5, 6], [7, 8]] as [number, number][], ref: { w: 800, h: 600 }, plane: "wall" as const, focal35: 26, offset: [0, 0] as [number, number], refWallOffset: 40 }
 
 describe("fitxer .moble", () => {
   it("anada i tornada: mateix moble (peces, mides i forats) i mateixa foto", () => {
@@ -29,7 +29,7 @@ describe("fitxer .moble", () => {
     const used = usedReferences({ composition: comp, calibration, references })
     const names = used.map((r) => r.name)
     expect(names).toContain("Radiador 650 × 1100 × 110")
-    expect(names).toContain("Tele 55″")
+    expect(names).toContain("Radiador 800 × 600")
     expect(names).not.toContain("Full A4 vertical")
     expect(used.every((r) => r.builtin === undefined)).toBe(true)
   })
@@ -38,7 +38,7 @@ describe("fitxer .moble", () => {
     const file = buildMobleFile({ name: "Sense foto", composition: comp, calibration, references })
     const res = parseMobleFile(mobleToJson(file))
     expect(res.ok && res.file.photo).toBeUndefined()
-    expect(res.ok && res.file.project.photo?.ref).toEqual({ w: 1230, h: 710 })
+    expect(res.ok && res.file.project.photo?.ref).toEqual({ w: 800, h: 600 })
   })
 
   it("referències que l'usuari no té s'afegeixen; les que ja té, no es dupliquen", () => {

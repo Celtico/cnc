@@ -19,18 +19,17 @@ import {
 describe("preferències", () => {
   it("els valors inicials són vàlids", () => {
     expect(SettingsSchema.safeParse(DEFAULT_SETTINGS).success).toBe(true)
-    expect(DEFAULT_SETTINGS.references.find((r) => r.id === "tv-55")).toMatchObject({ w: 1230, h: 710, d: 60, wallOffset: 30 })
-    expect(DEFAULT_SETTINGS.references.find((r) => r.id === "tv-55-stand")).toMatchObject({ w: 1230, h: 770, d: 250 })
-    expect(DEFAULT_SETTINGS.references.some((r) => /sony/i.test(r.name))).toBe(false)
+    expect(DEFAULT_SETTINGS.references.find((r) => r.id === "radiator-800")).toMatchObject({ w: 800, h: 600, d: 100, wallOffset: 40 })
+    expect(DEFAULT_SETTINGS.references.filter((r) => /tele|tv/i.test(r.name)).map((r) => r.name)).toEqual(["Tele 55″"])
   })
 
-  it("treu les teles de les proves del principi (valors inicials antics), no les de l'usuari", () => {
+  it("treu les teles antigues (valors inicials antics), no les de l'usuari", () => {
     const sony = { id: "tv-sony-55-screen", name: "TV Sony KD-55XD8505 (pantalla)", w: 1231, h: 717, plane: "wall", wallOffset: 200, builtin: true }
     const mine = { id: "tv-sony-55-stand", name: "La meva tele", w: 1231, h: 770, plane: "wall", wallOffset: 0 }
     const res = parseSettings({ ...DEFAULT_SETTINGS, references: [sony, mine] })
     expect(res.settings.references.some((r) => r.name.includes("Sony"))).toBe(false)
     expect(res.settings.references.some((r) => r.name === "La meva tele")).toBe(true)
-    expect(res.settings.references.some((r) => r.id === "tv-55")).toBe(true)
+    expect(res.settings.references.some((r) => r.id === "radiator-800")).toBe(true)
   })
 
   it("migra unes preferències d'una versió anterior (sense version i amb `wall`)", () => {
@@ -78,7 +77,7 @@ describe("preferències", () => {
 
   it("només els objectes amb fondària poden ser fantasma 3D", () => {
     expect(canBeGhost(DEFAULT_SETTINGS.references.find((r) => r.id === "a4-v")!)).toBe(false)
-    expect(canBeGhost(DEFAULT_SETTINGS.references.find((r) => r.id === "tv-55-stand")!)).toBe(true)
+    expect(canBeGhost(DEFAULT_SETTINGS.references.find((r) => r.id === "radiator-800")!)).toBe(true)
   })
 
   it("un mòdul nou pren ferratges, jocs i materials de les preferències", () => {

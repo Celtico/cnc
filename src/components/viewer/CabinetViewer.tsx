@@ -226,8 +226,10 @@ export function CabinetViewer({
     >
       {/* Les vistes ortogràfiques són plànols: sempre fons de dibuix, també a Presentació. */}
       <color attach="background" args={[q.guides || ortho ? bg : scene.wall]} />
-      {/* Llum d'entorn (IBL) d'un estudi procedural, com model-viewer: reflexos i ombrejat suau. */}
-      <StudioEnvironment intensity={q.guides ? 0.6 : 0.5} />
+      {/* Llum d'entorn (IBL) d'un estudi procedural, com model-viewer: reflexos i ombrejat suau. És l'única
+          de l'escena: abans l'habitació de Presentació en posava una altra i, segons quina s'aplicava l'última
+          (en clicar al 3D es tornava a aplicar la de l'habitació), tot el visor canviava de to. */}
+      <StudioEnvironment intensity={q.guides ? 0.6 : 0.5 * light.env} />
       <hemisphereLight intensity={(q.guides ? 0.55 : light.ambient) * 0.45} groundColor="#8a7a60" />
       {!q.guides && !ortho && <PresentationRoom backZ={-size.depth * S * 0.5} scene={scene} materials={materials} />}
       {/* bias i normalBias eviten les ratlles (shadow acne) de les cares que s'ombregen a si mateixes. */}

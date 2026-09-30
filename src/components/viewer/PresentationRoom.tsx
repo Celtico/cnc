@@ -1,7 +1,6 @@
-import { Environment, Lightformer } from "@react-three/drei"
 import { useEffect, useMemo } from "react"
 import { CanvasTexture, RepeatWrapping, SRGBColorSpace } from "three"
-import { LIGHT_SPEC, type FloorId, type PresentationScene } from "./presentationScene"
+import { type FloorId, type PresentationScene } from "./presentationScene"
 import { surfaceMaterial } from "./surfaceMaterial"
 import type { MaterialPref } from "../../core/model"
 
@@ -207,19 +206,9 @@ export function PresentationRoom({ backZ, scene, materials = [] }: { backZ: numb
     return t
   }, [floor])
   useEffect(() => () => skirtingMap?.dispose(), [skirtingMap])
-  const env = LIGHT_SPEC[scene.light].env
-  const sky = LIGHT_SPEC[scene.light].sky
 
   return (
     <>
-      {/* Llum ambiental amb forma de «softbox» per als reflexos (no es veu al fons). */}
-      <Environment key={scene.light} resolution={256} frames={1}>
-        <Lightformer form="rect" color={sky} intensity={2.2 * env} position={[0, 5, 2]} rotation-x={Math.PI / 2} scale={[8, 4, 1]} />
-        <Lightformer form="rect" color={sky} intensity={1.2 * env} position={[-5, 2, 3]} rotation-y={Math.PI / 3} scale={[4, 3, 1]} />
-        <Lightformer form="rect" color={sky} intensity={0.8 * env} position={[5, 1.5, 3]} rotation-y={-Math.PI / 3} scale={[4, 3, 1]} />
-        <Lightformer form="rect" color={sky} intensity={0.4 * env} position={[0, 1, 6]} scale={[10, 2, 1]} />
-      </Environment>
-
       <mesh rotation-x={-Math.PI / 2} position={[0, -0.0005, 0]} receiveShadow userData={{ room: "floor" }}>
         <planeGeometry args={[ROOM, ROOM]} />
         {floorMat ? (
