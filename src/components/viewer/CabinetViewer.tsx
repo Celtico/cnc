@@ -1262,7 +1262,7 @@ function makeMaterial(finish: FinishSpec, uMm: number, vMm: number, rotate: bool
     return new MeshStandardMaterial({ map: faceTexture(photoTexture(finish.src, finish.seamless), uMm, vMm, rotate, finish.tileMm, finish.aspect), roughness: 0.7, metalness: 0, ...opts })
   }
   if (finish.kind === "pattern") {
-    return new MeshStandardMaterial({ map: faceTexture(patternTexture(finish.pattern, finish.color, finish.grout, finish.opts), uMm, vMm, false, finish.tileMm), roughness: finish.roughness, metalness: 0, ...opts })
+    return new MeshStandardMaterial({ map: faceTexture(patternTexture(finish.pattern, finish.color, finish.grout, finish.opts), uMm, vMm, false, finish.tileMm), roughness: finish.roughness, metalness: finish.metalness ?? 0, ...opts })
   }
   // Vidre: translúcid sempre (també sense vel).
   const glass = finish.opacity !== undefined && finish.opacity < 1

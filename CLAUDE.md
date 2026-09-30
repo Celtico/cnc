@@ -621,8 +621,11 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     roure blanquejat): colors de fons i de veta, densitat, ondulació, contrast de fibres, franges de to,
     vetes de catedral, porus, gra fi, mida de la repetició i «Nova variació» (llavor). **Teixit**: fils,
     irregularitat, mida. **Rajola**: junta (mm), variació de to, quadrícula o trencajunts (la textura és de
-    2 × 2 peces). **Pedra / marbre** (acabat nou `stone`): color, color i quantitat de vetes, mida, llavor
-    (soroll periòdic sense costures). Tot és `textures.ts` (canvas; `woodTexture(species, gen)`,
+    2 × 2 peces). **Pedra** (acabat `stone`, `style`: marbre amb vetes, granit de tres colors, travertí amb
+    franges i porus, formigó amb núvols i porus; gra, polit, mida, llavor; soroll periòdic sense costures).
+    **Metall** (`surface`: polit, raspallat o martellejat, textures `brushed`/`hammered`; rugositat, intensitat,
+    colors habituals). **Vidre** (opacitat i glaçat). **Color llis i lacat** (brillant = `roughness`). Tots els
+    acabats menys la foto es poden editar (`isEditable`). Tot és `textures.ts` (canvas; `woodTexture(species, gen)`,
     `patternTexture(kind, color, grout, opts)`), amb memòria de les últimes 48 textures. Al mòbil, navegació en profunditat: apartats › pàgina › element, amb «‹ Tornar».
     L'apartat i l'element triats es recorden durant la sessió (`useSessionString`). Al material, botó
     visible «Posar una foto de textura» (a més de l'Acabat «Foto (textura)»), amb miniatura, «Canviar la

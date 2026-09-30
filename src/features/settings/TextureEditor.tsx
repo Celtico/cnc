@@ -3,10 +3,10 @@ import { useEffect, useState, type ReactNode } from "react"
 import { LuDices, LuRotateCcw } from "react-icons/lu"
 import { WOOD_PRESETS, type Finish, type MaterialPref, type WoodGen } from "../../core/model"
 import { woodGenOf } from "../../components/viewer/textures"
-import { previewStyle } from "./materialPreview"
+import { isEditable, previewStyle } from "./materialPreview"
 import { WOOD_EXTRA_PRESETS } from "./woodPresets"
 
-type Editable = Extract<Finish, { kind: "wood" | "fabric" | "tiles" | "stone" }>
+type Editable = Exclude<Finish, { kind: "image" }>
 
 /**
  * Editor de textures procedurals (com els nodes de textura de Blender o Cinema 4D, però amb
@@ -75,9 +75,7 @@ export function TextureEditor({ m, open, onClose, onApply }: { m: MaterialPref; 
   )
 }
 
-function isEditable(f: Finish): f is Editable {
-  return f.kind === "wood" || f.kind === "fabric" || f.kind === "tiles" || f.kind === "stone"
-}
+
 
 const newSeed = () => 1 + Math.floor(Math.random() * 99999)
 
@@ -146,18 +144,84 @@ function Controls({ f, setF }: { f: Editable; setF: (f: Editable) => void }) {
         <Actions onReset={() => setF({ kind: "tiles", color: f.color, grout: f.grout, size: f.size })} />
       </>
     )
+  if (f.kind === "stone") {
+    const style = f.style ?? "marble"
+    return (
+      <>
+        <Row label="Tipus">
+          <SegmentGroup.Root size="sm" value={style} onValueChange={(e) => e.value && setF({ ...f, style: e.value as typeof style })}>
+            <SegmentGroup.Indicator />
+            <SegmentGroup.Items items={[{ value: "marble", label: "Marbre" }, { value: "granite", label: "Granit" }, { value: "travertine", label: "Travertí" }, { value: "concrete", label: "Formigó" }]} />
+          </SegmentGroup.Root>
+        </Row>
+        <HStack gap={4}>
+          <ColorField label="Color de la pedra" value={f.color} onChange={(color) => setF({ ...f, color })} />
+          <ColorField label={style === "granite" ? "Color del gra" : "Color de les vetes"} value={f.vein} onChange={(vein) => setF({ ...f, vein })} />
+        </HStack>
+        <Slider label={style === "granite" ? "Quantitat de gra de color" : style === "marble" ? "Vetes" : "Contrast"} value={f.veins} min={0} max={1} step={0.05} fmt={pct} onChange={(veins) => setF({ ...f, veins })} />
+        <Slider label={style === "granite" ? "Punts foscos" : "Porus i gra"} value={f.grain ?? 0.3} min={0} max={1} step={0.05} fmt={pct} onChange={(grain) => setF({ ...f, grain })} />
+        <Slider label="Polit (mat → brillant)" value={f.polish ?? 0.6} min={0} max={1} step={0.05} fmt={pct} onChange={(polish) => setF({ ...f, polish })} />
+        <Slider label="Mida de la repetició" value={f.size} min={100} max={4000} step={50} fmt={(v) => `${v} mm`} onChange={(size) => setF({ ...f, size })} />
+        <Actions onSeed={() => setF({ ...f, seed: newSeed() })} onReset={() => setF({ ...f, veins: 0.5, size: 1200, seed: 7, grain: 0.3, polish: 0.6 })} />
+      </>
+    )
+  }
+  if (f.kind === "metal") {
+    const surface = f.surface ?? "polished"
+    return (
+      <>
+        <ColorField label="Color del metall" value={f.color} onChange={(color) => setF({ ...f, color })} />
+        <Row label="Acabat">
+          <SegmentGroup.Root size="sm" value={surface} onValueChange={(e) => e.value && setF({ ...f, surface: e.value as typeof surface })}>
+            <SegmentGroup.Indicator />
+            <SegmentGroup.Items items={[{ value: "polished", label: "Polit" }, { value: "brushed", label: "Raspallat" }, { value: "hammered", label: "Martellejat" }]} />
+          </SegmentGroup.Root>
+        </Row>
+        <Slider label="Rugositat (mirall → mat)" value={f.roughness ?? 0.35} min={0} max={1} step={0.05} fmt={pct} onChange={(roughness) => setF({ ...f, roughness })} />
+        {surface !== "polished" && <Slider label={surface === "brushed" ? "Intensitat del raspallat" : "Intensitat dels cops"} value={f.strength ?? 0.5} min={0} max={1} step={0.05} fmt={pct} onChange={(strength) => setF({ ...f, strength })} />}
+        <Row label="Colors habituals">
+          <HStack gap={1.5} wrap="wrap">
+            {METALS.map((mt) => (
+              <Button key={mt.name} size="xs" variant="outline" onClick={() => setF({ ...f, color: mt.color })}>
+                <Box w="12px" h="12px" rounded="full" bg={mt.color} borderWidth="1px" /> {mt.name}
+              </Button>
+            ))}
+          </HStack>
+        </Row>
+        <Actions onReset={() => setF({ kind: "metal", color: f.color })} />
+      </>
+    )
+  }
+  if (f.kind === "glass")
+    return (
+      <>
+        <ColorField label="Color del vidre" value={f.color} onChange={(color) => setF({ ...f, color })} />
+        <Slider label="Opacitat" value={f.opacity ?? 0.35} min={0.05} max={0.95} step={0.05} fmt={pct} onChange={(opacity) => setF({ ...f, opacity })} />
+        <Slider label="Glaçat (transparent → mat)" value={f.frost ?? 0} min={0} max={1} step={0.05} fmt={pct} onChange={(frost) => setF({ ...f, frost })} />
+        <Actions onReset={() => setF({ kind: "glass", color: f.color })} />
+      </>
+    )
+  // Color llis o lacat.
   return (
     <>
-      <HStack gap={4}>
-        <ColorField label="Color de la pedra" value={f.color} onChange={(color) => setF({ ...f, color })} />
-        <ColorField label="Color de les vetes" value={f.vein} onChange={(vein) => setF({ ...f, vein })} />
-      </HStack>
-      <Slider label="Vetes" value={f.veins} min={0} max={1} step={0.05} fmt={(v) => `${Math.round(v * 100)} %`} onChange={(veins) => setF({ ...f, veins })} />
-      <Slider label="Mida de la repetició" value={f.size} min={100} max={4000} step={50} fmt={(v) => `${v} mm`} onChange={(size) => setF({ ...f, size })} />
-      <Actions onSeed={() => setF({ ...f, seed: newSeed() })} onReset={() => setF({ ...f, veins: 0.5, size: 1200, seed: 7 })} />
+      <ColorField label="Color" value={f.color} onChange={(color) => setF({ ...f, color })} />
+      <Slider label="Brillant (mat → mirall)" value={1 - (f.roughness ?? (f.kind === "lacquer" ? 0.35 : 0.8))} min={0} max={1} step={0.05} fmt={pct} onChange={(g) => setF({ ...f, roughness: Math.round((1 - g) * 100) / 100 })} />
+      <Actions onReset={() => setF({ kind: f.kind, color: f.color })} />
     </>
   )
 }
+
+const pct = (v: number) => `${Math.round(v * 100)} %`
+const METALS = [
+  { name: "Inox", color: "#c3c7cb" },
+  { name: "Alumini", color: "#d4d6d8" },
+  { name: "Ferro negre", color: "#3b3b3d" },
+  { name: "Llautó", color: "#b8954a" },
+  { name: "Coure", color: "#b87350" },
+  { name: "Bronze", color: "#8c6a3f" },
+  { name: "Or", color: "#d4af37" },
+  { name: "Crom", color: "#e8eaec" },
+]
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (

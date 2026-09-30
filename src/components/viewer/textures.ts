@@ -11,9 +11,9 @@ export type WoodSpecies = Extract<Finish, { kind: "wood" }>["species"]
 
 export type FinishSpec = { kind: "color"; color: string; roughness: number; metalness?: number; opacity?: number } | { kind: "wood"; species: WoodSpecies; gen?: WoodGen } | { kind: "image"; src: string; tileMm: number; aspect?: number; seamless?: boolean }
   /** Textura procedural: teixit (trama), rajola (peces i junta) o pedra (marbre amb vetes). */
-  | { kind: "pattern"; pattern: PatternKind; color: string; grout?: string; tileMm: number; roughness: number; opts?: PatternOpts }
+  | { kind: "pattern"; pattern: PatternKind; color: string; grout?: string; tileMm: number; roughness: number; metalness?: number; opts?: PatternOpts }
 
-export type PatternKind = "fabric" | "tiles" | "stone"
+export type PatternKind = "fabric" | "tiles" | "stone" | "brushed" | "hammered"
 /** Opcions dels patrons: fils i irregularitat del teixit; junta, variació i col·locació de la rajola; vetes de la pedra. */
 export interface PatternOpts {
   threads?: number
@@ -24,6 +24,10 @@ export interface PatternOpts {
   layout?: "grid" | "brick"
   veins?: number
   seed?: number
+  /** Pedra: tipus i gra; metall: intensitat del raspallat o dels cops. */
+  style?: "marble" | "granite" | "travertine" | "concrete"
+  grain?: number
+  strength?: number
 }
 
 const hexToRgb = (h: string): [number, number, number] => {
@@ -269,6 +273,44 @@ export function patternTexture(pattern: PatternKind, color: string, grout = "#cc
         g.restore()
       }
     }
+  } else if (pattern === "brushed" || pattern === "hammered") {
+    const st = o.strength ?? 0.5
+    const img = g.createImageData(size, size)
+    if (pattern === "brushed") {
+      // Metall raspallat: ratlles fines horitzontals (repetibles: cada fila té el seu to).
+      const rows = Array.from({ length: size }, () => (rand() - 0.5) * st * 0.35)
+      for (let y = 0; y < size; y++)
+        for (let x = 0; x < size; x++) {
+          const k = 1 + rows[y]! + (rand() - 0.5) * st * 0.08
+          const i = (y * size + x) * 4
+          img.data[i] = Math.min(255, r * k)
+          img.data[i + 1] = Math.min(255, gg * k)
+          img.data[i + 2] = Math.min(255, b * k)
+          img.data[i + 3] = 255
+        }
+    } else {
+      // Martellejat: cops rodons (llum a dalt a l'esquerra, ombra a baix), repetibles.
+      const shade = new Float32Array(size * size)
+      const hits = 90
+      for (let n = 0; n < hits; n++) {
+        const cx = rand() * size, cy = rand() * size, rad = 18 + rand() * 26
+        for (let dy = -rad; dy <= rad; dy++)
+          for (let dx = -rad; dx <= rad; dx++) {
+            const d = Math.hypot(dx, dy) / rad
+            if (d > 1) continue
+            const x = (Math.round(cx + dx) + size) % size, y = (Math.round(cy + dy) + size) % size
+            shade[y * size + x]! += ((-dx - dy) / rad) * (1 - d) * 0.5
+          }
+      }
+      for (let i = 0; i < size * size; i++) {
+        const k = 1 + shade[i]! * st * 0.35
+        img.data[i * 4] = Math.min(255, r * k)
+        img.data[i * 4 + 1] = Math.min(255, gg * k)
+        img.data[i * 4 + 2] = Math.min(255, b * k)
+        img.data[i * 4 + 3] = 255
+      }
+    }
+    g.putImageData(img, 0, 0)
   } else {
     // Pedra / marbre: soroll periòdic (sense costures) amb vetes fines on el soroll «gira».
     const [vr, vg, vb] = hexRgb(grout).map((v) => v * 255) as [number, number, number]
@@ -284,19 +326,44 @@ export function patternTexture(pattern: PatternKind, color: string, grout = "#cc
     }
     const fbm = (x: number, y: number) => val(x, y, 2) * 0.5 + val(x, y, 4) * 0.25 + val(x, y, 8) * 0.15 + val(x, y, 16) * 0.1
     const veins = o.veins ?? 0.5
+    const grain = o.grain ?? 0.3
+    const style = o.style ?? "marble"
+    // Porus/gra: soroll de píxel determinista (el mateix a cada repetició).
+    const speck = new Float32Array(size * size)
+    for (let i = 0; i < speck.length; i++) speck[i] = rand()
     const img = g.createImageData(size, size)
     for (let y = 0; y < size; y++)
       for (let x = 0; x < size; x++) {
         const u = (x / size) * N / 2, v = (y / size) * N / 2
         const n = fbm(u, v)
-        const line = Math.abs(Math.sin((u / (N / 2) + n * 2.2) * Math.PI * 3))
-        const vein = Math.pow(1 - line, 10 + (1 - veins) * 40) * veins * 1.6
         const cloud = 0.93 + (fbm(u * 2 + 5, v * 2 + 5) - 0.5) * 0.14
-        const t = Math.min(1, vein)
+        const sp = speck[y * size + x]!
+        let t = 0
+        let k = cloud
+        if (style === "marble") {
+          const line = Math.abs(Math.sin((u / (N / 2) + n * 2.2) * Math.PI * 3))
+          t = Math.min(1, Math.pow(1 - line, 10 + (1 - veins) * 40) * veins * 1.6)
+        } else if (style === "granite") {
+          // Gra de tres colors: la base, la de «vetes» i punts foscos.
+          const cell = speck[(Math.floor(y / 3) * 3) * size + Math.floor(x / 3) * 3]!
+          if (cell > 1 - veins * 0.45) t = 1
+          if (cell < grain * 0.25) k *= 0.35
+        } else if (style === "travertine") {
+          // Franges horitzontals ondulades i porus allargats.
+          const band = Math.sin((v / (N / 2)) * Math.PI * 14 + n * 6)
+          k *= 0.95 + band * 0.05 * (0.5 + veins)
+          const pore = speck[y * size + ((x - (x % 6)) % size)]!
+          if (pore < grain * 0.06) k *= 0.7
+        } else {
+          // Formigó: núvols més marcats i porus rodons.
+          k = 0.9 + (n - 0.5) * 0.3 * (0.5 + veins)
+          if (sp < grain * 0.015) k *= 0.55
+        }
+        if (style !== "granite" && style !== "concrete") k *= 1 + (sp - 0.5) * grain * 0.08
         const i = (y * size + x) * 4
-        img.data[i] = (r * cloud) * (1 - t) + vr * t
-        img.data[i + 1] = (gg * cloud) * (1 - t) + vg * t
-        img.data[i + 2] = (b * cloud) * (1 - t) + vb * t
+        img.data[i] = r * k * (1 - t) + vr * t
+        img.data[i + 1] = gg * k * (1 - t) + vg * t
+        img.data[i + 2] = b * k * (1 - t) + vb * t
         img.data[i + 3] = 255
       }
     g.putImageData(img, 0, 0)
@@ -312,17 +379,25 @@ export function patternTexture(pattern: PatternKind, color: string, grout = "#cc
 /** Acabat d'una preferència de material. */
 export function finishOfPref(m: MaterialPref): FinishSpec {
   if (m.finish.kind === "wood") return { kind: "wood", species: m.finish.species, gen: m.finish.gen }
-  if (m.finish.kind === "stone") return { kind: "pattern", pattern: "stone", color: m.finish.color, grout: m.finish.vein, tileMm: m.finish.size, roughness: 0.35, opts: { veins: m.finish.veins, seed: m.finish.seed } }
+  if (m.finish.kind === "stone") {
+    const f = m.finish
+    return { kind: "pattern", pattern: "stone", color: f.color, grout: f.vein, tileMm: f.size, roughness: 0.75 - 0.65 * (f.polish ?? 0.6), opts: { veins: f.veins, seed: f.seed, style: f.style, grain: f.grain } }
+  }
   if (m.finish.kind === "image") return { kind: "image", src: m.finish.src, tileMm: m.finish.tileMm, aspect: m.finish.aspect, seamless: m.finish.seamless }
-  if (m.finish.kind === "metal") return { kind: "color", color: m.finish.color, roughness: 0.35, metalness: 0.85 }
-  if (m.finish.kind === "glass") return { kind: "color", color: m.finish.color, roughness: 0.05, opacity: 0.35 }
+  if (m.finish.kind === "metal") {
+    const f = m.finish
+    const rough = f.roughness ?? 0.35
+    if (f.surface === "brushed" || f.surface === "hammered") return { kind: "pattern", pattern: f.surface, color: f.color, tileMm: f.surface === "brushed" ? 300 : 200, roughness: rough, metalness: 0.9, opts: { strength: f.strength ?? 0.5 } }
+    return { kind: "color", color: f.color, roughness: rough, metalness: 0.85 }
+  }
+  if (m.finish.kind === "glass") return { kind: "color", color: m.finish.color, roughness: 0.03 + (m.finish.frost ?? 0) * 0.6, opacity: m.finish.opacity ?? 0.35 }
   if (m.finish.kind === "fabric") return { kind: "pattern", pattern: "fabric", color: m.finish.color, tileMm: m.finish.tileMm ?? 200, roughness: 0.95, opts: { threads: m.finish.threads, slub: m.finish.slub } }
   if (m.finish.kind === "tiles") {
     const f = m.finish
     // La textura és de 2 × 2 peces: la repetició fa el doble de la peça.
     return { kind: "pattern", pattern: "tiles", color: f.color, grout: f.grout, tileMm: f.size * 2, roughness: 0.3, opts: { joint: (f.joint ?? 3) / f.size, variation: f.variation, layout: f.layout } }
   }
-  return { kind: "color", color: m.finish.color, roughness: m.finish.kind === "lacquer" ? 0.35 : 0.8 }
+  return { kind: "color", color: m.finish.color, roughness: m.finish.roughness ?? (m.finish.kind === "lacquer" ? 0.35 : 0.8) }
 }
 
 const KEYWORDS: [RegExp, FinishSpec][] = [

@@ -17,6 +17,6 @@ export function surfaceMaterial(materials: MaterialPref[], name: string, uMm: nu
   const f = resolveFinish(materials, name)
   if (f.kind === "wood") return new MeshStandardMaterial({ map: tiled(woodTexture(f.species, f.gen), uMm, vMm, woodGenOf(f.species, f.gen).tileMm), roughness: 0.6 })
   if (f.kind === "image") return new MeshStandardMaterial({ map: tiled(photoTexture(f.src, f.seamless), uMm, vMm, f.tileMm, f.aspect), roughness: 0.7 })
-  if (f.kind === "pattern") return new MeshStandardMaterial({ map: tiled(patternTexture(f.pattern, f.color, f.grout, f.opts), uMm, vMm, f.tileMm), roughness: f.roughness })
+  if (f.kind === "pattern") return new MeshStandardMaterial({ map: tiled(patternTexture(f.pattern, f.color, f.grout, f.opts), uMm, vMm, f.tileMm), roughness: f.roughness, metalness: f.metalness ?? 0 })
   return new MeshStandardMaterial({ color: f.color, roughness: Math.max(0.5, f.roughness), metalness: f.metalness ?? 0 })
 }

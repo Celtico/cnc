@@ -35,6 +35,7 @@ import { MasterDetail } from "../../components/MasterDetail"
 import { useSessionString } from "./useSessionString"
 import { MaterialPreview, ThicknessChips } from "./MaterialBits"
 import { TextureEditor } from "./TextureEditor"
+import { isEditable } from "./materialPreview"
 import { toaster } from "../../components/ui/toaster"
 import {
   DEFAULT_SETTINGS,
@@ -720,7 +721,7 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
       <Flex gap={4} direction={{ base: "column", sm: "row" }} align={{ sm: "flex-start" }}>
         <Stack gap={2} flexShrink={0}>
           <MaterialPreview m={m} />
-          {(finish.kind === "wood" || finish.kind === "fabric" || finish.kind === "tiles" || finish.kind === "stone") && (
+          {isEditable(finish) && (
             <Button size="sm" variant="outline" colorPalette="wood" onClick={() => setEditing(true)}>
               <LuPaintbrush /> Editar la textura
             </Button>

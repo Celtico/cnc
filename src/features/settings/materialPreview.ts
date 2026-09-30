@@ -1,5 +1,5 @@
 import { finishOfPref, patternTexture, woodGenOf, woodTexture } from "../../components/viewer/textures"
-import type { MaterialPref } from "../../core/model"
+import type { Finish, MaterialPref } from "../../core/model"
 
 /** Amplada real (mm) que representa la mostra de previsualització d'un material. */
 export const PREVIEW_MM = 600
@@ -29,10 +29,23 @@ export function previewStyle(m: MaterialPref, wPx: number): Record<string, strin
   }
   if (f.kind === "image") return { backgroundImage: `url(${f.src})`, backgroundSize: `${px(f.tileMm)} ${px(f.tileMm * (f.aspect ?? 1))}` }
   if (f.kind === "pattern") return { backgroundImage: `url(${textureUrl(`${f.pattern}:${f.color}:${f.grout ?? ""}:${JSON.stringify(f.opts ?? {})}`, () => patternTexture(f.pattern, f.color, f.grout, f.opts))})`, backgroundSize: `${px(f.tileMm)} ${px(f.tileMm)}` }
-  if (f.opacity !== undefined && f.opacity < 1)
-    return { background: `linear-gradient(135deg, ${f.color}aa, ${f.color}55), repeating-conic-gradient(#bbb 0 25%, #eee 0 50%) 0 0 / 16px 16px` }
-  if (f.metalness && f.metalness > 0.5) return { background: `linear-gradient(120deg, ${f.color} 0%, #ffffff66 18%, ${f.color} 32%, #00000033 62%, ${f.color} 80%, #ffffff44 100%), ${f.color}` }
+  if (f.opacity !== undefined && f.opacity < 1) {
+    // Vidre: el color amb la seva opacitat sobre una quadrícula; glaçat = vel blanc que la difumina.
+    const a = Math.round(Math.min(1, f.opacity) * 255).toString(16).padStart(2, "0")
+    const frost = Math.min(0.6, Math.max(0, (f.roughness - 0.03) / 0.6) * 0.55)
+    return { background: `linear-gradient(rgba(255,255,255,${frost}), rgba(255,255,255,${frost})), linear-gradient(135deg, ${f.color}${a}, ${f.color}${a}), repeating-conic-gradient(#999 0 25%, #eee 0 50%) 0 0 / 16px 16px` }
+  }
+  if (f.metalness && f.metalness > 0.5) {
+    // Metall polit: reflexos marcats si és llis; més suaus com més rugós.
+    const hi = Math.round((1 - f.roughness) * 110).toString(16).padStart(2, "0")
+    return { background: `linear-gradient(120deg, ${f.color} 0%, #ffffff${hi} 18%, ${f.color} 32%, #00000033 62%, ${f.color} 80%, #ffffff${hi} 100%), ${f.color}` }
+  }
   // Llis o lacat: una mica de llum per veure'n el volum (el lacat, més brillant).
-  const gloss = f.roughness < 0.5 ? "#ffffff55" : "#ffffff22"
+  const gloss = `#ffffff${Math.round(Math.max(0.1, 1 - f.roughness) * 110).toString(16).padStart(2, "0")}`
   return { background: `radial-gradient(120% 90% at 25% 15%, ${gloss}, transparent 60%), ${f.color}` }
+}
+
+/** Acabats que es poden dissenyar amb l'editor de textures (tots menys la foto real). */
+export function isEditable(f: Finish): f is Exclude<Finish, { kind: "image" }> {
+  return f.kind !== "image"
 }

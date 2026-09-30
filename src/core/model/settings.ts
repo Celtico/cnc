@@ -75,16 +75,44 @@ export const WOOD_PRESETS: Record<"oak" | "walnut" | "ash", WoodGen> = {
 }
 
 export const FinishSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("color"), color: z.string() }),
-  z.object({ kind: z.literal("lacquer"), color: z.string() }),
+  /** Color llis o lacat; `roughness` (0 mirall, 1 mat) per al brillant. */
+  z.object({ kind: z.literal("color"), color: z.string(), roughness: z.number().min(0).max(1).optional() }),
+  z.object({ kind: z.literal("lacquer"), color: z.string(), roughness: z.number().min(0).max(1).optional() }),
   /** Fusta procedural: l'espècie és el punt de partida; `gen`, els paràmetres del generador. */
   z.object({ kind: z.literal("wood"), species: z.enum(["oak", "walnut", "ash"]), gen: WoodGenSchema.optional() }),
   /** Pedra o marbre procedural: color, vetes i mida real. */
-  z.object({ kind: z.literal("stone"), color: z.string(), vein: z.string(), veins: z.number().min(0).max(1), size: mm.min(100).max(4000), seed: z.number().int().min(1) }),
+  z.object({
+    kind: z.literal("stone"),
+    color: z.string(),
+    vein: z.string(),
+    veins: z.number().min(0).max(1),
+    size: mm.min(100).max(4000),
+    seed: z.number().int().min(1),
+    /** Tipus: marbre (vetes), granit (gra de tres colors), travertí (franges i porus) o formigó (núvols i porus). */
+    style: z.enum(["marble", "granite", "travertine", "concrete"]).optional(),
+    /** Gra o porus (0–1). */
+    grain: z.number().min(0).max(1).optional(),
+    /** Polit (0 mat, 1 brillant). */
+    polish: z.number().min(0).max(1).optional(),
+  }),
   /** Metall (ferro, inox, llautó): brillant i reflectant. */
-  z.object({ kind: z.literal("metal"), color: z.string() }),
+  z.object({
+    kind: z.literal("metal"),
+    color: z.string(),
+    /** Acabat: polit (mirall), raspallat (ratlles fines) o martellejat (cops). */
+    surface: z.enum(["polished", "brushed", "hammered"]).optional(),
+    /** Rugositat (0 mirall, 1 mat) i intensitat del raspallat o dels cops. */
+    roughness: z.number().min(0).max(1).optional(),
+    strength: z.number().min(0).max(1).optional(),
+  }),
   /** Vidre: translúcid. */
-  z.object({ kind: z.literal("glass"), color: z.string() }),
+  z.object({
+    kind: z.literal("glass"),
+    color: z.string(),
+    /** Opacitat (0 invisible, 1 opac) i glaçat (0 transparent, 1 mat). */
+    opacity: z.number().min(0.05).max(0.95).optional(),
+    frost: z.number().min(0).max(1).optional(),
+  }),
   /** Teixit (sofàs, cortines, catifes): trama procedural del color. Materials de simulació. */
   z.object({
     kind: z.literal("fabric"),
