@@ -28,6 +28,7 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],
       manifest: {
+        id: "/",
         name: "Mobles",
         short_name: "Mobles",
         description: "Configurador paramètric de mobles de cos per tallar a la CNC",
@@ -42,18 +43,17 @@ export default defineConfig({
         // Chrome d'escriptori: obrir els .moble amb l'app en fer-hi doble clic.
         file_handlers: [{ action: "/", accept: { "application/json": [".moble"] } }],
         icons: [
-          { src: "pwa-192.png", sizes: "192x192", type: "image/png" },
-          { src: "pwa-512.png", sizes: "512x512", type: "image/png" },
-          {
-            src: "pwa-512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "maskable",
-          },
+          // Icones a sang (quadrat sencer, sense cantonades rodones): el sistema hi posa la màscara.
+          { src: "pwa-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "pwa-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          // Maskable: la marca dins de la zona segura (cercle del 80 %) per a Android.
+          { src: "pwa-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        // Les pantalles d'inici d'iOS les desa el sistema en instal·lar l'app: no cal precachejar-les.
+        globIgnores: ["splash/**"],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
       },
     }),

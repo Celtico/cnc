@@ -158,6 +158,17 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   plans invisibles de terra i paret). L'SVG de controls va sempre a sobre.
 - AR: export USDZ + `<model-viewer>` amb AR Quick Look a l'iPhone. Res de WebXR.
 
+## Icona i pantalla d'inici de la PWA
+- **Icones a sang**: quadrat sencer amb el fons `#1a202c`, **sense cantonades rodones ni
+  transparència** (iOS i Android hi posen la màscara; si l'icona ja és arrodonida, les puntes
+  surten blanques). Font: `public/icon.svg` → `pwa-192/512.png`, `apple-touch-icon.png` (180).
+  `pwa-maskable-512.png` (`icon-maskable.svg`): la marca al 78 %, dins de la zona segura d'Android.
+  El `favicon.svg` de la pestanya sí que és arrodonit (té transparència, no blanc).
+- **Pantalles d'inici d'iOS** (`public/splash/`, `apple-touch-startup-image` a `index.html`): una
+  per mida d'iPhone i iPad i per orientació (marca, «Mobles» i «Configurador de mobles per a
+  CNC» en Inter). No es precachegen (`globIgnores`): les desa iOS en instal·lar l'app. Les PNG
+  es generen des de l'SVG (no s'editen a mà).
+
 ## UI (Chakra v3 + react-icons)
 - Mobile-first: la faig servir sobretot a l'iPhone. Mínim breakpoints `base` i `md`.
 - **Menú principal en dos nivells** (`App.tsx`): a la llista de Mobles, només `Mobles` i
