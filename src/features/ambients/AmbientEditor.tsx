@@ -1,7 +1,6 @@
 import { Badge, Box, Button, CloseButton, Dialog, Drawer, Editable, Flex, HStack, IconButton, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Slider, Stack, Switch, Text } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
-  LuArrowLeft,
   LuBox,
   LuBrickWall,
   LuChevronDown,
@@ -71,6 +70,7 @@ import {
 } from "../../core/model"
 import { compositionOf, updateProjectComposition } from "../../db/compositionStore"
 import { createProject, db, renameAmbient, updateAmbient, type Project } from "../../db/db"
+import { DocBar, TopBarActions } from "../../components/TopBar"
 import { uniqueName } from "../../core/file/mobleFile"
 import { NewMobleGallery } from "../projects/NewMobleGallery"
 import { blankMoble, blankObject } from "../projects/blank"
@@ -111,14 +111,20 @@ const SHAPE_LABEL: Record<BlockItem["shape"], string> = { box: "Caixa", sofa: "S
  * Desfer/refer, i dreceres com a Figma: V · P · H, Supr, fletxes (Maj ×10), R (girar 90°),
  * Ctrl/⌘ D (duplicar), Ctrl/⌘ Z / Maj Z.
  */
-export function AmbientEditor({ ambientId, onBack, onOpenProject }: { ambientId: number; onBack: () => void; onOpenProject: (id: number) => void }) {
+/** Barra superior de l'ambient obert: «Ambients › nom» (el nom es reanomena amb un clic). */
+export function AmbientTopBar({ ambientId, onBack, onSettings, actionsRef }: { ambientId: number; onBack: () => void; onSettings: () => void; actionsRef: (el: HTMLDivElement | null) => void }) {
+  const row = useLiveQuery(() => db.ambients.get(ambientId), [ambientId])
+  return <DocBar rootLabel="Ambients" name={row?.name ?? ""} nameLabel="Nom de l'ambient" onRename={(v) => void renameAmbient(ambientId, v)} onBack={onBack} onSettings={onSettings} actionsRef={actionsRef} />
+}
+
+export function AmbientEditor({ ambientId, onOpenProject }: { ambientId: number; onOpenProject: (id: number) => void }) {
   const row = useLiveQuery(() => db.ambients.get(ambientId), [ambientId])
   // Es llegeix un cop en obrir (després, la font de veritat és l'estat local, que es desa sol).
   if (!row) return null
-  return <EditorInner key={ambientId} ambientId={ambientId} name={row.name} initial={parseAmbient(row.data)} onBack={onBack} onOpenProject={onOpenProject} />
+  return <EditorInner key={ambientId} ambientId={ambientId} name={row.name} initial={parseAmbient(row.data)} onOpenProject={onOpenProject} />
 }
 
-function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambientId: number; name: string; initial: Ambient; onBack: () => void; onOpenProject: (id: number) => void }) {
+function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: number; name: string; initial: Ambient; onOpenProject: (id: number) => void }) {
   const { settings } = useSettings()
   const unit = useUnit()
   const projects = useProjects()
@@ -416,31 +422,19 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
 
   return (
     <Flex direction="column" flex={1} minH={0} gap={2}>
-      {/* Capçalera: «Ambients › nom», desfer/refer i pestanyes Plànol · 3D. */}
-      <HStack gap={2} flexShrink={0} minW={0}>
-        <IconButton aria-label="Tornar als ambients" size="sm" variant="ghost" onClick={onBack}>
-          <LuArrowLeft />
-        </IconButton>
-        <Text color="fg.muted" display={{ base: "none", md: "block" }} cursor="pointer" onClick={onBack}>
-          Ambients ›
-        </Text>
-        <Editable.Root defaultValue={name} onValueCommit={(e) => void renameAmbient(ambientId, e.value)} fontWeight="semibold" minW={0} flex={1} maxW="360px" aria-label="Nom de l'ambient">
-          <Editable.Preview truncate title="Clica per canviar el nom" />
-          <Editable.Input />
-        </Editable.Root>
-        <HStack gap={0} ms="auto">
-          <Tooltip content="Desfer (Ctrl/⌘ Z)">
-            <IconButton aria-label="Desfer" size="sm" variant="ghost" disabled={!hist.undo} onClick={undo}>
-              <LuUndo2 />
-            </IconButton>
-          </Tooltip>
-          <Tooltip content="Refer (Maj Ctrl/⌘ Z)">
-            <IconButton aria-label="Refer" size="sm" variant="ghost" disabled={!hist.redo} onClick={redo}>
-              <LuRedo2 />
-            </IconButton>
-          </Tooltip>
-        </HStack>
-      </HStack>
+      {/* Desfer/refer a la barra superior (la mateixa que la dels mobles: «Ambients › nom»). */}
+      <TopBarActions>
+        <Tooltip content="Desfer (Ctrl/⌘ Z)">
+          <IconButton aria-label="Desfer" size="sm" variant="ghost" disabled={!hist.undo} onClick={undo}>
+            <LuUndo2 />
+          </IconButton>
+        </Tooltip>
+        <Tooltip content="Refer (Maj Ctrl/⌘ Z)">
+          <IconButton aria-label="Refer" size="sm" variant="ghost" disabled={!hist.redo} onClick={redo}>
+            <LuRedo2 />
+          </IconButton>
+        </Tooltip>
+      </TopBarActions>
 
       <Workspace
         ws={ws}

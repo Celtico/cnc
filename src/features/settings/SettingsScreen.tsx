@@ -209,11 +209,11 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             <SettingsGroup icon={<LuScissors />} title="Tall" summary={`kerf ${draft.boards.kerf} · marge ${draft.boards.margin}${draft.boards.ignoreGrain ? " · gira amb veta" : ""}`}>
             <NumRow label="Kerf (fresa)" help="Amplada del tall de la fresa." value={draft.boards.kerf} min={0} max={30} step={0.5} onChange={(kerf) => set("boards", { ...draft.boards, kerf })} />
             <NumRow label="Marge del tauler" help="Vora que no s'aprofita, a cada costat." value={draft.boards.margin} min={0} max={100} step={1} onChange={(margin) => set("boards", { ...draft.boards, margin })} />
-            <FormRow label="Veta">
+            <FormRow label="Veta" help="Aprofita més el tauler, però la veta de les peces girades no segueix la del moble.">
               <Switch.Root size="sm" pt={1.5} checked={draft.boards.ignoreGrain} onCheckedChange={(e) => set("boards", { ...draft.boards, ignoreGrain: e.checked })}>
                 <Switch.HiddenInput />
                 <Switch.Control />
-                <Switch.Label fontSize="sm">Girar les peces encara que tinguin veta</Switch.Label>
+                <Switch.Label fontSize="sm">Girar les peces</Switch.Label>
               </Switch.Root>
             </FormRow>
             </SettingsGroup>

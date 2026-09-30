@@ -307,6 +307,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   accions del document a la dreta. Cada pàgina hi posa les seves amb `<TopBarActions>`
   (l'Editor: desar, desfer, refer). **Les pàgines no porten títol propi**: l'apartat ja es
   veu marcat al menú. Al mòbil, la mateixa barra amb fletxa enrere.
+  **La mateixa barra per a tots els documents** (`DocBar`: moble, objecte i ambient —`AmbientTopBar`,
+  «Ambients › nom», amb desfer/refer via `<TopBarActions>`); no hi ha capçaleres pròpies dins les pàgines.
 - **Pàgina Mobles = inici, com Figma o Google Docs** (`projects/NewMobleGallery.tsx`, sense
   botó «Nou moble» ni diàleg): text descriptiu, **cercador** (sense filtre de tipus: el tipus també
   es busca), botó «Nou moble» a la capçalera i acordions **tots tancats**

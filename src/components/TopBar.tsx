@@ -21,28 +21,35 @@ export function TopBarActions({ children }: { children: ReactNode }) {
   return target ? createPortal(children, target) : null
 }
 
-export function TopBar({
-  projectId,
-  onBack,
-  onSettings,
-  actionsRef,
-  menu,
-  tabs,
-  rootLabel = "Mobles",
-}: {
+/** Barra del moble o l'objecte obert: el nom és el del projecte (i es reanomena a la base de dades). */
+export function TopBar({ projectId, rootLabel = "Mobles", ...rest }: { projectId: number; rootLabel?: string } & Omit<DocBarProps, "name" | "onRename" | "rootLabel" | "nameLabel">) {
+  const project = useProject(projectId)
+  const name = project?.name ?? ""
+  return <DocBar {...rest} rootLabel={rootLabel} name={name} nameLabel="Nom del moble" onRename={(v) => void renameProject(projectId, v)} />
+}
+
+interface DocBarProps {
   /** Pàgines del document (Editor · Peces · Nesting · Exportar), al mig de la barra a l'ordinador. */
   tabs?: ReactNode
-  /** On torna la molla de pa («Mobles» o «Objectes»). */
-  rootLabel?: string
-  projectId: number
+  /** On torna la molla de pa («Mobles», «Objectes» o «Ambients»). */
+  rootLabel: string
+  name: string
+  /** Nom accessible del camp del nom (p. ex. «Nom del moble»). */
+  nameLabel: string
+  onRename: (name: string) => void
   onBack: () => void
   onSettings: () => void
   actionsRef: (el: HTMLDivElement | null) => void
   /** Menú ⋯ del document (desar com a fitxer, com a plantilla...). */
   menu?: ReactNode
-}) {
-  const project = useProject(projectId)
-  const name = project?.name ?? ""
+}
+
+/**
+ * Barra superior d'un document obert (moble, objecte o ambient), la mateixa a tot arreu: al mòbil
+ * fletxa enrere, a l'ordinador la molla de pa «Apartat › Nom»; el nom s'edita amb un clic; les
+ * accions de la pàgina (<TopBarActions>) i el menú ⋯ a la dreta.
+ */
+export function DocBar({ onBack, onSettings, actionsRef, menu, tabs, rootLabel, name, nameLabel, onRename }: DocBarProps) {
   return (
     <HStack
       as="header"
@@ -87,16 +94,16 @@ export function TopBar({
           defaultValue={name}
           onValueCommit={(e) => {
             const v = e.value.trim()
-            if (v && v !== name) void renameProject(projectId, v)
+            if (v && v !== name) onRename(v)
           }}
           fontSize="sm"
           fontWeight="semibold"
           minW={0}
           w="auto"
           maxW="100%"
-          aria-label="Nom del moble"
+          aria-label={nameLabel}
         >
-          <Editable.Preview title="Clica per canviar el nom del moble" truncate px={1.5} />
+          <Editable.Preview title="Clica per canviar el nom" truncate px={1.5} />
           <Editable.Input px={1.5} />
         </Editable.Root>
       </HStack>

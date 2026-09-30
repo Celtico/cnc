@@ -15,7 +15,7 @@ import { ExportScreen } from "./features/export/ExportScreen"
 import { NestingScreen } from "./features/nesting/NestingScreen"
 import { PhotoScreen } from "./features/photo/PhotoScreen"
 import { ProjectsScreen, type ProjectsRequest } from "./features/projects/ProjectsScreen"
-import { AmbientEditor } from "./features/ambients/AmbientEditor"
+import { AmbientEditor, AmbientTopBar } from "./features/ambients/AmbientEditor"
 import { AmbientsScreen } from "./features/ambients/AmbientsScreen"
 import { ObjectsScreen } from "./features/objects/ObjectsScreen"
 import { compositionKind } from "./core/model"
@@ -192,7 +192,7 @@ export function App() {
     ) : screen === "ambients" ? (
       <AmbientsScreen onOpen={openAmbient} />
     ) : screen === "ambient" && ambientId !== null ? (
-      <AmbientEditor ambientId={ambientId} onBack={() => (setAmbientId(null), setScreen("ambients"))} onOpenProject={openProject} />
+      <AmbientEditor ambientId={ambientId} onOpenProject={openProject} />
     ) : screen === "settings" ? (
       <SettingsScreen previewComposition={previewComposition} />
     ) : screen === "projects" || screen === "ambient" || projectId === null ? (
@@ -316,6 +316,9 @@ export function App() {
             }
           />
         )}
+        {screen === "ambient" && ambientId !== null && (
+          <AmbientTopBar ambientId={ambientId} onBack={() => (setAmbientId(null), setScreen("ambients"))} onSettings={() => go("settings")} actionsRef={setTopActions} />
+        )}
         {project && <SaveFileDialog project={saveOpen ? project : null} open={saveOpen} onClose={() => setSaveOpen(false)} />}
         {project && <SaveTemplateDialog project={project} open={templateOpen} onClose={() => setTemplateOpen(false)} />}
         {/* Mòbil: les pàgines d'inici porten el seu títol gran (com iOS); aquí només hi ha barra quan cal
@@ -349,7 +352,7 @@ export function App() {
           flexDirection="column"
           px={{ base: 4, md: screen === "editor" || screen === "ambient" ? 2 : 4 }}
           // Al mòbil, l'editor enganxa el visor a la barra de dalt (sense marge superior).
-          pt={{ base: screen === "editor" ? 0 : showTopBar || (screen === "settings" && inProject) ? 4 : "calc(16px + env(safe-area-inset-top, 0px))", md: screen === "editor" || screen === "ambient" ? 1.5 : 6 }}
+          pt={{ base: screen === "editor" ? 0 : showTopBar || screen === "ambient" || (screen === "settings" && inProject) ? 4 : "calc(16px + env(safe-area-inset-top, 0px))", md: screen === "editor" || screen === "ambient" ? 1.5 : 6 }}
           pb={{ base: "calc(76px + env(safe-area-inset-bottom, 0px))", md: screen === "editor" || screen === "ambient" ? 1.5 : 6 }}
         >
           <TopBarActionsProvider value={topActions}>{content}</TopBarActionsProvider>

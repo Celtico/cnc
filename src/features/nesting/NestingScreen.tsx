@@ -2,6 +2,7 @@ import {
   Alert,
   Badge,
   Card,
+  Grid,
   HStack,
   SimpleGrid,
   Stack,
@@ -51,6 +52,9 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
   return (
     <VStack align="stretch" gap={5}>
 
+      {/* A l'ordinador gran: les opcions a l'esquerra (com les preferències, sense estirar-se) i el
+          resum a la dreta; a sota, els taulers. */}
+      <Grid templateColumns={{ base: "minmax(0, 1fr)", xl: "minmax(0, 640px) minmax(0, 1fr)" }} gap={5} alignItems="start">
       <Card.Root variant="outline">
         <Card.Body gap={4}>
           {/* Molts formats de tauler: pastilles que salten de línia en lloc d'un control segmentat. */}
@@ -69,11 +73,11 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
           <NumRow label="Alt tauler" value={options.sheet.h} min={300} max={6000} step={10} onChange={(h) => setOptions((o) => ({ ...o, sheet: { ...o.sheet, h } }))} />
           <NumRow label="Kerf (fresa)" value={options.kerf} min={0} max={30} step={0.5} onChange={(kerf) => setOptions((o) => ({ ...o, kerf }))} />
           <NumRow label="Marge tauler" value={options.margin} min={0} max={100} step={1} onChange={(margin) => setOptions((o) => ({ ...o, margin }))} />
-          <FormRow label="Veta">
+          <FormRow label="Veta" help="Aprofita més el tauler, però la veta de les peces girades no segueix la del moble.">
             <Switch.Root size="sm" pt="6px" checked={!!options.ignoreGrain} onCheckedChange={(e) => setOptions((o) => ({ ...o, ignoreGrain: e.checked || undefined }))}>
               <Switch.HiddenInput />
               <Switch.Control />
-              <Switch.Label fontSize="sm">Permetre girar les peces encara que tinguin veta</Switch.Label>
+              <Switch.Label fontSize="sm">Girar les peces</Switch.Label>
             </Switch.Root>
           </FormRow>
           {options.sheetsByMaterial && Object.keys(options.sheetsByMaterial).length > 0 && (
@@ -86,14 +90,17 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
           )}
         </Card.Body>
       </Card.Root>
+      {nesting && (
+        <SimpleGrid columns={{ base: 3, xl: 1 }} gap={3}>
+          <StatBox label="Taulers" value={String(nesting.boards.length)} />
+          <StatBox label="Peces" value={`${panels.length - nesting.unplaced.length} / ${panels.length}`} />
+          <StatBox label="Aprofitament" value={`${Math.round(nesting.totalEfficiency * 100)} %`} />
+        </SimpleGrid>
+      )}
+      </Grid>
 
       {nesting && (
         <>
-          <SimpleGrid columns={3} gap={3}>
-            <StatBox label="Taulers" value={String(nesting.boards.length)} />
-            <StatBox label="Peces" value={`${panels.length - nesting.unplaced.length} / ${panels.length}`} />
-            <StatBox label="Aprofitament" value={`${Math.round(nesting.totalEfficiency * 100)} %`} />
-          </SimpleGrid>
 
           {nesting.unplaced.length > 0 && (
             <Alert.Root status="warning">
