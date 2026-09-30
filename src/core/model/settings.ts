@@ -36,18 +36,75 @@ export type RefPreset = z.infer<typeof RefPresetSchema>
 
 // --- Materials ---------------------------------------------------------------------
 
+const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/)
+
+/**
+ * Paràmetres del generador de fusta (textura procedural): colors, veta, catedrals, porus i la mida
+ * real d'una repetició. Sense, els de l'espècie (`WOOD_PRESETS`).
+ */
+export const WoodGenSchema = z.object({
+  /** Color de fons i de la veta. */
+  base: hex,
+  dark: hex,
+  /** Densitat de la veta (vetes per repetició). */
+  lines: z.number().min(2).max(80),
+  /** Ondulació de les fibres (0 recta, 0,25 molt ondulada). */
+  wobble: z.number().min(0).max(0.25),
+  /** Franges amples de to clar/fosc. */
+  bands: z.number().int().min(0).max(60),
+  /** Contrast de les fibres (0 suau, 1 marcat). */
+  contrast: z.number().min(0).max(1),
+  /** Vetes «de catedral» (arcs). */
+  figure: z.number().int().min(0).max(8),
+  /** Porus (traços curts). */
+  pores: z.number().int().min(0).max(5000),
+  /** Gra fi (soroll). */
+  grain: z.number().min(0).max(30),
+  /** Mida real d'una repetició (mm). */
+  tileMm: z.number().min(200).max(4000),
+  /** Llavor: cada número fa una variació diferent amb els mateixos paràmetres. */
+  seed: z.number().int().min(1),
+})
+export type WoodGen = z.infer<typeof WoodGenSchema>
+
+/** Paràmetres inicials de cada espècie (punt de partida del generador). */
+export const WOOD_PRESETS: Record<"oak" | "walnut" | "ash", WoodGen> = {
+  oak: { base: "#d6b684", dark: "#a88354", lines: 26, wobble: 0.06, bands: 26, contrast: 0.5, figure: 2, pores: 2200, grain: 8, tileMm: 600, seed: 101 },
+  walnut: { base: "#6e4e34", dark: "#422a1a", lines: 22, wobble: 0.05, bands: 26, contrast: 0.5, figure: 2, pores: 1400, grain: 8, tileMm: 600, seed: 202 },
+  ash: { base: "#e4d6b8", dark: "#baa47e", lines: 18, wobble: 0.09, bands: 26, contrast: 0.5, figure: 3, pores: 2200, grain: 8, tileMm: 600, seed: 303 },
+}
+
 export const FinishSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("color"), color: z.string() }),
   z.object({ kind: z.literal("lacquer"), color: z.string() }),
-  z.object({ kind: z.literal("wood"), species: z.enum(["oak", "walnut", "ash"]) }),
+  /** Fusta procedural: l'espècie és el punt de partida; `gen`, els paràmetres del generador. */
+  z.object({ kind: z.literal("wood"), species: z.enum(["oak", "walnut", "ash"]), gen: WoodGenSchema.optional() }),
+  /** Pedra o marbre procedural: color, vetes i mida real. */
+  z.object({ kind: z.literal("stone"), color: z.string(), vein: z.string(), veins: z.number().min(0).max(1), size: mm.min(100).max(4000), seed: z.number().int().min(1) }),
   /** Metall (ferro, inox, llautó): brillant i reflectant. */
   z.object({ kind: z.literal("metal"), color: z.string() }),
   /** Vidre: translúcid. */
   z.object({ kind: z.literal("glass"), color: z.string() }),
   /** Teixit (sofàs, cortines, catifes): trama procedural del color. Materials de simulació. */
-  z.object({ kind: z.literal("fabric"), color: z.string() }),
+  z.object({
+    kind: z.literal("fabric"),
+    color: z.string(),
+    /** Fils per repetició (trama més fina o més grossa), irregularitat dels fils i mida real (mm). */
+    threads: z.number().int().min(8).max(240).optional(),
+    slub: z.number().min(0).max(1).optional(),
+    tileMm: mm.min(20).max(2000).optional(),
+  }),
   /** Rajola: peces quadrades de `size` mm amb junta. Materials de simulació (terres, parets). */
-  z.object({ kind: z.literal("tiles"), color: z.string(), grout: z.string(), size: mm.min(20).max(1500) }),
+  z.object({
+    kind: z.literal("tiles"),
+    color: z.string(),
+    grout: z.string(),
+    size: mm.min(20).max(1500),
+    /** Gruix de la junta (mm), variació de to entre peces i col·locació (quadrícula o trencajunts). */
+    joint: mm.min(0).max(30).optional(),
+    variation: z.number().min(0).max(0.4).optional(),
+    layout: z.enum(["grid", "brick"]).optional(),
+  }),
   /**
    * Foto real del tauler (textura): imatge reduïda en data URL i l'amplada real que hi surt
    * (mm), perquè la veta tingui la mida de debò al 3D.

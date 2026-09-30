@@ -15,7 +15,7 @@ import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { ROLE_COLOR } from "./roleColors"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
-import { RAW_EDGE_COLOR, TILE_MM, patternTexture, photoTexture, resolveEdgeFinish, resolveFinish, woodTexture, type FinishSpec } from "./textures"
+import { RAW_EDGE_COLOR, TILE_MM, patternTexture, photoTexture, resolveEdgeFinish, resolveFinish, woodGenOf, woodTexture, type FinishSpec } from "./textures"
 
 /** Color de selecció (el mateix taronja que els botons + del 3D). */
 const SELECT_COLOR = "#b57a37"
@@ -1255,14 +1255,14 @@ function faceTexture(base: Texture, uMm: number, vMm: number, rotate: boolean, t
 
 function makeMaterial(finish: FinishSpec, uMm: number, vMm: number, rotate: boolean, opts: { transparent: boolean; opacity: number }): MeshStandardMaterial {
   if (finish.kind === "wood") {
-    return new MeshStandardMaterial({ map: faceTexture(woodTexture(finish.species), uMm, vMm, rotate), roughness: 0.7, metalness: 0, ...opts })
+    return new MeshStandardMaterial({ map: faceTexture(woodTexture(finish.species, finish.gen), uMm, vMm, rotate, woodGenOf(finish.species, finish.gen).tileMm), roughness: 0.7, metalness: 0, ...opts })
   }
   // Foto real del tauler: la mateixa escala que al tauler de debò (tileMm = amplada de la foto).
   if (finish.kind === "image") {
     return new MeshStandardMaterial({ map: faceTexture(photoTexture(finish.src, finish.seamless), uMm, vMm, rotate, finish.tileMm, finish.aspect), roughness: 0.7, metalness: 0, ...opts })
   }
   if (finish.kind === "pattern") {
-    return new MeshStandardMaterial({ map: faceTexture(patternTexture(finish.pattern, finish.color, finish.grout), uMm, vMm, false, finish.tileMm), roughness: finish.roughness, metalness: 0, ...opts })
+    return new MeshStandardMaterial({ map: faceTexture(patternTexture(finish.pattern, finish.color, finish.grout, finish.opts), uMm, vMm, false, finish.tileMm), roughness: finish.roughness, metalness: 0, ...opts })
   }
   // Vidre: translúcid sempre (també sense vel).
   const glass = finish.opacity !== undefined && finish.opacity < 1

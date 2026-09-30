@@ -1,4 +1,4 @@
-import { finishOfPref, patternTexture, TILE_MM, woodTexture } from "../../components/viewer/textures"
+import { finishOfPref, patternTexture, woodGenOf, woodTexture } from "../../components/viewer/textures"
 import type { MaterialPref } from "../../core/model"
 
 /** Amplada real (mm) que representa la mostra de previsualització d'un material. */
@@ -23,9 +23,12 @@ function textureUrl(key: string, make: () => { image: unknown }): string {
 export function previewStyle(m: MaterialPref, wPx: number): Record<string, string> {
   const f = finishOfPref(m)
   const px = (mm: number) => `${(mm / PREVIEW_MM) * wPx}px`
-  if (f.kind === "wood") return { backgroundImage: `url(${textureUrl(`wood:${f.species}`, () => woodTexture(f.species))})`, backgroundSize: `${px(TILE_MM * 2)} ${px(TILE_MM * 2)}` }
+  if (f.kind === "wood") {
+    const gen = woodGenOf(f.species, f.gen)
+    return { backgroundImage: `url(${textureUrl(`wood:${JSON.stringify(gen)}`, () => woodTexture(f.species, f.gen))})`, backgroundSize: `${px(gen.tileMm)} ${px(gen.tileMm)}` }
+  }
   if (f.kind === "image") return { backgroundImage: `url(${f.src})`, backgroundSize: `${px(f.tileMm)} ${px(f.tileMm * (f.aspect ?? 1))}` }
-  if (f.kind === "pattern") return { backgroundImage: `url(${textureUrl(`${f.pattern}:${f.color}:${f.grout ?? ""}`, () => patternTexture(f.pattern, f.color, f.grout))})`, backgroundSize: `${px(f.tileMm)} ${px(f.tileMm)}` }
+  if (f.kind === "pattern") return { backgroundImage: `url(${textureUrl(`${f.pattern}:${f.color}:${f.grout ?? ""}:${JSON.stringify(f.opts ?? {})}`, () => patternTexture(f.pattern, f.color, f.grout, f.opts))})`, backgroundSize: `${px(f.tileMm)} ${px(f.tileMm)}` }
   if (f.opacity !== undefined && f.opacity < 1)
     return { background: `linear-gradient(135deg, ${f.color}aa, ${f.color}55), repeating-conic-gradient(#bbb 0 25%, #eee 0 50%) 0 0 / 16px 16px` }
   if (f.metalness && f.metalness > 0.5) return { background: `linear-gradient(120deg, ${f.color} 0%, #ffffff66 18%, ${f.color} 32%, #00000033 62%, ${f.color} 80%, #ffffff44 100%), ${f.color}` }

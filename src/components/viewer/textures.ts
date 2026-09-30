@@ -1,5 +1,5 @@
 import { CanvasTexture, MirroredRepeatWrapping, RepeatWrapping, SRGBColorSpace, TextureLoader, type Texture } from "three"
-import type { Finish, MaterialPref } from "../../core/model"
+import { WOOD_PRESETS, type Finish, type MaterialPref, type WoodGen } from "../../core/model"
 
 /**
  * Acabats visuals dels materials: color llis, lacat o fusta amb veta. Les textures de
@@ -9,23 +9,26 @@ import type { Finish, MaterialPref } from "../../core/model"
 
 export type WoodSpecies = Extract<Finish, { kind: "wood" }>["species"]
 
-export type FinishSpec = { kind: "color"; color: string; roughness: number; metalness?: number; opacity?: number } | { kind: "wood"; species: WoodSpecies } | { kind: "image"; src: string; tileMm: number; aspect?: number; seamless?: boolean }
-  /** Textura procedural dels materials de simulació: teixit (trama) o rajola (peces i junta). */
-  | { kind: "pattern"; pattern: "fabric" | "tiles"; color: string; grout?: string; tileMm: number; roughness: number }
+export type FinishSpec = { kind: "color"; color: string; roughness: number; metalness?: number; opacity?: number } | { kind: "wood"; species: WoodSpecies; gen?: WoodGen } | { kind: "image"; src: string; tileMm: number; aspect?: number; seamless?: boolean }
+  /** Textura procedural: teixit (trama), rajola (peces i junta) o pedra (marbre amb vetes). */
+  | { kind: "pattern"; pattern: PatternKind; color: string; grout?: string; tileMm: number; roughness: number; opts?: PatternOpts }
 
-interface WoodParams {
-  base: [number, number, number]
-  dark: [number, number, number]
-  /** Nombre de vetes per tile. */
-  lines: number
-  /** Amplitud de l'ondulació de la veta (0..1 del tile). */
-  wobble: number
+export type PatternKind = "fabric" | "tiles" | "stone"
+/** Opcions dels patrons: fils i irregularitat del teixit; junta, variació i col·locació de la rajola; vetes de la pedra. */
+export interface PatternOpts {
+  threads?: number
+  slub?: number
+  /** Junta en fracció de la peça. */
+  joint?: number
+  variation?: number
+  layout?: "grid" | "brick"
+  veins?: number
+  seed?: number
 }
 
-const WOOD: Record<WoodSpecies, WoodParams> = {
-  oak: { base: [214, 182, 132], dark: [168, 131, 84], lines: 26, wobble: 0.06 },
-  walnut: { base: [110, 78, 52], dark: [66, 42, 26], lines: 22, wobble: 0.05 },
-  ash: { base: [228, 214, 184], dark: [186, 164, 126], lines: 18, wobble: 0.09 },
+const hexToRgb = (h: string): [number, number, number] => {
+  const n = parseInt(h.replace("#", "").padEnd(6, "0").slice(0, 6), 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
 export const SPECIES_LABEL: Record<WoodSpecies, string> = { oak: "Roure", walnut: "Noguera", ash: "Freixe" }
@@ -46,23 +49,40 @@ const mix = (a: [number, number, number], b: [number, number, number], t: number
   Math.round(a[2] + (b[2] - a[2]) * t),
 ]
 
-const cache = new Map<WoodSpecies, Texture>()
+/** Memòria de textures generades (les últimes; en moure un control se'n fan moltes). */
+const cache = new Map<string, Texture>()
+function remember<T>(map: Map<string, T>, key: string, v: T, max = 48): T {
+  map.set(key, v)
+  if (map.size > max) {
+    const first = map.keys().next().value
+    if (first !== undefined) map.delete(first)
+  }
+  return v
+}
+
+/** Paràmetres efectius de la fusta: els del generador o els de l'espècie. */
+export function woodGenOf(species: WoodSpecies, gen?: WoodGen): WoodGen {
+  return gen ?? WOOD_PRESETS[species]
+}
 
 /**
  * Textura de xapa de fusta amb la veta en horitzontal (eix u), repetible en u i en v.
  * Es pinta com un xapat real: franges amples de to, centenars de fibres fines de gruix i
  * contrast variables, alguna veta «de catedral» més ondulada i porus curts.
  */
-export function woodTexture(species: WoodSpecies): Texture {
-  const hit = cache.get(species)
+export function woodTexture(species: WoodSpecies, gen?: WoodGen): Texture {
+  const W = woodGenOf(species, gen)
+  const key = JSON.stringify(W)
+  const hit = cache.get(key)
   if (hit) return hit
   const size = 1024
   const canvas = document.createElement("canvas")
   canvas.width = size
   canvas.height = size
   const g = canvas.getContext("2d")!
-  const p = WOOD[species]
-  const rnd = rng(species === "oak" ? 101 : species === "walnut" ? 202 : 303)
+  const p = { base: hexToRgb(W.base), dark: hexToRgb(W.dark), lines: W.lines, wobble: W.wobble }
+  const rnd = rng(W.seed)
+  const ck = 0.3 + W.contrast * 1.4
 
   g.fillStyle = rgb(p.base)
   g.fillRect(0, 0, size, size)
@@ -76,7 +96,7 @@ export function woodTexture(species: WoodSpecies): Texture {
     amp * (Math.sin(2 * Math.PI * f1 * u + ph) * 0.7 + Math.sin(2 * Math.PI * f2 * u + ph * 1.9) * 0.3)
 
   // 1. Franges amples de to (clar/fosc) al llarg de la veta.
-  for (let i = 0; i < 26; i++) {
+  for (let i = 0; i < W.bands; i++) {
     const y = rnd() * size
     const h = 8 + rnd() * 60
     const light = rnd() > 0.5
@@ -103,7 +123,7 @@ export function woodTexture(species: WoodSpecies): Texture {
     const f2 = 2 + Math.floor(rnd() * 3)
     const strong = rnd() < 0.18
     const col = mix(p.dark, [0, 0, 0], strong ? 0.25 : 0)
-    const a = strong ? 0.25 + rnd() * 0.3 : 0.06 + rnd() * 0.14
+    const a = Math.min(1, (strong ? 0.25 + rnd() * 0.3 : 0.06 + rnd() * 0.14) * ck)
     const w = strong ? 1 + rnd() * 2.2 : 0.5 + rnd() * 1.1
     wrapY((dy) => {
       g.strokeStyle = rgb(col, a)
@@ -119,8 +139,7 @@ export function woodTexture(species: WoodSpecies): Texture {
   }
 
   // 3. Vetes de catedral: arcs amples i foscos (poques, com en un xapat pla).
-  const arches = species === "ash" ? 3 : 2
-  for (let i = 0; i < arches; i++) {
+  for (let i = 0; i < W.figure; i++) {
     const cy = rnd() * size
     const ph = rnd() * 10
     for (let k = 0; k < 7; k++) {
@@ -142,8 +161,7 @@ export function woodTexture(species: WoodSpecies): Texture {
   }
 
   // 4. Porus: traços curts i foscos al llarg de la veta.
-  const pores = species === "walnut" ? 1400 : 2200
-  for (let i = 0; i < pores; i++) {
+  for (let i = 0; i < W.pores; i++) {
     const x = rnd() * size
     const y = rnd() * size
     const len = 3 + rnd() * 12
@@ -155,7 +173,7 @@ export function woodTexture(species: WoodSpecies): Texture {
   // 5. Gra fi.
   const img = g.getImageData(0, 0, size, size)
   for (let i = 0; i < img.data.length; i += 4) {
-    const n = (rnd() - 0.5) * 8
+    const n = (rnd() - 0.5) * W.grain
     img.data[i]! += n
     img.data[i + 1]! += n
     img.data[i + 2]! += n
@@ -167,13 +185,12 @@ export function woodTexture(species: WoodSpecies): Texture {
   tex.wrapT = RepeatWrapping
   tex.colorSpace = SRGBColorSpace
   tex.anisotropy = 8
-  cache.set(species, tex)
-  return tex
+  return remember(cache, key, tex)
 }
 
 /** Color RGB (0–1) representatiu d'un acabat: per als colors del STEP de TopSolid. */
 export function finishRgb(f: FinishSpec): [number, number, number] {
-  if (f.kind === "wood") return WOOD[f.species].base.map((v) => v / 255) as [number, number, number]
+  if (f.kind === "wood") return hexToRgb(woodGenOf(f.species, f.gen).base).map((v) => v / 255) as [number, number, number]
   if (f.kind === "image") return [0.72, 0.6, 0.45]
   return hexRgb(f.color)
 }
@@ -191,8 +208,8 @@ const patternCache = new Map<string, Texture>()
  * d'ordit i trama amb soroll; la rajola, una peça per tile amb la junta i una mica de variació.
  * Un tile = `tileMm` del material (200 mm de teixit, la mida de la rajola).
  */
-export function patternTexture(pattern: "fabric" | "tiles", color: string, grout = "#cccccc"): Texture {
-  const key = `${pattern}:${color}:${grout}`
+export function patternTexture(pattern: PatternKind, color: string, grout = "#cccccc", o: PatternOpts = {}): Texture {
+  const key = `${pattern}:${color}:${grout}:${JSON.stringify(o)}`
   const hit = patternCache.get(key)
   if (hit) return hit
   const size = 512
@@ -201,10 +218,14 @@ export function patternTexture(pattern: "fabric" | "tiles", color: string, grout
   canvas.height = size
   const g = canvas.getContext("2d")!
   const [r, gg, b] = hexRgb(color).map((v) => v * 255) as [number, number, number]
-  const rand = rng(pattern === "fabric" ? 7 : 11)
+  const rand = rng(o.seed ?? (pattern === "fabric" ? 7 : pattern === "tiles" ? 11 : 13))
   if (pattern === "fabric") {
     const img = g.createImageData(size, size)
-    const threads = 96
+    const threads = Math.max(8, Math.round((o.threads ?? 96) / 2) * 2)
+    const slub = o.slub ?? 0
+    // Irregularitat dels fils: cada fil (fila i columna) amb el seu gruix de to.
+    const rowK = Array.from({ length: threads }, () => 1 + (rand() - 0.5) * slub * 0.35)
+    const colK = Array.from({ length: threads }, () => 1 + (rand() - 0.5) * slub * 0.35)
     for (let y = 0; y < size; y++)
       for (let x = 0; x < size; x++) {
         const tx = Math.floor((x / size) * threads), ty = Math.floor((y / size) * threads)
@@ -212,7 +233,7 @@ export function patternTexture(pattern: "fabric" | "tiles", color: string, grout
         // Ordit i trama alterns: un fil passa per sobre de l'altre.
         const over = (tx + ty) % 2 === 0
         const shade = over ? 0.55 + 0.45 * Math.sin(fy * Math.PI) : 0.55 + 0.45 * Math.sin(fx * Math.PI)
-        const k = 0.82 + 0.18 * shade + (rand() - 0.5) * 0.06
+        const k = (0.82 + 0.18 * shade + (rand() - 0.5) * 0.06) * (over ? colK[tx]! : rowK[ty]!)
         const i = (y * size + x) * 4
         img.data[i] = Math.min(255, r * k)
         img.data[i + 1] = Math.min(255, gg * k)
@@ -220,36 +241,87 @@ export function patternTexture(pattern: "fabric" | "tiles", color: string, grout
         img.data[i + 3] = 255
       }
     g.putImageData(img, 0, 0)
-  } else {
+  } else if (pattern === "tiles") {
+    // Una repetició = 2 × 2 peces (per poder fer trencajunts).
     g.fillStyle = grout
     g.fillRect(0, 0, size, size)
-    const j = 6
-    const k = 0.96 + rand() * 0.06
-    g.fillStyle = `rgb(${r * k}, ${gg * k}, ${b * k})`
-    g.fillRect(j / 2, j / 2, size - j, size - j)
-    // Una mica de variació (esmalt) perquè no sigui pla.
-    for (let n = 0; n < 900; n++) {
-      g.fillStyle = `rgba(255,255,255,${rand() * 0.035})`
-      g.fillRect(j / 2 + rand() * (size - j), j / 2 + rand() * (size - j), 2 + rand() * 30, 2 + rand() * 30)
+    const t = size / 2
+    const j = Math.max(1, (o.joint ?? 0.01) * t)
+    const vari = o.variation ?? 0.05
+    const piece = (x: number, y: number) => {
+      const k = 1 - vari / 2 + rand() * vari
+      g.fillStyle = `rgb(${r * k}, ${gg * k}, ${b * k})`
+      g.fillRect(x + j / 2, y + j / 2, t - j, t - j)
+      // Una mica de variació (esmalt) perquè no sigui pla.
+      for (let n = 0; n < 220; n++) {
+        g.fillStyle = `rgba(255,255,255,${rand() * 0.035})`
+        g.fillRect(x + j / 2 + rand() * (t - j - 30), y + j / 2 + rand() * (t - j - 30), 2 + rand() * 28, 2 + rand() * 28)
+      }
     }
+    for (let row = 0; row < 2; row++) {
+      const off = o.layout === "brick" && row === 1 ? t / 2 : 0
+      for (let c = -1; c < 2; c++) {
+        g.save()
+        g.beginPath()
+        g.rect(0, row * t, size, t)
+        g.clip()
+        piece(c * t + off, row * t)
+        g.restore()
+      }
+    }
+  } else {
+    // Pedra / marbre: soroll periòdic (sense costures) amb vetes fines on el soroll «gira».
+    const [vr, vg, vb] = hexRgb(grout).map((v) => v * 255) as [number, number, number]
+    const N = 16
+    const grid = Array.from({ length: N * N }, () => rand())
+    const val = (x: number, y: number, f: number) => {
+      const fx = x * f, fy = y * f
+      const x0 = Math.floor(fx), y0 = Math.floor(fy)
+      const sx = fx - x0, sy = fy - y0
+      const at = (i: number, k: number) => grid[(((i % N) + N) % N) + (((k % N) + N) % N) * N]!
+      const u = sx * sx * (3 - 2 * sx), v = sy * sy * (3 - 2 * sy)
+      return (at(x0, y0) * (1 - u) + at(x0 + 1, y0) * u) * (1 - v) + (at(x0, y0 + 1) * (1 - u) + at(x0 + 1, y0 + 1) * u) * v
+    }
+    const fbm = (x: number, y: number) => val(x, y, 2) * 0.5 + val(x, y, 4) * 0.25 + val(x, y, 8) * 0.15 + val(x, y, 16) * 0.1
+    const veins = o.veins ?? 0.5
+    const img = g.createImageData(size, size)
+    for (let y = 0; y < size; y++)
+      for (let x = 0; x < size; x++) {
+        const u = (x / size) * N / 2, v = (y / size) * N / 2
+        const n = fbm(u, v)
+        const line = Math.abs(Math.sin((u / (N / 2) + n * 2.2) * Math.PI * 3))
+        const vein = Math.pow(1 - line, 10 + (1 - veins) * 40) * veins * 1.6
+        const cloud = 0.93 + (fbm(u * 2 + 5, v * 2 + 5) - 0.5) * 0.14
+        const t = Math.min(1, vein)
+        const i = (y * size + x) * 4
+        img.data[i] = (r * cloud) * (1 - t) + vr * t
+        img.data[i + 1] = (gg * cloud) * (1 - t) + vg * t
+        img.data[i + 2] = (b * cloud) * (1 - t) + vb * t
+        img.data[i + 3] = 255
+      }
+    g.putImageData(img, 0, 0)
   }
   const tex = new CanvasTexture(canvas)
   tex.wrapS = RepeatWrapping
   tex.wrapT = RepeatWrapping
   tex.colorSpace = SRGBColorSpace
   tex.anisotropy = 8
-  patternCache.set(key, tex)
-  return tex
+  return remember(patternCache, key, tex)
 }
 
 /** Acabat d'una preferència de material. */
 export function finishOfPref(m: MaterialPref): FinishSpec {
-  if (m.finish.kind === "wood") return { kind: "wood", species: m.finish.species }
+  if (m.finish.kind === "wood") return { kind: "wood", species: m.finish.species, gen: m.finish.gen }
+  if (m.finish.kind === "stone") return { kind: "pattern", pattern: "stone", color: m.finish.color, grout: m.finish.vein, tileMm: m.finish.size, roughness: 0.35, opts: { veins: m.finish.veins, seed: m.finish.seed } }
   if (m.finish.kind === "image") return { kind: "image", src: m.finish.src, tileMm: m.finish.tileMm, aspect: m.finish.aspect, seamless: m.finish.seamless }
   if (m.finish.kind === "metal") return { kind: "color", color: m.finish.color, roughness: 0.35, metalness: 0.85 }
   if (m.finish.kind === "glass") return { kind: "color", color: m.finish.color, roughness: 0.05, opacity: 0.35 }
-  if (m.finish.kind === "fabric") return { kind: "pattern", pattern: "fabric", color: m.finish.color, tileMm: 200, roughness: 0.95 }
-  if (m.finish.kind === "tiles") return { kind: "pattern", pattern: "tiles", color: m.finish.color, grout: m.finish.grout, tileMm: m.finish.size, roughness: 0.3 }
+  if (m.finish.kind === "fabric") return { kind: "pattern", pattern: "fabric", color: m.finish.color, tileMm: m.finish.tileMm ?? 200, roughness: 0.95, opts: { threads: m.finish.threads, slub: m.finish.slub } }
+  if (m.finish.kind === "tiles") {
+    const f = m.finish
+    // La textura és de 2 × 2 peces: la repetició fa el doble de la peça.
+    return { kind: "pattern", pattern: "tiles", color: f.color, grout: f.grout, tileMm: f.size * 2, roughness: 0.3, opts: { joint: (f.joint ?? 3) / f.size, variation: f.variation, layout: f.layout } }
+  }
   return { kind: "color", color: m.finish.color, roughness: m.finish.kind === "lacquer" ? 0.35 : 0.8 }
 }
 

@@ -28,12 +28,13 @@ import {
   Text,
 } from "@chakra-ui/react"
 import { Children, Fragment, isValidElement, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { LuArrowDown, LuArrowUp, LuCheck, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff, LuFileDown, LuGrid3X3, LuHammer, LuImage, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRows3, LuRuler, LuScan, LuScissors, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
+import { LuArrowDown, LuArrowUp, LuCheck, LuPaintbrush, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff, LuFileDown, LuGrid3X3, LuHammer, LuImage, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRows3, LuRuler, LuScan, LuScissors, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { MasterDetail } from "../../components/MasterDetail"
 import { useSessionString } from "./useSessionString"
 import { MaterialPreview, ThicknessChips } from "./MaterialBits"
+import { TextureEditor } from "./TextureEditor"
 import { toaster } from "../../components/ui/toaster"
 import {
   DEFAULT_SETTINGS,
@@ -676,9 +677,10 @@ function MaterialSwatch({ m, size = "18px" }: { m: MaterialPref; size?: string }
   return <Box w={size} h={size} rounded="sm" borderWidth="1px" flexShrink={0} bg={swatch} bgImage={f.kind === "wood" ? "repeating-linear-gradient(90deg, #b98b57 0 2px, #a3763f 2px 3px)" : f.kind === "image" ? `url(${f.src})` : undefined} bgSize="cover" />
 }
 
-const FINISH_LABEL: Record<Finish["kind"], string> = { color: "color llis", lacquer: "lacat", wood: "fusta", image: "foto real", metal: "metall", glass: "vidre", fabric: "teixit", tiles: "rajola" }
+const FINISH_LABEL: Record<Finish["kind"], string> = { color: "color llis", lacquer: "lacat", wood: "fusta", image: "foto real", metal: "metall", glass: "vidre", fabric: "teixit", tiles: "rajola", stone: "pedra" }
 
 function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocusName }: { m: MaterialPref; onChange: (p: Partial<MaterialPref>) => void; onDuplicate: () => void; onDelete: () => void; canDelete: boolean; autoFocusName?: boolean }) {
+  const [editing, setEditing] = useState(false)
   const finish = m.finish
   // Fotos d'abans (sense proporció): es mesura la imatge un cop.
   const needsAspect = finish.kind === "image" && finish.aspect === undefined ? finish.src : null
@@ -712,7 +714,15 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
     >
       {/* A dalt: la mostra a escala real al costat del nom i els gruixos. */}
       <Flex gap={4} direction={{ base: "column", sm: "row" }} align={{ sm: "flex-start" }}>
-        <MaterialPreview m={m} />
+        <Stack gap={2} flexShrink={0}>
+          <MaterialPreview m={m} />
+          {(finish.kind === "wood" || finish.kind === "fabric" || finish.kind === "tiles" || finish.kind === "stone") && (
+            <Button size="sm" variant="outline" colorPalette="wood" onClick={() => setEditing(true)}>
+              <LuPaintbrush /> Editar la textura
+            </Button>
+          )}
+        </Stack>
+        <TextureEditor m={m} open={editing} onClose={() => setEditing(false)} onApply={(f) => onChange({ finish: f })} />
         <Stack gap={3} flex={1} minW={0}>
           <Field.Root>
             <Field.Label fontSize="sm">Nom</Field.Label>
@@ -735,7 +745,18 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
                     return
                   }
                   const color = swatch ?? "#e5e5e5"
-                  onChange({ finish: k === "wood" ? { kind: "wood", species: "oak" } : k === "tiles" ? { kind: "tiles", color, grout: "#cfcac0", size: 600 } : { kind: k, color } })
+                  onChange({
+                    finish:
+                      k === "wood"
+                        ? { kind: "wood", species: "oak" }
+                        : k === "tiles"
+                          ? { kind: "tiles", color, grout: "#cfcac0", size: 600 }
+                          : k === "stone"
+                            ? { kind: "stone", color: swatch ?? "#e8e4dc", vein: "#8f8a82", veins: 0.5, size: 1200, seed: 7 }
+                            : k === "fabric"
+                              ? { kind: "fabric", color }
+                              : { kind: k, color },
+                  })
                 }}
               >
                 <option value="color">Color llis</option>
@@ -746,6 +767,7 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
                 <option value="glass">Vidre</option>
                 <option value="fabric">Teixit</option>
                 <option value="tiles">Rajola</option>
+                <option value="stone">Pedra / marbre</option>
               </NativeSelect.Field>
               <NativeSelect.Indicator />
             </NativeSelect.Root>

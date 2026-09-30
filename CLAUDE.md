@@ -610,7 +610,17 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     Materials: «Per defecte als mòduls nous» a dalt; al detall, **mostra a escala real** (`MaterialPreview`,
     `materialPreview.ts`: 600 mm d'ample amb la textura de debò, la foto, la trama o les rajoles), gruixos
     com a etiquetes (`ThicknessChips`), color amb mostra petita i codi; un material nou té nom únic
-    («Material nou 2»), va a la categoria filtrada i deixa el nom seleccionat. Al mòbil, navegació en profunditat: apartats › pàgina › element, amb «‹ Tornar».
+    («Material nou 2»), va a la categoria filtrada i deixa el nom seleccionat.
+  - **Textures procedurals editables** (`settings/TextureEditor.tsx`, botó «Editar la textura» sota la
+    mostra): mostra gran a escala real (amb zoom) i els paràmetres del generador; s'aplica en acceptar
+    i els controls lliscants generen en deixar-los anar. **Fusta** (`Finish.wood.gen`, `WoodGenSchema`,
+    `WOOD_PRESETS` + `WOOD_EXTRA_PRESETS`: roure, noguera, freixe, cirerer, wengué, pi, roure fumat, faig,
+    roure blanquejat): colors de fons i de veta, densitat, ondulació, contrast de fibres, franges de to,
+    vetes de catedral, porus, gra fi, mida de la repetició i «Nova variació» (llavor). **Teixit**: fils,
+    irregularitat, mida. **Rajola**: junta (mm), variació de to, quadrícula o trencajunts (la textura és de
+    2 × 2 peces). **Pedra / marbre** (acabat nou `stone`): color, color i quantitat de vetes, mida, llavor
+    (soroll periòdic sense costures). Tot és `textures.ts` (canvas; `woodTexture(species, gen)`,
+    `patternTexture(kind, color, grout, opts)`), amb memòria de les últimes 48 textures. Al mòbil, navegació en profunditat: apartats › pàgina › element, amb «‹ Tornar».
     L'apartat i l'element triats es recorden durant la sessió (`useSessionString`). Al material, botó
     visible «Posar una foto de textura» (a més de l'Acabat «Foto (textura)»), amb miniatura, «Canviar la
     foto» i «Treure-la».
