@@ -35,6 +35,8 @@ export interface UserTemplate {
   id: string
   name: string
   composition: Composition
+  /** Grup (carpeta) de «Les teves plantilles». */
+  folder?: string
   createdAt: number
 }
 
@@ -91,6 +93,11 @@ export function renameUserTemplate(id: string, name: string): UserTemplate[] {
   const n = name.trim()
   if (!n) return loadUserTemplates()
   return writeTemplates(loadUserTemplates().map((t) => (t.id === id ? { ...t, name: n } : t)))
+}
+
+/** Posa (o treu) plantilles d'un grup. */
+export function setUserTemplatesFolder(ids: string[], folder: string | undefined): UserTemplate[] {
+  return writeTemplates(loadUserTemplates().map((t) => (ids.includes(t.id) ? { ...t, folder } : t)))
 }
 
 export function duplicateUserTemplate(id: string): UserTemplate[] {

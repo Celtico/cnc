@@ -12,6 +12,7 @@ import {
   Button,
   Dialog,
   Field,
+  Flex,
   Grid,
   GridItem,
   HStack,
@@ -26,11 +27,12 @@ import {
   Switch,
   Text,
 } from "@chakra-ui/react"
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { LuArrowDown, LuArrowUp, LuCheck, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff, LuFileDown, LuGrid3X3, LuHammer, LuImage, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRows3, LuRuler, LuScan, LuScissors, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
+import { Children, Fragment, isValidElement, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { LuArrowDown, LuArrowUp, LuCheck, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff, LuFileDown, LuGrid3X3, LuHammer, LuImage, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRows3, LuRuler, LuScan, LuScissors, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
 import type { IconType } from "react-icons"
-import { PanelGroup, PanelSection } from "../../components/PanelSection"
-import { SubFold } from "../../components/SubFold"
+import { SettingsGroup } from "../../components/SettingsGroup"
+import { MasterDetail } from "../../components/MasterDetail"
+import { useSessionString } from "./useSessionString"
 import { toaster } from "../../components/ui/toaster"
 import {
   DEFAULT_SETTINGS,
@@ -108,6 +110,9 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
 
   return (
     <Stack gap={5} w="full">
+      <SettingsPages
+        header={
+          <Stack gap={4}>
       <HStack justify="space-between" wrap="wrap" gap={3}>
         <Heading size="xl">Preferències</Heading>
         <HStack>
@@ -134,31 +139,32 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
         </Alert.Root>
       )}
 
-      <PanelGroup storageKey="mobles:settings-open-section" defaultOpen="">
-        <Stack gap={0}>
-          <Section id="references" wide title="Objectes de referència" icon={LuScan} onReset={() => setReset({ key: "references", label: "Objectes de referència" })}>
+          </Stack>
+        }
+      >
+          <Pane id="references" wide title="Objectes de referència" icon={LuScan} desc="Mides conegudes per calibrar la foto i per veure-les al costat del moble." onReset={() => setReset({ key: "references", label: "Objectes de referència" })}>
             <Text fontSize="sm" color="fg.muted" maxW="3xl">
               Una sola llista per a la foto (es calibra amb la cara del davant, amplada × alçada) i per a l'editor (fantasma 3D,
               cal fondària). La distància a la paret corregeix l'escala si l'objecte no hi toca.
             </Text>
             <ReferencesList refs={draft.references} onChange={(references) => set("references", references)} />
-          </Section>
+          </Pane>
 
-          <Section id="materials" wide title="Materials" icon={LuPalette} onReset={() => setReset({ key: "materials", label: "Materials" })}>
+          <Pane id="materials" wide title="Materials" icon={LuPalette} desc="Taulers, fons, metall, pedra i vidre, i els de simulació per als ambients." onReset={() => setReset({ key: "materials", label: "Materials" })}>
             <MaterialsList materials={draft.materials} onChange={(materials) => set("materials", materials)} />
-            <SubFold icon={<LuSquareStack />} title="Per defecte als mòduls nous" summary={`${draft.defaults.material} ${draft.defaults.thickness} · fons ${draft.defaults.backMaterial} ${draft.defaults.backThickness}`}>
+            <SettingsGroup icon={<LuSquareStack />} title="Per defecte als mòduls nous" summary={`${draft.defaults.material} ${draft.defaults.thickness} · fons ${draft.defaults.backMaterial} ${draft.defaults.backThickness}`}>
             <SimpleGrid columns={2} gap={3} maxW="xl">
               <MaterialSelect label="Tauler" materials={draft.materials.filter((m) => !m.forBacks && m.category !== "sim")} value={draft.defaults.material} onChange={(material) => set("defaults", { ...draft.defaults, material })} />
               <NumberField label="Gruix tauler" value={draft.defaults.thickness} min={8} max={40} step={1} onChange={(thickness) => set("defaults", { ...draft.defaults, thickness })} />
               <MaterialSelect label="Fons" materials={draft.materials} value={draft.defaults.backMaterial} onChange={(backMaterial) => set("defaults", { ...draft.defaults, backMaterial })} />
               <NumberField label="Gruix fons" value={draft.defaults.backThickness} min={3} max={40} step={1} onChange={(backThickness) => set("defaults", { ...draft.defaults, backThickness })} />
             </SimpleGrid>
-            </SubFold>
-          </Section>
+            </SettingsGroup>
+          </Pane>
 
-          <Section id="boards" title="Taulers i nesting" icon={LuLayoutGrid} onReset={() => setReset({ key: "boards", label: "Taulers i nesting" })}>
-            <FoldGrid>
-            <SubFold icon={<LuLayoutGrid />} title="Mides de tauler" summary={draft.boards.sheets.map((x) => `${x.w}×${x.h}`).join(" · ")}>
+          <Pane id="boards" title="Taulers i nesting" icon={LuLayoutGrid} desc="Mides dels taulers i com es talla." onReset={() => setReset({ key: "boards", label: "Taulers i nesting" })}>
+            <Stack gap={3}>
+            <SettingsGroup icon={<LuLayoutGrid />} title="Mides de tauler" summary={draft.boards.sheets.map((x) => `${x.w}×${x.h}`).join(" · ")}>
             {/* Taula en graella: capçalera una sola vegada i una fila per mida. */}
             <Grid templateColumns={{ base: "minmax(0, 1fr) minmax(0, 1fr) 32px", sm: "minmax(0, 1fr) 150px 150px 32px" }} gap={2} alignItems="center">
               <Text textStyle="xs" color="fg.muted" display={{ base: "none", sm: "block" }}>Material</Text>
@@ -193,8 +199,8 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             <Button size="xs" variant="ghost" alignSelf="flex-start" onClick={() => set("boards", { ...draft.boards, sheets: [...draft.boards.sheets, { material: "", w: 2440, h: 1220 }] })}>
               <LuPlus /> Afegir mida de tauler
             </Button>
-            </SubFold>
-            <SubFold icon={<LuScissors />} title="Tall" summary={`kerf ${draft.boards.kerf} · marge ${draft.boards.margin}${draft.boards.ignoreGrain ? " · gira amb veta" : ""}`}>
+            </SettingsGroup>
+            <SettingsGroup icon={<LuScissors />} title="Tall" summary={`kerf ${draft.boards.kerf} · marge ${draft.boards.margin}${draft.boards.ignoreGrain ? " · gira amb veta" : ""}`}>
             <SimpleGrid columns={2} gap={3}>
               <NumberField label="Kerf (fresa)" value={draft.boards.kerf} min={0} max={30} step={0.5} onChange={(kerf) => set("boards", { ...draft.boards, kerf })} />
               <NumberField label="Marge del tauler" value={draft.boards.margin} min={0} max={100} step={1} onChange={(margin) => set("boards", { ...draft.boards, margin })} />
@@ -204,23 +210,23 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
               <Switch.Control />
               <Switch.Label>Permetre girar les peces encara que tinguin veta</Switch.Label>
             </Switch.Root>
-            </SubFold>
-            </FoldGrid>
-          </Section>
+            </SettingsGroup>
+            </Stack>
+          </Pane>
 
-          <Section id="hardware" wide title="Ferratges i mecanitzats" icon={LuHammer} onReset={() => setReset({ key: "hardware", label: "Ferratges i mecanitzats" })}>
+          <Pane id="hardware" wide title="Ferratges i mecanitzats" icon={LuHammer} desc="Frontisses, guies, espigues i forats." onReset={() => setReset({ key: "hardware", label: "Ferratges i mecanitzats" })}>
             <HardwareForm hardware={draft.hardware} onChange={(hardware) => set("hardware", hardware)} />
-          </Section>
+          </Pane>
 
-          <Section id="gaps" title="Jocs per defecte" icon={LuRuler} onReset={() => setReset({ key: "gaps", label: "Jocs per defecte" })}>
+          <Pane id="gaps" title="Jocs per defecte" icon={LuRuler} desc="Separacions dels fronts, prestatges i fons." onReset={() => setReset({ key: "gaps", label: "Jocs per defecte" })}>
             <FoldGrid>
-            <SubFold icon={<LuDoorClosed />} title="Fronts" summary={`porta–cos ${draft.gaps.outerGap} · entre fronts ${draft.gaps.betweenGap}`}>
+            <SettingsGroup icon={<LuDoorClosed />} title="Fronts" summary={`porta–cos ${draft.gaps.outerGap} · entre fronts ${draft.gaps.betweenGap}`}>
             <SimpleGrid columns={2} gap={3}>
               <NumberField label="Porta–cos" value={draft.gaps.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => set("gaps", { ...draft.gaps, outerGap })} />
               <NumberField label="Entre fronts" value={draft.gaps.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => set("gaps", { ...draft.gaps, betweenGap })} />
             </SimpleGrid>
-            </SubFold>
-            <SubFold icon={<LuRows3 />} title="Prestatges i fons" summary={`prestatge ${draft.gaps.shelfClearance} / ${draft.gaps.shelfSetback} · ranura ${draft.gaps.backSetback} × ${draft.gaps.grooveDepth}`}>
+            </SettingsGroup>
+            <SettingsGroup icon={<LuRows3 />} title="Prestatges i fons" summary={`prestatge ${draft.gaps.shelfClearance} / ${draft.gaps.shelfSetback} · ranura ${draft.gaps.backSetback} × ${draft.gaps.grooveDepth}`}>
             <SimpleGrid columns={2} gap={3}>
               <NumberField label="Prestatge (joc)" value={draft.gaps.shelfClearance} min={0} max={5} step={0.5} onChange={(shelfClearance) => set("gaps", { ...draft.gaps, shelfClearance })} />
               <NumberField label="Prestatge (retranq.)" value={draft.gaps.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set("gaps", { ...draft.gaps, shelfSetback })} />
@@ -228,11 +234,11 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
               <NumberField label="Ranura del fons" value={draft.gaps.backSetback} min={0} max={60} step={1} help="Distància al cantell posterior" onChange={(backSetback) => set("gaps", { ...draft.gaps, backSetback })} />
               <NumberField label="Fondària ranura" value={draft.gaps.grooveDepth} min={3} max={15} step={1} onChange={(grooveDepth) => set("gaps", { ...draft.gaps, grooveDepth })} />
             </SimpleGrid>
-            </SubFold>
+            </SettingsGroup>
             </FoldGrid>
-          </Section>
+          </Pane>
 
-          <Section id="label" title="Etiquetes" icon={LuTag} onReset={() => setReset({ key: "label", label: "Etiquetes" })}>
+          <Pane id="label" title="Etiquetes" icon={LuTag} desc="Mida de l'etiqueta de les peces." onReset={() => setReset({ key: "label", label: "Etiquetes" })}>
             <Text fontSize="sm" color="fg.muted">
               Mida de l'etiqueta per triar on s'enganxa (PosX/PosY del CSV del taller). Per defecte 99 × 68, Avery L7165.
             </Text>
@@ -240,9 +246,9 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
               <NumberField label="Amplada" value={draft.label.w} min={10} max={300} step={1} onChange={(w) => set("label", { ...draft.label, w })} />
               <NumberField label="Alçada" value={draft.label.h} min={10} max={300} step={1} onChange={(h) => set("label", { ...draft.label, h })} />
             </SimpleGrid>
-          </Section>
+          </Pane>
 
-          <Section id="display" title="Visualització" icon={LuGrid3X3} onReset={() => setReset({ key: "display", label: "Visualització" })}>
+          <Pane id="display" title="Visualització" icon={LuGrid3X3} desc="Unitat de les mides a la pantalla." onReset={() => setReset({ key: "display", label: "Visualització" })}>
             <Field.Root>
               <Field.Label>Unitat de les mides a la pantalla</Field.Label>
               <SegmentGroup.Root size="sm" value={draft.display.unit} onValueChange={(e) => (e.value === "mm" || e.value === "cm") && set("display", { unit: e.value })}>
@@ -258,24 +264,23 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
               </SegmentGroup.Root>
               <Field.HelperText>Internament tot es guarda en mm; els fitxers per al taller sempre van en mm.</Field.HelperText>
             </Field.Root>
-          </Section>
+          </Pane>
 
-          <PanelSection id="theme" title="Tema" icon={LuSunMoon}>
+          <Pane id="theme" title="Tema" icon={LuSunMoon} desc="Dia o nit i el color principal de l'app.">
             <FoldGrid>
-              <SubFold icon={<LuSunMoon />} title="Aparença" summary="Dia · Nit · Com el sistema">
+              <SettingsGroup icon={<LuSunMoon />} title="Aparença" summary="Dia · Nit · Com el sistema">
                 <ThemeField />
-              </SubFold>
-              <SubFold icon={<LuPalette />} title="Color principal" summary="Botons, seleccions i ressaltats">
+              </SettingsGroup>
+              <SettingsGroup icon={<LuPalette />} title="Color principal" summary="Botons, seleccions i ressaltats">
                 <AccentField />
-              </SubFold>
+              </SettingsGroup>
             </FoldGrid>
-          </PanelSection>
+          </Pane>
 
-          <PanelSection id="viewer3d" title="Visor 3D" icon={LuLampFloor}>
+          <Pane id="viewer3d" title="Visor 3D" icon={LuLampFloor} desc="Qualitat del visor i l'escena del mode Presentació.">
             <SceneFields previewComposition={previewComposition} />
-          </PanelSection>
-        </Stack>
-      </PanelGroup>
+          </Pane>
+      </SettingsPages>
 
       <Dialog.Root role="alertdialog" open={reset !== null} onOpenChange={(e) => !e.open && setReset(null)}>
         <Portal>
@@ -304,23 +309,117 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
   )
 }
 
-/**
- * Secció de preferències. L'interior no ocupa tota l'amplada (els camps queden a una
- * mida llegible); les llistes de targetes (`wide`) sí, perquè es reparteixen en graella.
- */
-function Section({ id, title, icon, onReset, wide, children }: { id: string; title: string; icon: IconType; onReset: () => void; wide?: boolean; children: ReactNode }) {
-  return (
-    <PanelSection id={id} title={title} icon={icon}>
-      <Stack gap={3} w="full" maxW={wide ? "none" : "3xl"}>
-        {children}
-        <Button size="xs" variant="ghost" colorPalette="red" alignSelf="flex-start" onClick={onReset}>
-          <LuRotateCcw /> Restaurar valors inicials
-        </Button>
-      </Stack>
-    </PanelSection>
-  )
+interface PaneProps {
+  id: string
+  title: string
+  icon: IconType
+  desc?: string
+  onReset?: () => void
+  wide?: boolean
+  children: ReactNode
 }
 
+/** Una pàgina de Preferències (només en llegeix les propietats `SettingsPages`). */
+function Pane(_: PaneProps): ReactNode {
+  return null
+}
+
+/**
+ * Preferències com les apps professionals (Configuració de macOS, Figma, VS Code): a l'esquerra
+ * la llista d'apartats i a la dreta la pàgina triada, amb els grups d'opcions a la vista (res no
+ * s'obre de cop). Al mòbil: la llista d'apartats i, en triar-ne un, la seva pàgina amb «‹ Preferències».
+ */
+function SettingsPages({ header, children }: { header: ReactNode; children: ReactNode }) {
+  const panes = Children.toArray(children)
+    .filter(isValidElement)
+    .map((c) => c.props as PaneProps)
+  const [active, setActive] = useSessionString("mobles:settings-section")
+  const cur = panes.find((p) => p.id === active) ?? null
+  const shown = cur ?? panes[0]!
+  const Icon = shown.icon
+  return (
+    <Stack gap={5}>
+    {/* Capçalera (títol, importar/exportar): al mòbil, només a la llista d'apartats. */}
+    <Box display={{ base: cur ? "none" : "block", md: "block" }}>{header}</Box>
+    <Flex gap={6} align="flex-start">
+      {/* Llista d'apartats: a l'ordinador sempre; al mòbil, només si no n'hi ha cap d'obert. */}
+      <Stack as="nav" aria-label="Apartats de Preferències" w={{ base: "full", md: "230px" }} flexShrink={0} gap={0.5} display={{ base: cur ? "none" : "flex", md: "flex" }} position={{ md: "sticky" }} top={{ md: 0 }}>
+        <Box borderWidth={{ base: "1px", md: 0 }} rounded="lg" overflow="hidden" bg={{ base: "bg.panel", md: "transparent" }}>
+          {panes.map((p, i) => {
+            const on = p.id === shown.id
+            const PIcon = p.icon
+            return (
+              <HStack
+                key={p.id}
+                as="button"
+                w="full"
+                gap={3}
+                px={3}
+                py={{ base: 3, md: 2 }}
+                rounded={{ md: "md" }}
+                borderTopWidth={{ base: i ? "1px" : 0, md: 0 }}
+                textAlign="left"
+                cursor="pointer"
+                bg={{ md: on ? "wood.subtle" : undefined }}
+                color={{ md: on ? "wood.fg" : undefined }}
+                fontWeight={{ md: on ? "semibold" : "normal" }}
+                _hover={{ bg: { base: "bg.muted", md: on ? "wood.subtle" : "bg.muted" } }}
+                aria-current={on ? "page" : undefined}
+                onClick={() => setActive(p.id)}
+              >
+                <Box color="wood.fg" display="inline-flex">
+                  <PIcon />
+                </Box>
+                <Stack gap={0} flex={1} minW={0}>
+                  <Text fontSize="sm" truncate>
+                    {p.title}
+                  </Text>
+                  {p.desc && (
+                    <Text fontSize="xs" color="fg.muted" truncate display={{ md: "none" }}>
+                      {p.desc}
+                    </Text>
+                  )}
+                </Stack>
+                <Box color="fg.subtle" display={{ base: "inline-flex", md: "none" }}>
+                  <LuChevronRight />
+                </Box>
+              </HStack>
+            )
+          })}
+        </Box>
+      </Stack>
+      <Stack flex={1} minW={0} gap={4} display={{ base: cur ? "flex" : "none", md: "flex" }}>
+        <Button display={{ base: "inline-flex", md: "none" }} variant="ghost" size="sm" alignSelf="flex-start" ml={-2} onClick={() => setActive(null)}>
+          <LuChevronLeft /> Preferències
+        </Button>
+        <HStack justify="space-between" gap={3} wrap="wrap">
+          <HStack gap={2.5}>
+            <Box color="wood.fg" fontSize="xl" display="inline-flex">
+              <Icon />
+            </Box>
+            <Stack gap={0}>
+              <Heading size="lg">{shown.title}</Heading>
+              {shown.desc && (
+                <Text fontSize="sm" color="fg.muted">
+                  {shown.desc}
+                </Text>
+              )}
+            </Stack>
+          </HStack>
+          {shown.onReset && (
+            <Button size="xs" variant="ghost" colorPalette="red" onClick={shown.onReset}>
+              <LuRotateCcw /> Restaurar valors inicials
+            </Button>
+          )}
+        </HStack>
+        <Stack gap={3} w="full" maxW={shown.wide ? "none" : "3xl"}>
+          {shown.children}
+        </Stack>
+      </Stack>
+    </Flex>
+    </Stack>
+  )
+}
 
 /**
  * Graella de files plegables: a l'ordinador, tantes columnes com hi càpiguen (mín. 340 px);
@@ -337,6 +436,8 @@ function FoldGrid({ children }: { children: ReactNode }) {
 // --- Objectes de referència --------------------------------------------------------------
 
 function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: RefPreset[]) => void }) {
+  const [sel, setSel] = useSessionString("mobles:settings-ref")
+  const [query, setQuery] = useState("")
   const update = (i: number, patch: Partial<RefPreset>) => onChange(refs.map((r, k) => (k === i ? { ...r, ...patch } : r)))
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir
@@ -345,40 +446,64 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
     ;[next[i], next[j]] = [next[j]!, next[i]!]
     onChange(next)
   }
-  const add = () => onChange([{ id: newId("ref"), name: "Objecte nou", w: 600, h: 600, plane: "wall", wallOffset: 0 }, ...refs])
+  const add = () => {
+    const r: RefPreset = { id: newId("ref"), name: "Objecte nou", w: 600, h: 600, plane: "wall", wallOffset: 0 }
+    onChange([r, ...refs])
+    setSel(r.id)
+  }
   const duplicate = (i: number) => {
     const src = refs[i]!
     const copy: RefPreset = { ...src, id: newId("ref"), name: `${src.name} (còpia)`, builtin: undefined, hidden: undefined }
     const next = [...refs]
     next.splice(i + 1, 0, copy)
     onChange(next)
+    setSel(copy.id)
   }
+  const q = query.trim().toLowerCase()
+  const shown = refs.filter((r) => !q || r.name.toLowerCase().includes(q))
+  const i = refs.findIndex((r) => r.id === sel)
+  const r = i >= 0 ? refs[i]! : null
   return (
-    <Stack gap={2}>
-      <Button size="xs" variant="outline" alignSelf="flex-start" onClick={add}>
-        <LuPlus /> Afegir objecte
-      </Button>
-      <FoldGrid>
-        {refs.map((r, i) => (
-        <Box key={r.id} opacity={r.hidden ? 0.55 : 1}>
-        <SubFold
-          icon={<LuScan />}
-          title={
-            <HStack gap={1.5} as="span">
-              <span>{r.name}</span>
-              {r.builtin && (
-                <Badge size="sm" variant="subtle">
-                  inicial
-                </Badge>
-              )}
-            </HStack>
-          }
-          summary={`${r.w} × ${r.h}${r.d ? ` × ${r.d}` : ""} mm · ${r.plane === "floor" ? "terra" : "paret"}`}
-          actions={<>
-                <IconButton aria-label="Pujar" size="xs" variant="ghost" disabled={i === 0} onClick={() => move(i, -1)}>
+    <MasterDetail
+      groups={[
+        {
+          id: "refs",
+          label: "Objectes",
+          hint: "Els inicials es poden amagar; els teus, eliminar.",
+          items: shown.map((x) => ({
+            id: x.id,
+            lead: <LuScan />,
+            title: x.name,
+            subtitle: `${x.w} × ${x.h}${x.d ? ` × ${x.d}` : ""} mm · ${x.plane === "floor" ? "terra" : "paret"}`,
+            badge: x.builtin ? (
+              <Badge size="xs" variant="subtle">
+                inicial
+              </Badge>
+            ) : undefined,
+            dimmed: x.hidden,
+          })),
+        },
+      ]}
+      selected={r ? r.id : null}
+      onSelect={setSel}
+      query={query}
+      onQuery={setQuery}
+      addLabel="Afegir"
+      onAdd={add}
+      backLabel="Objectes de referència"
+      empty={<Text fontSize="sm" color="fg.muted">Tria un objecte de la llista per editar-lo.</Text>}
+      detail={
+        r && (
+          <SettingsGroup
+            icon={<LuScan />}
+            title={r.name}
+            summary={r.builtin ? "Objecte inicial (es pot amagar, no eliminar)" : "Objecte teu"}
+            actions={
+              <>
+                <IconButton aria-label="Pujar a la llista" size="xs" variant="ghost" disabled={i === 0} onClick={() => move(i, -1)}>
                   <LuArrowUp />
                 </IconButton>
-                <IconButton aria-label="Baixar" size="xs" variant="ghost" disabled={i === refs.length - 1} onClick={() => move(i, 1)}>
+                <IconButton aria-label="Baixar a la llista" size="xs" variant="ghost" disabled={i === refs.length - 1} onClick={() => move(i, 1)}>
                   <LuArrowDown />
                 </IconButton>
                 <IconButton aria-label="Duplicar objecte" size="xs" variant="ghost" onClick={() => duplicate(i)}>
@@ -389,16 +514,26 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
                     {r.hidden ? <LuEyeOff /> : <LuEye />}
                   </IconButton>
                 ) : (
-                  <IconButton aria-label="Eliminar objecte" size="xs" variant="ghost" colorPalette="red" onClick={() => onChange(refs.filter((_, k) => k !== i))}>
+                  <IconButton
+                    aria-label="Eliminar objecte"
+                    size="xs"
+                    variant="ghost"
+                    colorPalette="red"
+                    onClick={() => {
+                      onChange(refs.filter((_, k) => k !== i))
+                      setSel(null)
+                    }}
+                  >
                     <LuTrash2 />
                   </IconButton>
                 )}
-</>}
-        >
-          <Field.Root>
-            <Field.Label fontSize="sm">Nom</Field.Label>
-            <Input size="sm" value={r.name} onChange={(e) => update(i, { name: e.target.value })} />
-          </Field.Root>
+              </>
+            }
+          >
+            <Field.Root>
+              <Field.Label fontSize="sm">Nom</Field.Label>
+              <Input size="sm" value={r.name} onChange={(e) => update(i, { name: e.target.value })} />
+            </Field.Root>
             <Grid templateColumns="repeat(6, minmax(0, 1fr))" gap={2}>
               <GridItem colSpan={2}>
                 <NumberField label="Amplada" value={r.w} min={1} max={10000} step={10} onChange={(w) => update(i, { w })} />
@@ -423,11 +558,10 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
                 <NumberField label="A la paret" value={r.wallOffset} min={0} max={5000} step={10} onChange={(wallOffset) => update(i, { wallOffset })} />
               </GridItem>
             </Grid>
-        </SubFold>
-        </Box>
-        ))}
-      </FoldGrid>
-    </Stack>
+          </SettingsGroup>
+        )
+      }
+    />
   )
 }
 
@@ -447,44 +581,66 @@ function parseList(text: string): number[] {
 }
 
 function MaterialsList({ materials, onChange }: { materials: MaterialPref[]; onChange: (m: MaterialPref[]) => void }) {
+  const [sel, setSel] = useSessionString("mobles:settings-material")
+  const [query, setQuery] = useState("")
   const update = (i: number, patch: Partial<MaterialPref>) => onChange(materials.map((m, k) => (k === i ? { ...m, ...patch } : m)))
-  const add = () => onChange([{ id: newId("mat"), name: "Material nou", thicknesses: [19], hasGrain: false, finish: { kind: "color", color: "#e5e5e5" }, edge: "" }, ...materials])
+  const add = () => {
+    const m: MaterialPref = { id: newId("mat"), name: "Material nou", thicknesses: [19], hasGrain: false, finish: { kind: "color", color: "#e5e5e5" }, edge: "" }
+    onChange([m, ...materials])
+    setSel(m.id)
+  }
+  const q = query.trim().toLowerCase()
+  const i = materials.findIndex((m) => m.id === sel)
+  const m = i >= 0 ? materials[i]! : null
   return (
-    <Stack gap={2}>
-      <Button size="xs" variant="outline" alignSelf="flex-start" onClick={add}>
-        <LuPlus /> Afegir material
-      </Button>
-      {/* Per categories: Taulers · Fons · Metall, pedra i vidre · Simulació. */}
-      {MATERIAL_CATEGORIES.map((c) => {
-        const inCat = materials.map((m, i) => ({ m, i })).filter(({ m }) => materialCategory(m) === c.id)
-        if (!inCat.length) return null
-        return (
-          <Stack key={c.id} gap={1.5} mt={2}>
-            <HStack gap={2}>
-              <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
-                {c.label}
-              </Text>
-              <Badge size="xs" variant="subtle" colorPalette="gray">
-                {inCat.length}
-              </Badge>
-            </HStack>
-            <Text fontSize="xs" color="fg.muted">
-              {c.hint}
-            </Text>
-            <FoldGrid>
-              {inCat.map(({ m, i }) => (
-                <MaterialCard key={m.id} m={m} onChange={(patch) => update(i, patch)} onDuplicate={() => {
-                  const next = [...materials]
-                  next.splice(i + 1, 0, { ...m, id: newId("mat"), name: `${m.name} (còpia)` })
-                  onChange(next)
-                }} onDelete={() => onChange(materials.filter((_, k) => k !== i))} canDelete={materials.length > 1} />
-              ))}
-            </FoldGrid>
-          </Stack>
+    <MasterDetail
+      // Per categories: Taulers · Fons · Metall, pedra i vidre · Simulació.
+      groups={MATERIAL_CATEGORIES.map((c) => ({
+        id: c.id,
+        label: c.label,
+        hint: c.hint,
+        items: materials
+          .filter((x) => materialCategory(x) === c.id && (!q || x.name.toLowerCase().includes(q)))
+          .map((x) => ({ id: x.id, lead: <MaterialSwatch m={x} />, title: x.name, subtitle: `${x.thicknesses.join(" · ")} mm · ${FINISH_LABEL[x.finish.kind]}${x.edge ? ` · ${x.edge}` : ""}` })),
+      }))}
+      selected={m ? m.id : null}
+      onSelect={setSel}
+      query={query}
+      onQuery={setQuery}
+      addLabel="Afegir"
+      onAdd={add}
+      backLabel="Materials"
+      empty={<Text fontSize="sm" color="fg.muted">Tria un material de la llista per editar-lo.</Text>}
+      detail={
+        m && (
+          <MaterialCard
+            key={m.id}
+            m={m}
+            onChange={(patch) => update(i, patch)}
+            onDuplicate={() => {
+              const copy = { ...m, id: newId("mat"), name: `${m.name} (còpia)` }
+              const next = [...materials]
+              next.splice(i + 1, 0, copy)
+              onChange(next)
+              setSel(copy.id)
+            }}
+            onDelete={() => {
+              onChange(materials.filter((_, k) => k !== i))
+              setSel(null)
+            }}
+            canDelete={materials.length > 1}
+          />
         )
-      })}
-    </Stack>
+      }
+    />
   )
+}
+
+/** Mostra del material (color, fusta o la foto de la textura). */
+function MaterialSwatch({ m, size = "18px" }: { m: MaterialPref; size?: string }) {
+  const f = m.finish
+  const swatch = f.kind === "wood" || f.kind === "image" ? undefined : f.color
+  return <Box w={size} h={size} rounded="sm" borderWidth="1px" flexShrink={0} bg={swatch} bgImage={f.kind === "wood" ? "repeating-linear-gradient(90deg, #b98b57 0 2px, #a3763f 2px 3px)" : f.kind === "image" ? `url(${f.src})` : undefined} bgSize="cover" />
 }
 
 const FINISH_LABEL: Record<Finish["kind"], string> = { color: "color llis", lacquer: "lacat", wood: "fusta", image: "foto real", metal: "metall", glass: "vidre", fabric: "teixit", tiles: "rajola" }
@@ -502,10 +658,9 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needsAspect])
   const swatch = finish.kind === "wood" || finish.kind === "image" ? undefined : finish.color
-  const sw = <Box w="18px" h="18px" rounded="sm" borderWidth="1px" flexShrink={0} bg={swatch} bgImage={finish.kind === "wood" ? "repeating-linear-gradient(90deg, #b98b57 0 2px, #a3763f 2px 3px)" : finish.kind === "image" ? `url(${finish.src})` : undefined} bgSize="cover" />
   return (
-    <SubFold
-      icon={sw}
+    <SettingsGroup
+      icon={<MaterialSwatch m={m} size="22px" />}
       title={
         <HStack gap={1.5} as="span">
           <span>{m.name}</span>
@@ -694,17 +849,18 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete }: { m: Ma
           </NativeSelect.Root>
           <Field.HelperText>{MATERIAL_CATEGORIES.find((c) => c.id === materialCategory(m))!.hint}</Field.HelperText>
         </Field.Root>
-    </SubFold>
+    </SettingsGroup>
   )
 }
 
-export function MaterialSelect({ label, materials, value, onChange }: { label: string; materials: MaterialPref[]; value: string; onChange: (name: string) => void }) {
-  const known = materials.some((m) => m.name === value)
+export function MaterialSelect({ label, materials, value, onChange, emptyLabel }: { label: string; materials: MaterialPref[]; value: string; onChange: (name: string) => void; emptyLabel?: string }) {
+  const known = materials.some((m) => m.name === value) || (emptyLabel !== undefined && value === "")
   return (
     <Field.Root>
       <Field.Label fontSize="sm">{label}</Field.Label>
       <NativeSelect.Root size="sm">
         <NativeSelect.Field value={value} onChange={(e) => onChange(e.target.value)}>
+          {emptyLabel !== undefined && <option value="">{emptyLabel}</option>}
           {!known && <option value={value}>{value || "(sense material)"}</option>}
           {MATERIAL_CATEGORIES.map((c) => {
             const list = materials.filter((m) => materialCategory(m) === c.id)
@@ -793,9 +949,9 @@ function HardwareForm({ hardware: h, onChange }: { hardware: Settings["hardware"
 
 function Group({ title, icon: Icon, children }: { title: string; icon: IconType; children: ReactNode }) {
   return (
-    <SubFold icon={<Icon />} title={title}>
+    <SettingsGroup icon={<Icon />} title={title}>
       {children}
-    </SubFold>
+    </SettingsGroup>
   )
 }
 
@@ -924,7 +1080,7 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
   const wallName = WALLS.find((w) => w.color === scene.wall)?.label
   return (
     <FoldGrid>
-      <SubFold icon={<LuSparkles />} title="Qualitat" summary={QUALITY_LABELS[quality]}>
+      <SettingsGroup icon={<LuSparkles />} title="Qualitat" summary={QUALITY_LABELS[quality]}>
       <Field.Root>
         <Field.Label>Qualitat</Field.Label>
         <SegmentGroup.Root size="sm" value={quality} onValueChange={(e) => e.value && e.value in QUALITY_LABELS && setQuality(e.value as RenderQuality)}>
@@ -938,9 +1094,9 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
         </SegmentGroup.Root>
         <Field.HelperText>Ràpida per treballar (al visor, modes «Per peça» i «Textura»); Presentació per ensenyar-lo. També es canvia a «Opcions de vista» del visor.</Field.HelperText>
       </Field.Root>
-      </SubFold>
+      </SettingsGroup>
 
-      <SubFold icon={<LuLampFloor />} title="Escena de presentació" summary={`${wallName ?? "Paret personalitzada"} · ${LIGHTS.find((l) => l.id === scene.light)?.label ?? ""}`}>
+      <SettingsGroup icon={<LuLampFloor />} title="Escena de presentació" summary={`${wallName ?? "Paret personalitzada"} · ${LIGHTS.find((l) => l.id === scene.light)?.label ?? ""}`}>
       <SimpleGrid columns={{ base: 1, lg: 2 }} gap={6} alignItems="start">
         <Stack gap={4}>
           <Text textStyle="sm" color="fg.muted">
@@ -992,7 +1148,7 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
         </Stack>
         <ScenePreview composition={previewComposition} />
       </SimpleGrid>
-      </SubFold>
+      </SettingsGroup>
     </FoldGrid>
   )
 }

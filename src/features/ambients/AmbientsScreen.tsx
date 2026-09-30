@@ -1,14 +1,15 @@
-import { Accordion, Badge, Box, Button, Card, CloseButton, Dialog, Heading, HStack, IconButton, Input, InputGroup, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
+import { Accordion, Badge, Box, Button, Card, CloseButton, Dialog, Heading, HStack, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
 import { useMemo, useState } from "react"
-import { LuBookOpen, LuCopy, LuHistory, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu"
+import { LuBookOpen, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { uniqueName } from "../../core/file/mobleFile"
 import { AMBIENT_CATEGORIES, AMBIENT_TEMPLATES, EMPTY_AMBIENT, footprintCorners, parseAmbient, roomWalls, wallCorners, type Ambient, type AmbientTemplate } from "../../core/model"
-import { createAmbient, db, deleteAmbient, duplicateAmbient, type AmbientRow } from "../../db/db"
+import { createAmbient, db, deleteAmbient, duplicateAmbient, setAmbientsFolder, type AmbientRow } from "../../db/db"
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { FoldTitle } from "../projects/NewMobleGallery"
 import { GALLERY_COLS, fold, useSessionList } from "../projects/galleryGrid"
 import { ClearHistory } from "../projects/ClearHistory"
+import { FolderedGrid, MoveToFolderDialog } from "../projects/Folders"
 import { createAmbientFromTemplate, templatePreview } from "./fromTemplate"
 import { AMBIENT_TAB_KEY } from "./planGeom"
 
@@ -20,6 +21,7 @@ import { AMBIENT_TAB_KEY } from "./planGeom"
 export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
   const rows = useLiveQuery(() => db.ambients.orderBy("updatedAt").reverse().toArray(), [])
   const [toDelete, setToDelete] = useState<AmbientRow | null>(null)
+  const [toMove, setToMove] = useState<AmbientRow | null>(null)
   const [query, setQuery] = useState("")
   const [busy, setBusy] = useState<string | null>(null)
   const q = fold(query.trim())
@@ -99,37 +101,59 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                         toaster.create({ title: "Historial esborrat", description: "Els mobles i objectes que hi havia es queden a Mobles i Objectes.", type: "info" })
                       }}
                     />
-                    <SimpleGrid columns={GALLERY_COLS} gap={3}>
-                    {shownRows.map((r) => {
-                      const a = parseAmbient(r.data)
-                      return (
-                        <Card.Root key={r.id} variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }}>
-                          <Card.Body p={3} gap={2} cursor="pointer" onClick={() => onOpen(r.id)}>
-                            <AmbientThumb a={a} />
-                            <Text fontWeight="semibold" fontSize="sm" truncate title={r.name}>
-                              {r.name}
-                            </Text>
-                            <Text fontSize="xs" color="fg.muted">
-                              {a.walls.length} {a.walls.length === 1 ? "paret" : "parets"} · {a.items.length} {a.items.length === 1 ? "element" : "elements"}
-                            </Text>
-                          </Card.Body>
-                          <Card.Footer px={3} pb={3} pt={0} gap={0.5} justifyContent="space-between">
-                            <Text fontSize="xs" color="fg.subtle" truncate>
-                              {new Date(r.updatedAt).toLocaleDateString("ca-ES", { day: "numeric", month: "short", year: "numeric" })}
-                            </Text>
-                            <HStack gap={0}>
-                              <IconButton aria-label="Duplicar l'ambient" title="Duplicar" size="xs" variant="ghost" onClick={() => void duplicateAmbient(r.id).then(() => toaster.create({ title: "Ambient duplicat", type: "success" }))}>
-                                <LuCopy />
-                              </IconButton>
-                              <IconButton aria-label="Esborrar l'ambient" title="Esborrar" size="xs" variant="ghost" colorPalette="red" onClick={() => setToDelete(r)}>
-                                <LuTrash2 />
-                              </IconButton>
-                            </HStack>
-                          </Card.Footer>
-                        </Card.Root>
-                      )
-                    })}
-                    </SimpleGrid>
+                    <FolderedGrid
+                      items={shownRows}
+                      folderOf={(r) => r.folder}
+                      keyOf={(r) => r.id}
+                      storageKey="mobles:folders-ambients"
+                      searching={!!q}
+                      onRenameFolder={(from, to) => void setAmbientsFolder(shownRows.filter((r) => r.folder === from).map((r) => r.id), to)}
+                      onUngroup={(name) => void setAmbientsFolder(shownRows.filter((r) => r.folder === name).map((r) => r.id), undefined)}
+                      render={(r) => {
+                        const a = parseAmbient(r.data)
+                        return (
+                          <Card.Root variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }}>
+                            <Card.Body p={3} gap={2} cursor="pointer" onClick={() => onOpen(r.id)}>
+                              <AmbientThumb a={a} />
+                              <Text fontWeight="semibold" fontSize="sm" truncate title={r.name}>
+                                {r.name}
+                              </Text>
+                              <Text fontSize="xs" color="fg.muted">
+                                {a.walls.length} {a.walls.length === 1 ? "paret" : "parets"} · {a.items.length} {a.items.length === 1 ? "element" : "elements"}
+                              </Text>
+                            </Card.Body>
+                            <Card.Footer px={3} pb={3} pt={0} gap={0.5} justifyContent="space-between">
+                              <Text fontSize="xs" color="fg.subtle" truncate>
+                                {new Date(r.updatedAt).toLocaleDateString("ca-ES", { day: "numeric", month: "short", year: "numeric" })}
+                              </Text>
+                              <Menu.Root positioning={{ placement: "bottom-end" }}>
+                                <Menu.Trigger asChild>
+                                  <IconButton aria-label={`Opcions de «${r.name}»`} size="xs" variant="ghost">
+                                    <LuEllipsis />
+                                  </IconButton>
+                                </Menu.Trigger>
+                                <Portal>
+                                  <Menu.Positioner>
+                                    <Menu.Content>
+                                      <Menu.Item value="dup" onClick={() => void duplicateAmbient(r.id).then(() => toaster.create({ title: "Ambient duplicat", type: "success" }))}>
+                                        <LuCopy /> Duplicar
+                                      </Menu.Item>
+                                      <Menu.Item value="move" onClick={() => setToMove(r)}>
+                                        <LuFolderInput /> Moure a un grup…
+                                      </Menu.Item>
+                                      <Menu.Separator />
+                                      <Menu.Item value="del" color="fg.error" onClick={() => setToDelete(r)}>
+                                        <LuTrash2 /> Esborrar
+                                      </Menu.Item>
+                                    </Menu.Content>
+                                  </Menu.Positioner>
+                                </Portal>
+                              </Menu.Root>
+                            </Card.Footer>
+                          </Card.Root>
+                        )
+                      }}
+                    />
                   </Stack>
                 )}
               </Accordion.ItemBody>
@@ -176,6 +200,14 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
         </Accordion.Root>
       </Stack>
 
+      <MoveToFolderDialog
+        open={toMove !== null}
+        what={toMove?.name ?? ""}
+        folders={[...new Set((rows ?? []).filter((r) => r.folder).map((r) => r.folder!))].sort()}
+        current={toMove?.folder}
+        onPick={(f) => toMove && void setAmbientsFolder([toMove.id], f)}
+        onClose={() => setToMove(null)}
+      />
       <Dialog.Root role="alertdialog" open={toDelete !== null} onOpenChange={(e) => !e.open && setToDelete(null)}>
         <Portal>
           <Dialog.Backdrop />

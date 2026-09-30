@@ -169,7 +169,7 @@ el **`MaterialSelect`** de Preferències (per categories) a tot arreu. Una funci
 editor es fa al mòdul compartit perquè la tinguin tots.
 
 ## Objectes (per als ambients)
-- Menú **Mobles · Objectes · Ambients · Preferències**. Un objecte (sofà, làmpada, planta…) és un
+- Un objecte (sofà, làmpada, planta…) és un
   moble del tipus **`objecte`** (`partsOnlyKind`: només peces lliures, com el Flat-pack): s'edita
   amb el **mateix Editor** (peces amb forma, «Talla» per als forats, materials de preferències per
   categories), però **no es fabrica** (`buildComposition` en treu el nesting i els encaixos; al menú
@@ -195,8 +195,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   («Mobles ›» o la fletxa) el deixa d'obrir.
 
 ## Ambients (plànol de la casa amb els mobles)
-- Apartat propi al menú (**Mobles · Ambients · Preferències**; al mòbil, a la barra de baix):
-  els Mobles es dissenyen i es fabriquen; els Ambients són on es col·loquen.
+- Apartat propi al menú (el primer; al mòbil, a la barra de baix): els Mobles es dissenyen i es fabriquen; els Ambients són on es col·loquen.
 - Model a `core/model/ambient.ts` (`Ambient`: `walls`, `items`, `plan`, materials del terra i de
   les parets), Dexie v4 (`ambients`, `data` validat amb `parseAmbient`). Plànol en mm, x a la
   dreta i y avall; al 3D X = x, Z = y. Els elements van pel **centre** de la petjada i giren al
@@ -245,6 +244,12 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Catàleg per categories** (`AMBIENT_CATEGORIES`, `AmbientTemplate.category`: salons, cuines, menjadors,
   dormitoris, infantils, vestidors, rebedors, despatxos, banys, exteriors), un acordió per categoria; la
   cerca també busca la categoria i obre les que coincideixen.
+- **Grups (carpetes)** a l'historial de Mobles, Objectes i Ambients i a «Les teves plantilles»
+  (`Project.folder`, `AmbientRow.folder`, `UserTemplate.folder`; `setProjectsFolder`, `setAmbientsFolder`,
+  `setUserTemplatesFolder`): menú ⋯ de cada targeta (desar com a fitxer, duplicar, **moure a un grup…**,
+  esborrar; el mateix a totes) i `MoveToFolderDialog` (un grup existent, un de nou o treure'l). Es
+  mostren amb `FolderedGrid` (`projects/Folders.tsx`): primer els grups plegables (⋯: canviar el nom,
+  desagrupar) i després els que no en tenen; la cerca obre els grups amb resultats.
 - **Esborrar l'historial** (`projects/ClearHistory.tsx`, el mateix a Mobles, Objectes i Ambients): a dalt de
   l'historial, amb confirmació. A Mobles i Objectes es conserven els que són en algun ambient; a Ambients
   s'esborren els ambients (els seus mobles es queden). Respecta la cerca.
@@ -254,6 +259,10 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   amb cortines). La plantilla pot dur `height`, `walls` (material per costat), `low` (ampits), `open`
   (costats sense paret) i `openings`; `templateWalls` en fa les parets. Mobles nous amb `mag:<id>`
   (`magFurniture.ts`, `MAG_FURNITURE`, fets amb `storeBuilders` del catàleg de botiga).
+- **Finestres i portes**: eines **Finestra** (F) i **Porta** (D) del plànol: clic sobre una paret
+  (`nearestWall`, `addOpening` amb `OPENING_DEFAULTS`, `clampOpening`); al plànol s'arrosseguen al llarg
+  de la paret; a l'inspector de la paret, «Finestres i portes» (tipus, centre, ample, alt, ampit, fulles;
+  + Finestra · Porta · Vidriera) i el material d'aquella paret.
 - **Parets amb material propi i obertures** (`Wall.material`, `Wall.openings`: finestra amb ampit de pedra,
   porta amb fulla, vidriera de terra a sostre amb travessers): `wallOpenings`, `wallSegments` (trossos
   massissos al voltant dels forats) al 3D; al plànol, el forat amb el vidre o l'arc de la porta. El vidre
@@ -280,10 +289,16 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 
 ## UI (Chakra v3 + react-icons)
 - Mobile-first: la faig servir sobretot a l'iPhone. Mínim breakpoints `base` i `md`.
-- **Menú principal en dos nivells** (`App.tsx`): a la llista de Mobles, només `Mobles` i
-  `Preferències`. Amb un moble obert: les seves
-  pàgines (`PROJECT_NAV`: Editor, Peces, Nesting, Exportar) i `Preferències` separat a
-  baix. Pàgines noves d'un moble van a `PROJECT_NAV`; les generals, a baix.
+- **Menú global sempre igual** (`App.tsx`, `GLOBAL_NAV`, com Figma o Linear): Ambients · Objectes ·
+  Mobles i, a baix de tot, Preferències; l'apartat del document obert queda marcat (`section`).
+  **Les pàgines d'un moble** (`PROJECT_NAV`: Editor, Peces, Nesting, Exportar) són **pestanyes al mig
+  de la seva barra superior** (`TopBar tabs`), no al menú; al mòbil, amb un moble obert, la barra de
+  baix són aquestes pàgines. **Les accions d'un apartat van a la seva capçalera** (p. ex. «Obrir
+  fitxer» a Mobles), mai al menú. Clicar l'apartat del document obert torna a la llista.
+- **Mòbil sense títols repetits**: les pàgines d'inici porten el seu títol gran (com iOS) i no hi ha
+  barra de dalt; només n'hi ha quan cal tornar enrere (Preferències des d'un moble: «‹ nom del moble»).
+  Els diàlegs i calaixos a pantalla completa respecten la zona segura (`env(safe-area-inset-top)`), també
+  el botó de tancar.
 - **Barra superior del moble obert** (`components/TopBar.tsx`), com Figma/Onshape/Notion:
   `Mobles › Nom del moble` a l'esquerra (nom editable; "Mobles" torna a la llista) i les
   accions del document a la dreta. Cada pàgina hi posa les seves amb `<TopBarActions>`
@@ -583,13 +598,16 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     selectors del cos ni del taulell. Acabats nous `fabric` (trama) i `tiles` (rajola amb junta i
     mida), procedurals (`patternTexture`). Els materials que no són de CNC pinten els cantells amb
     el mateix material (no «tauler vist»).
-  - **Preferències amb acordions de segon nivell** (`components/SubFold.tsx`): cada material i
-    cada objecte de referència és una fila plegable (resum: gruixos, acabat, cantell / mides);
-    també «Per defecte als mòduls nous», Mides de tauler · Tall, Jocs (Fronts · Prestatges i fons),
-    Ferratges (cada grup), Tema (Aparença · Color) i Visor 3D (Qualitat · Escena).
-    Aquestes files van en **graella** (`FoldGrid`: tantes columnes de ≥ 340 px com hi càpiguen,
-    una al mòbil; cadascuna s'obre sola). Al material, botó visible «Posar una foto de textura»
-    (a més de l'Acabat «Foto (textura)»), amb miniatura, «Canviar la foto» i «Treure-la».
+  - **Preferències com Configuració de macOS / Figma** (`SettingsPages` + `Pane` a `SettingsScreen`):
+    a l'esquerra la llista d'apartats (Objectes de referència, Materials, Taulers i nesting, Ferratges,
+    Jocs, Etiquetes, Visualització, Tema, Visor 3D) i a la dreta la pàgina triada (icona, títol,
+    explicació i «Restaurar valors inicials»); dins, **grups sempre oberts** (`components/SettingsGroup`:
+    targeta amb capçalera, res no s'obre de cop). Materials i objectes de referència fan **llista i detall**
+    (`components/MasterDetail`: llista agrupada per categoria amb mostra, cercador i «Afegir»; el triat
+    s'edita a la dreta). Al mòbil, navegació en profunditat: apartats › pàgina › element, amb «‹ Tornar».
+    L'apartat i l'element triats es recorden durant la sessió (`useSessionString`). Al material, botó
+    visible «Posar una foto de textura» (a més de l'Acabat «Foto (textura)»), amb miniatura, «Canviar la
+    foto» i «Treure-la».
   - **Opcions que no toquen s'amaguen**: sense fons no surten el material i el gruix del fons
     ni la ranura del fons; Cantonades, només si hi ha tapa o base a unir amb els laterals.
   - **Forma del tauler**: `shapeOutline` escala per l'extensió real de la corba (mostrejada),
@@ -746,6 +764,7 @@ Accions principals: icona + text.
 | Visor | Veure a casa (AR) | `LuView` |
 | Visor | Vista 3D · Obertura portes · Materials · Per tipus de peça · Imatge | `LuRotate3D` · `LuDoorOpen` · `LuPalette` · `LuLayers` · `LuImageDown` |
 | Ambients | Ambients · Seleccionar · Paret (ploma) · Habitació · Calibrar · Plànol de fons | `LuHouse` · `LuMousePointer2` · `LuPenTool` · `LuBrickWall` · `LuPencilRuler` · `LuImageUp` |
+| Ambients | Finestra · Porta · Moure a un grup · Grup (carpeta) | `LuAppWindow` · `LuDoorOpen` · `LuFolderInput` · `LuFolder` |
 | Ambients | Afegir moble · Bloc · Plànol · 3D · Girar | `LuBox` · `LuSofa` · `LuMap` · `LuRotate3D` · `LuRotateCw` / `LuRotateCcw` |
 | Exportar | DXF (CNC) · STEP 3D · CSV de nesting · CSV de peces · GLB | `LuScissors` · `LuCuboid` · `LuLayoutGrid` · `LuFileDown` · `LuBoxes` |
 

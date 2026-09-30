@@ -1,5 +1,5 @@
-import { Badge, Button, Card, HStack, IconButton, Text, Wrap } from "@chakra-ui/react"
-import { LuCheck, LuCopy, LuHouse, LuPlus, LuSave, LuTrash2 } from "react-icons/lu"
+import { Badge, Button, Card, IconButton, Menu, Portal, Text, Wrap } from "@chakra-ui/react"
+import { LuCheck, LuCopy, LuEllipsis, LuFolderInput, LuHouse, LuPlus, LuSave, LuTrash2 } from "react-icons/lu"
 import { CompositionThumb } from "../../components/CompositionThumb"
 import { compositionHeight, compositionWidth } from "../../core/model"
 import { compositionOf } from "../../db/compositionStore"
@@ -16,6 +16,7 @@ export function ProjectCard({
   onDuplicate,
   onDelete,
   onSaveFile,
+  onMove,
   onAdd,
   ambients = [],
   currentAmbient,
@@ -25,6 +26,8 @@ export function ProjectCard({
   onDuplicate?: () => void
   onDelete?: () => void
   onSaveFile?: () => void
+  /** Moure a un grup (carpeta) de l'historial. */
+  onMove?: () => void
   onAdd?: () => void
   /** Ambients on hi ha aquest moble. */
   ambients?: { id: number; name: string }[]
@@ -71,23 +74,45 @@ export function ProjectCard({
             <LuPlus /> {here ? "Afegir-ne un altre" : "Afegir"}
           </Button>
         ) : (
-          <HStack gap={0}>
-            {onSaveFile && (
-              <IconButton aria-label="Desar com a fitxer" title="Desar com a fitxer" size="xs" variant="ghost" onClick={onSaveFile}>
-                <LuSave />
-              </IconButton>
-            )}
-            {onDuplicate && (
-              <IconButton aria-label="Duplicar moble" title="Duplicar" size="xs" variant="ghost" onClick={onDuplicate}>
-                <LuCopy />
-              </IconButton>
-            )}
-            {onDelete && (
-              <IconButton aria-label="Esborrar moble" title="Esborrar" size="xs" variant="ghost" colorPalette="red" onClick={onDelete}>
-                <LuTrash2 />
-              </IconButton>
-            )}
-          </HStack>
+          (onSaveFile || onDuplicate || onDelete || onMove) && (
+            // Les accions del document en un menú ⋯, com a «Les teves plantilles» i als ambients.
+            <Menu.Root positioning={{ placement: "bottom-end" }}>
+              <Menu.Trigger asChild>
+                <IconButton aria-label={`Opcions de «${project.name}»`} size="xs" variant="ghost">
+                  <LuEllipsis />
+                </IconButton>
+              </Menu.Trigger>
+              <Portal>
+                <Menu.Positioner>
+                  <Menu.Content>
+                    {onSaveFile && (
+                      <Menu.Item value="file" onClick={onSaveFile}>
+                        <LuSave /> Desar com a fitxer
+                      </Menu.Item>
+                    )}
+                    {onDuplicate && (
+                      <Menu.Item value="dup" onClick={onDuplicate}>
+                        <LuCopy /> Duplicar
+                      </Menu.Item>
+                    )}
+                    {onMove && (
+                      <Menu.Item value="move" onClick={onMove}>
+                        <LuFolderInput /> Moure a un grup…
+                      </Menu.Item>
+                    )}
+                    {onDelete && (
+                      <>
+                        <Menu.Separator />
+                        <Menu.Item value="del" color="fg.error" onClick={onDelete}>
+                          <LuTrash2 /> Esborrar
+                        </Menu.Item>
+                      </>
+                    )}
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Portal>
+            </Menu.Root>
+          )
         )}
       </Card.Footer>
     </Card.Root>

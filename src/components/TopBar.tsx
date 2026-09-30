@@ -27,8 +27,11 @@ export function TopBar({
   onSettings,
   actionsRef,
   menu,
+  tabs,
   rootLabel = "Mobles",
 }: {
+  /** Pàgines del document (Editor · Peces · Nesting · Exportar), al mig de la barra a l'ordinador. */
+  tabs?: ReactNode
   /** On torna la molla de pa («Mobles» o «Objectes»). */
   rootLabel?: string
   projectId: number
@@ -97,7 +100,12 @@ export function TopBar({
           <Editable.Input px={1.5} />
         </Editable.Root>
       </HStack>
-      <HStack gap={1} flexShrink={0}>
+      {tabs && (
+        <Box display={{ base: "none", md: "flex" }} flexShrink={0}>
+          {tabs}
+        </Box>
+      )}
+      <HStack gap={1} flexShrink={0} flex={tabs ? { md: 1 } : undefined} justify="flex-end">
         <HStack gap={1} ref={actionsRef} />
         {menu}
         <IconButton display={{ base: "inline-flex", md: "none" }} aria-label="Preferències" variant="ghost" size="sm" onClick={onSettings}>

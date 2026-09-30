@@ -329,6 +329,41 @@ export function wallOpenings(w: Wall): (Opening & { u0: number; u1: number })[] 
   return out
 }
 
+/** Mides per defecte de cada obertura nova (mm). */
+export const OPENING_DEFAULTS: Record<Opening["kind"], Omit<Opening, "at" | "kind">> = {
+  window: { w: 1200, h: 1200, sill: 900 },
+  door: { w: 900, h: 2100, sill: 0 },
+  glazing: { w: 2400, h: 2400, sill: 0 },
+}
+
+/** Paret més propera a `p` (a menys de mig gruix + `tol`) i la posició al llarg (des de `a`). */
+export function nearestWall(walls: Wall[], p: PlanPt, tol: number): { wall: Wall; at: number; dist: number } | null {
+  let best: { wall: Wall; at: number; dist: number } | null = null
+  for (const w of walls) {
+    const L = wallLength(w)
+    if (L < 1) continue
+    const ux = (w.b[0] - w.a[0]) / L, uy = (w.b[1] - w.a[1]) / L
+    const at = Math.max(0, Math.min(L, (p[0] - w.a[0]) * ux + (p[1] - w.a[1]) * uy))
+    const dist = Math.hypot(p[0] - (w.a[0] + ux * at), p[1] - (w.a[1] + uy * at))
+    if (dist <= w.thickness / 2 + tol && (!best || dist < best.dist)) best = { wall: w, at, dist }
+  }
+  return best
+}
+
+/** Posició d'una obertura ajustada perquè hi càpiga a la paret (centre entre w/2 i L − w/2). */
+export function clampOpening(w: Wall, o: Opening): Opening {
+  const L = wallLength(w)
+  const ww = Math.min(o.w, L)
+  const h = Math.min(o.h, w.height)
+  return { ...o, w: ww, h, sill: Math.min(o.sill, Math.max(0, w.height - h)), at: Math.round(Math.max(ww / 2, Math.min(L - ww / 2, o.at))) }
+}
+
+/** Paret amb una obertura nova del tipus `kind` centrada a `at` (mides per defecte). */
+export function addOpening(w: Wall, kind: Opening["kind"], at: number): Wall {
+  const o = clampOpening(w, { kind, at, ...OPENING_DEFAULTS[kind] })
+  return { ...w, openings: [...(w.openings ?? []), o] }
+}
+
 /**
  * Trossos massissos d'una paret amb obertures, en coordenades de la paret (u al llarg des de
  * l'extrem `a`, v amunt). La paret s'allarga mig gruix per banda perquè les cantonades tanquin.

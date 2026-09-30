@@ -1,7 +1,7 @@
-import { Box, Container, Flex, HStack, Heading, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, Container, Flex, HStack, Heading, IconButton, Menu, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import type { IconType } from "react-icons"
-import { LuArrowLeft, LuBookmark, LuBox, LuDownload, LuDraftingCompass, LuEllipsis, LuFolderOpen, LuHouse, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings, LuSofa } from "react-icons/lu"
+import { LuBookmark, LuChevronLeft, LuBox, LuDownload, LuDraftingCompass, LuEllipsis, LuHouse, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings, LuSofa } from "react-icons/lu"
 import { Toaster } from "./components/ui/toaster"
 import { Tooltip } from "./components/ui/tooltip"
 import { TopBar, TopBarActionsProvider } from "./components/TopBar"
@@ -41,6 +41,10 @@ const PROJECTS_ENTRY: NavEntry = { id: "projects", label: "Mobles", icon: LuBox 
 const OBJECTS_ENTRY: NavEntry = { id: "objects", label: "Objectes", icon: LuSofa }
 const AMBIENTS_ENTRY: NavEntry = { id: "ambients", label: "Ambients", icon: LuHouse }
 const SETTINGS_ENTRY: NavEntry = { id: "settings", label: "Preferències", icon: LuSettings }
+/** Apartats del menú global (barra lateral); Preferències va a baix de tot. */
+const GLOBAL_NAV: NavEntry[] = [AMBIENTS_ENTRY, OBJECTS_ENTRY, PROJECTS_ENTRY]
+/** Mòbil: la barra de baix amb els apartats i Preferències. */
+const GLOBAL_NAV_MOBILE: NavEntry[] = [...GLOBAL_NAV, SETTINGS_ENTRY]
 
 const STORAGE_KEY = "mobles:current-project"
 const AMBIENT_KEY = "mobles:current-ambient"
@@ -87,10 +91,6 @@ export function App() {
   // «Obrir fitxer» del menú: va a la llista de mobles i hi obre el selector de fitxers.
   const [projectsRequest, setProjectsRequest] = useState<ProjectsRequest>(null)
   const clearProjectsRequest = useCallback(() => setProjectsRequest(null), [])
-  const requestProjects = (kind: "open") => {
-    setProjectsRequest({ kind, n: Date.now() })
-    setScreen("projects")
-  }
 
   // Si el projecte guardat ja no existeix (esborrat), torna a la llista.
   useEffect(() => {
@@ -148,6 +148,17 @@ export function App() {
       setProjectId(null)
       setScreen(kind)
     }
+  }
+  /** Apartat actiu al menú global: el del document obert o el de la pàgina. */
+  const section: "ambients" | "objects" | "projects" | "settings" =
+    screen === "settings" ? "settings" : screen === "ambients" || screen === "ambient" ? "ambients" : inProject ? (isObject ? "objects" : "projects") : screen === "objects" ? "objects" : "projects"
+  /** Clic a un apartat: si ja hi ets dins d'un document, torna a la llista; si no, a l'últim obert. */
+  const goSection = (id: string) => {
+    if (id === "settings") return go("settings")
+    if (id === "ambients") return section === "ambients" && screen === "ambient" ? (setAmbientId(null), setScreen("ambients")) : goAmbients()
+    const kind = id === "objects" ? "objects" : "projects"
+    if (section === kind && inProject && screen !== "settings") return backToProjects()
+    goRoot(kind)
   }
   const go = (s: Screen) => {
     if (PROJECT_NAV.some((n) => n.id === s) && projectId === null) return
@@ -238,65 +249,16 @@ export function App() {
             </IconButton>
           </Tooltip>
         </HStack>
-        {inProject ? (
-          <>
-            {/* Moble obert: «Mobles» (tornar a la llista) i, a sota, les pàgines del moble. */}
-            <NavItem icon={rootEntry.icon} label={rootEntry.label} collapsed={navCollapsed} active={false} disabled={false} onClick={backToProjects} />
-            <Box borderTopWidth="1px" my={1} />
-            {projectNav.map((n) => (
-              <NavItem
-                key={n.id}
-                icon={n.icon}
-                label={n.label}
-                collapsed={navCollapsed}
-                active={screen === n.id || (n.id === "editor" && screen === "photo")}
-                disabled={false}
-                onClick={() => go(n.id)}
-              />
-            ))}
-          </>
-        ) : (
-          <Stack gap={1}>
-            {/* Ordre: Ambients (les escenes), Objectes i Mobles; a sota, Obrir fitxer. */}
-            <NavItem
-              icon={AMBIENTS_ENTRY.icon}
-              label={AMBIENTS_ENTRY.label}
-              collapsed={navCollapsed}
-              active={screen === "ambients" || screen === "ambient"}
-              disabled={false}
-              onClick={goAmbients}
-            />
-            <NavItem icon={OBJECTS_ENTRY.icon} label={OBJECTS_ENTRY.label} collapsed={navCollapsed} active={screen === "objects"} disabled={false} onClick={() => goRoot("objects")} />
-            <NavItem
-              icon={PROJECTS_ENTRY.icon}
-              label={PROJECTS_ENTRY.label}
-              collapsed={navCollapsed}
-              active={screen === "projects"}
-              disabled={false}
-              onClick={() => goRoot("projects")}
-            />
-            {/* Les accions de la llista només a la llista (a Preferències confonien). */}
-            {screen === "projects" && (
-              <>
-              <Box borderTopWidth="1px" my={1} />
-              <NavItem icon={LuFolderOpen} label="Obrir fitxer" collapsed={navCollapsed} active={false} disabled={false} onClick={() => requestProjects("open")} />
-              </>
-            )}
-          </Stack>
-        )}
-        {/* General: just a sota de les pàgines, separat amb una línia. */}
-        <Stack gap={1} mt={1} pt={2} borderTopWidth="1px" align={navCollapsed ? "center" : "stretch"}>
-          {inProject && <NavItem icon={AMBIENTS_ENTRY.icon} label={AMBIENTS_ENTRY.label} collapsed={navCollapsed} active={false} disabled={false} onClick={goAmbients} />}
-          {inProject && !isObject && <NavItem icon={OBJECTS_ENTRY.icon} label={OBJECTS_ENTRY.label} collapsed={navCollapsed} active={false} disabled={false} onClick={() => goRoot("objects")} />}
-          {inProject && isObject && <NavItem icon={PROJECTS_ENTRY.icon} label={PROJECTS_ENTRY.label} collapsed={navCollapsed} active={false} disabled={false} onClick={() => goRoot("projects")} />}
-          <NavItem
-            icon={SETTINGS_ENTRY.icon}
-            label={SETTINGS_ENTRY.label}
-            collapsed={navCollapsed}
-            active={screen === "settings"}
-            disabled={false}
-            onClick={() => go("settings")}
-          />
+        {/* Menú global, sempre igual (com Figma o Linear): només els apartats. Les pàgines d'un moble
+            obert són pestanyes a la seva barra superior i les accions de cada apartat, a la seva capçalera. */}
+        <Stack gap={1}>
+          {GLOBAL_NAV.map((n) => (
+            <NavItem key={n.id} icon={n.icon} label={n.label} collapsed={navCollapsed} active={section === n.id} disabled={false} onClick={() => goSection(n.id)} />
+          ))}
+        </Stack>
+        {/* Preferències, a baix de tot (com a les apps d'escriptori). */}
+        <Stack gap={1} mt="auto" pt={2} borderTopWidth="1px" align={navCollapsed ? "center" : "stretch"}>
+          <NavItem icon={SETTINGS_ENTRY.icon} label={SETTINGS_ENTRY.label} collapsed={navCollapsed} active={screen === "settings"} disabled={false} onClick={() => go("settings")} />
         </Stack>
       </Stack>
 
@@ -310,6 +272,23 @@ export function App() {
             onBack={backToProjects}
             onSettings={() => go("settings")}
             actionsRef={setTopActions}
+            tabs={
+              projectNav.length > 1 ? (
+                <SegmentGroup.Root size="sm" value={screen === "photo" ? "editor" : screen} onValueChange={(e) => e.value && go(e.value as Screen)}>
+                  <SegmentGroup.Indicator />
+                  {projectNav.map((n) => (
+                    <SegmentGroup.Item key={n.id} value={n.id}>
+                      <SegmentGroup.ItemText>
+                        <HStack gap={1.5}>
+                          <n.icon /> {n.label}
+                        </HStack>
+                      </SegmentGroup.ItemText>
+                      <SegmentGroup.ItemHiddenInput />
+                    </SegmentGroup.Item>
+                  ))}
+                </SegmentGroup.Root>
+              ) : undefined
+            }
             menu={
               <Menu.Root positioning={{ placement: "bottom-end" }}>
                 <Menu.Trigger asChild>
@@ -335,42 +314,26 @@ export function App() {
         )}
         {project && <SaveFileDialog project={saveOpen ? project : null} open={saveOpen} onClose={() => setSaveOpen(false)} />}
         {project && <SaveTemplateDialog project={project} open={templateOpen} onClose={() => setTemplateOpen(false)} />}
-        {/* Capçalera (mòbil) fora d'un moble */}
-        <HStack
-          display={{ base: showTopBar ? "none" : "flex", md: "none" }}
-          as="header"
-          px={4}
-          pt="env(safe-area-inset-top, 0px)"
-          h="calc(52px + env(safe-area-inset-top, 0px))"
-          borderBottomWidth="1px"
-          bg="bg.panel"
-          position="sticky"
-          top={0}
-          zIndex={2}
-          justify="space-between"
-        >
-          <HStack gap={1}>
-            {screen === "settings" && inProject ? (
-              <IconButton aria-label="Tornar al moble" variant="ghost" size="sm" onClick={() => setScreen("editor")}>
-                <LuArrowLeft />
-              </IconButton>
-            ) : inProject || screen === "settings" ? (
-              <IconButton aria-label="Tornar als mobles" variant="ghost" size="sm" onClick={backToProjects}>
-                <LuArrowLeft />
-              </IconButton>
-            ) : null}
-            <Heading size="md" truncate>
-              {screen === "settings" ? "Preferències" : inProject ? project?.name ?? "Mobles" : screen === "ambients" || screen === "ambient" ? "Ambients" : screen === "objects" ? "Objectes" : "Mobles"}
-            </Heading>
+        {/* Mòbil: les pàgines d'inici porten el seu títol gran (com iOS); aquí només hi ha barra quan cal
+            tornar enrere (Preferències obertes des d'un moble). */}
+        {screen === "settings" && inProject && (
+          <HStack
+            display={{ base: "flex", md: "none" }}
+            as="header"
+            px={2}
+            pt="env(safe-area-inset-top, 0px)"
+            h="calc(52px + env(safe-area-inset-top, 0px))"
+            borderBottomWidth="1px"
+            bg="bg.panel"
+            position="sticky"
+            top={0}
+            zIndex={2}
+          >
+            <Button variant="ghost" size="sm" onClick={() => setScreen("editor")} maxW="80%">
+              <LuChevronLeft /> <Text truncate>{project?.name ?? "Tornar"}</Text>
+            </Button>
           </HStack>
-          <HStack gap={0}>
-            {inProject && screen !== "settings" && (
-              <IconButton aria-label="Preferències" variant="ghost" size="sm" onClick={() => go("settings")}>
-                <LuSettings />
-              </IconButton>
-            )}
-          </HStack>
-        </HStack>
+        )}
 
         <Container
           as="main"
@@ -382,7 +345,7 @@ export function App() {
           flexDirection="column"
           px={{ base: 4, md: screen === "editor" || screen === "ambient" ? 2 : 4 }}
           // Al mòbil, l'editor enganxa el visor a la barra de dalt (sense marge superior).
-          pt={{ base: screen === "editor" ? 0 : 4, md: screen === "editor" || screen === "ambient" ? 1.5 : 6 }}
+          pt={{ base: screen === "editor" ? 0 : showTopBar || (screen === "settings" && inProject) ? 4 : "calc(16px + env(safe-area-inset-top, 0px))", md: screen === "editor" || screen === "ambient" ? 1.5 : 6 }}
           pb={{ base: "calc(76px + env(safe-area-inset-bottom, 0px))", md: screen === "editor" || screen === "ambient" ? 1.5 : 6 }}
         >
           <TopBarActionsProvider value={topActions}>{content}</TopBarActionsProvider>
@@ -403,9 +366,9 @@ export function App() {
         pb="env(safe-area-inset-bottom, 0px)"
         justify="space-around"
       >
-        {(inProject ? projectNav : [AMBIENTS_ENTRY, OBJECTS_ENTRY, PROJECTS_ENTRY, SETTINGS_ENTRY]).map((n) => {
+        {(showTopBar && projectNav.length > 1 ? projectNav : GLOBAL_NAV_MOBILE).map((n) => {
           const disabled = false
-          const active = screen === n.id || (n.id === "ambients" && screen === "ambient")
+          const active = showTopBar && projectNav.length > 1 ? screen === n.id || (n.id === "editor" && screen === "photo") : section === n.id
           return (
             <Box
               key={n.id}
@@ -416,7 +379,7 @@ export function App() {
               opacity={disabled ? 0.5 : 1}
               cursor={disabled ? "not-allowed" : "pointer"}
             >
-              <button disabled={disabled} onClick={() => (n.id === "ambients" ? goAmbients() : n.id === "projects" || n.id === "objects" ? goRoot(n.id) : go(n.id))} aria-current={active ? "page" : undefined}>
+              <button disabled={disabled} onClick={() => (showTopBar && projectNav.length > 1 ? go(n.id as Screen) : goSection(n.id))} aria-current={active ? "page" : undefined}>
                 <Stack align="center" gap={0.5}>
                   <Box fontSize="xl">
                     <n.icon />

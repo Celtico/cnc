@@ -35,6 +35,8 @@ import {
   LuUndo2,
   LuVideo,
   LuEye,
+  LuAppWindow,
+  LuDoorOpen,
   LuPanelTop,
 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
@@ -42,6 +44,10 @@ import { RenderDialog, type SceneGetter } from "../../components/viewer/render/R
 import { Tooltip } from "../../components/ui/tooltip"
 import {
   BlockShapeSchema,
+  OPENING_DEFAULTS,
+  addOpening,
+  clampOpening,
+  type Opening,
   CompositionSchema,
   compositionKind,
   duplicateItems,
@@ -90,6 +96,8 @@ const TOOLS: { id: Tool; label: string; key: string; icon: typeof LuPenTool }[] 
   { id: "select", label: "Seleccionar i moure", key: "V", icon: LuMousePointer2 },
   { id: "wall", label: "Paret (ploma)", key: "P", icon: LuPenTool },
   { id: "room", label: "Habitació (rectangle)", key: "H", icon: LuBrickWall },
+  { id: "window", label: "Finestra (clic a una paret)", key: "F", icon: LuAppWindow },
+  { id: "door", label: "Porta (clic a una paret)", key: "D", icon: LuDoorOpen },
 ]
 
 const SHAPE_LABEL: Record<BlockItem["shape"], string> = { box: "Caixa", sofa: "Sofà", bed: "Llit", table: "Taula" }
@@ -343,6 +351,8 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
       if (k === "v") setTool("select")
       else if (k === "p") setTool("wall")
       else if (k === "h") setTool("room")
+      else if (k === "f") setTool("window")
+      else if (k === "d") setTool("door")
       else if (k === "escape") {
         setTool("select")
         setSel(null)
@@ -517,7 +527,7 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
                 onPick={(id) => select({ kind: "item", id })}
               />
             ) : wall ? (
-              <WallInspector key={wall.id} wall={wall} onPatch={(p) => patchWall(wall.id, p)} onDelete={remove} />
+              <WallInspector key={wall.id} wall={wall} materials={settings.materials} onPatch={(p) => patchWall(wall.id, p)} onDelete={remove} />
             ) : (
               <AmbientInspector
                 amb={amb}
@@ -620,7 +630,7 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
           </Box>
           {tab === "plan" && tool !== "select" && (
             <Badge position="absolute" bottom={3} left="50%" transform="translateX(-50%)" colorPalette="wood" size="md" pointerEvents="none" maxW="90%" whiteSpace="normal" textAlign="center">
-              {tool === "wall" ? "Paret: clica punt a punt · clica el primer per tancar · Retorn o Esc per acabar" : tool === "room" ? "Habitació: arrossega un rectangle" : "Calibrar: clica dos punts d'una mida coneguda"}
+              {tool === "wall" ? "Paret: clica punt a punt · clica el primer per tancar · Retorn o Esc per acabar" : tool === "room" ? "Habitació: arrossega un rectangle" : tool === "window" ? "Finestra: clica sobre una paret (després la pots arrossegar i canviar-ne les mides)" : tool === "door" ? "Porta: clica sobre una paret (després la pots arrossegar i canviar-ne les mides)" : "Calibrar: clica dos punts d'una mida coneguda"}
             </Badge>
           )}
           </Box>
@@ -632,10 +642,11 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
         <Portal>
           <Drawer.Backdrop />
           <Drawer.Positioner>
-            <Drawer.Content>
+            {/* A pantalla completa: fora de la barra d'estat del telèfon (zona segura). */}
+            <Drawer.Content pt="env(safe-area-inset-top, 0px)" pb="env(safe-area-inset-bottom, 0px)">
               <Drawer.Header>
                 <Drawer.Title>Afegir un moble a «{name}»</Drawer.Title>
-                <Drawer.CloseTrigger asChild>
+                <Drawer.CloseTrigger asChild top="calc(env(safe-area-inset-top, 0px) + 8px)">
                   <CloseButton size="sm" aria-label="Tancar" />
                 </Drawer.CloseTrigger>
               </Drawer.Header>
@@ -683,10 +694,11 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
         <Portal>
           <Drawer.Backdrop />
           <Drawer.Positioner>
-            <Drawer.Content>
+            {/* A pantalla completa: fora de la barra d'estat del telèfon (zona segura). */}
+            <Drawer.Content pt="env(safe-area-inset-top, 0px)" pb="env(safe-area-inset-bottom, 0px)">
               <Drawer.Header>
                 <Drawer.Title>Afegir un objecte a «{name}»</Drawer.Title>
-                <Drawer.CloseTrigger asChild>
+                <Drawer.CloseTrigger asChild top="calc(env(safe-area-inset-top, 0px) + 8px)">
                   <CloseButton size="sm" aria-label="Tancar" />
                 </Drawer.CloseTrigger>
               </Drawer.Header>
@@ -747,8 +759,8 @@ function SectionTitle({ children }: { children: ReactNode }) {
 }
 
 /** Material de les preferències, agrupat per categories (el mateix selector que a Preferències). */
-function MaterialPick({ label, value, materials, onChange }: { label: string; value: string; materials: MaterialPref[]; onChange: (v: string) => void; onlySim?: boolean }) {
-  return <MaterialSelect label={label} materials={materials} value={value} onChange={onChange} />
+function MaterialPick({ label, value, materials, onChange, emptyLabel }: { label: string; value: string; materials: MaterialPref[]; onChange: (v: string) => void; onlySim?: boolean; emptyLabel?: string }) {
+  return <MaterialSelect label={label} materials={materials} value={value} onChange={onChange} emptyLabel={emptyLabel} />
 }
 
 function Placement({ item, onPatch }: { item: AmbientItem; onPatch: (p: Partial<AmbientItem>) => void }) {
@@ -917,7 +929,7 @@ function MobleDims({ project, geo }: { project: Project; geo: ItemGeometry }) {
   )
 }
 
-function WallInspector({ wall, onPatch, onDelete }: { wall: Wall; onPatch: (p: Partial<Wall>) => void; onDelete: () => void }) {
+function WallInspector({ wall, materials, onPatch, onDelete }: { wall: Wall; materials: MaterialPref[]; onPatch: (p: Partial<Wall>) => void; onDelete: () => void }) {
   const L = Math.round(wallLength(wall))
   return (
     <Stack gap={3}>
@@ -948,6 +960,54 @@ function WallInspector({ wall, onPatch, onDelete }: { wall: Wall; onPatch: (p: P
         <NumberField label="Gruix" value={wall.thickness} min={20} max={1000} step={10} onChange={(thickness) => thickness >= 20 && onPatch({ thickness })} />
         <NumberField label="Alt" value={wall.height} min={200} max={10000} step={10} onChange={(height) => height >= 200 && onPatch({ height })} />
       </SimpleGrid>
+      <MaterialPick label="Material d'aquesta paret" value={wall.material ?? ""} materials={materials} onChange={(material) => onPatch({ material: material || undefined })} onlySim emptyLabel="El de totes les parets" />
+      <Stack gap={2}>
+        <SectionTitle>Finestres i portes</SectionTitle>
+        {(wall.openings ?? []).map((o, i) => {
+          const set = (patch: Partial<Opening>) => onPatch({ openings: wall.openings!.map((q, j) => (j === i ? clampOpening(wall, { ...q, ...patch }) : q)) })
+          return (
+            <Stack key={i} gap={2} borderWidth="1px" rounded="md" p={2}>
+              <HStack>
+                <NativeSelect.Root size="sm" flex={1}>
+                  <NativeSelect.Field
+                    value={o.kind}
+                    aria-label="Tipus d'obertura"
+                    onChange={(e) => {
+                      const kind = e.currentTarget.value as Opening["kind"]
+                      set({ kind, ...OPENING_DEFAULTS[kind] })
+                    }}
+                  >
+                    <option value="window">Finestra</option>
+                    <option value="door">Porta</option>
+                    <option value="glazing">Vidriera (de terra a sostre)</option>
+                  </NativeSelect.Field>
+                  <NativeSelect.Indicator />
+                </NativeSelect.Root>
+                <IconButton aria-label="Treure l'obertura" size="xs" variant="ghost" colorPalette="red" onClick={() => onPatch({ openings: wall.openings!.filter((_, j) => j !== i) })}>
+                  <LuTrash2 />
+                </IconButton>
+              </HStack>
+              <SimpleGrid columns={2} gap={2}>
+                <NumberField label="Centre (des de l'inici)" value={Math.round(o.at)} step={10} onChange={(at) => Number.isFinite(at) && set({ at })} />
+                <NumberField label="Ample" value={o.w} min={200} step={10} onChange={(w) => w >= 200 && set({ w })} />
+                <NumberField label="Alt" value={o.h} min={200} step={10} onChange={(h) => h >= 200 && set({ h })} />
+                {o.kind === "window" && <NumberField label="Ampit (del terra)" value={o.sill} min={0} step={10} onChange={(sill) => sill >= 0 && set({ sill })} />}
+                {o.kind !== "door" && <NumberField label="Fulles" value={o.panes ?? Math.max(1, Math.round(o.w / (o.kind === "glazing" ? 1200 : 900)))} min={1} max={12} step={1} onChange={(panes) => panes >= 1 && set({ panes: Math.round(panes) })} />}
+              </SimpleGrid>
+            </Stack>
+          )
+        })}
+        <HStack gap={2} wrap="wrap">
+          {(["window", "door", "glazing"] as const).map((k) => (
+            <Button key={k} size="xs" variant="outline" onClick={() => onPatch({ openings: addOpening(wall, k, L / 2).openings })}>
+              {k === "window" ? <LuAppWindow /> : k === "door" ? <LuDoorOpen /> : <LuPanelTop />} {k === "window" ? "Finestra" : k === "door" ? "Porta" : "Vidriera"}
+            </Button>
+          ))}
+        </HStack>
+        <Text fontSize="xs" color="fg.muted">
+          També amb les eines Finestra (F) i Porta (D): clic sobre la paret. Al plànol s'arrosseguen al llarg de la paret.
+        </Text>
+      </Stack>
       <Text fontSize="xs" color="fg.muted">
         Arrossega-la per moure-la (les parets enganxades la segueixen) o arrossega'n els extrems. Maj: sense angles · Alt: sense imant.
       </Text>

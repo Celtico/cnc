@@ -24,3 +24,15 @@ export function useSessionList(key: string): [string[], (v: string[]) => void] {
   }, [key, v])
   return [v, setV]
 }
+
+/** Separa una llista pels seus grups (carpetes, ordenats pel nom) i els que no en tenen. */
+export function groupByFolder<T>(items: T[], folderOf: (t: T) => string | undefined): { folders: [string, T[]][]; loose: T[] } {
+  const map = new Map<string, T[]>()
+  const loose: T[] = []
+  for (const t of items) {
+    const f = folderOf(t)?.trim()
+    if (!f) loose.push(t)
+    else map.set(f, [...(map.get(f) ?? []), t])
+  }
+  return { folders: [...map.entries()].sort((a, b) => a[0].localeCompare(b[0], "ca")), loose }
+}

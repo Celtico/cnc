@@ -8,7 +8,7 @@ export interface View {
   s: number
 }
 
-export type Tool = "select" | "wall" | "room" | "calibrate"
+export type Tool = "select" | "wall" | "room" | "window" | "door" | "calibrate"
 /** Selecció: un element, una paret o un grup d'elements (`id` = nom del grup). */
 export type Selection = { kind: "item" | "wall" | "group"; id: string } | null
 

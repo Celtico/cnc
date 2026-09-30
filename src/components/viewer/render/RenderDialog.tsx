@@ -372,7 +372,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content h={{ base: "100dvh", md: undefined }} maxH="100dvh" display="flex" flexDirection="column" overflow="hidden">
+          <Dialog.Content h={{ base: "100dvh", md: undefined }} maxH="100dvh" display="flex" flexDirection="column" overflow="hidden" pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} pb={{ base: "env(safe-area-inset-bottom, 0px)", md: 0 }}>
             <Dialog.Header>
               <Dialog.Title>Render</Dialog.Title>
             </Dialog.Header>
@@ -584,8 +584,9 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                 </Button>
               </Stack>
             </Dialog.Body>
-            <Dialog.CloseTrigger asChild>
-              <CloseButton size="sm" />
+            {/* Al mòbil, per sota de la barra d'estat (zona segura). */}
+            <Dialog.CloseTrigger asChild top={{ base: "calc(env(safe-area-inset-top, 0px) + 8px)", md: 2 }}>
+              <CloseButton size="sm" aria-label="Tancar" />
             </Dialog.CloseTrigger>
           </Dialog.Content>
         </Dialog.Positioner>

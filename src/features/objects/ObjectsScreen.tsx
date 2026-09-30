@@ -1,14 +1,15 @@
-import { Button, Dialog, Heading, HStack, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
+import { Button, Dialog, Heading, HStack, Portal, Stack, Text, VStack } from "@chakra-ui/react"
 import { useState } from "react"
 import { LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { uniqueName } from "../../core/file/mobleFile"
 import type { Composition } from "../../core/model"
 import { ClearHistory } from "../projects/ClearHistory"
-import { createProject, db, deleteProject, duplicateProject, type Project } from "../../db/db"
+import { SaveFileDialog } from "../file/SaveFileDialog"
+import { FolderedGrid, MoveToFolderDialog } from "../projects/Folders"
+import { createProject, db, deleteProject, setProjectsFolder, duplicateProject, type Project } from "../../db/db"
 import { useAmbientMembership } from "../ambients/useAmbientMembership"
 import { ProjectCard } from "../projects/ProjectCard"
-import { GALLERY_COLS } from "../projects/galleryGrid"
 import { useProjects } from "../useProject"
 import { ObjectsGallery } from "./ObjectsGallery"
 import { isObject } from "./isObject"
@@ -21,6 +22,8 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
   const projects = useProjects()
   const membership = useAmbientMembership()
   const [toDelete, setToDelete] = useState<Project | null>(null)
+  const [toMove, setToMove] = useState<Project | null>(null)
+  const [toSave, setToSave] = useState<Project | null>(null)
   const create = async (composition: Composition, name: string) => {
     const existing = (await db.projects.toArray()).map((p) => p.name)
     onOpen(await createProject(uniqueName(name, existing), undefined, { composition }))
@@ -35,7 +38,7 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
       </Text>
       <ObjectsGallery
         onCreate={(c, n) => void create(c, n)}
-        history={(matches) => {
+        history={(matches, searching) => {
           const shown = (projects ?? []).filter((p) => isObject(p) && matches(p.name))
           const free = shown.filter((p) => !membership.has(p.id))
           return {
@@ -52,18 +55,26 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                     toaster.create({ title: "Historial esborrat", type: "info" })
                   }}
                 />
-                <SimpleGrid columns={GALLERY_COLS} gap={3}>
-                {shown.map((p) => (
-                  <ProjectCard
-                    key={p.id}
-                    project={p}
-                    ambients={membership.get(p.id)}
-                    onOpen={() => onOpen(p.id)}
-                    onDuplicate={() => void duplicateProject(p.id).then(() => toaster.create({ title: "Objecte duplicat", type: "success" }))}
-                    onDelete={() => setToDelete(p)}
-                  />
-                ))}
-                </SimpleGrid>
+                <FolderedGrid
+                  items={shown}
+                  folderOf={(p) => p.folder}
+                  keyOf={(p) => p.id}
+                  storageKey="mobles:folders-objects"
+                  searching={searching}
+                  onRenameFolder={(from, to) => void setProjectsFolder(shown.filter((p) => p.folder === from).map((p) => p.id), to)}
+                  onUngroup={(name) => void setProjectsFolder(shown.filter((p) => p.folder === name).map((p) => p.id), undefined)}
+                  render={(p) => (
+                    <ProjectCard
+                      project={p}
+                      ambients={membership.get(p.id)}
+                      onOpen={() => onOpen(p.id)}
+                      onDuplicate={() => void duplicateProject(p.id).then(() => toaster.create({ title: "Objecte duplicat", type: "success" }))}
+                      onSaveFile={() => setToSave(p)}
+                      onMove={() => setToMove(p)}
+                      onDelete={() => setToDelete(p)}
+                    />
+                  )}
+                />
               </Stack>
             ) : (
               <Text fontSize="sm" color="fg.muted">
@@ -72,6 +83,15 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
             ),
           }
         }}
+      />
+      <SaveFileDialog project={toSave} open={toSave !== null} onClose={() => setToSave(null)} />
+      <MoveToFolderDialog
+        open={toMove !== null}
+        what={toMove?.name ?? ""}
+        folders={[...new Set((projects ?? []).filter((p) => isObject(p) && p.folder).map((p) => p.folder!))].sort()}
+        current={toMove?.folder}
+        onPick={(f) => toMove && void setProjectsFolder([toMove.id], f)}
+        onClose={() => setToMove(null)}
       />
       <Dialog.Root role="alertdialog" open={toDelete !== null} onOpenChange={(e) => !e.open && setToDelete(null)}>
         <Portal>

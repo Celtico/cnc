@@ -26,14 +26,14 @@ export function ObjectsGallery({
   storageKey = "mobles:objects",
 }: {
   onCreate: (composition: Composition, name: string) => void
-  history: (query: (text: string) => boolean) => { count: number; node: ReactNode }
+  history: (query: (text: string) => boolean, searching: boolean) => { count: number; node: ReactNode }
   storageKey?: string
 }) {
   const [query, setQuery] = useState("")
   const q = fold(query.trim())
   const matches = (text: string) => !q || fold(text).includes(q)
   const templates = OBJECT_TEMPLATES.filter((t) => matches(`${t.name} ${t.description}`))
-  const hist = history(matches)
+  const hist = history(matches, !!q)
   const [open, setOpen] = useSessionList(storageKey)
   const found = [...(hist.count ? ["mine"] : []), ...(templates.length ? ["templates"] : [])]
   const pick = (t: Template) => onCreate({ ...t.make(), kind: "objecte" }, t.name)

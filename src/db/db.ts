@@ -74,6 +74,8 @@ export interface Project {
   nesting?: NestOptions
   /** Foto del racó i calibració. Opcional. */
   photo?: PhotoCalibration
+  /** Grup (carpeta) de l'historial, per ordenar-los. */
+  folder?: string
   createdAt: number
   updatedAt: number
 }
@@ -86,6 +88,8 @@ export interface AmbientRow {
   name: string
   /** Contingut (`Ambient`); es valida amb `parseAmbient` en llegir-lo. */
   data: unknown
+  /** Grup (carpeta) de l'historial. */
+  folder?: string
   createdAt: number
   updatedAt: number
 }
@@ -216,7 +220,18 @@ export async function deleteAmbient(id: number): Promise<void> {
 export async function duplicateAmbient(id: number): Promise<number | undefined> {
   const src = await db.ambients.get(id)
   if (!src) return undefined
-  return createAmbient(`${src.name} (còpia)`, structuredClone(src.data))
+  const copy = await createAmbient(`${src.name} (còpia)`, structuredClone(src.data))
+  if (src.folder) await db.ambients.update(copy, { folder: src.folder })
+  return copy
+}
+
+/** Posa (o treu, amb `undefined`) mobles/objectes d'un grup de l'historial. No canvia la data. */
+export async function setProjectsFolder(ids: number[], folder: string | undefined): Promise<void> {
+  await db.projects.bulkUpdate(ids.map((id) => ({ key: id, changes: { folder } })))
+}
+
+export async function setAmbientsFolder(ids: number[], folder: string | undefined): Promise<void> {
+  await db.ambients.bulkUpdate(ids.map((id) => ({ key: id, changes: { folder } })))
 }
 
 export async function renameAmbient(id: number, name: string): Promise<void> {

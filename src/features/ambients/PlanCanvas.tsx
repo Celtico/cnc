@@ -1,7 +1,7 @@
 import { Box, HStack, IconButton, Text } from "@chakra-ui/react"
 import { LuMinus, LuPlus } from "react-icons/lu"
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as RPointerEvent } from "react"
-import { footprintBox, newId, roomWalls, snapToWalls, wallCorners, wallLength, wallOpenings, type Ambient, type AmbientItem, type PlanPt, type Wall } from "../../core/model"
+import { footprintBox, newId, roomWalls, snapToWalls, wallCorners, wallLength, addOpening, clampOpening, nearestWall, type Ambient, type AmbientItem, type PlanPt, type Wall } from "../../core/model"
 import { formatLength, useUnit } from "../units"
 import type { ItemGeometry } from "./ambientData"
 import { ambientBox, fitView, nearestEndpoint, samePt, snapAngle, snapGrid, type Selection, type Tool, type View } from "./planGeom"
@@ -34,6 +34,7 @@ type Drag =
   | { kind: "end"; id: string; end: "a" | "b"; start: PlanPt; orig: PlanPt; moved: boolean }
   | { kind: "room"; start: PlanPt; cur: PlanPt }
   | { kind: "plan"; start: PlanPt; x: number; y: number }
+  | { kind: "opening"; wallId: string; index: number; start: PlanPt; at: number; moved: boolean }
 
 /**
  * Plànol de l'ambient (SVG, vista de dalt): la roda fa zoom al punt del ratolí (com al 3D),
@@ -216,6 +217,15 @@ export function PlanCanvas({
       setRoom({ a: s, b: s })
       return
     }
+    if (tool === "window" || tool === "door") {
+      // Finestra o porta: clic sobre una paret, centrada on s'ha clicat.
+      const hit = nearestWall(ambient.walls, p, 12 / view.s)
+      if (!hit) return
+      onChange({ ...ambient, walls: ambient.walls.map((w) => (w.id === hit.wall.id ? addOpening(w, tool, snapGrid(hit.at)) : w)) }, true)
+      onSelect({ kind: "wall", id: hit.wall.id })
+      onToolDone()
+      return
+    }
     if (tool === "calibrate") {
       const next = [...calib, p]
       if (next.length === 2) {
@@ -294,6 +304,17 @@ export function PlanCanvas({
       }
       const cur = w[g.end]
       onChange({ ...ambient, walls: ambient.walls.map((x) => (x.id === g.id ? { ...x, [g.end]: q } : moveJoined(x, cur, q, ambient, g.id))) }, false)
+    } else if (g.kind === "opening") {
+      const w = ambient.walls.find((x) => x.id === g.wallId)
+      const o = w?.openings?.[g.index]
+      if (!w || !o) return
+      g.moved = g.moved || Math.hypot(dx, dy) * view.s > 3
+      if (!g.moved) return
+      // Es mou al llarg de la paret (projecció del desplaçament).
+      const L = wallLength(w) || 1
+      const along = (dx * (w.b[0] - w.a[0]) + dy * (w.b[1] - w.a[1])) / L
+      const next = clampOpening(w, { ...o, at: snapGrid(g.at + along) })
+      onChange({ ...ambient, walls: ambient.walls.map((x) => (x.id === w.id ? { ...x, openings: x.openings!.map((q, i) => (i === g.index ? next : q)) } : x)) }, false)
     } else if (g.kind === "plan" && ambient.plan) {
       onChange({ ...ambient, plan: { ...ambient.plan, x: Math.round(g.x + dx), y: Math.round(g.y + dy) } }, false)
     }
@@ -313,7 +334,7 @@ export function PlanCanvas({
         onChange({ ...ambient, walls: [...ambient.walls, ...roomWalls(x0, y0, x1, y1, wallDefaults.thickness, wallDefaults.height)] }, true)
         onToolDone()
       }
-    } else if ((g.kind === "item" || g.kind === "wall" || g.kind === "end") && g.moved) onChange(ambient, true)
+    } else if ((g.kind === "item" || g.kind === "wall" || g.kind === "end" || g.kind === "opening") && g.moved) onChange(ambient, true)
     else if (g.kind === "plan") onChange(ambient, true)
   }
 
@@ -333,6 +354,14 @@ export function PlanCanvas({
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     onSelect({ kind: "wall", id: w.id })
     drag.current = { kind: "wall", id: w.id, start: toWorld(e.clientX, e.clientY), a: w.a, b: w.b, moved: false }
+  }
+  const startOpening = (e: RPointerEvent, w: Wall, index: number) => {
+    if (tool !== "select" || e.button === 1 || space.current) return
+    e.stopPropagation()
+    ;(host.current as Element).setPointerCapture?.(e.pointerId)
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    onSelect({ kind: "wall", id: w.id })
+    drag.current = { kind: "opening", wallId: w.id, index, start: toWorld(e.clientX, e.clientY), at: w.openings![index]!.at, moved: false }
   }
   const startEnd = (e: RPointerEvent, w: Wall, end: "a" | "b") => {
     if (tool !== "select") return
@@ -454,24 +483,26 @@ export function PlanCanvas({
               />
             )
           })}
-          {/* Finestres, portes i vidrieres: el forat de la paret amb el vidre (o la fulla) al mig. */}
+          {/* Finestres, portes i vidrieres: el forat de la paret amb el vidre (o la fulla) al mig. S'arrosseguen al llarg de la paret. */}
           {ambient.walls.map((w) => {
-            const ops = wallOpenings(w)
-            if (!ops.length) return null
+            if (!w.openings?.length) return null
             const deg = (Math.atan2(w.b[1] - w.a[1], w.b[0] - w.a[0]) * 180) / Math.PI
             const t = w.thickness
             return (
-              <g key={`o-${w.id}`} transform={`translate(${w.a[0]} ${w.a[1]}) rotate(${deg})`} style={{ pointerEvents: "none" }}>
-                {ops.map((o, i) => (
-                  <g key={i}>
-                    <rect x={o.u0} y={-t / 2} width={o.u1 - o.u0} height={t} fill="var(--chakra-colors-bg)" stroke={C.wall} strokeWidth={px(1)} />
-                    {o.kind === "door" ? (
-                      <path d={`M ${o.u0} ${t / 2} L ${o.u0} ${t / 2 + (o.u1 - o.u0)} A ${o.u1 - o.u0} ${o.u1 - o.u0} 0 0 0 ${o.u1} ${t / 2}`} fill="none" stroke={C.muted} strokeWidth={px(1)} />
-                    ) : (
-                      <line x1={o.u0} y1={0} x2={o.u1} y2={0} stroke={C.wall} strokeWidth={px(1.5)} />
-                    )}
-                  </g>
-                ))}
+              <g key={`o-${w.id}`} transform={`translate(${w.a[0]} ${w.a[1]}) rotate(${deg})`}>
+                {w.openings.map((o, i) => {
+                  const u0 = o.at - o.w / 2, u1 = o.at + o.w / 2
+                  return (
+                    <g key={i} style={{ cursor: tool === "select" ? "ew-resize" : undefined, pointerEvents: tool === "select" ? "auto" : "none" }} onPointerDown={(e) => startOpening(e, w, i)}>
+                      <rect x={u0} y={-t / 2} width={u1 - u0} height={t} fill="var(--chakra-colors-bg)" stroke={selWall?.id === w.id ? C.accent : C.wall} strokeWidth={px(1)} />
+                      {o.kind === "door" ? (
+                        <path d={`M ${u0} ${t / 2} L ${u0} ${t / 2 + (u1 - u0)} A ${u1 - u0} ${u1 - u0} 0 0 0 ${u1} ${t / 2}`} fill="none" stroke={C.muted} strokeWidth={px(1)} />
+                      ) : (
+                        <line x1={u0} y1={0} x2={u1} y2={0} stroke={C.wall} strokeWidth={px(o.kind === "glazing" ? 3 : 1.5)} />
+                      )}
+                    </g>
+                  )
+                })}
               </g>
             )
           })}

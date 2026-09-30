@@ -1,11 +1,13 @@
 import { Accordion, Badge, Box, Button, Card, CloseButton, Dialog, Editable, HStack, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { LuBookmark, LuCopy, LuEllipsis, LuHistory, LuLayoutTemplate, LuPlus, LuSearch, LuShare2, LuStore, LuTrash2 } from "react-icons/lu"
+import { LuBookmark, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuLayoutTemplate, LuPlus, LuSearch, LuShare2, LuStore, LuTrash2 } from "react-icons/lu"
 import { CompositionThumb } from "../../components/CompositionThumb"
 import { toaster } from "../../components/ui/toaster"
 import { applySettingsToModule, BUILTIN_TEMPLATES, compositionHeight, compositionKind, compositionWidth, defaultModule, newId, STORE_CATALOG, tableModule, type Composition, type CompositionKind, type Template } from "../../core/model"
 import { KINDS } from "../composition/kinds"
-import { deleteUserTemplate, duplicateUserTemplate, loadUserTemplates, renameUserTemplate, type UserTemplate } from "../../db/compositionStore"
+import { deleteUserTemplate, duplicateUserTemplate, loadUserTemplates, renameUserTemplate, setUserTemplatesFolder, type UserTemplate } from "../../db/compositionStore"
+import { FoldTitle } from "./FoldTitle"
+import { FolderedGrid, MoveToFolderDialog } from "./Folders"
 import { GALLERY_COLS, fold, useSessionList } from "./galleryGrid"
 import { saveTemplateAsFile } from "../file/mobleIo"
 import { useSettings } from "../settings/SettingsContext"
@@ -56,23 +58,7 @@ export function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?
 }
 
 /** Títol d'un acordió de la galeria: icona, nom i quantitat. */
-export function FoldTitle({ icon, title, count }: { icon?: ReactNode; title: string; count: number }) {
-  return (
-    <HStack flex={1} gap={2} minW={0}>
-      {icon && (
-        <Box color="wood.fg" display="inline-flex">
-          {icon}
-        </Box>
-      )}
-      <Text fontWeight="semibold" fontSize="sm" truncate>
-        {title}
-      </Text>
-      <Badge size="xs" variant="subtle" colorPalette="gray">
-        {count}
-      </Badge>
-    </HStack>
-  )
-}
+export { FoldTitle } from "./FoldTitle"
 
 const COLS = GALLERY_COLS
 
@@ -89,13 +75,14 @@ export function NewMobleGallery({
 }: {
   onCreate: (composition: Composition, name: string) => void
   /** Historial: els mobles que ja tens (del tipus triat), al primer acordió. */
-  history: (kind: CompositionKind | "all", query: (text: string) => boolean) => { count: number; node: ReactNode }
+  history: (kind: CompositionKind | "all", query: (text: string) => boolean, searching: boolean) => { count: number; node: ReactNode }
   /** Clau de sessió dels acordions oberts (la pàgina Mobles i la finestra dels ambients, per separat). */
   storageKey?: string
 }) {
   const { settings } = useSettings()
   const [mine, setMine] = useState<UserTemplate[]>(loadUserTemplates)
   const [confirmDelete, setConfirmDelete] = useState<UserTemplate | null>(null)
+  const [moving, setMoving] = useState<UserTemplate | null>(null)
   // Es poden haver desat plantilles des de l'Editor: es tornen a llegir en tornar a la finestra.
   useEffect(() => {
     const reload = () => setMine(loadUserTemplates())
@@ -122,7 +109,7 @@ export function NewMobleGallery({
   const storeCount = store.reduce((n, c) => n + c.types.reduce((m, ty) => m + ty.items.length, 0), 0)
   const [openSections, setOpenSections] = useSessionList(storageKey)
   const [openCats, setOpenCats] = useSessionList(`${storageKey}-store`)
-  const hist = history(kind, matches)
+  const hist = history(kind, matches, !!q)
   // Amb cerca, s'obren les seccions que tenen resultats.
   const found = [...(hist.count ? ["history"] : []), ...(shownMine.length ? ["mine"] : []), ...(shownBuiltin.length ? ["app"] : []), ...(storeCount ? ["store"] : [])]
   const pick = (t: Template) => onCreate({ ...t.make(), kind: t.kind }, t.name)
@@ -185,9 +172,16 @@ export function NewMobleGallery({
                   {mine.length === 0 ? "Encara no en tens. Obre un moble i, a la barra de dalt, ⋯ → Desar com a plantilla." : "Cap plantilla teva d'aquest tipus."}
                 </Text>
               ) : (
-                <SimpleGrid columns={COLS} gap={3}>
-                  {shownMine.map((t) => (
-                    <Card.Root key={t.id} variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }}>
+                <FolderedGrid
+                  items={shownMine}
+                  folderOf={(t) => t.folder}
+                  keyOf={(t) => t.id}
+                  storageKey={`${storageKey}:folders-mine`}
+                  searching={!!q}
+                  onRenameFolder={(from, to) => setMine(setUserTemplatesFolder(mine.filter((t) => t.folder === from).map((t) => t.id), to))}
+                  onUngroup={(name) => setMine(setUserTemplatesFolder(mine.filter((t) => t.folder === name).map((t) => t.id), undefined))}
+                  render={(t) => (
+                    <Card.Root variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }}>
                       <Card.Body p={3} gap={2}>
                         <Box cursor="pointer" onClick={() => onCreate(structuredClone(t.composition), t.name)}>
                           <CompositionThumb composition={t.composition} />
@@ -227,6 +221,9 @@ export function NewMobleGallery({
                                   >
                                     <LuShare2 /> Desar com a fitxer
                                   </Menu.Item>
+                                  <Menu.Item value="move" onClick={() => setMoving(t)}>
+                                    <LuFolderInput /> Moure a un grup…
+                                  </Menu.Item>
                                   <Menu.Separator />
                                   <Menu.Item value="del" color="fg.error" onClick={() => setConfirmDelete(t)}>
                                     <LuTrash2 /> Eliminar
@@ -241,8 +238,8 @@ export function NewMobleGallery({
                         </Text>
                       </Card.Body>
                     </Card.Root>
-                  ))}
-                </SimpleGrid>
+                  )}
+                />
               )}
             </Accordion.ItemBody>
           </Accordion.ItemContent>
@@ -301,6 +298,14 @@ export function NewMobleGallery({
         </Accordion.Item>
       </Accordion.Root>
 
+      <MoveToFolderDialog
+        open={moving !== null}
+        what={moving?.name ?? ""}
+        folders={[...new Set(mine.filter((t) => t.folder).map((t) => t.folder!))].sort()}
+        current={moving?.folder}
+        onPick={(f) => moving && setMine(setUserTemplatesFolder([moving.id], f))}
+        onClose={() => setMoving(null)}
+      />
       <Dialog.Root role="alertdialog" open={confirmDelete !== null} onOpenChange={(e) => !e.open && setConfirmDelete(null)}>
         <Portal>
           <Dialog.Backdrop />

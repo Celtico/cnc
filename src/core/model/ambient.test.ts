@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildBounds, buildComposition } from "../build/buildComposition"
-import { BLOCK_PRESETS, blockComposition, footprintBox, parseAmbient, resizeComposition, roomWalls, snapToWalls } from "./ambient"
+import { addOpening, nearestWall, BLOCK_PRESETS, blockComposition, footprintBox, parseAmbient, resizeComposition, roomWalls, snapToWalls } from "./ambient"
 import { BUILTIN_TEMPLATES } from "./templates"
 import { STORE_TEMPLATES } from "./storeCatalog"
 
@@ -81,3 +81,20 @@ describe("grups d'elements", async () => {
     expect(m.removeItems(d.ambient, d.ids).items).toHaveLength(2)
   })
 })
+
+describe("obertures de les parets", () => {
+  const wall = { id: "w", a: [0, 0] as [number, number], b: [4000, 0] as [number, number], thickness: 100, height: 2600 }
+  it("troba la paret clicada i hi posa una finestra ajustada", () => {
+    const hit = nearestWall([wall], [3900, 30], 20)!
+    expect(hit.wall.id).toBe("w")
+    expect(hit.at).toBe(3900)
+    const w = addOpening(wall, "window", hit.at)
+    expect(w.openings).toEqual([{ kind: "window", at: 3400, w: 1200, h: 1200, sill: 900 }])
+    expect(nearestWall([wall], [2000, 500], 20)).toBeNull()
+  })
+  it("una porta va fins a terra i no passa de l'alçada de la paret", () => {
+    const w = addOpening({ ...wall, height: 2000 }, "door", 2000)
+    expect(w.openings![0]).toMatchObject({ sill: 0, h: 2000 })
+  })
+})
+

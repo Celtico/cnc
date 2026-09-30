@@ -4,7 +4,6 @@ import {
   HStack,
   Heading,
   Portal,
-  SimpleGrid,
   Stack,
   Text,
   VStack,
@@ -15,13 +14,13 @@ import { SaveFileDialog } from "../file/SaveFileDialog"
 import { addMobleAsTemplate, openMobleFile } from "../file/mobleIo"
 import { parseMobleFile, uniqueName, type MobleFile } from "../../core/file/mobleFile"
 import { NewMobleGallery } from "./NewMobleGallery"
-import { GALLERY_COLS } from "./galleryGrid"
 import { ProjectCard } from "./ProjectCard"
 import { isObject } from "../objects/isObject"
 import { useAmbientMembership } from "../ambients/useAmbientMembership"
 import { compositionKind, type Composition } from "../../core/model"
 import { ClearHistory } from "./ClearHistory"
-import { createProject, db, deleteProject, duplicateProject, type Project } from "../../db/db"
+import { FolderedGrid, MoveToFolderDialog } from "./Folders"
+import { createProject, db, deleteProject, setProjectsFolder, duplicateProject, type Project } from "../../db/db"
 import { compositionOf } from "../../db/compositionStore"
 import { useProjects } from "../useProject"
 import { useSettings } from "../settings/SettingsContext"
@@ -37,6 +36,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
   const { settings, save } = useSettings()
   const [toDelete, setToDelete] = useState<Project | null>(null)
   const [toSave, setToSave] = useState<Project | null>(null)
+  const [toMove, setToMove] = useState<Project | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
   // Botó del menú de l'esquerra: obre el selector de fitxers.
@@ -107,8 +107,8 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
       <HStack justify="space-between" wrap="wrap" gap={3}>
         <Heading size="xl">Mobles</Heading>
         <input ref={fileInput} type="file" accept={fileAccept(".moble,.json,application/json")} hidden onChange={(e) => void handleOpenFile(e.target.files?.[0])} />
-        {/* A l'ordinador és al menú de l'esquerra; al mòbil, aquí. */}
-        <Button display={{ base: "flex", md: "none" }} variant="outline" onClick={() => fileInput.current?.click()}>
+        {/* Acció de l'apartat a la seva capçalera (no al menú global), com a les apps professionals. */}
+        <Button variant="outline" size={{ base: "sm", md: "md" }} onClick={() => fileInput.current?.click()}>
           <LuFolderOpen /> Obrir fitxer
         </Button>
       </HStack>
@@ -118,7 +118,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
 
       <NewMobleGallery
         onCreate={(c, n) => void handleCreate(c, n)}
-        history={(kind, matches) => {
+        history={(kind, matches, searching) => {
           const shown = (projects ?? []).filter((p) => !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
           const free = shown.filter((p) => !membership.has(p.id))
           return {
@@ -140,19 +140,26 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
                       toaster.create({ title: "Historial esborrat", type: "info" })
                     }}
                   />
-                  <SimpleGrid columns={GALLERY_COLS} gap={3}>
-                  {shown.map((p) => (
-                    <ProjectCard
-                      key={p.id}
-                      project={p}
-                      onOpen={() => onOpen(p.id)}
-                      onDuplicate={() => handleDuplicate(p.id)}
-                      onDelete={() => setToDelete(p)}
-                      onSaveFile={() => setToSave(p)}
-                      ambients={membership.get(p.id)}
-                    />
-                  ))}
-                  </SimpleGrid>
+                  <FolderedGrid
+                    items={shown}
+                    folderOf={(p) => p.folder}
+                    keyOf={(p) => p.id}
+                    storageKey="mobles:folders-projects"
+                    searching={searching}
+                    onRenameFolder={(from, to) => void setProjectsFolder(shown.filter((p) => p.folder === from).map((p) => p.id), to)}
+                    onUngroup={(name) => void setProjectsFolder(shown.filter((p) => p.folder === name).map((p) => p.id), undefined)}
+                    render={(p) => (
+                      <ProjectCard
+                        project={p}
+                        onOpen={() => onOpen(p.id)}
+                        onDuplicate={() => handleDuplicate(p.id)}
+                        onDelete={() => setToDelete(p)}
+                        onSaveFile={() => setToSave(p)}
+                        onMove={() => setToMove(p)}
+                        ambients={membership.get(p.id)}
+                      />
+                    )}
+                  />
                 </Stack>
               ),
           }
@@ -160,6 +167,14 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
       />
 
       <SaveFileDialog project={toSave} open={toSave !== null} onClose={() => setToSave(null)} />
+      <MoveToFolderDialog
+        open={toMove !== null}
+        what={toMove?.name ?? ""}
+        folders={[...new Set((projects ?? []).filter((p) => !isObject(p) && p.folder).map((p) => p.folder!))].sort()}
+        current={toMove?.folder}
+        onPick={(f) => toMove && void setProjectsFolder([toMove.id], f)}
+        onClose={() => setToMove(null)}
+      />
 
       <Dialog.Root open={pendingFile !== null} onOpenChange={(e) => !e.open && setPendingFile(null)}>
         <Portal>
