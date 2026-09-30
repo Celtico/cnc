@@ -265,10 +265,10 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   «Seleccionar» a la fila d'eines de l'historial (`FolderedGrid selection`,
   amb `toolbar` per a «Esborrar l'historial») marca diverses targetes i les **mou totes a un grup** (un que ja hi
   és o un de nou) o les esborra (els mobles i objectes que són en un ambient es conserven).
-  **Ambients per a clients**: en triar una escena del catàleg es pregunta per a qui és (client o projecte,
-  opcional): l'ambient es diu «escena · client» i els seus mobles i objectes van al grup del client. Cada cop es
-  fan còpies noves, i «Duplicar (per a un client)…» (`duplicateAmbient`) també duplica els mobles enllaçats: dos
-  clients amb la mateixa escena no comparteixen cap moble.
+  **Ambients per a clients**: una escena del catàleg **s'obre directament** i va a l'Historial (sense preguntar res;
+  per decisió de l'usuari). Per fer-ne la d'un client, al menú ⋯ de l'ambient, «Duplicar (per a un client)…»
+  (`duplicateAmbient`): es diu «escena · client», duplica els mobles i objectes enllaçats i ho posa tot al grup del
+  client: dos clients amb la mateixa escena no comparteixen cap moble.
 - **Esborrar l'historial** (`projects/ClearHistory.tsx`, el mateix a Mobles, Objectes i Ambients): a dalt de
   l'historial, amb confirmació. A Mobles i Objectes es conserven els que són en algun ambient; a Ambients
   s'esborren els ambients (els seus mobles es queden). Respecta la cerca.

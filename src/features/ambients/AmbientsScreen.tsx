@@ -40,7 +40,7 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
     const data: Ambient = { ...EMPTY_AMBIENT, walls: roomWalls(0, 0, 4000, 3000) }
     onOpen(await createAmbient(uniqueName("Ambient nou", names), data))
   }
-  // Escena del catàleg: primer es pregunta per a qui és (client o projecte, opcional).
+  // «Duplicar (per a un client)…»: es pregunta per a qui és (client o projecte, opcional). Les escenes del catàleg s'obren directament.
   const [asking, setAsking] = useState<{ t: AmbientTemplate } | { row: AmbientRow } | null>(null)
   const [client, setClient] = useState("")
   const clients = [...new Set((rows ?? []).filter((r) => r.folder).map((r) => r.folder!))].sort()
@@ -55,7 +55,7 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
         /* sense emmagatzematge */
       }
       onOpen(id)
-      toaster.create({ title: `«${t.name}» creat`, description: who ? `Els seus mobles i objectes són al grup «${who.trim()}» de Mobles i Objectes, enllaçats a l'ambient.` : "Els seus mobles i objectes són a Mobles i Objectes (al grup de l'ambient), enllaçats a l'ambient.", type: "success" })
+      toaster.create({ title: `«${t.name}» creat`, description: who ? `Els seus mobles i objectes són al grup «${who.trim()}» de Mobles i Objectes, enllaçats a l'ambient.` : "Va a l'Historial, amb els seus mobles i objectes. Si és per a un client: ⋯ › «Duplicar (per a un client)…».", type: "success" })
     } finally {
       setBusy(null)
     }
@@ -183,7 +183,7 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                   ambGrid("folders", groupedRows)
                 ) : (
                   <Text fontSize="sm" color="fg.muted">
-                    Encara no n'hi ha cap. En crear una escena del catàleg per a un client, o amb «Grup nou» a l'Historial: el que hi desis queda aquí i «Esborrar l'historial» no el toca.
+                    Encara no n'hi ha cap. Amb «Duplicar (per a un client)…» d'un ambient, o amb «Grup nou» a l'Historial: el que hi desis queda aquí i «Esborrar l'historial» no el toca.
                   </Text>
                 )}
               </Accordion.ItemBody>
@@ -214,7 +214,7 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                             <Accordion.ItemBody>
                               <SimpleGrid columns={GALLERY_COLS} gap={3}>
                                 {list.map((t) => (
-                                  <CatalogCard key={t.id} t={t} busy={busy === t.id} onPick={() => (setClient(""), setAsking({ t }))} />
+                                  <CatalogCard key={t.id} t={t} busy={busy === t.id} onPick={() => void fromTemplate(t)} />
                                 ))}
                               </SimpleGrid>
                             </Accordion.ItemBody>
