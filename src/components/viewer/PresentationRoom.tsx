@@ -2,6 +2,8 @@ import { Environment, Lightformer } from "@react-three/drei"
 import { useEffect, useMemo } from "react"
 import { CanvasTexture, RepeatWrapping, SRGBColorSpace } from "three"
 import { LIGHT_SPEC, type FloorId, type PresentationScene } from "./presentationScene"
+import { surfaceMaterial } from "./surfaceMaterial"
+import type { MaterialPref } from "../../core/model"
 
 const SKIRTING = "#fbfaf7"
 /** Sòcol de paret: 8 cm d'alt i 15 mm de gruix. */
@@ -177,7 +179,19 @@ export function floorSwatchUrl(id: FloorId): string | null {
  * moble hi va recolzat), sòcol de paret i llum d'estudi amb reflexos suaus. Tot es genera
  * aquí, sense xarxa (funciona a la PWA sense connexió).
  */
-export function PresentationRoom({ backZ, scene }: { backZ: number; scene: PresentationScene }) {
+export function PresentationRoom({ backZ, scene, materials = [] }: { backZ: number; scene: PresentationScene; materials?: MaterialPref[] }) {
+  // Terra i paret de la biblioteca de materials (els mateixos dels ambients), a mida real.
+  const floorLib = scene.floorMaterial && materials.some((m) => m.name === scene.floorMaterial) ? scene.floorMaterial : null
+  const wallLib = scene.wallMaterial && materials.some((m) => m.name === scene.wallMaterial) ? scene.wallMaterial : null
+  const floorMat = useMemo(() => (floorLib ? surfaceMaterial(materials, floorLib, ROOM * 1000, ROOM * 1000) : null), [floorLib, materials])
+  const wallMat = useMemo(() => (wallLib ? surfaceMaterial(materials, wallLib, ROOM * 1000, 4000) : null), [wallLib, materials])
+  const skirtLibMat = useMemo(() => {
+    const name = scene.skirting === "floor" ? floorLib : scene.skirting === "wall" ? wallLib : null
+    return name ? surfaceMaterial(materials, name, ROOM * 1000, SK_H * 1000) : null
+  }, [scene.skirting, floorLib, wallLib, materials])
+  useEffect(() => () => floorMat?.dispose(), [floorMat])
+  useEffect(() => () => wallMat?.dispose(), [wallMat])
+  useEffect(() => () => skirtLibMat?.dispose(), [skirtLibMat])
   const floor = useMemo(() => {
     const f = makeFloor(scene.floor)
     f.map?.repeat.set(f.repeat, f.repeat)
@@ -208,18 +222,24 @@ export function PresentationRoom({ backZ, scene }: { backZ: number; scene: Prese
 
       <mesh rotation-x={-Math.PI / 2} position={[0, -0.0005, 0]} receiveShadow userData={{ room: "floor" }}>
         <planeGeometry args={[ROOM, ROOM]} />
-        <meshStandardMaterial key={scene.floor} map={floor.map} color={floor.map ? "#ffffff" : "#eeeeec"} roughness={floor.roughness} metalness={0} envMapIntensity={0.6} />
+        {floorMat ? (
+          <primitive key={`lib:${floorLib}`} object={floorMat} attach="material" />
+        ) : (
+          <meshStandardMaterial key={scene.floor} map={floor.map} color={floor.map ? "#ffffff" : "#eeeeec"} roughness={floor.roughness} metalness={0} envMapIntensity={0.6} />
+        )}
       </mesh>
 
       <mesh position={[0, 2, backZ - 0.002]} receiveShadow userData={{ room: "wall" }}>
         <planeGeometry args={[ROOM, 4]} />
-        <meshStandardMaterial color={scene.wall} roughness={0.95} envMapIntensity={0.4} />
+        {wallMat ? <primitive key={`lib:${wallLib}`} object={wallMat} attach="material" /> : <meshStandardMaterial key="wall-color" color={scene.wall} roughness={0.95} envMapIntensity={0.4} />}
       </mesh>
 
       {scene.skirting !== "none" && (
         <mesh position={[0, SK_H / 2, backZ + SK_T / 2]} receiveShadow castShadow userData={{ room: "wall" }}>
           <boxGeometry args={[ROOM, SK_H, SK_T]} />
-          {scene.skirting === "floor" && skirtingMap ? (
+          {skirtLibMat ? (
+            <primitive key="sk-lib" object={skirtLibMat} attach="material" />
+          ) : scene.skirting === "floor" && skirtingMap ? (
             <meshStandardMaterial key="sk-tex" map={skirtingMap} roughness={floor.roughness} />
           ) : (
             <meshStandardMaterial key="sk-color" color={scene.skirting === "wall" ? scene.wall : scene.skirting === "floor" ? "#eeeeec" : SKIRTING} roughness={0.45} />

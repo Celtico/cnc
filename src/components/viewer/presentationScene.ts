@@ -13,6 +13,10 @@ export interface PresentationScene {
   wall: string
   light: LightId
   skirting: SkirtingId
+  /** Material de la biblioteca (Preferències › Materials) per al terra; si no, la mostra `floor`. */
+  floorMaterial?: string
+  /** Material de la biblioteca per a la paret; si no, el color `wall`. */
+  wallMaterial?: string
 }
 
 export const FLOORS: { id: FloorId; label: string; swatch: string }[] = [
@@ -65,6 +69,8 @@ function read(): PresentationScene {
       wall: typeof v.wall === "string" && /^#[0-9a-f]{6}$/i.test(v.wall) ? v.wall : DEFAULT_SCENE.wall,
       light: LIGHTS.some((l) => l.id === v.light) ? v.light! : DEFAULT_SCENE.light,
       skirting: SKIRTINGS.some((k) => k.id === v.skirting) ? v.skirting! : DEFAULT_SCENE.skirting,
+      ...(typeof v.floorMaterial === "string" && v.floorMaterial ? { floorMaterial: v.floorMaterial } : {}),
+      ...(typeof v.wallMaterial === "string" && v.wallMaterial ? { wallMaterial: v.wallMaterial } : {}),
     }
   } catch {
     return DEFAULT_SCENE

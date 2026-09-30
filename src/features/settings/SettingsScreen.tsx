@@ -1163,7 +1163,8 @@ function FloorTiles({ value, onChange }: { value: FloorId; onChange: (v: FloorId
 function SceneFields({ previewComposition }: { previewComposition?: Composition }) {
   const [quality, setQuality] = useRenderQuality()
   const [scene, setScene] = usePresentationScene()
-  const wallName = WALLS.find((w) => w.color === scene.wall)?.label
+  const { settings } = useSettings()
+  const wallName = scene.wallMaterial ?? WALLS.find((w) => w.color === scene.wall)?.label
   return (
     <FoldGrid>
       <SettingsGroup icon={<LuSparkles />} title="Qualitat" summary={QUALITY_LABELS[quality]}>
@@ -1185,11 +1186,22 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
         Escena de «Presentació»: on es posa el moble per ensenyar-lo o fer-ne una imatge.
       </Text>
       <ScenePreview composition={previewComposition} />
-      <FormRow label="Terra">
-        <FloorTiles value={scene.floor} onChange={(floor) => setScene({ floor })} />
+      {/* Terra i paret: un material de la biblioteca (els mateixos dels ambients) o una mostra ràpida. */}
+      <FormRow label="Terra" help="Un material de la biblioteca (Preferències › Materials) o una de les mostres ràpides.">
+        <Stack gap={2.5}>
+          <Box maxW="280px">
+            <MaterialSelect label="Material del terra" hideLabel materials={settings.materials} value={scene.floorMaterial ?? ""} emptyLabel="Mostra ràpida (a sota)" onChange={(name) => setScene({ floorMaterial: name || undefined })} />
+          </Box>
+          <FloorTiles value={scene.floorMaterial ? ("" as FloorId) : scene.floor} onChange={(floor) => setScene({ floor, floorMaterial: undefined })} />
+        </Stack>
       </FormRow>
-      <FormRow label="Paret" help={wallName ?? "Personalitzada"}>
-        <Swatches label="Paret" items={WALLS.map((w) => ({ id: w.color, label: w.label, swatch: w.color }))} value={scene.wall} onChange={(wall) => setScene({ wall })} />
+      <FormRow label="Paret" help={scene.wallMaterial ? undefined : (wallName ?? "Personalitzada")}>
+        <Stack gap={2.5}>
+          <Box maxW="280px">
+            <MaterialSelect label="Material de la paret" hideLabel materials={settings.materials} value={scene.wallMaterial ?? ""} emptyLabel="Color (a sota)" onChange={(name) => setScene({ wallMaterial: name || undefined })} />
+          </Box>
+          <Swatches label="Paret" items={WALLS.map((w) => ({ id: w.color, label: w.label, swatch: w.color }))} value={scene.wallMaterial ? "" : scene.wall} onChange={(wall) => setScene({ wall, wallMaterial: undefined })} />
+        </Stack>
       </FormRow>
       <FormRow label="Sòcol de paret">
         <ChoiceChips label="Sòcol de paret" options={SKIRTINGS} value={scene.skirting} onChange={(skirting) => setScene({ skirting })} />

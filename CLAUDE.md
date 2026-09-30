@@ -444,7 +444,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     d'estudi, `viewer/PresentationRoom.tsx`, procedural). Per dins són la qualitat
     (`viewer/renderQuality.ts`: fast / presentation, també a Preferències › Visor 3D) més
     `mobles:viewer-role-colors-fast` (els **objectes** tenen la seva, `mobles:viewer-role-colors-object`, i
-    s'obren amb la textura). L'escena és a `viewer/presentationScene.ts`.
+    s'obren amb la textura). L'escena és a `viewer/presentationScene.ts`. Terra i paret poden ser **materials de la biblioteca**
+    (`PresentationScene.floorMaterial` / `wallMaterial`, `surfaceMaterial` a mida real; Preferències › Visor 3D) o les
+    mostres ràpides de sempre.
   - **Nom a la capçalera de l'inspector**: el nom del mòdul i de l'objecte es canvia clicant-lo
     a la capçalera (`Editable`, com a Figma), no a les seccions; el del moble, a la barra de dalt.
   - **Tipus de moble** (`Composition.kind`, `compositionKind`, `features/composition/kinds.tsx`):

@@ -229,7 +229,7 @@ export function CabinetViewer({
       {/* Llum d'entorn (IBL) d'un estudi procedural, com model-viewer: reflexos i ombrejat suau. */}
       <StudioEnvironment intensity={q.guides ? 0.6 : 0.5} />
       <hemisphereLight intensity={(q.guides ? 0.55 : light.ambient) * 0.45} groundColor="#8a7a60" />
-      {!q.guides && !ortho && <PresentationRoom backZ={-size.depth * S * 0.5} scene={scene} />}
+      {!q.guides && !ortho && <PresentationRoom backZ={-size.depth * S * 0.5} scene={scene} materials={materials} />}
       {/* bias i normalBias eviten les ratlles (shadow acne) de les cares que s'ombregen a si mateixes. */}
       <directionalLight
         key={q.shadowMap}
