@@ -23,10 +23,12 @@ describe("preferències", () => {
     expect(DEFAULT_SETTINGS.references.filter((r) => /tele|tv/i.test(r.name)).map((r) => r.name)).toEqual(["Tele 55″"])
   })
 
-  it("treu les teles antigues (valors inicials antics), no les de l'usuari", () => {
+  it("treu les teles Sony de les proves (també les còpies), no les altres de l'usuari", () => {
     const sony = { id: "tv-sony-55-screen", name: "TV Sony KD-55XD8505 (pantalla)", w: 1231, h: 717, plane: "wall", wallOffset: 200, builtin: true }
+    const copy = { id: "refx", name: "TV Sony KD-55XD8505 (pantalla)", w: 1231, h: 717, plane: "wall", wallOffset: 200 }
     const mine = { id: "tv-sony-55-stand", name: "La meva tele", w: 1231, h: 770, plane: "wall", wallOffset: 0 }
-    const res = parseSettings({ ...DEFAULT_SETTINGS, references: [sony, mine] })
+    const res = parseSettings({ ...DEFAULT_SETTINGS, references: [sony, copy, mine] })
+    expect(res.migrated).toBe(true)
     expect(res.settings.references.some((r) => r.name.includes("Sony"))).toBe(false)
     expect(res.settings.references.some((r) => r.name === "La meva tele")).toBe(true)
     expect(res.settings.references.some((r) => r.id === "radiator-800")).toBe(true)

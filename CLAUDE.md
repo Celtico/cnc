@@ -656,7 +656,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     («Material nou 2»), va a la categoria filtrada i deixa el nom seleccionat.
   - **Objectes de referència inicials** (`BUILTIN_REFERENCES`): genèrics (A4, rajoles, portes, **una sola tele** de 55″,
     radiador, endoll; per decisió de l'usuari, no una llista de teles). Les teles antigues (Sony de les proves del principi) es treuen de les
-    preferències desades (`RETIRED_REFERENCES`, només les `builtin`: si l'usuari n'havia fet una de pròpia, es queda).
+    preferències desades (`RETIRED_REFERENCES`, `isRetired`: també les còpies desades amb el nom «TV Sony KD-55XD8505…»).
   - **Biblioteca de materials** (`settings/libraryItems.ts`, `MATERIAL_LIBRARY`; diàleg `MaterialLibrary`):
     «Afegir» obre una graella de materials fets amb la mostra (fustes i lacats, pedres, metalls, vidres,
     teixits, terres i parets), cadascun amb la categoria, els gruixos i el cantell; «En blanc» per començar

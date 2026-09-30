@@ -270,6 +270,10 @@ export const BUILTIN_REFERENCES: RefPreset[] = [
 
 /** Valors inicials antics (teles de les proves del principi) que ja no hi són: es treuen de les preferències desades. */
 const RETIRED_REFERENCES = new Set(["tv-sony-55-screen", "tv-sony-55-stand", "tv-43", "tv-50", "tv-65", "tv-75", "tv-55-stand"])
+/** Les teles Sony de les proves (també les còpies que se'n van desar com a pròpies) i els valors inicials retirats. */
+function isRetired(r: RefPreset): boolean {
+  return (!!r.builtin && RETIRED_REFERENCES.has(r.id)) || /^TV Sony KD-55XD8505/.test(r.name)
+}
 
 /** Materials que no es tallen a la CNC (peces lliures sense nesting). Afegits a la v2. */
 export const NON_CNC_MATERIALS: MaterialPref[] = [
@@ -437,7 +441,9 @@ export function parseSettings(raw: unknown): SettingsParse {
   }
 
   const stored = list("references", RefPresetSchema, BUILTIN_REFERENCES, "Objectes de referència")
-  const references = withBuiltins(stored.filter((r) => !(r.builtin && RETIRED_REFERENCES.has(r.id))), BUILTIN_REFERENCES)
+  const kept = stored.filter((r) => !isRetired(r))
+  if (kept.length !== stored.length) migrated = true
+  const references = withBuiltins(kept, BUILTIN_REFERENCES)
   const materialsRaw = list("materials", MaterialPrefSchema, BUILTIN_MATERIALS, "Materials")
   // v2: materials que no són de CNC (ferro, inox, pedra, vidre), per a les peces lliures.
   // v3: materials de simulació (teixits, parquet, rajola, pintura) per als ambients.
