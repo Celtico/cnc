@@ -607,10 +607,16 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     Visualització, Tema; no és un acordió, com la Configuració de macOS) i a la dreta la pàgina triada (icona, títol,
     explicació i «Restaurar valors inicials»); dins, **una sola columna de 760 px** (`FoldGrid` = pila; res de
     graelles de targetes, que deixaven forats) de **grups sempre oberts** (`components/SettingsGroup`:
-    targeta amb capçalera, marges amples (px 6) i 24 px entre targetes, icones alineades a dalt amb el títol; res no s'obre de cop). Materials i objectes de referència fan **llista i detall**
-    (`components/MasterDetail`: llista agrupada per categoria amb mostra, cercador, filtres per categoria en
-    pastilles i «Afegir», amb desplaçament propi; el triat s'edita a la dreta, fix i de 680 px com a molt).
-    Materials: «Per defecte als mòduls nous» a dalt; a la llista, miniatura amb la textura (`MaterialThumb`) i
+    targeta amb capçalera, marges amples (px 6) i 24 px entre targetes, icones alineades a dalt amb el títol; res no s'obre de cop).
+    **Tots els camps de Preferències són files etiqueta · control** (`components/FormRow`: `FormRow` amb l'etiqueta
+    de 150 px a l'esquerra —a sobre al mòbil—, el control amb `maxW` i l'ajuda a sota; `NumRow` per als números,
+    180 px; `FormSection` per a seccions dins una targeta; `ChoiceChips` per a opcions que han de saltar de línia,
+    com el sòcol i la llum del Visor 3D, en lloc d'un control segmentat que es desborda). Materials i objectes de
+    referència fan **llista i detall** (`components/MasterDetail`: llista agrupada amb mostra; cercador, desplegable
+    de categoria i «Afegir» en una fila; desplaçament propi; `head` = el títol de la pàgina a dalt de la llista,
+    perquè el detall comenci a dalt de tot, a l'altura del menú —`PaneHeadContext` a les pàgines `wide`—;
+    `footer` = sota el detall). Materials: «Per defecte als mòduls nous» **sota el detall** (Tauler i Fons amb
+    el gruix triat d'entre els del material, `DefaultPick`); a la llista, miniatura amb la textura (`MaterialThumb`) i
     resum «Acabat · gruixos · cantell» (sense l'explicació de la categoria, que és al detall). El detall és una
     targeta amb la **mostra a escala real a tota l'amplada** (`MaterialHero`, mesura l'amplada i sempre són
     600 mm; `materialPreview.ts`), el nom gran editable amb Duplicar/Eliminar i dues seccions de files

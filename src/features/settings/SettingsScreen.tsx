@@ -14,7 +14,6 @@ import {
   Field,
   Flex,
   Grid,
-  GridItem,
   HStack,
   Heading,
   IconButton,
@@ -22,16 +21,16 @@ import {
   NativeSelect,
   Portal,
   SegmentGroup,
-  SimpleGrid,
   Stack,
   Switch,
   Text,
 } from "@chakra-ui/react"
-import { Children, Fragment, isValidElement, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { Children, createContext, Fragment, isValidElement, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { LuArrowDown, LuArrowUp, LuCheck, LuPaintbrush, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff, LuFileDown, LuGrid3X3, LuHammer, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRows3, LuRuler, LuScan, LuScissors, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { MasterDetail } from "../../components/MasterDetail"
+import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
 import { useSessionString } from "./useSessionString"
 import { MaterialHero, MaterialThumb, ThicknessChips } from "./MaterialBits"
 import { TextureEditor } from "./TextureEditor"
@@ -148,26 +147,25 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
         }
       >
           <Pane id="references" wide title="Objectes de referència" icon={LuScan} desc="Mides conegudes per calibrar la foto i per veure-les al costat del moble." onReset={() => setReset({ key: "references", label: "Objectes de referència" })}>
-            <Text fontSize="sm" color="fg.muted" maxW="3xl">
-              Una sola llista per a la foto (es calibra amb la cara del davant, amplada × alçada) i per a l'editor (fantasma 3D,
-              cal fondària). La distància a la paret corregeix l'escala si l'objecte no hi toca.
-            </Text>
             <ReferencesList refs={draft.references} onChange={(references) => set("references", references)} />
           </Pane>
 
           <Pane id="materials" wide title="Materials" icon={LuPalette} desc="Taulers, fons, metall, pedra i vidre, i els de simulació per als ambients." onReset={() => setReset({ key: "materials", label: "Materials" })}>
-            {/* Com la resta de pàgines: 760 px, no tota l'amplada. */}
-            <Box maxW="760px">
-            <SettingsGroup icon={<LuSquareStack />} title="Per defecte als mòduls nous" summary={`${draft.defaults.material} ${draft.defaults.thickness} · fons ${draft.defaults.backMaterial} ${draft.defaults.backThickness}`}>
-            <SimpleGrid columns={{ base: 2, md: 4 }} gap={3}>
-              <MaterialSelect label="Tauler" materials={draft.materials.filter((m) => !m.forBacks && m.category !== "sim")} value={draft.defaults.material} onChange={(material) => set("defaults", { ...draft.defaults, material })} />
-              <NumberField label="Gruix tauler" value={draft.defaults.thickness} min={8} max={40} step={1} onChange={(thickness) => set("defaults", { ...draft.defaults, thickness })} />
-              <MaterialSelect label="Fons" materials={draft.materials} value={draft.defaults.backMaterial} onChange={(backMaterial) => set("defaults", { ...draft.defaults, backMaterial })} />
-              <NumberField label="Gruix fons" value={draft.defaults.backThickness} min={3} max={40} step={1} onChange={(backThickness) => set("defaults", { ...draft.defaults, backThickness })} />
-            </SimpleGrid>
-            </SettingsGroup>
-            </Box>
-            <MaterialsList materials={draft.materials} onChange={(materials) => set("materials", materials)} />
+            <MaterialsList
+              materials={draft.materials}
+              onChange={(materials) => set("materials", materials)}
+              footer={
+                // Sota el detall (no penjat a dalt de la pàgina): quin tauler i quin fons tenen els mòduls nous.
+                <SettingsGroup icon={<LuSquareStack />} title="Per defecte als mòduls nous" summary={`${draft.defaults.material} ${draft.defaults.thickness} · fons ${draft.defaults.backMaterial} ${draft.defaults.backThickness}`}>
+                  <FormRow label="Tauler">
+                    <DefaultPick label="Tauler" materials={draft.materials.filter((m) => !m.forBacks && m.category !== "sim")} all={draft.materials} material={draft.defaults.material} thickness={draft.defaults.thickness} onChange={(material, thickness) => set("defaults", { ...draft.defaults, material, thickness })} />
+                  </FormRow>
+                  <FormRow label="Fons">
+                    <DefaultPick label="Fons" materials={draft.materials} all={draft.materials} material={draft.defaults.backMaterial} thickness={draft.defaults.backThickness} onChange={(backMaterial, backThickness) => set("defaults", { ...draft.defaults, backMaterial, backThickness })} />
+                  </FormRow>
+                </SettingsGroup>
+              }
+            />
           </Pane>
 
           <Pane id="boards" title="Taulers i nesting" icon={LuLayoutGrid} desc="Mides dels taulers i com es talla." onReset={() => setReset({ key: "boards", label: "Taulers i nesting" })}>
@@ -209,15 +207,15 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             </Button>
             </SettingsGroup>
             <SettingsGroup icon={<LuScissors />} title="Tall" summary={`kerf ${draft.boards.kerf} · marge ${draft.boards.margin}${draft.boards.ignoreGrain ? " · gira amb veta" : ""}`}>
-            <SimpleGrid columns={2} gap={3}>
-              <NumberField label="Kerf (fresa)" value={draft.boards.kerf} min={0} max={30} step={0.5} onChange={(kerf) => set("boards", { ...draft.boards, kerf })} />
-              <NumberField label="Marge del tauler" value={draft.boards.margin} min={0} max={100} step={1} onChange={(margin) => set("boards", { ...draft.boards, margin })} />
-            </SimpleGrid>
-            <Switch.Root size="sm" checked={draft.boards.ignoreGrain} onCheckedChange={(e) => set("boards", { ...draft.boards, ignoreGrain: e.checked })}>
-              <Switch.HiddenInput />
-              <Switch.Control />
-              <Switch.Label>Permetre girar les peces encara que tinguin veta</Switch.Label>
-            </Switch.Root>
+            <NumRow label="Kerf (fresa)" help="Amplada del tall de la fresa." value={draft.boards.kerf} min={0} max={30} step={0.5} onChange={(kerf) => set("boards", { ...draft.boards, kerf })} />
+            <NumRow label="Marge del tauler" help="Vora que no s'aprofita, a cada costat." value={draft.boards.margin} min={0} max={100} step={1} onChange={(margin) => set("boards", { ...draft.boards, margin })} />
+            <FormRow label="Veta">
+              <Switch.Root size="sm" pt={1.5} checked={draft.boards.ignoreGrain} onCheckedChange={(e) => set("boards", { ...draft.boards, ignoreGrain: e.checked })}>
+                <Switch.HiddenInput />
+                <Switch.Control />
+                <Switch.Label fontSize="sm">Girar les peces encara que tinguin veta</Switch.Label>
+              </Switch.Root>
+            </FormRow>
             </SettingsGroup>
             </Stack>
           </Pane>
@@ -229,36 +227,32 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
           <Pane id="gaps" title="Jocs per defecte" icon={LuRuler} desc="Separacions dels fronts, prestatges i fons." onReset={() => setReset({ key: "gaps", label: "Jocs per defecte" })}>
             <FoldGrid>
             <SettingsGroup icon={<LuDoorClosed />} title="Fronts" summary={`porta–cos ${draft.gaps.outerGap} · entre fronts ${draft.gaps.betweenGap}`}>
-            <SimpleGrid columns={2} gap={3}>
-              <NumberField label="Porta–cos" value={draft.gaps.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => set("gaps", { ...draft.gaps, outerGap })} />
-              <NumberField label="Entre fronts" value={draft.gaps.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => set("gaps", { ...draft.gaps, betweenGap })} />
-            </SimpleGrid>
+            <NumRow label="Porta–cos" help="Joc entre el front i la vora del cos." value={draft.gaps.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => set("gaps", { ...draft.gaps, outerGap })} />
+            <NumRow label="Entre fronts" value={draft.gaps.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => set("gaps", { ...draft.gaps, betweenGap })} />
             </SettingsGroup>
             <SettingsGroup icon={<LuRows3 />} title="Prestatges i fons" summary={`prestatge ${draft.gaps.shelfClearance} / ${draft.gaps.shelfSetback} · ranura ${draft.gaps.backSetback} × ${draft.gaps.grooveDepth}`}>
-            <SimpleGrid columns={2} gap={3}>
-              <NumberField label="Prestatge (joc)" value={draft.gaps.shelfClearance} min={0} max={5} step={0.5} onChange={(shelfClearance) => set("gaps", { ...draft.gaps, shelfClearance })} />
-              <NumberField label="Prestatge (retranq.)" value={draft.gaps.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set("gaps", { ...draft.gaps, shelfSetback })} />
-              <NumberField label="Fons (joc)" value={draft.gaps.backClearance} min={0} max={4} step={0.5} onChange={(backClearance) => set("gaps", { ...draft.gaps, backClearance })} />
-              <NumberField label="Ranura del fons" value={draft.gaps.backSetback} min={0} max={60} step={1} help="Distància al cantell posterior" onChange={(backSetback) => set("gaps", { ...draft.gaps, backSetback })} />
-              <NumberField label="Fondària ranura" value={draft.gaps.grooveDepth} min={3} max={15} step={1} onChange={(grooveDepth) => set("gaps", { ...draft.gaps, grooveDepth })} />
-            </SimpleGrid>
+            <NumRow label="Prestatge (joc)" value={draft.gaps.shelfClearance} min={0} max={5} step={0.5} onChange={(shelfClearance) => set("gaps", { ...draft.gaps, shelfClearance })} />
+            <NumRow label="Prestatge (retranq.)" help="Quant es fica cap endins respecte del davant." value={draft.gaps.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set("gaps", { ...draft.gaps, shelfSetback })} />
+            <NumRow label="Fons (joc)" value={draft.gaps.backClearance} min={0} max={4} step={0.5} onChange={(backClearance) => set("gaps", { ...draft.gaps, backClearance })} />
+            <NumRow label="Ranura del fons" help="Distància al cantell posterior." value={draft.gaps.backSetback} min={0} max={60} step={1} onChange={(backSetback) => set("gaps", { ...draft.gaps, backSetback })} />
+            <NumRow label="Fondària ranura" value={draft.gaps.grooveDepth} min={3} max={15} step={1} onChange={(grooveDepth) => set("gaps", { ...draft.gaps, grooveDepth })} />
             </SettingsGroup>
             </FoldGrid>
           </Pane>
 
           <Pane id="label" title="Etiquetes" icon={LuTag} desc="Mida de l'etiqueta de les peces." onReset={() => setReset({ key: "label", label: "Etiquetes" })}>
-            <Text fontSize="sm" color="fg.muted">
-              Mida de l'etiqueta per triar on s'enganxa (PosX/PosY del CSV del taller). Per defecte 99 × 68, Avery L7165.
-            </Text>
-            <SimpleGrid columns={2} gap={3}>
-              <NumberField label="Amplada" value={draft.label.w} min={10} max={300} step={1} onChange={(w) => set("label", { ...draft.label, w })} />
-              <NumberField label="Alçada" value={draft.label.h} min={10} max={300} step={1} onChange={(h) => set("label", { ...draft.label, h })} />
-            </SimpleGrid>
+            <SettingsGroup icon={<LuTag />} title="Etiqueta de peça" summary={`${draft.label.w} × ${draft.label.h} mm`}>
+              <Text fontSize="sm" color="fg.muted">
+                Mida de l'etiqueta per triar on s'enganxa (PosX/PosY del CSV del taller). Per defecte 99 × 68, Avery L7165.
+              </Text>
+              <NumRow label="Amplada" value={draft.label.w} min={10} max={300} step={1} onChange={(w) => set("label", { ...draft.label, w })} />
+              <NumRow label="Alçada" value={draft.label.h} min={10} max={300} step={1} onChange={(h) => set("label", { ...draft.label, h })} />
+            </SettingsGroup>
           </Pane>
 
           <Pane id="display" title="Visualització" icon={LuGrid3X3} desc="Unitat de les mides a la pantalla." onReset={() => setReset({ key: "display", label: "Visualització" })}>
-            <Field.Root>
-              <Field.Label>Unitat de les mides a la pantalla</Field.Label>
+            <SettingsGroup icon={<LuRuler />} title="Mides" summary={draft.display.unit === "cm" ? "En centímetres" : "En mil·límetres"}>
+            <FormRow label="Unitat" help="Internament tot es guarda en mm; els fitxers per al taller sempre van en mm.">
               <SegmentGroup.Root size="sm" value={draft.display.unit} onValueChange={(e) => (e.value === "mm" || e.value === "cm") && set("display", { unit: e.value })}>
                 <SegmentGroup.Indicator />
                 <SegmentGroup.Item value="mm">
@@ -270,19 +264,15 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
                   <SegmentGroup.ItemHiddenInput />
                 </SegmentGroup.Item>
               </SegmentGroup.Root>
-              <Field.HelperText>Internament tot es guarda en mm; els fitxers per al taller sempre van en mm.</Field.HelperText>
-            </Field.Root>
+            </FormRow>
+            </SettingsGroup>
           </Pane>
 
           <Pane id="theme" title="Tema" icon={LuSunMoon} desc="Dia o nit i el color principal de l'app.">
-            <FoldGrid>
-              <SettingsGroup icon={<LuSunMoon />} title="Aparença" summary="Dia · Nit · Com el sistema">
-                <ThemeField />
-              </SettingsGroup>
-              <SettingsGroup icon={<LuPalette />} title="Color principal" summary="Botons, seleccions i ressaltats">
-                <AccentField />
-              </SettingsGroup>
-            </FoldGrid>
+            <SettingsGroup icon={<LuSunMoon />} title="Aparença" summary="Es guarda en aquest dispositiu">
+              <ThemeField />
+              <AccentField />
+            </SettingsGroup>
           </Pane>
 
           <Pane id="viewer3d" title="Visor 3D" icon={LuLampFloor} desc="Qualitat del visor i l'escena del mode Presentació.">
@@ -356,7 +346,6 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
   const ordered = groups.flatMap((g) => g.panes)
   const cur = panes.find((p) => p.id === active) ?? null
   const shown = cur ?? ordered[0]!
-  const Icon = shown.icon
   return (
     <Stack gap={5}>
     {/* Capçalera (títol, importar/exportar): al mòbil, només a la llista d'apartats. */}
@@ -420,32 +409,52 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
         <Button display={{ base: "inline-flex", md: "none" }} variant="ghost" size="sm" alignSelf="flex-start" ml={-2} onClick={() => setActive(null)}>
           <LuChevronLeft /> Preferències
         </Button>
-        <HStack justify="space-between" gap={3} wrap="wrap" w="full" maxW={shown.wide ? "none" : "760px"}>
-          <HStack gap={2.5} align="flex-start">
-            <Box color="wood.fg" fontSize="xl" display="inline-flex" mt="5px">
-              <Icon />
-            </Box>
-            <Stack gap={0}>
-              <Heading size="lg">{shown.title}</Heading>
-              {shown.desc && (
-                <Text fontSize="sm" color="fg.muted">
-                  {shown.desc}
-                </Text>
-              )}
-            </Stack>
-          </HStack>
-          {shown.onReset && (
-            <Button size="xs" variant="ghost" colorPalette="red" onClick={shown.onReset}>
-              <LuRotateCcw /> Restaurar valors inicials
-            </Button>
-          )}
-        </HStack>
+        {!shown.wide && <PaneHeader pane={shown} />}
         <Stack gap={6} w="full" maxW={shown.wide ? "none" : "760px"}>
-          {shown.children}
+          {/* Pàgines de llista i detall: el títol va a dalt de la llista i el detall comença a dalt de tot. */}
+          <PaneHeadContext.Provider value={shown.wide ? <PaneHeader pane={shown} /> : null}>{shown.children}</PaneHeadContext.Provider>
         </Stack>
       </Stack>
     </Flex>
     </Stack>
+  )
+}
+
+/** Fila amb un camp numèric (mm, si no es diu una altra unitat). */
+function NumRow({ label, help, ...p }: { label: ReactNode; help?: ReactNode } & Omit<Parameters<typeof NumberField>[0], "label" | "help">) {
+  return (
+    <FormRow label={label} help={help} maxW="180px">
+      <NumberField label="" {...p} />
+    </FormRow>
+  )
+}
+
+/** Títol de la pàgina que es mira: a les de llista i detall, el posa la llista (`MasterDetail.head`). */
+const PaneHeadContext = createContext<ReactNode>(null)
+
+function PaneHeader({ pane }: { pane: PaneProps }) {
+  const Icon = pane.icon
+  return (
+    <HStack justify="space-between" gap={3} wrap="wrap" w="full" maxW={pane.wide ? "none" : "760px"}>
+      <HStack gap={2.5} align="flex-start">
+        <Box color="wood.fg" fontSize="xl" display="inline-flex" mt="5px">
+          <Icon />
+        </Box>
+        <Stack gap={0}>
+          <Heading size="lg">{pane.title}</Heading>
+          {pane.desc && (
+            <Text fontSize="sm" color="fg.muted">
+              {pane.desc}
+            </Text>
+          )}
+        </Stack>
+      </HStack>
+      {pane.onReset && (
+        <Button size="xs" variant="ghost" colorPalette="red" onClick={pane.onReset}>
+          <LuRotateCcw /> Restaurar valors inicials
+        </Button>
+      )}
+    </HStack>
   )
 }
 
@@ -460,6 +469,7 @@ function FoldGrid({ children }: { children: ReactNode }) {
 // --- Objectes de referència --------------------------------------------------------------
 
 function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: RefPreset[]) => void }) {
+  const head = useContext(PaneHeadContext)
   const [sel, setSel] = useSessionString("mobles:settings-ref")
   const [query, setQuery] = useState("")
   const update = (i: number, patch: Partial<RefPreset>) => onChange(refs.map((r, k) => (k === i ? { ...r, ...patch } : r)))
@@ -489,6 +499,15 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
   const r = i >= 0 ? refs[i]! : null
   return (
     <MasterDetail
+      head={
+        <Stack gap={3}>
+          {head}
+          <Text fontSize="sm" color="fg.muted">
+            Una sola llista per a la foto (es calibra amb la cara del davant, amplada × alçada) i per a l'editor (fantasma 3D, cal
+            fondària). La distància a la paret corregeix l'escala si l'objecte no hi toca.
+          </Text>
+        </Stack>
+      }
       groups={[
         {
           id: "refs",
@@ -554,34 +573,22 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
               </>
             }
           >
-            <Field.Root>
-              <Field.Label fontSize="sm">Nom</Field.Label>
+            <FormRow label="Nom" maxW="360px">
               <Input size="sm" value={r.name} onChange={(e) => update(i, { name: e.target.value })} />
-            </Field.Root>
-            <Grid templateColumns="repeat(6, minmax(0, 1fr))" gap={2}>
-              <GridItem colSpan={2}>
-                <NumberField label="Amplada" value={r.w} min={1} max={10000} step={10} onChange={(w) => update(i, { w })} />
-              </GridItem>
-              <GridItem colSpan={2}>
-                <NumberField label="Alçada" value={r.h} min={1} max={10000} step={10} onChange={(h) => update(i, { h })} />
-              </GridItem>
-              <GridItem colSpan={2}>
-                <NumberField label="Fondària" value={r.d ?? NaN} min={1} max={10000} step={10} help={r.d ? undefined : "Buida: només foto"} onChange={(d) => update(i, { d: Number.isFinite(d) && d > 0 ? d : undefined })} />
-              </GridItem>
-              <Field.Root gridColumn="span 3">
-                <Field.Label fontSize="sm">Pla</Field.Label>
-                <NativeSelect.Root size="sm">
-                  <NativeSelect.Field value={r.plane} onChange={(e) => update(i, { plane: e.target.value as RefPreset["plane"] })}>
-                    <option value="wall">Paret</option>
-                    <option value="floor">Terra</option>
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
-              </Field.Root>
-              <GridItem colSpan={3}>
-                <NumberField label="A la paret" value={r.wallOffset} min={0} max={5000} step={10} onChange={(wallOffset) => update(i, { wallOffset })} />
-              </GridItem>
-            </Grid>
+            </FormRow>
+            <NumRow label="Amplada" value={r.w} min={1} max={10000} step={10} onChange={(w) => update(i, { w })} />
+            <NumRow label="Alçada" value={r.h} min={1} max={10000} step={10} onChange={(h) => update(i, { h })} />
+            <NumRow label="Fondària" help={r.d ? undefined : "Buida: només per a la foto (no surt al 3D)."} value={r.d ?? NaN} min={1} max={10000} step={10} onChange={(d) => update(i, { d: Number.isFinite(d) && d > 0 ? d : undefined })} />
+            <FormRow label="Pla" maxW="180px">
+              <NativeSelect.Root size="sm">
+                <NativeSelect.Field aria-label="Pla" value={r.plane} onChange={(e) => update(i, { plane: e.target.value as RefPreset["plane"] })}>
+                  <option value="wall">Paret</option>
+                  <option value="floor">Terra</option>
+                </NativeSelect.Field>
+                <NativeSelect.Indicator />
+              </NativeSelect.Root>
+            </FormRow>
+            <NumRow label="A la paret" help="Distància a la paret si l'objecte no hi toca (corregeix l'escala de la foto)." value={r.wallOffset} min={0} max={5000} step={10} onChange={(wallOffset) => update(i, { wallOffset })} />
           </SettingsGroup>
         )
       }
@@ -604,7 +611,8 @@ function parseList(text: string): number[] {
     .filter((n) => Number.isFinite(n) && n > 0)
 }
 
-function MaterialsList({ materials, onChange }: { materials: MaterialPref[]; onChange: (m: MaterialPref[]) => void }) {
+function MaterialsList({ materials, onChange, footer }: { materials: MaterialPref[]; onChange: (m: MaterialPref[]) => void; footer?: ReactNode }) {
+  const head = useContext(PaneHeadContext)
   const [sel, setSel] = useSessionString("mobles:settings-material")
   const [cat, setCat] = useSessionString("mobles:settings-material-cat")
   const [query, setQuery] = useState("")
@@ -639,6 +647,8 @@ function MaterialsList({ materials, onChange }: { materials: MaterialPref[]; onC
   return (
     <>
     <MasterDetail
+      head={head}
+      footer={footer}
       // Per categories: Taulers · Fons · Metall, pedra i vidre · Simulació.
       filters={[{ id: "all", label: "Tots", count: materials.length }, ...MATERIAL_CATEGORIES.map((c) => ({ id: c.id, label: c.label, count: materials.filter((x) => materialCategory(x) === c.id).length }))]}
       filter={filterId}
@@ -692,37 +702,6 @@ const FINISH_LABEL: Record<Finish["kind"], string> = { color: "Color llis", lacq
 /** Resum d'una línia: acabat, gruixos i cantell. */
 function materialSummary(m: MaterialPref): string {
   return `${FINISH_LABEL[m.finish.kind]} · ${m.thicknesses.join(" · ")} mm${m.edge ? ` · ${m.edge}` : ""}`
-}
-
-/** Secció del detall (com les de l'inspector de Figma): títol petit i files etiqueta · control. */
-function FormSection({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <Stack gap={3.5} px={{ base: 4, sm: 6 }} py={5} borderTopWidth="1px">
-      <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
-        {title}
-      </Text>
-      {children}
-    </Stack>
-  )
-}
-
-/** Fila de formulari: etiqueta a l'esquerra (a sobre al mòbil), control i ajuda a la dreta. */
-function FormRow({ label, help, children }: { label: string; help?: ReactNode; children: ReactNode }) {
-  return (
-    <Grid templateColumns={{ base: "1fr", sm: "120px minmax(0, 1fr)" }} columnGap={4} rowGap={1.5} alignItems="start">
-      <Text fontSize="sm" color="fg.muted" pt={{ sm: "7px" }}>
-        {label}
-      </Text>
-      <Stack gap={1} minW={0}>
-        {children}
-        {help && (
-          <Text fontSize="xs" color="fg.subtle">
-            {help}
-          </Text>
-        )}
-      </Stack>
-    </Grid>
-  )
 }
 
 function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocusName }: { m: MaterialPref; onChange: (p: Partial<MaterialPref>) => void; onDuplicate: () => void; onDelete: () => void; canDelete: boolean; autoFocusName?: boolean }) {
@@ -937,13 +916,44 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
   )
 }
 
-export function MaterialSelect({ label, materials, value, onChange, emptyLabel }: { label: string; materials: MaterialPref[]; value: string; onChange: (name: string) => void; emptyLabel?: string }) {
+/** Material i gruix per defecte en una fila: el gruix es tria d'entre els del material. */
+function DefaultPick({ label, materials, all, material, thickness, onChange }: { label: string; materials: MaterialPref[]; all: MaterialPref[]; material: string; thickness: number; onChange: (material: string, thickness: number) => void }) {
+  const list = all.find((m) => m.name === material)?.thicknesses ?? []
+  const options = list.includes(thickness) ? list : [...list, thickness].sort((a, b) => a - b)
+  return (
+    <HStack gap={2} maxW="400px">
+      <MaterialSelect
+        hideLabel
+        label={label}
+        materials={materials}
+        value={material}
+        onChange={(name) => {
+          // En canviar de material, el gruix passa al més proper dels seus.
+          const t = all.find((m) => m.name === name)?.thicknesses ?? []
+          onChange(name, t.includes(thickness) || !t.length ? thickness : t.reduce((a, b) => (Math.abs(b - thickness) < Math.abs(a - thickness) ? b : a)))
+        }}
+      />
+      <NativeSelect.Root size="sm" w="104px" flexShrink={0}>
+        <NativeSelect.Field aria-label={`Gruix ${label.toLowerCase()}`} value={thickness} onChange={(e) => onChange(material, Number(e.target.value))}>
+          {options.map((t) => (
+            <option key={t} value={t}>
+              {t} mm
+            </option>
+          ))}
+        </NativeSelect.Field>
+        <NativeSelect.Indicator />
+      </NativeSelect.Root>
+    </HStack>
+  )
+}
+
+export function MaterialSelect({ label, materials, value, onChange, emptyLabel, hideLabel }: { label: string; materials: MaterialPref[]; value: string; onChange: (name: string) => void; emptyLabel?: string; hideLabel?: boolean }) {
   const known = materials.some((m) => m.name === value) || (emptyLabel !== undefined && value === "")
   return (
-    <Field.Root>
-      <Field.Label fontSize="sm">{label}</Field.Label>
+    <Field.Root flex={hideLabel ? 1 : undefined} minW={0}>
+      {!hideLabel && <Field.Label fontSize="sm">{label}</Field.Label>}
       <NativeSelect.Root size="sm">
-        <NativeSelect.Field value={value} onChange={(e) => onChange(e.target.value)}>
+        <NativeSelect.Field aria-label={hideLabel ? label : undefined} value={value} onChange={(e) => onChange(e.target.value)}>
           {emptyLabel !== undefined && <option value="">{emptyLabel}</option>}
           {!known && <option value={value}>{value || "(sense material)"}</option>}
           {MATERIAL_CATEGORIES.map((c) => {
@@ -973,33 +983,27 @@ function HardwareForm({ hardware: h, onChange }: { hardware: Settings["hardware"
   return (
     <FoldGrid>
       <Group title="Cassoleta de frontissa" icon={LuSquareStack}>
-        <SimpleGrid columns={3} gap={3}>
-          <NumberField label="Ø" value={h.hinge.cupDiameter} min={20} max={40} step={1} onChange={(cupDiameter) => sub("hinge", { cupDiameter })} />
-          <NumberField label="Fondària" value={h.hinge.cupDepth} min={5} max={20} step={0.5} onChange={(cupDepth) => sub("hinge", { cupDepth })} />
-          <NumberField label="Al cantell" value={h.hinge.cupOffset} min={15} max={30} step={0.5} onChange={(cupOffset) => sub("hinge", { cupOffset })} />
-        </SimpleGrid>
+        <NumRow label="Diàmetre (Ø)" value={h.hinge.cupDiameter} min={20} max={40} step={1} onChange={(cupDiameter) => sub("hinge", { cupDiameter })} />
+        <NumRow label="Fondària" value={h.hinge.cupDepth} min={5} max={20} step={0.5} onChange={(cupDepth) => sub("hinge", { cupDepth })} />
+        <NumRow label="Al cantell" help="Del cantell de la porta a la vora de la cassoleta." value={h.hinge.cupOffset} min={15} max={30} step={0.5} onChange={(cupOffset) => sub("hinge", { cupOffset })} />
       </Group>
       <Group title="System 32" icon={LuGrid3X3}>
-        <SimpleGrid columns={2} gap={3}>
-          <NumberField label="Filera al cantell" value={h.system32.edgeOffset} min={20} max={60} step={1} onChange={(edgeOffset) => sub("system32", { edgeOffset })} />
-          <NumberField label="Pas" value={h.system32.pitch} min={16} max={64} step={1} onChange={(pitch) => sub("system32", { pitch })} />
-          <NumberField label="Ø forat" value={h.system32.diameter} min={3} max={10} step={0.5} onChange={(diameter) => sub("system32", { diameter })} />
-          <NumberField label="Fondària" value={h.system32.depth} min={5} max={16} step={0.5} onChange={(depth) => sub("system32", { depth })} />
-        </SimpleGrid>
+        <NumRow label="Filera al cantell" value={h.system32.edgeOffset} min={20} max={60} step={1} onChange={(edgeOffset) => sub("system32", { edgeOffset })} />
+        <NumRow label="Pas" value={h.system32.pitch} min={16} max={64} step={1} onChange={(pitch) => sub("system32", { pitch })} />
+        <NumRow label="Diàmetre (Ø)" value={h.system32.diameter} min={3} max={10} step={0.5} onChange={(diameter) => sub("system32", { diameter })} />
+        <NumRow label="Fondària" value={h.system32.depth} min={5} max={16} step={0.5} onChange={(depth) => sub("system32", { depth })} />
       </Group>
       <Group title="Espigues" icon={LuHammer}>
-        <SimpleGrid columns={2} gap={3}>
-          <NumberField label="Ø" value={h.dowel.diameter} min={5} max={12} step={1} onChange={(diameter) => sub("dowel", { diameter })} />
-          <NumberField label="Als extrems" value={h.dowel.endOffset} min={20} max={120} step={5} onChange={(endOffset) => sub("dowel", { endOffset })} />
-          <NumberField label="Fond. a la cara" value={h.dowel.faceDepth} min={5} max={20} step={0.5} onChange={(faceDepth) => sub("dowel", { faceDepth })} />
-          <NumberField label="Fond. al cantell" value={h.dowel.edgeDepth} min={10} max={40} step={0.5} onChange={(edgeDepth) => sub("dowel", { edgeDepth })} />
-        </SimpleGrid>
+        <NumRow label="Diàmetre (Ø)" value={h.dowel.diameter} min={5} max={12} step={1} onChange={(diameter) => sub("dowel", { diameter })} />
+        <NumRow label="Als extrems" value={h.dowel.endOffset} min={20} max={120} step={5} onChange={(endOffset) => sub("dowel", { endOffset })} />
+        <NumRow label="Fondària a la cara" value={h.dowel.faceDepth} min={5} max={20} step={0.5} onChange={(faceDepth) => sub("dowel", { faceDepth })} />
+        <NumRow label="Fondària al cantell" value={h.dowel.edgeDepth} min={10} max={40} step={0.5} onChange={(edgeDepth) => sub("dowel", { edgeDepth })} />
       </Group>
       <Group title="Calaixos (guia genèrica)" icon={LuFileDown}>
-        <Field.Root invalid={h.drawer.slideLengths.length === 0}>
-          <Field.Label fontSize="sm">Llargades de guia disponibles</Field.Label>
+        <FormRow label="Llargades de guia" help="Es tria la més llarga que hi cap." maxW="360px">
           <Input
             size="sm"
+            aria-invalid={h.drawer.slideLengths.length === 0 || undefined}
             value={slides}
             onChange={(e) => {
               setSlides(e.target.value)
@@ -1009,23 +1013,18 @@ function HardwareForm({ hardware: h, onChange }: { hardware: Settings["hardware"
             onBlur={() => setSlides(h.drawer.slideLengths.join(" · "))}
             placeholder="250 · 300 · 350 · 400 · 450 · 500 · 550"
           />
-          <Field.HelperText>Es tria la més llarga que hi cap.</Field.HelperText>
-        </Field.Root>
-        <SimpleGrid columns={{ base: 2, md: 3 }} gap={3}>
-          <NumberField label="Joc lateral (costat)" value={h.drawer.sideClearance} min={0} max={30} step={0.5} onChange={(sideClearance) => sub("drawer", { sideClearance })} />
-          <NumberField label="Gruix caixa" value={h.drawer.boxThickness} min={8} max={25} step={1} onChange={(boxThickness) => sub("drawer", { boxThickness })} />
-          <NumberField label="Gruix fons caixa" value={h.drawer.bottomThickness} min={3} max={16} step={1} onChange={(bottomThickness) => sub("drawer", { bottomThickness })} />
-          <NumberField label="Front − caixa" value={h.drawer.boxDrop} min={0} max={100} step={1} onChange={(boxDrop) => sub("drawer", { boxDrop })} />
-          <NumberField label="Fons des de baix" value={h.drawer.bottomOffset} min={0} max={40} step={1} onChange={(bottomOffset) => sub("drawer", { bottomOffset })} />
-          <NumberField label="Joc amb el fons" value={h.drawer.backClearance} min={0} max={60} step={1} onChange={(backClearance) => sub("drawer", { backClearance })} />
-        </SimpleGrid>
+        </FormRow>
+        <NumRow label="Joc lateral (costat)" value={h.drawer.sideClearance} min={0} max={30} step={0.5} onChange={(sideClearance) => sub("drawer", { sideClearance })} />
+        <NumRow label="Gruix caixa" value={h.drawer.boxThickness} min={8} max={25} step={1} onChange={(boxThickness) => sub("drawer", { boxThickness })} />
+        <NumRow label="Gruix fons caixa" value={h.drawer.bottomThickness} min={3} max={16} step={1} onChange={(bottomThickness) => sub("drawer", { bottomThickness })} />
+        <NumRow label="Front − caixa" help="Quant més baixa és la caixa que el front." value={h.drawer.boxDrop} min={0} max={100} step={1} onChange={(boxDrop) => sub("drawer", { boxDrop })} />
+        <NumRow label="Fons des de baix" value={h.drawer.bottomOffset} min={0} max={40} step={1} onChange={(bottomOffset) => sub("drawer", { bottomOffset })} />
+        <NumRow label="Joc amb el fons" value={h.drawer.backClearance} min={0} max={60} step={1} onChange={(backClearance) => sub("drawer", { backClearance })} />
       </Group>
       <Group title="Imants (reixetes i trapes)" icon={LuSquareStack}>
-        <SimpleGrid columns={3} gap={3}>
-          <NumberField label="Ø" value={h.magnet.diameter} min={5} max={20} step={1} onChange={(diameter) => sub("magnet", { diameter })} />
-          <NumberField label="Fondària" value={h.magnet.depth} min={2} max={15} step={0.5} onChange={(depth) => sub("magnet", { depth })} />
-          <NumberField label="A la cantonada" value={h.magnet.cornerOffset} min={20} max={200} step={5} onChange={(cornerOffset) => sub("magnet", { cornerOffset })} />
-        </SimpleGrid>
+        <NumRow label="Diàmetre (Ø)" value={h.magnet.diameter} min={5} max={20} step={1} onChange={(diameter) => sub("magnet", { diameter })} />
+        <NumRow label="Fondària" value={h.magnet.depth} min={2} max={15} step={0.5} onChange={(depth) => sub("magnet", { depth })} />
+        <NumRow label="A la cantonada" value={h.magnet.cornerOffset} min={20} max={200} step={5} onChange={(cornerOffset) => sub("magnet", { cornerOffset })} />
       </Group>
     </FoldGrid>
   )
@@ -1046,8 +1045,7 @@ function Group({ title, icon: Icon, children }: { title: string; icon: IconType;
 function ThemeField() {
   const { theme, setTheme } = useTheme()
   return (
-    <Field.Root>
-      <Field.Label>Aparença</Field.Label>
+    <FormRow label="Tema">
       <SegmentGroup.Root size="sm" value={theme ?? "system"} onValueChange={(e) => e.value && setTheme(e.value)}>
         <SegmentGroup.Indicator />
         {(
@@ -1067,15 +1065,14 @@ function ThemeField() {
           </SegmentGroup.Item>
         ))}
       </SegmentGroup.Root>
-    </Field.Root>
+    </FormRow>
   )
 }
 
 function AccentField() {
   const [accent, setAccent] = useAccent()
   return (
-    <Field.Root>
-      <Field.Label>Color principal</Field.Label>
+    <FormRow label="Color principal" help="Botons, seleccions i ressaltats.">
       <HStack gap={2} wrap="wrap" role="radiogroup" aria-label="Color principal">
         {ACCENTS.map((a) => {
           const on = a.id === accent
@@ -1100,8 +1097,7 @@ function AccentField() {
           )
         })}
       </HStack>
-      <Field.HelperText>Botons, seleccions i ressaltats. Es guarda en aquest dispositiu.</Field.HelperText>
-    </Field.Root>
+    </FormRow>
   )
 }
 
@@ -1165,8 +1161,7 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
   return (
     <FoldGrid>
       <SettingsGroup icon={<LuSparkles />} title="Qualitat" summary={QUALITY_LABELS[quality]}>
-      <Field.Root>
-        <Field.Label>Qualitat</Field.Label>
+      <FormRow label="Qualitat" help="Ràpida per treballar (al visor, modes «Per peça» i «Textura»); Presentació per ensenyar-lo. També es canvia a «Opcions de vista» del visor.">
         <SegmentGroup.Root size="sm" value={quality} onValueChange={(e) => e.value && e.value in QUALITY_LABELS && setQuality(e.value as RenderQuality)}>
           <SegmentGroup.Indicator />
           {(Object.keys(QUALITY_LABELS) as RenderQuality[]).map((k) => (
@@ -1176,62 +1171,26 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
             </SegmentGroup.Item>
           ))}
         </SegmentGroup.Root>
-        <Field.HelperText>Ràpida per treballar (al visor, modes «Per peça» i «Textura»); Presentació per ensenyar-lo. També es canvia a «Opcions de vista» del visor.</Field.HelperText>
-      </Field.Root>
+      </FormRow>
       </SettingsGroup>
 
       <SettingsGroup icon={<LuLampFloor />} title="Escena de presentació" summary={`${wallName ?? "Paret personalitzada"} · ${LIGHTS.find((l) => l.id === scene.light)?.label ?? ""}`}>
-      <SimpleGrid columns={{ base: 1, lg: 2 }} gap={6} alignItems="start">
-        <Stack gap={4}>
-          <Text textStyle="sm" color="fg.muted">
-            Escena de «Presentació»: on es posa el moble per ensenyar-lo o fer-ne una imatge.
-          </Text>
-
-          <Field.Root>
-            <Field.Label>Terra</Field.Label>
-            <FloorTiles value={scene.floor} onChange={(floor) => setScene({ floor })} />
-          </Field.Root>
-
-          <Field.Root>
-            <Field.Label>Paret · {wallName ?? "Personalitzada"}</Field.Label>
-            <Swatches label="Paret" items={WALLS.map((w) => ({ id: w.color, label: w.label, swatch: w.color }))} value={scene.wall} onChange={(wall) => setScene({ wall })} />
-          </Field.Root>
-
-          <Field.Root>
-            <Field.Label>Sòcol de paret</Field.Label>
-            <SegmentGroup.Root size="sm" value={scene.skirting} onValueChange={(e) => {
-              const k = SKIRTINGS.find((x) => x.id === e.value)
-              if (k) setScene({ skirting: k.id })
-            }}>
-              <SegmentGroup.Indicator />
-              {SKIRTINGS.map((k) => (
-                <SegmentGroup.Item key={k.id} value={k.id}>
-                  <SegmentGroup.ItemText>{k.label}</SegmentGroup.ItemText>
-                  <SegmentGroup.ItemHiddenInput />
-                </SegmentGroup.Item>
-              ))}
-            </SegmentGroup.Root>
-          </Field.Root>
-
-          <Field.Root>
-            <Field.Label>Llum</Field.Label>
-            <SegmentGroup.Root size="sm" value={scene.light} onValueChange={(e) => {
-              const l = LIGHTS.find((x) => x.id === e.value)
-              if (l) setScene({ light: l.id })
-            }}>
-              <SegmentGroup.Indicator />
-              {LIGHTS.map((l) => (
-                <SegmentGroup.Item key={l.id} value={l.id}>
-                  <SegmentGroup.ItemText>{l.label}</SegmentGroup.ItemText>
-                  <SegmentGroup.ItemHiddenInput />
-                </SegmentGroup.Item>
-              ))}
-            </SegmentGroup.Root>
-            <Field.HelperText>{LIGHTS.find((l) => l.id === scene.light)?.help}</Field.HelperText>
-          </Field.Root>
-        </Stack>
-        <ScenePreview composition={previewComposition} />
-      </SimpleGrid>
+      <Text textStyle="sm" color="fg.muted">
+        Escena de «Presentació»: on es posa el moble per ensenyar-lo o fer-ne una imatge.
+      </Text>
+      <ScenePreview composition={previewComposition} />
+      <FormRow label="Terra">
+        <FloorTiles value={scene.floor} onChange={(floor) => setScene({ floor })} />
+      </FormRow>
+      <FormRow label="Paret" help={wallName ?? "Personalitzada"}>
+        <Swatches label="Paret" items={WALLS.map((w) => ({ id: w.color, label: w.label, swatch: w.color }))} value={scene.wall} onChange={(wall) => setScene({ wall })} />
+      </FormRow>
+      <FormRow label="Sòcol de paret">
+        <ChoiceChips label="Sòcol de paret" options={SKIRTINGS} value={scene.skirting} onChange={(skirting) => setScene({ skirting })} />
+      </FormRow>
+      <FormRow label="Llum" help={LIGHTS.find((l) => l.id === scene.light)?.help}>
+        <ChoiceChips label="Llum" options={LIGHTS} value={scene.light} onChange={(light) => setScene({ light })} />
+      </FormRow>
       </SettingsGroup>
     </FoldGrid>
   )

@@ -1,4 +1,4 @@
-import { Badge, Box, Button, CloseButton, Flex, HStack, Input, InputGroup, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, CloseButton, Flex, HStack, Input, InputGroup, NativeSelect, Stack, Text } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 import { LuChevronLeft, LuChevronRight, LuPlus, LuSearch } from "react-icons/lu"
 
@@ -38,8 +38,14 @@ export function MasterDetail({
   filter,
   onFilter,
   detailMaxW = "680px",
+  head,
+  footer,
 }: {
-  /** Filtre per categoria (pastilles a dalt de la llista): «Tots» i una per grup. */
+  /** A dalt de la llista (títol de la pàgina): així el detall comença a dalt de tot, a l'altura del menú. */
+  head?: ReactNode
+  /** Sota el detall (opcions de tota la llista, p. ex. els materials per defecte). */
+  footer?: ReactNode
+  /** Filtre per categoria (desplegable al costat del cercador): «Tots» i una per grup. */
   filters?: { id: string; label: string; count: number }[]
   filter?: string
   onFilter?: (id: string) => void
@@ -58,28 +64,29 @@ export function MasterDetail({
 }) {
   const list = (
     <Stack gap={3} minW={0}>
+      {head}
       {/* Cercador i filtres sempre a dalt de la llista (la llista es desplaça per sota). */}
       <Stack gap={2} position="sticky" top={0} zIndex={1} bg="bg" pb={1}>
       <HStack gap={2}>
-        <InputGroup flex={1} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => onQuery("")} /> : undefined}>
+        <InputGroup flex={1} minW={0} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => onQuery("")} /> : undefined}>
           <Input size="sm" value={query} onChange={(e) => onQuery(e.target.value)} placeholder="Cercar…" aria-label="Cercar" />
         </InputGroup>
-        <Button size="sm" variant="outline" onClick={onAdd}>
+        {filters && (
+          <NativeSelect.Root size="sm" w="124px" flexShrink={0}>
+            <NativeSelect.Field aria-label="Categoria" value={filter} onChange={(e) => onFilter?.(e.target.value)}>
+              {filters.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label} ({f.count})
+                </option>
+              ))}
+            </NativeSelect.Field>
+            <NativeSelect.Indicator />
+          </NativeSelect.Root>
+        )}
+        <Button size="sm" variant="outline" flexShrink={0} onClick={onAdd}>
           <LuPlus /> {addLabel}
         </Button>
       </HStack>
-      {filters && (
-        <HStack gap={1} wrap="wrap">
-          {filters.map((f) => (
-            <Button key={f.id} size="2xs" rounded="full" variant={filter === f.id ? "solid" : "outline"} colorPalette={filter === f.id ? "wood" : "gray"} onClick={() => onFilter?.(f.id)}>
-              {f.label}
-              <Text as="span" opacity={0.7}>
-                {f.count}
-              </Text>
-            </Button>
-          ))}
-        </HStack>
-      )}
       </Stack>
       {groups.map((g) =>
         g.items.length ? (
@@ -154,12 +161,12 @@ export function MasterDetail({
       {/* A l'ordinador, la llista té el seu propi desplaçament i el detall queda fix al costat: triar
           un element de baix de tot no deixa el detall fora de la vista. */}
       <Box
-        w={{ base: "full", lg: "320px" }}
+        w={{ base: "full", lg: "360px" }}
         flexShrink={0}
         display={{ base: selected ? "none" : "block", lg: "block" }}
         position={{ lg: "sticky" }}
         top={{ lg: 0 }}
-        maxH={{ lg: "calc(100dvh - 150px)" }}
+        maxH={{ lg: "calc(100dvh - 40px)" }}
         overflowY={{ lg: "auto" }}
         pr={{ lg: 1 }}
         css={{ scrollbarWidth: "thin" }}
@@ -170,7 +177,10 @@ export function MasterDetail({
         <Button display={{ base: "inline-flex", lg: "none" }} variant="ghost" size="sm" mb={2} ml={-2} onClick={() => onSelect(null)}>
           <LuChevronLeft /> {backLabel}
         </Button>
-        {selected ? detail : (empty ?? null)}
+        <Stack gap={6}>
+          {selected ? detail : (empty ?? null)}
+          {footer}
+        </Stack>
       </Box>
     </Flex>
   )

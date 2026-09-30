@@ -26,7 +26,7 @@ export function ScenePreview({ composition }: { composition?: Composition }) {
   if (!data) return null
   return (
     <Box>
-      <Box aspectRatio={4 / 3} maxH="420px" w="full" rounded="md" overflow="hidden" borderWidth="1px" position="relative">
+      <Box aspectRatio={16 / 9} maxH="360px" w="full" rounded="md" overflow="hidden" borderWidth="1px" position="relative">
         <CabinetViewer panels={data.panels} size={data.size} exploded={false} showHoles={false} materials={settings.materials} quality="presentation" />
       </Box>
       <Text textStyle="xs" color="fg.muted" mt={1.5}>
