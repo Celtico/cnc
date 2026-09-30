@@ -383,9 +383,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const createAndAdd = (c: Composition, n: string, what: "moble" | "object") =>
     void (async () => {
       const existing = (await db.projects.toArray()).map((p) => p.name)
-      // Al grup de l'ambient, com els que porta una escena del catàleg.
-      const folder = (await db.ambients.get(ambientId))?.name
-      const id = await createProject(uniqueName(n, existing), undefined, { composition: c, ...(folder ? { folder } : {}) })
+      const id = await createProject(uniqueName(n, existing), undefined, { composition: c })
       const p = await db.projects.get(id)
       if (p) addMoble(p)
       if (what === "moble") setPicker(false)
@@ -670,7 +668,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                     storageKey="mobles:ambient-picker"
                     onCreate={(c, n) => createAndAdd(c, n, "moble")}
                     history={(kind, matches) => {
-                      const shown = (projects ?? []).filter((p) => !p.auto && !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
+                      const shown = (projects ?? []).filter((p) => !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
                       return {
                         count: shown.length,
                         node: shown.length ? (
@@ -716,7 +714,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                     storageKey="mobles:ambient-objects"
                     onCreate={(c, n) => createAndAdd(c, n, "object")}
                     history={(matches) => {
-                      const shown = (projects ?? []).filter((p) => !p.auto && isObject(p) && matches(p.name))
+                      const shown = (projects ?? []).filter((p) => isObject(p) && matches(p.name))
                       return {
                         count: shown.length,
                         node: shown.length ? (

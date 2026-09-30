@@ -255,18 +255,16 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   esborrar; el mateix a totes) i `MoveToFolderDialog` (un grup existent, un de nou o treure'l). Es
   mostren amb `FolderedGrid` (`projects/Folders.tsx`): primer els grups plegables (⋯: canviar el nom,
   desagrupar) i després els que no en tenen; la cerca obre els grups amb resultats.
-  **Historial i Projectes** (Mobles, Objectes i Ambients): l'**Historial** és el que és de pas (sense grup) i
-  «Esborrar l'historial» només esborra aquests; el que es desa en un grup surt a la secció **Projectes**
-  (`FolderedGrid show="folders"|"loose"`) i no es toca. **Mobles d'escena sense tocar** (`Project.auto`): els que
-  crea una escena del catàleg no surten a Mobles ni a Objectes (són part de l'ambient) fins que es modifiquen
-  (`updateProjectComposition` treu la marca i passen al grup de Projectes); `deleteAmbient` esborra els seus `auto`
-  que cap altre ambient fa servir.
+  **Historial i Projectes** (Mobles, Objectes i Ambients): primer l'**Historial** (el que és de pas, sense grup; la
+  «graella de batalla») i a sota **Projectes** (el que es desa en un grup, p. ex. un per client; `FolderedGrid
+  show="loose"|"folders"`). «Esborrar l'historial» no toca els Projectes. **Modificats** (`Project.edited`, posat per
+  `updateProjectComposition`; `isEdited` per als antics): a l'historial porten l'etiqueta «Modificat» i, en esborrar
+  l'historial, s'avisa que es perdrien els canvis i es pot «Esborrar només els no modificats». Els mobles d'una escena
+  del catàleg van a l'Historial (o al grup del client, si se n'indica un).
   **Grups propis** (p. ex. un per client): **«Grup nou»** (nom i després es toquen les targetes que hi van) i
   «Seleccionar» a la fila d'eines de l'historial (`FolderedGrid selection`,
   amb `toolbar` per a «Esborrar l'historial») marca diverses targetes i les **mou totes a un grup** (un que ja hi
-  és o un de nou) o les esborra (els mobles i objectes que són en un ambient es conserven). Els mobles i objectes
-  que crea un ambient (escena del catàleg, «Nou moble/objecte» de les finestres) van sols al **grup amb el nom de
-  l'ambient**.
+  és o un de nou) o les esborra (els mobles i objectes que són en un ambient es conserven).
   **Ambients per a clients**: en triar una escena del catàleg es pregunta per a qui és (client o projecte,
   opcional): l'ambient es diu «escena · client» i els seus mobles i objectes van al grup del client. Cada cop es
   fan còpies noves, i «Duplicar (per a un client)…» (`duplicateAmbient`) també duplica els mobles enllaçats: dos

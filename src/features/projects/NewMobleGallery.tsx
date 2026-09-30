@@ -129,6 +129,15 @@ export function NewMobleGallery({
 
 
       <Accordion.Root multiple collapsible lazyMount variant="enclosed" value={q ? found : openSections} onValueChange={(e) => !q && setOpenSections(e.value)}>
+        <Accordion.Item value="history">
+          <Accordion.ItemTrigger cursor="pointer">
+            <FoldTitle icon={<LuHistory />} title="Historial" count={hist.count} />
+            <Accordion.ItemIndicator />
+          </Accordion.ItemTrigger>
+          <Accordion.ItemContent>
+            <Accordion.ItemBody>{hist.node}</Accordion.ItemBody>
+          </Accordion.ItemContent>
+        </Accordion.Item>
         {hist.projects && (
           <Accordion.Item value="projects">
             <Accordion.ItemTrigger cursor="pointer">
@@ -140,15 +149,6 @@ export function NewMobleGallery({
             </Accordion.ItemContent>
           </Accordion.Item>
         )}
-        <Accordion.Item value="history">
-          <Accordion.ItemTrigger cursor="pointer">
-            <FoldTitle icon={<LuHistory />} title="Historial" count={hist.count} />
-            <Accordion.ItemIndicator />
-          </Accordion.ItemTrigger>
-          <Accordion.ItemContent>
-            <Accordion.ItemBody>{hist.node}</Accordion.ItemBody>
-          </Accordion.ItemContent>
-        </Accordion.Item>
 
         <Accordion.Item value="mine">
           <Accordion.ItemTrigger cursor="pointer">

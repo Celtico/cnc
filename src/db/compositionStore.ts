@@ -26,8 +26,8 @@ export function compositionOf(project: Pick<Project, "params" | "composition" | 
 }
 
 export async function updateProjectComposition(id: number, composition: Composition): Promise<void> {
-  // Un moble d'escena que es toca deixa de ser «automàtic»: ja surt a Mobles / Objectes (al seu grup).
-  await db.projects.update(id, { composition, updatedAt: Date.now(), auto: undefined })
+  // Marca de «modificat»: en esborrar l'historial s'avisa que es perdrien els canvis.
+  await db.projects.update(id, { composition, updatedAt: Date.now(), edited: true })
 }
 
 // --- Plantilles de l'usuari (JSON a localStorage) -----------------------------------

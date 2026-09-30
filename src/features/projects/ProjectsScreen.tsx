@@ -21,7 +21,7 @@ import { ClearHistory } from "./ClearHistory"
 import { blankMoble } from "./blank"
 import { useSettings } from "../settings/SettingsContext"
 import { FolderedGrid, MoveToFolderDialog } from "./Folders"
-import { createProject, db, deleteProject, setProjectsFolder, duplicateProject, type Project } from "../../db/db"
+import { createProject, db, deleteProject, isEdited, setProjectsFolder, duplicateProject, type Project } from "../../db/db"
 import { compositionOf } from "../../db/compositionStore"
 import { useProjects } from "../useProject"
 import { toaster } from "../../components/ui/toaster"
@@ -125,7 +125,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
       <NewMobleGallery
         onCreate={(c, n) => void handleCreate(c, n)}
         history={(kind, matches, searching) => {
-          const shown = (projects ?? []).filter((p) => !p.auto && !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
+          const shown = (projects ?? []).filter((p) => !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
           // Historial = el que és de pas (sense grup); el que es desa en un grup passa a Projectes.
           const loose = shown.filter((p) => !p.folder)
           const grouped = shown.filter((p) => p.folder)
@@ -182,9 +182,14 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
                     kept={loose.length - free.length}
                     noun={["moble", "mobles"]}
                     keptNote="Es conserven els {n} que són en algun ambient. Els dels Projectes no es toquen."
+                    edited={free.filter(isEdited).map((p) => p.name)}
                     onConfirm={async () => {
                       for (const p of free) await deleteProject(p.id)
                       toaster.create({ title: "Historial esborrat", description: "Els dels Projectes es conserven.", type: "info" })
+                    }}
+                    onConfirmUnedited={async () => {
+                      for (const p of free.filter((x) => !isEdited(x))) await deleteProject(p.id)
+                      toaster.create({ title: "Historial esborrat", description: "Els modificats i els dels Projectes es conserven.", type: "info" })
                     }}
                   />,
                 )

@@ -1,9 +1,9 @@
 import { Badge, Button, Card, IconButton, Menu, Portal, Text, Wrap } from "@chakra-ui/react"
-import { LuCheck, LuCopy, LuEllipsis, LuFolderInput, LuHouse, LuPlus, LuSave, LuTrash2 } from "react-icons/lu"
+import { LuCheck, LuCopy, LuEllipsis, LuFolderInput, LuHouse, LuPencil, LuPlus, LuSave, LuTrash2 } from "react-icons/lu"
 import { CompositionThumb } from "../../components/CompositionThumb"
 import { compositionHeight, compositionWidth } from "../../core/model"
 import { compositionOf } from "../../db/compositionStore"
-import { safeParams, type Project } from "../../db/db"
+import { isEdited, safeParams, type Project } from "../../db/db"
 
 /**
  * Targeta d'un moble (historial de la pàgina Mobles i finestra «Afegir un moble» dels ambients):
@@ -55,8 +55,14 @@ export function ProjectCard({
           {comp.modules.length === 1 ? `1 mòdul · ${first.material}` : `${comp.modules.length} mòduls: ${comp.modules.map((m) => m.name).join(", ")}`}
           {!project.composition && ` · ${p.shelves} ${p.shelves === 1 ? "prestatge" : "prestatges"} · ${p.doors} ${p.doors === 1 ? "porta" : "portes"}`}
         </Text>
-        {ambients.length > 0 && (
+        {(ambients.length > 0 || (!project.folder && isEdited(project))) && (
           <Wrap gap={1}>
+            {/* A l'historial, els modificats porten la marca: esborrar-los perdria els canvis. */}
+            {!project.folder && isEdited(project) && (
+              <Badge size="xs" variant="subtle" colorPalette="orange" title="L'has modificat: guarda'l en un grup si el vols conservar">
+                <LuPencil /> Modificat
+              </Badge>
+            )}
             {ambients.map((a) => (
               <Badge key={a.id} size="xs" variant={a.id === currentAmbient ? "solid" : "subtle"} colorPalette="wood" title={`És a l'ambient «${a.name}»`}>
                 {a.id === currentAmbient ? <LuCheck /> : <LuHouse />} {a.name}

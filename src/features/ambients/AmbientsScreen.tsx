@@ -144,23 +144,6 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
           <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar ambients: nom, habitació, material…" aria-label="Cercar ambients" />
         </InputGroup>
         <Accordion.Root multiple collapsible lazyMount variant="enclosed" value={q ? found : open} onValueChange={(e) => !q && setOpen(e.value)}>
-          <Accordion.Item value="projects">
-            <Accordion.ItemTrigger cursor="pointer">
-              <FoldTitle icon={<LuFolders />} title="Projectes" count={groupedRows.length} />
-              <Accordion.ItemIndicator />
-            </Accordion.ItemTrigger>
-            <Accordion.ItemContent>
-              <Accordion.ItemBody>
-                {groupedRows.length ? (
-                  ambGrid("folders", groupedRows)
-                ) : (
-                  <Text fontSize="sm" color="fg.muted">
-                    Encara no n'hi ha cap. En crear una escena del catàleg per a un client, o amb «Grup nou» a l'Historial: el que hi desis queda aquí i «Esborrar l'historial» no el toca.
-                  </Text>
-                )}
-              </Accordion.ItemBody>
-            </Accordion.ItemContent>
-          </Accordion.Item>
           <Accordion.Item value="history">
             <Accordion.ItemTrigger cursor="pointer">
               <FoldTitle icon={<LuHistory />} title="Historial" count={looseRows.length} />
@@ -185,6 +168,23 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                           }}
                         />,
                   )
+                )}
+              </Accordion.ItemBody>
+            </Accordion.ItemContent>
+          </Accordion.Item>
+          <Accordion.Item value="projects">
+            <Accordion.ItemTrigger cursor="pointer">
+              <FoldTitle icon={<LuFolders />} title="Projectes" count={groupedRows.length} />
+              <Accordion.ItemIndicator />
+            </Accordion.ItemTrigger>
+            <Accordion.ItemContent>
+              <Accordion.ItemBody>
+                {groupedRows.length ? (
+                  ambGrid("folders", groupedRows)
+                ) : (
+                  <Text fontSize="sm" color="fg.muted">
+                    Encara no n'hi ha cap. En crear una escena del catàleg per a un client, o amb «Grup nou» a l'Historial: el que hi desis queda aquí i «Esborrar l'historial» no el toca.
+                  </Text>
                 )}
               </Accordion.ItemBody>
             </Accordion.ItemContent>

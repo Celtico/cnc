@@ -18,7 +18,7 @@ export function templatePreview(t: AmbientTemplate): Ambient {
 
 /**
  * Crea un ambient del catàleg: cada moble i objecte es crea a Mobles / Objectes (un per
- * plantilla, dins d'un grup amb el nom de l'ambient) i es col·loca enllaçat a l'ambient.
+ * plantilla; a l'Historial, o al grup del client si n'hi ha) i es col·loca enllaçat a l'ambient.
  * Torna l'id de l'ambient nou.
  */
 export async function createAmbientFromTemplate(t: AmbientTemplate, client?: string): Promise<number> {
@@ -27,7 +27,8 @@ export async function createAmbientFromTemplate(t: AmbientTemplate, client?: str
   const who = client?.trim() || undefined
   const ambients = (await db.ambients.toArray()).map((a) => a.name)
   const ambientName = uniqueName(who ? `${t.name} · ${who}` : t.name, ambients)
-  const folder = who ?? ambientName
+  // Sense client, a l'Historial (de pas); amb client, al seu grup de Projectes.
+  const folder = who
   const names = (await db.projects.toArray()).map((p) => p.name)
   const made = new Map<string, { id: number; w: number; d: number }>()
   for (const ref of [...new Set(t.items.map((i) => i.ref))]) {
@@ -36,9 +37,7 @@ export async function createAmbientFromTemplate(t: AmbientTemplate, client?: str
     const comp = { ...tpl.make(), kind: tpl.kind }
     const name = uniqueName(tpl.name, names)
     names.push(name)
-    // Al grup de l'ambient (a Mobles i a Objectes): així no s'escampen per l'historial.
-    // `auto`: no surt a Mobles / Objectes fins que es toca (és part de l'escena).
-    const id = await createProject(name, undefined, { composition: comp, folder, auto: true })
+    const id = await createProject(name, undefined, { composition: comp, ...(folder ? { folder } : {}) })
     const b = buildBounds(buildComposition(comp))
     made.set(ref, { id, w: b.max[0] - b.min[0], d: b.max[2] - b.min[2] })
   }

@@ -76,11 +76,8 @@ export interface Project {
   photo?: PhotoCalibration
   /** Grup (carpeta) de l'historial, per ordenar-los. */
   folder?: string
-  /**
-   * Creat per una escena d'ambient i encara sense tocar: no surt a Mobles ni a Objectes (és
-   * part de l'ambient). En canviar-lo es treu la marca i passa al seu grup de Projectes.
-   */
-  auto?: boolean
+  /** S'ha modificat després de crear-lo (a l'editor o a l'ambient): esborrar-lo perdria els canvis. */
+  edited?: boolean
   createdAt: number
   updatedAt: number
 }
@@ -214,18 +211,13 @@ export async function updateAmbient(id: number, patch: Partial<Pick<AmbientRow, 
   await db.ambients.update(id, { ...patch, updatedAt: Date.now() })
 }
 
-/** Esborra l'ambient i els seus mobles i objectes que encara no s'han tocat (`auto`) si cap altre ambient els fa servir. */
 export async function deleteAmbient(id: number): Promise<void> {
-  const row = await db.ambients.get(id)
   await db.ambients.delete(id)
-  const own = new Set(((row?.data as { items?: { kind?: string; projectId?: number }[] } | undefined)?.items ?? []).flatMap((it) => (it.kind === "moble" && typeof it.projectId === "number" ? [it.projectId] : [])))
-  if (!own.size) return
-  for (const other of await db.ambients.toArray())
-    for (const it of (other.data as { items?: { projectId?: number }[] }).items ?? []) if (typeof it.projectId === "number") own.delete(it.projectId)
-  for (const pid of own) {
-    const p = await db.projects.get(pid)
-    if (p?.auto) await deleteProject(pid)
-  }
+}
+
+/** Modificat després de crear-lo (els antics, sense la marca: si s'han desat més tard). */
+export function isEdited(p: Pick<Project, "edited" | "createdAt" | "updatedAt">): boolean {
+  return p.edited ?? p.updatedAt - p.createdAt > 5000
 }
 
 /**
@@ -241,7 +233,7 @@ export async function duplicateAmbient(id: number, client?: string): Promise<num
   const base = who ? `${src.name.replace(/ · .*$/, "")} · ${who}` : `${src.name} (còpia)`
   let name = base
   for (let n = 2; names.includes(name); n++) name = `${base} (${n})`
-  const folder = who ?? name
+  const folder = who
   const data = structuredClone(src.data) as { items?: { kind?: string; projectId?: number }[] }
   const map = new Map<number, number>()
   for (const it of data.items ?? []) {
@@ -255,7 +247,7 @@ export async function duplicateAmbient(id: number, client?: string): Promise<num
       const pBase = who ? `${p.name.replace(/ · .*$/, "").replace(/ \(\d+\)$/, "")} · ${who}` : `${p.name} (còpia)`
       let pName = pBase
       for (let n = 2; projectNames.includes(pName); n++) pName = `${pBase} (${n})`
-      map.set(it.projectId, await createProject(pName, p.params, { ...rest, name: pName, folder }))
+      map.set(it.projectId, await createProject(pName, p.params, { ...rest, name: pName, ...(folder ? { folder } : {}) }))
     }
     it.projectId = map.get(it.projectId)
   }

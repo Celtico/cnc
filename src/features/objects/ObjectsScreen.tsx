@@ -8,7 +8,7 @@ import { ClearHistory } from "../projects/ClearHistory"
 import { blankObject } from "../projects/blank"
 import { SaveFileDialog } from "../file/SaveFileDialog"
 import { FolderedGrid, MoveToFolderDialog } from "../projects/Folders"
-import { createProject, db, deleteProject, setProjectsFolder, duplicateProject, type Project } from "../../db/db"
+import { createProject, db, deleteProject, isEdited, setProjectsFolder, duplicateProject, type Project } from "../../db/db"
 import { useAmbientMembership } from "../ambients/useAmbientMembership"
 import { ProjectCard } from "../projects/ProjectCard"
 import { useProjects } from "../useProject"
@@ -43,7 +43,7 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
       <ObjectsGallery
         onCreate={(c, n) => void create(c, n)}
         history={(matches, searching) => {
-          const shown = (projects ?? []).filter((p) => !p.auto && isObject(p) && matches(p.name))
+          const shown = (projects ?? []).filter((p) => isObject(p) && matches(p.name))
           // Historial = el que és de pas (sense grup); el que es desa en un grup passa a Projectes.
           const loose = shown.filter((p) => !p.folder)
           const grouped = shown.filter((p) => p.folder)
@@ -95,9 +95,14 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                   kept={loose.length - free.length}
                   noun={["objecte", "objectes"]}
                   keptNote="Es conserven els {n} que són en algun ambient. Els dels Projectes no es toquen."
+                  edited={free.filter(isEdited).map((p) => p.name)}
                   onConfirm={async () => {
                     for (const p of free) await deleteProject(p.id)
                     toaster.create({ title: "Historial esborrat", description: "Els dels Projectes es conserven.", type: "info" })
+                  }}
+                  onConfirmUnedited={async () => {
+                    for (const p of free.filter((x) => !isEdited(x))) await deleteProject(p.id)
+                    toaster.create({ title: "Historial esborrat", description: "Els modificats i els dels Projectes es conserven.", type: "info" })
                   }}
                 />,
               )

@@ -34,6 +34,15 @@ export function ObjectsGallery({
         <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar objectes: nom, material…" aria-label="Cercar objectes" />
       </InputGroup>
       <Accordion.Root multiple collapsible lazyMount variant="enclosed" value={q ? found : open} onValueChange={(e) => !q && setOpen(e.value)}>
+        <Accordion.Item value="mine">
+          <Accordion.ItemTrigger cursor="pointer">
+            <FoldTitle icon={<LuHistory />} title="Historial" count={hist.count} />
+            <Accordion.ItemIndicator />
+          </Accordion.ItemTrigger>
+          <Accordion.ItemContent>
+            <Accordion.ItemBody>{hist.node}</Accordion.ItemBody>
+          </Accordion.ItemContent>
+        </Accordion.Item>
         {hist.projects && (
           <Accordion.Item value="projects">
             <Accordion.ItemTrigger cursor="pointer">
@@ -45,15 +54,6 @@ export function ObjectsGallery({
             </Accordion.ItemContent>
           </Accordion.Item>
         )}
-        <Accordion.Item value="mine">
-          <Accordion.ItemTrigger cursor="pointer">
-            <FoldTitle icon={<LuHistory />} title="Historial" count={hist.count} />
-            <Accordion.ItemIndicator />
-          </Accordion.ItemTrigger>
-          <Accordion.ItemContent>
-            <Accordion.ItemBody>{hist.node}</Accordion.ItemBody>
-          </Accordion.ItemContent>
-        </Accordion.Item>
         <Accordion.Item value="templates">
           <Accordion.ItemTrigger cursor="pointer">
             <FoldTitle icon={<LuLayoutTemplate />} title="Plantilles d'objectes" count={templates.length} />
