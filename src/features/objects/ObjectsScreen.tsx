@@ -1,10 +1,11 @@
 import { Button, Dialog, Heading, HStack, Portal, Stack, Text, VStack } from "@chakra-ui/react"
 import { useState } from "react"
-import { LuTrash2 } from "react-icons/lu"
+import { LuPlus, LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { uniqueName } from "../../core/file/mobleFile"
 import type { Composition } from "../../core/model"
 import { ClearHistory } from "../projects/ClearHistory"
+import { blankObject } from "../projects/blank"
 import { SaveFileDialog } from "../file/SaveFileDialog"
 import { FolderedGrid, MoveToFolderDialog } from "../projects/Folders"
 import { createProject, db, deleteProject, setProjectsFolder, duplicateProject, type Project } from "../../db/db"
@@ -30,8 +31,11 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
   }
   return (
     <VStack align="stretch" gap={5}>
-      <HStack justify="space-between">
+      <HStack justify="space-between" gap={3}>
         <Heading size="xl">Objectes</Heading>
+        <Button colorPalette="wood" size={{ base: "sm", md: "md" }} onClick={() => void create(blankObject(), "Objecte nou")}>
+          <LuPlus /> Nou objecte
+        </Button>
       </HStack>
       <Text fontSize="sm" color="fg.muted" maxW="640px" mt={-3}>
         Sofàs, llits, làmpades, plantes… per col·locar als ambients. Es fan com un moble flat-pack (peces amb forma, «Talla» per als forats i materials de simulació), però només es veuen: no es fabriquen.

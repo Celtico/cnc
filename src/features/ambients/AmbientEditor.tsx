@@ -48,6 +48,7 @@ import {
   addOpening,
   clampOpening,
   type Opening,
+  type Composition,
   CompositionSchema,
   compositionKind,
   duplicateItems,
@@ -72,6 +73,7 @@ import { compositionOf, updateProjectComposition } from "../../db/compositionSto
 import { createProject, db, renameAmbient, updateAmbient, type Project } from "../../db/db"
 import { uniqueName } from "../../core/file/mobleFile"
 import { NewMobleGallery } from "../projects/NewMobleGallery"
+import { blankMoble, blankObject } from "../projects/blank"
 import { ProjectCard } from "../projects/ProjectCard"
 import { GALLERY_COLS } from "../projects/galleryGrid"
 import { useAmbientMembership } from "./useAmbientMembership"
@@ -370,6 +372,18 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
     return () => window.removeEventListener("keydown", key)
   })
 
+  /** Crea un moble o objecte (plantilla o en blanc) a la llista i el col·loca a l'ambient. */
+  const createAndAdd = (c: Composition, n: string, what: "moble" | "object") =>
+    void (async () => {
+      const existing = (await db.projects.toArray()).map((p) => p.name)
+      const id = await createProject(uniqueName(n, existing), undefined, { composition: c })
+      const p = await db.projects.get(id)
+      if (p) addMoble(p)
+      if (what === "moble") setPicker(false)
+      else setObjPicker(false)
+      toaster.create({ title: `«${p?.name ?? n}» afegit`, description: what === "moble" ? "S'ha creat a Mobles i s'ha col·locat a l'ambient." : "S'ha creat a Objectes i s'ha col·locat a l'ambient.", type: "success" })
+    })()
+
   const importPlan = async () => {
     const img = await pickPlanImage()
     if (!img) return
@@ -645,7 +659,10 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
             {/* A pantalla completa: fora de la barra d'estat del telèfon (zona segura). */}
             <Drawer.Content pt="env(safe-area-inset-top, 0px)" pb="env(safe-area-inset-bottom, 0px)">
               <Drawer.Header>
-                <Drawer.Title>Afegir un moble a «{name}»</Drawer.Title>
+                <Drawer.Title flex={1}>Afegir un moble a «{name}»</Drawer.Title>
+                <Button colorPalette="wood" size="sm" mr={10} onClick={() => createAndAdd(blankMoble(settings), "Moble nou", "moble")}>
+                  <LuPlus /> Nou moble
+                </Button>
                 <Drawer.CloseTrigger asChild top="calc(env(safe-area-inset-top, 0px) + 8px)">
                   <CloseButton size="sm" aria-label="Tancar" />
                 </Drawer.CloseTrigger>
@@ -654,16 +671,7 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
                 {picker && (
                   <NewMobleGallery
                     storageKey="mobles:ambient-picker"
-                    onCreate={(c, n) =>
-                      void (async () => {
-                        const existing = (await db.projects.toArray()).map((p) => p.name)
-                        const id = await createProject(uniqueName(n, existing), undefined, { composition: c })
-                        const p = await db.projects.get(id)
-                        if (p) addMoble(p)
-                        setPicker(false)
-                        toaster.create({ title: `«${p?.name ?? n}» afegit`, description: "S'ha creat a Mobles i s'ha col·locat a l'ambient.", type: "success" })
-                      })()
-                    }
+                    onCreate={(c, n) => createAndAdd(c, n, "moble")}
                     history={(kind, matches) => {
                       const shown = (projects ?? []).filter((p) => !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
                       return {
@@ -697,7 +705,10 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
             {/* A pantalla completa: fora de la barra d'estat del telèfon (zona segura). */}
             <Drawer.Content pt="env(safe-area-inset-top, 0px)" pb="env(safe-area-inset-bottom, 0px)">
               <Drawer.Header>
-                <Drawer.Title>Afegir un objecte a «{name}»</Drawer.Title>
+                <Drawer.Title flex={1}>Afegir un objecte a «{name}»</Drawer.Title>
+                <Button colorPalette="wood" size="sm" mr={10} onClick={() => createAndAdd(blankObject(), "Objecte nou", "object")}>
+                  <LuPlus /> Nou objecte
+                </Button>
                 <Drawer.CloseTrigger asChild top="calc(env(safe-area-inset-top, 0px) + 8px)">
                   <CloseButton size="sm" aria-label="Tancar" />
                 </Drawer.CloseTrigger>
@@ -706,16 +717,7 @@ function EditorInner({ ambientId, name, initial, onBack, onOpenProject }: { ambi
                 {objPicker && (
                   <ObjectsGallery
                     storageKey="mobles:ambient-objects"
-                    onCreate={(c, n) =>
-                      void (async () => {
-                        const existing = (await db.projects.toArray()).map((p) => p.name)
-                        const id = await createProject(uniqueName(n, existing), undefined, { composition: c })
-                        const p = await db.projects.get(id)
-                        if (p) addMoble(p)
-                        setObjPicker(false)
-                        toaster.create({ title: `«${p?.name ?? n}» afegit`, description: "S'ha creat a Objectes i s'ha col·locat a l'ambient.", type: "success" })
-                      })()
-                    }
+                    onCreate={(c, n) => createAndAdd(c, n, "object")}
                     history={(matches) => {
                       const shown = (projects ?? []).filter((p) => isObject(p) && matches(p.name))
                       return {

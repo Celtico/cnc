@@ -9,7 +9,7 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { useEffect, useRef, useState } from "react"
-import { LuFolderOpen, LuLayoutTemplate, LuTrash2 } from "react-icons/lu"
+import { LuFolderOpen, LuPlus, LuLayoutTemplate, LuTrash2 } from "react-icons/lu"
 import { SaveFileDialog } from "../file/SaveFileDialog"
 import { addMobleAsTemplate, openMobleFile } from "../file/mobleIo"
 import { parseMobleFile, uniqueName, type MobleFile } from "../../core/file/mobleFile"
@@ -19,11 +19,12 @@ import { isObject } from "../objects/isObject"
 import { useAmbientMembership } from "../ambients/useAmbientMembership"
 import { compositionKind, type Composition } from "../../core/model"
 import { ClearHistory } from "./ClearHistory"
+import { blankMoble } from "./blank"
+import { useSettings } from "../settings/SettingsContext"
 import { FolderedGrid, MoveToFolderDialog } from "./Folders"
 import { createProject, db, deleteProject, setProjectsFolder, duplicateProject, type Project } from "../../db/db"
 import { compositionOf } from "../../db/compositionStore"
 import { useProjects } from "../useProject"
-import { useSettings } from "../settings/SettingsContext"
 import { toaster } from "../../components/ui/toaster"
 import { fileAccept } from "../file/fileAccept"
 
@@ -108,9 +109,15 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
         <Heading size="xl">Mobles</Heading>
         <input ref={fileInput} type="file" accept={fileAccept(".moble,.json,application/json")} hidden onChange={(e) => void handleOpenFile(e.target.files?.[0])} />
         {/* Acció de l'apartat a la seva capçalera (no al menú global), com a les apps professionals. */}
-        <Button variant="outline" size={{ base: "sm", md: "md" }} onClick={() => fileInput.current?.click()}>
-          <LuFolderOpen /> Obrir fitxer
-        </Button>
+        <HStack gap={2}>
+          <Button variant="outline" size={{ base: "sm", md: "md" }} onClick={() => fileInput.current?.click()}>
+            <LuFolderOpen /> Obrir fitxer
+          </Button>
+          {/* Crear en blanc: el botó principal de la pàgina, a la dreta (com Importar/Exportar a Preferències). */}
+          <Button colorPalette="wood" size={{ base: "sm", md: "md" }} onClick={() => void handleCreate(blankMoble(settings), "Moble nou")}>
+            <LuPlus /> Nou moble
+          </Button>
+        </HStack>
       </HStack>
       <Text fontSize="sm" color="fg.muted" maxW="640px" mt={-3}>
         Els mobles que dissenyes i fabriques: comença en blanc o des d'una plantilla (de l'app o de botiga) i continua'l a l'editor. A l'historial hi tens els que ja has fet; el cercador busca a tot arreu (nom, tipus, estil, material, color).

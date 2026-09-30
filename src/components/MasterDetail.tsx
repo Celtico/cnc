@@ -104,6 +104,7 @@ export function MasterDetail({
                     gap={2.5}
                     px={3}
                     py={2}
+                    alignItems="flex-start"
                     borderTopWidth={i ? "1px" : 0}
                     bg={on ? "wood.subtle" : undefined}
                     _hover={{ bg: on ? "wood.subtle" : "bg.muted" }}
@@ -113,7 +114,7 @@ export function MasterDetail({
                     onClick={() => onSelect(it.id)}
                   >
                     {it.lead && (
-                      <Box flexShrink={0} display="inline-flex" color="wood.fg">
+                      <Box flexShrink={0} display="inline-flex" color="wood.fg" mt="2px">
                         {it.lead}
                       </Box>
                     )}
@@ -130,7 +131,7 @@ export function MasterDetail({
                         </Text>
                       )}
                     </Stack>
-                    <Box color="fg.subtle" display={{ base: "inline-flex", lg: "none" }}>
+                    <Box color="fg.subtle" display={{ base: "inline-flex", lg: "none" }} alignSelf="center">
                       <LuChevronRight />
                     </Box>
                   </HStack>

@@ -233,8 +233,11 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   i render; al 3D encuadrar, casa de nines, ombres i render.
 - **Plànol**: la roda fa zoom al punt del ratolí (com al 3D), pessigar també, arrossegar el fons
   desplaça; − / + i l'escala de pantalla (1:50…) a baix a la dreta; la barra d'eines flota a dalt.
-- **Les tres pàgines (Mobles, Objectes, Ambients) fan igual**: títol, text descriptiu, cercador,
-  «En blanc», **Historial** (els que ja tens) i acordions tancats (plantilles / catàleg).
+- **Les tres pàgines (Mobles, Objectes, Ambients) fan igual**: títol amb el **botó principal a la dreta**
+  («Nou ambient» · «Nou objecte» · «Nou moble», `colorPalette="wood"`, com Importar/Exportar a
+  Preferències; en blanc, `projects/blank.ts`), text descriptiu, cercador, **Historial** (els que ja
+  tens) i acordions tancats (plantilles / catàleg). Les finestres «Afegir» dels ambients porten el mateix
+  botó a la capçalera (`createAndAdd`).
 - **Catàleg d'ambients** (`core/model/ambientTemplates.ts`, `AMBIENT_TEMPLATES`): habitacions «de
   revista» per fer renders per a la web (saló nòrdic, saló de noguera, menjador, cuina amb illa,
   dormitori, juvenil, despatx, rebedor, bany). Referències a plantilles (`store:<cat>:<nom>`,
@@ -306,7 +309,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   veu marcat al menú. Al mòbil, la mateixa barra amb fletxa enrere.
 - **Pàgina Mobles = inici, com Figma o Google Docs** (`projects/NewMobleGallery.tsx`, sense
   botó «Nou moble» ni diàleg): text descriptiu, **cercador** (sense filtre de tipus: el tipus també
-  es busca), targeta «En blanc» i acordions **tots tancats**
+  es busca), botó «Nou moble» a la capçalera i acordions **tots tancats**
   en obrir l'app (l'estat es recorda durant la sessió, `mobles:gallery`): **Historial** (els
   mobles que ja tens, `ProjectCard`), **Les teves plantilles**, **Plantilles de l'app** i
   **Plantilles per a botigues de mobles**; el **cercador** (sense accents; obre
@@ -604,7 +607,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     Visualització, Tema; no és un acordió, com la Configuració de macOS) i a la dreta la pàgina triada (icona, títol,
     explicació i «Restaurar valors inicials»); dins, **una sola columna de 760 px** (`FoldGrid` = pila; res de
     graelles de targetes, que deixaven forats) de **grups sempre oberts** (`components/SettingsGroup`:
-    targeta amb capçalera, res no s'obre de cop). Materials i objectes de referència fan **llista i detall**
+    targeta amb capçalera, marges amples (px 6), icones alineades a dalt amb el títol; res no s'obre de cop). Materials i objectes de referència fan **llista i detall**
     (`components/MasterDetail`: llista agrupada per categoria amb mostra, cercador, filtres per categoria en
     pastilles i «Afegir», amb desplaçament propi; el triat s'edita a la dreta, fix i de 680 px com a molt).
     Materials: «Per defecte als mòduls nous» a dalt; al detall, **mostra a escala real** (`MaterialPreview`,

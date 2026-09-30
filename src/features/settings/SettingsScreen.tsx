@@ -153,6 +153,8 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
           </Pane>
 
           <Pane id="materials" wide title="Materials" icon={LuPalette} desc="Taulers, fons, metall, pedra i vidre, i els de simulació per als ambients." onReset={() => setReset({ key: "materials", label: "Materials" })}>
+            {/* Com la resta de pàgines: 760 px, no tota l'amplada. */}
+            <Box maxW="760px">
             <SettingsGroup icon={<LuSquareStack />} title="Per defecte als mòduls nous" summary={`${draft.defaults.material} ${draft.defaults.thickness} · fons ${draft.defaults.backMaterial} ${draft.defaults.backThickness}`}>
             <SimpleGrid columns={{ base: 2, md: 4 }} gap={3}>
               <MaterialSelect label="Tauler" materials={draft.materials.filter((m) => !m.forBacks && m.category !== "sim")} value={draft.defaults.material} onChange={(material) => set("defaults", { ...draft.defaults, material })} />
@@ -161,6 +163,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
               <NumberField label="Gruix fons" value={draft.defaults.backThickness} min={3} max={40} step={1} onChange={(backThickness) => set("defaults", { ...draft.defaults, backThickness })} />
             </SimpleGrid>
             </SettingsGroup>
+            </Box>
             <MaterialsList materials={draft.materials} onChange={(materials) => set("materials", materials)} />
           </Pane>
 
@@ -385,8 +388,9 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
                 _hover={{ bg: { base: "bg.muted", md: on ? "wood.subtle" : "bg.muted" } }}
                 aria-current={on ? "page" : undefined}
                 onClick={() => setActive(p.id)}
+                alignItems="flex-start"
               >
-                <Box color="wood.fg" display="inline-flex">
+                <Box color="wood.fg" display="inline-flex" mt="3px">
                   <PIcon />
                 </Box>
                 <Stack gap={0} flex={1} minW={0}>
@@ -399,7 +403,7 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
                     </Text>
                   )}
                 </Stack>
-                <Box color="fg.subtle" display={{ base: "inline-flex", md: "none" }}>
+                <Box color="fg.subtle" display={{ base: "inline-flex", md: "none" }} alignSelf="center">
                   <LuChevronRight />
                 </Box>
               </HStack>
@@ -414,8 +418,8 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
           <LuChevronLeft /> Preferències
         </Button>
         <HStack justify="space-between" gap={3} wrap="wrap" w="full" maxW={shown.wide ? "none" : "760px"}>
-          <HStack gap={2.5}>
-            <Box color="wood.fg" fontSize="xl" display="inline-flex">
+          <HStack gap={2.5} align="flex-start">
+            <Box color="wood.fg" fontSize="xl" display="inline-flex" mt="5px">
               <Icon />
             </Box>
             <Stack gap={0}>

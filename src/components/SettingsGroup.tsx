@@ -9,9 +9,10 @@ import type { ReactNode } from "react"
 export function SettingsGroup({ icon, title, summary, actions, children }: { icon?: ReactNode; title: ReactNode; summary?: ReactNode; actions?: ReactNode; children: ReactNode }) {
   return (
     <Box borderWidth="1px" rounded="lg" bg="bg.panel">
-      <HStack gap={2} px={3} pt={2.5} pb={2} borderBottomWidth="1px" bg="bg.subtle" roundedTop="lg">
+      {/* Icones alineades a dalt (amb la primera línia del títol) i el doble de marge. */}
+      <HStack gap={2.5} px={6} pt={4} pb={3.5} borderBottomWidth="1px" bg="bg.subtle" roundedTop="lg" align="flex-start">
         {icon && (
-          <Box color="wood.fg" flexShrink={0} display="inline-flex">
+          <Box color="wood.fg" flexShrink={0} display="inline-flex" mt="3px">
             {icon}
           </Box>
         )}
@@ -31,7 +32,7 @@ export function SettingsGroup({ icon, title, summary, actions, children }: { ico
           </HStack>
         )}
       </HStack>
-      <Stack gap={3} p={3}>
+      <Stack gap={4} px={6} py={5}>
         {children}
       </Stack>
     </Box>

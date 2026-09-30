@@ -1,9 +1,9 @@
 import { Accordion, Badge, Box, Button, Card, CloseButton, Dialog, Editable, HStack, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { LuBookmark, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuLayoutTemplate, LuPlus, LuSearch, LuShare2, LuStore, LuTrash2 } from "react-icons/lu"
+import { LuBookmark, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuLayoutTemplate, LuSearch, LuShare2, LuStore, LuTrash2 } from "react-icons/lu"
 import { CompositionThumb } from "../../components/CompositionThumb"
 import { toaster } from "../../components/ui/toaster"
-import { applySettingsToModule, BUILTIN_TEMPLATES, compositionHeight, compositionKind, compositionWidth, defaultModule, newId, STORE_CATALOG, tableModule, type Composition, type CompositionKind, type Template } from "../../core/model"
+import { BUILTIN_TEMPLATES, compositionHeight, compositionKind, compositionWidth, STORE_CATALOG, type Composition, type CompositionKind, type Template } from "../../core/model"
 import { KINDS } from "../composition/kinds"
 import { deleteUserTemplate, duplicateUserTemplate, loadUserTemplates, renameUserTemplate, setUserTemplatesFolder, type UserTemplate } from "../../db/compositionStore"
 import { FoldTitle } from "./FoldTitle"
@@ -114,12 +114,6 @@ export function NewMobleGallery({
   const found = [...(hist.count ? ["history"] : []), ...(shownMine.length ? ["mine"] : []), ...(shownBuiltin.length ? ["app"] : []), ...(storeCount ? ["store"] : [])]
   const pick = (t: Template) => onCreate({ ...t.make(), kind: t.kind }, t.name)
 
-  const blank = () => {
-    const k = kind === "all" ? "moble" : kind
-    const m = k === "taula" ? tableModule(newId("m"), "Taula") : applySettingsToModule(settings, defaultModule(newId("m"), "Mòdul 1"))
-    const names: Record<CompositionKind, string> = { moble: "Moble nou", cuina: "Cuina nova", armari: "Armari nou", taula: "Taula nova", lliure: "Flat-pack nou", objecte: "Objecte nou" }
-    onCreate({ kind: k, modules: [m], references: [] }, names[k])
-  }
 
   return (
     <Stack gap={4}>
@@ -133,21 +127,6 @@ export function NewMobleGallery({
         </Text>
       )}
 
-      <SimpleGrid columns={COLS} gap={3}>
-        <Card.Root asChild variant="outline" size="sm" cursor="pointer" _hover={{ borderColor: "wood.solid" }}>
-          <button type="button" onClick={blank}>
-            <Card.Body p={3} gap={2} alignItems="stretch" textAlign="left">
-              <Box h="96px" rounded="md" borderWidth="2px" borderStyle="dashed" display="flex" alignItems="center" justifyContent="center" color="fg.muted" fontSize="2xl">
-                <LuPlus />
-              </Box>
-              <Text fontWeight="semibold">En blanc</Text>
-              <Text fontSize="xs" color="fg.muted">
-                {kind === "taula" ? "Un tauler amb dos laterals de panell." : "Un mòdul amb els valors de les preferències."}
-              </Text>
-            </Card.Body>
-          </button>
-        </Card.Root>
-      </SimpleGrid>
 
       <Accordion.Root multiple collapsible lazyMount variant="enclosed" value={q ? found : openSections} onValueChange={(e) => !q && setOpenSections(e.value)}>
         <Accordion.Item value="history">

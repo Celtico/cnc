@@ -1,4 +1,4 @@
-import { Accordion, Badge, Box, Button, Card, CloseButton, Dialog, Heading, HStack, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
+import { Accordion, Badge, Button, Card, CloseButton, Dialog, Heading, HStack, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
 import { useMemo, useState } from "react"
 import { LuBookOpen, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
@@ -56,7 +56,12 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
   }
   return (
     <VStack align="stretch" gap={5}>
-      <Heading size="xl">Ambients</Heading>
+      <HStack justify="space-between" gap={3}>
+        <Heading size="xl">Ambients</Heading>
+        <Button colorPalette="wood" size={{ base: "sm", md: "md" }} onClick={() => void create()}>
+          <LuPlus /> Nou ambient
+        </Button>
+      </HStack>
       <Text fontSize="sm" color="fg.muted" maxW="640px" mt={-3}>
         El plànol de la casa amb els mobles al seu lloc: dibuixa les parets (o posa-hi la imatge d'un plànol), col·loca-hi els teus mobles i objectes i mira-ho en 3D o fes-ne un render. Al catàleg hi ha habitacions moblades, a punt per a renders.
       </Text>
@@ -64,21 +69,6 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
         <InputGroup maxW={{ base: "full", md: "420px" }} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => setQuery("")} /> : undefined}>
           <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar ambients: nom, habitació, material…" aria-label="Cercar ambients" />
         </InputGroup>
-        <SimpleGrid columns={GALLERY_COLS} gap={3}>
-          <Card.Root asChild variant="outline" size="sm" cursor="pointer" _hover={{ borderColor: "wood.solid" }}>
-            <button type="button" onClick={() => void create()}>
-              <Card.Body p={3} gap={2} alignItems="stretch" textAlign="left">
-                <Box h="96px" rounded="md" borderWidth="2px" borderStyle="dashed" display="flex" alignItems="center" justifyContent="center" color="fg.muted" fontSize="2xl">
-                  <LuPlus />
-                </Box>
-                <Text fontWeight="semibold">En blanc</Text>
-                <Text fontSize="xs" color="fg.muted">
-                  Una habitació de 4 × 3 m per començar: mou-ne les parets o dibuixa'n de noves.
-                </Text>
-              </Card.Body>
-            </button>
-          </Card.Root>
-        </SimpleGrid>
         <Accordion.Root multiple collapsible lazyMount variant="enclosed" value={q ? found : open} onValueChange={(e) => !q && setOpen(e.value)}>
           <Accordion.Item value="history">
             <Accordion.ItemTrigger cursor="pointer">
