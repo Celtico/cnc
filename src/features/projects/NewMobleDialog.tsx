@@ -1,9 +1,9 @@
-import { Badge, Box, Button, Card, Dialog, Editable, HStack, IconButton, Menu, Portal, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import { useMemo, useState } from "react"
-import { LuCopy, LuEllipsis, LuPlus, LuShare2, LuTrash2 } from "react-icons/lu"
+import { Accordion, Badge, Box, Button, Card, CloseButton, Dialog, Editable, HStack, IconButton, Input, InputGroup, Menu, Portal, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { useMemo, useState, type ReactNode } from "react"
+import { LuCopy, LuEllipsis, LuLayoutTemplate, LuPlus, LuSearch, LuShare2, LuStore, LuTrash2 } from "react-icons/lu"
 import { CompositionThumb } from "../../components/CompositionThumb"
 import { toaster } from "../../components/ui/toaster"
-import { applySettingsToModule, BUILTIN_TEMPLATES, compositionHeight, compositionKind, compositionWidth, defaultModule, newId, tableModule, type Composition, type CompositionKind } from "../../core/model"
+import { applySettingsToModule, BUILTIN_TEMPLATES, compositionHeight, compositionKind, compositionWidth, defaultModule, newId, STORE_CATALOG, tableModule, type Composition, type CompositionKind, type Template } from "../../core/model"
 import { KINDS } from "../composition/kinds"
 import { deleteUserTemplate, duplicateUserTemplate, loadUserTemplates, renameUserTemplate, type UserTemplate } from "../../db/compositionStore"
 import { saveTemplateAsFile } from "../file/mobleIo"
@@ -13,6 +13,61 @@ const size = (c: Composition) => {
   const h = Math.round(compositionHeight(c))
   const d = Math.max(...c.modules.map((m) => m.carcass.depth))
   return `${Math.round(compositionWidth(c))} × ${h} × ${d}`
+}
+
+const kindLabel = (k: CompositionKind) => KINDS.find((x) => x.value === k)!.label
+const kindOrder = (k: CompositionKind) => KINDS.findIndex((x) => x.value === k)
+const euros = (n: number) => `${n.toLocaleString("ca-ES")} €`
+/** Per cercar sense accents ni majúscules. */
+const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+
+/** Targeta d'una plantilla de l'app: la miniatura es calcula en muntar-la (les de botiga, en obrir la categoria). */
+function TemplateCard({ t, title, onPick }: { t: Template; title?: string; onPick: (t: Template) => void }) {
+  const comp = useMemo(() => t.make(), [t])
+  return (
+    <Card.Root asChild variant="outline" size="sm" cursor="pointer" _hover={{ borderColor: "wood.solid" }}>
+      <button type="button" onClick={() => onPick(t)}>
+        <Card.Body p={3} gap={2} alignItems="stretch" textAlign="left">
+          <CompositionThumb composition={comp} />
+          <HStack justify="space-between" gap={1}>
+            <Text fontWeight="semibold" fontSize="sm" truncate title={t.name}>
+              {title ?? t.name}
+            </Text>
+            <Badge size="xs" variant="subtle" flexShrink={0}>
+              {kindLabel(t.kind)}
+            </Badge>
+          </HStack>
+          <Text fontSize="xs" color="fg.muted" lineClamp={t.price ? 3 : 2} title={t.description}>
+            {t.description}
+          </Text>
+          {t.price !== undefined && (
+            <Text fontSize="xs" fontWeight="semibold" color="wood.fg">
+              Preu orientatiu: {euros(t.price)}
+            </Text>
+          )}
+        </Card.Body>
+      </button>
+    </Card.Root>
+  )
+}
+
+/** Títol d'un acordió de la galeria: icona, nom i quantitat. */
+function FoldTitle({ icon, title, count }: { icon?: ReactNode; title: string; count: number }) {
+  return (
+    <HStack flex={1} gap={2} minW={0}>
+      {icon && (
+        <Box color="wood.fg" display="inline-flex">
+          {icon}
+        </Box>
+      )}
+      <Text fontWeight="semibold" fontSize="sm" truncate>
+        {title}
+      </Text>
+      <Badge size="xs" variant="subtle" colorPalette="gray">
+        {count}
+      </Badge>
+    </HStack>
+  )
 }
 
 /**
@@ -37,13 +92,23 @@ export function NewMobleDialog({
     setLastOpen(open)
     if (open) setMine(loadUserTemplates())
   }
-  const builtin = useMemo(() => BUILTIN_TEMPLATES.map((t) => ({ t, comp: t.make() })), [])
   // Filtre per tipus de moble (Tot, Moble, Cuina, Armari, Taula).
   const [kind, setKind] = useState<CompositionKind | "all">("all")
-  const kindLabel = (k: CompositionKind) => KINDS.find((x) => x.value === k)!.label
+  const fits = (t: Template) => kind === "all" || t.kind === kind
   // Ordenades pel tipus (Moble, Cuina, Armari, Taula), i dins de cada tipus com a la llista.
-  const kindOrder = (k: CompositionKind) => KINDS.findIndex((x) => x.value === k)
-  const shownBuiltin = builtin.filter(({ t }) => kind === "all" || t.kind === kind).sort((a, b) => kindOrder(a.t.kind) - kindOrder(b.t.kind))
+  const shownBuiltin = BUILTIN_TEMPLATES.filter(fits).sort((a, b) => kindOrder(a.kind) - kindOrder(b.kind))
+  // Plantilles per a botigues: per categoria › tipus de moble, amb el filtre i la cerca.
+  const [query, setQuery] = useState("")
+  const [openCats, setOpenCats] = useState<string[]>([])
+  const q = fold(query.trim())
+  const store = STORE_CATALOG.map((c) => ({
+    ...c,
+    types: c.types
+      .map((ty) => ({ ...ty, items: ty.items.filter((t) => fits(t) && (!q || fold(`${c.name} ${t.name} ${t.description}`).includes(q))) }))
+      .filter((ty) => ty.items.length > 0),
+  })).filter((c) => c.types.length > 0)
+  const storeCount = store.reduce((n, c) => n + c.types.reduce((m, ty) => m + ty.items.length, 0), 0)
+  const pick = (t: Template) => onCreate({ ...t.make(), kind: t.kind }, t.name)
   const shownMine = mine.filter((t) => kind === "all" || compositionKind(t.composition) === kind)
 
   const blank = () => {
@@ -168,33 +233,87 @@ export function NewMobleDialog({
                     </Stack>
                   )}
 
-                  <Stack gap={2}>
-                    <Text fontSize="sm" fontWeight="semibold">
-                      Plantilles de l'app
-                    </Text>
-                    <SimpleGrid columns={{ base: 2, md: 3 }} gap={3}>
-                      {shownBuiltin.map(({ t, comp }) => (
-                        <Card.Root key={t.id} asChild variant="outline" size="sm" cursor="pointer" _hover={{ borderColor: "wood.solid" }}>
-                          <button type="button" onClick={() => onCreate({ ...t.make(), kind: t.kind }, t.name)}>
-                            <Card.Body p={3} gap={2} alignItems="stretch" textAlign="left">
-                              <CompositionThumb composition={comp} />
-                              <HStack justify="space-between" gap={1}>
-                                <Text fontWeight="semibold" fontSize="sm" truncate>
-                                  {t.name}
-                                </Text>
-                                <Badge size="xs" variant="subtle" flexShrink={0}>
-                                  {kindLabel(t.kind)}
-                                </Badge>
-                              </HStack>
-                              <Text fontSize="xs" color="fg.muted" lineClamp={2}>
-                                {t.description}
+                  <Accordion.Root multiple defaultValue={["app"]} lazyMount variant="plain">
+                    <Accordion.Item value="app">
+                      <Accordion.ItemTrigger cursor="pointer">
+                        <FoldTitle icon={<LuLayoutTemplate />} title="Plantilles de l'app" count={shownBuiltin.length} />
+                        <Accordion.ItemIndicator />
+                      </Accordion.ItemTrigger>
+                      <Accordion.ItemContent>
+                        <Accordion.ItemBody>
+                          <SimpleGrid columns={{ base: 2, md: 3 }} gap={3}>
+                            {shownBuiltin.map((t) => (
+                              <TemplateCard key={t.id} t={t} onPick={pick} />
+                            ))}
+                          </SimpleGrid>
+                        </Accordion.ItemBody>
+                      </Accordion.ItemContent>
+                    </Accordion.Item>
+
+                    <Accordion.Item value="store">
+                      <Accordion.ItemTrigger cursor="pointer">
+                        <FoldTitle icon={<LuStore />} title="Plantilles per a botigues de mobles" count={storeCount} />
+                        <Accordion.ItemIndicator />
+                      </Accordion.ItemTrigger>
+                      <Accordion.ItemContent>
+                        <Accordion.ItemBody>
+                          <Stack gap={3}>
+                            <Text fontSize="xs" color="fg.muted">
+                              Catàleg de mostra: tres dissenys per a cada tipus de moble, amb estil, materials, colors, públic i preu orientatiu.
+                            </Text>
+                            <InputGroup
+                              startElement={<LuSearch />}
+                              endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => setQuery("")} /> : undefined}
+                            >
+                              <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar: nom, estil, material, color…" aria-label="Cercar plantilles de botiga" />
+                            </InputGroup>
+                            {store.length === 0 && (
+                              <Text fontSize="sm" color="fg.muted">
+                                Cap plantilla no coincideix amb la cerca o el tipus.
                               </Text>
-                            </Card.Body>
-                          </button>
-                        </Card.Root>
-                      ))}
-                    </SimpleGrid>
-                  </Stack>
+                            )}
+                            {/* Amb cerca, totes les categories que coincideixen, obertes. */}
+                            <Accordion.Root
+                              multiple
+                              collapsible
+                              lazyMount
+                              variant="enclosed"
+                              size="sm"
+                              value={q ? store.map((c) => c.id) : openCats}
+                              onValueChange={(e) => !q && setOpenCats(e.value)}
+                            >
+                              {store.map((c) => (
+                                <Accordion.Item key={c.id} value={c.id}>
+                                  <Accordion.ItemTrigger cursor="pointer">
+                                    <FoldTitle title={c.name} count={c.types.reduce((m, ty) => m + ty.items.length, 0)} />
+                                    <Accordion.ItemIndicator />
+                                  </Accordion.ItemTrigger>
+                                  <Accordion.ItemContent>
+                                    <Accordion.ItemBody>
+                                      <Stack gap={4}>
+                                        {c.types.map((ty) => (
+                                          <Stack key={ty.name} gap={2}>
+                                            <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
+                                              {ty.name}
+                                            </Text>
+                                            <SimpleGrid columns={{ base: 2, md: 3 }} gap={3}>
+                                              {ty.items.map((t) => (
+                                                <TemplateCard key={t.id} t={t} title={t.name.replace(`${ty.name} `, "")} onPick={pick} />
+                                              ))}
+                                            </SimpleGrid>
+                                          </Stack>
+                                        ))}
+                                      </Stack>
+                                    </Accordion.ItemBody>
+                                  </Accordion.ItemContent>
+                                </Accordion.Item>
+                              ))}
+                            </Accordion.Root>
+                          </Stack>
+                        </Accordion.ItemBody>
+                      </Accordion.ItemContent>
+                    </Accordion.Item>
+                  </Accordion.Root>
                 </Stack>
               </Dialog.Body>
               <Dialog.Footer>

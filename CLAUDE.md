@@ -362,6 +362,20 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     Tretes de la galeria (per decisió de l'usuari): Consola ona, Moble TV 3 portes i Moble TV
     menjador; aquest últim es queda com a `TV_LIVING_ROOM` per als tests i la vista prèvia de
     l'escena a Preferències.
+  - **Galeria «Nou moble» en acordions** (`NewMobleDialog`, `Accordion` de Chakra amb `lazyMount`):
+    «Plantilles de l'app» (oberta) i, a sota, **«Plantilles per a botigues de mobles»**
+    (`model/storeCatalog.ts`, `STORE_CATALOG` / `STORE_TEMPLATES`, a partir de
+    [`cad-mobles-cataleg.md`](cad-mobles-cataleg.md)): 9 categories (Saló, Menjador, Dormitori, Juvenil,
+    Despatx, Entrada, Emmagatzematge, Bany, Exterior) › tipus de moble › 3 dissenys (nom comercial,
+    estil, mides, materials, ús, colors, públic i `Template.price` orientatiu). Cada categoria és un
+    acordió que només munta les miniatures en obrir-lo (180 plantilles); cercador sense accents (obre
+    les categories que coincideixen) i el filtre per tipus també hi val. Fora del catàleg: sofàs,
+    butaques, cadires, miralls, gandules i carros (no són mobles de tauler). Els mobles només de peces
+    lliures (llits, capçals, taules de pedra) són del tipus Flat-pack (l'app necessita un mòdul, que no
+    es fa). Aparadors sobre potes de peces lliures: caixa «penjada» a l'alçada de les potes (no surten
+    també les regulables). Colors dels lacats nous per nom a `textures.ts` (antracita, verd oliva,
+    terracota, blau fosc, greige). `storeCatalog.test.ts`: totes es construeixen sense avisos de
+    disseny (portes massa amples, prestatges que vinclen, guies que no caben, barres curtes, xocs).
   - **Peça lliure que talla** (`FreePart.effect = "cut"`, Efecte Peça/Talla a General): no és
     una peça; `partCutters` la converteix en objecte que talla (perfil = la seva forma, direcció =
     el gruix; a l'estirada la v es gira) i `applyRefCuts` fa el forat passant a les peces que

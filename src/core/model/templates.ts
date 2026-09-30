@@ -9,6 +9,8 @@ export interface Template {
   kind: CompositionKind
   name: string
   description: string
+  /** Preu orientatiu en € (plantilles per a botigues). */
+  price?: number
   /** Genera una composició nova amb ids únics. */
   make: () => Composition
 }
