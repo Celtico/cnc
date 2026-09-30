@@ -26,11 +26,12 @@ export function TextureEditor({ m, open, onClose, onApply }: { m: MaterialPref; 
   // Mostra de 1200 mm d'ample (× zoom): es veu com es repeteix.
   const W = 560
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size={{ base: "full", md: "xl" }}>
+    <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size={{ base: "full", md: "xl" }} placement="center">
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }}>
+          {/* La mida «full» del mòbil posa l'alçada a 100dvh i la «xl» no la treu: a l'ordinador, l'alçada del contingut. */}
+          <Dialog.Content pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} h={{ base: "100dvh", md: "auto" }} minH={{ md: "auto" }}>
             <Dialog.Header>
               <Dialog.Title>Editar la textura · {m.name}</Dialog.Title>
             </Dialog.Header>
