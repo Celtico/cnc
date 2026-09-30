@@ -34,7 +34,8 @@ export const Toaster = () => {
             {toast.action && (
               <Toast.ActionTrigger>{toast.action.label}</Toast.ActionTrigger>
             )}
-            {toast.closable && <Toast.CloseTrigger />}
+            {/* Sempre amb ✕: un avís no ha de tapar res que vulguis clicar mentre esperes que marxi. */}
+            <Toast.CloseTrigger aria-label="Tancar l'avís" />
           </Toast.Root>
         )}
       </ChakraToaster>

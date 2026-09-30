@@ -2,12 +2,14 @@ import { IconButton, Popover, Portal, SimpleGrid, Stack, Text } from "@chakra-ui
 import type { ReactNode } from "react"
 import { LuSlidersVertical } from "react-icons/lu"
 import { Tooltip } from "./ui/tooltip"
+import { segItem } from "./segmented"
 
 /** Botó d'opció de vista (activa/inactiva) amb el nom al tooltip, el mateix a tots els visors. */
 export function ViewTile({ label, icon, on, onClick, tip }: { label: string; icon: ReactNode; on: boolean; onClick: () => void; tip?: string }) {
   return (
     <Tooltip content={tip ?? label}>
-      <IconButton size="sm" w="full" variant={on ? "solid" : "outline"} colorPalette={on ? "wood" : "gray"} aria-pressed={on} aria-label={label} onClick={onClick}>
+      {/* Estil discret comú (`segmented.ts`): la rajola activa, amb fons clar i la icona de color. */}
+      <IconButton {...segItem(on)} size="sm" w="full" borderWidth="1px" borderColor={on ? "wood.solid/40" : "border"} aria-pressed={on} aria-label={label} onClick={onClick}>
         {icon}
       </IconButton>
     </Tooltip>

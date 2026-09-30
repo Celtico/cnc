@@ -1,4 +1,5 @@
-import { Box, Button, HStack, IconButton, Menu, Portal, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, HStack, IconButton, Menu, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
+import { segGroup, segItem } from "../../components/segmented"
 import { useState, type ReactNode } from "react"
 import { ProfileEditor } from "./ProfileEditor"
 import type { IconType } from "react-icons"
@@ -171,14 +172,15 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
         />
       )}
       <PanelSection id="ref-position" title="Posició" icon={LuMove}>
-        <SimpleGrid columns={2} gap={2}>
-          <Button size="sm" variant={o.onFloor ? "solid" : "outline"} colorPalette="wood" aria-pressed={!!o.onFloor} title="Sempre a terra (Y = 0): al 3D només es mou pel terra" onClick={() => update({ onFloor: o.onFloor ? undefined : true })}>
+        {/* Enganxar-lo: interruptors discrets (es poden activar tots dos). */}
+        <HStack {...segGroup}>
+          <Button {...segItem(!!o.onFloor)} px={2} aria-pressed={!!o.onFloor} title="Sempre a terra (Y = 0): al 3D només es mou pel terra" onClick={() => update({ onFloor: o.onFloor ? undefined : true })}>
             <LuArrowDownToLine /> Al terra
           </Button>
-          <Button size="sm" variant={o.onWall ? "solid" : "outline"} colorPalette="wood" aria-pressed={!!o.onWall} title="Sempre tocant la paret (Z = 0): al 3D només es mou per la paret" onClick={() => update({ onWall: o.onWall ? undefined : true })}>
+          <Button {...segItem(!!o.onWall)} px={2} aria-pressed={!!o.onWall} title="Sempre tocant la paret (Z = 0): al 3D només es mou per la paret" onClick={() => update({ onWall: o.onWall ? undefined : true })}>
             <LuBrickWall /> A la paret
           </Button>
-        </SimpleGrid>
+        </HStack>
         {/* Cada direcció amb la seva icona i un nom, no només la lletra de l'eix. */}
         <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra del moble" />} ariaLabel="De costat (X)" value={o.x} min={-30000} max={30000} step={10} onChange={(x) => update({ x })} />
         <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={o.y} min={-30000} max={30000} step={10} disabled={!!o.onFloor} onChange={(y) => update({ y })} />

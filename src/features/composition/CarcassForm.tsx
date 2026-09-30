@@ -1,4 +1,5 @@
 import { Button, HStack, NativeSelect, Stack, Switch, Text } from "@chakra-ui/react"
+import { segGroup, segItem } from "../../components/segmented"
 import { DEFAULT_GRILLE, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
 import { NumRow } from "../editor/ParamsForm"
 import { FormRow } from "../../components/FormRow"
@@ -318,17 +319,19 @@ function TableTopFields({ module, onChange }: { module: Module; onChange: (m: Mo
         <>
           <NumRow label="Voladís" value={tt.overhang} min={0} max={1000} step={10} onChange={(overhang) => set({ ...tt, overhang })} help={`A tot el voltant. Tauler de ${L} × ${D} mm. Les cantonades a inglet no s'hi apliquen.`} />
           <FormRow label="Forma">
-            <HStack gap={1.5} wrap="wrap" pt="2px">
-              <Button size="xs" variant={!tt.shape ? "solid" : "outline"} colorPalette="wood" onClick={() => set({ overhang: tt.overhang })}>
-                <LuRectangleHorizontal /> Rectangle
-              </Button>
-              <Button size="xs" variant="outline" colorPalette="wood" onClick={() => set({ ...tt, shape: preset("round") })}>
-                <LuSquare /> Arrodonit
-              </Button>
-              <Button size="xs" variant="outline" colorPalette="wood" onClick={() => set({ ...tt, shape: preset("ellipse") })}>
-                <LuCircle /> Oval
-              </Button>
-              <Button size="xs" variant="outline" onClick={() => setEditing(true)}>
+            <HStack gap={1.5} wrap="wrap">
+              <HStack {...segGroup}>
+                <Button {...segItem(!tt.shape)} px={2} onClick={() => set({ overhang: tt.overhang })}>
+                  <LuRectangleHorizontal /> Rectangle
+                </Button>
+                <Button {...segItem(false)} px={2} onClick={() => set({ ...tt, shape: preset("round") })}>
+                  <LuSquare /> Arrodonit
+                </Button>
+                <Button {...segItem(false)} px={2} onClick={() => set({ ...tt, shape: preset("ellipse") })}>
+                  <LuCircle /> Oval
+                </Button>
+              </HStack>
+              <Button size="xs" variant="ghost" onClick={() => setEditing(true)}>
                 <LuPencilRuler /> Editar…
               </Button>
             </HStack>

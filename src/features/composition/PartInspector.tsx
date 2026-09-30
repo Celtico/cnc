@@ -1,4 +1,5 @@
 import { Badge, Button, HStack, IconButton, Menu, NativeSelect, Portal, SegmentGroup, Stack, Switch, Text } from "@chakra-ui/react"
+import { segGroup, segItem } from "../../components/segmented"
 import { useState } from "react"
 import {
   LuBan,
@@ -299,11 +300,11 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
         )}
       </PanelSection>
       <PanelSection id="part-shape" title="Forma" icon={LuSpline} badge={p.shape ? "A mida" : "Rectangle"}>
-        <HStack gap={2}>
-          <Button size="xs" variant={p.shape ? "outline" : "solid"} colorPalette="wood" onClick={() => update({ shape: undefined })}>
+        <HStack {...segGroup}>
+          <Button {...segItem(!p.shape)} px={2} onClick={() => update({ shape: undefined })}>
             <LuSquare /> Rectangle
           </Button>
-          <Button size="xs" variant={p.shape ? "solid" : "outline"} colorPalette="wood" onClick={() => setEditing(true)}>
+          <Button {...segItem(!!p.shape)} px={2} onClick={() => setEditing(true)}>
             <LuPencilRuler /> {p.shape ? "Editar la forma…" : "Forma a mida…"}
           </Button>
         </HStack>

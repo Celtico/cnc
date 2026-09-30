@@ -15,6 +15,7 @@ import {
   VStack,
   Switch,
 } from "@chakra-ui/react"
+import { segGroup, segItem } from "../../components/segmented"
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import {
@@ -597,9 +598,8 @@ function PhotoCalibrator({
 
   const toolButton = (t: Tool, label: string, icon: ReactNode, disabled = false) => (
     <Button
-      size="xs"
-      variant={tool === t ? "solid" : "outline"}
-      colorPalette="wood"
+      {...segItem(tool === t)}
+      px={2}
       disabled={disabled || !calibrated}
       aria-pressed={tool === t}
       onClick={() => {
@@ -923,7 +923,7 @@ function PhotoCalibrator({
               </Button>
               </PanelSection>
               <PanelSection id="photo-tools" title="Eines" icon={LuWrench}>
-              <HStack wrap="wrap" gap={1.5}>
+              <HStack {...segGroup}>
                 {toolButton("origin", "Origen", <LuLocateFixed />)}
                 {toolButton("distance", "Distància", <LuMoveHorizontal />)}
                 {toolButton("rect", "Rectangle", <LuRectangleHorizontal />)}
