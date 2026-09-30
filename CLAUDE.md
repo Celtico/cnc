@@ -607,7 +607,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     Visualització, Tema; no és un acordió, com la Configuració de macOS) i a la dreta la pàgina triada (icona, títol,
     explicació i «Restaurar valors inicials»); dins, **una sola columna de 760 px** (`FoldGrid` = pila; res de
     graelles de targetes, que deixaven forats) de **grups sempre oberts** (`components/SettingsGroup`:
-    targeta amb capçalera, marges amples (px 6), icones alineades a dalt amb el títol; res no s'obre de cop). Materials i objectes de referència fan **llista i detall**
+    targeta amb capçalera, marges amples (px 6) i 24 px entre targetes, icones alineades a dalt amb el títol; res no s'obre de cop). Materials i objectes de referència fan **llista i detall**
     (`components/MasterDetail`: llista agrupada per categoria amb mostra, cercador, filtres per categoria en
     pastilles i «Afegir», amb desplaçament propi; el triat s'edita a la dreta, fix i de 680 px com a molt).
     Materials: «Per defecte als mòduls nous» a dalt; al detall, **mostra a escala real** (`MaterialPreview`,

@@ -168,7 +168,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
           </Pane>
 
           <Pane id="boards" title="Taulers i nesting" icon={LuLayoutGrid} desc="Mides dels taulers i com es talla." onReset={() => setReset({ key: "boards", label: "Taulers i nesting" })}>
-            <Stack gap={3}>
+            <Stack gap={6}>
             <SettingsGroup icon={<LuLayoutGrid />} title="Mides de tauler" summary={draft.boards.sheets.map((x) => `${x.w}×${x.h}`).join(" · ")}>
             {/* Taula en graella: capçalera una sola vegada i una fila per mida. */}
             <Grid templateColumns={{ base: "minmax(0, 1fr) minmax(0, 1fr) 32px", sm: "minmax(0, 1fr) 150px 150px 32px" }} gap={2} alignItems="center">
@@ -437,7 +437,7 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
             </Button>
           )}
         </HStack>
-        <Stack gap={3} w="full" maxW={shown.wide ? "none" : "760px"}>
+        <Stack gap={6} w="full" maxW={shown.wide ? "none" : "760px"}>
           {shown.children}
         </Stack>
       </Stack>
@@ -451,7 +451,7 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
  * macOS o Figma): es llegeix de dalt a baix, sense forats, i tots els camps tenen el mateix ample.
  */
 function FoldGrid({ children }: { children: ReactNode }) {
-  return <Stack gap={3}>{children}</Stack>
+  return <Stack gap={6}>{children}</Stack>
 }
 
 // --- Objectes de referència --------------------------------------------------------------
