@@ -2,6 +2,7 @@ import { Box, Button, CloseButton, Dialog, HStack, NativeSelect, Portal, Stack, 
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import type { IconType } from "react-icons"
 import { LuCamera, LuDownload, LuGauge, LuHouse, LuImage, LuImageUp, LuPause, LuPlay, LuRotateCcw, LuSun, LuX } from "react-icons/lu"
+import { FormRow } from "../../FormRow"
 import { PanelSection } from "../../PanelSection"
 import type { Camera, Scene } from "three"
 import { parseHdr } from "./hdr"
@@ -44,25 +45,26 @@ function aces(v: number, exp: number): number {
 }
 const srgb = (c: number) => (c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055)
 
-/** Control lliscant compacte: rètol, valor i range natiu. */
+/** Control lliscant compacte en fila: rètol a l'esquerra; el range natiu i el valor a la dreta. */
 function Range({ label, value, min, max, step, format, onChange }: { label: string; value: number; min: number; max: number; step: number; format: (v: number) => string; onChange: (v: number) => void }) {
   return (
-    <Stack gap={0.5}>
-      <HStack justify="space-between" fontSize="xs">
-        <Text color="fg.muted">{label}</Text>
-        <Text fontVariantNumeric="tabular-nums">{format(value)}</Text>
+    <FormRow label={label}>
+      <HStack gap={2} minH="32px">
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          aria-label={label}
+          onChange={(e) => onChange(Number(e.target.value))}
+          style={{ flex: 1, minWidth: 0, accentColor: "var(--chakra-colors-wood-solid)" }}
+        />
+        <Text fontSize="xs" fontVariantNumeric="tabular-nums" flexShrink={0} minW="4.5em" textAlign="right">
+          {format(value)}
+        </Text>
       </HStack>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        aria-label={label}
-        onChange={(e) => onChange(Number(e.target.value))}
-        style={{ width: "100%", accentColor: "var(--chakra-colors-wood-solid)" }}
-      />
-    </Stack>
+    </FormRow>
   )
 }
 
@@ -418,12 +420,9 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
 
               <Stack w={{ base: "full", md: "300px" }} flexShrink={0} gap={1} overflowY={{ base: "visible", md: "auto" }} pr={1} pb={{ base: 4, md: 0 }}>
                 <Sec id="quality" title="Qualitat" icon={LuGauge} hint="Els canvis tornen a començar el render." badge={`${RESOLUTIONS[res].label} · ${opts.bounces} rebots`}>
-                  <Stack gap={0.5}>
-                    <Text fontSize="xs" color="fg.muted">
-                      Resolució
-                    </Text>
+                  <FormRow label="Resolució" maxW="280px">
                     <NativeSelect.Root size="sm">
-                      <NativeSelect.Field value={res} onChange={(e) => setRes(e.currentTarget.value as Resolution)}>
+                      <NativeSelect.Field aria-label="Resolució" value={res} onChange={(e) => setRes(e.currentTarget.value as Resolution)}>
                         {(Object.keys(RESOLUTIONS) as Resolution[]).map((k) => (
                           <option key={k} value={k}>
                             {RESOLUTIONS[k].label} (fins a {RESOLUTIONS[k].max} px)
@@ -432,14 +431,11 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                       </NativeSelect.Field>
                       <NativeSelect.Indicator />
                     </NativeSelect.Root>
-                  </Stack>
+                  </FormRow>
                   <Range label="Rebots de llum" value={opts.bounces} min={2} max={12} step={1} format={(v) => String(v)} onChange={(v) => set({ bounces: v })} />
-                  <Stack gap={0.5}>
-                    <Text fontSize="xs" color="fg.muted">
-                      Aturar-se a
-                    </Text>
+                  <FormRow label="Aturar-se a" maxW="280px">
                     <NativeSelect.Root size="sm">
-                      <NativeSelect.Field value={String(limit)} onChange={(e) => setLimit(Number(e.currentTarget.value))}>
+                      <NativeSelect.Field aria-label="Aturar-se a" value={String(limit)} onChange={(e) => setLimit(Number(e.currentTarget.value))}>
                         <option value="0">Sense límit</option>
                         <option value="64">64 passades (prova)</option>
                         <option value="256">256 passades</option>
@@ -447,16 +443,13 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                       </NativeSelect.Field>
                       <NativeSelect.Indicator />
                     </NativeSelect.Root>
-                  </Stack>
+                  </FormRow>
                 </Sec>
 
                 <Sec id="camera" title="Càmera" icon={LuCamera} hint="Els canvis tornen a començar el render." badge={format === "view" ? "Visor" : format}>
-                  <Stack gap={0.5}>
-                    <Text fontSize="xs" color="fg.muted">
-                      Format
-                    </Text>
+                  <FormRow label="Format" maxW="280px">
                     <NativeSelect.Root size="sm">
-                      <NativeSelect.Field value={format} onChange={(e) => setFormat(e.currentTarget.value as Format)}>
+                      <NativeSelect.Field aria-label="Format" value={format} onChange={(e) => setFormat(e.currentTarget.value as Format)}>
                         {(Object.keys(FORMATS) as Format[]).map((k) => (
                           <option key={k} value={k}>
                             {FORMATS[k].label}
@@ -465,7 +458,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                       </NativeSelect.Field>
                       <NativeSelect.Indicator />
                     </NativeSelect.Root>
-                  </Stack>
+                  </FormRow>
                   <Range label="Desenfocament del fons" value={opts.aperture ?? 0} min={0} max={20} step={1} format={(v) => (v ? `f/${(35 / (2 * v)).toFixed(1)}` : "tot enfocat")} onChange={(v) => set({ aperture: v })} />
                   <Text fontSize="2xs" color="fg.subtle">
                     Enfoca el que hi ha al centre de la imatge. Per a interiors: «Interior» a Opcions de vista (càmera a l'alçada dels ulls).
@@ -492,11 +485,8 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                   <Range label="Sol · intensitat" value={opts.sunIntensity} min={0} max={3} step={0.1} format={x} onChange={(v) => set({ sunIntensity: v })} />
                   <Range label="Ombres (dures → suaus)" value={opts.softness} min={0} max={1} step={0.05} format={(v) => `${Math.round(v * 100)} %`} onChange={(v) => set({ softness: v })} />
                   <Range label="Cel (llum ambient)" value={opts.skyIntensity} min={0} max={3} step={0.1} format={x} onChange={(v) => set({ skyIntensity: v })} />
-                  <Stack gap={1}>
-                    <Text fontSize="xs" color="fg.muted">
-                      Cel HDRI {env ? `· ${env.name}` : "(opcional)"}
-                    </Text>
-                    <HStack gap={2}>
+                  <FormRow label={`Cel HDRI ${env ? `· ${env.name}` : "(opcional)"}`} help="Un cel de 360° (p. ex. de polyhaven.com, 1k o 2k): llum i reflexos de debò i el que es veu per les finestres. Sense, un cel de dia.">
+                    <HStack gap={2} minH="32px" wrap="wrap">
                       <Button size="xs" variant="outline" asChild>
                         <label>
                           <LuImageUp /> {env ? "Canviar" : "Carregar .hdr"}
@@ -523,48 +513,44 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                         </Button>
                       )}
                     </HStack>
-                    {env && <Range label="Gir del cel" value={opts.envRotation ?? 0} min={0} max={360} step={5} format={deg} onChange={(v) => set({ envRotation: v })} />}
-                    <Text fontSize="2xs" color="fg.subtle">
-                      Un cel de 360° (p. ex. de polyhaven.com, 1k o 2k): llum i reflexos de debò i el que es veu per les finestres. Sense, un cel de dia.
-                    </Text>
-                  </Stack>
+                  </FormRow>
+                  {env && <Range label="Gir del cel" value={opts.envRotation ?? 0} min={0} max={360} step={5} format={deg} onChange={(v) => set({ envRotation: v })} />}
                 </Sec>
 
                 <Sec id="image" title="Imatge" icon={LuImage} hint="S'aplica a l'instant, sense tornar a començar." badge={look.denoise ? "Sense soroll" : undefined}>
-                  <HStack justify="space-between" fontSize="xs">
-                    <Text color="fg.muted">Exposició automàtica</Text>
-                    <input type="checkbox" aria-label="Exposició automàtica" checked={look.auto} onChange={(e) => setLook({ auto: e.currentTarget.checked })} style={{ accentColor: "var(--chakra-colors-wood-solid)" }} />
-                  </HStack>
-                  <HStack justify="space-between" fontSize="xs">
-                    <Text color="fg.muted">Reduir el soroll</Text>
-                    <input
-                      type="checkbox"
-                      aria-label="Reduir el soroll"
-                      checked={look.denoise}
-                      onChange={(e) => {
-                        setLook({ denoise: e.currentTarget.checked })
-                        if (e.currentTarget.checked) scheduleDenoise(true)
-                      }}
-                      style={{ accentColor: "var(--chakra-colors-wood-solid)" }}
-                    />
-                  </HStack>
+                  <FormRow label="Exposició automàtica">
+                    <HStack minH="32px">
+                      <input type="checkbox" aria-label="Exposició automàtica" checked={look.auto} onChange={(e) => setLook({ auto: e.currentTarget.checked })} style={{ accentColor: "var(--chakra-colors-wood-solid)" }} />
+                    </HStack>
+                  </FormRow>
+                  <FormRow label="Reduir el soroll">
+                    <HStack minH="32px">
+                      <input
+                        type="checkbox"
+                        aria-label="Reduir el soroll"
+                        checked={look.denoise}
+                        onChange={(e) => {
+                          setLook({ denoise: e.currentTarget.checked })
+                          if (e.currentTarget.checked) scheduleDenoise(true)
+                        }}
+                        style={{ accentColor: "var(--chakra-colors-wood-solid)" }}
+                      />
+                    </HStack>
+                  </FormRow>
                   <Range label="Temperatura (fred → càlid)" value={look.warmth} min={-1} max={1} step={0.05} format={(v) => (v > 0 ? `+${v.toFixed(2)}` : v.toFixed(2))} onChange={(v) => setLook({ warmth: v })} />
                   <Range label="Exposició" value={look.exposure} min={-2} max={2} step={0.1} format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} EV`} onChange={(v) => setLook({ exposure: v })} />
                   <Range label="Contrast" value={look.contrast} min={0.6} max={1.6} step={0.05} format={x} onChange={(v) => setLook({ contrast: v })} />
                   <Range label="Saturació" value={look.saturation} min={0} max={2} step={0.05} format={x} onChange={(v) => setLook({ saturation: v })} />
-                  <Stack gap={0.5}>
-                    <Text fontSize="xs" color="fg.muted">
-                      Fons
-                    </Text>
+                  <FormRow label="Fons" maxW="280px">
                     <NativeSelect.Root size="sm">
-                      <NativeSelect.Field value={look.background} onChange={(e) => setLook({ background: e.currentTarget.value as Background })}>
+                      <NativeSelect.Field aria-label="Fons" value={look.background} onChange={(e) => setLook({ background: e.currentTarget.value as Background })}>
                         <option value="scene">Estudi</option>
                         <option value="white">Blanc</option>
                         <option value="transparent">Transparent (PNG amb alfa)</option>
                       </NativeSelect.Field>
                       <NativeSelect.Indicator />
                     </NativeSelect.Root>
-                  </Stack>
+                  </FormRow>
                 </Sec>
 
                 <Button

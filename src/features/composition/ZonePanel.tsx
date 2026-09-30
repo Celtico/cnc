@@ -1,4 +1,4 @@
-import { Button, Field, HStack, IconButton, Menu, Portal, SegmentGroup, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
+import { Button, HStack, IconButton, Menu, Portal, SegmentGroup, Stack, Switch, Text } from "@chakra-ui/react"
 import { LuArrowUp, LuCopy, LuEllipsis, LuColumns2, LuRows2, LuPlus, LuRows3, LuRuler, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
 import { PanelSection } from "../../components/PanelSection"
 import {
@@ -16,7 +16,8 @@ import {
   type Front,
   type Zone,
 } from "../../core/model"
-import { NumberField } from "../editor/ParamsForm"
+import { NumRow } from "../editor/ParamsForm"
+import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { FRONT_ICONS } from "./zoneIcon"
 import { Tooltip } from "../../components/ui/tooltip"
 import { IconChoice } from "../../components/IconChoice"
@@ -114,15 +115,14 @@ export function ZonePanel({
 
   const sizeField = parent?.split && size !== undefined && (
     <PanelSection id="zone-size" title={parent.split.dir === "v" ? "Amplada" : "Alçada"} icon={LuRuler} badge={size === "auto" ? "Auto" : `${size} mm`}>
-      <Switch.Root size="sm" checked={size === "auto"} onCheckedChange={(e) => onChange(setChildSize(root, parent.id, index, e.checked ? "auto" : 400))}>
-        <Switch.HiddenInput />
-        <Switch.Control />
-        <Switch.Label>Automàtica</Switch.Label>
-      </Switch.Root>
-      {size !== "auto" && <NumberField label="" value={size} min={50} max={3000} step={10} onChange={(v) => onChange(setChildSize(root, parent.id, index, v))} />}
-      <Text textStyle="xs" color="fg.muted">
-        {parent.split.dir === "v" ? "Amplada" : "Alçada"} de la llum. Les automàtiques es reparteixen el que queda.
-      </Text>
+      <FormRow label="Mida" help={`${parent.split.dir === "v" ? "Amplada" : "Alçada"} de la llum. Les automàtiques es reparteixen el que queda.`}>
+        <Switch.Root size="sm" pt="6px" checked={size === "auto"} onCheckedChange={(e) => onChange(setChildSize(root, parent.id, index, e.checked ? "auto" : 400))}>
+          <Switch.HiddenInput />
+          <Switch.Control />
+          <Switch.Label fontSize="sm">Automàtica</Switch.Label>
+        </Switch.Root>
+      </FormRow>
+      {size !== "auto" && <NumRow label={parent.split.dir === "v" ? "Amplada" : "Alçada"} value={size} min={50} max={3000} step={10} onChange={(v) => onChange(setChildSize(root, parent.id, index, v))} />}
     </PanelSection>
   )
 
@@ -154,7 +154,7 @@ export function ZonePanel({
 
           {zone.front?.kind !== "drawers" && (
             <PanelSection id="zone-shelves" title="Prestatges" badge={zone.shelves?.n || undefined} icon={LuRows3}>
-              <NumberField
+              <NumRow
                 label="Quantitat"
                 suffix="u"
                 value={zone.shelves?.n ?? 0}
@@ -163,34 +163,36 @@ export function ZonePanel({
                 step={1}
                 onChange={(n) => onChange(setShelves(root, zone.id, n > 0 || zone.shelves ? { ...zone.shelves, n: Math.max(0, n), adjustable: zone.shelves?.adjustable ?? true } : null))}
               />
-              <Switch.Root size="sm" checked={zone.shelves?.adjustable ?? true} onCheckedChange={(e) => onChange(setShelves(root, zone.id, { ...zone.shelves, n: zone.shelves?.n ?? 0, adjustable: e.checked }))}>
-                <Switch.HiddenInput />
-                <Switch.Control />
-                <Switch.Label>Regulables</Switch.Label>
-              </Switch.Root>
-              {(zone.shelves?.adjustable ?? true) && (
-                <Text textStyle="xs" color="fg.muted">
-                  Forats System 32 als laterals per moure'ls.
-                </Text>
-              )}
+              <FormRow label="Regulació" help={(zone.shelves?.adjustable ?? true) ? "Forats System 32 als laterals per moure'ls." : undefined}>
+                <Switch.Root size="sm" pt="6px" checked={zone.shelves?.adjustable ?? true} onCheckedChange={(e) => onChange(setShelves(root, zone.id, { ...zone.shelves, n: zone.shelves?.n ?? 0, adjustable: e.checked }))}>
+                  <Switch.HiddenInput />
+                  <Switch.Control />
+                  <Switch.Label fontSize="sm">Regulables</Switch.Label>
+                </Switch.Root>
+              </FormRow>
               {/* A ras del davant (a sang): el cantell del prestatge enrasat amb el de la caixa. */}
-              <Switch.Root size="sm" checked={!!zone.shelves?.flush} onCheckedChange={(e) => onChange(setShelves(root, zone.id, { n: zone.shelves?.n ?? 0, adjustable: zone.shelves?.adjustable ?? true, ...(zone.shelves?.thickness ? { thickness: zone.shelves.thickness } : {}), ...(e.checked ? { flush: true } : {}) }))}>
-                <Switch.HiddenInput />
-                <Switch.Control />
-                <Switch.Label>A ras del davant (a sang)</Switch.Label>
-              </Switch.Root>
+              <FormRow label="Davant">
+                <Switch.Root size="sm" pt="6px" checked={!!zone.shelves?.flush} onCheckedChange={(e) => onChange(setShelves(root, zone.id, { n: zone.shelves?.n ?? 0, adjustable: zone.shelves?.adjustable ?? true, ...(zone.shelves?.thickness ? { thickness: zone.shelves.thickness } : {}), ...(e.checked ? { flush: true } : {}) }))}>
+                  <Switch.HiddenInput />
+                  <Switch.Control />
+                  <Switch.Label fontSize="sm">A ras del davant (a sang)</Switch.Label>
+                </Switch.Root>
+              </FormRow>
               {/* Prestatges gruixuts (buits): queden més bé a la vista, sense porta. */}
-              <Switch.Root
-                size="sm"
-                checked={!!zone.shelves?.thickness}
-                onCheckedChange={(e) => onChange(setShelves(root, zone.id, { n: zone.shelves?.n ?? 0, adjustable: zone.shelves?.adjustable ?? true, ...(zone.shelves?.flush ? { flush: true } : {}), ...(e.checked ? { thickness: 50 } : {}) }))}
-              >
-                <Switch.HiddenInput />
-                <Switch.Control />
-                <Switch.Label>Gruixuts (buits)</Switch.Label>
-              </Switch.Root>
+              <FormRow label="Gruix">
+                <Switch.Root
+                  size="sm"
+                  pt="6px"
+                  checked={!!zone.shelves?.thickness}
+                  onCheckedChange={(e) => onChange(setShelves(root, zone.id, { n: zone.shelves?.n ?? 0, adjustable: zone.shelves?.adjustable ?? true, ...(zone.shelves?.flush ? { flush: true } : {}), ...(e.checked ? { thickness: 50 } : {}) }))}
+                >
+                  <Switch.HiddenInput />
+                  <Switch.Control />
+                  <Switch.Label fontSize="sm">Gruixuts (buits)</Switch.Label>
+                </Switch.Root>
+              </FormRow>
               {zone.shelves?.thickness && (
-                <NumberField
+                <NumRow
                   label="Gruix aparent"
                   value={zone.shelves.thickness}
                   min={20}
@@ -202,16 +204,13 @@ export function ZonePanel({
               )}
               {/* Barra de penjar (armaris): no és de CNC, surt a «Elements sense nesting». */}
               {!zone.split && (
-                <Switch.Root size="sm" checked={!!zone.rail} onCheckedChange={(e) => onChange(updateZone(root, zone.id, (z) => ({ ...z, rail: e.checked || undefined })))}>
-                  <Switch.HiddenInput />
-                  <Switch.Control />
-                  <Switch.Label>Barra de penjar</Switch.Label>
-                </Switch.Root>
-              )}
-              {zone.rail && (
-                <Text textStyle="xs" color="fg.muted">
-                  Tub d'inox Ø25 a 50 mm del sostre, de lateral a lateral. Surt a Peces, a «Elements sense nesting».
-                </Text>
+                <FormRow label="Penjador" help={zone.rail ? "Tub d'inox Ø25 a 50 mm del sostre, de lateral a lateral. Surt a Peces, a «Elements sense nesting»." : undefined}>
+                  <Switch.Root size="sm" pt="6px" checked={!!zone.rail} onCheckedChange={(e) => onChange(updateZone(root, zone.id, (z) => ({ ...z, rail: e.checked || undefined })))}>
+                    <Switch.HiddenInput />
+                    <Switch.Control />
+                    <Switch.Label fontSize="sm">Barra de penjar</Switch.Label>
+                  </Switch.Root>
+                </FormRow>
               )}
             </PanelSection>
           )}
@@ -243,45 +242,44 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
       // Un camp per fila: dos grups de botons no hi caben de costat a l'inspector.
       return (
         <Stack gap={3}>
-          <Field.Root>
-            <Field.Label>Portes</Field.Label>
-            <SegmentGroup.Root size="sm" w="full" value={front.mode} onValueChange={(e) => onChange({ ...front, mode: e.value as "single" | "double" })}>
+          <FormRow label="Portes">
+            <SegmentGroup.Root size="sm" w="full" aria-label="Portes" value={front.mode} onValueChange={(e) => onChange({ ...front, mode: e.value as "single" | "double" })}>
               <SegmentGroup.Indicator />
               <SegItem value="single" label="Una" icon={LuRectangleVertical} />
               <SegItem value="double" label="Dues" icon={LuColumns2} />
             </SegmentGroup.Root>
-          </Field.Root>
+          </FormRow>
           {front.mode === "single" && (
-            <Field.Root>
-              <Field.Label>Frontisses</Field.Label>
-              <SegmentGroup.Root size="sm" w="full" value={front.hinge} onValueChange={(e) => onChange({ ...front, hinge: e.value as "left" | "right" })}>
-                <SegmentGroup.Indicator />
-                <SegItem value="left" label="Esquerra" icon={LuPanelLeft} />
-                <SegItem value="right" label="Dreta" icon={LuPanelRight} />
-              </SegmentGroup.Root>
-            </Field.Root>
+            <FormRow label="Frontisses">
+              {/* Pastilles: «Esquerra» amb icona no cap en mig control segmentat. */}
+              <ChoiceChips
+                label="Frontisses"
+                value={front.hinge}
+                options={[
+                  { id: "left", label: <><LuPanelLeft /> Esquerra</> },
+                  { id: "right", label: <><LuPanelRight /> Dreta</> },
+                ]}
+                onChange={(hinge) => onChange({ ...front, hinge })}
+              />
+            </FormRow>
           )}
         </Stack>
       )
     case "drawers":
       return (
         <Stack gap={3}>
-          <NumberField label="Calaixos" suffix="u" value={front.n} min={1} max={10} step={1} onChange={(n) => onChange({ ...front, n: Math.max(1, Math.min(10, Math.round(n))), heights: Array.from({ length: n }, (_, i) => front.heights[i] ?? "auto") })} />
-          <Text fontSize="xs" color="fg.muted">
-            Alçades de front: auto (iguals). Caixa amb guia genèrica de la llargada més gran que hi cap.
-          </Text>
+          <NumRow label="Calaixos" help="Alçades de front: auto (iguals). Caixa amb guia genèrica de la llargada més gran que hi cap." suffix="u" value={front.n} min={1} max={10} step={1} onChange={(n) => onChange({ ...front, n: Math.max(1, Math.min(10, Math.round(n))), heights: Array.from({ length: n }, (_, i) => front.heights[i] ?? "auto") })} />
         </Stack>
       )
     case "flap":
       return (
-        <Field.Root>
-          <Field.Label>Obre cap a</Field.Label>
-          <SegmentGroup.Root size="sm" w="full" value={front.dir} onValueChange={(e) => onChange({ ...front, dir: e.value as "down" | "up" })}>
+        <FormRow label="Obre cap a">
+          <SegmentGroup.Root size="sm" w="full" aria-label="Obre cap a" value={front.dir} onValueChange={(e) => onChange({ ...front, dir: e.value as "down" | "up" })}>
             <SegmentGroup.Indicator />
             <SegItem value="down" label="Avall" icon={LuArrowDown} />
             <SegItem value="up" label="Amunt" icon={LuArrowUp} />
           </SegmentGroup.Root>
-        </Field.Root>
+        </FormRow>
       )
     case "grille": {
       const p = front.pattern
@@ -289,60 +287,68 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
       return (
         <Stack gap={3}>
           {/* Una fila per camp: el panell és estret i les opcions són llargues. */}
-          <IconChoice
-            label="Patró"
-            value={p.kind}
-            options={[
-              { value: "slotsV", label: "Ranures verticals", icon: LuColumns3 },
-              { value: "slotsH", label: "Ranures horitzontals", icon: LuRows3 },
-              { value: "holes", label: "Forats al tresbolillo", icon: LuGrip },
-            ]}
-            onChange={(kind) => setP({ kind })}
-          />
-          <Field.Root>
-            <Field.Label>Muntatge</Field.Label>
-            <SegmentGroup.Root size="sm" w="full" value={front.mount} onValueChange={(e) => onChange({ ...front, mount: e.value as "removable" | "hinged" })}>
-              <SegmentGroup.Indicator />
-              <SegItem value="removable" label="Imants" icon={LuMagnet} />
-              <SegItem value="hinged" label="Frontisses" icon={LuDoorOpen} />
-            </SegmentGroup.Root>
-          </Field.Root>
+          <FormRow label="Patró">
+            <IconChoice
+              hideLabel
+              label="Patró"
+              value={p.kind}
+              options={[
+                { value: "slotsV", label: "Ranures verticals", icon: LuColumns3 },
+                { value: "slotsH", label: "Ranures horitzontals", icon: LuRows3 },
+                { value: "holes", label: "Forats al tresbolillo", icon: LuGrip },
+              ]}
+              onChange={(kind) => setP({ kind })}
+            />
+          </FormRow>
+          <FormRow label="Muntatge">
+            {/* Pastilles: «Frontisses» amb icona no cap en mig control segmentat. */}
+            <ChoiceChips
+              label="Muntatge"
+              value={front.mount}
+              options={[
+                { id: "removable", label: <><LuMagnet /> Imants</> },
+                { id: "hinged", label: <><LuDoorOpen /> Frontisses</> },
+              ]}
+              onChange={(mount) => onChange({ ...front, mount })}
+            />
+          </FormRow>
 
-          <SimpleGrid columns={3} gap={3}>
-            {p.kind === "holes" ? (
-              <>
-                <NumberField label="Ø forat" value={p.holeDiameter} min={3} max={60} step={1} onChange={(holeDiameter) => setP({ holeDiameter })} />
-                <NumberField label="Pas" value={p.holePitch} min={4} max={120} step={1} onChange={(holePitch) => setP({ holePitch })} />
-              </>
-            ) : (
-              <>
-                <NumberField label="Ranura" value={p.slotWidth} min={3} max={60} step={1} onChange={(slotWidth) => setP({ slotWidth })} />
-                <NumberField label="Separació" value={p.slotGap} min={3} max={100} step={1} onChange={(slotGap) => setP({ slotGap })} />
-              </>
-            )}
-            <NumberField label="Marge" value={p.margin} min={10} max={200} step={5} onChange={(margin) => setP({ margin })} />
-          </SimpleGrid>
+          {p.kind === "holes" ? (
+            <>
+              <NumRow label="Diàmetre forat" value={p.holeDiameter} min={3} max={60} step={1} onChange={(holeDiameter) => setP({ holeDiameter })} />
+              <NumRow label="Pas" value={p.holePitch} min={4} max={120} step={1} onChange={(holePitch) => setP({ holePitch })} />
+            </>
+          ) : (
+            <>
+              <NumRow label="Ranura" value={p.slotWidth} min={3} max={60} step={1} onChange={(slotWidth) => setP({ slotWidth })} />
+              <NumRow label="Separació" value={p.slotGap} min={3} max={100} step={1} onChange={(slotGap) => setP({ slotGap })} />
+            </>
+          )}
+          <NumRow label="Marge" value={p.margin} min={10} max={200} step={5} onChange={(margin) => setP({ margin })} />
           {openRatio !== undefined && (
             <Text fontSize="sm" color={openRatio < 0.4 ? "fg.error" : "fg.muted"}>
               Àrea oberta: {Math.round(openRatio * 100)} % {openRatio < 0.4 ? "(per sota del 40 % recomanat)" : ""}
             </Text>
           )}
-          <Switch.Root
-            size="sm"
-            checked={!!front.hatch}
-            onCheckedChange={(e) => onChange({ ...front, hatch: e.checked ? { x: 100, y: 100, w: 150, h: 150 } : undefined })}
-          >
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label>Trapa petita (clau del radiador)</Switch.Label>
-          </Switch.Root>
+          <FormRow label="Trapa">
+            <Switch.Root
+              size="sm"
+              pt="6px"
+              checked={!!front.hatch}
+              onCheckedChange={(e) => onChange({ ...front, hatch: e.checked ? { x: 100, y: 100, w: 150, h: 150 } : undefined })}
+            >
+              <Switch.HiddenInput />
+              <Switch.Control />
+              <Switch.Label fontSize="sm">Trapa petita (clau del radiador)</Switch.Label>
+            </Switch.Root>
+          </FormRow>
           {front.hatch && (
-            <SimpleGrid columns={2} gap={3}>
-              <NumberField label="X" value={front.hatch.x} min={0} max={3000} step={10} onChange={(x) => onChange({ ...front, hatch: { ...front.hatch!, x } })} />
-              <NumberField label="Y" value={front.hatch.y} min={0} max={3000} step={10} onChange={(y) => onChange({ ...front, hatch: { ...front.hatch!, y } })} />
-              <NumberField label="Ample" value={front.hatch.w} min={50} max={600} step={10} onChange={(w) => onChange({ ...front, hatch: { ...front.hatch!, w } })} />
-              <NumberField label="Alt" value={front.hatch.h} min={50} max={600} step={10} onChange={(h) => onChange({ ...front, hatch: { ...front.hatch!, h } })} />
-            </SimpleGrid>
+            <>
+              <NumRow label="Trapa X" value={front.hatch.x} min={0} max={3000} step={10} onChange={(x) => onChange({ ...front, hatch: { ...front.hatch!, x } })} />
+              <NumRow label="Trapa Y" value={front.hatch.y} min={0} max={3000} step={10} onChange={(y) => onChange({ ...front, hatch: { ...front.hatch!, y } })} />
+              <NumRow label="Ample" value={front.hatch.w} min={50} max={600} step={10} onChange={(w) => onChange({ ...front, hatch: { ...front.hatch!, w } })} />
+              <NumRow label="Alt" value={front.hatch.h} min={50} max={600} step={10} onChange={(h) => onChange({ ...front, hatch: { ...front.hatch!, h } })} />
+            </>
           )}
         </Stack>
       )

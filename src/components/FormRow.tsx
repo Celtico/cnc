@@ -2,27 +2,41 @@ import { Box, Button, Grid, HStack, Stack, Text } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 
 /**
- * Fila de formulari de Preferències (com la Configuració de macOS o l'inspector de Figma):
- * l'etiqueta a l'esquerra, el control i l'ajuda a la dreta. Al mòbil, l'etiqueta va a sobre.
- * `maxW` limita l'amplada del control (els números no s'estiren fins a la vora).
+ * Fila de formulari, la mateixa a tota l'app (com la Configuració de macOS o l'inspector de Figma):
+ * l'etiqueta a l'esquerra, el control i l'ajuda a la dreta. S'adapta a l'amplada **del lloc on
+ * és** (consulta de contenidor, no de pantalla): en un panell estret o al mòbil, l'etiqueta va a
+ * sobre. `maxW` limita l'amplada del control (els números no s'estiren fins a la vora).
  */
 export function FormRow({ label, help, maxW, children }: { label: ReactNode; help?: ReactNode; maxW?: string; children: ReactNode }) {
   return (
-    <Grid templateColumns={{ base: "1fr", sm: "150px minmax(0, 1fr)" }} columnGap={4} rowGap={1.5} alignItems="start">
-      <Text as="div" fontSize="sm" color="fg.muted" pt={{ sm: "7px" }}>
-        {label}
-      </Text>
-      <Stack gap={1} minW={0}>
-        <Box maxW={maxW} minW={0}>
-          {children}
-        </Box>
-        {help && (
-          <Text as="div" fontSize="xs" color="fg.subtle">
-            {help}
-          </Text>
-        )}
-      </Stack>
-    </Grid>
+    <Box css={{ containerType: "inline-size" }} minW={0}>
+      <Grid
+        templateColumns="1fr"
+        columnGap={4}
+        rowGap={1.5}
+        alignItems="start"
+        css={{
+          "@container (min-width: 300px)": {
+            gridTemplateColumns: "min(150px, 36%) minmax(0, 1fr)",
+            "& > .form-row-label": { paddingTop: "7px" },
+          },
+        }}
+      >
+        <Text as="div" className="form-row-label" fontSize="sm" color="fg.muted">
+          {label}
+        </Text>
+        <Stack gap={1} minW={0}>
+          <Box maxW={maxW} minW={0}>
+            {children}
+          </Box>
+          {help && (
+            <Text as="div" fontSize="xs" color="fg.subtle">
+              {help}
+            </Text>
+          )}
+        </Stack>
+      </Grid>
+    </Box>
   )
 }
 

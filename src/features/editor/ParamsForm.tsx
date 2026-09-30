@@ -5,12 +5,12 @@ import {
   Input,
   NumberInput,
   SegmentGroup,
-  SimpleGrid,
   Stack,
   Text,
 } from "@chakra-ui/react"
 import { LuHammer, LuLayoutPanelLeft, LuMoveDiagonal, LuSquareStack } from "react-icons/lu"
 import { PanelSection } from "../../components/PanelSection"
+import { FormRow } from "../../components/FormRow"
 import type { CabinetParams } from "../../core/model"
 import { useUnit } from "../units"
 
@@ -34,21 +34,17 @@ export function ParamsForm({ draft, errors, onChange }: ParamsFormProps) {
   return (
     <Stack gap={0}>
       <PanelSection id="mides" title="Mides exteriors" icon={LuMoveDiagonal}>
-        <SimpleGrid columns={{ base: 3 }} gap={3}>
-          <NumberField label="Amplada" value={draft.width} onChange={(v) => set("width", v)} min={100} max={2500} step={10} error={errors.width} />
-          <NumberField label="Alçada" value={draft.height} onChange={(v) => set("height", v)} min={100} max={2800} step={10} error={errors.height} />
-          <NumberField label="Fondària" value={draft.depth} onChange={(v) => set("depth", v)} min={100} max={1200} step={10} error={errors.depth} />
-        </SimpleGrid>
+        <NumRow label="Amplada" value={draft.width} onChange={(v) => set("width", v)} min={100} max={2500} step={10} error={errors.width} />
+        <NumRow label="Alçada" value={draft.height} onChange={(v) => set("height", v)} min={100} max={2800} step={10} error={errors.height} />
+        <NumRow label="Fondària" value={draft.depth} onChange={(v) => set("depth", v)} min={100} max={1200} step={10} error={errors.depth} />
       </PanelSection>
 
       <PanelSection id="taulers" title="Taulers" icon={LuSquareStack}>
-        <SimpleGrid columns={2} gap={3}>
-          <NumberField label="Gruix tauler" value={draft.panelThickness} onChange={(v) => set("panelThickness", v)} min={8} max={40} step={1} error={errors.panelThickness} help="Habituals: 10 · 12 · 16 · 19 · 30" />
-          <NumberField label="Gruix fons" value={draft.backThickness} onChange={(v) => set("backThickness", v)} min={3} max={20} step={1} error={errors.backThickness} />
-        </SimpleGrid>
-        <Field.Root>
-          <Field.Label>Fons</Field.Label>
+        <NumRow label="Gruix tauler" value={draft.panelThickness} onChange={(v) => set("panelThickness", v)} min={8} max={40} step={1} error={errors.panelThickness} help="Habituals: 10 · 12 · 16 · 19 · 30" />
+        <NumRow label="Gruix fons" value={draft.backThickness} onChange={(v) => set("backThickness", v)} min={3} max={20} step={1} error={errors.backThickness} />
+        <FormRow label="Fons">
           <SegmentGroup.Root
+            aria-label="Fons"
             value={draft.backType}
             onValueChange={(e) => {
               if (e.value === "groove" || e.value === "screwed") set("backType", e.value)
@@ -65,15 +61,15 @@ export function ParamsForm({ draft, errors, onChange }: ParamsFormProps) {
               <SegmentGroup.ItemHiddenInput />
             </SegmentGroup.Item>
           </SegmentGroup.Root>
-        </Field.Root>
+        </FormRow>
       </PanelSection>
 
       <PanelSection id="interior" title="Interior i front" icon={LuLayoutPanelLeft}>
-        <SimpleGrid columns={2} gap={3}>
-          <NumberField label="Prestatges" value={draft.shelves} onChange={(v) => set("shelves", v)} min={0} max={20} step={1} suffix="u" error={errors.shelves} />
+        <NumRow label="Prestatges" value={draft.shelves} onChange={(v) => set("shelves", v)} min={0} max={20} step={1} suffix="u" error={errors.shelves} />
+        <FormRow label="Portes">
           <Field.Root invalid={!!errors.doors}>
-            <Field.Label>Portes</Field.Label>
             <SegmentGroup.Root
+              aria-label="Portes"
               value={String(draft.doors)}
               onValueChange={(e) => {
                 const n = Number(e.value)
@@ -90,62 +86,48 @@ export function ParamsForm({ draft, errors, onChange }: ParamsFormProps) {
               ))}
             </SegmentGroup.Root>
           </Field.Root>
-        </SimpleGrid>
+        </FormRow>
       </PanelSection>
 
       <PanelSection id="fusteria" title="Fusteria (avançat)" icon={LuHammer}>
           <Stack gap={5}>
             <Section title="Materials" small>
-              <SimpleGrid columns={2} gap={3}>
-                <Field.Root>
-                  <Field.Label>Tauler</Field.Label>
-                  <Input value={draft.material} onChange={(e) => set("material", e.target.value)} />
-                </Field.Root>
-                <Field.Root>
-                  <Field.Label>Fons</Field.Label>
-                  <Input value={draft.backMaterial} onChange={(e) => set("backMaterial", e.target.value)} />
-                </Field.Root>
-              </SimpleGrid>
+              <FormRow label="Tauler" maxW="280px">
+                <Input aria-label="Tauler" value={draft.material} onChange={(e) => set("material", e.target.value)} />
+              </FormRow>
+              <FormRow label="Fons" maxW="280px">
+                <Input aria-label="Fons" value={draft.backMaterial} onChange={(e) => set("backMaterial", e.target.value)} />
+              </FormRow>
             </Section>
 
             <Section title="Portes" small>
-              <SimpleGrid columns={2} gap={3}>
-                <NumberField label="Joc porta–cos" value={draft.doorGap} onChange={(v) => set("doorGap", v)} min={0} max={10} step={0.5} error={errors.doorGap} />
-                <NumberField label="Joc entre portes" value={draft.doorGapBetween} onChange={(v) => set("doorGapBetween", v)} min={0} max={10} step={0.5} error={errors.doorGapBetween} />
-              </SimpleGrid>
-              <SimpleGrid columns={3} gap={3}>
-                <NumberField label="Cassoleta Ø" value={draft.hinge.cupDiameter} onChange={(v) => setNested("hinge", "cupDiameter", v)} min={20} max={40} step={1} error={errors["hinge.cupDiameter"]} />
-                <NumberField label="Profunditat" value={draft.hinge.cupDepth} onChange={(v) => setNested("hinge", "cupDepth", v)} min={5} max={20} step={0.5} error={errors["hinge.cupDepth"]} />
-                <NumberField label="Al cantell" value={draft.hinge.cupOffset} onChange={(v) => setNested("hinge", "cupOffset", v)} min={15} max={30} step={0.5} error={errors["hinge.cupOffset"]} />
-              </SimpleGrid>
+              <NumRow label="Joc porta–cos" value={draft.doorGap} onChange={(v) => set("doorGap", v)} min={0} max={10} step={0.5} error={errors.doorGap} />
+              <NumRow label="Joc entre portes" value={draft.doorGapBetween} onChange={(v) => set("doorGapBetween", v)} min={0} max={10} step={0.5} error={errors.doorGapBetween} />
+              <NumRow label="Cassoleta Ø" value={draft.hinge.cupDiameter} onChange={(v) => setNested("hinge", "cupDiameter", v)} min={20} max={40} step={1} error={errors["hinge.cupDiameter"]} />
+              <NumRow label="Profunditat" value={draft.hinge.cupDepth} onChange={(v) => setNested("hinge", "cupDepth", v)} min={5} max={20} step={0.5} error={errors["hinge.cupDepth"]} />
+              <NumRow label="Al cantell" value={draft.hinge.cupOffset} onChange={(v) => setNested("hinge", "cupOffset", v)} min={15} max={30} step={0.5} error={errors["hinge.cupOffset"]} />
             </Section>
 
             <Section title="Prestatges i fons" small>
-              <SimpleGrid columns={2} gap={3}>
-                <NumberField label="Retranqueig prestatge" value={draft.shelfSetback} onChange={(v) => set("shelfSetback", v)} min={0} max={100} step={1} error={errors.shelfSetback} />
-                <NumberField label="Joc prestatge" value={draft.shelfClearance} onChange={(v) => set("shelfClearance", v)} min={0} max={5} step={0.5} error={errors.shelfClearance} />
-                <NumberField label="Ranura des del darrere" value={draft.backSetback} onChange={(v) => set("backSetback", v)} min={0} max={60} step={1} error={errors.backSetback} />
-                <NumberField label="Profunditat ranura" value={draft.grooveDepth} onChange={(v) => set("grooveDepth", v)} min={3} max={15} step={1} error={errors.grooveDepth} />
-                <NumberField label="Joc del fons" value={draft.backClearance} onChange={(v) => set("backClearance", v)} min={0} max={4} step={0.5} error={errors.backClearance} />
-              </SimpleGrid>
+              <NumRow label="Retranqueig prestatge" value={draft.shelfSetback} onChange={(v) => set("shelfSetback", v)} min={0} max={100} step={1} error={errors.shelfSetback} />
+              <NumRow label="Joc prestatge" value={draft.shelfClearance} onChange={(v) => set("shelfClearance", v)} min={0} max={5} step={0.5} error={errors.shelfClearance} />
+              <NumRow label="Ranura des del darrere" value={draft.backSetback} onChange={(v) => set("backSetback", v)} min={0} max={60} step={1} error={errors.backSetback} />
+              <NumRow label="Profunditat ranura" value={draft.grooveDepth} onChange={(v) => set("grooveDepth", v)} min={3} max={15} step={1} error={errors.grooveDepth} />
+              <NumRow label="Joc del fons" value={draft.backClearance} onChange={(v) => set("backClearance", v)} min={0} max={4} step={0.5} error={errors.backClearance} />
             </Section>
 
             <Section title="System 32" small>
-              <SimpleGrid columns={2} gap={3}>
-                <NumberField label="Filera al cantell" value={draft.system32.edgeOffset} onChange={(v) => setNested("system32", "edgeOffset", v)} min={20} max={60} step={1} error={errors["system32.edgeOffset"]} />
-                <NumberField label="Pas" value={draft.system32.pitch} onChange={(v) => setNested("system32", "pitch", v)} min={16} max={64} step={1} error={errors["system32.pitch"]} />
-                <NumberField label="Ø forat" value={draft.system32.diameter} onChange={(v) => setNested("system32", "diameter", v)} min={3} max={10} step={0.5} error={errors["system32.diameter"]} />
-                <NumberField label="Profunditat" value={draft.system32.depth} onChange={(v) => setNested("system32", "depth", v)} min={5} max={16} step={0.5} error={errors["system32.depth"]} />
-              </SimpleGrid>
+              <NumRow label="Filera al cantell" value={draft.system32.edgeOffset} onChange={(v) => setNested("system32", "edgeOffset", v)} min={20} max={60} step={1} error={errors["system32.edgeOffset"]} />
+              <NumRow label="Pas" value={draft.system32.pitch} onChange={(v) => setNested("system32", "pitch", v)} min={16} max={64} step={1} error={errors["system32.pitch"]} />
+              <NumRow label="Ø forat" value={draft.system32.diameter} onChange={(v) => setNested("system32", "diameter", v)} min={3} max={10} step={0.5} error={errors["system32.diameter"]} />
+              <NumRow label="Profunditat" value={draft.system32.depth} onChange={(v) => setNested("system32", "depth", v)} min={5} max={16} step={0.5} error={errors["system32.depth"]} />
             </Section>
 
             <Section title="Espigues (lateral ↔ base/sostre)" small>
-              <SimpleGrid columns={2} gap={3}>
-                <NumberField label="Ø espiga" value={draft.dowel.diameter} onChange={(v) => setNested("dowel", "diameter", v)} min={5} max={12} step={1} error={errors["dowel.diameter"]} />
-                <NumberField label="Als cantells" value={draft.dowel.endOffset} onChange={(v) => setNested("dowel", "endOffset", v)} min={20} max={120} step={5} error={errors["dowel.endOffset"]} />
-                <NumberField label="Prof. a la cara" value={draft.dowel.faceDepth} onChange={(v) => setNested("dowel", "faceDepth", v)} min={5} max={20} step={0.5} error={errors["dowel.faceDepth"]} />
-                <NumberField label="Prof. al cantell" value={draft.dowel.edgeDepth} onChange={(v) => setNested("dowel", "edgeDepth", v)} min={10} max={40} step={0.5} error={errors["dowel.edgeDepth"]} />
-              </SimpleGrid>
+              <NumRow label="Ø espiga" value={draft.dowel.diameter} onChange={(v) => setNested("dowel", "diameter", v)} min={5} max={12} step={1} error={errors["dowel.diameter"]} />
+              <NumRow label="Als cantells" value={draft.dowel.endOffset} onChange={(v) => setNested("dowel", "endOffset", v)} min={20} max={120} step={5} error={errors["dowel.endOffset"]} />
+              <NumRow label="Fondària a la cara" value={draft.dowel.faceDepth} onChange={(v) => setNested("dowel", "faceDepth", v)} min={5} max={20} step={0.5} error={errors["dowel.faceDepth"]} />
+              <NumRow label="Fondària al cantell" value={draft.dowel.edgeDepth} onChange={(v) => setNested("dowel", "edgeDepth", v)} min={10} max={40} step={0.5} error={errors["dowel.edgeDepth"]} />
             </Section>
           </Stack>
       </PanelSection>
@@ -181,10 +163,12 @@ interface NumberFieldProps {
   error?: string
   /** Només lectura (valor calculat, p. ex. un passacables que segueix un objecte). */
   disabled?: boolean
+  /** Nom accessible quan l'etiqueta és fora (a `FormRow`/`NumRow`). */
+  ariaLabel?: string
 }
 
 /** Camp numèric de mides. Amb `suffix="mm"` respecta la unitat de pantalla (mm o cm); el valor sempre és en mm. */
-export function NumberField({ label, value, onChange, min, max, step = 1, suffix = "mm", help, error, disabled }: NumberFieldProps) {
+export function NumberField({ label, value, onChange, min, max, step = 1, suffix = "mm", help, error, disabled, ariaLabel }: NumberFieldProps) {
   const unit = useUnit()
   const cm = suffix === "mm" && unit === "cm"
   const k = cm ? 10 : 1
@@ -214,7 +198,7 @@ export function NumberField({ label, value, onChange, min, max, step = 1, suffix
         w="full"
         position="relative"
       >
-        <NumberInput.Input inputMode="decimal" pe="14" />
+        <NumberInput.Input inputMode="decimal" pe="14" aria-label={ariaLabel ?? (typeof label === "string" && label ? label : undefined)} />
         <Text
           className="nf-unit"
           position="absolute"
@@ -231,5 +215,14 @@ export function NumberField({ label, value, onChange, min, max, step = 1, suffix
       </NumberInput.Root>
       {error ? <Field.ErrorText>{error}</Field.ErrorText> : help ? <Field.HelperText>{help}</Field.HelperText> : null}
     </Field.Root>
+  )
+}
+
+/** Fila de formulari (`FormRow`) amb un camp numèric: mm, si no es diu una altra unitat. */
+export function NumRow({ label, help, maxW = "180px", ...p }: { label: ReactNode; help?: ReactNode; maxW?: string } & Omit<NumberFieldProps, "label" | "help">) {
+  return (
+    <FormRow label={label} help={help} maxW={maxW}>
+      <NumberField label="" ariaLabel={typeof label === "string" ? label : undefined} {...p} />
+    </FormRow>
   )
 }

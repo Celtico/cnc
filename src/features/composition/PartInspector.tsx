@@ -1,4 +1,4 @@
-import { Badge, Button, Field, HStack, IconButton, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
+import { Badge, Button, HStack, IconButton, Menu, NativeSelect, Portal, SegmentGroup, Stack, Switch, Text } from "@chakra-ui/react"
 import { useState } from "react"
 import {
   LuBan,
@@ -40,7 +40,8 @@ import {
   type PartOrient,
 } from "../../core/model"
 import { JOINT_LABEL, type PartJoint } from "../../core/build/freeParts"
-import { NumberField } from "../editor/ParamsForm"
+import { NumRow } from "../editor/ParamsForm"
+import { FormRow } from "../../components/FormRow"
 import { MaterialSelect } from "../settings/SettingsScreen"
 import { useSettings } from "../settings/SettingsContext"
 import { ProfileEditor } from "./ProfileEditor"
@@ -126,11 +127,19 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
   return (
     <Stack gap={0}>
       <PanelSection id="part-general" title="General" icon={LuPuzzle} badge={ORIENTS.find((o) => o.value === p.orient)!.label}>
-        <IconChoice label="Orientació" value={p.orient} options={ORIENTS} onChange={(o) => onChange({ ...comp, parts: (comp.parts ?? []).map((x) => (x.id === id ? reorientPart(x, o) : x)) })} />
+        <FormRow label="Orientació">
+          <IconChoice label="Orientació" hideLabel value={p.orient} options={ORIENTS} onChange={(o) => onChange({ ...comp, parts: (comp.parts ?? []).map((x) => (x.id === id ? reorientPart(x, o) : x)) })} />
+        </FormRow>
         {/* Peça o forat (booleana), com els objectes de referència. */}
-        <Field.Root>
-          <Field.Label>Efecte</Field.Label>
-          <SegmentGroup.Root size="sm" w="full" value={cutter ? "cut" : "part"} onValueChange={(e) => e.value && update({ effect: e.value === "cut" ? "cut" : undefined })}>
+        <FormRow
+          label="Efecte"
+          help={
+            cutter
+              ? "Talla: no és una peça. Fa un forat passant, amb la seva forma, a cada peça que travessa en la direcció del seu gruix: per foradar un tauler estirat, posa-la estirada; un de cara, de cara. Surt al nesting, al DXF i al STEP de les peces tallades."
+              : object ? "Peça de l'objecte: només es veu (no es fabrica)." : "Peça: un tauler de debò (nesting, DXF, STEP, CSV)."
+          }
+        >
+          <SegmentGroup.Root size="sm" w="full" aria-label="Efecte" value={cutter ? "cut" : "part"} onValueChange={(e) => e.value && update({ effect: e.value === "cut" ? "cut" : undefined })}>
             <SegmentGroup.Indicator />
             {(
               [
@@ -148,18 +157,17 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
               </SegmentGroup.Item>
             ))}
           </SegmentGroup.Root>
-          <Field.HelperText>
-            {cutter
-              ? "Talla: no és una peça. Fa un forat passant, amb la seva forma, a cada peça que travessa en la direcció del seu gruix: per foradar un tauler estirat, posa-la estirada; un de cara, de cara. Surt al nesting, al DXF i al STEP de les peces tallades."
-              : object ? "Peça de l'objecte: només es veu (no es fabrica)." : "Peça: un tauler de debò (nesting, DXF, STEP, CSV)."}
-          </Field.HelperText>
-        </Field.Root>
-        {!cutter && <MaterialSelect label="Material" materials={boards} value={p.material} onChange={pickMaterial} />}
+        </FormRow>
+        {!cutter && (
+          <FormRow label="Material" maxW="280px">
+            <MaterialSelect label="Material" hideLabel materials={boards} value={p.material} onChange={pickMaterial} />
+          </FormRow>
+        )}
         {!partsOnlyKind(compositionKind(comp)) && comp.modules.length > 0 && (
-          <Field.Root>
-            <Field.Label fontSize="sm">Enganxada a</Field.Label>
+          <FormRow label="Enganxada a" help="Enganxada a un mòdul, el segueix quan es mou (el taulell de l'illa)." maxW="280px">
             <NativeSelect.Root size="sm">
               <NativeSelect.Field
+                aria-label="Enganxada a"
                 value={p.module ?? ""}
                 onChange={(e) => {
                   // Es queda on és: les coordenades passen a ser relatives al mòdul nou.
@@ -178,13 +186,12 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
               </NativeSelect.Field>
               <NativeSelect.Indicator />
             </NativeSelect.Root>
-            <Field.HelperText>Enganxada a un mòdul, el segueix quan es mou (el taulell de l'illa).</Field.HelperText>
-          </Field.Root>
+          </FormRow>
         )}
-        <Field.Root>
-          <Field.Label fontSize="sm">Grup</Field.Label>
+        <FormRow label="Grup" maxW="280px">
           <NativeSelect.Root size="sm">
             <NativeSelect.Field
+              aria-label="Grup"
               value={p.group ?? ""}
               onChange={(e) => update({ group: e.target.value === NEW_GROUP ? newGroupName(comp) : e.target.value || undefined })}
             >
@@ -198,24 +205,31 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
             </NativeSelect.Field>
             <NativeSelect.Indicator />
           </NativeSelect.Root>
-        </Field.Root>
-        {!cutter && <Switch.Root size="sm" checked={p.nest !== false} onCheckedChange={(e) => update({ nest: e.checked ? undefined : false })}>
-          <Switch.HiddenInput />
-          <Switch.Control />
-          <Switch.Label>Es talla a la CNC (va al nesting)</Switch.Label>
-        </Switch.Root>}
-        {p.nest === false && !cutter && (
-          <Text fontSize="xs" color="fg.muted">
-            No és de CNC ({p.material}): es veu al 3D però no va al nesting ni als fitxers del taller. Surt a Peces, a «Elements sense nesting». Sense encaixos.
-          </Text>
+        </FormRow>
+        {!cutter && (
+          <FormRow label="CNC" help={p.nest === false ? `No és de CNC (${p.material}): es veu al 3D però no va al nesting ni als fitxers del taller. Surt a Peces, a «Elements sense nesting». Sense encaixos.` : undefined}>
+            <Switch.Root size="sm" pt="6px" checked={p.nest !== false} onCheckedChange={(e) => update({ nest: e.checked ? undefined : false })}>
+              <Switch.HiddenInput />
+              <Switch.Control />
+              <Switch.Label fontSize="sm">Es talla a la CNC (va al nesting)</Switch.Label>
+            </Switch.Root>
+          </FormRow>
         )}
         {/* Ferro, pedra, vidre…: sense veta ni encaixos. */}
-        {cnc && <IconChoice label="Veta" value={p.grain ?? "u"} options={GRAIN} onChange={(g) => update({ grain: g === "u" ? undefined : g })} />}
-        {cnc && flatPack && (<Switch.Root size="sm" disabled={p.nest === false} checked={p.joints !== false && p.nest !== false} onCheckedChange={(e) => update({ joints: e.checked ? undefined : false })}>
-          <Switch.HiddenInput />
-          <Switch.Control />
-          <Switch.Label>Encaixos amb les altres peces</Switch.Label>
-        </Switch.Root>)}
+        {cnc && (
+          <FormRow label="Veta">
+            <IconChoice label="Veta" hideLabel value={p.grain ?? "u"} options={GRAIN} onChange={(g) => update({ grain: g === "u" ? undefined : g })} />
+          </FormRow>
+        )}
+        {cnc && flatPack && (
+          <FormRow label="Encaixos">
+            <Switch.Root size="sm" pt="6px" disabled={p.nest === false} checked={p.joints !== false && p.nest !== false} onCheckedChange={(e) => update({ joints: e.checked ? undefined : false })}>
+              <Switch.HiddenInput />
+              <Switch.Control />
+              <Switch.Label fontSize="sm">Amb les altres peces</Switch.Label>
+            </Switch.Root>
+          </FormRow>
+        )}
         {flatPack && p.joints !== false && p.nest !== false && (
           <Stack gap={1}>
             {mine.length === 0 ? (
@@ -244,15 +258,13 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
       <PanelSection id="part-size" title="Mides" icon={LuMoveDiagonal} badge={size.join(" × ")}>
         {/* Sempre ample (X), alt (Y) i fondària (Z) com la resta de l'app; la del gruix depèn de
             l'orientació. De CNC: el gruix, només els del tauler. Si no és de CNC: tot lliure. */}
-        <SimpleGrid columns={3} gap={2}>
-          {(["Ample", "Alt", "Fondària"] as const).map((label, a) => {
+        {(["Ample", "Alt", "Fondària"] as const).map((label, a) => {
             const isT = a === ax.n
             if (isT && cnc && mat)
               return (
-                <Field.Root key={label}>
-                  <Field.Label fontSize="sm">{label}</Field.Label>
+                <FormRow key={label} label={label} help="Gruix del tauler" maxW="180px">
                   <NativeSelect.Root size="sm">
-                    <NativeSelect.Field value={String(p.thickness)} onChange={(e) => update({ thickness: Number(e.target.value) })}>
+                    <NativeSelect.Field aria-label={label} value={String(p.thickness)} onChange={(e) => update({ thickness: Number(e.target.value) })}>
                       {!mat.thicknesses.includes(p.thickness) && <option value={p.thickness}>{p.thickness}</option>}
                       {mat.thicknesses.map((t) => (
                         <option key={t} value={t}>
@@ -262,11 +274,10 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
                     </NativeSelect.Field>
                     <NativeSelect.Indicator />
                   </NativeSelect.Root>
-                  <Field.HelperText>Gruix del tauler</Field.HelperText>
-                </Field.Root>
+                </FormRow>
               )
             return (
-              <NumberField
+              <NumRow
                 key={label}
                 label={label}
                 value={size[a]!}
@@ -281,7 +292,6 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
               />
             )
           })}
-        </SimpleGrid>
         {!cnc && !cutter && (
           <Text fontSize="xs" color="fg.muted">
             No és de CNC: les tres mides són lliures (també el gruix).
@@ -313,11 +323,9 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
         }}
       />
       <PanelSection id="part-position" title="Posició" icon={LuMove}>
-        <SimpleGrid columns={3} gap={2}>
-          <NumberField label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra" />} value={p.x} min={-30000} max={30000} step={1} onChange={(x) => update({ x })} />
-          <NumberField label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} value={p.y} min={0} max={30000} step={1} onChange={(y) => update({ y })} />
-          <NumberField label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} value={p.z} min={-30000} max={30000} step={1} onChange={(z) => update({ z })} />
-        </SimpleGrid>
+        <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra" />} ariaLabel="De costat (X)" value={p.x} min={-30000} max={30000} step={1} onChange={(x) => update({ x })} />
+        <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={p.y} min={0} max={30000} step={1} onChange={(y) => update({ y })} />
+        <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fons (Z)" value={p.z} min={-30000} max={30000} step={1} onChange={(z) => update({ z })} />
         <Text fontSize="xs" color="fg.muted">
           {p.module && !partsOnlyKind(compositionKind(comp)) ? `Respecte al mòdul «${comp.modules.find((m) => m.id === p.module)?.name ?? "?"}» (el segueix). ` : ""}Cantonada esquerra, de baix i del darrere. Al 3D, arrossega-la amb les fletxes (s'enganxa a les vores de les altres peces; Alt: lliure). Fletxes del teclat: 1 mm (Maj: 10); Re Pàg / Av Pàg: fons.
         </Text>
@@ -338,16 +346,16 @@ export function PartJoineryForm({ comp, onChange }: { comp: Composition; onChang
   const fit = j.clearance === 0 ? "a pressió dur" : j.clearance <= 0.25 ? "a pressió" : j.clearance <= 0.5 ? "fluix (desmuntable)" : "molt fluix"
   return (
     <Stack gap={3}>
-      <SimpleGrid columns={3} gap={2}>
-        <NumberField label="Joc" value={j.clearance} min={0} max={3} step={0.05} onChange={(clearance) => set({ clearance: Math.max(0, clearance || 0) })} />
-        <NumberField label="Ø fresa" value={j.tool} min={0} max={25} step={1} onChange={(tool) => set({ tool: Math.max(0, tool || 0) })} />
-        <NumberField label="Pestanya" value={j.tabWidth} min={10} max={500} step={5} onChange={(tabWidth) => set({ tabWidth: Math.max(10, tabWidth || 10) })} />
-      </SimpleGrid>
-      <Switch.Root size="sm" checked={j.dogbones !== false} onCheckedChange={(e) => set({ dogbones: e.checked ? undefined : false })}>
-        <Switch.HiddenInput />
-        <Switch.Control />
-        <Switch.Label>Dogbones a les cantonades interiors</Switch.Label>
-      </Switch.Root>
+      <NumRow label="Joc" value={j.clearance} min={0} max={3} step={0.05} onChange={(clearance) => set({ clearance: Math.max(0, clearance || 0) })} />
+      <NumRow label="Diàmetre fresa (Ø)" value={j.tool} min={0} max={25} step={1} onChange={(tool) => set({ tool: Math.max(0, tool || 0) })} />
+      <NumRow label="Pestanya" value={j.tabWidth} min={10} max={500} step={5} onChange={(tabWidth) => set({ tabWidth: Math.max(10, tabWidth || 10) })} />
+      <FormRow label="Dogbones">
+        <Switch.Root size="sm" pt="6px" checked={j.dogbones !== false} onCheckedChange={(e) => set({ dogbones: e.checked ? undefined : false })}>
+          <Switch.HiddenInput />
+          <Switch.Control />
+          <Switch.Label fontSize="sm">A les cantonades interiors</Switch.Label>
+        </Switch.Root>
+      </FormRow>
       <Text fontSize="xs" color="fg.muted">
         Joc {j.clearance} mm: encaix {fit}. Les mortalles surten el joc més amples que la pestanya. La fresa no fa cantonades vives: el dogbone (Ø fresa) les buida perquè la peça hi entri fins al fons.
       </Text>
@@ -410,11 +418,9 @@ export function GroupInspector({ comp, group, onChange, onSelectPart, onMove }: 
   return (
     <Stack gap={0}>
       <PanelSection id="group-position" title="Posició del grup" icon={LuMove} badge={size.join(" × ")}>
-        <SimpleGrid columns={3} gap={2}>
-          <NumberField label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra" />} value={b.min[0]} min={-30000} max={30000} step={10} onChange={(x) => Number.isFinite(x) && onMove(x - b.min[0], 0, 0)} />
-          <NumberField label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} value={b.min[1]} min={0} max={30000} step={10} onChange={(y) => Number.isFinite(y) && onMove(0, y - b.min[1], 0)} />
-          <NumberField label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} value={b.min[2]} min={-30000} max={30000} step={10} onChange={(z) => Number.isFinite(z) && onMove(0, 0, z - b.min[2])} />
-        </SimpleGrid>
+        <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra" />} ariaLabel="De costat (X)" value={b.min[0]} min={-30000} max={30000} step={10} onChange={(x) => Number.isFinite(x) && onMove(x - b.min[0], 0, 0)} />
+        <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={b.min[1]} min={0} max={30000} step={10} onChange={(y) => Number.isFinite(y) && onMove(0, y - b.min[1], 0)} />
+        <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fons (Z)" value={b.min[2]} min={-30000} max={30000} step={10} onChange={(z) => Number.isFinite(z) && onMove(0, 0, z - b.min[2])} />
         <Text fontSize="xs" color="fg.muted">
           Tot el grup es mou junt: amb les fletxes del 3D, del teclat o aquí. Al 3D, el primer clic selecciona el grup i el segon, la peça.
         </Text>

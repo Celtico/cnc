@@ -1,8 +1,9 @@
-import { Box, Button, Field, HStack, IconButton, NativeSelect, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, HStack, IconButton, NativeSelect, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
 import { LuChevronDown, LuChevronRight, LuPanelBottom, LuPanelTop, LuPlus, LuSquareDashed, LuTrash2 } from "react-icons/lu"
 import { CUTOUT_PRESETS, newId, type Composition, type Run, type WorktopCutout, type WorktopRun } from "../../core/model"
-import { NumberField } from "../editor/ParamsForm"
+import { NumRow } from "../editor/ParamsForm"
+import { FormRow } from "../../components/FormRow"
 import { MaterialSelect } from "../settings/SettingsScreen"
 import { useSettings } from "../settings/SettingsContext"
 
@@ -39,10 +40,9 @@ export function RunsForm({ comp, onChange }: { comp: Composition; onChange: (c: 
   }
 
   const moduleSelect = (label: string, value: string, onPick: (id: string) => void) => (
-    <Field.Root>
-      <Field.Label>{label}</Field.Label>
+    <FormRow label={label} maxW="280px">
       <NativeSelect.Root size="sm">
-        <NativeSelect.Field value={value} onChange={(e) => onPick(e.target.value)}>
+        <NativeSelect.Field aria-label={label} value={value} onChange={(e) => onPick(e.target.value)}>
           {row.map((m) => (
             <option key={m.id} value={m.id}>
               {m.name}
@@ -51,7 +51,7 @@ export function RunsForm({ comp, onChange }: { comp: Composition; onChange: (c: 
         </NativeSelect.Field>
         <NativeSelect.Indicator />
       </NativeSelect.Root>
-    </Field.Root>
+    </FormRow>
   )
 
   return (
@@ -72,17 +72,15 @@ export function RunsForm({ comp, onChange }: { comp: Composition; onChange: (c: 
           onRemove={() => setRuns(runs.filter((x) => x.id !== r.id))}
           removeLabel={r.kind === "worktop" ? "Eliminar el taulell" : "Eliminar el sòcol"}
         >
-          <SimpleGrid columns={2} gap={3}>
-            {moduleSelect("Des de", r.from, (from) => update(r.id, { from }))}
-            {moduleSelect("Fins a", r.to, (to) => update(r.id, { to }))}
-          </SimpleGrid>
-          <SimpleGrid columns={2} gap={3}>
-            <MaterialSelect label="Material" materials={settings.materials.filter((m) => !m.forBacks && m.category !== "sim")} value={r.material} onChange={(material) => update(r.id, { material })} />
-            <NumberField label="Gruix" value={r.thickness} min={10} max={60} step={1} onChange={(thickness) => update(r.id, { thickness })} />
-          </SimpleGrid>
+          {moduleSelect("Des de", r.from, (from) => update(r.id, { from }))}
+          {moduleSelect("Fins a", r.to, (to) => update(r.id, { to }))}
+          <FormRow label="Material" maxW="280px">
+            <MaterialSelect label="Material" hideLabel materials={settings.materials.filter((m) => !m.forBacks && m.category !== "sim")} value={r.material} onChange={(material) => update(r.id, { material })} />
+          </FormRow>
+          <NumRow label="Gruix" value={r.thickness} min={10} max={60} step={1} onChange={(thickness) => update(r.id, { thickness })} />
           {r.kind === "plinth" ? (
             <>
-              <NumberField label="Retranqueig" value={r.setback} min={0} max={150} step={5} onChange={(setback) => update(r.id, { setback })} help="Des de la cara dels fronts. L'alçada és la de les potes." />
+              <NumRow label="Retranqueig" value={r.setback} min={0} max={150} step={5} onChange={(setback) => update(r.id, { setback })} help="Des de la cara dels fronts. L'alçada és la de les potes." />
             </>
           ) : (
             <WorktopFields run={r} comp={comp} onChange={(patch) => update(r.id, patch)} />
@@ -113,14 +111,10 @@ function WorktopFields({ run, comp, onChange }: { run: WorktopRun; comp: Composi
   }
   return (
     <>
-      <SimpleGrid columns={3} gap={2}>
-        <NumberField label="Voladís" value={run.overhangFront} min={0} max={200} step={5} onChange={(overhangFront) => onChange({ overhangFront })} />
-        <NumberField label="Esquerra" value={run.overhangLeft} min={0} max={500} step={5} onChange={(overhangLeft) => onChange({ overhangLeft })} />
-        <NumberField label="Dreta" value={run.overhangRight} min={0} max={500} step={5} onChange={(overhangRight) => onChange({ overhangRight })} />
-      </SimpleGrid>
-      <Text fontSize="xs" color="fg.muted" mt={-1}>
-        Voladís per davant dels fronts i per cada costat.
-      </Text>
+      {/* Voladís per davant dels fronts i per cada costat. */}
+      <NumRow label="Voladís davant" help="Per davant dels fronts." value={run.overhangFront} min={0} max={200} step={5} onChange={(overhangFront) => onChange({ overhangFront })} />
+      <NumRow label="Voladís esquerra" value={run.overhangLeft} min={0} max={500} step={5} onChange={(overhangLeft) => onChange({ overhangLeft })} />
+      <NumRow label="Voladís dreta" value={run.overhangRight} min={0} max={500} step={5} onChange={(overhangRight) => onChange({ overhangRight })} />
       {run.cutouts.map((c) => (
         <Fold
           key={c.id}
@@ -134,10 +128,9 @@ function WorktopFields({ run, comp, onChange }: { run: WorktopRun; comp: Composi
           removeLabel="Treure el forat"
         >
           <Stack gap={2}>
-            <Field.Root>
-              <Field.Label>Tipus</Field.Label>
+            <FormRow label="Tipus" maxW="280px">
               <NativeSelect.Root size="sm">
-                <NativeSelect.Field value={c.kind} onChange={(e) => setCut(c.id, { kind: e.target.value as WorktopCutout["kind"] })}>
+                <NativeSelect.Field aria-label="Tipus" value={c.kind} onChange={(e) => setCut(c.id, { kind: e.target.value as WorktopCutout["kind"] })}>
                   {(Object.keys(CUTOUT_PRESETS) as WorktopCutout["kind"][]).map((k) => (
                     <option key={k} value={k}>
                       {CUTOUT_PRESETS[k].label}
@@ -146,11 +139,10 @@ function WorktopFields({ run, comp, onChange }: { run: WorktopRun; comp: Composi
                 </NativeSelect.Field>
                 <NativeSelect.Indicator />
               </NativeSelect.Root>
-            </Field.Root>
-            <Field.Root>
-              <Field.Label>Sobre</Field.Label>
+            </FormRow>
+            <FormRow label="Sobre" maxW="280px">
               <NativeSelect.Root size="sm">
-                <NativeSelect.Field value={c.module} onChange={(e) => setCut(c.id, { module: e.target.value })}>
+                <NativeSelect.Field aria-label="Sobre" value={c.module} onChange={(e) => setCut(c.id, { module: e.target.value })}>
                   {comp.modules
                     .filter((m) => m.carcass.base.kind !== "wall")
                     .map((m) => (
@@ -161,15 +153,10 @@ function WorktopFields({ run, comp, onChange }: { run: WorktopRun; comp: Composi
                 </NativeSelect.Field>
                 <NativeSelect.Indicator />
               </NativeSelect.Root>
-            </Field.Root>
-            <SimpleGrid columns={3} gap={2}>
-              <NumberField label="Ample" value={c.w} min={50} max={2000} step={5} onChange={(w) => setCut(c.id, { w })} />
-              <NumberField label="Fons" value={c.d} min={50} max={1000} step={5} onChange={(d) => setCut(c.id, { d })} />
-              <NumberField label="Despl." value={c.dx} min={-1000} max={1000} step={5} onChange={(dx) => setCut(c.id, { dx })} />
-            </SimpleGrid>
-            <Text fontSize="xs" color="fg.muted">
-              Mida del forat d'encastar (la del full d'instruccions de l'aparell), centrat al mòdul; «Despl.» el mou a la dreta (+) o a l'esquerra (−).
-            </Text>
+            </FormRow>
+            <NumRow label="Ample" value={c.w} min={50} max={2000} step={5} onChange={(w) => setCut(c.id, { w })} />
+            <NumRow label="Fons" value={c.d} min={50} max={1000} step={5} onChange={(d) => setCut(c.id, { d })} />
+            <NumRow label="Desplaçament" help="Mida del forat d'encastar (la del full d'instruccions de l'aparell), centrat al mòdul; el desplaçament el mou a la dreta (+) o a l'esquerra (−)." value={c.dx} min={-1000} max={1000} step={5} onChange={(dx) => setCut(c.id, { dx })} />
           </Stack>
         </Fold>
       ))}

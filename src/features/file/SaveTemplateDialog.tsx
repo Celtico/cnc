@@ -1,6 +1,7 @@
-import { Button, Dialog, Field, Input, Portal, Text } from "@chakra-ui/react"
+import { Button, Dialog, Input, Portal, Text } from "@chakra-ui/react"
 import { useState } from "react"
 import { LuBookmark } from "react-icons/lu"
+import { FormRow } from "../../components/FormRow"
 import { toaster } from "../../components/ui/toaster"
 import { compositionOf, saveUserTemplate } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
@@ -29,10 +30,9 @@ export function SaveTemplateDialog({ project, open, onClose }: { project: Projec
               <Dialog.Title>Desar com a plantilla</Dialog.Title>
             </Dialog.Header>
             <Dialog.Body>
-              <Field.Root>
-                <Field.Label>Nom de la plantilla</Field.Label>
-                <Input id="template-name" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && save()} />
-              </Field.Root>
+              <FormRow label="Nom de la plantilla">
+                <Input id="template-name" aria-label="Nom de la plantilla" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && save()} />
+              </FormRow>
               <Text fontSize="sm" color="fg.muted" mt={3}>
                 Es desa la composició tal com és ara (mòduls, compartiments i objectes de referència). El moble no canvia.
               </Text>

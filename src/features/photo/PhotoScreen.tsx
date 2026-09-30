@@ -4,13 +4,11 @@ import {
   Button,
   Card,
   EmptyState,
-  Field,
   HStack,
   Heading,
   IconButton,
   NativeSelect,
   SegmentGroup,
-  SimpleGrid,
   Slider,
   Stack,
   Text,
@@ -37,6 +35,7 @@ import {
   LuWrench,
 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
+import { FormRow } from "../../components/FormRow"
 import { PanelSection } from "../../components/PanelSection"
 import { usePresentationScene } from "../../components/viewer/presentationScene"
 import { panelBox } from "../../core/build/buildComposition"
@@ -70,7 +69,7 @@ import {
 import { addPhoto, db, removeProjectPhoto, updateProjectPhoto, type Photo, type PhotoCalibration } from "../../db/db"
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { ResizeHandle } from "../../components/ResizeHandle"
-import { NumberField } from "../editor/ParamsForm"
+import { NumRow } from "../editor/ParamsForm"
 import { downloadBlob, slugify } from "../download"
 import { useSettings } from "../settings/SettingsContext"
 import { usePersistentNumber } from "../usePersistentNumber"
@@ -837,10 +836,10 @@ function PhotoCalibrator({
             {/* Seccions plegables, com la resta de l'inspector. */}
             <Stack gap={0}>
               <PanelSection id="photo-ref" title="Referència" icon={LuCrosshair}>
-              <Field.Root>
-                <Field.Label>Rectangle de referència</Field.Label>
+              <FormRow label="Rectangle de referència" maxW="280px">
                 <NativeSelect.Root size="sm">
                   <NativeSelect.Field
+                    aria-label="Rectangle de referència"
                     value={refMode}
                     onChange={(e) => {
                       if (e.target.value === "custom") {
@@ -863,30 +862,35 @@ function PhotoCalibrator({
                   </NativeSelect.Field>
                   <NativeSelect.Indicator />
                 </NativeSelect.Root>
-              </Field.Root>
-              <Text fontSize="sm" fontWeight="medium" mb={-2}>
+              </FormRow>
+              <Text fontSize="sm" fontWeight="medium" mb={-1}>
                 Mida coneguda
               </Text>
-              <SimpleGrid columns={2} gap={3}>
-                <NumberField label="Amplada" value={cal.ref.w ?? NaN} min={10} max={5000} step={1} onChange={(w) => setCal((c) => ({ ...c, ref: { ...c.ref, w: known(w) } }))} />
-                <NumberField label="Alçada" value={cal.ref.h ?? NaN} min={10} max={5000} step={1} onChange={(h) => setCal((c) => ({ ...c, ref: { ...c.ref, h: known(h) } }))} />
-              </SimpleGrid>
-              <Text fontSize="xs" color="fg.muted" mt={-2}>
-                {refW && refH
-                  ? effective && (effective.w !== refW || effective.h !== refH)
-                    ? `Recalibrada amb cinta: ${effective.w} × ${effective.h} mm.`
-                    : "Donen l'escala de la foto. Es poden deixar en blanc per treballar només amb proporcions."
-                  : effective
-                    ? `Sense mides: l'escala surt de la cinta (${effective.w} × ${effective.h} mm).`
-                    : "En blanc: només mesures relatives fins que hi hagi una mida amb cinta."}
-              </Text>
+              <NumRow label="Amplada" value={cal.ref.w ?? NaN} min={10} max={5000} step={1} onChange={(w) => setCal((c) => ({ ...c, ref: { ...c.ref, w: known(w) } }))} />
+              {/* L'explicació de la mida coneguda va com a ajuda de la segona fila (val per a totes dues). */}
+              <NumRow
+                label="Alçada"
+                value={cal.ref.h ?? NaN}
+                min={10}
+                max={5000}
+                step={1}
+                onChange={(h) => setCal((c) => ({ ...c, ref: { ...c.ref, h: known(h) } }))}
+                help={
+                  refW && refH
+                    ? effective && (effective.w !== refW || effective.h !== refH)
+                      ? `Recalibrada amb cinta: ${effective.w} × ${effective.h} mm.`
+                      : "Donen l'escala de la foto. Es poden deixar en blanc per treballar només amb proporcions."
+                    : effective
+                      ? `Sense mides: l'escala surt de la cinta (${effective.w} × ${effective.h} mm).`
+                      : "En blanc: només mesures relatives fins que hi hagi una mida amb cinta."
+                }
+              />
               {cal.plane === "wall" && (
-                <NumberField label="Distància a la paret" value={cal.refWallOffset ?? 0} min={0} max={2000} step={10} help="De la referència a la paret. Una tele sobre un moble: uns 200." onChange={(v) => setCal((c) => ({ ...c, refWallOffset: Number.isFinite(v) ? v : 0 }))} />
+                <NumRow label="Distància a la paret" value={cal.refWallOffset ?? 0} min={0} max={2000} step={10} help="De la referència a la paret. Una tele sobre un moble: uns 200." onChange={(v) => setCal((c) => ({ ...c, refWallOffset: Number.isFinite(v) ? v : 0 }))} />
               )}
 
-              <Field.Root>
-                <Field.Label>El rectangle és a…</Field.Label>
-                <SegmentGroup.Root size="sm" value={cal.plane} onValueChange={(e) => (e.value === "wall" || e.value === "floor") && setCal((c) => ({ ...c, plane: e.value as ReferencePlane }))}>
+              <FormRow label="El rectangle és a…">
+                <SegmentGroup.Root size="sm" aria-label="El rectangle és a…" value={cal.plane} onValueChange={(e) => (e.value === "wall" || e.value === "floor") && setCal((c) => ({ ...c, plane: e.value as ReferencePlane }))}>
                   <SegmentGroup.Indicator />
                   <SegmentGroup.Item value="wall">
                     <SegmentGroup.ItemText>La paret</SegmentGroup.ItemText>
@@ -897,8 +901,8 @@ function PhotoCalibrator({
                     <SegmentGroup.ItemHiddenInput />
                   </SegmentGroup.Item>
                 </SegmentGroup.Root>
-              </Field.Root>
-              <NumberField
+              </FormRow>
+              <NumRow
                 label="Focal (35 mm)"
                 value={cal.focal35}
                 min={10}
@@ -935,16 +939,20 @@ function PhotoCalibrator({
               <MeasureTable measures={measures} values={values} targets={targets} applied={appliedByMeasure} onChange={updateMeasure} onRemove={removeMeasure} onApply={applyMeasure} />
               </PanelSection>
               <PanelSection id="photo-position" title="Posició del moble" icon={LuMove}>
-              <SimpleGrid columns={2} gap={3}>
-                <NumberField label="X" value={cal.offset[0]} min={-10000} max={10000} step={10} onChange={(x) => setCal((c) => ({ ...c, offset: [x, c.offset[1]] }))} />
-                <NumberField label={cal.plane === "wall" ? "Y (alçada)" : "Y (distància)"} value={cal.offset[1]} min={-10000} max={10000} step={10} onChange={(y) => setCal((c) => ({ ...c, offset: [c.offset[0], y] }))} />
-                {cal.plane === "wall" && <NumberField label="Z (paret)" value={cal.offsetZ ?? 0} min={0} max={3000} step={10} onChange={(z) => setCal((c) => ({ ...c, offsetZ: Number.isFinite(z) ? z : 0 }))} />}
-              </SimpleGrid>
+              <NumRow label="X (de costat)" value={cal.offset[0]} min={-10000} max={10000} step={10} onChange={(x) => setCal((c) => ({ ...c, offset: [x, c.offset[1]] }))} />
+              <NumRow label={cal.plane === "wall" ? "Y (alçada)" : "Y (distància)"} value={cal.offset[1]} min={-10000} max={10000} step={10} onChange={(y) => setCal((c) => ({ ...c, offset: [c.offset[0], y] }))} />
+              {cal.plane === "wall" && <NumRow label="Z (paret)" value={cal.offsetZ ?? 0} min={0} max={3000} step={10} onChange={(z) => setCal((c) => ({ ...c, offsetZ: Number.isFinite(z) ? z : 0 }))} />}
               </PanelSection>
               <PanelSection id="photo-look" title="Aspecte" icon={LuPaintbrush} badge={renderMode === "realistic" ? "Realista" : "Línies"}>
-              <Field.Root>
-                <Field.Label>Aspecte del moble</Field.Label>
-                <SegmentGroup.Root size="sm" value={renderMode} onValueChange={(e) => (e.value === "lines" || e.value === "realistic") && setCal((c) => ({ ...c, render: e.value as "lines" | "realistic" }))}>
+              <FormRow
+                label="Aspecte del moble"
+                help={
+                  renderMode === "lines"
+                    ? "Ràpid i transparent: per encaixar el moble amb la foto."
+                    : "Materials, llum i ombres. La llum és la de Preferències › Visor 3D."
+                }
+              >
+                <SegmentGroup.Root size="sm" aria-label="Aspecte del moble" value={renderMode} onValueChange={(e) => (e.value === "lines" || e.value === "realistic") && setCal((c) => ({ ...c, render: e.value as "lines" | "realistic" }))}>
                   <SegmentGroup.Indicator />
                   <SegmentGroup.Item value="lines">
                     <SegmentGroup.ItemText>Línies</SegmentGroup.ItemText>
@@ -955,39 +963,40 @@ function PhotoCalibrator({
                     <SegmentGroup.ItemHiddenInput />
                   </SegmentGroup.Item>
                 </SegmentGroup.Root>
-                <Field.HelperText>
-                  {renderMode === "lines"
-                    ? "Ràpid i transparent: per encaixar el moble amb la foto."
-                    : "Materials, llum i ombres. La llum és la de Preferències › Visor 3D."}
-                </Field.HelperText>
-              </Field.Root>
+              </FormRow>
               {renderMode === "realistic" && (
-                <Switch.Root size="sm" checked={renderShadows} onCheckedChange={(e) => setCal((c) => ({ ...c, shadows: e.checked }))}>
-                  <Switch.HiddenInput />
-                  <Switch.Control />
-                  <Switch.Label>Ombres a terra i a la paret</Switch.Label>
-                </Switch.Root>
+                <FormRow label="Ombres">
+                  <Switch.Root size="sm" pt="6px" checked={renderShadows} onCheckedChange={(e) => setCal((c) => ({ ...c, shadows: e.checked }))}>
+                    <Switch.HiddenInput />
+                    <Switch.Control />
+                    <Switch.Label fontSize="sm">Ombres a terra i a la paret</Switch.Label>
+                  </Switch.Root>
+                </FormRow>
               )}
               {renderMode === "realistic" && (
-                <Switch.Root size="sm" checked={marksInRender} onCheckedChange={(e) => setMarksInRender(e.checked)}>
-                  <Switch.HiddenInput />
-                  <Switch.Control />
-                  <Switch.Label>Mostrar les marques</Switch.Label>
-                </Switch.Root>
+                <FormRow label="Marques">
+                  <Switch.Root size="sm" pt="6px" checked={marksInRender} onCheckedChange={(e) => setMarksInRender(e.checked)}>
+                    <Switch.HiddenInput />
+                    <Switch.Control />
+                    <Switch.Label fontSize="sm">Mostrar les marques</Switch.Label>
+                  </Switch.Root>
+                </FormRow>
               )}
 
-              <Slider.Root size="sm" value={[Math.round(opacity * 100)]} min={10} max={100} step={5} onValueChange={(e) => setCal((c) => ({ ...c, opacity: (e.value[0] ?? 70) / 100 }))}>
-                <HStack justify="space-between">
-                  <Slider.Label>Opacitat del moble</Slider.Label>
-                  <Slider.ValueText />
-                </HStack>
-                <Slider.Control>
-                  <Slider.Track>
-                    <Slider.Range />
-                  </Slider.Track>
-                  <Slider.Thumbs />
-                </Slider.Control>
-              </Slider.Root>
+              {/* Fila: el lliscador i el valor a la dreta de l'etiqueta. */}
+              <FormRow label="Opacitat del moble">
+                <Slider.Root size="sm" aria-label={["Opacitat del moble"]} value={[Math.round(opacity * 100)]} min={10} max={100} step={5} onValueChange={(e) => setCal((c) => ({ ...c, opacity: (e.value[0] ?? 70) / 100 }))}>
+                  <HStack gap={3} minH="32px">
+                    <Slider.Control flex={1}>
+                      <Slider.Track>
+                        <Slider.Range />
+                      </Slider.Track>
+                      <Slider.Thumbs />
+                    </Slider.Control>
+                    <Slider.ValueText fontSize="sm" color="fg.muted" minW="3em" textAlign="right" />
+                  </HStack>
+                </Slider.Root>
+              </FormRow>
               <HStack justify="space-between" wrap="wrap" gap={2}>
                 <SegmentGroup.Root size="xs" value={layer} onValueChange={(e) => (e.value === "photo" || e.value === "cabinet" || e.value === "both") && setCal((c) => ({ ...c, layer: e.value as PhotoCalibration["layer"] }))}>
                   <SegmentGroup.Indicator />

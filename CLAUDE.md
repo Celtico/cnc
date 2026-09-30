@@ -608,9 +608,12 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     explicació i «Restaurar valors inicials»); dins, **una sola columna de 760 px** (`FoldGrid` = pila; res de
     graelles de targetes, que deixaven forats) de **grups sempre oberts** (`components/SettingsGroup`:
     targeta amb capçalera, marges amples (px 6) i 24 px entre targetes, icones alineades a dalt amb el títol; res no s'obre de cop).
-    **Tots els camps de Preferències són files etiqueta · control** (`components/FormRow`: `FormRow` amb l'etiqueta
-    de 150 px a l'esquerra —a sobre al mòbil—, el control amb `maxW` i l'ajuda a sota; `NumRow` per als números,
-    180 px; `FormSection` per a seccions dins una targeta; `ChoiceChips` per a opcions que han de saltar de línia,
+    **Tots els camps de l'app són files etiqueta · control** (Preferències, inspectors del moble, de peces, objectes i
+    ambients, diàlegs de render, textura, plantilla, foto i nesting): `components/FormRow` — `FormRow` amb l'etiqueta
+    a l'esquerra (min(150 px, 36 %)) i el control amb `maxW` i l'ajuda a sota; és una **consulta de contenidor**:
+    si el lloc fa menys de 300 px (mòbil, panell estret), l'etiqueta va a sobre. `NumRow` (a `editor/ParamsForm`,
+    amb `ariaLabel` al camp) per als números, 180 px; `IconChoice hideLabel` i `MaterialSelect hideLabel` dins un
+    `FormRow`; «Afegir» de `MasterDetail` només amb icona; `FormSection` per a seccions dins una targeta; `ChoiceChips` per a opcions que han de saltar de línia,
     com el sòcol i la llum del Visor 3D, en lloc d'un control segmentat que es desborda). Materials i objectes de
     referència fan **llista i detall** (`components/MasterDetail`: llista agrupada amb mostra; cercador, desplegable
     de categoria i «Afegir» en una fila; desplaçament propi; `head` = el títol de la pàgina a dalt de la llista,

@@ -2,9 +2,7 @@ import {
   Alert,
   Badge,
   Card,
-  Field,
   HStack,
-  SegmentGroup,
   SimpleGrid,
   Stack,
   Stat,
@@ -16,7 +14,8 @@ import { useEffect, useMemo, useState } from "react"
 import { BoardDrawing } from "../../components/BoardDrawing"
 import { STANDARD_SHEETS, type NestOptions } from "../../core/nesting/nest"
 import { updateProjectNesting } from "../../db/db"
-import { NumberField } from "../editor/ParamsForm"
+import { ChoiceChips, FormRow } from "../../components/FormRow"
+import { NumRow } from "../editor/ParamsForm"
 import { useSettings } from "../settings/SettingsContext"
 import { useCompositionPanels, useNesting, useProject } from "../useProject"
 
@@ -54,42 +53,29 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
 
       <Card.Root variant="outline">
         <Card.Body gap={4}>
-          <Field.Root>
-            <Field.Label>Tauler</Field.Label>
-            <SegmentGroup.Root
-              size="sm"
+          {/* Molts formats de tauler: pastilles que salten de línia en lloc d'un control segmentat. */}
+          <FormRow label="Tauler">
+            <ChoiceChips
+              label="Tauler"
               value={standardKey}
-              onValueChange={(e) => {
-                const s = sheets.find((x) => `${x.w}x${x.h}` === e.value)
+              options={[...sheets.map((s) => ({ id: `${s.w}x${s.h}`, label: s.label })), ...(standardKey === "custom" ? [{ id: "custom", label: "A mida" }] : [])]}
+              onChange={(v) => {
+                const s = sheets.find((x) => `${x.w}x${x.h}` === v)
                 if (s) setOptions((o) => ({ ...o, sheet: { w: s.w, h: s.h } }))
               }}
-            >
-              <SegmentGroup.Indicator />
-              {sheets.map((s) => (
-                <SegmentGroup.Item key={s.label} value={`${s.w}x${s.h}`}>
-                  <SegmentGroup.ItemText>{s.label}</SegmentGroup.ItemText>
-                  <SegmentGroup.ItemHiddenInput />
-                </SegmentGroup.Item>
-              ))}
-              {standardKey === "custom" && (
-                <SegmentGroup.Item value="custom">
-                  <SegmentGroup.ItemText>A mida</SegmentGroup.ItemText>
-                  <SegmentGroup.ItemHiddenInput />
-                </SegmentGroup.Item>
-              )}
-            </SegmentGroup.Root>
-          </Field.Root>
-          <SimpleGrid columns={{ base: 2, md: 4 }} gap={3}>
-            <NumberField label="Ample tauler" value={options.sheet.w} min={300} max={6000} step={10} onChange={(w) => setOptions((o) => ({ ...o, sheet: { ...o.sheet, w } }))} />
-            <NumberField label="Alt tauler" value={options.sheet.h} min={300} max={6000} step={10} onChange={(h) => setOptions((o) => ({ ...o, sheet: { ...o.sheet, h } }))} />
-            <NumberField label="Kerf (fresa)" value={options.kerf} min={0} max={30} step={0.5} onChange={(kerf) => setOptions((o) => ({ ...o, kerf }))} />
-            <NumberField label="Marge tauler" value={options.margin} min={0} max={100} step={1} onChange={(margin) => setOptions((o) => ({ ...o, margin }))} />
-          </SimpleGrid>
-          <Switch.Root size="sm" checked={!!options.ignoreGrain} onCheckedChange={(e) => setOptions((o) => ({ ...o, ignoreGrain: e.checked || undefined }))}>
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label>Permetre girar les peces encara que tinguin veta</Switch.Label>
-          </Switch.Root>
+            />
+          </FormRow>
+          <NumRow label="Ample tauler" value={options.sheet.w} min={300} max={6000} step={10} onChange={(w) => setOptions((o) => ({ ...o, sheet: { ...o.sheet, w } }))} />
+          <NumRow label="Alt tauler" value={options.sheet.h} min={300} max={6000} step={10} onChange={(h) => setOptions((o) => ({ ...o, sheet: { ...o.sheet, h } }))} />
+          <NumRow label="Kerf (fresa)" value={options.kerf} min={0} max={30} step={0.5} onChange={(kerf) => setOptions((o) => ({ ...o, kerf }))} />
+          <NumRow label="Marge tauler" value={options.margin} min={0} max={100} step={1} onChange={(margin) => setOptions((o) => ({ ...o, margin }))} />
+          <FormRow label="Veta">
+            <Switch.Root size="sm" pt="6px" checked={!!options.ignoreGrain} onCheckedChange={(e) => setOptions((o) => ({ ...o, ignoreGrain: e.checked || undefined }))}>
+              <Switch.HiddenInput />
+              <Switch.Control />
+              <Switch.Label fontSize="sm">Permetre girar les peces encara que tinguin veta</Switch.Label>
+            </Switch.Root>
+          </FormRow>
           {options.sheetsByMaterial && Object.keys(options.sheetsByMaterial).length > 0 && (
             <Text fontSize="xs" color="fg.muted">
               Taulers per material (de les preferències):{" "}

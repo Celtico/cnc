@@ -1,6 +1,7 @@
 import { Box, Button, CloseButton, Dialog, Flex, HStack, Input, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useState } from "react"
 import { LuDices, LuRotateCcw } from "react-icons/lu"
+import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { WOOD_PRESETS, type Finish, type MaterialPref, type WoodGen } from "../../core/model"
 import { woodGenOf } from "../../components/viewer/textures"
 import { isEditable, previewStyle } from "./materialPreview"
@@ -85,7 +86,7 @@ function Controls({ f, setF }: { f: Editable; setF: (f: Editable) => void }) {
     const set = (patch: Partial<WoodGen>) => setF({ ...f, gen: { ...g, ...patch } })
     return (
       <>
-        <Row label="Punt de partida">
+        <FormRow label="Punt de partida">
           <HStack gap={1.5} wrap="wrap">
             {(["oak", "walnut", "ash"] as const).map((sp) => (
               <Button key={sp} size="xs" variant="outline" onClick={() => setF({ kind: "wood", species: sp, gen: { ...WOOD_PRESETS[sp] } })}>
@@ -98,11 +99,9 @@ function Controls({ f, setF }: { f: Editable; setF: (f: Editable) => void }) {
               </Button>
             ))}
           </HStack>
-        </Row>
-        <HStack gap={4}>
-          <ColorField label="Color de fons" value={g.base} onChange={(base) => set({ base })} />
-          <ColorField label="Color de la veta" value={g.dark} onChange={(dark) => set({ dark })} />
-        </HStack>
+        </FormRow>
+        <ColorField label="Color de fons" value={g.base} onChange={(base) => set({ base })} />
+        <ColorField label="Color de la veta" value={g.dark} onChange={(dark) => set({ dark })} />
         <Slider label="Densitat de la veta" value={g.lines} min={2} max={80} step={1} onChange={(lines) => set({ lines })} />
         <Slider label="Ondulació" value={g.wobble} min={0} max={0.25} step={0.01} fmt={(v) => `${Math.round(v * 400)} %`} onChange={(wobble) => set({ wobble })} />
         <Slider label="Contrast de les fibres" value={g.contrast} min={0} max={1} step={0.05} fmt={(v) => `${Math.round(v * 100)} %`} onChange={(contrast) => set({ contrast })} />
@@ -128,19 +127,17 @@ function Controls({ f, setF }: { f: Editable; setF: (f: Editable) => void }) {
   if (f.kind === "tiles")
     return (
       <>
-        <HStack gap={4}>
-          <ColorField label="Color de la peça" value={f.color} onChange={(color) => setF({ ...f, color })} />
-          <ColorField label="Color de la junta" value={f.grout} onChange={(grout) => setF({ ...f, grout })} />
-        </HStack>
+        <ColorField label="Color de la peça" value={f.color} onChange={(color) => setF({ ...f, color })} />
+        <ColorField label="Color de la junta" value={f.grout} onChange={(grout) => setF({ ...f, grout })} />
         <Slider label="Mida de la peça" value={f.size} min={20} max={1500} step={10} fmt={(v) => `${v} mm`} onChange={(size) => setF({ ...f, size })} />
         <Slider label="Gruix de la junta" value={f.joint ?? 3} min={0} max={30} step={0.5} fmt={(v) => `${v} mm`} onChange={(joint) => setF({ ...f, joint })} />
         <Slider label="Variació de to" value={f.variation ?? 0.05} min={0} max={0.4} step={0.01} fmt={(v) => `${Math.round(v * 100)} %`} onChange={(variation) => setF({ ...f, variation })} />
-        <Row label="Col·locació">
+        <FormRow label="Col·locació">
           <SegmentGroup.Root size="sm" value={f.layout ?? "grid"} onValueChange={(e) => (e.value === "grid" || e.value === "brick") && setF({ ...f, layout: e.value })}>
             <SegmentGroup.Indicator />
             <SegmentGroup.Items items={[{ value: "grid", label: "Quadrícula" }, { value: "brick", label: "Trencajunts" }]} />
           </SegmentGroup.Root>
-        </Row>
+        </FormRow>
         <Actions onReset={() => setF({ kind: "tiles", color: f.color, grout: f.grout, size: f.size })} />
       </>
     )
@@ -148,16 +145,11 @@ function Controls({ f, setF }: { f: Editable; setF: (f: Editable) => void }) {
     const style = f.style ?? "marble"
     return (
       <>
-        <Row label="Tipus">
-          <SegmentGroup.Root size="sm" value={style} onValueChange={(e) => e.value && setF({ ...f, style: e.value as typeof style })}>
-            <SegmentGroup.Indicator />
-            <SegmentGroup.Items items={[{ value: "marble", label: "Marbre" }, { value: "granite", label: "Granit" }, { value: "travertine", label: "Travertí" }, { value: "concrete", label: "Formigó" }]} />
-          </SegmentGroup.Root>
-        </Row>
-        <HStack gap={4}>
-          <ColorField label="Color de la pedra" value={f.color} onChange={(color) => setF({ ...f, color })} />
-          <ColorField label={style === "granite" ? "Color del gra" : "Color de les vetes"} value={f.vein} onChange={(vein) => setF({ ...f, vein })} />
-        </HStack>
+        <FormRow label="Tipus">
+          <ChoiceChips label="Tipus" value={style} options={[{ id: "marble", label: "Marbre" }, { id: "granite", label: "Granit" }, { id: "travertine", label: "Travertí" }, { id: "concrete", label: "Formigó" }]} onChange={(v) => v && setF({ ...f, style: v })} />
+        </FormRow>
+        <ColorField label="Color de la pedra" value={f.color} onChange={(color) => setF({ ...f, color })} />
+        <ColorField label={style === "granite" ? "Color del gra" : "Color de les vetes"} value={f.vein} onChange={(vein) => setF({ ...f, vein })} />
         <Slider label={style === "granite" ? "Quantitat de gra de color" : style === "marble" ? "Vetes" : "Contrast"} value={f.veins} min={0} max={1} step={0.05} fmt={pct} onChange={(veins) => setF({ ...f, veins })} />
         <Slider label={style === "granite" ? "Punts foscos" : "Porus i gra"} value={f.grain ?? 0.3} min={0} max={1} step={0.05} fmt={pct} onChange={(grain) => setF({ ...f, grain })} />
         <Slider label="Polit (mat → brillant)" value={f.polish ?? 0.6} min={0} max={1} step={0.05} fmt={pct} onChange={(polish) => setF({ ...f, polish })} />
@@ -171,15 +163,12 @@ function Controls({ f, setF }: { f: Editable; setF: (f: Editable) => void }) {
     return (
       <>
         <ColorField label="Color del metall" value={f.color} onChange={(color) => setF({ ...f, color })} />
-        <Row label="Acabat">
-          <SegmentGroup.Root size="sm" value={surface} onValueChange={(e) => e.value && setF({ ...f, surface: e.value as typeof surface })}>
-            <SegmentGroup.Indicator />
-            <SegmentGroup.Items items={[{ value: "polished", label: "Polit" }, { value: "brushed", label: "Raspallat" }, { value: "hammered", label: "Martellejat" }]} />
-          </SegmentGroup.Root>
-        </Row>
+        <FormRow label="Acabat">
+          <ChoiceChips label="Acabat" value={surface} options={[{ id: "polished", label: "Polit" }, { id: "brushed", label: "Raspallat" }, { id: "hammered", label: "Martellejat" }]} onChange={(v) => v && setF({ ...f, surface: v })} />
+        </FormRow>
         <Slider label="Rugositat (mirall → mat)" value={f.roughness ?? 0.35} min={0} max={1} step={0.05} fmt={pct} onChange={(roughness) => setF({ ...f, roughness })} />
         {surface !== "polished" && <Slider label={surface === "brushed" ? "Intensitat del raspallat" : "Intensitat dels cops"} value={f.strength ?? 0.5} min={0} max={1} step={0.05} fmt={pct} onChange={(strength) => setF({ ...f, strength })} />}
-        <Row label="Colors habituals">
+        <FormRow label="Colors habituals">
           <HStack gap={1.5} wrap="wrap">
             {METALS.map((mt) => (
               <Button key={mt.name} size="xs" variant="outline" onClick={() => setF({ ...f, color: mt.color })}>
@@ -187,7 +176,7 @@ function Controls({ f, setF }: { f: Editable; setF: (f: Editable) => void }) {
               </Button>
             ))}
           </HStack>
-        </Row>
+        </FormRow>
         <Actions onReset={() => setF({ kind: "metal", color: f.color })} />
       </>
     )
@@ -223,27 +212,16 @@ const METALS = [
   { name: "Crom", color: "#e8eaec" },
 ]
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <Stack gap={1}>
-      <Text fontSize="sm" fontWeight="medium">
-        {label}
-      </Text>
-      {children}
-    </Stack>
-  )
-}
-
 function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
-    <Row label={label}>
-      <HStack gap={2}>
+    <FormRow label={label}>
+      <HStack gap={2} minH="32px">
         <Input size="sm" type="color" value={value} onChange={(e) => onChange(e.target.value)} p={0.5} w="44px" aria-label={label} />
         <Text fontSize="xs" fontFamily="mono" color="fg.muted">
           {value}
         </Text>
       </HStack>
-    </Row>
+    </FormRow>
   )
 }
 
@@ -256,15 +234,15 @@ function Slider({ label, value, min, max, step, fmt = (v) => String(v), onChange
   useEffect(() => setV(value), [value])
   const commit = () => v !== value && onChange(v)
   return (
-    <Stack gap={0.5}>
-      <HStack justify="space-between" fontSize="sm">
-        <Text fontWeight="medium">{label}</Text>
-        <Text color="fg.muted" fontVariantNumeric="tabular-nums">
+    // Fila: etiqueta a l'esquerra; el lliscador i el valor a la dreta.
+    <FormRow label={label}>
+      <HStack gap={3} minH="32px">
+        <input type="range" min={min} max={max} step={step} value={v} aria-label={label} onChange={(e) => setV(Number(e.target.value))} onPointerUp={commit} onKeyUp={commit} onBlur={commit} style={{ flex: 1, minWidth: 0, accentColor: "var(--chakra-colors-wood-solid)" }} />
+        <Text fontSize="sm" color="fg.muted" fontVariantNumeric="tabular-nums" flexShrink={0} minW="4.5em" textAlign="right">
           {fmt(v)}
         </Text>
       </HStack>
-      <input type="range" min={min} max={max} step={step} value={v} aria-label={label} onChange={(e) => setV(Number(e.target.value))} onPointerUp={commit} onKeyUp={commit} onBlur={commit} style={{ width: "100%", accentColor: "var(--chakra-colors-wood-solid)" }} />
-    </Stack>
+    </FormRow>
   )
 }
 

@@ -18,7 +18,8 @@ import {
   type PNode,
   type Vec2,
 } from "../../core/model"
-import { NumberField } from "../editor/ParamsForm"
+import { NumberField, NumRow } from "../editor/ParamsForm"
+import { FormRow } from "../../components/FormRow"
 
 const r1 = (v: number) => Math.round(v * 10) / 10
 /** Blau dels nodes i manegadors (com a Figma). */
@@ -506,9 +507,17 @@ export function ProfileEditor({
                       <Text textStyle="sm" fontWeight="semibold">
                         {drawing ? "Dibuixant" : sel !== null ? `Node ${sel + 1}` : "Forma"}
                       </Text>
-                      <Badge size="sm" colorPalette={bad ? "red" : "wood"}>
-                        {Math.round(b.x1 - b.x0)} × {Math.round(b.y1 - b.y0)}
-                      </Badge>
+                      <HStack gap={1}>
+                        <Badge size="sm" colorPalette={bad ? "red" : "wood"}>
+                          {Math.round(b.x1 - b.x0)} × {Math.round(b.y1 - b.y0)}
+                        </Badge>
+                        {/* Treure el node: a la capçalera, perquè les coordenades van en files. */}
+                        {!drawing && selNode && (
+                          <IconButton aria-label="Treure el node" size="xs" variant="ghost" disabled={nodes.length <= 3} onClick={() => remove(sel!)}>
+                            <LuTrash2 />
+                          </IconButton>
+                        )}
+                      </HStack>
                     </HStack>
                     {drawing ? (
                       <Text textStyle="xs" color="fg.muted">
@@ -516,54 +525,50 @@ export function ProfileEditor({
                       </Text>
                     ) : selNode ? (
                       <>
-                        <HStack gap={1} align="end">
-                          <NumberField label={axes[0]} value={selNode.x} step={1} onChange={(v) => Number.isFinite(v) && set(sel!, { ...selNode, x: v })} />
-                          <NumberField label={axes[1]} value={selNode.y} step={1} onChange={(v) => Number.isFinite(v) && set(sel!, { ...selNode, y: v })} />
-                          <IconButton aria-label="Treure el node" size="sm" variant="ghost" disabled={nodes.length <= 3} onClick={() => remove(sel!)}>
-                            <LuTrash2 />
-                          </IconButton>
-                        </HStack>
-                        <Text textStyle="xs" color="fg.muted">
-                          Manegadors
-                        </Text>
-                        <SegmentGroup.Root size="xs" w="full" value={selType} onValueChange={(e) => e.value && setType(sel!, e.value as "corner" | "smooth" | "symmetric")}>
-                          <SegmentGroup.Indicator />
-                          {(
-                            [
-                              ["corner", "Lliures", "Cada manegador va per lliure (fa punxa)"],
-                              ["smooth", "Alineats", "Mateixa direcció, cada un amb la seva llargada (corba suau)"],
-                              ["symmetric", "Simètrics", "Mateixa direcció i mateixa llargada"],
-                            ] as const
-                          ).map(([v, label, title]) => (
-                            <SegmentGroup.Item key={v} value={v} flex={1} title={title} whiteSpace="nowrap">
-                              <SegmentGroup.ItemText>{label}</SegmentGroup.ItemText>
-                              <SegmentGroup.ItemHiddenInput />
-                            </SegmentGroup.Item>
-                          ))}
-                        </SegmentGroup.Root>
+                        <NumRow label={axes[0]} value={selNode.x} step={1} onChange={(v) => Number.isFinite(v) && set(sel!, { ...selNode, x: v })} />
+                        <NumRow label={axes[1]} value={selNode.y} step={1} onChange={(v) => Number.isFinite(v) && set(sel!, { ...selNode, y: v })} />
+                        <FormRow label="Manegadors">
+                          <SegmentGroup.Root size="xs" w="full" aria-label="Manegadors" value={selType} onValueChange={(e) => e.value && setType(sel!, e.value as "corner" | "smooth" | "symmetric")}>
+                            <SegmentGroup.Indicator />
+                            {(
+                              [
+                                ["corner", "Lliures", "Cada manegador va per lliure (fa punxa)"],
+                                ["smooth", "Alineats", "Mateixa direcció, cada un amb la seva llargada (corba suau)"],
+                                ["symmetric", "Simètrics", "Mateixa direcció i mateixa llargada"],
+                              ] as const
+                            ).map(([v, label, title]) => (
+                              <SegmentGroup.Item key={v} value={v} flex={1} title={title} whiteSpace="nowrap">
+                                <SegmentGroup.ItemText>{label}</SegmentGroup.ItemText>
+                                <SegmentGroup.ItemHiddenInput />
+                              </SegmentGroup.Item>
+                            ))}
+                          </SegmentGroup.Root>
+                        </FormRow>
                         {edgeOf(nodes, (sel! - 1 + nodes.length) % nodes.length).kind === "line" && edgeOf(nodes, sel!).kind === "line" && (
                           <Stack gap={1} borderTopWidth="1px" pt={2}>
                             <Text textStyle="xs" color="fg.muted">
                               Arrodonir la punta: la cantonada passa a ser un arc d'aquest radi, tangent als dos costats.
                             </Text>
-                            <HStack gap={1} align="end">
-                              <NumberField label="Radi" value={radius} min={1} max={2000} step={5} onChange={(v) => Number.isFinite(v) && v > 0 && setRadius(v)} />
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={!canFillet}
-                                title={canFillet ? undefined : "El radi és massa gran per als costats"}
-                                onClick={() => {
-                                  const next = filletNode(nodes, sel!, radius)
-                                  if (next) {
-                                    setNodes(next)
-                                    setSel(null)
-                                  }
-                                }}
-                              >
-                                <LuSpline /> Arrodonir
-                              </Button>
-                            </HStack>
+                            <FormRow label="Radi">
+                              <HStack gap={1} align="start">
+                                <NumberField label="" ariaLabel="Radi" value={radius} min={1} max={2000} step={5} onChange={(v) => Number.isFinite(v) && v > 0 && setRadius(v)} />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={!canFillet}
+                                  title={canFillet ? undefined : "El radi és massa gran per als costats"}
+                                  onClick={() => {
+                                    const next = filletNode(nodes, sel!, radius)
+                                    if (next) {
+                                      setNodes(next)
+                                      setSel(null)
+                                    }
+                                  }}
+                                >
+                                  <LuSpline /> Arrodonir
+                                </Button>
+                              </HStack>
+                            </FormRow>
                           </Stack>
                         )}
                         {(selNode.in || selNode.out) && (

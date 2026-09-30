@@ -1,5 +1,5 @@
-import { Box, Button, Field, HStack, IconButton, Menu, Portal, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import { useState } from "react"
+import { Box, Button, HStack, IconButton, Menu, Portal, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { useState, type ReactNode } from "react"
 import { ProfileEditor } from "./ProfileEditor"
 import type { IconType } from "react-icons"
 import { IconChoice, type IconOption } from "../../components/IconChoice"
@@ -7,7 +7,8 @@ import { LuBox, LuCylinder, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, L
 import { PanelSection } from "../../components/PanelSection"
 import { toaster } from "../../components/ui/toaster"
 import { AXIS_INDEX, SECTION_AXES, anchorRef, insertRefCopy, toNodes, canBeGhost, compositionWidth, newId, visibleReferences, type Composition, type RefObject } from "../../core/model"
-import { NumberField } from "../editor/ParamsForm"
+import { NumRow } from "../editor/ParamsForm"
+import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { useSettings } from "../settings/SettingsContext"
 
 /**
@@ -82,9 +83,16 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
   return (
     <Stack gap={0}>
       <PanelSection id="ref-general" title="General" icon={LuScan}>
-        <Field.Root>
-          <Field.Label>Efecte</Field.Label>
+        <FormRow
+          label="Efecte"
+          help={
+            o.effect === "cut"
+              ? "Fa un forat passant a cada peça que travessa (tub, endoll, passacables…). Si el mous, el forat el segueix; surt al nesting, al DXF i al STEP."
+              : "Obstacle: no forma part del moble, es veu translúcid per comprovar que tot hi cap i avisa si xoca amb alguna peça."
+          }
+        >
           <Segments
+            label="Efecte"
             value={o.effect ?? "obstacle"}
             items={[
               ["obstacle", "Obstacle", LuShield],
@@ -92,67 +100,61 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
             ]}
             onChange={(v) => update({ effect: v === "cut" ? "cut" : undefined })}
           />
-        </Field.Root>
-        <Field.Root>
-          <Field.Label>Forma</Field.Label>
-          <Segments
-            value={o.shape ?? "box"}
-            items={[
-              ["box", "Caixa", LuBox],
-              ["cylinder", "Cilindre", LuCylinder],
-              ["profile", "Perfil", LuSpline],
-            ]}
-            onChange={(v) => {
-              if (v === "cylinder") update(cylinderPatch(o, o.axis ?? "z"))
-              else if (v === "profile") {
-                update(profilePatch(o))
-                setEditing(true)
-              } else update({ shape: undefined, axis: undefined, profile: undefined })
-            }}
-          />
-        </Field.Root>
-        {o.shape === "profile" && (
-          <Button size="xs" variant="outline" alignSelf="flex-start" onClick={() => setEditing(true)}>
-            <LuPencilRuler /> Editar la forma…
-          </Button>
-        )}
-        <Text fontSize="xs" color="fg.muted">
-          {o.effect === "cut"
-            ? "Fa un forat passant a cada peça que travessa (tub, endoll, passacables…). Si el mous, el forat el segueix; surt al nesting, al DXF i al STEP."
-            : "Obstacle: no forma part del moble, es veu translúcid per comprovar que tot hi cap i avisa si xoca amb alguna peça."}
-        </Text>
+        </FormRow>
+        <FormRow label="Forma">
+          {/* Pastilles que salten de línia: tres opcions amb icona no hi caben en un segmentat. */}
+          <Stack gap={2}>
+            <ChoiceChips
+              label="Forma"
+              value={o.shape ?? "box"}
+              options={SHAPE_OPTIONS}
+              onChange={(v) => {
+                if (v === "cylinder") update(cylinderPatch(o, o.axis ?? "z"))
+                else if (v === "profile") {
+                  update(profilePatch(o))
+                  setEditing(true)
+                } else update({ shape: undefined, axis: undefined, profile: undefined })
+              }}
+            />
+            {o.shape === "profile" && (
+              <Button size="xs" variant="outline" alignSelf="flex-start" onClick={() => setEditing(true)}>
+                <LuPencilRuler /> Editar la forma…
+              </Button>
+            )}
+          </Stack>
+        </FormRow>
       </PanelSection>
       <PanelSection id="ref-size" title="Mides" icon={LuMoveDiagonal}>
         {o.shape === "profile" ? (
           <>
-            <IconChoice label="Direcció" value={(o.axis ?? "z") as Axis} options={AXIS_OPTIONS} onChange={(a) => update(profileAxisPatch(o, a))} />
-            <SimpleGrid columns={2} gap={2}>
-              <NumberField label="Llarg" value={sectionOf(o).length} min={1} max={20000} step={10} onChange={(length) => update(sizePatch(o, { length }))} />
-              <Stack gap={0} justify="end" pb={2}>
-                <Text textStyle="xs" color="fg.muted">
-                  Secció {Math.round(sectionOf(o).su)} × {Math.round(sectionOf(o).sv)} · {o.profile?.length ?? 0} punts
-                </Text>
-              </Stack>
-            </SimpleGrid>
+            <FormRow label="Direcció">
+              <IconChoice label="Direcció" hideLabel value={(o.axis ?? "z") as Axis} options={AXIS_OPTIONS} onChange={(a) => update(profileAxisPatch(o, a))} />
+            </FormRow>
+            <NumRow label="Llarg" value={sectionOf(o).length} min={1} max={20000} step={10} onChange={(length) => update(sizePatch(o, { length }))} />
+            <FormRow label="Secció">
+              <Text fontSize="sm" color="fg.muted" pt={1.5}>
+                {Math.round(sectionOf(o).su)} × {Math.round(sectionOf(o).sv)} · {o.profile?.length ?? 0} punts
+              </Text>
+            </FormRow>
           </>
         ) : o.shape === "cylinder" ? (
           <>
-            <IconChoice label="Direcció" value={(o.axis ?? "z") as Axis} options={AXIS_OPTIONS} onChange={(a) => update(cylinderPatch(o, a))} />
-            <SimpleGrid columns={2} gap={2}>
-              <NumberField label="Ø" value={cylinderDims(o).diameter} min={1} max={20000} step={5} onChange={(diameter) => update(cylinderPatch(o, o.axis ?? "z", { diameter }))} />
-              <NumberField label="Llarg" value={cylinderDims(o).length} min={1} max={20000} step={10} onChange={(length) => update(cylinderPatch(o, o.axis ?? "z", { length }))} />
-            </SimpleGrid>
+            <FormRow label="Direcció">
+              <IconChoice label="Direcció" hideLabel value={(o.axis ?? "z") as Axis} options={AXIS_OPTIONS} onChange={(a) => update(cylinderPatch(o, a))} />
+            </FormRow>
+            <NumRow label="Diàmetre (Ø)" value={cylinderDims(o).diameter} min={1} max={20000} step={5} onChange={(diameter) => update(cylinderPatch(o, o.axis ?? "z", { diameter }))} />
+            <NumRow label="Llarg" value={cylinderDims(o).length} min={1} max={20000} step={10} onChange={(length) => update(cylinderPatch(o, o.axis ?? "z", { length }))} />
           </>
         ) : (
           <>
           {o.effect === "cut" && (
-            <IconChoice label="Direcció del tall" value={(o.axis ?? "z") as Axis} options={AXIS_OPTIONS} onChange={(a) => update({ axis: a === "z" ? undefined : a })} />
+            <FormRow label="Direcció del tall">
+              <IconChoice label="Direcció del tall" hideLabel value={(o.axis ?? "z") as Axis} options={AXIS_OPTIONS} onChange={(a) => update({ axis: a === "z" ? undefined : a })} />
+            </FormRow>
           )}
-          <SimpleGrid columns={3} gap={2}>
-            <NumberField label="Ample" value={o.w} min={1} max={20000} step={10} onChange={(w) => update({ w })} />
-            <NumberField label="Alt" value={o.h} min={1} max={20000} step={10} onChange={(h) => update({ h })} />
-            <NumberField label="Fondària" value={o.d} min={1} max={20000} step={10} onChange={(d) => update({ d })} />
-          </SimpleGrid>
+          <NumRow label="Ample" value={o.w} min={1} max={20000} step={10} onChange={(w) => update({ w })} />
+          <NumRow label="Alt" value={o.h} min={1} max={20000} step={10} onChange={(h) => update({ h })} />
+          <NumRow label="Fondària" value={o.d} min={1} max={20000} step={10} onChange={(d) => update({ d })} />
           </>
         )}
       </PanelSection>
@@ -177,12 +179,10 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
             <LuBrickWall /> A la paret
           </Button>
         </SimpleGrid>
-        <SimpleGrid columns={3} gap={2}>
-          {/* Cada direcció amb la seva icona i un nom, no només la lletra de l'eix. */}
-          <NumberField label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra del moble" />} value={o.x} min={-30000} max={30000} step={10} onChange={(x) => update({ x })} />
-          <NumberField label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} value={o.y} min={-30000} max={30000} step={10} disabled={!!o.onFloor} onChange={(y) => update({ y })} />
-          <NumberField label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} value={o.z} min={-30000} max={30000} step={10} disabled={!!o.onWall} onChange={(z) => update({ z })} />
-        </SimpleGrid>
+        {/* Cada direcció amb la seva icona i un nom, no només la lletra de l'eix. */}
+        <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra del moble" />} ariaLabel="De costat (X)" value={o.x} min={-30000} max={30000} step={10} onChange={(x) => update({ x })} />
+        <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={o.y} min={-30000} max={30000} step={10} disabled={!!o.onFloor} onChange={(y) => update({ y })} />
+        <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fons (Z)" value={o.z} min={-30000} max={30000} step={10} disabled={!!o.onWall} onChange={(z) => update({ z })} />
         <Text fontSize="xs" color="fg.muted">
           De costat (X) des de l'esquerra del moble · Alçada (Y) des del terra · Fons (Z) des de la paret cap endavant.
         </Text>
@@ -208,6 +208,13 @@ const AXIS_OPTIONS: IconOption<Axis>[] = [
   { value: "z", label: "Cap a la paret", icon: LuMoveDiagonal2, hint: "Cap a la paret (talla fons i portes)" },
   { value: "y", label: "Vertical", icon: LuMoveVertical, hint: "Vertical (talla base, tapa i prestatges)" },
   { value: "x", label: "De costat", icon: LuMoveHorizontal, hint: "De costat (talla laterals i divisions)" },
+]
+
+/** Forma de l'objecte: pastilles amb icona i nom. */
+const SHAPE_OPTIONS: { id: "box" | "cylinder" | "profile"; label: ReactNode }[] = [
+  { id: "box", label: <><LuBox /> Caixa</> },
+  { id: "cylinder", label: <><LuCylinder /> Cilindre</> },
+  { id: "profile", label: <><LuSpline /> Perfil</> },
 ]
 
 /** Noms dels eixos (u, v) de la secció per a cada direcció (`SECTION_AXES`). */
@@ -267,9 +274,9 @@ function cylinderPatch(o: RefObject, axis: Axis, change: { diameter?: number; le
   return { shape: "cylinder", axis, w, h, d, x: Math.round(cx - w / 2), y: Math.max(0, Math.round(cy - h / 2)), z: Math.round(cz - d / 2) }
 }
 
-function Segments({ value, items, onChange }: { value: string; items: [string, string, IconType?][]; onChange: (v: string) => void }) {
+function Segments({ label, value, items, onChange }: { label?: string; value: string; items: [string, string, IconType?][]; onChange: (v: string) => void }) {
   return (
-    <SegmentGroup.Root size="sm" w="full" value={value} onValueChange={(e) => e.value && onChange(e.value)}>
+    <SegmentGroup.Root size="sm" w="full" aria-label={label} value={value} onValueChange={(e) => e.value && onChange(e.value)}>
       <SegmentGroup.Indicator />
       {items.map(([v, label, Icon]) => (
         <SegmentGroup.Item key={v} value={v} flex={1}>

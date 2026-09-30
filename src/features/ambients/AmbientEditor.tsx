@@ -1,4 +1,4 @@
-import { Badge, Box, Button, CloseButton, Dialog, Drawer, Editable, Field, Flex, HStack, IconButton, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Slider, Stack, Switch, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, CloseButton, Dialog, Drawer, Editable, Flex, HStack, IconButton, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Slider, Stack, Switch, Text } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   LuArrowLeft,
@@ -80,7 +80,8 @@ import { useAmbientMembership } from "./useAmbientMembership"
 import { ObjectsGallery } from "../objects/ObjectsGallery"
 import { isObject } from "../objects/isObject"
 import { useLiveQuery } from "../../db/useLiveQuery"
-import { NumberField } from "../editor/ParamsForm"
+import { NumRow } from "../editor/ParamsForm"
+import { FormRow } from "../../components/FormRow"
 import { Workspace } from "../../components/Workspace"
 import { ViewOptions, ViewTile } from "../../components/ViewOptions"
 import { usePersistentFlag } from "../usePersistentFlag"
@@ -762,19 +763,21 @@ function SectionTitle({ children }: { children: ReactNode }) {
 
 /** Material de les preferències, agrupat per categories (el mateix selector que a Preferències). */
 function MaterialPick({ label, value, materials, onChange, emptyLabel }: { label: string; value: string; materials: MaterialPref[]; onChange: (v: string) => void; onlySim?: boolean; emptyLabel?: string }) {
-  return <MaterialSelect label={label} materials={materials} value={value} onChange={onChange} emptyLabel={emptyLabel} />
+  return (
+    <FormRow label={label} maxW="280px">
+      <MaterialSelect label={label} materials={materials} value={value} onChange={onChange} emptyLabel={emptyLabel} hideLabel />
+    </FormRow>
+  )
 }
 
 function Placement({ item, onPatch }: { item: AmbientItem; onPatch: (p: Partial<AmbientItem>) => void }) {
   return (
     <Stack gap={2}>
       <SectionTitle>Posició</SectionTitle>
-      <SimpleGrid columns={2} gap={2}>
-        <NumberField label="X (centre)" value={item.x} step={10} onChange={(x) => Number.isFinite(x) && onPatch({ x })} />
-        <NumberField label="Y (centre)" value={item.y} step={10} onChange={(y) => Number.isFinite(y) && onPatch({ y })} />
-        <NumberField label="Gir" suffix="°" value={item.rot} step={15} onChange={(rot) => Number.isFinite(rot) && onPatch({ rot: ((rot % 360) + 360) % 360 })} />
-        <NumberField label="Del terra" value={item.elevation ?? 0} min={0} step={10} onChange={(elevation) => Number.isFinite(elevation) && onPatch({ elevation: elevation || undefined })} />
-      </SimpleGrid>
+      <NumRow label="X (centre)" value={item.x} step={10} onChange={(x) => Number.isFinite(x) && onPatch({ x })} />
+      <NumRow label="Y (centre)" value={item.y} step={10} onChange={(y) => Number.isFinite(y) && onPatch({ y })} />
+      <NumRow label="Gir" suffix="°" value={item.rot} step={15} onChange={(rot) => Number.isFinite(rot) && onPatch({ rot: ((rot % 360) + 360) % 360 })} />
+      <NumRow label="Del terra" value={item.elevation ?? 0} min={0} step={10} onChange={(elevation) => Number.isFinite(elevation) && onPatch({ elevation: elevation || undefined })} />
       <HStack gap={2}>
         <Button size="xs" variant="outline" onClick={() => onPatch({ rot: (item.rot + 270) % 360 })}>
           <LuRotateCcw /> −90°
@@ -850,10 +853,9 @@ function ItemInspector({
       ) : (
         <Stack gap={2}>
           <SectionTitle>Bloc</SectionTitle>
-          <Field.Root>
-            <Field.Label fontSize="sm">Forma</Field.Label>
+          <FormRow label="Forma" maxW="280px">
             <NativeSelect.Root size="sm">
-              <NativeSelect.Field value={item.shape} onChange={(e) => onPatch({ shape: e.target.value as BlockItem["shape"] })}>
+              <NativeSelect.Field aria-label="Forma" value={item.shape} onChange={(e) => onPatch({ shape: e.target.value as BlockItem["shape"] })}>
                 {BlockShapeSchema.options.map((s) => (
                   <option key={s} value={s}>
                     {SHAPE_LABEL[s]}
@@ -862,12 +864,10 @@ function ItemInspector({
               </NativeSelect.Field>
               <NativeSelect.Indicator />
             </NativeSelect.Root>
-          </Field.Root>
-          <SimpleGrid columns={3} gap={2}>
-            <NumberField label="Ample" value={item.w} min={10} step={10} onChange={(w) => w >= 10 && onPatch({ w })} />
-            <NumberField label="Alt" value={item.h} min={5} step={10} onChange={(h) => h >= 5 && onPatch({ h })} />
-            <NumberField label="Fons" value={item.d} min={10} step={10} onChange={(d) => d >= 10 && onPatch({ d })} />
-          </SimpleGrid>
+          </FormRow>
+          <NumRow label="Ample" value={item.w} min={10} step={10} onChange={(w) => w >= 10 && onPatch({ w })} />
+          <NumRow label="Alt" value={item.h} min={5} step={10} onChange={(h) => h >= 5 && onPatch({ h })} />
+          <NumRow label="Fons" value={item.d} min={10} step={10} onChange={(d) => d >= 10 && onPatch({ d })} />
           <MaterialPick label="Material" value={item.material} materials={materials} onChange={(material) => onPatch({ material })} />
           {(item.shape === "bed" || item.shape === "sofa") && (
             <MaterialPick label={item.shape === "bed" ? "Matalàs" : "Coixins"} value={item.material2 ?? item.material} materials={materials} onChange={(material2) => onPatch({ material2 })} onlySim />
@@ -909,11 +909,9 @@ function MobleDims({ project, geo }: { project: Project; geo: ItemGeometry }) {
   return (
     <Stack gap={2} onKeyDown={(e) => e.key === "Enter" && void apply()}>
       <SectionTitle>Mides generals</SectionTitle>
-      <SimpleGrid columns={3} gap={2}>
-        <NumberField label="Ample" value={draft.w} min={100} step={10} onChange={(w) => setDraft({ ...draft, w })} />
-        <NumberField label="Alt" value={draft.h} min={100} step={10} onChange={(h) => setDraft({ ...draft, h })} />
-        <NumberField label="Fons" value={draft.d} min={100} step={10} onChange={(d) => setDraft({ ...draft, d })} />
-      </SimpleGrid>
+      <NumRow label="Ample" value={draft.w} min={100} step={10} onChange={(w) => setDraft({ ...draft, w })} />
+      <NumRow label="Alt" value={draft.h} min={100} step={10} onChange={(h) => setDraft({ ...draft, h })} />
+      <NumRow label="Fons" value={draft.d} min={100} step={10} onChange={(d) => setDraft({ ...draft, d })} />
       {dirty && (
         <HStack gap={2}>
           <Button size="xs" colorPalette="wood" onClick={() => void apply()}>
@@ -946,22 +944,20 @@ function WallInspector({ wall, materials, onPatch, onDelete }: { wall: Wall; mat
           <LuTrash2 />
         </IconButton>
       </HStack>
-      <SimpleGrid columns={3} gap={2}>
-        <NumberField
-          label="Llarg"
-          value={L}
-          min={50}
-          step={10}
-          onChange={(len) => {
-            if (!(len >= 50) || L < 1) return
-            // S'allarga cap al final (b), en la mateixa direcció.
-            const k = len / L
-            onPatch({ b: [Math.round(wall.a[0] + (wall.b[0] - wall.a[0]) * k), Math.round(wall.a[1] + (wall.b[1] - wall.a[1]) * k)] })
-          }}
-        />
-        <NumberField label="Gruix" value={wall.thickness} min={20} max={1000} step={10} onChange={(thickness) => thickness >= 20 && onPatch({ thickness })} />
-        <NumberField label="Alt" value={wall.height} min={200} max={10000} step={10} onChange={(height) => height >= 200 && onPatch({ height })} />
-      </SimpleGrid>
+      <NumRow
+        label="Llarg"
+        value={L}
+        min={50}
+        step={10}
+        onChange={(len) => {
+          if (!(len >= 50) || L < 1) return
+          // S'allarga cap al final (b), en la mateixa direcció.
+          const k = len / L
+          onPatch({ b: [Math.round(wall.a[0] + (wall.b[0] - wall.a[0]) * k), Math.round(wall.a[1] + (wall.b[1] - wall.a[1]) * k)] })
+        }}
+      />
+      <NumRow label="Gruix" value={wall.thickness} min={20} max={1000} step={10} onChange={(thickness) => thickness >= 20 && onPatch({ thickness })} />
+      <NumRow label="Alt" value={wall.height} min={200} max={10000} step={10} onChange={(height) => height >= 200 && onPatch({ height })} />
       <MaterialPick label="Material d'aquesta paret" value={wall.material ?? ""} materials={materials} onChange={(material) => onPatch({ material: material || undefined })} onlySim emptyLabel="El de totes les parets" />
       <Stack gap={2}>
         <SectionTitle>Finestres i portes</SectionTitle>
@@ -989,13 +985,11 @@ function WallInspector({ wall, materials, onPatch, onDelete }: { wall: Wall; mat
                   <LuTrash2 />
                 </IconButton>
               </HStack>
-              <SimpleGrid columns={2} gap={2}>
-                <NumberField label="Centre (des de l'inici)" value={Math.round(o.at)} step={10} onChange={(at) => Number.isFinite(at) && set({ at })} />
-                <NumberField label="Ample" value={o.w} min={200} step={10} onChange={(w) => w >= 200 && set({ w })} />
-                <NumberField label="Alt" value={o.h} min={200} step={10} onChange={(h) => h >= 200 && set({ h })} />
-                {o.kind === "window" && <NumberField label="Ampit (del terra)" value={o.sill} min={0} step={10} onChange={(sill) => sill >= 0 && set({ sill })} />}
-                {o.kind !== "door" && <NumberField label="Fulles" value={o.panes ?? Math.max(1, Math.round(o.w / (o.kind === "glazing" ? 1200 : 900)))} min={1} max={12} step={1} onChange={(panes) => panes >= 1 && set({ panes: Math.round(panes) })} />}
-              </SimpleGrid>
+              <NumRow label="Centre (des de l'inici)" value={Math.round(o.at)} step={10} onChange={(at) => Number.isFinite(at) && set({ at })} />
+              <NumRow label="Ample" value={o.w} min={200} step={10} onChange={(w) => w >= 200 && set({ w })} />
+              <NumRow label="Alt" value={o.h} min={200} step={10} onChange={(h) => h >= 200 && set({ h })} />
+              {o.kind === "window" && <NumRow label="Ampit (del terra)" value={o.sill} min={0} step={10} onChange={(sill) => sill >= 0 && set({ sill })} />}
+              {o.kind !== "door" && <NumRow label="Fulles" value={o.panes ?? Math.max(1, Math.round(o.w / (o.kind === "glazing" ? 1200 : 900)))} min={1} max={12} step={1} onChange={(panes) => panes >= 1 && set({ panes: Math.round(panes) })} />}
             </Stack>
           )
         })}
@@ -1039,10 +1033,8 @@ function AmbientInspector({
     <Stack gap={5}>
       <Stack gap={2}>
         <SectionTitle>Parets noves</SectionTitle>
-        <SimpleGrid columns={2} gap={2}>
-          <NumberField label="Gruix" value={wallDefaults.thickness} min={20} max={1000} step={10} onChange={(thickness) => thickness >= 20 && onWallDefaults({ ...wallDefaults, thickness })} />
-          <NumberField label="Alçada" value={wallDefaults.height} min={200} max={10000} step={10} onChange={(height) => height >= 200 && onWallDefaults({ ...wallDefaults, height })} />
-        </SimpleGrid>
+        <NumRow label="Gruix" value={wallDefaults.thickness} min={20} max={1000} step={10} onChange={(thickness) => thickness >= 20 && onWallDefaults({ ...wallDefaults, thickness })} />
+        <NumRow label="Alçada" value={wallDefaults.height} min={200} max={10000} step={10} onChange={(height) => height >= 200 && onWallDefaults({ ...wallDefaults, height })} />
       </Stack>
 
       <Stack gap={2}>
@@ -1073,9 +1065,8 @@ function AmbientInspector({
                 <LuTrash2 /> Treure'l
               </Button>
             </HStack>
-            <Field.Root>
-              <Field.Label fontSize="sm">Opacitat</Field.Label>
-              <Slider.Root size="sm" w="full" min={0.1} max={1} step={0.05} value={[plan.opacity]} onValueChange={(e) => onChange({ ...amb, plan: { ...plan, opacity: e.value[0]! } })}>
+            <FormRow label="Opacitat">
+              <Slider.Root size="sm" w="full" pt="10px" aria-label={["Opacitat"]} min={0.1} max={1} step={0.05} value={[plan.opacity]} onValueChange={(e) => onChange({ ...amb, plan: { ...plan, opacity: e.value[0]! } })}>
                 <Slider.Control>
                   <Slider.Track>
                     <Slider.Range />
@@ -1083,12 +1074,14 @@ function AmbientInspector({
                   <Slider.Thumbs />
                 </Slider.Control>
               </Slider.Root>
-            </Field.Root>
-            <Switch.Root size="sm" checked={plan.locked !== false} onCheckedChange={(e) => onChange({ ...amb, plan: { ...plan, locked: e.checked } })}>
-              <Switch.HiddenInput />
-              <Switch.Control />
-              <Switch.Label>Bloquejat (desbloquejat, s'arrossega)</Switch.Label>
-            </Switch.Root>
+            </FormRow>
+            <FormRow label="Bloqueig">
+              <Switch.Root size="sm" pt="6px" checked={plan.locked !== false} onCheckedChange={(e) => onChange({ ...amb, plan: { ...plan, locked: e.checked } })}>
+                <Switch.HiddenInput />
+                <Switch.Control />
+                <Switch.Label fontSize="sm">Bloquejat (desbloquejat, s'arrossega)</Switch.Label>
+              </Switch.Root>
+            </FormRow>
           </>
         ) : (
           <>
@@ -1124,7 +1117,7 @@ function CalibrateDialog({ open, measured, onClose, onApply }: { open: boolean; 
                 <Text fontSize="sm" color="fg.muted">
                   Ara fa {Math.round(measured)} mm al plànol. Quant fa de debò?
                 </Text>
-                <NumberField label="Distància real" value={real} min={10} step={10} onChange={setReal} />
+                <NumRow label="Distància real" value={real} min={10} step={10} onChange={setReal} />
               </Stack>
             </Dialog.Body>
             <Dialog.Footer>
@@ -1291,10 +1284,8 @@ function GroupInspector({
       </HStack>
       <Stack gap={2}>
         <SectionTitle>Posició del grup</SectionTitle>
-        <SimpleGrid columns={2} gap={2}>
-          <NumberField label="X (centre)" value={cx} step={10} onChange={(x) => Number.isFinite(x) && onMove(x - cx, 0)} />
-          <NumberField label="Y (centre)" value={cy} step={10} onChange={(y) => Number.isFinite(y) && onMove(0, y - cy)} />
-        </SimpleGrid>
+        <NumRow label="X (centre)" value={cx} step={10} onChange={(x) => Number.isFinite(x) && onMove(x - cx, 0)} />
+        <NumRow label="Y (centre)" value={cy} step={10} onChange={(y) => Number.isFinite(y) && onMove(0, y - cy)} />
         <HStack gap={2}>
           <Button size="xs" variant="outline" onClick={() => onRotate(-90)}>
             <LuRotateCcw /> −90°

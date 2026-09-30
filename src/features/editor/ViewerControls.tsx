@@ -1,5 +1,6 @@
-import { Button, Field, HStack, Menu, NativeSelect, Portal, SegmentGroup, Slider, Stack, Switch, Text } from "@chakra-ui/react"
+import { Button, HStack, Menu, NativeSelect, Portal, SegmentGroup, Slider, Stack, Switch } from "@chakra-ui/react"
 import { LuChevronDown, LuDoorOpen, LuImageDown } from "react-icons/lu"
+import { FormRow } from "../../components/FormRow"
 import { VIEW_LABELS, type ViewName } from "../../components/viewer/CabinetViewer"
 
 const VIEWS: ViewName[] = ["front", "back", "left", "right", "top", "3d"]
@@ -62,10 +63,9 @@ export function ViewerControls({
 }) {
   return (
     <Stack gap={4}>
-      <Field.Root>
-        <Field.Label>Vista</Field.Label>
+      <FormRow label="Vista" help="Les vistes de davant, costats i dalt són ortogràfiques i porten les cotes generals." maxW="280px">
         <NativeSelect.Root size="sm">
-          <NativeSelect.Field value={state.view} onChange={(e) => onChange({ view: e.target.value as ViewName })}>
+          <NativeSelect.Field aria-label="Vista" value={state.view} onChange={(e) => onChange({ view: e.target.value as ViewName })}>
             {VIEWS.map((v) => (
               <option key={v} value={v}>
                 {VIEW_LABELS[v]}
@@ -74,38 +74,38 @@ export function ViewerControls({
           </NativeSelect.Field>
           <NativeSelect.Indicator />
         </NativeSelect.Root>
-        <Field.HelperText>Les vistes de davant, costats i dalt són ortogràfiques i porten les cotes generals.</Field.HelperText>
-      </Field.Root>
+      </FormRow>
 
-      <Slider.Root
-        size="sm"
-        value={[Math.round(state.opening * 100)]}
-        min={0}
-        max={100}
-        step={5}
-        disabled={!hasMoving}
-        onValueChange={(e) => onChange({ opening: (e.value[0] ?? 0) / 100 })}
+      <FormRow
+        label={
+          <HStack gap={1.5}>
+            <LuDoorOpen /> Obertura
+          </HStack>
+        }
+        help={!hasMoving ? "Aquesta composició no té portes, abatibles ni calaixos." : undefined}
       >
-        <HStack justify="space-between">
-          <Slider.Label>
-            <HStack gap={1.5}>
-              <LuDoorOpen /> Obertura
-            </HStack>
-          </Slider.Label>
-          <Slider.ValueText />
-        </HStack>
-        <Slider.Control>
-          <Slider.Track>
-            <Slider.Range />
-          </Slider.Track>
-          <Slider.Thumbs />
-        </Slider.Control>
-      </Slider.Root>
-      {!hasMoving && (
-        <Text fontSize="xs" color="fg.muted" mt={-3}>
-          Aquesta composició no té portes, abatibles ni calaixos.
-        </Text>
-      )}
+        <Slider.Root
+          size="sm"
+          pt="6px"
+          aria-label={["Obertura"]}
+          value={[Math.round(state.opening * 100)]}
+          min={0}
+          max={100}
+          step={5}
+          disabled={!hasMoving}
+          onValueChange={(e) => onChange({ opening: (e.value[0] ?? 0) / 100 })}
+        >
+          <HStack gap={3}>
+            <Slider.Control flex={1}>
+              <Slider.Track>
+                <Slider.Range />
+              </Slider.Track>
+              <Slider.Thumbs />
+            </Slider.Control>
+            <Slider.ValueText minW="8" textAlign="end" fontSize="sm" />
+          </HStack>
+        </Slider.Root>
+      </FormRow>
       <Switch.Root size="sm" checked={state.openOnlySelected} disabled={!hasSelectedZone} onCheckedChange={(e) => onChange({ openOnlySelected: e.checked })}>
         <Switch.HiddenInput />
         <Switch.Control />

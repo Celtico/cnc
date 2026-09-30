@@ -14,14 +14,16 @@ export interface IconOption<T extends string> {
  * Tria entre poques opcions amb botons d'icona (com el tipus de front): la icona al botó,
  * el nom al tooltip i, al costat del títol, el nom de l'opció triada.
  */
-export function IconChoice<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: IconOption<T>[]; onChange: (v: T) => void }) {
+export function IconChoice<T extends string>({ label, value, options, onChange, hideLabel }: { label: string; value: T; options: IconOption<T>[]; onChange: (v: T) => void; /** Sense títol (dins d'un `FormRow`, que ja porta l'etiqueta): l'opció triada va a sota dels botons. */ hideLabel?: boolean }) {
   const current = options.find((o) => o.value === value)
   return (
     <Stack gap={1.5}>
-      <HStack gap={1.5} fontSize="sm">
-        <Text fontWeight="medium">{label}</Text>
-        {current && <Text color="fg.muted">· {current.label}</Text>}
-      </HStack>
+      {!hideLabel && (
+        <HStack gap={1.5} fontSize="sm">
+          <Text fontWeight="medium">{label}</Text>
+          {current && <Text color="fg.muted">· {current.label}</Text>}
+        </HStack>
+      )}
       <HStack gap={1} role="radiogroup" aria-label={label}>
         {options.map((o) => {
           const on = o.value === value
@@ -44,6 +46,11 @@ export function IconChoice<T extends string>({ label, value, options, onChange }
           )
         })}
       </HStack>
+      {hideLabel && current && (
+        <Text fontSize="xs" color="fg.muted">
+          {current.label}
+        </Text>
+      )}
     </Stack>
   )
 }

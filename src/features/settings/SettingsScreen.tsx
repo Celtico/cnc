@@ -54,7 +54,7 @@ import {
   type Settings,
 } from "../../core/model"
 import { downloadText } from "../download"
-import { NumberField } from "../editor/ParamsForm"
+import { NumberField, NumRow } from "../editor/ParamsForm"
 import { useSettings } from "./SettingsContext"
 import { fileAccept } from "../file/fileAccept"
 
@@ -417,15 +417,6 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
       </Stack>
     </Flex>
     </Stack>
-  )
-}
-
-/** Fila amb un camp numèric (mm, si no es diu una altra unitat). */
-function NumRow({ label, help, ...p }: { label: ReactNode; help?: ReactNode } & Omit<Parameters<typeof NumberField>[0], "label" | "help">) {
-  return (
-    <FormRow label={label} help={help} maxW="180px">
-      <NumberField label="" {...p} />
-    </FormRow>
   )
 }
 

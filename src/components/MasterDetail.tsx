@@ -1,4 +1,4 @@
-import { Badge, Box, Button, CloseButton, Flex, HStack, Input, InputGroup, NativeSelect, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, CloseButton, Flex, HStack, IconButton, Input, InputGroup, NativeSelect, Stack, Text } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 import { LuChevronLeft, LuChevronRight, LuPlus, LuSearch } from "react-icons/lu"
 
@@ -83,9 +83,10 @@ export function MasterDetail({
             <NativeSelect.Indicator />
           </NativeSelect.Root>
         )}
-        <Button size="sm" variant="outline" flexShrink={0} onClick={onAdd}>
-          <LuPlus /> {addLabel}
-        </Button>
+        {/* Només la icona: el cercador té més lloc (el text surt en passar-hi per sobre). */}
+        <IconButton size="sm" variant="outline" flexShrink={0} onClick={onAdd} aria-label={addLabel} title={addLabel}>
+          <LuPlus />
+        </IconButton>
       </HStack>
       </Stack>
       {groups.map((g) =>

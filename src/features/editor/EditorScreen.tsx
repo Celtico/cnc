@@ -1,4 +1,4 @@
-import { Alert, Badge, Box, Button, Editable, CloseButton, Drawer, Field, HStack, IconButton, Popover, Portal, SegmentGroup, SimpleGrid, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
+import { Alert, Badge, Box, Button, Editable, CloseButton, Drawer, HStack, IconButton, Popover, Portal, SegmentGroup, SimpleGrid, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
 import { createElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   LuArrowDownToLine,
@@ -62,7 +62,8 @@ import { RunsForm } from "../composition/RunsForm"
 import { zoneLabel } from "../composition/zoneLabel"
 import { zoneIcon } from "../composition/zoneIcon"
 import { downloadBlob, slugify } from "../download"
-import { NumberField } from "./ParamsForm"
+import { NumRow } from "./ParamsForm"
+import { FormRow } from "../../components/FormRow"
 import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
 import { PhotoScreen } from "../photo/PhotoScreen"
 import { useSettings } from "../settings/SettingsContext"
@@ -874,21 +875,27 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             </Text>
           ) : (
           <PanelSection id="moble-kind" title="Tipus" icon={KINDS.find((k) => k.value === kind)!.icon} badge={KINDS.find((k) => k.value === kind)!.label}>
-            <IconChoice label="Tipus de moble" value={kind} options={MOBLE_KINDS} onChange={(k) => setComp((c) => ({ ...c, kind: k }))} />
-            <Text fontSize="xs" color="fg.muted">
-              {kind !== "cuina" && comp.runs?.length
-                ? `Aquest moble té ${comp.runs.length === 1 ? "un taulell o sòcol corregut" : `${comp.runs.length} taulells o sòcols correguts`}: només es fan a la Cuina. Es guarden per si hi tornes. `
-                : ""}
-              {kind === "cuina"
-                ? "Cuina: baixos a terra i alts penjats, amb taulell i sòcol correguts per sobre i per sota de diversos mòduls."
-                : kind === "armari"
-                  ? "Armari: mòduls alts; les portes i els prestatges van a cada mòdul."
-                  : kind === "lliure"
-                    ? "Flat-pack: només peces lliures (sense mòduls). On dues peces es toquen o s'encreuen s'hi fa l'encaix sol: pestanyes, mitja fusta, dits o espigues. Les de ferro, pedra o vidre no van al nesting."
-                  : kind === "taula"
-                    ? "Taula o consola: cada mòdul és un tauler amb dos laterals de panell. Les mides, a Mides; les cantonades a inglet i els laterals, a Estructura."
-                    : "Moble: mòduls lliures (TV, calaixera, prestatgeria…)."}
-            </Text>
+            <FormRow
+              label="Tipus de moble"
+              help={
+                <>
+                  {kind !== "cuina" && comp.runs?.length
+                    ? `Aquest moble té ${comp.runs.length === 1 ? "un taulell o sòcol corregut" : `${comp.runs.length} taulells o sòcols correguts`}: només es fan a la Cuina. Es guarden per si hi tornes. `
+                    : ""}
+                  {kind === "cuina"
+                    ? "Cuina: baixos a terra i alts penjats, amb taulell i sòcol correguts per sobre i per sota de diversos mòduls."
+                    : kind === "armari"
+                      ? "Armari: mòduls alts; les portes i els prestatges van a cada mòdul."
+                      : kind === "lliure"
+                        ? "Flat-pack: només peces lliures (sense mòduls). On dues peces es toquen o s'encreuen s'hi fa l'encaix sol: pestanyes, mitja fusta, dits o espigues. Les de ferro, pedra o vidre no van al nesting."
+                      : kind === "taula"
+                        ? "Taula o consola: cada mòdul és un tauler amb dos laterals de panell. Les mides, a Mides; les cantonades a inglet i els laterals, a Estructura."
+                        : "Moble: mòduls lliures (TV, calaixera, prestatgeria…)."}
+                </>
+              }
+            >
+              <IconChoice label="Tipus de moble" hideLabel value={kind} options={MOBLE_KINDS} onChange={(k) => setComp((c) => ({ ...c, kind: k }))} />
+            </FormRow>
           </PanelSection>
           )}
           {kind === "cuina" && (
@@ -935,9 +942,18 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
               {/* Dues files, com les cuines: a terra (baixos) i penjats (alts). Dins de cada
                   fila, l'ordre és el de l'arbre (d'esquerra a dreta) i cada mòdul va al costat
                   de l'anterior de la seva fila. */}
-              <Field.Root>
-                <Field.Label>Fila</Field.Label>
-                <SimpleGrid columns={3} gap={1.5}>
+              <FormRow
+                label="Fila"
+                help={
+                  mountOf(module) === "hung"
+                    ? "Al 3D, arrossega la maneta del mòdul: es mou per la paret, de costat i amunt/avall (Maj: tot el moble)."
+                    : mountOf(module) === "floor"
+                      ? "Al 3D, arrossega la maneta del mòdul: es mou pel terra, de costat i endavant/enrere (Maj: tot el moble)."
+                      : "Al 3D, arrossega la maneta del mòdul: llisca de costat tocant la paret (Maj: tot el moble)."
+                }
+              >
+                {/* Salten de línia si el panell és estret (tres botons amb icona i text). */}
+                <HStack gap={1.5} wrap="wrap" role="group" aria-label="Fila">
                   {(
                     [
                       ["wall", "A la paret", LuBrickWall, "A terra, arrambat a la paret: es mou de costat"],
@@ -973,17 +989,10 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                       </Button>
                     )
                   })}
-                </SimpleGrid>
-                <Field.HelperText>
-                  {mountOf(module) === "hung"
-                    ? "Al 3D, arrossega la maneta del mòdul: es mou per la paret, de costat i amunt/avall (Maj: tot el moble)."
-                    : mountOf(module) === "floor"
-                      ? "Al 3D, arrossega la maneta del mòdul: es mou pel terra, de costat i endavant/enrere (Maj: tot el moble)."
-                      : "Al 3D, arrossega la maneta del mòdul: llisca de costat tocant la paret (Maj: tot el moble)."}
-                </Field.HelperText>
-              </Field.Root>
+                </HStack>
+              </FormRow>
               {module.carcass.base.kind === "wall" && (
-                <NumberField
+                <NumRow
                   label="Alçada del terra"
                   value={module.carcass.base.height}
                   min={0}
@@ -994,7 +1003,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                 />
               )}
               {mountOf(module) === "floor" && (
-                <NumberField
+                <NumRow
                   label="Separació de la paret"
                   value={module.wallGap ?? 0}
                   min={0}
@@ -1005,7 +1014,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                 />
               )}
               {freeX(module) ? (
-                <NumberField
+                <NumRow
                   label="De costat (X)"
                   value={module.x!}
                   min={-20000}
@@ -1015,7 +1024,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                   help="Des de l'inici del moble. Fora de la fila: no empeny els altres (una illa, un moble solt)."
                 />
               ) : (
-              <NumberField
+              <NumRow
                   label={rowIndex > 0 ? "Separació amb l'anterior" : "Separació des de l'inici"}
                   value={module.gapBefore}
                   min={0}
