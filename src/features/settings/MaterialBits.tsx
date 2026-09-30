@@ -5,13 +5,15 @@ import type { MaterialPref } from "../../core/model"
 import { PREVIEW_MM, previewStyle } from "./materialPreview"
 
 /** Mostra gran del material a escala real (com el previsualitzador de materials de Blender o Figma). */
-export function MaterialPreview({ m, w = 240, h = 150 }: { m: MaterialPref; w?: number; h?: number }) {
+export function MaterialPreview({ m, w = 240, h = 150, caption = true }: { m: MaterialPref; w?: number; h?: number; caption?: boolean }) {
   return (
     <Stack gap={1} flexShrink={0}>
       <Box w={`${w}px`} maxW="100%" h={`${h}px`} rounded="md" borderWidth="1px" style={previewStyle(m, w)} backgroundRepeat="repeat" />
-      <Text fontSize="2xs" color="fg.subtle">
-        Mostra de {PREVIEW_MM} × {Math.round((PREVIEW_MM * h) / w)} mm
-      </Text>
+      {caption && (
+        <Text fontSize="2xs" color="fg.subtle">
+          Mostra de {PREVIEW_MM} × {Math.round((PREVIEW_MM * h) / w)} mm
+        </Text>
+      )}
     </Stack>
   )
 }

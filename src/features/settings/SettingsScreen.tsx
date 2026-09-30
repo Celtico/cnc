@@ -35,6 +35,8 @@ import { MasterDetail } from "../../components/MasterDetail"
 import { useSessionString } from "./useSessionString"
 import { MaterialPreview, ThicknessChips } from "./MaterialBits"
 import { TextureEditor } from "./TextureEditor"
+import { MaterialLibrary } from "./MaterialLibrary"
+import type { LibraryItem } from "./materialLibrary"
 import { isEditable } from "./materialPreview"
 import { toaster } from "../../components/ui/toaster"
 import {
@@ -615,19 +617,27 @@ function MaterialsList({ materials, onChange }: { materials: MaterialPref[]; onC
     while (names.has(`${base} ${n}`)) n++
     return `${base} ${n}`
   }
-  const add = () => {
-    // A la categoria que es mira (si n'hi ha una de triada); amb nom únic i el nom a punt d'escriure.
-    const base: MaterialPref = { id: newId("mat"), name: uniqueName("Material nou"), thicknesses: [19], hasGrain: false, finish: { kind: "color", color: "#e5e5e5" }, edge: "" }
-    const m = cat && cat !== "all" ? withCategory(base, cat as MaterialCategory) : base
+  const [library, setLibrary] = useState(false)
+  const addMaterial = (m: MaterialPref) => {
     onChange([m, ...materials])
     setSel(m.id)
     setJustAdded(m.id)
+    // Que es vegi: si el filtre és d'una altra categoria, es treu.
+    if (cat && cat !== "all" && cat !== materialCategory(m)) setCat("all")
   }
+  const blank = () => {
+    // A la categoria que es mira (si n'hi ha una de triada); amb nom únic i el nom a punt d'escriure.
+    const base: MaterialPref = { id: newId("mat"), name: uniqueName("Material nou"), thicknesses: [19], hasGrain: false, finish: { kind: "color", color: "#e5e5e5" }, edge: "" }
+    addMaterial(cat && cat !== "all" ? withCategory(base, cat as MaterialCategory) : base)
+  }
+  const add = () => setLibrary(true)
+  const fromLibrary = ({ group: _g, ...item }: LibraryItem) => addMaterial({ ...structuredClone(item), id: newId("mat"), name: uniqueName(item.name) })
   const q = query.trim().toLowerCase()
   const filterId = cat ?? "all"
   const i = materials.findIndex((m) => m.id === sel)
   const m = i >= 0 ? materials[i]! : null
   return (
+    <>
     <MasterDetail
       // Per categories: Taulers · Fons · Metall, pedra i vidre · Simulació.
       filters={[{ id: "all", label: "Tots", count: materials.length }, ...MATERIAL_CATEGORIES.map((c) => ({ id: c.id, label: c.label, count: materials.filter((x) => materialCategory(x) === c.id).length }))]}
@@ -672,6 +682,8 @@ function MaterialsList({ materials, onChange }: { materials: MaterialPref[]; onC
         )
       }
     />
+    <MaterialLibrary open={library} onClose={() => setLibrary(false)} onPick={fromLibrary} onBlank={blank} />
+    </>
   )
 }
 

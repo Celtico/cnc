@@ -614,6 +614,10 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     `materialPreview.ts`: 600 mm d'ample amb la textura de debò, la foto, la trama o les rajoles), gruixos
     com a etiquetes (`ThicknessChips`), color amb mostra petita i codi; un material nou té nom únic
     («Material nou 2»), va a la categoria filtrada i deixa el nom seleccionat.
+  - **Biblioteca de materials** (`settings/materialLibrary.ts`, `MATERIAL_LIBRARY`; diàleg `MaterialLibrary`):
+    «Afegir» obre una graella de materials fets amb la mostra (fustes i lacats, pedres, metalls, vidres,
+    teixits, terres i parets), cadascun amb la categoria, els gruixos i el cantell; «En blanc» per començar
+    de zero. `materialLibrary.test.ts` comprova que tots són vàlids.
   - **Textures procedurals editables** (`settings/TextureEditor.tsx`, botó «Editar la textura» sota la
     mostra): mostra gran a escala real (amb zoom) i els paràmetres del generador; s'aplica en acceptar
     i els controls lliscants generen en deixar-los anar. **Fusta** (`Finish.wood.gen`, `WoodGenSchema`,
