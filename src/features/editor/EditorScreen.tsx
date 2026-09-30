@@ -40,7 +40,6 @@ import { Workspace } from "../../components/Workspace"
 import { ViewTile } from "../../components/ViewOptions"
 import { useWorkspace } from "../../components/useWorkspace"
 import { TopBarActions } from "../../components/TopBar"
-import { segGroup, segItem } from "../../components/segmented"
 import { toaster } from "../../components/ui/toaster"
 import { CabinetViewer, type ViewerModule, type ZoneLight } from "../../components/viewer/CabinetViewer"
 import { ArDialog } from "../../components/viewer/ArDialog"
@@ -964,42 +963,29 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                       : "Al 3D, arrossega la maneta del mòdul: llisca de costat tocant la paret (Maj: tot el moble)."
                 }
               >
-                {/* Salten de línia si el panell és estret (tres botons amb icona i text). */}
-                <HStack {...segGroup} role="group" aria-label="Fila">
-                  {(
-                    [
-                      ["wall", "A la paret", LuBrickWall, "A terra, arrambat a la paret: es mou de costat"],
-                      ["hung", "Penjat", LuPanelTop, "Penjat a la paret: es mou de costat i amunt/avall"],
-                      ["floor", "Al terra", LuArrowDownToLine, "Al terra, lliure: es mou pel terra, també separat de la paret"],
-                    ] as const
-                  ).map(([v, label, Icon, tip]) => {
-                    const on = mountOf(module) === v
-                    return (
-                      <Button
-                        key={v}
-                        {...segItem(on)}
-                        px={2}
-                        aria-pressed={on}
-                        title={tip}
-                        onClick={() => {
-                          if (on) return
-                          const c = module.carcass
-                          const wasHung = c.base.kind === "wall"
-                          const { wallGap: _old, x: _x, ...rest } = module
-                          // Al terra: surt de la fila i es queda on és (X pròpia).
-                          const here = Math.round(build?.modules[moduleIndex]?.x ?? 0)
-                          if (v === "hung") updateModule({ ...rest, gapBefore: 0, carcass: { ...c, base: { kind: "wall", height: 1450 } } })
-                          else {
-                            const base = wasHung ? ({ kind: "none" } as const) : c.base
-                            updateModule({ ...rest, ...(v === "floor" ? { wallGap: 0, x: here } : {}), gapBefore: wasHung ? 0 : module.gapBefore, carcass: { ...c, base } })
-                          }
-                        }}
-                      >
-                        <Icon /> {label}
-                      </Button>
-                    )
-                  })}
-                </HStack>
+                {/* Com els altres botons d'opció: només la icona, el nom al tooltip i la triada a sota. */}
+                <IconChoice
+                  label="Fila"
+                  hideLabel
+                  value={mountOf(module)}
+                  options={[
+                    { value: "wall", label: "A la paret", icon: LuBrickWall, hint: "A la paret: a terra, arrambat; es mou de costat" },
+                    { value: "hung", label: "Penjat", icon: LuPanelTop, hint: "Penjat a la paret: es mou de costat i amunt/avall" },
+                    { value: "floor", label: "Al terra", icon: LuArrowDownToLine, hint: "Al terra, lliure: es mou pel terra, també separat de la paret" },
+                  ]}
+                  onChange={(v) => {
+                    const c = module.carcass
+                    const wasHung = c.base.kind === "wall"
+                    const { wallGap: _old, x: _x, ...rest } = module
+                    // Al terra: surt de la fila i es queda on és (X pròpia).
+                    const here = Math.round(build?.modules[moduleIndex]?.x ?? 0)
+                    if (v === "hung") updateModule({ ...rest, gapBefore: 0, carcass: { ...c, base: { kind: "wall", height: 1450 } } })
+                    else {
+                      const base = wasHung ? ({ kind: "none" } as const) : c.base
+                      updateModule({ ...rest, ...(v === "floor" ? { wallGap: 0, x: here } : {}), gapBefore: wasHung ? 0 : module.gapBefore, carcass: { ...c, base } })
+                    }
+                  }}
+                />
               </FormRow>
               {module.carcass.base.kind === "wall" && (
                 <NumRow

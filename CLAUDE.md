@@ -716,7 +716,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     el nom al tooltip i l'opció triada al costat del títol (o a sota, amb `hideLabel`). **Estil discret i comú**
     (`components/segmented.ts`, `segGroup` + `segItem(on)`): control segmentat petit (botons xs, fons suau, la triada
     amb fons clar, ombra i icona del color principal), **sense ocupar tota l'amplada** i sense botons plens de
-    color; el fan servir IconChoice, el tipus de front, la «Fila» del mòdul i `ChoiceChips`. Base, Fons, Tapa (mòdul), Patró de
+    color; el fan servir IconChoice, el tipus de front, la «Fila» del mòdul (també només icona) i `ChoiceChips`. Base, Fons, Tapa (mòdul), Patró de
     reixeta, Direcció dels objectes; Efecte i Forma dels objectes, portes (una/dues, frontisses),
     abatible i muntatge de la reixeta són segments amb icona i text.
   - **Arbre: arrossegar per ordenar** (`reorderModule`, `reorderRef`): mòduls dins de la
