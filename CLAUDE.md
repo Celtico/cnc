@@ -232,7 +232,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Pestanyes Plànol · 3D** a dalt al mig del visor (com 3D · Alçat · Foto a l'editor) i les eines de dibuix en columna a l'esquerra del plànol.
 - **Opcions de vista** (`components/ViewOptions`: `ViewOptions` + `ViewTile`, els mateixos botons que
   l'editor), a dalt a la dreta: al plànol encabir, graella, mides, noms, peces, imant, plànol de fons
-  i render; al 3D encuadrar, casa de nines, ombres i render.
+  i render; al 3D enquadrar, casa de nines, ombres i render.
 - **Plànol**: la roda fa zoom al punt del ratolí (com al 3D), pessigar també, arrossegar el fons
   desplaça; − / + i l'escala de pantalla (1:50…) a baix a la dreta; la barra d'eines flota a dalt.
 - **Les tres pàgines (Mobles, Objectes, Ambients) fan igual**: títol amb el **botó principal a la dreta**
@@ -287,13 +287,13 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   massissos al voltant dels forats) al 3D; al plànol, el forat amb el vidre o l'arc de la porta. El vidre
   porta `userData.glass` (el render per CPU el fa translúcid) i `baseOpacity` (la casa de nines el respecta).
 - **3D**: la mateixa navegació que l'editor (esmorteïment, roda, botó dret per desplaçar), clic per
-  seleccionar (caixa taronja; Supr, Ctrl/⌘ D, R i fletxes com al plànol), «Encuadrar» i «Render». **Arrossegar un
+  seleccionar (caixa taronja; Supr, Ctrl/⌘ D, R i fletxes com al plànol), «Enquadrar» i «Render». **Arrossegar un
   element el mou pel terra** (`startDrag` a `Ambient3D`, pla y = 0; com al plànol: el primer toc tria el grup,
   quadrícula, imant a les parets amb un sol element, Alt sense imant, un sol pas de desfer). Les peces d'un element
   només es refan si en canvia la geometria o els materials (moure'l només en canvia la posició) i les que ja no es
-  dibuixen s'alliberen. La càmera mira el punt de l'obertura (o d'«Encuadrar»), no segueix la caixa de l'ambient.
+  dibuixen s'alliberen. La càmera mira el punt de l'obertura (o d'«Enquadrar»), no segueix la caixa de l'ambient.
   **Interior** (Opcions de vista, `LuEye`, `eyePose`): entra a l'habitació, càmera anivellada a 1,35 m (verticals rectes) al costat de la
-  paret de davant mirant la del fons, angular (fov 55; «Encuadrar» torna a 40), per als renders de revista.
+  paret de davant mirant la del fons, angular (fov 55; «Enquadrar» torna a 40), per als renders de revista.
   La pestanya Plànol · 3D es recorda (`AMBIENT_TAB_KEY`); els ambients creats del catàleg s'obren al 3D.
 - **3D** (`Ambient3D`): terra i parets amb `surfaceMaterial` (textura a mida real), mobles i blocs
   amb les textures del visor; les parets entre la càmera i l'habitació es fan transparents
@@ -396,9 +396,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   - **Teclat a l'editor**: Ctrl/⌘ C · X · V · D (copiar, retallar, enganxar, duplicar) i Supr
     per al mòdul, l'objecte o el compartiment seleccionat (`editOps.ts`). El porta-retalls és
     a localStorage (`mobles:clipboard`): es pot enganxar en un altre moble.
-  - **Càmera**: s'encuadra en obrir, canviar de vista, redimensionar o amb el botó «Encuadrar»
+  - **Càmera**: s'enquadra en obrir, canviar de vista, redimensionar o amb el botó «Enquadrar»
     (càmera de vídeo, `LuVideo`); editar no la mou. El botó surt **marcat** mentre la càmera és a
-    l'encuadrament (`onFramedChange`): es desmarca en orbitar/fer zoom/desplaçar o si el moble canvia de mida. Opcions de vista: popover a l'ordinador, calaix de baix al mòbil.
+    l'enquadrament (`onFramedChange`): es desmarca en orbitar/fer zoom/desplaçar o si el moble canvia de mida. Opcions de vista: popover a l'ordinador, calaix de baix al mòbil.
   - **Enganxar objectes** (`RefObject.onFloor`, `onWall`, `anchorRef`): botons «Al terra» (y = 0,
     al 3D llisca pel terra) i «A la paret» (z = 0, penjat: al 3D es mou per la paret); tots dos
     alhora només de costat. El camp fixat queda desactivat; `anchorRef` s'aplica a l'inspector,
@@ -696,7 +696,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     peces («Després del nesting») i al CSV de peces (Processos). El test d'anada i tornada ho
     comprova amb els parsers del taller (`~/Desktop/taller-cnc-nest`).
   - **Barra del visor**: fora només «Opcions de vista» (i amagar propietats); a dins, a dalt,
-    accions ràpides només amb icona i el nom al tooltip (`viewQuick`, el text no hi cabia): els 3 modes, Encuadrar, Forats, Explosió i
+    accions ràpides només amb icona i el nom al tooltip (`viewQuick`, el text no hi cabia): els 3 modes, Enquadrar, Forats, Explosió i
     Veure a casa (AR); a sota, la vista, l'obertura i la imatge. Al mòbil, el visor amb els
     marges de la pàgina i sense marge a dalt.
   - **Versió** (com a rack): `__APP_VERSION__` = nombre de commits i `__APP_COMMIT__` (git en

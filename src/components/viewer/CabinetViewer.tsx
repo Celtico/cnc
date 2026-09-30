@@ -117,9 +117,9 @@ export interface CabinetViewerProps {
   highlightZone?: { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number; veil?: boolean } | null
   /** Clic a l'espai buit (sense arrossegar): treure la selecció. */
   onDeselect?: () => void
-  /** Canviar-lo torna a encuadrar la càmera (la resta de canvis no la mouen). */
+  /** Canviar-lo torna a enquadrar la càmera (la resta de canvis no la mouen). */
   fitKey?: number
-  /** Avisa si la càmera és a l'encuadrament automàtic (true) o l'usuari l'ha moguda / el moble ha canviat de mida (false). */
+  /** Avisa si la càmera és a l'enquadrament automàtic (true) o l'usuari l'ha moguda / el moble ha canviat de mida (false). */
   onFramedChange?: (framed: boolean) => void
 }
 
@@ -424,7 +424,7 @@ const VIEW_DIR: Record<ViewName, [number, number, number]> = {
  * vistes estàndard (zoom perquè hi càpiga tot), amb transició suau.
  */
 /**
- * Càmera: s'encuadra en muntar-se, en canviar de vista, en redimensionar el visor i quan
+ * Càmera: s'enquadra en muntar-se, en canviar de vista, en redimensionar el visor i quan
  * canvia `fitKey`. Editar el moble (mides, mòduls, objectes) no la mou: es queda on l'has deixat.
  */
 function CameraRig({ size, view, fitKey, onFramedChange }: { size: CabinetViewerProps["size"]; view: ViewName; fitKey: number; onFramedChange?: (framed: boolean) => void }) {
@@ -437,7 +437,7 @@ function CameraRig({ size, view, fitKey, onFramedChange }: { size: CabinetViewer
   const aspect = viewport.width / Math.max(viewport.height, 1)
   const goal = useRef<{ pos: Vector3; zoom: number } | null>(null)
   const ortho = view !== "3d"
-  // Encuadrat = la càmera és on l'ha deixat l'últim encuadrament i el moble té la mateixa mida.
+  // Enquadrat = la càmera és on l'ha deixat l'últim enquadrament i el moble té la mateixa mida.
   const fittedSize = useRef("")
   const framedRef = useRef(true)
   const setFramed = (v: boolean) => {
@@ -474,7 +474,7 @@ function CameraRig({ size, view, fitKey, onFramedChange }: { size: CabinetViewer
     setFramed(true)
     controls.current?.target.set(0, targetY, 0)
     controls.current?.update()
-    // Les mides es llegeixen però no disparen el reencuadrament.
+    // Les mides es llegeixen però no disparen el reenquadrament.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [camera, view, ortho, viewport.width, viewport.height, fitKey])
 

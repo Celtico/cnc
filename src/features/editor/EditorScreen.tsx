@@ -195,9 +195,9 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const ws = useWorkspace("editor", { tree: 280, form: 340 })
   const { setMobilePane } = ws
   const [exploded, setExploded] = useState(false)
-  // Tornar a encuadrar la càmera (editar ja no la mou).
+  // Tornar a enquadrar la càmera (editar ja no la mou).
   const [fitKey, setFitKey] = useState(0)
-  // El botó d'encuadrar surt marcat mentre la càmera és a l'encuadrament.
+  // El botó d'enquadrar surt marcat mentre la càmera és a l'enquadrament.
   const [framed, setFramed] = useState(true)
   const isMobile = useBreakpointValue({ base: true, md: false }) ?? false
   const [showHoles, setShowHoles] = useState(false)
@@ -757,7 +757,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
         {VIEW_MODES.map(([v, label, tip, Icon]) => tile(v, label, <Icon />, viewMode === v, () => setViewMode(v), `${label}: ${tip}`))}
       </SimpleGrid>
       <SimpleGrid columns={6} gap={1.5}>
-        {tile("fit", "Encuadrar", <LuVideo />, framed, () => setFitKey((k) => k + 1), framed ? "Càmera encuadrada (no es mou sola en editar)" : "Encuadrar el moble")}
+        {tile("fit", "Enquadrar", <LuVideo />, framed, () => setFitKey((k) => k + 1), framed ? "Càmera enquadrada (no es mou sola en editar)" : "Enquadrar el moble")}
         {tile("holes", "Forats", <LuCircleDot />, showHoles, () => setShowHoles((v) => !v), showHoles ? "Amagar forats" : "Mostrar forats")}
         {tile("explode", "Explosió", exploded ? <LuShrink /> : <LuExpand />, exploded, () => setExploded((v) => !v), exploded ? "Vista muntada" : "Vista explosionada")}
         {tile("hardware", "Ferratges", <LuWrench />, hardware, () => setHardware((v) => !v), hardware ? "Amagar frontisses, tiradors i potes" : "Mostrar frontisses, tiradors i potes")}

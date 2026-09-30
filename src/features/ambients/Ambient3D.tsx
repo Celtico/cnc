@@ -52,7 +52,7 @@ export function Ambient3D({
   materials: MaterialPref[]
   /** Per al render per CPU (el mateix `RenderDialog` de l'editor). */
   onSceneAccess?: (get: SceneGetter) => void
-  /** Canvia per tornar a encuadrar la càmera. */
+  /** Canvia per tornar a enquadrar la càmera. */
   fitSignal?: number
   /** Canvia per entrar a l'habitació (càmera d'interior a l'alçada dels ulls). */
   eyeSignal?: number
@@ -99,7 +99,7 @@ function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance }: { ta
   const first = useRef(true)
   useEffect(() => {
     if (first.current) {
-      // El punt on es mira només es posa en obrir (i amb «Encuadrar»): si seguís la caixa de l'ambient,
+      // El punt on es mira només es posa en obrir (i amb «Enquadrar»): si seguís la caixa de l'ambient,
       // moure un element cap a fora mouria la càmera.
       first.current = false
       ref.current?.target.set(...target)
