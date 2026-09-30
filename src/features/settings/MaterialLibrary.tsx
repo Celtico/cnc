@@ -2,7 +2,7 @@ import { Box, Button, CloseButton, Dialog, Portal, SimpleGrid, Stack, Text } fro
 import { LuPlus } from "react-icons/lu"
 import type { MaterialPref } from "../../core/model"
 import { MaterialPreview } from "./MaterialBits"
-import { MATERIAL_LIBRARY, type LibraryItem } from "./materialLibrary"
+import { MATERIAL_LIBRARY, type LibraryItem } from "./libraryItems"
 
 /** Diàleg «Afegir material»: la biblioteca de materials fets en graella (i «En blanc» per començar de zero). */
 export function MaterialLibrary({ open, onClose, onPick, onBlank }: { open: boolean; onClose: () => void; onPick: (m: LibraryItem) => void; onBlank: () => void }) {

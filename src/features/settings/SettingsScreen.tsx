@@ -35,7 +35,7 @@ import { useSessionString } from "./useSessionString"
 import { MaterialHero, MaterialThumb, ThicknessChips } from "./MaterialBits"
 import { TextureEditor } from "./TextureEditor"
 import { MaterialLibrary } from "./MaterialLibrary"
-import type { LibraryItem } from "./materialLibrary"
+import type { LibraryItem } from "./libraryItems"
 import { isEditable } from "./materialPreview"
 import { toaster } from "../../components/ui/toaster"
 import {

@@ -343,6 +343,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     ranura del fons.
   - **Fast Refresh**: un fitxer `.tsx` només exporta components; constants i utilitats a part
     (`composition/partOrient.ts`), si no Vite fa «hmr invalidate» i recarrega la pàgina.
+    **El nom del `.ts` no pot coincidir amb el del `.tsx` si només canvien majúscules** (`MaterialLibrary.tsx` i
+    `materialLibrary.ts`): al Mac (disc sense majúscules) `./MaterialLibrary` obre el `.ts` i l'app surt en blanc;
+    per això les dades són a `libraryItems.ts`.
   - **AR («Veure a casa»)**: botó del visor 3D (`LuView`), no una exportació.
 - **Editor en tres columnes, com Figma / Fusion 360** (`features/editor/EditorScreen.tsx`):
   - **Esquerra — Estructura** (`composition/StructureTree.tsx`): arbre moble › mòduls ›
@@ -627,10 +630,10 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     «Editar la textura» i «Posar una foto») i **Fabricació** (Gruixos com a etiquetes `ThicknessChips`,
     Cantell, Veta, Categoria amb la seva explicació); controls de 280 px com a molt; un material nou té nom únic
     («Material nou 2»), va a la categoria filtrada i deixa el nom seleccionat.
-  - **Biblioteca de materials** (`settings/materialLibrary.ts`, `MATERIAL_LIBRARY`; diàleg `MaterialLibrary`):
+  - **Biblioteca de materials** (`settings/libraryItems.ts`, `MATERIAL_LIBRARY`; diàleg `MaterialLibrary`):
     «Afegir» obre una graella de materials fets amb la mostra (fustes i lacats, pedres, metalls, vidres,
     teixits, terres i parets), cadascun amb la categoria, els gruixos i el cantell; «En blanc» per començar
-    de zero. `materialLibrary.test.ts` comprova que tots són vàlids.
+    de zero. `libraryItems.test.ts` comprova que tots són vàlids.
   - **Textures procedurals editables** (`settings/TextureEditor.tsx`, botó «Editar la textura» sota la
     mostra): mostra gran a escala real (amb zoom) i els paràmetres del generador; s'aplica en acceptar
     i els controls lliscants generen en deixar-los anar. **Fusta** (`Finish.wood.gen`, `WoodGenSchema`,

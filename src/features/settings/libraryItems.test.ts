@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { MaterialPrefSchema } from "../../core/model"
-import { MATERIAL_LIBRARY } from "./materialLibrary"
+import { MATERIAL_LIBRARY } from "./libraryItems"
 
 describe("biblioteca de materials", () => {
   it("tots són materials vàlids de preferències i amb nom únic", () => {
