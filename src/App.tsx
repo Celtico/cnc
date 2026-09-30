@@ -219,6 +219,25 @@ export function App() {
       <ExportScreen projectId={projectId} />
     )
 
+  // Pàgines del moble obert (Editor · Peces · Nesting · Exportar): a l'ordinador, al mig de la barra
+  // de dalt; al mòbil, en una franja sota la barra (la barra de baix és sempre el menú general).
+  const projectTabs = (full: boolean) =>
+    showTopBar && projectNav.length > 1 ? (
+      <SegmentGroup.Root size="sm" w={full ? "full" : undefined} value={screen === "photo" ? "editor" : screen} onValueChange={(e) => e.value && go(e.value as Screen)}>
+        <SegmentGroup.Indicator />
+        {projectNav.map((n) => (
+          <SegmentGroup.Item key={n.id} value={n.id} flex={full ? 1 : undefined} justifyContent="center">
+            <SegmentGroup.ItemText>
+              <HStack gap={1.5}>
+                <n.icon /> {n.label}
+              </HStack>
+            </SegmentGroup.ItemText>
+            <SegmentGroup.ItemHiddenInput />
+          </SegmentGroup.Item>
+        ))}
+      </SegmentGroup.Root>
+    ) : undefined
+
   return (
     <UnitContext.Provider value={settings.display.unit}>
     <Flex direction={{ base: "column", md: "row" }} flex={1} minH="100dvh">
@@ -286,23 +305,7 @@ export function App() {
             onBack={backToProjects}
             onSettings={() => go("settings")}
             actionsRef={setTopActions}
-            tabs={
-              projectNav.length > 1 ? (
-                <SegmentGroup.Root size="sm" value={screen === "photo" ? "editor" : screen} onValueChange={(e) => e.value && go(e.value as Screen)}>
-                  <SegmentGroup.Indicator />
-                  {projectNav.map((n) => (
-                    <SegmentGroup.Item key={n.id} value={n.id}>
-                      <SegmentGroup.ItemText>
-                        <HStack gap={1.5}>
-                          <n.icon /> {n.label}
-                        </HStack>
-                      </SegmentGroup.ItemText>
-                      <SegmentGroup.ItemHiddenInput />
-                    </SegmentGroup.Item>
-                  ))}
-                </SegmentGroup.Root>
-              ) : undefined
-            }
+            tabs={projectTabs(false)}
             menu={
               <Menu.Root positioning={{ placement: "bottom-end" }}>
                 <Menu.Trigger asChild>
@@ -322,6 +325,11 @@ export function App() {
               </Menu.Root>
             }
           />
+        )}
+        {showTopBar && projectNav.length > 1 && (
+          <Box display={{ base: "block", md: "none" }} px={2} py={1.5} borderBottomWidth="1px" bg="bg.panel" position="sticky" top="calc(52px + env(safe-area-inset-top, 0px))" zIndex={2}>
+            {projectTabs(true)}
+          </Box>
         )}
         {screen === "ambient" && ambientId !== null && (
           <AmbientTopBar ambientId={ambientId} onBack={() => (setAmbientId(null), setScreen("ambients"))} onSettings={() => go("settings")} actionsRef={setTopActions} />
@@ -379,9 +387,10 @@ export function App() {
         pb="env(safe-area-inset-bottom, 0px)"
         justify="space-around"
       >
-        {(showTopBar && projectNav.length > 1 ? projectNav : GLOBAL_NAV_MOBILE).map((n) => {
+        {/* Sempre el menú general (com les apps de l'iPhone): les pàgines del moble són a dalt. */}
+        {GLOBAL_NAV_MOBILE.map((n) => {
           const disabled = false
-          const active = showTopBar && projectNav.length > 1 ? screen === n.id || (n.id === "editor" && screen === "photo") : section === n.id
+          const active = section === n.id
           return (
             <Box
               key={n.id}
@@ -392,7 +401,7 @@ export function App() {
               opacity={disabled ? 0.5 : 1}
               cursor={disabled ? "not-allowed" : "pointer"}
             >
-              <button disabled={disabled} onClick={() => (showTopBar && projectNav.length > 1 ? go(n.id as Screen) : goSection(n.id))} aria-current={active ? "page" : undefined}>
+              <button disabled={disabled} onClick={() => goSection(n.id)} aria-current={active ? "page" : undefined}>
                 <Stack align="center" gap={0.5}>
                   <Box fontSize="xl">
                     <n.icon />

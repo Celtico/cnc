@@ -311,8 +311,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Menú global sempre igual** (`App.tsx`, `GLOBAL_NAV`, com Figma o Linear): Ambients · Objectes ·
   Mobles i, a baix de tot, Preferències; l'apartat del document obert queda marcat (`section`).
   **Les pàgines d'un moble** (`PROJECT_NAV`: Editor, Peces, Nesting, Exportar) són **pestanyes al mig
-  de la seva barra superior** (`TopBar tabs`), no al menú; al mòbil, amb un moble obert, la barra de
-  baix són aquestes pàgines. **Les accions d'un apartat van a la seva capçalera** (p. ex. «Obrir
+  de la seva barra superior** (`TopBar tabs`), no al menú; al mòbil, en una **franja sota la barra de dalt**
+  (`projectTabs(true)`): la barra de baix és **sempre el menú general** (com les apps de l'iPhone), i així es
+  pot saltar entre documents oberts (cada apartat recorda l'últim obert). **Les accions d'un apartat van a la seva capçalera** (p. ex. «Obrir
   fitxer» a Mobles), mai al menú. Clicar l'apartat del document obert torna a la llista.
 - **Mòbil sense títols repetits**: les pàgines d'inici porten el seu títol gran (com iOS) i no hi ha
   barra de dalt; només n'hi ha quan cal tornar enrere (Preferències des d'un moble: «‹ nom del moble»).
@@ -653,6 +654,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     «Editar la textura» i «Posar una foto») i **Fabricació** (Gruixos com a etiquetes `ThicknessChips`,
     Cantell, Veta, Categoria amb la seva explicació); controls de 280 px com a molt; un material nou té nom únic
     («Material nou 2»), va a la categoria filtrada i deixa el nom seleccionat.
+  - **Objectes de referència inicials** (`BUILTIN_REFERENCES`): genèrics (A4, rajoles, portes, teles de 43″ a 75″
+    penjades i una de 55″ amb peu, radiador, endoll). Les teles Sony de les proves del principi es treuen de les
+    preferències desades (`RETIRED_REFERENCES`, només les `builtin`: si l'usuari n'havia fet una de pròpia, es queda).
   - **Biblioteca de materials** (`settings/libraryItems.ts`, `MATERIAL_LIBRARY`; diàleg `MaterialLibrary`):
     «Afegir» obre una graella de materials fets amb la mostra (fustes i lacats, pedres, metalls, vidres,
     teixits, terres i parets), cadascun amb la categoria, els gruixos i el cantell; «En blanc» per començar
