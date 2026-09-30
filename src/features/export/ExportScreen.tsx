@@ -10,7 +10,7 @@ import { toaster } from "../../components/ui/toaster"
 import { toCutList } from "../../core/cutlist/toCutList"
 import { cutListToCsv } from "../../core/export/csv"
 import { dxfLayers, toDxf } from "../../core/export/dxf"
-import { toStep, toStepCad } from "../../core/export/step"
+import { toStepCad } from "../../core/export/step"
 import { stepCadGroups } from "../../core/export/stepGroups"
 import { finishRgb, resolveFinish } from "../../components/viewer/textures"
 import { encodeUtf16le, toTopsolidCsv } from "../../core/export/topsolidCsv"
@@ -38,28 +38,19 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const [busyAr, setBusyAr] = useState(false)
   const layers = useMemo(() => dxfLayers(panels, labels), [panels, labels])
   // Els avisos del STEP es calculen abans de descarregar, per veure'ls de seguida.
-  const stepWarnings = useMemo(() => (panels.length ? toStep(panels, { name: "check" }).warnings : []), [panels])
+  const stepColor = useMemo(() => (p: { material: string }) => finishRgb(resolveFinish(settings.materials, p.material)), [settings.materials])
+  const stepWarnings = useMemo(() => (comp && build && panels.length ? toStepCad(stepCadGroups(comp, build), { name: "check" }).warnings : []), [comp, build, panels])
 
   if (!project) return null
   const base = slugify(project.name)
 
   const doStep = () => {
-    warnEstimated()
-    const step = toStep(panels, { name: project.name })
-    downloadBlob(new Blob([step.text], { type: "application/step" }), `${base}.step`)
-    toaster.create({
-      title: "STEP generat",
-      description: `${step.solids} sòlids en mm (X amplada, Y fondària, Z amunt)` + (step.warnings.length ? ` · ${step.warnings.length} avisos (vegeu la pàgina)` : ""),
-      type: step.warnings.length ? "warning" : "success",
-    })
-  }
-  const doStepCad = () => {
     if (!comp || !build) return
     warnEstimated()
-    const step = toStepCad(stepCadGroups(comp, build), { name: project.name, color: (p) => finishRgb(resolveFinish(settings.materials, p.material)) })
-    downloadBlob(new Blob([step.text], { type: "application/step" }), `${base}-topsolid.step`)
+    const step = toStepCad(stepCadGroups(comp, build), { name: project.name, color: stepColor })
+    downloadBlob(new Blob([step.text], { type: "application/step" }), `${base}.step`)
     toaster.create({
-      title: "STEP per a TopSolid generat",
+      title: "STEP de TopSolid generat",
       description: `${step.solids} peces en conjunts per mòdul, amb ingletes i colors` + (step.warnings.length ? ` · ${step.warnings.length} avisos` : ""),
       type: step.warnings.length ? "warning" : "success",
     })
@@ -159,25 +150,20 @@ export function ExportScreen({ projectId }: { projectId: number }) {
       <ExportCard
         highlight
         icon={<LuCuboid />}
-        title="TopSolid (per continuar el disseny)"
-        description="El moble en 3D per obrir-lo a TopSolid i continuar-lo treballant: un conjunt per mòdul, cada peça amb el seu nom, material i color, ingletes a 45°, talls i forats, peces sense nesting (ferro, pedra, vidre) i booleans 3D. El taller fa servir «STEP per al taller»: el format de TopSolid V6, amb tots els forats tal com els llegeix per fer el DXF."
-        files={`${base}-topsolid.step · ${base}.step`}
+        title="STEP de TopSolid"
+        description="El moble en 3D, per obrir-lo a TopSolid i continuar-lo treballant i per al taller: un conjunt per mòdul, cada peça amb el seu nom, material i color, ingletes a 45°, forats, ranures i talls, peces sense nesting (ferro, pedra, vidre) i booleans 3D."
+        files={`${base}.step`}
         action={
-          <HStack gap={2} wrap="wrap">
-            <Button colorPalette="wood" onClick={doStepCad} disabled={!panels.length}>
-              <LuDownload /> STEP per a TopSolid
-            </Button>
-            <Button size="sm" variant="ghost" onClick={doStep} disabled={!panels.length}>
-              STEP per al taller
-            </Button>
-          </HStack>
+          <Button colorPalette="wood" onClick={doStep} disabled={!panels.length}>
+            <LuDownload /> Descarregar STEP
+          </Button>
         }
       />
 
       <ExportCard
         icon={<LuLayoutGrid />}
         title="CSV de TopSolid"
-        description="El CSV de nesting com el que treu TopSolid (_res.csv): peces, taulers, etiquetes, cantells i referències. El taller el carrega a la seva pàgina de pujada juntament amb el «STEP per al taller»."
+        description="El CSV de nesting com el que treu TopSolid (_res.csv): peces, taulers, etiquetes, cantells i referències. El taller el carrega a la seva pàgina de pujada juntament amb el STEP."
         files={`${base}_res.csv`}
         action={
           <Button variant="outline" onClick={doTopsolidCsv} disabled={!nesting}>

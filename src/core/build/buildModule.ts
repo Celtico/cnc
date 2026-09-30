@@ -55,6 +55,7 @@ export interface BuildWarning {
     | "overlap"
     | "rail"
     | "hanging"
+    | "hole-clash"
   message: string
   zoneId?: string
   panelId?: string

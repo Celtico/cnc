@@ -3,6 +3,7 @@ import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { buildModule, type BuildWarning, type ModuleBuild } from "./buildModule"
 import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
 import { buildFreeParts, type PartJoint } from "./freeParts"
+import { resolveHoleClashes } from "./holeClash"
 
 export interface CompositionWarning extends BuildWarning {
   moduleId?: string
@@ -111,6 +112,14 @@ export function buildComposition(input: Composition): CompositionBuild {
     const owner = pr.refId.startsWith("part:") ? { partId: pr.refId.slice(5) } : { refId: pr.refId }
     warnings.push({ code: "ref-cut", message: pr.message, panelId: pr.panel.id, ...owner, ...(moduleId ? { moduleId } : {}) })
   }
+
+  // Forats que es troben per dins (System 32 a banda i banda d'un divisor, espiga contra guia):
+  // s'escurcen com ho faria un tècnic; els que no es poden resoldre, s'avisen.
+  for (const p of panels)
+    for (const message of resolveHoleClashes(p)) {
+      const moduleId = modules.find((m) => m.index === p.module)?.id
+      warnings.push({ code: "hole-clash", message, panelId: p.id, ...(moduleId ? { moduleId } : {}) })
+    }
 
   // Obstacles que xoquen amb alguna peça.
   for (const ref of comp.references) {

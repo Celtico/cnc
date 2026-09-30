@@ -197,3 +197,27 @@ describe.skipIf(!existsSync(TALLER))("flat-pack: peces lliures amb encaixos al t
     }
   })
 })
+
+describe.skipIf(!existsSync(TALLER))("el STEP de TopSolid (amb conjunts, ingletes i colors) el taller el llegeix igual", async () => {
+  const { assemble } = (await import(/* @vite-ignore */ TALLER)) as { assemble: Assemble }
+  const { toStepCad } = await import("./step")
+  const { stepCadGroups } = await import("./stepGroups")
+  const count = (u: Unified) => ({
+    matched: u.pieces.filter((p) => p.match !== "none").length,
+    mach: u.solids.reduce((n, s) => n + (s.mach?.length ?? 0), 0),
+    edges: u.solids.reduce((n, s) => n + (s.edges?.length ?? 0), 0),
+    pockets: u.solids.reduce((n, s) => n + (s.pockets?.length ?? 0), 0),
+    roles: u.solids.map((s) => s.role).join(","),
+  })
+  for (const t of BUILTIN_TEMPLATES) {
+    it(t.id, () => {
+      const comp = t.make()
+      const b = buildComposition(comp)
+      const csv = toTopsolidCsv(b.panels, nest(b.panels, DEFAULT_NEST_OPTIONS), { project: "X" }).text
+      const plain = assemble(csv, toStep(b.panels, { name: "X" }).text, "X")
+      const cad = assemble(csv, toStepCad(stepCadGroups(comp, { ...b, extras: [] }), { name: "X", color: () => [0.5, 0.4, 0.3] }).text, "X")
+      expect(count(cad)).toEqual(count(plain))
+      expect(cad.pieces.filter((p) => p.match === "none")).toEqual([])
+    })
+  }
+})
