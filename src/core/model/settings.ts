@@ -263,9 +263,19 @@ export const BUILTIN_REFERENCES: RefPreset[] = [
   ref("tile-600-300", "Rajola 600 × 300", 600, 300),
   ref("door-800", "Porta 800 × 2030", 800, 2030),
   ref("door-700", "Porta 700 × 2030", 700, 2030),
-  ref("tv-sony-55-screen", "TV Sony KD-55XD8505 (pantalla)", 1231, 717, { d: 44, wallOffset: 200 }),
-  ref("tv-sony-55-stand", "TV Sony KD-55XD8505 (amb peu)", 1231, 770, { d: 263, wallOffset: 0 }),
+  // Teles de mides habituals (16:9, sense peu, penjades amb un suport a 3 cm de la paret).
+  ref("tv-43", "Tele 43″", 970, 570, { d: 60, wallOffset: 30 }),
+  ref("tv-50", "Tele 50″", 1120, 650, { d: 60, wallOffset: 30 }),
+  ref("tv-55", "Tele 55″", 1230, 710, { d: 60, wallOffset: 30 }),
+  ref("tv-65", "Tele 65″", 1450, 840, { d: 60, wallOffset: 30 }),
+  ref("tv-75", "Tele 75″", 1680, 970, { d: 60, wallOffset: 30 }),
+  ref("tv-55-stand", "Tele 55″ amb peu", 1230, 770, { d: 250 }),
+  ref("radiator-800", "Radiador 800 × 600", 800, 600, { d: 100, wallOffset: 40 }),
+  ref("socket", "Endoll 80 × 80", 80, 80),
 ]
+
+/** Valors inicials antics (de les proves del principi) que ja no hi són: es treuen de les preferències desades. */
+const RETIRED_REFERENCES = new Set(["tv-sony-55-screen", "tv-sony-55-stand"])
 
 /** Materials que no es tallen a la CNC (peces lliures sense nesting). Afegits a la v2. */
 export const NON_CNC_MATERIALS: MaterialPref[] = [
@@ -432,7 +442,8 @@ export function parseSettings(raw: unknown): SettingsParse {
     return out
   }
 
-  const references = withBuiltins(list("references", RefPresetSchema, BUILTIN_REFERENCES, "Objectes de referència"), BUILTIN_REFERENCES)
+  const stored = list("references", RefPresetSchema, BUILTIN_REFERENCES, "Objectes de referència")
+  const references = withBuiltins(stored.filter((r) => !(r.builtin && RETIRED_REFERENCES.has(r.id))), BUILTIN_REFERENCES)
   const materialsRaw = list("materials", MaterialPrefSchema, BUILTIN_MATERIALS, "Materials")
   // v2: materials que no són de CNC (ferro, inox, pedra, vidre), per a les peces lliures.
   // v3: materials de simulació (teixits, parquet, rajola, pintura) per als ambients.
