@@ -379,10 +379,13 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   - **Plantilles en acordions** (`NewMobleGallery`, `Accordion` de Chakra amb `lazyMount`):
     «Plantilles de l'app» i, a sota, **«Plantilles per a botigues de mobles»**
     (`model/storeCatalog.ts`, `STORE_CATALOG` / `STORE_TEMPLATES`, a partir de
-    [`cad-mobles-cataleg.md`](cad-mobles-cataleg.md)): 9 categories (Saló, Menjador, Dormitori, Juvenil,
+    [`cad-mobles-cataleg.md`](cad-mobles-cataleg.md)): 10 categories (Saló, Menjador, **Cuina** —no és
+    al catàleg, afegida amb `kitchen()`: lineal, amb illa, kitchenette, illa sola, columnes i racó de
+    cafè; taulell de fusta corregut amb els forats de pica i placa o de pedra tallada, sòcol corregut,
+    alts alineats amb forat per a la campana, columnes de 2100 i illa amb X pròpia—, Dormitori, Juvenil,
     Despatx, Entrada, Emmagatzematge, Bany, Exterior) › tipus de moble › 3 dissenys (nom comercial,
     estil, mides, materials, ús, colors, públic i `Template.price` orientatiu). Cada categoria és un
-    acordió que només munta les miniatures en obrir-lo (180 plantilles); cercador sense accents (obre
+    acordió que només munta les miniatures en obrir-lo (198 plantilles); cercador sense accents (obre
     les categories que coincideixen) i el filtre per tipus també hi val. Fora del catàleg: sofàs,
     butaques, cadires, miralls, gandules i carros (no són mobles de tauler). Els mobles només de peces
     lliures (llits, capçals, taules de pedra) són del tipus Flat-pack (l'app necessita un mòdul, que no

@@ -7,8 +7,8 @@ import { buildComposition } from "./buildComposition"
 const BAD = ["layout", "collision", "ref-cut", "door-too-wide", "door-too-tall", "shelf-span", "drawer-no-slide", "hole-clash", "no-side", "rail", "hollow-thin", "cable-hole"]
 
 describe("plantilles per a botigues de mobles", () => {
-  it("9 categories, 3 dissenys per tipus i ids únics", () => {
-    expect(STORE_CATALOG).toHaveLength(9)
+  it("10 categories, 3 dissenys per tipus i ids únics", () => {
+    expect(STORE_CATALOG).toHaveLength(10)
     for (const c of STORE_CATALOG) for (const t of c.types) expect(t.items).toHaveLength(3)
     expect(new Set(STORE_TEMPLATES.map((t) => t.id)).size).toBe(STORE_TEMPLATES.length)
   })

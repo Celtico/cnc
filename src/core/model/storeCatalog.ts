@@ -4,7 +4,7 @@ import { compositionHeight, compositionWidth, defaultModule, DEFAULT_GRILLE, new
 import type { Template } from "./templates"
 
 /**
- * Plantilles per a botigues de mobles (catàleg de `cad-mobles-cataleg.md`): per a cada tipus de
+ * Plantilles per a botigues de mobles (catàleg de `cad-mobles-cataleg.md`, més la categoria Cuina): per a cada tipus de
  * moble que l'app sap fer (mobles de cos, taules, llits de tauler…), tres dissenys diferents en
  * forma, materials i funció, amb nom comercial, estil, materials, colors, públic i preu orientatiu.
  * No hi ha sofàs, butaques, cadires ni miralls: no són mobles de tauler.
@@ -273,6 +273,133 @@ function bunk(_name: string, o: { mat: string; hollow?: number; drawers?: boolea
   return { kind: "armari", modules, references: refs, parts: [railPart] }
 }
 
+// --- Cuines --------------------------------------------------------------------------------
+
+type KBase = "drawers" | "door" | "doors" | "sink" | "hob" | "oven" | "dish"
+type KWall = "door" | "doors" | "flap" | "open" | "gap"
+type KTall = "oven" | "pantry" | "fridge"
+
+interface KitchenOpts {
+  mat: string
+  front: string
+  /** Baixos d'esquerra a dreta: [tipus, amplada]. */
+  bases?: [KBase, number][]
+  /** Alts penjats sobre els baixos: [tipus, amplada]; «gap» deixa el forat (campana). */
+  walls?: [KWall, number][]
+  /** Columnes de 2100 a la dreta dels baixos (o a l'esquerra amb `tallsLeft`). */
+  talls?: KTall[]
+  tallsLeft?: boolean
+  /** Taulell: fusta de CNC (correguda, amb els forats de pica i placa) o pedra (peça lliure tallada). */
+  top?: { kind: "wood"; mat: string } | { kind: "stone" }
+  /** Prestatges de paret en lloc d'alts: nombre i material. */
+  shelves?: { n: number; mat: string }
+  /** Illa al terra, davant dels baixos. */
+  island?: { w: number; d: number; kind: "drawers" | "seats" | "mixed"; top: "stone" | string }
+  /** Sense fila de paret: només l'illa (plantilla «Illa de cuina»). */
+  islandOnly?: boolean
+}
+
+const K_H = 770, K_LEGS = 100, K_D = 560, K_TOP = 30
+
+function kitchenBase(kind: KBase, w: number, o: KitchenOpts): Module {
+  const names: Record<KBase, string> = { drawers: "Calaixos", door: "Baix", doors: "Baix", sink: "Fregadera", hob: "Placa", oven: "Forn", dish: "Rentaplats" }
+  const zone: Record<KBase, () => Zone> = {
+    drawers: () => drawers(3),
+    door: () => door("left", 1),
+    doors: () => doors(1),
+    sink: () => (w > 600 ? doors(0) : door("left", 0)),
+    hob: () => drawers(2),
+    oven: () => h(["auto", 595], [drawers(1), open()]),
+    dish: () => panel(),
+  }
+  const noTop = kind === "sink" || kind === "hob" || kind === "dish"
+  return box(`${names[kind]} ${w}`, { w, h: K_H, d: K_D, mat: o.mat, front: o.front, base: legs(K_LEGS), ...(noTop ? { top: { kind: "none" as const } } : {}) }, zone[kind]())
+}
+
+function kitchenTall(kind: KTall, o: KitchenOpts): Module {
+  const W = 600
+  if (kind === "oven")
+    return box("Columna forn", { w: W, h: 2100, d: K_D, mat: o.mat, front: o.front, base: legs(K_LEGS) }, h(["auto", 595, 380, "auto"], [drawers(2), open(), open(), door("left", 1)]))
+  if (kind === "fridge") return box("Columna frigorífic", { w: W, h: 2100, d: K_D, mat: o.mat, front: o.front, base: legs(K_LEGS) }, h(["auto", 400], [door("left", 0), door("left", 1)]))
+  return box("Columna rebost", { w: W, h: 2100, d: K_D, mat: o.mat, front: o.front, base: legs(K_LEGS) }, door("right", 5))
+}
+
+/** Cuina: fila de baixos amb taulell i sòcol correguts, alts penjats o prestatges, columnes i illa. */
+function kitchen(o: KitchenOpts): Composition {
+  const bases = (o.bases ?? []).map(([k, w]) => ({ k, m: kitchenBase(k, w, o) }))
+  const talls = (o.talls ?? []).map((k) => kitchenTall(k, o))
+  const floor = o.tallsLeft ? [...talls, ...bases.map((b) => b.m)] : [...bases.map((b) => b.m), ...talls]
+  const x0 = o.tallsLeft ? talls.length * 600 : 0
+  const baseW = bases.reduce((n, b) => n + b.m.carcass.width, 0)
+  const modules: Module[] = [...floor]
+  const parts: FreePart[] = []
+  const references: RefObject[] = []
+  const runs: NonNullable<Composition["runs"]> = []
+
+  // Alts penjats alineats amb els baixos.
+  let gap = x0
+  for (const [k, w] of o.walls ?? []) {
+    if (k === "gap") {
+      gap += w
+      continue
+    }
+    const zone = k === "door" ? door("left", 1) : k === "doors" ? doors(1) : k === "flap" ? flap("up", 1) : open(1)
+    modules.push(box(k === "flap" ? "Alt abatible" : "Alt", { w, h: 720, d: 330, mat: o.mat, front: o.front, base: hung(1450), gapBefore: gap }, zone))
+    gap = 0
+  }
+  if (o.shelves)
+    for (let i = 0; i < o.shelves.n; i++)
+      parts.push(part({ name: "Prestatge de paret", orient: "flat", material: o.shelves.mat, w: Math.min(baseW, 1800), h: 250, thickness: 30, x: x0, y: 1350 + i * 350, z: 0, group: "Prestatges de paret" }))
+
+  // Taulell corregut.
+  if (bases.length && o.top) {
+    const sink = bases.find((b) => b.k === "sink")
+    const hob = bases.find((b) => b.k === "hob")
+    if (o.top.kind === "wood")
+      runs.push({
+        id: newId("run"),
+        kind: "worktop",
+        from: bases[0]!.m.id,
+        to: bases.at(-1)!.m.id,
+        material: o.top.mat,
+        thickness: K_TOP,
+        overhangFront: 20,
+        overhangLeft: 0,
+        overhangRight: 0,
+        cutouts: [
+          ...(sink ? [{ id: newId(), kind: "sink" as const, module: sink.m.id, w: Math.min(740, sink.m.carcass.width - 120), d: 440, dx: 0 }] : []),
+          ...(hob ? [{ id: newId(), kind: "hob" as const, module: hob.m.id, w: 560, d: 490, dx: 0 }] : []),
+        ],
+      })
+    else {
+      parts.push(stoneTop(x0, baseW, K_D + 60, K_H + K_LEGS, K_TOP))
+      // Pica i placa: tallen la pedra (a sota no hi ha tapa).
+      const xOf = (m: Module) => x0 + bases.slice(0, bases.findIndex((b) => b.m === m)).reduce((n, b) => n + b.m.carcass.width, 0)
+      if (sink) {
+        const w = Math.min(740, sink.m.carcass.width - 120)
+        references.push({ id: newId("r"), name: "Pica", w, h: 60, d: 440, x: xOf(sink.m) + (sink.m.carcass.width - w) / 2, y: K_H + K_LEGS - 15, z: 80, effect: "cut", axis: "y" })
+      }
+      if (hob) references.push({ id: newId("r"), name: "Placa", w: 560, h: 60, d: 490, x: xOf(hob.m) + (hob.m.carcass.width - 560) / 2, y: K_H + K_LEGS - 15, z: 70, effect: "cut", axis: "y" })
+    }
+  }
+  if (floor.length > 1) runs.push({ id: newId("run"), kind: "plinth", from: floor[0]!.id, to: floor.at(-1)!.id, material: o.front, thickness: 19, setback: 40 })
+
+  // Illa al terra (X pròpia) amb el taulell enganxat.
+  if (o.island) {
+    const I = o.island
+    const cols = Math.max(2, Math.round(I.w / 600))
+    const root = I.kind === "mixed" ? v(auto(cols), Array.from({ length: cols }, (_, i) => (i % 2 ? doors(1) : drawers(3)))) : v(auto(cols), Array.from({ length: cols }, () => drawers(3)))
+    const rowW = Math.max(baseW + x0 + talls.length * (o.tallsLeft ? 0 : 600), I.w)
+    const island: Module = { ...box("Illa", { w: I.w, h: K_H, d: I.d, mat: o.mat, front: o.front, base: legs(K_LEGS) }, root), wallGap: o.islandOnly ? 0 : K_D + 1100, x: o.islandOnly ? 0 : Math.max(0, (rowW - I.w) / 2) }
+    modules.push(island)
+    // Barra: el taulell volat 300 per la banda de darrere per seure-hi.
+    const back = I.kind === "seats" ? 320 : 20
+    const top = { name: "Taulell de l'illa", orient: "flat" as const, w: I.w + 40, h: I.d + 20 + back, thickness: K_TOP, module: island.id, x: -20, y: K_H + K_LEGS, z: -back }
+    parts.push(I.top === "stone" ? metal({ ...top, material: STONE }) : part({ ...top, material: I.top }))
+  }
+  return { kind: "cuina", modules, references, parts, runs }
+}
+
 // --- Plantilla --------------------------------------------------------------------------------
 
 interface Variant {
@@ -430,6 +557,42 @@ export const STORE_CATALOG: StoreCategory[] = [
         { name: "Buffet", style: "Contemporani", materials: "MDF lacat antracita amb taulell de pedra", colors: "antracita, marbre", use: "Moble de servei amb calaixos i taulell de pedra", audience: "menjadors amb cuina oberta", price: 890, make: () => one(box("Buffet", { w: 1200, h: 880, d: 500, mat: ANTH, base: plinth(80, 30), top: { kind: "none" } }, v(auto(2), [drawers(3), doors(1)])), { parts: [stoneTop(0, 1200, 520, 880)] }) },
         { name: "Cava", style: "Industrial elegant", materials: "roure amb reixeta", colors: "roure natural, negre", use: "Botellers darrere reixeta i calaix", audience: "amants del vi", price: 620, make: () => one(box("Cava", { w: 600, h: 900, d: 450, mat: OAK, base: legs(150) }, h(["auto", 180], [grille(), drawers(1)]))) },
         { name: "Racó", style: "Escandinau", materials: "freixe", colors: "freixe, blanc", use: "Moble estret amb calaixos per a estovalles", audience: "menjadors petits", price: 390, make: () => one(box("Auxiliar", { w: 500, h: 900, d: 420, mat: ASH, base: plinth(60, 20) }, drawers(4))) },
+      ]),
+    ],
+  },
+  {
+    id: "cuina",
+    name: "Cuina",
+    types: [
+      items("cuina", "Cuina lineal", [
+        { name: "Nívia", style: "Minimalista", materials: "caixes de melamina blanca, fronts d'MDF lacat, taulell de roure", colors: "blanc, greige", use: "Calaixos, pica, rentaplats i placa en línia, alts de porta i abatible", audience: "pisos i primeres cases", price: 4900, make: () => kitchen({ mat: WHITE, front: LAC, bases: [["drawers", 600], ["sink", 800], ["dish", 600], ["hob", 600], ["drawers", 600]], walls: [["door", 600], ["door", 600], ["door", 600], ["gap", 600], ["flap", 600]], top: { kind: "wood", mat: OAK } }) },
+        { name: "Bosc", style: "Escandinau", materials: "melamina blanca i fronts de roure, taulell de pedra", colors: "roure natural, blanc", use: "Baixos amb columnes de forn i rebost i prestatges de paret de roure", audience: "famílies", price: 7200, make: () => kitchen({ mat: WHITE, front: OAKM, bases: [["drawers", 600], ["sink", 800], ["dish", 600], ["hob", 800]], talls: ["oven", "pantry"], shelves: { n: 2, mat: OAK }, top: { kind: "stone" } }) },
+        { name: "Grafit", style: "Industrial elegant", materials: "fronts d'MDF lacat antracita, taulell de noguera", colors: "antracita, noguera", use: "Cinc baixos i alts de porta, amb forn sota la placa", audience: "lofts i cuines obertes", price: 6400, make: () => kitchen({ mat: GREY, front: ANTH, bases: [["door", 600], ["sink", 800], ["dish", 600], ["oven", 600], ["drawers", 600]], walls: [["door", 600], ["doors", 800], ["door", 600], ["gap", 600], ["door", 600]], top: { kind: "wood", mat: WAL } }) },
+      ]),
+      items("cuina", "Cuina amb illa", [
+        { name: "Àgora", style: "Contemporani", materials: "fronts lacats greige, illa amb taulell de pedra", colors: "greige, pedra", use: "Fila de baixos amb frigorífic i forn en columna, illa de calaixos de 2400", audience: "cases amb cuina oberta al menjador", price: 11900, make: () => kitchen({ mat: WHITE, front: GREIGE, bases: [["drawers", 600], ["sink", 800], ["dish", 600], ["hob", 800], ["drawers", 600]], talls: ["fridge", "oven"], tallsLeft: true, walls: [["door", 600], ["door", 600], ["door", 600], ["gap", 800], ["door", 600]], top: { kind: "stone" }, island: { w: 2400, d: 900, kind: "drawers", top: "stone" } }) },
+        { name: "Fiord", style: "Escandinau", materials: "fronts de roure i barra de roure", colors: "roure natural, blanc", use: "Baixos i illa amb barra per a tres tamborets", audience: "famílies joves", price: 8900, make: () => kitchen({ mat: WHITE, front: OAKM, bases: [["drawers", 600], ["sink", 800], ["dish", 600], ["hob", 800]], shelves: { n: 2, mat: OAK }, top: { kind: "wood", mat: OAK }, island: { w: 1800, d: 600, kind: "seats", top: OAK } }) },
+        { name: "Olivera", style: "Mediterrani contemporani", materials: "fronts lacats verd oliva, pedra", colors: "verd oliva, pedra, roure", use: "Illa de calaixos i portes amb taulell de pedra i alts de porta", audience: "cases de poble reformades", price: 9800, make: () => kitchen({ mat: WHITE, front: OLIVE, bases: [["drawers", 600], ["sink", 800], ["dish", 600], ["hob", 600], ["door", 600]], walls: [["door", 600], ["door", 600], ["door", 600], ["gap", 600], ["door", 600]], top: { kind: "stone" }, island: { w: 2000, d: 900, kind: "mixed", top: "stone" } }) },
+      ]),
+      items("cuina", "Kitchenette", [
+        { name: "Estudi", style: "Minimalista", materials: "melamina blanca, taulell de roure", colors: "blanc, roure", use: "Cuina de 1800 amb calaixos, placa i pica, alts de porta i abatible", audience: "estudis i apartaments turístics", price: 2290, make: () => kitchen({ mat: WHITE, front: WHITE, bases: [["drawers", 600], ["hob", 600], ["sink", 600]], walls: [["door", 600], ["gap", 600], ["flap", 600]], top: { kind: "wood", mat: OAK } }) },
+        { name: "Loft", style: "Industrial elegant", materials: "fronts antracita, taulell de noguera", colors: "antracita, noguera", use: "Cuina de 2600 amb columna de frigorífic i prestatges de paret", audience: "lofts", price: 3490, make: () => kitchen({ mat: GREY, front: ANTH, bases: [["sink", 800], ["hob", 600], ["drawers", 600]], talls: ["fridge"], shelves: { n: 2, mat: WAL }, top: { kind: "wood", mat: WAL } }) },
+        { name: "Office", style: "Contemporani", materials: "melamina gris, taulell de roure", colors: "gris, roure", use: "Office d'oficina amb pica, armari i calaixos", audience: "oficines i sales de descans", price: 1890, make: () => kitchen({ mat: GREY, front: GREY, bases: [["sink", 600], ["door", 600], ["drawers", 400]], walls: [["door", 600], ["door", 600], ["door", 400]], top: { kind: "wood", mat: OAK } }) },
+      ]),
+      items("cuina", "Illa de cuina", [
+        { name: "Bloc", style: "Modern luxe", materials: "fronts de noguera, taulell de pedra", colors: "noguera, marbre", use: "Illa de 1800 × 900 de calaixos per les dues bandes de treball", audience: "cuines amples", price: 3900, make: () => kitchen({ mat: WHITE, front: WAL, island: { w: 1800, d: 900, kind: "drawers", top: "stone" }, islandOnly: true }) },
+        { name: "Barra", style: "Escandinau", materials: "fronts de roure, barra de roure", colors: "roure natural", use: "Illa de 1600 amb barra volada per seure", audience: "cuines obertes al saló", price: 2600, make: () => kitchen({ mat: WHITE, front: OAKM, island: { w: 1600, d: 600, kind: "seats", top: OAK }, islandOnly: true }) },
+        { name: "Taller", style: "Industrial elegant", materials: "fronts lacats blau fosc, taulell de noguera", colors: "blau fosc, noguera", use: "Illa de 2400 × 1000 de calaixos i portes", audience: "cuiners de casa", price: 4600, make: () => kitchen({ mat: WHITE, front: NAVY, island: { w: 2400, d: 1000, kind: "mixed", top: WAL }, islandOnly: true }) },
+      ]),
+      items("cuina", "Columnes de cuina", [
+        { name: "Forn i rebost", style: "Contemporani", materials: "melamina blanca, fronts lacats", colors: "blanc, greige", use: "Columna de forn i microones i dues de rebost", audience: "cuines amb paret lliure", price: 2400, make: () => kitchen({ mat: WHITE, front: LAC, talls: ["oven", "pantry", "pantry"] }) },
+        { name: "Nevera", style: "Minimalista", materials: "fronts de roure", colors: "roure natural", use: "Columnes de frigorífic integrat, forn i rebost", audience: "reformes de cuina", price: 2900, make: () => kitchen({ mat: WHITE, front: OAKM, talls: ["fridge", "oven", "pantry"] }) },
+        { name: "Rebost", style: "Funcional", materials: "melamina gris", colors: "gris", use: "Dues columnes de rebost de prestatges", audience: "cuines amb poc armari", price: 1290, make: () => kitchen({ mat: GREY, front: GREY, talls: ["pantry", "pantry"] }) },
+      ]),
+      items("cuina", "Racó de cafè", [
+        { name: "Barista", style: "Contemporani", materials: "fronts antracita, taulell de pedra, prestatges de roure", colors: "antracita, roure, marbre", use: "Moble de cafè amb calaixos i porta i prestatges a sobre", audience: "menjadors i despatxos", price: 1490, make: () => kitchen({ mat: GREY, front: ANTH, bases: [["drawers", 600], ["door", 600]], shelves: { n: 2, mat: OAK }, top: { kind: "stone" } }) },
+        { name: "Celler", style: "Modern luxe", materials: "fronts de noguera, taulell de noguera", colors: "noguera", use: "Baix de portes, calaixos i columna de rebost per a les ampolles", audience: "amants del vi", price: 2190, make: () => kitchen({ mat: WHITE, front: WAL, bases: [["doors", 800], ["drawers", 600]], talls: ["pantry"], top: { kind: "wood", mat: WAL } }) },
+        { name: "Esmorzar", style: "Escandinau", materials: "fronts de roure, taulell de roure", colors: "roure natural, blanc", use: "Baixos amb pica petita i alts de porta", audience: "cases amb cuina tancada", price: 1690, make: () => kitchen({ mat: WHITE, front: OAKM, bases: [["sink", 600], ["drawers", 600]], walls: [["door", 600], ["door", 600]], top: { kind: "wood", mat: OAK } }) },
       ]),
     ],
   },
