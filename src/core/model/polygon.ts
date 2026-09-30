@@ -414,3 +414,15 @@ export function filletNode(nodes: PNode[], i: number, r: number): PNode[] | null
   out.splice(i, 1, { x: t1[0], y: t1[1], b: t1[2] }, { x: t2[0], y: t2[1] })
   return out
 }
+
+/** El·lipse de w × h (la cantonada mínima a 0, 0) amb quatre cúbiques: peces i taulers rodons. */
+export function ellipseNodes(w: number, h: number): PNode[] {
+  const K = 0.5522847498
+  const a = w / 2, b = h / 2
+  return [
+    { x: w, y: b, in: [0, -K * b], out: [0, K * b], t: "smooth" },
+    { x: a, y: h, in: [K * a, 0], out: [-K * a, 0], t: "smooth" },
+    { x: 0, y: b, in: [0, K * b], out: [0, -K * b], t: "smooth" },
+    { x: a, y: 0, in: [-K * a, 0], out: [K * a, 0], t: "smooth" },
+  ]
+}

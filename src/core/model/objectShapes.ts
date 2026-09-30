@@ -1,6 +1,6 @@
 import { DEFAULT_JOINERY, tidyPart, type FreePart } from "./freePart"
 import { defaultModule, newId, type Composition } from "./composition"
-import type { PNode } from "./polygon"
+import { ellipseNodes, type PNode } from "./polygon"
 
 /**
  * Formes i ajudes per fer objectes (peces lliures sense nesting) per als ambients: el·lipses,
@@ -9,15 +9,7 @@ import type { PNode } from "./polygon"
 const K = 0.5522847498
 
 /** El·lipse de w × h (peces rodones). */
-export function ellipse(w: number, h: number): PNode[] {
-  const a = w / 2, b = h / 2
-  return [
-    { x: w, y: b, in: [0, -K * b], out: [0, K * b], t: "smooth" },
-    { x: a, y: h, in: [K * a, 0], out: [-K * a, 0], t: "smooth" },
-    { x: 0, y: b, in: [0, K * b], out: [0, -K * b], t: "smooth" },
-    { x: a, y: 0, in: [-K * a, 0], out: [K * a, 0], t: "smooth" },
-  ]
-}
+export const ellipse = ellipseNodes
 
 /** Rectangle de w × h amb les cantonades arrodonides de radi r (coixins, matalassos, taulers). */
 export function roundRect(w: number, h: number, r: number): PNode[] {

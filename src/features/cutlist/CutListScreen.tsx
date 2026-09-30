@@ -1,4 +1,5 @@
-import { Badge, Box, Card, HStack, SimpleGrid, Stack, Stat, Table, Text, VStack } from "@chakra-ui/react"
+import { Badge, Box, Card, HStack, SimpleGrid, Stack, Table, Text, VStack } from "@chakra-ui/react"
+import { StatBox } from "../../components/StatBox"
 import { useMemo, useState } from "react"
 import { PanelDrawing } from "../../components/PanelDrawing"
 import { toCutList } from "../../core/cutlist/toCutList"
@@ -226,14 +227,5 @@ export function CutListScreen({ projectId }: { projectId: number }) {
         </Stack>
       )}
     </VStack>
-  )
-}
-
-function StatBox({ label, value }: { label: string; value: string }) {
-  return (
-    <Stat.Root borderWidth="1px" rounded="lg" p={3}>
-      <Stat.Label>{label}</Stat.Label>
-      <Stat.ValueText fontSize={{ base: "lg", md: "2xl" }}>{value}</Stat.ValueText>
-    </Stat.Root>
   )
 }

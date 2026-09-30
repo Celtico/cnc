@@ -1,5 +1,5 @@
 import { defaultModule, newId, tableModule, type Carcass, type CompositionKind, type Module } from "./composition"
-import type { PNode } from "./polygon"
+import { ellipseNodes } from "./polygon"
 import { BUILTIN_TEMPLATES } from "./templates"
 
 /**
@@ -22,18 +22,6 @@ const kTall = (w: number): Partial<Carcass> => ({ width: w, height: 2100, depth:
 const wardrobe = (w: number): Partial<Carcass> => ({ width: w, height: 2400, depth: 600, base: { kind: "plinth", height: 80, setback: 30 } })
 const door = (hinge: "left" | "right" = "left") => ({ kind: "door" as const, mode: "single" as const, hinge })
 const doors = { kind: "door" as const, mode: "double" as const, hinge: "left" as const }
-
-/** El·lipse de w × h amb quatre cúbiques (per als taulers ovals). */
-export function ellipseNodes(w: number, h: number): PNode[] {
-  const K = 0.5522847498
-  const a = w / 2, b = h / 2
-  return [
-    { x: w, y: b, in: [0, -K * b], out: [0, K * b], t: "smooth" },
-    { x: a, y: h, in: [K * a, 0], out: [-K * a, 0], t: "smooth" },
-    { x: 0, y: b, in: [0, K * b], out: [0, -K * b], t: "smooth" },
-    { x: a, y: 0, in: [-K * a, 0], out: [K * a, 0], t: "smooth" },
-  ]
-}
 
 /** Taula oval: laterals de panell a sota i tauler oval per sobre amb voladís. */
 export function ovalTable(name = "Taula oval"): Module {

@@ -6,11 +6,11 @@ import {
   HStack,
   SimpleGrid,
   Stack,
-  Stat,
   Switch,
   Text,
   VStack,
 } from "@chakra-ui/react"
+import { StatBox } from "../../components/StatBox"
 import { useEffect, useMemo, useState } from "react"
 import { BoardDrawing } from "../../components/BoardDrawing"
 import { STANDARD_SHEETS, type NestOptions } from "../../core/nesting/nest"
@@ -149,14 +149,5 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
         </>
       )}
     </VStack>
-  )
-}
-
-function StatBox({ label, value }: { label: string; value: string }) {
-  return (
-    <Stat.Root borderWidth="1px" rounded="lg" p={3}>
-      <Stat.Label>{label}</Stat.Label>
-      <Stat.ValueText fontSize={{ base: "lg", md: "2xl" }}>{value}</Stat.ValueText>
-    </Stat.Root>
   )
 }
