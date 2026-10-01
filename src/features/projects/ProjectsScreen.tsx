@@ -90,11 +90,12 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
         description="Els mobles que dissenyes i fabriques: comença en blanc o des d'una plantilla (de l'app o de botiga) i continua'l a l'editor. A l'historial hi tens els que ja has fet; el cercador busca a tot arreu (nom, tipus, estil, material, color)."
         actions={
           <>
-            <Button variant="outline" size={{ base: "sm", md: "md" }} onClick={() => fileInput.current?.click()}>
-              <LuFolderOpen /> Obrir fitxer
-            </Button>
+            {/* El botó principal primer (com a Ambients i Objectes). */}
             <Button colorPalette="wood" size={{ base: "sm", md: "md" }} onClick={() => void handleCreate(blankMoble(settings), "Moble nou")}>
               <LuPlus /> Nou moble
+            </Button>
+            <Button variant="outline" size={{ base: "sm", md: "md" }} onClick={() => fileInput.current?.click()}>
+              <LuFolderOpen /> Obrir fitxer
             </Button>
           </>
         }
