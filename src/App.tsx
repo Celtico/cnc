@@ -365,10 +365,10 @@ export function App() {
           overflowY={{ md: "auto" }}
           display="flex"
           flexDirection="column"
-          px={{ base: 4, md: screen === "editor" || screen === "ambient" ? 2 : 4 }}
-          // Al mòbil, l'editor enganxa el visor a la barra de dalt (sense marge superior).
-          pt={{ base: screen === "editor" || screen === "ambient" ? 0 : showTopBar || settingsBackBar ? 4 : "calc(16px + env(safe-area-inset-top, 0px))", md: screen === "editor" || screen === "ambient" ? 1.5 : 6 }}
-          pb={{ base: "calc(76px + env(safe-area-inset-bottom, 0px))", md: screen === "editor" || screen === "ambient" ? 1.5 : 6 }}
+          px={4}
+          // El mateix aire al voltant de tots els documents (moble, objecte i ambient): 16 (al mòbil, a dalt; a l'ordinador, a tot el voltant).
+          pt={{ base: showTopBar || screen === "ambient" || settingsBackBar ? 4 : "calc(16px + env(safe-area-inset-top, 0px))", md: screen === "editor" || screen === "ambient" ? 4 : 6 }}
+          pb={{ base: "calc(76px + env(safe-area-inset-bottom, 0px))", md: screen === "editor" || screen === "ambient" ? 4 : 6 }}
         >
           <TopBarActionsProvider value={topActions}>{content}</TopBarActionsProvider>
         </Container>

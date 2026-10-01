@@ -702,8 +702,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     comprova amb els parsers del taller (`~/Desktop/taller-cnc-nest`).
   - **Barra del visor**: fora només «Opcions de vista» (i amagar propietats); a dins, a dalt,
     accions ràpides només amb icona i el nom al tooltip (`viewQuick`, el text no hi cabia): els 3 modes, Enquadrar, Forats, Explosió i
-    Veure a casa (AR); a sota, la vista, l'obertura i la imatge. Al mòbil, el visor amb els
-    marges de la pàgina i sense marge a dalt.
+    Veure a casa (AR); a sota, la vista, l'obertura i la imatge. El visor de tots els documents (moble,
+    objecte i ambient) amb el mateix aire: 16 a dalt al mòbil i 16 al voltant a l'ordinador.
   - **Versió** (com a rack): `__APP_VERSION__` = nombre de commits i `__APP_COMMIT__` (git en
     construir, `vite.config.ts`; sense git, `APP_VERSION` o «dev»), petita al costat del nom al
     menú i al manifest. El Dockerfile instal·la git i el `.git` no s'ignora.
