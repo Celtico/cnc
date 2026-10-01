@@ -35,7 +35,7 @@ const BY_ID: Record<string, ObjectCategory> = {
   "plant-tropical": "plantes", "plant-tropical-small": "plantes", olive: "plantes", pine: "plantes", "plant-small": "plantes",
   planter: "plantes", "branches-vase": "plantes",
   // Models 3D.
-  "model-fern-02-a": "plantes", "model-fern-02-b": "plantes", "model-fern-02-c": "plantes", "model-fern-02-d": "plantes", "model-fern-pot": "plantes",
+  "model-fern-02-a": "plantes", "model-fern-02-b": "plantes", "model-fern-02-c": "plantes", "model-fern-02-d": "plantes", "model-fern-pot": "plantes", "model-jacaranda": "plantes", "model-fir-01": "plantes",
   cushion: "textils", throw: "textils", books: "textils", "rug-jute": "textils", "rug-kilim": "textils", "rug-grey": "textils",
   "rug-round": "textils", "rug-white": "textils",
 }

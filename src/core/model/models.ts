@@ -2,6 +2,7 @@ import type { ModelObject } from "./composition"
 
 /**
  * Models 3D de l'app (`public/models/*.glb`, CC0 de Poly Haven, textura 1K amb el retall de les fulles a l'alfa).
+ * Els arbres són reduïts per al mòbil (escorça delmada, part de les fulles, compressió meshopt: `gltfpack -c`).
  * `size`: la mida real del model (mm, amplada · alçada · fondària), la que agafa en afegir-lo.
  */
 export interface ModelAsset {
@@ -16,6 +17,9 @@ export const MODEL_ASSETS: ModelAsset[] = [
   { id: "fern-02-c", name: "Falguera mitjana", url: "models/fern_02_c.glb", size: [874, 349, 765] },
   { id: "fern-02-a", name: "Falguera petita", url: "models/fern_02_a.glb", size: [552, 287, 613] },
   { id: "fern-02-d", name: "Falguera baixa", url: "models/fern_02_d.glb", size: [573, 213, 593] },
+  // Arbres (exteriors): de debò fan 19 m; aquí surten a una mida de jardí (es poden fer més grans o més petits).
+  { id: "jacaranda", name: "Xicranda", url: "models/jacaranda_tree.glb", size: [7526, 6000, 5902] },
+  { id: "fir-01", name: "Avet", url: "models/fir_tree_01.glb", size: [1735, 5000, 1706] },
 ]
 
 export const modelAsset = (src: string): ModelAsset | undefined => MODEL_ASSETS.find((a) => a.id === src)

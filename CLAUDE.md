@@ -411,6 +411,11 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     Eliminar, `insertModelCopy`), clic al 3D per triar-lo (`ModelMesh` a `CabinetViewer`), seleccionat amb el contorn i el
     gizmo (`RefGhost outline`, es mou en viu), fletxes, Supr i Ctrl/⌘ C · V · D, i inspector `ModelInspector` (Model ·
     Mides amb «Mida original» · Posició amb el Gir a passos de 15°). Compten per enquadrar la càmera (`size` de l'editor).
+    **Arbres** (Xicranda, Avet; Poly Haven, de debò 19 m: a `MODEL_ASSETS` amb mida de jardí): reduïts per al mòbil amb
+    `scripts/polyhaven-tree-to-glb.py` (Blender com a mòdul, `pip install bpy`: escorça delmada o només les branques més
+    grosses, una part dels grups de fulles una mica més grans, textures 512/1K WebP amb l'alfa) i comprimits amb meshopt
+    (`npx gltfpack -c`; `GLTFLoader.setMeshoptDecoder`). Els `.glb` es precachegen (PWA, sense connexió). El render per
+    CPU també retalla les fulles (`RenderMaterial.alphaCut`, `alphaAt` a `pathWorker`).
   - **Objectes de referència al 3D** (`RefGhost` a `CabinetViewer`): seleccionat, **es mou només amb les fletxes del
     gizmo** (`viewer/MoveGizmo`, `frontRaycast`: les fletxes es poden agafar encara que l'objecte sigui dins d'un altre o
     d'un moble, i el seu clic no tria el que hi ha al davant) (per decisió de l'usuari: el cos no s'arrossega, així sempre se sap cap on es mourà; també les peces lliures i

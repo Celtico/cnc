@@ -1,5 +1,6 @@
 import { Box3, DoubleSide, Group, Mesh, MeshStandardMaterial, Vector3, type Material, type Object3D } from "three"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js"
 import { modelAsset, type ModelObject } from "../../core/model"
 
 /**
@@ -62,7 +63,8 @@ export function loadModel(src: string): Promise<Loaded | null> {
   if (p) return p
   const url = urlOf(src)
   if (!url) return Promise.resolve(null)
-  loader ??= new GLTFLoader()
+  // Els arbres van comprimits amb meshopt (`gltfpack -c`): el descompressor és JS de three, sense fitxers a part.
+  loader ??= new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
   const job = loader
     .loadAsync(url)
     .then((gltf) => {
