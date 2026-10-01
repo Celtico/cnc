@@ -1,15 +1,35 @@
-import { Box, Button, CloseButton, Dialog, HStack, Portal, Stack, Text } from "@chakra-ui/react"
-import { LOW_MEMORY } from "../deviceLimits"
+import { Box, Button, CloseButton, Dialog, HStack, Image, Portal, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import type { IconType } from "react-icons"
 import { LuCamera, LuDownload, LuGauge, LuHouse, LuImage, LuImageUp, LuPause, LuPlay, LuRotateCcw, LuSun, LuX } from "react-icons/lu"
 import { ChoiceChips, FormRow } from "../../FormRow"
 import { PanelSection } from "../../PanelSection"
 import type { Camera, Scene } from "three"
+import { CpuEngine } from "./cpuEngine"
+import type { EngineKind, RenderEngine, RenderJob } from "./engine"
+import { GpuEngine, gpuSupport } from "./gpuTracer"
 import { parseHdr } from "./hdr"
 import { DEFAULT_RENDER_OPTS, extractScene, type RenderEnv, type RenderOpts, type RenderRoom } from "./sceneData"
 
-export type SceneGetter = () => { scene: Scene; camera: Camera; width: number; height: number } | null
+export type SceneGetter = () => { scene: Scene; camera: Camera; width: number; height: number; snapshot?: () => string } | null
+
+/** Motor triat (es recorda entre sessions). */
+const ENGINE_KEY = "mobles:render-engine"
+function savedEngine(): EngineKind | null {
+  try {
+    const v = localStorage.getItem(ENGINE_KEY)
+    return v === "cpu" || v === "gpu" ? v : null
+  } catch {
+    return null
+  }
+}
+function saveEngine(k: EngineKind) {
+  try {
+    localStorage.setItem(ENGINE_KEY, k)
+  } catch {
+    // Sense emmagatzematge (navegació privada): no es recorda.
+  }
+}
 
 /** Resolució: multiplicador de la mida del visor i amplada màxima (px). */
 const RESOLUTIONS = {
@@ -84,18 +104,24 @@ function Sec({ id, title, icon, hint, badge, children }: { id: string; title: st
 }
 
 /**
- * «Render»: imatge fotorealista per CPU, com el render físic de Cinema 4D. Es calcula amb
- * diversos fils (workers) i es va afinant (cada passada és una mostra més per píxel); es pot
- * aturar i desar en PNG. No depèn de la GPU ni dels seus límits.
- * Opcions: qualitat i llum tornen a començar el càlcul; les d'imatge (exposició, contrast,
- * saturació, fons) només retoquen el to, a l'instant.
+ * «Render»: imatge fotorealista amb path tracing, com el render físic de Cinema 4D. Dos motors
+ * amb el mateix resultat: **GPU** (WebGPU, `gpuTracer`) i **CPU** (un worker per nucli,
+ * `pathWorker`). Es va afinant (cada passada és una mostra més per píxel); es pot aturar i desar
+ * en PNG. **Comença aturat**: no es calcula res fins que no es prem «Començar».
+ * Opcions: motor, qualitat i llum tornen a començar el càlcul; les d'imatge (exposició,
+ * contrast, saturació, fons) només retoquen el to, a l'instant.
  */
 export function RenderDialog({ open, onClose, getScene, name }: { open: boolean; onClose: () => void; getScene: SceneGetter; name: string }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const [passes, setPasses] = useState(0)
   const [running, setRunning] = useState(false)
+  /** S'ha començat el render (fins llavors no es calcula res). */
+  const [begun, setBegun] = useState(false)
+  const [preparing, setPreparing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [started, setStarted] = useState(0)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [preview, setPreview] = useState<string | null>(null)
+  const [startedAt, setStartedAt] = useState(0)
   const [elapsed, setElapsed] = useState(0)
   const [opts, setOpts] = useState<RenderOpts>(DEFAULT_RENDER_OPTS)
   const [res, setRes] = useState<Resolution>("normal")
@@ -103,22 +129,31 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
   const [room, setRoom] = useState<RenderRoom>("room")
   const [format, setFormat] = useState<Format>("view")
   const [env, setEnv] = useState<{ name: string; env: RenderEnv } | null>(null)
+  const [engineKind, setEngineKind] = useState<EngineKind>(() => savedEngine() ?? "gpu")
+  /** Motiu pel qual no hi ha GPU (`undefined` mentre es mira). */
+  const [gpuWhy, setGpuWhy] = useState<string | null | undefined>(undefined)
+  const [engineLabel, setEngineLabel] = useState("")
   const envRef = useRef(env)
   envRef.current = env
   const [look, setLookState] = useState<Look>(DEFAULT_LOOK)
   const lookRef = useRef(look)
   const limitRef = useRef(limit)
   limitRef.current = limit
-  const workers = useRef<Worker[]>([])
+  const engine = useRef<RenderEngine | null>(null)
+  /** Cada render nou: els avisos dels motors d'abans s'ignoren. */
+  const token = useRef(0)
   const source = useRef<{ scene: ReturnType<typeof extractScene>; aspect: number; long: number; room?: RenderRoom; format?: Format } | null>(null)
-  const job = useRef<{ w: number; h: number; accum: Float32Array; aux: Float32Array; count: number } | null>(null)
+  const job = useRef<{ w: number; h: number; accum: Float32Array<ArrayBufferLike>; aux: Float32Array<ArrayBufferLike>; count: number } | null>(null)
   // Filtre de soroll: un fil a part; el resultat val per a les passades amb què s'ha calculat.
   const dn = useRef<{ worker: Worker | null; busy: boolean; id: number; data: Float32Array | null; count: number }>({ worker: null, busy: false, id: 0, data: null, count: 0 })
+  const effectiveKind: EngineKind = engineKind === "gpu" && gpuWhy === null ? "gpu" : "cpu"
 
-  const stopWorkers = () => {
-    for (const w of workers.current) w.terminate()
-    workers.current = []
+  const disposeEngine = () => {
+    token.current++
+    engine.current?.dispose()
+    engine.current = null
     setRunning(false)
+    setPreparing(false)
   }
 
   const draw = () => {
@@ -135,16 +170,20 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     const L = lookRef.current
     const D = L.denoise && dn.current.data && dn.current.data.length === j.w * j.h * 3 ? dn.current.data : null
     const col = (i: number, c: number) => (D ? D[i * 3 + c]! : j.accum[i * 4 + c]! * k)
-    // Exposició automàtica: mitjana geomètrica de la llum (com el fotòmetre d'una càmera).
+    // Exposició automàtica: mitjana geomètrica de la llum de les superfícies (com el fotòmetre
+    // d'una càmera), que queda al gris mitjà (18 %).
     let autoK = 1
     if (L.auto) {
       let sum = 0, cnt = 0
       for (let i = 0, n = j.w * j.h; i < n; i += 7) {
+        if (j.accum[i * 4 + 3]! * k < 0.5) continue
         const y = 0.2126 * col(i, 0) + 0.7152 * col(i, 1) + 0.0722 * col(i, 2)
+        if (!(y >= 0) || !Number.isFinite(y)) continue
         sum += Math.log(1e-4 + y)
         cnt++
       }
-      autoK = Math.min(8, Math.max(0.25, 0.3 / Math.exp(sum / Math.max(1, cnt))))
+      const gm = cnt ? Math.exp(sum / cnt) : 0.3
+      autoK = Math.min(40, Math.max(0.25, 0.18 / 0.7 / gm))
     }
     const expo = 0.7 * Math.pow(2, L.exposure) * autoK
     const tone = (v: number) => aces(v, expo)
@@ -153,6 +192,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
       let r = tone(col(i, 0) * wr)
       let g = tone(col(i, 1))
       let b = tone(col(i, 2) * wb)
+      if (!Number.isFinite(r + g + b)) r = g = b = 0
       const a = j.accum[i * 4 + 3]! * k
       if (L.saturation !== 1) {
         const y = 0.2126 * r + 0.7152 * g + 0.0722 * b
@@ -236,25 +276,36 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     D.worker.postMessage({ id, w: j.w, h: j.h, color, albedo, normal, strength: Math.min(1, 1.6 / Math.sqrt(count)) }, [color.buffer, albedo.buffer, normal.buffer])
   }
 
-  const startWorkers = (o: RenderOpts) => {
-    const j = job.current
+  /** Torna a començar el càlcul (en començar o en canviar el motor, la qualitat o la llum). */
+  const restart = (o: RenderOpts, r: Resolution, kind: EngineKind) => {
     const src = source.current
-    if (!j || !src) return
-    // Cada procés porta una còpia de l'escena: a l'iPhone, com a molt 2 (si no, iOS tanca la pàgina).
-    const n = Math.max(1, Math.min(LOW_MEMORY ? 2 : 8, (navigator.hardwareConcurrency || 4) - 1))
+    if (!src) return
+    disposeEngine()
+    const my = token.current
+    const R = RESOLUTIONS[r]
+    // El costat llarg segons la resolució; l'altre, segons el format.
+    const L = Math.min(R.max, Math.round(src.long * R.k))
+    const w = src.aspect >= 1 ? L : Math.round(L * src.aspect)
+    const h = src.aspect >= 1 ? Math.round(L / src.aspect) : L
+    const j: { w: number; h: number; accum: Float32Array<ArrayBufferLike>; aux: Float32Array<ArrayBufferLike>; count: number } = { w, h, accum: new Float32Array(w * h * 4), aux: new Float32Array(w * h * 6), count: 0 }
+    job.current = j
+    dn.current.id++
+    dn.current.data = null
+    dn.current.count = 0
+    dn.current.busy = false
+    setPasses(0)
+    setStartedAt(Date.now())
+    setElapsed(0)
+    setError(null)
+    const data: RenderJob = { scene: src.scene, env: envRef.current?.env ?? null, opts: o, w, h }
     let pending = false
-    for (let i = 0; i < n; i++) {
-      const w = new Worker(new URL("./pathWorker.ts", import.meta.url), { type: "module" })
-      w.onmessage = (e: MessageEvent<{ type: string; data: Float32Array; aux: Float32Array }>) => {
-        const jj = job.current
-        if (!jj || e.data.type !== "pass" || jj.accum.length !== e.data.data.length) return
-        const d = e.data.data
-        for (let q = 0; q < d.length; q++) jj.accum[q]! += d[q]!
-        const a = e.data.aux
-        if (a && a.length === jj.aux.length) for (let q = 0; q < a.length; q++) jj.aux[q]! += a[q]!
-        jj.count += 1
-        setPasses(jj.count)
-        if (limitRef.current && jj.count >= limitRef.current) stopWorkers()
+    const events = {
+      onProgress: (p: { color: Float32Array; aux: Float32Array; count: number }) => {
+        if (token.current !== my || job.current !== j) return
+        j.accum = p.color
+        j.aux = p.aux
+        j.count = p.count
+        setPasses(p.count)
         scheduleDenoise()
         if (!pending) {
           pending = true
@@ -263,36 +314,45 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
             draw()
           })
         }
-      }
-      w.onerror = (ev) => setError(ev.message || "Error en el render")
-      w.postMessage({ type: "scene", scene: src.scene, width: j.w, height: j.h, seed: (Math.random() * 2 ** 31) | 0, opts: o, env: envRef.current?.env ?? null })
-      workers.current.push(w)
+      },
+      onError: (message: string) => {
+        if (token.current !== my) return
+        // La GPU ha fallat (memòria, s'ha perdut…): es fa per CPU.
+        if (engine.current?.kind === "gpu") {
+          setNotice(`${message} Es fa per CPU.`)
+          restart(o, r, "cpu")
+        } else {
+          disposeEngine()
+          setError(message)
+        }
+      },
+      limit: () => limitRef.current,
+      onStop: () => {
+        if (token.current === my) setRunning(false)
+      },
     }
-    setRunning(true)
+    const run = (e: RenderEngine) => {
+      engine.current = e
+      setEngineLabel(e.label)
+      setPreparing(false)
+      setRunning(true)
+      e.resume()
+    }
+    if (kind === "gpu") {
+      setPreparing(true)
+      setEngineLabel("GPU")
+      GpuEngine.create(data, events).then(
+        (e) => (token.current === my ? run(e) : e.dispose()),
+        (err: unknown) => {
+          if (token.current !== my) return
+          setNotice(`${err instanceof Error ? err.message : String(err)} Es fa per CPU.`)
+          restart(o, r, "cpu")
+        },
+      )
+    } else run(new CpuEngine(data, events))
   }
 
-  /** Torna a començar el càlcul (canvi de qualitat o de llum). */
-  const restart = (o: RenderOpts, r: Resolution) => {
-    const src = source.current
-    if (!src) return
-    stopWorkers()
-    const R = RESOLUTIONS[r]
-    // El costat llarg segons la resolució; l'altre, segons el format.
-    const L = Math.min(R.max, Math.round(src.long * R.k))
-    const w = src.aspect >= 1 ? L : Math.round(L * src.aspect)
-    const h = src.aspect >= 1 ? Math.round(L / src.aspect) : L
-    job.current = { w, h, accum: new Float32Array(w * h * 4), aux: new Float32Array(w * h * 6), count: 0 }
-    dn.current.id++
-    dn.current.data = null
-    dn.current.count = 0
-    dn.current.busy = false
-    setPasses(0)
-    setStarted(Date.now())
-    setElapsed(0)
-    startWorkers(o)
-  }
-
-  /** Passa l'escena del visor a dades per als workers. */
+  /** Passa l'escena del visor a dades per als motors. */
   const extract = (r: RenderRoom, f: Format = format): boolean => {
     const got = getScene()
     if (!got) {
@@ -310,21 +370,37 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     }
   }
 
+  /** «Començar»: ara sí, es prepara l'escena i es calcula. */
+  const begin = () => {
+    setNotice(null)
+    if (!source.current && !extract(room)) return
+    setBegun(true)
+    restart(opts, res, effectiveKind)
+  }
+
   useEffect(() => {
     if (!open) return
+    // En obrir no es calcula res: només la imatge del visor de fons i si hi ha GPU.
     setError(null)
+    setNotice(null)
     setPasses(0)
-    if (extract(room)) {
-      // Als ambients (llum de dia), exposició automàtica i una mica càlid, com les fotos d'interiors.
-      if (source.current?.scene.daylight) {
-        const next = { ...lookRef.current, auto: true, warmth: 0.25 }
-        lookRef.current = next
-        setLookState(next)
-      }
-      restart(opts, res)
+    setBegun(false)
+    try {
+      setPreview(getScene()?.snapshot?.() ?? null)
+    } catch {
+      setPreview(null)
+    }
+    let alive = true
+    void gpuSupport().then((why) => alive && setGpuWhy(why))
+    // Als ambients (llum de dia), exposició automàtica i una mica càlid, com les fotos d'interiors.
+    if (getScene()?.scene.userData.daylight) {
+      const next = { ...lookRef.current, auto: true, warmth: 0.25 }
+      lookRef.current = next
+      setLookState(next)
     }
     return () => {
-      stopWorkers()
+      alive = false
+      disposeEngine()
       dn.current.worker?.terminate()
       dn.current.worker = null
       job.current = null
@@ -333,27 +409,22 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  // Qualitat i llum: es torna a començar, esperant una mica mentre s'arrossega.
-  const first = useRef(true)
+  // Motor, qualitat i llum: un cop començat, es torna a començar (esperant una mica mentre s'arrossega).
   useEffect(() => {
-    if (first.current) {
-      first.current = false
-      return
-    }
-    if (!open || !source.current) return
+    if (!open || !begun || !source.current) return
     const id = window.setTimeout(() => {
       if ((source.current?.room !== room || source.current?.format !== format) && !extract(room, format)) return
-      restart(opts, res)
+      restart(opts, res, effectiveKind)
     }, 300)
     return () => window.clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opts, res, room, format, env])
+  }, [opts, res, room, format, env, effectiveKind])
 
   useEffect(() => {
     if (!running) return
-    const id = window.setInterval(() => setElapsed(Math.round((Date.now() - started) / 1000)), 1000)
+    const id = window.setInterval(() => setElapsed(Math.round((Date.now() - startedAt) / 1000)), 1000)
     return () => window.clearInterval(id)
-  }, [running, started])
+  }, [running, startedAt])
 
   const save = () => {
     canvas.current?.toBlob((b) => {
@@ -366,10 +437,28 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     }, "image/png")
   }
 
+  const toggle = () => {
+    const e = engine.current
+    if (!e) return
+    if (running) {
+      e.pause()
+      setRunning(false)
+    } else {
+      setStartedAt(Date.now() - elapsed * 1000)
+      setRunning(true)
+      e.resume()
+    }
+  }
+
   const set = (patch: Partial<RenderOpts>) => setOpts((o) => ({ ...o, ...patch }))
   const x = (v: number) => `${v.toFixed(1)}×`
   const deg = (v: number) => `${Math.round(v)}°`
   const j = job.current
+  const status = !begun
+    ? "Aturat: prem «Començar» per calcular la imatge."
+    : preparing
+      ? "Preparant la GPU…"
+      : `${passes}${limit ? ` / ${limit}` : ""} ${passes === 1 ? "passada" : "passades"} · ${elapsed} s${elapsed && passes ? ` (${(passes / elapsed).toFixed(passes / elapsed < 10 ? 1 : 0)}/s)` : ""} · ${j ? `${j.w} × ${j.h} px` : "—"} · ${engineLabel}`
 
   return (
     <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size={{ base: "full", md: "cover" }} placement="center">
@@ -390,29 +479,53 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                   display="flex"
                   alignItems="center"
                   justifyContent="center"
+                  position="relative"
                   rounded="md"
                   overflow="hidden"
                   // Quadrícula de transparència quan el fons és transparent.
-                  bg={look.background === "transparent" ? undefined : "bg.muted"}
-                  style={look.background === "transparent" ? { background: "repeating-conic-gradient(#ccc 0 25%, #fff 0 50%) 0 0 / 16px 16px" } : undefined}
+                  bg={look.background === "transparent" && begun ? undefined : "bg.muted"}
+                  style={look.background === "transparent" && begun ? { background: "repeating-conic-gradient(#ccc 0 25%, #fff 0 50%) 0 0 / 16px 16px" } : undefined}
                 >
                   {error ? (
                     <Text p={4} color="fg.error">
                       {error}
                     </Text>
                   ) : (
-                    <canvas ref={canvas} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+                    <canvas ref={canvas} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: begun ? undefined : "none" }} />
+                  )}
+                  {!begun && !error && (
+                    <>
+                      {preview && <Image src={preview} alt="" position="absolute" inset={0} w="full" h="full" objectFit="contain" opacity={0.45} />}
+                      <Stack position="relative" align="center" gap={3} p={4} textAlign="center">
+                        <Button size="lg" colorPalette="wood" onClick={begin}>
+                          <LuPlay /> Començar
+                        </Button>
+                        <Text fontSize="sm" color="fg.muted" maxW="22em">
+                          Tria les opcions i prem «Començar»: fins llavors no es calcula res.
+                        </Text>
+                      </Stack>
+                    </>
                   )}
                 </Box>
+                {notice && (
+                  <Text fontSize="xs" color="fg.warning">
+                    {notice}
+                  </Text>
+                )}
                 <HStack justify="space-between" wrap="wrap" gap={2}>
-                  <Text fontSize="sm" color="fg.muted">
-                    {passes}
-                    {limit ? ` / ${limit}` : ""} {passes === 1 ? "passada" : "passades"} · {elapsed} s · {j ? `${j.w} × ${j.h} px` : "—"} · {workers.current.length || "—"} fils
+                  <Text fontSize="sm" color="fg.muted" data-render-status>
+                    {status}
                   </Text>
                   <HStack gap={2}>
-                    <Button size="sm" variant="outline" onClick={() => (running ? stopWorkers() : startWorkers(opts))} disabled={!!error}>
-                      {running ? <LuPause /> : <LuPlay />} {running ? "Aturar" : "Continuar"}
-                    </Button>
+                    {begun ? (
+                      <Button size="sm" variant="outline" onClick={toggle} disabled={!!error || preparing}>
+                        {running ? <LuPause /> : <LuPlay />} {running ? "Aturar" : "Continuar"}
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={begin} disabled={!!error}>
+                        <LuPlay /> Començar
+                      </Button>
+                    )}
                     <Button size="sm" colorPalette="wood" onClick={save} disabled={!passes}>
                       <LuDownload /> Desar PNG
                     </Button>
@@ -421,7 +534,28 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
               </Stack>
 
               <Stack w={{ base: "full", md: "300px" }} flexShrink={0} gap={1} overflowY={{ base: "visible", md: "auto" }} pr={1} pb={{ base: 4, md: 0 }}>
-                <Sec id="quality" title="Qualitat" icon={LuGauge} hint="Els canvis tornen a començar el render." badge={`${RESOLUTIONS[res].label} · ${opts.bounces} rebots`}>
+                <Sec id="quality" title="Qualitat" icon={LuGauge} hint="Els canvis tornen a començar el render." badge={`${effectiveKind === "gpu" ? "GPU" : "CPU"} · ${RESOLUTIONS[res].label} · ${opts.bounces} rebots`}>
+                  <FormRow
+                    label="Motor"
+                    help={
+                      gpuWhy
+                        ? `GPU no disponible: ${gpuWhy} Es fa per CPU.`
+                        : "GPU (WebGPU): molt més ràpid, amb la gràfica. CPU: amb el processador, funciona a tot arreu. La imatge és la mateixa."
+                    }
+                  >
+                    <ChoiceChips<EngineKind>
+                      label="Motor"
+                      options={[
+                        { id: "gpu", label: "GPU", disabled: gpuWhy !== null },
+                        { id: "cpu", label: "CPU" },
+                      ]}
+                      value={effectiveKind}
+                      onChange={(k) => {
+                        setEngineKind(k)
+                        saveEngine(k)
+                      }}
+                    />
+                  </FormRow>
                   <FormRow label="Resolució" help={`Amplada màxima: ${(Object.keys(RESOLUTIONS) as Resolution[]).map((k) => `${RESOLUTIONS[k].label.toLowerCase()} ${RESOLUTIONS[k].max} px`).join(" · ")}.`}>
                     <ChoiceChips label="Resolució" options={(Object.keys(RESOLUTIONS) as Resolution[]).map((k) => ({ id: k, label: RESOLUTIONS[k].label }))} value={res} onChange={setRes} />
                   </FormRow>
@@ -552,7 +686,8 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                     setLimit(0)
                     setRoom("room")
                     setFormat("view")
-                    setLook({ ...DEFAULT_LOOK, auto: !!source.current?.scene.daylight, warmth: source.current?.scene.daylight ? 0.25 : 0 })
+                    const day = !!getScene()?.scene.userData.daylight
+                    setLook({ ...DEFAULT_LOOK, auto: day, warmth: day ? 0.25 : 0 })
                   }}
                 >
                   <LuRotateCcw /> Restablir

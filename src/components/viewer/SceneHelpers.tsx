@@ -36,7 +36,17 @@ export function SceneAccess({ onAccess }: { onAccess: (get: SceneGetter) => void
   useEffect(() => {
     onAccess(() => {
       const st = get()
-      return { scene: st.scene, camera: st.camera, width: st.size.width, height: st.size.height }
+      return {
+        scene: st.scene,
+        camera: st.camera,
+        width: st.size.width,
+        height: st.size.height,
+        // Imatge del visor (es pinta ara mateix: el buffer de WebGL no es conserva).
+        snapshot: () => {
+          st.gl.render(st.scene, st.camera)
+          return st.gl.domElement.toDataURL("image/png")
+        },
+      }
     })
   }, [onAccess, get])
   return null

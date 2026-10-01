@@ -1259,6 +1259,8 @@ function MoveHandle({
   )
 }
 
+const BEVEL_USERDATA = { bevel: true }
+
 export function PanelMesh({
   panel,
   exploded,
@@ -1353,6 +1355,8 @@ export function PanelMesh({
           receiveShadow
           material={cut && cutMats ? cutMats : mats}
           geometry={cut ?? undefined}
+          // El render arrodoneix les arestes dels taulers (`sceneData`).
+          userData={BEVEL_USERDATA}
           onClick={onClick ? (e: ThreeEvent<MouseEvent>) => {
             // El clic que acaba un arrossegament (d'una fletxa o de la càmera) no selecciona.
             if (e.delta > 4) return

@@ -64,6 +64,8 @@ export function buildScene(panels: Panel[], name: string, real?: { materials: Ma
       const { geometry, material } = real.make(p, real.materials)
       const mesh = new Mesh(geometry, material)
       mesh.name = p.id
+      // El render arrodoneix les arestes dels taulers (`sceneData`).
+      mesh.userData.bevel = true
       holder.add(mesh)
       for (const h of handleMeshes(p)) holder.add(h)
       root.add(holder)

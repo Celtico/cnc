@@ -168,7 +168,7 @@ Tots els editors fan servir les mateixes peces, no còpies: **`Workspace`** + `u
 (`components/`: estructura · visor · propietats, vores arrossegables, plegar amb els botons de les
 cantonades, pestanyes Estructura · Propietats al mòbil, amplades recordades per editor) a l'Editor
 de mobles i objectes i als Ambients; **`SceneHelpers`** (`StudioEnvironment`, `SceneAccess`) als
-visors 3D; el **`RenderDialog`** (render per CPU) a l'editor i als ambients; **`NewMobleGallery`**,
+visors 3D; el **`RenderDialog`** (render per GPU o CPU) a l'editor i als ambients; **`NewMobleGallery`**,
 `TemplateCard`, `ProjectCard` i `GALLERY_COLS` a Mobles, Objectes i a les finestres dels ambients;
 la **`GalleryCard`** (`projects/GalleryCard.tsx`: totes les targetes de les graelles, en el mateix ordre: miniatura · nom de dues línies · què és · descripció · etiquetes (color principal) i preu a baix · peu amb data i ⋯) a historials, grups i catàlegs; el **`NameDialog`** (`components/`) per posar un nom (grup nou, canviar el nom, mòdul nou), amb un nom per defecte ja seleccionat; el **`MaterialSelect`** (`settings/MaterialSelect.tsx`) a tot arreu on es tria un material: un **botó** (fons suau, a tota l'amplada, sense fletxa ni icona: no ha de semblar un desplegable) amb la mostra i el nom
 que obre un calaix (a la dreta a l'ordinador, de baix al mòbil) amb un acordió per categoria i les mostres de la textura
@@ -187,7 +187,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   `ellipse`, `roundRect` per als coixins, `leaf`, `wave` per als plecs de les cortines, `blob` per a
   capçades i pufs): sofàs amb coixins i en L, daybed, butaques, cadires, quadres, miralls, tele, cortines,
   llums de sostre, plantes (tropical, olivera, pi pinyoner, jardinera), catifes, taules… Tot és geometria
-  (perfils extrudits), no física ni shaders: així el render per CPU ho veu igual que el visor. **Mides al mm**: les formes calculades
+  (perfils extrudits), no física ni shaders: així el render ho veu igual que el visor. **Mides al mm**: les formes calculades
   donen decimals llargs; `tidyMm`/`tidyPart` (`freePart.ts`) arrodoneixen al mm els valors amb més d'un decimal
   (els de l'usuari, com 22,5, es queden) en crear l'objecte i en carregar-lo (`normalizeComposition`). Materials de
   simulació nous a la **v4** de les preferències (estucs, travertí, pedra de paret, vellut oliva, bouclé,
@@ -310,7 +310,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Parets amb material propi i obertures** (`Wall.material`, `Wall.openings`: finestra amb ampit de pedra,
   porta amb fulla, vidriera de terra a sostre amb travessers): `wallOpenings`, `wallSegments` (trossos
   massissos al voltant dels forats) al 3D; al plànol, el forat amb el vidre o l'arc de la porta. El vidre
-  porta `userData.glass` (el render per CPU el fa translúcid) i `baseOpacity` (la casa de nines el respecta).
+  porta `userData.glass` (el render el fa de vidre) i `baseOpacity` (la casa de nines el respecta).
 - **Panells de l'editor d'ambients com els de l'editor**: l'inspector (element, bloc, paret, grup, ambient) en seccions plegables `PanelSection` (Posició, Mides generals, Bloc, Mides i material, Finestres i portes, Parets noves, Acabats, Plànol de fons, Elements); la llista de l'esquerra, amb el títol «Elements» i «+ Moble» · «+ Objecte» a la dreta (com els grups de l'arbre).
 - **3D**: la mateixa navegació que l'editor (esmorteïment, roda, botó dret per desplaçar), clic per
   seleccionar (caixa taronja; Supr, Ctrl/⌘ D, R i fletxes com al plànol), «Enquadrar» i «Render». **L'element seleccionat es mou
@@ -322,7 +322,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   **Interior** (Opcions de vista, `LuEye`, `eyePose`): entra a l'habitació, càmera anivellada a 1,35 m (verticals rectes) al costat de la
   paret de davant mirant la del fons, angular (fov 55; «Enquadrar» torna a 40), per als renders de revista.
   La pestanya Plànol · 3D es recorda (`AMBIENT_TAB_KEY`); els ambients creats del catàleg s'obren al 3D.
-- **Fons del 3D dels ambients**: el visor és transparent i a l'editor hi ha el gris del plànol (`bg.subtle`); el render per CPU fa servir el clar de sempre (`scene.userData.renderBackground`, `sceneData.ts`).
+- **Fons del 3D dels ambients**: el visor és transparent i a l'editor hi ha el gris del plànol (`bg.subtle`); el render fa servir el clar de sempre (`scene.userData.renderBackground`, `sceneData.ts`).
 - **3D** (`Ambient3D`): terra i parets amb `surfaceMaterial` (textura a mida real), mobles i blocs
   amb les textures del visor; les parets entre la càmera i l'habitació es fan transparents
   (casa de nines).
@@ -497,7 +497,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     alhora només de costat. El camp fixat queda desactivat; `anchorRef` s'aplica a l'inspector,
     a l'arrossegament i a les fletxes.
   - **Material dels objectes de referència** (`RefObject.material`, a General; no als que tallen): amb material es veuen
-    sòlids (`surfaceMaterial`, amb ombres) i surten a la Presentació i al render per CPU; sense («Cap (fantasma)»), fantasma
+    sòlids (`surfaceMaterial`, amb ombres) i surten a la Presentació i al render; sense («Cap (fantasma)»), fantasma
     translúcid que el render no pinta.
   - **Efecte dels objectes** (`RefObject.effect`, `shape`, `axis`): **Obstacle** (per defecte,
     avisa si xoca; el cilindre xoca amb la seva secció rodona, `refTouchesBox`) o **Talla**
@@ -640,7 +640,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   - **Plantilles en acordions** (`NewMobleGallery`, `Accordion` de Chakra amb `lazyMount`):
     «Plantilles de l'app» i, a sota, **«Plantilles per a botigues de mobles»**
     (`model/storeCatalog.ts`, `STORE_CATALOG` / `STORE_TEMPLATES`, a partir de
-    [`cad-mobles-cataleg.md`](cad-mobles-cataleg.md)): 10 categories (Saló, Menjador, **Cuina** —no és
+    [`cad-mobles-cataleg.md`](docs/cad-mobles-cataleg.md)): 10 categories (Saló, Menjador, **Cuina** —no és
     al catàleg, afegida amb `kitchen()`: lineal, amb illa, kitchenette, illa sola, columnes i racó de
     cafè; taulell de fusta corregut amb els forats de pica i placa o de pedra tallada, sòcol corregut,
     alts alineats amb forat per a la campana, columnes de 2100 i illa amb X pròpia—, Dormitori, Juvenil,
@@ -666,28 +666,50 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     el visor, l'AR i el render resten amb **three-bvh-csg** (`solidCutGeometry`); a les peces de
     CNC avisa que no es mecanitza. Els objectes de referència només foraden en la seva direcció.
     També talla les peces que no són de CNC (`extras`).
-  - **Render per CPU** (`viewer/render/`, botó «Render» a Opcions de vista, com Cinema 4D):
-    `extractScene` passa l'escena del visor a triangles + materials + textures (píxels) i
-    `pathWorker` (un per nucli, BVH propi) fa path tracing progressiu: cel d'estudi, sol amb
-    ombres suaus, difús, reflex segons la rugositat, metalls i vidre. `RenderDialog` acumula les
-    passades (to ACES), s'atura/continua i desa el PNG. No depèn de la GPU. Opcions (columna de la
-    dreta): **Qualitat** (resolució, rebots de llum, aturar-se a N passades), **Escena**
-    (habitació de Presentació / només terra / cap: `userData.room` a `PresentationRoom`),
-    **Llum** (`RenderOpts`: direcció i alçada del sol, intensitat, ombres dures–suaus, cel) —
-    aquestes tornen a començar— i **Imatge** (exposició EV, contrast, saturació, fons estudi /
-    blanc / transparent amb l'alfa de cobertura del worker), a l'instant.
-    **Interiors com les fotos de revista**: als ambients, cel de dia (`daySky`: zenit blau, horitzó clar,
-    halo del sol; `scene.userData.daylight`) i sol tres vegades més fort que el cel; les habitacions
-    tancades porten **sostre** (`userData.renderOnly = "ceiling"`, es veu quan la càmera és a dins, al visor
-    i al render) i llavors la llum entra per les finestres: els vidres són **portals** (`userData.portal`,
-    `RenderScene.portals`: llum del cel mostrejada a través seu) i no fan ombra (el sol hi passa). A la
-    imatge: **reducció de soroll** (`denoise.ts`, À-Trous guiat per l'albedo i la normal de la primera
-    superfície, en un worker a part, cada cop menys sovint), **exposició automàtica** (mitjana geomètrica)
-    i temperatura (càlid per defecte als ambients). Càmera: **format** (visor, 3:2, 4:5, 16:9, 1:1) i
-    desenfocament (lent fina, enfoca el centre). **Cel HDRI** opcional: es carrega un `.hdr` (`hdr.ts`,
-    RGBE; p. ex. de Poly Haven) i es pot girar; sense, el cel de dia. Límit de 12 per mostra (sense ateses).
-    Opcions del render en seccions plegables (`PanelSection`, com els inspectors: Qualitat, Càmera,
-    Escena, Llum, Imatge, amb el resum a la insígnia); al mòbil, pantalla completa amb la imatge a dalt.
+  - **Render** (`viewer/render/`, botó «Render» a Opcions de vista, com Cinema 4D): path tracing progressiu amb
+    **dos motors que donen la mateixa imatge** (opció **Motor**, `ChoiceChips` GPU · CPU; per defecte GPU si n'hi ha,
+    es recorda a `mobles:render-engine`): **GPU** (WebGPU, `gpuTracer.ts` + shader `gpuTracer.wgsl.ts`, compute shaders)
+    i **CPU** (`cpuEngine.ts`: un `pathWorker` per nucli, com a molt 2 a l'iPhone). Si el navegador no té WebGPU, GPU
+    surt desactivada amb el motiu; si la GPU falla (memòria, límits, s'ha perdut el dispositiu) es fa per CPU amb un avís.
+    **Comença aturat**: obrir el diàleg no calcula res (es veu la imatge del visor, `SceneGetter.snapshot`, amb el botó
+    «Començar»); canviar opcions abans tampoc; després, com sempre (les de qualitat, motor i llum tornen a començar,
+    aturar/continuar, límit de passades, passades per segon a l'estat). `extractScene` passa l'escena del visor a
+    triangles + materials + textures (píxels) i tots dos motors fan servir el **mateix BVH** (`bvh.ts`, SAH per calaixos,
+    empaquetat a 8 paraules per node) i les mateixes llums (`lights.ts`) i constants (`shading.ts`). El contracte amb el
+    diàleg (`engine.ts`): sumes RGBA + AOV (albedo i normal de la primera superfície) i el nombre de mostres; el diàleg
+    divideix, filtra el soroll, fa el to i desa el PNG igual per als dos. **GPU sense textures de GPU**: tot en buffers
+    d'emmagatzematge (`gpuScene.ts`: triangles en l'ordre del BVH, materials/textures/bevel/finestres en un buffer de
+    vec4, totes les textures RGBA8 en un sol buffer de u32 amb mostreig bilineal fet a mà; si no hi caben, es redueixen
+    a la meitat): així no hi ha el límit de 16 unitats de textura dels Mac/iPhone que va fer descartar
+    three-gpu-pathtracer. Respecta `maxStorageBufferBindingSize`/`maxBufferSize` (si no hi cap, CPU). Treballa per tandes
+    de files de ~10–30 ms (i més mostres per passada si va de pressa) perquè la pàgina no s'encalli, i llegeix el
+    resultat a cada passada sencera (cada cop menys sovint si costa). **Materials**: difús + reflex GGX amb Fresnel,
+    metalls, vidre fi (reflex de Fresnel o passa recte amb el to; no fa ombra), retall per l'alfa. **Arestes arrodonides**
+    (2 mm, `BEVEL_RADIUS`): les malles dels taulers (`userData.bevel` a `PanelMesh` i `buildScene`) porten la seva caixa
+    local; a menys del radi d'una aresta la normal s'inclina fins a 45° (`bevelNormal`), així les vores agafen llum.
+    **Veta amb relleu** (`userData.grain` als materials de fusta i foto, i al parquet): normal pel gradient de la
+    luminància de la textura i les parts fosques més mates. **Llum**: sol amb mida (ombres suaus; el reflex s'eixampla
+    amb la mida del sol) i cel amb mostra directa a cada rebot i MIS amb el material: cel llis per cosinus, **HDRI per
+    importància** (`envSampling.ts`, CDF de la llum × sin θ) i, als interiors, per les finestres (portals). **Sense
+    ateses**: la llum indirecta d'una mostra té un màxim relatiu a la llum de l'escena (`sceneKey`: mitjana geomètrica
+    d'una quadrícula de rajos amb llavor fixa, la mateixa per als dos motors; ×20 la indirecta, ×400 la directa) i, després
+    d'un rebot difús, els reflexos es tornen més rugosos (`PATH_ROUGHNESS`); halo del sol del cel de dia ample. Opcions
+    (columna de la dreta): **Qualitat** (motor, resolució, rebots de llum, aturar-se a N passades), **Escena**
+    (habitació de Presentació / només terra / cap: `userData.room` a `PresentationRoom`), **Llum** (`RenderOpts`:
+    direcció i alçada del sol, intensitat, ombres dures–suaus, cel) — aquestes tornen a començar— i **Imatge**
+    (exposició EV, contrast, saturació, fons estudi / blanc / transparent amb l'alfa de cobertura), a l'instant.
+    **Interiors com les fotos de revista**: als ambients, cel de dia (`daySky`: zenit blau, horitzó clar, halo del
+    sol; `scene.userData.daylight`) i sol tres vegades més fort que el cel; les habitacions tancades porten **sostre**
+    (`userData.renderOnly = "ceiling"`, es veu quan la càmera és a dins, al visor i al render; **només si hi ha alguna
+    finestra**: sense, l'habitació sortia negra) i llavors la llum entra per les finestres: els vidres són **portals**
+    (`userData.portal`, `RenderScene.portals`). A la imatge: **reducció de soroll** (`denoise.ts`, À-Trous guiat per
+    l'albedo i la normal de la primera superfície, en un worker a part, cada cop menys sovint), **exposició automàtica**
+    (mitjana geomètrica de les superfícies al gris mitjà del 18 %, fins a ×40; per defecte als ambients) i temperatura
+    (càlid per defecte als ambients). Càmera: **format** (visor, 3:2, 4:5, 16:9, 1:1) i desenfocament (lent fina, enfoca
+    el centre). **Cel HDRI** opcional: es carrega un `.hdr` (`hdr.ts`, RGBE; p. ex. de Poly Haven) i es pot girar; sense,
+    el cel de dia. Opcions del render en seccions plegables (`PanelSection`, com els inspectors: Qualitat, Càmera,
+    Escena, Llum, Imatge, amb el resum a la insígnia); al mòbil, pantalla completa amb la imatge a dalt. Tests:
+    `render/render.test.ts` (BVH contra força bruta, CDF de l'HDRI, bevel, empaquetat de textures i triangles).
     **Sostre**: opció de vista «Sostre» (`mobles:ambient-ceiling`) i material a Acabats
     (`Ambient.ceilingMaterial`); al visor té una mica de llum pròpia (emissive) perquè des de sota no quedi fosc.
   - **Peça enganxada a un mòdul** (`FreePart.module`, `resolveParts`, `partOffset`): a General,
@@ -711,8 +733,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     tres lliures i sense Veta ni interruptor d'encaixos.
   - **Llum com model-viewer** (`StudioEnvironment` a `CabinetViewer`): entorn d'estudi
     procedural (`RoomEnvironment` + PMREM, offline) com a `scene.environment` i to `Neutral`;
-    l'hemisfèrica queda baixa. **Ray tracing descartat**: `three-gpu-pathtracer` (WebGL) necessita
-    més de 16 unitats de textura i als Mac/iPhone (límit 16) les textures surten malament.
+    l'hemisfèrica queda baixa. **`three-gpu-pathtracer` descartat**: (WebGL) necessita
+    més de 16 unitats de textura i als Mac/iPhone (límit 16) les textures surten malament; el render per GPU és propi
+    (WebGPU amb les textures en un buffer, vegeu «Render»).
   - **Tiradors mecanitzats**: portes (costat contrari de les frontisses, a mitja alçada),
     calaixos (centrats) i abatibles (al cantell que obre) porten dos forats passants Ø5 a 128 /
     96 / 64 com a talls `circle` `tag: "handle"` (com els passacables, perquè el taller els

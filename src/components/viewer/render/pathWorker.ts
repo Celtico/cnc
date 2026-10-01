@@ -1,21 +1,37 @@
 /// <reference lib="webworker" />
 /**
  * Path tracer per CPU (com el render físic de Cinema 4D): cada worker calcula passades
- * senceres d'una mostra per píxel i les envia al fil principal, que les acumula. Llum: cel
- * d'estudi + sol amb ombres suaus; materials difusos amb una mica de reflex, metalls i
- * transparència. Triangles en un BVH propi.
+ * senceres d'una mostra per píxel i les envia al fil principal, que les acumula.
+ *
+ * El mateix algorisme que el de GPU (`gpuTracer.wgsl.ts`; si en canvies un, canvia l'altre):
+ * - Materials: difús (Lambert) + reflex GGX amb Fresnel (Schlick), metalls, vidre fi (reflex o
+ *   passa recte, amb el to), retall per l'alfa. Arestes arrodonides als taulers (`bevelNormal`) i
+ *   relleu i brillantor de la veta a la fusta (`bump`).
+ * - Llum: sol amb mida (ombres suaus) i cel (estudi, de dia o HDRI) amb mostreig directe a cada
+ *   rebot (NEE) i MIS amb el del material; als interiors, la llum del cel es mostreja per les
+ *   finestres (portals); l'HDRI, per importància (CDF de la llum).
+ * - Sense ateses: la llum indirecta d'una mostra té un màxim (`INDIRECT_CLAMP`) i, després d'un
+ *   rebot difús, els reflexos es tornen més rugosos (`PATH_ROUGHNESS`).
  */
+import { buildBvh, INTERNAL, NODE_WORDS } from "./bvh"
+import { buildEnvCdf, envPdf, sampleEnv, type EnvCdf } from "./envSampling"
+import { lightSetup } from "./lights"
 import type { RenderEnv, RenderOpts, RenderScene } from "./sceneData"
+import { BUMP_STRENGTH, DIRECT_CLAMP, GLASS_SHADOW, INDIRECT_CLAMP, PATH_ROUGHNESS, bevelNormal } from "./shading"
 
-type Msg = { type: "scene"; scene: RenderScene; width: number; height: number; seed: number; opts: RenderOpts; env?: RenderEnv | null } | { type: "stop" }
+type Msg = { type: "scene" | "estimate"; scene: RenderScene; width: number; height: number; seed: number; opts: RenderOpts; env?: RenderEnv | null } | { type: "stop" }
 
 let ENV: RenderEnv | null = null
+let CDF: EnvCdf | null = null
 let envRot = 0
 
 let O: RenderOpts = { bounces: 6, sunAzimuth: 40, sunElevation: 45, sunIntensity: 1, skyIntensity: 1, softness: 0.15 }
 let sunDir: [number, number, number] = [0, 1, 0]
 let sunCol: [number, number, number] = [0, 0, 0]
-let jitter = 0.06
+let sunCosMax = 1
+let sunA2 = 0
+/** Llum del cel directa: 0 = cosinus (cel llis), 1 = HDRI per importància, 2 = per les finestres. */
+let neeMode = 0
 
 let S: RenderScene | null = null
 let W = 0
@@ -33,113 +49,42 @@ const random = () => {
 
 // --- BVH ------------------------------------------------------------------------------
 let triCount = 0
-let tri: Float32Array // 9 per triangle
-let order: Uint32Array
-let nodeMin: Float32Array
-let nodeMax: Float32Array
-let nodeLeft: Int32Array // fill esquerre (el dret és el següent del seu subarbre) o -1 si fulla
-let nodeRight: Int32Array
-let nodeStart: Uint32Array
-let nodeCount: Uint32Array
-let nodes = 0
-
-function buildBVH(pos: Float32Array) {
-  triCount = pos.length / 9
-  tri = pos
-  order = new Uint32Array(triCount)
-  for (let i = 0; i < triCount; i++) order[i] = i
-  const cap = triCount * 2 + 1
-  nodeMin = new Float32Array(cap * 3)
-  nodeMax = new Float32Array(cap * 3)
-  nodeLeft = new Int32Array(cap)
-  nodeRight = new Int32Array(cap)
-  nodeStart = new Uint32Array(cap)
-  nodeCount = new Uint32Array(cap)
-  const cen = new Float32Array(triCount * 3)
-  for (let t = 0; t < triCount; t++)
-    for (let a = 0; a < 3; a++) cen[t * 3 + a] = (pos[t * 9 + a]! + pos[t * 9 + 3 + a]! + pos[t * 9 + 6 + a]!) / 3
-  nodes = 0
-  const build = (start: number, count: number): number => {
-    const n = nodes++
-    let mnx = Infinity, mny = Infinity, mnz = Infinity, mxx = -Infinity, mxy = -Infinity, mxz = -Infinity
-    let cmnx = Infinity, cmny = Infinity, cmnz = Infinity, cmxx = -Infinity, cmxy = -Infinity, cmxz = -Infinity
-    for (let i = start; i < start + count; i++) {
-      const t = order[i]!
-      for (let k = 0; k < 3; k++) {
-        const x = pos[t * 9 + k * 3]!, y = pos[t * 9 + k * 3 + 1]!, z = pos[t * 9 + k * 3 + 2]!
-        if (x < mnx) mnx = x
-        if (y < mny) mny = y
-        if (z < mnz) mnz = z
-        if (x > mxx) mxx = x
-        if (y > mxy) mxy = y
-        if (z > mxz) mxz = z
-      }
-      const cx = cen[t * 3]!, cy = cen[t * 3 + 1]!, cz = cen[t * 3 + 2]!
-      if (cx < cmnx) cmnx = cx
-      if (cy < cmny) cmny = cy
-      if (cz < cmnz) cmnz = cz
-      if (cx > cmxx) cmxx = cx
-      if (cy > cmxy) cmxy = cy
-      if (cz > cmxz) cmxz = cz
-    }
-    nodeMin[n * 3] = mnx; nodeMin[n * 3 + 1] = mny; nodeMin[n * 3 + 2] = mnz
-    nodeMax[n * 3] = mxx; nodeMax[n * 3 + 1] = mxy; nodeMax[n * 3 + 2] = mxz
-    if (count <= 4) {
-      nodeLeft[n] = -1
-      nodeStart[n] = start
-      nodeCount[n] = count
-      return n
-    }
-    const ex = cmxx - cmnx, ey = cmxy - cmny, ez = cmxz - cmnz
-    const axis = ex > ey && ex > ez ? 0 : ey > ez ? 1 : 2
-    const mid = axis === 0 ? (cmnx + cmxx) / 2 : axis === 1 ? (cmny + cmxy) / 2 : (cmnz + cmxz) / 2
-    let i = start
-    let j = start + count - 1
-    while (i <= j) {
-      if (cen[order[i]! * 3 + axis]! < mid) i++
-      else {
-        const tmp = order[i]!
-        order[i] = order[j]!
-        order[j] = tmp
-        j--
-      }
-    }
-    let leftCount = i - start
-    if (leftCount === 0 || leftCount === count) leftCount = count >> 1
-    nodeLeft[n] = build(start, leftCount)
-    nodeRight[n] = build(start + leftCount, count - leftCount)
-    return n
-  }
-  if (triCount) build(0, triCount)
-}
+let tri: Float32Array = new Float32Array(0)
+let order: Uint32Array = new Uint32Array(0)
+let nf: Float32Array = new Float32Array(0)
+let nu: Uint32Array = new Uint32Array(0)
 
 const stack = new Int32Array(128)
 // Resultat de la intersecció.
 let hitT = 0, hitTri = -1, hitU = 0, hitV = 0
+/** El raig d'ombra ha travessat vidre. */
+let crossedGlass = false
 
-function intersect(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, tMax: number, any: boolean, skipGlass = false): boolean {
+function intersect(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, tMax: number, any: boolean): boolean {
   hitT = tMax
   hitTri = -1
+  crossedGlass = false
   if (!triCount) return false
   const idx = 1 / dx, idy = 1 / dy, idz = 1 / dz
+  const mats = S!.materials, mi = S!.matIndex
   let sp = 0
   stack[sp++] = 0
   while (sp > 0) {
-    const n = stack[--sp]!
-    // Caixa.
-    let t0 = (nodeMin[n * 3]! - ox) * idx, t1 = (nodeMax[n * 3]! - ox) * idx
-    let tmin = Math.min(t0, t1), tmax = Math.max(t0, t1)
-    t0 = (nodeMin[n * 3 + 1]! - oy) * idy
-    t1 = (nodeMax[n * 3 + 1]! - oy) * idy
+    const n = stack[--sp]! * NODE_WORDS
+    let t0 = (nf[n]! - ox) * idx, t1 = (nf[n + 4]! - ox) * idx
+    let tmin = t0 < t1 ? t0 : t1, tmax = t0 < t1 ? t1 : t0
+    t0 = (nf[n + 1]! - oy) * idy
+    t1 = (nf[n + 5]! - oy) * idy
     tmin = Math.max(tmin, Math.min(t0, t1))
     tmax = Math.min(tmax, Math.max(t0, t1))
-    t0 = (nodeMin[n * 3 + 2]! - oz) * idz
-    t1 = (nodeMax[n * 3 + 2]! - oz) * idz
+    t0 = (nf[n + 2]! - oz) * idz
+    t1 = (nf[n + 6]! - oz) * idz
     tmin = Math.max(tmin, Math.min(t0, t1))
     tmax = Math.min(tmax, Math.max(t0, t1))
     if (tmax < Math.max(tmin, 0) || tmin > hitT) continue
-    if (nodeLeft[n]! < 0) {
-      const s = nodeStart[n]!, e = s + nodeCount[n]!
+    const meta = nu[n + 7]!
+    if (meta < INTERNAL) {
+      const s = nu[n + 3]!, e = s + meta
       for (let i = s; i < e; i++) {
         const t = order[i]!
         const b = t * 9
@@ -158,10 +103,14 @@ function intersect(ox: number, oy: number, oz: number, dx: number, dy: number, d
         if (v < 0 || u + v > 1) continue
         const d = (e2x * qx + e2y * qy + e2z * qz) * inv
         if (d > 1e-5 && d < hitT) {
-          // Rajos d'ombra: el vidre no fa ombra.
-          if (skipGlass && S!.materials[S!.matIndex[t]!]!.opacity < 1) continue
+          const m = mats[mi[t]!]!
           // Fulles retallades (alfa de la textura): on és transparent, el raig hi passa.
-          if (S!.materials[S!.matIndex[t]!]!.alphaCut > 0 && alphaAt(t, u, v) < S!.materials[S!.matIndex[t]!]!.alphaCut) continue
+          if (m.alphaCut > 0 && alphaAt(t, u, v) < m.alphaCut) continue
+          // Rajos d'ombra: el vidre no fa ombra (en deixa passar la major part).
+          if (any && m.opacity < 1) {
+            crossedGlass = true
+            continue
+          }
           hitT = d
           hitTri = t
           hitU = u
@@ -170,65 +119,83 @@ function intersect(ox: number, oy: number, oz: number, dx: number, dy: number, d
         }
       }
     } else {
-      stack[sp++] = nodeLeft[n]!
-      stack[sp++] = nodeRight[n]!
+      // El fill més proper primer (és l'últim que es posa a la pila).
+      const near = n / NODE_WORDS + 1, far = nu[n + 3]!
+      const axis = meta & 3
+      if ((axis === 0 ? dx : axis === 1 ? dy : dz) < 0) {
+        stack[sp++] = near
+        stack[sp++] = far
+      } else {
+        stack[sp++] = far
+        stack[sp++] = near
+      }
     }
   }
   return hitTri >= 0
 }
 
-// --- Materials i textures ----------------------------------------------------------------
+/** Raig d'ombra: 0 si el tapa res opac; el vidre deixa passar `GLASS_SHADOW`. */
+function visible(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, tMax: number): number {
+  if (intersect(ox, oy, oz, dx, dy, dz, tMax, true)) return 0
+  return crossedGlass ? GLASS_SHADOW : 1
+}
+
+// --- Textures ----------------------------------------------------------------------------
 const LIN = new Float32Array(256)
 for (let i = 0; i < 256; i++) {
   const c = i / 255
   LIN[i] = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
 }
-const wrap = (x: number, mode: number) => {
-  if (mode === 2) return Math.min(1, Math.max(0, x))
-  const f = x - Math.floor(x)
-  if (mode === 1 && Math.floor(x) % 2 !== 0) return 1 - f
-  return f
+/** Índex del texel amb la repetició: 0 = repeteix · 1 = mirall · 2 = vora. */
+const wrapI = (x: number, n: number, mode: number) => {
+  if (mode === 2) return x < 0 ? 0 : x >= n ? n - 1 : x
+  if (mode === 1) {
+    const m = ((x % (2 * n)) + 2 * n) % (2 * n)
+    return m < n ? m : 2 * n - 1 - m
+  }
+  return ((x % n) + n) % n
 }
-/** Alfa de la textura (0–1) al punt (u, v baricèntriques) del triangle `t`: per als retalls de les fulles. */
+/** Coordenades de textura (abans de repetir) al punt (u, v baricèntriques) del triangle `t`. */
+let tu = 0, tv = 0
+function texCoord(t: number, bu: number, bv: number) {
+  const m = S!.materials[S!.matIndex[t]!]!
+  const uv = S!.uvs, b = t * 6, w = 1 - bu - bv
+  const u0 = uv[b]! * w + uv[b + 2]! * bu + uv[b + 4]! * bv
+  const v0 = uv[b + 1]! * w + uv[b + 3]! * bu + uv[b + 5]! * bv
+  const e = m.uv
+  tu = e[0]! * u0 + e[3]! * v0 + e[6]!
+  tv = e[1]! * u0 + e[4]! * v0 + e[7]!
+}
+/** Alfa (0–1, el texel més proper) al punt del triangle `t`: per als retalls de les fulles. */
 function alphaAt(t: number, bu: number, bv: number): number {
-  const m = S!.materials[S!.matIndex[t]!]!
-  const tex = S!.textures[m.map]
+  const tex = S!.textures[S!.materials[S!.matIndex[t]!]!.map]
   if (!tex) return 1
-  const b = t * 6
-  const w = 1 - bu - bv
-  const u0 = S!.uvs[b]! * w + S!.uvs[b + 2]! * bu + S!.uvs[b + 4]! * bv
-  const v0 = S!.uvs[b + 1]! * w + S!.uvs[b + 3]! * bu + S!.uvs[b + 5]! * bv
-  const e = m.uv
-  const u = wrap(e[0]! * u0 + e[3]! * v0 + e[6]!, tex.wrapS)
-  const v = wrap(e[1]! * u0 + e[4]! * v0 + e[7]!, tex.wrapT)
-  const px = Math.min(tex.w - 1, Math.floor(u * tex.w))
-  const py = Math.min(tex.h - 1, Math.floor((tex.flipY ? 1 - v : v) * tex.h))
-  return tex.data[(py * tex.w + px) * 4 + 3]! / 255
+  texCoord(t, bu, bv)
+  const vv = tex.flipY ? 1 - tv : tv
+  const x = wrapI(Math.floor(tu * tex.w), tex.w, tex.wrapS), y = wrapI(Math.floor(vv * tex.h), tex.h, tex.wrapT)
+  return tex.data[(y * tex.w + x) * 4 + 3]! / 255
+}
+/** Color lineal bilineal de la textura `ti` a (u, v) (abans de repetir) → `tc`. */
+const tc = [0, 0, 0]
+function sampleTex(ti: number, u: number, v: number) {
+  const tex = S!.textures[ti]!
+  const vv = tex.flipY ? 1 - v : v
+  const fx = u * tex.w - 0.5, fy = vv * tex.h - 0.5
+  const x0 = Math.floor(fx), y0 = Math.floor(fy)
+  const ax = fx - x0, ay = fy - y0
+  const xa = wrapI(x0, tex.w, tex.wrapS), xb = wrapI(x0 + 1, tex.w, tex.wrapS)
+  const ya = wrapI(y0, tex.h, tex.wrapT), yb = wrapI(y0 + 1, tex.h, tex.wrapT)
+  const d = tex.data
+  const i00 = (ya * tex.w + xa) * 4, i10 = (ya * tex.w + xb) * 4, i01 = (yb * tex.w + xa) * 4, i11 = (yb * tex.w + xb) * 4
+  const w00 = (1 - ax) * (1 - ay), w10 = ax * (1 - ay), w01 = (1 - ax) * ay, w11 = ax * ay
+  for (let c = 0; c < 3; c++) tc[c] = LIN[d[i00 + c]!]! * w00 + LIN[d[i10 + c]!]! * w10 + LIN[d[i01 + c]!]! * w01 + LIN[d[i11 + c]!]! * w11
+}
+const lumTex = (ti: number, u: number, v: number) => {
+  sampleTex(ti, u, v)
+  return 0.2126 * tc[0]! + 0.7152 * tc[1]! + 0.0722 * tc[2]!
 }
 
-/** Albedo (lineal) al punt tocat. */
-const alb = [0, 0, 0]
-function albedo(t: number) {
-  const m = S!.materials[S!.matIndex[t]!]!
-  alb[0] = m.color[0]; alb[1] = m.color[1]; alb[2] = m.color[2]
-  if (m.map < 0) return m
-  const tex = S!.textures[m.map]!
-  const b = t * 6
-  const w = 1 - hitU - hitV
-  const u0 = S!.uvs[b]! * w + S!.uvs[b + 2]! * hitU + S!.uvs[b + 4]! * hitV
-  const v0 = S!.uvs[b + 1]! * w + S!.uvs[b + 3]! * hitU + S!.uvs[b + 5]! * hitV
-  const e = m.uv
-  const u = wrap(e[0]! * u0 + e[3]! * v0 + e[6]!, tex.wrapS)
-  const v = wrap(e[1]! * u0 + e[4]! * v0 + e[7]!, tex.wrapT)
-  const px = Math.min(tex.w - 1, Math.floor(u * tex.w))
-  const py = Math.min(tex.h - 1, Math.floor((tex.flipY ? 1 - v : v) * tex.h))
-  const i = (py * tex.w + px) * 4
-  alb[0] *= LIN[tex.data[i]!]!
-  alb[1] *= LIN[tex.data[i + 1]!]!
-  alb[2] *= LIN[tex.data[i + 2]!]!
-  return m
-}
-
+// --- Cel -----------------------------------------------------------------------------------
 // Cel d'estudi (lineal): clar a dalt, més fosc a baix.
 function studioSky(dy: number, out: number[]) {
   const t = Math.max(-1, Math.min(1, dy))
@@ -256,178 +223,393 @@ function daySky(dx: number, dy: number, dz: number, out: number[]) {
     out[1] = 0.64 + (0.31 - 0.64) * k
     out[2] = 0.64 + (0.26 - 0.64) * k
   }
-  const glow = Math.pow(cs, 48) * 5 + Math.pow(cs, 6) * 0.35
+  // Halo del sol ample (un de petit i molt fort faria ateses: el sol ja és a part).
+  const glow = Math.pow(cs, 16) * 1.2 + Math.pow(cs, 4) * 0.3
   out[0] += glow; out[1] += glow * 0.92; out[2] += glow * 0.78
 }
 
-/** Cel HDRI (equirectangular) girat `envRot`. */
+/** Cel HDRI (equirectangular, el píxel més proper) girat `envRot`. */
 function envSky(dx: number, dy: number, dz: number, out: number[]) {
   const e = ENV!
-  const u = (Math.atan2(dx, -dz) / (2 * Math.PI) + 0.5 + envRot) % 1
+  let u = (Math.atan2(dx, -dz) / (2 * Math.PI) + 0.5 + envRot) % 1
+  if (u < 0) u += 1
   const v = Math.acos(Math.max(-1, Math.min(1, dy))) / Math.PI
-  const x = Math.min(e.w - 1, Math.floor(((u + 1) % 1) * e.w)), y = Math.min(e.h - 1, Math.floor(v * e.h))
+  const x = Math.min(e.w - 1, Math.floor(u * e.w)), y = Math.min(e.h - 1, Math.floor(v * e.h))
   const i = (y * e.w + x) * 3
   out[0] = e.data[i]!; out[1] = e.data[i + 1]!; out[2] = e.data[i + 2]!
 }
 
+/** Llum del cel en la direcció d (amb la intensitat del cel). */
 function sky(dx: number, dy: number, dz: number, out: number[]) {
   if (ENV) envSky(dx, dy, dz, out)
   else if (S!.daylight) daySky(dx, dy, dz, out)
   else studioSky(dy, out)
+  const k = O.skyIntensity
+  out[0]! *= k; out[1]! *= k; out[2]! *= k
 }
 
-/** Raig d'ombra fins a tMax: 0 si el tapa res opac; el vidre no fa ombra (deixa passar el 88 %). */
-function transmit(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, tMax: number): number {
-  return intersect(ox, oy, oz, dx, dy, dz, tMax, true, true) ? 0 : 0.88
-}
-
-const SUN = [2.3, 2.15, 1.95]
-const env = [0, 0, 0]
-const env2 = [0, 0, 0]
-/** Llum del cel a través d'una finestra triada a l'atzar (portal): menys soroll a dins. */
-function portalLight(px: number, py: number, pz: number, nx: number, ny: number, nz: number, out: number[]): void {
-  out[0] = 0; out[1] = 0; out[2] = 0
+/** Densitat (per estereoradiant) de triar la direcció d per alguna finestra des de p. */
+function portalPdf(px: number, py: number, pz: number, dx: number, dy: number, dz: number): number {
   const P = S!.portals
   const np = P.length / 9
-  const i = Math.min(np - 1, Math.floor(random() * np)) * 9
-  const r1 = random() - 0.5, r2 = random() - 0.5
-  const qx = P[i]! + r1 * P[i + 3]! + r2 * P[i + 6]!, qy = P[i + 1]! + r1 * P[i + 4]! + r2 * P[i + 7]!, qz = P[i + 2]! + r1 * P[i + 5]! + r2 * P[i + 8]!
-  let lx = qx - px, ly = qy - py, lz = qz - pz
-  const d2 = lx * lx + ly * ly + lz * lz
-  const d = Math.sqrt(d2)
-  lx /= d; ly /= d; lz /= d
-  const cosS = nx * lx + ny * ly + nz * lz
-  if (cosS <= 0) return
-  // Normal del portal (u × v) i àrea.
-  const ux = P[i + 3]!, uy = P[i + 4]!, uz = P[i + 5]!, vx = P[i + 6]!, vy = P[i + 7]!, vz = P[i + 8]!
-  const cx = uy * vz - uz * vy, cy = uz * vx - ux * vz, cz = ux * vy - uy * vx
-  const area = Math.hypot(cx, cy, cz)
-  const cosP = Math.abs(cx * lx + cy * ly + cz * lz) / (area || 1)
-  if (cosP < 1e-3) return
-  const T = transmit(px, py, pz, lx, ly, lz, d - 0.02)
-  if (T <= 0) return
-  sky(lx, ly, lz, env2)
-  const k = (T * cosS * area * cosP * np) / (d2 * Math.PI) * O.skyIntensity
-  out[0] = env2[0]! * k; out[1] = env2[1]! * k; out[2] = env2[2]! * k
+  let pdf = 0
+  for (let i = 0; i < P.length; i += 9) {
+    const ux = P[i + 3]!, uy = P[i + 4]!, uz = P[i + 5]!, vx = P[i + 6]!, vy = P[i + 7]!, vz = P[i + 8]!
+    const cx = uy * vz - uz * vy, cy = uz * vx - ux * vz, cz = ux * vy - uy * vx
+    const area = Math.hypot(cx, cy, cz)
+    const dn = dx * cx + dy * cy + dz * cz
+    if (Math.abs(dn) < 1e-9 || area < 1e-9) continue
+    const t = ((P[i]! - px) * cx + (P[i + 1]! - py) * cy + (P[i + 2]! - pz) * cz) / dn
+    if (t <= 0) continue
+    const qx = px + dx * t - P[i]!, qy = py + dy * t - P[i + 1]!, qz = pz + dz * t - P[i + 2]!
+    const s = (qx * ux + qy * uy + qz * uz) / (ux * ux + uy * uy + uz * uz)
+    const r = (qx * vx + qy * vy + qz * vz) / (vx * vx + vy * vy + vz * vz)
+    if (Math.abs(s) > 0.5 || Math.abs(r) > 0.5) continue
+    const cos = Math.abs(dn) / area
+    pdf += (t * t) / (area * cos)
+  }
+  return pdf / np
 }
-const pl = [0, 0, 0]
+
+// --- Material del punt -------------------------------------------------------------------
+// Normal d'ombrejat (n), geomètrica (g), cap a la càmera (v), base tangent (t, b).
+let nx = 0, ny = 0, nz = 0, gx = 0, gy = 0, gz = 0, vx = 0, vy = 0, vz = 0
+let tx = 0, ty = 0, tz = 0, bx = 0, by = 0, bz = 0
+let NoV = 1
+// Paràmetres del BSDF: difús, F0, alfa² del reflex i probabilitat de triar el reflex.
+let kdR = 0, kdG = 0, kdB = 0, f0R = 0, f0G = 0, f0B = 0, A2 = 0, PS = 0
+let fr = 0, fg = 0, fb = 0
+
+function basis() {
+  const sign = nz >= 0 ? 1 : -1
+  const a = -1 / (sign + nz), b = nx * ny * a
+  tx = 1 + sign * nx * nx * a; ty = sign * b; tz = -sign * nx
+  bx = b; by = sign + ny * ny * a; bz = -ny
+}
+
+/** BSDF (→ fr, fg, fb) per a la direcció de la llum l; torna la densitat de `sampleBsdf`. */
+function evalBsdf(lx: number, ly: number, lz: number, a2: number): number {
+  const NoL = nx * lx + ny * ly + nz * lz
+  if (NoL <= 0) {
+    fr = fg = fb = 0
+    return 0
+  }
+  let hx = lx + vx, hy = ly + vy, hz = lz + vz
+  const hl = Math.hypot(hx, hy, hz) || 1
+  hx /= hl; hy /= hl; hz /= hl
+  const NoH = Math.max(0, nx * hx + ny * hy + nz * hz), VoH = Math.max(1e-4, vx * hx + vy * hy + vz * hz)
+  const dd = NoH * NoH * (a2 - 1) + 1
+  const D = a2 / (Math.PI * dd * dd)
+  const vis = 0.5 / (NoL * Math.sqrt(NoV * NoV * (1 - a2) + a2) + NoV * Math.sqrt(NoL * NoL * (1 - a2) + a2))
+  const fw = Math.pow(1 - VoH, 5)
+  const sR = f0R + (1 - f0R) * fw, sG = f0G + (1 - f0G) * fw, sB = f0B + (1 - f0B) * fw
+  const ds = D * vis
+  fr = sR * ds + (kdR * (1 - sR)) / Math.PI
+  fg = sG * ds + (kdG * (1 - sG)) / Math.PI
+  fb = sB * ds + (kdB * (1 - sB)) / Math.PI
+  return (PS * D * NoH) / (4 * VoH) + ((1 - PS) * NoL) / Math.PI
+}
+
+/** Màxims d'una mostra (relatius a la llum de l'escena, `sceneKey`). */
+let clampInd = Infinity, clampDir = Infinity
+/** Contribució d'una mostra; `k` = el rebot on es calcula (0 = llum directa). */
+let accR = 0, accG = 0, accB = 0
+function add(r: number, g: number, b: number, k: number) {
+  const l = 0.2126 * r + 0.7152 * g + 0.0722 * b
+  if (!(l > 0)) return
+  const max = k >= 1 ? clampInd : clampDir
+  const s = l > max ? max / l : 1
+  if (!Number.isFinite(s * l)) return
+  accR += r * s; accG += g * s; accB += b * s
+}
 
 /** AOV de la primera superfície (per al filtre de soroll): albedo i normal. */
 let aovA0 = 0, aovA1 = 0, aovA2 = 0, aovN0 = 0, aovN1 = 0, aovN2 = 0
 
+const env = [0, 0, 0]
+const lp = [0, 0, 0]
+
 function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, out: Float32Array, o: number) {
   let tr = 1, tg = 1, tb = 1
-  let r = 0, g = 0, b = 0
-  const sun = sunDir
-  const sky0 = O.skyIntensity
-  const portals = S!.interior && S!.portals.length > 0
+  accR = accG = accB = 0
   let alpha = 1
   let aov = false
-  let lastDiffuse = false
-  let viaGlass = false
+  // Últim punt on s'ha rebotat (per al MIS dels rajos que surten al cel).
+  let vertex = -1
+  let cpx = 0, cpy = 0, cpz = 0, cnx = 0, cny = 0, cnz = 0, lastPdf = 0
+  let delta = false
+  let pathRough = 0
+  const mats = S!.materials
   aovA0 = 1; aovA1 = 1; aovA2 = 1; aovN0 = 0; aovN1 = 0; aovN2 = 0
   for (let bounce = 0; bounce < O.bounces; bounce++) {
     if (!intersect(ox, oy, oz, dx, dy, dz, 1e9, false)) {
       if (bounce === 0) {
         // Fons: el color de l'escena i alfa 0 (fons blanc o transparent al diàleg).
-        r += S!.background[0]; g += S!.background[1]; b += S!.background[2]
+        accR += S!.background[0]; accG += S!.background[1]; accB += S!.background[2]
         alpha = 0
-      } else if (!(portals && lastDiffuse && viaGlass)) {
-        // (Si ha sortit per una finestra després d'un rebot difús, ja s'ha comptat amb el portal.)
-        sky(dx, dy, dz, env)
-        r += tr * env[0]! * sky0; g += tg * env[1]! * sky0; b += tb * env[2]! * sky0
+        break
       }
+      sky(dx, dy, dz, env)
+      let w = 1
+      if (vertex >= 0 && !delta) {
+        const pn = neeMode === 2 ? portalPdf(cpx, cpy, cpz, dx, dy, dz) : neeMode === 1 ? envPdf(CDF!, dx, dy, dz, envRot) : Math.max(0, cnx * dx + cny * dy + cnz * dz) / Math.PI
+        w = (lastPdf * lastPdf) / (lastPdf * lastPdf + pn * pn)
+      }
+      add(tr * env[0]! * w, tg * env[1]! * w, tb * env[2]! * w, Math.max(0, vertex))
       break
     }
     const t = hitTri
-    const m = albedo(t)
+    const m = mats[S!.matIndex[t]!]!
     // Normal geomètrica, girada cap al raig.
-    const k = t * 9
-    const e1x = tri[k + 3]! - tri[k]!, e1y = tri[k + 4]! - tri[k + 1]!, e1z = tri[k + 5]! - tri[k + 2]!
-    const e2x = tri[k + 6]! - tri[k]!, e2y = tri[k + 7]! - tri[k + 1]!, e2z = tri[k + 8]! - tri[k + 2]!
-    let nx = e1y * e2z - e1z * e2y, ny = e1z * e2x - e1x * e2z, nz = e1x * e2y - e1y * e2x
-    const nl = Math.hypot(nx, ny, nz) || 1
-    nx /= nl; ny /= nl; nz /= nl
-    if (nx * dx + ny * dy + nz * dz > 0) { nx = -nx; ny = -ny; nz = -nz }
-    const px = ox + dx * hitT + nx * 1e-4, py = oy + dy * hitT + ny * 1e-4, pz = oz + dz * hitT + nz * 1e-4
-    // Transparència (vidre): passa de llarg.
-    if (m.opacity < 1 && random() > m.opacity) {
-      ox = px - nx * 2e-4; oy = py - ny * 2e-4; oz = pz - nz * 2e-4
-      tr *= 0.95 * (0.5 + 0.5 * alb[0]!); tg *= 0.95 * (0.5 + 0.5 * alb[1]!); tb *= 0.95 * (0.5 + 0.5 * alb[2]!)
-      viaGlass = true
+    const k9 = t * 9
+    const e1x = tri[k9 + 3]! - tri[k9]!, e1y = tri[k9 + 4]! - tri[k9 + 1]!, e1z = tri[k9 + 5]! - tri[k9 + 2]!
+    const e2x = tri[k9 + 6]! - tri[k9]!, e2y = tri[k9 + 7]! - tri[k9 + 1]!, e2z = tri[k9 + 8]! - tri[k9 + 2]!
+    gx = e1y * e2z - e1z * e2y; gy = e1z * e2x - e1x * e2z; gz = e1x * e2y - e1y * e2x
+    const gl = Math.hypot(gx, gy, gz) || 1
+    gx /= gl; gy /= gl; gz /= gl
+    if (gx * dx + gy * dy + gz * dz > 0) { gx = -gx; gy = -gy; gz = -gz }
+    const hx = ox + dx * hitT, hy = oy + dy * hitT, hz = oz + dz * hitT
+    // Albedo (textura bilineal).
+    let ar = m.color[0], ag = m.color[1], ab = m.color[2]
+    let rough = m.roughness
+    nx = gx; ny = gy; nz = gz
+    if (m.map >= 0) {
+      texCoord(t, hitU, hitV)
+      const u = tu, v = tv
+      sampleTex(m.map, u, v)
+      ar *= tc[0]!; ag *= tc[1]!; ab *= tc[2]!
+      if (m.bump > 0) {
+        // Veta: relleu (gradient de la luminància) i les parts fosques, més mates.
+        const tex = S!.textures[m.map]!
+        const l0 = 0.2126 * tc[0]! + 0.7152 * tc[1]! + 0.0722 * tc[2]!
+        const gu = lumTex(m.map, u + 1 / tex.w, v) - l0, gv = lumTex(m.map, u, v + 1 / tex.h) - l0
+        const avg = Math.max(0.02, tex.lum)
+        rough = Math.min(1, Math.max(0.05, rough * (1 + (0.5 * (avg - l0)) / avg)))
+        // Direccions de u i v a la superfície (dP/du, dP/dv).
+        const uv = S!.uvs, b6 = t * 6, e = m.uv
+        const U = (i: number) => e[0]! * uv[b6 + i * 2]! + e[3]! * uv[b6 + i * 2 + 1]! + e[6]!
+        const V = (i: number) => e[1]! * uv[b6 + i * 2]! + e[4]! * uv[b6 + i * 2 + 1]! + e[7]!
+        const du1 = U(1) - U(0), dv1 = V(1) - V(0), du2 = U(2) - U(0), dv2 = V(2) - V(0)
+        const det = du1 * dv2 - du2 * dv1
+        if (Math.abs(det) > 1e-12) {
+          const r = 1 / det
+          let Tx = (e1x * dv2 - e2x * dv1) * r, Ty = (e1y * dv2 - e2y * dv1) * r, Tz = (e1z * dv2 - e2z * dv1) * r
+          let Bx = (e2x * du1 - e1x * du2) * r, By = (e2y * du1 - e1y * du2) * r, Bz = (e2z * du1 - e1z * du2) * r
+          const tl = Math.hypot(Tx, Ty, Tz) || 1, bl = Math.hypot(Bx, By, Bz) || 1
+          Tx /= tl; Ty /= tl; Tz /= tl; Bx /= bl; By /= bl; Bz /= bl
+          const s = BUMP_STRENGTH * m.bump
+          nx -= s * (gu * Tx + gv * Bx); ny -= s * (gu * Ty + gv * By); nz -= s * (gu * Tz + gv * Bz)
+          const nl = Math.hypot(nx, ny, nz) || 1
+          nx /= nl; ny /= nl; nz /= nl
+        }
+      }
+    }
+    // Arestes arrodonides dels taulers: al sistema de la malla.
+    const bi = S!.triBevel[t]!
+    if (bi >= 0) {
+      const B = S!.bevel, q = bi * 20
+      const lx = B[q]! * hx + B[q + 1]! * hy + B[q + 2]! * hz + B[q + 3]!
+      const ly = B[q + 4]! * hx + B[q + 5]! * hy + B[q + 6]! * hz + B[q + 7]!
+      const lz = B[q + 8]! * hx + B[q + 9]! * hy + B[q + 10]! * hz + B[q + 11]!
+      let mx = B[q]! * nx + B[q + 1]! * ny + B[q + 2]! * nz
+      let my = B[q + 4]! * nx + B[q + 5]! * ny + B[q + 6]! * nz
+      let mz = B[q + 8]! * nx + B[q + 9]! * ny + B[q + 10]! * nz
+      const ml = Math.hypot(mx, my, mz) || 1
+      mx /= ml; my /= ml; mz /= ml
+      const r = bevelNormal([lx, ly, lz], [mx, my, mz], [B[q + 12]!, B[q + 13]!, B[q + 14]!], [B[q + 16]!, B[q + 17]!, B[q + 18]!], B[q + 15]!)
+      const wx = B[q]! * r[0] + B[q + 4]! * r[1] + B[q + 8]! * r[2]
+      const wy = B[q + 1]! * r[0] + B[q + 5]! * r[1] + B[q + 9]! * r[2]
+      const wz = B[q + 2]! * r[0] + B[q + 6]! * r[1] + B[q + 10]! * r[2]
+      const wl = Math.hypot(wx, wy, wz) || 1
+      nx = wx / wl; ny = wy / wl; nz = wz / wl
+    }
+    vx = -dx; vy = -dy; vz = -dz
+    // La normal d'ombrejat no pot mirar d'esquena a la càmera.
+    NoV = nx * vx + ny * vy + nz * vz
+    if (NoV < 0.05) {
+      const k = 0.05 - NoV
+      nx += vx * k; ny += vy * k; nz += vz * k
+      const nl = Math.hypot(nx, ny, nz) || 1
+      nx /= nl; ny /= nl; nz /= nl
+      NoV = Math.max(1e-3, nx * vx + ny * vy + nz * vz)
+    }
+    // Vidre fi: reflex (Fresnel) o passa recte amb el to del vidre.
+    if (m.opacity < 1) {
+      const c = Math.abs(dx * gx + dy * gy + dz * gz)
+      const F = 0.04 + 0.96 * Math.pow(1 - c, 5)
+      if (random() < F) {
+        const dot = dx * gx + dy * gy + dz * gz
+        dx -= 2 * dot * gx; dy -= 2 * dot * gy; dz -= 2 * dot * gz
+        ox = hx + gx * 1e-4; oy = hy + gy * 1e-4; oz = hz + gz * 1e-4
+        delta = true
+      } else {
+        ox = hx - gx * 1e-4; oy = hy - gy * 1e-4; oz = hz - gz * 1e-4
+        tr *= 1 - m.opacity * (1 - ar); tg *= 1 - m.opacity * (1 - ag); tb *= 1 - m.opacity * (1 - ab)
+      }
       continue
     }
     if (!aov) {
       aov = true
-      aovA0 = alb[0]!; aovA1 = alb[1]!; aovA2 = alb[2]!
+      aovA0 = ar; aovA1 = ag; aovA2 = ab
       aovN0 = nx; aovN1 = ny; aovN2 = nz
     }
-    viaGlass = false
-    const metal = m.metalness > 0.5
-    const specP = metal ? 1 : 0.04 + 0.1 * (1 - m.roughness)
-    if (random() < specP) {
-      // Reflex: mirall pertorbat per la rugositat.
-      const dot = dx * nx + dy * ny + dz * nz
-      let rx = dx - 2 * dot * nx, ry = dy - 2 * dot * ny, rz = dz - 2 * dot * nz
-      const rough = m.roughness * m.roughness
-      rx += (random() * 2 - 1) * rough; ry += (random() * 2 - 1) * rough; rz += (random() * 2 - 1) * rough
-      const rl = Math.hypot(rx, ry, rz) || 1
-      dx = rx / rl; dy = ry / rl; dz = rz / rl
-      if (dx * nx + dy * ny + dz * nz <= 0) break
-      if (metal) { tr *= alb[0]!; tg *= alb[1]!; tb *= alb[2]! }
-      ox = px; oy = py; oz = pz
-      lastDiffuse = false
-      continue
+    vertex++
+    delta = false
+    const px = hx + gx * 1e-4, py = hy + gy * 1e-4, pz = hz + gz * 1e-4
+    // BSDF: difús + GGX (metall: només reflex amb el color).
+    const metal = Math.min(1, Math.max(0, m.metalness))
+    kdR = ar * (1 - metal); kdG = ag * (1 - metal); kdB = ab * (1 - metal)
+    f0R = 0.04 + (ar - 0.04) * metal; f0G = 0.04 + (ag - 0.04) * metal; f0B = 0.04 + (ab - 0.04) * metal
+    const re = vertex > 0 ? Math.max(rough, pathRough) : rough
+    A2 = Math.max(1e-4, re * re * re * re)
+    {
+      const fw = Math.pow(1 - NoV, 5)
+      const ws = (0.2126 * f0R + 0.7152 * f0G + 0.0722 * f0B) * (1 - fw) + fw
+      const wd = (0.2126 * kdR + 0.7152 * kdG + 0.0722 * kdB) * (1 - ws)
+      PS = wd < 1e-4 ? 1 : Math.min(0.95, Math.max(0.05, ws / (ws + wd)))
     }
-    // Difús: llum directa del sol (ombra suau: el sol té una mica de mida) i rebot cosinus.
-    const ar = alb[0]!, ag = alb[1]!, ab = alb[2]!
-    const jx = sun[0] + (random() - 0.5) * jitter, jy = sun[1] + (random() - 0.5) * jitter, jz = sun[2] + (random() - 0.5) * jitter
-    const jl = Math.hypot(jx, jy, jz)
-    const sx = jx / jl, sy = jy / jl, sz = jz / jl
-    const cos = nx * sx + ny * sy + nz * sz
-    if (cos > 0) {
-      // El sol també entra per les finestres (el vidre en deixa passar gairebé tota la llum).
-      const T = portals ? transmit(px, py, pz, sx, sy, sz, 1e9) : intersect(px, py, pz, sx, sy, sz, 1e9, true) ? 0 : 1
-      if (T > 0) {
-        r += tr * ar * sunCol[0] * cos * T / Math.PI
-        g += tg * ag * sunCol[1] * cos * T / Math.PI
-        b += tb * ab * sunCol[2] * cos * T / Math.PI
+    basis()
+
+    // Sol (disc amb mida: ombres suaus). El reflex s'eixampla amb la mida del sol.
+    {
+      const u1 = random(), u2 = random()
+      const ct = 1 - u1 * (1 - sunCosMax), st = Math.sqrt(Math.max(0, 1 - ct * ct)), ph = 2 * Math.PI * u2
+      const s0 = sunDir[0], s1 = sunDir[1], s2 = sunDir[2]
+      const sg = s2 >= 0 ? 1 : -1
+      const a = -1 / (sg + s2), b = s0 * s1 * a
+      const ux = 1 + sg * s0 * s0 * a, uy = sg * b, uz = -sg * s0
+      const wx = b, wy = sg + s1 * s1 * a, wz = -s1
+      const cp = Math.cos(ph) * st, sp = Math.sin(ph) * st
+      const lx = ux * cp + wx * sp + s0 * ct, ly = uy * cp + wy * sp + s1 * ct, lz = uz * cp + wz * sp + s2 * ct
+      if (lx * gx + ly * gy + lz * gz > 0) {
+        const NoL = nx * lx + ny * ly + nz * lz
+        if (NoL > 0) {
+          evalBsdf(lx, ly, lz, A2 + sunA2)
+          if (fr + fg + fb > 0) {
+            const T = visible(px, py, pz, lx, ly, lz, 1e9)
+            if (T > 0) add(tr * fr * sunCol[0] * NoL * T, tg * fg * sunCol[1] * NoL * T, tb * fb * sunCol[2] * NoL * T, vertex)
+          }
+        }
       }
     }
-    if (portals) {
-      portalLight(px, py, pz, nx, ny, nz, pl)
-      r += tr * ar * pl[0]!; g += tg * ag * pl[1]!; b += tb * ab * pl[2]!
+    // Cel: mostra directa (per les finestres, l'HDRI o cosinus) amb MIS.
+    {
+      let lx = 0, ly = 0, lz = 0, pl = 0
+      if (neeMode === 2) {
+        const P = S!.portals, np = P.length / 9
+        const i = Math.min(np - 1, Math.floor(random() * np)) * 9
+        const r1 = random() - 0.5, r2 = random() - 0.5
+        lx = P[i]! + r1 * P[i + 3]! + r2 * P[i + 6]! - px
+        ly = P[i + 1]! + r1 * P[i + 4]! + r2 * P[i + 7]! - py
+        lz = P[i + 2]! + r1 * P[i + 5]! + r2 * P[i + 8]! - pz
+        const d = Math.hypot(lx, ly, lz) || 1
+        lx /= d; ly /= d; lz /= d
+        pl = portalPdf(px, py, pz, lx, ly, lz)
+      } else if (neeMode === 1) {
+        const s = sampleEnv(CDF!, random(), random(), envRot)
+        lx = s[0]; ly = s[1]; lz = s[2]; pl = s[3]
+      } else {
+        const u1 = random(), u2 = random()
+        const rr = Math.sqrt(u1), ph = 2 * Math.PI * u2
+        const a = rr * Math.cos(ph), b = rr * Math.sin(ph), c = Math.sqrt(1 - u1)
+        lx = tx * a + bx * b + nx * c; ly = ty * a + by * b + ny * c; lz = tz * a + bz * b + nz * c
+        pl = c / Math.PI
+      }
+      if (pl > 0 && lx * gx + ly * gy + lz * gz > 0) {
+        const pb = evalBsdf(lx, ly, lz, A2)
+        const NoL = nx * lx + ny * ly + nz * lz
+        if (NoL > 0 && fr + fg + fb > 0) {
+          const T = visible(px, py, pz, lx, ly, lz, 1e9)
+          if (T > 0) {
+            sky(lx, ly, lz, lp)
+            const w = (pl * T * NoL) / (pl * pl + pb * pb)
+            add(tr * fr * lp[0]! * w, tg * fg * lp[1]! * w, tb * fb * lp[2]! * w, vertex)
+          }
+        }
+      }
     }
-    lastDiffuse = true
-    tr *= ar; tg *= ag; tb *= ab
-    // Rebot cosinus.
-    const u1 = random(), u2 = random()
-    const rr = Math.sqrt(u1), phi = 2 * Math.PI * u2
-    const lx = rr * Math.cos(phi), ly = rr * Math.sin(phi), lz = Math.sqrt(1 - u1)
-    // Base ortonormal al voltant de n.
-    const ax = Math.abs(nx) > 0.9 ? 0 : 1, ay = Math.abs(nx) > 0.9 ? 1 : 0
-    let tx = ay * nz, ty = -ax * nz, tz = ax * ny - ay * nx
-    const tl = Math.hypot(tx, ty, tz) || 1
-    tx /= tl; ty /= tl; tz /= tl
-    const bx = ny * tz - nz * ty, by = nz * tx - nx * tz, bz = nx * ty - ny * tx
-    dx = tx * lx + bx * ly + nx * lz
-    dy = ty * lx + by * ly + ny * lz
-    dz = tz * lx + bz * ly + nz * lz
+    // Rebot: reflex GGX o difús (cosinus), segons PS.
+    let lx: number, ly: number, lz: number
+    const spec = random() < PS
+    if (spec) {
+      const u1 = random(), u2 = random()
+      const ph = 2 * Math.PI * u1
+      const ct = Math.sqrt((1 - u2) / (1 + (A2 - 1) * u2)), st = Math.sqrt(Math.max(0, 1 - ct * ct))
+      const hx2 = tx * Math.cos(ph) * st + bx * Math.sin(ph) * st + nx * ct
+      const hy2 = ty * Math.cos(ph) * st + by * Math.sin(ph) * st + ny * ct
+      const hz2 = tz * Math.cos(ph) * st + bz * Math.sin(ph) * st + nz * ct
+      const vh = vx * hx2 + vy * hy2 + vz * hz2
+      lx = 2 * vh * hx2 - vx; ly = 2 * vh * hy2 - vy; lz = 2 * vh * hz2 - vz
+    } else {
+      const u1 = random(), u2 = random()
+      const rr = Math.sqrt(u1), ph = 2 * Math.PI * u2
+      const a = rr * Math.cos(ph), b = rr * Math.sin(ph), c = Math.sqrt(1 - u1)
+      lx = tx * a + bx * b + nx * c; ly = ty * a + by * b + ny * c; lz = tz * a + bz * b + nz * c
+    }
+    if (lx * gx + ly * gy + lz * gz <= 0) break
+    const pdf = evalBsdf(lx, ly, lz, A2)
+    const NoL = nx * lx + ny * ly + nz * lz
+    if (!(pdf > 1e-8) || NoL <= 0) break
+    tr *= (fr * NoL) / pdf; tg *= (fg * NoL) / pdf; tb *= (fb * NoL) / pdf
+    pathRough = Math.max(pathRough, spec ? re * 0.5 : PATH_ROUGHNESS)
+    cpx = px; cpy = py; cpz = pz; cnx = nx; cny = ny; cnz = nz; lastPdf = pdf
+    dx = lx; dy = ly; dz = lz
     ox = px; oy = py; oz = pz
     // Ruleta russa.
     if (bounce >= 2) {
-      const pmax = Math.max(tr, tg, tb)
+      const pmax = Math.min(0.95, Math.max(tr, tg, tb))
       if (random() > pmax) break
       tr /= pmax; tg /= pmax; tb /= pmax
     }
   }
-  // Sense «ateses» (fireflies): una mostra no pot valer més de 12.
-  const mx = Math.max(r, g, b)
-  if (mx > 12) { const k = 12 / mx; r *= k; g *= k; b *= k }
-  out[o] = r
-  out[o + 1] = g
-  out[o + 2] = b
+  out[o] = accR
+  out[o + 1] = accG
+  out[o + 2] = accB
   out[o + 3] = alpha
+}
+
+/**
+ * Llum típica de l'escena (mitjana geomètrica de la luminància d'una quadrícula de 32 × 24 rajos
+ * sense màxims, amb una llavor fixa: dona el mateix a tots els workers i a la GPU). Els màxims
+ * de les ateses en són múltiples: en una habitació fosca, també són més baixos.
+ */
+function sceneKey(): number {
+  const keepRng = rng, keepI = clampInd, keepD = clampDir
+  rng = 0x2545f491
+  clampInd = clampDir = Infinity
+  const c = S!.camera, m = c.matrix
+  const out = new Float32Array(4)
+  let sum = 0, n = 0
+  const GX = 32, GY = 24, SPP = 4
+  for (let gy = 0; gy < GY; gy++)
+    for (let gx = 0; gx < GX; gx++) {
+      let l = 0, hit = 0
+      for (let s = 0; s < SPP; s++) {
+        const nxp = ((gx + random()) / GX) * 2 - 1, nyp = 1 - ((gy + random()) / GY) * 2
+        const lx = nxp * c.scale * c.aspect, ly = nyp * c.scale
+        let ox = m[12]!, oy = m[13]!, oz = m[14]!, dx: number, dy: number, dz: number
+        if (c.ortho) {
+          ox += m[0]! * lx + m[4]! * ly; oy += m[1]! * lx + m[5]! * ly; oz += m[2]! * lx + m[6]! * ly
+          dx = -m[8]!; dy = -m[9]!; dz = -m[10]!
+        } else {
+          dx = m[0]! * lx + m[4]! * ly - m[8]!; dy = m[1]! * lx + m[5]! * ly - m[9]!; dz = m[2]! * lx + m[6]! * ly - m[10]!
+          const q = Math.hypot(dx, dy, dz)
+          dx /= q; dy /= q; dz /= q
+        }
+        trace(ox, oy, oz, dx, dy, dz, out, 0)
+        if (out[3]! > 0) {
+          l += 0.2126 * out[0]! + 0.7152 * out[1]! + 0.0722 * out[2]!
+          hit++
+        }
+      }
+      if (!hit) continue
+      sum += Math.log(1e-3 + l / hit)
+      n++
+    }
+  rng = keepRng
+  clampInd = keepI
+  clampDir = keepD
+  return n ? Math.max(0.01, Math.exp(sum / n)) : 0.3
 }
 
 let focus = 0
@@ -496,20 +678,33 @@ self.onmessage = (e: MessageEvent<Msg>) => {
   H = msg.height
   rng = msg.seed | 1
   O = msg.opts
-  const az = (O.sunAzimuth * Math.PI) / 180, el = (O.sunElevation * Math.PI) / 180
-  sunDir = [Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az)]
-  // De dia (ambients) el sol és unes tres vegades més fort que el cel, com a fora.
-  const sunK = O.sunIntensity * (S.daylight ? 3 : 1)
-  sunCol = [SUN[0]! * sunK, SUN[1]! * sunK, SUN[2]! * sunK]
-  jitter = 0.01 + O.softness * 0.35
+  const L = lightSetup(S, O, msg.env ?? null)
+  sunDir = L.sunDir
+  sunCol = L.sunCol
+  sunCosMax = L.sunCosMax
+  sunA2 = L.sunA2
+  neeMode = L.neeMode
   ENV = msg.env ?? null
+  CDF = ENV ? buildEnvCdf(ENV) : null
   envRot = (O.envRotation ?? 0) / 360
-  buildBVH(S.positions)
+  tri = S.positions
+  triCount = tri.length / 9
+  const bvh = buildBvh(tri)
+  nf = bvh.f32
+  nu = bvh.u32
+  order = bvh.order
   // Enfocament: la distància del centre de la imatge.
   {
     const m = S.camera.matrix
     focus = intersect(m[12]!, m[13]!, m[14]!, -m[8]!, -m[9]!, -m[10]!, 1e9, false) ? hitT : 0
   }
+  const key = sceneKey()
+  if (msg.type === "estimate") {
+    ;(self as unknown as Worker).postMessage({ type: "estimate", key })
+    return
+  }
+  clampInd = INDIRECT_CLAMP * key
+  clampDir = DIRECT_CLAMP * key
   running = true
   loop()
 }

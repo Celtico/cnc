@@ -25,12 +25,17 @@ function faceTexture(base: Texture, uMm: number, vMm: number, rotate: boolean, t
 }
 
 function makeMaterial(finish: FinishSpec, uMm: number, vMm: number, rotate: boolean, opts: { transparent: boolean; opacity: number }): MeshStandardMaterial {
+  // `userData.grain`: el render fa relleu i brillantor variable amb la veta (`sceneData`).
   if (finish.kind === "wood") {
-    return new MeshStandardMaterial({ map: faceTexture(woodTexture(finish.species, finish.gen), uMm, vMm, rotate, woodGenOf(finish.species, finish.gen).tileMm), roughness: 0.7, metalness: 0, ...opts })
+    const m = new MeshStandardMaterial({ map: faceTexture(woodTexture(finish.species, finish.gen), uMm, vMm, rotate, woodGenOf(finish.species, finish.gen).tileMm), roughness: 0.7, metalness: 0, ...opts })
+    m.userData.grain = true
+    return m
   }
   // Foto real del tauler: la mateixa escala que al tauler de debò (tileMm = amplada de la foto).
   if (finish.kind === "image") {
-    return new MeshStandardMaterial({ map: faceTexture(photoTexture(finish.src, finish.seamless), uMm, vMm, rotate, finish.tileMm, finish.aspect), roughness: 0.7, metalness: 0, ...opts })
+    const m = new MeshStandardMaterial({ map: faceTexture(photoTexture(finish.src, finish.seamless), uMm, vMm, rotate, finish.tileMm, finish.aspect), roughness: 0.7, metalness: 0, ...opts })
+    m.userData.grain = true
+    return m
   }
   if (finish.kind === "pattern") {
     return new MeshStandardMaterial({ map: faceTexture(patternTexture(finish.pattern, finish.color, finish.grout, finish.opts), uMm, vMm, false, finish.tileMm), roughness: finish.roughness, metalness: finish.metalness ?? 0, ...opts })

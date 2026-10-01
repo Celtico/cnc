@@ -1,4 +1,5 @@
-import { BoxGeometry, Camera, Mesh, MeshStandardMaterial, MirroredRepeatWrapping, OrthographicCamera, PerspectiveCamera, RepeatWrapping, Vector3, type BufferGeometry, type Object3D, type Scene, type Texture } from "three"
+import { BoxGeometry, Camera, Matrix4, Mesh, MeshStandardMaterial, MirroredRepeatWrapping, OrthographicCamera, PerspectiveCamera, RepeatWrapping, Vector3, type BufferGeometry, type Object3D, type Scene, type Texture } from "three"
+import { BEVEL_RADIUS } from "./shading"
 
 /**
  * Escena en dades planes per al render per CPU (`pathWorker`): triangles en coordenades del
@@ -14,6 +15,8 @@ export interface RenderTexture {
   wrapS: number
   wrapT: number
   flipY: boolean
+  /** Luminància lineal mitjana (per a la variació de rugositat de la veta). */
+  lum: number
 }
 export interface RenderMaterial {
   color: [number, number, number]
@@ -25,6 +28,8 @@ export interface RenderMaterial {
   opacity: number
   /** Retall per l'alfa de la textura (fulles dels models 3D): els punts amb alfa per sota no hi són. 0 = cap. */
   alphaCut: number
+  /** Relleu i brillantor variable segons la textura (fusta i fotos de tauler): 0 = no, 1 = normal. */
+  bump: number
 }
 export interface RenderCamera {
   ortho: boolean
@@ -38,6 +43,13 @@ export interface RenderScene {
   positions: Float32Array
   uvs: Float32Array
   matIndex: Uint16Array
+  /** Malla de cada triangle per a les arestes arrodonides (`bevel`), o −1. */
+  triBevel: Int32Array
+  /**
+   * Malles amb arestes arrodonides (els taulers dels mobles), 20 per malla: matriu món → local
+   * (3 files de 4), mínim de la caixa local i radi (local), màxim i un buit.
+   */
+  bevel: Float32Array
   materials: RenderMaterial[]
   textures: RenderTexture[]
   camera: RenderCamera
@@ -83,6 +95,13 @@ export const DEFAULT_RENDER_OPTS: RenderOpts = { bounces: 6, sunAzimuth: 40, sun
 
 const MAX_TEX = 512
 
+/** sRGB (byte) → lineal. */
+const LIN = new Float32Array(256)
+for (let i = 0; i < 256; i++) {
+  const c = i / 255
+  LIN[i] = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+}
+
 function visibleChain(o: Object3D): boolean {
   for (let p: Object3D | null = o; p; p = p.parent) if (!p.visible) return false
   return true
@@ -101,6 +120,8 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
   const matIds = new Map<MeshStandardMaterial, number>()
   const textures: RenderTexture[] = []
   const texIds = new Map<string, number>()
+  const triBevel: number[] = []
+  const bevel: number[] = []
 
   const texId = (t: Texture): number => {
     const key = t.source.uuid
@@ -115,7 +136,10 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
     const g = c.getContext("2d", { willReadFrequently: true })!
     g.drawImage(img, 0, 0, c.width, c.height)
     const wrap = (w: number) => (w === RepeatWrapping ? 0 : w === MirroredRepeatWrapping ? 1 : 2)
-    textures.push({ w: c.width, h: c.height, data: g.getImageData(0, 0, c.width, c.height).data, wrapS: wrap(t.wrapS), wrapT: wrap(t.wrapT), flipY: t.flipY })
+    const data = g.getImageData(0, 0, c.width, c.height).data
+    let lum = 0
+    for (let i = 0; i < data.length; i += 4) lum += 0.2126 * LIN[data[i]!]! + 0.7152 * LIN[data[i + 1]!]! + 0.0722 * LIN[data[i + 2]!]!
+    textures.push({ w: c.width, h: c.height, data, wrapS: wrap(t.wrapS), wrapT: wrap(t.wrapT), flipY: t.flipY, lum: lum / Math.max(1, data.length / 4) })
     texIds.set(key, textures.length - 1)
     return textures.length - 1
   }
@@ -138,6 +162,7 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
       metalness: m.metalness,
       opacity: m.userData.glass ? m.opacity : 1,
       alphaCut: map >= 0 ? ((m.userData.alphaCut as number | undefined) ?? 0) : 0,
+      bump: map >= 0 && m.userData.grain ? 1 : 0,
     })
     matIds.set(m, materials.length - 1)
     return materials.length - 1
@@ -147,15 +172,8 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
   const camPos = new Vector3().setFromMatrixPosition(camera.matrixWorld)
   const portals: number[] = []
   let interior = false
-  scene.traverse((o) => {
-    const mesh = o as Mesh
-    if (!mesh.isMesh) return
-    // Només per al render (el sostre dels ambients): si la càmera és a sota, és un interior.
-    const renderOnly = mesh.userData.renderOnly === "ceiling"
-    if (renderOnly) {
-      if (room !== "room" || camPos.y >= mesh.getWorldPosition(new Vector3()).y - 0.05) return
-      interior = true
-    } else if (!visibleChain(mesh)) return
+  const ceilings: Mesh[] = []
+  const addMesh = (mesh: Mesh) => {
     if (mesh.userData.portal && visibleChain(mesh)) {
       const g = mesh.geometry as BoxGeometry
       const { width = 1, height = 1 } = g.parameters ?? {}
@@ -178,6 +196,17 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
     if (!p) return
     const uv = geo.getAttribute("uv")
     const index = geo.getIndex()
+    // Arestes arrodonides: la caixa local de la malla i la matriu per passar-hi del món.
+    let bevelId = -1
+    if (mesh.userData.bevel) {
+      if (!geo.boundingBox) geo.computeBoundingBox()
+      const bb = geo.boundingBox!
+      const inv = new Matrix4().copy(mesh.matrixWorld).invert().elements
+      // Radi en unitats locals (si la malla té escala).
+      const k = Math.hypot(inv[0]!, inv[4]!, inv[8]!) || 1
+      bevelId = bevel.length / 20
+      bevel.push(inv[0]!, inv[4]!, inv[8]!, inv[12]!, inv[1]!, inv[5]!, inv[9]!, inv[13]!, inv[2]!, inv[6]!, inv[10]!, inv[14]!, bb.min.x, bb.min.y, bb.min.z, BEVEL_RADIUS * k, bb.max.x, bb.max.y, bb.max.z, 0)
+    }
     const count = index ? index.count : p.count
     const groups = geo.groups.length ? geo.groups : [{ start: 0, count, materialIndex: 0 }]
     for (const gr of groups) {
@@ -194,9 +223,26 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
           uvs.push(uv ? uv.getX(vi) : 0, uv ? uv.getY(vi) : 0)
         }
         mats.push(id)
+        triBevel.push(bevelId)
       }
     }
+  }
+  scene.traverse((o) => {
+    const mesh = o as Mesh
+    if (!mesh.isMesh) return
+    // Només per al render (el sostre dels ambients): si la càmera és a sota, és un interior.
+    if (mesh.userData.renderOnly === "ceiling") {
+      if (room === "room" && camPos.y < mesh.getWorldPosition(new Vector3()).y - 0.05) ceilings.push(mesh)
+      return
+    }
+    if (visibleChain(mesh)) addMesh(mesh)
   })
+  // El sostre només si la llum hi pot entrar per alguna finestra: una habitació tancada sense
+  // finestres sortiria negra (llavors es fa sense sostre, amb la llum del cel de dalt).
+  if (ceilings.length && portals.length) {
+    interior = true
+    for (const m of ceilings) addMesh(m)
+  }
 
   const persp = camera as PerspectiveCamera
   const ortho = camera as OrthographicCamera
@@ -210,6 +256,8 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
     positions: new Float32Array(pos),
     uvs: new Float32Array(uvs),
     matIndex: new Uint16Array(mats),
+    triBevel: new Int32Array(triBevel),
+    bevel: new Float32Array(bevel),
     materials,
     textures,
     camera: cam,
