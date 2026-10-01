@@ -291,7 +291,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Esborrar l'historial** (`projects/ClearHistory.tsx`, el mateix a Mobles, Objectes i Ambients): a dalt de
   l'historial, amb confirmació. A Mobles i Objectes es conserven els que són en algun ambient; a Ambients
   s'esborren els ambients (els seus mobles es queden). Respecta la cerca.
-- **Escenes de revista** (`MAG_SCENES` a `ambientTemplates.ts`, primer al catàleg): 14 habitacions fetes
+- **Escenes amb plantes de debò** (`PLANT_SCENES`, les primeres del catàleg): Jardí amb xicranda, Terrassa entre avets, Saló de falgueres i Rebedor verd (models 3D, `F(id)` = `object:object-model-<id>`).
+- **Escenes de revista** (`MAG_SCENES` a `ambientTemplates.ts`): 14 habitacions fetes
   a partir de fotos d'interiors (saló d'estuc, golfes, rebedor, pati amb cuina exterior, saló amb kilim,
   terrassa, cuines verd fosc / illa negra / greige / roure, menjador de pedra, vestidor, lliteres, menjador
   amb cortines). La plantilla pot dur `height`, `walls` (material per costat), `low` (ampits), `open`

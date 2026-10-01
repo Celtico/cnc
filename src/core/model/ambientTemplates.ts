@@ -439,7 +439,108 @@ const MAG_SCENES: AmbientTemplate[] = [
   },
 ]
 
+/**
+ * Escenes amb les plantes de debò (models 3D de Poly Haven: falgueres, xicranda i avet), primer al catàleg.
+ * Exteriors oberts per a l'arbre; interiors verds amb falgueres en test.
+ */
+const F = (id: string) => O(`model-${id}`)
+const PLANT_SCENES: AmbientTemplate[] = [
+  {
+    id: "amb-plant-jacaranda",
+    category: "exterior",
+    name: "Jardí amb xicranda",
+    description: "10 × 8 m obert per davant i per un costat · rajola de fang: xicranda al mig, taula de pedra amb sis cadires de roure a l'ombra, banc d'obra i falgueres al peu de la paret de pedra.",
+    w: 10000,
+    d: 8000,
+    height: 2400,
+    floor: "Rajola de fang 300",
+    wall: "Pedra de paret",
+    open: ["S", "E"],
+    items: [
+      { ref: F("jacaranda"), x: 5600, y: 4100 },
+      { ref: O("stone-table"), x: 5600, y: 4300 },
+      ...chairsAround(5600, 4300, 2200, 1000, 3, "Cadires", O("chair-oak")),
+      { ref: O("bench-builtin"), wall: "W", at: 4000 },
+      { ref: F("fern-02-b"), wall: "N", at: 1300, gap: 100, group: "Falgueres" },
+      { ref: F("fern-02-c"), wall: "N", at: 2400, gap: 150, group: "Falgueres" },
+      { ref: F("fern-02-a"), wall: "N", at: 3300, gap: 100, group: "Falgueres" },
+      { ref: F("fern-02-b"), wall: "N", at: 8200, gap: 100, group: "Falgueres" },
+      { ref: F("fern-02-d"), wall: "N", at: 9200, gap: 100, group: "Falgueres" },
+      { ref: F("fern-pot"), wall: "W", at: 1200, gap: 150 },
+      { ref: F("fern-pot"), wall: "W", at: 6800, gap: 150 },
+      { ref: O("rug-jute"), x: 1700, y: 4000, rot: 90 },
+    ],
+  },
+  {
+    id: "amb-plant-firs",
+    category: "exterior",
+    name: "Terrassa entre avets",
+    description: "8 × 5 m · fusta rentada i ampit baix: tres avets al fons, daybed amb coixins, taula baixa negra, pufs i falgueres en test als racons.",
+    w: 8000,
+    d: 5000,
+    height: 2600,
+    floor: "Fusta rentada",
+    wall: "Estuc gris clar",
+    low: { E: 900, S: 900 },
+    open: ["W"],
+    items: [
+      { ref: F("fir-01"), wall: "N", at: 1300, gap: 150, group: "Avets" },
+      { ref: F("fir-01"), wall: "N", at: 4000, gap: 400, group: "Avets" },
+      { ref: F("fir-01"), wall: "N", at: 6700, gap: 150, group: "Avets" },
+      { ref: O("daybed"), wall: "S", at: 4000, gap: 200 },
+      { ref: O("low-table-black"), x: 4000, y: 2600 },
+      { ref: O("pouf"), x: 2700, y: 2500 },
+      { ref: O("pouf-bean"), x: 5300, y: 2600 },
+      { ref: F("fern-pot"), wall: "E", at: 600, gap: 100 },
+      { ref: F("fern-pot"), wall: "E", at: 4400, gap: 100 },
+      { ref: F("fern-02-c"), wall: "S", at: 900, gap: 100 },
+      { ref: O("rug-round"), x: 4000, y: 2600 },
+    ],
+  },
+  {
+    id: "amb-plant-living",
+    category: "salo",
+    name: "Saló de falgueres",
+    description: "6 × 4,8 m · parquet de roure i parets verd sàlvia: sofà de lli, taula de centre cub, butaca de teixit, catifa rodona i falgueres en test al costat de la vidriera.",
+    w: 6000,
+    d: 4800,
+    floor: "Parquet de roure",
+    wall: "Pintura verd sàlvia",
+    openings: [{ side: "E", kind: "glazing", at: 2400, w: 2600, h: 2300, sill: 0, panes: 3 }],
+    items: [
+      { ref: O("rug-round"), x: 2700, y: 2500 },
+      { ref: O("sofa-linen"), wall: "W", at: 2400, gap: 150 },
+      { ref: O("cube-walnut"), x: 2700, y: 2400 },
+      { ref: O("armchair-grey"), x: 3900, y: 1300, rot: 220 },
+      { ref: F("fern-pot"), wall: "E", at: 700, gap: 150, group: "Falgueres" },
+      { ref: F("fern-pot"), wall: "E", at: 4100, gap: 150, group: "Falgueres" },
+      { ref: F("fern-02-a"), wall: "N", at: 5300, gap: 100, group: "Falgueres" },
+      { ref: O("floor-lamp-arc"), wall: "N", at: 800, gap: 200 },
+      { ref: O("art-abstract"), wall: "W", at: 2400, elevation: 1300 },
+      { ref: O("books"), x: 2650, y: 2450, elevation: 380 },
+    ],
+  },
+  {
+    id: "amb-plant-hall",
+    category: "entrada",
+    name: "Rebedor verd",
+    description: "4 × 2,4 m · terra de rajola de fang i parets verd fosc: mirall d'arc, banc d'obra, catifa de jute i falgueres en test a banda i banda.",
+    w: 4000,
+    d: 2400,
+    floor: "Rajola de fang 300",
+    wall: "Pintura verd fosc",
+    items: [
+      { ref: O("mirror-arch"), wall: "N", at: 2000, elevation: 900 },
+      { ref: O("bench-builtin"), wall: "N", at: 2000 },
+      { ref: O("rug-jute"), x: 2000, y: 1500 },
+      { ref: F("fern-pot"), wall: "N", at: 450, gap: 60 },
+      { ref: F("fern-pot"), wall: "N", at: 3550, gap: 60 },
+    ],
+  },
+]
+
 export const AMBIENT_TEMPLATES: AmbientTemplate[] = [
+  ...PLANT_SCENES,
   ...MAG_SCENES,
   {
     id: "amb-nordic-living",
