@@ -276,15 +276,16 @@ export function ProfileEditor({
   const stroke = bad ? "#dc2626" : "#6b7280"
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size="xl" placement="center" closeOnEscape={!drawing} closeOnInteractOutside={false}>
+    <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size={{ base: "full", md: "xl" }} placement="center" closeOnEscape={!drawing} closeOnInteractOutside={false}>
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content maxW="1000px">
+          {/* Al mòbil, a pantalla completa i respectant la zona segura (si no, la capçalera quedava sota l'illa / la barra d'estat). */}
+          <Dialog.Content maxW={{ md: "1000px" }} h={{ base: "100dvh", md: "auto" }} minH={{ md: "auto" }} pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} pb={{ base: "env(safe-area-inset-bottom, 0px)", md: 0 }}>
             <Dialog.Header>
               <Dialog.Title>Forma de la secció</Dialog.Title>
             </Dialog.Header>
-            <Dialog.Body>
+            <Dialog.Body overflowY="auto">
               <Stack gap={3}>
                 <HStack gap={2} wrap="wrap" justify="space-between">
                   {/* Eines, com al mode d'edició de vectors de Figma. */}
@@ -558,7 +559,7 @@ export function ProfileEditor({
                 Aplicar
               </Button>
             </Dialog.Footer>
-            <Dialog.CloseTrigger asChild>
+            <Dialog.CloseTrigger asChild top={{ base: "calc(env(safe-area-inset-top, 0px) + 8px)", md: 2 }}>
               <CloseButton size="sm" />
             </Dialog.CloseTrigger>
           </Dialog.Content>
