@@ -259,8 +259,10 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   sol renderitzador fora de pantalla (s'allibera quan la cua és buida) que pinta les peces amb els materials reals sobre el
   terra i la paret de l'escena de Presentació, amb ombres, en un JPEG 2:1 de 480 px; cua d'una en una quan el navegador
   és lliure (`projects/projectThumbs.ts`). Es desa al projecte (`Project.thumb`, `thumbAt` = l'`updatedAt` que retrata,
-  `thumbV` = `THUMB_VERSION`: si canvia, es refan); les de plantilles, només en memòria. Ambients: foto del visor 3D
-  (`canvasThumb`) uns segons després de l'últim canvi, si s'és al 3D i sense res seleccionat (`AmbientRow.thumb`).
+  `thumbV` = `THUMB_VERSION`: si canvia, es refan); les de plantilles, només en memòria. Ambients: igual, fora de pantalla
+  (`ambients/ambientThumbs.ts`): terra, parets (sense les de davant, com la casa de nines) i els mobles i objectes de debò,
+  vist de dalt i de davant; els de l'usuari es desen (`AmbientRow.thumb`, `thumbAt`, `thumbV`) i els del catàleg, en
+  memòria (amb les plantilles de les seves referències). Tot passa per la mateixa cua (`enqueueThumb`).
   `SnapshotThumb` (2:1, no retalla); sense foto encara, el dibuix de sempre. Cal `scene.updateMatrixWorld(true)` abans de
   mesurar la caixa (les peces porten la matriu feta).
 - **Grups (carpetes)** a l'historial de Mobles, Objectes i Ambients

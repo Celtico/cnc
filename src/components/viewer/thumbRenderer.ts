@@ -1,4 +1,4 @@
-import { Box3, Color, DirectionalLight, HemisphereLight, Mesh, MeshStandardMaterial, NeutralToneMapping, PCFSoftShadowMap, PerspectiveCamera, PlaneGeometry, PMREMGenerator, SRGBColorSpace, Vector3, WebGLRenderer, type Material, type Object3D, type Texture } from "three"
+import { Box3, Color, DirectionalLight, HemisphereLight, Mesh, Scene, MeshStandardMaterial, NeutralToneMapping, PCFSoftShadowMap, PerspectiveCamera, PlaneGeometry, PMREMGenerator, SRGBColorSpace, Vector3, WebGLRenderer, type Material, type Object3D, type Texture } from "three"
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
 import type { MaterialPref, Panel } from "../../core/model"
 import { exportablePanel } from "./CabinetViewer"
@@ -46,10 +46,37 @@ export function releaseThumbRenderer(): void {
   renderer = null
 }
 
+/** Llums i entorn d'estudi comuns de les miniatures, apuntant a `center`. */
+export function thumbLights(scene: Scene, center: Vector3, ext: number): void {
+  ensure()
+  scene.environment = env
+  scene.environmentIntensity = 0.6
+  scene.add(new HemisphereLight("#ffffff", "#8a7a60", 0.45))
+  const sun = new DirectionalLight("#ffffff", 1.7)
+  sun.position.set(center.x + 2, center.y + 4, center.z + 3)
+  sun.castShadow = true
+  sun.shadow.mapSize.set(1024, 1024)
+  Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext, near: 0.1, far: 60 })
+  sun.shadow.bias = -0.0004
+  sun.shadow.normalBias = 0.02
+  sun.target.position.copy(center)
+  scene.add(sun, sun.target)
+}
+
+/** Pinta l'escena amb la càmera, en treu el JPEG i allibera l'escena. */
+export function snapshot(scene: Scene, camera: PerspectiveCamera): string {
+  const r = ensure()
+  r.render(scene, camera)
+  const url = r.domElement.toDataURL("image/jpeg", 0.82)
+  disposeTree(scene)
+  return url
+}
+
+export const THUMB_ASPECT = W / H
+
 /** JPEG (data URL) de les peces vistes des de davant, una mica de costat i de dalt. */
 export function renderThumb(panels: Panel[], materials: MaterialPref[]): string | null {
   if (!panels.length) return null
-  const r = ensure()
   const scene = buildScene(panels, "thumb", { materials, make: exportablePanel })
   scene.traverse((o) => {
     if ((o as Mesh).isMesh) o.castShadow = o.receiveShadow = true
@@ -80,19 +107,7 @@ export function renderThumb(panels: Panel[], materials: MaterialPref[]): string 
   wall.receiveShadow = true
   scene.add(floor, wall)
   scene.background = new Color(look.wall)
-  scene.environment = env
-  scene.environmentIntensity = 0.6
-  scene.add(new HemisphereLight("#ffffff", "#8a7a60", 0.45))
-  const sun = new DirectionalLight("#ffffff", 1.7)
-  sun.position.set(center.x + 2, center.y + 4, center.z + 3)
-  sun.castShadow = true
-  sun.shadow.mapSize.set(1024, 1024)
-  const ext = Math.max(size.x, size.y, size.z) * 1.5 + 0.5
-  Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext, near: 0.1, far: 30 })
-  sun.shadow.bias = -0.0004
-  sun.shadow.normalBias = 0.02
-  sun.target.position.copy(center)
-  scene.add(sun, sun.target)
+  thumbLights(scene, center, Math.max(size.x, size.y, size.z) * 1.5 + 0.5)
 
   const camera = new PerspectiveCamera(30, W / H, 0.01, 200)
   // Distància perquè hi càpiga sencer amb marge (la targeta en retalla una mica), des de davant a la dreta i de dalt.
@@ -102,13 +117,10 @@ export function renderThumb(panels: Panel[], materials: MaterialPref[]): string 
   camera.position.copy(center).addScaledVector(dir, dist)
   camera.lookAt(center)
 
-  r.render(scene, camera)
-  const url = r.domElement.toDataURL("image/jpeg", 0.82)
-  disposeTree(scene)
-  return url
+  return snapshot(scene, camera)
 }
 
-function disposeTree(root: Object3D) {
+export function disposeTree(root: Object3D) {
   root.traverse((o) => {
     const m = o as Mesh
     if (!m.isMesh) return

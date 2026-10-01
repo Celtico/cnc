@@ -96,8 +96,10 @@ export interface AmbientRow {
   data: unknown
   /** Grup (carpeta) de l'historial. */
   folder?: string
-  /** Miniatura del 3D (JPEG, data URL): una foto del visor quan s'obre al 3D. */
+  /** Miniatura 3D (JPEG, data URL), l'`updatedAt` que retrata i la versió (`ambients/ambientThumbs`). */
   thumb?: string
+  thumbAt?: number
+  thumbV?: number
   createdAt: number
   updatedAt: number
 }

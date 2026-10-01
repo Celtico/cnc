@@ -60,6 +60,14 @@ export function requestTemplateThumb(id: string, make: () => Composition, materi
   void drain()
 }
 
+/** Afegeix una feina a la cua comuna de miniatures (una cada cop; `key` evita repetir-la). */
+export function enqueueThumb(key: string, run: () => Promise<void>): void {
+  if (pending.has(key)) return
+  pending.add(key)
+  queue.push({ id: key, run })
+  void drain()
+}
+
 const idle = () =>
   new Promise<void>((resolve) => {
     const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }

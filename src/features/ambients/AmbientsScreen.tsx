@@ -1,10 +1,11 @@
 import { Accordion, Badge, Button, Card, CloseButton, Dialog, HStack, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
-import { useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { LuFolders, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { uniqueName } from "../../core/file/mobleFile"
 import { AMBIENT_CATEGORIES, AMBIENT_TEMPLATES, EMPTY_AMBIENT, footprintCorners, parseAmbient, roomWalls, wallCorners, type Ambient, type AmbientTemplate } from "../../core/model"
 import { createAmbient, db, deleteAmbient, duplicateAmbient, setAmbientsFolder, type AmbientRow } from "../../db/db"
+import { useSettings } from "../settings/SettingsContext"
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { FoldTitle } from "../projects/NewMobleGallery"
 import { GALLERY_COLS, fold, useSessionList } from "../projects/galleryGrid"
@@ -15,6 +16,7 @@ import { AMBIENT_TAB_KEY } from "./planGeom"
 import { PageHeader } from "../../components/PageHeader"
 import { CatalogSection } from "../projects/CatalogSection"
 import { SnapshotThumb } from "../../components/SnapshotThumb"
+import { catalogThumb, needsAmbientThumb, requestAmbientThumb, requestCatalogThumb } from "./ambientThumbs"
 
 /**
  * Ambients: plànols de la casa on es col·loquen els mobles (els de la llista, enllaçats) i
@@ -89,8 +91,7 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
         return (
           <Card.Root variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }}>
             <Card.Body p={3} gap={2} cursor="pointer" onClick={() => onOpen(r.id)}>
-              {/* La foto del 3D (es fa en obrir-lo al 3D); si encara no n'hi ha, el plànol. */}
-              {r.thumb ? <SnapshotThumb src={r.thumb} /> : <AmbientThumb a={a} />}
+              <RowThumb row={r} a={a} />
               <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={r.name}>
                 {r.name}
               </Text>
@@ -309,11 +310,17 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
 /** Targeta del catàleg: miniatura del plànol moblat (es calcula en obrir el catàleg). */
 function CatalogCard({ t, busy, onPick }: { t: AmbientTemplate; busy: boolean; onPick: () => void }) {
   const preview = useMemo(() => templatePreview(t), [t])
+  // Foto 3D de l'escena amb els mobles de debò (feta fora de pantalla, en memòria); mentrestant, el plànol.
+  const { settings } = useSettings()
+  const [thumb, setThumb] = useState(() => catalogThumb(t.id))
+  useEffect(() => {
+    if (!thumb) requestCatalogThumb(t, settings.materials, setThumb)
+  }, [t, thumb, settings.materials])
   return (
     <Card.Root asChild variant="outline" size="sm" cursor="pointer" _hover={{ borderColor: "wood.solid" }} opacity={busy ? 0.6 : 1}>
       <button type="button" onClick={onPick} disabled={busy}>
         <Card.Body p={3} gap={2} alignItems="stretch" textAlign="left">
-          <AmbientThumb a={preview} />
+          {thumb ? <SnapshotThumb src={thumb} /> : <AmbientThumb a={preview} />}
           <HStack justify="space-between" gap={1}>
             <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={t.name}>
               {t.name}
@@ -347,4 +354,13 @@ function AmbientThumb({ a }: { a: Ambient }) {
       ))}
     </svg>
   )
+}
+
+/** Miniatura d'un ambient de l'usuari: la foto 3D (es fa sola i es refà si canvia) o, mentrestant, el plànol. */
+function RowThumb({ row, a }: { row: AmbientRow; a: Ambient }) {
+  const { settings } = useSettings()
+  useEffect(() => {
+    if (needsAmbientThumb(row)) requestAmbientThumb(row, settings.materials)
+  }, [row, settings.materials])
+  return row.thumb ? <SnapshotThumb src={row.thumb} /> : <AmbientThumb a={a} />
 }
