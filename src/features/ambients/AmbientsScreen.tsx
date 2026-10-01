@@ -329,7 +329,7 @@ function CatalogCard({ t, busy, onPick }: { t: AmbientTemplate; busy: boolean; o
           </Text>
           {/* A sota del text, com el tipus i el preu de les plantilles de mobles (al costat del nom l'escanyava). */}
           <HStack mt="auto">
-            <Badge size="xs" variant="subtle">
+            <Badge size="xs" variant="subtle" colorPalette="wood">
               {t.items.length} elements
             </Badge>
           </HStack>

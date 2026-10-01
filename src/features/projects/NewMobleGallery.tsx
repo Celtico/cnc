@@ -41,7 +41,7 @@ export function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?
           </Text>
           {/* A sota: el tipus de moble i el preu sol (orientatiu, es diu a l'explicació del catàleg). */}
           <HStack justify="space-between" gap={2} mt="auto">
-            <Badge size="xs" variant="subtle" flexShrink={0}>
+            <Badge size="xs" variant="subtle" colorPalette="wood" flexShrink={0}>
               {kindLabel(t.kind)}
             </Badge>
             {t.price !== undefined && (
