@@ -1,0 +1,36 @@
+/*
+ * Mides d'iOS a les pantalles tàctils (iPhone, iPad), segons la guia d'Apple (1 px CSS = 1 pt):
+ * text normal 17, secundari 13, mínim 11; botons, desplegables i files com a mínim 44 d'alt.
+ * A l'ordinador (ratolí) no canvia res: la mida normal de Chakra (sm = 14 px, botons de 32–36).
+ *
+ * Es fa canviant les variables dels tokens de Chakra (`--chakra-font-sizes-*`, `--chakra-sizes-*`), no
+ * component per component: així tota l'app (també el que es faci nou) agafa les mides d'iOS.
+ * Va fora de les capes de Chakra (@layer): el CSS sense capa guanya a qualsevol capa.
+ */
+@media (pointer: coarse) {
+  :root {
+    --chakra-font-sizes-2xs: 11px;
+    --chakra-font-sizes-xs: 13px;
+    --chakra-font-sizes-sm: 17px;
+    --chakra-font-sizes-md: 17px;
+    --chakra-font-sizes-lg: 20px;
+    --chakra-font-sizes-xl: 22px;
+    /* Alçades dels controls (botons, camps, desplegables, segments): xs 40, sm i md 44, lg 48. */
+    --chakra-sizes-8: 40px;
+    --chakra-sizes-9: 44px;
+    --chakra-sizes-10: 44px;
+    --chakra-sizes-11: 48px;
+    /* Etiqueta de les files de formulari (`FormRow`) centrada amb un control de 44. */
+    --form-row-label-pt: 11px;
+  }
+  /* Amb el text més gran, una mica més d'interlineat (Chakra el posa fix en rem). */
+  body * {
+    line-height: 1.3;
+  }
+
+  /* Camps on s'escriu: com a mínim 16 px, si no Safari fa zoom en entrar-hi i desquadra la vista. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  textarea {
+    font-size: 17px;
+  }
+}

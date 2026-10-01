@@ -5,7 +5,7 @@ import { App } from "./App"
 import { SettingsProvider } from "./features/settings/SettingsContext"
 import { initAccent } from "./theme/accent"
 import { initTruncatedTitles } from "./theme/truncatedTitles"
-import "./theme/inputs.css"
+import "./theme/touch.css"
 
 initAccent()
 initTruncatedTitles()

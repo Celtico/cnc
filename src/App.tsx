@@ -404,10 +404,11 @@ export function App() {
             >
               <button disabled={disabled} onClick={() => goSection(n.id)} aria-current={active ? "page" : undefined}>
                 <Stack align="center" gap={0.5}>
-                  <Box fontSize="xl">
+                  {/* Com la barra de pestanyes d'iOS: icona de ~25 i nom petit (10–11). */}
+                  <Box fontSize="2xl">
                     <n.icon />
                   </Box>
-                  <Text fontSize="xs" fontWeight={active ? "semibold" : "normal"}>
+                  <Text fontSize="2xs" fontWeight={active ? "semibold" : "medium"}>
                     {n.label}
                   </Text>
                 </Stack>

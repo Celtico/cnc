@@ -780,10 +780,14 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   guarden 12 i alliberen (`dispose`) les que en surten, i el render per CPU fa com a molt 2 processos.
 - **Controls segmentats en mode fosc** (`theme/system.ts`): l'indicador de l'opció triada és gris clar (per
   defecte era del mateix negre que el fons i no es veia quina estava triada).
-- **Només els camps on s'escriu a 16px, i només a les pantalles tàctils** (`src/theme/inputs.css`,
-  `@media (pointer: coarse)`, CSS sense capa: el globalCss de Chakra va a `@layer base` i les receptes `sm`/`xs` el
-  rebaixaven) per evitar el zoom d'iOS. Botons, desplegables, interruptors i tot a l'ordinador: la mida normal de
-  Chakra (per decisió de l'usuari; si un desplegable fa zoom a l'iPhone, afegir-hi `select`).
+- **Mides d'iOS a les pantalles tàctils** (`src/theme/touch.css`, `@media (pointer: coarse)`, CSS sense capa: guanya a les
+  capes de Chakra): es canvien les variables dels tokens, així tota l'app les agafa. Text `sm`/`md` 17 (cos d'iOS), `xs` 13,
+  `2xs` 11, `lg` 20, `xl` 22; controls (`sizes` 8–11) 40 / 44 / 44 / 48 (mínim tàctil d'Apple: 44); interlineat 1,3; els
+  camps on s'escriu a 17 (amb menys de 16, Safari fa zoom). `FormRow` centra l'etiqueta amb `--form-row-label-pt`. A
+  l'ordinador, les mides normals de Chakra (sm = 14, botons de 32–36). Barra de baix com la d'iOS (icona 24, nom 2xs).
+  **Res de Ionic** (per decisió: refer la UI no compensa i no encaixa amb les eines d'escriptori).
+- **Capçalera de les pàgines d'inici** (`components/PageHeader`, Ambients · Objectes · Mobles): títol gran, accions i
+  explicació; a l'ordinador les accions a la dreta del títol, al mòbil **a sota del títol**.
 - Tokens semàntics (`bg.subtle`, `fg.muted`...) i `colorPalette`, no colors crus.
 - **Color principal = paleta `wood`** sempre (`colorPalette="wood"`, `wood.fg`...). L'usuari el canvia a
   Preferències → Tema (`theme/accent.ts` redirigeix les variables CSS de `wood`). No facis servir

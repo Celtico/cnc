@@ -1,8 +1,6 @@
 import {
   Button,
   Dialog,
-  HStack,
-  Heading,
   Portal,
   Text,
   VStack,
@@ -26,6 +24,7 @@ import { compositionOf } from "../../db/compositionStore"
 import { useProjects } from "../useProject"
 import { toaster } from "../../components/ui/toaster"
 import { fileAccept } from "../file/fileAccept"
+import { PageHeader } from "../../components/PageHeader"
 
 /** Acció demanada des del menú de l'esquerra (Obrir fitxer); `n` la fa única. */
 export type ProjectsRequest = { kind: "open"; n: number } | null
@@ -84,23 +83,22 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
 
   return (
     <VStack align="stretch" gap={5}>
-      <HStack justify="space-between" wrap="wrap" gap={3}>
-        <Heading size="xl">Mobles</Heading>
-        <input ref={fileInput} type="file" accept={fileAccept(".moble,.json,application/json")} hidden onChange={(e) => void handleOpenFile(e.target.files?.[0])} />
-        {/* Acció de l'apartat a la seva capçalera (no al menú global), com a les apps professionals. */}
-        <HStack gap={2}>
-          <Button variant="outline" size={{ base: "sm", md: "md" }} onClick={() => fileInput.current?.click()}>
-            <LuFolderOpen /> Obrir fitxer
-          </Button>
-          {/* Crear en blanc: el botó principal de la pàgina, a la dreta (com Importar/Exportar a Preferències). */}
-          <Button colorPalette="wood" size={{ base: "sm", md: "md" }} onClick={() => void handleCreate(blankMoble(settings), "Moble nou")}>
-            <LuPlus /> Nou moble
-          </Button>
-        </HStack>
-      </HStack>
-      <Text fontSize="sm" color="fg.muted" maxW="640px" mt={-3}>
-        Els mobles que dissenyes i fabriques: comença en blanc o des d'una plantilla (de l'app o de botiga) i continua'l a l'editor. A l'historial hi tens els que ja has fet; el cercador busca a tot arreu (nom, tipus, estil, material, color).
-      </Text>
+      <input ref={fileInput} type="file" accept={fileAccept(".moble,.json,application/json")} hidden onChange={(e) => void handleOpenFile(e.target.files?.[0])} />
+      {/* Accions de l'apartat a la seva capçalera (no al menú global), com a les apps professionals. */}
+      <PageHeader
+        title="Mobles"
+        description="Els mobles que dissenyes i fabriques: comença en blanc o des d'una plantilla (de l'app o de botiga) i continua'l a l'editor. A l'historial hi tens els que ja has fet; el cercador busca a tot arreu (nom, tipus, estil, material, color)."
+        actions={
+          <>
+            <Button variant="outline" size={{ base: "sm", md: "md" }} onClick={() => fileInput.current?.click()}>
+              <LuFolderOpen /> Obrir fitxer
+            </Button>
+            <Button colorPalette="wood" size={{ base: "sm", md: "md" }} onClick={() => void handleCreate(blankMoble(settings), "Moble nou")}>
+              <LuPlus /> Nou moble
+            </Button>
+          </>
+        }
+      />
 
       <NewMobleGallery
         onCreate={(c, n) => void handleCreate(c, n)}

@@ -1,4 +1,4 @@
-import { Accordion, Badge, Button, Card, CloseButton, Dialog, Heading, HStack, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
+import { Accordion, Badge, Button, Card, CloseButton, Dialog, HStack, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
 import { useMemo, useState, type ReactNode } from "react"
 import { LuBookOpen, LuFolders, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
@@ -12,6 +12,7 @@ import { ClearHistory } from "../projects/ClearHistory"
 import { FolderedGrid, MoveToFolderDialog } from "../projects/Folders"
 import { createAmbientFromTemplate, templatePreview } from "./fromTemplate"
 import { AMBIENT_TAB_KEY } from "./planGeom"
+import { PageHeader } from "../../components/PageHeader"
 
 /**
  * Ambients: plànols de la casa on es col·loquen els mobles (els de la llista, enllaçats) i
@@ -130,15 +131,15 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
 
   return (
     <VStack align="stretch" gap={5}>
-      <HStack justify="space-between" gap={3}>
-        <Heading size="xl">Ambients</Heading>
-        <Button colorPalette="wood" size={{ base: "sm", md: "md" }} onClick={() => void create()}>
-          <LuPlus /> Nou ambient
-        </Button>
-      </HStack>
-      <Text fontSize="sm" color="fg.muted" maxW="640px" mt={-3}>
-        El plànol de la casa amb els mobles al seu lloc: dibuixa les parets (o posa-hi la imatge d'un plànol), col·loca-hi els teus mobles i objectes i mira-ho en 3D o fes-ne un render. Al catàleg hi ha habitacions moblades, a punt per a renders.
-      </Text>
+      <PageHeader
+        title="Ambients"
+        description="El plànol de la casa amb els mobles al seu lloc: dibuixa les parets (o posa-hi la imatge d'un plànol), col·loca-hi els teus mobles i objectes i mira-ho en 3D o fes-ne un render. Al catàleg hi ha habitacions moblades, a punt per a renders."
+        actions={
+          <Button colorPalette="wood" size={{ base: "sm", md: "md" }} onClick={() => void create()}>
+            <LuPlus /> Nou ambient
+          </Button>
+        }
+      />
       <Stack gap={4}>
         <InputGroup maxW={{ base: "full", md: "420px" }} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => setQuery("")} /> : undefined}>
           <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar ambients: nom, habitació, material…" aria-label="Cercar ambients" />

@@ -1,4 +1,4 @@
-import { Button, Dialog, Heading, HStack, Portal, Text, VStack } from "@chakra-ui/react"
+import { Button, Dialog, Portal, Text, VStack } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
 import { LuPlus, LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
@@ -14,6 +14,7 @@ import { ProjectCard } from "../projects/ProjectCard"
 import { useProjects } from "../useProject"
 import { ObjectsGallery } from "./ObjectsGallery"
 import { isObject } from "./isObject"
+import { PageHeader } from "../../components/PageHeader"
 
 /**
  * Objectes per als ambients (sofà, làmpada, planta…): es fan amb el mateix Editor que els mobles,
@@ -31,15 +32,15 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
   }
   return (
     <VStack align="stretch" gap={5}>
-      <HStack justify="space-between" gap={3}>
-        <Heading size="xl">Objectes</Heading>
-        <Button colorPalette="wood" size={{ base: "sm", md: "md" }} onClick={() => void create(blankObject(), "Objecte nou")}>
-          <LuPlus /> Nou objecte
-        </Button>
-      </HStack>
-      <Text fontSize="sm" color="fg.muted" maxW="640px" mt={-3}>
-        Sofàs, llits, làmpades, plantes… per col·locar als ambients. Es fan com un moble flat-pack (peces amb forma, «Talla» per als forats i materials de simulació), però només es veuen: no es fabriquen.
-      </Text>
+      <PageHeader
+        title="Objectes"
+        description="Sofàs, llits, làmpades, plantes… per col·locar als ambients. Es fan com un moble flat-pack (peces amb forma, «Talla» per als forats i materials de simulació), però només es veuen: no es fabriquen."
+        actions={
+          <Button colorPalette="wood" size={{ base: "sm", md: "md" }} onClick={() => void create(blankObject(), "Objecte nou")}>
+            <LuPlus /> Nou objecte
+          </Button>
+        }
+      />
       <ObjectsGallery
         onCreate={(c, n) => void create(c, n)}
         history={(matches, searching) => {
