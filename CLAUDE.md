@@ -235,7 +235,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   i render; al 3D enquadrar, casa de nines, ombres i render.
 - **Plànol**: la roda fa zoom al punt del ratolí (com al 3D), pessigar també, arrossegar el fons
   desplaça; − / + i l'escala de pantalla (1:50…) a baix a la dreta; la barra d'eines flota a dalt.
-- **Les tres pàgines (Mobles, Objectes, Ambients) fan igual**: títol amb el **botó principal a la dreta** (al mòbil, a sota del títol; `PageHeader`)
+- **Les tres pàgines (Mobles, Objectes, Ambients) fan igual**: títol amb el **botó principal a sota** (`PageHeader`)
   («Nou ambient» · «Nou objecte» · «Nou moble», `colorPalette="wood"`, com Importar/Exportar a
   Preferències; en blanc, `projects/blank.ts`), text descriptiu, cercador, **Historial** (els que ja
   tens) i acordions tancats (plantilles / catàleg). Les finestres «Afegir» dels ambients porten el mateix
@@ -796,8 +796,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   entre grups (`.settings-stack`). **Només canvien les mides** (ratolí: les de Chakra; dit: les d'iOS). Al tàctil, a més,
   els noms de les targetes de les graelles (`.card-title`) a 15 en dues línies i les capçaleres d'acordió de 48.
   **Res de Ionic** (per decisió: refer la UI no compensa i no encaixa amb les eines d'escriptori).
-- **Capçalera de les pàgines d'inici** (`components/PageHeader`, Ambients · Objectes · Mobles): títol gran, accions i
-  explicació; a l'ordinador les accions a la dreta del títol, al mòbil **a sota del títol**.
+- **Capçalera de les pàgines d'inici** (`components/PageHeader`, Ambients · Objectes · Mobles · Preferències): títol gran,
+  les accions **a sota del títol** (a l'ordinador i al mòbil igual) i l'explicació. Dins dels acordions, la fila d'eines
+  («Grup nou», «Seleccionar», «Esborrar l'historial») va **a l'esquerra**.
 - Tokens semàntics (`bg.subtle`, `fg.muted`...) i `colorPalette`, no colors crus.
 - **Color principal = paleta `wood`** sempre (`colorPalette="wood"`, `wood.fg`...). L'usuari el canvia a
   Preferències → Tema (`theme/accent.ts` redirigeix les variables CSS de `wood`). No facis servir

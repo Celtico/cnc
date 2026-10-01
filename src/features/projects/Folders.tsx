@@ -103,7 +103,7 @@ export function FolderedGrid<T>({
   return (
     <Stack gap={3}>
       {(toolbar || selection) && (
-        <HStack justify="flex-end" gap={1} wrap="wrap">
+        <HStack justify="flex-start" gap={1} wrap="wrap">
           {picking && selection ? (
             <>
               <Text fontSize="sm" color="fg.muted" mr="auto">

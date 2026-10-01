@@ -58,6 +58,7 @@ import { NumberField, NumRow } from "../editor/ParamsForm"
 import { useSettings } from "./SettingsContext"
 import { fileAccept } from "../file/fileAccept"
 import { useDebouncedSave } from "../useDebouncedSave"
+import { PageHeader } from "../../components/PageHeader"
 
 type SectionKey = keyof Omit<Settings, "version">
 
@@ -117,22 +118,21 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
       <SettingsPages
         header={
           <Stack gap={4}>
-      <HStack justify="space-between" wrap="wrap" gap={3}>
-        <Heading size="xl">Preferències</Heading>
-        <HStack>
-          <input ref={fileInput} type="file" accept={fileAccept("application/json,.json")} hidden onChange={(e) => void doImport(e.target.files?.[0])} />
-          <Button size="sm" variant="outline" onClick={() => fileInput.current?.click()}>
-            <LuUpload /> Importar
-          </Button>
-          <Button size="sm" variant="outline" onClick={doExport}>
-            <LuDownload /> Exportar
-          </Button>
-        </HStack>
-      </HStack>
-      <Text fontSize="sm" color="fg.muted">
-        Mides i valors que depenen de tu i del taller. Canviar-los no modifica els mobles ja fets: només els mòduls nous i les
-        pantalles que llegeixen aquestes llistes (foto, editor, nesting, export).
-      </Text>
+      <input ref={fileInput} type="file" accept={fileAccept("application/json,.json")} hidden onChange={(e) => void doImport(e.target.files?.[0])} />
+      <PageHeader
+        title="Preferències"
+        description="Mides i valors que depenen de tu i del taller. Canviar-los no modifica els mobles ja fets: només els mòduls nous i les pantalles que llegeixen aquestes llistes (foto, editor, nesting, export)."
+        actions={
+          <>
+            <Button size="sm" variant="outline" onClick={() => fileInput.current?.click()}>
+              <LuUpload /> Importar
+            </Button>
+            <Button size="sm" variant="outline" onClick={doExport}>
+              <LuDownload /> Exportar
+            </Button>
+          </>
+        }
+      />
       {problems.length > 0 && (
         <Alert.Root status="error" size="sm">
           <Alert.Indicator />
