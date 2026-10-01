@@ -367,7 +367,7 @@ export function App() {
           flexDirection="column"
           px={{ base: 4, md: screen === "editor" || screen === "ambient" ? 2 : 4 }}
           // Al mòbil, l'editor enganxa el visor a la barra de dalt (sense marge superior).
-          pt={{ base: screen === "editor" ? 0 : showTopBar || screen === "ambient" || settingsBackBar ? 4 : "calc(16px + env(safe-area-inset-top, 0px))", md: screen === "editor" || screen === "ambient" ? 1.5 : 6 }}
+          pt={{ base: screen === "editor" || screen === "ambient" ? 0 : showTopBar || settingsBackBar ? 4 : "calc(16px + env(safe-area-inset-top, 0px))", md: screen === "editor" || screen === "ambient" ? 1.5 : 6 }}
           pb={{ base: "calc(76px + env(safe-area-inset-bottom, 0px))", md: screen === "editor" || screen === "ambient" ? 1.5 : 6 }}
         >
           <TopBarActionsProvider value={topActions}>{content}</TopBarActionsProvider>
