@@ -1,7 +1,6 @@
-import { Box, Button, HStack, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
+import { Box, HStack, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
 import { NameDialog } from "../../components/NameDialog"
 import { createElement, useState, type ReactNode } from "react"
-import { KINDS } from "./kinds"
 import {
   LuArrowDown,
   LuArrowUp,
@@ -18,7 +17,7 @@ import {
   LuTrash2,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcon"
-import { compositionKind, partsOnlyKind, duplicateGroup, newGroupName, partGroups, insertPartCopy, insertRefCopy, modulePresetsFor, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
+import { compositionKind, partsOnlyKind, duplicateGroup, newGroupName, partGroups, insertPartCopy, insertRefCopy, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
 import { PartAddMenu } from "./PartInspector"
 import { ORIENT_ICON } from "./partOrient"
 import { RefAddMenu } from "./RefInspector"
@@ -241,8 +240,8 @@ export function StructureTree({
         </Box>
       ))}
 
-      {/* Afegir mòdul: un de bàsic directament, després de posar-li el nom (amb un per defecte). Els mòduls especials del
-          tipus de moble (cuina: baixos, alts, columnes…) són a la mateixa finestra, a sota, i agafen el nom escrit. */}
+      {/* Afegir mòdul: una caixa bàsica directament, després de posar-li el nom (amb un per defecte). Sense mòduls
+          especials (per decisió de l'usuari): la caixa es configura després a l'inspector. */}
       {!onlyParts && (
         <HStack as="button" gap={2} pl={7} py={1.5} color="fg.muted" _hover={{ color: "fg" }} rounded="md" cursor="pointer" onClick={() => setAdding(true)}>
           <LuPlus /> <Text>Afegir mòdul</Text>
@@ -259,35 +258,7 @@ export function StructureTree({
           setAdding(false)
           addModule(newModule(newId("m"), name))
         }}
-      >
-        {(name) => {
-          const presets = modulePresetsFor(compositionKind(comp))
-          return presets.length > 0 ? (
-            <Stack gap={1.5}>
-              <Text fontSize="xs" color="fg.muted">
-                O, en lloc d'una caixa bàsica, un mòdul de {KINDS.find((k) => k.value === compositionKind(comp))!.label.toLowerCase()}:
-              </Text>
-              <HStack gap={1.5} wrap="wrap">
-                {presets.map((p) => (
-                  <Button
-                    key={p.id}
-                    size="xs"
-                    variant="outline"
-                    disabled={!name}
-                    onClick={() => {
-                      setAdding(false)
-                      // Sense nom propi, el del mòdul especial («Baix de fregadera»…).
-                      addModule({ ...p.make(), id: newId("m"), name: name === newModuleName ? p.name : name })
-                    }}
-                  >
-                    {p.name}
-                  </Button>
-                ))}
-              </HStack>
-            </Stack>
-          ) : null
-        }}
-      </NameDialog>
+      />
 
       {/* Peces lliures (flat-pack): com els objectes, però són peces de debò amb encaixos. */}
       <HStack justify="space-between" pt={3} pb={1} px={1}>
