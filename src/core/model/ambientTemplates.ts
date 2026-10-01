@@ -1,4 +1,5 @@
 import { OBJECT_TEMPLATES, roomWalls, type Opening, type Wall } from "./ambient"
+import { COLLECTION_PIECES } from "./collections"
 import { MAG_FURNITURE } from "./magFurniture"
 import { STORE_CATALOG } from "./storeCatalog"
 import { BUILTIN_TEMPLATES, type Template } from "./templates"
@@ -9,8 +10,8 @@ import { BUILTIN_TEMPLATES, type Template } from "./templates"
  * En crear-ne un, cada moble i objecte es crea a Mobles / Objectes (un per plantilla, encara que
  * surti diverses vegades) i es col·loca a l'ambient.
  *
- * Referències: `store:<categoria>:<Tipus «Nom»>`, `app:<id>`, `object:<id>` o `mag:<id>` (mobles de les
- * escenes de revista, `MAG_FURNITURE`).
+ * Referències: `store:<categoria>:<Tipus «Nom»>`, `app:<id>`, `object:<id>`, `mag:<id>` (mobles de les
+ * escenes de revista, `MAG_FURNITURE`) o `col:<id>` (peces de les col·leccions de mobles, `COLLECTION_PIECES`).
  * Col·locació: arrambat a una paret (`wall` N/S/E/O, amb el darrere a la paret; `at` = centre al
  * llarg de la paret, `gap` = separació) o lliure (`x`, `y` = centre, `rot`).
  */
@@ -40,6 +41,8 @@ export const AMBIENT_CATEGORIES = [
   { id: "despatx", label: "Despatxos" },
   { id: "bany", label: "Banys" },
   { id: "exterior", label: "Exteriors: terrasses i patis" },
+  { id: "col-arq", label: "Col·lecció · Minimalisme arquitectònic" },
+  { id: "col-com", label: "Col·lecció · Minimalisme comercial" },
 ] as const
 export type AmbientCategory = (typeof AMBIENT_CATEGORIES)[number]["id"]
 
@@ -87,6 +90,7 @@ export function resolveTemplateRef(ref: string): Template | undefined {
   if (kind === "app") return BUILTIN_TEMPLATES.find((t) => t.id === a)
   if (kind === "object") return OBJECT_TEMPLATES.find((t) => t.id === a)
   if (kind === "mag") return MAG_FURNITURE.find((t) => t.id === a)
+  if (kind === "col") return COLLECTION_PIECES.find((t) => t.id === a)
   if (kind === "store") {
     const name = rest.join(":")
     return STORE_CATALOG.find((c) => c.id === a)?.types.flatMap((t) => t.items).find((t) => t.name === name)
@@ -539,9 +543,245 @@ const PLANT_SCENES: AmbientTemplate[] = [
   },
 ]
 
+const CA = (id: string) => `col:col-arquitectonic-${id}`
+const CC = (id: string) => `col:col-comercial-${id}`
+
+/**
+ * Ambients de les col·leccions de mobles (`collections.ts`): un per habitació, amb totes les peces de cada col·lecció
+ * col·locades (cada tipus de moble en el seu context) per estudiar-les i fer-ne renders.
+ */
+const COLLECTION_SCENES: AmbientTemplate[] = [
+  {
+    id: "amb-col-arq-living",
+    category: "col-arq",
+    name: "Saló arquitectònic",
+    description: "6,4 × 5 m · pedra calcària i estuc: banc de paret amb nínxol, llibreria de nínxols gruixuts, llosa baixa, bloc de travertí i sofà de lli.",
+    w: 6400,
+    d: 5000,
+    height: 2800,
+    floor: "Pedra calcària",
+    wall: "Estuc greige",
+    openings: [{ side: "E", kind: "glazing", at: 2500, w: 3000, h: 2600, sill: 0, panes: 3 }],
+    items: [
+      { ref: O("rug-jute"), x: 3500, y: 2700 },
+      { ref: CA("wall-bench-tv"), wall: "N", at: 3500 },
+      { ref: O("art-abstract"), wall: "N", at: 3500, elevation: 1200 },
+      { ref: CA("niche-library"), wall: "W", at: 2500 },
+      { ref: O("sofa-linen"), wall: "S", at: 3500, gap: 200 },
+      { ref: CA("low-slab"), x: 3500, y: 2600 },
+      { ref: O("branches-vase"), x: 3200, y: 2550, elevation: 300 },
+      { ref: CA("stone-block"), x: 5300, y: 3900 },
+      { ref: O("olive"), wall: "N", at: 5800, gap: 150 },
+    ],
+  },
+  {
+    id: "amb-col-arq-dining",
+    category: "col-arq",
+    name: "Menjador refectori",
+    description: "6 × 4,6 m · fusta rentada i estuc: taula «Llosa» de roure amb cadires «Bloc», aparador «Monòlit» de noguera i tres llums de lli.",
+    w: 6000,
+    d: 4600,
+    floor: "Fusta rentada",
+    wall: "Estuc greige",
+    openings: [{ side: "W", kind: "window", at: 2300, w: 1400, h: 1800, sill: 500 }],
+    items: [
+      { ref: O("rug-white"), x: 3000, y: 2500 },
+      { ref: CA("llosa-table"), x: 3000, y: 2500 },
+      ...chairsAround(3000, 2500, 2400, 950, 3, "Cadires", CA("slab-chair")),
+      { ref: CA("monolith-sideboard"), wall: "N", at: 3000 },
+      { ref: O("art-dark"), wall: "N", at: 3000, elevation: 1200 },
+      ...[2100, 3000, 3900].map((x) => pendant("pendant-drum", x, 2500, "Llums", 2600, 1000)),
+      { ref: O("plant-tropical"), wall: "S", at: 5500, gap: 150 },
+    ],
+  },
+  {
+    id: "amb-col-arq-bedroom",
+    category: "col-arq",
+    name: "Dormitori de calma",
+    description: "5 × 4,6 m · roure i estuc gris clar: llit de plataforma amb capçal mur, armari de paret sense tiradors, banc caixa, cub obert i calaix volat.",
+    w: 5000,
+    d: 4600,
+    floor: "Parquet de roure",
+    wall: "Estuc gris clar",
+    openings: [{ side: "S", kind: "window", at: 2600, w: 1600, h: 1800, sill: 500 }],
+    items: [
+      { ref: O("rug-white"), x: 2600, y: 1900 },
+      { ref: CA("wall-head-bed"), wall: "N", at: 2600 },
+      { ref: CA("box-bench"), x: 2600, y: 2600 },
+      { ref: CA("wall-wardrobe"), wall: "W", at: 2900 },
+      { ref: CA("floating-drawer"), wall: "E", at: 3600 },
+      { ref: CA("open-cube"), wall: "E", at: 1200, gap: 100 },
+      { ref: O("curtain-linen"), wall: "S", at: 1400, group: "Cortines" },
+      { ref: O("curtain-linen"), wall: "S", at: 3800, group: "Cortines" },
+    ],
+  },
+  {
+    id: "amb-col-arq-study",
+    category: "col-arq",
+    name: "Estudi d'arquitecte",
+    description: "5 × 4,2 m · formigó clar: escriptori «Taulell volat» amb cadira «Bloc», llibreria de nínxols, daybed de plataforma i taula «Marc».",
+    w: 5000,
+    d: 4200,
+    floor: "Formigó clar",
+    wall: "Pintura blanca",
+    openings: [{ side: "E", kind: "window", at: 2000, w: 1600, h: 1800, sill: 600 }],
+    items: [
+      { ref: CA("niche-library"), wall: "N", at: 2600 },
+      { ref: CA("floating-desk"), x: 2700, y: 1900 },
+      { ref: CA("slab-chair"), x: 2700, y: 2650, rot: 180 },
+      { ref: CA("platform-daybed"), wall: "W", at: 2900 },
+      { ref: CA("frame-low"), x: 1550, y: 3400 },
+      { ref: O("books"), x: 1500, y: 3350, elevation: 380 },
+      { ref: O("floor-lamp-arc"), wall: "S", at: 4300, gap: 200 },
+    ],
+  },
+  {
+    id: "amb-col-arq-hall",
+    category: "col-arq",
+    name: "Rebedor de pedra",
+    description: "3,6 × 2,6 m · travertí: consola de travertí i roure amb mirall, banc caixa i cub obert.",
+    w: 3600,
+    d: 2600,
+    floor: "Travertí",
+    wall: "Estuc greige",
+    items: [
+      { ref: CA("stone-console"), wall: "N", at: 1900 },
+      { ref: O("mirror-rect"), wall: "N", at: 1900, elevation: 1050 },
+      { ref: O("branches-vase"), x: 1500, y: 250, elevation: 780 },
+      { ref: CA("box-bench"), wall: "W", at: 1350 },
+      { ref: CA("open-cube"), wall: "E", at: 1900 },
+      { ref: O("plant-small"), x: 3200, y: 550 },
+    ],
+  },
+  {
+    id: "amb-col-com-living",
+    category: "col-com",
+    name: "Saló Mòdul 330",
+    description: "6,6 × 5,2 m · roure i parets greige: llibreria i moble TV sobre la retícula de 330, sofà en L, taula «Doble U» i auxiliar de pedra.",
+    w: 6600,
+    d: 5200,
+    floor: "Parquet de roure",
+    wall: "Estuc greige",
+    openings: [{ side: "E", kind: "window", at: 2600, w: 2000, h: 1900, sill: 400 }],
+    items: [
+      { ref: O("rug-grey"), x: 3700, y: 2800 },
+      { ref: CC("m330-library"), wall: "W", at: 2600 },
+      { ref: CC("m330-tv"), wall: "N", at: 3800 },
+      { ref: O("tv-65"), wall: "N", at: 3800, elevation: 1000 },
+      { ref: O("sofa-l"), wall: "S", at: 3800, gap: 150 },
+      { ref: CC("twin-coffee"), x: 3800, y: 2700 },
+      { ref: CC("linea-side"), x: 5900, y: 3600 },
+      { ref: O("plant-tropical"), wall: "N", at: 6000, gap: 150 },
+      { ref: O("floor-lamp-arc"), wall: "S", at: 1300, gap: 200 },
+    ],
+  },
+  {
+    id: "amb-col-com-twin",
+    category: "col-com",
+    name: "Saló Doble U",
+    description: "6 × 4,6 m · freixe a 45°: moble TV penjat, aparador baix de dos volums, taula de centre en U, sofà de lli i butaca.",
+    w: 6000,
+    d: 4600,
+    floor: "Parquet de roure",
+    wall: "Pintura blanca",
+    openings: [{ side: "S", kind: "glazing", at: 4300, w: 2400, h: 2400, sill: 0, panes: 2 }],
+    items: [
+      { ref: O("rug-jute"), x: 3000, y: 2300 },
+      { ref: CC("twin-tv"), wall: "N", at: 3200 },
+      { ref: O("tv-65"), wall: "N", at: 3200, elevation: 1100 },
+      { ref: CC("twin-sideboard"), wall: "W", at: 2300 },
+      { ref: O("sofa-linen"), x: 3200, y: 3300, rot: 180 },
+      { ref: CC("twin-coffee"), x: 3200, y: 2200 },
+      { ref: O("lounge-chair"), x: 5000, y: 2000, rot: 270 },
+      { ref: O("plant-tropical"), wall: "E", at: 600, gap: 150 },
+    ],
+  },
+  {
+    id: "amb-col-com-dining",
+    category: "col-com",
+    name: "Menjador Línia",
+    description: "6 × 4,8 m · taula de noguera sobre columnes amb sis cadires de cuir, madia alta «Galeria» amb travertí i vitrina de noguera.",
+    w: 6000,
+    d: 4800,
+    floor: "Parquet de noguera",
+    wall: "Estuc greige",
+    openings: [{ side: "E", kind: "window", at: 2400, w: 1800, h: 1900, sill: 400 }],
+    items: [
+      { ref: O("rug-grey"), x: 3000, y: 2600 },
+      { ref: CC("linea-table"), x: 3000, y: 2600 },
+      ...chairsAround(3000, 2600, 2400, 1050, 3, "Cadires", CC("linea-chair")),
+      { ref: CC("gallery-tall"), wall: "N", at: 3000 },
+      { ref: O("art-abstract"), wall: "N", at: 3000, elevation: 1450 },
+      { ref: CC("linea-vitrine"), wall: "W", at: 2600 },
+      ...[2400, 3600].map((x) => pendant("pendant-black", x, 2600, "Llums", 2600, 1000)),
+      { ref: O("plant-tropical"), wall: "S", at: 5400, gap: 150 },
+    ],
+  },
+  {
+    id: "amb-col-com-bedroom",
+    category: "col-com",
+    name: "Dormitori Línia",
+    description: "5,2 × 4,8 m · llit amb capçal entapissat, tauletes «Galeria», armari de quatre cossos, banc i calaixera de noguera.",
+    w: 5200,
+    d: 4800,
+    floor: "Parquet de roure",
+    wall: "Estuc greige",
+    openings: [{ side: "E", kind: "window", at: 3300, w: 1600, h: 1800, sill: 500 }],
+    items: [
+      { ref: O("rug-grey"), x: 2700, y: 2000 },
+      { ref: CC("linea-bed"), wall: "N", at: 2700 },
+      { ref: CC("gallery-night"), wall: "N", at: 1350 },
+      { ref: CC("gallery-night"), wall: "N", at: 4050 },
+      { ref: O("table-lamp"), x: 1350, y: 260, elevation: 520 },
+      { ref: CC("linea-bench"), x: 2700, y: 2550 },
+      { ref: CC("linea-wardrobe"), wall: "W", at: 3050 },
+      { ref: CC("linea-chest"), wall: "S", at: 2900 },
+      { ref: O("mirror-rect"), wall: "S", at: 2900, elevation: 1150 },
+    ],
+  },
+  {
+    id: "amb-col-com-office",
+    category: "col-com",
+    name: "Despatx Línia",
+    description: "6 × 4,2 m · escriptori de noguera, aparador «Mòdul 330», prestatgeria de doble cara com a separador i taula rodona de reunions.",
+    w: 6000,
+    d: 4200,
+    floor: "Parquet de noguera",
+    wall: "Pintura blanca",
+    openings: [{ side: "S", kind: "window", at: 2000, w: 1800, h: 1800, sill: 600 }],
+    items: [
+      { ref: CC("m330-sideboard"), wall: "N", at: 1900 },
+      { ref: CC("linea-desk"), x: 1900, y: 2000 },
+      { ref: CC("linea-chair"), x: 1900, y: 2750, rot: 180 },
+      { ref: CC("m330-divider"), x: 3500, y: 2100, rot: 90 },
+      { ref: CC("linea-round"), x: 4800, y: 2300 },
+      { ref: CC("linea-chair"), x: 4800, y: 1300, group: "Reunions" },
+      { ref: CC("linea-chair"), x: 4800, y: 3300, rot: 180, group: "Reunions" },
+      { ref: O("plant-tropical"), wall: "N", at: 5500, gap: 150 },
+    ],
+  },
+  {
+    id: "amb-col-com-hall",
+    category: "col-com",
+    name: "Rebedor Galeria",
+    description: "3,6 × 2,6 m · travertí: consola «Galeria» lacada amb tapa de pedra, mirall i làmpada.",
+    w: 3600,
+    d: 2600,
+    floor: "Travertí",
+    wall: "Estuc greige",
+    items: [
+      { ref: CC("gallery-console"), wall: "N", at: 1800 },
+      { ref: O("mirror-rect"), wall: "N", at: 1800, elevation: 1100 },
+      { ref: O("table-lamp"), x: 1300, y: 250, elevation: 780 },
+      { ref: O("plant-tropical-small"), wall: "E", at: 1900, gap: 100 },
+    ],
+  },
+]
+
 export const AMBIENT_TEMPLATES: AmbientTemplate[] = [
   ...PLANT_SCENES,
   ...MAG_SCENES,
+  ...COLLECTION_SCENES,
   {
     id: "amb-nordic-living",
     category: "salo",

@@ -49,6 +49,9 @@ coses per resoldre.
   (eixos, numeració de cantells del taller, geometria dels forats i ranures, etiqueta).
 - [`docs/foto-mesures.md`](docs/foto-mesures.md): model de mesures de la foto
   (relativa / estimada / real, recalibratge, qualitat, línia del terra i fondària).
+- [`docs/colleccions-mobles.md`](docs/colleccions-mobles.md): **col·leccions de mobles** (biblioteca de referències
+  per a una col·lecció pròpia: minimalisme arquitectònic i comercial; prompt a
+  [`docs/prompt/PROMPT-colleccions.md`](docs/prompt/PROMPT-colleccions.md)).
 - Els prompts van a `docs/prompt/`. La resta de documentació nova (decisions, notes de fusteria) va a `docs/` en
   Markdown. El `CLAUDE.md` es queda a l'arrel i només hi enllaça.
 
@@ -260,7 +263,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   seients, taules, llits, quadres/miralls/cortines, llums, plantes, catifes i tèxtils, electrodomèstics, blocs) i les
   plantilles per a botigues de mobles per categoria. La cerca obre les categories que coincideixen.
 - **Catàleg per categories** (`AMBIENT_CATEGORIES`, `AmbientTemplate.category`: salons, cuines, menjadors,
-  dormitoris, infantils, vestidors, rebedors, despatxos, banys, exteriors), un acordió per categoria; la
+  dormitoris, infantils, vestidors, rebedors, despatxos, banys, exteriors i les dues **«Col·lecció · …»**: 11 escenes
+  amb totes les peces de les col·leccions, `COLLECTION_SCENES`, refs `col:<id>`), un acordió per categoria; la
   cerca també busca la categoria i obre les que coincideixen.
 - **Miniatures 3D a les targetes** (per decisió de l'usuari, en lloc dels dibuixos de línies): **sense cap 3D viu per
   targeta** (a l'iPhone farien tancar la pàgina). Mobles, objectes i plantilles: `components/viewer/thumbRenderer.ts`, un
@@ -364,8 +368,13 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Pàgina Mobles = inici, com Figma o Google Docs** (`projects/NewMobleGallery.tsx`, sense
   botó «Nou moble» ni diàleg): text descriptiu, **cercador** (sense filtre de tipus: el tipus també
   es busca), botó «Nou moble» a la capçalera i acordions **tots tancats**
-  en obrir l'app (l'estat es recorda durant la sessió, `mobles:gallery`): **Historial**, **Projectes**
-  i **Catàleg** (les plantilles per a botigues de mobles) (les «teves plantilles» i les «de l'app» ja no hi són: les teves
+  en obrir l'app (l'estat es recorda durant la sessió, `mobles:gallery`): **Historial**, **Projectes**,
+  **Catàleg** (les plantilles per a botigues de mobles) i **Col·leccions de mobles** (`projects/CollectionsSection`,
+  `LuLibrary`: `FURNITURE_COLLECTIONS` a `core/model/collections.ts`, dues col·leccions —Minimalisme arquitectònic i
+  Minimalisme comercial, per famílies— de peces paramètriques amb una **fitxa d'estudi** (`PieceStudy`: referència,
+  llenguatge, geometria, proporcions, materials, acabats, gruixos, ferratges, sensació, relació amb l'espai, graus 1–5,
+  qualitat, fotos de la carpeta `referencies`); tocar una peça obre la fitxa (calaix) i «Crear el moble»; la cerca
+  també mira la fitxa; `collections.test.ts`) (les «teves plantilles» i les «de l'app» ja no hi són: les teves
   es van convertir en mobles del grup «Les meves plantilles», `migrateUserTemplates`); el **cercador** (sense accents; obre
   les seccions i categories amb resultats) valen per a tots. Totes les graelles fan servir
   `GALLERY_COLS` (`projects/galleryGrid.ts`) i la mateixa targeta petita (les del historial, amb
@@ -706,8 +715,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     l'albedo i la normal de la primera superfície, en un worker a part, cada cop menys sovint), **exposició automàtica**
     (mitjana geomètrica de les superfícies al gris mitjà del 18 %, fins a ×40; per defecte als ambients) i temperatura
     (càlid per defecte als ambients). Càmera: **format** (visor, 3:2, 4:5, 16:9, 1:1) i desenfocament (lent fina, enfoca
-    el centre). **Cel HDRI** opcional: es carrega un `.hdr` (`hdr.ts`, RGBE; p. ex. de Poly Haven) i es pot girar; sense,
-    el cel de dia. Opcions del render en seccions plegables (`PanelSection`, com els inspectors: Qualitat, Càmera,
+    el centre). **Cel** (`render/skies.ts`): «Dia» (procedural), «Núvols» i «Interior» (HDRI de Poly
+    Haven, CC0, reduïts a 1K a `public/hdr/`, precachejats) o un `.hdr` propi (`hdr.ts`, RGBE), que es pot girar; el de defecte, a
+    Preferències › Visor 3D › «Cel del render» (mobles: «Interior»; ambients: «Núvols»; preferència del dispositiu). Opcions del render en seccions plegables (`PanelSection`, com els inspectors: Qualitat, Càmera,
     Escena, Llum, Imatge, amb el resum a la insígnia); al mòbil, pantalla completa amb la imatge a dalt. Tests:
     `render/render.test.ts` (BVH contra força bruta, CDF de l'HDRI, bevel, empaquetat de textures i triangles).
     **Sostre**: opció de vista «Sostre» (`mobles:ambient-ceiling`) i material a Acabats
@@ -899,7 +909,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Memòria a l'iPhone** (`components/viewer/deviceLimits.ts`, `LOW_MEMORY` = pantalla tàctil): Safari dona poca
   memòria per pàgina i, si se supera, iOS la tanca i la recarrega. Per això, a les pantalles tàctils, Presentació fa
   l'ombra a 2048 (no 4096) i fins a 2×, les memòries de textures (`remember` a `textures.ts`, també les fotos) en
-  guarden 12 i alliberen (`dispose`) les que en surten, i el render per CPU fa com a molt 2 processos.
+  guarden 12 i alliberen (`dispose`) les que en surten, i el render fa com a molt 1600 px de costat llarg («Alta» i
+  «Màxima» desactivades, amb l'explicació) i, per CPU, com a molt 2 processos (a tot arreu, menys fils com més gran és la
+  imatge: `cpuThreads`, pressupost de memòria dels buffers dels workers).
 - **Controls segmentats en mode fosc** (`theme/system.ts`): l'indicador de l'opció triada és gris clar (per
   defecte era del mateix negre que el fons i no es veia quina estava triada).
 - **Mides d'iOS a les pantalles tàctils** (`src/theme/layout.css`, `@media (pointer: coarse)`, CSS sense capa: guanya a les
@@ -1004,6 +1016,7 @@ Accions principals: icona + text.
 | Visor | Vista 3D · Obertura portes · Materials · Per tipus de peça · Imatge | `LuRotate3D` · `LuDoorOpen` · `LuPalette` · `LuLayers` · `LuImageDown` |
 | Ambients | Ambients · Seleccionar · Paret (ploma) · Habitació · Calibrar · Plànol de fons | `LuHouse` · `LuMousePointer2` · `LuPenTool` · `LuBrickWall` · `LuPencilRuler` · `LuImageUp` |
 | Ambients | Finestra · Porta · Moure a un grup · Grup (carpeta) | `LuAppWindow` · `LuDoorOpen` · `LuFolderInput` · `LuFolder` |
+| Mobles | Col·leccions de mobles (biblioteca de referències) | `LuLibrary` |
 | Ambients | Afegir moble · Bloc · Plànol · 3D · Girar | `LuBox` · `LuSofa` · `LuMap` · `LuRotate3D` · `LuRotateCw` / `LuRotateCcw` |
 | Exportar | DXF (CNC) · STEP 3D · CSV de nesting · CSV de peces · GLB · Avançat | `LuScissors` · `LuCuboid` · `LuLayoutGrid` · `LuFileDown` · `LuBoxes` · `LuSettings2` |
 

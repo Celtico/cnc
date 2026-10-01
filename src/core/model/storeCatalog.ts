@@ -1,6 +1,6 @@
 import { DEFAULT_JOINERY, type FreePart } from "./freePart"
 import type { PNode } from "./polygon"
-import { compositionHeight, compositionWidth, defaultModule, DEFAULT_GRILLE, newId, tableModule, type Carcass, type Composition, type CompositionKind, type Module, type RefObject, type Zone } from "./composition"
+import { compositionHeight, compositionWidth, defaultModule, DEFAULT_GRILLE, newId, partsOnlyKind, tableModule, type Carcass, type Composition, type CompositionKind, type Module, type RefObject, type Zone } from "./composition"
 import type { Template } from "./templates"
 
 /**
@@ -414,10 +414,13 @@ interface Variant {
   make: () => Composition
 }
 
-const dims = (c: Composition): string => {
-  const d = Math.max(...c.modules.map((m) => m.carcass.depth + (m.wallGap ?? 0)), ...(c.parts ?? []).map((p) => (p.orient === "flat" ? p.h : p.orient === "side" ? p.w : p.thickness) + p.z))
-  const w = Math.max(compositionWidth(c), ...(c.parts ?? []).map((p) => p.x + (p.orient === "side" ? p.thickness : p.w)))
-  const hh = Math.max(compositionHeight(c), ...(c.parts ?? []).map((p) => p.y + (p.orient === "flat" ? p.thickness : p.h)))
+/** Mides exteriors «A × H × F» d'una composició (mòduls i peces lliures). */
+export const compositionDims = (c: Composition): string => {
+  // Flat-pack i objectes: el mòdul que porten no es fa (no compta per a les mides).
+  const mods = partsOnlyKind(c.kind ?? "moble") ? [] : c.modules
+  const d = Math.max(0, ...mods.map((m) => m.carcass.depth + (m.wallGap ?? 0)), ...(c.parts ?? []).map((p) => (p.orient === "flat" ? p.h : p.orient === "side" ? p.w : p.thickness) + p.z))
+  const w = Math.max(mods.length ? compositionWidth(c) : 0, ...(c.parts ?? []).map((p) => p.x + (p.orient === "side" ? p.thickness : p.w)))
+  const hh = Math.max(mods.length ? compositionHeight(c) : 0, ...(c.parts ?? []).map((p) => p.y + (p.orient === "flat" ? p.thickness : p.h)))
   return `${Math.round(w)} × ${Math.round(hh)} × ${Math.round(d)}`
 }
 
@@ -431,7 +434,7 @@ function items(cat: string, type: string, vs: Variant[]): StoreType {
         id: `store-${cat}-${type.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${i + 1}`,
         kind,
         name: `${type} «${x.name}»`,
-        description: `${x.style} · ${dims(sample)} mm · ${x.materials}. ${x.use}. Colors: ${x.colors}. Per a ${x.audience}.`,
+        description: `${x.style} · ${compositionDims(sample)} mm · ${x.materials}. ${x.use}. Colors: ${x.colors}. Per a ${x.audience}.`,
         price: x.price,
         make: () => ({ ...x.make(), kind }),
       }
@@ -879,4 +882,4 @@ export const STORE_CATALOG: StoreCategory[] = [
 export const STORE_TEMPLATES: Template[] = STORE_CATALOG.flatMap((c) => c.types.flatMap((t) => t.items))
 
 /** Constructors del catàleg, per a altres plantilles (mobles de les escenes de revista). */
-export const storeBuilders = { box, drawers, door, doors, flap, open, fixed, panel, v, h, auto, onFloor, plinth, legs, hung, part, metal, kitchen, bookcase, wardrobe, sideboard, one, row, stoneTop, legTable, loose }
+export const storeBuilders = { box, drawers, door, doors, flap, open, fixed, panel, v, h, auto, onFloor, plinth, legs, hung, part, metal, kitchen, bookcase, wardrobe, sideboard, one, row, stoneTop, legTable, loose, waterfall, ironLegs, oval, glassShelf }

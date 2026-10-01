@@ -4,12 +4,13 @@ import { LuFolders, LuHistory, LuSearch } from "react-icons/lu"
 import { SnapshotThumb } from "../../components/SnapshotThumb"
 import { useSettings } from "../settings/SettingsContext"
 import { requestTemplateThumb, templateThumb } from "./projectThumbs"
-import { STORE_CATALOG, type Composition, type CompositionKind, type Template } from "../../core/model"
+import { FURNITURE_COLLECTIONS, STORE_CATALOG, type Composition, type CompositionKind, type Template } from "../../core/model"
 import { KINDS } from "../composition/kinds"
 import { FoldTitle } from "./FoldTitle"
 import { GalleryCard } from "./GalleryCard"
 import { GALLERY_COLS, fold, useSessionList } from "./galleryGrid"
 import { CatalogSection } from "./CatalogSection"
+import { CollectionsSection } from "./CollectionsSection"
 
 const kindLabel = (k: CompositionKind) => KINDS.find((x) => x.value === k)!.label
 const euros = (n: number) => `${n.toLocaleString("ca-ES")} €`
@@ -54,7 +55,7 @@ const COLS = GALLERY_COLS
 
 /**
  * Pàgina de Mobles, com l'inici de Figma o Google Docs: cercador i acordions (tots tancats en
- * obrir l'app): Historial (el que és de pas), Projectes (els grups) i el catàleg de botigues.
+ * obrir l'app): Historial (el que és de pas), Projectes (els grups), el catàleg de botigues i les col·leccions de mobles.
  */
 export function NewMobleGallery({
   onCreate,
@@ -83,11 +84,18 @@ export function NewMobleGallery({
       .filter((ty) => ty.items.length > 0),
   })).filter((c) => c.types.length > 0)
   const storeCount = store.reduce((n, c) => n + c.types.reduce((m, ty) => m + ty.items.length, 0), 0)
+  // Col·leccions de mobles: la cerca també mira la fitxa d'estudi (referència, materials, llenguatge…).
+  const collections = FURNITURE_COLLECTIONS.map((c) => ({
+    ...c,
+    pieces: c.pieces.filter((t) => fits(t) && (!q || fold(`${c.name} ${t.name} ${t.description} ${kindLabel(t.kind)} ${Object.values(t.study).join(" ")}`).includes(q))),
+  }))
+  const collectionsCount = collections.reduce((n, c) => n + c.pieces.length, 0)
   const [openSections, setOpenSections] = useSessionList(storageKey)
   const [openCats, setOpenCats] = useSessionList(`${storageKey}-store`)
+  const [openCols, setOpenCols] = useSessionList(`${storageKey}-collections`)
   const hist = history(kind, matches, !!q)
   // Amb cerca, s'obren les seccions que tenen resultats.
-  const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["history"] : []), ...(storeCount ? ["store"] : [])]
+  const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["history"] : []), ...(storeCount ? ["store"] : []), ...(collectionsCount ? ["collections"] : [])]
   const pick = (t: Template) => onCreate({ ...t.make(), kind: t.kind }, t.name)
 
 
@@ -144,6 +152,7 @@ export function NewMobleGallery({
             ),
           }))}
         />
+        <CollectionsSection value="collections" collections={collections} searching={!!q} open={openCols} onOpenChange={setOpenCols} onCreate={pick} />
       </Accordion.Root>
 
     </Stack>
