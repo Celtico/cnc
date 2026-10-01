@@ -1,5 +1,4 @@
-import { intersectBvh } from "./bvh"
-import type { EngineEvents, RenderEngine, RenderJob } from "./engine"
+import { AUX_SAMPLES, type EngineEvents, type RenderEngine, type RenderJob } from "./engine"
 import { GpuLimitError, packGpuScene, type GpuScene } from "./gpuScene"
 import { TRACER_WGSL } from "./gpuTracer.wgsl"
 import { lightSetup } from "./lights"
@@ -9,12 +8,13 @@ import { DIRECT_CLAMP, BUMP_STRENGTH, GLASS_SHADOW, INDIRECT_CLAMP, PATH_ROUGHNE
 /**
  * Path tracer per GPU (WebGPU, compute shaders): el mateix algorisme que el de CPU, amb
  * l'escena en buffers d'emmagatzematge (`gpuScene`). Acumula a la GPU per tandes de files
- * (cadascuna de menys de ~30 ms, perquè la pàgina no s'encalli) i, a cada passada sencera,
- * torna les sumes al diàleg (el mateix contracte que la CPU).
+ * (cadascuna de menys de ~30 ms, perquè la pàgina no s'encalli; se'n deixen dues a la cua perquè
+ * la GPU no s'esperi) i, de tant en tant, en acabar una passada sencera, torna les sumes al diàleg
+ * (el mateix contracte que la CPU) sense aturar el càlcul.
  */
 
-/** Mostres que porten AOV (albedo i normal per al filtre de soroll): després ja no canvien. */
-const AUX_SAMPLES = 16
+/** Tandes enviades a la GPU abans d'esperar-ne la primera. */
+const IN_FLIGHT = 2
 const PARAMS_BYTES = 16 * 16
 /** Constants de WebGPU (els tipus del DOM de TypeScript no les porten). */
 const U = { MAP_READ: 0x1, COPY_SRC: 0x4, COPY_DST: 0x8, UNIFORM: 0x40, STORAGE: 0x80 } as const
@@ -49,12 +49,14 @@ export class GpuEngine implements RenderEngine {
   private job: RenderJob
   private ev: EngineEvents
   private gs: GpuScene
-  private focus: number
+  private focus = 0
   /** Llum típica de l'escena (màxims de les ateses). */
   key = 0.3
   private running = false
   private disposed = false
   private loopPromise: Promise<void> | null = null
+  /** Cada `resume` comença un bucle nou (encadenat a l'anterior); els d'abans en surten. */
+  private gen = 0
   // Progrés.
   private count = 0
   private cursor = 0
@@ -71,6 +73,12 @@ export class GpuEngine implements RenderEngine {
   private color: Float32Array
   private lastRead = 0
   private readMs = 0
+  /** Buffers de lectura (es reaprofiten; el de les AOV es treu quan ja no canvien). */
+  private colorStage: GPUBuffer | null = null
+  private auxStage: GPUBuffer | null = null
+  private reading: Promise<void> | null = null
+  /** Passades de l'última lectura enviada al diàleg. */
+  private readCount = 0
   private seed = (Math.random() * 2 ** 31) >>> 0
 
   private constructor(device: GPUDevice, pipeline: GPUComputePipeline, job: RenderJob, ev: EngineEvents, gs: GpuScene) {
@@ -95,8 +103,6 @@ export class GpuEngine implements RenderEngine {
       entries: [this.params, tris, nodes, info, texels, env, this.accum, this.auxBuf].map((buffer, binding) => ({ binding, resource: { buffer } })),
     })
     this.color = new Float32Array(w * h * 4)
-    const m = job.scene.camera.matrix
-    this.focus = intersectBvh(gs.bvh, job.scene.positions, m[12]!, m[13]!, m[14]!, -m[8]!, -m[9]!, -m[10]!)?.t ?? 0
     this.rows = Math.min(h, 16)
   }
 
@@ -134,14 +140,16 @@ export class GpuEngine implements RenderEngine {
     } catch (e) {
       return fail(new Error(`No s'ha pogut preparar la GPU: ${String(e)}`))
     }
-    let key: number
+    let est: { key: number; focus: number }
     try {
-      key = await estimateSceneKey(job)
+      est = await estimateSceneKey(job)
     } catch (e) {
       return fail(e)
     }
     const engine = new GpuEngine(device, pipeline, job, ev, gs)
-    engine.key = key
+    engine.key = est.key
+    // L'enfocament, del worker (com a la CPU: salta els retalls de les fulles).
+    engine.focus = est.focus
     const oom = await device.popErrorScope()
     const val = await device.popErrorScope()
     if (oom || val) {
@@ -167,19 +175,30 @@ export class GpuEngine implements RenderEngine {
   resume() {
     if (this.running || this.disposed) return
     this.running = true
-    this.loopPromise = this.loop()
+    const g = ++this.gen
+    // El bucle d'abans (si encara no ha sortit) acaba primer: mai n'hi ha dos alhora.
+    const prev = this.loopPromise ?? Promise.resolve()
+    this.loopPromise = prev.then(() => this.loop(g)).catch((e: unknown) => {
+      if (!this.disposed && this.gen === g) {
+        this.running = false
+        this.ev.onError(`Error de la GPU: ${String(e)}`)
+      }
+    })
   }
 
   pause() {
     this.running = false
+    this.gen++
   }
 
   dispose() {
     this.running = false
     this.disposed = true
-    const done = this.loopPromise ?? Promise.resolve()
-    void done.finally(() => {
+    this.gen++
+    void Promise.allSettled([this.loopPromise, this.reading]).finally(() => {
       for (const b of this.buffers) b.destroy()
+      this.colorStage?.destroy()
+      this.auxStage?.destroy()
       this.device.destroy()
     })
   }
@@ -202,20 +221,57 @@ export class GpuEngine implements RenderEngine {
     u.set([L.neeMode, gs.portalCount, job.env ? 1 : 0, gs.triCount], 48)
     u.set([gs.matOff, gs.texOff, gs.bevelOff, gs.portalOff], 52)
     u.set([gs.envW, gs.envH, gs.envMarginal, gs.envConditional], 56)
-    u.set([this.seed, rows, 0, 0], 60)
+    u.set([this.seed, rows, 2 ** gs.texHalvings, 0], 60)
     this.device.queue.writeBuffer(this.params, 0, buf)
   }
 
-  private async loop() {
+  /** Mida de les tandes segons el que ha tardat l'última (`dt`, ms; `rows` files). */
+  private adapt(rows: number, dt: number) {
+    const { h } = this.job
+    // Tandes de ~10–30 ms: més files (o més mostres a la passada següent) si va de pressa.
+    // Si partir la tanda no la fa més curta (una GPU per programari, amb un cost fix gran per
+    // tanda), es fan passades senceres: la pàgina no hi guanyaria res.
+    if (this.fixedCost) {
+      this.rows = h
+    } else if (rows === this.prevRows >> 1 && dt > this.prevDt * 0.75 && dt > 30) {
+      this.fixedCost = true
+      this.rows = h
+    } else if (dt < 12) {
+      if (this.rows < h) this.rows = Math.min(h, this.rows * 2)
+      else this.sppNext = Math.min(32, this.sppNext * 2)
+    } else if (dt > 30) {
+      if (this.sppNext > 1 && this.rows >= h) this.sppNext = Math.max(1, this.sppNext >> 1)
+      else this.rows = Math.max(8, this.rows >> 1)
+    }
+    this.prevRows = rows
+    this.prevDt = dt
+  }
+
+  private async loop(g: number) {
     const { w, h } = this.job
     const dev = this.device
-    while (this.running && !this.disposed) {
+    const live = () => this.running && this.gen === g && !this.disposed
+    // Tandes a la cua de la GPU: en esperar-ne una, la següent ja s'hi calcula.
+    const queue: { done: Promise<void>; t0: number; rows: number; end: number }[] = []
+    let lastEnd = 0
+    const settle = async () => {
+      const q = queue.shift()!
+      await q.done
+      // Temps de GPU de la tanda: des que ha acabat l'anterior (o des que s'ha enviat).
+      this.adapt(q.rows, q.end - Math.max(q.t0, lastEnd))
+      lastEnd = q.end
+    }
+    while (live()) {
       if (this.cursor === 0) {
         const lim = this.ev.limit()
         if (lim && this.count >= lim) {
-          this.running = false
-          this.ev.onStop?.()
-          break
+          while (queue.length) await settle()
+          await this.flushRead()
+          if (this.gen === g && !this.disposed) {
+            this.running = false
+            this.ev.onStop?.()
+          }
+          return
         }
         this.spp = lim ? Math.max(1, Math.min(this.sppNext, lim - this.count)) : this.sppNext
       }
@@ -227,28 +283,12 @@ export class GpuEngine implements RenderEngine {
       pass.setBindGroup(0, this.bind)
       pass.dispatchWorkgroups(Math.ceil(w / 8), Math.ceil(rows / 8))
       pass.end()
-      const t0 = performance.now()
       dev.queue.submit([enc.finish()])
-      await dev.queue.onSubmittedWorkDone()
-      if (this.disposed) return
-      const dt = performance.now() - t0
-      // Tandes de ~10–30 ms: més files (o més mostres a la passada següent) si va de pressa.
-      // Si partir la tanda no la fa més curta (una GPU per programari, amb un cost fix gran per
-      // tanda), es fan passades senceres: la pàgina no hi guanyaria res.
-      if (this.fixedCost) {
-        this.rows = h
-      } else if (rows === this.prevRows >> 1 && dt > this.prevDt * 0.75 && dt > 30) {
-        this.fixedCost = true
-        this.rows = h
-      } else if (dt < 12) {
-        if (this.rows < h) this.rows = Math.min(h, this.rows * 2)
-        else this.sppNext = Math.min(32, this.sppNext * 2)
-      } else if (dt > 30) {
-        if (this.sppNext > 1 && this.rows >= h) this.sppNext = Math.max(1, this.sppNext >> 1)
-        else this.rows = Math.max(8, this.rows >> 1)
-      }
-      this.prevRows = rows
-      this.prevDt = dt
+      const rec = { done: Promise.resolve(), t0: performance.now(), rows, end: 0 }
+      rec.done = dev.queue.onSubmittedWorkDone().then(() => {
+        rec.end = performance.now()
+      })
+      queue.push(rec)
       this.cursor += rows
       if (this.cursor >= h) {
         this.cursor = 0
@@ -256,48 +296,67 @@ export class GpuEngine implements RenderEngine {
         this.count += this.spp
         const lim = this.ev.limit()
         const now = performance.now()
-        if (now - this.lastRead >= Math.max(250, this.readMs * 4) || (lim && this.count >= lim) || this.count <= 2) await this.readback()
-        if (this.disposed) return
+        // La còpia va a la cua darrere d'aquesta passada: no cal esperar-la.
+        if (now - this.lastRead >= Math.max(250, this.readMs * 4) || (lim && this.count >= lim) || this.count <= 2) this.startRead()
       }
-      // Deixa respirar la pàgina.
-      await new Promise((r) => setTimeout(r, 0))
+      // Amb una GPU per programari (passades senceres), d'una en una: si no, el navegador no
+      // troba mai la GPU lliure per pintar la pàgina.
+      if (queue.length >= (this.fixedCost ? 1 : IN_FLIGHT)) await settle()
+      if (this.disposed) return
     }
-    // En aturar-se: el que s'ha fet fins a l'última passada sencera ja és al diàleg.
+    // En aturar-se: el que s'ha fet fins a l'última passada sencera va al diàleg.
+    while (queue.length) await settle()
+    if (!this.disposed) await this.flushRead()
   }
 
-  private async readback() {
+  /** Espera la lectura en curs i, si queden passades per enviar al diàleg, en fa una altra. */
+  private async flushRead() {
+    if (this.reading) await this.reading
+    if (this.disposed || this.readCount === this.count) return
+    this.startRead()
+    if (this.reading) await this.reading
+  }
+
+  /** Copia les sumes a la memòria del processador (sense esperar) i, quan hi són, les envia. */
+  private startRead() {
+    if (this.reading || this.disposed) return
     const dev = this.device
     const t0 = performance.now()
-    const needAux = !this.auxRaw || this.auxSamples < AUX_SAMPLES || this.auxRawSamples !== this.auxSamples
-    const rc = dev.createBuffer({ size: this.accum.size, usage: U.MAP_READ | U.COPY_DST })
-    const ra = needAux ? dev.createBuffer({ size: this.auxBuf.size, usage: U.MAP_READ | U.COPY_DST }) : null
+    const count = this.count
+    const auxSamples = this.auxSamples
+    // Les AOV només fins que ja no canvien (`AUX_SAMPLES`).
+    const needAux = this.auxRawSamples !== auxSamples
+    const cs = (this.colorStage ??= dev.createBuffer({ size: this.accum.size, usage: U.MAP_READ | U.COPY_DST }))
+    const as = needAux ? (this.auxStage ??= dev.createBuffer({ size: this.auxBuf.size, usage: U.MAP_READ | U.COPY_DST })) : null
     const enc = dev.createCommandEncoder()
-    enc.copyBufferToBuffer(this.accum, 0, rc, 0, this.accum.size)
-    if (ra) enc.copyBufferToBuffer(this.auxBuf, 0, ra, 0, this.auxBuf.size)
+    enc.copyBufferToBuffer(this.accum, 0, cs, 0, this.accum.size)
+    if (as) enc.copyBufferToBuffer(this.auxBuf, 0, as, 0, this.auxBuf.size)
     dev.queue.submit([enc.finish()])
-    try {
-      await rc.mapAsync(MAP_MODE_READ)
-      if (ra) await ra.mapAsync(MAP_MODE_READ)
-    } catch {
-      rc.destroy()
-      ra?.destroy()
-      return
-    }
-    if (this.disposed) return
-    this.color.set(new Float32Array(rc.getMappedRange()))
-    rc.unmap()
-    rc.destroy()
-    if (ra) {
-      this.auxRaw = new Float32Array(ra.getMappedRange()).slice()
-      this.auxRawSamples = this.auxSamples
-      ra.unmap()
-      ra.destroy()
-    }
-    // Les AOV només es sumen les primeres mostres: s'escalen com si fossin de totes.
-    const k = this.count / Math.max(1, this.auxRawSamples)
-    const aux = k === 1 ? this.auxRaw! : this.auxRaw!.map((v) => v * k)
-    this.readMs = performance.now() - t0
-    this.lastRead = performance.now()
-    this.ev.onProgress({ color: this.color, aux, count: this.count })
+    this.reading = (async () => {
+      try {
+        await Promise.all([cs.mapAsync(MAP_MODE_READ), as?.mapAsync(MAP_MODE_READ)])
+      } catch {
+        return
+      }
+      if (this.disposed) return
+      this.color.set(new Float32Array(cs.getMappedRange()))
+      cs.unmap()
+      if (as) {
+        ;(this.auxRaw ??= new Float32Array(this.job.w * this.job.h * 6)).set(new Float32Array(as.getMappedRange()))
+        as.unmap()
+        this.auxRawSamples = auxSamples
+        if (auxSamples >= AUX_SAMPLES) {
+          as.destroy()
+          this.auxStage = null
+        }
+      }
+      const now = performance.now()
+      this.readMs = now - t0
+      this.lastRead = now
+      this.readCount = count
+      this.ev.onProgress({ color: this.color, aux: this.auxRaw!, count, auxCount: Math.max(1, this.auxRawSamples) })
+    })().finally(() => {
+      this.reading = null
+    })
   }
 }

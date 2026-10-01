@@ -5,11 +5,14 @@ import { LuCamera, LuDownload, LuGauge, LuHouse, LuImage, LuImageUp, LuPause, Lu
 import { ChoiceChips, FormRow } from "../../FormRow"
 import { PanelSection } from "../../PanelSection"
 import type { Camera, Scene } from "three"
+import { LOW_MEMORY } from "../deviceLimits"
 import { CpuEngine } from "./cpuEngine"
-import type { EngineKind, RenderEngine, RenderJob } from "./engine"
+import type { EngineKind, RenderEngine, RenderJob, RenderProgress } from "./engine"
+import { GpuLimitError } from "./gpuScene"
 import { GpuEngine, gpuSupport } from "./gpuTracer"
 import { parseHdr } from "./hdr"
 import { DEFAULT_RENDER_OPTS, extractScene, type RenderEnv, type RenderOpts, type RenderRoom } from "./sceneData"
+import { aces, createDrawScheduler, makeSrgbLut, srgbLut } from "./tonemap"
 
 export type SceneGetter = () => { scene: Scene; camera: Camera; width: number; height: number; snapshot?: () => string } | null
 
@@ -39,6 +42,19 @@ const RESOLUTIONS = {
   max: { label: "Màxima", k: 3, max: 3600 },
 } as const
 type Resolution = keyof typeof RESOLUTIONS
+/** A l'iPhone i l'iPad (poca memòria per pàgina): com a molt 1600 px de costat llarg. */
+const LOW_MEMORY_MAX = 1600
+const resolutionAllowed = (r: Resolution) => !LOW_MEMORY || RESOLUTIONS[r].max <= LOW_MEMORY_MAX
+
+/** Una feina de render al diàleg: les sumes són les del motor (s'hi assignen en arribar). */
+interface Job {
+  w: number
+  h: number
+  accum: Float32Array<ArrayBufferLike>
+  aux: Float32Array<ArrayBufferLike>
+  count: number
+  auxCount: number
+}
 
 /** Format de la imatge (com les càmeres): el del visor o una proporció fixa (amplada ÷ alçada). */
 const FORMATS = { view: { label: "El del visor", r: 0 }, "3:2": { label: "3:2 (foto)", r: 3 / 2 }, "4:5": { label: "4:5 (revista, vertical)", r: 4 / 5 }, "16:9": { label: "16:9 (web)", r: 16 / 9 }, "1:1": { label: "1:1", r: 1 } } as const
@@ -59,12 +75,8 @@ interface Look {
 }
 const DEFAULT_LOOK: Look = { exposure: 0, contrast: 1, saturation: 1, background: "scene", auto: false, warmth: 0, denoise: true }
 
-/** To ACES aproximat (lineal → [0, 1] lineal); `exp` = multiplicador d'exposició. */
-function aces(v: number, exp: number): number {
-  const a = v * exp
-  return Math.min(1, Math.max(0, (a * (2.51 * a + 0.03)) / (a * (2.43 * a + 0.59) + 0.14)))
-}
-const srgb = (c: number) => (c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055)
+const SRGB_LUT = makeSrgbLut()
+const srgb = (c: number) => srgbLut(SRGB_LUT, c)
 
 /** Control lliscant compacte en fila: rètol a l'esquerra; el range natiu i el valor a la dreta. */
 function Range({ label, value, min, max, step, format, onChange }: { label: string; value: number; min: number; max: number; step: number; format: (v: number) => string; onChange: (v: number) => void }) {
@@ -132,6 +144,8 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
   const [engineKind, setEngineKind] = useState<EngineKind>(() => savedEngine() ?? "gpu")
   /** Motiu pel qual no hi ha GPU (`undefined` mentre es mira). */
   const [gpuWhy, setGpuWhy] = useState<string | null | undefined>(undefined)
+  /** La GPU ha fallat en aquest diàleg (motiu; si era per la mida, només a aquesta resolució). */
+  const [gpuFailed, setGpuFailed] = useState<{ why: string; res: Resolution | null } | null>(null)
   const [engineLabel, setEngineLabel] = useState("")
   const envRef = useRef(env)
   envRef.current = env
@@ -143,10 +157,15 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
   /** Cada render nou: els avisos dels motors d'abans s'ignoren. */
   const token = useRef(0)
   const source = useRef<{ scene: ReturnType<typeof extractScene>; aspect: number; long: number; room?: RenderRoom; format?: Format } | null>(null)
-  const job = useRef<{ w: number; h: number; accum: Float32Array<ArrayBufferLike>; aux: Float32Array<ArrayBufferLike>; count: number } | null>(null)
+  const job = useRef<Job | null>(null)
+  /** Què s'ha començat a calcular l'últim cop (per no tornar a començar el mateix). */
+  const lastRun = useRef<{ o: RenderOpts; r: Resolution; kind: EngineKind; env: unknown; room?: RenderRoom; format?: Format } | null>(null)
   // Filtre de soroll: un fil a part; el resultat val per a les passades amb què s'ha calculat.
-  const dn = useRef<{ worker: Worker | null; busy: boolean; id: number; data: Float32Array | null; count: number }>({ worker: null, busy: false, id: 0, data: null, count: 0 })
-  const effectiveKind: EngineKind = engineKind === "gpu" && gpuWhy === null ? "gpu" : "cpu"
+  // `busy`: l'identificador de la petició en curs (0 = cap).
+  const dn = useRef<{ worker: Worker | null; busy: number; id: number; data: Float32Array | null; count: number }>({ worker: null, busy: 0, id: 0, data: null, count: 0 })
+  const img = useRef<ImageData | null>(null)
+  const gpuFailedNow = gpuFailed && (!gpuFailed.res || gpuFailed.res === res) ? gpuFailed.why : null
+  const effectiveKind: EngineKind = engineKind === "gpu" && gpuWhy === null && !gpuFailedNow ? "gpu" : "cpu"
 
   const disposeEngine = () => {
     token.current++
@@ -165,7 +184,8 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
       c.height = j.h
     }
     const ctx = c.getContext("2d")!
-    const img = ctx.createImageData(j.w, j.h)
+    if (!img.current || img.current.width !== j.w || img.current.height !== j.h) img.current = ctx.createImageData(j.w, j.h)
+    const out = img.current.data
     const k = 1 / j.count
     const L = lookRef.current
     const D = L.denoise && dn.current.data && dn.current.data.length === j.w * j.h * 3 ? dn.current.data : null
@@ -188,6 +208,8 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     const expo = 0.7 * Math.pow(2, L.exposure) * autoK
     const tone = (v: number) => aces(v, expo)
     const wr = 1 + 0.12 * L.warmth, wb = 1 - 0.12 * L.warmth
+    const sb = source.current?.scene.background ?? [0, 0, 0]
+    const bgR = srgb(tone(sb[0])), bgG = srgb(tone(sb[1])), bgB = srgb(tone(sb[2]))
     for (let i = 0, n = j.w * j.h; i < n; i++) {
       let r = tone(col(i, 0) * wr)
       let g = tone(col(i, 1))
@@ -200,9 +222,9 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
         g = y + (g - y) * L.saturation
         b = y + (b - y) * L.saturation
       }
-      r = srgb(Math.min(1, Math.max(0, r)))
-      g = srgb(Math.min(1, Math.max(0, g)))
-      b = srgb(Math.min(1, Math.max(0, b)))
+      r = srgb(r)
+      g = srgb(g)
+      b = srgb(b)
       if (L.contrast !== 1) {
         r = (r - 0.5) * L.contrast + 0.5
         g = (g - 0.5) * L.contrast + 0.5
@@ -212,7 +234,6 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
       if (L.background !== "scene" && a < 1) {
         // Els píxels de fons (alfa < 1, amb les vores suavitzades) es barregen amb el blanc o
         // queden transparents. El color guardat al fons és el de l'escena: se'n treu.
-        const bgR = srgb(tone(source.current!.scene.background[0])), bgG = srgb(tone(source.current!.scene.background[1])), bgB = srgb(tone(source.current!.scene.background[2]))
         const fr = a > 0.001 ? (r - bgR * (1 - a)) / a : 0
         const fg = a > 0.001 ? (g - bgG * (1 - a)) / a : 0
         const fb = a > 0.001 ? (b - bgB * (1 - a)) / a : 0
@@ -227,35 +248,44 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
           alpha = a
         }
       }
-      img.data[i * 4] = Math.min(1, Math.max(0, r)) * 255
-      img.data[i * 4 + 1] = Math.min(1, Math.max(0, g)) * 255
-      img.data[i * 4 + 2] = Math.min(1, Math.max(0, b)) * 255
-      img.data[i * 4 + 3] = alpha * 255
+      // L'array és «clamped»: arrodoneix i retalla a 0–255.
+      out[i * 4] = r * 255
+      out[i * 4 + 1] = g * 255
+      out[i * 4 + 2] = b * 255
+      out[i * 4 + 3] = alpha * 255
     }
-    ctx.putImageData(img, 0, 0)
+    ctx.putImageData(img.current, 0, 0)
+  }
+  const drawRef = useRef(draw)
+  drawRef.current = draw
+  // Com a molt un dibuix per fotograma, i més espaiats si costen (imatges grans).
+  const drawer = useRef<ReturnType<typeof createDrawScheduler> | null>(null)
+  const requestDraw = () => {
+    drawer.current ??= createDrawScheduler(() => drawRef.current())
+    drawer.current.request()
   }
 
   const setLook = (patch: Partial<Look>) => {
     const next = { ...lookRef.current, ...patch }
     lookRef.current = next
     setLookState(next)
-    draw()
+    requestDraw()
   }
 
   /** Filtra el soroll de les passades acumulades (cada cop menys sovint: 4, 8, 16… passades). */
   const scheduleDenoise = (force = false) => {
     const j = job.current
     const D = dn.current
-    if (!j || !lookRef.current.denoise || D.busy || j.count < 2) return
+    if (!j || !lookRef.current.denoise || D.busy || j.count < 2 || !j.auxCount) return
     if (!force && j.count < D.count * 1.5 + 2) return
     D.worker ??= new Worker(new URL("./denoiseWorker.ts", import.meta.url), { type: "module" })
     const n = j.w * j.h
     const color = new Float32Array(n * 3), albedo = new Float32Array(n * 3), normal = new Float32Array(n * 3)
-    const k = 1 / j.count
+    const k = 1 / j.count, ka = 1 / j.auxCount
     for (let i = 0; i < n; i++) {
       for (let c = 0; c < 3; c++) {
         color[i * 3 + c] = j.accum[i * 4 + c]! * k
-        albedo[i * 3 + c] = j.aux[i * 6 + c]! * k
+        albedo[i * 3 + c] = j.aux[i * 6 + c]! * ka
       }
       const nx = j.aux[i * 6 + 3]!, ny = j.aux[i * 6 + 4]!, nz = j.aux[i * 6 + 5]!
       const l = Math.hypot(nx, ny, nz)
@@ -263,15 +293,20 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
         normal[i * 3] = nx / l; normal[i * 3 + 1] = ny / l; normal[i * 3 + 2] = nz / l
       }
     }
-    D.busy = true
     const id = ++D.id
+    D.busy = id
     const count = j.count
     D.worker.onmessage = (e: MessageEvent<{ id: number; data: Float32Array }>) => {
-      D.busy = false
-      if (e.data.id !== D.id || job.current !== j) return
+      // Només la resposta de la petició en curs l'allibera (les d'abans d'un reinici, també).
+      if (e.data.id === D.busy) D.busy = 0
+      if (e.data.id !== D.id || job.current !== j) {
+        // D'un render d'abans: es demana la del d'ara (si n'hi ha prou passades).
+        scheduleDenoise()
+        return
+      }
       D.data = e.data.data
       D.count = count
-      draw()
+      requestDraw()
     }
     D.worker.postMessage({ id, w: j.w, h: j.h, color, albedo, normal, strength: Math.min(1, 1.6 / Math.sqrt(count)) }, [color.buffer, albedo.buffer, normal.buffer])
   }
@@ -284,43 +319,45 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     const my = token.current
     const R = RESOLUTIONS[r]
     // El costat llarg segons la resolució; l'altre, segons el format.
-    const L = Math.min(R.max, Math.round(src.long * R.k))
+    const L = Math.min(LOW_MEMORY ? LOW_MEMORY_MAX : R.max, R.max, Math.round(src.long * R.k))
     const w = src.aspect >= 1 ? L : Math.round(L * src.aspect)
     const h = src.aspect >= 1 ? Math.round(L / src.aspect) : L
-    const j: { w: number; h: number; accum: Float32Array<ArrayBufferLike>; aux: Float32Array<ArrayBufferLike>; count: number } = { w, h, accum: new Float32Array(w * h * 4), aux: new Float32Array(w * h * 6), count: 0 }
+    // Les sumes són les del motor: s'hi assignen amb el primer progrés (no es reserva res aquí).
+    const j: Job = { w, h, accum: new Float32Array(0), aux: new Float32Array(0), count: 0, auxCount: 0 }
     job.current = j
+    lastRun.current = { o, r, kind, env: envRef.current?.env ?? null, room: src.room, format: src.format }
+    // Les respostes del filtre d'abans s'ignoren (la petició en curs, si n'hi ha, segueix ocupant-lo).
     dn.current.id++
     dn.current.data = null
     dn.current.count = 0
-    dn.current.busy = false
     setPasses(0)
     setStartedAt(Date.now())
     setElapsed(0)
     setError(null)
     const data: RenderJob = { scene: src.scene, env: envRef.current?.env ?? null, opts: o, w, h }
-    let pending = false
+    // La GPU ha fallat: es fa per CPU i no s'hi torna (fins que es torni a obrir el diàleg, o
+    // en canviar de resolució si el problema era la mida).
+    const gpuFallback = (message: string, sizeLimit: boolean) => {
+      setGpuFailed({ why: message, res: sizeLimit ? r : null })
+      setNotice(`${message} Es fa per CPU.`)
+      restart(o, r, "cpu")
+    }
     const events = {
-      onProgress: (p: { color: Float32Array; aux: Float32Array; count: number }) => {
+      onProgress: (p: RenderProgress) => {
         if (token.current !== my || job.current !== j) return
         j.accum = p.color
         j.aux = p.aux
         j.count = p.count
+        j.auxCount = p.auxCount
         setPasses(p.count)
         scheduleDenoise()
-        if (!pending) {
-          pending = true
-          requestAnimationFrame(() => {
-            pending = false
-            draw()
-          })
-        }
+        requestDraw()
       },
       onError: (message: string) => {
         if (token.current !== my) return
         // La GPU ha fallat (memòria, s'ha perdut…): es fa per CPU.
         if (engine.current?.kind === "gpu") {
-          setNotice(`${message} Es fa per CPU.`)
-          restart(o, r, "cpu")
+          gpuFallback(message, false)
         } else {
           disposeEngine()
           setError(message)
@@ -345,8 +382,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
         (e) => (token.current === my ? run(e) : e.dispose()),
         (err: unknown) => {
           if (token.current !== my) return
-          setNotice(`${err instanceof Error ? err.message : String(err)} Es fa per CPU.`)
-          restart(o, r, "cpu")
+          gpuFallback(err instanceof Error ? err.message : String(err), err instanceof GpuLimitError)
         },
       )
     } else run(new CpuEngine(data, events))
@@ -356,7 +392,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
   const extract = (r: RenderRoom, f: Format = format): boolean => {
     const got = getScene()
     if (!got) {
-      setError("El visor 3D no està a punt.")
+      setNotice("El visor 3D encara no està a punt: torna-ho a provar d'aquí a un moment.")
       return false
     }
     try {
@@ -365,7 +401,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
       source.current = { scene, aspect, long: Math.max(got.width, got.height), room: r, format: f }
       return true
     } catch (e) {
-      setError(String(e))
+      setNotice(`No s'ha pogut preparar l'escena: ${String(e)}`)
       return false
     }
   }
@@ -373,6 +409,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
   /** «Començar»: ara sí, es prepara l'escena i es calcula. */
   const begin = () => {
     setNotice(null)
+    setError(null)
     if (!source.current && !extract(room)) return
     setBegun(true)
     restart(opts, res, effectiveKind)
@@ -385,6 +422,8 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     setNotice(null)
     setPasses(0)
     setBegun(false)
+    setGpuFailed(null)
+    lastRun.current = null
     try {
       setPreview(getScene()?.snapshot?.() ?? null)
     } catch {
@@ -403,6 +442,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
       disposeEngine()
       dn.current.worker?.terminate()
       dn.current.worker = null
+      dn.current.busy = 0
       job.current = null
       source.current = null
     }
@@ -414,6 +454,9 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     if (!open || !begun || !source.current) return
     const id = window.setTimeout(() => {
       if ((source.current?.room !== room || source.current?.format !== format) && !extract(room, format)) return
+      // El mateix que ja s'ha començat (p. ex. en passar sol a CPU perquè la GPU ha fallat): res.
+      const L = lastRun.current
+      if (L && engine.current && L.o === opts && L.r === res && L.kind === effectiveKind && L.env === (env?.env ?? null) && L.room === room && L.format === format) return
       restart(opts, res, effectiveKind)
     }, 300)
     return () => window.clearTimeout(id)
@@ -439,7 +482,11 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
 
   const toggle = () => {
     const e = engine.current
-    if (!e) return
+    // Sense motor (després d'un error): es torna a començar.
+    if (!e) {
+      begin()
+      return
+    }
     if (running) {
       e.pause()
       setRunning(false)
@@ -486,14 +533,8 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                   bg={look.background === "transparent" && begun ? undefined : "bg.muted"}
                   style={look.background === "transparent" && begun ? { background: "repeating-conic-gradient(#ccc 0 25%, #fff 0 50%) 0 0 / 16px 16px" } : undefined}
                 >
-                  {error ? (
-                    <Text p={4} color="fg.error">
-                      {error}
-                    </Text>
-                  ) : (
-                    <canvas ref={canvas} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: begun ? undefined : "none" }} />
-                  )}
-                  {!begun && !error && (
+                  <canvas ref={canvas} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: begun ? undefined : "none" }} />
+                  {!begun && (
                     <>
                       {preview && <Image src={preview} alt="" position="absolute" inset={0} w="full" h="full" objectFit="contain" opacity={0.45} />}
                       <Stack position="relative" align="center" gap={3} p={4} textAlign="center">
@@ -507,6 +548,11 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                     </>
                   )}
                 </Box>
+                {error && (
+                  <Text fontSize="xs" color="fg.error">
+                    {error} Prem «Continuar» per tornar-ho a provar.
+                  </Text>
+                )}
                 {notice && (
                   <Text fontSize="xs" color="fg.warning">
                     {notice}
@@ -518,11 +564,11 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                   </Text>
                   <HStack gap={2}>
                     {begun ? (
-                      <Button size="sm" variant="outline" onClick={toggle} disabled={!!error || preparing}>
+                      <Button size="sm" variant="outline" onClick={toggle} disabled={preparing}>
                         {running ? <LuPause /> : <LuPlay />} {running ? "Aturar" : "Continuar"}
                       </Button>
                     ) : (
-                      <Button size="sm" variant="outline" onClick={begin} disabled={!!error}>
+                      <Button size="sm" variant="outline" onClick={begin}>
                         <LuPlay /> Començar
                       </Button>
                     )}
@@ -538,15 +584,15 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                   <FormRow
                     label="Motor"
                     help={
-                      gpuWhy
-                        ? `GPU no disponible: ${gpuWhy} Es fa per CPU.`
+                      gpuWhy || gpuFailedNow
+                        ? `GPU no disponible: ${gpuWhy || gpuFailedNow} Es fa per CPU.`
                         : "GPU (WebGPU): molt més ràpid, amb la gràfica. CPU: amb el processador, funciona a tot arreu. La imatge és la mateixa."
                     }
                   >
                     <ChoiceChips<EngineKind>
                       label="Motor"
                       options={[
-                        { id: "gpu", label: "GPU", disabled: gpuWhy !== null },
+                        { id: "gpu", label: "GPU", disabled: gpuWhy !== null || !!gpuFailedNow },
                         { id: "cpu", label: "CPU" },
                       ]}
                       value={effectiveKind}
@@ -556,8 +602,14 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                       }}
                     />
                   </FormRow>
-                  <FormRow label="Resolució" help={`Amplada màxima: ${(Object.keys(RESOLUTIONS) as Resolution[]).map((k) => `${RESOLUTIONS[k].label.toLowerCase()} ${RESOLUTIONS[k].max} px`).join(" · ")}.`}>
-                    <ChoiceChips label="Resolució" options={(Object.keys(RESOLUTIONS) as Resolution[]).map((k) => ({ id: k, label: RESOLUTIONS[k].label }))} value={res} onChange={setRes} />
+                  <FormRow
+                    label="Resolució"
+                    help={`Amplada màxima: ${(Object.keys(RESOLUTIONS) as Resolution[])
+                      .filter(resolutionAllowed)
+                      .map((k) => `${RESOLUTIONS[k].label.toLowerCase()} ${RESOLUTIONS[k].max} px`)
+                      .join(" · ")}.${LOW_MEMORY ? ` En aquest dispositiu, com a molt ${LOW_MEMORY_MAX} px (amb més, se’n podria tancar la pàgina per falta de memòria).` : ""}`}
+                  >
+                    <ChoiceChips label="Resolució" options={(Object.keys(RESOLUTIONS) as Resolution[]).map((k) => ({ id: k, label: RESOLUTIONS[k].label, disabled: !resolutionAllowed(k) }))} value={res} onChange={setRes} />
                   </FormRow>
                   <Range label="Rebots de llum" value={opts.bounces} min={2} max={12} step={1} format={(v) => String(v)} onChange={(v) => set({ bounces: v })} />
                   <FormRow label="Aturar-se a" help="Passades: 64 per provar, 1024 per a la imatge final.">
@@ -621,8 +673,9 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                               if (!f) return
                               try {
                                 setEnv({ name: f.name, env: parseHdr(await f.arrayBuffer()) })
+                                setNotice(null)
                               } catch (err) {
-                                setError(String(err))
+                                setNotice(`No s'ha pogut llegir el cel HDRI: ${err instanceof Error ? err.message : String(err)}`)
                               }
                             }}
                           />

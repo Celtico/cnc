@@ -19,7 +19,12 @@ import { lightSetup } from "./lights"
 import type { RenderEnv, RenderOpts, RenderScene } from "./sceneData"
 import { BUMP_STRENGTH, DIRECT_CLAMP, GLASS_SHADOW, INDIRECT_CLAMP, PATH_ROUGHNESS, bevelNormal } from "./shading"
 
-type Msg = { type: "scene" | "estimate"; scene: RenderScene; width: number; height: number; seed: number; opts: RenderOpts; env?: RenderEnv | null } | { type: "stop" }
+type Msg =
+  | { type: "scene" | "estimate"; scene: RenderScene; width: number; height: number; seed: number; opts: RenderOpts; env?: RenderEnv | null; auxPasses?: number }
+  | { type: "stop" }
+  | { type: "resume" }
+  /** El fil principal torna els buffers d'una passada (ja sumada) per reaprofitar-los. */
+  | { type: "buffers"; data: Float32Array; aux?: Float32Array }
 
 let ENV: RenderEnv | null = null
 let CDF: EnvCdf | null = null
@@ -613,9 +618,8 @@ function sceneKey(): number {
 }
 
 let focus = 0
-function pass(): { color: Float32Array; aux: Float32Array } {
-  const out = new Float32Array(W * H * 4)
-  const aux = new Float32Array(W * H * 6)
+/** Una passada (una mostra per píxel) a `out` (RGBA) i, si n'hi ha, les AOV a `aux` (se sobreescriuen). */
+function pass(out: Float32Array, aux: Float32Array | null) {
   const c = S!.camera
   const m = c.matrix
   const ap = (O.aperture ?? 0) / 1000
@@ -653,24 +657,57 @@ function pass(): { color: Float32Array; aux: Float32Array } {
       }
       const i = y * W + x
       trace(ox, oy, oz, dx, dy, dz, out, i * 4)
-      aux[i * 6] = aovA0; aux[i * 6 + 1] = aovA1; aux[i * 6 + 2] = aovA2
-      aux[i * 6 + 3] = aovN0; aux[i * 6 + 4] = aovN1; aux[i * 6 + 5] = aovN2
+      if (aux) {
+        aux[i * 6] = aovA0; aux[i * 6 + 1] = aovA1; aux[i * 6 + 2] = aovA2
+        aux[i * 6 + 3] = aovN0; aux[i * 6 + 4] = aovN1; aux[i * 6 + 5] = aovN2
+      }
     }
   }
-  return { color: out, aux }
+}
+
+// Buffers: un sol joc per worker, que va i torna (transferit) del fil principal; mentre és fora,
+// s'espera (sumar-lo costa molt menys que una passada). Les AOV només es fan les primeres passades.
+let buf: Float32Array | null = null
+let auxBuf: Float32Array | null = null
+let auxLeft = 0
+/** Els buffers són al fil principal. */
+let away = false
+let scheduled = false
+
+function schedule() {
+  if (scheduled || !running || away) return
+  scheduled = true
+  setTimeout(loop, 0)
 }
 
 function loop() {
-  if (!running) return
-  const { color, aux } = pass()
-  ;(self as unknown as Worker).postMessage({ type: "pass", data: color, aux }, [color.buffer, aux.buffer])
-  setTimeout(loop, 0)
+  scheduled = false
+  if (!running || away) return
+  const out = buf ?? new Float32Array(W * H * 4)
+  const aux = auxLeft > 0 ? (auxBuf ?? new Float32Array(W * H * 6)) : null
+  buf = auxBuf = null
+  pass(out, aux)
+  if (aux) auxLeft--
+  away = true
+  ;(self as unknown as Worker).postMessage({ type: "pass", data: out, aux, auxMore: auxLeft > 0 }, aux ? [out.buffer, aux.buffer] : [out.buffer])
 }
 
 self.onmessage = (e: MessageEvent<Msg>) => {
   const msg = e.data
   if (msg.type === "stop") {
     running = false
+    return
+  }
+  if (msg.type === "resume") {
+    running = true
+    schedule()
+    return
+  }
+  if (msg.type === "buffers") {
+    buf = msg.data.length === W * H * 4 ? msg.data : null
+    auxBuf = msg.aux && msg.aux.length === W * H * 6 ? msg.aux : null
+    away = false
+    schedule()
     return
   }
   S = msg.scene
@@ -700,11 +737,14 @@ self.onmessage = (e: MessageEvent<Msg>) => {
   }
   const key = sceneKey()
   if (msg.type === "estimate") {
-    ;(self as unknown as Worker).postMessage({ type: "estimate", key })
+    ;(self as unknown as Worker).postMessage({ type: "estimate", key, focus })
     return
   }
   clampInd = INDIRECT_CLAMP * key
   clampDir = DIRECT_CLAMP * key
+  auxLeft = Math.max(1, msg.auxPasses ?? 1)
+  buf = auxBuf = null
+  away = false
   running = true
-  loop()
+  schedule()
 }

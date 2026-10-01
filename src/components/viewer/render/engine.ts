@@ -14,13 +14,19 @@ export interface RenderJob {
 
 /**
  * Progrés: sumes de totes les mostres (el diàleg les divideix per `count`): color RGBA (4 per
- * píxel; A = cobertura) i AOV de la primera superfície (albedo i normal, 6 per píxel).
+ * píxel; A = cobertura) i AOV de la primera superfície (albedo i normal, 6 per píxel). Les AOV
+ * només es sumen les primeres mostres (després ja no canvien): se'n divideixen per `auxCount`.
+ * Els arrays són del motor (es reaprofiten): no s'han de modificar.
  */
 export interface RenderProgress {
   color: Float32Array
   aux: Float32Array
   count: number
+  auxCount: number
 }
+
+/** Mostres que porten AOV (albedo i normal per al filtre de soroll). */
+export const AUX_SAMPLES = 16
 
 export interface EngineEvents {
   onProgress: (p: RenderProgress) => void

@@ -20,7 +20,7 @@ struct Params {
   mode: vec4u,     // llum del cel (0 cosinus, 1 HDRI, 2 finestres), finestres, HDRI, triangles
   offs: vec4u,     // materials, textures, bevel, finestres (vec4 a info)
   envi: vec4u,     // w, h, inici de la marginal, inici de la condicional
-  seed: vec4u,     // llavor, files d'aquesta tanda
+  seed: vec4u,     // llavor, files d'aquesta tanda, 2^reduccions de les textures
 }
 
 @group(0) @binding(0) var<uniform> P: Params;
@@ -406,8 +406,8 @@ fn trace(o0: vec3f, d0: vec3f) -> vec4f {
       if (m.bump > 0.0) {
         let t = info[P.offs.y + u32(m.map)];
         let l0 = dot(tc, LUMA);
-        let gu = dot(sampleTex(m.map, uv + vec2f(1.0 / f32(t.y), 0.0)), LUMA) - l0;
-        let gv = dot(sampleTex(m.map, uv + vec2f(0.0, 1.0 / f32(t.z))), LUMA) - l0;
+        let gu = dot(sampleTex(m.map, uv + vec2f(1.0 / (f32(t.y) * f32(P.seed.z)), 0.0)), LUMA) - l0;
+        let gv = dot(sampleTex(m.map, uv + vec2f(0.0, 1.0 / (f32(t.z) * f32(P.seed.z)))), LUMA) - l0;
         let avg = max(0.02, m.lum);
         rough = clamp(rough * (1.0 + 0.5 * (avg - l0) / avg), 0.05, 1.0);
         let A = tris[ti * 5u + 3u];
