@@ -4,7 +4,7 @@
  * (a dalt, per al dit). Els selectors porten `:root` perquè guanyin als estils de Chakra, que van sense capa.
  */
 :root {
-  --form-row-py: 4px;
+  --form-row-py: 8px;
   --card-px: 20px;
 }
 :root .form-row {
@@ -110,7 +110,7 @@
     font-size: 17px;
   }
   :root {
-    --form-row-py: 6px;
+    --form-row-py: 10px;
     --card-px: 16px;
   }
   /* Opcions dels controls segmentats (IconChoice, pastilles, eines): la mida tàctil d'Apple. */

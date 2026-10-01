@@ -1,5 +1,5 @@
 import { IconButton, Popover, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import type { ReactNode } from "react"
+import { Children, Fragment, isValidElement, type ReactNode } from "react"
 import { LuSlidersVertical } from "react-icons/lu"
 import { Tooltip } from "./ui/tooltip"
 import { segItem } from "./segmented"
@@ -21,6 +21,9 @@ export function ViewTile({ label, icon, on, onClick, tip }: { label: string; ico
  * un panell amb les accions ràpides (rajoles) i, a sota, la resta d'opcions.
  */
 export function ViewOptions({ tiles, children }: { tiles: ReactNode; children?: ReactNode }) {
+  const n = Math.max(1, countTiles(tiles))
+  const rows = Math.ceil(n / 5)
+  const cols = Math.ceil(n / rows)
   return (
     <Popover.Root positioning={{ placement: "bottom-end" }}>
       <Popover.Trigger asChild>
@@ -36,7 +39,8 @@ export function ViewOptions({ tiles, children }: { tiles: ReactNode; children?: 
                 <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
                   Opcions de vista
                 </Text>
-                <SimpleGrid columns={5} gap={1.5}>
+                {/* Files iguals (cap rajola sola a l'última fila): 6 → 3 + 3, 7 → 4 + 3, 8 → 4 + 4. */}
+                <SimpleGrid columns={cols} gap={1.5}>
                   {tiles}
                 </SimpleGrid>
                 {children}
@@ -47,4 +51,14 @@ export function ViewOptions({ tiles, children }: { tiles: ReactNode; children?: 
       </Portal>
     </Popover.Root>
   )
+}
+
+/** Quantes rajoles hi ha (dins dels fragments, sense les que no es mostren). */
+function countTiles(node: ReactNode): number {
+  let n = 0
+  Children.forEach(node, (c) => {
+    if (isValidElement<{ children?: ReactNode }>(c) && c.type === Fragment) n += countTiles(c.props.children)
+    else if (c !== null && c !== undefined && c !== false && c !== true && c !== "") n++
+  })
+  return n
 }

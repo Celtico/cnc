@@ -43,8 +43,8 @@ export function MaterialHero({ m, h = 176, children }: { m: MaterialPref; h?: nu
 }
 
 /** Miniatura de la llista (un tros de 300 mm, prou per veure'n la textura). */
-export function MaterialThumb({ m, size = 36 }: { m: MaterialPref; size?: number }) {
-  return <Box w={`${size}px`} h={`${size}px`} rounded="md" borderWidth="1px" borderColor="border.emphasized" flexShrink={0} style={previewStyle(m, size * 2)} backgroundRepeat="repeat" />
+export function MaterialThumb({ m, size = 36, fill }: { m: MaterialPref; size?: number; /** Omple l'amplada (quadrat): les mostres de les graelles. */ fill?: boolean }) {
+  return <Box w={fill ? "full" : `${size}px`} h={fill ? undefined : `${size}px`} aspectRatio={fill ? "1" : undefined} rounded="md" borderWidth="1px" borderColor="border.emphasized" flexShrink={0} style={previewStyle(m, size * 2)} backgroundRepeat="repeat" />
 }
 
 /** Gruixos com a etiquetes (treure amb ×, afegir amb «+»), ordenats. */

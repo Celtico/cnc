@@ -153,6 +153,9 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
     }
   }
   const [fit, setFit] = useState(0)
+  // Botons «Encabir» / «Enquadrar» / «Interior» marcats mentre la vista és la seva (com a l'editor).
+  const [planFramed, setPlanFramed] = useState(true)
+  const [pose, setPose] = useState<"home" | "eye" | null>("home")
   // Vista d'interior: la càmera a l'alçada dels ulls, dins de l'habitació (per als renders).
   const [eye, setEye] = useState(0)
   const [calib, setCalib] = useState<{ a: PlanPt; b: PlanPt } | null>(null)
@@ -571,11 +574,12 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
               onCalibrate={(a, b) => setCalib({ a, b })}
               fitSignal={fit}
               show={{ grid: showGrid, dims: showDims, labels: showLabels, detail: showDetail, snap: snapOn, plan: showPlan }}
+              onFramedChange={setPlanFramed}
             />
           ) : (
             // Fons del 3D (el visor és transparent): el mateix gris que el plànol.
             <Box position="absolute" inset={0} rounded="md" overflow="hidden" borderWidth="1px" bg="bg.subtle">
-              <Ambient3D ambient={amb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} onPick={pickItem} onChange={change} snap={snapOn} dollhouse={dollhouse} shadows={shadows} ceiling={ceiling} />
+              <Ambient3D ambient={amb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} onPick={pickItem} onChange={change} snap={snapOn} dollhouse={dollhouse} shadows={shadows} ceiling={ceiling} onPoseChange={setPose} />
             </Box>
           )}
             {chrome}
@@ -618,7 +622,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
               tiles={
                 tab === "plan" ? (
                   <>
-                    <ViewTile label="Encabir" icon={<LuVideo />} on={false} onClick={() => setFit((n) => n + 1)} tip="Encabir el plànol" />
+                    <ViewTile label="Encabir" icon={<LuVideo />} on={planFramed} onClick={() => setFit((n) => n + 1)} tip="Encabir el plànol" />
                     <ViewTile label="Graella" icon={<LuGrid3X3 />} on={showGrid} onClick={() => setShowGrid((v) => !v)} />
                     <ViewTile label="Mides" icon={<LuRuler />} on={showDims} onClick={() => setShowDims((v) => !v)} tip="Mides de les parets" />
                     <ViewTile label="Noms" icon={<LuTag />} on={showLabels} onClick={() => setShowLabels((v) => !v)} tip="Noms i mides dels elements" />
@@ -629,8 +633,8 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                   </>
                 ) : (
                   <>
-                    <ViewTile label="Enquadrar" icon={<LuVideo />} on={false} onClick={() => setFit((n) => n + 1)} />
-                    <ViewTile label="Interior" icon={<LuEye />} on={false} onClick={() => setEye((n) => n + 1)} tip="Entrar a l'habitació: càmera anivellada a 1,35 m, mirant la paret del fons, com les fotos d'interiors" />
+                    <ViewTile label="Enquadrar" icon={<LuVideo />} on={pose === "home"} onClick={() => setFit((n) => n + 1)} />
+                    <ViewTile label="Interior" icon={<LuEye />} on={pose === "eye"} onClick={() => setEye((n) => n + 1)} tip="Entrar a l'habitació: càmera anivellada a 1,35 m, mirant la paret del fons, com les fotos d'interiors" />
                     <ViewTile label="Casa de nines" icon={<LuHouse />} on={dollhouse} onClick={() => setDollhouse((v) => !v)} tip="Parets de davant transparents" />
                     <ViewTile label="Ombres" icon={<LuSun />} on={shadows} onClick={() => setShadows((v) => !v)} />
                     <ViewTile label="Sostre" icon={<LuPanelTop />} on={ceiling} onClick={() => setCeiling((v) => !v)} tip="Sostre a les habitacions tancades: es veu des de dins («Interior») i al render la llum entra per les finestres" />

@@ -22,10 +22,10 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
   return (
     <Field.Root flex={hideLabel ? 1 : undefined} minW={0}>
       {!hideLabel && <Field.Label fontSize="sm">{label}</Field.Label>}
-      {/* Un botó (no un desplegable, per decisió de l'usuari): fons suau, tota l'amplada, la mostra i el nom. */}
+      {/* Un botó (no un desplegable, per decisió de l'usuari): sense fons (per decisió de l'usuari), tota l'amplada, la mostra i el nom. */}
       <Button
         size="sm"
-        variant="subtle"
+        variant="ghost"
         w="full"
         justifyContent="flex-start"
         gap={2}
@@ -82,33 +82,24 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
                         <Accordion.ItemContent>
                           <Accordion.ItemBody px={0}>
                             {/* Mostres de la textura: només les de la categoria oberta (lazyMount). */}
-                            <SimpleGrid columns={3} gap={2}>
+                            {/* Mostres quadrades a tota l'amplada de la columna, alineades a dalt; el nom, sempre dues línies
+                                d'alt. La triada: vora del color principal al voltant de la mostra i ✓ a la cantonada. */}
+                            <SimpleGrid columns={3} gap={3} alignItems="start">
                               {c.list.map((m) => {
                                 const on = m.name === value
                                 return (
-                                  <Box
-                                    key={m.id}
-                                    asChild
-                                    p={1.5}
-                                    rounded="md"
-                                    borderWidth="2px"
-                                    borderColor={on ? "wood.solid" : "transparent"}
-                                    bg={on ? "wood.subtle" : undefined}
-                                    _hover={{ bg: "bg.muted" }}
-                                    cursor="pointer"
-                                    textAlign="start"
-                                  >
+                                  <Box key={m.id} asChild rounded="md" cursor="pointer" textAlign="start" role="group" focusRing="outside">
                                     <button type="button" onClick={() => pick(m.name)} aria-pressed={on}>
-                                      <Stack gap={1}>
-                                        <Box position="relative">
-                                          <MaterialThumb m={m} size={96} />
+                                      <Stack gap={1.5}>
+                                        <Box position="relative" rounded="md" outline={on ? "2px solid" : undefined} outlineColor="wood.solid" outlineOffset="2px" _groupHover={on ? undefined : { opacity: 0.85 }}>
+                                          <MaterialThumb m={m} size={96} fill />
                                           {on && (
-                                            <Box position="absolute" top={1} right={1} bg="wood.solid" color="wood.contrast" rounded="full" p={0.5} display="inline-flex">
+                                            <Box position="absolute" top={1.5} right={1.5} w="22px" h="22px" bg="wood.solid" color="wood.contrast" rounded="full" display="flex" alignItems="center" justifyContent="center" fontSize="xs" shadow="md">
                                               <LuCheck />
                                             </Box>
                                           )}
                                         </Box>
-                                        <Text fontSize="xs" lineClamp={2}>
+                                        <Text fontSize="xs" lineClamp={2} minH="2lh" color={on ? "wood.fg" : undefined} fontWeight={on ? "semibold" : undefined}>
                                           {m.name}
                                         </Text>
                                       </Stack>

@@ -33,7 +33,11 @@ export function Ambient3D({
   dollhouse = true,
   shadows = true,
   ceiling: showCeiling = true,
+  onPoseChange,
 }: {
+  /** La càmera és a la posició d'«Enquadrar» (`home`) o d'«Interior» (`eye`), o l'usuari l'ha moguda (`null`): els
+      botons d'Opcions de vista surten marcats. */
+  onPoseChange?: (pose: "home" | "eye" | null) => void
   /** Sostre a les habitacions tancades (es veu quan la càmera és a dins). */
   ceiling?: boolean
   /** Parets de davant transparents (casa de nines) i ombres. */
@@ -82,7 +86,7 @@ export function Ambient3D({
       <directionalLight position={[cx + 4, 7, cz + 3]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-span} shadow-camera-right={span} shadow-camera-top={span} shadow-camera-bottom={-span} shadow-bias={-0.0004} />
       <Room ambient={ambient} geos={geos} materials={materials} box={box} selectedIds={selectedIds} onSelect={onSelect} onPick={onPick} onChange={onChange} snap={snap} dollhouse={dollhouse} showCeiling={showCeiling} />
       {/* Com al visor de l'editor: esmorteïment, botó dret o dos dits per desplaçar, roda per apropar. */}
-      <Controls target={[cx, 0.9, cz]} home={[cx + span * 0.5, span * 1.1 + 2, cz + span * 1.4 + 2]} fitSignal={fitSignal} eye={eyePose(ambient)} eyeSignal={eyeSignal} maxDistance={span * 4 + 10} />
+      <Controls target={[cx, 0.9, cz]} home={[cx + span * 0.5, span * 1.1 + 2, cz + span * 1.4 + 2]} fitSignal={fitSignal} eye={eyePose(ambient)} eyeSignal={eyeSignal} maxDistance={span * 4 + 10} onPoseChange={onPoseChange} />
       {onSceneAccess && <SceneAccess onAccess={onSceneAccess} />}
     </Canvas>
   )
@@ -93,7 +97,7 @@ const RENDER_BG = "#e9e6e1"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 
-function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance }: { target: [number, number, number]; home: [number, number, number]; fitSignal: number; eye: ReturnType<typeof eyePose>; eyeSignal: number; maxDistance: number }) {
+function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance, onPoseChange }: { target: [number, number, number]; home: [number, number, number]; fitSignal: number; eye: ReturnType<typeof eyePose>; eyeSignal: number; maxDistance: number; onPoseChange?: (pose: "home" | "eye" | null) => void }) {
   const ref = useRef<OrbitControlsImpl>(null)
   const camera = useThree((s) => s.camera) as PerspectiveCamera
   const pose = (pos: [number, number, number], tgt: [number, number, number], fov: number) => {
@@ -111,17 +115,23 @@ function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance }: { ta
       first.current = false
       ref.current?.target.set(...target)
       ref.current?.update()
+      onPoseChange?.("home")
       return
     }
     pose(home, target, 40)
+    onPoseChange?.("home")
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitSignal])
   // Interior: angular (com les fotos de revista) i des de dins; orbitar hi gira al voltant del punt mirat.
   useEffect(() => {
-    if (eyeSignal && eye) pose(eye.pos, eye.target, 55)
+    if (eyeSignal && eye) {
+      pose(eye.pos, eye.target, 55)
+      onPoseChange?.("eye")
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eyeSignal])
-  return <OrbitControls ref={ref} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={maxDistance} maxPolarAngle={Math.PI / 2 - 0.02} />
+  // Orbitar, desplaçar o fer zoom (l'usuari) treu la marca dels botons.
+  return <OrbitControls ref={ref} onStart={() => onPoseChange?.(null)} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={maxDistance} maxPolarAngle={Math.PI / 2 - 0.02} />
 }
 
 /** Contorn de l'element seleccionat (`strong`) o del que és sota el ratolí, com a l'editor. */

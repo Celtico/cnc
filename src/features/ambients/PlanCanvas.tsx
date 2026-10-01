@@ -59,8 +59,11 @@ export function PlanCanvas({
   wallDefaults,
   onCalibrate,
   fitSignal,
+  onFramedChange,
   show = PLAN_SHOW_ALL,
 }: {
+  /** La vista és la d'«Encabir» (el botó surt marcat) o s'ha mogut. */
+  onFramedChange?: (framed: boolean) => void
   /** Opcions de vista: graella, mides de les parets, noms, detall de les peces, imant. */
   show?: PlanShow
   ambient: Ambient
@@ -108,8 +111,13 @@ export function PlanCanvas({
   useEffect(() => {
     if (size.w < 50 || fitted.current === fitSignal) return
     fitted.current = fitSignal
-    setView(fitView(ambientBox(ambient, geos), size.w, size.h))
+    const v = fitView(ambientBox(ambient, geos), size.w, size.h)
+    setView(v)
+    setFitV(v)
   }, [fitSignal, size, ambient, geos])
+  // Qualsevol desplaçament o zoom fa una vista nova (un altre objecte): ja no és la d'«Encabir».
+  const [fitV, setFitV] = useState<View | null>(null)
+  useEffect(() => onFramedChange?.(view === fitV), [view, fitV, onFramedChange])
 
   // Canviar d'eina buida la ploma i la calibració.
   useEffect(() => {
