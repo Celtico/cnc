@@ -432,6 +432,11 @@ export const CompositionSchema = z.object({
   parts: z.array(FreePartSchema).optional(),
   /** Encaixos de les peces lliures (joc, fresa, pestanyes). Sense: `DEFAULT_JOINERY`. */
   joinery: JoinerySchema.optional(),
+  /**
+   * Acabats de l'escena on es presenta (mode Presentació i miniatura): material del terra i de la paret, com
+   * els dels ambients. Sense (o buit), els de Preferències › Visor 3D.
+   */
+  scene: z.object({ floor: z.string().optional(), wall: z.string().optional() }).optional(),
 })
 export type Composition = z.infer<typeof CompositionSchema>
 

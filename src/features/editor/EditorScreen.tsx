@@ -8,6 +8,7 @@ import {
   LuMove,
   LuChevronLeft,
   LuChevronRight,
+  LuLampFloor,
   LuPalette,
   LuPuzzle,
   LuAperture,
@@ -74,6 +75,7 @@ import { IconChoice } from "../../components/IconChoice"
 import { KINDS, MOBLE_KINDS } from "../composition/kinds"
 import { ViewBar, ViewerControls, type ViewerState } from "./ViewerControls"
 import { useDebouncedSave } from "../useDebouncedSave"
+import { MaterialSelect } from "../settings/SettingsScreen"
 
 type ViewTab = "3d" | "elevation" | "photo"
 const TAB_KEY = "mobles:editor-view-tab"
@@ -890,6 +892,27 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
               <PartJoineryForm comp={comp} onChange={setComp} />
             </PanelSection>
           )}
+          {/* Com els Acabats dels ambients: terra i paret de l'escena on es presenta (per defecte, les de Preferències). */}
+          <PanelSection id="moble-scene" title="Acabats de l'escena" icon={LuLampFloor} badge={comp.scene?.floor || comp.scene?.wall ? "Propis" : undefined}>
+            <Stack gap={0}>
+              {(["floor", "wall"] as const).map((k) => (
+                <FormRow key={k} label={k === "floor" ? "Terra" : "Paret"} help={k === "wall" ? "Es veuen en mode Presentació i a la miniatura de la targeta." : undefined} maxW="280px">
+                  <MaterialSelect
+                    label={k === "floor" ? "Terra" : "Paret"}
+                    materials={settings.materials}
+                    value={comp.scene?.[k] ?? ""}
+                    emptyLabel="Com a Preferències"
+                    hideLabel
+                    onChange={(v) => setComp((c) => {
+                      const next = { ...c.scene, [k]: v || undefined }
+                      const { scene: _s, ...rest } = c
+                      return next.floor || next.wall ? { ...rest, scene: next } : rest
+                    })}
+                  />
+                </FormRow>
+              ))}
+            </Stack>
+          </PanelSection>
           {!partsOnlyKind(kind) && <PanelSection id="moble-materials" title="Materials de tot el moble" icon={LuPalette}>
             <MaterialsForm
               carcass={comp.modules[0]!.carcass}
@@ -1171,6 +1194,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           </Box>
         ) : (
           <CabinetViewer
+            sceneFinish={comp.scene}
             panels={viewerPanels}
             size={size}
             exploded={exploded}

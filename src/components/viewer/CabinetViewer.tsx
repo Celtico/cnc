@@ -63,6 +63,8 @@ export interface ZoneLight {
 }
 
 export interface CabinetViewerProps {
+  /** Acabats propis de l'escena de Presentació (`Composition.scene`): terra i paret. */
+  sceneFinish?: { floor?: string; wall?: string }
   panels: Panel[]
   /** Mides exteriors del moble (o de tota la composició) en mm, per centrar la càmera. */
   size: { width: number; height: number; depth: number }
@@ -158,11 +160,15 @@ export function CabinetViewer({
   highlightZone,
   fitKey = 0,
   onFramedChange,
+  sceneFinish,
 }: CabinetViewerProps) {
   // Per distingir un clic a l'espai buit d'un gir de càmera (arrossegar).
   const downAt = useRef<[number, number] | null>(null)
   const q = QUALITY[quality]
-  const [scene] = usePresentationScene()
+  const [prefScene] = usePresentationScene()
+  // Els acabats propis del moble (terra i paret) passen per davant dels de Preferències.
+  const ownFloor = sceneFinish?.floor, ownWall = sceneFinish?.wall
+  const scene = useMemo(() => ({ ...prefScene, ...(ownFloor ? { floorMaterial: ownFloor } : {}), ...(ownWall ? { wallMaterial: ownWall } : {}) }), [prefScene, ownFloor, ownWall])
   const light = LIGHT_SPEC[scene.light]
   const bg = useColorModeValue("#f4f1ea", "#1b1a17")
   const gridCell = useColorModeValue("#d8d2c4", "#33302a")

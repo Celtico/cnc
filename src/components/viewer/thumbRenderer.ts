@@ -75,7 +75,7 @@ export function snapshot(scene: Scene, camera: PerspectiveCamera): string {
 export const THUMB_ASPECT = W / H
 
 /** JPEG (data URL) de les peces vistes des de davant, una mica de costat i de dalt. */
-export function renderThumb(panels: Panel[], materials: MaterialPref[]): string | null {
+export function renderThumb(panels: Panel[], materials: MaterialPref[], finish?: { floor?: string; wall?: string }): string | null {
   if (!panels.length) return null
   const scene = buildScene(panels, "thumb", { materials, make: exportablePanel })
   scene.traverse((o) => {
@@ -89,7 +89,9 @@ export function renderThumb(panels: Panel[], materials: MaterialPref[]): string 
   const center = box.getCenter(new Vector3())
 
   // Terra i paret de l'escena de Presentació (Preferències › Visor 3D): el moble no queda flotant.
-  const look = readPresentationScene()
+  // Els acabats propis del moble (`Composition.scene`) passen per davant dels de Preferències.
+  const pref = readPresentationScene()
+  const look = { ...pref, ...(finish?.floor ? { floorMaterial: finish.floor } : {}), ...(finish?.wall ? { wallMaterial: finish.wall } : {}) }
   const F = Math.max(6, size.x * 3, size.z * 6)
   const floorMat = look.floorMaterial ? surfaceMaterial(materials, look.floorMaterial, F * 1000, F * 1000) : (() => {
     const f = makeFloor(look.floor)

@@ -468,6 +468,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     s'obren amb la textura). L'escena és a `viewer/presentationScene.ts`. Terra i paret poden ser **materials de la biblioteca**
     (`PresentationScene.floorMaterial` / `wallMaterial`, `surfaceMaterial` a mida real; Preferències › Visor 3D) o les
     mostres ràpides de sempre.
+  - **Acabats de l'escena del moble** (`Composition.scene`: `floor`, `wall`; inspector del moble, secció «Acabats de
+    l'escena», com els Acabats dels ambients): terra i paret propis per al mode Presentació i la miniatura; buit = «Com a
+    Preferències» (Preferències › Visor 3D, el per defecte). `CabinetViewer sceneFinish`, `renderThumb(…, finish)`.
   - **Nom a la capçalera de l'inspector**: el nom del mòdul i de l'objecte es canvia clicant-lo
     a la capçalera (`Editable`, com a Figma), no a les seccions; el del moble, a la barra de dalt.
   - **Tipus de moble** (`Composition.kind`, `compositionKind`, `features/composition/kinds.tsx`):
