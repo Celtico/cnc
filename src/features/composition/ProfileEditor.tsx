@@ -350,7 +350,7 @@ export function ProfileEditor({
                       onPointerLeave={() => setCursor(null)}
                     >
                       {gridLines.map((l, i) => (
-                        <line key={i} {...l} stroke="var(--chakra-colors-border)" strokeWidth={l.major ? unit * 0.25 : unit * 0.1} />
+                        <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke="var(--chakra-colors-border)" strokeWidth={l.major ? unit * 0.25 : unit * 0.1} />
                       ))}
                       {closed ? (
                         <polygon points={sample.map(([x, y]) => `${x},${-y}`).join(" ")} fill={bad ? "rgba(220,38,38,0.12)" : "rgba(124,58,237,0.08)"} stroke={stroke} strokeWidth={unit * 0.3} strokeLinejoin="round" />

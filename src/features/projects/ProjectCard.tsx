@@ -1,7 +1,8 @@
-import { Badge, Button, Card, IconButton, Menu, Portal, Text, Wrap } from "@chakra-ui/react"
+import { Badge, Button, IconButton, Menu, Portal, Text } from "@chakra-ui/react"
 import { LuCheck, LuCopy, LuEllipsis, LuFolderInput, LuHouse, LuPencil, LuPlus, LuSave, LuTrash2 } from "react-icons/lu"
 import { useEffect } from "react"
 import { CompositionThumb } from "../../components/CompositionThumb"
+import { CardDate, GalleryCard } from "./GalleryCard"
 import { SnapshotThumb } from "../../components/SnapshotThumb"
 import { useSettings } from "../settings/SettingsContext"
 import { needsThumb, requestProjectThumb } from "./projectThumbs"
@@ -44,7 +45,6 @@ export function ProjectCard({
   const width = Math.round(compositionWidth(comp))
   const height = Math.round(compositionHeight(comp))
   const depth = Math.max(...comp.modules.map((m) => m.carcass.depth))
-  const date = new Date(project.updatedAt).toLocaleDateString("ca-ES", { day: "numeric", month: "short", year: "numeric" })
   const here = currentAmbient !== undefined && ambients.some((a) => a.id === currentAmbient)
   const click = onAdd ?? onOpen
   const { settings } = useSettings()
@@ -52,20 +52,19 @@ export function ProjectCard({
     if (needsThumb(project)) requestProjectThumb(project, settings.materials)
   }, [project, settings.materials])
   return (
-    <Card.Root variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }} borderColor={here ? "wood.solid" : undefined}>
-      <Card.Body p={3} gap={2} cursor="pointer" onClick={click}>
-        {/* Foto 3D (es fa sola, fora de pantalla); mentre no hi és, el dibuix de línies. */}
-        {project.thumb ? <SnapshotThumb src={project.thumb} /> : <CompositionThumb composition={comp} />}
-        <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={project.name}>
-          {project.name}
-        </Text>
-        <Text fontSize="xs" color="fg.muted" lineClamp={2}>
+    <GalleryCard
+      thumb={project.thumb ? <SnapshotThumb src={project.thumb} /> : <CompositionThumb composition={comp} />}
+      title={project.name}
+      description={
+        <>
           {width} × {height} × {depth} mm ·{" "}
           {comp.modules.length === 1 ? `1 mòdul · ${first.material}` : `${comp.modules.length} mòduls: ${comp.modules.map((m) => m.name).join(", ")}`}
           {!project.composition && ` · ${p.shelves} ${p.shelves === 1 ? "prestatge" : "prestatges"} · ${p.doors} ${p.doors === 1 ? "porta" : "portes"}`}
-        </Text>
-        {(ambients.length > 0 || (!project.folder && isEdited(project))) && (
-          <Wrap gap={1}>
+        </>
+      }
+      tags={
+        (ambients.length > 0 || (!project.folder && isEdited(project))) && (
+          <>
             {/* A l'historial, els modificats porten la marca: esborrar-los perdria els canvis. */}
             {!project.folder && isEdited(project) && (
               <Badge size="xs" variant="subtle" colorPalette="orange" title="L'has modificat: guarda'l en un grup si el vols conservar">
@@ -109,13 +108,14 @@ export function ProjectCard({
                 </Badge>
               )
             })}
-          </Wrap>
-        )}
-      </Card.Body>
-      <Card.Footer px={3} pb={3} pt={0} gap={0.5} justifyContent="space-between">
-        <Text fontSize="xs" color="fg.subtle" truncate>
-          {date}
-        </Text>
+          </>
+        )
+      }
+      selected={here}
+      onClick={click}
+      footer={
+        <>
+          <CardDate at={project.updatedAt} />
         {onAdd ? (
           <Button size="xs" colorPalette="wood" variant={here ? "outline" : "solid"} onClick={onAdd}>
             <LuPlus /> {here ? "Afegir-ne un altre" : "Afegir"}
@@ -161,7 +161,8 @@ export function ProjectCard({
             </Menu.Root>
           )
         )}
-      </Card.Footer>
-    </Card.Root>
+        </>
+      }
+    />
   )
 }

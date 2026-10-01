@@ -1,4 +1,4 @@
-import { Accordion, Badge, Button, Card, CloseButton, Dialog, HStack, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
+import { Accordion, Badge, Button, CloseButton, Dialog, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { LuFolders, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
@@ -14,6 +14,7 @@ import { FolderedGrid, MoveToFolderDialog } from "../projects/Folders"
 import { createAmbientFromTemplate, templatePreview } from "./fromTemplate"
 import { AMBIENT_TAB_KEY } from "./planGeom"
 import { PageHeader } from "../../components/PageHeader"
+import { CardDate, GalleryCard } from "../projects/GalleryCard"
 import { CatalogSection } from "../projects/CatalogSection"
 import { SnapshotThumb } from "../../components/SnapshotThumb"
 import { catalogThumb, needsAmbientThumb, requestAmbientThumb, requestCatalogThumb } from "./ambientThumbs"
@@ -89,45 +90,41 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
       render={(r) => {
         const a = parseAmbient(r.data)
         return (
-          <Card.Root variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }}>
-            <Card.Body p={3} gap={2} cursor="pointer" onClick={() => onOpen(r.id)}>
-              <RowThumb row={r} a={a} />
-              <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={r.name}>
-                {r.name}
-              </Text>
-              <Text fontSize="xs" color="fg.muted">
-                {a.walls.length} {a.walls.length === 1 ? "paret" : "parets"} · {a.items.length} {a.items.length === 1 ? "element" : "elements"}
-              </Text>
-            </Card.Body>
-            <Card.Footer px={3} pb={3} pt={0} gap={0.5} justifyContent="space-between">
-              <Text fontSize="xs" color="fg.subtle" truncate>
-                {new Date(r.updatedAt).toLocaleDateString("ca-ES", { day: "numeric", month: "short", year: "numeric" })}
-              </Text>
-              <Menu.Root positioning={{ placement: "bottom-end" }}>
-                <Menu.Trigger asChild>
-                  <IconButton aria-label={`Opcions de «${r.name}»`} size="xs" variant="ghost">
-                    <LuEllipsis />
-                  </IconButton>
-                </Menu.Trigger>
-                <Portal>
-                  <Menu.Positioner>
-                    <Menu.Content>
-                      <Menu.Item value="dup" onClick={() => (setClient(""), setAsking({ row: r }))}>
-                        <LuCopy /> Duplicar (per a un client)…
-                      </Menu.Item>
-                      <Menu.Item value="move" onClick={() => setToMove(r)}>
-                        <LuFolderInput /> Moure a un grup…
-                      </Menu.Item>
-                      <Menu.Separator />
-                      <Menu.Item value="del" color="fg.error" onClick={() => setToDelete(r)}>
-                        <LuTrash2 /> Esborrar
-                      </Menu.Item>
-                    </Menu.Content>
-                  </Menu.Positioner>
-                </Portal>
-              </Menu.Root>
-            </Card.Footer>
-          </Card.Root>
+          <GalleryCard
+            thumb={<RowThumb row={r} a={a} />}
+            title={r.name}
+            description={`${a.walls.length} ${a.walls.length === 1 ? "paret" : "parets"}`}
+            tags={<ElementsTag n={a.items.length} />}
+            onClick={() => onOpen(r.id)}
+            footer={
+              <>
+                <CardDate at={r.updatedAt} />
+                <Menu.Root positioning={{ placement: "bottom-end" }}>
+                  <Menu.Trigger asChild>
+                    <IconButton aria-label={`Opcions de «${r.name}»`} size="xs" variant="ghost">
+                      <LuEllipsis />
+                    </IconButton>
+                  </Menu.Trigger>
+                  <Portal>
+                    <Menu.Positioner>
+                      <Menu.Content>
+                        <Menu.Item value="dup" onClick={() => (setClient(""), setAsking({ row: r }))}>
+                          <LuCopy /> Duplicar (per a un client)…
+                        </Menu.Item>
+                        <Menu.Item value="move" onClick={() => setToMove(r)}>
+                          <LuFolderInput /> Moure a un grup…
+                        </Menu.Item>
+                        <Menu.Separator />
+                        <Menu.Item value="del" color="fg.error" onClick={() => setToDelete(r)}>
+                          <LuTrash2 /> Esborrar
+                        </Menu.Item>
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Portal>
+                </Menu.Root>
+              </>
+            }
+          />
         )
       }}
     />
@@ -317,25 +314,23 @@ function CatalogCard({ t, busy, onPick }: { t: AmbientTemplate; busy: boolean; o
     if (!thumb) requestCatalogThumb(t, settings.materials, setThumb)
   }, [t, thumb, settings.materials])
   return (
-    <Card.Root asChild variant="outline" size="sm" cursor="pointer" _hover={{ borderColor: "wood.solid" }} opacity={busy ? 0.6 : 1}>
-      <button type="button" onClick={onPick} disabled={busy}>
-        <Card.Body p={3} gap={2} alignItems="stretch" textAlign="left">
-          {thumb ? <SnapshotThumb src={thumb} /> : <AmbientThumb a={preview} />}
-          <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={t.name}>
-            {t.name}
-          </Text>
-          <Text fontSize="xs" color="fg.muted" lineClamp={2} title={t.description}>
-            {t.description}
-          </Text>
-          {/* A sota del text, com el tipus i el preu de les plantilles de mobles (al costat del nom l'escanyava). */}
-          <HStack mt="auto">
-            <Badge size="xs" variant="subtle" colorPalette="wood">
-              {t.items.length} elements
-            </Badge>
-          </HStack>
-        </Card.Body>
-      </button>
-    </Card.Root>
+    <GalleryCard
+      thumb={thumb ? <SnapshotThumb src={thumb} /> : <AmbientThumb a={preview} />}
+      title={t.name}
+      description={t.description}
+      tags={<ElementsTag n={t.items.length} />}
+      onClick={onPick}
+      disabled={busy}
+    />
+  )
+}
+
+/** Quants elements (mobles i objectes) té un ambient: la mateixa etiqueta a l'historial i al catàleg. */
+function ElementsTag({ n }: { n: number }) {
+  return (
+    <Badge size="xs" variant="subtle" colorPalette="wood">
+      {n} {n === 1 ? "element" : "elements"}
+    </Badge>
   )
 }
 

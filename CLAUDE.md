@@ -165,7 +165,7 @@ cantonades, pestanyes Estructura · Propietats al mòbil, amplades recordades pe
 de mobles i objectes i als Ambients; **`SceneHelpers`** (`StudioEnvironment`, `SceneAccess`) als
 visors 3D; el **`RenderDialog`** (render per CPU) a l'editor i als ambients; **`NewMobleGallery`**,
 `TemplateCard`, `ProjectCard` i `GALLERY_COLS` a Mobles, Objectes i a les finestres dels ambients;
-el **`NameDialog`** (`components/`) per posar un nom (grup nou, canviar el nom, mòdul nou), amb un nom per defecte ja seleccionat; el **`MaterialSelect`** (`settings/MaterialSelect.tsx`) a tot arreu on es tria un material: un **botó** (fons suau, a tota l'amplada, sense fletxa ni icona: no ha de semblar un desplegable) amb la mostra i el nom
+la **`GalleryCard`** (`projects/GalleryCard.tsx`: totes les targetes de les graelles, en el mateix ordre: miniatura · nom de dues línies · què és · descripció · etiquetes (color principal) i preu a baix · peu amb data i ⋯) a historials, grups i catàlegs; el **`NameDialog`** (`components/`) per posar un nom (grup nou, canviar el nom, mòdul nou), amb un nom per defecte ja seleccionat; el **`MaterialSelect`** (`settings/MaterialSelect.tsx`) a tot arreu on es tria un material: un **botó** (fons suau, a tota l'amplada, sense fletxa ni icona: no ha de semblar un desplegable) amb la mostra i el nom
 que obre un calaix (a la dreta a l'ordinador, de baix al mòbil) amb un acordió per categoria i les mostres de la textura
 (només les de la categoria oberta); en tocar-ne una es tria i es tanca. `emptyLabel` per a «Com el cos», «Com a
 Preferències», «Tots els altres», «Cap (fantasma)». Una funcionalitat nova d'un
@@ -305,6 +305,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   porta amb fulla, vidriera de terra a sostre amb travessers): `wallOpenings`, `wallSegments` (trossos
   massissos al voltant dels forats) al 3D; al plànol, el forat amb el vidre o l'arc de la porta. El vidre
   porta `userData.glass` (el render per CPU el fa translúcid) i `baseOpacity` (la casa de nines el respecta).
+- **Panells de l'editor d'ambients com els de l'editor**: l'inspector (element, bloc, paret, grup, ambient) en seccions plegables `PanelSection` (Posició, Mides generals, Bloc, Mides i material, Finestres i portes, Parets noves, Acabats, Plànol de fons, Elements); la llista de l'esquerra, amb el títol «Elements» i «+ Moble» · «+ Objecte» a la dreta (com els grups de l'arbre).
 - **3D**: la mateixa navegació que l'editor (esmorteïment, roda, botó dret per desplaçar), clic per
   seleccionar (caixa taronja; Supr, Ctrl/⌘ D, R i fletxes com al plànol), «Enquadrar» i «Render». **L'element seleccionat es mou
   amb les fletxes del gizmo** (`MoveGizmo` compartit amb l'editor, X i Z; el cos no s'arrossega, per decisió de l'usuari;
@@ -829,6 +830,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Capçalera de les pàgines d'inici** (`components/PageHeader`, Ambients · Objectes · Mobles · Preferències): títol gran,
   les accions **a sota del títol** (a l'ordinador i al mòbil igual) i l'explicació. Dins dels acordions, la fila d'eines
   («Grup nou», «Seleccionar», «Esborrar l'historial») va **a l'esquerra**.
+  **Seccions de les galeries sense marge** (`.gallery-accordion`, layout.css: contingut i `itemBody` amb padding 0): la barra
+  d'eines i els acordions de dins (grups, categories del catàleg) van **a sang**; la resta porta el marge de la secció amb
+  `--gallery-px` (graelles, textos, capçaleres de dins). Res de marges negatius.
 - Tokens semàntics (`bg.subtle`, `fg.muted`...) i `colorPalette`, no colors crus.
 - **Color principal = paleta `wood`** sempre (`colorPalette="wood"`, `wood.fg`...). L'usuari el canvia a
   Preferències → Tema (`theme/accent.ts` redirigeix les variables CSS de `wood`). No facis servir

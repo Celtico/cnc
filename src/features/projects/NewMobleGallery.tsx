@@ -1,4 +1,4 @@
-import { Accordion, Badge, Card, CloseButton, HStack, Input, InputGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Accordion, Badge, CloseButton, Input, InputGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { LuFolders, LuHistory, LuSearch } from "react-icons/lu"
 import { CompositionThumb } from "../../components/CompositionThumb"
@@ -8,6 +8,7 @@ import { requestTemplateThumb, templateThumb } from "./projectThumbs"
 import { STORE_CATALOG, type Composition, type CompositionKind, type Template } from "../../core/model"
 import { KINDS } from "../composition/kinds"
 import { FoldTitle } from "./FoldTitle"
+import { GalleryCard } from "./GalleryCard"
 import { GALLERY_COLS, fold, useSessionList } from "./galleryGrid"
 import { CatalogSection } from "./CatalogSection"
 
@@ -24,36 +25,25 @@ export function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?
     if (!thumb) requestTemplateThumb(t.id, () => comp, settings.materials, setThumb)
   }, [t.id, comp, settings.materials, thumb])
   return (
-    <Card.Root asChild variant="outline" size="sm" cursor="pointer" _hover={{ borderColor: "wood.solid" }}>
-      <button type="button" onClick={() => onPick(t)}>
-        <Card.Body p={3} gap={2} alignItems="stretch" textAlign="left">
-          {thumb ? <SnapshotThumb src={thumb} /> : <CompositionThumb composition={comp} />}
-          <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={t.name}>
-            {title ?? t.name}
+    <GalleryCard
+      thumb={thumb ? <SnapshotThumb src={thumb} /> : <CompositionThumb composition={comp} />}
+      title={title ?? t.name}
+      kicker={kicker}
+      description={t.description}
+      tags={
+        <Badge size="xs" variant="subtle" colorPalette="wood">
+          {kindLabel(t.kind)}
+        </Badge>
+      }
+      aside={
+        t.price !== undefined && (
+          <Text fontSize="xs" fontWeight="semibold" color="wood.fg" truncate>
+            {euros(t.price)}
           </Text>
-          {/* Primer el nom; a sota, amb la descripció, què és (vitrina, llibreria…). */}
-          {kicker && (
-            <Text fontSize="2xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide" truncate mb={-1.5}>
-              {kicker}
-            </Text>
-          )}
-          <Text fontSize="xs" color="fg.muted" lineClamp={2} title={t.description}>
-            {t.description}
-          </Text>
-          {/* A sota: el tipus de moble i el preu sol (orientatiu, es diu a l'explicació del catàleg). */}
-          <HStack justify="space-between" gap={2} mt="auto">
-            <Badge size="xs" variant="subtle" colorPalette="wood" flexShrink={0}>
-              {kindLabel(t.kind)}
-            </Badge>
-            {t.price !== undefined && (
-              <Text fontSize="xs" fontWeight="semibold" color="wood.fg" truncate>
-                {euros(t.price)}
-              </Text>
-            )}
-          </HStack>
-        </Card.Body>
-      </button>
-    </Card.Root>
+        )
+      }
+      onClick={() => onPick(t)}
+    />
   )
 }
 
