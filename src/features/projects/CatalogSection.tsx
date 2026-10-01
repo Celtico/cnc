@@ -26,7 +26,7 @@ export function CatalogSection({ value, description, categories, open, onOpenCha
       <Accordion.ItemContent>
         <Accordion.ItemBody>
           <Stack gap={3}>
-            <Text fontSize="xs" color="fg.muted">
+            <Text fontSize="xs" color="fg.muted" px="var(--gallery-px, 0)" pt={3}>
               {description}
             </Text>
             <Accordion.Root className="inner-accordion" multiple collapsible lazyMount variant="plain" value={searching ? shown.map((c) => c.id) : open} onValueChange={(e) => !searching && onOpenChange(e.value)}>

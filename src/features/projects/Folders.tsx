@@ -200,7 +200,8 @@ export function FolderedGrid<T>({
         </Accordion.Root>
       )}
       {loose.length > 0 && (
-        <SimpleGrid columns={GALLERY_COLS} gap={3}>
+        // Dins d'una secció de galeria (sense marge), el marge de la secció (`--gallery-px`, layout.css).
+        <SimpleGrid columns={GALLERY_COLS} gap={3} px="var(--gallery-px, 0)" pt={toolbar || selection ? 0 : 3} pb="var(--gallery-px, 0)">
           {loose.map(cell)}
         </SimpleGrid>
       )}
