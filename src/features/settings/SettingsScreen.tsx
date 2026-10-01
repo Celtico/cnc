@@ -1058,25 +1058,17 @@ function ThemeField() {
   const { theme, setTheme } = useTheme()
   return (
     <FormRow label="Tema">
-      <SegmentGroup.Root size="sm" value={theme ?? "system"} onValueChange={(e) => e.value && setTheme(e.value)}>
-        <SegmentGroup.Indicator />
-        {(
-          [
-            ["light", "Dia", LuSun],
-            ["dark", "Nit", LuMoon],
-            ["system", "Com el sistema", LuMonitor],
-          ] as const
-        ).map(([v, label, Icon]) => (
-          <SegmentGroup.Item key={v} value={v}>
-            <SegmentGroup.ItemText>
-              <HStack gap={1.5}>
-                <Icon /> {label}
-              </HStack>
-            </SegmentGroup.ItemText>
-            <SegmentGroup.ItemHiddenInput />
-          </SegmentGroup.Item>
-        ))}
-      </SegmentGroup.Root>
+      {/* Pastilles que salten de línia (el control segmentat es desbordava al mòbil). */}
+      <ChoiceChips
+        label="Tema"
+        value={(theme ?? "system") as "light" | "dark" | "system"}
+        onChange={setTheme}
+        options={[
+          { id: "light", label: <><LuSun /> Dia</> },
+          { id: "dark", label: <><LuMoon /> Nit</> },
+          { id: "system", label: <><LuMonitor /> Sistema</> },
+        ]}
+      />
     </FormRow>
   )
 }
