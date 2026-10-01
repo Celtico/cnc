@@ -124,10 +124,11 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
         description="Mides i valors que depenen de tu i del taller. Canviar-los no modifica els mobles ja fets: només els mòduls nous i les pantalles que llegeixen aquestes llistes (foto, editor, nesting, export)."
         actions={
           <>
-            <Button size="sm" variant="outline" onClick={() => fileInput.current?.click()}>
+            {/* El primer, el principal (color principal), com «Nou moble» a les altres pàgines. */}
+            <Button colorPalette="wood" size={{ base: "sm", md: "md" }} onClick={() => fileInput.current?.click()}>
               <LuUpload /> Importar
             </Button>
-            <Button size="sm" variant="outline" onClick={doExport}>
+            <Button variant="outline" size={{ base: "sm", md: "md" }} onClick={doExport}>
               <LuDownload /> Exportar
             </Button>
           </>
