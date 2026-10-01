@@ -160,7 +160,7 @@ export function FolderedGrid<T>({
         </HStack>
       )}
       {folders.length > 0 && (
-        <Accordion.Root className="inner-accordion" multiple collapsible lazyMount variant="plain" value={searching ? folders.map((f) => f[0]) : open} onValueChange={(e) => !searching && setOpen(e.value)}>
+        <Accordion.Root className="inner-accordion" multiple collapsible lazyMount variant="plain" value={searching || picking ? folders.map((f) => f[0]) : open} onValueChange={(e) => !searching && !picking && setOpen(e.value)}>
           {folders.map(([name, list]) => (
             <Accordion.Item key={name} value={name}>
               {/* Línia sota cada grup (com les categories del catàleg): el que hi ha a dins no queda penjat. Dins dels acordions

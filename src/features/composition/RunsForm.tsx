@@ -4,6 +4,7 @@ import { LuChevronDown, LuChevronRight, LuPanelBottom, LuPanelTop, LuPlus, LuSqu
 import { CUTOUT_PRESETS, newId, type Composition, type Run, type WorktopCutout, type WorktopRun } from "../../core/model"
 import { NumRow } from "../editor/ParamsForm"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
+import { moduleChips } from "./moduleChips"
 import { MaterialSelect } from "../settings/SettingsScreen"
 import { useSettings } from "../settings/SettingsContext"
 
@@ -41,7 +42,7 @@ export function RunsForm({ comp, onChange }: { comp: Composition; onChange: (c: 
 
   const moduleSelect = (label: string, value: string, onPick: (id: string) => void) => (
     <FormRow label={label}>
-      <ChoiceChips label={label} options={row.map((m) => ({ id: m.id, label: m.name }))} value={value} onChange={onPick} />
+      <ChoiceChips label={label} options={moduleChips(row, value)} value={value} onChange={onPick} />
     </FormRow>
   )
 
@@ -130,7 +131,7 @@ function WorktopFields({ run, comp, onChange }: { run: WorktopRun; comp: Composi
             <FormRow label="Sobre">
               <ChoiceChips
                 label="Sobre"
-                options={comp.modules.filter((m) => m.carcass.base.kind !== "wall").map((m) => ({ id: m.id, label: m.name }))}
+                options={moduleChips(comp.modules.filter((m) => m.carcass.base.kind !== "wall"), c.module)}
                 value={c.module}
                 onChange={(module) => setCut(c.id, { module })}
               />

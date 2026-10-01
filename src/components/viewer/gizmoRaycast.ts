@@ -8,7 +8,8 @@ import { Mesh, type Intersection, type Raycaster } from "three"
 export function frontRaycast(this: Mesh, raycaster: Raycaster, hits: Intersection[]) {
   const n = hits.length
   Mesh.prototype.raycast.call(this, raycaster, hits)
-  for (let i = n; i < hits.length; i++) hits[i]!.distance = 0
+  // Gairebé 0: passen per davant de tot, però entre fletxes mana la més propera.
+  for (let i = n; i < hits.length; i++) hits[i]!.distance *= 1e-6
 }
 
 /** Malla que no es pot tocar (la part visible del gizmo: només compta la nansa invisible). */

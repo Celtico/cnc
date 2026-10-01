@@ -24,7 +24,8 @@ export function ObjectsGallery({
   const [query, setQuery] = useState("")
   const q = fold(query.trim())
   const matches = (text: string) => !q || fold(text).includes(q)
-  const templates = OBJECT_TEMPLATES.filter((t) => matches(`${t.name} ${t.description}`))
+  // Com al catàleg d'ambients: també per la categoria («Llums», «Plantes»…).
+  const templates = OBJECT_TEMPLATES.filter((t) => matches(`${t.name} ${t.description} ${OBJECT_CATEGORIES.find((c) => c.id === objectCategory(t))?.label ?? ""}`))
   const hist = history(matches, !!q)
   const [open, setOpen] = useSessionList(storageKey)
   const [openCats, setOpenCats] = useSessionList(`${storageKey}-categories`)

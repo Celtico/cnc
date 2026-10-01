@@ -32,7 +32,7 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
   const [busy, setBusy] = useState<string | null>(null)
   const q = fold(query.trim())
   const matches = (text: string) => !q || fold(text).includes(q)
-  const shownRows = (rows ?? []).filter((r) => matches(r.name))
+  const shownRows = (rows ?? []).filter((r) => matches(`${r.name} ${r.folder ?? ""}`))
   const looseRows = shownRows.filter((r) => !r.folder)
   const groupedRows = shownRows.filter((r) => r.folder)
   const catLabel = (id: string) => AMBIENT_CATEGORIES.find((c) => c.id === id)?.label ?? ""

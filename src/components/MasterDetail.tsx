@@ -46,7 +46,7 @@ export function MasterDetail({
   head?: ReactNode
   /** Sota el detall (opcions de tota la llista, p. ex. els materials per defecte). */
   footer?: ReactNode
-  /** Filtre per categoria (desplegable al costat del cercador): «Tots» i una per grup. */
+  /** Filtre per categoria (fila de botons sota el cercador): «Tots» i una per grup. */
   filters?: { id: string; label: string; count: number }[]
   filter?: string
   onFilter?: (id: string) => void

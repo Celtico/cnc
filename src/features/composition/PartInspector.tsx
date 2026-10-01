@@ -46,6 +46,7 @@ import { useSettings } from "../settings/SettingsContext"
 import { ProfileEditor } from "./ProfileEditor"
 import { AxisLabel } from "./RefInspector"
 import { ORIENT_ICON, ORIENTS } from "./partOrient"
+import { moduleChips } from "./moduleChips"
 
 /** Orientació d'una peça lliure: com està posada (el pla del tauler). */
 
@@ -129,7 +130,7 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
           <FormRow label="Enganxada a" help="«Res»: lliure al moble. Enganxada a un mòdul, el segueix quan es mou (el taulell de l'illa).">
             <ChoiceChips
               label="Enganxada a"
-              options={[{ id: "", label: "Res" }, ...comp.modules.map((m) => ({ id: m.id, label: m.name }))]}
+              options={[{ id: "", label: "Res" }, ...moduleChips(comp.modules, p.module)]}
               value={p.module ?? ""}
               onChange={(v) => {
                 // Es queda on és: les coordenades passen a ser relatives al mòdul nou.

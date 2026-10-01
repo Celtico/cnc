@@ -25,6 +25,7 @@ import { useProjects } from "../useProject"
 import { toaster } from "../../components/ui/toaster"
 import { fileAccept } from "../file/fileAccept"
 import { PageHeader } from "../../components/PageHeader"
+import { projectSearchText } from "./searchText"
 
 /** Acció demanada des del menú de l'esquerra (Obrir fitxer); `n` la fa única. */
 export type ProjectsRequest = { kind: "open"; n: number } | null
@@ -104,7 +105,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
       <NewMobleGallery
         onCreate={(c, n) => void handleCreate(c, n)}
         history={(kind, matches, searching) => {
-          const shown = (projects ?? []).filter((p) => !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
+          const shown = (projects ?? []).filter((p) => !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(projectSearchText(p)))
           // Historial = el que és de pas (sense grup); el que es desa en un grup passa a Projectes.
           const loose = shown.filter((p) => !p.folder)
           const grouped = shown.filter((p) => p.folder)

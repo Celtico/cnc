@@ -384,10 +384,12 @@ function Room({
   // de desfer en deixar-lo anar).
   const { camera, controls } = useThree()
   const [hoverId, setHoverId] = useState<string | null>(null)
-  const sel = ambient.items.filter((it) => selectedIds.includes(it.id) && geos.get(it.id))
+  useEffect(() => () => void (document.body.style.cursor = ""), [])
+  const sel = useMemo(() => ambient.items.filter((it) => selectedIds.includes(it.id) && geos.get(it.id)), [ambient.items, selectedIds, geos])
+  // Al centre de la selecció (també en alçada: un moble penjat el porta a la seva altura).
   const gizmoAt = useMemo((): [number, number, number] | null => {
     if (!sel.length) return null
-    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity, top = 0
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity, top = 0, bot = Infinity
     for (const it of sel) {
       const g = geos.get(it.id)!
       const c = Math.abs(Math.cos(rad(it.rot))), sn = Math.abs(Math.sin(rad(it.rot)))
@@ -395,8 +397,9 @@ function Room({
       x0 = Math.min(x0, it.x - hw); x1 = Math.max(x1, it.x + hw)
       z0 = Math.min(z0, it.y - hd); z1 = Math.max(z1, it.y + hd)
       top = Math.max(top, (it.elevation ?? 0) + g.max[1])
+      bot = Math.min(bot, it.elevation ?? 0)
     }
-    return [(x0 + x1) / 2000, top / 2000, (z0 + z1) / 2000]
+    return [(x0 + x1) / 2000, (bot + top) / 2000, (z0 + z1) / 2000]
   }, [sel, geos])
   const drag = useRef<{ axis: Axis; plane: Plane; start: Vector3; from: Map<string, readonly [number, number]>; moved: boolean; last: Ambient; sx: number; sy: number } | null>(null)
   const [activeAxis, setActiveAxis] = useState<Axis | null>(null)

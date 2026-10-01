@@ -1,4 +1,4 @@
-import { IconButton, Popover, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { CloseButton, Drawer, IconButton, Popover, Portal, SimpleGrid, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
 import { Children, Fragment, isValidElement, type ReactNode } from "react"
 import { LuSlidersVertical } from "react-icons/lu"
 import { Tooltip } from "./ui/tooltip"
@@ -24,28 +24,49 @@ export function ViewOptions({ tiles, children }: { tiles: ReactNode; children?: 
   const n = Math.max(1, countTiles(tiles))
   const rows = Math.ceil(n / 5)
   const cols = Math.ceil(n / rows)
+  const mobile = useBreakpointValue({ base: true, md: false }) ?? false
+  const body = (
+    <Stack gap={3}>
+      <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
+        Opcions de vista
+      </Text>
+      {/* Files iguals (cap rajola sola a l'última fila): 6 → 3 + 3, 7 → 4 + 3, 8 → 4 + 4. */}
+      <SimpleGrid columns={cols} gap={1.5}>
+        {tiles}
+      </SimpleGrid>
+      {children}
+    </Stack>
+  )
+  const trigger = (
+    <IconButton aria-label="Opcions de vista" title="Opcions de vista" size="sm" variant="surface" colorPalette="wood">
+      <LuSlidersVertical />
+    </IconButton>
+  )
+  // Al mòbil, un calaix de baix (com a l'editor de mobles); a l'ordinador, un popover.
+  if (mobile)
+    return (
+      <Drawer.Root placement="bottom">
+        <Drawer.Trigger asChild>{trigger}</Drawer.Trigger>
+        <Portal>
+          <Drawer.Backdrop />
+          <Drawer.Positioner>
+            <Drawer.Content roundedTop="l3" pb="env(safe-area-inset-bottom, 0px)">
+              <Drawer.Body py={4}>{body}</Drawer.Body>
+              <Drawer.CloseTrigger asChild>
+                <CloseButton size="sm" aria-label="Tancar" />
+              </Drawer.CloseTrigger>
+            </Drawer.Content>
+          </Drawer.Positioner>
+        </Portal>
+      </Drawer.Root>
+    )
   return (
     <Popover.Root positioning={{ placement: "bottom-end" }}>
-      <Popover.Trigger asChild>
-        <IconButton aria-label="Opcions de vista" title="Opcions de vista" size="sm" variant="surface" colorPalette="wood">
-          <LuSlidersVertical />
-        </IconButton>
-      </Popover.Trigger>
+      <Popover.Trigger asChild>{trigger}</Popover.Trigger>
       <Portal>
         <Popover.Positioner>
           <Popover.Content w="300px">
-            <Popover.Body>
-              <Stack gap={3}>
-                <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
-                  Opcions de vista
-                </Text>
-                {/* Files iguals (cap rajola sola a l'última fila): 6 → 3 + 3, 7 → 4 + 3, 8 → 4 + 4. */}
-                <SimpleGrid columns={cols} gap={1.5}>
-                  {tiles}
-                </SimpleGrid>
-                {children}
-              </Stack>
-            </Popover.Body>
+            <Popover.Body>{body}</Popover.Body>
           </Popover.Content>
         </Popover.Positioner>
       </Portal>

@@ -681,7 +681,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     amb `ariaLabel` al camp) per als números, 180 px; `IconChoice hideLabel` i `MaterialSelect hideLabel` dins un
     `FormRow`; «Afegir» de `MasterDetail` només amb icona; `FormSection` per a seccions dins una targeta; `ChoiceChips` per a opcions que han de saltar de línia,
     com el sòcol i la llum del Visor 3D, en lloc d'un control segmentat que es desborda). Materials i objectes de
-    referència fan **llista i detall** (`components/MasterDetail`: llista agrupada amb mostra; cercador, desplegable
+    referència fan **llista i detall** (`components/MasterDetail`: llista agrupada amb mostra; cercador, botons
     de categoria i «Afegir» en una fila; desplaçament propi; `head` = el títol de la pàgina a dalt de la llista,
     perquè el detall comenci a dalt de tot, a l'altura del menú —`PaneHeadContext` a les pàgines `wide`—;
     `footer` = sota el detall). Materials: «Per defecte als mòduls nous» **sota el detall** (Tauler i Fons amb

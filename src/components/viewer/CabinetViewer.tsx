@@ -662,6 +662,7 @@ function RefGhost({
   const pos = drag ?? g
   // Ratolí a sobre: contorn del color de selecció (més suau), perquè es vegi què es triarà.
   const [hover, setHover] = useState(false)
+  useEffect(() => () => void (document.body.style.cursor = ""), [])
   // Obstacle en blau; objecte que talla en violeta; seleccionat en taronja; amb problema en vermell.
   const tint = hit ? "#dc2626" : selected ? SELECT_COLOR : g.effect === "cut" ? "#7c3aed" : "#3b82f6"
   const draggable = selected && !!onMove
@@ -735,6 +736,8 @@ function RefGhost({
       receiveShadow={!!solidMat}
       renderOrder={g.effect === "cut" ? 8 : 0}
       onClick={onSelect ? (e: ThreeEvent<MouseEvent>) => {
+        // El clic que acaba un arrossegament (d'una fletxa o de la càmera) no selecciona.
+        if (e.delta > 4) return
         e.stopPropagation()
         onSelect(g.id)
       } : undefined}
@@ -1320,6 +1323,8 @@ export function PanelMesh({
           material={cut && cutMats ? cutMats : mats}
           geometry={cut ?? undefined}
           onClick={onClick ? (e: ThreeEvent<MouseEvent>) => {
+            // El clic que acaba un arrossegament (d'una fletxa o de la càmera) no selecciona.
+            if (e.delta > 4) return
             e.stopPropagation()
             onClick(e.point)
           } : undefined}

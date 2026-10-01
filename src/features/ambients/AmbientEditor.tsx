@@ -953,26 +953,25 @@ function WallInspector({ wall, materials, onPatch, onDelete }: { wall: Wall; mat
           const set = (patch: Partial<Opening>) => onPatch({ openings: wall.openings!.map((q, j) => (j === i ? clampOpening(wall, { ...q, ...patch }) : q)) })
           return (
             <Stack key={i} gap={2} borderWidth="1px" rounded="md" p={2}>
-              <HStack align="flex-start" justify="space-between">
-                <ChoiceChips<Opening["kind"]>
-                  label="Tipus d'obertura"
-                  options={[
-                    { id: "window", label: "Finestra" },
-                    { id: "door", label: "Porta" },
-                    { id: "glazing", label: "Vidriera" },
-                  ]}
-                  value={o.kind}
-                  onChange={(kind) => set({ kind, ...OPENING_DEFAULTS[kind] })}
-                />
+              <HStack align="flex-start" gap={1}>
+                <Box flex={1} minW={0}>
+                <FormRow label="Tipus" help={o.kind === "glazing" ? "De terra a sostre." : undefined}>
+                  <ChoiceChips<Opening["kind"]>
+                    label="Tipus d'obertura"
+                    options={[
+                      { id: "window", label: "Finestra" },
+                      { id: "door", label: "Porta" },
+                      { id: "glazing", label: "Vidriera" },
+                    ]}
+                    value={o.kind}
+                    onChange={(kind) => set({ kind, ...OPENING_DEFAULTS[kind] })}
+                  />
+                </FormRow>
+                </Box>
                 <IconButton aria-label="Treure l'obertura" size="xs" variant="ghost" colorPalette="red" onClick={() => onPatch({ openings: wall.openings!.filter((_, j) => j !== i) })}>
                   <LuTrash2 />
                 </IconButton>
               </HStack>
-              {o.kind === "glazing" && (
-                <Text fontSize="xs" color="fg.muted">
-                  De terra a sostre.
-                </Text>
-              )}
               <NumRow label="Centre (des de l'inici)" value={Math.round(o.at)} step={10} onChange={(at) => Number.isFinite(at) && set({ at })} />
               <NumRow label="Ample" value={o.w} min={200} step={10} onChange={(w) => w >= 200 && set({ w })} />
               <NumRow label="Alt" value={o.h} min={200} step={10} onChange={(h) => h >= 200 && set({ h })} />

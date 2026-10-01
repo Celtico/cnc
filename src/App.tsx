@@ -288,7 +288,7 @@ export function App() {
 
   return (
     <UnitContext.Provider value={settings.display.unit}>
-    <Flex direction={{ base: "column", md: "row" }} flex={1} minH="100dvh">
+    <Flex className="app-root" direction={{ base: "column", md: "row" }} flex={1} minH="100dvh">
       {/* Barra lateral (escriptori), plegable a només icones */}
       <Stack
         display={{ base: "none", md: "flex" }}
@@ -423,6 +423,7 @@ export function App() {
 
       {/* Navegació inferior (mòbil) */}
       <HStack
+        className="bottom-nav"
         display={{ base: "flex", md: "none" }}
         as="nav"
         position="fixed"

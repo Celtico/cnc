@@ -452,19 +452,18 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                 </Sec>
 
                 <Sec id="scene" title="Escena" icon={LuHouse} hint="Els canvis tornen a començar el render." badge={room === "room" ? "Habitació" : room === "floor" ? "Terra" : "Cap"}>
-                  <ChoiceChips<RenderRoom>
-                    label="Escena"
-                    options={[
-                      { id: "room", label: "Habitació" },
-                      { id: "floor", label: "Només terra" },
-                      { id: "none", label: "Cap" },
-                    ]}
-                    value={room}
-                    onChange={setRoom}
-                  />
-                  <Text fontSize="2xs" color="fg.subtle">
-                    L'habitació (terra i paret) és la del mode Presentació; «Cap» deixa només el moble. Per a catàlegs: «Cap» amb fons blanc o transparent.
-                  </Text>
+                  <FormRow label="Escena" help="L'habitació (terra i paret) és la del mode Presentació; «Cap» deixa només el moble. Per a catàlegs: «Cap» amb fons blanc o transparent.">
+                    <ChoiceChips<RenderRoom>
+                      label="Escena"
+                      options={[
+                        { id: "room", label: "Habitació" },
+                        { id: "floor", label: "Només terra" },
+                        { id: "none", label: "Cap" },
+                      ]}
+                      value={room}
+                      onChange={setRoom}
+                    />
+                  </FormRow>
                 </Sec>
 
                 <Sec id="light" title="Llum" icon={LuSun} hint="Els canvis tornen a començar el render." badge={env ? "HDRI" : undefined}>

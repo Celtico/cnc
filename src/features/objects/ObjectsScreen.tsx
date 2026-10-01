@@ -15,6 +15,7 @@ import { useProjects } from "../useProject"
 import { ObjectsGallery } from "./ObjectsGallery"
 import { isObject } from "./isObject"
 import { PageHeader } from "../../components/PageHeader"
+import { projectSearchText } from "../projects/searchText"
 
 /**
  * Objectes per als ambients (sofà, làmpada, planta…): es fan amb el mateix Editor que els mobles,
@@ -44,7 +45,7 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
       <ObjectsGallery
         onCreate={(c, n) => void create(c, n)}
         history={(matches, searching) => {
-          const shown = (projects ?? []).filter((p) => isObject(p) && matches(p.name))
+          const shown = (projects ?? []).filter((p) => isObject(p) && matches(projectSearchText(p)))
           // Historial = el que és de pas (sense grup); el que es desa en un grup passa a Projectes.
           const loose = shown.filter((p) => !p.folder)
           const grouped = shown.filter((p) => p.folder)

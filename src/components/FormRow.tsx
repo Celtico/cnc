@@ -64,7 +64,8 @@ export function ChoiceChips<T extends string>({ label, options, value, onChange 
       {options.map((o) => {
         const on = o.id === value
         return (
-          <Button key={o.id} {...segItem(on)} px={2.5} role="radio" aria-checked={on} onClick={() => onChange(o.id)}>
+          // Tornar a tocar la triada no fa res (com un desplegable): si no, es refeia (p. ex. l'acabat del material).
+          <Button key={o.id} {...segItem(on)} px={2.5} role="radio" aria-checked={on} onClick={() => !on && onChange(o.id)}>
             {o.label}
           </Button>
         )

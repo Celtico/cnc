@@ -73,6 +73,8 @@ export function snapshot(scene: Scene, camera: PerspectiveCamera): string {
   const r = ensure()
   r.render(scene, camera)
   const url = scene.background ? r.domElement.toDataURL("image/jpeg", 0.82) : r.domElement.toDataURL("image/png")
+  // El mapa d'ombres de cada llum (1024², a la GPU) no l'allibera disposeTree: a l'iPhone, refer-les totes l'acumulava.
+  scene.traverse((o) => (o as DirectionalLight).isDirectionalLight && (o as DirectionalLight).shadow.dispose())
   disposeTree(scene)
   return url
 }

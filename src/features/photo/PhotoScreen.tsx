@@ -556,7 +556,7 @@ function PhotoCalibrator({
   const presets = visibleReferences(settings)
   const presetKey = presets.findIndex((r) => r.w === cal.ref.w && r.h === cal.ref.h && (r.wallOffset ?? 0) === (cal.refWallOffset ?? 0))
   // "A mida" és una tria de l'usuari, no només "cap preset coincideix": si no ho
-  // recordem, el desplegable torna al preset i no deixa triar-la.
+  // recordem, la tria torna al preset i no deixa triar-la.
   const refMode = customRef || presetKey < 0 ? "custom" : String(presetKey)
   const markerR = Math.max(W, H) / 90
   const stroke = Math.max(W, H) / 600

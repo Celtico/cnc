@@ -1,5 +1,5 @@
 import type { ThreeEvent } from "@react-three/fiber"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { Group } from "three"
 import { frontRaycast, noRaycast } from "./gizmoRaycast"
 import { usePixelScale, type Axis } from "./pixelScale"
@@ -28,6 +28,22 @@ export function MoveGizmo({
   const scaler = useRef<Group>(null)
   usePixelScale(scaler, 16)
   const [hover, setHover] = useState<Axis | null>(null)
+  // Si desapareix amb el ratolí a sobre (es deselecciona), el cursor no es queda en «grab».
+  useEffect(() => () => void (document.body.style.cursor = ""), [])
+  // r3f no fa arribar el `pointercancel` a l'objecte (un gest del sistema a l'iPhone, girar la pantalla…): se
+  // n'escolta un a la finestra perquè l'arrossegament s'acabi igualment (els `onEnd` ja ignoren un final repetit).
+  const start = (a: Axis, e: ThreeEvent<PointerEvent>) => {
+    onStart(a, e)
+    const id = e.pointerId
+    const cancel = (ev: PointerEvent) => {
+      if (ev.pointerId !== id) return
+      window.removeEventListener("pointercancel", cancel)
+      window.removeEventListener("pointerup", cancel)
+      onEnd({ target: null, pointerId: id } as unknown as ThreeEvent<PointerEvent>)
+    }
+    window.addEventListener("pointercancel", cancel)
+    window.addEventListener("pointerup", cancel)
+  }
   const rot: Record<Axis, [number, number, number]> = { x: [0, 0, -Math.PI / 2], y: [0, 0, 0], z: [Math.PI / 2, 0, 0] }
   return (
     <group ref={scaler}>
@@ -47,10 +63,11 @@ export function MoveGizmo({
               setHover(null)
               if (!active) document.body.style.cursor = ""
             }}
-            onPointerDown={(e) => onStart(a, e)}
+            onPointerDown={(e) => start(a, e)}
             // El clic de la fletxa no arriba a les peces de davant (si no, triaria una altra cosa i es perdria la selecció).
             onClick={(e) => e.stopPropagation()}
-            onPointerMove={onMove}
+            // Sense cap botó premut (s'ha perdut el final): s'acaba en lloc de moure.
+            onPointerMove={(e) => (e.buttons === 0 ? onEnd(e) : onMove(e))}
             onPointerUp={onEnd}
             onPointerCancel={onEnd}
           >

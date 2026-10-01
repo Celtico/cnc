@@ -266,7 +266,7 @@ export function StructureTree({
         </Box>
       ))}
 
-      {/* Peces lliures (flat-pack): com els objectes, però són peces de debò amb encaixos. El títol només surt si n'hi ha. */}
+      {/* Peces lliures (flat-pack): com els objectes, però són peces de debò amb encaixos. */}
       <SectionTitle onAdd={() => setAdding("part")} addLabel="Afegir peça lliure">Peces lliures</SectionTitle>
       {(() => {
         const seen = new Set<string>()

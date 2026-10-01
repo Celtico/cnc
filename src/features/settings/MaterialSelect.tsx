@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react"
 import { LuCheck } from "react-icons/lu"
 import { MATERIAL_CATEGORIES, materialCategory, type MaterialPref } from "../../core/model"
 import { MaterialThumb } from "./MaterialBits"
+import { useSettings } from "./SettingsContext"
 
 /**
  * Tria d'un material, la mateixa a tota l'app: un botó amb la mostra i el nom que obre un calaix (a la dreta a
@@ -12,7 +13,11 @@ import { MaterialThumb } from "./MaterialBits"
  */
 export function MaterialSelect({ label, materials, value, onChange, emptyLabel, hideLabel }: { label: string; materials: MaterialPref[]; value: string; onChange: (name: string) => void; emptyLabel?: string; hideLabel?: boolean }) {
   const [open, setOpen] = useState(false)
-  const current = materials.find((m) => m.name === value)
+  // La mostra del botó surt de tots els materials (la llista que es passa pot estar filtrada: sense fons, sense els de
+  // simulació…); «no és a Preferències» només si de debò no hi és.
+  const { settings } = useSettings()
+  const current = materials.find((m) => m.name === value) ?? settings.materials.find((m) => m.name === value)
+  const known = !!current
   const cats = MATERIAL_CATEGORIES.map((c) => ({ ...c, list: materials.filter((m) => materialCategory(m) === c.id) })).filter((c) => c.list.length)
   const [openCats, setOpenCats] = useState<string[]>([])
   const pick = (name: string) => {
@@ -49,7 +54,7 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
           <Drawer.Backdrop />
           <Drawer.Positioner>
             <Drawer.Content roundedTop={{ base: "l3", md: "none" }} maxH={{ base: "85dvh", md: "none" }} pb="env(safe-area-inset-bottom, 0px)">
-              <Drawer.Header pt="calc(var(--chakra-spacing-4) + env(safe-area-inset-top, 0px))">
+              <Drawer.Header pt={{ base: 4, md: "calc(var(--chakra-spacing-4) + env(safe-area-inset-top, 0px))" }}>
                 <Drawer.Title>{label}</Drawer.Title>
               </Drawer.Header>
               <Drawer.Body>
@@ -60,7 +65,7 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
                       <Text fontSize="sm">{emptyLabel}</Text>
                     </Row>
                   )}
-                  {value && !current && (
+                  {value && !known && (
                     <Text fontSize="xs" color="fg.muted">
                       Ara: «{value}» (no és a Preferències).
                     </Text>
@@ -115,7 +120,8 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
                   </Accordion.Root>
                 </Stack>
               </Drawer.Body>
-              <Drawer.CloseTrigger asChild top="calc(var(--chakra-spacing-3) + env(safe-area-inset-top, 0px))">
+              {/* Al mòbil és un full de baix: la zona segura de dalt no hi toca (només a la columna de la dreta, a l'iPad). */}
+              <Drawer.CloseTrigger asChild top={{ base: 3, md: "calc(var(--chakra-spacing-3) + env(safe-area-inset-top, 0px))" }}>
                 <CloseButton size="sm" aria-label="Tancar" />
               </Drawer.CloseTrigger>
             </Drawer.Content>

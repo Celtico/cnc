@@ -9,10 +9,15 @@ export const ADD_KINDS: { id: AddKind; label: string; noun: string }[] = [
   { id: "ref", label: "Objecte", noun: "Objecte" },
 ]
 
-/** Nom per defecte del següent element d'aquest tipus («Mòdul 3», «Peça 2», «Objecte 1»). */
+/** Nom per defecte del següent element d'aquest tipus («Mòdul 3», «Peça 2», «Objecte 1»), sense repetir-ne cap. */
 export function defaultElementName(comp: Composition, kind: AddKind): string {
-  const n = kind === "module" ? comp.modules.length : kind === "part" ? (comp.parts ?? []).length : comp.references.length
-  return `${ADD_KINDS.find((k) => k.id === kind)!.noun} ${n + 1}`
+  const list: { name: string }[] = kind === "module" ? comp.modules : kind === "part" ? (comp.parts ?? []) : comp.references
+  const used = new Set(list.map((x) => x.name))
+  const noun = ADD_KINDS.find((k) => k.id === kind)!.noun
+  // El següent número lliure (amb «Mòdul 1» i «Mòdul 3», «Mòdul 4»: no en repeteix cap).
+  let n = list.length + 1
+  while (used.has(`${noun} ${n}`)) n++
+  return `${noun} ${n}`
 }
 
 /**
