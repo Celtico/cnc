@@ -1,7 +1,10 @@
 import { Accordion, Badge, Card, CloseButton, HStack, Input, InputGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import { useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { LuFolders, LuHistory, LuSearch } from "react-icons/lu"
 import { CompositionThumb } from "../../components/CompositionThumb"
+import { SnapshotThumb } from "../../components/SnapshotThumb"
+import { useSettings } from "../settings/SettingsContext"
+import { requestTemplateThumb, templateThumb } from "./projectThumbs"
 import { STORE_CATALOG, type Composition, type CompositionKind, type Template } from "../../core/model"
 import { KINDS } from "../composition/kinds"
 import { FoldTitle } from "./FoldTitle"
@@ -14,11 +17,17 @@ const euros = (n: number) => `${n.toLocaleString("ca-ES")} €`
 /** Targeta d'una plantilla de l'app: la miniatura es calcula en muntar-la (les de botiga, en obrir la categoria). */
 export function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?: string; kicker?: string; onPick: (t: Template) => void }) {
   const comp = useMemo(() => t.make(), [t])
+  // Foto 3D feta fora de pantalla (en memòria mentre l'app és oberta); mentrestant, el dibuix.
+  const { settings } = useSettings()
+  const [thumb, setThumb] = useState(() => templateThumb(t.id))
+  useEffect(() => {
+    if (!thumb) requestTemplateThumb(t.id, () => comp, settings.materials, setThumb)
+  }, [t.id, comp, settings.materials, thumb])
   return (
     <Card.Root asChild variant="outline" size="sm" cursor="pointer" _hover={{ borderColor: "wood.solid" }}>
       <button type="button" onClick={() => onPick(t)}>
         <Card.Body p={3} gap={2} alignItems="stretch" textAlign="left">
-          <CompositionThumb composition={comp} />
+          {thumb ? <SnapshotThumb src={thumb} /> : <CompositionThumb composition={comp} />}
           {kicker && (
             <Text fontSize="2xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide" truncate mb={-1.5}>
               {kicker}

@@ -60,7 +60,7 @@ export const DEFAULT_SCENE: PresentationScene = { floor: "oak", wall: WALLS[0]!.
 const KEY = "mobles:presentation-scene"
 const EVENT = "mobles:presentation-scene-change"
 
-function read(): PresentationScene {
+export function readPresentationScene(): PresentationScene {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) ?? "null") as Partial<PresentationScene> | null
     if (!v) return DEFAULT_SCENE
@@ -78,14 +78,14 @@ function read(): PresentationScene {
 }
 
 export function usePresentationScene(): [PresentationScene, (patch: Partial<PresentationScene>) => void] {
-  const [s, setS] = useState<PresentationScene>(read)
+  const [s, setS] = useState<PresentationScene>(readPresentationScene)
   useEffect(() => {
-    const on = () => setS(read())
+    const on = () => setS(readPresentationScene())
     window.addEventListener(EVENT, on)
     return () => window.removeEventListener(EVENT, on)
   }, [])
   const set = (patch: Partial<PresentationScene>) => {
-    const next = { ...read(), ...patch }
+    const next = { ...readPresentationScene(), ...patch }
     try {
       localStorage.setItem(KEY, JSON.stringify(next))
     } catch {

@@ -1,0 +1,122 @@
+import { Box3, Color, DirectionalLight, HemisphereLight, Mesh, MeshStandardMaterial, NeutralToneMapping, PCFSoftShadowMap, PerspectiveCamera, PlaneGeometry, PMREMGenerator, SRGBColorSpace, Vector3, WebGLRenderer, type Material, type Object3D, type Texture } from "three"
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
+import type { MaterialPref, Panel } from "../../core/model"
+import { exportablePanel } from "./CabinetViewer"
+import { buildScene } from "./exportGlb"
+import { makeFloor, ROOM } from "./floorTextures"
+import { readPresentationScene } from "./presentationScene"
+import { surfaceMaterial } from "./surfaceMaterial"
+
+/**
+ * Miniatures 3D de les targetes (Mobles i Objectes) sense cap visor obert: un sol renderitzador fora de
+ * pantalla que pinta les peces amb els materials reals i en treu un JPEG petit. Un cada cop i, quan s'acaba
+ * la cua, s'allibera (a l'iPhone, cada context WebGL compta: un 3D viu per targeta faria tancar la pàgina).
+ */
+/** 2:1, com les targetes (a l'ordinador, una mica més amples; al mòbil, una mica menys: es retalla poc). */
+const W = 480
+const H = 240
+/** Versió de les miniatures: si canvia la manera de fer-les, es tornen a fer totes. */
+export const THUMB_VERSION = 3
+
+let renderer: WebGLRenderer | null = null
+let env: Texture | null = null
+
+function ensure(): WebGLRenderer {
+  if (renderer) return renderer
+  const r = new WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
+  r.setPixelRatio(1)
+  r.setSize(W, H, false)
+  r.toneMapping = NeutralToneMapping
+  r.outputColorSpace = SRGBColorSpace
+  r.shadowMap.enabled = true
+  r.shadowMap.type = PCFSoftShadowMap
+  const pmrem = new PMREMGenerator(r)
+  env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+  pmrem.dispose()
+  renderer = r
+  return r
+}
+
+/** Allibera el renderitzador (quan la cua de miniatures queda buida). */
+export function releaseThumbRenderer(): void {
+  env?.dispose()
+  env = null
+  renderer?.dispose()
+  renderer?.forceContextLoss()
+  renderer = null
+}
+
+/** JPEG (data URL) de les peces vistes des de davant, una mica de costat i de dalt. */
+export function renderThumb(panels: Panel[], materials: MaterialPref[]): string | null {
+  if (!panels.length) return null
+  const r = ensure()
+  const scene = buildScene(panels, "thumb", { materials, make: exportablePanel })
+  scene.traverse((o) => {
+    if ((o as Mesh).isMesh) o.castShadow = o.receiveShadow = true
+  })
+  // Les peces porten la matriu feta (`matrixAutoUpdate = false`): cal posar al dia les del món abans de
+  // mesurar la caixa, si no surt la de les peces sense col·locar (tallades i fora de lloc).
+  scene.updateMatrixWorld(true)
+  const box = new Box3().setFromObject(scene)
+  const size = box.getSize(new Vector3())
+  const center = box.getCenter(new Vector3())
+
+  // Terra i paret de l'escena de Presentació (Preferències › Visor 3D): el moble no queda flotant.
+  const look = readPresentationScene()
+  const F = Math.max(6, size.x * 3, size.z * 6)
+  const floorMat = look.floorMaterial ? surfaceMaterial(materials, look.floorMaterial, F * 1000, F * 1000) : (() => {
+    const f = makeFloor(look.floor)
+    if (f.map) f.map.repeat.set((f.repeat * F) / ROOM, (f.repeat * F) / ROOM)
+    return new MeshStandardMaterial({ map: f.map, color: f.map ? "#ffffff" : "#eeeeec", roughness: f.roughness })
+  })()
+  const wallZ = box.min.z - 0.002
+  const floor = new Mesh(new PlaneGeometry(F, F), floorMat)
+  floor.rotation.x = -Math.PI / 2
+  floor.position.set(center.x, 0, wallZ + F / 2)
+  floor.receiveShadow = true
+  const wallMat = look.wallMaterial ? surfaceMaterial(materials, look.wallMaterial, F * 1000, 4000) : new MeshStandardMaterial({ color: look.wall, roughness: 0.95 })
+  const wall = new Mesh(new PlaneGeometry(F, Math.max(4, size.y * 2)), wallMat)
+  wall.position.set(center.x, Math.max(2, size.y), wallZ)
+  wall.receiveShadow = true
+  scene.add(floor, wall)
+  scene.background = new Color(look.wall)
+  scene.environment = env
+  scene.environmentIntensity = 0.6
+  scene.add(new HemisphereLight("#ffffff", "#8a7a60", 0.45))
+  const sun = new DirectionalLight("#ffffff", 1.7)
+  sun.position.set(center.x + 2, center.y + 4, center.z + 3)
+  sun.castShadow = true
+  sun.shadow.mapSize.set(1024, 1024)
+  const ext = Math.max(size.x, size.y, size.z) * 1.5 + 0.5
+  Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext, near: 0.1, far: 30 })
+  sun.shadow.bias = -0.0004
+  sun.shadow.normalBias = 0.02
+  sun.target.position.copy(center)
+  scene.add(sun, sun.target)
+
+  const camera = new PerspectiveCamera(30, W / H, 0.01, 200)
+  // Distància perquè hi càpiga sencer amb marge (la targeta en retalla una mica), des de davant a la dreta i de dalt.
+  const dir = new Vector3(0.5, 0.3, 1).normalize()
+  const radius = size.length() / 2
+  const dist = (radius / Math.sin((camera.fov * Math.PI) / 360)) * 1.15
+  camera.position.copy(center).addScaledVector(dir, dist)
+  camera.lookAt(center)
+
+  r.render(scene, camera)
+  const url = r.domElement.toDataURL("image/jpeg", 0.82)
+  disposeTree(scene)
+  return url
+}
+
+function disposeTree(root: Object3D) {
+  root.traverse((o) => {
+    const m = o as Mesh
+    if (!m.isMesh) return
+    m.geometry?.dispose()
+    const mats = (Array.isArray(m.material) ? m.material : [m.material]) as Material[]
+    for (const mat of new Set(mats)) {
+      ;(mat as Material & { map?: Texture | null }).map?.dispose()
+      mat.dispose()
+    }
+  })
+}

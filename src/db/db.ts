@@ -78,6 +78,10 @@ export interface Project {
   folder?: string
   /** S'ha modificat després de crear-lo (a l'editor o a l'ambient): esborrar-lo perdria els canvis. */
   edited?: boolean
+  /** Miniatura 3D de la targeta (JPEG, data URL) i l'`updatedAt` que retrata (`projects/projectThumbs`). */
+  thumb?: string
+  thumbAt?: number
+  thumbV?: number
   createdAt: number
   updatedAt: number
 }
@@ -92,6 +96,8 @@ export interface AmbientRow {
   data: unknown
   /** Grup (carpeta) de l'historial. */
   folder?: string
+  /** Miniatura del 3D (JPEG, data URL): una foto del visor quan s'obre al 3D. */
+  thumb?: string
   createdAt: number
   updatedAt: number
 }

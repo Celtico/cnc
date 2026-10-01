@@ -254,6 +254,15 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Catàleg per categories** (`AMBIENT_CATEGORIES`, `AmbientTemplate.category`: salons, cuines, menjadors,
   dormitoris, infantils, vestidors, rebedors, despatxos, banys, exteriors), un acordió per categoria; la
   cerca també busca la categoria i obre les que coincideixen.
+- **Miniatures 3D a les targetes** (per decisió de l'usuari, en lloc dels dibuixos de línies): **sense cap 3D viu per
+  targeta** (a l'iPhone farien tancar la pàgina). Mobles, objectes i plantilles: `components/viewer/thumbRenderer.ts`, un
+  sol renderitzador fora de pantalla (s'allibera quan la cua és buida) que pinta les peces amb els materials reals sobre el
+  terra i la paret de l'escena de Presentació, amb ombres, en un JPEG 2:1 de 480 px; cua d'una en una quan el navegador
+  és lliure (`projects/projectThumbs.ts`). Es desa al projecte (`Project.thumb`, `thumbAt` = l'`updatedAt` que retrata,
+  `thumbV` = `THUMB_VERSION`: si canvia, es refan); les de plantilles, només en memòria. Ambients: foto del visor 3D
+  (`canvasThumb`) uns segons després de l'últim canvi, si s'és al 3D i sense res seleccionat (`AmbientRow.thumb`).
+  `SnapshotThumb` (2:1, no retalla); sense foto encara, el dibuix de sempre. Cal `scene.updateMatrixWorld(true)` abans de
+  mesurar la caixa (les peces porten la matriu feta).
 - **Grups (carpetes)** a l'historial de Mobles, Objectes i Ambients
   (`Project.folder`, `AmbientRow.folder`, `UserTemplate.folder`; `setProjectsFolder`, `setAmbientsFolder`,
   `setUserTemplatesFolder`): menú ⋯ de cada targeta (desar com a fitxer, duplicar, **moure a un grup…**,

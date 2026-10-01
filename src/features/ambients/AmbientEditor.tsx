@@ -95,6 +95,7 @@ import { itemName, useItemGeometries, type ItemGeometry } from "./ambientData"
 import { PlanCanvas } from "./PlanCanvas"
 import { AMBIENT_TAB_KEY, ambientBox, type Selection, type Tool } from "./planGeom"
 import { useDebouncedSave } from "../useDebouncedSave"
+import { canvasThumb } from "../../components/viewer/canvasThumb"
 
 const TOOLS: { id: Tool; label: string; key: string; icon: typeof LuPenTool }[] = [
   { id: "select", label: "Seleccionar i moure", key: "V", icon: LuMousePointer2 },
@@ -184,6 +185,19 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const committed = useRef<Ambient>(initial)
   const [hist, setHist] = useState({ undo: 0, redo: 0 })
   const syncHist = () => setHist({ undo: past.current.length, redo: future.current.length })
+
+  // Miniatura de la targeta: una foto del 3D quan s'hi és, sense res seleccionat (la caixa taronja no ha de
+  // sortir-hi), uns segons després de l'últim canvi. Només es desa la imatge (no canvia la data de l'ambient).
+  const view3d = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (tab !== "3d" || sel !== null) return
+    const t = setTimeout(() => {
+      const c = view3d.current?.querySelector("canvas")
+      const url = c ? canvasThumb(c) : null
+      if (url) void db.ambients.update(ambientId, { thumb: url })
+    }, 2500)
+    return () => clearTimeout(t)
+  }, [amb, tab, sel, ambientId])
 
   // Desar (esperant una mica mentre s'arrossega; el que queda pendent, en sortir). Obrir-lo no el desa.
   useDebouncedSave(amb, (a) => void updateAmbient(ambientId, { data: a }))
@@ -572,7 +586,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
               show={{ grid: showGrid, dims: showDims, labels: showLabels, detail: showDetail, snap: snapOn, plan: showPlan }}
             />
           ) : (
-            <Box position="absolute" inset={0} rounded="md" overflow="hidden" borderWidth="1px">
+            <Box ref={view3d} position="absolute" inset={0} rounded="md" overflow="hidden" borderWidth="1px">
               <Ambient3D ambient={amb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} onPick={pickItem} onChange={change} snap={snapOn} dollhouse={dollhouse} shadows={shadows} ceiling={ceiling} />
             </Box>
           )}

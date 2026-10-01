@@ -1,6 +1,10 @@
 import { Badge, Button, Card, IconButton, Menu, Portal, Text, Wrap } from "@chakra-ui/react"
 import { LuCheck, LuCopy, LuEllipsis, LuFolderInput, LuHouse, LuPencil, LuPlus, LuSave, LuTrash2 } from "react-icons/lu"
+import { useEffect } from "react"
 import { CompositionThumb } from "../../components/CompositionThumb"
+import { SnapshotThumb } from "../../components/SnapshotThumb"
+import { useSettings } from "../settings/SettingsContext"
+import { needsThumb, requestProjectThumb } from "./projectThumbs"
 import { compositionHeight, compositionWidth } from "../../core/model"
 import { compositionOf } from "../../db/compositionStore"
 import { isEdited, safeParams, type Project } from "../../db/db"
@@ -43,10 +47,15 @@ export function ProjectCard({
   const date = new Date(project.updatedAt).toLocaleDateString("ca-ES", { day: "numeric", month: "short", year: "numeric" })
   const here = currentAmbient !== undefined && ambients.some((a) => a.id === currentAmbient)
   const click = onAdd ?? onOpen
+  const { settings } = useSettings()
+  useEffect(() => {
+    if (needsThumb(project)) requestProjectThumb(project, settings.materials)
+  }, [project, settings.materials])
   return (
     <Card.Root variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }} borderColor={here ? "wood.solid" : undefined}>
       <Card.Body p={3} gap={2} cursor="pointer" onClick={click}>
-        <CompositionThumb composition={comp} />
+        {/* Foto 3D (es fa sola, fora de pantalla); mentre no hi és, el dibuix de línies. */}
+        {project.thumb ? <SnapshotThumb src={project.thumb} /> : <CompositionThumb composition={comp} />}
         <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={project.name}>
           {project.name}
         </Text>

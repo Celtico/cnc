@@ -14,6 +14,7 @@ import { createAmbientFromTemplate, templatePreview } from "./fromTemplate"
 import { AMBIENT_TAB_KEY } from "./planGeom"
 import { PageHeader } from "../../components/PageHeader"
 import { CatalogSection } from "../projects/CatalogSection"
+import { SnapshotThumb } from "../../components/SnapshotThumb"
 
 /**
  * Ambients: plànols de la casa on es col·loquen els mobles (els de la llista, enllaçats) i
@@ -88,7 +89,8 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
         return (
           <Card.Root variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }}>
             <Card.Body p={3} gap={2} cursor="pointer" onClick={() => onOpen(r.id)}>
-              <AmbientThumb a={a} />
+              {/* La foto del 3D (es fa en obrir-lo al 3D); si encara no n'hi ha, el plànol. */}
+              {r.thumb ? <SnapshotThumb src={r.thumb} /> : <AmbientThumb a={a} />}
               <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={r.name}>
                 {r.name}
               </Text>
