@@ -573,7 +573,8 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
               show={{ grid: showGrid, dims: showDims, labels: showLabels, detail: showDetail, snap: snapOn, plan: showPlan }}
             />
           ) : (
-            <Box position="absolute" inset={0} rounded="md" overflow="hidden" borderWidth="1px">
+            // Fons del 3D (el visor és transparent): el mateix gris que el plànol.
+            <Box position="absolute" inset={0} rounded="md" overflow="hidden" borderWidth="1px" bg="bg.subtle">
               <Ambient3D ambient={amb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} onPick={pickItem} onChange={change} snap={snapOn} dollhouse={dollhouse} shadows={shadows} ceiling={ceiling} />
             </Box>
           )}

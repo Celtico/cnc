@@ -266,7 +266,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   (`ambients/ambientThumbs.ts`): terra, parets (sense les de davant, com la casa de nines) i els mobles i objectes de debò,
   vist de dalt i de davant; els de l'usuari es desen (`AmbientRow.thumb`, `thumbAt`, `thumbV`) i els del catàleg, en
   memòria (amb les plantilles de les seves referències). Tot passa per la mateixa cua (`enqueueThumb`).
-  `SnapshotThumb` (2:1, no retalla); sense foto encara, el dibuix de sempre. Cal `scene.updateMatrixWorld(true)` abans de
+  Les dels ambients, **sense fons** (PNG transparent: al voltant de l'habitació es veu la targeta); les dels mobles, JPEG. `SnapshotThumb` (2:1, no retalla, sense fons); sense foto encara, el dibuix de sempre. Cal `scene.updateMatrixWorld(true)` abans de
   mesurar la caixa (les peces porten la matriu feta).
 - **Grups (carpetes)** a l'historial de Mobles, Objectes i Ambients
   (`Project.folder`, `AmbientRow.folder`, `UserTemplate.folder`; `setProjectsFolder`, `setAmbientsFolder`,
@@ -316,6 +316,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   **Interior** (Opcions de vista, `LuEye`, `eyePose`): entra a l'habitació, càmera anivellada a 1,35 m (verticals rectes) al costat de la
   paret de davant mirant la del fons, angular (fov 55; «Enquadrar» torna a 40), per als renders de revista.
   La pestanya Plànol · 3D es recorda (`AMBIENT_TAB_KEY`); els ambients creats del catàleg s'obren al 3D.
+- **Fons del 3D dels ambients**: el visor és transparent i a l'editor hi ha el gris del plànol (`bg.subtle`); el render per CPU fa servir el clar de sempre (`scene.userData.renderBackground`, `sceneData.ts`).
 - **3D** (`Ambient3D`): terra i parets amb `surfaceMaterial` (textura a mida real), mobles i blocs
   amb les textures del visor; les parets entre la càmera i l'habitació es fan transparents
   (casa de nines).

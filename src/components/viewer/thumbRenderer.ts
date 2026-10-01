@@ -17,14 +17,15 @@ import { surfaceMaterial } from "./surfaceMaterial"
 const W = 480
 const H = 240
 /** Versió de les miniatures: si canvia la manera de fer-les, es tornen a fer totes. */
-export const THUMB_VERSION = 4
+export const THUMB_VERSION = 5
 
 let renderer: WebGLRenderer | null = null
 let env: Texture | null = null
 
 function ensure(): WebGLRenderer {
   if (renderer) return renderer
-  const r = new WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
+  const r = new WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: true })
+  r.setClearColor(0x000000, 0)
   r.setPixelRatio(1)
   r.setSize(W, H, false)
   r.toneMapping = NeutralToneMapping
@@ -64,11 +65,14 @@ export function thumbLights(scene: Scene, center: Vector3, ext: number): void {
   scene.add(sun, sun.target)
 }
 
-/** Pinta l'escena amb la càmera, en treu el JPEG i allibera l'escena. */
+/**
+ * Pinta l'escena amb la càmera, en treu la imatge i allibera l'escena. Sense fons (`scene.background` buit), PNG amb
+ * transparència (les dels ambients: es veu el color de la targeta al voltant de l'habitació); si no, JPEG.
+ */
 export function snapshot(scene: Scene, camera: PerspectiveCamera): string {
   const r = ensure()
   r.render(scene, camera)
-  const url = r.domElement.toDataURL("image/jpeg", 0.82)
+  const url = scene.background ? r.domElement.toDataURL("image/jpeg", 0.82) : r.domElement.toDataURL("image/png")
   disposeTree(scene)
   return url
 }

@@ -1,4 +1,4 @@
-import { Box3, Color, Group, Mesh, PerspectiveCamera, PlaneGeometry, BoxGeometry, Scene, Vector3 } from "three"
+import { Box3, Group, Mesh, PerspectiveCamera, PlaneGeometry, BoxGeometry, Scene, Vector3 } from "three"
 import { exportablePanel } from "../../components/viewer/CabinetViewer"
 import { buildScene } from "../../components/viewer/exportGlb"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
@@ -17,7 +17,7 @@ import { itemGeometry, type ItemGeometry } from "./ambientData"
 function renderAmbient(a: Ambient, geoOf: (i: number) => ItemGeometry | null, materials: MaterialPref[]): string | null {
   if (!a.walls.length && !a.items.length) return null
   const scene = new Scene()
-  scene.background = new Color("#e9e6e1")
+  // Sense fons: transparent (PNG), al voltant de l'habitació es veu la targeta.
   // Caixa de les parets (o dels elements, sense parets).
   const xs = a.walls.flatMap((w) => [w.a[0], w.b[0]]), ys = a.walls.flatMap((w) => [w.a[1], w.b[1]])
   for (const it of a.items) {
