@@ -43,7 +43,8 @@ describe("migració: buildModule(cabinetToModule(p)) == buildCabinet(p)", () => 
 
 describe("resolveSizes", () => {
   it("reparteix l'espai restant entre els auto descomptant els gruixos", () => {
-    expect(resolveSizes(1812, ["auto", "auto", "auto"], 19)).toEqual([591.33, 591.33, 591.33])
+    // L'últim es queda el que sobra: la suma dona just el total (1812 − 2·19).
+    expect(resolveSizes(1812, ["auto", "auto", "auto"], 19)).toEqual([591.33, 591.33, 591.34])
     expect(resolveSizes(1000, [300, "auto"], 19)).toEqual([300, 681])
   })
 })

@@ -3,6 +3,7 @@ import type { Nesting, Placement } from "../nesting/nest"
 import { labelPoint, type LabelSize } from "./labelPoint"
 import { tallerEdgeNumbers } from "./step"
 import { pieceRefs } from "./refs"
+import { csvField, workshopName } from "./text"
 import { needsSecondFace, secondFaceProgram } from "../process/processes"
 
 /**
@@ -10,6 +11,10 @@ import { needsSecondFace, secondFaceProgram } from "../process/processes"
  * `csv-nesting.ts` del taller: UTF-16 LE amb BOM, separador `;`, CRLF, decimals amb
  * punt. Per a cada tauler, una fila de tauler (`Nombre_pieza` = `<material>:<L>x<A>x<gruix>`)
  * i després les seves peces.
+ *
+ * El parser del taller no entén cometes: tots els camps de text passen per `csvField`
+ * (`;` → `,`, `:` → `-`, sense salts de línia). L'únic `:` és el separador de la fila de
+ * tauler, que és com el taller la distingeix d'una peça.
  */
 
 export const TOPSOLID_CSV_HEADER = [
@@ -69,7 +74,7 @@ const int = (v: number): string => String(Math.round(v))
 
 /** Nom de tauler del taller: `Melamina_blanca_19#01`. */
 export function boardName(material: string, thickness: number, n: number): string {
-  const mat = material.trim().replace(/\s+/g, "_")
+  const mat = csvField(material).replace(/\s+/g, "_")
   return `${mat}_${int(thickness)}#${String(n).padStart(2, "0")}`
 }
 
@@ -83,7 +88,7 @@ export function localToBoard(pl: Placement, u: number, v: number): { x: number; 
 export function toTopsolidCsv(panels: Panel[], nesting: Nesting, options: TopsolidCsvOptions): TopsolidCsvResult {
   const byId = new Map(panels.map((p) => [p.id, p]))
   const refs = pieceRefs(panels)
-  const edgeText = options.edgeText ?? "canto 1mm"
+  const edgeText = csvField(options.edgeText ?? "canto 1mm")
   const lines: string[] = [TOPSOLID_CSV_HEADER.join(";")]
   const rows: CsvPieceRow[] = []
   let elementId = 1000
@@ -133,17 +138,18 @@ export function toTopsolidCsv(panels: Panel[], nesting: Nesting, options: Topsol
     })
   }
 
-  const route = options.project
+  const route = csvField(options.project)
   for (const b of boards) {
     const common = [b.name, String(b.pieces.length), num2(b.waste)]
+    const mat = csvField(b.material)
     lines.push(
       [
         ...common,
-        `${b.material}:${int(b.w)}x${int(b.h)}x${int(b.thickness)}`,
+        `${mat}:${int(b.w)}x${int(b.h)}x${int(b.thickness)}`,
         num1(b.w),
         num1(b.h),
         int(b.thickness),
-        `${b.material}${int(b.thickness)}`,
+        `${mat}${int(b.thickness)}`,
         "0",
         "0",
         "0.00",
@@ -165,12 +171,12 @@ export function toTopsolidCsv(panels: Panel[], nesting: Nesting, options: Topsol
       const nums = tallerEdgeNumbers(p)
       const canto: Record<1 | 2 | 3 | 4, string> = { 1: "", 2: "", 3: "", 4: "" }
       for (const side of EDGE_SIDES) if (p.edges[side]) canto[nums[side]] = edgeText
-      const ref = refs.get(p.id) ?? ""
+      const ref = csvField(refs.get(p.id) ?? "")
       rows.push({ panelId: p.id, board: b.name, ref, x: pos.x, y: pos.y, angle: pl.angle, labelFits: lp.fits })
       lines.push(
         [
           ...common,
-          p.name,
+          workshopName(p.name),
           num1(p.length),
           num1(p.width),
           int(p.thickness),

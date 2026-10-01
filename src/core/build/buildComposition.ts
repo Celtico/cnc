@@ -106,6 +106,21 @@ export function buildComposition(input: Composition): CompositionBuild {
   panels.push(...free.panels)
   for (const w of free.warnings) warnings.push({ code: "layout", message: w.message, partId: w.partId })
 
+  // Peces sense mida (llarg, ample o gruix ≤ 0, p. ex. un calaix sense lloc): no es poden
+  // fabricar. Es treuen i s'avisa.
+  const valid = (v: number) => Number.isFinite(v) && v > 0
+  for (let i = panels.length - 1; i >= 0; i--) {
+    const p = panels[i]!
+    if (valid(p.length) && valid(p.width) && valid(p.thickness)) continue
+    panels.splice(i, 1)
+    const mod = modules.find((m) => m.index === p.module)
+    if (mod) {
+      const localId = p.id.slice(mod.id.length + 1)
+      mod.build = { ...mod.build, panels: mod.build.panels.filter((q) => q.id !== localId) }
+    }
+    warnings.push({ code: "invalid-part", message: `${p.label} fa ${p.length} × ${p.width} × ${p.thickness} mm: no té mida i no es fabrica. Revisa les mides del mòdul.`, panelId: p.id, ...(mod ? { moduleId: mod.id } : {}) })
+  }
+
   // Objectes que tallen: forat a cada peça que travessen.
   // Peces lliures en mode «Talla»: fan forats com els objectes que tallen.
   // També a les peces que no són de CNC (ferro, pedra, vidre): el forat es veu al 3D.

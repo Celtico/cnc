@@ -1,6 +1,7 @@
-import { arcOf, bulgeOf, ccwB, flatten, type EdgeSide, type Panel, type Vec3 } from "../model"
+import { arcOf, bulgeOf, ccwB, flatten, type EdgeSide, type Hole, type Panel, type Vec3 } from "../model"
 import * as pcNs from "polygon-clipping"
 import { pointInRing, rectsOverlap, signedArea, subtractRects, type Poly2, type Pt2, type Rect2 } from "./region2d"
+import { workshopName } from "./text"
 
 // El paquet només té export per defecte (el .d.ts declara els noms): acceptem les dues formes.
 const pc = ((pcNs as unknown as { default?: typeof pcNs }).default ?? pcNs) as typeof pcNs
@@ -496,12 +497,12 @@ function outlineSolid(p: Panel, cad = false): PanelSolid {
       if (h.face === "edge") continue
       const r = h.diameter / 2
       const top = h.face === "A"
-      const pocket = cylPocket([h.x, h.y, top ? T : 0], top ? Z : neg(Z), X, r, Math.min(h.depth, T - 0.5), false)
       const bbox: Rect2 = { a0: h.x - r, a1: h.x + r, b0: h.y - r, b1: h.y + r }
       if (!place(bbox, [[h.x - r, h.y - r], [h.x + r, h.y - r], [h.x + r, h.y + r], [h.x - r, h.y + r]])) {
         skipped += 1
         continue
       }
+      const pocket = cylPocket([h.x, h.y, top ? T : 0], top ? Z : neg(Z), X, r, blindDepth(p, h, warnings), false)
       ;(top ? loopsA : loopsB).push(pocket.loop)
       faces.push(...pocket.faces)
     }
@@ -513,6 +514,20 @@ function outlineSolid(p: Panel, cad = false): PanelSolid {
   faces.push({ kind: "plane", loc: at(0, T), normal: Z, loops: loopsA })
   faces.push({ kind: "plane", loc: at(0, 0), normal: neg(Z), loops: loopsB })
   return { faces, warnings }
+}
+
+/**
+ * Fondària màxima d'un forat cec de cara: el taller descarta els cilindres amb fondària
+ * ≥ gruix − 0,5 (els pren per radis de cantonada), així que en deixem 1 mm.
+ */
+export const FACE_HOLE_FLOOR = 1
+
+/** Fondària d'un forat cec de cara al STEP, amb avís si s'ha d'escurçar. */
+function blindDepth(p: Panel, h: Hole, warnings: string[]): number {
+  const max = p.thickness - FACE_HOLE_FLOOR
+  if (h.depth <= max) return h.depth
+  warnings.push(`${p.name} (${p.id}): forat Ø${h.diameter} × ${h.depth} a (${h.x}, ${h.y}) cara ${h.face} massa fondo per a ${p.thickness} mm; al STEP fa ${stepReal(max)} mm.`)
+  return max
 }
 
 /**
@@ -607,7 +622,8 @@ function panelSolid(p: Panel, cad = false): PanelSolid {
   for (const [hi, h] of p.holes.entries()) {
     if (skip.has(hi)) continue
     const r = h.diameter / 2
-    const depth = Math.min(h.depth, h.face === "edge" ? Math.max(L, W) : T - 0.5)
+    const thru = through.has(hi)
+    const depth = h.face === "edge" ? Math.min(h.depth, Math.max(L, W)) : thru ? T : blindDepth(p, h, warnings)
     if (h.face === "edge") {
       if (!h.edge) continue
       const face = EDGE_TO_FACE[h.edge]
@@ -629,8 +645,7 @@ function panelSolid(p: Panel, cad = false): PanelSolid {
     const face: BoxFace = h.face === "A" ? "A" : "B"
     const f = frames[face]
     const c: V3 = [h.x, h.y, face === "A" ? T : 0]
-    const thru = through.has(hi)
-    const pocket = cylPocket(c, f.n, X, r, thru ? T : depth, thru)
+    const pocket = cylPocket(c, f.n, X, r, depth, thru)
     const center = to2D(f, c)
     const cB = to2D(frames.B, [h.x, h.y, 0])
     rounds[face].push({
@@ -827,26 +842,31 @@ export function stepReal(n: number): string {
   return v.toFixed(4).replace(/0+$/, "")
 }
 
-/** Cadena STEP: cometes dobles i caràcters fora d'ASCII com a \X2\....\X0\. */
+/**
+ * Cadena STEP: cometa doblada, barra invertida doblada i no-ASCII com a \X2\....\X0\. Els
+ * parsers del taller parteixen per `;` sense mirar cadenes: `;` → `,`. Els salts de línia
+ * passen a espai; els caràcters fora del BMP (emojis), que \X2\ no admet, a `?`.
+ */
 export function stepString(s: string): string {
   let out = ""
-  let i = 0
-  while (i < s.length) {
-    const code = s.codePointAt(i)!
-    if (code < 128) {
-      out += code === 39 ? "''" : String.fromCodePoint(code)
-      i += 1
+  let hex = ""
+  const flush = () => {
+    if (hex) out += `\\X2\\${hex}\\X0\\`
+    hex = ""
+  }
+  for (const ch of s.replace(/[\r\n\t]+/g, " ").replace(/;/g, ",")) {
+    const code = ch.codePointAt(0)!
+    if (code >= 128 && code <= 0xffff) {
+      hex += code.toString(16).toUpperCase().padStart(4, "0")
       continue
     }
-    let hex = ""
-    while (i < s.length) {
-      const c = s.codePointAt(i)!
-      if (c < 128) break
-      hex += c > 0xffff ? "\\X4\\" : c.toString(16).toUpperCase().padStart(4, "0")
-      i += c > 0xffff ? 2 : 1
-    }
-    out += `\\X2\\${hex}\\X0\\`
+    flush()
+    if (code > 0xffff) out += "?"
+    else if (code === 39) out += "''"
+    else if (code === 92) out += "\\\\"
+    else if (code >= 32) out += ch
   }
+  flush()
   return out
 }
 
@@ -1029,7 +1049,7 @@ function writeBrep(c: StepContext, p: Panel, cad: boolean): { brep: number; warn
   const solid = p.outline ? outlineSolid(p, cad) : panelSolid(p, cad)
   const faceIds = solid.faces.map((f) => sw.face(f))
   const shell = c.w.add(`CLOSED_SHELL('',(${faceIds.map((f) => `#${f}`).join(",")}))`)
-  const brep = c.w.add(`MANIFOLD_SOLID_BREP('${stepString(p.name)}',#${shell})`)
+  const brep = c.w.add(`MANIFOLD_SOLID_BREP('${stepString(workshopName(p.name))}',#${shell})`)
   return { brep, warnings: solid.warnings }
 }
 
@@ -1042,7 +1062,8 @@ export function toStep(panels: Panel[], options: StepOptions): StepResult {
   const products: number[] = []
 
   panels.forEach((p, i) => {
-    const name = stepString(p.name)
+    // El taller llegeix el nom d'aquí, en text pla: el mateix que la columna Nombre_pieza del CSV.
+    const name = stepString(workshopName(p.name))
     const { brep, warnings: ws } = writeBrep(c, p, false)
     warnings.push(...ws)
     const axis = identityAxis(w)
@@ -1127,8 +1148,10 @@ export function toStepCad(groups: StepCadGroup[], options: StepCadOptions): Step
       warnings.push(...ws)
       solids += 1
       const axis = identityAxis(w)
+      // El taller llegeix el nom de la representació (sense descodificar \X2\): el de taller en
+      // ASCII, igual que al CSV. El PRODUCT porta el nom llegible per a l'arbre del CAD.
       const label = p.label || p.name
-      const rep = w.add(`ADVANCED_BREP_SHAPE_REPRESENTATION('${stepString(label)}',(#${brep},#${axis}),#${ctx})`)
+      const rep = w.add(`ADVANCED_BREP_SHAPE_REPRESENTATION('${stepString(workshopName(p.name))}',(#${brep},#${axis}),#${ctx})`)
       const pr = product(c, label, label, `${p.material} · ${p.length} × ${p.width} × ${p.thickness} mm`)
       parts.push(pr.product)
       w.add(`SHAPE_DEFINITION_REPRESENTATION(#${pr.pds},#${rep})`)

@@ -1,14 +1,17 @@
 import type { Cutout, Groove, Hole, Panel } from "../model"
+import { asciiFold } from "./text"
 
 /**
  * Writer DXF R12 (AC1009) ASCII, escrit a mà.
  *
- * - Una peça per BLOCK (nom = id de la peça), inserida a ENTITIES sense encavalcar.
+ * - Una peça per BLOCK, inserida a ENTITIES sense encavalcar. Nom curt (`P001`…: R12 en
+ *   limita la llargada a 31) i l'id de la peça en un comentari (999) just abans del bloc.
  * - Contorn: POLYLINE tancada a la capa CONTOUR.
  * - Forats de cara A: CIRCLE a DRILL_D{Ø}_P{prof}. Cara B: DRILL_B_D{Ø}_P{prof}.
  * - Forats de cantell (horitzontals): CIRCLE al punt d'entrada, capa DRILL_H_D{Ø}_P{prof}.
+ *   Als noms de capa els decimals van amb `_` (R12 no admet `.`): DRILL_D8_P17_5.
  * - Ranures: POLYLINE tancada a GROOVE_W{ample}_P{prof}.
- * - Etiqueta amb el nom a la capa LABEL.
+ * - Etiqueta amb el nom a la capa LABEL, en ASCII (sense accents).
  * Coordenades en mm, sense escalar.
  *
  * Amb `threeD` (per defecte), cada entitat porta alçada Z i gruix d'extrusió (codis 30/38 i
@@ -44,8 +47,15 @@ export function fmt(n: number): string {
   return s.includes(".") ? s : `${s}.0`
 }
 
-/** Número per a noms de capa: "5", "22.5". */
-const num = (n: number): string => (Math.round(n * 100) / 100).toString()
+/** Número per a noms de capa: "5", "22_5" (R12: només lletres, xifres, `_`, `-` i `$`). */
+const num = (n: number): string => (Math.round(n * 100) / 100).toString().replace(".", "_")
+
+/** Text DXF R12 en ASCII: sense accents, sense salts de línia i `?` per a la resta. */
+export function dxfText(s: string): string {
+  return asciiFold(s)
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/[^\x20-\x7e]/g, "?")
+}
 
 export function holeLayer(h: Hole): string {
   const suffix = `D${num(h.diameter)}_P${num(h.depth)}`
@@ -73,8 +83,9 @@ export function dxfLayers(panels: Panel[], labels = true): string[] {
   return [...set].sort()
 }
 
-export function blockName(panel: Panel): string {
-  return panel.id.toUpperCase().replace(/[^A-Z0-9_]/g, "_")
+/** Nom del bloc de la peça `i` (0, 1…): `P001`, `P002`… */
+export function blockName(i: number): string {
+  return `P${String(i + 1).padStart(3, "0")}`
 }
 
 // --- Emissió de parells codi/valor ---------------------------------------------
@@ -207,7 +218,7 @@ export function panelEntities(panel: Panel, labels = true, threeD = true): strin
   }
   if (labels) {
     const h = Math.max(5, Math.min(20, W / 12))
-    out += text(LAYER_LABEL, h, h, h, `${panel.name} ${fmt(L)}x${fmt(W)}x${fmt(panel.thickness)}`, threeD ? T : 0)
+    out += text(LAYER_LABEL, h, h, h, dxfText(`${panel.name} ${fmt(L)}x${fmt(W)}x${fmt(panel.thickness)}`), threeD ? T : 0)
   }
   return out
 }
@@ -283,8 +294,9 @@ function tables(layers: string[]): string {
 
 function blocks(panels: Panel[], labels: boolean, threeD: boolean): string {
   let out = pairs([0, "SECTION"], [2, "BLOCKS"])
-  for (const p of panels) {
-    const name = blockName(p)
+  for (const [i, p] of panels.entries()) {
+    const name = blockName(i)
+    out += pairs([999, `${name} = ${dxfText(p.id)}`])
     out += pairs([0, "BLOCK"], [8, "0"], [2, name], [70, "0"], [10, "0.0"], [20, "0.0"], [30, "0.0"], [3, name])
     out += panelEntities(p, labels, threeD)
     out += pairs([0, "ENDBLK"], [8, "0"])
@@ -295,8 +307,8 @@ function blocks(panels: Panel[], labels: boolean, threeD: boolean): string {
 
 function entities(placed: Placed[]): string {
   let out = pairs([0, "SECTION"], [2, "ENTITIES"])
-  for (const { panel, x, y } of placed) {
-    out += pairs([0, "INSERT"], [8, "0"], [2, blockName(panel)], [10, fmt(x)], [20, fmt(y)], [30, "0.0"])
+  for (const [i, { x, y }] of placed.entries()) {
+    out += pairs([0, "INSERT"], [8, "0"], [2, blockName(i)], [10, fmt(x)], [20, fmt(y)], [30, "0.0"])
   }
   out += pairs([0, "ENDSEC"])
   return out

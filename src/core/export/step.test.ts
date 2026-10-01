@@ -97,6 +97,26 @@ describe("toStep · talls passants i ranures que arriben al cantell", () => {
     for (const s of solids) expect(s.badEdges).toBe(0)
   })
 
+  it("forat de cara més fondo que gruix − 1: es modela a gruix − 1 i avisa", () => {
+    const base: Panel = buildModule(cabinetToModule(DEFAULT_CABINET)).panels.find((p) => p.role === "shelf")!
+    const thin: Panel = { ...base, thickness: 12, holes: [{ x: 100, y: 100, diameter: 35, depth: 13, face: "A" }] }
+    const date = "2026-01-01T00:00:00"
+    const step = toStep([thin], { name: "x", date })
+    expect(step.warnings).toHaveLength(1)
+    expect(step.warnings[0]).toContain("Ø35 × 13")
+    // La mateixa geometria que un forat d'11: el fons queda a 1 mm de la cara B.
+    const ok = toStep([{ ...thin, holes: [{ x: 100, y: 100, diameter: 35, depth: 11, face: "A" }] }], { name: "x", date })
+    expect(ok.warnings).toEqual([])
+    expect(step.text).toEqual(ok.text)
+  })
+
+  it("noms amb accents: ASCII al nom que llegeix el taller", () => {
+    const base: Panel = buildModule(cabinetToModule(DEFAULT_CABINET)).panels.find((p) => p.role === "shelf")!
+    const step = toStep([{ ...base, name: "Façana; dalt" }], { name: "x" })
+    expect(step.text).toContain("ADVANCED_BREP_SHAPE_REPRESENTATION('Facana, dalt'")
+    expect(step.text).toContain("MANIFOLD_SOLID_BREP('Facana, dalt'")
+  })
+
   it("un forat que surt de la peça no es modela i avisa", () => {
     const base: Panel = buildModule(cabinetToModule(DEFAULT_CABINET)).panels.find((p) => p.role === "shelf")!
     const bad: Panel = { ...base, holes: [{ x: 2, y: 2, diameter: 10, depth: 5, face: "A" }] }
@@ -116,6 +136,16 @@ describe("format", () => {
   it("cadenes: cometes dobles i accents en \\X2\\", () => {
     expect(stepString("l'armari")).toBe("l''armari")
     expect(stepString("Sòcol")).toBe("S\\X2\\00F2\\X0\\col")
+  })
+  it("cadenes: `;` → `,` (el taller parteix per `;`), barra invertida doblada, salts fora", () => {
+    expect(stepString("Lateral 40;60")).toBe("Lateral 40,60")
+    expect(stepString("a\\b")).toBe("a\\\\b")
+    expect(stepString("dues\r\nlínies")).toBe("dues l\\X2\\00ED\\X0\\nies")
+  })
+  it("cadenes: fora del BMP → `?`, sense \\X4\\ dins d'un bloc \\X2\\", () => {
+    expect(stepString("é😀è")).toBe("\\X2\\00E9\\X0\\?\\X2\\00E8\\X0\\")
+    expect(stepString("😀")).toBe("?")
+    expect(stepString("éè")).toBe("\\X2\\00E900E8\\X0\\")
   })
 })
 

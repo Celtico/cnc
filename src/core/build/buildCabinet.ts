@@ -9,6 +9,7 @@ import {
   type Placement,
   type Vec3,
 } from "../model"
+import { hingeCount } from "./geometry"
 
 /** Arrodoneix a la centèsima per evitar soroll de coma flotant. */
 const r = (v: number): number => Math.round(v * 100) / 100
@@ -279,13 +280,6 @@ function buildShelves(p: CabinetParams, d: Derived): Panel[] {
     })
   }
   return shelves
-}
-
-function hingeCount(height: number): number {
-  if (height <= 900) return 2
-  if (height <= 1600) return 3
-  if (height <= 2100) return 4
-  return 5
 }
 
 function buildDoors(p: CabinetParams, d: Derived): Panel[] {

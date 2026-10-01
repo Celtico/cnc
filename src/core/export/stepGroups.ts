@@ -4,10 +4,13 @@ import type { StepCadGroup } from "./step"
 
 /**
  * Conjunts del STEP per a TopSolid, com l'arbre de l'editor: un per mòdul («1. Baix»), el
- * taulell i el sòcol correguts, i les peces lliures (per grup, o «Peces lliures»). Hi van
- * també les peces sense nesting (ferro, pedra, vidre, barres).
+ * taulell i el sòcol correguts, i les peces lliures (per grup, o «Peces lliures»).
+ *
+ * Per defecte només hi van les peces amb nesting (les del CSV): el taller lliga sòlids i
+ * peces per mida i busca unions entre sòlids, i el ferro, la pedra o el vidre li donarien
+ * unions falses. `extras` les hi afegeix, només per obrir el moble en un CAD.
  */
-export function stepCadGroups(comp: Composition, build: CompositionBuild): StepCadGroup[] {
+export function stepCadGroups(comp: Composition, build: CompositionBuild, options: { extras?: boolean } = {}): StepCadGroup[] {
   const groups = new Map<string, Panel[]>()
   const push = (name: string, p: Panel) => {
     const list = groups.get(name)
@@ -16,7 +19,7 @@ export function stepCadGroups(comp: Composition, build: CompositionBuild): StepC
   }
   const modulesBuilt = !partsOnlyKind(compositionKind(comp))
   const parts = new Map((comp.parts ?? []).map((q) => [q.id, q]))
-  for (const p of [...build.panels, ...build.extras]) {
+  for (const p of options.extras ? [...build.panels, ...build.extras] : build.panels) {
     if (p.id.startsWith("part:")) {
       push(parts.get(p.id.slice(5))?.group ?? "Peces lliures", p)
       continue

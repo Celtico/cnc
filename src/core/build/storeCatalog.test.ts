@@ -4,7 +4,7 @@ import { CompositionSchema } from "../model"
 import { buildComposition } from "./buildComposition"
 
 // Avisos que indiquen un disseny mal fet (els informatius d'inglet, parets buides… sí que hi poden ser).
-const BAD = ["layout", "collision", "ref-cut", "door-too-wide", "door-too-tall", "shelf-span", "drawer-no-slide", "hole-clash", "no-side", "rail", "hollow-thin", "cable-hole"]
+const BAD = ["layout", "collision", "ref-cut", "door-too-wide", "door-too-tall", "shelf-span", "drawer-no-slide", "hole-clash", "no-side", "rail", "hollow-thin", "cable-hole", "invalid-part", "hinge"]
 
 describe("plantilles per a botigues de mobles", () => {
   it("10 categories, 3 dissenys per tipus i ids únics", () => {

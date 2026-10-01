@@ -39,8 +39,10 @@ export function resolveSizes(total: number, sizes: (number | "auto")[], thicknes
   const fixed = sizes.reduce<number>((s, v) => (typeof v === "number" ? s + v : s), 0)
   const autos = sizes.filter((v) => v === "auto").length
   const remaining = total - (n - 1) * thickness - fixed
-  const auto = autos > 0 ? remaining / autos : 0
-  return sizes.map((v) => r(v === "auto" ? auto : v))
+  const auto = r(autos > 0 ? remaining / autos : 0)
+  // L'últim auto es queda el que sobra: la suma dona just el total (sense 981,99 per 982).
+  const last = sizes.lastIndexOf("auto")
+  return sizes.map((v, i) => (v !== "auto" ? r(v) : i === last ? r(remaining - (autos - 1) * auto) : auto))
 }
 
 /** Calcula els rectangles de totes les zones a partir de la llum interior del mòdul. */

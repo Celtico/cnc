@@ -215,9 +215,53 @@ describe.skipIf(!existsSync(TALLER))("el STEP de TopSolid (amb conjunts, inglete
       const b = buildComposition(comp)
       const csv = toTopsolidCsv(b.panels, nest(b.panels, DEFAULT_NEST_OPTIONS), { project: "X" }).text
       const plain = assemble(csv, toStep(b.panels, { name: "X" }).text, "X")
-      const cad = assemble(csv, toStepCad(stepCadGroups(comp, { ...b, extras: [] }), { name: "X", color: () => [0.5, 0.4, 0.3] }).text, "X")
+      const cad = assemble(csv, toStepCad(stepCadGroups(comp, b), { name: "X", color: () => [0.5, 0.4, 0.3] }).text, "X")
+      // El camí real del botó STEP: sense ferro, pedra ni vidre (unions falses al taller).
+      expect(cad.solids).toHaveLength(b.panels.length)
       expect(count(cad)).toEqual(count(plain))
       expect(cad.pieces.filter((p) => p.match === "none")).toEqual([])
     })
   }
+})
+
+describe.skipIf(!existsSync(TALLER))("noms amb `;`, `:` i accents: el taller els llegeix sencers, iguals al CSV i al STEP", async () => {
+  const { assemble } = (await import(/* @vite-ignore */ TALLER)) as { assemble: Assemble }
+  const { toStepCad } = await import("./step")
+  const { stepCadGroups } = await import("./stepGroups")
+  const comp = cabinetToComposition(DEFAULT_CABINET)
+  const b = buildComposition(comp)
+  const rename: Record<string, string> = { "lat e": "Lateral 40;60", "lat d": "Prestatge: dalt", porta: "Porta façana" }
+  const ps = b.panels.map((p) => (rename[p.name] ? { ...p, name: rename[p.name]!, label: `${rename[p.name]!}; app` } : p))
+  const csv = toTopsolidCsv(ps, nest(ps, DEFAULT_NEST_OPTIONS), { project: "Prova; v2" })
+  const steps = {
+    taller: toStep(ps, { name: "Prova; v2" }).text,
+    topsolid: toStepCad(stepCadGroups(comp, { ...b, panels: ps }), { name: "Prova; v2", color: () => [0.5, 0.4, 0.3] }).text,
+  }
+  for (const [kind, text] of Object.entries(steps)) {
+    it(kind, () => {
+      const d = assemble(csv.text, text, "Prova; v2")
+      expect(d.pieces).toHaveLength(ps.length)
+      expect(d.solids).toHaveLength(ps.length)
+      expect(d.pieces.filter((p) => p.match === "none")).toEqual([])
+      const names = d.pieces.map((p) => p.name)
+      expect(names).toEqual(expect.arrayContaining(["Lateral 40,60", "Prestatge- dalt", "Porta facana"]))
+      // Mateix vocabulari: els noms dels sòlids són els de les peces del CSV.
+      expect(d.solids.map((s) => s.label).sort()).toEqual([...names].sort())
+    })
+  }
+})
+
+describe.skipIf(!existsSync(TALLER))("cassoleta Ø35 × 13 en tauler de 12: el taller la veu (a gruix − 1)", async () => {
+  const { assemble } = (await import(/* @vite-ignore */ TALLER)) as { assemble: Assemble }
+  it("mach amb fondària 11", () => {
+    const ps = buildComposition(cabinetToComposition(DEFAULT_CABINET)).panels
+    const door = ps.find((p) => p.name === "porta")!
+    const thin: Panel = { ...door, thickness: 12, holes: [{ x: 22, y: 100, diameter: 35, depth: 13, face: "B" }] }
+    const all = ps.map((p) => (p === door ? thin : p))
+    const s = toStep(all, { name: "X" })
+    expect(s.warnings.some((w) => w.includes("Ø35") && w.includes("massa fondo"))).toBe(true)
+    const d = assemble(toTopsolidCsv(all, nest(all, DEFAULT_NEST_OPTIONS), { project: "X" }).text, s.text, "X")
+    const sol = d.solids[d.pieces.find((p) => p.name === "porta")!.solid]!
+    expect((sol.mach ?? []).map((m) => [Math.round(m.r * 20) / 10, m.depth])).toEqual([[35, 11]])
+  })
 })

@@ -28,6 +28,19 @@ Notes de la implementació de `core/export/step.ts`, `topsolidCsv.ts` i `labelPo
 - Un mecanitzat que surt de la peça o toca un altre no es modela i surt com a avís:
   així es van trobar dos errors del motor (espigues fora de la tapa amb ranura d'aire i
   ranures de reixeta sobre els imants de la trapa).
+- Forats cecs de cara: com a molt gruix − 1 mm. El parser del taller descarta els cilindres
+  amb fondària ≥ gruix − 0,5 (els pren per radis de cantonada); un forat més fondo (una
+  cassoleta Ø35 × 13 en un tauler de 12) s'escurça a gruix − 1 i surt un avís. Els forats
+  passants del STEP de TopSolid no canvien.
+- El STEP del botó (`toStepCad` + `stepCadGroups`) només porta les peces amb nesting, les
+  mateixes del CSV: el ferro, la pedra i el vidre donarien unions falses al taller. Amb
+  l'interruptor «Ferro, pedra i vidre (només per a CAD)» (`stepCadGroups(…, { extras: true })`)
+  s'hi afegeixen per obrir el moble en un CAD; aquest fitxer no és per al taller.
+- Noms: el taller llegeix el nom de l'`ADVANCED_BREP_SHAPE_REPRESENTATION` en text pla (no
+  descodifica `\X2\`) i parteix el fitxer per `;` sense mirar cadenes. Per això hi va el nom de
+  taller (`name`) en ASCII sense accents (`workshopName`, el mateix de la columna
+  `Nombre_pieza` del CSV); l'etiqueta de l'app (`label`) es queda al `PRODUCT` per a l'arbre del
+  CAD. `stepString` canvia `;` per `,`, dobla `\` i `'` i posa `?` als caràcters fora del BMP.
 - Pendent: obrir un fitxer generat amb FreeCAD per confirmar que el llegeix com a
   sòlids (no hi ha FreeCAD instal·lat en aquesta màquina).
 
@@ -38,6 +51,11 @@ Notes de la implementació de `core/export/step.ts`, `topsolidCsv.ts` i `labelPo
 - `PosX/PosY_etiqueta` és el centre de l'etiqueta (99 × 68 per defecte, configurable a
   Preferències), dins de la peça col·locada al tauler i lluny de forats, ranures, talls i
   cantells a laminar (`labelPoint.ts`); si la peça és massa petita, al centre.
+- El parser del CSV no entén cometes i pren per fila de tauler qualsevol `Nombre_pieza` amb
+  `:`. Tots els textos passen per `csvField`: `;` → `,`, `:` → `-` i sense salts de línia; l'únic
+  `:` és el separador de la fila de tauler. Els noms de peça van en ASCII (`workshopName`).
+- Peces amb forma (`outline`): l'etiqueta sencera (les 4 cantonades, i cap vèrtex del contorn a
+  dins) ha de caure dins del contorn; si no hi cap, el punt de dins més proper al centre.
 - `ÍNDICE_3D` = `A.<mòdul>.<tipus>.<n>` amb `n` consecutiu dins del mòdul (`refs.ts`),
   igual al JSON de depuració.
 - Les peces que no caben al tauler surten en un tauler a mida perquè el CSV segueixi
@@ -48,3 +66,11 @@ Notes de la implementació de `core/export/step.ts`, `topsolidCsv.ts` i `labelPo
 (només lectura, fora del `tsc` del projecte perquè es compila amb altres opcions) i
 comprova peces, taulers, material, lligam peça↔sòlid, rols, forats i ranures per al
 mòdul de 600 × 720 × 560, el moble de TV amb cobreradiador i una calaixera.
+També hi ha casos amb `;`, `:` i accents als noms (CSV i STEP, els dos STEP) i una
+cassoleta més fonda que el gruix − 1.
+
+## DXF R12
+- Noms de capa sense `.` (R12 no l'admet): `DRILL_H_D8_P17_5`.
+- Blocs amb nom curt (`P001`, `P002`…, R12 en limita la llargada a 31) i l'id de la peça en
+  un comentari (`999`) just abans del bloc.
+- Textos (capa `LABEL`) en ASCII sense accents (`dxfText`).

@@ -31,6 +31,8 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const [labels, setLabels] = useState(true)
   // DXF «3D»: gruix de cada peça i profunditat de cada mecanitzat com a Z i extrusió.
   const [dxf3d, setDxf3d] = usePersistentFlag("mobles:dxf-3d", true)
+  // STEP amb el ferro, la pedra i el vidre: només per a CAD (al taller donen unions falses).
+  const [stepExtras, setStepExtras] = usePersistentFlag("mobles:step-extras", false)
   const estimated = useMemo(() => estimatedApplied(project?.photo), [project?.photo])
   const warnEstimated = () => {
     if (estimated.length) toaster.create({ title: ESTIMATED_WARNING, description: `Mides estimades de la foto: ${estimated.map((a) => a.label).join(", ")}.`, type: "warning", duration: 8000 })
@@ -40,7 +42,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const layers = useMemo(() => dxfLayers(panels, labels), [panels, labels])
   // Els avisos del STEP es calculen abans de descarregar, per veure'ls de seguida.
   const stepColor = useMemo(() => (p: { material: string }) => finishRgb(resolveFinish(settings.materials, p.material)), [settings.materials])
-  const stepWarnings = useMemo(() => (comp && build && panels.length ? toStepCad(stepCadGroups(comp, build), { name: "check" }).warnings : []), [comp, build, panels])
+  const stepWarnings = useMemo(() => (comp && build && panels.length ? toStepCad(stepCadGroups(comp, build, { extras: stepExtras }), { name: "check" }).warnings : []), [comp, build, panels, stepExtras])
 
   if (!project) return null
   const base = slugify(project.name)
@@ -48,7 +50,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const doStep = () => {
     if (!comp || !build) return
     warnEstimated()
-    const step = toStepCad(stepCadGroups(comp, build), { name: project.name, color: stepColor })
+    const step = toStepCad(stepCadGroups(comp, build, { extras: stepExtras }), { name: project.name, color: stepColor })
     downloadBlob(new Blob([step.text], { type: "application/step" }), `${base}.step`)
     toaster.create({
       title: "STEP de TopSolid generat",
@@ -152,14 +154,22 @@ export function ExportScreen({ projectId }: { projectId: number }) {
         highlight
         icon={<LuCuboid />}
         title="STEP de TopSolid"
-        description="El moble en 3D, per obrir-lo a TopSolid i continuar-lo treballant i per al taller: un conjunt per mòdul, cada peça amb el seu nom, material i color, ingletes a 45°, forats, ranures i talls, peces sense nesting (ferro, pedra, vidre) i booleans 3D."
+        description="El moble en 3D, per obrir-lo a TopSolid i continuar-lo treballant i per al taller: un conjunt per mòdul, cada peça amb el seu nom, material i color, ingletes a 45°, forats, ranures i talls i booleans 3D."
         files={`${base}.step`}
         action={
           <Button colorPalette="wood" onClick={doStep} disabled={!panels.length}>
             <LuDownload /> Descarregar STEP
           </Button>
         }
-      />
+      >
+        <FormRow label="Altres peces">
+          <Switch.Root checked={stepExtras} onCheckedChange={(e) => setStepExtras(e.checked)} size="sm" pt="6px">
+            <Switch.HiddenInput />
+            <Switch.Control />
+            <Switch.Label fontSize="sm">Ferro, pedra i vidre (només per a CAD: al taller donarien unions falses)</Switch.Label>
+          </Switch.Root>
+        </FormRow>
+      </ExportCard>
 
       <ExportCard
         icon={<LuLayoutGrid />}

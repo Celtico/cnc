@@ -384,7 +384,12 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     una peça per tauler amb el nom (`label`), el material i les mides a la descripció i el color del
     material (`STYLED_ITEM`, `finishRgb`); ingletes de debò (cara A retallada i cares a 45°; els
     buidats s'escurcen fins a l'inglet), booleans 3D (`solidCuts`), talls i forats de les peces amb
-    forma i peces sense nesting. Validat amb OpenCascade (sòlids vàlids, volum positiu, sense
+    forma. **Ferro, pedra i vidre** (`build.extras`) només amb l'interruptor «només per a CAD» d'Exportar
+    (`stepCadGroups(…, { extras })`, `mobles:step-extras`, apagat): al taller donarien unions falses. Noms dels sòlids =
+    `workshopName(p.name)` (`export/text.ts`: ASCII, sense `;` ni `:`; el mateix que `Nombre_pieza` del CSV), l'etiqueta de
+    l'app al `PRODUCT`. Tots els textos del CSV passen per `csvField` (el parser no admet cometes). Forats de cara cecs
+    com a molt a gruix − 1 (avís si eren més fondos: el taller descarta els de ≥ T − 0,5). DXF R12: capes sense punt
+    (`P17_5`), blocs `P001…` (l'id en un comentari 999), textos en ASCII. Validat amb OpenCascade (sòlids vàlids, volum positiu, sense
     autointerseccions) i amb els parsers del taller: `taller.roundtrip.test.ts` comprova que llegeix
     igual que el STEP pla `toStep` (mateixes peces, rols, forats, cantells i buidats). `toStep`
     queda per als tests i el JSON de depuració. Les peces amb base mirall s'escriuen amb els bucles
@@ -394,6 +399,15 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     matèria al mig); espiga de cantell contra un forat de cara (guia) → l'espiga s'atura 1 mm abans
     (mínim 10 mm, si no avís `hole-clash`). Forats de guia de la caixa del calaix: no arriben a la
     ranura del fons.
+  - **Regles de fabricació revisades** (`build/manufacturing.test.ts`): amb fronts encastats, divisors i prestatges fixos
+    d'una zona coberta es retiren `t + outerGap` (`insetCut`, espigues i System 32 al cantell nou); les portes d'una zona
+    pare fan la filera System 32 als trams lliures entre prestatges fixos (placa de la frontissa); forats de guia dels
+    calaixos des del davant de la caixa (`zFront − 37`); trapa de reixeta darrere del front encastat; ranura del fons
+    sempre dins de la peça i allargada `g` on la tapa/base passa per sobre del lateral (inglet, tauler de taula); fons
+    sota el tauler de taula i fins a `interior.y1` amb ranura d'aire; `hingeCount` compartit (`geometry.ts`: 2/3/4/5 fins
+    a 900/1600/2100) i cassoletes separades ≥ Ø + 10 (si no hi caben, menys i avís `hinge`); fons del calaix amb material
+    del seu gruix (avís `drawer-bottom`); peces amb alguna mida ≤ 0 es treuen amb avís `invalid-part`; l'últim «auto»
+    agafa el que sobra. **Pendent de decidir amb el taller**: joc de les ranures i descompte del gruix del cantell.
   - **Fast Refresh**: un fitxer `.tsx` només exporta components; constants i utilitats a part
     (`composition/partOrient.ts`), si no Vite fa «hmr invalidate» i recarrega la pàgina.
     **El nom del `.ts` no pot coincidir amb el del `.tsx` si només canvien majúscules** (`MaterialLibrary.tsx` i

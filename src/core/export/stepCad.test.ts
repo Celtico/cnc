@@ -56,14 +56,31 @@ describe("STEP per a TopSolid", () => {
     expect(ents.filter((e) => e.type === "COLOUR_RGB")).toHaveLength(1)
     expect(step.text).toContain("PRODUCT('Llibreria'")
   })
+
+  it("el nom que llegeix el taller és el de taller en ASCII (com al CSV); el PRODUCT, l'etiqueta de l'app", () => {
+    const b = buildComposition(template("bookcase-black"))
+    const p = { ...b.panels[0]!, name: "Prestatge: dalt", label: "Prestatge de dalt (façana)" }
+    const step = toStepCad([{ name: "M", panels: [p] }], { name: "L" })
+    expect(step.text).toContain("ADVANCED_BREP_SHAPE_REPRESENTATION('Prestatge- dalt'")
+    expect(step.text).toContain("PRODUCT('Prestatge de dalt (fa\\X2\\00E7\\X0\\ana)'")
+  })
 })
 
 describe("conjunts del STEP per a TopSolid", async () => {
   const { stepCadGroups } = await import("./stepGroups")
-  it("un per mòdul, el taulell i les peces lliures (també les de pedra)", () => {
+  it("per al taller, només les peces amb nesting (sense ferro, pedra ni vidre)", () => {
     const comp = template("oak-kitchen")
     const b = buildComposition(comp)
+    expect(b.extras.length).toBeGreaterThan(0)
     const groups = stepCadGroups(comp, b)
+    const ids = groups.flatMap((g) => g.panels.map((p) => p.id))
+    expect(ids).toHaveLength(b.panels.length)
+    expect(ids.some((id) => b.extras.some((e) => e.id === id))).toBe(false)
+  })
+  it("amb `extras` (CAD): un per mòdul, el taulell i les peces lliures (també les de pedra)", () => {
+    const comp = template("oak-kitchen")
+    const b = buildComposition(comp)
+    const groups = stepCadGroups(comp, b, { extras: true })
     expect(groups.map((g) => g.name)).toEqual(["1. Calaixos", "2. Fregadera", "3. Fogons", "4. Rebost", "5. Illa", "Taulell i sòcol", "Prestatges de paret", "Peces lliures"])
     expect(groups.reduce((n, g) => n + g.panels.length, 0)).toBe(b.panels.length + b.extras.length)
   })

@@ -130,6 +130,14 @@ export function system32Ys(yFrom: number, yTo: number, edgeOffset: number, pitch
   return ys
 }
 
+/** Nombre de frontisses segons l'alçada de la porta (el mateix per a tots els constructors). */
+export function hingeCount(height: number): number {
+  if (height <= 900) return 2
+  if (height <= 1600) return 3
+  if (height <= 2100) return 4
+  return 5
+}
+
 /** Valor de `candidates` més proper a `target`. */
 export function snap(target: number, candidates: readonly number[]): number {
   let best = candidates[0] ?? target

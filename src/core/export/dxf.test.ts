@@ -4,7 +4,9 @@ import { buildModule } from "../build/buildModule"
 import { DEFAULT_CABINET, DEFAULT_GRILLE, defaultModule } from "../model"
 import {
   arrangePanels,
+  blockName,
   dxfLayers,
+  dxfText,
   fmt,
   holeLayer,
   panelToDxf,
@@ -183,5 +185,34 @@ describe("DXF 3D (gruix i profunditats)", () => {
 
   it("sense 3D no hi ha cap gruix d'extrusió", () => {
     expect(flat).not.toMatch(/\r\n39\r\n/)
+  })
+})
+
+describe("R12: noms de capa, de bloc i textos", () => {
+  const base = panels[0]!
+  const p = { ...base, id: "module-1:zone-root-left:shelf-pin-lateral-esquerre-amb-un-nom-molt-llarg", name: "Façana dalt", holes: [{ x: 50, y: 10, diameter: 8, depth: 17.5, face: "edge" as const, edge: "bottom" as const }] }
+  const out = toDxf([p, base])
+  const ents = parseDxfEntities(out)
+  const pairs = parseDxfPairs(out)
+
+  it("capes sense punt: DRILL_H_D8_P17_5", () => {
+    expect(holeLayer(p.holes[0]!)).toBe("DRILL_H_D8_P17_5")
+    for (const l of dxfLayers([p, base])) expect(l).toMatch(/^[A-Z0-9_$-]+$/)
+  })
+
+  it("blocs amb nom curt (P001…) i l'id de la peça en un comentari", () => {
+    expect(blockName(0)).toBe("P001")
+    const blocks = ents.filter((e) => e.type === "BLOCK").map((e) => e.values[2]![0]!)
+    expect(blocks).toEqual(["P001", "P002"])
+    for (const b of blocks) expect(b.length).toBeLessThanOrEqual(31)
+    expect(ents.filter((e) => e.type === "INSERT").map((e) => e.values[2]![0])).toEqual(["P001", "P002"])
+    expect(pairs).toContainEqual([999, `P001 = ${p.id}`])
+  })
+
+  it("textos en ASCII: sense accents", () => {
+    expect(dxfText("Façana · ñ")).toBe("Facana ? n")
+    const label = ents.find((e) => e.type === "TEXT")!.values[1]![0]!
+    expect(label.startsWith("Facana dalt ")).toBe(true)
+    expect(/[^\r\n -~]/.test(out)).toBe(false)
   })
 })

@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "../build/buildComposition"
-import { DEFAULT_CABINET, cabinetToComposition, type Panel } from "../model"
+import { DEFAULT_CABINET, cabinetToComposition, flatPackStool, flatten, type Panel } from "../model"
 import { DEFAULT_NEST_OPTIONS, nest } from "../nesting/nest"
-import { labelPoint } from "./labelPoint"
+import { DEFAULT_LABEL, labelPoint } from "./labelPoint"
+import { pointInRing } from "./region2d"
 import { boardName, encodeUtf16le, localToBoard, TOPSOLID_CSV_HEADER, toTopsolidCsv } from "./topsolidCsv"
 
 const panels = buildComposition(cabinetToComposition(DEFAULT_CABINET)).panels
@@ -62,6 +63,25 @@ describe("toTopsolidCsv", () => {
     expect(localToBoard(pl, 300, 50)).toEqual({ x: 100, y: 500 })
   })
 
+  it("`;`, `:` i salts de línia als textos no trenquen les columnes", () => {
+    const named = panels.map((p, i) => (i === 0 ? { ...p, name: "Lateral 40;60" } : i === 1 ? { ...p, name: "Prestatge: dalt" } : i === 2 ? { ...p, name: "Línia\r\nnova" } : p))
+    const mat = named.map((p) => ({ ...p, material: "Roure; nat:ural" }))
+    const out = toTopsolidCsv(mat, nest(mat, DEFAULT_NEST_OPTIONS), { project: "Prova; v2", edgeText: "canto; 1mm" })
+    const rows = out.text.split("\r\n").filter(Boolean)
+    expect(rows).toHaveLength(1 + nesting.boards.length + panels.length)
+    for (const r of rows) expect(r.split(";")).toHaveLength(TOPSOLID_CSV_HEADER.length)
+    const pieces = rows.slice(1).filter((l) => !l.split(";")[3]!.includes(":"))
+    expect(pieces).toHaveLength(panels.length)
+    const names = pieces.map((l) => l.split(";")[3])
+    expect(names).toContain("Lateral 40,60")
+    expect(names).toContain("Prestatge- dalt")
+    expect(names).toContain("Linia nova")
+    const board = rows[1]!.split(";")
+    expect(board[3]).toMatch(/^Roure, nat-ural:\d+x\d+x\d+$/)
+    expect(board[0]).toBe("Roure,_nat-ural_19#01")
+    expect(board[14]).toBe("Prova, v2")
+  })
+
   it("UTF-16 LE amb BOM", () => {
     const bytes = encodeUtf16le("A;")
     expect([...bytes]).toEqual([0xff, 0xfe, 0x41, 0x00, 0x3b, 0x00])
@@ -88,5 +108,24 @@ describe("labelPoint", () => {
   it("peça massa petita: al centre i ho diu", () => {
     const small: Panel = { ...shelf, length: 80, width: 50 }
     expect(labelPoint(small)).toEqual({ u: 40, v: 25, fits: false })
+  })
+  it("peça amb forma (pota del tamboret): l'etiqueta sencera dins del contorn", () => {
+    const legs = buildComposition(flatPackStool()).panels.filter((p) => p.outline)
+    expect(legs.some((p) => p.label === "Pota davant" || p.name === "Pota davant")).toBe(true)
+    for (const p of legs) {
+      const ring = flatten(p.outline!)
+      const lp = labelPoint(p)
+      expect(pointInRing([lp.u, lp.v], ring), p.name).toBe(true)
+      if (!lp.fits) continue
+      const { w, h } = DEFAULT_LABEL
+      for (const [du, dv] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) expect(pointInRing([lp.u + (du * w) / 2, lp.v + (dv * h) / 2], ring), p.name).toBe(true)
+    }
+  })
+  it("contorn en U (arc obert): no posa l'etiqueta al buit del mig", () => {
+    // 600 × 400 amb una osca de 300 × 300 al mig de baix: el centre (300, 200) és al buit.
+    const u: Panel = { ...shelf, length: 600, width: 400, holes: [], grooves: [], edges: { left: false, right: false, bottom: false, top: false }, outline: [[0, 0], [150, 0], [150, 300], [450, 300], [450, 0], [600, 0], [600, 400], [0, 400]] }
+    const lp = labelPoint(u)
+    expect(lp.fits).toBe(true)
+    expect(lp.v - DEFAULT_LABEL.h / 2).toBeGreaterThanOrEqual(300)
   })
 })
