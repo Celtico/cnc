@@ -17,8 +17,8 @@ import {
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcon"
 import { compositionKind, partsOnlyKind, duplicateGroup, newGroupName, partGroups, insertPartCopy, insertRefCopy, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
-import { AddElementDialog } from "./AddElementDialog"
-import { freePartFor, refFor } from "./addElements"
+import { NameDialog } from "../../components/NameDialog"
+import { defaultElementName, freePartFor, refFor, type AddKind } from "./addElements"
 import { useSettings } from "../settings/SettingsContext"
 import { ORIENT_ICON } from "./partOrient"
 import { zoneLabel } from "./zoneLabel"
@@ -156,7 +156,7 @@ export function StructureTree({
       },
     }
   }
-  const [adding, setAdding] = useState(false)
+  const [adding, setAdding] = useState<AddKind | null>(null)
   const { settings } = useSettings()
   const hasWall = comp.modules.some((m) => rowOf(m) === "wall")
   const rows: { row: "floor" | "wall"; label: string }[] = hasWall
@@ -193,28 +193,33 @@ export function StructureTree({
   return (
     <Stack gap={0.5} role="tree" aria-label="Estructura del moble" fontSize="sm">
       <Row icon={<LuBox />} label={name || "Moble"} bold selected={selection.kind === "moble"} onClick={() => onSelect({ kind: "moble" })} depth={0} />
-      {/* Un sol «Afegir» per a tot (com les capes de Figma): mòdul, peça lliure o objecte de referència. */}
-      <HStack as="button" gap={2} pl={7} py={1.5} color="fg.muted" _hover={{ color: "fg" }} rounded="md" cursor="pointer" onClick={() => setAdding(true)}>
-        <LuPlus /> <Text>Afegir</Text>
-      </HStack>
-      <AddElementDialog
-        open={adding}
-        comp={comp}
-        onlyParts={onlyParts}
-        onClose={() => setAdding(false)}
-        onAddModule={(n) => addModule(newModule(newId("m"), n))}
-        onAddPart={(orient, n) => {
-          const p = freePartFor(comp, settings, orient, partCenter, n)
-          onChange({ ...comp, parts: [...(comp.parts ?? []), p] })
-          onSelect({ kind: "part", id: p.id })
-        }}
-        onAddRef={(n, preset) => {
-          const r = refFor(preset ? { name: n, w: preset.w, h: preset.h, d: preset.d!, z: preset.wallOffset } : { name: n, w: 600, h: 600, d: 100 })
-          onChange({ ...comp, references: [...comp.references, r] })
-          onSelect({ kind: "ref", id: r.id })
-        }}
-      />
-
+      {/* Un + per a cada tipus d'element (per decisió de l'usuari: així es veu que n'hi ha tres): demana el nom (un per
+          defecte, seleccionat) i crea l'element, sense més opcions (es configura a l'inspector). */}
+      {adding && (
+        <NameDialog
+          open
+          title={adding === "module" ? "Mòdul nou" : adding === "part" ? "Peça lliure nova" : "Objecte de referència nou"}
+          ariaLabel="Nom"
+          submitLabel="Afegir"
+          initial={defaultElementName(comp, adding)}
+          onClose={() => setAdding(null)}
+          onSave={(n) => {
+            const kind = adding
+            setAdding(null)
+            if (kind === "module") addModule(newModule(newId("m"), n))
+            else if (kind === "part") {
+              const p = freePartFor(comp, settings, "front", partCenter, n)
+              onChange({ ...comp, parts: [...(comp.parts ?? []), p] })
+              onSelect({ kind: "part", id: p.id })
+            } else {
+              const r = refFor({ name: n, w: 600, h: 600, d: 100 })
+              onChange({ ...comp, references: [...comp.references, r] })
+              onSelect({ kind: "ref", id: r.id })
+            }
+          }}
+        />
+      )}
+      {!onlyParts && <SectionTitle onAdd={() => setAdding("module")} addLabel="Afegir mòdul">Mòduls</SectionTitle>}
       {!onlyParts && rows.map(({ row, label }) => (
         <Box key={row}>
           {label && (
@@ -262,7 +267,7 @@ export function StructureTree({
       ))}
 
       {/* Peces lliures (flat-pack): com els objectes, però són peces de debò amb encaixos. El títol només surt si n'hi ha. */}
-      {parts.length > 0 && <SectionTitle>Peces lliures</SectionTitle>}
+      <SectionTitle onAdd={() => setAdding("part")} addLabel="Afegir peça lliure">Peces lliures</SectionTitle>
       {(() => {
         const seen = new Set<string>()
         const partRow = (r: (typeof parts)[number], depth: number) => {
@@ -398,7 +403,7 @@ export function StructureTree({
         </HStack>
       )}
 
-      {comp.references.length > 0 && <SectionTitle>Objectes de referència</SectionTitle>}
+      <SectionTitle onAdd={() => setAdding("ref")} addLabel="Afegir objecte de referència">Objectes de referència</SectionTitle>
       {comp.references.map((r) => (
         <Row
           key={r.id}
@@ -631,11 +636,16 @@ function RowMenu({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-/** Títol d'un grup de l'arbre (peces lliures, objectes de referència): només quan el grup té alguna fila. */
-function SectionTitle({ children }: { children: ReactNode }) {
+/** Títol d'un grup de l'arbre (mòduls, peces lliures, objectes de referència) amb el seu + per afegir-ne. */
+function SectionTitle({ children, onAdd, addLabel }: { children: ReactNode; onAdd: () => void; addLabel: string }) {
   return (
-    <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide" pt={3} pb={1} px={1}>
-      {children}
-    </Text>
+    <HStack justify="space-between" pt={3} pb={1} px={1}>
+      <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
+        {children}
+      </Text>
+      <IconButton aria-label={addLabel} title={addLabel} size="2xs" variant="ghost" onClick={onAdd}>
+        <LuPlus />
+      </IconButton>
+    </HStack>
   )
 }

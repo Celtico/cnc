@@ -1,6 +1,6 @@
 import { compositionKind, materialByName, newFreePart, newId, partsOnlyKind, type Composition, type FreePart, type PartOrient, type RefObject, type Settings } from "../../core/model"
 
-/** Què es pot afegir des de l'arbre (una sola finestra, `AddElementDialog`). */
+/** Què es pot afegir des de l'arbre (un + per a cada tipus). */
 export type AddKind = "module" | "part" | "ref"
 
 export const ADD_KINDS: { id: AddKind; label: string; noun: string }[] = [

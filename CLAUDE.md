@@ -395,12 +395,10 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Editor en tres columnes, com Figma / Fusion 360** (`features/editor/EditorScreen.tsx`):
   - **Esquerra — Estructura** (`composition/StructureTree.tsx`): arbre moble › mòduls ›
     compartiments, i objectes de referència. Afegir/duplicar/moure/eliminar amb el menú ⋯.
-    **Un sol «+ Afegir»** sota el nom del moble (com les capes de Figma; `AddElementDialog`, `addElements.ts`): es tria
-    **Mòdul · Peça · Objecte** (es recorda l'últim; sense Mòdul als tipus només de peces), el nom (per defecte «Mòdul 3»,
-    «Peça 2», «Objecte 1», seleccionat; canvia sol amb el tipus si no s'ha tocat) i, a la peça, l'orientació. Mòdul = una
-    caixa bàsica; objecte = una caixa de 600 × 600 × 100 o un dels de Preferències (agafa el nom escrit o, amb el de per
-    defecte, el seu). Res de mòduls especials ni passacables fets: es configuren a l'inspector. Els títols «Peces lliures»
-    i «Objectes de referència» només surten si n'hi ha (sense textos «Cap…»).
+    **Un + a cada grup** (Mòduls · Peces lliures · Objectes de referència; per decisió de l'usuari, així es veuen els tres
+    tipus): demana el nom (`NameDialog`, per defecte «Mòdul 3», «Peça 2», «Objecte 1», seleccionat; `addElements.ts`) i
+    crea l'element sense més opcions: caixa bàsica, peça de cara, caixa de 600 × 600 × 100. Res de mòduls especials,
+    passacables fets ni plantilles al +: es configura a l'inspector.
   - **Objectes de referència al 3D** (`RefGhost` a `CabinetViewer`): seleccionat, **es mou només amb les fletxes del
     gizmo** (`viewer/MoveGizmo`, `frontRaycast`: les fletxes es poden agafar encara que l'objecte sigui dins d'un altre o
     d'un moble, i el seu clic no tria el que hi ha al davant) (per decisió de l'usuari: el cos no s'arrossega, així sempre se sap cap on es mourà; també les peces lliures i
@@ -494,7 +492,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     crea el del tipus) i a l'inspector del moble (secció Tipus). Taulell i sòcol correguts només
     surten i es construeixen a la Cuina; en canviar de tipus es guarden (no es fan) i tornen. Taula: `tableModule` (tauler + dos laterals de
     panell, sense base ni fons, cantonades a inglet); «Afegir mòdul» n'afegeix una. Plantilles
-    amb `kind` (Consola, Taula de menjador). **«+ Afegir»** (arbre) afegeix una caixa bàsica (vegeu «Un sol Afegir» a l'Estructura); **sense mòduls especials** (per decisió de l'usuari: la caixa es configura a l'inspector). Queden al codi, sense UI, els de `core/model/modulePresets.ts`
+    amb `kind` (Consola, Taula de menjador). **El + de Mòduls** (arbre) afegeix una caixa bàsica; **sense mòduls especials** (per decisió de l'usuari: la caixa es configura a l'inspector). Queden al codi, sense UI, els de `core/model/modulePresets.ts`
     (`modulePresetsFor`): cuina (baixos calaixos/porta/fregadera/fogons/
     forn, columnes forn i rebost, alts porta/abatible), armari (prestatges, penjador amb
     maleter, calaixos i prestatges), taula (consola, menjador, centre, banc); al Moble, les
