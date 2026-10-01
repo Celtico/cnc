@@ -1,4 +1,5 @@
-import { Box, HStack, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, HStack, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
+import { NameDialog } from "../../components/NameDialog"
 import { createElement, useState, type ReactNode } from "react"
 import { KINDS } from "./kinds"
 import {
@@ -156,6 +157,8 @@ export function StructureTree({
       },
     }
   }
+  const [adding, setAdding] = useState(false)
+  const newModuleName = `Mòdul ${comp.modules.length + 1}`
   const hasWall = comp.modules.some((m) => rowOf(m) === "wall")
   const rows: { row: "floor" | "wall"; label: string }[] = hasWall
     ? [
@@ -238,31 +241,53 @@ export function StructureTree({
         </Box>
       ))}
 
-      {!onlyParts && <Menu.Root>
-        <Menu.Trigger asChild>
-          <HStack as="button" gap={2} pl={7} py={1.5} color="fg.muted" _hover={{ color: "fg" }} rounded="md" cursor="pointer">
-            <LuPlus /> <Text>Afegir mòdul</Text>
-          </HStack>
-        </Menu.Trigger>
-        <Portal>
-          <Menu.Positioner>
-            <Menu.Content>
-              <Menu.Item value="empty" onClick={() => addModule(newModule(newId("m"), `Mòdul ${comp.modules.length + 1}`))}>
-                <LuBox /> Caixa buida
-              </Menu.Item>
-              {/* Mòduls especials del tipus de moble (cuina: baixos, alts, columnes…). */}
-              <Menu.ItemGroup>
-                <Menu.ItemGroupLabel>{KINDS.find((k) => k.value === compositionKind(comp))!.label}</Menu.ItemGroupLabel>
-                {modulePresetsFor(compositionKind(comp)).map((p) => (
-                  <Menu.Item key={p.id} value={p.id} onClick={() => addModule({ ...p.make(), id: newId("m") })}>
+      {/* Afegir mòdul: un de bàsic directament, després de posar-li el nom (amb un per defecte). Els mòduls especials del
+          tipus de moble (cuina: baixos, alts, columnes…) són a la mateixa finestra, a sota, i agafen el nom escrit. */}
+      {!onlyParts && (
+        <HStack as="button" gap={2} pl={7} py={1.5} color="fg.muted" _hover={{ color: "fg" }} rounded="md" cursor="pointer" onClick={() => setAdding(true)}>
+          <LuPlus /> <Text>Afegir mòdul</Text>
+        </HStack>
+      )}
+      <NameDialog
+        open={adding}
+        title="Mòdul nou"
+        ariaLabel="Nom del mòdul"
+        submitLabel="Afegir"
+        initial={newModuleName}
+        onClose={() => setAdding(false)}
+        onSave={(name) => {
+          setAdding(false)
+          addModule(newModule(newId("m"), name))
+        }}
+      >
+        {(name) => {
+          const presets = modulePresetsFor(compositionKind(comp))
+          return presets.length > 0 ? (
+            <Stack gap={1.5}>
+              <Text fontSize="xs" color="fg.muted">
+                O, en lloc d'una caixa bàsica, un mòdul de {KINDS.find((k) => k.value === compositionKind(comp))!.label.toLowerCase()}:
+              </Text>
+              <HStack gap={1.5} wrap="wrap">
+                {presets.map((p) => (
+                  <Button
+                    key={p.id}
+                    size="xs"
+                    variant="outline"
+                    disabled={!name}
+                    onClick={() => {
+                      setAdding(false)
+                      // Sense nom propi, el del mòdul especial («Baix de fregadera»…).
+                      addModule({ ...p.make(), id: newId("m"), name: name === newModuleName ? p.name : name })
+                    }}
+                  >
                     {p.name}
-                  </Menu.Item>
+                  </Button>
                 ))}
-              </Menu.ItemGroup>
-            </Menu.Content>
-          </Menu.Positioner>
-        </Portal>
-      </Menu.Root>}
+              </HStack>
+            </Stack>
+          ) : null
+        }}
+      </NameDialog>
 
       {/* Peces lliures (flat-pack): com els objectes, però són peces de debò amb encaixos. */}
       <HStack justify="space-between" pt={3} pb={1} px={1}>

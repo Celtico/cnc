@@ -1,6 +1,7 @@
 import { Accordion, Box, Button, Dialog, HStack, IconButton, Input, Menu, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import { useEffect, useState, type ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { LuCircle, LuCircleCheck, LuEllipsis, LuFolder, LuFolderInput, LuFolderMinus, LuFolderPlus, LuListChecks, LuPencil, LuTrash2, LuX } from "react-icons/lu"
+import { NameDialog } from "../../components/NameDialog"
 import { FoldTitle } from "./FoldTitle"
 import { GALLERY_COLS, groupByFolder, useSessionList } from "./galleryGrid"
 
@@ -251,7 +252,8 @@ export function FolderedGrid<T>({
           </Dialog.Root>
         </>
       )}
-      <FolderNameDialog
+      <NameDialog
+        ariaLabel="Nom del grup"
         open={naming}
         title="Grup nou"
         initial=""
@@ -264,7 +266,8 @@ export function FolderedGrid<T>({
           setPicking(true)
         }}
       />
-      <FolderNameDialog
+      <NameDialog
+        ariaLabel="Nom del grup"
         open={renaming !== null}
         title="Canviar el nom del grup"
         initial={renaming ?? ""}
@@ -336,45 +339,6 @@ export function MoveToFolderDialog({ open, what, folders, current, onPick, onClo
                 Cancel·lar
               </Button>
             </Dialog.Footer>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
-  )
-}
-
-function FolderNameDialog({ open, title, initial, placeholder, onClose, onSave }: { open: boolean; title: string; initial: string; placeholder?: string; onClose: () => void; onSave: (name: string) => void }) {
-  const [v, setV] = useState(initial)
-  useEffect(() => {
-    if (open) setV(initial)
-  }, [open, initial])
-  return (
-    <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size="sm">
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                onSave(v.trim())
-              }}
-            >
-              <Dialog.Header>
-                <Dialog.Title>{title}</Dialog.Title>
-              </Dialog.Header>
-              <Dialog.Body>
-                <Input value={v} onChange={(e) => setV(e.target.value)} aria-label="Nom del grup" placeholder={placeholder} autoFocus />
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Button variant="outline" onClick={onClose}>
-                  Cancel·lar
-                </Button>
-                <Button type="submit" colorPalette="wood" disabled={!v.trim()}>
-                  Desar
-                </Button>
-              </Dialog.Footer>
-            </form>
           </Dialog.Content>
         </Dialog.Positioner>
       </Portal>

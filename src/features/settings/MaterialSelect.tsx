@@ -1,6 +1,6 @@
 import { Accordion, Box, Button, CloseButton, Drawer, Field, HStack, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
-import { LuCheck, LuPalette } from "react-icons/lu"
+import { LuCheck } from "react-icons/lu"
 import { MATERIAL_CATEGORIES, materialCategory, type MaterialPref } from "../../core/model"
 import { MaterialThumb } from "./MaterialBits"
 
@@ -22,7 +22,7 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
   return (
     <Field.Root flex={hideLabel ? 1 : undefined} minW={0}>
       {!hideLabel && <Field.Label fontSize="sm">{label}</Field.Label>}
-      {/* Un botó (no un desplegable, per decisió de l'usuari): fons suau, amplada del contingut i la icona de Materials. */}
+      {/* Un botó (no un desplegable, per decisió de l'usuari): fons suau, amplada del contingut, la mostra i el nom. */}
       <Button
         size="sm"
         variant="subtle"
@@ -43,9 +43,6 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
         <Text truncate textAlign="start">
           {current?.name ?? (value || emptyLabel || "(sense material)")}
         </Text>
-        <Box color="wood.fg" display="inline-flex" flexShrink={0}>
-          <LuPalette />
-        </Box>
       </Button>
 
       <Drawer.Root open={open} onOpenChange={(e) => setOpen(e.open)} placement={{ base: "bottom", md: "end" }} size={{ base: "full", md: "sm" }}>

@@ -165,7 +165,7 @@ cantonades, pestanyes Estructura · Propietats al mòbil, amplades recordades pe
 de mobles i objectes i als Ambients; **`SceneHelpers`** (`StudioEnvironment`, `SceneAccess`) als
 visors 3D; el **`RenderDialog`** (render per CPU) a l'editor i als ambients; **`NewMobleGallery`**,
 `TemplateCard`, `ProjectCard` i `GALLERY_COLS` a Mobles, Objectes i a les finestres dels ambients;
-el **`MaterialSelect`** (`settings/MaterialSelect.tsx`) a tot arreu on es tria un material: un botó amb la mostra i el nom
+el **`NameDialog`** (`components/`) per posar un nom (grup nou, canviar el nom, mòdul nou), amb un nom per defecte ja seleccionat; el **`MaterialSelect`** (`settings/MaterialSelect.tsx`) a tot arreu on es tria un material: un **botó** (fons suau, de l'amplada del contingut, sense fletxa ni icona: no ha de semblar un desplegable) amb la mostra i el nom
 que obre un calaix (a la dreta a l'ordinador, de baix al mòbil) amb un acordió per categoria i les mostres de la textura
 (només les de la categoria oberta); en tocar-ne una es tria i es tanca. `emptyLabel` per a «Com el cos», «Com a
 Preferències», «Tots els altres», «Cap (fantasma)». Una funcionalitat nova d'un
@@ -488,8 +488,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     crea el del tipus) i a l'inspector del moble (secció Tipus). Taulell i sòcol correguts només
     surten i es construeixen a la Cuina; en canviar de tipus es guarden (no es fan) i tornen. Taula: `tableModule` (tauler + dos laterals de
     panell, sense base ni fons, cantonades a inglet); «Afegir mòdul» n'afegeix una. Plantilles
-    amb `kind` (Consola, Taula de menjador). **Mòduls especials** per tipus (`core/model/modulePresets.ts`,
-    `modulePresetsFor`) al menú «Afegir mòdul»: cuina (baixos calaixos/porta/fregadera/fogons/
+    amb `kind` (Consola, Taula de menjador). **«Afegir mòdul»** (arbre) afegeix directament una caixa bàsica després de demanar-ne el nom (`NameDialog`, per defecte «Mòdul N»). **Mòduls especials** per tipus (`core/model/modulePresets.ts`,
+    `modulePresetsFor`) a la mateixa finestra, a sota (agafen el nom escrit; amb el de per defecte, el seu): cuina (baixos calaixos/porta/fregadera/fogons/
     forn, columnes forn i rebost, alts porta/abatible), armari (prestatges, penjador amb
     maleter, calaixos i prestatges), taula (consola, menjador, centre, banc); al Moble, les
     plantilles d'un sol mòdul. Els antics: cuina si tenen runs, si no moble.
