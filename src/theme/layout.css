@@ -37,6 +37,14 @@
 :root .gallery-accordion > [data-part="item"][data-state="open"] > [data-part="item-content"] {
   padding-top: 12px;
 }
+/* Barra d'eines de l'historial («Grup nou», «Seleccionar», «Esborrar l'historial») a sang de l'acordió: de vora a vora,
+   enganxada a la capçalera, sense cantonades i amb els botons alineats amb el contingut. */
+:root .gallery-accordion .gallery-toolbar {
+  margin: calc(-12px - var(--accordion-padding-y)) calc(-1 * var(--accordion-padding-x)) 0;
+  padding-inline: calc(var(--accordion-padding-x) - 4px);
+  border-radius: 0;
+  border-bottom: 1px solid var(--chakra-colors-border);
+}
 
 /*
  * Mides d'iOS a les pantalles tàctils (iPhone, iPad), segons la guia d'Apple (1 px CSS = 1 pt):
