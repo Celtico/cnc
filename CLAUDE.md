@@ -165,7 +165,7 @@ cantonades, pestanyes Estructura · Propietats al mòbil, amplades recordades pe
 de mobles i objectes i als Ambients; **`SceneHelpers`** (`StudioEnvironment`, `SceneAccess`) als
 visors 3D; el **`RenderDialog`** (render per CPU) a l'editor i als ambients; **`NewMobleGallery`**,
 `TemplateCard`, `ProjectCard` i `GALLERY_COLS` a Mobles, Objectes i a les finestres dels ambients;
-el **`NameDialog`** (`components/`) per posar un nom (grup nou, canviar el nom, mòdul nou), amb un nom per defecte ja seleccionat; el **`MaterialSelect`** (`settings/MaterialSelect.tsx`) a tot arreu on es tria un material: un **botó** (fons suau, de l'amplada del contingut, sense fletxa ni icona: no ha de semblar un desplegable) amb la mostra i el nom
+el **`NameDialog`** (`components/`) per posar un nom (grup nou, canviar el nom, mòdul nou), amb un nom per defecte ja seleccionat; el **`MaterialSelect`** (`settings/MaterialSelect.tsx`) a tot arreu on es tria un material: un **botó** (fons suau, a tota l'amplada, sense fletxa ni icona: no ha de semblar un desplegable) amb la mostra i el nom
 que obre un calaix (a la dreta a l'ordinador, de baix al mòbil) amb un acordió per categoria i les mostres de la textura
 (només les de la categoria oberta); en tocar-ne una es tria i es tanca. `emptyLabel` per a «Com el cos», «Com a
 Preferències», «Tots els altres», «Cap (fantasma)». Una funcionalitat nova d'un

@@ -22,12 +22,11 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
   return (
     <Field.Root flex={hideLabel ? 1 : undefined} minW={0}>
       {!hideLabel && <Field.Label fontSize="sm">{label}</Field.Label>}
-      {/* Un botó (no un desplegable, per decisió de l'usuari): fons suau, amplada del contingut, la mostra i el nom. */}
+      {/* Un botó (no un desplegable, per decisió de l'usuari): fons suau, tota l'amplada, la mostra i el nom. */}
       <Button
         size="sm"
         variant="subtle"
-        alignSelf="flex-start"
-        maxW="full"
+        w="full"
         justifyContent="flex-start"
         gap={2}
         px={2}
