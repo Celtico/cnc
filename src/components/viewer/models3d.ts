@@ -2,6 +2,7 @@ import { Box3, DoubleSide, Group, Mesh, MeshStandardMaterial, Vector3, type Mate
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js"
 import { modelAsset, type ModelObject } from "../../core/model"
+import { getUserModel, isUserModelSrc } from "../../db/userModels"
 
 /**
  * Models 3D (`.glb`) dels objectes: es carreguen un cop (memòria compartida) i cada element en fa una còpia que
@@ -23,6 +24,8 @@ const pending = new Map<string, Promise<Loaded | null>>()
 /** Càrregues fallides (src → quan): no es tornen a provar fins passat `RETRY_MS`. */
 const failed = new Map<string, number>()
 const RETRY_MS = 60_000
+/** Models de l'usuari que no hi són (esborrats): no es dibuixen, però no impedeixen les miniatures. */
+const missing = new Set<string>()
 const listeners = new Set<() => void>()
 let loader: GLTFLoader | null = null
 
@@ -65,14 +68,25 @@ export function loadModel(src: string): Promise<Loaded | null> {
   if (hit) return Promise.resolve(hit)
   const p = pending.get(src)
   if (p) return p
-  const url = urlOf(src)
-  if (!url) return Promise.resolve(null)
+  const user = isUserModelSrc(src)
+  const url = user ? null : urlOf(src)
+  if (!user && !url) return Promise.resolve(null)
   const at = failed.get(src)
   if (at !== undefined && Date.now() - at < RETRY_MS) return Promise.resolve(null)
   // Els arbres van comprimits amb meshopt (`gltfpack -c`): el descompressor és JS de three, sense fitxers a part.
-  loader ??= new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
-  const job = loader
-    .loadAsync(url)
+  const gl = (loader ??= new GLTFLoader().setMeshoptDecoder(MeshoptDecoder))
+  // Els de l'usuari: el `.glb` és a Dexie (`db.models`).
+  const read = user
+    ? getUserModel(src).then(async (row) => {
+        if (!row) {
+          missing.add(src)
+          throw new Error("missing")
+        }
+        missing.delete(src)
+        return gl.parseAsync(await row.blob.arrayBuffer(), "")
+      })
+    : gl.loadAsync(url!)
+  const job = read
     .then((gltf) => {
       const l = prepare(gltf.scene)
       cache.set(src, l)
@@ -91,8 +105,17 @@ export function loadModel(src: string): Promise<Loaded | null> {
 
 /** Espera que estiguin carregats tots els models de la llista (miniatures, exportacions). `true` si hi són tots. */
 export async function preloadModels(models: ModelObject[] | undefined): Promise<boolean> {
-  const got = await Promise.all([...new Set((models ?? []).map((m) => m.src))].map(loadModel))
-  return got.every((l) => l !== null)
+  const srcs = [...new Set((models ?? []).map((m) => m.src))]
+  const got = await Promise.all(srcs.map(loadModel))
+  return got.every((l, i) => l !== null || missing.has(srcs[i]!))
+}
+
+/** Oblida un model de la memòria cau (pujat de nou o esborrat): el pròxim cop es torna a llegir. */
+export function forgetModel(src: string): void {
+  cache.delete(src)
+  failed.delete(src)
+  missing.delete(src)
+  for (const f of listeners) f()
 }
 
 /**

@@ -52,6 +52,19 @@ export const FilePhotoSchema = z.object({
 })
 export type FilePhoto = z.infer<typeof FilePhotoSchema>
 
+/** Model 3D de l'usuari (`.glb`) que fa servir el moble, perquè s'obri igual en un altre aparell. */
+export const FileModelSchema = z.object({
+  /** El mateix id que `ModelObject.src` ("user-…"). */
+  id: z.string().min(1),
+  name: z.string(),
+  /** Mida real (mm: w, h, d). */
+  size: z.tuple([mm, mm, mm]),
+  mime: z.string().optional(),
+  /** Bytes del `.glb` en base64 (sense prefix `data:`). */
+  data: z.string(),
+})
+export type FileModel = z.infer<typeof FileModelSchema>
+
 export const MobleFileSchema = z.object({
   format: z.literal(MOBLE_FORMAT),
   version: z.literal(MOBLE_VERSION),
@@ -66,6 +79,8 @@ export const MobleFileSchema = z.object({
   }),
   references: z.array(RefPresetSchema),
   photo: FilePhotoSchema.optional(),
+  /** Opcional (fitxers antics no en porten): els models 3D de l'usuari que fa servir. */
+  models: z.array(FileModelSchema).optional(),
 })
 export type MobleFile = z.infer<typeof MobleFileSchema>
 
@@ -77,6 +92,8 @@ export interface MobleInput {
   /** Totes les referències de l'usuari: només s'inclouen les que el moble fa servir. */
   references: RefPreset[]
   photo?: FilePhoto
+  /** Models 3D de l'usuari: només s'inclouen els que la composició fa servir. */
+  models?: FileModel[]
   exportedAt?: string
   kind?: "moble" | "plantilla"
 }
@@ -97,7 +114,14 @@ export function usedReferences(input: Pick<MobleInput, "composition" | "calibrat
   return out
 }
 
+/** Ids dels models de l'usuari ("user-…") que fa servir la composició. */
+export function usedUserModelIds(composition: Pick<Composition, "models">): string[] {
+  return [...new Set((composition.models ?? []).map((m) => m.src).filter((src) => src.startsWith("user-")))]
+}
+
 export function buildMobleFile(input: MobleInput): MobleFile {
+  const used = new Set(usedUserModelIds(input.composition))
+  const models = (input.models ?? []).filter((m) => used.has(m.id))
   return {
     format: MOBLE_FORMAT,
     version: MOBLE_VERSION,
@@ -111,6 +135,7 @@ export function buildMobleFile(input: MobleInput): MobleFile {
     },
     references: usedReferences(input),
     ...(input.photo ? { photo: input.photo } : {}),
+    ...(models.length ? { models } : {}),
   }
 }
 
@@ -165,6 +190,13 @@ export function parseMobleFile(text: string): MobleParse {
   if (photoRes && !photoRes.success) {
     warnings.push("La foto del fitxer està malmesa; s'ha obert sense foto.")
     obj = { ...obj, photo: undefined }
+  }
+  // Igual amb els models 3D: el que estigui malmès es treu i el moble s'obre igualment.
+  if (obj.models !== undefined) {
+    const list = Array.isArray(obj.models) ? obj.models : []
+    const good = list.filter((m) => FileModelSchema.safeParse(m).success)
+    if (good.length < list.length || !Array.isArray(obj.models)) warnings.push("Algun model 3D del fitxer està malmès; no es veurà.")
+    obj = { ...obj, models: good.length ? good : undefined }
   }
   const res = MobleFileSchema.safeParse(obj)
   if (!res.success) {

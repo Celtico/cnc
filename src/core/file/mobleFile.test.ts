@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { buildComposition } from "../build/buildComposition"
 import { TV_LIVING_ROOM, DEFAULT_SETTINGS, type RefPreset } from "../model"
 import { DEFAULT_NEST_OPTIONS } from "../nesting/nest"
-import { buildMobleFile, missingReferences, mobleFileName, mobleToJson, parseMobleFile, uniqueName, usedReferences } from "./mobleFile"
+import { buildMobleFile, missingReferences, usedUserModelIds, mobleFileName, mobleToJson, parseMobleFile, uniqueName, usedReferences } from "./mobleFile"
 
 const comp = TV_LIVING_ROOM.make()
 const radiator: RefPreset = { id: "u-rad", name: "Radiador 650 × 1100 × 110", w: 650, h: 1100, d: 110, plane: "wall", wallOffset: 0 }
@@ -73,5 +73,50 @@ describe("fitxer .moble", () => {
     expect(mobleFileName("Moble TV: menjador/2026")).toBe("Moble TV- menjador-2026.moble")
     expect(uniqueName("Moble", ["Moble", "Moble (2)"])).toBe("Moble (3)")
     expect(uniqueName("Nou", ["Moble"])).toBe("Nou")
+  })
+
+  describe("models 3D de l'usuari", () => {
+    const withModels = { ...comp, models: [
+      { id: "g1", name: "Planta", src: "user-abc123", x: 0, y: 0, z: 0, w: 500, h: 800, d: 400, rot: 0 },
+      { id: "g2", name: "Falguera", src: "fern-02-a", x: 0, y: 0, z: 0, w: 552, h: 287, d: 613, rot: 0 },
+      { id: "g3", name: "Planta 2", src: "user-abc123", x: 600, y: 0, z: 0, w: 500, h: 800, d: 400, rot: 0 },
+    ] }
+    const bytes = "glTF\x02\x00\x00\x00fake-glb"
+    const model = { id: "user-abc123", name: "La meva planta", size: [500, 800, 400] as [number, number, number], mime: "model/gltf-binary", data: btoa(bytes) }
+    const unused = { ...model, id: "user-zzz", name: "Sense fer servir" }
+
+    it("només els de l'usuari que fa servir la composició, sense repetir", () => {
+      expect(usedUserModelIds(withModels)).toEqual(["user-abc123"])
+      expect(usedUserModelIds(comp)).toEqual([])
+    })
+
+    it("anada i tornada: nom, mida i bytes (base64) iguals; els que no fa servir no hi van", () => {
+      const file = buildMobleFile({ name: "Amb planta", composition: withModels, references, models: [model, unused] })
+      const res = parseMobleFile(mobleToJson(file))
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.warnings).toEqual([])
+      expect(res.file.models).toEqual([model])
+      expect(atob(res.file.models![0]!.data)).toBe(bytes)
+      expect(res.file.project.composition.models?.map((m) => m.src)).toEqual(["user-abc123", "fern-02-a", "user-abc123"])
+    })
+
+    it("sense models de l'usuari el fitxer no porta `models` (com els antics, que s'obren igual)", () => {
+      const file = buildMobleFile({ name: "x", composition: comp, references, models: [model] })
+      expect("models" in file).toBe(false)
+      const res = parseMobleFile(mobleToJson(file))
+      expect(res.ok && res.file.models).toBeUndefined()
+    })
+
+    it("model malmès: s'obre sense ell i avisa", () => {
+      const file = buildMobleFile({ name: "x", composition: withModels, references, models: [model] })
+      const json = JSON.parse(mobleToJson(file))
+      json.models.push({ id: "user-bad", data: 7 })
+      const res = parseMobleFile(JSON.stringify(json))
+      expect(res.ok).toBe(true)
+      if (!res.ok) return
+      expect(res.file.models).toEqual([model])
+      expect(res.warnings).toEqual(["Algun model 3D del fitxer està malmès; no es veurà."])
+    })
   })
 })

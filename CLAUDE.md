@@ -423,6 +423,16 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     grosses, una part dels grups de fulles una mica més grans, textures 512/1K WebP amb l'alfa) i comprimits amb meshopt
     (`npx gltfpack -c`; `GLTFLoader.setMeshoptDecoder`). Els `.glb` es precachegen (PWA, sense connexió). El render per
     CPU també retalla les fulles (`RenderMaterial.alphaCut`, `alphaAt` a `pathWorker`).
+    **Models de l'usuari** («Pujar un model (.glb)…», `LuUpload`, al + de l'arbre i a la secció Model de l'inspector;
+    `composition/ModelUpload.tsx`): taula Dexie **v5** `models` (`UserModel`: id `user-…`, nom del fitxer, `blob`, mida
+    real en mm); `db/userModels.ts` (`addUserModel` valida amb `GLTFLoader` + meshopt i mesura la caixa, m → mm; només
+    `.glb` amb les textures a dins; avís si fa més de 15 MB, no bloqueja). `models3d.ts` llegeix els `src` que
+    comencen per `user-` de Dexie (`parseAsync`) pel mateix camí de memòria cau; un d'esborrat no es veu i no impedeix
+    les miniatures; `forgetModel` en pujar-ne o esborrar-ne. `useModelAssets` (`composition/useModelAssets.ts`, en viu)
+    = `MODEL_ASSETS` + els de l'usuari, i `resolve(src)` per al nom i la mida («Mida original»). Al + es pugen i
+    s'afegeixen de seguida; a l'inspector substitueixen el model (agafa la mida real, la posició es manté); «Els teus
+    models 3D» (sota) per esborrar-los. El `.moble` els porta a dins (`models`: id, nom, mida i el `.glb` en base64,
+    només els que fa servir; opcional, els antics s'obren igual) i en obrir-lo es tornen a crear amb el mateix id.
   - **Objectes de referència al 3D** (`RefGhost` a `CabinetViewer`): seleccionat, **es mou només amb les fletxes del
     gizmo** (`viewer/MoveGizmo`, `frontRaycast`: les fletxes es poden agafar encara que l'objecte sigui dins d'un altre o
     d'un moble, i el seu clic no tria el que hi ha al davant) (per decisió de l'usuari: el cos no s'arrossega, així sempre se sap cap on es mourà; també les peces lliures i
@@ -928,7 +938,7 @@ Accions principals: icona + text.
 | Inspector | Anterior · Següent · Accions de la selecció (menú) | `LuChevronLeft` · `LuChevronRight` · `LuEllipsis` |
 | Preferències | Tema (dia/nit/sistema) · Color principal | `LuSunMoon` (`LuSun` · `LuMoon` · `LuMonitor`) · `LuCheck` a la mostra triada |
 | Preferències | Visualització · Calaixos · System 32 · Cassoleta · Imants (Ferratges) | `LuScanEye` · `LuArchive` · `LuCircleDot` · `LuCircleDashed` · `LuMagnet` |
-| Fitxer | Desar com a fitxer · Obrir fitxer | `LuSave` · `LuFolderOpen` |
+| Fitxer | Desar com a fitxer · Obrir fitxer · Pujar un fitxer (importar preferències, model 3D `.glb`) | `LuSave` · `LuFolderOpen` · `LuUpload` |
 | Editor | Estructura · Propietats · Opcions de vista · Alçat | `LuListTree` · `LuSlidersHorizontal` · `LuSlidersVertical` · `LuLayoutPanelLeft` |
 | Estat | Avisos de fusteria · Desfer · Refer | `LuTriangleAlert` · `LuUndo2` · `LuRedo2` |
 | Foto | Foto · Referència · Distància · Rectangle | `LuCamera` · `LuCrosshair` · `LuMoveHorizontal` · `LuRectangleHorizontal` |

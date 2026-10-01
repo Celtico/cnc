@@ -104,6 +104,15 @@ export interface AmbientRow {
   updatedAt: number
 }
 
+/** Model 3D pujat per l'usuari (`.glb`): `ModelObject.src` = `id` ("user-…"). `size`: mida real (mm, w · h · d). */
+export interface UserModel {
+  id: string
+  name: string
+  blob: Blob
+  size: [number, number, number]
+  createdAt: number
+}
+
 /** Fila única de preferències (id = "user"). El contingut es valida amb zod en llegir-lo. */
 export interface SettingsRow {
   id: string
@@ -116,6 +125,7 @@ class MoblesDB extends Dexie {
   photos!: EntityTable<Photo, "id">
   settings!: EntityTable<SettingsRow, "id">
   ambients!: EntityTable<AmbientRow, "id">
+  models!: EntityTable<UserModel, "id">
 
   constructor() {
     super("mobles-cnc")
@@ -136,6 +146,13 @@ class MoblesDB extends Dexie {
       photos: "++id, projectId",
       settings: "id",
       ambients: "++id, name, updatedAt",
+    })
+    this.version(5).stores({
+      projects: "++id, name, updatedAt",
+      photos: "++id, projectId",
+      settings: "id",
+      ambients: "++id, name, updatedAt",
+      models: "id, createdAt",
     })
   }
 }

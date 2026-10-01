@@ -5,12 +5,16 @@ import {
   mobleToJson,
   parseMobleFile,
   uniqueName,
+  usedUserModelIds,
+  type FileModel,
   type FilePhoto,
   type MobleFile,
 } from "../../core/file/mobleFile"
 import { DEFAULT_CABINET, newId, type Settings } from "../../core/model"
 import { compositionOf } from "../../db/compositionStore"
 import { addPhoto, createProject, db, safeNestOptions, updateProjectPhoto, type Photo, type Project } from "../../db/db"
+import { forgetModel } from "../../components/viewer/models3d"
+import { ensureUserModel, getUserModel } from "../../db/userModels"
 import { downloadBlob } from "../download"
 
 /** Blob → base64 (sense prefix). */
@@ -50,8 +54,15 @@ export async function projectToMoble(project: Project, settings: Settings, inclu
       if (p) photo = { mime: p.blob.type || "image/jpeg", width: p.width, height: p.height, exifFocal35: p.exifFocal35, data: await blobToBase64(p.blob) }
     }
   }
+  // Els models 3D de l'usuari van a dins (si no, en un altre aparell no es veurien).
+  const models: FileModel[] = []
+  for (const id of usedUserModelIds(composition)) {
+    const m = await getUserModel(id)
+    if (m) models.push({ id: m.id, name: m.name, size: [...m.size], mime: m.blob.type || "model/gltf-binary", data: await blobToBase64(m.blob) })
+  }
   return buildMobleFile({
     name: project.name,
+    models,
     composition,
     nesting: project.nesting ? safeNestOptions(project.nesting) : undefined,
     calibration,
@@ -100,6 +111,19 @@ export async function openMobleFile(text: string, settings: Settings, saveSettin
   if (!res.ok) return res
   const { file } = res
   const warnings = [...res.warnings]
+
+  // Models 3D de l'usuari: es tornen a crear amb el mateix id (si ja hi són, es fan servir els que hi ha).
+  let badModels = false
+  for (const m of file.models ?? []) {
+    try {
+      const added = await ensureUserModel({ id: m.id, name: m.name, size: m.size, blob: base64ToBlob(m.data, m.mime || "model/gltf-binary"), createdAt: Date.now() })
+      // Si abans no hi era, oblida el «no hi és» de la memòria cau.
+      if (added) forgetModel(m.id)
+    } catch {
+      badModels = true
+    }
+  }
+  if (badModels) warnings.push("Algun model 3D del fitxer està malmès; no es veurà.")
 
   const existing = (await db.projects.toArray()).map((p) => p.name)
   const name = uniqueName(file.project.name.trim() || "Moble", existing)

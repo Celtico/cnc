@@ -3,22 +3,35 @@ import { LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuMoveDiagonal2, LuMoveHori
 import { PanelSection } from "../../components/PanelSection"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
-import { insertModelCopy, MODEL_ASSETS, modelAsset, type Composition, type ModelObject } from "../../core/model"
+import { insertModelCopy, type Composition, type ModelObject } from "../../core/model"
+import { ModelUploadButton, UserModelsList } from "./ModelUpload"
+import { useModelAssets } from "./useModelAssets"
 import { AxisLabel } from "./RefInspector"
 
 /** Propietats d'un model 3D (`Composition.models`): quin model, mides de la caixa i posició (com una peça lliure). */
 export function ModelInspector({ comp, id, onChange }: { comp: Composition; id: string; onChange: (c: Composition) => void }) {
+  const { assets, resolve } = useModelAssets()
   const g = comp.models?.find((m) => m.id === id)
   if (!g) return null
   const update = (patch: Partial<ModelObject>) => onChange({ ...comp, models: (comp.models ?? []).map((m) => (m.id === id ? { ...m, ...patch } : m)) })
-  const asset = modelAsset(g.src)
+  const asset = resolve(g.src)
   const original = !!asset && asset.size[0] === g.w && asset.size[1] === g.h && asset.size[2] === g.d
   return (
     <Stack gap={0}>
       <PanelSection id="model-asset" title="Model" icon={LuSprout} badge={asset?.name}>
         <FormRow label="Model" help="Es canvia el model; la caixa (mides i posició) es manté.">
-          <ChoiceChips label="Model" value={g.src} options={MODEL_ASSETS.map((a) => ({ id: a.id, label: a.name }))} onChange={(src) => update({ src })} />
+          <ChoiceChips label="Model" value={g.src} options={assets.map((a) => ({ id: a.id, label: a.name }))} onChange={(src) => update({ src })} />
         </FormRow>
+        {!asset && (
+          <Text fontSize="xs" color="fg.error">
+            Aquest model ja no hi és (s'ha esborrat): no es veu res. Tria'n un altre o puja'l de nou.
+          </Text>
+        )}
+        {/* Un de teu: substitueix el model i agafa la seva mida real (la posició es manté). */}
+        <FormRow label="El teu">
+          <ModelUploadButton onUploaded={(m) => update({ src: m.id, w: m.size[0], h: m.size[1], d: m.size[2] })} />
+        </FormRow>
+        <UserModelsList />
       </PanelSection>
       <PanelSection id="model-size" title="Mides" icon={LuMoveDiagonal} badge={`${Math.round(g.w)} × ${Math.round(g.h)}`}>
         <NumRow label="Ample" value={g.w} min={1} max={20000} step={10} onChange={(w) => w > 0 && update({ w })} />

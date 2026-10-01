@@ -25,6 +25,8 @@ import { ORIENT_ICON } from "./partOrient"
 import { zoneLabel } from "./zoneLabel"
 import { SectionLabel } from "../../components/SectionLabel"
 import { ChoiceChips } from "../../components/FormRow"
+import { ModelUploadButton } from "./ModelUpload"
+import { useModelAssets, type ModelChoice } from "./useModelAssets"
 
 type DragKind = "module" | "ref" | "part"
 
@@ -194,6 +196,14 @@ export function StructureTree({
     if (selection.kind === "part" && selection.id === id) onSelect({ kind: "moble" })
   }
   const models = comp.models ?? []
+  const { assets: modelAssets, resolve: resolveModel } = useModelAssets()
+  const addModel = (asset: ModelChoice, label: string) => {
+    const [w, , d] = asset.size
+    // El centre de la petjada on surten les peces noves, a terra.
+    const g = newModelObject(newId("g"), { ...asset, url: "" }, { x: Math.round(partCenter.x - w / 2), y: 0, z: Math.round(partCenter.z - d / 2) }, label)
+    onChange({ ...comp, models: [...(comp.models ?? []), g] })
+    onSelect({ kind: "model", id: g.id })
+  }
   const removeModel = (id: string) => {
     onChange({ ...comp, models: models.filter((g) => g.id !== id) })
     if (selection.kind === "model" && selection.id === id) onSelect({ kind: "moble" })
@@ -242,18 +252,22 @@ export function StructureTree({
           onClose={() => setAddingModel(false)}
           onSave={(n) => {
             setAddingModel(false)
-            const asset = MODEL_ASSETS.find((a) => a.id === modelSrc) ?? MODEL_ASSETS[0]!
+            const asset = resolveModel(modelSrc) ?? resolveModel(MODEL_ASSETS[0]!.id)!
             // Sense tocar el nom per defecte, agafa el del model triat.
-            const label = n === MODEL_ASSETS[0]!.name ? asset.name : n
-            const [w, , d] = asset.size
-            // El centre de la petjada on surten les peces noves, a terra.
-            const g = newModelObject(newId("g"), asset, { x: Math.round(partCenter.x - w / 2), y: 0, z: Math.round(partCenter.z - d / 2) }, label)
-            onChange({ ...comp, models: [...models, g] })
-            onSelect({ kind: "model", id: g.id })
+            addModel(asset, n === MODEL_ASSETS[0]!.name ? asset.name : n)
           }}
         >
           {() => (
-            <ChoiceChips label="Model" value={modelSrc} options={MODEL_ASSETS.map((a) => ({ id: a.id, label: a.name }))} onChange={setModelSrc} />
+            <Stack gap={3}>
+              <ChoiceChips label="Model" value={modelSrc} options={modelAssets.map((a) => ({ id: a.id, label: a.name }))} onChange={setModelSrc} />
+              {/* Un de teu: s'afegeix de seguida amb el seu nom i es tanca la finestra. */}
+              <ModelUploadButton
+                onUploaded={(m) => {
+                  setAddingModel(false)
+                  addModel(m, m.name)
+                }}
+              />
+            </Stack>
           )}
         </NameDialog>
       )}
