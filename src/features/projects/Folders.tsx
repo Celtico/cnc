@@ -102,7 +102,9 @@ export function FolderedGrid<T>({
     )
   }
   return (
-    <Stack gap={3}>
+    // Sense espai entre la barra i els grups (una llista seguida, com la Configuració d'iOS); les targetes soltes
+    // porten el seu espai a dalt.
+    <Stack gap={0}>
       {(toolbar || selection) && (
         // Barra d'eines en una franja suau; dins dels acordions de les galeries, a sang (`.gallery-toolbar`, layout.css).
         <HStack className="gallery-toolbar" justify="flex-start" gap={1} wrap="wrap" bg="bg.muted" rounded="md" px={1} py={1}>
@@ -201,7 +203,7 @@ export function FolderedGrid<T>({
       )}
       {loose.length > 0 && (
         // Dins d'una secció de galeria (sense marge), el marge de la secció (`--gallery-px`, layout.css).
-        <SimpleGrid columns={GALLERY_COLS} gap={3} px="var(--gallery-px, 0)" pt={toolbar || selection ? 0 : 3} pb="var(--gallery-px, 0)">
+        <SimpleGrid columns={GALLERY_COLS} gap={3} px="var(--gallery-px, 0)" pt={3} pb="var(--gallery-px, 0)">
           {loose.map(cell)}
         </SimpleGrid>
       )}
