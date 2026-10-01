@@ -45,6 +45,15 @@
   border-radius: 0;
   border-bottom: 1px solid var(--chakra-colors-border);
 }
+/* Acordions de dins (grups de Projectes, categories del Catàleg) també a sang: les línies van de vora a vora i la
+   capçalera i el contingut porten el marge de l'acordió de fora (així queden alineats amb la resta). */
+:root .gallery-accordion .inner-accordion {
+  margin-inline: calc(-1 * var(--accordion-padding-x));
+}
+:root .gallery-accordion .inner-accordion > [data-part="item"] > .inner-head,
+:root .gallery-accordion .inner-accordion > [data-part="item"] > [data-part="item-content"] {
+  padding-inline: var(--accordion-padding-x);
+}
 
 /*
  * Mides d'iOS a les pantalles tàctils (iPhone, iPad), segons la guia d'Apple (1 px CSS = 1 pt):

@@ -29,10 +29,10 @@ export function CatalogSection({ value, description, categories, open, onOpenCha
             <Text fontSize="xs" color="fg.muted">
               {description}
             </Text>
-            <Accordion.Root multiple collapsible lazyMount variant="plain" value={searching ? shown.map((c) => c.id) : open} onValueChange={(e) => !searching && onOpenChange(e.value)}>
+            <Accordion.Root className="inner-accordion" multiple collapsible lazyMount variant="plain" value={searching ? shown.map((c) => c.id) : open} onValueChange={(e) => !searching && onOpenChange(e.value)}>
               {shown.map((c) => (
                 <Accordion.Item key={c.id} value={c.id}>
-                  <Accordion.ItemTrigger cursor="pointer" borderBottomWidth="1px" rounded="none" px={0}>
+                  <Accordion.ItemTrigger className="inner-head" cursor="pointer" borderBottomWidth="1px" rounded="none" px={0}>
                     <FoldTitle title={c.label} count={c.count} />
                     <Accordion.ItemIndicator />
                   </Accordion.ItemTrigger>
