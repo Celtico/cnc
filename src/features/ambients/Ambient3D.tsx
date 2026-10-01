@@ -1,7 +1,7 @@
 import { OrbitControls } from "@react-three/drei"
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
-import { BoxGeometry, Group, Mesh, MeshStandardMaterial, NeutralToneMapping, PerspectiveCamera, Plane, PlaneGeometry, Vector3, type Material, type Object3D } from "three"
+import { BoxGeometry, Color, Group, Mesh, MeshStandardMaterial, NeutralToneMapping, PerspectiveCamera, Plane, PlaneGeometry, Vector3, type Material, type Object3D } from "three"
 import { BoxFrame } from "../../components/viewer/BoxFrame"
 import { MoveGizmo } from "../../components/viewer/MoveGizmo"
 import type { Axis } from "../../components/viewer/pixelScale"
@@ -75,7 +75,9 @@ export function Ambient3D({
       style={{ touchAction: "none" }}
       onPointerMissed={(e) => e.button === 0 && onSelect?.(null)}
     >
-      <color attach="background" args={["#e9e6e1"]} />
+      {/* Fons del visor gris fosc (com Blender o Cinema 4D: el que es mira destaca). El render per CPU fa servir
+          el d'abans (`renderBackground`), així no canvia. */}
+      <color attach="background" args={[VIEW_BG]} />
       <StudioEnvironment intensity={0.55} />
       <hemisphereLight args={["#ffffff", "#b9ad9c", 0.35]} />
       <directionalLight position={[cx + 4, 7, cz + 3]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-span} shadow-camera-right={span} shadow-camera-top={span} shadow-camera-bottom={-span} shadow-bias={-0.0004} />
@@ -86,6 +88,10 @@ export function Ambient3D({
     </Canvas>
   )
 }
+
+/** Fons del visor dels ambients i el del render (el clar de sempre). */
+const VIEW_BG = "#2b2b2d"
+const RENDER_BG = "#e9e6e1"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 
@@ -296,6 +302,7 @@ function Room({
   const scene = useThree((s) => s.scene)
   useEffect(() => {
     scene.userData.daylight = true
+    scene.userData.renderBackground = new Color(RENDER_BG)
   }, [scene])
 
   // Com una casa de nines: les parets entre la càmera i l'habitació es fan gairebé transparents.

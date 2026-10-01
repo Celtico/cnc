@@ -201,7 +201,8 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
     ? { ortho: false, matrix: Array.from(camera.matrixWorld.elements), scale: Math.tan(((persp.fov * Math.PI) / 180) / 2) / persp.zoom, aspect }
     : { ortho: true, matrix: Array.from(camera.matrixWorld.elements), scale: (ortho.top - ortho.bottom) / 2 / ortho.zoom, aspect }
   const sun = new Vector3(2.5, 4, 3).normalize()
-  const bg = (scene.background as { r?: number; g?: number; b?: number } | null) ?? null
+  // El fons del render: el propi de l'escena si en té (els ambients: el visor és fosc però el render manté el clar).
+  const bg = ((scene.userData.renderBackground ?? scene.background) as { r?: number; g?: number; b?: number } | null) ?? null
   return {
     positions: new Float32Array(pos),
     uvs: new Float32Array(uvs),
