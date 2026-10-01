@@ -20,7 +20,6 @@ import {
   Input,
   NativeSelect,
   Portal,
-  SegmentGroup,
   Stack,
   Switch,
   Text,
@@ -254,17 +253,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
           <Pane id="display" title="Visualització" icon={LuGrid3X3} desc="Unitat de les mides a la pantalla." onReset={() => setReset({ key: "display", label: "Visualització" })}>
             <SettingsGroup icon={<LuRuler />} title="Mides" summary={draft.display.unit === "cm" ? "En centímetres" : "En mil·límetres"}>
             <FormRow label="Unitat" help="Internament tot es guarda en mm; els fitxers per al taller sempre van en mm.">
-              <SegmentGroup.Root size="sm" value={draft.display.unit} onValueChange={(e) => (e.value === "mm" || e.value === "cm") && set("display", { unit: e.value })}>
-                <SegmentGroup.Indicator />
-                <SegmentGroup.Item value="mm">
-                  <SegmentGroup.ItemText>mm</SegmentGroup.ItemText>
-                  <SegmentGroup.ItemHiddenInput />
-                </SegmentGroup.Item>
-                <SegmentGroup.Item value="cm">
-                  <SegmentGroup.ItemText>cm</SegmentGroup.ItemText>
-                  <SegmentGroup.ItemHiddenInput />
-                </SegmentGroup.Item>
-              </SegmentGroup.Root>
+              <ChoiceChips label="Unitat" value={draft.display.unit} onChange={(unit) => set("display", { unit })} options={[{ id: "mm", label: "mm" }, { id: "cm", label: "cm" }]} />
             </FormRow>
             </SettingsGroup>
           </Pane>
@@ -1167,15 +1156,7 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
     <FoldGrid>
       <SettingsGroup icon={<LuSparkles />} title="Qualitat" summary={QUALITY_LABELS[quality]}>
       <FormRow label="Qualitat" help="Ràpida per treballar (al visor, modes «Per peça» i «Textura»); Presentació per ensenyar-lo. També es canvia a «Opcions de vista» del visor.">
-        <SegmentGroup.Root size="sm" value={quality} onValueChange={(e) => e.value && e.value in QUALITY_LABELS && setQuality(e.value as RenderQuality)}>
-          <SegmentGroup.Indicator />
-          {(Object.keys(QUALITY_LABELS) as RenderQuality[]).map((k) => (
-            <SegmentGroup.Item key={k} value={k}>
-              <SegmentGroup.ItemText>{QUALITY_LABELS[k]}</SegmentGroup.ItemText>
-              <SegmentGroup.ItemHiddenInput />
-            </SegmentGroup.Item>
-          ))}
-        </SegmentGroup.Root>
+        <ChoiceChips label="Qualitat" value={quality} onChange={setQuality} options={(Object.keys(QUALITY_LABELS) as RenderQuality[]).map((k) => ({ id: k, label: QUALITY_LABELS[k] }))} />
       </FormRow>
       </SettingsGroup>
 
