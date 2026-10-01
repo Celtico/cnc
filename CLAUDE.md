@@ -853,9 +853,10 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   (`theme/truncatedTitles.ts`; per a altres textos, afegeix `data-truncate`).
 - Camps numèrics de mides amb `NumberInput` i sufix "mm". En columnes estretes (< 130 px)
   s'amaga el sufix (no els botons + −) automàticament (container query a `NumberField`).
-- Un selector (`select` o `SegmentGroup`) no pot desbordar el seu contenidor: si les
-  opcions no hi caben (popovers, inspector), fes servir un `NativeSelect`. A l'inspector,
-  cada `SegmentGroup` va sol a la seva fila i a tota l'amplada (mai dos de costat).
+- **Res de desplegables** (per decisió de l'usuari, tot unificat): cada tria entre opcions és un `ChoiceChips`
+  (`components/FormRow`, botons segmentats que salten de línia, no desborden mai): vistes, formes, tipus, mòduls,
+  gruixos, grups, resolucions… Les explicacions que portaven les opcions van a l'ajuda (`help`) de la fila. Els
+  materials, amb el `MaterialSelect` (calaix). Cap `NativeSelect` fora de `components/ui`.
 
 ## Desar
 - **Tot el que es desa sol fa servir `useDebouncedSave`** (`features/useDebouncedSave.ts`): Editor, Foto, Nesting,

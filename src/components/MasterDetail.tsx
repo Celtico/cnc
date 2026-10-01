@@ -1,6 +1,7 @@
-import { Badge, Box, Button, CloseButton, Flex, HStack, IconButton, Input, InputGroup, NativeSelect, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, CloseButton, Flex, HStack, IconButton, Input, InputGroup, Stack, Text } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 import { LuChevronLeft, LuChevronRight, LuPlus, LuSearch } from "react-icons/lu"
+import { ChoiceChips } from "./FormRow"
 
 export interface MasterItem {
   id: string
@@ -71,23 +72,30 @@ export function MasterDetail({
         <InputGroup flex={1} minW={0} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => onQuery("")} /> : undefined}>
           <Input size="sm" value={query} onChange={(e) => onQuery(e.target.value)} placeholder="Cercar…" aria-label="Cercar" />
         </InputGroup>
-        {filters && (
-          <NativeSelect.Root size="sm" w="124px" flexShrink={0}>
-            <NativeSelect.Field aria-label="Categoria" value={filter} onChange={(e) => onFilter?.(e.target.value)}>
-              {filters.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.label} ({f.count})
-                </option>
-              ))}
-            </NativeSelect.Field>
-            <NativeSelect.Indicator />
-          </NativeSelect.Root>
-        )}
         {/* Només la icona: el cercador té més lloc (el text surt en passar-hi per sobre). */}
         <IconButton size="sm" variant="outline" flexShrink={0} onClick={onAdd} aria-label={addLabel} title={addLabel}>
           <LuPlus />
         </IconButton>
       </HStack>
+      {/* Categories en pastilles a la seva fila (salten de línia si no hi caben). */}
+      {filters && (
+        <ChoiceChips
+          label="Categoria"
+          options={filters.map((f) => ({
+            id: f.id,
+            label: (
+              <>
+                {f.label}
+                <Text as="span" color="fg.subtle" ms={1}>
+                  {f.count}
+                </Text>
+              </>
+            ),
+          }))}
+          value={filter ?? filters[0]?.id ?? ""}
+          onChange={(v) => onFilter?.(v)}
+        />
+      )}
       </Stack>
       {groups.map((g) =>
         g.items.length ? (

@@ -1,9 +1,9 @@
-import { Box, Button, CloseButton, Dialog, HStack, NativeSelect, Portal, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, CloseButton, Dialog, HStack, Portal, Stack, Text } from "@chakra-ui/react"
 import { LOW_MEMORY } from "../deviceLimits"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import type { IconType } from "react-icons"
 import { LuCamera, LuDownload, LuGauge, LuHouse, LuImage, LuImageUp, LuPause, LuPlay, LuRotateCcw, LuSun, LuX } from "react-icons/lu"
-import { FormRow } from "../../FormRow"
+import { ChoiceChips, FormRow } from "../../FormRow"
 import { PanelSection } from "../../PanelSection"
 import type { Camera, Scene } from "three"
 import { parseHdr } from "./hdr"
@@ -422,44 +422,28 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
 
               <Stack w={{ base: "full", md: "300px" }} flexShrink={0} gap={1} overflowY={{ base: "visible", md: "auto" }} pr={1} pb={{ base: 4, md: 0 }}>
                 <Sec id="quality" title="Qualitat" icon={LuGauge} hint="Els canvis tornen a començar el render." badge={`${RESOLUTIONS[res].label} · ${opts.bounces} rebots`}>
-                  <FormRow label="Resolució" maxW="280px">
-                    <NativeSelect.Root size="sm">
-                      <NativeSelect.Field aria-label="Resolució" value={res} onChange={(e) => setRes(e.currentTarget.value as Resolution)}>
-                        {(Object.keys(RESOLUTIONS) as Resolution[]).map((k) => (
-                          <option key={k} value={k}>
-                            {RESOLUTIONS[k].label} (fins a {RESOLUTIONS[k].max} px)
-                          </option>
-                        ))}
-                      </NativeSelect.Field>
-                      <NativeSelect.Indicator />
-                    </NativeSelect.Root>
+                  <FormRow label="Resolució" help={`Amplada màxima: ${(Object.keys(RESOLUTIONS) as Resolution[]).map((k) => `${RESOLUTIONS[k].label.toLowerCase()} ${RESOLUTIONS[k].max} px`).join(" · ")}.`}>
+                    <ChoiceChips label="Resolució" options={(Object.keys(RESOLUTIONS) as Resolution[]).map((k) => ({ id: k, label: RESOLUTIONS[k].label }))} value={res} onChange={setRes} />
                   </FormRow>
                   <Range label="Rebots de llum" value={opts.bounces} min={2} max={12} step={1} format={(v) => String(v)} onChange={(v) => set({ bounces: v })} />
-                  <FormRow label="Aturar-se a" maxW="280px">
-                    <NativeSelect.Root size="sm">
-                      <NativeSelect.Field aria-label="Aturar-se a" value={String(limit)} onChange={(e) => setLimit(Number(e.currentTarget.value))}>
-                        <option value="0">Sense límit</option>
-                        <option value="64">64 passades (prova)</option>
-                        <option value="256">256 passades</option>
-                        <option value="1024">1024 passades (final)</option>
-                      </NativeSelect.Field>
-                      <NativeSelect.Indicator />
-                    </NativeSelect.Root>
+                  <FormRow label="Aturar-se a" help="Passades: 64 per provar, 1024 per a la imatge final.">
+                    <ChoiceChips
+                      label="Aturar-se a"
+                      options={[
+                        { id: "0", label: "Sense límit" },
+                        { id: "64", label: "64" },
+                        { id: "256", label: "256" },
+                        { id: "1024", label: "1024" },
+                      ]}
+                      value={String(limit)}
+                      onChange={(v) => setLimit(Number(v))}
+                    />
                   </FormRow>
                 </Sec>
 
                 <Sec id="camera" title="Càmera" icon={LuCamera} hint="Els canvis tornen a començar el render." badge={format === "view" ? "Visor" : format}>
-                  <FormRow label="Format" maxW="280px">
-                    <NativeSelect.Root size="sm">
-                      <NativeSelect.Field aria-label="Format" value={format} onChange={(e) => setFormat(e.currentTarget.value as Format)}>
-                        {(Object.keys(FORMATS) as Format[]).map((k) => (
-                          <option key={k} value={k}>
-                            {FORMATS[k].label}
-                          </option>
-                        ))}
-                      </NativeSelect.Field>
-                      <NativeSelect.Indicator />
-                    </NativeSelect.Root>
+                  <FormRow label="Format" help="3:2 foto · 4:5 revista (vertical) · 16:9 web.">
+                    <ChoiceChips label="Format" options={(Object.keys(FORMATS) as Format[]).map((k) => ({ id: k, label: k === "view" ? "Visor" : k }))} value={format} onChange={setFormat} />
                   </FormRow>
                   <Range label="Desenfocament del fons" value={opts.aperture ?? 0} min={0} max={20} step={1} format={(v) => (v ? `f/${(35 / (2 * v)).toFixed(1)}` : "tot enfocat")} onChange={(v) => set({ aperture: v })} />
                   <Text fontSize="2xs" color="fg.subtle">
@@ -468,16 +452,18 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                 </Sec>
 
                 <Sec id="scene" title="Escena" icon={LuHouse} hint="Els canvis tornen a començar el render." badge={room === "room" ? "Habitació" : room === "floor" ? "Terra" : "Cap"}>
-                  <NativeSelect.Root size="sm">
-                    <NativeSelect.Field value={room} onChange={(e) => setRoom(e.currentTarget.value as RenderRoom)}>
-                      <option value="room">Habitació (terra i paret)</option>
-                      <option value="floor">Només el terra</option>
-                      <option value="none">Cap (només el moble)</option>
-                    </NativeSelect.Field>
-                    <NativeSelect.Indicator />
-                  </NativeSelect.Root>
+                  <ChoiceChips<RenderRoom>
+                    label="Escena"
+                    options={[
+                      { id: "room", label: "Habitació" },
+                      { id: "floor", label: "Només terra" },
+                      { id: "none", label: "Cap" },
+                    ]}
+                    value={room}
+                    onChange={setRoom}
+                  />
                   <Text fontSize="2xs" color="fg.subtle">
-                    L'habitació és la del mode Presentació. Per a catàlegs: «Cap» amb fons blanc o transparent.
+                    L'habitació (terra i paret) és la del mode Presentació; «Cap» deixa només el moble. Per a catàlegs: «Cap» amb fons blanc o transparent.
                   </Text>
                 </Sec>
 
@@ -543,15 +529,17 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                   <Range label="Exposició" value={look.exposure} min={-2} max={2} step={0.1} format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} EV`} onChange={(v) => setLook({ exposure: v })} />
                   <Range label="Contrast" value={look.contrast} min={0.6} max={1.6} step={0.05} format={x} onChange={(v) => setLook({ contrast: v })} />
                   <Range label="Saturació" value={look.saturation} min={0} max={2} step={0.05} format={x} onChange={(v) => setLook({ saturation: v })} />
-                  <FormRow label="Fons" maxW="280px">
-                    <NativeSelect.Root size="sm">
-                      <NativeSelect.Field aria-label="Fons" value={look.background} onChange={(e) => setLook({ background: e.currentTarget.value as Background })}>
-                        <option value="scene">Estudi</option>
-                        <option value="white">Blanc</option>
-                        <option value="transparent">Transparent (PNG amb alfa)</option>
-                      </NativeSelect.Field>
-                      <NativeSelect.Indicator />
-                    </NativeSelect.Root>
+                  <FormRow label="Fons" help="Transparent: PNG amb alfa.">
+                    <ChoiceChips<Background>
+                      label="Fons"
+                      options={[
+                        { id: "scene", label: "Estudi" },
+                        { id: "white", label: "Blanc" },
+                        { id: "transparent", label: "Transparent" },
+                      ]}
+                      value={look.background}
+                      onChange={(v) => setLook({ background: v })}
+                    />
                   </FormRow>
                 </Sec>
 

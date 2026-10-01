@@ -1,6 +1,6 @@
-import { Button, HStack, Menu, NativeSelect, Portal, SegmentGroup, Slider, Stack, Switch } from "@chakra-ui/react"
+import { Button, HStack, Menu, Portal, SegmentGroup, Slider, Stack, Switch } from "@chakra-ui/react"
 import { LuChevronDown, LuDoorOpen, LuImageDown } from "react-icons/lu"
-import { FormRow } from "../../components/FormRow"
+import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { VIEW_LABELS, type ViewName } from "../../components/viewer/viewNames"
 
 const VIEWS: ViewName[] = ["front", "back", "left", "right", "top", "3d"]
@@ -63,17 +63,8 @@ export function ViewerControls({
 }) {
   return (
     <Stack gap={4}>
-      <FormRow label="Vista" help="Les vistes de davant, costats i dalt són ortogràfiques i porten les cotes generals." maxW="280px">
-        <NativeSelect.Root size="sm">
-          <NativeSelect.Field aria-label="Vista" value={state.view} onChange={(e) => onChange({ view: e.target.value as ViewName })}>
-            {VIEWS.map((v) => (
-              <option key={v} value={v}>
-                {VIEW_LABELS[v]}
-              </option>
-            ))}
-          </NativeSelect.Field>
-          <NativeSelect.Indicator />
-        </NativeSelect.Root>
+      <FormRow label="Vista" help="Les vistes de davant, costats i dalt són ortogràfiques i porten les cotes generals.">
+        <ChoiceChips label="Vista" options={VIEWS.map((v) => ({ id: v, label: VIEW_LABELS[v] }))} value={state.view} onChange={(view) => onChange({ view })} />
       </FormRow>
 
       <FormRow

@@ -1,9 +1,9 @@
-import { Box, Button, HStack, IconButton, NativeSelect, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
 import { LuChevronDown, LuChevronRight, LuPanelBottom, LuPanelTop, LuPlus, LuSquareDashed, LuTrash2 } from "react-icons/lu"
 import { CUTOUT_PRESETS, newId, type Composition, type Run, type WorktopCutout, type WorktopRun } from "../../core/model"
 import { NumRow } from "../editor/ParamsForm"
-import { FormRow } from "../../components/FormRow"
+import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { MaterialSelect } from "../settings/SettingsScreen"
 import { useSettings } from "../settings/SettingsContext"
 
@@ -40,17 +40,8 @@ export function RunsForm({ comp, onChange }: { comp: Composition; onChange: (c: 
   }
 
   const moduleSelect = (label: string, value: string, onPick: (id: string) => void) => (
-    <FormRow label={label} maxW="280px">
-      <NativeSelect.Root size="sm">
-        <NativeSelect.Field aria-label={label} value={value} onChange={(e) => onPick(e.target.value)}>
-          {row.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}
-            </option>
-          ))}
-        </NativeSelect.Field>
-        <NativeSelect.Indicator />
-      </NativeSelect.Root>
+    <FormRow label={label}>
+      <ChoiceChips label={label} options={row.map((m) => ({ id: m.id, label: m.name }))} value={value} onChange={onPick} />
     </FormRow>
   )
 
@@ -128,31 +119,21 @@ function WorktopFields({ run, comp, onChange }: { run: WorktopRun; comp: Composi
           removeLabel="Treure el forat"
         >
           <Stack gap={2}>
-            <FormRow label="Tipus" maxW="280px">
-              <NativeSelect.Root size="sm">
-                <NativeSelect.Field aria-label="Tipus" value={c.kind} onChange={(e) => setCut(c.id, { kind: e.target.value as WorktopCutout["kind"] })}>
-                  {(Object.keys(CUTOUT_PRESETS) as WorktopCutout["kind"][]).map((k) => (
-                    <option key={k} value={k}>
-                      {CUTOUT_PRESETS[k].label}
-                    </option>
-                  ))}
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
+            <FormRow label="Tipus">
+              <ChoiceChips
+                label="Tipus"
+                options={(Object.keys(CUTOUT_PRESETS) as WorktopCutout["kind"][]).map((k) => ({ id: k, label: CUTOUT_PRESETS[k].label }))}
+                value={c.kind}
+                onChange={(kind) => setCut(c.id, { kind })}
+              />
             </FormRow>
-            <FormRow label="Sobre" maxW="280px">
-              <NativeSelect.Root size="sm">
-                <NativeSelect.Field aria-label="Sobre" value={c.module} onChange={(e) => setCut(c.id, { module: e.target.value })}>
-                  {comp.modules
-                    .filter((m) => m.carcass.base.kind !== "wall")
-                    .map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
+            <FormRow label="Sobre">
+              <ChoiceChips
+                label="Sobre"
+                options={comp.modules.filter((m) => m.carcass.base.kind !== "wall").map((m) => ({ id: m.id, label: m.name }))}
+                value={c.module}
+                onChange={(module) => setCut(c.id, { module })}
+              />
             </FormRow>
             <NumRow label="Ample" value={c.w} min={50} max={2000} step={5} onChange={(w) => setCut(c.id, { w })} />
             <NumRow label="Fons" value={c.d} min={50} max={1000} step={5} onChange={(d) => setCut(c.id, { d })} />

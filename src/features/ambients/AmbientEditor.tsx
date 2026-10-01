@@ -1,4 +1,4 @@
-import { Badge, Box, Button, CloseButton, Dialog, Drawer, Editable, Flex, HStack, IconButton, Menu, NativeSelect, Portal, SegmentGroup, SimpleGrid, Slider, Stack, Switch, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, CloseButton, Dialog, Drawer, Editable, Flex, HStack, IconButton, Menu, Portal, SegmentGroup, SimpleGrid, Slider, Stack, Switch, Text } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   LuBox,
@@ -84,7 +84,7 @@ import { ObjectsGallery } from "../objects/ObjectsGallery"
 import { isObject } from "../objects/isObject"
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { NumRow } from "../editor/ParamsForm"
-import { FormRow } from "../../components/FormRow"
+import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { PanelSection } from "../../components/PanelSection"
 import { Workspace } from "../../components/Workspace"
 import { ViewOptions, ViewTile } from "../../components/ViewOptions"
@@ -840,17 +840,8 @@ function ItemInspector({
         )
       ) : (
         <PanelSection id="amb-block" title="Bloc" icon={LuSofa}>
-          <FormRow label="Forma" maxW="280px">
-            <NativeSelect.Root size="sm">
-              <NativeSelect.Field aria-label="Forma" value={item.shape} onChange={(e) => onPatch({ shape: e.target.value as BlockItem["shape"] })}>
-                {BlockShapeSchema.options.map((s) => (
-                  <option key={s} value={s}>
-                    {SHAPE_LABEL[s]}
-                  </option>
-                ))}
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
+          <FormRow label="Forma">
+            <ChoiceChips label="Forma" options={BlockShapeSchema.options.map((s) => ({ id: s, label: SHAPE_LABEL[s] }))} value={item.shape} onChange={(shape) => onPatch({ shape })} />
           </FormRow>
           <NumRow label="Ample" value={item.w} min={10} step={10} onChange={(w) => w >= 10 && onPatch({ w })} />
           <NumRow label="Alt" value={item.h} min={5} step={10} onChange={(h) => h >= 5 && onPatch({ h })} />
@@ -957,26 +948,26 @@ function WallInspector({ wall, materials, onPatch, onDelete }: { wall: Wall; mat
           const set = (patch: Partial<Opening>) => onPatch({ openings: wall.openings!.map((q, j) => (j === i ? clampOpening(wall, { ...q, ...patch }) : q)) })
           return (
             <Stack key={i} gap={2} borderWidth="1px" rounded="md" p={2}>
-              <HStack>
-                <NativeSelect.Root size="sm" flex={1}>
-                  <NativeSelect.Field
-                    value={o.kind}
-                    aria-label="Tipus d'obertura"
-                    onChange={(e) => {
-                      const kind = e.currentTarget.value as Opening["kind"]
-                      set({ kind, ...OPENING_DEFAULTS[kind] })
-                    }}
-                  >
-                    <option value="window">Finestra</option>
-                    <option value="door">Porta</option>
-                    <option value="glazing">Vidriera (de terra a sostre)</option>
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
+              <HStack align="flex-start" justify="space-between">
+                <ChoiceChips<Opening["kind"]>
+                  label="Tipus d'obertura"
+                  options={[
+                    { id: "window", label: "Finestra" },
+                    { id: "door", label: "Porta" },
+                    { id: "glazing", label: "Vidriera" },
+                  ]}
+                  value={o.kind}
+                  onChange={(kind) => set({ kind, ...OPENING_DEFAULTS[kind] })}
+                />
                 <IconButton aria-label="Treure l'obertura" size="xs" variant="ghost" colorPalette="red" onClick={() => onPatch({ openings: wall.openings!.filter((_, j) => j !== i) })}>
                   <LuTrash2 />
                 </IconButton>
               </HStack>
+              {o.kind === "glazing" && (
+                <Text fontSize="xs" color="fg.muted">
+                  De terra a sostre.
+                </Text>
+              )}
               <NumRow label="Centre (des de l'inici)" value={Math.round(o.at)} step={10} onChange={(at) => Number.isFinite(at) && set({ at })} />
               <NumRow label="Ample" value={o.w} min={200} step={10} onChange={(w) => w >= 200 && set({ w })} />
               <NumRow label="Alt" value={o.h} min={200} step={10} onChange={(h) => h >= 200 && set({ h })} />

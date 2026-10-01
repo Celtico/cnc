@@ -1,4 +1,4 @@
-import { Badge, Button, HStack, IconButton, Menu, NativeSelect, Portal, SegmentGroup, Stack, Switch, Text } from "@chakra-ui/react"
+import { Badge, Button, HStack, IconButton, Menu, Portal, SegmentGroup, Stack, Switch, Text } from "@chakra-ui/react"
 import { segGroup, segItem } from "../../components/segmented"
 import { useState } from "react"
 import {
@@ -40,7 +40,7 @@ import {
 } from "../../core/model"
 import { JOINT_LABEL, type PartJoint } from "../../core/build/freeParts"
 import { NumRow } from "../editor/ParamsForm"
-import { FormRow } from "../../components/FormRow"
+import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { MaterialSelect } from "../settings/SettingsScreen"
 import { useSettings } from "../settings/SettingsContext"
 import { ProfileEditor } from "./ProfileEditor"
@@ -126,47 +126,28 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
           </FormRow>
         )}
         {!partsOnlyKind(compositionKind(comp)) && comp.modules.length > 0 && (
-          <FormRow label="Enganxada a" help="Enganxada a un mòdul, el segueix quan es mou (el taulell de l'illa)." maxW="280px">
-            <NativeSelect.Root size="sm">
-              <NativeSelect.Field
-                aria-label="Enganxada a"
-                value={p.module ?? ""}
-                onChange={(e) => {
-                  // Es queda on és: les coordenades passen a ser relatives al mòdul nou.
-                  const from = partOffset(comp, p)
-                  const next = { ...p, module: e.target.value || undefined }
-                  const to = partOffset(comp, next)
-                  update({ module: next.module, x: p.x + from[0] - to[0], y: p.y + from[1] - to[1], z: p.z + from[2] - to[2] })
-                }}
-              >
-                <option value="">Res (lliure al moble)</option>
-                {comp.modules.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    Mòdul «{m.name}»
-                  </option>
-                ))}
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
+          <FormRow label="Enganxada a" help="«Res»: lliure al moble. Enganxada a un mòdul, el segueix quan es mou (el taulell de l'illa).">
+            <ChoiceChips
+              label="Enganxada a"
+              options={[{ id: "", label: "Res" }, ...comp.modules.map((m) => ({ id: m.id, label: m.name }))]}
+              value={p.module ?? ""}
+              onChange={(v) => {
+                // Es queda on és: les coordenades passen a ser relatives al mòdul nou.
+                const from = partOffset(comp, p)
+                const next = { ...p, module: v || undefined }
+                const to = partOffset(comp, next)
+                update({ module: next.module, x: p.x + from[0] - to[0], y: p.y + from[1] - to[1], z: p.z + from[2] - to[2] })
+              }}
+            />
           </FormRow>
         )}
-        <FormRow label="Grup" maxW="280px">
-          <NativeSelect.Root size="sm">
-            <NativeSelect.Field
-              aria-label="Grup"
-              value={p.group ?? ""}
-              onChange={(e) => update({ group: e.target.value === NEW_GROUP ? newGroupName(comp) : e.target.value || undefined })}
-            >
-              <option value="">Sense grup</option>
-              {partGroups(comp.parts ?? []).map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-              <option value={NEW_GROUP}>+ Grup nou</option>
-            </NativeSelect.Field>
-            <NativeSelect.Indicator />
-          </NativeSelect.Root>
+        <FormRow label="Grup">
+          <ChoiceChips
+            label="Grup"
+            options={[{ id: "", label: "Sense grup" }, ...partGroups(comp.parts ?? []).map((g) => ({ id: g, label: g })), { id: NEW_GROUP, label: "+ Grup nou" }]}
+            value={p.group ?? ""}
+            onChange={(v) => update({ group: v === NEW_GROUP ? newGroupName(comp) : v || undefined })}
+          />
         </FormRow>
         {!cutter && (
           <FormRow label="CNC" help={p.nest === false ? `No és de CNC (${p.material}): es veu al 3D però no va al nesting ni als fitxers del taller. Surt a Peces, a «Elements sense nesting». Sense encaixos.` : undefined}>
@@ -224,18 +205,13 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
             const isT = a === ax.n
             if (isT && cnc && mat)
               return (
-                <FormRow key={label} label={label} help="Gruix del tauler" maxW="180px">
-                  <NativeSelect.Root size="sm">
-                    <NativeSelect.Field aria-label={label} value={String(p.thickness)} onChange={(e) => update({ thickness: Number(e.target.value) })}>
-                      {!mat.thicknesses.includes(p.thickness) && <option value={p.thickness}>{p.thickness}</option>}
-                      {mat.thicknesses.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </NativeSelect.Field>
-                    <NativeSelect.Indicator />
-                  </NativeSelect.Root>
+                <FormRow key={label} label={label} help="Gruix del tauler">
+                  <ChoiceChips
+                    label={label}
+                    options={(mat.thicknesses.includes(p.thickness) ? mat.thicknesses : [p.thickness, ...mat.thicknesses]).map((t) => ({ id: String(t), label: String(t) }))}
+                    value={String(p.thickness)}
+                    onChange={(v) => update({ thickness: Number(v) })}
+                  />
                 </FormRow>
               )
             return (

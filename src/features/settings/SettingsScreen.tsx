@@ -17,7 +17,6 @@ import {
   Heading,
   IconButton,
   Input,
-  NativeSelect,
   Portal,
   Stack,
   Switch,
@@ -568,14 +567,16 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
             <NumRow label="Amplada" value={r.w} min={1} max={10000} step={10} onChange={(w) => update(i, { w })} />
             <NumRow label="Alçada" value={r.h} min={1} max={10000} step={10} onChange={(h) => update(i, { h })} />
             <NumRow label="Fondària" help={r.d ? undefined : "Buida: només per a la foto (no surt al 3D)."} value={r.d ?? NaN} min={1} max={10000} step={10} onChange={(d) => update(i, { d: Number.isFinite(d) && d > 0 ? d : undefined })} />
-            <FormRow label="Pla" maxW="180px">
-              <NativeSelect.Root size="sm">
-                <NativeSelect.Field aria-label="Pla" value={r.plane} onChange={(e) => update(i, { plane: e.target.value as RefPreset["plane"] })}>
-                  <option value="wall">Paret</option>
-                  <option value="floor">Terra</option>
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
+            <FormRow label="Pla">
+              <ChoiceChips<RefPreset["plane"]>
+                label="Pla"
+                options={[
+                  { id: "wall", label: "Paret" },
+                  { id: "floor", label: "Terra" },
+                ]}
+                value={r.plane}
+                onChange={(plane) => update(i, { plane })}
+              />
             </FormRow>
             <NumRow label="A la paret" help="Distància a la paret si l'objecte no hi toca (corregeix l'escala de la foto)." value={r.wallOffset} min={0} max={5000} step={10} onChange={(wallOffset) => update(i, { wallOffset })} />
           </SettingsGroup>
@@ -769,20 +770,22 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
 
       <FormSection title="Aspecte">
         <FormRow label="Acabat">
-          <NativeSelect.Root size="sm" maxW="280px">
-            <NativeSelect.Field value={finish.kind} onChange={(e) => setKind(e.target.value as Finish["kind"])}>
-              <option value="color">Color llis</option>
-              <option value="lacquer">Lacat</option>
-              <option value="wood">Fusta</option>
-              <option value="image">Foto (textura)</option>
-              <option value="metal">Metall</option>
-              <option value="glass">Vidre</option>
-              <option value="fabric">Teixit</option>
-              <option value="tiles">Rajola</option>
-              <option value="stone">Pedra / marbre</option>
-            </NativeSelect.Field>
-            <NativeSelect.Indicator />
-          </NativeSelect.Root>
+          <ChoiceChips<Finish["kind"]>
+            label="Acabat"
+            options={[
+              { id: "color", label: "Color llis" },
+              { id: "lacquer", label: "Lacat" },
+              { id: "wood", label: "Fusta" },
+              { id: "image", label: "Foto (textura)" },
+              { id: "metal", label: "Metall" },
+              { id: "glass", label: "Vidre" },
+              { id: "fabric", label: "Teixit" },
+              { id: "tiles", label: "Rajola" },
+              { id: "stone", label: "Pedra / marbre" },
+            ]}
+            value={finish.kind}
+            onChange={setKind}
+          />
         </FormRow>
         {finish.kind === "image" ? (
           <FormRow label="Foto" help={`${finish.tileMm} × ${Math.round(finish.tileMm * (finish.aspect ?? 1))} mm de tauler per repetició, ${finish.seamless ? "repetida tal qual" : "en mirall"}.`}>
@@ -822,16 +825,7 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
           </FormRow>
         ) : finish.kind === "wood" ? (
           <FormRow label="Espècie">
-            <NativeSelect.Root size="sm" maxW="280px">
-              <NativeSelect.Field value={finish.species} onChange={(e) => onChange({ finish: { kind: "wood", species: e.target.value as typeof finish.species } })}>
-                {SPECIES.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
+            <ChoiceChips label="Espècie" options={SPECIES.map((s) => ({ id: s.value, label: s.label }))} value={finish.species} onChange={(species) => onChange({ finish: { kind: "wood", species } })} />
           </FormRow>
         ) : (
           <FormRow label="Color">
@@ -885,23 +879,16 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
           </Switch.Root>
         </FormRow>
         <FormRow label="Categoria" help={category.hint}>
-          <NativeSelect.Root size="sm" maxW="280px">
-            <NativeSelect.Field
-              value={category.id}
-              onChange={(e) => {
-                const next = withCategory(m, e.target.value as MaterialCategory)
-                // Replaça tot el material: `forBacks` i `cnc` poden desaparèixer.
-                onChange({ ...next, forBacks: next.forBacks, cnc: next.cnc, category: next.category })
-              }}
-            >
-              {MATERIAL_CATEGORIES.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </NativeSelect.Field>
-            <NativeSelect.Indicator />
-          </NativeSelect.Root>
+          <ChoiceChips<MaterialCategory>
+            label="Categoria"
+            options={MATERIAL_CATEGORIES.map((c) => ({ id: c.id, label: c.label }))}
+            value={category.id}
+            onChange={(id) => {
+              const next = withCategory(m, id)
+              // Replaça tot el material: `forBacks` i `cnc` poden desaparèixer.
+              onChange({ ...next, forBacks: next.forBacks, cnc: next.cnc, category: next.category })
+            }}
+          />
         </FormRow>
       </FormSection>
     </Box>
@@ -913,7 +900,8 @@ function DefaultPick({ label, materials, all, material, thickness, onChange }: {
   const list = all.find((m) => m.name === material)?.thicknesses ?? []
   const options = list.includes(thickness) ? list : [...list, thickness].sort((a, b) => a - b)
   return (
-    <HStack gap={2} maxW="400px">
+    // Les pastilles del gruix van a sota (no hi caben al costat del material).
+    <Stack gap={2} maxW="400px">
       <MaterialSelect
         hideLabel
         label={label}
@@ -925,17 +913,8 @@ function DefaultPick({ label, materials, all, material, thickness, onChange }: {
           onChange(name, t.includes(thickness) || !t.length ? thickness : t.reduce((a, b) => (Math.abs(b - thickness) < Math.abs(a - thickness) ? b : a)))
         }}
       />
-      <NativeSelect.Root size="sm" w="104px" flexShrink={0}>
-        <NativeSelect.Field aria-label={`Gruix ${label.toLowerCase()}`} value={thickness} onChange={(e) => onChange(material, Number(e.target.value))}>
-          {options.map((t) => (
-            <option key={t} value={t}>
-              {t} mm
-            </option>
-          ))}
-        </NativeSelect.Field>
-        <NativeSelect.Indicator />
-      </NativeSelect.Root>
-    </HStack>
+      <ChoiceChips label={`Gruix ${label.toLowerCase()}`} options={options.map((t) => ({ id: String(t), label: `${t} mm` }))} value={String(thickness)} onChange={(v) => onChange(material, Number(v))} />
+    </Stack>
   )
 }
 

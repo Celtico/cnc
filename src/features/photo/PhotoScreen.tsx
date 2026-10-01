@@ -7,7 +7,6 @@ import {
   HStack,
   Heading,
   IconButton,
-  NativeSelect,
   SegmentGroup,
   Slider,
   Stack,
@@ -36,7 +35,7 @@ import {
   LuWrench,
 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
-import { FormRow } from "../../components/FormRow"
+import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { PanelSection } from "../../components/PanelSection"
 import { usePresentationScene } from "../../components/viewer/presentationScene"
 import { panelBox } from "../../core/build/buildComposition"
@@ -838,32 +837,36 @@ function PhotoCalibrator({
             {/* Seccions plegables, com la resta de l'inspector. */}
             <Stack gap={0}>
               <PanelSection id="photo-ref" title="Referència" icon={LuCrosshair}>
-              <FormRow label="Rectangle de referència" maxW="280px">
-                <NativeSelect.Root size="sm">
-                  <NativeSelect.Field
-                    aria-label="Rectangle de referència"
-                    value={refMode}
-                    onChange={(e) => {
-                      if (e.target.value === "custom") {
-                        setCustomRef(true)
-                        return
-                      }
-                      const r = presets[Number(e.target.value)]
-                      if (r) {
-                        setCustomRef(false)
-                        setCal((c) => ({ ...c, ref: { w: r.w, h: r.h }, refAspect: r.w / r.h, refWallOffset: r.wallOffset ?? 0, plane: r.plane }))
-                      }
-                    }}
-                  >
-                    {presets.map((r, i) => (
-                      <option key={r.id} value={String(i)}>
-                        {r.name} ({r.w} × {r.h})
-                      </option>
-                    ))}
-                    <option value="custom">A mida</option>
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
+              <FormRow label="Rectangle de referència">
+                <ChoiceChips
+                  label="Rectangle de referència"
+                  options={[
+                    ...presets.map((r, i) => ({
+                      id: String(i),
+                      label: (
+                        <>
+                          {r.name}
+                          <Text as="span" color="fg.subtle" ms={1}>
+                            {r.w} × {r.h}
+                          </Text>
+                        </>
+                      ),
+                    })),
+                    { id: "custom", label: "A mida" },
+                  ]}
+                  value={refMode}
+                  onChange={(v) => {
+                    if (v === "custom") {
+                      setCustomRef(true)
+                      return
+                    }
+                    const r = presets[Number(v)]
+                    if (r) {
+                      setCustomRef(false)
+                      setCal((c) => ({ ...c, ref: { w: r.w, h: r.h }, refAspect: r.w / r.h, refWallOffset: r.wallOffset ?? 0, plane: r.plane }))
+                    }
+                  }}
+                />
               </FormRow>
               <Text fontSize="sm" fontWeight="medium" mb={-1}>
                 Mida coneguda
