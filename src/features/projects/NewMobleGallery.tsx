@@ -104,7 +104,7 @@ export function NewMobleGallery({
       )}
 
 
-      <Accordion.Root multiple collapsible lazyMount variant="enclosed" value={q ? found : openSections} onValueChange={(e) => !q && setOpenSections(e.value)}>
+      <Accordion.Root className="gallery-accordion" multiple collapsible lazyMount variant="enclosed" value={q ? found : openSections} onValueChange={(e) => !q && setOpenSections(e.value)}>
         <Accordion.Item value="history">
           <Accordion.ItemTrigger cursor="pointer">
             <FoldTitle icon={<LuHistory />} title="Historial" count={hist.count} />

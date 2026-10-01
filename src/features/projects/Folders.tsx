@@ -159,7 +159,8 @@ export function FolderedGrid<T>({
         <Accordion.Root multiple collapsible lazyMount variant="plain" value={searching ? folders.map((f) => f[0]) : open} onValueChange={(e) => !searching && setOpen(e.value)}>
           {folders.map(([name, list]) => (
             <Accordion.Item key={name} value={name}>
-              <HStack gap={1}>
+              {/* Línia sota cada grup (com les categories del catàleg): el que hi ha a dins no queda penjat. */}
+              <HStack gap={1} borderBottomWidth="1px">
                 <Accordion.ItemTrigger cursor="pointer" flex={1}>
                   <FoldTitle icon={<LuFolder />} title={name} count={list.length} />
                   <Accordion.ItemIndicator />

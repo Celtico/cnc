@@ -27,6 +27,16 @@
 :root .settings-stack {
   gap: 32px;
 }
+/*
+ * Acordions de les pàgines d'inici (Historial · Projectes · Catàleg): obert, una línia sota la capçalera i una mica
+ * d'aire, perquè la fila d'eines («Grup nou», «Seleccionar»…) no quedi penjada.
+ */
+:root .gallery-accordion > [data-part="item"][data-state="open"] > [data-part="item-trigger"] {
+  border-bottom: 1px solid var(--chakra-colors-border);
+}
+:root .gallery-accordion > [data-part="item"][data-state="open"] > [data-part="item-content"] {
+  padding-top: 12px;
+}
 
 /*
  * Mides d'iOS a les pantalles tàctils (iPhone, iPad), segons la guia d'Apple (1 px CSS = 1 pt):
