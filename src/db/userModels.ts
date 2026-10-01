@@ -1,6 +1,7 @@
 import { Box3, Vector3 } from "three"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js"
+import type { OptimizeReport } from "../components/viewer/optimizeGlbPlan"
 import { db, type UserModel } from "./db"
 
 export type { UserModel }
@@ -36,11 +37,27 @@ export async function measureGlb(buffer: ArrayBuffer): Promise<[number, number, 
 
 const randomId = () => `${USER_MODEL_PREFIX}${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`
 
-/** Importa un `.glb`: el valida, en mesura la caixa i el desa. Errors en català (`Error.message`). */
-export async function addUserModel(file: File): Promise<UserModel> {
+/**
+ * Importa un `.glb`: el valida, l'optimitza per al mòbil (`optimizeGlb`: triangles, textures 1K; si falla, l'original),
+ * en mesura la caixa i el desa. Errors en català (`Error.message`). `report` diu què s'ha reduït.
+ */
+export async function addUserModel(file: File): Promise<{ model: UserModel; report: OptimizeReport }> {
   if (!/\.glb$/i.test(file.name)) throw new Error("Només es poden pujar fitxers .glb (glTF binari).")
-  const buffer = await file.arrayBuffer()
-  const size = await measureGlb(buffer)
+  const original = await file.arrayBuffer()
+  // Primer es valida l'original (missatges d'error clars) i després s'optimitza.
+  let size = await measureGlb(original)
+  const { optimizeGlb } = await import("../components/viewer/optimizeGlb")
+  let { buffer, report } = await optimizeGlb(original)
+  if (report.changed) {
+    try {
+      size = await measureGlb(buffer)
+    } catch (e) {
+      // L'optimitzat no es llegeix: es desa l'original.
+      console.warn("addUserModel: el model optimitzat no es pot llegir, es desa l'original", e)
+      buffer = original
+      report = { ...report, trisAfter: report.trisBefore, bytesAfter: report.bytesBefore, texturesResized: 0, changed: false }
+    }
+  }
   const model: UserModel = {
     id: randomId(),
     name: file.name.replace(/\.glb$/i, "").trim() || "Model",
@@ -49,7 +66,7 @@ export async function addUserModel(file: File): Promise<UserModel> {
     createdAt: Date.now(),
   }
   await db.models.add(model)
-  return model
+  return { model, report }
 }
 
 /** Desa un model tal com ve (p. ex. d'un `.moble`); si l'id ja hi és, es fa servir el que hi ha. `true` si l'ha afegit. */

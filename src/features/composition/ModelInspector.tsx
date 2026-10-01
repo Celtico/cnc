@@ -2,15 +2,15 @@ import { Button, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
 import { LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuSprout, LuTrash2 } from "react-icons/lu"
 import { PanelSection } from "../../components/PanelSection"
 import { NumRow } from "../../components/NumRow"
-import { ChoiceChips, FormRow } from "../../components/FormRow"
+import { FormRow } from "../../components/FormRow"
 import { insertModelCopy, type Composition, type ModelObject } from "../../core/model"
-import { ModelUploadButton, UserModelsList } from "./ModelUpload"
+import { ModelUploadButton } from "./ModelUpload"
 import { useModelAssets } from "./useModelAssets"
 import { AxisLabel } from "./RefInspector"
 
 /** Propietats d'un model 3D (`Composition.models`): quin model, mides de la caixa i posició (com una peça lliure). */
 export function ModelInspector({ comp, id, onChange }: { comp: Composition; id: string; onChange: (c: Composition) => void }) {
-  const { assets, resolve } = useModelAssets()
+  const { resolve } = useModelAssets()
   const g = comp.models?.find((m) => m.id === id)
   if (!g) return null
   const update = (patch: Partial<ModelObject>) => onChange({ ...comp, models: (comp.models ?? []).map((m) => (m.id === id ? { ...m, ...patch } : m)) })
@@ -19,19 +19,20 @@ export function ModelInspector({ comp, id, onChange }: { comp: Composition; id: 
   return (
     <Stack gap={0}>
       <PanelSection id="model-asset" title="Model" icon={LuSprout} badge={asset?.name}>
-        <FormRow label="Model" help="Es canvia el model; la caixa (mides i posició) es manté.">
-          <ChoiceChips label="Model" value={g.src} options={assets.map((a) => ({ id: a.id, label: a.name }))} onChange={(src) => update({ src })} />
+        {/* Sense llista de models (per decisió de l'usuari): el nom del que hi ha i, per canviar-lo, un altre .glb teu. */}
+        <FormRow label="Model">
+          <Text fontSize="sm" pt="6px" truncate title={asset?.name}>
+            {asset?.name ?? "—"}
+          </Text>
         </FormRow>
         {!asset && (
           <Text fontSize="xs" color="fg.error">
-            Aquest model ja no hi és (s'ha esborrat): no es veu res. Tria'n un altre o puja'l de nou.
+            Aquest model ja no hi és (s'ha esborrat): no es veu res. Puja'l de nou.
           </Text>
         )}
-        {/* Un de teu: substitueix el model i agafa la seva mida real (la posició es manté). */}
-        <FormRow label="El teu">
+        <FormRow label="Canviar">
           <ModelUploadButton onUploaded={(m) => update({ src: m.id, w: m.size[0], h: m.size[1], d: m.size[2] })} />
         </FormRow>
-        <UserModelsList />
       </PanelSection>
       <PanelSection id="model-size" title="Mides" icon={LuMoveDiagonal} badge={`${Math.round(g.w)} × ${Math.round(g.h)}`}>
         <NumRow label="Ample" value={g.w} min={1} max={20000} step={10} onChange={(w) => w > 0 && update({ w })} />

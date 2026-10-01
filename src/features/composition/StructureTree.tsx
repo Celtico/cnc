@@ -1,5 +1,5 @@
-import { Box, HStack, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
-import { createElement, useState, type ReactNode } from "react"
+import { Box, HStack, IconButton, Menu, Portal, Spinner, Stack, Text } from "@chakra-ui/react"
+import { createElement, useRef, useState, type ReactNode } from "react"
 import {
   LuArrowLeft,
   LuArrowRight,
@@ -17,16 +17,15 @@ import {
   LuTrash2,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcon"
-import { compositionKind, partsOnlyKind, duplicateGroup, newGroupName, partGroups, insertModelCopy, insertPartCopy, insertRefCopy, MODEL_ASSETS, newModelObject, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
+import { compositionKind, partsOnlyKind, duplicateGroup, newGroupName, partGroups, insertModelCopy, insertPartCopy, insertRefCopy, newModelObject, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
 import { NameDialog } from "../../components/NameDialog"
 import { defaultElementName, freePartFor, refFor, type AddKind } from "./addElements"
 import { useSettings } from "../settings/SettingsContext"
 import { ORIENT_ICON } from "./partOrient"
 import { zoneLabel } from "./zoneLabel"
 import { SectionLabel } from "../../components/SectionLabel"
-import { ChoiceChips } from "../../components/FormRow"
-import { ModelUploadButton } from "./ModelUpload"
-import { useModelAssets, type ModelChoice } from "./useModelAssets"
+import { fileAccept } from "../file/fileAccept"
+import { uploadUserModel, type ModelChoice } from "./useModelAssets"
 
 type DragKind = "module" | "ref" | "part"
 
@@ -164,9 +163,9 @@ export function StructureTree({
     }
   }
   const [adding, setAdding] = useState<AddKind | null>(null)
-  // Model 3D nou: el nom i quin model de l'app (el primer per defecte).
-  const [addingModel, setAddingModel] = useState(false)
-  const [modelSrc, setModelSrc] = useState(MODEL_ASSETS[0]!.id)
+  // Model 3D nou: un .glb teu (s'optimitza en pujar-lo).
+  const modelInput = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
   const { settings } = useSettings()
   const hasWall = comp.modules.some((m) => rowOf(m) === "wall")
   const rows: { row: "floor" | "wall"; label: string }[] = hasWall
@@ -196,7 +195,6 @@ export function StructureTree({
     if (selection.kind === "part" && selection.id === id) onSelect({ kind: "moble" })
   }
   const models = comp.models ?? []
-  const { assets: modelAssets, resolve: resolveModel } = useModelAssets()
   const addModel = (asset: ModelChoice, label: string) => {
     const [w, , d] = asset.size
     // El centre de la petjada on surten les peces noves, a terra.
@@ -242,35 +240,24 @@ export function StructureTree({
           }}
         />
       )}
-      {addingModel && (
-        <NameDialog
-          open
-          title="Model 3D nou"
-          ariaLabel="Nom"
-          submitLabel="Afegir"
-          initial={MODEL_ASSETS[0]!.name}
-          onClose={() => setAddingModel(false)}
-          onSave={(n) => {
-            setAddingModel(false)
-            const asset = resolveModel(modelSrc) ?? resolveModel(MODEL_ASSETS[0]!.id)!
-            // Sense tocar el nom per defecte, agafa el del model triat.
-            addModel(asset, n === MODEL_ASSETS[0]!.name ? asset.name : n)
-          }}
-        >
-          {() => (
-            <Stack gap={3}>
-              <ChoiceChips label="Model" value={modelSrc} options={modelAssets.map((a) => ({ id: a.id, label: a.name }))} onChange={setModelSrc} />
-              {/* Un de teu: s'afegeix de seguida amb el seu nom i es tanca la finestra. */}
-              <ModelUploadButton
-                onUploaded={(m) => {
-                  setAddingModel(false)
-                  addModel(m, m.name)
-                }}
-              />
-            </Stack>
-          )}
-        </NameDialog>
-      )}
+      {/* El + de «Models 3D» obre directament el selector de fitxers (un .glb teu): sense llista de models de l'app
+          (per decisió de l'usuari; les plantes de l'app són al catàleg d'Objectes). */}
+      <input
+        ref={modelInput}
+        type="file"
+        accept={fileAccept(".glb,model/gltf-binary")}
+        hidden
+        data-testid="model-upload-input"
+        onChange={async (e) => {
+          const file = e.target.files?.[0]
+          e.target.value = ""
+          if (!file) return
+          setUploading(true)
+          const m = await uploadUserModel(file)
+          setUploading(false)
+          if (m) addModel(m, m.name)
+        }}
+      />
       {!onlyParts && <SectionTitle onAdd={() => setAdding("module")} addLabel="Afegir mòdul">Mòduls</SectionTitle>}
       {!onlyParts && rows.map(({ row, label }) => (
         <Box key={row}>
@@ -487,13 +474,7 @@ export function StructureTree({
       ))}
 
       {/* Models 3D (plantes, decoració…): només es veuen; es col·loquen com les peces lliures. */}
-      <SectionTitle
-        onAdd={() => {
-          setModelSrc(MODEL_ASSETS[0]!.id)
-          setAddingModel(true)
-        }}
-        addLabel="Afegir model 3D"
-      >
+      <SectionTitle onAdd={() => modelInput.current?.click()} addLabel="Pujar un model 3D (.glb)" busy={uploading}>
         Models 3D
       </SectionTitle>
       {models.map((g) => (
@@ -728,14 +709,14 @@ function RowMenu({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** Títol d'un grup de l'arbre (mòduls, peces lliures, objectes de referència, models 3D) amb el seu + per afegir-ne. */
-function SectionTitle({ children, onAdd, addLabel }: { children: ReactNode; onAdd: () => void; addLabel: string }) {
+function SectionTitle({ children, onAdd, addLabel, busy }: { children: ReactNode; onAdd: () => void; addLabel: string; busy?: boolean }) {
   return (
     <HStack justify="space-between" pt={3} pb={1} px={1}>
       <SectionLabel>
         {children}
       </SectionLabel>
-      <IconButton aria-label={addLabel} title={addLabel} size="2xs" variant="ghost" onClick={onAdd}>
-        <LuPlus />
+      <IconButton aria-label={addLabel} title={busy ? "Optimitzant el model…" : addLabel} size="2xs" variant="ghost" onClick={onAdd} disabled={busy} aria-busy={busy}>
+        {busy ? <Spinner size="xs" /> : <LuPlus />}
       </IconButton>
     </HStack>
   )

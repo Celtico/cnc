@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { toaster } from "../../components/ui/toaster"
 import { forgetModel } from "../../components/viewer/models3d"
+import { formatReport } from "../../components/viewer/optimizeGlbPlan"
 import { MODEL_ASSETS } from "../../core/model"
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { addUserModel, deleteUserModel, HEAVY_MODEL_BYTES, listUserModels, type UserModel } from "../../db/userModels"
@@ -34,15 +35,18 @@ export const modelChoiceOf = (m: UserModel): ModelChoice => ({ id: m.id, name: m
 /** Puja un `.glb` amb els avisos (toaster): torna el model o `null` si no s'ha pogut. */
 export async function uploadUserModel(file: File): Promise<ModelChoice | null> {
   try {
-    const m = await addUserModel(file)
+    const { model: m, report } = await addUserModel(file)
     forgetModel(m.id)
-    if (file.size > HEAVY_MODEL_BYTES) {
+    const bytes = m.blob.size
+    if (bytes > HEAVY_MODEL_BYTES) {
       toaster.create({
         title: "Model pesat",
-        description: `Fa ${formatBytes(file.size)}: a l'iPhone pot anar lent o no carregar-se. Redueix-lo (textures més petites, menys polígons).`,
+        description: `Fa ${formatBytes(bytes)}: a l'iPhone pot anar lent o no carregar-se. Redueix-lo (textures més petites, menys polígons).`,
         type: "warning",
         duration: 8000,
       })
+    } else if (report.changed) {
+      toaster.create({ title: `Model «${m.name}» afegit`, description: `Optimitzat per al mòbil: ${formatReport(report)}`, type: "success", duration: 8000 })
     } else toaster.create({ title: `Model «${m.name}» afegit`, type: "success" })
     return modelChoiceOf(m)
   } catch (e) {

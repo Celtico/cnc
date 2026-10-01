@@ -428,15 +428,28 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     grosses, una part dels grups de fulles una mica més grans, textures 512/1K WebP amb l'alfa) i comprimits amb meshopt
     (`npx gltfpack -c`; `GLTFLoader.setMeshoptDecoder`). Els `.glb` es precachegen (PWA, sense connexió). El render per
     CPU també retalla les fulles (`RenderMaterial.alphaCut`, `alphaAt` a `pathWorker`).
-    **Models de l'usuari** («Pujar un model (.glb)…», `LuUpload`, al + de l'arbre i a la secció Model de l'inspector;
+    **Models de l'usuari** (el + de «Models 3D» de l'arbre obre directament el selector de fitxers, sense llista de models
+    —per decisió de l'usuari: les plantes de l'app són al catàleg d'Objectes—; a l'inspector, «Model» diu el nom i «Canviar»
+    puja un altre `.glb`; `LuUpload`;
     `composition/ModelUpload.tsx`): taula Dexie **v5** `models` (`UserModel`: id `user-…`, nom del fitxer, `blob`, mida
     real en mm); `db/userModels.ts` (`addUserModel` valida amb `GLTFLoader` + meshopt i mesura la caixa, m → mm; només
-    `.glb` amb les textures a dins; avís si fa més de 15 MB, no bloqueja). `models3d.ts` llegeix els `src` que
+    `.glb` amb les textures a dins; avís si fa més de 15 MB, no bloqueja). **S'optimitzen per al mòbil en pujar-los**
+    (`viewer/optimizeGlb.ts`, carregat a demanda; parts pures i test a `optimizeGlbPlan.ts`): pressupost de **100.000
+    triangles** repartit proporcionalment; les malles opaques es delmen (`MeshoptSimplifier`, després de `mergeVertices`,
+    primer amb `LockBorder`) i les d'alfa (targetes de fulles) no: se'n treu una part dels grups solts i els que queden es
+    fan una mica més grans (≤ 1,5×), com l'script de Blender; les opaques tenen sempre ≥ 25 % del pressupost. Textures de
+    més de **1024 px** reduïdes (canvas, amb l'alfa) i, en tornar a exportar (`GLTFExporter`), WebP si el navegador en
+    sap codificar (si no, JPEG les opaques i PNG les d'alfa; `texture.userData.mimeType`). Si ja compleix (≤ 100.000,
+    textures ≤ 1K i < 5 MB) es desa tal com ve; si el resultat no té menys triangles ni pesa menys, o si alguna cosa
+    falla (`console.warn`) o l'optimitzat no es llegeix, també es desa l'original. El botó diu «Optimitzant el model…» i
+    l'avís, «Optimitzat per al mòbil: 5,1 MB → 4,4 MB · 132.281 → 99.973 triangles · n textures reduïdes»
+    (`formatReport`). L'exportador no quantitza ni comprimeix amb meshopt: un `.glb` ja passat per `gltfpack` pot no
+    aprimar-se (es queda l'original si no millora). `models3d.ts` llegeix els `src` que
     comencen per `user-` de Dexie (`parseAsync`) pel mateix camí de memòria cau; un d'esborrat no es veu i no impedeix
     les miniatures; `forgetModel` en pujar-ne o esborrar-ne. `useModelAssets` (`composition/useModelAssets.ts`, en viu)
     = `MODEL_ASSETS` + els de l'usuari, i `resolve(src)` per al nom i la mida («Mida original»). Al + es pugen i
-    s'afegeixen de seguida; a l'inspector substitueixen el model (agafa la mida real, la posició es manté); «Els teus
-    models 3D» (sota) per esborrar-los. El `.moble` els porta a dins (`models`: id, nom, mida i el `.glb` en base64,
+    s'afegeixen de seguida; a l'inspector substitueixen el model (agafa la mida real, la posició es manté). Sense llista per
+    esborrar-los (`removeUserModel` queda per si cal). El `.moble` els porta a dins (`models`: id, nom, mida i el `.glb` en base64,
     només els que fa servir; opcional, els antics s'obren igual) i en obrir-lo es tornen a crear amb el mateix id.
   - **Objectes de referència al 3D** (`RefGhost` a `CabinetViewer`): seleccionat, **es mou només amb les fletxes del
     gizmo** (`viewer/MoveGizmo`, `frontRaycast`: les fletxes es poden agafar encara que l'objecte sigui dins d'un altre o
