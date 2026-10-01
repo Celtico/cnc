@@ -54,13 +54,13 @@ export function MoveGizmo({
             onPointerUp={onEnd}
             onPointerCancel={onEnd}
           >
-            {/* Tija i punta; un cilindre invisible més gruixut per agafar-la fàcilment. */}
+            {/* Tija i punta (amb el ratolí a sobre, el doble de gruixudes); un cilindre invisible més gruixut per agafar-la fàcilment. */}
             <mesh position={[0, 2, 0]} renderOrder={30} raycast={noRaycast}>
-              <cylinderGeometry args={[on ? 0.14 : 0.1, on ? 0.14 : 0.1, 3, 10]} />
+              <cylinderGeometry args={[on ? 0.2 : 0.1, on ? 0.2 : 0.1, 3, 10]} />
               {mat}
             </mesh>
-            <mesh position={[0, 3.9, 0]} renderOrder={30} raycast={noRaycast}>
-              <coneGeometry args={[on ? 0.5 : 0.4, 1.1, 16]} />
+            <mesh position={[0, on ? 4.15 : 3.9, 0]} renderOrder={30} raycast={noRaycast}>
+              <coneGeometry args={[on ? 0.8 : 0.4, on ? 1.6 : 1.1, 16]} />
               {mat}
             </mesh>
             <mesh position={[0, 2.5, 0]} visible={false} raycast={frontRaycast}>
