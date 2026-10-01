@@ -9,6 +9,11 @@ del taller del meu germà) o a una fusteria que talla a mida.
 Projecte per passar-ho bé: sense clients, sense monetització. Prioritat: que funcioni
 amb mobles reals de casa meva, no que ho faci tot.
 
+**Objectiu (per decisió de l'usuari): substituir TopSolid** per fer mobles paramètrics per a la CNC. Això és el
+que importa: el disseny paramètric, les peces, els mecanitzats i els fitxers per al taller han de funcionar bé.
+Ambients, objectes, plantes, models 3D i renders són **decoratius**: no s'hi dedica temps mentre el nucli tingui
+coses per resoldre.
+
 ## Idioma
 - Respon-me sempre en **català**.
 - Textos de la UI en català.
