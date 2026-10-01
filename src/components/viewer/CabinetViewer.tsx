@@ -9,6 +9,9 @@ import { profileGeometry } from "./refGeometry"
 import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
 import { Billboard, ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
+import { BoxFrame } from "./BoxFrame"
+import { MoveGizmo } from "./MoveGizmo"
+import { usePixelScale, type Axis } from "./pixelScale"
 import { BoxGeometry, NeutralToneMapping, DoubleSide, type BufferGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Vector3, type Object3D, type Texture } from "three"
 import { type ViewName } from "./viewNames"
 export type { ViewName } from "./viewNames"
@@ -187,6 +190,8 @@ export function CabinetViewer({
   }, [groups])
   const gridRef = useRef<Object3D>(null)
   // Mòdul (o moble sencer) que s'està arrossegant amb la nansa: desplaçament en viu.
+  // Mòdul sota el ratolí: contorn suau, perquè es vegi què se seleccionarà en clicar.
+  const [hoverModule, setHoverModule] = useState<number | null>(null)
   const [moduleDrag, setModuleDrag] = useState<{ index: number; dx: number; dy: number; dz: number; all: boolean } | null>(null)
   // Arestes on s'enganxen els objectes en arrossegar-los: mòduls, altres objectes, terra i paret.
   const snapTargets = useMemo((): SnapTargets => {
@@ -273,6 +278,10 @@ export function CabinetViewer({
                 materialMode={materialMode}
                 materials={materials}
                 hardware={hardware}
+                onHover={onSelectModule && !p.id.startsWith("part:") ? (on) => {
+                  setHoverModule((h) => (on ? (p.module ?? null) : h === p.module ? null : h))
+                  document.body.style.cursor = on ? "pointer" : ""
+                } : undefined}
                 onClick={p.id.startsWith("part:") ? (onSelectPart ? () => onSelectPart(p.id.slice(5)) : undefined) : onSelectModule ? (pt) => {
                   const id = moduleIdOf(p)
                   // Punt clicat en mm de la composició (el grup està centrat a l'escena).
@@ -334,6 +343,14 @@ export function CabinetViewer({
         )}
         {hardware && modules?.map((m) => m.legs && !(moduleDrag && (moduleDrag.all || moduleDrag.index === m.index)) && <ModuleLegs key={`legs-${m.id}`} x={m.x} z={m.z ?? 0} width={m.width} depth={m.legs.depth} height={m.legs.height} />)}
         {highlightZone && <ZoneHighlight box={highlightZone} />}
+        {(() => {
+          const hm = hoverModule !== null && hoverModule !== selectedIndex && !moduleDrag ? modules?.find((m) => m.index === hoverModule) : undefined
+          return hm ? (
+            <group position={[(hm.x + hm.width / 2) * S, (hm.y + hm.height / 2) * S, ((hm.z ?? 0) + hm.depth / 2) * S]}>
+              <BoxFrame w={(hm.width + 6) * S} h={(hm.height + 6) * S} d={(hm.depth + 6) * S} />
+            </group>
+          ) : null
+        })()}
         {selectedIndex !== undefined && q.guides && <CableMarks panels={panels.filter((p) => p.module === selectedIndex)} />}
         {selected && onMoveModule && view !== "top" && (
           <MoveHandle
@@ -591,12 +608,11 @@ function snapAxis(pos: number, size: number, targets: number[], free: boolean): 
   return best === null ? { v: Math.round(pos), snapped: false } : { v: Math.round(pos + best), snapped: true }
 }
 
-type Axis = "x" | "y" | "z"
 
 /**
- * Objecte de referència (translúcid). Seleccionat, s'arrossega: per defecte en el pla de la
- * paret (X i Y); amb Maj o a la vista de dalt, pel terra (X i Z); a les vistes laterals, Z i
- * Y. S'enganxa a les arestes dels mòduls i dels altres objectes (Alt: sense imant).
+ * Objecte de referència (translúcid, o sòlid si té material). Seleccionat, es mou només amb les fletxes del gizmo (cada
+ * una en la seva direcció; el cos no s'arrossega). S'enganxa a les arestes dels mòduls i dels altres objectes (Alt: sense
+ * imant). Amb el ratolí a sobre, contorn del color de selecció.
  */
 function RefGhost({
   g,
@@ -644,6 +660,8 @@ function RefGhost({
     return t
   }, [targets, others, g.id])
   const pos = drag ?? g
+  // Ratolí a sobre: contorn del color de selecció (més suau), perquè es vegi què es triarà.
+  const [hover, setHover] = useState(false)
   // Obstacle en blau; objecte que talla en violeta; seleccionat en taronja; amb problema en vermell.
   const tint = hit ? "#dc2626" : selected ? SELECT_COLOR : g.effect === "cut" ? "#7c3aed" : "#3b82f6"
   const draggable = selected && !!onMove
@@ -722,42 +740,26 @@ function RefGhost({
       } : undefined}
       onPointerOver={onSelect ? (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation()
-        document.body.style.cursor = draggable ? "move" : "pointer"
+        document.body.style.cursor = "pointer"
+        if (e.pointerType === "mouse") setHover(true)
       } : undefined}
       onPointerOut={onSelect ? () => {
+        setHover(false)
         if (!state.current) document.body.style.cursor = ""
       } : undefined}
-      onPointerDown={draggable ? (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation()
-        // Enganxat al terra: llisca pel terra. A la paret: es mou pel pla de la paret.
-        const floor = !g.onWall && (g.onFloor || view === "top" || e.shiftKey)
-        const side = !g.onWall && !g.onFloor && (view === "left" || view === "right")
-        const normal = floor ? new Vector3(0, 1, 0) : side ? new Vector3(1, 0, 0) : new Vector3(0, 0, 1)
-        const fixed: Axis[] = [...(g.onFloor ? (["y"] as Axis[]) : []), ...(g.onWall ? (["z"] as Axis[]) : [])]
-        const corner = new Vector3(g.x * S + offset[0], g.y * S + offset[1], g.z * S + offset[2])
-        state.current = {
-          plane: new Plane().setFromNormalAndCoplanarPoint(normal, e.point),
-          grab: e.point.clone().sub(corner),
-          axes: (floor ? (["x", "z"] as Axis[]) : side ? (["z", "y"] as Axis[]) : (["x", "y"] as Axis[])).filter((a) => !fixed.includes(a)),
-          start: [e.clientX, e.clientY],
-          moved: false,
-        }
-        ;(e.target as Element | null)?.setPointerCapture?.(e.pointerId)
-        if (controls) controls.enabled = false
-      } : undefined}
-      onPointerMove={draggable ? moveEvt : undefined}
-      onPointerUp={draggable ? end : undefined}
-      onPointerCancel={draggable ? end : undefined}
+      // El cos no s'arrossega (per decisió de l'usuari): només les fletxes del gizmo, així sempre se sap cap on es mourà.
     >
       {profileGeo ? <primitive object={profileGeo} attach="geometry" /> : cyl ? <cylinderGeometry args={[radius * S, radius * S, len * S, 40]} /> : <boxGeometry args={[g.w * S, g.h * S, g.d * S]} />}
       {/* Els que tallen solen quedar dins del fons o darrere de les portes: es veuen a través. */}
       {solidMat ? (
         <primitive object={solidMat} attach="material" />
       ) : (
-        <meshStandardMaterial side={DoubleSide} color={tint} transparent opacity={outline ? 0.08 : selected || hit ? 0.38 : g.effect === "cut" ? 0.45 : 0.22} depthWrite={false} depthTest={g.effect !== "cut"} />
+        <meshStandardMaterial side={DoubleSide} color={hover && !selected && !hit ? SELECT_COLOR : tint} transparent opacity={outline ? 0.08 : selected || hit ? 0.38 : g.effect === "cut" ? 0.45 : hover ? 0.32 : 0.22} depthWrite={false} depthTest={g.effect !== "cut"} />
       )}
       {((guides && !solidMat) || selected || hit || g.effect === "cut") && <Edges color={selected ? SELECT_COLOR : tint} threshold={cyl ? 30 : 1} depthTest={g.effect !== "cut"} renderOrder={g.effect === "cut" ? 9 : 0} />}
     </mesh>
+      {/* Seleccionat: contorn gruixut que es veu sempre (també sobre un objecte sòlid i fosc); a sobre: més prim. */}
+      {!outline && (selected || (hover && !drag)) && <BoxFrame w={(g.w + 4) * S} h={(g.h + 4) * S} d={(g.d + 4) * S} strong={selected} />}
       {draggable && <MoveGizmo axes={gizmoAxes} active={drag?.axes.length === 1 ? drag.axes[0]! : null} onStart={startAxis} onMove={moveEvt} onEnd={end} />}
       {drag && (
         <Html position={[0, (g.h / 2) * S, 0]} center zIndexRange={[30, 20]} style={{ pointerEvents: "none" }}>
@@ -988,85 +990,6 @@ function ZoneHighlight({ box: b }: { box: { x0: number; x1: number; y0: number; 
   )
 }
 
-/** Botó + ancorat a un punt del 3D, per afegir un mòdul a un costat del seleccionat. */
-/** Escala un grup perquè 1 unitat sigui `px` píxels a la pantalla (nanses i botons 3D). */
-const AXIS_COLOR: Record<Axis, string> = { x: "#e5484d", y: "#30a46c", z: "#0090ff" }
-
-/**
- * Gizmo de moviment d'un objecte: una fletxa per direcció (vermella de costat, verda amunt,
- * blava endavant), de mida constant a la pantalla i sempre per sobre de tot.
- */
-function MoveGizmo({
-  axes,
-  active,
-  onStart,
-  onMove,
-  onEnd,
-}: {
-  axes: Axis[]
-  active: Axis | null
-  onStart: (a: Axis, e: ThreeEvent<PointerEvent>) => void
-  onMove: (e: ThreeEvent<PointerEvent>) => void
-  onEnd: (e: ThreeEvent<PointerEvent>) => void
-}) {
-  const scaler = useRef<Group>(null)
-  usePixelScale(scaler, 16)
-  const [hover, setHover] = useState<Axis | null>(null)
-  const rot: Record<Axis, [number, number, number]> = { x: [0, 0, -Math.PI / 2], y: [0, 0, 0], z: [Math.PI / 2, 0, 0] }
-  return (
-    <group ref={scaler}>
-      {axes.map((a) => {
-        const on = hover === a || active === a
-        const mat = <meshBasicMaterial color={AXIS_COLOR[a]} transparent opacity={active && active !== a ? 0.25 : on ? 1 : 0.85} depthTest={false} depthWrite={false} />
-        return (
-          <group
-            key={a}
-            rotation={rot[a]}
-            onPointerOver={(e) => {
-              e.stopPropagation()
-              setHover(a)
-              document.body.style.cursor = "grab"
-            }}
-            onPointerOut={() => {
-              setHover(null)
-              if (!active) document.body.style.cursor = ""
-            }}
-            onPointerDown={(e) => onStart(a, e)}
-            onPointerMove={onMove}
-            onPointerUp={onEnd}
-            onPointerCancel={onEnd}
-          >
-            {/* Tija i punta; un cilindre invisible més gruixut per agafar-la fàcilment. */}
-            <mesh position={[0, 2, 0]} renderOrder={30}>
-              <cylinderGeometry args={[on ? 0.14 : 0.1, on ? 0.14 : 0.1, 3, 10]} />
-              {mat}
-            </mesh>
-            <mesh position={[0, 3.9, 0]} renderOrder={30}>
-              <coneGeometry args={[on ? 0.5 : 0.4, 1.1, 16]} />
-              {mat}
-            </mesh>
-            <mesh position={[0, 2.5, 0]} visible={false}>
-              <cylinderGeometry args={[0.6, 0.6, 4.2, 8]} />
-            </mesh>
-          </group>
-        )
-      })}
-    </group>
-  )
-}
-
-function usePixelScale(ref: React.RefObject<Group | null>, px: number) {
-  const tmp = useMemo(() => new Vector3(), [])
-  useFrame(({ camera, size }) => {
-    const g = ref.current
-    if (!g) return
-    const k =
-      "isOrthographicCamera" in camera && camera.isOrthographicCamera
-        ? px / (camera as { zoom: number }).zoom
-        : (px * 2 * camera.position.distanceTo(g.getWorldPosition(tmp)) * Math.tan((((camera as { fov?: number }).fov ?? 38) * Math.PI) / 360)) / Math.max(1, size.height)
-    g.scale.setScalar(k)
-  })
-}
 
 function AddButton({ x, y, z, side, onClick }: { x: number; y: number; z: number; side: "left" | "right"; onClick: () => void }) {
   // Botó 3D (no Html): mida constant a la pantalla, sempre per sobre del moble.
@@ -1310,9 +1233,12 @@ export function PanelMesh({
   materialMode,
   materials,
   onClick,
+  onHover,
   edges = true,
   hardware = false,
 }: {
+  /** El ratolí entra o surt de la peça (ressaltat del mòdul en passar-hi per sobre). */
+  onHover?: (on: boolean) => void
   /** Ferratges visuals de la peça (frontisses i tirador als fronts). */
   hardware?: boolean
   panel: Panel
@@ -1397,6 +1323,12 @@ export function PanelMesh({
             e.stopPropagation()
             onClick(e.point)
           } : undefined}
+          onPointerOver={onHover ? (e: ThreeEvent<PointerEvent>) => {
+            if (e.pointerType !== "mouse") return
+            e.stopPropagation()
+            onHover(true)
+          } : undefined}
+          onPointerOut={onHover ? () => onHover(false) : undefined}
         >
           {!cut && <boxGeometry args={[L, W, T]} />}
           {edges && <Edges color={dimmed ? "#a08a6a" : "#6b5a3e"} threshold={15} />}

@@ -306,9 +306,10 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   massissos al voltant dels forats) al 3D; al plànol, el forat amb el vidre o l'arc de la porta. El vidre
   porta `userData.glass` (el render per CPU el fa translúcid) i `baseOpacity` (la casa de nines el respecta).
 - **3D**: la mateixa navegació que l'editor (esmorteïment, roda, botó dret per desplaçar), clic per
-  seleccionar (caixa taronja; Supr, Ctrl/⌘ D, R i fletxes com al plànol), «Enquadrar» i «Render». **Arrossegar un
-  element el mou pel terra** (`startDrag` a `Ambient3D`, pla y = 0; com al plànol: el primer toc tria el grup,
-  quadrícula, imant a les parets amb un sol element, Alt sense imant, un sol pas de desfer). Les peces d'un element
+  seleccionar (caixa taronja; Supr, Ctrl/⌘ D, R i fletxes com al plànol), «Enquadrar» i «Render». **L'element seleccionat es mou
+  amb les fletxes del gizmo** (`MoveGizmo` compartit amb l'editor, X i Z; el cos no s'arrossega, per decisió de l'usuari;
+  com al plànol: el primer clic tria el grup, quadrícula, imant a les parets amb un sol element només en la direcció de la
+  fletxa, Alt sense imant, un sol pas de desfer). Ratolí a sobre: contorn prim (`BoxFrame`); seleccionat, gruixut. Les peces d'un element
   només es refan si en canvia la geometria o els materials (moure'l només en canvia la posició) i les que ja no es
   dibuixen s'alliberen. La càmera mira el punt de l'obertura (o d'«Enquadrar»), no segueix la caixa de l'ambient.
   **Interior** (Opcions de vista, `LuEye`, `eyePose`): entra a l'habitació, càmera anivellada a 1,35 m (verticals rectes) al costat de la
@@ -394,8 +395,11 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Editor en tres columnes, com Figma / Fusion 360** (`features/editor/EditorScreen.tsx`):
   - **Esquerra — Estructura** (`composition/StructureTree.tsx`): arbre moble › mòduls ›
     compartiments, i objectes de referència. Afegir/duplicar/moure/eliminar amb el menú ⋯.
-  - **Objectes de referència al 3D** (`RefGhost` a `CabinetViewer`): seleccionat, s'arrossega
-    en el pla de la paret (X·Y); Maj o vista de dalt, pel terra (X·Z); vistes laterals, Z·Y.
+  - **Objectes de referència al 3D** (`RefGhost` a `CabinetViewer`): seleccionat, **es mou només amb les fletxes del
+    gizmo** (`viewer/MoveGizmo`, `frontRaycast`: les fletxes es poden agafar encara que l'objecte sigui dins d'un altre o
+    d'un moble, i el seu clic no tria el que hi ha al davant) (per decisió de l'usuari: el cos no s'arrossega, així sempre se sap cap on es mourà; també les peces lliures i
+    els grups). **Ratolí a sobre** (`BoxFrame`): contorn del color de selecció, prim, per sobre de tot, als objectes i als
+    mòduls (només amb ratolí); seleccionat, el contorn és gruixut (es veu també sobre un objecte sòlid i fosc).
     Imant de 15 mm a les vores dels mòduls, dels altres objectes, del terra i de la paret (Alt:
     sense imant); etiqueta amb la posició mentre s'arrossega. Fletxes 1 mm (Maj 10), Re Pàg /
     Av Pàg per a Z. Es desa en deixar-lo anar (un sol pas de desfer).
@@ -746,7 +750,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     (vermella X de costat, verda Y amunt, blava Z endavant), de mida constant a la pantalla i per
     sobre de tot; cada una arrossega només en la seva direcció (pla que conté l'eix i mira a
     la càmera), amb el mateix imant. S'amaguen les fixades (al terra: Y; a la paret: Z) i les
-    que miren a la càmera en vistes ortogràfiques. Arrossegar el cos continua movent en el pla.
+    que miren a la càmera en vistes ortogràfiques. El cos no s'arrossega.
   - **Opcions amb icona** (`components/IconChoice.tsx`): poques opcions → botons d'icona amb
     el nom al tooltip i l'opció triada al costat del títol (o a sota, amb `hideLabel`). **Estil discret i comú**
     (`components/segmented.ts`, `segGroup` + `segItem(on)`): control segmentat petit (botons xs, fons suau, la triada

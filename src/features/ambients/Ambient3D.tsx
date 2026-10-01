@@ -1,7 +1,10 @@
 import { OrbitControls } from "@react-three/drei"
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
-import { useEffect, useMemo, useRef, type ComponentRef } from "react"
-import { BoxGeometry, Group, Mesh, MeshStandardMaterial, NeutralToneMapping, PerspectiveCamera, Plane, PlaneGeometry, Raycaster, Vector2, Vector3, type Material, type Object3D } from "three"
+import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
+import { BoxGeometry, Group, Mesh, MeshStandardMaterial, NeutralToneMapping, PerspectiveCamera, Plane, PlaneGeometry, Vector3, type Material, type Object3D } from "three"
+import { BoxFrame } from "../../components/viewer/BoxFrame"
+import { MoveGizmo } from "../../components/viewer/MoveGizmo"
+import type { Axis } from "../../components/viewer/pixelScale"
 import { exportablePanel } from "../../components/viewer/CabinetViewer"
 import { buildScene } from "../../components/viewer/exportGlb"
 import { SceneAccess, StudioEnvironment } from "../../components/viewer/SceneHelpers"
@@ -40,8 +43,8 @@ export function Ambient3D({
   selectedIds?: string[]
   onSelect?: (id: string | null) => void
   /**
-   * Arrossegar elements pel terra (com al plànol): `onPick` tria l'element tocat (o el seu grup, com
-   * Figma) i en torna els ids que es mouen; `onChange` rep l'ambient (commit en deixar-los anar).
+   * Moure elements pel terra amb les fletxes del gizmo (X i Z; el cos no s'arrossega): `onPick` tria l'element tocat
+   * (o el seu grup, com Figma); `onChange` rep l'ambient (commit en deixar-lo anar).
    */
   onPick?: (id: string) => string[]
   onChange?: (a: Ambient, commit: boolean) => void
@@ -117,23 +120,18 @@ function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance }: { ta
   return <OrbitControls ref={ref} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={maxDistance} maxPolarAngle={Math.PI / 2 - 0.02} />
 }
 
-/** Caixa taronja de l'element seleccionat (com el contorn de selecció del visor de l'editor). */
-function Selected({ ambient, geos, id }: { ambient: Ambient; geos: Map<string, ItemGeometry | null>; id: string | null }) {
+/** Contorn de l'element seleccionat (`strong`) o del que és sota el ratolí, com a l'editor. */
+function ItemFrame({ ambient, geos, id, strong }: { ambient: Ambient; geos: Map<string, ItemGeometry | null>; id: string | null; strong?: boolean }) {
   const it = id ? ambient.items.find((i) => i.id === id) : undefined
   const g = it ? geos.get(it.id) : undefined
   if (!it || !g) return null
   const w = g.w / 1000 + 0.02, h = g.max[1] / 1000 + 0.02, d = g.d / 1000 + 0.02
   return (
     <group position={[it.x / 1000, (it.elevation ?? 0) / 1000 + h / 2 - 0.01, it.y / 1000]} rotation={[0, -rad(it.rot), 0]}>
-      <lineSegments raycast={() => null}>
-        <edgesGeometry args={[new BoxGeometry(w, h, d)]} />
-        <lineBasicMaterial color="#d97706" depthTest={false} transparent opacity={0.95} />
-      </lineSegments>
+      <BoxFrame w={w} h={h} d={d} strong={strong} />
     </group>
   )
 }
-
-
 
 const shadowsOn = (o: Object3D) =>
   o.traverse((c) => {
@@ -366,61 +364,84 @@ function Room({
     built.current = new Map()
   }, [])
 
-  // Arrossegar pel terra: el pla y = 0 sota el punter; la resta, com al plànol (quadrícula, imant a
-  // les parets per a un sol element, Alt sense imant, un sol pas de desfer en deixar-lo anar).
-  const { camera, gl, controls } = useThree()
-  const startDrag = (id: string, e: ThreeEvent<PointerEvent>) => {
-    if (!onPick || !onChange || e.button !== 0) return
+  // Moure amb el gizmo: cada fletxa en la seva direcció (X o Z del plànol) sobre un pla que conté l'eix i mira a la
+  // càmera; la resta, com al plànol (quadrícula, imant a les parets per a un sol element, Alt sense imant, un sol pas
+  // de desfer en deixar-lo anar).
+  const { camera, controls } = useThree()
+  const [hoverId, setHoverId] = useState<string | null>(null)
+  const sel = ambient.items.filter((it) => selectedIds.includes(it.id) && geos.get(it.id))
+  const gizmoAt = useMemo((): [number, number, number] | null => {
+    if (!sel.length) return null
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity, top = 0
+    for (const it of sel) {
+      const g = geos.get(it.id)!
+      const c = Math.abs(Math.cos(rad(it.rot))), sn = Math.abs(Math.sin(rad(it.rot)))
+      const hw = (g.w * c + g.d * sn) / 2, hd = (g.w * sn + g.d * c) / 2
+      x0 = Math.min(x0, it.x - hw); x1 = Math.max(x1, it.x + hw)
+      z0 = Math.min(z0, it.y - hd); z1 = Math.max(z1, it.y + hd)
+      top = Math.max(top, (it.elevation ?? 0) + g.max[1])
+    }
+    return [(x0 + x1) / 2000, top / 2000, (z0 + z1) / 2000]
+  }, [sel, geos])
+  const drag = useRef<{ axis: Axis; plane: Plane; start: Vector3; from: Map<string, readonly [number, number]>; moved: boolean; last: Ambient; sx: number; sy: number } | null>(null)
+  const [activeAxis, setActiveAxis] = useState<Axis | null>(null)
+  const orbit = controls as unknown as { enabled: boolean } | null
+  const startAxis = (a: Axis, e: ThreeEvent<PointerEvent>) => {
+    if (!onChange || e.button !== 0) return
     e.stopPropagation()
-    const ids = onPick(id)
-    const plane = new Plane(new Vector3(0, 1, 0), 0)
-    const ray = new Raycaster()
-    const ndc = new Vector2()
-    const hit = (cx: number, cy: number): Vector3 | null => {
-      const r = gl.domElement.getBoundingClientRect()
-      ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1)
-      ray.setFromCamera(ndc, camera)
-      return ray.ray.intersectPlane(plane, new Vector3())
+    const dir = a === "x" ? new Vector3(1, 0, 0) : new Vector3(0, 0, 1)
+    const toCam = camera.getWorldDirection(new Vector3()).negate()
+    const n = dir.clone().cross(toCam).cross(dir)
+    if (n.lengthSq() < 1e-6) return
+    drag.current = {
+      axis: a,
+      plane: new Plane().setFromNormalAndCoplanarPoint(n.normalize(), e.point),
+      start: e.point.clone(),
+      from: new Map(sel.map((it) => [it.id, [it.x, it.y] as const])),
+      moved: false,
+      last: ambient,
+      sx: e.clientX,
+      sy: e.clientY,
     }
-    const start = hit(e.nativeEvent.clientX, e.nativeEvent.clientY)
-    if (!start) return
-    const from = new Map(ambient.items.filter((it) => ids.includes(it.id)).map((it) => [it.id, [it.x, it.y] as const]))
-    const orbit = controls as unknown as { enabled: boolean } | null
+    ;(e.target as Element | null)?.setPointerCapture?.(e.pointerId)
     if (orbit) orbit.enabled = false
-    let moved = false
-    let last = ambient
-    const move = (ev: PointerEvent) => {
-      const p = hit(ev.clientX, ev.clientY)
-      if (!p) return
-      let ox = snapGrid((p.x - start.x) * 1000), oy = snapGrid((p.z - start.z) * 1000)
-      moved = moved || Math.hypot(ev.clientX - e.nativeEvent.clientX, ev.clientY - e.nativeEvent.clientY) > 4
-      if (!moved) return
-      if (ids.length === 1 && snap && !ev.altKey) {
-        const it = ambient.items.find((x) => x.id === ids[0])
-        const geo = geos.get(ids[0]!)
-        const f = from.get(ids[0]!)
-        if (it && geo && f) {
-          const sn = snapToWalls(f[0] + ox, f[1] + oy, geo.w, geo.d, it.rot, ambient.walls, 60)
-          ox = Math.round(sn.x - f[0])
-          oy = Math.round(sn.y - f[1])
-        }
+    setActiveAxis(a)
+  }
+  const moveAxis = (e: ThreeEvent<PointerEvent>) => {
+    const st = drag.current
+    if (!st || !onChange) return
+    e.stopPropagation()
+    st.moved = st.moved || Math.hypot(e.clientX - st.sx, e.clientY - st.sy) > 3
+    if (!st.moved) return
+    const p = e.ray.intersectPlane(st.plane, new Vector3())
+    if (!p) return
+    let ox = st.axis === "x" ? snapGrid((p.x - st.start.x) * 1000) : 0
+    let oy = st.axis === "z" ? snapGrid((p.z - st.start.z) * 1000) : 0
+    if (st.from.size === 1 && snap && !e.altKey) {
+      const [id, f] = [...st.from][0]!
+      const it = ambient.items.find((x) => x.id === id)
+      const geo = geos.get(id)
+      if (it && geo) {
+        const sn = snapToWalls(f[0] + ox, f[1] + oy, geo.w, geo.d, it.rot, ambient.walls, 60)
+        // Només en la direcció de la fletxa: l'altra no es mou.
+        if (st.axis === "x") ox = Math.round(sn.x - f[0])
+        else oy = Math.round(sn.y - f[1])
       }
-      last = { ...ambient, items: ambient.items.map((it) => {
-        const f = from.get(it.id)
-        return f ? { ...it, x: f[0] + ox, y: f[1] + oy } : it
-      }) }
-      onChange(last, false)
     }
-    const up = () => {
-      window.removeEventListener("pointermove", move)
-      window.removeEventListener("pointerup", up)
-      window.removeEventListener("pointercancel", up)
-      if (orbit) orbit.enabled = true
-      if (moved) onChange(last, true)
-    }
-    window.addEventListener("pointermove", move)
-    window.addEventListener("pointerup", up)
-    window.addEventListener("pointercancel", up)
+    st.last = { ...ambient, items: ambient.items.map((it) => {
+      const f = st.from.get(it.id)
+      return f ? { ...it, x: f[0] + ox, y: f[1] + oy } : it
+    }) }
+    onChange(st.last, false)
+  }
+  const endAxis = (e: ThreeEvent<PointerEvent>) => {
+    const st = drag.current
+    if (!st) return
+    drag.current = null
+    ;(e.target as Element | null)?.releasePointerCapture?.(e.pointerId)
+    if (orbit) orbit.enabled = true
+    setActiveAxis(null)
+    if (st.moved && onChange) onChange(st.last, true)
   }
 
   return (
@@ -432,19 +453,33 @@ function Room({
         <primitive
           key={s.id}
           object={s.obj}
-          onPointerDown={onPick && onChange ? (e: ThreeEvent<PointerEvent>) => startDrag(s.id, e) : undefined}
+          onPointerOver={(e: ThreeEvent<PointerEvent>) => {
+            e.stopPropagation()
+            document.body.style.cursor = "pointer"
+            if (e.pointerType === "mouse") setHoverId(s.id)
+          }}
+          onPointerOut={() => {
+            document.body.style.cursor = ""
+            setHoverId((h) => (h === s.id ? null : h))
+          }}
           onClick={(e: ThreeEvent<MouseEvent>) => {
-            // Un clic (no un arrossegament de la càmera) selecciona l'element, com a l'editor. Si es pot
-            // arrossegar, ja s'ha triat en prémer.
+            // Un clic (no un arrossegament de la càmera) selecciona l'element (o el seu grup), com a l'editor.
             if (e.delta > 4) return
             e.stopPropagation()
-            if (!(onPick && onChange)) onSelect?.(s.id)
+            if (onPick) onPick(s.id)
+            else onSelect?.(s.id)
           }}
         />
       ))}
       {selectedIds.map((id) => (
-        <Selected key={id} ambient={ambient} geos={geos} id={id} />
+        <ItemFrame key={id} ambient={ambient} geos={geos} id={id} strong />
       ))}
+      {hoverId && !selectedIds.includes(hoverId) && !activeAxis && <ItemFrame ambient={ambient} geos={geos} id={hoverId} />}
+      {gizmoAt && onChange && (
+        <group position={gizmoAt}>
+          <MoveGizmo axes={["x", "z"]} active={activeAxis} onStart={startAxis} onMove={moveAxis} onEnd={endAxis} />
+        </group>
+      )}
     </>
   )
 }
