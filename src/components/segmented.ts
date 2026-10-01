@@ -19,6 +19,8 @@ export function segItem(on: boolean) {
   return {
     size: "xs",
     variant: "ghost",
+    // Al tàctil, 44 × 44 com a mínim (`layout.css`, `.seg-item`).
+    className: "seg-item",
     minW: "32px",
     rounded: "sm",
     bg: on ? { base: "bg.panel", _dark: "gray.700" } : "transparent",

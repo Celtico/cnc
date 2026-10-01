@@ -795,6 +795,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   marges de les targetes de Preferències i de les seccions (`.settings-group-*`, `.form-section`: 20, al tàctil 16) i 32
   entre grups (`.settings-stack`). **Només canvien les mides** (ratolí: les de Chakra; dit: les d'iOS). Al tàctil, a més,
   els noms de les targetes de les graelles (`.card-title`) a 15 en dues línies i les capçaleres d'acordió de 48.
+  Al tàctil, també: les opcions dels controls segmentats (`.seg-item`) de 44 × 44 i els camps numèrics **sense les
+  fletxetes + −** (23 × 21, massa petites per al dit; es fa servir el teclat numèric, `inputMode`).
   **Res de Ionic** (per decisió: refer la UI no compensa i no encaixa amb les eines d'escriptori).
 - **Capçalera de les pàgines d'inici** (`components/PageHeader`, Ambients · Objectes · Mobles · Preferències): títol gran,
   les accions **a sota del títol** (a l'ordinador i al mòbil igual) i l'explicació. Dins dels acordions, la fila d'eines

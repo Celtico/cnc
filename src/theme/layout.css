@@ -77,6 +77,24 @@
     --form-row-py: 6px;
     --card-px: 16px;
   }
+  /* Opcions dels controls segmentats (IconChoice, pastilles, eines): la mida tàctil d'Apple. */
+  :root .seg-item {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /*
+   * Camps numèrics: sense les fletxetes + − (fan 23 × 21, massa petites per al dit; a iOS els números
+   * s'escriuen amb el teclat numèric, que ja surt amb `inputMode`). La unitat (mm) s'arrima a la dreta.
+   */
+  :root [data-scope="number-input"][data-part="control"] {
+    display: none;
+  }
+  :root [data-scope="number-input"] .nf-unit {
+    right: 12px;
+  }
+  :root [data-scope="number-input"][data-part="input"] {
+    padding-inline-end: 44px;
+  }
   /* Nom de les targetes de les graelles (dues columnes al mòbil): 15, com el «subheadline» d'iOS, en dues línies. */
   :root .card-title {
     font-size: 15px;

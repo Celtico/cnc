@@ -260,7 +260,7 @@ export function CabinetViewer({
                 exploded={exploded}
                 showHoles={showHoles}
                 // Mòdul triat: sòlid amb el contorn taronja. Translúcid només amb un compartiment triat (per veure'l a dins).
-                dimmed={q.guides && !!highlightZone && selectedIndex !== undefined && p.module === selectedIndex}
+                dimmed={q.guides && !!highlightZone && highlightZone.veil !== false && selectedIndex !== undefined && p.module === selectedIndex}
                 edges={q.guides}
                 materialMode={materialMode}
                 materials={materials}

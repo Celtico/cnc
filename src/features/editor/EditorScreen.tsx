@@ -669,7 +669,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
     const mod = build.modules[moduleIndex]
     if (!mod) return null
     const c = module.carcass
-    // Mòdul seleccionat: només el contorn, sense vel (el mòdul ja es veu translúcid).
+    // Mòdul seleccionat: només el contorn, sense vel i sòlid (translúcid només amb un compartiment).
     if (selection.kind === "module")
       return { x0: mod.x, x1: mod.x + c.width, y0: mod.y, y1: mod.y + c.height, z0: mod.z, z1: mod.z + c.depth + c.thickness, veil: false }
     if (selection.kind !== "zone" || !zoneRect) return null
