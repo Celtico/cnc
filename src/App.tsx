@@ -221,15 +221,14 @@ export function App() {
 
   // Pàgines del moble obert (Editor · Peces · Nesting · Exportar): a l'ordinador, al mig de la barra
   // de dalt; al mòbil, en una franja sota la barra (la barra de baix és sempre el menú general).
-  const projectTabs = (full: boolean) =>
+  const projectTabs = () =>
     showTopBar && projectNav.length > 1 ? (
-      // Al mòbil (full), les 4 pestanyes a parts iguals i més petites: a 375 px «Exportar» quedava tallat.
-      <SegmentGroup.Root size={full ? "xs" : "sm"} w={full ? "full" : undefined} value={screen === "photo" ? "editor" : screen} onValueChange={(e) => e.value && go(e.value as Screen)}>
+      <SegmentGroup.Root size="sm" value={screen === "photo" ? "editor" : screen} onValueChange={(e) => e.value && go(e.value as Screen)}>
         <SegmentGroup.Indicator />
         {projectNav.map((n) => (
-          <SegmentGroup.Item key={n.id} value={n.id} flex={full ? 1 : undefined} minW={0} px={full ? 1 : undefined} justifyContent="center">
+          <SegmentGroup.Item key={n.id} value={n.id} justifyContent="center">
             <SegmentGroup.ItemText>
-              <HStack gap={full ? 1 : 1.5}>
+              <HStack gap={1.5}>
                 <n.icon /> {n.label}
               </HStack>
             </SegmentGroup.ItemText>
@@ -238,6 +237,42 @@ export function App() {
         ))}
       </SegmentGroup.Root>
     ) : undefined
+
+  // Al mòbil, les pàgines del moble a sang (de vora a vora), com unes pestanyes d'app: icona a sobre, nom a
+  // sota i la triada amb el color principal i una ratlla a baix.
+  const current = screen === "photo" ? "editor" : screen
+  const mobileProjectTabs = (
+    <HStack gap={0} role="tablist" aria-label="Pàgines del moble">
+      {projectNav.map((n) => {
+        const on = current === n.id
+        return (
+          <Box
+            key={n.id}
+            asChild
+            flex={1}
+            minW={0}
+            pt={1.5}
+            pb={1}
+            color={on ? "wood.fg" : "fg.muted"}
+            borderBottomWidth="2px"
+            borderColor={on ? "wood.solid" : "transparent"}
+            cursor="pointer"
+          >
+            <button type="button" role="tab" aria-selected={on} onClick={() => go(n.id as Screen)}>
+              <Stack align="center" gap={0.5}>
+                <Box fontSize="xl" display="inline-flex">
+                  <n.icon />
+                </Box>
+                <Text fontSize="xs" fontWeight={on ? "semibold" : "medium"} truncate maxW="full">
+                  {n.label}
+                </Text>
+              </Stack>
+            </button>
+          </Box>
+        )
+      })}
+    </HStack>
+  )
 
   return (
     <UnitContext.Provider value={settings.display.unit}>
@@ -306,7 +341,7 @@ export function App() {
             onBack={backToProjects}
             onSettings={() => go("settings")}
             actionsRef={setTopActions}
-            tabs={projectTabs(false)}
+            tabs={projectTabs()}
             menu={
               <Menu.Root positioning={{ placement: "bottom-end" }}>
                 <Menu.Trigger asChild>
@@ -328,8 +363,8 @@ export function App() {
           />
         )}
         {showTopBar && projectNav.length > 1 && (
-          <Box display={{ base: "block", md: "none" }} px={2} py={1.5} borderBottomWidth="1px" bg="bg.panel" position="sticky" top="calc(52px + env(safe-area-inset-top, 0px))" zIndex="sticky">
-            {projectTabs(true)}
+          <Box display={{ base: "block", md: "none" }} borderBottomWidth="1px" bg="bg.panel" position="sticky" top="calc(52px + env(safe-area-inset-top, 0px))" zIndex="sticky">
+            {mobileProjectTabs}
           </Box>
         )}
         {screen === "ambient" && ambientId !== null && (

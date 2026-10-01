@@ -320,8 +320,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Menú global sempre igual** (`App.tsx`, `GLOBAL_NAV`, com Figma o Linear): Ambients · Objectes ·
   Mobles i, a baix de tot, Preferències; l'apartat del document obert queda marcat (`section`).
   **Les pàgines d'un moble** (`PROJECT_NAV`: Editor, Peces, Nesting, Exportar) són **pestanyes al mig
-  de la seva barra superior** (`TopBar tabs`), no al menú; al mòbil, en una **franja sota la barra de dalt**
-  (`projectTabs(true)`): la barra de baix és **sempre el menú general** (com les apps de l'iPhone), i així es
+  de la seva barra superior** (`TopBar tabs`), no al menú; al mòbil, en una **franja a sang sota la barra de dalt**
+  (`mobileProjectTabs`: de vora a vora, icona a sobre i nom a sota, la triada amb el color principal i una ratlla): la barra de baix és **sempre el menú general** (com les apps de l'iPhone), i així es
   pot saltar entre documents oberts (cada apartat recorda l'últim obert). **Les accions d'un apartat van a la seva capçalera** (p. ex. «Obrir
   fitxer» a Mobles), mai al menú. Clicar l'apartat del document obert torna a la llista.
 - **Mòbil sense títols repetits**: les pàgines d'inici porten el seu títol gran (com iOS) i no hi ha
