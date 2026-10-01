@@ -33,4 +33,30 @@
   textarea {
     font-size: 17px;
   }
+
+  /*
+   * Espais com la Configuració d'iOS (els selectors porten `:root` perquè guanyin als estils de Chakra, que
+   * també van sense capa): files de formulari enganxades amb una línia fina entre elles, 16 als costats de
+   * les targetes i ~32 entre grups.
+   */
+  :root .form-row {
+    padding-block: 6px;
+  }
+  :root .form-row + .form-row {
+    border-top: 1px solid var(--chakra-colors-border);
+  }
+  :root :has(> .form-row) {
+    row-gap: 0;
+  }
+  :root :has(> .form-row) > :not(.form-row) {
+    margin-block: 6px;
+  }
+  :root .settings-group-head,
+  :root .settings-group-body,
+  :root .form-section {
+    padding-inline: 16px;
+  }
+  :root .settings-stack {
+    gap: 32px;
+  }
 }

@@ -462,7 +462,11 @@ function PaneHeader({ pane }: { pane: PaneProps }) {
  * macOS o Figma): es llegeix de dalt a baix, sense forats, i tots els camps tenen el mateix ample.
  */
 function FoldGrid({ children }: { children: ReactNode }) {
-  return <Stack gap={6}>{children}</Stack>
+  return (
+    <Stack className="settings-stack" gap={6}>
+      {children}
+    </Stack>
+  )
 }
 
 // --- Objectes de referència --------------------------------------------------------------

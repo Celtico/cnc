@@ -10,7 +10,7 @@ export function SettingsGroup({ icon, title, summary, actions, children }: { ico
   return (
     <Box borderWidth="1px" rounded="lg" bg="bg.panel">
       {/* Icones alineades a dalt (amb la primera línia del títol) i el doble de marge. */}
-      <HStack gap={2.5} px={6} pt={4} pb={3.5} borderBottomWidth="1px" bg="bg.subtle" roundedTop="lg" align="flex-start">
+      <HStack className="settings-group-head" gap={2.5} px={6} pt={4} pb={3.5} borderBottomWidth="1px" bg="bg.subtle" roundedTop="lg" align="flex-start">
         {icon && (
           <Box color="wood.fg" flexShrink={0} display="inline-flex" mt="3px">
             {icon}
@@ -32,7 +32,7 @@ export function SettingsGroup({ icon, title, summary, actions, children }: { ico
           </HStack>
         )}
       </HStack>
-      <Stack gap={4} px={6} py={5}>
+      <Stack className="settings-group-body" gap={4} px={6} py={5}>
         {children}
       </Stack>
     </Box>

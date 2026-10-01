@@ -235,7 +235,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   i render; al 3D enquadrar, casa de nines, ombres i render.
 - **Plànol**: la roda fa zoom al punt del ratolí (com al 3D), pessigar també, arrossegar el fons
   desplaça; − / + i l'escala de pantalla (1:50…) a baix a la dreta; la barra d'eines flota a dalt.
-- **Les tres pàgines (Mobles, Objectes, Ambients) fan igual**: títol amb el **botó principal a la dreta**
+- **Les tres pàgines (Mobles, Objectes, Ambients) fan igual**: títol amb el **botó principal a la dreta** (al mòbil, a sota del títol; `PageHeader`)
   («Nou ambient» · «Nou objecte» · «Nou moble», `colorPalette="wood"`, com Importar/Exportar a
   Preferències; en blanc, `projects/blank.ts`), text descriptiu, cercador, **Historial** (els que ja
   tens) i acordions tancats (plantilles / catàleg). Les finestres «Afegir» dels ambients porten el mateix
@@ -785,6 +785,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   `2xs` 11, `lg` 20, `xl` 22; controls (`sizes` 8–11) 40 / 44 / 44 / 48 (mínim tàctil d'Apple: 44); interlineat 1,3; els
   camps on s'escriu a 17 (amb menys de 16, Safari fa zoom). `FormRow` centra l'etiqueta amb `--form-row-label-pt`. A
   l'ordinador, les mides normals de Chakra (sm = 14, botons de 32–36). Barra de baix com la d'iOS (icona 24, nom 2xs).
+  **Espais com la Configuració d'iOS** (també a `touch.css`, amb classes dels mòduls comuns): files de formulari
+  (`.form-row`) enganxades amb una línia fina entre elles, 16 als costats de les targetes de Preferències i de les
+  seccions (`.settings-group-*`, `.form-section`) i 32 entre grups (`.settings-stack`).
   **Res de Ionic** (per decisió: refer la UI no compensa i no encaixa amb les eines d'escriptori).
 - **Capçalera de les pàgines d'inici** (`components/PageHeader`, Ambients · Objectes · Mobles): títol gran, accions i
   explicació; a l'ordinador les accions a la dreta del títol, al mòbil **a sota del títol**.

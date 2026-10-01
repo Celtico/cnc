@@ -10,7 +10,7 @@ import { segGroup, segItem } from "./segmented"
  */
 export function FormRow({ label, help, maxW, children }: { label: ReactNode; help?: ReactNode; maxW?: string; children: ReactNode }) {
   return (
-    <Box css={{ containerType: "inline-size" }} minW={0}>
+    <Box className="form-row" css={{ containerType: "inline-size" }} minW={0}>
       <Grid
         templateColumns="1fr"
         columnGap={4}
@@ -45,7 +45,7 @@ export function FormRow({ label, help, maxW, children }: { label: ReactNode; hel
 /** Secció d'una targeta amb files (títol petit en majúscules i una línia a dalt). */
 export function FormSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <Stack gap={3.5} px={{ base: 4, sm: 6 }} py={5} borderTopWidth="1px">
+    <Stack className="form-section" gap={3.5} px={{ base: 4, sm: 6 }} py={5} borderTopWidth="1px">
       <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
         {title}
       </Text>
