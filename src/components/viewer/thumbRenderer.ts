@@ -2,7 +2,7 @@ import { Box3, Color, DirectionalLight, HemisphereLight, Mesh, Scene, MeshStanda
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
 import type { MaterialPref, Panel, RefObject } from "../../core/model"
 import { refGeometry } from "./refGeometry"
-import { exportablePanel } from "./CabinetViewer"
+import { exportablePanel } from "./exportablePanel"
 import { buildScene } from "./exportGlb"
 import { makeFloor, ROOM } from "./floorTextures"
 import { readPresentationScene } from "./presentationScene"

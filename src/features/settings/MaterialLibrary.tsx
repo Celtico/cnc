@@ -3,6 +3,7 @@ import { LuPlus } from "react-icons/lu"
 import type { MaterialPref } from "../../core/model"
 import { MaterialPreview } from "./MaterialBits"
 import { MATERIAL_LIBRARY, type LibraryItem } from "./libraryItems"
+import { SectionLabel } from "../../components/SectionLabel"
 
 /** Diàleg «Afegir material»: la biblioteca de materials fets en graella (i «En blanc» per començar de zero). */
 export function MaterialLibrary({ open, onClose, onPick, onBlank }: { open: boolean; onClose: () => void; onPick: (m: LibraryItem) => void; onBlank: () => void }) {
@@ -12,7 +13,7 @@ export function MaterialLibrary({ open, onClose, onPick, onBlank }: { open: bool
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} h={{ base: "100dvh", md: "auto" }} maxH={{ md: "85dvh" }}>
+          <Dialog.Content pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} pb={{ base: "env(safe-area-inset-bottom, 0px)", md: 0 }} h={{ base: "100dvh", md: "auto" }} maxH={{ md: "85dvh" }}>
             <Dialog.Header>
               <Dialog.Title>Afegir un material</Dialog.Title>
             </Dialog.Header>
@@ -23,9 +24,9 @@ export function MaterialLibrary({ open, onClose, onPick, onBlank }: { open: bool
                 </Text>
                 {groups.map((g) => (
                   <Stack key={g} gap={2}>
-                    <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
+                    <SectionLabel>
                       {g}
-                    </Text>
+                    </SectionLabel>
                     <SimpleGrid columns={{ base: 2, sm: 3, md: 4 }} gap={3}>
                       {MATERIAL_LIBRARY.filter((m) => m.group === g).map((m) => (
                         <Box

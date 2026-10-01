@@ -1,4 +1,4 @@
-import { Alert, Badge, Box, Button, Editable, CloseButton, Drawer, HStack, IconButton, Popover, Portal, SegmentGroup, SimpleGrid, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
+import { Alert, Badge, Box, Button, Editable, HStack, IconButton, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { createElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   LuArrowDownToLine,
@@ -31,14 +31,13 @@ import {
   LuShapes,
   LuTrees,
   LuVideo,
-  LuSlidersVertical,
   LuTriangleAlert,
   LuUndo2,
   LuView,
 } from "react-icons/lu"
 import { PanelSection } from "../../components/PanelSection"
 import { Workspace } from "../../components/Workspace"
-import { ViewTile } from "../../components/ViewOptions"
+import { ViewOptions, ViewTile } from "../../components/ViewOptions"
 import { useWorkspace } from "../../components/useWorkspace"
 import { TopBarActions } from "../../components/TopBar"
 import { toaster } from "../../components/ui/toaster"
@@ -63,7 +62,7 @@ import { RunsForm } from "../composition/RunsForm"
 import { zoneLabel } from "../composition/zoneLabel"
 import { zoneIcon } from "../composition/zoneIcon"
 import { downloadBlob, slugify } from "../download"
-import { NumRow } from "./ParamsForm"
+import { NumRow } from "../../components/NumRow"
 import { FormRow } from "../../components/FormRow"
 import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
 import { PhotoScreen } from "../photo/PhotoScreen"
@@ -75,7 +74,7 @@ import { IconChoice } from "../../components/IconChoice"
 import { KINDS, MOBLE_KINDS } from "../composition/kinds"
 import { ViewBar, ViewerControls, type ViewerState } from "./ViewerControls"
 import { useDebouncedSave } from "../useDebouncedSave"
-import { MaterialSelect } from "../settings/SettingsScreen"
+import { MaterialSelect } from "../settings/MaterialSelect"
 
 type ViewTab = "3d" | "elevation" | "photo"
 const TAB_KEY = "mobles:editor-view-tab"
@@ -201,7 +200,6 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const [fitKey, setFitKey] = useState(0)
   // El botó d'enquadrar surt marcat mentre la càmera és a l'enquadrament.
   const [framed, setFramed] = useState(true)
-  const isMobile = useBreakpointValue({ base: true, md: false }) ?? false
   const [showHoles, setShowHoles] = useState(false)
   // «Veure a casa»: visor 3D amb el botó d'AR Quick Look (Safari a l'iPhone/iPad).
   const [arOpen, setArOpen] = useState(false)
@@ -753,20 +751,20 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   // de Fusion o Blender): el mode en un grup i la resta com a botons amb icona i nom.
   // Només icona (el text no hi cabia): el nom i l'explicació, al tooltip.
   const tile = (key: string, label: string, icon: ReactNode, on: boolean, onClick: () => void, tip?: string) => <ViewTile key={key} label={label} icon={icon} on={on} onClick={onClick} tip={tip} />
-  const viewQuick = (
-    <Stack gap={3} mb={4} pb={4} borderBottomWidth="1px">
-      <SimpleGrid columns={3} gap={1.5}>
-        {VIEW_MODES.map(([v, label, tip, Icon]) => tile(v, label, <Icon />, viewMode === v, () => setViewMode(v), `${label}: ${tip}`))}
-      </SimpleGrid>
-      <SimpleGrid columns={6} gap={1.5}>
-        {tile("fit", "Enquadrar", <LuVideo />, framed, () => setFitKey((k) => k + 1), framed ? "Càmera enquadrada (no es mou sola en editar)" : "Enquadrar el moble")}
-        {tile("holes", "Forats", <LuCircleDot />, showHoles, () => setShowHoles((v) => !v), showHoles ? "Amagar forats" : "Mostrar forats")}
-        {tile("explode", "Explosió", exploded ? <LuShrink /> : <LuExpand />, exploded, () => setExploded((v) => !v), exploded ? "Vista muntada" : "Vista explosionada")}
-        {tile("hardware", "Ferratges", <LuWrench />, hardware, () => setHardware((v) => !v), hardware ? "Amagar frontisses, tiradors i potes" : "Mostrar frontisses, tiradors i potes")}
-        {tile("render", "Render", <LuAperture />, false, () => setRenderOpen(true), "Render fotorealista per CPU (com Cinema 4D): es va afinant i es desa en PNG")}
-        {tile("ar", "A casa (AR)", <LuView />, false, () => setArOpen(true), "Veure a casa (realitat augmentada)")}
-      </SimpleGrid>
-    </Stack>
+  const viewModes = (
+    <SimpleGrid columns={3} gap={1.5}>
+      {VIEW_MODES.map(([v, label, tip, Icon]) => tile(v, label, <Icon />, viewMode === v, () => setViewMode(v), `${label}: ${tip}`))}
+    </SimpleGrid>
+  )
+  const viewTiles = (
+    <>
+      {tile("fit", "Enquadrar", <LuVideo />, framed, () => setFitKey((k) => k + 1), framed ? "Càmera enquadrada (no es mou sola en editar)" : "Enquadrar el moble")}
+      {tile("holes", "Forats", <LuCircleDot />, showHoles, () => setShowHoles((v) => !v), showHoles ? "Amagar forats" : "Mostrar forats")}
+      {tile("explode", "Explosió", exploded ? <LuShrink /> : <LuExpand />, exploded, () => setExploded((v) => !v), exploded ? "Vista muntada" : "Vista explosionada")}
+      {tile("hardware", "Ferratges", <LuWrench />, hardware, () => setHardware((v) => !v), hardware ? "Amagar frontisses, tiradors i potes" : "Mostrar frontisses, tiradors i potes")}
+      {tile("render", "Render", <LuAperture />, false, () => setRenderOpen(true), "Render fotorealista per CPU (com Cinema 4D): es va afinant i es desa en PNG")}
+      {tile("ar", "A casa (AR)", <LuView />, false, () => setArOpen(true), "Veure a casa (realitat augmentada)")}
+    </>
   )
 
   // Sense separació entre blocs: les seccions plegables van enganxades (totes amb la
@@ -1029,7 +1027,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             <CarcassForm module={module} onChange={updateModule} section="structure" />
           </PanelSection>
           {/* Mòdul dividit: portes que el tapen tot (armari amb penjador i maleter). */}
-          {module.root.split && <ZoneFrontSection root={module.root} zone={module.root} onChange={(root) => updateModule({ ...module, root })} kinds={["none", "door", "panel"]} title="Front de tot el mòdul" />}
+          {module.root.split && <ZoneFrontSection root={module.root} zone={module.root} onChange={(root) => updateModule({ ...module, root })} kinds={["none", "door", "panel"]} title="Front de tot el mòdul" id="module-front" />}
           <PanelSection id="mod-materials" title="Materials" icon={LuPalette}>
             <MaterialsForm carcass={module.carcass} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
           </PanelSection>
@@ -1050,13 +1048,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
         )}
 
         {collisions.length > 0 && (
-          <Stack gap={2} mt={3}>
-            <HStack gap={2} color="fg.muted">
-              <LuDoorOpen />
-              <Text fontSize="sm" fontWeight="semibold">
-                Amb l'obertura actual
-              </Text>
-            </HStack>
+          <PanelSection id="collisions" title="Amb l'obertura actual" icon={LuDoorOpen} badge={collisions.length} badgePalette="orange">
             {collisions.map((c) => (
               <Alert.Root key={c.groupId} status="warning" size="sm">
                 <Alert.Indicator />
@@ -1065,7 +1057,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
                 </Alert.Content>
               </Alert.Root>
             ))}
-          </Stack>
+          </PanelSection>
         )}
 
         {moduleWarnings.length > 0 && (
@@ -1295,52 +1287,12 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
         >
           <RenderDialog open={renderOpen} onClose={() => setRenderOpen(false)} getScene={() => sceneGetter.current?.() ?? null} name={name} />
           <ArDialog open={arOpen} onClose={() => setArOpen(false)} panels={viewerPanels} name={name} />
-          {isMobile ? (
-            // Al mòbil, les opcions surten en un calaix de baix amb el seu propi desplaçament
-            // (el popover feia desplaçar tota la pàgina).
-            <Drawer.Root placement="bottom">
-              <Drawer.Trigger asChild>
-                <IconButton aria-label="Opcions de vista" title="Opcions de vista" size="sm" variant="surface" colorPalette="wood">
-                  <LuSlidersVertical />
-                </IconButton>
-              </Drawer.Trigger>
-              <Portal>
-                <Drawer.Backdrop />
-                <Drawer.Positioner>
-                  <Drawer.Content roundedTop="l3" maxH="75dvh">
-                    <Drawer.Header>
-                      <Drawer.Title>Opcions de vista</Drawer.Title>
-                    </Drawer.Header>
-                    <Drawer.Body overflowY="auto" pb={6}>
-                      {viewQuick}
-                      <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} />
-                    </Drawer.Body>
-                    <Drawer.CloseTrigger asChild>
-                      <CloseButton size="sm" />
-                    </Drawer.CloseTrigger>
-                  </Drawer.Content>
-                </Drawer.Positioner>
-              </Portal>
-            </Drawer.Root>
-          ) : (
-          <Popover.Root positioning={{ placement: "bottom-end" }}>
-              <Popover.Trigger asChild>
-                <IconButton aria-label="Opcions de vista" title="Opcions de vista" size="sm" variant="surface" colorPalette="wood">
-                  <LuSlidersVertical />
-                </IconButton>
-              </Popover.Trigger>
-              <Portal>
-                <Popover.Positioner>
-                  <Popover.Content w="320px">
-                    <Popover.Body>
-                      {viewQuick}
-                      <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} />
-                    </Popover.Body>
-                  </Popover.Content>
-                </Popover.Positioner>
-              </Portal>
-            </Popover.Root>
-          )}
+          {/* Al mòbil, un calaix de baix amb el seu propi desplaçament; a l'ordinador, un popover. */}
+          <ViewOptions lead={viewModes} tiles={viewTiles}>
+            <Box pt={3} borderTopWidth="1px">
+              <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} />
+            </Box>
+          </ViewOptions>
         </Stack>
       </Box>
         )}

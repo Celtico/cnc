@@ -5,7 +5,7 @@ import { BoxGeometry, Color, Group, Mesh, MeshStandardMaterial, NeutralToneMappi
 import { BoxFrame } from "../../components/viewer/BoxFrame"
 import { MoveGizmo } from "../../components/viewer/MoveGizmo"
 import type { Axis } from "../../components/viewer/pixelScale"
-import { exportablePanel } from "../../components/viewer/CabinetViewer"
+import { exportablePanel } from "../../components/viewer/exportablePanel"
 import { buildScene } from "../../components/viewer/exportGlb"
 import { SceneAccess, StudioEnvironment } from "../../components/viewer/SceneHelpers"
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"

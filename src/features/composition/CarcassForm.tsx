@@ -1,16 +1,15 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { segGroup, segItem } from "../../components/segmented"
 import { DEFAULT_GRILLE, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
-import { NumRow } from "../editor/ParamsForm"
-import { FormRow } from "../../components/FormRow"
+import { NumRow } from "../../components/NumRow"
+import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
 import { useState } from "react"
 import { ProfileEditor } from "./ProfileEditor"
-import { PRESETS } from "./profilePresets"
-import { LuCircle, LuPencilRuler, LuRectangleHorizontal } from "react-icons/lu"
+import { PRESETS, matchPreset } from "./profilePresets"
+import { LuCircle, LuPencilRuler, LuRectangleHorizontal, LuSquircle } from "react-icons/lu"
 import { LuArrowDownToLine, LuDrill, LuGrid3X3, LuLayers2, LuPanelBottom, LuPanelTop, LuSquareDashed, LuSquare, LuSquareDashedBottom, LuSquareSquare, LuSquareStack, LuTable, LuTriangleRight, LuWind } from "react-icons/lu"
 import { useSettings } from "../settings/SettingsContext"
-import { MaterialSelect } from "../settings/SettingsScreen"
+import { MaterialSelect } from "../settings/MaterialSelect"
 
 export type CarcassSection = "dims" | "structure"
 
@@ -36,9 +35,11 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
       <Stack gap={4}>
         {/* «Penjat a la paret» és una posició, no una base: es tria a la secció Posició. */}
         {c.base.kind === "wall" ? (
-          <Text fontSize="sm" color="fg.muted">
-            Base: cap (penjat a la paret, a {c.base.height} mm del terra). Es canvia a Posició.
-          </Text>
+          <FormRow label="Base" help="Es canvia a Posició.">
+            <Text fontSize="sm" color="fg.muted" pt="7px">
+              Cap (penjat a la paret, a {c.base.height} mm del terra)
+            </Text>
+          </FormRow>
         ) : (
           <FormRow label="Base">
             <IconChoice
@@ -216,6 +217,7 @@ export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !==
   // Mateix material però un altre gruix: al nesting van a taulers diferents.
   const backApart = c.backMaterial === c.material && c.backThickness !== c.thickness
   const boards = settings.materials.filter((m) => !m.forBacks && m.category !== "sim")
+  const setThickness = (thickness: number) => onPatch(sameBack ? { thickness, backThickness: thickness } : { thickness })
   return (
     <Stack gap={3}>
       {mixed && (
@@ -226,7 +228,13 @@ export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !==
       <FormRow label="Cos" maxW="280px">
         <MaterialSelect label="Cos" hideLabel materials={boards} value={c.material} onChange={pickMaterial("material", "thickness")} />
       </FormRow>
-      <NumRow label="Gruix" value={c.thickness} min={8} max={40} step={1} onChange={(thickness) => onPatch(sameBack ? { thickness, backThickness: thickness } : { thickness })} help={mat ? `Gruixos del material: ${mat.thicknesses.join(" · ")} mm` : undefined} />
+      {mat ? (
+        <FormRow label="Gruix">
+          <ChoiceChips label="Gruix" options={thicknessOptions(mat.thicknesses, c.thickness)} value={String(c.thickness)} onChange={(v) => setThickness(Number(v))} />
+        </FormRow>
+      ) : (
+        <NumRow label="Gruix" value={c.thickness} min={8} max={40} step={1} onChange={setThickness} />
+      )}
       <FormRow label="Fronts" help="Portes, calaixos i abatibles. Mateix gruix que el cos." maxW="280px">
         <MaterialSelect label="Fronts" hideLabel materials={boards} value={c.frontMaterial ?? ""} emptyLabel="Com el cos" onChange={(v) => onPatch({ frontMaterial: v || undefined })} />
       </FormRow>
@@ -234,7 +242,13 @@ export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !==
         <FormRow label="Fons" maxW="280px">
           <MaterialSelect label="Fons" hideLabel materials={settings.materials.filter((m) => m.category !== "sim")} value={sameBack ? "" : c.backMaterial} emptyLabel="Com el cos" onChange={(v) => pickMaterial("backMaterial", "backThickness")(v || SAME)} />
         </FormRow>
-        <NumRow label="Gruix del fons" value={c.backThickness} min={3} max={40} step={1} onChange={(backThickness) => onPatch({ backThickness })} help={backMat ? backMat.thicknesses.join(" · ") : undefined} />
+        {backMat ? (
+          <FormRow label="Gruix del fons">
+            <ChoiceChips label="Gruix del fons" options={thicknessOptions(backMat.thicknesses, c.backThickness)} value={String(c.backThickness)} onChange={(v) => onPatch({ backThickness: Number(v) })} />
+          </FormRow>
+        ) : (
+          <NumRow label="Gruix del fons" value={c.backThickness} min={3} max={40} step={1} onChange={(backThickness) => onPatch({ backThickness })} />
+        )}
       </>}
       {hasBack && backApart && (
         <HStack gap={2} fontSize="xs" color="fg.muted" wrap="wrap">
@@ -299,17 +313,17 @@ function TableTopFields({ module, onChange }: { module: Module; onChange: (m: Mo
           <NumRow label="Voladís" value={tt.overhang} min={0} max={1000} step={10} onChange={(overhang) => set({ ...tt, overhang })} help={`A tot el voltant. Tauler de ${L} × ${D} mm. Les cantonades a inglet no s'hi apliquen.`} />
           <FormRow label="Forma">
             <HStack gap={1.5} wrap="wrap">
-              <HStack {...segGroup}>
-                <Button {...segItem(!tt.shape)} px={2} onClick={() => set({ overhang: tt.overhang })}>
-                  <LuRectangleHorizontal /> Rectangle
-                </Button>
-                <Button {...segItem(false)} px={2} onClick={() => set({ ...tt, shape: preset("round") })}>
-                  <LuSquare /> Arrodonit
-                </Button>
-                <Button {...segItem(false)} px={2} onClick={() => set({ ...tt, shape: preset("ellipse") })}>
-                  <LuCircle /> Oval
-                </Button>
-              </HStack>
+              <ChoiceChips
+                label="Forma"
+                options={[
+                  { id: "rect", label: <><LuRectangleHorizontal /> Rectangle</> },
+                  { id: "round", label: <><LuSquircle /> Arrodonit</> },
+                  { id: "ellipse", label: <><LuCircle /> Oval</> },
+                ]}
+                // Una forma editada a mà no és cap de les tres (cap marcada).
+                value={tt.shape ? (matchPreset(tt.shape) ?? "") : "rect"}
+                onChange={(v) => set(v === "rect" ? { overhang: tt.overhang } : { ...tt, shape: preset(v) })}
+              />
               <Button size="xs" variant="ghost" onClick={() => setEditing(true)}>
                 <LuPencilRuler /> Editar…
               </Button>
@@ -329,4 +343,9 @@ function TableTopFields({ module, onChange }: { module: Module; onChange: (m: Mo
       )}
     </Stack>
   )
+}
+
+/** Gruixos del material com a opcions, amb l'actual si no n'és cap (no es perd en obrir-lo). */
+function thicknessOptions(list: number[], current: number): { id: string; label: string }[] {
+  return (list.includes(current) ? list : [current, ...list]).map((t) => ({ id: String(t), label: `${t} mm` }))
 }

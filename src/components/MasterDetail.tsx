@@ -2,6 +2,7 @@ import { Badge, Box, Button, CloseButton, Flex, HStack, IconButton, Input, Input
 import type { ReactNode } from "react"
 import { LuChevronLeft, LuChevronRight, LuPlus, LuSearch } from "react-icons/lu"
 import { ChoiceChips } from "./FormRow"
+import { SectionLabel } from "./SectionLabel"
 
 export interface MasterItem {
   id: string
@@ -101,9 +102,9 @@ export function MasterDetail({
         g.items.length ? (
           <Stack key={g.id} gap={1}>
             <HStack gap={2} px={1}>
-              <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
+              <SectionLabel>
                 {g.label}
-              </Text>
+              </SectionLabel>
               <Badge size="xs" variant="subtle" colorPalette="gray">
                 {g.items.length}
               </Badge>
@@ -161,6 +162,12 @@ export function MasterDetail({
             )}
           </Stack>
         ) : null,
+      )}
+      {/* La cerca o el filtre no troben res. */}
+      {groups.every((g) => !g.items.length) && (
+        <Text fontSize="sm" color="fg.muted" px={1}>
+          Cap resultat.
+        </Text>
       )}
     </Stack>
   )

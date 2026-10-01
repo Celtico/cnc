@@ -1,10 +1,11 @@
 import { Alert, Box, Button, Card, HStack, Stack, Switch, Text, VStack } from "@chakra-ui/react"
 import { useMemo, useState } from "react"
 import { usePersistentFlag } from "../usePersistentFlag"
-import { LuBoxes, LuCuboid, LuDownload, LuFileDown, LuFileJson, LuLayoutGrid, LuScissors, LuWrench } from "react-icons/lu"
+import { LuBoxes, LuCuboid, LuDownload, LuFileDown, LuFileJson, LuLayoutGrid, LuScissors, LuSettings2 } from "react-icons/lu"
 import { PanelGroup, PanelSection } from "../../components/PanelSection"
+import { FormRow } from "../../components/FormRow"
 import { exportGlb } from "../../components/viewer/exportGlb"
-import { exportablePanel } from "../../components/viewer/CabinetViewer"
+import { exportablePanel } from "../../components/viewer/exportablePanel"
 import { exportUsdz, openQuickLook } from "../../components/viewer/exportUsdz"
 import { toaster } from "../../components/ui/toaster"
 import { toCutList } from "../../core/cutlist/toCutList"
@@ -183,16 +184,20 @@ export function ExportScreen({ projectId }: { projectId: number }) {
           </Button>
         }
       >
-        <Switch.Root checked={labels} onCheckedChange={(e) => setLabels(e.checked)} size="sm">
-          <Switch.HiddenInput />
-          <Switch.Control />
-          <Switch.Label>Etiquetes amb el nom de la peça (capa LABEL)</Switch.Label>
-        </Switch.Root>
-        <Switch.Root checked={dxf3d} onCheckedChange={(e) => setDxf3d(e.checked)} size="sm">
-          <Switch.HiddenInput />
-          <Switch.Control />
-          <Switch.Label>3D: gruix de la peça i profunditat de forats i ranures (Z i extrusió)</Switch.Label>
-        </Switch.Root>
+        <FormRow label="Etiquetes">
+          <Switch.Root checked={labels} onCheckedChange={(e) => setLabels(e.checked)} size="sm" pt="6px">
+            <Switch.HiddenInput />
+            <Switch.Control />
+            <Switch.Label fontSize="sm">Nom de la peça (capa LABEL)</Switch.Label>
+          </Switch.Root>
+        </FormRow>
+        <FormRow label="3D">
+          <Switch.Root checked={dxf3d} onCheckedChange={(e) => setDxf3d(e.checked)} size="sm" pt="6px">
+            <Switch.HiddenInput />
+            <Switch.Control />
+            <Switch.Label fontSize="sm">Gruix de la peça i profunditat de forats i ranures (Z i extrusió)</Switch.Label>
+          </Switch.Root>
+        </FormRow>
       </ExportCard>
 
       <ExportCard
@@ -225,7 +230,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
       />
 
       <PanelGroup storageKey="mobles:export-open-section" defaultOpen="">
-        <PanelSection id="advanced" title="Avançat" icon={LuWrench}>
+        <PanelSection id="advanced" title="Avançat" icon={LuSettings2}>
           <HStack justify="space-between" gap={3} wrap="wrap">
             <Text fontSize="sm" color="fg.muted" flex={1} minW="240px">
               JSON del taller (UnifiedData): el que el taller obtindria en llegir el STEP i el CSV ({nesting?.boards.length ?? 0} taulers). Només

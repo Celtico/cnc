@@ -56,3 +56,36 @@ export const PRESETS: { id: string; label: string; make: (w: number, h: number) 
     },
   },
 ]
+
+const near = (a: number | undefined, b: number | undefined, tol: number) => Math.abs((a ?? 0) - (b ?? 0)) <= tol
+
+/**
+ * Quina forma de partida és `shape` (refeta a la mida dels seus nodes, perquè la forma es desa a
+ * la mida que tenia en triar-la), o `undefined` si s'ha editat a mà.
+ */
+export function matchPreset(shape: PNode[]): string | undefined {
+  if (shape.length === 0) return undefined
+  const xs = shape.map((n) => n.x)
+  const ys = shape.map((n) => n.y)
+  const x0 = Math.min(...xs), y0 = Math.min(...ys)
+  const w = Math.max(...xs) - x0, h = Math.max(...ys) - y0
+  const tol = Math.max(0.5, Math.max(w, h) * 1e-4)
+  return PRESETS.find((p) => {
+    const ref = p.make(w, h)
+    return (
+      ref.length === shape.length &&
+      ref.every((r, i) => {
+        const n = shape[i]!
+        return (
+          near(n.x - x0, r.x, tol) &&
+          near(n.y - y0, r.y, tol) &&
+          near(n.b, r.b, 1e-3) &&
+          near(n.in?.[0], r.in?.[0], tol) &&
+          near(n.in?.[1], r.in?.[1], tol) &&
+          near(n.out?.[0], r.out?.[0], tol) &&
+          near(n.out?.[1], r.out?.[1], tol)
+        )
+      })
+    )
+  })?.id
+}

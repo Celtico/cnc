@@ -4,7 +4,7 @@ import { LuView } from "react-icons/lu"
 import type { Panel } from "../../core/model"
 import { exportGlb } from "./exportGlb"
 import { exportUsdz, supportsQuickLook } from "./exportUsdz"
-import { exportablePanel } from "./CabinetViewer"
+import { exportablePanel } from "./exportablePanel"
 import { useSettings } from "../../features/settings/SettingsContext"
 
 type ModelViewerProps = DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {

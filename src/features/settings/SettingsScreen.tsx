@@ -23,7 +23,7 @@ import {
   Text,
 } from "@chakra-ui/react"
 import { Children, createContext, Fragment, isValidElement, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { LuArrowDown, LuArrowUp, LuCheck, LuPaintbrush, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff, LuFileDown, LuGrid3X3, LuHammer, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRows3, LuRuler, LuScan, LuScissors, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
+import { LuArchive, LuArrowDown, LuArrowUp, LuCheck, LuCircleDashed, LuCircleDot, LuMagnet, LuScanEye, LuPaintbrush, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff,  LuHammer, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRows3, LuRuler, LuScan, LuScissors, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { MasterDetail } from "../../components/MasterDetail"
@@ -51,12 +51,13 @@ import {
   type Settings,
 } from "../../core/model"
 import { downloadText } from "../download"
-import { NumberField, NumRow } from "../editor/ParamsForm"
+import { NumberField, NumRow } from "../../components/NumRow"
 import { useSettings } from "./SettingsContext"
 import { fileAccept } from "../file/fileAccept"
 import { useDebouncedSave } from "../useDebouncedSave"
 import { PageHeader } from "../../components/PageHeader"
 import { MaterialSelect } from "./MaterialSelect"
+import { SectionLabel } from "../../components/SectionLabel"
 
 type SectionKey = keyof Omit<Settings, "version">
 
@@ -184,8 +185,8 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
                     <Box gridColumn={{ base: "1 / -1", sm: "auto" }} mt={{ base: i > 0 ? 2 : 0, sm: 0 }} minW={0}>
                       <MaterialSelect label="Material" hideLabel materials={draft.materials} value={s.material} emptyLabel="Tots els altres" onChange={(material) => update({ material })} />
                     </Box>
-                    <NumberField label="" value={s.w} min={300} max={6000} step={10} onChange={(w) => update({ w })} />
-                    <NumberField label="" value={s.h} min={300} max={6000} step={10} onChange={(h) => update({ h })} />
+                    <NumberField label="" ariaLabel="Llarg" value={s.w} min={300} max={6000} step={10} onChange={(w) => update({ w })} />
+                    <NumberField label="" ariaLabel="Ample" value={s.h} min={300} max={6000} step={10} onChange={(h) => update({ h })} />
                     <IconButton aria-label="Eliminar tauler" size="sm" variant="ghost" colorPalette="red" disabled={draft.boards.sheets.length <= 1} onClick={() => set("boards", { ...draft.boards, sheets: draft.boards.sheets.filter((_, k) => k !== i) })}>
                       <LuTrash2 />
                     </IconButton>
@@ -241,7 +242,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             </SettingsGroup>
           </Pane>
 
-          <Pane id="display" title="Visualització" icon={LuGrid3X3} desc="Unitat de les mides a la pantalla." onReset={() => setReset({ key: "display", label: "Visualització" })}>
+          <Pane id="display" title="Visualització" icon={LuScanEye} desc="Unitat de les mides a la pantalla." onReset={() => setReset({ key: "display", label: "Visualització" })}>
             <SettingsGroup icon={<LuRuler />} title="Mides" summary={draft.display.unit === "cm" ? "En centímetres" : "En mil·límetres"}>
             <FormRow label="Unitat" help="Internament tot es guarda en mm; els fitxers per al taller sempre van en mm.">
               <ChoiceChips label="Unitat" value={draft.display.unit} onChange={(unit) => set("display", { unit })} options={[{ id: "mm", label: "mm" }, { id: "cm", label: "cm" }]} />
@@ -344,9 +345,9 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
       <Stack as="nav" aria-label="Apartats de Preferències" w={{ base: "full", md: "230px" }} flexShrink={0} gap={0.5} display={{ base: cur ? "none" : "flex", md: "flex" }} position={{ md: "sticky" }} top={{ md: 0 }}>
         {groups.map((g) => (
         <Stack key={g.label} gap={1} mb={{ base: 3, md: 2 }}>
-        <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide" px={{ base: 1, md: 3 }}>
+        <SectionLabel px={{ base: 1, md: 3 }}>
           {g.label}
-        </Text>
+        </SectionLabel>
         <Box borderWidth={{ base: "1px", md: 0 }} rounded="lg" overflow="hidden" bg={{ base: "bg.panel", md: "transparent" }}>
           {g.panes.map((p, i) => {
             const on = p.id === shown.id
@@ -791,23 +792,11 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
           <FormRow label="Foto" help={`${finish.tileMm} × ${Math.round(finish.tileMm * (finish.aspect ?? 1))} mm de tauler per repetició, ${finish.seamless ? "repetida tal qual" : "en mirall"}.`}>
             <HStack gap={2} wrap="wrap">
               <HStack gap={1.5}>
-                <Input
-                  size="sm"
-                  w="96px"
-                  type="number"
-                  inputMode="numeric"
-                  value={finish.tileMm}
-                  min={50}
-                  max={5000}
-                  onChange={(e) => {
-                    const v = Number(e.target.value)
-                    if (v >= 50 && v <= 5000) onChange({ finish: { ...finish, tileMm: v } })
-                  }}
-                  aria-label="Amplada de la foto (mm)"
-                  title="Quants mm de tauler de debò surten a la foto (d'esquerra a dreta)"
-                />
+                <Box w="150px">
+                  <NumberField label="" ariaLabel="Amplada de la foto" value={finish.tileMm} min={50} max={5000} step={10} onChange={(v) => v >= 50 && v <= 5000 && onChange({ finish: { ...finish, tileMm: v } })} />
+                </Box>
                 <Text fontSize="sm" color="fg.muted">
-                  mm d'amplada
+                  d'amplada
                 </Text>
               </HStack>
               <Button size="sm" variant="outline" onClick={() => void pickTexture().then((t) => t && onChange({ finish: { ...finish, ...t } }))}>
@@ -839,10 +828,9 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
         {finish.kind === "tiles" && (
           <FormRow label="Rajola">
             <HStack gap={3} wrap="wrap">
-              <HStack gap={1.5}>
-                <Input size="sm" w="96px" type="number" inputMode="numeric" value={finish.size} min={20} max={1500} onChange={(e) => { const v = Number(e.target.value); if (v >= 20 && v <= 1500) onChange({ finish: { ...finish, size: v } }) }} aria-label="Mida de la rajola (mm)" />
-                <Text fontSize="sm" color="fg.muted">mm</Text>
-              </HStack>
+              <Box w="150px">
+                <NumberField label="" ariaLabel="Mida de la rajola" value={finish.size} min={20} max={1500} step={10} onChange={(v) => v >= 20 && v <= 1500 && onChange({ finish: { ...finish, size: v } })} />
+              </Box>
               <HStack gap={1.5}>
                 <Input size="sm" type="color" value={finish.grout} onChange={(e) => onChange({ finish: { ...finish, grout: e.target.value } })} p={0.5} w="44px" aria-label="Color de la junta" />
                 <Text fontSize="sm" color="fg.muted">junta</Text>
@@ -918,8 +906,6 @@ function DefaultPick({ label, materials, all, material, thickness, onChange }: {
   )
 }
 
-export { MaterialSelect }
-
 // --- Ferratges -----------------------------------------------------------------------------
 
 function HardwareForm({ hardware: h, onChange }: { hardware: Settings["hardware"]; onChange: (h: Settings["hardware"]) => void }) {
@@ -928,12 +914,12 @@ function HardwareForm({ hardware: h, onChange }: { hardware: Settings["hardware"
   const sub = <K extends keyof Settings["hardware"]>(key: K, patch: Partial<Settings["hardware"][K]>) => onChange({ ...h, [key]: { ...h[key], ...patch } })
   return (
     <FoldGrid>
-      <Group title="Cassoleta de frontissa" icon={LuSquareStack}>
+      <Group title="Cassoleta de frontissa" icon={LuCircleDashed}>
         <NumRow label="Diàmetre (Ø)" value={h.hinge.cupDiameter} min={20} max={40} step={1} onChange={(cupDiameter) => sub("hinge", { cupDiameter })} />
         <NumRow label="Fondària" value={h.hinge.cupDepth} min={5} max={20} step={0.5} onChange={(cupDepth) => sub("hinge", { cupDepth })} />
         <NumRow label="Al cantell" help="Del cantell de la porta a la vora de la cassoleta." value={h.hinge.cupOffset} min={15} max={30} step={0.5} onChange={(cupOffset) => sub("hinge", { cupOffset })} />
       </Group>
-      <Group title="System 32" icon={LuGrid3X3}>
+      <Group title="System 32" icon={LuCircleDot}>
         <NumRow label="Filera al cantell" value={h.system32.edgeOffset} min={20} max={60} step={1} onChange={(edgeOffset) => sub("system32", { edgeOffset })} />
         <NumRow label="Pas" value={h.system32.pitch} min={16} max={64} step={1} onChange={(pitch) => sub("system32", { pitch })} />
         <NumRow label="Diàmetre (Ø)" value={h.system32.diameter} min={3} max={10} step={0.5} onChange={(diameter) => sub("system32", { diameter })} />
@@ -945,7 +931,7 @@ function HardwareForm({ hardware: h, onChange }: { hardware: Settings["hardware"
         <NumRow label="Fondària a la cara" value={h.dowel.faceDepth} min={5} max={20} step={0.5} onChange={(faceDepth) => sub("dowel", { faceDepth })} />
         <NumRow label="Fondària al cantell" value={h.dowel.edgeDepth} min={10} max={40} step={0.5} onChange={(edgeDepth) => sub("dowel", { edgeDepth })} />
       </Group>
-      <Group title="Calaixos (guia genèrica)" icon={LuFileDown}>
+      <Group title="Calaixos (guia genèrica)" icon={LuArchive}>
         <FormRow label="Llargades de guia" help="Es tria la més llarga que hi cap." maxW="360px">
           <Input
             size="sm"
@@ -967,7 +953,7 @@ function HardwareForm({ hardware: h, onChange }: { hardware: Settings["hardware"
         <NumRow label="Fons des de baix" value={h.drawer.bottomOffset} min={0} max={40} step={1} onChange={(bottomOffset) => sub("drawer", { bottomOffset })} />
         <NumRow label="Joc amb el fons" value={h.drawer.backClearance} min={0} max={60} step={1} onChange={(backClearance) => sub("drawer", { backClearance })} />
       </Group>
-      <Group title="Imants (reixetes i trapes)" icon={LuSquareStack}>
+      <Group title="Imants (reixetes i trapes)" icon={LuMagnet}>
         <NumRow label="Diàmetre (Ø)" value={h.magnet.diameter} min={5} max={20} step={1} onChange={(diameter) => sub("magnet", { diameter })} />
         <NumRow label="Fondària" value={h.magnet.depth} min={2} max={15} step={0.5} onChange={(depth) => sub("magnet", { depth })} />
         <NumRow label="A la cantonada" value={h.magnet.cornerOffset} min={20} max={200} step={5} onChange={(cornerOffset) => sub("magnet", { cornerOffset })} />

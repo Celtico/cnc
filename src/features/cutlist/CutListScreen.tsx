@@ -5,6 +5,7 @@ import { PanelDrawing } from "../../components/PanelDrawing"
 import { toCutList } from "../../core/cutlist/toCutList"
 import type { Grain } from "../../core/model"
 import { useCompositionExtras, useCompositionPanels, useProject } from "../useProject"
+import { SectionLabel } from "../../components/SectionLabel"
 
 const GRAIN: Record<Grain, string> = { x: "Llarg", y: "Ample", none: "—" }
 
@@ -196,7 +197,7 @@ export function CutListScreen({ projectId }: { projectId: number }) {
 
       {extraRows.length > 0 && (
         <Stack gap={2}>
-          <Text fontWeight="semibold">Elements sense nesting</Text>
+          <SectionLabel>Elements sense nesting</SectionLabel>
           <Table.ScrollArea borderWidth="1px" rounded="lg">
             <Table.Root size="sm" variant="line" striped>
               <Table.Header>

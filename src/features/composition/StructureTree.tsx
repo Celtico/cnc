@@ -1,8 +1,8 @@
 import { Box, HStack, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
 import { createElement, useState, type ReactNode } from "react"
 import {
-  LuArrowDown,
-  LuArrowUp,
+  LuArrowLeft,
+  LuArrowRight,
   LuBox,
   LuChevronDown,
   LuChevronRight,
@@ -22,6 +22,7 @@ import { defaultElementName, freePartFor, refFor, type AddKind } from "./addElem
 import { useSettings } from "../settings/SettingsContext"
 import { ORIENT_ICON } from "./partOrient"
 import { zoneLabel } from "./zoneLabel"
+import { SectionLabel } from "../../components/SectionLabel"
 
 type DragKind = "module" | "ref" | "part"
 
@@ -244,10 +245,10 @@ export function StructureTree({
               menu={
                 <RowMenu label={`Opcions de «${m.name}»`}>
                   <Menu.Item value="up" disabled={neighbourIndex(i, -1) < 0} onClick={() => move(i, -1)}>
-                    <LuArrowUp /> Moure a l'esquerra
+                    <LuArrowLeft /> Moure a l'esquerra
                   </Menu.Item>
                   <Menu.Item value="down" disabled={neighbourIndex(i, 1) < 0} onClick={() => move(i, 1)}>
-                    <LuArrowDown /> Moure a la dreta
+                    <LuArrowRight /> Moure a la dreta
                   </Menu.Item>
                   <Menu.Item value="dup" onClick={() => duplicate(i)}>
                     <LuCopy /> Duplicar
@@ -640,9 +641,9 @@ function RowMenu({ label, children }: { label: string; children: ReactNode }) {
 function SectionTitle({ children, onAdd, addLabel }: { children: ReactNode; onAdd: () => void; addLabel: string }) {
   return (
     <HStack justify="space-between" pt={3} pb={1} px={1}>
-      <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
+      <SectionLabel>
         {children}
-      </Text>
+      </SectionLabel>
       <IconButton aria-label={addLabel} title={addLabel} size="2xs" variant="ghost" onClick={onAdd}>
         <LuPlus />
       </IconButton>

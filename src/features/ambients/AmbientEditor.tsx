@@ -83,14 +83,14 @@ import { useAmbientMembership } from "./useAmbientMembership"
 import { ObjectsGallery } from "../objects/ObjectsGallery"
 import { isObject } from "../objects/isObject"
 import { useLiveQuery } from "../../db/useLiveQuery"
-import { NumRow } from "../editor/ParamsForm"
+import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { PanelSection } from "../../components/PanelSection"
 import { Workspace } from "../../components/Workspace"
 import { ViewOptions, ViewTile } from "../../components/ViewOptions"
 import { usePersistentFlag } from "../usePersistentFlag"
 import { useWorkspace } from "../../components/useWorkspace"
-import { MaterialSelect } from "../settings/SettingsScreen"
+import { MaterialSelect } from "../settings/MaterialSelect"
 import { useSettings } from "../settings/SettingsContext"
 import { formatLength, useUnit } from "../units"
 import { useProjects } from "../useProject"
@@ -99,6 +99,7 @@ import { itemName, useItemGeometries, type ItemGeometry } from "./ambientData"
 import { PlanCanvas } from "./PlanCanvas"
 import { AMBIENT_TAB_KEY, ambientBox, type Selection, type Tool } from "./planGeom"
 import { useDebouncedSave } from "../useDebouncedSave"
+import { SectionLabel } from "../../components/SectionLabel"
 
 const TOOLS: { id: Tool; label: string; key: string; icon: typeof LuPenTool }[] = [
   { id: "select", label: "Seleccionar i moure", key: "V", icon: LuMousePointer2 },
@@ -451,9 +452,9 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
             <Stack gap={0.5}>
               {/* Com els grups de l'arbre de l'editor: títol i, a la dreta, què s'hi pot afegir. */}
               <HStack justify="space-between" pb={1} px={1}>
-                <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
+                <SectionLabel>
                   Elements
-                </Text>
+                </SectionLabel>
                 <HStack gap={0.5}>
                   <Button size="2xs" variant="ghost" onClick={() => setPicker(true)}>
                     <LuPlus /> Moble

@@ -97,12 +97,13 @@ export function ViewerControls({
           </HStack>
         </Slider.Root>
       </FormRow>
-      <Switch.Root size="sm" checked={state.openOnlySelected} disabled={!hasSelectedZone} onCheckedChange={(e) => onChange({ openOnlySelected: e.checked })}>
-        <Switch.HiddenInput />
-        <Switch.Control />
-        <Switch.Label>Obrir només el compartiment seleccionat</Switch.Label>
-      </Switch.Root>
-
+      <FormRow label="Selecció">
+        <Switch.Root size="sm" pt="6px" checked={state.openOnlySelected} disabled={!hasSelectedZone} onCheckedChange={(e) => onChange({ openOnlySelected: e.checked })}>
+          <Switch.HiddenInput />
+          <Switch.Control />
+          <Switch.Label fontSize="sm">Obrir només el compartiment seleccionat</Switch.Label>
+        </Switch.Root>
+      </FormRow>
 
       <Button size="sm" variant="outline" colorPalette="wood" alignSelf="flex-start" onClick={onImage}>
         <LuImageDown /> Descarregar imatge

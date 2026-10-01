@@ -1,4 +1,4 @@
-import { Box, Button, HStack, IconButton, Menu, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, HStack, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
 import { segGroup, segItem } from "../../components/segmented"
 import { useState, type ReactNode } from "react"
 import { ProfileEditor } from "./ProfileEditor"
@@ -8,10 +8,10 @@ import { LuBox, LuCylinder, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, L
 import { PanelSection } from "../../components/PanelSection"
 import { toaster } from "../../components/ui/toaster"
 import { AXIS_INDEX, SECTION_AXES, anchorRef, insertRefCopy, toNodes, newId, type Composition, type RefObject } from "../../core/model"
-import { NumRow } from "../editor/ParamsForm"
+import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { useSettings } from "../settings/SettingsContext"
-import { MaterialSelect } from "../settings/SettingsScreen"
+import { MaterialSelect } from "../settings/MaterialSelect"
 
 /** Propietats d'un objecte de referència (fantasma): nom, mides i posició. */
 export function RefInspector({ comp, id, onChange }: { comp: Composition; id: string; onChange: (c: Composition) => void }) {
@@ -32,12 +32,12 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
               : "Obstacle: no forma part del moble, es veu translúcid per comprovar que tot hi cap i avisa si xoca amb alguna peça."
           }
         >
-          <Segments
+          <ChoiceChips
             label="Efecte"
             value={o.effect ?? "obstacle"}
-            items={[
-              ["obstacle", "Obstacle", LuShield],
-              ["cut", "Talla", LuScissors],
+            options={[
+              { id: "obstacle", label: <><LuShield /> Obstacle</> },
+              { id: "cut", label: <><LuScissors /> Talla</> },
             ]}
             onChange={(v) => update({ effect: v === "cut" ? "cut" : undefined })}
           />
@@ -118,14 +118,16 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
       )}
       <PanelSection id="ref-position" title="Posició" icon={LuMove}>
         {/* Enganxar-lo: interruptors discrets (es poden activar tots dos). */}
-        <HStack {...segGroup}>
-          <Button {...segItem(!!o.onFloor)} px={2} aria-pressed={!!o.onFloor} title="Sempre a terra (Y = 0): al 3D només es mou pel terra" onClick={() => update({ onFloor: o.onFloor ? undefined : true })}>
-            <LuArrowDownToLine /> Al terra
-          </Button>
-          <Button {...segItem(!!o.onWall)} px={2} aria-pressed={!!o.onWall} title="Sempre tocant la paret (Z = 0): al 3D només es mou per la paret" onClick={() => update({ onWall: o.onWall ? undefined : true })}>
-            <LuBrickWall /> A la paret
-          </Button>
-        </HStack>
+        <FormRow label="Enganxat">
+          <HStack {...segGroup}>
+            <Button {...segItem(!!o.onFloor)} px={2} aria-pressed={!!o.onFloor} title="Sempre a terra (Y = 0): al 3D només es mou pel terra" onClick={() => update({ onFloor: o.onFloor ? undefined : true })}>
+              <LuArrowDownToLine /> Al terra
+            </Button>
+            <Button {...segItem(!!o.onWall)} px={2} aria-pressed={!!o.onWall} title="Sempre tocant la paret (Z = 0): al 3D només es mou per la paret" onClick={() => update({ onWall: o.onWall ? undefined : true })}>
+              <LuBrickWall /> A la paret
+            </Button>
+          </HStack>
+        </FormRow>
         {/* Cada direcció amb la seva icona i un nom, no només la lletra de l'eix. */}
         <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra del moble" />} ariaLabel="De costat (X)" value={o.x} min={-30000} max={30000} step={10} onChange={(x) => update({ x })} />
         <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={o.y} min={-30000} max={30000} step={10} disabled={!!o.onFloor} onChange={(y) => update({ y })} />
@@ -219,25 +221,6 @@ function cylinderPatch(o: RefObject, axis: Axis, change: { diameter?: number; le
   const h = axis === "y" ? length : diameter
   const d = axis === "z" ? length : diameter
   return { shape: "cylinder", axis, w, h, d, x: Math.round(cx - w / 2), y: Math.max(0, Math.round(cy - h / 2)), z: Math.round(cz - d / 2) }
-}
-
-function Segments({ label, value, items, onChange }: { label?: string; value: string; items: [string, string, IconType?][]; onChange: (v: string) => void }) {
-  return (
-    <SegmentGroup.Root size="sm" w="full" aria-label={label} value={value} onValueChange={(e) => e.value && onChange(e.value)}>
-      <SegmentGroup.Indicator />
-      {items.map(([v, label, Icon]) => (
-        <SegmentGroup.Item key={v} value={v} flex={1}>
-          <SegmentGroup.ItemText>
-            <HStack gap={1.5}>
-              {Icon && <Icon />}
-              {label}
-            </HStack>
-          </SegmentGroup.ItemText>
-          <SegmentGroup.ItemHiddenInput />
-        </SegmentGroup.Item>
-      ))}
-    </SegmentGroup.Root>
-  )
 }
 
 /** Accions de l'objecte seleccionat, a la capçalera de l'inspector. */

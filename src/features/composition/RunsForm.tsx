@@ -2,10 +2,10 @@ import { Box, Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
 import { LuChevronDown, LuChevronRight, LuPanelBottom, LuPanelTop, LuPlus, LuSquareDashed, LuTrash2 } from "react-icons/lu"
 import { CUTOUT_PRESETS, newId, type Composition, type Run, type WorktopCutout, type WorktopRun } from "../../core/model"
-import { NumRow } from "../editor/ParamsForm"
+import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { moduleChips } from "./moduleChips"
-import { MaterialSelect } from "../settings/SettingsScreen"
+import { MaterialSelect } from "../settings/MaterialSelect"
 import { useSettings } from "../settings/SettingsContext"
 
 /**

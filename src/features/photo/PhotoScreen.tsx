@@ -7,7 +7,6 @@ import {
   HStack,
   Heading,
   IconButton,
-  SegmentGroup,
   Slider,
   Stack,
   Text,
@@ -32,7 +31,7 @@ import {
   LuCrosshair,
   LuMove,
   LuPaintbrush,
-  LuWrench,
+  LuPencilLine,
 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
@@ -69,7 +68,7 @@ import {
 import { addPhoto, db, removeProjectPhoto, updateProjectPhoto, type Photo, type PhotoCalibration } from "../../db/db"
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { ResizeHandle } from "../../components/ResizeHandle"
-import { NumRow } from "../editor/ParamsForm"
+import { NumRow } from "../../components/NumRow"
 import { downloadBlob, slugify } from "../download"
 import { useSettings } from "../settings/SettingsContext"
 import { usePersistentNumber } from "../usePersistentNumber"
@@ -868,7 +867,7 @@ function PhotoCalibrator({
                   }}
                 />
               </FormRow>
-              <Text fontSize="sm" fontWeight="medium" mb={-1}>
+              <Text fontSize="sm" fontWeight="medium">
                 Mida coneguda
               </Text>
               <NumRow label="Amplada" value={cal.ref.w ?? NaN} min={10} max={5000} step={1} onChange={(w) => setCal((c) => ({ ...c, ref: { ...c.ref, w: known(w) } }))} />
@@ -895,17 +894,15 @@ function PhotoCalibrator({
               )}
 
               <FormRow label="El rectangle és a…">
-                <SegmentGroup.Root size="sm" aria-label="El rectangle és a…" value={cal.plane} onValueChange={(e) => (e.value === "wall" || e.value === "floor") && setCal((c) => ({ ...c, plane: e.value as ReferencePlane }))}>
-                  <SegmentGroup.Indicator />
-                  <SegmentGroup.Item value="wall">
-                    <SegmentGroup.ItemText>La paret</SegmentGroup.ItemText>
-                    <SegmentGroup.ItemHiddenInput />
-                  </SegmentGroup.Item>
-                  <SegmentGroup.Item value="floor">
-                    <SegmentGroup.ItemText>El terra</SegmentGroup.ItemText>
-                    <SegmentGroup.ItemHiddenInput />
-                  </SegmentGroup.Item>
-                </SegmentGroup.Root>
+                <ChoiceChips
+                  label="El rectangle és a…"
+                  value={cal.plane}
+                  options={[
+                    { id: "wall", label: "La paret" },
+                    { id: "floor", label: "El terra" },
+                  ]}
+                  onChange={(plane: ReferencePlane) => setCal((c) => ({ ...c, plane }))}
+                />
               </FormRow>
               <NumRow
                 label="Focal (35 mm)"
@@ -918,11 +915,11 @@ function PhotoCalibrator({
                 onChange={(focal35) => setCal((c) => ({ ...c, focal35 }))}
               />
 
-              <Button variant="outline" size="sm" onClick={() => setCal((c) => ({ ...c, points: [] }))}>
+              <Button variant="outline" size="sm" alignSelf="flex-start" onClick={() => setCal((c) => ({ ...c, points: [] }))}>
                 <LuRotateCcw /> Tornar a marcar els punts
               </Button>
               </PanelSection>
-              <PanelSection id="photo-tools" title="Eines" icon={LuWrench}>
+              <PanelSection id="photo-tools" title="Eines" icon={LuPencilLine}>
               <HStack {...segGroup}>
                 {toolButton("origin", "Origen", <LuLocateFixed />)}
                 {toolButton("distance", "Distància", <LuMoveHorizontal />)}
@@ -957,17 +954,15 @@ function PhotoCalibrator({
                     : "Materials, llum i ombres. La llum és la de Preferències › Visor 3D."
                 }
               >
-                <SegmentGroup.Root size="sm" aria-label="Aspecte del moble" value={renderMode} onValueChange={(e) => (e.value === "lines" || e.value === "realistic") && setCal((c) => ({ ...c, render: e.value as "lines" | "realistic" }))}>
-                  <SegmentGroup.Indicator />
-                  <SegmentGroup.Item value="lines">
-                    <SegmentGroup.ItemText>Línies</SegmentGroup.ItemText>
-                    <SegmentGroup.ItemHiddenInput />
-                  </SegmentGroup.Item>
-                  <SegmentGroup.Item value="realistic">
-                    <SegmentGroup.ItemText>Realista</SegmentGroup.ItemText>
-                    <SegmentGroup.ItemHiddenInput />
-                  </SegmentGroup.Item>
-                </SegmentGroup.Root>
+                <ChoiceChips
+                  label="Aspecte del moble"
+                  value={renderMode}
+                  options={[
+                    { id: "lines", label: "Línies" },
+                    { id: "realistic", label: "Realista" },
+                  ]}
+                  onChange={(render) => setCal((c) => ({ ...c, render }))}
+                />
               </FormRow>
               {renderMode === "realistic" && (
                 <FormRow label="Ombres">
@@ -1002,26 +997,21 @@ function PhotoCalibrator({
                   </HStack>
                 </Slider.Root>
               </FormRow>
-              <HStack justify="space-between" wrap="wrap" gap={2}>
-                <SegmentGroup.Root size="xs" value={layer} onValueChange={(e) => (e.value === "photo" || e.value === "cabinet" || e.value === "both") && setCal((c) => ({ ...c, layer: e.value as PhotoCalibration["layer"] }))}>
-                  <SegmentGroup.Indicator />
-                  <SegmentGroup.Item value="photo">
-                    <SegmentGroup.ItemText>Foto</SegmentGroup.ItemText>
-                    <SegmentGroup.ItemHiddenInput />
-                  </SegmentGroup.Item>
-                  <SegmentGroup.Item value="cabinet">
-                    <SegmentGroup.ItemText>Moble</SegmentGroup.ItemText>
-                    <SegmentGroup.ItemHiddenInput />
-                  </SegmentGroup.Item>
-                  <SegmentGroup.Item value="both">
-                    <SegmentGroup.ItemText>Tots dos</SegmentGroup.ItemText>
-                    <SegmentGroup.ItemHiddenInput />
-                  </SegmentGroup.Item>
-                </SegmentGroup.Root>
-                <Button size="xs" variant="outline" disabled={!camera} onClick={() => void downloadPng()}>
-                  <LuImageDown /> Imatge PNG
-                </Button>
-              </HStack>
+              <FormRow label="Mostrar">
+                <ChoiceChips
+                  label="Mostrar"
+                  value={layer}
+                  options={[
+                    { id: "photo", label: "Foto" },
+                    { id: "cabinet", label: "Moble" },
+                    { id: "both", label: "Tots dos" },
+                  ]}
+                  onChange={(layer) => setCal((c) => ({ ...c, layer }))}
+                />
+              </FormRow>
+              <Button size="xs" variant="outline" alignSelf="flex-start" disabled={!camera} onClick={() => void downloadPng()}>
+                <LuImageDown /> Imatge PNG
+              </Button>
               </PanelSection>
             </Stack>
           </Card.Body>

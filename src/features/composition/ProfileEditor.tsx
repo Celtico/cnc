@@ -1,4 +1,4 @@
-import { Badge, Box, Button, CloseButton, Dialog, HStack, IconButton, Kbd, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, CloseButton, Dialog, HStack, IconButton, Kbd, Portal, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
 import { LuEraser, LuMousePointer2, LuPenTool, LuSpline, LuTrash2, LuX } from "react-icons/lu"
 import {
@@ -18,11 +18,17 @@ import {
   type PNode,
   type Vec2,
 } from "../../core/model"
-import { NumberField, NumRow } from "../editor/ParamsForm"
-import { FormRow } from "../../components/FormRow"
+import { NumberField, NumRow } from "../../components/NumRow"
+import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { PRESETS } from "./profilePresets"
 
 const r1 = (v: number) => Math.round(v * 10) / 10
+/** Què fa cada tipus de node (ajuda de «Manegadors»). */
+const HANDLE_HELP: Record<"corner" | "smooth" | "symmetric", string> = {
+  corner: "Lliures: cada manegador va per lliure (fa punxa).",
+  smooth: "Alineats: mateixa direcció, cada un amb la seva llargada (corba suau).",
+  symmetric: "Simètrics: mateixa direcció i mateixa llargada.",
+}
 /** Blau dels nodes i manegadors (com a Figma). */
 const HANDLE = "#1e88e5"
 /** Constant del cercle amb cúbiques: manegador = k · radi. */
@@ -472,22 +478,17 @@ export function ProfileEditor({
                       <>
                         <NumRow label={axes[0]} value={selNode.x} step={1} onChange={(v) => Number.isFinite(v) && set(sel!, { ...selNode, x: v })} />
                         <NumRow label={axes[1]} value={selNode.y} step={1} onChange={(v) => Number.isFinite(v) && set(sel!, { ...selNode, y: v })} />
-                        <FormRow label="Manegadors">
-                          <SegmentGroup.Root size="xs" w="full" aria-label="Manegadors" value={selType} onValueChange={(e) => e.value && setType(sel!, e.value as "corner" | "smooth" | "symmetric")}>
-                            <SegmentGroup.Indicator />
-                            {(
-                              [
-                                ["corner", "Lliures", "Cada manegador va per lliure (fa punxa)"],
-                                ["smooth", "Alineats", "Mateixa direcció, cada un amb la seva llargada (corba suau)"],
-                                ["symmetric", "Simètrics", "Mateixa direcció i mateixa llargada"],
-                              ] as const
-                            ).map(([v, label, title]) => (
-                              <SegmentGroup.Item key={v} value={v} flex={1} title={title} whiteSpace="nowrap">
-                                <SegmentGroup.ItemText>{label}</SegmentGroup.ItemText>
-                                <SegmentGroup.ItemHiddenInput />
-                              </SegmentGroup.Item>
-                            ))}
-                          </SegmentGroup.Root>
+                        <FormRow label="Manegadors" help={HANDLE_HELP[selType]}>
+                          <ChoiceChips
+                            label="Manegadors"
+                            value={selType}
+                            options={[
+                              { id: "corner", label: "Lliures" },
+                              { id: "smooth", label: "Alineats" },
+                              { id: "symmetric", label: "Simètrics" },
+                            ]}
+                            onChange={(t) => setType(sel!, t)}
+                          />
                         </FormRow>
                         {edgeOf(nodes, (sel! - 1 + nodes.length) % nodes.length).kind === "line" && edgeOf(nodes, sel!).kind === "line" && (
                           <Stack gap={1} borderTopWidth="1px" pt={2}>

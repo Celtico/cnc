@@ -489,7 +489,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     Preferències» (Preferències › Visor 3D, el per defecte). `CabinetViewer sceneFinish`, `renderThumb(…, finish)`.
   - **Nom a la capçalera de l'inspector**: el nom del mòdul i de l'objecte es canvia clicant-lo
     a la capçalera (`Editable`, com a Figma), no a les seccions; el del moble, a la barra de dalt.
-  - **Tipus de moble** (`Composition.kind`, `compositionKind`, `features/composition/kinds.tsx`):
+  - **Tipus de moble** (`Composition.kind`, `compositionKind`, `features/composition/kinds.ts`):
     Moble, Cuina, Armari, Taula. Es tria a la pàgina Mobles (filtre per tipus; «En blanc»
     crea el del tipus) i a l'inspector del moble (secció Tipus). Taulell i sòcol correguts només
     surten i es construeixen a la Cuina; en canviar de tipus es guarden (no es fan) i tornen. Taula: `tableModule` (tauler + dos laterals de
@@ -677,9 +677,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     **Tots els camps de l'app són files etiqueta · control** (Preferències, inspectors del moble, de peces, objectes i
     ambients, diàlegs de render, textura, plantilla, foto i nesting): `components/FormRow` — `FormRow` amb l'etiqueta
     a l'esquerra (min(150 px, 36 %)) i el control amb `maxW` i l'ajuda a sota; és una **consulta de contenidor**:
-    si el lloc fa menys de 300 px (mòbil, panell estret), l'etiqueta va a sobre. `NumRow` (a `editor/ParamsForm`,
+    si el lloc fa menys de 300 px (mòbil, panell estret), l'etiqueta va a sobre. `NumRow` (a `components/NumRow`,
     amb `ariaLabel` al camp) per als números, 180 px; `IconChoice hideLabel` i `MaterialSelect hideLabel` dins un
-    `FormRow`; «Afegir» de `MasterDetail` només amb icona; `FormSection` per a seccions dins una targeta; `ChoiceChips` per a opcions que han de saltar de línia,
+    `FormRow`; «Afegir» de `MasterDetail` només amb icona; `FormSection` per a seccions dins una targeta (el títol petit en majúscules és `components/SectionLabel`, el mateix als grups de les llistes i a Opcions de vista); `ChoiceChips` per a opcions que han de saltar de línia,
     com el sòcol i la llum del Visor 3D, en lloc d'un control segmentat que es desborda). Materials i objectes de
     referència fan **llista i detall** (`components/MasterDetail`: llista agrupada amb mostra; cercador, botons
     de categoria i «Afegir» en una fila; desplaçament propi; `head` = el títol de la pàgina a dalt de la llista,
@@ -881,7 +881,7 @@ Accions principals: icona + text.
 | Àmbit | Acció | Icona |
 |---|---|---|
 | Navegació | Mobles (el cub: un moble) · Editor · Peces · Nesting · Exportar | `LuBox` · `LuDraftingCompass` · `LuList` · `LuLayoutGrid` · `LuDownload` |
-| Navegació | Tornar · Plegar/desplegar menú · Preferències | `LuArrowLeft` · `LuPanelLeftClose` / `LuPanelLeftOpen` · `LuSettings` |
+| Navegació | Tornar (‹ a les barres) · Plegar/desplegar menú · Preferències | `LuChevronLeft` · `LuPanelLeftClose` / `LuPanelLeftOpen` · `LuSettings` |
 | Zones | Dividir en vertical (divisor vertical, zones esquerra/dreta) | `LuSquareSplitHorizontal` |
 | Zones | Dividir en horitzontal (travesser, zones dalt/baix) | `LuSquareSplitVertical` |
 | Zones | Divisió vertical (zones de costat) · Divisió horitzontal (zones una sobre l'altra); un compartiment porta la icona del seu contingut (fila «Contingut»), igual a l'arbre, a la capçalera i a la secció «Front» (`composition/zoneIcon.tsx`) | `LuColumns2` · `LuRows2` |
@@ -891,25 +891,29 @@ Accions principals: icona + text.
 | Composició | Afegir · Duplicar · Eliminar · Reordenar | `LuPlus` · `LuCopy` · `LuTrash2` · `LuGripVertical` |
 | Composició | Objecte de referència · Radiador · TV | `LuScan` · `LuHeater` · `LuTv` |
 | Composició | Plantilles · Menú del document | `LuLayoutTemplate` · `LuEllipsis` |
+| Composició | Moure a l'esquerra · a la dreta (menú de l'arbre) | `LuArrowLeft` · `LuArrowRight` |
+| Front | Una porta · Dues portes · Abatible avall · amunt · Ranures horitzontals (reixeta) | `LuDoorClosed` · `LuFlipHorizontal2` · `LuArrowDownToLine` · `LuArrowUpToLine` · `LuAlignJustify` |
+| Forma | Rectangle · Arrodonit · Oval (tauler de taula) · Efecte peça · Efecte obstacle · Talla | `LuRectangleHorizontal` · `LuSquircle` · `LuCircle` · `LuPuzzle` · `LuShield` · `LuScissors` |
 | Panell | Mides exteriors · Taulers · Interior i front · Fusteria · Adaptar a la imatge | `LuMoveDiagonal` · `LuSquareStack` · `LuLayoutPanelLeft` · `LuHammer` · `LuCamera` |
 | Panell | Composició (mòduls i objectes de referència) · Compartiments (alçat) | `LuLayoutDashboard` · `LuLayoutPanelLeft` |
 | Inspector | Estructura (base, fons, tapa, laterals) · Front · Pare | `LuFrame` · `LuDoorClosed` · `LuArrowUp` |
 | Inspector | Resum del moble · Posició | `LuBox` · `LuMove` |
 | Inspector | Anterior · Següent · Accions de la selecció (menú) | `LuChevronLeft` · `LuChevronRight` · `LuEllipsis` |
 | Preferències | Tema (dia/nit/sistema) · Color principal | `LuSunMoon` (`LuSun` · `LuMoon` · `LuMonitor`) · `LuCheck` a la mostra triada |
+| Preferències | Visualització · Calaixos · System 32 · Cassoleta · Imants (Ferratges) | `LuScanEye` · `LuArchive` · `LuCircleDot` · `LuCircleDashed` · `LuMagnet` |
 | Fitxer | Desar com a fitxer · Obrir fitxer | `LuSave` · `LuFolderOpen` |
 | Editor | Estructura · Propietats · Opcions de vista · Alçat | `LuListTree` · `LuSlidersHorizontal` · `LuSlidersVertical` · `LuLayoutPanelLeft` |
 | Estat | Avisos de fusteria · Desfer · Refer | `LuTriangleAlert` · `LuUndo2` · `LuRedo2` |
 | Foto | Foto · Referència · Distància · Rectangle | `LuCamera` · `LuCrosshair` · `LuMoveHorizontal` · `LuRectangleHorizontal` |
-| Foto | Origen (0,0) · Treure/tancar | `LuLocateFixed` · `LuX` |
+| Foto | Origen (0,0) · Treure/tancar · Eines | `LuLocateFixed` · `LuX` · `LuPencilLine` |
 | Foto | Mida estimada · Mida real (cinta) · Línia del terra · Fondària | `LuEye` · `LuCircleCheck` · `LuArrowDownToLine` · `LuArrowUpFromLine` |
-| Visor | Forats · Explosionat / muntat · Ampliar / reduir 3D | `LuCircleDot` · `LuExpand` / `LuShrink` · `LuMaximize2` / `LuMinimize2` |
+| Visor | Forats · Explosionat / muntat · Ampliar / reduir 3D · Ferratges (rajola) | `LuCircleDot` · `LuExpand` / `LuShrink` · `LuMaximize2` / `LuMinimize2` · `LuWrench` |
 | Visor | Veure a casa (AR) | `LuView` |
 | Visor | Vista 3D · Obertura portes · Materials · Per tipus de peça · Imatge | `LuRotate3D` · `LuDoorOpen` · `LuPalette` · `LuLayers` · `LuImageDown` |
 | Ambients | Ambients · Seleccionar · Paret (ploma) · Habitació · Calibrar · Plànol de fons | `LuHouse` · `LuMousePointer2` · `LuPenTool` · `LuBrickWall` · `LuPencilRuler` · `LuImageUp` |
 | Ambients | Finestra · Porta · Moure a un grup · Grup (carpeta) | `LuAppWindow` · `LuDoorOpen` · `LuFolderInput` · `LuFolder` |
 | Ambients | Afegir moble · Bloc · Plànol · 3D · Girar | `LuBox` · `LuSofa` · `LuMap` · `LuRotate3D` · `LuRotateCw` / `LuRotateCcw` |
-| Exportar | DXF (CNC) · STEP 3D · CSV de nesting · CSV de peces · GLB | `LuScissors` · `LuCuboid` · `LuLayoutGrid` · `LuFileDown` · `LuBoxes` |
+| Exportar | DXF (CNC) · STEP 3D · CSV de nesting · CSV de peces · GLB · Avançat | `LuScissors` · `LuCuboid` · `LuLayoutGrid` · `LuFileDown` · `LuBoxes` · `LuSettings2` |
 
 Les vistes Davant, Darrere, Esquerra, Dreta i Dalt van amb **text**, sense icona. Compte:
 a Lucide, `square-split-horizontal` té la línia **vertical**. Per això és la de "dividir en vertical".

@@ -1,4 +1,4 @@
-import { Button, HStack, IconButton, Menu, Portal, SegmentGroup, Stack, Switch, Text } from "@chakra-ui/react"
+import { Button, HStack, IconButton, Menu, Portal, Stack, Switch, Text } from "@chakra-ui/react"
 import { LuArrowUp, LuCopy, LuEllipsis, LuColumns2, LuRows2, LuPlus, LuRows3, LuRuler, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
 import { PanelSection } from "../../components/PanelSection"
 import {
@@ -16,14 +16,11 @@ import {
   type Front,
   type Zone,
 } from "../../core/model"
-import { NumRow } from "../editor/ParamsForm"
+import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { FRONT_ICONS } from "./zoneIcon"
-import { Tooltip } from "../../components/ui/tooltip"
 import { IconChoice } from "../../components/IconChoice"
-import { segGroup, segItem } from "../../components/segmented"
-import { LuArrowDown, LuColumns3, LuDoorOpen, LuGrip, LuMagnet, LuPanelLeft, LuPanelRight, LuRectangleVertical } from "react-icons/lu"
-import type { IconType } from "react-icons"
+import { LuAlignJustify, LuArrowDownToLine, LuArrowUpToLine, LuColumns3, LuDoorClosed, LuDoorOpen, LuFlipHorizontal2, LuGrip, LuMagnet, LuPanelLeft, LuPanelRight } from "react-icons/lu"
 
 const FRONT_LABELS: Record<Front["kind"] | "none", string> = {
   none: "Obert",
@@ -244,11 +241,15 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
       return (
         <Stack gap={3}>
           <FormRow label="Portes">
-            <SegmentGroup.Root size="sm" w="full" aria-label="Portes" value={front.mode} onValueChange={(e) => onChange({ ...front, mode: e.value as "single" | "double" })}>
-              <SegmentGroup.Indicator />
-              <SegItem value="single" label="Una" icon={LuRectangleVertical} />
-              <SegItem value="double" label="Dues" icon={LuColumns2} />
-            </SegmentGroup.Root>
+            <ChoiceChips
+              label="Portes"
+              value={front.mode}
+              options={[
+                { id: "single", label: <><LuDoorClosed /> Una</> },
+                { id: "double", label: <><LuFlipHorizontal2 /> Dues</> },
+              ]}
+              onChange={(mode) => onChange({ ...front, mode })}
+            />
           </FormRow>
           {front.mode === "single" && (
             <FormRow label="Frontisses">
@@ -279,11 +280,15 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
     case "flap":
       return (
         <FormRow label="Obre cap a">
-          <SegmentGroup.Root size="sm" w="full" aria-label="Obre cap a" value={front.dir} onValueChange={(e) => onChange({ ...front, dir: e.value as "down" | "up" })}>
-            <SegmentGroup.Indicator />
-            <SegItem value="down" label="Avall" icon={LuArrowDown} />
-            <SegItem value="up" label="Amunt" icon={LuArrowUp} />
-          </SegmentGroup.Root>
+          <ChoiceChips
+            label="Obre cap a"
+            value={front.dir}
+            options={[
+              { id: "down", label: <><LuArrowDownToLine /> Avall</> },
+              { id: "up", label: <><LuArrowUpToLine /> Amunt</> },
+            ]}
+            onChange={(dir) => onChange({ ...front, dir })}
+          />
         </FormRow>
       )
     case "grille": {
@@ -299,7 +304,7 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
               value={p.kind}
               options={[
                 { value: "slotsV", label: "Ranures verticals", icon: LuColumns3 },
-                { value: "slotsH", label: "Ranures horitzontals", icon: LuRows3 },
+                { value: "slotsH", label: "Ranures horitzontals", icon: LuAlignJustify },
                 { value: "holes", label: "Forats al tresbolillo", icon: LuGrip },
               ]}
               onChange={(kind) => setP({ kind })}
@@ -363,48 +368,24 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
   }
 }
 
-function SegItem({ value, label, icon: Icon }: { value: string; label: string; icon?: IconType }) {
-  return (
-    <SegmentGroup.Item value={value} flex={1} justifyContent="center">
-      <SegmentGroup.ItemText>
-        <HStack gap={1.5}>
-          {Icon && <Icon />}
-          {label}
-        </HStack>
-      </SegmentGroup.ItemText>
-      <SegmentGroup.ItemHiddenInput />
-    </SegmentGroup.Item>
-  )
-}
-
 /**
  * Tipus de front d'una zona (botons d'icona) i els seus camps. En una zona dividida, només
  * portes o front fix, que tapen tota la zona (les fulles de dins queden darrere).
  */
-export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title = "Front" }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; kinds?: (Front["kind"] | "none")[]; title?: string }) {
+export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title = "Front", id }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; kinds?: (Front["kind"] | "none")[]; title?: string; /** Id de la secció plegable (cada lloc el seu: recorda si és oberta). */ id?: string }) {
   const options = kinds ?? (Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[])
   return (
-          <PanelSection id={kinds ? "zone-parent-front" : "zone-front"} title={title} badge={FRONT_LABELS[zone.front?.kind ?? "none"]} icon={FRONT_ICONS[zone.front?.kind ?? "none"]}>
-            {/* Tipus de front: un botó amb la icona de cada tipus (el nom, al tooltip i a la insígnia). */}
-            <HStack {...segGroup} role="radiogroup" aria-label="Tipus de front">
-              {options.map((k) => {
-                const Icon = FRONT_ICONS[k]
-                const on = (zone.front?.kind ?? "none") === k
-                return (
-                  <Tooltip key={k} content={FRONT_LABELS[k]}>
-                    <IconButton
-                      {...segItem(on)}
-                      role="radio"
-                      aria-checked={on}
-                      aria-label={FRONT_LABELS[k]}
-                      onClick={() => !on && onChange(setFront(root, zone.id, k === "none" ? null : defaultFront(k)))}
-                    >
-                      <Icon />
-                    </IconButton>
-                  </Tooltip>
-                )
-              })}
-            </HStack>
+          <PanelSection id={id ?? (kinds ? "zone-parent-front" : "zone-front")} title={title} badge={FRONT_LABELS[zone.front?.kind ?? "none"]} icon={FRONT_ICONS[zone.front?.kind ?? "none"]}>
+            {/* Tipus de front: un botó amb la icona de cada tipus (el nom, al tooltip, a sota i a la insígnia). */}
+            <FormRow label="Contingut">
+              <IconChoice
+                hideLabel
+                label="Tipus de front"
+                value={zone.front?.kind ?? "none"}
+                options={options.map((k) => ({ value: k, label: FRONT_LABELS[k], icon: FRONT_ICONS[k] }))}
+                onChange={(k) => onChange(setFront(root, zone.id, k === "none" ? null : defaultFront(k)))}
+              />
+            </FormRow>
             {zone.front && <FrontFields front={zone.front} openRatio={openRatio} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
           </PanelSection>
   )

@@ -1,4 +1,4 @@
-import { Box, Button, CloseButton, Dialog, Flex, HStack, Input, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, CloseButton, Dialog, Flex, HStack, Input, Portal, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useState } from "react"
 import { LuDices, LuRotateCcw } from "react-icons/lu"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
@@ -32,7 +32,7 @@ export function TextureEditor({ m, open, onClose, onApply }: { m: MaterialPref; 
         <Dialog.Backdrop />
         <Dialog.Positioner>
           {/* La mida «full» del mòbil posa l'alçada a 100dvh i la «xl» no la treu: a l'ordinador, l'alçada del contingut. */}
-          <Dialog.Content pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} h={{ base: "100dvh", md: "auto" }} minH={{ md: "auto" }}>
+          <Dialog.Content pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} pb={{ base: "env(safe-area-inset-bottom, 0px)", md: 0 }} h={{ base: "100dvh", md: "auto" }} minH={{ md: "auto" }}>
             <Dialog.Header>
               <Dialog.Title>Editar la textura · {m.name}</Dialog.Title>
             </Dialog.Header>
@@ -133,10 +133,7 @@ function Controls({ f, setF }: { f: Editable; setF: (f: Editable) => void }) {
         <Slider label="Gruix de la junta" value={f.joint ?? 3} min={0} max={30} step={0.5} fmt={(v) => `${v} mm`} onChange={(joint) => setF({ ...f, joint })} />
         <Slider label="Variació de to" value={f.variation ?? 0.05} min={0} max={0.4} step={0.01} fmt={(v) => `${Math.round(v * 100)} %`} onChange={(variation) => setF({ ...f, variation })} />
         <FormRow label="Col·locació">
-          <SegmentGroup.Root size="sm" value={f.layout ?? "grid"} onValueChange={(e) => (e.value === "grid" || e.value === "brick") && setF({ ...f, layout: e.value })}>
-            <SegmentGroup.Indicator />
-            <SegmentGroup.Items items={[{ value: "grid", label: "Quadrícula" }, { value: "brick", label: "Trencajunts" }]} />
-          </SegmentGroup.Root>
+          <ChoiceChips label="Col·locació" value={f.layout ?? "grid"} options={[{ id: "grid", label: "Quadrícula" }, { id: "brick", label: "Trencajunts" }]} onChange={(layout) => setF({ ...f, layout })} />
         </FormRow>
         <Actions onReset={() => setF({ kind: "tiles", color: f.color, grout: f.grout, size: f.size })} />
       </>

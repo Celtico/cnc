@@ -1,6 +1,7 @@
 import { Box, Button, Grid, HStack, Stack, Text } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 import { segGroup, segItem } from "./segmented"
+import { SectionLabel } from "./SectionLabel"
 
 /**
  * Fila de formulari, la mateixa a tota l'app (com la Configuració de macOS o l'inspector de Figma):
@@ -46,9 +47,9 @@ export function FormRow({ label, help, maxW, children }: { label: ReactNode; hel
 export function FormSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Stack className="form-section" gap={3.5} px={{ base: 4, sm: 6 }} py={5} borderTopWidth="1px">
-      <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
+      <SectionLabel>
         {title}
-      </Text>
+      </SectionLabel>
       {children}
     </Stack>
   )

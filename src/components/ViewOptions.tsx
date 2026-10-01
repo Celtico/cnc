@@ -1,8 +1,9 @@
-import { CloseButton, Drawer, IconButton, Popover, Portal, SimpleGrid, Stack, Text, useBreakpointValue } from "@chakra-ui/react"
+import { CloseButton, Drawer, IconButton, Popover, Portal, SimpleGrid, Stack, useBreakpointValue } from "@chakra-ui/react"
 import { Children, Fragment, isValidElement, type ReactNode } from "react"
 import { LuSlidersVertical } from "react-icons/lu"
 import { Tooltip } from "./ui/tooltip"
 import { segItem } from "./segmented"
+import { SectionLabel } from "./SectionLabel"
 
 /** Botó d'opció de vista (activa/inactiva) amb el nom al tooltip, el mateix a tots els visors. */
 export function ViewTile({ label, icon, on, onClick, tip }: { label: string; icon: ReactNode; on: boolean; onClick: () => void; tip?: string }) {
@@ -18,18 +19,20 @@ export function ViewTile({ label, icon, on, onClick, tip }: { label: string; ico
 
 /**
  * «Opcions de vista» d'un visor (com a l'editor): botó a la cantonada de dalt a la dreta que obre
- * un panell amb les accions ràpides (rajoles) i, a sota, la resta d'opcions.
+ * un panell amb les accions ràpides (rajoles) i, a sota, la resta d'opcions. `lead`: un grup de
+ * rajoles a part, a sobre (p. ex. el mode de vista de l'editor).
  */
-export function ViewOptions({ tiles, children }: { tiles: ReactNode; children?: ReactNode }) {
+export function ViewOptions({ tiles, lead, children }: { tiles: ReactNode; lead?: ReactNode; children?: ReactNode }) {
   const n = Math.max(1, countTiles(tiles))
   const rows = Math.ceil(n / 5)
   const cols = Math.ceil(n / rows)
   const mobile = useBreakpointValue({ base: true, md: false }) ?? false
   const body = (
     <Stack gap={3}>
-      <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
+      <SectionLabel>
         Opcions de vista
-      </Text>
+      </SectionLabel>
+      {lead}
       {/* Files iguals (cap rajola sola a l'última fila): 6 → 3 + 3, 7 → 4 + 3, 8 → 4 + 4. */}
       <SimpleGrid columns={cols} gap={1.5}>
         {tiles}
@@ -50,8 +53,11 @@ export function ViewOptions({ tiles, children }: { tiles: ReactNode; children?: 
         <Portal>
           <Drawer.Backdrop />
           <Drawer.Positioner>
-            <Drawer.Content roundedTop="l3" pb="env(safe-area-inset-bottom, 0px)">
-              <Drawer.Body py={4}>{body}</Drawer.Body>
+            <Drawer.Content roundedTop="l3" maxH="75dvh" pb="env(safe-area-inset-bottom, 0px)">
+              {/* Desplaçament propi (el de la pàgina no es mou). */}
+              <Drawer.Body py={4} overflowY="auto">
+                {body}
+              </Drawer.Body>
               <Drawer.CloseTrigger asChild>
                 <CloseButton size="sm" aria-label="Tancar" />
               </Drawer.CloseTrigger>

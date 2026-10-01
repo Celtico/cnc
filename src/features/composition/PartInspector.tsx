@@ -1,4 +1,4 @@
-import { Badge, Button, HStack, IconButton, Menu, Portal, SegmentGroup, Stack, Switch, Text } from "@chakra-ui/react"
+import { Badge, Button, HStack, IconButton, Menu, Portal, Stack, Switch, Text } from "@chakra-ui/react"
 import { segGroup, segItem } from "../../components/segmented"
 import { useState } from "react"
 import {
@@ -39,9 +39,9 @@ import {
   type PartOrient,
 } from "../../core/model"
 import { JOINT_LABEL, type PartJoint } from "../../core/build/freeParts"
-import { NumRow } from "../editor/ParamsForm"
+import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
-import { MaterialSelect } from "../settings/SettingsScreen"
+import { MaterialSelect } from "../settings/MaterialSelect"
 import { useSettings } from "../settings/SettingsContext"
 import { ProfileEditor } from "./ProfileEditor"
 import { AxisLabel } from "./RefInspector"
@@ -102,24 +102,15 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
               : object ? "Peça de l'objecte: només es veu (no es fabrica)." : "Peça: un tauler de debò (nesting, DXF, STEP, CSV)."
           }
         >
-          <SegmentGroup.Root size="sm" w="full" aria-label="Efecte" value={cutter ? "cut" : "part"} onValueChange={(e) => e.value && update({ effect: e.value === "cut" ? "cut" : undefined })}>
-            <SegmentGroup.Indicator />
-            {(
-              [
-                ["part", "Peça", LuSquare],
-                ["cut", "Talla", LuScissors],
-              ] as const
-            ).map(([v, label, Icon]) => (
-              <SegmentGroup.Item key={v} value={v} flex={1}>
-                <SegmentGroup.ItemText>
-                  <HStack gap={1.5}>
-                    <Icon /> {label}
-                  </HStack>
-                </SegmentGroup.ItemText>
-                <SegmentGroup.ItemHiddenInput />
-              </SegmentGroup.Item>
-            ))}
-          </SegmentGroup.Root>
+          <ChoiceChips
+            label="Efecte"
+            options={[
+              { id: "part", label: <><LuPuzzle /> Peça</> },
+              { id: "cut", label: <><LuScissors /> Talla</> },
+            ]}
+            value={cutter ? "cut" : "part"}
+            onChange={(v) => update({ effect: v === "cut" ? "cut" : undefined })}
+          />
         </FormRow>
         {!cutter && (
           <FormRow label="Material" maxW="280px">
@@ -238,17 +229,16 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
         )}
       </PanelSection>
       <PanelSection id="part-shape" title="Forma" icon={LuSpline} badge={p.shape ? "A mida" : "Rectangle"}>
-        <HStack {...segGroup}>
-          <Button {...segItem(!p.shape)} px={2} onClick={() => update({ shape: undefined })}>
-            <LuSquare /> Rectangle
-          </Button>
-          <Button {...segItem(!!p.shape)} px={2} onClick={() => setEditing(true)}>
-            <LuPencilRuler /> {p.shape ? "Editar la forma…" : "Forma a mida…"}
-          </Button>
-        </HStack>
-        <Text fontSize="xs" color="fg.muted">
-          La forma s'escala a {un.toLowerCase()} × {vn.toLowerCase()}. Els encaixos es retallen sobre la forma (pestanyes, osques i mortalles).
-        </Text>
+        <FormRow label="Forma" help={`La forma s'escala a ${un.toLowerCase()} × ${vn.toLowerCase()}. Els encaixos es retallen sobre la forma (pestanyes, osques i mortalles).`}>
+          <HStack {...segGroup}>
+            <Button {...segItem(!p.shape)} px={2} onClick={() => update({ shape: undefined })}>
+              <LuSquare /> Rectangle
+            </Button>
+            <Button {...segItem(!!p.shape)} px={2} onClick={() => setEditing(true)}>
+              <LuPencilRuler /> {p.shape ? "Editar la forma…" : "Forma a mida…"}
+            </Button>
+          </HStack>
+        </FormRow>
       </PanelSection>
       <ProfileEditor
         key={editing ? "open" : "closed"}
