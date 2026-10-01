@@ -60,7 +60,7 @@ export function DocBar({ onBack, onSettings, actionsRef, menu, tabs, rootLabel, 
       bg="bg.panel"
       position="sticky"
       top={0}
-      zIndex={3}
+      zIndex="sticky"
       justify="space-between"
       gap={2}
       flexShrink={0}

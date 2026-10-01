@@ -328,7 +328,7 @@ export function App() {
           />
         )}
         {showTopBar && projectNav.length > 1 && (
-          <Box display={{ base: "block", md: "none" }} px={2} py={1.5} borderBottomWidth="1px" bg="bg.panel" position="sticky" top="calc(52px + env(safe-area-inset-top, 0px))" zIndex={2}>
+          <Box display={{ base: "block", md: "none" }} px={2} py={1.5} borderBottomWidth="1px" bg="bg.panel" position="sticky" top="calc(52px + env(safe-area-inset-top, 0px))" zIndex="sticky">
             {projectTabs(true)}
           </Box>
         )}
@@ -349,7 +349,7 @@ export function App() {
             bg="bg.panel"
             position="sticky"
             top={0}
-            zIndex={2}
+            zIndex="sticky"
           >
             <Button variant="ghost" size="sm" onClick={() => setScreen("editor")} maxW="80%">
               <LuChevronLeft /> <Text truncate>{project?.name ?? "Tornar"}</Text>
@@ -382,7 +382,7 @@ export function App() {
         bottom={0}
         left={0}
         right={0}
-        zIndex={3}
+        zIndex="sticky"
         bg="bg.panel"
         borderTopWidth="1px"
         pb="env(safe-area-inset-bottom, 0px)"
