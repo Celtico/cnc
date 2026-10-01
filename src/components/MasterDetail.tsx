@@ -163,10 +163,10 @@ export function MasterDetail({
           </Stack>
         ) : null,
       )}
-      {/* La cerca o el filtre no troben res. */}
+      {/* Llista buida: «Cap resultat» només si és la cerca o un filtre (que no sigui el primer) que no troben res. */}
       {groups.every((g) => !g.items.length) && (
         <Text fontSize="sm" color="fg.muted" px={1}>
-          Cap resultat.
+          {query.trim() || (filters && filter !== undefined && filter !== filters[0]?.id) ? "Cap resultat." : "Encara no n'hi ha cap."}
         </Text>
       )}
     </Stack>

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { Field, NumberInput, Text } from "@chakra-ui/react"
 import { FormRow } from "./FormRow"
 import { useUnit } from "../features/units"
@@ -18,14 +18,25 @@ interface NumberFieldProps {
   disabled?: boolean
   /** Nom accessible quan l'etiqueta és fora (a `FormRow`/`NumRow`). */
   ariaLabel?: string
+  /** El camp es pot deixar buit: llavors `onChange` rep `NaN` (sense, mai rep un valor que no sigui un número). */
+  allowEmpty?: boolean
 }
 
 /** Camp numèric de mides. Amb `suffix="mm"` respecta la unitat de pantalla (mm o cm); el valor sempre és en mm. */
-export function NumberField({ label, value, onChange, min, max, step = 1, suffix = "mm", help, error, disabled, ariaLabel }: NumberFieldProps) {
+export function NumberField({ label, value, onChange, min, max, step = 1, suffix = "mm", help, error, disabled, ariaLabel, allowEmpty = false }: NumberFieldProps) {
   const unit = useUnit()
   const cm = suffix === "mm" && unit === "cm"
   const k = cm ? 10 : 1
   const shown = Number.isFinite(value) ? String(Math.round((value / k) * 1000) / 1000) : ""
+  // El text del camp mentre s'escriu («», «-», «12.») i el número que hi llegeix el camp: el text es queda encara
+  // que no sigui un número vàlid.
+  const [edit, setEdit] = useState({ text: shown, num: Number.isFinite(value) ? value / k : NaN })
+  const [prevShown, setPrevShown] = useState(shown)
+  if (shown !== prevShown) {
+    setPrevShown(shown)
+    // El valor ha canviat de fora (o s'ha arrodonit): si el text ja hi correspon, no es toca (no es perd el «12.»).
+    if (!(Number.isFinite(edit.num) && Math.abs(edit.num * k - value) < 1e-6)) setEdit({ text: shown, num: Number.isFinite(value) ? value / k : NaN })
+  }
   return (
     <Field.Root
       invalid={!!error}
@@ -41,8 +52,12 @@ export function NumberField({ label, value, onChange, min, max, step = 1, suffix
     >
       {label && <Field.Label fontSize="sm">{label}</Field.Label>}
       <NumberInput.Root
-        value={shown}
-        onValueChange={(e) => onChange(Number.isFinite(e.valueAsNumber) ? Math.round(e.valueAsNumber * k * 1000) / 1000 : e.valueAsNumber)}
+        value={edit.text}
+        onValueChange={(e) => {
+          setEdit({ text: e.value, num: e.valueAsNumber })
+          if (Number.isFinite(e.valueAsNumber)) onChange(Math.round(e.valueAsNumber * k * 1000) / 1000)
+          else if (allowEmpty) onChange(NaN)
+        }}
         min={min === undefined ? undefined : min / k}
         max={max === undefined ? undefined : max / k}
         step={step / k}
@@ -51,7 +66,14 @@ export function NumberField({ label, value, onChange, min, max, step = 1, suffix
         w="full"
         position="relative"
       >
-        <NumberInput.Input inputMode="decimal" pe="14" aria-label={ariaLabel ?? (typeof label === "string" && label ? label : undefined)} />
+        <NumberInput.Input
+          inputMode="decimal"
+          pe="14"
+          // En sortir amb el camp buit o a mig escriure («-»), torna l'últim valor vàlid.
+          onBlur={() => {
+            if (!allowEmpty && !Number.isFinite(edit.num)) setEdit({ text: shown, num: Number.isFinite(value) ? value / k : NaN })
+          }}
+          aria-label={ariaLabel ?? (typeof label === "string" && label ? label : undefined)} />
         <Text
           className="nf-unit"
           position="absolute"

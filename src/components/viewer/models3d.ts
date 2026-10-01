@@ -20,6 +20,9 @@ interface Loaded {
 
 const cache = new Map<string, Loaded>()
 const pending = new Map<string, Promise<Loaded | null>>()
+/** Càrregues fallides (src → quan): no es tornen a provar fins passat `RETRY_MS`. */
+const failed = new Map<string, number>()
+const RETRY_MS = 60_000
 const listeners = new Set<() => void>()
 let loader: GLTFLoader | null = null
 
@@ -40,8 +43,9 @@ function prepare(root: Object3D): Loaded {
     for (const mat of mats) {
       const s = mat as MeshStandardMaterial
       if (!s.isMeshStandardMaterial) continue
-      // Retall de les fulles (alfa de la textura): net i amb ombres, sense ordenar transparències.
-      if (s.map || s.alphaTest > 0 || s.transparent) {
+      // Retall de les fulles (alfa de la textura): net i amb ombres, sense ordenar transparències. Només els
+      // materials que ja eren amb alfa (l'escorça, opaca, queda normal).
+      if (s.transparent || s.alphaTest > 0) {
         s.alphaTest = Math.max(s.alphaTest, 0.5)
         s.transparent = false
         s.depthWrite = true
@@ -63,6 +67,8 @@ export function loadModel(src: string): Promise<Loaded | null> {
   if (p) return p
   const url = urlOf(src)
   if (!url) return Promise.resolve(null)
+  const at = failed.get(src)
+  if (at !== undefined && Date.now() - at < RETRY_MS) return Promise.resolve(null)
   // Els arbres van comprimits amb meshopt (`gltfpack -c`): el descompressor és JS de three, sense fitxers a part.
   loader ??= new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
   const job = loader
@@ -70,18 +76,43 @@ export function loadModel(src: string): Promise<Loaded | null> {
     .then((gltf) => {
       const l = prepare(gltf.scene)
       cache.set(src, l)
+      failed.delete(src)
       for (const f of listeners) f()
       return l
     })
-    .catch(() => null)
+    .catch(() => {
+      failed.set(src, Date.now())
+      return null
+    })
     .finally(() => pending.delete(src))
   pending.set(src, job)
   return job
 }
 
-/** Espera que estiguin carregats tots els models de la llista (miniatures). */
-export async function preloadModels(models: ModelObject[] | undefined): Promise<void> {
-  await Promise.all([...new Set((models ?? []).map((m) => m.src))].map(loadModel))
+/** Espera que estiguin carregats tots els models de la llista (miniatures, exportacions). `true` si hi són tots. */
+export async function preloadModels(models: ModelObject[] | undefined): Promise<boolean> {
+  const got = await Promise.all([...new Set((models ?? []).map((m) => m.src))].map(loadModel))
+  return got.every((l) => l !== null)
+}
+
+/**
+ * Allibera de la GPU la geometria, els materials i les textures compartits dels models. Cada renderer que els ha
+ * dibuixat hi deixa escoltadors de `dispose`: si no, un renderer mort quedaria viu a través de la memòria cau. És
+ * segur cridar-ho amb altres renderers vius: els tornen a pujar quan els dibuixen.
+ */
+export function releaseModelGpu(): void {
+  for (const l of cache.values()) {
+    l.root.traverse((o) => {
+      const m = o as Mesh
+      if (!m.isMesh) return
+      m.geometry.dispose()
+      const mats = (Array.isArray(m.material) ? m.material : [m.material]) as Material[]
+      for (const mat of mats) {
+        ;(mat as MeshStandardMaterial).map?.dispose()
+        mat.dispose()
+      }
+    })
+  }
 }
 
 /** Avisa quan s'acaba de carregar un model (per tornar a dibuixar). Torna la funció per deixar d'escoltar. */

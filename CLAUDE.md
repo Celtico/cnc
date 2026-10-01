@@ -208,7 +208,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Mobles enllaçats** (`item.kind = "moble"`, `projectId`): és el mateix moble de la llista.
   A l'ambient només se'n toquen les **mides generals** (`resizeComposition`: escala amplades,
   separacions, alçades amb potes/sòcol/penjats, fondàries, mides fixes de zones i calaixos, peces
-  lliures i objectes; els gruixos no) i la posició; «Obrir a l'editor» per a l'interior.
+  lliures, objectes i models 3D; els gruixos no) i la posició; «Obrir a l'editor» per a l'interior.
   «Moble» obre una **finestra a pantalla completa** (`Drawer` full) amb la mateixa pàgina de
   Mobles (`NewMobleGallery`: historial, les teves, les de l'app i les de botiga, amb filtre i
   cercador); a l'historial, «Afegir»; una plantilla crea el moble a Mobles i el col·loca. Els
@@ -405,9 +405,15 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   - **Models 3D** (`Composition.models`, `ModelObject` a `model/composition.ts`: `src` = id de `MODEL_ASSETS`
     (`model/models.ts`), cantonada x/y/z i caixa w/h/d en mm, `rot` en graus al voltant del vertical): malles `.glb`
     que **només es veuen** (no es fabriquen). Ara, falgueres de Poly Haven (CC0) a `public/models`, textura 1K WebP amb el
-    retall de les fulles a l'alfa (`alphaTest`). `viewer/models3d.ts` les carrega un cop (`loadModel`, `preloadModels`,
-    `onModelsLoaded`) i `modelInstance` fa la còpia col·locada (m; geometria i materials compartits, `userData.sharedModel`:
-    no s'alliberen). Surten als ambients, a les miniatures, a la Presentació i al render. A l'editor: grup **«Models 3D»**
+    retall de les fulles a l'alfa (`alphaTest`, només als materials que ja eren amb alfa: l'escorça opaca queda normal).
+    `viewer/models3d.ts` les carrega un cop (`loadModel`, `preloadModels` → `true` si hi són tots, `onModelsLoaded`; una
+    càrrega fallida no es torna a provar fins passat 60 s) i `modelInstance` fa la còpia col·locada (m; geometria i
+    materials compartits, `userData.sharedModel`: no s'alliberen per element). `releaseModelGpu` els treu de la GPU en
+    alliberar el renderitzador de miniatures i en tancar el visor de l'editor o el 3D dels ambients (si no, els
+    escoltadors de `dispose` mantenen vius els renderitzadors morts). Les miniatures amb un model que no s'ha carregat no
+    es fan ni es desen. Surten als ambients, a les miniatures, a la Presentació, al render, a l'AR i al GLB/USDZ
+    d'Exportar. El gir (`rot`) compta a les caixes (`modelFootprint`: enquadrar, plànol dels ambients, contorn i imant
+    de l'editor). A l'editor: grup **«Models 3D»**
     a l'arbre (+ demana el nom i el model amb `ChoiceChips`; surt al centre de les peces noves, a terra; ⋯ Duplicar ·
     Eliminar, `insertModelCopy`), clic al 3D per triar-lo (`ModelMesh` a `CabinetViewer`), seleccionat amb el contorn i el
     gizmo (`RefGhost outline`, es mou en viu), fletxes, Supr i Ctrl/⌘ C · V · D, i inspector `ModelInspector` (Model ·
@@ -869,9 +875,13 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   (`theme/system.ts`) i mostra el text sencer al passar-hi per sobre
   (`theme/truncatedTitles.ts`; per a altres textos, afegeix `data-truncate`).
 - Camps numèrics de mides amb `NumberInput` i sufix "mm". En columnes estretes (< 130 px)
-  s'amaga el sufix (no els botons + −) automàticament (container query a `NumberField`).
+  s'amaga el sufix (no els botons + −) automàticament (container query a `NumberField`). Mentre s'escriu, el text
+  es queda encara que no sigui un número («», «-»), però `onChange` només rep números; en sortir es torna l'últim
+  valor vàlid. Amb `allowEmpty` (mides que poden quedar buides) rep `NaN`. L'Editor només desa composicions que
+  passen `CompositionSchema`.
 - **Res de desplegables** (per decisió de l'usuari, tot unificat): cada tria entre opcions és un `ChoiceChips`
-  (`components/FormRow`, botons segmentats que salten de línia, no desborden mai): vistes, formes, tipus, mòduls,
+  (`components/FormRow`, botons segmentats que salten de línia, no desborden mai; els noms llargs es tallen amb «…» i
+  el sencer al `title`; tornar a tocar la triada no fa res, si no és amb `retap`, p. ex. la forma del tauler): vistes, formes, tipus, mòduls,
   gruixos, grups, resolucions… Les explicacions que portaven les opcions van a l'ajuda (`help`) de la fila. Els
   materials, amb el `MaterialSelect` (calaix). Cap `NativeSelect` fora de `components/ui`.
 

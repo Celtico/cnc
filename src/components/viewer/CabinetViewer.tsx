@@ -17,8 +17,8 @@ import { type ViewName } from "./viewNames"
 export type { ViewName } from "./viewNames"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
-import { flatten, partSize, partsBox, type FreePart, type Hole, type MaterialPref, type ModelObject, type Panel, type RefObject } from "../../core/model"
-import { modelInstance, onModelsLoaded } from "./models3d"
+import { flatten, modelFootprint, partSize, partsBox, type FreePart, type Hole, type MaterialPref, type ModelObject, type Panel, type RefObject } from "../../core/model"
+import { modelInstance, onModelsLoaded, releaseModelGpu } from "./models3d"
 import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
@@ -219,9 +219,19 @@ export function CabinetViewer({
     return { id: p.id, name: p.name, x: p.x, y: p.y, z: p.z, w: s[0], h: s[1], d: s[2] }
   }), [parts])
   const selectedPartBox = partBoxes.find((b) => b.id === selectedPartId)
-  // Caixa de cada model 3D (per al contorn, el gizmo i l'imant dels altres).
-  const modelBoxes = useMemo((): RefObject[] => (models ?? []).map((m) => ({ id: m.id, name: m.name, x: m.x, y: m.y, z: m.z, w: m.w, h: m.h, d: m.d })), [models])
+  // Caixa de cada model 3D, amb el gir (per al contorn, el gizmo i l'imant dels altres).
+  const modelBoxes = useMemo((): RefObject[] => (models ?? []).map((m) => {
+    const f = modelFootprint(m)
+    return { id: m.id, name: m.name, x: f.x, y: m.y, z: f.z, w: f.w, h: m.h, d: f.d }
+  }), [models])
   const selectedModelBox = modelBoxes.find((b) => b.id === selectedModelId)
+  const selectedModel = models?.find((m) => m.id === selectedModelId)
+  // De la caixa girada a la cantonada del model (el gizmo mou la caixa).
+  const toModelPos = (pos: { x: number; y: number; z: number }) => (selectedModel && selectedModelBox ? { x: pos.x - selectedModelBox.x + selectedModel.x, y: pos.y, z: pos.z - selectedModelBox.z + selectedModel.z } : pos)
+  // Els models comparteixen geometria i materials (memòria de `models3d`): en tancar el visor (o recrear el
+  // renderitzador en canviar la qualitat) s'alliberen de la GPU; si no, el renderitzador mort quedaria viu a través
+  // dels seus escoltadors.
+  useEffect(() => () => releaseModelGpu(), [quality])
   // Model que s'arrossega amb el gizmo: es mou en viu (posició en mm).
   const [modelDrag, setModelDrag] = useState<{ id: string; x: number; y: number; z: number } | null>(null)
   const groupBox = useMemo((): RefObject | null => {
@@ -357,8 +367,8 @@ export function CabinetViewer({
             targets={snapTargets}
             others={[...modelBoxes, ...partBoxes, ...(ghosts ?? [])]}
             onSelect={onSelectModel}
-            onMove={onMoveModel}
-            onDrag={(pos) => setModelDrag(pos && { id: selectedModelBox.id, ...pos })}
+            onMove={onMoveModel ? (id, pos) => onMoveModel(id, toModelPos(pos)) : undefined}
+            onDrag={(pos) => setModelDrag(pos && { id: selectedModelBox.id, ...toModelPos(pos) })}
             outline
           />
         )}

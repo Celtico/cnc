@@ -315,6 +315,8 @@ function TableTopFields({ module, onChange }: { module: Module; onChange: (m: Mo
             <HStack gap={1.5} wrap="wrap">
               <ChoiceChips
                 label="Forma"
+                // Arrodonit i Oval es poden tornar a aplicar (després de canviar la mida, la desada queda estirada).
+                retap
                 options={[
                   { id: "rect", label: <><LuRectangleHorizontal /> Rectangle</> },
                   { id: "round", label: <><LuSquircle /> Arrodonit</> },

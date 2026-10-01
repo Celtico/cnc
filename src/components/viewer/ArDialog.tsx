@@ -1,7 +1,7 @@
 import { Box, Button, CloseButton, Dialog, HStack, Portal, Spinner, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useState, type DetailedHTMLProps, type HTMLAttributes } from "react"
 import { LuView } from "react-icons/lu"
-import type { Panel } from "../../core/model"
+import type { ModelObject, Panel } from "../../core/model"
 import { exportGlb } from "./exportGlb"
 import { exportUsdz, supportsQuickLook } from "./exportUsdz"
 import { exportablePanel } from "./exportablePanel"
@@ -42,7 +42,7 @@ interface Urls {
  * l'iPhone/iPad, el botó que l'obre a mida real a l'habitació amb AR Quick Look (USDZ).
  * El component web es carrega només en obrir el diàleg.
  */
-export function ArDialog({ open, onClose, panels, name }: { open: boolean; onClose: () => void; panels: Panel[]; name: string }) {
+export function ArDialog({ open, onClose, panels, name, models }: { open: boolean; onClose: () => void; panels: Panel[]; name: string; models?: ModelObject[] }) {
   const [urls, setUrls] = useState<Urls | null>(null)
   const [error, setError] = useState<string | null>(null)
   const ios = supportsQuickLook()
@@ -60,8 +60,8 @@ export function ArDialog({ open, onClose, panels, name }: { open: boolean; onClo
       try {
         const [, glb, usdz] = await Promise.all([
           import("@google/model-viewer"),
-          exportGlb(panels, name, real),
-          ios ? exportUsdz(panels, name, real) : Promise.resolve(null),
+          exportGlb(panels, name, real, models),
+          ios ? exportUsdz(panels, name, real, models) : Promise.resolve(null),
         ])
         if (cancelled) return // tancat abans d'acabar: no es creen les URL (quedarien sense alliberar)
         made = { glb: URL.createObjectURL(glb), ...(usdz ? { usdz: URL.createObjectURL(usdz) } : {}) }
@@ -77,7 +77,7 @@ export function ArDialog({ open, onClose, panels, name }: { open: boolean; onClo
         if (made.usdz) URL.revokeObjectURL(made.usdz)
       }
     }
-  }, [open, panels, name, ios, real])
+  }, [open, panels, name, ios, real, models])
 
   return (
     <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size="xl" placement="center">

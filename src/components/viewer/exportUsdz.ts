@@ -1,13 +1,15 @@
 import { USDZExporter } from "three/examples/jsm/exporters/USDZExporter.js"
-import type { Panel } from "../../core/model"
+import type { ModelObject, Panel } from "../../core/model"
 import { buildScene } from "./exportGlb"
+import { preloadModels } from "./models3d"
 
 /**
  * USDZ del moble en METRES, per a AR Quick Look (Safari iOS/iPadOS).
  * Quick Look posa l'origen sobre el pla detectat: la base del moble és a y = 0.
  */
-export async function exportUsdz(panels: Panel[], name: string, real?: Parameters<typeof buildScene>[2]): Promise<Blob> {
-  const scene = buildScene(panels, name, real)
+export async function exportUsdz(panels: Panel[], name: string, real?: Parameters<typeof buildScene>[2], models: ModelObject[] = []): Promise<Blob> {
+  await preloadModels(models)
+  const scene = buildScene(panels, name, real, models)
   scene.updateMatrixWorld(true)
   const exporter = new USDZExporter()
   const bytes = await exporter.parseAsync(scene, { quickLookCompatible: true })

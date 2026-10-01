@@ -48,7 +48,7 @@ import { RenderDialog, type SceneGetter } from "../../components/viewer/render/R
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
-import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, partBox, type Composition, type FreePart, type ModelObject, type Module, type Panel, type RefObject, type Zone } from "../../core/model"
+import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, partBox, CompositionSchema, type Composition, type FreePart, type ModelObject, type Module, type Panel, type RefObject, type Zone } from "../../core/model"
 import { updateProjectComposition } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -278,8 +278,11 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   panelsRef.current = panels
 
   // Desa amb retard quan la composició canvia; el que queda pendent es desa en sortir de l'Editor (si
-  // no, Exportar llegiria la versió anterior).
-  useDebouncedSave(comp, (c) => void updateProjectComposition(projectId, c))
+  // no, Exportar llegiria la versió anterior). Només si és vàlida (com a Preferències): un camp a mig escriure no
+  // ha de desar un moble que després no s'obriria.
+  useDebouncedSave(comp, (c) => {
+    if (CompositionSchema.safeParse(c).success) void updateProjectComposition(projectId, c)
+  })
 
   const kind = compositionKind(comp)
   const module: Module = comp.modules.find((m) => m.id === selectedModule) ?? comp.modules[0]!
@@ -1088,7 +1091,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
         )}
 
         {collisions.length > 0 && (
-          <PanelSection id="collisions" title="Amb l'obertura actual" icon={LuDoorOpen} badge={collisions.length} badgePalette="orange">
+          <PanelSection id="collisions" title="Amb l'obertura actual" icon={LuDoorOpen} defaultOpen badge={collisions.length} badgePalette="orange">
             {collisions.map((c) => (
               <Alert.Root key={c.groupId} status="warning" size="sm">
                 <Alert.Indicator />
@@ -1330,7 +1333,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
           display={viewTab === "3d" ? "flex" : "none"}
         >
           <RenderDialog open={renderOpen} onClose={() => setRenderOpen(false)} getScene={() => sceneGetter.current?.() ?? null} name={name} />
-          <ArDialog open={arOpen} onClose={() => setArOpen(false)} panels={viewerPanels} name={name} />
+          <ArDialog open={arOpen} onClose={() => setArOpen(false)} panels={viewerPanels} name={name} models={build?.models} />
           {/* Al mòbil, un calaix de baix amb el seu propi desplaçament; a l'ordinador, un popover. */}
           <ViewOptions lead={viewModes} tiles={viewTiles}>
             <Box pt={3} borderTopWidth="1px">

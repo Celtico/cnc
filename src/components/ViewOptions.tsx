@@ -26,12 +26,13 @@ export function ViewOptions({ tiles, lead, children }: { tiles: ReactNode; lead?
   const n = Math.max(1, countTiles(tiles))
   const rows = Math.ceil(n / 5)
   const cols = Math.ceil(n / rows)
-  const mobile = useBreakpointValue({ base: true, md: false }) ?? false
-  const body = (
+  // Sense SSR: el valor de debò ja al primer render (si no, a l'ordinador sortia un instant el calaix). El tipus
+  // encara admet `undefined`.
+  const mobile = useBreakpointValue({ base: true, md: false }, { ssr: false }) ?? false
+  // El títol és el nom accessible del calaix (`Drawer.Title`), amb el mateix aspecte.
+  const body = (title: ReactNode) => (
     <Stack gap={3}>
-      <SectionLabel>
-        Opcions de vista
-      </SectionLabel>
+      {title}
       {lead}
       {/* Files iguals (cap rajola sola a l'última fila): 6 → 3 + 3, 7 → 4 + 3, 8 → 4 + 4. */}
       <SimpleGrid columns={cols} gap={1.5}>
@@ -56,7 +57,11 @@ export function ViewOptions({ tiles, lead, children }: { tiles: ReactNode; lead?
             <Drawer.Content roundedTop="l3" maxH="75dvh" pb="env(safe-area-inset-bottom, 0px)">
               {/* Desplaçament propi (el de la pàgina no es mou). */}
               <Drawer.Body py={4} overflowY="auto">
-                {body}
+                {body(
+                  <Drawer.Title asChild>
+                    <SectionLabel as="h2">Opcions de vista</SectionLabel>
+                  </Drawer.Title>,
+                )}
               </Drawer.Body>
               <Drawer.CloseTrigger asChild>
                 <CloseButton size="sm" aria-label="Tancar" />
@@ -71,8 +76,8 @@ export function ViewOptions({ tiles, lead, children }: { tiles: ReactNode; lead?
       <Popover.Trigger asChild>{trigger}</Popover.Trigger>
       <Portal>
         <Popover.Positioner>
-          <Popover.Content w="300px">
-            <Popover.Body>{body}</Popover.Body>
+          <Popover.Content w="300px" aria-label="Opcions de vista">
+            <Popover.Body>{body(<SectionLabel>Opcions de vista</SectionLabel>)}</Popover.Body>
           </Popover.Content>
         </Popover.Positioner>
       </Portal>

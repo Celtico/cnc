@@ -12,7 +12,7 @@ import {
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js"
 import type { MaterialPref, ModelObject, Panel, PanelRole } from "../../core/model"
-import { modelInstance } from "./models3d"
+import { modelInstance, preloadModels } from "./models3d"
 
 const ROLE_COLOR: Record<PanelRole, number> = {
   side: 0xe6cfa6,
@@ -129,9 +129,10 @@ function handleMeshes(p: Panel): Mesh[] {
   return [bar, ...feet]
 }
 
-/** GLB binari (ArrayBuffer) del moble en metres. */
-export async function exportGlb(panels: Panel[], name: string, real?: Parameters<typeof buildScene>[2]): Promise<Blob> {
-  const scene = buildScene(panels, name, real)
+/** GLB binari (ArrayBuffer) del moble en metres, amb els models 3D (s'esperen carregats). */
+export async function exportGlb(panels: Panel[], name: string, real?: Parameters<typeof buildScene>[2], models: ModelObject[] = []): Promise<Blob> {
+  await preloadModels(models)
+  const scene = buildScene(panels, name, real, models)
   const exporter = new GLTFExporter()
   const result = await exporter.parseAsync(scene, { binary: true })
   if (result instanceof ArrayBuffer) return new Blob([result], { type: "model/gltf-binary" })

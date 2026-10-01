@@ -7,7 +7,7 @@ import { MoveGizmo } from "../../components/viewer/MoveGizmo"
 import type { Axis } from "../../components/viewer/pixelScale"
 import { exportablePanel } from "../../components/viewer/exportablePanel"
 import { buildScene } from "../../components/viewer/exportGlb"
-import { onModelsLoaded } from "../../components/viewer/models3d"
+import { onModelsLoaded, releaseModelGpu } from "../../components/viewer/models3d"
 import { SceneAccess, StudioEnvironment } from "../../components/viewer/SceneHelpers"
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
@@ -68,6 +68,9 @@ export function Ambient3D({
   const box = ambientBox(ambient, geos) ?? { x0: 0, y0: 0, x1: 5000, y1: 4000 }
   const cx = (box.x0 + box.x1) / 2000, cz = (box.y0 + box.y1) / 2000
   const span = Math.max(box.x1 - box.x0, box.y1 - box.y0) / 1000
+  // En tancar el 3D, els models compartits (memòria de `models3d`) s'alliberen de la GPU: si no, guardarien el
+  // renderitzador mort a través dels seus escoltadors.
+  useEffect(() => () => releaseModelGpu(), [])
   return (
     <Canvas
       shadows={shadows ? "soft" : false}

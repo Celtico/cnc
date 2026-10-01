@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { buildBounds, buildComposition, panelBox, type CompositionBuild } from "../../core/build/buildComposition"
-import { blockComposition, type AmbientItem, type BlockItem } from "../../core/model"
+import { blockComposition, modelFootprint, type AmbientItem, type BlockItem } from "../../core/model"
 import type { Composition } from "../../core/model"
 import { compositionOf } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
@@ -47,7 +47,10 @@ export function itemGeometry(comp: Composition): ItemGeometry {
     h: max[1] - min[1],
     d: max[2] - min[2],
     // Els models 3D (plantes…), amb la seva caixa.
-    rects: [...build.panels.map(rect(false)), ...build.extras.map(rect(true)), ...build.models.map((m) => ({ x0: m.x - cx, z0: m.z - cz, x1: m.x + m.w - cx, z1: m.z + m.d - cz, extra: true }))],
+    rects: [...build.panels.map(rect(false)), ...build.extras.map(rect(true)), ...build.models.map((m) => {
+      const f = modelFootprint(m)
+      return { x0: f.x - cx, z0: f.z - cz, x1: f.x + f.w - cx, z1: f.z + f.d - cz, extra: true }
+    })],
   }
 }
 

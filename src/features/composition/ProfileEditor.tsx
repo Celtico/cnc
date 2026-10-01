@@ -20,6 +20,7 @@ import {
 } from "../../core/model"
 import { NumberField, NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
+import { segGroup, segItem } from "../../components/segmented"
 import { PRESETS } from "./profilePresets"
 
 const r1 = (v: number) => Math.round(v * 10) / 10
@@ -294,8 +295,8 @@ export function ProfileEditor({
             <Dialog.Body overflowY="auto">
               <Stack gap={3}>
                 <HStack gap={2} wrap="wrap" justify="space-between">
-                  {/* Eines, com al mode d'edició de vectors de Figma. */}
-                  <HStack gap={0.5} p={0.5} rounded="md" bg="bg.muted">
+                  {/* Eines, com al mode d'edició de vectors de Figma (el control segmentat comú, com les eines de la Foto). */}
+                  <HStack {...segGroup}>
                     {(
                       [
                         ["edit", "Moure", LuMousePointer2, "Arrossega nodes i manegadors"],
@@ -306,10 +307,9 @@ export function ProfileEditor({
                     ).map(([id, label, Icon, title]) => (
                       <Button
                         key={id}
-                        size="xs"
+                        {...segItem(tool === id || (id === "pen" && drawing))}
                         title={title}
-                        variant={tool === id ? "solid" : "ghost"}
-                        colorPalette={id === "pen" && drawing ? "red" : tool === id ? "blue" : "gray"}
+                        aria-pressed={tool === id}
                         disabled={drawing && id !== "pen" && nodes.length < 3}
                         onClick={() => {
                           if (id === "pen") {

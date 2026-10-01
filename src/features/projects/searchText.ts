@@ -8,6 +8,19 @@ import { KINDS } from "../composition/kinds"
  * tipus, el grup, els noms dels mòduls i els materials.
  */
 export function projectSearchText(p: Project): string {
+  // Memòria per moble: llegir la composició de tots a cada tecla és car. Es refà si el moble ha canviat (`updatedAt`, el nom o el grup).
+  const key = `${p.id}`
+  const hit = memo.get(key)
+  if (hit && hit.at === p.updatedAt && hit.name === p.name && hit.folder === p.folder) return hit.text
+  const text = searchTextOf(p)
+  memo.set(key, { at: p.updatedAt, name: p.name, folder: p.folder, text })
+  return text
+}
+
+/** Una entrada per moble (la d'un moble que canvia es substitueix): no creix més que la llista. */
+const memo = new Map<string, { at: number; name: string; folder: string | undefined; text: string }>()
+
+function searchTextOf(p: Project): string {
   const comp = compositionOf(p)
   const kind = KINDS.find((k) => k.value === compositionKind(comp))?.label ?? ""
   const mats = new Set<string>()

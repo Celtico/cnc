@@ -79,6 +79,7 @@ import { NewMobleGallery } from "../projects/NewMobleGallery"
 import { blankMoble, blankObject } from "../projects/blank"
 import { ProjectCard } from "../projects/ProjectCard"
 import { GALLERY_COLS } from "../projects/galleryGrid"
+import { projectSearchText } from "../projects/searchText"
 import { useAmbientMembership } from "./useAmbientMembership"
 import { ObjectsGallery } from "../objects/ObjectsGallery"
 import { isObject } from "../objects/isObject"
@@ -675,8 +676,8 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                   <NewMobleGallery
                     storageKey="mobles:ambient-picker"
                     onCreate={(c, n) => createAndAdd(c, n, "moble")}
-                    history={(kind, matches) => {
-                      const shown = (projects ?? []).filter((p) => !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && matches(p.name))
+                    history={(kind, matches, searching) => {
+                      const shown = (projects ?? []).filter((p) => !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && (!searching || matches(projectSearchText(p))))
                       return {
                         count: shown.length,
                         node: shown.length ? (
@@ -721,8 +722,8 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                   <ObjectsGallery
                     storageKey="mobles:ambient-objects"
                     onCreate={(c, n) => createAndAdd(c, n, "object")}
-                    history={(matches) => {
-                      const shown = (projects ?? []).filter((p) => isObject(p) && matches(p.name))
+                    history={(matches, searching) => {
+                      const shown = (projects ?? []).filter((p) => isObject(p) && (!searching || matches(projectSearchText(p))))
                       return {
                         count: shown.length,
                         node: shown.length ? (

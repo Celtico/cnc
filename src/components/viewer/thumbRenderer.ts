@@ -7,6 +7,7 @@ import { buildScene } from "./exportGlb"
 import { makeFloor, ROOM } from "./floorTextures"
 import { readPresentationScene } from "./presentationScene"
 import { surfaceMaterial } from "./surfaceMaterial"
+import { releaseModelGpu } from "./models3d"
 
 /**
  * Miniatures 3D de les targetes (Mobles i Objectes) sense cap visor obert: un sol renderitzador fora de
@@ -41,6 +42,8 @@ function ensure(): WebGLRenderer {
 
 /** Allibera el renderitzador (quan la cua de miniatures queda buida). */
 export function releaseThumbRenderer(): void {
+  // Els models compartits guarden escoltadors del renderer: alliberar-los perquè no el mantinguin viu.
+  if (renderer) releaseModelGpu()
   env?.dispose()
   env = null
   renderer?.dispose()

@@ -870,11 +870,12 @@ function PhotoCalibrator({
               <Text fontSize="sm" fontWeight="medium">
                 Mida coneguda
               </Text>
-              <NumRow label="Amplada" value={cal.ref.w ?? NaN} min={10} max={5000} step={1} onChange={(w) => setCal((c) => ({ ...c, ref: { ...c.ref, w: known(w) } }))} />
+              <NumRow label="Amplada" value={cal.ref.w ?? NaN} allowEmpty min={10} max={5000} step={1} onChange={(w) => setCal((c) => ({ ...c, ref: { ...c.ref, w: known(w) } }))} />
               {/* L'explicació de la mida coneguda va com a ajuda de la segona fila (val per a totes dues). */}
               <NumRow
                 label="Alçada"
                 value={cal.ref.h ?? NaN}
+                allowEmpty
                 min={10}
                 max={5000}
                 step={1}

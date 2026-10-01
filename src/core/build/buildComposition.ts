@@ -1,4 +1,4 @@
-import { compositionKind, modulePlacements, partsOnlyKind, partCutters, type Composition, type ModelObject, type Panel, type Vec3 } from "../model"
+import { compositionKind, modelFootprint, modulePlacements, partsOnlyKind, partCutters, type Composition, type ModelObject, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { buildModule, type BuildWarning, type ModuleBuild } from "./buildModule"
 import { normalizePanel } from "./buildCabinet"
@@ -149,7 +149,8 @@ export function buildBounds(b: Pick<CompositionBuild, "panels" | "extras"> & { m
   }
   // Els models 3D també compten (un objecte que només és una planta).
   for (const m of b.models ?? []) {
-    const lo = [m.x, m.y, m.z], hi = [m.x + m.w, m.y + m.h, m.z + m.d]
+    const f = modelFootprint(m)
+    const lo = [f.x, m.y, f.z], hi = [f.x + f.w, m.y + m.h, f.z + f.d]
     for (let i = 0; i < 3; i++) {
       min[i] = Math.min(min[i]!, lo[i]!)
       max[i] = Math.max(max[i]!, hi[i]!)

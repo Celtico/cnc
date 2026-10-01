@@ -200,7 +200,7 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
                 <FormRow key={label} label={label} help="Gruix del tauler">
                   <ChoiceChips
                     label={label}
-                    options={(mat.thicknesses.includes(p.thickness) ? mat.thicknesses : [p.thickness, ...mat.thicknesses]).map((t) => ({ id: String(t), label: String(t) }))}
+                    options={(mat.thicknesses.includes(p.thickness) ? mat.thicknesses : [p.thickness, ...mat.thicknesses]).map((t) => ({ id: String(t), label: `${t} mm` }))}
                     value={String(p.thickness)}
                     onChange={(v) => update({ thickness: Number(v) })}
                   />

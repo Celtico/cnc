@@ -115,7 +115,8 @@ export function requestAmbientThumb(r: AmbientRow, materials: MaterialPref[]): v
       }
       geos.push(cache.get(key)!)
     }
-    await preloadModels(geos.flatMap((g) => g?.build.models ?? []))
+    // Si un model 3D no s'ha pogut carregar, no es fa (ni es desa): sortiria sense la planta per sempre.
+    if (!(await preloadModels(geos.flatMap((g) => g?.build.models ?? [])))) return
     const url = renderAmbient(a, (i) => geos[i] ?? null, materials)
     if (url) await db.ambients.update(r.id, { thumb: url, thumbAt: fresh.updatedAt, thumbV: THUMB_VERSION })
   })
@@ -149,7 +150,7 @@ export function requestCatalogThumb(t: AmbientTemplate, materials: MaterialPref[
       floorMaterial: t.floor,
       wallMaterial: t.wall,
     } as Ambient
-    await preloadModels(placed.flatMap((p) => geoOf(p.ref)?.build.models ?? []))
+    if (!(await preloadModels(placed.flatMap((p) => geoOf(p.ref)?.build.models ?? [])))) return
     const url = renderAmbient(a, (i) => geoOf(placed[i]!.ref), materials)
     if (url) {
       catalogThumbs.set(t.id, url)

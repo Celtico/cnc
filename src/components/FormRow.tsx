@@ -59,15 +59,24 @@ export function FormSection({ title, children }: { title: string; children: Reac
  * Tria d'una opció amb pastilles que salten de línia (no es desborden com un control segmentat
  * quan hi ha moltes opcions o la pantalla és estreta).
  */
-export function ChoiceChips<T extends string>({ label, options, value, onChange }: { label: string; options: { id: T; label: ReactNode }[]; value: T; onChange: (v: T) => void }) {
+export function ChoiceChips<T extends string>({ label, options, value, onChange, retap = false }: { label: string; options: { id: T; label: ReactNode }[]; value: T; onChange: (v: T) => void; retap?: boolean }) {
   return (
     <HStack {...segGroup} role="radiogroup" aria-label={label}>
       {options.map((o) => {
         const on = o.id === value
+        const text = typeof o.label === "string" ? o.label : undefined
         return (
           // Tornar a tocar la triada no fa res (com un desplegable): si no, es refeia (p. ex. l'acabat del material).
-          <Button key={o.id} {...segItem(on)} px={2.5} role="radio" aria-checked={on} onClick={() => !on && onChange(o.id)}>
-            {o.label}
+          // Amb `retap`, sí (una opció que es torna a aplicar, com la forma del tauler després de canviar-ne la mida).
+          // Els noms llargs es tallen amb punts suspensius (al mòbil no desborden) i el sencer surt al `title`.
+          <Button key={o.id} {...segItem(on)} px={2.5} maxW="full" role="radio" aria-checked={on} title={text} onClick={() => (retap || !on) && onChange(o.id)}>
+            {text !== undefined ? (
+              <Box as="span" minW={0} truncate>
+                {text}
+              </Box>
+            ) : (
+              o.label
+            )}
           </Button>
         )
       })}

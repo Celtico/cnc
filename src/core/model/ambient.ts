@@ -288,7 +288,7 @@ export const OBJECT_TEMPLATES: Template[] = [
     id: "object-model-fern-pot",
     kind: "objecte",
     name: "Falguera en test",
-    description: "Ø 380 × 640 mm · test de ceràmica blanca i falguera (model 3D).",
+    description: "Ø 380 × 530 mm · test de ceràmica blanca i falguera (model 3D).",
     make: () => {
       const a = MODEL_ASSETS.find((m) => m.id === "fern-02-c")!
       const k = 600 / a.size[0]
@@ -451,7 +451,7 @@ export function snapToWalls(x: number, y: number, w: number, d: number, rot: num
 /**
  * Canvia les mides generals d'un moble (ample, alt, fons) escalant-ne la distribució: amplades
  * i separacions dels mòduls, alçades (també potes, sòcol i alçada dels penjats), fondàries, les
- * mides fixes dels compartiments i calaixos, les peces lliures i els objectes. Els gruixos dels
+ * mides fixes dels compartiments i calaixos, les peces lliures, els objectes i els models 3D. Els gruixos dels
  * taulers no canvien. `cur` és la mida actual (la caixa de les peces).
  */
 export function resizeComposition(comp: Composition, cur: { w: number; h: number; d: number }, next: { w: number; h: number; d: number }): Composition {
@@ -479,8 +479,10 @@ export function resizeComposition(comp: Composition, cur: { w: number; h: number
     return { ...p, x: r(p.x * sx), y: r(p.y * sy), z: r(p.z * sz), w: r(p.w * su), h: r(p.h * sv), ...(p.thickness > 60 ? { thickness: r(p.thickness * st) } : {}) }
   })
   const references = comp.references.map((o) => ({ ...o, x: r(o.x * sx), y: r(o.y * sy), z: r(o.z * sz), w: r(o.w * sx), h: r(o.h * sy), d: r(o.d * sz) }))
+  // Models 3D (plantes…): com els objectes.
+  const models = comp.models?.map((o) => ({ ...o, x: r(o.x * sx), y: r(o.y * sy), z: r(o.z * sz), w: r(o.w * sx), h: r(o.h * sy), d: r(o.d * sz) }))
   const runs = comp.runs?.map((run) => (run.kind === "worktop" ? { ...run, cutouts: run.cutouts.map((c) => ({ ...c, dx: r(c.dx * sx) })) } : run))
-  return { ...comp, modules, references, ...(parts ? { parts } : {}), ...(runs ? { runs } : {}) }
+  return { ...comp, modules, references, ...(parts ? { parts } : {}), ...(models ? { models } : {}), ...(runs ? { runs } : {}) }
 }
 
 // --- Grups d'elements (com les peces lliures de l'editor) -----------------------------------

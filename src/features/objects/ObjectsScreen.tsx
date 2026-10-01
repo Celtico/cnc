@@ -45,7 +45,7 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
       <ObjectsGallery
         onCreate={(c, n) => void create(c, n)}
         history={(matches, searching) => {
-          const shown = (projects ?? []).filter((p) => isObject(p) && matches(projectSearchText(p)))
+          const shown = (projects ?? []).filter((p) => isObject(p) && (!searching || matches(projectSearchText(p))))
           // Historial = el que és de pas (sense grup); el que es desa en un grup passa a Projectes.
           const loose = shown.filter((p) => !p.folder)
           const grouped = shown.filter((p) => p.folder)

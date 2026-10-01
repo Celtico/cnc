@@ -85,7 +85,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const doGlb = async () => {
     setBusy(true)
     try {
-      downloadBlob(await exportGlb(panels, project.name, { materials: settings.materials, make: exportablePanel }), `${base}.glb`)
+      downloadBlob(await exportGlb(panels, project.name, { materials: settings.materials, make: exportablePanel }, build?.models), `${base}.glb`)
     } catch (e) {
       toaster.create({ title: "No s'ha pogut generar el GLB", description: String(e), type: "error" })
     } finally {
@@ -96,7 +96,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const doUsdz = async (open: boolean) => {
     setBusyAr(true)
     try {
-      const blob = await exportUsdz(panels, project.name, { materials: settings.materials, make: exportablePanel })
+      const blob = await exportUsdz(panels, project.name, { materials: settings.materials, make: exportablePanel }, build?.models)
       if (open) openQuickLook(blob, `${base}.usdz`)
       else downloadBlob(blob, `${base}.usdz`)
     } catch (e) {

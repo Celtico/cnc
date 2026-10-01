@@ -23,6 +23,12 @@ describe("ambients", () => {
     }
   })
 
+  it("canviar les mides generals també escala els models 3D", () => {
+    const comp = { ...BUILTIN_TEMPLATES[0]!.make(), models: [{ id: "m1", name: "Falguera", src: "fern-02-c", x: 100, y: 200, z: 300, w: 600, h: 240, d: 500, rot: 30 }] }
+    const out = resizeComposition(comp, { w: 1000, h: 1000, d: 1000 }, { w: 2000, h: 500, d: 1500 })
+    expect(out.models).toEqual([{ id: "m1", name: "Falguera", src: "fern-02-c", x: 200, y: 100, z: 450, w: 1200, h: 120, d: 750, rot: 30 }])
+  })
+
   it("els blocs fan la seva mida i no van al nesting", () => {
     for (const p of BLOCK_PRESETS) {
       const b = buildComposition(blockComposition(p))
