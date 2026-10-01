@@ -305,6 +305,11 @@ export const RefObjectSchema = z.object({
    * les peces perpendiculars). z cap a la paret (per defecte), y vertical, x de costat.
    */
   axis: z.enum(["x", "y", "z"]).optional(),
+  /**
+   * Material (nom de Preferències): l'objecte es veu sòlid amb aquest material i surt a la Presentació i al
+   * render (p. ex. una tele, un radiador). Sense, és un fantasma translúcid que no surt al render.
+   */
+  material: z.string().optional(),
   /** Enganxat al terra: y = 0 sempre; al 3D només es mou pel terra. */
   onFloor: z.boolean().optional(),
   /** Enganxat a la paret: z = 0 sempre (tocant la paret); al 3D només es mou per la paret. */

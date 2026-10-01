@@ -11,6 +11,7 @@ import { AXIS_INDEX, SECTION_AXES, anchorRef, insertRefCopy, toNodes, canBeGhost
 import { NumRow } from "../editor/ParamsForm"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { useSettings } from "../settings/SettingsContext"
+import { MaterialSelect } from "../settings/SettingsScreen"
 
 /**
  * Objectes que tallen, preparats: travessen el fons (de z = −10 a 30) davant del moble, a
@@ -77,6 +78,7 @@ export function RefAddMenu({ comp, onChange, onAdded }: { comp: Composition; onC
 /** Propietats d'un objecte de referència (fantasma): nom, mides i posició. */
 export function RefInspector({ comp, id, onChange }: { comp: Composition; id: string; onChange: (c: Composition) => void }) {
   const [editing, setEditing] = useState(false)
+  const { settings } = useSettings()
   const o = comp.references.find((r) => r.id === id)
   if (!o) return null
   const update = (patch: Partial<RefObject>) => onChange({ ...comp, references: comp.references.map((r) => (r.id === id ? anchorRef({ ...r, ...patch }) : r)) })
@@ -124,6 +126,11 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
             )}
           </Stack>
         </FormRow>
+        {o.effect !== "cut" && (
+          <FormRow label="Material" help={o.material ? "Es veu sòlid amb aquest material i surt a la Presentació i al render." : "Sense material, és un fantasma translúcid (només per comprovar que tot hi cap; no surt al render)."} maxW="280px">
+            <MaterialSelect label="Material" materials={settings.materials} value={o.material ?? ""} emptyLabel="Cap (fantasma)" hideLabel onChange={(v) => update({ material: v || undefined })} />
+          </FormRow>
+        )}
       </PanelSection>
       <PanelSection id="ref-size" title="Mides" icon={LuMoveDiagonal}>
         {o.shape === "profile" ? (

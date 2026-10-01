@@ -4,6 +4,7 @@ import { PresentationRoom } from "./PresentationRoom"
 import { ModuleLegs, PanelHardware } from "./Hardware"
 import type { SceneGetter } from "./render/RenderDialog"
 import { SceneAccess, StudioEnvironment } from "./SceneHelpers"
+import { surfaceMaterial } from "./surfaceMaterial"
 import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
 import { Billboard, ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
@@ -286,6 +287,7 @@ export function CabinetViewer({
           <RefGhost
             key={g.id}
             g={g}
+            materials={materials}
             selected={g.id === selectedRefId}
             hit={collidingRefIds?.has(g.id) ?? false}
             guides={q.guides}
@@ -630,9 +632,12 @@ function RefGhost({
   onSelect,
   onMove,
   outline = false,
+  materials = [],
 }: {
   /** Només el contorn (peça lliure: la peça de debò ja es veu a sota). */
   outline?: boolean
+  /** Materials de Preferències (per als objectes que en porten). */
+  materials?: MaterialPref[]
   g: RefObject
   selected: boolean
   hit: boolean
@@ -666,6 +671,9 @@ function RefGhost({
   const draggable = selected && !!onMove
   const cyl = g.shape === "cylinder"
   const profileGeo = useMemo(() => (g.shape === "profile" && g.profile && g.profile.length >= 3 ? profileGeometry(g) : null), [g])
+  // Amb material: sòlid, amb ombres, i surt a la Presentació i al render (els fantasmes no hi surten).
+  const solidMat = useMemo(() => (g.material && g.effect !== "cut" && !outline ? surfaceMaterial(materials, g.material, Math.max(g.w, g.d), g.h) : null), [g.material, g.effect, g.w, g.h, g.d, outline, materials])
+  useEffect(() => () => (solidMat?.map?.dispose(), solidMat?.dispose()), [solidMat])
   useEffect(() => () => profileGeo?.dispose(), [profileGeo])
   const axis = g.axis ?? "z"
   const len = axis === "x" ? g.w : axis === "y" ? g.h : g.d
@@ -727,6 +735,8 @@ function RefGhost({
     <group position={[(pos.x + g.w / 2) * S, (pos.y + g.h / 2) * S, (pos.z + g.d / 2) * S]}>
     <mesh
       rotation={cyl ? rotation : [0, 0, 0]}
+      castShadow={!!solidMat}
+      receiveShadow={!!solidMat}
       renderOrder={g.effect === "cut" ? 8 : 0}
       onClick={onSelect ? (e: ThreeEvent<MouseEvent>) => {
         e.stopPropagation()
@@ -763,8 +773,12 @@ function RefGhost({
     >
       {profileGeo ? <primitive object={profileGeo} attach="geometry" /> : cyl ? <cylinderGeometry args={[radius * S, radius * S, len * S, 40]} /> : <boxGeometry args={[g.w * S, g.h * S, g.d * S]} />}
       {/* Els que tallen solen quedar dins del fons o darrere de les portes: es veuen a través. */}
-      <meshStandardMaterial side={DoubleSide} color={tint} transparent opacity={outline ? 0.08 : selected || hit ? 0.38 : g.effect === "cut" ? 0.45 : 0.22} depthWrite={false} depthTest={g.effect !== "cut"} />
-      {(guides || selected || hit || g.effect === "cut") && <Edges color={selected ? SELECT_COLOR : tint} threshold={cyl ? 30 : 1} depthTest={g.effect !== "cut"} renderOrder={g.effect === "cut" ? 9 : 0} />}
+      {solidMat ? (
+        <primitive object={solidMat} attach="material" />
+      ) : (
+        <meshStandardMaterial side={DoubleSide} color={tint} transparent opacity={outline ? 0.08 : selected || hit ? 0.38 : g.effect === "cut" ? 0.45 : 0.22} depthWrite={false} depthTest={g.effect !== "cut"} />
+      )}
+      {((guides && !solidMat) || selected || hit || g.effect === "cut") && <Edges color={selected ? SELECT_COLOR : tint} threshold={cyl ? 30 : 1} depthTest={g.effect !== "cut"} renderOrder={g.effect === "cut" ? 9 : 0} />}
     </mesh>
       {draggable && <MoveGizmo axes={gizmoAxes} active={drag?.axes.length === 1 ? drag.axes[0]! : null} onStart={startAxis} onMove={moveEvt} onEnd={end} />}
       {drag && (

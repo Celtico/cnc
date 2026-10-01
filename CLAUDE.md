@@ -419,6 +419,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     al 3D llisca pel terra) i «A la paret» (z = 0, penjat: al 3D es mou per la paret); tots dos
     alhora només de costat. El camp fixat queda desactivat; `anchorRef` s'aplica a l'inspector,
     a l'arrossegament i a les fletxes.
+  - **Material dels objectes de referència** (`RefObject.material`, a General; no als que tallen): amb material es veuen
+    sòlids (`surfaceMaterial`, amb ombres) i surten a la Presentació i al render per CPU; sense («Cap (fantasma)»), fantasma
+    translúcid que el render no pinta.
   - **Efecte dels objectes** (`RefObject.effect`, `shape`, `axis`): **Obstacle** (per defecte,
     avisa si xoca; el cilindre xoca amb la seva secció rodona, `refTouchesBox`) o **Talla**
     (`build/refCuts.ts`, `applyRefCuts`): forat passant a cada peça perpendicular a la seva
