@@ -1,6 +1,6 @@
 import { Accordion, Box, Button, CloseButton, Drawer, Field, HStack, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
-import { LuCheck, LuChevronDown } from "react-icons/lu"
+import { LuCheck, LuPalette } from "react-icons/lu"
 import { MATERIAL_CATEGORIES, materialCategory, type MaterialPref } from "../../core/model"
 import { MaterialThumb } from "./MaterialBits"
 
@@ -22,10 +22,12 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
   return (
     <Field.Root flex={hideLabel ? 1 : undefined} minW={0}>
       {!hideLabel && <Field.Label fontSize="sm">{label}</Field.Label>}
+      {/* Un botó (no un desplegable, per decisió de l'usuari): fons suau, amplada del contingut i la icona de Materials. */}
       <Button
         size="sm"
-        variant="outline"
-        w="full"
+        variant="subtle"
+        alignSelf="flex-start"
+        maxW="full"
         justifyContent="flex-start"
         gap={2}
         px={2}
@@ -38,11 +40,11 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
         }}
       >
         {current ? <MaterialThumb m={current} size={20} /> : <Box w="20px" h="20px" rounded="sm" borderWidth="1px" borderStyle="dashed" flexShrink={0} />}
-        <Text truncate flex={1} textAlign="start">
+        <Text truncate textAlign="start">
           {current?.name ?? (value || emptyLabel || "(sense material)")}
         </Text>
-        <Box color="fg.muted" display="inline-flex">
-          <LuChevronDown />
+        <Box color="wood.fg" display="inline-flex" flexShrink={0}>
+          <LuPalette />
         </Box>
       </Button>
 
