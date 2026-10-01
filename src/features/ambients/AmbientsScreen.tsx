@@ -88,7 +88,7 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
           <Card.Root variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }}>
             <Card.Body p={3} gap={2} cursor="pointer" onClick={() => onOpen(r.id)}>
               <AmbientThumb a={a} />
-              <Text fontWeight="semibold" fontSize="sm" truncate title={r.name}>
+              <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={r.name}>
                 {r.name}
               </Text>
               <Text fontSize="xs" color="fg.muted">
@@ -328,7 +328,7 @@ function CatalogCard({ t, busy, onPick }: { t: AmbientTemplate; busy: boolean; o
         <Card.Body p={3} gap={2} alignItems="stretch" textAlign="left">
           <AmbientThumb a={preview} />
           <HStack justify="space-between" gap={1}>
-            <Text fontWeight="semibold" fontSize="sm" truncate title={t.name}>
+            <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={t.name}>
               {t.name}
             </Text>
             <Badge size="xs" variant="subtle" flexShrink={0}>

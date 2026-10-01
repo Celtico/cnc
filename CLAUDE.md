@@ -780,14 +780,16 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   guarden 12 i alliberen (`dispose`) les que en surten, i el render per CPU fa com a molt 2 processos.
 - **Controls segmentats en mode fosc** (`theme/system.ts`): l'indicador de l'opció triada és gris clar (per
   defecte era del mateix negre que el fons i no es veia quina estava triada).
-- **Mides d'iOS a les pantalles tàctils** (`src/theme/touch.css`, `@media (pointer: coarse)`, CSS sense capa: guanya a les
+- **Mides d'iOS a les pantalles tàctils** (`src/theme/layout.css`, `@media (pointer: coarse)`, CSS sense capa: guanya a les
   capes de Chakra): es canvien les variables dels tokens, així tota l'app les agafa. Text `sm`/`md` 17 (cos d'iOS), `xs` 13,
   `2xs` 11, `lg` 20, `xl` 22; controls (`sizes` 8–11) 40 / 44 / 44 / 48 (mínim tàctil d'Apple: 44); interlineat 1,3; els
   camps on s'escriu a 17 (amb menys de 16, Safari fa zoom). `FormRow` centra l'etiqueta amb `--form-row-label-pt`. A
   l'ordinador, les mides normals de Chakra (sm = 14, botons de 32–36). Barra de baix com la d'iOS (icona 24, nom 2xs).
-  **Espais com la Configuració d'iOS** (també a `touch.css`, amb classes dels mòduls comuns): files de formulari
-  (`.form-row`) enganxades amb una línia fina entre elles, 16 als costats de les targetes de Preferències i de les
-  seccions (`.settings-group-*`, `.form-section`) i 32 entre grups (`.settings-stack`).
+  **La mateixa estructura a l'ordinador i al mòbil** (per decisió de l'usuari; `layout.css`, amb classes dels mòduls
+  comuns), com la Configuració d'iOS/macOS: files de formulari (`.form-row`) enganxades amb una línia fina entre elles,
+  marges de les targetes de Preferències i de les seccions (`.settings-group-*`, `.form-section`: 20, al tàctil 16) i 32
+  entre grups (`.settings-stack`). **Només canvien les mides** (ratolí: les de Chakra; dit: les d'iOS). Al tàctil, a més,
+  els noms de les targetes de les graelles (`.card-title`) a 15 en dues línies i les capçaleres d'acordió de 48.
   **Res de Ionic** (per decisió: refer la UI no compensa i no encaixa amb les eines d'escriptori).
 - **Capçalera de les pàgines d'inici** (`components/PageHeader`, Ambients · Objectes · Mobles): títol gran, accions i
   explicació; a l'ordinador les accions a la dreta del títol, al mòbil **a sota del títol**.

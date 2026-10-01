@@ -24,7 +24,7 @@ export function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?
             </Text>
           )}
           <HStack justify="space-between" gap={1}>
-            <Text fontWeight="semibold" fontSize="sm" truncate title={t.name}>
+            <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={t.name}>
               {title ?? t.name}
             </Text>
             <Badge size="xs" variant="subtle" flexShrink={0}>

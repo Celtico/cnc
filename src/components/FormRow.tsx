@@ -19,7 +19,7 @@ export function FormRow({ label, help, maxW, children }: { label: ReactNode; hel
         css={{
           "@container (min-width: 300px)": {
             gridTemplateColumns: "min(150px, 36%) minmax(0, 1fr)",
-            // Centrada amb un control d'una línia (36 px a l'ordinador, 44 a les pantalles tàctils: `touch.css`).
+            // Centrada amb un control d'una línia (36 px a l'ordinador, 44 a les pantalles tàctils: `layout.css`).
             "& > .form-row-label": { paddingTop: "var(--form-row-label-pt, 7px)" },
           },
         }}

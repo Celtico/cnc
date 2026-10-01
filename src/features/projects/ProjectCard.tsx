@@ -47,7 +47,7 @@ export function ProjectCard({
     <Card.Root variant="outline" size="sm" _hover={{ borderColor: "wood.solid" }} borderColor={here ? "wood.solid" : undefined}>
       <Card.Body p={3} gap={2} cursor="pointer" onClick={click}>
         <CompositionThumb composition={comp} />
-        <Text fontWeight="semibold" fontSize="sm" truncate title={project.name}>
+        <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={project.name}>
           {project.name}
         </Text>
         <Text fontSize="xs" color="fg.muted" lineClamp={2}>

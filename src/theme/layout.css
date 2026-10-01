@@ -1,4 +1,34 @@
 /*
+ * Estructura comuna (ordinador i pantalles tàctils), com la Configuració d'iOS i de macOS: files de formulari
+ * enganxades amb una línia fina entre elles, marges de les targetes i ~32 entre grups. Només canvien les mides
+ * (a dalt, per al dit). Els selectors porten `:root` perquè guanyin als estils de Chakra, que van sense capa.
+ */
+:root {
+  --form-row-py: 4px;
+  --card-px: 20px;
+}
+:root .form-row {
+  padding-block: var(--form-row-py);
+}
+:root .form-row + .form-row {
+  border-top: 1px solid var(--chakra-colors-border);
+}
+:root :has(> .form-row) {
+  row-gap: 0;
+}
+:root :has(> .form-row) > :not(.form-row) {
+  margin-block: 6px;
+}
+:root .settings-group-head,
+:root .settings-group-body,
+:root .form-section {
+  padding-inline: var(--card-px);
+}
+:root .settings-stack {
+  gap: 32px;
+}
+
+/*
  * Mides d'iOS a les pantalles tàctils (iPhone, iPad), segons la guia d'Apple (1 px CSS = 1 pt):
  * text normal 17, secundari 13, mínim 11; botons, desplegables i files com a mínim 44 d'alt.
  * A l'ordinador (ratolí) no canvia res: la mida normal de Chakra (sm = 14 px, botons de 32–36).
@@ -33,30 +63,16 @@
   textarea {
     font-size: 17px;
   }
-
-  /*
-   * Espais com la Configuració d'iOS (els selectors porten `:root` perquè guanyin als estils de Chakra, que
-   * també van sense capa): files de formulari enganxades amb una línia fina entre elles, 16 als costats de
-   * les targetes i ~32 entre grups.
-   */
-  :root .form-row {
-    padding-block: 6px;
+  :root {
+    --form-row-py: 6px;
+    --card-px: 16px;
   }
-  :root .form-row + .form-row {
-    border-top: 1px solid var(--chakra-colors-border);
+  /* Nom de les targetes de les graelles (dues columnes al mòbil): 15, com el «subheadline» d'iOS, en dues línies. */
+  :root .card-title {
+    font-size: 15px;
   }
-  :root :has(> .form-row) {
-    row-gap: 0;
-  }
-  :root :has(> .form-row) > :not(.form-row) {
-    margin-block: 6px;
-  }
-  :root .settings-group-head,
-  :root .settings-group-body,
-  :root .form-section {
-    padding-inline: 16px;
-  }
-  :root .settings-stack {
-    gap: 32px;
+  /* Capçaleres dels acordions (Historial, Projectes, catàleg…) com una fila d'iOS: 44 com a mínim. */
+  :root [data-scope="accordion"][data-part="item-trigger"] {
+    min-height: 48px;
   }
 }
