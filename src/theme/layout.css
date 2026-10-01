@@ -60,6 +60,11 @@
 :root .gallery-accordion .inner-accordion > [data-part="item"] > [data-part="item-content"] {
   padding-inline: var(--gallery-px);
 }
+/* Nom de les targetes de les graelles: sempre l'alçada de dues línies, encara que en tingui una (les targetes d'una fila
+   queden alineades: la descripció i les etiquetes comencen a la mateixa altura). */
+:root .card-title {
+  min-height: 2lh;
+}
 /* Les graelles de targetes, amb el mateix marge a dalt i a baix que als costats. */
 :root .gallery-accordion .inner-accordion > [data-part="item"] > [data-part="item-content"] > .chakra-accordion__itemBody {
   padding-block: var(--gallery-px);
