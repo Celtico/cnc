@@ -1,0 +1,115 @@
+import { Box3, DoubleSide, Group, Mesh, MeshStandardMaterial, Vector3, type Material, type Object3D } from "three"
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
+import { modelAsset, type ModelObject } from "../../core/model"
+
+/**
+ * Models 3D (`.glb`) dels objectes: es carreguen un cop (memòria compartida) i cada element en fa una còpia que
+ * comparteix la geometria i els materials. La càrrega és asíncrona: qui els dibuixa escolta `onModelsLoaded` (o
+ * espera `preloadModels`) i torna a construir l'escena quan arriben. Les fulles tenen la silueta a l'alfa de la
+ * textura: material amb `alphaTest` (retall net, amb ombres) i de doble cara; `userData.alphaCut` perquè el render per
+ * CPU també les retalli.
+ */
+interface Loaded {
+  root: Object3D
+  /** Mida del model (m), per escalar-lo a la caixa de l'element. */
+  size: Vector3
+  /** Desplaçament perquè la cantonada mínima quedi a l'origen. */
+  offset: Vector3
+}
+
+const cache = new Map<string, Loaded>()
+const pending = new Map<string, Promise<Loaded | null>>()
+const listeners = new Set<() => void>()
+let loader: GLTFLoader | null = null
+
+function urlOf(src: string): string | null {
+  const a = modelAsset(src)
+  return a ? `${import.meta.env.BASE_URL}${a.url}` : null
+}
+
+function prepare(root: Object3D): Loaded {
+  root.updateMatrixWorld(true)
+  root.traverse((o) => {
+    const m = o as Mesh
+    if (!m.isMesh) return
+    m.userData.sharedModel = true
+    m.castShadow = true
+    m.receiveShadow = true
+    const mats = (Array.isArray(m.material) ? m.material : [m.material]) as Material[]
+    for (const mat of mats) {
+      const s = mat as MeshStandardMaterial
+      if (!s.isMeshStandardMaterial) continue
+      // Retall de les fulles (alfa de la textura): net i amb ombres, sense ordenar transparències.
+      if (s.map || s.alphaTest > 0 || s.transparent) {
+        s.alphaTest = Math.max(s.alphaTest, 0.5)
+        s.transparent = false
+        s.depthWrite = true
+        s.userData.alphaCut = s.alphaTest
+      }
+      s.side = DoubleSide
+    }
+  })
+  const box = new Box3().setFromObject(root)
+  const size = box.getSize(new Vector3())
+  return { root, size, offset: box.min.clone().negate() }
+}
+
+/** Carrega (un cop) el model; `null` si no existeix o falla. */
+export function loadModel(src: string): Promise<Loaded | null> {
+  const hit = cache.get(src)
+  if (hit) return Promise.resolve(hit)
+  const p = pending.get(src)
+  if (p) return p
+  const url = urlOf(src)
+  if (!url) return Promise.resolve(null)
+  loader ??= new GLTFLoader()
+  const job = loader
+    .loadAsync(url)
+    .then((gltf) => {
+      const l = prepare(gltf.scene)
+      cache.set(src, l)
+      for (const f of listeners) f()
+      return l
+    })
+    .catch(() => null)
+    .finally(() => pending.delete(src))
+  pending.set(src, job)
+  return job
+}
+
+/** Espera que estiguin carregats tots els models de la llista (miniatures). */
+export async function preloadModels(models: ModelObject[] | undefined): Promise<void> {
+  await Promise.all([...new Set((models ?? []).map((m) => m.src))].map(loadModel))
+}
+
+/** Avisa quan s'acaba de carregar un model (per tornar a dibuixar). Torna la funció per deixar d'escoltar. */
+export function onModelsLoaded(f: () => void): () => void {
+  listeners.add(f)
+  return () => listeners.delete(f)
+}
+
+/**
+ * Còpia d'un model col·locada a la seva caixa (m, coordenades de la composició): cantonada (x, y, z), mida (w, h, d)
+ * i gir al voltant del centre. Si encara no s'ha carregat, comença la càrrega i torna `null`.
+ */
+export function modelInstance(m: ModelObject): Group | null {
+  const l = cache.get(m.src)
+  if (!l) {
+    void loadModel(m.src)
+    return null
+  }
+  const inner = l.root.clone(true)
+  inner.position.copy(l.offset)
+  const fit = new Group()
+  fit.add(inner)
+  // Escalat a la caixa (cada eix pel seu compte: es pot fer més alta o més ampla).
+  fit.scale.set(m.w / 1000 / Math.max(l.size.x, 1e-6), m.h / 1000 / Math.max(l.size.y, 1e-6), m.d / 1000 / Math.max(l.size.z, 1e-6))
+  fit.position.set(-m.w / 2000, 0, -m.d / 2000)
+  const g = new Group()
+  g.name = m.name
+  g.userData.model = m.id
+  g.position.set((m.x + m.w / 2) / 1000, m.y / 1000, (m.z + m.d / 2) / 1000)
+  g.rotation.y = -((m.rot ?? 0) * Math.PI) / 180
+  g.add(fit)
+  return g
+}

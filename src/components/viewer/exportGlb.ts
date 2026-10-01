@@ -11,7 +11,8 @@ import {
 } from "three"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js"
-import type { MaterialPref, Panel, PanelRole } from "../../core/model"
+import type { MaterialPref, ModelObject, Panel, PanelRole } from "../../core/model"
+import { modelInstance } from "./models3d"
 
 const ROLE_COLOR: Record<PanelRole, number> = {
   side: 0xe6cfa6,
@@ -42,7 +43,7 @@ const ROLE_COLOR: Record<PanelRole, number> = {
  * navegador): els materials i les textures del visor, i els tiradors; sense (tests, node):
  * colors per tipus de peça.
  */
-export function buildScene(panels: Panel[], name: string, real?: { materials: MaterialPref[]; make: (p: Panel, m: MaterialPref[]) => { geometry: BufferGeometry; material: MeshStandardMaterial[] } }): Scene {
+export function buildScene(panels: Panel[], name: string, real?: { materials: MaterialPref[]; make: (p: Panel, m: MaterialPref[]) => { geometry: BufferGeometry; material: MeshStandardMaterial[] } }, models: ModelObject[] = []): Scene {
   const scene = new Scene()
   scene.name = name
   const root = new Group()
@@ -76,6 +77,11 @@ export function buildScene(panels: Panel[], name: string, real?: { materials: Ma
     mesh.name = p.id
     holder.add(mesh)
     root.add(holder)
+  }
+  // Models 3D (plantes…): els que ja s'han carregat (`preloadModels` abans, si cal que hi siguin segur).
+  for (const m of models) {
+    const g = modelInstance(m)
+    if (g) root.add(g)
   }
   return scene
 }

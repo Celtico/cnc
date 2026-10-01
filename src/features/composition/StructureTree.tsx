@@ -13,16 +13,18 @@ import {
   LuPlus,
   LuScan,
   LuScissors,
+  LuSprout,
   LuTrash2,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcon"
-import { compositionKind, partsOnlyKind, duplicateGroup, newGroupName, partGroups, insertPartCopy, insertRefCopy, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
+import { compositionKind, partsOnlyKind, duplicateGroup, newGroupName, partGroups, insertModelCopy, insertPartCopy, insertRefCopy, MODEL_ASSETS, newModelObject, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
 import { NameDialog } from "../../components/NameDialog"
 import { defaultElementName, freePartFor, refFor, type AddKind } from "./addElements"
 import { useSettings } from "../settings/SettingsContext"
 import { ORIENT_ICON } from "./partOrient"
 import { zoneLabel } from "./zoneLabel"
 import { SectionLabel } from "../../components/SectionLabel"
+import { ChoiceChips } from "../../components/FormRow"
 
 type DragKind = "module" | "ref" | "part"
 
@@ -34,6 +36,8 @@ export type Selection =
   | { kind: "part"; id: string }
   /** Grup de peces lliures (id = nom del grup). */
   | { kind: "group"; id: string }
+  /** Model 3D (`.glb`, `Composition.models`). */
+  | { kind: "model"; id: string }
 
 /**
  * Arbre d'estructura (com l'outliner de Figma o Fusion): el moble, els seus mòduls amb
@@ -158,6 +162,9 @@ export function StructureTree({
     }
   }
   const [adding, setAdding] = useState<AddKind | null>(null)
+  // Model 3D nou: el nom i quin model de l'app (el primer per defecte).
+  const [addingModel, setAddingModel] = useState(false)
+  const [modelSrc, setModelSrc] = useState(MODEL_ASSETS[0]!.id)
   const { settings } = useSettings()
   const hasWall = comp.modules.some((m) => rowOf(m) === "wall")
   const rows: { row: "floor" | "wall"; label: string }[] = hasWall
@@ -185,6 +192,11 @@ export function StructureTree({
   const removePart = (id: string) => {
     onChange({ ...comp, parts: parts.filter((r) => r.id !== id) })
     if (selection.kind === "part" && selection.id === id) onSelect({ kind: "moble" })
+  }
+  const models = comp.models ?? []
+  const removeModel = (id: string) => {
+    onChange({ ...comp, models: models.filter((g) => g.id !== id) })
+    if (selection.kind === "model" && selection.id === id) onSelect({ kind: "moble" })
   }
   const removeRef = (id: string) => {
     onChange({ ...comp, references: comp.references.filter((r) => r.id !== id) })
@@ -219,6 +231,31 @@ export function StructureTree({
             }
           }}
         />
+      )}
+      {addingModel && (
+        <NameDialog
+          open
+          title="Model 3D nou"
+          ariaLabel="Nom"
+          submitLabel="Afegir"
+          initial={MODEL_ASSETS[0]!.name}
+          onClose={() => setAddingModel(false)}
+          onSave={(n) => {
+            setAddingModel(false)
+            const asset = MODEL_ASSETS.find((a) => a.id === modelSrc) ?? MODEL_ASSETS[0]!
+            // Sense tocar el nom per defecte, agafa el del model triat.
+            const label = n === MODEL_ASSETS[0]!.name ? asset.name : n
+            const [w, , d] = asset.size
+            // El centre de la petjada on surten les peces noves, a terra.
+            const g = newModelObject(newId("g"), asset, { x: Math.round(partCenter.x - w / 2), y: 0, z: Math.round(partCenter.z - d / 2) }, label)
+            onChange({ ...comp, models: [...models, g] })
+            onSelect({ kind: "model", id: g.id })
+          }}
+        >
+          {() => (
+            <ChoiceChips label="Model" value={modelSrc} options={MODEL_ASSETS.map((a) => ({ id: a.id, label: a.name }))} onChange={setModelSrc} />
+          )}
+        </NameDialog>
       )}
       {!onlyParts && <SectionTitle onAdd={() => setAdding("module")} addLabel="Afegir mòdul">Mòduls</SectionTitle>}
       {!onlyParts && rows.map(({ row, label }) => (
@@ -434,6 +471,45 @@ export function StructureTree({
           }
         />
       ))}
+
+      {/* Models 3D (plantes, decoració…): només es veuen; es col·loquen com les peces lliures. */}
+      <SectionTitle
+        onAdd={() => {
+          setModelSrc(MODEL_ASSETS[0]!.id)
+          setAddingModel(true)
+        }}
+        addLabel="Afegir model 3D"
+      >
+        Models 3D
+      </SectionTitle>
+      {models.map((g) => (
+        <Row
+          key={g.id}
+          depth={1}
+          icon={<LuSprout />}
+          label={g.name.trim() || "Model"}
+          hint={`${Math.round(g.w)} × ${Math.round(g.h)}`}
+          selected={selection.kind === "model" && selection.id === g.id}
+          onClick={() => onSelect({ kind: "model", id: g.id })}
+          menu={
+            <RowMenu label={`Opcions de «${g.name}»`}>
+              <Menu.Item
+                value="dup"
+                onClick={() => {
+                  const res = insertModelCopy(comp, g)
+                  onChange(res.comp)
+                  onSelect({ kind: "model", id: res.id })
+                }}
+              >
+                <LuCopy /> Duplicar
+              </Menu.Item>
+              <Menu.Item value="del" color="fg.error" onClick={() => removeModel(g.id)}>
+                <LuTrash2 /> Eliminar
+              </Menu.Item>
+            </RowMenu>
+          }
+        />
+      ))}
     </Stack>
   )
 }
@@ -637,7 +713,7 @@ function RowMenu({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-/** Títol d'un grup de l'arbre (mòduls, peces lliures, objectes de referència) amb el seu + per afegir-ne. */
+/** Títol d'un grup de l'arbre (mòduls, peces lliures, objectes de referència, models 3D) amb el seu + per afegir-ne. */
 function SectionTitle({ children, onAdd, addLabel }: { children: ReactNode; onAdd: () => void; addLabel: string }) {
   return (
     <HStack justify="space-between" pt={3} pb={1} px={1}>

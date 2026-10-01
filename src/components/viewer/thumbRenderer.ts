@@ -1,6 +1,6 @@
 import { Box3, Color, DirectionalLight, HemisphereLight, Mesh, Scene, MeshStandardMaterial, NeutralToneMapping, PCFSoftShadowMap, PerspectiveCamera, PlaneGeometry, PMREMGenerator, SRGBColorSpace, Vector3, WebGLRenderer, type Material, type Object3D, type Texture } from "three"
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
-import type { MaterialPref, Panel, RefObject } from "../../core/model"
+import type { MaterialPref, ModelObject, Panel, RefObject } from "../../core/model"
 import { refGeometry } from "./refGeometry"
 import { exportablePanel } from "./exportablePanel"
 import { buildScene } from "./exportGlb"
@@ -82,9 +82,9 @@ export function snapshot(scene: Scene, camera: PerspectiveCamera): string {
 export const THUMB_ASPECT = W / H
 
 /** JPEG (data URL) de les peces vistes des de davant, una mica de costat i de dalt. */
-export function renderThumb(panels: Panel[], materials: MaterialPref[], finish?: { floor?: string; wall?: string }, refs: RefObject[] = []): string | null {
-  if (!panels.length) return null
-  const scene = buildScene(panels, "thumb", { materials, make: exportablePanel })
+export function renderThumb(panels: Panel[], materials: MaterialPref[], finish?: { floor?: string; wall?: string }, refs: RefObject[] = [], models: ModelObject[] = []): string | null {
+  if (!panels.length && !models.length) return null
+  const scene = buildScene(panels, "thumb", { materials, make: exportablePanel }, models)
   // Objectes de referència amb material (una tele, un radiador): com al visor i al render. Els fantasmes, no.
   for (const g of refs) {
     if (!g.material || g.effect === "cut") continue
@@ -139,7 +139,8 @@ export function renderThumb(panels: Panel[], materials: MaterialPref[], finish?:
 export function disposeTree(root: Object3D) {
   root.traverse((o) => {
     const m = o as Mesh
-    if (!m.isMesh) return
+    // Els models 3D comparteixen geometria i materials amb la memòria de models (`models3d.ts`): no s'alliberen.
+    if (!m.isMesh || m.userData.sharedModel) return
     m.geometry?.dispose()
     const mats = (Array.isArray(m.material) ? m.material : [m.material]) as Material[]
     for (const mat of new Set(mats)) {

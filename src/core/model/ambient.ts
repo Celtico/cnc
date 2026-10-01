@@ -2,7 +2,8 @@ import { z } from "zod"
 import { DEFAULT_JOINERY, type FreePart } from "./freePart"
 import { defaultModule, newId, type Composition, type Module, type Zone } from "./composition"
 import { MAG_OBJECTS } from "./magObjects"
-import { ellipse, objectComposition } from "./objectShapes"
+import { cyl, ellipse, objectComposition } from "./objectShapes"
+import { MODEL_ASSETS, newModelObject } from "./models"
 import type { Template } from "./templates"
 
 /**
@@ -275,6 +276,26 @@ export const OBJECT_TEMPLATES: Template[] = [
       ]),
   },
   ...MAG_OBJECTS,
+  // Models 3D de debò (Poly Haven, CC0): les falgueres soles i una en un test de ceràmica.
+  ...MODEL_ASSETS.map((a) => ({
+    id: `object-model-${a.id}`,
+    kind: "objecte" as const,
+    name: a.name,
+    description: `${a.size[0]} × ${a.size[1]} × ${a.size[2]} mm · model 3D (fulles de debò).`,
+    make: () => ({ ...obj([]), models: [newModelObject(newId("g"), a, { x: 0, y: 0, z: 0 })] }),
+  })),
+  {
+    id: "object-model-fern-pot",
+    kind: "objecte",
+    name: "Falguera en test",
+    description: "Ø 380 × 640 mm · test de ceràmica blanca i falguera (model 3D).",
+    make: () => {
+      const a = MODEL_ASSETS.find((m) => m.id === "fern-02-c")!
+      const k = 600 / a.size[0]
+      const [w, h, d] = [Math.round(a.size[0] * k), Math.round(a.size[1] * k), Math.round(a.size[2] * k)]
+      return { ...obj([cyl("Test", "Ceràmica blanca", 300, 0, 300, 380, 320)]), models: [{ ...newModelObject(newId("g"), a, { x: 300 - w / 2, y: 290, z: 300 - d / 2 }, "Falguera"), w, h, d }] }
+    },
+  },
 ]
 
 // --- Geometria del plànol ---------------------------------------------------------------

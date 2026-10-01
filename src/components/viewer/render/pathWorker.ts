@@ -160,6 +160,8 @@ function intersect(ox: number, oy: number, oz: number, dx: number, dy: number, d
         if (d > 1e-5 && d < hitT) {
           // Rajos d'ombra: el vidre no fa ombra.
           if (skipGlass && S!.materials[S!.matIndex[t]!]!.opacity < 1) continue
+          // Fulles retallades (alfa de la textura): on és transparent, el raig hi passa.
+          if (S!.materials[S!.matIndex[t]!]!.alphaCut > 0 && alphaAt(t, u, v) < S!.materials[S!.matIndex[t]!]!.alphaCut) continue
           hitT = d
           hitTri = t
           hitU = u
@@ -187,6 +189,23 @@ const wrap = (x: number, mode: number) => {
   if (mode === 1 && Math.floor(x) % 2 !== 0) return 1 - f
   return f
 }
+/** Alfa de la textura (0–1) al punt (u, v baricèntriques) del triangle `t`: per als retalls de les fulles. */
+function alphaAt(t: number, bu: number, bv: number): number {
+  const m = S!.materials[S!.matIndex[t]!]!
+  const tex = S!.textures[m.map]
+  if (!tex) return 1
+  const b = t * 6
+  const w = 1 - bu - bv
+  const u0 = S!.uvs[b]! * w + S!.uvs[b + 2]! * bu + S!.uvs[b + 4]! * bv
+  const v0 = S!.uvs[b + 1]! * w + S!.uvs[b + 3]! * bu + S!.uvs[b + 5]! * bv
+  const e = m.uv
+  const u = wrap(e[0]! * u0 + e[3]! * v0 + e[6]!, tex.wrapS)
+  const v = wrap(e[1]! * u0 + e[4]! * v0 + e[7]!, tex.wrapT)
+  const px = Math.min(tex.w - 1, Math.floor(u * tex.w))
+  const py = Math.min(tex.h - 1, Math.floor((tex.flipY ? 1 - v : v) * tex.h))
+  return tex.data[(py * tex.w + px) * 4 + 3]! / 255
+}
+
 /** Albedo (lineal) al punt tocat. */
 const alb = [0, 0, 0]
 function albedo(t: number) {

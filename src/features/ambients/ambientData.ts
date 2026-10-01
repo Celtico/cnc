@@ -46,7 +46,8 @@ export function itemGeometry(comp: Composition): ItemGeometry {
     w: max[0] - min[0],
     h: max[1] - min[1],
     d: max[2] - min[2],
-    rects: [...build.panels.map(rect(false)), ...build.extras.map(rect(true))],
+    // Els models 3D (plantes…), amb la seva caixa.
+    rects: [...build.panels.map(rect(false)), ...build.extras.map(rect(true)), ...build.models.map((m) => ({ x0: m.x - cx, z0: m.z - cz, x1: m.x + m.w - cx, z1: m.z + m.d - cz, extra: true }))],
   }
 }
 

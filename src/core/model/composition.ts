@@ -427,6 +427,26 @@ export const CUTOUT_PRESETS: Record<WorktopCutout["kind"], { w: number; d: numbe
 export const CompositionKindSchema = z.enum(["moble", "cuina", "armari", "taula", "lliure", "objecte"])
 export type CompositionKind = z.infer<typeof CompositionKindSchema>
 
+/**
+ * Model 3D (malla de debò, `.glb`: plantes, decoració…) dins d'un objecte o moble: només es veu (visor, ambients,
+ * miniatures, render), no es fabrica. `src` és l'id d'un model de l'app (`MODEL_ASSETS`). Es col·loca com una peça
+ * lliure: la cantonada (x, y, z) i la caixa que ocupa (w, h, d, mm); el model s'hi escala. `rot`: gir al voltant del
+ * vertical (graus).
+ */
+export const ModelObjectSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  src: z.string(),
+  x: z.number(),
+  y: z.number(),
+  z: z.number(),
+  w: z.number().positive(),
+  h: z.number().positive(),
+  d: z.number().positive(),
+  rot: z.number().default(0),
+})
+export type ModelObject = z.infer<typeof ModelObjectSchema>
+
 export const CompositionSchema = z.object({
   kind: CompositionKindSchema.optional(),
   modules: z.array(ModuleSchema),
@@ -435,6 +455,8 @@ export const CompositionSchema = z.object({
   runs: z.array(RunSchema).optional(),
   /** Peces lliures (flat-pack, encaixos). Opcional. */
   parts: z.array(FreePartSchema).optional(),
+  /** Models 3D (`.glb`) que només es veuen. Opcional. */
+  models: z.array(ModelObjectSchema).optional(),
   /** Encaixos de les peces lliures (joc, fresa, pestanyes). Sense: `DEFAULT_JOINERY`. */
   joinery: JoinerySchema.optional(),
   /**

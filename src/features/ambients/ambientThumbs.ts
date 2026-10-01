@@ -3,6 +3,7 @@ import { exportablePanel } from "../../components/viewer/exportablePanel"
 import { buildScene } from "../../components/viewer/exportGlb"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
 import { snapshot, THUMB_ASPECT, THUMB_VERSION, thumbLights } from "../../components/viewer/thumbRenderer"
+import { preloadModels } from "../../components/viewer/models3d"
 import { blockComposition, layoutTemplate, parseAmbient, rad, resolveTemplateRef, templateWalls, wallLength, wallSegments, type Ambient, type AmbientTemplate, type Composition, type MaterialPref } from "../../core/model"
 import { compositionOf } from "../../db/compositionStore"
 import { db, type AmbientRow } from "../../db/db"
@@ -66,7 +67,7 @@ function renderAmbient(a: Ambient, geoOf: (i: number) => ItemGeometry | null, ma
   a.items.forEach((it, i) => {
     const geo = geoOf(i)
     if (!geo) return
-    const inner = buildScene([...geo.build.panels, ...geo.build.extras], it.id, { materials, make: exportablePanel })
+    const inner = buildScene([...geo.build.panels, ...geo.build.extras], it.id, { materials, make: exportablePanel }, geo.build.models)
     inner.position.set(-(geo.min[0] + geo.max[0]) / 2000, 0, -(geo.min[2] + geo.max[2]) / 2000)
     inner.traverse((o) => {
       if ((o as Mesh).isMesh) o.castShadow = o.receiveShadow = true
@@ -114,6 +115,7 @@ export function requestAmbientThumb(r: AmbientRow, materials: MaterialPref[]): v
       }
       geos.push(cache.get(key)!)
     }
+    await preloadModels(geos.flatMap((g) => g?.build.models ?? []))
     const url = renderAmbient(a, (i) => geos[i] ?? null, materials)
     if (url) await db.ambients.update(r.id, { thumb: url, thumbAt: fresh.updatedAt, thumbV: THUMB_VERSION })
   })
@@ -147,6 +149,7 @@ export function requestCatalogThumb(t: AmbientTemplate, materials: MaterialPref[
       floorMaterial: t.floor,
       wallMaterial: t.wall,
     } as Ambient
+    await preloadModels(placed.flatMap((p) => geoOf(p.ref)?.build.models ?? []))
     const url = renderAmbient(a, (i) => geoOf(placed[i]!.ref), materials)
     if (url) {
       catalogThumbs.set(t.id, url)

@@ -7,6 +7,7 @@ import { MoveGizmo } from "../../components/viewer/MoveGizmo"
 import type { Axis } from "../../components/viewer/pixelScale"
 import { exportablePanel } from "../../components/viewer/exportablePanel"
 import { buildScene } from "../../components/viewer/exportGlb"
+import { onModelsLoaded } from "../../components/viewer/models3d"
 import { SceneAccess, StudioEnvironment } from "../../components/viewer/SceneHelpers"
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
@@ -348,22 +349,26 @@ function Room({
   // Mobles i blocs: la seva escena (m) centrada a la petjada, al seu lloc i girada. Les peces d'un element
   // només es refan si en canvia la geometria o els materials: moure'l (arrossegar-lo) només en canvia la
   // posició. Les que ja no hi són s'alliberen (memòria gràfica: a l'iPhone compta).
-  const built = useRef(new Map<string, { geo: ItemGeometry; materials: MaterialPref[]; obj: Group }>())
+  const built = useRef(new Map<string, { geo: ItemGeometry; materials: MaterialPref[]; ver: number; obj: Group }>())
+  // Models 3D (plantes…): es carreguen a part; quan n'arriba un, es refan els elements que en porten.
+  const [modelsVer, setModelsVer] = useState(0)
+  useEffect(() => onModelsLoaded(() => setModelsVer((v) => v + 1)), [])
   const scenes = useMemo(() => {
     const prev = built.current
-    const next = new Map<string, { geo: ItemGeometry; materials: MaterialPref[]; obj: Group }>()
+    const next = new Map<string, { geo: ItemGeometry; materials: MaterialPref[]; ver: number; obj: Group }>()
     const out: { id: string; obj: Group }[] = []
     for (const it of ambient.items) {
       const g = geos.get(it.id)
       if (!g) continue
       let entry = prev.get(it.id)
-      if (!entry || entry.geo !== g || entry.materials !== materials) {
-        const inner = buildScene([...g.build.panels, ...g.build.extras], it.id, { materials, make: exportablePanel })
+      const ver = g.build.models.length ? modelsVer : 0
+      if (!entry || entry.geo !== g || entry.materials !== materials || entry.ver !== ver) {
+        const inner = buildScene([...g.build.panels, ...g.build.extras], it.id, { materials, make: exportablePanel }, g.build.models)
         inner.position.set(-(g.min[0] + g.max[0]) / 2000, 0, -(g.min[2] + g.max[2]) / 2000)
         shadowsOn(inner)
         const outer = new Group()
         outer.add(inner)
-        entry = { geo: g, materials, obj: outer }
+        entry = { geo: g, materials, ver, obj: outer }
       }
       entry.obj.position.set(it.x / 1000, (it.elevation ?? 0) / 1000, it.y / 1000)
       entry.obj.rotation.y = -rad(it.rot)
@@ -373,7 +378,7 @@ function Room({
     for (const [id, e] of prev) if (next.get(id)?.obj !== e.obj) disposeTree(e.obj)
     built.current = next
     return out
-  }, [ambient.items, geos, materials])
+  }, [ambient.items, geos, materials, modelsVer])
   useEffect(() => () => {
     for (const e of built.current.values()) disposeTree(e.obj)
     built.current = new Map()
@@ -506,7 +511,8 @@ function Room({
 function disposeTree(root: Object3D) {
   root.traverse((o) => {
     const m = o as Mesh
-    if (!m.isMesh) return
+    // Els models 3D comparteixen geometria i materials amb la memòria de models (`models3d.ts`): no s'alliberen.
+    if (!m.isMesh || m.userData.sharedModel) return
     m.geometry?.dispose()
     const mats = (Array.isArray(m.material) ? m.material : [m.material]) as Material[]
     for (const mat of new Set(mats)) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule, type Composition } from "./composition"
-import { insertModuleCopy, insertRefCopy, moveAllBy, moveModuleBy, movePartToGroup, pasteZone, removePartFromGroup, reorderPart } from "./editOps"
+import { insertModelCopy, insertModuleCopy, insertRefCopy, moveAllBy, moveModuleBy, movePartToGroup, pasteZone, removePartFromGroup, reorderPart } from "./editOps"
 
 const comp = (): Composition => ({
   modules: [
@@ -12,6 +12,15 @@ const comp = (): Composition => ({
 })
 
 describe("edició: moure, copiar i enganxar", () => {
+  it("duplicar un model 3D el posa a la dreta amb un id nou", () => {
+    const g = { id: "g1", name: "Falguera", src: "fern-02-b", x: 100, y: 0, z: 50, w: 990, h: 428, d: 894, rot: 30 }
+    const res = insertModelCopy({ ...comp(), models: [g] }, g)
+    expect(res.comp.models).toHaveLength(2)
+    const copy = res.comp.models![1]!
+    expect(copy.id).toBe(res.id)
+    expect(copy.id).not.toBe("g1")
+    expect(copy).toMatchObject({ name: "Falguera (còpia)", x: 1110, y: 0, z: 50, w: 990, rot: 30 })
+  })
   it("moure un mòdul no mou els de la dreta", () => {
     const c = moveModuleBy(comp(), "b", 200)
     expect(c.modules.map((m) => m.gapBefore)).toEqual([100, 250, 0])

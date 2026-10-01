@@ -401,6 +401,16 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     tipus): demana el nom (`NameDialog`, per defecte «Mòdul 3», «Peça 2», «Objecte 1», seleccionat; `addElements.ts`) i
     crea l'element sense més opcions: caixa bàsica, peça de cara, caixa de 600 × 600 × 100. Res de mòduls especials,
     passacables fets ni plantilles al +: es configura a l'inspector.
+  - **Models 3D** (`Composition.models`, `ModelObject` a `model/composition.ts`: `src` = id de `MODEL_ASSETS`
+    (`model/models.ts`), cantonada x/y/z i caixa w/h/d en mm, `rot` en graus al voltant del vertical): malles `.glb`
+    que **només es veuen** (no es fabriquen). Ara, falgueres de Poly Haven (CC0) a `public/models`, textura 1K WebP amb el
+    retall de les fulles a l'alfa (`alphaTest`). `viewer/models3d.ts` les carrega un cop (`loadModel`, `preloadModels`,
+    `onModelsLoaded`) i `modelInstance` fa la còpia col·locada (m; geometria i materials compartits, `userData.sharedModel`:
+    no s'alliberen). Surten als ambients, a les miniatures, a la Presentació i al render. A l'editor: grup **«Models 3D»**
+    a l'arbre (+ demana el nom i el model amb `ChoiceChips`; surt al centre de les peces noves, a terra; ⋯ Duplicar ·
+    Eliminar, `insertModelCopy`), clic al 3D per triar-lo (`ModelMesh` a `CabinetViewer`), seleccionat amb el contorn i el
+    gizmo (`RefGhost outline`, es mou en viu), fletxes, Supr i Ctrl/⌘ C · V · D, i inspector `ModelInspector` (Model ·
+    Mides amb «Mida original» · Posició amb el Gir a passos de 15°). Compten per enquadrar la càmera (`size` de l'editor).
   - **Objectes de referència al 3D** (`RefGhost` a `CabinetViewer`): seleccionat, **es mou només amb les fletxes del
     gizmo** (`viewer/MoveGizmo`, `frontRaycast`: les fletxes es poden agafar encara que l'objecte sigui dins d'un altre o
     d'un moble, i el seu clic no tria el que hi ha al davant) (per decisió de l'usuari: el cos no s'arrossega, així sempre se sap cap on es mourà; també les peces lliures i
@@ -890,6 +900,7 @@ Accions principals: icona + text.
 | Contingut | Abatible · Reixeta · Front fix | `LuPanelBottom` · `LuGrid3X3` · `LuSquare` |
 | Composició | Afegir · Duplicar · Eliminar · Reordenar | `LuPlus` · `LuCopy` · `LuTrash2` · `LuGripVertical` |
 | Composició | Objecte de referència · Radiador · TV | `LuScan` · `LuHeater` · `LuTv` |
+| Composició | Model 3D (`.glb`: plantes…) | `LuSprout` |
 | Composició | Plantilles · Menú del document | `LuLayoutTemplate` · `LuEllipsis` |
 | Composició | Moure a l'esquerra · a la dreta (menú de l'arbre) | `LuArrowLeft` · `LuArrowRight` |
 | Front | Una porta · Dues portes · Abatible avall · amunt · Ranures horitzontals (reixeta) | `LuDoorClosed` · `LuFlipHorizontal2` · `LuArrowDownToLine` · `LuArrowUpToLine` · `LuAlignJustify` |

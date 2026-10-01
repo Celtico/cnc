@@ -1,4 +1,4 @@
-import { compositionKind, modulePlacements, partsOnlyKind, partCutters, type Composition, type Panel, type Vec3 } from "../model"
+import { compositionKind, modulePlacements, partsOnlyKind, partCutters, type Composition, type ModelObject, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { buildModule, type BuildWarning, type ModuleBuild } from "./buildModule"
 import { normalizePanel } from "./buildCabinet"
@@ -22,6 +22,8 @@ export interface CompositionBuild {
   joints: PartJoint[]
   /** Elements sense nesting (peces lliures de ferro, pedra, vidre…): 3D i llista, no taller. */
   extras: Panel[]
+  /** Models 3D (`.glb`) que només es veuen: el visor i els ambients els dibuixen; no surten a les peces. */
+  models: ModelObject[]
 }
 
 /** Caixa englobant d'una peça (coordenades de la composició). */
@@ -131,11 +133,11 @@ export function buildComposition(input: Composition): CompositionBuild {
     }
   }
 
-  return { panels, warnings, modules, joints: free.joints, extras: [...moduleExtras, ...free.extras] }
+  return { panels, warnings, modules, joints: free.joints, extras: [...moduleExtras, ...free.extras], models: input.models ?? [] }
 }
 
 /** Caixa de tot el moble (peces i elements sense nesting), en mm de la composició. */
-export function buildBounds(b: Pick<CompositionBuild, "panels" | "extras">): { min: Vec3; max: Vec3 } {
+export function buildBounds(b: Pick<CompositionBuild, "panels" | "extras"> & { models?: ModelObject[] }): { min: Vec3; max: Vec3 } {
   const min: [number, number, number] = [Infinity, Infinity, Infinity]
   const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
   for (const p of [...b.panels, ...b.extras]) {
@@ -143,6 +145,14 @@ export function buildBounds(b: Pick<CompositionBuild, "panels" | "extras">): { m
     for (let i = 0; i < 3; i++) {
       min[i] = Math.min(min[i]!, bx.min[i]!)
       max[i] = Math.max(max[i]!, bx.max[i]!)
+    }
+  }
+  // Els models 3D també compten (un objecte que només és una planta).
+  for (const m of b.models ?? []) {
+    const lo = [m.x, m.y, m.z], hi = [m.x + m.w, m.y + m.h, m.z + m.d]
+    for (let i = 0; i < 3; i++) {
+      min[i] = Math.min(min[i]!, lo[i]!)
+      max[i] = Math.max(max[i]!, hi[i]!)
     }
   }
   if (!Number.isFinite(min[0])) return { min: [0, 0, 0], max: [0, 0, 0] }

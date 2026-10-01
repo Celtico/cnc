@@ -56,7 +56,7 @@ describe("plantilles d'objectes", async () => {
     for (const t of OBJECT_TEMPLATES) {
       const b = buildComposition(t.make())
       expect(b.panels, t.name).toHaveLength(0)
-      expect(b.extras.length, t.name).toBeGreaterThan(0)
+      expect(b.extras.length + b.models.length, t.name).toBeGreaterThan(0)
       expect(b.warnings.filter((w) => ["layout", "collision"].includes(w.code)), t.name).toEqual([])
     }
   })

@@ -51,7 +51,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        // Els models 3D (`public/models/*.glb`, ~150 KB cadascun) també: les plantes surten sense connexió.
+        globPatterns: ["**/*.{js,css,html,svg,png,woff2,glb}"],
         // Les pantalles d'inici d'iOS les desa el sistema en instal·lar l'app: no cal precachejar-les.
         globIgnores: ["splash/**"],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,

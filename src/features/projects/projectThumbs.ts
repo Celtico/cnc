@@ -1,6 +1,7 @@
 import { buildComposition } from "../../core/build/buildComposition"
 import type { Composition, MaterialPref } from "../../core/model"
 import { releaseThumbRenderer, renderThumb, THUMB_VERSION } from "../../components/viewer/thumbRenderer"
+import { preloadModels } from "../../components/viewer/models3d"
 import { compositionOf } from "../../db/compositionStore"
 import { db, type Project } from "../../db/db"
 
@@ -26,7 +27,8 @@ export function requestProjectThumb(p: Project, materials: MaterialPref[]): void
       if (!fresh || !needsThumb(fresh)) return
       const comp = compositionOf(fresh)
       const build = buildComposition(comp)
-      const url = renderThumb([...build.panels, ...build.extras], materials, comp.scene, comp.references)
+      await preloadModels(build.models)
+      const url = renderThumb([...build.panels, ...build.extras], materials, comp.scene, comp.references, build.models)
       if (url) await db.projects.update(p.id, { thumb: url, thumbAt: fresh.updatedAt, thumbV: THUMB_VERSION })
     },
   })
@@ -51,7 +53,8 @@ export function requestTemplateThumb(id: string, make: () => Composition, materi
     id: key,
     run: async () => {
       const build = buildComposition(make())
-      const url = renderThumb([...build.panels, ...build.extras], materials)
+      await preloadModels(build.models)
+      const url = renderThumb([...build.panels, ...build.extras], materials, undefined, [], build.models)
       if (url) {
         templateThumbs.set(id, url)
         onDone(url)

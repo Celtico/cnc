@@ -23,6 +23,8 @@ export interface RenderMaterial {
   roughness: number
   metalness: number
   opacity: number
+  /** Retall per l'alfa de la textura (fulles dels models 3D): els punts amb alfa per sota no hi són. 0 = cap. */
+  alphaCut: number
 }
 export interface RenderCamera {
   ortho: boolean
@@ -135,6 +137,7 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
       roughness: m.roughness,
       metalness: m.metalness,
       opacity: m.userData.glass ? m.opacity : 1,
+      alphaCut: map >= 0 ? ((m.userData.alphaCut as number | undefined) ?? 0) : 0,
     })
     matIds.set(m, materials.length - 1)
     return materials.length - 1

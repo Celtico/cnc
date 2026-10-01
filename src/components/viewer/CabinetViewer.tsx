@@ -17,7 +17,8 @@ import { type ViewName } from "./viewNames"
 export type { ViewName } from "./viewNames"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
-import { flatten, partSize, partsBox, type FreePart, type Hole, type MaterialPref, type Panel, type RefObject } from "../../core/model"
+import { flatten, partSize, partsBox, type FreePart, type Hole, type MaterialPref, type ModelObject, type Panel, type RefObject } from "../../core/model"
+import { modelInstance, onModelsLoaded } from "./models3d"
 import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
@@ -117,6 +118,11 @@ export interface CabinetViewerProps {
   /** Grup de peces lliures seleccionat: caixa del grup amb el gizmo; es mou tot junt (delta en mm). */
   selectedGroup?: string | null
   onMoveGroup?: (group: string, dx: number, dy: number, dz: number) => void
+  /** Models 3D (`.glb`): clic per seleccionar-los; el seleccionat porta el gizmo per moure'l. */
+  models?: ModelObject[]
+  selectedModelId?: string | null
+  onSelectModel?: (id: string) => void
+  onMoveModel?: (id: string, pos: { x: number; y: number; z: number }) => void
   /** Objectes que xoquen amb alguna peça: es pinten de vermell. */
   collidingRefIds?: Set<string>
   /** Compartiment seleccionat (mm, coordenades de la composició): contorn taronja. */
@@ -160,6 +166,10 @@ export function CabinetViewer({
   onMovePart,
   selectedGroup,
   onMoveGroup,
+  models,
+  selectedModelId,
+  onSelectModel,
+  onMoveModel,
   collidingRefIds,
   highlightZone,
   fitKey = 0,
@@ -209,6 +219,11 @@ export function CabinetViewer({
     return { id: p.id, name: p.name, x: p.x, y: p.y, z: p.z, w: s[0], h: s[1], d: s[2] }
   }), [parts])
   const selectedPartBox = partBoxes.find((b) => b.id === selectedPartId)
+  // Caixa de cada model 3D (per al contorn, el gizmo i l'imant dels altres).
+  const modelBoxes = useMemo((): RefObject[] => (models ?? []).map((m) => ({ id: m.id, name: m.name, x: m.x, y: m.y, z: m.z, w: m.w, h: m.h, d: m.d })), [models])
+  const selectedModelBox = modelBoxes.find((b) => b.id === selectedModelId)
+  // Model que s'arrossega amb el gizmo: es mou en viu (posició en mm).
+  const [modelDrag, setModelDrag] = useState<{ id: string; x: number; y: number; z: number } | null>(null)
   const groupBox = useMemo((): RefObject | null => {
     const members = (parts ?? []).filter((p) => p.group && p.group === selectedGroup)
     if (!members.length) return null
@@ -322,6 +337,28 @@ export function CabinetViewer({
             others={[...partBoxes, ...(ghosts ?? [])]}
             onSelect={onSelectPart}
             onMove={onMovePart}
+            outline
+          />
+        )}
+        {models?.map((m) => {
+          const live = modelDrag?.id === m.id ? modelDrag : null
+          return <ModelMesh key={m.id} m={m} selected={m.id === selectedModelId} shift={live ? [(live.x - m.x) * S, (live.y - m.y) * S, (live.z - m.z) * S] : undefined} onSelect={onSelectModel} />
+        })}
+        {/* Model seleccionat: contorn taronja amb el gizmo (com una peça lliure). */}
+        {selectedModelBox && (
+          <RefGhost
+            key={`model-${selectedModelBox.id}`}
+            g={selectedModelBox}
+            selected
+            hit={false}
+            guides={q.guides}
+            view={view}
+            offset={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}
+            targets={snapTargets}
+            others={[...modelBoxes, ...partBoxes, ...(ghosts ?? [])]}
+            onSelect={onSelectModel}
+            onMove={onMoveModel}
+            onDrag={(pos) => setModelDrag(pos && { id: selectedModelBox.id, ...pos })}
             outline
           />
         )}
@@ -609,6 +646,51 @@ function snapAxis(pos: number, size: number, targets: number[], free: boolean): 
 
 
 /**
+ * Model 3D (`.glb`) d'un objecte: la còpia de `modelInstance` (m, coordenades de la composició, com les peces). Es torna
+ * a fer quan acaba de carregar-se o canvia el model, la mida, la posició o el gir. Comparteix geometria i materials amb
+ * la memòria de `models3d` (`userData.sharedModel`): no s'alliberen mai aquí (`dispose={null}`). `shift`: desplaçament
+ * en viu mentre s'arrossega (m).
+ */
+function ModelMesh({ m, selected, shift, onSelect }: { m: ModelObject; selected: boolean; shift?: [number, number, number]; onSelect?: (id: string) => void }) {
+  const [loaded, setLoaded] = useState(0)
+  useEffect(() => onModelsLoaded(() => setLoaded((v) => v + 1)), [])
+  const { id, name, src, x, y, z, w, h, d, rot } = m
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const obj = useMemo(() => modelInstance({ id, name, src, x, y, z, w, h, d, rot }), [id, name, src, x, y, z, w, h, d, rot, loaded])
+  const [hover, setHover] = useState(false)
+  useEffect(() => () => void (document.body.style.cursor = ""), [])
+  if (!obj) return null
+  return (
+    <group position={shift ?? [0, 0, 0]}>
+      <primitive
+        object={obj}
+        dispose={null}
+        onClick={onSelect ? (e: ThreeEvent<MouseEvent>) => {
+          if (e.delta > 4) return
+          e.stopPropagation()
+          onSelect(id)
+        } : undefined}
+        onPointerOver={onSelect ? (e: ThreeEvent<PointerEvent>) => {
+          e.stopPropagation()
+          document.body.style.cursor = "pointer"
+          if (e.pointerType === "mouse") setHover(true)
+        } : undefined}
+        onPointerOut={onSelect ? () => {
+          setHover(false)
+          document.body.style.cursor = ""
+        } : undefined}
+      />
+      {/* Seleccionat: contorn gruixut; ratolí a sobre: prim (com els objectes). */}
+      {(selected || hover) && (
+        <group position={[(x + w / 2) * S, (y + h / 2) * S, (z + d / 2) * S]}>
+          <BoxFrame w={(w + 4) * S} h={(h + 4) * S} d={(d + 4) * S} strong={selected} />
+        </group>
+      )}
+    </group>
+  )
+}
+
+/**
  * Objecte de referència (translúcid, o sòlid si té material). Seleccionat, es mou només amb les fletxes del gizmo (cada
  * una en la seva direcció; el cos no s'arrossega). S'enganxa a les arestes dels mòduls i dels altres objectes (Alt: sense
  * imant). Amb el ratolí a sobre, contorn del color de selecció.
@@ -624,9 +706,12 @@ function RefGhost({
   others,
   onSelect,
   onMove,
+  onDrag,
   outline = false,
   materials = [],
 }: {
+  /** Posició en viu mentre s'arrossega amb el gizmo (null en acabar), per moure-hi el que hi ha a sota (models 3D). */
+  onDrag?: (pos: { x: number; y: number; z: number } | null) => void
   /** Només el contorn (peça lliure: la peça de debò ja es veu a sota). */
   outline?: boolean
   /** Materials de Preferències (per als objectes que en porten). */
@@ -685,6 +770,7 @@ function RefGhost({
     const d = latest.current
     if (st.moved && d && onMove) onMove(g.id, { x: d.x, y: d.y, z: d.z })
     setDrag(null)
+    onDrag?.(null)
   }
 
   const moveEvt = (e: ThreeEvent<PointerEvent>) => {
@@ -707,6 +793,7 @@ function RefGhost({
         // No es pot enfonsar al terra.
         next.y = Math.max(0, next.y)
         setDrag(next)
+        onDrag?.({ x: next.x, y: next.y, z: next.z })
   }
   // Fletxes de moviment (com el gizmo de Blender o Fusion): cada una mou només en la seva
   // direcció. Pla que conté l'eix i mira cap a la càmera.

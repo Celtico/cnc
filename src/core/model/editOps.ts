@@ -1,4 +1,4 @@
-import { freeX, newId, resolveParts, rowOf, type Composition, type Module, type RefObject, type Zone } from "./composition"
+import { freeX, newId, resolveParts, rowOf, type Composition, type ModelObject, type Module, type RefObject, type Zone } from "./composition"
 import { cloneZone, removeZone, updateZone } from "./zoneOps"
 import { partSize, partsBox, type FreePart } from "./freePart"
 
@@ -110,6 +110,12 @@ export function reorderRef(comp: Composition, id: string, targetId: string, afte
 export function insertPartCopy(comp: Composition, src: FreePart): { comp: Composition; id: string } {
   const copy: FreePart = { ...structuredClone(src), id: newId("p"), name: src.name.endsWith("(còpia)") ? src.name : `${src.name} (còpia)`, x: src.x + partSize(src)[0] + 20 }
   return { comp: { ...comp, parts: [...(comp.parts ?? []), copy] }, id: copy.id }
+}
+
+/** Còpia d'un model 3D, posada just a la dreta de l'original. */
+export function insertModelCopy(comp: Composition, src: ModelObject): { comp: Composition; id: string } {
+  const copy: ModelObject = { ...structuredClone(src), id: newId("g"), name: src.name.endsWith("(còpia)") ? src.name : `${src.name} (còpia)`, x: src.x + src.w + 20 }
+  return { comp: { ...comp, models: [...(comp.models ?? []), copy] }, id: copy.id }
 }
 
 /** Mou la peça lliure `id` just abans (o després) de `targetId`. */
