@@ -1,4 +1,4 @@
-import { Card, HStack, Text } from "@chakra-ui/react"
+import { Badge, Card, HStack, Text } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 
 /**
@@ -47,15 +47,18 @@ export function GalleryCard({
       <Text fontSize="xs" color="fg.muted" lineClamp={2} minH="2lh" title={typeof description === "string" ? description : undefined}>
         {description}
       </Text>
-      {(tags || aside) && (
-        // A baix de tot (mt auto): a cada fila, les etiquetes i el preu queden a la mateixa altura.
-        <HStack justify="space-between" gap={2} mt="auto" minW={0}>
-          <HStack gap={1} wrap="wrap" minW={0}>
-            {tags}
-          </HStack>
-          {aside}
+      {/* A baix de tot (mt auto): a cada fila, les etiquetes i el preu queden a la mateixa altura. Sense cap etiqueta, el
+          lloc d'una (invisible): totes les targetes fan la mateixa alçada. */}
+      <HStack justify="space-between" gap={2} mt="auto" minW={0}>
+        <HStack gap={1} wrap="wrap" minW={0}>
+          {tags || (
+            <Badge size="xs" visibility="hidden" aria-hidden>
+              &nbsp;
+            </Badge>
+          )}
         </HStack>
-      )}
+        {aside}
+      </HStack>
     </Card.Body>
   )
   const card = { variant: "outline" as const, size: "sm" as const, _hover: { borderColor: "wood.solid" }, borderColor: selected ? "wood.solid" : undefined, opacity: disabled ? 0.6 : 1 }
