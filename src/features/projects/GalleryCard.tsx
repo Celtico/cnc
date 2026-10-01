@@ -3,7 +3,8 @@ import type { ReactNode } from "react"
 
 /**
  * La targeta de totes les graelles (Mobles, Objectes, Ambients; historial, grups i catàleg), sempre en el mateix ordre:
- * miniatura 2:1 · nom (sempre dues línies d'alt, `.card-title`) · què és (`kicker`, opcional) · descripció (dues línies)
+ * miniatura 2:1 · nom (sempre dues línies d'alt, `.card-title`) · què és (`kicker`, opcional) · descripció (sempre
+ * dues línies d'alt)
  * · etiquetes a l'esquerra i, a la dreta, un valor (`aside`: el preu) a baix de tot · peu (`footer`: data i ⋯ o
  * «Afegir»). Sense peu, tota la targeta és un botó; amb peu, només la part de dalt obre.
  */
@@ -42,11 +43,10 @@ export function GalleryCard({
           {kicker}
         </Text>
       )}
-      {description && (
-        <Text fontSize="xs" color="fg.muted" lineClamp={2} title={typeof description === "string" ? description : undefined}>
-          {description}
-        </Text>
-      )}
+      {/* Sempre l'alçada de dues línies (com el nom): les targetes d'una fila queden iguals. */}
+      <Text fontSize="xs" color="fg.muted" lineClamp={2} minH="2lh" title={typeof description === "string" ? description : undefined}>
+        {description}
+      </Text>
       {(tags || aside) && (
         // A baix de tot (mt auto): a cada fila, les etiquetes i el preu queden a la mateixa altura.
         <HStack justify="space-between" gap={2} mt="auto" minW={0}>
