@@ -1113,13 +1113,11 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
         flex={{ md: 1 }}
         minW={{ base: 0, md: "320px" }}
         position="relative"
-        h={formHidden ? { base: "calc(100dvh - 52px - 76px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))", md: "full" } : { base: "42vh", md: "full" }}
-        // Al mòbil, amb els marges de la pàgina (no a tota l'amplada) i cantonades de baix
-        // arrodonides: a dalt toca la barra.
-        rounded={{ base: "0 0 var(--chakra-radii-xl) var(--chakra-radii-xl)", md: "xl" }}
+        h={formHidden ? { base: "calc(100dvh - 52px - 56px - 16px - 76px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))", md: "full" } : { base: "42vh", md: "full" }}
+        // Amb els marges de la pàgina (no a tota l'amplada) i les quatre cantonades arrodonides, com el visor dels ambients.
+        rounded="xl"
         overflow="hidden"
         borderWidth="1px"
-        borderTopWidth={{ base: 0, md: "1px" }}
         bg="bg.subtle"
       >
         {viewTab === "photo" ? (
