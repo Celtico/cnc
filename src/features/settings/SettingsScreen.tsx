@@ -1,6 +1,7 @@
 import { useTheme } from "next-themes"
 import { ACCENTS, useAccent } from "../../theme/accent"
 import { QUALITY_LABELS, useRenderQuality, type RenderQuality } from "../../components/viewer/renderQuality"
+import { SKIES, useSkyPref, type SkyId } from "../../components/viewer/render/skies"
 import { FLOORS, LIGHTS, SKIRTINGS, WALLS, usePresentationScene, type FloorId } from "../../components/viewer/presentationScene"
 import { floorSwatchUrl } from "../../components/viewer/floorTextures"
 import type { Composition } from "../../core/model"
@@ -1074,6 +1075,27 @@ function FloorTiles({ value, onChange }: { value: FloorId; onChange: (v: FloorId
   )
 }
 
+/** Cel de defecte del render (Preferències › Visor 3D): un per als mobles i un per als ambients. */
+function SkyFields() {
+  const [moble, setMoble] = useSkyPref("moble")
+  const [ambient, setAmbient] = useSkyPref("ambient")
+  const opts = SKIES.map((k) => ({ id: k.id, label: k.label }))
+  const label = (id: SkyId) => SKIES.find((k) => k.id === id)?.label ?? ""
+  return (
+    <SettingsGroup icon={<LuSun />} title="Cel del render" summary={`${label(moble)} · ${label(ambient)}`}>
+      <Text textStyle="sm" color="fg.muted">
+        Amb quin cel comença el render. «Núvols» i «Interior» són cels reals (HDRI de Poly Haven): llum i reflexos de debò. Al render es pot canviar o carregar-ne un de teu.
+      </Text>
+      <FormRow label="Mobles" help={SKIES.find((k) => k.id === moble)?.help}>
+        <ChoiceChips label="Cel dels mobles" value={moble} onChange={setMoble} options={opts} />
+      </FormRow>
+      <FormRow label="Ambients" help={SKIES.find((k) => k.id === ambient)?.help}>
+        <ChoiceChips label="Cel dels ambients" value={ambient} onChange={setAmbient} options={opts} />
+      </FormRow>
+    </SettingsGroup>
+  )
+}
+
 /**
  * Qualitat del visor i escena del mode Presentació. Preferències del dispositiu (es
  * desen al navegador): no s'exporten amb la resta de preferències.
@@ -1090,6 +1112,8 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
         <ChoiceChips label="Qualitat" value={quality} onChange={setQuality} options={(Object.keys(QUALITY_LABELS) as RenderQuality[]).map((k) => ({ id: k, label: QUALITY_LABELS[k] }))} />
       </FormRow>
       </SettingsGroup>
+
+      <SkyFields />
 
       <SettingsGroup icon={<LuLampFloor />} title="Escena de presentació" summary={`${wallName ?? "Paret personalitzada"} · ${LIGHTS.find((l) => l.id === scene.light)?.label ?? ""}`}>
       <Text textStyle="sm" color="fg.muted">

@@ -1,7 +1,7 @@
 import { Box, Button, CloseButton, Dialog, HStack, Image, Portal, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import type { IconType } from "react-icons"
-import { LuCamera, LuDownload, LuGauge, LuHouse, LuImage, LuImageUp, LuPause, LuPlay, LuRotateCcw, LuSun, LuX } from "react-icons/lu"
+import { LuCamera, LuDownload, LuGauge, LuHouse, LuImage, LuImageUp, LuPause, LuPlay, LuRotateCcw, LuSun } from "react-icons/lu"
 import { ChoiceChips, FormRow } from "../../FormRow"
 import { PanelSection } from "../../PanelSection"
 import type { Camera, Scene } from "three"
@@ -11,6 +11,7 @@ import type { EngineKind, RenderEngine, RenderJob, RenderProgress } from "./engi
 import { GpuLimitError } from "./gpuScene"
 import { GpuEngine, gpuSupport } from "./gpuTracer"
 import { parseHdr } from "./hdr"
+import { SKIES, loadSky, readSky, type SkyId } from "./skies"
 import { DEFAULT_RENDER_OPTS, extractScene, type RenderEnv, type RenderOpts, type RenderRoom } from "./sceneData"
 import { aces, createDrawScheduler, makeSrgbLut, srgbLut } from "./tonemap"
 
@@ -140,7 +141,10 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
   const [limit, setLimit] = useState(0)
   const [room, setRoom] = useState<RenderRoom>("room")
   const [format, setFormat] = useState<Format>("view")
-  const [env, setEnv] = useState<{ name: string; env: RenderEnv } | null>(null)
+  /** Cel HDRI: un dels de l'app (`sky`) o un `.hdr` propi («file»); `null` = cel de dia. */
+  const [env, setEnv] = useState<{ name: string; env: RenderEnv; sky: SkyId | "file" } | null>(null)
+  const [sky, setSky] = useState<SkyId | "file">("day")
+  const skyReq = useRef(0)
   const [engineKind, setEngineKind] = useState<EngineKind>(() => savedEngine() ?? "gpu")
   /** Motiu pel qual no hi ha GPU (`undefined` mentre es mira). */
   const [gpuWhy, setGpuWhy] = useState<string | null | undefined>(undefined)
@@ -165,6 +169,16 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
   const dn = useRef<{ worker: Worker | null; busy: number; id: number; data: Float32Array | null; count: number }>({ worker: null, busy: 0, id: 0, data: null, count: 0 })
   const img = useRef<ImageData | null>(null)
   const gpuFailedNow = gpuFailed && (!gpuFailed.res || gpuFailed.res === res) ? gpuFailed.why : null
+  /** Tria un dels cels de l'app (es carrega a part; si ja s'ha començat, el render torna a començar amb el cel nou). */
+  const chooseSky = (id: SkyId) => {
+    const req = ++skyReq.current
+    setSky(id)
+    if (id === "day") return setEnv(null)
+    void loadSky(id).then(
+      (e) => req === skyReq.current && e && setEnv({ name: SKIES.find((k) => k.id === id)!.label, env: e, sky: id }),
+      (err) => req === skyReq.current && setNotice(`No s'ha pogut carregar el cel: ${err instanceof Error ? err.message : String(err)}`),
+    )
+  }
   const effectiveKind: EngineKind = engineKind === "gpu" && gpuWhy === null && !gpuFailedNow ? "gpu" : "cpu"
 
   const disposeEngine = () => {
@@ -432,7 +446,9 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     let alive = true
     void gpuSupport().then((why) => alive && setGpuWhy(why))
     // Als ambients (llum de dia), exposició automàtica i una mica càlid, com les fotos d'interiors.
-    if (getScene()?.scene.userData.daylight) {
+    const daylight = !!getScene()?.scene.userData.daylight
+    chooseSky(readSky(daylight ? "ambient" : "moble"))
+    if (daylight) {
       const next = { ...lookRef.current, auto: true, warmth: 0.25 }
       lookRef.current = next
       setLookState(next)
@@ -658,11 +674,17 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                   <Range label="Sol · intensitat" value={opts.sunIntensity} min={0} max={3} step={0.1} format={x} onChange={(v) => set({ sunIntensity: v })} />
                   <Range label="Ombres (dures → suaus)" value={opts.softness} min={0} max={1} step={0.05} format={(v) => `${Math.round(v * 100)} %`} onChange={(v) => set({ softness: v })} />
                   <Range label="Cel (llum ambient)" value={opts.skyIntensity} min={0} max={3} step={0.1} format={x} onChange={(v) => set({ skyIntensity: v })} />
-                  <FormRow label={`Cel HDRI ${env ? `· ${env.name}` : "(opcional)"}`} help="Un cel de 360° (p. ex. de polyhaven.com, 1k o 2k): llum i reflexos de debò i el que es veu per les finestres. Sense, un cel de dia.">
-                    <HStack gap={2} minH="32px" wrap="wrap">
-                      <Button size="xs" variant="outline" asChild>
+                  <FormRow label="Cel" help={sky === "file" ? `El teu cel HDRI: ${env?.name ?? ""}` : `${SKIES.find((k) => k.id === sky)?.help ?? ""} El de defecte, a Preferències › Visor 3D.`}>
+                    <Stack gap={2}>
+                      <ChoiceChips<SkyId | "file">
+                        label="Cel"
+                        options={[...SKIES.map((k) => ({ id: k.id as SkyId | "file", label: k.label })), ...(env?.sky === "file" ? [{ id: "file" as const, label: "El teu .hdr" }] : [])]}
+                        value={sky}
+                        onChange={(v) => v !== "file" && chooseSky(v)}
+                      />
+                      <Button size="xs" variant="outline" alignSelf="flex-start" asChild>
                         <label>
-                          <LuImageUp /> {env ? "Canviar" : "Carregar .hdr"}
+                          <LuImageUp /> Carregar un .hdr teu
                           <input
                             type="file"
                             accept=".hdr"
@@ -672,7 +694,10 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                               e.currentTarget.value = ""
                               if (!f) return
                               try {
-                                setEnv({ name: f.name, env: parseHdr(await f.arrayBuffer()) })
+                                const parsed = parseHdr(await f.arrayBuffer())
+                                skyReq.current++
+                                setEnv({ name: f.name, env: parsed, sky: "file" })
+                                setSky("file")
                                 setNotice(null)
                               } catch (err) {
                                 setNotice(`No s'ha pogut llegir el cel HDRI: ${err instanceof Error ? err.message : String(err)}`)
@@ -681,12 +706,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                           />
                         </label>
                       </Button>
-                      {env && (
-                        <Button size="xs" variant="ghost" onClick={() => setEnv(null)}>
-                          <LuX /> Treure
-                        </Button>
-                      )}
-                    </HStack>
+                    </Stack>
                   </FormRow>
                   {env && <Range label="Gir del cel" value={opts.envRotation ?? 0} min={0} max={360} step={5} format={deg} onChange={(v) => set({ envRotation: v })} />}
                 </Sec>
