@@ -395,6 +395,12 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Editor en tres columnes, com Figma / Fusion 360** (`features/editor/EditorScreen.tsx`):
   - **Esquerra — Estructura** (`composition/StructureTree.tsx`): arbre moble › mòduls ›
     compartiments, i objectes de referència. Afegir/duplicar/moure/eliminar amb el menú ⋯.
+    **Un sol «+ Afegir»** sota el nom del moble (com les capes de Figma; `AddElementDialog`, `addElements.ts`): es tria
+    **Mòdul · Peça · Objecte** (es recorda l'últim; sense Mòdul als tipus només de peces), el nom (per defecte «Mòdul 3»,
+    «Peça 2», «Objecte 1», seleccionat; canvia sol amb el tipus si no s'ha tocat) i, a la peça, l'orientació. Mòdul = una
+    caixa bàsica; objecte = una caixa de 600 × 600 × 100 o un dels de Preferències (agafa el nom escrit o, amb el de per
+    defecte, el seu). Res de mòduls especials ni passacables fets: es configuren a l'inspector. Els títols «Peces lliures»
+    i «Objectes de referència» només surten si n'hi ha (sense textos «Cap…»).
   - **Objectes de referència al 3D** (`RefGhost` a `CabinetViewer`): seleccionat, **es mou només amb les fletxes del
     gizmo** (`viewer/MoveGizmo`, `frontRaycast`: les fletxes es poden agafar encara que l'objecte sigui dins d'un altre o
     d'un moble, i el seu clic no tria el que hi ha al davant) (per decisió de l'usuari: el cos no s'arrossega, així sempre se sap cap on es mourà; també les peces lliures i
@@ -422,9 +428,6 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   - **Càmera**: s'enquadra en obrir, canviar de vista, redimensionar o amb el botó «Enquadrar»
     (càmera de vídeo, `LuVideo`); editar no la mou. El botó surt **marcat** mentre la càmera és a
     l'enquadrament (`onFramedChange`): es desmarca en orbitar/fer zoom/desplaçar o si el moble canvia de mida. Opcions de vista: popover a l'ordinador, calaix de baix al mòbil.
-  - **Afegir objecte de referència** (+ de l'arbre, `RefAddMenu`): com «Afegir mòdul», demana el nom (`NameDialog`, per
-    defecte «Objecte N») i afegeix una caixa de 600 × 600 × 100; a sota, només els de Preferències (els configura
-    l'usuari; agafen el nom escrit o, amb el de per defecte, el seu). Res de passacables ni pilars fets: es fan amb la caixa.
   - **Enganxar objectes** (`RefObject.onFloor`, `onWall`, `anchorRef`): botons «Al terra» (y = 0,
     al 3D llisca pel terra) i «A la paret» (z = 0, penjat: al 3D es mou per la paret); tots dos
     alhora només de costat. El camp fixat queda desactivat; `anchorRef` s'aplica a l'inspector,
@@ -491,7 +494,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     crea el del tipus) i a l'inspector del moble (secció Tipus). Taulell i sòcol correguts només
     surten i es construeixen a la Cuina; en canviar de tipus es guarden (no es fan) i tornen. Taula: `tableModule` (tauler + dos laterals de
     panell, sense base ni fons, cantonades a inglet); «Afegir mòdul» n'afegeix una. Plantilles
-    amb `kind` (Consola, Taula de menjador). **«Afegir mòdul»** (arbre) afegeix directament una caixa bàsica després de demanar-ne el nom (`NameDialog`, per defecte «Mòdul N»); **sense mòduls especials** (per decisió de l'usuari: la caixa es configura a l'inspector). Queden al codi, sense UI, els de `core/model/modulePresets.ts`
+    amb `kind` (Consola, Taula de menjador). **«+ Afegir»** (arbre) afegeix una caixa bàsica (vegeu «Un sol Afegir» a l'Estructura); **sense mòduls especials** (per decisió de l'usuari: la caixa es configura a l'inspector). Queden al codi, sense UI, els de `core/model/modulePresets.ts`
     (`modulePresetsFor`): cuina (baixos calaixos/porta/fregadera/fogons/
     forn, columnes forn i rebost, alts porta/abatible), armari (prestatges, penjador amb
     maleter, calaixos i prestatges), taula (consola, menjador, centre, banc); al Moble, les

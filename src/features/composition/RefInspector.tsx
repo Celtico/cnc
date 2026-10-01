@@ -1,87 +1,17 @@
 import { Box, Button, HStack, IconButton, Menu, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
 import { segGroup, segItem } from "../../components/segmented"
-import { NameDialog } from "../../components/NameDialog"
 import { useState, type ReactNode } from "react"
 import { ProfileEditor } from "./ProfileEditor"
 import type { IconType } from "react-icons"
 import { IconChoice, type IconOption } from "../../components/IconChoice"
-import { LuBox, LuCylinder, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuScissors, LuShield, LuSpline, LuArrowDownToLine, LuBrickWall, LuBookmark, LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuPlus, LuScan, LuTrash2 } from "react-icons/lu"
+import { LuBox, LuCylinder, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuScissors, LuShield, LuSpline, LuArrowDownToLine, LuBrickWall, LuBookmark, LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuScan, LuTrash2 } from "react-icons/lu"
 import { PanelSection } from "../../components/PanelSection"
 import { toaster } from "../../components/ui/toaster"
-import { AXIS_INDEX, SECTION_AXES, anchorRef, insertRefCopy, toNodes, canBeGhost, newId, visibleReferences, type Composition, type RefObject } from "../../core/model"
+import { AXIS_INDEX, SECTION_AXES, anchorRef, insertRefCopy, toNodes, newId, type Composition, type RefObject } from "../../core/model"
 import { NumRow } from "../editor/ParamsForm"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/SettingsScreen"
-
-/** «+» per afegir un objecte de referència: demana el nom i posa una caixa (o un dels de Preferències). */
-export function RefAddMenu({ comp, onChange, onAdded }: { comp: Composition; onChange: (c: Composition) => void; onAdded?: (id: string) => void }) {
-  const { settings } = useSettings()
-  const presets = visibleReferences(settings).filter(canBeGhost)
-  const add = (o: Omit<RefObject, "id" | "x" | "y" | "z"> & Partial<Pick<RefObject, "x" | "y" | "z">>) => {
-    const id = newId("r")
-    onChange({ ...comp, references: [...comp.references, { id, x: 0, y: 0, z: 0, ...o }] })
-    onAdded?.(id)
-  }
-  // Com «Afegir mòdul»: el + afegeix directament un objecte bàsic (caixa) després de demanar-ne el nom. A sota, només els
-  // de Preferències (els configura l'usuari; agafen el nom escrit o, amb el de per defecte, el seu).
-  const [open, setOpen] = useState(false)
-  const defaultName = `Objecte ${comp.references.length + 1}`
-  const group = (title: string, items: { key: string; label: string; hint?: string; make: () => Parameters<typeof add>[0] }[], name: string) =>
-    items.length > 0 && (
-      <Stack gap={1.5}>
-        <Text fontSize="xs" color="fg.muted">
-          {title}
-        </Text>
-        <HStack gap={1.5} wrap="wrap">
-          {items.map((it) => (
-            <Button
-              key={it.key}
-              size="xs"
-              variant="outline"
-              title={it.hint}
-              disabled={!name}
-              onClick={() => {
-                setOpen(false)
-                const o = it.make()
-                add({ ...o, name: name === defaultName ? o.name : name })
-              }}
-            >
-              {it.label}
-            </Button>
-          ))}
-        </HStack>
-      </Stack>
-    )
-  return (
-    <>
-      <IconButton aria-label="Afegir objecte de referència" title="Afegir objecte de referència" size="2xs" variant="ghost" onClick={() => setOpen(true)}>
-        <LuPlus />
-      </IconButton>
-      <NameDialog
-        open={open}
-        title="Objecte nou"
-        ariaLabel="Nom de l'objecte"
-        submitLabel="Afegir"
-        initial={defaultName}
-        onClose={() => setOpen(false)}
-        onSave={(name) => {
-          setOpen(false)
-          add({ name, w: 600, h: 600, d: 100 })
-        }}
-      >
-        {(name) => (
-          <Stack gap={3}>
-            <Text fontSize="xs" color="fg.muted">
-              «Afegir» posa una caixa de 600 × 600 × 100 (les mides, la forma i l'efecte es canvien després).{presets.length > 0 ? " O un dels teus:" : ""}
-            </Text>
-            {group("De Preferències", presets.map((r) => ({ key: r.id, label: r.name, hint: `${r.w} × ${r.h} × ${r.d}`, make: () => ({ name: r.name, w: r.w, h: r.h, d: r.d!, z: r.wallOffset }) })), name)}
-          </Stack>
-        )}
-      </NameDialog>
-    </>
-  )
-}
 
 /** Propietats d'un objecte de referència (fantasma): nom, mides i posició. */
 export function RefInspector({ comp, id, onChange }: { comp: Composition; id: string; onChange: (c: Composition) => void }) {

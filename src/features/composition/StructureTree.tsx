@@ -1,5 +1,4 @@
 import { Box, HStack, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
-import { NameDialog } from "../../components/NameDialog"
 import { createElement, useState, type ReactNode } from "react"
 import {
   LuArrowDown,
@@ -18,9 +17,10 @@ import {
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcon"
 import { compositionKind, partsOnlyKind, duplicateGroup, newGroupName, partGroups, insertPartCopy, insertRefCopy, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
-import { PartAddMenu } from "./PartInspector"
+import { AddElementDialog } from "./AddElementDialog"
+import { freePartFor, refFor } from "./addElements"
+import { useSettings } from "../settings/SettingsContext"
 import { ORIENT_ICON } from "./partOrient"
-import { RefAddMenu } from "./RefInspector"
 import { zoneLabel } from "./zoneLabel"
 
 type DragKind = "module" | "ref" | "part"
@@ -157,7 +157,7 @@ export function StructureTree({
     }
   }
   const [adding, setAdding] = useState(false)
-  const newModuleName = `Mòdul ${comp.modules.length + 1}`
+  const { settings } = useSettings()
   const hasWall = comp.modules.some((m) => rowOf(m) === "wall")
   const rows: { row: "floor" | "wall"; label: string }[] = hasWall
     ? [
@@ -193,6 +193,27 @@ export function StructureTree({
   return (
     <Stack gap={0.5} role="tree" aria-label="Estructura del moble" fontSize="sm">
       <Row icon={<LuBox />} label={name || "Moble"} bold selected={selection.kind === "moble"} onClick={() => onSelect({ kind: "moble" })} depth={0} />
+      {/* Un sol «Afegir» per a tot (com les capes de Figma): mòdul, peça lliure o objecte de referència. */}
+      <HStack as="button" gap={2} pl={7} py={1.5} color="fg.muted" _hover={{ color: "fg" }} rounded="md" cursor="pointer" onClick={() => setAdding(true)}>
+        <LuPlus /> <Text>Afegir</Text>
+      </HStack>
+      <AddElementDialog
+        open={adding}
+        comp={comp}
+        onlyParts={onlyParts}
+        onClose={() => setAdding(false)}
+        onAddModule={(n) => addModule(newModule(newId("m"), n))}
+        onAddPart={(orient, n) => {
+          const p = freePartFor(comp, settings, orient, partCenter, n)
+          onChange({ ...comp, parts: [...(comp.parts ?? []), p] })
+          onSelect({ kind: "part", id: p.id })
+        }}
+        onAddRef={(n, preset) => {
+          const r = refFor(preset ? { name: n, w: preset.w, h: preset.h, d: preset.d!, z: preset.wallOffset } : { name: n, w: 600, h: 600, d: 100 })
+          onChange({ ...comp, references: [...comp.references, r] })
+          onSelect({ kind: "ref", id: r.id })
+        }}
+      />
 
       {!onlyParts && rows.map(({ row, label }) => (
         <Box key={row}>
@@ -240,38 +261,8 @@ export function StructureTree({
         </Box>
       ))}
 
-      {/* Afegir mòdul: una caixa bàsica directament, després de posar-li el nom (amb un per defecte). Sense mòduls
-          especials (per decisió de l'usuari): la caixa es configura després a l'inspector. */}
-      {!onlyParts && (
-        <HStack as="button" gap={2} pl={7} py={1.5} color="fg.muted" _hover={{ color: "fg" }} rounded="md" cursor="pointer" onClick={() => setAdding(true)}>
-          <LuPlus /> <Text>Afegir mòdul</Text>
-        </HStack>
-      )}
-      <NameDialog
-        open={adding}
-        title="Mòdul nou"
-        ariaLabel="Nom del mòdul"
-        submitLabel="Afegir"
-        initial={newModuleName}
-        onClose={() => setAdding(false)}
-        onSave={(name) => {
-          setAdding(false)
-          addModule(newModule(newId("m"), name))
-        }}
-      />
-
-      {/* Peces lliures (flat-pack): com els objectes, però són peces de debò amb encaixos. */}
-      <HStack justify="space-between" pt={3} pb={1} px={1}>
-        <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
-          Peces lliures
-        </Text>
-        <PartAddMenu comp={comp} onChange={onChange} center={partCenter} onAdded={(id) => onSelect({ kind: "part", id })} />
-      </HStack>
-      {parts.length === 0 && (
-        <Text fontSize="xs" color="fg.subtle" px={2}>
-          {onlyParts ? "Cap. Afegeix-ne amb el +: on dues peces es toquen o s'encreuen, s'hi fa l'encaix sol." : "Cap. Taulers solts (prestatges, travessers, potes…) o elements de ferro, pedra o vidre. Els encaixos automàtics són del tipus Flat-pack."}
-        </Text>
-      )}
+      {/* Peces lliures (flat-pack): com els objectes, però són peces de debò amb encaixos. El títol només surt si n'hi ha. */}
+      {parts.length > 0 && <SectionTitle>Peces lliures</SectionTitle>}
       {(() => {
         const seen = new Set<string>()
         const partRow = (r: (typeof parts)[number], depth: number) => {
@@ -407,17 +398,7 @@ export function StructureTree({
         </HStack>
       )}
 
-      <HStack justify="space-between" pt={3} pb={1} px={1}>
-        <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
-          Objectes de referència
-        </Text>
-        <RefAddMenu comp={comp} onChange={onChange} onAdded={(id) => onSelect({ kind: "ref", id })} />
-      </HStack>
-      {comp.references.length === 0 && (
-        <Text fontSize="xs" color="fg.subtle" px={2}>
-          Cap. Afegeix-ne per comprovar que tot hi cap (radiador, tele...).
-        </Text>
-      )}
+      {comp.references.length > 0 && <SectionTitle>Objectes de referència</SectionTitle>}
       {comp.references.map((r) => (
         <Row
           key={r.id}
@@ -647,5 +628,14 @@ function RowMenu({ label, children }: { label: string; children: ReactNode }) {
         </Menu.Positioner>
       </Portal>
     </Menu.Root>
+  )
+}
+
+/** Títol d'un grup de l'arbre (peces lliures, objectes de referència): només quan el grup té alguna fila. */
+function SectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide" pt={3} pb={1} px={1}>
+      {children}
+    </Text>
   )
 }

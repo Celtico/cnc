@@ -11,7 +11,6 @@ import {
   LuMoveHorizontal,
   LuMoveVertical,
   LuPencilRuler,
-  LuPlus,
   LuPuzzle,
   LuSpline,
   LuScissors,
@@ -25,7 +24,6 @@ import {
   DEFAULT_JOINERY,
   insertPartCopy,
   materialByName,
-  newFreePart,
   reorientPart,
   PART_AXES,
   partsBox,
@@ -61,43 +59,6 @@ const GRAIN: IconOption<"u" | "v" | "none">[] = [
   { value: "v", label: "Al llarg de l'alt", icon: LuMoveVertical },
   { value: "none", label: "Sense veta", icon: LuBan },
 ]
-
-/** Menú «+» per afegir una peça lliure (davant del moble, al mig). */
-export function PartAddMenu({ comp, onChange, onAdded, center }: { comp: Composition; onChange: (c: Composition) => void; onAdded?: (id: string) => void; center: { x: number; y: number; z: number } }) {
-  const { settings } = useSettings()
-  const base = comp.modules[0]?.carcass
-  const add = (o: PartOrient) => {
-    const mat = comp.parts?.at(-1)
-    const object = compositionKind(comp) === "objecte"
-    const loose = partsOnlyKind(compositionKind(comp))
-    const p = newFreePart(o, center, mat?.material ?? (loose ? (object ? "Microciment gris" : undefined) : base?.material), mat?.thickness ?? (loose ? undefined : base?.thickness))
-    // Si el material no és de les preferències, el primer de la llista.
-    const known = materialByName(settings, p.material)
-    const fresh = known ? { ...p, ...(known.cnc === false || object ? { nest: false } : {}) } : { ...p, material: settings.materials.find((m) => !m.forBacks && m.cnc !== false)?.name ?? p.material, ...(object ? { nest: false } : {}) }
-    onChange({ ...comp, parts: [...(comp.parts ?? []), fresh] })
-    onAdded?.(p.id)
-  }
-  return (
-    <Menu.Root positioning={{ placement: "bottom-end" }}>
-      <Menu.Trigger asChild>
-        <IconButton aria-label="Afegir peça lliure" title="Afegir peça lliure" size="2xs" variant="ghost">
-          <LuPlus />
-        </IconButton>
-      </Menu.Trigger>
-      <Portal>
-        <Menu.Positioner>
-          <Menu.Content>
-            {ORIENTS.map((o) => (
-              <Menu.Item key={o.value} value={o.value} onClick={() => add(o.value)}>
-                <o.icon /> {o.label}
-              </Menu.Item>
-            ))}
-          </Menu.Content>
-        </Menu.Positioner>
-      </Portal>
-    </Menu.Root>
-  )
-}
 
 /** Propietats d'una peça lliure: orientació, material, mides, forma, posició i encaixos. */
 export function PartInspector({ comp, id, joints, onChange }: { comp: Composition; id: string; joints: PartJoint[]; onChange: (c: Composition) => void }) {
