@@ -28,14 +28,15 @@ export function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?
       <button type="button" onClick={() => onPick(t)}>
         <Card.Body p={3} gap={2} alignItems="stretch" textAlign="left">
           {thumb ? <SnapshotThumb src={thumb} /> : <CompositionThumb composition={comp} />}
+          <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={t.name}>
+            {title ?? t.name}
+          </Text>
+          {/* Primer el nom; a sota, amb la descripció, què és (vitrina, llibreria…). */}
           {kicker && (
             <Text fontSize="2xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide" truncate mb={-1.5}>
               {kicker}
             </Text>
           )}
-          <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={t.name}>
-            {title ?? t.name}
-          </Text>
           <Text fontSize="xs" color="fg.muted" lineClamp={2} title={t.description}>
             {t.description}
           </Text>
