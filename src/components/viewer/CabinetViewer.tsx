@@ -5,15 +5,16 @@ import { ModuleLegs, PanelHardware } from "./Hardware"
 import type { SceneGetter } from "./render/RenderDialog"
 import { SceneAccess, StudioEnvironment } from "./SceneHelpers"
 import { surfaceMaterial } from "./surfaceMaterial"
+import { profileGeometry } from "./refGeometry"
 import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
 import { Billboard, ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
-import { BoxGeometry, NeutralToneMapping, DoubleSide, type BufferGeometry, ExtrudeGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Shape, Vector3, type Object3D, type Texture } from "three"
+import { BoxGeometry, NeutralToneMapping, DoubleSide, type BufferGeometry, Group, Matrix4, MeshStandardMaterial, Plane, Vector3, type Object3D, type Texture } from "three"
 import { type ViewName } from "./viewNames"
 export type { ViewName } from "./viewNames"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
-import { AXIS_INDEX, SECTION_AXES, flatten, partSize, partsBox, sampleProfile, toNodes, type FreePart, type Hole, type MaterialPref, type Panel, type RefObject } from "../../core/model"
+import { flatten, partSize, partsBox, type FreePart, type Hole, type MaterialPref, type Panel, type RefObject } from "../../core/model"
 import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { ROLE_COLOR } from "./roleColorMap"
@@ -566,29 +567,6 @@ function drawLabels(ctx: CanvasRenderingContext2D, glCanvas: HTMLCanvasElement, 
     ctx.textBaseline = "middle"
     ctx.fillText(el.textContent ?? "", x + w / 2, y + h / 2)
   }
-}
-
-/**
- * Perfil 2D extrudit en la direcció de l'objecte, centrat a la seva caixa (metres). El perfil
- * és en (u, v) del pla de la secció (`SECTION_AXES`); l'extrusió va per l'eix de la direcció.
- */
-function profileGeometry(g: RefObject): ExtrudeGeometry {
-  const axis = g.axis ?? "z"
-  const [u, v] = SECTION_AXES[axis]
-  const a = AXIS_INDEX[axis]
-  const size = [g.w, g.h, g.d]
-  const su = size[u]!, sv = size[v]!, len = size[a]!
-  const shape = new Shape()
-  const pts = sampleProfile(toNodes(g.profile!))
-  shape.moveTo((pts[0]![0] - su / 2) * S, (pts[0]![1] - sv / 2) * S)
-  for (const [pu, pv] of pts.slice(1)) shape.lineTo((pu - su / 2) * S, (pv - sv / 2) * S)
-  shape.closePath()
-  const geo = new ExtrudeGeometry(shape, { depth: len * S, bevelEnabled: false })
-  geo.translate(0, 0, (-len / 2) * S)
-  const e = [new Vector3(1, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 0, 1)]
-  geo.applyMatrix4(new Matrix4().makeBasis(e[u]!, e[v]!, e[a]!))
-  geo.computeVertexNormals()
-  return geo
 }
 
 interface SnapTargets {

@@ -26,7 +26,7 @@ export function requestProjectThumb(p: Project, materials: MaterialPref[]): void
       if (!fresh || !needsThumb(fresh)) return
       const comp = compositionOf(fresh)
       const build = buildComposition(comp)
-      const url = renderThumb([...build.panels, ...build.extras], materials, comp.scene)
+      const url = renderThumb([...build.panels, ...build.extras], materials, comp.scene, comp.references)
       if (url) await db.projects.update(p.id, { thumb: url, thumbAt: fresh.updatedAt, thumbV: THUMB_VERSION })
     },
   })

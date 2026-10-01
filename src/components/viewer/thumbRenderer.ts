@@ -1,6 +1,7 @@
 import { Box3, Color, DirectionalLight, HemisphereLight, Mesh, Scene, MeshStandardMaterial, NeutralToneMapping, PCFSoftShadowMap, PerspectiveCamera, PlaneGeometry, PMREMGenerator, SRGBColorSpace, Vector3, WebGLRenderer, type Material, type Object3D, type Texture } from "three"
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
-import type { MaterialPref, Panel } from "../../core/model"
+import type { MaterialPref, Panel, RefObject } from "../../core/model"
+import { refGeometry } from "./refGeometry"
 import { exportablePanel } from "./CabinetViewer"
 import { buildScene } from "./exportGlb"
 import { makeFloor, ROOM } from "./floorTextures"
@@ -16,7 +17,7 @@ import { surfaceMaterial } from "./surfaceMaterial"
 const W = 480
 const H = 240
 /** Versió de les miniatures: si canvia la manera de fer-les, es tornen a fer totes. */
-export const THUMB_VERSION = 3
+export const THUMB_VERSION = 4
 
 let renderer: WebGLRenderer | null = null
 let env: Texture | null = null
@@ -75,9 +76,16 @@ export function snapshot(scene: Scene, camera: PerspectiveCamera): string {
 export const THUMB_ASPECT = W / H
 
 /** JPEG (data URL) de les peces vistes des de davant, una mica de costat i de dalt. */
-export function renderThumb(panels: Panel[], materials: MaterialPref[], finish?: { floor?: string; wall?: string }): string | null {
+export function renderThumb(panels: Panel[], materials: MaterialPref[], finish?: { floor?: string; wall?: string }, refs: RefObject[] = []): string | null {
   if (!panels.length) return null
   const scene = buildScene(panels, "thumb", { materials, make: exportablePanel })
+  // Objectes de referència amb material (una tele, un radiador): com al visor i al render. Els fantasmes, no.
+  for (const g of refs) {
+    if (!g.material || g.effect === "cut") continue
+    const m = new Mesh(refGeometry(g), surfaceMaterial(materials, g.material, Math.max(g.w, g.d), g.h))
+    m.position.set((g.x + g.w / 2) / 1000, (g.y + g.h / 2) / 1000, (g.z + g.d / 2) / 1000)
+    scene.add(m)
+  }
   scene.traverse((o) => {
     if ((o as Mesh).isMesh) o.castShadow = o.receiveShadow = true
   })
