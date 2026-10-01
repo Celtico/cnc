@@ -191,6 +191,18 @@ export function App() {
     setAmbientId(id)
     setScreen("ambient")
   }
+  // Enllaços a un ambient des d'altres pàgines (p. ex. l'etiqueta «És a l'ambient» de les targetes de mobles).
+  useEffect(() => {
+    const on = (e: Event) => {
+      const id = (e as CustomEvent<number>).detail
+      if (typeof id !== "number") return
+      setProjectId(null)
+      setAmbientId(id)
+      setScreen("ambient")
+    }
+    window.addEventListener("mobles:open-ambient", on)
+    return () => window.removeEventListener("mobles:open-ambient", on)
+  }, [])
   const goAmbients = () => {
     setProjectId(null)
     setScreen(ambientId !== null ? "ambient" : "ambients")

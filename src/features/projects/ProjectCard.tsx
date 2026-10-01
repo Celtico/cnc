@@ -72,11 +72,43 @@ export function ProjectCard({
                 <LuPencil /> Modificat
               </Badge>
             )}
-            {ambients.map((a) => (
-              <Badge key={a.id} size="xs" variant={a.id === currentAmbient ? "solid" : "subtle"} colorPalette="wood" title={`És a l'ambient «${a.name}»`}>
-                {a.id === currentAmbient ? <LuCheck /> : <LuHouse />} {a.name}
-              </Badge>
-            ))}
+            {/* Cada ambient on és: retallat amb punts suspensius (no desborda la targeta) i, fora de l'ambient obert, un
+                enllaç que hi porta. */}
+            {ambients.map((a) => {
+              const here = a.id === currentAmbient
+              return (
+                <Badge
+                  key={a.id}
+                  asChild={!here}
+                  size="xs"
+                  variant={here ? "solid" : "subtle"}
+                  colorPalette="wood"
+                  maxW="full"
+                  minW={0}
+                  title={here ? `És a l'ambient «${a.name}»` : `Obrir l'ambient «${a.name}»`}
+                  cursor={here ? undefined : "pointer"}
+                  _hover={here ? undefined : { textDecoration: "underline" }}
+                >
+                  {here ? (
+                    <>
+                      <LuCheck />
+                      <Text as="span" truncate>{a.name}</Text>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        window.dispatchEvent(new CustomEvent("mobles:open-ambient", { detail: a.id }))
+                      }}
+                    >
+                      <LuHouse />
+                      <Text as="span" truncate>{a.name}</Text>
+                    </button>
+                  )}
+                </Badge>
+              )
+            })}
           </Wrap>
         )}
       </Card.Body>

@@ -103,7 +103,8 @@ export function FolderedGrid<T>({
   return (
     <Stack gap={3}>
       {(toolbar || selection) && (
-        <HStack justify="flex-start" gap={1} wrap="wrap">
+        // Barra d'eines en una franja suau, a tota l'amplada de la graella: no queda penjada sobre les targetes.
+        <HStack justify="flex-start" gap={1} wrap="wrap" bg="bg.muted" rounded="md" px={1} py={1}>
           {picking && selection ? (
             <>
               <Text fontSize="sm" color="fg.muted" mr="auto">
