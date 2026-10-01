@@ -1,11 +1,12 @@
 import { Accordion, Badge, Card, CloseButton, HStack, Input, InputGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useMemo, useState, type ReactNode } from "react"
-import { LuFolders, LuHistory, LuSearch, LuStore } from "react-icons/lu"
+import { LuFolders, LuHistory, LuSearch } from "react-icons/lu"
 import { CompositionThumb } from "../../components/CompositionThumb"
 import { STORE_CATALOG, type Composition, type CompositionKind, type Template } from "../../core/model"
 import { KINDS } from "../composition/kinds"
 import { FoldTitle } from "./FoldTitle"
 import { GALLERY_COLS, fold, useSessionList } from "./galleryGrid"
+import { CatalogSection } from "./CatalogSection"
 
 const kindLabel = (k: CompositionKind) => KINDS.find((x) => x.value === k)!.label
 const euros = (n: number) => `${n.toLocaleString("ca-ES")} €`
@@ -125,41 +126,24 @@ export function NewMobleGallery({
           </Accordion.Item>
         )}
 
-        <Accordion.Item value="store">
-          <Accordion.ItemTrigger cursor="pointer">
-            <FoldTitle icon={<LuStore />} title="Plantilles per a botigues de mobles" count={storeCount} />
-            <Accordion.ItemIndicator />
-          </Accordion.ItemTrigger>
-          <Accordion.ItemContent>
-            <Accordion.ItemBody>
-              <Stack gap={3}>
-                <Text fontSize="xs" color="fg.muted">
-                  Catàleg de mostra: tres dissenys per a cada tipus de moble, amb estil, materials, colors, públic i preu orientatiu.
-                </Text>
-
-                {/* Amb cerca, totes les categories que coincideixen, obertes. */}
-                <Accordion.Root multiple collapsible lazyMount variant="plain" size="sm" value={q ? store.map((c) => c.id) : openCats} onValueChange={(e) => !q && setOpenCats(e.value)}>
-                  {store.map((c) => (
-                    <Accordion.Item key={c.id} value={c.id}>
-                      <Accordion.ItemTrigger cursor="pointer" borderBottomWidth="1px" rounded="none" px={0}>
-                        <FoldTitle title={c.name} count={c.types.reduce((m, ty) => m + ty.items.length, 0)} />
-                        <Accordion.ItemIndicator />
-                      </Accordion.ItemTrigger>
-                      <Accordion.ItemContent>
-                        <Accordion.ItemBody px={0}>
-                          {/* Una sola graella per categoria (com les altres); el tipus va a la targeta. */}
-                          <SimpleGrid columns={COLS} gap={3}>
-                            {c.types.flatMap((ty) => ty.items.map((t) => <TemplateCard key={t.id} t={t} kicker={ty.name} title={t.name.replace(`${ty.name} `, "")} onPick={pick} />))}
-                          </SimpleGrid>
-                        </Accordion.ItemBody>
-                      </Accordion.ItemContent>
-                    </Accordion.Item>
-                  ))}
-                </Accordion.Root>
-              </Stack>
-            </Accordion.ItemBody>
-          </Accordion.ItemContent>
-        </Accordion.Item>
+        <CatalogSection
+          value="store"
+          description="Plantilles per a botigues de mobles: tres dissenys per a cada tipus de moble, amb estil, materials, colors, públic i preu orientatiu."
+          searching={!!q}
+          open={openCats}
+          onOpenChange={setOpenCats}
+          categories={store.map((c) => ({
+            id: c.id,
+            label: c.name,
+            count: c.types.reduce((m, ty) => m + ty.items.length, 0),
+            // Una sola graella per categoria (com les altres); el tipus va a la targeta.
+            content: (
+              <SimpleGrid columns={COLS} gap={3}>
+                {c.types.flatMap((ty) => ty.items.map((t) => <TemplateCard key={t.id} t={t} kicker={ty.name} title={t.name.replace(`${ty.name} `, "")} onPick={pick} />))}
+              </SimpleGrid>
+            ),
+          }))}
+        />
       </Accordion.Root>
 
     </Stack>

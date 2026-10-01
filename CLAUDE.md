@@ -246,6 +246,11 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   `app:<id>`, `object:<id>`), col·locades arrambades a una paret (N/S/E/O, `placeTemplateItem`) o
   lliures. `createAmbientFromTemplate` (`features/ambients/fromTemplate.ts`) crea cada moble i objecte
   (un per plantilla) i l'ambient enllaçat; `templatePreview` fa la miniatura.
+- **«Catàleg», igual a les tres pàgines** (`projects/CatalogSection`, per decisió de l'usuari): l'última secció d'Ambients,
+  Objectes i Mobles es diu **Catàleg** (icona `LuBookOpen`), amb una línia d'explicació i un acordió per categoria: escenes
+  per habitació, objectes per tipus (`OBJECT_CATEGORIES` / `objectCategory` a `core/model/objectCategories.ts`: sofàs i
+  seients, taules, llits, quadres/miralls/cortines, llums, plantes, catifes i tèxtils, electrodomèstics, blocs) i les
+  plantilles per a botigues de mobles per categoria. La cerca obre les categories que coincideixen.
 - **Catàleg per categories** (`AMBIENT_CATEGORIES`, `AmbientTemplate.category`: salons, cuines, menjadors,
   dormitoris, infantils, vestidors, rebedors, despatxos, banys, exteriors), un acordió per categoria; la
   cerca també busca la categoria i obre les que coincideixen.
@@ -337,7 +342,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   botó «Nou moble» ni diàleg): text descriptiu, **cercador** (sense filtre de tipus: el tipus també
   es busca), botó «Nou moble» a la capçalera i acordions **tots tancats**
   en obrir l'app (l'estat es recorda durant la sessió, `mobles:gallery`): **Historial**, **Projectes**
-  i **Plantilles per a botigues de mobles** (les «teves plantilles» i les «de l'app» ja no hi són: les teves
+  i **Catàleg** (les plantilles per a botigues de mobles) (les «teves plantilles» i les «de l'app» ja no hi són: les teves
   es van convertir en mobles del grup «Les meves plantilles», `migrateUserTemplates`); el **cercador** (sense accents; obre
   les seccions i categories amb resultats) valen per a tots. Totes les graelles fan servir
   `GALLERY_COLS` (`projects/galleryGrid.ts`) i la mateixa targeta petita (les del historial, amb

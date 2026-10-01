@@ -1,10 +1,11 @@
 import { Accordion, CloseButton, Input, InputGroup, SimpleGrid, Stack } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 import { useState } from "react"
-import { LuFolders, LuHistory, LuLayoutTemplate, LuSearch } from "react-icons/lu"
-import { OBJECT_TEMPLATES, type Composition, type Template } from "../../core/model"
+import { LuFolders, LuHistory, LuSearch } from "react-icons/lu"
+import { OBJECT_CATEGORIES, OBJECT_TEMPLATES, objectCategory, type Composition, type Template } from "../../core/model"
 import { FoldTitle, TemplateCard } from "../projects/NewMobleGallery"
 import { GALLERY_COLS, fold, useSessionList } from "../projects/galleryGrid"
+import { CatalogSection } from "../projects/CatalogSection"
 
 
 /**
@@ -26,6 +27,7 @@ export function ObjectsGallery({
   const templates = OBJECT_TEMPLATES.filter((t) => matches(`${t.name} ${t.description}`))
   const hist = history(matches, !!q)
   const [open, setOpen] = useSessionList(storageKey)
+  const [openCats, setOpenCats] = useSessionList(`${storageKey}-categories`)
   const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["mine"] : []), ...(templates.length ? ["templates"] : [])]
   const pick = (t: Template) => onCreate({ ...t.make(), kind: "objecte" }, t.name)
   return (
@@ -54,21 +56,28 @@ export function ObjectsGallery({
             </Accordion.ItemContent>
           </Accordion.Item>
         )}
-        <Accordion.Item value="templates">
-          <Accordion.ItemTrigger cursor="pointer">
-            <FoldTitle icon={<LuLayoutTemplate />} title="Plantilles d'objectes" count={templates.length} />
-            <Accordion.ItemIndicator />
-          </Accordion.ItemTrigger>
-          <Accordion.ItemContent>
-            <Accordion.ItemBody>
-              <SimpleGrid columns={GALLERY_COLS} gap={3}>
-                {templates.map((t) => (
-                  <TemplateCard key={t.id} t={t} onPick={pick} />
-                ))}
-              </SimpleGrid>
-            </Accordion.ItemBody>
-          </Accordion.ItemContent>
-        </Accordion.Item>
+        <CatalogSection
+          value="templates"
+          description="Sofàs, taules, llums, plantes, catifes… fets amb peces, per col·locar als ambients."
+          searching={!!q}
+          open={openCats}
+          onOpenChange={setOpenCats}
+          categories={OBJECT_CATEGORIES.map((c) => {
+            const list = templates.filter((t) => objectCategory(t) === c.id)
+            return {
+              id: c.id,
+              label: c.label,
+              count: list.length,
+              content: (
+                <SimpleGrid columns={GALLERY_COLS} gap={3}>
+                  {list.map((t) => (
+                    <TemplateCard key={t.id} t={t} onPick={pick} />
+                  ))}
+                </SimpleGrid>
+              ),
+            }
+          })}
+        />
       </Accordion.Root>
     </Stack>
   )

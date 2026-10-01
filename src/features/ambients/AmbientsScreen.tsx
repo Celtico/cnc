@@ -1,6 +1,6 @@
 import { Accordion, Badge, Button, Card, CloseButton, Dialog, HStack, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
 import { useMemo, useState, type ReactNode } from "react"
-import { LuBookOpen, LuFolders, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu"
+import { LuFolders, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { uniqueName } from "../../core/file/mobleFile"
 import { AMBIENT_CATEGORIES, AMBIENT_TEMPLATES, EMPTY_AMBIENT, footprintCorners, parseAmbient, roomWalls, wallCorners, type Ambient, type AmbientTemplate } from "../../core/model"
@@ -13,6 +13,7 @@ import { FolderedGrid, MoveToFolderDialog } from "../projects/Folders"
 import { createAmbientFromTemplate, templatePreview } from "./fromTemplate"
 import { AMBIENT_TAB_KEY } from "./planGeom"
 import { PageHeader } from "../../components/PageHeader"
+import { CatalogSection } from "../projects/CatalogSection"
 
 /**
  * Ambients: plànols de la casa on es col·loquen els mobles (els de la llista, enllaçats) i
@@ -190,44 +191,28 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
               </Accordion.ItemBody>
             </Accordion.ItemContent>
           </Accordion.Item>
-          <Accordion.Item value="catalog">
-            <Accordion.ItemTrigger cursor="pointer">
-              <FoldTitle icon={<LuBookOpen />} title="Catàleg d'ambients" count={shownTemplates.length} />
-              <Accordion.ItemIndicator />
-            </Accordion.ItemTrigger>
-            <Accordion.ItemContent>
-              <Accordion.ItemBody>
-                <Stack gap={3}>
-                  <Text fontSize="xs" color="fg.muted">
-                    Habitacions moblades amb mobles de les plantilles i objectes, per fer-ne renders per a la web o el catàleg. En triar-ne una, els mobles es creen a Mobles i Objectes i queden enllaçats.
-                  </Text>
-                  {/* Una categoria per acordió (com les plantilles de botiga); la cerca obre les que coincideixen. */}
-                  <Accordion.Root multiple collapsible lazyMount variant="plain" value={q ? shownCats.map((c) => c.id) : openCats} onValueChange={(e) => !q && setOpenCats(e.value)}>
-                    {shownCats.map((c) => {
-                      const list = shownTemplates.filter((t) => t.category === c.id)
-                      return (
-                        <Accordion.Item key={c.id} value={c.id}>
-                          <Accordion.ItemTrigger cursor="pointer">
-                            <FoldTitle title={c.label} count={list.length} />
-                            <Accordion.ItemIndicator />
-                          </Accordion.ItemTrigger>
-                          <Accordion.ItemContent>
-                            <Accordion.ItemBody>
-                              <SimpleGrid columns={GALLERY_COLS} gap={3}>
-                                {list.map((t) => (
-                                  <CatalogCard key={t.id} t={t} busy={busy === t.id} onPick={() => void fromTemplate(t)} />
-                                ))}
-                              </SimpleGrid>
-                            </Accordion.ItemBody>
-                          </Accordion.ItemContent>
-                        </Accordion.Item>
-                      )
-                    })}
-                  </Accordion.Root>
-                </Stack>
-              </Accordion.ItemBody>
-            </Accordion.ItemContent>
-          </Accordion.Item>
+          <CatalogSection
+            value="catalog"
+            description="Habitacions moblades amb mobles de les plantilles i objectes, per fer-ne renders per a la web o el catàleg. En triar-ne una, els mobles es creen a Mobles i Objectes i queden enllaçats."
+            searching={!!q}
+            open={openCats}
+            onOpenChange={setOpenCats}
+            categories={shownCats.map((c) => {
+              const list = shownTemplates.filter((t) => t.category === c.id)
+              return {
+                id: c.id,
+                label: c.label,
+                count: list.length,
+                content: (
+                  <SimpleGrid columns={GALLERY_COLS} gap={3}>
+                    {list.map((t) => (
+                      <CatalogCard key={t.id} t={t} busy={busy === t.id} onPick={() => void fromTemplate(t)} />
+                    ))}
+                  </SimpleGrid>
+                ),
+              }
+            })}
+          />
         </Accordion.Root>
       </Stack>
 
