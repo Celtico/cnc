@@ -319,7 +319,7 @@ export function buildFreeParts(comp: Composition, moduleNumber: number): FreePar
       thickness: p.thickness,
       material: p.material,
       grain: p.grain === "v" ? "y" : p.grain === "none" ? "none" : "x",
-      edges: { ...NO_EDGES },
+      edges: p.edged && p.nest !== false ? { left: true, right: true, bottom: true, top: true } : { ...NO_EDGES },
       holes: w.holes,
       grooves: w.grooves,
       ...(cutouts.length ? { cutouts } : {}),

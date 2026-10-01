@@ -83,7 +83,7 @@ export function PanelHardware({ panel }: { panel: Panel }) {
           </mesh>
         </group>
       ))}
-      <BarHandle cx={handle.cx} cy={handle.cy} z={outZ} dir={outDir} len={handle.len} vertical={handle.vertical} />
+      {!panel.push && <BarHandle cx={handle.cx} cy={handle.cy} z={outZ} dir={outDir} len={handle.len} vertical={handle.vertical} />}
     </group>
   )
 }

@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { CameraPoseSchema, parseCameraPose } from "./camera"
 import { DEFAULT_JOINERY, type FreePart } from "./freePart"
 import { defaultModule, newId, type Composition, type Module, type Zone } from "./composition"
 import { MAG_OBJECTS } from "./magObjects"
@@ -110,6 +111,8 @@ export const AmbientSchema = z.object({
   wallMaterial: z.string().optional(),
   /** Material del sostre (sense, pintura blanca). */
   ceilingMaterial: z.string().optional(),
+  /** Última càmera del 3D (es desa sense tocar la data ni el desfer). Opcional. */
+  camera: CameraPoseSchema,
 })
 export type Ambient = z.infer<typeof AmbientSchema>
 
@@ -130,6 +133,7 @@ export function parseAmbient(raw: unknown): Ambient {
     ...(typeof o.floorMaterial === "string" ? { floorMaterial: o.floorMaterial } : {}),
     ...(typeof o.wallMaterial === "string" ? { wallMaterial: o.wallMaterial } : {}),
     ...(typeof o.ceilingMaterial === "string" ? { ceilingMaterial: o.ceilingMaterial } : {}),
+    ...(parseCameraPose(o.camera) ? { camera: parseCameraPose(o.camera) } : {}),
   }
 }
 

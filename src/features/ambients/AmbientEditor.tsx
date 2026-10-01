@@ -65,6 +65,7 @@ import {
   resizeComposition,
   wallLength,
   type Ambient,
+  type CameraPose,
   type AmbientItem,
   type BlockItem,
   type MaterialPref,
@@ -72,7 +73,7 @@ import {
   type Wall,
 } from "../../core/model"
 import { compositionOf, updateProjectComposition } from "../../db/compositionStore"
-import { createProject, db, renameAmbient, updateAmbient, type Project } from "../../db/db"
+import { createProject, db, renameAmbient, saveAmbientCamera, updateAmbient, type Project } from "../../db/db"
 import { DocBar, TopBarActions } from "../../components/TopBar"
 import { uniqueName } from "../../core/file/mobleFile"
 import { NewMobleGallery } from "../projects/NewMobleGallery"
@@ -196,6 +197,15 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
 
   // Desar (esperant una mica mentre s'arrossega; el que queda pendent, en sortir). Obrir-lo no el desa.
   useDebouncedSave(amb, (a) => void updateAmbient(ambientId, { data: a }))
+  // Última càmera del 3D: es desa a part (sense tocar la data ni el desfer) i el 3D hi torna en obrir-se.
+  const cameraRef = useRef(initial.camera)
+  const saveCamera = useCallback(
+    (c: CameraPose) => {
+      cameraRef.current = c
+      void saveAmbientCamera(ambientId, c)
+    },
+    [ambientId],
+  )
 
   const change = useCallback((next: Ambient, commit: boolean) => {
     setAmbState(next)
@@ -581,7 +591,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
           ) : (
             // Fons del 3D (el visor és transparent): el mateix gris que el plànol.
             <Box position="absolute" inset={0} rounded="md" overflow="hidden" borderWidth="1px" bg="bg.subtle">
-              <Ambient3D ambient={amb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} onPick={pickItem} onChange={change} snap={snapOn} dollhouse={dollhouse} shadows={shadows} ceiling={ceiling} onPoseChange={setPose} />
+              <Ambient3D ambient={amb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} onPick={pickItem} onChange={change} snap={snapOn} dollhouse={dollhouse} shadows={shadows} ceiling={ceiling} onPoseChange={setPose} initialCamera={cameraRef.current} onCameraChange={saveCamera} />
             </Box>
           )}
             {chrome}

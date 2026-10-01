@@ -1,4 +1,4 @@
-import { newId, tableModule, type Composition, type RefObject } from "./composition"
+import { DEFAULT_GRILLE, newId, tableModule, type Composition, type RefObject, type Zone } from "./composition"
 import type { FreePart } from "./freePart"
 import { compositionDims, storeBuilders as B } from "./storeCatalog"
 import type { Template } from "./templates"
@@ -83,13 +83,14 @@ const TRAV = "Travertí"
 const LINEN = "Lli blanc"
 const SAND = "Teixit sorra"
 const LEATHER = "Cuir conyac"
+const GLASS = "Vidre"
 
 // --- Constructors propis --------------------------------------------------------------------------
 
 type Orient = FreePart["orient"]
-/** Peça de CNC (tauler) a la posició (x, y, z) de la seva cantonada mínima. */
+/** Peça de CNC (tauler) a la posició (x, y, z) de la seva cantonada mínima; cantejada (no es veu l'ànima del tauler). */
 const P = (name: string, orient: Orient, material: string, w: number, h: number, t: number, x: number, y: number, z: number, group?: string): FreePart =>
-  B.part({ name, orient, material, w, h, thickness: t, x, y, z, ...(group ? { group } : {}) })
+  B.part({ name, orient, material, w, h, thickness: t, x, y, z, edged: true, ...(group ? { group } : {}) })
 /** Peça que no és de CNC (pedra, tapisseria, fusta massissa torneada…). */
 const M = (name: string, orient: Orient, material: string, w: number, h: number, t: number, x: number, y: number, z: number, group?: string): FreePart =>
   B.metal({ name, orient, material, w, h, thickness: t, x, y, z, ...(group ? { group } : {}) })
@@ -146,6 +147,9 @@ function slabChair(o: { w: number; d: number; h: number; seat: number; mat: stri
   if (o.cushion) parts.push(M("Coixí", "flat", o.cushion, o.w - 2 * t - 20, o.d - t - 40, 40, t + 10, o.seat, t + 20))
   return B.loose(parts)
 }
+
+/** Porta estriada: reixeta de ranures verticals fresades (passants) amb marge llis; obre amb frontisses. */
+const fluted = (hinge: "left" | "right"): Zone => ({ ...B.grille(hinge), front: { kind: "grille", pattern: { ...DEFAULT_GRILLE, kind: "slotsV", slotWidth: 14, slotGap: 10, margin: 40 }, mount: "hinged", hinge } })
 
 // --- Fitxes ---------------------------------------------------------------------------------------
 
@@ -367,7 +371,7 @@ const ARQ: PieceDef[] = [
       finishes: "Oli o vernís mat 5 gloss",
       combination: "Un sol material, interior igual",
       surfaces: "Continuïtat de veta de front a front (xapa casada)",
-      thickness: "Parets buides de 40 i inglet: el moble llegeix com a massís",
+      thickness: "Parets buides de 50 i inglet: el moble llegeix com a massís",
       hardware: "Cap a la vista: obertura per pressió (push) o per la junta",
       feeling: "Pes, permanència, silenci",
       quality: "Juntes de 3 mm regulars, veta casada, inglet net",
@@ -378,7 +382,7 @@ const ARQ: PieceDef[] = [
       photos: [F("01_WOW_JP_Obumex_Kitchen_System_II.jpg"), F("4327907705202-a1.webp")],
     },
     make: () =>
-      B.one(B.box("Aparador", { w: 2400, h: 720, d: 500, mat: WAL, base: B.plinth(80, 60), joint: "mitre", inset: true, hollow: 40 }, B.v([800, "auto", 800], [B.doors(1), B.drawers(3), B.doors(1)]))),
+      B.one(B.box("Aparador", { w: 2400, h: 720, d: 500, mat: WAL, base: B.plinth(80, 60), joint: "mitre", inset: true, push: true, hollow: 50 }, B.v([800, "auto", 800], [B.doors(1), B.drawers(3), B.doors(1)]))),
   },
   {
     id: "wall-bench-tv",
@@ -405,7 +409,7 @@ const ARQ: PieceDef[] = [
       photos: [F("03-Lounge-Douglas-Classic-Home-Farm-UK-John-Pawson-Photographer-Claus-Troelsgaard-John-Pawson-Furniture-Collection-04-PR.jpg")],
     },
     make: () =>
-      B.one(B.box("Moble TV", { w: 2800, h: 420, d: 450, mat: OAK, base: B.plinth(80, 60), joint: "mitre", inset: true, hollow: 50 }, B.v([800, "auto", 800], [B.drawers(1), B.open(0), B.drawers(1)]))),
+      B.one(B.box("Moble TV", { w: 2800, h: 420, d: 450, mat: OAK, base: B.plinth(80, 60), joint: "mitre", inset: true, push: true, hollow: 50 }, B.v([800, "auto", 800], [B.drawers(1), B.open(0), B.drawers(1)]))),
   },
   {
     id: "niche-library",
@@ -459,7 +463,7 @@ const ARQ: PieceDef[] = [
     },
     make: () => ({
       kind: "moble",
-      modules: [B.box("Bloc", { w: 500, h: 710, d: 760, mat: WAL, base: B.onFloor, joint: "mitre", inset: true, gapBefore: 150 }, B.drawers(3))],
+      modules: [B.box("Bloc", { w: 500, h: 710, d: 760, mat: WAL, base: B.onFloor, joint: "mitre", inset: true, push: true, gapBefore: 150 }, B.drawers(3))],
       references: [],
       parts: [P("Tauler", "flat", WAL, 1800, 800, 30, 0, 710, 0), P("Pla", "side", WAL, 740, 710, 30, 1620, 0, 30)],
     }),
@@ -513,7 +517,7 @@ const ARQ: PieceDef[] = [
       warmth: 3,
       functionality: 3,
     },
-    make: () => B.one(B.box("Tauleta", { w: 500, h: 180, d: 380, mat: WAL, base: B.hung(450), joint: "mitre", inset: true }, B.drawers(1))),
+    make: () => B.one(B.box("Tauleta", { w: 500, h: 180, d: 380, mat: WAL, base: B.hung(450), joint: "mitre", inset: true, push: true }, B.drawers(1))),
   },
   {
     id: "wall-wardrobe",
@@ -524,7 +528,7 @@ const ARQ: PieceDef[] = [
       reference: "John Pawson, Obumex, Poliform (portes a ras)",
       language: "L'armari desapareix: és una paret de fusta",
       geometry: "Pla vertical modulat per juntes",
-      proportions: "2400 × 2300 × 620; cossos de 800 (porta màxima de 2200)",
+      proportions: "2400 × 2300 × 620; tres cossos de 800 (penjador · prestatges · doble barra) tancats de dalt a baix: sis portes iguals (porta màxima de 2200)",
       materials: "Roure xapat",
       finishes: "Oli invisible",
       combination: "Un sol material",
@@ -539,7 +543,7 @@ const ARQ: PieceDef[] = [
       functionality: 5,
       photos: ["links/dinesean/dinesen-apartment-by-david-thulstrup-layers-oak-and-heartoak-invisible-oil-2-4m-300mm-19mm-interior-design-david-thulstrup-photo-eric-petschek-26.webp"],
     },
-    make: () => B.wardrobe("Armari", { bodies: ["hang", "drawers", "hang2"], bodyW: 800, h: 2300, d: 620, mat: OAK, base: B.plinth(60, 40), inset: true }),
+    make: () => B.wardrobe("Armari", { bodies: ["hang", "shelves", "hang2"], bodyW: 800, h: 2300, d: 620, mat: OAK, base: B.plinth(60, 40), inset: true, push: true }),
   },
   {
     id: "stone-console",
@@ -624,6 +628,246 @@ const ARQ: PieceDef[] = [
     },
     make: () => B.loose([M("Bloc de travertí", "flat", TRAV, 450, 450, 450, 0, 30, 0), P("Sòcol", "flat", OAK, 390, 390, 30, 30, 0, 30)]),
   },
+  {
+    id: "fluted-sideboard",
+    type: "Aparador",
+    name: "Estria",
+    summary: "Volum de noguera amb quatre portes estriades (ranures verticals fresades) sobre un sòcol en ombra",
+    study: {
+      reference: "Vincent Van Duysen (Molteni&C), De La Espada",
+      language: "Monòlit amb textura: el ritme vertical de les estries és l'únic ornament, i fa de reixeta",
+      geometry: "Prisma pur; quatre fronts iguals ratllats de dalt a baix",
+      proportions: "2200 × 700 × 480 (≈ 3:1); fronts de 550, ranures de 14 cada 24 (≈ 50 % obert); sòcol de 100 enretirat 60",
+      materials: "Noguera xapada",
+      finishes: "Oli o vernís mat",
+      combination: "Un sol material; la llum rasant dibuixa les estries",
+      surfaces: "Fresat vertical continu (ranures passants de la CNC), interior de noguera",
+      thickness: "Tapa a inglet amb els laterals; fronts de 19 amb 40 de marge llis a tot el voltant",
+      hardware: "Cap: obertura per pressió (push)",
+      feeling: "Calma rítmica, artesania de precisió",
+      quality: "Estries regulars i alineades d'un front a l'altre, junta de 3 mm, inglet net",
+      minimalism: 4,
+      sophistication: 5,
+      warmth: 5,
+      functionality: 4,
+    },
+    make: () => B.one(B.box("Aparador", { w: 2200, h: 700, d: 480, mat: WAL, base: B.plinth(100, 60), joint: "mitre", push: true }, B.v(B.auto(4), [fluted("left"), fluted("right"), fluted("left"), fluted("right")]))),
+  },
+  {
+    id: "hung-console",
+    type: "Escriptori",
+    name: "Volada",
+    summary: "Consola-escriptori penjada: un tauler gruixut de calaixos que surt de la paret",
+    study: {
+      reference: "John Pawson, Vincent Van Duysen (escriptoris penjats)",
+      language: "Una llosa volada: res toca el terra",
+      geometry: "Prisma prim i llarg penjat a la paret",
+      proportions: "1600 × 180 × 450; a 750 del terra (alçada d'escriptori), dos calaixos de 800",
+      materials: "Roure xapat",
+      finishes: "Oli blanc mat",
+      combination: "Un sol material",
+      surfaces: "Front continu partit per una sola junta",
+      thickness: "Caixa a inglet de 19: es llegeix com una llosa de 180",
+      hardware: "Cap: calaixos amb guies push i fixació oculta a la paret",
+      feeling: "Lleugeresa, ordre, espai lliure a sota",
+      quality: "Inglets, junta central, ombra sota la llosa",
+      minimalism: 5,
+      sophistication: 4,
+      warmth: 4,
+      functionality: 4,
+    },
+    make: () => B.one(B.box("Consola", { w: 1600, h: 180, d: 450, mat: OAK, base: B.hung(570), joint: "mitre", inset: true, push: true }, B.v(B.auto(2), [B.drawers(1), B.drawers(1)]))),
+  },
+  {
+    id: "bench-library",
+    type: "Banc",
+    name: "Sòcol llibreria",
+    summary: "Banc baix de parets gruixudes amb quatre nínxols per a llibres",
+    study: {
+      reference: "John Pawson (bancs d'obra), Dinesen",
+      language: "Sòcol habitable: s'hi seu a sobre i s'hi guarden llibres a sota",
+      geometry: "Prisma llarg i baix buidat en quatre nínxols iguals",
+      proportions: "2400 × 450 × 400 (1:5,3); nínxols de ≈ 560, sòcol enretirat 60",
+      materials: "Roure massís / xapat",
+      finishes: "Oli blanc o sabó",
+      combination: "Un sol material",
+      surfaces: "Parets llises; el buit dels nínxols fa el dibuix",
+      thickness: "Parets buides de 50 (sempre a inglet): gruix arquitectònic i seient ferm",
+      feeling: "Robust, càlid, part de la paret",
+      quality: "Gruix constant de totes les parets, ombra del sòcol",
+      minimalism: 5,
+      sophistication: 3,
+      warmth: 5,
+      functionality: 5,
+    },
+    make: () => B.one(B.box("Banc", { w: 2400, h: 450, d: 400, mat: OAK, base: B.plinth(80, 60), hollow: 50 }, B.v(B.auto(4), [B.open(0), B.open(0), B.open(0), B.open(0)]))),
+  },
+  {
+    id: "tall-column",
+    type: "Armari",
+    name: "Columna",
+    summary: "Armari alt de dues portes encastades de dalt a baix, sense tiradors, sobre un sòcol en ombra",
+    study: {
+      reference: "Obumex × John Pawson, Vincent Van Duysen",
+      language: "Un pany de paret que s'obre: dues juntes verticals i res més",
+      geometry: "Prisma vertical; fronts a nivell amb la caixa",
+      proportions: "1000 × 2200 × 450 (1:2,2); portes de ≈ 480 × 2070; sòcol de 100 enretirat 60",
+      materials: "Roure xapat",
+      finishes: "Oli mat",
+      combination: "Un sol material, interior igual",
+      surfaces: "Fronts encastats amb veta vertical casada",
+      thickness: "Caixa de 19 a inglet a dalt; els cantells no es veuen",
+      hardware: "Cap: frontisses ocultes i obertura per pressió",
+      feeling: "Vertical, silenciós, arquitectura",
+      quality: "Juntes regulars al voltant de les portes, veta casada",
+      minimalism: 5,
+      sophistication: 4,
+      warmth: 4,
+      functionality: 4,
+    },
+    make: () => B.one(B.box("Armari", { w: 1000, h: 2200, d: 450, mat: OAK, base: B.plinth(100, 60), joint: "mitre", inset: true, push: true }, B.v(B.auto(2), [B.door("left", 4), B.door("right", 4)]))),
+  },
+  {
+    id: "waterfall-table",
+    type: "Taula de menjador",
+    name: "Pla",
+    summary: "Tauler i dues potes de tauler sencer a inglet: la veta baixa fins a terra",
+    study: {
+      reference: "John Pawson × Dinesen, De La Espada",
+      language: "Un sol pla plegat dues vegades",
+      geometry: "U invertida; tres plans del mateix gruix",
+      proportions: "2400 × 740 × 950; potes de fondària sencera",
+      materials: "Roure massís / xapat",
+      finishes: "Oli invisible",
+      combination: "Un sol material",
+      surfaces: "Veta contínua del tauler a les potes",
+      thickness: "Tot a 30 i a inglet: cap cantell a la vista",
+      feeling: "Monumental i serè, de refectori",
+      quality: "Inglets perfectes, veta que dona la volta",
+      minimalism: 5,
+      sophistication: 4,
+      warmth: 4,
+      functionality: 4,
+    },
+    make: () => B.waterfall("Taula", { w: 2400, h: 740, d: 950, mat: OAK }),
+  },
+  {
+    id: "strata-wall",
+    type: "Sistema de paret",
+    name: "Estrat",
+    summary: "Llosa de calaixos penjada i dos prestatges volats de roure, desplaçats com estrats",
+    study: {
+      reference: "Vincent Van Duysen (Molteni&C 505), John Pawson (prestatges volats), De La Espada",
+      language: "Plans horitzontals que suren a la paret: un de gruixut (calaixos) i dos de prims (prestatges)",
+      geometry: "Tres franges horitzontals desplaçades; composició asimètrica equilibrada",
+      proportions: "2400 × 1670 × 400: llosa de 2400 × 300 a 420 del terra; prestatges de 1500 i 1200 a 1180 i 1640 (pas de 460), solapats al terç central",
+      materials: "Roure massís / xapat",
+      finishes: "Oli invisible",
+      combination: "Un sol material",
+      surfaces: "Llosa de parets buides a inglet amb tres calaixos encastats; prestatges de 30 amb el cantell a la vista",
+      thickness: "Contrast de gruixos: llosa de 300 (parets de 50) contra prestatges de 30",
+      hardware: "Calaixos push; prestatges amb ferros ocults encastats a la paret (no es veuen)",
+      feeling: "Lleugeresa, ritme, paret habitada",
+      quality: "Gruix constant de la llosa, juntes de calaix regulars, ombra sota cada pla",
+      minimalism: 5,
+      sophistication: 5,
+      warmth: 4,
+      functionality: 4,
+    },
+    make: () =>
+      B.one(B.box("Llosa de calaixos", { w: 2400, h: 300, d: 400, mat: OAK, base: B.hung(420), joint: "mitre", inset: true, push: true, hollow: 50 }, B.v(B.auto(3), [B.drawers(1), B.drawers(1), B.drawers(1)])), {
+        parts: [P("Prestatge volat", "flat", OAK, 1500, 260, 30, 0, 1180, 0, "Prestatges"), P("Prestatge volat", "flat", OAK, 1200, 260, 30, 1200, 1640, 0, "Prestatges")],
+      }),
+  },
+  {
+    id: "block-slab-island",
+    type: "Illa de cuina",
+    name: "Bloc i llosa",
+    summary: "Bloc monolític de noguera travessat per una llosa de roure que fa de taula",
+    study: {
+      reference: "Obumex × John Pawson (Kitchen System II), Vincent Van Duysen",
+      language: "Volums que s'interpenetren: un bloc alt de treball i una llosa baixa per seure",
+      geometry: "Prisma pur de 2400 × 900 × 1000 i un pla horitzontal que en surt pel cap, sostingut per un sol pla vertical",
+      proportions: "3600 en total (2:1 entre bloc i llosa); bloc a 900, llosa a 750: la diferència de 150 dibuixa l'encreuament",
+      materials: "Noguera xapada (bloc), roure massís (llosa); variant amb el bloc de travertí",
+      finishes: "Oli mat; noguera i roure del mateix to",
+      combination: "Dues fustes, una fosca i massiva i una clara i prima",
+      surfaces: "Bloc de parets buides a inglet; fronts encastats amb juntes de 3 mm; llosa llisa",
+      thickness: "Parets de 50 contra llosa de 30: el bloc pesa, la llosa vola",
+      hardware: "Cap a la vista: calaixos i portes push",
+      feeling: "Arquitectura domèstica, cuina com a escultura",
+      quality: "L'encreuament exacte dels dos volums, inglets i veta casada als fronts",
+      minimalism: 5,
+      sophistication: 5,
+      warmth: 4,
+      functionality: 5,
+      photos: [F("01_WOW_JP_Obumex_Kitchen_System_II.jpg")],
+    },
+    make: () =>
+      B.one(B.box("Bloc", { w: 2400, h: 900, d: 1000, mat: WAL, base: B.plinth(100, 80), joint: "mitre", inset: true, push: true, hollow: 50 }, B.v([800, "auto", 800], [B.drawers(3), B.doors(1), B.drawers(3)])), {
+        parts: [P("Llosa", "flat", OAK, 1200, 900, 30, 2400, 720, 50, "Llosa"), P("Pota", "side", OAK, 800, 720, 30, 3570, 0, 100, "Llosa")],
+      }),
+  },
+  {
+    id: "thread-desk",
+    type: "Escriptori",
+    name: "Fil",
+    summary: "Tauler de roure sobre dues potes de tauler, amb un calaix prim penjat a sota",
+    study: {
+      reference: "De La Espada, John Pawson, Vincent Van Duysen",
+      language: "Pòrtic de tres plans i un calaix que gairebé no hi és",
+      geometry: "U invertida oberta; un prisma prim enretirat sota el tauler",
+      proportions: "1600 × 740 × 750; calaix de 1000 × 170 a 150 del cantell (ombra), potes enretirades 80",
+      materials: "Roure massís / xapat",
+      finishes: "Oli blanc",
+      combination: "Un sol material",
+      surfaces: "Llises; el calaix a inglet i el front encastat",
+      thickness: "Tauler i potes de 30; calaix de 170 que es llegeix com una línia d'ombra",
+      hardware: "Calaix push",
+      feeling: "Lleuger, precís, d'estudi",
+      quality: "El calaix enretirat que desapareix a l'ombra, proporció tauler/potes",
+      minimalism: 5,
+      sophistication: 4,
+      warmth: 4,
+      functionality: 4,
+    },
+    make: () => ({
+      kind: "moble",
+      modules: [B.box("Calaix", { w: 1000, h: 170, d: 600, mat: OAK, base: B.hung(540), joint: "mitre", inset: true, push: true, gapBefore: 300 }, B.drawers(1))],
+      references: [],
+      parts: [P("Tauler", "flat", OAK, 1600, 750, 30, 0, 710, 0), P("Pota", "side", OAK, 650, 710, 30, 80, 0, 50), P("Pota", "side", OAK, 650, 710, 30, 1490, 0, 50)],
+    }),
+  },
+  {
+    id: "chamber-wardrobe",
+    type: "Armari",
+    name: "Cambra",
+    summary: "Paret d'armaris de dalt a baix amb un nínxol obert al mig que trenca la superfície",
+    study: {
+      reference: "John Pawson (cases de Home Farm), Obumex, Poliform (portes a ras)",
+      language: "Revestiment de fusta excavat: el buit és l'únic dibuix d'una paret contínua",
+      geometry: "Pla vertical de 2700; tres cossos i, al central, un nínxol horitzontal",
+      proportions: "2700 × 2300 × 620; cossos de 850 · 1000 · 850; nínxol de 600 a 900 del terra (alçada de tocador)",
+      materials: "Roure xapat",
+      finishes: "Oli invisible",
+      combination: "Un sol material, interior del nínxol igual",
+      surfaces: "Fronts encastats, veta vertical; nínxol amb un prestatge gruixut a ras; a dalt, prestatges buits de 50 (1000 de llum)",
+      thickness: "Fronts a nivell de la caixa; prestatge de 50 al nínxol",
+      hardware: "Push i frontisses ocultes",
+      feeling: "Ordre, calma, el buit com a lloc",
+      quality: "Juntes alineades amb el nínxol, veta casada de dalt a baix",
+      minimalism: 5,
+      sophistication: 5,
+      warmth: 4,
+      functionality: 5,
+    },
+    make: () => {
+      const o = { h: 2300, d: 620, mat: OAK, base: B.plinth(60, 40), inset: true, push: true }
+      const [left, right] = B.wardrobe("Armari", { bodies: ["hang", "hang2"], bodyW: 850, ...o }).modules
+      const mid = B.box("Nínxol", { ...o, w: 1000 }, B.h([900, 600, "auto"], [B.drawers(2), B.fixed(1, { thickness: 50, flush: true }), { ...B.doors(0), shelves: { n: 2, adjustable: false, thickness: 50 } }]))
+      return { kind: "armari", modules: [{ ...left!, name: "Cos 1" }, mid, { ...right!, name: "Cos 3" }], references: [] }
+    },
+  },
 ]
 
 // --- 2. Minimalisme comercial -------------------------------------------------------------------
@@ -637,7 +881,7 @@ const COM: PieceDef[] = [
   {
     id: "m330-library",
     type: "Llibreria",
-    name: M330,
+    name: `${M330} paret`,
     summary: "Sistema de paret sobre la retícula de 330: portes, calaixos i prestatges",
     study: {
       family: M330,
@@ -661,7 +905,7 @@ const COM: PieceDef[] = [
       finishOptions: "Lacats mats de la carta, roure, noguera, freixe tenyit",
     },
     make: () => {
-      const o = { h: 2010, d: 346, mat: ANTH, front: WAL, base: B.plinth(30, 0) }
+      const o = { h: 2010, d: 346, mat: ANTH, front: WAL, base: B.plinth(30, 0), push: true }
       return B.row([
         B.box("Columna 1", { ...o, w: 660 }, B.h([690, "auto"], [B.doors(1), B.open(3)])),
         B.box("Columna 2", { ...o, w: 990 }, B.h([360, "auto"], [B.drawers(1), B.fixed(4, { thickness: 50 })])),
@@ -673,7 +917,7 @@ const COM: PieceDef[] = [
   {
     id: "m330-tv",
     type: "Moble TV",
-    name: M330,
+    name: `${M330} baix`,
     summary: "Tres mòduls de 990 sobre sòcol: calaixos i nínxol per als aparells",
     study: {
       family: M330,
@@ -697,14 +941,14 @@ const COM: PieceDef[] = [
       finishOptions: "Lacats, roure, noguera",
     },
     make: () => {
-      const o = { w: 990, h: 390, d: 474, mat: ANTH, front: WAL, base: B.plinth(30, 0) }
+      const o = { w: 990, h: 390, d: 474, mat: ANTH, front: WAL, base: B.plinth(30, 0), push: true }
       return B.row([B.box("Mòdul 1", o, B.drawers(1)), B.box("Mòdul 2", o, B.open(0)), B.box("Mòdul 3", o, B.drawers(1))])
     },
   },
   {
     id: "m330-sideboard",
     type: "Aparador",
-    name: M330,
+    name: `${M330} bufet`,
     summary: "1980 de tres cossos de 660 sobre potes primes de ferro",
     study: {
       family: M330,
@@ -728,7 +972,7 @@ const COM: PieceDef[] = [
       finishOptions: "Lacats, roure, noguera; potes ferro o bronze",
     },
     make: () =>
-      B.sideboard("Aparador", { w: 1980, h: 570, d: 474, mat: GREIGE, front: OAK, base: B.legs(150) }, [["auto", B.doors(1)], [660, B.drawers(3)], ["auto", B.doors(1)]], (o) => B.ironLegs(0, o.w, 0, o.d, 150, "post")),
+      B.sideboard("Aparador", { w: 1980, h: 570, d: 474, mat: GREIGE, front: OAK, base: B.legs(150), push: true }, [["auto", B.doors(1)], [660, B.drawers(3)], ["auto", B.doors(1)]], (o) => B.ironLegs(0, o.w, 0, o.d, 150, "post")),
   },
   {
     id: "m330-divider",
@@ -774,7 +1018,7 @@ const COM: PieceDef[] = [
       combination: "Lacat + pedra + metall",
       surfaces: "Fronts llisos, tapa de pedra",
       thickness: "Pedra de 30 sobre caixa de 19",
-      hardware: "Potes a la vista, tirador ocult",
+      hardware: "Potes a la vista; fronts push sense tirador",
       feeling: "Elegància comercial, hotel de luxe",
       quality: "Combinació de materials, llum interior (a la referència: LED i mirall)",
       minimalism: 4,
@@ -786,14 +1030,14 @@ const COM: PieceDef[] = [
       photos: ["pdf/20250929-33828-PORRO_schede-tecniche_GALLERY-LOW-CUPBOARD.pdf"],
     },
     make: () => {
-      const c = B.sideboard("Aparador", { w: 2480, h: 974, d: 471, mat: GREIGE, base: B.legs(150), top: { kind: "none" } }, [["auto", B.door("left", 2)], ["auto", B.door("right", 2)], [760, B.h([360, "auto"], [B.drawers(2), B.open(1)])], ["auto", B.door("left", 2)], ["auto", B.door("right", 2)]], (o) => B.ironLegs(0, o.w, 0, o.d, 150, "sled"))
+      const c = B.sideboard("Aparador", { w: 2480, h: 974, d: 471, mat: GREIGE, base: B.legs(150), top: { kind: "none" }, push: true }, [["auto", B.door("left", 2)], ["auto", B.door("right", 2)], [760, B.drawers(3)], ["auto", B.door("left", 2)], ["auto", B.door("right", 2)]], (o) => B.ironLegs(0, o.w, 0, o.d, 150, "sled"))
       return { ...c, parts: [...(c.parts ?? []), M("Tapa de travertí", "flat", TRAV, 2480, 471, 30, 0, 150 + 974, 0)] }
     },
   },
   {
     id: "gallery-console",
     type: "Consola",
-    name: GAL,
+    name: `${GAL} consola`,
     summary: "Caixa de dos calaixos sobre potes, tapa de travertí",
     study: {
       family: GAL,
@@ -806,7 +1050,7 @@ const COM: PieceDef[] = [
       combination: "Lacat + pedra + metall",
       surfaces: "Llises",
       thickness: "Pedra de 30",
-      hardware: "Potes a la vista",
+      hardware: "Potes a la vista; calaixos push",
       feeling: "Elegant, lleugera",
       quality: "Coherència amb la família",
       minimalism: 4,
@@ -817,14 +1061,14 @@ const COM: PieceDef[] = [
       finishOptions: "Com Galeria",
     },
     make: () => {
-      const c = B.sideboard("Consola", { w: 1400, h: 330, d: 400, mat: GREIGE, base: B.legs(420), top: { kind: "none" } }, [["auto", B.drawers(1)], ["auto", B.drawers(1)]], (o) => B.ironLegs(0, o.w, 0, o.d, 420, "post"))
+      const c = B.sideboard("Consola", { w: 1400, h: 330, d: 400, mat: GREIGE, base: B.legs(420), top: { kind: "none" }, push: true }, [["auto", B.drawers(1)], ["auto", B.drawers(1)]], (o) => B.ironLegs(0, o.w, 0, o.d, 420, "post"))
       return { ...c, parts: [...(c.parts ?? []), M("Tapa de travertí", "flat", TRAV, 1400, 400, 30, 0, 750, 0)] }
     },
   },
   {
     id: "gallery-night",
     type: "Tauleta de nit",
-    name: GAL,
+    name: `${GAL} nit`,
     summary: "Dos calaixos sobre potes amb tapa de travertí",
     study: {
       family: GAL,
@@ -848,7 +1092,7 @@ const COM: PieceDef[] = [
       finishOptions: "Com Galeria",
     },
     make: () => {
-      const c = B.sideboard("Tauleta", { w: 550, h: 300, d: 420, mat: GREIGE, base: B.legs(200), top: { kind: "none" } }, [["auto", B.drawers(2)]], (o) => B.ironLegs(0, o.w, 0, o.d, 200, "post"))
+      const c = B.sideboard("Tauleta", { w: 550, h: 300, d: 420, mat: GREIGE, base: B.legs(200), top: { kind: "none" }, push: true }, [["auto", B.drawers(2)]], (o) => B.ironLegs(0, o.w, 0, o.d, 200, "post"))
       return { ...c, parts: [...(c.parts ?? []), M("Tapa de travertí", "flat", TRAV, 550, 420, 20, 0, 500, 0)] }
     },
   },
@@ -881,14 +1125,14 @@ const COM: PieceDef[] = [
     },
     make: () =>
       B.row([
-        B.box("Volum ple", { w: 1300, h: 495, d: 550, mat: ASH, base: B.onFloor, joint: "mitre", inset: true }, B.v(B.auto(2), [B.drawers(1), B.drawers(1)])),
+        B.box("Volum ple", { w: 1300, h: 495, d: 550, mat: ASH, base: B.onFloor, joint: "mitre", inset: true, push: true }, B.v(B.auto(2), [B.drawers(1), B.drawers(1)])),
         B.box("Volum obert", { w: 1220, h: 495, d: 550, mat: ASH, base: B.onFloor, joint: "mitre" }, B.open(0)),
       ]),
   },
   {
     id: "twin-coffee",
     type: "Taula de centre",
-    name: DU,
+    name: `${DU} centre`,
     summary: "U a inglet, oberta per davant i per darrere",
     study: {
       family: DU,
@@ -939,12 +1183,12 @@ const COM: PieceDef[] = [
       sizes: "1800 · 2200 · 2600",
       finishOptions: "Freixe bru, negre, roure",
     },
-    make: () => B.one(B.box("Moble TV", { w: 2200, h: 400, d: 450, mat: ASH, base: B.hung(300), joint: "mitre", inset: true }, B.v(B.auto(3), [B.drawers(1), B.open(0), B.drawers(1)]))),
+    make: () => B.one(B.box("Moble TV", { w: 2200, h: 400, d: 450, mat: ASH, base: B.hung(300), joint: "mitre", inset: true, push: true }, B.v(B.auto(3), [B.drawers(1), B.open(0), B.drawers(1)]))),
   },
   {
     id: "linea-table",
     type: "Taula de menjador",
-    name: LIN,
+    name: `${LIN} 240`,
     summary: "Tauler de noguera sobre dues columnes de tauler",
     study: {
       family: LIN,
@@ -1008,7 +1252,7 @@ const COM: PieceDef[] = [
   {
     id: "linea-chair",
     type: "Cadira",
-    name: LIN,
+    name: `${LIN} cadira`,
     summary: "Cadira de noguera de plans amb coixí de cuir",
     study: {
       family: LIN,
@@ -1036,7 +1280,7 @@ const COM: PieceDef[] = [
   {
     id: "linea-bench",
     type: "Banc",
-    name: LIN,
+    name: `${LIN} banc`,
     summary: "Banc de noguera sobre patins de ferro amb coixí de cuir",
     study: {
       family: LIN,
@@ -1067,7 +1311,7 @@ const COM: PieceDef[] = [
   {
     id: "linea-desk",
     type: "Escriptori",
-    name: LIN,
+    name: `${LIN} estudi`,
     summary: "Tauler de noguera sobre dos laterals i faldó",
     study: {
       family: LIN,
@@ -1100,7 +1344,7 @@ const COM: PieceDef[] = [
   {
     id: "linea-bed",
     type: "Llit",
-    name: LIN,
+    name: `${LIN} 160`,
     summary: "Llit amb capçal entapissat i plataforma de noguera flotant",
     study: {
       family: LIN,
@@ -1128,7 +1372,7 @@ const COM: PieceDef[] = [
   {
     id: "linea-chest",
     type: "Calaixera",
-    name: LIN,
+    name: `${LIN} sis`,
     summary: "Calaixera de sis calaixos sobre patins",
     study: {
       family: LIN,
@@ -1151,12 +1395,12 @@ const COM: PieceDef[] = [
       sizes: "900 · 1200 · 1600",
       finishOptions: "Noguera, roure, lacats",
     },
-    make: () => B.sideboard("Calaixera", { w: 1200, h: 550, d: 500, mat: WAL, base: B.legs(200) }, [["auto", B.drawers(3)], ["auto", B.drawers(3)]], (o) => B.ironLegs(0, o.w, 0, o.d, 200, "sled")),
+    make: () => B.sideboard("Calaixera", { w: 1200, h: 550, d: 500, mat: WAL, base: B.legs(200), push: true }, [["auto", B.drawers(3)], ["auto", B.drawers(3)]], (o) => B.ironLegs(0, o.w, 0, o.d, 200, "sled")),
   },
   {
     id: "linea-wardrobe",
     type: "Armari",
-    name: LIN,
+    name: `${LIN} armari`,
     summary: "Armari de quatre cossos lacat greige",
     study: {
       family: LIN,
@@ -1184,7 +1428,7 @@ const COM: PieceDef[] = [
   {
     id: "linea-vitrine",
     type: "Vitrina",
-    name: LIN,
+    name: `${LIN} vitrina`,
     summary: "Vitrina de noguera amb prestatges de vidre i portes a baix",
     study: {
       family: LIN,
@@ -1207,12 +1451,12 @@ const COM: PieceDef[] = [
       sizes: "600 · 800 (dues per a 1600)",
       finishOptions: "Noguera, roure, lacats",
     },
-    make: () => B.one(B.box("Vitrina", { w: 800, h: 1900, d: 450, mat: WAL, base: B.plinth(60, 20) }, B.h([800, "auto"], [B.doors(1), B.open()])), { parts: [1250, 1580].map((y) => B.glassShelf(19, 762, 400, y)) }),
+    make: () => B.one(B.box("Vitrina", { w: 800, h: 1900, d: 450, mat: WAL, base: B.plinth(60, 20), push: true }, B.h([800, "auto"], [B.doors(1), B.open()])), { parts: [1250, 1580].map((y) => B.glassShelf(19, 762, 400, y)) }),
   },
   {
     id: "linea-side",
     type: "Taula auxiliar",
-    name: LIN,
+    name: `${LIN} pedra`,
     summary: "Auxiliar rodona de pedra sobre peu",
     study: {
       family: LIN,
@@ -1236,6 +1480,158 @@ const COM: PieceDef[] = [
       finishOptions: "Marbres, travertí; peu ferro o bronze",
     },
     make: () => B.legTable("Auxiliar", { w: 500, h: 520, d: 500, mat: TRAV, legs: "pedestal", shape: B.oval(500, 500), stone: true }),
+  },
+  {
+    id: "m330-media",
+    type: "Moble TV",
+    name: `${M330} mur`,
+    summary: "Paret de TV de la retícula de 330: dues columnes, baix de calaixos i un prestatge pont que emmarca la tele",
+    study: {
+      family: M330,
+      reference: "Porro System (Piero Lissoni), Poliform Wall System, Molteni&C 505",
+      language: "Composició de sistema: columnes que emmarquen el buit de la tele",
+      geometry: "Retícula ortogonal; dos volums verticals i un d'horitzontal",
+      proportions: "2970 × 2010 × 474: columnes de 660, baix de 1650 × 360 (calaix · nínxol · calaix de 550) i prestatge pont a 1880: la tele (fins a 65″) queda emmarcada",
+      materials: "Lacat antracita i noguera",
+      finishes: "Lacat mat, noguera oliada",
+      combination: "Estructura fosca, fronts i prestatges de fusta",
+      surfaces: "Llises; nínxol central per als aparells",
+      thickness: "Caixes de 19, prestatge pont de 30",
+      hardware: "Frontisses ocultes i fronts push, com tota la família",
+      feeling: "Ordre, tot al seu lloc, de catàleg",
+      quality: "Alineació de juntes i de prestatges amb la retícula",
+      minimalism: 4,
+      sophistication: 4,
+      warmth: 3,
+      functionality: 5,
+      sizes: "Amplada 2640 · 2970 · 3300 (columnes de 660 o 990); alçada 2010 o 2340",
+      finishOptions: "Lacats mats de la carta, roure, noguera, freixe tenyit",
+    },
+    make: () => {
+      const o = { h: 2010, d: 346, mat: ANTH, front: WAL, base: B.plinth(30, 0), push: true }
+      const col = (n: number) => B.box(`Columna ${n}`, { ...o, w: 660 }, B.h([690, "auto"], [B.doors(1), B.open(3)]))
+      return B.row([col(1), B.box("Baix", { ...o, w: 1650, h: 360, d: 474 }, B.v(B.auto(3), [B.drawers(1), B.open(0), B.drawers(1)])), col(2)], {
+        parts: [P("Prestatge pont", "flat", WAL, 1610, 250, 30, 680, 1880, 0)],
+      })
+    },
+  },
+  {
+    id: "twin-night",
+    type: "Tauleta de nit",
+    name: `${DU} nit`,
+    summary: "Tauleta penjada a inglet: calaix push a baix i nínxol obert a dalt",
+    study: {
+      family: DU,
+      reference: "Porro Twin (Dordoni Studio), Molteni&C",
+      language: "La U de la família en petit: ple a baix, buit a dalt",
+      geometry: "Cub allargat penjat, partit per un pla horitzontal",
+      proportions: "500 × 360 × 400; a 300 del terra; calaix i nínxol de la mateixa alçada",
+      materials: "Freixe xapat",
+      finishes: "Tenyit mat",
+      combination: "Un sol material",
+      surfaces: "Veta que dona la volta pels inglets; front encastat",
+      thickness: "19 a inglet: sense cantells",
+      hardware: "Push",
+      feeling: "Lleuger, net, de terra lliure",
+      quality: "Inglets, junta regular del calaix",
+      minimalism: 5,
+      sophistication: 4,
+      warmth: 3,
+      functionality: 4,
+      sizes: "500 · 600 d'amplada; penjada o sobre el terra",
+      finishOptions: "Freixe bru, freixe negre, roure",
+    },
+    make: () => B.one(B.box("Tauleta", { w: 500, h: 360, d: 400, mat: ASH, base: B.hung(300), joint: "mitre", inset: true, push: true }, B.h(B.auto(2), [B.drawers(1), B.open(0)]))),
+  },
+  {
+    id: "linea-fluted",
+    type: "Aparador",
+    name: `${LIN} estria`,
+    summary: "Aparador de noguera sobre patins de ferro: dues portes estriades i tres calaixos",
+    study: {
+      family: LIN,
+      reference: "Poliform (Jean-Marie Massaud), Minotti, Molteni&C",
+      language: "La família Línia amb textura: estries verticals que fan de reixeta",
+      geometry: "Prisma horitzontal sobre una base de ferro prima",
+      proportions: "1800 × 750 × 480 sobre potes de 200: tres cossos de 600",
+      materials: "Noguera xapada i ferro negre",
+      finishes: "Noguera oliada, ferro pintat mat",
+      combination: "Fusta càlida i metall fosc",
+      surfaces: "Fronts estriats (ranures passants de la CNC) i fronts llisos de calaix",
+      thickness: "Caixa de 19, patins de 30 × 20",
+      hardware: "Push als fronts",
+      feeling: "Elegant, contemporani, càlid",
+      quality: "Estries regulars, juntes alineades, potes primes",
+      minimalism: 4,
+      sophistication: 4,
+      warmth: 4,
+      functionality: 4,
+      sizes: "1800 · 2400 (quatre cossos)",
+      finishOptions: "Noguera, roure fumat, lacat de la carta; potes negres o bronze",
+    },
+    make: () => B.sideboard("Aparador", { w: 1800, h: 750, d: 480, mat: WAL, base: B.legs(200), push: true }, [["auto", fluted("left")], ["auto", fluted("right")], ["auto", B.drawers(3)]], (o) => B.ironLegs(0, o.w, 0, o.d, 200, "sled")),
+  },
+  {
+    id: "gallery-tv",
+    type: "Moble TV",
+    name: `${GAL} TV`,
+    summary: "Moble TV baix lacat sobre patins de ferro, amb tapa de travertí i nínxol central",
+    study: {
+      family: GAL,
+      reference: "Porro Gallery (Buratti), Minotti, Molteni&C",
+      language: "La família Galeria a escala de saló: horitzontal, sobre un peu mínim",
+      geometry: "Prisma baix elevat; nínxol central i dos calaixos",
+      proportions: "2400 × 580 × 471 (la fondària de la família): calaixos de 800, nínxol de 800 i patins de 150",
+      materials: "MDF lacat greige, travertí, ferro negre",
+      finishes: "Lacat mat, pedra apomassada, ferro pintat",
+      combination: "Lacat + pedra + metall",
+      surfaces: "Fronts llisos push, tapa de pedra a ras",
+      thickness: "Pedra de 30 sobre caixa de 19; patins de 30 × 20",
+      hardware: "Push; patins a la vista",
+      feeling: "Elegància de hotel, lleuger",
+      quality: "Coherència amb la família, pedra a ras, potes primes",
+      minimalism: 4,
+      sophistication: 5,
+      warmth: 3,
+      functionality: 4,
+      sizes: "1800 · 2400 · 3000",
+      finishOptions: "Com Galeria: lacats, fustes; tapa de marbre, travertí o fusta",
+    },
+    make: () => {
+      const c = B.sideboard("Moble TV", { w: 2400, h: 400, d: 471, mat: GREIGE, base: B.legs(150), top: { kind: "none" }, push: true }, [["auto", B.drawers(1)], [800, B.open(0)], ["auto", B.drawers(1)]], (o) => B.ironLegs(0, o.w, 0, o.d, 150, "sled"))
+      return { ...c, parts: [...(c.parts ?? []), M("Tapa de travertí", "flat", TRAV, 2400, 471, 30, 0, 550, 0)] }
+    },
+  },
+  {
+    id: "linea-island",
+    type: "Illa de vestidor",
+    name: `${LIN} illa`,
+    summary: "Illa de vestidor de noguera: dotze calaixos push sota una tapa de vidre",
+    study: {
+      family: LIN,
+      reference: "Poliform (Senzafine, illes de vestidor), Molteni&C Gliss Master",
+      language: "Bloc de calaixos com a peça central del vestidor",
+      geometry: "Prisma baix de quatre cares iguals, tres columnes de quatre calaixos",
+      proportions: "1800 × 940 × 600; calaixos de 600 × ≈ 200; sòcol de 80 enretirat 40",
+      materials: "Noguera xapada, vidre",
+      finishes: "Noguera oliada, vidre fumat (a la referència)",
+      combination: "Fusta i vidre",
+      surfaces: "Fronts encastats a inglet, tapa de vidre de 10",
+      thickness: "Caixa de 19 a inglet; vidre de 10 que deixa veure la fusta",
+      hardware: "Push",
+      feeling: "Suite d'hotel, ordre",
+      quality: "Juntes regulars a les tres columnes, inglets",
+      minimalism: 4,
+      sophistication: 5,
+      warmth: 4,
+      functionality: 5,
+      sizes: "1200 · 1800 · 2400 (dues a quatre columnes)",
+      finishOptions: "Noguera, roure fumat, lacats; tapa de vidre, cuir o pedra",
+    },
+    make: () =>
+      B.one(B.box("Illa", { w: 1800, h: 860, d: 600, mat: WAL, base: B.plinth(80, 40), joint: "mitre", inset: true, push: true }, B.v(B.auto(3), [B.drawers(4), B.drawers(4), B.drawers(4)])), {
+        parts: [M("Tapa de vidre", "flat", GLASS, 1800, 600, 10, 0, 940, 0)],
+      }),
   },
 ]
 

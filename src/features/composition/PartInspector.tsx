@@ -156,6 +156,15 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
             <IconChoice label="Veta" hideLabel value={p.grain ?? "u"} options={GRAIN} onChange={(g) => update({ grain: g === "u" ? undefined : g })} />
           </FormRow>
         )}
+        {cnc && p.nest !== false && (
+          <FormRow label="Cantell">
+            <Switch.Root size="sm" pt="6px" checked={!!p.edged} onCheckedChange={(e) => update({ edged: e.checked ? true : undefined })}>
+              <Switch.HiddenInput />
+              <Switch.Control />
+              <Switch.Label fontSize="sm">Als quatre costats</Switch.Label>
+            </Switch.Root>
+          </FormRow>
+        )}
         {cnc && flatPack && (
           <FormRow label="Encaixos">
             <Switch.Root size="sm" pt="6px" disabled={p.nest === false} checked={p.joints !== false && p.nest !== false} onCheckedChange={(e) => update({ joints: e.checked ? undefined : false })}>

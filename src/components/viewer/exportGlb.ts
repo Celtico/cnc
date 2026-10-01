@@ -92,7 +92,7 @@ const METAL = new MeshStandardMaterial({ color: 0xb9bdc2, metalness: 0.85, rough
 
 /** Tirador de barra als fronts (el mateix criteri que `PanelHardware` del visor), en m. */
 function handleMeshes(p: Panel): Mesh[] {
-  if (p.role !== "door" && p.role !== "drawerFront" && p.role !== "flap") return []
+  if ((p.role !== "door" && p.role !== "drawerFront" && p.role !== "flap") || p.push) return []
   const L = p.length, W = p.width, T = p.thickness
   const cups = p.holes.filter((h) => h.tag === "hinge")
   const inner = cups[0]?.face === "B" ? 0 : T

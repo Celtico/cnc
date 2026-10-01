@@ -57,6 +57,8 @@ export const FreePartSchema = z.object({
   joints: z.boolean().optional(),
   /** Veta al llarg de u (per defecte), de v o sense. */
   grain: z.enum(["u", "v", "none"]).optional(),
+  /** Cantell als quatre costats (tauler xapat o lacat que es veu): no es veu l'ànima del tauler. */
+  edged: z.boolean().optional(),
 })
 export type FreePart = z.infer<typeof FreePartSchema>
 

@@ -193,6 +193,8 @@ export const PanelSchema = z.object({
   assembly: z.string().optional(),
   /** Cantells tallats a 45° (unió a inglet); la cara llarga és la de fora del moble. */
   mitres: z.array(EdgeSideSchema).optional(),
+  /** Front sense tirador (obertura per pressió, `fronts.handles = "none"`): ni forats ni barra al 3D. */
+  push: z.boolean().optional(),
   /** Número de mòdul (1..n) dins de la composició, per a les refs del taller. */
   module: z.number().int().positive().optional(),
   placement: PlacementSchema,

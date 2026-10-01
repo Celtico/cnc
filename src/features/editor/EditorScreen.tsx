@@ -48,8 +48,8 @@ import { RenderDialog, type SceneGetter } from "../../components/viewer/render/R
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
-import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, partBox, CompositionSchema, type Composition, type FreePart, type ModelObject, type Module, type Panel, type RefObject, type Zone } from "../../core/model"
-import { updateProjectComposition } from "../../db/compositionStore"
+import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, partBox, CompositionSchema, type CameraPose, type Composition, type FreePart, type ModelObject, type Module, type Panel, type RefObject, type Zone } from "../../core/model"
+import { saveProjectCamera, updateProjectComposition } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
 import { ElevationEditor } from "../composition/ElevationEditor"
@@ -201,6 +201,15 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const [exploded, setExploded] = useState(false)
   // Tornar a enquadrar la càmera (editar ja no la mou).
   const [fitKey, setFitKey] = useState(0)
+  // Última càmera del 3D: es desa a part (sense «Modificat» ni desfer) i el visor hi torna en obrir-se.
+  const cameraRef = useRef(initial.camera)
+  const saveCamera = useCallback(
+    (c: CameraPose) => {
+      cameraRef.current = c
+      void saveProjectCamera(projectId, c)
+    },
+    [projectId],
+  )
   // El botó d'enquadrar surt marcat mentre la càmera és a l'enquadrament.
   const [framed, setFramed] = useState(true)
   const [showHoles, setShowHoles] = useState(false)
@@ -1106,7 +1115,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
         {moduleWarnings.length > 0 && (
           <PanelSection id="warnings" title="Avisos de fusteria" icon={LuTriangleAlert} badge={moduleWarnings.length} badgePalette="orange">
             {moduleWarnings.map((w, i) => (
-              <Alert.Root key={i} status={w.code === "material-heat" || w.code === "mitre" || (w.code === "inset" && w.message.startsWith("Fronts")) ? "info" : "warning"} size="sm">
+              <Alert.Root key={i} status={w.code === "material-heat" || w.code === "mitre" || w.code === "push" || (w.code === "inset" && w.message.startsWith("Fronts")) ? "info" : "warning"} size="sm">
                 <Alert.Indicator />
                 <Alert.Content>
                   <Alert.Description>
@@ -1254,6 +1263,8 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
             onSelectRef={(id) => select(id.startsWith("part:") ? { kind: "part", id: id.slice(5) } : { kind: "ref", id })}
             fitKey={fitKey}
             onFramedChange={setFramed}
+            initialCamera={cameraRef.current}
+            onCameraChange={saveCamera}
             onMoveRef={(id, pos) => (id.startsWith("part:") ? movePart(id.slice(5), pos) : moveRef(id, pos))}
             hardware={hardware}
             onSceneAccess={registerScene}

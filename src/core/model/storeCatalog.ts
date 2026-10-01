@@ -73,6 +73,8 @@ interface BoxOpts {
   base?: Carcass["base"]
   joint?: "mitre"
   inset?: boolean
+  /** Fronts sense tirador (obertura per pressió). */
+  push?: boolean
   hollow?: number
   top?: Carcass["top"]
   back?: Carcass["back"]
@@ -99,7 +101,8 @@ function box(name: string, o: BoxOpts, root: Zone): Module {
     ...(o.sides ? { sides: o.sides } : {}),
   })
   const withRoot = { ...m, root, gapBefore: o.gapBefore ?? 0 }
-  return o.inset ? { ...withRoot, fronts: { ...withRoot.fronts, style: "inset" } } : withRoot
+  if (!o.inset && !o.push) return withRoot
+  return { ...withRoot, fronts: { ...withRoot.fronts, ...(o.inset ? { style: "inset" as const } : {}), ...(o.push ? { handles: "none" as const } : {}) } }
 }
 
 const part = (p: Omit<FreePart, "id">): FreePart => ({ id: newId("p"), ...p })
@@ -465,7 +468,7 @@ function bookcase(name: string, o: { cols: number; colW: number; h: number; d: n
 }
 
 /** Armari de cossos (penjador, doble barra, calaixos i prestatges). */
-function wardrobe(name: string, o: { bodies: ("hang" | "hang2" | "drawers" | "shelves")[]; bodyW?: number; h?: number; d?: number; mat: string; front?: string; base?: Carcass["base"]; inset?: boolean }): Composition {
+function wardrobe(name: string, o: { bodies: ("hang" | "hang2" | "drawers" | "shelves")[]; bodyW?: number; h?: number; d?: number; mat: string; front?: string; base?: Carcass["base"]; inset?: boolean; push?: boolean }): Composition {
   const H = o.h ?? 2200
   const W = o.bodyW ?? 800
   const zone = (k: string): Zone => {
@@ -475,7 +478,7 @@ function wardrobe(name: string, o: { bodies: ("hang" | "hang2" | "drawers" | "sh
     if (k === "drawers") return h([700, "auto"], [drawers(3), doors(3)])
     return doors(5)
   }
-  const ms = o.bodies.map((k, i) => box(o.bodies.length > 1 ? `${name} ${i + 1}` : name, { w: W, h: H, d: o.d ?? 600, mat: o.mat, front: o.front, base: o.base ?? plinth(80, 30), inset: o.inset }, zone(k)))
+  const ms = o.bodies.map((k, i) => box(o.bodies.length > 1 ? `${name} ${i + 1}` : name, { w: W, h: H, d: o.d ?? 600, mat: o.mat, front: o.front, base: o.base ?? plinth(80, 30), inset: o.inset, push: o.push }, zone(k)))
   return { kind: "armari", modules: ms, references: [] }
 }
 
@@ -882,4 +885,4 @@ export const STORE_CATALOG: StoreCategory[] = [
 export const STORE_TEMPLATES: Template[] = STORE_CATALOG.flatMap((c) => c.types.flatMap((t) => t.items))
 
 /** Constructors del catàleg, per a altres plantilles (mobles de les escenes de revista). */
-export const storeBuilders = { box, drawers, door, doors, flap, open, fixed, panel, v, h, auto, onFloor, plinth, legs, hung, part, metal, kitchen, bookcase, wardrobe, sideboard, one, row, stoneTop, legTable, loose, waterfall, ironLegs, oval, glassShelf }
+export const storeBuilders = { box, drawers, door, doors, flap, open, fixed, panel, grille, v, h, auto, onFloor, plinth, legs, hung, part, metal, kitchen, bookcase, wardrobe, sideboard, one, row, stoneTop, legTable, loose, waterfall, ironLegs, oval, glassShelf }

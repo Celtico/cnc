@@ -2,6 +2,7 @@ import { z } from "zod"
 import { DEFAULT_CABINET, type CabinetParams } from "./cabinet"
 import { BPtSchema, ProfileNodeSchema } from "./panel"
 import { flatten, profileToOutline, sampleProfile, toNodes, type BPt } from "./polygon"
+import { CameraPoseSchema } from "./camera"
 import { FreePartSchema, JoinerySchema, PART_AXES as PART_AXES_C, tidyPart, type FreePart } from "./freePart"
 
 /**
@@ -259,6 +260,8 @@ export const ModuleSchema = z.object({
      * cantells dels laterals. Encastats: dins de la llum, a nivell amb el davant de la caixa.
      */
     style: z.enum(["overlay", "inset"]).optional(),
+    /** Tiradors: barra (per defecte, dos forats Ø5) o cap (obertura per pressió: cal un ferratge push). */
+    handles: z.enum(["bar", "none"]).optional(),
   }),
   hardware: HardwareSchema,
   extras: CarcassExtrasSchema,
@@ -464,6 +467,8 @@ export const CompositionSchema = z.object({
    * els dels ambients. Sense (o buit), els de Preferències › Visor 3D.
    */
   scene: z.object({ floor: z.string().optional(), wall: z.string().optional() }).optional(),
+  /** Última càmera del visor 3D (es desa sense marcar el moble com a modificat). Opcional. */
+  camera: CameraPoseSchema,
 })
 export type Composition = z.infer<typeof CompositionSchema>
 

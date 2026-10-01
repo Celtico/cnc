@@ -17,7 +17,7 @@ import { type ViewName } from "./viewNames"
 export type { ViewName } from "./viewNames"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
-import { flatten, modelFootprint, partSize, partsBox, type FreePart, type Hole, type MaterialPref, type ModelObject, type Panel, type RefObject } from "../../core/model"
+import { flatten, modelFootprint, partSize, partsBox, type CameraPose, type FreePart, type Hole, type MaterialPref, type ModelObject, type Panel, type RefObject } from "../../core/model"
 import { modelInstance, onModelsLoaded, releaseModelGpu } from "./models3d"
 import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
@@ -133,6 +133,10 @@ export interface CabinetViewerProps {
   fitKey?: number
   /** Avisa si la càmera és a l'enquadrament automàtic (true) o l'usuari l'ha moguda / el moble ha canviat de mida (false). */
   onFramedChange?: (framed: boolean) => void
+  /** Càmera desada (vista 3D): en muntar-se s'hi torna en lloc d'enquadrar. Només es llegeix en muntar-se. */
+  initialCamera?: CameraPose
+  /** La càmera de la vista 3D s'ha quedat quieta (1 s després de moure-la o d'enquadrar): per desar-la. */
+  onCameraChange?: (camera: CameraPose) => void
 }
 
 export function CabinetViewer({
@@ -174,6 +178,8 @@ export function CabinetViewer({
   highlightZone,
   fitKey = 0,
   onFramedChange,
+  initialCamera,
+  onCameraChange,
   sceneFinish,
 }: CabinetViewerProps) {
   // Per distingir un clic a l'espai buit d'un gir de càmera (arrossegar).
@@ -441,7 +447,7 @@ export function CabinetViewer({
           resolution={q.contactResolution}
         />
       )}
-      <CameraRig size={size} view={view} fitKey={fitKey} onFramedChange={onFramedChange} />
+      <CameraRig size={size} view={view} fitKey={fitKey} onFramedChange={onFramedChange} initialCamera={initialCamera} onCameraChange={onCameraChange} />
       {onCapture && <Capture onCapture={onCapture} gridRef={gridRef} />}
       {onSceneAccess && <SceneAccess onAccess={onSceneAccess} />}
     </Canvas>
@@ -499,7 +505,7 @@ const VIEW_DIR: Record<ViewName, [number, number, number]> = {
  * Càmera: s'enquadra en muntar-se, en canviar de vista, en redimensionar el visor i quan
  * canvia `fitKey`. Editar el moble (mides, mòduls, objectes) no la mou: es queda on l'has deixat.
  */
-function CameraRig({ size, view, fitKey, onFramedChange }: { size: CabinetViewerProps["size"]; view: ViewName; fitKey: number; onFramedChange?: (framed: boolean) => void }) {
+function CameraRig({ size, view, fitKey, onFramedChange, initialCamera, onCameraChange }: { size: CabinetViewerProps["size"]; view: ViewName; fitKey: number; onFramedChange?: (framed: boolean) => void; initialCamera?: CameraPose; onCameraChange?: (camera: CameraPose) => void }) {
   const controls = useRef<OrbitControlsImpl>(null)
   const { camera, size: viewport } = useThree()
   const w = size.width * S
@@ -511,6 +517,28 @@ function CameraRig({ size, view, fitKey, onFramedChange }: { size: CabinetViewer
   const ortho = view !== "3d"
   // Enquadrat = la càmera és on l'ha deixat l'últim enquadrament i el moble té la mateixa mida.
   const fittedSize = useRef("")
+  // Càmera desada que s'ha restaurat (fins que s'enquadri o es canviï de vista) i els disparadors ja vistos
+  // (vista | fitKey): un de nou és de l'usuari; els altres reenquadraments són de redimensionar el visor.
+  const restored = useRef<CameraPose | null>(null)
+  const fitTriggered = useRef(new Set<string>())
+  const reportAfterGoal = useRef(false)
+  const reportTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const reportRef = useRef(onCameraChange)
+  useEffect(() => {
+    reportRef.current = onCameraChange
+  })
+  // Es llegeix 1 s després de deixar-la anar (l'esmorteïment encara la mou una mica).
+  const scheduleReport = () => {
+    clearTimeout(reportTimer.current)
+    reportTimer.current = setTimeout(() => {
+      const t = controls.current?.target
+      if (!t || !("fov" in camera) || ("isOrthographicCamera" in camera && camera.isOrthographicCamera)) return
+      const r = (v: number) => Math.round(v * 10000) / 10000
+      const pose: CameraPose = { position: [r(camera.position.x), r(camera.position.y), r(camera.position.z)], target: [r(t.x), r(t.y), r(t.z)], fov: camera.fov as number }
+      if ([...pose.position, ...pose.target].every(Number.isFinite)) reportRef.current?.(pose)
+    }, 1000)
+  }
+  useEffect(() => () => clearTimeout(reportTimer.current), [])
   const framedRef = useRef(true)
   const setFramed = (v: boolean) => {
     if (framedRef.current === v) return
@@ -541,6 +569,24 @@ function CameraRig({ size, view, fitKey, onFramedChange }: { size: CabinetViewer
       zoom = Math.min((viewport.width - 40) / (ew + 0.5), (viewport.height - 120) / (eh + 0.5))
     }
     const pos = new Vector3((dir[0] / len) * dist, targetY + (dir[1] / len) * dist, (dir[2] / len) * dist)
+    // Càmera desada: en obrir-lo (vista 3D) es torna on es va deixar. Mentre no s'enquadri ni es canviï de vista,
+    // redimensionar el visor (la disposició es mou en obrir-se) no la treu d'allà.
+    const restore = restored.current ?? (!ortho && initialCamera && !fitTriggered.current.size ? initialCamera : null)
+    const trigger = `${view}|${fitKey}`
+    const userFit = fitTriggered.current.size > 0 && !fitTriggered.current.has(trigger)
+    fitTriggered.current.add(trigger)
+    if (restore && !userFit && !ortho) {
+      restored.current = restore
+      goal.current = null
+      camera.position.set(...restore.position)
+      controls.current?.target.set(...restore.target)
+      controls.current?.update()
+      fittedSize.current = `${size.width}x${size.height}x${size.depth}`
+      setFramed(camera.position.distanceTo(pos) < 0.005 && Math.abs(restore.target[0]) + Math.abs(restore.target[2]) + Math.abs(restore.target[1] - targetY) < 0.005)
+      return
+    }
+    restored.current = null
+    reportAfterGoal.current = userFit && !ortho
     goal.current = { pos, zoom }
     fittedSize.current = `${size.width}x${size.height}x${size.depth}`
     setFramed(true)
@@ -560,7 +606,14 @@ function CameraRig({ size, view, fitKey, onFramedChange }: { size: CabinetViewer
       camera.updateProjectionMatrix()
     }
     controls.current?.update()
-    if (camera.position.distanceTo(g.pos) < 0.002 && (!("isOrthographicCamera" in camera) || Math.abs(camera.zoom - g.zoom) < 0.5)) goal.current = null
+    if (camera.position.distanceTo(g.pos) < 0.002 && (!("isOrthographicCamera" in camera) || Math.abs(camera.zoom - g.zoom) < 0.5)) {
+      goal.current = null
+      // «Enquadrar» (o tornar a la vista 3D): la càmera nova també es desa.
+      if (reportAfterGoal.current) {
+        reportAfterGoal.current = false
+        scheduleReport()
+      }
+    }
   })
 
   return (
@@ -568,7 +621,11 @@ function CameraRig({ size, view, fitKey, onFramedChange }: { size: CabinetViewer
       {ortho ? <OrthographicCamera makeDefault near={-50} far={100} position={[0, targetY, 5]} zoom={80} /> : <PerspectiveCamera makeDefault fov={38} near={0.01} far={100} position={[1.4, 1.1, 1.9]} />}
       <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={12} maxPolarAngle={Math.PI * 0.55} enableRotate={!ortho} onStart={() => {
           goal.current = null
+          restored.current = null
           setFramed(false)
+          clearTimeout(reportTimer.current)
+        }} onEnd={() => {
+          if (!ortho) scheduleReport()
         }} />
     </>
   )

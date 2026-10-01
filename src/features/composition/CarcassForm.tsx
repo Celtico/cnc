@@ -166,6 +166,17 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
             onChange={(style) => onChange({ ...module, fronts: { ...module.fronts, style: style === "overlay" ? undefined : style } })}
           />
         </FormRow>
+        <FormRow label="Tiradors" help="Sense tirador: obertura per pressió (push); cal el ferratge a cada front.">
+          <ChoiceChips
+            label="Tiradors"
+            value={module.fronts.handles ?? "bar"}
+            options={[
+              { id: "bar", label: "Barra" },
+              { id: "none", label: "Sense (push)" },
+            ]}
+            onChange={(handles) => onChange({ ...module, fronts: { ...module.fronts, handles: handles === "bar" ? undefined : handles } })}
+          />
+        </FormRow>
 
         {/* No dins d'un Field.Root: el Field dona el mateix id als dos interruptors i els dos
             rètols activaven el mateix (no es podia treure el lateral dret). */}

@@ -1,4 +1,4 @@
-import { CompositionSchema, cabinetToComposition, normalizeComposition, type Composition } from "../core/model"
+import { CompositionSchema, cabinetToComposition, normalizeComposition, type CameraPose, type Composition } from "../core/model"
 import { panelBox } from "../core/build/buildComposition"
 import { migrateCableHoles } from "../core/build/refCuts"
 import { db, safeParams, type Project } from "./db"
@@ -27,7 +27,25 @@ export function compositionOf(project: Pick<Project, "params" | "composition" | 
 
 export async function updateProjectComposition(id: number, composition: Composition): Promise<void> {
   // Marca de «modificat»: en esborrar l'historial s'avisa que es perdrien els canvis.
-  await db.projects.update(id, { composition, updatedAt: Date.now(), edited: true })
+  // La càmera és la desada (`saveProjectCamera`): la de l'estat de l'editor pot ser la d'obrir-lo.
+  await db.transaction("rw", db.projects, async () => {
+    const camera = (await db.projects.get(id))?.composition?.camera ?? composition.camera
+    const { camera: _c, ...rest } = composition
+    await db.projects.update(id, { composition: camera ? { ...rest, camera } : rest, updatedAt: Date.now(), edited: true })
+  })
+}
+
+/**
+ * Desa la càmera del visor 3D a la composició **sense tocar `updatedAt` ni `edited`**: moure la càmera no és
+ * modificar el moble (no puja a l'historial, no surt «Modificat» ni es refà la miniatura).
+ */
+export async function saveProjectCamera(id: number, camera: CameraPose): Promise<void> {
+  await db.projects
+    .where("id")
+    .equals(id)
+    .modify((p) => {
+      if (p.composition) p.composition = { ...p.composition, camera }
+    })
 }
 
 // --- Plantilles de l'usuari (antigues) ------------------------------------------------

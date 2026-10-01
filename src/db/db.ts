@@ -234,7 +234,26 @@ export async function createAmbient(name: string, data: unknown): Promise<number
 }
 
 export async function updateAmbient(id: number, patch: Partial<Pick<AmbientRow, "name" | "data">>): Promise<void> {
-  await db.ambients.update(id, { ...patch, updatedAt: Date.now() })
+  // La càmera és la desada (`saveAmbientCamera`): la de l'estat (i del desfer) pot ser la d'obrir-lo.
+  await db.transaction("rw", db.ambients, async () => {
+    let next = patch
+    if (patch.data && typeof patch.data === "object") {
+      const { camera: own, ...rest } = patch.data as { camera?: unknown }
+      const camera = ((await db.ambients.get(id))?.data as { camera?: unknown } | undefined)?.camera ?? own
+      next = { ...patch, data: camera ? { ...rest, camera } : rest }
+    }
+    await db.ambients.update(id, { ...next, updatedAt: Date.now() })
+  })
+}
+
+/** Desa la càmera del 3D a l'ambient **sense tocar `updatedAt`** (moure la càmera no és modificar-lo). */
+export async function saveAmbientCamera(id: number, camera: unknown): Promise<void> {
+  await db.ambients
+    .where("id")
+    .equals(id)
+    .modify((a) => {
+      if (a.data && typeof a.data === "object") a.data = { ...(a.data as object), camera }
+    })
 }
 
 export async function deleteAmbient(id: number): Promise<void> {

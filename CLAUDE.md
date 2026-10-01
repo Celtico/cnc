@@ -263,7 +263,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   seients, taules, llits, quadres/miralls/cortines, llums, plantes, catifes i tèxtils, electrodomèstics, blocs) i les
   plantilles per a botigues de mobles per categoria. La cerca obre les categories que coincideixen.
 - **Catàleg per categories** (`AMBIENT_CATEGORIES`, `AmbientTemplate.category`: salons, cuines, menjadors,
-  dormitoris, infantils, vestidors, rebedors, despatxos, banys, exteriors i les dues **«Col·lecció · …»**: 11 escenes
+  dormitoris, infantils, vestidors, rebedors, despatxos, banys, exteriors i les dues **«Col·lecció · …»**: 15 escenes
   amb totes les peces de les col·leccions, `COLLECTION_SCENES`, refs `col:<id>`), un acordió per categoria; la
   cerca també busca la categoria i obre les que coincideixen.
 - **Miniatures 3D a les targetes** (per decisió de l'usuari, en lloc dels dibuixos de línies): **sense cap 3D viu per
@@ -325,6 +325,10 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   dibuixen s'alliberen. La càmera mira el punt de l'obertura (o d'«Enquadrar»), no segueix la caixa de l'ambient.
   **Interior** (Opcions de vista, `LuEye`, `eyePose`): entra a l'habitació, càmera anivellada a 1,35 m (verticals rectes) al costat de la
   paret de davant mirant la del fons, angular (fov 55; «Enquadrar» torna a 40), per als renders de revista.
+  **La càmera del 3D es recorda per ambient** (`Ambient.camera`, amb `pose` = «home»/«eye» si era la d'Enquadrar o
+  d'Interior): es desa 1 s després de moure-la, d'«Enquadrar» o d'«Interior» amb `saveAmbientCamera` (sense `updatedAt`
+  ni desfer; `updateAmbient` conserva la desada) i en obrir el 3D s'hi torna; el botó surt marcat només si és la mateixa
+  d'ara. La vista del plànol no es recorda.
   La pestanya Plànol · 3D es recorda (`AMBIENT_TAB_KEY`); els ambients creats del catàleg s'obren al 3D.
 - **Fons del 3D dels ambients**: el visor és transparent i a l'editor hi ha el gris del plànol (`bg.subtle`); el render fa servir el clar de sempre (`scene.userData.renderBackground`, `sceneData.ts`).
 - **3D** (`Ambient3D`): terra i parets amb `surfaceMaterial` (textura a mida real), mobles i blocs
@@ -371,7 +375,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   en obrir l'app (l'estat es recorda durant la sessió, `mobles:gallery`): **Historial**, **Projectes**,
   **Catàleg** (les plantilles per a botigues de mobles) i **Col·leccions de mobles** (`projects/CollectionsSection`,
   `LuLibrary`: `FURNITURE_COLLECTIONS` a `core/model/collections.ts`, dues col·leccions —Minimalisme arquitectònic i
-  Minimalisme comercial, per famílies— de peces paramètriques amb una **fitxa d'estudi** (`PieceStudy`: referència,
+  Minimalisme comercial, per famílies; 25 + 25 peces, fronts push on la fitxa diu «sense tirador»— de peces paramètriques amb una **fitxa d'estudi** (`PieceStudy`: referència,
   llenguatge, geometria, proporcions, materials, acabats, gruixos, ferratges, sensació, relació amb l'espai, graus 1–5,
   qualitat, fotos de la carpeta `referencies`); tocar una peça obre la fitxa (calaix) i «Crear el moble»; la cerca
   també mira la fitxa; `collections.test.ts`) (les «teves plantilles» i les «de l'app» ja no hi són: les teves
@@ -501,6 +505,12 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   - **Càmera**: s'enquadra en obrir, canviar de vista, redimensionar o amb el botó «Enquadrar»
     (càmera de vídeo, `LuVideo`); editar no la mou. El botó surt **marcat** mentre la càmera és a
     l'enquadrament (`onFramedChange`): es desmarca en orbitar/fer zoom/desplaçar o si el moble canvia de mida. Opcions de vista: popover a l'ordinador, calaix de baix al mòbil.
+    **Es recorda per moble** (`Composition.camera`, `CameraPose` a `core/model/camera.ts`: posició, punt mirat i fov en
+    metres del visor; opcional, una de no vàlida es descarta): 1 s després de deixar d'orbitar o d'«Enquadrar» (només a la
+    vista 3D) es desa amb `saveProjectCamera`, **sense tocar `updatedAt` ni `edited`** (no surt «Modificat», no puja a
+    l'historial, no refà la miniatura) i fora del desfer; `updateProjectComposition` conserva la desada. En obrir-lo (o
+    tornar a la pestanya 3D) `CabinetViewer initialCamera` hi torna en lloc d'enquadrar; redimensionar no la treu fins que
+    s'orbita, s'enquadra o es canvia de vista. Va al `.moble`.
   - **Enganxar objectes** (`RefObject.onFloor`, `onWall`, `anchorRef`): botons «Al terra» (y = 0,
     al 3D llisca pel terra) i «A la paret» (z = 0, penjat: al 3D es mou per la paret); tots dos
     alhora només de costat. El camp fixat queda desactivat; `anchorRef` s'aplica a l'inspector,

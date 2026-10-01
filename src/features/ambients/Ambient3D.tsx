@@ -11,7 +11,7 @@ import { onModelsLoaded, releaseModelGpu } from "../../components/viewer/models3
 import { SceneAccess, StudioEnvironment } from "../../components/viewer/SceneHelpers"
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
-import { rad, snapToWalls, wallLength, wallOpenings, wallSegments, type Ambient, type MaterialPref, type Opening } from "../../core/model"
+import { rad, sameCameraPose, snapToWalls, wallLength, wallOpenings, wallSegments, type Ambient, type CameraPose, type MaterialPref, type Opening } from "../../core/model"
 import type { ItemGeometry } from "./ambientData"
 import { ambientBox, eyePose, snapGrid } from "./planGeom"
 
@@ -35,7 +35,13 @@ export function Ambient3D({
   shadows = true,
   ceiling: showCeiling = true,
   onPoseChange,
+  initialCamera,
+  onCameraChange,
 }: {
+  /** Càmera desada: en obrir el 3D s'hi torna en lloc d'enquadrar (només es llegeix en muntar-se). */
+  initialCamera?: CameraPose
+  /** La càmera s'ha quedat quieta (1 s després de moure-la, d'«Enquadrar» o d'«Interior»): per desar-la. */
+  onCameraChange?: (camera: CameraPose) => void
   /** La càmera és a la posició d'«Enquadrar» (`home`) o d'«Interior» (`eye`), o l'usuari l'ha moguda (`null`): els
       botons d'Opcions de vista surten marcats. */
   onPoseChange?: (pose: "home" | "eye" | null) => void
@@ -90,7 +96,7 @@ export function Ambient3D({
       <directionalLight position={[cx + 4, 7, cz + 3]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-span} shadow-camera-right={span} shadow-camera-top={span} shadow-camera-bottom={-span} shadow-bias={-0.0004} />
       <Room ambient={ambient} geos={geos} materials={materials} box={box} selectedIds={selectedIds} onSelect={onSelect} onPick={onPick} onChange={onChange} snap={snap} dollhouse={dollhouse} showCeiling={showCeiling} />
       {/* Com al visor de l'editor: esmorteïment, botó dret o dos dits per desplaçar, roda per apropar. */}
-      <Controls target={[cx, 0.9, cz]} home={[cx + span * 0.5, span * 1.1 + 2, cz + span * 1.4 + 2]} fitSignal={fitSignal} eye={eyePose(ambient)} eyeSignal={eyeSignal} maxDistance={span * 4 + 10} onPoseChange={onPoseChange} />
+      <Controls target={[cx, 0.9, cz]} home={[cx + span * 0.5, span * 1.1 + 2, cz + span * 1.4 + 2]} fitSignal={fitSignal} eye={eyePose(ambient)} eyeSignal={eyeSignal} maxDistance={span * 4 + 10} onPoseChange={onPoseChange} initialCamera={initialCamera} onCameraChange={onCameraChange} />
       {onSceneAccess && <SceneAccess onAccess={onSceneAccess} />}
     </Canvas>
   )
@@ -101,7 +107,7 @@ const RENDER_BG = "#e9e6e1"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 
-function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance, onPoseChange }: { target: [number, number, number]; home: [number, number, number]; fitSignal: number; eye: ReturnType<typeof eyePose>; eyeSignal: number; maxDistance: number; onPoseChange?: (pose: "home" | "eye" | null) => void }) {
+function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance, onPoseChange, initialCamera, onCameraChange }: { target: [number, number, number]; home: [number, number, number]; fitSignal: number; eye: ReturnType<typeof eyePose>; eyeSignal: number; maxDistance: number; onPoseChange?: (pose: "home" | "eye" | null) => void; initialCamera?: CameraPose; onCameraChange?: (camera: CameraPose) => void }) {
   const ref = useRef<OrbitControlsImpl>(null)
   const camera = useThree((s) => s.camera) as PerspectiveCamera
   const pose = (pos: [number, number, number], tgt: [number, number, number], fov: number) => {
@@ -111,32 +117,86 @@ function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance, onPose
     ref.current?.target.set(...tgt)
     ref.current?.update()
   }
+  // Desar la càmera 1 s després que es quedi quieta (l'esmorteïment encara la mou una mica en deixar-la anar).
+  const reportRef = useRef(onCameraChange)
+  useEffect(() => {
+    reportRef.current = onCameraChange
+  })
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  // Botó marcat ara (es desa amb la càmera).
+  const mark = useRef<"home" | "eye" | null>(null)
+  const setMark = (m: "home" | "eye" | null) => {
+    mark.current = m
+    onPoseChange?.(m)
+  }
+  const scheduleReport = () => {
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => {
+      const t = ref.current?.target
+      if (!t) return
+      const r = (v: number) => Math.round(v * 10000) / 10000
+      const c: CameraPose = { position: [r(camera.position.x), r(camera.position.y), r(camera.position.z)], target: [r(t.x), r(t.y), r(t.z)], fov: camera.fov }
+      if (mark.current) c.pose = mark.current
+      if ([...c.position, ...c.target].every(Number.isFinite)) reportRef.current?.(c)
+    }, 1000)
+  }
+  useEffect(() => () => clearTimeout(timer.current), [])
   const first = useRef(true)
   useEffect(() => {
     if (first.current) {
       // El punt on es mira només es posa en obrir (i amb «Enquadrar»): si seguís la caixa de l'ambient,
       // moure un element cap a fora mouria la càmera.
       first.current = false
+      // Càmera desada: es torna on es va deixar (marcada si és la d'«Enquadrar» o la d'«Interior»).
+      if (initialCamera) {
+        const fov = initialCamera.fov ?? 40
+        pose(initialCamera.position, initialCamera.target, fov)
+        // Marcada només si és la mateixa d'ara (si l'habitació ha canviat, ja no ho és). L'alçada de l'«Interior»
+        // no compta: OrbitControls l'aixeca una mica (angle màxim).
+        const [px, , pz] = initialCamera.position
+        const isHome = sameCameraPose(initialCamera, { position: home, target, fov: 40 })
+        const isEye = initialCamera.pose === "eye" && !!eye && sameCameraPose({ ...initialCamera, position: [px, eye.pos[1], pz] }, { position: eye.pos, target: eye.target, fov: 55 })
+        setMark(isHome ? "home" : isEye ? "eye" : null)
+        return
+      }
       ref.current?.target.set(...target)
       ref.current?.update()
-      onPoseChange?.("home")
+      setMark("home")
       return
     }
     pose(home, target, 40)
-    onPoseChange?.("home")
+    setMark("home")
+    scheduleReport()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitSignal])
   // Interior: angular (com les fotos de revista) i des de dins; orbitar hi gira al voltant del punt mirat.
   useEffect(() => {
     if (eyeSignal && eye) {
       pose(eye.pos, eye.target, 55)
-      onPoseChange?.("eye")
+      setMark("eye")
+      scheduleReport()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eyeSignal])
   // Orbitar, desplaçar o fer zoom (l'usuari) treu la marca dels botons.
-  return <OrbitControls ref={ref} onStart={() => onPoseChange?.(null)} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={maxDistance} maxPolarAngle={Math.PI / 2 - 0.02} />
+  return (
+    <OrbitControls
+      ref={ref}
+      onStart={() => {
+        setMark(null)
+        clearTimeout(timer.current)
+      }}
+      onEnd={scheduleReport}
+      makeDefault
+      enableDamping
+      dampingFactor={0.12}
+      minDistance={0.3}
+      maxDistance={maxDistance}
+      maxPolarAngle={Math.PI / 2 - 0.02}
+    />
+  )
 }
+
 
 /** Contorn de l'element seleccionat (`strong`) o del que és sota el ratolí, com a l'editor. */
 function ItemFrame({ ambient, geos, id, strong }: { ambient: Ambient; geos: Map<string, ItemGeometry | null>; id: string | null; strong?: boolean }) {

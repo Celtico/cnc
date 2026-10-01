@@ -46,6 +46,7 @@ export interface BuildWarning {
     | "cable-hole"
     | "ref-cut"
     | "mitre"
+    | "push"
     | "inset"
     | "hollow"
     | "table"
@@ -932,6 +933,14 @@ class Builder {
   }
 
   /** Peça de front vertical (porta, reixeta, fix): cara A cap a dins, x local = alçada. */
+  /** Tirador del front; sense tiradors (`handles: "none"`), cap forat i un avís (una vegada) del ferratge push. */
+  private handle(p: Panel, cx: number, cy: number, along: "x" | "y"): void {
+    if (this.m.fronts.handles !== "none") return addHandle(p, cx, cy, along)
+    p.push = true
+    if (!this.warnings.some((w) => w.code === "push"))
+      this.warnings.push({ code: "push", message: "Fronts sense tirador: cada porta, calaix o abatible necessita un ferratge d'obertura per pressió (push, p. ex. Tip-On o Push-to-open); als calaixos, guies amb push." })
+  }
+
   private frontPanel(id: string, name: string, label: string, role: PanelRole, x0: number, y0: number, w: number, h: number): Panel {
     const { m, d } = this
     return this.add(
@@ -994,7 +1003,7 @@ class Builder {
       const door = this.frontPanel(id, name, label, "door", x0, ter.y0, w, doorH)
       this.addCups(door, doorH, hinge, w, rowYs, ter.y0, zone.id)
       // Tirador al costat contrari de les frontisses, vertical i a mitja alçada.
-      addHandle(door, doorH / 2, hinge === "left" ? w - 40 : 40, "x")
+      this.handle(door, doorH / 2, hinge === "left" ? w - 40 : 40, "x")
     }
     if (front.mode === "single") {
       make(`door${suffix}`, "porta", "Porta", ter.x0, r(ter.x1 - ter.x0), front.hinge)
@@ -1016,7 +1025,7 @@ class Builder {
       flap.holes.push({ x, y, diameter: 8, depth: 12, face: "A", tag: "flap" })
     }
     // Tirador al cantell que obre (el contrari del gir), horitzontal i centrat.
-    addHandle(flap, front.dir === "down" ? along - 40 : 40, across / 2, "y")
+    this.handle(flap, front.dir === "down" ? along - 40 : 40, across / 2, "y")
   }
 
   private buildGrille(
@@ -1157,7 +1166,7 @@ class Builder {
         ...(mL || mR || mT || mB ? { mitres: [...(mL ? (["left"] as const) : []), ...(mR ? (["right"] as const) : []), ...(mT ? (["bottom"] as const) : []), ...(mB ? (["top"] as const) : [])] } : {}),
       })
       // Tirador centrat (x local = amplada, y local = cap avall).
-      addHandle(frontPanel, fw / 2, fh / 2, "x")
+      this.handle(frontPanel, fw / 2, fh / 2, "x")
       // Caixa centrada al front però sempre dins de la llum (el front del primer i de l'últim
       // calaix sobresurt per sobre de la tapa o la base i la caixa hi toparia).
       const by0 = Math.max(y + (fh - (fh - hw.boxDrop)) / 2, rect.y0 + 1)
