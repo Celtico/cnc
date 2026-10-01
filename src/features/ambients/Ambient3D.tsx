@@ -68,16 +68,15 @@ export function Ambient3D({
       shadows={shadows ? "soft" : false}
       dpr={[1, 2]}
       camera={{ fov: 40, position: [cx + span * 0.5, span * 1.1 + 2, cz + span * 1.4 + 2], near: 0.05, far: 500 }}
-      gl={{ preserveDrawingBuffer: true }}
+      gl={{ preserveDrawingBuffer: true, alpha: true }}
       onCreated={({ gl }) => {
         gl.toneMapping = NeutralToneMapping
       }}
       style={{ touchAction: "none" }}
       onPointerMissed={(e) => e.button === 0 && onSelect?.(null)}
     >
-      {/* Fons del visor gris fosc (com Blender o Cinema 4D: el que es mira destaca). El render per CPU fa servir
-          el d'abans (`renderBackground`), així no canvia. */}
-      <color attach="background" args={[VIEW_BG]} />
+      {/* Sense fons: el visor és transparent i es veu el color de l'app (fosc o clar segons el tema). El render per
+          CPU fa servir el clar de sempre (`renderBackground`), així no canvia. */}
       <StudioEnvironment intensity={0.55} />
       <hemisphereLight args={["#ffffff", "#b9ad9c", 0.35]} />
       <directionalLight position={[cx + 4, 7, cz + 3]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-span} shadow-camera-right={span} shadow-camera-top={span} shadow-camera-bottom={-span} shadow-bias={-0.0004} />
@@ -89,8 +88,7 @@ export function Ambient3D({
   )
 }
 
-/** Fons del visor dels ambients i el del render (el clar de sempre). */
-const VIEW_BG = "#2b2b2d"
+/** Fons del render dels ambients (el clar de sempre; el visor és transparent). */
 const RENDER_BG = "#e9e6e1"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
