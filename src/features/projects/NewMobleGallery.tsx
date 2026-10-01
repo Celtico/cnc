@@ -1,7 +1,6 @@
 import { Accordion, Badge, CloseButton, Input, InputGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { LuFolders, LuHistory, LuSearch } from "react-icons/lu"
-import { CompositionThumb } from "../../components/CompositionThumb"
 import { SnapshotThumb } from "../../components/SnapshotThumb"
 import { useSettings } from "../settings/SettingsContext"
 import { requestTemplateThumb, templateThumb } from "./projectThumbs"
@@ -26,7 +25,7 @@ export function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?
   }, [t.id, comp, settings.materials, thumb])
   return (
     <GalleryCard
-      thumb={thumb ? <SnapshotThumb src={thumb} /> : <CompositionThumb composition={comp} />}
+      thumb={<SnapshotThumb src={thumb} />}
       title={title ?? t.name}
       kicker={kicker}
       description={t.description}

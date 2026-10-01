@@ -266,7 +266,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   (`ambients/ambientThumbs.ts`): terra, parets (sense les de davant, com la casa de nines) i els mobles i objectes de debò,
   vist de dalt i de davant; els de l'usuari es desen (`AmbientRow.thumb`, `thumbAt`, `thumbV`) i els del catàleg, en
   memòria (amb les plantilles de les seves referències). Tot passa per la mateixa cua (`enqueueThumb`).
-  Les dels ambients, **sense fons** (PNG transparent: al voltant de l'habitació es veu la targeta); les dels mobles, JPEG. `SnapshotThumb` (2:1, no retalla, sense fons); sense foto encara, el dibuix de sempre. Cal `scene.updateMatrixWorld(true)` abans de
+  Les dels ambients, **sense fons** (PNG transparent: al voltant de l'habitació es veu la targeta); les dels mobles, JPEG. `SnapshotThumb` (2:1, no retalla, sense fons); sense foto encara, el mateix requadre 2:1 buit (res de dibuixos de línies d'una altra mida: la graella no salta mentre es van fent). Cal `scene.updateMatrixWorld(true)` abans de
   mesurar la caixa (les peces porten la matriu feta).
 - **Grups (carpetes)** a l'historial de Mobles, Objectes i Ambients
   (`Project.folder`, `AmbientRow.folder`, `UserTemplate.folder`; `setProjectsFolder`, `setAmbientsFolder`,

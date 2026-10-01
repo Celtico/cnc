@@ -1,7 +1,6 @@
 import { Badge, Button, IconButton, Menu, Portal, Text } from "@chakra-ui/react"
 import { LuCheck, LuCopy, LuEllipsis, LuFolderInput, LuHouse, LuPencil, LuPlus, LuSave, LuTrash2 } from "react-icons/lu"
 import { useEffect } from "react"
-import { CompositionThumb } from "../../components/CompositionThumb"
 import { CardDate, GalleryCard } from "./GalleryCard"
 import { SnapshotThumb } from "../../components/SnapshotThumb"
 import { useSettings } from "../settings/SettingsContext"
@@ -53,7 +52,7 @@ export function ProjectCard({
   }, [project, settings.materials])
   return (
     <GalleryCard
-      thumb={project.thumb ? <SnapshotThumb src={project.thumb} /> : <CompositionThumb composition={comp} />}
+      thumb={<SnapshotThumb src={project.thumb} />}
       title={project.name}
       description={
         <>

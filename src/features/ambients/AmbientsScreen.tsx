@@ -1,9 +1,9 @@
 import { Accordion, Badge, Button, CloseButton, Dialog, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { LuFolders, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { uniqueName } from "../../core/file/mobleFile"
-import { AMBIENT_CATEGORIES, AMBIENT_TEMPLATES, EMPTY_AMBIENT, footprintCorners, parseAmbient, roomWalls, wallCorners, type Ambient, type AmbientTemplate } from "../../core/model"
+import { AMBIENT_CATEGORIES, AMBIENT_TEMPLATES, EMPTY_AMBIENT, parseAmbient, roomWalls, type Ambient, type AmbientTemplate } from "../../core/model"
 import { createAmbient, db, deleteAmbient, duplicateAmbient, setAmbientsFolder, type AmbientRow } from "../../db/db"
 import { useSettings } from "../settings/SettingsContext"
 import { useLiveQuery } from "../../db/useLiveQuery"
@@ -11,7 +11,7 @@ import { FoldTitle } from "../projects/NewMobleGallery"
 import { GALLERY_COLS, fold, useSessionList } from "../projects/galleryGrid"
 import { ClearHistory } from "../projects/ClearHistory"
 import { FolderedGrid, MoveToFolderDialog } from "../projects/Folders"
-import { createAmbientFromTemplate, templatePreview } from "./fromTemplate"
+import { createAmbientFromTemplate } from "./fromTemplate"
 import { AMBIENT_TAB_KEY } from "./planGeom"
 import { PageHeader } from "../../components/PageHeader"
 import { CardDate, GalleryCard } from "../projects/GalleryCard"
@@ -91,7 +91,7 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
         const a = parseAmbient(r.data)
         return (
           <GalleryCard
-            thumb={<RowThumb row={r} a={a} />}
+            thumb={<RowThumb row={r} />}
             title={r.name}
             description={`${a.walls.length} ${a.walls.length === 1 ? "paret" : "parets"}`}
             tags={<ElementsTag n={a.items.length} />}
@@ -306,8 +306,7 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
 
 /** Targeta del catàleg: miniatura del plànol moblat (es calcula en obrir el catàleg). */
 function CatalogCard({ t, busy, onPick }: { t: AmbientTemplate; busy: boolean; onPick: () => void }) {
-  const preview = useMemo(() => templatePreview(t), [t])
-  // Foto 3D de l'escena amb els mobles de debò (feta fora de pantalla, en memòria); mentrestant, el plànol.
+  // Foto 3D de l'escena amb els mobles de debò (feta fora de pantalla, en memòria); mentrestant, el requadre buit.
   const { settings } = useSettings()
   const [thumb, setThumb] = useState(() => catalogThumb(t.id))
   useEffect(() => {
@@ -315,7 +314,7 @@ function CatalogCard({ t, busy, onPick }: { t: AmbientTemplate; busy: boolean; o
   }, [t, thumb, settings.materials])
   return (
     <GalleryCard
-      thumb={thumb ? <SnapshotThumb src={thumb} /> : <AmbientThumb a={preview} />}
+      thumb={<SnapshotThumb src={thumb} />}
       title={t.name}
       description={t.description}
       tags={<ElementsTag n={t.items.length} />}
@@ -334,29 +333,11 @@ function ElementsTag({ n }: { n: number }) {
   )
 }
 
-/** Miniatura: parets i elements (els mobles, amb una petjada aproximada). */
-function AmbientThumb({ a }: { a: Ambient }) {
-  const polys = [
-    ...a.walls.map((w) => ({ pts: wallCorners(w), wall: true })),
-    ...a.items.map((it) => ({ pts: footprintCorners(it.x, it.y, it.kind === "block" ? it.w : 800, it.kind === "block" ? it.d : 500, it.rot), wall: false })),
-  ]
-  const xs = polys.flatMap((p) => p.pts.map((q) => q[0])), ys = polys.flatMap((p) => p.pts.map((q) => q[1]))
-  const x0 = Math.min(0, ...xs), y0 = Math.min(0, ...ys), x1 = Math.max(1000, ...xs), y1 = Math.max(1000, ...ys)
-  const pad = Math.max(x1 - x0, y1 - y0) * 0.06
-  return (
-    <svg viewBox={`${x0 - pad} ${y0 - pad} ${x1 - x0 + 2 * pad} ${y1 - y0 + 2 * pad}`} style={{ width: "100%", height: 96, background: "var(--chakra-colors-bg-subtle)", borderRadius: 6 }} aria-hidden>
-      {polys.map((p, i) => (
-        <polygon key={i} points={p.pts.map((q) => q.join(",")).join(" ")} fill={p.wall ? "var(--chakra-colors-fg)" : "var(--chakra-colors-wood-muted)"} stroke={p.wall ? "none" : "var(--chakra-colors-wood-solid)"} strokeWidth={(x1 - x0) / 300} />
-      ))}
-    </svg>
-  )
-}
-
-/** Miniatura d'un ambient de l'usuari: la foto 3D (es fa sola i es refà si canvia) o, mentrestant, el plànol. */
-function RowThumb({ row, a }: { row: AmbientRow; a: Ambient }) {
+/** Miniatura d'un ambient de l'usuari: la foto 3D (es fa sola i es refà si canvia) o, mentrestant, el requadre buit. */
+function RowThumb({ row }: { row: AmbientRow }) {
   const { settings } = useSettings()
   useEffect(() => {
     if (needsAmbientThumb(row)) requestAmbientThumb(row, settings.materials)
   }, [row, settings.materials])
-  return row.thumb ? <SnapshotThumb src={row.thumb} /> : <AmbientThumb a={a} />
+  return <SnapshotThumb src={row.thumb} />
 }
