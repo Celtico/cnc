@@ -203,7 +203,7 @@ export function FolderedGrid<T>({
       )}
       {loose.length > 0 && (
         // Dins d'una secció de galeria (sense marge), el marge de la secció (`--gallery-px`, layout.css).
-        <SimpleGrid columns={GALLERY_COLS} gap={3} px="var(--gallery-px, 0)" pt={3} pb="var(--gallery-px, 0)">
+        <SimpleGrid columns={GALLERY_COLS} gap={3} p="var(--gallery-px, 0)">
           {loose.map(cell)}
         </SimpleGrid>
       )}

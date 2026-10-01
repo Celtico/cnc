@@ -33,22 +33,23 @@ export function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?
               {kicker}
             </Text>
           )}
-          <HStack justify="space-between" gap={1}>
-            <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={t.name}>
-              {title ?? t.name}
-            </Text>
-            <Badge size="xs" variant="subtle" flexShrink={0}>
-              {kindLabel(t.kind)}
-            </Badge>
-          </HStack>
+          <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={t.name}>
+            {title ?? t.name}
+          </Text>
           <Text fontSize="xs" color="fg.muted" lineClamp={2} title={t.description}>
             {t.description}
           </Text>
-          {t.price !== undefined && (
-            <Text fontSize="xs" fontWeight="semibold" color="wood.fg">
-              Preu orientatiu: {euros(t.price)}
-            </Text>
-          )}
+          {/* A sota: el tipus de moble i el preu sol (orientatiu, es diu a l'explicació del catàleg). */}
+          <HStack justify="space-between" gap={2} mt="auto">
+            <Badge size="xs" variant="subtle" flexShrink={0}>
+              {kindLabel(t.kind)}
+            </Badge>
+            {t.price !== undefined && (
+              <Text fontSize="xs" fontWeight="semibold" color="wood.fg" truncate>
+                {euros(t.price)}
+              </Text>
+            )}
+          </HStack>
         </Card.Body>
       </button>
     </Card.Root>

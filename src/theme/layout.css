@@ -60,6 +60,10 @@
 :root .gallery-accordion .inner-accordion > [data-part="item"] > [data-part="item-content"] {
   padding-inline: var(--gallery-px);
 }
+/* Les graelles de targetes, amb el mateix marge a dalt i a baix que als costats. */
+:root .gallery-accordion .inner-accordion > [data-part="item"] > [data-part="item-content"] > .chakra-accordion__itemBody {
+  padding-block: var(--gallery-px);
+}
 /* L'últim, tancat, ja toca la vora de la secció: sense la seva línia (si no, en sortirien dues). */
 :root .gallery-accordion .inner-accordion > [data-part="item"]:last-child[data-state="closed"] > .inner-head {
   border-bottom-width: 0;

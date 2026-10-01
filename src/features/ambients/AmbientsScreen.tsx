@@ -321,17 +321,18 @@ function CatalogCard({ t, busy, onPick }: { t: AmbientTemplate; busy: boolean; o
       <button type="button" onClick={onPick} disabled={busy}>
         <Card.Body p={3} gap={2} alignItems="stretch" textAlign="left">
           {thumb ? <SnapshotThumb src={thumb} /> : <AmbientThumb a={preview} />}
-          <HStack justify="space-between" gap={1}>
-            <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={t.name}>
-              {t.name}
-            </Text>
-            <Badge size="xs" variant="subtle" flexShrink={0}>
-              {t.items.length} elements
-            </Badge>
-          </HStack>
+          <Text className="card-title" fontWeight="semibold" fontSize="sm" lineClamp={2} title={t.name}>
+            {t.name}
+          </Text>
           <Text fontSize="xs" color="fg.muted" lineClamp={2} title={t.description}>
             {t.description}
           </Text>
+          {/* A sota del text, com el tipus i el preu de les plantilles de mobles (al costat del nom l'escanyava). */}
+          <HStack mt="auto">
+            <Badge size="xs" variant="subtle">
+              {t.items.length} elements
+            </Badge>
+          </HStack>
         </Card.Body>
       </button>
     </Card.Root>
