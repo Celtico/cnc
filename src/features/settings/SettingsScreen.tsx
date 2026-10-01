@@ -11,7 +11,6 @@ import {
   Box,
   Button,
   Dialog,
-  Field,
   Flex,
   Grid,
   HStack,
@@ -58,6 +57,7 @@ import { useSettings } from "./SettingsContext"
 import { fileAccept } from "../file/fileAccept"
 import { useDebouncedSave } from "../useDebouncedSave"
 import { PageHeader } from "../../components/PageHeader"
+import { MaterialSelect } from "./MaterialSelect"
 
 type SectionKey = keyof Omit<Settings, "version">
 
@@ -182,17 +182,9 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
                 return (
                   <Fragment key={i}>
                     {/* Al mòbil, el material ocupa tota la fila i les mides van a sota. */}
-                    <NativeSelect.Root size="sm" gridColumn={{ base: "1 / -1", sm: "auto" }} mt={{ base: i > 0 ? 2 : 0, sm: 0 }}>
-                      <NativeSelect.Field aria-label="Material" value={s.material} onChange={(e) => update({ material: e.target.value })}>
-                        <option value="">Tots els altres</option>
-                        {draft.materials.map((m) => (
-                          <option key={m.id} value={m.name}>
-                            {m.name}
-                          </option>
-                        ))}
-                      </NativeSelect.Field>
-                      <NativeSelect.Indicator />
-                    </NativeSelect.Root>
+                    <Box gridColumn={{ base: "1 / -1", sm: "auto" }} mt={{ base: i > 0 ? 2 : 0, sm: 0 }} minW={0}>
+                      <MaterialSelect label="Material" hideLabel materials={draft.materials} value={s.material} emptyLabel="Tots els altres" onChange={(material) => update({ material })} />
+                    </Box>
                     <NumberField label="" value={s.w} min={300} max={6000} step={10} onChange={(w) => update({ w })} />
                     <NumberField label="" value={s.h} min={300} max={6000} step={10} onChange={(h) => update({ h })} />
                     <IconButton aria-label="Eliminar tauler" size="sm" variant="ghost" colorPalette="red" disabled={draft.boards.sheets.length <= 1} onClick={() => set("boards", { ...draft.boards, sheets: draft.boards.sheets.filter((_, k) => k !== i) })}>
@@ -947,33 +939,7 @@ function DefaultPick({ label, materials, all, material, thickness, onChange }: {
   )
 }
 
-export function MaterialSelect({ label, materials, value, onChange, emptyLabel, hideLabel }: { label: string; materials: MaterialPref[]; value: string; onChange: (name: string) => void; emptyLabel?: string; hideLabel?: boolean }) {
-  const known = materials.some((m) => m.name === value) || (emptyLabel !== undefined && value === "")
-  return (
-    <Field.Root flex={hideLabel ? 1 : undefined} minW={0}>
-      {!hideLabel && <Field.Label fontSize="sm">{label}</Field.Label>}
-      <NativeSelect.Root size="sm">
-        <NativeSelect.Field aria-label={hideLabel ? label : undefined} value={value} onChange={(e) => onChange(e.target.value)}>
-          {emptyLabel !== undefined && <option value="">{emptyLabel}</option>}
-          {!known && <option value={value}>{value || "(sense material)"}</option>}
-          {MATERIAL_CATEGORIES.map((c) => {
-            const list = materials.filter((m) => materialCategory(m) === c.id)
-            return list.length ? (
-              <optgroup key={c.id} label={c.label}>
-                {list.map((m) => (
-                  <option key={m.id} value={m.name}>
-                    {m.name}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null
-          })}
-        </NativeSelect.Field>
-        <NativeSelect.Indicator />
-      </NativeSelect.Root>
-    </Field.Root>
-  )
-}
+export { MaterialSelect }
 
 // --- Ferratges -----------------------------------------------------------------------------
 

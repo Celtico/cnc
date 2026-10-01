@@ -1,4 +1,4 @@
-import { Button, HStack, NativeSelect, Stack, Switch, Text } from "@chakra-ui/react"
+import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
 import { segGroup, segItem } from "../../components/segmented"
 import { DEFAULT_GRILLE, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
 import { NumRow } from "../editor/ParamsForm"
@@ -228,32 +228,11 @@ export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !==
       </FormRow>
       <NumRow label="Gruix" value={c.thickness} min={8} max={40} step={1} onChange={(thickness) => onPatch(sameBack ? { thickness, backThickness: thickness } : { thickness })} help={mat ? `Gruixos del material: ${mat.thicknesses.join(" · ")} mm` : undefined} />
       <FormRow label="Fronts" help="Portes, calaixos i abatibles. Mateix gruix que el cos." maxW="280px">
-        <NativeSelect.Root size="sm">
-          <NativeSelect.Field aria-label="Fronts (portes, calaixos, abatibles)" value={c.frontMaterial ?? ""} onChange={(e) => onPatch({ frontMaterial: e.target.value || undefined })}>
-            <option value="">Com el cos</option>
-            {boards.map((m) => (
-              <option key={m.id} value={m.name}>
-                {m.name}
-              </option>
-            ))}
-          </NativeSelect.Field>
-          <NativeSelect.Indicator />
-        </NativeSelect.Root>
+        <MaterialSelect label="Fronts" hideLabel materials={boards} value={c.frontMaterial ?? ""} emptyLabel="Com el cos" onChange={(v) => onPatch({ frontMaterial: v || undefined })} />
       </FormRow>
       {hasBack && <>
         <FormRow label="Fons" maxW="280px">
-          <NativeSelect.Root size="sm">
-            <NativeSelect.Field aria-label="Fons" value={sameBack ? SAME : c.backMaterial} onChange={(e) => pickMaterial("backMaterial", "backThickness")(e.target.value)}>
-              <option value={SAME}>Com el cos</option>
-              {!settings.materials.some((m) => m.name === c.backMaterial) && <option value={c.backMaterial}>{c.backMaterial || "(sense material)"}</option>}
-              {settings.materials.filter((m) => m.category !== "sim").map((m) => (
-                <option key={m.id} value={m.name}>
-                  {m.name}
-                </option>
-              ))}
-            </NativeSelect.Field>
-            <NativeSelect.Indicator />
-          </NativeSelect.Root>
+          <MaterialSelect label="Fons" hideLabel materials={settings.materials.filter((m) => m.category !== "sim")} value={sameBack ? "" : c.backMaterial} emptyLabel="Com el cos" onChange={(v) => pickMaterial("backMaterial", "backThickness")(v || SAME)} />
         </FormRow>
         <NumRow label="Gruix del fons" value={c.backThickness} min={3} max={40} step={1} onChange={(backThickness) => onPatch({ backThickness })} help={backMat ? backMat.thicknesses.join(" · ") : undefined} />
       </>}
