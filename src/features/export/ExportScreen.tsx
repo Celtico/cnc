@@ -1,7 +1,7 @@
-import { Alert, Box, Button, Card, HStack, Stack, Switch, Text, VStack } from "@chakra-ui/react"
+import { Alert, Box, Button, Card, Collapsible, HStack, Stack, Switch, Text, VStack } from "@chakra-ui/react"
 import { useMemo, useState } from "react"
 import { usePersistentFlag } from "../usePersistentFlag"
-import { LuBoxes, LuCuboid, LuDownload, LuFactory, LuFileDown, LuFileJson, LuLayoutGrid, LuScissors, LuSettings2 } from "react-icons/lu"
+import { LuBoxes, LuChevronRight, LuCuboid, LuDownload, LuFactory, LuFileDown, LuFileJson, LuLayoutGrid, LuScissors, LuSettings2 } from "react-icons/lu"
 import { PanelGroup, PanelSection } from "../../components/PanelSection"
 import { FormRow } from "../../components/FormRow"
 import { exportGlb } from "../../components/viewer/exportGlb"
@@ -235,10 +235,40 @@ export function ExportScreen({ projectId }: { projectId: number }) {
                   ))}
                 </Stack>
                 {xcs.warnings.length > 5 && <Text mt={1}>… i {xcs.warnings.length - 5} més (tots al LLEGEIX-ME.txt del zip).</Text>}
-                <Text mt={1}>Si falta una eina, afegeix-la a Preferències › Màquines CNC amb el codi de Maestro.</Text>
+                {xcs.missingTool > 0 && <Text mt={1}>Si falta una eina, afegeix-la a Preferències › Màquines CNC amb el codi de Maestro.</Text>}
               </Alert.Description>
             </Alert.Content>
           </Alert.Root>
+        )}
+        {xcs && xcs.postProcessPanels > 0 && (
+          // Inglets, cantells, encolar…: no són avisos, és el que toca després de la CNC (també al LLEGEIX-ME).
+          <Collapsible.Root>
+            <Collapsible.Trigger asChild>
+              <Button variant="ghost" size="sm" px={1} css={{ "&[data-state=open] svg": { transform: "rotate(90deg)" } }}>
+                <LuChevronRight /> Després de la CNC ({xcs.postProcessPanels} {xcs.postProcessPanels === 1 ? "peça" : "peces"})
+              </Button>
+            </Collapsible.Trigger>
+            <Collapsible.Content>
+              <Stack gap={2} fontSize="sm" mt={1}>
+                {xcs.panels.map((r, i) =>
+                  r.postProcesses.length ? (
+                    <Box key={r.ref}>
+                      <Text fontWeight="medium">
+                        {r.ref} · {panels[i]?.label}
+                      </Text>
+                      <Text color="fg.muted">{r.route}</Text>
+                      <Stack as="ol" gap={0} ps={5} listStyleType="decimal">
+                        {r.postProcesses.map((x, k) => (
+                          <li key={k}>{x.text}</li>
+                        ))}
+                      </Stack>
+                    </Box>
+                  ) : null,
+                )}
+                <Text color="fg.muted">Cantells amb la numeració de l'app (1 dalt · 2 dreta · 3 baix · 4 esquerra).</Text>
+              </Stack>
+            </Collapsible.Content>
+          </Collapsible.Root>
         )}
       </ExportCard>
 

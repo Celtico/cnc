@@ -197,6 +197,56 @@ describe("peça senzilla (golden)", () => {
     expect(r.skipped).toBe(2)
     expect(r.warnings.join("\n")).toMatch(/cap broca vertical de Ø6/)
     expect(r.warnings.join("\n")).toMatch(/cap broca horitzontal de Ø5/)
+    expect(r.missingTool).toBe(2)
+    // El forat de cantell que no surt també va a la ruta (perforadora), a més de l'avís.
+    expect(r.postProcesses.map((x) => x.text)).toEqual(["Forats de cantell · 1 forat que no fa la CNC (perforadora horitzontal)"])
+    expect(r.route).toBe("CNC: sense programa → perforadora horitzontal")
+  })
+})
+
+describe("després de la CNC (post-processos)", () => {
+  it("inglets i cantells: no són avisos, són passos de la ruta, també al .xcs com a comentari", () => {
+    const p = panel({
+      mitres: ["right", "left"],
+      edges: { left: false, right: false, bottom: true, top: true },
+      holes: [
+        { x: 37, y: 100, diameter: 5, depth: 12, face: "A" },
+        { x: 0, y: 37, diameter: 8, depth: 30, face: "edge", edge: "left" },
+        { x: 360, y: 280, diameter: 8, depth: 10, face: "B" },
+      ],
+      assembly: "Lateral esquerre (paret buida)",
+    })
+    const r = panelXcs(p, "A.1.L.1", M)
+    expect(r.warnings).toEqual([])
+    expect(r.missingTool).toBe(0)
+    // El forat de cantell el fa la CNC: no surt; la cara B és el programa Volt.
+    expect(r.postProcesses.map((x) => x.text)).toEqual([
+      "Programa cara B: A.1.L.1Volt.xcs (girar la peça sobre l'eix X)",
+      "Inglet a 45° · cantells 2+4 (serra)",
+      "Cantejar cantells 1+3 (cantejadora)",
+      "Encolar · Lateral esquerre (paret buida)",
+    ])
+    expect(r.route).toBe("CNC: A.1.L.1.xcs + A.1.L.1Volt.xcs → serra (inglets) → cantejadora → encolar")
+    const a = lines(r.programs[0]!.text)
+    expect(a).toContain(`// Ordre de treball: CNC: A.1.L.1.xcs + A.1.L.1Volt.xcs -> serra (inglets) -> cantejadora -> encolar`)
+    expect(a).toContain(`//   2. Inglet a 45 graus - cantells 2+4 (serra)`)
+    // Res que aturi la màquina (missatges a l'operari).
+    expect(r.programs[0]!.text).not.toMatch(/CreateMessage|ShowMessage/)
+    for (const prog of r.programs) expect(prog.text.split("\r\n").filter((l) => l.startsWith("//")).join("")).toMatch(/^[\x20-\x7e]*$/)
+  })
+
+  it("LLEGEIX-ME: «Després de la CNC» per peça i «Avisos» només amb problemes", () => {
+    const mitred = panel({ id: "m", mitres: ["top"], holes: [{ x: 37, y: 100, diameter: 5, depth: 12, face: "A" }] })
+    const x = toMaestroXcs([mitred], M, { project: "Prova", date: new Date("2026-10-02") })
+    expect(x.warnings).toEqual([])
+    expect(x.postProcessPanels).toBe(1)
+    const t = x.files.at(-1)!.text
+    expect(t).toMatch(/Ordre de treball: CNC: .+\.xcs → serra \(inglets\)/)
+    expect(t).toMatch(/1\. Inglet a 45° · cantell 1 \(serra\)/)
+    expect(t).not.toMatch(/^Avisos/m)
+    const bad = toMaestroXcs([panel({ holes: [{ x: 50, y: 50, diameter: 6, depth: 10, face: "A" }] })], M, { project: "Prova" })
+    expect(bad.missingTool).toBe(1)
+    expect(bad.files.at(-1)!.text).toMatch(/^Avisos \(1\)/m)
   })
 })
 

@@ -3,6 +3,10 @@
 // Cara A amunt. X = u (700 mm), Y = v (440 mm), origen a la cantonada de baix a l'esquerra (cantell 4 a X = 0, cantell 3 a Y = 0)
 // Maquina SCM AA10008021 (AA10008021) - Maestro 2.00.004
 // Noms d'eina i capcalera del projecte Proyecto1.pgmx (Maestro 2.0.5 rev 1005)
+// Ordre de treball: CNC: A.1.L.1.xcs -> serra (inglets) -> cantejadora
+// Despres de la CNC:
+//   1. Inglet a 45 graus - cantells 2+4 (serra)
+//   2. Cantejar cantell 1 (cantejadora)
 
 SetMachiningParameters("AD", 1, 10, 16973824, false);
 CreateFinishedWorkpieceBox("A.1.L.1", 700, 440, 19);

@@ -2,7 +2,7 @@ import { zipStore } from "../file/zip"
 import { pickBlade, pickDrill, pickRouter, pickSmallRouter, drillsOfDiameter } from "../machine/tools"
 import { arcOf, bulgeOf, EDGE_NUMBER, flatten, type BPt, type Cutout, type EdgeSide, type Groove, type Hole, type Panel } from "../model"
 import { toolMslName, type Machine, type MachineTool } from "../model/machine"
-import { needsSecondFace, secondFaceProgram } from "../process/processes"
+import { needsSecondFace, panelProcesses, secondFaceProgram, type ProcessKind } from "../process/processes"
 import { pieceRefs } from "./refs"
 import { asciiFold } from "./text"
 
@@ -61,12 +61,27 @@ export interface XcsProgram {
   text: string
 }
 
+/** Un pas després de la CNC (o el programa de la cara B), per a l'etiqueta i la ruta de la peça. */
+export interface XcsPostProcess {
+  kind: ProcessKind
+  /** «Inglet a 45° · cantells 2+4 (serra)». */
+  text: string
+  /** On es fa, per a la ruta: «serra (inglets)», «cantejadora»… */
+  station: string
+}
+
 export interface XcsPanelResult {
   ref: string
   programs: XcsProgram[]
   ops: XcsOp[]
-  /** Mecanitzats que no s'han pogut fer (sense eina, massa fondos…) o que fa un altre procés. */
+  /** Problemes de debò: mecanitzats que no surten (sense eina, fora de la peça…) o que canvien. */
   warnings: string[]
+  /** Avisos de `warnings` per una eina que falta o no hi arriba (per a la pista «afegeix l'eina»). */
+  missingTool: number
+  /** El que li toca després de la CNC, en l'ordre del taller (`panelProcesses`), sense el que ja fa el programa. */
+  postProcesses: XcsPostProcess[]
+  /** «CNC: A.1.L.1.xcs + A.1.L.1Volt.xcs → serra (inglets) → cantejadora». */
+  route: string
   /** Nombre de mecanitzats de la peça (forats, ranures, talls, contorn): cadascun és una op o un avís. */
   features: number
   /** Mecanitzats que no surten al programa (amb avís). */
@@ -91,7 +106,9 @@ export function cs(s: string): string {
   return `"${s.replace(/[\\"]/g, (c) => `\\${c}`).replace(/[\u0000-\u001f\u007f]/g, " ")}"`
 }
 
-const comment = (s: string) => `// ${asciiFold(s).replace(/[^\x20-\x7e]/g, "?")}`
+// Fletxes, punts volats i graus en ASCII; la resta de no ASCII, «?».
+const comment = (s: string) =>
+  `// ${asciiFold(s.replace(/→/g, "->").replace(/·/g, "-").replace(/°/g, " graus").replace(/[«»]/g, '"')).replace(/[^\x20-\x7e]/g, "?")}`
 
 /** Cara del cantell: 4 = esquerra (x = 0), 2 = dreta (x = L), 3 = baix (y = 0, «Front»), 1 = dalt (y = A, «Back»). */
 export const EDGE_PLANE: Record<EdgeSide, XcsPlane> = { left: "Left", right: "Right", bottom: "Front", top: "Back" }
@@ -373,10 +390,14 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
   const warnings: string[] = []
   let features = 0
   let skipped = 0
-  const skip = (what: string, why: string) => {
+  let missingTool = 0
+  // `tool`: no surt perquè falta una eina (o no hi arriba).
+  const skip = (what: string, why: string, tool = false) => {
     skipped++
+    if (tool) missingTool++
     warnings.push(`${what}: ${why}`)
   }
+  let edgeHolesDone = 0
   let handled = 0
   const A = new Script("A")
   const B = new Script("B")
@@ -403,7 +424,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
     const t = pickDrill(m, h.diameter, depth, "vertical")
     if (!t) {
       const same = drillsOfDiameter(m, h.diameter, "vertical")
-      skip(holeWhat(h), same.length ? `la broca ${same.map((x) => x.code).join("/")} no arriba a ${num(depth)} mm` : `cap broca vertical de Ø${num(h.diameter)} muntada`)
+      skip(holeWhat(h), same.length ? `la broca ${same.map((x) => x.code).join("/")} no arriba a ${num(depth)} mm` : `cap broca vertical de Ø${num(h.diameter)} muntada`, true)
       continue
     }
     const x = h.x
@@ -428,7 +449,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
       const t = pickDrill(m, h.diameter, h.depth, "horizontal")
       if (!t) {
         const same = drillsOfDiameter(m, h.diameter, "horizontal")
-        skip(holeWhat(h), same.length ? `la broca horitzontal ${same.map((x) => x.code).join("/")} no arriba a ${num(h.depth)} mm` : `cap broca horitzontal de Ø${num(h.diameter)} muntada`)
+        skip(holeWhat(h), same.length ? `la broca horitzontal ${same.map((x) => x.code).join("/")} no arriba a ${num(h.depth)} mm` : `cap broca horitzontal de Ø${num(h.diameter)} muntada`, true)
         continue
       }
       const [x, y] = edgePoint(p, h, side)
@@ -441,6 +462,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
       A.lines.push(`CreateDrill(${cs(name)}, ${num(x)}, ${num(y)}, ${num(h.depth)}, ${num(h.diameter)}, "", TypeOfProcess.Drilling, ${cs("-1")}, ${HEAD});`)
       A.op({ kind: "drill", tool: "-1", depth: h.depth, points: [[x, y]], what: holeWhat(h), candidate: t.code })
       handled++
+      edgeHolesDone++
     }
   }
   for (const h of edgeHoles.filter((x) => !x.edge)) {
@@ -496,7 +518,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
     if (m.grooves === "blade") warnings.push(`${grooveWhat(g)}: no es pot fer amb disc (${fullLength ? "cap disc prou prim o prou gran" : "no va de cantell a cantell"}); es prova amb fresa`)
     const router = pickRouter(m, width, depth)
     if (!router) {
-      skip(grooveWhat(g), `cap fresa de Ø ≤ ${num(width)} que arribi a ${num(depth)} mm`)
+      skip(grooveWhat(g), `cap fresa de Ø ≤ ${num(width)} que arribi a ${num(depth)} mm`, true)
       continue
     }
     const r = router.diameter / 2
@@ -504,7 +526,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
     const start = a0 <= EPS ? a0 : a0 + r
     const end = a1 >= aMax - EPS ? a1 : a1 - r
     if (end < start - EPS) {
-      skip(grooveWhat(g), `massa curta per a la fresa ${router.code} (Ø${num(router.diameter)})`)
+      skip(grooveWhat(g), `massa curta per a la fresa ${router.code} (Ø${num(router.diameter)})`, true)
       continue
     }
     const lanes = router.diameter >= width - EPS ? [(b0 + b1) / 2] : (() => {
@@ -543,7 +565,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
       }
       const router = pickRouter(m, c.diameter - 1, through)
       if (!router) {
-        skip(cutWhat(c), `cap broca de Ø${num(c.diameter)} ni fresa més petita que arribin a ${num(through)} mm`)
+        skip(cutWhat(c), `cap broca de Ø${num(c.diameter)} ni fresa més petita que arribin a ${num(through)} mm`, true)
         continue
       }
       A.select("Top")
@@ -566,7 +588,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
     const sharp = sharpCorners(pts, "inside")
     const router = sharp ? pickSmallRouter(m, maxDia, through) : pickRouter(m, maxDia, through)
     if (!router) {
-      skip(cutWhat(c), `cap fresa prou petita (Ø ≤ ${num(maxDia)}) que arribi a ${num(through)} mm`)
+      skip(cutWhat(c), `cap fresa prou petita (Ø ≤ ${num(maxDia)}) que arribi a ${num(through)} mm`, true)
       continue
     }
     if (sharp && router.diameter / 2 > 0.5) warnings.push(`${cutWhat(c)}: ${sharp} cantonades vives queden amb radi ${num(router.diameter / 2)} mm (fresa ${toolMslName(router)} Ø${num(router.diameter)})`)
@@ -586,7 +608,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
     const sharp = sharpCorners(outline, "outside")
     const router = sharp ? pickSmallRouter(m, maxDia, through) : pickRouter(m, maxDia, through)
     if (outline.length < 3) skip("contorn de la peça", "contorn sense mida")
-    else if (!router) skip("contorn de la peça", `cap fresa${Number.isFinite(maxDia) ? ` de Ø ≤ ${num(maxDia)}` : ""} que arribi a ${num(through)} mm`)
+    else if (!router) skip("contorn de la peça", `cap fresa${Number.isFinite(maxDia) ? ` de Ø ≤ ${num(maxDia)}` : ""} que arribi a ${num(through)} mm`, true)
     else {
       if (sharp && router.diameter / 2 > 0.5) warnings.push(`contorn de la peça: ${sharp} cantonades entrants queden amb radi ${num(router.diameter / 2)} mm (fresa ${toolMslName(router)} Ø${num(router.diameter)})`)
       A.select("Top")
@@ -598,7 +620,12 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
     }
   }
 
-  if (p.mitres?.length) warnings.push(`inglet a 45° al cantell ${p.mitres.map((e) => EDGE_NUMBER[e]).sort().join("+")}: no surt al programa (serra)`)
+  // Inglets, cantells, encolar…: no són avisos, són els passos de després (`postProcesses`).
+  const hasB = B.ops.length > 0
+  if (needsSecondFace(p) && !hasB) warnings.push("la cara B no té cap mecanitzat que es pugui fer: no hi ha programa «Volt»")
+  const post = postProcessesOf(p, ref, hasB, edgeHolesDone)
+  const cncFiles = [...(A.ops.length ? [`${ref}.xcs`] : []), ...(hasB ? [`${secondFaceProgram(ref)}.xcs`] : [])]
+  const route = [cncFiles.length ? `CNC: ${cncFiles.join(" + ")}` : "CNC: sense programa", ...post.filter((x) => x.kind !== "secondFace").map((x) => x.station)].join(" → ")
 
   const programs: XcsProgram[] = []
   const header = (face: "A" | "B") => {
@@ -610,6 +637,8 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
         : comment(`Cara B amunt: la peca girada sobre l'eix X (${num(L)} mm; el cantell 1 passa a Y = 0). Forats de cantell i talls: al programa de la cara A`),
       comment(`Maquina ${m.name}${m.serial ? ` (${m.serial})` : ""}${m.maestroVersion ? ` - Maestro ${m.maestroVersion}` : ""}`),
       ...(m.pgmx ? [comment(`Noms d'eina i capcalera del projecte ${m.pgmx.file} (Maestro ${m.pgmx.version})`)] : []),
+      // Només comentaris (cap missatge a l'operari, que aturaria la màquina).
+      ...(post.length ? [comment(`Ordre de treball: ${route}`), comment("Despres de la CNC:"), ...post.map((x, i) => comment(`  ${i + 1}. ${x.text}`))] : []),
       "",
       `SetMachiningParameters(${cs(m.header.executionFields)}, ${m.header.repetitions ?? 1}, ${m.header.tableOptions}, ${m.header.mechanicalOptions}, ${m.header.continuousCycle ?? false});`,
       `CreateFinishedWorkpieceBox(${cs(ref)}, ${num(L)}, ${num(W)}, ${num(T)});`,
@@ -618,16 +647,59 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
     return lines
   }
   if (A.ops.length) programs.push({ file: `${ref}.xcs`, face: "A", text: [...header("A"), ...A.lines, ""].join(EOL) })
-  if (B.ops.length) programs.push({ file: `${secondFaceProgram(ref)}.xcs`, face: "B", text: [...header("B"), ...B.lines, ""].join(EOL) })
-  else if (needsSecondFace(p) && !B.ops.length) warnings.push("la cara B no té cap mecanitzat que es pugui fer: no hi ha programa «Volt»")
-  return { ref, programs, ops: [...A.ops, ...B.ops], warnings, features, skipped, handled }
+  if (hasB) programs.push({ file: `${secondFaceProgram(ref)}.xcs`, face: "B", text: [...header("B"), ...B.lines, ""].join(EOL) })
+  return { ref, programs, ops: [...A.ops, ...B.ops], warnings, missingTool, postProcesses: post, route, features, skipped, handled }
+}
+
+/** On es fa cada post-procés (per a la ruta). */
+const STATION: Record<ProcessKind, string> = {
+  secondFace: "CNC cara B",
+  mitre: "serra (inglets)",
+  edge: "cantejadora",
+  edgeDrill: "perforadora horitzontal",
+  glue: "encolar",
+  push: "muntar el push",
+}
+
+const plural = (detail: string, one: string, many: string) => (detail.includes("+") ? many : one)
+
+/**
+ * Passos de després de la CNC (`panelProcesses`, mateix ordre), sense el que ja fa el programa: la cara B
+ * és el programa «Volt» i els forats de cantell que surten al programa A no compten. Cantells amb la
+ * numeració de l'app (1 dalt · 2 dreta · 3 baix · 4 esquerra, com la llista de peces).
+ */
+export function postProcessesOf(p: Panel, ref: string, hasB: boolean, edgeHolesDone: number): XcsPostProcess[] {
+  const out: XcsPostProcess[] = []
+  for (const x of panelProcesses(p)) {
+    const station = STATION[x.kind]
+    if (x.kind === "secondFace") {
+      if (hasB) out.push({ kind: x.kind, station, text: `Programa cara B: ${secondFaceProgram(ref)}.xcs (girar la peça sobre l'eix X)` })
+    } else if (x.kind === "mitre") {
+      const n = x.detail.replace(/^cantell /, "")
+      out.push({ kind: x.kind, station, text: `Inglet a 45° · ${plural(n, "cantell", "cantells")} ${n} (serra)` })
+    } else if (x.kind === "edge") {
+      out.push({ kind: x.kind, station, text: `Cantejar ${plural(x.detail, "cantell", "cantells")} ${x.detail} (cantejadora)` })
+    } else if (x.kind === "edgeDrill") {
+      const left = p.holes.filter((h) => h.face === "edge").length - edgeHolesDone
+      if (left > 0) out.push({ kind: x.kind, station, text: `Forats de cantell · ${left} ${left === 1 ? "forat" : "forats"} que no fa la CNC (perforadora horitzontal)` })
+    } else if (x.kind === "glue") {
+      out.push({ kind: x.kind, station, text: `Encolar · ${x.detail}` })
+    } else {
+      out.push({ kind: x.kind, station, text: `Push (Tip-On) · ${x.detail}` })
+    }
+  }
+  return out
 }
 
 export interface XcsExport {
   files: { name: string; text: string }[]
   panels: XcsPanelResult[]
-  /** Avisos amb la peça: «A.1.L.1 (lat e): forat Ø5…». */
+  /** Avisos amb la peça (només problemes de debò): «A.1.L.1 (lat e): forat Ø5…». */
   warnings: string[]
+  /** Avisos per una eina que falta o no hi arriba. */
+  missingTool: number
+  /** Peces amb algun pas després de la CNC. */
+  postProcessPanels: number
   programs: number
 }
 
@@ -656,11 +728,18 @@ export function toMaestroXcs(panels: Panel[], m: Machine, opts: { project: strin
     for (const w of r.warnings) warnings.push(`${r.ref} (${panels[i]!.label}): ${w}`)
   })
   const empty = results.filter((r) => !r.programs.length).map((r) => r.ref)
-  files.push({ name: "LLEGEIX-ME.txt", text: readme(opts.project, m, results, warnings, empty, opts.date ?? new Date()) })
-  return { files, panels: results, warnings, programs: results.reduce((a, r) => a + r.programs.length, 0) }
+  files.push({ name: "LLEGEIX-ME.txt", text: readme(opts.project, m, results, panels, warnings, empty, opts.date ?? new Date()) })
+  return {
+    files,
+    panels: results,
+    warnings,
+    missingTool: results.reduce((a, r) => a + r.missingTool, 0),
+    postProcessPanels: results.filter((r) => r.postProcesses.length).length,
+    programs: results.reduce((a, r) => a + r.programs.length, 0),
+  }
 }
 
-function readme(project: string, m: Machine, results: XcsPanelResult[], warnings: string[], empty: string[], date: Date): string {
+function readme(project: string, m: Machine, results: XcsPanelResult[], panels: Panel[], warnings: string[], empty: string[], date: Date): string {
   const lines = [
     `Programes Maestro (.xcs) - ${project}`,
     `Generat per Mobles CNC el ${date.toISOString().slice(0, 10)} per a la màquina ${m.name}${m.serial ? ` (${m.serial})` : ""}${m.maestroVersion ? `, Maestro ${m.maestroVersion}` : ""}.`,
@@ -686,11 +765,22 @@ function readme(project: string, m: Machine, results: XcsPanelResult[], warnings
     m.verticalDrills === "tool" ? "- Broques verticals: el nom de la broca que ha triat l'app." : "- Broques verticals: eina automàtica (\"-1\"), com als projectes del taller.",
     `- Eines pel nom de Maestro${m.pgmx ? ` (noms del projecte ${m.pgmx.file}, Maestro ${m.pgmx.version})` : " (codi del .tlgx)"}.`,
     "- Fitxers .xcs en UTF-8 amb BOM.",
+    "- Cantells amb la numeració de l'app: 1 dalt · 2 dreta · 3 baix · 4 esquerra (pendent de confirmar",
+    "  amb la del taller).",
     `- Talls i forats passants: gruix + ${num(m.throughExtra)} mm.`,
     "",
     `Peces: ${results.length} · programes: ${results.reduce((a, r) => a + r.programs.length, 0)}`,
   ]
   if (empty.length) lines.push(`Sense mecanitzats (no tenen programa): ${empty.join(", ")}`)
+  // Per peça: la ruta i el que li toca després de la CNC (per a l'etiqueta).
+  const withPost = results.map((r, i) => ({ r, p: panels[i]! })).filter(({ r }) => r.postProcesses.length)
+  if (withPost.length) {
+    lines.push("", `Ordre de treball i després de la CNC (${withPost.length} ${withPost.length === 1 ? "peça" : "peces"})`)
+    for (const { r, p } of withPost) {
+      lines.push("", `${r.ref} (${p.label})`, `  Ordre de treball: ${r.route}`, "  Després de la CNC:")
+      r.postProcesses.forEach((x, k) => lines.push(`    ${k + 1}. ${x.text}`))
+    }
+  }
   if (warnings.length) {
     lines.push("", `Avisos (${warnings.length}): el que no surt als programes o s'ha canviat`)
     for (const w of warnings) lines.push(`- ${w}`)

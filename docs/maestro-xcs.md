@@ -151,7 +151,24 @@ Només eines automàtiques i muntades.
   hi deixa passa de 0,5 mm, avís amb el radi («4 cantonades vives queden amb radi 6 mm (fresa E128 Ø12)»); si no,
   la més grossa.
 - **Nom de l'eina a l'MSL**: `toolMslName` = el del .pgmx (`mslName`) o el codi.
-- Sense eina → el mecanitzat no surt i hi ha un avís (UI d'Exportar i LLEGEIX-ME). Inglets: avís (serra).
+- Sense eina → el mecanitzat no surt i hi ha un avís (UI d'Exportar i LLEGEIX-ME; `missingTool` compta els que són per
+  una eina, i només llavors surt la pista «afegeix-la a Preferències»).
+
+### Avisos i «Després de la CNC»
+- **Avisos** (`warnings`) = només problemes de debò: eina que falta o no hi arriba, forat de cantell que el contorn no
+  toca, forat escurçat, cantonades vives amb radi, cara B sense cap mecanitzat possible…
+- **Post-processos** (`postProcesses`, `postProcessesOf`) = el que toca a la peça després de la CNC, en l'ordre de
+  `panelProcesses` (`core/process/processes.ts`), **sense el que ja fa el programa**: els forats de cantell que surten
+  al programa A no hi són (només els que no fa la CNC, «perforadora horitzontal») i la 2a cara és el programa «Volt»
+  («Programa cara B: <ref>Volt.xcs»). Els inglets **no són avisos**: són un segon procés a la serra («Inglet a 45° ·
+  cantells 2+4 (serra)»); després «Cantejar cantells 1+3 (cantejadora)», «Encolar · …», «Push (Tip-On) · …».
+- **Ruta** (`route`): «CNC: <ref>.xcs + <ref>Volt.xcs → serra (inglets) → cantejadora → …».
+- On surt: LLEGEIX-ME.txt (per peça: «Ordre de treball» i «Després de la CNC»; «Avisos» a part, només si n'hi ha),
+  targeta de Maestro a Exportar (plegable «Després de la CNC (n peces)») i a la capçalera de cada .xcs com a
+  **comentaris** en ASCII («->», «graus»): viatja amb el programa sense cap missatge a l'operari que aturi la màquina.
+- **Numeració dels cantells**: la de l'app i de la llista de peces (`EDGE_NUMBER`: 1 dalt · 2 dreta · 3 baix ·
+  4 esquerra, a la peça vista amb la cara A amunt com al programa). **Pendent de confirmar amb el taller**: el seu
+  visor numera pel sòlid (`tallerEdgeNumbers`, vegeu `docs/export-taller.md`) i pot no coincidir.
 
 ### Tests
 - `core/machine/maestro.test.ts`: contra el context real (`docs/maestro/AA10008021.machinecontext`, només
@@ -160,11 +177,13 @@ Només eines automàtiques i muntades.
   noms per ID (nom tocat a mà respectat), reimportació que conserva els camps tocats, «Eina nova» sense codi.
 - `core/export/maestroXcs.test.ts`: golden d'una peça (forats amb `"-1"` i amb eina concreta, cantell, ranura
   amb disc, Volt), ranura amb fresa, talls (rectangle amb la fresa petita i l'avís del radi), contorn amb arcs,
-  semicercles amb centre, ranura rodona, punts repetits, forats de cantell en peces amb forma, sense eina, noms
+  semicercles amb centre, ranura rodona, punts repetits, forats de cantell en peces amb forma, sense eina (avís i
+  `missingTool`), inglets i cantells com a post-processos (sense avís, ruta, comentari ASCII, LLEGEIX-ME), noms
   del .pgmx a l'MSL, cadenes C# i BOM, preferències amb una eina invàlida; propietats sobre 51 mobles del
   catàleg: cada mecanitzat té op o avís, tots els punts dins del pla, eina muntada que arriba a la fondària,
   noms únics, sense caràcters de control.
-- Mostres a `docs/maestro/samples/*.xcs` generades amb el context + `Proyecto1.pgmx` (UTF-8 amb BOM).
+- Mostres a `docs/maestro/samples/*.xcs` generades amb el context + `Proyecto1.pgmx` (UTF-8 amb BOM): `lateral_A.1.L.1` i `porta_A.1.F.9`
+  de l'«Aparador sobre ferro», `peca-amb-forma_A.1.H.1` de la «Taula de centre «Nube»» (amb la capçalera de post-processos).
 
 ## Preguntes obertes per al taller
 Ja resolt (revisió amb el manual i el .pgmx real): orígens i sentit de X de les cinc cares i el gir de la cara
@@ -195,3 +214,5 @@ B (taula de dalt); el paràmetre `tool` és el nom de l'eina; les broques del ta
 11. **Tecnologies** (`ApplyTechnology`, §3.5.14 p91): en tenen de fetes (p. ex. «Ranura fons») que s'hagin de
     fer servir en lloc de CreateSlot/CreateRoughFinish?
 12. **Passants**: 1 mm per sota és prou (o massa) amb les ventoses?
+13. **Numeració dels cantells** a l'etiqueta i la ruta («Inglet a 45° · cantells 2+4», «Cantejar cantells 1+3»): la de
+    l'app (1 dalt · 2 dreta · 3 baix · 4 esquerra) és la que fan servir al taller, o la del seu visor?

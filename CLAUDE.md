@@ -209,7 +209,12 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   cantell a cantell, si no fresa Ø ≤ ample; talls amb broca si n'hi ha del Ø, si no fresa limitada pels arcs
   i dogbones (`maxToolDiameter`); amb cantonades vives (`sharpCorners`), la fresa més petita i avís si el radi passa
   de 0,5 mm. Punts repetits fora (`dedupePolyline`), `num()` llança si no és finit. Sense eina → no surt i avisa.
-  Inglets: avís (serra).
+- **Avisos ≠ post-processos** (per decisió de l'usuari): `warnings` només amb problemes de debò (eina, forat que no es
+  pot fer…); el que toca després (`postProcesses`, de `panelProcesses` sense el que fa el programa: inglets a la serra,
+  cantejar, forats de cantell que no fa la CNC, encolar, push; la cara B = «Programa cara B: <ref>Volt.xcs») i la ruta
+  («CNC: … → serra (inglets) → cantejadora») van al LLEGEIX-ME per peça, al plegable «Després de la CNC» d'Exportar i
+  com a comentaris ASCII a la capçalera del .xcs (mai missatges a l'operari). Cantells amb la numeració de l'app
+  (pendent de confirmar amb el taller).
 - **Pendent de validar amb el taller** (llista a `docs/maestro-xcs.md`): prova a la màquina
   (`PROVA_ORIENTACIO.xcs`), codificació UTF-8 amb BOM, noms de totes les eines al Maestro 2.0.5, broques amb `"-1"`,
   `MechanicalOptions`, disc o fresa per a les ranures, fixació, eines que falten al `.tlgx`.
