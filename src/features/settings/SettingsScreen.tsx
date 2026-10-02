@@ -23,8 +23,8 @@ import {
   Switch,
   Text,
 } from "@chakra-ui/react"
-import { Children, createContext, Fragment, isValidElement, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { LuArchive, LuArrowDown, LuArrowUp, LuCheck, LuCircleDashed, LuCircleDot, LuMagnet, LuScanEye, LuPaintbrush, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff,  LuHammer, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRows3, LuRuler, LuScan, LuScissors, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
+import { Children, Fragment, isValidElement, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { LuArchive, LuFactory, LuArrowDown, LuArrowUp, LuCheck, LuCircleDashed, LuCircleDot, LuMagnet, LuScanEye, LuPaintbrush, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff,  LuHammer, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRows3, LuRuler, LuScan, LuScissors, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { MasterDetail } from "../../components/MasterDetail"
@@ -59,6 +59,8 @@ import { useDebouncedSave } from "../useDebouncedSave"
 import { PageHeader } from "../../components/PageHeader"
 import { MaterialSelect } from "./MaterialSelect"
 import { SectionLabel } from "../../components/SectionLabel"
+import { PaneHeadContext } from "./paneHead"
+import { MachinesList } from "./MachinesPane"
 
 type SectionKey = keyof Omit<Settings, "version">
 
@@ -243,6 +245,10 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             </SettingsGroup>
           </Pane>
 
+          <Pane id="machines" wide title="Màquines CNC" icon={LuFactory} desc="Les màquines del taller i les seves eines, importades de Maestro, per als programes .xcs.">
+            <MachinesList machines={draft.machines} onChange={(machines) => set("machines", machines)} />
+          </Pane>
+
           <Pane id="display" title="Visualització" icon={LuScanEye} desc="Unitat de les mides a la pantalla." onReset={() => setReset({ key: "display", label: "Visualització" })}>
             <SettingsGroup icon={<LuRuler />} title="Mides" summary={draft.display.unit === "cm" ? "En centímetres" : "En mil·límetres"}>
             <FormRow label="Unitat" help="Internament tot es guarda en mm; els fitxers per al taller sempre van en mm.">
@@ -291,11 +297,11 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
 }
 
 /** Clau de l'element obert a les pàgines de llista i detall (per saber quin «Tornar» es veu). */
-const DETAIL_KEYS = { materials: "mobles:settings-material", references: "mobles:settings-ref" } as const
+const DETAIL_KEYS = { materials: "mobles:settings-material", references: "mobles:settings-ref", machines: "mobles:settings-machine" } as const
 
 /** Categories dels apartats de Preferències. */
 const SETTINGS_GROUPS: { label: string; ids: string[] }[] = [
-  { label: "Fabricació", ids: ["materials", "boards", "hardware", "gaps", "label"] },
+  { label: "Fabricació", ids: ["materials", "boards", "hardware", "gaps", "label", "machines"] },
   { label: "Foto i visor 3D", ids: ["references", "viewer3d"] },
   { label: "App", ids: ["display", "theme"] },
 ]
@@ -329,7 +335,8 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
   // Al mòbil, un sol «‹ Tornar» a la vista: amb un element obert (material, objecte) només el seu.
   const [matSel] = useSessionString(DETAIL_KEYS.materials)
   const [refSel] = useSessionString(DETAIL_KEYS.references)
-  const detailOpen = (active === "materials" && matSel !== null) || (active === "references" && refSel !== null)
+  const [machSel] = useSessionString(DETAIL_KEYS.machines)
+  const detailOpen = (active === "materials" && matSel !== null) || (active === "references" && refSel !== null) || (active === "machines" && machSel !== null)
   // Apartats agrupats per categoria (com la Configuració de macOS): el que no hi surti, a «Altres».
   const groups = SETTINGS_GROUPS.map((g) => ({ label: g.label, panes: g.ids.flatMap((id) => panes.filter((p) => p.id === id)) }))
   const rest = panes.filter((p) => !SETTINGS_GROUPS.some((g) => g.ids.includes(p.id)))
@@ -411,8 +418,6 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
   )
 }
 
-/** Títol de la pàgina que es mira: a les de llista i detall, el posa la llista (`MasterDetail.head`). */
-const PaneHeadContext = createContext<ReactNode>(null)
 
 function PaneHeader({ pane }: { pane: PaneProps }) {
   const Icon = pane.icon

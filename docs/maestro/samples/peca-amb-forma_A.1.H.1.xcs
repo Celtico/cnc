@@ -1,0 +1,64 @@
+// Mobles CNC - programa Maestro (MSL .xcs) - BETA: comprova'l a Maestro abans de mecanitzar
+// Peca A.1.H.1: Sostre (dalt) - 1200 x 700 x 30 - Roure massis / xapat
+// Cara A amunt. X = llarg, Y = ample, origen a la cantonada de baix a l'esquerra (cantell 4 a X = 0, cantell 3 a Y = 0)
+// Maquina SCM AA10008021 (AA10008021) - Maestro 2.00.004
+
+SetMachiningParameters("AD", 1, 10, 0, false);
+CreateFinishedWorkpieceBox("A.1.H.1", 1200, 700, 30);
+CreateRawWorkpiece("A.1.H.1", 0, 0, 0, 0, 0, 0);
+
+SelectWorkplane("Top");
+CreatePolyline("Contorn_1_G", 1200, 350);
+AddArc2PointRadiusToPolyline(1187.81, 420.537, 212.115, false, false);
+AddArc2PointRadiusToPolyline(1173.025, 454.079, 240.509, false, false);
+AddArc2PointRadiusToPolyline(1152.849, 486.236, 276.262, false, false);
+AddArc2PointRadiusToPolyline(1127.583, 516.831, 324.315, false, false);
+AddArc2PointRadiusToPolyline(1097.529, 545.688, 383.571, false, false);
+AddArc2PointRadiusToPolyline(1062.989, 572.633, 452.293, false, false);
+AddArc2PointRadiusToPolyline(1024.264, 597.487, 528.026, false, false);
+AddArc2PointRadiusToPolyline(981.656, 620.077, 607.821, false, false);
+AddArc2PointRadiusToPolyline(935.466, 640.225, 688.372, false, false);
+AddArc2PointRadiusToPolyline(885.996, 657.757, 766.406, false, false);
+AddArc2PointRadiusToPolyline(833.547, 672.495, 838.947, false, false);
+AddArc2PointRadiusToPolyline(720.921, 692.889, 931.679, false, false);
+AddArc2PointRadiusToPolyline(600, 700, 1021.141, false, false);
+AddArc2PointRadiusToPolyline(479.079, 692.889, 1021.141, false, false);
+AddArc2PointRadiusToPolyline(366.453, 672.495, 931.679, false, false);
+AddArc2PointRadiusToPolyline(314.004, 657.757, 838.947, false, false);
+AddArc2PointRadiusToPolyline(264.534, 640.225, 766.406, false, false);
+AddArc2PointRadiusToPolyline(218.344, 620.077, 688.372, false, false);
+AddArc2PointRadiusToPolyline(175.736, 597.487, 607.821, false, false);
+AddArc2PointRadiusToPolyline(137.011, 572.633, 528.026, false, false);
+AddArc2PointRadiusToPolyline(102.471, 545.688, 452.293, false, false);
+AddArc2PointRadiusToPolyline(72.417, 516.831, 383.571, false, false);
+AddArc2PointRadiusToPolyline(47.151, 486.236, 324.315, false, false);
+AddArc2PointRadiusToPolyline(26.975, 454.079, 276.262, false, false);
+AddArc2PointRadiusToPolyline(12.19, 420.537, 240.509, false, false);
+AddArc2PointRadiusToPolyline(0, 350, 212.115, false, false);
+AddArc2PointRadiusToPolyline(12.19, 279.463, 212.115, false, false);
+AddArc2PointRadiusToPolyline(26.975, 245.921, 240.509, false, false);
+AddArc2PointRadiusToPolyline(47.151, 213.764, 276.262, false, false);
+AddArc2PointRadiusToPolyline(72.417, 183.169, 324.315, false, false);
+AddArc2PointRadiusToPolyline(102.471, 154.312, 383.571, false, false);
+AddArc2PointRadiusToPolyline(137.011, 127.367, 452.293, false, false);
+AddArc2PointRadiusToPolyline(175.736, 102.513, 528.026, false, false);
+AddArc2PointRadiusToPolyline(218.344, 79.923, 607.821, false, false);
+AddArc2PointRadiusToPolyline(264.534, 59.775, 688.372, false, false);
+AddArc2PointRadiusToPolyline(314.004, 42.243, 766.406, false, false);
+AddArc2PointRadiusToPolyline(366.453, 27.505, 838.947, false, false);
+AddArc2PointRadiusToPolyline(479.079, 7.111, 931.679, false, false);
+AddArc2PointRadiusToPolyline(600, 0, 1021.141, false, false);
+AddArc2PointRadiusToPolyline(720.921, 7.111, 1021.141, false, false);
+AddArc2PointRadiusToPolyline(833.547, 27.505, 931.679, false, false);
+AddArc2PointRadiusToPolyline(885.996, 42.243, 838.947, false, false);
+AddArc2PointRadiusToPolyline(935.466, 59.775, 766.406, false, false);
+AddArc2PointRadiusToPolyline(981.656, 79.923, 688.372, false, false);
+AddArc2PointRadiusToPolyline(1024.264, 102.513, 607.821, false, false);
+AddArc2PointRadiusToPolyline(1062.989, 127.367, 528.026, false, false);
+AddArc2PointRadiusToPolyline(1097.529, 154.312, 452.293, false, false);
+AddArc2PointRadiusToPolyline(1127.583, 183.169, 383.571, false, false);
+AddArc2PointRadiusToPolyline(1152.849, 213.764, 324.315, false, false);
+AddArc2PointRadiusToPolyline(1173.025, 245.921, 276.262, false, false);
+AddArc2PointRadiusToPolyline(1187.81, 279.463, 240.509, false, false);
+AddArc2PointRadiusToPolyline(1200, 350, 212.115, false, false);
+CreateContour("Contorn_1", 31, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "E219", "-1", 0, -1, -1, -1, 0);

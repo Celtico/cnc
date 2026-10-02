@@ -1,0 +1,48 @@
+// Mobles CNC - programa Maestro (MSL .xcs) - BETA: comprova'l a Maestro abans de mecanitzar
+// Peca A.1.L.1: Lateral esquerre (lat e) - 700 x 440 x 19 - Noguera xapada
+// Cara A amunt. X = llarg, Y = ample, origen a la cantonada de baix a l'esquerra (cantell 4 a X = 0, cantell 3 a Y = 0)
+// Maquina SCM AA10008021 (AA10008021) - Maestro 2.00.004
+
+SetMachiningParameters("AD", 1, 10, 0, false);
+CreateFinishedWorkpieceBox("A.1.L.1", 700, 440, 19);
+CreateRawWorkpiece("A.1.L.1", 0, 0, 0, 0, 0, 0);
+
+SelectWorkplane("Top");
+CreateDrill("Forat_1", 56, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_2", 56, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_3", 88, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_4", 88, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_5", 120, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_6", 120, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_7", 152, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_8", 152, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_9", 184, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_10", 184, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_11", 216, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_12", 216, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_13", 248, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_14", 248, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_15", 280, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_16", 280, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_17", 312, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_18", 312, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_19", 344, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_20", 344, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_21", 376, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_22", 376, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_23", 408, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_24", 408, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_25", 440, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_26", 440, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_27", 472, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_28", 472, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_29", 504, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_30", 504, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_31", 536, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_32", 536, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_33", 568, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_34", 568, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_35", 600, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_36", 600, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_37", 632, 403, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("Forat_38", 632, 37, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");

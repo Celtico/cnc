@@ -1,0 +1,26 @@
+2mm recta
+3mm helicoidal
+4mm placa recta
+6mm helicoidal
+8mm diamant
+10mm helicoidal
+10mm diamant Esquerra
+11mm cocodrilo
+8mm cocodrilo
+12mm diamant nesting
+14mm diamant compacte
+14mm diamant nesting
+16mm diamant xop
+16mm helicoidal
+20mm helicoidal
+20mm cocodrilo
+22mm diamant
+30mm plaquetes helicoidal
+
+
+FRESA_TIRADOR UÑERO 38
+45 chaflanar 227
+
+5mm disco                  d123mm horizontal
+3.2mm disco                d121mm horizontal
+125 serra wekee            d125mm vertical

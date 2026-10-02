@@ -3,6 +3,7 @@ import { DEFAULT_CABINET } from "./cabinet"
 import { DEFAULT_HARDWARE, HardwareSchema, type Module } from "./composition"
 import { PHOTO_MATERIALS } from "./textureSets"
 import { rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
+import { MachineSchema, type Machine } from "./machine"
 
 /**
  * Preferències de l'usuari: tot el que depèn de casa seva i del taller (referències de
@@ -15,7 +16,7 @@ import { rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgra
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 9
+export const SETTINGS_VERSION = 10
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -260,6 +261,8 @@ export const SettingsSchema = z.object({
   display: DisplayPrefSchema,
   /** Materials per defecte dels mòduls nous (id de `materials`). */
   defaults: z.object({ material: z.string(), thickness: mm, backMaterial: z.string(), backThickness: mm }),
+  /** Màquines CNC importades de Maestro (v10). */
+  machines: z.array(MachineSchema),
 })
 export type Settings = z.infer<typeof SettingsSchema>
 
@@ -429,6 +432,7 @@ export const DEFAULT_SETTINGS: Settings = {
   label: { w: 99, h: 68 },
   display: { unit: "mm" },
   defaults: { material: "Melamina blanca", thickness: 19, backMaterial: "DM (fons)", backThickness: 10 },
+  machines: [],
 }
 
 // --- Migració i importació ------------------------------------------------------------
@@ -527,8 +531,20 @@ export function parseSettings(raw: unknown): SettingsParse {
     label: section("label", LabelPrefSchema, DEFAULT_SETTINGS.label, "Etiqueta"),
     display: section("display", DisplayPrefSchema, DEFAULT_SETTINGS.display, "Visualització"),
     defaults: v7 ? { ...defaults, material: alias(defaults.material), backMaterial: alias(defaults.backMaterial) } : defaults,
+    // v10: màquines CNC (additiu: abans no n'hi havia). Si n'hi ha més d'una per defecte, només la primera.
+    machines: oneDefault(list("machines", MachineSchema, [], "Màquines CNC")),
   }
   return { settings, problems, migrated: migrated || problems.length > 0 }
+}
+
+function oneDefault(ms: Machine[]): Machine[] {
+  let seen = false
+  return ms.map((m) => {
+    if (!m.isDefault) return m
+    if (seen) return { ...m, isDefault: false }
+    seen = true
+    return m
+  })
 }
 
 /** Els valors inicials sempre hi són (amagats o no): si falten, s'afegeixen al final. */

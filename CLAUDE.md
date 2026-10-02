@@ -47,6 +47,10 @@ coses per resoldre.
   repo.**
 - [`docs/export-taller.md`](docs/export-taller.md): decisions de l'export STEP + CSV
   (eixos, numeració de cantells del taller, geometria dels forats i ranures, etiqueta).
+- [`docs/maestro-xcs.md`](docs/maestro-xcs.md): **màquines CNC i programes de Maestro (.xcs)**: lectura del
+  context de màquina, orientació i origen, instruccions MSL amb les pàgines del manual, tria d'eines i
+  preguntes obertes per al taller. Fonts a `docs/maestro/` (manual MSL R4 —**no es puja al repo**, és de SCM—,
+  context `AA10008021.machinecontext`, `eines.txt` del germà).
 - [`docs/foto-mesures.md`](docs/foto-mesures.md): model de mesures de la foto
   (relativa / estimada / real, recalibratge, qualitat, línia del terra i fondària).
 - [`docs/colleccions-mobles.md`](docs/colleccions-mobles.md): **col·leccions de mobles** (biblioteca de referències
@@ -154,6 +158,41 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   producció.
 - Diferències: allà Chakra **v2** + React 18, aquí Chakra **v3** + React 19. No es
   comparteix codi d'UI.
+
+## Màquines CNC (Preferències › Màquines CNC)
+- La SCM del taller (Xilog Maestro 2.00.004, sèrie AA10008021) s'**importa de Maestro**: la carpeta
+  `<sèrie>.machinecontext` sencera (`webkitdirectory`) o fitxers solts (`.tlgx`, `.atrx`, `.cfgx`,
+  `XilogHeaderParameters.xml`). `core/machine/maestro.ts` (lector XML propi `xml.ts`, .cfgx = zip amb
+  `DecompressionStream`, `core/file/zip.ts`): eines (`MachineTool`: codi de Maestro, nom, broca/fresa/disc/
+  agregat/palpador, vertical/horitzontal, Ø, fondària útil, gruix del disc, sentit, capçal i mandrins,
+  `mounted`, `auto`), versió, camp de treball, àrees, capçalera. Model a `core/model/machine.ts`.
+- Desat a `Settings.machines` (**preferències v10**, additiu), una per defecte (`defaultMachine`). Pàgina
+  `settings/MachinesPane.tsx` (`MasterDetail`, al grup Fabricació): «Importar de Maestro» i «Fitxers solts»,
+  detall amb nom, sèrie, configuració, Maestro, camp, per defecte (★), opcions dels programes (àrea de
+  treball, passants de més, ranures disc/fresa) i **taula d'eines per tipus** (codi · nom · Ø · fondària ·
+  posició); tocar una eina l'edita; «Afegir eina» per a les que el `.tlgx` no porta (amb el codi de Maestro).
+  Tornar a importar la mateixa sèrie conserva les eines afegides a mà i les opcions.
+
+## Export Maestro .xcs (BETA)
+- **El STEP no serveix per mecanitzar**: TopSolid llegeix els forats del STEP com a geometria, no com a
+  mecanitzats (al taller s'han de refer). Per això l'app escriu **programes de Maestro** directament:
+  Exportar › «Màquina CNC (Maestro)» › «Programes .xcs» → `<moble>-maestro.zip` (`zipStore`, sense
+  dependències) amb un `<ref>.xcs` per peça (ref del taller, `A.1.L.1`), `<ref>Volt.xcs` per a la cara B
+  (com el «2a cara») i `LLEGEIX-ME.txt`. `core/export/maestroXcs.ts` (`toMaestroXcs`, `panelXcs`), pur i
+  testejat. La targeta diu BETA fins que el taller els validi a Maestro i mostra els avisos.
+- Només instruccions dels exemples del manual MSL (pàgines als comentaris i a `docs/maestro-xcs.md`):
+  `SetMachiningParameters`, `CreateFinishedWorkpieceBox`, `CreateRawWorkpiece`, `SelectWorkplane`,
+  `CreateDrill`, `CreateSegment` + `CreateSlot` (disc), `CreatePolyline` + `CreateRoughFinish` (fresa),
+  polilínia/cercle + `CreateContour` (talls per dins, contorn per fora). Capçal sempre `"-1"`.
+- X = llarg, Y = curt, origen a baix a l'esquerra de la cara A (la convenció u/v); forats de cantell a les
+  cares estàndard (3 Front · 1 Back · 4 Left · 2 Right, vistes des de fora, a mig gruix, broca horitzontal
+  `"-1"`); cara B girada sobre X: (x, A − y).
+- Eines (`core/machine/tools.ts`): broques pel Ø exacte i la fondària útil; ranures amb disc si van de
+  cantell a cantell, si no fresa Ø ≤ ample; talls amb broca si n'hi ha del Ø, si no fresa limitada pels arcs
+  i dogbones (`maxToolDiameter`). Sense eina → no surt i avisa. Inglets: avís (serra).
+- **Pendent de validar amb el taller** (llista a `docs/maestro-xcs.md`): origen i sentit de X a Back/Left
+  (`PROVA_ORIENTACIO.xcs`), gir de la cara B, disc o fresa per a les ranures, fixació, eines que falten al
+  `.tlgx`.
 
 ## Foto i visualització
 - La foto serveix per **veure proporcions**, no per fabricar. Les mides reals
@@ -395,8 +434,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   - **Peces**: taula (peces iguals agrupades) + **plànol de la peça seleccionada** al costat.
     Al mòbil, una **targeta per peça** (mides, material, veta, forats, cantells) i la triada porta el plànol a dins.
     Els plànols no van a Exportar.
-  - **Exportar**: per destinació (STEP de TopSolid · CSV de TopSolid · CNC · Llista de tall · Model
-    3D), una acció principal per grup; les eines de depuració (JSON UnifiedData) plegades a «Avançat».
+  - **Exportar**: per destinació (STEP de TopSolid · CSV de TopSolid · Màquina CNC (Maestro, .xcs) · CNC (DXF) ·
+    Llista de tall · Model 3D), una acció principal per grup; les eines de depuració (JSON UnifiedData) plegades a «Avançat».
   - **Un sol STEP** (`toStepCad` a `export/step.ts`, conjunts de `stepCadGroups`), per obrir el moble
     a TopSolid i continuar-lo treballant **i** per al taller (amb el `_res.csv`): conjunt arrel (el
     moble) › un subconjunt per mòdul («1. Baix»), «Taulell i sòcol» i les peces lliures (per grup) ›
@@ -794,7 +833,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     el mateix material (no «tauler vist»).
   - **Preferències com Configuració de macOS / Figma** (`SettingsPages` + `Pane` a `SettingsScreen`):
     a l'esquerra la llista d'apartats per categories (`SETTINGS_GROUPS`: **Fabricació** — Materials, Taulers i
-    nesting, Ferratges, Jocs, Etiquetes —, **Foto i visor 3D** — Objectes de referència, Visor 3D — i **App** —
+    nesting, Ferratges, Jocs, Etiquetes, Màquines CNC —, **Foto i visor 3D** — Objectes de referència, Visor 3D — i **App** —
     Visualització, Tema; no és un acordió, com la Configuració de macOS) i a la dreta la pàgina triada (icona, títol,
     explicació i «Restaurar valors inicials»); dins, **una sola columna de 760 px** (`FoldGrid` = pila; res de
     graelles de targetes, que deixaven forats) de **grups sempre oberts** (`components/SettingsGroup`:
@@ -1095,6 +1134,7 @@ Accions principals: icona + text.
 | Mobles | Col·leccions de mobles (biblioteca de referències) | `LuLibrary` |
 | Ambients | Afegir moble · Bloc · Plànol · 3D · Girar | `LuBox` · `LuSofa` · `LuMap` · `LuRotate3D` · `LuRotateCw` / `LuRotateCcw` |
 | Exportar | DXF (CNC) · STEP 3D · CSV de nesting · CSV de peces · GLB · Avançat | `LuScissors` · `LuCuboid` · `LuLayoutGrid` · `LuFileDown` · `LuBoxes` · `LuSettings2` |
+| Màquines | Màquina CNC (Preferències i export Maestro .xcs) · Per defecte · Fitxers solts | `LuFactory` · `LuStar` · `LuFolderOpen` |
 
 Les vistes Davant, Darrere, Esquerra, Dreta i Dalt van amb **text**, sense icona. Compte:
 a Lucide, `square-split-horizontal` té la línia **vertical**. Per això és la de "dividir en vertical".

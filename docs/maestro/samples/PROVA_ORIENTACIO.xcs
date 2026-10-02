@@ -1,0 +1,27 @@
+// Mobles CNC - programa Maestro (MSL .xcs) - BETA: comprova'l a Maestro abans de mecanitzar
+// Peca PROVA_ORIENTACIO: Prova d'orientacio (prova) - 600 x 400 x 19 - Aglomerat 19
+// Cara A amunt. X = llarg, Y = ample, origen a la cantonada de baix a l'esquerra (cantell 4 a X = 0, cantell 3 a Y = 0)
+// Maquina SCM AA10008021 (AA10008021) - Maestro 2.00.004
+
+SetMachiningParameters("AD", 1, 10, 0, false);
+CreateFinishedWorkpieceBox("PROVA_ORIENTACIO", 600, 400, 19);
+CreateRawWorkpiece("PROVA_ORIENTACIO", 0, 0, 0, 0, 0, 0);
+
+SelectWorkplane("Top");
+CreateDrill("Forat_1", 50, 30, 5, 5, "", TypeOfProcess.Drilling, "003", "-1");
+
+SelectWorkplane("Front");
+// broca horitzontal 019/020: Maestro tria el mandri segons el cantell
+CreateDrill("ForatCantell_1", 100, 9.5, 15, 8, "", TypeOfProcess.Drilling, "-1", "-1");
+
+SelectWorkplane("Right");
+// broca horitzontal 019/020: Maestro tria el mandri segons el cantell
+CreateDrill("ForatCantell_2", 100, 9.5, 15, 8, "", TypeOfProcess.Drilling, "-1", "-1");
+
+SelectWorkplane("Back");
+// broca horitzontal 019/020: Maestro tria el mandri segons el cantell
+CreateDrill("ForatCantell_3", 500, 9.5, 15, 8, "", TypeOfProcess.Drilling, "-1", "-1");
+
+SelectWorkplane("Left");
+// broca horitzontal 019/020: Maestro tria el mandri segons el cantell
+CreateDrill("ForatCantell_4", 300, 9.5, 15, 8, "", TypeOfProcess.Drilling, "-1", "-1");

@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Manual de SCM (Maestro Scripting Language): només local, no es puja
+docs/maestro/*.pdf

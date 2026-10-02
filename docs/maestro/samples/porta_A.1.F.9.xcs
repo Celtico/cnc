@@ -1,0 +1,14 @@
+// Mobles CNC - programa Maestro (MSL .xcs) - BETA: comprova'l a Maestro abans de mecanitzar
+// Peca A.1.F.9: Porta esquerra (porta e) - 658 x 302.5 x 19 - Noguera xapada
+// Cara A amunt. X = llarg, Y = ample, origen a la cantonada de baix a l'esquerra (cantell 4 a X = 0, cantell 3 a Y = 0)
+// Maquina SCM AA10008021 (AA10008021) - Maestro 2.00.004
+
+SetMachiningParameters("AD", 1, 10, 0, false);
+CreateFinishedWorkpieceBox("A.1.F.9", 658, 302.5, 19);
+CreateRawWorkpiece("A.1.F.9", 0, 0, 0, 0, 0, 0);
+
+SelectWorkplane("Top");
+CreateDrill("Forat_1", 115, 22.5, 13, 35, "", TypeOfProcess.Drilling, "013", "-1");
+CreateDrill("Forat_2", 563, 22.5, 13, 35, "", TypeOfProcess.Drilling, "013", "-1");
+CreateDrill("ForatPassant_1", 265, 262.5, 20, 5, "", TypeOfProcess.Drilling, "003", "-1");
+CreateDrill("ForatPassant_2", 393, 262.5, 20, 5, "", TypeOfProcess.Drilling, "003", "-1");
