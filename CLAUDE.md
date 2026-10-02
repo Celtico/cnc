@@ -903,9 +903,18 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   «Acabat · gruixos · cantell» (`materialSummary`) i l'etiqueta «★ Tauler per defecte» / «★ Fons per defecte».
   - Tocar una targeta obre l'**editor a pantalla completa** (`MaterialEditorDialog`: `Dialog size="full"`, 100vw × 100dvh,
     zona segura als quatre costats, ✕ a `calc(env(safe-area-inset-top) + 8px)` i el títol a la seva altura: nom del material
-    i categoria). A l'ordinador gran (`lg`), la **mostra a escala real** omple la columna de l'esquerra (`MaterialHero fill`,
-    600 mm = l'amplada) i el formulari va a la dreta (560 px, amb el seu desplaçament); més estret, una sola columna que es
-    desplaça (mostra a dalt, formulari de 760 px com a molt). Formulari (`MaterialCard`): nom editable amb Duplicar/Eliminar i
+    i categoria). Mostres (`MaterialStage`, fora de la `MaterialCard` amb `key`: canviar de material no refà el 3D): la
+    **tira a escala real** (`MaterialHero fill`, 600 mm = l'amplada, «A escala real») i la **bola de material**
+    (`settings/MaterialBall.tsx`, «Bola de material»: esfera de 300 mm, `ballMaterial` a `viewer/ballMaterial.ts` = el
+    mateix camí que les peces, `finishMaterial` d'`exportablePanel.ts`; u = π·D i v = π·D/2, repeticions en u enteres si
+    cal estirar ≤ 12 % (`ballSpanU`), si no costura darrere; un sol `Canvas` `frameloop="demand"`, dpr ≤ 2 / 1,5
+    `LOW_MEMORY`, `resize offsetSize` —el diàleg s'obre escalat—, `StudioEnvironment` + llum principal forta i retall,
+    terra de caselles de 50 mm que s'esvaeix sobre el fons d'estudi CSS clar/fosc, ombra de contacte de textura;
+    `OrbitControls` sense zoom ni desplaçar; el material es refà per `ballKey` i s'allibera; només muntada amb l'editor
+    obert; en DEV `window.__materialBall` = el renderitzador per mirar `info.memory`). A l'ordinador gran (`lg`) omplen
+    la columna de l'esquerra (tira a dalt, bola a sota a tota l'amplada) i el formulari va a la dreta (560 px, amb el seu
+    desplaçament); més estret, tira i bola una al costat de l'altra a dalt (meitat i meitat al mòbil, bola de 280 px a
+    `md`) i el formulari (760 px com a molt) a sota, tot es desplaça. Les targetes de la graella es queden en CSS. Formulari (`MaterialCard`): nom editable amb Duplicar/Eliminar i
     les seccions **Aspecte** (Acabat, Color/Espècie/Foto, mapes de relleu i brillantor, Rajola, Textura, Joc PBR) i
     **Fabricació** (Gruixos `ThicknessChips`, Cantell, Veta, Categoria; als de simulació només Categoria) i, als taulers i
     fons, **«Per defecte als mòduls nous»** (`DefaultPick`). Esc i ✕ tornen a la graella; **Esc amb el nom a mig escriure

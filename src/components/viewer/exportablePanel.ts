@@ -29,6 +29,14 @@ function faceTexture(base: Texture, uMm: number, vMm: number, rotate: boolean, t
   return t
 }
 
+/**
+ * Material d'una cara de `uMm` × `vMm` amb l'acabat, pel mateix camí que les peces (textura a mida real, mapes PBR, metall,
+ * vidre translúcid, llum que emet): la bola de material de Preferències (`ballMaterial`).
+ */
+export function finishMaterial(finish: FinishSpec, uMm: number, vMm: number): MeshStandardMaterial {
+  return makeMaterial(finish, uMm, vMm, false, { transparent: false, opacity: 1 })
+}
+
 /** Material d'un acabat amb la llum i la translucidesa del render (`applyFinishFx`). */
 function makeMaterial(finish: FinishSpec, uMm: number, vMm: number, rotate: boolean, opts: { transparent: boolean; opacity: number }, off?: TextureOffset): MeshStandardMaterial {
   return applyFinishFx(baseMaterial(finish, uMm, vMm, rotate, opts, off), finish)

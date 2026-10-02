@@ -103,7 +103,8 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
                             {/* Mostres de la textura: només les de la categoria oberta (lazyMount). */}
                             {/* Mostres quadrades a tota l'amplada de la columna, alineades a dalt; el nom, sempre dues línies
                                 d'alt. La triada: vora del color principal al voltant de la mostra i ✓ a la cantonada. */}
-                            <SimpleGrid columns={3} gap={3} alignItems="start">
+                            {/* 5 px de marge: la vora de la triada (outline a 2 px) no queda tallada pels costats. */}
+                            <SimpleGrid columns={3} gap={3} alignItems="start" p="5px">
                               {c.list.map((m) => {
                                 const on = m.name === value
                                 return (

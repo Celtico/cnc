@@ -8,6 +8,8 @@ import { MATERIAL_CATEGORIES, materialCategory, materialNameError, newId, restor
 import { GalleryCard } from "../projects/GalleryCard"
 import { GALLERY_COLS, fold } from "../projects/galleryGrid"
 import type { LibraryItem } from "./libraryItems"
+import { useColorMode } from "../../components/ui/color-mode"
+import { MaterialBall } from "./MaterialBall"
 import { MaterialHero, ThicknessChips } from "./MaterialBits"
 import { MaterialLibrary } from "./MaterialLibrary"
 import { isEditable, previewStyle } from "./materialPreview"
@@ -193,6 +195,7 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
         </Text>
       )}
       <MaterialEditorDialog open={editorOpen && m !== null} m={shownM} onClose={close} dirty={dirty} focusName={shownM !== null && justAdded === shownM.id}>
+        {shownM && <MaterialStage m={shownM} live={editorOpen} />}
         {shownM && (
           <MaterialCard
             key={shownM.id}
@@ -281,6 +284,41 @@ function MaterialEditorDialog({ open, m, onClose, dirty, focusName, children }: 
   )
 }
 
+/** Fons d'estudi de la bola (el terra s'hi esvaeix): clar o fosc com el tema. */
+const STUDIO_BG = "radial-gradient(120% 95% at 50% 30%, #fbfaf8 0%, #ebe8e3 55%, #dedad4 100%)"
+const STUDIO_BG_DARK = "radial-gradient(120% 95% at 50% 30%, #4a4a4e 0%, #3a3a3d 50%, #2c2c2f 100%)"
+
+/**
+ * Mostres de l'editor: la tira plana a escala real (`MaterialHero`) i la bola de material (`MaterialBall`). A l'ordinador
+ * gran omplen la columna de l'esquerra (la tira a dalt i la bola a sota, a tota l'amplada); més estret, una al costat de
+ * l'altra a dalt del formulari. Fora de la targeta (que es refà per material): canviar de material no refà el 3D. `live`:
+ * la bola només es munta amb l'editor obert (a l'iPhone, cap context de WebGL amagat).
+ */
+function MaterialStage({ m, live }: { m: MaterialPref; live: boolean }) {
+  const dark = useColorMode().colorMode === "dark"
+  const caption = (t: string) => (
+    <Text fontSize="xs" color="fg.muted" textAlign="center" truncate>
+      {t}
+    </Text>
+  )
+  return (
+    <Box flex={{ lg: 1 }} flexShrink={0} minW={0} minH={0} bg="bg.subtle" display="flex" flexDirection={{ base: "row", lg: "column" }} gap={{ base: 3, lg: 4 }} p={{ base: 3, sm: 4, lg: 5 }}>
+      <Stack flex={1} minW={0} minH={0} gap={1.5}>
+        <Box flex={{ lg: 1 }} minH={0} aspectRatio={{ base: 1, md: "auto" }} h={{ md: "280px", lg: "auto" }} rounded="lg" overflow="hidden" borderWidth="1px">
+          <MaterialHero m={m} fill />
+        </Box>
+        {caption("A escala real")}
+      </Stack>
+      <Stack w={{ base: "calc(50% - 6px)", md: "280px", lg: "full" }} flexShrink={0} minW={0} gap={1.5}>
+        <Box aspectRatio={{ base: 1, lg: "auto" }} h={{ lg: "min(380px, 42dvh)" }} rounded="lg" overflow="hidden" borderWidth="1px" cursor="grab" _active={{ cursor: "grabbing" }} style={{ background: dark ? STUDIO_BG_DARK : STUDIO_BG }} title="Arrossega per girar-la">
+          {live && <MaterialBall m={m} dark={dark} />}
+        </Box>
+        {caption("Bola de material")}
+      </Stack>
+    </Box>
+  )
+}
+
 function MaterialCard({ m, dirty, footer, onChange, onRename, nameError, onDuplicate, onDelete, canDelete, autoFocusName }: { m: MaterialPref; dirty: RefObject<boolean>; footer?: ReactNode; onChange: (p: Partial<MaterialPref>) => void; onRename: (name: string) => void; nameError: (name: string) => string | null; onDuplicate: () => void; onDelete: () => void; canDelete: boolean; autoFocusName?: boolean }) {
   const [editing, setEditing] = useState(false)
   // El nom es canvia en acabar (sortir del camp o Retorn), no a cada tecla: llavors els mobles i ambients que el fan
@@ -352,10 +390,6 @@ function MaterialCard({ m, dirty, footer, onChange, onRename, nameError, onDupli
   })
   return (
     <>
-      {/* La mostra a escala real: a l'ordinador, tota la columna de l'esquerra; al mòbil, a dalt (la pàgina es desplaça). */}
-      <Box flex={{ lg: 1 }} minW={0} minH={0} h={{ base: "220px", md: "280px", lg: "auto" }} flexShrink={0} bg="bg.subtle">
-        <MaterialHero m={m} fill />
-      </Box>
       <TextureEditor m={m} open={editing} onClose={() => setEditing(false)} onApply={(f) => onChange({ finish: f })} />
 
       <Box w={{ base: "full", lg: "min(560px, 48%)" }} flexShrink={0} overflowY={{ lg: "auto" }} borderStartWidth={{ lg: "1px" }} css={{ scrollbarWidth: "thin", scrollbarGutter: "stable" }}>
