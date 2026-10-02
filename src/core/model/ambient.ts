@@ -242,7 +242,7 @@ export const OBJECT_TEMPLATES: Template[] = [
       obj([
         { name: "Base", orient: "flat", material: "Ferro negre", w: 300, h: 300, thickness: 20, x: 50, y: 0, z: 50, shape: ellipse(300, 300) },
         { name: "Pal", orient: "flat", material: "Ferro negre", w: 20, h: 20, thickness: 1450, x: 190, y: 20, z: 190, shape: ellipse(20, 20) },
-        { name: "Pantalla", orient: "flat", material: "Lli blanc", w: 400, h: 400, thickness: 300, x: 0, y: 1450, z: 0, shape: ellipse(400, 400) },
+        { name: "Pantalla", orient: "flat", material: "Pantalla de lli", w: 400, h: 400, thickness: 300, x: 0, y: 1450, z: 0, shape: ellipse(400, 400) },
       ]),
   },
   {

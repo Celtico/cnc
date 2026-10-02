@@ -21,6 +21,8 @@ struct Params {
   offs: vec4u,     // materials, textures, bevel, finestres (vec4 a info)
   envi: vec4u,     // w, h, inici de la marginal, inici de la condicional
   seed: vec4u,     // llavor, files d'aquesta tanda, 2^reduccions de les textures
+  lamp: vec4f,     // intensitat de les làmpades (0 = apagades), Σ àrea × luminància
+  emit: vec4u,     // inici dels emissors (vec4 a info), quants
 }
 
 @group(0) @binding(0) var<uniform> P: Params;
@@ -47,14 +49,16 @@ fn rnd() -> f32 {
 }
 
 // --- Materials i textures ------------------------------------------------------------------
-struct Mat { color: vec3f, map: i32, e: vec4f, e2: vec2f, rough: f32, metal: f32, opacity: f32, alphaCut: f32, bump: f32, lum: f32 }
+struct Mat { color: vec3f, map: i32, e: vec4f, e2: vec2f, rough: f32, metal: f32, opacity: f32, alphaCut: f32, bump: f32, lum: f32, emission: vec3f, translucent: f32, normalMap: i32, roughMap: i32 }
 fn getMat(i: u32) -> Mat {
-  let b = P.offs.x + i * 4u;
+  let b = P.offs.x + i * 6u;
   let a = infoF(b);
   let c = infoF(b + 1u);
   let d = infoF(b + 2u);
   let e = infoF(b + 3u);
-  return Mat(a.xyz, i32(a.w), c, d.xy, d.z, d.w, e.x, e.y, e.z, e.w);
+  let f = infoF(b + 4u);
+  let g = infoF(b + 5u);
+  return Mat(a.xyz, i32(a.w), c, d.xy, d.z, d.w, e.x, e.y, e.z, e.w, f.xyz, f.w, i32(g.x), i32(g.y));
 }
 fn wrapI(x: i32, n: i32, mode: u32) -> i32 {
   if (mode == 2u) { return clamp(x, 0, n - 1); }
@@ -87,6 +91,12 @@ fn sampleTex(ti: i32, uv: vec2f) -> vec3f {
   let xb = wrapI(x0 + 1, w, ws);
   let ya = wrapI(y0, h, wt);
   let yb = wrapI(y0 + 1, h, wt);
+  if (((t.w >> 5u) & 1u) == 1u) {
+    // Mapes lineals (normals, rugositat): sense la corba sRGB.
+    let r0 = mix(texel(t, xa, ya).rgb, texel(t, xb, ya).rgb, ax);
+    let r1 = mix(texel(t, xa, yb).rgb, texel(t, xb, yb).rgb, ax);
+    return mix(r0, r1, ay);
+  }
   let c0 = mix(toLin(texel(t, xa, ya).rgb), toLin(texel(t, xb, ya).rgb), ax);
   let c1 = mix(toLin(texel(t, xa, yb).rgb), toLin(texel(t, xb, yb).rgb), ax);
   return mix(c0, c1, ay);
@@ -309,6 +319,7 @@ var<private> KD: vec3f;
 var<private> F0: vec3f;
 var<private> A2: f32;
 var<private> PS: f32;
+var<private> TR: f32;
 var<private> acc: vec3f;
 var<private> aovA: vec3f;
 var<private> aovN: vec3f;
@@ -322,7 +333,11 @@ fn basis() {
 }
 fn evalBsdf(l: vec3f, a2: f32) -> vec4f {
   let NoL = dot(N, l);
-  if (NoL <= 0.0) { return vec4f(0.0); }
+  let back = dot(l, G) < 0.0;
+  if (NoL <= 0.0 || back) {
+    if (TR > 0.0 && back && NoL < 0.0) { return vec4f(KD * TR / PI, (1.0 - PS) * TR * -NoL / PI); }
+    return vec4f(0.0);
+  }
   let hs = l + V;
   let hl = length(hs);
   let h = select(N, hs / hl, hl > 1e-6);
@@ -333,8 +348,9 @@ fn evalBsdf(l: vec3f, a2: f32) -> vec4f {
   let vis = 0.5 / (NoL * sqrt(NoV * NoV * (1.0 - a2) + a2) + NoV * sqrt(NoL * NoL * (1.0 - a2) + a2));
   let fw = pow(1.0 - VoH, 5.0);
   let Fs = F0 + (1.0 - F0) * fw;
-  let f = Fs * (D * vis) + KD * (1.0 - Fs) / PI;
-  return vec4f(f, PS * D * NoH / (4.0 * VoH) + (1.0 - PS) * NoL / PI);
+  let kr = (1.0 - TR) / PI;
+  let f = Fs * (D * vis) + KD * (1.0 - Fs) * kr;
+  return vec4f(f, PS * D * NoH / (4.0 * VoH) + (1.0 - PS) * NoL * kr);
 }
 fn addC(c: vec3f, k: i32) {
   let l = dot(c, LUMA);
@@ -354,6 +370,29 @@ fn bevelNormal(p: vec3f, n: vec3f, bmin: vec3f, bmax: vec3f, r: f32) -> vec3f {
     else if (hi < ra) { o[a] = o[a] + (1.0 - max(0.0, hi) / ra); }
   }
   return normalize(o);
+}
+
+fn emitter(i: u32) -> array<vec4f, 4> {
+  let b = P.emit.x + i * 4u;
+  return array<vec4f, 4>(infoF(b), infoF(b + 1u), infoF(b + 2u), infoF(b + 3u));
+}
+fn pickEmitter(u: f32) -> u32 {
+  var lo = 0u;
+  var hi = P.emit.y - 1u;
+  while (lo < hi) {
+    let mid = (lo + hi) / 2u;
+    if (infoF(P.emit.x + mid * 4u + 2u).w <= u) { lo = mid + 1u; } else { hi = mid; }
+  }
+  return lo;
+}
+fn perturbNormal(n: vec3f, T: vec3f, B: vec3f, ts: vec3f) -> vec3f {
+  var t = T - n * dot(n, T);
+  let tl = length(t);
+  if (!(tl > 1e-12)) { return n; }
+  t /= tl;
+  var b = cross(n, t);
+  if (dot(b, B) < 0.0) { b = -b; }
+  return normalize(t * ts.x + b * ts.y + n * ts.z);
 }
 
 fn trace(o0: vec3f, d0: vec3f) -> vec4f {
@@ -403,6 +442,28 @@ fn trace(o0: vec3f, d0: vec3f) -> vec4f {
       let uv = texCoord(ti, m, hU, hV);
       let tc = sampleTex(m.map, uv);
       al *= tc;
+      if (m.roughMap >= 0) { rough = clamp(rough * sampleTex(m.roughMap, uv).y, 0.02, 1.0); }
+      if (m.normalMap >= 0) {
+        let A = tris[ti * 5u + 3u];
+        let Bq = tris[ti * 5u + 4u];
+        let U0 = m.e.x * A.x + m.e.z * A.y + m.e2.x;
+        let V0 = m.e.y * A.x + m.e.w * A.y + m.e2.y;
+        let U1 = m.e.x * A.z + m.e.z * A.w + m.e2.x;
+        let V1 = m.e.y * A.z + m.e.w * A.w + m.e2.y;
+        let U2 = m.e.x * Bq.x + m.e.z * Bq.y + m.e2.x;
+        let V2 = m.e.y * Bq.x + m.e.w * Bq.y + m.e2.y;
+        let du1 = U1 - U0;
+        let dv1 = V1 - V0;
+        let du2 = U2 - U0;
+        let dv2 = V2 - V0;
+        let det = du1 * dv2 - du2 * dv1;
+        if (abs(det) > 1e-12) {
+          let r = 1.0 / det;
+          let T = (e1.xyz * dv2 - e2 * dv1) * r;
+          let B = (e2 * du1 - e1.xyz * du2) * r;
+          N = perturbNormal(N, T, B, sampleTex(m.normalMap, uv) * 2.0 - 1.0);
+        }
+      }
       if (m.bump > 0.0) {
         let t = info[P.offs.y + u32(m.map)];
         let l0 = dot(tc, LUMA);
@@ -450,6 +511,18 @@ fn trace(o0: vec3f, d0: vec3f) -> vec4f {
       N = normalize(N + V * (0.05 - NoV));
       NoV = max(1e-3, dot(N, V));
     }
+    if (P.lamp.x > 0.0 && P.emit.y > 0u) {
+      let el = dot(m.emission, LUMA);
+      if (el > 0.0) {
+        var w = 1.0;
+        if (vertex >= 0 && !delta) {
+          let cosL = abs(dot(d, G));
+          let pl = select(0.0, el / P.lamp.y * hT * hT / cosL, cosL > 1e-6);
+          w = lastPdf * lastPdf / (lastPdf * lastPdf + pl * pl);
+        }
+        addC(thr * m.emission * (P.lamp.x * w), max(0, vertex));
+      }
+    }
     if (m.opacity < 1.0) {
       let c = abs(dot(d, G));
       let F = 0.04 + 0.96 * pow(1.0 - c, 5.0);
@@ -471,6 +544,8 @@ fn trace(o0: vec3f, d0: vec3f) -> vec4f {
     vertex += 1;
     delta = false;
     let p = hp + G * 1e-4;
+    let q = hp - G * 1e-4;
+    TR = m.translucent;
     let metal = clamp(m.metal, 0.0, 1.0);
     KD = al * (1.0 - metal);
     F0 = mix(vec3f(0.04), al, metal);
@@ -497,14 +572,13 @@ fn trace(o0: vec3f, d0: vec3f) -> vec4f {
       let ux = vec3f(1.0 + sg * s.x * s.x * a, sg * b, -sg * s.x);
       let wx = vec3f(b, sg + s.y * s.y * a, -s.y);
       let l = ux * (cos(ph) * st) + wx * (sin(ph) * st) + s * ct;
-      if (dot(l, G) > 0.0) {
-        let NoL = dot(N, l);
-        if (NoL > 0.0) {
-          let f = evalBsdf(l, A2 + P.sunCol.w).xyz;
-          if (f.x + f.y + f.z > 0.0) {
-            let T = visible(p, l, 1e9);
-            if (T > 0.0) { addC(thr * f * P.sunCol.xyz * (NoL * T), vertex); }
-          }
+      let front = dot(l, G) > 0.0;
+      if (front || TR > 0.0) {
+        let NoL = abs(dot(N, l));
+        let f = evalBsdf(l, A2 + P.sunCol.w).xyz;
+        if (f.x + f.y + f.z > 0.0) {
+          let T = visible(select(q, p, front), l, 1e9);
+          if (T > 0.0) { addC(thr * f * P.sunCol.xyz * (NoL * T), vertex); }
         }
       }
     }
@@ -532,14 +606,40 @@ fn trace(o0: vec3f, d0: vec3f) -> vec4f {
         l = TT * (rr * cos(ph)) + BB * (rr * sin(ph)) + N * c;
         pl = c / PI;
       }
-      if (pl > 0.0 && dot(l, G) > 0.0) {
+      let front = dot(l, G) > 0.0;
+      if (pl > 0.0 && (front || TR > 0.0)) {
         let fb = evalBsdf(l, A2);
-        let NoL = dot(N, l);
-        if (NoL > 0.0 && fb.x + fb.y + fb.z > 0.0) {
-          let T = visible(p, l, 1e9);
+        let NoL = abs(dot(N, l));
+        if (fb.x + fb.y + fb.z > 0.0) {
+          let T = visible(select(q, p, front), l, 1e9);
           if (T > 0.0) {
             let w = pl * T * NoL / (pl * pl + fb.w * fb.w);
             addC(thr * fb.xyz * sky(l) * w, vertex);
+          }
+        }
+      }
+    }
+    // Làmpades.
+    if (P.lamp.x > 0.0 && P.emit.y > 0u) {
+      let E = emitter(pickEmitter(rnd()));
+      let su = sqrt(rnd());
+      let r2 = rnd();
+      let tp = E[0].xyz + E[1].xyz * (su * (1.0 - r2)) + E[2].xyz * (su * r2);
+      var l = tp - p;
+      let dist = max(1e-9, length(l));
+      l /= dist;
+      let c = cross(E[1].xyz, E[2].xyz);
+      let cosL = abs(dot(c, l)) / max(1e-20, length(c));
+      let front = dot(l, G) > 0.0;
+      if (cosL > 1e-4 && (front || TR > 0.0)) {
+        let pl = E[3].w / P.lamp.y * dist * dist / cosL;
+        let fb = evalBsdf(l, A2);
+        let NoL = abs(dot(N, l));
+        if (fb.x + fb.y + fb.z > 0.0) {
+          let T = visible(select(q, p, front), l, dist * (1.0 - 1e-3));
+          if (T > 0.0) {
+            let w = P.lamp.x * pl * T * NoL / (pl * pl + fb.w * fb.w);
+            addC(thr * fb.xyz * E[3].xyz * w, vertex);
           }
         }
       }
@@ -560,19 +660,25 @@ fn trace(o0: vec3f, d0: vec3f) -> vec4f {
       let u2 = rnd();
       let rr = sqrt(u1);
       let ph = 2.0 * PI * u2;
-      l = TT * (rr * cos(ph)) + BB * (rr * sin(ph)) + N * sqrt(1.0 - u1);
+      var cz = sqrt(1.0 - u1);
+      if (TR > 0.0) {
+        if (rnd() < TR) { cz = -cz; }
+      }
+      l = TT * (rr * cos(ph)) + BB * (rr * sin(ph)) + N * cz;
     }
-    if (dot(l, G) <= 0.0) { break; }
+    let ldg = dot(l, G);
+    let nl = dot(N, l);
+    if (ldg * nl <= 0.0 || (ldg < 0.0 && (spec || !(TR > 0.0)))) { break; }
     let fb = evalBsdf(l, A2);
-    let NoL = dot(N, l);
-    if (!(fb.w > 1e-8) || NoL <= 0.0) { break; }
+    let NoL = abs(nl);
+    if (!(fb.w > 1e-8)) { break; }
     thr *= fb.xyz * NoL / fb.w;
     pathRough = max(pathRough, select(P.clampv.z, re * 0.5, spec));
     cp = p;
     cn = N;
     lastPdf = fb.w;
     d = l;
-    o = p;
+    o = select(q, p, ldg > 0.0);
     if (bounce >= 2u) {
       let pm = min(0.95, max(thr.x, max(thr.y, thr.z)));
       if (rnd() > pm) { break; }

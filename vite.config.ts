@@ -56,6 +56,20 @@ export default defineConfig({
         // Les pantalles d'inici d'iOS les desa el sistema en instal·lar l'app: no cal precachejar-les.
         globIgnores: ["splash/**"],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+        // Textures de foto (~14 MB) i pesos d'OIDN: no es precachegen; es desen el primer cop que es fan servir.
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith("/textures/"),
+            handler: "CacheFirst",
+            options: { cacheName: "mobles-textures", expiration: { maxEntries: 120, maxAgeSeconds: 365 * 24 * 3600 }, cacheableResponse: { statuses: [200] } },
+          },
+          {
+            // Pesos d'OIDN (1,8 MB): `oidn.ts` els valida (i esborra els dolents de la seva memòria cau).
+            urlPattern: ({ url }) => url.pathname.startsWith("/oidn/"),
+            handler: "CacheFirst",
+            options: { cacheName: "mobles-oidn-sw", expiration: { maxEntries: 4 }, cacheableResponse: { statuses: [200] } },
+          },
+        ],
       },
     }),
   ],

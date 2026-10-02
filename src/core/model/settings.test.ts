@@ -111,3 +111,27 @@ describe("categories de materials", () => {
     expect(withCategory({ ...res.settings.materials[0]!, forBacks: true }, "board").forBacks).toBeUndefined()
   })
 })
+
+describe("materials de foto (v6)", () => {
+  it("són vàlids, amb els fitxers i sense noms repetits", async () => {
+    const fsMod = "node:fs"
+    const { existsSync } = (await import(/* @vite-ignore */ fsMod)) as { existsSync: (p: string) => boolean }
+    const { PHOTO_MATERIALS, TEXTURE_SETS, textureSetFile } = await import("./textureSets")
+    const { MaterialPrefSchema } = await import("./settings")
+    for (const m of PHOTO_MATERIALS) expect(MaterialPrefSchema.safeParse(m).success, m.name).toBe(true)
+    const names = DEFAULT_SETTINGS.materials.map((m) => m.name)
+    expect(new Set(names).size).toBe(names.length)
+    for (const t of TEXTURE_SETS) for (const k of ["diff", "nor", "rough"] as const) expect(existsSync(`public/${textureSetFile(t.id, k)}`), t.id).toBe(true)
+  })
+  it("la migració afegeix els que falten sense tocar els de l'usuari", () => {
+    const mine = { id: "photo-oak_veneer_01", name: "Roure (foto)", thicknesses: [19], hasGrain: true, finish: { kind: "color", color: "#123456" }, edge: "" }
+    const res = parseSettings({ version: 5, materials: [mine] })
+    const oak = res.settings.materials.filter((m) => m.name === "Roure (foto)")
+    expect(oak).toHaveLength(1)
+    expect(oak[0]!.finish).toEqual({ kind: "color", color: "#123456" })
+    expect(res.settings.materials.some((m) => m.name === "Noguera (foto)")).toBe(true)
+    // Si l'usuari n'esborra un a la v6, no torna.
+    const again = parseSettings({ ...res.settings, materials: res.settings.materials.filter((m) => m.name !== "Noguera (foto)") })
+    expect(again.settings.materials.some((m) => m.name === "Noguera (foto)")).toBe(false)
+  })
+})

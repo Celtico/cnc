@@ -12,6 +12,8 @@ export interface LightSetup {
   sunA2: number
   /** Llum del cel directa: 0 = cosinus (cel llis), 1 = HDRI per importància, 2 = per les finestres. */
   neeMode: number
+  /** Multiplicador de la llum de les làmpades (0 = apagades). */
+  lampScale: number
 }
 
 /** Llums derivades de les opcions: les mateixes per al worker de CPU i per a la GPU. */
@@ -26,5 +28,6 @@ export function lightSetup(scene: RenderScene, o: RenderOpts, env: RenderEnv | n
     sunCosMax: Math.cos(angle),
     sunA2: (angle / 2) ** 2,
     neeMode: scene.interior && scene.portals.length > 0 ? 2 : env ? 1 : 0,
+    lampScale: o.lamps === false ? 0 : Math.max(0, o.lampIntensity ?? 1),
   }
 }

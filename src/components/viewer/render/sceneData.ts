@@ -17,6 +17,8 @@ export interface RenderTexture {
   flipY: boolean
   /** Luminància lineal mitjana (per a la variació de rugositat de la veta). */
   lum: number
+  /** Dades lineals (mapes de normals i de rugositat): sense la corba sRGB. */
+  linear?: boolean
 }
 export interface RenderMaterial {
   color: [number, number, number]
@@ -30,6 +32,13 @@ export interface RenderMaterial {
   alphaCut: number
   /** Relleu i brillantor variable segons la textura (fusta i fotos de tauler): 0 = no, 1 = normal. */
   bump: number
+  /** Llum que emet (radiància lineal, abans de la intensitat de «Llums enceses»): pantalles i bombetes. */
+  emission: [number, number, number]
+  /** Translucidesa (0–1): part de la llum difusa que passa a l'altra cara (fulles, cortines, pantalles). */
+  translucent: number
+  /** Mapa de normals (tangent, convenció OpenGL) i de rugositat (canal G): índex de textura o −1. */
+  normalMap: number
+  roughMap: number
 }
 export interface RenderCamera {
   ortho: boolean
@@ -89,11 +98,20 @@ export interface RenderOpts {
   aperture?: number
   /** Gir del cel HDRI (graus). */
   envRotation?: number
+  /** Llums enceses (pantalles i bombetes emeten llum) i la seva intensitat (×). */
+  lamps?: boolean
+  lampIntensity?: number
 }
 
-export const DEFAULT_RENDER_OPTS: RenderOpts = { bounces: 6, sunAzimuth: 40, sunElevation: 45, sunIntensity: 1, skyIntensity: 1, softness: 0.15, aperture: 0, envRotation: 0 }
+export const DEFAULT_RENDER_OPTS: RenderOpts = { bounces: 6, sunAzimuth: 40, sunElevation: 45, sunIntensity: 1, skyIntensity: 1, softness: 0.15, aperture: 0, envRotation: 0, lamps: true, lampIntensity: 1 }
 
 const MAX_TEX = 512
+
+/** Color de la llum de les làmpades (bombeta càlida, ~2700 K, lineal i de luminància 1). */
+export const LAMP_COLOR: [number, number, number] = [1.32, 0.95, 0.62]
+
+/** Translucidesa per defecte de les fulles retallades dels models 3D (alfa). */
+export const LEAF_TRANSLUCENCY = 0.4
 
 /** sRGB (byte) → lineal. */
 const LIN = new Float32Array(256)
@@ -123,8 +141,8 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
   const triBevel: number[] = []
   const bevel: number[] = []
 
-  const texId = (t: Texture): number => {
-    const key = t.source.uuid
+  const texId = (t: Texture, linear = false): number => {
+    const key = `${t.source.uuid}${linear ? ":lin" : ""}`
     const known = texIds.get(key)
     if (known !== undefined) return known
     const img = t.image as CanvasImageSource & { width: number; height: number }
@@ -139,7 +157,7 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
     const data = g.getImageData(0, 0, c.width, c.height).data
     let lum = 0
     for (let i = 0; i < data.length; i += 4) lum += 0.2126 * LIN[data[i]!]! + 0.7152 * LIN[data[i + 1]!]! + 0.0722 * LIN[data[i + 2]!]!
-    textures.push({ w: c.width, h: c.height, data, wrapS: wrap(t.wrapS), wrapT: wrap(t.wrapT), flipY: t.flipY, lum: lum / Math.max(1, data.length / 4) })
+    textures.push({ w: c.width, h: c.height, data, wrapS: wrap(t.wrapS), wrapT: wrap(t.wrapT), flipY: t.flipY, lum: lum / Math.max(1, data.length / 4), ...(linear ? { linear: true } : {}) })
     texIds.set(key, textures.length - 1)
     return textures.length - 1
   }
@@ -153,6 +171,11 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
       m.map.updateMatrix()
       uv = Array.from(m.map.matrix.elements)
     }
+    // Mapes PBR (fotos amb normal i rugositat): mateixa repetició que el color (`uv`).
+    const normalMap = m.map && m.normalMap ? texId(m.normalMap, true) : -1
+    const roughMap = m.map && m.roughnessMap ? texId(m.roughnessMap, true) : -1
+    const glow = Number(m.userData.glow) || 0
+    const alphaCut = map >= 0 ? ((m.userData.alphaCut as number | undefined) ?? 0) : 0
     materials.push({
       // three guarda els colors ja en lineal (gestió de color activada).
       color: [m.color.r, m.color.g, m.color.b],
@@ -161,8 +184,12 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
       roughness: m.roughness,
       metalness: m.metalness,
       opacity: m.userData.glass ? m.opacity : 1,
-      alphaCut: map >= 0 ? ((m.userData.alphaCut as number | undefined) ?? 0) : 0,
-      bump: map >= 0 && m.userData.grain ? 1 : 0,
+      alphaCut,
+      bump: map >= 0 && m.userData.grain && normalMap < 0 ? 1 : 0,
+      emission: glow > 0 ? [LAMP_COLOR[0] * glow, LAMP_COLOR[1] * glow, LAMP_COLOR[2] * glow] : [0, 0, 0],
+      translucent: Math.min(1, Math.max(0, Number(m.userData.translucent ?? (alphaCut > 0 ? LEAF_TRANSLUCENCY : 0)) || 0)),
+      normalMap,
+      roughMap,
     })
     matIds.set(m, materials.length - 1)
     return materials.length - 1

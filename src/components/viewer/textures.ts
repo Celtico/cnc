@@ -1,4 +1,4 @@
-import { CanvasTexture, MirroredRepeatWrapping, RepeatWrapping, SRGBColorSpace, TextureLoader, type Texture } from "three"
+import { CanvasTexture, MirroredRepeatWrapping, NoColorSpace, RepeatWrapping, SRGBColorSpace, TextureLoader, type MeshStandardMaterial, type Texture } from "three"
 import { TEXTURE_CACHE_MAX } from "./deviceLimits"
 import { WOOD_PRESETS, type Finish, type MaterialPref, type WoodGen } from "../../core/model"
 
@@ -10,9 +10,20 @@ import { WOOD_PRESETS, type Finish, type MaterialPref, type WoodGen } from "../.
 
 export type WoodSpecies = Extract<Finish, { kind: "wood" }>["species"]
 
-export type FinishSpec = { kind: "color"; color: string; roughness: number; metalness?: number; opacity?: number } | { kind: "wood"; species: WoodSpecies; gen?: WoodGen } | { kind: "image"; src: string; tileMm: number; aspect?: number; seamless?: boolean }
-  /** Textura procedural: teixit (trama), rajola (peces i junta) o pedra (marbre amb vetes). */
-  | { kind: "pattern"; pattern: PatternKind; color: string; grout?: string; tileMm: number; roughness: number; metalness?: number; opts?: PatternOpts }
+/** Efectes del render comuns a tots els acabats: llum que emet i translucidesa (`MaterialPref`). */
+export interface FinishFx {
+  glow?: number
+  translucent?: number
+}
+export type FinishSpec = FinishFx &
+  (
+    | { kind: "color"; color: string; roughness: number; metalness?: number; opacity?: number }
+    | { kind: "wood"; species: WoodSpecies; gen?: WoodGen }
+    /** Foto (amb mapes PBR opcionals: normal i rugositat, amb la mateixa repetició). */
+    | { kind: "image"; src: string; tileMm: number; aspect?: number; seamless?: boolean; normalMap?: string; roughMap?: string; roughness?: number; grain?: "x" | "y"; color?: string }
+    /** Textura procedural: teixit (trama), rajola (peces i junta) o pedra (marbre amb vetes). */
+    | { kind: "pattern"; pattern: PatternKind; color: string; grout?: string; tileMm: number; roughness: number; metalness?: number; opts?: PatternOpts }
+  )
 
 export type PatternKind = "fabric" | "tiles" | "stone" | "brushed" | "hammered"
 /** Opcions dels patrons: fils i irregularitat del teixit; junta, variació i col·locació de la rajola; vetes de la pedra. */
@@ -199,7 +210,7 @@ export function woodTexture(species: WoodSpecies, gen?: WoodGen): Texture {
 /** Color RGB (0–1) representatiu d'un acabat: per als colors del STEP de TopSolid. */
 export function finishRgb(f: FinishSpec): [number, number, number] {
   if (f.kind === "wood") return hexToRgb(woodGenOf(f.species, f.gen).base).map((v) => v / 255) as [number, number, number]
-  if (f.kind === "image") return [0.72, 0.6, 0.45]
+  if (f.kind === "image") return f.color ? hexRgb(f.color) : [0.72, 0.6, 0.45]
   return hexRgb(f.color)
 }
 
@@ -380,14 +391,37 @@ export function patternTexture(pattern: PatternKind, color: string, grout = "#cc
   return remember(patternCache, key, tex)
 }
 
-/** Acabat d'una preferència de material. */
+/** Acabat d'una preferència de material (amb la llum i la translucidesa del render). */
 export function finishOfPref(m: MaterialPref): FinishSpec {
+  const f = baseFinishOfPref(m)
+  return m.glow || m.translucent ? { ...f, ...(m.glow ? { glow: m.glow } : {}), ...(m.translucent ? { translucent: m.translucent } : {}) } : f
+}
+
+/**
+ * Passa al material de three els efectes del render (`userData.glow` / `translucent`, que llegeix
+ * `extractScene`). Al visor, els que fan llum es veuen encesos (emissive).
+ */
+export function applyFinishFx(mat: MeshStandardMaterial, f: FinishFx): MeshStandardMaterial {
+  if (f.translucent) mat.userData.translucent = f.translucent
+  if (f.glow) {
+    mat.userData.glow = f.glow
+    mat.emissive.copy(mat.color)
+    mat.emissiveMap = mat.map
+    mat.emissiveIntensity = Math.min(1, 0.35 + f.glow / 10)
+  }
+  return mat
+}
+
+function baseFinishOfPref(m: MaterialPref): FinishSpec {
   if (m.finish.kind === "wood") return { kind: "wood", species: m.finish.species, gen: m.finish.gen }
   if (m.finish.kind === "stone") {
     const f = m.finish
     return { kind: "pattern", pattern: "stone", color: f.color, grout: f.vein, tileMm: f.size, roughness: 0.75 - 0.65 * (f.polish ?? 0.6), opts: { veins: f.veins, seed: f.seed, style: f.style, grain: f.grain } }
   }
-  if (m.finish.kind === "image") return { kind: "image", src: m.finish.src, tileMm: m.finish.tileMm, aspect: m.finish.aspect, seamless: m.finish.seamless }
+  if (m.finish.kind === "image") {
+    const f = m.finish
+    return { kind: "image", src: f.src, tileMm: f.tileMm, aspect: f.aspect, seamless: f.seamless, ...(f.normalMap ? { normalMap: f.normalMap } : {}), ...(f.roughMap ? { roughMap: f.roughMap } : {}), ...(f.roughness !== undefined ? { roughness: f.roughness } : {}), ...(f.grain ? { grain: f.grain } : {}), ...(f.color ? { color: f.color } : {}) }
+  }
   if (m.finish.kind === "metal") {
     const f = m.finish
     const rough = f.roughness ?? 0.35
@@ -449,20 +483,37 @@ export function resolveEdgeFinish(materials: MaterialPref[], name: string): Fini
 export const RAW_EDGE_COLOR = "#cdb48c"
 
 const photoCache = new Map<string, Texture>()
+const loading = new Set<Promise<void>>()
+
+/**
+ * Hi ha fotos carregant-se (les miniatures es pinten d'una vegada: si en falta alguna, s'espera
+ * `photoTexturesIdle` i es tornen a pintar; si no, sortirien negres i es desarien així).
+ */
+export const photoTexturesPending = () => loading.size > 0
+export const photoTexturesIdle = (): Promise<void> => Promise.all([...loading]).then(() => undefined)
 
 /**
  * Textura d'una foto real (data URL), en repetició. Es carrega una sola vegada per imatge.
  * Seamless (feta per repetir): repetició normal. Si no, en mirall: una foto qualsevol no deixa
  * costures a cada tile (però el dibuix surt simètric).
  */
-export function photoTexture(src: string, seamless = false): Texture {
-  const key = `${seamless ? "r" : "m"}:${src}`
+export function photoTexture(src: string, seamless = false, linear = false): Texture {
+  const key = `${seamless ? "r" : "m"}${linear ? "l" : ""}:${src}`
   const hit = photoCache.get(key)
   if (hit) return hit
-  const tex = new TextureLoader().load(src)
+  // Els fitxers de l'app (`textures/<id>/…`, jocs de `textureSets.ts`) van des de l'arrel de l'app.
+  let done = () => {}
+  const loaded = new Promise<void>((r) => (done = r))
+  loading.add(loaded)
+  const finish = () => {
+    loading.delete(loaded)
+    done()
+  }
+  const tex = new TextureLoader().load(src.startsWith("data:") ? src : `${import.meta.env.BASE_URL}${src}`, finish, undefined, finish)
   tex.wrapS = seamless ? RepeatWrapping : MirroredRepeatWrapping
   tex.wrapT = seamless ? RepeatWrapping : MirroredRepeatWrapping
-  tex.colorSpace = SRGBColorSpace
+  // Normals i rugositat són dades, no colors: sense la corba sRGB.
+  tex.colorSpace = linear ? NoColorSpace : SRGBColorSpace
   tex.anisotropy = 8
   return remember(photoCache, key, tex)
 }

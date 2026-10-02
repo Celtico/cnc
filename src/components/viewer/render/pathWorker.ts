@@ -10,14 +10,19 @@
  * - Llum: sol amb mida (ombres suaus) i cel (estudi, de dia o HDRI) amb mostreig directe a cada
  *   rebot (NEE) i MIS amb el del material; als interiors, la llum del cel es mostreja per les
  *   finestres (portals); l'HDRI, per importància (CDF de la llum).
+ * - Làmpades: els triangles que emeten (pantalles, bombetes) sumen la seva llum en tocar-los (MIS)
+ *   i es mostregen directament a cada rebot (`emitters.ts`, CDF d'àrea × luminància).
+ * - Translucidesa (fulles, cortines, pantalles): part del difús passa a l'altra cara (`translucent`).
+ * - Mapes PBR: normal (espai tangent, OpenGL) i rugositat (G) amb la repetició del color.
  * - Sense ateses: la llum indirecta d'una mostra té un màxim (`INDIRECT_CLAMP`) i, després d'un
  *   rebot difús, els reflexos es tornen més rugosos (`PATH_ROUGHNESS`).
  */
 import { buildBvh, INTERNAL, NODE_WORDS } from "./bvh"
+import { EMIT_FLOATS, buildEmitters, pickEmitter, type Emitters } from "./emitters"
 import { buildEnvCdf, envPdf, sampleEnv, type EnvCdf } from "./envSampling"
 import { lightSetup } from "./lights"
 import type { RenderEnv, RenderOpts, RenderScene } from "./sceneData"
-import { BUMP_STRENGTH, DIRECT_CLAMP, GLASS_SHADOW, INDIRECT_CLAMP, PATH_ROUGHNESS, bevelNormal } from "./shading"
+import { BUMP_STRENGTH, DIRECT_CLAMP, GLASS_SHADOW, INDIRECT_CLAMP, PATH_ROUGHNESS, bevelNormal, perturbNormal, tangentFrame } from "./shading"
 
 type Msg =
   | { type: "scene" | "estimate"; scene: RenderScene; width: number; height: number; seed: number; opts: RenderOpts; env?: RenderEnv | null; auxPasses?: number }
@@ -37,6 +42,9 @@ let sunCosMax = 1
 let sunA2 = 0
 /** Llum del cel directa: 0 = cosinus (cel llis), 1 = HDRI per importància, 2 = per les finestres. */
 let neeMode = 0
+/** Làmpades: triangles que emeten i el seu multiplicador (0 = apagades). */
+let EM: Emitters = { data: new Float32Array(0), count: 0, total: 0 }
+let lampScale = 1
 
 let S: RenderScene | null = null
 let W = 0
@@ -147,9 +155,12 @@ function visible(ox: number, oy: number, oz: number, dx: number, dy: number, dz:
 
 // --- Textures ----------------------------------------------------------------------------
 const LIN = new Float32Array(256)
+/** Mapes lineals (normals, rugositat): el byte tal qual. */
+const RAW = new Float32Array(256)
 for (let i = 0; i < 256; i++) {
   const c = i / 255
   LIN[i] = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+  RAW[i] = c
 }
 /** Índex del texel amb la repetició: 0 = repeteix · 1 = mirall · 2 = vora. */
 const wrapI = (x: number, n: number, mode: number) => {
@@ -191,10 +202,12 @@ function sampleTex(ti: number, u: number, v: number) {
   const xa = wrapI(x0, tex.w, tex.wrapS), xb = wrapI(x0 + 1, tex.w, tex.wrapS)
   const ya = wrapI(y0, tex.h, tex.wrapT), yb = wrapI(y0 + 1, tex.h, tex.wrapT)
   const d = tex.data
+  const LIN = tex.linear ? RAW : LIN_SRGB
   const i00 = (ya * tex.w + xa) * 4, i10 = (ya * tex.w + xb) * 4, i01 = (yb * tex.w + xa) * 4, i11 = (yb * tex.w + xb) * 4
   const w00 = (1 - ax) * (1 - ay), w10 = ax * (1 - ay), w01 = (1 - ax) * ay, w11 = ax * ay
   for (let c = 0; c < 3; c++) tc[c] = LIN[d[i00 + c]!]! * w00 + LIN[d[i10 + c]!]! * w10 + LIN[d[i01 + c]!]! * w01 + LIN[d[i11 + c]!]! * w11
 }
+const LIN_SRGB = LIN
 const lumTex = (ti: number, u: number, v: number) => {
   sampleTex(ti, u, v)
   return 0.2126 * tc[0]! + 0.7152 * tc[1]! + 0.0722 * tc[2]!
@@ -283,6 +296,8 @@ let tx = 0, ty = 0, tz = 0, bx = 0, by = 0, bz = 0
 let NoV = 1
 // Paràmetres del BSDF: difús, F0, alfa² del reflex i probabilitat de triar el reflex.
 let kdR = 0, kdG = 0, kdB = 0, f0R = 0, f0G = 0, f0B = 0, A2 = 0, PS = 0
+/** Translucidesa del material del punt (difús que passa a l'altra cara). */
+let TR = 0
 let fr = 0, fg = 0, fb = 0
 
 function basis() {
@@ -292,10 +307,18 @@ function basis() {
   bx = b; by = sign + ny * ny * a; bz = -ny
 }
 
-/** BSDF (→ fr, fg, fb) per a la direcció de la llum l; torna la densitat de `sampleBsdf`. */
+/**
+ * BSDF (→ fr, fg, fb) per a la direcció de la llum l; torna la densitat de `sampleBsdf`. Cap a
+ * l'altra cara (translúcids): difús transmès, el color × `TR` / π. El cosinus el posa qui crida (|n·l|).
+ */
 function evalBsdf(lx: number, ly: number, lz: number, a2: number): number {
   const NoL = nx * lx + ny * ly + nz * lz
-  if (NoL <= 0) {
+  const back = lx * gx + ly * gy + lz * gz < 0
+  if (NoL <= 0 || back) {
+    if (TR > 0 && back && NoL < 0) {
+      fr = (kdR * TR) / Math.PI; fg = (kdG * TR) / Math.PI; fb = (kdB * TR) / Math.PI
+      return ((1 - PS) * TR * -NoL) / Math.PI
+    }
     fr = fg = fb = 0
     return 0
   }
@@ -309,10 +332,11 @@ function evalBsdf(lx: number, ly: number, lz: number, a2: number): number {
   const fw = Math.pow(1 - VoH, 5)
   const sR = f0R + (1 - f0R) * fw, sG = f0G + (1 - f0G) * fw, sB = f0B + (1 - f0B) * fw
   const ds = D * vis
-  fr = sR * ds + (kdR * (1 - sR)) / Math.PI
-  fg = sG * ds + (kdG * (1 - sG)) / Math.PI
-  fb = sB * ds + (kdB * (1 - sB)) / Math.PI
-  return (PS * D * NoH) / (4 * VoH) + ((1 - PS) * NoL) / Math.PI
+  const kr = (1 - TR) / Math.PI
+  fr = sR * ds + kdR * (1 - sR) * kr
+  fg = sG * ds + kdG * (1 - sG) * kr
+  fb = sB * ds + kdB * (1 - sB) * kr
+  return (PS * D * NoH) / (4 * VoH) + (1 - PS) * NoL * kr
 }
 
 /** Màxims d'una mostra (relatius a la llum de l'escena, `sceneKey`). */
@@ -383,6 +407,22 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
       const u = tu, v = tv
       sampleTex(m.map, u, v)
       ar *= tc[0]!; ag *= tc[1]!; ab *= tc[2]!
+      if (m.roughMap >= 0) {
+        sampleTex(m.roughMap, u, v)
+        rough = Math.min(1, Math.max(0.02, rough * tc[1]!))
+      }
+      if (m.normalMap >= 0) {
+        // Mapa de normals: base tangent per les derivades de les UV del triangle.
+        const uv = S!.uvs, b6 = t * 6, e = m.uv
+        const U = (i: number) => e[0]! * uv[b6 + i * 2]! + e[3]! * uv[b6 + i * 2 + 1]! + e[6]!
+        const V = (i: number) => e[1]! * uv[b6 + i * 2]! + e[4]! * uv[b6 + i * 2 + 1]! + e[7]!
+        const f = tangentFrame([e1x, e1y, e1z], [e2x, e2y, e2z], U(1) - U(0), V(1) - V(0), U(2) - U(0), V(2) - V(0))
+        if (f) {
+          sampleTex(m.normalMap, u, v)
+          const r = perturbNormal([nx, ny, nz], f[0], f[1], [tc[0]! * 2 - 1, tc[1]! * 2 - 1, tc[2]! * 2 - 1])
+          nx = r[0]; ny = r[1]; nz = r[2]
+        }
+      }
       if (m.bump > 0) {
         // Veta: relleu (gradient de la luminància) i les parts fosques, més mates.
         const tex = S!.textures[m.map]!
@@ -438,6 +478,21 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
       nx /= nl; ny /= nl; nz /= nl
       NoV = Math.max(1e-3, nx * vx + ny * vy + nz * vz)
     }
+    // Làmpada: la seva llum (MIS amb la mostra directa si s'hi ha arribat rebotant).
+    if (lampScale > 0 && EM.count > 0) {
+      const em = m.emission
+      const el = 0.2126 * em[0] + 0.7152 * em[1] + 0.0722 * em[2]
+      if (el > 0) {
+        let w = 1
+        if (vertex >= 0 && !delta) {
+          const cosL = Math.abs(dx * gx + dy * gy + dz * gz)
+          const pl = cosL > 1e-6 ? ((el / EM.total) * hitT * hitT) / cosL : 0
+          w = (lastPdf * lastPdf) / (lastPdf * lastPdf + pl * pl)
+        }
+        const k = lampScale * w
+        add(tr * em[0] * k, tg * em[1] * k, tb * em[2] * k, Math.max(0, vertex))
+      }
+    }
     // Vidre fi: reflex (Fresnel) o passa recte amb el to del vidre.
     if (m.opacity < 1) {
       const c = Math.abs(dx * gx + dy * gy + dz * gz)
@@ -461,6 +516,9 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
     vertex++
     delta = false
     const px = hx + gx * 1e-4, py = hy + gy * 1e-4, pz = hz + gz * 1e-4
+    // L'altra cara (llum que travessa un translúcid).
+    const qx = hx - gx * 1e-4, qy = hy - gy * 1e-4, qz = hz - gz * 1e-4
+    TR = m.translucent
     // BSDF: difús + GGX (metall: només reflex amb el color).
     const metal = Math.min(1, Math.max(0, m.metalness))
     kdR = ar * (1 - metal); kdG = ag * (1 - metal); kdB = ab * (1 - metal)
@@ -486,14 +544,13 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
       const wx = b, wy = sg + s1 * s1 * a, wz = -s1
       const cp = Math.cos(ph) * st, sp = Math.sin(ph) * st
       const lx = ux * cp + wx * sp + s0 * ct, ly = uy * cp + wy * sp + s1 * ct, lz = uz * cp + wz * sp + s2 * ct
-      if (lx * gx + ly * gy + lz * gz > 0) {
-        const NoL = nx * lx + ny * ly + nz * lz
-        if (NoL > 0) {
-          evalBsdf(lx, ly, lz, A2 + sunA2)
-          if (fr + fg + fb > 0) {
-            const T = visible(px, py, pz, lx, ly, lz, 1e9)
-            if (T > 0) add(tr * fr * sunCol[0] * NoL * T, tg * fg * sunCol[1] * NoL * T, tb * fb * sunCol[2] * NoL * T, vertex)
-          }
+      const front = lx * gx + ly * gy + lz * gz > 0
+      if (front || TR > 0) {
+        const NoL = Math.abs(nx * lx + ny * ly + nz * lz)
+        evalBsdf(lx, ly, lz, A2 + sunA2)
+        if (fr + fg + fb > 0) {
+          const T = front ? visible(px, py, pz, lx, ly, lz, 1e9) : visible(qx, qy, qz, lx, ly, lz, 1e9)
+          if (T > 0) add(tr * fr * sunCol[0] * NoL * T, tg * fg * sunCol[1] * NoL * T, tb * fb * sunCol[2] * NoL * T, vertex)
         }
       }
     }
@@ -520,15 +577,42 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
         lx = tx * a + bx * b + nx * c; ly = ty * a + by * b + ny * c; lz = tz * a + bz * b + nz * c
         pl = c / Math.PI
       }
-      if (pl > 0 && lx * gx + ly * gy + lz * gz > 0) {
+      const front = lx * gx + ly * gy + lz * gz > 0
+      if (pl > 0 && (front || TR > 0)) {
         const pb = evalBsdf(lx, ly, lz, A2)
-        const NoL = nx * lx + ny * ly + nz * lz
-        if (NoL > 0 && fr + fg + fb > 0) {
-          const T = visible(px, py, pz, lx, ly, lz, 1e9)
+        const NoL = Math.abs(nx * lx + ny * ly + nz * lz)
+        if (fr + fg + fb > 0) {
+          const T = front ? visible(px, py, pz, lx, ly, lz, 1e9) : visible(qx, qy, qz, lx, ly, lz, 1e9)
           if (T > 0) {
             sky(lx, ly, lz, lp)
             const w = (pl * T * NoL) / (pl * pl + pb * pb)
             add(tr * fr * lp[0]! * w, tg * fg * lp[1]! * w, tb * fb * lp[2]! * w, vertex)
+          }
+        }
+      }
+    }
+    // Làmpades: un punt d'un triangle emissor (àrea × luminància) amb MIS.
+    if (lampScale > 0 && EM.count > 0) {
+      const E = EM.data, o = pickEmitter(EM, random()) * EMIT_FLOATS
+      const su = Math.sqrt(random()), r2 = random()
+      const b1 = su * (1 - r2), b2 = su * r2
+      let lx = E[o]! + E[o + 4]! * b1 + E[o + 8]! * b2 - px
+      let ly = E[o + 1]! + E[o + 5]! * b1 + E[o + 9]! * b2 - py
+      let lz = E[o + 2]! + E[o + 6]! * b1 + E[o + 10]! * b2 - pz
+      const dist = Math.hypot(lx, ly, lz) || 1
+      lx /= dist; ly /= dist; lz /= dist
+      const cx = E[o + 5]! * E[o + 10]! - E[o + 6]! * E[o + 9]!, cy = E[o + 6]! * E[o + 8]! - E[o + 4]! * E[o + 10]!, cz = E[o + 4]! * E[o + 9]! - E[o + 5]! * E[o + 8]!
+      const cosL = Math.abs(cx * lx + cy * ly + cz * lz) / (Math.hypot(cx, cy, cz) || 1)
+      const front = lx * gx + ly * gy + lz * gz > 0
+      if (cosL > 1e-4 && (front || TR > 0)) {
+        const pl = ((E[o + 15]! / EM.total) * dist * dist) / cosL
+        const pb = evalBsdf(lx, ly, lz, A2)
+        const NoL = Math.abs(nx * lx + ny * ly + nz * lz)
+        if (fr + fg + fb > 0) {
+          const T = front ? visible(px, py, pz, lx, ly, lz, dist * (1 - 1e-3)) : visible(qx, qy, qz, lx, ly, lz, dist * (1 - 1e-3))
+          if (T > 0) {
+            const w = (lampScale * pl * T * NoL) / (pl * pl + pb * pb)
+            add(tr * fr * E[o + 12]! * w, tg * fg * E[o + 13]! * w, tb * fb * E[o + 14]! * w, vertex)
           }
         }
       }
@@ -548,18 +632,22 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
     } else {
       const u1 = random(), u2 = random()
       const rr = Math.sqrt(u1), ph = 2 * Math.PI * u2
-      const a = rr * Math.cos(ph), b = rr * Math.sin(ph), c = Math.sqrt(1 - u1)
+      // Translúcid: una part del difús surt per l'altra cara (cosinus al voltant de −n).
+      const c = TR > 0 && random() < TR ? -Math.sqrt(1 - u1) : Math.sqrt(1 - u1)
+      const a = rr * Math.cos(ph), b = rr * Math.sin(ph)
       lx = tx * a + bx * b + nx * c; ly = ty * a + by * b + ny * c; lz = tz * a + bz * b + nz * c
     }
-    if (lx * gx + ly * gy + lz * gz <= 0) break
+    const ldg = lx * gx + ly * gy + lz * gz
+    const nl = nx * lx + ny * ly + nz * lz
+    if (ldg * nl <= 0 || (ldg < 0 && (spec || !(TR > 0)))) break
     const pdf = evalBsdf(lx, ly, lz, A2)
-    const NoL = nx * lx + ny * ly + nz * lz
-    if (!(pdf > 1e-8) || NoL <= 0) break
+    const NoL = Math.abs(nl)
+    if (!(pdf > 1e-8)) break
     tr *= (fr * NoL) / pdf; tg *= (fg * NoL) / pdf; tb *= (fb * NoL) / pdf
     pathRough = Math.max(pathRough, spec ? re * 0.5 : PATH_ROUGHNESS)
     cpx = px; cpy = py; cpz = pz; cnx = nx; cny = ny; cnz = nz; lastPdf = pdf
     dx = lx; dy = ly; dz = lz
-    ox = px; oy = py; oz = pz
+    if (ldg > 0) { ox = px; oy = py; oz = pz } else { ox = qx; oy = qy; oz = qz }
     // Ruleta russa.
     if (bounce >= 2) {
       const pmax = Math.min(0.95, Math.max(tr, tg, tb))
@@ -721,6 +809,7 @@ self.onmessage = (e: MessageEvent<Msg>) => {
   sunCosMax = L.sunCosMax
   sunA2 = L.sunA2
   neeMode = L.neeMode
+  lampScale = L.lampScale
   ENV = msg.env ?? null
   CDF = ENV ? buildEnvCdf(ENV) : null
   envRot = (O.envRotation ?? 0) / 360
@@ -730,6 +819,7 @@ self.onmessage = (e: MessageEvent<Msg>) => {
   nf = bvh.f32
   nu = bvh.u32
   order = bvh.order
+  EM = buildEmitters(S)
   // Enfocament: la distància del centre de la imatge.
   {
     const m = S.camera.matrix

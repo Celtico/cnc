@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { DEFAULT_CABINET } from "./cabinet"
 import { DEFAULT_HARDWARE, HardwareSchema, type Module } from "./composition"
+import { PHOTO_MATERIALS } from "./textureSets"
 
 /**
  * Preferències de l'usuari: tot el que depèn de casa seva i del taller (referències de
@@ -13,7 +14,7 @@ import { DEFAULT_HARDWARE, HardwareSchema, type Module } from "./composition"
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 4
+export const SETTINGS_VERSION = 6
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -37,6 +38,8 @@ export type RefPreset = z.infer<typeof RefPresetSchema>
 // --- Materials ---------------------------------------------------------------------
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/)
+/** Imatge d'un acabat: data URL o un fitxer de l'app a `public/textures/`. */
+const imageSrc = z.string().refine((s) => s.startsWith("data:image/") || /^textures\/[\w.-]+\/[\w.-]+\.(jpe?g|png|webp)$/.test(s), "Imatge invàlida")
 
 /**
  * Paràmetres del generador de fusta (textura procedural): colors, veta, catedrals, porus i la mida
@@ -139,13 +142,23 @@ export const FinishSchema = z.discriminatedUnion("kind", [
    */
   z.object({
     kind: z.literal("image"),
-    src: z.string().startsWith("data:image/"),
+    /** Data URL (foto pròpia) o fitxer de l'app (`textures/<id>/diff.jpg`, jocs de `textureSets.ts`). */
+    src: imageSrc,
+    /** Mapes PBR opcionals (mateix format): normal (convenció OpenGL) i rugositat (canal G). */
+    normalMap: imageSrc.optional(),
+    roughMap: imageSrc.optional(),
     /** Amplada de tauler de debò que mostra la foto (mm, d'esquerra a dreta). */
     tileMm: mm.min(50).max(5000),
     /** Alçada ÷ amplada de la foto: l'alçada real és tileMm × aspect (sense, quadrada). */
     aspect: z.number().positive().optional(),
     /** Textura feta per repetir (seamless): es repeteix normal; si no, en mirall (sense costures). */
     seamless: z.boolean().optional(),
+    /** Direcció de la veta a la foto: `y` = vertical (es gira perquè vagi com la de la peça); sense, horitzontal. */
+    grain: z.enum(["x", "y"]).optional(),
+    /** Multiplicador del mapa de rugositat (o rugositat, sense mapa). */
+    roughness: z.number().min(0).max(2).optional(),
+    /** Color mitjà de la foto (STEP, mostres). */
+    color: z.string().optional(),
   }),
 ])
 export type Finish = z.infer<typeof FinishSchema>
@@ -170,6 +183,13 @@ export const MaterialPrefSchema = z.object({
    * `sim` = de simulació: només es veu (blocs i parets dels ambients, coixins…), no es fabrica.
    */
   category: z.enum(["board", "back", "hard", "sim"]).optional(),
+  /**
+   * Render: llum que emet (radiància, ~1 paper blanc al sol tènue; pantalla de làmpada ≈ 4,
+   * bombeta ≈ 30). Al visor es veu encès. v5.
+   */
+  glow: z.number().min(0).max(200).optional(),
+  /** Render: translucidesa (0–1), llum difusa que passa a l'altra cara (fulles, cortines, pantalles). v5. */
+  translucent: z.number().min(0).max(1).optional(),
 })
 export type MaterialPref = z.infer<typeof MaterialPrefSchema>
 export type MaterialCategory = NonNullable<MaterialPref["category"]>
@@ -284,13 +304,13 @@ export const NON_CNC_MATERIALS: MaterialPref[] = [
 ]
 
 /** Materials de simulació: només per veure (ambients, blocs, coixins). Afegits a la v3. */
-const sim = (id: string, name: string, finish: Finish, hasGrain = false): MaterialPref => ({ id, name, thicknesses: [10], hasGrain, finish, edge: "", cnc: false, category: "sim" })
+const sim = (id: string, name: string, finish: Finish, hasGrain = false, fx: Pick<MaterialPref, "glow" | "translucent"> = {}): MaterialPref => ({ id, name, thicknesses: [10], hasGrain, finish, edge: "", cnc: false, category: "sim", ...fx })
 export const SIM_MATERIALS: MaterialPref[] = [
   sim("sim-fabric-grey", "Teixit gris", { kind: "fabric", color: "#8e8e8a" }),
   sim("sim-fabric-beige", "Teixit beix", { kind: "fabric", color: "#cbbca2" }),
   sim("sim-fabric-blue", "Teixit blau", { kind: "fabric", color: "#44597a" }),
   sim("sim-velvet-green", "Vellut verd", { kind: "fabric", color: "#4d6a4b" }),
-  sim("sim-linen-white", "Lli blanc", { kind: "fabric", color: "#ece6da" }),
+  sim("sim-linen-white", "Lli blanc", { kind: "fabric", color: "#ece6da" }, false, { translucent: 0.3 }),
   sim("sim-rug-beige", "Catifa beix", { kind: "fabric", color: "#d6c7ac" }),
   sim("sim-leather", "Cuir conyac", { kind: "color", color: "#8a5634" }),
   sim("sim-parquet-oak", "Parquet de roure", { kind: "wood", species: "oak" }, true),
@@ -324,15 +344,15 @@ export const SIM_MATERIALS: MaterialPref[] = [
   sim("sim-fabric-red", "Teixit vermell", { kind: "fabric", color: "#8b2a2a" }),
   sim("sim-fabric-ochre", "Teixit ocre", { kind: "fabric", color: "#b58a45" }),
   sim("sim-boucle", "Bouclé blanc", { kind: "fabric", color: "#ebe5da" }),
-  sim("sim-tulle", "Tul blanc", { kind: "fabric", color: "#f5f2ec" }),
+  sim("sim-tulle", "Tul blanc", { kind: "fabric", color: "#f5f2ec" }, false, { translucent: 0.6 }),
   sim("sim-leather-green", "Cuir verd", { kind: "color", color: "#5d7466" }),
   sim("sim-leather-black", "Cuir negre", { kind: "color", color: "#262422" }),
   sim("sim-jute", "Jute", { kind: "fabric", color: "#b8a58a" }),
   sim("sim-kilim", "Catifa kilim", { kind: "tiles", color: "#a8564a", grout: "#caa27f", size: 250 }),
   sim("sim-rug-grey", "Catifa gris", { kind: "fabric", color: "#9d9a94" }),
-  sim("sim-leaves", "Fulles", { kind: "fabric", color: "#3e5a38" }),
-  sim("sim-leaves-light", "Fulles clares", { kind: "fabric", color: "#6b8a4e" }),
-  sim("sim-pine", "Pi", { kind: "fabric", color: "#2f4a30" }),
+  sim("sim-leaves", "Fulles", { kind: "fabric", color: "#3e5a38" }, false, { translucent: 0.4 }),
+  sim("sim-leaves-light", "Fulles clares", { kind: "fabric", color: "#6b8a4e" }, false, { translucent: 0.4 }),
+  sim("sim-pine", "Pi", { kind: "fabric", color: "#2f4a30" }, false, { translucent: 0.3 }),
   sim("sim-bark", "Escorça", { kind: "color", color: "#6d5a47" }),
   sim("sim-soil", "Terra de test", { kind: "color", color: "#4a3a2c" }),
   sim("sim-ceramic-white", "Ceràmica blanca", { kind: "lacquer", color: "#eeebe4" }),
@@ -344,6 +364,9 @@ export const SIM_MATERIALS: MaterialPref[] = [
   sim("sim-screen", "Pantalla negra", { kind: "lacquer", color: "#111214" }),
   sim("sim-mirror", "Mirall", { kind: "metal", color: "#e4e8e8" }),
   sim("sim-book", "Llibres", { kind: "tiles", color: "#a49781", grout: "#5b4a3a", size: 60 }),
+  // v5: llums dels objectes (el render en fa llum: «Llums enceses»).
+  sim("sim-lampshade", "Pantalla de lli", { kind: "fabric", color: "#f1eadc" }, false, { glow: 4, translucent: 0.5 }),
+  sim("sim-bulb", "Bombeta", { kind: "color", color: "#fff6e6", roughness: 0.3 }, false, { glow: 30 }),
 ]
 
 export const BUILTIN_MATERIALS: MaterialPref[] = [
@@ -359,6 +382,7 @@ export const BUILTIN_MATERIALS: MaterialPref[] = [
   { id: "plywood-back", name: "Contraxapat (fons)", thicknesses: [10, 12, 15], hasGrain: true, finish: { kind: "wood", species: "ash" }, edge: "", forBacks: true },
   ...NON_CNC_MATERIALS,
   ...SIM_MATERIALS,
+  ...PHOTO_MATERIALS,
 ]
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -449,7 +473,14 @@ export function parseSettings(raw: unknown): SettingsParse {
   // v3: materials de simulació (teixits, parquet, rajola, pintura) per als ambients.
   const missing = (list: MaterialPref[], from: MaterialPref[]) => list.filter((m) => !from.some((x) => x.id === m.id || x.name === m.name))
   const v2 = materialsRaw.length && version < 2 ? [...materialsRaw, ...missing(NON_CNC_MATERIALS, materialsRaw)] : materialsRaw
-  const materials = v2.length ? (version < SETTINGS_VERSION ? [...v2, ...missing(SIM_MATERIALS, v2)] : v2) : BUILTIN_MATERIALS
+  const v4 = v2.length ? (version < SETTINGS_VERSION ? [...v2, ...missing(SIM_MATERIALS, v2)] : v2) : BUILTIN_MATERIALS
+  // v5: llum i translucidesa dels materials de simulació de sempre (si no se n'hi ha posat).
+  const v5 = version < 5 ? v4.map((m) => {
+    const b = SIM_MATERIALS.find((x) => x.id === m.id)
+    return b && (b.glow !== undefined || b.translucent !== undefined) && m.glow === undefined && m.translucent === undefined ? { ...m, ...(b.glow !== undefined ? { glow: b.glow } : {}), ...(b.translucent !== undefined ? { translucent: b.translucent } : {}) } : m
+  }) : v4
+  // v6: materials de foto amb mapes PBR (Poly Haven), només els que falten.
+  const materials = version < 6 && v5 !== BUILTIN_MATERIALS ? [...v5, ...missing(PHOTO_MATERIALS, v5)] : v5
   const settings: Settings = {
     version: SETTINGS_VERSION,
     references,

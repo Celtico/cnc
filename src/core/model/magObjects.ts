@@ -202,23 +202,26 @@ export const MAG_OBJECTS: Template[] = [
   t("curtain-linen", "Cortina de lli", "1500 × 2600 mm · plecs fins a terra.", () => [flat("Cortina", "Lli blanc", 0, 0, 0, 1500, 160, 2580, wave(1500, 160, 10))]),
   t("curtain-tulle", "Cortina de tul", "1500 × 2600 mm · tul blanc amb plecs.", () => [flat("Cortina", "Tul blanc", 0, 0, 0, 1500, 140, 2580, wave(1500, 140, 12, 10))]),
   // --- Llums ---
+  // Les pantalles de lli i les bombetes fan llum al render (materials «Pantalla de lli» i «Bombeta»).
   t("pendant-dome", "Llum de sostre (cúpula)", "Ø 450 × 1100 mm · penja del sostre (posa'l a 1500 del terra).", () => [
-    flat("Pantalla", "Pintura verd sàlvia", 0, 0, 0, 450, 450, 110, ellipse(450, 450)),
-    flat("Pantalla", "Pintura verd sàlvia", 55, 110, 55, 340, 340, 90, ellipse(340, 340)),
-    flat("Pantalla", "Pintura verd sàlvia", 130, 200, 130, 190, 190, 60, ellipse(190, 190)),
-    cyl("Cable", "Pintura negra", 225, 260, 225, 8, 840),
+    cyl("Bombeta", "Bombeta", 225, 0, 225, 110, 60),
+    flat("Pantalla", "Pintura verd sàlvia", 0, 40, 0, 450, 450, 110, ellipse(450, 450)),
+    flat("Pantalla", "Pintura verd sàlvia", 55, 150, 55, 340, 340, 90, ellipse(340, 340)),
+    flat("Pantalla", "Pintura verd sàlvia", 130, 240, 130, 190, 190, 60, ellipse(190, 190)),
+    cyl("Cable", "Pintura negra", 225, 300, 225, 8, 800),
   ]),
   t("pendant-black", "Llum de sostre negre", "Ø 300 × 1100 mm · metall negre.", () => [
-    flat("Pantalla", "Ferro negre", 0, 0, 0, 300, 300, 180, ellipse(300, 300)),
-    flat("Pantalla", "Ferro negre", 75, 180, 75, 150, 150, 60, ellipse(150, 150)),
-    cyl("Cable", "Pintura negra", 150, 240, 150, 8, 860),
+    cyl("Bombeta", "Bombeta", 150, 0, 150, 90, 50),
+    flat("Pantalla", "Ferro negre", 0, 30, 0, 300, 300, 180, ellipse(300, 300)),
+    flat("Pantalla", "Ferro negre", 75, 210, 75, 150, 150, 60, ellipse(150, 150)),
+    cyl("Cable", "Pintura negra", 150, 270, 150, 8, 830),
   ]),
-  t("pendant-drum", "Llum de sostre de lli", "Ø 600 × 1000 mm · tambor de lli.", () => [cyl("Pantalla", "Lli blanc", 300, 0, 300, 600, 280), cyl("Cable", "Pintura negra", 300, 280, 300, 8, 720)]),
-  t("table-lamp", "Làmpada de taula", "Ø 350 × 580 mm · peu de ceràmica i pantalla de lli.", () => [cyl("Peu", "Ceràmica blanca", 175, 0, 175, 160, 320), cyl("Pantalla", "Lli blanc", 175, 320, 175, 350, 260)]),
+  t("pendant-drum", "Llum de sostre de lli", "Ø 600 × 1000 mm · tambor de lli.", () => [cyl("Pantalla", "Pantalla de lli", 300, 0, 300, 600, 280), cyl("Cable", "Pintura negra", 300, 280, 300, 8, 720)]),
+  t("table-lamp", "Làmpada de taula", "Ø 350 × 580 mm · peu de ceràmica i pantalla de lli.", () => [cyl("Peu", "Ceràmica blanca", 175, 0, 175, 160, 320), cyl("Pantalla", "Pantalla de lli", 175, 320, 175, 350, 260)]),
   t("floor-lamp-arc", "Làmpada de peu de llautó", "Ø 450 × 1650 mm.", () => [
     cyl("Base", "Pedra calcària", 225, 0, 225, 300, 40),
     cyl("Pal", "Llautó", 225, 40, 225, 22, 1350),
-    cyl("Pantalla", "Lli blanc", 225, 1390, 225, 450, 260),
+    cyl("Pantalla", "Pantalla de lli", 225, 1390, 225, 450, 260),
   ]),
   // --- Plantes ---
   t("plant-tropical", "Planta tropical", "900 × 1900 mm · fulles grans en test blanc.", () => tropicalParts("Ceràmica blanca")),

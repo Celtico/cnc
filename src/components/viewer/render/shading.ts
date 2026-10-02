@@ -57,3 +57,38 @@ export function clampLum(c: [number, number, number], max: number): [number, num
   }
   return c
 }
+
+type V3 = [number, number, number]
+
+/**
+ * Base tangent d'un triangle per les derivades de les coordenades de textura: T = dP/du i
+ * B = dP/dv (sense normalitzar), amb les arestes `e1`, `e2` i les diferències d'UV
+ * (du1, dv1) i (du2, dv2). `null` si les UV són degenerades.
+ */
+export function tangentFrame(e1: ArrayLike<number>, e2: ArrayLike<number>, du1: number, dv1: number, du2: number, dv2: number): [V3, V3] | null {
+  const det = du1 * dv2 - du2 * dv1
+  if (!(Math.abs(det) > 1e-12)) return null
+  const r = 1 / det
+  const T: V3 = [(e1[0]! * dv2 - e2[0]! * dv1) * r, (e1[1]! * dv2 - e2[1]! * dv1) * r, (e1[2]! * dv2 - e2[2]! * dv1) * r]
+  const B: V3 = [(e2[0]! * du1 - e1[0]! * du2) * r, (e2[1]! * du1 - e1[1]! * du2) * r, (e2[2]! * du1 - e1[2]! * du2) * r]
+  return [T, B]
+}
+
+/**
+ * Normal d'un mapa de normals (espai tangent, convenció OpenGL: x cap a +u, y cap a +v, z la
+ * normal) sobre la normal `n`: T s'ortogonalitza (Gram-Schmidt) i B surt de n × T amb el signe
+ * de la B de les UV (textures girades o en mirall). `ts` ja en [−1, 1]. Torna la normal unitària.
+ */
+export function perturbNormal(n: ArrayLike<number>, T: ArrayLike<number>, B: ArrayLike<number>, ts: ArrayLike<number>): V3 {
+  const d = n[0]! * T[0]! + n[1]! * T[1]! + n[2]! * T[2]!
+  let tx = T[0]! - n[0]! * d, ty = T[1]! - n[1]! * d, tz = T[2]! - n[2]! * d
+  const tl = Math.hypot(tx, ty, tz)
+  if (!(tl > 1e-12)) return [n[0]!, n[1]!, n[2]!]
+  tx /= tl; ty /= tl; tz /= tl
+  let bx = n[1]! * tz - n[2]! * ty, by = n[2]! * tx - n[0]! * tz, bz = n[0]! * ty - n[1]! * tx
+  if (bx * B[0]! + by * B[1]! + bz * B[2]! < 0) { bx = -bx; by = -by; bz = -bz }
+  const x = ts[0]!, y = ts[1]!, z = ts[2]!
+  const ox = tx * x + bx * y + n[0]! * z, oy = ty * x + by * y + n[1]! * z, oz = tz * x + bz * y + n[2]! * z
+  const l = Math.hypot(ox, oy, oz) || 1
+  return [ox / l, oy / l, oz / l]
+}

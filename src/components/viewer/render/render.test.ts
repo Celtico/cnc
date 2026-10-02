@@ -3,7 +3,8 @@ import { buildBvh, INTERNAL, intersectBvh, NODE_WORDS, triHit } from "./bvh"
 import { buildEnvCdf, dirToUv, envPdf, sampleEnv, uvToDir } from "./envSampling"
 import { halveTexture, packGpuScene, packTextures, TRI_VEC4 } from "./gpuScene"
 import type { RenderEnv, RenderScene, RenderTexture } from "./sceneData"
-import { bevelNormal, clampLum } from "./shading"
+import { bevelNormal, clampLum, perturbNormal, tangentFrame } from "./shading"
+import { EMIT_FLOATS, buildEmitters, pickEmitter } from "./emitters"
 
 /** Graella de n × n quadrats (2 triangles cadascun) al pla z = 0, i alguns de girats a sobre. */
 function soup(n: number): Float32Array {
@@ -200,7 +201,7 @@ describe("empaquetat per a la GPU", () => {
       matIndex: new Uint16Array(n).map((_, i) => i % 2),
       triBevel: new Int32Array(n).map((_, i) => (i % 3 ? -1 : 0)),
       bevel: new Float32Array(20),
-      materials: [0, 1].map(() => ({ color: [1, 1, 1] as [number, number, number], map: -1, uv: [1, 0, 0, 0, 1, 0, 0, 0, 1], roughness: 0.5, metalness: 0, opacity: 1, alphaCut: 0, bump: 0 })),
+      materials: [0, 1].map((i) => ({ color: [1, 1, 1] as [number, number, number], map: -1, uv: [1, 0, 0, 0, 1, 0, 0, 0, 1], roughness: 0.5, metalness: 0, opacity: 1, alphaCut: 0, bump: 0, emission: [i * 2, i * 2, i * 2] as [number, number, number], translucent: 0, normalMap: -1, roughMap: -1 })),
       textures: [],
       camera: { ortho: false, matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 5, 1], scale: 1, aspect: 1 },
       sun: [0, 1, 0],
@@ -222,6 +223,76 @@ describe("empaquetat per a la GPU", () => {
     }
     expect(g.portalCount).toBe(1)
     expect(g.portalOff).toBe(g.bevelOff + 5)
+    // Emissors: els triangles del material 1 (la meitat), després de les finestres.
+    expect(g.emitCount).toBe(n >> 1)
+    expect(g.emitOff).toBe(g.portalOff + 3)
     expect(() => packGpuScene(scene, null, 1024)).toThrow(/massa gran/)
+  })
+})
+
+describe("mapes de normals (base tangent)", () => {
+  // Triangle al pla XY: (0,0,0) (2,0,0) (0,1,0), normal +Z.
+  const e1 = [2, 0, 0], e2 = [0, 1, 0]
+  it("T = dP/du i B = dP/dv per les UV", () => {
+    // UV directes: u al llarg de X (0 → 1 en 2 m), v al llarg de Y.
+    const f = tangentFrame(e1, e2, 1, 0, 0, 1)!
+    expect(f[0]).toEqual([2, 0, 0])
+    expect(f[1]).toEqual([0, 1, 0])
+    // Textura girada 90°: u al llarg de Y, v cap a −X.
+    const g = tangentFrame(e1, e2, 0, -1, 1, 0)!
+    expect(g[0][1]).toBeCloseTo(1)
+    expect(g[1][0]).toBeCloseTo(-2)
+    // UV degenerades.
+    expect(tangentFrame(e1, e2, 1, 1, 2, 2)).toBeNull()
+  })
+  it("la normal plana (0,0,1) no canvia; x i y inclinen cap a T i B", () => {
+    const [T, B] = tangentFrame(e1, e2, 1, 0, 0, 1)!
+    const n = [0, 0, 1]
+    expect(perturbNormal(n, T, B, [0, 0, 1])).toEqual([0, 0, 1])
+    const a = perturbNormal(n, T, B, [0.6, 0, 0.8])
+    expect(a[0]).toBeCloseTo(0.6)
+    expect(a[2]).toBeCloseTo(0.8)
+    const b = perturbNormal(n, T, B, [0, 0.6, 0.8])
+    expect(b[1]).toBeCloseTo(0.6)
+    // UV en mirall (v cap avall): B s'inverteix i la y també (convenció OpenGL respecte de les UV).
+    const [T2, B2] = tangentFrame(e1, e2, 1, 0, 0, -1)!
+    expect(perturbNormal(n, T2, B2, [0, 0.6, 0.8])[1]).toBeCloseTo(-0.6)
+    // Normal girada (cara del darrere): segueix unitària i a l'hemisferi de la normal.
+    const c = perturbNormal([0, 0, -1], T, B, [0.6, 0, 0.8])
+    expect(Math.hypot(...c)).toBeCloseTo(1)
+    expect(c[2]).toBeCloseTo(-0.8)
+  })
+})
+
+describe("làmpades (triangles emissors)", () => {
+  const mat = (e: number) => ({ color: [1, 1, 1] as [number, number, number], map: -1, uv: [1, 0, 0, 0, 1, 0, 0, 0, 1], roughness: 0.5, metalness: 0, opacity: 1, alphaCut: 0, bump: 0, emission: [e, e, e] as [number, number, number], translucent: 0, normalMap: -1, roughMap: -1 })
+  // Tres triangles: àrea 0,5 (llum 1), àrea 2 (llum 1) i un que no emet.
+  const scene = {
+    positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 1, 0, 2, 1, 0, 0, 2, 1, 0, 2, 0, 1, 2]),
+    matIndex: new Uint16Array([0, 0, 1]),
+    materials: [mat(1), mat(0)],
+  } as unknown as RenderScene
+  it("CDF per àrea × luminància i tria proporcional", () => {
+    const em = buildEmitters(scene)
+    expect(em.count).toBe(2)
+    expect(em.total).toBeCloseTo(2.5)
+    expect(em.data[3]).toBe(0)
+    expect(em.data[11]).toBeCloseTo(0.2)
+    expect(em.data[EMIT_FLOATS + 11]).toBe(1)
+    expect(pickEmitter(em, 0.1)).toBe(0)
+    expect(pickEmitter(em, 0.3)).toBe(1)
+    expect(pickEmitter(em, 0.9999)).toBe(1)
+  })
+})
+
+describe("pesos d'OIDN", () => {
+  it("descarta els punters de Git LFS i els fitxers petits", async () => {
+    const { isWeightsFile } = await import("./oidn")
+    const ptr = new TextEncoder().encode("version https://git-lfs.github.com/spec/v1\noid sha256:abc\nsize 12345\n")
+    expect(isWeightsFile(ptr.buffer as ArrayBuffer)).toBe(false)
+    const big = new Uint8Array(20 * 1024)
+    big.set(ptr)
+    expect(isWeightsFile(big.buffer)).toBe(false)
+    expect(isWeightsFile(new Uint8Array(20 * 1024).fill(7).buffer)).toBe(true)
   })
 })

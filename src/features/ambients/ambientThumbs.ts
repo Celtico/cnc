@@ -1,5 +1,6 @@
 import { Box3, Group, Mesh, PerspectiveCamera, PlaneGeometry, BoxGeometry, Scene, Vector3 } from "three"
 import { exportablePanel } from "../../components/viewer/exportablePanel"
+import { photoTexturesIdle, photoTexturesPending } from "../../components/viewer/textures"
 import { buildScene } from "../../components/viewer/exportGlb"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
 import { snapshot, THUMB_ASPECT, THUMB_VERSION, thumbLights } from "../../components/viewer/thumbRenderer"
@@ -117,7 +118,12 @@ export function requestAmbientThumb(r: AmbientRow, materials: MaterialPref[]): v
     }
     // Si un model 3D no s'ha pogut carregar, no es fa (ni es desa): sortiria sense la planta per sempre.
     if (!(await preloadModels(geos.flatMap((g) => g?.build.models ?? [])))) return
-    const url = renderAmbient(a, (i) => geos[i] ?? null, materials)
+    let url = renderAmbient(a, (i) => geos[i] ?? null, materials)
+    // Textures de foto que encara es baixaven: es torna a pintar quan hi són.
+    if (photoTexturesPending()) {
+      await photoTexturesIdle()
+      url = renderAmbient(a, (i) => geos[i] ?? null, materials)
+    }
     if (url) await db.ambients.update(r.id, { thumb: url, thumbAt: fresh.updatedAt, thumbV: THUMB_VERSION })
   })
 }
@@ -151,7 +157,11 @@ export function requestCatalogThumb(t: AmbientTemplate, materials: MaterialPref[
       wallMaterial: t.wall,
     } as Ambient
     if (!(await preloadModels(placed.flatMap((p) => geoOf(p.ref)?.build.models ?? [])))) return
-    const url = renderAmbient(a, (i) => geoOf(placed[i]!.ref), materials)
+    let url = renderAmbient(a, (i) => geoOf(placed[i]!.ref), materials)
+    if (photoTexturesPending()) {
+      await photoTexturesIdle()
+      url = renderAmbient(a, (i) => geoOf(placed[i]!.ref), materials)
+    }
     if (url) {
       catalogThumbs.set(t.id, url)
       onDone(url)

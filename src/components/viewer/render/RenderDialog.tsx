@@ -11,9 +11,11 @@ import type { EngineKind, RenderEngine, RenderJob, RenderProgress } from "./engi
 import { GpuLimitError } from "./gpuScene"
 import { GpuEngine, gpuSupport } from "./gpuTracer"
 import { parseHdr } from "./hdr"
+import { oidnDenoise, oidnFailed, oidnReady } from "./oidn"
+import type { UNet } from "oidn-web"
 import { SKIES, loadSky, readSky, type SkyId } from "./skies"
 import { DEFAULT_RENDER_OPTS, extractScene, type RenderEnv, type RenderOpts, type RenderRoom } from "./sceneData"
-import { aces, createDrawScheduler, makeSrgbLut, srgbLut } from "./tonemap"
+import { aces, agx, bloomBuffer, createDrawScheduler, makeAgxLut, makePowLut, makeSrgbLut, sampleBloom, srgbLut, vignette, type ToneCurve } from "./tonemap"
 
 export type SceneGetter = () => { scene: Scene; camera: Camera; width: number; height: number; snapshot?: () => string } | null
 
@@ -73,11 +75,18 @@ interface Look {
   warmth: number
   /** Filtre de soroll (guiat per l'albedo i les normals). */
   denoise: boolean
+  /** Corba de color (AgX natural o ACES), vinyeta (0–1) i resplendor dels punts molt brillants. */
+  curve: ToneCurve
+  vignette: number
+  bloom: number
+  bloomThreshold: number
 }
-const DEFAULT_LOOK: Look = { exposure: 0, contrast: 1, saturation: 1, background: "scene", auto: false, warmth: 0, denoise: true }
+const DEFAULT_LOOK: Look = { exposure: 0, contrast: 1, saturation: 1, background: "scene", auto: false, warmth: 0, denoise: true, curve: "agx", vignette: 0.2, bloom: 0.15, bloomThreshold: 1.5 }
 
 const SRGB_LUT = makeSrgbLut()
 const srgb = (c: number) => srgbLut(SRGB_LUT, c)
+const AGX_LUT = makeAgxLut()
+const POW_LUT = makePowLut()
 
 /** Control lliscant compacte en fila: rètol a l'esquerra; el range natiu i el valor a la dreta. */
 function Range({ label, value, min, max, step, format, onChange }: { label: string; value: number; min: number; max: number; step: number; format: (v: number) => string; onChange: (v: number) => void }) {
@@ -166,7 +175,9 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
   const lastRun = useRef<{ o: RenderOpts; r: Resolution; kind: EngineKind; env: unknown; room?: RenderRoom; format?: Format } | null>(null)
   // Filtre de soroll: un fil a part; el resultat val per a les passades amb què s'ha calculat.
   // `busy`: l'identificador de la petició en curs (0 = cap).
-  const dn = useRef<{ worker: Worker | null; busy: number; id: number; data: Float32Array | null; count: number }>({ worker: null, busy: 0, id: 0, data: null, count: 0 })
+  // `oidn`: la xarxa d'Open Image Denoise si hi és (WebGPU + pesos); si no, l'À-Trous del worker.
+  const dn = useRef<{ worker: Worker | null; busy: number; id: number; data: Float32Array | null; count: number; oidn: UNet | null; oidnNext: number }>({ worker: null, busy: 0, id: 0, data: null, count: 0, oidn: null, oidnNext: 4 })
+  const [denoiser, setDenoiser] = useState<"oidn" | "atrous">("atrous")
   const img = useRef<ImageData | null>(null)
   const gpuFailedNow = gpuFailed && (!gpuFailed.res || gpuFailed.res === res) ? gpuFailed.why : null
   /** Tria un dels cels de l'app (es carrega a part; si ja s'ha començat, el render torna a començar amb el cel nou). */
@@ -220,14 +231,36 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
       autoK = Math.min(40, Math.max(0.25, 0.18 / 0.7 / gm))
     }
     const expo = 0.7 * Math.pow(2, L.exposure) * autoK
-    const tone = (v: number) => aces(v, expo)
     const wr = 1 + 0.12 * L.warmth, wb = 1 - 0.12 * L.warmth
+    // Corba de color: AgX (per defecte, natural) o ACES. Entrada lineal ja exposada.
+    const tc = [0, 0, 0]
+    const toneRgb = L.curve === "aces"
+      ? (r: number, g: number, b: number) => {
+          tc[0] = aces(r, 1); tc[1] = aces(g, 1); tc[2] = aces(b, 1)
+        }
+      : (r: number, g: number, b: number) => agx(AGX_LUT, POW_LUT, r, g, b, tc)
     const sb = source.current?.scene.background ?? [0, 0, 0]
-    const bgR = srgb(tone(sb[0])), bgG = srgb(tone(sb[1])), bgB = srgb(tone(sb[2]))
-    for (let i = 0, n = j.w * j.h; i < n; i++) {
-      let r = tone(col(i, 0) * wr)
-      let g = tone(col(i, 1))
-      let b = tone(col(i, 2) * wb)
+    toneRgb(sb[0] * expo, sb[1] * expo, sb[2] * expo)
+    const bgR = srgb(tc[0]!), bgG = srgb(tc[1]!), bgB = srgb(tc[2]!)
+    // Resplendor (a 1/16 dels píxels) i vinyeta: només amb el fons de l'escena (els catàlegs, nets).
+    const W = j.w, H = j.h
+    const bloom = L.bloom > 0 ? bloomBuffer(W, H, (i, c) => col(i, c) * expo * (c === 0 ? wr : c === 2 ? wb : 1), L.bloomThreshold) : null
+    const bl = [0, 0, 0]
+    const vig = L.background === "scene" ? L.vignette : 0
+    const cx = (W - 1) / 2, cy = (H - 1) / 2, rd2 = 1 / (cx * cx + cy * cy || 1)
+    for (let i = 0, n = W * H; i < n; i++) {
+      let lr = col(i, 0) * wr * expo, lg = col(i, 1) * expo, lb = col(i, 2) * wb * expo
+      if (bloom) {
+        sampleBloom(bloom, i % W, (i / W) | 0, bl)
+        lr += bl[0]! * L.bloom; lg += bl[1]! * L.bloom; lb += bl[2]! * L.bloom
+      }
+      if (vig > 0) {
+        const dx = (i % W) - cx, dy = ((i / W) | 0) - cy
+        const v = vignette((dx * dx + dy * dy) * rd2, vig)
+        lr *= v; lg *= v; lb *= v
+      }
+      toneRgb(lr, lg, lb)
+      let r = tc[0]!, g = tc[1]!, b = tc[2]!
       if (!Number.isFinite(r + g + b)) r = g = b = 0
       const a = j.accum[i * 4 + 3]! * k
       if (L.saturation !== 1) {
@@ -286,13 +319,18 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     requestDraw()
   }
 
-  /** Filtra el soroll de les passades acumulades (cada cop menys sovint: 4, 8, 16… passades). */
+  /**
+   * Filtra el soroll de les passades acumulades: À-Trous cada cop menys sovint (4, 8, 16…
+   * passades) o, amb OIDN, a les 4, 16, 64, 256… passades i en aturar-se (`force`).
+   */
   const scheduleDenoise = (force = false) => {
     const j = job.current
     const D = dn.current
     if (!j || !lookRef.current.denoise || D.busy || j.count < 2 || !j.auxCount) return
-    if (!force && j.count < D.count * 1.5 + 2) return
-    D.worker ??= new Worker(new URL("./denoiseWorker.ts", import.meta.url), { type: "module" })
+    const oidn = D.oidn
+    if (oidn ? !force && j.count < D.oidnNext : !force && j.count < D.count * 1.5 + 2) return
+    if (oidn && D.count === j.count && D.data) return
+    if (!oidn) D.worker ??= new Worker(new URL("./denoiseWorker.ts", import.meta.url), { type: "module" })
     const n = j.w * j.h
     const color = new Float32Array(n * 3), albedo = new Float32Array(n * 3), normal = new Float32Array(n * 3)
     const k = 1 / j.count, ka = 1 / j.auxCount
@@ -310,7 +348,29 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     const id = ++D.id
     D.busy = id
     const count = j.count
-    D.worker.onmessage = (e: MessageEvent<{ id: number; data: Float32Array }>) => {
+    if (oidn) {
+      D.oidnNext = Math.max(4, count * 4)
+      oidnDenoise(oidn, j.w, j.h, color, albedo, normal).then(
+        (data) => {
+          if (D.busy === id) D.busy = 0
+          if (id !== D.id || job.current !== j) return scheduleDenoise()
+          D.data = data
+          D.count = count
+          requestDraw()
+        },
+        (err: unknown) => {
+          // La xarxa ha fallat: l'À-Trous de sempre.
+          if (D.busy === id) D.busy = 0
+          oidnFailed(err)
+          D.oidn = null
+          setDenoiser("atrous")
+          scheduleDenoise(true)
+        },
+      )
+      return
+    }
+    const worker = D.worker!
+    worker.onmessage = (e: MessageEvent<{ id: number; data: Float32Array }>) => {
       // Només la resposta de la petició en curs l'allibera (les d'abans d'un reinici, també).
       if (e.data.id === D.busy) D.busy = 0
       if (e.data.id !== D.id || job.current !== j) {
@@ -322,7 +382,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
       D.count = count
       requestDraw()
     }
-    D.worker.postMessage({ id, w: j.w, h: j.h, color, albedo, normal, strength: Math.min(1, 1.6 / Math.sqrt(count)) }, [color.buffer, albedo.buffer, normal.buffer])
+    worker.postMessage({ id, w: j.w, h: j.h, color, albedo, normal, strength: Math.min(1, 1.6 / Math.sqrt(count)) }, [color.buffer, albedo.buffer, normal.buffer])
   }
 
   /** Torna a començar el càlcul (en començar o en canviar el motor, la qualitat o la llum). */
@@ -344,6 +404,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     dn.current.id++
     dn.current.data = null
     dn.current.count = 0
+    dn.current.oidnNext = 4
     setPasses(0)
     setStartedAt(Date.now())
     setElapsed(0)
@@ -379,7 +440,9 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
       },
       limit: () => limitRef.current,
       onStop: () => {
-        if (token.current === my) setRunning(false)
+        if (token.current !== my) return
+        setRunning(false)
+        scheduleDenoise(true)
       },
     }
     const run = (e: RenderEngine) => {
@@ -445,6 +508,12 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     }
     let alive = true
     void gpuSupport().then((why) => alive && setGpuWhy(why))
+    // Open Image Denoise si hi ha WebGPU i els pesos; si no, en silenci, l'À-Trous.
+    void oidnReady().then((u) => {
+      if (!alive) return
+      dn.current.oidn = u
+      setDenoiser(u ? "oidn" : "atrous")
+    })
     // Als ambients (llum de dia), exposició automàtica i una mica càlid, com les fotos d'interiors.
     const daylight = !!getScene()?.scene.userData.daylight
     chooseSky(readSky(daylight ? "ambient" : "moble"))
@@ -506,6 +575,8 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     if (running) {
       e.pause()
       setRunning(false)
+      // En aturar-se, el filtre de soroll amb totes les passades (els motors en poden enviar una més).
+      window.setTimeout(() => scheduleDenoise(true), 300)
     } else {
       setStartedAt(Date.now() - elapsed * 1000)
       setRunning(true)
@@ -709,6 +780,12 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                     </Stack>
                   </FormRow>
                   {env && <Range label="Gir del cel" value={opts.envRotation ?? 0} min={0} max={360} step={5} format={deg} onChange={(v) => set({ envRotation: v })} />}
+                  <FormRow label="Llums enceses" help="Les pantalles de lli i les bombetes dels llums fan llum (materials «Pantalla de lli» i «Bombeta»).">
+                    <HStack minH="32px">
+                      <input type="checkbox" aria-label="Llums enceses" checked={opts.lamps !== false} onChange={(e) => set({ lamps: e.currentTarget.checked })} style={{ accentColor: "var(--chakra-colors-wood-solid)" }} />
+                    </HStack>
+                  </FormRow>
+                  {opts.lamps !== false && <Range label="Llums · intensitat" value={opts.lampIntensity ?? 1} min={0.1} max={5} step={0.1} format={x} onChange={(v) => set({ lampIntensity: v })} />}
                 </Sec>
 
                 <Sec id="image" title="Imatge" icon={LuImage} hint="S'aplica a l'instant, sense tornar a començar." badge={look.denoise ? "Sense soroll" : undefined}>
@@ -717,7 +794,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                       <input type="checkbox" aria-label="Exposició automàtica" checked={look.auto} onChange={(e) => setLook({ auto: e.currentTarget.checked })} style={{ accentColor: "var(--chakra-colors-wood-solid)" }} />
                     </HStack>
                   </FormRow>
-                  <FormRow label="Reduir el soroll">
+                  <FormRow label="Reduir el soroll" help={denoiser === "oidn" ? "Amb Open Image Denoise (IA, a la GPU): a les 4, 16, 64, 256… passades i en aturar." : "Filtre guiat per l'albedo i les normals."}>
                     <HStack minH="32px">
                       <input
                         type="checkbox"
@@ -729,8 +806,24 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                         }}
                         style={{ accentColor: "var(--chakra-colors-wood-solid)" }}
                       />
+                      {/* Quin filtre fa servir (discret) */}
+                      <Text fontSize="xs" color="fg.subtle">{denoiser === "oidn" ? "Intel OIDN" : "bàsic"}</Text>
                     </HStack>
                   </FormRow>
+                  <FormRow label="Corba de color" help="AgX: natural, com les fotos (les llums es tornen blanques suaument). ACES: més contrast i color.">
+                    <ChoiceChips<ToneCurve>
+                      label="Corba de color"
+                      options={[
+                        { id: "agx", label: "AgX" },
+                        { id: "aces", label: "ACES" },
+                      ]}
+                      value={look.curve}
+                      onChange={(v) => setLook({ curve: v })}
+                    />
+                  </FormRow>
+                  <Range label="Vinyeta" value={look.vignette} min={0} max={1} step={0.05} format={(v) => `${Math.round(v * 100)} %`} onChange={(v) => setLook({ vignette: v })} />
+                  <Range label="Resplendor" value={look.bloom} min={0} max={1} step={0.05} format={(v) => (v ? `${Math.round(v * 100)} %` : "cap")} onChange={(v) => setLook({ bloom: v })} />
+                  {look.bloom > 0 && <Range label="Resplendor · a partir de" value={look.bloomThreshold} min={0.5} max={4} step={0.1} format={x} onChange={(v) => setLook({ bloomThreshold: v })} />}
                   <Range label="Temperatura (fred → càlid)" value={look.warmth} min={-1} max={1} step={0.05} format={(v) => (v > 0 ? `+${v.toFixed(2)}` : v.toFixed(2))} onChange={(v) => setLook({ warmth: v })} />
                   <Range label="Exposició" value={look.exposure} min={-2} max={2} step={0.1} format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} EV`} onChange={(v) => setLook({ exposure: v })} />
                   <Range label="Contrast" value={look.contrast} min={0.6} max={1.6} step={0.05} format={x} onChange={(v) => setLook({ contrast: v })} />

@@ -1,4 +1,4 @@
-import { WOOD_PRESETS, type MaterialPref } from "../../core/model"
+import { PHOTO_MATERIALS, TEXTURE_SETS, WOOD_PRESETS, type MaterialPref } from "../../core/model"
 import { WOOD_EXTRA_PRESETS } from "./woodPresets"
 
 /**
@@ -49,4 +49,6 @@ export const MATERIAL_LIBRARY: LibraryItem[] = [
   sim("Terres i parets", "Parquet de roure", { kind: "wood", species: "oak", gen: { ...WOOD_PRESETS.oak } }),
   sim("Terres i parets", "Microciment", { kind: "stone", color: "#b3aea5", vein: "#9d978d", veins: 0.3, size: 2500, seed: 4, style: "concrete", grain: 0.2, polish: 0.3 }),
   sim("Terres i parets", "Pintura blanca", { kind: "color", color: "#f3f1ec" }),
+  // Fotos amb relleu i rugositat (Poly Haven, CC0): les mateixes dels materials inicials.
+  ...PHOTO_MATERIALS.map(({ id: _id, ...m }, i): LibraryItem => ({ ...m, group: TEXTURE_SETS[i]!.use === "board" ? "Fotos · fusta" : TEXTURE_SETS[i]!.translucent !== undefined || /Teixit|Llana|Jute/.test(m.name) ? "Fotos · teixits" : "Fotos · pedra, terres i parets" })),
 ]

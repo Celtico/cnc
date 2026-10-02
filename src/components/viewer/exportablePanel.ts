@@ -2,7 +2,7 @@ import { BoxGeometry, MeshStandardMaterial, type BufferGeometry, type Texture } 
 import type { MaterialPref, Panel } from "../../core/model"
 import { ROLE_COLOR } from "./roleColorMap"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
-import { RAW_EDGE_COLOR, TILE_MM, patternTexture, photoTexture, resolveEdgeFinish, resolveFinish, woodGenOf, woodTexture, type FinishSpec } from "./textures"
+import { RAW_EDGE_COLOR, TILE_MM, applyFinishFx, patternTexture, photoTexture, resolveEdgeFinish, resolveFinish, woodGenOf, woodTexture, type FinishSpec } from "./textures"
 
 /** Materials i geometria de les peces (visor, GLB/USDZ, miniatures). mm → m. */
 const S = 0.001
@@ -24,7 +24,12 @@ function faceTexture(base: Texture, uMm: number, vMm: number, rotate: boolean, t
   return t
 }
 
+/** Material d'un acabat amb la llum i la translucidesa del render (`applyFinishFx`). */
 function makeMaterial(finish: FinishSpec, uMm: number, vMm: number, rotate: boolean, opts: { transparent: boolean; opacity: number }): MeshStandardMaterial {
+  return applyFinishFx(baseMaterial(finish, uMm, vMm, rotate, opts), finish)
+}
+
+function baseMaterial(finish: FinishSpec, uMm: number, vMm: number, rotate: boolean, opts: { transparent: boolean; opacity: number }): MeshStandardMaterial {
   // `userData.grain`: el render fa relleu i brillantor variable amb la veta (`sceneData`).
   if (finish.kind === "wood") {
     const m = new MeshStandardMaterial({ map: faceTexture(woodTexture(finish.species, finish.gen), uMm, vMm, rotate, woodGenOf(finish.species, finish.gen).tileMm), roughness: 0.7, metalness: 0, ...opts })
@@ -32,9 +37,21 @@ function makeMaterial(finish: FinishSpec, uMm: number, vMm: number, rotate: bool
     return m
   }
   // Foto real del tauler: la mateixa escala que al tauler de debò (tileMm = amplada de la foto).
+  // Amb mapes PBR (normal, rugositat): la mateixa repetició i gir que el color.
   if (finish.kind === "image") {
-    const m = new MeshStandardMaterial({ map: faceTexture(photoTexture(finish.src, finish.seamless), uMm, vMm, rotate, finish.tileMm, finish.aspect), roughness: 0.7, metalness: 0, ...opts })
-    m.userData.grain = true
+    // Veta vertical a la foto: es gira un quart més perquè vagi com la de la peça.
+    const turn = finish.grain === "y" ? !rotate : rotate
+    const tex = (src: string, linear: boolean) => faceTexture(photoTexture(src, finish.seamless, linear), uMm, vMm, turn, finish.tileMm, finish.aspect)
+    const m = new MeshStandardMaterial({
+      map: tex(finish.src, false),
+      ...(finish.normalMap ? { normalMap: tex(finish.normalMap, true) } : {}),
+      ...(finish.roughMap ? { roughnessMap: tex(finish.roughMap, true) } : {}),
+      roughness: Math.min(1, finish.roughness ?? (finish.roughMap ? 1 : 0.7)),
+      metalness: 0,
+      ...opts,
+    })
+    // Sense mapa de normals, el relleu de la veta es treu de la foto.
+    if (!finish.normalMap) m.userData.grain = true
     return m
   }
   if (finish.kind === "pattern") {

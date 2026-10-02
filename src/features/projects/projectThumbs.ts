@@ -1,6 +1,7 @@
 import { buildComposition } from "../../core/build/buildComposition"
 import type { Composition, MaterialPref } from "../../core/model"
 import { releaseThumbRenderer, renderThumb, THUMB_VERSION } from "../../components/viewer/thumbRenderer"
+import { photoTexturesIdle, photoTexturesPending } from "../../components/viewer/textures"
 import { preloadModels } from "../../components/viewer/models3d"
 import { compositionOf } from "../../db/compositionStore"
 import { db, type Project } from "../../db/db"
@@ -29,7 +30,13 @@ export function requestProjectThumb(p: Project, materials: MaterialPref[]): void
       const build = buildComposition(comp)
       // Si un model 3D no s'ha pogut carregar, no es fa (ni es desa): sortiria sense la planta per sempre.
       if (!(await preloadModels(build.models))) return
-      const url = renderThumb([...build.panels, ...build.extras], materials, comp.scene, comp.references, build.models)
+      const draw = () => renderThumb([...build.panels, ...build.extras], materials, comp.scene, comp.references, build.models)
+      let url = draw()
+      // Textures de foto que encara es baixaven: es torna a pintar quan hi són.
+      if (photoTexturesPending()) {
+        await photoTexturesIdle()
+        url = draw()
+      }
       if (url) await db.projects.update(p.id, { thumb: url, thumbAt: fresh.updatedAt, thumbV: THUMB_VERSION })
     },
   })
@@ -55,7 +62,12 @@ export function requestTemplateThumb(id: string, make: () => Composition, materi
     run: async () => {
       const build = buildComposition(make())
       if (!(await preloadModels(build.models))) return
-      const url = renderThumb([...build.panels, ...build.extras], materials, undefined, [], build.models)
+      const draw = () => renderThumb([...build.panels, ...build.extras], materials, undefined, [], build.models)
+      let url = draw()
+      if (photoTexturesPending()) {
+        await photoTexturesIdle()
+        url = draw()
+      }
       if (url) {
         templateThumbs.set(id, url)
         onDone(url)

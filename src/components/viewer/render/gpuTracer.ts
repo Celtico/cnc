@@ -15,7 +15,7 @@ import { DIRECT_CLAMP, BUMP_STRENGTH, GLASS_SHADOW, INDIRECT_CLAMP, PATH_ROUGHNE
 
 /** Tandes enviades a la GPU abans d'esperar-ne la primera. */
 const IN_FLIGHT = 2
-const PARAMS_BYTES = 16 * 16
+const PARAMS_BYTES = 18 * 16
 /** Constants de WebGPU (els tipus del DOM de TypeScript no les porten). */
 const U = { MAP_READ: 0x1, COPY_SRC: 0x4, COPY_DST: 0x8, UNIFORM: 0x40, STORAGE: 0x80 } as const
 const MAP_MODE_READ = 0x1
@@ -222,6 +222,8 @@ export class GpuEngine implements RenderEngine {
     u.set([gs.matOff, gs.texOff, gs.bevelOff, gs.portalOff], 52)
     u.set([gs.envW, gs.envH, gs.envMarginal, gs.envConditional], 56)
     u.set([this.seed, rows, 2 ** gs.texHalvings, 0], 60)
+    f.set([L.lampScale, gs.emitTotal || 1, 0, 0], 64)
+    u.set([gs.emitOff, gs.emitCount, 0, 0], 68)
     this.device.queue.writeBuffer(this.params, 0, buf)
   }
 

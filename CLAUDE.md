@@ -730,6 +730,18 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     Preferències › Visor 3D › «Cel del render» (mobles: «Interior»; ambients: «Núvols»; preferència del dispositiu). Opcions del render en seccions plegables (`PanelSection`, com els inspectors: Qualitat, Càmera,
     Escena, Llum, Imatge, amb el resum a la insígnia); al mòbil, pantalla completa amb la imatge a dalt. Tests:
     `render/render.test.ts` (BVH contra força bruta, CDF de l'HDRI, bevel, empaquetat de textures i triangles).
+    **Mapes PBR**: els materials de foto amb `normalMap`/`roughMap` porten normal en espai tangent (base per les
+    derivades de les UV del triangle, `tangentFrame`/`perturbNormal` a `shading.ts`, també amb UV en mirall) i
+    rugositat = mapa × la del material, als dos motors (sense mapa de normals, el relleu de la veta de sempre).
+    **Llums que fan llum**: `MaterialPref.glow` (radiància; «Pantalla de lli» 4, «Bombeta» 30) →
+    `RenderMaterial.emission`; es veu en tocar-la (MIS) i hi ha mostra directa dels triangles emissors
+    (`emitters.ts`, CDF àrea × luminància, la mateixa per a CPU i GPU); opció Llum › «Llums enceses» + intensitat.
+    **Translucidesa** (`MaterialPref.translucent`, fulles amb `alphaCut`, tul, lli, pantalles, jute): part del difús
+    passa a l'altra cara tenyit per l'albedo. **Imatge, a l'instant**: «Corba de color» AgX (per defecte) · ACES
+    (taules, `tonemap.ts`), vinyeta (0,2) i resplendor dels punts molt brillants (llindar + força, desenfocat a ¼).
+    **Reduir el soroll**: Open Image Denoise (`oidn.ts`, `oidn-web`, WebGPU, HDR + albedo + normal) si hi ha WebGPU i
+    `public/oidn/rt_hdr_alb_nrm.tza` és un fitxer de pesos de debò (> 10 KB i no un punter de Git LFS:
+    `isWeightsFile`); si no, o si falla, l'À-Trous. Els pesos (1,8 MB) **van amb l'app** però no es precachegen (CacheFirst en fer-los servir, com `/textures/`). Al costat de l'opció surt quin filtre es fa servir («Intel OIDN» / «bàsic»).
     **Sostre**: opció de vista «Sostre» (`mobles:ambient-ceiling`) i material a Acabats
     (`Ambient.ceilingMaterial`); al visor té una mica de llum pròpia (emissive) perquè des de sota no quedi fosc.
   - **Peça enganxada a un mòdul** (`FreePart.module`, `resolveParts`, `partOffset`): a General,
@@ -851,6 +863,18 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     o, a les antigues, en obrir la targeta) fa que l'alçada real sigui `tileMm × aspect`: abans
     s'estirava si la foto no era quadrada. `faceTexture` creua les repeticions quan la veta va en v
     (three escala després de girar).
+  - **Materials de foto amb relleu** (v6 de les preferències): 22 jocs de Poly Haven (CC0, 1K) a
+    `public/textures/<id>/{diff,nor,rough}.jpg` (normal OpenGL, rugositat en grisos), manifest a
+    `core/model/textureSets.ts` (`TEXTURE_SETS`: nom, mida real d'una repetició, direcció de la veta a la foto,
+    ús; reexportat a `viewer/textureSets.ts`). `PHOTO_MATERIALS`: xapes a **Taulers** (16/19/30: «Roure (foto)»,
+    «Noguera (foto)», «Noguera fumada (foto)», «Fusta fosca (foto)»), pedres a **Metall, pedra i vidre** i la resta
+    (parquets, estucs, formigons, microciment, terratzo, murs de pedra, jute, llana espiga, vaquer) a
+    **Simulació**; la migració només afegeix els que falten. També a la biblioteca («Fotos · …»). L'acabat
+    `image` porta `normalMap`, `roughMap`, `grain` (`y` = veta vertical a la foto: es gira un quart), `roughness`
+    (multiplicador) i `color` (STEP). Visor: `MeshStandardMaterial` map + normalMap + roughnessMap amb la mateixa
+    repetició i gir, sRGB només el color. Les miniatures esperen les fotos que es baixen (`photoTexturesIdle`).
+    **PWA**: els `.jpg` no es precachegen (~14 MB): `runtimeCaching` CacheFirst per a `/textures/` i NetworkFirst
+    per a `/oidn/` (si el fitxer canvia, no queda el vell). Terra i parets per defecte continuen procedurals.
   - **Tauler de taula** (`Carcass.tableTop`): la tapa per sobre dels laterals (més curts),
     voladís a tot el voltant i forma (rectangle, arrodonit, oval o a mida amb l'editor de
     perfil; `shape` en mm s'escala al tauler). `Panel.outline` (rectes i arcs): 3D/GLB

@@ -1,4 +1,5 @@
 import { buildBvh, type Bvh } from "./bvh"
+import { EMIT_FLOATS, buildEmitters } from "./emitters"
 import { buildEnvCdf } from "./envSampling"
 import type { RenderEnv, RenderScene, RenderTexture } from "./sceneData"
 
@@ -10,19 +11,19 @@ import type { RenderEnv, RenderScene, RenderTexture } from "./sceneData"
  * - `tris`: 5 vec4 per triangle, en l'ordre del BVH: (v0, material) (e1, malla bevel) (e2, 0)
  *   (uv0, uv1) (uv2, 0, 0).
  * - `nodes`: el BVH de `bvh.ts`, tal qual.
- * - `info` (vec4): materials (4 per material), textures (1, u32: inici, w, h, repetició),
- *   malles amb bevel (5) i finestres (3).
+ * - `info` (vec4): materials (6 per material), textures (1, u32: inici, w, h, repetició),
+ *   malles amb bevel (5), finestres (3) i triangles emissors (4, `emitters.ts`).
  * - `texels`: totes les textures RGBA8 seguides (un u32 per texel).
  * - `env`: cel HDRI RGB, la CDF marginal (h + 1) i la condicional (h × (w + 1)).
  */
 export const TRI_VEC4 = 5
-export const MAT_VEC4 = 4
+export const MAT_VEC4 = 6
 export const BEVEL_VEC4 = 5
 export const PORTAL_VEC4 = 3
 
 export interface PackedTextures {
   texels: Uint32Array
-  /** Per textura: inici (en texels), w, h, repetició (wrapS | wrapT << 2 | flipY << 4). */
+  /** Per textura: inici (en texels), w, h, repetició (wrapS | wrapT << 2 | flipY << 4 | lineal << 5). */
   entries: { offset: number; w: number; h: number; flags: number }[]
   /** Quantes vegades s'han reduït a la meitat per cabre (0 = mida original). */
   halvings: number
@@ -64,7 +65,7 @@ export function packTextures(textures: RenderTexture[], maxBytes: number): Packe
     // RGBA8 en ordre de bytes = u32 little-endian (el que llegeix `unpack4x8unorm`).
     const src = new Uint8Array(t.data.buffer, t.data.byteOffset, n * 4)
     new Uint8Array(texels.buffer, off * 4, n * 4).set(src)
-    entries.push({ offset: off, w: t.w, h: t.h, flags: t.wrapS | (t.wrapT << 2) | ((t.flipY ? 1 : 0) << 4) })
+    entries.push({ offset: off, w: t.w, h: t.h, flags: t.wrapS | (t.wrapT << 2) | ((t.flipY ? 1 : 0) << 4) | ((t.linear ? 1 : 0) << 5) })
     off += n
   }
   return { texels, entries, halvings }
@@ -79,6 +80,10 @@ export interface GpuScene {
   bevelOff: number
   portalOff: number
   portalCount: number
+  emitOff: number
+  emitCount: number
+  /** Σ àrea × luminància dels emissors. */
+  emitTotal: number
   texels: Uint32Array
   texHalvings: number
   env: Float32Array
@@ -114,13 +119,16 @@ export function packGpuScene(scene: RenderScene, env: RenderEnv | null, maxBindi
   const texOff = matOff + nMat * MAT_VEC4
   const bevelOff = texOff + nTex
   const portalOff = bevelOff + nBevel * BEVEL_VEC4
-  const total = portalOff + nPortal * PORTAL_VEC4
+  const em = buildEmitters(scene)
+  const emitOff = portalOff + nPortal * PORTAL_VEC4
+  const total = emitOff + em.count * (EMIT_FLOATS / 4)
   const info = new Uint32Array(Math.max(1, total) * 4)
   const f = new Float32Array(info.buffer)
   scene.materials.forEach((m, i) => {
     const o = (matOff + i * MAT_VEC4) * 4
     const e = m.uv
-    f.set([m.color[0], m.color[1], m.color[2], m.map, e[0]!, e[1]!, e[3]!, e[4]!, e[6]!, e[7]!, m.roughness, m.metalness, m.opacity, m.alphaCut, m.bump, scene.textures[m.map]?.lum ?? 0], o)
+    const em = m.emission ?? [0, 0, 0]
+    f.set([m.color[0], m.color[1], m.color[2], m.map, e[0]!, e[1]!, e[3]!, e[4]!, e[6]!, e[7]!, m.roughness, m.metalness, m.opacity, m.alphaCut, m.bump, scene.textures[m.map]?.lum ?? 0, em[0], em[1], em[2], m.translucent ?? 0, m.normalMap ?? -1, m.roughMap ?? -1, 0, 0], o)
   })
   tex.entries.forEach((t, i) => info.set([t.offset, t.w, t.h, t.flags], (texOff + i) * 4))
   f.set(scene.bevel, bevelOff * 4)
@@ -129,6 +137,8 @@ export function packGpuScene(scene: RenderScene, env: RenderEnv | null, maxBindi
     const q = scene.portals.subarray(i * 9, i * 9 + 9)
     f.set([q[0]!, q[1]!, q[2]!, 0, q[3]!, q[4]!, q[5]!, 0, q[6]!, q[7]!, q[8]!, 0], o)
   }
+
+  f.set(em.data, emitOff * 4)
 
   let envData = new Float32Array(4)
   let envMarginal = 0, envConditional = 0, envTotal = 0
@@ -153,6 +163,9 @@ export function packGpuScene(scene: RenderScene, env: RenderEnv | null, maxBindi
     bevelOff,
     portalOff,
     portalCount: nPortal,
+    emitOff,
+    emitCount: em.count,
+    emitTotal: em.total,
     texels: tex.texels,
     texHalvings: tex.halvings,
     env: envData,
