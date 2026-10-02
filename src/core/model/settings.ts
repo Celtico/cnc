@@ -2,6 +2,7 @@ import { z } from "zod"
 import { DEFAULT_CABINET } from "./cabinet"
 import { DEFAULT_HARDWARE, HardwareSchema, type Module } from "./composition"
 import { PHOTO_MATERIALS } from "./textureSets"
+import { resolveMaterialAlias, upgradeToPhoto } from "./photoUpgrade"
 
 /**
  * Preferències de l'usuari: tot el que depèn de casa seva i del taller (referències de
@@ -14,7 +15,7 @@ import { PHOTO_MATERIALS } from "./textureSets"
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 6
+export const SETTINGS_VERSION = 7
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -369,7 +370,8 @@ export const SIM_MATERIALS: MaterialPref[] = [
   sim("sim-bulb", "Bombeta", { kind: "color", color: "#fff6e6", roughness: 0.3 }, false, { glow: 30 }),
 ]
 
-export const BUILTIN_MATERIALS: MaterialPref[] = [
+/** Valors inicials: els de sempre amb l'acabat de foto on n'hi ha (v7) i la resta de fotos, sense duplicats. */
+export const BUILTIN_MATERIALS: MaterialPref[] = upgradeToPhoto([
   { id: "mel-white", name: "Melamina blanca", thicknesses: [10, 16, 19], hasGrain: false, finish: { kind: "color", color: "#f2f0eb" }, edge: "PVC blanc 1 mm" },
   { id: "mel-grey", name: "Melamina gris", thicknesses: [16, 19], hasGrain: false, finish: { kind: "color", color: "#9a9a96" }, edge: "PVC gris 1 mm" },
   { id: "mel-black", name: "Melamina negra", thicknesses: [16, 19], hasGrain: false, finish: { kind: "color", color: "#2b2b2b" }, edge: "PVC negre 1 mm" },
@@ -383,7 +385,7 @@ export const BUILTIN_MATERIALS: MaterialPref[] = [
   ...NON_CNC_MATERIALS,
   ...SIM_MATERIALS,
   ...PHOTO_MATERIALS,
-]
+])
 
 export const DEFAULT_SETTINGS: Settings = {
   version: SETTINGS_VERSION,
@@ -444,6 +446,8 @@ export function parseSettings(raw: unknown): SettingsParse {
       : undefined
     obj = { ...obj, ...(refs ? { references: refs } : {}), version: 1 }
   }
+  // Una versió anterior es desa ja migrada (les migracions són idempotents: tornar-les a fer no canvia res).
+  if (version < SETTINGS_VERSION) migrated = true
   if (version > SETTINGS_VERSION) problems.push(`Preferències d'una versió més nova (${version}); s'ha llegit el que s'ha pogut.`)
 
   const section = <T>(key: string, schema: z.ZodType<T>, fallback: T, label: string): T => {
@@ -473,24 +477,29 @@ export function parseSettings(raw: unknown): SettingsParse {
   // v3: materials de simulació (teixits, parquet, rajola, pintura) per als ambients.
   const missing = (list: MaterialPref[], from: MaterialPref[]) => list.filter((m) => !from.some((x) => x.id === m.id || x.name === m.name))
   const v2 = materialsRaw.length && version < 2 ? [...materialsRaw, ...missing(NON_CNC_MATERIALS, materialsRaw)] : materialsRaw
-  const v4 = v2.length ? (version < SETTINGS_VERSION ? [...v2, ...missing(SIM_MATERIALS, v2)] : v2) : BUILTIN_MATERIALS
+  const v4 = v2.length ? (version < 6 ? [...v2, ...missing(SIM_MATERIALS, v2)] : v2) : BUILTIN_MATERIALS
   // v5: llum i translucidesa dels materials de simulació de sempre (si no se n'hi ha posat).
   const v5 = version < 5 ? v4.map((m) => {
     const b = SIM_MATERIALS.find((x) => x.id === m.id)
     return b && (b.glow !== undefined || b.translucent !== undefined) && m.glow === undefined && m.translucent === undefined ? { ...m, ...(b.glow !== undefined ? { glow: b.glow } : {}), ...(b.translucent !== undefined ? { translucent: b.translucent } : {}) } : m
   }) : v4
   // v6: materials de foto amb mapes PBR (Poly Haven), només els que falten.
-  const materials = version < 6 && v5 !== BUILTIN_MATERIALS ? [...v5, ...missing(PHOTO_MATERIALS, v5)] : v5
+  const v6 = version < 6 && v5 !== BUILTIN_MATERIALS ? [...v5, ...missing(PHOTO_MATERIALS, v5)] : v5
+  // v7: els de sempre amb l'acabat de foto; els «(foto)» repetits fora i la resta sense «(foto)» (idempotent).
+  const materials = version < 7 && v6 !== BUILTIN_MATERIALS ? upgradeToPhoto(v6) : v6
+  const boards = section("boards", BoardsPrefSchema, DEFAULT_SETTINGS.boards, "Taulers")
+  const defaults = section("defaults", SettingsSchema.shape.defaults, DEFAULT_SETTINGS.defaults, "Materials per defecte")
+  const v7 = version < 7
   const settings: Settings = {
     version: SETTINGS_VERSION,
     references,
     materials,
-    boards: section("boards", BoardsPrefSchema, DEFAULT_SETTINGS.boards, "Taulers"),
+    boards: v7 ? { ...boards, sheets: boards.sheets.map((x) => ({ ...x, material: resolveMaterialAlias(x.material) })) } : boards,
     hardware: section("hardware", HardwareSchema, DEFAULT_SETTINGS.hardware, "Ferratges"),
     gaps: section("gaps", GapsPrefSchema, DEFAULT_SETTINGS.gaps, "Jocs"),
     label: section("label", LabelPrefSchema, DEFAULT_SETTINGS.label, "Etiqueta"),
     display: section("display", DisplayPrefSchema, DEFAULT_SETTINGS.display, "Visualització"),
-    defaults: section("defaults", SettingsSchema.shape.defaults, DEFAULT_SETTINGS.defaults, "Materials per defecte"),
+    defaults: v7 ? { ...defaults, material: resolveMaterialAlias(defaults.material), backMaterial: resolveMaterialAlias(defaults.backMaterial) } : defaults,
   }
   return { settings, problems, migrated: migrated || problems.length > 0 }
 }

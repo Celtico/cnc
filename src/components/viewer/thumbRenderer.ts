@@ -1,6 +1,6 @@
 import { Box3, Color, DirectionalLight, HemisphereLight, Mesh, Scene, MeshStandardMaterial, NeutralToneMapping, PCFSoftShadowMap, PerspectiveCamera, PlaneGeometry, PMREMGenerator, SRGBColorSpace, Vector3, WebGLRenderer, type Material, type Object3D, type Texture } from "three"
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
-import type { MaterialPref, ModelObject, Panel, RefObject } from "../../core/model"
+import { parseCameraPose, type MaterialPref, type ModelObject, type Panel, type RefObject } from "../../core/model"
 import { refGeometry } from "./refGeometry"
 import { exportablePanel } from "./exportablePanel"
 import { buildScene } from "./exportGlb"
@@ -18,7 +18,7 @@ import { releaseModelGpu } from "./models3d"
 const W = 480
 const H = 240
 /** Versió de les miniatures: si canvia la manera de fer-les, es tornen a fer totes. */
-export const THUMB_VERSION = 5
+export const THUMB_VERSION = 6
 
 let renderer: WebGLRenderer | null = null
 let env: Texture | null = null
@@ -84,8 +84,11 @@ export function snapshot(scene: Scene, camera: PerspectiveCamera): string {
 
 export const THUMB_ASPECT = W / H
 
-/** JPEG (data URL) de les peces vistes des de davant, una mica de costat i de dalt. */
-export function renderThumb(panels: Panel[], materials: MaterialPref[], finish?: { floor?: string; wall?: string }, refs: RefObject[] = [], models: ModelObject[] = []): string | null {
+/**
+ * JPEG (data URL) de les peces vistes des de davant, una mica de costat i de dalt. Amb `pose` (la càmera desada
+ * del document, ja en metres d'aquesta escena: les peces en mm de la composició, sense centrar), des d'allà.
+ */
+export function renderThumb(panels: Panel[], materials: MaterialPref[], finish?: { floor?: string; wall?: string }, refs: RefObject[] = [], models: ModelObject[] = [], pose?: unknown): string | null {
   if (!panels.length && !models.length) return null
   const scene = buildScene(panels, "thumb", { materials, make: exportablePanel }, models)
   // Objectes de referència amb material (una tele, un radiador): com al visor i al render. Els fantasmes, no.
@@ -129,6 +132,7 @@ export function renderThumb(panels: Panel[], materials: MaterialPref[], finish?:
   thumbLights(scene, center, Math.max(size.x, size.y, size.z) * 1.5 + 0.5)
 
   const camera = new PerspectiveCamera(30, W / H, 0.01, 200)
+  if (aimSaved(camera, pose)) return snapshot(scene, camera)
   // Distància perquè hi càpiga sencer amb marge (la targeta en retalla una mica), des de davant a la dreta i de dalt.
   const dir = new Vector3(0.5, 0.3, 1).normalize()
   const radius = size.length() / 2
@@ -137,6 +141,22 @@ export function renderThumb(panels: Panel[], materials: MaterialPref[], finish?:
   camera.lookAt(center)
 
   return snapshot(scene, camera)
+}
+
+/**
+ * Posa la càmera desada (posició, punt mirat i fov vertical del visor; el 2:1 pot retallar-ne els costats o
+ * afegir-n'hi). `false` si no n'hi ha o no és vàlida (llavors, l'enquadrament automàtic).
+ */
+export function aimSaved(camera: PerspectiveCamera, raw: unknown): boolean {
+  const pose = parseCameraPose(raw)
+  if (!pose) return false
+  const pos = new Vector3(...pose.position), target = new Vector3(...pose.target)
+  if (pos.distanceToSquared(target) < 1e-8) return false
+  if (pose.fov) camera.fov = pose.fov
+  camera.updateProjectionMatrix()
+  camera.position.copy(pos)
+  camera.lookAt(target)
+  return true
 }
 
 export function disposeTree(root: Object3D) {

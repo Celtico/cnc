@@ -78,10 +78,11 @@ export interface Project {
   folder?: string
   /** S'ha modificat després de crear-lo (a l'editor o a l'ambient): esborrar-lo perdria els canvis. */
   edited?: boolean
-  /** Miniatura 3D de la targeta (JPEG, data URL) i l'`updatedAt` que retrata (`projects/projectThumbs`). */
+  /** Miniatura 3D de la targeta (JPEG, data URL), l'`updatedAt` que retrata, la versió i la càmera (`thumbIsStale`). */
   thumb?: string
   thumbAt?: number
   thumbV?: number
+  thumbCam?: string
   createdAt: number
   updatedAt: number
 }
@@ -96,10 +97,11 @@ export interface AmbientRow {
   data: unknown
   /** Grup (carpeta) de l'historial. */
   folder?: string
-  /** Miniatura 3D (JPEG, data URL), l'`updatedAt` que retrata i la versió (`ambients/ambientThumbs`). */
+  /** Miniatura 3D (PNG, data URL), l'`updatedAt` que retrata, la versió i la càmera (`ambients/ambientThumbs`). */
   thumb?: string
   thumbAt?: number
   thumbV?: number
+  thumbCam?: string
   createdAt: number
   updatedAt: number
 }

@@ -3,9 +3,9 @@ import { exportablePanel } from "../../components/viewer/exportablePanel"
 import { photoTexturesIdle, photoTexturesPending } from "../../components/viewer/textures"
 import { buildScene } from "../../components/viewer/exportGlb"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
-import { snapshot, THUMB_ASPECT, THUMB_VERSION, thumbLights } from "../../components/viewer/thumbRenderer"
+import { aimSaved, snapshot, THUMB_ASPECT, THUMB_VERSION, thumbLights } from "../../components/viewer/thumbRenderer"
 import { preloadModels } from "../../components/viewer/models3d"
-import { blockComposition, layoutTemplate, parseAmbient, rad, resolveTemplateRef, templateWalls, wallLength, wallSegments, type Ambient, type AmbientTemplate, type Composition, type MaterialPref } from "../../core/model"
+import { blockComposition, cameraSignature, parseCameraPose, thumbIsStale, layoutTemplate, parseAmbient, rad, resolveTemplateRef, templateWalls, wallLength, wallSegments, type Ambient, type AmbientTemplate, type Composition, type MaterialPref } from "../../core/model"
 import { compositionOf } from "../../db/compositionStore"
 import { db, type AmbientRow } from "../../db/db"
 import { enqueueThumb } from "../projects/projectThumbs"
@@ -16,7 +16,7 @@ import { itemGeometry, type ItemGeometry } from "./ambientData"
  * terra, parets (sense les de davant, com la casa de nines) i els mobles i objectes de debò, vist de dalt i
  * de davant. Les dels ambients de l'usuari es desen (`AmbientRow.thumb`); les del catàleg, en memòria.
  */
-function renderAmbient(a: Ambient, geoOf: (i: number) => ItemGeometry | null, materials: MaterialPref[]): string | null {
+function renderAmbient(a: Ambient, geoOf: (i: number) => ItemGeometry | null, materials: MaterialPref[], pose?: unknown): string | null {
   if (!a.walls.length && !a.items.length) return null
   const scene = new Scene()
   // Sense fons: transparent (PNG), al voltant de l'habitació es veu la targeta.
@@ -39,7 +39,9 @@ function renderAmbient(a: Ambient, geoOf: (i: number) => ItemGeometry | null, ma
 
   // Càmera de dalt i de davant (el davant del plànol és la y gran), una mica de costat.
   const dir = new Vector3(0.45, 1.05, 1).normalize()
-  const camPos = new Vector3(cx, 0.9, cz).addScaledVector(dir, span * 1.55 + 1)
+  // La càmera desada (`Ambient.camera`, mateixes coordenades que el 3D; també la d'«Interior») passa per davant.
+  const saved = parseCameraPose(pose)
+  const camPos = saved ? new Vector3(...saved.position) : new Vector3(cx, 0.9, cz).addScaledVector(dir, span * 1.55 + 1)
 
   for (const w of a.walls) {
     const L = wallLength(w)
@@ -84,8 +86,10 @@ function renderAmbient(a: Ambient, geoOf: (i: number) => ItemGeometry | null, ma
   const center = new Box3().setFromObject(scene).getCenter(new Vector3())
   thumbLights(scene, new Vector3(cx, 1, cz), span)
   const camera = new PerspectiveCamera(32, THUMB_ASPECT, 0.05, 200)
-  camera.position.copy(camPos)
-  camera.lookAt(cx, Math.min(center.y, 0.8), cz)
+  if (!aimSaved(camera, saved)) {
+    camera.position.copy(camPos)
+    camera.lookAt(cx, Math.min(center.y, 0.8), cz)
+  }
   return snapshot(scene, camera)
 }
 
@@ -95,8 +99,10 @@ const compOfItem = async (it: Ambient["items"][number]): Promise<Composition | n
   return p ? compositionOf(p) : null
 }
 
+const cameraOf = (r: AmbientRow): unknown => (r.data && typeof r.data === "object" ? (r.data as { camera?: unknown }).camera : undefined)
+
 export function needsAmbientThumb(r: AmbientRow): boolean {
-  return !r.thumb || r.thumbAt !== r.updatedAt || r.thumbV !== THUMB_VERSION
+  return thumbIsStale(r, r.updatedAt, THUMB_VERSION, cameraOf(r))
 }
 
 /** Miniatura d'un ambient de l'usuari (es desa a la fila; es refà si l'ambient ha canviat). */
@@ -118,13 +124,15 @@ export function requestAmbientThumb(r: AmbientRow, materials: MaterialPref[]): v
     }
     // Si un model 3D no s'ha pogut carregar, no es fa (ni es desa): sortiria sense la planta per sempre.
     if (!(await preloadModels(geos.flatMap((g) => g?.build.models ?? [])))) return
-    let url = renderAmbient(a, (i) => geos[i] ?? null, materials)
+    const pose = cameraOf(fresh)
+    let url = renderAmbient(a, (i) => geos[i] ?? null, materials, pose)
     // Textures de foto que encara es baixaven: es torna a pintar quan hi són.
     if (photoTexturesPending()) {
       await photoTexturesIdle()
-      url = renderAmbient(a, (i) => geos[i] ?? null, materials)
+      url = renderAmbient(a, (i) => geos[i] ?? null, materials, pose)
     }
-    if (url) await db.ambients.update(r.id, { thumb: url, thumbAt: fresh.updatedAt, thumbV: THUMB_VERSION })
+    // Sense tocar `updatedAt`.
+    if (url) await db.ambients.update(r.id, { thumb: url, thumbAt: fresh.updatedAt, thumbV: THUMB_VERSION, thumbCam: cameraSignature(pose) })
   })
 }
 

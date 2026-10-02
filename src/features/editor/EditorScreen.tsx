@@ -48,7 +48,7 @@ import { RenderDialog, type SceneGetter } from "../../components/viewer/render/R
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
-import { applySettingsToModule, compositionHeight, compositionWidth, defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, partBox, CompositionSchema, type CameraPose, type Composition, type FreePart, type ModelObject, type Module, type Panel, type RefObject, type Zone } from "../../core/model"
+import { applySettingsToModule,  defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type FreePart, type ModelObject, type Module, type Panel, type RefObject, type Zone } from "../../core/model"
 import { saveProjectCamera, updateProjectComposition } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -303,32 +303,7 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   const moduleBuild = build?.modules[moduleIndex]?.build
   const zone = selectedZone ? findZone(module.root, selectedZone) : undefined
 
-  const size = useMemo(() => {
-    // Flat-pack: només les peces lliures (els mòduls es guarden però no es fan).
-    const onlyParts = partsOnlyKind(compositionKind(comp))
-    let h = onlyParts ? 0 : compositionHeight(comp)
-    let d = 0
-    let w = onlyParts ? 0 : compositionWidth(comp)
-    if (!onlyParts) for (const m of comp.modules) d = Math.max(d, (mountOf(m) === "floor" ? (m.wallGap ?? 0) : 0) + m.carcass.depth + m.carcass.thickness)
-    for (const g of comp.references) {
-      h = Math.max(h, g.y + g.h)
-      d = Math.max(d, g.z + g.d)
-      w = Math.max(w, g.x + g.w)
-    }
-    // Models 3D: també compten (un objecte que només és un model no ha de fer 0 × 0).
-    for (const g of comp.models ?? []) {
-      h = Math.max(h, g.y + g.h)
-      d = Math.max(d, g.z + g.d)
-      w = Math.max(w, g.x + g.w)
-    }
-    for (const p of resolveParts(comp)) {
-      const b = partBox(p)
-      w = Math.max(w, b.max[0])
-      h = Math.max(h, b.max[1])
-      d = Math.max(d, b.max[2])
-    }
-    return { width: Math.max(1, w), height: Math.max(1, h), depth: Math.max(1, d) }
-  }, [comp])
+  const size = useMemo(() => viewerSize(comp), [comp])
 
   const viewerModules: ViewerModule[] = useMemo(
     () =>

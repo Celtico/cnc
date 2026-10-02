@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { resolveMaterialAlias } from "../../core/model/photoUpgrade"
 
 /**
  * Escena del mode «Presentació» (terra, paret i llum). És una preferència del dispositiu,
@@ -56,7 +57,7 @@ export const LIGHT_SPEC: Record<LightId, { key: string; keyIntensity: number; am
 }
 
 // Terra de foto (Poly Haven) per defecte; si el material no hi és, la mostra ràpida «oak».
-export const DEFAULT_SCENE: PresentationScene = { floor: "oak", wall: WALLS[0]!.color, light: "studio", skirting: "white", floorMaterial: "Parquet de roure (foto)" }
+export const DEFAULT_SCENE: PresentationScene = { floor: "oak", wall: WALLS[0]!.color, light: "studio", skirting: "white", floorMaterial: "Parquet de roure" }
 
 const KEY = "mobles:presentation-scene"
 const EVENT = "mobles:presentation-scene-change"
@@ -70,8 +71,8 @@ export function readPresentationScene(): PresentationScene {
       wall: typeof v.wall === "string" && /^#[0-9a-f]{6}$/i.test(v.wall) ? v.wall : DEFAULT_SCENE.wall,
       light: LIGHTS.some((l) => l.id === v.light) ? v.light! : DEFAULT_SCENE.light,
       skirting: SKIRTINGS.some((k) => k.id === v.skirting) ? v.skirting! : DEFAULT_SCENE.skirting,
-      ...(typeof v.floorMaterial === "string" && v.floorMaterial ? { floorMaterial: v.floorMaterial } : {}),
-      ...(typeof v.wallMaterial === "string" && v.wallMaterial ? { wallMaterial: v.wallMaterial } : {}),
+      ...(typeof v.floorMaterial === "string" && v.floorMaterial ? { floorMaterial: resolveMaterialAlias(v.floorMaterial) } : {}),
+      ...(typeof v.wallMaterial === "string" && v.wallMaterial ? { wallMaterial: resolveMaterialAlias(v.wallMaterial) } : {}),
     }
   } catch {
     return DEFAULT_SCENE

@@ -1,4 +1,4 @@
-import { PHOTO_MATERIALS, TEXTURE_SETS, WOOD_PRESETS, type MaterialPref } from "../../core/model"
+import { LIBRARY_PHOTO_UPGRADES, PHOTO_MATERIALS, TEXTURE_SETS, WOOD_PRESETS, photoFinish, photoMaterialName, type MaterialPref } from "../../core/model"
 import { WOOD_EXTRA_PRESETS } from "./woodPresets"
 
 /**
@@ -13,7 +13,7 @@ const hard = (group: string, name: string, finish: MaterialPref["finish"], thick
 const sim = (group: string, name: string, finish: MaterialPref["finish"]): LibraryItem => ({ group, name, finish, thicknesses: [10], hasGrain: false, edge: "", cnc: false, category: "sim" })
 const extra = (n: string) => WOOD_EXTRA_PRESETS.find((p) => p.name === n)!.gen
 
-export const MATERIAL_LIBRARY: LibraryItem[] = [
+const CLASSIC_LIBRARY: LibraryItem[] = [
   board("Roure natural", { kind: "wood", species: "oak", gen: { ...WOOD_PRESETS.oak } }, "Xapa de roure"),
   board("Roure fumat", { kind: "wood", species: "oak", gen: extra("Roure fumat") }, "Xapa de roure fumat"),
   board("Roure blanquejat", { kind: "wood", species: "oak", gen: extra("Roure blanquejat") }, "Xapa de roure"),
@@ -49,6 +49,24 @@ export const MATERIAL_LIBRARY: LibraryItem[] = [
   sim("Terres i parets", "Parquet de roure", { kind: "wood", species: "oak", gen: { ...WOOD_PRESETS.oak } }),
   sim("Terres i parets", "Microciment", { kind: "stone", color: "#b3aea5", vein: "#9d978d", veins: 0.3, size: 2500, seed: 4, style: "concrete", grain: 0.2, polish: 0.3 }),
   sim("Terres i parets", "Pintura blanca", { kind: "color", color: "#f3f1ec" }),
-  // Fotos amb relleu i rugositat (Poly Haven, CC0): les mateixes dels materials inicials.
-  ...PHOTO_MATERIALS.map(({ id: _id, ...m }, i): LibraryItem => ({ ...m, group: TEXTURE_SETS[i]!.use === "board" ? "Fotos · fusta" : TEXTURE_SETS[i]!.translucent !== undefined || /Teixit|Llana|Jute/.test(m.name) ? "Fotos · teixits" : "Fotos · pedra, terres i parets" })),
+]
+
+// Els de sempre amb la foto de Poly Haven (v7, com els materials inicials): l'acabat procedural fora.
+const UPGRADED = CLASSIC_LIBRARY.map((m): LibraryItem => {
+  const set = LIBRARY_PHOTO_UPGRADES[m.name]
+  const finish = set ? photoFinish(set) : undefined
+  return finish ? { ...m, finish } : m
+})
+const usedSets = new Set(Object.values(LIBRARY_PHOTO_UPGRADES))
+
+export const MATERIAL_LIBRARY: LibraryItem[] = [
+  ...UPGRADED,
+  // La resta de fotos amb relleu i rugositat (Poly Haven, CC0), amb el nom dels materials inicials (sense «(foto)»).
+  ...PHOTO_MATERIALS.flatMap(({ id: _id, ...m }, i): LibraryItem[] => {
+    const t = TEXTURE_SETS[i]!
+    if (usedSets.has(t.id)) return []
+    const name = photoMaterialName(t)
+    if (UPGRADED.some((x) => x.name === name)) return []
+    return [{ ...m, name, group: t.use === "board" ? "Fotos · fusta" : t.translucent !== undefined || /Teixit|Llana|Jute/.test(t.label) ? "Fotos · teixits" : "Fotos · pedra, terres i parets" }]
+  }),
 ]

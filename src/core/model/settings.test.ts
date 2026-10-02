@@ -126,12 +126,14 @@ describe("materials de foto (v6)", () => {
   it("la migració afegeix els que falten sense tocar els de l'usuari", () => {
     const mine = { id: "photo-oak_veneer_01", name: "Roure (foto)", thicknesses: [19], hasGrain: true, finish: { kind: "color", color: "#123456" }, edge: "" }
     const res = parseSettings({ version: 5, materials: [mine] })
-    const oak = res.settings.materials.filter((m) => m.name === "Roure (foto)")
+    // v7: sense el de sempre, el «Roure (foto)» de l'usuari agafa el nom del de sempre (el dels àlies), amb el seu acabat.
+    const oak = res.settings.materials.filter((m) => m.id === "photo-oak_veneer_01")
     expect(oak).toHaveLength(1)
+    expect(oak[0]!.name).toBe("Roure massís / xapat")
     expect(oak[0]!.finish).toEqual({ kind: "color", color: "#123456" })
-    expect(res.settings.materials.some((m) => m.name === "Noguera (foto)")).toBe(true)
-    // Si l'usuari n'esborra un a la v6, no torna.
-    const again = parseSettings({ ...res.settings, materials: res.settings.materials.filter((m) => m.name !== "Noguera (foto)") })
-    expect(again.settings.materials.some((m) => m.name === "Noguera (foto)")).toBe(false)
+    expect(res.settings.materials.some((m) => m.name === "Noguera fumada")).toBe(true)
+    // Si l'usuari n'esborra un, no torna.
+    const again = parseSettings({ ...res.settings, materials: res.settings.materials.filter((m) => m.name !== "Noguera fumada") })
+    expect(again.settings.materials.some((m) => m.name === "Noguera fumada")).toBe(false)
   })
 })

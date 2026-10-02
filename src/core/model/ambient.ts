@@ -3,6 +3,7 @@ import { CameraPoseSchema, parseCameraPose } from "./camera"
 import { DEFAULT_JOINERY, type FreePart } from "./freePart"
 import { defaultModule, newId, type Composition, type Module, type Zone } from "./composition"
 import { MAG_OBJECTS } from "./magObjects"
+import { aliasMaterialRefs } from "./photoUpgrade"
 import { cyl, ellipse, objectComposition } from "./objectShapes"
 import { MODEL_ASSETS, newModelObject } from "./models"
 import type { Template } from "./templates"
@@ -120,6 +121,11 @@ export const EMPTY_AMBIENT: Ambient = { walls: [], items: [], floorMaterial: "Pa
 
 /** Llegeix un ambient desat: el que no sigui vàlid es descarta (mai llança). */
 export function parseAmbient(raw: unknown): Ambient {
+  // Noms de material antics («… (foto)»): els vigents.
+  return aliasMaterialRefs(parseAmbientData(raw))
+}
+
+function parseAmbientData(raw: unknown): Ambient {
   const r = AmbientSchema.safeParse(raw)
   if (r.success) return r.data
   const o = (typeof raw === "object" && raw ? raw : {}) as Record<string, unknown>

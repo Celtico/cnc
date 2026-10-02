@@ -29,3 +29,30 @@ export function sameCameraPose(a: CameraPose, b: CameraPose, eps = 0.005): boole
   const near = (p: readonly number[], q: readonly number[]) => p.every((v, i) => Math.abs(v - q[i]!) < eps)
   return near(a.position, b.position) && near(a.target, b.target) && Math.abs((a.fov ?? 0) - (b.fov ?? 0)) < 0.5
 }
+
+/**
+ * Signatura curta d'una càmera (arrodonida a mm i a dècimes de grau) per saber si la miniatura que se'n va fer
+ * encara la retrata: desar la càmera no toca `updatedAt`. Sense càmera (o no vàlida), `undefined`.
+ */
+export function cameraSignature(raw: unknown): string | undefined {
+  const c = parseCameraPose(raw)
+  if (!c) return undefined
+  const r = (v: number) => Math.round(v * 1000) / 1000
+  return JSON.stringify([c.position.map(r), c.target.map(r), c.fov === undefined ? null : Math.round(c.fov * 10) / 10])
+}
+
+/** Camps de miniatura desats amb el document (`Project`, `AmbientRow`). */
+export interface ThumbStamp {
+  thumb?: string
+  /** L'`updatedAt` que retrata. */
+  thumbAt?: number
+  /** `THUMB_VERSION` amb què es va fer. */
+  thumbV?: number
+  /** `cameraSignature` de la càmera amb què es va fer (sense càmera, no hi és). */
+  thumbCam?: string
+}
+
+/** Cal refer la miniatura: no n'hi ha, el document ha canviat, la manera de fer-les o la càmera desada. */
+export function thumbIsStale(t: ThumbStamp, updatedAt: number, version: number, camera: unknown): boolean {
+  return !t.thumb || t.thumbAt !== updatedAt || t.thumbV !== version || t.thumbCam !== cameraSignature(camera)
+}

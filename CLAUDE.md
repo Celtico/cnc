@@ -275,6 +275,11 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   (`ambients/ambientThumbs.ts`): terra, parets (sense les de davant, com la casa de nines) i els mobles i objectes de debò,
   vist de dalt i de davant; els de l'usuari es desen (`AmbientRow.thumb`, `thumbAt`, `thumbV`) i els del catàleg, en
   memòria (amb les plantilles de les seves referències). Tot passa per la mateixa cua (`enqueueThumb`).
+  **Amb la càmera desada** (`Composition.camera`, `Ambient.camera`, també la d'«Interior»): la miniatura es fa des
+  d'allà (fov vertical del visor, 2:1); la del moble es passa del visor centrat a l'escena de la miniatura amb
+  `viewerSize` (`thumbPose`). Sense càmera (i plantilles i catàleg), l'enquadrament automàtic. Com que desar la càmera
+  no toca `updatedAt`, es desa `thumbCam` (`cameraSignature`) i `thumbIsStale` (`core/model/camera.ts`) la refà si no
+  coincideix; desar la miniatura tampoc toca `updatedAt` ni `edited`.
   Les dels ambients, **sense fons** (PNG transparent: al voltant de l'habitació es veu la targeta); les dels mobles, JPEG. `SnapshotThumb` (2:1, no retalla, sense fons); sense foto encara, el mateix requadre 2:1 buit (res de dibuixos de línies d'una altra mida: la graella no salta mentre es van fent). Cal `scene.updateMatrixWorld(true)` abans de
   mesurar la caixa (les peces porten la matriu feta).
 - **Grups (carpetes)** a l'historial de Mobles, Objectes i Ambients
@@ -869,12 +874,26 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     ús; reexportat a `viewer/textureSets.ts`). `PHOTO_MATERIALS`: xapes a **Taulers** (16/19/30: «Roure (foto)»,
     «Noguera (foto)», «Noguera fumada (foto)», «Fusta fosca (foto)»), pedres a **Metall, pedra i vidre** i la resta
     (parquets, estucs, formigons, microciment, terratzo, murs de pedra, jute, llana espiga, vaquer) a
-    **Simulació**; la migració només afegeix els que falten. També a la biblioteca («Fotos · …»). L'acabat
+    **Simulació**; la migració v6 només afegeix els que falten (la v7 els fusiona amb els de sempre, vegeu a sota). També a la biblioteca («Fotos · …»). L'acabat
     `image` porta `normalMap`, `roughMap`, `grain` (`y` = veta vertical a la foto: es gira un quart), `roughness`
     (multiplicador) i `color` (STEP). Visor: `MeshStandardMaterial` map + normalMap + roughnessMap amb la mateixa
     repetició i gir, sRGB només el color. Les miniatures esperen les fotos que es baixen (`photoTexturesIdle`).
     **PWA**: els `.jpg` no es precachegen (~14 MB): `runtimeCaching` CacheFirst per a `/textures/` i NetworkFirst
-    per a `/oidn/` (si el fitxer canvia, no queda el vell). Terra i parets per defecte continuen procedurals.
+    per a `/oidn/` (si el fitxer canvia, no queda el vell).
+  - **Els materials de sempre amb la foto** (v7, per decisió de l'usuari: «a tot arreu»; `core/model/photoUpgrade.ts`):
+    `PHOTO_UPGRADES` (nom de sempre → joc; només on la foto és fidel, mirat a `diff.jpg`): Roure massís / xapat,
+    Melamina roure, Revestiment de roure → `oak_veneer_01`; Noguera xapada → `walnut_veneer_02`; Parquet de roure →
+    `wood_floor`; Microciment gris → `gravel_concrete_03`; Formigó → `concrete_layers_02`; Pedra calcària → `marble_01`;
+    Pedra de paret → `medieval_blocks_03`; Jute → `hessian_230`; Teixit gris → `poly_wool_herringbone`. **Els noms no
+    canvien** (CSV del taller, composicions): només l'acabat (gruixos, cantell, veta, categoria i id es queden; una foto
+    pròpia no es toca). Lacats, colors, metalls, vidres i el que no té foto fidel (freixe, wengué, estucs clars, teixits de
+    color…) queden procedurals (l'acabat `image` no es pot tenyir). `upgradeToPhoto` (migració v7 i valors inicials,
+    idempotent): els «(foto)» el joc dels quals ja fa servir un de sempre desapareixen; la resta perden el «(foto)»
+    («Fusta fosca», «Terratzo»…; si el nom ja és d'un altre material, es queda amb «(foto)»). **Àlies**:
+    `resolveMaterialAlias` («Roure (foto)» → «Roure massís / xapat», «Fusta fosca (foto)» → «Fusta fosca») i
+    `aliasMaterialRefs` (claus `material`, `material2`, `…Material`, `scene.floor/wall`) a `normalizeComposition`,
+    `parseAmbient`, `readPresentationScene` i els materials per defecte i dels taulers de les preferències. La biblioteca
+    fa el mateix (`LIBRARY_PHOTO_UPGRADES`). El terra per defecte de Presentació és «Parquet de roure» (foto).
   - **Tauler de taula** (`Carcass.tableTop`): la tapa per sobre dels laterals (més curts),
     voladís a tot el voltant i forma (rectangle, arrodonit, oval o a mida amb l'editor de
     perfil; `shape` en mm s'escala al tauler). `Panel.outline` (rectes i arcs): 3D/GLB

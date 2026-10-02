@@ -3,6 +3,7 @@ import { DEFAULT_CABINET, type CabinetParams } from "./cabinet"
 import { BPtSchema, ProfileNodeSchema } from "./panel"
 import { flatten, profileToOutline, sampleProfile, toNodes, type BPt } from "./polygon"
 import { CameraPoseSchema } from "./camera"
+import { aliasMaterialRefs } from "./photoUpgrade"
 import { FreePartSchema, JoinerySchema, PART_AXES as PART_AXES_C, tidyPart, type FreePart } from "./freePart"
 
 /**
@@ -569,7 +570,9 @@ function legacyPlacements(comp: Composition): ModulePlacement[] {
  * sobre d'un altre passen a penjats a l'alçada on eren; l'ordre de cada fila es refà
  * d'esquerra a dreta i les separacions es recalculen perquè tot quedi on era.
  */
-export function normalizeComposition(input: Composition): Composition {
+export function normalizeComposition(raw: Composition): Composition {
+  // Noms de material antics («… (foto)», v6 de les preferències): els vigents.
+  const input = aliasMaterialRefs(raw)
   // Peces lliures amb decimals llargs (objectes fets abans d'arrodonir): al mm.
   const tidy = input.parts?.map(tidyPart)
   const comp = tidy && tidy.some((p, i) => p !== input.parts![i]) ? { ...input, parts: tidy } : input
