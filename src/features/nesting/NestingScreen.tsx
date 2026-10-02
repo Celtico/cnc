@@ -86,7 +86,7 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
             </FormRow>
           ) : (
             <>
-              <NumRow label="Kerf (fresa)" value={options.kerf} min={0} max={30} step={0.5} help="Sense màquina CNC a Preferències: separació entre peces." onChange={(kerf) => setOptions((o) => ({ ...o, kerf }))} />
+              <NumRow label="Separació (fresa)" value={options.kerf} min={0} max={30} step={0.5} help="Sense màquina CNC a Preferències: separació entre peces." onChange={(kerf) => setOptions((o) => ({ ...o, kerf }))} />
               <NumRow label="Marge tauler" value={options.margin} min={0} max={100} step={1} onChange={(margin) => setOptions((o) => ({ ...o, margin }))} />
             </>
           )}

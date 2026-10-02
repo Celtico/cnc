@@ -1,5 +1,5 @@
 import { Box, Button, HStack, IconButton, Stack, Switch, Text } from "@chakra-ui/react"
-import { LuCheck, LuFactory, LuPlus, LuTrash2 } from "react-icons/lu"
+import { LuCheck, LuRoute, LuPlus, LuTrash2 } from "react-icons/lu"
 import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
 import { NumberField, NumRow } from "../../components/NumRow"
 import { SettingsGroup } from "../../components/SettingsGroup"
@@ -21,7 +21,7 @@ export function MachineRulesGroup({ rules: r, machines, onChange }: { rules: Mac
   const summary = `ranures ${r.grooves.tool || "auto"} · ${r.profile.length} gruixos · peces petites < ${comma(r.small.maxArea)} m²${short ? ` · eines que falten a ${short} ${short === 1 ? "màquina" : "màquines"}` : ""}`
   const nestingOf = defaultMachine(machines)
   return (
-    <SettingsGroup icon={<LuFactory />} title="Regles del taller" summary={summary}>
+    <SettingsGroup icon={<LuRoute />} title="Regles del taller" summary={summary}>
       <Text fontSize="sm" color="fg.muted">
         Com mecanitza el taller: quina fresa per a cada cosa i en quantes passades. Són les mateixes per a totes les màquines; les eines van pel nom
         de Maestro i es busquen a la màquina que exporta. Si no en té cap amb aquell nom, l'export la tria com sempre i avisa (afegeix-la a
@@ -53,7 +53,7 @@ export function MachineRulesGroup({ rules: r, machines, onChange }: { rules: Mac
       )}
 
       <FormSection title="Ranures">
-        <FormRow label="Fresa" help="Ranures obertes per algun extrem (també les de cantell a cantell, si a «Ranures» no es prefereix el disc).">
+        <FormRow label="Fresa" help="Ranures obertes per algun extrem (també les de cantell a cantell, si a Preferències › Màquines CNC › Programes .xcs › «Ranures» no es prefereix el disc).">
           <ToolPick machines={machines} label="Fresa de les ranures" value={r.grooves.tool} onChange={(tool) => set({ grooves: { ...r.grooves, tool } })} />
         </FormRow>
         <NumRow label="Per passada" help="Fondària màxima de cada passada: més fondes, en diverses (CreateBidirectionalMillingStrategy)." value={r.grooves.maxPass} min={0.5} max={50} step={0.5} onChange={(maxPass) => set({ grooves: { ...r.grooves, maxPass } })} />

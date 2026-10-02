@@ -39,7 +39,10 @@ export function ruleToolNames(r: MachineRules): string[] {
   })
 }
 
-/** Eines de les regles que la màquina no té (o no pot fer servir): el que diu Preferències › Regles de mecanitzat per màquina. */
+/**
+ * Eines de les regles (del taller) que aquesta màquina no té o no pot fer servir: a Preferències › Regles de mecanitzat,
+ * una línia per màquina («✓ té totes les eines» o «falta «X»»).
+ */
 export const missingRuleTools = (m: Pick<Machine, "tools">, r: MachineRules): string[] => ruleToolNames(r).filter((n) => !findRuleTool(m, n))
 
 /** Regla de perfilar per al gruix (interval tancat). */

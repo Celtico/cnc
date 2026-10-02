@@ -223,7 +223,6 @@ export const SheetPrefSchema = z.object({
   w: mm.min(300).max(6000),
   h: mm.min(300).max(6000),
 })
-export type SheetPref = z.infer<typeof SheetPrefSchema>
 
 export const BoardsPrefSchema = z.object({
   sheets: z.array(SheetPrefSchema).min(1),
@@ -232,7 +231,6 @@ export const BoardsPrefSchema = z.object({
   /** Permetre girar les peces 90° encara que tinguin veta. */
   ignoreGrain: z.boolean(),
 })
-export type BoardsPref = z.infer<typeof BoardsPrefSchema>
 
 // --- Jocs, etiquetes, visualització ---------------------------------------------------
 
@@ -245,7 +243,6 @@ export const GapsPrefSchema = z.object({
   backSetback: mm.min(0).max(60),
   grooveDepth: mm.min(3).max(15),
 })
-export type GapsPref = z.infer<typeof GapsPrefSchema>
 
 export const LabelPrefSchema = z.object({ w: mm.min(10).max(300), h: mm.min(10).max(300) })
 
@@ -543,7 +540,7 @@ export function parseSettings(raw: unknown): SettingsParse {
   // v9: gruixos perduts a la v7 (xapes de foto) i materials de les plantilles que faltaven (mai se'n sobreescriu cap).
   const materials = version < 9 && v8m !== BUILTIN_MATERIALS ? [...restorePhotoThicknesses(v8m), ...missing(TEMPLATE_MATERIALS, v8m)] : v8m
   const boards = section("boards", BoardsPrefSchema, DEFAULT_SETTINGS.boards, "Taulers")
-  const defaults = section("defaults", SettingsSchema.shape.defaults, DEFAULT_SETTINGS.defaults, "Materials per defecte")
+  const defaults = section("defaults", SettingsSchema.shape.defaults, DEFAULT_SETTINGS.defaults, "Materials (per defecte als mòduls nous)")
   const v7 = version < 7
   const machines = oneDefault(machinesOf(obj.machines, problems, () => (migrated = true)))
   // v11: regles del taller. Si les preferències no en porten (anteriors a la v11), les de les màquines (`rulesFromMachines`).
@@ -560,8 +557,8 @@ export function parseSettings(raw: unknown): SettingsParse {
     materials,
     boards: v7 ? { ...boards, sheets: boards.sheets.map((x) => ({ ...x, material: alias(x.material) })) } : boards,
     hardware: section("hardware", HardwareSchema, DEFAULT_SETTINGS.hardware, "Ferratges"),
-    gaps: section("gaps", GapsPrefSchema, DEFAULT_SETTINGS.gaps, "Jocs"),
-    label: section("label", LabelPrefSchema, DEFAULT_SETTINGS.label, "Etiqueta"),
+    gaps: section("gaps", GapsPrefSchema, DEFAULT_SETTINGS.gaps, "Jocs per defecte"),
+    label: section("label", LabelPrefSchema, DEFAULT_SETTINGS.label, "Etiquetes"),
     display: section("display", DisplayPrefSchema, DEFAULT_SETTINGS.display, "Visualització"),
     defaults: v7 ? { ...defaults, material: alias(defaults.material), backMaterial: alias(defaults.backMaterial) } : defaults,
     // v10: màquines CNC (additiu: abans no n'hi havia). Si n'hi ha més d'una per defecte, només la primera.

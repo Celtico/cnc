@@ -16,7 +16,7 @@ import {
   LuSprout,
   LuTrash2,
 } from "react-icons/lu"
-import { zoneIcon } from "./zoneIcon"
+import { zoneIcon } from "./zoneIcons"
 import { compositionKind, partsOnlyKind, duplicateGroup, removeModule, newGroupName, partGroups, insertModelCopy, insertPartCopy, insertRefCopy, newModelObject, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
 import { NameDialog } from "../../components/NameDialog"
 import { toaster } from "../../components/ui/toaster"

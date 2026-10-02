@@ -14,7 +14,7 @@ import { FreePartSchema, JoinerySchema, PART_AXES as PART_AXES_C, tidyPart, type
 const mm = z.number().finite()
 const sizeOrAuto = z.union([mm.positive(), z.literal("auto")])
 
-// --- Ferratges i mecanitzats per defecte ------------------------------------------
+// --- Ferratges per defecte ---------------------------------------------------------
 
 export const HardwareSchema = z.object({
   hinge: z.object({ cupDiameter: mm.positive(), cupDepth: mm.positive(), cupOffset: mm.positive() }),
@@ -240,7 +240,6 @@ export const CarcassExtrasSchema = z.object({
   /** Passacables (forats passants) a les peces de la carcassa. */
   cableHoles: z.array(CableHoleSchema),
 })
-export type CarcassExtras = z.infer<typeof CarcassExtrasSchema>
 
 export const ModuleSchema = z.object({
   id: z.string(),

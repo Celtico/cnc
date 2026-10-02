@@ -4,12 +4,10 @@ import type { IconType } from "react-icons"
 import { LuChevronDown } from "react-icons/lu"
 
 /**
- * Seccions plegables. Dins d'un `PanelGroup` (Preferències) fan d'acordió: només una
- * oberta alhora. Fora d'un grup (l'inspector de l'editor) són independents. Totes comencen
- * tancades en obrir l'app; l'estat es recorda només mentre dura la sessió (sessionStorage).
- *
- * Acordió del panell esquerre: només una secció oberta alhora. En obrir-ne una es
- * tanquen les altres. La secció oberta es recorda (preferència de vista).
+ * Seccions plegables. Dins d'un `PanelGroup` (l'«Avançat» d'Exportar) fan d'acordió: només una
+ * oberta alhora. Fora d'un grup (inspectors, render) són independents. Comencen tancades en obrir
+ * l'app (llevat de `defaultOpen`); l'estat es recorda només mentre dura la sessió (sessionStorage).
+ * Les Preferències no en fan servir: hi ha `SettingsGroup`, sempre obert.
  */
 interface Group {
   openId: string | null

@@ -97,8 +97,6 @@ export interface Project {
   updatedAt: number
 }
 
-export type NewProject = Omit<Project, "id">
-
 /** Ambient: plànol de la casa amb mobles col·locats (`core/model/ambient.ts`). */
 export interface AmbientRow {
   id: number

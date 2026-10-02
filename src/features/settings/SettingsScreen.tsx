@@ -24,7 +24,7 @@ import {
   Text,
 } from "@chakra-ui/react"
 import { Children, Fragment, isValidElement, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { LuArchive, LuFactory, LuArrowDown, LuArrowUp, LuCheck, LuCircleDashed, LuCircleDot, LuMagnet, LuScanEye, LuPaintbrush, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff,  LuHammer, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRotateCw, LuRoute, LuRows3, LuRuler, LuScan, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
+import { LuArchive, LuFactory, LuArrowDown, LuArrowUp, LuCheck, LuCircleDashed, LuCircleDot, LuMagnet, LuScanEye, LuPaintbrush, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff,  LuHammer, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRotateCw, LuRoute, LuRows3, LuRuler, LuScan, LuSparkles, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { MasterDetail } from "../../components/MasterDetail"
@@ -166,7 +166,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
               onChange={(materials) => set("materials", materials)}
               footer={
                 // Sota el detall (no penjat a dalt de la pàgina): quin tauler i quin fons tenen els mòduls nous.
-                <SettingsGroup icon={<LuSquareStack />} title="Per defecte als mòduls nous" summary={`${draft.defaults.material} ${draft.defaults.thickness} · fons ${draft.defaults.backMaterial} ${draft.defaults.backThickness}`}>
+                <SettingsGroup icon={<LuPalette />} title="Per defecte als mòduls nous" summary={`${draft.defaults.material} ${draft.defaults.thickness} · fons ${draft.defaults.backMaterial} ${draft.defaults.backThickness}`}>
                   <FormRow label="Tauler">
                     <DefaultPick label="Tauler" materials={draft.materials.filter((m) => !m.forBacks && m.category !== "sim")} all={draft.materials} material={draft.defaults.material} thickness={draft.defaults.thickness} onChange={(material, thickness) => set("defaults", { ...draft.defaults, material, thickness })} />
                   </FormRow>
@@ -235,7 +235,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             </Stack>
           </Pane>
 
-          <Pane id="hardware" title="Ferratges i mecanitzats" icon={LuHammer} desc="Frontisses, guies, espigues i forats." onReset={() => setReset({ key: "hardware", label: "Ferratges i mecanitzats" })}>
+          <Pane id="hardware" title="Ferratges" icon={LuHammer} desc="Frontisses, guies, espigues i els seus forats." onReset={() => setReset({ key: "hardware", label: "Ferratges" })}>
             <HardwareForm hardware={draft.hardware} onChange={(hardware) => set("hardware", hardware)} />
           </Pane>
 

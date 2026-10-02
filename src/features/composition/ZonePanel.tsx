@@ -18,7 +18,7 @@ import {
 } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
-import { FRONT_ICONS } from "./zoneIcon"
+import { FRONT_ICONS } from "./zoneIcons"
 import { IconChoice } from "../../components/IconChoice"
 import { LuAlignJustify, LuArrowDownToLine, LuArrowUpToLine, LuColumns3, LuDoorClosed, LuDoorOpen, LuFlipHorizontal2, LuGrip, LuMagnet, LuPanelLeft, LuPanelRight } from "react-icons/lu"
 

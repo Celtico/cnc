@@ -52,7 +52,6 @@ import {
   type Opening,
   type Composition,
   CompositionSchema,
-  compositionKind,
   duplicateItems,
   groupIds,
   moveItems,
@@ -693,8 +692,8 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                   <NewMobleGallery
                     storageKey="mobles:ambient-picker"
                     onCreate={(c, n) => createAndAdd(c, n, "moble")}
-                    history={(kind, matches, searching) => {
-                      const shown = (projects ?? []).filter((p) => !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && (!searching || matches(projectSearchText(p))))
+                    history={(matches, searching) => {
+                      const shown = (projects ?? []).filter((p) => !isObject(p) && (!searching || matches(projectSearchText(p))))
                       return {
                         count: shown.length,
                         node: shown.length ? (
@@ -705,7 +704,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                           </SimpleGrid>
                         ) : (
                           <Text fontSize="sm" color="fg.muted">
-                            {projects?.length ? "Cap moble no coincideix amb el tipus o la cerca." : "Encara no tens cap moble: comença en blanc o des d'una plantilla."}
+                            {projects?.length ? "Cap moble no coincideix amb la cerca." : "Encara no tens cap moble: comença en blanc o des del catàleg."}
                           </Text>
                         ),
                       }

@@ -181,7 +181,7 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
                 summary={[m.serial, m.model].filter(Boolean).join(" · ") || "Màquina"}
                 actions={
                   <>
-                    <IconButton aria-label="Per defecte a l'export" title="Per defecte a l'export" size="xs" variant="ghost" colorPalette={m.isDefault ? "wood" : undefined} onClick={() => makeDefault(m.id)}>
+                    <IconButton aria-label="Màquina per defecte" title="Màquina per defecte (exportació .xcs i separació del nesting)" size="xs" variant="ghost" colorPalette={m.isDefault ? "wood" : undefined} onClick={() => makeDefault(m.id)}>
                       <LuStar fill={m.isDefault ? "currentColor" : "none"} />
                     </IconButton>
                     <IconButton
@@ -239,7 +239,7 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
                   <Switch.Root size="sm" pt={1.5} checked={m.isDefault} onCheckedChange={(e) => (e.checked ? makeDefault(m.id) : update({ isDefault: false }))}>
                     <Switch.HiddenInput />
                     <Switch.Control />
-                    <Switch.Label fontSize="sm">La de l'export «Programes .xcs»</Switch.Label>
+                    <Switch.Label fontSize="sm">La de l'exportació .xcs i del nesting (separació i marge)</Switch.Label>
                   </Switch.Root>
                 </FormRow>
               </SettingsGroup>
@@ -270,9 +270,6 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
                   <NumRow label="Repeticions" suffix="" value={m.header.repetitions} min={1} max={99} step={1} onChange={(repetitions) => update({ header: { ...m.header, repetitions: Math.max(1, Math.round(repetitions)) } })} />
                   <FormRow label="Taula" help="TableOptions (tipus de fixació). El .pgmx del taller diu 10.">
                     <Input size="sm" maxW="160px" inputMode="numeric" value={String(m.header.tableOptions)} onChange={(e) => update({ header: { ...m.header, tableOptions: Number(e.target.value.replace(/[^0-9]/g, "")) || 0 } })} />
-                  </FormRow>
-                  <FormRow label="Opcions mecàniques" help="MechanicalOptions dels programes per peça: un número de Maestro (bits). El .pgmx del taller diu 16973824. Els programes per tauler fan servir la de «Programes per tauler».">
-                    <Input size="sm" maxW="160px" inputMode="numeric" value={String(m.header.mechanicalOptions)} onChange={(e) => update({ header: { ...m.header, mechanicalOptions: Number(e.target.value.replace(/[^0-9]/g, "")) || 0 } })} />
                   </FormRow>
                   <FormRow label="Cicle continu">
                     <Switch.Root size="sm" pt={1.5} checked={m.header.continuousCycle} onCheckedChange={(e) => update({ header: { ...m.header, continuousCycle: e.checked } })}>
@@ -404,8 +401,8 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
               </SettingsGroup>
 
               <Text fontSize="sm" color="fg.muted">
-                Les regles de mecanitzat d'aquesta màquina (fresa de les ranures, perfilar per gruix, rampa, peces petites) són a Preferències ›
-                Regles de mecanitzat.
+                Les regles de mecanitzat (fresa de les ranures, perfilar per gruix, rampa, peces petites) són del taller, les mateixes per a
+                totes les màquines: Preferències › Regles de mecanitzat.
               </Text>
 
               <ToolsTable tools={m.tools} onChange={(tools) => update({ tools })} />
@@ -552,7 +549,7 @@ function ToolEditor({ tool: t, codes, onChange, onDelete }: { tool: MachineTool;
       <NumRow label="Diàmetre" value={t.diameter} min={0} max={400} step={0.5} onChange={(diameter) => onChange({ diameter })} />
       <NumRow label="Fondària útil" help="0 = desconeguda (no es comprova)." value={t.maxDepth} min={0} max={300} step={1} onChange={(maxDepth) => onChange({ maxDepth })} />
       {t.kind === "blade" && <NumRow label="Gruix del disc" value={t.bladeThickness ?? 0} min={0} max={20} step={0.1} onChange={(bladeThickness) => onChange({ bladeThickness })} />}
-      <FormRow label="Export">
+      <FormRow label="Exportació">
         <Stack gap={2} pt={1.5}>
           <Switch.Root size="sm" checked={t.auto} onCheckedChange={(e) => onChange({ auto: e.checked })}>
             <Switch.HiddenInput />

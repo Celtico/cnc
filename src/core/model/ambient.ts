@@ -87,7 +87,6 @@ export const AmbientItemSchema = z.discriminatedUnion("kind", [
 ])
 export type AmbientItem = z.infer<typeof AmbientItemSchema>
 export type BlockItem = Extract<AmbientItem, { kind: "block" }>
-export type MobleItem = Extract<AmbientItem, { kind: "moble" }>
 
 export const PlanImageSchema = z.object({
   src: z.string().startsWith("data:image/"),
@@ -102,7 +101,6 @@ export const PlanImageSchema = z.object({
   opacity: z.number().min(0).max(1),
   locked: z.boolean().optional(),
 })
-export type PlanImage = z.infer<typeof PlanImageSchema>
 
 export const AmbientSchema = z.object({
   walls: z.array(WallSchema),

@@ -185,7 +185,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
         highlight
         icon={<LuFactory />}
         title="Màquina CNC (Maestro)"
-        description="L'exportació principal: programes de Xilog Maestro (.xcs) per a la SCM del taller, sense passar per TopSolid. Un programa per tauler del nesting (el Maestro no en fa) amb totes les peces: forats, ranures, talls i contorns com a mecanitzats de debò amb les eines de la màquina (cara A; forats de cantell, cara B i inglets després). BETA: fins que el taller no els validi a Maestro, revisa'ls a la vista CAM del Maestro abans de mecanitzar."
+        description="L'exportació principal: programes de Xilog Maestro (.xcs) per a la SCM del taller, sense passar per TopSolid. Un programa per tauler del nesting (el Maestro no en fa) amb totes les peces: forats, ranures, talls i contorns com a mecanitzats de debò amb les eines de la màquina (cara A; forats de cantell, cara B i inglets després). BETA: fins que el taller no els validi a Maestro, revisa'ls a la Vista CAM (aquí) i al Maestro abans de mecanitzar."
         files={machine ? `${base}-maestro.zip · ${xcs?.programs ?? 0} programes (${xcs?.sheets ?? 0} taulers) per a ${machine.name}` : undefined}
         action={
           <HStack gap={2} wrap="wrap">

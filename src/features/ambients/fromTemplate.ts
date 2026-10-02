@@ -3,19 +3,6 @@ import { uniqueName } from "../../core/file/mobleFile"
 import { layoutTemplate, newId, resolveTemplateRef, templateWalls, type Ambient, type AmbientItem, type AmbientTemplate } from "../../core/model"
 import { createAmbient, createProject, db, setAmbientsFolder } from "../../db/db"
 
-const sizeOfRef = (ref: string) => {
-  const b = buildBounds(buildComposition(resolveTemplateRef(ref)!.make()))
-  return { w: b.max[0] - b.min[0], d: b.max[2] - b.min[2] }
-}
-
-/** Ambient de previsualització (miniatura del catàleg): els elements com a blocs de la seva petjada. */
-export function templatePreview(t: AmbientTemplate): Ambient {
-  const sizes = new Map<string, { w: number; d: number }>()
-  const size = (ref: string) => sizes.get(ref) ?? (sizes.set(ref, sizeOfRef(ref)), sizes.get(ref)!)
-  const items: AmbientItem[] = layoutTemplate(t, size).map((p) => ({ id: newId("i"), kind: "block", name: p.ref, shape: "box", w: size(p.ref).w, h: 100, d: size(p.ref).d, material: "", x: p.x, y: p.y, rot: p.rot, ...(p.elevation ? { elevation: p.elevation } : {}) }))
-  return { walls: templateWalls(t), items, floorMaterial: t.floor, wallMaterial: t.wall }
-}
-
 /**
  * Crea un ambient del catàleg: cada moble i objecte es crea a Mobles / Objectes (un per
  * plantilla; a l'Historial, o al grup del client si n'hi ha) i es col·loca enllaçat a l'ambient.

@@ -7,8 +7,8 @@ import type { MaterialPref } from "./settings"
  * - `nor.jpg`: normals en espai tangent, **convenció OpenGL** (verd = +v, amunt de la imatge).
  * - `rough.jpg`: rugositat en grisos (0 mirall, 1 mat; es multiplica per la del material).
  *
- * Dades pures (sense three): les fan servir les preferències (`PHOTO_MATERIALS`, migració v6) i el
- * visor (`components/viewer/textureSets.ts`). Per afegir-ne un: copia els fitxers i posa'n una
+ * Dades pures (sense three): les fan servir les preferències (`PHOTO_MATERIALS`, migració v6) i les
+ * migracions de foto (`photoUpgrade.ts`). Per afegir-ne un: copia els fitxers i posa'n una
  * entrada aquí; la migració l'afegeix als materials de l'usuari si no hi és.
  */
 export interface TextureSet {

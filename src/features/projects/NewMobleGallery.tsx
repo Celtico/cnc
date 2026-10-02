@@ -15,7 +15,7 @@ import { CollectionsSection } from "./CollectionsSection"
 const kindLabel = (k: CompositionKind) => KINDS.find((x) => x.value === k)!.label
 const euros = (n: number) => `${n.toLocaleString("ca-ES")} €`
 
-/** Targeta d'una plantilla de l'app: la miniatura es calcula en muntar-la (les de botiga, en obrir la categoria). */
+/** Targeta d'una plantilla (catàleg, col·leccions, objectes): la miniatura es calcula en muntar-la (al catàleg, en obrir la categoria). */
 export function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?: string; kicker?: string; onPick: (t: Template) => void }) {
   const comp = useMemo(() => t.make(), [t])
   // Foto 3D feta fora de pantalla (en memòria mentre l'app és oberta); mentrestant, el dibuix.
@@ -50,7 +50,6 @@ export { FoldTitle } from "./FoldTitle"
 
 const COLS = GALLERY_COLS
 
-
 /**
  * Pàgina de Mobles, com l'inici de Figma o Google Docs: cercador i acordions (tots tancats en
  * obrir l'app): Historial (el que és de pas), Projectes (els grups), el catàleg de botigues i les col·leccions de mobles.
@@ -61,37 +60,33 @@ export function NewMobleGallery({
   storageKey = "mobles:gallery",
 }: {
   onCreate: (composition: Composition, name: string) => void
-  /** Historial: els mobles que ja tens (del tipus triat), al primer acordió. */
-  history: (kind: CompositionKind | "all", query: (text: string) => boolean, searching: boolean) => { count: number; node: ReactNode; projects?: { count: number; node: ReactNode } }
+  /** Historial: els mobles que ja tens (que coincideixen amb la cerca), al primer acordió; `projects`, els dels grups. */
+  history: (query: (text: string) => boolean, searching: boolean) => { count: number; node: ReactNode; projects?: { count: number; node: ReactNode } }
   /** Clau de sessió dels acordions oberts (la pàgina Mobles i la finestra dels ambients, per separat). */
   storageKey?: string
 }) {
-  // Filtre per tipus de moble (Tot, Moble, Cuina, Armari, Taula, Flat-pack).
   // Sense filtre de tipus: el cercador també troba pel tipus («cuina», «armari», «taula»…).
-  const kind = "all" as CompositionKind | "all"
-  const fits = (t: Template) => kind === "all" || t.kind === kind
-  // Ordenades pel tipus, i dins de cada tipus com a la llista.
-  // Cercador de tota la pàgina: historial, les teves, les de l'app i les de botiga (sense accents).
+  // Cercador de tota la pàgina: historial, projectes, catàleg i col·leccions (sense accents).
   const [query, setQuery] = useState("")
   const q = fold(query.trim())
   const matches = (text: string) => !q || fold(text).includes(q)
   const store = STORE_CATALOG.map((c) => ({
     ...c,
     types: c.types
-      .map((ty) => ({ ...ty, items: ty.items.filter((t) => fits(t) && (!q || fold(`${c.name} ${t.name} ${t.description} ${kindLabel(t.kind)}`).includes(q))) }))
+      .map((ty) => ({ ...ty, items: ty.items.filter((t) => !q || fold(`${c.name} ${t.name} ${t.description} ${kindLabel(t.kind)}`).includes(q)) }))
       .filter((ty) => ty.items.length > 0),
   })).filter((c) => c.types.length > 0)
   const storeCount = store.reduce((n, c) => n + c.types.reduce((m, ty) => m + ty.items.length, 0), 0)
   // Col·leccions de mobles: la cerca també mira la fitxa d'estudi (referència, materials, llenguatge…).
   const collections = FURNITURE_COLLECTIONS.map((c) => ({
     ...c,
-    pieces: c.pieces.filter((t) => fits(t) && (!q || fold(`${c.name} ${t.name} ${t.description} ${kindLabel(t.kind)} ${Object.values(t.study).join(" ")}`).includes(q))),
+    pieces: c.pieces.filter((t) => !q || fold(`${c.name} ${t.name} ${t.description} ${kindLabel(t.kind)} ${Object.values(t.study).join(" ")}`).includes(q)),
   }))
   const collectionsCount = collections.reduce((n, c) => n + c.pieces.length, 0)
   const [openSections, setOpenSections] = useSessionList(storageKey)
   const [openCats, setOpenCats] = useSessionList(`${storageKey}-store`)
   const [openCols, setOpenCols] = useSessionList(`${storageKey}-collections`)
-  const hist = history(kind, matches, !!q)
+  const hist = history(matches, !!q)
   // Amb cerca, s'obren les seccions que tenen resultats.
   const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["history"] : []), ...(storeCount ? ["store"] : []), ...(collectionsCount ? ["collections"] : [])]
   const pick = (t: Template) => onCreate({ ...t.make(), kind: t.kind }, t.name)

@@ -235,7 +235,7 @@ export const MachineSchema = z.object({
   rulesVersion: z.number().int().min(0).optional(),
   /** D'on venen els noms de les eines (`mslName`) i la capçalera: el .pgmx importat. */
   pgmx: z.object({ file: z.string(), version: z.string(), tools: z.number().int(), importedAt: z.number() }).optional(),
-  /** La màquina per defecte de l'export. */
+  /** La màquina per defecte: la de l'export .xcs i la que dona la separació i el marge del nesting (pàgina Nesting, CSV, JSON). */
   isDefault: z.boolean(),
   tools: z.array(MachineToolSchema),
   importedAt: z.number().optional(),

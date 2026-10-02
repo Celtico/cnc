@@ -14,13 +14,12 @@ import { NewMobleGallery } from "./NewMobleGallery"
 import { ProjectCard } from "./ProjectCard"
 import { isObject } from "../objects/isObject"
 import { useAmbientMembership } from "../ambients/useAmbientMembership"
-import { compositionKind, type Composition } from "../../core/model"
+import type { Composition } from "../../core/model"
 import { ClearHistory } from "./ClearHistory"
 import { blankMoble } from "./blank"
 import { useSettings } from "../settings/SettingsContext"
 import { FolderedGrid, MoveToFolderDialog } from "./Folders"
 import { createProject, db, deleteProject, isEdited, setProjectsFolder, duplicateProject, type Project } from "../../db/db"
-import { compositionOf } from "../../db/compositionStore"
 import { useProjects } from "../useProject"
 import { toaster } from "../../components/ui/toaster"
 import { fileAccept } from "../file/fileAccept"
@@ -88,7 +87,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
       {/* Accions de l'apartat a la seva capçalera (no al menú global), com a les apps professionals. */}
       <PageHeader
         title="Mobles"
-        description="Els mobles que dissenyes i fabriques: comença en blanc o des d'una plantilla (de l'app o de botiga) i continua'l a l'editor. A l'historial hi tens els que ja has fet; el cercador busca a tot arreu (nom, tipus, estil, material, color)."
+        description="Els mobles que dissenyes i fabriques: comença en blanc, des del catàleg o des d'una col·lecció i continua'l a l'editor. A l'historial hi tens els que ja has fet; el cercador busca a tot arreu (nom, tipus, estil, material, color)."
         actions={
           <>
             {/* El botó principal primer (com a Ambients i Objectes). */}
@@ -104,8 +103,8 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
 
       <NewMobleGallery
         onCreate={(c, n) => void handleCreate(c, n)}
-        history={(kind, matches, searching) => {
-          const shown = (projects ?? []).filter((p) => !isObject(p) && (kind === "all" || compositionKind(compositionOf(p)) === kind) && (!searching || matches(projectSearchText(p))))
+        history={(matches, searching) => {
+          const shown = (projects ?? []).filter((p) => !isObject(p) && (!searching || matches(projectSearchText(p))))
           // Historial = el que és de pas (sense grup); el que es desa en un grup passa a Projectes.
           const loose = shown.filter((p) => !p.folder)
           const grouped = shown.filter((p) => p.folder)
@@ -152,7 +151,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
             node:
               loose.length === 0 ? (
                 <Text fontSize="sm" color="fg.muted">
-                  {shown.length ? "L'historial és buit: el que tens és a Projectes." : projects?.length ? "Cap moble no coincideix amb el tipus o la cerca." : "Encara no tens cap moble: comença en blanc o des d'una plantilla."}
+                  {shown.length ? "L'historial és buit: el que tens és a Projectes." : projects?.length ? "Cap moble no coincideix amb la cerca." : "Encara no tens cap moble: comença en blanc o des del catàleg."}
                 </Text>
               ) : (
                 grid(
