@@ -16,6 +16,8 @@ export interface MasterItem {
 export interface MasterGroup {
   id: string
   label: string
+  /** Icona de la capçalera (només a l'acordió, com els apartats de les pàgines principals). */
+  icon?: ReactNode
   hint?: string
   items: MasterItem[]
 }
@@ -96,7 +98,8 @@ export function MasterDetail({
 
   const rows = (g: MasterGroup, withHint = true) => (
     <Stack gap={1}>
-      <Box borderWidth="1px" rounded="lg" overflow="hidden" bg="bg.panel">
+      {/* Dins de l'acordió (withHint = false) les files van a sang: la vora ja és la de l'apartat. */}
+      <Box borderWidth={withHint ? "1px" : 0} rounded={withHint ? "lg" : "none"} overflow="hidden" bg="bg.panel">
               {g.items.map((it, i) => {
                 const on = it.id === selected
                 return (
@@ -184,27 +187,33 @@ export function MasterDetail({
       )}
       </Stack>
       {collapsible && visibleGroups.length > 1 ? (
-        // Acordió com el del selector de materials: animat, amb filet sota cada capçalera.
+        // El mateix acordió que els apartats de les pàgines principals (Historial, Catàleg…): `gallery-accordion`, tancat
+        // amb vora, icona, nom i comptador; a sota del nom, per a què serveix el grup.
         <Accordion.Root
+          className="gallery-accordion"
           multiple
           collapsible
-          variant="plain"
+          variant="enclosed"
           value={visibleGroups.filter(isOpen).map((g) => g.id)}
           onValueChange={(e) => setOpen(e.value)}
         >
           {visibleGroups.map((g) => (
             <Accordion.Item key={g.id} value={g.id}>
-              <Accordion.ItemTrigger cursor="pointer" borderBottomWidth="1px" rounded="none" px={1}>
-                <Stack flex={1} gap={0} minW={0} textAlign="left">
-                  <HStack gap={2}>
-                    <Text fontWeight="semibold" fontSize="sm">
+              <Accordion.ItemTrigger cursor="pointer">
+                <Stack flex={1} gap={0.5} minW={0} textAlign="left">
+                  <HStack gap={2} minW={0}>
+                    {g.icon && (
+                      <Box color="wood.fg" display="inline-flex">
+                        {g.icon}
+                      </Box>
+                    )}
+                    <Text fontWeight="semibold" fontSize="sm" truncate>
                       {g.label}
                     </Text>
-                    <Text fontSize="xs" color="fg.muted">
+                    <Badge size="xs" variant="subtle" colorPalette="gray">
                       {g.items.length}
-                    </Text>
+                    </Badge>
                   </HStack>
-                  {/* A l'acordió, l'explicació del grup va a la capçalera (es veu també tancat). */}
                   {g.hint && (
                     <Text fontSize="xs" color="fg.muted" fontWeight="normal">
                       {g.hint}
@@ -214,9 +223,7 @@ export function MasterDetail({
                 <Accordion.ItemIndicator />
               </Accordion.ItemTrigger>
               <Accordion.ItemContent>
-                <Accordion.ItemBody px={0} pt={2}>
-                  {rows(g, false)}
-                </Accordion.ItemBody>
+                <Accordion.ItemBody>{rows(g, false)}</Accordion.ItemBody>
               </Accordion.ItemContent>
             </Accordion.Item>
           ))}

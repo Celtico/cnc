@@ -891,7 +891,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`useSessionString`). Les referències creuades als textos diuen «Preferències › <títol de la pàgina>».
 - **Llista i detall** (`components/MasterDetail`: llista agrupada amb mostra; cercador, categories i «Afegir» (només icona)
   en una fila; `head` = títol de la pàgina a dalt de la llista —`PaneHeadContext` a les pàgines `wide`—; `footer` = sota el
-  detall) a Materials, Objectes de referència i Màquines CNC. **Materials**: categories en **acordió** (`collapsible`, el mateix `Accordion` animat i amb filet que el `MaterialSelect`, amb per a què serveix cada categoria sota el nom —Taulers i Fons: per al nesting; Simulació: decoratius per a objectes i ambients—, per decisió de
+  detall) a Materials, Objectes de referència i Màquines CNC. **Materials**: categories en **acordió** (`collapsible`, el mateix acordió que els apartats de les pàgines principals —`gallery-accordion` tancat amb vora, icona, nom, comptador i, sota el nom, per a què serveix: Taulers i Fons, per al nesting; Simulació, decoratius per a objectes i ambients—, per decisió de
   l'usuari, sense el menú de categories: per defecte només és obert el grup del material triat, la cerca obre els que tenen
   resultats, es recorda durant la sessió; un material «En blanc» va a la categoria del que es mira); «Per defecte als mòduls nous» sota el detall
   d'un tauler o d'un fons (`DefaultPick`); a la llista, `MaterialThumb` i «Acabat · gruixos · cantell»; detall amb la **mostra a escala real a tota
@@ -1095,6 +1095,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Ambients | Moble · Objecte / bloc · Pestanyes Plànol · 3D · Girar · Peces (plànol) · Interior | `LuBox` · `LuSofa` · `LuMap` · `LuRotate3D` · `LuRotateCw` / `LuRotateCcw` · `LuLayers` · `LuEye` |
 | Galeries | Historial · Catàleg · Col·leccions de mobles | `LuHistory` · `LuBookOpen` · `LuLibrary` |
 | Exportar | DXF (CNC) · STEP 3D · CSV de nesting · CSV de peces · GLB · Avançat | `LuScissors` · `LuCuboid` · `LuLayoutGrid` · `LuFileDown` · `LuBoxes` · `LuSettings2` |
+| Materials | Categories de la llista: Taulers · Fons · Simulació | `LuLayers3` · `LuLayers2` · `LuSprayCan` |
 | Màquines | Màquina CNC (pàgina, grups del detall i export Maestro) · Per defecte · Triar carpeta… · Triar fitxers… | `LuFactory` · `LuStar` · `LuFolderOpen` · `LuFileUp` |
 | Màquines | Regles de mecanitzat · Distribució dels taulers (girar peces) · Vista CAM | `LuRoute` · `LuRotateCw` · `LuMonitorCog` |
 | Materials | Posar una foto / mapa (relleu, brillantor) · Carregar joc de textures… · Carpeta… | `LuImagePlus` · `LuFileUp` · `LuFolderOpen` |

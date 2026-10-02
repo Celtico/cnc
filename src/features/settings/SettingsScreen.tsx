@@ -24,7 +24,7 @@ import {
   Text,
 } from "@chakra-ui/react"
 import { Children, Fragment, isValidElement, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { LuArchive, LuFactory, LuArrowDown, LuArrowUp, LuCheck, LuCircleDashed, LuCircleDot, LuMagnet, LuScanEye, LuPaintbrush, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff,  LuHammer, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRotateCw, LuRoute, LuRows3, LuRuler, LuScan, LuSparkles, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
+import { LuArchive, LuFactory, LuArrowDown, LuArrowUp, LuCheck, LuCircleDashed, LuCircleDot, LuMagnet, LuScanEye, LuPaintbrush, LuLayers3, LuLayers2, LuSprayCan, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff,  LuHammer, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRotateCw, LuRoute, LuRows3, LuRuler, LuScan, LuSparkles, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { MasterDetail } from "../../components/MasterDetail"
@@ -373,6 +373,8 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
 }
 
 /** Clau de l'element obert a les pàgines de llista i detall (per saber quin «Tornar» es veu). */
+/** Icones de les categories a la llista de Materials (com els apartats de les pàgines principals). */
+const MATERIAL_LIST_ICONS: Record<MaterialCategory, ReactNode> = { board: <LuLayers3 />, back: <LuLayers2 />, sim: <LuSprayCan /> }
 /** Per a què serveix cada categoria (sota el nom, a la llista de Materials). */
 const MATERIAL_LIST_HINTS: Record<MaterialCategory, string> = {
   board: "Materials per al nesting: es tallen a la CNC (cossos, fronts, taulells).",
@@ -741,6 +743,7 @@ function MaterialsList({ materials, onChange, onRename, onDelete, footer }: { ma
         label: c.label,
         // Sota el nom de la categoria, per a què serveix (a l'acordió es veu tancat).
         hint: MATERIAL_LIST_HINTS[c.id],
+        icon: MATERIAL_LIST_ICONS[c.id],
         items: materials
           .filter((x) => materialCategory(x) === c.id && (!q || x.name.toLowerCase().includes(q)))
           .map((x) => ({ id: x.id, lead: <MaterialThumb m={x} />, title: x.name, subtitle: materialSummary(x) })),
