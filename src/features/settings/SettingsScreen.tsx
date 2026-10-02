@@ -305,7 +305,7 @@ const DETAIL_KEYS = { materials: "mobles:settings-material", references: "mobles
 
 /** Categories dels apartats de Preferències. */
 const SETTINGS_GROUPS: { label: string; ids: string[] }[] = [
-  { label: "Fabricació", ids: ["materials", "boards", "hardware", "gaps", "label", "machines"] },
+  { label: "Fabricació", ids: ["machines", "materials", "boards", "hardware", "gaps", "label"] },
   { label: "Foto i visor 3D", ids: ["references", "viewer3d"] },
   { label: "App", ids: ["display", "theme"] },
 ]
