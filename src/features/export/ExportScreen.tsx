@@ -54,7 +54,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
     const name = project?.name ?? "moble"
     const plan = cncNestOptions(panels, machine, project?.nesting ?? DEFAULT_NEST_OPTIONS)
     const x = toMaestroNestXcs(panels, nest(panels, plan.options), machine, { project: name })
-    return { ...x, sheets: x.sheets.length, rows: x.panels }
+    return { ...x, sheets: x.sheets.length, rows: x.panels, spacingTool: plan.tool }
   }, [machine, panels, project?.name, project?.nesting])
   const stepWarnings = useMemo(() => (comp && build && panels.length ? toStepCad(stepCadGroups(comp, build, { extras: stepExtras }), { name: "check" }).warnings : []), [comp, build, panels, stepExtras])
 
@@ -133,7 +133,6 @@ export function ExportScreen({ projectId }: { projectId: number }) {
     }
   }
 
-
   return (
     <VStack align="stretch" gap={4}>
       {estimated.length > 0 && (
@@ -179,7 +178,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
         highlight
         icon={<LuFactory />}
         title="Màquina CNC (Maestro)"
-        description="L'exportació principal: programes de Xilog Maestro (.xcs) per a la SCM del taller, sense passar per TopSolid. Un programa per tauler del nesting (el Maestro no en fa) amb totes les peces: forats, ranures, talls i contorns com a mecanitzats de debò amb les eines de la màquina (cara A; forats de cantell, cara B i inglets després). BETA: fins que el taller no els validi a Maestro, revisa'ls a la vista CAM abans de mecanitzar."
+        description="L'exportació principal: programes de Xilog Maestro (.xcs) per a la SCM del taller, sense passar per TopSolid. Un programa per tauler del nesting (el Maestro no en fa) amb totes les peces: forats, ranures, talls i contorns com a mecanitzats de debò amb les eines de la màquina (cara A; forats de cantell, cara B i inglets després). BETA: fins que el taller no els validi a Maestro, revisa'ls a la vista CAM del Maestro abans de mecanitzar."
         files={machine ? `${base}-maestro.zip · ${xcs?.programs ?? 0} programes (${xcs?.sheets ?? 0} taulers) per a ${machine.name}` : undefined}
         action={
           <Button colorPalette="wood" onClick={doXcs} disabled={!xcs || !xcs.programs}>
@@ -187,9 +186,13 @@ export function ExportScreen({ projectId }: { projectId: number }) {
           </Button>
         }
       >
-        <Text fontSize="sm" color="fg.muted">
-          Separació entre peces = Ø de la fresa de nesting + 2 mm; marge del tauler, martiri i regles de mecanitzat a Preferències.
-        </Text>
+        {machine && xcs && (
+          <Text fontSize="sm" color="fg.muted">
+            Separació entre peces {fmt(xcs.spacing)} mm
+            {xcs.spacingTool ? ` (Ø${fmt(xcs.spacingTool.diameter)} + ${fmt(xcs.spacing - xcs.spacingTool.diameter)}, la fresa de contorn més grossa)` : ""}; marge del tauler, martiri i
+            regles de mecanitzat a Preferències.
+          </Text>
+        )}
         {!machine && (
           <Text fontSize="sm" color="fg.muted">
             Cal una màquina: importa-la de Maestro a Preferències › Màquines CNC (la carpeta .machinecontext).
@@ -284,7 +287,6 @@ export function ExportScreen({ projectId }: { projectId: number }) {
         }
       />
 
-
       <ExportCard
         icon={<LuScissors />}
         title="CNC (DXF)"
@@ -357,6 +359,9 @@ export function ExportScreen({ projectId }: { projectId: number }) {
     </VStack>
   )
 }
+
+/** Mm amb coma decimal (com a la resta de la UI). */
+const fmt = (n: number) => String(Math.round(n * 100) / 100).replace(".", ",")
 
 function ExportCard({
   icon,

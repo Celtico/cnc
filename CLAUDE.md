@@ -180,7 +180,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   posició); tocar una eina l'edita; «Afegir eina» per a les que el `.tlgx` no porta (amb el codi de Maestro; una
   «Eina nova» `NOVA1` no es tria fins que té codi). Tornar a importar la mateixa sèrie (`mergeReimport`) conserva,
   eina per eina, els camps tocats a mà (`MachineTool.edited`), les eines afegides a mà i les opcions; una eina invàlida
-  a les preferències només treu aquella eina (`repairMachine`).
+  a les preferències només treu aquella eina (`repairMachine`; si encara falla, es tornen a provar sense les regles i/o
+  sense les opcions de nesting, que tornen als valors per defecte amb un avís, en lloc de perdre la màquina).
 - **Projecte .pgmx** (al detall, «Importar .pgmx» = el mateix importador amb la màquina triada; `core/machine/pgmx.ts`, .pgmx = zip o l'XML extret): el paràmetre `tool` de
   l'MSL és el **nom** de l'eina i el Maestro del taller (2.0.5) les ha rebatejades (ID 2149647431: `E128` al .tlgx,
   «12mm diamant nesting» al projecte `docs/maestro/samples/Proyecto1.pgmx.xml`). Per ID (`MachineTool.id` = `Key/ID` del
@@ -219,11 +220,12 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   (pendent de confirmar amb el taller).
 - **Per tauler (nesting), l'única opció** (petició del taller): `core/export/maestroNestXcs.ts` (`toMaestroNestXcs`, `cncNestOptions`, `toBoard`, `orderFeats`). Un
   `T01_<material>_<gruix>.xcs` per tauler: **una peça de treball = el tauler** (com el `Proyecto1.pgmx` del taller; no les
-  peces «contemporànies» de §3.11 p129) i tot en coordenades del tauler. `nest()` amb separació = Ø de la fresa de nesting
-  + `spacingExtra` i marge `edgeTrim` (`Machine.nesting`, opcional, `machineNesting`: 10 mm, Ø + 2 (del taller: 14 amb la fresa de 12, 16 amb la de 14), martiri 0,3 mm, peces
+  peces «contemporànies» de §3.11 p129) i tot en coordenades del tauler. `nest()` amb separació = Ø de la fresa de contorn
+  més grossa dels gruixos del moble (`boardRouter` per gruix: la de la regla de perfilar o la de nesting; 19 + 30 → 14 + 2 = 16; la
+  mateixa que diuen el LLEGEIX-ME, la capçalera i la targeta d'Exportar) + `spacingExtra` i marge `edgeTrim` (`Machine.nesting`, opcional, `machineNesting`: 10 mm, Ø + 2 (del taller: 14 amb la fresa de 12, 16 amb la de 14), martiri 0,3 mm, peces
   petites al final; Preferències › Màquines CNC); la pantalla Nesting (serra) no canvia. Gir 0/90 (antihorari, sense
   mirall, = `localToBoard`). Només cara A: forats → ranures (sempre fresa) → talls per dins → contorns per fora (gruix +
-  martiri), per eina i veí més proper, les peces petites al final. Forats de cantell, cara B («fer a la perforadora /
+  martiri), per eina i veí més proper, les peces petites (marcades `small`, amb desbastos o sense) al final. Forats de cantell, cara B («fer a la perforadora /
   segona passada», sense Volt) i inglets a la ruta «CNC (tauler N) → …». Comentaris amb les peces i les etiquetes (ref +
   centre). Mostra `docs/maestro/samples/nesting_T01.xcs`. Alternativa documentada: el nesting del Maestro (§4 p134, CSV).
 - **Regles de mecanitzat** (`Machine.rules`, del germà; Preferències › Ferratges i mecanitzats › «Regles de mecanitzat», de la màquina per defecte o la triada;
@@ -232,8 +234,11 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   (`CreateContourPocket`), perfilar per gruix (8–22 → «12mm diamant nesting», 23–41 → «14mm diamant nesting»), rampa als
   perfilats del nesting (`SetApproachStrategy(true, false, k)`, des del mig del costat recte més llarg), peces petites
   (menys de 0,8 m², del taller; `maxSide` 0 = no compta; el provisional 300 mm / 0,1 m² es migra) en 3 passades (Z/XY 1/1, 0,5/0 i la final al martiri o als passants,
-  `overMaterial`). Eines pel nom (`findRuleTool`); si falta, tria de sempre i un sol avís. Màquines sense regles → les
-  per defecte en carregar (`withMachineRules`).
+  `overMaterial`). Eines pel nom (`findRuleTool`, només les que es poden fer servir: `usableTool`, les mateixes que ofereix
+  el selector de la regla, amb el nom); si falta, no es pot fer servir o no arriba, tria de sempre i un sol avís per regla
+  i eina. Màquines sense regles → les per defecte en carregar (`withMachineRules`); els valors provisionals d'abans
+  (Ø + 1, 300 mm / 0,1 m²) es migren un sol cop (`Machine.rulesVersion`) i es desa, així una tria posterior de l'usuari es
+  queda. «Restaurar valors inicials» de Ferratges i mecanitzats no toca les regles (tenen el seu «Les del taller»).
 - **Pendent de validar amb el taller** (llista a `docs/maestro-xcs.md`): pontets/pell de les peces petites, martiri,
   zones de buit, etiquetes, prova a la màquina
   (`PROVA_ORIENTACIO.xcs`), codificació UTF-8 amb BOM, noms de totes les eines al Maestro 2.0.5, broques amb `"-1"`,
@@ -451,7 +456,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   i amb un element obert «‹ Materials» (`useSessionString` es manté igual entre components amb la mateixa clau;
   `DETAIL_KEYS`).
   Els diàlegs i calaixos a pantalla completa respecten la zona segura (`env(safe-area-inset-top)`), també
-  el botó de tancar.
+  el botó de tancar. El Render (a tota la finestra a totes les mides) hi posa els quatre costats (`env(safe-area-inset-*)`)
+  i el botó de tancar a `calc(env(…) + 8px)` de dalt i de la dreta, també a l'ordinador i a l'iPad.
 - **Barra superior del moble obert** (`components/TopBar.tsx`), com Figma/Onshape/Notion:
   `Mobles › Nom del moble` a l'esquerra (nom editable; "Mobles" torna a la llista) i les
   accions del document a la dreta. Cada pàgina hi posa les seves amb `<TopBarActions>`
@@ -1043,7 +1049,13 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     mateix tauler que el cos (veta vertical, cantell només on no toca res). S'uneix com un prestatge fix: 3 espigues per
     costat (`threeAlong`, `endOffset`) al cantell del fons i de cara a laterals, base i tapa (no al tauler de taula ni on
     la tapa amb ranura d'aire no arriba); amb menys de 15 mm, sense espigues i avís `back-inset` (cargolar-lo). L'interior
-    comença a `backInnerZ` = retirada + gruix i la filera System 32 de darrere es mesura des del darrere del fons.
+    comença a `backInnerZ` = retirada + gruix i la filera System 32 de darrere es mesura des del darrere del fons, però mai
+    dins del fons (fons de 30/40: com a molt a un Ø de la seva cara, `max(retirada + 37, backInnerZ + Ø)`); si arribaria a
+    la de davant, no es fa (només la de davant). Més avisos `back-inset`: poca fondària davant del fons (< 2 × 37 + Ø) i,
+    amb tapa amb ranura d'aire, menys de 10 mm entre el fons i la tapa (el cantell de dalt del fons, si és del cos, es
+    canteja perquè s'hi veu). Tapa de reixeta: la franja del fons (amb les espigues) queda sense ranures. Passar a
+    «Encastat» amb un fons de menys de 15 mm el posa «Com el cos» (material i gruix). «Afegir mòdul al costat» copia el
+    fons sencer (tipus, material, gruix i retirada).
   - **Posició: dues files, com a les cuines** — *A terra* (baixos) i *Penjats a la paret*
     (alts, `base.kind = "wall"` amb l'alçada des del terra). Dins de cada fila, l'ordre és el
     de l'arbre (d'esquerra a dreta) i cada mòdul va al costat de l'anterior de la seva fila

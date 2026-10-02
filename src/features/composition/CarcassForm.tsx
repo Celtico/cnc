@@ -81,7 +81,8 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
               { value: "inset", label: "Encastat", icon: LuInspectionPanel, hint: "Fons encastat entre laterals, tapa i base, amb espigues (pot ser del mateix tauler)" },
               { value: "none", label: "Sense fons", icon: LuSquareDashed },
             ]}
-            onChange={(back) => set({ back })}
+            // Encastat amb un fons prim (< 15 mm, sense espigues): comença «Com el cos» (mateix material i gruix), sense l'avís.
+            onChange={(back) => set(back === "inset" && c.back !== "inset" && c.backThickness < 15 ? { back, backMaterial: c.material, backThickness: c.thickness } : { back })}
           />
         </FormRow>
         <FormRow label="Tapa">

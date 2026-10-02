@@ -6,17 +6,19 @@ import { NumberField, NumRow } from "../../components/NumRow"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { defaultMachineRules, machineNesting, machineRules, toolMslName, type Machine, type MachineRules } from "../../core/model"
 import { findRuleTool } from "../../core/machine/rules"
+import { usableTool } from "../../core/machine/tools"
 
 /**
- * Preferències › Màquines CNC › «Regles de mecanitzat»: les regles del taller (eines per tipus de mecanitzat, passades
- * de les ranures, perfilar per gruix, rampa del nesting i peces petites). Les eines es trien d'entre les freses de la
- * màquina; una que no hi és surt marcada («falta») i l'export tria com sempre, amb un avís.
+ * Preferències › Ferratges i mecanitzats › «Regles de mecanitzat»: les regles del taller (eines per tipus de mecanitzat,
+ * passades de les ranures, perfilar per gruix, rampa del nesting i peces petites), de la màquina per defecte o la triada.
+ * Les eines es trien d'entre les freses de la màquina que es poden fer servir (`usableTool`); una que no hi és (o no es pot
+ * fer servir) surt marcada («falta») i l'export tria com sempre, amb un avís.
  */
 export function MachineRulesGroup({ m, onChange }: { m: Machine; onChange: (rules: MachineRules) => void }) {
   const r = machineRules(m)
   const set = (patch: Partial<MachineRules>) => onChange({ ...r, ...patch })
   const missing = [r.grooves.tool, r.pockets.tool, ...r.profile.map((x) => x.tool)].filter((n) => n.trim() && !findRuleTool(m, n))
-  const summary = `ranures ${r.grooves.tool || "auto"} · ${r.profile.length} gruixos · peces petites < ${r.small.maxArea} m²${missing.length ? ` · ${missing.length} eines falten` : ""}`
+  const summary = `ranures ${r.grooves.tool || "auto"} · ${r.profile.length} gruixos · peces petites < ${comma(r.small.maxArea)} m²${missing.length ? ` · ${missing.length} eines falten` : ""}`
   return (
     <SettingsGroup
       icon={<LuFactory />}
@@ -30,7 +32,7 @@ export function MachineRulesGroup({ m, onChange }: { m: Machine; onChange: (rule
     >
       <Text fontSize="sm" color="fg.muted">
         Com mecanitza el taller: quina fresa per a cada cosa i en quantes passades. Les eines van pel nom de Maestro; si la màquina no en té cap
-        amb aquell nom surt «falta» i l'export la tria com sempre i avisa (afegeix-la a «Eines» o importa un .pgmx que la faci servir).
+        amb aquell nom surt «falta» i l'export la tria com sempre i avisa (afegeix-la a Preferències › Màquines CNC (Eines) o importa un .pgmx que la faci servir).
       </Text>
 
       <FormSection title="Ranures">
@@ -56,13 +58,16 @@ export function MachineRulesGroup({ m, onChange }: { m: Machine; onChange: (rule
             <Stack key={k} gap={2}>
               <FormRow label={`Gruixos ${k + 1}`}>
                 <HStack gap={2} align="center" wrap="wrap">
-                  <Box w="140px" flexShrink={0}>
+                  <Box w={PAIR_W} flexShrink={0}>
                     <NumberField label="" ariaLabel="Gruix des de" value={row.min} min={0} max={200} step={1} onChange={(min) => put({ min })} />
                   </Box>
-                  <Text fontSize="sm">–</Text>
-                  <Box w="140px" flexShrink={0}>
-                    <NumberField label="" ariaLabel="Gruix fins a" value={row.max} min={0} max={200} step={1} onChange={(max) => put({ max })} />
-                  </Box>
+                  {/* Cada etiqueta amb el seu camp: en saltar de línia, el «–» no es queda sol. */}
+                  <HStack gap={2} flexShrink={0}>
+                    <Text fontSize="sm">–</Text>
+                    <Box w={PAIR_W}>
+                      <NumberField label="" ariaLabel="Gruix fins a" value={row.max} min={0} max={200} step={1} onChange={(max) => put({ max })} />
+                    </Box>
+                  </HStack>
                   <IconButton size="xs" variant="ghost" aria-label="Treure aquests gruixos" title="Treure aquests gruixos" onClick={() => set({ profile: r.profile.filter((_, j) => j !== k) })}>
                     <LuTrash2 />
                   </IconButton>
@@ -108,14 +113,18 @@ export function MachineRulesGroup({ m, onChange }: { m: Machine; onChange: (rule
           return (
             <FormRow key={k} label={`Passada ${k + 1}`} help="Material que deixa a baix (Z) i al costat (XY).">
               <HStack gap={2} align="center" wrap="wrap">
-                <Text fontSize="sm">Z</Text>
-                <Box w="140px" flexShrink={0}>
-                  <NumberField label="" ariaLabel={`Passada ${k + 1}: Z`} value={p.z} min={0} max={20} step={0.1} onChange={(z) => put({ z })} />
-                </Box>
-                <Text fontSize="sm">XY</Text>
-                <Box w="140px" flexShrink={0}>
-                  <NumberField label="" ariaLabel={`Passada ${k + 1}: XY`} value={p.xy} min={0} max={10} step={0.1} onChange={(xy) => put({ xy })} />
-                </Box>
+                <HStack gap={2} flexShrink={0}>
+                  <Text fontSize="sm">Z</Text>
+                  <Box w={PAIR_W}>
+                    <NumberField label="" ariaLabel={`Passada ${k + 1}: Z`} value={p.z} min={0} max={20} step={0.1} onChange={(z) => put({ z })} />
+                  </Box>
+                </HStack>
+                <HStack gap={2} flexShrink={0}>
+                  <Text fontSize="sm">XY</Text>
+                  <Box w={PAIR_W}>
+                    <NumberField label="" ariaLabel={`Passada ${k + 1}: XY`} value={p.xy} min={0} max={10} step={0.1} onChange={(xy) => put({ xy })} />
+                  </Box>
+                </HStack>
                 <IconButton size="xs" variant="ghost" aria-label="Treure la passada" title="Treure la passada" onClick={() => set({ small: { ...r.small, passes: r.small.passes.filter((_, j) => j !== k) } })}>
                   <LuTrash2 />
                 </IconButton>
@@ -123,9 +132,9 @@ export function MachineRulesGroup({ m, onChange }: { m: Machine; onChange: (rule
             </FormRow>
           )
         })}
-        <FormRow label={`Passada ${r.small.passes.length + 1}`} help="La de sempre: al nesting fins al martiri; per peça, els passants de més.">
+        <FormRow label={`Passada ${r.small.passes.length + 1}`} help="La de sempre: fins al martiri.">
           <Text fontSize="sm" pt="6px">
-            Final · Z −{String(machineNesting(m).overcut).replace(".", ",")} (martiri) · XY 0
+            Final · Z −{comma(machineNesting(m).overcut)} (martiri) · XY 0
           </Text>
         </FormRow>
         <HStack>
@@ -138,13 +147,20 @@ export function MachineRulesGroup({ m, onChange }: { m: Machine; onChange: (rule
   )
 }
 
-/** Fresa d'una regla: «Automàtica», les freses de la màquina pel nom de Maestro i, si el nom no hi és, «falta». */
+/** Amplada dels camps en parella (des de – fins a, Z · XY): estrets al mòbil; a l'ordinador, prou per al sufix «mm». */
+const PAIR_W = { base: "100px", md: "140px" }
+
+/** Número amb coma decimal. */
+const comma = (n: number) => String(n).replace(".", ",")
+
+/** Fresa d'una regla: «Automàtica», les freses de la màquina que es poden fer servir pel nom de Maestro (i el nom) i, si el nom no hi és, «falta». */
 function ToolPick({ m, label, value, onChange }: { m: Machine; label: string; value: string; onChange: (v: string) => void }) {
   const found = value.trim() ? findRuleTool(m, value) : undefined
-  const routers = m.tools.filter((t) => t.kind === "router" && t.mounted && t.diameter > 0)
+  // Les mateixes que pot fer servir l'export (`findRuleTool`): muntades, automàtiques i amb codi de Maestro.
+  const routers = m.tools.filter((t) => t.kind === "router" && usableTool(t) && t.diameter > 0)
   const options = [
     { id: "", label: "Automàtica" },
-    ...routers.map((t) => ({ id: toolMslName(t), label: `${toolMslName(t)} · Ø${t.diameter}` })),
+    ...routers.map((t) => ({ id: toolMslName(t), label: `${toolMslName(t)}${t.name.trim() && t.name !== toolMslName(t) ? ` (${t.name})` : ""} · Ø${comma(t.diameter)}` })),
     ...(value.trim() && !found ? [{ id: value, label: `${value} · falta` }] : []),
   ]
   // El valor desat pot ser el nom o el codi: es marca l'eina trobada.

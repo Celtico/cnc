@@ -82,7 +82,7 @@ export function SettingsScreen({ previewComposition }: { previewComposition?: Co
 
 function SettingsEditor({ initial, save, previewComposition }: { initial: Settings; save: (s: Settings) => Promise<void>; previewComposition?: Composition }) {
   const [draft, setDraft] = useState<Settings>(initial)
-  const [reset, setReset] = useState<{ key: SectionKey; label: string } | null>(null)
+  const [reset, setReset] = useState<{ key: SectionKey; label: string; note?: string } | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const validation = useMemo(() => SettingsSchema.safeParse(draft), [draft])
   const problems = validation.success ? [] : validation.error.issues.map(issueText)
@@ -216,7 +216,13 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             </Stack>
           </Pane>
 
-          <Pane id="hardware" title="Ferratges i mecanitzats" icon={LuHammer} desc="Frontisses, guies, espigues i forats, i com mecanitza la CNC." onReset={() => setReset({ key: "hardware", label: "Ferratges i mecanitzats" })}>
+          <Pane id="hardware" title="Ferratges i mecanitzats" icon={LuHammer} desc="Frontisses, guies, espigues i forats, i com mecanitza la CNC." onReset={() =>
+              setReset({
+                key: "hardware",
+                label: "Ferratges i mecanitzats",
+                note: "Només els ferratges: les regles de mecanitzat de les màquines es queden (tenen el seu botó «Les del taller»).",
+              })
+            }>
             <Stack gap={8}>
               <HardwareForm hardware={draft.hardware} onChange={(hardware) => set("hardware", hardware)} />
               <MachiningRulesSection machines={draft.machines} onChange={(machines) => set("machines", machines)} />
@@ -283,6 +289,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
               </Dialog.Header>
               <Dialog.Body>
                 <Text>Es perdran els canvis d'aquesta secció i tornaran els valors inicials. Els mobles ja fets no canvien.</Text>
+                {reset?.note && <Text mt={2}>{reset.note}</Text>}
               </Dialog.Body>
               <Dialog.Footer>
                 <Button variant="outline" onClick={() => setReset(null)}>

@@ -599,8 +599,8 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          {/* A tota la finestra (alçada i amplada), també a l'ordinador. */}
-          <Dialog.Content w="100vw" maxW="100vw" h="100dvh" maxH="100dvh" rounded="none" display="flex" flexDirection="column" overflow="hidden" pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} pb={{ base: "env(safe-area-inset-bottom, 0px)", md: 0 }}>
+          {/* A tota la finestra (alçada i amplada), també a l'ordinador; sempre dins de la zona segura (iPad i iPhone de costat). */}
+          <Dialog.Content w="100vw" maxW="100vw" h="100dvh" maxH="100dvh" rounded="none" display="flex" flexDirection="column" overflow="hidden" pt="env(safe-area-inset-top, 0px)" pb="env(safe-area-inset-bottom, 0px)" ps="env(safe-area-inset-left, 0px)" pe="env(safe-area-inset-right, 0px)">
             <Dialog.Header>
               <Dialog.Title>Render</Dialog.Title>
             </Dialog.Header>
@@ -861,8 +861,8 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                 </Button>
               </Stack>
             </Dialog.Body>
-            {/* Al mòbil, per sota de la barra d'estat (zona segura). */}
-            <Dialog.CloseTrigger asChild top={{ base: "calc(env(safe-area-inset-top, 0px) + 8px)", md: 2 }}>
+            {/* Dins de la zona segura (per sota de la barra d'estat i lluny de la cantonada), a totes les mides. */}
+            <Dialog.CloseTrigger asChild top="calc(env(safe-area-inset-top, 0px) + 8px)" insetEnd="calc(env(safe-area-inset-right, 0px) + 8px)">
               <CloseButton size="sm" aria-label="Tancar" />
             </Dialog.CloseTrigger>
           </Dialog.Content>

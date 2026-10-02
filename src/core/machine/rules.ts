@@ -1,4 +1,5 @@
-import { isPlaceholderTool, machineRules, toolMslName, type Machine, type MachineRules, type MachineTool } from "../model/machine"
+import { machineRules, toolMslName, type Machine, type MachineRules, type MachineTool } from "../model/machine"
+import { usableTool } from "./tools"
 
 /**
  * Regles de mecanitzat del taller (`Machine.rules`) a l'export: l'eina de cada regla va pel nom (el de l'MSL, el
@@ -9,17 +10,22 @@ import { isPlaceholderTool, machineRules, toolMslName, type Machine, type Machin
 
 const norm = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase()
 
-/** Eina de la màquina amb aquest nom (MSL, nom o codi). Només freses muntades (no les «Eina nova»). */
-export function findRuleTool(m: Pick<Machine, "tools">, name: string): MachineTool | undefined {
+/** Fresa de la màquina amb aquest nom (MSL, nom o codi), de qualsevol estat. */
+function namedRouter(m: Pick<Machine, "tools">, name: string, ok: (t: MachineTool) => boolean): MachineTool | undefined {
   const n = norm(name)
   if (!n) return undefined
-  const ok = (t: MachineTool) => t.kind === "router" && t.mounted && !isPlaceholderTool(t)
   return (
     m.tools.find((t) => ok(t) && t.mslName !== undefined && norm(t.mslName) === n) ??
     m.tools.find((t) => ok(t) && norm(t.name) === n) ??
     m.tools.find((t) => ok(t) && norm(t.code) === n)
   )
 }
+
+/**
+ * Eina de la màquina amb aquest nom (MSL, nom o codi). Només freses que es poden fer servir (`usableTool`: muntades,
+ * per a la tria automàtica i que no són una «Eina nova»), les mateixes que ofereix el selector de les regles.
+ */
+export const findRuleTool = (m: Pick<Machine, "tools">, name: string): MachineTool | undefined => namedRouter(m, name, (t) => t.kind === "router" && usableTool(t))
 
 /** Regla de perfilar per al gruix (interval tancat). */
 export const profileRuleFor = (r: MachineRules, thickness: number) => r.profile.find((x) => thickness >= x.min - 1e-6 && thickness <= x.max + 1e-6)
@@ -52,12 +58,20 @@ export class RulePicker {
     if (!name.trim()) return undefined
     const t = findRuleTool(this.m, name)
     const label = `regla «${KIND_LABEL[kind]}${extra}»`
+    // Un sol avís (i una sola eina que falta) per regla i eina, encara que la faltin moltes peces o gruixos.
+    const key = `${kind}|${norm(name)}`
     if (!t) {
-      this.note(`${kind}|${norm(name)}`, `${label}: l'eina «${name}» no és a la màquina (afegeix-la o importa un .pgmx amb el nom); es tria l'eina automàticament`)
+      const off = namedRouter(this.m, name, (x) => x.kind === "router")
+      this.note(
+        key,
+        off
+          ? `${label}: l'eina «${name}» és a la màquina però no es pot fer servir (no muntada, no automàtica o sense codi de Maestro); es tria l'eina automàticament`
+          : `${label}: l'eina «${name}» no és a la màquina (afegeix-la o importa un .pgmx amb el nom); es tria l'eina automàticament`,
+      )
       return undefined
     }
     if (t.maxDepth > 0 && t.maxDepth + 1e-6 < depth) {
-      this.note(`${kind}|${norm(name)}|${depth}`, `${label}: l'eina «${toolMslName(t)}» no arriba a ${Math.round(depth * 1000) / 1000} mm (fondària útil ${t.maxDepth}); es tria l'eina automàticament`)
+      this.note(key, `${label}: l'eina «${toolMslName(t)}» no arriba a ${Math.round(depth * 1000) / 1000} mm (fondària útil ${t.maxDepth}); es tria l'eina automàticament`)
       return undefined
     }
     if (t.diameter <= 0 || t.diameter > maxDiameter + 1e-6) return undefined

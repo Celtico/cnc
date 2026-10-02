@@ -116,14 +116,28 @@ export const defaultMachineRules = (): MachineRules => ({
 /** Regles de la màquina (les de per defecte si no en té). */
 export const machineRules = (m: Pick<Machine, "rules">): MachineRules => m.rules ?? defaultMachineRules()
 
-/** Màquina amb regles (migració en carregar: additiu i idempotent; les que ja en tenen no es toquen). */
-export const withMachineRules = <M extends Pick<Machine, "rules"> & { nesting?: Machine["nesting"] }>(m0: M): M => {
-  // Separació provisional d'abans (Ø + 1) → la del taller (Ø + 2); una d'editada es queda.
-  const m = m0.nesting?.spacingExtra === 1 ? { ...m0, nesting: { ...m0.nesting, spacingExtra: 2 } } : m0
-  if (!m.rules) return { ...m, rules: defaultMachineRules() }
-  // El llindar provisional d'abans (costat < 300 mm o < 0,1 m²) passa al del taller (< 0,8 m²); un d'editat es queda.
-  const s = m.rules.small
-  return s.maxSide === 300 && s.maxArea === 0.1 ? { ...m, rules: { ...m.rules, small: { ...s, maxSide: 0, maxArea: 0.8 } } } : m
+/**
+ * Versió de les migracions d'un sol cop de les opcions de la màquina (`Machine.rulesVersion`). 1: separació Ø + 1 → Ø + 2
+ * i llindar de peça petita 300 mm / 0,1 m² → 0,8 m².
+ */
+export const MACHINE_RULES_VERSION = 1
+
+/**
+ * Màquina amb regles (migració en carregar). Les que no en tenen agafen les de per defecte (additiu). Els valors
+ * provisionals d'abans es migren **un sol cop** (`rulesVersion`): si l'usuari els torna a posar després, es queden.
+ * Idempotent: una màquina ja migrada es retorna tal qual (el mateix objecte).
+ */
+export const withMachineRules = <M extends Pick<Machine, "rules"> & { nesting?: Machine["nesting"]; rulesVersion?: number }>(m0: M): M => {
+  let m = m0
+  if ((m.rulesVersion ?? 0) < MACHINE_RULES_VERSION) {
+    // Separació provisional d'abans (Ø + 1) → la del taller (Ø + 2).
+    if (m.nesting?.spacingExtra === 1) m = { ...m, nesting: { ...m.nesting, spacingExtra: 2 } }
+    // El llindar provisional d'abans (costat < 300 mm o < 0,1 m²) passa al del taller (< 0,8 m²).
+    const s = m.rules?.small
+    if (m.rules && s && s.maxSide === 300 && s.maxArea === 0.1) m = { ...m, rules: { ...m.rules, small: { ...s, maxSide: 0, maxArea: 0.8 } } }
+    m = { ...m, rulesVersion: MACHINE_RULES_VERSION }
+  }
+  return m.rules ? m : { ...m, rules: defaultMachineRules() }
 }
 
 /** Peça petita segons les regles: àrea (m²) < `maxArea`, o algun costat < `maxSide` (si no és 0). */
@@ -191,6 +205,8 @@ export const MachineSchema = z.object({
    * (`withMachineRules`); per llegir-les, `machineRules`.
    */
   rules: MachineRulesSchema.optional(),
+  /** Migracions d'un sol cop ja fetes (`withMachineRules`, `MACHINE_RULES_VERSION`). Sense: cap. */
+  rulesVersion: z.number().int().min(0).optional(),
   /** D'on venen els noms de les eines (`mslName`) i la capçalera: el .pgmx importat. */
   pgmx: z.object({ file: z.string(), version: z.string(), tools: z.number().int(), importedAt: z.number() }).optional(),
   /** La màquina per defecte de l'export. */
@@ -205,8 +221,7 @@ export const DEFAULT_HEADER: Machine["header"] = { executionFields: "AD", repeti
 
 export type MachineNesting = NonNullable<Machine["nesting"]>
 
-/** Opcions de nesting per defecte: marge 10, separació Ø + 1, martiri 0,3 mm, peces petites al final. */
-// Separació del taller: Ø + 2 (14 mm amb la fresa de 12, 16 amb la de 14).
+/** Opcions de nesting per defecte: marge 10, separació Ø + 2 (la del taller: 14 mm amb la fresa de 12, 16 amb la de 14), martiri 0,3 mm, peces petites al final. */
 export const DEFAULT_MACHINE_NESTING: MachineNesting = { edgeTrim: 10, spacingExtra: 2, overcut: 0.3, smallParts: "last" }
 
 /** Opcions de nesting de la màquina (amb els valors per defecte). */
@@ -220,7 +235,8 @@ export const toolMslName = (t: MachineTool): string => t.mslName ?? t.code
 
 /**
  * Llegeix una màquina desada sense perdre-la per una eina invàlida: les eines que no passen l'esquema es
- * descarten d'una en una (amb un problema per a cadascuna). Si la màquina tampoc és vàlida, `machine` és buit.
+ * descarten d'una en una (amb un problema per a cadascuna). Si encara no és vàlida, es tornen a provar sense les regles i
+ * després sense les opcions de nesting (valors per defecte, amb un problema). Si tampoc, `machine` és buit.
  */
 export function repairMachine(raw: unknown): { machine?: Machine; problems: string[] } {
   const whole = MachineSchema.safeParse(raw)
@@ -239,6 +255,19 @@ export function repairMachine(raw: unknown): { machine?: Machine; problems: stri
   }
   const again = MachineSchema.safeParse({ ...r, tools })
   if (again.success) return { machine: again.data, problems }
+  // Regles o opcions de nesting invàlides: es tornen als valors per defecte (`withMachineRules`, `machineNesting`) abans
+  // de perdre la màquina sencera.
+  const RULES = "regles de mecanitzat invàlides: es restauren les del taller"
+  const NESTING = "opcions dels programes per tauler invàlides: es restauren les inicials"
+  const tries: [Record<string, unknown>, string[]][] = [
+    [{ rules: undefined }, [RULES]],
+    [{ nesting: undefined }, [NESTING]],
+    [{ rules: undefined, nesting: undefined }, [RULES, NESTING]],
+  ]
+  for (const [patch, why] of tries) {
+    const res = MachineSchema.safeParse({ ...r, tools, ...patch })
+    if (res.success) return { machine: res.data, problems: [...problems, ...why] }
+  }
   return { problems: [...problems, again.error.issues[0]?.message ?? "invàlida"] }
 }
 

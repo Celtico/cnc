@@ -171,4 +171,68 @@ describe("fons encastat", () => {
     expect(board?.placements.length).toBeGreaterThan(1)
     expect(toDxf(ps)).toContain("DRILL_H_D8_P20")
   })
+
+  it("fons gruixut (30, 40): la filera System 32 de darrere mai cau dins del fons; amb ranura, com sempre", () => {
+    const rearZs = (m: Module) => {
+      const side = panelsOf(m).find((p) => p.id === "side-left")!
+      return side.holes.filter((h) => h.tag === "system32").map((h) => toWorld(side, [h.x, h.y, 0])[2])
+    }
+    const d = defaultModule("x", "X").hardware.system32.diameter
+    // 30: a 37 del darrere (la cara del fons és a 30, el forat la passa de 7 − Ø/2).
+    expect(Math.min(...rearZs(mod({ backThickness: 30, backMaterial: "Tauler 30" })))).toBe(37)
+    // 40: a un Ø de la cara del fons (no a 37, que seria dins del fons).
+    expect(Math.min(...rearZs(mod({ backThickness: 40, backMaterial: "Tauler 40" })))).toBe(40 + d)
+    expect(Math.min(...rearZs(mod({ backThickness: 40, backMaterial: "Tauler 40", backInsetSetback: 10 })))).toBe(50 + d)
+    for (const tb of [30, 40]) for (const z of rearZs(mod({ backThickness: tb, backMaterial: `Tauler ${tb}` }))) expect(z - d / 2).toBeGreaterThanOrEqual(tb)
+    // Ranura: la filera de sempre (a 37 del darrere dels laterals).
+    expect(Math.min(...rearZs(mod({ back: "groove", backThickness: 10, backMaterial: "DM 10" })))).toBe(37)
+  })
+
+  it("tapa de reixeta: les espigues del fons no cauen a cap ranura (la franja del fons queda sense ranures)", () => {
+    for (const kind of ["slotsV", "slotsH", "holes"] as const) {
+      const pattern = { kind, slotWidth: 8, slotGap: 8, holeDiameter: 8, holePitch: 14, margin: 30 }
+      const b = buildModule(mod({ top: { kind: "grille", pattern } }))
+      const top = b.panels.find((p) => p.id === "top")!
+      expect(top.cutouts?.length, kind).toBeGreaterThan(0)
+      const dowels = top.holes.filter((h) => h.tag === "dowel" && h.face !== "edge")
+      expect(dowels.length, kind).toBe(3)
+      for (const h of dowels) {
+        const r = h.diameter / 2
+        for (const c of top.cutouts!) {
+          const box = c.kind === "circle" ? { x0: c.x - c.diameter / 2, x1: c.x + c.diameter / 2, y0: c.y - c.diameter / 2, y1: c.y + c.diameter / 2 } : c.kind === "polygon" ? null : { x0: c.x, x1: c.x + c.w, y0: c.y, y1: c.y + c.h }
+          if (!box) continue
+          const inside = h.x + r > box.x0 && h.x - r < box.x1 && h.y + r > box.y0 && h.y - r < box.y1
+          expect(inside, `${kind} (${h.x}, ${h.y})`).toBe(false)
+        }
+      }
+    }
+  })
+
+  it("tapa amb ranura d'aire: avís si entre el fons i la tapa queden menys de 10 mm; el cantell de dalt del fons, cantejat", () => {
+    const warns = (gap: number, over: Partial<Carcass> = {}) => buildModule(mod({ top: { kind: "ventSlot", gap }, ...over })).warnings.filter((w) => w.code === "back-inset" && /Ranura d'aire/.test(w.message))
+    expect(warns(60)).toEqual([])
+    expect(warns(25)).toHaveLength(1)
+    expect(warns(25)[0]!.message).toMatch(/només queden 6 mm/)
+    expect(warns(15)[0]!.message).toMatch(/queda tapada/)
+    expect(warns(60, { backInsetSetback: 35 })).toHaveLength(1)
+    const back = buildModule(mod({ top: { kind: "ventSlot", gap: 60 } })).panels.find((p) => p.role === "back")!
+    // Un sol cantell (el de dalt; la peça va girada al costat llarg).
+    expect(Object.values(back.edges).filter(Boolean)).toHaveLength(1)
+  })
+
+  it("poca fondària davant del fons: avís; si les fileres es trobarien, només la de davant", () => {
+    const deep = buildModule(mod())
+    expect(deep.warnings.filter((w) => w.code === "back-inset")).toEqual([])
+    const shallow = (depth: number) => {
+      const b = buildModule(mod({ depth }))
+      const side = b.panels.find((p) => p.id === "side-left")!
+      return { b, zs: [...new Set(side.holes.filter((h) => h.tag === "system32").map((h) => toWorld(side, [h.x, h.y, 0])[2]))] }
+    }
+    const s90 = shallow(90)
+    expect(s90.b.warnings.some((w) => w.code === "back-inset" && /fondària/.test(w.message))).toBe(true)
+    expect(s90.zs).toHaveLength(2)
+    const s75 = shallow(75)
+    expect(s75.b.warnings.some((w) => w.code === "back-inset" && /fondària/.test(w.message))).toBe(true)
+    expect(s75.zs).toEqual([75 - 37])
+  })
 })

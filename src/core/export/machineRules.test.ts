@@ -6,9 +6,9 @@ import { machineFromContext } from "../machine/maestro"
 import { applyPgmx, parsePgmxXml } from "../machine/pgmx"
 import { findRuleTool, profileRuleFor, RulePicker } from "../machine/rules"
 import { bytes, read } from "../machine/testContext"
-import { defaultMachineRules, isSmallPart, machineRules, parseSettings, withMachineRules, type Machine, type MachineTool, type Panel } from "../model"
+import { defaultMachineRules, isSmallPart, MACHINE_RULES_VERSION, machineRules, parseSettings, repairMachine, withMachineRules, type Machine, type MachineTool, type Panel } from "../model"
 import { DEFAULT_NEST_OPTIONS, nest } from "../nesting/nest"
-import { cncNestOptions, toMaestroNestXcs } from "./maestroNestXcs"
+import { cncNestOptions, nestingRouter, orderFeats, toMaestroNestXcs } from "./maestroNestXcs"
 import { contourPasses, panelXcs, passDepths, rampStart, toMaestroXcs } from "./maestroXcs"
 
 /** Màquina del taller: context + Proyecto1.pgmx (E128 = «12mm diamant nesting»), sense les eines que falten. */
@@ -87,10 +87,57 @@ describe("regles per defecte i migració", () => {
   })
   it("migra el llindar provisional (300 mm / 0,1 m²) al del taller (0,8 m²)", () => {
     const old = { ...defaultMachineRules(), small: { ...defaultMachineRules().small, maxSide: 300, maxArea: 0.1 } }
-    const m = withMachineRules({ rules: old })
+    const m = withMachineRules<Pick<Machine, "rules" | "rulesVersion">>({ rules: old })
     expect(m.rules!.small.maxArea).toBe(0.8)
     expect(m.rules!.small.maxSide).toBe(0)
+    expect(m.rulesVersion).toBe(MACHINE_RULES_VERSION)
     expect(withMachineRules(m)).toBe(m)
+  })
+  it("les migracions es fan un sol cop: si després l'usuari torna a triar Ø + 1 o 300 mm / 0,1 m², es queda", () => {
+    const { rules: _r, rulesVersion: _v, ...old } = BASE
+    const small = { ...defaultMachineRules().small, maxSide: 300, maxArea: 0.1 }
+    const raw = { ...old, rules: { ...defaultMachineRules(), small }, nesting: { edgeTrim: 10, spacingExtra: 1, overcut: 0.3, smallParts: "last" } }
+    const first = parseSettings({ version: 10, machines: [raw] })
+    const a = first.settings.machines[0]!
+    expect(a.nesting!.spacingExtra).toBe(2)
+    expect(a.rules!.small.maxArea).toBe(0.8)
+    expect(a.rulesVersion).toBe(MACHINE_RULES_VERSION)
+    // Es desa la migració (si no, es tornaria a fer i trepitjaria la tria de l'usuari).
+    expect(first.migrated).toBe(true)
+    // L'usuari ho torna a posar: es queda.
+    const mine = { ...a, nesting: { ...a.nesting!, spacingExtra: 1 }, rules: { ...a.rules!, small } }
+    const again = parseSettings({ version: 10, machines: [mine] })
+    expect(again.settings.machines[0]!.nesting!.spacingExtra).toBe(1)
+    expect(again.settings.machines[0]!.rules!.small).toEqual(small)
+    expect(again.migrated).toBe(false)
+  })
+})
+
+describe("reparar una màquina desada", () => {
+  it("regles invàlides: es restauren les del taller i es conserva la màquina (amb un problema)", () => {
+    const bad = { ...BASE, rules: { ...defaultMachineRules(), grooves: { tool: "8mm diamant", maxPass: -3 } } }
+    const r = repairMachine(bad)
+    expect(r.machine?.id).toBe(BASE.id)
+    expect(r.machine?.rules).toBeUndefined()
+    expect(r.problems.join(" ")).toMatch(/regles de mecanitzat invàlides/)
+    const s = parseSettings({ version: 10, machines: [bad] })
+    expect(s.settings.machines[0]!.rules).toEqual(defaultMachineRules())
+    expect(s.problems.join(" ")).toMatch(/regles de mecanitzat invàlides/)
+  })
+  it("opcions de nesting invàlides (i regles bones): només es treuen les opcions de nesting", () => {
+    const mine = { ...defaultMachineRules(), ramp: { enabled: false, length: 40 } }
+    const r = repairMachine({ ...BASE, rules: mine, nesting: { edgeTrim: 500, spacingExtra: 2, overcut: 0.3, smallParts: "last" } })
+    expect(r.machine?.nesting).toBeUndefined()
+    expect(r.machine?.rules).toEqual(mine)
+    expect(r.problems).toEqual(["opcions dels programes per tauler invàlides: es restauren les inicials"])
+  })
+  it("totes dues invàlides: es treuen totes dues", () => {
+    const r = repairMachine({ ...BASE, rules: { nope: 1 }, nesting: { edgeTrim: -1 } })
+    expect(r.machine).toBeTruthy()
+    expect(r.problems).toHaveLength(2)
+  })
+  it("la resta de la màquina invàlida: es descarta", () => {
+    expect(repairMachine({ ...BASE, header: null }).machine).toBeUndefined()
   })
 })
 
@@ -250,10 +297,89 @@ describe("eina de la regla que falta", () => {
     // Les ranures surten igualment, amb la fresa automàtica (Ø ≤ 10).
     expect(x.panels[0]!.ops.filter((o) => o.kind === "route").map((o) => o.tool)).toEqual(["E810", "E810"])
   })
+  it("una eina amb el nom però no muntada o no automàtica no es fa servir (avís)", () => {
+    const off = { ...M, tools: M.tools.map((t) => (t.code === "E801" ? { ...t, auto: false } : t)) }
+    expect(findRuleTool(off, "8mm diamant")).toBeUndefined()
+    const rp = new RulePicker(off)
+    expect(rp.tool("groove", "8mm diamant", 10, 8)).toBeUndefined()
+    expect(rp.notes).toEqual([`regla «Ranures»: l'eina «8mm diamant» és a la màquina però no es pot fer servir (no muntada, no automàtica o sense codi de Maestro); es tria l'eina automàticament`])
+  })
+  it("una eina que no arriba: un sol avís i una sola eina que falta, encara que sigui a diverses fondàries", () => {
+    const short = { ...M, tools: M.tools.map((t) => (t.code === "E801" ? { ...t, maxDepth: 5 } : t)) }
+    const rp = new RulePicker(short)
+    rp.tool("groove", "8mm diamant", 10, 8)
+    rp.tool("groove", "8mm diamant", 10, 9)
+    rp.tool("groove", "8mm diamant", 10, 12)
+    expect(rp.notes).toHaveLength(1)
+    expect(rp.missing).toBe(1)
+  })
   it("nesting: la de 14 no hi és → automàtica i avís", () => {
     const x = nestOf([panel({ thickness: 30 })], BASE)
     expect(x.warnings[0]).toMatch(/regla «Perfilar 23–41 mm»: l'eina «14mm diamant nesting» no és a la màquina/)
     expect(x.sheets[0]!.ops.find((o) => o.stage === "outer")).toBeTruthy()
     expect(x.missingTool).toBeGreaterThanOrEqual(1)
+  })
+})
+
+describe("separació del nesting = la fresa de contorn més grossa dels gruixos", () => {
+  it("19 + 30 amb el context real: la de 12 (regla 8–22) i la de 30 sense la de la regla (la de nesting que travessa)", () => {
+    const panels = [panel({}), panel({ thickness: 30 })]
+    const fallback = nestingRouter(BASE, 30.3)!
+    const plan = cncNestOptions(panels, BASE, DEFAULT_NEST_OPTIONS)
+    expect(plan.tool?.diameter).toBe(Math.max(12, fallback.diameter))
+    expect(plan.spacing).toBe(16)
+    // El tauler de 30 es fa amb la mateixa fresa que ha fixat la separació, i els textos ho diuen.
+    const x = toMaestroNestXcs(panels, nest(panels, plan.options), BASE, { project: "t", date: new Date("2026-10-02") })
+    expect(x.spacing).toBe(16)
+    expect(x.tool?.code).toBe(plan.tool?.code)
+    const t30 = x.sheets.find((s) => s.thickness === 30)!
+    expect(t30.ops.find((o) => o.stage === "outer")!.tool).toBe(plan.tool!.code)
+    const readme = x.files.at(-1)!.text
+    expect(readme).toContain(`separació entre peces 16 mm (fresa ${plan.tool!.mslName ?? plan.tool!.code} Ø${plan.tool!.diameter} + 2)`)
+    for (const s of x.sheets) expect(s.text).toContain(`separacio 16 mm (${plan.tool!.mslName ?? plan.tool!.code} D${plan.tool!.diameter} + 2)`)
+  })
+  it("sense regles: la fresa de nesting de cada gruix", () => {
+    const nr: Machine = { ...M, rules: { ...defaultMachineRules(), profile: [] }, tools: [...M.tools, tool("E820", "20mm nesting curta", 20)].map((t) => (t.code === "E820" ? { ...t, maxDepth: 20 } : t)) }
+    // Gruix 19: la de nesting més petita que travessa (12); 30: la de 20 no arriba → la mateixa de 12 (o la que travessi).
+    const p19 = cncNestOptions([panel({})], nr, DEFAULT_NEST_OPTIONS)
+    const both = cncNestOptions([panel({}), panel({ thickness: 30 })], nr, DEFAULT_NEST_OPTIONS)
+    const t19 = nestingRouter(nr, 19.3)!
+    const t30 = nestingRouter(nr, 30.3)!
+    expect(p19.spacing).toBe(t19.diameter + 2)
+    expect(both.spacing).toBe(Math.max(t19.diameter, t30.diameter) + 2)
+  })
+  it("tria la fresa més grossa encara que el gruix més gros no en tingui", () => {
+    // Una màquina amb només la de 14 per a 8–22 i la de 12 per a 23–41 (al revés): la separació és 14 + 2.
+    const inv: Machine = {
+      ...M,
+      rules: { ...defaultMachineRules(), profile: [{ min: 8, max: 22, tool: "14mm diamant nesting" }, { min: 23, max: 41, tool: "12mm diamant nesting" }] },
+    }
+    expect(cncNestOptions([panel({}), panel({ thickness: 30 })], inv, DEFAULT_NEST_OPTIONS).spacing).toBe(16)
+  })
+})
+
+describe("peces petites al final, sense passades de desbast", () => {
+  it("marcades com a petites: van al final (o al principi) encara que no tinguin desbastos", () => {
+    // Petites = algun costat de menys de 150 mm (sense desbastos): el llistó de 2000 × 120 (0,24 m²) és petit i la peça de
+    // 300 × 200 (0,06 m²), no. Per àrea, el llistó aniria abans; per marca, va al final.
+    const noRough: Machine = { ...M, rules: { ...defaultMachineRules(), small: { maxSide: 150, maxArea: 0, passes: [] } } }
+    const small = panel({ length: 2000, width: 120, label: "Llistó" })
+    const big = panel({ label: "Lateral", length: 1400, width: 700 })
+    const big2 = panel({ label: "Lateral 2", length: 300, width: 200 })
+    const x = nestOf([big, small, big2], noRough)
+    const ops = x.sheets[0]!.ops.filter((o) => o.stage === "outer")
+    const smallRef = x.sheets[0]!.parts.find((p) => p.label === "Llistó")!.ref
+    expect(ops.every((o) => !o.pass)).toBe(true)
+    expect(ops.map((o) => o.ref).at(-1)).toBe(smallRef)
+    const firstM: Machine = { ...noRough, nesting: { edgeTrim: 10, spacingExtra: 2, overcut: 0.3, smallParts: "first" } }
+    const first = nestOf([big, small, big2], firstM)
+    expect(first.sheets[0]!.ops.filter((o) => o.stage === "outer")[0]!.ref).toBe(smallRef)
+  })
+  it("orderFeats: `small` mana sobre l'àrea", () => {
+    const f = (x: number, area: number, small?: boolean) => ({ stage: "outer" as const, key: "k", start: [x, 0] as [number, number], end: [x, 0] as [number, number], area, ...(small ? { small } : {}) })
+    // Una «petita» més gran que una normal (llindar per costat, p. ex.): igualment al final.
+    const o = orderFeats([f(1, 500_000, true), f(2, 1000), f(3, 90_000)])
+    expect(o.map((x) => x.start[0])).toEqual([3, 2, 1])
+    expect(orderFeats([f(1, 500_000, true), f(2, 1000), f(3, 90_000)], "first")[0]!.start[0]).toBe(1)
   })
 })

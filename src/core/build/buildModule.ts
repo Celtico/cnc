@@ -35,6 +35,9 @@ import {
 import { MIN_OPEN_RATIO, grilleCutouts, type Rect } from "./grille"
 import { layoutZones, resolveSizes, type Layout, type ZoneRect } from "./layout"
 
+/** Mm per als avisos: un decimal com a molt, amb coma. */
+const num = (n: number): string => String(Math.round(n * 10) / 10).replace(".", ",")
+
 export interface BuildWarning {
   code:
     | "door-too-wide"
@@ -544,7 +547,13 @@ class Builder {
         : {}),
     })
     if (!isBottom && c.top.kind === "grille") {
-      const g = grilleCutouts(panel.length, panel.width, c.top.pattern)
+      // Fons encastat: la franja on el fons toca la tapa (amb les espigues) queda sense ranures, com la trapa o els imants.
+      const exclude: Rect[] = []
+      if (c.back === "inset") {
+        const pad = m.hardware.dowel.diameter / 2 + 1
+        exclude.push({ x: 0, y: (c.backInsetSetback ?? 0) - zRear - pad, w: panel.length, h: d.tb + 2 * pad })
+      }
+      const g = grilleCutouts(panel.length, panel.width, c.top.pattern, exclude)
       cutouts = g.cutouts
       this.openRatios.top = g.openRatio
       if (g.openRatio < MIN_OPEN_RATIO) {
@@ -610,14 +619,42 @@ class Builder {
     const c = m.carcass
     const { interior } = d
     const z0 = c.backInsetSetback ?? 0
-    // Del mateix tauler que el cos: es veu per darrere; veta vertical i cantell on no toca res.
+    // Tapa amb ranura d'aire: aire entre la cara de davant del fons i el darrere de la tapa (el cantell de dalt del fons s'hi veu).
+    const slot = d.hasTop && c.top.kind === "ventSlot" ? d.sideZ0 + c.top.gap - (z0 + d.tb) : null
+    // Del mateix tauler que el cos: es veu per darrere; veta vertical i cantell on no toca res (o on la ranura el deixa veure).
     const visible = c.backMaterial === c.material
     const eb = visible
-      ? edges(...(c.sides.left ? [] : (["left"] as const)), ...(c.sides.right ? [] : (["right"] as const)), ...(d.hasBase ? [] : (["bottom"] as const)), ...(d.hasTop ? [] : (["top"] as const)))
+      ? edges(
+          ...(c.sides.left ? [] : (["left"] as const)),
+          ...(c.sides.right ? [] : (["right"] as const)),
+          ...(d.hasBase ? [] : (["bottom"] as const)),
+          ...(!d.hasTop || (slot !== null && slot > 0) ? (["top"] as const) : []),
+        )
       : { ...NO_EDGES }
     const back = this.add(
       this.basePanel("back", "trassera", "Fons", "back", interior.x1 - interior.x0, interior.y1 - interior.y0, d.tb, c.backMaterial, visible ? "y" : "none", eb, placement([interior.x0, interior.y0, z0], X, Y, Z, neg(Z))),
     )
+    if (slot !== null && slot < 10) {
+      this.warnings.push({
+        code: "back-inset",
+        message:
+          slot <= 0
+            ? `Ranura d'aire de la tapa: amb el fons encastat (retirada ${num(z0)} + gruix ${num(d.tb)} mm) la ranura queda tapada. Fes-la més ampla (més de ${num(z0 + d.tb + 10)} mm) o retira menys el fons.`
+            : `Ranura d'aire de la tapa: entre el fons encastat i la tapa només queden ${num(slot)} mm (calen 10 mm o més). Fes la ranura més ampla o retira menys el fons.`,
+        panelId: back.id,
+      })
+    }
+    // Fondària que queda davant del fons: hi han de cabre les dues fileres System 32 (`rows`: la de darrere no es fa si
+    // arribaria a la de davant).
+    const s32 = m.hardware.system32
+    const need = 2 * s32.edgeOffset + s32.diameter
+    if (d.D - d.backInnerZ < need) {
+      this.warnings.push({
+        code: "back-inset",
+        message: `Fons encastat: davant del fons només queden ${num(d.D - d.backInnerZ)} mm de fondària (calen ${num(need)} mm per a les dues fileres System 32 a ${num(s32.edgeOffset)} mm dels cantells). Retira menys el fons o fes el mòdul més fondo; si les fileres es trobarien, la de darrere no es fa.`,
+        panelId: back.id,
+      })
+    }
     if (d.tb < 15) {
       this.warnings.push({ code: "back-inset", message: `Fons encastat de ${d.tb} mm: massa prim per a espigues al cantell (calen 15 mm o més). Fixa'l amb cargols des dels laterals, la base i la tapa, o posa'l en ranura.`, panelId: back.id })
       return
@@ -778,12 +815,16 @@ class Builder {
     const s = this.m.hardware.system32
     const ys = system32Ys(rect.y0, rect.y1, s.edgeOffset, s.pitch)
     const xFace = side === "left" ? v.xR : v.xL
-    // Fons encastat retirat: la filera de darrere es mesura des del darrere del fons.
+    // Fons encastat retirat: la filera de darrere es mesura des del darrere del fons, però mai dins del fons (gruixos de 30
+    // o 40): com a molt a prop, a un Ø de la seva cara de davant.
     const c = this.m.carcass
-    const zRear = c.back === "inset" ? Math.max(v.zRear, c.backInsetSetback ?? 0) : v.zRear
+    const zFront = v.zFront - s.edgeOffset
+    const zBack = c.back === "inset" ? Math.max(Math.max(v.zRear, c.backInsetSetback ?? 0) + s.edgeOffset, this.d.backInnerZ + s.diameter) : v.zRear + s.edgeOffset
+    // Si la de darrere arribaria a la de davant (mòdul massa poc fondo), només la de davant (la de les frontisses).
+    const rear = zBack <= zFront - s.diameter
     for (const y of ys) {
-      addFaceHole(v.panel, [xFace, y, v.zFront - s.edgeOffset], { diameter: s.diameter, depth: s.depth, tag: "system32" })
-      addFaceHole(v.panel, [xFace, y, zRear + s.edgeOffset], { diameter: s.diameter, depth: s.depth, tag: "system32" })
+      addFaceHole(v.panel, [xFace, y, zFront], { diameter: s.diameter, depth: s.depth, tag: "system32" })
+      if (rear) addFaceHole(v.panel, [xFace, y, zBack], { diameter: s.diameter, depth: s.depth, tag: "system32" })
     }
     return ys
   }

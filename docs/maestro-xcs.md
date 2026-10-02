@@ -56,14 +56,17 @@ llenguatge d'scripts pensat per a postprocessadors de CAD/CAM externs (manual MS
   (per ID, o pel codi si no en té) es conserven els camps tocats a mà (`MachineTool.edited`: nom, automàtica,
   muntada, fondària útil, orientació), el `mslName` del .pgmx i les afegides a mà; també el nom, el per
   defecte, les opcions i, si s'havia importat un .pgmx, la seva capçalera.
-- Preferències: una eina invàlida es descarta sola (`repairMachine`), no tota la màquina.
+- Preferències: una eina invàlida es descarta sola (`repairMachine`), no tota la màquina; si encara no és vàlida, es torna
+  a provar sense les regles i/o sense les opcions de nesting (es restauren les per defecte, amb un avís).
 - Desat a `Settings.machines` (preferències **v10**, additiu: les v9 surten amb la llista buida); una
   sola `isDefault`.
 
 ## Programes
-Un `.xcs` per peça de CNC amb el nom de la ref del taller (`A.1.L.1.xcs`, el mateix `ÍNDICE_3D` del CSV) i,
-si té mecanitzats a la cara B, `A.1.L.1Volt.xcs` (com el «2a cara» de TopSolid). Tot en un .zip sense
-compressió (`zipStore`, `xcsZip`) amb un `LLEGEIX-ME.txt` (avisos inclosos). CRLF.
+A la UI només hi ha **els programes per tauler** (vegeu «Programes per tauler (nesting)»; per decisió de l'usuari es va
+treure l'opció «Per peça»). `toMaestroXcs` queda al nucli (tests i `panelXcs`): un `.xcs` per peça de CNC amb el nom de
+la ref del taller (`A.1.L.1.xcs`, el mateix `ÍNDICE_3D` del CSV) i, si té mecanitzats a la cara B, `A.1.L.1Volt.xcs`
+(com el «2a cara» de TopSolid). Tot en un .zip sense compressió (`zipStore`, `xcsZip`) amb un `LLEGEIX-ME.txt` (avisos
+inclosos). CRLF.
 
 **Codificació (pendent de validar):** els noms d'eina del taller poden dur accents o caràcters no ASCII
 («12mm diamant nesting» no en porta, però n'hi pot haver), i **no es pleguen a ASCII**: canviar-los faria
@@ -163,7 +166,7 @@ Només eines automàtiques i muntades.
   («Programa cara B: <ref>Volt.xcs»). Els inglets **no són avisos**: són un segon procés a la serra («Inglet a 45° ·
   cantells 2+4 (serra)»); després «Cantejar cantells 1+3 (cantejadora)», «Encolar · …», «Push (Tip-On) · …».
 - **Ruta** (`route`): «CNC: <ref>.xcs + <ref>Volt.xcs → serra (inglets) → cantejadora → …».
-- On surt: LLEGEIX-ME.txt (per peça: «Ordre de treball» i «Després de la CNC»; «Avisos» a part, només si n'hi ha),
+- On surt: LLEGEIX-ME.txt (per a cada peça: «Ordre de treball» i «Després de la CNC»; «Avisos» a part, només si n'hi ha),
   targeta de Maestro a Exportar (plegable «Després de la CNC (n peces)») i a la capçalera de cada .xcs com a
   **comentaris** en ASCII («->», «graus»): viatja amb el programa sense cap missatge a l'operari que aturi la màquina.
 - **Numeració dels cantells**: la de l'app i de la llista de peces (`EDGE_NUMBER`: 1 dalt · 2 dreta · 3 baix ·
@@ -192,11 +195,11 @@ Només eines automàtiques i muntades.
 - Mostres a `docs/maestro/samples/*.xcs` generades amb el context + `Proyecto1.pgmx` i les regles per defecte (UTF-8 amb BOM): `lateral_A.1.L.1` i `porta_A.1.F.9`
   de l'«Aparador sobre ferro», `peca-amb-forma_A.1.H.1` de la «Taula de centre «Nube»» (amb la capçalera de post-processos).
 
-## Programes per tauler (nesting) — per defecte
+## Programes per tauler (nesting) — l'única opció
 Petició del taller: els .xcs han de ser **els taulers del nesting**, un programa per tauler, no per peça.
-`core/export/maestroNestXcs.ts` (`toMaestroNestXcs`, `cncNestOptions`, `toBoard`, `orderFeats`), pur i testejat
-(`maestroNestXcs.test.ts`). A Exportar › Màquina CNC (Maestro), «Programes»: **Per tauler (nesting)** (per defecte) ·
-Per peça (el d'abans; `mobles:xcs-per-piece`).
+`core/export/maestroNestXcs.ts` (`toMaestroNestXcs`, `cncNestOptions`, `boardRouter`, `toBoard`, `orderFeats`), pur i
+testejat (`maestroNestXcs.test.ts`). A Exportar › Màquina CNC (Maestro) › «Programes .xcs»: **només per tauler** (l'opció
+«Per peça» ja no surt a la UI; `toMaestroXcs` queda al nucli).
 
 ### Modelatge: una peça de treball = el tauler
 - **Triat**: `CreateFinishedWorkpieceBox("T01", L, A, gruix)` + `CreateRawWorkpiece("T01", 0, 0, 0, 0, 0, 0)`
@@ -214,8 +217,12 @@ Per peça (el d'abans; `mobles:xcs-per-piece`).
 
 ### Nesting per a la CNC
 - `cncNestOptions(panels, màquina, opcions del moble)`: el mateix `nest()` (taulers per material, veta) amb
-  **separació = Ø de la fresa de nesting + `spacingExtra`** (en lloc del gruix de la serra) i **marge = `edgeTrim`** de la
-  màquina. La pantalla Nesting (serra) no canvia.
+  **separació = Ø de la fresa de contorn + `spacingExtra`** (en lloc del gruix de la serra) i **marge = `edgeTrim`** de la
+  màquina. La separació és una per a tot el moble: per a cada gruix es mira la fresa de contorn que farà servir el seu
+  tauler (`boardRouter`: la de la regla de perfilar del gruix o, si no, la de nesting que travessa) i mana **la de Ø més
+  gros** (19 + 30 mm amb el context real: la de 12 i la de 14 → 14 + 2 = 16). Aquesta fresa (`tool`) és la que diuen el
+  LLEGEIX-ME, la capçalera de cada .xcs («separacio 16 mm (… D14 + 2)») i la targeta d'Exportar («Separació entre peces 16
+  mm (Ø14 + 2)»). La pantalla Nesting (serra) no canvia.
 - Opcions per màquina (`Machine.nesting`, opcional; `machineNesting` amb `DEFAULT_MACHINE_NESTING`; Preferències ›
   Màquines CNC › «Programes per tauler (nesting)»): fresa del contorn (automàtica: la que diu «nesting» al nom —la
   «12mm diamant nesting» del .pgmx—, si no la més petita que travessa), marge del tauler **10 mm**, separació **Ø + 2** (del taller: 14 mm amb la de 12, 16 amb la de 14),
@@ -224,7 +231,7 @@ Per peça (el d'abans; `mobles:xcs-per-piece`).
 - El marge és la vora que no s'aprofita: la fresa del contorn d'una peça arrambada al marge hi entra (fins a Ø).
 
 ### Programa d'un tauler
-- Fitxer `T01_<material>_<gruix>.xcs` (ASCII), peça de treball `T01`. Capçalera de comentaris: tauler, material,
+- Fitxer `T01_<material>_<gruix>.xcs` (UTF-8 amb BOM, com tots els .xcs; comentaris en ASCII), peça de treball `T01`. Capçalera de comentaris: tauler, material,
   mida, peces i aprofitament, marge/separació/fresa/martiri, i la llista de peces (ref, nom, mida, cantonada, gir) i
   les **etiquetes** (ref + centre). Abans del contorn de cada peça, `// Peca <ref> (...) - etiqueta al centre (x, y)`.
 - **Gir** (`toBoard`): el nesting col·loca a 0° o 90° (antihorari, sense mirall; el mateix que `localToBoard` del CSV):
@@ -259,9 +266,10 @@ emissió compartida a `core/export/maestroXcs.ts` (`passDepths`, `grooveStrategy
 | Peces petites (menys de 0,8 m²; les grans, d'una passada) | desbast Z 1 / XY 1, desbast Z 0,5 / XY 0, final | un `CreateContour` per passada: fondària = gruix − Z i `overMaterial` = XY (darrer paràmetre, Table 36 p53); la final fins al martiri (nesting, `nesting.overcut`, 0,3) o als passants (per peça, `throughExtra`). Peces normals: una passada |
 
 - **Eina pel nom**: `findRuleTool` mira el nom de l'MSL (`mslName`, del .pgmx), el nom i el codi, sense majúscules ni
-  espais de més; només freses muntades. Si **no hi és** (o no arriba a la fondària): la tria automàtica de sempre i
-  **un sol avís per export** («regla «Ranures»: l'eina «8mm diamant» no és a la màquina…», compta a `missingTool`). Al
-  detall de la màquina surt «· falta» a la fila. El context exportat (Maestro 2.00.004) només té la «12mm diamant
+  espais de més; només freses que es poden fer servir (`usableTool`: muntades, automàtiques i amb codi de Maestro; el
+  selector de la regla només ofereix aquestes, amb el nom). Si **no hi és**, no es pot fer servir o no arriba a la
+  fondària: la tria automàtica de sempre i **un sol avís per regla i eina** («regla «Ranures»: l'eina «8mm diamant» no és
+  a la màquina…», una sola eina a `missingTool`). Al selector de la regla surt «· falta». El context exportat (Maestro 2.00.004) només té la «12mm diamant
   nesting» (E128, pel .pgmx); la «8mm diamant» i la «14mm diamant nesting» s'han d'afegir a «Eines» (amb el codi de
   Maestro) o importar un .pgmx que les faci servir.
 - **Ranures i disc**: amb la fresa de la regla a la màquina, les ranures de cantell a cantell van amb fresa (la regla
@@ -270,17 +278,22 @@ emissió compartida a `core/export/maestroXcs.ts` (`passDepths`, `grooveStrategy
   passants de més per peça). Les de desbast es defineixen per l'altura que deixen (Z) i el sobrant al costat (XY).
 - **Ordre al nesting** (`orderFeats`): els desbastos de les peces petites primer (la passada 1 de totes, després la
   2…, amb el tauler encara sencer), després les peces normals (per mida) i les passades finals de les petites al
-  final (o al principi amb «Peces petites: al principi»).
+  final (o al principi amb «Peces petites: al principi»). Les petites van marcades (`small`, `isSmallPart`), així l'ordre
+  es manté encara que no tinguin cap passada de desbast.
 - **Rampa**: el contorn comença al **mig del costat recte més llarg** (`rampStart`, s'hi afegeix un punt) i tanca amb
   aquell costat (`ClosePolyline`): l'entrada lineal tangent cau sobre el mateix tall i no surt cap a les peces del
   costat (la separació és Ø + 2). Llargada = la de la regla, com a molt la meitat d'aquell costat; sense cap costat
   recte de 2 × Ø (cercles), sense rampa. Per peça, sense rampa.
 - Màquines desades sense `rules`: en carregar les preferències agafen les de per defecte (`withMachineRules`, additiu
   i idempotent); una reimportació (`mergeReimport`) les conserva; «Les del taller» les torna als valors per defecte.
+  Els valors provisionals d'abans (separació Ø + 1, peça petita «costat < 300 mm o < 0,1 m²») es migren **un sol cop**
+  (`Machine.rulesVersion`, `MACHINE_RULES_VERSION`) i la migració es desa: si després l'usuari els torna a triar, es
+  queden. Les màquines noves ja porten la marca.
 
 ### Dubtes de les regles (per confirmar amb el taller)
 - **Llindar de «peça petita»**: menys de 0,8 m² (del taller, octubre 2026). Les grans, d'una passada.
-  Amb «costat < 300» els llistons i fronts de calaix també ho són.
+  Amb aquest llindar gairebé totes les peces d'un moble de cos són petites (un lateral de 720 × 560 fa 0,40 m²); si el
+  taller vol també els llistons llargs, «Costat menor que» (0 = no compta).
 - **Rampa**: l'MSL no té «rampa» com a tal. S'ha fet amb `SetApproachStrategy(isLinear = true, isQuote = false)`
   (p71: «in downstroke, from security height along Z»), entenent que «en baixada» és entrar baixant al llarg del segment
   d'aproximació. Cal veure-ho a la vista CAM. Alternativa del manual: `CreateHelicMillingStrategy(cuttingDepth, true, 0)`

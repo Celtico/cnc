@@ -533,19 +533,24 @@ export function parseSettings(raw: unknown): SettingsParse {
     defaults: v7 ? { ...defaults, material: alias(defaults.material), backMaterial: alias(defaults.backMaterial) } : defaults,
     // v10: màquines CNC (additiu: abans no n'hi havia). Si n'hi ha més d'una per defecte, només la primera.
     // Una eina invàlida només treu aquella eina, no tota la màquina (`repairMachine`).
-    machines: oneDefault(machinesOf(obj.machines, problems)),
+    machines: oneDefault(machinesOf(obj.machines, problems, () => (migrated = true))),
   }
   return { settings, problems, migrated: migrated || problems.length > 0 }
 }
 
-function machinesOf(raw: unknown, problems: string[]): Machine[] {
+function machinesOf(raw: unknown, problems: string[], onMigrated: () => void): Machine[] {
   if (!Array.isArray(raw)) return []
   const out: Machine[] = []
   for (const item of raw) {
     const r = repairMachine(item)
     const name = isRecord(item) && typeof item.name === "string" ? item.name : "?"
-    // Regles de mecanitzat: les que no en tenen agafen les de per defecte (additiu, idempotent).
-    if (r.machine) out.push(withMachineRules(r.machine))
+    // Regles de mecanitzat: les que no en tenen agafen les de per defecte i els valors provisionals d'abans es migren un
+    // sol cop (`rulesVersion`); si canvia alguna cosa, es desa (així una tria posterior de l'usuari es queda).
+    if (r.machine) {
+      const m = withMachineRules(r.machine)
+      if (m !== r.machine) onMigrated()
+      out.push(m)
+    }
     else problems.push(`Màquines CNC: s'ha descartat la màquina ${name} (${r.problems.at(-1) ?? "invàlida"}).`)
     if (r.machine && r.problems.length) problems.push(`Màquines CNC (${name}): ${r.problems.join("; ")}.`)
   }

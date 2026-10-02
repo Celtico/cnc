@@ -24,8 +24,14 @@ const TOOL_GROUPS: { id: string; label: string; match: (t: MachineTool) => boole
   { id: "other", label: "Agregats, palpadors i altres", match: (t) => t.kind === "aggregate" || t.kind === "probe" || t.kind === "other" },
 ]
 
-/** Columnes de la taula d'eines: codi · nom · Ø · fondària · posició. */
-const COLS = "52px minmax(0, 1fr) 56px 64px minmax(0, 96px)"
+/**
+ * Columnes de la taula d'eines: codi · nom · Ø · fondària · posició. Al mòbil, columnes estretes i sense «Posició» (va
+ * sota el nom): a 390 px el nom ha de tenir lloc.
+ */
+const COLS = { base: "40px minmax(0, 1fr) 36px 44px", md: "52px minmax(0, 1fr) 56px 64px minmax(0, 96px)" }
+const COL_GAP = { base: 2, md: 3 }
+const MD_ONLY = { base: "none", md: "block" }
+const BASE_ONLY = { base: "block", md: "none" }
 
 const where = (t: MachineTool) =>
   !t.mounted ? "no muntada" : t.spindles?.length ? `mandrí ${t.spindles.join(", ")}` : t.heads?.length ? `capçal ${t.heads.join(", ")}` : "—"
@@ -158,10 +164,13 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
         onAdd={() => pick("folder")}
         backLabel="Màquines CNC"
         detailMaxW="860px"
+        // Sense cap màquina, la llista ja ho diu (i la zona d'importar és a sobre): el detall no ho repeteix.
         empty={
-          <Text fontSize="sm" color="fg.muted">
-            {machines.length ? "Tria una màquina de la llista." : "Encara no hi ha cap màquina: importa-la de Maestro."}
-          </Text>
+          machines.length ? (
+            <Text fontSize="sm" color="fg.muted">
+              Tria una màquina de la llista.
+            </Text>
+          ) : undefined
         }
         detail={
           m && (
@@ -309,7 +318,7 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
               <SettingsGroup
                 icon={<LuFactory />}
                 title="Programes per tauler (nesting)"
-                summary={`marge ${machineNesting(m).edgeTrim} mm · separació Ø + ${machineNesting(m).spacingExtra} · martiri ${machineNesting(m).overcut} mm`}
+                summary={`marge ${machineNesting(m).edgeTrim} mm · separació Ø + ${String(machineNesting(m).spacingExtra).replace(".", ",")} · martiri ${String(machineNesting(m).overcut).replace(".", ",")} mm`}
               >
                 <FormRow label="Fresa del contorn" help="Contorns de les peces per fora quan cap regla de «Perfilar» no val per al gruix. Automàtica: la que diu «nesting» al nom o, si no, la més petita que travessa el tauler.">
                   <ChoiceChips<string>
@@ -405,12 +414,15 @@ function ToolsTable({ tools, onChange }: { tools: MachineTool[]; onChange: (t: M
               </Badge>
             </HStack>
             <Grid templateColumns="minmax(0, 1fr)" fontSize="sm" borderWidth="1px" rounded="md" overflow="hidden" bg="bg.panel">
-              <Grid templateColumns={COLS} columnGap={3} py={1} bg="bg.subtle" color="fg.muted" fontSize="xs">
+              <Grid templateColumns={COLS} columnGap={COL_GAP} py={1} bg="bg.subtle" color="fg.muted" fontSize="xs">
                 <Text px={2}>Codi</Text>
                 <Text>Nom</Text>
                 <Text textAlign="right">Ø</Text>
-                <Text textAlign="right">Fondària</Text>
-                <Text pe={2}>Posició</Text>
+                <Text textAlign="right" pe={{ base: 2, md: 0 }} title="Fondària útil">
+                  <Box as="span" display={BASE_ONLY}>Fond.</Box>
+                  <Box as="span" display={MD_ONLY}>Fondària</Box>
+                </Text>
+                <Text pe={2} display={MD_ONLY}>Posició</Text>
               </Grid>
               {list.map((t) => {
                 const on = open === t.code
@@ -418,12 +430,15 @@ function ToolsTable({ tools, onChange }: { tools: MachineTool[]; onChange: (t: M
                 return (
                   <Fragment key={t.code}>
                     <Box gridColumn="1 / -1" as="button" textAlign="left" cursor="pointer" borderTopWidth="1px" bg={on ? "wood.subtle" : undefined} _hover={{ bg: on ? "wood.subtle" : "bg.muted" }} onClick={() => setOpen(on ? null : t.code)} aria-expanded={on}>
-                      <Grid templateColumns={COLS} columnGap={3} alignItems="center" py={1.5} opacity={dim ? 0.55 : 1}>
-                        <Text fontFamily="mono" fontSize="xs" px={2}>{t.code}</Text>
-                        <Text truncate title={t.mslName ? `${t.name} · a l'MSL: ${t.mslName}` : t.name}>{t.name}{t.manual ? " ·  a mà" : ""}{isPlaceholderTool(t) ? " · falta el codi" : ""}</Text>
-                        <Text textAlign="right">{t.diameter}</Text>
-                        <Text textAlign="right">{t.maxDepth || "—"}</Text>
-                        <Text fontSize="xs" color="fg.muted" truncate pe={2}>{where(t)}</Text>
+                      <Grid templateColumns={COLS} columnGap={COL_GAP} alignItems="center" py={1.5} opacity={dim ? 0.55 : 1}>
+                        <Text fontFamily="mono" fontSize="xs" px={2} truncate>{t.code}</Text>
+                        <Box minW={0}>
+                          <Text truncate title={t.mslName ? `${t.name} · a l'MSL: ${t.mslName}` : t.name}>{t.name}{t.manual ? " · a mà" : ""}{isPlaceholderTool(t) ? " · falta el codi" : ""}</Text>
+                          <Text fontSize="xs" color="fg.muted" truncate display={BASE_ONLY}>{where(t)}</Text>
+                        </Box>
+                        <Text textAlign="right">{String(t.diameter).replace(".", ",")}</Text>
+                        <Text textAlign="right" pe={{ base: 2, md: 0 }}>{t.maxDepth ? String(t.maxDepth).replace(".", ",") : "—"}</Text>
+                        <Text fontSize="xs" color="fg.muted" truncate pe={2} display={MD_ONLY}>{where(t)}</Text>
                       </Grid>
                     </Box>
                     {on && (

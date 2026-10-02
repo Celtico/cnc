@@ -646,6 +646,10 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
         thickness: module.carcass.thickness,
         base: module.carcass.base,
         back: module.carcass.back,
+        // El fons igual que el del costat (encastat: retirada, material i gruix; si no, el mòdul nou seria diferent).
+        backMaterial: module.carcass.backMaterial,
+        backThickness: module.carcass.backThickness,
+        ...(module.carcass.backInsetSetback !== undefined ? { backInsetSetback: module.carcass.backInsetSetback } : {}),
       },
     }
     const modules = [...comp.modules]
@@ -653,8 +657,6 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
     setComp({ ...comp, modules })
     selectModule(m.id)
   }
-
-
 
   const warnings = build?.warnings ?? NO_WARNINGS
   // Al 3D també els elements sense nesting (ferro, pedra, vidre…).
