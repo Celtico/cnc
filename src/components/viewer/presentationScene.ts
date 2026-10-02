@@ -55,7 +55,8 @@ export const LIGHT_SPEC: Record<LightId, { key: string; keyIntensity: number; am
   daylight: { key: "#eef4ff", keyIntensity: 2, ambient: 0.3, env: 1.1, sky: "#dfeaff" },
 }
 
-export const DEFAULT_SCENE: PresentationScene = { floor: "oak", wall: WALLS[0]!.color, light: "studio", skirting: "white" }
+// Terra de foto (Poly Haven) per defecte; si el material no hi és, la mostra ràpida «oak».
+export const DEFAULT_SCENE: PresentationScene = { floor: "oak", wall: WALLS[0]!.color, light: "studio", skirting: "white", floorMaterial: "Parquet de roure (foto)" }
 
 const KEY = "mobles:presentation-scene"
 const EVENT = "mobles:presentation-scene-change"
