@@ -55,12 +55,12 @@ export function MachineRulesGroup({ m, onChange }: { m: Machine; onChange: (rule
           return (
             <Stack key={k} gap={2}>
               <FormRow label={`Gruixos ${k + 1}`}>
-                <HStack gap={2} align="center">
-                  <Box maxW="110px">
+                <HStack gap={2} align="center" wrap="wrap">
+                  <Box w="140px" flexShrink={0}>
                     <NumberField label="" ariaLabel="Gruix des de" value={row.min} min={0} max={200} step={1} onChange={(min) => put({ min })} />
                   </Box>
                   <Text fontSize="sm">–</Text>
-                  <Box maxW="110px">
+                  <Box w="140px" flexShrink={0}>
                     <NumberField label="" ariaLabel="Gruix fins a" value={row.max} min={0} max={200} step={1} onChange={(max) => put({ max })} />
                   </Box>
                   <IconButton size="xs" variant="ghost" aria-label="Treure aquests gruixos" title="Treure aquests gruixos" onClick={() => set({ profile: r.profile.filter((_, j) => j !== k) })}>
@@ -98,8 +98,8 @@ export function MachineRulesGroup({ m, onChange }: { m: Machine; onChange: (rule
 
       <FormSection title="Peces petites">
         <Text fontSize="sm" color="fg.muted">
-          Provisional (falta confirmar-ho amb el taller): és petita si algun costat fa menys de la mida o l'àrea és més petita. El contorn es fa en
-          passades de desbast (deixen material a baix i al costat) i una final.
+          Del taller: una peça és petita si l'àrea (o algun costat, si s'hi posa una mida) és més petita; el contorn es fa en passades de desbast
+          (deixen material a baix i al costat) i una final. Les grans, d'una passada.
         </Text>
         <NumRow label="Costat menor que" help="0 = no compta (només l'àrea)." value={r.small.maxSide} min={0} max={3000} step={10} onChange={(maxSide) => set({ small: { ...r.small, maxSide } })} />
         <NumRow label="Àrea menor que" suffix="m²" value={r.small.maxArea} min={0} max={6} step={0.01} onChange={(maxArea) => set({ small: { ...r.small, maxArea } })} />
@@ -107,13 +107,13 @@ export function MachineRulesGroup({ m, onChange }: { m: Machine; onChange: (rule
           const put = (patch: Partial<MachineRules["small"]["passes"][number]>) => set({ small: { ...r.small, passes: r.small.passes.map((x, j) => (j === k ? { ...x, ...patch } : x)) } })
           return (
             <FormRow key={k} label={`Passada ${k + 1}`} help="Material que deixa a baix (Z) i al costat (XY).">
-              <HStack gap={2} align="center">
+              <HStack gap={2} align="center" wrap="wrap">
                 <Text fontSize="sm">Z</Text>
-                <Box maxW="110px">
+                <Box w="140px" flexShrink={0}>
                   <NumberField label="" ariaLabel={`Passada ${k + 1}: Z`} value={p.z} min={0} max={20} step={0.1} onChange={(z) => put({ z })} />
                 </Box>
                 <Text fontSize="sm">XY</Text>
-                <Box maxW="110px">
+                <Box w="140px" flexShrink={0}>
                   <NumberField label="" ariaLabel={`Passada ${k + 1}: XY`} value={p.xy} min={0} max={10} step={0.1} onChange={(xy) => put({ xy })} />
                 </Box>
                 <IconButton size="xs" variant="ghost" aria-label="Treure la passada" title="Treure la passada" onClick={() => set({ small: { ...r.small, passes: r.small.passes.filter((_, j) => j !== k) } })}>
