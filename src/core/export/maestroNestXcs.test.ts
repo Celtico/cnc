@@ -127,7 +127,7 @@ describe("nesting per a la CNC", () => {
     expect(tool.mslName).toBe("12mm diamant nesting")
     const panels = Array.from({ length: 12 }, (_, i) => panel({ id: `p${i}`, length: 500 + i * 20, width: 300 }))
     const plan = cncNestOptions(panels, M2, DEFAULT_NEST_OPTIONS)
-    expect(plan.spacing).toBe(tool.diameter + 1)
+    expect(plan.spacing).toBe(tool.diameter + 2)
     expect(plan.options.margin).toBe(10)
     const n = nest(panels, plan.options)
     expect(validateNesting(n)).toEqual([])

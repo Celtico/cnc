@@ -113,9 +113,9 @@ describe("tria de l'eina per la regla", () => {
     expect(rp.profileTool(30, 10, 30.3)).toBeUndefined()
     expect(rp.notes).toEqual([])
   })
-  it("nesting: contorns d'un tauler de 30 amb la de 14 i separació 14 + 1; el de 19 amb la de 12", () => {
+  it("nesting: contorns d'un tauler de 30 amb la de 14 i separació 14 + 2 = 16 (del taller); el de 19 amb la de 12", () => {
     const x30 = nestOf([panel({ thickness: 30 })], M)
-    expect(x30.spacing).toBe(15)
+    expect(x30.spacing).toBe(16)
     const outer = x30.sheets[0]!.ops.find((o) => o.stage === "outer")!
     expect(outer.tool).toBe("E814")
     expect(x30.sheets[0]!.text).toContain(`"14mm diamant nesting"`)

@@ -220,7 +220,7 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   `mobles:xcs-per-piece`): `core/export/maestroNestXcs.ts` (`toMaestroNestXcs`, `cncNestOptions`, `toBoard`, `orderFeats`). Un
   `T01_<material>_<gruix>.xcs` per tauler: **una peça de treball = el tauler** (com el `Proyecto1.pgmx` del taller; no les
   peces «contemporànies» de §3.11 p129) i tot en coordenades del tauler. `nest()` amb separació = Ø de la fresa de nesting
-  + `spacingExtra` i marge `edgeTrim` (`Machine.nesting`, opcional, `machineNesting`: 10 mm, Ø + 1, martiri 0,3 mm, peces
+  + `spacingExtra` i marge `edgeTrim` (`Machine.nesting`, opcional, `machineNesting`: 10 mm, Ø + 2 (del taller: 14 amb la fresa de 12, 16 amb la de 14), martiri 0,3 mm, peces
   petites al final; Preferències › Màquines CNC); la pantalla Nesting (serra) no canvia. Gir 0/90 (antihorari, sense
   mirall, = `localToBoard`). Només cara A: forats → ranures (sempre fresa) → talls per dins → contorns per fora (gruix +
   martiri), per eina i veí més proper, les peces petites al final. Forats de cantell, cara B («fer a la perforadora /
@@ -1036,6 +1036,13 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     pestanyes 3D · Alçat · Foto ja són a dalt del visor.
   - **Base del mòdul** (Estructura): a terra · sòcol · potes · sense base. Avís `hanging` si
     un penjat té el fons prim.
+  - **Fons del mòdul** (Estructura, `Carcass.back`): en ranura · cargolat darrere · **encastat** · sense. Encastat
+    (`buildInsetBack`): ocupa la llum interior (entre laterals, base i tapa; on falta una peça, fins a fora; parets buides:
+    entre les pells de dins), enrasat al darrere o retirat `backInsetSetback` (Fusteria, «Retirada del fons»); pot ser del
+    mateix tauler que el cos (veta vertical, cantell només on no toca res). S'uneix com un prestatge fix: 3 espigues per
+    costat (`threeAlong`, `endOffset`) al cantell del fons i de cara a laterals, base i tapa (no al tauler de taula ni on
+    la tapa amb ranura d'aire no arriba); amb menys de 15 mm, sense espigues i avís `back-inset` (cargolar-lo). L'interior
+    comença a `backInnerZ` = retirada + gruix i la filera System 32 de darrere es mesura des del darrere del fons.
   - **Posició: dues files, com a les cuines** — *A terra* (baixos) i *Penjats a la paret*
     (alts, `base.kind = "wall"` amb l'alçada des del terra). Dins de cada fila, l'ordre és el
     de l'arbre (d'esquerra a dreta) i cada mòdul va al costat de l'anterior de la seva fila
@@ -1161,6 +1168,7 @@ Accions principals: icona + text.
 | Panell | Mides exteriors · Taulers · Interior i front · Fusteria · Adaptar a la imatge | `LuMoveDiagonal` · `LuSquareStack` · `LuLayoutPanelLeft` · `LuHammer` · `LuCamera` |
 | Panell | Composició (mòduls i objectes de referència) · Compartiments (alçat) | `LuLayoutDashboard` · `LuLayoutPanelLeft` |
 | Inspector | Estructura (base, fons, tapa, laterals) · Front · Pare | `LuFrame` · `LuDoorClosed` · `LuArrowUp` |
+| Inspector | Fons en ranura · Cargolat darrere · Encastat · Sense fons | `LuLayers2` · `LuDrill` · `LuInspectionPanel` · `LuSquareDashed` |
 | Inspector | Resum del moble · Posició | `LuBox` · `LuMove` |
 | Inspector | Anterior · Següent · Accions de la selecció (menú) | `LuChevronLeft` · `LuChevronRight` · `LuEllipsis` |
 | Preferències | Tema (dia/nit/sistema) · Color principal | `LuSunMoon` (`LuSun` · `LuMoon` · `LuMonitor`) · `LuCheck` a la mostra triada |

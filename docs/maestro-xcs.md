@@ -218,7 +218,7 @@ Per peça (el d'abans; `mobles:xcs-per-piece`).
   màquina. La pantalla Nesting (serra) no canvia.
 - Opcions per màquina (`Machine.nesting`, opcional; `machineNesting` amb `DEFAULT_MACHINE_NESTING`; Preferències ›
   Màquines CNC › «Programes per tauler (nesting)»): fresa del contorn (automàtica: la que diu «nesting» al nom —la
-  «12mm diamant nesting» del .pgmx—, si no la més petita que travessa), marge del tauler **10 mm**, separació **Ø + 1**,
+  «12mm diamant nesting» del .pgmx—, si no la més petita que travessa), marge del tauler **10 mm**, separació **Ø + 2** (del taller: 14 mm amb la de 12, 16 amb la de 14),
   **martiri 0,3 mm** (contorns i talls passants fins a gruix + 0,3), peces petites **al final** (o al principi). Una
   reimportació les conserva.
 - El marge és la vora que no s'aprofita: la fresa del contorn d'una peça arrambada al marge hi entra (fins a Ø).
@@ -273,7 +273,7 @@ emissió compartida a `core/export/maestroXcs.ts` (`passDepths`, `grooveStrategy
   final (o al principi amb «Peces petites: al principi»).
 - **Rampa**: el contorn comença al **mig del costat recte més llarg** (`rampStart`, s'hi afegeix un punt) i tanca amb
   aquell costat (`ClosePolyline`): l'entrada lineal tangent cau sobre el mateix tall i no surt cap a les peces del
-  costat (la separació és Ø + 1). Llargada = la de la regla, com a molt la meitat d'aquell costat; sense cap costat
+  costat (la separació és Ø + 2). Llargada = la de la regla, com a molt la meitat d'aquell costat; sense cap costat
   recte de 2 × Ø (cercles), sense rampa. Per peça, sense rampa.
 - Màquines desades sense `rules`: en carregar les preferències agafen les de per defecte (`withMachineRules`, additiu
   i idempotent); una reimportació (`mergeReimport`) les conserva; «Les del taller» les torna als valors per defecte.
@@ -333,5 +333,5 @@ B (taula de dalt); el paràmetre `tool` és el nom de l'eina; les broques del ta
     (`SetSuctionCupPosition` §3.10 p117-128 no s'aplica a una taula de martiri) o un altre `TableOptions`?
 17. **Etiquetes**: imprimeixen etiquetes al taller abans de descarregar? Amb quin format (ref + centre ja surten
     com a comentaris)?
-18. **Marge i separació**: 10 mm de marge i Ø + 1 entre peces els van bé? Prefereixen el mòdul de nesting del Maestro
+18. **Marge i separació**: 10 mm de marge els van bé? (La separació ja és la del taller: Ø + 2.) Prefereixen el mòdul de nesting del Maestro
     (§4 p134, CSV + .pgmx per peça)?

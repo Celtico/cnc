@@ -7,7 +7,7 @@ import { useState } from "react"
 import { ProfileEditor } from "./ProfileEditor"
 import { PRESETS, matchPreset } from "./profilePresets"
 import { LuCircle, LuPencilRuler, LuRectangleHorizontal, LuSquircle } from "react-icons/lu"
-import { LuArrowDownToLine, LuDrill, LuGrid3X3, LuLayers2, LuPanelBottom, LuPanelTop, LuSquareDashed, LuSquare, LuSquareDashedBottom, LuSquareSquare, LuSquareStack, LuTable, LuTriangleRight, LuWind } from "react-icons/lu"
+import { LuArrowDownToLine, LuDrill, LuGrid3X3, LuInspectionPanel, LuLayers2, LuPanelBottom, LuPanelTop, LuSquareDashed, LuSquare, LuSquareDashedBottom, LuSquareSquare, LuSquareStack, LuTable, LuTriangleRight, LuWind } from "react-icons/lu"
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/MaterialSelect"
 
@@ -78,6 +78,7 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
             options={[
               { value: "groove", label: "En ranura", icon: LuLayers2, hint: "Fons encaixat en una ranura" },
               { value: "screwed", label: "Cargolat darrere", icon: LuDrill, hint: "Fons cargolat per darrere" },
+              { value: "inset", label: "Encastat", icon: LuInspectionPanel, hint: "Fons encastat entre laterals, tapa i base, amb espigues (pot ser del mateix tauler)" },
               { value: "none", label: "Sense fons", icon: LuSquareDashed },
             ]}
             onChange={(back) => set({ back })}
@@ -290,6 +291,7 @@ export function JoineryForm({ module, onChange }: { module: Module; onChange: (m
       <NumRow label="Joc entre fronts" value={module.fronts.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => onChange({ ...module, fronts: { ...module.fronts, betweenGap } })} />
       <NumRow label="Retranqueig prest." value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set({ shelfSetback })} />
       {c.back === "groove" && <NumRow label="Ranura del fons" value={c.backSetback} min={0} max={60} step={1} onChange={(backSetback) => set({ backSetback })} help="Distància al cantell posterior" />}
+      {c.back === "inset" && <NumRow label="Retirada del fons" value={c.backInsetSetback ?? 0} min={0} max={60} step={1} onChange={(backInsetSetback) => set({ backInsetSetback })} help="Distància del fons encastat al cantell posterior (0 = enrasat)" />}
       <NumRow label="Cassoleta (Ø)" value={module.hardware.hinge.cupDiameter} min={20} max={40} step={1} onChange={(cupDiameter) => onChange({ ...module, hardware: { ...module.hardware, hinge: { ...module.hardware.hinge, cupDiameter } } })} />
       <NumRow label="Pas System 32" value={module.hardware.system32.pitch} min={16} max={64} step={1} onChange={(pitch) => onChange({ ...module, hardware: { ...module.hardware, system32: { ...module.hardware.system32, pitch } } })} />
       <NumRow label="Espiga (Ø)" value={module.hardware.dowel.diameter} min={5} max={12} step={1} onChange={(diameter) => onChange({ ...module, hardware: { ...module.hardware, dowel: { ...module.hardware.dowel, diameter } } })} />

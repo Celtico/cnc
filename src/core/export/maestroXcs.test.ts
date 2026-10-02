@@ -5,7 +5,7 @@ const { readFileSync } = (await import(/* @vite-ignore */ fsMod)) as { readFileS
 import { buildComposition } from "../build/buildComposition"
 import { machineFromContext } from "../machine/maestro"
 import { bytes, read } from "../machine/testContext"
-import { BUILTIN_TEMPLATES, STORE_TEMPLATES, parseSettings, type BPt, type Machine, type MachineRules, type Panel } from "../model"
+import { BUILTIN_TEMPLATES, STORE_TEMPLATES, defaultModule, parseSettings, type BPt, type Machine, type MachineRules, type Panel } from "../model"
 import { INSPIRED_TEMPLATES } from "../model/inspiredTemplates"
 import { unzip, zipStore } from "../file/zip"
 import { applyPgmx, parsePgmxXml } from "../machine/pgmx"
@@ -384,5 +384,19 @@ describe("preferències v10", () => {
     expect(r.migrated).toBe(true)
     const two = parseSettings({ version: 10, machines: [{ ...M, id: "a", isDefault: true }, { ...M, id: "b", isDefault: true }] })
     expect(two.settings.machines.map((m) => m.isDefault)).toEqual([true, false])
+  })
+})
+
+describe("fons encastat (del mateix tauler, amb espigues)", () => {
+  it("el programa del fons fa els 12 forats de cantell i laterals, base i tapa, els de cara", () => {
+    const m = defaultModule("m", "M", { width: 600, height: 720, depth: 560, back: "inset", backMaterial: "Melamina 19", backThickness: 19 })
+    const { panels } = buildComposition({ modules: [m], references: [] })
+    const x = toMaestroXcs(panels, M, { project: "Prova", date: new Date("2026-10-02") })
+    const back = panels.find((p) => p.role === "back")!
+    expect(back.holes.filter((h) => h.face === "edge")).toHaveLength(12)
+    expect(x.warnings.filter((w) => w.includes(`(${back.label})`))).toEqual([])
+    const all = x.files.map((f) => f.text).join("\n")
+    // 12 espigues al fons + les de les altres peces de cantell (tapa i base amb els laterals).
+    expect((all.match(/ForatCantell_/g) ?? []).length).toBe(panels.reduce((n, p) => n + p.holes.filter((h) => h.face === "edge").length, 0))
   })
 })

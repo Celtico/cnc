@@ -265,3 +265,41 @@ describe.skipIf(!existsSync(TALLER))("cassoleta Ø35 × 13 en tauler de 12: el t
     expect((sol.mach ?? []).map((m) => [Math.round(m.r * 20) / 10, m.depth])).toEqual([[35, 11]])
   })
 })
+
+describe.skipIf(!existsSync(TALLER))("fons encastat del mateix tauler: el taller el llegeix (rol back, espigues de cantell i de cara)", async () => {
+  const { assemble } = (await import(/* @vite-ignore */ TALLER)) as { assemble: Assemble }
+  const insetOf = (comp: ReturnType<typeof cabinetToComposition>) => ({
+    ...comp,
+    modules: comp.modules.map((m) => ({ ...m, carcass: { ...m.carcass, back: "inset" as const, backMaterial: m.carcass.material, backThickness: m.carcass.thickness } })),
+  })
+  const comps = {
+    caixa: insetOf(cabinetToComposition(DEFAULT_CABINET)),
+    calaixera: insetOf(BUILTIN_TEMPLATES.find((t) => t.name.startsWith("Calaixera"))!.make()),
+  }
+  for (const [name, comp] of Object.entries(comps)) {
+    it(name, () => {
+      const ps = buildComposition(comp).panels
+      const c = toTopsolidCsv(ps, nest(ps, DEFAULT_NEST_OPTIONS), { project: "X" })
+      const s = toStep(ps, { name: "X" })
+      expect(s.warnings).toEqual([])
+      const d = assemble(c.text, s.text, "X")
+      expect(d.pieces).toHaveLength(ps.length)
+      expect(d.pieces.filter((p) => p.match === "none")).toEqual([])
+      for (const piece of d.pieces) {
+        const p = ps.find((x) => x.id === c.rows.find((r) => r.ref === piece.ref)!.panelId)!
+        const sol = d.solids[piece.solid]!
+        expect((sol.mach ?? []).length, `${p.id}: forats de cara`).toBe(p.holes.filter((h) => h.face !== "edge").length)
+        expect((sol.edges ?? []).length, `${p.id}: forats de cantell`).toBe(p.holes.filter((h) => h.face === "edge").length)
+      }
+      const backs = d.pieces.filter((p) => p.name === "trassera")
+      expect(backs.length).toBeGreaterThan(0)
+      for (const b of backs) {
+        expect(b.r3d).toBe("back")
+        // El rol del sòlid el taller el dedueix només del gruix (≤ 12 = back): un fons de 19 hi surt
+        // com a «front», igual que un fons cargolat de 19. La peça (pel nom) sí que és «back».
+        expect(b.thick).toBe(19)
+        expect((d.solids[b.solid]!.edges ?? []).length).toBe(12)
+      }
+    })
+  }
+})

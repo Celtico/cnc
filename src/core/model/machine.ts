@@ -117,7 +117,9 @@ export const defaultMachineRules = (): MachineRules => ({
 export const machineRules = (m: Pick<Machine, "rules">): MachineRules => m.rules ?? defaultMachineRules()
 
 /** Màquina amb regles (migració en carregar: additiu i idempotent; les que ja en tenen no es toquen). */
-export const withMachineRules = <M extends Pick<Machine, "rules">>(m: M): M => {
+export const withMachineRules = <M extends Pick<Machine, "rules"> & { nesting?: Machine["nesting"] }>(m0: M): M => {
+  // Separació provisional d'abans (Ø + 1) → la del taller (Ø + 2); una d'editada es queda.
+  const m = m0.nesting?.spacingExtra === 1 ? { ...m0, nesting: { ...m0.nesting, spacingExtra: 2 } } : m0
   if (!m.rules) return { ...m, rules: defaultMachineRules() }
   // El llindar provisional d'abans (costat < 300 mm o < 0,1 m²) passa al del taller (< 0,8 m²); un d'editat es queda.
   const s = m.rules.small
@@ -204,7 +206,8 @@ export const DEFAULT_HEADER: Machine["header"] = { executionFields: "AD", repeti
 export type MachineNesting = NonNullable<Machine["nesting"]>
 
 /** Opcions de nesting per defecte: marge 10, separació Ø + 1, martiri 0,3 mm, peces petites al final. */
-export const DEFAULT_MACHINE_NESTING: MachineNesting = { edgeTrim: 10, spacingExtra: 1, overcut: 0.3, smallParts: "last" }
+// Separació del taller: Ø + 2 (14 mm amb la fresa de 12, 16 amb la de 14).
+export const DEFAULT_MACHINE_NESTING: MachineNesting = { edgeTrim: 10, spacingExtra: 2, overcut: 0.3, smallParts: "last" }
 
 /** Opcions de nesting de la màquina (amb els valors per defecte). */
 export const machineNesting = (m: Pick<Machine, "nesting">): MachineNesting => ({ ...DEFAULT_MACHINE_NESTING, ...m.nesting })

@@ -43,6 +43,7 @@ export interface BuildWarning {
     | "drawer-no-slide"
     | "grille-open-ratio"
     | "back-groove"
+    | "back-inset"
     | "cable-hole"
     | "ref-cut"
     | "mitre"
@@ -128,7 +129,8 @@ function derive(m: Module): Derived {
   const { width: W, height: H, depth: D } = c
   const sideDepth = c.back === "screwed" ? D - tb : D
   const sideZ0 = D - sideDepth
-  const backInnerZ = c.back === "groove" ? c.backSetback + tb : c.back === "screwed" ? tb : 0
+  // Encastat: entre laterals, a `backInsetSetback` del darrere; l'interior comença a la seva cara de davant.
+  const backInnerZ = c.back === "groove" ? c.backSetback + tb : c.back === "screwed" ? tb : c.back === "inset" ? (c.backInsetSetback ?? 0) + tb : 0
   const hasBase = c.base.kind !== "open"
   const hasTop = c.top.kind !== "none"
   const baseY = c.base.kind === "plinth" ? c.base.height : 0
@@ -573,6 +575,7 @@ class Builder {
     const { m, d } = this
     const c = m.carcass
     const { interior } = d
+    if (c.back === "inset") return this.buildInsetBack()
     if (c.back === "screwed") {
       // Cargolat per darrere, els seus quatre cantells es veuen de costat i de dalt. Si és
       // del mateix tauler que el cos (no un DM de fons), es cantegen com la resta.
@@ -594,6 +597,54 @@ class Builder {
     this.add(
       this.basePanel("back", "trassera", "Fons", "back", xR - xL, yT - yB, d.tb, c.backMaterial, "none", { ...NO_EDGES }, placement([xL, yB, c.backSetback], X, Y, Z, neg(Z))),
     )
+  }
+
+  /**
+   * Fons encastat: ocupa la llum interior (entre laterals, base i tapa; on falta una peça, fins a
+   * fora del mòdul), a `backInsetSetback` del cantell posterior. S'uneix com un prestatge fix:
+   * espigues al cantell del fons i forats de cara a laterals, base i tapa (tres per costat, a
+   * `endOffset` dels extrems). Amb un fons de menys de 15 mm no hi caben espigues: avís.
+   */
+  private buildInsetBack(): void {
+    const { m, d } = this
+    const c = m.carcass
+    const { interior } = d
+    const z0 = c.backInsetSetback ?? 0
+    // Del mateix tauler que el cos: es veu per darrere; veta vertical i cantell on no toca res.
+    const visible = c.backMaterial === c.material
+    const eb = visible
+      ? edges(...(c.sides.left ? [] : (["left"] as const)), ...(c.sides.right ? [] : (["right"] as const)), ...(d.hasBase ? [] : (["bottom"] as const)), ...(d.hasTop ? [] : (["top"] as const)))
+      : { ...NO_EDGES }
+    const back = this.add(
+      this.basePanel("back", "trassera", "Fons", "back", interior.x1 - interior.x0, interior.y1 - interior.y0, d.tb, c.backMaterial, visible ? "y" : "none", eb, placement([interior.x0, interior.y0, z0], X, Y, Z, neg(Z))),
+    )
+    if (d.tb < 15) {
+      this.warnings.push({ code: "back-inset", message: `Fons encastat de ${d.tb} mm: massa prim per a espigues al cantell (calen 15 mm o més). Fixa'l amb cargols des dels laterals, la base i la tapa, o posa'l en ranura.`, panelId: back.id })
+      return
+    }
+    const dw = m.hardware.dowel
+    const zMid = z0 + d.tb / 2
+    const rad = dw.diameter / 2
+    // Només els punts que cauen dins de la peça que continua (la tapa amb ranura d'aire no arriba al fons).
+    const join = (through: Panel, pts: Vec3[]) =>
+      dowelJoint(back, through, pts.filter((w) => {
+        const l = toLocal(through, w)
+        return l[0] >= rad && l[0] <= through.length - rad && l[1] >= rad && l[1] <= through.width - rad
+      }), dw)
+    for (const v of this.verticals) {
+      if (!v.outer) continue
+      const xFace = near(v.xR, interior.x0) ? v.xR : near(v.xL, interior.x1) ? v.xL : null
+      if (xFace === null) continue
+      join(v.panel, threeAlong(interior.y0, interior.y1, dw.endOffset).map((y): Vec3 => [xFace, y, zMid]))
+    }
+    for (const h of this.horizontals) {
+      if (!h.outer) continue
+      // El tauler de taula es fixa per sota amb cargols (no porta espigues).
+      if (d.tableTop && h.panel.id === "top") continue
+      const yFace = d.hasBase && near(h.yTop, interior.y0) ? h.yTop : d.hasTop && near(h.yBottom, interior.y1) ? h.yBottom : null
+      if (yFace === null) continue
+      join(h.panel, threeAlong(interior.x0, interior.x1, dw.endOffset).map((x): Vec3 => [x, yFace, zMid]))
+    }
   }
 
   /** Y de dalt de la ranura del fons: dins de la tapa (g), si la tapa porta ranura. */
@@ -727,9 +778,12 @@ class Builder {
     const s = this.m.hardware.system32
     const ys = system32Ys(rect.y0, rect.y1, s.edgeOffset, s.pitch)
     const xFace = side === "left" ? v.xR : v.xL
+    // Fons encastat retirat: la filera de darrere es mesura des del darrere del fons.
+    const c = this.m.carcass
+    const zRear = c.back === "inset" ? Math.max(v.zRear, c.backInsetSetback ?? 0) : v.zRear
     for (const y of ys) {
       addFaceHole(v.panel, [xFace, y, v.zFront - s.edgeOffset], { diameter: s.diameter, depth: s.depth, tag: "system32" })
-      addFaceHole(v.panel, [xFace, y, v.zRear + s.edgeOffset], { diameter: s.diameter, depth: s.depth, tag: "system32" })
+      addFaceHole(v.panel, [xFace, y, zRear + s.edgeOffset], { diameter: s.diameter, depth: s.depth, tag: "system32" })
     }
     return ys
   }

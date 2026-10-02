@@ -111,7 +111,11 @@ export const CarcassSchema = z.object({
   backMaterial: z.string(),
   backThickness: mm.min(3).max(40),
   base: BaseSchema,
-  back: z.enum(["groove", "screwed", "none"]),
+  /**
+   * Fons: en ranura, cargolat per darrere, encastat (entre laterals, tapa i base, amb espigues:
+   * pot ser del mateix tauler que el cos) o sense.
+   */
+  back: z.enum(["groove", "screwed", "inset", "none"]),
   top: TopSchema,
   sides: z.object({ left: z.boolean(), right: z.boolean() }),
   /**
@@ -134,6 +138,8 @@ export const CarcassSchema = z.object({
   tableTop: z.object({ overhang: mm.min(0).max(1000), shape: z.array(ProfileNodeSchema).min(3).optional() }).optional(),
   // Fusteria
   backSetback: mm.min(0).max(60),
+  /** Fons encastat: distància del cantell posterior dels laterals al fons (0 = enrasat). */
+  backInsetSetback: mm.min(0).max(60).optional(),
   grooveDepth: mm.min(3).max(15),
   backClearance: mm.min(0).max(4),
   shelfSetback: mm.min(0).max(100),
