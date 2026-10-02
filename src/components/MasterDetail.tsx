@@ -94,7 +94,7 @@ export function MasterDetail({
     }
   }
 
-  const rows = (g: MasterGroup) => (
+  const rows = (g: MasterGroup, withHint = true) => (
     <Stack gap={1}>
       <Box borderWidth="1px" rounded="lg" overflow="hidden" bg="bg.panel">
               {g.items.map((it, i) => {
@@ -142,7 +142,7 @@ export function MasterDetail({
                 )
               })}
       </Box>
-      {g.hint && (
+      {withHint && g.hint && (
         <Text fontSize="xs" color="fg.subtle" px={1}>
           {g.hint}
         </Text>
@@ -195,19 +195,27 @@ export function MasterDetail({
           {visibleGroups.map((g) => (
             <Accordion.Item key={g.id} value={g.id}>
               <Accordion.ItemTrigger cursor="pointer" borderBottomWidth="1px" rounded="none" px={1}>
-                <HStack flex={1} gap={2}>
-                  <Text fontWeight="semibold" fontSize="sm">
-                    {g.label}
-                  </Text>
-                  <Text fontSize="xs" color="fg.muted">
-                    {g.items.length}
-                  </Text>
-                </HStack>
+                <Stack flex={1} gap={0} minW={0} textAlign="left">
+                  <HStack gap={2}>
+                    <Text fontWeight="semibold" fontSize="sm">
+                      {g.label}
+                    </Text>
+                    <Text fontSize="xs" color="fg.muted">
+                      {g.items.length}
+                    </Text>
+                  </HStack>
+                  {/* A l'acordió, l'explicació del grup va a la capçalera (es veu també tancat). */}
+                  {g.hint && (
+                    <Text fontSize="xs" color="fg.muted" fontWeight="normal">
+                      {g.hint}
+                    </Text>
+                  )}
+                </Stack>
                 <Accordion.ItemIndicator />
               </Accordion.ItemTrigger>
               <Accordion.ItemContent>
                 <Accordion.ItemBody px={0} pt={2}>
-                  {rows(g)}
+                  {rows(g, false)}
                 </Accordion.ItemBody>
               </Accordion.ItemContent>
             </Accordion.Item>

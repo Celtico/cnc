@@ -891,7 +891,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`useSessionString`). Les referències creuades als textos diuen «Preferències › <títol de la pàgina>».
 - **Llista i detall** (`components/MasterDetail`: llista agrupada amb mostra; cercador, categories i «Afegir» (només icona)
   en una fila; `head` = títol de la pàgina a dalt de la llista —`PaneHeadContext` a les pàgines `wide`—; `footer` = sota el
-  detall) a Materials, Objectes de referència i Màquines CNC. **Materials**: categories en **acordió** (`collapsible`, el mateix `Accordion` animat i amb filet que el `MaterialSelect`, per decisió de
+  detall) a Materials, Objectes de referència i Màquines CNC. **Materials**: categories en **acordió** (`collapsible`, el mateix `Accordion` animat i amb filet que el `MaterialSelect`, amb per a què serveix cada categoria sota el nom —Taulers i Fons: per al nesting; Simulació: decoratius per a objectes i ambients—, per decisió de
   l'usuari, sense el menú de categories: per defecte només és obert el grup del material triat, la cerca obre els que tenen
   resultats, es recorda durant la sessió; un material «En blanc» va a la categoria del que es mira); «Per defecte als mòduls nous» sota el detall
   d'un tauler o d'un fons (`DefaultPick`); a la llista, `MaterialThumb` i «Acabat · gruixos · cantell»; detall amb la **mostra a escala real a tota

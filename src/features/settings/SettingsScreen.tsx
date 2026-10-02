@@ -373,6 +373,12 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
 }
 
 /** Clau de l'element obert a les pàgines de llista i detall (per saber quin «Tornar» es veu). */
+/** Per a què serveix cada categoria (sota el nom, a la llista de Materials). */
+const MATERIAL_LIST_HINTS: Record<MaterialCategory, string> = {
+  board: "Materials per al nesting: es tallen a la CNC (cossos, fronts, taulells).",
+  back: "Materials per al nesting: taulers prims per als fons.",
+  sim: "Materials decoratius per als objectes i els ambients: no es tallen.",
+}
 const DETAIL_KEYS = { materials: "mobles:settings-material", references: "mobles:settings-ref", machines: "mobles:settings-machine" } as const
 
 /** Categories dels apartats de Preferències. */
@@ -733,7 +739,8 @@ function MaterialsList({ materials, onChange, onRename, onDelete, footer }: { ma
       groups={MATERIAL_CATEGORIES.map((c) => ({
         id: c.id,
         label: c.label,
-        // L'explicació de cada categoria és al detall (Categoria), no sota cada grup de la llista.
+        // Sota el nom de la categoria, per a què serveix (a l'acordió es veu tancat).
+        hint: MATERIAL_LIST_HINTS[c.id],
         items: materials
           .filter((x) => materialCategory(x) === c.id && (!q || x.name.toLowerCase().includes(q)))
           .map((x) => ({ id: x.id, lead: <MaterialThumb m={x} />, title: x.name, subtitle: materialSummary(x) })),
