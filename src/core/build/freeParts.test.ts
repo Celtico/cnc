@@ -211,3 +211,17 @@ describe("peça que talla travessant de costat", () => {
     expect(Math.abs(sc.dir[1])).toBe(400)
   })
 })
+
+describe("cantell als quatre costats amb osques d'encaix", () => {
+  const side = part({ id: "side", orient: "side", w: 300, h: 600 })
+  const shelf = (edged: boolean) => part({ id: "shelf", orient: "flat", w: 400, h: 300, y: 300, edged })
+  it("avisa que no es pot folrar a les pestanyes", () => {
+    const w = buildComposition(comp([side, shelf(true)])).warnings.filter((x) => x.code === "edge-notch")
+    expect(w.map((x) => x.partId)).toEqual(["shelf"])
+    expect(w[0]!.message).toMatch(/folrar no és factible/)
+  })
+  it("sense cantell o sense osques, cap avís", () => {
+    expect(buildComposition(comp([side, shelf(false)])).warnings.some((x) => x.code === "edge-notch")).toBe(false)
+    expect(buildComposition(comp([part({ id: "a", orient: "front", w: 400, h: 300, edged: true })])).warnings.some((x) => x.code === "edge-notch")).toBe(false)
+  })
+})

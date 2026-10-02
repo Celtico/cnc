@@ -44,7 +44,8 @@ export async function saveProjectCamera(id: number, camera: CameraPose): Promise
     .where("id")
     .equals(id)
     .modify((p) => {
-      if (p.composition) p.composition = { ...p.composition, camera }
+      // Els antics només amb `params`: la composició que se'n fa en llegir-los (com `compositionOf`).
+      p.composition = { ...(p.composition ?? compositionOf(p)), camera }
     })
 }
 

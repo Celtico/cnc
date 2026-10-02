@@ -113,6 +113,9 @@ function recessedPlinth(mat: string, x0: number, z0: number, w: number, d: numbe
   ]
 }
 
+/** Llarg útil del tauler més gran (2800 − 2 × 10 de marge). */
+const MAX_BOARD_LENGTH = 2780
+
 /**
  * Llit de plataforma: capçal (CNC o entapissat) a la paret, plataforma de tauler sobre un sòcol enretirat (flota) i
  * matalàs de referència. Opcionalment, prestatges volats al capçal com a tauletes.
@@ -123,10 +126,18 @@ function platformBed(o: { matW: number; matL: number; mat: string; headMat: stri
   const H = o.plinthH ?? 260
   const x0 = (o.headW - W) / 2
   const z0 = o.headT
-  const head = o.upholstered ? M("Capçal entapissat", "front", o.headMat, o.headW, o.headH, o.headT, 0, 0, 0) : P("Capçal", "front", o.headMat, o.headW, o.headH, o.headT, 0, 0, 0)
+  // Capçal de CNC més llarg que el tauler útil (2780): dues fulles amb junta al centre.
+  const leaves = !o.upholstered && o.headW > MAX_BOARD_LENGTH ? 2 : 1
+  const leafW = o.headW / leaves
+  const head = o.upholstered
+    ? [M("Capçal entapissat", "front", o.headMat, o.headW, o.headH, o.headT, 0, 0, 0)]
+    : leaves === 1
+      ? [P("Capçal", "front", o.headMat, o.headW, o.headH, o.headT, 0, 0, 0)]
+      : [P("Capçal esquerre", "front", o.headMat, leafW, o.headH, o.headT, 0, 0, 0, "Capçal"), P("Capçal dret", "front", o.headMat, leafW, o.headH, o.headT, leafW, 0, 0, "Capçal")]
   const parts: FreePart[] = [
-    head,
-    P("Plataforma", "flat", o.mat, W, L, 30, x0, H, z0),
+    ...head,
+    // Veta al llarg del llit (v): així els 2060 van pel costat de 2800 del tauler.
+    { ...P("Plataforma", "flat", o.mat, W, L, 30, x0, H, z0), grain: "v" },
     ...recessedPlinth(o.mat, x0 + 180, z0 + 150, W - 360, L - 330, H),
   ]
   if (o.shelves)
@@ -393,7 +404,7 @@ const ARQ: PieceDef[] = [
       reference: "John Pawson (bancs d'obra), Vincent Van Duysen",
       language: "Moble com a part de l'arquitectura: un sòcol habitable",
       geometry: "Prisma llarg i baix",
-      proportions: "2800 × 420 × 450 (1:6,7): horitzontal pur",
+      proportions: "2700 × 420 × 450 (1:6,4): horitzontal pur; la tapa d'una peça cap al tauler de 2800",
       materials: "Roure; també estuc o pedra a joc amb la paret",
       finishes: "Oli blanc",
       combination: "Un sol material",
@@ -409,7 +420,7 @@ const ARQ: PieceDef[] = [
       photos: [F("03-Lounge-Douglas-Classic-Home-Farm-UK-John-Pawson-Photographer-Claus-Troelsgaard-John-Pawson-Furniture-Collection-04-PR.jpg")],
     },
     make: () =>
-      B.one(B.box("Moble TV", { w: 2800, h: 420, d: 450, mat: OAK, base: B.plinth(80, 60), joint: "mitre", inset: true, push: true, hollow: 50 }, B.v([800, "auto", 800], [B.drawers(1), B.open(0), B.drawers(1)]))),
+      B.one(B.box("Moble TV", { w: 2700, h: 420, d: 450, mat: OAK, base: B.plinth(80, 60), joint: "mitre", inset: true, push: true, hollow: 50 }, B.v([800, "auto", 800], [B.drawers(1), B.open(0), B.drawers(1)]))),
   },
   {
     id: "niche-library",
@@ -477,7 +488,7 @@ const ARQ: PieceDef[] = [
       reference: "John Pawson (Home Farm), Vincent Van Duysen",
       language: "El capçal és una paret; el llit, una plataforma",
       geometry: "Pla vertical llarg i llosa horitzontal",
-      proportions: "Capçal 2900 × 900 per a matalàs de 1600 × 2000; plataforma a 290",
+      proportions: "Capçal 2900 × 900 (dues fulles de 1450 amb junta al centre: no cap al tauler de 2800) per a matalàs de 1600 × 2000; plataforma a 290",
       materials: "Roure, lli",
       finishes: "Oli blanc, lli rentat",
       combination: "Fusta i tèxtil",
@@ -1259,7 +1270,7 @@ const COM: PieceDef[] = [
       reference: "Poliform, Molteni&C, De La Espada",
       language: "Plans de fusta i un coixí",
       geometry: "Ortogonal",
-      proportions: "480 × 800 × 520; seient a 450",
+      proportions: "500 × 800 × 520; seient a 450",
       materials: "Noguera, cuir",
       finishes: "Oli, cuir anilina",
       combination: "Fusta i pell",
@@ -1275,7 +1286,7 @@ const COM: PieceDef[] = [
       sizes: "Cadira · amb braços",
       finishOptions: "Noguera, roure; cuir, teixit",
     },
-    make: () => slabChair({ w: 480, d: 520, h: 800, seat: 420, mat: WAL, cushion: LEATHER }),
+    make: () => slabChair({ w: 500, d: 520, h: 800, seat: 420, mat: WAL, cushion: LEATHER }),
   },
   {
     id: "linea-bench",

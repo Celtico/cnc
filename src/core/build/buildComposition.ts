@@ -5,6 +5,7 @@ import { normalizePanel } from "./buildCabinet"
 import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
 import { buildFreeParts, type PartJoint } from "./freeParts"
 import { resolveHoleClashes } from "./holeClash"
+import { sameSizeConflicts } from "./sameSize"
 
 export interface CompositionWarning extends BuildWarning {
   moduleId?: string
@@ -77,7 +78,8 @@ export function buildComposition(input: Composition): CompositionBuild {
       const o = p.placement.origin
       moduleExtras.push({ ...p, id: `${m.id}:${p.id}`, module: i + 1, placement: { ...p.placement, origin: [o[0] + x, o[1] + y, o[2] + z] } })
     }
-    for (const w of build.warnings) warnings.push({ ...w, moduleId: m.id })
+    // L'avís del push és de tot el moble: una sola vegada, no un per mòdul.
+    for (const w of build.warnings) if (w.code !== "push" || !warnings.some((x) => x.code === "push")) warnings.push({ ...w, moduleId: m.id })
     // Mòdul penjat: el pes el porta el darrere. Cal fons cargolat o en ranura prou gruixut
     // i penjadors de moble; amb un fons prim o sense fons no s'aguanta.
     if (m.carcass.base.kind === "wall" && (m.carcass.back === "none" || m.carcass.backThickness < 8))
@@ -104,7 +106,7 @@ export function buildComposition(input: Composition): CompositionBuild {
   // Peces lliures, amb els encaixos entre elles: un «mòdul» més per a les refs del taller.
   const free = buildFreeParts(comp, onlyParts ? 1 : comp.modules.length + (runs.length ? 1 : 0) + 1)
   panels.push(...free.panels)
-  for (const w of free.warnings) warnings.push({ code: "layout", message: w.message, partId: w.partId })
+  for (const w of free.warnings) warnings.push({ code: w.code ?? "layout", message: w.message, partId: w.partId })
 
   // Peces sense mida (llarg, ample o gruix ≤ 0, p. ex. un calaix sense lloc): no es poden
   // fabricar. Es treuen i s'avisa.
@@ -146,6 +148,21 @@ export function buildComposition(input: Composition): CompositionBuild {
       const moduleId = modules.find((m) => m.index === hit.module)?.id
       warnings.push({ code: "collision", message: `«${ref.name}» xoca amb ${hit.label}.`, panelId: hit.id, refId: ref.id, ...(moduleId ? { moduleId } : {}) })
     }
+  }
+
+  // El taller casa peça i sòlid només per la mida: dues peces iguals amb mecanitzats diferents es poden canviar.
+  // Un sol avís per moble (en una cuina n'hi pot haver molts), amb la primera parella i quantes n'hi ha.
+  const clash = sameSizeConflicts(panels)
+  if (clash.length) {
+    const [a, b] = clash[0]!
+    const moduleId = modules.find((m) => m.index === a.module)?.id
+    const more = clash.length > 1 ? ` (i ${clash.length - 1} ${clash.length === 2 ? "parella més" : "parelles més"})` : ""
+    warnings.push({
+      code: "same-size",
+      message: `${a.label} i ${b.label} fan ${a.length} × ${a.width} × ${a.thickness} mm de ${a.material} però tenen mecanitzats diferents${more}: el taller casa cada peça amb el seu sòlid només per la mida i els pot intercanviar. Canvia una mica la mida d'una de les dues o avisa el taller.`,
+      panelId: a.id,
+      ...(moduleId ? { moduleId } : {}),
+    })
   }
 
   return { panels, warnings, modules, joints: free.joints, extras: [...moduleExtras, ...free.extras], models: input.models ?? [] }

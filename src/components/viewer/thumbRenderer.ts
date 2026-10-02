@@ -8,6 +8,7 @@ import { makeFloor, ROOM } from "./floorTextures"
 import { readPresentationScene } from "./presentationScene"
 import { surfaceMaterial } from "./surfaceMaterial"
 import { releaseModelGpu } from "./models3d"
+import { disposeMaterial } from "./textures"
 
 /**
  * Miniatures 3D de les targetes (Mobles i Objectes) sense cap visor obert: un sol renderitzador fora de
@@ -166,9 +167,6 @@ export function disposeTree(root: Object3D) {
     if (!m.isMesh || m.userData.sharedModel) return
     m.geometry?.dispose()
     const mats = (Array.isArray(m.material) ? m.material : [m.material]) as Material[]
-    for (const mat of new Set(mats)) {
-      ;(mat as Material & { map?: Texture | null }).map?.dispose()
-      mat.dispose()
-    }
+    for (const mat of new Set(mats)) disposeMaterial(mat)
   })
 }

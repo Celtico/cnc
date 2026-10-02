@@ -23,6 +23,7 @@ import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
 import { cutoutMaterials, panelMaterials, visualPanel } from "./exportablePanel"
+import { disposeMaterial } from "./textures"
 
 /** Color de selecció (el mateix taronja que els botons + del 3D). */
 const SELECT_COLOR = "#b57a37"
@@ -528,17 +529,32 @@ function CameraRig({ size, view, fitKey, onFramedChange, initialCamera, onCamera
     reportRef.current = onCameraChange
   })
   // Es llegeix 1 s després de deixar-la anar (l'esmorteïment encara la mou una mica).
+  // Lectura pendent: en desmuntar el visor o amagar la pàgina es fa de seguida (si no, es perdria).
+  const pendingReport = useRef<(() => void) | null>(null)
   const scheduleReport = () => {
     clearTimeout(reportTimer.current)
-    reportTimer.current = setTimeout(() => {
-      const t = controls.current?.target
-      if (!t || !("fov" in camera) || ("isOrthographicCamera" in camera && camera.isOrthographicCamera)) return
+    // El punt mirat és un Vector3 que els controls actualitzen: es guarda ara (en desmuntar, la ref ja és buida).
+    const t = controls.current?.target
+    const run = () => {
+      clearTimeout(reportTimer.current)
+      pendingReport.current = null
+      const tt = t ?? controls.current?.target
+      if (!tt || !("fov" in camera) || ("isOrthographicCamera" in camera && camera.isOrthographicCamera)) return
       const r = (v: number) => Math.round(v * 10000) / 10000
-      const pose: CameraPose = { position: [r(camera.position.x), r(camera.position.y), r(camera.position.z)], target: [r(t.x), r(t.y), r(t.z)], fov: camera.fov as number }
+      const pose: CameraPose = { position: [r(camera.position.x), r(camera.position.y), r(camera.position.z)], target: [r(tt.x), r(tt.y), r(tt.z)], fov: camera.fov as number }
       if ([...pose.position, ...pose.target].every(Number.isFinite)) reportRef.current?.(pose)
-    }, 1000)
+    }
+    pendingReport.current = run
+    reportTimer.current = setTimeout(run, 1000)
   }
-  useEffect(() => () => clearTimeout(reportTimer.current), [])
+  useEffect(() => {
+    const flush = () => pendingReport.current?.()
+    window.addEventListener("pagehide", flush)
+    return () => {
+      window.removeEventListener("pagehide", flush)
+      flush()
+    }
+  }, [])
   const framedRef = useRef(true)
   const setFramed = (v: boolean) => {
     if (framedRef.current === v) return
@@ -1373,19 +1389,13 @@ export function PanelMesh({
   useEffect(
     () => () => {
       cut?.dispose()
-      for (const m of cutMats ?? []) {
-        m.map?.dispose()
-        m.dispose()
-      }
+      for (const m of cutMats ?? []) disposeMaterial(m)
     },
     [cut, cutMats],
   )
   useEffect(
     () => () => {
-      for (const m of new Set(mats)) {
-        m.map?.dispose()
-        m.dispose()
-      }
+      for (const m of new Set(mats)) disposeMaterial(m)
     },
     [mats],
   )

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { COLLECTION_PIECES, CompositionSchema, FURNITURE_COLLECTIONS, storeBuilders as B } from "../model"
+import { DEFAULT_NEST_OPTIONS, STANDARD_SHEETS } from "../nesting/nest"
+import { panelProcesses } from "../process/processes"
+import { toCutList } from "../cutlist/toCutList"
 import { buildComposition } from "./buildComposition"
 
 // Els mateixos avisos que el catàleg de botiga: un disseny mal fet.
@@ -28,6 +31,20 @@ describe("col·leccions de mobles", () => {
       expect(b.warnings.filter((w) => w.code === "hollow" && /massisses/.test(w.message)).map((w) => w.message)).toEqual([])
       expect(b.panels.length + b.extras.length).toBeGreaterThan(0)
     })
+  it("totes les peces de CNC caben al tauler més gran, respectant la veta", () => {
+    const m = DEFAULT_NEST_OPTIONS.margin
+    const W = Math.max(...STANDARD_SHEETS.map((s) => s.w)) - 2 * m
+    const H = Math.max(...STANDARD_SHEETS.map((s) => s.h)) - 2 * m
+    const over: string[] = []
+    for (const t of COLLECTION_PIECES)
+      for (const p of buildComposition(t.make()).panels) {
+        // Veta x: el llarg va pel costat llarg del tauler; y: pel curt; sense veta, qualsevol.
+        const flat = p.grain !== "y" && p.length <= W && p.width <= H
+        const turned = p.grain !== "x" && p.width <= W && p.length <= H
+        if (!flat && !turned) over.push(`${t.id}: ${p.label} ${p.length} × ${p.width} (veta ${p.grain})`)
+      }
+    expect(over).toEqual([])
+  })
   it("noms de peça únics (la targeta en mostra el nom)", () => {
     expect(new Set(COLLECTION_PIECES.map((t) => t.name)).size).toBe(COLLECTION_PIECES.length)
   })
@@ -48,5 +65,19 @@ describe("fronts sense tirador (push)", () => {
     }
     const b = buildComposition(B.one(B.box("Moble", { w: 1500, h: 700, d: 450, mat: "Roure massís / xapat", push: true }, zone)))
     expect(b.warnings.filter((w) => w.code === "push")).toHaveLength(1)
+    expect(b.warnings.find((w) => w.code === "push")!.message).toMatch(/sense molla/)
+  })
+  it("un sol avís push per a tot el moble (no un per mòdul)", () => {
+    const box = (n: string) => B.box(n, { w: 600, h: 700, d: 450, mat: "Roure massís / xapat", push: true }, B.drawers(2))
+    const b = buildComposition(B.row([box("A"), box("B"), box("C")]))
+    expect(b.modules).toHaveLength(3)
+    expect(b.warnings.filter((w) => w.code === "push")).toHaveLength(1)
+  })
+  it("el push surt als post-processos (llista de peces i CSV de peces)", () => {
+    const fs = fronts(true)
+    for (const p of fs) expect(panelProcesses(p).at(-1)).toMatchObject({ kind: "push", label: "Push (Tip-On)" })
+    for (const p of fronts(false)) expect(panelProcesses(p).some((x) => x.kind === "push")).toBe(false)
+    const rows = toCutList(fs)
+    for (const it of rows.items) expect(it.processes).toMatch(/Push \(Tip-On\)/)
   })
 })

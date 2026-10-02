@@ -2,7 +2,7 @@ import { z } from "zod"
 import { DEFAULT_CABINET } from "./cabinet"
 import { DEFAULT_HARDWARE, HardwareSchema, type Module } from "./composition"
 import { PHOTO_MATERIALS } from "./textureSets"
-import { rescalePhotoTiles, resolveMaterialAlias, upgradeToPhoto } from "./photoUpgrade"
+import { rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
 
 /**
  * Preferències de l'usuari: tot el que depèn de casa seva i del taller (referències de
@@ -15,7 +15,7 @@ import { rescalePhotoTiles, resolveMaterialAlias, upgradeToPhoto } from "./photo
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 8
+export const SETTINGS_VERSION = 9
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -370,6 +370,24 @@ export const SIM_MATERIALS: MaterialPref[] = [
   sim("sim-bulb", "Bombeta", { kind: "color", color: "#fff6e6", roughness: 0.3 }, false, { glow: 30 }),
 ]
 
+/**
+ * Materials que les plantilles fan servir i que no hi eren (v9): el material i el fons de `DEFAULT_CABINET` i els
+ * MDF lacats de colors (els colors que abans en deduïa el visor pel nom). La migració només afegeix els que falten.
+ */
+const lacquered = (id: string, name: string, color: string): MaterialPref => ({ id, name, thicknesses: [16, 19, 30], hasGrain: false, finish: { kind: "lacquer", color }, edge: "Lacat (sense cantell)" })
+export const TEMPLATE_MATERIALS: MaterialPref[] = [
+  { id: "mel-19", name: "Melamina 19", thicknesses: [16, 19], hasGrain: false, finish: { kind: "color", color: "#f2f0eb" }, edge: "PVC blanc 1 mm" },
+  { id: "dm-10", name: "DM 10", thicknesses: [10], hasGrain: false, finish: { kind: "color", color: "#c9b79a" }, edge: "", forBacks: true },
+  lacquered("mdf-lacquer-greige", "MDF lacat greige", "#c8bfb2"),
+  lacquered("mdf-lacquer-anthracite", "MDF lacat antracita", "#3d3f42"),
+  lacquered("mdf-lacquer-olive", "MDF lacat verd oliva", "#6f7550"),
+  lacquered("mdf-lacquer-terracotta", "MDF lacat terracota", "#b8664a"),
+  lacquered("mdf-lacquer-navy", "MDF lacat blau fosc", "#2c3a52"),
+  lacquered("mdf-lacquer-black", "MDF lacat negre", "#2b2b2b"),
+  lacquered("mdf-lacquer-light-grey", "MDF lacat gris clar", "#cbcac6"),
+  lacquered("mdf-lacquer-dark-green", "MDF lacat verd fosc", "#2f3b36"),
+]
+
 /** Valors inicials: els de sempre amb l'acabat de foto on n'hi ha (v7) i la resta de fotos, sense duplicats. */
 export const BUILTIN_MATERIALS: MaterialPref[] = upgradeToPhoto([
   { id: "mel-white", name: "Melamina blanca", thicknesses: [10, 16, 19], hasGrain: false, finish: { kind: "color", color: "#f2f0eb" }, edge: "PVC blanc 1 mm" },
@@ -382,6 +400,7 @@ export const BUILTIN_MATERIALS: MaterialPref[] = upgradeToPhoto([
   { id: "ash", name: "Freixe xapat", thicknesses: [19], hasGrain: true, finish: { kind: "wood", species: "ash" }, edge: "Xapa de freixe" },
   { id: "mdf-back", name: "DM (fons)", thicknesses: [10, 12], hasGrain: false, finish: { kind: "color", color: "#c9b79a" }, edge: "", forBacks: true },
   { id: "plywood-back", name: "Contraxapat (fons)", thicknesses: [10, 12, 15], hasGrain: true, finish: { kind: "wood", species: "ash" }, edge: "", forBacks: true },
+  ...TEMPLATE_MATERIALS,
   ...NON_CNC_MATERIALS,
   ...SIM_MATERIALS,
   ...PHOTO_MATERIALS,
@@ -446,7 +465,8 @@ export function parseSettings(raw: unknown): SettingsParse {
       : undefined
     obj = { ...obj, ...(refs ? { references: refs } : {}), version: 1 }
   }
-  // Una versió anterior es desa ja migrada (les migracions són idempotents: tornar-les a fer no canvia res).
+  // Una versió anterior es desa ja migrada. Cada pas depèn només de la versió desada, que mai baixa (`saveSettings`
+  // desa la més alta): un fitxer ja migrat no torna a afegir els materials que l'usuari ha esborrat.
   if (version < SETTINGS_VERSION) migrated = true
   if (version > SETTINGS_VERSION) problems.push(`Preferències d'una versió més nova (${version}); s'ha llegit el que s'ha pogut.`)
 
@@ -488,20 +508,25 @@ export function parseSettings(raw: unknown): SettingsParse {
   // v7: els de sempre amb l'acabat de foto; els «(foto)» repetits fora i la resta sense «(foto)» (idempotent).
   const v7m = version < 7 && v6 !== BUILTIN_MATERIALS ? upgradeToPhoto(v6) : v6
   // v8: mida real de les xapes de foto (roure 1100 → 600, noguera…), només si encara tenen la d'abans.
-  const materials = version < 8 && v7m !== BUILTIN_MATERIALS ? rescalePhotoTiles(v7m) : v7m
+  const v8m = version < 8 && v7m !== BUILTIN_MATERIALS ? rescalePhotoTiles(v7m) : v7m
+  // v9: gruixos perduts a la v7 (xapes de foto) i materials de les plantilles que faltaven (mai se'n sobreescriu cap).
+  const materials = version < 9 && v8m !== BUILTIN_MATERIALS ? [...restorePhotoThicknesses(v8m), ...missing(TEMPLATE_MATERIALS, v8m)] : v8m
   const boards = section("boards", BoardsPrefSchema, DEFAULT_SETTINGS.boards, "Taulers")
   const defaults = section("defaults", SettingsSchema.shape.defaults, DEFAULT_SETTINGS.defaults, "Materials per defecte")
   const v7 = version < 7
+  // Àlies segons els materials d'aquestes preferències (un «X (foto)» que encara hi és no es toca).
+  const names = new Set(materials.map((m) => m.name))
+  const alias = (n: string) => resolveMaterialAlias(n, names)
   const settings: Settings = {
     version: SETTINGS_VERSION,
     references,
     materials,
-    boards: v7 ? { ...boards, sheets: boards.sheets.map((x) => ({ ...x, material: resolveMaterialAlias(x.material) })) } : boards,
+    boards: v7 ? { ...boards, sheets: boards.sheets.map((x) => ({ ...x, material: alias(x.material) })) } : boards,
     hardware: section("hardware", HardwareSchema, DEFAULT_SETTINGS.hardware, "Ferratges"),
     gaps: section("gaps", GapsPrefSchema, DEFAULT_SETTINGS.gaps, "Jocs"),
     label: section("label", LabelPrefSchema, DEFAULT_SETTINGS.label, "Etiqueta"),
     display: section("display", DisplayPrefSchema, DEFAULT_SETTINGS.display, "Visualització"),
-    defaults: v7 ? { ...defaults, material: resolveMaterialAlias(defaults.material), backMaterial: resolveMaterialAlias(defaults.backMaterial) } : defaults,
+    defaults: v7 ? { ...defaults, material: alias(defaults.material), backMaterial: alias(defaults.backMaterial) } : defaults,
   }
   return { settings, problems, migrated: migrated || problems.length > 0 }
 }

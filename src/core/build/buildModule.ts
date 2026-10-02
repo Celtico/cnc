@@ -61,6 +61,8 @@ export interface BuildWarning {
     | "hinge"
     | "drawer-bottom"
     | "invalid-part"
+    | "same-size"
+    | "edge-notch"
   message: string
   zoneId?: string
   panelId?: string
@@ -938,7 +940,7 @@ class Builder {
     if (this.m.fronts.handles !== "none") return addHandle(p, cx, cy, along)
     p.push = true
     if (!this.warnings.some((w) => w.code === "push"))
-      this.warnings.push({ code: "push", message: "Fronts sense tirador: cada porta, calaix o abatible necessita un ferratge d'obertura per pressió (push, p. ex. Tip-On o Push-to-open); als calaixos, guies amb push." })
+      this.warnings.push({ code: "push", message: "Fronts sense tirador: cada porta, calaix o abatible necessita un ferratge d'obertura per pressió (push, p. ex. Tip-On o Push-to-open); als calaixos, guies amb push; a les portes, frontisses sense molla (sense retenció), perquè el push les pugui obrir." })
   }
 
   private frontPanel(id: string, name: string, label: string, role: PanelRole, x0: number, y0: number, w: number, h: number): Panel {

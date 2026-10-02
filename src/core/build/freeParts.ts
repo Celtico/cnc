@@ -53,7 +53,7 @@ export interface FreePartsBuild {
   /** Peces que no es tallen a la CNC (ferro, pedra, vidre…): només 3D i llista. */
   extras: Panel[]
   joints: PartJoint[]
-  warnings: { message: string; partId: string }[]
+  warnings: { message: string; partId: string; code?: "edge-notch" }[]
 }
 
 const TOL = 0.5
@@ -309,6 +309,9 @@ export function buildFreeParts(comp: Composition, moduleNumber: number): FreePar
     const w = work.get(p.id)!
     const { outline, cutouts, pieces } = partContour(p, w.removals)
     if (pieces > 1) warnings.push({ partId: p.id, message: `«${p.name}» queda partida en ${pieces} trossos pels encaixos: revisa'n la posició.` })
+    // Cantell als quatre costats amb osques al contorn (pestanyes, dits, mitja fusta): no es pot folrar dins les osques.
+    if (p.edged && p.nest !== false && outline && notched(p, outline))
+      warnings.push({ partId: p.id, code: "edge-notch", message: `«${p.name}» porta cantell als quatre costats però el contorn té osques d'encaix: folrar no és factible a les pestanyes i osques; el cantell només es fa als trams llisos.` })
     ;(p.nest === false ? extras : panels).push(normalizePanel({
       id: `part:${p.id}`,
       name: p.name,
@@ -332,6 +335,12 @@ export function buildFreeParts(comp: Composition, moduleNumber: number): FreePar
 }
 
 const r2 = (v: number) => Math.round(v * 100) / 100
+
+/** El contorn té osques: menys àrea que la forma (o el rectangle) sencera. */
+function notched(p: FreePart, outline: NonNullable<Panel["outline"]>): boolean {
+  const full = p.shape ? polygonArea(flatten(shapeOutline(p.shape, p.w, p.h))) : p.w * p.h
+  return polygonArea(flatten(outline)) < full - 1
+}
 
 /** Contorn final: la forma (o el rectangle) menys les osques; els forats interiors, talls. */
 function partContour(p: FreePart, removals: Pt[][]): { outline?: Panel["outline"]; cutouts: Cutout[]; pieces: number } {

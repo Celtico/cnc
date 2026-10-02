@@ -7,6 +7,8 @@ import {
   Mesh,
   MeshStandardMaterial,
   Scene,
+  type Material,
+  type Texture,
   Vector3,
 } from "three"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
@@ -135,8 +137,34 @@ function handleMeshes(p: Panel): Mesh[] {
 export async function exportGlb(panels: Panel[], name: string, real?: Parameters<typeof buildScene>[2], models: ModelObject[] = []): Promise<Blob> {
   await preloadModels(models)
   const scene = buildScene(panels, name, real, models)
+  bakeTextureCenters(scene)
   const exporter = new GLTFExporter()
   const result = await exporter.parseAsync(scene, { binary: true })
   if (result instanceof ArrayBuffer) return new Blob([result], { type: "model/gltf-binary" })
   return new Blob([JSON.stringify(result)], { type: "model/gltf+json" })
+}
+
+/**
+ * `KHR_texture_transform` no té `center` (gira i escala des de l'origen de les UV): es passa a l'`offset` perquè la
+ * matriu UV sigui la mateixa, offset' = offset + c − M·c (M = escala i gir de three), i el centre queda a 0.
+ * Només per exportar, sobre les textures pròpies de l'escena exportada (els clons de `faceTexture`; els models 3D
+ * comparteixen les seves amb el visor i no es toquen).
+ */
+export function bakeTextureCenter(t: Texture): void {
+  const cx = t.center.x, cy = t.center.y
+  if (!cx && !cy) return
+  const c = Math.cos(t.rotation), s = Math.sin(t.rotation)
+  const sx = t.repeat.x, sy = t.repeat.y
+  t.offset.set(t.offset.x + cx - (sx * c * cx + sx * s * cy), t.offset.y + cy - (-sy * s * cx + sy * c * cy))
+  t.center.set(0, 0)
+  t.updateMatrix()
+}
+
+function bakeTextureCenters(scene: Scene): void {
+  scene.traverse((o) => {
+    const m = o as Mesh
+    if (!m.isMesh || m.userData.sharedModel) return
+    for (const mat of (Array.isArray(m.material) ? m.material : [m.material]) as Material[])
+      for (const v of Object.values(mat)) if ((v as Texture | null)?.isTexture) bakeTextureCenter(v as Texture)
+  })
 }

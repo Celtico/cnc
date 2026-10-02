@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { buildCabinet } from "../build/buildCabinet"
 import { DEFAULT_CABINET } from "../model"
-import { toCutList } from "./toCutList"
+import { edgeLengthOf, toCutList } from "./toCutList"
 
 describe("toCutList", () => {
   const panels = buildCabinet({ ...DEFAULT_CABINET, doors: 2, shelves: 2 })
@@ -59,3 +59,17 @@ describe("toCutList", () => {
 })
 
 const round4 = (v: number): number => Math.round(v * 10000) / 10000
+
+describe("metres de cantell amb contorn", () => {
+  it("amb els quatre cantells i contorn, el perímetre real; si no, el rectangle", () => {
+    const all = { top: true, right: true, bottom: true, left: true }
+    expect(edgeLengthOf(400, 300, all, [[0, 0], [400, 0], [0, 300]])).toBeCloseTo(1200, 6)
+    expect(edgeLengthOf(400, 300, all)).toBe(1400)
+    expect(edgeLengthOf(400, 300, { ...all, left: false }, [[0, 0], [400, 0], [0, 300]])).toBe(1100)
+  })
+  it("toCutList fa servir el contorn de la peça", () => {
+    const [p] = buildCabinet({ ...DEFAULT_CABINET })
+    const tri = { ...p!, role: "part" as const, label: "Triangle", length: 400, width: 300, edges: { top: true, right: true, bottom: true, left: true }, outline: [[0, 0], [400, 0], [0, 300]] as [number, number][] }
+    expect(toCutList([tri]).items[0]!.edgeLength).toBeCloseTo(1.2, 4)
+  })
+})

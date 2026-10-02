@@ -18,8 +18,13 @@ const S = 0.001
  * render (`sceneData`) i l'export (GLB/USDZ).
  */
 function faceTexture(base: Texture, uMm: number, vMm: number, rotate: boolean, tileMm = TILE_MM, aspect = 1, off?: TextureOffset): Texture {
+  // `clone` marca la font compartida per tornar-la a pujar a la GPU (la foto sencera, a cada peça i a cada
+  // reconstrucció). Si la imatge ja és carregada, es deixa la versió de la font com era: el clon (versió pròpia > 0)
+  // reutilitza la textura de GPU de la font. Si encara es baixa, la càrrega ja la marcarà.
+  const sourceVersion = base.source.version
   const t = base.clone()
-  t.needsUpdate = true
+  const img = base.image as { width?: number } | null
+  if (img && (img.width ?? 0) > 0) t.source.version = sourceVersion
   t.center.set(0.5, 0.5)
   t.rotation = (rotate ? Math.PI / 2 : 0) + (off?.flip ? Math.PI : 0)
   const tw = tileMm, th = tileMm * aspect

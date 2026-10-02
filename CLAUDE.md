@@ -143,7 +143,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   converteix en exportar); un `MANIFOLD_SOLID_BREP` per peça dins
   `ADVANCED_BREP_SHAPE_REPRESENTATION('<nom>')`; forats cecs com a cilindres.
 - El taller lliga peça ↔ sòlid **per mida**. Peces idèntiques surten com a
-  `representative`, i és normal.
+  `representative`, i és normal. Dues peces de la mateixa mida i material amb mecanitzats diferents (no mirall) es
+  poden intercanviar: avís `same-size` (`build/sameSize.ts`, a `buildComposition`).
 - Noms de peça del vocabulari del taller (`lat d`, `lat e`, `base`, `sostre`,
   `prestatge`, `trassera`, `porta`, `frontal`) i refs `A.<mòdul>.<tipus>.<n>` a `ÍNDICE_3D`.
 - Test d'anada i tornada: els fitxers generats es passen pels parsers del taller
@@ -675,8 +676,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     butaques, cadires, miralls, gandules i carros (no són mobles de tauler). Els mobles només de peces
     lliures (llits, capçals, taules de pedra) són del tipus Flat-pack (l'app necessita un mòdul, que no
     es fa). Aparadors sobre potes de peces lliures: caixa «penjada» a l'alçada de les potes (no surten
-    també les regulables). Colors dels lacats nous per nom a `textures.ts` (antracita, verd oliva,
-    terracota, blau fosc, greige). `storeCatalog.test.ts`: totes es construeixen sense avisos de
+    també les regulables). Colors dels lacats nous: materials propis a les preferències (v9, `TEMPLATE_MATERIALS`; abans es deduïen pel nom a
+    `textures.ts`). `storeCatalog.test.ts`: totes es construeixen sense avisos de
     disseny (portes massa amples, prestatges que vinclen, guies que no caben, barres curtes, xocs).
   - **Peça lliure que talla** (`FreePart.effect = "cut"`, Efecte Peça/Talla a General): no és
     una peça; `partCutters` la converteix en objecte que talla (perfil = la seva forma, direcció =
@@ -848,7 +849,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     mateix id i els dos rètols activen el mateix): passava amb Laterals Esquerre/Dret.
   - **Post-processos** (`core/process/processes.ts`): `panelProcesses` dedueix el que toca a
     cada peça després del nesting, en ordre: 2a cara → Inglet 45° → Cantell → Forats de cantell →
-    Encolar (`Panel.assembly`). L'app NO fa etiquetes (les fa el taller-cnc-nest): només ho
+    Encolar (`Panel.assembly`) → Push (Tip-On) (`Panel.push`, fronts sense tirador; l'avís `push` surt un sol cop per
+    moble i demana frontisses sense molla). L'app NO fa etiquetes (les fa el taller-cnc-nest): només ho
     anota. **2a cara** (`needsSecondFace`: forats o ranures a la cara B) → columna
     `SEGUNDO_NOMBRE_DE_FICHERO_DE_MECANIZADO` del CSV TopSolid amb `<ref>Volt` (com TopSolid;
     el taller en fa l'etiqueta «PROGRAMA 2a CARA» amb Code128). La resta surt a la llista de
@@ -895,15 +897,26 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     pròpia no es toca). Lacats, colors, metalls, vidres i el que no té foto fidel (freixe, wengué, estucs clars, teixits de
     color…) queden procedurals (l'acabat `image` no es pot tenyir). `upgradeToPhoto` (migració v7 i valors inicials,
     idempotent): els «(foto)» el joc dels quals ja fa servir un de sempre desapareixen; la resta perden el «(foto)»
-    («Fusta fosca», «Terratzo»…; si el nom ja és d'un altre material, es queda amb «(foto)»). **Àlies**:
+    («Fusta fosca», «Terratzo»…; si el nom ja és d'un altre material, es queda amb «(foto)»). Només passa a la foto
+    un material amb l'acabat per defecte d'abans (`OLD_FINISHES`, igualtat estructural): un de retocat es queda i el
+    «(foto)» també, al costat. En treure un duplicat, els seus gruixos passen al de sempre. **Àlies**:
     `resolveMaterialAlias` («Roure (foto)» → «Roure massís / xapat», «Fusta fosca (foto)» → «Fusta fosca») i
-    `aliasMaterialRefs` (claus `material`, `material2`, `…Material`, `scene.floor/wall`) a `normalizeComposition`,
-    `parseAmbient`, `readPresentationScene` i els materials per defecte i dels taulers de les preferències. La biblioteca
-    fa el mateix (`LIBRARY_PHOTO_UPGRADES`). El terra per defecte de Presentació és «Parquet de roure» (foto).
+    `aliasMaterialRefs` (claus `material`, `material2`, `frame` de les obertures, `…Material`, `scene.floor/wall`) a
+    `normalizeComposition`, `parseAmbient`, `readPresentationScene` i els materials per defecte i dels taulers de les
+    preferències. **Depenen dels materials de l'usuari**: «X (foto)» → «X» només si no hi ha cap material «X (foto)» i sí
+    «X» (`setKnownMaterialNames`, que posa `settingsStore` en llegir les preferències; sense, el mapa de sempre).
+    La biblioteca fa el mateix (`LIBRARY_PHOTO_UPGRADES`). El terra per defecte de Presentació és «Parquet de roure» (foto).
+    Cantells (`resolveEdgeFinish`): primer el material de la mateixa foto que diu el cantell, després el mateix
+    material si el cantell en diu la primera paraula, després un altre i les paraules clau.
   - **Mida de les xapes de foto** (v8, mirada a `diff.jpg`: fibres de roure a 2–3 mm, catedrals de noguera de
     ~250–300 mm): roure 1100 → 600, noguera 1200 → 900, noguera fumada 1200 → 800. `rescalePhotoTiles` (migració v8,
     idempotent) només canvia els materials que fan servir el joc amb la mida d'abans (`PREVIOUS_TILE_MM`); una mida
     posada per l'usuari es queda.
+  - **v9 de les preferències**: `restorePhotoThicknesses` torna als de sempre de les xapes de foto (Roure massís /
+    xapat, Noguera xapada) els gruixos 16 · 19 · 30 que la v7 va perdre, i `TEMPLATE_MATERIALS` (Melamina 19 i DM 10 de
+    `DEFAULT_CABINET`, MDF lacats de colors de les plantilles) s'afegeixen si falten (mai se'n sobreescriu cap). Un test
+    comprova que tots els materials de les plantilles i ambients del catàleg són a les preferències inicials.
+    **La versió desada mai baixa** (`saveSettings` desa la més alta): les migracions depenen només d'aquesta versió.
   - **Tauler de taula** (`Carcass.tableTop`): la tapa per sobre dels laterals (més curts),
     voladís a tot el voltant i forma (rectangle, arrodonit, oval o a mida amb l'editor de
     perfil; `shape` en mm s'escala al tauler). `Panel.outline` (rectes i arcs): 3D/GLB

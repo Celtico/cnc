@@ -8,9 +8,10 @@ import { EDGE_NUMBER, EDGE_SIDES, type Panel } from "../model"
  *  - inglet: serra a 45° als cantells `mitres`;
  *  - cantell: cantejadora als cantells folrats;
  *  - forats de cantell: perforadora horitzontal (espigues, excèntriques…);
- *  - encolar: muntar un conjunt abans del moble (p. ex. les parets buides).
+ *  - encolar: muntar un conjunt abans del moble (p. ex. les parets buides);
+ *  - push: front sense tirador, cal muntar-hi el ferratge d'obertura per pressió.
  */
-export type ProcessKind = "secondFace" | "mitre" | "edge" | "edgeDrill" | "glue"
+export type ProcessKind = "secondFace" | "mitre" | "edge" | "edgeDrill" | "glue" | "push"
 
 export interface Process {
   kind: ProcessKind
@@ -26,6 +27,7 @@ export const PROCESS_LABELS: Record<ProcessKind, string> = {
   edge: "Cantell",
   edgeDrill: "Forats de cantell",
   glue: "Encolar",
+  push: "Push (Tip-On)",
 }
 
 const nums = (sides: readonly (typeof EDGE_SIDES)[number][]): string =>
@@ -51,6 +53,7 @@ export function panelProcesses(p: Panel): Process[] {
   const edgeHoles = p.holes.filter((h) => h.face === "edge").length
   if (edgeHoles) out.push({ kind: "edgeDrill", label: PROCESS_LABELS.edgeDrill, detail: `${edgeHoles} ${edgeHoles === 1 ? "forat" : "forats"}` })
   if (p.assembly) out.push({ kind: "glue", label: PROCESS_LABELS.glue, detail: p.assembly })
+  if (p.push) out.push({ kind: "push", label: PROCESS_LABELS.push, detail: "ferratge d'obertura per pressió, sense tirador" })
   return out
 }
 

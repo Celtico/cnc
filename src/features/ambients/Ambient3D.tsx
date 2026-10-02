@@ -129,18 +129,33 @@ function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance, onPose
     mark.current = m
     onPoseChange?.(m)
   }
+  // Lectura pendent: en desmuntar el 3D o amagar la pàgina es fa de seguida (si no, es perdria).
+  const pending = useRef<(() => void) | null>(null)
   const scheduleReport = () => {
     clearTimeout(timer.current)
-    timer.current = setTimeout(() => {
-      const t = ref.current?.target
-      if (!t) return
+    // El punt mirat és un Vector3 que els controls actualitzen: es guarda ara (en desmuntar, la ref ja és buida).
+    const t = ref.current?.target
+    const run = () => {
+      clearTimeout(timer.current)
+      pending.current = null
+      const tt = t ?? ref.current?.target
+      if (!tt) return
       const r = (v: number) => Math.round(v * 10000) / 10000
-      const c: CameraPose = { position: [r(camera.position.x), r(camera.position.y), r(camera.position.z)], target: [r(t.x), r(t.y), r(t.z)], fov: camera.fov }
+      const c: CameraPose = { position: [r(camera.position.x), r(camera.position.y), r(camera.position.z)], target: [r(tt.x), r(tt.y), r(tt.z)], fov: camera.fov }
       if (mark.current) c.pose = mark.current
       if ([...c.position, ...c.target].every(Number.isFinite)) reportRef.current?.(c)
-    }, 1000)
+    }
+    pending.current = run
+    timer.current = setTimeout(run, 1000)
   }
-  useEffect(() => () => clearTimeout(timer.current), [])
+  useEffect(() => {
+    const flush = () => pending.current?.()
+    window.addEventListener("pagehide", flush)
+    return () => {
+      window.removeEventListener("pagehide", flush)
+      flush()
+    }
+  }, [])
   const first = useRef(true)
   useEffect(() => {
     if (first.current) {

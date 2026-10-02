@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react"
 import { type PresentationScene } from "./presentationScene"
 import { makeFloor, ROOM } from "./floorTextures"
 import { surfaceMaterial } from "./surfaceMaterial"
+import { disposeMaterial } from "./textures"
 import type { MaterialPref } from "../../core/model"
 
 const SKIRTING = "#fbfaf7"
@@ -24,9 +25,9 @@ export function PresentationRoom({ backZ, scene, materials = [] }: { backZ: numb
     const name = scene.skirting === "floor" ? floorLib : scene.skirting === "wall" ? wallLib : null
     return name ? surfaceMaterial(materials, name, ROOM * 1000, SK_H * 1000) : null
   }, [scene.skirting, floorLib, wallLib, materials])
-  useEffect(() => () => (floorMat?.map?.dispose(), floorMat?.dispose()), [floorMat])
-  useEffect(() => () => (wallMat?.map?.dispose(), wallMat?.dispose()), [wallMat])
-  useEffect(() => () => (skirtLibMat?.map?.dispose(), skirtLibMat?.dispose()), [skirtLibMat])
+  useEffect(() => () => void (floorMat && disposeMaterial(floorMat)), [floorMat])
+  useEffect(() => () => void (wallMat && disposeMaterial(wallMat)), [wallMat])
+  useEffect(() => () => void (skirtLibMat && disposeMaterial(skirtLibMat)), [skirtLibMat])
   const floor = useMemo(() => {
     const f = makeFloor(scene.floor)
     f.map?.repeat.set(f.repeat, f.repeat)

@@ -2,6 +2,7 @@ import { processSummary } from "../process/processes"
 import {
   EDGE_NUMBER,
   EDGE_SIDES,
+  flatten,
   type EdgeBanding,
   type Grain,
   type Panel,
@@ -100,11 +101,20 @@ function groupKey(p: Panel): string {
   const shortEdges = Number(p.edges.left) + Number(p.edges.right)
   // Peces lliures: només s'agrupen si són iguals de debò (contorn, talls i mecanitzats).
   const shape = p.role === "part" ? JSON.stringify([p.outline ?? null, p.cutouts ?? null, p.holes.length, p.grooves.length]) : ""
-  return [p.role, p.length, p.width, p.thickness, p.material, p.grain, longEdges, shortEdges, (p.mitres ?? []).length, p.assembly ?? "", shape].join("|")
+  return [p.role, p.length, p.width, p.thickness, p.material, p.grain, longEdges, shortEdges, (p.mitres ?? []).length, p.assembly ?? "", p.push ? "push" : "", shape].join("|")
 }
 
-/** Mil·límetres de cantell d'una peça. */
-export function edgeLengthOf(length: number, width: number, edges: EdgeBanding): number {
+/** Mil·límetres de cantell d'una peça. Amb contorn (`outline`) i els quatre cantells folrats, el perímetre real. */
+export function edgeLengthOf(length: number, width: number, edges: EdgeBanding, outline?: Panel["outline"]): number {
+  if (outline && EDGE_SIDES.every((s) => edges[s])) {
+    const pts = flatten(outline)
+    let per = 0
+    pts.forEach(([x, y], i) => {
+      const [nx, ny] = pts[(i + 1) % pts.length]!
+      per += Math.hypot(nx - x, ny - y)
+    })
+    return per
+  }
   let mm = 0
   if (edges.top) mm += length
   if (edges.bottom) mm += length
@@ -118,6 +128,8 @@ const round4 = (v: number): number => Math.round(v * 10000) / 10000
 /** Agrupa les peces idèntiques (rol, mides, material, veta i cantells) en files. */
 export function toCutList(panels: Panel[]): CutList {
   const groups = new Map<string, CutListItem>()
+  // Contorn de cada fila (les peces lliures només s'agrupen amb el mateix contorn).
+  const outlines = new Map<CutListItem, Panel["outline"]>()
   for (const p of panels) {
     const key = groupKey(p)
     const existing = groups.get(key)
@@ -149,13 +161,14 @@ export function toCutList(panels: Panel[]): CutList {
       panelIds: [p.id],
       holes: p.holes.length,
     })
+    if (p.outline) outlines.set(groups.get(key)!, p.outline)
   }
 
   const items = [...groups.values()]
     .map((it) => ({
       ...it,
       area: round4((it.length * it.width * it.qty) / 1e6),
-      edgeLength: round4((edgeLengthOf(it.length, it.width, it.edges) * it.qty) / 1000),
+      edgeLength: round4((edgeLengthOf(it.length, it.width, it.edges, outlines.get(it)) * it.qty) / 1000),
     }))
     .sort((a, b) => {
       const ra = ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role)

@@ -1,4 +1,4 @@
-import { CanvasTexture, MirroredRepeatWrapping, NoColorSpace, RepeatWrapping, SRGBColorSpace, TextureLoader, type MeshStandardMaterial, type Texture } from "three"
+import { CanvasTexture, MirroredRepeatWrapping, NoColorSpace, RepeatWrapping, SRGBColorSpace, TextureLoader, type Material, type MeshStandardMaterial, type Texture } from "three"
 import { TEXTURE_CACHE_MAX } from "./deviceLimits"
 import { WOOD_PRESETS, type Finish, type MaterialPref, type WoodGen } from "../../core/model"
 
@@ -64,11 +64,12 @@ const mix = (a: [number, number, number], b: [number, number, number], t: number
 ]
 
 /**
- * Memòria de textures generades (les últimes; en moure un control se'n fan moltes). Les que en surten
- * s'alliberen (`dispose`): si algun material encara la fa servir, three la torna a pujar.
+ * Memòria de textures generades (les últimes fetes servir, LRU; en moure un control se'n fan moltes). Les que en
+ * surten s'alliberen (`dispose`): si algun material encara la fa servir, three la torna a pujar.
  */
 const cache = new Map<string, Texture>()
 function remember(map: Map<string, Texture>, key: string, v: Texture, max = TEXTURE_CACHE_MAX): Texture {
+  map.delete(key)
   map.set(key, v)
   while (map.size > max) {
     const first = map.keys().next().value
@@ -77,6 +78,21 @@ function remember(map: Map<string, Texture>, key: string, v: Texture, max = TEXT
     map.delete(first)
   }
   return v
+}
+/** Textura de la memòria; si hi és, passa a ser la més recent. */
+function recall(map: Map<string, Texture>, key: string): Texture | undefined {
+  const hit = map.get(key)
+  if (hit) {
+    map.delete(key)
+    map.set(key, hit)
+  }
+  return hit
+}
+
+/** Allibera un material i totes les seves textures (map, normalMap, roughnessMap, emissiveMap…), no només `map`. */
+export function disposeMaterial(mat: Material): void {
+  for (const v of Object.values(mat)) if ((v as Texture | null)?.isTexture) (v as Texture).dispose()
+  mat.dispose()
 }
 
 /** Paràmetres efectius de la fusta: els del generador o els de l'espècie. */
@@ -92,7 +108,7 @@ export function woodGenOf(species: WoodSpecies, gen?: WoodGen): WoodGen {
 export function woodTexture(species: WoodSpecies, gen?: WoodGen): Texture {
   const W = woodGenOf(species, gen)
   const key = JSON.stringify(W)
-  const hit = cache.get(key)
+  const hit = recall(cache, key)
   if (hit) return hit
   const size = 1024
   const canvas = document.createElement("canvas")
@@ -229,7 +245,7 @@ const patternCache = new Map<string, Texture>()
  */
 export function patternTexture(pattern: PatternKind, color: string, grout = "#cccccc", o: PatternOpts = {}): Texture {
   const key = `${pattern}:${color}:${grout}:${JSON.stringify(o)}`
-  const hit = patternCache.get(key)
+  const hit = recall(patternCache, key)
   if (hit) return hit
   const size = 512
   const canvas = document.createElement("canvas")
@@ -467,12 +483,19 @@ export function resolveFinish(materials: MaterialPref[], name: string): FinishSp
   return { kind: "color", color: "#e6cfa6", roughness: 0.85 }
 }
 
-/** Acabat del cantell d'un material: el que digui el nom del cantell (p. ex. "xapa de roure"), o el del material. */
+/**
+ * Acabat del cantell d'un material, pel nom del cantell (p. ex. «Xapa de noguera»): primer el material de la mateixa
+ * foto que el del tauler (una xapa de foto té el cantell de la mateixa foto), després el mateix material si el
+ * cantell en diu la primera paraula, després un altre material que hi surti i les paraules clau; si no, el del material.
+ */
 export function resolveEdgeFinish(materials: MaterialPref[], name: string): FinishSpec {
   const pref = materials.find((m) => m.name === name)
-  const edge = pref?.edge ?? ""
-  if (edge) {
-    const byMaterial = materials.find((m) => m.name !== name && edge.toLowerCase().includes(m.name.toLowerCase().split(" ")[0] ?? "\u0000"))
+  const edge = (pref?.edge ?? "").toLowerCase()
+  if (pref && edge) {
+    const mentioned = (m: MaterialPref) => edge.includes(m.name.toLowerCase().split(" ")[0] ?? "\u0000")
+    const src = pref.finish.kind === "image" ? pref.finish.src : undefined
+    const sameSet = src === undefined ? undefined : materials.find((m) => m.finish.kind === "image" && m.finish.src === src && mentioned(m))
+    const byMaterial = sameSet ?? (mentioned(pref) ? pref : materials.find((m) => m.name !== name && mentioned(m)))
     if (byMaterial) return finishOfPref(byMaterial)
     for (const [rx, f] of KEYWORDS) if (rx.test(edge)) return f
   }
@@ -499,7 +522,7 @@ export const photoTexturesIdle = (): Promise<void> => Promise.all([...loading]).
  */
 export function photoTexture(src: string, seamless = false, linear = false): Texture {
   const key = `${seamless ? "r" : "m"}${linear ? "l" : ""}:${src}`
-  const hit = photoCache.get(key)
+  const hit = recall(photoCache, key)
   if (hit) return hit
   // Els fitxers de l'app (`textures/<id>/…`, jocs de `textureSets.ts`) van des de l'arrel de l'app.
   let done = () => {}
@@ -515,5 +538,6 @@ export function photoTexture(src: string, seamless = false, linear = false): Tex
   // Normals i rugositat són dades, no colors: sense la corba sRGB.
   tex.colorSpace = linear ? NoColorSpace : SRGBColorSpace
   tex.anisotropy = 8
-  return remember(photoCache, key, tex)
+  // Cada material de foto en fa servir fins a tres (color, normal i rugositat): la memòria n'hi guarda tres per material.
+  return remember(photoCache, key, tex, TEXTURE_CACHE_MAX * 3)
 }
