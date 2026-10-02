@@ -1,5 +1,5 @@
 import type { MaterialPref } from "./settings"
-import { TEXTURE_SETS, textureSetFile, textureSetMaterial, type TextureSet } from "./textureSets"
+import { PREVIOUS_TILE_MM, TEXTURE_SETS, textureSetFile, textureSetMaterial, type TextureSet } from "./textureSets"
 
 /**
  * Materials de sempre amb l'acabat de foto (Poly Haven, v7). Els noms no canvien (el CSV del taller, les
@@ -86,6 +86,25 @@ export function upgradeToPhoto(list: MaterialPref[]): MaterialPref[] {
     } else out.push(m)
   }
   return out
+}
+
+/**
+ * v8: mida de repetició nova dels jocs que l'han canviada (`PREVIOUS_TILE_MM`), només als materials que encara fan
+ * servir aquell joc amb la mida d'abans (una mida posada per l'usuari no es toca). Idempotent.
+ */
+export function rescalePhotoTiles(list: MaterialPref[]): MaterialPref[] {
+  let changed = false
+  const out = list.map((m) => {
+    if (m.finish.kind !== "image") return m
+    for (const [id, old] of Object.entries(PREVIOUS_TILE_MM)) {
+      const t = setById(id)
+      if (!t || m.finish.src !== textureSetFile(id, "diff") || m.finish.tileMm !== old) continue
+      changed = true
+      return { ...m, finish: { ...m.finish, tileMm: t.tileMm } }
+    }
+    return m
+  })
+  return changed ? out : list
 }
 
 const isRefKey = (k: string) => k === "material" || k === "material2" || /Material$/.test(k)

@@ -701,15 +701,18 @@ const COLLECTION_SCENES: AmbientTemplate[] = [
     id: "amb-col-arq-suite",
     category: "col-arq",
     name: "Suite de roure",
-    description: "5,6 × 4,6 m · pedra calcària i estuc gris clar: paret d'armaris «Cambra» amb nínxol, llit «Capçal mur», escriptori «Fil» sota la finestra i cadira «Bloc».",
+    description: "5,6 × 4,6 m · microciment gris i estuc gris clar: paret d'armaris «Cambra» amb nínxol, llit «Capçal mur» vestit de lli, escriptori «Fil» sota la finestra i cadira «Bloc».",
     w: 5600,
     d: 4600,
-    floor: "Pedra calcària",
+    // Terra fosc i continu: el roure dels mobles no s'hi confon.
+    floor: "Microciment gris",
     wall: "Estuc gris clar",
     openings: [{ side: "E", kind: "window", at: 3200, w: 1600, h: 1500, sill: 900 }],
     items: [
       { ref: O("rug-white"), x: 2800, y: 1900 },
-      { ref: CA("wall-head-bed"), wall: "N", at: 2800 },
+      { ref: CA("wall-head-bed"), wall: "N", at: 2800, group: "Llit" },
+      // Roba de llit sobre la plataforma (a 290; el matalàs a 60 del capçal).
+      { ref: O("bed-linen-160"), wall: "N", at: 2800, gap: 60, elevation: 290, group: "Llit" },
       { ref: CA("chamber-wardrobe"), wall: "W", at: 2500 },
       { ref: CA("thread-desk"), wall: "E", at: 3200 },
       { ref: CA("slab-chair"), x: 4600, y: 3200, rot: 270 },

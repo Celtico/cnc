@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { normalizeComposition, type Composition } from "./composition"
 import { parseAmbient } from "./ambient"
-import { aliasMaterialRefs, PHOTO_UPGRADES, resolveMaterialAlias, upgradeToPhoto } from "./photoUpgrade"
+import { aliasMaterialRefs, PHOTO_UPGRADES, rescalePhotoTiles, resolveMaterialAlias, upgradeToPhoto } from "./photoUpgrade"
 import { BUILTIN_MATERIALS, DEFAULT_SETTINGS, NON_CNC_MATERIALS, parseSettings, SIM_MATERIALS, type MaterialPref } from "./settings"
 import { PHOTO_MATERIALS, TEXTURE_SETS } from "./textureSets"
 import { BUILTIN_TEMPLATES } from "./templates"
@@ -113,5 +113,36 @@ describe("àlies dels noms antics", () => {
     expect(a).toMatchObject({ floorMaterial: "Parquet de roure", wallMaterial: "Microciment gris", ceilingMaterial: "Estuc antracita" })
     expect(a.walls[0]!.material).toBe("Mur de pedra")
     expect(a.items[0]).toMatchObject({ material: "Teixit gris", material2: "Jute" })
+  })
+})
+
+describe("mida de les xapes de foto (v8)", () => {
+  const photo = (id: string, name: string, set: string, tileMm: number): MaterialPref => {
+    const t = TEXTURE_SETS.find((x) => x.id === set)!
+    const base = PHOTO_MATERIALS.find((m) => m.id === `photo-${t.id}`)!
+    return { ...base, id, name, finish: { ...base.finish, tileMm } as MaterialPref["finish"] }
+  }
+
+  it("actualitza només els que tenen la mida d'abans, i és idempotent", () => {
+    const v7 = {
+      ...DEFAULT_SETTINGS,
+      version: 7,
+      materials: [
+        photo("oak", "Roure massís / xapat", "oak_veneer_01", 1100),
+        photo("u1", "El meu roure", "oak_veneer_01", 1500),
+        photo("wal", "Noguera xapada", "walnut_veneer_02", 1200),
+        photo("dark", "Fusta fosca", "dark_wood", 1000),
+      ],
+    }
+    const res = parseSettings(v7)
+    expect(res.migrated).toBe(true)
+    const tile = (id: string) => (res.settings.materials.find((m) => m.id === id)!.finish as { tileMm: number }).tileMm
+    expect(tile("oak")).toBe(TEXTURE_SETS.find((t) => t.id === "oak_veneer_01")!.tileMm)
+    expect(tile("oak")).toBeLessThan(1100)
+    expect(tile("u1")).toBe(1500)
+    expect(tile("wal")).toBe(TEXTURE_SETS.find((t) => t.id === "walnut_veneer_02")!.tileMm)
+    expect(tile("dark")).toBe(1000)
+    expect(parseSettings(res.settings).settings).toEqual(res.settings)
+    expect(rescalePhotoTiles(res.settings.materials)).toBe(res.settings.materials)
   })
 })

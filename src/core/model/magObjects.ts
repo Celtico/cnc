@@ -259,6 +259,17 @@ export const MAG_OBJECTS: Template[] = [
   // --- Tèxtils i complements ---
   t("cushion", "Coixí", "500 × 500 × 150 mm · lli.", () => [front("Coixí", "Teixit sorra", 0, 0, 0, 500, 500, 150, roundRect(500, 500, 160))]),
   t("throw", "Manta plegada", "500 × 60 × 350 mm.", () => [flat("Manta", "Teixit ocre", 0, 0, 0, 500, 350, 60, roundRect(500, 350, 25))]),
+  // Roba de llit per posar sobre una plataforma (z = 0 al capçal; el matalàs comença a x = 50).
+  t("bed-linen-160", "Roba de llit de 160", "1700 × 300 × 2030 mm · matalàs de 1600 × 2000, nòrdic de lli amb el plec, plaid de llana als peus i tres coixins.", () => [
+    flat("Matalàs", "Bouclé blanc", 50, 0, 0, 1600, 2000, 200, roundRect(1600, 2000, 40)),
+    // El nòrdic embolica la part de dalt del matalàs i cau una mica pels costats i els peus.
+    flat("Nòrdic", "Lli blanc", 20, 70, 430, 1660, 1600, 205, roundRect(1660, 1600, 70)),
+    flat("Plec del nòrdic", "Lli blanc", 25, 275, 430, 1650, 300, 35, roundRect(1650, 300, 30)),
+    flat("Plaid", "Teixit gris", 0, 275, 1480, 1700, 480, 28, roundRect(1700, 480, 20)),
+    front("Coixí", "Lli blanc", 110, 200, 40, 700, 460, 170, roundRect(700, 460, 130)),
+    front("Coixí", "Lli blanc", 890, 200, 40, 700, 460, 170, roundRect(700, 460, 130)),
+    front("Coixí", "Teixit sorra", 600, 200, 230, 500, 340, 130, roundRect(500, 340, 110)),
+  ]),
   t("books", "Pila de llibres", "500 × 240 × 220 mm.", () => [flat("Llibres", "Llibres", 0, 0, 0, 500, 220, 240)]),
   t("rug-jute", "Catifa de jute", "2400 × 1700 mm.", () => [flat("Catifa", "Jute", 0, 0, 0, 2400, 1700, 12, roundRect(2400, 1700, 30))]),
   t("rug-kilim", "Catifa kilim", "2000 × 3000 mm.", () => [flat("Catifa", "Catifa kilim", 0, 0, 0, 2000, 3000, 10)]),

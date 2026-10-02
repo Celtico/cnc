@@ -18,7 +18,7 @@ export type ObjectCategory = (typeof OBJECT_CATEGORIES)[number]["id"]
 const BY_ID: Record<string, ObjectCategory> = {
   // Blocs d'abans (`BLOCK_PRESETS`) i els primers objectes.
   "sofa-3": "seients", "sofa-2": "seients", armchair: "seients", chair: "seients",
-  "bed-150": "llits", "bed-90": "llits",
+  "bed-150": "llits", "bed-90": "llits", "bed-linen-160": "llits",
   dining: "taules", desk: "taules", "round-table": "taules",
   fridge: "cuina", washer: "cuina",
   rug: "textils", tv: "parets", mirror: "parets",

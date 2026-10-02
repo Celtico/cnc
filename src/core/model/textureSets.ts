@@ -38,10 +38,11 @@ export interface TextureSet {
 const PH = "Poly Haven (CC0)"
 
 export const TEXTURE_SETS: TextureSet[] = [
-  // Xapes (taulers de la CNC): la veta ~1,1 m per repetició.
-  { id: "oak_veneer_01", label: "Roure (foto)", tileMm: 1100, grain: "y", use: "board", color: "#a17e57", edge: "Xapa de roure", credit: PH },
-  { id: "walnut_veneer_02", label: "Noguera (foto)", tileMm: 1200, grain: "x", use: "board", color: "#a98971", edge: "Xapa de noguera", credit: PH },
-  { id: "smoked_walnut_veneer", label: "Noguera fumada (foto)", tileMm: 1200, grain: "x", use: "board", color: "#ba997d", edge: "Xapa de noguera", credit: PH },
+  // Xapes (taulers de la CNC). Mida mirada a la foto (v8): fibres del roure a ~2–3 mm i flames de 60–80 mm d'ample
+  // (abans 1100: fibres de 6–9 mm, semblava una sola fulla gegant); les nogueres, catedrals de ~250–300 mm.
+  { id: "oak_veneer_01", label: "Roure (foto)", tileMm: 600, grain: "y", use: "board", color: "#a17e57", edge: "Xapa de roure", credit: PH },
+  { id: "walnut_veneer_02", label: "Noguera (foto)", tileMm: 900, grain: "x", use: "board", color: "#a98971", edge: "Xapa de noguera", credit: PH },
+  { id: "smoked_walnut_veneer", label: "Noguera fumada (foto)", tileMm: 800, grain: "x", use: "board", color: "#ba997d", edge: "Xapa de noguera", credit: PH },
   { id: "dark_wood", label: "Fusta fosca (foto)", tileMm: 1000, grain: "x", use: "board", color: "#5c2a17", edge: "Xapa de fusta fosca", credit: PH },
   // Terres de fusta (lames de ~190 mm).
   { id: "wood_floor", label: "Parquet de roure (foto)", tileMm: 1600, grain: "y", use: "sim", color: "#7f5f42", credit: PH },
@@ -66,6 +67,9 @@ export const TEXTURE_SETS: TextureSet[] = [
   { id: "poly_wool_herringbone", label: "Llana espiga (foto)", tileMm: 450, aspect: 1046 / 1024, grain: "none", use: "sim", color: "#787570", credit: PH },
   { id: "denim_fabric_05", label: "Teixit vaquer (foto)", tileMm: 400, aspect: 1030 / 1024, grain: "none", use: "sim", color: "#666464", credit: PH },
 ]
+
+/** Mides de repetició per defecte d'abans (v6–v7) dels jocs que han canviat: la migració v8 les actualitza. */
+export const PREVIOUS_TILE_MM: Record<string, number> = { oak_veneer_01: 1100, walnut_veneer_02: 1200, smoked_walnut_veneer: 1200 }
 
 /** Fitxer d'un mapa d'un joc (camí relatiu a l'arrel de l'app). */
 export const textureSetFile = (id: string, map: "diff" | "nor" | "rough") => `textures/${id}/${map}.jpg`

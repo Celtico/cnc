@@ -868,6 +868,12 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     o, a les antigues, en obrir la targeta) fa que l'alçada real sigui `tileMm × aspect`: abans
     s'estirava si la foto no era quadrada. `faceTexture` creua les repeticions quan la veta va en v
     (three escala després de girar).
+  - **Textura desplaçada per peça** (`viewer/textureOffset.ts`, test): cada cara de cada peça (`Panel.id` + cara) té
+    un desplaçament determinista dins d'una repetició (u, v en [0, 1), hash FNV-1a + barreja) i, a l'atzar, un gir de
+    180° (la veta no canvia de direcció): així les portes d'un armari no tenen la mateixa veta. Va a la matriu UV de la
+    textura (`faceTexture(…, off)`: `offset` i `rotation`), que llegeixen el visor, el render per CPU/GPU (`sceneData`:
+    `map.matrix`, també la base tangent dels mapes de normals) i el GLB/USDZ; fusta procedural, fotos i patrons. Canviar
+    el hash canvia la veta de tots els mobles.
   - **Materials de foto amb relleu** (v6 de les preferències): 22 jocs de Poly Haven (CC0, 1K) a
     `public/textures/<id>/{diff,nor,rough}.jpg` (normal OpenGL, rugositat en grisos), manifest a
     `core/model/textureSets.ts` (`TEXTURE_SETS`: nom, mida real d'una repetició, direcció de la veta a la foto,
@@ -894,6 +900,10 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     `aliasMaterialRefs` (claus `material`, `material2`, `…Material`, `scene.floor/wall`) a `normalizeComposition`,
     `parseAmbient`, `readPresentationScene` i els materials per defecte i dels taulers de les preferències. La biblioteca
     fa el mateix (`LIBRARY_PHOTO_UPGRADES`). El terra per defecte de Presentació és «Parquet de roure» (foto).
+  - **Mida de les xapes de foto** (v8, mirada a `diff.jpg`: fibres de roure a 2–3 mm, catedrals de noguera de
+    ~250–300 mm): roure 1100 → 600, noguera 1200 → 900, noguera fumada 1200 → 800. `rescalePhotoTiles` (migració v8,
+    idempotent) només canvia els materials que fan servir el joc amb la mida d'abans (`PREVIOUS_TILE_MM`); una mida
+    posada per l'usuari es queda.
   - **Tauler de taula** (`Carcass.tableTop`): la tapa per sobre dels laterals (més curts),
     voladís a tot el voltant i forma (rectangle, arrodonit, oval o a mida amb l'editor de
     perfil; `shape` en mm s'escala al tauler). `Panel.outline` (rectes i arcs): 3D/GLB

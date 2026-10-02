@@ -2,7 +2,7 @@ import { z } from "zod"
 import { DEFAULT_CABINET } from "./cabinet"
 import { DEFAULT_HARDWARE, HardwareSchema, type Module } from "./composition"
 import { PHOTO_MATERIALS } from "./textureSets"
-import { resolveMaterialAlias, upgradeToPhoto } from "./photoUpgrade"
+import { rescalePhotoTiles, resolveMaterialAlias, upgradeToPhoto } from "./photoUpgrade"
 
 /**
  * Preferències de l'usuari: tot el que depèn de casa seva i del taller (referències de
@@ -15,7 +15,7 @@ import { resolveMaterialAlias, upgradeToPhoto } from "./photoUpgrade"
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 7
+export const SETTINGS_VERSION = 8
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -486,7 +486,9 @@ export function parseSettings(raw: unknown): SettingsParse {
   // v6: materials de foto amb mapes PBR (Poly Haven), només els que falten.
   const v6 = version < 6 && v5 !== BUILTIN_MATERIALS ? [...v5, ...missing(PHOTO_MATERIALS, v5)] : v5
   // v7: els de sempre amb l'acabat de foto; els «(foto)» repetits fora i la resta sense «(foto)» (idempotent).
-  const materials = version < 7 && v6 !== BUILTIN_MATERIALS ? upgradeToPhoto(v6) : v6
+  const v7m = version < 7 && v6 !== BUILTIN_MATERIALS ? upgradeToPhoto(v6) : v6
+  // v8: mida real de les xapes de foto (roure 1100 → 600, noguera…), només si encara tenen la d'abans.
+  const materials = version < 8 && v7m !== BUILTIN_MATERIALS ? rescalePhotoTiles(v7m) : v7m
   const boards = section("boards", BoardsPrefSchema, DEFAULT_SETTINGS.boards, "Taulers")
   const defaults = section("defaults", SettingsSchema.shape.defaults, DEFAULT_SETTINGS.defaults, "Materials per defecte")
   const v7 = version < 7
