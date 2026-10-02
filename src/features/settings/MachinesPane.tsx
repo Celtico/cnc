@@ -311,7 +311,7 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
                 title="Programes per tauler (nesting)"
                 summary={`marge ${machineNesting(m).edgeTrim} mm · separació Ø + ${machineNesting(m).spacingExtra} · martiri ${machineNesting(m).overcut} mm`}
               >
-                <FormRow label="Fresa del contorn" help="Contorns de les peces per fora. Automàtica: la que diu «nesting» al nom o, si no, la més petita que travessa el tauler.">
+                <FormRow label="Fresa del contorn" help="Contorns de les peces per fora quan cap regla de «Perfilar» no val per al gruix. Automàtica: la que diu «nesting» al nom o, si no, la més petita que travessa el tauler.">
                   <ChoiceChips<string>
                     label="Fresa del contorn"
                     options={[
@@ -337,6 +337,11 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
                   />
                 </FormRow>
               </SettingsGroup>
+
+              <Text fontSize="sm" color="fg.muted">
+                Les regles de mecanitzat d'aquesta màquina (fresa de les ranures, perfilar per gruix, rampa, peces petites) són a Preferències ›
+                Ferratges i mecanitzats.
+              </Text>
 
               <ToolsTable tools={m.tools} onChange={(tools) => update({ tools })} />
             </Stack>

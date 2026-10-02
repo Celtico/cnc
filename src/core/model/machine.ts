@@ -65,6 +65,69 @@ export const MachineToolSchema = z.object({
 })
 export type MachineTool = z.infer<typeof MachineToolSchema>
 
+/**
+ * Regles de mecanitzat (les del taller). Les eines van pel nom (el de l'MSL, el nom o el codi: `findRuleTool`);
+ * si la màquina no en té cap amb aquell nom, l'export tria com sempre i avisa.
+ */
+export const MachineRulesSchema = z.object({
+  /** Ranures (obertes per algun extrem): eina i fondària màxima per passada (més fondes, diverses passades). */
+  grooves: z.object({ tool: z.string(), maxPass: z.number().min(0.5).max(50) }),
+  /** Caixeres (rebaixos cecs tancats pels quatre costats): eina. */
+  pockets: z.object({ tool: z.string() }),
+  /** Perfilar (contorns per fora i talls passants per dins): eina segons el gruix del tauler (mm, inclosos). */
+  profile: z.array(z.object({ min: z.number().min(0), max: z.number().min(0), tool: z.string() })),
+  /** Perfilats del nesting: entrada en rampa (`SetApproachStrategy` en baixada, manual p71); llargada en mm. */
+  ramp: z.object({ enabled: z.boolean(), length: z.number().min(1).max(500) }),
+  /**
+   * Peces petites (àrea < `maxArea` m², o algun costat < `maxSide` si no és 0): el contorn en passades de desbast que deixen
+   * `z` mm a baix i `xy` mm al costat, i una passada final fins al martiri (la de sempre). Les normals, una passada.
+   */
+  small: z.object({
+    maxSide: z.number().min(0),
+    maxArea: z.number().min(0),
+    passes: z.array(z.object({ z: z.number().min(0).max(20), xy: z.number().min(0).max(10) })),
+  }),
+})
+export type MachineRules = z.infer<typeof MachineRulesSchema>
+
+/**
+ * Regles per defecte (les del germà, 2026): ranures «8mm diamant» a 6 mm per passada; caixeres «12mm diamant
+ * nesting»; perfilar 8–22 mm amb «12mm diamant nesting» i 23–41 mm amb «14mm diamant nesting»; rampa de 40 mm;
+ * peces petites (menys de 0,8 m², del taller) en 3 passades: Z 1 / XY 1, Z 0,5 / XY 0 i la final.
+ */
+export const defaultMachineRules = (): MachineRules => ({
+  grooves: { tool: "8mm diamant", maxPass: 6 },
+  pockets: { tool: "12mm diamant nesting" },
+  profile: [
+    { min: 8, max: 22, tool: "12mm diamant nesting" },
+    { min: 23, max: 41, tool: "14mm diamant nesting" },
+  ],
+  ramp: { enabled: true, length: 40 },
+  small: {
+    maxSide: 0,
+    maxArea: 0.8,
+    passes: [
+      { z: 1, xy: 1 },
+      { z: 0.5, xy: 0 },
+    ],
+  },
+})
+
+/** Regles de la màquina (les de per defecte si no en té). */
+export const machineRules = (m: Pick<Machine, "rules">): MachineRules => m.rules ?? defaultMachineRules()
+
+/** Màquina amb regles (migració en carregar: additiu i idempotent; les que ja en tenen no es toquen). */
+export const withMachineRules = <M extends Pick<Machine, "rules">>(m: M): M => {
+  if (!m.rules) return { ...m, rules: defaultMachineRules() }
+  // El llindar provisional d'abans (costat < 300 mm o < 0,1 m²) passa al del taller (< 0,8 m²); un d'editat es queda.
+  const s = m.rules.small
+  return s.maxSide === 300 && s.maxArea === 0.1 ? { ...m, rules: { ...m.rules, small: { ...s, maxSide: 0, maxArea: 0.8 } } } : m
+}
+
+/** Peça petita segons les regles: àrea (m²) < `maxArea`, o algun costat < `maxSide` (si no és 0). */
+export const isSmallPart = (r: MachineRules, length: number, width: number, area = length * width): boolean =>
+  (r.small.maxSide > 0 && Math.min(length, width) < r.small.maxSide) || area / 1e6 < r.small.maxArea
+
 export const MachineSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -120,6 +183,12 @@ export const MachineSchema = z.object({
       smallParts: z.enum(["last", "first"]),
     })
     .optional(),
+  /**
+   * Regles de mecanitzat del taller (eines per tipus de mecanitzat, passades, rampa, peces petites). Opcional a
+   * l'esquema: les màquines desades abans no en tenen i en carregar-les se'ls posen les de per defecte
+   * (`withMachineRules`); per llegir-les, `machineRules`.
+   */
+  rules: MachineRulesSchema.optional(),
   /** D'on venen els noms de les eines (`mslName`) i la capçalera: el .pgmx importat. */
   pgmx: z.object({ file: z.string(), version: z.string(), tools: z.number().int(), importedAt: z.number() }).optional(),
   /** La màquina per defecte de l'export. */

@@ -3,6 +3,8 @@
 // Cara A amunt. X = u (1200 mm), Y = v (700 mm), origen a la cantonada de baix a l'esquerra (cantell 4 a X = 0, cantell 3 a Y = 0)
 // Maquina SCM AA10008021 (AA10008021) - Maestro 2.00.004
 // Noms d'eina i capcalera del projecte Proyecto1.pgmx (Maestro 2.0.5 rev 1005)
+// Regles: ranures 8mm diamant (max 6 mm per passada), caixeres 12mm diamant nesting, perfilar 8-22 mm 12mm diamant nesting, 23-41 mm 14mm diamant nesting
+// Peces petites (costat < 300 mm o < 0.1 m2): Z 1/XY 1 + Z 0.5/XY 0 + final
 // Ordre de treball: CNC: A.1.H.1.xcs -> cantejadora
 // Despres de la CNC:
 //   1. Cantejar cantells 1+2+3+4 (cantejadora)

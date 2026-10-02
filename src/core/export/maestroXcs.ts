@@ -1,7 +1,8 @@
 import { zipStore } from "../file/zip"
 import { pickBlade, pickDrill, pickRouter, pickSmallRouter, drillsOfDiameter } from "../machine/tools"
-import { arcOf, bulgeOf, EDGE_NUMBER, flatten, type BPt, type Cutout, type EdgeSide, type Groove, type Hole, type Panel } from "../model"
-import { toolMslName, type Machine, type MachineTool } from "../model/machine"
+import { arcOf, bulgeOf, EDGE_NUMBER, flatten, polygonArea, type BPt, type Cutout, type EdgeSide, type Groove, type Hole, type Panel } from "../model"
+import { isSmallPart, machineRules, toolMslName, type Machine, type MachineRules, type MachineTool } from "../model/machine"
+import { RulePicker } from "../machine/rules"
 import { needsSecondFace, panelProcesses, secondFaceProgram, type ProcessKind } from "../process/processes"
 import { pieceRefs } from "./refs"
 import { asciiFold } from "./text"
@@ -44,7 +45,7 @@ export type XcsPlane = "Top" | "Front" | "Back" | "Left" | "Right"
 export interface XcsOp {
   program: "A" | "B"
   plane: XcsPlane
-  kind: "drill" | "slot" | "route" | "contour"
+  kind: "drill" | "slot" | "route" | "contour" | "pocket"
   /** Codi de l'eina o "-1" (automàtica). */
   tool: string
   /** Amb eina automàtica: el codi de l'eina que l'app ha comprovat que existeix i hi arriba. */
@@ -53,6 +54,14 @@ export interface XcsOp {
   points: [number, number][]
   /** Què és: «forat Ø5 (x, y)». */
   what: string
+  /** Ranures en diverses passades (regla): fondària de cada capa. */
+  passes?: number[]
+  /** Contorns: sobrant al costat (`overMaterial`) d'una passada de desbast de les peces petites. */
+  xy?: number
+  /** Contorns: passada n de m (peces petites). */
+  pass?: { index: number; count: number }
+  /** Entra en rampa (`SetApproachStrategy` en baixada). */
+  ramp?: boolean
 }
 
 export interface XcsProgram {
@@ -191,12 +200,15 @@ export function dedupePolyline(pts: BPt[]): BPt[] {
 /** Mig cercle (|bulge| = 1): es fa amb el centre (AddArc2PointCenterToPolyline). */
 const isHalfCircle = (b: number) => Math.abs(Math.abs(b) - 1) < 0.01
 
-/** Polilínia tancada amb arcs (bulge) a la cara activa. `pts` sense punts repetits (`dedupePolyline`). */
-export function closedPolyline(name: string, ptsIn: BPt[]): string[] {
+/**
+ * Polilínia tancada amb arcs (bulge) a la cara activa. `pts` sense punts repetits (`dedupePolyline`). Amb
+ * `keepStart`, comença pel primer punt tal com ve (la rampa, `rampStart`, que deixa recte el costat de tancar).
+ */
+export function closedPolyline(name: string, ptsIn: BPt[], keepStart = false): string[] {
   // Si hi ha algun costat recte, que sigui el de tancar (ClosePolyline, p30-32); si no, s'acaba amb l'arc.
   let pts = ptsIn
   const k = ptsIn.findIndex((p) => Math.abs(bulgeOf(p)) < 1e-9)
-  if (k >= 0) pts = [...ptsIn.slice(k + 1), ...ptsIn.slice(0, k + 1)]
+  if (k >= 0 && !keepStart) pts = [...ptsIn.slice(k + 1), ...ptsIn.slice(0, k + 1)]
   const first = pts[0]!
   const out = [`CreatePolyline(${cs(name)}, ${num(first[0])}, ${num(first[1])});`]
   const n = pts.length
@@ -410,8 +422,119 @@ export function grooveRouterPath(x0: number, x1: number, y0: number, y1: number,
   return pts
 }
 
-/** Programes d'una peça. `ref` = la ref del taller (`A.1.L.1`): nom del fitxer i de la peça a Maestro. */
-export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
+/**
+ * Fondàries de les passades d'una ranura amb `CreateBidirectionalMillingStrategy(true, maxPass, 0)` (manual
+ * §3.5.11.2 p60, Table 39; exemple p63): capes de `maxPass` fins a la fondària. Una sola si no passa de `maxPass`.
+ */
+export function passDepths(depth: number, maxPass: number): number[] {
+  if (!(maxPass > 0) || depth <= maxPass + 1e-6) return [depth]
+  const out: number[] = []
+  for (let z = maxPass; z < depth - 1e-6; z += maxPass) out.push(Math.round(z * 1000) / 1000)
+  out.push(depth)
+  return out
+}
+
+/** Estratègia de passades d'una ranura (només si en cal més d'una): va just abans del `CreateRoughFinish` (p58). */
+export const grooveStrategy = (depth: number, maxPass: number): string[] =>
+  passDepths(depth, maxPass).length > 1 ? [`CreateBidirectionalMillingStrategy(true, ${num(maxPass)}, 0);`] : []
+
+/** Una passada de perfilar: fondària i sobrant al costat (`overMaterial`, Table 36 p53). */
+export interface ContourPass {
+  depth: number
+  xy: number
+}
+
+/**
+ * Passades del contorn d'una peça: les petites, les de desbast de les regles (deixen `z` a baix: fondària = gruix −
+ * z; i `xy` al costat) i la final fins a `finalDepth` (el martiri o els passants de més); les normals, només la final.
+ */
+export function contourPasses(thickness: number, finalDepth: number, small: boolean, passes: readonly { z: number; xy: number }[]): ContourPass[] {
+  const rough = small ? passes.filter((p) => thickness - p.z > 0.05).map((p) => ({ depth: Math.round((thickness - p.z) * 1000) / 1000, xy: p.xy })) : []
+  return [...rough, { depth: finalDepth, xy: 0 }]
+}
+
+/** `CreateContour(nom, fondària, 1, costat, desc, GeneralRouting, eina, capçal, 0, -1, -1, -1, sobrant)` (p53). */
+export const contourLine = (name: string, depth: number, side: 0 | 1, desc: string, tool: MachineTool | undefined, xy = 0) =>
+  `CreateContour(${cs(name)}, ${num(depth)}, 1, ${side}, ${cs(desc)}, TypeOfProcess.GeneralRouting, ${toolArg(tool)}, ${HEAD}, 0, -1, -1, -1, ${num(xy)});`
+
+/**
+ * Inici de la rampa: el contorn comença al mig del costat recte més llarg (s'hi afegeix un punt) i acaba amb aquell
+ * mateix costat recte (ClosePolyline). Així l'entrada lineal tangent (`SetApproachStrategy(true, false, k)`, p71:
+ * lineal i «en baixada») va per sobre del mateix tall i no surt de la peça cap a les del costat. `room` = la meitat
+ * del costat (la rampa no pot ser més llarga). `null` si no té cap costat recte de `minLen` o més.
+ */
+export function rampStart(pts: BPt[], minLen: number): { pts: BPt[]; room: number } | null {
+  let best = -1
+  let len = 0
+  for (let i = 0; i < pts.length; i++) {
+    if (Math.abs(bulgeOf(pts[i]!)) > 1e-9) continue
+    const a = pts[i]!
+    const b = pts[(i + 1) % pts.length]!
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1])
+    if (l > len + 1e-9) {
+      len = l
+      best = i
+    }
+  }
+  if (best < 0 || len < minLen) return null
+  const a = pts[best]!
+  const b = pts[(best + 1) % pts.length]!
+  const mid: BPt = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]
+  // mid → b → … → a (recte) → mid.
+  const rest = [...pts.slice(best + 1), ...pts.slice(0, best + 1)]
+  return { pts: [mid, ...rest], room: len / 2 }
+}
+
+/**
+ * Rampa d'entrada (manual §3.5.11.6 p71, Tables 45-46; exemple p72): `SetApproachStrategy(isLinear = true,
+ * isQuote = false: «en baixada», des de l'alçada de seguretat, k = llargada / radi)` i la sortida igual
+ * (`SetRetractStrategy(true, false, k, 0)`). No són d'una operació (p71): es reinicien abans i després.
+ */
+export function rampLines(tool: MachineTool, length: number): { on: string[]; off: string[] } {
+  const k = length / Math.max(0.5, tool.diameter / 2)
+  return {
+    on: ["ResetApproachStrategy();", "ResetRetractStrategy();", `SetApproachStrategy(true, false, ${num(k)});`, `SetRetractStrategy(true, false, ${num(k)}, 0);`],
+    off: ["ResetApproachStrategy();", "ResetRetractStrategy();"],
+  }
+}
+
+/**
+ * Una caixera (rebaix cec tancat pels quatre costats) amb `CreateContourPocket(nom, fondària, desc,
+ * TypeOfProcess.ConcentricalPocket, eina, capçal, -1, -1, -1, 50)` sobre la polilínia tancada (manual §3.5.10 p55,
+ * Table 37; exemples p55 i p57; l'eina ha de ser més petita que la caixera, p56). Solapament del 50 % (el per
+ * defecte, com la «ClosedPocket» del .pgmx del taller: Overlap 0,5).
+ */
+export const pocketLines = (name: string, pts: BPt[], depth: number, tool: MachineTool): string[] => [
+  ...closedPolyline(`${name}_G`, pts),
+  `CreateContourPocket(${cs(name)}, ${num(depth)}, ${cs("caixera")}, TypeOfProcess.ConcentricalPocket, ${toolArg(tool)}, ${HEAD}, -1, -1, -1, 50);`,
+]
+
+/** Resum de les regles per als comentaris de la capçalera (ASCII). */
+export function rulesComment(r: MachineRules, nesting: boolean): string[] {
+  const prof = r.profile.map((x) => `${num(x.min)}-${num(x.max)} mm ${x.tool || "auto"}`).join(", ")
+  return [
+    comment(`Regles: ranures ${r.grooves.tool || "auto"} (max ${num(r.grooves.maxPass)} mm per passada), caixeres ${r.pockets.tool || "auto"}, perfilar ${prof || "auto"}`),
+    comment(
+      `Peces petites (< ${num(r.small.maxArea)} m2${r.small.maxSide > 0 ? ` o costat < ${num(r.small.maxSide)} mm` : ""}; grans, una passada): ${r.small.passes.map((p) => `Z ${num(p.z)}/XY ${num(p.xy)}`).join(" + ") || "sense desbast"} + final${nesting && r.ramp.enabled ? `; entrada en rampa ${num(r.ramp.length)} mm` : ""}`,
+    ),
+  ]
+}
+
+/** Les regles al LLEGEIX-ME. */
+export function rulesReadme(r: MachineRules, nesting: boolean): string[] {
+  const prof = r.profile.map((x) => `${num(x.min)}–${num(x.max)} mm «${x.tool || "automàtica"}»`).join(", ")
+  return [
+    `- Regles del taller: ranures amb «${r.grooves.tool || "automàtica"}» (com a molt ${num(r.grooves.maxPass)} mm per passada), caixeres amb «${r.pockets.tool || "automàtica"}» (CreateContourPocket), perfilar per gruix: ${prof || "automàtica"}.`,
+    `- Peces petites (menys de ${num(r.small.maxArea)} m²${r.small.maxSide > 0 ? ` o algun costat < ${num(r.small.maxSide)} mm` : ""}; les grans, d'una passada): contorn en ${r.small.passes.length + 1} passades (${r.small.passes.map((p) => `deixa Z ${num(p.z)} · XY ${num(p.xy)}`).join(", ")}${r.small.passes.length ? ", " : ""}final ${nesting ? "al martiri" : "als passants"}).`,
+    ...(nesting && r.ramp.enabled ? [`- Perfilats amb entrada en rampa de ${num(r.ramp.length)} mm (com a molt la meitat del costat recte més llarg), començant al mig d'aquest costat.`] : []),
+  ]
+}
+
+/**
+ * Programes d'una peça. `ref` = la ref del taller (`A.1.L.1`): nom del fitxer i de la peça a Maestro. `rules`: la tria
+ * per regles compartida per tot l'export (els avisos d'eina que falta, un sol cop); sense, els avisos van a la peça.
+ */
+export function panelXcs(p: Panel, ref: string, m: Machine, rules?: RulePicker): XcsPanelResult {
   const L = p.length
   const W = p.width
   const T = p.thickness
@@ -420,6 +543,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
   let features = 0
   let skipped = 0
   let missingTool = 0
+  const rp = rules ?? new RulePicker(m)
   // `tool`: no surt perquè falta una eina (o no hi arriba).
   const skip = (what: string, why: string, tool = false) => {
     skipped++
@@ -526,7 +650,21 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
     const fullLength = a0 <= EPS && a1 >= aMax - EPS
     const pt = (a: number, b: number): [number, number] => (alongX ? [a, b] : [b, a])
 
-    const blade = m.grooves !== "router" && fullLength ? pickBlade(m, depth, width) : undefined
+    // Caixera (tancada pels dos extrems): la fresa de la regla amb CreateContourPocket, si hi cap.
+    const closed = a0 > EPS && a1 < aMax - EPS
+    const pocketTool = closed ? rp.tool("pocket", rp.rules.pockets.tool, width - 0.5, depth) : undefined
+    if (pocketTool) {
+      const pts = rectPts(x0, y0, x1 - x0, y1 - y0)
+      s.select("Top")
+      const name = s.name("Caixera")
+      s.lines.push(...pocketLines(name, pts, depth, pocketTool))
+      s.op({ kind: "pocket", tool: pocketTool.code, depth, points: pts as [number, number][], what: grooveWhat(g) })
+      handled++
+      continue
+    }
+    // Ranura amb la fresa de la regla (si no es prefereix el disc), en passades de `maxPass` com a molt.
+    const ruleRouter = m.grooves !== "blade" ? rp.tool("groove", rp.rules.grooves.tool, width, depth) : undefined
+    const blade = !ruleRouter && m.grooves !== "router" && fullLength ? pickBlade(m, depth, width) : undefined
     if (blade && m.grooves !== "router") {
       const t = blade.bladeThickness!
       const n = Math.max(1, Math.ceil(width / t - 1e-6))
@@ -545,11 +683,12 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
       continue
     }
     if (m.grooves === "blade") warnings.push(`${grooveWhat(g)}: no es pot fer amb disc (${fullLength ? "cap disc prou prim o prou gran" : "no va de cantell a cantell"}); es prova amb fresa`)
-    const router = pickRouter(m, width, depth)
+    const router = ruleRouter ?? pickRouter(m, width, depth)
     if (!router) {
       skip(grooveWhat(g), `cap fresa de Ø ≤ ${num(width)} que arribi a ${num(depth)} mm`, true)
       continue
     }
+    const maxPass = rp.rules.grooves.maxPass
     const pts = grooveRouterPath(x0, x1, y0, y1, L, W, router.diameter)
     if (!pts) {
       skip(grooveWhat(g), `massa curta per a la fresa ${router.code} (Ø${num(router.diameter)})`, true)
@@ -559,8 +698,9 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
     const name = s.name("Ranura")
     s.lines.push(`CreatePolyline(${cs(`${name}_G`)}, ${num(pts[0]![0])}, ${num(pts[0]![1])});`)
     for (const q of pts.slice(1)) s.lines.push(`AddSegmentToPolyline(${num(q[0])}, ${num(q[1])});`)
+    s.lines.push(...grooveStrategy(depth, maxPass))
     s.lines.push(`CreateRoughFinish(${cs(name)}, ${num(depth)}, ${cs("ranura")}, TypeOfProcess.GeneralRouting, ${toolArg(router)}, ${HEAD}, 0, -1, -1, -1, 0);`)
-    s.op({ kind: "route", tool: router.code, depth, points: pts, what: grooveWhat(g) })
+    s.op({ kind: "route", tool: router.code, depth, points: pts, what: grooveWhat(g), passes: passDepths(depth, maxPass) })
     handled++
   }
 
@@ -580,7 +720,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
         handled++
         continue
       }
-      const router = pickRouter(m, c.diameter - 1, through)
+      const router = rp.profileTool(T, c.diameter - 1, through) ?? pickRouter(m, c.diameter - 1, through)
       if (!router) {
         skip(cutWhat(c), `cap broca de Ø${num(c.diameter)} ni fresa més petita que arribin a ${num(through)} mm`, true)
         continue
@@ -588,7 +728,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
       A.select("Top")
       const name = A.name("Tall")
       A.lines.push(`CreateCircleCenterRadius(${cs(`${name}_G`)}, ${num(c.x)}, ${num(c.y)}, ${num(c.diameter / 2)}, false);`)
-      A.lines.push(`CreateContour(${cs(name)}, ${num(through)}, 1, 0, ${cs("tall passant")}, TypeOfProcess.GeneralRouting, ${toolArg(router)}, ${HEAD}, 0, -1, -1, -1, 0);`)
+      A.lines.push(contourLine(name, through, 0, "tall passant", router))
       const pts = flatten([[c.x + c.diameter / 2, c.y, 1], [c.x - c.diameter / 2, c.y, 1]])
       A.op({ kind: "contour", tool: router.code, depth: through, points: pts, what: cutWhat(c) })
       handled++
@@ -603,7 +743,9 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
     const maxDia = maxToolDiameter(pts, "inside")
     // Amb cantonades vives, la fresa més petita (el radi que hi deixa és el seu).
     const sharp = sharpCorners(pts, "inside")
-    const router = sharp ? pickSmallRouter(m, maxDia, through) : pickRouter(m, maxDia, through)
+    // Perfilar: la fresa de la regla pel gruix si hi cap; amb cantonades vives, la més petita (com sempre).
+    const ruled = sharp ? undefined : rp.profileTool(T, maxDia, through)
+    const router = ruled ?? (sharp ? pickSmallRouter(m, maxDia, through) : pickRouter(m, maxDia, through))
     if (!router) {
       skip(cutWhat(c), `cap fresa prou petita (Ø ≤ ${num(maxDia)}) que arribi a ${num(through)} mm`, true)
       continue
@@ -612,7 +754,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
     A.select("Top")
     const name = A.name("Tall")
     A.lines.push(...closedPolyline(`${name}_G`, pts))
-    A.lines.push(`CreateContour(${cs(name)}, ${num(through)}, 1, 0, ${cs("tall passant")}, TypeOfProcess.GeneralRouting, ${toolArg(router)}, ${HEAD}, 0, -1, -1, -1, 0);`)
+    A.lines.push(contourLine(name, through, 0, "tall passant", router))
     A.op({ kind: "contour", tool: router.code, depth: through, points: flat, what: cutWhat(c) })
     handled++
   }
@@ -623,7 +765,8 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
     const outline = dedupePolyline(p.outline)
     const maxDia = maxToolDiameter(outline, "outside")
     const sharp = sharpCorners(outline, "outside")
-    const router = sharp ? pickSmallRouter(m, maxDia, through) : pickRouter(m, maxDia, through)
+    const ruled = sharp ? undefined : rp.profileTool(T, maxDia, through)
+    const router = ruled ?? (sharp ? pickSmallRouter(m, maxDia, through) : pickRouter(m, maxDia, through))
     if (outline.length < 3) skip("contorn de la peça", "contorn sense mida")
     else if (!router) skip("contorn de la peça", `cap fresa${Number.isFinite(maxDia) ? ` de Ø ≤ ${num(maxDia)}` : ""} que arribi a ${num(through)} mm`, true)
     else {
@@ -631,8 +774,16 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
       A.select("Top")
       const name = A.name("Contorn")
       A.lines.push(...closedPolyline(`${name}_G`, outline))
-      A.lines.push(`CreateContour(${cs(name)}, ${num(through)}, 1, 1, ${cs("contorn")}, TypeOfProcess.GeneralRouting, ${toolArg(router)}, ${HEAD}, 0, -1, -1, -1, 0);`)
-      A.op({ kind: "contour", tool: router.code, depth: through, points: flatten(outline), what: "contorn de la peça" })
+      // Peça petita: passades de desbast (regles) i la final; normal: una passada.
+      const flatOutline = flatten(outline)
+      const small = isSmallPart(rp.rules, L, W, Math.abs(polygonArea(flatOutline)))
+      const passes = contourPasses(T, through, small, rp.rules.small.passes)
+      passes.forEach((ps, k) => {
+        const n = passes.length > 1 ? `${name}_P${k + 1}` : name
+        if (passes.length > 1) A.lines.push(comment(`peca petita: passada ${k + 1} de ${passes.length} (fondaria ${num(ps.depth)}, sobrant ${num(ps.xy)})`))
+        A.lines.push(contourLine(n, ps.depth, 1, "contorn", router, ps.xy))
+        A.op({ kind: "contour", tool: router.code, depth: ps.depth, points: flatOutline, what: "contorn de la peça", ...(passes.length > 1 ? { xy: ps.xy, pass: { index: k + 1, count: passes.length } } : {}) })
+      })
       handled++
     }
   }
@@ -654,6 +805,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
         : comment(`Cara B amunt: la peca girada sobre l'eix X (${num(L)} mm; el cantell 1 passa a Y = 0). Forats de cantell i talls: al programa de la cara A`),
       comment(`Maquina ${m.name}${m.serial ? ` (${m.serial})` : ""}${m.maestroVersion ? ` - Maestro ${m.maestroVersion}` : ""}`),
       ...(m.pgmx ? [comment(`Noms d'eina i capcalera del projecte ${m.pgmx.file} (Maestro ${m.pgmx.version})`)] : []),
+      ...rulesComment(rp.rules, false),
       // Només comentaris (cap missatge a l'operari, que aturaria la màquina).
       ...(post.length ? [comment(`Ordre de treball: ${route}`), comment("Despres de la CNC:"), ...post.map((x, i) => comment(`  ${i + 1}. ${x.text}`))] : []),
       "",
@@ -665,6 +817,11 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
   }
   if (A.ops.length) programs.push({ file: `${ref}.xcs`, face: "A", text: [...header("A"), ...A.lines, ""].join(EOL) })
   if (hasB) programs.push({ file: `${secondFaceProgram(ref)}.xcs`, face: "B", text: [...header("B"), ...B.lines, ""].join(EOL) })
+  // Sola (sense l'export): els avisos de les regles, a la peça.
+  if (!rules) {
+    warnings.unshift(...rp.notes)
+    missingTool += rp.missing
+  }
   return { ref, programs, ops: [...A.ops, ...B.ops], warnings, missingTool, postProcesses: post, route, features, skipped, handled }
 }
 
@@ -737,9 +894,11 @@ export function xcsZip(x: Pick<XcsExport, "files">, when?: Date): Uint8Array {
 /** Tots els programes d'un moble + un LLEGEIX-ME.txt. */
 export function toMaestroXcs(panels: Panel[], m: Machine, opts: { project: string; date?: Date }): XcsExport {
   const refs = pieceRefs(panels)
-  const results = panels.map((p) => panelXcs(p, refs.get(p.id) ?? p.id, m))
+  const rp = new RulePicker(m)
+  const results = panels.map((p) => panelXcs(p, refs.get(p.id) ?? p.id, m, rp))
   const files: { name: string; text: string }[] = []
-  const warnings: string[] = []
+  // Primer les regles amb eines que falten (un sol cop per export), després els de cada peça.
+  const warnings: string[] = [...rp.notes]
   results.forEach((r, i) => {
     for (const prog of r.programs) files.push({ name: prog.file, text: prog.text })
     for (const w of r.warnings) warnings.push(`${r.ref} (${panels[i]!.label}): ${w}`)
@@ -750,7 +909,7 @@ export function toMaestroXcs(panels: Panel[], m: Machine, opts: { project: strin
     files,
     panels: results,
     warnings,
-    missingTool: results.reduce((a, r) => a + r.missingTool, 0),
+    missingTool: results.reduce((a, r) => a + r.missingTool, 0) + rp.missing,
     postProcessPanels: results.filter((r) => r.postProcesses.length).length,
     programs: results.reduce((a, r) => a + r.programs.length, 0),
   }
@@ -785,6 +944,7 @@ function readme(project: string, m: Machine, results: XcsPanelResult[], panels: 
     "- Cantells amb la numeració de l'app: 1 dalt · 2 dreta · 3 baix · 4 esquerra (pendent de confirmar",
     "  amb la del taller).",
     `- Talls i forats passants: gruix + ${num(m.throughExtra)} mm.`,
+    ...rulesReadme(machineRules(m), false),
     "",
     `Peces: ${results.length} · programes: ${results.reduce((a, r) => a + r.programs.length, 0)}`,
   ]

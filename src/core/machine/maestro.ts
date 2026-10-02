@@ -1,5 +1,5 @@
 import { unzip } from "../file/zip"
-import { DEFAULT_HEADER, type Machine, type MachineTool, type ToolKind } from "../model/machine"
+import { DEFAULT_HEADER, defaultMachineRules, type Machine, type MachineTool, type ToolKind } from "../model/machine"
 import { child, childrenOf, descendants, numOf, parseXml, textOf, type XmlNode } from "./xml"
 
 /**
@@ -283,6 +283,7 @@ export async function machineFromContext(files: ContextFiles, id: string): Promi
     throughExtra: 1,
     grooves: "auto",
     verticalDrills: "auto",
+    rules: defaultMachineRules(),
     isDefault: false,
     tools,
     importedAt: Date.now(),

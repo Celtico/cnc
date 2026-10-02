@@ -3,7 +3,7 @@ import { DEFAULT_CABINET } from "./cabinet"
 import { DEFAULT_HARDWARE, HardwareSchema, type Module } from "./composition"
 import { PHOTO_MATERIALS } from "./textureSets"
 import { rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
-import { MachineSchema, repairMachine, type Machine } from "./machine"
+import { MachineSchema, repairMachine, withMachineRules, type Machine } from "./machine"
 
 /**
  * Preferències de l'usuari: tot el que depèn de casa seva i del taller (referències de
@@ -544,7 +544,8 @@ function machinesOf(raw: unknown, problems: string[]): Machine[] {
   for (const item of raw) {
     const r = repairMachine(item)
     const name = isRecord(item) && typeof item.name === "string" ? item.name : "?"
-    if (r.machine) out.push(r.machine)
+    // Regles de mecanitzat: les que no en tenen agafen les de per defecte (additiu, idempotent).
+    if (r.machine) out.push(withMachineRules(r.machine))
     else problems.push(`Màquines CNC: s'ha descartat la màquina ${name} (${r.problems.at(-1) ?? "invàlida"}).`)
     if (r.machine && r.problems.length) problems.push(`Màquines CNC (${name}): ${r.problems.join("; ")}.`)
   }

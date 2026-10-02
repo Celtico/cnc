@@ -61,6 +61,7 @@ import { MaterialSelect } from "./MaterialSelect"
 import { SectionLabel } from "../../components/SectionLabel"
 import { PaneHeadContext } from "./paneHead"
 import { MachinesList } from "./MachinesPane"
+import { MachiningRulesSection } from "./MachineRules"
 
 type SectionKey = keyof Omit<Settings, "version">
 
@@ -215,8 +216,11 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             </Stack>
           </Pane>
 
-          <Pane id="hardware" title="Ferratges i mecanitzats" icon={LuHammer} desc="Frontisses, guies, espigues i forats." onReset={() => setReset({ key: "hardware", label: "Ferratges i mecanitzats" })}>
-            <HardwareForm hardware={draft.hardware} onChange={(hardware) => set("hardware", hardware)} />
+          <Pane id="hardware" title="Ferratges i mecanitzats" icon={LuHammer} desc="Frontisses, guies, espigues i forats, i com mecanitza la CNC." onReset={() => setReset({ key: "hardware", label: "Ferratges i mecanitzats" })}>
+            <Stack gap={8}>
+              <HardwareForm hardware={draft.hardware} onChange={(hardware) => set("hardware", hardware)} />
+              <MachiningRulesSection machines={draft.machines} onChange={(machines) => set("machines", machines)} />
+            </Stack>
           </Pane>
 
           <Pane id="gaps" title="Jocs per defecte" icon={LuRuler} desc="Separacions dels fronts, prestatges i fons." onReset={() => setReset({ key: "gaps", label: "Jocs per defecte" })}>

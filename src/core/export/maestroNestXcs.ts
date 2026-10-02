@@ -1,23 +1,33 @@
 import { drillsOfDiameter, pickDrill, pickRouter, pickSmallRouter, usableTool } from "../machine/tools"
 import { flatten, polygonArea, type BPt, type Cutout, type Panel } from "../model"
-import { machineNesting, toolMslName, type Machine, type MachineTool } from "../model/machine"
+import { isSmallPart, machineNesting, machineRules, toolMslName, type Machine, type MachineTool } from "../model/machine"
+import { RulePicker } from "../machine/rules"
 import type { NestOptions, Nesting } from "../nesting/nest"
 import { needsSecondFace } from "../process/processes"
 import {
   closedPolyline,
   comment,
+  contourLine,
+  contourPasses,
   cs,
   cutWhat,
   dedupePolyline,
   EOL,
   grooveRouterPath,
+  grooveStrategy,
   grooveWhat,
   HEAD,
   holeWhat,
   maxToolDiameter,
   num,
+  passDepths,
+  pocketLines,
   postProcessesOf,
+  rampLines,
+  rampStart,
   rectPts,
+  rulesComment,
+  rulesReadme,
   sharpCorners,
   slotPts,
   toolArg,
@@ -92,7 +102,10 @@ export function nestingRouter(m: Machine, depth: number): MachineTool | undefine
 export function cncNestOptions(panels: Panel[], m: Machine, base: NestOptions): { options: NestOptions; tool?: MachineTool; spacing: number } {
   const n = machineNesting(m)
   const maxT = panels.reduce((a, p) => Math.max(a, p.thickness), 0)
-  const tool = nestingRouter(m, maxT + n.overcut)
+  // Amb regles de perfilar per gruix: la fresa més grossa dels gruixos del moble (la separació és una per a tots).
+  const rp = new RulePicker(m)
+  const ruled = [...new Set(panels.map((p) => p.thickness))].map((t) => rp.profileTool(t, Infinity, t + n.overcut)).filter((t): t is MachineTool => !!t)
+  const tool = ruled.sort((a, b) => b.diameter - a.diameter)[0] ?? nestingRouter(m, maxT + n.overcut)
   const spacing = (tool ? tool.diameter : base.kerf) + n.spacingExtra
   return { options: { ...base, kerf: spacing, margin: n.edgeTrim }, tool, spacing }
 }
@@ -172,6 +185,8 @@ interface Feat {
   area: number
   /** Comentari del grup (la broca automàtica). */
   groupNote?: string
+  /** Contorns de les peces petites: passada n de m (els desbastos van abans, la final amb les petites). */
+  pass?: { index: number; count: number }
   lines: string[]
   op: NestOp
 }
@@ -207,16 +222,23 @@ function nearest(feats: Feat[], pos: [number, number]): { out: Feat[]; pos: [num
  * surten) i pel veí més proper; els contorns, per mida (classes de ×2 d'àrea: les petites al final o al
  * principi, `smallParts`) i, dins de cada classe, pel veí més proper.
  */
-export function orderFeats<F extends Pick<Feat, "stage" | "key" | "start" | "end" | "area">>(feats: F[], smallParts: "last" | "first" = "last"): F[] {
+export function orderFeats<F extends Pick<Feat, "stage" | "key" | "start" | "end" | "area" | "pass">>(feats: F[], smallParts: "last" | "first" = "last"): F[] {
   const out: F[] = []
   let pos: [number, number] = [0, 0]
   for (const stage of STAGES) {
     const of = feats.filter((f) => f.stage === stage)
     const groups = new Map<string, F[]>()
     if (stage === "outer") {
+      // Peces petites en passades: primer els desbastos (passada 1 de totes, després la 2…), amb el tauler sencer.
+      const rough = of.filter((f) => f.pass && f.pass.index < f.pass.count)
+      for (const k of [...new Set(rough.map((f) => f.pass!.index))].sort((a, b) => a - b)) groups.set(`P${k}`, rough.filter((f) => f.pass!.index === k))
+      const finals = of.filter((f) => f.pass && f.pass.index === f.pass.count)
+      const rest = of.filter((f) => !f.pass)
       const tier = (f: F) => Math.floor(Math.log2(Math.max(1, f.area)))
-      const tiers = [...new Set(of.map(tier))].sort((a, b) => (smallParts === "last" ? b - a : a - b))
-      for (const t of tiers) groups.set(String(t), of.filter((f) => tier(f) === t))
+      const tiers = [...new Set(rest.map(tier))].sort((a, b) => (smallParts === "last" ? b - a : a - b))
+      if (smallParts === "first" && finals.length) groups.set("final", finals)
+      for (const t of tiers) groups.set(String(t), rest.filter((f) => tier(f) === t))
+      if (smallParts === "last" && finals.length) groups.set("final", finals)
     } else {
       for (const f of of) groups.set(f.key, [...(groups.get(f.key) ?? []), f])
     }
@@ -243,13 +265,22 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
   const tabOf = new Map<string, number>()
   const sheets: NestSheetXcs[] = []
   const maxT = panels.reduce((a, p) => Math.max(a, p.thickness), 0)
-  const mainTool = nestingRouter(m, maxT + nopt.overcut)
+  const rp = new RulePicker(m)
+  const rules = rp.rules
+  const mainTool = rp.profileTool(maxT, Infinity, maxT + nopt.overcut) ?? nestingRouter(m, maxT + nopt.overcut)
   const spacing = nesting.options.kerf
+  /** Polilínia tancada + operació; amb rampa (regla), comença al mig del costat recte més llarg. */
+  const profiled = (name: string, pts: BPt[], t: MachineTool, ops: (n: string) => string[]): { lines: string[]; start: [number, number]; ramp: boolean } => {
+    const r = rules.ramp.enabled ? rampStart(pts, 2 * t.diameter) : null
+    if (!r) return { lines: [...closedPolyline(`${name}_G`, pts), ...ops(name)], start: [pts[0]![0], pts[0]![1]], ramp: false }
+    const ramp = rampLines(t, Math.min(rules.ramp.length, r.room))
+    return { lines: [...closedPolyline(`${name}_G`, r.pts, true), ...ramp.on, ...ops(name), ...ramp.off], start: [r.pts[0]![0], r.pts[0]![1]], ramp: true }
+  }
 
   for (const b of nesting.boards) {
     const T = b.thickness
     const through = T + nopt.overcut
-    const router = nestingRouter(m, through)
+    const router = rp.profileTool(T, Infinity, through) ?? nestingRouter(m, through)
     const feats: Feat[] = []
     const parts: NestPart[] = []
     for (const pl of b.placements) {
@@ -322,7 +353,25 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
           warn(grooveWhat(g), `més fonda que el gruix − 1; s'escurça a ${num(depth)}`)
         }
         const width = Math.min(x1 - x0, y1 - y0)
-        const t = pickRouter(m, width, depth)
+        const alongX = x1 - x0 >= y1 - y0
+        const closed = alongX ? x0 > EPS && x1 < p.length - EPS : y0 > EPS && y1 < p.width - EPS
+        // Caixera (tancada pels dos extrems): la fresa de la regla amb CreateContourPocket, si hi cap.
+        const pt = closed ? rp.tool("pocket", rules.pockets.tool, width - 0.5, depth) : undefined
+        if (pt) {
+          const pts = toBoardPts(place, rectPts(x0, y0, x1 - x0, y1 - y0))
+          const n = name("Caixera")
+          feats.push({
+            stage: "groove",
+            key: `pocket:${pt.code}`,
+            start: [pts[0]![0], pts[0]![1]],
+            end: [pts[0]![0], pts[0]![1]],
+            area: 0,
+            lines: pocketLines(n, pts, depth, pt),
+            op: { program: "A", plane: "Top", kind: "pocket", tool: pt.code, depth, points: flatten(pts), what: grooveWhat(g), ref, stage: "groove" },
+          })
+          continue
+        }
+        const t = rp.tool("groove", rules.grooves.tool, width, depth) ?? pickRouter(m, width, depth)
         if (!t) {
           warn(grooveWhat(g), `cap fresa de Ø ≤ ${num(width)} que arribi a ${num(depth)} mm`, true)
           continue
@@ -343,9 +392,10 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
           lines: [
             `CreatePolyline(${cs(`${n}_G`)}, ${num(pts[0]![0])}, ${num(pts[0]![1])});`,
             ...pts.slice(1).map((q) => `AddSegmentToPolyline(${num(q[0])}, ${num(q[1])});`),
+            ...grooveStrategy(depth, rules.grooves.maxPass),
             `CreateRoughFinish(${cs(n)}, ${num(depth)}, ${cs("ranura")}, TypeOfProcess.GeneralRouting, ${toolArg(t)}, ${HEAD}, 0, -1, -1, -1, 0);`,
           ],
-          op: { program: "A", plane: "Top", kind: "route", tool: t.code, depth, points: pts, what: grooveWhat(g), ref, stage: "groove" },
+          op: { program: "A", plane: "Top", kind: "route", tool: t.code, depth, points: pts, what: grooveWhat(g), ref, stage: "groove", passes: passDepths(depth, rules.grooves.maxPass) },
         })
       }
 
@@ -359,7 +409,7 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
             drill(x, y, through, c.diameter, cutWhat(c), d, name("ForatPassant"))
             continue
           }
-          const t = pickRouter(m, c.diameter - 1, through)
+          const t = rp.profileTool(T, c.diameter - 1, through) ?? pickRouter(m, c.diameter - 1, through)
           if (!t) {
             warn(cutWhat(c), `cap broca de Ø${num(c.diameter)} ni fresa més petita que arribin a ${num(through)} mm`, true)
             continue
@@ -374,7 +424,7 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
             area: 0,
             lines: [
               `CreateCircleCenterRadius(${cs(`${n}_G`)}, ${num(x)}, ${num(y)}, ${num(c.diameter / 2)}, false);`,
-              `CreateContour(${cs(n)}, ${num(through)}, 1, 0, ${cs("tall passant")}, TypeOfProcess.GeneralRouting, ${toolArg(t)}, ${HEAD}, 0, -1, -1, -1, 0);`,
+              contourLine(n, through, 0, "tall passant", t),
             ],
             op: { program: "A", plane: "Top", kind: "contour", tool: t.code, depth: through, points: flatten([[x + c.diameter / 2, y, 1], [x - c.diameter / 2, y, 1]]), what: cutWhat(c), ref, stage: "inner" },
           })
@@ -387,7 +437,7 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
         }
         const maxDia = maxToolDiameter(local, "inside")
         const sharp = sharpCorners(local, "inside")
-        const t = sharp ? pickSmallRouter(m, maxDia, through) : pickRouter(m, maxDia, through)
+        const t = (sharp ? undefined : rp.profileTool(T, maxDia, through)) ?? (sharp ? pickSmallRouter(m, maxDia, through) : pickRouter(m, maxDia, through))
         if (!t) {
           warn(cutWhat(c), `cap fresa prou petita (Ø ≤ ${num(maxDia)}) que arribi a ${num(through)} mm`, true)
           continue
@@ -395,15 +445,15 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
         if (sharp && t.diameter / 2 > 0.5) warn(cutWhat(c), `${sharp} cantonades vives queden amb radi ${num(t.diameter / 2)} mm (fresa ${toolMslName(t)} Ø${num(t.diameter)})`)
         const pts = toBoardPts(place, local)
         const n = name("Tall")
-        const start: [number, number] = [pts[0]![0], pts[0]![1]]
+        const pr = profiled(n, pts, t, (nm) => [contourLine(nm, through, 0, "tall passant", t)])
         feats.push({
           stage: "inner",
           key: t.code,
-          start,
-          end: start,
+          start: pr.start,
+          end: pr.start,
           area: 0,
-          lines: [...closedPolyline(`${n}_G`, pts), `CreateContour(${cs(n)}, ${num(through)}, 1, 0, ${cs("tall passant")}, TypeOfProcess.GeneralRouting, ${toolArg(t)}, ${HEAD}, 0, -1, -1, -1, 0);`],
-          op: { program: "A", plane: "Top", kind: "contour", tool: t.code, depth: through, points: flatten(pts), what: cutWhat(c), ref, stage: "inner" },
+          lines: pr.lines,
+          op: { program: "A", plane: "Top", kind: "contour", tool: t.code, depth: through, points: flatten(pts), what: cutWhat(c), ref, stage: "inner", ...(pr.ramp ? { ramp: true } : {}) },
         })
       }
 
@@ -413,26 +463,44 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
       } else {
         const maxDia = p.outline?.length ? maxToolDiameter(outline, "outside") : Infinity
         const sharp = p.outline?.length ? sharpCorners(outline, "outside") : 0
-        const t = router && router.diameter <= maxDia + 1e-6 && !sharp ? router : sharp ? pickSmallRouter(m, maxDia, through) : pickRouter(m, maxDia, through)
+        const t = router && router.diameter <= maxDia + 1e-6 && !sharp ? router : sharp ? pickSmallRouter(m, maxDia, through) : (rp.profileTool(T, maxDia, through) ?? pickRouter(m, maxDia, through))
         if (!t) {
           warn("contorn de la peça", `cap fresa${Number.isFinite(maxDia) ? ` de Ø ≤ ${num(maxDia)}` : ""} que arribi a ${num(through)} mm`, true)
         } else {
           if (sharp && t.diameter / 2 > 0.5) warn("contorn de la peça", `${sharp} cantonades entrants queden amb radi ${num(t.diameter / 2)} mm (fresa ${toolMslName(t)} Ø${num(t.diameter)})`)
           const pts = toBoardPts(place, outline)
           const n = name("Contorn")
-          const start: [number, number] = [pts[0]![0], pts[0]![1]]
-          feats.push({
-            stage: "outer",
-            key: t.code,
-            start,
-            end: start,
-            area,
-            lines: [
-              comment(`Peca ${ref} (${p.label}) - etiqueta al centre (${num(pl.cx)}, ${num(pl.cy)})`),
-              ...closedPolyline(`${n}_G`, pts),
-              `CreateContour(${cs(n)}, ${num(through)}, 1, 1, ${cs("contorn")}, TypeOfProcess.GeneralRouting, ${toolArg(t)}, ${HEAD}, 0, -1, -1, -1, 0);`,
-            ],
-            op: { program: "A", plane: "Top", kind: "contour", tool: t.code, depth: through, points: flatten(pts), what: "contorn de la peça", ref, stage: "outer" },
+          // Peça petita: passades de desbast (regles) i la final al martiri; normal: una passada.
+          const passes = contourPasses(T, through, isSmallPart(rules, p.length, p.width, area), rules.small.passes)
+          passes.forEach((ps, k) => {
+            const many = passes.length > 1
+            const nm = many ? `${n}_P${k + 1}` : n
+            const pr = profiled(nm, pts, t, (x) => [contourLine(x, ps.depth, 1, "contorn", t, ps.xy)])
+            feats.push({
+              stage: "outer",
+              key: t.code,
+              start: pr.start,
+              end: pr.start,
+              area,
+              ...(many ? { pass: { index: k + 1, count: passes.length } } : {}),
+              lines: [
+                comment(`Peca ${ref} (${p.label}) - etiqueta al centre (${num(pl.cx)}, ${num(pl.cy)})${many ? ` - peca petita, passada ${k + 1} de ${passes.length} (fondaria ${num(ps.depth)}, sobrant ${num(ps.xy)})` : ""}`),
+                ...pr.lines,
+              ],
+              op: {
+                program: "A",
+                plane: "Top",
+                kind: "contour",
+                tool: t.code,
+                depth: ps.depth,
+                points: flatten(pts),
+                what: "contorn de la peça",
+                ref,
+                stage: "outer",
+                ...(many ? { xy: ps.xy, pass: { index: k + 1, count: passes.length } } : {}),
+                ...(pr.ramp ? { ramp: true } : {}),
+              },
+            })
           })
         }
       }
@@ -464,6 +532,7 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
       ),
       comment(`Maquina ${m.name}${m.serial ? ` (${m.serial})` : ""}${m.maestroVersion ? ` - Maestro ${m.maestroVersion}` : ""}`),
       ...(m.pgmx ? [comment(`Noms d'eina i capcalera del projecte ${m.pgmx.file} (Maestro ${m.pgmx.version})`)] : []),
+      ...rulesComment(rules, true),
       comment("Peces (ref - nom - mida - cantonada al tauler - gir antihorari):"),
       ...parts.map((x) => {
         const p = byId.get(x.panelId)!
@@ -506,6 +575,8 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
     warnings.push(`cap fresa que travessi ${num(maxT + nopt.overcut)} mm per als contorns del nesting`)
   }
 
+  warnings.unshift(...rp.notes)
+  missingTool += rp.missing
   const files = sheets.map((s) => ({ name: s.file, text: s.text }))
   files.push({ name: "LLEGEIX-ME.txt", text: nestReadme(opts.project, m, sheets, infos, unplaced, warnings, spacing, mainTool, opts.date ?? new Date()) })
   return {
@@ -549,6 +620,7 @@ function nestReadme(project: string, m: Machine, sheets: NestSheetXcs[], infos: 
     "- Forats de cantell, mecanitzats de la cara B i inglets no es fan al nesting: van a la ruta de cada peça.",
     m.verticalDrills === "tool" ? "- Broques verticals: el nom de la broca que ha triat l'app." : "- Broques verticals: eina automàtica (\"-1\"), com als projectes del taller.",
     "- Cada peça porta un comentari amb la ref i el centre (per a l'etiqueta) abans del seu contorn.",
+    ...rulesReadme(machineRules(m), true),
     "- Fitxers .xcs en UTF-8 amb BOM.",
     "",
     `Taulers: ${sheets.length}`,

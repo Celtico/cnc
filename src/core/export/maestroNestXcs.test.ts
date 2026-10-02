@@ -6,11 +6,18 @@ import { buildComposition } from "../build/buildComposition"
 import { machineFromContext } from "../machine/maestro"
 import { applyPgmx, parsePgmxXml } from "../machine/pgmx"
 import { bytes, read } from "../machine/testContext"
-import { BUILTIN_TEMPLATES, STORE_TEMPLATES, type BPt, type Machine, type Panel } from "../model"
+import { BUILTIN_TEMPLATES, STORE_TEMPLATES, type BPt, type Machine, type MachineRules, type Panel } from "../model"
 import { DEFAULT_NEST_OPTIONS, nest, validateNesting } from "../nesting/nest"
 import { cncNestOptions, nestingRouter, orderFeats, sheetFile, toBoard, toMaestroNestXcs, type NestAngle, type PartPlace } from "./maestroNestXcs"
 
 let M: Machine
+const NO_RULES: MachineRules = {
+  grooves: { tool: "", maxPass: 50 },
+  pockets: { tool: "" },
+  profile: [],
+  ramp: { enabled: false, length: 40 },
+  small: { maxSide: 0, maxArea: 0, passes: [] },
+}
 let M2: Machine
 beforeAll(async () => {
   M = (
@@ -19,6 +26,8 @@ beforeAll(async () => {
       "m",
     )
   ).machine
+  // Sense regles del taller (tria automàtica de sempre): els tests de les regles van a part (`machineRules.test.ts`).
+  M = { ...M, rules: NO_RULES }
   const info = parsePgmxXml(new TextDecoder().decode(new Uint8Array(readFileSync("docs/maestro/samples/Proyecto1.pgmx.xml"))))
   M2 = applyPgmx(M, info, "Proyecto1.pgmx", { withHeader: true, now: 0 }).machine
 })

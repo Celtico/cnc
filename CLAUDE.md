@@ -197,7 +197,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   testejat. La targeta diu BETA fins que el taller els validi a Maestro i mostra els avisos.
 - Només instruccions dels exemples del manual MSL (pàgines als comentaris i a `docs/maestro-xcs.md`):
   `SetMachiningParameters`, `CreateFinishedWorkpieceBox`, `CreateRawWorkpiece`, `SelectWorkplane`,
-  `CreateDrill`, `CreateSegment` + `CreateSlot` (disc), `CreatePolyline` + `CreateRoughFinish` (fresa),
+  `CreateDrill`, `CreateSegment` + `CreateSlot` (disc), `CreatePolyline` + `CreateRoughFinish` (fresa), `CreateContourPocket`,
+  `CreateBidirectionalMillingStrategy`, `Set/ResetApproachStrategy` i `Set/ResetRetractStrategy` (regles),
   polilínia/cercle + `CreateContour` (talls per dins, contorn per fora; semicercles amb
   `AddArc2PointCenterToPolyline`). Capçal sempre `"-1"`. Broques verticals amb eina `"-1"` per defecte (com el .pgmx
   del taller; opció «Broques: tria el Maestro / eina concreta», `Machine.verticalDrills`). Noms d'eina sense plegar a
@@ -225,6 +226,14 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   martiri), per eina i veí més proper, les peces petites al final. Forats de cantell, cara B («fer a la perforadora /
   segona passada», sense Volt) i inglets a la ruta «CNC (tauler N) → …». Comentaris amb les peces i les etiquetes (ref +
   centre). Mostra `docs/maestro/samples/nesting_T01.xcs`. Alternativa documentada: el nesting del Maestro (§4 p134, CSV).
+- **Regles de mecanitzat** (`Machine.rules`, del germà; Preferències › Ferratges i mecanitzats › «Regles de mecanitzat», de la màquina per defecte o la triada;
+  `settings/MachineRules.tsx`; `core/machine/rules.ts`, `RulePicker`; detall i pàgines del manual a `docs/maestro-xcs.md`):
+  ranures «8mm diamant» a 6 mm per passada (`CreateBidirectionalMillingStrategy`), caixeres «12mm diamant nesting»
+  (`CreateContourPocket`), perfilar per gruix (8–22 → «12mm diamant nesting», 23–41 → «14mm diamant nesting»), rampa als
+  perfilats del nesting (`SetApproachStrategy(true, false, k)`, des del mig del costat recte més llarg), peces petites
+  (menys de 0,8 m², del taller; `maxSide` 0 = no compta; el provisional 300 mm / 0,1 m² es migra) en 3 passades (Z/XY 1/1, 0,5/0 i la final al martiri o als passants,
+  `overMaterial`). Eines pel nom (`findRuleTool`); si falta, tria de sempre i un sol avís. Màquines sense regles → les
+  per defecte en carregar (`withMachineRules`).
 - **Pendent de validar amb el taller** (llista a `docs/maestro-xcs.md`): pontets/pell de les peces petites, martiri,
   zones de buit, etiquetes, prova a la màquina
   (`PROVA_ORIENTACIO.xcs`), codificació UTF-8 amb BOM, noms de totes les eines al Maestro 2.0.5, broques amb `"-1"`,

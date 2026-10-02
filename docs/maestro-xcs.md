@@ -187,7 +187,9 @@ Només eines automàtiques i muntades.
   la fresa de nesting i el martiri, separació ≥ Ø i marge, ordre de les etapes i de les peces petites, estructura d'un
   tauler del catàleg (capçalera, peça `T01`, etiquetes, noms únics, tot dins del tauler, rutes) i 36 mobles del
   catàleg (cada peça amb contorn o avís, tot dins de la seva petjada).
-- Mostres a `docs/maestro/samples/*.xcs` generades amb el context + `Proyecto1.pgmx` (UTF-8 amb BOM): `lateral_A.1.L.1` i `porta_A.1.F.9`
+- `core/export/machineRules.test.ts`: regles del taller (valors per defecte i migració, eina per gruix, ranures en
+  passades, caixeres, peces petites en 3 passades i l'ordre, rampa, eina que falta amb un sol avís).
+- Mostres a `docs/maestro/samples/*.xcs` generades amb el context + `Proyecto1.pgmx` i les regles per defecte (UTF-8 amb BOM): `lateral_A.1.L.1` i `porta_A.1.F.9`
   de l'«Aparador sobre ferro», `peca-amb-forma_A.1.H.1` de la «Taula de centre «Nube»» (amb la capçalera de post-processos).
 
 ## Programes per tauler (nesting) — per defecte
@@ -241,6 +243,56 @@ Per peça (el d'abans; `mobles:xcs-per-piece`).
 - LLEGEIX-ME: taulers (fitxer, material, mida, peces, aprofitament), peces que no hi caben, ruta de cada peça i avisos.
 - Mostra: `docs/maestro/samples/nesting_T01.xcs` (tauler 1 de l'«Aparador sobre ferro», amb el context + `Proyecto1.pgmx`).
 
+## Regles de mecanitzat del taller (`Machine.rules`)
+Les va donar el germà (octubre 2026). Per màquina, editables a Preferències › Ferratges i mecanitzats › «Regles de mecanitzat»
+(`settings/MachineRules.tsx`); model a `core/model/machine.ts` (`MachineRulesSchema`, `defaultMachineRules`,
+`machineRules`, `isSmallPart`), tria a `core/machine/rules.ts` (`findRuleTool`, `profileRuleFor`, `RulePicker`) i
+emissió compartida a `core/export/maestroXcs.ts` (`passDepths`, `grooveStrategy`, `contourPasses`, `contourLine`,
+`pocketLines`, `rampStart`, `rampLines`). Tests: `core/export/machineRules.test.ts`.
+
+| Regla | Per defecte | Com surt a l'MSL |
+|---|---|---|
+| Ranures (obertes per algun extrem) | «8mm diamant», 6 mm per passada | `CreateBidirectionalMillingStrategy(true, 6, 0)` just abans del `CreateRoughFinish` si la ranura és més fonda (§3.5.11.2 p60, Table 39; exemple p63; les estratègies són «no modals», p58). `XcsOp.passes` = fondària de cada capa |
+| Caixeres (rebaix cec tancat pels dos extrems, i la fresa hi cap: Ø ≤ ample − 0,5, p56) | «12mm diamant nesting» | polilínia tancada + `CreateContourPocket(nom, fondària, "caixera", TypeOfProcess.ConcentricalPocket, eina, "-1", -1, -1, -1, 50)` (§3.5.10 p55, Table 37; exemples p55/p57; com la `ClosedPocket` del .pgmx, Overlap 0,5) |
+| Perfilar per gruix (contorns per fora i talls passants per dins) | 8–22 mm «12mm diamant nesting» · 23–41 mm «14mm diamant nesting» (llista editable) | la fresa al `CreateContour` (p53). Amb cantonades vives o arcs més tancats que la fresa, la tria de sempre (la més petita / la que hi cap) |
+| Rampa (només al nesting, perfilats) | sí, 40 mm | `ResetApproachStrategy(); ResetRetractStrategy(); SetApproachStrategy(true, false, k); SetRetractStrategy(true, false, k, 0);` abans del `CreateContour` i els dos `Reset…` després (§3.5.11.6 p71, Tables 45-46; exemple p72). k = llargada / radi (Ø12 → 6,667) |
+| Peces petites (menys de 0,8 m²; les grans, d'una passada) | desbast Z 1 / XY 1, desbast Z 0,5 / XY 0, final | un `CreateContour` per passada: fondària = gruix − Z i `overMaterial` = XY (darrer paràmetre, Table 36 p53); la final fins al martiri (nesting, `nesting.overcut`, 0,3) o als passants (per peça, `throughExtra`). Peces normals: una passada |
+
+- **Eina pel nom**: `findRuleTool` mira el nom de l'MSL (`mslName`, del .pgmx), el nom i el codi, sense majúscules ni
+  espais de més; només freses muntades. Si **no hi és** (o no arriba a la fondària): la tria automàtica de sempre i
+  **un sol avís per export** («regla «Ranures»: l'eina «8mm diamant» no és a la màquina…», compta a `missingTool`). Al
+  detall de la màquina surt «· falta» a la fila. El context exportat (Maestro 2.00.004) només té la «12mm diamant
+  nesting» (E128, pel .pgmx); la «8mm diamant» i la «14mm diamant nesting» s'han d'afegir a «Eines» (amb el codi de
+  Maestro) o importar un .pgmx que les faci servir.
+- **Ranures i disc**: amb la fresa de la regla a la màquina, les ranures de cantell a cantell van amb fresa (la regla
+  mana sobre «Disc si es pot»); amb «Preferir disc», disc com abans.
+- **Martiri unificat**: la passada final de les peces petites no té valor propi: és el martiri del nesting (o els
+  passants de més per peça). Les de desbast es defineixen per l'altura que deixen (Z) i el sobrant al costat (XY).
+- **Ordre al nesting** (`orderFeats`): els desbastos de les peces petites primer (la passada 1 de totes, després la
+  2…, amb el tauler encara sencer), després les peces normals (per mida) i les passades finals de les petites al
+  final (o al principi amb «Peces petites: al principi»).
+- **Rampa**: el contorn comença al **mig del costat recte més llarg** (`rampStart`, s'hi afegeix un punt) i tanca amb
+  aquell costat (`ClosePolyline`): l'entrada lineal tangent cau sobre el mateix tall i no surt cap a les peces del
+  costat (la separació és Ø + 1). Llargada = la de la regla, com a molt la meitat d'aquell costat; sense cap costat
+  recte de 2 × Ø (cercles), sense rampa. Per peça, sense rampa.
+- Màquines desades sense `rules`: en carregar les preferències agafen les de per defecte (`withMachineRules`, additiu
+  i idempotent); una reimportació (`mergeReimport`) les conserva; «Les del taller» les torna als valors per defecte.
+
+### Dubtes de les regles (per confirmar amb el taller)
+- **Llindar de «peça petita»**: menys de 0,8 m² (del taller, octubre 2026). Les grans, d'una passada.
+  Amb «costat < 300» els llistons i fronts de calaix també ho són.
+- **Rampa**: l'MSL no té «rampa» com a tal. S'ha fet amb `SetApproachStrategy(isLinear = true, isQuote = false)`
+  (p71: «in downstroke, from security height along Z»), entenent que «en baixada» és entrar baixant al llarg del segment
+  d'aproximació. Cal veure-ho a la vista CAM. Alternativa del manual: `CreateHelicMillingStrategy(cuttingDepth, true, 0)`
+  (p61, Table 41; baixa en hèlix pel mateix perfil), si el taller ho prefereix.
+- **`overMaterial`** de `CreateContour` (Table 36: «Overmaterial») s'ha fet servir com el sobrant al costat (XY); el Z
+  es deixa amb la fondària. Al .pgmx hi ha `AllowanceSide` i `AllowanceBottom`: confirmar que l'`overMaterial` va a
+  l'`AllowanceSide`.
+- **Caixeres**: `TypeOfProcess.ConcentricalPocket` (com els exemples p55/p57/p69; la taula diu GeneralRouting) i una
+  sola passada (el .pgmx del taller: `AllowMultiplePasses` false). Si n'hi ha de molt fondes, `CreateContourParallelStrategy`
+  (p69) permetria passades.
+- Gruixos entre files (22,5 mm) o fora (> 41 mm): tria automàtica, sense avís.
+
 ## Preguntes obertes per al taller
 Ja resolt (revisió amb el manual i el .pgmx real): orígens i sentit de X de les cinc cares i el gir de la cara
 B (taula de dalt); el paràmetre `tool` és el nom de l'eina; les broques del taller van sense eina.
@@ -275,8 +327,8 @@ B (taula de dalt); el paràmetre `tool` és el nom de l'eina; les broques del ta
     llistons de 12 mm d'ample, els fronts petits) perquè no es moguin quan el buit ja no les aguanta? Ordre dels
     contorns: les petites **al final** (com ara) o **al principi** (molts CAM ho fan així perquè el tauler encara
     tanca el buit)? Hi ha opció a la màquina.
-15. **Martiri**: 0,3 mm per sota del tauler és el valor que fan servir? Contorn en una passada o en dues (desbast +
-    acabat)?
+15. **Martiri**: 0,3 mm per sota del tauler és el valor que fan servir? (Passades: ja les van dir —regles—; peces
+    normals en una, petites en tres.)
 16. **Zones de buit**: el tauler va sobre el martiri amb el buit de tota la taula (camp «AD»)? Cal triar zones
     (`SetSuctionCupPosition` §3.10 p117-128 no s'aplica a una taula de martiri) o un altre `TableOptions`?
 17. **Etiquetes**: imprimeixen etiquetes al taller abans de descarregar? Amb quin format (ref + centre ja surten

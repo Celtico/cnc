@@ -5,13 +5,20 @@ const { readFileSync } = (await import(/* @vite-ignore */ fsMod)) as { readFileS
 import { buildComposition } from "../build/buildComposition"
 import { machineFromContext } from "../machine/maestro"
 import { bytes, read } from "../machine/testContext"
-import { BUILTIN_TEMPLATES, STORE_TEMPLATES, parseSettings, type BPt, type Machine, type Panel } from "../model"
+import { BUILTIN_TEMPLATES, STORE_TEMPLATES, parseSettings, type BPt, type Machine, type MachineRules, type Panel } from "../model"
 import { INSPIRED_TEMPLATES } from "../model/inspiredTemplates"
 import { unzip, zipStore } from "../file/zip"
 import { applyPgmx, parsePgmxXml } from "../machine/pgmx"
 import { cs, dedupePolyline, edgeHoleOnFace, edgePoint, maxToolDiameter, num, panelXcs, planeSize, sharpCorners, toMaestroXcs, xcsBytes } from "./maestroXcs"
 
 let M: Machine
+const NO_RULES: MachineRules = {
+  grooves: { tool: "", maxPass: 50 },
+  pockets: { tool: "" },
+  profile: [],
+  ramp: { enabled: false, length: 40 },
+  small: { maxSide: 0, maxArea: 0, passes: [] },
+}
 beforeAll(async () => {
   M = (
     await machineFromContext(
@@ -19,6 +26,8 @@ beforeAll(async () => {
       "m",
     )
   ).machine
+  // Sense regles del taller (tria automàtica de sempre): els tests de les regles van a part (`machineRules.test.ts`).
+  M = { ...M, rules: NO_RULES }
 })
 
 const PLACEMENT = { origin: [0, 0, 0], xAxis: [1, 0, 0], yAxis: [0, 1, 0], zAxis: [0, 0, 1], explodeDir: [0, 0, 1] } as Panel["placement"]
