@@ -90,7 +90,7 @@ export interface XcsPanelResult {
   handled: number
 }
 
-const EOL = "\r\n"
+export const EOL = "\r\n"
 const EPS = 0.01
 
 /** Número per a l'MSL: punt decimal, fins a 3 decimals, sense zeros de més. Llança si no és finit. */
@@ -107,7 +107,7 @@ export function cs(s: string): string {
 }
 
 // Fletxes, punts volats i graus en ASCII; la resta de no ASCII, «?».
-const comment = (s: string) =>
+export const comment = (s: string) =>
   `// ${asciiFold(s.replace(/→/g, "->").replace(/·/g, "-").replace(/°/g, " graus").replace(/[«»]/g, '"')).replace(/[^\x20-\x7e]/g, "?")}`
 
 /** Cara del cantell: 4 = esquerra (x = 0), 2 = dreta (x = L), 3 = baix (y = 0, «Front»), 1 = dalt (y = A, «Back»). */
@@ -160,8 +160,8 @@ class Script {
   }
 }
 
-const toolArg = (t: MachineTool | undefined) => cs(t ? toolMslName(t) : "-1")
-const HEAD = cs("-1")
+export const toolArg = (t: MachineTool | undefined) => cs(t ? toolMslName(t) : "-1")
+export const HEAD = cs("-1")
 
 /** Clau d'un punt tal com el veurà Maestro (arrodonit a 0,001 mm). */
 const key = (p: BPt) => `${num(p[0])},${num(p[1])}`
@@ -192,7 +192,7 @@ export function dedupePolyline(pts: BPt[]): BPt[] {
 const isHalfCircle = (b: number) => Math.abs(Math.abs(b) - 1) < 0.01
 
 /** Polilínia tancada amb arcs (bulge) a la cara activa. `pts` sense punts repetits (`dedupePolyline`). */
-function closedPolyline(name: string, ptsIn: BPt[]): string[] {
+export function closedPolyline(name: string, ptsIn: BPt[]): string[] {
   // Si hi ha algun costat recte, que sigui el de tancar (ClosePolyline, p30-32); si no, s'acaba amb l'arc.
   let pts = ptsIn
   const k = ptsIn.findIndex((p) => Math.abs(bulgeOf(p)) < 1e-9)
@@ -218,7 +218,7 @@ function closedPolyline(name: string, ptsIn: BPt[]): string[] {
   return out
 }
 
-const rectPts = (x: number, y: number, w: number, h: number): BPt[] => [
+export const rectPts = (x: number, y: number, w: number, h: number): BPt[] => [
   [x, y],
   [x + w, y],
   [x + w, y + h],
@@ -226,7 +226,7 @@ const rectPts = (x: number, y: number, w: number, h: number): BPt[] => [
 ]
 
 /** Ranura de cantells rodons com a contorn: semicercles exactes (bulge 1). */
-function slotPts(c: Extract<Cutout, { kind: "slot" }>): BPt[] {
+export function slotPts(c: Extract<Cutout, { kind: "slot" }>): BPt[] {
   const r = Math.min(c.w, c.h) / 2
   if (c.w >= c.h) {
     return [
@@ -376,10 +376,39 @@ export function edgeHoleOnFace(p: Pick<Panel, "length" | "width" | "outline">, h
   return along.every(([x, y]) => distToOutline(flat, x, y) < 0.05)
 }
 
-const holeWhat = (h: Hole) => `forat Ø${num(h.diameter)} × ${num(h.depth)} a (${num(h.x)}, ${num(h.y)})${h.face === "edge" ? ` cantell ${h.edge ?? "?"}` : ` cara ${h.face}`}`
-const grooveWhat = (g: Groove) => `ranura ${num(g.w)} × ${num(g.h)} × ${num(g.depth)} a (${num(g.x)}, ${num(g.y)}) cara ${g.face}`
-const cutWhat = (c: Cutout) =>
+export const holeWhat = (h: Hole) => `forat Ø${num(h.diameter)} × ${num(h.depth)} a (${num(h.x)}, ${num(h.y)})${h.face === "edge" ? ` cantell ${h.edge ?? "?"}` : ` cara ${h.face}`}`
+export const grooveWhat = (g: Groove) => `ranura ${num(g.w)} × ${num(g.h)} × ${num(g.depth)} a (${num(g.x)}, ${num(g.y)}) cara ${g.face}`
+export const cutWhat = (c: Cutout) =>
   c.kind === "circle" ? `tall Ø${num(c.diameter)} a (${num(c.x)}, ${num(c.y)})` : c.kind === "polygon" ? `tall de ${c.points.length} punts` : `tall ${c.kind} ${num(c.w)} × ${num(c.h)} a (${num(c.x)}, ${num(c.y)})`
+
+/**
+ * Recorregut de la fresa d'una ranura (x0..x1 × y0..y1, ja retallada a la peça L × W): els extrems oberts
+ * (al cantell) amb el centre al cantell, els tancats a r de la vora; zig-zag si cal més d'una passada
+ * (solapament del 25 %). `null` si és massa curta per a la fresa.
+ */
+export function grooveRouterPath(x0: number, x1: number, y0: number, y1: number, L: number, W: number, diameter: number): [number, number][] | null {
+  const alongX = x1 - x0 >= y1 - y0
+  const [a0, a1, b0, b1, aMax] = alongX ? [x0, x1, y0, y1, L] : [y0, y1, x0, x1, W]
+  const width = b1 - b0
+  const pt = (a: number, b: number): [number, number] => (alongX ? [a, b] : [b, a])
+  const r = diameter / 2
+  const start = a0 <= EPS ? a0 : a0 + r
+  const end = a1 >= aMax - EPS ? a1 : a1 - r
+  if (end < start - EPS) return null
+  const lanes =
+    diameter >= width - EPS
+      ? [(b0 + b1) / 2]
+      : (() => {
+          const n = Math.ceil((width - diameter) / (0.75 * diameter)) + 1
+          return Array.from({ length: n }, (_, k) => b0 + r + ((width - 2 * r) * k) / (n - 1))
+        })()
+  const pts: [number, number][] = []
+  lanes.forEach((c, k) => {
+    const [p0, p1] = k % 2 === 0 ? [start, end] : [end, start]
+    pts.push(pt(p0, c), pt(p1, c))
+  })
+  return pts
+}
 
 /** Programes d'una peça. `ref` = la ref del taller (`A.1.L.1`): nom del fitxer i de la peça a Maestro. */
 export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
@@ -521,23 +550,11 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
       skip(grooveWhat(g), `cap fresa de Ø ≤ ${num(width)} que arribi a ${num(depth)} mm`, true)
       continue
     }
-    const r = router.diameter / 2
-    // El centre de la fresa al cantell talla fins al cantell; als extrems tancats, a r de la vora.
-    const start = a0 <= EPS ? a0 : a0 + r
-    const end = a1 >= aMax - EPS ? a1 : a1 - r
-    if (end < start - EPS) {
+    const pts = grooveRouterPath(x0, x1, y0, y1, L, W, router.diameter)
+    if (!pts) {
       skip(grooveWhat(g), `massa curta per a la fresa ${router.code} (Ø${num(router.diameter)})`, true)
       continue
     }
-    const lanes = router.diameter >= width - EPS ? [(b0 + b1) / 2] : (() => {
-      const n = Math.ceil((width - router.diameter) / (0.75 * router.diameter)) + 1
-      return Array.from({ length: n }, (_, k) => b0 + r + ((width - 2 * r) * k) / (n - 1))
-    })()
-    const pts: [number, number][] = []
-    lanes.forEach((c, k) => {
-      const [p0, p1] = k % 2 === 0 ? [start, end] : [end, start]
-      pts.push(pt(p0, c), pt(p1, c))
-    })
     s.select("Top")
     const name = s.name("Ranura")
     s.lines.push(`CreatePolyline(${cs(`${name}_G`)}, ${num(pts[0]![0])}, ${num(pts[0]![1])});`)
@@ -652,7 +669,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
 }
 
 /** On es fa cada post-procés (per a la ruta). */
-const STATION: Record<ProcessKind, string> = {
+export const STATION: Record<ProcessKind, string> = {
   secondFace: "CNC cara B",
   mitre: "serra (inglets)",
   edge: "cantejadora",
@@ -713,7 +730,7 @@ export function xcsBytes(text: string): Uint8Array {
 }
 
 /** El .zip de l'export (sense compressió). */
-export function xcsZip(x: XcsExport, when?: Date): Uint8Array {
+export function xcsZip(x: Pick<XcsExport, "files">, when?: Date): Uint8Array {
   return zipStore(x.files.map((f) => ({ name: f.name, data: xcsBytes(f.text) })), when)
 }
 

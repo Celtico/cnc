@@ -215,7 +215,18 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   («CNC: … → serra (inglets) → cantejadora») van al LLEGEIX-ME per peça, al plegable «Després de la CNC» d'Exportar i
   com a comentaris ASCII a la capçalera del .xcs (mai missatges a l'operari). Cantells amb la numeració de l'app
   (pendent de confirmar amb el taller).
-- **Pendent de validar amb el taller** (llista a `docs/maestro-xcs.md`): prova a la màquina
+- **Per tauler (nesting), per defecte** (petició del taller; «Programes» Per tauler · Per peça a la targeta,
+  `mobles:xcs-per-piece`): `core/export/maestroNestXcs.ts` (`toMaestroNestXcs`, `cncNestOptions`, `toBoard`, `orderFeats`). Un
+  `T01_<material>_<gruix>.xcs` per tauler: **una peça de treball = el tauler** (com el `Proyecto1.pgmx` del taller; no les
+  peces «contemporànies» de §3.11 p129) i tot en coordenades del tauler. `nest()` amb separació = Ø de la fresa de nesting
+  + `spacingExtra` i marge `edgeTrim` (`Machine.nesting`, opcional, `machineNesting`: 10 mm, Ø + 1, martiri 0,3 mm, peces
+  petites al final; Preferències › Màquines CNC); la pantalla Nesting (serra) no canvia. Gir 0/90 (antihorari, sense
+  mirall, = `localToBoard`). Només cara A: forats → ranures (sempre fresa) → talls per dins → contorns per fora (gruix +
+  martiri), per eina i veí més proper, les peces petites al final. Forats de cantell, cara B («fer a la perforadora /
+  segona passada», sense Volt) i inglets a la ruta «CNC (tauler N) → …». Comentaris amb les peces i les etiquetes (ref +
+  centre). Mostra `docs/maestro/samples/nesting_T01.xcs`. Alternativa documentada: el nesting del Maestro (§4 p134, CSV).
+- **Pendent de validar amb el taller** (llista a `docs/maestro-xcs.md`): pontets/pell de les peces petites, martiri,
+  zones de buit, etiquetes, prova a la màquina
   (`PROVA_ORIENTACIO.xcs`), codificació UTF-8 amb BOM, noms de totes les eines al Maestro 2.0.5, broques amb `"-1"`,
   `MechanicalOptions`, disc o fresa per a les ranures, fixació, eines que falten al `.tlgx`.
 

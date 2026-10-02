@@ -102,6 +102,24 @@ export const MachineSchema = z.object({
    * DrillingOperation no porta ToolKey); «tool» = el nom de la broca triada per l'app.
    */
   verticalDrills: z.enum(["auto", "tool"]).default("auto"),
+  /**
+   * Programes per tauler (nesting): fresa del contorn, separació entre peces, marge del tauler i passada
+   * dins del martiri. Opcional: sense, `DEFAULT_MACHINE_NESTING` (`machineNesting`).
+   */
+  nesting: z
+    .object({
+      /** Codi de la fresa de nesting; sense, la que diu «nesting» al nom o la més petita que travessa. */
+      tool: z.string().optional(),
+      /** Marge de la vora del tauler que no s'aprofita (mm). */
+      edgeTrim: z.number().min(0).max(100),
+      /** Separació entre peces = Ø de la fresa + això (mm). */
+      spacingExtra: z.number().min(0).max(20),
+      /** Passada de més dins del martiri als talls passants i contorns (mm). */
+      overcut: z.number().min(0).max(3),
+      /** Contorns de les peces petites: al final (per defecte) o al principi. */
+      smallParts: z.enum(["last", "first"]),
+    })
+    .optional(),
   /** D'on venen els noms de les eines (`mslName`) i la capçalera: el .pgmx importat. */
   pgmx: z.object({ file: z.string(), version: z.string(), tools: z.number().int(), importedAt: z.number() }).optional(),
   /** La màquina per defecte de l'export. */
@@ -113,6 +131,14 @@ export type Machine = z.infer<typeof MachineSchema>
 
 /** Capçalera per defecte: la del .pgmx real del taller (Proyecto1, Maestro 2.0.5 rev 1005). */
 export const DEFAULT_HEADER: Machine["header"] = { executionFields: "AD", repetitions: 1, tableOptions: 10, mechanicalOptions: 16973824, continuousCycle: false }
+
+export type MachineNesting = NonNullable<Machine["nesting"]>
+
+/** Opcions de nesting per defecte: marge 10, separació Ø + 1, martiri 0,3 mm, peces petites al final. */
+export const DEFAULT_MACHINE_NESTING: MachineNesting = { edgeTrim: 10, spacingExtra: 1, overcut: 0.3, smallParts: "last" }
+
+/** Opcions de nesting de la màquina (amb els valors per defecte). */
+export const machineNesting = (m: Pick<Machine, "nesting">): MachineNesting => ({ ...DEFAULT_MACHINE_NESTING, ...m.nesting })
 
 /** Codi provisional d'una «Eina nova» (`NOVA1`…): no es tria fins que no se li posa el codi de Maestro. */
 export const isPlaceholderTool = (t: Pick<MachineTool, "code" | "manual">): boolean => !!t.manual && /^NOVA\d+$/.test(t.code)

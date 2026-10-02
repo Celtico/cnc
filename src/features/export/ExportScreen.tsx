@@ -3,7 +3,7 @@ import { useMemo, useState } from "react"
 import { usePersistentFlag } from "../usePersistentFlag"
 import { LuBoxes, LuChevronRight, LuCuboid, LuDownload, LuFactory, LuFileDown, LuFileJson, LuLayoutGrid, LuScissors, LuSettings2 } from "react-icons/lu"
 import { PanelGroup, PanelSection } from "../../components/PanelSection"
-import { FormRow } from "../../components/FormRow"
+import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { exportGlb } from "../../components/viewer/exportGlb"
 import { exportablePanel } from "../../components/viewer/exportablePanel"
 import { exportUsdz, openQuickLook } from "../../components/viewer/exportUsdz"
@@ -17,6 +17,8 @@ import { finishRgb, resolveFinish } from "../../components/viewer/textures"
 import { encodeUtf16le, toTopsolidCsv } from "../../core/export/topsolidCsv"
 import { toUnifiedData } from "../../core/export/unified"
 import { toMaestroXcs, xcsZip } from "../../core/export/maestroXcs"
+import { cncNestOptions, toMaestroNestXcs } from "../../core/export/maestroNestXcs"
+import { DEFAULT_NEST_OPTIONS, nest } from "../../core/nesting/nest"
 import { defaultMachine } from "../../core/model"
 import { downloadBlob, downloadText, slugify } from "../download"
 import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
@@ -46,7 +48,19 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const stepColor = useMemo(() => (p: { material: string }) => finishRgb(resolveFinish(settings.materials, p.material)), [settings.materials])
   // Programes de Maestro (.xcs) amb la màquina per defecte de Preferències › Màquines CNC.
   const machine = defaultMachine(settings.machines)
-  const xcs = useMemo(() => (machine && panels.length ? toMaestroXcs(panels, machine, { project: project?.name ?? "moble" }) : null), [machine, panels, project?.name])
+  // Per tauler (nesting, per defecte: el que demana el taller) o per peça.
+  const [xcsPerPiece, setXcsPerPiece] = usePersistentFlag("mobles:xcs-per-piece", false)
+  const xcs = useMemo(() => {
+    if (!machine || !panels.length) return null
+    const name = project?.name ?? "moble"
+    if (xcsPerPiece) {
+      const x = toMaestroXcs(panels, machine, { project: name })
+      return { ...x, sheets: 0, rows: x.panels.map((r, i) => ({ ref: r.ref, label: panels[i]?.label ?? "", route: r.route, postProcesses: r.postProcesses })) }
+    }
+    const plan = cncNestOptions(panels, machine, project?.nesting ?? DEFAULT_NEST_OPTIONS)
+    const x = toMaestroNestXcs(panels, nest(panels, plan.options), machine, { project: name })
+    return { ...x, sheets: x.sheets.length, rows: x.panels }
+  }, [machine, panels, project?.name, project?.nesting, xcsPerPiece])
   const stepWarnings = useMemo(() => (comp && build && panels.length ? toStepCad(stepCadGroups(comp, build, { extras: stepExtras }), { name: "check" }).warnings : []), [comp, build, panels, stepExtras])
 
   if (!project) return null
@@ -89,7 +103,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
     downloadBlob(new Blob([zip as BlobPart], { type: "application/zip" }), `${base}-maestro.zip`)
     toaster.create({
       title: "Programes de Maestro generats",
-      description: `${xcs.programs} programes .xcs per a ${machine.name}` + (xcs.warnings.length ? ` · ${xcs.warnings.length} avisos (al LLEGEIX-ME.txt)` : ""),
+      description: `${xcs.programs} programes .xcs ${xcsPerPiece ? "per peça" : "per tauler"} per a ${machine.name}` + (xcs.warnings.length ? ` · ${xcs.warnings.length} avisos (al LLEGEIX-ME.txt)` : ""),
       type: xcs.warnings.length ? "warning" : "success",
     })
   }
@@ -202,14 +216,25 @@ export function ExportScreen({ projectId }: { projectId: number }) {
       <ExportCard
         icon={<LuFactory />}
         title="Màquina CNC (Maestro)"
-        description="Programes de Xilog Maestro (.xcs, Maestro Scripting Language) per a la SCM del taller, sense passar per TopSolid: forats, forats de cantell, ranures, talls i contorn com a mecanitzats de debò amb les eines de la màquina. Un programa per peça i, si cal girar-la, un altre acabat en «Volt» per a la cara B. BETA: fins que el taller no els validi a Maestro, revisa'ls a la vista CAM abans de mecanitzar."
-        files={machine ? `${base}-maestro.zip · ${xcs?.programs ?? 0} programes per a ${machine.name}` : undefined}
+        description="Programes de Xilog Maestro (.xcs, Maestro Scripting Language) per a la SCM del taller, sense passar per TopSolid: forats, ranures, talls i contorns com a mecanitzats de debò amb les eines de la màquina. Per tauler: un programa per tauler del nesting amb totes les peces (cara A; forats de cantell, cara B i inglets després). Per peça: un programa per peça i un «Volt» per a la cara B. BETA: fins que el taller no els validi a Maestro, revisa'ls a la vista CAM abans de mecanitzar."
+        files={machine ? `${base}-maestro.zip · ${xcs?.programs ?? 0} programes ${xcsPerPiece ? "(per peça)" : `(${xcs?.sheets ?? 0} taulers)`} per a ${machine.name}` : undefined}
         action={
           <Button variant="outline" onClick={doXcs} disabled={!xcs || !xcs.programs}>
             <LuFactory /> Programes .xcs
           </Button>
         }
       >
+        <FormRow label="Programes" help={xcsPerPiece ? undefined : "Separació entre peces = Ø de la fresa de nesting + marge; marge del tauler i passada al martiri a Preferències › Màquines CNC."}>
+          <ChoiceChips<"sheet" | "piece">
+            label="Programes"
+            options={[
+              { id: "sheet", label: "Per tauler (nesting)" },
+              { id: "piece", label: "Per peça" },
+            ]}
+            value={xcsPerPiece ? "piece" : "sheet"}
+            onChange={(v) => setXcsPerPiece(v === "piece")}
+          />
+        </FormRow>
         {!machine && (
           <Text fontSize="sm" color="fg.muted">
             Cal una màquina: importa-la de Maestro a Preferències › Màquines CNC (la carpeta .machinecontext).
@@ -250,11 +275,11 @@ export function ExportScreen({ projectId }: { projectId: number }) {
             </Collapsible.Trigger>
             <Collapsible.Content>
               <Stack gap={2} fontSize="sm" mt={1}>
-                {xcs.panels.map((r, i) =>
+                {xcs.rows.map((r) =>
                   r.postProcesses.length ? (
                     <Box key={r.ref}>
                       <Text fontWeight="medium">
-                        {r.ref} · {panels[i]?.label}
+                        {r.ref} · {r.label}
                       </Text>
                       <Text color="fg.muted">{r.route}</Text>
                       <Stack as="ol" gap={0} ps={5} listStyleType="decimal">

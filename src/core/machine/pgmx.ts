@@ -137,6 +137,7 @@ export function mergeReimport(old: Machine, fresh: Machine): Machine {
     throughExtra: old.throughExtra,
     grooves: old.grooves,
     verticalDrills: old.verticalDrills,
+    ...(old.nesting ? { nesting: old.nesting } : {}),
     // La capçalera del .pgmx (o la retocada) mana sobre la de XilogHeaderParameters.
     ...(old.pgmx ? { header: old.header, pgmx: old.pgmx } : {}),
     tools: [...tools, ...manual],

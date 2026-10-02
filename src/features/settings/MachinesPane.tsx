@@ -7,7 +7,8 @@ import { NumRow } from "../../components/NumRow"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { SectionLabel } from "../../components/SectionLabel"
 import { toaster } from "../../components/ui/toaster"
-import { isPlaceholderTool, newId, TOOL_EDITABLE, TOOL_KIND_LABELS, type Machine, type MachineTool, type ToolEditable, type ToolKind } from "../../core/model"
+import { isPlaceholderTool, machineNesting, newId, TOOL_EDITABLE, TOOL_KIND_LABELS, type Machine, type MachineTool, type ToolEditable, type ToolKind } from "../../core/model"
+import { usableTool } from "../../core/machine/tools"
 import { importMaestroFiles, pickedFromDrop, pickedFromList, type PickedFile } from "./machineImport"
 import { PaneHeadContext } from "./paneHead"
 import { useSessionString } from "./useSessionString"
@@ -301,6 +302,38 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
                     ]}
                     value={m.grooves}
                     onChange={(grooves) => update({ grooves })}
+                  />
+                </FormRow>
+              </SettingsGroup>
+
+              <SettingsGroup
+                icon={<LuFactory />}
+                title="Programes per tauler (nesting)"
+                summary={`marge ${machineNesting(m).edgeTrim} mm · separació Ø + ${machineNesting(m).spacingExtra} · martiri ${machineNesting(m).overcut} mm`}
+              >
+                <FormRow label="Fresa del contorn" help="Contorns de les peces per fora. Automàtica: la que diu «nesting» al nom o, si no, la més petita que travessa el tauler.">
+                  <ChoiceChips<string>
+                    label="Fresa del contorn"
+                    options={[
+                      { id: "", label: "Automàtica" },
+                      ...m.tools.filter((t) => t.kind === "router" && usableTool(t)).map((t) => ({ id: t.code, label: `${t.code} · Ø${t.diameter}` })),
+                    ]}
+                    value={machineNesting(m).tool ?? ""}
+                    onChange={(tool) => update({ nesting: { ...machineNesting(m), tool: tool || undefined } })}
+                  />
+                </FormRow>
+                <NumRow label="Marge del tauler" help="Vora del tauler que no s'aprofita." value={machineNesting(m).edgeTrim} min={0} max={100} step={1} onChange={(edgeTrim) => update({ nesting: { ...machineNesting(m), edgeTrim } })} />
+                <NumRow label="Separació (Ø +)" help="Entre peces: el Ø de la fresa del contorn més aquest tant." value={machineNesting(m).spacingExtra} min={0} max={20} step={0.5} onChange={(spacingExtra) => update({ nesting: { ...machineNesting(m), spacingExtra } })} />
+                <NumRow label="Martiri" help="Els contorns i talls passants baixen aquest tant per sota del tauler." value={machineNesting(m).overcut} min={0} max={3} step={0.1} onChange={(overcut) => update({ nesting: { ...machineNesting(m), overcut } })} />
+                <FormRow label="Peces petites" help="Ordre dels contorns: les peces petites (menys aguantades pel buit) al final o al principi.">
+                  <ChoiceChips<"last" | "first">
+                    label="Peces petites"
+                    options={[
+                      { id: "last", label: "Al final" },
+                      { id: "first", label: "Al principi" },
+                    ]}
+                    value={machineNesting(m).smallParts}
+                    onChange={(smallParts) => update({ nesting: { ...machineNesting(m), smallParts } })}
                   />
                 </FormRow>
               </SettingsGroup>

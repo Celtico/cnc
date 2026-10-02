@@ -182,8 +182,64 @@ Només eines automàtiques i muntades.
   del .pgmx a l'MSL, cadenes C# i BOM, preferències amb una eina invàlida; propietats sobre 51 mobles del
   catàleg: cada mecanitzat té op o avís, tots els punts dins del pla, eina muntada que arriba a la fondària,
   noms únics, sense caràcters de control.
+- `core/export/maestroNestXcs.test.ts`: gir de les peces (un forat a (u, v) per a 0/90/180/270, petjada i sentit dels
+  contorns), la peça amb veta en Y a 90° amb els forats al seu lloc, talls per dins i contorn per fora antihoraris amb
+  la fresa de nesting i el martiri, separació ≥ Ø i marge, ordre de les etapes i de les peces petites, estructura d'un
+  tauler del catàleg (capçalera, peça `T01`, etiquetes, noms únics, tot dins del tauler, rutes) i 36 mobles del
+  catàleg (cada peça amb contorn o avís, tot dins de la seva petjada).
 - Mostres a `docs/maestro/samples/*.xcs` generades amb el context + `Proyecto1.pgmx` (UTF-8 amb BOM): `lateral_A.1.L.1` i `porta_A.1.F.9`
   de l'«Aparador sobre ferro», `peca-amb-forma_A.1.H.1` de la «Taula de centre «Nube»» (amb la capçalera de post-processos).
+
+## Programes per tauler (nesting) — per defecte
+Petició del taller: els .xcs han de ser **els taulers del nesting**, un programa per tauler, no per peça.
+`core/export/maestroNestXcs.ts` (`toMaestroNestXcs`, `cncNestOptions`, `toBoard`, `orderFeats`), pur i testejat
+(`maestroNestXcs.test.ts`). A Exportar › Màquina CNC (Maestro), «Programes»: **Per tauler (nesting)** (per defecte) ·
+Per peça (el d'abans; `mobles:xcs-per-piece`).
+
+### Modelatge: una peça de treball = el tauler
+- **Triat**: `CreateFinishedWorkpieceBox("T01", L, A, gruix)` + `CreateRawWorkpiece("T01", 0, 0, 0, 0, 0, 0)`
+  (§3.2 p16-17) i tots els mecanitzats en **coordenades del tauler** (cara de dalt, origen a baix a l'esquerra).
+  És com el projecte de nesting del taller (`samples/Proyecto1.pgmx.xml`: una peça 1200 × 800 × 18 amb un forat, un
+  `ClosedPocket` i un contorn amb la «12mm diamant nesting», `SideOfFeature` Left = per fora).
+- **Descartat**: diverses peces de treball a la taula (§3.11 p129-130, «workpieces machined contemporaneously»): cada
+  peça té la seva bruta i `SetWorkpieceSetupPosition`, col·locades perquè no xoquin; és per a peces ja tallades sobre
+  ventoses/barres (i la §3.12 p131 només hi afegeix l'optimització de canvis d'eina amb XConverter, §3.1.2.3). Un
+  tauler sencer que es talla és una sola peça física.
+- **Alternativa (no implementada): el mòdul de nesting del Maestro** (§4 p134): un .pgmx per peça (una peça i una
+  fase) i un CSV amb `nom;tipus;descripció;quantitat;quantitat extra;L;A;gruix;material;veta (1 horitzontal, 2
+  vertical);fitxer.pgmx` (`;` o `,`). Es podria generar a partir dels programes «Per peça» (convertits a .pgmx amb
+  XConverter `-m 0`) si el taller prefereix niar al Maestro.
+
+### Nesting per a la CNC
+- `cncNestOptions(panels, màquina, opcions del moble)`: el mateix `nest()` (taulers per material, veta) amb
+  **separació = Ø de la fresa de nesting + `spacingExtra`** (en lloc del gruix de la serra) i **marge = `edgeTrim`** de la
+  màquina. La pantalla Nesting (serra) no canvia.
+- Opcions per màquina (`Machine.nesting`, opcional; `machineNesting` amb `DEFAULT_MACHINE_NESTING`; Preferències ›
+  Màquines CNC › «Programes per tauler (nesting)»): fresa del contorn (automàtica: la que diu «nesting» al nom —la
+  «12mm diamant nesting» del .pgmx—, si no la més petita que travessa), marge del tauler **10 mm**, separació **Ø + 1**,
+  **martiri 0,3 mm** (contorns i talls passants fins a gruix + 0,3), peces petites **al final** (o al principi). Una
+  reimportació les conserva.
+- El marge és la vora que no s'aprofita: la fresa del contorn d'una peça arrambada al marge hi entra (fins a Ø).
+
+### Programa d'un tauler
+- Fitxer `T01_<material>_<gruix>.xcs` (ASCII), peça de treball `T01`. Capçalera de comentaris: tauler, material,
+  mida, peces i aprofitament, marge/separació/fresa/martiri, i la llista de peces (ref, nom, mida, cantonada, gir) i
+  les **etiquetes** (ref + centre). Abans del contorn de cada peça, `// Peca <ref> (...) - etiqueta al centre (x, y)`.
+- **Gir** (`toBoard`): el nesting col·loca a 0° o 90° (antihorari, sense mirall; el mateix que `localToBoard` del CSV):
+  90° → (u, v) ↦ (x + A − v, y + u); també 180° i 270° per si de cas. Un gir conserva el sentit dels contorns i dels
+  arcs (bulge).
+- Només la **cara A**: forats de cara (regles de sempre, `"-1"`), **ranures sempre amb fresa** (un disc de cantell a
+  cantell tallaria les peces del costat), talls passants per dins (costat 0) i el **contorn de cada peça per fora**
+  (costat 1) amb la fresa de nesting (o una de més petita si la forma té arcs o cantonades entrants més tancats), tot
+  passant fins a gruix + martiri.
+- **Ordre** (`orderFeats`): forats (per Ø) → ranures (per eina) → talls (per eina) → contorns; dins de cada grup, pel
+  **veí més proper**; els contorns per mida (classes de ×2 d'àrea, les petites al final o al principi) i veí més proper.
+- Noms únics: `<ref>_Forat_1`, `<ref>_Ranura_1`, `<ref>_Tall_1`, `<ref>_Contorn_1` (+ `_G` per a la geometria).
+- **El que no es fa al nesting** va a la ruta de la peça (LLEGEIX-ME, plegable «Després de la CNC» d'Exportar):
+  «CNC (tauler N) → …»: forats de cantell («perforadora horitzontal»), **cara B** («Mecanitzats cara B (n forats): fer a
+  la perforadora / segona passada»; sense programes «Volt») i inglets (serra), cantells, encolar, push.
+- LLEGEIX-ME: taulers (fitxer, material, mida, peces, aprofitament), peces que no hi caben, ruta de cada peça i avisos.
+- Mostra: `docs/maestro/samples/nesting_T01.xcs` (tauler 1 de l'«Aparador sobre ferro», amb el context + `Proyecto1.pgmx`).
 
 ## Preguntes obertes per al taller
 Ja resolt (revisió amb el manual i el .pgmx real): orígens i sentit de X de les cinc cares i el gir de la cara
@@ -203,8 +259,7 @@ B (taula de dalt); el paràmetre `tool` és el nom de l'eina; les broques del ta
    `SetWorkpieceSetupPosition` (§3.9.2 p115) o la posa Maestro?
 6. **Cara B**: dos programes (`Volt`) o un de sol amb `CreateWorkplan("Volt")` (§3.8 p112) i `CreateMessage`
    (§3.7.5 p111)?
-7. **Peces ja tallades o nesting?** La màquina és de barres (8 barres, ventoses): les peces arriben escairades
-   (llavors no cal el contorn de les rectangulars) o també fa nesting amb les freses «nesting»?
+7. ~~Peces ja tallades o nesting?~~ **Nesting** (resposta del taller): un programa per tauler (vegeu a dalt).
 8. **Ranures**: disc E604 (3,2) en passades o fresa? Les ranures del fons (10 mm) no tenen fresa: falta la de
    10 (o 8) a la biblioteca exportada.
 9. **Eines que falten al .tlgx** (la llista del germà): 2, 3, 4, 6, 8, 10, 16, 20, 22, 30 mm, cocodrils… Una
@@ -216,3 +271,15 @@ B (taula de dalt); el paràmetre `tool` és el nom de l'eina; les broques del ta
 12. **Passants**: 1 mm per sota és prou (o massa) amb les ventoses?
 13. **Numeració dels cantells** a l'etiqueta i la ruta («Inglet a 45° · cantells 2+4», «Cantejar cantells 1+3»): la de
     l'app (1 dalt · 2 dreta · 3 baix · 4 esquerra) és la que fan servir al taller, o la del seu visor?
+14. **Nesting — peces petites**: cal deixar **pontets (tabs)** o una **pell (onion-skin)** a les peces petites (els
+    llistons de 12 mm d'ample, els fronts petits) perquè no es moguin quan el buit ja no les aguanta? Ordre dels
+    contorns: les petites **al final** (com ara) o **al principi** (molts CAM ho fan així perquè el tauler encara
+    tanca el buit)? Hi ha opció a la màquina.
+15. **Martiri**: 0,3 mm per sota del tauler és el valor que fan servir? Contorn en una passada o en dues (desbast +
+    acabat)?
+16. **Zones de buit**: el tauler va sobre el martiri amb el buit de tota la taula (camp «AD»)? Cal triar zones
+    (`SetSuctionCupPosition` §3.10 p117-128 no s'aplica a una taula de martiri) o un altre `TableOptions`?
+17. **Etiquetes**: imprimeixen etiquetes al taller abans de descarregar? Amb quin format (ref + centre ja surten
+    com a comentaris)?
+18. **Marge i separació**: 10 mm de marge i Ø + 1 entre peces els van bé? Prefereixen el mòdul de nesting del Maestro
+    (§4 p134, CSV + .pgmx per peça)?
