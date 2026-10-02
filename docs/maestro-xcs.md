@@ -58,7 +58,7 @@ llenguatge d'scripts pensat per a postprocessadors de CAD/CAM externs (manual MS
   muntada, fondària útil, orientació), el `mslName` del .pgmx i les afegides a mà; també el nom, el per
   defecte, les opcions i, si s'havia importat un .pgmx, la seva capçalera.
 - Preferències: una eina invàlida es descarta sola (`repairMachine`), no tota la màquina; si encara no és vàlida, es torna
-  a provar sense les regles i/o sense les opcions de nesting (es restauren les per defecte, amb un avís).
+  a provar sense les regles (les d'abans de la v11) i/o sense les opcions de nesting (es restauren les per defecte, amb un avís).
 - Desat a `Settings.machines` (preferències **v10**, additiu: les v9 surten amb la llista buida); una
   sola `isDefault`.
 
@@ -191,6 +191,10 @@ Només eines automàtiques i muntades.
   la fresa de nesting i el martiri, separació ≥ Ø i marge, ordre de les etapes i de les peces petites, estructura d'un
   tauler del catàleg (capçalera, peça `T01`, etiquetes, noms únics, tot dins del tauler, rutes) i 36 mobles del
   catàleg (cada peça amb contorn o avís, tot dins de la seva petjada).
+- `core/export/xcsPreview.test.ts`: la **Vista CAM** d'Exportar llegeix el text dels .xcs (`parseXcsPreview`): mobles del catàleg amb el
+  context real (peces, ordre, tipus, eina, fondària, posicions, rampa i passades iguals que els mecanitzats escrits; cap línia
+  desconeguda), `nesting_T01.xcs`, el programa real del taller (recorreguts `CreateToolpath`, fondària de debò −19,3) i els per peça;
+  òfset del centre de l'eina (rectangles exactes per fora i per dins, forma en L, cercles).
 - `core/export/machineRules.test.ts`: regles del taller (valors per defecte i migració, eina per gruix, ranures en
   passades, caixeres, peces petites en 3 passades i l'ordre, rampa, eina que falta amb un sol avís).
 - Mostres a `docs/maestro/samples/*.xcs` generades amb el context + `Proyecto1.pgmx` i les regles per defecte (UTF-8 amb BOM): `lateral_A.1.L.1` i `porta_A.1.F.9`
@@ -347,9 +351,11 @@ Llegenda: **[real]** = el que diu el fitxer; **[suposició]** = interpretació n
 14. **El parser del taller** (no el toquem, només per informar el germà): als contorns del real llegeix la fondària del
     `CreateRoughFinish` (2 mm), no la de debò (−19,3 de la Z del recorregut).
 
-## Regles de mecanitzat del taller (`Machine.rules`)
-Les va donar el germà (octubre 2026). Per màquina, editables a Preferències › Regles de mecanitzat
-(`settings/MachineRules.tsx`); model a `core/model/machine.ts` (`MachineRulesSchema`, `defaultMachineRules`,
+## Regles de mecanitzat del taller (`Settings.machiningRules`)
+Les va donar el germà (octubre 2026). **Del taller, les mateixes per a totes les màquines** (per decisió de l'usuari: «en un
+taller les regles són les mateixes per a les dues CNC»; abans eren per màquina, `Machine.rules`), editables a Preferències ›
+Regles de mecanitzat (`settings/MachineRules.tsx`, amb una línia per màquina: ✓ o «falta «X»», `missingRuleTools`). A
+l'export arriben a `Machine.rules` amb `machineWithRules(settings)` / `withWorkshopRules`; model a `core/model/machine.ts` (`MachineRulesSchema`, `defaultMachineRules`,
 `machineRules`, `isSmallPart`), tria a `core/machine/rules.ts` (`findRuleTool`, `profileRuleFor`, `RulePicker`) i
 emissió compartida a `core/export/maestroXcs.ts` (`passDepths`, `grooveStrategy`, `contourPasses`, `contourLine`,
 `pocketLines`, `rampStart`, `rampLines`). Tests: `core/export/machineRules.test.ts`.
@@ -381,11 +387,13 @@ emissió compartida a `core/export/maestroXcs.ts` (`passDepths`, `grooveStrategy
   aquell costat (`ClosePolyline`): l'entrada lineal tangent cau sobre el mateix tall i no surt cap a les peces del
   costat (la separació és Ø + 2). Llargada = la de la regla, com a molt la meitat d'aquell costat; sense cap costat
   recte de 2 × Ø (cercles), sense rampa. Per peça, sense rampa.
-- Màquines desades sense `rules`: en carregar les preferències agafen les de per defecte (`withMachineRules`, additiu
-  i idempotent); una reimportació (`mergeReimport`) les conserva; «Les del taller» les torna als valors per defecte.
-  Els valors provisionals d'abans (separació Ø + 1, peça petita «costat < 300 mm o < 0,1 m²») es migren **un sol cop**
-  (`Machine.rulesVersion`, `MACHINE_RULES_VERSION`) i la migració es desa: si després l'usuari els torna a triar, es
-  queden. Les màquines noves ja porten la marca.
+- **Migració (preferències v11, additiva i idempotent)**: sense `machiningRules`, les de la màquina per defecte (o la primera
+  que en tingui; si cap, les per defecte; `rulesFromMachines`) i les `rules` de les màquines es treuen (l'esquema les continua
+  llegint per compatibilitat; importar un fitxer d'abans també les passa). Una reimportació (`mergeReimport`) no en porta.
+  «Restaurar valors inicials» torna `defaultMachineRules()`. Els valors provisionals d'abans (separació Ø + 1, peça petita
+  «costat < 300 mm o < 0,1 m²») es migren **un sol cop** (`Machine.rulesVersion`, `MACHINE_RULES_VERSION`, `migrateMachine`,
+  abans de passar les regles al taller) i la migració es desa: si després l'usuari els torna a triar, es queden. Les màquines
+  noves ja porten la marca.
 
 ### Dubtes de les regles (per confirmar amb el taller)
 - **Llindar de «peça petita»**: menys de 0,8 m² (del taller, octubre 2026). Les grans, d'una passada.

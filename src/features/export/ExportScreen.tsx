@@ -1,7 +1,7 @@
-import { Alert, Box, Button, Card, Collapsible, HStack, Stack, Switch, Text, VStack } from "@chakra-ui/react"
+import { Alert, Box, Button, Card, CloseButton, Collapsible, Dialog, HStack, Portal, Stack, Switch, Text, VStack } from "@chakra-ui/react"
 import { useMemo, useState } from "react"
 import { usePersistentFlag } from "../usePersistentFlag"
-import { LuBoxes, LuChevronRight, LuCuboid, LuDownload, LuFactory, LuFileDown, LuFileJson, LuLayoutGrid, LuScissors, LuSettings2 } from "react-icons/lu"
+import { LuBoxes, LuChevronRight, LuCuboid, LuDownload, LuFactory, LuFileDown, LuFileJson, LuLayoutGrid, LuMonitorCog, LuScissors, LuSettings2 } from "react-icons/lu"
 import { PanelGroup, PanelSection } from "../../components/PanelSection"
 import { FormRow } from "../../components/FormRow"
 import { exportGlb } from "../../components/viewer/exportGlb"
@@ -19,10 +19,11 @@ import { toUnifiedData } from "../../core/export/unified"
 import { xcsZip } from "../../core/export/maestroXcs"
 import { cncNestOptions, toMaestroNestXcs } from "../../core/export/maestroNestXcs"
 import { DEFAULT_NEST_OPTIONS, nest } from "../../core/nesting/nest"
-import { defaultMachine } from "../../core/model"
+import { machineWithRules } from "../../core/model"
 import { downloadBlob, downloadText, slugify } from "../download"
 import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
 import { useSettings } from "../settings/SettingsContext"
+import { CamPreview } from "./CamPreview"
 import { useComposition, useCompositionBuild, useNesting, useProject } from "../useProject"
 
 export function ExportScreen({ projectId }: { projectId: number }) {
@@ -43,18 +44,20 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   }
   const [busy, setBusy] = useState(false)
   const [busyAr, setBusyAr] = useState(false)
+  const [cam, setCam] = useState(false)
   const layers = useMemo(() => dxfLayers(panels, labels), [panels, labels])
   // Els avisos del STEP es calculen abans de descarregar, per veure'ls de seguida.
   const stepColor = useMemo(() => (p: { material: string }) => finishRgb(resolveFinish(settings.materials, p.material)), [settings.materials])
   // Programes de Maestro (.xcs) amb la màquina per defecte de Preferències › Màquines CNC.
-  const machine = defaultMachine(settings.machines)
+  const machine = machineWithRules(settings)
   // Un programa per tauler del nesting (el Maestro del taller no en fa).
   const xcs = useMemo(() => {
     if (!machine || !panels.length) return null
     const name = project?.name ?? "moble"
     const plan = cncNestOptions(panels, machine, project?.nesting ?? DEFAULT_NEST_OPTIONS)
     const x = toMaestroNestXcs(panels, nest(panels, plan.options), machine, { project: name })
-    return { ...x, sheets: x.sheets.length, rows: x.panels, spacingTool: plan.tool }
+    // `sheetList`: els programes amb el seu text (el mateix que va al zip) per a la Vista CAM.
+    return { ...x, sheets: x.sheets.length, sheetList: x.sheets, rows: x.panels, spacingTool: plan.tool }
   }, [machine, panels, project?.name, project?.nesting])
   const stepWarnings = useMemo(() => (comp && build && panels.length ? toStepCad(stepCadGroups(comp, build, { extras: stepExtras }), { name: "check" }).warnings : []), [comp, build, panels, stepExtras])
 
@@ -181,9 +184,14 @@ export function ExportScreen({ projectId }: { projectId: number }) {
         description="L'exportació principal: programes de Xilog Maestro (.xcs) per a la SCM del taller, sense passar per TopSolid. Un programa per tauler del nesting (el Maestro no en fa) amb totes les peces: forats, ranures, talls i contorns com a mecanitzats de debò amb les eines de la màquina (cara A; forats de cantell, cara B i inglets després). BETA: fins que el taller no els validi a Maestro, revisa'ls a la vista CAM del Maestro abans de mecanitzar."
         files={machine ? `${base}-maestro.zip · ${xcs?.programs ?? 0} programes (${xcs?.sheets ?? 0} taulers) per a ${machine.name}` : undefined}
         action={
-          <Button colorPalette="wood" onClick={doXcs} disabled={!xcs || !xcs.programs}>
-            <LuFactory /> Programes .xcs
-          </Button>
+          <HStack gap={2} wrap="wrap">
+            <Button colorPalette="wood" onClick={doXcs} disabled={!xcs || !xcs.programs}>
+              <LuFactory /> Programes .xcs
+            </Button>
+            <Button variant="outline" onClick={() => setCam(true)} disabled={!xcs || !xcs.programs}>
+              <LuMonitorCog /> Vista CAM
+            </Button>
+          </HStack>
         }
       >
         {machine && xcs && (
@@ -254,6 +262,29 @@ export function ExportScreen({ projectId }: { projectId: number }) {
           </Collapsible.Root>
         )}
       </ExportCard>
+
+      {/* Vista CAM: els programes del zip dibuixats, per revisar-los abans d'enviar-los a la màquina. */}
+      <Dialog.Root open={cam} onOpenChange={(e) => setCam(e.open)} size="full" placement="center" lazyMount unmountOnExit>
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content w="100vw" maxW="100vw" h="100dvh" maxH="100dvh" rounded="none" display="flex" flexDirection="column" overflow="hidden" pt="env(safe-area-inset-top, 0px)" pb="env(safe-area-inset-bottom, 0px)" ps="env(safe-area-inset-left, 0px)" pe="env(safe-area-inset-right, 0px)">
+              <Dialog.Header flexDirection="column" alignItems="start" gap={0.5} pe={14}>
+                <Dialog.Title>Vista CAM</Dialog.Title>
+                <Text fontSize="sm" color="fg.muted">
+                  El que rebrà la màquina: cada programa .xcs del zip, llegit i dibuixat.
+                </Text>
+              </Dialog.Header>
+              <Dialog.Body flex={1} minH={0} overflowY={{ base: "auto", lg: "hidden" }} px={{ base: 4, md: 6 }} pb={6}>
+                {xcs && <CamPreview sheets={xcs.sheetList} machine={machine} />}
+              </Dialog.Body>
+              <Dialog.CloseTrigger asChild top="calc(env(safe-area-inset-top, 0px) + 8px)" insetEnd="calc(env(safe-area-inset-right, 0px) + 8px)">
+                <CloseButton size="sm" aria-label="Tancar" />
+              </Dialog.CloseTrigger>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
 
       <ExportCard
         icon={<LuCuboid />}

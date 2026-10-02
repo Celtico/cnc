@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { CompositionSchema, RefPresetSchema, repairComposition, repairValue, type Composition, type RefPreset } from "../model"
+import { CompositionSchema, materialRefNames, RefPresetSchema, repairComposition, repairValue, resolveMaterialAlias, type Composition, type MaterialPref, type RefPreset } from "../model"
 import { NestOptionsSchema, type NestOptions } from "../nesting/nest"
 
 /**
@@ -253,4 +253,27 @@ export function uniqueName(name: string, existing: readonly string[]): string {
 /** Referències del fitxer que l'usuari no té (per afegir-les sense duplicar). */
 export function missingReferences(file: MobleFile, mine: RefPreset[]): RefPreset[] {
   return file.references.filter((r) => !mine.some((m) => sameReference(m, r)))
+}
+
+/**
+ * Materials que fa servir la composició d'un `.moble` (cos, fronts, fons, peces lliures, taulell i sòcol, objectes de
+ * referència i terra/paret de l'escena) i que no són a les preferències de qui l'obre (amb els àlies resolts amb els
+ * seus materials, `resolveMaterialAlias`). El `.moble` no porta preferències: els forats, ferratges, l'aspecte dels
+ * materials i la màquina són de qui l'obre; un material que no hi és es veu amb un color per defecte i al taller surt amb
+ * aquest nom.
+ */
+export function missingMaterials(composition: Composition, mine: readonly Pick<MaterialPref, "name">[]): string[] {
+  const names = new Set(mine.map((m) => m.name))
+  const out = new Set<string>()
+  for (const n of materialRefNames(composition)) {
+    const r = resolveMaterialAlias(n, names)
+    if (!names.has(r)) out.add(r)
+  }
+  return [...out]
+}
+
+/** Avís (en català) dels materials que falten en obrir un `.moble` (`missingMaterials`); `undefined` si no en falta cap. */
+export function missingMaterialsWarning(names: readonly string[]): string | undefined {
+  if (!names.length) return undefined
+  return `Materials que no tens a Preferències: ${names.join(", ")}; es veuran amb un color per defecte i al taller sortiran amb aquest nom. Afegeix-los a Preferències › Materials.`
 }

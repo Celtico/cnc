@@ -138,7 +138,6 @@ export function mergeReimport(old: Machine, fresh: Machine): Machine {
     grooves: old.grooves,
     verticalDrills: old.verticalDrills,
     ...(old.nesting ? { nesting: old.nesting } : {}),
-    ...(old.rules ? { rules: old.rules } : {}),
     // Les opcions d'abans es queden, i també quines migracions ja s'hi han fet.
     rulesVersion: old.rulesVersion,
     // La capçalera del .pgmx (o la retocada) mana sobre la de XilogHeaderParameters.

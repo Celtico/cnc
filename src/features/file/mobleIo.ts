@@ -1,5 +1,7 @@
 import {
   buildMobleFile,
+  missingMaterials,
+  missingMaterialsWarning,
   missingReferences,
   mobleFileName,
   mobleToJson,
@@ -104,7 +106,9 @@ export type OpenResult = { ok: true; projectId: number; name: string; warnings: 
 
 /**
  * Obre un `.moble`: sempre crea un moble nou (mai en sobreescriu cap), amb la foto si
- * n'hi ha, i afegeix a les preferències les referències que faltin.
+ * n'hi ha, i afegeix a les preferències les referències que faltin. El fitxer no porta preferències: el moble s'adapta
+ * a les de qui l'obre (forats, ferratges, aspecte dels materials, màquina; en silenci). Només s'avisa dels materials
+ * que no hi són (`missingMaterials`).
  */
 export async function openMobleFile(text: string, settings: Settings, saveSettings: (s: Settings) => Promise<void>): Promise<OpenResult> {
   const res = parseMobleFile(text)
@@ -148,6 +152,8 @@ export async function openMobleFile(text: string, settings: Settings, saveSettin
     await saveSettings({ ...settings, references: [...missing.map((r) => ({ ...r, id: newId("ref") })), ...settings.references] })
     warnings.push(`${missing.length === 1 ? "S'ha afegit una referència" : `S'han afegit ${missing.length} referències`} a les preferències: ${missing.map((r) => r.name).join(", ")}.`)
   }
+  const noMaterials = missingMaterialsWarning(missingMaterials(file.project.composition, settings.materials))
+  if (noMaterials) warnings.push(noMaterials)
   return { ok: true, projectId, name, warnings }
 }
 

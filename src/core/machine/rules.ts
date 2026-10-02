@@ -2,7 +2,8 @@ import { machineRules, toolMslName, type Machine, type MachineRules, type Machin
 import { usableTool } from "./tools"
 
 /**
- * Regles de mecanitzat del taller (`Machine.rules`) a l'export: l'eina de cada regla va pel nom (el de l'MSL, el
+ * Regles de mecanitzat del taller (`Settings.machiningRules`, les mateixes per a totes les màquines; a l'export arriben a
+ * `Machine.rules` amb `withWorkshopRules`) a l'export: l'eina de cada regla va pel nom (el de l'MSL, el
  * nom o el codi, sense majúscules ni espais de més). Si la màquina no la té (o no arriba a la fondària), l'export
  * tria l'eina com sempre i avisa un sol cop per export; si no hi cap (Ø massa gros per a la geometria), també tria
  * com sempre, sense avís (és la geometria, no falta res).
@@ -26,6 +27,20 @@ function namedRouter(m: Pick<Machine, "tools">, name: string, ok: (t: MachineToo
  * per a la tria automàtica i que no són una «Eina nova»), les mateixes que ofereix el selector de les regles.
  */
 export const findRuleTool = (m: Pick<Machine, "tools">, name: string): MachineTool | undefined => namedRouter(m, name, (t) => t.kind === "router" && usableTool(t))
+
+/** Noms d'eina de les regles (ranures, caixeres i perfilar), sense buits ni repetits (sense mirar majúscules ni espais). */
+export function ruleToolNames(r: MachineRules): string[] {
+  const seen = new Set<string>()
+  return [r.grooves.tool, r.pockets.tool, ...r.profile.map((x) => x.tool)].filter((n) => {
+    const k = norm(n)
+    if (!k || seen.has(k)) return false
+    seen.add(k)
+    return true
+  })
+}
+
+/** Eines de les regles que la màquina no té (o no pot fer servir): el que diu Preferències › Regles de mecanitzat per màquina. */
+export const missingRuleTools = (m: Pick<Machine, "tools">, r: MachineRules): string[] => ruleToolNames(r).filter((n) => !findRuleTool(m, n))
 
 /** Regla de perfilar per al gruix (interval tancat). */
 export const profileRuleFor = (r: MachineRules, thickness: number) => r.profile.find((x) => thickness >= x.min - 1e-6 && thickness <= x.max + 1e-6)

@@ -4,9 +4,9 @@ const fsMod = "node:fs"
 const { readFileSync } = (await import(/* @vite-ignore */ fsMod)) as { readFileSync: (p: string) => Uint8Array }
 import { machineFromContext } from "../machine/maestro"
 import { applyPgmx, parsePgmxXml } from "../machine/pgmx"
-import { findRuleTool, profileRuleFor, RulePicker } from "../machine/rules"
+import { findRuleTool, missingRuleTools, profileRuleFor, ruleToolNames, RulePicker } from "../machine/rules"
 import { bytes, read } from "../machine/testContext"
-import { defaultMachineRules, isSmallPart, MACHINE_RULES_VERSION, machineRules, parseSettings, repairMachine, withMachineRules, type Machine, type MachineTool, type Panel } from "../model"
+import { defaultMachineRules, importSettingsJson, isSmallPart, MACHINE_RULES_VERSION, machineRules, machineWithRules, migrateMachine, parseSettings, repairMachine, rulesFromMachines, settingsToJson, withWorkshopRules, DEFAULT_SETTINGS, type Machine, type MachineTool, type Panel } from "../model"
 import { DEFAULT_NEST_OPTIONS, nest } from "../nesting/nest"
 import { cncNestOptions, nestingRouter, orderFeats, toMaestroNestXcs } from "./maestroNestXcs"
 import { contourPasses, panelXcs, passDepths, rampStart, toMaestroXcs } from "./maestroXcs"
@@ -68,15 +68,75 @@ describe("regles per defecte i migració", () => {
     ])
     expect(r.ramp.enabled).toBe(true)
   })
-  it("una màquina desada sense regles agafa les de per defecte; amb regles, no es toquen (idempotent)", () => {
+  it("v11: les preferències sense regles del taller agafen les de per defecte; les màquines no en porten", () => {
     const { rules: _r, ...old } = BASE
-    const a = parseSettings({ version: 10, machines: [old] }).settings.machines[0]!
-    expect(a.rules).toEqual(defaultMachineRules())
+    const a = parseSettings({ version: 10, machines: [old] })
+    expect(a.settings.machiningRules).toEqual(defaultMachineRules())
+    expect(a.settings.machines[0]!.rules).toBeUndefined()
+    expect(parseSettings({}).settings.machiningRules).toEqual(defaultMachineRules())
+    // Les màquines noves (context de Maestro) ja no porten regles.
+    expect(BASE.rules).toBeUndefined()
+  })
+  it("v11: migra les regles de la màquina per defecte (o la primera que en té) i les treu de les màquines (idempotent)", () => {
+    const { rules: _r, ...old } = BASE
     const mine = { ...defaultMachineRules(), grooves: { tool: "6mm helicoidal", maxPass: 4 } }
-    const b = parseSettings({ version: 10, machines: [{ ...old, rules: mine }] }).settings.machines[0]!
-    expect(b.rules).toEqual(mine)
-    const c = parseSettings({ version: 10, machines: [b] }).settings.machines[0]!
-    expect(c.rules).toEqual(mine)
+    const other = { ...defaultMachineRules(), ramp: { enabled: false, length: 40 } }
+    // La per defecte mana, encara que no sigui la primera.
+    const first = parseSettings({ version: 10, machines: [{ ...old, id: "a", isDefault: false, rules: other }, { ...old, id: "b", isDefault: true, rules: mine }] })
+    expect(first.settings.machiningRules).toEqual(mine)
+    expect(first.settings.machines.every((m) => m.rules === undefined)).toBe(true)
+    expect(first.migrated).toBe(true)
+    // La per defecte sense regles: les de la primera que en té.
+    const second = parseSettings({ version: 10, machines: [{ ...old, id: "a", isDefault: true }, { ...old, id: "b", isDefault: false, rules: other }] })
+    expect(second.settings.machiningRules).toEqual(other)
+    // Ja migrades: tal qual, sense tornar-les a desar.
+    const again = parseSettings(JSON.parse(settingsToJson(first.settings)))
+    expect(again.settings.machiningRules).toEqual(mine)
+    expect(again.settings.machines).toEqual(first.settings.machines)
+    expect(again.migrated).toBe(false)
+    // Unes regles del taller que ja hi són manen sobre les d'una màquina que encara en porti.
+    const both = parseSettings({ ...JSON.parse(settingsToJson(first.settings)), machines: [{ ...old, rules: other }] })
+    expect(both.settings.machiningRules).toEqual(mine)
+    expect(both.settings.machines[0]!.rules).toBeUndefined()
+  })
+  it("rulesFromMachines: per defecte › primera amb regles › cap", () => {
+    const { rules: _r, ...old } = BASE
+    const mine = { ...defaultMachineRules(), pockets: { tool: "x" } }
+    expect(rulesFromMachines([])).toBeUndefined()
+    expect(rulesFromMachines([{ ...old, isDefault: true }])).toBeUndefined()
+    expect(rulesFromMachines([{ ...old, isDefault: true }, { ...old, rules: mine }])).toBe(mine)
+  })
+  it("regles del taller invàlides: només el camp dolent torna al valor inicial", () => {
+    const bad = { ...defaultMachineRules(), grooves: { tool: "6mm", maxPass: -3 } }
+    const r = parseSettings({ ...JSON.parse(settingsToJson(DEFAULT_SETTINGS)), machiningRules: bad })
+    expect(r.settings.machiningRules.grooves.tool).toBe("6mm")
+    expect(r.settings.machiningRules.grooves.maxPass).toBe(6)
+    expect(r.problems.join(" ")).toMatch(/Regles de mecanitzat/)
+  })
+  it("importar un fitxer d'abans de la v11: les regles de les màquines passen a les del taller", () => {
+    const { rules: _r, ...old } = BASE
+    const mine = { ...defaultMachineRules(), grooves: { tool: "6mm helicoidal", maxPass: 4 } }
+    const res = importSettingsJson(DEFAULT_SETTINGS, JSON.stringify({ version: 10, machines: [{ ...old, isDefault: true, rules: mine }] }))
+    expect(res.settings.machiningRules).toEqual(mine)
+    // Sense màquines ni regles al fitxer: no es toquen.
+    const cur = { ...DEFAULT_SETTINGS, machiningRules: mine }
+    expect(importSettingsJson(cur, JSON.stringify({ version: 10, label: { w: 90, h: 60 } })).settings.machiningRules).toBe(mine)
+  })
+  it("machineWithRules: la màquina per defecte amb les regles del taller (el mateix objecte per a les mateixes preferències)", () => {
+    const mine = { ...defaultMachineRules(), ramp: { enabled: false, length: 40 } }
+    const s = { machines: [{ ...BASE, isDefault: false, id: "x" }, { ...M, isDefault: true }], machiningRules: mine }
+    const m = machineWithRules(s)!
+    expect(m.id).toBe(M.id)
+    expect(machineRules(m)).toBe(mine)
+    expect(machineWithRules(s)).toBe(m)
+    expect(machineWithRules({ machines: [], machiningRules: mine })).toBeUndefined()
+    expect(withWorkshopRules(m, mine)).toBe(m)
+  })
+  it("eines que falten per màquina (Preferències › Regles de mecanitzat)", () => {
+    const r = defaultMachineRules()
+    expect(ruleToolNames(r)).toEqual(["8mm diamant", "12mm diamant nesting", "14mm diamant nesting"])
+    expect(missingRuleTools(M, r)).toEqual([])
+    expect(missingRuleTools(BASE, r)).toEqual(["8mm diamant", "14mm diamant nesting"])
   })
   it("peça petita: menys de 0,8 m² (el costat no compta si és 0)", () => {
     const r = defaultMachineRules()
@@ -87,11 +147,11 @@ describe("regles per defecte i migració", () => {
   })
   it("migra el llindar provisional (300 mm / 0,1 m²) al del taller (0,8 m²)", () => {
     const old = { ...defaultMachineRules(), small: { ...defaultMachineRules().small, maxSide: 300, maxArea: 0.1 } }
-    const m = withMachineRules<Pick<Machine, "rules" | "rulesVersion">>({ rules: old })
+    const m = migrateMachine<Pick<Machine, "rules" | "rulesVersion">>({ rules: old })
     expect(m.rules!.small.maxArea).toBe(0.8)
     expect(m.rules!.small.maxSide).toBe(0)
     expect(m.rulesVersion).toBe(MACHINE_RULES_VERSION)
-    expect(withMachineRules(m)).toBe(m)
+    expect(migrateMachine(m)).toBe(m)
   })
   it("les migracions es fan un sol cop: si després l'usuari torna a triar Ø + 1 o 300 mm / 0,1 m², es queda", () => {
     const { rules: _r, rulesVersion: _v, ...old } = BASE
@@ -100,15 +160,16 @@ describe("regles per defecte i migració", () => {
     const first = parseSettings({ version: 10, machines: [raw] })
     const a = first.settings.machines[0]!
     expect(a.nesting!.spacingExtra).toBe(2)
-    expect(a.rules!.small.maxArea).toBe(0.8)
+    // El llindar provisional es migra abans de passar a les regles del taller.
+    expect(first.settings.machiningRules.small.maxArea).toBe(0.8)
     expect(a.rulesVersion).toBe(MACHINE_RULES_VERSION)
     // Es desa la migració (si no, es tornaria a fer i trepitjaria la tria de l'usuari).
     expect(first.migrated).toBe(true)
     // L'usuari ho torna a posar: es queda.
-    const mine = { ...a, nesting: { ...a.nesting!, spacingExtra: 1 }, rules: { ...a.rules!, small } }
-    const again = parseSettings({ version: 10, machines: [mine] })
+    const mine = { ...first.settings, machines: [{ ...a, nesting: { ...a.nesting!, spacingExtra: 1 } }], machiningRules: { ...first.settings.machiningRules, small } }
+    const again = parseSettings(JSON.parse(settingsToJson(mine)))
     expect(again.settings.machines[0]!.nesting!.spacingExtra).toBe(1)
-    expect(again.settings.machines[0]!.rules!.small).toEqual(small)
+    expect(again.settings.machiningRules.small).toEqual(small)
     expect(again.migrated).toBe(false)
   })
 })
@@ -121,7 +182,8 @@ describe("reparar una màquina desada", () => {
     expect(r.machine?.rules).toBeUndefined()
     expect(r.problems.join(" ")).toMatch(/regles de mecanitzat invàlides/)
     const s = parseSettings({ version: 10, machines: [bad] })
-    expect(s.settings.machines[0]!.rules).toEqual(defaultMachineRules())
+    expect(s.settings.machines[0]!.rules).toBeUndefined()
+    expect(s.settings.machiningRules).toEqual(defaultMachineRules())
     expect(s.problems.join(" ")).toMatch(/regles de mecanitzat invàlides/)
   })
   it("opcions de nesting invàlides (i regles bones): només es treuen les opcions de nesting", () => {

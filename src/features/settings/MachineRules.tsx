@@ -1,46 +1,67 @@
 import { Box, Button, HStack, IconButton, Stack, Switch, Text } from "@chakra-ui/react"
-import { LuFactory, LuPlus, LuTrash2 } from "react-icons/lu"
+import { LuCheck, LuFactory, LuPlus, LuTrash2 } from "react-icons/lu"
 import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
 import { NumberField, NumRow } from "../../components/NumRow"
 import { SettingsGroup } from "../../components/SettingsGroup"
-import { machineNesting, machineRules, toolMslName, type Machine, type MachineRules } from "../../core/model"
-import { findRuleTool } from "../../core/machine/rules"
+import { defaultMachine, machineNesting, toolMslName, type Machine, type MachineRules } from "../../core/model"
+import { findRuleTool, missingRuleTools } from "../../core/machine/rules"
 import { usableTool } from "../../core/machine/tools"
 
 /**
- * Preferències › Regles de mecanitzat: les regles del taller (eines per tipus de mecanitzat, passades de les ranures,
- * perfilar per gruix, rampa del nesting i peces petites), de la màquina per defecte o la triada. «Restaurar valors
- * inicials» de la pàgina les torna a les del taller (`defaultMachineRules`).
- * Les eines es trien d'entre les freses de la màquina que es poden fer servir (`usableTool`); una que no hi és (o no es pot
- * fer servir) surt marcada («falta») i l'export tria com sempre, amb un avís.
+ * Preferències › Regles de mecanitzat: les regles del taller (`Settings.machiningRules`: eines per tipus de mecanitzat,
+ * passades de les ranures, perfilar per gruix, rampa del nesting i peces petites), **les mateixes per a totes les
+ * màquines**. «Restaurar valors inicials» de la pàgina les torna a les del taller (`defaultMachineRules`).
+ * Les eines van pel nom i es trien d'entre les freses que es poden fer servir (`usableTool`) de qualsevol màquina; per a
+ * cada màquina, una línia diu si les té totes (✓) o quines li falten: a l'export, la que falta es tria com sempre, amb un avís.
  */
-export function MachineRulesGroup({ m, onChange }: { m: Machine; onChange: (rules: MachineRules) => void }) {
-  const r = machineRules(m)
+export function MachineRulesGroup({ rules: r, machines, onChange }: { rules: MachineRules; machines: Machine[]; onChange: (rules: MachineRules) => void }) {
   const set = (patch: Partial<MachineRules>) => onChange({ ...r, ...patch })
-  const missing = [r.grooves.tool, r.pockets.tool, ...r.profile.map((x) => x.tool)].filter((n) => n.trim() && !findRuleTool(m, n))
-  const summary = `ranures ${r.grooves.tool || "auto"} · ${r.profile.length} gruixos · peces petites < ${comma(r.small.maxArea)} m²${missing.length ? ` · ${missing.length} eines falten` : ""}`
+  const missingBy = machines.map((m) => ({ m, missing: missingRuleTools(m, r) }))
+  const short = missingBy.filter((x) => x.missing.length).length
+  const summary = `ranures ${r.grooves.tool || "auto"} · ${r.profile.length} gruixos · peces petites < ${comma(r.small.maxArea)} m²${short ? ` · eines que falten a ${short} ${short === 1 ? "màquina" : "màquines"}` : ""}`
+  const nestingOf = defaultMachine(machines)
   return (
-    <SettingsGroup
-      icon={<LuFactory />}
-      // El títol de la pàgina ja diu «Regles de mecanitzat»: aquí, de quina màquina són.
-      title={m.name}
-      summary={summary}
-    >
+    <SettingsGroup icon={<LuFactory />} title="Regles del taller" summary={summary}>
       <Text fontSize="sm" color="fg.muted">
-        Com mecanitza el taller: quina fresa per a cada cosa i en quantes passades. Les eines van pel nom de Maestro; si la màquina no en té cap
-        amb aquell nom surt «falta» i l'export la tria com sempre i avisa (afegeix-la a Preferències › Màquines CNC (Eines) o importa un .pgmx que la faci servir).
+        Com mecanitza el taller: quina fresa per a cada cosa i en quantes passades. Són les mateixes per a totes les màquines; les eines van pel nom
+        de Maestro i es busquen a la màquina que exporta. Si no en té cap amb aquell nom, l'export la tria com sempre i avisa (afegeix-la a
+        Preferències › Màquines CNC (Eines) o importa un .pgmx que la faci servir).
       </Text>
+      {machines.length > 0 ? (
+        <Stack gap={1}>
+          {missingBy.map(({ m, missing }) => (
+            <HStack key={m.id} gap={2} align="flex-start" fontSize="sm">
+              {missing.length ? (
+                <Text color="fg.warning">
+                  {m.name}: falta {missing.map((n) => `«${n}»`).join(", ")}
+                </Text>
+              ) : (
+                <>
+                  <Box color="fg.success" pt="3px" flexShrink={0}>
+                    <LuCheck />
+                  </Box>
+                  <Text>{m.name}: té totes les eines</Text>
+                </>
+              )}
+            </HStack>
+          ))}
+        </Stack>
+      ) : (
+        <Text fontSize="sm" color="fg.muted">
+          Sense màquina: importa-la a Preferències › Màquines CNC per triar les freses d'entre les seves eines.
+        </Text>
+      )}
 
       <FormSection title="Ranures">
         <FormRow label="Fresa" help="Ranures obertes per algun extrem (també les de cantell a cantell, si a «Ranures» no es prefereix el disc).">
-          <ToolPick m={m} label="Fresa de les ranures" value={r.grooves.tool} onChange={(tool) => set({ grooves: { ...r.grooves, tool } })} />
+          <ToolPick machines={machines} label="Fresa de les ranures" value={r.grooves.tool} onChange={(tool) => set({ grooves: { ...r.grooves, tool } })} />
         </FormRow>
         <NumRow label="Per passada" help="Fondària màxima de cada passada: més fondes, en diverses (CreateBidirectionalMillingStrategy)." value={r.grooves.maxPass} min={0.5} max={50} step={0.5} onChange={(maxPass) => set({ grooves: { ...r.grooves, maxPass } })} />
       </FormSection>
 
       <FormSection title="Caixeres">
         <FormRow label="Fresa" help="Rebaixos cecs tancats pels quatre costats (CreateContourPocket). Si la fresa no hi cap, es fan com una ranura.">
-          <ToolPick m={m} label="Fresa de les caixeres" value={r.pockets.tool} onChange={(tool) => set({ pockets: { tool } })} />
+          <ToolPick machines={machines} label="Fresa de les caixeres" value={r.pockets.tool} onChange={(tool) => set({ pockets: { tool } })} />
         </FormRow>
       </FormSection>
 
@@ -70,7 +91,7 @@ export function MachineRulesGroup({ m, onChange }: { m: Machine; onChange: (rule
                 </HStack>
               </FormRow>
               <FormRow label="Fresa">
-                <ToolPick m={m} label={`Fresa per a ${row.min}–${row.max} mm`} value={row.tool} onChange={(tool) => put({ tool })} />
+                <ToolPick machines={machines} label={`Fresa per a ${row.min}–${row.max} mm`} value={row.tool} onChange={(tool) => put({ tool })} />
               </FormRow>
             </Stack>
           )
@@ -130,7 +151,7 @@ export function MachineRulesGroup({ m, onChange }: { m: Machine; onChange: (rule
         })}
         <FormRow label={`Passada ${r.small.passes.length + 1}`} help="La de sempre: fins al martiri.">
           <Text fontSize="sm" pt="6px">
-            Final · Z −{comma(machineNesting(m).overcut)} (martiri) · XY 0
+            Final · Z −{comma(machineNesting(nestingOf ?? {}).overcut)} (martiri) · XY 0
           </Text>
         </FormRow>
         <HStack>
@@ -149,11 +170,14 @@ const PAIR_W = { base: "100px", md: "140px" }
 /** Número amb coma decimal. */
 const comma = (n: number) => String(n).replace(".", ",")
 
-/** Fresa d'una regla: «Automàtica», les freses de la màquina que es poden fer servir pel nom de Maestro (i el nom) i, si el nom no hi és, «falta». */
-function ToolPick({ m, label, value, onChange }: { m: Machine; label: string; value: string; onChange: (v: string) => void }) {
-  const found = value.trim() ? findRuleTool(m, value) : undefined
+/**
+ * Fresa d'una regla: «Automàtica», les freses que es poden fer servir de totes les màquines (pel nom de Maestro i el nom,
+ * sense repetir-les) i, si el nom no és a cap màquina, «falta».
+ */
+function ToolPick({ machines, label, value, onChange }: { machines: Machine[]; label: string; value: string; onChange: (v: string) => void }) {
+  const found = value.trim() ? machines.map((m) => findRuleTool(m, value)).find((t) => !!t) : undefined
   // Les mateixes que pot fer servir l'export (`findRuleTool`): muntades, automàtiques i amb codi de Maestro.
-  const routers = m.tools.filter((t) => t.kind === "router" && usableTool(t) && t.diameter > 0)
+  const routers = machines.flatMap((m) => m.tools.filter((t) => t.kind === "router" && usableTool(t) && t.diameter > 0))
   const options = [
     { id: "", label: "Automàtica" },
     ...routers.map((t) => ({ id: toolMslName(t), label: `${toolMslName(t)}${t.name.trim() && t.name !== toolMslName(t) ? ` (${t.name})` : ""} · Ø${comma(t.diameter)}` })),
@@ -163,33 +187,4 @@ function ToolPick({ m, label, value, onChange }: { m: Machine; label: string; va
   const current = found ? toolMslName(found) : value
   const seen = new Set<string>()
   return <ChoiceChips<string> label={label} options={options.filter((o) => !seen.has(o.id) && !!seen.add(o.id))} value={current} onChange={onChange} />
-}
-
-/**
- * Preferències › Regles de mecanitzat: les de la màquina per defecte (o la triada, si n'hi ha diverses: `selected`, que
- * la pàgina guarda per saber quina restaurar). Es desen a cada màquina, perquè les eines són d'ella.
- */
-export function MachiningRulesSection({ machines, selected, onSelect, onChange }: { machines: Machine[]; selected: string | null; onSelect: (id: string) => void; onChange: (machines: Machine[]) => void }) {
-  const def = machines.find((m) => m.isDefault) ?? machines[0]
-  const m = machines.find((x) => x.id === selected) ?? def
-  if (!m) {
-    return (
-      <SettingsGroup icon={<LuFactory />} title="Sense màquina" summary="importa-la a Màquines CNC">
-        <Text fontSize="sm" color="fg.muted">
-          Les regles de mecanitzat (fresa de les ranures, perfilar per gruix, rampa, peces petites) van amb la màquina i les seves eines. Importa-la
-          a Preferències › Màquines CNC.
-        </Text>
-      </SettingsGroup>
-    )
-  }
-  return (
-    <Stack gap={3}>
-      {machines.length > 1 && (
-        <FormRow label="Màquina">
-          <ChoiceChips label="Màquina" value={m.id} options={machines.map((x) => ({ id: x.id, label: x.name }))} onChange={onSelect} />
-        </FormRow>
-      )}
-      <MachineRulesGroup m={m} onChange={(rules) => onChange(machines.map((x) => (x.id === m.id ? { ...x, rules } : x)))} />
-    </Stack>
-  )
 }

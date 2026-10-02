@@ -113,7 +113,7 @@ export const defaultMachineRules = (): MachineRules => ({
   },
 })
 
-/** Regles de la màquina (les de per defecte si no en té). */
+/** Regles que porta la màquina (les del taller, injectades per `withWorkshopRules`; sense, les de per defecte). */
 export const machineRules = (m: Pick<Machine, "rules">): MachineRules => m.rules ?? defaultMachineRules()
 
 /**
@@ -123,11 +123,12 @@ export const machineRules = (m: Pick<Machine, "rules">): MachineRules => m.rules
 export const MACHINE_RULES_VERSION = 1
 
 /**
- * Màquina amb regles (migració en carregar). Les que no en tenen agafen les de per defecte (additiu). Els valors
- * provisionals d'abans es migren **un sol cop** (`rulesVersion`): si l'usuari els torna a posar després, es queden.
- * Idempotent: una màquina ja migrada es retorna tal qual (el mateix objecte).
+ * Migracions d'un sol cop de la màquina en carregar (`rulesVersion`): els valors provisionals d'abans (separació Ø + 1,
+ * peça petita 300 mm / 0,1 m²) passen als del taller; si l'usuari els torna a posar després, es queden. Ja no hi posa
+ * regles: des de la v11 de les preferències les regles són del taller (`Settings.machiningRules`) i les `rules` d'una
+ * màquina només es llegeixen per migrar-les. Idempotent: una màquina ja migrada es retorna tal qual (el mateix objecte).
  */
-export const withMachineRules = <M extends Pick<Machine, "rules"> & { nesting?: Machine["nesting"]; rulesVersion?: number }>(m0: M): M => {
+export const migrateMachine = <M extends Pick<Machine, "rules"> & { nesting?: Machine["nesting"]; rulesVersion?: number }>(m0: M): M => {
   let m = m0
   if ((m.rulesVersion ?? 0) < MACHINE_RULES_VERSION) {
     // Separació provisional d'abans (Ø + 1) → la del taller (Ø + 2).
@@ -137,8 +138,14 @@ export const withMachineRules = <M extends Pick<Machine, "rules"> & { nesting?: 
     if (m.rules && s && s.maxSide === 300 && s.maxArea === 0.1) m = { ...m, rules: { ...m.rules, small: { ...s, maxSide: 0, maxArea: 0.8 } } }
     m = { ...m, rulesVersion: MACHINE_RULES_VERSION }
   }
-  return m.rules ? m : { ...m, rules: defaultMachineRules() }
+  return m
 }
+
+/**
+ * La màquina amb les regles del taller (`Settings.machiningRules`) a `rules`, la forma que llegeix l'export
+ * (`machineRules`, `RulePicker`). Les eines es busquen pel nom a la màquina que exporta.
+ */
+export const withWorkshopRules = (m: Machine, rules: MachineRules): Machine => (m.rules === rules ? m : { ...m, rules })
 
 /** Peça petita segons les regles: àrea (m²) < `maxArea`, o algun costat < `maxSide` (si no és 0). */
 export const isSmallPart = (r: MachineRules, length: number, width: number, area = length * width): boolean =>
@@ -219,12 +226,12 @@ export const MachineSchema = z.object({
     })
     .optional(),
   /**
-   * Regles de mecanitzat del taller (eines per tipus de mecanitzat, passades, rampa, peces petites). Opcional a
-   * l'esquema: les màquines desades abans no en tenen i en carregar-les se'ls posen les de per defecte
-   * (`withMachineRules`); per llegir-les, `machineRules`.
+   * Regles de mecanitzat d'abans de la v11 de les preferències (eren per màquina). Es llegeix per compatibilitat i per
+   * migrar-les a `Settings.machiningRules` (les del taller, iguals per a totes les màquines); en carregar es treu. A
+   * l'export només hi és la còpia de les del taller (`withWorkshopRules`, `machineWithRules`); per llegir-les, `machineRules`.
    */
   rules: MachineRulesSchema.optional(),
-  /** Migracions d'un sol cop ja fetes (`withMachineRules`, `MACHINE_RULES_VERSION`). Sense: cap. */
+  /** Migracions d'un sol cop ja fetes (`migrateMachine`, `MACHINE_RULES_VERSION`). Sense: cap. */
   rulesVersion: z.number().int().min(0).optional(),
   /** D'on venen els noms de les eines (`mslName`) i la capçalera: el .pgmx importat. */
   pgmx: z.object({ file: z.string(), version: z.string(), tools: z.number().int(), importedAt: z.number() }).optional(),
@@ -286,7 +293,7 @@ export function repairMachine(raw: unknown): { machine?: Machine; problems: stri
   }
   const again = MachineSchema.safeParse({ ...r, tools })
   if (again.success) return { machine: again.data, problems }
-  // Regles o opcions de nesting invàlides: es tornen als valors per defecte (`withMachineRules`, `machineNesting`) abans
+  // Regles (d'abans de la v11) o opcions de nesting invàlides: es treuen (`machineNesting` dona les per defecte) abans
   // de perdre la màquina sencera.
   const RULES = "regles de mecanitzat invàlides: es restauren les del taller"
   const NESTING = "opcions dels programes per tauler invàlides: es restauren les inicials"

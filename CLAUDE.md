@@ -185,8 +185,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   posició); tocar una eina l'edita; «Afegir eina» per a les que el `.tlgx` no porta (amb el codi de Maestro; una
   «Eina nova» `NOVA1` no es tria fins que té codi). Tornar a importar la mateixa sèrie (`mergeReimport`) conserva,
   eina per eina, els camps tocats a mà (`MachineTool.edited`), les eines afegides a mà i les opcions; una eina invàlida
-  a les preferències només treu aquella eina (`repairMachine`; si encara falla, es tornen a provar sense les regles i/o
-  sense les opcions de nesting, que tornen als valors per defecte amb un avís, en lloc de perdre la màquina).
+  a les preferències només treu aquella eina (`repairMachine`; si encara falla, es tornen a provar sense les regles d'abans de la v11
+  i/o sense les opcions de nesting, que tornen als valors per defecte amb un avís, en lloc de perdre la màquina).
 - **Projecte .pgmx** (al detall, «Importar .pgmx» = el mateix importador amb la màquina triada; `core/machine/pgmx.ts`, .pgmx = zip o l'XML extret): el paràmetre `tool` de
   l'MSL és el **nom** de l'eina i el Maestro del taller (2.0.5) les ha rebatejades (ID 2149647431: `E128` al .tlgx,
   «12mm diamant nesting» al projecte `docs/maestro/samples/Proyecto1.pgmx.xml`). Per ID (`MachineTool.id` = `Key/ID` del
@@ -241,6 +241,22 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   martiri), per eina i veí més proper, les peces petites (marcades `small`, amb desbastos o sense) al final. Forats de cantell, cara B («fer a la perforadora /
   segona passada», sense Volt) i inglets a la ruta «CNC (tauler N) → …». Comentaris amb les peces i les etiquetes (ref +
   centre). Mostra `docs/maestro/samples/nesting_T01.xcs`. Alternativa documentada: el nesting del Maestro (§4 p134, CSV).
+- **Vista CAM** (Exportar › Màquina CNC (Maestro) › «Vista CAM», `LuMonitorCog`; perquè el taller revisi cada programa a l'app
+  abans d'enviar-lo, sense TopSolid): diàleg a pantalla completa (zona segura com el Render) amb `export/CamPreview.tsx` sobre **el
+  mateix text dels .xcs que va al zip** (`xcs.sheetList`). El dibuix surt de **llegir l'MSL**, no del model: `core/export/xcsPreview.ts`
+  (`parseXcsPreview`, pur i testejat) llegeix peça de treball, peces i etiquetes dels comentaris de la capçalera, forats, polilínies
+  (rectes, `AddArc2PointRadius/Center/3Points…`), cercles, segments i recorreguts (`CreateToolpath` del programa real) i les operacions
+  (`CreateContour` costat dins/fora, `CreateContourPocket`, `CreateRoughFinish`/`CreateSlot` amb la correcció, eina —amb `"-1"`, la del
+  comentari `//BROCA PLANA …`—, fondària, sobrant, passada `_Pn` de les peces petites, rampa `SetApproachStrategy` i passades de
+  `CreateBidirectionalMillingStrategy`), en l'ordre del fitxer; les línies que no entén **no llancen**: es compten (`unknown`, surt a la
+  vista si n'hi ha). `camDraw`: el centre de l'eina a mig Ø al costat que toca (`offsetPolyline`: arc a les cantonades que s'obren,
+  intersecció a les que es tanquen; cercles exactes) i la franja Ø (Ø de les eines de la màquina pel nom, `findTool`); aproximat, només per
+  dibuixar. Tests (`xcsPreview.test.ts`): mobles del catàleg amb el context real (el que es llegeix = el que s'ha escrit: peces, ordre,
+  tipus, eina, fondària, posicions, rampa, passades), `nesting_T01.xcs`, el programa real del taller i els per peça. Dibuix (SVG,
+  `features/export/camDrawing.ts`): tauler i marge, peces (petites en groc discontinu) amb la ref si hi cap, forats i fresats d'un color
+  per eina amb la llegenda (eina, Ø, quantitat), franja de l'eina («Amplada de l'eina»), fletxa d'entrada en rampa, números d'ordre
+  («Ordre»; els del mateix punt junts, «289·302·318»), zoom 1×/2×/4×, `ChoiceChips` per tauler (T01…) i la llista compacta
+  d'operacions (forats seguits iguals en una fila; tocar-ne una la marca al dibuix).
 - **Programa real del taller** (`docs/maestro/samples/taller_U767_Gris_cubanita_19_01.xcs`, TopSolid → Maestro, s'hi va
   mecanitzar; comparació línia a línia a `docs/maestro-xcs.md`, «Comparació amb un programa real del taller»). Ja hi som iguals:
   capçalera (`MachineParameters mp=GetMachiningParameters();`, 16777216, `SetPreserveWorkingSequence`, `SetWorkPieceFallPrevention`,
@@ -252,18 +268,25 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   geometria (`CreateContour`/`CreateContourPocket`/`CreateRoughFinish`) i el Maestro calcula el recorregut. El parser del taller
   només veu els `CreateRoughFinish` (no els contorns). Test: `core/export/tallerXcs.roundtrip.test.ts`
   (`TALLER_DIR=/tmp/claude-0/taller pnpm exec vitest run src/core/export/tallerXcs.roundtrip.test.ts`; se salta sense el repo del taller).
-- **Regles de mecanitzat** (`Machine.rules`, del germà; pàgina pròpia Preferències › **Regles de mecanitzat** (`rules`, `LuRoute`, just després de Màquines CNC), de la màquina per defecte o la triada;
-  `settings/MachineRules.tsx`; `core/machine/rules.ts`, `RulePicker`; detall i pàgines del manual a `docs/maestro-xcs.md`):
+- **Regles de mecanitzat** (del germà; **del taller, no de cada màquina**: `Settings.machiningRules`, per decisió de l'usuari
+  «en un taller les regles són les mateixes per a les dues CNC»; pàgina pròpia Preferències › **Regles de mecanitzat** (`rules`,
+  `LuRoute`, just després de Màquines CNC), sense triar màquina; `settings/MachineRules.tsx`; `core/machine/rules.ts`, `RulePicker`;
+  detall i pàgines del manual a `docs/maestro-xcs.md`):
   ranures «8mm diamant» a 6 mm per passada (`CreateBidirectionalMillingStrategy`), caixeres «12mm diamant nesting»
   (`CreateContourPocket`), perfilar per gruix (8–22 → «12mm diamant nesting», 23–41 → «14mm diamant nesting»), rampa als
   perfilats del nesting (`SetApproachStrategy(true, false, k)`, des del mig del costat recte més llarg), peces petites
   (menys de 0,8 m², del taller; `maxSide` 0 = no compta; el provisional 300 mm / 0,1 m² es migra) en 3 passades (Z/XY 1/1, 0,5/0 i la final al martiri o als passants,
-  `overMaterial`). Eines pel nom (`findRuleTool`, només les que es poden fer servir: `usableTool`, les mateixes que ofereix
-  el selector de la regla, amb el nom); si falta, no es pot fer servir o no arriba, tria de sempre i un sol avís per regla
-  i eina. Màquines sense regles → les per defecte en carregar (`withMachineRules`); els valors provisionals d'abans
-  (Ø + 1, 300 mm / 0,1 m²) es migren un sol cop (`Machine.rulesVersion`) i es desa, així una tria posterior de l'usuari es
-  queda. «Restaurar valors inicials» de la pàgina torna les regles de la màquina triada a `defaultMachineRules()` (les del taller;
-  la tria de la màquina la guarda `SettingsEditor`, `rulesMachineId`).
+  `overMaterial`). Eines **pel nom a la màquina que exporta** (`findRuleTool`, només les que es poden fer servir: `usableTool`, les
+  mateixes que ofereix el selector de la regla, amb les freses de totes les màquines); si falta, no es pot fer servir o no arriba,
+  tria de sempre i un sol avís per regla i eina. A la pàgina, una línia per màquina: «✓ té totes les eines» o «falta «X»»
+  (`missingRuleTools`). L'export llegeix les regles a `Machine.rules`, on les posa **`machineWithRules(settings)`** (la màquina per
+  defecte amb les del taller, `withWorkshopRules`; el mateix objecte per a les mateixes preferències): `useNesting`, Nesting i
+  Exportar l'han de fer servir en lloc de `defaultMachine(settings.machines)`, si no la separació i les eines serien les inicials.
+  **Preferències v11** (additiu): sense `machiningRules`, les de la màquina per defecte (o la primera que en tingui; si cap, les
+  inicials, `rulesFromMachines`) i les `rules` de les màquines es treuen (l'esquema les llegeix per compatibilitat; un fitxer
+  d'abans importat també les passa); idempotent. Els valors provisionals d'abans (Ø + 1, 300 mm / 0,1 m²) es migren un sol cop
+  (`Machine.rulesVersion`, `migrateMachine`, abans de passar-les al taller) i es desa, així una tria posterior de l'usuari es
+  queda. «Restaurar valors inicials» de la pàgina torna les regles a `defaultMachineRules()` (les del taller).
 - **Pendent de validar amb el taller** (llista a `docs/maestro-xcs.md`): pontets/pell de les peces petites, martiri,
   zones de buit, etiquetes, prova a la màquina
   (`PROVA_ORIENTACIO.xcs`), codificació UTF-8 amb BOM (el real és ASCII sense BOM), noms de totes les eines al Maestro 2.0.5,
@@ -1241,6 +1264,13 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   avisa (toaster) del que s'ha tret. El `.moble` (`parseMobleFile`) fa servir la mateixa reparació i, a més, treu amb
   un avís el nesting, el calibratge de la foto (camp a camp) i les referències que estiguin malmesos. Les parets dels
   ambients (`parseAmbient`) també: una obertura o un material propi dolents no treuen la paret.
+- **El `.moble` no porta preferències** (per decisió de l'usuari): forats, ferratges, jocs, l'aspecte dels materials i la màquina
+  són de **qui l'obre** (el moble s'hi adapta en silenci; els ferratges no avisen). Només s'avisa dels **materials** que fa servir
+  la composició (cos, fronts, fons, peces lliures, taulell i sòcol, objectes de referència, terra i paret de l'escena:
+  `materialRefNames`, les mateixes claus que `aliasMaterialRefs`) i que no són a les preferències locals després de resoldre els
+  àlies (`missingMaterials`, `core/file/mobleFile.ts`): avís «Materials que no tens a Preferències: …; es veuran amb un color per
+  defecte i al taller sortiran amb aquest nom. Afegeix-los a Preferències › Materials.» (`missingMaterialsWarning`, a
+  `openMobleFile`). Les referències que falten sí que s'afegeixen a les preferències.
 - El calibratge del `.moble` (`FileCalibrationSchema`) té els mateixos camps que `PhotoCalibration` (també `render` i
   `shadows`; un test ho comprova en compilar). `updateProjectPhoto` no desa un calibratge d'una foto que ja no hi és
   (esborrada o canviada amb un desat pendent).
@@ -1299,6 +1329,7 @@ Accions principals: icona + text.
 | Exportar | DXF (CNC) · STEP 3D · CSV de nesting · CSV de peces · GLB · Avançat | `LuScissors` · `LuCuboid` · `LuLayoutGrid` · `LuFileDown` · `LuBoxes` · `LuSettings2` |
 | Màquines | Màquina CNC (Preferències i export Maestro .xcs) · Per defecte · Triar carpeta… · Triar fitxers… | `LuFactory` · `LuStar` · `LuFolderOpen` · `LuFileUp` |
 | Màquines | Regles de mecanitzat (Preferències) · Distribució dels taulers (girar peces) | `LuRoute` · `LuRotateCw` |
+| Màquines | Vista CAM (programes .xcs dibuixats, Exportar) | `LuMonitorCog` |
 
 Les vistes Davant, Darrere, Esquerra, Dreta i Dalt van amb **text**, sense icona. Compte:
 a Lucide, `square-split-horizontal` té la línia **vertical**. Per això és la de "dividir en vertical".

@@ -1,4 +1,4 @@
-import { DEFAULT_HEADER, defaultMachineRules, MACHINE_RULES_VERSION, type Machine, type MachineTool } from "../model/machine"
+import { DEFAULT_HEADER, MACHINE_RULES_VERSION, type Machine, type MachineTool } from "../model/machine"
 import { classifyContextFiles, machineFromContext, parseAtrx, parseCfgx, type CfgxInfo } from "./maestro"
 import { applyPgmx, mergeReimport, pgmxSummary, readPgmx, type PgmxInfo } from "./pgmx"
 
@@ -143,7 +143,6 @@ export async function machineFromAtrx(files: { atrx?: string; cfgx?: Uint8Array;
       throughExtra: 1,
       grooves: "auto",
       verticalDrills: "auto",
-      rules: defaultMachineRules(),
       rulesVersion: MACHINE_RULES_VERSION,
       isDefault: false,
       tools,

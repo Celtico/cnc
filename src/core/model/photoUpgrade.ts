@@ -214,3 +214,26 @@ export function aliasMaterialRefs<T>(value: T, names: ReadonlySet<string> | null
   }
   return walk(value, false) as T
 }
+
+/**
+ * Noms de material als quals fa referència una dada (composició, ambient), amb les mateixes claus que
+ * `aliasMaterialRefs`: `material`, `material2`, `frame`, `…Material` i `scene.floor` / `scene.wall`. Sense buits
+ * («Com el cos», «Com a Preferències») ni repetits, en l'ordre en què surten.
+ */
+export function materialRefNames(value: unknown): string[] {
+  const out = new Set<string>()
+  const walk = (v: unknown, scene: boolean): void => {
+    if (Array.isArray(v)) {
+      for (const x of v) walk(x, false)
+      return
+    }
+    if (typeof v !== "object" || v === null) return
+    for (const [k, x] of Object.entries(v)) {
+      if (typeof x === "string") {
+        if ((isRefKey(k) || (scene && (k === "floor" || k === "wall"))) && x.trim()) out.add(x)
+      } else walk(x, k === "scene")
+    }
+  }
+  walk(value, false)
+  return [...out]
+}

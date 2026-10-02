@@ -3,7 +3,7 @@ import { DEFAULT_CABINET } from "./cabinet"
 import { DEFAULT_HARDWARE, HardwareSchema, type Module } from "./composition"
 import { PHOTO_MATERIALS } from "./textureSets"
 import { rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
-import { MachineSchema, repairMachine, withMachineRules, type Machine } from "./machine"
+import { defaultMachine, defaultMachineRules, MachineRulesSchema, MachineSchema, migrateMachine, repairMachine, withWorkshopRules, type Machine, type MachineRules } from "./machine"
 import { repairValue } from "./repair"
 
 /**
@@ -17,7 +17,7 @@ import { repairValue } from "./repair"
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 10
+export const SETTINGS_VERSION = 11
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -264,6 +264,12 @@ export const SettingsSchema = z.object({
   defaults: z.object({ material: z.string(), thickness: mm, backMaterial: z.string(), backThickness: mm }),
   /** Màquines CNC importades de Maestro (v10). */
   machines: z.array(MachineSchema),
+  /**
+   * Regles de mecanitzat del taller (v11): les mateixes per a totes les màquines (per decisió de l'usuari: «en un taller
+   * les regles són les mateixes per a les dues CNC»). Les eines van pel nom a la màquina que exporta (`findRuleTool`).
+   * Abans eren per màquina (`Machine.rules`): la migració agafa les de la màquina per defecte.
+   */
+  machiningRules: MachineRulesSchema,
 })
 export type Settings = z.infer<typeof SettingsSchema>
 
@@ -446,6 +452,7 @@ export const DEFAULT_SETTINGS: Settings = {
   display: { unit: "mm" },
   defaults: { material: "Melamina blanca", thickness: 19, backMaterial: "DM (fons)", backThickness: 10 },
   machines: [],
+  machiningRules: defaultMachineRules(),
 }
 
 // --- Migració i importació ------------------------------------------------------------
@@ -538,6 +545,12 @@ export function parseSettings(raw: unknown): SettingsParse {
   const boards = section("boards", BoardsPrefSchema, DEFAULT_SETTINGS.boards, "Taulers")
   const defaults = section("defaults", SettingsSchema.shape.defaults, DEFAULT_SETTINGS.defaults, "Materials per defecte")
   const v7 = version < 7
+  const machines = oneDefault(machinesOf(obj.machines, problems, () => (migrated = true)))
+  // v11: regles del taller. Si les preferències no en porten (anteriors a la v11), les de les màquines (`rulesFromMachines`).
+  const machiningRules = "machiningRules" in obj
+    ? section("machiningRules", MachineRulesSchema, defaultMachineRules(), "Regles de mecanitzat")
+    : (rulesFromMachines(machines) ?? defaultMachineRules())
+  if (machines.some((m) => m.rules !== undefined)) migrated = true
   // Àlies segons els materials d'aquestes preferències (un «X (foto)» que encara hi és no es toca).
   const names = new Set(materials.map((m) => m.name))
   const alias = (n: string) => resolveMaterialAlias(n, names)
@@ -553,9 +566,26 @@ export function parseSettings(raw: unknown): SettingsParse {
     defaults: v7 ? { ...defaults, material: alias(defaults.material), backMaterial: alias(defaults.backMaterial) } : defaults,
     // v10: màquines CNC (additiu: abans no n'hi havia). Si n'hi ha més d'una per defecte, només la primera.
     // Una eina invàlida només treu aquella eina, no tota la màquina (`repairMachine`).
-    machines: oneDefault(machinesOf(obj.machines, problems, () => (migrated = true))),
+    // v11: les regles ja no són de la màquina (`machiningRules`); les `rules` desades es treuen.
+    machines: machines.map(stripRules),
+    machiningRules,
   }
   return { settings, problems, migrated: migrated || problems.length > 0 }
+}
+
+const stripRules = (m: Machine): Machine => {
+  if (m.rules === undefined) return m
+  const { rules: _rules, ...rest } = m
+  return rest
+}
+
+/**
+ * v11: regles del taller d'unes preferències que encara les tenien per màquina: les de la màquina per defecte (o, si no
+ * en té, les de la primera que en tingui; si cap, les inicials). Les màquines ja han passat per `migrateMachine`
+ * (llindars provisionals d'abans migrats). `undefined` si cap màquina en porta.
+ */
+export function rulesFromMachines(machines: readonly Machine[]): MachineRules | undefined {
+  return defaultMachine(machines)?.rules ?? machines.find((m) => m.rules)?.rules
 }
 
 function machinesOf(raw: unknown, problems: string[], onMigrated: () => void): Machine[] {
@@ -564,10 +594,10 @@ function machinesOf(raw: unknown, problems: string[], onMigrated: () => void): M
   for (const item of raw) {
     const r = repairMachine(item)
     const name = isRecord(item) && typeof item.name === "string" ? item.name : "?"
-    // Regles de mecanitzat: les que no en tenen agafen les de per defecte i els valors provisionals d'abans es migren un
-    // sol cop (`rulesVersion`); si canvia alguna cosa, es desa (així una tria posterior de l'usuari es queda).
+    // Els valors provisionals d'abans es migren un sol cop (`rulesVersion`); si canvia alguna cosa, es desa (així una
+    // tria posterior de l'usuari es queda).
     if (r.machine) {
-      const m = withMachineRules(r.machine)
+      const m = migrateMachine(r.machine)
       if (m !== r.machine) onMigrated()
       out.push(m)
     }
@@ -624,8 +654,27 @@ export function importSettingsJson(current: Settings, text: string): SettingsPar
   for (const key of Object.keys(current) as (keyof Settings)[]) {
     if (key !== "version" && key in raw) (merged as Record<string, unknown>)[key] = res.settings[key]
   }
+  // Un fitxer d'abans de la v11 porta les regles a les màquines: es fan servir (`rulesFromMachines`).
+  if (!("machiningRules" in raw) && Array.isArray(raw.machines) && raw.machines.some((m) => isRecord(m) && m.rules !== undefined)) {
+    merged.machiningRules = res.settings.machiningRules
+  }
   return { ...res, settings: merged }
 }
+
+/**
+ * La màquina de l'export (la per defecte, `defaultMachine`) amb les regles del taller a `rules` (`withWorkshopRules`): la
+ * forma que llegeixen els exports (`toMaestroNestXcs`, `cncNestOptions`, `nestPlan`). Mateix objecte per a les mateixes
+ * preferències (memòria per objecte), així es pot posar a les dependències d'un `useMemo`.
+ */
+export function machineWithRules(s: Pick<Settings, "machines" | "machiningRules">): Machine | undefined {
+  const hit = workshopMachineCache.get(s)
+  if (hit && hit.machines === s.machines && hit.rules === s.machiningRules) return hit.machine
+  const m = defaultMachine(s.machines)
+  const machine = m ? withWorkshopRules(m, s.machiningRules) : undefined
+  workshopMachineCache.set(s, { machines: s.machines, rules: s.machiningRules, machine })
+  return machine
+}
+const workshopMachineCache = new WeakMap<object, { machines: readonly Machine[]; rules: MachineRules; machine: Machine | undefined }>()
 
 // --- Aplicació a mòduls nous -----------------------------------------------------------
 

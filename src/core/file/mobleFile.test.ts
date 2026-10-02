@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "../build/buildComposition"
-import { TV_LIVING_ROOM, DEFAULT_SETTINGS, type RefPreset } from "../model"
+import { TV_LIVING_ROOM, DEFAULT_SETTINGS, materialRefNames, type Composition, type RefPreset } from "../model"
 import { DEFAULT_NEST_OPTIONS } from "../nesting/nest"
-import { buildMobleFile, FileCalibrationSchema, missingReferences, usedUserModelIds, mobleFileName, mobleToJson, parseMobleFile, uniqueName, usedReferences, type FileCalibration } from "./mobleFile"
+import { buildMobleFile, FileCalibrationSchema, missingMaterials, missingMaterialsWarning, missingReferences, usedUserModelIds, mobleFileName, mobleToJson, parseMobleFile, uniqueName, usedReferences, type FileCalibration } from "./mobleFile"
 import type { PhotoCalibration } from "../../db/db"
 
 const comp = TV_LIVING_ROOM.make()
@@ -175,5 +175,32 @@ describe(".moble amb parts malmeses", () => {
     const same: [Extra<Omit<PhotoCalibration, "photoId">, FileCalibration>, Extra<FileCalibration, Omit<PhotoCalibration, "photoId">>] extends [never, never] ? true : false = true
     expect(same).toBe(true)
     expect(Object.keys(FileCalibrationSchema.shape).sort()).toEqual(Object.keys(keys).sort())
+  })
+})
+
+describe("materials que no són a les preferències de qui obre el .moble", () => {
+  it("un moble del catàleg amb les preferències inicials: no en falta cap", () => {
+    expect(missingMaterials(comp, DEFAULT_SETTINGS.materials)).toEqual([])
+    expect(missingMaterialsWarning([])).toBeUndefined()
+  })
+  it("mira tots els camps de material (cos, fronts, fons, peces lliures, taulell, objectes, escena) i resol els àlies", () => {
+    const m0 = comp.modules[0]!
+    const c = {
+      ...comp,
+      modules: [{ ...m0, carcass: { ...m0.carcass, material: "Cos X", frontMaterial: "Front X", backMaterial: "Fons X" } }, ...comp.modules.slice(1)],
+      parts: [{ id: "p", material: "Peça X", material2: "" }],
+      runs: [{ id: "r", material: "Taulell X" }],
+      refs: [{ id: "o", material: "Objecte X" }, { id: "o2", material: "Front X" }],
+      // «Roure (foto)» és l'àlies de «Roure massís / xapat», que sí que hi és.
+      scene: { floor: "Terra X", wall: "Roure (foto)" },
+    } as unknown as Composition
+    const names = materialRefNames(c)
+    expect(names).toEqual(expect.arrayContaining(["Cos X", "Front X", "Fons X", "Peça X", "Taulell X", "Objecte X", "Terra X", "Roure (foto)"]))
+    expect(names).not.toContain("")
+    const missing = missingMaterials(c, DEFAULT_SETTINGS.materials)
+    expect([...missing].sort()).toEqual(["Cos X", "Fons X", "Front X", "Objecte X", "Peça X", "Taulell X", "Terra X"])
+    expect(missingMaterialsWarning(["A", "B"])).toBe(
+      "Materials que no tens a Preferències: A, B; es veuran amb un color per defecte i al taller sortiran amb aquest nom. Afegeix-los a Preferències › Materials.",
+    )
   })
 })

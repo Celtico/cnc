@@ -63,7 +63,7 @@ import { MaterialSelect } from "./MaterialSelect"
 import { SectionLabel } from "../../components/SectionLabel"
 import { PaneHeadContext } from "./paneHead"
 import { MachinesList } from "./MachinesPane"
-import { MachiningRulesSection } from "./MachineRules"
+import { MachineRulesGroup } from "./MachineRules"
 
 type SectionKey = keyof Omit<Settings, "version">
 
@@ -84,11 +84,7 @@ export function SettingsScreen({ previewComposition }: { previewComposition?: Co
 
 function SettingsEditor({ initial, save, previewComposition }: { initial: Settings; save: (s: Settings) => Promise<void>; previewComposition?: Composition }) {
   const [draft, setDraft] = useState<Settings>(initial)
-  // `rules`: les regles de mecanitzat de la màquina triada a la seva pàgina (no són una secció de les preferències).
-  const [reset, setReset] = useState<{ key: SectionKey | "rules"; label: string; note?: string } | null>(null)
-  // Màquina triada a Regles de mecanitzat (sense: la per defecte); la fa servir «Restaurar valors inicials».
-  const [rulesMachineId, setRulesMachineId] = useState<string | null>(null)
-  const rulesMachine = draft.machines.find((m) => m.id === rulesMachineId) ?? defaultMachine(draft.machines)
+  const [reset, setReset] = useState<{ key: SectionKey; label: string; note?: string } | null>(null)
   const machine = defaultMachine(draft.machines)
   const fileInput = useRef<HTMLInputElement>(null)
   const validation = useMemo(() => SettingsSchema.safeParse(draft), [draft])
@@ -120,10 +116,8 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
   const confirmReset = () => {
     if (!reset) return
     const key = reset.key
-    if (key === "rules") {
-      const id = rulesMachine?.id
-      setDraft((d) => ({ ...d, machines: d.machines.map((m) => (m.id === id ? { ...m, rules: defaultMachineRules() } : m)) }))
-    } else setDraft((d) => ({ ...d, [key]: structuredClone(DEFAULT_SETTINGS[key]) }))
+    // Regles de mecanitzat: `defaultMachineRules()` (les del taller), com la resta de seccions.
+    setDraft((d) => ({ ...d, [key]: key === "machiningRules" ? defaultMachineRules() : structuredClone(DEFAULT_SETTINGS[key]) }))
     toaster.create({ title: `«${reset.label}» restaurat`, type: "info" })
     setReset(null)
   }
@@ -250,13 +244,9 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             title="Regles de mecanitzat"
             icon={LuRoute}
             desc="Com mecanitza la CNC: freses per a cada cosa, passades, rampa i peces petites."
-            onReset={
-              rulesMachine
-                ? () => setReset({ key: "rules", label: "Regles de mecanitzat", note: `Les regles de ${rulesMachine.name} tornen a les del taller. Les eines i les altres màquines no canvien.` })
-                : undefined
-            }
+            onReset={() => setReset({ key: "machiningRules", label: "Regles de mecanitzat", note: "Les regles tornen a les del taller (les mateixes per a totes les màquines). Les eines de les màquines no canvien." })}
           >
-            <MachiningRulesSection machines={draft.machines} selected={rulesMachineId} onSelect={setRulesMachineId} onChange={(machines) => set("machines", machines)} />
+            <MachineRulesGroup rules={draft.machiningRules} machines={draft.machines} onChange={(rules) => set("machiningRules", rules)} />
           </Pane>
 
           <Pane id="gaps" title="Jocs per defecte" icon={LuRuler} desc="Separacions dels fronts, prestatges i fons." onReset={() => setReset({ key: "gaps", label: "Jocs per defecte" })}>

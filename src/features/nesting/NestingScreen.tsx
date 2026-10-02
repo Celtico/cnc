@@ -15,7 +15,7 @@ import { useMemo, useState } from "react"
 import { BoardDrawing } from "../../components/BoardDrawing"
 import { STANDARD_SHEETS, type NestOptions } from "../../core/nesting/nest"
 import { nestPlan } from "../../core/nesting/machineNest"
-import { defaultMachine, machineNesting, toolMslName } from "../../core/model"
+import { machineNesting, machineWithRules, toolMslName } from "../../core/model"
 import { updateProjectNesting } from "../../db/db"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { NumRow } from "../../components/NumRow"
@@ -39,7 +39,7 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
 
   const byId = useMemo(() => new Map(panels.map((p) => [p.id, p])), [panels])
   const { settings } = useSettings()
-  const machine = defaultMachine(settings.machines)
+  const machine = machineWithRules(settings)
   // D'on surten la separació i el marge (el nesting de `useNesting` fa servir les mateixes).
   const plan = useMemo(() => nestPlan(panels, options, machine), [panels, options, machine])
   const sheetKey = `${options.sheet.w}x${options.sheet.h}`

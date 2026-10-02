@@ -6,7 +6,7 @@ import { compositionOf } from "../db/compositionStore"
 import { nest, type Nesting, type NestOptions } from "../core/nesting/nest"
 import { db, safeNestOptions, safeParams, type Project } from "../db/db"
 import { useLiveQuery } from "../db/useLiveQuery"
-import { defaultMachine, type Settings } from "../core/model"
+import { machineWithRules, type Settings } from "../core/model"
 import { nestPlan } from "../core/nesting/machineNest"
 import { useSettings } from "./settings/SettingsContext"
 
@@ -53,7 +53,8 @@ export function useCabinet(params: CabinetParams | undefined): Panel[] {
  */
 export function useNesting(panels: Panel[], options: NestOptions | undefined): Nesting | undefined {
   const { settings } = useSettings()
-  const machine = defaultMachine(settings.machines)
+  // Amb les regles del taller (`machineWithRules`): la fresa de perfilar de la regla fixa la separació.
+  const machine = machineWithRules(settings)
   return useMemo(() => (options && panels.length ? nest(panels, nestPlan(panels, options, machine).options) : undefined), [panels, options, machine])
 }
 
