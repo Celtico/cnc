@@ -1,9 +1,10 @@
-// Mobles CNC - programa Maestro (MSL .xcs) - BETA: comprova'l a Maestro abans de mecanitzar
+﻿// Mobles CNC - programa Maestro (MSL .xcs) - BETA: comprova'l a Maestro abans de mecanitzar
 // Peca A.1.H.1: Sostre (dalt) - 1200 x 700 x 30 - Roure massis / xapat
-// Cara A amunt. X = llarg, Y = ample, origen a la cantonada de baix a l'esquerra (cantell 4 a X = 0, cantell 3 a Y = 0)
+// Cara A amunt. X = u (1200 mm), Y = v (700 mm), origen a la cantonada de baix a l'esquerra (cantell 4 a X = 0, cantell 3 a Y = 0)
 // Maquina SCM AA10008021 (AA10008021) - Maestro 2.00.004
+// Noms d'eina i capcalera del projecte Proyecto1.pgmx (Maestro 2.0.5 rev 1005)
 
-SetMachiningParameters("AD", 1, 10, 0, false);
+SetMachiningParameters("AD", 1, 10, 16973824, false);
 CreateFinishedWorkpieceBox("A.1.H.1", 1200, 700, 30);
 CreateRawWorkpiece("A.1.H.1", 0, 0, 0, 0, 0, 0);
 

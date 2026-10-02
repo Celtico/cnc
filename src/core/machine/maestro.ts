@@ -1,5 +1,5 @@
 import { unzip } from "../file/zip"
-import type { Machine, MachineTool, ToolKind } from "../model/machine"
+import { DEFAULT_HEADER, type Machine, type MachineTool, type ToolKind } from "../model/machine"
 import { child, childrenOf, descendants, numOf, parseXml, textOf, type XmlNode } from "./xml"
 
 /**
@@ -38,11 +38,7 @@ export interface CfgxInfo {
   areas: string[]
 }
 
-export interface HeaderParams {
-  executionFields: string
-  tableOptions: number
-  mechanicalOptions: number
-}
+export type HeaderParams = Machine["header"]
 
 const kindOfBody = (body: string | undefined, coreType: string | undefined): ToolKind => {
   if (coreType === "AggregateComponent") return "aggregate"
@@ -73,9 +69,11 @@ export function parseTlgx(text: string): MachineTool[] {
     const hand = textOf(body, "HandOfCut")
     const disabled = textOf(t, "IsDisabled") === "true"
     const isExample = /^example\b/i.test(desc)
+    const id = textOf(child(t, "Key"), "ID")
     const tool: MachineTool = {
       code,
       name: desc || code,
+      ...(id ? { id } : {}),
       kind,
       ...(kind === "drill" ? { orientation: /\bHOR\b/i.test(desc) ? ("horizontal" as const) : ("vertical" as const) } : {}),
       diameter,
@@ -181,13 +179,31 @@ export async function parseCfgx(bytes: Uint8Array): Promise<CfgxInfo> {
   return parseCfgxXml(new TextDecoder().decode(xml.data))
 }
 
-export function parseHeaderParams(text: string): HeaderParams {
-  const root = parseXml(text)
-  return {
-    executionFields: textOf(root, "ExecutionFields") ?? "AB",
-    tableOptions: numOf(root, "TableOptions") ?? 0,
-    mechanicalOptions: numOf(root, "MechanicalOptions") ?? 0,
+/**
+ * Capçalera d'un `XilogHeaderParameters` (el fitxer de Settings o el `MachiningParameters` d'un .pgmx).
+ * Paràmetres de `SetMachiningParameters` (manual Table 79 p114): ExecutionFields, Repetitions, TableOptions,
+ * MechanicalOptions, ContinuousCycle. IsTechnologicalMirror i PreserveWorkingSequence només s'informen.
+ */
+export function headerFromNode(n: XmlNode): HeaderParams {
+  const bool = (k: string) => {
+    const v = textOf(n, k)
+    return v === undefined ? undefined : v === "true"
   }
+  const mirror = bool("IsTechnologicalMirror")
+  const preserve = bool("PreserveWorkingSequence")
+  return {
+    executionFields: textOf(n, "ExecutionFields") || DEFAULT_HEADER.executionFields,
+    repetitions: Math.max(1, numOf(n, "Repetitions") ?? 1),
+    tableOptions: numOf(n, "TableOptions") ?? DEFAULT_HEADER.tableOptions,
+    mechanicalOptions: numOf(n, "MechanicalOptions") ?? DEFAULT_HEADER.mechanicalOptions,
+    continuousCycle: bool("ContinuousCycle") ?? false,
+    ...(mirror !== undefined ? { technologicalMirror: mirror } : {}),
+    ...(preserve !== undefined ? { preserveWorkingSequence: preserve } : {}),
+  }
+}
+
+export function parseHeaderParams(text: string): HeaderParams {
+  return headerFromNode(parseXml(text))
 }
 
 /** Fitxers del context (pel nom, sense importar la carpeta). */
@@ -246,14 +262,14 @@ export async function machineFromContext(files: ContextFiles, id: string): Promi
       problems.push(`No s'ha pogut llegir la configuració (.cfgx): ${String(e)}`)
     }
   }
-  let header: HeaderParams = { executionFields: "AB", tableOptions: 0, mechanicalOptions: 0 }
+  let header: HeaderParams = { ...DEFAULT_HEADER }
   if (files.header) {
     try {
       header = parseHeaderParams(files.header)
     } catch (e) {
       problems.push(`No s'ha pogut llegir la capçalera (XilogHeaderParameters.xml): ${String(e)}`)
     }
-  } else problems.push("Sense XilogHeaderParameters.xml: capçalera «AB» per defecte (revisa-la).")
+  } else problems.push("Sense XilogHeaderParameters.xml: capçalera del .pgmx del taller per defecte (revisa-la).")
   const serial = files.serial ?? ""
   const machine: Machine = {
     id,
@@ -266,6 +282,7 @@ export async function machineFromContext(files: ContextFiles, id: string): Promi
     header,
     throughExtra: 1,
     grooves: "auto",
+    verticalDrills: "auto",
     isDefault: false,
     tools,
     importedAt: Date.now(),

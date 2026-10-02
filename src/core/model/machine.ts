@@ -19,11 +19,24 @@ export const TOOL_KIND_LABELS: Record<ToolKind, string> = {
   other: "Altres",
 }
 
+/** Camps d'una eina que l'usuari pot tocar: una reimportació no els trepitja (`MachineTool.edited`). */
+export const TOOL_EDITABLE = ["name", "auto", "mounted", "maxDepth", "orientation"] as const
+export type ToolEditable = (typeof TOOL_EDITABLE)[number]
+
 export const MachineToolSchema = z.object({
-  /** Codi de l'eina a Maestro (el que va al paràmetre `tool` de l'MSL): «003», «E128». */
+  /** Codi de l'eina al .tlgx (`Name` del `CoreTool`): «003», «E128». Identifica l'eina a l'app. */
   code: z.string().min(1),
   /** Nom llegible (descripció de Maestro o del taller): «5mm ESQ», «Diamant D12». Editable. */
   name: z.string(),
+  /** Identificador intern de Maestro (`Key/ID` del `CoreTool`, `ToolKey/ID` dels .pgmx): «2149647431». */
+  id: z.string().optional(),
+  /**
+   * Nom de l'eina a la versió de Maestro del taller, llegit d'un .pgmx (`ToolKey/Name`, «12mm diamant
+   * nesting»). És el que va al paràmetre `tool` de l'MSL (manual p36: «Tool name»); sense, el codi.
+   */
+  mslName: z.string().min(1).optional(),
+  /** Camps tocats a mà (es conserven en tornar a importar). */
+  edited: z.array(z.enum(TOOL_EDITABLE)).optional(),
   kind: ToolKindSchema,
   /** Broques: vertical (cara de dalt) o horitzontal (cantells). */
   orientation: z.enum(["vertical", "horizontal"]).optional(),
@@ -65,22 +78,71 @@ export const MachineSchema = z.object({
   workArea: z.object({ x: z.number().positive(), y: z.number().positive() }).optional(),
   /** Àrees de treball de la configuració (A, B…). */
   areas: z.array(z.string()),
-  /** Capçalera del programa (XilogHeaderParameters): `SetMachiningParameters(fields, 1, table, mech, false)`. */
+  /**
+   * Capçalera del programa: `SetMachiningParameters(executionFields, repetitions, tableOptions,
+   * mechanicalOptions, continuousCycle)` (manual §3.9.1 p114, Table 79). Valors de XilogHeaderParameters o
+   * d'un .pgmx del taller (`MachiningParameters`). `technologicalMirror` i `preserveWorkingSequence` no
+   * tenen paràmetre a l'MSL: només es desen per informar (vegeu docs/maestro-xcs.md).
+   */
   header: z.object({
     executionFields: z.string().min(1),
+    repetitions: z.number().int().min(1).default(1),
     tableOptions: z.number().int(),
     mechanicalOptions: z.number().int(),
+    continuousCycle: z.boolean().default(false),
+    technologicalMirror: z.boolean().optional(),
+    preserveWorkingSequence: z.boolean().optional(),
   }),
   /** Passada de més dels talls i forats passants per sota de la peça (mm). */
   throughExtra: z.number().min(0).max(5),
   /** Ranures: serra si es pot (i fresa si no), sempre fresa o sempre serra. */
   grooves: z.enum(["auto", "router", "blade"]),
+  /**
+   * Broques verticals: «auto» = eina `"-1"` (la tria el Maestro, com als .pgmx del taller: la
+   * DrillingOperation no porta ToolKey); «tool» = el nom de la broca triada per l'app.
+   */
+  verticalDrills: z.enum(["auto", "tool"]).default("auto"),
+  /** D'on venen els noms de les eines (`mslName`) i la capçalera: el .pgmx importat. */
+  pgmx: z.object({ file: z.string(), version: z.string(), tools: z.number().int(), importedAt: z.number() }).optional(),
   /** La màquina per defecte de l'export. */
   isDefault: z.boolean(),
   tools: z.array(MachineToolSchema),
   importedAt: z.number().optional(),
 })
 export type Machine = z.infer<typeof MachineSchema>
+
+/** Capçalera per defecte: la del .pgmx real del taller (Proyecto1, Maestro 2.0.5 rev 1005). */
+export const DEFAULT_HEADER: Machine["header"] = { executionFields: "AD", repetitions: 1, tableOptions: 10, mechanicalOptions: 16973824, continuousCycle: false }
+
+/** Codi provisional d'una «Eina nova» (`NOVA1`…): no es tria fins que no se li posa el codi de Maestro. */
+export const isPlaceholderTool = (t: Pick<MachineTool, "code" | "manual">): boolean => !!t.manual && /^NOVA\d+$/.test(t.code)
+
+/** Nom de l'eina per al paràmetre `tool` de l'MSL. */
+export const toolMslName = (t: MachineTool): string => t.mslName ?? t.code
+
+/**
+ * Llegeix una màquina desada sense perdre-la per una eina invàlida: les eines que no passen l'esquema es
+ * descarten d'una en una (amb un problema per a cadascuna). Si la màquina tampoc és vàlida, `machine` és buit.
+ */
+export function repairMachine(raw: unknown): { machine?: Machine; problems: string[] } {
+  const whole = MachineSchema.safeParse(raw)
+  if (whole.success) return { machine: whole.data, problems: [] }
+  const problems: string[] = []
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return { problems: ["no és una màquina"] }
+  const r = raw as Record<string, unknown>
+  const tools: MachineTool[] = []
+  for (const t of Array.isArray(r.tools) ? r.tools : []) {
+    const res = MachineToolSchema.safeParse(t)
+    if (res.success) tools.push(res.data)
+    else {
+      const code = typeof t === "object" && t && "code" in t ? String((t as { code: unknown }).code) : "?"
+      problems.push(`eina ${code} descartada (${res.error.issues[0]?.message ?? "invàlida"})`)
+    }
+  }
+  const again = MachineSchema.safeParse({ ...r, tools })
+  if (again.success) return { machine: again.data, problems }
+  return { problems: [...problems, again.error.issues[0]?.message ?? "invàlida"] }
+}
 
 /** La màquina de l'export: la marcada per defecte o la primera. */
 export function defaultMachine(machines: readonly Machine[]): Machine | undefined {

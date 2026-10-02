@@ -1,11 +1,15 @@
 import { beforeAll, describe, expect, it } from "vitest"
+// Només per als tests: el .pgmx real del taller (import dinàmic: el tsc de l'app no té els tipus de Node).
+const fsMod = "node:fs"
+const { readFileSync } = (await import(/* @vite-ignore */ fsMod)) as { readFileSync: (p: string) => Uint8Array }
 import { buildComposition } from "../build/buildComposition"
 import { machineFromContext } from "../machine/maestro"
 import { bytes, read } from "../machine/testContext"
-import { BUILTIN_TEMPLATES, STORE_TEMPLATES, parseSettings, type Machine, type Panel } from "../model"
+import { BUILTIN_TEMPLATES, STORE_TEMPLATES, parseSettings, type BPt, type Machine, type Panel } from "../model"
 import { INSPIRED_TEMPLATES } from "../model/inspiredTemplates"
 import { unzip, zipStore } from "../file/zip"
-import { cs, edgePoint, maxToolDiameter, num, panelXcs, planeSize, toMaestroXcs } from "./maestroXcs"
+import { applyPgmx, parsePgmxXml } from "../machine/pgmx"
+import { cs, dedupePolyline, edgeHoleOnFace, edgePoint, maxToolDiameter, num, panelXcs, planeSize, sharpCorners, toMaestroXcs, xcsBytes } from "./maestroXcs"
 
 let M: Machine
 beforeAll(async () => {
@@ -42,7 +46,16 @@ describe("format MSL", () => {
     expect(num(12)).toBe("12")
     expect(num(12.34567)).toBe("12.346")
     expect(num(-0.0001)).toBe("0")
-    expect(cs('Lateral "esq" àç\\')).toBe('"Lateral _esq_ ac_"')
+    // Cadena C#: sense plegar accents (els noms d'eina de Maestro van tal qual), amb \\ i " escapats.
+    expect(cs('Lateral "esq" àç\\')).toBe('"Lateral \\"esq\\" àç\\\\"')
+    expect(cs("12mm diamant nesting")).toBe('"12mm diamant nesting"')
+    expect(cs("a\r\nb")).toBe('"a  b"')
+    expect(() => num(NaN)).toThrow()
+    expect(() => num(Infinity)).toThrow()
+  })
+  it("fitxer UTF-8 amb BOM", () => {
+    const b = xcsBytes("Ø")
+    expect([...b]).toEqual([0xef, 0xbb, 0xbf, 0xc3, 0x98])
   })
   it("punts dels cantells vistos des de fora", () => {
     const p = { length: 720, width: 560, thickness: 19 }
@@ -100,8 +113,11 @@ describe("peça senzilla (golden)", () => {
     expect(a).toContain(`CreateFinishedWorkpieceBox("A.1.L.1", 720, 560, 19);`)
     expect(a).toContain(`CreateRawWorkpiece("A.1.L.1", 0, 0, 0, 0, 0, 0);`)
     expect(a).toContain(`SelectWorkplane("Top");`)
-    expect(a).toContain(`CreateDrill("Forat_1", 37, 100, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");`)
-    expect(a).toContain(`CreateDrill("Forat_2", 22.5, 100, 13, 35, "", TypeOfProcess.Drilling, "013", "-1");`)
+    // Broques verticals: eina automàtica (com els .pgmx del taller), amb la que hi ha al comentari.
+    expect(a).toContain(`// broca vertical O5 (003): eina automatica`)
+    expect(a).toContain(`CreateDrill("Forat_1", 37, 100, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");`)
+    expect(a).toContain(`CreateDrill("Forat_2", 22.5, 100, 13, 35, "", TypeOfProcess.Drilling, "-1", "-1");`)
+    expect(r.ops.find((o) => o.what.startsWith("forat Ø5"))).toMatchObject({ tool: "-1", candidate: "003" })
     // Cantell 4 (esquerre) → cara «Left», X = ample − y, Y = mig gruix; broca horitzontal automàtica.
     expect(a).toContain(`SelectWorkplane("Left");`)
     expect(a).toContain(`CreateDrill("ForatCantell_1", 523, 9.5, 30, 8, "", TypeOfProcess.Drilling, "-1", "-1");`)
@@ -114,12 +130,20 @@ describe("peça senzilla (golden)", () => {
     expect(r.features).toBe(r.handled + r.skipped)
   })
 
+  it("opció «eina concreta»: el nom de la broca", () => {
+    const r = panelXcs(side(), "A.1.L.1", { ...M, verticalDrills: "tool" })
+    const a = lines(r.programs[0]!.text)
+    expect(a).toContain(`CreateDrill("Forat_1", 37, 100, 12, 5, "", TypeOfProcess.Drilling, "003", "-1");`)
+    expect(a).toContain(`CreateDrill("Forat_2", 22.5, 100, 13, 35, "", TypeOfProcess.Drilling, "013", "-1");`)
+  })
+
   it("programa Volt: cara B girada sobre X", () => {
     const r = panelXcs(side(), "A.1.L.1", M)
     const b = lines(r.programs[1]!.text)
     expect(b).toContain(`CreateFinishedWorkpieceBox("A.1.L.1", 720, 560, 19);`)
     // y = 280 → 560 − 280 = 280; el forat de 8 vertical és el 006.
-    expect(b).toContain(`CreateDrill("Forat_1", 360, 280, 10, 8, "", TypeOfProcess.Drilling, "006", "-1");`)
+    expect(b).toContain(`CreateDrill("Forat_1", 360, 280, 10, 8, "", TypeOfProcess.Drilling, "-1", "-1");`)
+    expect(r.ops.find((o) => o.program === "B")).toMatchObject({ tool: "-1", candidate: "006" })
     expect(b.some((l) => l.includes("ForatCantell"))).toBe(false)
   })
 
@@ -154,10 +178,12 @@ describe("peça senzilla (golden)", () => {
       M,
     )
     const a = lines(r.programs[0]!.text)
-    expect(a).toContain(`CreateDrill("ForatPassant_1", 100, 50, 20, 5, "", TypeOfProcess.Drilling, "003", "-1");`)
+    expect(a).toContain(`CreateDrill("ForatPassant_1", 100, 50, 20, 5, "", TypeOfProcess.Drilling, "-1", "-1");`)
     expect(a).toContain(`CreatePolyline("Tall_1_G", 300, 200);`)
     expect(a).toContain(`ClosePolyline("");`)
-    expect(a).toContain(`CreateContour("Tall_1", 20, 1, 0, "tall passant", TypeOfProcess.GeneralRouting, "E219", "-1", 0, -1, -1, -1, 0);`)
+    // Rectangle (cantonades vives): la fresa més petita, i avís del radi que hi queda.
+    expect(a).toContain(`CreateContour("Tall_1", 20, 1, 0, "tall passant", TypeOfProcess.GeneralRouting, "E128", "-1", 0, -1, -1, -1, 0);`)
+    expect(r.warnings).toEqual([`tall rect 100 × 60 a (200, 200): 4 cantonades vives queden amb radi 6 mm (fresa E128 Ø12)`])
     // Arc de 90° (bulge tan(22,5°)) de radi 100, antihorari.
     expect(a).toContain(`AddArc2PointRadiusToPolyline(620, 560, 100, false, false);`)
     expect(a).toContain(`CreateContour("Contorn_1", 20, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "E219", "-1", 0, -1, -1, -1, 0);`)
@@ -171,6 +197,52 @@ describe("peça senzilla (golden)", () => {
     expect(r.skipped).toBe(2)
     expect(r.warnings.join("\n")).toMatch(/cap broca vertical de Ø6/)
     expect(r.warnings.join("\n")).toMatch(/cap broca horitzontal de Ø5/)
+  })
+})
+
+describe("geometria", () => {
+  it("punts repetits i segments de llargada zero fora", () => {
+    expect(dedupePolyline([[0, 0], [10, 0], [10, 0.0004, 1], [10, 10], [0, 10], [0, 0]])).toEqual([[0, 0], [10, 0.0004, 1], [10, 10], [0, 10]])
+    expect(dedupePolyline([[5, 5], [5, 5]])).toHaveLength(1)
+  })
+  it("mig cercle amb el centre (AddArc2PointCenterToPolyline) i ranura rodona = cercle", () => {
+    const r = panelXcs(panel({ cutouts: [{ kind: "slot", x: 100, y: 100, w: 100.003, h: 20 }, { kind: "slot", x: 300, y: 100, w: 20, h: 20.0004 }] }), "S", M)
+    const a = lines(r.programs[0]!.text)
+    expect(a).toContain(`AddArc2PointCenterToPolyline(190.003, 120, 190.003, 110, false);`)
+    expect(a.some((l) => l.startsWith("AddArc2PointRadiusToPolyline"))).toBe(false)
+    // La segona és un cercle de Ø20: la broca de 20 (009), automàtica.
+    expect(a).toContain(`CreateDrill("ForatPassant_1", 310, 110, 20, 20, "", TypeOfProcess.Drilling, "-1", "-1");`)
+    expect(r.warnings).toEqual([])
+  })
+  it("cantonades vives: per dins les del forat, per fora les entrants", () => {
+    expect(sharpCorners([[0, 0], [10, 0], [10, 10], [0, 10]], "inside")).toBe(4)
+    expect(sharpCorners([[0, 0], [10, 0], [10, 10], [0, 10]], "outside")).toBe(0)
+    // L: una cantonada entrant.
+    expect(sharpCorners([[0, 0], [20, 0], [20, 10], [10, 10], [10, 20], [0, 20]], "outside")).toBe(1)
+    expect(sharpCorners([[5, 0], [95, 0, 1], [95, 10], [5, 10, 1]], "inside")).toBe(0)
+  })
+  it("forats de cantell d'una peça amb forma: només si el contorn toca la cara", () => {
+    const outline: BPt[] = [[0, 0], [400, 0], [400, 200], [200, 300], [0, 300]]
+    const p = { length: 400, width: 300, outline }
+    expect(edgeHoleOnFace(p, { x: 100, y: 0, diameter: 8 }, "bottom")).toBe(true)
+    expect(edgeHoleOnFace(p, { x: 0, y: 150, diameter: 8 }, "left")).toBe(true)
+    expect(edgeHoleOnFace(p, { x: 300, y: 300, diameter: 8 }, "top")).toBe(false)
+    expect(edgeHoleOnFace(p, { x: 400, y: 250, diameter: 8 }, "right")).toBe(false)
+    const r = panelXcs(panel({ length: 400, width: 300, outline, holes: [{ x: 400, y: 250, diameter: 8, depth: 30, face: "edge", edge: "right" }] }), "F", M)
+    expect(r.ops.some((o) => o.kind === "drill")).toBe(false)
+    expect(r.warnings.join("\n")).toMatch(/no toca la cara del cantell 2/)
+  })
+})
+
+describe("noms d'eina del .pgmx del taller", () => {
+  it("l'E128 surt amb el nom de Maestro 2.0.5, i la capçalera del projecte", () => {
+    const info = parsePgmxXml(new TextDecoder().decode(new Uint8Array(readFileSync("docs/maestro/samples/Proyecto1.pgmx.xml"))))
+    const m2 = applyPgmx(M, info, "Proyecto1.pgmx", { withHeader: true, now: 0 }).machine
+    const r = panelXcs(panel({ cutouts: [{ kind: "rect", x: 200, y: 200, w: 100, h: 60 }] }), "P", m2)
+    const a = lines(r.programs[0]!.text)
+    expect(a).toContain(`SetMachiningParameters("AD", 1, 10, 16973824, false);`)
+    expect(a).toContain(`CreateContour("Tall_1", 20, 1, 0, "tall passant", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);`)
+    expect(r.ops[0]!.tool).toBe("E128")
   })
 })
 
@@ -220,11 +292,29 @@ describe("propietats sobre mobles del catàleg", () => {
           // Noms únics dins de cada programa (manual §2 p5).
           const ns = [...prog.text.matchAll(/^Create(?!FinishedWorkpieceBox|RawWorkpiece)\w+\("([^"]+)"/gm)].map((m) => m[1])
           expect(new Set(ns).size, `${r.ref} ${prog.file}`).toBe(ns.length)
-          expect(prog.text).toMatch(/^[\x20-\x7e\r\n]*$/)
+          // Sense caràcters de control (els noms d'eina poden dur accents: el fitxer és UTF-8 amb BOM).
+          // eslint-disable-next-line no-control-regex -- es busquen precisament els caràcters de control
+          expect(prog.text).not.toMatch(/[\u0000-\u0009\u000b\u000c\u000e-\u001f\u007f]/)
         }
       })
     }
     expect(ops).toBeGreaterThan(100)
+  })
+})
+
+describe("preferències: màquines", () => {
+  it("una eina invàlida no fa perdre la màquina", () => {
+    const raw = { ...M, id: "a", tools: [...M.tools, { code: "", name: "trencada" }] }
+    const r = parseSettings({ version: 10, machines: [raw] })
+    expect(r.settings.machines).toHaveLength(1)
+    expect(r.settings.machines[0]!.tools).toHaveLength(M.tools.length)
+    expect(r.problems.join(" ")).toMatch(/eina  descartada/)
+  })
+  it("màquines desades abans: capçalera i broques per defecte", () => {
+    const { repetitions: _r, continuousCycle: _c, ...oldHeader } = M.header
+    const { verticalDrills: _v, ...old } = M
+    const r = parseSettings({ version: 10, machines: [{ ...old, header: oldHeader }] })
+    expect(r.settings.machines[0]).toMatchObject({ verticalDrills: "auto", header: { repetitions: 1, continuousCycle: false } })
   })
 })
 

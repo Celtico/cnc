@@ -16,8 +16,7 @@ import { stepCadGroups } from "../../core/export/stepGroups"
 import { finishRgb, resolveFinish } from "../../components/viewer/textures"
 import { encodeUtf16le, toTopsolidCsv } from "../../core/export/topsolidCsv"
 import { toUnifiedData } from "../../core/export/unified"
-import { toMaestroXcs } from "../../core/export/maestroXcs"
-import { zipStore } from "../../core/file/zip"
+import { toMaestroXcs, xcsZip } from "../../core/export/maestroXcs"
 import { defaultMachine } from "../../core/model"
 import { downloadBlob, downloadText, slugify } from "../download"
 import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
@@ -86,8 +85,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const doXcs = () => {
     if (!xcs || !machine) return
     warnEstimated()
-    const enc = new TextEncoder()
-    const zip = zipStore(xcs.files.map((f) => ({ name: f.name, data: enc.encode(f.text) })))
+    const zip = xcsZip(xcs)
     downloadBlob(new Blob([zip as BlobPart], { type: "application/zip" }), `${base}-maestro.zip`)
     toaster.create({
       title: "Programes de Maestro generats",
@@ -215,6 +213,12 @@ export function ExportScreen({ projectId }: { projectId: number }) {
         {!machine && (
           <Text fontSize="sm" color="fg.muted">
             Cal una màquina: importa-la de Maestro a Preferències › Màquines CNC (la carpeta .machinecontext).
+          </Text>
+        )}
+        {machine && !machine.pgmx && (
+          <Text fontSize="sm" color="fg.muted">
+            Els noms de les eines són els del context exportat ({machine.maestroVersion || "?"}). Si el Maestro del taller les ha rebatejades,
+            importa un projecte seu (.pgmx) a Preferències › Màquines CNC.
           </Text>
         )}
         {xcs && xcs.warnings.length > 0 && (

@@ -3,7 +3,7 @@ import { DEFAULT_CABINET } from "./cabinet"
 import { DEFAULT_HARDWARE, HardwareSchema, type Module } from "./composition"
 import { PHOTO_MATERIALS } from "./textureSets"
 import { rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
-import { MachineSchema, type Machine } from "./machine"
+import { MachineSchema, repairMachine, type Machine } from "./machine"
 
 /**
  * Preferències de l'usuari: tot el que depèn de casa seva i del taller (referències de
@@ -532,9 +532,23 @@ export function parseSettings(raw: unknown): SettingsParse {
     display: section("display", DisplayPrefSchema, DEFAULT_SETTINGS.display, "Visualització"),
     defaults: v7 ? { ...defaults, material: alias(defaults.material), backMaterial: alias(defaults.backMaterial) } : defaults,
     // v10: màquines CNC (additiu: abans no n'hi havia). Si n'hi ha més d'una per defecte, només la primera.
-    machines: oneDefault(list("machines", MachineSchema, [], "Màquines CNC")),
+    // Una eina invàlida només treu aquella eina, no tota la màquina (`repairMachine`).
+    machines: oneDefault(machinesOf(obj.machines, problems)),
   }
   return { settings, problems, migrated: migrated || problems.length > 0 }
+}
+
+function machinesOf(raw: unknown, problems: string[]): Machine[] {
+  if (!Array.isArray(raw)) return []
+  const out: Machine[] = []
+  for (const item of raw) {
+    const r = repairMachine(item)
+    const name = isRecord(item) && typeof item.name === "string" ? item.name : "?"
+    if (r.machine) out.push(r.machine)
+    else problems.push(`Màquines CNC: s'ha descartat la màquina ${name} (${r.problems.at(-1) ?? "invàlida"}).`)
+    if (r.machine && r.problems.length) problems.push(`Màquines CNC (${name}): ${r.problems.join("; ")}.`)
+  }
+  return out
 }
 
 function oneDefault(ms: Machine[]): Machine[] {

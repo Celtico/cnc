@@ -50,7 +50,7 @@ describe("context de màquina AA10008021", () => {
   it("42 eines amb codi, tipus i mides", () => {
     expect(tools).toHaveLength(42)
     expect(byCode("003")).toMatchObject({ name: "5mm ESQ", kind: "drill", orientation: "vertical", diameter: 5, maxDepth: 35, rotation: "left", tip: "FlatDrill", auto: true })
-    expect(byCode("E128")).toMatchObject({ name: "Diamant D12", kind: "router", diameter: 12, maxDepth: 24, rotation: "right", auto: true })
+    expect(byCode("E128")).toMatchObject({ name: "Diamant D12", id: "2149647431", kind: "router", diameter: 12, maxDepth: 24, rotation: "right", auto: true })
     expect(byCode("E604")).toMatchObject({ kind: "blade", diameter: 125, maxDepth: 45, bladeThickness: 3.2 })
     expect(byCode("A504").kind).toBe("aggregate")
     expect(byCode("E998").kind).toBe("probe")
@@ -71,7 +71,15 @@ describe("context de màquina AA10008021", () => {
   })
 
   it("capçalera i configuració", async () => {
-    expect(parseHeaderParams(read("Settings/XilogHeaderParameters.xml"))).toEqual({ executionFields: "AD", tableOptions: 10, mechanicalOptions: 0 })
+    expect(parseHeaderParams(read("Settings/XilogHeaderParameters.xml"))).toEqual({
+      executionFields: "AD",
+      repetitions: 1,
+      tableOptions: 10,
+      mechanicalOptions: 0,
+      continuousCycle: false,
+      technologicalMirror: false,
+      preserveWorkingSequence: false,
+    })
     const cfg = await parseCfgx(bytes("Cfgx/AA10008021.cfgx"))
     expect(cfg.description).toBe("5020*1905 8 BARRE MATIC 4 BASI rif. ant.")
     expect(cfg.workArea).toEqual({ x: 5020, y: 1905 })

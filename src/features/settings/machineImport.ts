@@ -1,4 +1,5 @@
 import { classifyContextFiles, machineFromContext } from "../../core/machine/maestro"
+import { applyPgmx, pgmxSummary, readPgmx } from "../../core/machine/pgmx"
 import { newId, type Machine } from "../../core/model"
 
 /** Camí relatiu del fitxer (dins de la carpeta triada) o el nom. */
@@ -22,4 +23,12 @@ export async function importMachineFiles(list: FileList | File[]): Promise<{ mac
     { tlgx, ...(atrx ? { atrx } : {}), ...(header ? { header } : {}), ...(cfgx ? { cfgx } : {}), ...(c.serial ? { serial: c.serial } : {}) },
     newId("mach"),
   )
+}
+
+/** Llegeix un projecte de Maestro (.pgmx, o l'XML ja extret) i l'aplica a la màquina: noms de les eines per ID i capçalera. */
+export async function importPgmxFile(file: File, m: Machine): Promise<{ machine: Machine; summary: string; changed: boolean }> {
+  const info = await readPgmx(new Uint8Array(await file.arrayBuffer()))
+  if (!m.tools.some((t) => t.id)) throw new Error("Les eines d'aquesta màquina no porten l'ID de Maestro: torna a importar el context de màquina i després el .pgmx.")
+  const r = applyPgmx(m, info, file.name, { withHeader: true })
+  return { machine: r.machine, summary: pgmxSummary(r, info), changed: r.renamed.length > 0 || r.header }
 }

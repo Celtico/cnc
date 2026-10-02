@@ -170,8 +170,16 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   `settings/MachinesPane.tsx` (`MasterDetail`, al grup Fabricació): «Importar de Maestro» i «Fitxers solts»,
   detall amb nom, sèrie, configuració, Maestro, camp, per defecte (★), opcions dels programes (àrea de
   treball, passants de més, ranures disc/fresa) i **taula d'eines per tipus** (codi · nom · Ø · fondària ·
-  posició); tocar una eina l'edita; «Afegir eina» per a les que el `.tlgx` no porta (amb el codi de Maestro).
-  Tornar a importar la mateixa sèrie conserva les eines afegides a mà i les opcions.
+  posició); tocar una eina l'edita; «Afegir eina» per a les que el `.tlgx` no porta (amb el codi de Maestro; una
+  «Eina nova» `NOVA1` no es tria fins que té codi). Tornar a importar la mateixa sèrie (`mergeReimport`) conserva,
+  eina per eina, els camps tocats a mà (`MachineTool.edited`), les eines afegides a mà i les opcions; una eina invàlida
+  a les preferències només treu aquella eina (`repairMachine`).
+- **«Importar noms d'eines d'un .pgmx»** (`core/machine/pgmx.ts`, .pgmx = zip o l'XML extret): el paràmetre `tool` de
+  l'MSL és el **nom** de l'eina i el Maestro del taller (2.0.5) les ha rebatejades (ID 2149647431: `E128` al .tlgx,
+  «12mm diamant nesting» al projecte `docs/maestro/samples/Proyecto1.pgmx.xml`). Per ID (`MachineTool.id` = `Key/ID` del
+  .tlgx) posa `mslName` (el que surt a l'MSL, `toolMslName`) i el nom; el codi no canvia. També la capçalera
+  (`MachiningParameters`), editable a la màquina: `SetMachiningParameters(fields, repeticions, taula, mecàniques, cicle
+  continu)`; per defecte la del projecte (`DEFAULT_HEADER`: AD, 1, 10, 16973824, false).
 
 ## Export Maestro .xcs (BETA)
 - **El STEP no serveix per mecanitzar**: TopSolid llegeix els forats del STEP com a geometria, no com a
@@ -183,16 +191,21 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
 - Només instruccions dels exemples del manual MSL (pàgines als comentaris i a `docs/maestro-xcs.md`):
   `SetMachiningParameters`, `CreateFinishedWorkpieceBox`, `CreateRawWorkpiece`, `SelectWorkplane`,
   `CreateDrill`, `CreateSegment` + `CreateSlot` (disc), `CreatePolyline` + `CreateRoughFinish` (fresa),
-  polilínia/cercle + `CreateContour` (talls per dins, contorn per fora). Capçal sempre `"-1"`.
-- X = llarg, Y = curt, origen a baix a l'esquerra de la cara A (la convenció u/v); forats de cantell a les
-  cares estàndard (3 Front · 1 Back · 4 Left · 2 Right, vistes des de fora, a mig gruix, broca horitzontal
-  `"-1"`); cara B girada sobre X: (x, A − y).
+  polilínia/cercle + `CreateContour` (talls per dins, contorn per fora; semicercles amb
+  `AddArc2PointCenterToPolyline`). Capçal sempre `"-1"`. Broques verticals amb eina `"-1"` per defecte (com el .pgmx
+  del taller; opció «Broques: tria el Maestro / eina concreta», `Machine.verticalDrills`). Noms d'eina sense plegar a
+  ASCII, cadenes C# escapades (`cs`); fitxers en **UTF-8 amb BOM** (`xcsBytes`/`xcsZip`, pendent de validar).
+- X = u (`length`), Y = v, origen a baix a l'esquerra de la cara A; forats de cantell a les cares estàndard (3 Front ·
+  1 Back · 4 Left · 2 Right, vistes des de fora, a mig gruix, broca horitzontal `"-1"`; a les peces amb forma només si
+  el contorn toca la cara); cara B girada sobre X: (x, A − y). **Orígens verificats** (taula a `docs/maestro-xcs.md`).
 - Eines (`core/machine/tools.ts`): broques pel Ø exacte i la fondària útil; ranures amb disc si van de
   cantell a cantell, si no fresa Ø ≤ ample; talls amb broca si n'hi ha del Ø, si no fresa limitada pels arcs
-  i dogbones (`maxToolDiameter`). Sense eina → no surt i avisa. Inglets: avís (serra).
-- **Pendent de validar amb el taller** (llista a `docs/maestro-xcs.md`): origen i sentit de X a Back/Left
-  (`PROVA_ORIENTACIO.xcs`), gir de la cara B, disc o fresa per a les ranures, fixació, eines que falten al
-  `.tlgx`.
+  i dogbones (`maxToolDiameter`); amb cantonades vives (`sharpCorners`), la fresa més petita i avís si el radi passa
+  de 0,5 mm. Punts repetits fora (`dedupePolyline`), `num()` llança si no és finit. Sense eina → no surt i avisa.
+  Inglets: avís (serra).
+- **Pendent de validar amb el taller** (llista a `docs/maestro-xcs.md`): prova a la màquina
+  (`PROVA_ORIENTACIO.xcs`), codificació UTF-8 amb BOM, noms de totes les eines al Maestro 2.0.5, broques amb `"-1"`,
+  `MechanicalOptions`, disc o fresa per a les ranures, fixació, eines que falten al `.tlgx`.
 
 ## Foto i visualització
 - La foto serveix per **veure proporcions**, no per fabricar. Les mides reals

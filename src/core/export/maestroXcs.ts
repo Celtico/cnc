@@ -1,6 +1,7 @@
-import { pickBlade, pickDrill, pickRouter, drillsOfDiameter } from "../machine/tools"
+import { zipStore } from "../file/zip"
+import { pickBlade, pickDrill, pickRouter, pickSmallRouter, drillsOfDiameter } from "../machine/tools"
 import { arcOf, bulgeOf, EDGE_NUMBER, flatten, type BPt, type Cutout, type EdgeSide, type Groove, type Hole, type Panel } from "../model"
-import type { Machine, MachineTool } from "../model/machine"
+import { toolMslName, type Machine, type MachineTool } from "../model/machine"
 import { needsSecondFace, secondFaceProgram } from "../process/processes"
 import { pieceRefs } from "./refs"
 import { asciiFold } from "./text"
@@ -24,13 +25,17 @@ import { asciiFold } from "./text"
  *  - talls i contorn: polilínia tancada (`AddArc2PointRadiusToPolyline`, `ClosePolyline`, p31-32) o
  *    `CreateCircleCenterRadius` (§3.4.1.3 p28) + `CreateContour(nom, fondària, 1, costat, desc,
  *    TypeOfProcess.GeneralRouting, eina, capçal, 0, -1, -1, -1, 0)` amb costat 0 = dins, 1 = fora (§3.5.9 p53, p79).
+ *  - semicercles (|bulge| = 1): `AddArc2PointCenterToPolyline(x, y, cx, cy, horari)` (Table 21 p31): amb el
+ *    centre, el radi no s'ha d'arrodonir per sota de mitja corda.
  * El capçal va sempre a "-1" (Maestro el tria segons on és muntada l'eina); les broques horitzontals,
- * també l'eina (`"-1"`, p36): el parell esquerra/dreta depèn del cantell i no surt a l'.atrx.
+ * també l'eina (`"-1"`, p36): el parell esquerra/dreta depèn del cantell i no surt a l'.atrx. Les
+ * verticals, `"-1"` per defecte (com els .pgmx del taller) o el nom de la broca (`Machine.verticalDrills`).
+ * L'eina va pel seu nom de Maestro (`toolMslName`: el del .pgmx importat o el codi del .tlgx), sense
+ * canviar-lo: cadena C# amb `\` i `"` escapats. Fitxer en UTF-8 amb BOM (`xcsBytes`; pendent de validar).
  *
- * Coordenades (vegeu docs/maestro-xcs.md): la peça amb el costat llarg a X (u) i el curt a Y (v),
- * origen a la cantonada de baix a l'esquerra de la cara A vista des de dalt (la mateixa convenció
- * u/v de l'app), Z = gruix. Cara B: la peça es gira sobre l'eix X (el cantell 1 passa a baix):
- * (x, y) → (x, A − y).
+ * Coordenades (vegeu docs/maestro-xcs.md, verificades amb el revisor): X = u (la llargada de la peça a
+ * l'app, `length`), Y = v (`width`), origen a la cantonada de baix a l'esquerra de la cara A vista des de
+ * dalt, Z = gruix. Cara B: la peça es gira sobre l'eix X (el cantell 1 passa a baix): (x, y) → (x, A − y).
  */
 
 export type XcsPlane = "Top" | "Front" | "Back" | "Left" | "Right"
@@ -42,6 +47,8 @@ export interface XcsOp {
   kind: "drill" | "slot" | "route" | "contour"
   /** Codi de l'eina o "-1" (automàtica). */
   tool: string
+  /** Amb eina automàtica: el codi de l'eina que l'app ha comprovat que existeix i hi arriba. */
+  candidate?: string
   depth: number
   points: [number, number][]
   /** Què és: «forat Ø5 (x, y)». */
@@ -71,15 +78,17 @@ export interface XcsPanelResult {
 const EOL = "\r\n"
 const EPS = 0.01
 
-/** Número per a l'MSL: punt decimal, fins a 3 decimals, sense zeros de més. */
+/** Número per a l'MSL: punt decimal, fins a 3 decimals, sense zeros de més. Llança si no és finit. */
 export function num(n: number): string {
+  if (!Number.isFinite(n)) throw new Error(`Número no vàlid a l'MSL: ${n}`)
   const r = Math.round(n * 1000) / 1000
   return Object.is(r, -0) ? "0" : String(r)
 }
 
-/** Cadena C#: ASCII (sense accents), sense cometes ni barres. */
+/** Cadena C# de l'MSL: el text tal qual (accents inclosos) amb `\` i `"` escapats; salts de línia i controls → espai. */
 export function cs(s: string): string {
-  return `"${asciiFold(s).replace(/[^\x20-\x7e]/g, "?").replace(/["\\]/g, "_")}"`
+  // eslint-disable-next-line no-control-regex -- es busquen precisament els caràcters de control
+  return `"${s.replace(/[\\"]/g, (c) => `\\${c}`).replace(/[\u0000-\u001f\u007f]/g, " ")}"`
 }
 
 const comment = (s: string) => `// ${asciiFold(s).replace(/[^\x20-\x7e]/g, "?")}`
@@ -134,10 +143,38 @@ class Script {
   }
 }
 
-const toolArg = (t: MachineTool | undefined) => cs(t ? t.code : "-1")
+const toolArg = (t: MachineTool | undefined) => cs(t ? toolMslName(t) : "-1")
 const HEAD = cs("-1")
 
-/** Polilínia tancada amb arcs (bulge) a la cara activa. Retorna les línies i els punts. */
+/** Clau d'un punt tal com el veurà Maestro (arrodonit a 0,001 mm). */
+const key = (p: BPt) => `${num(p[0])},${num(p[1])}`
+
+/**
+ * Treu els punts repetits (a 0,001 mm, el que s'escriu): un segment o arc de llargada zero no és vàlid.
+ * Si dos punts seguits coincideixen, es queda el segon (amb el seu bulge, el del tram que de debò surt d'allà).
+ */
+export function dedupePolyline(pts: BPt[]): BPt[] {
+  const out = [...pts]
+  let changed = true
+  while (changed && out.length > 1) {
+    changed = false
+    for (let i = 0; i < out.length && out.length > 1; i++) {
+      const p = out[i]!
+      const q = out[(i + 1) % out.length]!
+      if (key(p) === key(q) || Math.hypot(q[0] - p[0], q[1] - p[1]) < 0.001) {
+        out.splice(i, 1)
+        changed = true
+        break
+      }
+    }
+  }
+  return out
+}
+
+/** Mig cercle (|bulge| = 1): es fa amb el centre (AddArc2PointCenterToPolyline). */
+const isHalfCircle = (b: number) => Math.abs(Math.abs(b) - 1) < 0.01
+
+/** Polilínia tancada amb arcs (bulge) a la cara activa. `pts` sense punts repetits (`dedupePolyline`). */
 function closedPolyline(name: string, ptsIn: BPt[]): string[] {
   // Si hi ha algun costat recte, que sigui el de tancar (ClosePolyline, p30-32); si no, s'acaba amb l'arc.
   let pts = ptsIn
@@ -158,7 +195,8 @@ function closedPolyline(name: string, ptsIn: BPt[]): string[] {
     }
     const a = arcOf(p, q, b)
     // isClockwise = bulge negatiu; isOver180 = |bulge| > 1 (més de mig cercle).
-    out.push(`AddArc2PointRadiusToPolyline(${num(q[0])}, ${num(q[1])}, ${num(a.r)}, ${b < 0}, ${Math.abs(b) > 1});`)
+    if (isHalfCircle(b)) out.push(`AddArc2PointCenterToPolyline(${num(q[0])}, ${num(q[1])}, ${num(a.cx)}, ${num(a.cy)}, ${b < 0});`)
+    else out.push(`AddArc2PointRadiusToPolyline(${num(q[0])}, ${num(q[1])}, ${num(a.r)}, ${b < 0}, ${Math.abs(b) > 1});`)
   }
   return out
 }
@@ -259,6 +297,68 @@ export function maxToolDiameter(pts: BPt[], side: "inside" | "outside"): number 
   return max
 }
 
+/**
+ * Cantonades vives que la fresa arrodoneix (amb el seu radi): per dins, les que giren cap a l'interior del
+ * forat (angle < 180° vist des del forat); per fora, les entrants de la peça. Els girs de menys de 35° (arcs
+ * fets de segments) no compten.
+ */
+export function sharpCorners(pts: BPt[], side: "inside" | "outside"): number {
+  const flat = flatten(pts)
+  const n = flat.length
+  let area = 0
+  for (let i = 0; i < n; i++) {
+    const a = flat[i]!
+    const b = flat[(i + 1) % n]!
+    area += a[0] * b[1] - b[0] * a[1]
+  }
+  const ccw = area > 0
+  let count = 0
+  for (let i = 0; i < n; i++) {
+    const a = flat[(i - 1 + n) % n]!
+    const b = flat[i]!
+    const c = flat[(i + 1) % n]!
+    const u = [b[0] - a[0], b[1] - a[1]] as const
+    const v = [c[0] - b[0], c[1] - b[1]] as const
+    const ang = Math.atan2(u[0] * v[1] - u[1] * v[0], u[0] * v[0] + u[1] * v[1])
+    if (Math.abs(ang) < (35 * Math.PI) / 180) continue
+    // Antihorari: girar a l'esquerra (ang > 0) és una cantonada convexa del polígon.
+    const convex = ang > 0 === ccw
+    if (convex === (side === "inside")) count++
+  }
+  return count
+}
+
+/** Distància d'un punt a un contorn (polígon tancat). */
+function distToOutline(flat: [number, number][], x: number, y: number): number {
+  let best = Infinity
+  for (let i = 0; i < flat.length; i++) {
+    const a = flat[i]!
+    const b = flat[(i + 1) % flat.length]!
+    const dx = b[0] - a[0]
+    const dy = b[1] - a[1]
+    const l2 = dx * dx + dy * dy
+    const t = l2 > 0 ? Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / l2)) : 0
+    best = Math.min(best, Math.hypot(a[0] + t * dx - x, a[1] + t * dy - y))
+  }
+  return best
+}
+
+/**
+ * Un forat de cantell d'una peça amb forma només es pot fer a la cara estàndard si el contorn toca la caixa
+ * en aquell punt (tot el diàmetre del forat): si no, la broca entraria a l'aire o en una corba.
+ */
+export function edgeHoleOnFace(p: Pick<Panel, "length" | "width" | "outline">, h: Pick<Hole, "x" | "y" | "diameter">, edge: EdgeSide): boolean {
+  if (!p.outline?.length) return true
+  const flat = flatten(p.outline)
+  const r = h.diameter / 2
+  const along: [number, number][] =
+    edge === "bottom" ? [[h.x - r, 0], [h.x, 0], [h.x + r, 0]]
+    : edge === "top" ? [[h.x - r, p.width], [h.x, p.width], [h.x + r, p.width]]
+    : edge === "left" ? [[0, h.y - r], [0, h.y], [0, h.y + r]]
+    : [[p.length, h.y - r], [p.length, h.y], [p.length, h.y + r]]
+  return along.every(([x, y]) => distToOutline(flat, x, y) < 0.05)
+}
+
 const holeWhat = (h: Hole) => `forat Ø${num(h.diameter)} × ${num(h.depth)} a (${num(h.x)}, ${num(h.y)})${h.face === "edge" ? ` cantell ${h.edge ?? "?"}` : ` cara ${h.face}`}`
 const grooveWhat = (g: Groove) => `ranura ${num(g.w)} × ${num(g.h)} × ${num(g.depth)} a (${num(g.x)}, ${num(g.y)}) cara ${g.face}`
 const cutWhat = (c: Cutout) =>
@@ -280,6 +380,15 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
   let handled = 0
   const A = new Script("A")
   const B = new Script("B")
+  // Broques verticals: "-1" (la tria el Maestro, com als .pgmx del taller) o el nom de la triada.
+  const autoDrill = (m.verticalDrills ?? "auto") === "auto"
+  const vDrill = (s: Script, t: MachineTool, diameter: number): string => {
+    if (!autoDrill) return toolArg(t)
+    const same = drillsOfDiameter(m, diameter, "vertical").map(toolMslName)
+    s.lines.push(comment(`broca vertical Ø${num(diameter)} (${[...new Set(same)].join("/")}): eina automatica`))
+    return cs("-1")
+  }
+  const vTool = (t: MachineTool) => (autoDrill ? "-1" : t.code)
 
   // --- Forats de cara (A a dalt; B al programa girat) --------------------------------------
   for (const h of p.holes) {
@@ -301,8 +410,9 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
     const y = h.face === "A" ? h.y : W - h.y
     s.select("Top")
     const name = s.name("Forat")
-    s.lines.push(`CreateDrill(${cs(name)}, ${num(x)}, ${num(y)}, ${num(depth)}, ${num(h.diameter)}, "", TypeOfProcess.Drilling, ${toolArg(t)}, ${HEAD});`)
-    s.op({ kind: "drill", tool: t.code, depth, points: [[x, y]], what: holeWhat(h) })
+    const arg = vDrill(s, t, h.diameter)
+    s.lines.push(`CreateDrill(${cs(name)}, ${num(x)}, ${num(y)}, ${num(depth)}, ${num(h.diameter)}, "", TypeOfProcess.Drilling, ${arg}, ${HEAD});`)
+    s.op({ kind: "drill", tool: vTool(t), depth, points: [[x, y]], what: holeWhat(h), candidate: t.code })
     handled++
   }
 
@@ -311,6 +421,10 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
   for (const side of ["bottom", "right", "top", "left"] as const) {
     for (const h of edgeHoles.filter((x) => x.edge === side)) {
       features++
+      if (!edgeHoleOnFace(p, h, side)) {
+        skip(holeWhat(h), `la peça té forma i el contorn no toca la cara del cantell ${EDGE_NUMBER[side]} en aquest punt`)
+        continue
+      }
       const t = pickDrill(m, h.diameter, h.depth, "horizontal")
       if (!t) {
         const same = drillsOfDiameter(m, h.diameter, "horizontal")
@@ -321,11 +435,11 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
       A.select(EDGE_PLANE[side])
       const name = A.name("ForatCantell")
       const pair = drillsOfDiameter(m, h.diameter, "horizontal")
-        .map((d) => d.code)
+        .map(toolMslName)
         .join("/")
       A.lines.push(comment(`broca horitzontal ${pair}: Maestro tria el mandri segons el cantell`))
       A.lines.push(`CreateDrill(${cs(name)}, ${num(x)}, ${num(y)}, ${num(h.depth)}, ${num(h.diameter)}, "", TypeOfProcess.Drilling, ${cs("-1")}, ${HEAD});`)
-      A.op({ kind: "drill", tool: "-1", depth: h.depth, points: [[x, y]], what: holeWhat(h) })
+      A.op({ kind: "drill", tool: "-1", depth: h.depth, points: [[x, y]], what: holeWhat(h), candidate: t.code })
       handled++
     }
   }
@@ -412,15 +526,18 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
   }
 
   // --- Talls passants (programa A) ---------------------------------------------------------
-  for (const c of p.cutouts ?? []) {
+  for (const c0 of p.cutouts ?? []) {
     features++
+    // Ranura tan ampla com llarga: és un cercle (els dos semicercles farien segments de llargada zero).
+    const c: Cutout = c0.kind === "slot" && Math.abs(c0.w - c0.h) < 0.001 ? { ...c0, kind: "circle", x: c0.x + c0.w / 2, y: c0.y + c0.h / 2, diameter: Math.min(c0.w, c0.h) } as Cutout : c0
     if (c.kind === "circle") {
       const drill = pickDrill(m, c.diameter, through, "vertical")
       if (drill) {
         A.select("Top")
         const name = A.name("ForatPassant")
-        A.lines.push(`CreateDrill(${cs(name)}, ${num(c.x)}, ${num(c.y)}, ${num(through)}, ${num(c.diameter)}, "", TypeOfProcess.Drilling, ${toolArg(drill)}, ${HEAD});`)
-        A.op({ kind: "drill", tool: drill.code, depth: through, points: [[c.x, c.y]], what: cutWhat(c) })
+        const arg = vDrill(A, drill, c.diameter)
+        A.lines.push(`CreateDrill(${cs(name)}, ${num(c.x)}, ${num(c.y)}, ${num(through)}, ${num(c.diameter)}, "", TypeOfProcess.Drilling, ${arg}, ${HEAD});`)
+        A.op({ kind: "drill", tool: vTool(drill), depth: through, points: [[c.x, c.y]], what: cutWhat(c), candidate: drill.code })
         handled++
         continue
       }
@@ -438,14 +555,21 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
       handled++
       continue
     }
-    const pts: BPt[] = c.kind === "rect" ? rectPts(c.x, c.y, c.w, c.h) : c.kind === "slot" ? slotPts(c) : c.points
+    const pts = dedupePolyline(c.kind === "rect" ? rectPts(c.x, c.y, c.w, c.h) : c.kind === "slot" ? slotPts(c) : c.points)
+    if (pts.length < 2) {
+      skip(cutWhat(c), "contorn sense mida")
+      continue
+    }
     const flat = flatten(pts)
     const maxDia = maxToolDiameter(pts, "inside")
-    const router = pickRouter(m, maxDia, through)
+    // Amb cantonades vives, la fresa més petita (el radi que hi deixa és el seu).
+    const sharp = sharpCorners(pts, "inside")
+    const router = sharp ? pickSmallRouter(m, maxDia, through) : pickRouter(m, maxDia, through)
     if (!router) {
       skip(cutWhat(c), `cap fresa prou petita (Ø ≤ ${num(maxDia)}) que arribi a ${num(through)} mm`)
       continue
     }
+    if (sharp && router.diameter / 2 > 0.5) warnings.push(`${cutWhat(c)}: ${sharp} cantonades vives queden amb radi ${num(router.diameter / 2)} mm (fresa ${toolMslName(router)} Ø${num(router.diameter)})`)
     A.select("Top")
     const name = A.name("Tall")
     A.lines.push(...closedPolyline(`${name}_G`, pts))
@@ -457,15 +581,19 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
   // --- Contorn de les peces amb forma (programa A, l'últim) -----------------------------------
   if (p.outline?.length) {
     features++
-    const maxDia = maxToolDiameter(p.outline, "outside")
-    const router = pickRouter(m, maxDia, through)
-    if (!router) skip("contorn de la peça", `cap fresa${Number.isFinite(maxDia) ? ` de Ø ≤ ${num(maxDia)}` : ""} que arribi a ${num(through)} mm`)
+    const outline = dedupePolyline(p.outline)
+    const maxDia = maxToolDiameter(outline, "outside")
+    const sharp = sharpCorners(outline, "outside")
+    const router = sharp ? pickSmallRouter(m, maxDia, through) : pickRouter(m, maxDia, through)
+    if (outline.length < 3) skip("contorn de la peça", "contorn sense mida")
+    else if (!router) skip("contorn de la peça", `cap fresa${Number.isFinite(maxDia) ? ` de Ø ≤ ${num(maxDia)}` : ""} que arribi a ${num(through)} mm`)
     else {
+      if (sharp && router.diameter / 2 > 0.5) warnings.push(`contorn de la peça: ${sharp} cantonades entrants queden amb radi ${num(router.diameter / 2)} mm (fresa ${toolMslName(router)} Ø${num(router.diameter)})`)
       A.select("Top")
       const name = A.name("Contorn")
-      A.lines.push(...closedPolyline(`${name}_G`, p.outline))
+      A.lines.push(...closedPolyline(`${name}_G`, outline))
       A.lines.push(`CreateContour(${cs(name)}, ${num(through)}, 1, 1, ${cs("contorn")}, TypeOfProcess.GeneralRouting, ${toolArg(router)}, ${HEAD}, 0, -1, -1, -1, 0);`)
-      A.op({ kind: "contour", tool: router.code, depth: through, points: flatten(p.outline), what: "contorn de la peça" })
+      A.op({ kind: "contour", tool: router.code, depth: through, points: flatten(outline), what: "contorn de la peça" })
       handled++
     }
   }
@@ -478,11 +606,12 @@ export function panelXcs(p: Panel, ref: string, m: Machine): XcsPanelResult {
       comment(`Mobles CNC - programa Maestro (MSL .xcs) - BETA: comprova'l a Maestro abans de mecanitzar`),
       comment(`Peca ${ref}: ${p.label} (${p.name}) - ${num(L)} x ${num(W)} x ${num(T)} - ${p.material}`),
       face === "A"
-        ? comment("Cara A amunt. X = llarg, Y = ample, origen a la cantonada de baix a l'esquerra (cantell 4 a X = 0, cantell 3 a Y = 0)")
-        : comment("Cara B amunt: la peca girada sobre l'eix X (el cantell 1 passa a Y = 0). Forats de cantell i talls: al programa de la cara A"),
+        ? comment(`Cara A amunt. X = u (${num(L)} mm), Y = v (${num(W)} mm), origen a la cantonada de baix a l'esquerra (cantell 4 a X = 0, cantell 3 a Y = 0)`)
+        : comment(`Cara B amunt: la peca girada sobre l'eix X (${num(L)} mm; el cantell 1 passa a Y = 0). Forats de cantell i talls: al programa de la cara A`),
       comment(`Maquina ${m.name}${m.serial ? ` (${m.serial})` : ""}${m.maestroVersion ? ` - Maestro ${m.maestroVersion}` : ""}`),
+      ...(m.pgmx ? [comment(`Noms d'eina i capcalera del projecte ${m.pgmx.file} (Maestro ${m.pgmx.version})`)] : []),
       "",
-      `SetMachiningParameters(${cs(m.header.executionFields)}, 1, ${m.header.tableOptions}, ${m.header.mechanicalOptions}, false);`,
+      `SetMachiningParameters(${cs(m.header.executionFields)}, ${m.header.repetitions ?? 1}, ${m.header.tableOptions}, ${m.header.mechanicalOptions}, ${m.header.continuousCycle ?? false});`,
       `CreateFinishedWorkpieceBox(${cs(ref)}, ${num(L)}, ${num(W)}, ${num(T)});`,
       `CreateRawWorkpiece(${cs(ref)}, 0, 0, 0, 0, 0, 0);`,
     ]
@@ -500,6 +629,20 @@ export interface XcsExport {
   /** Avisos amb la peça: «A.1.L.1 (lat e): forat Ø5…». */
   warnings: string[]
   programs: number
+}
+
+/** Bytes d'un fitxer de l'export: UTF-8 amb BOM (els .xcs i el LLEGEIX-ME; pendent de validar a Maestro). */
+export function xcsBytes(text: string): Uint8Array {
+  const body = new TextEncoder().encode(text)
+  const out = new Uint8Array(body.length + 3)
+  out.set([0xef, 0xbb, 0xbf])
+  out.set(body, 3)
+  return out
+}
+
+/** El .zip de l'export (sense compressió). */
+export function xcsZip(x: XcsExport, when?: Date): Uint8Array {
+  return zipStore(x.files.map((f) => ({ name: f.name, data: xcsBytes(f.text) })), when)
 }
 
 /** Tots els programes d'un moble + un LLEGEIX-ME.txt. */
@@ -536,10 +679,13 @@ function readme(project: string, m: Machine, results: XcsPanelResult[], warnings
     `  XConverter.exe -s -m 0 -i "<ref>.xcs" -t "def.tlgx"   (manual MSL §3.1.2.1)`,
     "",
     "Convencions",
-    "- X = costat llarg de la peça, Y = costat curt, Z = gruix. Origen a la cantonada de baix a",
-    "  l'esquerra de la cara A (cantell 4 a l'esquerra, cantell 3 a baix, com a l'app).",
+    "- X = llargada de la peça a l'app (u), Y = amplada (v), Z = gruix. Origen a la cantonada de baix",
+    "  a l'esquerra de la cara A (cantell 4 a l'esquerra, cantell 3 a baix, com a l'app).",
     "- Forats de cantell a les cares estàndard (Front = cantell 3, Back = 1, Left = 4, Right = 2),",
     "  a mig gruix. Broques horitzontals amb eina automàtica (\"-1\").",
+    m.verticalDrills === "tool" ? "- Broques verticals: el nom de la broca que ha triat l'app." : "- Broques verticals: eina automàtica (\"-1\"), com als projectes del taller.",
+    `- Eines pel nom de Maestro${m.pgmx ? ` (noms del projecte ${m.pgmx.file}, Maestro ${m.pgmx.version})` : " (codi del .tlgx)"}.`,
+    "- Fitxers .xcs en UTF-8 amb BOM.",
     `- Talls i forats passants: gruix + ${num(m.throughExtra)} mm.`,
     "",
     `Peces: ${results.length} · programes: ${results.reduce((a, r) => a + r.programs.length, 0)}`,

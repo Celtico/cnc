@@ -1,11 +1,13 @@
-// Mobles CNC - programa Maestro (MSL .xcs) - BETA: comprova'l a Maestro abans de mecanitzar
+﻿// Mobles CNC - programa Maestro (MSL .xcs) - BETA: comprova'l a Maestro abans de mecanitzar
 // Peca PROVA_ORIENTACIO: Prova d'orientacio (prova) - 600 x 400 x 19 - Aglomerat 19
-// Cara B amunt: la peca girada sobre l'eix X (el cantell 1 passa a Y = 0). Forats de cantell i talls: al programa de la cara A
+// Cara B amunt: la peca girada sobre l'eix X (600 mm; el cantell 1 passa a Y = 0). Forats de cantell i talls: al programa de la cara A
 // Maquina SCM AA10008021 (AA10008021) - Maestro 2.00.004
+// Noms d'eina i capcalera del projecte Proyecto1.pgmx (Maestro 2.0.5 rev 1005)
 
-SetMachiningParameters("AD", 1, 10, 0, false);
+SetMachiningParameters("AD", 1, 10, 16973824, false);
 CreateFinishedWorkpieceBox("PROVA_ORIENTACIO", 600, 400, 19);
 CreateRawWorkpiece("PROVA_ORIENTACIO", 0, 0, 0, 0, 0, 0);
 
 SelectWorkplane("Top");
-CreateDrill("Forat_1", 50, 370, 5, 8, "", TypeOfProcess.Drilling, "006", "-1");
+// broca vertical O8 (006): eina automatica
+CreateDrill("Forat_1", 50, 370, 5, 8, "", TypeOfProcess.Drilling, "-1", "-1");

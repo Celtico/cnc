@@ -7,8 +7,9 @@ import { NumRow } from "../../components/NumRow"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { SectionLabel } from "../../components/SectionLabel"
 import { toaster } from "../../components/ui/toaster"
-import { newId, TOOL_KIND_LABELS, type Machine, type MachineTool, type ToolKind } from "../../core/model"
-import { importMachineFiles } from "./machineImport"
+import { mergeReimport } from "../../core/machine/pgmx"
+import { isPlaceholderTool, newId, TOOL_EDITABLE, TOOL_KIND_LABELS, type Machine, type MachineTool, type ToolEditable, type ToolKind } from "../../core/model"
+import { importMachineFiles, importPgmxFile } from "./machineImport"
 import { PaneHeadContext } from "./paneHead"
 import { useSessionString } from "./useSessionString"
 
@@ -40,6 +41,7 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
   const [busy, setBusy] = useState(false)
   const folderInput = useRef<HTMLInputElement>(null)
   const filesInput = useRef<HTMLInputElement>(null)
+  const pgmxInput = useRef<HTMLInputElement>(null)
   const i = machines.findIndex((m) => m.id === sel)
   const m = i >= 0 ? machines[i]! : null
   useEffect(() => {
@@ -54,11 +56,9 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
     setBusy(true)
     try {
       const { machine, problems } = await importMachineFiles(list)
-      // La mateixa sèrie ja importada: se substitueix (es conserva el nom, el per defecte i les eines afegides a mà).
+      // La mateixa sèrie ja importada: s'actualitza conservant el que s'ha tocat a mà (eina per eina) i les opcions.
       const old = machines.find((x) => machine.serial && x.serial === machine.serial)
-      const merged: Machine = old
-        ? { ...machine, id: old.id, name: old.name, isDefault: old.isDefault, throughExtra: old.throughExtra, grooves: old.grooves, tools: [...machine.tools, ...old.tools.filter((t) => t.manual && !machine.tools.some((x) => x.code === t.code))] }
-        : { ...machine, isDefault: machines.length === 0 }
+      const merged: Machine = old ? mergeReimport(old, machine) : { ...machine, isDefault: machines.length === 0 }
       onChange(old ? machines.map((x) => (x.id === old.id ? merged : x)) : [...machines, merged])
       setSel(merged.id)
       const n = merged.tools.length
@@ -76,6 +76,22 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
     }
   }
 
+  const doPgmx = async (list: FileList | null, input: HTMLInputElement | null) => {
+    const f = list?.[0]
+    if (!f || !m) return
+    setBusy(true)
+    try {
+      const r = await importPgmxFile(f, m)
+      update(r.machine)
+      toaster.create({ title: r.changed ? `Noms de les eines de ${f.name}` : `${f.name}: res a canviar`, description: r.summary, type: "success", duration: 12000 })
+    } catch (e) {
+      toaster.create({ title: "No s'ha pogut llegir el .pgmx", description: e instanceof Error ? e.message : String(e), type: "error", duration: 8000 })
+    } finally {
+      setBusy(false)
+      if (input) input.value = ""
+    }
+  }
+
   const q = query.trim().toLowerCase()
   const shown = machines.filter((x) => !q || `${x.name} ${x.serial} ${x.model}`.toLowerCase().includes(q))
 
@@ -84,6 +100,7 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
       {/* Carpeta sencera (`webkitdirectory`) o fitxers solts. */}
       <input ref={(el) => { folderInput.current = el; el?.setAttribute("webkitdirectory", "") }} type="file" multiple hidden data-testid="machine-folder" onChange={(e) => void doImport(e.target.files, e.target)} />
       <input ref={filesInput} type="file" multiple hidden data-testid="machine-files" onChange={(e) => void doImport(e.target.files, e.target)} />
+      <input ref={pgmxInput} type="file" accept=".pgmx,.xml" hidden data-testid="machine-pgmx" onChange={(e) => void doPgmx(e.target.files, e.target)} />
       <MasterDetail
         head={
           <Stack gap={3}>
@@ -204,11 +221,62 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
                 </FormRow>
               </SettingsGroup>
 
+              <SettingsGroup
+                icon={<LuFactory />}
+                title="Projecte de Maestro (.pgmx)"
+                summary={m.pgmx ? `${m.pgmx.file} · Maestro ${m.pgmx.version}` : "noms de les eines del taller"}
+                actions={
+                  <Button size="xs" variant="ghost" loading={busy} onClick={() => pgmxInput.current?.click()}>
+                    <LuUpload /> Importar noms d'eines d'un .pgmx
+                  </Button>
+                }
+              >
+                <Text fontSize="sm" color="fg.muted">
+                  Els programes diuen cada eina pel seu nom de Maestro, i el nom pot haver canviat des que es va exportar el context (p. ex.
+                  l'E128 es diu «12mm diamant nesting» a Maestro 2.0.5). Tria un projecte desat al taller (.pgmx, o l'XML de dins): s'hi llegeixen els
+                  noms de les eines que fa servir (per l'ID de Maestro; el codi no canvia) i la capçalera.
+                </Text>
+              </SettingsGroup>
+
               <SettingsGroup icon={<LuFactory />} title="Programes .xcs" summary={`capçalera ${m.header.executionFields} · passants +${m.throughExtra} mm`}>
-                <FormRow label="Àrea de treball" help="Primer paràmetre de SetMachiningParameters (ExecutionFields de Maestro), p. ex. «AD».">
-                  <Input size="sm" maxW="120px" value={m.header.executionFields} onChange={(e) => update({ header: { ...m.header, executionFields: e.target.value.toUpperCase().replace(/[^A-Z]/g, "") || "A" } })} />
-                </FormRow>
+                <FormSection title="Capçalera (SetMachiningParameters)">
+                  <FormRow label="Àrea de treball" help="ExecutionFields de Maestro, p. ex. «AD».">
+                    <Input size="sm" maxW="120px" value={m.header.executionFields} onChange={(e) => update({ header: { ...m.header, executionFields: e.target.value.toUpperCase().replace(/[^A-Z]/g, "") || "A" } })} />
+                  </FormRow>
+                  <NumRow label="Repeticions" suffix="" value={m.header.repetitions} min={1} max={99} step={1} onChange={(repetitions) => update({ header: { ...m.header, repetitions: Math.max(1, Math.round(repetitions)) } })} />
+                  <FormRow label="Taula" help="TableOptions (tipus de fixació). El .pgmx del taller diu 10.">
+                    <Input size="sm" maxW="160px" inputMode="numeric" value={String(m.header.tableOptions)} onChange={(e) => update({ header: { ...m.header, tableOptions: Number(e.target.value.replace(/[^0-9]/g, "")) || 0 } })} />
+                  </FormRow>
+                  <FormRow label="Opcions mecàniques" help="MechanicalOptions: un número de Maestro (bits). El .pgmx del taller diu 16973824.">
+                    <Input size="sm" maxW="160px" inputMode="numeric" value={String(m.header.mechanicalOptions)} onChange={(e) => update({ header: { ...m.header, mechanicalOptions: Number(e.target.value.replace(/[^0-9]/g, "")) || 0 } })} />
+                  </FormRow>
+                  <FormRow label="Cicle continu">
+                    <Switch.Root size="sm" pt={1.5} checked={m.header.continuousCycle} onCheckedChange={(e) => update({ header: { ...m.header, continuousCycle: e.checked } })}>
+                      <Switch.HiddenInput />
+                      <Switch.Control />
+                      <Switch.Label fontSize="sm">ContinuousCycle</Switch.Label>
+                    </Switch.Root>
+                  </FormRow>
+                  {(m.header.technologicalMirror !== undefined || m.header.preserveWorkingSequence !== undefined) && (
+                    <FormRow label="Altres (Maestro)" help="No tenen paràmetre a l'MSL: es posen a Maestro si cal.">
+                      <Text fontSize="sm" pt="6px">
+                        Mirall tecnològic: {m.header.technologicalMirror ? "sí" : "no"} · Conservar la seqüència: {m.header.preserveWorkingSequence ? "sí" : "no"}
+                      </Text>
+                    </FormRow>
+                  )}
+                </FormSection>
                 <NumRow label="Passants (de més)" help="Els forats i talls passants baixen aquest tant per sota de la peça." value={m.throughExtra} min={0} max={5} step={0.5} onChange={(throughExtra) => update({ throughExtra })} />
+                <FormRow label="Broques" help="Forats de cara i passants: «-1» deixa triar la broca al Maestro (com fan els projectes del taller); si no, la que tria l'app pel Ø i la fondària.">
+                  <ChoiceChips<Machine["verticalDrills"]>
+                    label="Broques"
+                    options={[
+                      { id: "auto", label: "Tria el Maestro" },
+                      { id: "tool", label: "Eina concreta" },
+                    ]}
+                    value={m.verticalDrills}
+                    onChange={(verticalDrills) => update({ verticalDrills })}
+                  />
+                </FormRow>
                 <FormRow label="Ranures" help="Amb disc només les rectes de cantell a cantell (passades del gruix del disc); la resta, amb fresa.">
                   <ChoiceChips<Machine["grooves"]>
                     label="Ranures"
@@ -235,11 +303,24 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
 /** Taula d'eines agrupada per tipus; tocar-ne una l'obre per editar-la. */
 function ToolsTable({ tools, onChange }: { tools: MachineTool[]; onChange: (t: MachineTool[]) => void }) {
   const [open, setOpen] = useState<string | null>(null)
-  const set = (code: string, patch: Partial<MachineTool>) => onChange(tools.map((t) => (t.code === code ? { ...t, ...patch } : t)))
+  // Els camps tocats queden a `edited` (una reimportació no els trepitja).
+  const set = (code: string, patch: Partial<MachineTool>) =>
+    onChange(
+      tools.map((t) => {
+        if (t.code !== code) return t
+        const touched = (Object.keys(patch) as ToolEditable[]).filter((k) => (TOOL_EDITABLE as readonly string[]).includes(k))
+        const edited = [...new Set([...(t.edited ?? []), ...touched])]
+        const next = { ...t, ...patch, ...(edited.length ? { edited } : {}) }
+        // Una «Eina nova» passa a automàtica quan rep el codi de Maestro (si no s'ha tocat a mà).
+        if (patch.code && isPlaceholderTool(t) && !isPlaceholderTool(next) && !t.edited?.includes("auto")) next.auto = true
+        return next
+      }),
+    )
   const add = () => {
     let n = 1
     while (tools.some((t) => t.code === `NOVA${n}`)) n++
-    const t: MachineTool = { code: `NOVA${n}`, name: "Eina nova", kind: "router", diameter: 10, maxDepth: 30, mounted: true, auto: true, manual: true }
+    // Sense codi de Maestro de debò no es pot triar (auto: false fins que se li posa).
+    const t: MachineTool = { code: `NOVA${n}`, name: "Eina nova", kind: "router", diameter: 10, maxDepth: 30, mounted: true, auto: false, manual: true }
     onChange([...tools, t])
     setOpen(t.code)
   }
@@ -287,7 +368,7 @@ function ToolsTable({ tools, onChange }: { tools: MachineTool[]; onChange: (t: M
                     <Box gridColumn="1 / -1" as="button" textAlign="left" cursor="pointer" borderTopWidth="1px" bg={on ? "wood.subtle" : undefined} _hover={{ bg: on ? "wood.subtle" : "bg.muted" }} onClick={() => setOpen(on ? null : t.code)} aria-expanded={on}>
                       <Grid templateColumns={COLS} columnGap={3} alignItems="center" py={1.5} opacity={dim ? 0.55 : 1}>
                         <Text fontFamily="mono" fontSize="xs" px={2}>{t.code}</Text>
-                        <Text truncate title={t.name}>{t.name}{t.manual ? " ·  a mà" : ""}</Text>
+                        <Text truncate title={t.mslName ? `${t.name} · a l'MSL: ${t.mslName}` : t.name}>{t.name}{t.manual ? " ·  a mà" : ""}{isPlaceholderTool(t) ? " · falta el codi" : ""}</Text>
                         <Text textAlign="right">{t.diameter}</Text>
                         <Text textAlign="right">{t.maxDepth || "—"}</Text>
                         <Text fontSize="xs" color="fg.muted" truncate pe={2}>{where(t)}</Text>
@@ -319,8 +400,11 @@ function ToolEditor({ tool: t, codes, onChange, onDelete }: { tool: MachineTool;
       <FormRow label="Nom" maxW="360px">
         <Input size="sm" value={t.name} onChange={(e) => onChange({ name: e.target.value })} />
       </FormRow>
+      <FormRow label="Nom a Maestro" help={`El que va al paràmetre «tool» de l'MSL. Buit = el codi (${t.code}). Ve del .pgmx importat.`} maxW="360px">
+        <Input size="sm" value={t.mslName ?? ""} placeholder={t.code} onChange={(e) => onChange({ mslName: e.target.value || undefined })} />
+      </FormRow>
       {t.manual && (
-        <FormRow label="Codi a Maestro" help={clash ? "Ja hi ha una eina amb aquest codi." : "El que va al paràmetre «tool» de l'MSL (p. ex. E128)."} maxW="160px">
+        <FormRow label="Codi a Maestro" help={clash ? "Ja hi ha una eina amb aquest codi." : isPlaceholderTool(t) ? "Posa-hi el codi de Maestro (p. ex. E128): fins llavors no es tria." : "El codi de l'eina a Maestro (p. ex. E128)."} maxW="160px">
           <Input size="sm" value={code} onChange={(e) => setCode(e.target.value.trim())} onBlur={() => code && !clash && code !== t.code && onChange({ code })} />
         </FormRow>
       )}
