@@ -26,4 +26,11 @@ describe("cutListToCsv", () => {
     const en = cutListToCsv(list, { separator: ",", decimal: "." })
     expect(en).toContain("Porta,2,716,296.5,19,Melamina 19,Llarg,1+2+3+4,4.05,4,0.4246")
   })
+
+  it("cometes als números si la coma decimal és el separador, i als textos amb salt de línia (\\r)", () => {
+    const comma = cutListToCsv(list, { separator: ",", decimal: "," })
+    expect(comma).toContain('Porta,2,716,"296,5",19,Melamina 19,Llarg,1+2+3+4,"4,05",4,"0,4246"')
+    const cr = cutListToCsv({ ...list, items: [{ ...list.items[0]!, material: "Roure\rnatural" }] })
+    expect(cr).toContain('"Roure\rnatural"')
+  })
 })

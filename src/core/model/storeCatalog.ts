@@ -272,7 +272,8 @@ function bunk(_name: string, o: { mat: string; hollow?: number; drawers?: boolea
     { id: newId("r"), name: "Matalàs de baix", w: W - 2 * wall - 20, h: 150, d: 900, x: wall + 10, y: baseY + 1, z: 30 },
     { id: newId("r"), name: "Matalàs de dalt", w: W - 2 * wall - 20, h: 150, d: 900, x: wall + 10, y: upperY + 1, z: 30 },
   ]
-  const railPart = part({ name: "Barana", orient: "front", material: o.mat, w: 1350, h: 160, thickness: 19, module: bunkM.id, x: wall, y: upperY - (o.drawers ? 20 : 250) + 240, z: D - 19 })
+  // Barana per sobre del matalàs de dalt (220 mm sobre el sostre de la llitera): no pot entrar dins del sostre.
+  const railPart = part({ name: "Barana", orient: "front", material: o.mat, w: 1350, h: 160, thickness: 19, module: bunkM.id, x: wall, y: upperY + 220, z: D - 19 })
   return { kind: "armari", modules, references: refs, parts: [railPart] }
 }
 

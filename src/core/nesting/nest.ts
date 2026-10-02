@@ -10,7 +10,9 @@ import type { Panel } from "../model"
  *    franja on caben (primer encaix); si no, s'obre una franja nova o un tauler nou.
  *  - La veta del tauler va al llarg del seu costat llarg (X). Una peça amb veta "x"
  *    es col·loca a 0°, amb veta "y" a 90°, i amb veta "none" en l'orientació que
- *    encaixi millor.
+ *    encaixi millor. Un tauler entrat dret (alt > ample, p. ex. 1220 × 2440) és el mateix
+ *    tauler: es fa servir apaïsat (`landscape`), i els taulers del resultat sempre tenen
+ *    `w ≥ h` (la veta en X).
  *  - Es respecta un marge al voltant del tauler i un kerf (gruix de fresa) entre peces.
  *
  * Coordenades del tauler: origen a la cantonada inferior esquerra, X cap a la dreta,
@@ -110,6 +112,11 @@ interface OpenBoard {
 
 const r = (v: number): number => Math.round(v * 100) / 100
 
+/** El tauler apaïsat: el costat llarg (i la veta) en X. */
+export function landscape(sheet: Sheet): Sheet {
+  return sheet.h > sheet.w ? { w: sheet.h, h: sheet.w } : sheet
+}
+
 export function nest(panels: Panel[], options: NestOptions = DEFAULT_NEST_OPTIONS): Nesting {
   const { kerf, margin } = options
   const ignoreGrain = options.ignoreGrain ?? false
@@ -129,7 +136,7 @@ export function nest(panels: Panel[], options: NestOptions = DEFAULT_NEST_OPTION
 
   for (const group of groups.values()) {
     const first = group[0]!
-    const sheet = options.sheetsByMaterial?.[first.material] ?? options.sheet
+    const sheet = landscape(options.sheetsByMaterial?.[first.material] ?? options.sheet)
     const usableW = sheet.w - 2 * margin
     const usableH = sheet.h - 2 * margin
     const open: OpenBoard[] = []
@@ -243,15 +250,17 @@ function newShelf(ob: OpenBoard, height: number, kerf: number): Shelf {
 function place(ob: OpenBoard, shelf: Shelf, p: Panel, w: number, h: number, angle: 0 | 90, kerf: number): void {
   const x = shelf.cursor
   const y = shelf.y
+  // Sense arrodonir: x, y, w i h han de ser coherents (amb kerf 0, arrodonir només x/y feia
+  // solapar peces de mides amb decimals).
   ob.board.placements.push({
     panelId: p.id,
-    x: r(x),
-    y: r(y),
+    x,
+    y,
     w,
     h,
     angle,
-    cx: r(x + w / 2),
-    cy: r(y + h / 2),
+    cx: x + w / 2,
+    cy: y + h / 2,
   })
   shelf.cursor = x + w + kerf
 }

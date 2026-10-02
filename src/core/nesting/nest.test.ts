@@ -110,10 +110,11 @@ describe("nest · casos límit", () => {
     expect(n.boards[0]!.placements.map((p) => p.panelId)).toEqual(["ok"])
   })
 
-  it("una peça sense veta gira per cabre si només hi cap girada", () => {
+  it("una peça llarga cap en un tauler entrat dret (es gira el tauler, no la peça)", () => {
     const n = nest([panel("tall", 2000, 500, { grain: "none" })], { sheet: { w: 1220, h: 2440 }, kerf: 6, margin: 10 })
     expect(n.unplaced).toEqual([])
-    expect(n.boards[0]!.placements[0]!.angle).toBe(90)
+    expect(n.boards[0]).toMatchObject({ w: 2440, h: 1220 })
+    expect(n.boards[0]!.placements[0]!.angle).toBe(0)
   })
 
   it("una peça amb veta y es col·loca a 90°", () => {
@@ -164,5 +165,44 @@ describe("nest · casos límit", () => {
     const problems = validateNesting(bad)
     expect(problems.some((p) => p.includes("solapen"))).toBe(true)
     expect(problems.some((p) => p.includes("surt del tauler"))).toBe(true)
+  })
+})
+
+describe("nest · tauler dret i decimals", () => {
+  it("un tauler dret (alt > ample) es fa servir apaïsat: la veta segueix el costat llarg i no es perden peces", () => {
+    const panels = [panel("a", 1500, 400, { grain: "x" }), panel("b", 1100, 300, { grain: "y" }), panel("c", 800, 500, { grain: "none" })]
+    const portrait = nest(panels, { sheet: { w: 1220, h: 2440 }, kerf: 6, margin: 10 })
+    const flat = nest(panels, { sheet: { w: 2440, h: 1220 }, kerf: 6, margin: 10 })
+    expect(portrait.unplaced).toEqual([])
+    expect(validateNesting(portrait)).toEqual([])
+    expect(portrait.boards.every((b) => b.w === 2440 && b.h === 1220)).toBe(true)
+    // El mateix resultat que amb el tauler entrat apaïsat.
+    expect(portrait.boards).toEqual(flat.boards)
+    const angle = (id: string) => portrait.boards.flatMap((b) => b.placements).find((pl) => pl.panelId === id)!.angle
+    expect(angle("a")).toBe(0)
+    expect(angle("b")).toBe(90)
+  })
+
+  it("també els taulers per material", () => {
+    const panels = [panel("a", 2000, 400, { material: "Roure" })]
+    const n = nest(panels, { ...opts, sheetsByMaterial: { Roure: { w: 1220, h: 2440 } } })
+    expect(n.unplaced).toEqual([])
+    expect(n.boards[0]).toMatchObject({ w: 2440, h: 1220 })
+    expect(n.boards[0]!.placements[0]!.angle).toBe(0)
+  })
+
+  it("amb kerf 0 i mides amb decimals, les peces no se solapen (x, y, w, h coherents)", () => {
+    const panels = Array.from({ length: 12 }, (_, i) => panel(`p${i}`, 333.335 + i * 0.001, 100.005, { grain: "x" }))
+    const n = nest(panels, { sheet: { w: 2800, h: 2070 }, kerf: 0, margin: 0 })
+    expect(n.unplaced).toEqual([])
+    for (const b of n.boards) {
+      const pls = [...b.placements].filter((p) => p.y === b.placements[0]!.y).sort((a, c) => a.x - c.x)
+      for (let i = 1; i < pls.length; i++) expect(pls[i]!.x).toBeGreaterThanOrEqual(pls[i - 1]!.x + pls[i - 1]!.w)
+      for (const pl of b.placements) {
+        expect(pl.cx).toBe(pl.x + pl.w / 2)
+        expect(pl.cy).toBe(pl.y + pl.h / 2)
+      }
+    }
+    expect(validateNesting(n)).toEqual([])
   })
 })

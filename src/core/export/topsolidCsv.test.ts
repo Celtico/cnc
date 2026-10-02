@@ -128,4 +128,21 @@ describe("labelPoint", () => {
     expect(lp.fits).toBe(true)
     expect(lp.v - DEFAULT_LABEL.h / 2).toBeGreaterThanOrEqual(300)
   })
+
+  it("gruixos amb decimals: el gruix de debò i noms de tauler que no es repeteixen", () => {
+    const [a] = panels
+    const thin = { ...a!, id: "thin", thickness: 18.6 }
+    const std = { ...a!, id: "std", thickness: 19 }
+    const n = nest([thin, std], DEFAULT_NEST_OPTIONS)
+    const out = toTopsolidCsv([thin, std], n, { project: "x" }).text.split("\r\n").filter(Boolean).map((l) => l.split(";"))
+    const boards = out.slice(1).filter((c) => c[3]!.includes(":"))
+    expect(boards.map((c) => c[0])).toEqual([boardName(a!.material, 18.6, 1), boardName(a!.material, 19, 1)])
+    expect(new Set(boards.map((c) => c[0])).size).toBe(2)
+    expect(boards[0]![3]).toBe(`${a!.material}:2800x2070x18.6`)
+    expect(boards[0]![6]).toBe("18.6")
+    expect(boards[1]![6]).toBe("19")
+    const pieces = out.slice(1).filter((c) => !c[3]!.includes(":"))
+    expect(pieces.map((c) => c[6]).sort()).toEqual(["18.6", "19"])
+    expect(boardName("Melamina blanca", 18.6, 2)).toBe("Melamina_blanca_18.6#02")
+  })
 })

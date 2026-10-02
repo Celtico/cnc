@@ -115,18 +115,13 @@ export function BoardDrawing({
                     />
                   )
                 })}
-                {/* Marca de veta: ratlles fines en la direcció de la veta (X si angle 0). */}
-                {p?.grain !== "none" && (
-                  <line
-                    x1={pl.angle === 0 ? pl.x + pl.w * 0.1 : pl.cx}
-                    y1={pl.angle === 0 ? pl.cy : pl.y + pl.h * 0.1}
-                    x2={pl.angle === 0 ? pl.x + pl.w * 0.9 : pl.cx}
-                    y2={pl.angle === 0 ? pl.cy : pl.y + pl.h * 0.9}
-                    stroke="var(--chakra-colors-wood-fg)"
-                    strokeWidth={stroke / 2}
-                    opacity={0.35}
-                  />
-                )}
+                {/* Marca de veta: una ratlla fina en la direcció de la veta de la peça al tauler
+                    (horitzontal si la veta de la peça va pel llarg i el llarg va en X). */}
+                {p && p.grain !== "none" && ((p.grain === "x") === (pl.angle === 0) ? (
+                  <line x1={pl.x + pl.w * 0.1} y1={pl.cy} x2={pl.x + pl.w * 0.9} y2={pl.cy} stroke="var(--chakra-colors-wood-fg)" strokeWidth={stroke / 2} opacity={0.35} />
+                ) : (
+                  <line x1={pl.cx} y1={pl.y + pl.h * 0.1} x2={pl.cx} y2={pl.y + pl.h * 0.9} stroke="var(--chakra-colors-wood-fg)" strokeWidth={stroke / 2} opacity={0.35} />
+                ))}
                 <g transform={`translate(${pl.cx} ${pl.cy}) scale(1 -1) ${textUp ? "rotate(-90)" : ""}`}>
                   <text textAnchor="middle" fontSize={font} fill="currentColor" fontFamily="system-ui, sans-serif" y={-font * 0.15}>
                     {label}

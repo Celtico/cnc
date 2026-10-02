@@ -1,9 +1,10 @@
-import { processSummary } from "../process/processes"
+import { needsSecondFace, processSummary } from "../process/processes"
 import {
   EDGE_NUMBER,
   EDGE_SIDES,
   flatten,
   type EdgeBanding,
+  type EdgeSide,
   type Grain,
   type Panel,
   type PanelRole,
@@ -91,17 +92,62 @@ const ROLE_ORDER: PanelRole[] = [
   "back",
 ]
 
+/** Gira o emmiralla una peça en el seu pla: identitat, mirall esquerra/dreta, mirall dalt/baix i gir de 180°. */
+const SIDE_MAPS: readonly Record<EdgeSide, EdgeSide>[] = [
+  { left: "left", right: "right", bottom: "bottom", top: "top" },
+  { left: "right", right: "left", bottom: "bottom", top: "top" },
+  { left: "left", right: "right", bottom: "top", top: "bottom" },
+  { left: "right", right: "left", bottom: "top", top: "bottom" },
+]
+/** Costats en l'ordre de la numeració del taller (1 dalt · 2 dreta · 3 baix · 4 esquerra). */
+const BY_NUMBER: readonly EdgeSide[] = ["top", "right", "bottom", "left"]
+
 /**
- * Clau d'agrupació. Els cantells es comparen per nombre de costats llargs i curts
- * folrats, de manera que dues peces mirall (lateral esquerre/dret) cauen a la
- * mateixa fila.
+ * Cantells i inglets normalitzats: de les quatre maneres equivalents de posar la peça (mirall
+ * esquerra/dreta, dalt/baix o girada 180°), la que deixa els cantells i després els inglets més
+ * cap a 1 · 2 (dalt, dreta). Cantells i inglets es giren junts, així dues peces mirall (lateral
+ * esquerre/dret) cauen a la mateixa fila i la fila diu el mateix per a totes.
+ */
+export function canonicalSides(p: Pick<Panel, "edges" | "mitres">): { edges: EdgeBanding; mitres: EdgeSide[]; code: string } {
+  let best: { edges: EdgeBanding; mitres: EdgeSide[]; code: string } | undefined
+  for (const m of SIDE_MAPS) {
+    const edges = { left: false, right: false, bottom: false, top: false } as EdgeBanding
+    for (const s of EDGE_SIDES) if (p.edges[s]) edges[m[s]] = true
+    const mitreSet = new Set((p.mitres ?? []).map((s) => m[s]))
+    const code = BY_NUMBER.map((s) => (edges[s] ? "1" : "0")).join("") + BY_NUMBER.map((s) => (mitreSet.has(s) ? "1" : "0")).join("")
+    if (!best || code > best.code) best = { edges, mitres: BY_NUMBER.filter((s) => mitreSet.has(s)), code }
+  }
+  return best!
+}
+
+/**
+ * Clau d'agrupació. Cantells i inglets normalitzats (`canonicalSides`), de manera que dues peces
+ * mirall (lateral esquerre/dret) cauen a la mateixa fila. Tot el que surt a la fila (processos,
+ * inglets, forats de cantell, 2a cara) forma part de la clau, perquè sigui cert per a totes les
+ * peces de la fila.
  */
 function groupKey(p: Panel): string {
-  const longEdges = Number(p.edges.top) + Number(p.edges.bottom)
-  const shortEdges = Number(p.edges.left) + Number(p.edges.right)
-  // Peces lliures: només s'agrupen si són iguals de debò (contorn, talls i mecanitzats).
-  const shape = p.role === "part" ? JSON.stringify([p.outline ?? null, p.cutouts ?? null, p.holes.length, p.grooves.length]) : ""
-  return [p.role, p.length, p.width, p.thickness, p.material, p.grain, longEdges, shortEdges, (p.mitres ?? []).length, p.assembly ?? "", p.push ? "push" : "", shape].join("|")
+  const sides = canonicalSides(p)
+  const edgeHoles = p.holes.filter((h) => h.face === "edge").length
+  // Peces amb forma o talls (de qualsevol rol): només s'agrupen amb el mateix contorn i talls.
+  const shape = p.outline || p.cutouts?.length ? JSON.stringify([p.outline ?? null, p.cutouts ?? null]) : ""
+  // Peces lliures: a més, els mateixos mecanitzats.
+  const machining = p.role === "part" ? `${p.holes.length}/${p.grooves.length}` : ""
+  return [
+    p.role,
+    p.length,
+    p.width,
+    p.thickness,
+    p.material,
+    p.grain,
+    sides.code,
+    needsSecondFace(p) ? "B" : "",
+    edgeHoles,
+    p.assembly ?? "",
+    p.push ? "push" : "",
+    shape,
+    machining,
+  ].join("|")
 }
 
 /** Mil·límetres de cantell d'una peça. Amb contorn (`outline`) i els quatre cantells folrats, el perímetre real. */
@@ -141,6 +187,9 @@ export function toCutList(panels: Panel[]): CutList {
       if (p.role === "part" && !existing.label.split(", ").includes(p.label)) existing.label += `, ${p.label}`
       continue
     }
+    // La fila es descriu amb els cantells i inglets normalitzats (els mateixos per a totes les peces).
+    const sides = canonicalSides(p)
+    const canon: Panel = { ...p, edges: sides.edges, mitres: sides.mitres.length ? sides.mitres : undefined }
     groups.set(key, {
       label: p.role === "part" ? p.label : ROLE_LABELS[p.role],
       role: p.role,
@@ -149,12 +198,12 @@ export function toCutList(panels: Panel[]): CutList {
       thickness: p.thickness,
       material: p.material,
       grain: p.grain,
-      edges: { ...p.edges },
-      edgeNumbers: EDGE_SIDES.filter((s) => p.edges[s])
+      edges: { ...sides.edges },
+      edgeNumbers: EDGE_SIDES.filter((s) => sides.edges[s])
         .map((s) => EDGE_NUMBER[s])
         .sort((a, b) => a - b),
-      processes: processSummary(p),
-      mitreNumbers: (p.mitres ?? []).map((s) => EDGE_NUMBER[s]).sort((a, b) => a - b),
+      processes: processSummary(canon),
+      mitreNumbers: sides.mitres.map((s) => EDGE_NUMBER[s]).sort((a, b) => a - b),
       edgeLength: 0,
       qty: 1,
       area: 0,

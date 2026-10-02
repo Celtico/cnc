@@ -67,7 +67,7 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
             />
           </FormRow>
           <NumRow label="Ample tauler" value={options.sheet.w} min={300} max={6000} step={10} onChange={(w) => setOptions((o) => ({ ...o, sheet: { ...o.sheet, w } }))} />
-          <NumRow label="Alt tauler" value={options.sheet.h} min={300} max={6000} step={10} onChange={(h) => setOptions((o) => ({ ...o, sheet: { ...o.sheet, h } }))} />
+          <NumRow label="Alt tauler" value={options.sheet.h} min={300} max={6000} step={10} help={options.sheet.h > options.sheet.w ? "La veta va pel costat llarg: el tauler es fa servir apaïsat." : undefined} onChange={(h) => setOptions((o) => ({ ...o, sheet: { ...o.sheet, h } }))} />
           <NumRow label="Kerf (fresa)" value={options.kerf} min={0} max={30} step={0.5} onChange={(kerf) => setOptions((o) => ({ ...o, kerf }))} />
           <NumRow label="Marge tauler" value={options.margin} min={0} max={100} step={1} onChange={(margin) => setOptions((o) => ({ ...o, margin }))} />
           <FormRow label="Veta" help="Aprofita més el tauler, però la veta de les peces girades no segueix la del moble.">

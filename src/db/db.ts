@@ -193,8 +193,16 @@ export async function addPhoto(photo: Omit<Photo, "id">): Promise<number> {
   return db.photos.add(photo as Photo)
 }
 
+/**
+ * Desa el calibratge de la foto. Si la foto que diu ja no hi és (esborrada o canviada mentre hi havia un calibratge
+ * pendent de desar, p. ex. el de `useDebouncedSave` en sortir), no fa res: no torna a posar un calibratge orfe ni
+ * trepitja el de la foto nova.
+ */
 export async function updateProjectPhoto(id: number, photo: PhotoCalibration | undefined): Promise<void> {
-  await db.projects.update(id, { photo, updatedAt: Date.now() })
+  await db.transaction("rw", db.projects, db.photos, async () => {
+    if (photo && !(await db.photos.get(photo.photoId))) return
+    await db.projects.update(id, { photo, updatedAt: Date.now() })
+  })
 }
 
 /** Esborra la foto i la calibració del projecte. */

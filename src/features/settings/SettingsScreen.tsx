@@ -44,7 +44,7 @@ import {
   type MaterialCategory,
   SettingsSchema,
   newId,
-  settingsFromJson,
+  importSettingsJson,
   settingsToJson,
   type Finish,
   type MaterialPref,
@@ -92,7 +92,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
     draft,
     (d) => {
       const r = SettingsSchema.safeParse(d)
-      if (r.success) void save(r.data)
+      return r.success ? save(r.data) : undefined
     },
     400,
   )
@@ -102,7 +102,8 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
   const doExport = () => downloadText(settingsToJson(validation.success ? validation.data : draft), "mobles-preferencies.json", "application/json")
   const doImport = async (file: File | undefined) => {
     if (!file) return
-    const res = settingsFromJson(await file.text())
+    // Les seccions que el fitxer no porta (p. ex. les màquines, en un fitxer antic) es queden com són.
+    const res = importSettingsJson(draft, await file.text())
     if (res.problems.length) {
       toaster.create({ title: "Preferències importades amb avisos", description: res.problems.join(" "), type: "warning", duration: 8000 })
     } else toaster.create({ title: "Preferències importades", type: "success" })

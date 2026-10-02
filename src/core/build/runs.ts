@@ -1,4 +1,4 @@
-import { CUTOUT_PRESETS, type Composition, type Module, type Panel, type PlinthRun, type WorktopRun } from "../model"
+import { CUTOUT_PRESETS, freeX, type Composition, type Module, type Panel, type PlinthRun, type WorktopRun } from "../model"
 import type { ModulePlacement } from "../model/composition"
 
 export interface RunWarning {
@@ -8,19 +8,19 @@ export interface RunWarning {
 
 /**
  * Mòduls que cobreix una peça correguda: de `from` a `to` en l'ordre de la composició,
- * només els de la fila (no els apilats ni els penjats). Null si algun dels dos no hi és.
+ * només els de la fila (no els apilats ni els penjats, ni les illes —«Al terra» amb X pròpia— si n'hi ha d'altres).
+ * Null si algun dels dos no hi és.
  */
 export function runModules(comp: Composition, from: string, to: string): { modules: Module[]; indices: number[] } | null {
   let a = comp.modules.findIndex((m) => m.id === from)
   let b = comp.modules.findIndex((m) => m.id === to)
   if (a < 0 || b < 0) return null
   if (a > b) [a, b] = [b, a]
-  const indices: number[] = []
-  for (let i = a; i <= b; i++) {
-    const m = comp.modules[i]!
-    if (m.carcass.base.kind === "wall") continue
-    indices.push(i)
-  }
+  const all: number[] = []
+  for (let i = a; i <= b; i++) if (comp.modules[i]!.carcass.base.kind !== "wall") all.push(i)
+  // Les illes en queden fora (si no, el taulell i el sòcol hi arribarien), llevat que la peça sigui només de l'illa.
+  const row = all.filter((i) => !freeX(comp.modules[i]!))
+  const indices = row.length ? row : all
   if (!indices.length) return null
   return { modules: indices.map((i) => comp.modules[i]!), indices }
 }
@@ -56,6 +56,11 @@ export function buildWorktop(comp: Composition, run: WorktopRun, places: ModuleP
     const cx = places[i]!.x + comp.modules[i]!.carcass.width / 2 + c.dx - x0
     const y = c.front ?? (W - c.d) / 2
     const cut = { kind: "rect" as const, x: r1(cx - c.w / 2), y: r1(y), w: c.w, h: c.d, tag: c.kind }
+    // Si travessa el contorn no és un forat sinó una osca: no es fa.
+    if (cut.x < 0 || cut.x + cut.w > L || cut.y < 0 || cut.y + cut.h > W) {
+      warnings.push({ runId: run.id, message: `El forat «${CUTOUT_PRESETS[c.kind].label}» surt del taulell (${c.w} × ${c.d} mm en un taulell de ${L} × ${W} mm): no s'ha fet. Mou-lo o fes-lo més petit.` })
+      continue
+    }
     if (cut.x < 30 || cut.x + cut.w > L - 30 || cut.y < 30 || cut.y + cut.h > W - 30)
       warnings.push({ runId: run.id, message: `El forat «${CUTOUT_PRESETS[c.kind].label}» queda massa a prop del cantell del taulell (mínim 30 mm).` })
     cutouts.push(cut)

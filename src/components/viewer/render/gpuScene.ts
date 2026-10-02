@@ -2,14 +2,16 @@ import { buildBvh, type Bvh } from "./bvh"
 import { EMIT_FLOATS, buildEmitters } from "./emitters"
 import { buildEnvCdf } from "./envSampling"
 import type { RenderEnv, RenderScene, RenderTexture } from "./sceneData"
+import { encodeNormal } from "./shading"
 
 /**
  * L'escena del render empaquetada per a la GPU (`gpuTracer`): buffers d'emmagatzematge plans,
  * sense textures de GPU (així no hi ha límit d'unitats de textura, el problema dels Mac/iPhone
  * amb three-gpu-pathtracer). Tot és pur (sense WebGPU): es prova amb Vitest.
  *
- * - `tris`: 5 vec4 per triangle, en l'ordre del BVH: (v0, material) (e1, malla bevel) (e2, 0)
- *   (uv0, uv1) (uv2, 0, 0).
+ * - `tris`: 5 vec4 per triangle, en l'ordre del BVH: (v0, material) (e1, malla bevel) (e2, n0)
+ *   (uv0, uv1) (uv2, n1, n2). Les normals dels vèrtexs n0–n2 van en un float cadascuna
+ *   (`encodeNormal`: octaedre de 12 + 12 bits), als buits: el buffer no creix.
  * - `nodes`: el BVH de `bvh.ts`, tal qual.
  * - `info` (vec4): materials (6 per material), textures (1, u32: inici, w, h, repetició),
  *   malles amb bevel (5), finestres (3) i triangles emissors (4, `emitters.ts`).
@@ -103,7 +105,7 @@ export function packGpuScene(scene: RenderScene, env: RenderEnv | null, maxBindi
   const triCount = scene.matIndex.length
   const bvh = buildBvh(scene.positions)
   const tris = new Float32Array(Math.max(1, triCount) * TRI_VEC4 * 4)
-  const P = scene.positions, UV = scene.uvs
+  const P = scene.positions, UV = scene.uvs, N = scene.normals as Float32Array | undefined
   for (let i = 0; i < triCount; i++) {
     const t = bvh.order[i]!
     const o = i * TRI_VEC4 * 4, p = t * 9, u = t * 6
@@ -111,6 +113,14 @@ export function packGpuScene(scene: RenderScene, env: RenderEnv | null, maxBindi
     tris[o + 4] = P[p + 3]! - P[p]!; tris[o + 5] = P[p + 4]! - P[p + 1]!; tris[o + 6] = P[p + 5]! - P[p + 2]!; tris[o + 7] = scene.triBevel[t] ?? -1
     tris[o + 8] = P[p + 6]! - P[p]!; tris[o + 9] = P[p + 7]! - P[p + 1]!; tris[o + 10] = P[p + 8]! - P[p + 2]!
     for (let k = 0; k < 6; k++) tris[o + 12 + k] = UV[u + k]!
+    // Normals dels vèrtexs (sense: la de la cara).
+    let fx = tris[o + 5]! * tris[o + 10]! - tris[o + 6]! * tris[o + 9]!, fy = tris[o + 6]! * tris[o + 8]! - tris[o + 4]! * tris[o + 10]!, fz = tris[o + 4]! * tris[o + 9]! - tris[o + 5]! * tris[o + 8]!
+    const fl = Math.hypot(fx, fy, fz) || 1
+    fx /= fl; fy /= fl; fz /= fl
+    const nv = (k: number) => (N && N.length >= p + 9 ? encodeNormal(N[p + k * 3]!, N[p + k * 3 + 1]!, N[p + k * 3 + 2]!) : encodeNormal(fx, fy, fz))
+    tris[o + 11] = nv(0)
+    tris[o + 18] = nv(1)
+    tris[o + 19] = nv(2)
   }
   const tex = packTextures(scene.textures, Math.min(maxBinding, 256 * 1024 * 1024))
 

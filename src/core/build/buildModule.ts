@@ -23,6 +23,7 @@ import {
   addEdgeHole,
   addFaceHole,
   dowelJoint,
+  dowelsAlong,
   hingeCount,
   neg,
   placement,
@@ -33,7 +34,7 @@ import {
   toLocal,
 } from "./geometry"
 import { MIN_OPEN_RATIO, grilleCutouts, type Rect } from "./grille"
-import { layoutZones, resolveSizes, type Layout, type ZoneRect } from "./layout"
+import { fitSizes, layoutZones, mismatchMessage, type Layout, type ZoneRect } from "./layout"
 
 /** Mm per als avisos: un decimal com a molt, amb coma. */
 const num = (n: number): string => String(Math.round(n * 10) / 10).replace(".", ",")
@@ -67,6 +68,9 @@ export interface BuildWarning {
     | "invalid-part"
     | "same-size"
     | "edge-notch"
+    | "drawer-box"
+    | "handle"
+    | "shelves"
   message: string
   zoneId?: string
   panelId?: string
@@ -223,8 +227,10 @@ interface HorizontalRef {
   xL: number
   xR: number
   outer: boolean
-  /** Z del cantell de davant (prestatges fixos: més enrere si un front encastat els tapa). */
-  zFront?: number
+  /** Z del cantell de darrere i del de davant (prestatges fixos: més enrere si un front encastat els tapa; tapa amb
+   * ranura d'aire: comença després de la ranura). Les espigues dels divisors van dins del tram comú. */
+  zRear: number
+  zFront: number
 }
 
 const near = (a: number, b: number): boolean => Math.abs(a - b) < 0.51
@@ -478,7 +484,7 @@ class Builder {
     const spL = D - t - sideZ0 - t
     for (const [end, x] of [["left", x0], ["right", x0 + len - t]] as const)
       this.hollowPiece(`${which}-spacer-${end}`, "llistó", `${nm} (llistó ${end === "left" ? "esquerre" : "dret"})`, "spacer", spL, gap, { ...NO_EDGES }, placement([x, y0 + t, D - t], neg(Z), Y, X, end === "left" ? neg(X) : X))
-    this.horizontals.push({ panel: innerPanel, yBottom: y0, yTop: y0 + w, xL: interior.x0, xR: interior.x1, outer: true })
+    this.horizontals.push({ panel: innerPanel, yBottom: y0, yTop: y0 + w, xL: interior.x0, xR: interior.x1, outer: true, zRear: sideZ0, zFront: D - t })
   }
 
   private buildHorizontal(which: "bottom" | "top"): void {
@@ -561,7 +567,7 @@ class Builder {
       }
     }
     if (cutouts?.length) panel.cutouts = cutouts
-    this.horizontals.push({ panel, yBottom, yTop: yBottom + t, xL: interior.x0, xR: interior.x1, outer: true })
+    this.horizontals.push({ panel, yBottom, yTop: yBottom + t, xL: interior.x0, xR: interior.x1, outer: true, zRear, zFront: zRear + width })
 
     // Espigues amb els laterals (la base/tapa hi topa; el lateral continua). A inglet no:
     // s'encola amb lamel·les o Clamex, que es fan a mà o amb una eina a 45°.
@@ -771,7 +777,7 @@ class Builder {
     const panel = this.add(
       this.basePanel(id, "estanter fixe", "Prestatge fix", "fixedShelf", xTo - xFrom, d.availDepth - cut, t, m.carcass.material, "x", edges("bottom"), placement([xFrom, y, zFront], X, neg(Z), Y, Z)),
     )
-    this.horizontals.push({ panel, yBottom: y, yTop: y + t, xL: xFrom, xR: xTo, outer: false, zFront })
+    this.horizontals.push({ panel, yBottom: y, yTop: y + t, xL: xFrom, xR: xTo, outer: false, zRear: d.backInnerZ, zFront })
   }
 
   private findBelow(rect: ZoneRect): HorizontalRef | undefined {
@@ -787,27 +793,41 @@ class Builder {
     return this.verticals.find((v) => near(v.xL, rect.x1) && v.yB <= rect.y0 + 0.51 && v.yT >= rect.y1 - 0.51)
   }
 
+  /**
+   * Espigues entre un divisor o un prestatge fix i la peça on topa: repartides sobre el tram de fondària que tenen en
+   * comú (la tapa amb ranura d'aire comença després de la ranura; un prestatge fix tapat per un front encastat és més
+   * curt). Si el tram és massa curt per a tres, dues o una (`dowelsAlong`).
+   */
+  private sharedDowelZs(z0: number, z1: number): number[] {
+    const dw = this.m.hardware.dowel
+    if (z1 - z0 >= 2 * dw.endOffset + dw.diameter) return threeAlong(z0, z1, dw.endOffset)
+    return dowelsAlong(z0, z1, Math.min(dw.endOffset, (z1 - z0) / 4), dw.diameter)
+  }
+
   private joinDivider(v: VerticalRef): void {
-    const { m, d } = this
+    const { m } = this
     const xMid = (v.xL + v.xR) / 2
-    const zs = threeAlong(v.zRear, v.zFront, m.hardware.dowel.endOffset)
     const rect: ZoneRect = { x0: v.xL, x1: v.xR, y0: v.yB, y1: v.yT }
     const below = this.findBelow(rect)
     const above = this.findAbove(rect)
-    if (below) dowelJoint(v.panel, below.panel, zs.map((z): Vec3 => [xMid, v.yB, z]), m.hardware.dowel)
-    if (above) dowelJoint(v.panel, above.panel, zs.map((z): Vec3 => [xMid, v.yT, z]), m.hardware.dowel)
-    void d
+    for (const [h, y] of [[below, v.yB], [above, v.yT]] as const) {
+      if (!h) continue
+      const zs = this.sharedDowelZs(Math.max(v.zRear, h.zRear), Math.min(v.zFront, h.zFront))
+      dowelJoint(v.panel, h.panel, zs.map((z): Vec3 => [xMid, y, z]), m.hardware.dowel)
+    }
   }
 
   private joinFixedShelf(h: HorizontalRef): void {
-    const { m, d } = this
+    const { m } = this
     const yMid = (h.yBottom + h.yTop) / 2
-    const zs = threeAlong(d.backInnerZ, h.zFront ?? d.D, m.hardware.dowel.endOffset)
     const rect: ZoneRect = { x0: h.xL, x1: h.xR, y0: h.yBottom, y1: h.yTop }
     const left = this.findLeft(rect)
     const right = this.findRight(rect)
-    if (left) dowelJoint(h.panel, left.panel, zs.map((z): Vec3 => [h.xL, yMid, z]), m.hardware.dowel)
-    if (right) dowelJoint(h.panel, right.panel, zs.map((z): Vec3 => [h.xR, yMid, z]), m.hardware.dowel)
+    for (const [v, x] of [[left, h.xL], [right, h.xR]] as const) {
+      if (!v) continue
+      const zs = this.sharedDowelZs(Math.max(v.zRear, h.zRear), Math.min(v.zFront, h.zFront))
+      dowelJoint(h.panel, v.panel, zs.map((z): Vec3 => [x, yMid, z]), m.hardware.dowel)
+    }
   }
 
   /** Filera System 32 sobre la cara d'un panell vertical, per al tram d'una zona. */
@@ -981,10 +1001,29 @@ class Builder {
     }
     const x0 = rect.x0 + c.shelfClearance / 2
     const zF = d.D - setback
-    for (let k = 1; k <= n; k++) {
+    // On va cada prestatge. Regulables: a la filera més propera que no trepitgi cap altre prestatge (si no n'hi ha cap
+    // de lliure, no es fa). Fixos: si no hi caben amb 10 mm entre ells, només els que hi caben.
+    const ys: number[] = []
+    if (zone.shelves!.adjustable && rowYs.length) {
+      for (let k = 1; k <= n; k++) {
+        const target = rect.y0 + k * gap + (k - 1) * T
+        const free = rowYs.filter((ry) => ry + T <= rect.y1 + 0.01 && ys.every((u) => Math.abs(u - ry) >= T + 1))
+        if (free.length) ys.push(snap(target, free))
+      }
+      ys.sort((a, b) => a - b)
+    } else {
+      const fit = Math.max(0, Math.min(n, Math.floor((innerH - 10) / (T + 10))))
+      const g = (innerH - fit * T) / (fit + 1)
+      for (let k = 1; k <= fit; k++) ys.push(r(rect.y0 + k * g + (k - 1) * T))
+    }
+    if (ys.length < n)
+      this.warnings.push({
+        code: "shelves",
+        message: `Hi caben ${ys.length} de ${n} prestatges ${zone.shelves!.adjustable ? "regulables (cada un en una filera lliure sense trepitjar-ne cap altre)" : "(amb almenys 10 mm entre ells)"} en ${num(innerH)} mm: se'n fan ${ys.length}.`,
+        zoneId: zone.id,
+      })
+    for (const y of ys) {
       this.shelfCount += 1
-      const target = rect.y0 + k * gap + (k - 1) * T
-      const y = zone.shelves!.adjustable && rowYs.length ? snap(target, rowYs) : r(target)
       const idx = this.shelfCount
       const nm = this.shelfCount === 1 && n === 1 ? "Prestatge" : `Prestatge ${idx}`
       const code = this.shelfCount === 1 && n === 1 ? "estanter" : `estanter ${idx}`
@@ -1025,14 +1064,20 @@ class Builder {
     const ogB = d.mitreFronts && d.mitreBottom ? 0 : og
     const ogT = d.mitreFronts && d.mitreTop ? 0 : og
     const y0 = below ? (below.outer ? rect.y0 - (below.yTop - below.yBottom) + ogB : rect.y0 - t / 2 + bg / 2) : rect.y0 + og
-    const y1 = above ? (above.outer ? rect.y1 + (above.yTop - above.yBottom) - ogT : rect.y1 + t / 2 - bg / 2) : rect.y1 - og
+    // Tauler de taula amb voladís: sobresurt per davant dels fronts (que hi toparien); el front s'atura a sota, amb el joc.
+    const underTable = !!above && above.outer && above.panel.id === "top" && !!d.tableTop && d.tableTop.overhang > 0
+    const y1 = above ? (underTable ? rect.y1 - og : above.outer ? rect.y1 + (above.yTop - above.yBottom) - ogT : rect.y1 + t / 2 - bg / 2) : rect.y1 - og
     return { x0: r(x0), x1: r(x1), y0: r(y0), y1: r(y1) }
   }
 
   /** Peça de front vertical (porta, reixeta, fix): cara A cap a dins, x local = alçada. */
   /** Tirador del front; sense tiradors (`handles: "none"`), cap forat i un avís (una vegada) del ferratge push. */
   private handle(p: Panel, cx: number, cy: number, along: "x" | "y"): void {
-    if (this.m.fronts.handles !== "none") return addHandle(p, cx, cy, along)
+    if (this.m.fronts.handles !== "none") {
+      if (!addHandle(p, cx, cy, along))
+        this.warnings.push({ code: "handle", message: `${p.label} de ${num(p.width)} × ${num(p.length)} mm: massa petit per als forats del tirador (o toparien amb les cassoletes). No es fan: posa-hi un pom o un tirador de cantell.`, panelId: p.id })
+      return
+    }
     p.push = true
     if (!this.warnings.some((w) => w.code === "push"))
       this.warnings.push({ code: "push", message: "Fronts sense tirador: cada porta, calaix o abatible necessita un ferratge d'obertura per pressió (push, p. ex. Tip-On o Push-to-open); als calaixos, guies amb push; a les portes, frontisses sense molla (sense retenció), perquè el push les pugui obrir." })
@@ -1065,6 +1110,12 @@ class Builder {
     const targets = Array.from({ length: count }, (_, i) => 100 + (span * i) / (count - 1))
     // Cassoletes sense trepitjar-se: entre centres, almenys el diàmetre i 10 mm, i dins de la porta.
     const dia = m.hardware.hinge.cupDiameter
+    // Porta massa estreta: la cassoleta (a `cupOffset` del cantell) sortiria per l'altre costat.
+    const minW = m.hardware.hinge.cupOffset + dia / 2 + 3
+    if (doorW < minW) {
+      this.warnings.push({ code: "hinge", message: `${door.label} de ${num(doorW)} mm d'amplada: no hi cap la cassoleta de la frontissa (calen ${num(minW)} mm). Fes-la més ampla o posa-hi un front fix.`, zoneId, panelId: door.id })
+      return 0
+    }
     const minGap = dia + 10
     const lo = doorY0 + dia / 2 + 3
     const hi = doorY0 + doorH - dia / 2 - 3
@@ -1099,8 +1150,12 @@ class Builder {
       if (w > 600) this.warnings.push({ code: "door-too-wide", message: `Porta de ${w} mm d'amplada (màxim recomanat 600).`, zoneId: zone.id })
       const door = this.frontPanel(id, name, label, "door", x0, ter.y0, w, doorH)
       this.addCups(door, doorH, hinge, w, rowYs, ter.y0, zone.id)
-      // Tirador al costat contrari de les frontisses, vertical i a mitja alçada.
-      this.handle(door, doorH / 2, hinge === "left" ? w - 40 : 40, "x")
+      // Tirador al costat contrari de les frontisses, vertical i a mitja alçada. En una porta estreta cauria a la
+      // columna de les cassoletes (on va el braç de la frontissa): no es fa.
+      const cupBand = m.hardware.hinge.cupOffset + m.hardware.hinge.cupDiameter / 2 + 2.5 + 3
+      if (m.fronts.handles !== "none" && w - 40 < cupBand)
+        this.warnings.push({ code: "handle", message: `${door.label} de ${num(w)} mm d'amplada: el tirador cauria sobre les frontisses (calen ${num(cupBand + 40)} mm). No es fan els forats: posa-hi un pom o un tirador de cantell.`, zoneId: zone.id, panelId: door.id })
+      else this.handle(door, doorH / 2, hinge === "left" ? w - 40 : 40, "x")
     }
     if (front.mode === "single") {
       make(`door${suffix}`, "porta", "Porta", ter.x0, r(ter.x1 - ter.x0), front.hinge)
@@ -1118,7 +1173,12 @@ class Builder {
     const along = flap.length // alçada
     const across = flap.width
     const x = front.dir === "down" ? m.hardware.hinge.cupOffset : r(along - m.hardware.hinge.cupOffset)
-    for (const y of [100, r(across - 100)]) {
+    // Abatibles estrets: si els dos forats no hi caben a 100 mm dels costats, a un quart i a tres quarts (com a mínim un
+    // Ø de matèria entre ells); més estret encara, no se'n fan i s'avisa.
+    const fitsAlong = along >= m.hardware.hinge.cupOffset + 4 + 1
+    const ys = !fitsAlong ? [] : across >= 216 ? [100, r(across - 100)] : across >= 32 ? [r(across / 4), r((3 * across) / 4)] : []
+    if (!ys.length) this.warnings.push({ code: "hinge", message: `Abatible de ${num(across)} × ${num(along)} mm: no hi caben els forats de les frontisses.`, zoneId: zone.id, panelId: flap.id })
+    for (const y of ys) {
       flap.holes.push({ x, y, diameter: 8, depth: 12, face: "A", tag: "flap" })
     }
     // Tirador al cantell que obre (el contrari del gir), horitzontal i centrat.
@@ -1226,8 +1286,12 @@ class Builder {
     const bg = m.fronts.betweenGap
     const sizes = front.heights.slice(0, n)
     while (sizes.length < n) sizes.push("auto")
-    // Com les zones: l'últim auto es queda el que sobra.
-    const heights = resolveSizes(ter.y1 - ter.y0, sizes, bg)
+    // Com les zones: l'últim auto es queda el que sobra; sense cap «auto», l'últim s'ajusta (i s'avisa).
+    const fit = fitSizes(ter.y1 - ter.y0, sizes, bg)
+    const heights = fit.sizes
+    if (fit.mismatch !== null)
+      this.warnings.push({ code: "layout", message: mismatchMessage("Les alçades dels fronts dels calaixos", fit.mismatch, r(ter.y1 - ter.y0), heights.at(-1)!), zoneId: zone.id })
+    if (heights.some((h) => h <= 0)) this.warnings.push({ code: "layout", message: `Els ${n} calaixos no hi caben: algun front no té alçada.`, zoneId: zone.id })
 
     const boxW = r(rect.x1 - rect.x0 - 2 * hw.sideClearance)
     // Amb el front encastat, la caixa del calaix comença un gruix més endins.
@@ -1244,11 +1308,42 @@ class Builder {
     if (n > 0 && bottomMat.warn && !this.warnings.some((w) => w.code === "drawer-bottom"))
       this.warnings.push({ code: "drawer-bottom", message: `Fons dels calaixos de ${tbb} mm en «${bottomMat.name}» (el fons del moble és de ${c.backThickness} mm): comprova que aquest material es ven en ${tbb} mm.`, zoneId: zone.id })
 
-    let y = ter.y0
+    // Caixa de cada calaix (relativa a la vora de baix del front): centrada al front (`boxDrop`) però sempre dins de la
+    // llum (el front del primer i de l'últim calaix sobresurt per sobre de la tapa o la base i la caixa hi toparia). Els
+    // fronts iguals fan servir la mateixa caixa (la més justa del grup): així tenen exactament els mateixos mecanitzats
+    // i el taller, que casa les peces per mida, no en barreja dos de diferents.
+    const ys: number[] = []
+    for (let i = 0, yy = ter.y0; i < n; i++) {
+      ys.push(yy)
+      yy = r(yy + heights[i]! + bg)
+    }
+    const box = heights.map((fh, i) => ({
+      lo: Math.max(hw.boxDrop / 2, rect.y0 + 1 - ys[i]!),
+      hi: Math.min(fh - hw.boxDrop / 2, rect.y1 - 1 - ys[i]!),
+    }))
+    // Iguals a mig mil·límetre (com els agrupa el taller i `sameSize`): l'últim «auto» pot fer 0,01 mm més.
+    const groupOf = (fh: number) => String(Math.round(fh * 2) / 2)
+    const shared = new Map<string, { lo: number; hi: number }>()
+    heights.forEach((fh, i) => {
+      const k = groupOf(fh)
+      const cur = shared.get(k)
+      shared.set(k, cur ? { lo: Math.max(cur.lo, box[i]!.lo), hi: Math.min(cur.hi, box[i]!.hi) } : { ...box[i]! })
+    })
+    // Alçada mínima de la caixa: el fons en ranura i una mica de lateral per sobre (si no, no es fa: només el front).
+    const minBox = hw.bottomOffset + tbb + 30
+    let lowBox: number | null = null
+    let noDowel = false
+    // Amplada mínima: el darrere entre laterals ha de poder rebre les espigues de tots dos costats (20 mm cadascuna).
+    const minInner = 2 * 20 + 10
+    const narrowBox = boxW - 2 * bt < minInner
+    if (n > 0 && narrowBox)
+      this.warnings.push({ code: "drawer-box", message: `Calaixos massa estrets: entre els laterals de la caixa només queden ${num(boxW - 2 * bt)} mm (en calen ${num(minInner)}). No es fa la caixa (només el front).`, zoneId: zone.id })
+
     for (let i = 0; i < n; i++) {
       this.drawerCount += 1
       const k = this.drawerCount
       const fh = heights[i]!
+      const y = ys[i]!
       const fw = r(ter.x1 - ter.x0)
       // Front (cara A cap a dins, x local = amplada).
       // A inglet amb els laterals: el costat que arriba a fora del moble, tallat a 45°.
@@ -1264,12 +1359,14 @@ class Builder {
       })
       // Tirador centrat (x local = amplada, y local = cap avall).
       this.handle(frontPanel, fw / 2, fh / 2, "x")
-      // Caixa centrada al front però sempre dins de la llum (el front del primer i de l'últim
-      // calaix sobresurt per sobre de la tapa o la base i la caixa hi toparia).
-      const by0 = Math.max(y + (fh - (fh - hw.boxDrop)) / 2, rect.y0 + 1)
-      const by1 = Math.min(y + (fh + (fh - hw.boxDrop)) / 2, rect.y1 - 1)
-      const boxH = r(by1 - by0)
-      const boxY0 = r(by0)
+      const sb = shared.get(groupOf(fh))!
+      const boxH = r(sb.hi - sb.lo)
+      if (boxH < minBox) {
+        lowBox = lowBox === null ? boxH : Math.min(lowBox, boxH)
+        continue
+      }
+      if (narrowBox) continue
+      const boxY0 = r(y + sb.lo)
       const boxX0 = r(rect.x0 + hw.sideClearance)
       const zFront = d.frontZ - d.t // cara posterior del front
       const zBack = r(zFront - boxL)
@@ -1284,9 +1381,10 @@ class Builder {
         grooves: [{ ...sideGroove }],
       })
       // Darrere: entre laterals, sobre el fons.
+      const backY0 = boxY0 + hw.bottomOffset + tbb
       const backH = r(boxH - hw.bottomOffset - tbb)
       const back = this.add(
-        this.basePanel(`drawer-${k}-back`, "darrere calaix", `Darrere calaix ${k}`, "drawerBack", boxW - 2 * bt, backH, bt, c.material, "x", edges("top"), placement([boxX0 + bt, boxY0 + hw.bottomOffset + tbb, zBack + bt], X, Y, neg(Z), neg(Z))),
+        this.basePanel(`drawer-${k}-back`, "darrere calaix", `Darrere calaix ${k}`, "drawerBack", boxW - 2 * bt, backH, bt, c.material, "x", edges("top"), placement([boxX0 + bt, backY0, zBack + bt], X, Y, neg(Z), neg(Z))),
       )
       // Fons: en ranura als laterals i al front.
       const bottomW = r(boxW - 2 * bt + 2 * g - 1)
@@ -1296,11 +1394,15 @@ class Builder {
       )
       // Ranura al front per al fons (cara A = darrere del front).
       frontPanel.grooves.push({ x: r(boxX0 + bt - g - ter.x0), y: r(y + fh - (boxY0 + hw.bottomOffset + tbb)), w: r(boxW - 2 * bt + 2 * g), h: tbb, depth: g, face: "A", tag: "drawer-bottom" })
-      // Espigues: laterals → front (topen), darrere → laterals (topa).
+      // Espigues: laterals → front (topen), darrere → laterals (topa). Dues a 30 / 20 mm dels extrems si hi caben; si
+      // la caixa és baixa, una al mig (`dowelsAlong`).
       const dowel = { diameter: hw.boxThickness >= 16 ? 8 : 6, faceDepth: 10, edgeDepth: 20 }
+      const frontYs = dowelsAlong(boxY0, boxY0 + boxH, 30, dowel.diameter)
+      const backYs = dowelsAlong(backY0, boxY0 + boxH, 20, dowel.diameter)
       for (const [xs, sidePanel] of [[boxX0 + bt / 2, sideL], [boxX0 + boxW - bt / 2, sideR]] as [number, Panel][]) {
-        dowelJoint(sidePanel, frontPanel, [boxY0 + 30, boxY0 + boxH - 30].map((yy): Vec3 => [r(xs), r(yy), zFront]), dowel)
-        dowelJoint(back, sidePanel, [boxY0 + hw.bottomOffset + tbb + 20, boxY0 + boxH - 20].map((yy): Vec3 => [r(xs < boxX0 + bt ? boxX0 + bt : boxX0 + boxW - bt), r(yy), r(zBack + bt / 2)]), dowel)
+        const a = dowelJoint(sidePanel, frontPanel, frontYs.map((yy): Vec3 => [r(xs), r(yy), zFront]), dowel)
+        const b = dowelJoint(back, sidePanel, backYs.map((yy): Vec3 => [r(xs < boxX0 + bt ? boxX0 + bt : boxX0 + boxW - bt), r(yy), r(zBack + bt / 2)]), dowel)
+        if (!a || !b) noDowel = true
       }
       // Forats de guia: al lateral del moble (Ø5 P12) i al lateral de la caixa (Ø4 P10).
       // Des de la cara de darrere del front (encastat: un gruix més endins que el recobrent).
@@ -1315,8 +1417,15 @@ class Builder {
           addFaceHole(sidePanel, [xBox, ySlide, r(z)], { diameter: 4, depth: inGroove ? Math.min(10, r(bt - g - 1)) : 10, tag: "slide" })
         }
       }
-      y = r(y + fh + bg)
     }
+    if (lowBox !== null)
+      this.warnings.push({
+        code: "drawer-box",
+        message: `Calaixos massa baixos: la caixa faria ${num(lowBox)} mm d'alçada i en calen almenys ${num(minBox)} (fons a ${num(hw.bottomOffset)} mm + ${num(tbb)} mm de fons + 30). No es fa la caixa (només el front): fes els fronts més alts o posa'n menys.`,
+        zoneId: zone.id,
+      })
+    if (noDowel)
+      this.warnings.push({ code: "drawer-box", message: "Caixa del calaix massa baixa per a les espigues: alguna unió queda sense espiga (cal cargolar-la).", zoneId: zone.id })
   }
 
   private cableHole(hole: CableHole): void {
@@ -1406,10 +1515,19 @@ function onlyDrawers(root: Zone): boolean {
  * hi cap, 96 / 64) al voltant de (cx, cy), al llarg de l'eix local `along`. Van com a talls
  * passants (com els passacables): així els llegeix el taller i es fan al nesting.
  */
-function addHandle(p: Panel, cx: number, cy: number, along: "x" | "y"): void {
+function addHandle(p: Panel, cx: number, cy: number, along: "x" | "y"): boolean {
   const room = along === "x" ? p.length : p.width
   const spacing = room >= 260 ? 128 : room >= 200 ? 96 : 64
-  for (const s of [-spacing / 2, spacing / 2]) {
-    ;(p.cutouts ??= []).push({ kind: "circle", x: r(along === "x" ? cx + s : cx), y: r(along === "y" ? cy + s : cy), diameter: 5, tag: "handle" })
-  }
+  const R = 2.5
+  // Cada forat sencer dins de la peça amb 3 mm de matèria al voltant i sense tocar cap altre forat de cara (les
+  // cassoletes de les frontisses d'una porta estreta): si no, no es fa cap dels dos.
+  const pts = [-spacing / 2, spacing / 2].map((s): [number, number] => [r(along === "x" ? cx + s : cx), r(along === "y" ? cy + s : cy)])
+  const fits = pts.every(
+    ([x, y]) =>
+      x - R >= 3 && x + R <= p.length - 3 && y - R >= 3 && y + R <= p.width - 3 &&
+      p.holes.every((h) => h.face === "edge" || Math.hypot(h.x - x, h.y - y) >= h.diameter / 2 + R + 3),
+  )
+  if (!fits) return false
+  for (const [x, y] of pts) (p.cutouts ??= []).push({ kind: "circle", x, y, diameter: 5, tag: "handle" })
+  return true
 }

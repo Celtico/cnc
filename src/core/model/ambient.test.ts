@@ -104,3 +104,21 @@ describe("obertures de les parets", () => {
   })
 })
 
+
+describe("ambient desat amb dades malmeses", () => {
+  it("una obertura o un material de paret dolents no treuen la paret", () => {
+    const amb = {
+      walls: [
+        { id: "w1", a: [0, 0], b: [3000, 0], thickness: 100, height: 2600, material: 5, openings: [{ kind: "window", at: 1000, w: 800, h: 1000, sill: 900 }, { kind: "window", at: 2000, w: 0, h: 1000, sill: 900 }] },
+        { id: "w2", a: [3000, 0], b: [3000, 3000], thickness: 100, height: 2600 },
+        { id: "w3", a: [0, 0], b: "?", thickness: 100, height: 2600 },
+      ],
+      items: [],
+      camera: { position: "?" },
+    }
+    const p = parseAmbient(amb)
+    expect(p.walls.map((w) => w.id)).toEqual(["w1", "w2"])
+    expect(p.walls[0]!.openings).toEqual([{ kind: "window", at: 1000, w: 800, h: 1000, sill: 900 }])
+    expect(p.walls[0]!.material).toBeUndefined()
+  })
+})

@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { CameraPoseSchema, parseCameraPose } from "./camera"
+import { repairValue } from "./repair"
 import { DEFAULT_JOINERY, type FreePart } from "./freePart"
 import { defaultModule, newId, type Composition, type Module, type Zone } from "./composition"
 import { MAG_OBJECTS } from "./magObjects"
@@ -133,7 +134,9 @@ function parseAmbientData(raw: unknown): Ambient {
   const plan = PlanImageSchema.safeParse(o.plan)
   return {
     ...EMPTY_AMBIENT,
-    walls: list(o.walls, WallSchema),
+    // Paret a paret i, dins de cada una, obertura a obertura: una finestra dolenta (o un material propi dolent) no
+    // treu tota la paret.
+    walls: Array.isArray(o.walls) ? (repairValue(z.array(WallSchema), o.walls, [], () => {}) ?? []) : [],
     items: list(o.items, AmbientItemSchema),
     ...(plan.success ? { plan: plan.data } : {}),
     ...(typeof o.floorMaterial === "string" ? { floorMaterial: o.floorMaterial } : {}),

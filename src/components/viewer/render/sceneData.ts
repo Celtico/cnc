@@ -1,4 +1,4 @@
-import { BoxGeometry, Camera, Matrix4, Mesh, MeshStandardMaterial, MirroredRepeatWrapping, OrthographicCamera, PerspectiveCamera, RepeatWrapping, Vector3, type BufferGeometry, type Object3D, type Scene, type Texture } from "three"
+import { BoxGeometry, Camera, Matrix3, Matrix4, Mesh, MeshStandardMaterial, MirroredRepeatWrapping, OrthographicCamera, PerspectiveCamera, RepeatWrapping, Vector3, type BufferGeometry, type Object3D, type Scene, type Texture } from "three"
 import { BEVEL_RADIUS } from "./shading"
 
 /**
@@ -50,6 +50,11 @@ export interface RenderCamera {
 }
 export interface RenderScene {
   positions: Float32Array
+  /**
+   * Normals dels vèrtexs (9 per triangle, com `positions`), al món i unitàries: la normal
+   * d'ombrejat és la seva interpolació (`smoothNormal`). Sense normals a la geometria, la de la cara.
+   */
+  normals: Float32Array
   uvs: Float32Array
   matIndex: Uint16Array
   /** Malla de cada triangle per a les arestes arrodonides (`bevel`), o −1. */
@@ -132,6 +137,7 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
   scene.updateMatrixWorld(true)
   camera.updateMatrixWorld(true)
   const pos: number[] = []
+  const nrm: number[] = []
   const uvs: number[] = []
   const mats: number[] = []
   const materials: RenderMaterial[] = []
@@ -196,6 +202,8 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
   }
 
   const v = new Vector3()
+  const vn = new Vector3()
+  const normalMatrix = new Matrix3()
   const camPos = new Vector3().setFromMatrixPosition(camera.matrixWorld)
   const portals: number[] = []
   let interior = false
@@ -222,6 +230,9 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
     const p = geo.getAttribute("position")
     if (!p) return
     const uv = geo.getAttribute("uv")
+    const na = geo.getAttribute("normal")
+    // Normals al món: la matriu normal (inversa transposada) també val amb escales no uniformes i miralls.
+    normalMatrix.getNormalMatrix(mesh.matrixWorld)
     const index = geo.getIndex()
     // Arestes arrodonides: la caixa local de la malla i la matriu per passar-hi del món.
     let bevelId = -1
@@ -243,11 +254,28 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
       const id = matId(m)
       const end = Math.min(count, gr.start + gr.count)
       for (let i = gr.start; i + 2 < end; i += 3) {
+        const p0 = pos.length
+        let ok = !!na
         for (let k = 0; k < 3; k++) {
           const vi = index ? index.getX(i + k) : i + k
           v.fromBufferAttribute(p, vi).applyMatrix4(mesh.matrixWorld)
           pos.push(v.x, v.y, v.z)
           uvs.push(uv ? uv.getX(vi) : 0, uv ? uv.getY(vi) : 0)
+          if (na) {
+            vn.fromBufferAttribute(na, vi).applyMatrix3(normalMatrix)
+            const l = vn.length()
+            if (!(l > 1e-8)) ok = false
+            vn.divideScalar(l || 1)
+            nrm.push(vn.x, vn.y, vn.z)
+          }
+        }
+        if (!ok) {
+          // Sense normals (o degenerades): la de la cara als tres vèrtexs.
+          const e1x = pos[p0 + 3]! - pos[p0]!, e1y = pos[p0 + 4]! - pos[p0 + 1]!, e1z = pos[p0 + 5]! - pos[p0 + 2]!
+          const e2x = pos[p0 + 6]! - pos[p0]!, e2y = pos[p0 + 7]! - pos[p0 + 1]!, e2z = pos[p0 + 8]! - pos[p0 + 2]!
+          vn.set(e1y * e2z - e1z * e2y, e1z * e2x - e1x * e2z, e1x * e2y - e1y * e2x).normalize()
+          nrm.length = p0
+          for (let k = 0; k < 3; k++) nrm.push(vn.x, vn.y, vn.z)
         }
         mats.push(id)
         triBevel.push(bevelId)
@@ -281,6 +309,7 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
   const bg = ((scene.userData.renderBackground ?? scene.background) as { r?: number; g?: number; b?: number } | null) ?? null
   return {
     positions: new Float32Array(pos),
+    normals: new Float32Array(nrm),
     uvs: new Float32Array(uvs),
     matIndex: new Uint16Array(mats),
     triBevel: new Int32Array(triBevel),

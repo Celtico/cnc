@@ -1,0 +1,91 @@
+import { describe, expect, it } from "vitest"
+import { BUILTIN_TEMPLATES } from "./templates"
+import { CompositionSchema, defaultModule, type Composition } from "./composition"
+import { repairComposition } from "./compositionRepair"
+
+const plain = <T>(v: T): T => JSON.parse(JSON.stringify(v))
+const sample = (): Composition => plain(BUILTIN_TEMPLATES.find((t) => t.make().references.length > 0)!.make())
+
+describe("repairComposition", () => {
+  it("una composició vàlida torna igual i sense problemes", () => {
+    const c = sample()
+    const r = repairComposition(c)
+    expect(r.problems).toEqual([])
+    expect(r.composition).toEqual(CompositionSchema.parse(c))
+  })
+
+  it("un objecte de referència, una peça o un model dolents es treuen sols", () => {
+    const c = sample() as Record<string, any>
+    const refs = c.references.length
+    c.references.push({ id: "r1", name: "dolent", w: 0, h: 10, d: 10, x: 0, y: 0, z: 0 })
+    c.parts = [{ id: "p1", name: "Bona", orient: "front", w: 100, h: 100, thickness: 19, material: "M", x: 0, y: 0, z: 0 }, { id: "p2", name: "Dolenta", orient: "front", w: -1 }]
+    c.models = [{ id: "mo", name: "fern", src: "x", x: 0, y: 0, z: 0, w: 0, h: 1, d: 1 }]
+    const r = repairComposition(c)
+    expect(r.composition!.modules.map((m) => m.id)).toEqual(c.modules.map((m: { id: string }) => m.id))
+    expect(r.composition!.references.length).toBe(refs)
+    expect(r.composition!.parts!.map((p) => p.id)).toEqual(["p1"])
+    expect(r.composition!.models).toEqual([])
+    expect(r.problems.some((p) => p.includes("Objecte de referència «dolent»"))).toBe(true)
+    expect(r.problems.some((p) => p.includes("Peça lliure «Dolenta»"))).toBe(true)
+  })
+
+  it("d'un mòdul només es canvien els camps dolents", () => {
+    const c = sample() as Record<string, any>
+    const m = c.modules[0]
+    const before = plain(m)
+    m.carcass.width = "ample"
+    m.carcass.frontMaterial = 7
+    m.hardware.drawer.slideLengths = [300, 0]
+    m.fronts.style = "estrany"
+    const r = repairComposition(c)
+    const out = r.composition!.modules[0]!
+    expect(out.carcass.width).toBe(defaultModule("x", "x").carcass.width)
+    expect(out.carcass.frontMaterial).toBeUndefined()
+    expect(out.carcass.height).toBe(before.carcass.height)
+    expect(out.carcass.material).toBe(before.carcass.material)
+    expect(out.hardware.drawer.slideLengths).toEqual([300])
+    expect(out.hardware.hinge).toEqual(before.hardware.hinge)
+    expect(out.fronts.style).toBeUndefined()
+    expect(out.fronts.outerGap).toBe(before.fronts.outerGap)
+    expect(out.root).toEqual(before.root)
+    expect(r.problems.length).toBeGreaterThan(0)
+  })
+
+  it("arbre de zones: un front dolent d'un compartiment només treu aquell front", () => {
+    const m = defaultModule("m1", "Baix")
+    const root = { id: "r", split: { dir: "v", sizes: ["auto", "auto"], children: [{ id: "a", front: { kind: "door", mode: "single", hinge: "left" } }, { id: "b", front: { kind: "door", mode: "triple" }, shelves: { n: 2, adjustable: true } }] } }
+    const r = repairComposition({ modules: [{ ...m, root }], references: [] })
+    const out = r.composition!.modules[0]!.root
+    expect(out.split!.children[0]!.front).toEqual({ kind: "door", mode: "single", hinge: "left" })
+    expect(out.split!.children[1]!.front).toBeUndefined()
+    expect(out.split!.children[1]!.shelves).toEqual({ n: 2, adjustable: true })
+  })
+
+  it("un forat dolent del taulell no treu el taulell", () => {
+    const m = defaultModule("m1", "Baix")
+    const run = { id: "w", kind: "worktop", from: "m1", to: "m1", material: "M", thickness: 30, overhangFront: 20, overhangLeft: 0, overhangRight: 0, cutouts: [{ id: "c1", kind: "sink", module: "m1", w: 500, d: 400, dx: 0 }, { id: "c2", kind: "hob", module: "m1", w: -5, d: 400, dx: 0 }] }
+    const r = repairComposition({ modules: [m], references: [], runs: [run] })
+    expect(r.composition!.runs).toHaveLength(1)
+    expect((r.composition!.runs![0] as { cutouts: { id: string }[] }).cutouts.map((c) => c.id)).toEqual(["c1"])
+  })
+
+  it("un mòdul que no és un objecte es treu; els altres es queden", () => {
+    const a = defaultModule("a", "A")
+    const r = repairComposition({ modules: [a, "?", null], references: [] })
+    expect(r.composition!.modules.map((m) => m.id)).toEqual(["a"])
+    expect(r.problems).toHaveLength(2)
+  })
+
+  it("sense llista de mòduls, o si no és un objecte: no es pot reparar", () => {
+    expect(repairComposition({ modules: "?" }).composition).toBeNull()
+    expect(repairComposition(null).composition).toBeNull()
+    expect(repairComposition([1, 2]).composition).toBeNull()
+  })
+
+  it("camps opcionals dolents del moble (tipus, encaixos, escena) es treuen", () => {
+    const r = repairComposition({ modules: [defaultModule("a", "A")], references: [], kind: "nau", joinery: { clearance: -1, tool: 6, tabWidth: 40 }, scene: { floor: 3, wall: "Pintura blanca" } })
+    expect(r.composition!.kind).toBeUndefined()
+    expect(r.composition!.joinery).toBeUndefined()
+    expect(r.composition!.scene).toEqual({ wall: "Pintura blanca" })
+  })
+})

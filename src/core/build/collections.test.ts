@@ -6,7 +6,7 @@ import { toCutList } from "../cutlist/toCutList"
 import { buildComposition } from "./buildComposition"
 
 // Els mateixos avisos que el catàleg de botiga: un disseny mal fet.
-const BAD = ["layout", "collision", "ref-cut", "door-too-wide", "door-too-tall", "shelf-span", "drawer-no-slide", "hole-clash", "no-side", "rail", "hollow-thin", "cable-hole", "invalid-part", "hinge", "grille-open-ratio"]
+const BAD = ["layout", "collision", "ref-cut", "door-too-wide", "door-too-tall", "shelf-span", "drawer-no-slide", "hole-clash", "no-side", "rail", "hollow-thin", "cable-hole", "invalid-part", "hinge", "grille-open-ratio", "overlap", "drawer-box", "handle", "shelves"]
 
 describe("col·leccions de mobles", () => {
   it("dues col·leccions, ids únics i fitxa completa", () => {

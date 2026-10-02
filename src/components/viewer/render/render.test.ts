@@ -3,7 +3,7 @@ import { buildBvh, INTERNAL, intersectBvh, NODE_WORDS, triHit } from "./bvh"
 import { buildEnvCdf, dirToUv, envPdf, sampleEnv, uvToDir } from "./envSampling"
 import { halveTexture, packGpuScene, packTextures, TRI_VEC4 } from "./gpuScene"
 import type { RenderEnv, RenderScene, RenderTexture } from "./sceneData"
-import { bevelNormal, clampLum, perturbNormal, tangentFrame } from "./shading"
+import { bevelNormal, clampLum, decodeNormal, encodeNormal, perturbNormal, smoothNormal, tangentFrame } from "./shading"
 import { EMIT_FLOATS, buildEmitters, pickEmitter } from "./emitters"
 
 /** Graella de n × n quadrats (2 triangles cadascun) al pla z = 0, i alguns de girats a sobre. */
@@ -195,8 +195,16 @@ describe("empaquetat per a la GPU", () => {
   it("triangles en l'ordre del BVH amb material, bevel i uv", () => {
     const pos = soup(3)
     const n = pos.length / 9
+    // Normals de vèrtex diferents per triangle i vèrtex (per veure que segueixen l'ordre del BVH).
+    const normals = new Float32Array(n * 9)
+    for (let i = 0; i < n * 3; i++) {
+      const a = i * 0.37, z = Math.cos(i * 0.11)
+      const r = Math.sqrt(1 - z * z)
+      normals.set([r * Math.cos(a), r * Math.sin(a), z], i * 3)
+    }
     const scene: RenderScene = {
       positions: pos,
+      normals,
       uvs: new Float32Array(n * 6).map((_, i) => i),
       matIndex: new Uint16Array(n).map((_, i) => i % 2),
       triBevel: new Int32Array(n).map((_, i) => (i % 3 ? -1 : 0)),
@@ -220,6 +228,13 @@ describe("empaquetat per a la GPU", () => {
       expect(g.tris[o + 7]).toBe(t % 3 ? -1 : 0)
       expect(g.tris[o + 4]).toBeCloseTo(pos[t * 9 + 3]! - pos[t * 9]!, 6)
       expect(g.tris[o + 12]).toBe(t * 6)
+      // Normals dels vèrtexs del mateix triangle (a n0, n1, n2), dins l'error de l'empaquetat.
+      const slots = [o + 11, o + 18, o + 19]
+      for (let k = 0; k < 3; k++) {
+        const d = decodeNormal(g.tris[slots[k]!]!)
+        const e = normals.subarray(t * 9 + k * 3, t * 9 + k * 3 + 3)
+        expect(d[0] * e[0]! + d[1] * e[1]! + d[2] * e[2]!).toBeGreaterThan(Math.cos((0.1 * Math.PI) / 180))
+      }
     }
     expect(g.portalCount).toBe(1)
     expect(g.portalOff).toBe(g.bevelOff + 5)
@@ -294,5 +309,107 @@ describe("pesos d'OIDN", () => {
     big.set(ptr)
     expect(isWeightsFile(big.buffer)).toBe(false)
     expect(isWeightsFile(new Uint8Array(20 * 1024).fill(7).buffer)).toBe(true)
+  })
+})
+
+describe("normals llises (interpolades dels vèrtexs)", () => {
+  it("empaquetat per a la GPU: ida i tornada a tot l'esfera (error < 0,1°)", () => {
+    let worst = 1
+    for (let i = 0; i < 2000; i++) {
+      const z = 1 - (2 * (i + 0.5)) / 2000, r = Math.sqrt(1 - z * z), a = i * 2.39996
+      const n = [r * Math.cos(a), r * Math.sin(a), z]
+      const f = encodeNormal(n[0]!, n[1]!, n[2]!)
+      // Enter exacte en f32 (el shader el llegeix d'un Float32Array).
+      expect(Math.fround(f)).toBe(f)
+      expect(f).toBeLessThan(2 ** 24)
+      const d = decodeNormal(f)
+      worst = Math.min(worst, d[0] * n[0]! + d[1] * n[1]! + d[2] * n[2]!)
+    }
+    for (const n of [[0, 0, 1], [0, 0, -1], [1, 0, 0], [0, -1, 0]]) expect(decodeNormal(encodeNormal(n[0]!, n[1]!, n[2]!)).map((x) => Math.round(x * 1e4) / 1e4 + 0)).toEqual(n)
+    expect(worst).toBeGreaterThan(Math.cos((0.1 * Math.PI) / 180))
+  })
+
+  it("a un vèrtex, la normal d'aquell vèrtex; al mig, la mitjana normalitzada", () => {
+    const s = Math.SQRT1_2
+    // Un triangle amb tres normals diferents (un tros de cilindre).
+    const N = new Float32Array([1, 0, 0, s, 0, s, 0, 0, 1])
+    const g = [0.7, 0, 0.7]
+    expect(smoothNormal(N, 0, 0, 0, g)).toEqual([1, 0, 0])
+    const v1 = smoothNormal(N, 0, 1, 0, g)
+    expect(v1[0]).toBeCloseTo(s, 6)
+    expect(v1[2]).toBeCloseTo(s, 6)
+    expect(smoothNormal(N, 0, 0, 1, g)).toEqual([0, 0, 1])
+    const mid = smoothNormal(N, 0, 1 / 3, 1 / 3, g)
+    expect(Math.hypot(...mid)).toBeCloseTo(1, 6)
+    expect(mid[0]).toBeCloseTo(mid[2], 6)
+  })
+
+  it("es gira a la cara de la geomètrica (vist per darrere) i sense normals torna la geomètrica", () => {
+    const N = new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1])
+    expect(smoothNormal(N, 0, 0.2, 0.3, [0, 0, -1])).toEqual([-0, -0, -1])
+    expect(smoothNormal(undefined, 0, 0.2, 0.3, [0, 1, 0])).toEqual([0, 1, 0])
+    expect(smoothNormal(new Float32Array(9), 0, 0.2, 0.3, [0, 1, 0])).toEqual([0, 1, 0])
+  })
+
+  it("una caixa plana: la normal d'ombrejat és la geomètrica a tot arreu", () => {
+    // Caixa unitària amb les normals separades per cara (com BoxGeometry): 6 cares × 2 triangles.
+    const faces: [number[], number[], number[]][] = [
+      [[1, 0, 0], [0, 1, 0], [0, 0, 1]], [[-1, 0, 0], [0, 0, 1], [0, 1, 0]],
+      [[0, 1, 0], [0, 0, 1], [1, 0, 0]], [[0, -1, 0], [1, 0, 0], [0, 0, 1]],
+      [[0, 0, 1], [1, 0, 0], [0, 1, 0]], [[0, 0, -1], [0, 1, 0], [1, 0, 0]],
+    ]
+    const P: number[] = [], N: number[] = []
+    for (const [n, a, b] of faces) {
+      const c = n.map((x) => 0.5 + x * 0.5)
+      const q = (sa: number, sb: number) => c.map((x, k) => x + (a[k]! * sa + b[k]! * sb) * 0.5)
+      for (const t of [[q(-1, -1), q(1, -1), q(1, 1)], [q(-1, -1), q(1, 1), q(-1, 1)]])
+        for (const v of t) {
+          P.push(...v)
+          N.push(...n)
+        }
+    }
+    const pos = new Float32Array(P), nrm = new Float32Array(N)
+    let rng = 5
+    const r = () => ((rng = (rng * 48271) % 2147483647) / 2147483647)
+    for (let t = 0; t < 12; t++) {
+      const b = t * 9
+      const e1 = [pos[b + 3]! - pos[b]!, pos[b + 4]! - pos[b + 1]!, pos[b + 5]! - pos[b + 2]!]
+      const e2 = [pos[b + 6]! - pos[b]!, pos[b + 7]! - pos[b + 1]!, pos[b + 8]! - pos[b + 2]!]
+      const g = [e1[1]! * e2[2]! - e1[2]! * e2[1]!, e1[2]! * e2[0]! - e1[0]! * e2[2]!, e1[0]! * e2[1]! - e1[1]! * e2[0]!]
+      const gl = Math.hypot(g[0]!, g[1]!, g[2]!)
+      for (const side of [1, -1]) {
+        const gg = g.map((x) => (x / gl) * side)
+        for (let k = 0; k < 5; k++) {
+          const u = r() * 0.5, v = r() * 0.5
+          const s = smoothNormal(nrm, t, u, v, gg)
+          for (let a = 0; a < 3; a++) expect(s[a]).toBeCloseTo(gg[a]!, 6)
+        }
+      }
+    }
+  })
+})
+
+describe("normals dels taulers amb forma (cantells corbs)", () => {
+  it("taula rodona: el cantell, llis (radial); les cares, planes; un rectangle no canvia", async () => {
+    const { cutoutGeometry } = await import("../cutoutGeometry")
+    const R = 300, k = Math.tan(Math.PI / 8)
+    const panel = { length: 2 * R, width: 2 * R, thickness: 40, outline: [[2 * R, R, k], [R, 2 * R, k], [0, R, k], [R, 0, k]], cutouts: [] }
+    const g = cutoutGeometry(panel as unknown as Parameters<typeof cutoutGeometry>[0])
+    const p = g.getAttribute("position"), n = g.getAttribute("normal")
+    let side = 0
+    for (let i = 0; i < p.count; i++) {
+      const nz = n.getZ(i)
+      if (Math.abs(nz) > 0.999) continue
+      // Cantell: la normal és la radial del punt (no la de la faceta).
+      side++
+      const rx = p.getX(i) - 0.3, ry = p.getY(i) - 0.3, rl = Math.hypot(rx, ry)
+      expect(Math.abs(nz)).toBeLessThan(1e-6)
+      expect((n.getX(i) * rx + n.getY(i) * ry) / rl).toBeGreaterThan(Math.cos((1 * Math.PI) / 180))
+    }
+    expect(side).toBeGreaterThan(100)
+    const rect = cutoutGeometry({ length: 600, width: 400, thickness: 19, cutouts: [] } as unknown as Parameters<typeof cutoutGeometry>[0])
+    const rp = rect.getAttribute("normal")
+    // Totes les normals del rectangle alineades amb un eix (arestes vives de 90°).
+    for (let i = 0; i < rp.count; i++) expect(Math.max(Math.abs(rp.getX(i)), Math.abs(rp.getY(i)), Math.abs(rp.getZ(i)))).toBeCloseTo(1, 6)
   })
 })

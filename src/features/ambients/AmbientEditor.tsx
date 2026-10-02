@@ -127,8 +127,10 @@ export function AmbientTopBar({ ambientId, onBack, onSettings, actionsRef }: { a
 
 export function AmbientEditor({ ambientId, onOpenProject }: { ambientId: number; onOpenProject: (id: number) => void }) {
   const row = useLiveQuery(() => db.ambients.get(ambientId), [ambientId])
+  // Els àlies dels materials («X (foto)») depenen de les preferències: s'espera que s'hagin llegit.
+  const { loading } = useSettings()
   // Es llegeix un cop en obrir (després, la font de veritat és l'estat local, que es desa sol).
-  if (!row) return null
+  if (!row || loading) return null
   return <EditorInner key={ambientId} ambientId={ambientId} name={row.name} initial={parseAmbient(row.data)} onOpenProject={onOpenProject} />
 }
 
@@ -899,7 +901,9 @@ function MobleDims({ project, geo }: { project: Project; geo: ItemGeometry }) {
       toaster.create({ title: "No s'ha pogut canviar la mida", description: "Amb aquestes mides alguna part del moble queda fora de límits. Prova-ho a l'editor.", type: "error" })
       return
     }
-    await updateProjectComposition(project.id, next)
+    if (!(await updateProjectComposition(project.id, next))) {
+      toaster.create({ title: "No s'ha pogut canviar la mida", description: "Aquest moble no s'ha pogut llegir bé; obre'l a l'editor.", type: "error" })
+    }
   }
   return (
     <PanelSection id="amb-dims" title="Mides generals" icon={LuMoveDiagonal} badge={`${cur.w} × ${cur.h} × ${cur.d}`}>

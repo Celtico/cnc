@@ -4,6 +4,7 @@ import { DEFAULT_HARDWARE, HardwareSchema, type Module } from "./composition"
 import { PHOTO_MATERIALS } from "./textureSets"
 import { rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
 import { MachineSchema, repairMachine, withMachineRules, type Machine } from "./machine"
+import { repairValue } from "./repair"
 
 /**
  * Preferències de l'usuari: tot el que depèn de casa seva i del taller (referències de
@@ -374,6 +375,18 @@ export const SIM_MATERIALS: MaterialPref[] = [
 ]
 
 /**
+ * Versió de les preferències que va portar cada material de simulació (v3 els primers, v4 els de les escenes de
+ * revista, v5 els llums): la migració només afegeix els d'una versió posterior a la desada.
+ */
+export const SIM_MATERIALS_SINCE: Record<string, 3 | 4 | 5> = Object.fromEntries(
+  SIM_MATERIALS.map((m, i) => {
+    const v4 = SIM_MATERIALS.findIndex((x) => x.id === "sim-stucco-greige")
+    const v5 = SIM_MATERIALS.findIndex((x) => x.id === "sim-lampshade")
+    return [m.id, i >= v5 ? 5 : i >= v4 ? 4 : 3]
+  }),
+)
+
+/**
  * Materials que les plantilles fan servir i que no hi eren (v9): el material i el fons de `DEFAULT_CABINET` i els
  * MDF lacats de colors (els colors que abans en deduïa el visor pel nom). La migració només afegeix els que falten.
  */
@@ -474,12 +487,16 @@ export function parseSettings(raw: unknown): SettingsParse {
   if (version < SETTINGS_VERSION) migrated = true
   if (version > SETTINGS_VERSION) problems.push(`Preferències d'una versió més nova (${version}); s'ha llegit el que s'ha pogut.`)
 
+  // Camp a camp (`repairValue`): un valor dolent només torna aquell valor a l'inicial (un tauler o una llargada de
+  // guia dolents només es treuen), no tota la secció.
   const section = <T>(key: string, schema: z.ZodType<T>, fallback: T, label: string): T => {
     if (!(key in obj)) return fallback
     const res = schema.safeParse(obj[key])
     if (res.success) return res.data
-    problems.push(`${label}: ${res.error.issues[0]?.message ?? "valor invàlid"}; es mantenen els valors inicials.`)
-    return fallback
+    const fixed: string[] = []
+    const out = repairValue(schema, obj[key], fallback, (path, what) => fixed.push(`${path || "tot"} ${what}`))
+    problems.push(`${label}: ${fixed.join("; ") || "valor invàlid"}; la resta es manté.`)
+    return out ?? fallback
   }
   const list = <T extends { id: string }>(key: string, schema: z.ZodType<T>, fallback: T[], label: string): T[] => {
     if (!Array.isArray(obj[key])) return fallback
@@ -501,7 +518,10 @@ export function parseSettings(raw: unknown): SettingsParse {
   // v3: materials de simulació (teixits, parquet, rajola, pintura) per als ambients.
   const missing = (list: MaterialPref[], from: MaterialPref[]) => list.filter((m) => !from.some((x) => x.id === m.id || x.name === m.name))
   const v2 = materialsRaw.length && version < 2 ? [...materialsRaw, ...missing(NON_CNC_MATERIALS, materialsRaw)] : materialsRaw
-  const v4 = v2.length ? (version < 6 ? [...v2, ...missing(SIM_MATERIALS, v2)] : v2) : BUILTIN_MATERIALS
+  // Cada grup només s'afegeix a qui encara no l'havia rebut (versió desada anterior a la que el va portar): així els
+  // que l'usuari ha esborrat no tornen.
+  const sims = (v: number) => SIM_MATERIALS.filter((m) => SIM_MATERIALS_SINCE[m.id] === v)
+  const v4 = v2.length ? [...v2, ...missing([...(version < 3 ? sims(3) : []), ...(version < 4 ? sims(4) : []), ...(version < 5 ? sims(5) : [])], v2)] : BUILTIN_MATERIALS
   // v5: llum i translucidesa dels materials de simulació de sempre (si no se n'hi ha posat).
   const v5 = version < 5 ? v4.map((m) => {
     const b = SIM_MATERIALS.find((x) => x.id === m.id)
@@ -585,6 +605,26 @@ export function settingsFromJson(text: string): SettingsParse {
   } catch {
     return { settings: DEFAULT_SETTINGS, problems: ["El fitxer no és un JSON vàlid."], migrated: false }
   }
+}
+
+/**
+ * Importa un JSON de preferències **sobre les actuals**: només se substitueixen les seccions que porta el fitxer
+ * (un fitxer sense `machines`, p. ex. d'abans de la v10, no esborra les màquines). Mai llança.
+ */
+export function importSettingsJson(current: Settings, text: string): SettingsParse {
+  let raw: unknown
+  try {
+    raw = JSON.parse(text)
+  } catch {
+    return { settings: current, problems: ["El fitxer no és un JSON vàlid."], migrated: false }
+  }
+  const res = parseSettings(raw)
+  if (!isRecord(raw)) return { ...res, settings: current }
+  const merged: Settings = { ...current }
+  for (const key of Object.keys(current) as (keyof Settings)[]) {
+    if (key !== "version" && key in raw) (merged as Record<string, unknown>)[key] = res.settings[key]
+  }
+  return { ...res, settings: merged }
 }
 
 // --- Aplicació a mòduls nous -----------------------------------------------------------

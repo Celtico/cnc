@@ -8,6 +8,7 @@ interface SettingsCtx {
   settings: Settings
   /** Encara no s'han llegit de Dexie: els valors són els inicials. */
   loading: boolean
+  /** Desa (no fa res si són d'una versió més nova de l'app: només lectura, `saveSettings`). */
   save: (next: Settings) => Promise<void>
 }
 
@@ -26,7 +27,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [])
   const live = useLiveQuery(() => (ready ? currentSettings() : undefined), [ready])
   const settings = live ?? DEFAULT_SETTINGS
-  return <Ctx.Provider value={{ settings, loading: !ready || live === undefined, save: saveSettings }}>{children}</Ctx.Provider>
+  return <Ctx.Provider value={{ settings, loading: !ready || live === undefined, save: saveVoid }}>{children}</Ctx.Provider>
+}
+
+const saveVoid = async (next: Settings): Promise<void> => {
+  await saveSettings(next)
 }
 
 export function useSettings(): SettingsCtx {

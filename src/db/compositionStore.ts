@@ -1,4 +1,4 @@
-import { CompositionSchema, cabinetToComposition, normalizeComposition, type CameraPose, type Composition } from "../core/model"
+import { CompositionSchema, cabinetToComposition, normalizeComposition, parseCameraPose, repairComposition, type CameraPose, type Composition } from "../core/model"
 import { panelBox } from "../core/build/buildComposition"
 import { migrateCableHoles } from "../core/build/refCuts"
 import { db, safeParams, type Project } from "./db"
@@ -15,23 +15,69 @@ declare module "./db" {
   }
 }
 
-/** Composició d'un projecte, migrant el mòdul de caixa antic si cal. */
-export function compositionOf(project: Pick<Project, "params" | "composition" | "name">): Composition {
-  if (project.composition) {
-    const res = CompositionSchema.safeParse(project.composition)
-    // Els passacables dels mòduls (versió anterior) passen a ser objectes que tallen.
-    if (res.success && res.data.modules.length > 0) return migrateCableHoles(normalizeComposition(res.data), panelBox)
-  }
-  return cabinetToComposition(safeParams(project.params), project.name)
+/** Lectura d'una composició desada, amb el que s'ha hagut de reparar. */
+export interface CompositionRead {
+  composition: Composition
+  /** El que s'ha tret o restaurat en llegir-la (en català). Buit si era vàlida. */
+  problems: string[]
+  /**
+   * La composició desada no s'ha pogut llegir (ni reparant-la): `composition` és una caixa per defecte. L'Editor
+   * **no ha de desar** a sobre (es perdrien les dades de debò, que potser una versió nova de l'app sap llegir).
+   */
+  unreadable: boolean
 }
 
-export async function updateProjectComposition(id: number, composition: Composition): Promise<void> {
+// Es llegeix moltes vegades (cerca, targetes, miniatures): la reparació (pura) es recorda per objecte desat. La
+// normalització no, perquè els àlies dels materials depenen de les preferències carregades.
+const repairs = new WeakMap<object, ReturnType<typeof repairComposition>>()
+function repairCached(raw: unknown): ReturnType<typeof repairComposition> {
+  if (typeof raw !== "object" || raw === null) return repairComposition(raw)
+  const hit = repairs.get(raw)
+  if (hit) return hit
+  const r = repairComposition(raw)
+  repairs.set(raw, r)
+  if (!r.composition) console.warn("Composició il·legible; no es desarà a sobre.", r.problems)
+  return r
+}
+
+/**
+ * Composició d'un projecte: la desada, reparada element a element si cal (`repairComposition`), o, si no en té,
+ * la del mòdul de caixa antic (`params`).
+ */
+export function readComposition(project: Pick<Project, "params" | "composition" | "name">): CompositionRead {
+  const raw: unknown = project.composition
+  const legacy = () => cabinetToComposition(safeParams(project.params), project.name)
+  if (raw === undefined || raw === null) return { composition: legacy(), problems: [], unreadable: false }
+  const { composition, problems } = repairCached(raw)
+  if (!composition) return { composition: legacy(), problems, unreadable: true }
+  // Sense cap mòdul bo (l'Editor en necessita un): el del mòdul de caixa, conservant la resta.
+  const withModule = composition.modules.length > 0 ? composition : { ...composition, modules: legacy().modules }
+  // Els passacables dels mòduls (versió anterior) passen a ser objectes que tallen.
+  return { composition: migrateCableHoles(normalizeComposition(withModule), panelBox), problems, unreadable: false }
+}
+
+/** Composició d'un projecte, reparada si cal i migrant el mòdul de caixa antic. */
+export function compositionOf(project: Pick<Project, "params" | "composition" | "name">): Composition {
+  return readComposition(project).composition
+}
+
+/**
+ * Desa la composició del projecte. **No desa** (torna `false`) si la composició desada és il·legible
+ * (`readComposition(…).unreadable`): no s'escriu una caixa per defecte a sobre de les dades de debò.
+ */
+export async function updateProjectComposition(id: number, composition: Composition): Promise<boolean> {
   // Marca de «modificat»: en esborrar l'historial s'avisa que es perdrien els canvis.
   // La càmera és la desada (`saveProjectCamera`): la de l'estat de l'editor pot ser la d'obrir-lo.
-  await db.transaction("rw", db.projects, async () => {
-    const camera = (await db.projects.get(id))?.composition?.camera ?? composition.camera
+  return db.transaction("rw", db.projects, async () => {
+    const prev = await db.projects.get(id)
+    if (prev?.composition !== undefined && prev.composition !== null && !repairCached(prev.composition).composition) {
+      console.warn(`Moble ${id}: la composició desada és il·legible; no es desa a sobre.`)
+      return false
+    }
+    const camera = parseCameraPose(prev?.composition?.camera) ?? composition.camera
     const { camera: _c, ...rest } = composition
     await db.projects.update(id, { composition: camera ? { ...rest, camera } : rest, updatedAt: Date.now(), edited: true })
+    return true
   })
 }
 

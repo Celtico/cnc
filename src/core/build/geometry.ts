@@ -70,10 +70,16 @@ export function addFaceHole(
   w: Vec3,
   spec: { diameter: number; depth: number; tag?: string },
 ): boolean {
+  const h = faceHoleAt(panel, w, spec)
+  return h ? addHole(panel, h) : false
+}
+
+/** El forat de cara que `addFaceHole` posaria (null si el punt no és sobre una cara de la peça). */
+function faceHoleAt(panel: Panel, w: Vec3, spec: { diameter: number; depth: number; tag?: string }, inset = -EPS): Hole | null {
   const l = toLocal(panel, w)
   const face = faceAt(panel, l)
-  if (!face || l[0] < -EPS || l[0] > panel.length + EPS || l[1] < -EPS || l[1] > panel.width + EPS) return false
-  return addHole(panel, { x: l[0], y: l[1], diameter: spec.diameter, depth: spec.depth, face, ...(spec.tag ? { tag: spec.tag } : {}) })
+  if (!face || l[0] < inset || l[0] > panel.length - inset || l[1] < inset || l[1] > panel.width - inset) return null
+  return { x: l[0], y: l[1], diameter: spec.diameter, depth: spec.depth, face, ...(spec.tag ? { tag: spec.tag } : {}) }
 }
 
 /** Forat de cantell a `panel` al punt del moble `w` (sobre el contorn, a mig gruix). */
@@ -82,20 +88,21 @@ export function addEdgeHole(
   w: Vec3,
   spec: { diameter: number; depth: number; tag?: string },
 ): boolean {
+  const h = edgeHoleAt(panel, w, spec)
+  return h ? addHole(panel, h) : false
+}
+
+/** El forat de cantell que `addEdgeHole` posaria (null si el punt no és sobre el contorn). */
+function edgeHoleAt(panel: Panel, w: Vec3, spec: { diameter: number; depth: number; tag?: string }, inset = -EPS): Hole | null {
   const l = toLocal(panel, w)
   const edge = edgeAt(panel, l)
-  if (!edge) return false
-  // El punt ha de ser sobre el contorn de la peça, no només sobre la seva recta.
-  if (l[0] < -EPS || l[0] > panel.length + EPS || l[1] < -EPS || l[1] > panel.width + EPS) return false
-  return addHole(panel, {
-    x: l[0],
-    y: l[1],
-    diameter: spec.diameter,
-    depth: spec.depth,
-    face: "edge",
-    edge,
-    ...(spec.tag ? { tag: spec.tag } : {}),
-  })
+  if (!edge) return null
+  // El punt ha de ser sobre el contorn de la peça, no només sobre la seva recta (amb `inset`: el forat sencer a dins).
+  const along = edge === "left" || edge === "right" ? l[1] : l[0]
+  const span = edge === "left" || edge === "right" ? panel.width : panel.length
+  if (l[0] < -EPS || l[0] > panel.length + EPS || l[1] < -EPS || l[1] > panel.width + EPS) return null
+  if (along < inset || along > span - inset) return null
+  return { x: l[0], y: l[1], diameter: spec.diameter, depth: spec.depth, face: "edge", edge, ...(spec.tag ? { tag: spec.tag } : {}) }
 }
 
 export interface DowelSpec {
@@ -109,11 +116,31 @@ export interface DowelSpec {
  * (`through`) rep forats de cara. `points` són els centres de les espigues, al moble,
  * sobre la superfície de contacte.
  */
-export function dowelJoint(butt: Panel, through: Panel, points: Vec3[], spec: DowelSpec, tag = "dowel"): void {
+export function dowelJoint(butt: Panel, through: Panel, points: Vec3[], spec: DowelSpec, tag = "dowel"): number {
+  // Mai mitja unió: si l'espiga no cap sencera a les dues peces (forat dins del cantell i de la cara), no es fa cap dels
+  // dos forats. Retorna quantes espigues s'han fet.
+  const rad = spec.diameter / 2
+  let n = 0
   for (const w of points) {
-    addEdgeHole(butt, w, { diameter: spec.diameter, depth: spec.edgeDepth, tag })
-    addFaceHole(through, w, { diameter: spec.diameter, depth: spec.faceDepth, tag })
+    const e = edgeHoleAt(butt, w, { diameter: spec.diameter, depth: spec.edgeDepth, tag }, rad - EPS)
+    const f = faceHoleAt(through, w, { diameter: spec.diameter, depth: spec.faceDepth, tag }, rad - EPS)
+    if (!e || !f) continue
+    addHole(butt, e)
+    addHole(through, f)
+    n++
   }
+  return n
+}
+
+/**
+ * Espigues al llarg d'un tram [lo, hi]: dues a `offset` dels extrems si hi caben (tram ≥ 2·offset + Ø), una al mig si
+ * el tram és més curt però hi cap el forat amb 2 mm de matèria a cada costat, i cap si no.
+ */
+export function dowelsAlong(lo: number, hi: number, offset: number, diameter: number): number[] {
+  const span = hi - lo
+  if (span >= 2 * offset + diameter) return [r(lo + offset), r(hi - offset)]
+  if (span >= diameter + 4) return [r((lo + hi) / 2)]
+  return []
 }
 
 /** Tres punts repartits entre `a` i `b` a `endOffset` dels extrems i al mig. */

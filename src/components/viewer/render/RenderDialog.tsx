@@ -81,7 +81,7 @@ interface Look {
   bloom: number
   bloomThreshold: number
 }
-const DEFAULT_LOOK: Look = { exposure: 0, contrast: 1, saturation: 1, background: "scene", auto: false, warmth: 0, denoise: true, curve: "agx", vignette: 0.2, bloom: 0.15, bloomThreshold: 1.5 }
+const DEFAULT_LOOK: Look = { exposure: 0, contrast: 1, saturation: 1, background: "scene", auto: false, warmth: 0, denoise: true, curve: "agx", vignette: 0.2, bloom: 0, bloomThreshold: 3 }
 
 const SRGB_LUT = makeSrgbLut()
 const srgb = (c: number) => srgbLut(SRGB_LUT, c)

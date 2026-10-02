@@ -114,7 +114,10 @@ de fabricació surt de `core/`; el visor 3D només la pinta.
   fons 10 (confirmar amb mi si cal un altre).
 - Sistema de forats: **System 32** (fileres a 37 mm del cantell, pas de 32 mm).
 - Cazoleta de frontissa: Ø35 mm, profunditat 13 mm, a 22,5 mm del cantell (configurable).
-- Taulers estàndard per al nesting: 2800×2070 i 2440×1220.
+- Taulers estàndard per al nesting: 2800×2070 i 2440×1220. Un tauler entrat dret (alt > ample, 1220×2440) és el
+  mateix: `nest` el fa servir apaïsat (`landscape`), la veta sempre va pel costat llarg (X) i els taulers del resultat
+  tenen `w ≥ h`. Les posicions (x, y, cx, cy) no s'arrodoneixen: amb kerf 0 i mides amb decimals, arrodonir només x/y
+  feia solapar peces.
 - Cada peça té: ref, nom, llarg, ample, gruix, material, veta, cantells (4),
   mecanitzats de cara (u, v, r, fondària, cara a/b), forats de cantell i buidats.
 
@@ -142,7 +145,9 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   Si el taller no llegeix bé un fitxer nostre, s'arregla el nostre exportador, no el
   parser. **No es modifica res de `taller-cnc-nest` des d'aquí.**
 - CSV: UTF-16 LE amb BOM, `;`, CRLF, mateixes columnes que la mostra `ARM02_res.csv`;
-  fila de tauler `<material>:<L>x<A>x<gruix>` abans de les seves peces.
+  fila de tauler `<material>:<L>x<A>x<gruix>` abans de les seves peces. Gruix (`thick`): enter si ho és (`19`) i, si
+  no, amb punt (`18.6`), igual al nom del tauler, a la fila i a `Grueso_pieza`; els taulers es numeren pel nom imprès
+  (abans 18,6 i 19 sortien tots dos `_19#01`).
 - STEP: mm, **X = amplada, Y = fondària, Z = amunt** (el nostre 3D és Y-amunt: es
   converteix en exportar); un `MANIFOLD_SOLID_BREP` per peça dins
   `ADVANCED_BREP_SHAPE_REPRESENTATION('<nom>')`; forats cecs com a cilindres.
@@ -483,6 +488,11 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   superior ja no té «Desar com a plantilla».
 - **Pàgines del moble, cadascuna amb un sol propòsit**:
   - **Peces**: taula (peces iguals agrupades) + **plànol de la peça seleccionada** al costat.
+    Agrupació (`toCutList`, `groupKey`): rol, mides, gruix, material, veta, cantells i inglets normalitzats junts
+    (`canonicalSides`: mirall esquerra/dreta, dalt/baix o girada 180°; les peces mirall cauen a la mateixa fila), 2a cara,
+    nombre de forats de cantell, encolar, push i, de qualsevol rol, contorn i talls (peces lliures: també forats i
+    ranures). La fila es descriu amb els costats normalitzats: processos, cantells i inglets són els de totes les peces.
+    CSV de peces: cometes als números si la coma decimal és el separador i als textos amb `\r`.
     Al mòbil, una **targeta per peça** (mides, material, veta, forats, cantells) i la triada porta el plànol a dins.
     Els plànols no van a Exportar.
   - **Exportar**: per destinació (STEP de TopSolid · CSV de TopSolid · Màquina CNC (Maestro, .xcs) · CNC (DXF) ·
@@ -517,6 +527,21 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     a 900/1600/2100) i cassoletes separades ≥ Ø + 10 (si no hi caben, menys i avís `hinge`); fons del calaix amb material
     del seu gruix (avís `drawer-bottom`); peces amb alguna mida ≤ 0 es treuen amb avís `invalid-part`; l'últim «auto»
     agafa el que sobra. **Pendent de decidir amb el taller**: joc de les ranures i descompte del gruix del cantell.
+  - **Casos degenerats** (trobats amb un fuzzer; `build/robustness.test.ts`): res surt de les peces i **mai mitja unió**
+    (`dowelJoint`: si l'espiga no cap sencera al cantell i a la cara —amb el radi—, no es fa cap dels dos forats). Espigues
+    dels divisors i prestatges fixos repartides sobre el **tram de fondària comú** de les dues peces (la tapa amb ranura
+    d'aire comença després de la ranura; `HorizontalRef.zRear/zFront`). Mides fixes que no sumen el total (±0,5 mm, sense
+    cap «auto»; zones i alçades de calaixos): l'última s'ajusta i avís `layout` (`fitSizes`); mai res fora del mòdul.
+    Calaixos: **els fronts iguals fan la mateixa caixa** (la més justa del grup, a mig mm: el primer i l'últim ja no fan
+    mecanitzats diferents ni avís `same-size`); espigues de la caixa amb `dowelsAlong` (dues a 30/20 mm dels extrems, una al
+    mig si no hi caben, cap i avís); caixa de menys de `bottomOffset + fons + 30` mm d'alçada o de menys de 50 mm entre
+    laterals → no es fa (només el front) i avís `drawer-box`. Tauler de taula amb voladís: els fronts recobrents s'aturen
+    a sota (joc `outerGap`). Portes estretes: sense cassoleta si no hi cap (avís `hinge`) i sense tirador si cauria a la
+    columna de les cassoletes o fora de la peça (avís `handle`); abatibles estrets, forats a ¼ i ¾ o cap. Prestatges
+    regulables: cada un a una filera lliure (sense trepitjar-ne cap); fixos amb almenys 10 mm entre ells; els que no hi
+    caben no es fan (avís `shelves`). **Mòduls que es trepitgen** (caixa de les seves peces, > 0,5 mm en les tres
+    direccions: columna i penjat a la mateixa X, illa sobre la fila, voladís del tauler de taula dins del veí): avís
+    `overlap` amb els dos noms. Les plantilles del catàleg no poden fer cap d'aquests avisos (`storeCatalog.test.ts`).
   - **Fast Refresh**: un fitxer `.tsx` només exporta components; constants i utilitats a part
     (`composition/partOrient.ts`), si no Vite fa «hmr invalidate» i recarrega la pàgina.
     **El nom del `.ts` no pot coincidir amb el del `.tsx` si només canvien majúscules** (`MaterialLibrary.tsx` i
@@ -714,6 +739,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   - **Peces**: sense botó d'exportar (tot és a Exportar).
   - **Nesting i plànol de peça amb forma**: les peces amb `outline` es dibuixen amb el contorn
     real (el rectangle que ocupen, discontinu); el nesting encara reserva el rectangle.
+    Marca de veta al tauler (`BoardDrawing`): horitzontal si `(grain === "x") === (angle === 0)`, vertical si no, cap
+    sense veta.
   - **Peces lliures i flat-pack** (`Composition.parts`, `model/freePart.ts`, `build/freeParts.ts`):
     taulers solts que es col·loquen com els objectes (X/Y/Z, gizmo al 3D amb `RefGhost outline`,
     fletxes del teclat, arrossegar a l'arbre) però són peces de debò (rol `part`, un «mòdul»
@@ -803,7 +830,11 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     (2 mm, `BEVEL_RADIUS`): les malles dels taulers (`userData.bevel` a `PanelMesh` i `buildScene`) porten la seva caixa
     local; a menys del radi d'una aresta la normal s'inclina fins a 45° (`bevelNormal`), així les vores agafen llum.
     **Veta amb relleu** (`userData.grain` als materials de fusta i foto, i al parquet): normal pel gradient de la
-    luminància de la textura i les parts fosques més mates. **Llum**: sol amb mida (ombres suaus; el reflex s'eixampla
+    luminància de la textura i les parts fosques més mates. **Normals llises**: `RenderScene.normals` porta les normals
+    dels vèrtexs (al món, amb la matriu normal) i els dos motors ombregen amb la seva interpolació (`smoothNormal`; a la GPU,
+    un float per vèrtex als buits dels triangles, `encodeNormal`), que el bevel, el mapa de normals i la veta inclinen; la
+    geomètrica es queda per desplaçar els rajos i triar la cara (les mostres que totes dues veuen a cares diferents no
+    compten), i els taulers amb contorn porten els cantells corbs llisos (`creaseNormals` a `cutoutGeometry`, < 30°). **Llum**: sol amb mida (ombres suaus; el reflex s'eixampla
     amb la mida del sol) i cel amb mostra directa a cada rebot i MIS amb el material: cel llis per cosinus, **HDRI per
     importància** (`envSampling.ts`, CDF de la llum × sin θ) i, als interiors, per les finestres (portals). **Sense
     ateses**: la llum indirecta d'una mostra té un màxim relatiu a la llum de l'escena (`sceneKey`: mitjana geomètrica
@@ -826,7 +857,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     Preferències › Visor 3D › «Cel del render» (mobles: «Interior»; ambients: «Núvols»; preferència del dispositiu). Opcions del render en seccions plegables (`PanelSection`, com els inspectors: Qualitat, Càmera,
     Escena, Llum, Imatge, amb el resum a la insígnia); la finestra ocupa **tota la pantalla** (100 % d'alçada i
     amplada, també a l'ordinador); al mòbil, la imatge a dalt i les opcions a sota. Tests:
-    `render/render.test.ts` (BVH contra força bruta, CDF de l'HDRI, bevel, empaquetat de textures i triangles).
+    `render/render.test.ts` (BVH contra força bruta, CDF de l'HDRI, bevel, empaquetat de textures i triangles, normals llises).
     **Mapes PBR**: els materials de foto amb `normalMap`/`roughMap` porten normal en espai tangent (base per les
     derivades de les UV del triangle, `tangentFrame`/`perturbNormal` a `shading.ts`, també amb UV en mirall) i
     rugositat = mapa × la del material, als dos motors (sense mapa de normals, el relleu de la veta de sempre).
@@ -835,7 +866,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     (`emitters.ts`, CDF àrea × luminància, la mateixa per a CPU i GPU); opció Llum › «Llums enceses» + intensitat.
     **Translucidesa** (`MaterialPref.translucent`, fulles amb `alphaCut`, tul, lli, pantalles, jute): part del difús
     passa a l'altra cara tenyit per l'albedo. **Imatge, a l'instant**: «Corba de color» AgX (per defecte) · ACES
-    (taules, `tonemap.ts`), vinyeta (0,2) i resplendor dels punts molt brillants (llindar + força, desenfocat a ¼).
+    (taules, `tonemap.ts`), vinyeta (0,2) i resplendor dels punts molt brillants (llindar + força, desenfocat a ¼; **apagada per defecte**, per
+    decisió de l'usuari: l'aura al voltant dels leds es veia postissa).
     **Reduir el soroll**: Open Image Denoise (`oidn.ts`, `oidn-web`, WebGPU, HDR + albedo + normal) si hi ha WebGPU i
     `public/oidn/rt_hdr_alb_nrm.tza` és un fitxer de pesos de debò (> 10 KB i no un punter de Git LFS:
     `isWeightsFile`); si no, o si falla, l'À-Trous. Els pesos (1,8 MB) **van amb l'app** però no es precachegen (CacheFirst en fer-los servir, com `/textures/`). Al costat de l'opció surt quin filtre es fa servir («Intel OIDN» / «bàsic»).
@@ -879,7 +911,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     antics es dedueix de `forBacks` / `cnc`. A Preferències es llisten per categoria (camp Categoria
     en lloc dels interruptors «Per a fons» i «Es talla a la CNC») i els selectors fan `optgroup`.
     Els de **simulació** (`SIM_MATERIALS`, v3 de les preferències: teixits, vellut, cuir, parquet,
-    rajoles, microciment, pintures, electrodomèstics) només es veuen: `cnc: false`, no surten als
+    rajoles, microciment, pintures, electrodomèstics; v4 els de les escenes de revista; v5 els llums; `SIM_MATERIALS_SINCE`:
+    la migració només afegeix els d'una versió posterior a la desada, així els esborrats no tornen) només es veuen: `cnc: false`, no surten als
     selectors del cos ni del taulell. Acabats nous `fabric` (trama) i `tiles` (rajola amb junta i
     mida), procedurals (`patternTexture`). Els materials que no són de CNC pinten els cantells amb
     el mateix material (no «tauler vist»).
@@ -995,7 +1028,10 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     `aliasMaterialRefs` (claus `material`, `material2`, `frame` de les obertures, `…Material`, `scene.floor/wall`) a
     `normalizeComposition`, `parseAmbient`, `readPresentationScene` i els materials per defecte i dels taulers de les
     preferències. **Depenen dels materials de l'usuari**: «X (foto)» → «X» només si no hi ha cap material «X (foto)» i sí
-    «X» (`setKnownMaterialNames`, que posa `settingsStore` en llegir les preferències; sense, el mapa de sempre).
+    «X» (`setKnownMaterialNames`, que posa `settingsStore` en llegir les preferències). **Sense noms coneguts (preferències
+    encara no llegides) no es reescriu res** (abans es feia el mapa de sempre i un moble obert massa d'hora perdia el seu
+    «Roure (foto)» en desar-lo): per això l'Editor i l'editor d'Ambients esperen `useSettings().loading` abans de fer la
+    composició / l'ambient.
     La biblioteca fa el mateix (`LIBRARY_PHOTO_UPGRADES`). El terra per defecte de Presentació és «Parquet de roure» (foto).
     Cantells (`resolveEdgeFinish`): primer el material de la mateixa foto que diu el cantell, després el mateix
     material si el cantell en diu la primera paraula, després un altre i les paraules clau.
@@ -1008,6 +1044,12 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     `DEFAULT_CABINET`, MDF lacats de colors de les plantilles) s'afegeixen si falten (mai se'n sobreescriu cap). Un test
     comprova que tots els materials de les plantilles i ambients del catàleg són a les preferències inicials.
     **La versió desada mai baixa** (`saveSettings` desa la més alta): les migracions depenen només d'aquesta versió.
+    **Desades per una versió més nova de l'app** (versió > `SETTINGS_VERSION`): només lectura; `saveSettings` no desa
+    (torna `false`, `console.warn`) i `loadSettings` avisa, perquè el que aquesta versió no entén no es perdi.
+    **Lectura camp a camp** (`repairValue`, `core/model/repair.ts`): un valor dolent d'una secció (ferratges, taulers,
+    jocs, etiqueta, visualització, materials per defecte) només torna aquell valor a l'inicial; un tauler o una llargada
+    de guia dolents es treuen sols. **Importar** (`importSettingsJson`): només se substitueixen les seccions que porta el
+    fitxer (un fitxer sense `machines` no esborra les màquines).
   - **Tauler de taula** (`Carcass.tableTop`): la tapa per sobre dels laterals (més curts),
     voladís a tot el voltant i forma (rectangle, arrodonit, oval o a mida amb l'editor de
     perfil; `shape` en mm s'escala al tauler). `Panel.outline` (rectes i arcs): 3D/GLB
@@ -1074,7 +1116,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     els baixos de la fila, amb voladís i forats d'encastar de placa, pica o a mida, que surten
     com a talls passants al DXF/STEP/CSV) i **sòcol corregut** (davant de les potes, de punta a
     punta, retranquejat). Es numeren com un mòdul més (n + 1) per a les refs del taller. Es
-    configuren al moble, secció «Taulell i sòcol».
+    configuren al moble, secció «Taulell i sòcol». No arriben a les illes («Al terra» amb X pròpia, `freeX`) llevat que la
+    peça sigui només de l'illa; un forat del taulell que travessa el contorn no es fa i s'avisa.
   - **Una sola selecció** (`Selection`), sincronitzada entre arbre, 3D i alçat. Controls
     nous: decideix a quin nivell pertanyen i posa'ls a l'inspector d'aquell nivell.
   - **Mòbil**: visor a dalt i, a sota, pestanyes `Estructura` · `Propietats` (triar a
@@ -1146,7 +1189,21 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Tot el que es desa sol fa servir `useDebouncedSave`** (`features/useDebouncedSave.ts`): Editor, Foto, Nesting,
   Ambients i Preferències. Desa amb retard, compara amb **l'últim valor desat** (no amb el que torna Dexie: cada
   desada en tornava un objecte nou i es desava sense parar) i desa el pendent en sortir de la pàgina, en amagar l'app
-  i amb `mobles:flush-save`. Obrir una cosa no la desa (no puja amunt de la llista ni surt «Modificat»).
+  i amb `mobles:flush-save`. Obrir una cosa no la desa (no puja amunt de la llista ni surt «Modificat»). Si `save` torna
+  una promesa que falla o `false`, aquell valor no compta com a desat (el següent canvi o desfer-hi el torna a desar).
+- **Llegir sense perdre res** (`repairComposition`, `core/model/compositionRepair.ts`, test): una composició desada que
+  no passa l'esquema es repara **element a element** (un objecte de referència, una peça lliure, un model 3D, un taulell
+  o un forat del taulell dolents es treuen sols; d'un mòdul només els camps dolents, amb el valor del mòdul bàsic o
+  sense si són opcionals; a l'arbre de zones, només el camp dolent del compartiment). `readComposition`
+  (`db/compositionStore.ts`; `compositionOf` la fa servir) dona també els `problems` i `unreadable`: sense cap mòdul bo,
+  el del mòdul de caixa (`params`) i la resta es queda; si no es pot reparar (p. ex. `modules` no és una llista),
+  caixa per defecte i **no es desa a sobre** (`updateProjectComposition` torna `false`; l'Editor no desa i avisa). L'Editor
+  avisa (toaster) del que s'ha tret. El `.moble` (`parseMobleFile`) fa servir la mateixa reparació i, a més, treu amb
+  un avís el nesting, el calibratge de la foto (camp a camp) i les referències que estiguin malmesos. Les parets dels
+  ambients (`parseAmbient`) també: una obertura o un material propi dolents no treuen la paret.
+- El calibratge del `.moble` (`FileCalibrationSchema`) té els mateixos camps que `PhotoCalibration` (també `render` i
+  `shadows`; un test ho comprova en compilar). `updateProjectPhoto` no desa un calibratge d'una foto que ja no hi és
+  (esborrada o canviada amb un desat pendent).
 
 ## Com treballar
 - Abans de codi nou al `core/`, escriu o actualitza els tests (Vitest).

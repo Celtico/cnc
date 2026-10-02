@@ -91,6 +91,41 @@ export function buildComposition(input: Composition): CompositionBuild {
     modules.push({ id: m.id, index: i + 1, x, y, z, build })
   })
 
+  // Mòduls que es trepitgen (una columna i un penjat a la mateixa X, una illa sobre la fila, el voladís d'un tauler de
+  // taula dins del veí…): la caixa de les peces de cada mòdul no pot entrar dins d'una altra més de 0,5 mm en les tres
+  // direccions.
+  if (!onlyParts) {
+    const boxes = comp.modules.map((m, i) => {
+      const p = places[i]!
+      const z = p.z ?? 0
+      const lo = [p.x, p.y, z], hi = [p.x + m.carcass.width, p.y + m.carcass.height, z + m.carcass.depth]
+      const own = panels.filter((q) => q.module === i + 1)
+      if (own.length) {
+        lo.fill(Infinity)
+        hi.fill(-Infinity)
+        for (const q of own) {
+          const b = panelBox(q)
+          for (let k = 0; k < 3; k++) {
+            lo[k] = Math.min(lo[k]!, b.min[k]!)
+            hi[k] = Math.max(hi[k]!, b.max[k]!)
+          }
+        }
+      }
+      return { m, lo, hi }
+    })
+    for (let i = 0; i < boxes.length; i++)
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i]!, b = boxes[j]!
+        const ov = [0, 1, 2].map((k) => Math.min(a.hi[k]!, b.hi[k]!) - Math.max(a.lo[k]!, b.lo[k]!))
+        if (!ov.every((o) => o > 0.5)) continue
+        warnings.push({
+          code: "overlap",
+          moduleId: b.m.id,
+          message: `Els mòduls «${a.m.name}» i «${b.m.name}» es trepitgen (${ov.map((o) => String(Math.round(o * 10) / 10).replace(".", ",")).join(" × ")} mm): mou-ne un o canvia'n les mides.`,
+        })
+      }
+  }
+
   // Peces corregudes (taulell, sòcol): numerades com un «mòdul» més per a les refs del taller.
   const runWarnings: RunWarning[] = []
   // Només a la cuina: si es canvia de tipus, es conserven però no es fan (es recuperen en tornar-hi).

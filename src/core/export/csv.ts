@@ -14,12 +14,14 @@ export interface CsvOptions {
   decimal?: string
 }
 
-function cell(value: string | number, o: Required<CsvOptions>): string {
-  if (typeof value === "number") {
-    return String(value).replace(".", o.decimal)
-  }
-  const needsQuotes = value.includes(o.separator) || value.includes('"') || value.includes("\n")
+function quote(value: string, o: Required<CsvOptions>): string {
+  const needsQuotes = value.includes(o.separator) || value.includes('"') || value.includes("\n") || value.includes("\r")
   return needsQuotes ? `"${value.replace(/"/g, '""')}"` : value
+}
+
+function cell(value: string | number, o: Required<CsvOptions>): string {
+  // Un número amb la coma decimal igual que el separador (p. ex. «,» i «,») va entre cometes.
+  return quote(typeof value === "number" ? String(value).replace(".", o.decimal) : value, o)
 }
 
 /** CSV de la llista de peces, una fila per grup de peces idèntiques. */

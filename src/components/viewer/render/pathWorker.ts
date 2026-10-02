@@ -5,8 +5,10 @@
  *
  * El mateix algorisme que el de GPU (`gpuTracer.wgsl.ts`; si en canvies un, canvia l'altre):
  * - Materials: difús (Lambert) + reflex GGX amb Fresnel (Schlick), metalls, vidre fi (reflex o
- *   passa recte, amb el to), retall per l'alfa. Arestes arrodonides als taulers (`bevelNormal`) i
- *   relleu i brillantor de la veta a la fusta (`bump`).
+ *   passa recte, amb el to), retall per l'alfa. Normal d'ombrejat interpolada dels vèrtexs
+ *   (`smoothNormal`); les mostres que la geomètrica i la d'ombrejat veuen a cares diferents no compten.
+ *   Arestes arrodonides als taulers (`bevelNormal`) i relleu i brillantor de la veta a la fusta
+ *   (`bump`), sobre la normal d'ombrejat.
  * - Llum: sol amb mida (ombres suaus) i cel (estudi, de dia o HDRI) amb mostreig directe a cada
  *   rebot (NEE) i MIS amb el del material; als interiors, la llum del cel es mostreja per les
  *   finestres (portals); l'HDRI, per importància (CDF de la llum).
@@ -22,7 +24,7 @@ import { EMIT_FLOATS, buildEmitters, pickEmitter, type Emitters } from "./emitte
 import { buildEnvCdf, envPdf, sampleEnv, type EnvCdf } from "./envSampling"
 import { lightSetup } from "./lights"
 import type { RenderEnv, RenderOpts, RenderScene } from "./sceneData"
-import { BUMP_STRENGTH, DIRECT_CLAMP, GLASS_SHADOW, INDIRECT_CLAMP, PATH_ROUGHNESS, bevelNormal, perturbNormal, tangentFrame } from "./shading"
+import { BUMP_STRENGTH, DIRECT_CLAMP, GLASS_SHADOW, INDIRECT_CLAMP, PATH_ROUGHNESS, bevelNormal, perturbNormal, smoothNormal, tangentFrame } from "./shading"
 
 type Msg =
   | { type: "scene" | "estimate"; scene: RenderScene; width: number; height: number; seed: number; opts: RenderOpts; env?: RenderEnv | null; auxPasses?: number }
@@ -401,7 +403,12 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
     // Albedo (textura bilineal).
     let ar = m.color[0], ag = m.color[1], ab = m.color[2]
     let rough = m.roughness
-    nx = gx; ny = gy; nz = gz
+    // Normal d'ombrejat: la dels vèrtexs interpolada (corbes llises), a la cara de la geomètrica. La
+    // geomètrica es queda per als desplaçaments dels rajos i per saber de quina cara surten.
+    {
+      const sn = smoothNormal(S!.normals, t, hitU, hitV, [gx, gy, gz])
+      nx = sn[0]; ny = sn[1]; nz = sn[2]
+    }
     if (m.map >= 0) {
       texCoord(t, hitU, hitV)
       const u = tu, v = tv

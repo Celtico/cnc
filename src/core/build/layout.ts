@@ -45,6 +45,36 @@ export function resolveSizes(total: number, sizes: (number | "auto")[], thicknes
   return sizes.map((v, i) => (v !== "auto" ? r(v) : i === last ? r(remaining - (autos - 1) * auto) : auto))
 }
 
+const num = (n: number): string => String(Math.round(n * 10) / 10).replace(".", ",")
+
+/**
+ * Com `resolveSizes`, però el resultat sempre cap just a `total`: sense cap «auto», si les mides fixes (més els gruixos)
+ * no sumen el total (±0,5 mm), l'última s'ajusta al que queda; si encara no hi cap (mides negatives), es retallen
+ * des del final. `mismatch` diu quant sumaven (null si quadrava o hi havia «auto»).
+ */
+export function fitSizes(total: number, sizes: (number | "auto")[], thickness: number): { sizes: number[]; mismatch: number | null } {
+  const out = resolveSizes(total, sizes, thickness)
+  const n = out.length
+  if (!n) return { sizes: out, mismatch: null }
+  const sum = () => out.reduce((s, v) => s + v, 0) + (n - 1) * thickness
+  const given = sum()
+  const hasAuto = sizes.includes("auto")
+  let mismatch: number | null = null
+  if (!hasAuto && Math.abs(given - total) > 0.5) {
+    mismatch = r(given)
+    out[n - 1] = r(out[n - 1]! + total - given)
+  }
+  // Res fora: cap mida negativa i, si encara se'n surt, es retalla des del final.
+  for (let i = 0; i < n; i++) if (out[i]! < 0) out[i] = 0
+  for (let i = n - 1; i >= 0 && sum() > total + 0.005; i--) out[i] = r(Math.max(0, out[i]! - (sum() - total)))
+  return { sizes: out, mismatch }
+}
+
+/** Avís (en català) de mides fixes que no quadren amb el total. */
+export function mismatchMessage(what: string, given: number, total: number, last: number): string {
+  return `${what}: les mides fixes sumen ${num(given)} mm però n'hi ha ${num(total)} mm. L'última s'ajusta a ${num(last)} mm (posa'n una a «auto» perquè agafi el que sobra).`
+}
+
 /** Calcula els rectangles de totes les zones a partir de la llum interior del mòdul. */
 export function layoutZones(root: Zone, interior: ZoneRect, thickness: number): Layout {
   const rects = new Map<string, ZoneRect>()
@@ -61,7 +91,8 @@ export function layoutZones(root: Zone, interior: ZoneRect, thickness: number): 
     const { dir, children } = zone.split
     const sizes = padSizes(zone.split.sizes, children.length)
     const total = dir === "v" ? rect.x1 - rect.x0 : rect.y1 - rect.y0
-    const resolved = resolveSizes(total, sizes, thickness)
+    const { sizes: resolved, mismatch } = fitSizes(total, sizes, thickness)
+    if (mismatch !== null) problems.push(mismatchMessage(`Les ${dir === "v" ? "amplades" : "alçades"} de la divisió de la zona ${zone.id}`, mismatch, r(total), resolved.at(-1)!))
     if (resolved.some((v) => v <= 0)) problems.push(`La zona ${zone.id} no té prou espai per a les seves divisions.`)
 
     let cursor = dir === "v" ? rect.x0 : rect.y0

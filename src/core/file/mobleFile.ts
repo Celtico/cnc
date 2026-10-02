@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { CompositionSchema, RefPresetSchema, type Composition, type RefPreset } from "../model"
+import { CompositionSchema, RefPresetSchema, repairComposition, repairValue, type Composition, type RefPreset } from "../model"
 import { NestOptionsSchema, type NestOptions } from "../nesting/nest"
 
 /**
@@ -32,6 +32,10 @@ export const FileCalibrationSchema = z.object({
   applied: z.array(z.object({ measureId: z.string(), target: z.string(), label: z.string() })).optional(),
   opacity: mm.optional(),
   layer: z.enum(["photo", "cabinet", "both"]).optional(),
+  /** Aspecte del moble sobre la foto: línies (SVG) o realista (three.js). */
+  render: z.enum(["lines", "realistic"]).optional(),
+  /** Ombres del moble realista sobre la foto. */
+  shadows: z.boolean().optional(),
   plane: z.enum(["wall", "floor"]),
   focal35: mm,
   origin: Pt.optional(),
@@ -197,6 +201,32 @@ export function parseMobleFile(text: string): MobleParse {
     const good = list.filter((m) => FileModelSchema.safeParse(m).success)
     if (good.length < list.length || !Array.isArray(obj.models)) warnings.push("Algun model 3D del fitxer està malmès; no es veurà.")
     obj = { ...obj, models: good.length ? good : undefined }
+  }
+  // Extres opcionals del projecte i referències: el que estigui malmès es treu amb un avís (no tot el fitxer).
+  if (isRecord(obj.project)) {
+    let project: Record<string, unknown> = obj.project
+    if (project.nesting !== undefined && !NestOptionsSchema.safeParse(project.nesting).success) {
+      warnings.push("Les opcions de nesting del fitxer estan malmeses; es fan servir les de les preferències.")
+      project = { ...project, nesting: undefined }
+    }
+    if (project.photo !== undefined && !FileCalibrationSchema.safeParse(project.photo).success) {
+      const fixed = repairValue(FileCalibrationSchema, project.photo, undefined, () => {})
+      warnings.push(fixed ? "El calibratge de la foto tenia valors malmesos; s'han tret." : "El calibratge de la foto està malmès; s'ha obert sense calibratge.")
+      project = { ...project, photo: fixed }
+    }
+    // La composició, element a element (com en llegir-la de la base de dades).
+    if (project.composition !== undefined) {
+      const rep = repairComposition(project.composition)
+      if (!rep.composition) return { ok: false, error: `Aquest fitxer no és un moble vàlid (composició: ${rep.problems.at(-1) ?? "invàlida"}).` }
+      if (rep.problems.length) warnings.push(`S'han tret dades malmeses del moble: ${rep.problems.join(" ")}`)
+      project = { ...project, composition: rep.composition }
+    }
+    obj = { ...obj, project }
+  }
+  if (Array.isArray(obj.references)) {
+    const good = obj.references.filter((r) => RefPresetSchema.safeParse(r).success)
+    if (good.length < obj.references.length) warnings.push("Algun objecte de referència del fitxer està malmès; no s'ha afegit.")
+    obj = { ...obj, references: good }
   }
   const res = MobleFileSchema.safeParse(obj)
   if (!res.success) {

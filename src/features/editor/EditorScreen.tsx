@@ -49,7 +49,7 @@ import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
 import { applySettingsToModule,  defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type FreePart, type ModelObject, type Module, type Panel, type RefObject, type Zone } from "../../core/model"
-import { saveProjectCamera, updateProjectComposition } from "../../db/compositionStore"
+import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
 import { ElevationEditor } from "../composition/ElevationEditor"
@@ -70,7 +70,7 @@ import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
 import { PhotoScreen } from "../photo/PhotoScreen"
 import { useSettings } from "../settings/SettingsContext"
 import { usePersistentFlag } from "../usePersistentFlag"
-import { useComposition, useCompositionBuild, useProject } from "../useProject"
+import { useCompositionBuild, useProject } from "../useProject"
 import { RoleLegend } from "../../components/viewer/roleColors"
 import { IconChoice } from "../../components/IconChoice"
 import { KINDS, MOBLE_KINDS } from "../composition/kinds"
@@ -102,9 +102,11 @@ const VIEW_MODES: [ViewMode, string, string, typeof LuShapes][] = [
 
 export function EditorScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
-  const initial = useComposition(project)
-  if (!project || !initial) return null
-  return <Editor key={project.id} projectId={project.id} name={project.name} initial={initial} project={project} />
+  // Els àlies dels materials («X (foto)») depenen de les preferències: no es fa la composició fins que s'han llegit.
+  const { loading } = useSettings()
+  const read = useMemo(() => (project && !loading ? readComposition(project) : undefined), [project, loading])
+  if (!project || !read) return null
+  return <Editor key={project.id} projectId={project.id} name={project.name} initial={read.composition} read={read} project={project} />
 }
 
 interface History {
@@ -138,7 +140,9 @@ function readClip(): Clip | null {
 /** Símbol de la tecla de drecera: ⌘ al Mac/iPad, Ctrl a la resta. */
 const MOD = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? "⌘" : "Ctrl+"
 
-function Editor({ projectId, name, initial, project }: { projectId: number; name: string; initial: Composition; project: Project }) {
+function Editor({ projectId, name, initial, read: readNow, project }: { projectId: number; name: string; initial: Composition; read: CompositionRead; project: Project }) {
+  // La lectura en obrir-lo (la de després de cada desada ja no cal: és la que hem desat).
+  const [read] = useState(readNow)
   // Composició amb desfer/refer (fins a 50 passos).
   const [history, setHistory] = useState<History>({ past: [], present: initial, future: [] })
   const comp = history.present
@@ -289,9 +293,22 @@ function Editor({ projectId, name, initial, project }: { projectId: number; name
   // Desa amb retard quan la composició canvia; el que queda pendent es desa en sortir de l'Editor (si
   // no, Exportar llegiria la versió anterior). Només si és vàlida (com a Preferències): un camp a mig escriure no
   // ha de desar un moble que després no s'obriria.
+  // Si la composició desada no s'ha pogut llegir, no es desa a sobre (`updateProjectComposition` tampoc ho faria).
   useDebouncedSave(comp, (c) => {
-    if (CompositionSchema.safeParse(c).success) void updateProjectComposition(projectId, c)
+    if (read.unreadable) return undefined
+    return CompositionSchema.safeParse(c).success ? updateProjectComposition(projectId, c) : undefined
   })
+  // Avís (un cop en obrir-lo) si s'ha hagut de reparar o no s'ha pogut llegir.
+  useEffect(() => {
+    if (read.unreadable) {
+      toaster.create({ id: `unreadable-${projectId}`, title: "No s'ha pogut llegir aquest moble", description: "Es mostra una caixa per defecte i els canvis no es desaran, per no perdre les dades desades.", type: "error", duration: 12000 })
+    } else if (read.problems.length) {
+      const shown = read.problems.slice(0, 4).join(" ")
+      const more = read.problems.length > 4 ? ` (i ${read.problems.length - 4} més)` : ""
+      toaster.create({ id: `repaired-${projectId}`, title: "S'han tret dades malmeses del moble", description: shown + more, type: "warning", duration: 12000 })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const kind = compositionKind(comp)
   const module: Module = comp.modules.find((m) => m.id === selectedModule) ?? comp.modules[0]!

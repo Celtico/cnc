@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react"
  * Es compara amb l'**últim valor desat**, no amb el que arriba de la base de dades: si no, cada
  * desada tornava un objecte nou de Dexie, semblava un canvi i es tornava a desar sense parar.
  */
-export function useDebouncedSave<T>(value: T, save: (v: T) => void, delay = 350): void {
+export function useDebouncedSave<T>(value: T, save: (v: T) => unknown, delay = 350): void {
   const saved = useRef(value)
   const pending = useRef<{ v: T } | null>(null)
   const saveRef = useRef(save)
@@ -19,8 +19,21 @@ export function useDebouncedSave<T>(value: T, save: (v: T) => void, delay = 350)
     const p = pending.current
     if (!p) return
     pending.current = null
+    const prev = saved.current
     saved.current = p.v
-    saveRef.current(p.v)
+    // Si `save` torna una promesa que falla (o `false`: no s'ha desat), aquell valor no compta com a desat: tornar-hi
+    // (desfer) o qualsevol canvi següent el tornarà a desar.
+    const failed = (e?: unknown) => {
+      if (Object.is(saved.current, p.v)) saved.current = prev
+      console.warn("No s'ha pogut desar.", e ?? "")
+    }
+    try {
+      const r = saveRef.current(p.v)
+      if (r === false) failed()
+      else if (r instanceof Promise) r.then((ok) => ok === false && failed(), failed)
+    } catch (e) {
+      failed(e)
+    }
   })
 
   useEffect(() => {

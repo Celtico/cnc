@@ -395,6 +395,26 @@ fn perturbNormal(n: vec3f, T: vec3f, B: vec3f, ts: vec3f) -> vec3f {
   return normalize(t * ts.x + b * ts.y + n * ts.z);
 }
 
+// Normal d'un vèrtex empaquetada en un float (octaedre, 12 + 12 bits): \`decodeNormal\` de shading.ts.
+fn decodeNormal(f: f32) -> vec3f {
+  let k = u32(round(f));
+  let e = vec2f(f32(k / 4096u), f32(k % 4096u)) / 4094.0 * 2.0 - 1.0;
+  var n = vec3f(e.x, e.y, 1.0 - abs(e.x) - abs(e.y));
+  let t = max(-n.z, 0.0);
+  n.x += select(t, -t, n.x >= 0.0);
+  n.y += select(t, -t, n.y >= 0.0);
+  return normalize(n);
+}
+// Normal d'ombrejat: les dels vèrtexs interpolades (\`smoothNormal\`), a la cara de G.
+fn smoothNormal(ti: u32, bu: f32, bv: f32) -> vec3f {
+  let a = tris[ti * 5u + 2u].w;
+  let b = tris[ti * 5u + 4u];
+  let n = decodeNormal(a) * (1.0 - bu - bv) + decodeNormal(b.z) * bu + decodeNormal(b.w) * bv;
+  let l = length(n);
+  if (!(l > 1e-6)) { return G; }
+  return select(n / l, -n / l, dot(n, G) < 0.0);
+}
+
 fn trace(o0: vec3f, d0: vec3f) -> vec4f {
   var o = o0;
   var d = d0;
@@ -437,7 +457,7 @@ fn trace(o0: vec3f, d0: vec3f) -> vec4f {
     let hp = o + d * hT;
     var al = m.color;
     var rough = m.rough;
-    N = G;
+    N = smoothNormal(ti, hU, hV);
     if (m.map >= 0) {
       let uv = texCoord(ti, m, hU, hV);
       let tc = sampleTex(m.map, uv);

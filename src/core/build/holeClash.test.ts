@@ -21,8 +21,11 @@ describe("forats que es troben per dins", () => {
   })
 
   it("l'espiga del divisor s'atura abans del forat de guia", () => {
-    const b = buildComposition(BUILTIN_TEMPLATES.find((t) => t.id === "floating-tv")!.make())
-    const div = b.panels.find((p) => p.role === "divider" && p.holes.some((h) => h.tag === "slide"))!
+    // Un divisor amb forats de guia a la cara i espigues escurçades (les plantilles de cuina en tenen).
+    const div = BUILTIN_TEMPLATES.flatMap((t) => buildComposition(t.make()).panels).find(
+      (p) => p.role === "divider" && p.holes.some((h) => h.tag === "slide") && p.holes.some((h) => h.face === "edge" && h.depth < 20),
+    )!
+    expect(div).toBeTruthy()
     const dowels = div.holes.filter((h) => h.face === "edge")
     expect(dowels.some((h) => h.depth < 20)).toBe(true)
     expect(dowels.every((h) => h.depth >= 10)).toBe(true)

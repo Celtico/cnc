@@ -92,3 +92,57 @@ export function perturbNormal(n: ArrayLike<number>, T: ArrayLike<number>, B: Arr
   const l = Math.hypot(ox, oy, oz) || 1
   return [ox / l, oy / l, oz / l]
 }
+
+/**
+ * Normal d'ombrejat d'un punt (u, v baricèntriques) del triangle `t`: les normals dels vèrtexs
+ * (`normals`, 9 per triangle) interpolades i normalitzades (superfícies corbes llises: cilindres,
+ * taules rodones, models), girada a la mateixa cara que la normal geomètrica `g` (ja girada cap
+ * al raig). Si no n'hi ha o és degenerada, `g`. Les caixes i els taulers tenen les normals dels
+ * vèrtexs iguals a la de la cara: no canvien.
+ */
+export function smoothNormal(normals: ArrayLike<number> | undefined, t: number, u: number, v: number, g: ArrayLike<number>): V3 {
+  const b = t * 9
+  if (!normals || normals.length < b + 9) return [g[0]!, g[1]!, g[2]!]
+  const w = 1 - u - v
+  let x = normals[b]! * w + normals[b + 3]! * u + normals[b + 6]! * v
+  let y = normals[b + 1]! * w + normals[b + 4]! * u + normals[b + 7]! * v
+  let z = normals[b + 2]! * w + normals[b + 5]! * u + normals[b + 8]! * v
+  const l = Math.hypot(x, y, z)
+  if (!(l > 1e-6)) return [g[0]!, g[1]!, g[2]!]
+  x /= l; y /= l; z /= l
+  if (x * g[0]! + y * g[1]! + z * g[2]! < 0) { x = -x; y = -y; z = -z }
+  return [x, y, z]
+}
+
+/** Nivells per eix de les normals empaquetades per a la GPU (octaedre, 12 bits per eix; parell perquè el 0 sigui exacte). */
+const OCT_LEVELS = 4094
+
+/**
+ * Normal unitària → un sol float (per a la GPU, als buits dels triangles): coordenades de
+ * l'octaedre en 12 + 12 bits, com a enter (< 2^24, exacte en f32). Error < 0,1°.
+ */
+export function encodeNormal(x: number, y: number, z: number): number {
+  const s = Math.abs(x) + Math.abs(y) + Math.abs(z) || 1
+  let a = x / s, b = y / s
+  if (z < 0) {
+    const a0 = a
+    a = (1 - Math.abs(b)) * (a0 >= 0 ? 1 : -1)
+    b = (1 - Math.abs(a0)) * (b >= 0 ? 1 : -1)
+  }
+  const qa = Math.round((Math.min(1, Math.max(-1, a)) * 0.5 + 0.5) * OCT_LEVELS)
+  const qb = Math.round((Math.min(1, Math.max(-1, b)) * 0.5 + 0.5) * OCT_LEVELS)
+  return qa * 4096 + qb
+}
+
+/** Inversa d'`encodeNormal` (el shader en porta una còpia, `decodeNormal`). */
+export function decodeNormal(f: number): V3 {
+  const k = Math.round(f)
+  const a = (Math.floor(k / 4096) / OCT_LEVELS) * 2 - 1, b = ((k % 4096) / OCT_LEVELS) * 2 - 1
+  let x = a, y = b
+  const z = 1 - Math.abs(a) - Math.abs(b)
+  const t = Math.max(-z, 0)
+  x += x >= 0 ? -t : t
+  y += y >= 0 ? -t : t
+  const l = Math.hypot(x, y, z) || 1
+  return [x / l, y / l, z / l]
+}

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest"
 import { buildComposition } from "../build/buildComposition"
 import { TV_LIVING_ROOM, DEFAULT_SETTINGS, type RefPreset } from "../model"
 import { DEFAULT_NEST_OPTIONS } from "../nesting/nest"
-import { buildMobleFile, missingReferences, usedUserModelIds, mobleFileName, mobleToJson, parseMobleFile, uniqueName, usedReferences } from "./mobleFile"
+import { buildMobleFile, FileCalibrationSchema, missingReferences, usedUserModelIds, mobleFileName, mobleToJson, parseMobleFile, uniqueName, usedReferences, type FileCalibration } from "./mobleFile"
+import type { PhotoCalibration } from "../../db/db"
 
 const comp = TV_LIVING_ROOM.make()
 const radiator: RefPreset = { id: "u-rad", name: "Radiador 650 × 1100 × 110", w: 650, h: 1100, d: 110, plane: "wall", wallOffset: 0 }
@@ -118,5 +119,59 @@ describe("fitxer .moble", () => {
       expect(res.file.models).toEqual([model])
       expect(res.warnings).toEqual(["Algun model 3D del fitxer està malmès; no es veurà."])
     })
+  })
+})
+
+describe(".moble amb parts malmeses", () => {
+  const good = () => JSON.parse(mobleToJson(buildMobleFile({ name: "x", composition: comp, nesting: DEFAULT_NEST_OPTIONS, calibration, references }))) as Record<string, any>
+
+  it("un objecte de referència dolent del moble es treu i el moble s'obre", () => {
+    const f = good()
+    const n = f.project.composition.references.length
+    f.project.composition.references.push({ id: "r1", name: "dolent", w: 0, h: 10, d: 10, x: 0, y: 0, z: 0 })
+    const res = parseMobleFile(JSON.stringify(f))
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.file.project.composition.references).toHaveLength(n)
+    expect(res.file.project.composition.modules.map((m) => m.id)).toEqual(comp.modules.map((m) => m.id))
+    expect(res.warnings.some((w) => w.includes("dolent"))).toBe(true)
+  })
+
+  it("nesting, calibratge o referències dolents: es treuen amb un avís", () => {
+    const f = good()
+    f.project.nesting = { sheet: { w: 1, h: 1 }, kerf: 99, margin: 0 }
+    f.project.photo = { ...calibration, focal35: "x" }
+    f.references = [...f.references, { id: "a", name: "", w: 1, h: 1, plane: "wall", wallOffset: 0 }]
+    const res = parseMobleFile(JSON.stringify(f))
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.file.project.nesting).toBeUndefined()
+    expect(res.file.project.photo).toBeUndefined()
+    expect(res.file.references).toEqual(good().references)
+    expect(res.warnings).toHaveLength(3)
+  })
+
+  it("calibratge amb un camp opcional dolent: es queda sense aquell camp", () => {
+    const f = good()
+    f.project.photo = { ...calibration, opacity: "mig" }
+    const res = parseMobleFile(JSON.stringify(f))
+    expect(res.ok && res.file.project.photo).toEqual(calibration)
+  })
+
+  it("aspecte de la foto (línies/realista i ombres) es conserva", () => {
+    const cal = { ...calibration, render: "realistic" as const, shadows: false }
+    const res = parseMobleFile(mobleToJson(buildMobleFile({ name: "x", composition: comp, calibration: cal, references })))
+    expect(res.ok && res.file.project.photo).toEqual(cal)
+  })
+
+  it("el calibratge del fitxer té els mateixos camps que el de la base de dades", () => {
+    // Si `PhotoCalibration` guanya o perd un camp, això no compila fins que s'afegeix a `FileCalibrationSchema`.
+    const keys: Record<keyof Omit<PhotoCalibration, "photoId">, true> & Record<keyof FileCalibration, true> = {
+      points: true, ref: true, refAspect: true, measures: true, floorLine: true, applied: true, opacity: true, layer: true, render: true, shadows: true, plane: true, focal35: true, origin: true, originMm: true, offset: true, offsetZ: true, refWallOffset: true,
+    }
+    type Extra<A, B> = Exclude<keyof A, keyof B>
+    const same: [Extra<Omit<PhotoCalibration, "photoId">, FileCalibration>, Extra<FileCalibration, Omit<PhotoCalibration, "photoId">>] extends [never, never] ? true : false = true
+    expect(same).toBe(true)
+    expect(Object.keys(FileCalibrationSchema.shape).sort()).toEqual(Object.keys(keys).sort())
   })
 })

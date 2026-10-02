@@ -71,11 +71,21 @@ export interface TopsolidCsvResult {
 const num1 = (v: number): string => (Math.round(v * 10) / 10).toFixed(1)
 const num2 = (v: number): string => (Math.round(v * 100) / 100).toFixed(2)
 const int = (v: number): string => String(Math.round(v))
+/**
+ * Gruix tal com surt al CSV: enter si ho és (`19`, com TopSolid) i, si no, amb els decimals que
+ * calguin i punt (`18.6`, com la resta de números del CSV). Abans s'arrodonia i un tauler de 18,6
+ * i un de 19 sortien amb el mateix nom.
+ */
+export const thick = (v: number): string => String(Math.round(v * 100) / 100)
 
 /** Nom de tauler del taller: `Melamina_blanca_19#01`. */
 export function boardName(material: string, thickness: number, n: number): string {
-  const mat = csvField(material).replace(/\s+/g, "_")
-  return `${mat}_${int(thickness)}#${String(n).padStart(2, "0")}`
+  return `${boardBase(material, thickness)}#${String(n).padStart(2, "0")}`
+}
+
+/** El nom del tauler sense el número: també és la clau per numerar-los (dos taulers no es diuen igual). */
+function boardBase(material: string, thickness: number): string {
+  return `${csvField(material).replace(/\s+/g, "_")}_${thick(thickness)}`
 }
 
 /** Punt local (u, v) d'una peça → coordenades del tauler segons la col·locació. */
@@ -105,7 +115,7 @@ export function toTopsolidCsv(panels: Panel[], nesting: Nesting, options: Topsol
   const boards: BoardOut[] = []
   const counters = new Map<string, number>()
   for (const b of nesting.boards) {
-    const key = `${b.material}|${b.thickness}`
+    const key = boardBase(b.material, b.thickness)
     const n = (counters.get(key) ?? 0) + 1
     counters.set(key, n)
     boards.push({
@@ -124,7 +134,7 @@ export function toTopsolidCsv(panels: Panel[], nesting: Nesting, options: Topsol
     const p = byId.get(id)
     if (!p) continue
     unplaced.push(id)
-    const key = `${p.material}|${p.thickness}`
+    const key = boardBase(p.material, p.thickness)
     const n = (counters.get(key) ?? 0) + 1
     counters.set(key, n)
     boards.push({
@@ -145,11 +155,11 @@ export function toTopsolidCsv(panels: Panel[], nesting: Nesting, options: Topsol
     lines.push(
       [
         ...common,
-        `${mat}:${int(b.w)}x${int(b.h)}x${int(b.thickness)}`,
+        `${mat}:${int(b.w)}x${int(b.h)}x${thick(b.thickness)}`,
         num1(b.w),
         num1(b.h),
-        int(b.thickness),
-        `${mat}${int(b.thickness)}`,
+        thick(b.thickness),
+        `${mat}${thick(b.thickness)}`,
         "0",
         "0",
         "0.00",
@@ -179,7 +189,7 @@ export function toTopsolidCsv(panels: Panel[], nesting: Nesting, options: Topsol
           workshopName(p.name),
           num1(p.length),
           num1(p.width),
-          int(p.thickness),
+          thick(p.thickness),
           "",
           int(pos.x),
           int(pos.y),

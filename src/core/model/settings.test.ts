@@ -14,7 +14,13 @@ import {
   settingsToJson,
   sheetFor,
   visibleReferences,
+  importSettingsJson,
+  SIM_MATERIALS,
+  SIM_MATERIALS_SINCE,
+  type MaterialPref,
+  type Settings,
 } from "./settings"
+import type { Machine } from "./machine"
 
 describe("preferències", () => {
   it("els valors inicials són vàlids", () => {
@@ -135,5 +141,96 @@ describe("materials de foto (v6)", () => {
     // Si l'usuari n'esborra un, no torna.
     const again = parseSettings({ ...res.settings, materials: res.settings.materials.filter((m) => m.name !== "Noguera fumada") })
     expect(again.settings.materials.some((m) => m.name === "Noguera fumada")).toBe(false)
+  })
+})
+
+describe("reparació camp a camp", () => {
+  const plain = <T>(v: T): T => JSON.parse(JSON.stringify(v))
+
+  it("un valor de ferratges dolent no torna tots els ferratges als inicials", () => {
+    const s = plain(DEFAULT_SETTINGS) as Record<string, any>
+    s.hardware.hinge.cupDiameter = 40
+    s.hardware.drawer.slideLengths = [300, 0]
+    s.hardware.magnet.depth = "x"
+    const r = parseSettings(s)
+    expect(r.settings.hardware.hinge.cupDiameter).toBe(40)
+    expect(r.settings.hardware.drawer.slideLengths).toEqual([300])
+    expect(r.settings.hardware.magnet.depth).toBe(DEFAULT_SETTINGS.hardware.magnet.depth)
+    expect(r.problems.some((p) => p.startsWith("Ferratges"))).toBe(true)
+  })
+
+  it("un tauler dolent es treu sol: el gruix de tall i la resta es queden", () => {
+    const s = plain(DEFAULT_SETTINGS) as Record<string, any>
+    s.boards.kerf = 4
+    s.boards.sheets = [{ material: "", w: 2800, h: 2070 }, { material: "Roure massís / xapat", w: 100, h: 2000 }]
+    const r = parseSettings(s)
+    expect(r.settings.boards.kerf).toBe(4)
+    expect(r.settings.boards.sheets).toEqual([{ material: "", w: 2800, h: 2070 }])
+    // Sense cap tauler bo (en cal un): els inicials, però el gruix de tall es queda.
+    const none = parseSettings({ ...s, boards: { ...s.boards, sheets: [{ w: 1 }] } })
+    expect(none.settings.boards.sheets).toEqual(DEFAULT_SETTINGS.boards.sheets)
+    expect(none.settings.boards.kerf).toBe(4)
+  })
+
+  it("jocs i materials per defecte: només el camp dolent", () => {
+    const s = plain(DEFAULT_SETTINGS) as Record<string, any>
+    s.gaps.outerGap = 3
+    s.gaps.grooveDepth = 99
+    s.defaults.material = "El meu"
+    s.defaults.thickness = "gruixut"
+    const r = parseSettings(s)
+    expect(r.settings.gaps.outerGap).toBe(3)
+    expect(r.settings.gaps.grooveDepth).toBe(DEFAULT_SETTINGS.gaps.grooveDepth)
+    expect(r.settings.defaults.material).toBe("El meu")
+    expect(r.settings.defaults.thickness).toBe(DEFAULT_SETTINGS.defaults.thickness)
+  })
+})
+
+describe("materials de simulació per versió (v3, v4, v5)", () => {
+  const plain = <T>(v: T): T => JSON.parse(JSON.stringify(v))
+  const since = (v: number) => SIM_MATERIALS.filter((m) => SIM_MATERIALS_SINCE[m.id] === v)
+  const simIds = (ms: { id: string }[]) => ms.filter((m) => m.id in SIM_MATERIALS_SINCE).map((m) => m.id)
+  const user = (version: number, sims: MaterialPref[]) => {
+    const { machines: _m, ...rest } = plain(DEFAULT_SETTINGS)
+    void _m
+    return { ...rest, version, materials: [...plain(DEFAULT_SETTINGS.materials.filter((m) => !(m.id in SIM_MATERIALS_SINCE))), ...plain(sims)] }
+  }
+
+  it("cada material de simulació té la seva versió", () => {
+    expect(since(3).length + since(4).length + since(5).length).toBe(SIM_MATERIALS.length)
+    expect(since(3)[0]!.id).toBe("sim-fabric-grey")
+    expect(since(5).map((m) => m.id)).toEqual(["sim-lampshade", "sim-bulb"])
+  })
+
+  it("els esborrats no tornen a qui ja tenia la versió que els va portar", () => {
+    const one = [SIM_MATERIALS[0]!]
+    // v4: ja tenia els de la v3 i la v4 (n'ha esborrat tots menys un); només li falten els llums de la v5.
+    expect(simIds(parseSettings(user(4, one)).settings.materials).sort()).toEqual([one[0]!.id, ...since(5).map((m) => m.id)].sort())
+    // v5 i posteriors: res de nou.
+    for (const v of [5, 6, 9]) expect(simIds(parseSettings(user(v, one)).settings.materials)).toEqual([one[0]!.id])
+    // v3: li falten els de la v4 i la v5, no els de la v3 que ha esborrat.
+    expect(simIds(parseSettings(user(3, one)).settings.materials).sort()).toEqual([one[0]!.id, ...since(4).map((m) => m.id), ...since(5).map((m) => m.id)].sort())
+    // v2: tots.
+    expect(simIds(parseSettings(user(2, one)).settings.materials)).toHaveLength(SIM_MATERIALS.length)
+  })
+})
+
+describe("importar preferències", () => {
+  it("les seccions que el fitxer no porta es queden (les màquines!)", () => {
+    const machine = { name: "SCM" } as unknown as Machine
+    const current: Settings = { ...DEFAULT_SETTINGS, machines: [machine], label: { w: 120, h: 80 } }
+    const file = { version: 9, boards: { ...DEFAULT_SETTINGS.boards, kerf: 3 } }
+    const r = importSettingsJson(current, JSON.stringify(file))
+    expect(r.settings.machines).toEqual([machine])
+    expect(r.settings.label).toEqual({ w: 120, h: 80 })
+    expect(r.settings.boards.kerf).toBe(3)
+    expect(r.settings.materials).toBe(current.materials)
+    expect(r.settings.version).toBe(SETTINGS_VERSION)
+  })
+
+  it("un fitxer que no és JSON no toca res", () => {
+    const r = importSettingsJson(DEFAULT_SETTINGS, "{ no")
+    expect(r.settings).toBe(DEFAULT_SETTINGS)
+    expect(r.problems[0]).toMatch(/JSON/)
   })
 })

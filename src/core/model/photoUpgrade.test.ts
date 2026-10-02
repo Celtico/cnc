@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { normalizeComposition, type Composition } from "./composition"
 import { parseAmbient } from "./ambient"
 import { aliasMaterialRefs, PHOTO_UPGRADES, rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, setKnownMaterialNames, upgradeToPhoto } from "./photoUpgrade"
@@ -55,7 +55,8 @@ describe("materials de sempre amb foto (v7)", () => {
     // Material per defecte: el nom nou.
     expect(res.settings.defaults.material).toBe("Roure massís / xapat")
     // Cada nom antic porta a un material que hi és.
-    for (const t of TEXTURE_SETS) expect(ms.some((m) => m.name === resolveMaterialAlias(t.label)), t.label).toBe(true)
+    const msNames = new Set(ms.map((m) => m.name))
+    for (const t of TEXTURE_SETS) expect(ms.some((m) => m.name === resolveMaterialAlias(t.label, msNames)), t.label).toBe(true)
   })
 
   it("és idempotent", () => {
@@ -85,6 +86,10 @@ describe("materials de sempre amb foto (v7)", () => {
 })
 
 describe("àlies dels noms antics", () => {
+  // Amb les preferències inicials llegides (sense, no es reescriu res: vegeu a sota).
+  beforeEach(() => setKnownMaterialNames(DEFAULT_SETTINGS.materials.map((m) => m.name)))
+  afterEach(() => setKnownMaterialNames(null))
+
   it("resolveMaterialAlias", () => {
     expect(resolveMaterialAlias("Roure (foto)")).toBe("Roure massís / xapat")
     expect(resolveMaterialAlias("Parquet de roure (foto)")).toBe("Parquet de roure")
@@ -92,6 +97,8 @@ describe("àlies dels noms antics", () => {
     expect(resolveMaterialAlias("Fusta fosca (foto)")).toBe("Fusta fosca")
     expect(resolveMaterialAlias("Melamina blanca")).toBe("Melamina blanca")
     expect(resolveMaterialAlias("Coses (foto)")).toBe("Coses (foto)")
+    // Preferències encara no llegides: cap nom es reescriu (un «Roure (foto)» pot ser un material que l'usuari té).
+    expect(resolveMaterialAlias("Roure (foto)", null)).toBe("Roure (foto)")
   })
 
   it("composició: mòduls, fronts, fons, peces, objectes i escena", () => {
@@ -203,7 +210,7 @@ describe("àlies segons els materials de l'usuari", () => {
     const a = parseAmbient({ walls: [], items: [], floorMaterial: "Terratzo (foto)", wallMaterial: "Fusta fosca (foto)" })
     expect(a).toMatchObject({ floorMaterial: "Terratzo (foto)", wallMaterial: "Fusta fosca" })
     setKnownMaterialNames(null)
-    expect(resolveMaterialAlias("Terratzo (foto)")).toBe("Terratzo")
+    expect(resolveMaterialAlias("Terratzo (foto)")).toBe("Terratzo (foto)")
   })
 
   it("preferències: el material per defecte i els taulers segons els materials desats", () => {
@@ -215,6 +222,7 @@ describe("àlies segons els materials de l'usuari", () => {
   })
 
   it("obertures de les parets: el material dels perfils (`frame`)", () => {
+    setKnownMaterialNames(DEFAULT_SETTINGS.materials.map((m) => m.name))
     const a = parseAmbient({ walls: [{ id: "w1", a: [0, 0], b: [3000, 0], thickness: 100, height: 2500, openings: [{ kind: "window", at: 1500, w: 1000, h: 1200, sill: 900, frame: "Fusta fosca (foto)" }] }], items: [] })
     expect(a.walls[0]!.openings![0]!.frame).toBe("Fusta fosca")
   })

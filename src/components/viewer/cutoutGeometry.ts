@@ -56,7 +56,79 @@ export function cutoutGeometry(p: Panel): ExtrudeGeometry {
     }
     shape.holes.push(hole)
   }
-  return new ExtrudeGeometry(shape, { depth: p.thickness * S, bevelEnabled: false, curveSegments: 10 })
+  // Cantells corbs (taules rodones, el·lipses, coixins) llisos al visor i al render; les arestes vives, vives.
+  return creaseNormals(new ExtrudeGeometry(shape, { depth: p.thickness * S, bevelEnabled: false, curveSegments: 10 }))
+}
+
+/**
+ * Normals llises d'una geometria no indexada (`ExtrudeGeometry` les fa planes, per cara): a cada
+ * vèrtex, la mitjana (ponderada per l'angle de la cantonada) de les cares que hi toquen i es
+ * troben a menys de `angle` de la seva; les arestes més vives (cantell i cara, cantonades) no
+ * canvien. Modifica i torna la mateixa geometria (si és indexada, la deixa com és).
+ */
+export function creaseNormals<T extends BufferGeometry>(g: T, angle = Math.PI / 6): T {
+  const pa = g.getAttribute("position")
+  if (g.index || !pa || pa.count < 3) return g
+  const n = pa.count - (pa.count % 3)
+  const P = new Float64Array(n * 3)
+  for (let i = 0; i < n; i++) {
+    P[i * 3] = pa.getX(i)
+    P[i * 3 + 1] = pa.getY(i)
+    P[i * 3 + 2] = pa.getZ(i)
+  }
+  // Normal de cada cara i angle de cada cantonada.
+  const fn = new Float64Array(n)
+  const corner = new Float64Array(n)
+  for (let f = 0; f < n; f += 3) {
+    const b = f * 3
+    const e1x = P[b + 3]! - P[b]!, e1y = P[b + 4]! - P[b + 1]!, e1z = P[b + 5]! - P[b + 2]!
+    const e2x = P[b + 6]! - P[b]!, e2y = P[b + 7]! - P[b + 1]!, e2z = P[b + 8]! - P[b + 2]!
+    const cx = e1y * e2z - e1z * e2y, cy = e1z * e2x - e1x * e2z, cz = e1x * e2y - e1y * e2x
+    const l = Math.hypot(cx, cy, cz)
+    if (l > 0) {
+      fn[f] = cx / l
+      fn[f + 1] = cy / l
+      fn[f + 2] = cz / l
+    }
+    for (let k = 0; k < 3; k++) {
+      const o = b + k * 3, a = b + ((k + 1) % 3) * 3, c = b + ((k + 2) % 3) * 3
+      const ux = P[a]! - P[o]!, uy = P[a + 1]! - P[o + 1]!, uz = P[a + 2]! - P[o + 2]!
+      const vx = P[c]! - P[o]!, vy = P[c + 1]! - P[o + 1]!, vz = P[c + 2]! - P[o + 2]!
+      const d = Math.hypot(ux, uy, uz) * Math.hypot(vx, vy, vz)
+      corner[f + k] = d > 0 ? Math.acos(Math.max(-1, Math.min(1, (ux * vx + uy * vy + uz * vz) / d))) : 0
+    }
+  }
+  // Vèrtexs al mateix punt (a la micra).
+  const at = new Map<string, number[]>()
+  for (let i = 0; i < n; i++) {
+    const k = `${Math.round(P[i * 3]! * 1e6)},${Math.round(P[i * 3 + 1]! * 1e6)},${Math.round(P[i * 3 + 2]! * 1e6)}`
+    const list = at.get(k)
+    if (list) list.push(i)
+    else at.set(k, [i])
+  }
+  const cos = Math.cos(angle)
+  const out = new Float32Array(pa.count * 3)
+  for (const list of at.values())
+    for (const i of list) {
+      const fi = i - (i % 3)
+      const ax = fn[fi]!, ay = fn[fi + 1]!, az = fn[fi + 2]!
+      let sx = 0, sy = 0, sz = 0
+      for (const j of list) {
+        const fj = j - (j % 3)
+        const bx = fn[fj]!, by = fn[fj + 1]!, bz = fn[fj + 2]!
+        if (fj !== fi && ax * bx + ay * by + az * bz <= cos) continue
+        const w = fj === fi ? Math.max(corner[i]!, 1e-6) : corner[j]!
+        sx += bx * w
+        sy += by * w
+        sz += bz * w
+      }
+      const l = Math.hypot(sx, sy, sz)
+      out[i * 3] = l > 0 ? sx / l : ax
+      out[i * 3 + 1] = l > 0 ? sy / l : ay
+      out[i * 3 + 2] = l > 0 ? sz / l : az
+    }
+  g.setAttribute("normal", new Float32BufferAttribute(out, 3))
+  return g
 }
 
 /**

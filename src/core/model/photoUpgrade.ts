@@ -43,7 +43,7 @@ const ALIASES = new Map(TEXTURE_SETS.filter((t) => photoMaterialName(t) !== t.la
 
 /**
  * Noms dels materials de l'usuari (els posa `settingsStore` en carregar les preferències). Sense (encara no
- * carregades, tests): els àlies de sempre.
+ * carregades, tests): no es reescriu cap nom (un «X (foto)» pot ser un material que l'usuari encara té).
  */
 let knownNames: ReadonlySet<string> | null = null
 
@@ -54,12 +54,14 @@ export function setKnownMaterialNames(names: Iterable<string> | null): void {
 
 /**
  * Nom vigent d'un material: un «X (foto)» (v6) passa a «X» si l'usuari no té cap material «X (foto)» (la v7 el
- * conserva si «X» ja era d'un altre material) i sí que té «X». Sense noms coneguts, el mapa de sempre.
+ * conserva si «X» ja era d'un altre material o estava retocat) i sí que té «X». **Sense noms coneguts (preferències
+ * encara no llegides) no es reescriu res**: si no, un moble obert abans de llegir-les canviava «Roure (foto)» pel
+ * de sempre i, en desar-lo, el canvi quedava fet. Per això l'Editor i els Ambients esperen les preferències.
  */
 export function resolveMaterialAlias(name: string, names: ReadonlySet<string> | null = knownNames): string {
+  if (!names) return name
   const target = ALIASES.get(name)
   if (target === undefined) return name
-  if (!names) return target
   return !names.has(name) && names.has(target) ? target : name
 }
 
