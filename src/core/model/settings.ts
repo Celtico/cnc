@@ -150,6 +150,11 @@ export const FinishSchema = z.discriminatedUnion("kind", [
     /** Mapes PBR opcionals (mateix format): normal (convenció OpenGL) i rugositat (canal G). */
     normalMap: imageSrc.optional(),
     roughMap: imageSrc.optional(),
+    /**
+     * El normal de l'usuari venia en convenció DirectX: se n'ha invertit el verd en carregar-lo (el desat ja és
+     * OpenGL). Només recorda l'interruptor «Invertir el verd».
+     */
+    normalDx: z.boolean().optional(),
     /** Amplada de tauler de debò que mostra la foto (mm, d'esquerra a dreta). */
     tileMm: mm.min(50).max(5000),
     /** Alçada ÷ amplada de la foto: l'alçada real és tileMm × aspect (sense, quadrada). */

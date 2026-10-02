@@ -64,6 +64,8 @@ import { SectionLabel } from "../../components/SectionLabel"
 import { PaneHeadContext } from "./paneHead"
 import { MachinesList } from "./MachinesPane"
 import { MachineRulesGroup } from "./MachineRules"
+import { MapThumb, TextureMapRows, TextureSetRow } from "./TextureMapRows"
+import { encodeMap, pickFiles } from "./textureImport"
 
 type SectionKey = keyof Omit<Settings, "version">
 
@@ -827,27 +829,32 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
         </FormRow>
         {finish.kind === "image" ? (
           <FormRow label="Foto" help={`${finish.tileMm} × ${Math.round(finish.tileMm * (finish.aspect ?? 1))} mm de tauler per repetició, ${finish.seamless ? "repetida tal qual" : "en mirall"}.`}>
-            <HStack gap={2} wrap="wrap">
-              <HStack gap={1.5}>
-                <Box w="150px">
-                  <NumberField label="" ariaLabel="Amplada de la foto" value={finish.tileMm} min={50} max={5000} step={10} onChange={(v) => v >= 50 && v <= 5000 && onChange({ finish: { ...finish, tileMm: v } })} />
-                </Box>
-                <Text fontSize="sm" color="fg.muted">
-                  d'amplada
-                </Text>
-              </HStack>
-              <Button size="sm" variant="outline" onClick={() => void pickTexture().then((t) => t && onChange({ finish: { ...finish, ...t } }))}>
-                <LuImagePlus /> Canviar
-              </Button>
-              <Button size="sm" variant="ghost" colorPalette="red" onClick={() => onChange({ finish: m.hasGrain ? { kind: "wood", species: "oak" } : { kind: "color", color: "#e5e5e5" } })}>
-                <LuTrash2 /> Treure
-              </Button>
+            <HStack gap={3} align="flex-start" wrap="wrap">
+              <MapThumb src={finish.src} label="Foto de color" />
+              <Stack gap={1} minW={0} flex="1 1 200px">
+                <HStack gap={2} wrap="wrap">
+                  <HStack gap={1.5} wrap="wrap">
+                    <Box w="150px">
+                      <NumberField label="" ariaLabel="Amplada de la foto" value={finish.tileMm} min={50} max={5000} step={10} onChange={(v) => v >= 50 && v <= 5000 && onChange({ finish: { ...finish, tileMm: v } })} />
+                    </Box>
+                    <Text fontSize="sm" color="fg.muted">
+                      d'amplada
+                    </Text>
+                  </HStack>
+                  <Button size="sm" variant="outline" onClick={() => void pickTexture().then((t) => t && onChange({ finish: { ...finish, ...t } }))}>
+                    <LuImagePlus /> Canviar
+                  </Button>
+                  <Button size="sm" variant="ghost" colorPalette="red" onClick={() => onChange({ finish: m.hasGrain ? { kind: "wood", species: "oak" } : { kind: "color", color: "#e5e5e5" } })}>
+                    <LuTrash2 /> Treure
+                  </Button>
+                </HStack>
+                <Switch.Root size="sm" mt={1} checked={!!finish.seamless} onCheckedChange={(e) => onChange({ finish: { ...finish, seamless: e.checked || undefined } })}>
+                  <Switch.HiddenInput />
+                  <Switch.Control />
+                  <Switch.Label fontSize="sm">Sense costures (repetir sense mirall)</Switch.Label>
+                </Switch.Root>
+              </Stack>
             </HStack>
-            <Switch.Root size="sm" mt={1} checked={!!finish.seamless} onCheckedChange={(e) => onChange({ finish: { ...finish, seamless: e.checked || undefined } })}>
-              <Switch.HiddenInput />
-              <Switch.Control />
-              <Switch.Label fontSize="sm">Sense costures (repetir sense mirall)</Switch.Label>
-            </Switch.Root>
           </FormRow>
         ) : finish.kind === "wood" ? (
           <FormRow label="Espècie">
@@ -862,6 +869,7 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
             </HStack>
           </FormRow>
         )}
+        {finish.kind === "image" && <TextureMapRows finish={finish} onChange={(f) => onChange({ finish: f })} />}
         {finish.kind === "tiles" && (
           <FormRow label="Rajola">
             <HStack gap={3} wrap="wrap">
@@ -887,6 +895,7 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
             </HStack>
           </FormRow>
         )}
+        <TextureSetRow finish={finish} onChange={(f) => onChange({ finish: f })} />
       </FormSection>
 
       <FormSection title="Fabricació">
@@ -1186,33 +1195,15 @@ function SceneFields({ previewComposition }: { previewComposition?: Composition 
 
 /**
  * Tria una foto del tauler (galeria o càmera al mòbil) i la redueix a 1024 px en JPEG, perquè
- * càpiga a les preferències sense ocupar massa.
+ * càpiga a les preferències sense ocupar massa. També en dona el color mitjà (STEP, mostres).
  */
-function pickTexture(): Promise<{ src: string; aspect: number } | null> {
-  return new Promise((resolve) => {
-    const input = document.createElement("input")
-    input.type = "file"
-    input.accept = "image/*"
-    input.onchange = () => {
-      const file = input.files?.[0]
-      if (!file) return resolve(null)
-      const img = new Image()
-      const url = URL.createObjectURL(file)
-      img.onload = () => {
-        const k = Math.min(1, 1024 / Math.max(img.width, img.height))
-        const c = document.createElement("canvas")
-        c.width = Math.round(img.width * k)
-        c.height = Math.round(img.height * k)
-        c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height)
-        URL.revokeObjectURL(url)
-        resolve({ src: c.toDataURL("image/jpeg", 0.85), aspect: Math.round((c.height / c.width) * 1000) / 1000 })
-      }
-      img.onerror = () => {
-        URL.revokeObjectURL(url)
-        resolve(null)
-      }
-      img.src = url
-    }
-    input.click()
-  })
+async function pickTexture(): Promise<{ src: string; aspect: number; color?: string } | null> {
+  const [p] = await pickFiles({ accept: "image/*" })
+  if (!p) return null
+  try {
+    return await encodeMap(p.file, "color")
+  } catch (e) {
+    toaster.create({ title: "No s'ha pogut llegir la foto", description: e instanceof Error ? e.message : String(e), type: "error", duration: 8000 })
+    return null
+  }
 }
