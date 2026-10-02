@@ -595,11 +595,12 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
       : `${passes}${limit ? ` / ${limit}` : ""} ${passes === 1 ? "passada" : "passades"} · ${elapsed} s${elapsed && passes ? ` (${(passes / elapsed).toFixed(passes / elapsed < 10 ? 1 : 0)}/s)` : ""} · ${j ? `${j.w} × ${j.h} px` : "—"} · ${engineLabel}`
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size={{ base: "full", md: "cover" }} placement="center">
+    <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size="full" placement="center">
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content h={{ base: "100dvh", md: undefined }} maxH="100dvh" display="flex" flexDirection="column" overflow="hidden" pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} pb={{ base: "env(safe-area-inset-bottom, 0px)", md: 0 }}>
+          {/* A tota la finestra (alçada i amplada), també a l'ordinador. */}
+          <Dialog.Content w="100vw" maxW="100vw" h="100dvh" maxH="100dvh" rounded="none" display="flex" flexDirection="column" overflow="hidden" pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} pb={{ base: "env(safe-area-inset-bottom, 0px)", md: 0 }}>
             <Dialog.Header>
               <Dialog.Title>Render</Dialog.Title>
             </Dialog.Header>

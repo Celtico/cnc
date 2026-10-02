@@ -818,7 +818,8 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     el centre). **Cel** (`render/skies.ts`): «Dia» (procedural), «Núvols» i «Interior» (HDRI de Poly
     Haven, CC0, reduïts a 1K a `public/hdr/`, precachejats) o un `.hdr` propi (`hdr.ts`, RGBE), que es pot girar; el de defecte, a
     Preferències › Visor 3D › «Cel del render» (mobles: «Interior»; ambients: «Núvols»; preferència del dispositiu). Opcions del render en seccions plegables (`PanelSection`, com els inspectors: Qualitat, Càmera,
-    Escena, Llum, Imatge, amb el resum a la insígnia); al mòbil, pantalla completa amb la imatge a dalt. Tests:
+    Escena, Llum, Imatge, amb el resum a la insígnia); la finestra ocupa **tota la pantalla** (100 % d'alçada i
+    amplada, també a l'ordinador); al mòbil, la imatge a dalt i les opcions a sota. Tests:
     `render/render.test.ts` (BVH contra força bruta, CDF de l'HDRI, bevel, empaquetat de textures i triangles).
     **Mapes PBR**: els materials de foto amb `normalMap`/`roughMap` porten normal en espai tangent (base per les
     derivades de les UV del triangle, `tangentFrame`/`perturbNormal` a `shading.ts`, també amb UV en mirall) i
