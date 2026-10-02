@@ -21,9 +21,7 @@ export function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?
   // Foto 3D feta fora de pantalla (en memòria mentre l'app és oberta); mentrestant, el dibuix.
   const { settings } = useSettings()
   const [thumb, setThumb] = useState(() => templateThumb(t.id))
-  useEffect(() => {
-    if (!thumb) requestTemplateThumb(t.id, () => comp, settings.materials, setThumb)
-  }, [t.id, comp, settings.materials, thumb])
+  useEffect(() => (thumb ? undefined : requestTemplateThumb(t.id, () => comp, settings.materials, setThumb)), [t.id, comp, settings.materials, thumb])
   return (
     <GalleryCard
       thumb={<SnapshotThumb src={thumb} />}

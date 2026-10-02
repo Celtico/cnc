@@ -22,7 +22,21 @@ export function ViewTile({ label, icon, on, onClick, tip }: { label: string; ico
  * un panell amb les accions ràpides (rajoles) i, a sota, la resta d'opcions. `lead`: un grup de
  * rajoles a part, a sobre (p. ex. el mode de vista de l'editor).
  */
-export function ViewOptions({ tiles, lead, children }: { tiles: ReactNode; lead?: ReactNode; children?: ReactNode }) {
+export function ViewOptions({
+  tiles,
+  lead,
+  children,
+  open,
+  onOpenChange,
+}: {
+  tiles: ReactNode
+  lead?: ReactNode
+  children?: ReactNode
+  /** Obert o tancat des de fora (p. ex. tancar-lo en obrir el Render); sense, va sol. */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}) {
+  const control = open === undefined ? {} : { open, onOpenChange: (e: { open: boolean }) => onOpenChange?.(e.open) }
   const n = Math.max(1, countTiles(tiles))
   const rows = Math.ceil(n / 5)
   const cols = Math.ceil(n / rows)
@@ -49,7 +63,7 @@ export function ViewOptions({ tiles, lead, children }: { tiles: ReactNode; lead?
   // Al mòbil, un calaix de baix (com a l'editor de mobles); a l'ordinador, un popover.
   if (mobile)
     return (
-      <Drawer.Root placement="bottom">
+      <Drawer.Root placement="bottom" {...control}>
         <Drawer.Trigger asChild>{trigger}</Drawer.Trigger>
         <Portal>
           <Drawer.Backdrop />
@@ -72,7 +86,7 @@ export function ViewOptions({ tiles, lead, children }: { tiles: ReactNode; lead?
       </Drawer.Root>
     )
   return (
-    <Popover.Root positioning={{ placement: "bottom-end" }}>
+    <Popover.Root positioning={{ placement: "bottom-end" }} {...control}>
       <Popover.Trigger asChild>{trigger}</Popover.Trigger>
       <Portal>
         <Popover.Positioner>

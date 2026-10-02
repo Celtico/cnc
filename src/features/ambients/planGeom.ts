@@ -39,13 +39,21 @@ export function ambientBox(a: Ambient, geos: Map<string, ItemGeometry | null>): 
   return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) }
 }
 
-/** Vista que encabeix la caixa (o un pis de 8 × 6 m si no hi ha res) en un requadre de W × H px. */
-export function fitView(box: { x0: number; y0: number; x1: number; y1: number } | null, W: number, H: number): View {
+/**
+ * Marges del plànol que tapen els controls (px): a l'esquerra la columna d'eines, a dalt les pestanyes Plànol · 3D i
+ * les opcions de vista, a baix el zoom i l'escala. «Encabir» deixa l'habitació al lloc que queda lliure.
+ */
+export const PLAN_INSETS = { top: 64, right: 24, bottom: 56, left: 84 }
+
+/** Vista que encabeix la caixa (o un pis de 8 × 6 m si no hi ha res) en un requadre de W × H px, sense els marges `insets`. */
+export function fitView(box: { x0: number; y0: number; x1: number; y1: number } | null, W: number, H: number, insets = PLAN_INSETS): View {
   const b = box ?? { x0: -1000, y0: -1000, x1: 7000, y1: 5000 }
-  const pad = 48
+  // En un requadre petit, els marges no poden menjar-se'l tot.
+  const k = Math.min(1, (0.5 * W) / (insets.left + insets.right), (0.5 * H) / (insets.top + insets.bottom))
+  const l = insets.left * k, r = insets.right * k, t = insets.top * k, bo = insets.bottom * k
   const bw = Math.max(1000, b.x1 - b.x0), bh = Math.max(1000, b.y1 - b.y0)
-  const s = Math.min((W - 2 * pad) / bw, (H - 2 * pad) / bh)
-  return { s, tx: W / 2 - ((b.x0 + b.x1) / 2) * s, ty: H / 2 - ((b.y0 + b.y1) / 2) * s }
+  const s = Math.min((W - l - r) / bw, (H - t - bo) / bh)
+  return { s, tx: l + (W - l - r) / 2 - ((b.x0 + b.x1) / 2) * s, ty: t + (H - t - bo) / 2 - ((b.y0 + b.y1) / 2) * s }
 }
 
 /** Punt amb l'angle ajustat a múltiples de 15° respecte a `from` i la llargada a 10 mm. */

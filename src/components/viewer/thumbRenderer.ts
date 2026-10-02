@@ -1,4 +1,4 @@
-import { Box3, Color, DirectionalLight, HemisphereLight, Mesh, Scene, MeshStandardMaterial, NeutralToneMapping, PCFSoftShadowMap, PerspectiveCamera, PlaneGeometry, PMREMGenerator, SRGBColorSpace, Vector3, WebGLRenderer, type Material, type Object3D, type Texture } from "three"
+import { Box3, Color, DirectionalLight, HemisphereLight, Mesh, Scene, MeshStandardMaterial, NeutralToneMapping, PCFShadowMap, PerspectiveCamera, PlaneGeometry, PMREMGenerator, SRGBColorSpace, Vector3, WebGLRenderer, type Texture } from "three"
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
 import { parseCameraPose, type MaterialPref, type ModelObject, type Panel, type RefObject } from "../../core/model"
 import { refGeometry } from "./refGeometry"
@@ -8,7 +8,9 @@ import { makeFloor, ROOM } from "./floorTextures"
 import { readPresentationScene } from "./presentationScene"
 import { surfaceMaterial } from "./surfaceMaterial"
 import { releaseModelGpu } from "./models3d"
-import { disposeMaterial } from "./textures"
+import { disposeTree, photoTexturesPending, tileClone } from "./textures"
+
+export { disposeTree }
 
 /**
  * Miniatures 3D de les targetes (Mobles i Objectes) sense cap visor obert: un sol renderitzador fora de
@@ -33,7 +35,8 @@ function ensure(): WebGLRenderer {
   r.toneMapping = NeutralToneMapping
   r.outputColorSpace = SRGBColorSpace
   r.shadowMap.enabled = true
-  r.shadowMap.type = PCFSoftShadowMap
+  // PCF amb el radi de sempre (el «soft» de three ja ho és: PCFSoftShadowMap s'ha retirat i avisava).
+  r.shadowMap.type = PCFShadowMap
   const pmrem = new PMREMGenerator(r)
   env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
   pmrem.dispose()
@@ -73,7 +76,13 @@ export function thumbLights(scene: Scene, center: Vector3, ext: number): void {
  * Pinta l'escena amb la càmera, en treu la imatge i allibera l'escena. Sense fons (`scene.background` buit), PNG amb
  * transparència (les dels ambients: es veu el color de la targeta al voltant de l'habitació); si no, JPEG.
  */
-export function snapshot(scene: Scene, camera: PerspectiveCamera): string {
+export function snapshot(scene: Scene, camera: PerspectiveCamera): string | null {
+  // Fotos de textura que encara es baixen: no es pinta (sortirien negres i three avisaria per cada textura sense
+  // imatge). Qui la demana espera `photoTexturesIdle` i la torna a fer (`drawWhenReady`).
+  if (photoTexturesPending()) {
+    disposeTree(scene)
+    return null
+  }
   const r = ensure()
   r.render(scene, camera)
   const url = scene.background ? r.domElement.toDataURL("image/jpeg", 0.82) : r.domElement.toDataURL("image/png")
@@ -86,7 +95,7 @@ export function snapshot(scene: Scene, camera: PerspectiveCamera): string {
 export const THUMB_ASPECT = W / H
 
 /**
- * JPEG (data URL) de les peces vistes des de davant, una mica de costat i de dalt. Amb `pose` (la càmera desada
+ * JPEG (data URL) de les peces vistes des de davant, una mica de costat i de dalt (`null` si encara es baixen fotos). Amb `pose` (la càmera desada
  * del document, ja en metres d'aquesta escena: les peces en mm de la composició, sense centrar), des d'allà.
  */
 export function renderThumb(panels: Panel[], materials: MaterialPref[], finish?: { floor?: string; wall?: string }, refs: RefObject[] = [], models: ModelObject[] = [], pose?: unknown): string | null {
@@ -116,8 +125,10 @@ export function renderThumb(panels: Panel[], materials: MaterialPref[], finish?:
   const F = Math.max(6, size.x * 3, size.z * 6)
   const floorMat = look.floorMaterial ? surfaceMaterial(materials, look.floorMaterial, F * 1000, F * 1000) : (() => {
     const f = makeFloor(look.floor)
-    if (f.map) f.map.repeat.set((f.repeat * F) / ROOM, (f.repeat * F) / ROOM)
-    return new MeshStandardMaterial({ map: f.map, color: f.map ? "#ffffff" : "#eeeeec", roughness: f.roughness })
+    // Clon de la base compartida (`disposeTree` només allibera el clon).
+    const map = f.map ? tileClone(f.map) : null
+    map?.repeat.set((f.repeat * F) / ROOM, (f.repeat * F) / ROOM)
+    return new MeshStandardMaterial({ map, color: map ? "#ffffff" : "#eeeeec", roughness: f.roughness })
   })()
   const wallZ = box.min.z - 0.002
   const floor = new Mesh(new PlaneGeometry(F, F), floorMat)
@@ -160,13 +171,3 @@ export function aimSaved(camera: PerspectiveCamera, raw: unknown): boolean {
   return true
 }
 
-export function disposeTree(root: Object3D) {
-  root.traverse((o) => {
-    const m = o as Mesh
-    // Els models 3D comparteixen geometria i materials amb la memòria de models (`models3d.ts`): no s'alliberen.
-    if (!m.isMesh || m.userData.sharedModel) return
-    m.geometry?.dispose()
-    const mats = (Array.isArray(m.material) ? m.material : [m.material]) as Material[]
-    for (const mat of new Set(mats)) disposeMaterial(mat)
-  })
-}

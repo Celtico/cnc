@@ -1,130 +1,143 @@
 ﻿// Mobles CNC - programa Maestro (MSL .xcs) per tauler (nesting) - BETA: comprova'l a Maestro abans de mecanitzar
-// Tauler T01: Noguera xapada - 2800 x 2070 x 19 - 19 peces - aprofitament 75%
+// Tauler T01 (Noguera_xapada_19#01): Noguera xapada - 2800 x 2070 x 19 - 19 peces - aprofitament 75%
 // Cara de dalt (cara A de les peces). X, Y del tauler, origen a la cantonada de baix a l'esquerra
-// Marge del tauler 10 mm, separacio 13 mm, contorns amb 12mm diamant nesting (D12), passants fins a 19.3 (gruix + 0.3 al martiri)
+// Marge del tauler 10 mm, separacio 14 mm (12mm diamant nesting D12 + 2), contorns amb 12mm diamant nesting (D12), passants fins a 19.3 (gruix + 0.3 al martiri)
 // Maquina SCM AA10008021 (AA10008021) - Maestro 2.00.004
 // Noms d'eina i capcalera del projecte Proyecto1.pgmx (Maestro 2.0.5 rev 1005)
 // Regles: ranures 8mm diamant (max 6 mm per passada), caixeres 12mm diamant nesting, perfilar 8-22 mm 12mm diamant nesting, 23-41 mm 14mm diamant nesting
 // Peces petites (< 0.8 m2; grans, una passada): Z 1/XY 1 + Z 0.5/XY 0 + final; entrada en rampa 40 mm
 // Peces (ref - nom - mida - cantonada al tauler - gir antihorari):
 //   A.1.H.3 baix (Base) 1800 x 440 a (10, 10) gir 0
-//   A.1.H.4 dalt (Sostre) 1800 x 440 a (10, 463) gir 0
-//   A.1.L.1 lat e (Lateral esquerre) 700 x 440 a (1823, 10) gir 0
-//   A.1.L.2 lat d (Lateral dret) 700 x 440 a (1823, 463) gir 0
-//   A.1.L.6 divisor (Divisor) 662 x 440 a (10, 916) gir 0
-//   A.1.L.7 divisor (Divisor) 662 x 440 a (685, 916) gir 0
-//   A.1.H.26 estanter 2 (Prestatge 2 (pell de baix)) 611 x 421 a (1360, 916) gir 0
-//   A.1.H.27 estanter 2 (Prestatge 2 (pell de dalt)) 611 x 421 a (1984, 916) gir 0
-//   A.1.H.32 estanter 3 (Prestatge 3 (pell de baix)) 611 x 421 a (10, 1369) gir 0
-//   A.1.H.33 estanter 3 (Prestatge 3 (pell de dalt)) 611 x 421 a (634, 1369) gir 0
-//   A.1.H.8 estanter (Prestatge) 611 x 420 a (1258, 1369) gir 0
-//   A.1.F.9 porta e (Porta esquerra) 658 x 302.5 a (1882, 1369) gir 0
-//   A.1.F.28 estanter 2 (Prestatge 2 (tira del davant)) 611 x 50 a (10, 1803) gir 0
-//   A.1.F.34 estanter 3 (Prestatge 3 (tira del davant)) 611 x 50 a (634, 1803) gir 0
-//   A.1.H.29 estanter 2 (Prestatge 2 (llisto del darrere)) 611 x 12 a (1258, 1803) gir 0
-//   A.1.H.35 estanter 3 (Prestatge 3 (llisto del darrere)) 611 x 12 a (1882, 1803) gir 0
-//   A.1.H.31 estanter 2 (Prestatge 2 (llisto dret)) 402 x 12 a (10, 1866) gir 0
-//   A.1.H.36 estanter 3 (Prestatge 3 (llisto esquerre)) 402 x 12 a (425, 1866) gir 0
-//   A.1.H.37 estanter 3 (Prestatge 3 (llisto dret)) 402 x 12 a (840, 1866) gir 0
+//   A.1.H.4 dalt (Sostre) 1800 x 440 a (10, 464) gir 0
+//   A.1.L.1 lat e (Lateral esquerre) 700 x 440 a (1824, 10) gir 0
+//   A.1.L.2 lat d (Lateral dret) 700 x 440 a (1824, 464) gir 0
+//   A.1.L.6 divisor (Divisor) 662 x 440 a (10, 918) gir 0
+//   A.1.L.7 divisor (Divisor) 662 x 440 a (686, 918) gir 0
+//   A.1.H.26 estanter 2 (Prestatge 2 (pell de baix)) 611 x 421 a (1362, 918) gir 0
+//   A.1.H.27 estanter 2 (Prestatge 2 (pell de dalt)) 611 x 421 a (1987, 918) gir 0
+//   A.1.H.32 estanter 3 (Prestatge 3 (pell de baix)) 611 x 421 a (10, 1372) gir 0
+//   A.1.H.33 estanter 3 (Prestatge 3 (pell de dalt)) 611 x 421 a (635, 1372) gir 0
+//   A.1.H.8 estanter (Prestatge) 611 x 420 a (1260, 1372) gir 0
+//   A.1.F.9 porta e (Porta esquerra) 658 x 302.5 a (1885, 1372) gir 0
+//   A.1.F.28 estanter 2 (Prestatge 2 (tira del davant)) 611 x 50 a (10, 1807) gir 0
+//   A.1.F.34 estanter 3 (Prestatge 3 (tira del davant)) 611 x 50 a (635, 1807) gir 0
+//   A.1.H.29 estanter 2 (Prestatge 2 (llisto del darrere)) 611 x 12 a (1260, 1807) gir 0
+//   A.1.H.35 estanter 3 (Prestatge 3 (llisto del darrere)) 611 x 12 a (1885, 1807) gir 0
+//   A.1.H.31 estanter 2 (Prestatge 2 (llisto dret)) 402 x 12 a (10, 1871) gir 0
+//   A.1.H.36 estanter 3 (Prestatge 3 (llisto esquerre)) 402 x 12 a (426, 1871) gir 0
+//   A.1.H.37 estanter 3 (Prestatge 3 (llisto dret)) 402 x 12 a (842, 1871) gir 0
 // Etiquetes (centre de cada peca):
 //   A.1.H.3 (910, 230)
-//   A.1.H.4 (910, 683)
-//   A.1.L.1 (2173, 230)
-//   A.1.L.2 (2173, 683)
-//   A.1.L.6 (341, 1136)
-//   A.1.L.7 (1016, 1136)
-//   A.1.H.26 (1665.5, 1126.5)
-//   A.1.H.27 (2289.5, 1126.5)
-//   A.1.H.32 (315.5, 1579.5)
-//   A.1.H.33 (939.5, 1579.5)
-//   A.1.H.8 (1563.5, 1579)
-//   A.1.F.9 (2211, 1520.25)
-//   A.1.F.28 (315.5, 1828)
-//   A.1.F.34 (939.5, 1828)
-//   A.1.H.29 (1563.5, 1809)
-//   A.1.H.35 (2187.5, 1809)
-//   A.1.H.31 (211, 1872)
-//   A.1.H.36 (626, 1872)
-//   A.1.H.37 (1041, 1872)
+//   A.1.H.4 (910, 684)
+//   A.1.L.1 (2174, 230)
+//   A.1.L.2 (2174, 684)
+//   A.1.L.6 (341, 1138)
+//   A.1.L.7 (1017, 1138)
+//   A.1.H.26 (1667.5, 1128.5)
+//   A.1.H.27 (2292.5, 1128.5)
+//   A.1.H.32 (315.5, 1582.5)
+//   A.1.H.33 (940.5, 1582.5)
+//   A.1.H.8 (1565.5, 1582)
+//   A.1.F.9 (2214, 1523.25)
+//   A.1.F.28 (315.5, 1832)
+//   A.1.F.34 (940.5, 1832)
+//   A.1.H.29 (1565.5, 1813)
+//   A.1.H.35 (2190.5, 1813)
+//   A.1.H.31 (211, 1877)
+//   A.1.H.36 (627, 1877)
+//   A.1.H.37 (1043, 1877)
 
-SetMachiningParameters("AD", 1, 10, 16973824, false);
-CreateFinishedWorkpieceBox("T01", 2800, 2070, 19);
-CreateRawWorkpiece("T01", 0, 0, 0, 0, 0, 0);
+MachineParameters mp=GetMachiningParameters();
+SetMachiningParameters("AD", 1, 10, 16777216, false);
+SetPreserveWorkingSequence(true);
+SetWorkPieceFallPrevention(true);
+
+CreateFinishedWorkpieceBox("Noguera_xapada_19#01", 2800, 2070, 19);
+CreateRawWorkpiece("Noguera_xapada_19#01", 0, 0, 0, 0, 0, 0);
+SetWorkpieceSetupPosition(0, -20, 0, 0);
+CreateMacro("Pload", "PLOAD", 1, 0, 1, 0, 4, 2, false, 0, 0, 0, 0);
 
 SelectWorkplane("Top");
+SetPneumaticHoodPosition(1);
+ResetAuxiliaryHood();
+ResetDustpan();
 
 // --- Forats ---
-// broca vertical O8 (006): eina automatica
-CreateDrill("A.1.H.3_Forat_3", 650.5, 50, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.H.3_Forat_2", 650.5, 230, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.H.3_Forat_1", 650.5, 410, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.H.4_Forat_1", 650.5, 503, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.H.4_Forat_2", 650.5, 683, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.H.4_Forat_3", 650.5, 863, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.H.4_Forat_6", 1169.5, 863, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.H.4_Forat_5", 1169.5, 683, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.H.4_Forat_4", 1169.5, 503, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.H.3_Forat_4", 1169.5, 410, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.H.3_Forat_5", 1169.5, 230, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.H.3_Forat_6", 1169.5, 50, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1");
-// broca vertical O5 (003): eina automatica
-CreateDrill("A.1.L.1_Forat_2", 1879, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_4", 1911, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_6", 1943, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_8", 1975, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_10", 2007, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_12", 2039, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_14", 2071, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_16", 2103, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_18", 2135, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_20", 2167, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_22", 2199, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_24", 2231, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_26", 2263, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_28", 2295, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_30", 2327, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_32", 2359, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_34", 2391, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_36", 2423, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_38", 2455, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_37", 2455, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_35", 2423, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_33", 2391, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_31", 2359, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_29", 2327, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_27", 2295, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_25", 2263, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_23", 2231, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_21", 2199, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_19", 2167, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_17", 2135, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_15", 2103, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_13", 2071, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_11", 2039, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_9", 2007, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_7", 1975, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_5", 1943, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_3", 1911, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.1_Forat_1", 1879, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.F.9_ForatPassant_1", 2147, 1631.5, 19.3, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.F.9_ForatPassant_2", 2275, 1631.5, 19.3, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.6_Forat_5", 487.66, 1300, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.6_Forat_3", 267.33, 1300, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.6_Forat_1", 47, 1300, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.6_Forat_2", 47, 1044, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.6_Forat_4", 267.33, 1044, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.L.6_Forat_6", 487.66, 1044, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1");
-// broca vertical O35 (013): eina automatica
-CreateDrill("A.1.F.9_Forat_1", 1997, 1391.5, 13, 35, "", TypeOfProcess.Drilling, "-1", "-1");
-CreateDrill("A.1.F.9_Forat_2", 2445, 1391.5, 13, 35, "", TypeOfProcess.Drilling, "-1", "-1");
+//BROCA PLANA 006
+// O8: eina automatica ("-1"), broques del diametre 006
+CreateDrill("A.1.H.3_Forat_3", 650.5, 50, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.H.3_Forat_2", 650.5, 230, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.H.3_Forat_1", 650.5, 410, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.H.4_Forat_1", 650.5, 504, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.H.4_Forat_2", 650.5, 684, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.H.4_Forat_3", 650.5, 864, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.H.4_Forat_6", 1169.5, 864, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.H.4_Forat_5", 1169.5, 684, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.H.4_Forat_4", 1169.5, 504, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.H.3_Forat_4", 1169.5, 410, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.H.3_Forat_5", 1169.5, 230, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.H.3_Forat_6", 1169.5, 50, 12, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+//BROCA PLANA 003
+// O5: eina automatica ("-1"), broques del diametre 003
+CreateDrill("A.1.L.1_Forat_2", 1880, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_4", 1912, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_6", 1944, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_8", 1976, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_10", 2008, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_12", 2040, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_14", 2072, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_16", 2104, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_18", 2136, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_20", 2168, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_22", 2200, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_24", 2232, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_26", 2264, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_28", 2296, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_30", 2328, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_32", 2360, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_34", 2392, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_36", 2424, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_38", 2456, 47, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_37", 2456, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_35", 2424, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_33", 2392, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_31", 2360, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_29", 2328, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_27", 2296, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_25", 2264, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_23", 2232, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_21", 2200, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_19", 2168, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_17", 2136, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_15", 2104, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_13", 2072, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_11", 2040, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_9", 2008, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_7", 1976, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_5", 1944, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_3", 1912, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.1_Forat_1", 1880, 413, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.F.9_ForatPassant_1", 2150, 1634.5, 19.3, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.F.9_ForatPassant_2", 2278, 1634.5, 19.3, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.6_Forat_5", 487.66, 1302, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.6_Forat_3", 267.33, 1302, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.6_Forat_1", 47, 1302, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.6_Forat_2", 47, 1046, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.6_Forat_4", 267.33, 1046, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.L.6_Forat_6", 487.66, 1046, 12, 5, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+//BROCA PLANA 013
+// O35: eina automatica ("-1"), broques del diametre 013
+CreateDrill("A.1.F.9_Forat_1", 2000, 1394.5, 13, 35, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill("A.1.F.9_Forat_2", 2448, 1394.5, 13, 35, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
 
 // --- Contorns de les peces (per fora) ---
-// Peca A.1.F.9 (Porta esquerra) - etiqueta al centre (2211, 1520.25) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.F.9_Contorn_1_P1_G", 2211, 1369);
-AddSegmentToPolyline(2540, 1369);
-AddSegmentToPolyline(2540, 1671.5);
-AddSegmentToPolyline(1882, 1671.5);
-AddSegmentToPolyline(1882, 1369);
+//FRESA PLANA 12mm diamant nesting
+// Peca A.1.F.9 (Porta esquerra) - etiqueta al centre (2214, 1523.25) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.F.9_Contorn_1_P1_G", 2214, 1372);
+AddSegmentToPolyline(2543, 1372);
+AddSegmentToPolyline(2543, 1674.5);
+AddSegmentToPolyline(1885, 1674.5);
+AddSegmentToPolyline(1885, 1372);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -133,12 +146,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.F.9_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.35 (Prestatge 3 (llisto del darrere)) - etiqueta al centre (2187.5, 1809) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.H.35_Contorn_1_P1_G", 2187.5, 1803);
-AddSegmentToPolyline(2493, 1803);
-AddSegmentToPolyline(2493, 1815);
-AddSegmentToPolyline(1882, 1815);
-AddSegmentToPolyline(1882, 1803);
+// Peca A.1.H.35 (Prestatge 3 (llisto del darrere)) - etiqueta al centre (2190.5, 1813) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.H.35_Contorn_1_P1_G", 2190.5, 1807);
+AddSegmentToPolyline(2496, 1807);
+AddSegmentToPolyline(2496, 1819);
+AddSegmentToPolyline(1885, 1819);
+AddSegmentToPolyline(1885, 1807);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -147,12 +160,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.35_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.29 (Prestatge 2 (llisto del darrere)) - etiqueta al centre (1563.5, 1809) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.H.29_Contorn_1_P1_G", 1563.5, 1803);
-AddSegmentToPolyline(1869, 1803);
-AddSegmentToPolyline(1869, 1815);
-AddSegmentToPolyline(1258, 1815);
-AddSegmentToPolyline(1258, 1803);
+// Peca A.1.H.29 (Prestatge 2 (llisto del darrere)) - etiqueta al centre (1565.5, 1813) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.H.29_Contorn_1_P1_G", 1565.5, 1807);
+AddSegmentToPolyline(1871, 1807);
+AddSegmentToPolyline(1871, 1819);
+AddSegmentToPolyline(1260, 1819);
+AddSegmentToPolyline(1260, 1807);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -161,12 +174,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.29_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.8 (Prestatge) - etiqueta al centre (1563.5, 1579) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.H.8_Contorn_1_P1_G", 1563.5, 1369);
-AddSegmentToPolyline(1869, 1369);
-AddSegmentToPolyline(1869, 1789);
-AddSegmentToPolyline(1258, 1789);
-AddSegmentToPolyline(1258, 1369);
+// Peca A.1.H.8 (Prestatge) - etiqueta al centre (1565.5, 1582) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.H.8_Contorn_1_P1_G", 1565.5, 1372);
+AddSegmentToPolyline(1871, 1372);
+AddSegmentToPolyline(1871, 1792);
+AddSegmentToPolyline(1260, 1792);
+AddSegmentToPolyline(1260, 1372);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -175,12 +188,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.8_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.26 (Prestatge 2 (pell de baix)) - etiqueta al centre (1665.5, 1126.5) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.H.26_Contorn_1_P1_G", 1665.5, 916);
-AddSegmentToPolyline(1971, 916);
-AddSegmentToPolyline(1971, 1337);
-AddSegmentToPolyline(1360, 1337);
-AddSegmentToPolyline(1360, 916);
+// Peca A.1.H.26 (Prestatge 2 (pell de baix)) - etiqueta al centre (1667.5, 1128.5) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.H.26_Contorn_1_P1_G", 1667.5, 918);
+AddSegmentToPolyline(1973, 918);
+AddSegmentToPolyline(1973, 1339);
+AddSegmentToPolyline(1362, 1339);
+AddSegmentToPolyline(1362, 918);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -189,12 +202,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.26_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.27 (Prestatge 2 (pell de dalt)) - etiqueta al centre (2289.5, 1126.5) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.H.27_Contorn_1_P1_G", 2289.5, 916);
-AddSegmentToPolyline(2595, 916);
-AddSegmentToPolyline(2595, 1337);
-AddSegmentToPolyline(1984, 1337);
-AddSegmentToPolyline(1984, 916);
+// Peca A.1.H.27 (Prestatge 2 (pell de dalt)) - etiqueta al centre (2292.5, 1128.5) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.H.27_Contorn_1_P1_G", 2292.5, 918);
+AddSegmentToPolyline(2598, 918);
+AddSegmentToPolyline(2598, 1339);
+AddSegmentToPolyline(1987, 1339);
+AddSegmentToPolyline(1987, 918);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -203,12 +216,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.27_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.L.2 (Lateral dret) - etiqueta al centre (2173, 683) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.L.2_Contorn_1_P1_G", 2173, 463);
-AddSegmentToPolyline(2523, 463);
-AddSegmentToPolyline(2523, 903);
-AddSegmentToPolyline(1823, 903);
-AddSegmentToPolyline(1823, 463);
+// Peca A.1.L.2 (Lateral dret) - etiqueta al centre (2174, 684) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.L.2_Contorn_1_P1_G", 2174, 464);
+AddSegmentToPolyline(2524, 464);
+AddSegmentToPolyline(2524, 904);
+AddSegmentToPolyline(1824, 904);
+AddSegmentToPolyline(1824, 464);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -217,12 +230,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.L.2_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.L.1 (Lateral esquerre) - etiqueta al centre (2173, 230) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.L.1_Contorn_1_P1_G", 2173, 10);
-AddSegmentToPolyline(2523, 10);
-AddSegmentToPolyline(2523, 450);
-AddSegmentToPolyline(1823, 450);
-AddSegmentToPolyline(1823, 10);
+// Peca A.1.L.1 (Lateral esquerre) - etiqueta al centre (2174, 230) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.L.1_Contorn_1_P1_G", 2174, 10);
+AddSegmentToPolyline(2524, 10);
+AddSegmentToPolyline(2524, 450);
+AddSegmentToPolyline(1824, 450);
+AddSegmentToPolyline(1824, 10);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -245,12 +258,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.3_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.4 (Sostre) - etiqueta al centre (910, 683) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.H.4_Contorn_1_P1_G", 910, 463);
-AddSegmentToPolyline(1810, 463);
-AddSegmentToPolyline(1810, 903);
-AddSegmentToPolyline(10, 903);
-AddSegmentToPolyline(10, 463);
+// Peca A.1.H.4 (Sostre) - etiqueta al centre (910, 684) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.H.4_Contorn_1_P1_G", 910, 464);
+AddSegmentToPolyline(1810, 464);
+AddSegmentToPolyline(1810, 904);
+AddSegmentToPolyline(10, 904);
+AddSegmentToPolyline(10, 464);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -259,12 +272,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.4_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.L.7 (Divisor) - etiqueta al centre (1016, 1136) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.L.7_Contorn_1_P1_G", 1016, 916);
-AddSegmentToPolyline(1347, 916);
-AddSegmentToPolyline(1347, 1356);
-AddSegmentToPolyline(685, 1356);
-AddSegmentToPolyline(685, 916);
+// Peca A.1.L.7 (Divisor) - etiqueta al centre (1017, 1138) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.L.7_Contorn_1_P1_G", 1017, 918);
+AddSegmentToPolyline(1348, 918);
+AddSegmentToPolyline(1348, 1358);
+AddSegmentToPolyline(686, 1358);
+AddSegmentToPolyline(686, 918);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -273,12 +286,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.L.7_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.33 (Prestatge 3 (pell de dalt)) - etiqueta al centre (939.5, 1579.5) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.H.33_Contorn_1_P1_G", 939.5, 1369);
-AddSegmentToPolyline(1245, 1369);
-AddSegmentToPolyline(1245, 1790);
-AddSegmentToPolyline(634, 1790);
-AddSegmentToPolyline(634, 1369);
+// Peca A.1.H.33 (Prestatge 3 (pell de dalt)) - etiqueta al centre (940.5, 1582.5) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.H.33_Contorn_1_P1_G", 940.5, 1372);
+AddSegmentToPolyline(1246, 1372);
+AddSegmentToPolyline(1246, 1793);
+AddSegmentToPolyline(635, 1793);
+AddSegmentToPolyline(635, 1372);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -287,12 +300,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.33_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.F.34 (Prestatge 3 (tira del davant)) - etiqueta al centre (939.5, 1828) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.F.34_Contorn_1_P1_G", 939.5, 1803);
-AddSegmentToPolyline(1245, 1803);
-AddSegmentToPolyline(1245, 1853);
-AddSegmentToPolyline(634, 1853);
-AddSegmentToPolyline(634, 1803);
+// Peca A.1.F.34 (Prestatge 3 (tira del davant)) - etiqueta al centre (940.5, 1832) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.F.34_Contorn_1_P1_G", 940.5, 1807);
+AddSegmentToPolyline(1246, 1807);
+AddSegmentToPolyline(1246, 1857);
+AddSegmentToPolyline(635, 1857);
+AddSegmentToPolyline(635, 1807);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -301,12 +314,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.F.34_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.37 (Prestatge 3 (llisto dret)) - etiqueta al centre (1041, 1872) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.H.37_Contorn_1_P1_G", 1041, 1866);
-AddSegmentToPolyline(1242, 1866);
-AddSegmentToPolyline(1242, 1878);
-AddSegmentToPolyline(840, 1878);
-AddSegmentToPolyline(840, 1866);
+// Peca A.1.H.37 (Prestatge 3 (llisto dret)) - etiqueta al centre (1043, 1877) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.H.37_Contorn_1_P1_G", 1043, 1871);
+AddSegmentToPolyline(1244, 1871);
+AddSegmentToPolyline(1244, 1883);
+AddSegmentToPolyline(842, 1883);
+AddSegmentToPolyline(842, 1871);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -315,12 +328,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.37_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.36 (Prestatge 3 (llisto esquerre)) - etiqueta al centre (626, 1872) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.H.36_Contorn_1_P1_G", 626, 1866);
-AddSegmentToPolyline(827, 1866);
-AddSegmentToPolyline(827, 1878);
-AddSegmentToPolyline(425, 1878);
-AddSegmentToPolyline(425, 1866);
+// Peca A.1.H.36 (Prestatge 3 (llisto esquerre)) - etiqueta al centre (627, 1877) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.H.36_Contorn_1_P1_G", 627, 1871);
+AddSegmentToPolyline(828, 1871);
+AddSegmentToPolyline(828, 1883);
+AddSegmentToPolyline(426, 1883);
+AddSegmentToPolyline(426, 1871);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -329,12 +342,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.36_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.F.28 (Prestatge 2 (tira del davant)) - etiqueta al centre (315.5, 1828) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.F.28_Contorn_1_P1_G", 315.5, 1803);
-AddSegmentToPolyline(621, 1803);
-AddSegmentToPolyline(621, 1853);
-AddSegmentToPolyline(10, 1853);
-AddSegmentToPolyline(10, 1803);
+// Peca A.1.F.28 (Prestatge 2 (tira del davant)) - etiqueta al centre (315.5, 1832) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.F.28_Contorn_1_P1_G", 315.5, 1807);
+AddSegmentToPolyline(621, 1807);
+AddSegmentToPolyline(621, 1857);
+AddSegmentToPolyline(10, 1857);
+AddSegmentToPolyline(10, 1807);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -343,12 +356,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.F.28_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.31 (Prestatge 2 (llisto dret)) - etiqueta al centre (211, 1872) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.H.31_Contorn_1_P1_G", 211, 1866);
-AddSegmentToPolyline(412, 1866);
-AddSegmentToPolyline(412, 1878);
-AddSegmentToPolyline(10, 1878);
-AddSegmentToPolyline(10, 1866);
+// Peca A.1.H.31 (Prestatge 2 (llisto dret)) - etiqueta al centre (211, 1877) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.H.31_Contorn_1_P1_G", 211, 1871);
+AddSegmentToPolyline(412, 1871);
+AddSegmentToPolyline(412, 1883);
+AddSegmentToPolyline(10, 1883);
+AddSegmentToPolyline(10, 1871);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -357,12 +370,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.31_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.32 (Prestatge 3 (pell de baix)) - etiqueta al centre (315.5, 1579.5) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.H.32_Contorn_1_P1_G", 315.5, 1369);
-AddSegmentToPolyline(621, 1369);
-AddSegmentToPolyline(621, 1790);
-AddSegmentToPolyline(10, 1790);
-AddSegmentToPolyline(10, 1369);
+// Peca A.1.H.32 (Prestatge 3 (pell de baix)) - etiqueta al centre (315.5, 1582.5) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.H.32_Contorn_1_P1_G", 315.5, 1372);
+AddSegmentToPolyline(621, 1372);
+AddSegmentToPolyline(621, 1793);
+AddSegmentToPolyline(10, 1793);
+AddSegmentToPolyline(10, 1372);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -371,12 +384,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.32_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.L.6 (Divisor) - etiqueta al centre (341, 1136) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
-CreatePolyline("A.1.L.6_Contorn_1_P1_G", 341, 916);
-AddSegmentToPolyline(672, 916);
-AddSegmentToPolyline(672, 1356);
-AddSegmentToPolyline(10, 1356);
-AddSegmentToPolyline(10, 916);
+// Peca A.1.L.6 (Divisor) - etiqueta al centre (341, 1138) - peca petita, passada 1 de 3 (fondaria 18, sobrant 1)
+CreatePolyline("A.1.L.6_Contorn_1_P1_G", 341, 918);
+AddSegmentToPolyline(672, 918);
+AddSegmentToPolyline(672, 1358);
+AddSegmentToPolyline(10, 1358);
+AddSegmentToPolyline(10, 918);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -385,12 +398,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.L.6_Contorn_1_P1", 18, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 1);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.L.6 (Divisor) - etiqueta al centre (341, 1136) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.L.6_Contorn_1_P2_G", 341, 916);
-AddSegmentToPolyline(672, 916);
-AddSegmentToPolyline(672, 1356);
-AddSegmentToPolyline(10, 1356);
-AddSegmentToPolyline(10, 916);
+// Peca A.1.L.6 (Divisor) - etiqueta al centre (341, 1138) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.L.6_Contorn_1_P2_G", 341, 918);
+AddSegmentToPolyline(672, 918);
+AddSegmentToPolyline(672, 1358);
+AddSegmentToPolyline(10, 1358);
+AddSegmentToPolyline(10, 918);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -399,12 +412,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.L.6_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.32 (Prestatge 3 (pell de baix)) - etiqueta al centre (315.5, 1579.5) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.H.32_Contorn_1_P2_G", 315.5, 1369);
-AddSegmentToPolyline(621, 1369);
-AddSegmentToPolyline(621, 1790);
-AddSegmentToPolyline(10, 1790);
-AddSegmentToPolyline(10, 1369);
+// Peca A.1.H.32 (Prestatge 3 (pell de baix)) - etiqueta al centre (315.5, 1582.5) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.H.32_Contorn_1_P2_G", 315.5, 1372);
+AddSegmentToPolyline(621, 1372);
+AddSegmentToPolyline(621, 1793);
+AddSegmentToPolyline(10, 1793);
+AddSegmentToPolyline(10, 1372);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -413,12 +426,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.32_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.F.28 (Prestatge 2 (tira del davant)) - etiqueta al centre (315.5, 1828) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.F.28_Contorn_1_P2_G", 315.5, 1803);
-AddSegmentToPolyline(621, 1803);
-AddSegmentToPolyline(621, 1853);
-AddSegmentToPolyline(10, 1853);
-AddSegmentToPolyline(10, 1803);
+// Peca A.1.F.28 (Prestatge 2 (tira del davant)) - etiqueta al centre (315.5, 1832) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.F.28_Contorn_1_P2_G", 315.5, 1807);
+AddSegmentToPolyline(621, 1807);
+AddSegmentToPolyline(621, 1857);
+AddSegmentToPolyline(10, 1857);
+AddSegmentToPolyline(10, 1807);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -427,12 +440,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.F.28_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.31 (Prestatge 2 (llisto dret)) - etiqueta al centre (211, 1872) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.H.31_Contorn_1_P2_G", 211, 1866);
-AddSegmentToPolyline(412, 1866);
-AddSegmentToPolyline(412, 1878);
-AddSegmentToPolyline(10, 1878);
-AddSegmentToPolyline(10, 1866);
+// Peca A.1.H.31 (Prestatge 2 (llisto dret)) - etiqueta al centre (211, 1877) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.H.31_Contorn_1_P2_G", 211, 1871);
+AddSegmentToPolyline(412, 1871);
+AddSegmentToPolyline(412, 1883);
+AddSegmentToPolyline(10, 1883);
+AddSegmentToPolyline(10, 1871);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -441,12 +454,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.31_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.36 (Prestatge 3 (llisto esquerre)) - etiqueta al centre (626, 1872) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.H.36_Contorn_1_P2_G", 626, 1866);
-AddSegmentToPolyline(827, 1866);
-AddSegmentToPolyline(827, 1878);
-AddSegmentToPolyline(425, 1878);
-AddSegmentToPolyline(425, 1866);
+// Peca A.1.H.36 (Prestatge 3 (llisto esquerre)) - etiqueta al centre (627, 1877) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.H.36_Contorn_1_P2_G", 627, 1871);
+AddSegmentToPolyline(828, 1871);
+AddSegmentToPolyline(828, 1883);
+AddSegmentToPolyline(426, 1883);
+AddSegmentToPolyline(426, 1871);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -455,12 +468,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.36_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.F.34 (Prestatge 3 (tira del davant)) - etiqueta al centre (939.5, 1828) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.F.34_Contorn_1_P2_G", 939.5, 1803);
-AddSegmentToPolyline(1245, 1803);
-AddSegmentToPolyline(1245, 1853);
-AddSegmentToPolyline(634, 1853);
-AddSegmentToPolyline(634, 1803);
+// Peca A.1.F.34 (Prestatge 3 (tira del davant)) - etiqueta al centre (940.5, 1832) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.F.34_Contorn_1_P2_G", 940.5, 1807);
+AddSegmentToPolyline(1246, 1807);
+AddSegmentToPolyline(1246, 1857);
+AddSegmentToPolyline(635, 1857);
+AddSegmentToPolyline(635, 1807);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -469,12 +482,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.F.34_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.37 (Prestatge 3 (llisto dret)) - etiqueta al centre (1041, 1872) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.H.37_Contorn_1_P2_G", 1041, 1866);
-AddSegmentToPolyline(1242, 1866);
-AddSegmentToPolyline(1242, 1878);
-AddSegmentToPolyline(840, 1878);
-AddSegmentToPolyline(840, 1866);
+// Peca A.1.H.37 (Prestatge 3 (llisto dret)) - etiqueta al centre (1043, 1877) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.H.37_Contorn_1_P2_G", 1043, 1871);
+AddSegmentToPolyline(1244, 1871);
+AddSegmentToPolyline(1244, 1883);
+AddSegmentToPolyline(842, 1883);
+AddSegmentToPolyline(842, 1871);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -483,12 +496,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.37_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.33 (Prestatge 3 (pell de dalt)) - etiqueta al centre (939.5, 1579.5) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.H.33_Contorn_1_P2_G", 939.5, 1369);
-AddSegmentToPolyline(1245, 1369);
-AddSegmentToPolyline(1245, 1790);
-AddSegmentToPolyline(634, 1790);
-AddSegmentToPolyline(634, 1369);
+// Peca A.1.H.33 (Prestatge 3 (pell de dalt)) - etiqueta al centre (940.5, 1582.5) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.H.33_Contorn_1_P2_G", 940.5, 1372);
+AddSegmentToPolyline(1246, 1372);
+AddSegmentToPolyline(1246, 1793);
+AddSegmentToPolyline(635, 1793);
+AddSegmentToPolyline(635, 1372);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -497,12 +510,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.33_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.L.7 (Divisor) - etiqueta al centre (1016, 1136) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.L.7_Contorn_1_P2_G", 1016, 916);
-AddSegmentToPolyline(1347, 916);
-AddSegmentToPolyline(1347, 1356);
-AddSegmentToPolyline(685, 1356);
-AddSegmentToPolyline(685, 916);
+// Peca A.1.L.7 (Divisor) - etiqueta al centre (1017, 1138) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.L.7_Contorn_1_P2_G", 1017, 918);
+AddSegmentToPolyline(1348, 918);
+AddSegmentToPolyline(1348, 1358);
+AddSegmentToPolyline(686, 1358);
+AddSegmentToPolyline(686, 918);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -511,12 +524,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.L.7_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.4 (Sostre) - etiqueta al centre (910, 683) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.H.4_Contorn_1_P2_G", 910, 463);
-AddSegmentToPolyline(1810, 463);
-AddSegmentToPolyline(1810, 903);
-AddSegmentToPolyline(10, 903);
-AddSegmentToPolyline(10, 463);
+// Peca A.1.H.4 (Sostre) - etiqueta al centre (910, 684) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.H.4_Contorn_1_P2_G", 910, 464);
+AddSegmentToPolyline(1810, 464);
+AddSegmentToPolyline(1810, 904);
+AddSegmentToPolyline(10, 904);
+AddSegmentToPolyline(10, 464);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -539,12 +552,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.3_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.26 (Prestatge 2 (pell de baix)) - etiqueta al centre (1665.5, 1126.5) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.H.26_Contorn_1_P2_G", 1665.5, 916);
-AddSegmentToPolyline(1971, 916);
-AddSegmentToPolyline(1971, 1337);
-AddSegmentToPolyline(1360, 1337);
-AddSegmentToPolyline(1360, 916);
+// Peca A.1.H.26 (Prestatge 2 (pell de baix)) - etiqueta al centre (1667.5, 1128.5) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.H.26_Contorn_1_P2_G", 1667.5, 918);
+AddSegmentToPolyline(1973, 918);
+AddSegmentToPolyline(1973, 1339);
+AddSegmentToPolyline(1362, 1339);
+AddSegmentToPolyline(1362, 918);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -553,12 +566,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.26_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.8 (Prestatge) - etiqueta al centre (1563.5, 1579) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.H.8_Contorn_1_P2_G", 1563.5, 1369);
-AddSegmentToPolyline(1869, 1369);
-AddSegmentToPolyline(1869, 1789);
-AddSegmentToPolyline(1258, 1789);
-AddSegmentToPolyline(1258, 1369);
+// Peca A.1.H.8 (Prestatge) - etiqueta al centre (1565.5, 1582) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.H.8_Contorn_1_P2_G", 1565.5, 1372);
+AddSegmentToPolyline(1871, 1372);
+AddSegmentToPolyline(1871, 1792);
+AddSegmentToPolyline(1260, 1792);
+AddSegmentToPolyline(1260, 1372);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -567,12 +580,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.8_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.29 (Prestatge 2 (llisto del darrere)) - etiqueta al centre (1563.5, 1809) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.H.29_Contorn_1_P2_G", 1563.5, 1803);
-AddSegmentToPolyline(1869, 1803);
-AddSegmentToPolyline(1869, 1815);
-AddSegmentToPolyline(1258, 1815);
-AddSegmentToPolyline(1258, 1803);
+// Peca A.1.H.29 (Prestatge 2 (llisto del darrere)) - etiqueta al centre (1565.5, 1813) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.H.29_Contorn_1_P2_G", 1565.5, 1807);
+AddSegmentToPolyline(1871, 1807);
+AddSegmentToPolyline(1871, 1819);
+AddSegmentToPolyline(1260, 1819);
+AddSegmentToPolyline(1260, 1807);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -581,12 +594,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.29_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.35 (Prestatge 3 (llisto del darrere)) - etiqueta al centre (2187.5, 1809) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.H.35_Contorn_1_P2_G", 2187.5, 1803);
-AddSegmentToPolyline(2493, 1803);
-AddSegmentToPolyline(2493, 1815);
-AddSegmentToPolyline(1882, 1815);
-AddSegmentToPolyline(1882, 1803);
+// Peca A.1.H.35 (Prestatge 3 (llisto del darrere)) - etiqueta al centre (2190.5, 1813) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.H.35_Contorn_1_P2_G", 2190.5, 1807);
+AddSegmentToPolyline(2496, 1807);
+AddSegmentToPolyline(2496, 1819);
+AddSegmentToPolyline(1885, 1819);
+AddSegmentToPolyline(1885, 1807);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -595,12 +608,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.35_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.F.9 (Porta esquerra) - etiqueta al centre (2211, 1520.25) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.F.9_Contorn_1_P2_G", 2211, 1369);
-AddSegmentToPolyline(2540, 1369);
-AddSegmentToPolyline(2540, 1671.5);
-AddSegmentToPolyline(1882, 1671.5);
-AddSegmentToPolyline(1882, 1369);
+// Peca A.1.F.9 (Porta esquerra) - etiqueta al centre (2214, 1523.25) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.F.9_Contorn_1_P2_G", 2214, 1372);
+AddSegmentToPolyline(2543, 1372);
+AddSegmentToPolyline(2543, 1674.5);
+AddSegmentToPolyline(1885, 1674.5);
+AddSegmentToPolyline(1885, 1372);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -609,12 +622,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.F.9_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.27 (Prestatge 2 (pell de dalt)) - etiqueta al centre (2289.5, 1126.5) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.H.27_Contorn_1_P2_G", 2289.5, 916);
-AddSegmentToPolyline(2595, 916);
-AddSegmentToPolyline(2595, 1337);
-AddSegmentToPolyline(1984, 1337);
-AddSegmentToPolyline(1984, 916);
+// Peca A.1.H.27 (Prestatge 2 (pell de dalt)) - etiqueta al centre (2292.5, 1128.5) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.H.27_Contorn_1_P2_G", 2292.5, 918);
+AddSegmentToPolyline(2598, 918);
+AddSegmentToPolyline(2598, 1339);
+AddSegmentToPolyline(1987, 1339);
+AddSegmentToPolyline(1987, 918);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -623,12 +636,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.27_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.L.2 (Lateral dret) - etiqueta al centre (2173, 683) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.L.2_Contorn_1_P2_G", 2173, 463);
-AddSegmentToPolyline(2523, 463);
-AddSegmentToPolyline(2523, 903);
-AddSegmentToPolyline(1823, 903);
-AddSegmentToPolyline(1823, 463);
+// Peca A.1.L.2 (Lateral dret) - etiqueta al centre (2174, 684) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.L.2_Contorn_1_P2_G", 2174, 464);
+AddSegmentToPolyline(2524, 464);
+AddSegmentToPolyline(2524, 904);
+AddSegmentToPolyline(1824, 904);
+AddSegmentToPolyline(1824, 464);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -637,12 +650,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.L.2_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.L.1 (Lateral esquerre) - etiqueta al centre (2173, 230) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
-CreatePolyline("A.1.L.1_Contorn_1_P2_G", 2173, 10);
-AddSegmentToPolyline(2523, 10);
-AddSegmentToPolyline(2523, 450);
-AddSegmentToPolyline(1823, 450);
-AddSegmentToPolyline(1823, 10);
+// Peca A.1.L.1 (Lateral esquerre) - etiqueta al centre (2174, 230) - peca petita, passada 2 de 3 (fondaria 18.5, sobrant 0)
+CreatePolyline("A.1.L.1_Contorn_1_P2_G", 2174, 10);
+AddSegmentToPolyline(2524, 10);
+AddSegmentToPolyline(2524, 450);
+AddSegmentToPolyline(1824, 450);
+AddSegmentToPolyline(1824, 10);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -651,12 +664,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.L.1_Contorn_1_P2", 18.5, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.L.1 (Lateral esquerre) - etiqueta al centre (2173, 230) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.L.1_Contorn_1_P3_G", 2173, 10);
-AddSegmentToPolyline(2523, 10);
-AddSegmentToPolyline(2523, 450);
-AddSegmentToPolyline(1823, 450);
-AddSegmentToPolyline(1823, 10);
+// Peca A.1.L.1 (Lateral esquerre) - etiqueta al centre (2174, 230) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.L.1_Contorn_1_P3_G", 2174, 10);
+AddSegmentToPolyline(2524, 10);
+AddSegmentToPolyline(2524, 450);
+AddSegmentToPolyline(1824, 450);
+AddSegmentToPolyline(1824, 10);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -665,12 +678,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.L.1_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.L.2 (Lateral dret) - etiqueta al centre (2173, 683) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.L.2_Contorn_1_P3_G", 2173, 463);
-AddSegmentToPolyline(2523, 463);
-AddSegmentToPolyline(2523, 903);
-AddSegmentToPolyline(1823, 903);
-AddSegmentToPolyline(1823, 463);
+// Peca A.1.L.2 (Lateral dret) - etiqueta al centre (2174, 684) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.L.2_Contorn_1_P3_G", 2174, 464);
+AddSegmentToPolyline(2524, 464);
+AddSegmentToPolyline(2524, 904);
+AddSegmentToPolyline(1824, 904);
+AddSegmentToPolyline(1824, 464);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -679,12 +692,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.L.2_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.27 (Prestatge 2 (pell de dalt)) - etiqueta al centre (2289.5, 1126.5) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.H.27_Contorn_1_P3_G", 2289.5, 916);
-AddSegmentToPolyline(2595, 916);
-AddSegmentToPolyline(2595, 1337);
-AddSegmentToPolyline(1984, 1337);
-AddSegmentToPolyline(1984, 916);
+// Peca A.1.H.27 (Prestatge 2 (pell de dalt)) - etiqueta al centre (2292.5, 1128.5) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.H.27_Contorn_1_P3_G", 2292.5, 918);
+AddSegmentToPolyline(2598, 918);
+AddSegmentToPolyline(2598, 1339);
+AddSegmentToPolyline(1987, 1339);
+AddSegmentToPolyline(1987, 918);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -693,12 +706,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.27_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.F.9 (Porta esquerra) - etiqueta al centre (2211, 1520.25) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.F.9_Contorn_1_P3_G", 2211, 1369);
-AddSegmentToPolyline(2540, 1369);
-AddSegmentToPolyline(2540, 1671.5);
-AddSegmentToPolyline(1882, 1671.5);
-AddSegmentToPolyline(1882, 1369);
+// Peca A.1.F.9 (Porta esquerra) - etiqueta al centre (2214, 1523.25) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.F.9_Contorn_1_P3_G", 2214, 1372);
+AddSegmentToPolyline(2543, 1372);
+AddSegmentToPolyline(2543, 1674.5);
+AddSegmentToPolyline(1885, 1674.5);
+AddSegmentToPolyline(1885, 1372);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -707,12 +720,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.F.9_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.35 (Prestatge 3 (llisto del darrere)) - etiqueta al centre (2187.5, 1809) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.H.35_Contorn_1_P3_G", 2187.5, 1803);
-AddSegmentToPolyline(2493, 1803);
-AddSegmentToPolyline(2493, 1815);
-AddSegmentToPolyline(1882, 1815);
-AddSegmentToPolyline(1882, 1803);
+// Peca A.1.H.35 (Prestatge 3 (llisto del darrere)) - etiqueta al centre (2190.5, 1813) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.H.35_Contorn_1_P3_G", 2190.5, 1807);
+AddSegmentToPolyline(2496, 1807);
+AddSegmentToPolyline(2496, 1819);
+AddSegmentToPolyline(1885, 1819);
+AddSegmentToPolyline(1885, 1807);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -721,12 +734,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.35_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.29 (Prestatge 2 (llisto del darrere)) - etiqueta al centre (1563.5, 1809) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.H.29_Contorn_1_P3_G", 1563.5, 1803);
-AddSegmentToPolyline(1869, 1803);
-AddSegmentToPolyline(1869, 1815);
-AddSegmentToPolyline(1258, 1815);
-AddSegmentToPolyline(1258, 1803);
+// Peca A.1.H.29 (Prestatge 2 (llisto del darrere)) - etiqueta al centre (1565.5, 1813) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.H.29_Contorn_1_P3_G", 1565.5, 1807);
+AddSegmentToPolyline(1871, 1807);
+AddSegmentToPolyline(1871, 1819);
+AddSegmentToPolyline(1260, 1819);
+AddSegmentToPolyline(1260, 1807);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -735,12 +748,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.29_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.8 (Prestatge) - etiqueta al centre (1563.5, 1579) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.H.8_Contorn_1_P3_G", 1563.5, 1369);
-AddSegmentToPolyline(1869, 1369);
-AddSegmentToPolyline(1869, 1789);
-AddSegmentToPolyline(1258, 1789);
-AddSegmentToPolyline(1258, 1369);
+// Peca A.1.H.8 (Prestatge) - etiqueta al centre (1565.5, 1582) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.H.8_Contorn_1_P3_G", 1565.5, 1372);
+AddSegmentToPolyline(1871, 1372);
+AddSegmentToPolyline(1871, 1792);
+AddSegmentToPolyline(1260, 1792);
+AddSegmentToPolyline(1260, 1372);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -749,12 +762,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.8_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.26 (Prestatge 2 (pell de baix)) - etiqueta al centre (1665.5, 1126.5) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.H.26_Contorn_1_P3_G", 1665.5, 916);
-AddSegmentToPolyline(1971, 916);
-AddSegmentToPolyline(1971, 1337);
-AddSegmentToPolyline(1360, 1337);
-AddSegmentToPolyline(1360, 916);
+// Peca A.1.H.26 (Prestatge 2 (pell de baix)) - etiqueta al centre (1667.5, 1128.5) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.H.26_Contorn_1_P3_G", 1667.5, 918);
+AddSegmentToPolyline(1973, 918);
+AddSegmentToPolyline(1973, 1339);
+AddSegmentToPolyline(1362, 1339);
+AddSegmentToPolyline(1362, 918);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -763,12 +776,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.26_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.L.7 (Divisor) - etiqueta al centre (1016, 1136) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.L.7_Contorn_1_P3_G", 1016, 916);
-AddSegmentToPolyline(1347, 916);
-AddSegmentToPolyline(1347, 1356);
-AddSegmentToPolyline(685, 1356);
-AddSegmentToPolyline(685, 916);
+// Peca A.1.L.7 (Divisor) - etiqueta al centre (1017, 1138) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.L.7_Contorn_1_P3_G", 1017, 918);
+AddSegmentToPolyline(1348, 918);
+AddSegmentToPolyline(1348, 1358);
+AddSegmentToPolyline(686, 1358);
+AddSegmentToPolyline(686, 918);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -777,12 +790,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.L.7_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.33 (Prestatge 3 (pell de dalt)) - etiqueta al centre (939.5, 1579.5) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.H.33_Contorn_1_P3_G", 939.5, 1369);
-AddSegmentToPolyline(1245, 1369);
-AddSegmentToPolyline(1245, 1790);
-AddSegmentToPolyline(634, 1790);
-AddSegmentToPolyline(634, 1369);
+// Peca A.1.H.33 (Prestatge 3 (pell de dalt)) - etiqueta al centre (940.5, 1582.5) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.H.33_Contorn_1_P3_G", 940.5, 1372);
+AddSegmentToPolyline(1246, 1372);
+AddSegmentToPolyline(1246, 1793);
+AddSegmentToPolyline(635, 1793);
+AddSegmentToPolyline(635, 1372);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -791,12 +804,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.33_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.F.34 (Prestatge 3 (tira del davant)) - etiqueta al centre (939.5, 1828) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.F.34_Contorn_1_P3_G", 939.5, 1803);
-AddSegmentToPolyline(1245, 1803);
-AddSegmentToPolyline(1245, 1853);
-AddSegmentToPolyline(634, 1853);
-AddSegmentToPolyline(634, 1803);
+// Peca A.1.F.34 (Prestatge 3 (tira del davant)) - etiqueta al centre (940.5, 1832) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.F.34_Contorn_1_P3_G", 940.5, 1807);
+AddSegmentToPolyline(1246, 1807);
+AddSegmentToPolyline(1246, 1857);
+AddSegmentToPolyline(635, 1857);
+AddSegmentToPolyline(635, 1807);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -805,12 +818,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.F.34_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.37 (Prestatge 3 (llisto dret)) - etiqueta al centre (1041, 1872) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.H.37_Contorn_1_P3_G", 1041, 1866);
-AddSegmentToPolyline(1242, 1866);
-AddSegmentToPolyline(1242, 1878);
-AddSegmentToPolyline(840, 1878);
-AddSegmentToPolyline(840, 1866);
+// Peca A.1.H.37 (Prestatge 3 (llisto dret)) - etiqueta al centre (1043, 1877) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.H.37_Contorn_1_P3_G", 1043, 1871);
+AddSegmentToPolyline(1244, 1871);
+AddSegmentToPolyline(1244, 1883);
+AddSegmentToPolyline(842, 1883);
+AddSegmentToPolyline(842, 1871);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -819,12 +832,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.37_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.36 (Prestatge 3 (llisto esquerre)) - etiqueta al centre (626, 1872) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.H.36_Contorn_1_P3_G", 626, 1866);
-AddSegmentToPolyline(827, 1866);
-AddSegmentToPolyline(827, 1878);
-AddSegmentToPolyline(425, 1878);
-AddSegmentToPolyline(425, 1866);
+// Peca A.1.H.36 (Prestatge 3 (llisto esquerre)) - etiqueta al centre (627, 1877) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.H.36_Contorn_1_P3_G", 627, 1871);
+AddSegmentToPolyline(828, 1871);
+AddSegmentToPolyline(828, 1883);
+AddSegmentToPolyline(426, 1883);
+AddSegmentToPolyline(426, 1871);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -833,12 +846,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.36_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.F.28 (Prestatge 2 (tira del davant)) - etiqueta al centre (315.5, 1828) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.F.28_Contorn_1_P3_G", 315.5, 1803);
-AddSegmentToPolyline(621, 1803);
-AddSegmentToPolyline(621, 1853);
-AddSegmentToPolyline(10, 1853);
-AddSegmentToPolyline(10, 1803);
+// Peca A.1.F.28 (Prestatge 2 (tira del davant)) - etiqueta al centre (315.5, 1832) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.F.28_Contorn_1_P3_G", 315.5, 1807);
+AddSegmentToPolyline(621, 1807);
+AddSegmentToPolyline(621, 1857);
+AddSegmentToPolyline(10, 1857);
+AddSegmentToPolyline(10, 1807);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -847,12 +860,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.F.28_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.31 (Prestatge 2 (llisto dret)) - etiqueta al centre (211, 1872) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.H.31_Contorn_1_P3_G", 211, 1866);
-AddSegmentToPolyline(412, 1866);
-AddSegmentToPolyline(412, 1878);
-AddSegmentToPolyline(10, 1878);
-AddSegmentToPolyline(10, 1866);
+// Peca A.1.H.31 (Prestatge 2 (llisto dret)) - etiqueta al centre (211, 1877) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.H.31_Contorn_1_P3_G", 211, 1871);
+AddSegmentToPolyline(412, 1871);
+AddSegmentToPolyline(412, 1883);
+AddSegmentToPolyline(10, 1883);
+AddSegmentToPolyline(10, 1871);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -861,12 +874,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.31_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.32 (Prestatge 3 (pell de baix)) - etiqueta al centre (315.5, 1579.5) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.H.32_Contorn_1_P3_G", 315.5, 1369);
-AddSegmentToPolyline(621, 1369);
-AddSegmentToPolyline(621, 1790);
-AddSegmentToPolyline(10, 1790);
-AddSegmentToPolyline(10, 1369);
+// Peca A.1.H.32 (Prestatge 3 (pell de baix)) - etiqueta al centre (315.5, 1582.5) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.H.32_Contorn_1_P3_G", 315.5, 1372);
+AddSegmentToPolyline(621, 1372);
+AddSegmentToPolyline(621, 1793);
+AddSegmentToPolyline(10, 1793);
+AddSegmentToPolyline(10, 1372);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -875,12 +888,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.H.32_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.L.6 (Divisor) - etiqueta al centre (341, 1136) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.L.6_Contorn_1_P3_G", 341, 916);
-AddSegmentToPolyline(672, 916);
-AddSegmentToPolyline(672, 1356);
-AddSegmentToPolyline(10, 1356);
-AddSegmentToPolyline(10, 916);
+// Peca A.1.L.6 (Divisor) - etiqueta al centre (341, 1138) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.L.6_Contorn_1_P3_G", 341, 918);
+AddSegmentToPolyline(672, 918);
+AddSegmentToPolyline(672, 1358);
+AddSegmentToPolyline(10, 1358);
+AddSegmentToPolyline(10, 918);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();
@@ -889,12 +902,12 @@ SetRetractStrategy(true, false, 6.667, 0);
 CreateContour("A.1.L.6_Contorn_1_P3", 19.3, 1, 1, "contorn", TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
 ResetApproachStrategy();
 ResetRetractStrategy();
-// Peca A.1.H.4 (Sostre) - etiqueta al centre (910, 683) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
-CreatePolyline("A.1.H.4_Contorn_1_P3_G", 910, 463);
-AddSegmentToPolyline(1810, 463);
-AddSegmentToPolyline(1810, 903);
-AddSegmentToPolyline(10, 903);
-AddSegmentToPolyline(10, 463);
+// Peca A.1.H.4 (Sostre) - etiqueta al centre (910, 684) - peca petita, passada 3 de 3 (fondaria 19.3, sobrant 0)
+CreatePolyline("A.1.H.4_Contorn_1_P3_G", 910, 464);
+AddSegmentToPolyline(1810, 464);
+AddSegmentToPolyline(1810, 904);
+AddSegmentToPolyline(10, 904);
+AddSegmentToPolyline(10, 464);
 ClosePolyline("");
 ResetApproachStrategy();
 ResetRetractStrategy();

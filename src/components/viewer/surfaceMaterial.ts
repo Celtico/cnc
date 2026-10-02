@@ -1,10 +1,10 @@
 import { MeshStandardMaterial, type Texture } from "three"
 import type { MaterialPref } from "../../core/model"
-import { applyFinishFx, patternTexture, photoTexture, resolveFinish, woodGenOf, woodTexture } from "./textures"
+import { applyFinishFx, patternTexture, tileClone, photoTexture, resolveFinish, woodGenOf, woodTexture } from "./textures"
 
+/** Còpia amb la repetició a mida real; comparteix la imatge (i la textura de GPU) de la base (`tileClone`). */
 function tiled(base: Texture, uMm: number, vMm: number, tileMm: number, aspect = 1): Texture {
-  const t = base.clone()
-  t.needsUpdate = true
+  const t = tileClone(base)
   t.repeat.set(uMm / tileMm, vMm / (tileMm * aspect))
   return t
 }

@@ -6,7 +6,8 @@ import { compositionOf } from "../db/compositionStore"
 import { nest, type Nesting, type NestOptions } from "../core/nesting/nest"
 import { db, safeNestOptions, safeParams, type Project } from "../db/db"
 import { useLiveQuery } from "../db/useLiveQuery"
-import { type Settings } from "../core/model"
+import { defaultMachine, type Settings } from "../core/model"
+import { nestPlan } from "../core/nesting/machineNest"
 import { useSettings } from "./settings/SettingsContext"
 
 export function useProjects(): Project[] | undefined {
@@ -46,8 +47,14 @@ export function useCabinet(params: CabinetParams | undefined): Panel[] {
   return useMemo(() => (params ? buildCabinet(params) : []), [params])
 }
 
+/**
+ * Nesting del projecte. Amb una màquina a Preferències › Màquines CNC, amb la separació i el marge dels seus programes per
+ * tauler (`nestPlan`): la pantalla Nesting, el CSV de TopSolid i els .xcs fan el mateix nesting. Sense, els del projecte.
+ */
 export function useNesting(panels: Panel[], options: NestOptions | undefined): Nesting | undefined {
-  return useMemo(() => (options && panels.length ? nest(panels, options) : undefined), [panels, options])
+  const { settings } = useSettings()
+  const machine = defaultMachine(settings.machines)
+  return useMemo(() => (options && panels.length ? nest(panels, nestPlan(panels, options, machine).options) : undefined), [panels, options, machine])
 }
 
 /** Composició del projecte (migrada del mòdul de caixa si cal). */

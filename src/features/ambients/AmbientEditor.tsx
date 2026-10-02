@@ -186,6 +186,8 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const [objPicker, setObjPicker] = useState(false)
   // Render per CPU (path tracing), el mateix de l'editor.
   const [renderOpen, setRenderOpen] = useState(false)
+  // «Opcions de vista» obert: es tanca en obrir el Render (si no, el popover o el calaix quedaven a sobre).
+  const [viewOptsOpen, setViewOptsOpen] = useState(false)
   const sceneGetter = useRef<SceneGetter | null>(null)
   const onSceneAccess = useCallback((g: SceneGetter) => {
     sceneGetter.current = g
@@ -633,6 +635,8 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
           {/* Opcions de vista (com a l'editor), a dalt a la dreta. */}
           <Box position="absolute" top={3} right={{ base: 3, md: 14 }} zIndex={2}>
             <ViewOptions
+              open={viewOptsOpen}
+              onOpenChange={setViewOptsOpen}
               tiles={
                 tab === "plan" ? (
                   <>
@@ -643,7 +647,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                     <ViewTile label="Peces" icon={<LuLayers />} on={showDetail} onClick={() => setShowDetail((v) => !v)} tip="Les peces dels mobles vistes des de dalt" />
                     <ViewTile label="Imant" icon={<LuMagnet />} on={snapOn} onClick={() => setSnapOn((v) => !v)} tip="Imant a les parets i als extrems (Alt: sense, puntualment)" />
                     {amb.plan && <ViewTile label="Plànol de fons" icon={<LuImage />} on={showPlan} onClick={() => setShowPlan((v) => !v)} />}
-                    <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => (setTab("3d"), setRenderOpen(true))} tip="Render fotorealista per CPU (des del 3D)" />
+                    <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => (setViewOptsOpen(false), setTab("3d"), setRenderOpen(true))} tip="Render fotorealista per CPU (des del 3D)" />
                   </>
                 ) : (
                   <>
@@ -652,7 +656,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                     <ViewTile label="Casa de nines" icon={<LuHouse />} on={dollhouse} onClick={() => setDollhouse((v) => !v)} tip="Parets de davant transparents" />
                     <ViewTile label="Ombres" icon={<LuSun />} on={shadows} onClick={() => setShadows((v) => !v)} />
                     <ViewTile label="Sostre" icon={<LuPanelTop />} on={ceiling} onClick={() => setCeiling((v) => !v)} tip="Sostre a les habitacions tancades: es veu des de dins («Interior») i al render la llum entra per les finestres" />
-                    <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => setRenderOpen(true)} tip="Render fotorealista per CPU (com Cinema 4D): es va afinant i es desa en PNG" />
+                    <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => (setViewOptsOpen(false), setRenderOpen(true))} tip="Render fotorealista per CPU (com Cinema 4D): es va afinant i es desa en PNG" />
                   </>
                 )
               }

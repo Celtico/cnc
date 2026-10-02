@@ -1,8 +1,9 @@
 import { Environment, Lightformer, PerspectiveCamera } from "@react-three/drei"
 import { Canvas } from "@react-three/fiber"
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { Matrix4, Object3D } from "three"
 import { PanelMesh } from "../../components/viewer/CabinetViewer"
+import { TextureRefresh } from "../../components/viewer/SceneHelpers"
 import { LIGHT_SPEC, type LightId } from "../../components/viewer/presentationScene"
 import { cabinetToPlane, type Camera, type SceneOptions } from "../../core/photo/camera"
 import type { MaterialPref, Panel } from "../../core/model"
@@ -69,19 +70,26 @@ export function PhotoRender({ panels, camera, scene, width, height, size, materi
   const target = useMemo(() => new Object3D(), [])
   // La llum apunta al centre del moble (`target` com a prop: amb una ref, l'efecte corria abans que
   // el Canvas creés la llum i apuntava a l'origen).
+  // La funció pot ser nova a cada render del pare: es guarda en una ref i el canvas només es «treu» en desmuntar-se
+  // (abans, cada render del pare el posava a null i ja no tornava: la imatge descarregada sortia sense el moble).
+  const onCanvasRef = useRef(onCanvas)
   useEffect(() => {
-    target.position.set(w / 2, h / 2, d / 2)
-  }, [target, w, h, d])
-  useEffect(() => () => onCanvas?.(null), [onCanvas])
+    onCanvasRef.current = onCanvas
+  })
+  useEffect(() => () => onCanvasRef.current?.(null), [])
 
   return (
+    // Només pinta quan canvia alguna cosa (càmera, moble, llum, textures que arriben).
     <Canvas
-      shadows={shadows ? "soft" : false}
+      frameloop="demand"
+      // PCF amb el radi de sempre (el «soft» de three ja ho és; PCFSoftShadowMap s'ha retirat i avisava).
+      shadows={shadows ? "percentage" : false}
       dpr={[1, 2]}
       gl={{ alpha: true, preserveDrawingBuffer: true, antialias: true }}
       style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity }}
-      onCreated={({ gl }) => onCanvas?.(gl.domElement)}
+      onCreated={({ gl }) => onCanvasRef.current?.(gl.domElement)}
     >
+      <TextureRefresh />
       <PerspectiveCamera makeDefault position={[0, 0, 0]} fov={fov} aspect={width / height} near={0.05} far={200} />
       <Environment key={light} resolution={128} frames={1}>
         <Lightformer form="rect" color={spec.sky} intensity={2 * spec.env} position={[0, 5, 2]} rotation-x={Math.PI / 2} scale={[8, 4, 1]} />
@@ -89,7 +97,8 @@ export function PhotoRender({ panels, camera, scene, width, height, size, materi
         <Lightformer form="rect" color={spec.sky} intensity={0.6 * spec.env} position={[5, 1.5, 3]} rotation-y={-Math.PI / 3} scale={[4, 3, 1]} />
       </Environment>
       <group matrix={matrix} matrixAutoUpdate={false}>
-        <primitive object={target} />
+        {/* La posició com a prop: r3f la posa i demana el fotograma (`frameloop="demand"`). */}
+        <primitive object={target} position={[w / 2, h / 2, d / 2]} />
         <hemisphereLight position={[0, 1, 0]} intensity={spec.ambient + 0.15} groundColor="#8a7a60" />
         <directionalLight
           target={target}

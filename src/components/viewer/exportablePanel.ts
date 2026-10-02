@@ -3,7 +3,7 @@ import type { MaterialPref, Panel } from "../../core/model"
 import { ROLE_COLOR } from "./roleColorMap"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
 import { textureOffset, type TextureOffset } from "./textureOffset"
-import { RAW_EDGE_COLOR, TILE_MM, applyFinishFx, patternTexture, photoTexture, resolveEdgeFinish, resolveFinish, woodGenOf, woodTexture, type FinishSpec } from "./textures"
+import { RAW_EDGE_COLOR, TILE_MM, applyFinishFx, tileClone, patternTexture, photoTexture, resolveEdgeFinish, resolveFinish, woodGenOf, woodTexture, type FinishSpec } from "./textures"
 
 /** Materials i geometria de les peces (visor, GLB/USDZ, miniatures). mm → m. */
 const S = 0.001
@@ -18,13 +18,8 @@ const S = 0.001
  * render (`sceneData`) i l'export (GLB/USDZ).
  */
 function faceTexture(base: Texture, uMm: number, vMm: number, rotate: boolean, tileMm = TILE_MM, aspect = 1, off?: TextureOffset): Texture {
-  // `clone` marca la font compartida per tornar-la a pujar a la GPU (la foto sencera, a cada peça i a cada
-  // reconstrucció). Si la imatge ja és carregada, es deixa la versió de la font com era: el clon (versió pròpia > 0)
-  // reutilitza la textura de GPU de la font. Si encara es baixa, la càrrega ja la marcarà.
-  const sourceVersion = base.source.version
-  const t = base.clone()
-  const img = base.image as { width?: number } | null
-  if (img && (img.width ?? 0) > 0) t.source.version = sourceVersion
+  // Sense tornar a pujar la imatge a la GPU (`tileClone`: comparteix la de la base i compta com a clon viu).
+  const t = tileClone(base)
   t.center.set(0.5, 0.5)
   t.rotation = (rotate ? Math.PI / 2 : 0) + (off?.flip ? Math.PI : 0)
   const tw = tileMm, th = tileMm * aspect
@@ -142,4 +137,14 @@ export function visualPanel(p: Panel): Panel {
   const { cutouts: _c, ...rest } = p
   void _c
   return cutouts.length ? { ...rest, cutouts } : rest
+}
+
+/**
+ * Tot el que fa canviar com es dibuixa una peça (geometria, materials, veta, cantells, forats, ferratges), sense la
+ * col·locació: si no canvia, el visor no refà els recursos de la GPU de la peça (editar un mòdul no refà les dels
+ * altres). L'`id` hi és perquè la textura es desplaça per peça (`textureOffset`). Els forats, només si es dibuixen
+ * (`holes`: marques dels forats o ferratges, que fan servir les cassoletes).
+ */
+export function panelVisualKey(p: Panel, holes: boolean): string {
+  return JSON.stringify([p.id, p.role, p.length, p.width, p.thickness, p.material, p.grain, p.edges, p.outline, p.cutouts, p.mitres, p.solidCuts, p.grooves, p.push, holes ? p.holes : null])
 }

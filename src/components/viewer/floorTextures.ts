@@ -1,4 +1,5 @@
 import { CanvasTexture, RepeatWrapping, SRGBColorSpace } from "three"
+import { LOW_MEMORY } from "./deviceLimits"
 import type { FloorId } from "./presentationScene"
 
 /* Textures procedurals del terra de l'habitació de Presentació (i les mostres de Preferències). */
@@ -21,7 +22,10 @@ const PARQUET_TILE = 2.4
  * costat, així no es veuen costures ni lames tallades en repetir-se.
  */
 function makeParquet(tones: string[]): CanvasTexture {
-  const px = 2048
+  // A l'iPhone, 1024 (4 MB en lloc de 16, més els mipmaps): la mateixa tessel·la amb la meitat de detall.
+  const px = LOW_MEMORY ? 1024 : 2048
+  /** Gruixos de línia dibuixats per a 2048 px. */
+  const lw = px / 2048
   const rows = 16
   const perM = px / PARQUET_TILE
   const c = document.createElement("canvas")
@@ -56,8 +60,8 @@ function makeParquet(tones: string[]): CanvasTexture {
       const lines = Array.from({ length: 16 }, (_, i) => ({
         y: y0 + rnd() * plankW,
         a: 0.04 + rnd() * 0.08,
-        w: 0.6 + rnd() * 1.4,
-        amp: 1 + rnd() * 2,
+        w: (0.6 + rnd() * 1.4) * lw,
+        amp: (1 + rnd() * 2) * lw,
         ph: i + rnd() * 3,
       }))
       wrapped((dx) => {
@@ -83,13 +87,13 @@ function makeParquet(tones: string[]): CanvasTexture {
         g.restore()
         // junt de testa
         g.fillStyle = "rgba(60, 40, 20, 0.45)"
-        g.fillRect(x0 + len - 1, y0, 2, plankW)
+        g.fillRect(x0 + len - lw, y0, 2 * lw, plankW)
       })
       x += len
     }
     // junt longitudinal
     g.fillStyle = "rgba(60, 40, 20, 0.5)"
-    g.fillRect(0, y0, px, 2)
+    g.fillRect(0, y0, px, 2 * lw)
   }
   const tex = new CanvasTexture(c)
   tex.wrapS = tex.wrapT = RepeatWrapping
@@ -141,9 +145,22 @@ function makeConcrete(): CanvasTexture {
   return tex
 }
 
+/** Textures base dels terres (es generen la primera vegada que es fan servir i es guarden: el parquet costa de fer). */
+const floorCache = new Map<FloorId, CanvasTexture>()
+
+function generate(id: FloorId): CanvasTexture | null {
+  return id === "oak" || id === "walnut" ? makeParquet(WOOD_TONES[id]) : id === "concrete" ? makeConcrete() : null
+}
+
+/**
+ * Terra procedural de l'habitació de Presentació (i de les miniatures): la textura és la base compartida de la
+ * memòria; qui la fa servir en fa un clon (`tileClone`) amb la seva repetició i allibera només el clon.
+ */
 export function makeFloor(id: FloorId): { map: CanvasTexture | null; repeat: number; roughness: number } {
-  if (id === "oak" || id === "walnut") return { map: makeParquet(WOOD_TONES[id]), repeat: ROOM / PARQUET_TILE, roughness: 0.55 }
-  if (id === "concrete") return { map: makeConcrete(), repeat: ROOM / 2, roughness: 0.8 }
+  let map = floorCache.get(id) ?? null
+  if (!map && (map = generate(id))) floorCache.set(id, map)
+  if (id === "oak" || id === "walnut") return { map, repeat: ROOM / PARQUET_TILE, roughness: 0.55 }
+  if (id === "concrete") return { map, repeat: ROOM / 2, roughness: 0.8 }
   return { map: null, repeat: 1, roughness: 0.7 }
 }
 
@@ -152,8 +169,10 @@ const swatchCache = new Map<FloorId, string | null>()
 /** Imatge petita (data URL) de la textura del terra, per a les mostres de les preferències. */
 export function floorSwatchUrl(id: FloorId): string | null {
   if (!swatchCache.has(id)) {
-    const f = makeFloor(id)
-    const src = f.map?.image as HTMLCanvasElement | undefined
+    // Sense guardar-la a la memòria si no hi era (les mostres no la fan servir al 3D).
+    const cached = floorCache.get(id)
+    const tex = cached ?? generate(id)
+    const src = tex?.image as HTMLCanvasElement | undefined
     let url: string | null = null
     if (src) {
       const c = document.createElement("canvas")
@@ -162,7 +181,7 @@ export function floorSwatchUrl(id: FloorId): string | null {
       c.getContext("2d")!.drawImage(src, 0, 0, src.width / 6, src.height / 6, 0, 0, 96, 96)
       url = c.toDataURL("image/jpeg", 0.85)
     }
-    f.map?.dispose()
+    if (!cached) tex?.dispose()
     swatchCache.set(id, url)
   }
   return swatchCache.get(id)!

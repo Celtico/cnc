@@ -7,7 +7,7 @@ import { NumRow } from "../../components/NumRow"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { SectionLabel } from "../../components/SectionLabel"
 import { toaster } from "../../components/ui/toaster"
-import { isPlaceholderTool, machineNesting, newId, TOOL_EDITABLE, TOOL_KIND_LABELS, type Machine, type MachineTool, type ToolEditable, type ToolKind } from "../../core/model"
+import { isPlaceholderTool, machineNesting, nestProgram, newId, TOOL_EDITABLE, TOOL_KIND_LABELS, type Machine, type MachineTool, type ToolEditable, type ToolKind } from "../../core/model"
 import { usableTool } from "../../core/machine/tools"
 import { importMaestroFiles, pickedFromDrop, pickedFromList, type PickedFile } from "./machineImport"
 import { PaneHeadContext } from "./paneHead"
@@ -271,7 +271,7 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
                   <FormRow label="Taula" help="TableOptions (tipus de fixació). El .pgmx del taller diu 10.">
                     <Input size="sm" maxW="160px" inputMode="numeric" value={String(m.header.tableOptions)} onChange={(e) => update({ header: { ...m.header, tableOptions: Number(e.target.value.replace(/[^0-9]/g, "")) || 0 } })} />
                   </FormRow>
-                  <FormRow label="Opcions mecàniques" help="MechanicalOptions: un número de Maestro (bits). El .pgmx del taller diu 16973824.">
+                  <FormRow label="Opcions mecàniques" help="MechanicalOptions dels programes per peça: un número de Maestro (bits). El .pgmx del taller diu 16973824. Els programes per tauler fan servir la de «Programes per tauler».">
                     <Input size="sm" maxW="160px" inputMode="numeric" value={String(m.header.mechanicalOptions)} onChange={(e) => update({ header: { ...m.header, mechanicalOptions: Number(e.target.value.replace(/[^0-9]/g, "")) || 0 } })} />
                   </FormRow>
                   <FormRow label="Cicle continu">
@@ -282,7 +282,7 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
                     </Switch.Root>
                   </FormRow>
                   {(m.header.technologicalMirror !== undefined || m.header.preserveWorkingSequence !== undefined) && (
-                    <FormRow label="Altres (Maestro)" help="No tenen paràmetre a l'MSL: es posen a Maestro si cal.">
+                    <FormRow label="Altres (Maestro)" help="«Conservar la seqüència» surt als programes per tauler (SetPreserveWorkingSequence, com el programa real del taller); el mirall tecnològic no té instrucció a l'MSL.">
                       <Text fontSize="sm" pt="6px">
                         Mirall tecnològic: {m.header.technologicalMirror ? "sí" : "no"} · Conservar la seqüència: {m.header.preserveWorkingSequence ? "sí" : "no"}
                       </Text>
@@ -345,11 +345,67 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
                     onChange={(smallParts) => update({ nesting: { ...machineNesting(m), smallParts } })}
                   />
                 </FormRow>
+                <FormSection title="Capçalera dels programes per tauler">
+                  <Text fontSize="sm" color="fg.muted">
+                    Per defecte, la del programa de nesting real del taller (TopSolid → Maestro). L'àrea, la taula, les repeticions, el cicle continu i
+                    «conservar la seqüència» són els de «Programes .xcs».
+                  </Text>
+                  <FormRow label="Opcions mecàniques" help="MechanicalOptions dels programes per tauler. El programa real del taller diu 16777216 (el .pgmx d'una peça, 16973824).">
+                    <Input
+                      size="sm"
+                      maxW="160px"
+                      inputMode="numeric"
+                      value={String(nestProgram(m).mechanicalOptions)}
+                      onChange={(e) => update({ nesting: { ...machineNesting(m), program: { ...nestProgram(m), mechanicalOptions: Number(e.target.value.replace(/[^0-9]/g, "")) || 0 } } })}
+                    />
+                  </FormRow>
+                  <NumRow
+                    label="Posició a la taula X"
+                    help="SetWorkpieceSetupPosition: on va la cantonada del tauler a la taula. El real: (0, −20)."
+                    value={nestProgram(m).setupPosition.x}
+                    min={-5000}
+                    max={5000}
+                    step={1}
+                    onChange={(x) => update({ nesting: { ...machineNesting(m), program: { ...nestProgram(m), setupPosition: { ...nestProgram(m).setupPosition, x } } } })}
+                  />
+                  <NumRow
+                    label="Posició a la taula Y"
+                    value={nestProgram(m).setupPosition.y}
+                    min={-5000}
+                    max={5000}
+                    step={1}
+                    onChange={(y) => update({ nesting: { ...machineNesting(m), program: { ...nestProgram(m), setupPosition: { ...nestProgram(m).setupPosition, y } } } })}
+                  />
+                  <NumRow
+                    label="Campana"
+                    suffix=""
+                    help="SetPneumaticHoodPosition: 0 = alta, 1–8 = baixa a la posició n. El real: 1."
+                    value={nestProgram(m).pneumaticHood}
+                    min={0}
+                    max={8}
+                    step={1}
+                    onChange={(h) => update({ nesting: { ...machineNesting(m), program: { ...nestProgram(m), pneumaticHood: Math.max(0, Math.min(8, Math.round(h))) } } })}
+                  />
+                  <FormRow label="Macro de càrrega" help="CreateMacro(«Pload», «PLOAD», …) tal com surt al programa real del taller.">
+                    <Switch.Root size="sm" pt={1.5} checked={nestProgram(m).loadMacro} onCheckedChange={(e) => update({ nesting: { ...machineNesting(m), program: { ...nestProgram(m), loadMacro: e.checked } } })}>
+                      <Switch.HiddenInput />
+                      <Switch.Control />
+                      <Switch.Label fontSize="sm">Pload</Switch.Label>
+                    </Switch.Root>
+                  </FormRow>
+                  <FormRow label="Evitar que caiguin peces" help="SetWorkPieceFallPrevention (el porta el programa real; no és al manual).">
+                    <Switch.Root size="sm" pt={1.5} checked={nestProgram(m).fallPrevention} onCheckedChange={(e) => update({ nesting: { ...machineNesting(m), program: { ...nestProgram(m), fallPrevention: e.checked } } })}>
+                      <Switch.HiddenInput />
+                      <Switch.Control />
+                      <Switch.Label fontSize="sm">WorkPieceFallPrevention</Switch.Label>
+                    </Switch.Root>
+                  </FormRow>
+                </FormSection>
               </SettingsGroup>
 
               <Text fontSize="sm" color="fg.muted">
                 Les regles de mecanitzat d'aquesta màquina (fresa de les ranures, perfilar per gruix, rampa, peces petites) són a Preferències ›
-                Ferratges i mecanitzats.
+                Regles de mecanitzat.
               </Text>
 
               <ToolsTable tools={m.tools} onChange={(tools) => update({ tools })} />

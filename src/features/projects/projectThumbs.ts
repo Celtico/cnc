@@ -1,7 +1,7 @@
 import { buildComposition } from "../../core/build/buildComposition"
 import { cameraSignature, thumbIsStale, viewerSize, type CameraPose, type Composition, type MaterialPref } from "../../core/model"
 import { releaseThumbRenderer, renderThumb, THUMB_VERSION } from "../../components/viewer/thumbRenderer"
-import { photoTexturesIdle, photoTexturesPending } from "../../components/viewer/textures"
+import { photoTextureFailures, photoTexturesIdle, photoTexturesPending } from "../../components/viewer/textures"
 import { preloadModels } from "../../components/viewer/models3d"
 import { compositionOf } from "../../db/compositionStore"
 import { db, type Project } from "../../db/db"
@@ -12,7 +12,42 @@ import { db, type Project } from "../../db/db"
  */
 const queue: { id: number | string; run: () => Promise<void> }[] = []
 const pending = new Set<number | string>()
+/** Targetes que esperen cada feina: si ja no n'hi ha cap (s'han desmuntat), la feina se salta. */
+const wanted = new Map<number | string, number>()
 let running = false
+/** El renderitzador s'allibera quan la cua fa 3 s que és buida (desplaçar una graella en demana més de seguida). */
+const RELEASE_MS = 3000
+let releaseTimer: ReturnType<typeof setTimeout> | undefined
+
+/** Una targeta més vol la miniatura `key`; la funció que torna diu que ja no (en desmuntar-se). */
+function want(key: number | string): () => void {
+  wanted.set(key, (wanted.get(key) ?? 0) + 1)
+  let done = false
+  return () => {
+    if (done) return
+    done = true
+    const n = (wanted.get(key) ?? 1) - 1
+    if (n > 0) wanted.set(key, n)
+    else wanted.delete(key)
+  }
+}
+
+/**
+ * Pinta la miniatura quan les fotos de textura ja hi són: el primer intent les comença a baixar (sense pintar,
+ * `snapshot`) i es torna a fer quan s'acaben. `null` si no surt o si alguna foto ha fallat mentrestant (sortiria
+ * negra i es desaria així).
+ */
+export async function drawWhenReady(draw: () => string | null): Promise<string | null> {
+  const failures = photoTextureFailures()
+  for (let i = 0; i < 4; i++) {
+    const url = draw()
+    if (photoTextureFailures() !== failures) return null
+    if (url !== null || !photoTexturesPending()) return url
+    await photoTexturesIdle()
+    if (photoTextureFailures() !== failures) return null
+  }
+  return null
+}
 
 export function needsThumb(p: Project): boolean {
   return thumbIsStale(p, p.updatedAt, THUMB_VERSION, p.composition?.camera)
@@ -31,8 +66,11 @@ export function thumbPose(comp: Composition): CameraPose | undefined {
   return { ...c, position: shift(c.position), target: shift(c.target) }
 }
 
-export function requestProjectThumb(p: Project, materials: MaterialPref[]): void {
-  if (!needsThumb(p) || pending.has(p.id)) return
+/** Demana la miniatura del moble; la funció que torna la cancel·la (si cap altra targeta la vol). */
+export function requestProjectThumb(p: Project, materials: MaterialPref[]): () => void {
+  if (!needsThumb(p)) return () => {}
+  const release = want(p.id)
+  if (pending.has(p.id)) return release
   pending.add(p.id)
   queue.push({
     id: p.id,
@@ -44,19 +82,15 @@ export function requestProjectThumb(p: Project, materials: MaterialPref[]): void
       // Si un model 3D no s'ha pogut carregar, no es fa (ni es desa): sortiria sense la planta per sempre.
       if (!(await preloadModels(build.models))) return
       const pose = thumbPose(comp)
-      const draw = () => renderThumb([...build.panels, ...build.extras], materials, comp.scene, comp.references, build.models, pose)
-      let url = draw()
-      // Textures de foto que encara es baixaven: es torna a pintar quan hi són.
-      if (photoTexturesPending()) {
-        await photoTexturesIdle()
-        url = draw()
-      }
+      // Quan hi són les textures de foto (si no, sortirien negres).
+      const url = await drawWhenReady(() => renderThumb([...build.panels, ...build.extras], materials, comp.scene, comp.references, build.models, pose))
       // Sense tocar `updatedAt` ni `edited`. `thumbCam` és la de la fila (la que mira `needsThumb`).
       const cam = cameraSignature(fresh.composition?.camera)
       if (url) await db.projects.update(p.id, { thumb: url, thumbAt: fresh.updatedAt, thumbV: THUMB_VERSION, thumbCam: cam })
     },
   })
   void drain()
+  return release
 }
 
 /**
@@ -64,41 +98,53 @@ export function requestProjectThumb(p: Project, materials: MaterialPref[]): void
  * l'app és oberta (no són dades de l'usuari). `onDone` rep la imatge quan és feta.
  */
 const templateThumbs = new Map<string, string>()
+const templateListeners = new Map<string, Set<(url: string) => void>>()
 export function templateThumb(id: string): string | undefined {
   return templateThumbs.get(id)
 }
-export function requestTemplateThumb(id: string, make: () => Composition, materials: MaterialPref[], onDone: (url: string) => void): void {
+export function requestTemplateThumb(id: string, make: () => Composition, materials: MaterialPref[], onDone: (url: string) => void): () => void {
   const hit = templateThumbs.get(id)
-  if (hit) return onDone(hit)
+  if (hit) {
+    onDone(hit)
+    return () => {}
+  }
   const key = `t:${id}`
-  if (pending.has(key)) return
+  const release = want(key)
+  // Una altra targeta de la mateixa plantilla (la mateixa a dues categories): també rep la imatge.
+  const listeners = (templateListeners.get(key) ?? new Set<(url: string) => void>())
+  templateListeners.set(key, listeners)
+  listeners.add(onDone)
+  const cancel = () => {
+    listeners.delete(onDone)
+    release()
+  }
+  if (pending.has(key)) return cancel
   pending.add(key)
   queue.push({
     id: key,
     run: async () => {
       const build = buildComposition(make())
       if (!(await preloadModels(build.models))) return
-      const draw = () => renderThumb([...build.panels, ...build.extras], materials, undefined, [], build.models)
-      let url = draw()
-      if (photoTexturesPending()) {
-        await photoTexturesIdle()
-        url = draw()
-      }
+      const url = await drawWhenReady(() => renderThumb([...build.panels, ...build.extras], materials, undefined, [], build.models))
       if (url) {
         templateThumbs.set(id, url)
-        onDone(url)
+        for (const f of templateListeners.get(key) ?? []) f(url)
       }
+      templateListeners.delete(key)
     },
   })
   void drain()
+  return cancel
 }
 
 /** Afegeix una feina a la cua comuna de miniatures (una cada cop; `key` evita repetir-la). */
-export function enqueueThumb(key: string, run: () => Promise<void>): void {
-  if (pending.has(key)) return
+export function enqueueThumb(key: string, run: () => Promise<void>): () => void {
+  const release = want(key)
+  if (pending.has(key)) return release
   pending.add(key)
   queue.push({ id: key, run })
   void drain()
+  return release
 }
 
 const idle = () =>
@@ -111,9 +157,16 @@ const idle = () =>
 async function drain() {
   if (running) return
   running = true
+  clearTimeout(releaseTimer)
   try {
     while (queue.length) {
       const job = queue.shift()!
+      // La targeta que la volia ja no hi és (s'ha tancat l'acordió, s'ha canviat de pàgina): se salta.
+      if (!wanted.has(job.id)) {
+        pending.delete(job.id)
+        templateListeners.delete(String(job.id))
+        continue
+      }
       await idle()
       try {
         await job.run()
@@ -124,6 +177,9 @@ async function drain() {
     }
   } finally {
     running = false
-    releaseThumbRenderer()
+    clearTimeout(releaseTimer)
+    releaseTimer = setTimeout(() => {
+      if (!running) releaseThumbRenderer()
+    }, RELEASE_MS)
   }
 }

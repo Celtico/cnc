@@ -455,11 +455,12 @@ export function PlanCanvas({
                   g.rects.map((r, i) => <rect key={i} x={r.x0} y={r.z0} width={Math.max(0.1, r.x1 - r.x0)} height={Math.max(0.1, r.z1 - r.z0)} fill="none" stroke={C.line} strokeWidth={px(0.6)} />)}
                 {/* El davant: línia gruixuda. */}
                 <line x1={-w / 2} y1={d / 2} x2={w / 2} y2={d / 2} stroke={sel ? C.accent : C.wall} strokeWidth={px(3)} />
-                {show.labels && <g transform={`rotate(${-it.rot})`} style={{ pointerEvents: "none" }}>
+                {/* El nom (i la mida) només si hi cap a la pantalla: si no, tapaven els veïns i el plànol. */}
+                {show.labels && labelFits(names.get(it.id) ?? "", w, d, it.rot, view.s, 12, 18) && <g transform={`rotate(${-it.rot})`} style={{ pointerEvents: "none" }}>
                   <text textAnchor="middle" style={{ fontSize: px(12) }} fill={C.wall} fontWeight={600} y={px(-2)}>
                     {names.get(it.id)}
                   </text>
-                  {g && (
+                  {g && labelFits(`${Math.round(w)} × ${Math.round(d)}`, w, d, it.rot, view.s, 10.5, 34) && (
                     <text textAnchor="middle" style={{ fontSize: px(10.5) }} fill={C.muted} y={px(12)}>
                       {Math.round(w)} × {Math.round(d)}
                     </text>
@@ -619,4 +620,15 @@ function ScaleBar({ s }: { s: number }) {
       {formatLength(mm, unit)}
     </Box>
   )
+}
+
+/**
+ * El text (horitzontal a la pantalla, de `fontPx`) cap dins de la petjada de l'element (w × d mm, girat `rot` graus) a
+ * l'escala `s` (px per mm), amb `minH` px d'alçada com a mínim. L'amplada del text s'estima (≈ 0,55 em per lletra).
+ */
+function labelFits(text: string, w: number, d: number, rot: number, s: number, fontPx: number, minH: number): boolean {
+  const a = (rot * Math.PI) / 180
+  const c = Math.abs(Math.cos(a)), sn = Math.abs(Math.sin(a))
+  const bw = (w * c + d * sn) * s, bh = (w * sn + d * c) * s
+  return bh >= minH && text.length * fontPx * 0.55 <= bw * 1.1
 }

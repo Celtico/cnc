@@ -1,0 +1,200 @@
+MachineParameters mp=GetMachiningParameters();
+SetMachiningParameters ("AD", 1, 10,16777216, false);;
+SetPreserveWorkingSequence (true);
+SetWorkPieceFallPrevention (true);
+
+CreateFinishedWorkpieceBox ("U767_Gris_cubanita_19#01", 2800, 2070, 19);
+CreateRawWorkpiece ("U767_Gris_cubanita_19#01", 0, 0, 0, 0, 0, 0);
+SetWorkpieceSetupPosition (0, -20, 0, 0);
+CreateMacro("Pload","PLOAD",1, 0, 1, 0, 4, 2, false, 0, 0, 0, 0);
+
+//BROCA PLANA FO-FPL-2
+
+//Posicionado pieza a mecanizar 210
+SelectWorkplane ("Top");
+
+SetPneumaticHoodPosition(1);
+ResetAuxiliaryHood ();
+ResetDustpan ();
+CreateDrill ("OP1_1", 2268, 49, 5.15, 2, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP1_2", 2236, 49, 5.15, 2, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP1_3", 1733, 49, 5.15, 2, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP1_4", 1701, 49, 5.15, 2, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP1_5", 1198, 49, 5.15, 2, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP1_6", 1166, 49, 5.15, 2, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP1_7", 663, 49, 5.15, 2, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP1_8", 631, 49, 5.15, 2, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP1_9", 128, 49, 5.15, 2, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP1_10", 96, 49, 5.15, 2, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+
+//BROCA PLANA FO-FPL-4
+
+CreateDrill ("OP2_1", 2342, 411, 18.9, 4, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP2_2", 2342, 93, 18.9, 4, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP2_3", 22, 93, 18.9, 4, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP2_4", 22, 411, 18.9, 4, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+
+//BROCA PLANA FO-FPL-8
+
+CreateDrill ("OP3_1", 2342, 451, 11, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP3_2", 2342, 252, 11, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP3_3", 2342, 53, 11, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP3_4", 22, 53, 11, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP3_5", 22, 252, 11, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP3_6", 22, 451, 11, 8, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+
+//BROCA PLANA FO-FPL-3
+
+CreateDrill ("OP4_1", 2174, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_2", 2110, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_3", 2046, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_4", 1982, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_5", 1918, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_6", 1854, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_7", 1790, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_8", 1726, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_9", 1662, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_10", 1598, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_11", 1534, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_12", 1470, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_13", 1406, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_14", 1342, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_15", 1278, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_16", 1214, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_17", 1150, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_18", 1086, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_19", 1022, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_20", 958, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_21", 894, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_22", 830, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_23", 766, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_24", 702, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_25", 638, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_26", 574, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_27", 510, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_28", 446, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_29", 382, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_30", 318, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_31", 254, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_32", 190, 410.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_33", 190, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_34", 254, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_35", 318, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_36", 382, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_37", 446, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_38", 510, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_39", 574, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_40", 638, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_41", 702, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_42", 766, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_43", 830, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_44", 894, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_45", 958, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_46", 1022, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_47", 1086, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_48", 1150, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_49", 1214, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_50", 1278, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_51", 1342, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_52", 1406, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_53", 1470, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_54", 1534, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_55", 1598, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_56", 1662, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_57", 1726, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_58", 1790, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_59", 1854, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_60", 1918, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_61", 1982, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_62", 2046, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_63", 2110, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+CreateDrill ("OP4_64", 2174, 29.5, 9, 3, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P", 0, 2);
+
+//FRESA PLANA 12mm diamant nesting
+
+CreatePolyline ("OP5_1_Polyline", 2352, 500.7);
+AddSegmentToPolyline (2352, 500.7);
+SetAttribute ("DEPTH", -10.01);
+CreateRoughFinish ("OP5_1",-10,"",TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
+CreateToolpath ("OP5_1_ToolPath", 2352, 500.7, 10);
+AddSegmentToToolpath (2352, 491, -14);
+AddArc2PointRadiusToToolpath (2350.68, 487.82, -14, 4.5, true, false);
+AddArc2PointRadiusToToolpath (2347.5, 486.5, -14, 4.5, true, false);
+AddSegmentToToolpath (16.5, 486.5, -14);
+AddArc2PointRadiusToToolpath (12, 491, -14, 4.5, true, false);
+AddSegmentToToolpath (12, 491, 10);
+
+CreatePolyline ("OP6_1_Polyline", 1331.5, 1752.89);
+AddSegmentToPolyline (1331.5, 1752.89);
+SetAttribute ("DEPTH", -2.01);
+CreateRoughFinish ("OP6_1",-2,"",TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
+CreateToolpath ("OP6_1_ToolPath", 1331.5, 1752.89, 2);
+AddSegmentToToolpath (1331.5, 1716, -19.3);
+AddSegmentToToolpath (1334.5, 1716, -19.3);
+AddSegmentToToolpath (1334.5, 1646, -19.3);
+AddArc2PointRadiusToToolpath (1306.5, 1618, -19.3, 28, true, false);
+AddArc2PointRadiusToToolpath (1278.5, 1646, -19.3, 28, true, false);
+AddSegmentToToolpath (1278.5, 1786, -19.3);
+AddArc2PointRadiusToToolpath (1306.5, 1814, -19.3, 28, true, false);
+AddArc2PointRadiusToToolpath (1334.5, 1786, -19.3, 28, true, false);
+AddSegmentToToolpath (1334.5, 1716, -19.3);
+AddSegmentToToolpath (1331.5, 1716, -19.3);
+AddSegmentToToolpath (1331.5, 1716, 2);
+
+//Tercera passada
+CreatePolyline ("OP7_1 - Tercera passada_Polyline", 1218.89, 498);
+AddSegmentToPolyline (1218.89, 498);
+SetAttribute ("DEPTH", -2.01);
+CreateRoughFinish ("OP7_1 - Tercera passada",-2,"Tercera passada",TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
+CreateToolpath ("OP7_1 - Tercera passada_ToolPath", 1218.89, 498, 2);
+AddSegmentToToolpath (1182, 498, -19.3);
+AddSegmentToToolpath (1182, 497, -19.3);
+AddSegmentToToolpath (12, 497, -19.3);
+AddArc2PointRadiusToToolpath (6, 491, -19.3, 6, false, false);
+AddSegmentToToolpath (6, 12, -19.3);
+AddArc2PointRadiusToToolpath (12, 6, -19.3, 6, false, false);
+AddSegmentToToolpath (2352, 6, -19.3);
+AddArc2PointRadiusToToolpath (2356.24, 7.76, -19.3, 6, false, false);
+AddArc2PointRadiusToToolpath (2358, 12, -19.3, 6, false, false);
+AddSegmentToToolpath (2358, 491, -19.3);
+AddArc2PointRadiusToToolpath (2352, 497, -19.3, 6, false, false);
+AddSegmentToToolpath (1182, 497, -19.3);
+AddSegmentToToolpath (1182, 497, 2);
+
+CreatePolyline ("OP8_1 - Tercera passada_Polyline", 1172.36, 1446);
+AddSegmentToPolyline (1172.36, 1446);
+SetAttribute ("DEPTH", -2.01);
+CreateRoughFinish ("OP8_1 - Tercera passada",-2,"Tercera passada",TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
+CreateToolpath ("OP8_1 - Tercera passada_ToolPath", 1172.36, 1446, 2);
+AddSegmentToToolpath (1209.25, 1446, -19.3);
+AddSegmentToToolpath (1209.25, 1447, -19.3);
+AddSegmentToToolpath (2406.5, 1447, -19.3);
+AddArc2PointRadiusToToolpath (2410.74, 1448.76, -19.3, 6, false, false);
+AddArc2PointRadiusToToolpath (2412.5, 1453, -19.3, 6, false, false);
+AddSegmentToToolpath (2412.5, 2058, -19.3);
+AddArc2PointRadiusToToolpath (2406.5, 2064, -19.3, 6, false, false);
+AddSegmentToToolpath (12, 2064, -19.3);
+AddArc2PointRadiusToToolpath (6, 2058, -19.3, 6, false, false);
+AddSegmentToToolpath (6, 1453, -19.3);
+AddArc2PointRadiusToToolpath (12, 1447, -19.3, 6, false, false);
+AddSegmentToToolpath (1209.25, 1447, -19.3);
+AddSegmentToToolpath (1209.25, 1447, 2);
+
+CreatePolyline ("OP9_1 - Tercera passada_Polyline", 1147.39, 1446);
+AddSegmentToPolyline (1147.39, 1446);
+SetAttribute ("DEPTH", -2.01);
+CreateRoughFinish ("OP9_1 - Tercera passada",-2,"Tercera passada",TypeOfProcess.GeneralRouting, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0);
+CreateToolpath ("OP9_1 - Tercera passada_ToolPath", 1147.39, 1446, 2);
+AddSegmentToToolpath (1110.5, 1446, -19.3);
+AddSegmentToToolpath (1110.5, 1445, -19.3);
+AddSegmentToToolpath (12, 1445, -19.3);
+AddArc2PointRadiusToToolpath (6, 1439, -19.3, 6, false, false);
+AddSegmentToToolpath (6, 526, -19.3);
+AddArc2PointRadiusToToolpath (12, 520, -19.3, 6, false, false);
+AddSegmentToToolpath (2209, 520, -19.3);
+AddArc2PointRadiusToToolpath (2213.24, 521.76, -19.3, 6, false, false);
+AddArc2PointRadiusToToolpath (2215, 526, -19.3, 6, false, false);
+AddSegmentToToolpath (2215, 1439, -19.3);
+AddArc2PointRadiusToToolpath (2209, 1445, -19.3, 6, false, false);
+AddSegmentToToolpath (1110.5, 1445, -19.3);
+AddSegmentToToolpath (1110.5, 1445, 2);

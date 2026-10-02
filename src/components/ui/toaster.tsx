@@ -12,12 +12,14 @@ import {
 export const toaster = createToaster({
   placement: "bottom-end",
   pauseOnPageIdle: true,
+  // Al mòbil, per sobre de la barra de baix (el menú general, 76 px + la zona segura): abans la tapaven.
+  offsets: { top: "1rem", left: "1rem", right: "1rem", bottom: "var(--toast-offset-bottom, 1rem)" },
 })
 
 export const Toaster = () => {
   return (
     <Portal>
-      <ChakraToaster toaster={toaster} insetInline={{ mdDown: "4" }}>
+      <ChakraToaster toaster={toaster} insetInline={{ mdDown: "4" }} css={{ "--toast-offset-bottom": { base: "calc(76px + env(safe-area-inset-bottom, 0px) + 8px)", md: "1rem" } }}>
         {(toast) => (
           <Toast.Root width={{ md: "sm" }}>
             {toast.type === "loading" ? (

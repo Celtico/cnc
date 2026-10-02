@@ -5,6 +5,7 @@ import { frontRaycast, noRaycast } from "./gizmoRaycast"
 import { usePixelScale, type Axis } from "./pixelScale"
 
 const AXIS_COLOR: Record<Axis, string> = { x: "#e5484d", y: "#30a46c", z: "#0090ff" }
+const EDITOR_ONLY = { editorOnly: true }
 
 /**
  * Gizmo de moviment (editor i ambients): una fletxa per direcció (vermella de costat, verda amunt, blava endavant), de
@@ -46,7 +47,8 @@ export function MoveGizmo({
   }
   const rot: Record<Axis, [number, number, number]> = { x: [0, 0, -Math.PI / 2], y: [0, 0, 0], z: [Math.PI / 2, 0, 0] }
   return (
-    <group ref={scaler}>
+    // Element d'edició: la imatge del visor per al render no el porta (`SceneAccess`).
+    <group ref={scaler} userData={EDITOR_ONLY}>
       {axes.map((a) => {
         const on = hover === a || active === a
         const mat = <meshBasicMaterial color={AXIS_COLOR[a]} transparent opacity={active && active !== a ? 0.25 : on ? 1 : 0.85} depthTest={false} depthWrite={false} />

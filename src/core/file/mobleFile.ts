@@ -241,8 +241,11 @@ export function parseMobleFile(text: string): MobleParse {
 export function uniqueName(name: string, existing: readonly string[]): string {
   const taken = new Set(existing.map((n) => n.trim().toLowerCase()))
   if (!taken.has(name.trim().toLowerCase())) return name
-  for (let i = 2; ; i++) {
-    const candidate = `${name} (${i})`
+  // «Moble (3)» que es torna a obrir → «Moble (4)», no «Moble (3) (2)».
+  const m = /^(.*\S) \((\d+)\)$/.exec(name.trim())
+  const base = m ? m[1]! : name.trim()
+  for (let i = m ? Number(m[2]) + 1 : 2; ; i++) {
+    const candidate = `${base} (${i})`
     if (!taken.has(candidate.toLowerCase())) return candidate
   }
 }

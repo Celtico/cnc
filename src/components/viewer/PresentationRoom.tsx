@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react"
 import { type PresentationScene } from "./presentationScene"
 import { makeFloor, ROOM } from "./floorTextures"
 import { surfaceMaterial } from "./surfaceMaterial"
-import { disposeMaterial } from "./textures"
+import { disposeMaterial, tileClone } from "./textures"
 import type { MaterialPref } from "../../core/model"
 
 const SKIRTING = "#fbfaf7"
@@ -28,20 +28,24 @@ export function PresentationRoom({ backZ, scene, materials = [] }: { backZ: numb
   useEffect(() => () => void (floorMat && disposeMaterial(floorMat)), [floorMat])
   useEffect(() => () => void (wallMat && disposeMaterial(wallMat)), [wallMat])
   useEffect(() => () => void (skirtLibMat && disposeMaterial(skirtLibMat)), [skirtLibMat])
+  // Parquet procedural: només si no hi ha terra de la biblioteca (es genera la primera vegada i es guarda per terra,
+  // `makeFloor`); aquí se'n fa un clon amb la repetició, que és l'únic que s'allibera.
   const floor = useMemo(() => {
+    if (floorLib) return { map: null, repeat: 1, roughness: 0.7 }
     const f = makeFloor(scene.floor)
-    f.map?.repeat.set(f.repeat, f.repeat)
-    return f
-  }, [scene.floor])
+    if (!f.map) return f
+    const map = tileClone(f.map)
+    map.repeat.set(f.repeat, f.repeat)
+    return { ...f, map }
+  }, [scene.floor, floorLib])
   useEffect(() => () => floor.map?.dispose(), [floor])
   // El sòcol «com el terra» fa servir la mateixa textura, amb la veta al llarg del sòcol.
   const skirtingMap = useMemo(() => {
-    if (!floor.map) return null
-    const t = floor.map.clone()
+    if (!floor.map || skirtLibMat || scene.skirting !== "floor") return null
+    const t = tileClone(floor.map)
     t.repeat.set(floor.repeat, SK_H / (ROOM / floor.repeat))
-    t.needsUpdate = true
     return t
-  }, [floor])
+  }, [floor, skirtLibMat, scene.skirting])
   useEffect(() => () => skirtingMap?.dispose(), [skirtingMap])
 
   return (

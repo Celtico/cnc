@@ -39,10 +39,11 @@ llenguatge d'scripts pensat per a postprocessadors de CAD/CAM externs (manual MS
     `ExecutionFields` AD, `Repetitions` 1, `TableOptions` 10, **`MechanicalOptions` 16973824** (0x01030000; el
     context diu 0), `ContinuousCycle` false, `IsTechnologicalMirror` true, `PreserveWorkingSequence` true.
     Correspondència amb `SetMachiningParameters(executionFields, repetitions, tableOptions, mechanicalOptions,
-    continuousCycle)` (Table 79 p114, exemples p8 i p114): les cinc primeres van tal qual. **Mirall tecnològic i
-    conservar la seqüència no tenen paràmetre** a la instrucció (el més semblant és `SetPriority`, §3.5.16 p95,
-    però és per operació): es desen i es mostren, no s'escriuen. Sense XilogHeaderParameters, la capçalera per
-    defecte és la del projecte (`DEFAULT_HEADER`).
+    continuousCycle)` (Table 79 p114, exemples p8 i p114): les cinc primeres van tal qual. El **mirall tecnològic** no
+    té instrucció (es desa i es mostra). **Conservar la seqüència** no és al manual R4, però el programa real del taller
+    porta `SetPreserveWorkingSequence(true)`: surt als programes per tauler (vegeu «Comparació amb un programa real del
+    taller»). Sense XilogHeaderParameters, la capçalera per defecte és la del projecte (`DEFAULT_HEADER`). Els programes
+    per tauler fan servir una altra `MechanicalOptions` (16777216, la del programa real; `Machine.nesting.program`).
   - Les operacions de broca del projecte (`DrillingOperation`) **no porten eina** (ToolKey buit, ID 0): el taller
     deixa triar la broca al Maestro. Per això les broques verticals surten amb `tool = "-1"` per defecte
     (opció de la màquina «Broques: tria el Maestro / eina concreta», `Machine.verticalDrills`).
@@ -111,10 +112,10 @@ espai (`cs`). Els comentaris i els textos lliures (noms de peça, descripcions) 
 ### Instruccions MSL (només les dels exemples del manual)
 | Què | MSL | Manual |
 |---|---|---|
-| Capçalera | `SetMachiningParameters("AD", 1, 10, 16973824, false);` (valors de la màquina, editables) | §3.9.1 p114 (Table 79), p8 |
+| Capçalera | `SetMachiningParameters("AD", 1, 10, 16973824, false);` (valors de la màquina, editables). Per tauler, la del programa real del taller (`GetMachiningParameters`, 16777216, `SetPreserveWorkingSequence`, `SetWorkPieceFallPrevention`, `SetWorkpieceSetupPosition`, `Pload`, campanes) | §3.9.1 p114 (Table 79), p8; §3.9.2 p115; §3.6.2 p103; Table 50 p79 |
 | Peça | `CreateFinishedWorkpieceBox(ref, L, A, gruix);` `CreateRawWorkpiece(ref, 0, 0, 0, 0, 0, 0);` | §3.2 p16-17 |
 | Cara | `SelectWorkplane("Top")` / `"Front"` / `"Back"` / `"Left"` / `"Right"` | §3.3.4 p23 |
-| Forat | `CreateDrill(nom, x, y, fondària, Ø, "", TypeOfProcess.Drilling, "-1" o eina, "-1");` | §3.5.1 p36 |
+| Forat | `CreateDrill(nom, x, y, fondària, Ø, "", TypeOfProcess.Drilling, "-1" o eina, "-1");` (per tauler, + `0, -1, -1, "P", 0, 2` com el real) | §3.5.1 p36 (Table 28) |
 | Ranura amb disc | `CreateSegment(…)` + `CreateSlot(nom, fondària, desc, TypeOfProcess.GeneralRouting, eina, "-1", 0, -1, -1, -1, 0);` | §3.4.1.1 p25, §3.5.7 p49 |
 | Ranura amb fresa | `CreatePolyline` + `AddSegmentToPolyline` + `CreateRoughFinish(nom, fondària, desc, TypeOfProcess.GeneralRouting, eina, "-1", 0, -1, -1, -1, 0);` | §3.4.1.4 p30-33, §3.5.3 p40-41 |
 | Tall / contorn | polilínia tancada (`AddArc2PointRadiusToPolyline(x, y, r, horari, >180°)`; els semicercles `AddArc2PointCenterToPolyline(x, y, cx, cy, horari)` (Table 21 p31); `ClosePolyline("")`) o `CreateCircleCenterRadius(nom, cx, cy, r, false)` + `CreateContour(nom, fondària, 1, costat, desc, TypeOfProcess.GeneralRouting, eina, "-1", 0, -1, -1, -1, 0);` (costat 0 = dins, 1 = fora) | §3.4.1.3 p28, p31-32, §3.5.9 p53, p79 |
@@ -122,8 +123,8 @@ espai (`cs`). Els comentaris i els textos lliures (noms de peça, descripcions) 
 - Capçal sempre `"-1"` (automàtic, p36): Maestro el tria segons on és muntada l'eina.
 - Broques horitzontals amb eina `"-1"`: el parell esquerra/dreta (019/020, 021/022) depèn del sentit i
   l'.atrx no diu quin mandrí mira cap a on.
-- Sense estratègies, aproximacions, campanes ni ventoses: Maestro hi posa els valors per defecte de
-  l'eina (§3.5 p35). Noms únics per programa (§2 p5).
+- Sense estratègies, aproximacions, campanes ni ventoses (per peça): Maestro hi posa els valors per defecte de
+  l'eina (§3.5 p35). Els programes per tauler porten les campanes i la rampa (regles). Noms únics per programa (§2 p5).
 - Els arcs (bulge) es passen amb radi, sentit (bulge < 0 = horari) i «més de 180°» (|bulge| > 1). Els
   **semicercles** (|bulge| ≈ 1, ± 0,01) van amb el **centre** (`AddArc2PointCenterToPolyline`, Table 21 p31): amb
   el radi arrodonit a 0,001 podria quedar per sota de mitja corda i l'arc no existiria. És l'opció del manual (no
@@ -231,7 +232,15 @@ testejat (`maestroNestXcs.test.ts`). A Exportar › Màquina CNC (Maestro) › �
 - El marge és la vora que no s'aprofita: la fresa del contorn d'una peça arrambada al marge hi entra (fins a Ø).
 
 ### Programa d'un tauler
-- Fitxer `T01_<material>_<gruix>.xcs` (UTF-8 amb BOM, com tots els .xcs; comentaris en ASCII), peça de treball `T01`. Capçalera de comentaris: tauler, material,
+- Fitxer `T01_<material>_<gruix>.xcs` (UTF-8 amb BOM, com tots els .xcs; comentaris en ASCII), peça de treball amb el **nom
+  del tauler del CSV** (`boardName`: `Noguera_xapada_19#01`, numerat per material i gruix, com el real
+  `U767_Gris_cubanita_19#01`). Capçalera com el programa real del taller (`MachineParameters mp=GetMachiningParameters();`,
+  `SetMachiningParameters` amb `MechanicalOptions` 16777216, `SetPreserveWorkingSequence`, `SetWorkPieceFallPrevention`,
+  `SetWorkpieceSetupPosition(0, -20, 0, 0)`, macro `Pload`; després de `SelectWorkplane("Top")`, campana 1 i
+  `ResetAuxiliaryHood`/`ResetDustpan`), editable a Preferències › Màquines CNC › «Programes per tauler» (`Machine.nesting.program`,
+  `nestProgram`, `DEFAULT_NEST_PROGRAM`). Abans de cada grup d'eina, `//BROCA PLANA <eina>` o `//FRESA PLANA <eina>` (el parser
+  del taller hi atribueix els forats) i els `CreateDrill` amb els paràmetres opcionals del real (`0, -1, -1, "P", 0, 2`).
+  Capçalera de comentaris: tauler, material,
   mida, peces i aprofitament, marge/separació/fresa/martiri, i la llista de peces (ref, nom, mida, cantonada, gir) i
   les **etiquetes** (ref + centre). Abans del contorn de cada peça, `// Peca <ref> (...) - etiqueta al centre (x, y)`.
 - **Gir** (`toBoard`): el nesting col·loca a 0° o 90° (antihorari, sense mirall; el mateix que `localToBoard` del CSV):
@@ -249,9 +258,97 @@ testejat (`maestroNestXcs.test.ts`). A Exportar › Màquina CNC (Maestro) › �
   la perforadora / segona passada»; sense programes «Volt») i inglets (serra), cantells, encolar, push.
 - LLEGEIX-ME: taulers (fitxer, material, mida, peces, aprofitament), peces que no hi caben, ruta de cada peça i avisos.
 - Mostra: `docs/maestro/samples/nesting_T01.xcs` (tauler 1 de l'«Aparador sobre ferro», amb el context + `Proyecto1.pgmx`).
+- Test amb el parser del taller: `core/export/tallerXcs.roundtrip.test.ts` (`TALLER_DIR=… pnpm exec vitest run …`; se salta si no
+  hi és el repo del taller): llegeix el programa real i els nostres (22 mobles × 2 màquines): tauler, forats (posició, fondària, Ø,
+  eina del comentari) i fresats `CreateRoughFinish` (eina, fondària).
+
+## Comparació amb un programa real del taller (U767…)
+Mostra: `docs/maestro/samples/taller_U767_Gris_cubanita_19_01.xcs`. Programa de nesting **de producció** del taller, fet amb el seu
+flux actual TopSolid → Maestro, per a aquesta mateixa màquina; **s'hi va mecanitzar**. ASCII sense BOM, CRLF, 200 línies. Tauler
+`U767_Gris_cubanita_19#01` de 2800 × 2070 × 19 amb 84 forats, 1 fresat obert, 1 tall interior i 3 contorns.
+
+Llegenda: **[real]** = el que diu el fitxer; **[suposició]** = interpretació nostra, per confirmar.
+
+### Coincideix (ja ho fèiem igual)
+- **[real]** Una peça de treball = el tauler (`CreateFinishedWorkpieceBox` 2800 × 2070 × 19 + `CreateRawWorkpiece(…, 0, 0, 0, 0, 0,
+  0)`) i tot en coordenades del tauler, cara `Top`, origen a una cantonada del tauler, X pel costat de 2800 i Y pel de 2070 (les
+  peces van de x = 6 a 2418, y = 6 a 2064, en centre d'eina).
+- **[real]** Broques amb eina `"-1"` i capçal `"-1"` (la tria el Maestro); el nom de la broca només va al comentari.
+- **[real]** Ordre: forats (per eina) → fresat obert → tall interior → contorns de les peces. És el nostre `orderFeats`.
+- **[real]** Fresa «12mm diamant nesting» (el nom del .pgmx, no `E128`) per a tot el fresat.
+- **[real]** Passants a −19,3 = gruix + 0,3: el nostre martiri de 0,3 mm.
+- **[real]** Separació entre peces veïnes 14 mm = Ø12 + 2 (OP9 acaba a y = 1439 i OP8 comença a 1453): la nostra `spacingExtra` 2.
+- **[real]** Cada contorn comença **al mig del costat recte més llarg** (OP7: x = 1182 = (12 + 2352) / 2; OP8: 1209,25; OP9: 1110,5) i
+  hi torna al final: el nostre `rampStart`.
+- **[real]** Contorns de les peces en sentit **antihorari** (arcs `isClockwise = false`), com els nostres.
+- **[real]** Contorns d'una sola passada a tota la fondària en peces grans (1,1–2,0 m²): com la regla «grans, d'una passada».
+
+### Diferent, i què vol dir (de més a menys important)
+1. **Recorreguts explícits.** **[real]** Cada fresat és `CreatePolyline` d'**un sol punt** + `AddSegmentToPolyline` al mateix punt +
+   `SetAttribute("DEPTH", −x,01)` + `CreateRoughFinish(nom, −x, …, "12mm diamant nesting", "-1", 0, -1, -1, -1, 0)` i després el
+   recorregut del **centre de l'eina** amb `CreateToolpath` / `AddSegmentToToolpath` / `AddArc2PointRadiusToToolpath` (X, Y, Z;
+   Z = 0 a la cara de dalt, negativa cap avall, +2 o +10 d'alçada de seguretat). El manual (§3.5.13 p88) diu que amb recorregut
+   «el mecanitzat es fa només com l'ha especificat l'usuari i no es tenen en compte estratègies». La geometria i la fondària del
+   `CreateRoughFinish` hi són de farciment (−2 per a un passant de −19,3). **Nosaltres** donem la geometria de la peça
+   (`CreateContour` costat 1/0, `CreateContourPocket`, `CreateRoughFinish` sobre la ranura) i deixem que el Maestro calculi el
+   recorregut i l'entrada (`SetApproachStrategy`). **[suposició]** Totes dues coses són vàlides a l'MSL; la nostra depèn que el
+   Maestro compensi bé el radi (`CreateContour` amb `correction` 0 = «central» i `sideOfContour` 1 = fora, com l'exemple del manual
+   p53): **cal mirar-ho a la vista CAM** (que el contorn quedi 6 mm per fora de la peça). **No ho hem canviat**: fer els
+   recorreguts nosaltres vol dir calcular l'òfset de qualsevol forma (arcs, cantonades entrants), les passades i les entrades; per
+   a rectangles seria trivial (vegeu el punt 3). Conseqüència: el **parser del taller** (`parseXcs`) només veu com a fresat el
+   `CreateRoughFinish` i només en treu punts dels `…Toolpath`: dels nostres programes hi veu els forats i les ranures (sense punts),
+   **no** els contorns, els talls ni les caixeres.
+2. **Capçalera.** **[real]** `MachineParameters mp=GetMachiningParameters();` (C#: llegeix els paràmetres; la variable no es fa
+   servir), `SetMachiningParameters("AD", 1, 10, 16777216, false);` (amb `;;`), `SetPreserveWorkingSequence(true);`,
+   `SetWorkPieceFallPrevention(true);`, i després de la peça `SetWorkpieceSetupPosition(0, -20, 0, 0);` (§3.9.2 p115: la cantonada
+   0,0,0 del tauler a X 0, Y −20 de la taula) i `CreateMacro("Pload","PLOAD",1, 0, 1, 0, 4, 2, false, 0, 0, 0, 0);` (§3.6.2 p103:
+   aplica la macro .xsp `PLOAD` que ja és al Maestro del taller). Les dues `Set…Prevention/Sequence` no són al manual R4.
+   `MechanicalOptions` **16777216** = 0x01000000; el `Proyecto1.pgmx` (un projecte desat al Maestro) diu 16973824 = 0x01030000
+   (dos bits més, 0x00020000 i 0x00010000) i el context exportat, 0. **Fet**: els programes per tauler escriuen tota aquesta
+   capçalera (abans només `SetMachiningParameters` amb 16973824). **Decisió**: la `MechanicalOptions` dels programes per tauler és
+   la del programa real (és el mateix flux, nesting, i va funcionar), a part de la capçalera de la màquina (que continua sent la del
+   .pgmx per als programes per peça); tot és editable a Preferències › Màquines CNC › «Programes per tauler» (`Machine.nesting.program`).
+   **[suposició]** El significat dels bits, de `-20` (topalls / referència de càrrega?) i dels paràmetres de `PLOAD`.
+3. **Entrada i sortida.** **[real]** Contorns: entrada en **rampa a 30°** (de Z +2 a −19,3 en 36,89 mm: 21,3 / tan 30°) per una línia
+   paral·lela al costat **1 mm cap enfora** (cap al buit entre peces: amb la separació Ø + 2 no toca la del costat), acabant al
+   punt mig; pas d'1 mm cap al contorn; volta sencera; **sortida vertical** a +2. Tall interior (OP6): igual però la rampa va
+   **3 mm cap a dins** del forat (al retall). Fresat obert (OP5): baixa de +10 a −14 en 9,7 mm. **Nosaltres**:
+   `SetApproachStrategy(true, false, k)` / `SetRetractStrategy(true, false, k, 0)` amb k = 40 / radi (el Maestro fa l'entrada lineal
+   «en baixada»; angle i costat, els seus). **[suposició]** Equivalent si la vista CAM ho confirma; si no, la rampa explícita per a
+   rectangles és trivial de copiar.
+4. **Comentaris d'eina.** **[real]** `//BROCA PLANA FO-FPL-8`, `//FRESA PLANA 12mm diamant nesting` abans de cada grup (el parser del
+   taller atribueix els forats a l'últim comentari d'eina). **Fet**: ara els escrivim igual (`//BROCA PLANA 006`, amb el nom de la
+   broca que l'app ha comprovat; `//FRESA PLANA <eina>`); la resta dels nostres comentaris no diuen BROCA/FRESA.
+5. **`CreateDrill`.** **[real]** `CreateDrill("OP1_1", x, y, fondària, Ø, "", TypeOfProcess.Drilling, "-1", "-1", 0, -1, -1, "P",
+   0, 2)`: descàrregues 0, velocitats −1, forat pla `"P"`, con 0, **cota de seguretat 2** (Table 28 p36). **Fet**: els nostres
+   igual (abans acabaven al capçal).
+6. **Nom de la peça de treball.** **[real]** `<material>_<gruix>#NN`. **Fet**: el nom del tauler del CSV (`boardName`); abans `T01`.
+   El nom del fitxer continua sent `T01_<material>_<gruix>.xcs` (el real seria `U767_Gris_cubanita_19_01.xcs`).
+7. **Campanes.** **[real]** `SetPneumaticHoodPosition(1); ResetAuxiliaryHood(); ResetDustpan();` un cop, després de
+   `SelectWorkplane("Top")` (Table 50 p79: 1 = campana baixa a la posició 1). **Fet**: igual (editable).
+8. **Marge del tauler.** **[real]** Les peces comencen a **12 mm** de la vora (x = 12, y = 12, fins a 2070 − 12): el centre de la fresa
+   Ø12 a 6, el tall arriba just a la vora (0..12). **Nosaltres**: `edgeTrim` 10 (la fresa surt 2 mm fora del tauler). **No ho hem
+   canviat**: és una opció de la màquina; **[suposició]** el taller fa marge = Ø.
+9. **Fondàries dels forats.** **[real]** Ø2 × 5,15 (parells a 32 mm, a 37 mm del cantell: **[suposició]** pilots de base de frontissa),
+   Ø3 × 9 (dues files a pas de 64), Ø8 × 11 (espigues a 10 mm dels extrems), **Ø4 × 18,9 en un tauler de 19** (0,1 mm de pell). Les
+   nostres surten de les ferramentes del moble (Ø8 × 12, Ø5 × 12…). La nostra regla «més fondo que gruix − 0,5 → gruix − 1»
+   escurçaria aquest 18,9 a 18. **No ho hem canviat** (pregunta).
+10. **Nom «Tercera passada».** **[real]** Els tres contorns de peça es diuen `OPn_1 - Tercera passada` (descripció «Tercera passada») i
+    són l'única passada, a tota la fondària, en peces de 1,1–2,0 m². **[suposició]** És el nom del procés de TopSolid; no vol dir que
+    hi hagi primera i segona passada en aquest programa. Nosaltres: `contorn` (i `_P1…_P3` a les peces petites, < 0,8 m²).
+11. **Sentit dels talls interiors.** **[real]** OP6 (forat allargat de 68 × 208, R34) va en sentit **horari**: l'eina sempre a la dreta
+    del sentit de la marxa, com als contorns antihoraris de fora. **Nosaltres**: polilínia antihorària i `CreateContour` costat 0.
+    **[suposició]** Si el Maestro segueix el sentit de la geometria, els nostres talls interiors es fresarien a l'inrevés
+    (concordança/oposició) que els del taller. **No ho hem canviat** (pregunta; a la vista CAM es veu).
+12. **Ordre dels contorns.** **[real]** OP7 (1,12 m²), OP8 (1,45 m²), OP9 (2,0 m²): ni per mida ni per proximitat evident.
+    Nosaltres: per mida (les grans primer, les petites al final) i veí més proper.
+13. **Fitxer.** **[real]** ASCII sense BOM. Nosaltres: UTF-8 **amb** BOM. El real prova que el Maestro llegeix un fitxer sense BOM, no
+    que el BOM falli. Sense canvis (si els noms d'eina són ASCII, tots dos són iguals byte a byte excepte el BOM).
+14. **El parser del taller** (no el toquem, només per informar el germà): als contorns del real llegeix la fondària del
+    `CreateRoughFinish` (2 mm), no la de debò (−19,3 de la Z del recorregut).
 
 ## Regles de mecanitzat del taller (`Machine.rules`)
-Les va donar el germà (octubre 2026). Per màquina, editables a Preferències › Ferratges i mecanitzats › «Regles de mecanitzat»
+Les va donar el germà (octubre 2026). Per màquina, editables a Preferències › Regles de mecanitzat
 (`settings/MachineRules.tsx`); model a `core/model/machine.ts` (`MachineRulesSchema`, `defaultMachineRules`,
 `machineRules`, `isSmallPart`), tria a `core/machine/rules.ts` (`findRuleTool`, `profileRuleFor`, `RulePicker`) i
 emissió compartida a `core/export/maestroXcs.ts` (`passDepths`, `grooveStrategy`, `contourPasses`, `contourLine`,
@@ -319,9 +416,10 @@ B (taula de dalt); el paràmetre `tool` és el nom de l'eina; les broques del ta
    Maestro actual.
 4. **Broques amb `"-1"`**: el Maestro tria bé la broca vertical (i el mandrí horitzontal) pel Ø? Si no, «Eina
    concreta» a la màquina.
-5. **Capçalera**: `MechanicalOptions` 16973824 (del projecte) o 0 (del context)? Què vol dir cada bit? Cal el
-   mirall tecnològic i «conservar la seqüència» (no són a l'MSL: es posen a Maestro)? Cal
-   `SetWorkpieceSetupPosition` (§3.9.2 p115) o la posa Maestro?
+5. **Capçalera**: ~~quina `MechanicalOptions` i cal `SetWorkpieceSetupPosition`?~~ El programa real del taller ho diu
+   (16777216, `SetPreserveWorkingSequence`, `SetWorkPieceFallPrevention`, `SetWorkpieceSetupPosition(0, -20, 0, 0)`, `Pload`): ja
+   surt així als programes per tauler. Queda: què vol dir cada bit, el −20 i els paràmetres de `PLOAD`; i si és igual per a tots
+   els gruixos i materials.
 6. **Cara B**: dos programes (`Volt`) o un de sol amb `CreateWorkplan("Volt")` (§3.8 p112) i `CreateMessage`
    (§3.7.5 p111)?
 7. ~~Peces ja tallades o nesting?~~ **Nesting** (resposta del taller): un programa per tauler (vegeu a dalt).
@@ -346,5 +444,13 @@ B (taula de dalt); el paràmetre `tool` és el nom de l'eina; les broques del ta
     (`SetSuctionCupPosition` §3.10 p117-128 no s'aplica a una taula de martiri) o un altre `TableOptions`?
 17. **Etiquetes**: imprimeixen etiquetes al taller abans de descarregar? Amb quin format (ref + centre ja surten
     com a comentaris)?
-18. **Marge i separació**: 10 mm de marge els van bé? (La separació ja és la del taller: Ø + 2.) Prefereixen el mòdul de nesting del Maestro
+18. **Marge i separació**: 10 mm de marge els van bé? (Al programa real les peces van a 12 = Ø de la fresa.) (La separació ja és la del taller: Ø + 2.) Prefereixen el mòdul de nesting del Maestro
     (§4 p134, CSV + .pgmx per peça)?
+19. **Recorreguts explícits o calculats pel Maestro** (comparació amb el programa real, punt 1): els nostres contorns són
+    `CreateContour` sobre la forma de la peça i el Maestro hi fa el recorregut; TopSolid envia el recorregut del centre de l'eina.
+    A la vista CAM, el contorn queda per fora de la peça (6 mm amb la Ø12) i l'entrada és acceptable? Si prefereixen recorreguts
+    explícits (i que el seu parser vegi els contorns), per a peces rectangulars és fàcil de fer igual que TopSolid.
+20. **Sentit dels talls interiors**: TopSolid els fa horaris (els contorns de fora, antihoraris); els nostres són antihoraris amb
+    `CreateContour` costat 0. Importa?
+21. **Forats gairebé passants**: el real fa Ø4 × 18,9 en un tauler de 19. Nosaltres escurcem a gruix − 1 tot el que passa de gruix
+    − 0,5. Quina pell mínima volen?

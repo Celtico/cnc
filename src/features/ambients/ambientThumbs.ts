@@ -1,6 +1,5 @@
 import { Box3, Group, Mesh, PerspectiveCamera, PlaneGeometry, BoxGeometry, Scene, Vector3 } from "three"
 import { exportablePanel } from "../../components/viewer/exportablePanel"
-import { photoTexturesIdle, photoTexturesPending } from "../../components/viewer/textures"
 import { buildScene } from "../../components/viewer/exportGlb"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
 import { aimSaved, snapshot, THUMB_ASPECT, THUMB_VERSION, thumbLights } from "../../components/viewer/thumbRenderer"
@@ -8,7 +7,7 @@ import { preloadModels } from "../../components/viewer/models3d"
 import { blockComposition, cameraSignature, parseCameraPose, thumbIsStale, layoutTemplate, parseAmbient, rad, resolveTemplateRef, templateWalls, wallLength, wallSegments, type Ambient, type AmbientTemplate, type Composition, type MaterialPref } from "../../core/model"
 import { compositionOf } from "../../db/compositionStore"
 import { db, type AmbientRow } from "../../db/db"
-import { enqueueThumb } from "../projects/projectThumbs"
+import { drawWhenReady, enqueueThumb } from "../projects/projectThumbs"
 import { itemGeometry, type ItemGeometry } from "./ambientData"
 
 /**
@@ -106,9 +105,9 @@ export function needsAmbientThumb(r: AmbientRow): boolean {
 }
 
 /** Miniatura d'un ambient de l'usuari (es desa a la fila; es refà si l'ambient ha canviat). */
-export function requestAmbientThumb(r: AmbientRow, materials: MaterialPref[]): void {
-  if (!needsAmbientThumb(r)) return
-  enqueueThumb(`a:${r.id}`, async () => {
+export function requestAmbientThumb(r: AmbientRow, materials: MaterialPref[]): () => void {
+  if (!needsAmbientThumb(r)) return () => {}
+  return enqueueThumb(`a:${r.id}`, async () => {
     const fresh = await db.ambients.get(r.id)
     if (!fresh || !needsAmbientThumb(fresh)) return
     const a = parseAmbient(fresh.data)
@@ -125,12 +124,8 @@ export function requestAmbientThumb(r: AmbientRow, materials: MaterialPref[]): v
     // Si un model 3D no s'ha pogut carregar, no es fa (ni es desa): sortiria sense la planta per sempre.
     if (!(await preloadModels(geos.flatMap((g) => g?.build.models ?? [])))) return
     const pose = cameraOf(fresh)
-    let url = renderAmbient(a, (i) => geos[i] ?? null, materials, pose)
-    // Textures de foto que encara es baixaven: es torna a pintar quan hi són.
-    if (photoTexturesPending()) {
-      await photoTexturesIdle()
-      url = renderAmbient(a, (i) => geos[i] ?? null, materials, pose)
-    }
+    // Quan hi són les textures de foto (si alguna falla, no es desa: sortiria negra).
+    const url = await drawWhenReady(() => renderAmbient(a, (i) => geos[i] ?? null, materials, pose))
     // Sense tocar `updatedAt`.
     if (url) await db.ambients.update(r.id, { thumb: url, thumbAt: fresh.updatedAt, thumbV: THUMB_VERSION, thumbCam: cameraSignature(pose) })
   })
@@ -142,10 +137,18 @@ export function catalogThumb(id: string): string | undefined {
 }
 
 /** Miniatura d'una escena del catàleg, amb els mobles i objectes de les seves plantilles (en memòria). */
-export function requestCatalogThumb(t: AmbientTemplate, materials: MaterialPref[], onDone: (url: string) => void): void {
+/** Targetes que esperen la miniatura de cada escena (la mateixa pot sortir a dues seccions). */
+const catalogListeners = new Map<string, Set<(url: string) => void>>()
+export function requestCatalogThumb(t: AmbientTemplate, materials: MaterialPref[], onDone: (url: string) => void): () => void {
   const hit = catalogThumbs.get(t.id)
-  if (hit) return onDone(hit)
-  enqueueThumb(`c:${t.id}`, async () => {
+  if (hit) {
+    onDone(hit)
+    return () => {}
+  }
+  const listeners = catalogListeners.get(t.id) ?? new Set<(url: string) => void>()
+  catalogListeners.set(t.id, listeners)
+  listeners.add(onDone)
+  const release = enqueueThumb(`c:${t.id}`, async () => {
     const geos = new Map<string, ItemGeometry | null>()
     const geoOf = (ref: string) => {
       if (!geos.has(ref)) {
@@ -165,14 +168,15 @@ export function requestCatalogThumb(t: AmbientTemplate, materials: MaterialPref[
       wallMaterial: t.wall,
     } as Ambient
     if (!(await preloadModels(placed.flatMap((p) => geoOf(p.ref)?.build.models ?? [])))) return
-    let url = renderAmbient(a, (i) => geoOf(placed[i]!.ref), materials)
-    if (photoTexturesPending()) {
-      await photoTexturesIdle()
-      url = renderAmbient(a, (i) => geoOf(placed[i]!.ref), materials)
-    }
+    const url = await drawWhenReady(() => renderAmbient(a, (i) => geoOf(placed[i]!.ref), materials))
     if (url) {
       catalogThumbs.set(t.id, url)
-      onDone(url)
+      for (const f of catalogListeners.get(t.id) ?? []) f(url)
     }
+    catalogListeners.delete(t.id)
   })
+  return () => {
+    listeners.delete(onDone)
+    release()
+  }
 }

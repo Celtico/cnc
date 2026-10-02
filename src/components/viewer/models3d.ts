@@ -3,6 +3,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js"
 import { modelAsset, type ModelObject } from "../../core/model"
 import { getUserModel, isUserModelSrc } from "../../db/userModels"
+import { disposeMaterial } from "./textures"
 
 /**
  * Models 3D (`.glb`) dels objectes: es carreguen un cop (memòria compartida) i cada element en fa una còpia que
@@ -129,11 +130,8 @@ export function releaseModelGpu(): void {
       const m = o as Mesh
       if (!m.isMesh) return
       m.geometry.dispose()
-      const mats = (Array.isArray(m.material) ? m.material : [m.material]) as Material[]
-      for (const mat of mats) {
-        ;(mat as MeshStandardMaterial).map?.dispose()
-        mat.dispose()
-      }
+      // Totes les textures del material (color, normals, rugositat, emissiva…), no només `map`.
+      for (const mat of new Set((Array.isArray(m.material) ? m.material : [m.material]) as Material[])) disposeMaterial(mat)
     })
   }
 }

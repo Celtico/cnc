@@ -309,9 +309,7 @@ function CatalogCard({ t, busy, onPick }: { t: AmbientTemplate; busy: boolean; o
   // Foto 3D de l'escena amb els mobles de debò (feta fora de pantalla, en memòria); mentrestant, el requadre buit.
   const { settings } = useSettings()
   const [thumb, setThumb] = useState(() => catalogThumb(t.id))
-  useEffect(() => {
-    if (!thumb) requestCatalogThumb(t, settings.materials, setThumb)
-  }, [t, thumb, settings.materials])
+  useEffect(() => (thumb ? undefined : requestCatalogThumb(t, settings.materials, setThumb)), [t, thumb, settings.materials])
   return (
     <GalleryCard
       thumb={<SnapshotThumb src={thumb} />}
@@ -336,8 +334,6 @@ function ElementsTag({ n }: { n: number }) {
 /** Miniatura d'un ambient de l'usuari: la foto 3D (es fa sola i es refà si canvia) o, mentrestant, el requadre buit. */
 function RowThumb({ row }: { row: AmbientRow }) {
   const { settings } = useSettings()
-  useEffect(() => {
-    if (needsAmbientThumb(row)) requestAmbientThumb(row, settings.materials)
-  }, [row, settings.materials])
+  useEffect(() => (needsAmbientThumb(row) ? requestAmbientThumb(row, settings.materials) : undefined), [row, settings.materials])
   return <SnapshotThumb src={row.thumb} />
 }

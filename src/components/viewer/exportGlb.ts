@@ -15,6 +15,7 @@ import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js"
 import type { MaterialPref, ModelObject, Panel, PanelRole } from "../../core/model"
 import { modelInstance, preloadModels } from "./models3d"
+import { disposeTree } from "./textures"
 
 const ROLE_COLOR: Record<PanelRole, number> = {
   side: 0xe6cfa6,
@@ -91,6 +92,8 @@ export function buildScene(panels: Panel[], name: string, real?: { materials: Ma
 }
 
 const METAL = new MeshStandardMaterial({ color: 0xb9bdc2, metalness: 0.85, roughness: 0.3, name: "Inox" })
+// El fan servir tots els tiradors de totes les escenes: `disposeMaterial` no l'allibera.
+METAL.userData.shared = true
 
 /** Tirador de barra als fronts (el mateix criteri que `PanelHardware` del visor), en m. */
 function handleMeshes(p: Panel): Mesh[] {
@@ -139,7 +142,7 @@ export async function exportGlb(panels: Panel[], name: string, real?: Parameters
   const scene = buildScene(panels, name, real, models)
   bakeTextureCenters(scene)
   const exporter = new GLTFExporter()
-  const result = await exporter.parseAsync(scene, { binary: true })
+  const result = await exporter.parseAsync(scene, { binary: true }).finally(() => disposeTree(scene))
   if (result instanceof ArrayBuffer) return new Blob([result], { type: "model/gltf-binary" })
   return new Blob([JSON.stringify(result)], { type: "model/gltf+json" })
 }

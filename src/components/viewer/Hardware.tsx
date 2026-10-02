@@ -10,6 +10,8 @@ import type { Panel } from "../../core/model"
 const S = 0.001
 const METAL = new MeshStandardMaterial({ color: "#b9bdc2", metalness: 0.85, roughness: 0.3 })
 const DARK = new MeshStandardMaterial({ color: "#2f3033", metalness: 0.4, roughness: 0.5 })
+// Compartits per totes les peces: no s'alliberen amb una peça (`disposeMaterial`).
+METAL.userData.shared = DARK.userData.shared = true
 
 /** Tirador de barra: llarg `len` mm, paral·lel a x local, centrat a (cx, cy), cap a `dir` (±z). */
 function BarHandle({ cx, cy, z, dir, len, vertical }: { cx: number; cy: number; z: number; dir: 1 | -1; len: number; vertical: boolean }) {

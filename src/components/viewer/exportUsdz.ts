@@ -2,6 +2,7 @@ import { USDZExporter } from "three/examples/jsm/exporters/USDZExporter.js"
 import type { ModelObject, Panel } from "../../core/model"
 import { buildScene } from "./exportGlb"
 import { preloadModels } from "./models3d"
+import { disposeTree } from "./textures"
 
 /**
  * USDZ del moble en METRES, per a AR Quick Look (Safari iOS/iPadOS).
@@ -12,7 +13,8 @@ export async function exportUsdz(panels: Panel[], name: string, real?: Parameter
   const scene = buildScene(panels, name, real, models)
   scene.updateMatrixWorld(true)
   const exporter = new USDZExporter()
-  const bytes = await exporter.parseAsync(scene, { quickLookCompatible: true })
+  // L'escena és només per exportar: s'allibera (els clons de les textures, si no, guardarien les bases a la memòria).
+  const bytes = await exporter.parseAsync(scene, { quickLookCompatible: true }).finally(() => disposeTree(scene))
   return new Blob([bytes as BlobPart], { type: "model/vnd.usdz+zip" })
 }
 

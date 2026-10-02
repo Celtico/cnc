@@ -357,7 +357,7 @@ export function App() {
             menu={
               <Menu.Root positioning={{ placement: "bottom-end" }}>
                 <Menu.Trigger asChild>
-                  <IconButton aria-label="Menú del moble" title="Menú del moble" size="sm" variant="ghost">
+                  <IconButton aria-label={isObject ? "Menú de l'objecte" : "Menú del moble"} title={isObject ? "Menú de l'objecte" : "Menú del moble"} size="sm" variant="ghost">
                     <LuEllipsis />
                   </IconButton>
                 </Menu.Trigger>

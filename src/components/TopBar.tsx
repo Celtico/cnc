@@ -25,7 +25,8 @@ export function TopBarActions({ children }: { children: ReactNode }) {
 export function TopBar({ projectId, rootLabel = "Mobles", ...rest }: { projectId: number; rootLabel?: string } & Omit<DocBarProps, "name" | "onRename" | "rootLabel" | "nameLabel">) {
   const project = useProject(projectId)
   const name = project?.name ?? ""
-  return <DocBar {...rest} rootLabel={rootLabel} name={name} nameLabel="Nom del moble" onRename={(v) => void renameProject(projectId, v)} />
+  // Els objectes s'editen amb el mateix editor: «Nom de l'objecte» (la barra diu «Objectes › …»).
+  return <DocBar {...rest} rootLabel={rootLabel} name={name} nameLabel={rootLabel === "Objectes" ? "Nom de l'objecte" : "Nom del moble"} onRename={(v) => void renameProject(projectId, v)} />
 }
 
 interface DocBarProps {

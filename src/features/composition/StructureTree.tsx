@@ -212,7 +212,7 @@ export function StructureTree({
   }
 
   return (
-    <Stack gap={0.5} role="tree" aria-label="Estructura del moble" fontSize="sm">
+    <Stack gap={0.5} role="tree" aria-label={compositionKind(comp) === "objecte" ? "Estructura de l'objecte" : "Estructura del moble"} fontSize="sm">
       <Row icon={<LuBox />} label={name || "Moble"} bold selected={selection.kind === "moble"} onClick={() => onSelect({ kind: "moble" })} depth={0} />
       {/* Un + per a cada tipus d'element (per decisió de l'usuari: així es veu que n'hi ha tres): demana el nom (un per
           defecte, seleccionat) i crea l'element, sense més opcions (es configura a l'inspector). */}

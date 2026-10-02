@@ -14,6 +14,8 @@ import { StatBox } from "../../components/StatBox"
 import { useMemo, useState } from "react"
 import { BoardDrawing } from "../../components/BoardDrawing"
 import { STANDARD_SHEETS, type NestOptions } from "../../core/nesting/nest"
+import { nestPlan } from "../../core/nesting/machineNest"
+import { defaultMachine, machineNesting, toolMslName } from "../../core/model"
 import { updateProjectNesting } from "../../db/db"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { NumRow } from "../../components/NumRow"
@@ -37,6 +39,9 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
 
   const byId = useMemo(() => new Map(panels.map((p) => [p.id, p])), [panels])
   const { settings } = useSettings()
+  const machine = defaultMachine(settings.machines)
+  // D'on surten la separació i el marge (el nesting de `useNesting` fa servir les mateixes).
+  const plan = useMemo(() => nestPlan(panels, options, machine), [panels, options, machine])
   const sheetKey = `${options.sheet.w}x${options.sheet.h}`
   // Taulers estàndard més els de les preferències (sense repetir).
   const sheets = useMemo(() => {
@@ -68,8 +73,19 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
           </FormRow>
           <NumRow label="Ample tauler" value={options.sheet.w} min={300} max={6000} step={10} onChange={(w) => setOptions((o) => ({ ...o, sheet: { ...o.sheet, w } }))} />
           <NumRow label="Alt tauler" value={options.sheet.h} min={300} max={6000} step={10} help={options.sheet.h > options.sheet.w ? "La veta va pel costat llarg: el tauler es fa servir apaïsat." : undefined} onChange={(h) => setOptions((o) => ({ ...o, sheet: { ...o.sheet, h } }))} />
-          <NumRow label="Kerf (fresa)" value={options.kerf} min={0} max={30} step={0.5} onChange={(kerf) => setOptions((o) => ({ ...o, kerf }))} />
-          <NumRow label="Marge tauler" value={options.margin} min={0} max={100} step={1} onChange={(margin) => setOptions((o) => ({ ...o, margin }))} />
+          {plan.machine ? (
+            // La separació i el marge són els de la màquina (els mateixos dels programes .xcs per tauler).
+            <FormRow label="Tall" help={plan.tool ? `Ø de la fresa del contorn més grossa del moble (${toolMslName(plan.tool)}, Ø${comma(plan.tool.diameter)}) + ${comma(machineNesting(plan.machine).spacingExtra)} mm.` : undefined}>
+              <Text fontSize="sm" pt="6px">
+                Separació {comma(plan.options.kerf)} mm i marge {comma(plan.options.margin)} mm de la màquina {plan.machine.name} (Preferències › Màquines CNC)
+              </Text>
+            </FormRow>
+          ) : (
+            <>
+              <NumRow label="Kerf (fresa)" value={options.kerf} min={0} max={30} step={0.5} help="Sense màquina CNC a Preferències: separació entre peces." onChange={(kerf) => setOptions((o) => ({ ...o, kerf }))} />
+              <NumRow label="Marge tauler" value={options.margin} min={0} max={100} step={1} onChange={(margin) => setOptions((o) => ({ ...o, margin }))} />
+            </>
+          )}
           <FormRow label="Veta" help="Aprofita més el tauler, però la veta de les peces girades no segueix la del moble.">
             <Switch.Root size="sm" pt="6px" checked={!!options.ignoreGrain} onCheckedChange={(e) => setOptions((o) => ({ ...o, ignoreGrain: e.checked || undefined }))}>
               <Switch.HiddenInput />
@@ -134,7 +150,7 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
                   </HStack>
                 </Card.Header>
                 <Card.Body>
-                  <BoardDrawing board={b} panels={byId} margin={options.margin} />
+                  <BoardDrawing board={b} panels={byId} margin={nesting.options.margin} />
                 </Card.Body>
               </Card.Root>
             ))}
@@ -148,3 +164,6 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
     </VStack>
   )
 }
+
+/** Número amb coma decimal. */
+const comma = (n: number) => String(n).replace(".", ",")

@@ -160,8 +160,9 @@ export const MachineSchema = z.object({
   /**
    * Capçalera del programa: `SetMachiningParameters(executionFields, repetitions, tableOptions,
    * mechanicalOptions, continuousCycle)` (manual §3.9.1 p114, Table 79). Valors de XilogHeaderParameters o
-   * d'un .pgmx del taller (`MachiningParameters`). `technologicalMirror` i `preserveWorkingSequence` no
-   * tenen paràmetre a l'MSL: només es desen per informar (vegeu docs/maestro-xcs.md).
+   * d'un .pgmx del taller (`MachiningParameters`). `technologicalMirror` no té instrucció a l'MSL (només es desa per
+   * informar); `preserveWorkingSequence` surt als programes per tauler com `SetPreserveWorkingSequence` (com el programa
+   * real del taller; sense valor, `true`). Vegeu docs/maestro-xcs.md.
    */
   header: z.object({
     executionFields: z.string().min(1),
@@ -197,6 +198,24 @@ export const MachineSchema = z.object({
       overcut: z.number().min(0).max(3),
       /** Contorns de les peces petites: al final (per defecte) o al principi. */
       smallParts: z.enum(["last", "first"]),
+      /**
+       * Capçalera dels programes per tauler, com el programa de nesting real del taller
+       * (docs/maestro/samples/taller_U767_Gris_cubanita_19_01.xcs). Opcional: sense, `DEFAULT_NEST_PROGRAM` (`nestProgram`).
+       */
+      program: z
+        .object({
+          /** `MechanicalOptions` del `SetMachiningParameters` dels programes per tauler (el real: 16777216). */
+          mechanicalOptions: z.number().int().min(0),
+          /** `SetWorkpieceSetupPosition(x, y, z, rot)` (manual §3.9.2 p115; el real: 0, −20, 0, 0). */
+          setupPosition: z.object({ x: z.number(), y: z.number(), z: z.number(), rot: z.number() }),
+          /** La macro de càrrega del taller `CreateMacro("Pload", "PLOAD", …)` (§3.6.2 p103), tal com surt al real. */
+          loadMacro: z.boolean(),
+          /** `SetPneumaticHoodPosition(n)` (Table 50 p79: 0 = alta, 1–8 = baixa a la posició n; el real: 1). */
+          pneumaticHood: z.number().int().min(0).max(8),
+          /** `SetWorkPieceFallPrevention(true)` (no és al manual R4; el real el porta). */
+          fallPrevention: z.boolean(),
+        })
+        .optional(),
     })
     .optional(),
   /**
@@ -226,6 +245,18 @@ export const DEFAULT_MACHINE_NESTING: MachineNesting = { edgeTrim: 10, spacingEx
 
 /** Opcions de nesting de la màquina (amb els valors per defecte). */
 export const machineNesting = (m: Pick<Machine, "nesting">): MachineNesting => ({ ...DEFAULT_MACHINE_NESTING, ...m.nesting })
+
+export type NestProgram = NonNullable<MachineNesting["program"]>
+
+/**
+ * Capçalera dels programes per tauler per defecte: la del programa de nesting real del taller (TopSolid → Maestro, el
+ * va mecanitzar aquesta màquina): `MechanicalOptions` 16777216 (el .pgmx d'una peça diu 16973824),
+ * `SetWorkpieceSetupPosition(0, -20, 0, 0)`, la macro `Pload`, campana baixa a la posició 1 i `SetWorkPieceFallPrevention(true)`.
+ */
+export const DEFAULT_NEST_PROGRAM: NestProgram = { mechanicalOptions: 16777216, setupPosition: { x: 0, y: -20, z: 0, rot: 0 }, loadMacro: true, pneumaticHood: 1, fallPrevention: true }
+
+/** Capçalera dels programes per tauler de la màquina (amb els valors per defecte). */
+export const nestProgram = (m: Pick<Machine, "nesting">): NestProgram => ({ ...DEFAULT_NEST_PROGRAM, ...m.nesting?.program })
 
 /** Codi provisional d'una «Eina nova» (`NOVA1`…): no es tria fins que no se li posa el codi de Maestro. */
 export const isPlaceholderTool = (t: Pick<MachineTool, "code" | "manual">): boolean => !!t.manual && /^NOVA\d+$/.test(t.code)

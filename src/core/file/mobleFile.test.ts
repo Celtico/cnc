@@ -74,6 +74,8 @@ describe("fitxer .moble", () => {
     expect(mobleFileName("Moble TV: menjador/2026")).toBe("Moble TV- menjador-2026.moble")
     expect(uniqueName("Moble", ["Moble", "Moble (2)"])).toBe("Moble (3)")
     expect(uniqueName("Nou", ["Moble"])).toBe("Nou")
+    expect(uniqueName("Moble (3)", ["Moble (3)"])).toBe("Moble (4)")
+    expect(uniqueName("Moble (3)", ["Moble (3)", "Moble (4)"])).toBe("Moble (5)")
   })
 
   describe("models 3D de l'usuari", () => {

@@ -248,6 +248,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     sceneGetter.current = g
   }, [])
   const [renderOpen, setRenderOpen] = useState(false)
+  // «Opcions de vista» obert: es tanca en obrir el Render (si no, el popover o el calaix quedaven a sobre).
+  const [viewOptsOpen, setViewOptsOpen] = useState(false)
   const registerCapture = useCallback((fn: () => Promise<Blob>) => {
     capture.current = fn
   }, [])
@@ -802,7 +804,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       {tile("holes", "Forats", <LuCircleDot />, showHoles, () => setShowHoles((v) => !v), showHoles ? "Amagar forats" : "Mostrar forats")}
       {tile("explode", "Explosió", exploded ? <LuShrink /> : <LuExpand />, exploded, () => setExploded((v) => !v), exploded ? "Vista muntada" : "Vista explosionada")}
       {tile("hardware", "Ferratges", <LuWrench />, hardware, () => setHardware((v) => !v), hardware ? "Amagar frontisses, tiradors i potes" : "Mostrar frontisses, tiradors i potes")}
-      {tile("render", "Render", <LuAperture />, false, () => setRenderOpen(true), "Render fotorealista per CPU (com Cinema 4D): es va afinant i es desa en PNG")}
+      {tile("render", "Render", <LuAperture />, false, () => (setViewOptsOpen(false), setRenderOpen(true)), "Render fotorealista per CPU (com Cinema 4D): es va afinant i es desa en PNG")}
       {tile("ar", "A casa (AR)", <LuView />, false, () => setArOpen(true), "Veure a casa (realitat augmentada)")}
     </>
   )
@@ -1340,7 +1342,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           <RenderDialog open={renderOpen} onClose={() => setRenderOpen(false)} getScene={() => sceneGetter.current?.() ?? null} name={name} />
           <ArDialog open={arOpen} onClose={() => setArOpen(false)} panels={viewerPanels} name={name} models={build?.models} />
           {/* Al mòbil, un calaix de baix amb el seu propi desplaçament; a l'ordinador, un popover. */}
-          <ViewOptions lead={viewModes} tiles={viewTiles}>
+          <ViewOptions lead={viewModes} tiles={viewTiles} open={viewOptsOpen} onOpenChange={setViewOptsOpen}>
             <Box pt={3} borderTopWidth="1px">
               <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} />
             </Box>

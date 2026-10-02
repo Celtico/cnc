@@ -47,9 +47,8 @@ export function ProjectCard({
   const here = currentAmbient !== undefined && ambients.some((a) => a.id === currentAmbient)
   const click = onAdd ?? onOpen
   const { settings } = useSettings()
-  useEffect(() => {
-    if (needsThumb(project)) requestProjectThumb(project, settings.materials)
-  }, [project, settings.materials])
+  // En desmuntar-se, la feina de la cua se salta si cap altra targeta la vol.
+  useEffect(() => (needsThumb(project) ? requestProjectThumb(project, settings.materials) : undefined), [project, settings.materials])
   return (
     <GalleryCard
       thumb={<SnapshotThumb src={project.thumb} />}

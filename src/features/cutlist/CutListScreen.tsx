@@ -99,7 +99,11 @@ export function CutListScreen({ projectId }: { projectId: number }) {
                 </Text>
                 <Text fontSize="sm" color="fg.muted" truncate>
                   {it.material}
-                  {it.grain !== "none" ? ` · veta ${GRAIN[it.grain].toLowerCase()}` : ""} · {it.holes} forats
+                  {it.grain !== "none" ? ` · veta ${GRAIN[it.grain].toLowerCase()}` : ""}
+                </Text>
+                {/* Línia pròpia: el total de la fila i els de cada peça no es tallen amb el material. */}
+                <Text fontSize="sm" color="fg.muted">
+                  {holesText(it.holes, it.qty)}
                 </Text>
                 <HStack gap={2} wrap="wrap">
                   <Text fontSize="xs" color="fg.muted">
@@ -134,7 +138,7 @@ export function CutListScreen({ projectId }: { projectId: number }) {
               <Table.ColumnHeader>Material</Table.ColumnHeader>
               <Table.ColumnHeader>Veta</Table.ColumnHeader>
               <Table.ColumnHeader>Cantells</Table.ColumnHeader>
-              <Table.ColumnHeader textAlign="end">Forats</Table.ColumnHeader>
+              <Table.ColumnHeader textAlign="end" title="Forats de totes les peces de la fila (i de cada peça)">Forats (total)</Table.ColumnHeader>
               <Table.ColumnHeader>Després del nesting</Table.ColumnHeader>
             </Table.Row>
           </Table.Header>
@@ -158,7 +162,14 @@ export function CutListScreen({ projectId }: { projectId: number }) {
                 <Table.Cell>
                   <EdgeBadges it={it} />
                 </Table.Cell>
-                <Table.Cell textAlign="end">{it.holes}</Table.Cell>
+                <Table.Cell textAlign="end">
+                  {it.holes}
+                  {it.qty > 1 && it.holes > 0 && Number.isInteger(it.holes / it.qty) && (
+                    <Text as="span" display="block" fontSize="xs" color="fg.muted" whiteSpace="nowrap">
+                      {it.holes / it.qty} per peça
+                    </Text>
+                  )}
+                </Table.Cell>
                 <Table.Cell fontSize="xs" color={it.processes ? "fg" : "fg.subtle"} maxW="280px" whiteSpace="normal">
                   {it.processes || "—"}
                 </Table.Cell>
@@ -181,7 +192,8 @@ export function CutListScreen({ projectId }: { projectId: number }) {
               <Badge variant="subtle">× {sel.qty}</Badge>
             </HStack>
             <Text fontSize="sm" color="fg.muted">
-              {sel.length} × {sel.width} × {sel.thickness} mm · {sel.material} · {selPanel.holes.length} forats per peça
+              {sel.length} × {sel.width} × {sel.thickness} mm · {sel.material} · {selPanel.holes.length} {selPanel.holes.length === 1 ? "forat" : "forats"} per peça
+              {sel.qty > 1 && ` (${sel.holes} en total a les ${sel.qty} peces)`}
             </Text>
             <Box bg="bg.muted" rounded="md" p={2}>
               <PanelDrawing panel={selPanel} />
@@ -231,4 +243,12 @@ export function CutListScreen({ projectId }: { projectId: number }) {
       )}
     </VStack>
   )
+}
+
+/** Forats d'una fila de peces iguals: el total i, si n'hi ha més d'una, els de cada peça («22 forats en total · 11 per peça»). */
+function holesText(total: number, qty: number): string {
+  const n = (v: number) => `${v} ${v === 1 ? "forat" : "forats"}`
+  if (qty <= 1) return n(total)
+  const per = total / qty
+  return Number.isInteger(per) ? `${n(total)} en total · ${per} per peça` : `${n(total)} en total`
 }

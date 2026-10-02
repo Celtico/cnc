@@ -175,9 +175,29 @@ describe("moble del catàleg", () => {
     expect(s.file).toBe(sheetFile(s.tab, s.material, s.thickness))
     expect(s.file).toMatch(/^T01_[A-Za-z0-9_]+_\d+\.xcs$/)
     const t = s.text.split("\r\n")
-    expect(t).toContain(`SetMachiningParameters("AD", 1, 10, 16973824, false);`)
-    expect(t).toContain(`CreateFinishedWorkpieceBox("T01", ${s.w}, ${s.h}, ${s.thickness});`)
-    expect(t).toContain(`CreateRawWorkpiece("T01", 0, 0, 0, 0, 0, 0);`)
+    // Capçalera com el programa de nesting real del taller (docs/maestro/samples/taller_U767_Gris_cubanita_19_01.xcs).
+    const head = ["MachineParameters mp=GetMachiningParameters();", `SetMachiningParameters("AD", 1, 10, 16777216, false);`, "SetPreserveWorkingSequence(true);", "SetWorkPieceFallPrevention(true);"]
+    expect(t.slice(t.indexOf(head[0]!), t.indexOf(head[0]!) + 4)).toEqual(head)
+    // La peça de treball es diu com el tauler del CSV: `<material>_<gruix>#01`.
+    expect(s.workpiece).toBe(`${s.material.replace(/\s+/g, "_")}_${s.thickness}#01`)
+    expect(t).toContain(`CreateFinishedWorkpieceBox("${s.workpiece}", ${s.w}, ${s.h}, ${s.thickness});`)
+    expect(t).toContain(`CreateRawWorkpiece("${s.workpiece}", 0, 0, 0, 0, 0, 0);`)
+    expect(t).toContain("SetWorkpieceSetupPosition(0, -20, 0, 0);")
+    expect(t).toContain(`CreateMacro("Pload", "PLOAD", 1, 0, 1, 0, 4, 2, false, 0, 0, 0, 0);`)
+    expect(t.slice(t.indexOf(`SelectWorkplane("Top");`), t.indexOf(`SelectWorkplane("Top");`) + 4)).toEqual([`SelectWorkplane("Top");`, "SetPneumaticHoodPosition(1);", "ResetAuxiliaryHood();", "ResetDustpan();"])
+    // Forats amb els paràmetres opcionals del real i un comentari d'eina abans de cada grup.
+    for (const l of t.filter((x) => x.startsWith("CreateDrill("))) expect(l).toMatch(/, "-1", "-1", 0, -1, -1, "P", 0, 2\);$/)
+    const firstDrill = t.findIndex((x) => x.startsWith("CreateDrill("))
+    if (firstDrill >= 0) expect(t.slice(0, firstDrill).filter((x) => x.startsWith("//BROCA PLANA ")).length).toBeGreaterThan(0)
+    expect(t.filter((x) => x.startsWith("//FRESA PLANA ")).length).toBeGreaterThan(0)
+    // Un altre màquina pot canviar-ho (Preferències › Màquines CNC › Programes per tauler).
+    const custom: Machine = { ...M2, nesting: { edgeTrim: 10, spacingExtra: 2, overcut: 0.3, smallParts: "last", program: { mechanicalOptions: 0, setupPosition: { x: 5, y: 0, z: 0, rot: 0 }, loadMacro: false, pneumaticHood: 3, fallPrevention: false } } }
+    const c = toMaestroNestXcs(b.panels, nest(b.panels, cncNestOptions(b.panels, custom, DEFAULT_NEST_OPTIONS).options), custom, { project: "Prova" }).sheets[0]!.text
+    expect(c).toContain(`SetMachiningParameters("AD", 1, 10, 0, false);`)
+    expect(c).toContain("SetWorkpieceSetupPosition(5, 0, 0, 0);")
+    expect(c).toContain("SetWorkPieceFallPrevention(false);")
+    expect(c).toContain("SetPneumaticHoodPosition(3);")
+    expect(c).not.toContain("Pload")
     for (const part of s.parts) expect(s.text).toContain(`etiqueta al centre (${part.cx}, ${part.cy})`)
     for (const sh of x.sheets) {
       const ns = [...sh.text.matchAll(/^Create(?!FinishedWorkpieceBox|RawWorkpiece)\w+\("([^"]+)"/gm)].map((m) => m[1])

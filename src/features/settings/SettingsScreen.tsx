@@ -24,7 +24,7 @@ import {
   Text,
 } from "@chakra-ui/react"
 import { Children, Fragment, isValidElement, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { LuArchive, LuFactory, LuArrowDown, LuArrowUp, LuCheck, LuCircleDashed, LuCircleDot, LuMagnet, LuScanEye, LuPaintbrush, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff,  LuHammer, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRows3, LuRuler, LuScan, LuScissors, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
+import { LuArchive, LuFactory, LuArrowDown, LuArrowUp, LuCheck, LuCircleDashed, LuCircleDot, LuMagnet, LuScanEye, LuPaintbrush, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff,  LuHammer, LuImagePlus, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRotateCw, LuRoute, LuRows3, LuRuler, LuScan, LuSparkles, LuSquareStack, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { MasterDetail } from "../../components/MasterDetail"
@@ -38,6 +38,8 @@ import { isEditable } from "./materialPreview"
 import { toaster } from "../../components/ui/toaster"
 import {
   DEFAULT_SETTINGS,
+  defaultMachine,
+  defaultMachineRules,
   MATERIAL_CATEGORIES,
   materialCategory,
   withCategory,
@@ -82,7 +84,12 @@ export function SettingsScreen({ previewComposition }: { previewComposition?: Co
 
 function SettingsEditor({ initial, save, previewComposition }: { initial: Settings; save: (s: Settings) => Promise<void>; previewComposition?: Composition }) {
   const [draft, setDraft] = useState<Settings>(initial)
-  const [reset, setReset] = useState<{ key: SectionKey; label: string; note?: string } | null>(null)
+  // `rules`: les regles de mecanitzat de la màquina triada a la seva pàgina (no són una secció de les preferències).
+  const [reset, setReset] = useState<{ key: SectionKey | "rules"; label: string; note?: string } | null>(null)
+  // Màquina triada a Regles de mecanitzat (sense: la per defecte); la fa servir «Restaurar valors inicials».
+  const [rulesMachineId, setRulesMachineId] = useState<string | null>(null)
+  const rulesMachine = draft.machines.find((m) => m.id === rulesMachineId) ?? defaultMachine(draft.machines)
+  const machine = defaultMachine(draft.machines)
   const fileInput = useRef<HTMLInputElement>(null)
   const validation = useMemo(() => SettingsSchema.safeParse(draft), [draft])
   const problems = validation.success ? [] : validation.error.issues.map(issueText)
@@ -112,7 +119,11 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
   }
   const confirmReset = () => {
     if (!reset) return
-    setDraft((d) => ({ ...d, [reset.key]: structuredClone(DEFAULT_SETTINGS[reset.key]) }))
+    const key = reset.key
+    if (key === "rules") {
+      const id = rulesMachine?.id
+      setDraft((d) => ({ ...d, machines: d.machines.map((m) => (m.id === id ? { ...m, rules: defaultMachineRules() } : m)) }))
+    } else setDraft((d) => ({ ...d, [key]: structuredClone(DEFAULT_SETTINGS[key]) }))
     toaster.create({ title: `«${reset.label}» restaurat`, type: "info" })
     setReset(null)
   }
@@ -173,9 +184,24 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             />
           </Pane>
 
-          <Pane id="boards" title="Taulers i nesting" icon={LuLayoutGrid} desc="Mides dels taulers i com es talla." onReset={() => setReset({ key: "boards", label: "Taulers i nesting" })}>
+          <Pane id="boards" title="Taulers" icon={LuLayoutGrid} desc="Mides dels taulers de fàbrica per al nesting. La separació i el marge són de la màquina." onReset={() => setReset({ key: "boards", label: "Taulers" })}>
             <Stack gap={6}>
-            <SettingsGroup icon={<LuLayoutGrid />} title="Mides de tauler" summary={draft.boards.sheets.map((x) => `${x.w}×${x.h}`).join(" · ")}>
+            {/* Com es talla (separació, marge, fresa) és de la màquina: aquí només el camp de treball, al costat de les mides dels taulers (sense avís si n'és més gran). */}
+            <SettingsGroup icon={<LuFactory />} title="Màquina CNC" summary={machine ? machine.name : "sense màquina"}>
+              {machine ? (
+                <FormRow label="Camp de treball" help={`El màxim que mecanitza ${machine.name}. La separació entre peces i el marge del tauler són de la màquina (Preferències › Màquines CNC).`}>
+                  <Text fontSize="sm" pt="6px">{machine.workArea ? `${machine.workArea.x} × ${machine.workArea.y} mm` : "—"}</Text>
+                </FormRow>
+              ) : (
+                <Text fontSize="sm" color="fg.muted">
+                  Sense màquina CNC: importa-la a Preferències › Màquines CNC. Mentrestant, la separació i el marge del nesting es trien a la pàgina Nesting de cada moble.
+                </Text>
+              )}
+            </SettingsGroup>
+            <SettingsGroup icon={<LuLayoutGrid />} title="Mides de tauler de fàbrica" summary={draft.boards.sheets.map((x) => `${x.w}×${x.h}`).join(" · ")}>
+            <Text fontSize="sm" color="fg.muted">
+              Els taulers que es compren, per material («Tots els altres»: la resta). El nesting hi reparteix les peces.
+            </Text>
             {/* Taula en graella: capçalera una sola vegada i una fila per mida. */}
             <Grid templateColumns={{ base: "minmax(0, 1fr) minmax(0, 1fr) 32px", sm: "minmax(0, 1fr) 150px 150px 32px" }} gap={2} alignItems="center">
               <Text textStyle="xs" color="fg.muted" display={{ base: "none", sm: "block" }}>Material</Text>
@@ -203,9 +229,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
               <LuPlus /> Afegir mida de tauler
             </Button>
             </SettingsGroup>
-            <SettingsGroup icon={<LuScissors />} title="Tall" summary={`kerf ${draft.boards.kerf} · marge ${draft.boards.margin}${draft.boards.ignoreGrain ? " · gira amb veta" : ""}`}>
-            <NumRow label="Kerf (fresa)" help="Amplada del tall de la fresa." value={draft.boards.kerf} min={0} max={30} step={0.5} onChange={(kerf) => set("boards", { ...draft.boards, kerf })} />
-            <NumRow label="Marge del tauler" help="Vora que no s'aprofita, a cada costat." value={draft.boards.margin} min={0} max={100} step={1} onChange={(margin) => set("boards", { ...draft.boards, margin })} />
+            <SettingsGroup icon={<LuRotateCw />} title="Distribució" summary={draft.boards.ignoreGrain ? "gira les peces amb veta" : "respecta la veta"}>
             <FormRow label="Veta" help="Aprofita més el tauler, però la veta de les peces girades no segueix la del moble.">
               <Switch.Root size="sm" pt={1.5} checked={draft.boards.ignoreGrain} onCheckedChange={(e) => set("boards", { ...draft.boards, ignoreGrain: e.checked })}>
                 <Switch.HiddenInput />
@@ -217,17 +241,22 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             </Stack>
           </Pane>
 
-          <Pane id="hardware" title="Ferratges i mecanitzats" icon={LuHammer} desc="Frontisses, guies, espigues i forats, i com mecanitza la CNC." onReset={() =>
-              setReset({
-                key: "hardware",
-                label: "Ferratges i mecanitzats",
-                note: "Només els ferratges: les regles de mecanitzat de les màquines es queden (tenen el seu botó «Les del taller»).",
-              })
-            }>
-            <Stack gap={8}>
-              <HardwareForm hardware={draft.hardware} onChange={(hardware) => set("hardware", hardware)} />
-              <MachiningRulesSection machines={draft.machines} onChange={(machines) => set("machines", machines)} />
-            </Stack>
+          <Pane id="hardware" title="Ferratges i mecanitzats" icon={LuHammer} desc="Frontisses, guies, espigues i forats." onReset={() => setReset({ key: "hardware", label: "Ferratges i mecanitzats" })}>
+            <HardwareForm hardware={draft.hardware} onChange={(hardware) => set("hardware", hardware)} />
+          </Pane>
+
+          <Pane
+            id="rules"
+            title="Regles de mecanitzat"
+            icon={LuRoute}
+            desc="Com mecanitza la CNC: freses per a cada cosa, passades, rampa i peces petites."
+            onReset={
+              rulesMachine
+                ? () => setReset({ key: "rules", label: "Regles de mecanitzat", note: `Les regles de ${rulesMachine.name} tornen a les del taller. Les eines i les altres màquines no canvien.` })
+                : undefined
+            }
+          >
+            <MachiningRulesSection machines={draft.machines} selected={rulesMachineId} onSelect={setRulesMachineId} onChange={(machines) => set("machines", machines)} />
           </Pane>
 
           <Pane id="gaps" title="Jocs per defecte" icon={LuRuler} desc="Separacions dels fronts, prestatges i fons." onReset={() => setReset({ key: "gaps", label: "Jocs per defecte" })}>
@@ -313,7 +342,7 @@ const DETAIL_KEYS = { materials: "mobles:settings-material", references: "mobles
 
 /** Categories dels apartats de Preferències. */
 const SETTINGS_GROUPS: { label: string; ids: string[] }[] = [
-  { label: "Fabricació", ids: ["machines", "hardware", "gaps", "materials", "boards", "label"] },
+  { label: "Fabricació", ids: ["machines", "rules", "hardware", "gaps", "materials", "boards", "label"] },
   { label: "Foto i visor 3D", ids: ["references", "viewer3d"] },
   { label: "App", ids: ["display", "theme"] },
 ]

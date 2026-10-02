@@ -3,16 +3,17 @@ import { QUALITY, type RenderQuality } from "./renderQuality"
 import { PresentationRoom } from "./PresentationRoom"
 import { ModuleLegs, PanelHardware } from "./Hardware"
 import type { SceneGetter } from "./render/RenderDialog"
-import { SceneAccess, StudioEnvironment } from "./SceneHelpers"
+import { SceneAccess, StudioEnvironment, TextureRefresh } from "./SceneHelpers"
 import { surfaceMaterial } from "./surfaceMaterial"
 import { profileGeometry } from "./refGeometry"
 import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
-import { Billboard, ContactShadows, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
-import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
+import { Billboard, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react"
+import { ContactShadow } from "./ContactShadow"
 import { BoxFrame } from "./BoxFrame"
 import { MoveGizmo } from "./MoveGizmo"
 import { usePixelScale, type Axis } from "./pixelScale"
-import { NeutralToneMapping, DoubleSide, Group, Matrix4, Plane, Vector3, type Object3D } from "three"
+import { CircleGeometry, NeutralToneMapping, DoubleSide, Group, InstancedMesh, Matrix4, MeshBasicMaterial, Object3D, Plane, Vector3 } from "three"
 import { type ViewName } from "./viewNames"
 export type { ViewName } from "./viewNames"
 
@@ -22,7 +23,7 @@ import { modelInstance, onModelsLoaded, releaseModelGpu } from "./models3d"
 import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
-import { cutoutMaterials, panelMaterials, visualPanel } from "./exportablePanel"
+import { cutoutMaterials, panelMaterials, panelVisualKey, visualPanel } from "./exportablePanel"
 import { disposeMaterial } from "./textures"
 
 /** Color de selecció (el mateix taronja que els botons + del 3D). */
@@ -197,7 +198,6 @@ export function CabinetViewer({
   const dimColor = useColorModeValue("#3b2f1f", "#e8dcc6")
   const selected = modules?.find((m) => m.id === selectedModuleId)
   const selectedIndex = selected?.index
-  const moduleIdOf = (p: Panel): string | undefined => modules?.find((m) => m.index === p.module)?.id
   const groups = useMemo(() => movingGroups(panels), [panels])
   const groupOf = useMemo(() => {
     const m = new Map<string, MovingGroup>()
@@ -209,6 +209,32 @@ export function CabinetViewer({
   // Mòdul sota el ratolí: contorn suau, perquè es vegi què se seleccionarà en clicar.
   const [hoverModule, setHoverModule] = useState<number | null>(null)
   const [moduleDrag, setModuleDrag] = useState<{ index: number; dx: number; dy: number; dz: number; all: boolean } | null>(null)
+  // Signatura visual i col·locació de cada peça (es calculen un cop per construcció, no a cada render): `PanelMesh`
+  // només es torna a dibuixar si canvien, així passar per sobre, arrossegar o editar un altre mòdul no refà les
+  // geometries, els materials ni les textures de totes les peces.
+  const holesDrawn = showHoles || hardware
+  const panelKeys = useMemo(() => {
+    const m = new Map<string, { sig: string; place: string }>()
+    // `place` porta també el mòdul: el clic i el ressaltat el llegeixen de la peça (no és visual, però no pot quedar vell).
+    for (const p of panels) m.set(p.id, { sig: panelVisualKey(p, holesDrawn), place: `${p.module ?? ""}|${JSON.stringify(p.placement)}` })
+    return m
+  }, [panels, holesDrawn])
+  // Callbacks estables per a totes les peces (la peça arriba com a dada): el que fan llegeix les props d'ara.
+  const live = useRef({ onSelectModule, onSelectPart, modules, size })
+  useEffect(() => {
+    live.current = { onSelectModule, onSelectPart, modules, size }
+  })
+  const onPanelHover = useCallback((p: Panel, on: boolean) => {
+    setHoverModule((h) => (on ? (p.module ?? null) : h === p.module ? null : h))
+    document.body.style.cursor = on ? "pointer" : ""
+  }, [])
+  const onPanelClick = useCallback((p: Panel, pt: Vector3) => {
+    const l = live.current
+    if (p.id.startsWith("part:")) return l.onSelectPart?.(p.id.slice(5))
+    const id = l.modules?.find((m) => m.index === p.module)?.id
+    // Punt clicat en mm de la composició (el grup està centrat a l'escena).
+    if (id) l.onSelectModule?.(id, [pt.x / S + l.size.width / 2, pt.y / S, pt.z / S + l.size.depth / 2])
+  }, [])
   // Arestes on s'enganxen els objectes en arrossegar-los: mòduls, altres objectes, terra i paret.
   const snapTargets = useMemo((): SnapTargets => {
     const t: SnapTargets = { x: [0, size.width], y: [0, size.height], z: [0, size.depth] }
@@ -250,9 +276,13 @@ export function CabinetViewer({
 
   return (
     // Canviar la qualitat recrea el renderitzador: les ombres no es poden activar en calent.
+    // Només pinta quan alguna cosa canvia (`frameloop="demand"`): els controls, les animacions (obrir, explosionar,
+    // enquadrar) i les textures que arriben demanen el fotograma (`invalidate`). A l'iPhone, un visor quiet no gasta.
     <Canvas
       key={quality}
-      shadows={q.shadows ? "soft" : false}
+      frameloop="demand"
+      // PCF amb el radi de sempre (el «soft» de three ja ho és; PCFSoftShadowMap s'ha retirat i avisava).
+      shadows={q.shadows ? "percentage" : false}
       dpr={q.dpr}
       style={{ touchAction: "none" }}
       gl={{ preserveDrawingBuffer: true, alpha: true }}
@@ -274,6 +304,7 @@ export function CabinetViewer({
           de l'escena: abans l'habitació de Presentació en posava una altra i, segons quina s'aplicava l'última
           (en clicar al 3D es tornava a aplicar la de l'habitació), tot el visor canviava de to. */}
       <StudioEnvironment intensity={q.guides ? 0.6 : 0.5 * light.env} />
+      <TextureRefresh />
       <hemisphereLight intensity={(q.guides ? 0.55 : light.ambient) * 0.45} groundColor="#8a7a60" />
       {!q.guides && !ortho && <PresentationRoom backZ={-size.depth * S * 0.5} scene={scene} materials={materials} />}
       {/* bias i normalBias eviten les ratlles (shadow acne) de les cares que s'ombregen a si mateixes. */}
@@ -296,11 +327,15 @@ export function CabinetViewer({
           const t = active ? opening : 0
           const tr = g ? transformAt(g.motion, t) : null
           const shifted = moduleDrag && (moduleDrag.all || p.module === moduleDrag.index)
+          const isPart = p.id.startsWith("part:")
+          const k = panelKeys.get(p.id)
           return (
-            <group key={p.id} position={shifted ? [moduleDrag.dx * S, moduleDrag.dy * S, moduleDrag.dz * S] : [0, 0, 0]}>
+            <group key={p.id} position={shifted ? [moduleDrag.dx * S, moduleDrag.dy * S, moduleDrag.dz * S] : ZERO3}>
             <MovingPanel transform={tr}>
               <PanelMesh
                 panel={p}
+                sig={k?.sig}
+                place={k?.place}
                 exploded={exploded}
                 showHoles={showHoles}
                 // Mòdul triat: sòlid amb el contorn taronja. Translúcid només amb un compartiment triat (per veure'l a dins).
@@ -309,15 +344,8 @@ export function CabinetViewer({
                 materialMode={materialMode}
                 materials={materials}
                 hardware={hardware}
-                onHover={onSelectModule && !p.id.startsWith("part:") ? (on) => {
-                  setHoverModule((h) => (on ? (p.module ?? null) : h === p.module ? null : h))
-                  document.body.style.cursor = on ? "pointer" : ""
-                } : undefined}
-                onClick={p.id.startsWith("part:") ? (onSelectPart ? () => onSelectPart(p.id.slice(5)) : undefined) : onSelectModule ? (pt) => {
-                  const id = moduleIdOf(p)
-                  // Punt clicat en mm de la composició (el grup està centrat a l'escena).
-                  if (id) onSelectModule(id, [pt.x / S + size.width / 2, pt.y / S, pt.z / S + size.depth / 2])
-                } : undefined}
+                onHover={onSelectModule && !isPart ? onPanelHover : undefined}
+                onClick={(isPart ? onSelectPart : onSelectModule) ? onPanelClick : undefined}
               />
             </MovingPanel>
             </group>
@@ -418,8 +446,10 @@ export function CabinetViewer({
         )}
         {selected && onAddModule && !ortho && q.guides && (
           <>
-            <AddButton x={selected.x - 120} y={selected.y + selected.height / 2} z={(selected.z ?? 0) + selected.depth / 2} side="left" onClick={() => onAddModule("left")} />
-            <AddButton x={selected.x + selected.width + 120} y={selected.y + selected.height / 2} z={(selected.z ?? 0) + selected.depth / 2} side="right" onClick={() => onAddModule("right")} />
+            {/* A l'aresta de davant de cada costat, a mitja alçada, i apartats uns píxels cap a fora a la pantalla: la nansa
+                ↔ (a dalt al mig) no els tapa ni en un mòdul baix i fondo. */}
+            <AddButton x={selected.x} y={selected.y + selected.height / 2} z={(selected.z ?? 0) + selected.depth} side="left" onClick={() => onAddModule("left")} />
+            <AddButton x={selected.x + selected.width} y={selected.y + selected.height / 2} z={(selected.z ?? 0) + selected.depth} side="right" onClick={() => onAddModule("right")} />
           </>
         )}
         {ortho && (
@@ -438,11 +468,11 @@ export function CabinetViewer({
         <Grid position={[0, -0.001, 0]} args={[10, 10]} cellSize={0.1} sectionSize={0.5} cellColor={gridCell} sectionColor={gridSection} fadeDistance={6} infiniteGrid />
       </group>
       {q.contactResolution > 0 && (
-        <ContactShadows
-          key={q.contactResolution}
-          position={[0, 0.0005, 0]}
+        <ContactShadow
+          position={CONTACT_POS}
           opacity={0.35}
-          scale={Math.max(size.width, size.depth) * S * 2.2}
+          // A passos (quatre per octava, cap amunt): editar les mides no refà els render targets a cada canvi.
+          scale={2 ** (Math.ceil(Math.log2(Math.max(size.width, size.depth, 100) * S * 2.2) * 4) / 4)}
           blur={q.contactBlur}
           far={size.height * S + 0.5}
           resolution={q.contactResolution}
@@ -455,31 +485,58 @@ export function CabinetViewer({
   )
 }
 
+const ZERO3: [number, number, number] = [0, 0, 0]
+const CONTACT_POS: [number, number, number] = [0, 0.0005, 0]
+/**
+ * Pas de temps d'una animació (s): amb `frameloop="demand"`, el primer fotograma després d'una estona quieta porta tot
+ * el temps que no s'ha pintat i saltaria al final de cop; aquest compta com 1/60 s. Després, el temps de debò (com a
+ * molt 0,1 s). `running` es posa a false quan arriba.
+ */
+function animStep(running: { current: boolean }, dt: number): number {
+  const step = running.current ? Math.min(dt, 0.1) : 1 / 60
+  running.current = true
+  return step
+}
+
 /** Aplica el moviment d'obertura (gir sobre el pivot o desplaçament) a una peça. */
 function MovingPanel({ transform, children }: { transform: ReturnType<typeof transformAt> | null; children: React.ReactNode }) {
   const outer = useRef<Group>(null)
   const target = useRef(transform)
+  const running = useRef(false)
+  const invalidate = useThree((st) => st.invalidate)
   useEffect(() => {
     target.current = transform
-  }, [transform])
-  useFrame((_, dt) => {
+    invalidate()
+  }, [transform, invalidate])
+  useFrame((st, dt) => {
     const g = outer.current
     if (!g) return
     const tr = target.current
-    const k = Math.min(1, dt * 8)
     const rx = tr?.rotation[0] ?? 0
     const ry = tr?.rotation[1] ?? 0
-    g.rotation.x += (rx - g.rotation.x) * k
-    g.rotation.y += (ry - g.rotation.y) * k
     const tx = (tr?.translation[0] ?? 0) * S
     const ty = (tr?.translation[1] ?? 0) * S
     const tz = (tr?.translation[2] ?? 0) * S
     const px = (tr?.pivot[0] ?? 0) * S + tx
     const py = (tr?.pivot[1] ?? 0) * S + ty
     const pz = (tr?.pivot[2] ?? 0) * S + tz
+    const left = Math.max(Math.abs(rx - g.rotation.x), Math.abs(ry - g.rotation.y), Math.abs(px - g.position.x), Math.abs(py - g.position.y), Math.abs(pz - g.position.z))
+    // Quasi a lloc: s'hi posa i s'atura (sense demanar més fotogrames).
+    if (left < 1e-5) {
+      running.current = false
+      if (left === 0) return
+      g.rotation.x = rx
+      g.rotation.y = ry
+      g.position.set(px, py, pz)
+      return
+    }
+    const k = Math.min(1, animStep(running, dt) * 8)
+    g.rotation.x += (rx - g.rotation.x) * k
+    g.rotation.y += (ry - g.rotation.y) * k
     g.position.x += (px - g.position.x) * k
     g.position.y += (py - g.position.y) * k
     g.position.z += (pz - g.position.z) * k
+    st.invalidate()
   })
   const pivot = transform?.pivot ?? [0, 0, 0]
   return (
@@ -488,6 +545,9 @@ function MovingPanel({ transform, children }: { transform: ReturnType<typeof tra
     </group>
   )
 }
+
+/** Distància màxima de la càmera de l'editor (m). */
+const MAX_DISTANCE = 12
 
 const VIEW_DIR: Record<ViewName, [number, number, number]> = {
   "3d": [0.72, 0.45, 0.95],
@@ -508,13 +568,16 @@ const VIEW_DIR: Record<ViewName, [number, number, number]> = {
  */
 function CameraRig({ size, view, fitKey, onFramedChange, initialCamera, onCameraChange }: { size: CabinetViewerProps["size"]; view: ViewName; fitKey: number; onFramedChange?: (framed: boolean) => void; initialCamera?: CameraPose; onCameraChange?: (camera: CameraPose) => void }) {
   const controls = useRef<OrbitControlsImpl>(null)
-  const { camera, size: viewport } = useThree()
+  const { camera, size: viewport, invalidate } = useThree()
   const w = size.width * S
   const h = size.height * S
   const d = size.depth * S
   const targetY = h * 0.5
   const aspect = viewport.width / Math.max(viewport.height, 1)
   const goal = useRef<{ pos: Vector3; zoom: number } | null>(null)
+  const goalRunning = useRef(false)
+  const lastPos = useRef<Vector3 | null>(null)
+  const lastZoom = useRef(1)
   const ortho = view !== "3d"
   // Enquadrat = la càmera és on l'ha deixat l'últim enquadrament i el moble té la mateixa mida.
   const fittedSize = useRef("")
@@ -575,7 +638,9 @@ function CameraRig({ size, view, fitKey, onFramedChange, initialCamera, onCamera
     if ("fov" in camera && !ortho) {
       const vHalf = ((camera.fov as number) * Math.PI) / 360
       const hHalf = Math.atan(Math.tan(vHalf) * aspect)
-      dist = (radius / Math.sin(Math.min(vHalf, hHalf))) * 1.08
+      // Com a molt la distància màxima dels controls: més enllà, els controls la retenien i l'animació no arribava
+      // mai (amb `frameloop="demand"`, el visor no pararia de pintar).
+      dist = Math.min(MAX_DISTANCE * 0.999, (radius / Math.sin(Math.min(vHalf, hHalf))) * 1.08)
     } else {
       dist = radius * 4 + 1
       // Extensió visible segons la vista, amb marge per a les cotes.
@@ -597,6 +662,7 @@ function CameraRig({ size, view, fitKey, onFramedChange, initialCamera, onCamera
       camera.position.set(...restore.position)
       controls.current?.target.set(...restore.target)
       controls.current?.update()
+      invalidate()
       fittedSize.current = `${size.width}x${size.height}x${size.depth}`
       setFramed(camera.position.distanceTo(pos) < 0.005 && Math.abs(restore.target[0]) + Math.abs(restore.target[2]) + Math.abs(restore.target[1] - targetY) < 0.005)
       return
@@ -608,34 +674,46 @@ function CameraRig({ size, view, fitKey, onFramedChange, initialCamera, onCamera
     setFramed(true)
     controls.current?.target.set(0, targetY, 0)
     controls.current?.update()
+    // L'animació cap a l'enquadrament (`useFrame`) demana els fotogrames fins que arriba.
+    invalidate()
     // Les mides es llegeixen però no disparen el reenquadrament.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [camera, view, ortho, viewport.width, viewport.height, fitKey])
 
-  useFrame((_, dt) => {
+  useFrame((st, dt) => {
     const g = goal.current
-    if (!g) return
-    const k = Math.min(1, dt * 6)
+    if (!g) {
+      goalRunning.current = false
+      return
+    }
+    const k = Math.min(1, animStep(goalRunning, dt) * 6)
     camera.position.lerp(g.pos, k)
     if ("isOrthographicCamera" in camera && camera.isOrthographicCamera) {
       camera.zoom += (g.zoom - camera.zoom) * k
       camera.updateProjectionMatrix()
     }
     controls.current?.update()
-    if (camera.position.distanceTo(g.pos) < 0.002 && (!("isOrthographicCamera" in camera) || Math.abs(camera.zoom - g.zoom) < 0.5)) {
+    // Arribat, o encallat (els controls no la deixen anar més enllà, p. ex. el límit d'angle): s'acaba.
+    const zoom = "isOrthographicCamera" in camera && camera.isOrthographicCamera ? camera.zoom : 1
+    const stuck = lastPos.current !== null && camera.position.distanceToSquared(lastPos.current) < 1e-14 && Math.abs(zoom - lastZoom.current) < 1e-6
+    lastPos.current = (lastPos.current ?? new Vector3()).copy(camera.position)
+    lastZoom.current = zoom
+    if (stuck || (camera.position.distanceTo(g.pos) < 0.002 && (!("isOrthographicCamera" in camera) || Math.abs(camera.zoom - g.zoom) < 0.5))) {
       goal.current = null
+      goalRunning.current = false
+      lastPos.current = null
       // «Enquadrar» (o tornar a la vista 3D): la càmera nova també es desa.
       if (reportAfterGoal.current) {
         reportAfterGoal.current = false
         scheduleReport()
       }
-    }
+    } else st.invalidate()
   })
 
   return (
     <>
       {ortho ? <OrthographicCamera makeDefault near={-50} far={100} position={[0, targetY, 5]} zoom={80} /> : <PerspectiveCamera makeDefault fov={38} near={0.01} far={100} position={[1.4, 1.1, 1.9]} />}
-      <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={12} maxPolarAngle={Math.PI * 0.55} enableRotate={!ortho} onStart={() => {
+      <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={MAX_DISTANCE} maxPolarAngle={Math.PI * 0.55} enableRotate={!ortho} onStart={() => {
           goal.current = null
           restored.current = null
           setFramed(false)
@@ -837,7 +915,8 @@ function RefGhost({
   const profileGeo = useMemo(() => (g.shape === "profile" && g.profile && g.profile.length >= 3 ? profileGeometry(g) : null), [g])
   // Amb material: sòlid, amb ombres, i surt a la Presentació i al render (els fantasmes no hi surten).
   const solidMat = useMemo(() => (g.material && g.effect !== "cut" && !outline ? surfaceMaterial(materials, g.material, Math.max(g.w, g.d), g.h) : null), [g.material, g.effect, g.w, g.h, g.d, outline, materials])
-  useEffect(() => () => (solidMat?.map?.dispose(), solidMat?.dispose()), [solidMat])
+  // Totes les textures del material (color, normals, rugositat), no només `map`.
+  useEffect(() => () => void (solidMat && disposeMaterial(solidMat)), [solidMat])
   useEffect(() => () => profileGeo?.dispose(), [profileGeo])
   const axis = g.axis ?? "z"
   const len = axis === "x" ? g.w : axis === "y" ? g.h : g.d
@@ -1163,6 +1242,10 @@ function ZoneHighlight({ box: b }: { box: { x0: number; x1: number; y0: number; 
 }
 
 
+/** Elements d'edició (botons +, nanses, gizmo): la imatge del visor per al render no els porta (`SceneAccess`). */
+const EDITOR_ONLY = { editorOnly: true }
+
+/** Botó + d'afegir un mòdul al costat: (x, y, z) és l'aresta del mòdul; el botó va 1,7 radis cap a fora a la pantalla. */
 function AddButton({ x, y, z, side, onClick }: { x: number; y: number; z: number; side: "left" | "right"; onClick: () => void }) {
   // Botó 3D (no Html): mida constant a la pantalla, sempre per sobre del moble.
   const scaler = useRef<Group>(null)
@@ -1170,9 +1253,10 @@ function AddButton({ x, y, z, side, onClick }: { x: number; y: number; z: number
   usePixelScale(scaler, 15)
   const white = <meshBasicMaterial color="white" depthTest={false} depthWrite={false} transparent />
   return (
-    <group position={[x * S, y * S, z * S]}>
+    <group position={[x * S, y * S, z * S]} userData={EDITOR_ONLY}>
       <Billboard>
         <group ref={scaler}>
+          <group position={[side === "left" ? -1.7 : 1.7, 0, 0]}>
           <mesh
             renderOrder={20}
             onPointerOver={(e) => {
@@ -1201,6 +1285,7 @@ function AddButton({ x, y, z, side, onClick }: { x: number; y: number; z: number
             <planeGeometry args={[0.14, 1]} />
             {white}
           </mesh>
+          </group>
         </group>
       </Billboard>
     </group>
@@ -1212,6 +1297,10 @@ function AddButton({ x, y, z, side, onClick }: { x: number; y: number; z: number
  * la fila i, si és penjat, amunt i avall. S'enganxa a les vores dels altres mòduls i dels
  * objectes (Alt: lliure).
  */
+/** La nansa ↔ va `HANDLE_LIFT` radis per sobre de l'aresta de dalt (a la pantalla) i, com a molt, a `HANDLE_TOP_PX` de dalt del visor. */
+const HANDLE_LIFT = 1.8
+const HANDLE_TOP_PX = 56
+
 function MoveHandle({
   m,
   others,
@@ -1228,10 +1317,56 @@ function MoveHandle({
   const latest = useRef<{ dx: number; dy: number; dz: number; all: boolean } | null>(null)
   const [live, setLive] = useState<{ dx: number; dy: number; dz: number; all: boolean } | null>(null)
   const [hover, setHover] = useState(false)
-  const pos: [number, number, number] = [(m.x + m.width / 2) * S, (m.y + m.height) * S + 0.08, ((m.z ?? 0) + m.depth) * S]
+  // Al mig de l'aresta de dalt de davant; el cercle va uns píxels més amunt (a la pantalla, `HANDLE_LIFT`).
+  const top: [number, number, number] = [(m.x + m.width / 2) * S, (m.y + m.height) * S, ((m.z ?? 0) + m.depth) * S]
   // Mida constant a la pantalla (uns 30 px), s'allunyi o s'acosti la càmera.
   const scaler = useRef<Group>(null)
+  const anchor = useRef<Group>(null)
+  const tmp = useMemo(() => ({ a: new Vector3(), b: new Vector3() }), [])
+  // En un mòdul alt (una columna) amb la càmera a prop, la nansa sortiria per dalt del visor: baixa per l'aresta de
+  // davant (com a molt fins a una quarta part de l'alçada) fins que hi cap, a sota de la barra de dalt del visor.
+  useFrame(({ camera, size }) => {
+    const g = anchor.current
+    if (!g) return
+    const ox = (live?.dx ?? 0) * S, oy = (live?.dy ?? 0) * S, oz = (live?.dz ?? 0) * S
+    const hi = tmp.a.set(top[0] + ox, top[1] + oy, top[2] + oz)
+    let y = hi.y
+    const limit = 1 - (2 * (HANDLE_TOP_PX + HANDLE_LIFT * 14)) / Math.max(1, size.height)
+    // Les coordenades són del grup del moble (centrat a l'escena): a la pantalla, amb la seva matriu.
+    const parent = g.parent?.matrixWorld
+    const ndcOf = (v: Vector3) => (parent ? v.clone().applyMatrix4(parent) : v.clone()).project(camera).y
+    const ndcHi = ndcOf(hi)
+    if (ndcHi > limit) {
+      const drop = m.height * 0.75 * S
+      const lo = tmp.b.set(hi.x, hi.y - drop, hi.z)
+      const ndcLo = ndcOf(lo)
+      const t = ndcHi - ndcLo > 1e-6 ? Math.min(1, Math.max(0, (ndcHi - limit) / (ndcHi - ndcLo))) : 0
+      y = hi.y - t * drop
+    }
+    g.position.set(hi.x, y, hi.z)
+  })
   usePixelScale(scaler, 14)
+  // r3f no fa arribar el `pointercancel` (un gest del sistema a l'iPhone, girar la pantalla…) ni el `pointerup` si el
+  // dit acaba fora de la nansa i no s'ha pogut capturar el punter: com al gizmo, s'escolten a la finestra perquè
+  // l'arrossegament acabi igualment (`end` ignora un final repetit).
+  const endRef = useRef<(e: ThreeEvent<PointerEvent>) => void>(() => {})
+  const unlisten = useRef<(() => void) | null>(null)
+  useEffect(() => () => unlisten.current?.(), [])
+  const listenEnd = (pointerId: number) => {
+    unlisten.current?.()
+    const fin = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId) return
+      unlisten.current?.()
+      endRef.current({ target: null, pointerId } as unknown as ThreeEvent<PointerEvent>)
+    }
+    window.addEventListener("pointerup", fin)
+    window.addEventListener("pointercancel", fin)
+    unlisten.current = () => {
+      window.removeEventListener("pointerup", fin)
+      window.removeEventListener("pointercancel", fin)
+      unlisten.current = null
+    }
+  }
 
   const compute = (e: ThreeEvent<PointerEvent>) => {
     const s0 = start.current
@@ -1254,20 +1389,26 @@ function MoveHandle({
   const end = (e: ThreeEvent<PointerEvent>) => {
     if (!start.current) return
     start.current = null
+    unlisten.current?.()
     ;(e.target as Element | null)?.releasePointerCapture?.(e.pointerId)
     if (controls) controls.enabled = true
+    if (!hover) document.body.style.cursor = ""
     const d = latest.current
     latest.current = null
     setLive(null)
     onDrop(d?.dx ?? 0, d?.dy ?? 0, d?.dz ?? 0, d?.all ?? false)
   }
+  useEffect(() => {
+    endRef.current = end
+  })
   const sign = (v: number) => `${v > 0 ? "+" : ""}${v}`
   const label = live ? (live.all ? `Tot el moble ${sign(live.dx)} mm` : `${sign(live.dx)} mm${live.dy ? ` · ${sign(live.dy)} mm` : ""}${live.dz ? ` · paret ${(m.z ?? 0) + live.dz} mm` : ""}`) : null
 
   return (
-    <group position={[pos[0] + (live?.dx ?? 0) * S, pos[1] + (live?.dy ?? 0) * S, pos[2] + (live?.dz ?? 0) * S]}>
+    <group ref={anchor} position={top} userData={EDITOR_ONLY}>
       <Billboard>
         <group ref={scaler}>
+        <group position={[0, HANDLE_LIFT, 0]}>
         <mesh
           onPointerOver={(e) => {
             e.stopPropagation()
@@ -1286,6 +1427,7 @@ function MoveHandle({
             start.current = { p: e.point.clone(), plane, all: e.shiftKey }
             if (controls) controls.enabled = false
             document.body.style.cursor = "grabbing"
+            listenEnd(e.pointerId)
           }}
           onPointerMove={(e) => {
             if (!start.current) return
@@ -1322,10 +1464,12 @@ function MoveHandle({
           </group>
         ))}
         </group>
+        </group>
       </Billboard>
       {label && (
-        <Html position={[0, 0.05, 0]} center zIndexRange={[30, 20]} style={{ pointerEvents: "none" }}>
-          <span style={{ fontFamily: "system-ui, sans-serif", fontSize: 12, fontWeight: 600, color: "#fff", background: "#b57a37", padding: "2px 6px", borderRadius: 4, whiteSpace: "nowrap", display: "block" }}>{label}</span>
+        // Per sobre de la nansa (que va uns 25 px per sobre de l'aresta).
+        <Html position={[0, 0, 0]} center zIndexRange={[30, 20]} style={{ pointerEvents: "none" }}>
+          <span style={{ fontFamily: "system-ui, sans-serif", fontSize: 12, fontWeight: 600, color: "#fff", background: "#b57a37", padding: "2px 6px", borderRadius: 4, whiteSpace: "nowrap", display: "block", transform: "translateY(-52px)" }}>{label}</span>
         </Html>
       )}
     </group>
@@ -1334,20 +1478,15 @@ function MoveHandle({
 
 const BEVEL_USERDATA = { bevel: true }
 
-export function PanelMesh({
-  panel,
-  exploded,
-  showHoles,
-  dimmed = false,
-  materialMode,
-  materials,
-  onClick,
-  onHover,
-  edges = true,
-  hardware = false,
-}: {
-  /** El ratolí entra o surt de la peça (ressaltat del mòdul en passar-hi per sobre). */
-  onHover?: (on: boolean) => void
+interface PanelMeshProps {
+  /**
+   * Signatura visual de la peça (`panelVisualKey`) i col·locació (JSON): si no canvien (i la resta de props tampoc),
+   * la peça no es torna a dibuixar ni refà la geometria i els materials. Sense, es calcula aquí.
+   */
+  sig?: string
+  place?: string
+  /** El ratolí entra o surt de la peça (ressaltat del mòdul en passar-hi per sobre). Estable: la peça va com a dada. */
+  onHover?: (panel: Panel, on: boolean) => void
   /** Ferratges visuals de la peça (frontisses i tirador als fronts). */
   hardware?: boolean
   panel: Panel
@@ -1359,11 +1498,46 @@ export function PanelMesh({
   dimmed?: boolean
   materialMode: "material" | "role"
   materials: MaterialPref[]
-  /** Clic a la peça, amb el punt tocat (coordenades del món, m). */
-  onClick?: (point: Vector3) => void
-}) {
+  /** Clic a la peça, amb el punt tocat (coordenades del món, m). Estable: la peça va com a dada. */
+  onClick?: (panel: Panel, point: Vector3) => void
+}
+
+/** Les mateixes props: per signatura si n'hi ha (la peça és un objecte nou a cada construcció), si no per referència. */
+const samePanelProps = (a: PanelMeshProps, b: PanelMeshProps) =>
+  (a.sig !== undefined ? a.sig === b.sig && a.place === b.place : a.panel === b.panel) &&
+  a.exploded === b.exploded &&
+  a.showHoles === b.showHoles &&
+  a.dimmed === b.dimmed &&
+  a.edges === b.edges &&
+  a.hardware === b.hardware &&
+  a.materialMode === b.materialMode &&
+  a.materials === b.materials &&
+  a.onClick === b.onClick &&
+  a.onHover === b.onHover
+
+/** Peça del moble al visor (també a la foto realista). Només es torna a pintar si canvia el que es veu (`samePanelProps`). */
+export const PanelMesh = memo(function PanelMesh({
+  panel,
+  sig: givenSig,
+  exploded,
+  showHoles,
+  dimmed = false,
+  materialMode,
+  materials,
+  onClick,
+  onHover,
+  edges = true,
+  hardware = false,
+}: PanelMeshProps) {
   const group = useRef<Group>(null)
   const amount = useRef(exploded ? 1 : 0)
+  const running = useRef(false)
+  const invalidate = useThree((st) => st.invalidate)
+  const ownSig = useMemo(() => (givenSig === undefined ? panelVisualKey(panel, showHoles || hardware) : ""), [givenSig, panel, showHoles, hardware])
+  const sig = givenSig ?? ownSig
+  // La peça que es dibuixa: la mateixa mentre la signatura no canviï (una construcció nova la torna a fer igual).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const vpanel = useMemo(() => panel, [sig])
 
   const { matrix, explode } = useMemo(() => {
     const { origin, xAxis, yAxis, zAxis, explodeDir } = panel.placement
@@ -1372,20 +1546,20 @@ export function PanelMesh({
     return { matrix: m, explode: new Vector3(...explodeDir).multiplyScalar(EXPLODE_MM * S) }
   }, [panel.placement])
 
-  const mats = useMemo(() => panelMaterials(panel, materialMode, materials, dimmed), [panel, materialMode, materials, dimmed])
+  const mats = useMemo(() => panelMaterials(vpanel, materialMode, materials, dimmed), [vpanel, materialMode, materials, dimmed])
   // Peces amb talls passants (reixetes, taulell amb pica i vitro, passacables): geometria
   // extruïda amb els forats de debò, perquè es vegi a través.
   // Peces a inglet (sense talls): secció en trapezi, perquè la cantonada es vegi a 45°.
   // Els forats dels tiradors no es buiden al 3D (els tapa el tirador): així una peça a inglet
   // amb tirador continua sent un prisma a 45°.
-  const vis = useMemo(() => visualPanel(panel), [panel])
+  const vis = useMemo(() => visualPanel(vpanel), [vpanel])
   const cut = useMemo(() => (isShaped(vis) ? shapedGeometry(vis) : vis.mitres?.length ? mitreGeometry(vis) : null), [vis])
   const cutMats = useMemo(() => {
     if (!cut) return null
-    const m = cutoutMaterials(panel, materialMode, materials, dimmed)
+    const m = cutoutMaterials(vpanel, materialMode, materials, dimmed)
     // A la geometria d'inglet els grups van al revés: [0] puntes (cantell), [1] cares.
     return isShaped(vis) ? m : [m[1]!, m[0]!]
-  }, [cut, panel, materialMode, materials, dimmed])
+  }, [cut, vpanel, vis, materialMode, materials, dimmed])
   useEffect(
     () => () => {
       cut?.dispose()
@@ -1400,18 +1574,25 @@ export function PanelMesh({
     [mats],
   )
 
-  useFrame((_, dt) => {
+  // Explosionar o muntar: l'animació (`useFrame`) demana els fotogrames fins que arriba.
+  useEffect(() => invalidate(), [exploded, invalidate])
+  useFrame((st, dt) => {
     const g = group.current
     if (!g) return
     const target = exploded ? 1 : 0
-    amount.current += (target - amount.current) * Math.min(1, dt * 7)
-    if (Math.abs(target - amount.current) < 0.002) amount.current = target
+    if (amount.current !== target) {
+      amount.current += (target - amount.current) * Math.min(1, animStep(running, dt) * 7)
+      if (Math.abs(target - amount.current) < 0.002) {
+        amount.current = target
+        running.current = false
+      } else st.invalidate()
+    }
     g.position.copy(explode).multiplyScalar(amount.current)
   })
 
-  const L = panel.length * S
-  const W = panel.width * S
-  const T = panel.thickness * S
+  const L = vpanel.length * S
+  const W = vpanel.width * S
+  const T = vpanel.thickness * S
 
   return (
     <group ref={group}>
@@ -1428,21 +1609,21 @@ export function PanelMesh({
             // El clic que acaba un arrossegament (d'una fletxa o de la càmera) no selecciona.
             if (e.delta > 4) return
             e.stopPropagation()
-            onClick(e.point)
+            onClick(panel, e.point)
           } : undefined}
           onPointerOver={onHover ? (e: ThreeEvent<PointerEvent>) => {
             if (e.pointerType !== "mouse") return
             e.stopPropagation()
-            onHover(true)
+            onHover(panel, true)
           } : undefined}
-          onPointerOut={onHover ? () => onHover(false) : undefined}
+          onPointerOut={onHover ? () => onHover(panel, false) : undefined}
         >
           {!cut && <boxGeometry args={[L, W, T]} />}
           {edges && <Edges color={dimmed ? "#a08a6a" : "#6b5a3e"} threshold={15} />}
         </mesh>
-        {showHoles && panel.holes.map((h, i) => <HoleMark key={i} hole={h} thickness={T} />)}
-        {hardware && <PanelHardware panel={panel} />}
-        {panel.grooves.map((g, i) => (
+        {showHoles && vpanel.holes.length > 0 && <HoleMarks holes={vpanel.holes} thickness={T} />}
+        {hardware && <PanelHardware panel={vpanel} />}
+        {vpanel.grooves.map((g, i) => (
           <mesh key={`g${i}`} position={[(g.x + g.w / 2) * S, (g.y + g.h / 2) * S, g.face === "A" ? T - (g.depth * S) / 2 + 0.0002 : (g.depth * S) / 2 - 0.0002]}>
             <boxGeometry args={[g.w * S, g.h * S, g.depth * S]} />
             <meshStandardMaterial color="#8a7150" roughness={1} />
@@ -1452,68 +1633,65 @@ export function PanelMesh({
       </group>
     </group>
   )
-}
+}, samePanelProps)
 
 const HOLE_COLOR = "#3b2f1f"
 const EPS = 0.0004
+/** Disc de radi 1 i material comuns a totes les marques de forat (cada forat és una instància, escalada al seu radi). */
+const HOLE_GEO = new CircleGeometry(1, 20)
+const HOLE_MAT = new MeshBasicMaterial({ color: HOLE_COLOR })
+HOLE_MAT.userData.shared = true
 
-/** Marca d'un tall passant: forma fosca a la cara A (passacables, ranures de reixeta, trapa). */
+/** Gir de la marca d'un forat de cantell: disc perpendicular al cantell, al mig del gruix. */
+const EDGE_MARK: Record<string, { d: [number, number, number]; r: [number, number, number] }> = {
+  left: { d: [-EPS, 0, 0], r: [0, -Math.PI / 2, 0] },
+  right: { d: [EPS, 0, 0], r: [0, Math.PI / 2, 0] },
+  bottom: { d: [0, -EPS, 0], r: [Math.PI / 2, 0, 0] },
+  top: { d: [0, EPS, 0], r: [-Math.PI / 2, 0, 0] },
+}
 
-function HoleMark({ hole, thickness }: { hole: Hole; thickness: number }) {
-  const r = (hole.diameter / 2) * S
-  const x = hole.x * S
-  const y = hole.y * S
-
-  if (hole.face === "A") {
-    return (
-      <mesh position={[x, y, thickness + EPS]}>
-        <circleGeometry args={[r, 20]} />
-        <meshBasicMaterial color={HOLE_COLOR} />
-      </mesh>
-    )
-  }
-  if (hole.face === "B") {
-    return (
-      <mesh position={[x, y, -EPS]} rotation={[Math.PI, 0, 0]}>
-        <circleGeometry args={[r, 20]} />
-        <meshBasicMaterial color={HOLE_COLOR} />
-      </mesh>
-    )
-  }
-  // Forat de cantell: disc perpendicular al cantell, al mig del gruix.
-  const z = thickness / 2
-  switch (hole.edge) {
-    case "left":
-      return (
-        <mesh position={[x - EPS, y, z]} rotation={[0, -Math.PI / 2, 0]}>
-          <circleGeometry args={[r, 20]} />
-          <meshBasicMaterial color={HOLE_COLOR} />
-        </mesh>
-      )
-    case "right":
-      return (
-        <mesh position={[x + EPS, y, z]} rotation={[0, Math.PI / 2, 0]}>
-          <circleGeometry args={[r, 20]} />
-          <meshBasicMaterial color={HOLE_COLOR} />
-        </mesh>
-      )
-    case "bottom":
-      return (
-        <mesh position={[x, y - EPS, z]} rotation={[Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[r, 20]} />
-          <meshBasicMaterial color={HOLE_COLOR} />
-        </mesh>
-      )
-    case "top":
-      return (
-        <mesh position={[x, y + EPS, z]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[r, 20]} />
-          <meshBasicMaterial color={HOLE_COLOR} />
-        </mesh>
-      )
-    default:
-      return null
-  }
+/**
+ * Marques dels forats d'una peça (discos foscos a la cara A, a la B o al cantell): una sola malla instanciada per peça
+ * amb la geometria i el material comuns (abans, una malla i un material per forat: centenars per moble).
+ */
+function HoleMarks({ holes, thickness }: { holes: Hole[]; thickness: number }) {
+  const marks = useMemo(() => {
+    const o = new Object3D()
+    const out: Matrix4[] = []
+    for (const h of holes) {
+      const x = h.x * S
+      const y = h.y * S
+      if (h.face === "A") {
+        o.position.set(x, y, thickness + EPS)
+        o.rotation.set(0, 0, 0)
+      } else if (h.face === "B") {
+        o.position.set(x, y, -EPS)
+        o.rotation.set(Math.PI, 0, 0)
+      } else {
+        const e = h.edge ? EDGE_MARK[h.edge] : undefined
+        if (!e) continue
+        o.position.set(x + e.d[0], y + e.d[1], thickness / 2 + e.d[2])
+        o.rotation.set(...e.r)
+      }
+      o.scale.setScalar((h.diameter / 2) * S)
+      o.updateMatrix()
+      out.push(o.matrix.clone())
+    }
+    return out
+  }, [holes, thickness])
+  const ref = useRef<InstancedMesh>(null)
+  const invalidate = useThree((st) => st.invalidate)
+  useLayoutEffect(() => {
+    const mesh = ref.current
+    if (!mesh) return
+    marks.forEach((m, i) => mesh.setMatrixAt(i, m))
+    mesh.instanceMatrix.needsUpdate = true
+    mesh.computeBoundingSphere()
+    invalidate()
+  }, [marks, invalidate])
+  if (!marks.length) return null
+  // La mida de la malla és el nombre de forats: si canvia, se'n fa una de nova.
+  return <instancedMesh key={marks.length} ref={ref} args={[HOLE_GEO, HOLE_MAT, marks.length]} />
 }
 
 

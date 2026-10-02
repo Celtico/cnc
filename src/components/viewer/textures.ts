@@ -1,4 +1,4 @@
-import { CanvasTexture, MirroredRepeatWrapping, NoColorSpace, RepeatWrapping, SRGBColorSpace, TextureLoader, type Material, type MeshStandardMaterial, type Texture } from "three"
+import { CanvasTexture, MirroredRepeatWrapping, NoColorSpace, RepeatWrapping, SRGBColorSpace, TextureLoader, type Material, type Mesh, type MeshStandardMaterial, type Object3D, type Texture } from "three"
 import { TEXTURE_CACHE_MAX } from "./deviceLimits"
 import { WOOD_PRESETS, type Finish, type MaterialPref, type WoodGen } from "../../core/model"
 
@@ -64,19 +64,31 @@ const mix = (a: [number, number, number], b: [number, number, number], t: number
 ]
 
 /**
- * Memòria de textures generades (les últimes fetes servir, LRU; en moure un control se'n fan moltes). Les que en
- * surten s'alliberen (`dispose`): si algun material encara la fa servir, three la torna a pujar.
+ * Memòria de textures generades (les últimes fetes servir, LRU; en moure un control se'n fan moltes). Els materials no
+ * fan servir aquestes textures base sinó clons (`tileClone`) que en comparteixen la imatge: cada base compta els seus
+ * clons vius i només en surten (i s'alliberen) les que ja no en tenen cap. Treure'n una de feta servir no estalviaria
+ * res (els clons guarden la imatge) i la tornaria a generar i a pujar a la GPU (a l'iPhone, amb 12, passava sovint).
  */
 const cache = new Map<string, Texture>()
+/** Clons vius de cada textura base (`tileClone`). */
+const liveClones = new WeakMap<Texture, number>()
+/** Clons d'una foto que encara no s'ha baixat: es marquen per pujar-los quan arriba. */
+const waitingClones = new WeakMap<Texture, Set<Texture>>()
+/** Buidat de cada memòria (quan una base es queda sense clons, ja pot sortir). */
+const trimmers: (() => void)[] = []
+function trim(map: Map<string, Texture>, max: number): void {
+  if (map.size <= max) return
+  for (const [k, t] of map) {
+    if (map.size <= max) break
+    if ((liveClones.get(t) ?? 0) > 0) continue
+    t.dispose()
+    map.delete(k)
+  }
+}
 function remember(map: Map<string, Texture>, key: string, v: Texture, max = TEXTURE_CACHE_MAX): Texture {
   map.delete(key)
   map.set(key, v)
-  while (map.size > max) {
-    const first = map.keys().next().value
-    if (first === undefined) break
-    map.get(first)?.dispose()
-    map.delete(first)
-  }
+  trim(map, max)
   return v
 }
 /** Textura de la memòria; si hi és, passa a ser la més recent. */
@@ -89,10 +101,62 @@ function recall(map: Map<string, Texture>, key: string): Texture | undefined {
   return hit
 }
 
-/** Allibera un material i totes les seves textures (map, normalMap, roughnessMap, emissiveMap…), no només `map`. */
+/**
+ * Còpia d'una textura per a un material (repetició, gir i desplaçament propis) que comparteix la imatge de la base.
+ * `clone` marca la font compartida per tornar-la a pujar a la GPU (la foto sencera, a cada peça i a cada reconstrucció):
+ * si la imatge ja és carregada, es deixa la versió de la font com era i el clon (versió pròpia > 0) reutilitza la
+ * textura de GPU de la font. Si encara es baixa, la càrrega ja la marcarà. Compta com a clon viu de la base fins que
+ * s'allibera (`dispose`).
+ */
+export function tileClone(base: Texture): Texture {
+  const sourceVersion = base.source.version
+  const t = base.clone()
+  const img = base.image as { width?: number } | null
+  if (img && (img.width ?? 0) > 0) t.source.version = sourceVersion
+  else {
+    // Foto que encara es baixa: el clon no es puja fins que arriba (si no, three avisa a cada fotograma «Texture
+    // marked for update but no image data found»); `photoTexture` el marca quan la imatge hi és.
+    t.version = 0
+    const waiting = waitingClones.get(base) ?? new Set<Texture>()
+    waitingClones.set(base, waiting)
+    waiting.add(t)
+  }
+  liveClones.set(base, (liveClones.get(base) ?? 0) + 1)
+  let live = true
+  t.addEventListener("dispose", () => {
+    if (!live) return
+    live = false
+    waitingClones.get(base)?.delete(t)
+    const n = (liveClones.get(base) ?? 1) - 1
+    liveClones.set(base, n)
+    if (n <= 0) for (const f of trimmers) f()
+  })
+  return t
+}
+
+/**
+ * Allibera un material i totes les seves textures (map, normalMap, roughnessMap, emissiveMap…), no només `map`. Els
+ * compartits (`userData.shared`: l'inox dels tiradors) no: els fan servir totes les peces.
+ */
 export function disposeMaterial(mat: Material): void {
+  if (mat.userData.shared) return
   for (const v of Object.values(mat)) if ((v as Texture | null)?.isTexture) (v as Texture).dispose()
   mat.dispose()
+}
+
+/**
+ * Allibera la geometria, els materials i les textures d'un arbre d'objectes que ja no es dibuixa (miniatures, elements
+ * dels ambients, exportacions). Els models 3D comparteixen geometria i materials amb la memòria de models
+ * (`models3d.ts`, `userData.sharedModel`): no s'alliberen.
+ */
+export function disposeTree(root: Object3D): void {
+  root.traverse((o) => {
+    const m = o as Mesh
+    if (!m.isMesh || m.userData.sharedModel) return
+    m.geometry?.dispose()
+    const mats = (Array.isArray(m.material) ? m.material : [m.material]) as Material[]
+    for (const mat of new Set(mats)) disposeMaterial(mat)
+  })
 }
 
 /** Paràmetres efectius de la fusta: els del generador o els de l'espècie. */
@@ -237,6 +301,7 @@ function hexRgb(color: string): [number, number, number] {
 }
 
 const patternCache = new Map<string, Texture>()
+trimmers.push(() => trim(cache, TEXTURE_CACHE_MAX), () => trim(patternCache, TEXTURE_CACHE_MAX))
 
 /**
  * Textures procedurals dels materials de simulació (sense imatges): el teixit és una trama
@@ -505,8 +570,18 @@ export function resolveEdgeFinish(materials: MaterialPref[], name: string): Fini
 /** Color del cantell sense folrar (tauler vist). */
 export const RAW_EDGE_COLOR = "#cdb48c"
 
-const photoCache = new Map<string, Texture>()
+/**
+ * Fotos carregades: per `src` (la cadena tal com ve, sovint una data URL de centenars de kB: no se'n fa cap clau nova
+ * concatenant-hi res) i, a dins, una textura per variant (repetició o mirall, color o dades).
+ */
+interface PhotoEntry {
+  variants: Map<string, Texture>
+}
+const photoCache = new Map<string, PhotoEntry>()
+const PHOTO_MAX = () => TEXTURE_CACHE_MAX * 3
 const loading = new Set<Promise<void>>()
+let photoFailures = 0
+const photoListeners = new Set<() => void>()
 
 /**
  * Hi ha fotos carregant-se (les miniatures es pinten d'una vegada: si en falta alguna, s'espera
@@ -514,6 +589,41 @@ const loading = new Set<Promise<void>>()
  */
 export const photoTexturesPending = () => loading.size > 0
 export const photoTexturesIdle = (): Promise<void> => Promise.all([...loading]).then(() => undefined)
+/**
+ * Fotos que no s'han pogut carregar des que va començar l'app (comptador): una miniatura que n'ha vist fallar alguna
+ * mentre es feia no es desa (sortiria negra per sempre). La foto fallida surt de la memòria i es torna a provar.
+ */
+export const photoTextureFailures = (): number => photoFailures
+/** Avisa quan s'acaba de carregar una foto (els visors amb `frameloop="demand"` tornen a pintar). */
+export function onPhotoTextureLoaded(f: () => void): () => void {
+  photoListeners.add(f)
+  return () => photoListeners.delete(f)
+}
+
+/** Nombre de textures de foto a la memòria (totes les variants). */
+function photoCount(): number {
+  let n = 0
+  for (const e of photoCache.values()) n += e.variants.size
+  return n
+}
+
+/** Treu les fotos més antigues sense clons vius fins que en queden `PHOTO_MAX`. */
+function trimPhotos(): void {
+  let n = photoCount()
+  if (n <= PHOTO_MAX()) return
+  for (const [src, e] of photoCache) {
+    for (const [k, t] of e.variants) {
+      if (n <= PHOTO_MAX()) break
+      if ((liveClones.get(t) ?? 0) > 0) continue
+      t.dispose()
+      e.variants.delete(k)
+      n--
+    }
+    if (!e.variants.size) photoCache.delete(src)
+    if (n <= PHOTO_MAX()) break
+  }
+}
+trimmers.push(trimPhotos)
 
 /**
  * Textura d'una foto real (data URL), en repetició. Es carrega una sola vegada per imatge.
@@ -521,9 +631,19 @@ export const photoTexturesIdle = (): Promise<void> => Promise.all([...loading]).
  * costures a cada tile (però el dibuix surt simètric).
  */
 export function photoTexture(src: string, seamless = false, linear = false): Texture {
-  const key = `${seamless ? "r" : "m"}${linear ? "l" : ""}:${src}`
-  const hit = recall(photoCache, key)
-  if (hit) return hit
+  const variant = `${seamless ? "r" : "m"}${linear ? "l" : ""}`
+  let entry = photoCache.get(src)
+  if (entry) {
+    // La més recent passa al final (LRU per foto).
+    photoCache.delete(src)
+    photoCache.set(src, entry)
+    const hit = entry.variants.get(variant)
+    if (hit) return hit
+  } else {
+    entry = { variants: new Map() }
+    photoCache.set(src, entry)
+  }
+  const own = entry
   // Els fitxers de l'app (`textures/<id>/…`, jocs de `textureSets.ts`) van des de l'arrel de l'app.
   let done = () => {}
   const loaded = new Promise<void>((r) => (done = r))
@@ -531,13 +651,27 @@ export function photoTexture(src: string, seamless = false, linear = false): Tex
   const finish = () => {
     loading.delete(loaded)
     done()
+    // Els clons fets mentre es baixava (versió 0) es pugen ara.
+    if (tex.image) for (const c of waitingClones.get(tex) ?? []) c.needsUpdate = true
+    waitingClones.delete(tex)
+    for (const f of photoListeners) f()
   }
-  const tex = new TextureLoader().load(src.startsWith("data:") ? src : `${import.meta.env.BASE_URL}${src}`, finish, undefined, finish)
+  const fail = () => {
+    photoFailures++
+    // Fora de la memòria: la pròxima vegada es torna a provar (si no, quedaria negra fins a recarregar l'app).
+    if (own.variants.get(variant) === tex) own.variants.delete(variant)
+    if (!own.variants.size && photoCache.get(src) === own) photoCache.delete(src)
+    tex.userData.failed = true
+    finish()
+  }
+  const tex = new TextureLoader().load(src.startsWith("data:") ? src : `${import.meta.env.BASE_URL}${src}`, finish, undefined, fail)
   tex.wrapS = seamless ? RepeatWrapping : MirroredRepeatWrapping
   tex.wrapT = seamless ? RepeatWrapping : MirroredRepeatWrapping
   // Normals i rugositat són dades, no colors: sense la corba sRGB.
   tex.colorSpace = linear ? NoColorSpace : SRGBColorSpace
   tex.anisotropy = 8
   // Cada material de foto en fa servir fins a tres (color, normal i rugositat): la memòria n'hi guarda tres per material.
-  return remember(photoCache, key, tex, TEXTURE_CACHE_MAX * 3)
+  entry.variants.set(variant, tex)
+  trimPhotos()
+  return tex
 }

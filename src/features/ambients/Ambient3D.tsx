@@ -1,16 +1,17 @@
 import { OrbitControls } from "@react-three/drei"
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
-import { BoxGeometry, Color, Group, Mesh, MeshStandardMaterial, NeutralToneMapping, PerspectiveCamera, Plane, PlaneGeometry, Vector3, type Material, type Object3D } from "three"
+import { BoxGeometry, Color, Group, Mesh, MeshStandardMaterial, NeutralToneMapping, PerspectiveCamera, Plane, PlaneGeometry, Vector3, type Object3D } from "three"
 import { BoxFrame } from "../../components/viewer/BoxFrame"
 import { MoveGizmo } from "../../components/viewer/MoveGizmo"
 import type { Axis } from "../../components/viewer/pixelScale"
 import { exportablePanel } from "../../components/viewer/exportablePanel"
 import { buildScene } from "../../components/viewer/exportGlb"
 import { onModelsLoaded, releaseModelGpu } from "../../components/viewer/models3d"
-import { SceneAccess, StudioEnvironment } from "../../components/viewer/SceneHelpers"
+import { SceneAccess, StudioEnvironment, TextureRefresh } from "../../components/viewer/SceneHelpers"
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
+import { disposeTree } from "../../components/viewer/textures"
 import { rad, sameCameraPose, snapToWalls, wallLength, wallOpenings, wallSegments, type Ambient, type CameraPose, type MaterialPref, type Opening } from "../../core/model"
 import type { ItemGeometry } from "./ambientData"
 import { ambientBox, eyePose, snapGrid } from "./planGeom"
@@ -78,8 +79,11 @@ export function Ambient3D({
   // renderitzador mort a través dels seus escoltadors.
   useEffect(() => () => releaseModelGpu(), [])
   return (
+    // Només pinta quan alguna cosa canvia (controls, elements, textures que arriben): a l'iPhone, un 3D quiet no gasta.
     <Canvas
-      shadows={shadows ? "soft" : false}
+      frameloop="demand"
+      // PCF amb el radi de sempre (el «soft» de three ja ho és; PCFSoftShadowMap s'ha retirat i avisava).
+      shadows={shadows ? "percentage" : false}
       dpr={[1, 2]}
       camera={{ fov: 40, position: [cx + span * 0.5, span * 1.1 + 2, cz + span * 1.4 + 2], near: 0.05, far: 500 }}
       gl={{ preserveDrawingBuffer: true, alpha: true }}
@@ -92,6 +96,7 @@ export function Ambient3D({
       {/* Sense fons: el visor és transparent i es veu el color de l'app (fosc o clar segons el tema). El render per
           CPU fa servir el clar de sempre (`renderBackground`), així no canvia. */}
       <StudioEnvironment intensity={0.55} />
+      <TextureRefresh />
       <hemisphereLight args={["#ffffff", "#b9ad9c", 0.35]} />
       <directionalLight position={[cx + 4, 7, cz + 3]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-span} shadow-camera-right={span} shadow-camera-top={span} shadow-camera-bottom={-span} shadow-bias={-0.0004} />
       <Room ambient={ambient} geos={geos} materials={materials} box={box} selectedIds={selectedIds} onSelect={onSelect} onPick={onPick} onChange={onChange} snap={snap} dollhouse={dollhouse} showCeiling={showCeiling} />
@@ -110,12 +115,14 @@ type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance, onPoseChange, initialCamera, onCameraChange }: { target: [number, number, number]; home: [number, number, number]; fitSignal: number; eye: ReturnType<typeof eyePose>; eyeSignal: number; maxDistance: number; onPoseChange?: (pose: "home" | "eye" | null) => void; initialCamera?: CameraPose; onCameraChange?: (camera: CameraPose) => void }) {
   const ref = useRef<OrbitControlsImpl>(null)
   const camera = useThree((s) => s.camera) as PerspectiveCamera
+  const invalidate = useThree((s) => s.invalidate)
   const pose = (pos: [number, number, number], tgt: [number, number, number], fov: number) => {
     camera.position.set(...pos)
     camera.fov = fov
     camera.updateProjectionMatrix()
     ref.current?.target.set(...tgt)
     ref.current?.update()
+    invalidate()
   }
   // Desar la càmera 1 s després que es quedi quieta (l'esmorteïment encara la mou una mica en deixar-la anar).
   const reportRef = useRef(onCameraChange)
@@ -176,6 +183,7 @@ function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance, onPose
       }
       ref.current?.target.set(...target)
       ref.current?.update()
+      invalidate()
       setMark("home")
       return
     }
@@ -461,6 +469,9 @@ function Room({
     for (const e of built.current.values()) disposeTree(e.obj)
     built.current = new Map()
   }, [])
+  // Moure un element només en canvia la posició (el mateix objecte): cal demanar el fotograma.
+  const invalidate = useThree((s) => s.invalidate)
+  useEffect(() => invalidate(), [scenes, dollhouse, invalidate])
 
   // Moure amb el gizmo: cada fletxa en la seva direcció (X o Z del plànol) sobre un pla que conté l'eix i mira a la
   // càmera; la resta, com al plànol (quadrícula, imant a les parets per a un sol element, Alt sense imant, un sol pas
@@ -585,17 +596,3 @@ function Room({
   )
 }
 
-/** Allibera la geometria, els materials i les textures d'un element que ja no es dibuixa. */
-function disposeTree(root: Object3D) {
-  root.traverse((o) => {
-    const m = o as Mesh
-    // Els models 3D comparteixen geometria i materials amb la memòria de models (`models3d.ts`): no s'alliberen.
-    if (!m.isMesh || m.userData.sharedModel) return
-    m.geometry?.dispose()
-    const mats = (Array.isArray(m.material) ? m.material : [m.material]) as Material[]
-    for (const mat of new Set(mats)) {
-      ;(mat as MeshStandardMaterial).map?.dispose()
-      mat.dispose()
-    }
-  })
-}
