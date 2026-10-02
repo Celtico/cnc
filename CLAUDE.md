@@ -191,9 +191,10 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
 ## Export Maestro .xcs (BETA)
 - **El STEP no serveix per mecanitzar**: TopSolid llegeix els forats del STEP com a geometria, no com a
   mecanitzats (al taller s'han de refer). Per això l'app escriu **programes de Maestro** directament:
-  Exportar › «Màquina CNC (Maestro)» › «Programes .xcs» → `<moble>-maestro.zip` (`zipStore`, sense
-  dependències) amb un `<ref>.xcs` per peça (ref del taller, `A.1.L.1`), `<ref>Volt.xcs` per a la cara B
-  (com el «2a cara») i `LLEGEIX-ME.txt`. `core/export/maestroXcs.ts` (`toMaestroXcs`, `panelXcs`), pur i
+  Exportar › «Màquina CNC (Maestro)» (**la primera i principal** d'Exportar, destacada) › «Programes .xcs» →
+  `<moble>-maestro.zip` (`zipStore`, sense dependències): **només per tauler** (el Maestro no fa nesting; per decisió de
+  l'usuari es va treure l'opció «Per peça» de la UI). `toMaestroXcs` (un `<ref>.xcs` per peça i `<ref>Volt.xcs` per a la
+  cara B) queda al nucli (tests i `panelXcs`). `core/export/maestroXcs.ts` (`toMaestroXcs`, `panelXcs`), pur i
   testejat. La targeta diu BETA fins que el taller els validi a Maestro i mostra els avisos.
 - Només instruccions dels exemples del manual MSL (pàgines als comentaris i a `docs/maestro-xcs.md`):
   `SetMachiningParameters`, `CreateFinishedWorkpieceBox`, `CreateRawWorkpiece`, `SelectWorkplane`,
@@ -216,8 +217,7 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   («CNC: … → serra (inglets) → cantejadora») van al LLEGEIX-ME per peça, al plegable «Després de la CNC» d'Exportar i
   com a comentaris ASCII a la capçalera del .xcs (mai missatges a l'operari). Cantells amb la numeració de l'app
   (pendent de confirmar amb el taller).
-- **Per tauler (nesting), per defecte** (petició del taller; «Programes» Per tauler · Per peça a la targeta,
-  `mobles:xcs-per-piece`): `core/export/maestroNestXcs.ts` (`toMaestroNestXcs`, `cncNestOptions`, `toBoard`, `orderFeats`). Un
+- **Per tauler (nesting), l'única opció** (petició del taller): `core/export/maestroNestXcs.ts` (`toMaestroNestXcs`, `cncNestOptions`, `toBoard`, `orderFeats`). Un
   `T01_<material>_<gruix>.xcs` per tauler: **una peça de treball = el tauler** (com el `Proyecto1.pgmx` del taller; no les
   peces «contemporànies» de §3.11 p129) i tot en coordenades del tauler. `nest()` amb separació = Ø de la fresa de nesting
   + `spacingExtra` i marge `edgeTrim` (`Machine.nesting`, opcional, `machineNesting`: 10 mm, Ø + 2 (del taller: 14 amb la fresa de 12, 16 amb la de 14), martiri 0,3 mm, peces

@@ -3,7 +3,7 @@ import { useMemo, useState } from "react"
 import { usePersistentFlag } from "../usePersistentFlag"
 import { LuBoxes, LuChevronRight, LuCuboid, LuDownload, LuFactory, LuFileDown, LuFileJson, LuLayoutGrid, LuScissors, LuSettings2 } from "react-icons/lu"
 import { PanelGroup, PanelSection } from "../../components/PanelSection"
-import { ChoiceChips, FormRow } from "../../components/FormRow"
+import { FormRow } from "../../components/FormRow"
 import { exportGlb } from "../../components/viewer/exportGlb"
 import { exportablePanel } from "../../components/viewer/exportablePanel"
 import { exportUsdz, openQuickLook } from "../../components/viewer/exportUsdz"
@@ -16,7 +16,7 @@ import { stepCadGroups } from "../../core/export/stepGroups"
 import { finishRgb, resolveFinish } from "../../components/viewer/textures"
 import { encodeUtf16le, toTopsolidCsv } from "../../core/export/topsolidCsv"
 import { toUnifiedData } from "../../core/export/unified"
-import { toMaestroXcs, xcsZip } from "../../core/export/maestroXcs"
+import { xcsZip } from "../../core/export/maestroXcs"
 import { cncNestOptions, toMaestroNestXcs } from "../../core/export/maestroNestXcs"
 import { DEFAULT_NEST_OPTIONS, nest } from "../../core/nesting/nest"
 import { defaultMachine } from "../../core/model"
@@ -48,19 +48,14 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const stepColor = useMemo(() => (p: { material: string }) => finishRgb(resolveFinish(settings.materials, p.material)), [settings.materials])
   // Programes de Maestro (.xcs) amb la màquina per defecte de Preferències › Màquines CNC.
   const machine = defaultMachine(settings.machines)
-  // Per tauler (nesting, per defecte: el que demana el taller) o per peça.
-  const [xcsPerPiece, setXcsPerPiece] = usePersistentFlag("mobles:xcs-per-piece", false)
+  // Un programa per tauler del nesting (el Maestro del taller no en fa).
   const xcs = useMemo(() => {
     if (!machine || !panels.length) return null
     const name = project?.name ?? "moble"
-    if (xcsPerPiece) {
-      const x = toMaestroXcs(panels, machine, { project: name })
-      return { ...x, sheets: 0, rows: x.panels.map((r, i) => ({ ref: r.ref, label: panels[i]?.label ?? "", route: r.route, postProcesses: r.postProcesses })) }
-    }
     const plan = cncNestOptions(panels, machine, project?.nesting ?? DEFAULT_NEST_OPTIONS)
     const x = toMaestroNestXcs(panels, nest(panels, plan.options), machine, { project: name })
     return { ...x, sheets: x.sheets.length, rows: x.panels }
-  }, [machine, panels, project?.name, project?.nesting, xcsPerPiece])
+  }, [machine, panels, project?.name, project?.nesting])
   const stepWarnings = useMemo(() => (comp && build && panels.length ? toStepCad(stepCadGroups(comp, build, { extras: stepExtras }), { name: "check" }).warnings : []), [comp, build, panels, stepExtras])
 
   if (!project) return null
@@ -103,7 +98,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
     downloadBlob(new Blob([zip as BlobPart], { type: "application/zip" }), `${base}-maestro.zip`)
     toaster.create({
       title: "Programes de Maestro generats",
-      description: `${xcs.programs} programes .xcs ${xcsPerPiece ? "per peça" : "per tauler"} per a ${machine.name}` + (xcs.warnings.length ? ` · ${xcs.warnings.length} avisos (al LLEGEIX-ME.txt)` : ""),
+      description: `${xcs.programs} programes .xcs per tauler per a ${machine.name}` + (xcs.warnings.length ? ` · ${xcs.warnings.length} avisos (al LLEGEIX-ME.txt)` : ""),
       type: xcs.warnings.length ? "warning" : "success",
     })
   }
@@ -182,59 +177,19 @@ export function ExportScreen({ projectId }: { projectId: number }) {
       {/* Per destinació: cada grup, una acció principal. */}
       <ExportCard
         highlight
-        icon={<LuCuboid />}
-        title="STEP de TopSolid"
-        description="El moble en 3D, per obrir-lo a TopSolid i continuar-lo treballant i per al taller: un conjunt per mòdul, cada peça amb el seu nom, material i color, ingletes a 45°, forats, ranures i talls i booleans 3D."
-        files={`${base}.step`}
-        action={
-          <Button colorPalette="wood" onClick={doStep} disabled={!panels.length}>
-            <LuDownload /> Descarregar STEP
-          </Button>
-        }
-      >
-        <FormRow label="Altres peces">
-          <Switch.Root checked={stepExtras} onCheckedChange={(e) => setStepExtras(e.checked)} size="sm" pt="6px">
-            <Switch.HiddenInput />
-            <Switch.Control />
-            <Switch.Label fontSize="sm">Ferro, pedra i vidre (només per a CAD: al taller donarien unions falses)</Switch.Label>
-          </Switch.Root>
-        </FormRow>
-      </ExportCard>
-
-      <ExportCard
-        icon={<LuLayoutGrid />}
-        title="CSV de TopSolid"
-        description="El CSV de nesting com el que treu TopSolid (_res.csv): peces, taulers, etiquetes, cantells i referències. El taller el carrega a la seva pàgina de pujada juntament amb el STEP."
-        files={`${base}_res.csv`}
-        action={
-          <Button variant="outline" onClick={doTopsolidCsv} disabled={!nesting}>
-            <LuLayoutGrid /> Descarregar CSV
-          </Button>
-        }
-      />
-
-      <ExportCard
         icon={<LuFactory />}
         title="Màquina CNC (Maestro)"
-        description="Programes de Xilog Maestro (.xcs, Maestro Scripting Language) per a la SCM del taller, sense passar per TopSolid: forats, ranures, talls i contorns com a mecanitzats de debò amb les eines de la màquina. Per tauler: un programa per tauler del nesting amb totes les peces (cara A; forats de cantell, cara B i inglets després). Per peça: un programa per peça i un «Volt» per a la cara B. BETA: fins que el taller no els validi a Maestro, revisa'ls a la vista CAM abans de mecanitzar."
-        files={machine ? `${base}-maestro.zip · ${xcs?.programs ?? 0} programes ${xcsPerPiece ? "(per peça)" : `(${xcs?.sheets ?? 0} taulers)`} per a ${machine.name}` : undefined}
+        description="L'exportació principal: programes de Xilog Maestro (.xcs) per a la SCM del taller, sense passar per TopSolid. Un programa per tauler del nesting (el Maestro no en fa) amb totes les peces: forats, ranures, talls i contorns com a mecanitzats de debò amb les eines de la màquina (cara A; forats de cantell, cara B i inglets després). BETA: fins que el taller no els validi a Maestro, revisa'ls a la vista CAM abans de mecanitzar."
+        files={machine ? `${base}-maestro.zip · ${xcs?.programs ?? 0} programes (${xcs?.sheets ?? 0} taulers) per a ${machine.name}` : undefined}
         action={
-          <Button variant="outline" onClick={doXcs} disabled={!xcs || !xcs.programs}>
+          <Button colorPalette="wood" onClick={doXcs} disabled={!xcs || !xcs.programs}>
             <LuFactory /> Programes .xcs
           </Button>
         }
       >
-        <FormRow label="Programes" help={xcsPerPiece ? undefined : "Separació entre peces = Ø de la fresa de nesting + marge; marge del tauler i passada al martiri a Preferències › Màquines CNC."}>
-          <ChoiceChips<"sheet" | "piece">
-            label="Programes"
-            options={[
-              { id: "sheet", label: "Per tauler (nesting)" },
-              { id: "piece", label: "Per peça" },
-            ]}
-            value={xcsPerPiece ? "piece" : "sheet"}
-            onChange={(v) => setXcsPerPiece(v === "piece")}
-          />
-        </FormRow>
+        <Text fontSize="sm" color="fg.muted">
+          Separació entre peces = Ø de la fresa de nesting + 2 mm; marge del tauler, martiri i regles de mecanitzat a Preferències.
+        </Text>
         {!machine && (
           <Text fontSize="sm" color="fg.muted">
             Cal una màquina: importa-la de Maestro a Preferències › Màquines CNC (la carpeta .machinecontext).
@@ -296,6 +251,39 @@ export function ExportScreen({ projectId }: { projectId: number }) {
           </Collapsible.Root>
         )}
       </ExportCard>
+
+      <ExportCard
+        icon={<LuCuboid />}
+        title="STEP de TopSolid"
+        description="El moble en 3D, per obrir-lo a TopSolid i continuar-lo treballant i per al taller: un conjunt per mòdul, cada peça amb el seu nom, material i color, ingletes a 45°, forats, ranures i talls i booleans 3D."
+        files={`${base}.step`}
+        action={
+          <Button variant="outline" onClick={doStep} disabled={!panels.length}>
+            <LuDownload /> Descarregar STEP
+          </Button>
+        }
+      >
+        <FormRow label="Altres peces">
+          <Switch.Root checked={stepExtras} onCheckedChange={(e) => setStepExtras(e.checked)} size="sm" pt="6px">
+            <Switch.HiddenInput />
+            <Switch.Control />
+            <Switch.Label fontSize="sm">Ferro, pedra i vidre (només per a CAD: al taller donarien unions falses)</Switch.Label>
+          </Switch.Root>
+        </FormRow>
+      </ExportCard>
+
+      <ExportCard
+        icon={<LuLayoutGrid />}
+        title="CSV de TopSolid"
+        description="El CSV de nesting com el que treu TopSolid (_res.csv): peces, taulers, etiquetes, cantells i referències. El taller el carrega a la seva pàgina de pujada juntament amb el STEP."
+        files={`${base}_res.csv`}
+        action={
+          <Button variant="outline" onClick={doTopsolidCsv} disabled={!nesting}>
+            <LuLayoutGrid /> Descarregar CSV
+          </Button>
+        }
+      />
+
 
       <ExportCard
         icon={<LuScissors />}
