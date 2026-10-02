@@ -1,15 +1,14 @@
 import { Badge, Box, Button, Grid, HStack, IconButton, Input, Stack, Switch, Text } from "@chakra-ui/react"
 import { Fragment, useContext, useEffect, useRef, useState } from "react"
-import { LuCopy, LuFactory, LuFolderOpen, LuPlus, LuStar, LuTrash2, LuUpload } from "react-icons/lu"
+import { LuCopy, LuFactory, LuFileUp, LuFolderOpen, LuPlus, LuStar, LuTrash2, LuUpload } from "react-icons/lu"
 import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
 import { MasterDetail } from "../../components/MasterDetail"
 import { NumRow } from "../../components/NumRow"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { SectionLabel } from "../../components/SectionLabel"
 import { toaster } from "../../components/ui/toaster"
-import { mergeReimport } from "../../core/machine/pgmx"
 import { isPlaceholderTool, newId, TOOL_EDITABLE, TOOL_KIND_LABELS, type Machine, type MachineTool, type ToolEditable, type ToolKind } from "../../core/model"
-import { importMachineFiles, importPgmxFile } from "./machineImport"
+import { importMaestroFiles, pickedFromDrop, pickedFromList, type PickedFile } from "./machineImport"
 import { PaneHeadContext } from "./paneHead"
 import { useSessionString } from "./useSessionString"
 
@@ -41,7 +40,6 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
   const [busy, setBusy] = useState(false)
   const folderInput = useRef<HTMLInputElement>(null)
   const filesInput = useRef<HTMLInputElement>(null)
-  const pgmxInput = useRef<HTMLInputElement>(null)
   const i = machines.findIndex((m) => m.id === sel)
   const m = i >= 0 ? machines[i]! : null
   useEffect(() => {
@@ -51,45 +49,34 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
   const update = (patch: Partial<Machine>) => onChange(machines.map((x, k) => (k === i ? { ...x, ...patch } : x)))
   const makeDefault = (id: string) => onChange(machines.map((x) => ({ ...x, isDefault: x.id === id })))
 
-  const doImport = async (list: FileList | null, input: HTMLInputElement | null) => {
-    if (!list?.length) return
+  /** Màquina on van els .pgmx sense màquina pròpia: la del botó del detall o la seleccionada. */
+  const target = useRef<string | undefined>(undefined)
+  const [dragOver, setDragOver] = useState(false)
+
+  const doImport = async (picked: PickedFile[], input?: HTMLInputElement | null) => {
+    if (!picked.length) return
     setBusy(true)
     try {
-      const { machine, problems } = await importMachineFiles(list)
-      // La mateixa sèrie ja importada: s'actualitza conservant el que s'ha tocat a mà (eina per eina) i les opcions.
-      const old = machines.find((x) => machine.serial && x.serial === machine.serial)
-      const merged: Machine = old ? mergeReimport(old, machine) : { ...machine, isDefault: machines.length === 0 }
-      onChange(old ? machines.map((x) => (x.id === old.id ? merged : x)) : [...machines, merged])
-      setSel(merged.id)
-      const n = merged.tools.length
+      const r = await importMaestroFiles(picked, machines, target.current ?? m?.id)
+      onChange(r.machines)
+      if (r.selected) setSel(r.selected)
       toaster.create({
-        title: old ? `Màquina ${merged.name} actualitzada` : `Màquina ${merged.name} importada`,
-        description: `${n} eines, ${merged.tools.filter((t) => t.mounted && t.auto).length} disponibles per a l'export.` + (problems.length ? ` ${problems.join(" ")}` : ""),
-        type: problems.length ? "warning" : "success",
-        duration: 8000,
+        title: "Importat de Maestro",
+        description: [...r.lines, ...r.problems].join(" "),
+        type: r.problems.length ? "warning" : "success",
+        duration: 12000,
       })
     } catch (e) {
-      toaster.create({ title: "No s'ha pogut importar la màquina", description: e instanceof Error ? e.message : String(e), type: "error", duration: 8000 })
+      toaster.create({ title: "No s'ha pogut importar de Maestro", description: e instanceof Error ? e.message : String(e), type: "error", duration: 8000 })
     } finally {
       setBusy(false)
+      target.current = undefined
       if (input) input.value = ""
     }
   }
-
-  const doPgmx = async (list: FileList | null, input: HTMLInputElement | null) => {
-    const f = list?.[0]
-    if (!f || !m) return
-    setBusy(true)
-    try {
-      const r = await importPgmxFile(f, m)
-      update(r.machine)
-      toaster.create({ title: r.changed ? `Noms de les eines de ${f.name}` : `${f.name}: res a canviar`, description: r.summary, type: "success", duration: 12000 })
-    } catch (e) {
-      toaster.create({ title: "No s'ha pogut llegir el .pgmx", description: e instanceof Error ? e.message : String(e), type: "error", duration: 8000 })
-    } finally {
-      setBusy(false)
-      if (input) input.value = ""
-    }
+  const pick = (which: "folder" | "files", machineId?: string) => {
+    target.current = machineId
+    ;(which === "folder" ? folderInput : filesInput).current?.click()
   }
 
   const q = query.trim().toLowerCase()
@@ -97,26 +84,52 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
 
   return (
     <>
-      {/* Carpeta sencera (`webkitdirectory`) o fitxers solts. */}
-      <input ref={(el) => { folderInput.current = el; el?.setAttribute("webkitdirectory", "") }} type="file" multiple hidden data-testid="machine-folder" onChange={(e) => void doImport(e.target.files, e.target)} />
-      <input ref={filesInput} type="file" multiple hidden data-testid="machine-files" onChange={(e) => void doImport(e.target.files, e.target)} />
-      <input ref={pgmxInput} type="file" accept=".pgmx,.xml" hidden data-testid="machine-pgmx" onChange={(e) => void doPgmx(e.target.files, e.target)} />
+      {/* Carpeta (`webkitdirectory`: .machinecontext o .pgmx desplegat) o fitxers; el navegador no deixa triar totes dues coses alhora. */}
+      <input ref={(el) => { folderInput.current = el; el?.setAttribute("webkitdirectory", "") }} type="file" multiple hidden data-testid="machine-folder" onChange={(e) => void doImport(pickedFromList(e.target.files ?? []), e.target)} />
+      <input ref={filesInput} type="file" multiple hidden accept=".pgmx,.xml,.zip,.tlgx,.atrx,.cfgx" data-testid="machine-files" onChange={(e) => void doImport(pickedFromList(e.target.files ?? []), e.target)} />
       <MasterDetail
         head={
           <Stack gap={3}>
             {head}
-            <Text fontSize="sm" color="fg.muted">
-              Exporta el context de màquina de Maestro (la carpeta <Text as="span" fontFamily="mono">.machinecontext</Text>) i importa'l aquí: les
-              eines de la biblioteca (.tlgx), on és muntada cada una (.atrx) i la configuració (.cfgx). L'export «Programes .xcs» les fa servir.
-            </Text>
-            <HStack gap={2} wrap="wrap">
-              <Button colorPalette="wood" size="sm" loading={busy} onClick={() => folderInput.current?.click()}>
-                <LuUpload /> Importar de Maestro
-              </Button>
-              <Button variant="outline" size="sm" disabled={busy} onClick={() => filesInput.current?.click()}>
-                <LuFolderOpen /> Fitxers solts
-              </Button>
-            </HStack>
+            <Box
+              borderWidth="1px"
+              borderStyle="dashed"
+              borderColor={dragOver ? "wood.solid" : "border"}
+              bg={dragOver ? "wood.subtle" : "bg.subtle"}
+              rounded="l2"
+              p={3}
+              data-testid="machine-drop"
+              onDragOver={(e) => {
+                e.preventDefault()
+                setDragOver(true)
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault()
+                setDragOver(false)
+                void pickedFromDrop(e.dataTransfer).then((p) => doImport(p))
+              }}
+            >
+              <Stack gap={2}>
+                <Text fontSize="sm" fontWeight="medium">
+                  <LuUpload style={{ display: "inline", verticalAlign: "-2px" }} /> Importar de Maestro
+                </Text>
+                <Text fontSize="xs" color="fg.muted">
+                  Carpeta <Text as="span" fontFamily="mono">.machinecontext</Text> (configuració de la màquina) · Projecte{" "}
+                  <Text as="span" fontFamily="mono">.pgmx</Text> (fitxer o carpeta desplegada) · fitxers <Text as="span" fontFamily="mono">.tlgx</Text> /{" "}
+                  <Text as="span" fontFamily="mono">.atrx</Text>. També es poden deixar anar aquí. El context crea o actualitza la màquina; el
+                  .pgmx hi posa els noms de les eines del taller i la capçalera.
+                </Text>
+                <HStack gap={2} wrap="wrap">
+                  <Button colorPalette="wood" size="sm" loading={busy} onClick={() => pick("folder")}>
+                    <LuFolderOpen /> Triar carpeta…
+                  </Button>
+                  <Button variant="outline" size="sm" disabled={busy} onClick={() => pick("files")}>
+                    <LuFileUp /> Triar fitxers…
+                  </Button>
+                </HStack>
+              </Stack>
+            </Box>
           </Stack>
         }
         groups={[
@@ -141,7 +154,7 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
         query={query}
         onQuery={setQuery}
         addLabel="Importar de Maestro"
-        onAdd={() => folderInput.current?.click()}
+        onAdd={() => pick("folder")}
         backLabel="Màquines CNC"
         detailMaxW="860px"
         empty={
@@ -226,15 +239,16 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
                 title="Projecte de Maestro (.pgmx)"
                 summary={m.pgmx ? `${m.pgmx.file} · Maestro ${m.pgmx.version}` : "noms de les eines del taller"}
                 actions={
-                  <Button size="xs" variant="ghost" loading={busy} onClick={() => pgmxInput.current?.click()}>
-                    <LuUpload /> Importar noms d'eines d'un .pgmx
+                  <Button size="xs" variant="ghost" loading={busy} title="Importar un .pgmx a aquesta màquina" onClick={() => pick("files", m.id)}>
+                    <LuUpload /> Importar .pgmx
                   </Button>
                 }
               >
                 <Text fontSize="sm" color="fg.muted">
                   Els programes diuen cada eina pel seu nom de Maestro, i el nom pot haver canviat des que es va exportar el context (p. ex.
                   l'E128 es diu «12mm diamant nesting» a Maestro 2.0.5). Tria un projecte desat al taller (.pgmx, o l'XML de dins): s'hi llegeixen els
-                  noms de les eines que fa servir (per l'ID de Maestro; el codi no canvia) i la capçalera.
+                  noms de les eines que fa servir (per l'ID de Maestro; el codi no canvia) i la capçalera. És el mateix importador de dalt, amb aquesta
+                  màquina triada; una carpeta .pgmx desplegada es tria amb «Triar carpeta…».
                 </Text>
               </SettingsGroup>
 

@@ -1,34 +1,47 @@
-import { classifyContextFiles, machineFromContext } from "../../core/machine/maestro"
-import { applyPgmx, pgmxSummary, readPgmx } from "../../core/machine/pgmx"
+import { importMaestro, maestroCandidate, type ImportFile, type MaestroImportResult } from "../../core/machine/maestroImport"
 import { newId, type Machine } from "../../core/model"
 
 /** Camí relatiu del fitxer (dins de la carpeta triada) o el nom. */
 const rel = (f: File) => (f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name
 
-/**
- * Llegeix una màquina dels fitxers triats: la carpeta `<sèrie>.machinecontext` sencera
- * (`webkitdirectory`) o els fitxers solts (.tlgx, .atrx, .cfgx, XilogHeaderParameters.xml).
- */
-export async function importMachineFiles(list: FileList | File[]): Promise<{ machine: Machine; problems: string[] }> {
-  const files = [...list]
-  const byName = new Map(files.map((f) => [rel(f), f]))
-  const c = classifyContextFiles([...byName.keys()])
-  const text = async (n?: string) => (n ? await byName.get(n)!.text() : undefined)
-  const tlgx = await text(c.tlgx)
-  if (!tlgx) throw new Error("No hi ha cap biblioteca d'eines (.tlgx). Tria la carpeta .machinecontext o el fitxer Tlgx/def.tlgx.")
-  const atrx = await text(c.atrx)
-  const header = await text(c.header)
-  const cfgx = c.cfgx ? new Uint8Array(await byName.get(c.cfgx)!.arrayBuffer()) : undefined
-  return machineFromContext(
-    { tlgx, ...(atrx ? { atrx } : {}), ...(header ? { header } : {}), ...(cfgx ? { cfgx } : {}), ...(c.serial ? { serial: c.serial } : {}) },
-    newId("mach"),
-  )
+/** Fitxer amb el seu camí relatiu (el de la carpeta triada o deixada anar). */
+export interface PickedFile {
+  path: string
+  file: File
 }
 
-/** Llegeix un projecte de Maestro (.pgmx, o l'XML ja extret) i l'aplica a la màquina: noms de les eines per ID i capçalera. */
-export async function importPgmxFile(file: File, m: Machine): Promise<{ machine: Machine; summary: string; changed: boolean }> {
-  const info = await readPgmx(new Uint8Array(await file.arrayBuffer()))
-  if (!m.tools.some((t) => t.id)) throw new Error("Les eines d'aquesta màquina no porten l'ID de Maestro: torna a importar el context de màquina i després el .pgmx.")
-  const r = applyPgmx(m, info, file.name, { withHeader: true })
-  return { machine: r.machine, summary: pgmxSummary(r, info), changed: r.renamed.length > 0 || r.header }
+export const pickedFromList = (list: FileList | File[]): PickedFile[] => [...list].map((file) => ({ path: rel(file), file }))
+
+/** Fitxers i carpetes deixats anar (les carpetes es recorren amb `webkitGetAsEntry`). */
+export async function pickedFromDrop(dt: DataTransfer): Promise<PickedFile[]> {
+  const entries = [...dt.items].map((i) => i.webkitGetAsEntry?.()).filter((e): e is FileSystemEntry => !!e)
+  if (!entries.length) return pickedFromList(dt.files)
+  const out: PickedFile[] = []
+  const walk = async (e: FileSystemEntry, prefix: string): Promise<void> => {
+    if (e.isFile) {
+      const file = await new Promise<File>((res, rej) => (e as FileSystemFileEntry).file(res, rej))
+      out.push({ path: prefix + e.name, file })
+      return
+    }
+    const reader = (e as FileSystemDirectoryEntry).createReader()
+    // readEntries torna a trossos: es crida fins que torna buit.
+    for (;;) {
+      const batch = await new Promise<FileSystemEntry[]>((res, rej) => reader.readEntries(res, rej))
+      if (!batch.length) break
+      for (const c of batch) await walk(c, `${prefix}${e.name}/`)
+    }
+  }
+  for (const e of entries) await walk(e, "")
+  return out
+}
+
+/**
+ * Importa de Maestro el que s'hagi triat (carpeta .machinecontext, projecte .pgmx en fitxer o carpeta, fitxers
+ * solts): només es llegeixen els fitxers que poden ser de Maestro. `target` = on van els .pgmx sense màquina pròpia.
+ */
+export async function importMaestroFiles(picked: PickedFile[], machines: Machine[], target?: string): Promise<MaestroImportResult> {
+  const files: ImportFile[] = await Promise.all(
+    picked.filter((p) => maestroCandidate(p.path)).map(async (p) => ({ path: p.path, bytes: new Uint8Array(await p.file.arrayBuffer()) })),
+  )
+  return importMaestro(files, machines, { ...(target ? { target } : {}), newId: () => newId("mach") })
 }

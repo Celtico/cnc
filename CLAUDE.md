@@ -160,21 +160,28 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   comparteix codi d'UI.
 
 ## Màquines CNC (Preferències › Màquines CNC)
-- La SCM del taller (Xilog Maestro 2.00.004, sèrie AA10008021) s'**importa de Maestro**: la carpeta
-  `<sèrie>.machinecontext` sencera (`webkitdirectory`) o fitxers solts (`.tlgx`, `.atrx`, `.cfgx`,
-  `XilogHeaderParameters.xml`). `core/machine/maestro.ts` (lector XML propi `xml.ts`, .cfgx = zip amb
+- La SCM del taller (Xilog Maestro 2.00.004, sèrie AA10008021) s'**importa de Maestro** amb un **sol importador**
+  (`core/machine/maestroImport.ts`, `importMaestro`; zona «Importar de Maestro» amb «Triar carpeta…» (`webkitdirectory`) ·
+  «Triar fitxers…» i drag & drop de fitxers i carpetes, `webkitGetAsEntry`): la carpeta `<sèrie>.machinecontext`, un
+  projecte `.pgmx` (zip o carpeta desplegada `Proyecto(1).pgmx/` amb l'XML, `def.atrx`, `*.cfgx`) o fitxers solts. Tipus pel
+  **contingut** (`detectMaestroFile`: arrel `CoreToolLibrary` / `ToolEquipmentProject` / `XilogHeaderParameters` /
+  `Project`, o zip), agrupat per carpeta (`planMaestroImport`); primer el context (crea o actualitza per sèrie) i després els
+  .pgmx: a la màquina de la seva carpeta (sèrie del `.cfgx`; sense `.tlgx`, eines de l'`.atrx` sense mides,
+  `machineFromAtrx`), a la triada, a la per defecte o, sense cap, a una nova feta del .pgmx (`addPgmxTools`). Un sol avís
+  amb el resum. Tests amb els fitxers reals (`maestroImport.test.ts`). Fitxers del context: `.tlgx`, `.atrx`, `.cfgx`,
+  `XilogHeaderParameters.xml`. `core/machine/maestro.ts` (lector XML propi `xml.ts`, .cfgx = zip amb
   `DecompressionStream`, `core/file/zip.ts`): eines (`MachineTool`: codi de Maestro, nom, broca/fresa/disc/
   agregat/palpador, vertical/horitzontal, Ø, fondària útil, gruix del disc, sentit, capçal i mandrins,
   `mounted`, `auto`), versió, camp de treball, àrees, capçalera. Model a `core/model/machine.ts`.
 - Desat a `Settings.machines` (**preferències v10**, additiu), una per defecte (`defaultMachine`). Pàgina
-  `settings/MachinesPane.tsx` (`MasterDetail`, al grup Fabricació): «Importar de Maestro» i «Fitxers solts»,
+  `settings/MachinesPane.tsx` (`MasterDetail`, al grup Fabricació): l'importador de dalt,
   detall amb nom, sèrie, configuració, Maestro, camp, per defecte (★), opcions dels programes (àrea de
   treball, passants de més, ranures disc/fresa) i **taula d'eines per tipus** (codi · nom · Ø · fondària ·
   posició); tocar una eina l'edita; «Afegir eina» per a les que el `.tlgx` no porta (amb el codi de Maestro; una
   «Eina nova» `NOVA1` no es tria fins que té codi). Tornar a importar la mateixa sèrie (`mergeReimport`) conserva,
   eina per eina, els camps tocats a mà (`MachineTool.edited`), les eines afegides a mà i les opcions; una eina invàlida
   a les preferències només treu aquella eina (`repairMachine`).
-- **«Importar noms d'eines d'un .pgmx»** (`core/machine/pgmx.ts`, .pgmx = zip o l'XML extret): el paràmetre `tool` de
+- **Projecte .pgmx** (al detall, «Importar .pgmx» = el mateix importador amb la màquina triada; `core/machine/pgmx.ts`, .pgmx = zip o l'XML extret): el paràmetre `tool` de
   l'MSL és el **nom** de l'eina i el Maestro del taller (2.0.5) les ha rebatejades (ID 2149647431: `E128` al .tlgx,
   «12mm diamant nesting» al projecte `docs/maestro/samples/Proyecto1.pgmx.xml`). Per ID (`MachineTool.id` = `Key/ID` del
   .tlgx) posa `mslName` (el que surt a l'MSL, `toolMslName`) i el nom; el codi no canvia. També la capçalera
@@ -1147,7 +1154,7 @@ Accions principals: icona + text.
 | Mobles | Col·leccions de mobles (biblioteca de referències) | `LuLibrary` |
 | Ambients | Afegir moble · Bloc · Plànol · 3D · Girar | `LuBox` · `LuSofa` · `LuMap` · `LuRotate3D` · `LuRotateCw` / `LuRotateCcw` |
 | Exportar | DXF (CNC) · STEP 3D · CSV de nesting · CSV de peces · GLB · Avançat | `LuScissors` · `LuCuboid` · `LuLayoutGrid` · `LuFileDown` · `LuBoxes` · `LuSettings2` |
-| Màquines | Màquina CNC (Preferències i export Maestro .xcs) · Per defecte · Fitxers solts | `LuFactory` · `LuStar` · `LuFolderOpen` |
+| Màquines | Màquina CNC (Preferències i export Maestro .xcs) · Per defecte · Triar carpeta… · Triar fitxers… | `LuFactory` · `LuStar` · `LuFolderOpen` · `LuFileUp` |
 
 Les vistes Davant, Darrere, Esquerra, Dreta i Dalt van amb **text**, sense icona. Compte:
 a Lucide, `square-split-horizontal` té la línia **vertical**. Per això és la de "dividir en vertical".
