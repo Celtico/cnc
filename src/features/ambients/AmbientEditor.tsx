@@ -77,7 +77,6 @@ import { createProject, db, renameAmbient, saveAmbientCamera, updateAmbient, typ
 import { DocBar, TopBarActions } from "../../components/TopBar"
 import { uniqueName } from "../../core/file/mobleFile"
 import { NewMobleGallery } from "../projects/NewMobleGallery"
-import { blankMoble, blankObject } from "../projects/blank"
 import { ProjectCard } from "../projects/ProjectCard"
 import { GALLERY_COLS } from "../projects/galleryGrid"
 import { projectSearchText } from "../projects/searchText"
@@ -680,9 +679,6 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
             <Drawer.Content pt="env(safe-area-inset-top, 0px)" pb="env(safe-area-inset-bottom, 0px)">
               <Drawer.Header>
                 <Drawer.Title flex={1}>Afegir un moble a «{name}»</Drawer.Title>
-                <Button colorPalette="wood" size="sm" mr={10} onClick={() => createAndAdd(blankMoble(settings), "Moble nou", "moble")}>
-                  <LuPlus /> Nou moble
-                </Button>
                 <Drawer.CloseTrigger asChild top="calc(env(safe-area-inset-top, 0px) + 8px)">
                   <CloseButton size="sm" aria-label="Tancar" />
                 </Drawer.CloseTrigger>
@@ -726,9 +722,6 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
             <Drawer.Content pt="env(safe-area-inset-top, 0px)" pb="env(safe-area-inset-bottom, 0px)">
               <Drawer.Header>
                 <Drawer.Title flex={1}>Afegir un objecte a «{name}»</Drawer.Title>
-                <Button colorPalette="wood" size="sm" mr={10} onClick={() => createAndAdd(blankObject(), "Objecte nou", "object")}>
-                  <LuPlus /> Nou objecte
-                </Button>
                 <Drawer.CloseTrigger asChild top="calc(env(safe-area-inset-top, 0px) + 8px)">
                   <CloseButton size="sm" aria-label="Tancar" />
                 </Drawer.CloseTrigger>

@@ -753,8 +753,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   les **mides generals** (`resizeComposition`: escala amplades, separacions, alçades, fondàries, mides fixes, peces lliures,
   objectes i models; els gruixos no; una divisió amb totes les mides fixes deixa l'última «auto») i la posició; «Obrir a
   l'editor» per a l'interior. Els objectes es col·loquen igual. «+ Moble» / «+ Objecte» obren la galeria a **pantalla
-  completa** (`Drawer` full: la de Mobles, `NewMobleGallery`, o la d'Objectes) amb el botó «Nou moble» / «Nou objecte» a la
-  capçalera (`createAndAdd`); a l'historial, «Afegir»; una plantilla crea el moble i el col·loca. Els que ja són en un ambient
+  completa** (`Drawer` full: la de Mobles, `NewMobleGallery`, o la d'Objectes) **sense** botó «Nou moble» / «Nou objecte»
+  (per decisió de l'usuari: un moble en blanc a l'ambient no servia i despistava); a l'historial, «Afegir»; una plantilla crea el moble i el col·loca. Els que ja són en un ambient
   porten la marca (`useAmbientMembership`, `ProjectCard`), destacada (✓ i vora) a la finestra de l'ambient obert.
 - **Blocs** (`kind = "block"`, `blockComposition`): llegat; els antics es veuen i s'editen (inspector «Bloc»), però no se'n
   creen de nous: els `BLOCK_PRESETS` són ara objectes (`object-<id>`). Tot es dibuixa pel mateix camí: build → peces →
@@ -891,15 +891,29 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`useSessionString`). Les referències creuades als textos diuen «Preferències › <títol de la pàgina>».
 - **Llista i detall** (`components/MasterDetail`: llista agrupada amb mostra; cercador, categories i «Afegir» (només icona)
   en una fila; `head` = títol de la pàgina a dalt de la llista —`PaneHeadContext` a les pàgines `wide`—; `footer` = sota el
-  detall) a Materials, Objectes de referència i Màquines CNC. **Materials**: categories en **acordió** (`collapsible`, el mateix acordió que els apartats de les pàgines principals —`gallery-accordion` tancat amb vora, icona, nom, comptador i, sota el nom, per a què serveix: Taulers i Fons, per al nesting; Simulació, decoratius per a objectes i ambients—, per decisió de
-  l'usuari, sense el menú de categories: per defecte només és obert el grup del material triat, la cerca obre els que tenen
-  resultats, es recorda durant la sessió; un material «En blanc» va a la categoria del que es mira); «Per defecte als mòduls nous» sota el detall
-  d'un tauler o d'un fons (`DefaultPick`); a la llista, `MaterialThumb` i «Acabat · gruixos · cantell»; detall amb la **mostra a escala real a tota
-  l'amplada** (`MaterialHero`, 600 mm; `materialPreview.ts`), nom editable amb Duplicar/Eliminar i les seccions **Aspecte**
-  (Acabat, Color/Espècie/Foto, Rajola, Textura) i **Fabricació** (Gruixos `ThicknessChips`, Cantell, Veta, Categoria; als
-  de simulació només Categoria);
-  controls de 280 px com a molt; un material nou té nom únic («Material nou 2»), va a la categoria filtrada i deixa el nom
-  seleccionat.
+  detall) a Objectes de referència i Màquines CNC.
+- **Materials: graella de targetes i edició a pantalla completa** (per decisió de l'usuari, com la finestra del Render;
+  `settings/MaterialsPane.tsx`, `MaterialsList`): a dalt el cercador (sense accents, `fold`) i «Afegir» (biblioteca); a sota,
+  les categories en el mateix **acordió** que els apartats de les galeries (`gallery-accordion` tancat amb vora, icona, nom,
+  comptador i, sota el nom, per a què serveix: Taulers i Fons, per al nesting; Simulació, decoratius per a objectes i
+  ambients; `lazyMount`: les targetes només es munten en obrir la categoria). Per defecte, oberts els Taulers; la cerca obre
+  les que tenen resultats; les obertes es recorden durant la sessió (`mobles:md-open:materials`). Dins, una graella
+  `GALLERY_COLS` de **`GalleryCard`** (marge `--gallery-px`): la mostra del material de debò (`MaterialSwatch`, 3:2, CSS de
+  `previewStyle` a escala fixa: sense canvas per targeta, les procedurals es pinten un cop i es recorden), nom de dues línies,
+  «Acabat · gruixos · cantell» (`materialSummary`) i l'etiqueta «★ Tauler per defecte» / «★ Fons per defecte».
+  - Tocar una targeta obre l'**editor a pantalla completa** (`MaterialEditorDialog`: `Dialog size="full"`, 100vw × 100dvh,
+    zona segura als quatre costats, ✕ a `calc(env(safe-area-inset-top) + 8px)` i el títol a la seva altura: nom del material
+    i categoria). A l'ordinador gran (`lg`), la **mostra a escala real** omple la columna de l'esquerra (`MaterialHero fill`,
+    600 mm = l'amplada) i el formulari va a la dreta (560 px, amb el seu desplaçament); més estret, una sola columna que es
+    desplaça (mostra a dalt, formulari de 760 px com a molt). Formulari (`MaterialCard`): nom editable amb Duplicar/Eliminar i
+    les seccions **Aspecte** (Acabat, Color/Espècie/Foto, mapes de relleu i brillantor, Rajola, Textura, Joc PBR) i
+    **Fabricació** (Gruixos `ThicknessChips`, Cantell, Veta, Categoria; als de simulació només Categoria) i, als taulers i
+    fons, **«Per defecte als mòduls nous»** (`DefaultPick`). Esc i ✕ tornen a la graella; **Esc amb el nom a mig escriure
+    només el desfà** (no tanca). El focus va al ✕ (al mòbil no surt el teclat), llevat d'un material nou.
+  - Un material nou (biblioteca o «En blanc»; nom únic, «Material nou 2», a la categoria oberta si només n'hi ha una) o
+    duplicat **obre l'editor** amb el nom seleccionat; «Obrir el meu» de la biblioteca també l'obre. **Eliminar** des de
+    l'editor el tanca. Al mòbil l'editor fa de pàgina de detall: el seu ✕ és el «Tornar» (cap «‹ Materials»; la pàgina de
+    la graella només té «‹ Preferències»). Controls de 280 px com a molt.
 - **Objectes de referència inicials** (`BUILTIN_REFERENCES`): genèrics (A4, rajoles, portes, **una sola tele** de 55″,
   radiador, endoll; per decisió de l'usuari, no una llista de teles). Les teles antigues es treuen (`RETIRED_REFERENCES`,
   `isRetired`, també les còpies «TV Sony KD-55XD8505…»).
@@ -994,10 +1008,10 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   barra de dalt** (`mobileProjectTabs`: icona a sobre i nom a sota, la triada amb el color principal i una ratlla): la barra
   de baix és **sempre el menú general** (com les apps de l'iPhone).
 - **Mòbil sense títols repetits**: les pàgines d'inici porten el seu títol gran (com iOS) i no hi ha barra de dalt; només n'hi
-  ha quan cal tornar enrere. **Un sol «‹ Tornar» a la vista** («‹ nom del moble», «‹ Preferències», «‹ Materials»;
+  ha quan cal tornar enrere. **Un sol «‹ Tornar» a la vista** («‹ nom del moble», «‹ Preferències», «‹ Màquines CNC»;
   `useSessionString` es manté igual entre components amb la mateixa clau; `DETAIL_KEYS`). Diàlegs i calaixos a pantalla
-  completa respecten la zona segura (`env(safe-area-inset-top)`), també el botó de tancar; el Render, els quatre costats i el
-  botó a `calc(env(…) + 8px)`, també a l'ordinador i a l'iPad.
+  completa respecten la zona segura (`env(safe-area-inset-top)`), també el botó de tancar; el Render (i l'editor de
+  materials, la Vista CAM), els quatre costats i el botó a `calc(env(…) + 8px)`, també a l'ordinador i a l'iPad.
 
 ### Mides d'iOS a les pantalles tàctils
 - `src/theme/layout.css`, `@media (pointer: coarse)` (CSS sense capa: guanya a les de Chakra): es canvien les variables dels

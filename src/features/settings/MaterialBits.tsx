@@ -20,23 +20,26 @@ export function MaterialPreview({ m, w = 240, h = 150, caption = true }: { m: Ma
 
 /**
  * Mostra gran de capçalera (a tota l'amplada de la targeta), a escala real: l'amplada es mesura
- * i sempre representa `PREVIEW_MM` mm. A sota, a la dreta, la mida que es veu.
+ * i sempre representa `PREVIEW_MM` mm. A sota, a la dreta, la mida que es veu. Amb `fill`, omple el
+ * contenidor (alçada inclosa: la columna de l'editor a pantalla completa).
  */
-export function MaterialHero({ m, h = 176, children }: { m: MaterialPref; h?: number; children?: ReactNode }) {
+export function MaterialHero({ m, h = 176, fill, children }: { m: MaterialPref; h?: number; fill?: boolean; children?: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
-  const [w, setW] = useState(600)
+  const [size, setSize] = useState({ w: 600, h })
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    const ro = new ResizeObserver(([e]) => e && e.contentRect.width > 0 && setW(Math.round(e.contentRect.width)))
+    const ro = new ResizeObserver(([e]) => e && e.contentRect.width > 0 && setSize({ w: Math.round(e.contentRect.width), h: Math.round(e.contentRect.height) }))
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
+  const w = size.w
+  const shownH = fill ? size.h : h
   return (
-    <Box ref={ref} position="relative" h={`${h}px`} style={previewStyle(m, w)} backgroundRepeat="repeat" borderBottomWidth="1px">
+    <Box ref={ref} position="relative" h={fill ? "full" : `${h}px`} style={previewStyle(m, w)} backgroundRepeat="repeat" borderBottomWidth={fill ? 0 : "1px"}>
       {children}
       <Text position="absolute" right={3} bottom={2.5} fontSize="2xs" fontWeight="medium" color="white" bg="blackAlpha.600" px={2} py={0.5} rounded="full" backdropFilter="blur(6px)">
-        {PREVIEW_MM} × {Math.round((PREVIEW_MM * h) / w)} mm
+        {PREVIEW_MM} × {Math.round((PREVIEW_MM * shownH) / w)} mm
       </Text>
     </Box>
   )

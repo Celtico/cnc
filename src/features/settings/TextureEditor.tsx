@@ -217,7 +217,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   return (
     <FormRow label={label}>
       <HStack gap={2} minH="32px">
-        <Input size="sm" type="color" value={value} onChange={(e) => onChange(e.target.value)} p={0.5} w="44px" aria-label={label} />
+        <Input size="sm" type="color" value={value} onChange={(e) => onChange(e.target.value)} p="5px" w="48px" aria-label={label} />
         <Text fontSize="xs" fontFamily="mono" color="fg.muted">
           {value}
         </Text>
