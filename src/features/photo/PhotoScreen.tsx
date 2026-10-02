@@ -61,6 +61,7 @@ import {
   floorLevel,
   measureValues,
   planeModel,
+  scaledOrigin,
   type DepthMeasure,
   type Measure,
   type MeasureValue,
@@ -153,7 +154,7 @@ export function PhotoScreen({
         blob: resized.blob,
         width: resized.width,
         height: resized.height,
-        exifFocal35: exif.focal35 ?? null,
+        exifFocal35: exif.focal35 || null,
         createdAt: Date.now(),
       })
       if (project.photo) await db.photos.delete(project.photo.photoId)
@@ -164,7 +165,7 @@ export function PhotoScreen({
         refAspect: firstRef ? firstRef.w / firstRef.h : null,
         plane: firstRef?.plane ?? "wall",
         refWallOffset: firstRef?.wallOffset ?? 0,
-        focal35: exif.focal35 ?? DEFAULT_FOCAL_35,
+        focal35: exif.focal35 || DEFAULT_FOCAL_35,
         offset: [0, 0],
         measures: [],
       })
@@ -244,6 +245,23 @@ const fin = (v: number | null | undefined): number => (typeof v === "number" && 
 /** Valor conegut o null (camp en blanc). */
 const known = (v: number | null | undefined): number | null => (typeof v === "number" && Number.isFinite(v) && v > 0 ? v : null)
 
+/** Amplada efectiva de la referència (mm) d'un calibratge, o null si no se sap l'escala. */
+function calibrationWidth(c: PhotoCalibration): number | null {
+  if (c.points.length !== 4) return null
+  const m = planeModel({ points: c.points, refW: known(c.ref.w), refH: known(c.ref.h), aspect: c.refAspect ?? null })
+  return m ? (effectiveReference(m, c.measures ?? [], known(c.ref.w))?.w ?? null) : null
+}
+
+/**
+ * Origen desat abans sense escala (`originScale`): agafa la d'ara, així una recalibració posterior el deixa al mateix
+ * punt de la foto. Sense escala, es queda en mm. No es desa fins al pròxim canvi (obrir no desa).
+ */
+function withOriginScale(c: PhotoCalibration): PhotoCalibration {
+  if (!c.originMm || c.originScale) return c
+  const w = calibrationWidth(c)
+  return w ? { ...c, originScale: w } : c
+}
+
 /** Dins de l'Editor, els controls es pinten al panell de l'esquerra (portal). */
 function Controls({ embedded, target, children }: { embedded: boolean; target: HTMLElement | null; children: ReactNode }) {
   if (!embedded) return <>{children}</>
@@ -318,7 +336,7 @@ function PhotoCalibrator({
   onApplyMeasure?: (target: string, valueMm: number) => void
   selectedModule?: number | null
 }) {
-  const [cal, setCal] = useState<PhotoCalibration>(initial)
+  const [cal, setCal] = useState<PhotoCalibration>(() => withOriginScale(initial))
   const [customRef, setCustomRef] = useState(false)
   const [panelWidth, setPanelWidth] = usePersistentNumber("mobles:photo-panel-width", 340)
   const svgRef = useRef<SVGSVGElement>(null)
@@ -355,7 +373,8 @@ function PhotoCalibrator({
   // Mides efectives de la referència en mm (cinta > mides conegudes). Si no n'hi ha, no hi ha càmera ni moble.
   const effective = useMemo(() => (model ? effectiveReference(model, measures, refW) : null), [model, measures, refW])
   const homography = useMemo(() => (calibrated && effective ? planeToImage(cal.points, effective.w, effective.h) : null), [calibrated, cal.points, effective])
-  const fPx = focalPx(cal.focal35, W, H)
+  // Una focal desada de 0 (EXIF «desconeguda» d'abans): la per defecte.
+  const fPx = focalPx(cal.focal35 > 0 ? cal.focal35 : DEFAULT_FOCAL_35, W, H)
   const camera = useMemo(() => (homography ? cameraFromHomography(homography, fPx, W / 2, H / 2) : null), [homography, fPx, W, H])
   const quality = useMemo(() => (homography ? calibrationQuality(homography, fPx, W / 2, H / 2) : null), [homography, fPx, W, H])
   const wallOffset = cal.plane === "wall" ? fin(cal.refWallOffset) : 0
@@ -364,13 +383,17 @@ function PhotoCalibrator({
   // Línia del terra → alçada del terra sobre la paret.
   const floor = useMemo(() => (camera && cal.floorLine ? floorLevel(camera, cal.floorLine, wallOffset) : null), [camera, cal.floorLine, wallOffset])
   // Origen 3D (mm). Sense origen: cantonada baix-esquerra de la referència, a la paret.
+  // L'origen es desa en mm amb l'escala d'aquell moment (`originScale`): es passa a l'escala d'ara.
+  const scaleW = effective?.w ?? null
   const origin3 = useMemo<Vec3m | null>(() => {
-    if (cal.originMm) return cal.originMm
+    if (cal.originMm) return scaledOrigin(cal.originMm, cal.originScale, scaleW)
     if (!cal.origin) return null
     const q = toSupport(cal.origin)
     return q ? [q[0], q[1], 0] : null
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cal.originMm, cal.origin, camera, homography, wallOffset])
+  }, [cal.originMm, cal.originScale, scaleW, cal.origin, camera, homography, wallOffset])
+  // Escala amb què es desa un origen nou (mm d'ara).
+  const originScaleNow = scaleW ? { originScale: scaleW } : { originScale: undefined }
   const originPlane: Pt = origin3 ? [origin3[0], origin3[1]] : [0, 0]
   const originZ = origin3 ? origin3[2] : 0
   const sceneOffset = useMemo<Pt>(() => [fin(originPlane[0]) + fin(cal.offset[0]), fin(originPlane[1]) + fin(cal.offset[1])], [originPlane[0], originPlane[1], cal.offset])
@@ -454,7 +477,7 @@ function PhotoCalibrator({
     const floorIdx = target.dataset.floor
     if (tool === "origin" && calibrated) {
       const q = toSupport(p)
-      if (q) setCal((c) => ({ ...c, originMm: [Math.round(q[0]), Math.round(q[1]), 0], origin: undefined, offset: [0, 0], offsetZ: 0 }))
+      if (q) setCal((c) => ({ ...c, originMm: [Math.round(q[0]), Math.round(q[1]), 0], ...originScaleNow, origin: undefined, offset: [0, 0], offsetZ: 0 }))
       setTool("none")
       drag.current = { kind: "origin", z: 0 }
     } else if ((tool === "distance" || tool === "rect") && calibrated) {
@@ -514,13 +537,13 @@ function PhotoCalibrator({
     if (!p) return
     if (d.kind === "origin") {
       const q = camera ? imageToPlaneAt(camera, p, -wallOffset + d.z) : null
-      if (q) setCal((c) => ({ ...c, originMm: [Math.round(q[0]), Math.round(q[1]), d.z], origin: undefined }))
+      if (q) setCal((c) => ({ ...c, originMm: [Math.round(q[0]), Math.round(q[1]), Math.round(d.z)], ...originScaleNow, origin: undefined }))
     } else if (d.kind === "axis") {
       const along = ((p[0] - d.start[0]) * d.dir[0] + (p[1] - d.start[1]) * d.dir[1]) / Math.max(d.pxPerMm, 1e-6)
       const next: Vec3m = [...d.o0]
       next[d.axis] = Math.round(d.o0[d.axis] + along)
       if (d.axis === 2) next[2] = Math.max(0, next[2]) // no dins de la paret
-      setCal((c) => ({ ...c, originMm: next, origin: undefined }))
+      setCal((c) => ({ ...c, originMm: [Math.round(next[0]), Math.round(next[1]), Math.round(next[2])], ...originScaleNow, origin: undefined }))
     } else if (d.kind === "point") {
       setLens(p)
       setCal((c) => {
@@ -549,7 +572,8 @@ function PhotoCalibrator({
   // En marcar la línia del terra, es proposa l'origen al seu extrem esquerre (si no n'hi ha).
   useEffect(() => {
     if (!floor || cal.originMm || cal.origin) return
-    setCal((c) => ({ ...c, originMm: [Math.round(floor.xLeft), Math.round(floor.y), 0], offset: [0, 0], offsetZ: 0 }))
+    setCal((c) => ({ ...c, originMm: [Math.round(floor.xLeft), Math.round(floor.y), 0], ...originScaleNow, offset: [0, 0], offsetZ: 0 }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [floor, cal.originMm, cal.origin])
 
   const presets = visibleReferences(settings)
@@ -565,8 +589,10 @@ function PhotoCalibrator({
     if (!onApplyMeasure) return
     onApplyMeasure(t.id, Math.round(value))
     const label = which === "second" ? `${t.label} (alçada)` : t.label
-    setCal((c) => ({ ...c, applied: [...(c.applied ?? []).filter((a) => a.target !== t.id), { measureId: m.id, target: t.id, label }] }))
-    const real = values.find((v) => v.id === m.id)?.state === "real"
+    setCal((c) => ({ ...c, applied: [...(c.applied ?? []).filter((a) => a.target !== t.id), { measureId: m.id, target: t.id, label, which }] }))
+    const v = values.find((x) => x.id === m.id)
+    // La cinta només dona el valor principal: l'alçada d'un rectangle continua essent estimada.
+    const real = (which === "second" ? v?.state2 : v?.state) === "real"
     toaster.create({ title: `${t.label}: ${Math.round(value)} mm`, description: real ? "Mida real (cinta)." : "Mida estimada a partir de la foto: no tallis amb aquesta mida.", type: "success" })
   }
 
@@ -928,7 +954,7 @@ function PhotoCalibrator({
                 {toolButton("floor", cal.floorLine ? "Terra" : "Línia del terra", <LuArrowDownToLine />, cal.plane !== "wall")}
                 {toolButton("depth", "Fondària", <LuArrowUpFromLine />, !floor)}
                 {origin3 && (
-                  <IconButton size="xs" variant="ghost" aria-label="Treure l'origen" title="Treure l'origen" onClick={() => setCal((c) => ({ ...c, origin: undefined, originMm: undefined, offset: [0, 0], offsetZ: 0 }))}>
+                  <IconButton size="xs" variant="ghost" aria-label="Treure l'origen" title="Treure l'origen" onClick={() => setCal((c) => ({ ...c, origin: undefined, originMm: undefined, originScale: undefined, offset: [0, 0], offsetZ: 0 }))}>
                     <LuX />
                   </IconButton>
                 )}

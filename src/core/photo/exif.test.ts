@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { readExif } from "./exif"
 
 /** Construeix un JPEG mínim amb un segment APP1/EXIF sintètic. */
-function makeJpeg(little: boolean, withExif = true): ArrayBuffer {
+function makeJpeg(little: boolean, withExif = true, focal35 = 26): ArrayBuffer {
   const tiff = new ArrayBuffer(200)
   const v = new DataView(tiff)
   const u16 = (o: number, x: number) => v.setUint16(o, x, little)
@@ -35,7 +35,7 @@ function makeJpeg(little: boolean, withExif = true): ArrayBuffer {
   u16(e, 0xa405) // FocalLengthIn35mmFilm SHORT
   u16(e + 2, 3)
   u32(e + 4, 1)
-  u16(e + 8, 26)
+  u16(e + 8, focal35)
   e += 12
   u16(e, 0xa002) // PixelXDimension LONG
   u16(e + 2, 4)
@@ -81,6 +81,9 @@ describe("readExif", () => {
     expect(readExif(makeJpeg(true)).focal35).toBe(26)
   })
 
+  it("focal 35 mm = 0 (desconeguda) → sense focal35", () => {
+    expect(readExif(makeJpeg(false, true, 0)).focal35).toBeUndefined()
+  })
   it("JPEG sense EXIF → objecte buit", () => {
     expect(readExif(makeJpeg(false, false))).toEqual({})
   })

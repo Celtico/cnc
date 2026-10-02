@@ -79,9 +79,12 @@ function readTiff(tiff: DataView): ExifInfo {
         case TAG_FOCAL:
           info.focalMm = value()
           break
-        case TAG_FOCAL_35:
-          info.focal35 = value()
+        case TAG_FOCAL_35: {
+          // 0 = desconeguda (norma EXIF): sense focal, no una focal de 0 mm.
+          const f = value()
+          if (f !== undefined && f > 0) info.focal35 = f
           break
+        }
         case TAG_PIXEL_X:
           info.pixelWidth = value()
           break

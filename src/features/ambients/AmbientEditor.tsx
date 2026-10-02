@@ -63,6 +63,7 @@ import {
   newId,
   parseAmbient,
   resizeComposition,
+  setWallEnds,
   wallLength,
   type Ambient,
   type CameraPose,
@@ -184,7 +185,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
     if (x) ws.setMobilePane("props")
   }
   const [objPicker, setObjPicker] = useState(false)
-  // Render per CPU (path tracing), el mateix de l'editor.
+  // Render (path tracing per GPU o CPU), el mateix de l'editor.
   const [renderOpen, setRenderOpen] = useState(false)
   // «Opcions de vista» obert: es tanca en obrir el Render (si no, el popover o el calaix quedaven a sobre).
   const [viewOptsOpen, setViewOptsOpen] = useState(false)
@@ -647,7 +648,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                     <ViewTile label="Peces" icon={<LuLayers />} on={showDetail} onClick={() => setShowDetail((v) => !v)} tip="Les peces dels mobles vistes des de dalt" />
                     <ViewTile label="Imant" icon={<LuMagnet />} on={snapOn} onClick={() => setSnapOn((v) => !v)} tip="Imant a les parets i als extrems (Alt: sense, puntualment)" />
                     {amb.plan && <ViewTile label="Plànol de fons" icon={<LuImage />} on={showPlan} onClick={() => setShowPlan((v) => !v)} />}
-                    <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => (setViewOptsOpen(false), setTab("3d"), setRenderOpen(true))} tip="Render fotorealista per CPU (des del 3D)" />
+                    <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => (setViewOptsOpen(false), setTab("3d"), setRenderOpen(true))} tip="Render fotorealista (des del 3D)" />
                   </>
                 ) : (
                   <>
@@ -656,7 +657,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                     <ViewTile label="Casa de nines" icon={<LuHouse />} on={dollhouse} onClick={() => setDollhouse((v) => !v)} tip="Parets de davant transparents" />
                     <ViewTile label="Ombres" icon={<LuSun />} on={shadows} onClick={() => setShadows((v) => !v)} />
                     <ViewTile label="Sostre" icon={<LuPanelTop />} on={ceiling} onClick={() => setCeiling((v) => !v)} tip="Sostre a les habitacions tancades: es veu des de dins («Interior») i al render la llum entra per les finestres" />
-                    <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => (setViewOptsOpen(false), setRenderOpen(true))} tip="Render fotorealista per CPU (com Cinema 4D): es va afinant i es desa en PNG" />
+                    <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => (setViewOptsOpen(false), setRenderOpen(true))} tip="Render fotorealista (GPU o CPU, com Cinema 4D): es va afinant i es desa en PNG" />
                   </>
                 )
               }
@@ -958,7 +959,9 @@ function WallInspector({ wall, materials, onPatch, onDelete }: { wall: Wall; mat
           if (!(len >= 50) || L < 1) return
           // S'allarga cap al final (b), en la mateixa direcció.
           const k = len / L
-          onPatch({ b: [Math.round(wall.a[0] + (wall.b[0] - wall.a[0]) * k), Math.round(wall.a[1] + (wall.b[1] - wall.a[1]) * k)] })
+          const b: [number, number] = [Math.round(wall.a[0] + (wall.b[0] - wall.a[0]) * k), Math.round(wall.a[1] + (wall.b[1] - wall.a[1]) * k)]
+          // Les obertures es queden on eren i, si s'escurça, s'ajusten perquè hi càpiguen.
+          onPatch({ b, ...(wall.openings ? { openings: setWallEnds(wall, wall.a, b).openings } : {}) })
         }}
       />
       <NumRow label="Gruix" value={wall.thickness} min={20} max={1000} step={10} onChange={(thickness) => thickness >= 20 && onPatch({ thickness })} />
@@ -1002,7 +1005,16 @@ function WallInspector({ wall, materials, onPatch, onDelete }: { wall: Wall; mat
         })}
         <HStack gap={2} wrap="wrap">
           {(["window", "door", "glazing"] as const).map((k) => (
-            <Button key={k} size="xs" variant="outline" onClick={() => onPatch({ openings: addOpening(wall, k, L / 2).openings })}>
+            <Button
+              key={k}
+              size="xs"
+              variant="outline"
+              onClick={() => {
+                const next = addOpening(wall, k, L / 2)
+                if (next) onPatch({ openings: next.openings })
+                else toaster.create({ title: "No hi cap", description: "Aquesta paret no té cap tros lliure prou ample.", type: "info" })
+              }}
+            >
               {k === "window" ? <LuAppWindow /> : k === "door" ? <LuDoorOpen /> : <LuPanelTop />} {k === "window" ? "Finestra" : k === "door" ? "Porta" : "Vidriera"}
             </Button>
           ))}

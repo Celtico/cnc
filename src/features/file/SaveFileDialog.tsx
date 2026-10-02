@@ -13,15 +13,22 @@ export function SaveFileDialog({ project, open, onClose }: { project: Project | 
   const [includePhoto, setIncludePhoto] = useState(true)
   const [bytes, setBytes] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const hasPhoto = !!project?.photo
 
   useEffect(() => {
     if (!open || !project) return
     let alive = true
     setBytes(null)
-    void projectToMoble(project, settings, includePhoto && hasPhoto).then((f) => {
-      if (alive) setBytes(mobleBlob(f).size)
-    })
+    setError(null)
+    projectToMoble(project, settings, includePhoto && hasPhoto).then(
+      (f) => {
+        if (alive) setBytes(mobleBlob(f).size)
+      },
+      (e: unknown) => {
+        if (alive) setError(e instanceof Error ? e.message : String(e))
+      },
+    )
     return () => {
       alive = false
     }
@@ -35,7 +42,7 @@ export function SaveFileDialog({ project, open, onClose }: { project: Project | 
       toaster.create({ title: r.how === "shared" ? "Fitxer compartit" : "Fitxer desat", description: `${r.filename} · ${fmtBytes(r.bytes)}`, type: "success" })
       onClose()
     } catch (e) {
-      toaster.create({ title: "No s'ha pogut desar el fitxer", description: String(e), type: "error" })
+      toaster.create({ title: "No s'ha pogut desar el fitxer", description: e instanceof Error ? e.message : String(e), type: "error" })
     } finally {
       setBusy(false)
     }
@@ -61,14 +68,20 @@ export function SaveFileDialog({ project, open, onClose }: { project: Project | 
                   <Switch.Control />
                   <Switch.Label>Incloure la foto{hasPhoto ? "" : " (el moble no en té)"}</Switch.Label>
                 </Switch.Root>
-                <Text fontSize="sm">Mida del fitxer: {bytes === null ? "calculant…" : fmtBytes(bytes)}</Text>
+                {error ? (
+                  <Text fontSize="sm" color="fg.error">
+                    {error}
+                  </Text>
+                ) : (
+                  <Text fontSize="sm">Mida del fitxer: {bytes === null ? "calculant…" : fmtBytes(bytes)}</Text>
+                )}
               </Stack>
             </Dialog.Body>
             <Dialog.Footer>
               <Button variant="outline" onClick={onClose}>
                 Cancel·lar
               </Button>
-              <Button colorPalette="wood" onClick={() => void save()} loading={busy}>
+              <Button colorPalette="wood" onClick={() => void save()} loading={busy} disabled={!!error}>
                 <LuSave /> Desar
               </Button>
             </Dialog.Footer>

@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { DEFAULT_GRILLE, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, jointApplies, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
@@ -135,14 +135,15 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
         {/* Acabats: com s'uneix la tapa amb els laterals i com van els fronts. */}
         {/* Sense laterals, o sense tapa ni base a baix dels laterals (amb sòcol la base queda
             entre els laterals), no hi ha cantonades a unir a inglet. */}
-        {!(c.sides.left || c.sides.right) || (!c.hollow && c.top.kind === "none" && (c.base.kind === "open" || c.base.kind === "plinth")) ? null : c.hollow ? (
+        {/* La mateixa condició que fa servir la construcció (`jointApplies`): si el control no surt, `joint` no compta. */}
+        {c.hollow && (c.sides.left || c.sides.right) ? (
           // Amb parets buides les cantonades són sempre a inglet (com un bloc massís).
           <FormRow label="Cantonades" help="Amb parets buides, sempre a inglet: pells de fora a 45° i tires del davant en marc.">
             <Text fontSize="sm" pt="7px">
               A inglet
             </Text>
           </FormRow>
-        ) : (
+        ) : !jointApplies(c) ? null : (
           <FormRow label="Cantonades">
             <IconChoice
               hideLabel

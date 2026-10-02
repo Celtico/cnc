@@ -161,13 +161,16 @@ export function ZonePanel({
                 step={1}
                 onChange={(n) => onChange(setShelves(root, zone.id, n > 0 || zone.shelves ? { ...zone.shelves, n: Math.max(0, n), adjustable: zone.shelves?.adjustable ?? true } : null))}
               />
-              <FormRow label="Regulació" help={(zone.shelves?.adjustable ?? true) ? "Forats System 32 als laterals per moure'ls." : undefined}>
-                <Switch.Root size="sm" pt="6px" checked={zone.shelves?.adjustable ?? true} onCheckedChange={(e) => onChange(setShelves(root, zone.id, { ...zone.shelves, n: zone.shelves?.n ?? 0, adjustable: e.checked }))}>
+              {/* Sense cap prestatge, l'interruptor mostra el valor que fa servir la construcció (sense `shelves`: no regulables). */}
+              <FormRow label="Regulació" help={(zone.shelves?.adjustable ?? false) ? "Forats System 32 als laterals per moure'ls." : undefined}>
+                <Switch.Root size="sm" pt="6px" checked={zone.shelves?.adjustable ?? false} onCheckedChange={(e) => onChange(setShelves(root, zone.id, { ...zone.shelves, n: zone.shelves?.n ?? 0, adjustable: e.checked }))}>
                   <Switch.HiddenInput />
                   <Switch.Control />
                   <Switch.Label fontSize="sm">Regulables</Switch.Label>
                 </Switch.Root>
               </FormRow>
+              {/* Sense prestatges, «a ras» i el gruix no compten (la construcció tampoc els llegeix): no surten. */}
+              {(zone.shelves?.n ?? 0) > 0 && <>
               {/* A ras del davant (a sang): el cantell del prestatge enrasat amb el de la caixa. */}
               <FormRow label="Davant">
                 <Switch.Root size="sm" pt="6px" checked={!!zone.shelves?.flush} onCheckedChange={(e) => onChange(setShelves(root, zone.id, { n: zone.shelves?.n ?? 0, adjustable: zone.shelves?.adjustable ?? true, ...(zone.shelves?.thickness ? { thickness: zone.shelves.thickness } : {}), ...(e.checked ? { flush: true } : {}) }))}>
@@ -200,6 +203,7 @@ export function ZonePanel({
                   help={zone.front ? "Dues pells, llistons i una tira al davant. Sense porta es veuen més bé." : "Dues pells, llistons i una tira al davant: fan el prestatge com si fos de fusta gruixuda."}
                 />
               )}
+              </>}
               {/* Barra de penjar (armaris): no és de CNC, surt a «Elements sense nesting». */}
               {!zone.split && (
                 <FormRow label="Penjador" help={zone.rail ? "Tub d'inox Ø25 a 50 mm del sostre, de lateral a lateral. Surt a Peces, a «Elements sense nesting»." : undefined}>

@@ -689,6 +689,89 @@ export function defaultModule(id: string, name: string, overrides: Partial<Carca
   return { ...m, carcass: { ...m.carcass, ...overrides } }
 }
 
+// --- «Res amagat compta» -------------------------------------------------------------
+
+/**
+ * Cantonades (Normals / A inglet) es poden triar: hi ha algun lateral, les parets no són buides (amb parets buides
+ * són sempre a inglet) i hi ha una tapa o una base a baix de tot dels laterals per unir-hi (amb sòcol la base queda
+ * entre els laterals). És la mateixa condició que fa sortir el control a l'inspector: si no surt, `joint` no compta.
+ */
+export function jointApplies(c: Pick<Carcass, "sides" | "hollow" | "top" | "base">): boolean {
+  if (!(c.sides.left || c.sides.right) || c.hollow) return false
+  return c.top.kind !== "none" || (c.base.kind !== "open" && c.base.kind !== "plinth")
+}
+
+/**
+ * El mòdul tal com el veu l'usuari: cada camp que la UI amaga perquè la seva opció és apagada es posa a un valor fix
+ * (o es treu). Els camps amagats es **conserven** a la composició (tornar a encendre l'opció recupera els valors
+ * d'abans), però `buildModule` construeix sempre a partir d'aquest mòdul: dos mòduls que es veuen iguals a l'inspector
+ * fan les mateixes peces i els mateixos avisos, vingui d'on vingui l'estat (regla «res amagat compta»,
+ * `build/hiddenState.test.ts`). Si una opció nova amaga camps, s'han d'afegir aquí.
+ */
+export function visibleModule(m: Module): Module {
+  const c = m.carcass
+  const carcass: Carcass = { ...c }
+  // Fons: sense fons, ni material ni gruix (els fons dels calaixos agafen el del cos); la ranura (posició i joc) només
+  // compta en ranura i la retirada només encastat.
+  if (c.back === "none") {
+    carcass.backMaterial = c.material
+    carcass.backThickness = c.thickness
+  }
+  if (c.back !== "groove") {
+    carcass.backSetback = DEFAULT_CABINET.backSetback
+    carcass.backClearance = DEFAULT_CABINET.backClearance
+  }
+  if (c.back !== "inset") delete carcass.backInsetSetback
+  // Cantonades: només si el control surt (`jointApplies`); «Normals» és l'absència.
+  if (c.joint !== "mitre" || !jointApplies(c)) delete carcass.joint
+  // Tauler de taula: només amb la tapa sencera.
+  if (c.top.kind !== "full") delete carcass.tableTop
+  const fronts = { ...m.fronts }
+  if (fronts.style === "overlay") delete fronts.style
+  if (fronts.handles === "bar") delete fronts.handles
+  return { ...m, carcass, fronts, root: visibleZone(m.root) }
+}
+
+/** Un compartiment tal com es veu (vegeu `visibleModule`). */
+function visibleZone(z: Zone): Zone {
+  const out: Zone = { ...z }
+  if (z.split) {
+    // Un compartiment dividit no té prestatges ni barra (l'inspector no els ensenya).
+    delete out.shelves
+    delete out.rail
+    out.split = { ...z.split, children: z.split.children.map(visibleZone) }
+  } else {
+    // Sense prestatges (0): gruix i «a ras» no compten; «Regulables» sí (les fileres System 32 per posar-n'hi després),
+    // i sense `shelves` és com no regulables.
+    if (z.shelves && z.shelves.n <= 0) {
+      if (z.shelves.adjustable) out.shelves = { n: 0, adjustable: true }
+      else delete out.shelves
+    } else if (z.shelves) {
+      const s = { ...z.shelves }
+      if (!s.flush) delete s.flush
+      if (!s.thickness) delete s.thickness
+      out.shelves = s
+    }
+    if (!z.rail) delete out.rail
+  }
+  const f = z.front
+  if (f?.kind === "drawers") {
+    // Els calaixos ocupen el compartiment: la secció Prestatges (prestatges i barra) no surt.
+    delete out.shelves
+    delete out.rail
+    const heights = f.heights.slice(0, f.n)
+    while (heights.length < f.n) heights.push("auto")
+    out.front = { ...f, heights }
+  } else if (f?.kind === "door" && f.mode === "double") out.front = { ...f, hinge: "left" }
+  else if (f?.kind === "grille") {
+    // Patró: de ranures (amplada i separació) o de forats (Ø i pas); el de l'altre tipus no surt. Amb imants, sense frontisses.
+    const p = f.pattern
+    const pattern = p.kind === "holes" ? { ...p, slotWidth: DEFAULT_GRILLE.slotWidth, slotGap: DEFAULT_GRILLE.slotGap } : { ...p, holeDiameter: DEFAULT_GRILLE.holeDiameter, holePitch: DEFAULT_GRILLE.holePitch }
+    out.front = { ...f, pattern, ...(f.mount === "removable" ? { hinge: "left" as const } : {}) }
+  }
+  return out
+}
+
 /** Origen (mm) de cada mòdul a la composició, per id. */
 export function moduleOrigins3(comp: Composition): Map<string, [number, number, number]> {
   const ps = modulePlacements(comp)

@@ -14,6 +14,7 @@ import {
   type PanelRole,
   type Vec3,
   type Zone,
+  visibleModule,
 } from "../model"
 import { normalizePanel } from "./buildCabinet"
 import {
@@ -1306,7 +1307,7 @@ class Builder {
     const g = c.grooveDepth
     const bottomMat = drawerBottomMaterial(c.backMaterial, c.backThickness, tbb)
     if (n > 0 && bottomMat.warn && !this.warnings.some((w) => w.code === "drawer-bottom"))
-      this.warnings.push({ code: "drawer-bottom", message: `Fons dels calaixos de ${tbb} mm en «${bottomMat.name}» (el fons del moble és de ${c.backThickness} mm): comprova que aquest material es ven en ${tbb} mm.`, zoneId: zone.id })
+      this.warnings.push({ code: "drawer-bottom", message: `Fons dels calaixos de ${tbb} mm en «${bottomMat.name}» (${c.back === "none" ? `el mòdul no té fons: el material del cos, de ${c.thickness} mm` : `el fons del moble és de ${c.backThickness} mm`}): comprova que aquest material es ven en ${tbb} mm.`, zoneId: zone.id })
 
     // Caixa de cada calaix (relativa a la vora de baix del front): centrada al front (`boxDrop`) però sempre dins de la
     // llum (el front del primer i de l'últim calaix sobresurt per sobre de la tapa o la base i la caixa hi toparia). Els
@@ -1468,8 +1469,9 @@ class Builder {
 }
 
 /** Construeix totes les peces d'un mòdul en coordenades del mòdul (base a Y = 0). */
-export function buildModule(m: Module): ModuleBuild {
-  const b = new Builder(m)
+export function buildModule(input: Module): ModuleBuild {
+  // Res amagat compta: només el que es veu a l'inspector (els camps de les opcions apagades no hi entren).
+  const b = new Builder(visibleModule(input))
   b.buildCarcass()
   const layout = b.buildZones()
   const panels = b.panels.map((p) => normalizePanel(p.cutouts && p.cutouts.length === 0 ? { ...p, cutouts: undefined } : p))

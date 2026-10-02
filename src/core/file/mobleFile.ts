@@ -29,7 +29,7 @@ export const FileCalibrationSchema = z.object({
   refAspect: mm.nullable().optional(),
   measures: z.array(MeasureSchema).optional(),
   floorLine: z.tuple([Pt, Pt]).optional(),
-  applied: z.array(z.object({ measureId: z.string(), target: z.string(), label: z.string() })).optional(),
+  applied: z.array(z.object({ measureId: z.string(), target: z.string(), label: z.string(), which: z.enum(["main", "second"]).optional() })).optional(),
   opacity: mm.optional(),
   layer: z.enum(["photo", "cabinet", "both"]).optional(),
   /** Aspecte del moble sobre la foto: línies (SVG) o realista (three.js). */
@@ -40,6 +40,7 @@ export const FileCalibrationSchema = z.object({
   focal35: mm,
   origin: Pt.optional(),
   originMm: z.tuple([mm, mm, mm]).optional(),
+  originScale: mm.optional(),
   offset: Pt,
   offsetZ: mm.optional(),
   refWallOffset: mm.optional(),

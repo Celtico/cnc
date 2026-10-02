@@ -22,9 +22,11 @@ export function useDebouncedSave<T>(value: T, save: (v: T) => unknown, delay = 3
     const prev = saved.current
     saved.current = p.v
     // Si `save` torna una promesa que falla (o `false`: no s'ha desat), aquell valor no compta com a desat: tornar-hi
-    // (desfer) o qualsevol canvi següent el tornarà a desar.
+    // (desfer) o qualsevol canvi següent el tornarà a desar. Si no n'hi ha cap de més nou pendent, torna a quedar pendent:
+    // el pròxim `flush` (amagar l'app, sortir, `mobles:flush-save`) ho torna a provar.
     const failed = (e?: unknown) => {
       if (Object.is(saved.current, p.v)) saved.current = prev
+      if (!pending.current && !Object.is(saved.current, p.v)) pending.current = p
       console.warn("No s'ha pogut desar.", e ?? "")
     }
     try {

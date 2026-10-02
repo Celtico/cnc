@@ -20,12 +20,16 @@ import { updateProjectNesting } from "../../db/db"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { NumRow } from "../../components/NumRow"
 import { useSettings } from "../settings/SettingsContext"
-import { useCompositionPanels, useNesting, useProject } from "../useProject"
+import { useCompositionPanels, useCompositionRead, useNesting, useProject } from "../useProject"
+import { UnreadableAlert } from "../../components/UnreadableAlert"
 import { useDebouncedSave } from "../useDebouncedSave"
 
 export function NestingScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
+  const unreadable = !!useCompositionRead(project)?.unreadable
   if (!project) return null
+  // Composició il·legible: sense nesting (seria el de la caixa per defecte).
+  if (unreadable) return <UnreadableAlert />
   return <NestingView key={project.id} projectId={project.id} initial={project.nesting} />
 }
 

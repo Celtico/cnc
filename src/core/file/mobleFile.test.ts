@@ -169,7 +169,7 @@ describe(".moble amb parts malmeses", () => {
   it("el calibratge del fitxer té els mateixos camps que el de la base de dades", () => {
     // Si `PhotoCalibration` guanya o perd un camp, això no compila fins que s'afegeix a `FileCalibrationSchema`.
     const keys: Record<keyof Omit<PhotoCalibration, "photoId">, true> & Record<keyof FileCalibration, true> = {
-      points: true, ref: true, refAspect: true, measures: true, floorLine: true, applied: true, opacity: true, layer: true, render: true, shadows: true, plane: true, focal35: true, origin: true, originMm: true, offset: true, offsetZ: true, refWallOffset: true,
+      points: true, ref: true, refAspect: true, measures: true, floorLine: true, applied: true, opacity: true, layer: true, render: true, shadows: true, plane: true, focal35: true, origin: true, originMm: true, originScale: true, offset: true, offsetZ: true, refWallOffset: true,
     }
     type Extra<A, B> = Exclude<keyof A, keyof B>
     const same: [Extra<Omit<PhotoCalibration, "photoId">, FileCalibration>, Extra<FileCalibration, Omit<PhotoCalibration, "photoId">>] extends [never, never] ? true : false = true

@@ -39,6 +39,12 @@ export interface MeasureValue {
   /** Marge d'error relatiu de l'estimació (0,05 = ±5 %). */
   error: number
   state: MeasureState
+  /**
+   * Estat i error del segon valor (alçada del rectangle). La cinta només dona el principal: amb cinta, l'alçada continua
+   * essent estimada (`state2` = «estimated») encara que `state` sigui «real».
+   */
+  state2?: MeasureState
+  error2?: number
 }
 
 export interface PlaneModelInput {
@@ -81,7 +87,8 @@ export function planeModel(input: PlaneModelInput): PlaneModel | null {
     mode = "relative"
   } else {
     const s = sideLengths(input.points)
-    if (s.h <= 0) return null
+    // Punts repetits o en línia: sense amplada o alçada no hi ha proporció.
+    if (!(s.w > 1e-9) || !(s.h > 1e-9)) return null
     aspect = s.w / s.h
     mode = "image"
   }
@@ -154,6 +161,7 @@ export function measureValues(m: PlaneModel, measures: readonly Measure[], refW:
     const real = !!meas.tape && meas.tape > 0
     const total = real ? meas.tape! : width !== null ? rel.r * width : null
     const total2 = rel.r2 === undefined ? undefined : width !== null ? rel.r2 * width : null
+    const second = total2 === undefined ? {} : { state2: (total2 !== null ? "estimated" : "relative") as MeasureState, error2: ESTIMATE_ERROR[m.mode] }
     out.push({
       id: meas.id,
       relative: rel.r,
@@ -162,6 +170,7 @@ export function measureValues(m: PlaneModel, measures: readonly Measure[], refW:
       ...(total2 !== undefined ? { total2: total2 === null ? null : round1(total2) } : {}),
       error: real ? 0 : ESTIMATE_ERROR[m.mode],
       state: real ? "real" : total !== null ? "estimated" : "relative",
+      ...second,
     })
   }
   return out
@@ -174,6 +183,17 @@ export function effectiveReference(m: PlaneModel, measures: readonly Measure[], 
 }
 
 const round1 = (v: number): number => Math.round(v * 10) / 10
+
+/**
+ * Origen desat en mm (`originMm`) passat a l'escala d'ara. Es desa amb l'amplada efectiva de la referència d'aquell
+ * moment (`scale`, mm): si després es recalibra (una cinta), tot el pla canvia d'escala i l'origen ha de quedar al mateix
+ * punt de la foto, no als mateixos mm. Sense `scale` (desats abans) o sense escala ara: tal com és, en mm.
+ */
+export function scaledOrigin(originMm: readonly [number, number, number], scale: number | null | undefined, width: number | null): [number, number, number] {
+  if (!scale || !(scale > 0) || width === null || !(width > 0)) return [originMm[0], originMm[1], originMm[2]]
+  const k = width / scale
+  return [originMm[0] * k, originMm[1] * k, originMm[2] * k]
+}
 
 // --- Qualitat del calibratge ----------------------------------------------------------
 

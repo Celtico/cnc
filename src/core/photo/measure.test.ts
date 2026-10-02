@@ -10,6 +10,7 @@ import {
   planeModel,
   relativeDistance,
   relativeRect,
+  scaledOrigin,
   type Measure,
 } from "./measure"
 
@@ -76,6 +77,21 @@ describe("mesures relatives i estimades", () => {
     expect(effectiveReference(model, [{ ...wall, tape: 2970 }], REF_W)!.w).toBeCloseTo(660, 0)
   })
 
+  it("rectangle amb cinta: l'amplada és real, l'alçada continua estimada (state2)", () => {
+    const [v] = measureValues(model, [{ ...radiator, tape: 650 }], REF_W)
+    expect(v).toMatchObject({ state: "real", error: 0, state2: "estimated" })
+    expect(v!.error2).toBeGreaterThan(0)
+    const [w] = measureValues(model, [radiator], REF_W)
+    expect(w).toMatchObject({ state: "estimated", state2: "estimated" })
+    const [d] = measureValues(model, [wall], REF_W)
+    expect(d!.state2).toBeUndefined()
+  })
+
+  it("quadrilàter degenerat (punts repetits) sense mides: cap model", () => {
+    expect(planeModel({ points: [[100, 100], [100, 100], [100, 300], [100, 300]], refW: null, refH: null })).toBeNull()
+    expect(planeModel({ points: [[100, 100], [300, 100], [300, 100], [100, 100]], refW: null, refH: null })).toBeNull()
+  })
+
   it("sense mides ni forma: escala de la imatge, amb error gran", () => {
     const m = planeModel({ points: refPts, refW: null, refH: null })!
     expect(m.mode).toBe("image")
@@ -137,5 +153,16 @@ describe("línia del terra i fondària", () => {
     const p = px([400, FLOOR_Y, 300 - wallOffset])
     const d = floorDepth(cam, p, FLOOR_Y, wallOffset)!
     expect(Math.abs(d.depth - 300)).toBeLessThanOrEqual(1)
+  })
+})
+
+describe("origen desat", () => {
+  it("es queda al mateix punt de la foto si la referència es recalibra", () => {
+    scaledOrigin([-1500, -800, 100], 600, 660).forEach((v, i) => expect(v).toBeCloseTo([-1650, -880, 110][i]!, 9))
+    expect(scaledOrigin([-1500, -800, 0], 600, 600)).toEqual([-1500, -800, 0])
+  })
+  it("sense escala desada (antics) o sense escala ara: en mm, tal com és", () => {
+    expect(scaledOrigin([10, 20, 0], undefined, 660)).toEqual([10, 20, 0])
+    expect(scaledOrigin([10, 20, 0], 600, null)).toEqual([10, 20, 0])
   })
 })

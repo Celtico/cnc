@@ -1,7 +1,8 @@
 import { Box, HStack, IconButton, Text } from "@chakra-ui/react"
 import { LuMinus, LuPlus } from "react-icons/lu"
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as RPointerEvent } from "react"
-import { footprintBox, newId, roomWalls, snapToWalls, wallCorners, wallLength, addOpening, clampOpening, nearestWall, type Ambient, type AmbientItem, type PlanPt, type Wall } from "../../core/model"
+import { footprintBox, newId, roomWalls, snapToWalls, wallCorners, wallLength, addOpening, clampOpening, nearestWall, setWallEnds, type Ambient, type AmbientItem, type PlanPt, type Wall } from "../../core/model"
+import { toaster } from "../../components/ui/toaster"
 import { formatLength, useUnit } from "../units"
 import type { ItemGeometry } from "./ambientData"
 import { ambientBox, fitView, nearestEndpoint, samePt, snapAngle, snapGrid, type Selection, type Tool, type View } from "./planGeom"
@@ -27,11 +28,14 @@ export interface PlanShow {
 }
 const PLAN_SHOW_ALL: PlanShow = { grid: true, dims: true, labels: true, detail: true, snap: true, plan: true }
 
+/** Extrem d'una altra paret enganxat al que s'arrossega (es mira en començar: després només es mouen aquests). */
+type Joined = { id: string; end: "a" | "b" }
+
 type Drag =
   | { kind: "pan"; x: number; y: number; view: View }
   | { kind: "item"; ids: string[]; start: PlanPt; from: Map<string, PlanPt>; moved: boolean }
-  | { kind: "wall"; id: string; start: PlanPt; a: PlanPt; b: PlanPt; moved: boolean }
-  | { kind: "end"; id: string; end: "a" | "b"; start: PlanPt; orig: PlanPt; moved: boolean }
+  | { kind: "wall"; id: string; start: PlanPt; a: PlanPt; b: PlanPt; moved: boolean; walls: Map<string, Wall>; joinedA: Joined[]; joinedB: Joined[] }
+  | { kind: "end"; id: string; end: "a" | "b"; start: PlanPt; orig: PlanPt; moved: boolean; walls: Map<string, Wall>; joined: Joined[] }
   | { kind: "room"; start: PlanPt; cur: PlanPt }
   | { kind: "plan"; start: PlanPt; x: number; y: number }
   | { kind: "opening"; wallId: string; index: number; start: PlanPt; at: number; moved: boolean }
@@ -229,7 +233,13 @@ export function PlanCanvas({
       // Finestra o porta: clic sobre una paret, centrada on s'ha clicat.
       const hit = nearestWall(ambient.walls, p, 12 / view.s)
       if (!hit) return
-      onChange({ ...ambient, walls: ambient.walls.map((w) => (w.id === hit.wall.id ? addOpening(w, tool, snapGrid(hit.at)) : w)) }, true)
+      // No trepitja les que ja hi són: al forat lliure més proper o, si no n'hi ha, no es posa.
+      const next = addOpening(hit.wall, tool, snapGrid(hit.at))
+      if (!next) {
+        toaster.create({ title: "No hi cap", description: "Aquesta paret no té cap tros lliure prou ample.", type: "info" })
+        return
+      }
+      onChange({ ...ambient, walls: ambient.walls.map((w) => (w.id === hit.wall.id ? next : w)) }, true)
       onSelect({ kind: "wall", id: hit.wall.id })
       onToolDone()
       return
@@ -298,11 +308,11 @@ export function PlanCanvas({
       if (!g.moved) return
       const ox = snapGrid(dx), oy = snapGrid(dy)
       const na: PlanPt = [g.a[0] + ox, g.a[1] + oy], nb: PlanPt = [g.b[0] + ox, g.b[1] + oy]
-      // Les parets enganxades als extrems el segueixen (les cantonades no s'obren). Es busquen on és ara la
-      // paret (el pas anterior de l'arrossegament), no on era en començar: si no, només seguien el primer pas.
-      const cur = ambient.walls.find((w) => w.id === g.id)
-      const ca = cur?.a ?? g.a, cb = cur?.b ?? g.b
-      onChange({ ...ambient, walls: ambient.walls.map((w) => (w.id === g.id ? { ...w, a: na, b: nb } : moveJoined(moveJoined(w, ca, na, ambient, g.id), cb, nb, ambient, g.id))) }, false)
+      // Les parets enganxades als extrems en començar el segueixen (les cantonades no s'obren); les que toca pel camí, no.
+      const ends = new Map<string, Partial<Record<"a" | "b", PlanPt>>>()
+      for (const j of g.joinedA) ends.set(j.id, { ...ends.get(j.id), [j.end]: na })
+      for (const j of g.joinedB) ends.set(j.id, { ...ends.get(j.id), [j.end]: nb })
+      onChange({ ...ambient, walls: ambient.walls.map((w) => (w.id === g.id ? { ...w, a: na, b: nb } : movedEnds(w, g.walls, ends.get(w.id)))) }, false)
     } else if (g.kind === "end") {
       g.moved = true
       const w = ambient.walls.find((x) => x.id === g.id)
@@ -310,11 +320,14 @@ export function PlanCanvas({
       const other = g.end === "a" ? w.b : w.a
       let q: PlanPt = e.shiftKey ? [snapGrid(p[0]), snapGrid(p[1])] : snapAngle(other, p)
       if (!e.altKey) {
-        const near = nearestEndpoint(ambient.walls, p, tolMm, (x, end) => x.id === g.id || samePt(x[end], w[g.end]))
+        const near = nearestEndpoint(ambient.walls, p, tolMm, (x, end) => x.id === g.id || g.joined.some((j) => j.id === x.id && j.end === end))
         if (near) q = near
       }
-      const cur = w[g.end]
-      onChange({ ...ambient, walls: ambient.walls.map((x) => (x.id === g.id ? { ...x, [g.end]: q } : moveJoined(x, cur, q, ambient, g.id))) }, false)
+      // Només es mouen els extrems que hi eren enganxats en començar (no els que toca pel camí). Les obertures es
+      // queden on eren (`setWallEnds`).
+      const ends = new Map<string, Partial<Record<"a" | "b", PlanPt>>>([[g.id, { [g.end]: q }]])
+      for (const j of g.joined) ends.set(j.id, { ...ends.get(j.id), [j.end]: q })
+      onChange({ ...ambient, walls: ambient.walls.map((x) => movedEnds(x, g.walls, ends.get(x.id))) }, false)
     } else if (g.kind === "opening") {
       const w = ambient.walls.find((x) => x.id === g.wallId)
       const o = w?.openings?.[g.index]
@@ -364,7 +377,7 @@ export function PlanCanvas({
     ;(host.current as Element).setPointerCapture?.(e.pointerId)
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     onSelect({ kind: "wall", id: w.id })
-    drag.current = { kind: "wall", id: w.id, start: toWorld(e.clientX, e.clientY), a: w.a, b: w.b, moved: false }
+    drag.current = { kind: "wall", id: w.id, start: toWorld(e.clientX, e.clientY), a: w.a, b: w.b, moved: false, walls: wallMap(ambient.walls), joinedA: joinedAt(ambient.walls, w.a, w.id), joinedB: joinedAt(ambient.walls, w.b, w.id) }
   }
   const startOpening = (e: RPointerEvent, w: Wall, index: number) => {
     if (tool !== "select" || e.button === 1 || space.current) return
@@ -379,7 +392,7 @@ export function PlanCanvas({
     e.stopPropagation()
     ;(host.current as Element).setPointerCapture?.(e.pointerId)
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
-    drag.current = { kind: "end", id: w.id, end, start: toWorld(e.clientX, e.clientY), orig: w[end], moved: false }
+    drag.current = { kind: "end", id: w.id, end, start: toWorld(e.clientX, e.clientY), orig: w[end], moved: false, walls: wallMap(ambient.walls), joined: joinedAt(ambient.walls, w[end], w.id) }
   }
   const startPlan = (e: RPointerEvent) => {
     if (tool !== "select" || !ambient.plan || ambient.plan.locked !== false || space.current) return
@@ -602,11 +615,29 @@ function zoomAt(v: View, px: number, py: number, k: number): View {
 }
 
 /** Mou l'extrem de `w` que era a `from` (una paret enganxada a la que s'arrossega). */
-function moveJoined(w: Wall, from: PlanPt, to: PlanPt, _a: Ambient, dragging: string): Wall {
-  if (w.id === dragging) return w
-  if (samePt(w.a, from)) return { ...w, a: to }
-  if (samePt(w.b, from)) return { ...w, b: to }
-  return w
+/** Extrems d'altres parets que són al punt `p` (enganxats a la paret `except`). */
+function joinedAt(walls: Wall[], p: PlanPt, except: string): Joined[] {
+  const out: Joined[] = []
+  for (const w of walls) {
+    if (w.id === except) continue
+    if (samePt(w.a, p)) out.push({ id: w.id, end: "a" })
+    if (samePt(w.b, p)) out.push({ id: w.id, end: "b" })
+  }
+  return out
+}
+
+const wallMap = (walls: Wall[]) => new Map(walls.map((w) => [w.id, w]))
+
+/**
+ * La paret amb els extrems nous (`ends`), calculada des de com era en començar a arrossegar (`orig`): les obertures es
+ * queden al mateix punt i s'ajusten (`setWallEnds`) sense anar perdent posició pas a pas.
+ */
+function movedEnds(w: Wall, orig: Map<string, Wall>, ends: Partial<Record<"a" | "b", PlanPt>> | undefined): Wall {
+  if (!ends) return w
+  const w0 = orig.get(w.id) ?? w
+  const moved = setWallEnds(w0, ends.a ?? w0.a, ends.b ?? w0.b)
+  // La resta de camps (material, gruix…) són els d'ara.
+  return { ...w, a: moved.a, b: moved.b, ...(moved.openings ? { openings: moved.openings } : {}) }
 }
 
 function ScaleBar({ s }: { s: number }) {

@@ -4,7 +4,8 @@ import { useMemo, useState } from "react"
 import { PanelDrawing } from "../../components/PanelDrawing"
 import { toCutList } from "../../core/cutlist/toCutList"
 import type { Grain } from "../../core/model"
-import { useCompositionExtras, useCompositionPanels, useProject } from "../useProject"
+import { useCompositionExtras, useCompositionPanels, useCompositionRead, useProject } from "../useProject"
+import { UnreadableAlert } from "../../components/UnreadableAlert"
 import { SectionLabel } from "../../components/SectionLabel"
 
 const GRAIN: Record<Grain, string> = { x: "Llarg", y: "Ample", none: "—" }
@@ -33,6 +34,7 @@ function EdgeBadges({ it }: { it: { mitreNumbers: number[]; edgeNumbers: number[
 
 export function CutListScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
+  const unreadable = !!useCompositionRead(project)?.unreadable
   const panels = useCompositionPanels(project)
   const list = useMemo(() => toCutList(panels), [panels])
   const extras = useCompositionExtras(project)
@@ -55,6 +57,7 @@ export function CutListScreen({ projectId }: { projectId: number }) {
   const selPanel = sel ? panels.find((p) => p.id === sel.panelIds[0]) : undefined
 
   if (!project) return null
+  if (unreadable) return <UnreadableAlert />
 
   return (
     <VStack align="stretch" gap={5}>

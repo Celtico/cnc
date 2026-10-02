@@ -249,3 +249,26 @@ describe("programes de l'app (toMaestroNestXcs) amb el context real", () => {
     expect(passes).toBeGreaterThan(0)
   })
 })
+
+describe("contorns només d'arcs", () => {
+  it("«Roda»: el tauler rodó és tancat (contorn de la peça i centre de l'eina per fora)", () => {
+    const t = STORE_TEMPLATES.find((x) => x.name.includes("«Roda»"))!
+    expect(t).toBeDefined()
+    const b = buildComposition(t.make())
+    const n = nest(b.panels, cncNestOptions(b.panels, M, DEFAULT_NEST_OPTIONS).options)
+    const x = toMaestroNestXcs(b.panels, n, M, { project: t.name })
+    const sh = x.sheets.find((s) => s.ops.some((o) => o.stage === "outer" && o.points.length > 20))!
+    const p = parseXcsPreview(sh.text)
+    const i = sh.ops.findIndex((o) => o.stage === "outer" && o.points.length > 20)
+    const r = p.ops[i]!
+    expect(r.path!.closed).toBe(true)
+    const d = camDraw(r, findTool(M, r.tool)!.diameter)!
+    expect(d.closed).toBe(true)
+    // El centre de l'eina: fora del tauler (radi més gran que el de la peça).
+    const e = bbox(sh.ops[i]!.points)
+    const cx = (e.x0 + e.x1) / 2
+    const cy = (e.y0 + e.y1) / 2
+    const R = (e.x1 - e.x0) / 2
+    for (const q of d.centre) expect(Math.hypot(q[0] - cx, q[1] - cy)).toBeGreaterThan(R + 1)
+  })
+})

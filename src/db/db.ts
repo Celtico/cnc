@@ -11,6 +11,11 @@ export interface AppliedMeasure {
   /** `module:<id>:width|height|depth` o `ref:<id>:w|h|d`. */
   target: string
   label: string
+  /**
+   * Quin valor de la mesura s'hi ha aplicat: el principal o el segon (alçada del rectangle, que amb cinta continua essent
+   * estimada). Els antics no en porten: «second» si l'etiqueta acaba amb « (alçada)».
+   */
+  which?: "main" | "second"
 }
 
 /** Calibració de la foto d'un projecte. Les mides reals les entra l'usuari. */
@@ -47,6 +52,11 @@ export interface PhotoCalibration {
    * distància a la paret. Té prioritat sobre `origin`; es mou amb els eixos.
    */
   originMm?: [number, number, number]
+  /**
+   * Amplada efectiva de la referència (mm) quan es va desar `originMm`: si es recalibra, l'origen s'escala
+   * (`scaledOrigin`) i es queda al mateix punt de la foto. Els antics no en porten: en obrir la foto agafen la d'ara.
+   */
+  originScale?: number
   /** Posició del moble respecte a l'origen (mm): X i Y (alçada o distància al terra). */
   offset: Pt
   /** Separació del darrere del moble respecte a la paret (mm). Per defecte 0. */

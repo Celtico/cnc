@@ -392,10 +392,50 @@ export function clampOpening(w: Wall, o: Opening): Opening {
   return { ...o, w: ww, h, sill: Math.min(o.sill, Math.max(0, w.height - h)), at: Math.round(Math.max(ww / 2, Math.min(L - ww / 2, o.at))) }
 }
 
-/** Paret amb una obertura nova del tipus `kind` centrada a `at` (mides per defecte). */
-export function addOpening(w: Wall, kind: Opening["kind"], at: number): Wall {
+/**
+ * Paret amb una obertura nova del tipus `kind` centrada a `at` (mides per defecte). Si trepitjaria les que ja hi ha, va
+ * al forat lliure més proper on hi cap; si no n'hi ha cap, `null` (no s'afegeix).
+ */
+export function addOpening(w: Wall, kind: Opening["kind"], at: number): Wall | null {
   const o = clampOpening(w, { kind, at, ...OPENING_DEFAULTS[kind] })
-  return { ...w, openings: [...(w.openings ?? []), o] }
+  const L = wallLength(w)
+  const taken = (w.openings ?? []).map((q) => [q.at - q.w / 2, q.at + q.w / 2] as const).sort((p, q) => p[0] - q[0])
+  // Trams lliures de la paret entre les obertures.
+  const gaps: [number, number][] = []
+  let u = 0
+  for (const [a, b] of taken) {
+    if (a > u) gaps.push([u, a])
+    u = Math.max(u, b)
+  }
+  if (L > u) gaps.push([u, L])
+  let best: number | null = null
+  for (const [a, b] of gaps) {
+    if (b - a < o.w - 1e-6) continue
+    const c = Math.max(a + o.w / 2, Math.min(b - o.w / 2, o.at))
+    if (best === null || Math.abs(c - o.at) < Math.abs(best - o.at)) best = c
+  }
+  if (best === null) return null
+  return { ...w, openings: [...(w.openings ?? []), { ...o, at: Math.round(best) }] }
+}
+
+/**
+ * Paret amb els extrems nous (`a`, `b`): cada obertura es queda al mateix punt del plànol (projectat sobre la paret nova)
+ * i després s'ajusta perquè hi càpiga (`clampOpening`): en moure l'extrem `a` no llisquen i en escurçar-la no en surten.
+ */
+export function setWallEnds(w: Wall, a: PlanPt, b: PlanPt): Wall {
+  const next: Wall = { ...w, a, b }
+  if (!w.openings?.length) return next
+  const L0 = wallLength(w), L1 = wallLength(next)
+  if (L0 < 1e-9 || L1 < 1e-9) return { ...next, openings: w.openings.map((o) => clampOpening(next, o)) }
+  const ux0 = (w.b[0] - w.a[0]) / L0, uy0 = (w.b[1] - w.a[1]) / L0
+  const ux1 = (b[0] - a[0]) / L1, uy1 = (b[1] - a[1]) / L1
+  return {
+    ...next,
+    openings: w.openings.map((o) => {
+      const px = w.a[0] + ux0 * o.at, py = w.a[1] + uy0 * o.at
+      return clampOpening(next, { ...o, at: Math.round((px - a[0]) * ux1 + (py - a[1]) * uy1) })
+    }),
+  }
 }
 
 /**
@@ -429,7 +469,8 @@ export function roomWalls(x0: number, y0: number, x1: number, y1: number, thickn
 
 /**
  * Imant d'un element a les cares de les parets (només parets alineades amb els eixos): si una
- * vora de la seva caixa queda a menys de `tol` d'una cara, s'hi arramba. Retorna el centre nou.
+ * vora de la seva caixa queda a menys de `tol` d'una cara, s'hi arramba. Cada cara només atrau la vora del seu costat
+ * (pel centre de l'element respecte a l'eix de la paret): mai no l'estira a través de la paret. Retorna el centre nou.
  */
 export function snapToWalls(x: number, y: number, w: number, d: number, rot: number, walls: Wall[], tol = 120): { x: number; y: number; snapped: boolean } {
   const b = footprintBox(x, y, w, d, rot)
@@ -441,19 +482,16 @@ export function snapToWalls(x: number, y: number, w: number, d: number, rot: num
     if (horiz) {
       const lo = Math.min(wl.a[0], wl.b[0]) - t, hi = Math.max(wl.a[0], wl.b[0]) + t
       if (b.x1 < lo || b.x0 > hi) continue
-      for (const face of [wl.a[1] - t, wl.a[1] + t])
-        for (const edge of [b.y0, b.y1]) {
-          const k = face - edge
-          if (Math.abs(k) < tol && Math.abs(k) < Math.abs(dy)) dy = k
-        }
+      // A sobre de la paret (y més petita): la vora de sota contra la cara de sobre; a sota, al revés.
+      const [face, edge] = y < wl.a[1] ? [wl.a[1] - t, b.y1] : [wl.a[1] + t, b.y0]
+      const k = face - edge
+      if (Math.abs(k) < tol && Math.abs(k) < Math.abs(dy)) dy = k
     } else if (vert) {
       const lo = Math.min(wl.a[1], wl.b[1]) - t, hi = Math.max(wl.a[1], wl.b[1]) + t
       if (b.y1 < lo || b.y0 > hi) continue
-      for (const face of [wl.a[0] - t, wl.a[0] + t])
-        for (const edge of [b.x0, b.x1]) {
-          const k = face - edge
-          if (Math.abs(k) < tol && Math.abs(k) < Math.abs(dx)) dx = k
-        }
+      const [face, edge] = x < wl.a[0] ? [wl.a[0] - t, b.x1] : [wl.a[0] + t, b.x0]
+      const k = face - edge
+      if (Math.abs(k) < tol && Math.abs(k) < Math.abs(dx)) dx = k
     }
   }
   return { x: x + (Number.isFinite(dx) ? dx : 0), y: y + (Number.isFinite(dy) ? dy : 0), snapped: Number.isFinite(dx) || Number.isFinite(dy) }
@@ -470,10 +508,18 @@ export function snapToWalls(x: number, y: number, w: number, d: number, rot: num
 export function resizeComposition(comp: Composition, cur: { w: number; h: number; d: number }, next: { w: number; h: number; d: number }): Composition {
   const sx = next.w / cur.w, sy = next.h / cur.h, sz = next.d / cur.d
   const r = (v: number) => Math.round(v)
+  // Mides fixes escalades. Si totes ho són, ja no sumarien la llum nova (els gruixos dels divisors no s'escalen):
+  // l'última passa a «auto» i agafa el que sobra.
+  const scaled = (list: readonly (number | "auto")[], k: number, n: number): (number | "auto")[] => {
+    const out = list.map((v) => (v === "auto" ? v : r(v * k)))
+    while (out.length < n) out.push("auto")
+    if (out.length && !out.includes("auto")) out[out.length - 1] = "auto"
+    return out
+  }
   const zone = (z: Zone): Zone => {
     const out: Zone = { ...z }
-    if (z.split) out.split = { ...z.split, sizes: z.split.sizes.map((s) => (s === "auto" ? s : r(s * (z.split!.dir === "v" ? sx : sy)))), children: z.split.children.map(zone) }
-    if (z.front?.kind === "drawers") out.front = { ...z.front, heights: z.front.heights.map((hh) => (hh === "auto" ? hh : r(hh * sy))) }
+    if (z.split) out.split = { ...z.split, sizes: scaled(z.split.sizes, z.split.dir === "v" ? sx : sy, z.split.children.length), children: z.split.children.map(zone) }
+    if (z.front?.kind === "drawers") out.front = { ...z.front, heights: scaled(z.front.heights, sy, z.front.heights.length) }
     return out
   }
   const base = (b: Module["carcass"]["base"]): Module["carcass"]["base"] =>
@@ -536,12 +582,25 @@ export function rotateItems(a: Ambient, ids: string[], deg: number): Ambient {
   }
 }
 
-/** Duplica els elements (desplaçats); si eren un grup, la còpia és un grup nou. Retorna els ids nous. */
+/**
+ * Duplica els elements (desplaçats). Un grup duplicat sencer fa un grup nou; si només se'n duplica una part (un element
+ * d'un grup), la còpia es queda al mateix grup. `group`: el grup nou, si la còpia és un sol grup sencer.
+ */
 export function duplicateItems(a: Ambient, ids: string[], offset = 300): { ambient: Ambient; ids: string[]; group?: string } {
   const src = a.items.filter((i) => ids.includes(i.id))
-  const groups = new Set(src.map((i) => i.group))
-  const group = groups.size === 1 && src[0]?.group ? newItemGroupName(a) : undefined
-  const copies = src.map((i) => ({ ...i, id: newId("i"), x: i.x + offset, y: i.y + offset, ...(group ? { group } : {}) }))
+  const renamed = new Map<string, string>()
+  const used = new Set(a.items.map((i) => i.group).filter(Boolean))
+  let n = 1
+  for (const g of new Set(src.map((i) => i.group))) {
+    if (!g || !a.items.every((i) => i.group !== g || ids.includes(i.id))) continue
+    while (used.has(`Grup ${n}`)) n++
+    renamed.set(g, `Grup ${n}`)
+    used.add(`Grup ${n}`)
+  }
+  const copies = src.map((i) => ({ ...i, id: newId("i"), x: i.x + offset, y: i.y + offset, ...(i.group && renamed.has(i.group) ? { group: renamed.get(i.group) } : {}) }))
+  const groups = new Set(copies.map((c) => c.group))
+  const only = groups.size === 1 ? [...groups][0] : undefined
+  const group = only && [...renamed.values()].includes(only) ? only : undefined
   return { ambient: { ...a, items: [...a.items, ...copies] }, ids: copies.map((c) => c.id), group }
 }
 

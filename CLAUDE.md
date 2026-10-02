@@ -248,7 +248,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   (rectes, `AddArc2PointRadius/Center/3Points…`), cercles, segments i recorreguts (`CreateToolpath` del programa real) i les operacions
   (`CreateContour` costat dins/fora, `CreateContourPocket`, `CreateRoughFinish`/`CreateSlot` amb la correcció, eina —amb `"-1"`, la del
   comentari `//BROCA PLANA …`—, fondària, sobrant, passada `_Pn` de les peces petites, rampa `SetApproachStrategy` i passades de
-  `CreateBidirectionalMillingStrategy`), en l'ordre del fitxer; les línies que no entén **no llancen**: es compten (`unknown`, surt a la
+  `CreateBidirectionalMillingStrategy`), en l'ordre del fitxer (una polilínia que acaba on comença, ≤ 1e-3, és tancada per a
+  `CreateContour`/`CreateContourPocket` encara que no porti `ClosePolyline`: taules rodones i ovals, `closedLoop`); les línies que no entén **no llancen**: es compten (`unknown`, surt a la
   vista si n'hi ha). `camDraw`: el centre de l'eina a mig Ø al costat que toca (`offsetPolyline`: arc a les cantonades que s'obren,
   intersecció a les que es tanquen; cercles exactes) i la franja Ø (Ø de les eines de la màquina pel nom, `findTool`); aproximat, només per
   dibuixar. Tests (`xcsPreview.test.ts`): mobles del catàleg amb el context real (el que es llegeix = el que s'ha escrit: peces, ordre,
@@ -298,7 +299,10 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   sempre les entra l'usuari i **recalculen** el model i recalibren la foto.
 - Calibració: l'usuari marca 4 punts d'un rectangle de mides conegudes (rajola,
   porta, A4) → homografia → escala i pla del terra/paret.
-- Llegir EXIF (focal) si existeix; si no, continuar sense.
+- Llegir EXIF (focal) si existeix; si no, continuar sense (focal 35 mm = 0 vol dir desconeguda: sense focal).
+- Rectangle amb cinta: només el valor principal és real; l'alçada continua estimada (`MeasureValue.state2`/`error2`) i les
+  aplicades recorden quin valor (`AppliedMeasure.which`; antigues: « (alçada)» = el segon). L'origen (`originMm`) es desa
+  amb l'escala d'aquell moment (`originScale`) i `scaledOrigin` el passa a l'actual: recalibrar no el fa lliscar.
 - Aspecte del moble sobre la foto (`cal.render`): **Línies** (SVG de cares projectades,
   per encaixar) o **Realista** (`photo/PhotoRender.tsx`: three.js amb la càmera calibrada
   convertida a matriu, materials reals, llum de Preferències › Visor 3D i ombres sobre
@@ -355,7 +359,7 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - **Mobles enllaçats** (`item.kind = "moble"`, `projectId`): és el mateix moble de la llista.
   A l'ambient només se'n toquen les **mides generals** (`resizeComposition`: escala amplades,
   separacions, alçades amb potes/sòcol/penjats, fondàries, mides fixes de zones i calaixos, peces
-  lliures, objectes i models 3D; els gruixos no) i la posició; «Obrir a l'editor» per a l'interior.
+  lliures, objectes i models 3D; els gruixos no; una divisió amb totes les mides fixes deixa l'última «auto») i la posició; «Obrir a l'editor» per a l'interior.
   «Moble» obre una **finestra a pantalla completa** (`Drawer` full) amb la mateixa pàgina de
   Mobles (`NewMobleGallery`: historial, les teves, les de l'app i les de botiga, amb filtre i
   cercador); a l'historial, «Afegir»; una plantilla crea el moble a Mobles i el col·loca. Els
@@ -370,14 +374,15 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   el primer punt tanca, Retorn/Esc/doble clic acaben), **Habitació** (H, rectangle → 4 parets),
   **Calibrar** (dos punts del plànol de fons i la mida real). Maj: sense angles; Alt: sense
   imant. Arrossegar una paret mou les enganxades; els extrems de la seleccionada s'arrosseguen.
-  Els elements s'arramben a les cares de les parets (`snapToWalls`), R gira 90°, fletxes (Maj ×10),
+  Els elements s'arramben a les cares de les parets (`snapToWalls`, cada cara només a la vora del seu costat), R gira 90°, fletxes (Maj ×10),
   Supr, Ctrl/⌘ D, desfer/refer (Ctrl/⌘ Z). Es desa sol. **Plànol de fons**: imatge (2400 px,
   JPEG) escalada amb la calibració, opacitat i bloqueig.
 - **Grups d'elements** (`AmbientItem.group`; `setItemGroup`, `moveItems`, `rotateItems`,
   `duplicateItems`, `removeItems`): la llista d'elements és com l'arbre de l'editor (grups plegables
   i menú ⋯ a cada fila: duplicar, grup nou, posar a un grup, treure del grup, obrir a l'editor,
   treure de l'ambient). Com Figma, el primer clic a un element agrupat (al plànol o al 3D) tria el
-  grup i el segon l'element; Supr, Ctrl/⌘ D, R i les fletxes valen per a tot el grup; inspector del
+  grup i el segon l'element; Supr, Ctrl/⌘ D, R i les fletxes valen per a tot el grup (duplicar un sol element d'un grup
+  el deixa al mateix grup; el grup sencer en fa un de nou); inspector del
   grup (nom, posició, girar, duplicar, desagrupar, eliminar).
 - **Pestanyes Plànol · 3D** a dalt al mig del visor (com 3D · Alçat · Foto a l'editor) i les eines de dibuix en columna a l'esquerra del plànol.
 - **Opcions de vista** (`components/ViewOptions`: `ViewOptions` + `ViewTile`, els mateixos botons que
@@ -454,7 +459,9 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   (costats sense paret) i `openings`; `templateWalls` en fa les parets. Mobles nous amb `mag:<id>`
   (`magFurniture.ts`, `MAG_FURNITURE`, fets amb `storeBuilders` del catàleg de botiga).
 - **Finestres i portes**: eines **Finestra** (F) i **Porta** (D) del plànol: clic sobre una paret
-  (`nearestWall`, `addOpening` amb `OPENING_DEFAULTS`, `clampOpening`); al plànol s'arrosseguen al llarg
+  (`nearestWall`, `addOpening` amb `OPENING_DEFAULTS`, `clampOpening`; no trepitja les que hi ha: forat lliure més proper o
+  `null` i avís; en moure els extrems o escurçar la paret es queden al seu lloc, `setWallEnds`; arrossegar un extrem només
+  mou les parets enganxades en començar); al plànol s'arrosseguen al llarg
   de la paret; a l'inspector de la paret, «Finestres i portes» (tipus, centre, ample, alt, ampit, fulles;
   + Finestra · Porta · Vidriera) i el material d'aquella paret.
 - **Parets amb material propi i obertures** (`Wall.material`, `Wall.openings`: finestra amb ampit de pedra,
@@ -671,7 +678,10 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     antics «Al terra» sense `x` continuen a la fila.
   - **Teclat a l'editor**: Ctrl/⌘ C · X · V · D (copiar, retallar, enganxar, duplicar) i Supr
     per al mòdul, l'objecte o el compartiment seleccionat (`editOps.ts`). El porta-retalls és
-    a localStorage (`mobles:clipboard`): es pot enganxar en un altre moble.
+    a localStorage (`mobles:clipboard`): es pot enganxar en un altre moble; es valida amb zod (`parseClip`), una peça
+    enganxada a un mòdul d'un altre moble queda solta, una illa es duplica al costat i no s'enganxen mòduls a un flat-pack
+    o objecte. Ctrl/⌘ D en un compartiment fa `duplicateZone`. **Eliminar un mòdul** (Supr i arbre) = `removeModule`: peces
+    enganxades soltes al mateix lloc, taulell i sòcol al mòdul més proper del tram (o fora) i forats del taulell seus fora.
   - **Càmera**: s'enquadra en obrir, canviar de vista, redimensionar o amb el botó «Enquadrar»
     (càmera de vídeo, `LuVideo`); editar no la mou. El botó surt **marcat** mentre la càmera és a
     l'enquadrament (`onFramedChange`): es desmarca en orbitar/fer zoom/desplaçar o si el moble canvia de mida. Opcions de vista: popover a l'ordinador, calaix de baix al mòbil; es tanca en obrir el Render (`ViewOptions open`).
@@ -1017,7 +1027,17 @@ editor es fa al mòdul compartit perquè la tinguin tots.
     visible «Posar una foto de textura» (a més de l'Acabat «Foto (textura)»), amb miniatura, «Canviar la
     foto» i «Treure-la».
   - **Opcions que no toquen s'amaguen**: sense fons no surten el material i el gruix del fons
-    ni la ranura del fons; Cantonades, només si hi ha tapa o base a unir amb els laterals.
+    ni la ranura del fons; Cantonades, només si hi ha tapa o base a unir amb els laterals (`jointApplies`).
+    **Res amagat compta** (regla): el que s'amaga es conserva (tornar a encendre l'opció recupera els valors), però
+    `buildModule` construeix des de `visibleModule` (`model/composition.ts`), que posa a un valor fix tots els camps de
+    les opcions apagades: fons (material i gruix sense fons; ranura sense ranura; retirada si no és encastat), inglet si
+    Cantonades no surt (també els fronts dels calaixos a inglet), tauler de taula sense tapa sencera, prestatges i barra
+    als calaixos i als compartiments dividits, gruix i «a ras» sense prestatges, alçades de calaix de més, frontissa de
+    les dues portes, patró de reixeta de l'altre tipus. Sense fons, el fons dels calaixos surt del material del cos
+    (abans, del fons amagat: un fons de 19 mm tret deixava l'avís `drawer-bottom`). Sense cap prestatge, «Regulables»
+    es veu i compta (fileres System 32); sense `shelves`, no regulables. Una opció nova que amaga camps s'afegeix a
+    `visibleModule` i al test `build/hiddenState.test.ts` (camps amagats a l'atzar i camins de la UI en un altre ordre
+    → les mateixes peces i avisos).
   - **Forma del tauler**: `shapeOutline` escala per l'extensió real de la corba (mostrejada),
     no pels nodes: si no, les cúbiques sortien del rectangle del nesting.
   - **Compte amb `Field.Root`**: no hi posis dos interruptors a dins (el Field els dona el
@@ -1249,18 +1269,24 @@ editor es fa al mòdul compartit perquè la tinguin tots.
   materials, amb el `MaterialSelect` (calaix). Cap `NativeSelect` fora de `components/ui`.
 
 ## Desar
+- **Obrir un `.moble` amb doble clic** (app instal·lada, Chromium): el manifest té `file_handlers` i `launch_handler`
+  `focus-existing` (va a la finestra que ja hi ha) i `useLaunchFiles` (`features/file/useLaunchFiles.ts`, a `App`) llegeix la
+  `launchQueue` i fa el mateix que «Obrir fitxer» (espera que es carreguin les preferències). Safari/iOS no ho suporta.
 - **Tot el que es desa sol fa servir `useDebouncedSave`** (`features/useDebouncedSave.ts`): Editor, Foto, Nesting,
   Ambients i Preferències. Desa amb retard, compara amb **l'últim valor desat** (no amb el que torna Dexie: cada
   desada en tornava un objecte nou i es desava sense parar) i desa el pendent en sortir de la pàgina, en amagar l'app
   i amb `mobles:flush-save`. Obrir una cosa no la desa (no puja amunt de la llista ni surt «Modificat»). Si `save` torna
-  una promesa que falla o `false`, aquell valor no compta com a desat (el següent canvi o desfer-hi el torna a desar).
+  una promesa que falla o `false`, aquell valor no compta com a desat (el següent canvi o desfer-hi el torna a desar) i, si
+  no n'hi ha cap de més nou, torna a quedar pendent (el pròxim `flush` ho torna a provar).
 - **Llegir sense perdre res** (`repairComposition`, `core/model/compositionRepair.ts`, test): una composició desada que
   no passa l'esquema es repara **element a element** (un objecte de referència, una peça lliure, un model 3D, un taulell
   o un forat del taulell dolents es treuen sols; d'un mòdul només els camps dolents, amb el valor del mòdul bàsic o
   sense si són opcionals; a l'arbre de zones, només el camp dolent del compartiment). `readComposition`
   (`db/compositionStore.ts`; `compositionOf` la fa servir) dona també els `problems` i `unreadable`: sense cap mòdul bo,
   el del mòdul de caixa (`params`) i la resta es queda; si no es pot reparar (p. ex. `modules` no és una llista),
-  caixa per defecte i **no es desa a sobre** (`updateProjectComposition` torna `false`; l'Editor no desa i avisa). L'Editor
+  caixa per defecte i **no es desa a sobre** (`updateProjectComposition` torna `false`; l'Editor no desa i avisa). Peces,
+  Nesting i Exportar mostren l'error (`UnreadableAlert`, `useCompositionRead`; `useComposition` dona `undefined`) i no fan
+  res, i el `.moble` no es desa (`projectToMoble` llança `UNREADABLE_COMPOSITION`). L'Editor
   avisa (toaster) del que s'ha tret. El `.moble` (`parseMobleFile`) fa servir la mateixa reparació i, a més, treu amb
   un avís el nesting, el calibratge de la foto (camp a camp) i les referències que estiguin malmesos. Les parets dels
   ambients (`parseAmbient`) també: una obertura o un material propi dolents no treuen la paret.
@@ -1282,6 +1308,16 @@ editor es fa al mòdul compartit perquè la tinguin tots.
 - No afegeixis dependències fora del stack sense preguntar.
 - Si una decisió de fusteria no és clara (tolerància, tipus d'unió), pregunta'm
   en lloc d'inventar-te-la.
+
+### Proves d'or (golden)
+- `src/core/build/golden.test.ts` construeix un corpus fix (totes les plantilles del catàleg —app, botiga, col·leccions,
+  revista— i 200 variacions aleatòries amb llavor, `build/testCorpus.ts`, amb ids estables) i en compara un resum
+  determinista amb `src/core/build/__golden__/*.json`: per moble, peces i avisos (codis); per peça, rol, nom,
+  L×A×G, material, veta, cantells, inglets, forats, ranures, talls, contorn i col·locació (hash). `exports.json`: CSV
+  de TopSolid, .xcs per tauler (context real de la màquina) i entitats del DXF per capa d'uns quants.
+- **Qualsevol canvi volgut a la fabricació** s'actualitza a propòsit: `UPDATE_GOLDEN=1 pnpm test` i es **revisa el diff**
+  dels JSON (què ha canviat i a quins mobles) abans de donar-lo per bo. Un diff que no s'esperava és un error.
+- Hi val la regla **res amagat compta** (`build/hiddenState.test.ts`, vegeu «Opcions que no toquen s'amaguen»).
 
 ### Icones (catàleg fix, `react-icons/lu`)
 Una icona = un significat a tota l'app. No en triïs d'altres per a aquestes accions; si en

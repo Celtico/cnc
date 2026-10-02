@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { buildBounds, buildComposition } from "../build/buildComposition"
-import { addOpening, nearestWall, BLOCK_PRESETS, blockComposition, footprintBox, parseAmbient, resizeComposition, roomWalls, snapToWalls } from "./ambient"
+import { addOpening, nearestWall, BLOCK_PRESETS, blockComposition, footprintBox, parseAmbient, resizeComposition, roomWalls, setWallEnds, snapToWalls } from "./ambient"
+import { defaultModule, newId, type Composition } from "./composition"
 import { BUILTIN_TEMPLATES } from "./templates"
 import { STORE_TEMPLATES } from "./storeCatalog"
 
@@ -86,6 +87,12 @@ describe("grups d'elements", async () => {
     expect(d.ambient.items).toHaveLength(4)
     expect(m.removeItems(d.ambient, d.ids).items).toHaveLength(2)
   })
+  it("duplicar un element d'un grup: la còpia es queda al grup", () => {
+    const g = m.setItemGroup(base, ["a", "b"], "Grup 1")
+    const d = m.duplicateItems(g, ["a"])
+    expect(d.group).toBeUndefined()
+    expect(d.ambient.items.find((i) => i.id === d.ids[0])!.group).toBe("Grup 1")
+  })
 })
 
 describe("obertures de les parets", () => {
@@ -94,13 +101,45 @@ describe("obertures de les parets", () => {
     const hit = nearestWall([wall], [3900, 30], 20)!
     expect(hit.wall.id).toBe("w")
     expect(hit.at).toBe(3900)
-    const w = addOpening(wall, "window", hit.at)
+    const w = addOpening(wall, "window", hit.at)!
     expect(w.openings).toEqual([{ kind: "window", at: 3400, w: 1200, h: 1200, sill: 900 }])
     expect(nearestWall([wall], [2000, 500], 20)).toBeNull()
   })
   it("una porta va fins a terra i no passa de l'alçada de la paret", () => {
-    const w = addOpening({ ...wall, height: 2000 }, "door", 2000)
+    const w = addOpening({ ...wall, height: 2000 }, "door", 2000)!
     expect(w.openings![0]).toMatchObject({ sill: 0, h: 2000 })
+  })
+  it("una obertura nova no trepitja les que hi ha: forat lliure més proper o cap", () => {
+    const one = addOpening({ ...wall, b: [3000, 0] }, "window", 1000)!
+    const two = addOpening(one, "door", 1300)!
+    // La finestra ocupa 400–1600: la porta (900) va just a la dreta.
+    expect(two.openings![1]!.at).toBe(2050)
+    expect(addOpening({ ...wall, b: [2000, 0], openings: [{ kind: "glazing", at: 1000, w: 1800, h: 2400, sill: 0 }] }, "door", 1000)).toBeNull()
+  })
+  it("moure l'extrem `a` no fa lliscar les obertures; escurçar la paret les hi manté a dins", () => {
+    const w = { ...wall, openings: [{ kind: "window" as const, at: 2000, w: 1200, h: 1200, sill: 900 }] }
+    expect(setWallEnds(w, [500, 0], [4000, 0]).openings![0]!.at).toBe(1500)
+    expect(setWallEnds(w, [-500, 0], [4000, 0]).openings![0]!.at).toBe(2500)
+    expect(setWallEnds(w, [0, 0], [2200, 0]).openings![0]!.at).toBe(1600)
+  })
+})
+
+describe("imant i mides generals (casos límit)", () => {
+  it("l'imant no estira un element a través de la paret", () => {
+    const walls = roomWalls(0, 0, 4000, 3000, 200)
+    // Element dins l'habitació amb la vora de dalt 30 mm dins del cos de la paret de dalt (cara de dins a y = 100).
+    // Abans la cara de fora (y = −100) l'estirava 70 mm cap a fora, a través de la paret.
+    expect(snapToWalls(2000, 470, 1000, 1000, 0, walls, 120).y).toBe(470)
+    expect(snapToWalls(2000, 470, 1000, 1000, 0, walls, 200).y).toBe(600)
+  })
+  it("una divisió amb totes les mides fixes: l'última passa a «auto» en canviar l'ample", () => {
+    const m0 = defaultModule("a", "A", { width: 800 })
+    const m = { ...m0, gapBefore: 0, root: { id: m0.root.id, split: { dir: "v" as const, sizes: [380, 381], children: [{ id: newId() }, { id: newId() }] } } }
+    const comp: Composition = { modules: [m], references: [] }
+    const out = resizeComposition(comp, { w: 800, h: m.carcass.height, d: m.carcass.depth }, { w: 1600, h: m.carcass.height, d: m.carcass.depth })
+    expect(out.modules[0]!.root.split!.sizes).toEqual([760, "auto"])
+    const b = buildComposition(out)
+    expect(b.warnings.filter((x) => x.code === "layout")).toEqual([])
   })
 })
 

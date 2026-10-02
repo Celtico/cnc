@@ -80,7 +80,11 @@ export function MeasureTable({
                     <HStack gap={1} justify="flex-end">
                       <Text>
                         {fmt(v.total)}
-                        {v.total2 !== undefined && v.total2 !== null && <Text as="span" color="fg.muted">{` × ${fmt(v.total2)}`}</Text>}
+                        {v.total2 !== undefined && v.total2 !== null && (
+                          <Text as="span" color="fg.muted" title={v.state2 === "real" ? undefined : `Alçada estimada ±${Math.round((v.error2 ?? v.error) * 100)} %`}>
+                            {` × ${fmt(v.total2)}${v.state === "real" && v.state2 !== "real" ? " ~" : ""}`}
+                          </Text>
+                        )}
                       </Text>
                       {v.state === "real" ? (
                         <Box color="green.fg" title="Real (cinta)">

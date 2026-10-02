@@ -24,10 +24,12 @@ import { downloadBlob, downloadText, slugify } from "../download"
 import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
 import { useSettings } from "../settings/SettingsContext"
 import { CamPreview } from "./CamPreview"
-import { useComposition, useCompositionBuild, useNesting, useProject } from "../useProject"
+import { useComposition, useCompositionBuild, useCompositionRead, useNesting, useProject } from "../useProject"
+import { UnreadableAlert } from "../../components/UnreadableAlert"
 
 export function ExportScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
+  const unreadable = !!useCompositionRead(project)?.unreadable
   const comp = useComposition(project)
   const build = useCompositionBuild(comp)
   const panels = useMemo(() => build?.panels ?? [], [build])
@@ -62,6 +64,8 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   const stepWarnings = useMemo(() => (comp && build && panels.length ? toStepCad(stepCadGroups(comp, build, { extras: stepExtras }), { name: "check" }).warnings : []), [comp, build, panels, stepExtras])
 
   if (!project) return null
+  // Composició il·legible: res a exportar (seria la caixa per defecte).
+  if (unreadable) return <UnreadableAlert />
   const base = slugify(project.name)
 
   const doStep = () => {

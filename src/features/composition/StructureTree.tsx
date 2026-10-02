@@ -17,8 +17,9 @@ import {
   LuTrash2,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcon"
-import { compositionKind, partsOnlyKind, duplicateGroup, newGroupName, partGroups, insertModelCopy, insertPartCopy, insertRefCopy, newModelObject, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
+import { compositionKind, partsOnlyKind, duplicateGroup, removeModule, newGroupName, partGroups, insertModelCopy, insertPartCopy, insertRefCopy, newModelObject, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
 import { NameDialog } from "../../components/NameDialog"
+import { toaster } from "../../components/ui/toaster"
 import { defaultElementName, freePartFor, refFor, type AddKind } from "./addElements"
 import { useSettings } from "../settings/SettingsContext"
 import { ORIENT_ICON } from "./partOrient"
@@ -89,9 +90,11 @@ export function StructureTree({
   }
   const remove = (i: number) => {
     if (comp.modules.length <= 1) return
-    const modules = comp.modules.filter((_, k) => k !== i)
-    onChange({ ...comp, modules })
-    onSelect({ kind: "module", id: modules[Math.max(0, i - 1)]!.id })
+    // Peces enganxades, taulell i sòcol i forats del taulell que en depenen (`removeModule`).
+    const res = removeModule(comp, comp.modules[i]!.id)
+    onChange(res.comp)
+    for (const n of res.notes) toaster.create({ title: n, type: "info" })
+    onSelect({ kind: "module", id: res.comp.modules[Math.max(0, i - 1)]!.id })
   }
   /** Veí de la mateixa fila (a terra / penjats) cap a l'esquerra (-1) o la dreta (1). */
   const neighbourIndex = (i: number, dir: -1 | 1): number => {

@@ -48,7 +48,7 @@ import { RenderDialog, type SceneGetter } from "../../components/viewer/render/R
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
-import { applySettingsToModule,  defaultModule, deleteZone, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type FreePart, type ModelObject, type Module, type Panel, type RefObject, type Zone } from "../../core/model"
+import { applySettingsToModule,  defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -115,8 +115,8 @@ interface History {
   future: Composition[]
 }
 
-/** Porta-retalls de l'editor (mòdul, objecte o compartiment). */
-type Clip = { kind: "module"; data: Module; label: string } | { kind: "ref"; data: RefObject; label: string } | { kind: "zone"; data: Zone; label: string } | { kind: "part"; data: FreePart; label: string } | { kind: "model"; data: ModelObject; label: string }
+/** Porta-retalls de l'editor (mòdul, objecte, compartiment, peça o model 3D). */
+type Clip = EditClip
 const CLIP_KEY = "mobles:clipboard"
 let memClip: Clip | null = null
 function writeClip(c: Clip) {
@@ -129,8 +129,9 @@ function writeClip(c: Clip) {
 }
 function readClip(): Clip | null {
   try {
+    // Pot venir d'una altra versió de l'app o estar malmès: es valida amb els esquemes (`parseClip`).
     const raw = localStorage.getItem(CLIP_KEY)
-    if (raw) return JSON.parse(raw) as Clip
+    if (raw) return parseClip(JSON.parse(raw))
   } catch {
     /* només en memòria */
   }
@@ -242,7 +243,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     if (Object.keys(rest).length) setViewerState((v) => ({ ...v, ...rest }))
   }
   const capture = useRef<(() => Promise<Blob>) | null>(null)
-  // Render per CPU: accés a l'escena del visor.
+  // Render (GPU o CPU): accés a l'escena del visor.
   const sceneGetter = useRef<SceneGetter | null>(null)
   const registerScene = useCallback((g: SceneGetter) => {
     sceneGetter.current = g
@@ -469,6 +470,10 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     }
     const paste = (clip: Clip) => {
       if (clip.kind === "module") {
+        if (partsOnlyKind(compositionKind(comp))) {
+          toaster.create({ title: "Aquí no es poden enganxar mòduls", description: "Un flat-pack o un objecte només té peces lliures.", type: "info" })
+          return
+        }
         const res = insertModuleCopy(comp, clip.data, selection.kind === "module" ? selection.id : selection.kind === "zone" ? selection.moduleId : undefined)
         setComp(res.comp)
         select({ kind: "module", id: res.id })
@@ -513,6 +518,15 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       return
     }
     if (mod && key === "d") {
+      // Un compartiment es duplica al costat (o a continuació, dins de la seva divisió), com al menú de l'inspector.
+      if (selection.kind === "zone" && module) {
+        e.preventDefault()
+        const parent = parentOf(module.root, selection.zoneId)
+        const r = duplicateZone(module.root, selection.zoneId, parent?.split?.dir ?? "v")
+        updateModule({ ...module, root: r.root })
+        if (r.copyId) select({ kind: "zone", moduleId: module.id, zoneId: r.copyId })
+        return
+      }
       const clip = current()
       if (!clip) return
       e.preventDefault()
@@ -531,9 +545,11 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           return
         }
         const i = comp.modules.findIndex((x) => x.id === selection.id)
-        const modules = comp.modules.filter((x) => x.id !== selection.id)
-        setComp({ ...comp, modules })
-        select({ kind: "module", id: modules[Math.max(0, i - 1)]!.id })
+        // Peces enganxades, taulell i sòcol i forats del taulell que en depenen (`removeModule`).
+        const res = removeModule(comp, selection.id)
+        setComp(res.comp)
+        for (const n of res.notes) toaster.create({ title: n, type: "info" })
+        select({ kind: "module", id: res.comp.modules[Math.max(0, i - 1)]!.id })
       } else if (selection.kind === "ref") {
         setComp({ ...comp, references: comp.references.filter((r) => r.id !== selection.id) })
         select({ kind: "moble" })
@@ -804,7 +820,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       {tile("holes", "Forats", <LuCircleDot />, showHoles, () => setShowHoles((v) => !v), showHoles ? "Amagar forats" : "Mostrar forats")}
       {tile("explode", "Explosió", exploded ? <LuShrink /> : <LuExpand />, exploded, () => setExploded((v) => !v), exploded ? "Vista muntada" : "Vista explosionada")}
       {tile("hardware", "Ferratges", <LuWrench />, hardware, () => setHardware((v) => !v), hardware ? "Amagar frontisses, tiradors i potes" : "Mostrar frontisses, tiradors i potes")}
-      {tile("render", "Render", <LuAperture />, false, () => (setViewOptsOpen(false), setRenderOpen(true)), "Render fotorealista per CPU (com Cinema 4D): es va afinant i es desa en PNG")}
+      {tile("render", "Render", <LuAperture />, false, () => (setViewOptsOpen(false), setRenderOpen(true)), "Render fotorealista (GPU o CPU, com Cinema 4D): es va afinant i es desa en PNG")}
       {tile("ar", "A casa (AR)", <LuView />, false, () => setArOpen(true), "Veure a casa (realitat augmentada)")}
     </>
   )

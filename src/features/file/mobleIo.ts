@@ -13,7 +13,7 @@ import {
   type MobleFile,
 } from "../../core/file/mobleFile"
 import { DEFAULT_CABINET, newId, type Settings } from "../../core/model"
-import { compositionOf } from "../../db/compositionStore"
+import { readComposition } from "../../db/compositionStore"
 import { addPhoto, createProject, db, safeNestOptions, updateProjectPhoto, type Photo, type Project } from "../../db/db"
 import { forgetModel } from "../../components/viewer/models3d"
 import { ensureUserModel, getUserModel } from "../../db/userModels"
@@ -35,9 +35,17 @@ export function base64ToBlob(data: string, mime: string): Blob {
   return new Blob([bytes], { type: mime })
 }
 
-/** Construeix el fitxer `.moble` d'un projecte (amb la foto si es demana i n'hi ha). */
+/** Missatge quan la composició desada no es pot llegir (no s'exporta la caixa per defecte en lloc seu). */
+export const UNREADABLE_COMPOSITION = "La composició desada d'aquest moble no es pot llegir: no es desa el fitxer (sortiria una caixa per defecte)."
+
+/**
+ * Construeix el fitxer `.moble` d'un projecte (amb la foto si es demana i n'hi ha). Llança (`UNREADABLE_COMPOSITION`) si
+ * la composició desada és il·legible (`readComposition(…).unreadable`): el fitxer seria la caixa per defecte.
+ */
 export async function projectToMoble(project: Project, settings: Settings, includePhoto: boolean): Promise<MobleFile> {
-  const composition = compositionOf(project)
+  const read = readComposition(project)
+  if (read.unreadable) throw new Error(UNREADABLE_COMPOSITION)
+  const composition = read.composition
   let photo: FilePhoto | undefined
   let calibration: MobleFile["project"]["photo"]
   if (project.photo) {

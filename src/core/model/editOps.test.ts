@@ -1,6 +1,20 @@
 import { describe, expect, it } from "vitest"
-import { defaultModule, type Composition } from "./composition"
-import { insertModelCopy, insertModuleCopy, insertRefCopy, moveAllBy, moveModuleBy, movePartToGroup, pasteZone, removePartFromGroup, reorderPart } from "./editOps"
+import { defaultModule, modulePlacements, resolveParts, type Composition, type Module, type Run } from "./composition"
+import {
+  duplicateGroup,
+  insertModelCopy,
+  insertModuleCopy,
+  insertPartCopy,
+  insertRefCopy,
+  moveAllBy,
+  moveModuleBy,
+  movePartToGroup,
+  parseClip,
+  pasteZone,
+  removeModule,
+  removePartFromGroup,
+  reorderPart,
+} from "./editOps"
 
 const comp = (): Composition => ({
   modules: [
@@ -110,5 +124,76 @@ describe("moure tot el moble amb peces enganxades", () => {
     expect(c.modules[0]!.gapBefore).toBe(200)
     expect(c.parts!.find((x) => x.id === "p")!.x).toBe(10)
     expect(c.parts!.find((x) => x.id === "q")!.x).toBe(110)
+  })
+})
+
+const part = (id: string, extra: Record<string, unknown> = {}) => ({ id, name: id, orient: "front" as const, w: 100, h: 100, thickness: 19, material: "M", x: 10, y: 20, z: 30, ...extra })
+const island = (id: string, x: number): Module => ({ ...defaultModule(id, "Illa", { width: 800 }), gapBefore: 0, x, wallGap: 1500 })
+
+describe("illes (X pròpia) i veïns de la fila", () => {
+  it("moure un mòdul de la fila no toca la illa que hi ha entre ell i el veí", () => {
+    const c: Composition = { ...comp(), modules: [comp().modules[0]!, island("i", 3000), comp().modules[1]!, comp().modules[2]!] }
+    const before = modulePlacements(c).map((p) => p.x)
+    const after = modulePlacements(moveModuleBy(c, "a", 30)).map((p) => p.x)
+    expect(after[0]).toBe(before[0]! + 30)
+    expect(after.slice(1)).toEqual(before.slice(1))
+  })
+  it("duplicar una illa la posa al costat (amplada + 20)", () => {
+    const c: Composition = { ...comp(), modules: [...comp().modules, island("i", 3000)] }
+    const r = insertModuleCopy(c, c.modules[3]!, "i")
+    expect(r.comp.modules.find((m) => m.id === r.id)!.x).toBe(3820)
+  })
+})
+
+describe("eliminar un mòdul (removeModule)", () => {
+  const runs = (): Run[] => [
+    { id: "w", kind: "worktop", from: "a", to: "c", material: "M", thickness: 30, overhangFront: 20, overhangLeft: 0, overhangRight: 0, cutouts: [{ id: "k", kind: "sink", module: "b", w: 400, d: 300, dx: 0 }, { id: "h", kind: "hob", module: "c", w: 400, d: 300, dx: 0 }] },
+    { id: "s", kind: "plinth", from: "c", to: "c", material: "M", thickness: 19, setback: 40 },
+  ]
+  it("les peces enganxades queden soltes al mateix lloc", () => {
+    const c: Composition = { ...comp(), parts: [part("p", { module: "b" }), part("q")] }
+    const before = resolveParts(c).find((p) => p.id === "p")!
+    const r = removeModule(c, "b")
+    const p = r.comp.parts!.find((x) => x.id === "p")!
+    expect(p.module).toBeUndefined()
+    expect([p.x, p.y, p.z]).toEqual([before.x, before.y, before.z])
+    expect(r.comp.parts!.find((x) => x.id === "q")!.x).toBe(10)
+  })
+  it("taulell i sòcol: passen al mòdul més proper del tram o es treuen; els forats del mòdul, fora", () => {
+    const r = removeModule({ ...comp(), runs: runs() }, "c")
+    expect(r.comp.runs).toHaveLength(1)
+    expect(r.comp.runs![0]).toMatchObject({ id: "w", from: "a", to: "b" })
+    expect((r.comp.runs![0] as Extract<Run, { kind: "worktop" }>).cutouts.map((k) => k.id)).toEqual(["k"])
+    expect(r.notes).toHaveLength(2)
+    const r2 = removeModule({ ...comp(), runs: runs() }, "a")
+    expect(r2.comp.runs![0]).toMatchObject({ from: "b", to: "c" })
+    expect(r2.notes).toEqual([])
+  })
+})
+
+describe("porta-retalls", () => {
+  it("parseClip valida amb els esquemes", () => {
+    const m = comp().modules[0]!
+    expect(parseClip({ kind: "module", data: m, label: "A" })?.kind).toBe("module")
+    expect(parseClip({ kind: "module", data: { id: "x" }, label: "A" })).toBeNull()
+    expect(parseClip({ kind: "virus", data: {}, label: "" })).toBeNull()
+    expect(parseClip("text")).toBeNull()
+  })
+  it("una peça enganxada a un mòdul d'un altre moble queda solta; del mateix, enganxada", () => {
+    const foreign = insertPartCopy(comp(), part("p", { module: "zz" }))
+    expect(foreign.comp.parts![0]!.module).toBeUndefined()
+    const own = insertPartCopy(comp(), part("p", { module: "a" }))
+    expect(own.comp.parts![0]!.module).toBe("a")
+  })
+})
+
+describe("duplicar un grup amb peces enganxades", () => {
+  it("la còpia va a la dreta de la caixa real del grup (coordenades de la composició)", () => {
+    const c: Composition = { ...comp(), modules: [{ ...defaultModule("a", "A", { width: 600 }), gapBefore: 2000 }], parts: [part("p1", { module: "a", group: "G", x: 0, y: 0, z: 0 }), part("p2", { group: "G", x: 2500, y: 0, z: 0 })] }
+    const abs = resolveParts(c).filter((p) => p.group === "G").map((p) => p.x)
+    const d = duplicateGroup(c, "G")
+    const copy = resolveParts(d.comp).filter((p) => p.group === d.group).map((p) => p.x)
+    const w = Math.max(...abs) + 100 - Math.min(...abs)
+    expect(copy.map((x, i) => x - abs[i]!)).toEqual([w + 50, w + 50])
   })
 })

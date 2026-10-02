@@ -96,7 +96,11 @@ export function addChild(root: Zone, id: string): Zone {
   })
 }
 
-/** Elimina una zona de la seva divisió. Si només en queda una, la divisió desapareix. */
+/**
+ * Elimina una zona de la seva divisió. Si només en queda una, la divisió desapareix. Si les que queden són totes de
+ * mida fixa, ja no sumarien la llum (en falta la treta i el seu divisor): el veí (el de l'esquerra/sota, o el següent)
+ * passa a «auto» i n'agafa l'espai.
+ */
 export function removeZone(root: Zone, id: string): Zone {
   const parent = parentOf(root, id)
   if (!parent || !parent.split) return root
@@ -106,6 +110,8 @@ export function removeZone(root: Zone, id: string): Zone {
     if (idx < 0) return p
     const children = p.split.children.filter((_, i) => i !== idx)
     const sizes = p.split.sizes.filter((_, i) => i !== idx)
+    while (sizes.length < children.length) sizes.push("auto")
+    if (children.length > 1 && !sizes.includes("auto")) sizes[Math.max(0, idx - 1)] = "auto"
     if (children.length === 1) {
       const only = children[0]!
       return { ...only, id: p.id }

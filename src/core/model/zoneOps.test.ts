@@ -39,6 +39,14 @@ describe("zoneOps", () => {
     expect(z.shelves).toEqual({ n: 2, adjustable: true })
   })
 
+  it("removeZone: si totes les que queden són fixes, el veí passa a «auto»", () => {
+    const root = { id: "r", split: { dir: "v" as const, sizes: [300, "auto" as const, 300], children: [{ id: "a" }, { id: "b" }, { id: "c" }] } }
+    expect(removeZone(root, "b").split!.sizes).toEqual(["auto", 300])
+    expect(removeZone(root, "a").split!.sizes).toEqual(["auto", 300])
+    const withAuto = { id: "r", split: { dir: "v" as const, sizes: [300, 200, "auto" as const], children: [{ id: "a" }, { id: "b" }, { id: "c" }] } }
+    expect(removeZone(withAuto, "a").split!.sizes).toEqual([200, "auto"])
+  })
+
   it("setChildSize, setShelves i setFront", () => {
     let z = splitZone(leaf, "root", "v", 2)
     z = setChildSize(z, "root", 1, 300)

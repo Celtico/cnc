@@ -2,7 +2,7 @@ import { useMemo } from "react"
 import { buildCabinet } from "../core/build/buildCabinet"
 import { buildComposition, type CompositionBuild } from "../core/build/buildComposition"
 import type { CabinetParams, Composition, Panel } from "../core/model"
-import { compositionOf } from "../db/compositionStore"
+import { readComposition, type CompositionRead } from "../db/compositionStore"
 import { nest, type Nesting, type NestOptions } from "../core/nesting/nest"
 import { db, safeNestOptions, safeParams, type Project } from "../db/db"
 import { useLiveQuery } from "../db/useLiveQuery"
@@ -58,9 +58,18 @@ export function useNesting(panels: Panel[], options: NestOptions | undefined): N
   return useMemo(() => (options && panels.length ? nest(panels, nestPlan(panels, options, machine).options) : undefined), [panels, options, machine])
 }
 
-/** Composició del projecte (migrada del mòdul de caixa si cal). */
+/** Lectura de la composició del projecte, amb `unreadable` (la desada no es pot llegir). */
+export function useCompositionRead(project: Pick<Project, "params" | "composition" | "name"> | undefined): CompositionRead | undefined {
+  return useMemo(() => (project ? readComposition(project) : undefined), [project])
+}
+
+/**
+ * Composició del projecte (migrada del mòdul de caixa si cal). `undefined` si la desada és il·legible
+ * (`useCompositionRead(…).unreadable`): així Peces, Nesting i Exportar no fan servir la caixa per defecte com si fos el moble.
+ */
 export function useComposition(project: Pick<Project, "params" | "composition" | "name"> | undefined): Composition | undefined {
-  return useMemo(() => (project ? compositionOf(project) : undefined), [project])
+  const read = useCompositionRead(project)
+  return read && !read.unreadable ? read.composition : undefined
 }
 
 export function useCompositionBuild(comp: Composition | undefined): CompositionBuild | undefined {

@@ -98,6 +98,16 @@ export interface XcsPreview {
 
 type Arg = { s: string } | { v: string }
 
+/**
+ * Una polilínia que acaba on comença (≤ 1e-3) és tancada encara que no porti `ClosePolyline`: els contorns fets només
+ * d'arcs (taules rodones i ovals) s'escriuen així. Només per a `CreateContour`/`CreateContourPocket`.
+ */
+export function closedLoop(p: CamPath): CamPath {
+  if (p.closed || p.kind !== "polyline" || !p.segs.length) return p
+  const last = p.segs[p.segs.length - 1]!.to
+  return dist(last, p.start) <= 1e-3 ? { ...p, closed: true } : p
+}
+
 /** Parteix els arguments d'una crida (cadenes C# amb `\"` i `\\`). `null` si està mal tancada. */
 function splitArgs(src: string): Arg[] | null {
   const out: Arg[] = []
@@ -409,13 +419,13 @@ export function parseXcsPreview(text: string): XcsPreview {
         if (!ok(depth)) break
         const side = N(3) === 0 ? "inside" : "outside"
         const om = N(12)
-        lastOp = pushOp({ kind: "contour", name: S(0) ?? "", toolArg: S(6) ?? "-1", depth, desc: S(4) ?? "", side, ...(active ? { path: active } : {}), ...(Number.isFinite(om) && om ? { overMaterial: om } : {}) }, lineNo)
+        lastOp = pushOp({ kind: "contour", name: S(0) ?? "", toolArg: S(6) ?? "-1", depth, desc: S(4) ?? "", side, ...(active ? { path: closedLoop(active) } : {}), ...(Number.isFinite(om) && om ? { overMaterial: om } : {}) }, lineNo)
         continue
       }
       case "CreateContourPocket": {
         const depth = N(1)
         if (!ok(depth)) break
-        lastOp = pushOp({ kind: "pocket", name: S(0) ?? "", toolArg: S(4) ?? "-1", depth, desc: S(2) ?? "", side: "inside", ...(active ? { path: active } : {}) }, lineNo)
+        lastOp = pushOp({ kind: "pocket", name: S(0) ?? "", toolArg: S(4) ?? "-1", depth, desc: S(2) ?? "", side: "inside", ...(active ? { path: closedLoop(active) } : {}) }, lineNo)
         continue
       }
       case "CreateRoughFinish":
