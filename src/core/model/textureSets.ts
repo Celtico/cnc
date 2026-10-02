@@ -90,7 +90,7 @@ export function textureSetMaterial(t: TextureSet): MaterialPref {
   }
   const base = { id: `photo-${t.id}`, name: t.label, finish, ...(t.translucent ? { translucent: t.translucent } : {}) }
   if (t.use === "board") return { ...base, thicknesses: [16, 19, 30], hasGrain: true, edge: t.edge ?? "", category: "board" }
-  if (t.use === "hard") return { ...base, thicknesses: [10, 20, 30], hasGrain: false, edge: "", cnc: false, category: "hard" }
+  if (t.use === "hard") return { ...base, thicknesses: [10, 20, 30], hasGrain: false, edge: "", cnc: false, category: "sim" }
   return { ...base, thicknesses: [10], hasGrain: t.grain !== "none", edge: "", cnc: false, category: "sim" }
 }
 

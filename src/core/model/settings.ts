@@ -223,24 +223,28 @@ const MaterialListSchema = z.array(MaterialPrefSchema).min(1).superRefine((list,
     seen.add(k)
   })
 })
-export type MaterialCategory = NonNullable<MaterialPref["category"]>
+/**
+ * Categories: Taulers · Fons · Simulació. «Metall, pedra i vidre» (`hard`, a l'esquema per als desats antics) és
+ * Simulació (per decisió de l'usuari: és el mateix, no es tallen a la CNC).
+ */
+export type MaterialCategory = "board" | "back" | "sim"
 
 export const MATERIAL_CATEGORIES: { id: MaterialCategory; label: string; hint: string }[] = [
   { id: "board", label: "Taulers", hint: "Es tallen a la CNC: cossos, fronts, taulells." },
   { id: "back", label: "Fons", hint: "Taulers prims per als fons." },
-  { id: "hard", label: "Metall, pedra i vidre", hint: "No es tallen a la CNC: surten a «Elements sense nesting»." },
-  { id: "sim", label: "Simulació", hint: "Només es veuen: teixits, parquet, rajola, pintura… per als ambients i els blocs." },
+  { id: "sim", label: "Simulació", hint: "No es tallen a la CNC, només es veuen: metall, pedra, vidre, teixits, parquet, pintura… per als ambients i els objectes. Una peça lliure d'aquests materials surt a «Elements sense nesting»." },
 ]
 
-/** Categoria d'un material: la triada o, als antics, deduïda dels interruptors. */
+/** Categoria d'un material: la triada o, als antics, deduïda dels interruptors (`hard` antic = Simulació). */
 export function materialCategory(m: Pick<MaterialPref, "category" | "forBacks" | "cnc">): MaterialCategory {
-  return m.category ?? (m.forBacks ? "back" : m.cnc === false ? "hard" : "board")
+  const c = m.category ?? (m.forBacks ? "back" : m.cnc === false ? "sim" : "board")
+  return c === "hard" ? "sim" : c
 }
 
 /** Canvia la categoria d'un material mantenint coherents `forBacks` i `cnc`. */
 export function withCategory(m: MaterialPref, category: MaterialCategory): MaterialPref {
   const { forBacks: _f, cnc: _c, category: _k, ...rest } = m
-  return { ...rest, category, ...(category === "back" ? { forBacks: true } : {}), ...(category === "hard" || category === "sim" ? { cnc: false } : {}) }
+  return { ...rest, category, ...(category === "back" ? { forBacks: true } : {}), ...(category === "sim" ? { cnc: false } : {}) }
 }
 
 // --- Taulers i nesting ---------------------------------------------------------------

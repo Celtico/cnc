@@ -21,7 +21,7 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
   // El valor actual no és dels que es poden triar aquí (un moble fet amb vidre al cos, un material que ja no hi és): es
   // continua veient com a valor actual, amb un avís.
   const offList = !!value && !materials.some((m) => m.name === value)
-  const offNote = !known ? "No és a Preferències" : materialCategory(current) === "sim" ? "Només de simulació" : materialCategory(current) === "hard" ? "No es talla a la CNC" : "No és per a aquí"
+  const offNote = !known ? "No és a Preferències" : materialCategory(current) === "sim" ? "No es talla a la CNC (simulació)" : "No és per a aquí"
   const cats = MATERIAL_CATEGORIES.map((c) => ({ ...c, list: materials.filter((m) => materialCategory(m) === c.id) })).filter((c) => c.list.length)
   const [openCats, setOpenCats] = useState<string[]>([])
   const pick = (name: string) => {

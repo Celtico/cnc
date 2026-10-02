@@ -687,7 +687,6 @@ function parseList(text: string): number[] {
 function MaterialsList({ materials, onChange, onRename, onDelete, footer }: { materials: MaterialPref[]; onChange: (m: MaterialPref[]) => void; onRename: (from: string, to: string) => void; onDelete: (m: MaterialPref) => void; footer?: ReactNode }) {
   const head = useContext(PaneHeadContext)
   const [sel, setSel] = useSessionString(DETAIL_KEYS.materials)
-  const [cat, setCat] = useSessionString("mobles:settings-material-cat")
   const [query, setQuery] = useState("")
   const [justAdded, setJustAdded] = useState<string | null>(null)
   const update = (i: number, patch: Partial<MaterialPref>) => onChange(materials.map((m, k) => (k === i ? { ...m, ...patch } : m)))
@@ -704,26 +703,22 @@ function MaterialsList({ materials, onChange, onRename, onDelete, footer }: { ma
     onChange([m, ...materials])
     setSel(m.id)
     setJustAdded(m.id)
-    // Que es vegi: si el filtre és d'una altra categoria, es treu.
-    if (cat && cat !== "all" && cat !== materialCategory(m)) setCat("all")
   }
   const blank = () => {
-    // A la categoria que es mira (si n'hi ha una de triada); amb nom únic i el nom a punt d'escriure.
+    // A la categoria del material que es mira (si n'hi ha); amb nom únic i el nom a punt d'escriure.
     const base: MaterialPref = { id: newId("mat"), name: uniqueName("Material nou"), thicknesses: [19], hasGrain: false, finish: { kind: "color", color: "#e5e5e5" }, edge: "" }
-    addMaterial(cat && cat !== "all" ? withCategory(base, cat as MaterialCategory) : base)
+    const cur = materials.find((x) => x.id === sel)
+    addMaterial(cur ? withCategory(base, materialCategory(cur) as MaterialCategory) : base)
   }
   const add = () => setLibrary(true)
   const fromLibrary = ({ group: _g, ...item }: LibraryItem) => addMaterial({ ...structuredClone(item), id: newId("mat"), name: uniqueName(item.name) })
   const q = query.trim().toLowerCase()
-  const filterId = cat ?? "all"
   const i = materials.findIndex((m) => m.id === sel)
   const m = i >= 0 ? materials[i]! : null
   useEffect(() => {
     if (sel !== null && i < 0) setSel(null)
   }, [sel, i, setSel])
   const openExisting = (id: string) => {
-    const x = materials.find((y) => y.id === id)
-    if (x && cat && cat !== "all" && cat !== materialCategory(x)) setCat("all")
     setSel(id)
   }
   // «Per defecte als mòduls nous» només sota un tauler o un fons (els que poden ser-ho).
@@ -733,11 +728,9 @@ function MaterialsList({ materials, onChange, onRename, onDelete, footer }: { ma
     <MasterDetail
       head={head}
       footer={showDefaults ? footer : undefined}
-      // Per categories: Taulers · Fons · Metall, pedra i vidre · Simulació.
-      filters={[{ id: "all", label: "Tots", count: materials.length }, ...MATERIAL_CATEGORIES.map((c) => ({ id: c.id, label: c.label, count: materials.filter((x) => materialCategory(x) === c.id).length }))]}
-      filter={filterId}
-      onFilter={setCat}
-      groups={MATERIAL_CATEGORIES.filter((c) => filterId === "all" || c.id === filterId).map((c) => ({
+      // Per categories en acordió (Taulers · Fons · Simulació), com el selector de materials.
+      collapsible="materials"
+      groups={MATERIAL_CATEGORIES.map((c) => ({
         id: c.id,
         label: c.label,
         // L'explicació de cada categoria és al detall (Categoria), no sota cada grup de la llista.

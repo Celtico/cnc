@@ -1,6 +1,6 @@
 import { Badge, Box, Button, CloseButton, Flex, HStack, IconButton, Input, InputGroup, Stack, Text } from "@chakra-ui/react"
-import type { ReactNode } from "react"
-import { LuChevronLeft, LuChevronRight, LuPlus, LuSearch } from "react-icons/lu"
+import { useState, type ReactNode } from "react"
+import { LuChevronDown, LuChevronLeft, LuChevronRight, LuPlus, LuSearch } from "react-icons/lu"
 import { ChoiceChips } from "./FormRow"
 import { SectionLabel } from "./SectionLabel"
 
@@ -42,7 +42,13 @@ export function MasterDetail({
   detailMaxW = "680px",
   head,
   footer,
+  collapsible,
 }: {
+  /**
+   * Grups plegables (acordió, com el selector de materials): clau de sessió per recordar quins són oberts.
+   * Per defecte només és obert el grup de l'element triat; la cerca obre els que tenen resultats.
+   */
+  collapsible?: string
   /** A dalt de la llista (títol de la pàgina): així el detall comença a dalt de tot, a l'altura del menú. */
   head?: ReactNode
   /** Sota el detall (opcions de tota la llista, p. ex. els materials per defecte). */
@@ -64,6 +70,28 @@ export function MasterDetail({
   detail: ReactNode
   empty?: ReactNode
 }) {
+  const openKey = collapsible ? `mobles:md-open:${collapsible}` : null
+  const [openState, setOpenState] = useState<Record<string, boolean>>(() => {
+    if (!openKey) return {}
+    try {
+      return JSON.parse(sessionStorage.getItem(openKey) ?? "{}") as Record<string, boolean>
+    } catch {
+      return {}
+    }
+  })
+  const visibleGroups = groups.filter((g) => g.items.length)
+  const searching = !!query.trim()
+  const isOpen = (g: MasterGroup) =>
+    !collapsible || searching || visibleGroups.length === 1 || (openState[g.id] ?? g.items.some((it) => it.id === selected))
+  const toggle = (g: MasterGroup) => {
+    const next = { ...openState, [g.id]: !isOpen(g) }
+    setOpenState(next)
+    try {
+      if (openKey) sessionStorage.setItem(openKey, JSON.stringify(next))
+    } catch {
+      /* només aquesta vista */
+    }
+  }
   const list = (
     <Stack gap={3} minW={0}>
       {head}
@@ -101,14 +129,35 @@ export function MasterDetail({
       {groups.map((g) =>
         g.items.length ? (
           <Stack key={g.id} gap={1}>
-            <HStack gap={2} px={1}>
-              <SectionLabel>
-                {g.label}
-              </SectionLabel>
-              <Badge size="xs" variant="subtle" colorPalette="gray">
-                {g.items.length}
-              </Badge>
-            </HStack>
+            {collapsible && !searching && visibleGroups.length > 1 ? (
+              <HStack
+                as="button"
+                gap={2}
+                px={1}
+                py={1}
+                w="full"
+                cursor="pointer"
+                aria-expanded={isOpen(g)}
+                onClick={() => toggle(g)}
+                _hover={{ color: "fg" }}
+              >
+                <SectionLabel>{g.label}</SectionLabel>
+                <Badge size="xs" variant="subtle" colorPalette="gray">
+                  {g.items.length}
+                </Badge>
+                <Box ms="auto" color="fg.subtle" display="inline-flex" transition="transform 0.15s" transform={isOpen(g) ? "rotate(180deg)" : undefined}>
+                  <LuChevronDown />
+                </Box>
+              </HStack>
+            ) : (
+              <HStack gap={2} px={1}>
+                <SectionLabel>{g.label}</SectionLabel>
+                <Badge size="xs" variant="subtle" colorPalette="gray">
+                  {g.items.length}
+                </Badge>
+              </HStack>
+            )}
+            {isOpen(g) && (
             <Box borderWidth="1px" rounded="lg" overflow="hidden" bg="bg.panel">
               {g.items.map((it, i) => {
                 const on = it.id === selected
@@ -155,7 +204,8 @@ export function MasterDetail({
                 )
               })}
             </Box>
-            {g.hint && (
+            )}
+            {isOpen(g) && g.hint && (
               <Text fontSize="xs" color="fg.subtle" px={1}>
                 {g.hint}
               </Text>

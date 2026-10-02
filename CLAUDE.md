@@ -625,7 +625,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 
 ## Materials
 - **Categories** (`MaterialPref.category`, `materialCategory`, `withCategory`, `MATERIAL_CATEGORIES`): **Taulers** · **Fons** ·
-  **Metall, pedra i vidre** · **Simulació** (als antics es dedueix de `forBacks` / `cnc`). A Preferències es llisten per
+  **Simulació** (als antics es dedueix de `forBacks` / `cnc`; l'antiga «Metall, pedra i vidre», `hard`, es llegeix com a
+  Simulació: per decisió de l'usuari és el mateix, no es tallen a la CNC). A Preferències es llisten per
   categoria (camp Categoria en lloc dels interruptors «Per a fons» i «Es talla a la CNC») i el `MaterialSelect` agrupa per
   categoria. Els que no són de CNC (ferro, inox, pedra, vidre) van arribar a la v2 de les preferències. Els de **simulació** (`SIM_MATERIALS`: v3 teixits, vellut, cuir, parquet, rajoles, microciment, pintures,
   electrodomèstics; v4 els de les escenes de revista; v5 els llums; `SIM_MATERIALS_SINCE`: la migració només afegeix els d'una
@@ -663,7 +664,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Materials de foto amb relleu** (v6): 22 jocs de Poly Haven (CC0, 1K) a `public/textures/<id>/{diff,nor,rough}.jpg`
   (normal OpenGL, rugositat en grisos), manifest a `core/model/textureSets.ts` (`TEXTURE_SETS`: nom, mida real d'una repetició,
   direcció de la veta a la foto, ús). `PHOTO_MATERIALS`: xapes a **Taulers** (16/19/30: «Roure (foto)», «Noguera (foto)»,
-  «Noguera fumada (foto)», «Fusta fosca (foto)»), pedres a **Metall, pedra i vidre** i la resta (parquets, estucs, formigons,
+  «Noguera fumada (foto)», «Fusta fosca (foto)»), pedres i la resta (parquets, estucs, formigons,
   microciment, terratzo, murs de pedra, jute, llana espiga, vaquer) a **Simulació**; la migració v6 només afegeix els que
   falten. També a la biblioteca («Fotos · …»). L'acabat `image` porta `normalMap`, `roughMap`, `grain`,
   `roughness` (multiplicador) i `color` (STEP); `grain` `y` = veta vertical a la foto (es gira un quart). Visor:
@@ -890,7 +891,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`useSessionString`). Les referències creuades als textos diuen «Preferències › <títol de la pàgina>».
 - **Llista i detall** (`components/MasterDetail`: llista agrupada amb mostra; cercador, categories i «Afegir» (només icona)
   en una fila; `head` = títol de la pàgina a dalt de la llista —`PaneHeadContext` a les pàgines `wide`—; `footer` = sota el
-  detall) a Materials, Objectes de referència i Màquines CNC. **Materials**: «Per defecte als mòduls nous» sota el detall
+  detall) a Materials, Objectes de referència i Màquines CNC. **Materials**: categories en **acordió** (`collapsible`, per decisió de
+  l'usuari, sense el menú de categories: per defecte només és obert el grup del material triat, la cerca obre els que tenen
+  resultats, es recorda durant la sessió; un material «En blanc» va a la categoria del que es mira); «Per defecte als mòduls nous» sota el detall
   d'un tauler o d'un fons (`DefaultPick`); a la llista, `MaterialThumb` i «Acabat · gruixos · cantell»; detall amb la **mostra a escala real a tota
   l'amplada** (`MaterialHero`, 600 mm; `materialPreview.ts`), nom editable amb Duplicar/Eliminar i les seccions **Aspecte**
   (Acabat, Color/Espècie/Foto, Rajola, Textura) i **Fabricació** (Gruixos `ThicknessChips`, Cantell, Veta, Categoria; als

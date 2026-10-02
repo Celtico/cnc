@@ -9,7 +9,7 @@ import { WOOD_EXTRA_PRESETS } from "./woodPresets"
 export type LibraryItem = Omit<MaterialPref, "id"> & { group: string }
 
 const board = (name: string, finish: MaterialPref["finish"], edge: string, hasGrain = true): LibraryItem => ({ group: "Fusta i taulers", name, finish, thicknesses: [16, 19], hasGrain, edge, category: "board" })
-const hard = (group: string, name: string, finish: MaterialPref["finish"], thicknesses = [10, 20, 30]): LibraryItem => ({ group, name, finish, thicknesses, hasGrain: false, edge: "", cnc: false, category: "hard" })
+const hard = (group: string, name: string, finish: MaterialPref["finish"], thicknesses = [10, 20, 30]): LibraryItem => ({ group, name, finish, thicknesses, hasGrain: false, edge: "", cnc: false, category: "sim" })
 const sim = (group: string, name: string, finish: MaterialPref["finish"]): LibraryItem => ({ group, name, finish, thicknesses: [10], hasGrain: false, edge: "", cnc: false, category: "sim" })
 const extra = (n: string) => WOOD_EXTRA_PRESETS.find((p) => p.name === n)!.gen
 

@@ -107,7 +107,8 @@ describe("preferències", () => {
 describe("categories de materials", () => {
   it("dedueix la categoria dels antics i afegeix els de simulació (v3)", () => {
     expect(materialCategory({ forBacks: true })).toBe("back")
-    expect(materialCategory({ cnc: false })).toBe("hard")
+    expect(materialCategory({ cnc: false })).toBe("sim")
+    expect(materialCategory({ category: "hard", cnc: false })).toBe("sim")
     expect(materialCategory({})).toBe("board")
     const v2 = { version: 2, materials: [{ id: "m", name: "Meu", thicknesses: [19], hasGrain: false, finish: { kind: "color", color: "#fff" }, edge: "" }] }
     const res = parseSettings(v2)
