@@ -1,6 +1,6 @@
-import { Badge, Box, Button, CloseButton, Flex, HStack, IconButton, Input, InputGroup, Stack, Text } from "@chakra-ui/react"
+import { Accordion, Badge, Box, Button, CloseButton, Flex, HStack, IconButton, Input, InputGroup, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
-import { LuChevronDown, LuChevronLeft, LuChevronRight, LuPlus, LuSearch } from "react-icons/lu"
+import { LuChevronLeft, LuChevronRight, LuPlus, LuSearch } from "react-icons/lu"
 import { ChoiceChips } from "./FormRow"
 import { SectionLabel } from "./SectionLabel"
 
@@ -83,8 +83,9 @@ export function MasterDetail({
   const searching = !!query.trim()
   const isOpen = (g: MasterGroup) =>
     !collapsible || searching || visibleGroups.length === 1 || (openState[g.id] ?? g.items.some((it) => it.id === selected))
-  const toggle = (g: MasterGroup) => {
-    const next = { ...openState, [g.id]: !isOpen(g) }
+  const setOpen = (ids: string[]) => {
+    const next = { ...openState }
+    for (const g of visibleGroups) next[g.id] = ids.includes(g.id)
     setOpenState(next)
     try {
       if (openKey) sessionStorage.setItem(openKey, JSON.stringify(next))
@@ -92,73 +93,10 @@ export function MasterDetail({
       /* només aquesta vista */
     }
   }
-  const list = (
-    <Stack gap={3} minW={0}>
-      {head}
-      {/* Cercador i filtres sempre a dalt de la llista (la llista es desplaça per sota). */}
-      <Stack gap={2} position="sticky" top={0} zIndex={1} bg="bg" pb={1}>
-      <HStack gap={2}>
-        <InputGroup flex={1} minW={0} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => onQuery("")} /> : undefined}>
-          <Input size="sm" value={query} onChange={(e) => onQuery(e.target.value)} placeholder="Cercar…" aria-label="Cercar" />
-        </InputGroup>
-        {/* Només la icona: el cercador té més lloc (el text surt en passar-hi per sobre). */}
-        <IconButton size="sm" variant="outline" flexShrink={0} onClick={onAdd} aria-label={addLabel} title={addLabel}>
-          <LuPlus />
-        </IconButton>
-      </HStack>
-      {/* Categories en pastilles a la seva fila (salten de línia si no hi caben). */}
-      {filters && (
-        <ChoiceChips
-          label="Categoria"
-          options={filters.map((f) => ({
-            id: f.id,
-            label: (
-              <>
-                {f.label}
-                <Text as="span" color="fg.subtle" ms={1}>
-                  {f.count}
-                </Text>
-              </>
-            ),
-          }))}
-          value={filter ?? filters[0]?.id ?? ""}
-          onChange={(v) => onFilter?.(v)}
-        />
-      )}
-      </Stack>
-      {groups.map((g) =>
-        g.items.length ? (
-          <Stack key={g.id} gap={1}>
-            {collapsible && !searching && visibleGroups.length > 1 ? (
-              <HStack
-                as="button"
-                gap={2}
-                px={1}
-                py={1}
-                w="full"
-                cursor="pointer"
-                aria-expanded={isOpen(g)}
-                onClick={() => toggle(g)}
-                _hover={{ color: "fg" }}
-              >
-                <SectionLabel>{g.label}</SectionLabel>
-                <Badge size="xs" variant="subtle" colorPalette="gray">
-                  {g.items.length}
-                </Badge>
-                <Box ms="auto" color="fg.subtle" display="inline-flex" transition="transform 0.15s" transform={isOpen(g) ? "rotate(180deg)" : undefined}>
-                  <LuChevronDown />
-                </Box>
-              </HStack>
-            ) : (
-              <HStack gap={2} px={1}>
-                <SectionLabel>{g.label}</SectionLabel>
-                <Badge size="xs" variant="subtle" colorPalette="gray">
-                  {g.items.length}
-                </Badge>
-              </HStack>
-            )}
-            {isOpen(g) && (
-            <Box borderWidth="1px" rounded="lg" overflow="hidden" bg="bg.panel">
+
+  const rows = (g: MasterGroup) => (
+    <Stack gap={1}>
+      <Box borderWidth="1px" rounded="lg" overflow="hidden" bg="bg.panel">
               {g.items.map((it, i) => {
                 const on = it.id === selected
                 return (
@@ -203,15 +141,92 @@ export function MasterDetail({
                   </HStack>
                 )
               })}
-            </Box>
-            )}
-            {isOpen(g) && g.hint && (
-              <Text fontSize="xs" color="fg.subtle" px={1}>
-                {g.hint}
-              </Text>
-            )}
-          </Stack>
-        ) : null,
+      </Box>
+      {g.hint && (
+        <Text fontSize="xs" color="fg.subtle" px={1}>
+          {g.hint}
+        </Text>
+      )}
+    </Stack>
+  )
+  const list = (
+    <Stack gap={3} minW={0}>
+      {head}
+      {/* Cercador i filtres sempre a dalt de la llista (la llista es desplaça per sota). */}
+      <Stack gap={2} position="sticky" top={0} zIndex={1} bg="bg" pb={1}>
+      <HStack gap={2}>
+        <InputGroup flex={1} minW={0} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => onQuery("")} /> : undefined}>
+          <Input size="sm" value={query} onChange={(e) => onQuery(e.target.value)} placeholder="Cercar…" aria-label="Cercar" />
+        </InputGroup>
+        {/* Només la icona: el cercador té més lloc (el text surt en passar-hi per sobre). */}
+        <IconButton size="sm" variant="outline" flexShrink={0} onClick={onAdd} aria-label={addLabel} title={addLabel}>
+          <LuPlus />
+        </IconButton>
+      </HStack>
+      {/* Categories en pastilles a la seva fila (salten de línia si no hi caben). */}
+      {filters && (
+        <ChoiceChips
+          label="Categoria"
+          options={filters.map((f) => ({
+            id: f.id,
+            label: (
+              <>
+                {f.label}
+                <Text as="span" color="fg.subtle" ms={1}>
+                  {f.count}
+                </Text>
+              </>
+            ),
+          }))}
+          value={filter ?? filters[0]?.id ?? ""}
+          onChange={(v) => onFilter?.(v)}
+        />
+      )}
+      </Stack>
+      {collapsible && visibleGroups.length > 1 ? (
+        // Acordió com el del selector de materials: animat, amb filet sota cada capçalera.
+        <Accordion.Root
+          multiple
+          collapsible
+          variant="plain"
+          value={visibleGroups.filter(isOpen).map((g) => g.id)}
+          onValueChange={(e) => setOpen(e.value)}
+        >
+          {visibleGroups.map((g) => (
+            <Accordion.Item key={g.id} value={g.id}>
+              <Accordion.ItemTrigger cursor="pointer" borderBottomWidth="1px" rounded="none" px={1}>
+                <HStack flex={1} gap={2}>
+                  <Text fontWeight="semibold" fontSize="sm">
+                    {g.label}
+                  </Text>
+                  <Text fontSize="xs" color="fg.muted">
+                    {g.items.length}
+                  </Text>
+                </HStack>
+                <Accordion.ItemIndicator />
+              </Accordion.ItemTrigger>
+              <Accordion.ItemContent>
+                <Accordion.ItemBody px={0} pt={2}>
+                  {rows(g)}
+                </Accordion.ItemBody>
+              </Accordion.ItemContent>
+            </Accordion.Item>
+          ))}
+        </Accordion.Root>
+      ) : (
+        groups.map((g) =>
+          g.items.length ? (
+            <Stack key={g.id} gap={1}>
+              <HStack gap={2} px={1}>
+                <SectionLabel>{g.label}</SectionLabel>
+                <Badge size="xs" variant="subtle" colorPalette="gray">
+                  {g.items.length}
+                </Badge>
+              </HStack>
+              {rows(g)}
+            </Stack>
+          ) : null,
+        )
       )}
       {/* Llista buida: «Cap resultat» només si és la cerca o un filtre (que no sigui el primer) que no troben res. */}
       {groups.every((g) => !g.items.length) && (
