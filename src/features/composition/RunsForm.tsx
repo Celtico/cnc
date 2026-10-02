@@ -1,7 +1,7 @@
 import { Box, Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
 import { LuChevronDown, LuChevronRight, LuPanelBottom, LuPanelTop, LuPlus, LuSquareDashed, LuTrash2 } from "react-icons/lu"
-import { CUTOUT_PRESETS, newId, type Composition, type Run, type WorktopCutout, type WorktopRun } from "../../core/model"
+import { CUTOUT_PRESETS, boardChoices, newId, type Composition, type Run, type WorktopCutout, type WorktopRun } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { moduleChips } from "./moduleChips"
@@ -67,7 +67,7 @@ export function RunsForm({ comp, onChange }: { comp: Composition; onChange: (c: 
           {moduleSelect("Des de", r.from, (from) => update(r.id, { from }))}
           {moduleSelect("Fins a", r.to, (to) => update(r.id, { to }))}
           <FormRow label="Material" maxW="280px">
-            <MaterialSelect label="Material" hideLabel materials={settings.materials.filter((m) => !m.forBacks && m.category !== "sim")} value={r.material} onChange={(material) => update(r.id, { material })} />
+            <MaterialSelect label="Material" hideLabel materials={boardChoices(settings.materials)} value={r.material} onChange={(material) => update(r.id, { material })} />
           </FormRow>
           <NumRow label="Gruix" value={r.thickness} min={10} max={60} step={1} onChange={(thickness) => update(r.id, { thickness })} />
           {r.kind === "plinth" ? (

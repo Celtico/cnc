@@ -39,7 +39,13 @@ export function photoMaterialName(t: TextureSet): string {
   return PHOTO_UPGRADES.find((u) => u.set === t.id)?.names[0] ?? (t.label.endsWith(SUFFIX) ? t.label.slice(0, -SUFFIX.length) : t.label)
 }
 
-const ALIASES = new Map(TEXTURE_SETS.filter((t) => photoMaterialName(t) !== t.label).map((t) => [t.label, photoMaterialName(t)]))
+/**
+ * Noms antics → vigents. Els «X (foto)» de la v6 i els duplicats que la v12 va treure (`MATERIAL_MERGES`): «Melamina
+ * 19» i «DM 10» (els de `DEFAULT_CABINET`, iguals que «Melamina blanca» i «DM (fons)») i «Pi» (les fulles del pi dels
+ * ambients, que es confonia amb la fusta de pi de la biblioteca).
+ */
+export const MATERIAL_MERGES: Record<string, string> = { "Melamina 19": "Melamina blanca", "DM 10": "DM (fons)", Pi: "Fulles de pi" }
+const ALIASES = new Map([...TEXTURE_SETS.filter((t) => photoMaterialName(t) !== t.label).map((t): [string, string] => [t.label, photoMaterialName(t)]), ...Object.entries(MATERIAL_MERGES)])
 
 /**
  * Noms dels materials de l'usuari (els posa `settingsStore` en carregar les preferències). Sense (encara no
@@ -91,8 +97,8 @@ const OLD_FINISHES: Record<string, MaterialPref["finish"]> = {
   "Teixit gris": { kind: "fabric", color: "#8e8e8a" },
 }
 
-/** Igualtat estructural de dades JSON (ordre de claus indiferent). */
-function deepEqual(a: unknown, b: unknown): boolean {
+/** Igualtat estructural de dades JSON (ordre de claus indiferent; una clau `undefined` = sense la clau). */
+export function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true
   if (typeof a !== "object" || typeof b !== "object" || a === null || b === null || Array.isArray(a) !== Array.isArray(b)) return false
   const ka = Object.keys(a).filter((k) => (a as Record<string, unknown>)[k] !== undefined)
@@ -189,11 +195,10 @@ export function rescalePhotoTiles(list: MaterialPref[]): MaterialPref[] {
 const isRefKey = (k: string) => k === "material" || k === "material2" || k === "frame" || /Material$/.test(k)
 
 /**
- * Canvia els noms antics de material («… (foto)») pels vigents a qualsevol dada (composició, ambient):
- * claus `material`, `material2`, `frame`, `…Material` i `scene.floor` / `scene.wall`. Torna el mateix objecte si
- * no hi ha res a canviar. `names`: materials de l'usuari (sense, els registrats; vegeu `resolveMaterialAlias`).
+ * Aplica `fn` a cada nom de material d'una dada (composició, ambient, paràmetres antics): claus `material`,
+ * `material2`, `frame`, `…Material` i `scene.floor` / `scene.wall`. Torna el mateix objecte si no canvia res.
  */
-export function aliasMaterialRefs<T>(value: T, names: ReadonlySet<string> | null = knownNames): T {
+export function mapMaterialRefs<T>(value: T, fn: (name: string) => string): T {
   const walk = (v: unknown, scene: boolean): unknown => {
     if (Array.isArray(v)) {
       let changed = false
@@ -207,12 +212,31 @@ export function aliasMaterialRefs<T>(value: T, names: ReadonlySet<string> | null
     if (typeof v !== "object" || v === null) return v
     let out: Record<string, unknown> | null = null
     for (const [k, x] of Object.entries(v)) {
-      const y = typeof x === "string" ? (isRefKey(k) || (scene && (k === "floor" || k === "wall")) ? resolveMaterialAlias(x, names) : x) : walk(x, k === "scene")
+      const y = typeof x === "string" ? (isRefKey(k) || (scene && (k === "floor" || k === "wall")) ? fn(x) : x) : walk(x, k === "scene")
       if (y !== x) (out ??= { ...(v as Record<string, unknown>) })[k] = y
     }
     return out ?? v
   }
   return walk(value, false) as T
+}
+
+/**
+ * Canvia els noms antics de material («… (foto)», «Melamina 19»…) pels vigents a qualsevol dada (composició, ambient):
+ * les claus de `mapMaterialRefs`. Torna el mateix objecte si no hi ha res a canviar. `names`: materials de l'usuari
+ * (sense, els registrats; vegeu `resolveMaterialAlias`).
+ */
+export function aliasMaterialRefs<T>(value: T, names: ReadonlySet<string> | null = knownNames): T {
+  return mapMaterialRefs(value, (n) => resolveMaterialAlias(n, names))
+}
+
+/**
+ * Canvia el nom d'un material (`from` → `to`, exacte) a qualsevol dada (composició, ambient, paràmetres antics), amb les
+ * claus de `mapMaterialRefs`. Torna el mateix objecte si no el fa servir. Per canviar el nom a Preferències sense
+ * trencar els mobles (`renameMaterialEverywhere`).
+ */
+export function renameMaterialRefs<T>(value: T, from: string, to: string): T {
+  if (from === to) return value
+  return mapMaterialRefs(value, (n) => (n === from ? to : n))
 }
 
 /**

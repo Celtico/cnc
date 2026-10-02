@@ -123,7 +123,7 @@ describe("toUnifiedData", () => {
 
   it("laminat en numeració 1..4 amb el material als cantells folrats", () => {
     const door = data.pieces.find((p) => p.name === "porta")!
-    expect(door.lam).toEqual(["Melamina 19", "Melamina 19", "Melamina 19", "Melamina 19"])
+    expect(door.lam).toEqual(["Melamina blanca", "Melamina blanca", "Melamina blanca", "Melamina blanca"])
     const back = data.pieces.find((p) => p.name === "trassera")!
     expect(back.lam).toEqual([null, null, null, null])
   })
@@ -180,7 +180,7 @@ describe("toUnifiedData", () => {
     const d = toUnifiedData(panels, { name: "x", nesting })
     expect(() => UnifiedDataSchema.parse(JSON.parse(JSON.stringify(d)))).not.toThrow()
     expect(d.boards.map((b) => b.tab)).toEqual(nesting.boards.map((b) => b.tab))
-    expect(d.boards[0]!.name).toBe("Melamina 19 2800x2070 #01")
+    expect(d.boards[0]!.name).toBe("Melamina blanca 2800x2070 #01")
     for (const piece of d.pieces) {
       const board = nesting.boards.find((b) => b.tab === piece.tab)!
       const pl = board.placements.find((p) => p.panelId === panels[piece.solid]!.id)!

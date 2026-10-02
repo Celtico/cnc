@@ -633,7 +633,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   ni del taulell. Els que no són de CNC pinten els cantells amb el mateix material. Acabats `metal`, `glass`, `fabric`
   (trama) i `tiles` (rajola amb junta), procedurals (`patternTexture`).
 - **Textures procedurals editables** (`settings/TextureEditor.tsx`, «Editar la textura»): mostra gran a escala real amb zoom;
-  s'aplica en acceptar. **Fusta** (`Finish.wood.gen`, `WoodGenSchema`, `WOOD_PRESETS` + `WOOD_EXTRA_PRESETS`), **Teixit**,
+  s'aplica en acceptar. A l'ordinador, com a molt el 90 % de l'alçada i el cos es desplaça (el títol i els botons a la
+  vista); el diàleg es queda muntat tancat (muntar-lo ja obert el tancava sol: el focus comptava com «de fora»). **Fusta** (`Finish.wood.gen`, `WoodGenSchema`, `WOOD_PRESETS` + `WOOD_EXTRA_PRESETS`), **Teixit**,
   **Rajola** (junta, variació, quadrícula o trencajunts), **Pedra** (`stone`: marbre, granit, travertí, formigó; soroll
   periòdic), **Metall** (polit, raspallat, martellejat), **Vidre**, **Color llis i lacat**. Tots menys la foto (`isEditable`).
   Tot a `textures.ts` (canvas; `woodTexture(species, gen)`, `patternTexture(kind, color, grout, opts)`), memòria de 48.
@@ -658,6 +659,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   d'una foto que ja hi era. L'amplada real és la de sempre. Visor, miniatures, render (CPU/GPU), GLB/USDZ i
   exportar/importar les preferències els llegeixen com els de l'app (tot passa per `photoTexture`, memòria per `src`); a
   Dexie i al JSON de preferències no hi ha límit de mida (un material amb els tres mapes fa ~0,5–1 MB).
+- **Canviar l'Acabat no perd res** (`MaterialPref.previousFinishes`, `switchFinish`/`restoredFinish` a `materialOps.ts`): l'acabat d'abans es guarda per tipus i, en tornar-hi, es recupera (la foto amb els mapes de relleu i brillantor). Un material de foto de l'app que ja l'havia perdut la recupera del material inicial (mateix id o nom).
 - **Materials de foto amb relleu** (v6): 22 jocs de Poly Haven (CC0, 1K) a `public/textures/<id>/{diff,nor,rough}.jpg`
   (normal OpenGL, rugositat en grisos), manifest a `core/model/textureSets.ts` (`TEXTURE_SETS`: nom, mida real d'una repetició,
   direcció de la veta a la foto, ús). `PHOTO_MATERIALS`: xapes a **Taulers** (16/19/30: «Roure (foto)», «Noguera (foto)»,
@@ -682,14 +684,51 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   `normalizeComposition`, `parseAmbient`, `readPresentationScene` i preferències): «X (foto)» → «X» només si no hi ha cap «X
   (foto)» i sí «X» (`setKnownMaterialNames`, de `settingsStore`). **Sense noms coneguts (preferències encara no llegides) no es reescriu res** (abans un moble
   obert massa d'hora perdia el seu «Roure (foto)» en desar-lo): per això l'Editor i l'editor d'Ambients esperen `useSettings().loading`. La biblioteca fa el mateix (`LIBRARY_PHOTO_UPGRADES`).
-  Cantells (`resolveEdgeFinish`): material de la mateixa foto, després el que diu la primera paraula, després paraules clau.
+  Cantells (`resolveEdgeFinish`): un cantell lacat, «sense cantell» o buit és el mateix tauler (un MDF lacat antracita no
+  fa el cantell blanc); si no, material de la mateixa foto, després el mateix material si el cantell en diu la primera
+  paraula, després un altre material que hi surti **sencer** (no per la primera paraula) i paraules clau.
 - **v8**: mida real de les xapes de foto (mirada a `diff.jpg`: fibres de roure a 2–3 mm, catedrals de noguera de ~250–300 mm;
   roure 1100 → 600, noguera 1200 → 900, noguera fumada 1200 → 800; `rescalePhotoTiles`, només si encara
   tenen la d'abans, `PREVIOUS_TILE_MM`). **v9**: `restorePhotoThicknesses` (16 · 19 · 30) i `TEMPLATE_MATERIALS` (Melamina 19
   i DM 10 de `DEFAULT_CABINET`, MDF lacats de les plantilles) s'afegeixen si falten. Un test comprova que tots els materials
   de plantilles i ambients del catàleg són a les preferències inicials.
+- **v12, duplicats fora** (`mergeDuplicateMaterials`, additiu i sense perdre res): «Melamina 19» → «Melamina blanca» i
+  «DM 10» → «DM (fons)» (eren iguals; només si encara són els inicials, `RETIRED_TEMPLATE_MATERIALS`, i el de sempre hi
+  és; els gruixos hi passen) i les fulles «Pi» (`sim-pine`) → «Fulles de pi» (es confonia amb la fusta «Pi» de la
+  biblioteca; si el nom és lliure). `DEFAULT_CABINET` i les plantilles ja fan servir els de sempre. Els canvis de nom
+  (`SettingsParse.renames`) es segueixen a les preferències (per defecte, taulers) i, a `loadSettings`, a tots els mobles
+  i ambients desats (`renameMaterialEverywhere`, la mateixa transacció); l'àlies (`MATERIAL_MERGES` a
+  `resolveMaterialAlias`) llegeix els `.moble` i dades antigues. Conseqüència al taller: el tauler del CSV ja no porta el
+  gruix dues vegades («DM (fons):…x10», `T03_DM_fons_10.xcs`; abans «DM 10:…x10», `T03_DM_10_10.xcs`).
+- **Noms únics** (`materialNameKey`: sense majúscules ni espais repetits): l'esquema (`MaterialListSchema`) rebutja els
+  repetits; en llegir unes preferències, un de repetit passa a «X 2» amb un avís (`dedupeMaterialNames`).
+- **Canviar el nom** (Preferències › Materials): en acabar (sortir del camp o Retorn; Esc el desfà), no a cada tecla; un
+  nom repetit o buit surt en vermell a sota i es queda l'antic. Els mobles, objectes i ambients desats el segueixen
+  (`renameMaterialRefs`, les claus de `mapMaterialRefs` = les d'`aliasMaterialRefs`; `db/materialRefs.ts`
+  `renameMaterialEverywhere`, una transacció amb les preferències): **sense tocar `updatedAt` ni `edited`** (com
+  `saveProjectCamera`) però amb la miniatura per refer (`thumbAt` fora). També el tauler i el fons per defecte, les mides
+  de tauler (`renameMaterialInSettings`) i l'escena de Presentació (`renamePresentationMaterial`). Avís «Nom canviat: N
+  mobles i M ambients actualitzats». Importar un fitxer d'abans de la v12 fa el mateix amb els seus `renames`.
+- **Eliminar** (`DeleteMaterialDialog`): diu on es fa servir (`materialUsage`: mobles, objectes, ambients; i
+  `materialSettingsUsage`: tauler/fons per defecte, mida de tauler) i ofereix un substitut (les referències hi passen com
+  en un canvi de nom; `removeMaterialFromSettings`); el tauler o el fons per defecte no s'eliminen sense triar-ne un.
+  «Restaurar valors inicials» (i eliminar sense substitut) corregeix el per defecte i les mides de tauler que apuntaven a
+  un material que ja no hi és (`fixMaterialRefs`).
+- **Selectors** (`core/model/materialOps.ts`): `boardChoices` (només taulers de CNC: cos, fronts, taulell i sòcol, tauler
+  per defecte), `backChoices` (taulers i fons: fons del mòdul i per defecte, mides de tauler) i `partChoices` (peces
+  lliures: tot menys els fons; ferro, pedra i vidre hi van a propòsit, la simulació per als objectes). Un moble fet amb un
+  material que ja no és a la llista el conserva: el `MaterialSelect` el mostra com a valor actual amb ⚠ i «No es talla a
+  la CNC» / «Només de simulació» / «No és a Preferències».
+  Una peça lliure nova amb un material que no és a Preferències pren el tauler per defecte (`freePartFor`; no el primer
+  de la llista: els nous s'hi afegeixen al davant).
+- **Avisos de materials** (`core/build/materialIssues.ts`, `materialIssues(build, comp, materials)`: el build no llegeix
+  preferències): `unknown-material` («El material «X» no és a Preferències: es veu amb un color per defecte i al taller
+  sortirà amb aquest nom») i `thickness-not-listed` («El gruix 18 mm no és dels gruixos de «X»»), a «Avisos de fusteria»
+  de l'Editor i a Exportar. A «Per defecte als mòduls nous», un gruix que no és del material és una nota, no una pastilla.
 - **Biblioteca** (`settings/libraryItems.ts`, `MATERIAL_LIBRARY`; diàleg `MaterialLibrary`): «Afegir» obre una graella de
   materials fets (fustes, lacats, pedres, metalls, vidres, teixits, terres, parets) i «En blanc». `libraryItems.test.ts`.
+  Els que ja tens (mateix nom o mateix acabat, `ownedMaterial`) porten «Ja el tens»: tocar-ne un no fa un «X 2» en
+  silenci, sinó que ofereix «Obrir el meu» o «Afegir una còpia».
   (Les dades no són a `materialLibrary.ts`: vegeu Fast Refresh.)
 
 ## Foto
@@ -852,9 +891,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Llista i detall** (`components/MasterDetail`: llista agrupada amb mostra; cercador, categories i «Afegir» (només icona)
   en una fila; `head` = títol de la pàgina a dalt de la llista —`PaneHeadContext` a les pàgines `wide`—; `footer` = sota el
   detall) a Materials, Objectes de referència i Màquines CNC. **Materials**: «Per defecte als mòduls nous» sota el detall
-  (`DefaultPick`); a la llista, `MaterialThumb` i «Acabat · gruixos · cantell»; detall amb la **mostra a escala real a tota
+  d'un tauler o d'un fons (`DefaultPick`); a la llista, `MaterialThumb` i «Acabat · gruixos · cantell»; detall amb la **mostra a escala real a tota
   l'amplada** (`MaterialHero`, 600 mm; `materialPreview.ts`), nom editable amb Duplicar/Eliminar i les seccions **Aspecte**
-  (Acabat, Color/Espècie/Foto, Rajola, Textura) i **Fabricació** (Gruixos `ThicknessChips`, Cantell, Veta, Categoria);
+  (Acabat, Color/Espècie/Foto, Rajola, Textura) i **Fabricació** (Gruixos `ThicknessChips`, Cantell, Veta, Categoria; als
+  de simulació només Categoria);
   controls de 280 px com a molt; un material nou té nom únic («Material nou 2»), va a la categoria filtrada i deixa el nom
   seleccionat.
 - **Objectes de referència inicials** (`BUILTIN_REFERENCES`): genèrics (A4, rajoles, portes, **una sola tele** de 55″,
@@ -863,7 +903,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Visor 3D**: qualitat, escena de Presentació (terra i paret: materials de la biblioteca, `PresentationScene.floorMaterial`
   / `wallMaterial`, o les mostres ràpides; terra per defecte «Parquet de roure»), llum i «Cel del render». **Tema**:
   dia/nit/sistema i color principal (`theme/accent.ts` redirigeix les variables CSS de `wood`).
-- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 11): les migracions depenen només de la versió
+- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 12): les migracions depenen només de la versió
   desada, que **mai baixa** (`saveSettings` desa la més alta). **Desades per una versió més nova**: només lectura
   (`saveSettings` torna `false` amb `console.warn`; `loadSettings` avisa). **Lectura camp a camp** (`repairValue`,
   `core/model/repair.ts`): un valor dolent d'una secció només torna aquell valor a l'inicial (un tauler o una llargada de guia

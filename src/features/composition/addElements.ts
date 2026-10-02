@@ -1,4 +1,4 @@
-import { compositionKind, materialByName, newFreePart, newId, partsOnlyKind, type Composition, type FreePart, type PartOrient, type RefObject, type Settings } from "../../core/model"
+import { boardChoices, compositionKind, materialByName, newFreePart, newId, partsOnlyKind, type Composition, type FreePart, type PartOrient, type RefObject, type Settings } from "../../core/model"
 
 /** Què es pot afegir des de l'arbre (un + per a cada tipus). */
 export type AddKind = "module" | "part" | "ref"
@@ -22,7 +22,8 @@ export function defaultElementName(comp: Composition, kind: AddKind): string {
 
 /**
  * Peça lliure nova: el material i el gruix de l'última peça (o del primer mòdul); als objectes, microciment i fora del
- * nesting; si el material no és a Preferències, el primer tauler de la llista.
+ * nesting; si el material no és a Preferències, el tauler per defecte dels mòduls nous (no el primer de la llista: els
+ * materials nous s'hi afegeixen al davant).
  */
 export function freePartFor(comp: Composition, settings: Settings, orient: PartOrient, center: { x: number; y: number; z: number }, name: string): FreePart {
   const base = comp.modules[0]?.carcass
@@ -33,7 +34,12 @@ export function freePartFor(comp: Composition, settings: Settings, orient: PartO
   const known = materialByName(settings, p.material)
   return known
     ? { ...p, ...(known.cnc === false || object ? { nest: false } : {}) }
-    : { ...p, material: settings.materials.find((m) => !m.forBacks && m.cnc !== false)?.name ?? p.material, ...(object ? { nest: false } : {}) }
+    : { ...p, material: fallbackMaterial(settings) ?? p.material, ...(object ? { nest: false } : {}) }
+}
+
+/** Tauler per defecte de Preferències (si hi és) o, si no, el primer tauler de CNC. */
+function fallbackMaterial(settings: Settings): string | undefined {
+  return materialByName(settings, settings.defaults.material)?.name ?? boardChoices(settings.materials)[0]?.name
 }
 
 /** Objecte de referència nou (una caixa de 600 × 600 × 100, o les mides d'un de Preferències). */

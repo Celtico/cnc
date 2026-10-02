@@ -9,7 +9,7 @@ import { nest } from "../nesting/nest"
 
 // Mòdul estàndard 600 × 720 × 560, cos de 19 i fons encastat de 19 del mateix tauler.
 const mod = (over: Partial<Carcass> = {}, root?: Zone): Module => {
-  const m = defaultModule("m", "M", { width: 600, height: 720, depth: 560, back: "inset", backMaterial: "Melamina 19", backThickness: 19, ...over })
+  const m = defaultModule("m", "M", { width: 600, height: 720, depth: 560, back: "inset", backMaterial: "Melamina blanca", backThickness: 19, ...over })
   return root ? { ...m, root } : m
 }
 const panelsOf = (m: Module) => buildComposition({ modules: [m], references: [] }).panels.map((p) => ({ ...p, id: p.id.replace(/^m:/, "") }))
@@ -39,7 +39,7 @@ describe("fons encastat", () => {
     const back = panelsOf(mod()).find((p) => p.role === "back")!
     expect(sizes(back)).toEqual([720 - 2 * 19, 600 - 2 * 19])
     expect(back.thickness).toBe(19)
-    expect(back.material).toBe("Melamina 19")
+    expect(back.material).toBe("Melamina blanca")
     const b = panelBox(back)
     expect(b.min).toEqual([19, 19, 0])
     expect(b.max).toEqual([581, 701, 19])
@@ -163,7 +163,7 @@ describe("fons encastat", () => {
   it("és una peça de CNC més: llista de tall, nesting amb el cos i DXF amb les espigues", () => {
     const ps = panelsOf(mod())
     const item = toCutList(ps).items.find((i) => i.role === "back")!
-    expect([item.length, item.width, item.thickness, item.material]).toEqual([682, 562, 19, "Melamina 19"])
+    expect([item.length, item.width, item.thickness, item.material]).toEqual([682, 562, 19, "Melamina blanca"])
     // Mateix material i gruix que el cos: comparteix tauler.
     const n = nest(ps)
     expect(n.unplaced).toEqual([])

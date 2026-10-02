@@ -83,8 +83,9 @@ export const DEFAULT_CABINET: CabinetParams = {
   hinge: { cupDiameter: 35, cupDepth: 13, cupOffset: 22.5 },
   system32: { edgeOffset: 37, pitch: 32, diameter: 5, depth: 12 },
   dowel: { diameter: 8, faceDepth: 12, edgeDepth: 20, endOffset: 40 },
-  material: "Melamina 19",
-  backMaterial: "DM 10",
+  // v12: els de sempre de Preferències (abans «Melamina 19» i «DM 10», iguals però amb un altre nom).
+  material: "Melamina blanca",
+  backMaterial: "DM (fons)",
 }
 
 /** Valida i completa uns paràmetres parcials amb els valors per defecte. */

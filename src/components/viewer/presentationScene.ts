@@ -98,3 +98,16 @@ export function usePresentationScene(): [PresentationScene, (patch: Partial<Pres
   }
   return [s, set]
 }
+
+/** Un material de Preferències canvia de nom (o se substitueix): l'escena de Presentació el segueix. */
+export function renamePresentationMaterial(from: string, to: string): void {
+  const s = readPresentationScene()
+  if (s.floorMaterial !== from && s.wallMaterial !== from) return
+  const next = { ...s, ...(s.floorMaterial === from ? { floorMaterial: to } : {}), ...(s.wallMaterial === from ? { wallMaterial: to } : {}) }
+  try {
+    localStorage.setItem(KEY, JSON.stringify(next))
+  } catch {
+    return
+  }
+  window.dispatchEvent(new Event(EVENT))
+}

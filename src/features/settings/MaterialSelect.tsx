@@ -1,6 +1,6 @@
-import { Accordion, Box, Button, CloseButton, Drawer, Field, HStack, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Accordion, Badge, Box, Button, CloseButton, Drawer, Field, HStack, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
-import { LuCheck } from "react-icons/lu"
+import { LuCheck, LuTriangleAlert } from "react-icons/lu"
 import { MATERIAL_CATEGORIES, materialCategory, type MaterialPref } from "../../core/model"
 import { MaterialThumb } from "./MaterialBits"
 import { useSettings } from "./SettingsContext"
@@ -18,6 +18,10 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
   const { settings } = useSettings()
   const current = materials.find((m) => m.name === value) ?? settings.materials.find((m) => m.name === value)
   const known = !!current
+  // El valor actual no és dels que es poden triar aquí (un moble fet amb vidre al cos, un material que ja no hi és): es
+  // continua veient com a valor actual, amb un avís.
+  const offList = !!value && !materials.some((m) => m.name === value)
+  const offNote = !known ? "No és a Preferències" : materialCategory(current) === "sim" ? "Només de simulació" : materialCategory(current) === "hard" ? "No es talla a la CNC" : "No és per a aquí"
   const cats = MATERIAL_CATEGORIES.map((c) => ({ ...c, list: materials.filter((m) => materialCategory(m) === c.id) })).filter((c) => c.list.length)
   const [openCats, setOpenCats] = useState<string[]>([])
   const pick = (name: string) => {
@@ -38,8 +42,8 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
         fontWeight="normal"
         aria-label={`${label}: ${current?.name ?? (value || emptyLabel || "sense material")}`}
         onClick={() => {
-          // S'obre per la categoria del material triat.
-          setOpenCats(current ? [materialCategory(current)] : [])
+          // S'obre per la categoria del material triat (sense, si només n'hi ha una, aquella).
+          setOpenCats(current ? [materialCategory(current)] : cats.length === 1 ? [cats[0]!.id] : [])
           setOpen(true)
         }}
       >
@@ -47,7 +51,17 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
         <Text truncate textAlign="start">
           {current?.name ?? (value || emptyLabel || "(sense material)")}
         </Text>
+        {offList && (
+          <Box as="span" color="orange.fg" flexShrink={0} ml="auto" display="inline-flex" title={offNote}>
+            <LuTriangleAlert />
+          </Box>
+        )}
       </Button>
+      {offList && (
+        <Badge size="xs" colorPalette="orange" variant="subtle" alignSelf="flex-start" mt={1} whiteSpace="normal">
+          {offNote}
+        </Badge>
+      )}
 
       <Drawer.Root open={open} onOpenChange={(e) => setOpen(e.open)} placement={{ base: "bottom", md: "end" }} size={{ base: "full", md: "sm" }}>
         <Portal>
@@ -65,9 +79,9 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
                       <Text fontSize="sm">{emptyLabel}</Text>
                     </Row>
                   )}
-                  {value && !known && (
+                  {offList && (
                     <Text fontSize="xs" color="fg.muted">
-                      Ara: «{value}» (no és a Preferències).
+                      Ara: «{value}» ({offNote.toLowerCase()}). Es manté fins que en triïs un altre.
                     </Text>
                   )}
                   <Accordion.Root multiple collapsible lazyMount variant="plain" value={openCats} onValueChange={(e) => setOpenCats(e.value)}>

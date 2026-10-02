@@ -548,19 +548,25 @@ export function resolveFinish(materials: MaterialPref[], name: string): FinishSp
   return { kind: "color", color: "#e6cfa6", roughness: 0.85 }
 }
 
+/** Cantell que és el mateix tauler: lacat, «sense cantell» o buit (el cantell es veu del color del material). */
+const SELF_EDGE = /lacat|lacad|sense cantell|^\s*$/i
+
 /**
- * Acabat del cantell d'un material, pel nom del cantell (p. ex. «Xapa de noguera»): primer el material de la mateixa
- * foto que el del tauler (una xapa de foto té el cantell de la mateixa foto), després el mateix material si el
- * cantell en diu la primera paraula, després un altre material que hi surti i les paraules clau; si no, el del material.
+ * Acabat del cantell d'un material, pel nom del cantell (p. ex. «Xapa de noguera»): un cantell lacat, «sense cantell» o
+ * buit és el mateix tauler (un MDF lacat antracita no fa el cantell blanc); si no, el material de la mateixa foto que el
+ * del tauler (una xapa de foto té el cantell de la mateixa foto), després el mateix material si el cantell en diu la
+ * primera paraula, després un altre material que hi surti **sencer** (no per la primera paraula: «Lacat (sense
+ * cantell)» no és «Lacat blanc mat») i les paraules clau; si no, el del material.
  */
 export function resolveEdgeFinish(materials: MaterialPref[], name: string): FinishSpec {
   const pref = materials.find((m) => m.name === name)
   const edge = (pref?.edge ?? "").toLowerCase()
+  if (pref && SELF_EDGE.test(edge)) return finishOfPref(pref)
   if (pref && edge) {
-    const mentioned = (m: MaterialPref) => edge.includes(m.name.toLowerCase().split(" ")[0] ?? "\u0000")
+    const firstWord = (m: MaterialPref) => edge.includes(m.name.toLowerCase().split(" ")[0] ?? "\u0000")
     const src = pref.finish.kind === "image" ? pref.finish.src : undefined
-    const sameSet = src === undefined ? undefined : materials.find((m) => m.finish.kind === "image" && m.finish.src === src && mentioned(m))
-    const byMaterial = sameSet ?? (mentioned(pref) ? pref : materials.find((m) => m.name !== name && mentioned(m)))
+    const sameSet = src === undefined ? undefined : materials.find((m) => m.finish.kind === "image" && m.finish.src === src && firstWord(m))
+    const byMaterial = sameSet ?? (firstWord(pref) ? pref : materials.find((m) => m.name !== name && edge.includes(m.name.toLowerCase())))
     if (byMaterial) return finishOfPref(byMaterial)
     for (const [rx, f] of KEYWORDS) if (rx.test(edge)) return f
   }

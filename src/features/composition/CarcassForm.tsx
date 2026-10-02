@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { DEFAULT_GRILLE, jointApplies, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, backChoices, boardChoices, jointApplies, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
@@ -230,7 +230,8 @@ export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !==
   const sameBack = c.backMaterial === c.material && c.backThickness === c.thickness
   // Mateix material però un altre gruix: al nesting van a taulers diferents.
   const backApart = c.backMaterial === c.material && c.backThickness !== c.thickness
-  const boards = settings.materials.filter((m) => !m.forBacks && m.category !== "sim")
+  // Només els de CNC (`boardChoices`/`backChoices`); un moble fet amb un altre continua igual (avís al selector).
+  const boards = boardChoices(settings.materials)
   const setThickness = (thickness: number) => onPatch(sameBack ? { thickness, backThickness: thickness } : { thickness })
   return (
     <Stack gap={3}>
@@ -254,7 +255,7 @@ export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !==
       </FormRow>
       {hasBack && <>
         <FormRow label="Fons" maxW="280px">
-          <MaterialSelect label="Fons" hideLabel materials={settings.materials.filter((m) => m.category !== "sim")} value={sameBack ? "" : c.backMaterial} emptyLabel="Com el cos" onChange={(v) => pickMaterial("backMaterial", "backThickness")(v || SAME)} />
+          <MaterialSelect label="Fons" hideLabel materials={backChoices(settings.materials)} value={sameBack ? "" : c.backMaterial} emptyLabel="Com el cos" onChange={(v) => pickMaterial("backMaterial", "backThickness")(v || SAME)} />
         </FormRow>
         {backMat ? (
           <FormRow label="Gruix del fons">

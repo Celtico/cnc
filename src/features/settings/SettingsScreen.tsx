@@ -2,7 +2,7 @@ import { useTheme } from "next-themes"
 import { ACCENTS, useAccent } from "../../theme/accent"
 import { QUALITY_LABELS, useRenderQuality, type RenderQuality } from "../../components/viewer/renderQuality"
 import { SKIES, useSkyPref, type SkyId } from "../../components/viewer/render/skies"
-import { FLOORS, LIGHTS, SKIRTINGS, WALLS, usePresentationScene, type FloorId } from "../../components/viewer/presentationScene"
+import { FLOORS, LIGHTS, SKIRTINGS, WALLS, renamePresentationMaterial, usePresentationScene, type FloorId } from "../../components/viewer/presentationScene"
 import { floorSwatchUrl } from "../../components/viewer/floorTextures"
 import type { Composition } from "../../core/model"
 import { ScenePreview } from "./ScenePreview"
@@ -38,6 +38,15 @@ import { isEditable } from "./materialPreview"
 import { toaster } from "../../components/ui/toaster"
 import {
   DEFAULT_SETTINGS,
+  backChoices,
+  boardChoices,
+  fixMaterialRefs,
+  restoredFinish,
+  switchFinish,
+  materialNameError,
+  removeMaterialFromSettings,
+  renameMaterialInSettings,
+  tidyMaterialName,
   defaultMachine,
   defaultMachineRules,
   MATERIAL_CATEGORIES,
@@ -66,6 +75,8 @@ import { MachinesList } from "./MachinesPane"
 import { MachineRulesGroup } from "./MachineRules"
 import { MapThumb, TextureMapRows, TextureSetRow } from "./TextureMapRows"
 import { encodeMap, pickFiles } from "./textureImport"
+import { DeleteMaterialDialog } from "./DeleteMaterialDialog"
+import { renameMaterialEverywhere, type RenameCount } from "../../db/materialRefs"
 
 type SectionKey = keyof Omit<Settings, "version">
 
@@ -104,6 +115,30 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
 
   const set = <K extends SectionKey>(key: K, value: Settings[K]) => setDraft((d) => ({ ...d, [key]: value }))
 
+  // Noms de material canviats (canviar el nom, eliminar amb substitut, importar un fitxer antic): els mobles, objectes i
+  // ambients desats el segueixen en una transacció, amb les preferències noves (si són vàlides).
+  const cascade = (renames: [string, string][], next: Settings): Promise<RenameCount> => {
+    for (const [from, to] of renames) renamePresentationMaterial(from, to)
+    const valid = SettingsSchema.safeParse(next)
+    return renameMaterialEverywhere(renames, valid.success ? () => save(valid.data) : undefined)
+  }
+  const counted = (c: RenameCount) => `${c.projects} ${c.projects === 1 ? "moble" : "mobles"} i ${c.ambients} ${c.ambients === 1 ? "ambient" : "ambients"} actualitzats`
+  const renameMaterial = (from: string, to: string) => {
+    const next = renameMaterialInSettings(draft, from, to)
+    setDraft(next)
+    void cascade([[from, to]], next).then((c) => toaster.create({ title: `Nom canviat: ${counted(c)}`, type: "success" }))
+  }
+  const [deleting, setDeleting] = useState<MaterialPref | null>(null)
+  const confirmDelete = (replacement: string | null) => {
+    const m = deleting
+    setDeleting(null)
+    if (!m) return
+    const next = removeMaterialFromSettings(draft, m.name, replacement)
+    setDraft(next)
+    if (replacement) void cascade([[m.name, replacement]], next).then((c) => toaster.create({ title: `«${m.name}» eliminat`, description: `Passen a «${replacement}»: ${counted(c)}.`, type: "success" }))
+    else toaster.create({ title: `«${m.name}» eliminat`, type: "info" })
+  }
+
   const doExport = () => downloadText(settingsToJson(validation.success ? validation.data : draft), "mobles-preferencies.json", "application/json")
   const doImport = async (file: File | undefined) => {
     if (!file) return
@@ -113,13 +148,16 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
       toaster.create({ title: "Preferències importades amb avisos", description: res.problems.join(" "), type: "warning", duration: 8000 })
     } else toaster.create({ title: "Preferències importades", type: "success" })
     setDraft(res.settings)
+    // Un fitxer d'abans de la v12 porta «Melamina 19», «DM 10» o «Pi»: els mobles desats segueixen el nom nou.
+    if (res.renames?.length) void cascade(res.renames, res.settings)
     if (fileInput.current) fileInput.current.value = ""
   }
   const confirmReset = () => {
     if (!reset) return
     const key = reset.key
     // Regles de mecanitzat: `defaultMachineRules()` (les del taller), com la resta de seccions.
-    setDraft((d) => ({ ...d, [key]: key === "machiningRules" ? defaultMachineRules() : structuredClone(DEFAULT_SETTINGS[key]) }))
+    // Després, les referències a materials que ja no hi són (per defecte, mides de tauler) es corregeixen.
+    setDraft((d) => fixMaterialRefs({ ...d, [key]: key === "machiningRules" ? defaultMachineRules() : structuredClone(DEFAULT_SETTINGS[key]) }))
     toaster.create({ title: `«${reset.label}» restaurat`, type: "info" })
     setReset(null)
   }
@@ -166,14 +204,16 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             <MaterialsList
               materials={draft.materials}
               onChange={(materials) => set("materials", materials)}
+              onRename={renameMaterial}
+              onDelete={setDeleting}
               footer={
                 // Sota el detall (no penjat a dalt de la pàgina): quin tauler i quin fons tenen els mòduls nous.
                 <SettingsGroup icon={<LuPalette />} title="Per defecte als mòduls nous" summary={`${draft.defaults.material} ${draft.defaults.thickness} · fons ${draft.defaults.backMaterial} ${draft.defaults.backThickness}`}>
                   <FormRow label="Tauler">
-                    <DefaultPick label="Tauler" materials={draft.materials.filter((m) => !m.forBacks && m.category !== "sim")} all={draft.materials} material={draft.defaults.material} thickness={draft.defaults.thickness} onChange={(material, thickness) => set("defaults", { ...draft.defaults, material, thickness })} />
+                    <DefaultPick label="Tauler" materials={boardChoices(draft.materials)} all={draft.materials} material={draft.defaults.material} thickness={draft.defaults.thickness} onChange={(material, thickness) => set("defaults", { ...draft.defaults, material, thickness })} />
                   </FormRow>
                   <FormRow label="Fons">
-                    <DefaultPick label="Fons" materials={draft.materials} all={draft.materials} material={draft.defaults.backMaterial} thickness={draft.defaults.backThickness} onChange={(backMaterial, backThickness) => set("defaults", { ...draft.defaults, backMaterial, backThickness })} />
+                    <DefaultPick label="Fons" materials={backChoices(draft.materials)} all={draft.materials} material={draft.defaults.backMaterial} thickness={draft.defaults.backThickness} onChange={(backMaterial, backThickness) => set("defaults", { ...draft.defaults, backMaterial, backThickness })} />
                   </FormRow>
                 </SettingsGroup>
               }
@@ -210,7 +250,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
                   <Fragment key={i}>
                     {/* Al mòbil, el material ocupa tota la fila i les mides van a sota. */}
                     <Box gridColumn={{ base: "1 / -1", sm: "auto" }} mt={{ base: i > 0 ? 2 : 0, sm: 0 }} minW={0}>
-                      <MaterialSelect label="Material" hideLabel materials={draft.materials} value={s.material} emptyLabel="Tots els altres" onChange={(material) => update({ material })} />
+                      <MaterialSelect label="Material" hideLabel materials={backChoices(draft.materials)} value={s.material} emptyLabel="Tots els altres" onChange={(material) => update({ material })} />
                     </Box>
                     <NumberField label="" ariaLabel="Llarg" value={s.w} min={300} max={6000} step={10} onChange={(w) => update({ w })} />
                     <NumberField label="" ariaLabel="Ample" value={s.h} min={300} max={6000} step={10} onChange={(h) => update({ h })} />
@@ -301,6 +341,8 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
           </Pane>
       </SettingsPages>
 
+      <DeleteMaterialDialog material={deleting} settings={draft} onCancel={() => setDeleting(null)} onConfirm={confirmDelete} />
+
       <Dialog.Root role="alertdialog" open={reset !== null} onOpenChange={(e) => !e.open && setReset(null)}>
         <Portal>
           <Dialog.Backdrop />
@@ -311,6 +353,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
               </Dialog.Header>
               <Dialog.Body>
                 <Text>Es perdran els canvis d'aquesta secció i tornaran els valors inicials. Els mobles ja fets no canvien.</Text>
+                {reset?.key === "materials" && <Text mt={2}>El tauler i el fons per defecte i les mides de tauler d'un material que deixi d'existir tornen als inicials.</Text>}
                 {reset?.note && <Text mt={2}>{reset.note}</Text>}
               </Dialog.Body>
               <Dialog.Footer>
@@ -641,18 +684,19 @@ function parseList(text: string): number[] {
     .filter((n) => Number.isFinite(n) && n > 0)
 }
 
-function MaterialsList({ materials, onChange, footer }: { materials: MaterialPref[]; onChange: (m: MaterialPref[]) => void; footer?: ReactNode }) {
+function MaterialsList({ materials, onChange, onRename, onDelete, footer }: { materials: MaterialPref[]; onChange: (m: MaterialPref[]) => void; onRename: (from: string, to: string) => void; onDelete: (m: MaterialPref) => void; footer?: ReactNode }) {
   const head = useContext(PaneHeadContext)
   const [sel, setSel] = useSessionString(DETAIL_KEYS.materials)
   const [cat, setCat] = useSessionString("mobles:settings-material-cat")
   const [query, setQuery] = useState("")
   const [justAdded, setJustAdded] = useState<string | null>(null)
   const update = (i: number, patch: Partial<MaterialPref>) => onChange(materials.map((m, k) => (k === i ? { ...m, ...patch } : m)))
+  // Noms únics sense majúscules ni espais (com l'esquema, `materialNameKey`).
   const uniqueName = (base: string) => {
-    const names = new Set(materials.map((m) => m.name))
-    if (!names.has(base)) return base
+    const taken = (n: string) => materialNameError(materials, "", n) !== null
+    if (!taken(base)) return base
     let n = 2
-    while (names.has(`${base} ${n}`)) n++
+    while (taken(`${base} ${n}`)) n++
     return `${base} ${n}`
   }
   const [library, setLibrary] = useState(false)
@@ -677,11 +721,18 @@ function MaterialsList({ materials, onChange, footer }: { materials: MaterialPre
   useEffect(() => {
     if (sel !== null && i < 0) setSel(null)
   }, [sel, i, setSel])
+  const openExisting = (id: string) => {
+    const x = materials.find((y) => y.id === id)
+    if (x && cat && cat !== "all" && cat !== materialCategory(x)) setCat("all")
+    setSel(id)
+  }
+  // «Per defecte als mòduls nous» només sota un tauler o un fons (els que poden ser-ho).
+  const showDefaults = m !== null && (materialCategory(m) === "board" || materialCategory(m) === "back")
   return (
     <>
     <MasterDetail
       head={head}
-      footer={footer}
+      footer={showDefaults ? footer : undefined}
       // Per categories: Taulers · Fons · Metall, pedra i vidre · Simulació.
       filters={[{ id: "all", label: "Tots", count: materials.length }, ...MATERIAL_CATEGORIES.map((c) => ({ id: c.id, label: c.label, count: materials.filter((x) => materialCategory(x) === c.id).length }))]}
       filter={filterId}
@@ -708,6 +759,8 @@ function MaterialsList({ materials, onChange, footer }: { materials: MaterialPre
             key={m.id}
             m={m}
             onChange={(patch) => update(i, patch)}
+            nameError={(name) => materialNameError(materials, m.id, name)}
+            onRename={(name) => onRename(m.name, name)}
             autoFocusName={justAdded === m.id}
             onDuplicate={() => {
               const copy = { ...m, id: newId("mat"), name: uniqueName(`${m.name} (còpia)`) }
@@ -716,16 +769,13 @@ function MaterialsList({ materials, onChange, footer }: { materials: MaterialPre
               onChange(next)
               setSel(copy.id)
             }}
-            onDelete={() => {
-              onChange(materials.filter((_, k) => k !== i))
-              setSel(null)
-            }}
+            onDelete={() => onDelete(m)}
             canDelete={materials.length > 1}
           />
         )
       }
     />
-    <MaterialLibrary open={library} onClose={() => setLibrary(false)} onPick={fromLibrary} onBlank={blank} />
+    <MaterialLibrary open={library} onClose={() => setLibrary(false)} onPick={fromLibrary} onBlank={blank} materials={materials} onOpenExisting={openExisting} />
     </>
   )
 }
@@ -737,8 +787,27 @@ function materialSummary(m: MaterialPref): string {
   return `${FINISH_LABEL[m.finish.kind]} · ${m.thicknesses.join(" · ")} mm${m.edge ? ` · ${m.edge}` : ""}`
 }
 
-function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocusName }: { m: MaterialPref; onChange: (p: Partial<MaterialPref>) => void; onDuplicate: () => void; onDelete: () => void; canDelete: boolean; autoFocusName?: boolean }) {
+function MaterialCard({ m, onChange, onRename, nameError, onDuplicate, onDelete, canDelete, autoFocusName }: { m: MaterialPref; onChange: (p: Partial<MaterialPref>) => void; onRename: (name: string) => void; nameError: (name: string) => string | null; onDuplicate: () => void; onDelete: () => void; canDelete: boolean; autoFocusName?: boolean }) {
   const [editing, setEditing] = useState(false)
+  // El nom es canvia en acabar (sortir del camp o Retorn), no a cada tecla: llavors els mobles i ambients que el fan
+  // servir el segueixen (`renameMaterialEverywhere`). Repetit o buit: l'error a sota i, en acabar, es queda l'antic.
+  const [nameText, setNameText] = useState(m.name)
+  useEffect(() => setNameText(m.name), [m.name])
+  const typedError = nameText === m.name ? null : nameError(nameText)
+  const commitName = () => {
+    const next = tidyMaterialName(nameText)
+    if (next === m.name) {
+      setNameText(m.name)
+      return
+    }
+    const err = nameError(next)
+    if (err) {
+      toaster.create({ title: "El nom no s'ha canviat", description: err, type: "warning" })
+      setNameText(m.name)
+      return
+    }
+    onRename(next)
+  }
   const finish = m.finish
   // Fotos d'abans (sense proporció): es mesura la imatge un cop.
   const needsAspect = finish.kind === "image" && finish.aspect === undefined ? finish.src : null
@@ -751,14 +820,20 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
   }, [needsAspect])
   const swatch = finish.kind === "wood" || finish.kind === "image" ? undefined : finish.color
   const setKind = (k: Finish["kind"]) => {
+    if (k === finish.kind) return
+    // Si ja havia tingut aquest acabat (o és una foto de l'app), es recupera tal com era.
+    const back = restoredFinish(m, k)
+    if (back) {
+      onChange(switchFinish(m, back))
+      return
+    }
     if (k === "image") {
       // Primer cal triar la foto; si es cancel·la, l'acabat no canvia.
-      void pickTexture().then((t) => t && onChange({ finish: { kind: "image", tileMm: 800, ...t } }))
+      void pickTexture().then((t) => t && onChange(switchFinish(m, { kind: "image", tileMm: 800, ...t })))
       return
     }
     const color = swatch ?? "#e5e5e5"
-    onChange({
-      finish:
+    onChange(switchFinish(m, 
         k === "wood"
           ? { kind: "wood", species: "oak" }
           : k === "tiles"
@@ -768,7 +843,7 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
               : k === "fabric"
                 ? { kind: "fabric", color }
                 : { kind: k, color },
-    })
+    ))
   }
   const category = MATERIAL_CATEGORIES.find((c) => c.id === materialCategory(m))!
   return (
@@ -785,8 +860,17 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
             size="md"
             fontSize="lg"
             fontWeight="semibold"
-            value={m.name}
-            onChange={(e) => onChange({ name: e.target.value })}
+            value={nameText}
+            onChange={(e) => setNameText(e.target.value)}
+            onBlur={commitName}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur()
+              else if (e.key === "Escape") {
+                setNameText(m.name)
+                e.currentTarget.blur()
+              }
+            }}
+            aria-invalid={typedError ? true : undefined}
             autoFocus={autoFocusName}
             onFocus={(e) => autoFocusName && e.currentTarget.select()}
             aria-label="Nom del material"
@@ -794,9 +878,15 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
             _hover={{ borderColor: "border" }}
             _focus={{ borderColor: "wood.solid" }}
           />
-          <Text fontSize="xs" color="fg.muted" truncate>
-            {materialSummary(m)}
-          </Text>
+          {typedError ? (
+            <Text fontSize="xs" color="fg.error" role="alert">
+              {typedError}
+            </Text>
+          ) : (
+            <Text fontSize="xs" color="fg.muted" truncate>
+              {materialSummary(m)}
+            </Text>
+          )}
         </Stack>
         <HStack gap={0} flexShrink={0} pt={1.5}>
           <IconButton aria-label="Duplicar material" title="Duplicar" size="sm" variant="ghost" onClick={onDuplicate}>
@@ -899,6 +989,8 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
       </FormSection>
 
       <FormSection title="Fabricació">
+        {/* Els de simulació només es veuen: sense gruixos, cantell ni veta (es conserven per si es canvia de categoria). */}
+        {category.id !== "sim" && <>
         <FormRow label="Gruixos" help="Els que es poden triar a les peces d'aquest material.">
           <ThicknessChips value={m.thicknesses} onChange={(thicknesses) => onChange({ thicknesses })} label={false} />
         </FormRow>
@@ -912,6 +1004,7 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
             <Switch.Label fontSize="sm">Té veta</Switch.Label>
           </Switch.Root>
         </FormRow>
+        </>}
         <FormRow label="Categoria" help={category.hint}>
           <ChoiceChips<MaterialCategory>
             label="Categoria"
@@ -931,8 +1024,9 @@ function MaterialCard({ m, onChange, onDuplicate, onDelete, canDelete, autoFocus
 
 /** Material i gruix per defecte en una fila: el gruix es tria d'entre els del material. */
 function DefaultPick({ label, materials, all, material, thickness, onChange }: { label: string; materials: MaterialPref[]; all: MaterialPref[]; material: string; thickness: number; onChange: (material: string, thickness: number) => void }) {
-  const list = all.find((m) => m.name === material)?.thicknesses ?? []
-  const options = list.includes(thickness) ? list : [...list, thickness].sort((a, b) => a - b)
+  const known = all.find((m) => m.name === material)
+  const list = known?.thicknesses ?? []
+  // Un gruix que no és dels del material no s'afegeix com a pastilla: una nota a sota.
   return (
     // Les pastilles del gruix van a sota (no hi caben al costat del material).
     <Stack gap={2} maxW="400px">
@@ -947,7 +1041,18 @@ function DefaultPick({ label, materials, all, material, thickness, onChange }: {
           onChange(name, t.includes(thickness) || !t.length ? thickness : t.reduce((a, b) => (Math.abs(b - thickness) < Math.abs(a - thickness) ? b : a)))
         }}
       />
-      <ChoiceChips label={`Gruix ${label.toLowerCase()}`} options={options.map((t) => ({ id: String(t), label: `${t} mm` }))} value={String(thickness)} onChange={(v) => onChange(material, Number(v))} />
+      {list.length > 0 && <ChoiceChips label={`Gruix ${label.toLowerCase()}`} options={list.map((t) => ({ id: String(t), label: `${t} mm` }))} value={String(thickness)} onChange={(v) => onChange(material, Number(v))} />}
+      {!known ? (
+        <Text fontSize="xs" color="fg.muted">
+          El material «{material}» no és a Preferències: tria'n un altre.
+        </Text>
+      ) : (
+        !list.includes(thickness) && (
+          <Text fontSize="xs" color="fg.muted">
+            El gruix {thickness} mm no és dels gruixos de «{material}»: tria'n un.
+          </Text>
+        )
+      )}
     </Stack>
   )
 }

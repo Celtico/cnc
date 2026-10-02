@@ -22,17 +22,21 @@ export function TextureEditor({ m, open, onClose, onApply }: { m: MaterialPref; 
   useEffect(() => {
     if (open && isEditable(m.finish)) setF(structuredClone(m.finish))
   }, [open, m.finish])
-  if (!f) return null
-  const preview: MaterialPref = { ...m, finish: f }
+  // El diàleg es queda muntat (tancat) mentre el material sigui editable: muntar-lo ja obert feia que el focus que hi
+  // entra comptés com «de fora» i es tanqués sol. Abans del primer `setF`, l'acabat del material.
+  const cur = f ?? (isEditable(m.finish) ? m.finish : null)
+  if (!cur) return null
+  const preview: MaterialPref = { ...m, finish: cur }
   // Mostra de 1200 mm d'ample (× zoom): es veu com es repeteix.
   const W = 560
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size={{ base: "full", md: "xl" }} placement="center">
+    <Dialog.Root open={open} onOpenChange={(e) => !e.open && onClose()} size={{ base: "full", md: "xl" }} placement="center" scrollBehavior="inside">
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          {/* La mida «full» del mòbil posa l'alçada a 100dvh i la «xl» no la treu: a l'ordinador, l'alçada del contingut. */}
-          <Dialog.Content pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} pb={{ base: "env(safe-area-inset-bottom, 0px)", md: 0 }} h={{ base: "100dvh", md: "auto" }} minH={{ md: "auto" }}>
+          {/* La mida «full» del mòbil posa l'alçada a 100dvh i la «xl» no la treu: a l'ordinador, l'alçada del contingut fins
+              al 90 % de la finestra i el cos es desplaça (amb una finestra baixa, el títol i els botons es queden a la vista). */}
+          <Dialog.Content pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} pb={{ base: "env(safe-area-inset-bottom, 0px)", md: 0 }} h={{ base: "100dvh", md: "auto" }} minH={{ md: "auto" }} maxH={{ md: "90dvh" }}>
             <Dialog.Header>
               <Dialog.Title>Editar la textura · {m.name}</Dialog.Title>
             </Dialog.Header>
@@ -48,7 +52,7 @@ export function TextureEditor({ m, open, onClose, onApply }: { m: MaterialPref; 
                   </HStack>
                 </Stack>
                 <Stack gap={3} flex={1} minW={0}>
-                  <Controls f={f} setF={setF} />
+                  <Controls f={cur} setF={setF} />
                 </Stack>
               </Flex>
             </Dialog.Body>
@@ -59,7 +63,7 @@ export function TextureEditor({ m, open, onClose, onApply }: { m: MaterialPref; 
               <Button
                 colorPalette="wood"
                 onClick={() => {
-                  onApply(f)
+                  onApply(cur)
                   onClose()
                 }}
               >

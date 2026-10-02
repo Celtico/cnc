@@ -24,6 +24,7 @@ import {
   DEFAULT_JOINERY,
   insertPartCopy,
   materialByName,
+  partChoices,
   reorientPart,
   PART_AXES,
   partsBox,
@@ -80,7 +81,8 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
   const mat = materialByName(settings, p.material)
   const mine = joints.filter((j) => j.a === id || j.b === id)
   const nameOf = (pid: string) => comp.parts?.find((x) => x.id === pid)?.name ?? "?"
-  const boards = settings.materials.filter((m) => !m.forBacks)
+  // Tot menys els fons: ferro, pedra i vidre surten del nesting; els de simulació, per als objectes (`partChoices`).
+  const boards = partChoices(settings.materials)
   const pickMaterial = (name: string) => {
     const m = materialByName(settings, name)
     const t = m && m.cnc !== false && !m.thicknesses.includes(p.thickness) ? m.thicknesses.reduce((a, b) => (Math.abs(b - p.thickness) < Math.abs(a - p.thickness) ? b : a)) : p.thickness

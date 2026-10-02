@@ -234,3 +234,70 @@ describe("importar preferències", () => {
     expect(r.problems[0]).toMatch(/JSON/)
   })
 })
+
+describe("v12: duplicats fora i noms únics", () => {
+  const v11 = (materials: MaterialPref[], extra: Partial<Settings> = {}) => ({ ...DEFAULT_SETTINGS, version: 11, materials, ...extra })
+  const mel19: MaterialPref = { id: "mel-19", name: "Melamina 19", thicknesses: [16, 19], hasGrain: false, finish: { kind: "color", color: "#f2f0eb" }, edge: "PVC blanc 1 mm" }
+  const dm10: MaterialPref = { id: "dm-10", name: "DM 10", thicknesses: [10], hasGrain: false, finish: { kind: "color", color: "#c9b79a" }, edge: "", forBacks: true }
+  const pine = (name: string): MaterialPref => ({ ...SIM_MATERIALS.find((m) => m.id === "sim-pine")!, name })
+  const base = DEFAULT_SETTINGS.materials.filter((m) => m.id !== "sim-pine")
+
+  it("els valors inicials ja no porten «Melamina 19», «DM 10» ni «Pi» i tenen noms únics", () => {
+    const names = DEFAULT_SETTINGS.materials.map((m) => m.name)
+    expect(names).not.toContain("Melamina 19")
+    expect(names).not.toContain("DM 10")
+    expect(names).not.toContain("Pi")
+    expect(names).toContain("Fulles de pi")
+    expect(SETTINGS_VERSION).toBe(12)
+  })
+
+  it("«Melamina 19» i «DM 10» inicials passen als de sempre (amb les referències de les preferències) i «Pi» a «Fulles de pi»", () => {
+    const res = parseSettings(v11([...base, mel19, dm10, pine("Pi")], {
+      defaults: { material: "Melamina 19", thickness: 16, backMaterial: "DM 10", backThickness: 10 },
+      boards: { ...DEFAULT_SETTINGS.boards, sheets: [{ material: "Melamina 19", w: 2440, h: 1220 }, { material: "", w: 2800, h: 2070 }] },
+    }))
+    expect(res.problems).toEqual([])
+    expect(res.migrated).toBe(true)
+    const names = res.settings.materials.map((m) => m.name)
+    expect(names).not.toContain("Melamina 19")
+    expect(names).not.toContain("DM 10")
+    expect(names).toContain("Fulles de pi")
+    expect(res.settings.defaults).toEqual({ material: "Melamina blanca", thickness: 16, backMaterial: "DM (fons)", backThickness: 10 })
+    expect(res.settings.boards.sheets[0]!.material).toBe("Melamina blanca")
+    expect(res.renames).toEqual([["Melamina 19", "Melamina blanca"], ["DM 10", "DM (fons)"], ["Pi", "Fulles de pi"]])
+    // Els gruixos del duplicat passen al de sempre (ja els tenia).
+    expect(res.settings.materials.find((m) => m.name === "Melamina blanca")!.thicknesses).toEqual([10, 16, 19])
+    expect(SettingsSchema.safeParse(res.settings).success).toBe(true)
+  })
+
+  it("si l'usuari els ha retocat (o el de sempre no hi és), es queden; i es fa un sol cop", () => {
+    const mine = { ...mel19, finish: { kind: "color" as const, color: "#ffffff" } }
+    const res = parseSettings(v11([...base.filter((m) => m.name !== "DM (fons)"), mine, dm10, pine("Pi"), { ...pine("Fulles de pi"), id: "u-pi" }]))
+    const names = res.settings.materials.map((m) => m.name)
+    expect(names).toContain("Melamina 19")
+    expect(names).toContain("DM 10")
+    // «Fulles de pi» ja és d'un altre: «Pi» es queda.
+    expect(names).toContain("Pi")
+    expect(res.renames).toEqual([])
+    // Desades ja a la v12: res no es torna a migrar.
+    const again = parseSettings({ ...DEFAULT_SETTINGS, materials: [...base, mel19, dm10] })
+    expect(again.settings.materials.map((m) => m.name)).toContain("Melamina 19")
+    expect(again.renames).toEqual([])
+  })
+
+  it("l'esquema rebutja noms repetits (majúscules i espais a part)", () => {
+    const dup = { ...DEFAULT_SETTINGS, materials: [...DEFAULT_SETTINGS.materials, { ...DEFAULT_SETTINGS.materials[0]!, id: "x", name: " melamina  BLANCA" }] }
+    const r = SettingsSchema.safeParse(dup)
+    expect(r.success).toBe(false)
+    expect(r.error!.issues[0]!.message).toMatch(/Nom repetit/)
+  })
+
+  it("en llegir-les, un nom repetit passa a «X 2» amb un avís (sense perdre el material)", () => {
+    const copy = { ...DEFAULT_SETTINGS.materials[0]!, id: "x", name: "Melamina Blanca", finish: { kind: "color" as const, color: "#fafafa" } }
+    const res = parseSettings({ ...DEFAULT_SETTINGS, materials: [...DEFAULT_SETTINGS.materials, copy] })
+    expect(res.problems).toEqual(["Materials: «Melamina Blanca» estava repetit; l'altre ara es diu «Melamina Blanca 2»."])
+    expect(res.settings.materials.find((m) => m.id === "x")).toMatchObject({ name: "Melamina Blanca 2", finish: { color: "#fafafa" } })
+    expect(res.settings.materials.find((m) => m.id === "mel-white")!.name).toBe("Melamina blanca")
+    expect(SettingsSchema.safeParse(res.settings).success).toBe(true)
+  })
+})

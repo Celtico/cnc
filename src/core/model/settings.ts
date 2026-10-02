@@ -2,7 +2,7 @@ import { z } from "zod"
 import { DEFAULT_CABINET } from "./cabinet"
 import { DEFAULT_HARDWARE, HardwareSchema, type Module } from "./composition"
 import { PHOTO_MATERIALS } from "./textureSets"
-import { rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
+import { deepEqual, MATERIAL_MERGES, rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
 import { defaultMachine, defaultMachineRules, MachineRulesSchema, MachineSchema, migrateMachine, repairMachine, withWorkshopRules, type Machine, type MachineRules } from "./machine"
 import { repairValue } from "./repair"
 
@@ -17,7 +17,7 @@ import { repairValue } from "./repair"
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 11
+export const SETTINGS_VERSION = 12
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -177,6 +177,11 @@ export const MaterialPrefSchema = z.object({
   thicknesses: z.array(mm.min(3, "Gruix entre 3 i 60 mm").max(60, "Gruix entre 3 i 60 mm")).min(1, "Cal almenys un gruix"),
   hasGrain: z.boolean(),
   finish: FinishSchema,
+  /**
+   * Acabats d'abans per tipus (`kind` → acabat): en canviar l'Acabat es guarda el que hi havia i, si es torna
+   * a aquell tipus, es recupera (p. ex. la foto amb els mapes de relleu). Només aspecte, no fabricació.
+   */
+  previousFinishes: z.record(z.string(), FinishSchema).optional(),
   /** Cantell per defecte (nom lliure: "PVC blanc 1 mm", "Xapa de roure"). */
   edge: z.string(),
   /** Apte per a fons (DM 10, contraxapat...). */
@@ -200,6 +205,24 @@ export const MaterialPrefSchema = z.object({
   translucent: z.number().min(0).max(1).optional(),
 })
 export type MaterialPref = z.infer<typeof MaterialPrefSchema>
+
+/**
+ * Clau per comparar noms de material (únics a Preferències): sense majúscules ni espais repetits o als extrems
+ * («Melamina  blanca » = «melamina blanca»).
+ */
+export function materialNameKey(name: string): string {
+  return name.trim().replace(/\s+/g, " ").toLocaleLowerCase("ca")
+}
+
+/** Llista de materials amb noms únics (`materialNameKey`): el Zod de les preferències la rebutja si no. */
+const MaterialListSchema = z.array(MaterialPrefSchema).min(1).superRefine((list, ctx) => {
+  const seen = new Set<string>()
+  list.forEach((m, i) => {
+    const k = materialNameKey(m.name)
+    if (seen.has(k)) ctx.addIssue({ code: "custom", path: [i, "name"], message: `Nom repetit: «${m.name.trim()}»` })
+    seen.add(k)
+  })
+})
 export type MaterialCategory = NonNullable<MaterialPref["category"]>
 
 export const MATERIAL_CATEGORIES: { id: MaterialCategory; label: string; hint: string }[] = [
@@ -256,13 +279,13 @@ export const DisplayPrefSchema = z.object({ unit: z.enum(["mm", "cm"]) })
 export const SettingsSchema = z.object({
   version: z.literal(SETTINGS_VERSION),
   references: z.array(RefPresetSchema),
-  materials: z.array(MaterialPrefSchema).min(1),
+  materials: MaterialListSchema,
   boards: BoardsPrefSchema,
   hardware: HardwareSchema,
   gaps: GapsPrefSchema,
   label: LabelPrefSchema,
   display: DisplayPrefSchema,
-  /** Materials per defecte dels mòduls nous (id de `materials`). */
+  /** Materials per defecte dels mòduls nous (noms de `materials`: es canvien amb el nom, `renameMaterialInSettings`). */
   defaults: z.object({ material: z.string(), thickness: mm, backMaterial: z.string(), backThickness: mm }),
   /** Màquines CNC importades de Maestro (v10). */
   machines: z.array(MachineSchema),
@@ -365,7 +388,8 @@ export const SIM_MATERIALS: MaterialPref[] = [
   sim("sim-rug-grey", "Catifa gris", { kind: "fabric", color: "#9d9a94" }),
   sim("sim-leaves", "Fulles", { kind: "fabric", color: "#3e5a38" }, false, { translucent: 0.4 }),
   sim("sim-leaves-light", "Fulles clares", { kind: "fabric", color: "#6b8a4e" }, false, { translucent: 0.4 }),
-  sim("sim-pine", "Pi", { kind: "fabric", color: "#2f4a30" }, false, { translucent: 0.3 }),
+  // v12: «Pi» → «Fulles de pi» (es confonia amb la fusta de pi de la biblioteca).
+  sim("sim-pine", "Fulles de pi", { kind: "fabric", color: "#2f4a30" }, false, { translucent: 0.3 }),
   sim("sim-bark", "Escorça", { kind: "color", color: "#6d5a47" }),
   sim("sim-soil", "Terra de test", { kind: "color", color: "#4a3a2c" }),
   sim("sim-ceramic-white", "Ceràmica blanca", { kind: "lacquer", color: "#eeebe4" }),
@@ -400,8 +424,6 @@ export const SIM_MATERIALS_SINCE: Record<string, 3 | 4 | 5> = Object.fromEntries
  */
 const lacquered = (id: string, name: string, color: string): MaterialPref => ({ id, name, thicknesses: [16, 19, 30], hasGrain: false, finish: { kind: "lacquer", color }, edge: "Lacat (sense cantell)" })
 export const TEMPLATE_MATERIALS: MaterialPref[] = [
-  { id: "mel-19", name: "Melamina 19", thicknesses: [16, 19], hasGrain: false, finish: { kind: "color", color: "#f2f0eb" }, edge: "PVC blanc 1 mm" },
-  { id: "dm-10", name: "DM 10", thicknesses: [10], hasGrain: false, finish: { kind: "color", color: "#c9b79a" }, edge: "", forBacks: true },
   lacquered("mdf-lacquer-greige", "MDF lacat greige", "#c8bfb2"),
   lacquered("mdf-lacquer-anthracite", "MDF lacat antracita", "#3d3f42"),
   lacquered("mdf-lacquer-olive", "MDF lacat verd oliva", "#6f7550"),
@@ -410,6 +432,15 @@ export const TEMPLATE_MATERIALS: MaterialPref[] = [
   lacquered("mdf-lacquer-black", "MDF lacat negre", "#2b2b2b"),
   lacquered("mdf-lacquer-light-grey", "MDF lacat gris clar", "#cbcac6"),
   lacquered("mdf-lacquer-dark-green", "MDF lacat verd fosc", "#2f3b36"),
+]
+
+/**
+ * «Melamina 19» i «DM 10» (v9, els de `DEFAULT_CABINET`) eren iguals que «Melamina blanca» i «DM (fons)»: la v12 els
+ * treu (`mergeDuplicateMaterials`) si no s'han tocat i les plantilles ja fan servir els de sempre.
+ */
+export const RETIRED_TEMPLATE_MATERIALS: MaterialPref[] = [
+  { id: "mel-19", name: "Melamina 19", thicknesses: [16, 19], hasGrain: false, finish: { kind: "color", color: "#f2f0eb" }, edge: "PVC blanc 1 mm" },
+  { id: "dm-10", name: "DM 10", thicknesses: [10], hasGrain: false, finish: { kind: "color", color: "#c9b79a" }, edge: "", forBacks: true },
 ]
 
 /** Valors inicials: els de sempre amb l'acabat de foto on n'hi ha (v7) i la resta de fotos, sense duplicats. */
@@ -464,6 +495,11 @@ export interface SettingsParse {
   /** Problemes trobats (en català). Buit si tot era vàlid. */
   problems: string[]
   migrated: boolean
+  /**
+   * Noms de material canviats per la migració (v12, `mergeDuplicateMaterials`): `loadSettings` els segueix als mobles
+   * i ambients desats (`renameMaterialEverywhere`). Buit si no n'hi ha.
+   */
+  renames?: [string, string][]
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -543,7 +579,14 @@ export function parseSettings(raw: unknown): SettingsParse {
   // v8: mida real de les xapes de foto (roure 1100 → 600, noguera…), només si encara tenen la d'abans.
   const v8m = version < 8 && v7m !== BUILTIN_MATERIALS ? rescalePhotoTiles(v7m) : v7m
   // v9: gruixos perduts a la v7 (xapes de foto) i materials de les plantilles que faltaven (mai se'n sobreescriu cap).
-  const materials = version < 9 && v8m !== BUILTIN_MATERIALS ? [...restorePhotoThicknesses(v8m), ...missing(TEMPLATE_MATERIALS, v8m)] : v8m
+  const v9m = version < 9 && v8m !== BUILTIN_MATERIALS ? [...restorePhotoThicknesses(v8m), ...missing(TEMPLATE_MATERIALS, v8m)] : v8m
+  // v12: duplicats fora («Melamina 19», «DM 10», «Pi»); els noms canviats es segueixen a tot arreu (`renames`).
+  const v12 = version < 12 && v9m !== BUILTIN_MATERIALS ? mergeDuplicateMaterials(v9m) : { materials: v9m, renames: [] }
+  // Noms únics (sempre): un de repetit passa a «X 2» amb un avís (abans no es comprovava).
+  const unique = dedupeMaterialNames(v12.materials)
+  problems.push(...unique.problems)
+  const materials = unique.materials
+  const renamed = (n: string) => v12.renames.find(([from]) => from === n)?.[1] ?? n
   const boards = section("boards", BoardsPrefSchema, DEFAULT_SETTINGS.boards, "Taulers")
   const defaults = section("defaults", SettingsSchema.shape.defaults, DEFAULT_SETTINGS.defaults, "Materials (per defecte als mòduls nous)")
   const v7 = version < 7
@@ -560,19 +603,74 @@ export function parseSettings(raw: unknown): SettingsParse {
     version: SETTINGS_VERSION,
     references,
     materials,
-    boards: v7 ? { ...boards, sheets: boards.sheets.map((x) => ({ ...x, material: alias(x.material) })) } : boards,
+    boards: v7 || v12.renames.length ? { ...boards, sheets: boards.sheets.map((x) => ({ ...x, material: renamed(v7 ? alias(x.material) : x.material) })) } : boards,
     hardware: section("hardware", HardwareSchema, DEFAULT_SETTINGS.hardware, "Ferratges"),
     gaps: section("gaps", GapsPrefSchema, DEFAULT_SETTINGS.gaps, "Jocs per defecte"),
     label: section("label", LabelPrefSchema, DEFAULT_SETTINGS.label, "Etiquetes"),
     display: section("display", DisplayPrefSchema, DEFAULT_SETTINGS.display, "Visualització"),
-    defaults: v7 ? { ...defaults, material: alias(defaults.material), backMaterial: alias(defaults.backMaterial) } : defaults,
+    defaults: v7 || v12.renames.length ? { ...defaults, material: renamed(v7 ? alias(defaults.material) : defaults.material), backMaterial: renamed(v7 ? alias(defaults.backMaterial) : defaults.backMaterial) } : defaults,
     // v10: màquines CNC (additiu: abans no n'hi havia). Si n'hi ha més d'una per defecte, només la primera.
     // Una eina invàlida només treu aquella eina, no tota la màquina (`repairMachine`).
     // v11: les regles ja no són de la màquina (`machiningRules`); les `rules` desades es treuen.
     machines: machines.map(stripRules),
     machiningRules,
   }
-  return { settings, problems, migrated: migrated || problems.length > 0 }
+  return { settings, problems, migrated: migrated || problems.length > 0, renames: v12.renames }
+}
+
+/** Un material sense l'`id` (per comparar-lo amb un valor inicial). */
+const withoutId = ({ id: _id, ...rest }: MaterialPref) => rest
+
+/**
+ * v12: duplicats fora. «Melamina 19» → «Melamina blanca» i «DM 10» → «DM (fons)» (només si encara són els inicials de
+ * la v9 i el de sempre hi és; els gruixos passen al de sempre) i «Pi» (fulles, `sim-pine`) → «Fulles de pi» (si el nom
+ * és lliure). Torna els canvis de nom (`from → to`) perquè les preferències (per defecte, taulers) i els mobles i
+ * ambients desats els segueixin. Idempotent.
+ */
+export function mergeDuplicateMaterials(list: MaterialPref[]): { materials: MaterialPref[]; renames: [string, string][] } {
+  let out = list
+  const renames: [string, string][] = []
+  const has = (name: string) => out.some((m) => m.name === name)
+  for (const retired of RETIRED_TEMPLATE_MATERIALS) {
+    const target = MATERIAL_MERGES[retired.name]!
+    const dup = out.find((m) => m.name === retired.name)
+    const owner = out.find((m) => m.name === target)
+    if (!dup || !owner || !deepEqual(withoutId(dup), withoutId(retired))) continue
+    const thicknesses = [...new Set([...owner.thicknesses, ...dup.thicknesses])].sort((a, b) => a - b)
+    out = out.filter((m) => m !== dup).map((m) => (m === owner && thicknesses.length !== m.thicknesses.length ? { ...m, thicknesses } : m))
+    renames.push([retired.name, target])
+  }
+  const pine = out.find((m) => m.id === "sim-pine" && m.name === "Pi")
+  if (pine && !has(MATERIAL_MERGES.Pi!)) {
+    out = out.map((m) => (m === pine ? { ...m, name: MATERIAL_MERGES.Pi! } : m))
+    renames.push(["Pi", MATERIAL_MERGES.Pi!])
+  }
+  return { materials: out, renames }
+}
+
+/**
+ * Noms repetits (`materialNameKey`: majúscules i espais a part) en unes preferències desades: el segon es diu «X 2»
+ * (el tercer «X 3»…). Les dades es conserven; els mobles continuen apuntant al primer.
+ */
+export function dedupeMaterialNames(list: MaterialPref[]): { materials: MaterialPref[]; problems: string[] } {
+  const keys = new Set<string>()
+  const problems: string[] = []
+  const all = new Set(list.map((m) => materialNameKey(m.name)))
+  const materials = list.map((m) => {
+    const k = materialNameKey(m.name)
+    if (!keys.has(k)) {
+      keys.add(k)
+      return m
+    }
+    let n = 2
+    while (all.has(materialNameKey(`${m.name.trim()} ${n}`))) n++
+    const name = `${m.name.trim()} ${n}`
+    all.add(materialNameKey(name))
+    keys.add(materialNameKey(name))
+    problems.push(`Materials: «${m.name.trim()}» estava repetit; l'altre ara es diu «${name}».`)
+    return { ...m, name }
+  })
+  return { materials: problems.length ? materials : list, problems }
 }
 
 const stripRules = (m: Machine): Machine => {

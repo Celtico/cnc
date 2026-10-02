@@ -1,4 +1,4 @@
-import { LIBRARY_PHOTO_UPGRADES, PHOTO_MATERIALS, TEXTURE_SETS, WOOD_PRESETS, photoFinish, photoMaterialName, type MaterialPref } from "../../core/model"
+import { LIBRARY_PHOTO_UPGRADES, PHOTO_MATERIALS, TEXTURE_SETS, WOOD_PRESETS, deepEqual, materialNameKey, photoFinish, photoMaterialName, type MaterialPref } from "../../core/model"
 import { WOOD_EXTRA_PRESETS } from "./woodPresets"
 
 /**
@@ -70,3 +70,12 @@ export const MATERIAL_LIBRARY: LibraryItem[] = [
     return [{ ...m, name, group: t.use === "board" ? "Fotos · fusta" : t.translucent !== undefined || /Teixit|Llana|Jute/.test(t.label) ? "Fotos · teixits" : "Fotos · pedra, terres i parets" }]
   }),
 ]
+
+/**
+ * El material de l'usuari que ja és aquest de la biblioteca («Ja el tens»): el del mateix nom (sense majúscules ni
+ * espais) o, si no, el del mateix acabat (la mateixa foto, la mateixa fusta, el mateix color…).
+ */
+export function ownedMaterial(item: Pick<LibraryItem, "name" | "finish">, materials: readonly MaterialPref[]): MaterialPref | undefined {
+  const k = materialNameKey(item.name)
+  return materials.find((m) => materialNameKey(m.name) === k) ?? materials.find((m) => deepEqual(m.finish, item.finish))
+}

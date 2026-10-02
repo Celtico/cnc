@@ -1,6 +1,7 @@
 import { DEFAULT_SETTINGS, SETTINGS_VERSION, parseSettings, type Settings } from "../core/model"
 import { setKnownMaterialNames } from "../core/model/photoUpgrade"
 import { db } from "./db"
+import { renameMaterialEverywhere } from "./materialRefs"
 
 const ROW_ID = "user"
 
@@ -17,8 +18,12 @@ export async function loadSettings(): Promise<{ settings: Settings; problems: st
     console.warn(`Preferències de la versió ${storedVersion(row.data)} (aquesta app és la ${SETTINGS_VERSION}): no es desaran.`)
     return remember({ settings: res.settings, problems: [...res.problems, "Les preferències són d'una versió més nova de l'app: els canvis no es desaran fins que l'actualitzis."], readOnly: true })
   }
-  // Migració: es desa la versió nova perquè no es repeteixi.
-  if (res.migrated && res.problems.length === 0) await db.settings.put({ id: ROW_ID, data: res.settings, updatedAt: Date.now() })
+  // Migració: es desa la versió nova perquè no es repeteixi. Els noms de material que ha canviat (v12: «Melamina 19» →
+  // «Melamina blanca»…) es segueixen als mobles i ambients desats, a la mateixa transacció (si no es desen, la propera
+  // lectura ho torna a fer: és idempotent).
+  const save = res.migrated && res.problems.length === 0 ? () => db.settings.put({ id: ROW_ID, data: res.settings, updatedAt: Date.now() }) : undefined
+  if (res.renames?.length) await renameMaterialEverywhere(res.renames, save)
+  else if (save) await save()
   return remember({ settings: res.settings, problems: res.problems, readOnly: false })
 }
 

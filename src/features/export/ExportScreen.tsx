@@ -13,6 +13,7 @@ import { cutListToCsv } from "../../core/export/csv"
 import { dxfLayers, toDxf } from "../../core/export/dxf"
 import { toStepCad } from "../../core/export/step"
 import { stepCadGroups } from "../../core/export/stepGroups"
+import { materialIssues } from "../../core/build/materialIssues"
 import { finishRgb, resolveFinish } from "../../components/viewer/textures"
 import { encodeUtf16le, toTopsolidCsv } from "../../core/export/topsolidCsv"
 import { toUnifiedData } from "../../core/export/unified"
@@ -61,6 +62,8 @@ export function ExportScreen({ projectId }: { projectId: number }) {
     // `sheetList`: els programes amb el seu text (el mateix que va al zip) per a la Vista CAM.
     return { ...x, sheets: x.sheets.length, sheetList: x.sheets, rows: x.panels, spacingTool: plan.tool }
   }, [machine, panels, project?.name, project?.nesting])
+  // Materials que no lliguen amb Preferències: al taller sortirien amb un nom o un gruix que no hi ha.
+  const matIssues = useMemo(() => (comp && build ? materialIssues(build, comp, settings.materials) : []), [comp, build, settings.materials])
   const stepWarnings = useMemo(() => (comp && build && panels.length ? toStepCad(stepCadGroups(comp, build, { extras: stepExtras }), { name: "check" }).warnings : []), [comp, build, panels, stepExtras])
 
   if (!project) return null
@@ -159,6 +162,22 @@ export function ExportScreen({ projectId }: { projectId: number }) {
           </Alert.Content>
         </Alert.Root>
       ) : null}
+
+      {matIssues.length > 0 && (
+        <Alert.Root status="warning" size="sm">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Title>Materials que no lliguen amb Preferències</Alert.Title>
+            <Alert.Description>
+              <Stack as="ul" gap={0.5} mt={1} ps={4} listStyleType="disc">
+                {matIssues.map((w, i) => (
+                  <li key={i}>{w.message}</li>
+                ))}
+              </Stack>
+            </Alert.Description>
+          </Alert.Content>
+        </Alert.Root>
+      )}
 
       {stepWarnings.length > 0 && (
         <Alert.Root status="warning" size="sm">

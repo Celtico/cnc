@@ -41,11 +41,11 @@ describe("nest · mòdul per defecte", () => {
     expect(placed).toEqual(panels.map((p) => p.id).sort())
   })
 
-  it("un tauler de melamina 19 i un de DM 10, numerats 1 i 2", () => {
+  it("un tauler de melamina blanca i un de DM (fons), numerats 1 i 2", () => {
     expect(n.boards).toHaveLength(2)
     expect(n.boards.map((b) => [b.tab, b.material, b.thickness])).toEqual([
-      [1, "Melamina 19", 19],
-      [2, "DM 10", 10],
+      [1, "Melamina blanca", 19],
+      [2, "DM (fons)", 10],
     ])
   })
 

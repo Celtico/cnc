@@ -48,6 +48,7 @@ import { RenderDialog, type SceneGetter } from "../../components/viewer/render/R
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
+import { materialIssues } from "../../core/build/materialIssues"
 import { applySettingsToModule,  defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
@@ -693,7 +694,12 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     selectModule(m.id)
   }
 
-  const warnings = build?.warnings ?? NO_WARNINGS
+  // Els de fusteria i, com que el build no llegeix Preferències, els de materials (no hi és, gruix que no té).
+  const warnings = useMemo(() => {
+    if (!build) return NO_WARNINGS
+    const own = materialIssues(build, comp, settings.materials)
+    return own.length ? [...build.warnings, ...own] : build.warnings
+  }, [build, comp, settings.materials])
   // Al 3D també els elements sense nesting (ferro, pedra, vidre…).
   const viewerPanels = useMemo(() => (build?.extras.length ? [...panels, ...build.extras] : panels), [build, panels])
   const totalHoles = panels.reduce((n, p) => n + p.holes.length, 0)
