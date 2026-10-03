@@ -1,4 +1,4 @@
-import type { Composition, MaterialPref, Panel } from "../model"
+import { materialCategory, type Composition, type MaterialPref, type Panel } from "../model"
 import type { CompositionWarning } from "./buildComposition"
 
 /**
@@ -28,7 +28,8 @@ export function materialIssues(
     checkName(p.material)
     const m = byName.get(p.material)
     const key = `${p.material}\u0000${p.thickness}`
-    if (!m || m.thicknesses.includes(p.thickness) || thick.has(key)) continue
+    // Els de simulació no tenen gruixos a triar (no es tallen): no s'avisa.
+    if (!m || materialCategory(m) === "sim" || m.thicknesses.includes(p.thickness) || thick.has(key)) continue
     thick.add(key)
     out.push({ code: "thickness-not-listed", message: `El gruix ${fmt(p.thickness)} mm no és dels gruixos de «${m.name}» (${m.thicknesses.map(fmt).join(" · ")} mm).` })
   }

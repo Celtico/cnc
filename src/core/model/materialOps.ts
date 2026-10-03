@@ -122,6 +122,21 @@ export function restoredFinish(m: MaterialPref, kind: MaterialPref["finish"]["ki
 
 /** Canvi d'acabat que guarda l'actual a `previousFinishes` (per poder-hi tornar). */
 export function switchFinish(m: MaterialPref, next: MaterialPref["finish"]): Pick<MaterialPref, "finish" | "previousFinishes"> {
-  if (next.kind === m.finish.kind) return { finish: next, previousFinishes: m.previousFinishes }
-  return { finish: next, previousFinishes: { ...(m.previousFinishes ?? {}), [m.finish.kind]: m.finish } }
+  // El que torna a ser l'actual surt de `previousFinishes`: si no, una foto (data URL) quedaria desada dues vegades.
+  const prev: Record<string, MaterialPref["finish"]> = { ...(m.previousFinishes ?? {}) }
+  if (next.kind !== m.finish.kind) prev[m.finish.kind] = m.finish
+  delete prev[next.kind]
+  return { finish: next, previousFinishes: Object.keys(prev).length ? prev : undefined }
+}
+
+/**
+ * Les mides de tauler per material desades al projecte (`nesting.sheetsByMaterial`, clau = nom del material) quan un
+ * material canvia de nom: la clau segueix el nom nou (si el nom nou ja en tenia, es queda la seva). Mateix objecte si
+ * no canvia res.
+ */
+export function renameNestingSheets<T extends { sheetsByMaterial?: Record<string, unknown> } | undefined | null>(nesting: T, from: string, to: string): T {
+  const by = nesting?.sheetsByMaterial
+  if (!nesting || !by || !(from in by) || from === to) return nesting
+  const { [from]: moved, ...rest } = by
+  return { ...nesting, sheetsByMaterial: to in rest ? rest : { ...rest, [to]: moved } }
 }

@@ -1,5 +1,5 @@
 import { BoxGeometry, MeshStandardMaterial, type BufferGeometry, type Texture } from "three"
-import type { MaterialPref, Panel } from "../../core/model"
+import { materialCategory, type MaterialPref, type Panel } from "../../core/model"
 import { ROLE_COLOR } from "./roleColorMap"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
 import { textureOffset, type TextureOffset } from "./textureOffset"
@@ -100,7 +100,8 @@ export function panelMaterials(p: Panel, mode: "material" | "role", materials: M
   // Cares grans: u al llarg de x local (BoxGeometry), veta en x llevat que la peça la tingui en y.
   const big = (face: string) => makeMaterial(finish, L, W, grainY, opts, off(face))
   // Materials massissos (ferro, pedra, vidre, teixits de simulació): el cantell és el mateix material.
-  const solid = materials.find((m) => m.name === p.material)?.cnc === false
+  const mat = materials.find((m) => m.name === p.material)
+  const solid = !!mat && materialCategory(mat) === "sim"
   const raw = (face: string) => (solid ? makeMaterial(finish, L, T, false, opts, off(face)) : new MeshStandardMaterial({ color: RAW_EDGE_COLOR, roughness: 0.95, metalness: 0, ...opts }))
   // +x / −x: cara T × W (u = gruix, v = amplada): la veta ha d'anar en v.
   const edgeX = (banded: boolean, face: string) => (banded ? makeMaterial(edgeFinish, T, W, true, opts, off(face)) : raw(face))

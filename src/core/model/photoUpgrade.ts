@@ -42,10 +42,11 @@ export function photoMaterialName(t: TextureSet): string {
 /**
  * Noms antics → vigents. Els «X (foto)» de la v6 i els duplicats que la v12 va treure (`MATERIAL_MERGES`): «Melamina
  * 19» i «DM 10» (els de `DEFAULT_CABINET`, iguals que «Melamina blanca» i «DM (fons)») i «Pi» (les fulles del pi dels
- * ambients, que es confonia amb la fusta de pi de la biblioteca).
+ * ambients, que es confonia amb la fusta de pi de la biblioteca). «Pi» no és un àlies general (seria la fusta de pi d'un
+ * moble): només el reanomena la migració v12, i només si és el de les fulles.
  */
 export const MATERIAL_MERGES: Record<string, string> = { "Melamina 19": "Melamina blanca", "DM 10": "DM (fons)", Pi: "Fulles de pi" }
-const ALIASES = new Map([...TEXTURE_SETS.filter((t) => photoMaterialName(t) !== t.label).map((t): [string, string] => [t.label, photoMaterialName(t)]), ...Object.entries(MATERIAL_MERGES)])
+const ALIASES = new Map([...TEXTURE_SETS.filter((t) => photoMaterialName(t) !== t.label).map((t): [string, string] => [t.label, photoMaterialName(t)]), ...Object.entries(MATERIAL_MERGES).filter(([from]) => from !== "Pi")])
 
 /**
  * Noms dels materials de l'usuari (els posa `settingsStore` en carregar les preferències). Sense (encara no

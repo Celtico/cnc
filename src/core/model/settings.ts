@@ -17,7 +17,7 @@ import { repairValue } from "./repair"
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 12
+export const SETTINGS_VERSION = 13
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -449,14 +449,14 @@ export const RETIRED_TEMPLATE_MATERIALS: MaterialPref[] = [
 
 /** Valors inicials: els de sempre amb l'acabat de foto on n'hi ha (v7) i la resta de fotos, sense duplicats. */
 export const BUILTIN_MATERIALS: MaterialPref[] = upgradeToPhoto([
-  { id: "mel-white", name: "Melamina blanca", thicknesses: [10, 16, 19], hasGrain: false, finish: { kind: "color", color: "#f2f0eb" }, edge: "PVC blanc 1 mm" },
-  { id: "mel-grey", name: "Melamina gris", thicknesses: [16, 19], hasGrain: false, finish: { kind: "color", color: "#9a9a96" }, edge: "PVC gris 1 mm" },
+  { id: "mel-white", name: "Melamina blanca", thicknesses: [10, 16, 19, 30], hasGrain: false, finish: { kind: "color", color: "#f2f0eb" }, edge: "PVC blanc 1 mm" },
+  { id: "mel-grey", name: "Melamina gris", thicknesses: [16, 19, 30], hasGrain: false, finish: { kind: "color", color: "#9a9a96" }, edge: "PVC gris 1 mm" },
   { id: "mel-black", name: "Melamina negra", thicknesses: [16, 19], hasGrain: false, finish: { kind: "color", color: "#2b2b2b" }, edge: "PVC negre 1 mm" },
-  { id: "mel-oak", name: "Melamina roure", thicknesses: [16, 19], hasGrain: true, finish: { kind: "wood", species: "oak" }, edge: "PVC roure 1 mm" },
+  { id: "mel-oak", name: "Melamina roure", thicknesses: [16, 19, 30], hasGrain: true, finish: { kind: "wood", species: "oak" }, edge: "PVC roure 1 mm" },
   { id: "mdf-lacquer", name: "MDF lacat", thicknesses: [16, 19, 22, 30], hasGrain: false, finish: { kind: "lacquer", color: "#e9e6df" }, edge: "Lacat (sense cantell)" },
-  { id: "oak", name: "Roure massís / xapat", thicknesses: [19, 30], hasGrain: true, finish: { kind: "wood", species: "oak" }, edge: "Xapa de roure" },
+  { id: "oak", name: "Roure massís / xapat", thicknesses: [19, 30, 40], hasGrain: true, finish: { kind: "wood", species: "oak" }, edge: "Xapa de roure" },
   { id: "walnut", name: "Noguera xapada", thicknesses: [19], hasGrain: true, finish: { kind: "wood", species: "walnut" }, edge: "Xapa de noguera" },
-  { id: "ash", name: "Freixe xapat", thicknesses: [19], hasGrain: true, finish: { kind: "wood", species: "ash" }, edge: "Xapa de freixe" },
+  { id: "ash", name: "Freixe xapat", thicknesses: [16, 19, 30], hasGrain: true, finish: { kind: "wood", species: "ash" }, edge: "Xapa de freixe" },
   { id: "mdf-back", name: "DM (fons)", thicknesses: [10, 12], hasGrain: false, finish: { kind: "color", color: "#c9b79a" }, edge: "", forBacks: true },
   { id: "plywood-back", name: "Contraxapat (fons)", thicknesses: [10, 12, 15], hasGrain: true, finish: { kind: "wood", species: "ash" }, edge: "", forBacks: true },
   ...TEMPLATE_MATERIALS,
@@ -586,8 +586,10 @@ export function parseSettings(raw: unknown): SettingsParse {
   const v9m = version < 9 && v8m !== BUILTIN_MATERIALS ? [...restorePhotoThicknesses(v8m), ...missing(TEMPLATE_MATERIALS, v8m)] : v8m
   // v12: duplicats fora («Melamina 19», «DM 10», «Pi»); els noms canviats es segueixen a tot arreu (`renames`).
   const v12 = version < 12 && v9m !== BUILTIN_MATERIALS ? mergeDuplicateMaterials(v9m) : { materials: v9m, renames: [] }
+  // v13: gruixos que les plantilles del catàleg fan servir i els materials inicials no tenien (només s'afegeixen).
+  const v13m = version < 13 && v12.materials !== BUILTIN_MATERIALS ? addCatalogThicknesses(v12.materials) : v12.materials
   // Noms únics (sempre): un de repetit passa a «X 2» amb un avís (abans no es comprovava).
-  const unique = dedupeMaterialNames(v12.materials)
+  const unique = dedupeMaterialNames(v13m)
   problems.push(...unique.problems)
   const materials = unique.materials
   const renamed = (n: string) => v12.renames.find(([from]) => from === n)?.[1] ?? n
@@ -631,6 +633,15 @@ const withoutId = ({ id: _id, ...rest }: MaterialPref) => rest
  * és lliure). Torna els canvis de nom (`from → to`) perquè les preferències (per defecte, taulers) i els mobles i
  * ambients desats els segueixin. Idempotent.
  */
+/** Gruixos que fan servir les plantilles del catàleg (v13): s'afegeixen als materials inicials que no els tenien. */
+export const CATALOG_THICKNESSES: Record<string, number[]> = { "mel-white": [30], "mel-grey": [30], "mel-oak": [30], oak: [40], ash: [16, 30] }
+export function addCatalogThicknesses(list: MaterialPref[]): MaterialPref[] {
+  return list.map((m) => {
+    const add = (CATALOG_THICKNESSES[m.id] ?? []).filter((t) => !m.thicknesses.includes(t))
+    return add.length ? { ...m, thicknesses: [...m.thicknesses, ...add].sort((a, b) => a - b) } : m
+  })
+}
+
 export function mergeDuplicateMaterials(list: MaterialPref[]): { materials: MaterialPref[]; renames: [string, string][] } {
   let out = list
   const renames: [string, string][] = []
@@ -644,8 +655,11 @@ export function mergeDuplicateMaterials(list: MaterialPref[]): { materials: Mate
     out = out.filter((m) => m !== dup).map((m) => (m === owner && thicknesses.length !== m.thicknesses.length ? { ...m, thicknesses } : m))
     renames.push([retired.name, target])
   }
+  // Només si «Pi» és les fulles (sim-pine) i cap altre material es diu «Pi» (p. ex. la fusta de pi de la biblioteca): si
+  // no, es reanomenarien també els mobles de fusta de pi.
   const pine = out.find((m) => m.id === "sim-pine" && m.name === "Pi")
-  if (pine && !has(MATERIAL_MERGES.Pi!)) {
+  const otherPi = out.some((m) => m !== pine && m.name.trim().toLowerCase() === "pi")
+  if (pine && !otherPi && !has(MATERIAL_MERGES.Pi!)) {
     out = out.map((m) => (m === pine ? { ...m, name: MATERIAL_MERGES.Pi! } : m))
     renames.push(["Pi", MATERIAL_MERGES.Pi!])
   }

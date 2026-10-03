@@ -249,7 +249,7 @@ describe("v12: duplicats fora i noms únics", () => {
     expect(names).not.toContain("DM 10")
     expect(names).not.toContain("Pi")
     expect(names).toContain("Fulles de pi")
-    expect(SETTINGS_VERSION).toBe(12)
+    expect(SETTINGS_VERSION).toBe(13)
   })
 
   it("«Melamina 19» i «DM 10» inicials passen als de sempre (amb les referències de les preferències) i «Pi» a «Fulles de pi»", () => {
@@ -267,7 +267,7 @@ describe("v12: duplicats fora i noms únics", () => {
     expect(res.settings.boards.sheets[0]!.material).toBe("Melamina blanca")
     expect(res.renames).toEqual([["Melamina 19", "Melamina blanca"], ["DM 10", "DM (fons)"], ["Pi", "Fulles de pi"]])
     // Els gruixos del duplicat passen al de sempre (ja els tenia).
-    expect(res.settings.materials.find((m) => m.name === "Melamina blanca")!.thicknesses).toEqual([10, 16, 19])
+    expect(res.settings.materials.find((m) => m.name === "Melamina blanca")!.thicknesses).toEqual([10, 16, 19, 30])
     expect(SettingsSchema.safeParse(res.settings).success).toBe(true)
   })
 
@@ -300,5 +300,14 @@ describe("v12: duplicats fora i noms únics", () => {
     expect(res.settings.materials.find((m) => m.id === "x")).toMatchObject({ name: "Melamina Blanca 2", finish: { color: "#fafafa" } })
     expect(res.settings.materials.find((m) => m.id === "mel-white")!.name).toBe("Melamina blanca")
     expect(SettingsSchema.safeParse(res.settings).success).toBe(true)
+  })
+})
+
+describe("v13: gruixos del catàleg", () => {
+  it("s'afegeixen als materials inicials, una sola vegada", async () => {
+    const { addCatalogThicknesses } = await import("./settings")
+    const once = addCatalogThicknesses([{ id: "ash", name: "Freixe xapat", thicknesses: [19], hasGrain: true, finish: { kind: "wood", species: "ash" }, edge: "" }])
+    expect(once[0]!.thicknesses).toEqual([16, 19, 30])
+    expect(addCatalogThicknesses(once)[0]).toBe(once[0])
   })
 })

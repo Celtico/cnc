@@ -28,6 +28,7 @@ import {
   reorientPart,
   PART_AXES,
   partsBox,
+  materialCategory,
   compositionKind, partsOnlyKind,
   partOffset,
   resolveParts,
@@ -87,7 +88,7 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
     const m = materialByName(settings, name)
     const t = m && m.cnc !== false && !m.thicknesses.includes(p.thickness) ? m.thicknesses.reduce((a, b) => (Math.abs(b - p.thickness) < Math.abs(a - p.thickness) ? b : a)) : p.thickness
     // Si el material no es talla a la CNC (ferro, pedra, vidre…), la peça surt del nesting.
-    update({ material: name, thickness: object ? p.thickness : t, nest: m?.cnc === false || object ? false : undefined })
+    update({ material: name, thickness: object ? p.thickness : t, nest: (m && materialCategory(m) === "sim") || object ? false : undefined })
   }
   return (
     <Stack gap={0}>

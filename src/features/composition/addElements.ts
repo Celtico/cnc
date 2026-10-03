@@ -1,4 +1,4 @@
-import { boardChoices, compositionKind, materialByName, newFreePart, newId, partsOnlyKind, type Composition, type FreePart, type PartOrient, type RefObject, type Settings } from "../../core/model"
+import { boardChoices, compositionKind, materialCategory, materialByName, newFreePart, newId, partsOnlyKind, type Composition, type FreePart, type PartOrient, type RefObject, type Settings } from "../../core/model"
 
 /** Què es pot afegir des de l'arbre (un + per a cada tipus). */
 export type AddKind = "module" | "part" | "ref"
@@ -33,7 +33,7 @@ export function freePartFor(comp: Composition, settings: Settings, orient: PartO
   const p = { ...newFreePart(orient, center, last?.material ?? (loose ? (object ? "Microciment gris" : undefined) : base?.material), last?.thickness ?? (loose ? undefined : base?.thickness)), name }
   const known = materialByName(settings, p.material)
   return known
-    ? { ...p, ...(known.cnc === false || object ? { nest: false } : {}) }
+    ? { ...p, ...(materialCategory(known) === "sim" || object ? { nest: false } : {}) }
     : { ...p, material: fallbackMaterial(settings) ?? p.material, ...(object ? { nest: false } : {}) }
 }
 

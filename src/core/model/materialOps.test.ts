@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule } from "./composition"
 import { aliasMaterialRefs, materialRefNames, renameMaterialRefs } from "./photoUpgrade"
-import { backChoices, boardChoices, fixMaterialRefs, materialNameError, materialSettingsUsage, partChoices, removeMaterialFromSettings, renameMaterialInSettings, restoredFinish, switchFinish, tidyMaterialName } from "./materialOps"
+import { backChoices, boardChoices, fixMaterialRefs, materialNameError, materialSettingsUsage, partChoices, removeMaterialFromSettings, renameMaterialInSettings, renameNestingSheets, restoredFinish, switchFinish, tidyMaterialName } from "./materialOps"
 import { DEFAULT_SETTINGS, materialCategory, type Settings } from "./settings"
 
 const comp = () => {
@@ -39,7 +39,8 @@ describe("canviar el nom d'un material a les dades (`renameMaterialRefs`)", () =
   it("els noms retirats a la v12 es llegeixen amb el nom nou (àlies) si l'usuari ja no els té", () => {
     const names = new Set(DEFAULT_SETTINGS.materials.map((m) => m.name))
     const old = { modules: [{ carcass: { material: "Melamina 19", backMaterial: "DM 10" } }], parts: [{ material: "Pi" }] }
-    expect(aliasMaterialRefs(old, names)).toEqual({ modules: [{ carcass: { material: "Melamina blanca", backMaterial: "DM (fons)" } }], parts: [{ material: "Fulles de pi" }] })
+    expect(aliasMaterialRefs(old, names)).toEqual({ modules: [{ carcass: { material: "Melamina blanca", backMaterial: "DM (fons)" } }], parts: [{ material: "Pi" }] })
+    // «Pi» no és un àlies general: un moble de fusta de pi es queda «Pi» (només la migració reanomena les fulles).
     // Si encara té «Melamina 19» (retocada), es queda.
     expect(aliasMaterialRefs(old, new Set([...names, "Melamina 19"])).modules[0]!.carcass.material).toBe("Melamina 19")
   })
@@ -136,5 +137,15 @@ describe("tornar a un acabat d'abans", () => {
   it("un material propi sense foto d'abans no en té", () => {
     const mine = { ...volc, id: "mine", name: "Pedra meva", finish: { kind: "color" as const, color: "#555555" }, previousFinishes: undefined }
     expect(restoredFinish(mine, "image")).toBeUndefined()
+  })
+})
+
+describe("mides de tauler del projecte en canviar el nom", () => {
+  it("la clau segueix el nom nou", () => {
+    const n = { sheetsByMaterial: { A: { w: 2800, h: 2070 }, B: { w: 2440, h: 1220 } } }
+    expect(renameNestingSheets(n, "A", "C")).toEqual({ sheetsByMaterial: { B: { w: 2440, h: 1220 }, C: { w: 2800, h: 2070 } } })
+    expect(renameNestingSheets(n, "A", "B")).toEqual({ sheetsByMaterial: { B: { w: 2440, h: 1220 } } })
+    expect(renameNestingSheets(n, "X", "Y")).toBe(n)
+    expect(renameNestingSheets(undefined, "A", "B")).toBeUndefined()
   })
 })

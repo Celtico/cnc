@@ -660,7 +660,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   d'una foto que ja hi era. L'amplada real és la de sempre. Visor, miniatures, render (CPU/GPU), GLB/USDZ i
   exportar/importar les preferències els llegeixen com els de l'app (tot passa per `photoTexture`, memòria per `src`); a
   Dexie i al JSON de preferències no hi ha límit de mida (un material amb els tres mapes fa ~0,5–1 MB).
-- **Canviar l'Acabat no perd res** (`MaterialPref.previousFinishes`, `switchFinish`/`restoredFinish` a `materialOps.ts`): l'acabat d'abans es guarda per tipus i, en tornar-hi, es recupera (la foto amb els mapes de relleu i brillantor). Un material de foto de l'app que ja l'havia perdut la recupera del material inicial (mateix id o nom).
+- **Canviar l'Acabat no perd res** (`MaterialPref.previousFinishes`, `switchFinish`/`restoredFinish` a `materialOps.ts`): l'acabat d'abans es guarda per tipus i, en tornar-hi, es recupera (la foto amb els mapes de relleu i brillantor). Un material de foto de l'app que ja l'havia perdut la recupera del material inicial (mateix id o nom). El que torna a ser l'actual surt de `previousFinishes` (si no, una foto quedaria desada dues vegades).
 - **Materials de foto amb relleu** (v6): 22 jocs de Poly Haven (CC0, 1K) a `public/textures/<id>/{diff,nor,rough}.jpg`
   (normal OpenGL, rugositat en grisos), manifest a `core/model/textureSets.ts` (`TEXTURE_SETS`: nom, mida real d'una repetició,
   direcció de la veta a la foto, ús). `PHOTO_MATERIALS`: xapes a **Taulers** (16/19/30: «Roure (foto)», «Noguera (foto)»,
@@ -696,11 +696,15 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **v12, duplicats fora** (`mergeDuplicateMaterials`, additiu i sense perdre res): «Melamina 19» → «Melamina blanca» i
   «DM 10» → «DM (fons)» (eren iguals; només si encara són els inicials, `RETIRED_TEMPLATE_MATERIALS`, i el de sempre hi
   és; els gruixos hi passen) i les fulles «Pi» (`sim-pine`) → «Fulles de pi» (es confonia amb la fusta «Pi» de la
-  biblioteca; si el nom és lliure). `DEFAULT_CABINET` i les plantilles ja fan servir els de sempre. Els canvis de nom
+  biblioteca; si el nom és lliure i cap altre material es diu «Pi»; «Pi» no és un àlies general: un moble de fusta de pi es
+  queda «Pi»). `DEFAULT_CABINET` i les plantilles ja fan servir els de sempre. Els canvis de nom
   (`SettingsParse.renames`) es segueixen a les preferències (per defecte, taulers) i, a `loadSettings`, a tots els mobles
   i ambients desats (`renameMaterialEverywhere`, la mateixa transacció); l'àlies (`MATERIAL_MERGES` a
   `resolveMaterialAlias`) llegeix els `.moble` i dades antigues. Conseqüència al taller: el tauler del CSV ja no porta el
   gruix dues vegades («DM (fons):…x10», `T03_DM_fons_10.xcs`; abans «DM 10:…x10», `T03_DM_10_10.xcs`).
+- **v13, gruixos del catàleg** (`addCatalogThicknesses`, només afegeix): Melamina blanca/gris/roure 30, Roure massís /
+  xapat 40, Freixe xapat 16 i 30 (les plantilles els feien servir). Un test comprova que cap plantilla del catàleg avisa de
+  materials ni gruixos amb les preferències inicials; l'avís de gruix no surt als materials de Simulació.
 - **Noms únics** (`materialNameKey`: sense majúscules ni espais repetits): l'esquema (`MaterialListSchema`) rebutja els
   repetits; en llegir unes preferències, un de repetit passa a «X 2» amb un avís (`dedupeMaterialNames`).
 - **Canviar el nom** (Preferències › Materials): en acabar (sortir del camp o Retorn; Esc el desfà), no a cada tecla; un
@@ -708,7 +712,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`renameMaterialRefs`, les claus de `mapMaterialRefs` = les d'`aliasMaterialRefs`; `db/materialRefs.ts`
   `renameMaterialEverywhere`, una transacció amb les preferències): **sense tocar `updatedAt` ni `edited`** (com
   `saveProjectCamera`) però amb la miniatura per refer (`thumbAt` fora). També el tauler i el fons per defecte, les mides
-  de tauler (`renameMaterialInSettings`) i l'escena de Presentació (`renamePresentationMaterial`). Avís «Nom canviat: N
+  de tauler (`renameMaterialInSettings`), les mides de tauler per material desades al nesting de cada moble
+  (`renameNestingSheets`) i l'escena de Presentació (`renamePresentationMaterial`). Avís «Nom canviat: N
   mobles i M ambients actualitzats». Importar un fitxer d'abans de la v12 fa el mateix amb els seus `renames`.
 - **Eliminar** (`DeleteMaterialDialog`): diu on es fa servir (`materialUsage`: mobles, objectes, ambients; i
   `materialSettingsUsage`: tauler/fons per defecte, mida de tauler) i ofereix un substitut (les referències hi passen com

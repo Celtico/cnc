@@ -1,4 +1,4 @@
-import { materialRefNames, renameMaterialRefs } from "../core/model"
+import { materialRefNames, renameMaterialRefs, renameNestingSheets } from "../core/model"
 import { db } from "./db"
 
 /** Quants mobles (i objectes) i ambients s'han reescrit. */
@@ -24,9 +24,12 @@ export async function renameMaterialEverywhere(renames: readonly (readonly [stri
       await db.projects.toCollection().modify((p) => {
         const composition = p.composition === undefined || p.composition === null ? p.composition : apply(p.composition)
         const params = apply(p.params)
-        if (composition === p.composition && params === p.params) return
+        // Les mides de tauler per material del nesting del projecte (clau = nom del material).
+        const nesting = list.reduce((acc, [from, to]) => renameNestingSheets(acc, from, to), p.nesting)
+        if (composition === p.composition && params === p.params && nesting === p.nesting) return
         p.composition = composition
         p.params = params
+        p.nesting = nesting
         delete p.thumbAt
         count.projects++
       })

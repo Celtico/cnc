@@ -132,7 +132,8 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
     if (res.problems.length) {
       toaster.create({ title: "Preferències importades amb avisos", description: res.problems.join(" "), type: "warning", duration: 8000 })
     } else toaster.create({ title: "Preferències importades", type: "success" })
-    setDraft(res.settings)
+    // Si el fitxer porta materials però no els per defecte, que no apuntin a un material que ja no hi és.
+    setDraft(fixMaterialRefs(res.settings))
     // Un fitxer d'abans de la v12 porta «Melamina 19», «DM 10» o «Pi»: els mobles desats segueixen el nom nou.
     if (res.renames?.length) void cascade(res.renames, res.settings)
     if (fileInput.current) fileInput.current.value = ""

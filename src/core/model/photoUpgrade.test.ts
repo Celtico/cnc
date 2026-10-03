@@ -38,7 +38,7 @@ describe("materials de sempre amb foto (v7)", () => {
     const ms = res.settings.materials
     const oak = ms.find((m) => m.name === "Roure massís / xapat")!
     // Els gruixos del «Roure (foto)» que desapareix (16 · 19 · 30) passen al de sempre.
-    expect(oak).toMatchObject({ id: "oak", thicknesses: [16, 19, 30], hasGrain: true, edge: "Xapa de roure" })
+    expect(oak).toMatchObject({ id: "oak", thicknesses: [16, 19, 30, 40], hasGrain: true, edge: "Xapa de roure" })
     expect(ms.find((m) => m.name === "Noguera xapada")!.thicknesses).toEqual([16, 19, 30])
     expect(oak.finish).toMatchObject({ kind: "image", src: "textures/oak_veneer_01/diff.jpg", normalMap: "textures/oak_veneer_01/nor.jpg", grain: "y" })
     expect(ms.find((m) => m.name === "Parquet de roure")!.finish).toMatchObject({ kind: "image", src: "textures/wood_floor/diff.jpg" })
@@ -181,9 +181,9 @@ describe("acabats retocats i gruixos (v7 per a migracions futures, v9)", () => {
     const ash = DEFAULT_SETTINGS.materials.find((m) => m.id === "ash")!
     const res = parseSettings({ ...DEFAULT_SETTINGS, version: 8, materials: [oak, walnut, ash, myMel] })
     const ms = res.settings.materials
-    expect(ms.find((m) => m.id === "oak")!.thicknesses).toEqual([16, 19, 30])
+    expect(ms.find((m) => m.id === "oak")!.thicknesses).toEqual([16, 19, 30, 40])
     expect(ms.find((m) => m.id === "walnut")!.thicknesses).toEqual([16, 19, 30])
-    expect(ms.find((m) => m.id === "ash")!.thicknesses).toEqual([19])
+    expect(ms.find((m) => m.id === "ash")!.thicknesses).toEqual([16, 19, 30])
     // El de l'usuari amb el mateix nom no es toca ni es duplica.
     expect(ms.filter((m) => m.name === "Melamina 19")).toEqual([myMel])
     for (const t of TEMPLATE_MATERIALS) expect(ms.some((m) => m.name === t.name), t.name).toBe(true)
