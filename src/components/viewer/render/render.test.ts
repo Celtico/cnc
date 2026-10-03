@@ -449,22 +449,55 @@ describe("càmera de fotògraf (`photoCamera`)", async () => {
 })
 
 describe("vista per les finestres (`backdrops.ts`)", async () => {
-  const { backdropTexture } = await import("./backdrops")
-  it("jardí i mar: cel transparent a dalt, opac sota l'horitzó, arbres al jardí", () => {
-    for (const kind of ["garden", "sea"] as const) {
-      const t0 = performance.now()
-      const t = backdropTexture(kind)
-      expect(performance.now() - t0).toBeLessThan(5000)
-      const a = (x: number, y: number) => t.data[(y * t.w + x) * 4 + 3]!
-      expect(a(100, 10)).toBe(0)
-      expect(a(100, t.h - 10)).toBe(255)
-      expect(t.wrapT).toBe(2)
+  const { photoPanorama, aimBackdrop } = await import("./backdrops")
+  const { PerspectiveCamera } = await import("three")
+  const cam = (pos: [number, number, number], target: [number, number, number]) => {
+    const c = new PerspectiveCamera(40, 1.5)
+    c.position.set(...pos)
+    c.lookAt(...target)
+    c.updateMatrixWorld(true)
+    return { ortho: false, matrix: Array.from(c.matrixWorld.elements), scale: 0.36, aspect: 1.5 }
+  }
+  // Foto 400 × 300: meitat de dalt vermella, de baix verda (l'horitzó al mig).
+  const W = 400, H = 300
+  const photo = new Uint8ClampedArray(W * H * 4)
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) photo.set(y < H / 2 ? [255, 0, 0, 255] : [0, 255, 0, 255], (y * W + x) * 4)
+  it("una foto normal: davant, tal qual; a dalt, el cel del motor (alfa 0); a baix, opac; als costats, en mirall", () => {
+    const p = photoPanorama(W, H, photo)
+    const at = (u: number, el: number) => {
+      const x = Math.floor(u * p.w), y = Math.floor((0.5 - el / 180) * p.h)
+      return Array.from(p.data.subarray((y * p.w + x) * 4, (y * p.w + x) * 4 + 4))
     }
-    // Una mica per sobre de l'horitzó (5°), el jardí té arbres gairebé a tota la volta.
-    const g = backdropTexture("garden")
-    const y = Math.round(g.h / 2 - (5 / 180) * g.h)
-    let n = 0
-    for (let x = 0; x < g.w; x += 8) if (g.data[(y * g.w + x) * 4 + 3]! > 0) n++
-    expect(n / (g.w / 8)).toBeGreaterThan(0.8)
+    expect(p.hero).toBe(0.5)
+    expect(at(0.5, 5)).toEqual([255, 0, 0, 255])
+    expect(at(0.5, -5)).toEqual([0, 255, 0, 255])
+    expect(at(0.5, 60)[3]).toBe(0)
+    expect(at(0.5, -70)[3]).toBe(255)
+    // Darrere de la càmera també hi ha foto (mirall), no un forat.
+    expect(at(0.02, -5)).toEqual([0, 255, 0, 255])
+  })
+  it("un panorama 2:1 es fa servir tal qual", () => {
+    const d = new Uint8ClampedArray(64 * 32 * 4)
+    expect(photoPanorama(64, 32, d).data).toBe(d)
+  })
+  it("la part bona del panorama queda davant de la càmera (com mira el motor)", () => {
+    const w = 64, h = 32
+    const d = new Uint8ClampedArray(w * h * 4)
+    const hero = 0.25
+    for (let y = 0; y < h; y++) d[(y * w + Math.floor(hero * w)) * 4] = 255
+    for (const [eye, target] of [[[0, 1.6, 3], [0, 1.6, 0]], [[0, 1.6, 0], [3, 1.6, 0]], [[1, 1.6, 1], [0, 1.6, 2]]] as [number[], number[]][]) {
+      const c = cam(eye as [number, number, number], target as [number, number, number])
+      for (const rot of [0, 90]) {
+        const t = aimBackdrop({ w, h, data: d, hero }, c, rot)
+        const fx = target[0]! - eye[0]!, fz = target[2]! - eye[2]!
+        const n = Math.hypot(fx, fz)
+        let u = (Math.atan2(fx / n, -fz / n) / (2 * Math.PI) + 0.5 + rot / 360) % 1
+        if (u < 0) u += 1
+        const x = Math.round(u * w) % w
+        const row = Array.from({ length: w }, (_, i) => t.data[(h / 2 * w + i) * 4]!)
+        const got = row.indexOf(255)
+        expect(Math.min(Math.abs(got - x), w - Math.abs(got - x))).toBeLessThanOrEqual(1)
+      }
+    }
   })
 })

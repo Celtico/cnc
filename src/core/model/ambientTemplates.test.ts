@@ -15,6 +15,12 @@ describe("catàleg d'ambients", () => {
         return { w: b.max[0] - b.min[0], d: b.max[2] - b.min[2] }
       }
       for (const p of layoutTemplate(t, size)) {
+        if (p.outside) {
+          // Fora a posta: del tot fora de l'habitació (no a mig mur).
+          const s = size(p.ref)
+          expect(p.x + s.w / 2 <= 0 || p.x - s.w / 2 >= t.w || p.y + s.d / 2 <= 0 || p.y - s.d / 2 >= t.d, `${t.name}: ${p.ref} fora`).toBe(true)
+          continue
+        }
         const s = size(p.ref)
         const half = Math.max(s.w, s.d) / 2
         expect(p.x - Math.min(half, p.rot % 180 ? s.d / 2 : s.w / 2), `${t.name}: ${p.ref}`).toBeGreaterThanOrEqual(0)

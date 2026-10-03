@@ -17,7 +17,7 @@ import { repairValue } from "./repair"
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 16
+export const SETTINGS_VERSION = 17
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -369,6 +369,18 @@ export const RIFT_MATERIALS: MaterialPref[] = [
   { id: "sim-marble-black", name: "Marbre negre", thicknesses: [20, 30], hasGrain: false, finish: { kind: "stone", color: "#1e1e20", vein: "#d8d4cc", veins: 0.45, size: 1400, seed: 33, style: "marble", polish: 0.9 }, edge: "", cnc: false, category: "sim" },
 ]
 
+/**
+ * Revestiment de paret de roure de fil (veta recta, sense les flames de la xapa de foto), com les parets de fusta de les
+ * fotos de catàleg, i la gespa de fora. Afegits a la v17.
+ */
+export const CLADDING_MATERIALS: MaterialPref[] = [
+  // Fora de les habitacions amb arbres davant de les finestres (terra de fora, `Ambient3D`).
+  { id: "sim-lawn", name: "Gespa", thicknesses: [10], hasGrain: false, finish: { kind: "fabric", color: "#5b7337" }, edge: "", cnc: false, category: "sim" },
+  { id: "sim-oak-cladding-rift", name: "Revestiment de roure de fil", thicknesses: [10], hasGrain: true, finish: { kind: "wood", species: "oak", gen: { base: "#b48e62", dark: "#8c6a44", lines: 60, wobble: 0.025, bands: 30, contrast: 0.4, figure: 0, pores: 2400, grain: 10, tileMm: 1200, seed: 131 } }, edge: "", cnc: false, category: "sim" },
+]
+/** v17: les pantalles de lli feien massa llum (surtien blanques del tot al render del vespre). */
+export const LAMPSHADE_GLOW = 2.2
+
 /** Llum LED dels mobles (`Zone.led`): fa llum al render (càlida). Afegit a la v14. */
 export const LED_MATERIALS: MaterialPref[] = [
   { id: "led-strip", name: "Tira LED", thicknesses: [8], hasGrain: false, finish: { kind: "color", color: "#ffe2b8", roughness: 0.4 }, edge: "", cnc: false, category: "sim", glow: 60 },
@@ -437,7 +449,7 @@ export const SIM_MATERIALS: MaterialPref[] = [
   sim("sim-mirror", "Mirall", { kind: "metal", color: "#e4e8e8" }),
   sim("sim-book", "Llibres", { kind: "tiles", color: "#a49781", grout: "#5b4a3a", size: 60 }),
   // v5: llums dels objectes (el render en fa llum: «Llums enceses»).
-  sim("sim-lampshade", "Pantalla de lli", { kind: "fabric", color: "#f1eadc" }, false, { glow: 4, translucent: 0.5 }),
+  sim("sim-lampshade", "Pantalla de lli", { kind: "fabric", color: "#f1eadc" }, false, { glow: LAMPSHADE_GLOW, translucent: 0.5 }),
   sim("sim-bulb", "Bombeta", { kind: "color", color: "#fff6e6", roughness: 0.3 }, false, { glow: 30 }),
 ]
 
@@ -496,6 +508,7 @@ export const BUILTIN_MATERIALS: MaterialPref[] = upgradeToPhoto([
   ...LED_MATERIALS,
   ...GLOSS_MATERIALS,
   ...RIFT_MATERIALS,
+  ...CLADDING_MATERIALS,
   ...PHOTO_MATERIALS,
 ])
 
@@ -628,8 +641,12 @@ export function parseSettings(raw: unknown): SettingsParse {
   const v15m = version < 15 && v14m !== BUILTIN_MATERIALS ? [...v14m, ...missing(GLOSS_MATERIALS, v14m)] : v14m
   // v16: fusta de fil (roure i noguera), si no hi són.
   const v16m = version < 16 && v15m !== BUILTIN_MATERIALS ? [...v15m, ...missing(RIFT_MATERIALS, v15m)] : v15m
+  // v17: revestiment de roure de fil, i la llum de les pantalles de lli (només si encara tenen la d'abans, 4).
+  const v17m = version < 17 && v16m !== BUILTIN_MATERIALS
+    ? [...v16m.map((m) => (m.id === "sim-lampshade" && m.glow === 4 ? { ...m, glow: LAMPSHADE_GLOW } : m)), ...missing(CLADDING_MATERIALS, v16m)]
+    : v16m
   // Noms únics (sempre): un de repetit passa a «X 2» amb un avís (abans no es comprovava).
-  const unique = dedupeMaterialNames(v16m)
+  const unique = dedupeMaterialNames(v17m)
   problems.push(...unique.problems)
   const materials = unique.materials
   const renamed = (n: string) => v12.renames.find(([from]) => from === n)?.[1] ?? n

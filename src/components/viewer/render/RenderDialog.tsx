@@ -14,7 +14,7 @@ import { parseHdr } from "./hdr"
 import { oidnDenoise, oidnFailed, oidnReady } from "./oidn"
 import type { UNet } from "oidn-web"
 import { SKIES, loadSky, readSky, type SkyId } from "./skies"
-import { BACKDROPS, backdropTexture } from "./backdrops"
+import { BACKDROPS, aimBackdrop, loadBackdrop, saveBackdropPhoto, type BackdropKind, type Panorama } from "./backdrops"
 import { DEFAULT_RENDER_OPTS, extractScene, photoCamera, type RenderEnv, type RenderOpts, type RenderRoom } from "./sceneData"
 import { aces, agx, bloomBuffer, createDrawScheduler, makeAgxLut, makePowLut, makeSrgbLut, sampleBloom, srgbLut, vignette, type ToneCurve } from "./tonemap"
 
@@ -180,6 +180,10 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
   const [engineLabel, setEngineLabel] = useState("")
   const envRef = useRef(env)
   envRef.current = env
+  /** Vista per les finestres carregada (`opts.view`; es carrega a part, com el cel). */
+  const [pano, setPano] = useState<{ kind: BackdropKind; p: Panorama } | null>(null)
+  const panoRef = useRef(pano)
+  panoRef.current = pano
   const [look, setLookState] = useState<Look>(DEFAULT_LOOK)
   const lookRef = useRef(look)
   const limitRef = useRef(limit)
@@ -190,7 +194,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
   const source = useRef<{ scene: ReturnType<typeof extractScene>; aspect: number; long: number; room?: RenderRoom; format?: Format } | null>(null)
   const job = useRef<Job | null>(null)
   /** Què s'ha començat a calcular l'últim cop (per no tornar a començar el mateix). */
-  const lastRun = useRef<{ o: RenderOpts; r: Resolution; kind: EngineKind; env: unknown; room?: RenderRoom; format?: Format } | null>(null)
+  const lastRun = useRef<{ o: RenderOpts; r: Resolution; kind: EngineKind; env: unknown; pano: unknown; room?: RenderRoom; format?: Format } | null>(null)
   // Filtre de soroll: un fil a part; el resultat val per a les passades amb què s'ha calculat.
   // `busy`: l'identificador de la petició en curs (0 = cap).
   // `oidn`: la xarxa d'Open Image Denoise si hi és (WebGPU + pesos); si no, l'À-Trous del worker.
@@ -417,7 +421,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     // Les sumes són les del motor: s'hi assignen amb el primer progrés (no es reserva res aquí).
     const j: Job = { w, h, accum: new Float32Array(0), aux: new Float32Array(0), count: 0, auxCount: 0 }
     job.current = j
-    lastRun.current = { o, r, kind, env: envRef.current?.env ?? null, room: src.room, format: src.format }
+    lastRun.current = { o, r, kind, env: envRef.current?.env ?? null, pano: panoRef.current, room: src.room, format: src.format }
     // Les respostes del filtre d'abans s'ignoren (la petició en curs, si n'hi ha, segueix ocupant-lo).
     dn.current.id++
     dn.current.data = null
@@ -429,8 +433,10 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     setError(null)
     // La càmera de fotògraf (verticals rectes, focal) es fa aquí: l'escena extreta és la del visor.
     // Vista per les finestres (ambients): el panorama com una textura més (`backdrops.ts`).
-    const view = src.scene.daylight && o.view !== "sky" ? backdropTexture(o.view ?? "garden") : null
-    const scene = { ...src.scene, camera: photoCamera(src.scene.camera, o), ...(view ? { textures: [...src.scene.textures, view], backdrop: src.scene.textures.length } : {}) }
+    const camera = photoCamera(src.scene.camera, o)
+    const P = panoRef.current
+    const view = src.scene.daylight && P && P.kind === (o.view ?? "garden") ? aimBackdrop(P.p, camera, o.envRotation) : null
+    const scene = { ...src.scene, camera, ...(view ? { textures: [...src.scene.textures, view], backdrop: src.scene.textures.length } : {}) }
     const data: RenderJob = { scene, env: envRef.current?.env ?? null, opts: o, w, h }
     // La GPU ha fallat: es fa per CPU i no s'hi torna (fins que es torni a obrir el diàleg, o
     // en canviar de resolució si el problema era la mida).
@@ -568,12 +574,26 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
       if ((source.current?.room !== room || source.current?.format !== format) && !extract(room, format)) return
       // El mateix que ja s'ha començat (p. ex. en passar sol a CPU perquè la GPU ha fallat): res.
       const L = lastRun.current
-      if (L && engine.current && L.o === opts && L.r === res && L.kind === effectiveKind && L.env === (env?.env ?? null) && L.room === room && L.format === format) return
+      if (L && engine.current && L.o === opts && L.r === res && L.kind === effectiveKind && L.env === (env?.env ?? null) && L.pano === pano && L.room === room && L.format === format) return
       restart(opts, res, effectiveKind)
     }, 300)
     return () => window.clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opts, res, room, format, env, effectiveKind])
+  }, [opts, res, room, format, env, pano, effectiveKind])
+
+  // Vista per les finestres: es carrega la triada (la foto pròpia, si n'hi ha de desada).
+  const viewKind = opts.view ?? "garden"
+  useEffect(() => {
+    if (!open || viewKind === "sky") return
+    let alive = true
+    void loadBackdrop(viewKind).then(
+      (p) => alive && setPano(p ? { kind: viewKind, p } : null),
+      (err) => alive && setNotice(`No s'ha pogut carregar la vista per les finestres: ${err instanceof Error ? err.message : String(err)}`),
+    )
+    return () => {
+      alive = false
+    }
+  }, [open, viewKind])
 
   useEffect(() => {
     if (!running) return
@@ -779,7 +799,32 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                     />
                   </FormRow>
                   <FormRow label="Per les finestres" help={`${BACKDROPS.find((b) => b.id === (opts.view ?? "garden"))?.help ?? ""} Només als ambients, a través dels vidres.`}>
-                    <ChoiceChips<string> label="Per les finestres" options={BACKDROPS.map((b) => ({ id: b.id, label: b.label }))} value={opts.view ?? "garden"} onChange={(v) => set({ view: v as RenderOpts["view"] })} />
+                    <Stack gap={2}>
+                      <ChoiceChips<string> label="Per les finestres" options={BACKDROPS.map((b) => ({ id: b.id, label: b.label }))} value={viewKind} onChange={(v) => set({ view: v as RenderOpts["view"] })} />
+                      {viewKind === "photo" && (
+                        <Button size="xs" variant="outline" alignSelf="flex-start" asChild>
+                          <label>
+                            <LuImageUp /> {pano?.kind === "photo" ? "Canviar la foto" : "Triar una foto"}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              hidden
+                              onChange={async (e) => {
+                                const f = e.currentTarget.files?.[0]
+                                e.currentTarget.value = ""
+                                if (!f) return
+                                try {
+                                  setPano({ kind: "photo", p: await saveBackdropPhoto(f) })
+                                  setNotice(null)
+                                } catch (err) {
+                                  setNotice(`No s'ha pogut llegir la foto: ${err instanceof Error ? err.message : String(err)}`)
+                                }
+                              }}
+                            />
+                          </label>
+                        </Button>
+                      )}
+                    </Stack>
                   </FormRow>
                 </Sec>
 
@@ -825,6 +870,8 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                                 skyReq.current++
                                 setEnv({ name: f.name, env: parsed, sky: "file" })
                                 setSky("file")
+                                // Un .hdr propi (un jardí, el mar…) es veu tal qual per les finestres.
+                                setOpts((o) => ({ ...o, view: "sky" }))
                                 setNotice(null)
                               } catch (err) {
                                 setNotice(`No s'ha pogut llegir el cel HDRI: ${err instanceof Error ? err.message : String(err)}`)

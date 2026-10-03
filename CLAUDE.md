@@ -621,12 +621,18 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     així les preferències d'abans també en tenen. Lacats brillants nous (`GLOSS_MATERIALS`, v15): «Lacat negre brillant»
     i «Lacat blanc brillant» (taulers, vernís 1).
     Més materials (`RIFT_MATERIALS`, v16): «Roure de fil» i «Noguera de fil» (veta recta, sense flama), «Vidre ambre»,
-    «Ceràmica sorra», «Marbre blanc» i «Marbre negre» (pedra polida).
-  - **Vista per les finestres** (per decisió de l'usuari): `backdrops.ts` fa a mà un panorama equirectangular (Jardí:
-    dues fileres d'arbres, tanca i gespa; Mar), alfa 0 on hi ha cel; `RenderOpts.view` («Per les finestres»: Jardí, Mar,
-    Només cel; només de dia o capvespre amb llum de dia) l'afegeix com a textura i `RenderScene.backdrop` n'és l'índex
-    (GPU: `P.emit.z` = índex + 1). Només el veuen els raigs de càmera directes (`vertex < 0`) que surten per un vidre: no
-    fa llum; es multiplica per la llum del cel a l'horitzó × `BACKDROP_GAIN` (2).
+    «Ceràmica sorra», «Marbre blanc» i «Marbre negre» (pedra polida). v17: «Revestiment de roure de fil»
+    (`CLADDING_MATERIALS`; la xapa de foto del «Revestiment de roure» feia flames a la paret) i «Pantalla de lli» amb
+    `glow` `LAMPSHADE_GLOW` (2,2; abans 4, sortia blanca cremada; només si encara tenia el 4).
+  - **Vista per les finestres** (per decisió de l'usuari): panorames de foto (`backdrops.ts`): Jardí i Mar són fotos
+    360° de Poly Haven (CC0, `public/backdrop/*-2k.jpg`, de les JPG tonemapejades de symmetrical_garden_02 i
+    simons_town_rocks; a la memòria cau del SW en fer-les servir) i «La meva foto» (`saveBackdropPhoto`, Cache Storage
+    `mobles-backdrop-v1`; una foto normal es fa panorama amb `photoPanorama`: 70° davant, mirall als costats, alfa 0 per
+    sobre; una 2:1 tal qual). `aimBackdrop` gira el panorama perquè `hero` quedi on mira la càmera. «El cel (HDRI)»: res
+    (un .hdr propi es veu tal qual per les finestres i també fa llum; en carregar-ne un es tria sol). `RenderOpts.view`
+    l'afegeix com a textura i `RenderScene.backdrop` n'és l'índex (GPU: `P.emit.z` = índex + 1). Només el veuen els raigs
+    de càmera directes (`vertex < 0`) que no toquen res: no fa llum; es multiplica per la llum del cel a l'horitzó ×
+    `BACKDROP_GAIN` (2). Els models 3D d'arbres (Xicranda, Avet) es poden posar fora (plantilla: `outside: true`).
   - **Materials**: difús + GGX amb Fresnel, metalls, vidre fi (no fa ombra), retall per l'alfa. **Arestes arrodonides** (2 mm,
     `BEVEL_RADIUS`, `userData.bevel`, `bevelNormal`). **Veta amb relleu** (`userData.grain`). **Normals llises**
     (`RenderScene.normals`, `smoothNormal`; GPU: `encodeNormal`); la geomètrica es queda per desplaçar rajos; cantells corbs
@@ -836,7 +842,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **3D** (`Ambient3D`): terra i parets amb `surfaceMaterial` (textura a mida real); les parets entre la càmera i l'habitació es
   fan transparents (casa de nines). La mateixa navegació que l'editor; clic per seleccionar (caixa taronja; Supr, Ctrl/⌘ D, R
   i fletxes); **es mou amb les fletxes del gizmo** (`MoveGizmo`, X i Z; quadrícula, imant a les parets només en la direcció
-  de la fletxa amb un sol element, Alt sense imant, un pas de desfer). Ratolí a sobre: contorn prim (`BoxFrame`); seleccionat, gruixut. Les peces d'un
+  de la fletxa amb un sol element, Alt sense imant, un pas de desfer). **La verda (Y) mou l'alçada** («Del terra», mai
+  sota 0; per decisió de l'usuari): amb l'imant, a 60 mm s'enganxa al terra o a sobre d'un altre element que tingui a
+  sota (planta que se solapa: una taula, un moble). Ratolí a sobre: contorn prim (`BoxFrame`); seleccionat, gruixut. Les peces d'un
   element només es refan si en canvia la geometria o els materials (moure'l només en canvia la posició) i les que ja no es
   dibuixen s'alliberen. La càmera mira el punt de l'obertura (o d'«Enquadrar»), no segueix la caixa de l'ambient. **Interior** (`LuEye`, `eyePose`): càmera anivellada a 1,35 m al costat de la paret de davant
   mirant la del fons, fov 55 («Enquadrar» torna a 40). **La càmera es recorda per ambient** (`Ambient.camera`, `pose` =
@@ -853,10 +861,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   `focal`), que es copia a l'ambient (`Ambient.render`, tolerant) i el 3D passa al Render (`scene.userData.renderPreset`:
   el diàleg l'aplica en obrir-se), i `eye` (el 3D s'obre amb la càmera d'Interior, `eyePose`, desada com a `camera` amb
   `pose: "eye"`). La primera és **«Saló al vespre»** (`amb-evening-living`): vitrina «Galeria» amb LED a la paret del fons,
-  res a la paret de davant (hi va la càmera), vespre amb 24 mm.
+  res a la paret de davant (hi va la càmera), vespre amb 24 mm; llibres, gerros, bol i ampolles als prestatges i una
+  xicranda fora de la finestra.
   La segona és **«Showroom»** (`amb-showroom`), per ensenyar el render: vitrina `show-vitrine` (roure de fil, portes de
   vidre amb LED), bufet `show-sideboard` (lacat negre brillant, sobre de marbre), tauleta `show-coffee`, ampolles ambre,
-  gerros, copes, llibres i bol, sofà de vellut i vidriera al jardí; capvespre amb 24 mm.
+  gerros, copes, llibres i bol, sofà de vellut i vidriera al jardí (amb una xicranda i un avet fora); capvespre amb 24 mm.
   `createAmbientFromTemplate` (`features/ambients/fromTemplate.ts`) crea cada moble i objecte (un per plantilla, a l'Historial
   o al grup del client) i l'ambient enllaçat. **Una escena del catàleg s'obre directament** i va a l'Historial (per decisió de l'usuari, sense preguntar).
 - **Ambients per a clients**: menú ⋯ › «Duplicar (per a un client)…» (`duplicateAmbient`): «escena · client», duplica els
@@ -1002,7 +1011,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Visor 3D**: qualitat, escena de Presentació (terra i paret: materials de la biblioteca, `PresentationScene.floorMaterial`
   / `wallMaterial`, o les mostres ràpides; terra per defecte «Parquet de roure»), llum i «Cel del render». **Tema**:
   dia/nit/sistema i color principal (`theme/accent.ts` redirigeix les variables CSS de `wood`).
-- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 12): les migracions depenen només de la versió
+- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 17): les migracions depenen només de la versió
   desada, que **mai baixa** (`saveSettings` desa la més alta). **Desades per una versió més nova**: només lectura
   (`saveSettings` torna `false` amb `console.warn`; `loadSettings` avisa). **Lectura camp a camp** (`repairValue`,
   `core/model/repair.ts`): un valor dolent d'una secció només torna aquell valor a l'inicial (un tauler o una llargada de guia

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { DEFAULT_SETTINGS, parseSettings, type MaterialPref } from "./settings"
+import { DEFAULT_SETTINGS, LAMPSHADE_GLOW, parseSettings, type MaterialPref } from "./settings"
 import { materialCoat, materialSheen } from "./materialFx"
 
 const byName = (n: string) => DEFAULT_SETTINGS.materials.find((m) => m.name === n)!
@@ -33,5 +33,18 @@ describe("v16: fusta de fil", () => {
     const rift = ms.find((m) => m.name === "Roure de fil")!
     expect(rift.finish.kind === "wood" && rift.finish.gen?.figure).toBe(0)
     expect(ms.some((m) => m.name === "Noguera de fil")).toBe(true)
+  })
+})
+
+describe("v17: revestiment de fil i pantalles", () => {
+  it("afegeix «Revestiment de roure de fil» i baixa la llum de les pantalles que encara tenien la d'abans", () => {
+    const old = { ...DEFAULT_SETTINGS, version: 16, materials: DEFAULT_SETTINGS.materials.filter((m) => m.id !== "sim-oak-cladding-rift").map((m) => (m.id === "sim-lampshade" ? { ...m, glow: 4 } : m)) }
+    const ms = parseSettings(JSON.parse(JSON.stringify(old))).settings.materials
+    expect(ms.some((m) => m.name === "Revestiment de roure de fil")).toBe(true)
+    expect(ms.find((m) => m.id === "sim-lampshade")!.glow).toBe(LAMPSHADE_GLOW)
+  })
+  it("una llum triada per l'usuari no es toca", () => {
+    const old = { ...DEFAULT_SETTINGS, version: 16, materials: DEFAULT_SETTINGS.materials.map((m) => (m.id === "sim-lampshade" ? { ...m, glow: 7 } : m)) }
+    expect(parseSettings(JSON.parse(JSON.stringify(old))).settings.materials.find((m) => m.id === "sim-lampshade")!.glow).toBe(7)
   })
 })

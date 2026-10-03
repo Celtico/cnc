@@ -67,6 +67,12 @@ export default defineConfig({
             options: { cacheName: "mobles-textures", expiration: { maxEntries: 120, maxAgeSeconds: 365 * 24 * 3600 }, cacheableResponse: { statuses: [200] } },
           },
           {
+            // Vistes per les finestres del render (`backdrop/*.jpg`, ~0,5 MB cadascuna).
+            urlPattern: ({ url }) => url.pathname.startsWith("/backdrop/"),
+            handler: "CacheFirst",
+            options: { cacheName: "mobles-backdrop-sw", expiration: { maxEntries: 8 }, cacheableResponse: { statuses: [200] } },
+          },
+          {
             // Pesos d'OIDN (1,8 MB): `oidn.ts` els valida (i esborra els dolents de la seva memòria cau).
             urlPattern: ({ url }) => url.pathname.startsWith("/oidn/"),
             handler: "CacheFirst",

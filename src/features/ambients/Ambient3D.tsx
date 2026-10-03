@@ -55,7 +55,7 @@ export function Ambient3D({
   selectedIds?: string[]
   onSelect?: (id: string | null) => void
   /**
-   * Moure elements pel terra amb les fletxes del gizmo (X i Z; el cos no s'arrossega): `onPick` tria l'element tocat
+   * Moure elements amb les fletxes del gizmo (X i Z pel terra, Y en alçada; el cos no s'arrossega): `onPick` tria l'element tocat
    * (o el seu grup, com Figma); `onChange` rep l'ambient (commit en deixar-lo anar).
    */
   onPick?: (id: string) => string[]
@@ -324,21 +324,36 @@ function Room({
   // Terra: la caixa de tot amb un marge, arrodonida al metre (arrossegar un element no el refà a cada pas).
   const fx0 = Math.floor((box.x0 - 600) / 1000) * 1000, fx1 = Math.ceil((box.x1 + 600) / 1000) * 1000
   const fy0 = Math.floor((box.y0 - 600) / 1000) * 1000, fy1 = Math.ceil((box.y1 + 600) / 1000) * 1000
-  const floor = useMemo(() => {
-    const w = fx1 - fx0, d = fy1 - fy0
-    const mesh = new Mesh(new PlaneGeometry(w / 1000, d / 1000), surfaceMaterial(materials, ambient.floorMaterial ?? "Parquet de roure", w, d))
-    mesh.rotation.x = -Math.PI / 2
-    mesh.position.set((fx0 + fx1) / 2000, 0, (fy0 + fy1) / 2000)
-    mesh.receiveShadow = true
-    mesh.userData.room = "floor"
-    return mesh
-  }, [fx0, fx1, fy0, fy1, materials, ambient.floorMaterial])
   // Les parets només depenen de les parets (el centre de l'habitació per saber cap on és «fora»).
   const wx = ambient.walls.flatMap((w) => [w.a[0], w.b[0]]), wy = ambient.walls.flatMap((w) => [w.a[1], w.b[1]])
   // Amb una o dues parets soltes, el centre de tot (amb els elements) diu millor on és l'habitació.
   const closed = ambient.walls.length >= 3
   const rcx = closed ? (Math.min(...wx) + Math.max(...wx)) / 2 : (box.x0 + box.x1) / 2
   const rcy = closed ? (Math.min(...wy) + Math.max(...wy)) / 2 : (box.y0 + box.y1) / 2
+  // Habitació tancada amb coses fora (arbres davant d'una finestra): el terra de dins, fins a les parets (amb el gruix),
+  // i fora gespa, una mica més avall.
+  const rx0 = closed ? Math.min(...wx) - 300 : fx0, rx1 = closed ? Math.max(...wx) + 300 : fx1
+  const ry0 = closed ? Math.min(...wy) - 300 : fy0, ry1 = closed ? Math.max(...wy) + 300 : fy1
+  const outside = closed && (fx0 < rx0 - 1000 || fx1 > rx1 + 1000 || fy0 < ry0 - 1000 || fy1 > ry1 + 1000)
+  const floor = useMemo(() => {
+    const [x0, x1, y0, y1] = outside ? [rx0, rx1, ry0, ry1] : [fx0, fx1, fy0, fy1]
+    const w = x1 - x0, d = y1 - y0
+    const mesh = new Mesh(new PlaneGeometry(w / 1000, d / 1000), surfaceMaterial(materials, ambient.floorMaterial ?? "Parquet de roure", w, d))
+    mesh.rotation.x = -Math.PI / 2
+    mesh.position.set((x0 + x1) / 2000, 0, (y0 + y1) / 2000)
+    mesh.receiveShadow = true
+    mesh.userData.room = "floor"
+    if (!outside) return mesh
+    const g = new Group()
+    const gw = fx1 - fx0 + 4000, gd = fy1 - fy0 + 4000
+    const lawn = new Mesh(new PlaneGeometry(gw / 1000, gd / 1000), surfaceMaterial(materials, "Gespa", gw, gd))
+    lawn.rotation.x = -Math.PI / 2
+    lawn.position.set((fx0 + fx1) / 2000, -0.004, (fy0 + fy1) / 2000)
+    lawn.receiveShadow = true
+    lawn.userData.room = "floor"
+    g.add(mesh, lawn)
+    return g
+  }, [fx0, fx1, fy0, fy1, rx0, rx1, ry0, ry1, outside, materials, ambient.floorMaterial])
   useEffect(() => () => disposeTree(floor), [floor])
 
   const walls = useMemo(() => {
@@ -477,7 +492,7 @@ function Room({
   const invalidate = useThree((s) => s.invalidate)
   useEffect(() => invalidate(), [scenes, dollhouse, invalidate])
 
-  // Moure amb el gizmo: cada fletxa en la seva direcció (X o Z del plànol) sobre un pla que conté l'eix i mira a la
+  // Moure amb el gizmo: cada fletxa en la seva direcció (X o Z del plànol, i la verda en alçada, «Del terra») sobre un pla que conté l'eix i mira a la
   // càmera; la resta, com al plànol (quadrícula, imant a les parets per a un sol element, Alt sense imant, un sol pas
   // de desfer en deixar-lo anar).
   const { camera, controls } = useThree()
@@ -499,13 +514,21 @@ function Room({
     }
     return [(x0 + x1) / 2000, (bot + top) / 2000, (z0 + z1) / 2000]
   }, [sel, geos])
-  const drag = useRef<{ axis: Axis; plane: Plane; start: Vector3; from: Map<string, readonly [number, number]>; moved: boolean; last: Ambient; sx: number; sy: number } | null>(null)
+  const drag = useRef<{ axis: Axis; plane: Plane; start: Vector3; from: Map<string, readonly [number, number, number]>; moved: boolean; last: Ambient; sx: number; sy: number } | null>(null)
+  /** Planta (rectangle del plànol, mm) d'un element girat. */
+  const footprint = (it: Ambient["items"][number]) => {
+    const g = geos.get(it.id)
+    if (!g) return null
+    const c = Math.abs(Math.cos(rad(it.rot))), sn = Math.abs(Math.sin(rad(it.rot)))
+    const hw = (g.w * c + g.d * sn) / 2, hd = (g.w * sn + g.d * c) / 2
+    return { x0: it.x - hw, x1: it.x + hw, y0: it.y - hd, y1: it.y + hd, h: g.max[1] }
+  }
   const [activeAxis, setActiveAxis] = useState<Axis | null>(null)
   const orbit = controls as unknown as { enabled: boolean } | null
   const startAxis = (a: Axis, e: ThreeEvent<PointerEvent>) => {
     if (!onChange || e.button !== 0) return
     e.stopPropagation()
-    const dir = a === "x" ? new Vector3(1, 0, 0) : new Vector3(0, 0, 1)
+    const dir = a === "x" ? new Vector3(1, 0, 0) : a === "y" ? new Vector3(0, 1, 0) : new Vector3(0, 0, 1)
     const toCam = camera.getWorldDirection(new Vector3()).negate()
     const n = dir.clone().cross(toCam).cross(dir)
     if (n.lengthSq() < 1e-6) return
@@ -513,7 +536,7 @@ function Room({
       axis: a,
       plane: new Plane().setFromNormalAndCoplanarPoint(n.normalize(), e.point),
       start: e.point.clone(),
-      from: new Map(sel.map((it) => [it.id, [it.x, it.y] as const])),
+      from: new Map(sel.map((it) => [it.id, [it.x, it.y, it.elevation ?? 0] as const])),
       moved: false,
       last: ambient,
       sx: e.clientX,
@@ -531,6 +554,33 @@ function Room({
     if (!st.moved) return
     const p = e.ray.intersectPlane(st.plane, new Vector3())
     if (!p) return
+    if (st.axis === "y") {
+      // Alçada («Del terra»): mai sota el terra; amb l'imant, a sobre d'un altre element que tingui a sota (una taula,
+      // un moble) o al terra, si hi és a prop.
+      let oe = snapGrid((p.y - st.start.y) * 1000)
+      if (st.from.size === 1 && snap && !e.altKey) {
+        const [id, f] = [...st.from][0]!
+        const me = ambient.items.find((x) => x.id === id)
+        const fp = me && footprint(me)
+        if (fp) {
+          const tops = [0]
+          for (const o of ambient.items) {
+            if (o.id === id) continue
+            const q = footprint(o)
+            if (q && q.x0 < fp.x1 && q.x1 > fp.x0 && q.y0 < fp.y1 && q.y1 > fp.y0) tops.push((o.elevation ?? 0) + q.h)
+          }
+          const want = f[2] + oe
+          const near = tops.reduce((b, t) => (Math.abs(t - want) < Math.abs(b - want) ? t : b), Infinity)
+          if (Math.abs(near - want) <= 60) oe = Math.round(near - f[2])
+        }
+      }
+      st.last = { ...ambient, items: ambient.items.map((it) => {
+        const f = st.from.get(it.id)
+        return f ? { ...it, elevation: Math.max(0, f[2] + oe) } : it
+      }) }
+      onChange(st.last, false)
+      return
+    }
     let ox = st.axis === "x" ? snapGrid((p.x - st.start.x) * 1000) : 0
     let oy = st.axis === "z" ? snapGrid((p.z - st.start.z) * 1000) : 0
     if (st.from.size === 1 && snap && !e.altKey) {
@@ -593,7 +643,7 @@ function Room({
       {hoverId && !selectedIds.includes(hoverId) && !activeAxis && <ItemFrame ambient={ambient} geos={geos} id={hoverId} />}
       {gizmoAt && onChange && (
         <group position={gizmoAt}>
-          <MoveGizmo axes={["x", "z"]} active={activeAxis} onStart={startAxis} onMove={moveAxis} onEnd={endAxis} />
+          <MoveGizmo axes={["x", "y", "z"]} active={activeAxis} onStart={startAxis} onMove={moveAxis} onEnd={endAxis} />
         </group>
       )}
     </>

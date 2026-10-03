@@ -27,6 +27,8 @@ export interface AmbientTemplateItem {
   rot?: number
   elevation?: number
   group?: string
+  /** Fora de l'habitació a posta (arbres davant d'una finestra). */
+  outside?: boolean
 }
 
 /** Categories del catàleg d'ambients (acordions de la pàgina Ambients). */
@@ -130,6 +132,7 @@ const chairsAround = (cx: number, cy: number, len: number, depth: number, n: num
 }
 
 const O = (id: string) => `object:object-${id}`
+const F = (id: string) => O(`model-${id}`)
 /** Llum de sostre penjat perquè toqui el sostre (objectes de 1100 d'alt). */
 const pendant = (id: string, x: number, y: number, group: string, ceiling = 2600, h = 1100): AmbientTemplateItem => ({ ref: O(id), x, y, elevation: ceiling - h, group })
 
@@ -147,7 +150,7 @@ const MAG_SCENES: AmbientTemplate[] = [
     d: 4800,
     floor: "Parquet de noguera",
     wall: "Estuc greige",
-    walls: { N: "Revestiment de roure" },
+    walls: { N: "Revestiment de roure de fil" },
     openings: [{ side: "N", kind: "glazing", at: 3250, w: 1900, h: 2400, sill: 0, panes: 2 }],
     // La càmera d'Interior és a la paret de davant (S) mirant la del fons (N): el que s'ha de veure, a la paret N i a prop
     // de les cantonades del fons; res a la paret S.
@@ -168,6 +171,9 @@ const MAG_SCENES: AmbientTemplate[] = [
       { ref: O("plant-tropical"), wall: "E", at: 3100, gap: 150 },
       // Una cortina recollida a la dreta: la vidriera es veu gairebé sencera (el jardí).
       { ref: O("curtain-linen"), wall: "N", at: 4440 },
+      // Fora, davant de la vidriera: arbres de veritat (models 3D), amb la foto del jardí al darrere.
+      { ref: F("jacaranda"), x: 3300, y: -3600, group: "Jardí", outside: true },
+      { ref: F("fir-01"), x: 4900, y: -1400, group: "Jardí", outside: true },
     ],
     render: { mood: "dusk", focal: 24 },
     eye: true,
@@ -176,16 +182,23 @@ const MAG_SCENES: AmbientTemplate[] = [
     id: "amb-evening-living",
     category: "salo",
     name: "Saló al vespre",
-    description: "5,4 × 4,4 m · paret del fons de roure i parquet de noguera: vitrina «Galeria» amb llum LED, sofà en L, taula negra, butaca i làmpada de peu. El Render s'obre al vespre, a l'alçada dels ulls i amb un 24 mm (angular d'interiors).",
+    description: "5,4 × 4,4 m · paret del fons de roure de fil i parquet de noguera: vitrina «Galeria» amb llum LED i llibres, gerros i ampolles, sofà en L, taula negra, butaca i làmpada de peu. El Render s'obre al vespre, a l'alçada dels ulls i amb un 24 mm (angular d'interiors).",
     w: 5400,
     d: 4400,
     floor: "Parquet de noguera",
     wall: "Estuc greige",
-    walls: { N: "Revestiment de roure" },
+    walls: { N: "Revestiment de roure de fil" },
     openings: [{ side: "E", kind: "window", at: 2200, w: 1400, h: 1900, sill: 400 }],
     // La càmera d'Interior és a la paret de davant (S) mirant la del fons (N): res a la paret S.
     items: [
       { ref: "store:salo:Vitrina «Galeria»", wall: "N", at: 1500 },
+      // Decoració als prestatges de la vitrina (columnes centrades a 1150 i 1850; prestatges a 598, 942, 1294 i 1646).
+      { ref: O("books-standing"), wall: "N", at: 1150, gap: 90, elevation: 1646 },
+      { ref: O("vases-ceramic"), wall: "N", at: 1150, gap: 90, elevation: 1294 },
+      { ref: O("bowl-wood"), wall: "N", at: 1150, gap: 60, elevation: 598 },
+      { ref: O("bottles-amber"), wall: "N", at: 1850, gap: 140, elevation: 1646 },
+      { ref: O("books-standing"), wall: "N", at: 1850, gap: 90, elevation: 942 },
+      { ref: O("vases-ceramic"), wall: "N", at: 1850, gap: 90, elevation: 598 },
       { ref: O("art-dark"), wall: "N", at: 3700, elevation: 1000 },
       { ref: O("plant-tropical"), wall: "N", at: 4950, gap: 150 },
       { ref: O("rug-grey"), x: 2900, y: 2300 },
@@ -195,6 +208,8 @@ const MAG_SCENES: AmbientTemplate[] = [
       { ref: O("armchair-grey"), x: 4300, y: 2500, rot: 90 },
       { ref: O("curtain-linen"), wall: "E", at: 900, group: "Cortines" },
       { ref: O("curtain-linen"), wall: "E", at: 3500, group: "Cortines" },
+      // Fora de la finestra (paret E): una xicranda (model 3D).
+      { ref: F("jacaranda"), x: 9200, y: 2400, group: "Jardí", outside: true },
     ],
     render: { mood: "night", focal: 24 },
     eye: true,
@@ -512,7 +527,6 @@ const MAG_SCENES: AmbientTemplate[] = [
  * Escenes amb les plantes de debò (models 3D de Poly Haven: falgueres, xicranda i avet), primer al catàleg.
  * Exteriors oberts per a l'arbre; interiors verds amb falgueres en test.
  */
-const F = (id: string) => O(`model-${id}`)
 const PLANT_SCENES: AmbientTemplate[] = [
   {
     id: "amb-plant-jacaranda",

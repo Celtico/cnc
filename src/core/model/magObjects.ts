@@ -303,12 +303,12 @@ export const MAG_OBJECTS: Template[] = [
       return q
     })
   }),
-  t("bottles-amber", "Ampolles d'ambre", "360 × 340 × 120 mm · tres ampolles de vidre ambre.", () =>
-    ([[60, 340, 110], [180, 280, 95], [290, 230, 80]] as const).flatMap(([cx, h, dia], i) => bottle(`Ampolla ${i + 1}`, "Vidre ambre", cx, 60, dia, h)),
+  t("bottles-amber", "Ampolles d'ambre", "360 × 300 × 120 mm · tres ampolles de vidre ambre (caben en un prestatge de 32 cm).", () =>
+    ([[60, 300, 110], [180, 250, 95], [290, 205, 80]] as const).flatMap(([cx, h, dia], i) => bottle(`Ampolla ${i + 1}`, "Vidre ambre", cx, 60, dia, h)),
   ),
-  t("vases-ceramic", "Gerros de ceràmica", "420 × 360 × 220 mm · un gerro alt sorra i un de rodó negre.", () => [
-    ...vase("Gerro alt", "Ceràmica sorra", 100, 110, 180, 360, 0.55),
-    ...vase("Gerro rodó", "Ceràmica negra", 300, 110, 220, 230, 0.35),
+  t("vases-ceramic", "Gerros de ceràmica", "420 × 300 × 220 mm · un gerro alt sorra i un de rodó negre.", () => [
+    ...vase("Gerro alt", "Ceràmica sorra", 100, 110, 170, 300, 0.55),
+    ...vase("Gerro rodó", "Ceràmica negra", 300, 110, 210, 210, 0.35),
   ]),
   t("bowl-wood", "Bol de fusta", "Ø 320 × 120 mm · noguera.", () => blob("Bol", "Noguera xapada", 160, 0, 160, 320, 320, 120, 5)),
   t("wine-glasses", "Copes", "260 × 220 × 90 mm · tres copes de vidre.", () =>
