@@ -210,6 +210,8 @@ export class GpuEngine implements RenderEngine {
     const buf = new ArrayBuffer(PARAMS_BYTES)
     const f = new Float32Array(buf), u = new Uint32Array(buf)
     f.set(m.slice(0, 16), 0)
+    // cam3.w (la w de la posició) porta el descentrament de la lent.
+    f[15] = c.ortho ? 0 : (c.shift ?? 0)
     f.set([c.scale, c.aspect, c.ortho ? 1 : 0, (o.aperture ?? 0) / 1000], 16)
     f.set([this.focus, job.w, job.h, y0], 20)
     f.set([...L.sunDir, L.sunCosMax], 24)

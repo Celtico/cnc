@@ -214,6 +214,16 @@ export function ZonePanel({
                   </Switch.Root>
                 </FormRow>
               )}
+              {/* Llum LED (vitrines, prestatgeries, nínxols): fa llum al render; el perfil surt a Peces sense nesting. */}
+              {!zone.split && (
+                <FormRow label="Llum" help={zone.led ? "Perfil amb tira LED càlida sota el sostre i sota cada prestatge, a prop del davant. Fa llum al render i surt a Peces, a «Elements sense nesting», amb el llarg per tallar el perfil." : undefined}>
+                  <Switch.Root size="sm" pt="6px" checked={!!zone.led} onCheckedChange={(e) => onChange(updateZone(root, zone.id, (z) => ({ ...z, led: e.checked || undefined })))}>
+                    <Switch.HiddenInput />
+                    <Switch.Control />
+                    <Switch.Label fontSize="sm">Tira LED</Switch.Label>
+                  </Switch.Root>
+                </FormRow>
+              )}
             </PanelSection>
           )}
 

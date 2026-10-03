@@ -172,6 +172,8 @@ export interface Zone {
   front?: Front
   /** Barra de penjar (tub d'inox Ø25 a 50 mm del sostre del compartiment). */
   rail?: boolean
+  /** Llum LED: perfil amb tira LED sota el sostre del compartiment i sota cada prestatge (render i llista; no és de CNC). */
+  led?: boolean
 }
 
 export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
@@ -199,6 +201,7 @@ export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
       .optional(),
     front: FrontSchema.optional(),
     rail: z.boolean().optional(),
+    led: z.boolean().optional(),
   }),
 )
 
@@ -738,6 +741,7 @@ function visibleZone(z: Zone): Zone {
     // Un compartiment dividit no té prestatges ni barra (l'inspector no els ensenya).
     delete out.shelves
     delete out.rail
+    delete out.led
     out.split = { ...z.split, children: z.split.children.map(visibleZone) }
   } else {
     // Sense prestatges (0): gruix i «a ras» no compten; «Regulables» sí (les fileres System 32 per posar-n'hi després),
@@ -752,12 +756,14 @@ function visibleZone(z: Zone): Zone {
       out.shelves = s
     }
     if (!z.rail) delete out.rail
+    if (!z.led) delete out.led
   }
   const f = z.front
   if (f?.kind === "drawers") {
-    // Els calaixos ocupen el compartiment: la secció Prestatges (prestatges i barra) no surt.
+    // Els calaixos ocupen el compartiment: la secció Prestatges (prestatges, barra i llum) no surt.
     delete out.shelves
     delete out.rail
+    delete out.led
     const heights = f.heights.slice(0, f.n)
     while (heights.length < f.n) heights.push("auto")
     out.front = { ...f, heights }

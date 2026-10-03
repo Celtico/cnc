@@ -8,7 +8,7 @@ const LUMA = vec3f(0.2126, 0.7152, 0.0722);
 const INTERNAL = 0x80000000u;
 
 struct Params {
-  cam0: vec4f, cam1: vec4f, cam2: vec4f, cam3: vec4f,
+  cam0: vec4f, cam1: vec4f, cam2: vec4f, cam3: vec4f, // cam3.w: descentrament vertical (RenderCamera.shift)
   camInfo: vec4f,  // escala, aspecte, ortogràfica, obertura (m)
   frame: vec4f,    // focus, W, H, primera fila
   sunDir: vec4f,   // direcció, cos del radi
@@ -444,7 +444,8 @@ fn trace(o0: vec3f, d0: vec3f) -> vec4f {
   for (var bounce = 0u; bounce < P.run.z; bounce++) {
     if (!intersect(o, d, 1e9, false)) {
       if (bounce == 0u) {
-        acc += P.bg.xyz;
+        // El fons segueix la llum del cel (al vespre, fosc).
+        acc += P.bg.xyz * P.sky.x;
         alpha = 0.0;
         break;
       }
@@ -736,7 +737,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     let nxp = (f32(x) + rnd()) / f32(W) * 2.0 - 1.0;
     let nyp = 1.0 - (f32(y) + rnd()) / f32(H) * 2.0;
     let lx = nxp * P.camInfo.x * P.camInfo.y;
-    let ly = nyp * P.camInfo.x;
+    let ly = nyp * P.camInfo.x + P.cam3.w;
     var o: vec3f;
     var d: vec3f;
     if (P.camInfo.z > 0.5) {

@@ -47,6 +47,12 @@ export interface RenderCamera {
   /** Perspectiva: tan(fov/2). Ortogràfica: mitja alçada visible. */
   scale: number
   aspect: number
+  /**
+   * Descentrament vertical de la lent (perspectiva; en unitats de tan, com `scale`): els raigs fan `ly = nyp·scale + shift`.
+   * És el que fan els fotògrafs d'interiors amb una lent de descentrament: càmera anivellada (verticals rectes) i el
+   * centre de la imatge on mirava (`photoCamera`).
+   */
+  shift?: number
 }
 export interface RenderScene {
   positions: Float32Array
@@ -106,9 +112,41 @@ export interface RenderOpts {
   /** Llums enceses (pantalles i bombetes emeten llum) i la seva intensitat (×). */
   lamps?: boolean
   lampIntensity?: number
+  /** Verticals rectes (càmera anivellada amb descentrament, com les fotos d'interiors): `photoCamera`. */
+  straight?: boolean
+  /** Focal equivalent de 35 mm (costat llarg = 36 mm); 0 o res = la del visor. */
+  focal?: number
 }
 
-export const DEFAULT_RENDER_OPTS: RenderOpts = { bounces: 6, sunAzimuth: 40, sunElevation: 45, sunIntensity: 1, skyIntensity: 1, softness: 0.15, aperture: 0, envRotation: 0, lamps: true, lampIntensity: 1 }
+export const DEFAULT_RENDER_OPTS: RenderOpts = { bounces: 6, sunAzimuth: 40, sunElevation: 45, sunIntensity: 1, skyIntensity: 1, softness: 0.15, aperture: 0, envRotation: 0, lamps: true, lampIntensity: 1, straight: true, focal: 0 }
+
+/**
+ * La càmera del render com la d'un fotògraf d'interiors:
+ * - `focal` (mm, equivalent de 35 mm: el costat llarg de la imatge fa 36 mm) en lloc de l'angle del visor;
+ * - `straight`: verticals rectes. La càmera s'anivella (sense inclinació ni gir) i un descentrament (`shift`) torna a posar
+ *   al centre de la imatge el punt on mirava. Mirant gairebé de dalt (> 60°) no es fa: quedaria molt estirat.
+ */
+export function photoCamera(cam: RenderCamera, o: Pick<RenderOpts, "straight" | "focal">): RenderCamera {
+  if (cam.ortho) return cam
+  let out = cam
+  if (o.focal && o.focal > 0) {
+    const half = 18 / o.focal
+    out = { ...out, scale: out.aspect >= 1 ? half / out.aspect : half }
+  }
+  if (o.straight) {
+    const m = out.matrix
+    const fx = -m[8]!, fy = -m[9]!, fz = -m[10]!
+    const hl = Math.hypot(fx, fz)
+    const pitch = Math.atan2(fy, hl)
+    if (hl > 1e-6 && Math.abs(pitch) < (60 * Math.PI) / 180) {
+      const hx = fx / hl, hz = fz / hl
+      // Columnes: dreta, amunt (vertical del món), enrere (horitzontal), posició.
+      const mm = [-hz, 0, hx, 0, 0, 1, 0, 0, -hx, 0, -hz, 0, m[12]!, m[13]!, m[14]!, 1]
+      out = { ...out, matrix: mm, shift: Math.tan(pitch) }
+    }
+  }
+  return out
+}
 
 const MAX_TEX = 512
 

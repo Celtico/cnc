@@ -383,7 +383,9 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
     if (!intersect(ox, oy, oz, dx, dy, dz, 1e9, false)) {
       if (bounce === 0) {
         // Fons: el color de l'escena i alfa 0 (fons blanc o transparent al diàleg).
-        accR += S!.background[0]; accG += S!.background[1]; accB += S!.background[2]
+        // Segueix la llum del cel (al vespre, fosc), com al motor de GPU.
+        const k = O.skyIntensity
+        accR += S!.background[0] * k; accG += S!.background[1] * k; accB += S!.background[2] * k
         alpha = 0
         break
       }
@@ -737,7 +739,7 @@ function pass(out: Float32Array, aux: Float32Array | null) {
         oz = m[14]! + m[2]! * lx + m[6]! * ly
         dx = -m[8]!; dy = -m[9]!; dz = -m[10]!
       } else {
-        const lx = nxp * c.scale * c.aspect, ly = nyp * c.scale
+        const lx = nxp * c.scale * c.aspect, ly = nyp * c.scale + (c.shift ?? 0)
         dx = m[0]! * lx + m[4]! * ly - m[8]!
         dy = m[1]! * lx + m[5]! * ly - m[9]!
         dz = m[2]! * lx + m[6]! * ly - m[10]!
@@ -836,8 +838,10 @@ self.onmessage = (e: MessageEvent<Msg>) => {
   EM = buildEmitters(S)
   // Enfocament: la distància del centre de la imatge.
   {
-    const m = S.camera.matrix
-    focus = intersect(m[12]!, m[13]!, m[14]!, -m[8]!, -m[9]!, -m[10]!, 1e9, false) ? hitT : 0
+    // El raig del centre (amb el descentrament, `shift`): la seva component endavant és 1, així que `hitT` és la
+    // distància del pla enfocat (paral·lel a la imatge), la que fa servir la lent fina.
+    const m = S.camera.matrix, sh = S.camera.ortho ? 0 : (S.camera.shift ?? 0)
+    focus = intersect(m[12]!, m[13]!, m[14]!, m[4]! * sh - m[8]!, m[5]! * sh - m[9]!, m[6]! * sh - m[10]!, 1e9, false) ? hitT : 0
   }
   const key = sceneKey()
   if (msg.type === "estimate") {

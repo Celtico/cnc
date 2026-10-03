@@ -14,12 +14,14 @@ import { parseHdr } from "./hdr"
 import { oidnDenoise, oidnFailed, oidnReady } from "./oidn"
 import type { UNet } from "oidn-web"
 import { SKIES, loadSky, readSky, type SkyId } from "./skies"
-import { DEFAULT_RENDER_OPTS, extractScene, type RenderEnv, type RenderOpts, type RenderRoom } from "./sceneData"
+import { DEFAULT_RENDER_OPTS, extractScene, photoCamera, type RenderEnv, type RenderOpts, type RenderRoom } from "./sceneData"
 import { aces, agx, bloomBuffer, createDrawScheduler, makeAgxLut, makePowLut, makeSrgbLut, sampleBloom, srgbLut, vignette, type ToneCurve } from "./tonemap"
 
 export type SceneGetter = () => { scene: Scene; camera: Camera; width: number; height: number; snapshot?: () => string } | null
 
 /** Motor triat (es recorda entre sessions). */
+/** Objectius (mm, equivalent de 35 mm); 0 = l'angle del visor. */
+const FOCALS = [0, 24, 35, 50] as const
 const ENGINE_KEY = "mobles:render-engine"
 function savedEngine(): EngineKind | null {
   try {
@@ -63,6 +65,18 @@ interface Job {
 const FORMATS = { view: { label: "El del visor", r: 0 }, "3:2": { label: "3:2 (foto)", r: 3 / 2 }, "4:5": { label: "4:5 (revista, vertical)", r: 4 / 5 }, "16:9": { label: "16:9 (web)", r: 16 / 9 }, "1:1": { label: "1:1", r: 1 } } as const
 type Format = keyof typeof FORMATS
 
+/**
+ * Ambients de llum (com les fotos de catàleg): canvien la llum (tornen a començar el render) i l'exposició (a l'instant).
+ * Al capvespre i al vespre l'exposició automàtica deixa la imatge més fosca (`key`) i amb més contrast: manen els llums i
+ * les tires LED, no tot igual d'il·luminat.
+ */
+const MOODS = {
+  day: { label: "Dia", help: "Llum natural: sol i cel.", opts: { sunElevation: 45, sunIntensity: 1, skyIntensity: 1, lamps: true, lampIntensity: 1 }, look: { key: 0.18, contrast: 1 } },
+  dusk: { label: "Capvespre", help: "Sol baix i càlid, poc cel i els llums encesos.", opts: { sunElevation: 8, sunIntensity: 1.3, skyIntensity: 0.35, lamps: true, lampIntensity: 1.5 }, look: { auto: true, key: 0.1, contrast: 1.15, warmth: 0.45 } },
+  night: { label: "Vespre", help: "Només els llums i les tires LED: ambient fosc, com les fotos de catàleg.", opts: { sunIntensity: 0, skyIntensity: 0.05, lamps: true, lampIntensity: 2.5 }, look: { auto: true, key: 0.06, contrast: 1.2, warmth: 0.3 } },
+} satisfies Record<string, { label: string; help: string; opts: Partial<RenderOpts>; look: Partial<Look> }>
+type Mood = keyof typeof MOODS
+
 type Background = "scene" | "white" | "transparent"
 interface Look {
   exposure: number
@@ -71,6 +85,8 @@ interface Look {
   background: Background
   /** Exposició automàtica (com una càmera): la llum mitjana de la imatge queda a un gris mitjà. */
   auto: boolean
+  /** El gris on l'exposició automàtica deixa la llum mitjana: 0,18 de dia; menys, ambient fosc (capvespre, vespre). */
+  key: number
   /** Temperatura: − fred, + càlid. */
   warmth: number
   /** Filtre de soroll (guiat per l'albedo i les normals). */
@@ -81,7 +97,7 @@ interface Look {
   bloom: number
   bloomThreshold: number
 }
-const DEFAULT_LOOK: Look = { exposure: 0, contrast: 1, saturation: 1, background: "scene", auto: false, warmth: 0, denoise: true, curve: "agx", vignette: 0.2, bloom: 0, bloomThreshold: 3 }
+const DEFAULT_LOOK: Look = { exposure: 0, contrast: 1, saturation: 1, background: "scene", auto: false, key: 0.18, warmth: 0, denoise: true, curve: "agx", vignette: 0.2, bloom: 0, bloomThreshold: 3 }
 
 const SRGB_LUT = makeSrgbLut()
 const srgb = (c: number) => srgbLut(SRGB_LUT, c)
@@ -146,6 +162,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
   const [startedAt, setStartedAt] = useState(0)
   const [elapsed, setElapsed] = useState(0)
   const [opts, setOpts] = useState<RenderOpts>(DEFAULT_RENDER_OPTS)
+  const [mood, setMood] = useState<Mood>("day")
   const [res, setRes] = useState<Resolution>("normal")
   const [limit, setLimit] = useState(0)
   const [room, setRoom] = useState<RenderRoom>("room")
@@ -228,7 +245,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
         cnt++
       }
       const gm = cnt ? Math.exp(sum / cnt) : 0.3
-      autoK = Math.min(40, Math.max(0.25, 0.18 / 0.7 / gm))
+      autoK = Math.min(40, Math.max(0.25, (L.key ?? 0.18) / 0.7 / gm))
     }
     const expo = 0.7 * Math.pow(2, L.exposure) * autoK
     const wr = 1 + 0.12 * L.warmth, wb = 1 - 0.12 * L.warmth
@@ -409,7 +426,8 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     setStartedAt(Date.now())
     setElapsed(0)
     setError(null)
-    const data: RenderJob = { scene: src.scene, env: envRef.current?.env ?? null, opts: o, w, h }
+    // La càmera de fotògraf (verticals rectes, focal) es fa aquí: l'escena extreta és la del visor.
+    const data: RenderJob = { scene: { ...src.scene, camera: photoCamera(src.scene.camera, o) }, env: envRef.current?.env ?? null, opts: o, w, h }
     // La GPU ha fallat: es fa per CPU i no s'hi torna (fins que es torni a obrir el diàleg, o
     // en canviar de resolució si el problema era la mida).
     const gpuFallback = (message: string, sizeLimit: boolean) => {
@@ -715,9 +733,22 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                   </FormRow>
                 </Sec>
 
-                <Sec id="camera" title="Càmera" icon={LuCamera} hint="Els canvis tornen a començar el render." badge={format === "view" ? "Visor" : format}>
+                <Sec id="camera" title="Càmera" icon={LuCamera} hint="Els canvis tornen a començar el render." badge={`${format === "view" ? "Visor" : format}${opts.focal ? ` · ${opts.focal} mm` : ""}`}>
                   <FormRow label="Format" help="3:2 foto · 4:5 revista (vertical) · 16:9 web.">
                     <ChoiceChips label="Format" options={(Object.keys(FORMATS) as Format[]).map((k) => ({ id: k, label: k === "view" ? "Visor" : k }))} value={format} onChange={setFormat} />
+                  </FormRow>
+                  <FormRow label="Verticals rectes" help="Com les fotos d'interiors: la càmera s'anivella i les parets i els mobles no «cauen». Mirant molt de dalt no es fa.">
+                    <HStack minH="32px">
+                      <input type="checkbox" aria-label="Verticals rectes" checked={opts.straight !== false} onChange={(e) => set({ straight: e.currentTarget.checked })} style={{ accentColor: "var(--chakra-colors-wood-solid)" }} />
+                    </HStack>
+                  </FormRow>
+                  <FormRow label="Objectiu" help="Equivalent de 35 mm: 24 angular (habitacions petites), 35 interiors, 50 detall i mobles sols. «Visor»: l'angle del visor 3D.">
+                    <ChoiceChips<string>
+                      label="Objectiu"
+                      options={FOCALS.map((f) => ({ id: String(f), label: f ? `${f} mm` : "Visor" }))}
+                      value={String(opts.focal ?? 0)}
+                      onChange={(v) => set({ focal: Number(v) })}
+                    />
                   </FormRow>
                   <Range label="Desenfocament del fons" value={opts.aperture ?? 0} min={0} max={20} step={1} format={(v) => (v ? `f/${(35 / (2 * v)).toFixed(1)}` : "tot enfocat")} onChange={(v) => set({ aperture: v })} />
                   <Text fontSize="2xs" color="fg.subtle">
@@ -740,7 +771,19 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                   </FormRow>
                 </Sec>
 
-                <Sec id="light" title="Llum" icon={LuSun} hint="Els canvis tornen a començar el render." badge={env ? "HDRI" : undefined}>
+                <Sec id="light" title="Llum" icon={LuSun} hint="Els canvis tornen a començar el render." badge={mood !== "day" ? MOODS[mood].label : env ? "HDRI" : undefined}>
+                  <FormRow label="Ambient" help={MOODS[mood].help}>
+                    <ChoiceChips<Mood>
+                      label="Ambient"
+                      options={(Object.keys(MOODS) as Mood[]).map((k) => ({ id: k, label: MOODS[k].label }))}
+                      value={mood}
+                      onChange={(k) => {
+                        setMood(k)
+                        set(MOODS[k].opts)
+                        setLook(MOODS[k].look)
+                      }}
+                    />
+                  </FormRow>
                   <Range label="Sol · direcció" value={opts.sunAzimuth} min={-180} max={180} step={5} format={deg} onChange={(v) => set({ sunAzimuth: v })} />
                   <Range label="Sol · alçada" value={opts.sunElevation} min={5} max={85} step={1} format={deg} onChange={(v) => set({ sunElevation: v })} />
                   <Range label="Sol · intensitat" value={opts.sunIntensity} min={0} max={3} step={0.1} format={x} onChange={(v) => set({ sunIntensity: v })} />
@@ -849,6 +892,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                   alignSelf="start"
                   onClick={() => {
                     setOpts(DEFAULT_RENDER_OPTS)
+                    setMood("day")
                     setRes("normal")
                     setLimit(0)
                     setRoom("room")

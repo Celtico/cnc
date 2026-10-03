@@ -17,7 +17,7 @@ import { repairValue } from "./repair"
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 13
+export const SETTINGS_VERSION = 14
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -343,6 +343,11 @@ export const NON_CNC_MATERIALS: MaterialPref[] = [
   { id: "glass", name: "Vidre", thicknesses: [4, 5, 6, 8, 10], hasGrain: false, finish: { kind: "glass", color: "#cfe6e3" }, edge: "", cnc: false },
 ]
 
+/** Llum LED dels mobles (`Zone.led`): fa llum al render (càlida). Afegit a la v14. */
+export const LED_MATERIALS: MaterialPref[] = [
+  { id: "led-strip", name: "Tira LED", thicknesses: [8], hasGrain: false, finish: { kind: "color", color: "#ffe2b8", roughness: 0.4 }, edge: "", cnc: false, category: "sim", glow: 60 },
+]
+
 /** Materials de simulació: només per veure (ambients, blocs, coixins). Afegits a la v3. */
 const sim = (id: string, name: string, finish: Finish, hasGrain = false, fx: Pick<MaterialPref, "glow" | "translucent"> = {}): MaterialPref => ({ id, name, thicknesses: [10], hasGrain, finish, edge: "", cnc: false, category: "sim", ...fx })
 export const SIM_MATERIALS: MaterialPref[] = [
@@ -462,6 +467,7 @@ export const BUILTIN_MATERIALS: MaterialPref[] = upgradeToPhoto([
   ...TEMPLATE_MATERIALS,
   ...NON_CNC_MATERIALS,
   ...SIM_MATERIALS,
+  ...LED_MATERIALS,
   ...PHOTO_MATERIALS,
 ])
 
@@ -588,8 +594,10 @@ export function parseSettings(raw: unknown): SettingsParse {
   const v12 = version < 12 && v9m !== BUILTIN_MATERIALS ? mergeDuplicateMaterials(v9m) : { materials: v9m, renames: [] }
   // v13: gruixos que les plantilles del catàleg fan servir i els materials inicials no tenien (només s'afegeixen).
   const v13m = version < 13 && v12.materials !== BUILTIN_MATERIALS ? addCatalogThicknesses(v12.materials) : v12.materials
+  // v14: «Tira LED» (llum dels mobles), si no hi és.
+  const v14m = version < 14 && v13m !== BUILTIN_MATERIALS ? [...v13m, ...missing(LED_MATERIALS, v13m)] : v13m
   // Noms únics (sempre): un de repetit passa a «X 2» amb un avís (abans no es comprovava).
-  const unique = dedupeMaterialNames(v13m)
+  const unique = dedupeMaterialNames(v14m)
   problems.push(...unique.problems)
   const materials = unique.materials
   const renamed = (n: string) => v12.renames.find(([from]) => from === n)?.[1] ?? n

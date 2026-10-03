@@ -413,3 +413,37 @@ describe("normals dels taulers amb forma (cantells corbs)", () => {
     for (let i = 0; i < rp.count; i++) expect(Math.max(Math.abs(rp.getX(i)), Math.abs(rp.getY(i)), Math.abs(rp.getZ(i)))).toBeCloseTo(1, 6)
   })
 })
+
+describe("càmera de fotògraf (`photoCamera`)", async () => {
+  const { photoCamera } = await import("./sceneData")
+  const { Matrix4, PerspectiveCamera, Vector3 } = await import("three")
+  const cam = (pos: [number, number, number], target: [number, number, number]) => {
+    const c = new PerspectiveCamera(40, 1.5)
+    c.position.set(...pos)
+    c.lookAt(...target)
+    c.updateMatrixWorld(true)
+    return { ortho: false, matrix: Array.from(c.matrixWorld.elements), scale: Math.tan((20 * Math.PI) / 180), aspect: 1.5 }
+  }
+  it("verticals rectes: càmera anivellada i el centre de la imatge on mirava", () => {
+    const c = cam([2, 1.6, 3], [0, 0.4, 0])
+    const p = photoCamera(c, { straight: true })
+    const m = new Matrix4().fromArray(p.matrix)
+    const right = new Vector3().setFromMatrixColumn(m, 0), up = new Vector3().setFromMatrixColumn(m, 1), back = new Vector3().setFromMatrixColumn(m, 2)
+    expect(up.y).toBeCloseTo(1)
+    expect(right.y).toBeCloseTo(0)
+    expect(back.y).toBeCloseTo(0)
+    // Raig del centre: amunt × shift − enrere = la direcció d'abans.
+    const center = up.clone().multiplyScalar(p.shift!).sub(back).normalize()
+    const before = new Vector3(-c.matrix[8]!, -c.matrix[9]!, -c.matrix[10]!).normalize()
+    expect(center.distanceTo(before)).toBeLessThan(1e-6)
+    // Sense l'opció, igual; mirant de dalt (> 60°), no es toca.
+    expect(photoCamera(c, { straight: false })).toBe(c)
+    const top = cam([0, 5, 0.5], [0, 0, 0])
+    expect(photoCamera(top, { straight: true }).shift).toBeUndefined()
+  })
+  it("objectiu: 36 mm al costat llarg", () => {
+    const c = cam([2, 1.6, 3], [0, 0.4, 0])
+    expect(photoCamera(c, { focal: 36 }).scale * 1.5).toBeCloseTo(0.5)
+    expect(photoCamera({ ...c, aspect: 0.8 }, { focal: 36 }).scale).toBeCloseTo(0.5)
+  })
+})

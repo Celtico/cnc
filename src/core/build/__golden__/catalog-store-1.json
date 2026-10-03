@@ -252,8 +252,8 @@
   ]
  },
  "store-salo-vitrina-2": {
-  "panels": 34,
-  "extras": 0,
+  "panels": 40,
+  "extras": 8,
   "warnings": [],
   "p": [
    "back|trassera|2000x700x10|DM (fons)|none|e0000|h0|g0|c0|o-|@113bcee2",
@@ -284,6 +284,12 @@
    "fixedShelf|estanter fixe|662x410x19|Noguera xapada|x|e0010|h6:8bfd7d79|g0|c0|o-|@2841a836",
    "plinth|socol|662x60x19|Noguera xapada|x|e1010|h0|g0|c0|o-|@1e819749",
    "plinth|socol|662x60x19|Noguera xapada|x|e1010|h0|g0|c0|o-|@39ebe8f6",
+   "shelf|estanter 1|661x390x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@31a5cf6a",
+   "shelf|estanter 1|661x390x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@7e1ad6bb",
+   "shelf|estanter 2|661x390x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@e2cf9b0f",
+   "shelf|estanter 2|661x390x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@f9e232c8",
+   "shelf|estanter 3|661x390x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@497c9c25",
+   "shelf|estanter 3|661x390x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@a579530a",
    "side|lat d|2000x410x19|Noguera xapada|x|e0110|h95:11e3dcaa|g0|c0|o-|@9200dfd7",
    "side|lat d|2000x410x19|Noguera xapada|x|e0110|h95:11e3dcaa|g0|c0|o-|@c9649aad",
    "side|lat e|2000x410x19|Noguera xapada|x|e1100|h95:cdf7a656|g0|c0|o-|@0a2d2b9c",

@@ -877,8 +877,9 @@ class Builder {
     const rowYs = ysLeft.length ? ysLeft : ysRight.length ? ysRight : system32Ys(rect.y0, rect.y1, s.edgeOffset, s.pitch)
 
     // Prestatges.
-    if (zone.shelves && zone.shelves.n > 0) this.buildShelves(zone, rect, rowYs)
+    const shelfYs = zone.shelves && zone.shelves.n > 0 ? this.buildShelves(zone, rect, rowYs) : []
     if (zone.rail) this.buildRail(zone, rect)
+    if (zone.led) this.buildLed(zone, rect, shelfYs)
 
     // Front.
     if (!front) return
@@ -979,7 +980,39 @@ class Builder {
     })
   }
 
-  private buildShelves(zone: Zone, rect: ZoneRect, rowYs: number[]): void {
+  /**
+   * Llum LED: perfil d'alumini de 16 × 8 amb tira LED càlida sota el sostre del compartiment i sota cada prestatge, a
+   * 20 mm del davant del prestatge (il·lumina el que hi ha a sota). No és de CNC: va a `extras` (3D, render i llista, amb
+   * el llarg per tallar el perfil). Material «Tira LED» (fa llum al render).
+   */
+  private buildLed(zone: Zone, rect: ZoneRect, shelfYs: number[]): void {
+    const { m, d } = this
+    const W = 16, H = 8
+    const len = r(rect.x1 - rect.x0 - 20)
+    if (len < 50) return
+    const zFront = d.D - m.carcass.shelfSetback - 20
+    const ys = [rect.y1, ...shelfYs].map((y) => r(y - H))
+    ys.forEach((y, i) => {
+      this.extras.push({
+        id: `led-${zone.id}-${i}`,
+        name: "tira LED",
+        label: "Tira LED",
+        role: "part",
+        length: len,
+        width: W,
+        thickness: H,
+        material: "Tira LED",
+        grain: "none",
+        edges: { ...NO_EDGES },
+        holes: [],
+        grooves: [],
+        placement: placement([r(rect.x0 + 10), y, zFront], X, neg(Z), Y, Z),
+      })
+    })
+  }
+
+  /** Posa els prestatges i torna on és la cara de sota de cadascun (per a la llum LED). */
+  private buildShelves(zone: Zone, rect: ZoneRect, rowYs: number[]): number[] {
     const { m, d } = this
     const c = m.carcass
     const n = zone.shelves!.n
@@ -1048,6 +1081,7 @@ class Builder {
       for (const [end, x] of [["left", x0], ["right", x0 + length - t]] as const)
         piece(`shelf-${idx}-spacer-${end}`, `${nm} (llistó ${end === "left" ? "esquerre" : "dret"})`, "spacer", depth - 2 * t, T - 2 * t, { ...NO_EDGES }, placement([x, y + t, zF - t], neg(Z), Y, X, end === "left" ? neg(X) : X))
     }
+    return ys
   }
 
   /** Rectangle que un front tapa: la llum més el que li toca dels panells del voltant, menys jocs. */

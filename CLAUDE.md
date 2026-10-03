@@ -159,6 +159,12 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     fulles de sota queden `covered`. «Front de tota la zona» i, al mòdul, «Front de tot el mòdul»: només portes o front fix.
   - **Barra de penjar** (`Zone.rail`, a Prestatges): tub d'inox Ø25 a 50 mm del sostre, de lateral a lateral; va a
     `ModuleBuild.extras` → «Elements sense nesting». Avís `rail` si el compartiment fa menys de 900 mm.
+  - **Tira LED** (`Zone.led`, a Prestatges, «Llum»; per decisió de l'usuari, com les fotos de catàleg): perfil de 16 × 8
+    amb tira LED sota el sostre del compartiment i sota cada prestatge, a 20 mm del davant del prestatge (`buildLed`,
+    `buildShelves` torna on és cada prestatge); `extras` (no és de CNC: «Elements sense nesting», amb el llarg per tallar
+    el perfil), material «Tira LED» (`LED_MATERIALS`, `glow` 60, càlid; v14 de les preferències). Res amagat compta: amb
+    calaixos o dividit, cap tira (`visibleZone`). Encara sense mecanitzat (ranura per al perfil: pendent del taller). La
+    vitrina «Galeria» del catàleg (Saló) en porta (`led.test.ts`).
   - **Tiradors mecanitzats**: portes (costat contrari de les frontisses, a mitja alçada), calaixos (centrats) i abatibles
     (al cantell que obre): dos forats passants Ø5 a 128 / 96 / 64 com a talls `circle` `tag: "handle"` (el taller els llegeix
     com els passacables); el 3D no els buida (`visualPanel`) i hi col·loca el tirador.
@@ -617,6 +623,16 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     fort; les habitacions tancades porten **sostre** (`userData.renderOnly = "ceiling"`, es veu quan la càmera és a dins, al visor i al render;
     **només si hi ha alguna finestra**: sense, l'habitació sortia negra) i els vidres són **portals** (`userData.portal`). Exposició automàtica (mitjana geomètrica de les superfícies al gris del
     18 %, fins a ×40; per defecte als ambients) i temperatura càlida per defecte.
+  - **Càmera de fotògraf** (`photoCamera` a `sceneData.ts`, s'aplica a la càmera del visor en començar el render):
+    **Verticals rectes** (per defecte; `RenderOpts.straight`): càmera anivellada i descentrament de la lent
+    (`RenderCamera.shift`, `ly = nyp·scale + shift`; a la GPU va a `cam3.w`) perquè el centre de la imatge sigui on
+    mirava; mirant de més de 60° no es fa. L'enfocament fa servir el raig del centre amb el descentrament. **Objectiu**
+    (`focal`: Visor · 24 · 35 · 50 mm, equivalent de 35 mm amb el costat llarg de 36 mm). Tests a `render.test.ts`.
+  - **Ambient de llum** (`MOODS`, a Llum): Dia · Capvespre (sol baix, poc cel, llums ×1,5, més càlid) · Vespre (sense
+    sol, cel 0,05, llums ×2,5): canvien la llum i l'exposició; al capvespre i al vespre l'exposició automàtica deixa la
+    llum mitjana més fosca (`Look.key` 0,1 / 0,06 en lloc de 0,18) i amb més contrast. El fons (raigs que no toquen res)
+    es multiplica per la llum del cel als dos motors (al vespre, fosc). Obrir el Render des de l'editor treu els colors
+    per rol del mode Ràpid (si no, el render sortia amb els colors de les peces).
   - **Opcions** en seccions plegables (`PanelSection`: Qualitat, Càmera, Escena, Llum, Imatge, amb el resum a la insígnia):
     motor, resolució, rebots, aturar a N passades; format (visor, 3:2, 4:5, 16:9, 1:1) i desenfocament (lent fina, enfoca el centre); escena (habitació de
     Presentació / només terra / cap, `userData.room`); sol, intensitat, ombres, **Cel** (`render/skies.ts`: «Dia» procedural,
