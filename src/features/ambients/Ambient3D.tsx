@@ -12,7 +12,7 @@ import { SceneAccess, StudioEnvironment, TextureRefresh } from "../../components
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
 import { disposeTree } from "../../components/viewer/textures"
-import { rad, sameCameraPose, snapToWalls, wallLength, wallOpenings, wallSegments, type Ambient, type CameraPose, type MaterialPref, type Opening } from "../../core/model"
+import { footprintBox, rad, sameCameraPose, snapToWalls, wallLength, wallOpenings, wallSegments, type Ambient, type CameraPose, type MaterialPref, type Opening } from "../../core/model"
 import type { ItemGeometry } from "./ambientData"
 import { ambientBox, eyePose, snapGrid } from "./planGeom"
 
@@ -333,11 +333,18 @@ function Room({
   const closed = ambient.walls.length >= 3
   const rcx = closed ? (Math.min(...wx) + Math.max(...wx)) / 2 : (box.x0 + box.x1) / 2
   const rcy = closed ? (Math.min(...wy) + Math.max(...wy)) / 2 : (box.y0 + box.y1) / 2
-  // Habitació tancada amb coses fora (arbres davant d'una finestra): el terra de dins, fins a les parets (amb el gruix),
+  // Habitació tancada amb coses fora (arbres davant d'una finestra): el terra de dins, fins a l'eix de les parets (on
+  // hi ha el vidre de les finestres: el parquet no surt a fora; sota la paret no es veu),
   // i fora el «Terra de fora» (`outsideFloorMaterial`, gespa si no se n'ha triat), una mica més avall.
-  const rx0 = closed ? Math.min(...wx) - 300 : fx0, rx1 = closed ? Math.max(...wx) + 300 : fx1
-  const ry0 = closed ? Math.min(...wy) - 300 : fy0, ry1 = closed ? Math.max(...wy) + 300 : fy1
-  const outside = closed && (fx0 < rx0 - 1000 || fx1 > rx1 + 1000 || fy0 < ry0 - 1000 || fy1 > ry1 + 1000)
+  const rx0 = closed ? Math.min(...wx) : fx0, rx1 = closed ? Math.max(...wx) : fx1
+  const ry0 = closed ? Math.min(...wy) : fy0, ry1 = closed ? Math.max(...wy) : fy1
+  // «Fora»: algun element que surt més de 300 mm de les parets (no un que hi és arrambat).
+  const outside = closed && ambient.items.some((it) => {
+    const g = geos.get(it.id)
+    if (!g) return false
+    const b = footprintBox(it.x, it.y, g.w, g.d, it.rot)
+    return b.x0 < rx0 - 300 || b.x1 > rx1 + 300 || b.y0 < ry0 - 300 || b.y1 > ry1 + 300
+  })
   const floor = useMemo(() => {
     const [x0, x1, y0, y1] = outside ? [rx0, rx1, ry0, ry1] : [fx0, fx1, fy0, fy1]
     const w = x1 - x0, d = y1 - y0

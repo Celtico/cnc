@@ -633,8 +633,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     l'afegeix com a textura i `RenderScene.backdrop` n'és l'índex (GPU: `P.emit.z` = índex + 1). Només el veuen els raigs
     de càmera directes (`vertex < 0`) que no toquen res: no fa llum; es multiplica per la llum del cel a l'horitzó ×
     `BACKDROP_GAIN` (2). Els models 3D d'arbres (Xicranda, Avet) es poden posar fora (plantilla: `outside: true`).
-    Terra de fora (`Ambient3D`): una habitació tancada (3+ parets) amb coses a més d'1 m fora de les parets té el terra
-    de dins fins a les parets (+300) i fora un pla 4 mm més avall amb `Ambient.outsideFloorMaterial` (Acabats › «Terra
+    Terra de fora (`Ambient3D`): una habitació tancada (3+ parets) amb algun element que surt més de 300 mm de les parets té el terra
+    de dins fins a l'eix de les parets (on és el vidre: el parquet no surt per la finestra) i fora un pla 4 mm més avall amb `Ambient.outsideFloorMaterial` (Acabats › «Terra
     de fora»; sense, «Gespa», `sim-lawn`, v17).
   - **Materials**: difús + GGX amb Fresnel, metalls, vidre fi (no fa ombra), retall per l'alfa. **Arestes arrodonides** (2 mm,
     `BEVEL_RADIUS`, `userData.bevel`, `bevelNormal`). **Veta amb relleu** (`userData.grain`). **Normals llises**
