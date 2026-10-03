@@ -24,7 +24,7 @@ import { EMIT_FLOATS, buildEmitters, pickEmitter, type Emitters } from "./emitte
 import { buildEnvCdf, envPdf, sampleEnv, type EnvCdf } from "./envSampling"
 import { lightSetup } from "./lights"
 import type { RenderEnv, RenderOpts, RenderScene } from "./sceneData"
-import { BUMP_STRENGTH, DIRECT_CLAMP, GLASS_SHADOW, INDIRECT_CLAMP, PATH_ROUGHNESS, bevelNormal, perturbNormal, smoothNormal, tangentFrame } from "./shading"
+import { BUMP_STRENGTH, COAT_ROUGHNESS, DIRECT_CLAMP, GLASS_SHADOW, INDIRECT_CLAMP, PATH_ROUGHNESS, bevelNormal, perturbNormal, smoothNormal, tangentFrame } from "./shading"
 
 type Msg =
   | { type: "scene" | "estimate"; scene: RenderScene; width: number; height: number; seed: number; opts: RenderOpts; env?: RenderEnv | null; auxPasses?: number }
@@ -307,6 +307,12 @@ let NoV = 1
 let kdR = 0, kdG = 0, kdB = 0, f0R = 0, f0G = 0, f0B = 0, A2 = 0, PS = 0
 /** Translucidesa del material del punt (difús que passa a l'altra cara). */
 let TR = 0
+/**
+ * Vernís (capa transparent a sobre, com el lacat brillant o el marbre polit): pes `COAT`, alfa² `CA2`, Fresnel cap a la
+ * càmera `CFV` (el que la capa treu a la base) i probabilitat de triar-la en rebotar `PC`. Vellut: `SH` (lluïssor de la
+ * tela a les vores, Disney).
+ */
+let COAT = 0, CA2 = 0, CFV = 0, PC = 0, SH = 0
 let fr = 0, fg = 0, fb = 0
 
 function basis() {
@@ -325,8 +331,9 @@ function evalBsdf(lx: number, ly: number, lz: number, a2: number): number {
   const back = lx * gx + ly * gy + lz * gz < 0
   if (NoL <= 0 || back) {
     if (TR > 0 && back && NoL < 0) {
-      fr = (kdR * TR) / Math.PI; fg = (kdG * TR) / Math.PI; fb = (kdB * TR) / Math.PI
-      return ((1 - PS) * TR * -NoL) / Math.PI
+      const att = (1 - COAT * CFV) / Math.PI
+      fr = kdR * TR * att; fg = kdG * TR * att; fb = kdB * TR * att
+      return ((1 - PC) * (1 - PS) * TR * -NoL) / Math.PI
     }
     fr = fg = fb = 0
     return 0
@@ -345,7 +352,24 @@ function evalBsdf(lx: number, ly: number, lz: number, a2: number): number {
   fr = sR * ds + kdR * (1 - sR) * kr
   fg = sG * ds + kdG * (1 - sG) * kr
   fb = sB * ds + kdB * (1 - sB) * kr
-  return (PS * D * NoH) / (4 * VoH) + (1 - PS) * NoL * kr
+  if (SH > 0) {
+    // Vellut: la tela s'aclareix a les vores (Disney: (1 − l·h)⁵), del color de la tela cap al blanc.
+    const LoH = Math.max(0, lx * hx + ly * hy + lz * hz)
+    const k = SH * Math.pow(1 - LoH, 5) * (1 - TR)
+    fr += k * (0.5 + 0.5 * kdR); fg += k * (0.5 + 0.5 * kdG); fb += k * (0.5 + 0.5 * kdB)
+  }
+  const pdf = (PS * D * NoH) / (4 * VoH) + (1 - PS) * NoL * kr
+  if (!(COAT > 0)) return pdf
+  // Vernís: un reflex nítid (GGX, F0 0,04) a sobre; la base rep la llum que la capa no reflecteix.
+  const c2 = Math.max(CA2, CA2 + a2 - A2)
+  const dc = NoH * NoH * (c2 - 1) + 1
+  const Dc = c2 / (Math.PI * dc * dc)
+  const visc = 0.5 / (NoL * Math.sqrt(NoV * NoV * (1 - c2) + c2) + NoV * Math.sqrt(NoL * NoL * (1 - c2) + c2))
+  const Fc = COAT * (0.04 + 0.96 * fw)
+  const att = 1 - COAT * CFV
+  const cs = Fc * Dc * visc
+  fr = fr * att + cs; fg = fg * att + cs; fb = fb * att + cs
+  return (1 - PC) * pdf + (PC * Dc * NoH) / (4 * VoH)
 }
 
 /** Màxims d'una mostra (relatius a la llum de l'escena, `sceneKey`). */
@@ -541,6 +565,14 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
     f0R = 0.04 + (ar - 0.04) * metal; f0G = 0.04 + (ag - 0.04) * metal; f0B = 0.04 + (ab - 0.04) * metal
     const re = vertex > 0 ? Math.max(rough, pathRough) : rough
     A2 = Math.max(1e-4, re * re * re * re)
+    COAT = Math.min(1, Math.max(0, m.coat ?? 0))
+    SH = Math.min(1, Math.max(0, m.sheen ?? 0))
+    {
+      const rc = vertex > 0 ? Math.max(COAT_ROUGHNESS, pathRough) : COAT_ROUGHNESS
+      CA2 = Math.max(1e-5, rc * rc * rc * rc)
+      CFV = 0.04 + 0.96 * Math.pow(1 - NoV, 5)
+      PC = COAT > 0 ? COAT * Math.min(0.5, 0.15 + CFV) : 0
+    }
     {
       const fw = Math.pow(1 - NoV, 5)
       const ws = (0.2126 * f0R + 0.7152 * f0G + 0.0722 * f0B) * (1 - fw) + fw
@@ -635,8 +667,18 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
     }
     // Rebot: reflex GGX o difús (cosinus), segons PS.
     let lx: number, ly: number, lz: number
-    const spec = random() < PS
-    if (spec) {
+    const coatS = PC > 0 && random() < PC
+    const spec = coatS || random() < PS
+    if (coatS) {
+      const u1 = random(), u2 = random()
+      const ph = 2 * Math.PI * u1
+      const ct = Math.sqrt((1 - u2) / (1 + (CA2 - 1) * u2)), st = Math.sqrt(Math.max(0, 1 - ct * ct))
+      const hx2 = tx * Math.cos(ph) * st + bx * Math.sin(ph) * st + nx * ct
+      const hy2 = ty * Math.cos(ph) * st + by * Math.sin(ph) * st + ny * ct
+      const hz2 = tz * Math.cos(ph) * st + bz * Math.sin(ph) * st + nz * ct
+      const vh = vx * hx2 + vy * hy2 + vz * hz2
+      lx = 2 * vh * hx2 - vx; ly = 2 * vh * hy2 - vy; lz = 2 * vh * hz2 - vz
+    } else if (spec) {
       const u1 = random(), u2 = random()
       const ph = 2 * Math.PI * u1
       const ct = Math.sqrt((1 - u2) / (1 + (A2 - 1) * u2)), st = Math.sqrt(Math.max(0, 1 - ct * ct))
@@ -660,7 +702,7 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
     const NoL = Math.abs(nl)
     if (!(pdf > 1e-8)) break
     tr *= (fr * NoL) / pdf; tg *= (fg * NoL) / pdf; tb *= (fb * NoL) / pdf
-    pathRough = Math.max(pathRough, spec ? re * 0.5 : PATH_ROUGHNESS)
+    pathRough = Math.max(pathRough, coatS ? COAT_ROUGHNESS : spec ? re * 0.5 : PATH_ROUGHNESS)
     cpx = px; cpy = py; cpz = pz; cnx = nx; cny = ny; cnz = nz; lastPdf = pdf
     dx = lx; dy = ly; dz = lz
     if (ldg > 0) { ox = px; oy = py; oz = pz } else { ox = qx; oy = qy; oz = qz }
@@ -695,7 +737,7 @@ function sceneKey(): number {
       let l = 0, hit = 0
       for (let s = 0; s < SPP; s++) {
         const nxp = ((gx + random()) / GX) * 2 - 1, nyp = 1 - ((gy + random()) / GY) * 2
-        const lx = nxp * c.scale * c.aspect, ly = nyp * c.scale
+        const lx = nxp * c.scale * c.aspect, ly = nyp * c.scale + (c.ortho ? 0 : (c.shift ?? 0))
         let ox = m[12]!, oy = m[13]!, oz = m[14]!, dx: number, dy: number, dz: number
         if (c.ortho) {
           ox += m[0]! * lx + m[4]! * ly; oy += m[1]! * lx + m[5]! * ly; oz += m[2]! * lx + m[6]! * ly

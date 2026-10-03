@@ -608,6 +608,14 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     bilineal fet a mà, reduïdes a la meitat si no hi caben): així no hi ha el límit de 16 unitats de textura. Respecta
     `maxStorageBufferBindingSize`/`maxBufferSize` (si no hi cap, CPU). Tandes de files de ~10–30 ms (més mostres per passada
     si va de pressa) perquè la pàgina no s'encalli; llegeix el resultat a cada passada sencera (cada cop menys sovint si costa).
+  - **Vernís i vellut** (per decisió de l'usuari, com els lacats i els vellut dels catàlegs): `RenderMaterial.coat`
+    (capa transparent: GGX nítid `COAT_ROUGHNESS` 0,08, F0 0,04; la base rep `1 − coat·F(n·v)`; es tria en rebotar amb
+    `PC = coat·min(0,5; 0,15 + F)` i la densitat és la mescla) i `sheen` (Disney: `sheen·(1 − l·h)⁵`, del color de la tela
+    cap al blanc), als dos motors (`COAT`, `CA2`, `CFV`, `PC`, `SH`; a la GPU, `g.zw` del material). Dels materials:
+    `MaterialPref.coat` / `sheen` (0–1, «Al render» a l'editor de materials); sense valor, el de l'app
+    (`core/model/materialFx.ts`: teles i vellut per id, cuir, parquet, rajoles, ceràmica, pantalla; pedra polida → vernís),
+    així les preferències d'abans també en tenen. Lacats brillants nous (`GLOSS_MATERIALS`, v15): «Lacat negre brillant»
+    i «Lacat blanc brillant» (taulers, vernís 1).
   - **Materials**: difús + GGX amb Fresnel, metalls, vidre fi (no fa ombra), retall per l'alfa. **Arestes arrodonides** (2 mm,
     `BEVEL_RADIUS`, `userData.bevel`, `bevelNormal`). **Veta amb relleu** (`userData.grain`). **Normals llises**
     (`RenderScene.normals`, `smoothNormal`; GPU: `encodeNormal`); la geomètrica es queda per desplaçar rajos; cantells corbs

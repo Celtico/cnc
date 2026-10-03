@@ -17,7 +17,7 @@ import { repairValue } from "./repair"
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 14
+export const SETTINGS_VERSION = 15
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -203,6 +203,10 @@ export const MaterialPrefSchema = z.object({
   glow: z.number().min(0).max(200).optional(),
   /** Render: translucidesa (0–1), llum difusa que passa a l'altra cara (fulles, cortines, pantalles). v5. */
   translucent: z.number().min(0).max(1).optional(),
+  /** Render: vernís (0–1), un reflex nítid a sobre (lacat brillant, marbre polit). Sense, el de l'app (`materialCoat`). */
+  coat: z.number().min(0).max(1).optional(),
+  /** Render: vellut (0–1), la tela s'aclareix a les vores. Sense, el de l'app (`materialSheen`). */
+  sheen: z.number().min(0).max(1).optional(),
 })
 export type MaterialPref = z.infer<typeof MaterialPrefSchema>
 
@@ -343,6 +347,12 @@ export const NON_CNC_MATERIALS: MaterialPref[] = [
   { id: "glass", name: "Vidre", thicknesses: [4, 5, 6, 8, 10], hasGrain: false, finish: { kind: "glass", color: "#cfe6e3" }, edge: "", cnc: false },
 ]
 
+/** Lacats brillants (vernís): com els mobles de catàleg de lacat negre. Afegits a la v15. */
+export const GLOSS_MATERIALS: MaterialPref[] = [
+  { id: "mdf-lacquer-gloss-black", name: "Lacat negre brillant", thicknesses: [16, 19, 22], hasGrain: false, finish: { kind: "lacquer", color: "#161616", roughness: 0.3 }, edge: "Lacat (sense cantell)", category: "board", coat: 1 },
+  { id: "mdf-lacquer-gloss-white", name: "Lacat blanc brillant", thicknesses: [16, 19, 22], hasGrain: false, finish: { kind: "lacquer", color: "#efede8", roughness: 0.3 }, edge: "Lacat (sense cantell)", category: "board", coat: 1 },
+]
+
 /** Llum LED dels mobles (`Zone.led`): fa llum al render (càlida). Afegit a la v14. */
 export const LED_MATERIALS: MaterialPref[] = [
   { id: "led-strip", name: "Tira LED", thicknesses: [8], hasGrain: false, finish: { kind: "color", color: "#ffe2b8", roughness: 0.4 }, edge: "", cnc: false, category: "sim", glow: 60 },
@@ -468,6 +478,7 @@ export const BUILTIN_MATERIALS: MaterialPref[] = upgradeToPhoto([
   ...NON_CNC_MATERIALS,
   ...SIM_MATERIALS,
   ...LED_MATERIALS,
+  ...GLOSS_MATERIALS,
   ...PHOTO_MATERIALS,
 ])
 
@@ -596,8 +607,10 @@ export function parseSettings(raw: unknown): SettingsParse {
   const v13m = version < 13 && v12.materials !== BUILTIN_MATERIALS ? addCatalogThicknesses(v12.materials) : v12.materials
   // v14: «Tira LED» (llum dels mobles), si no hi és.
   const v14m = version < 14 && v13m !== BUILTIN_MATERIALS ? [...v13m, ...missing(LED_MATERIALS, v13m)] : v13m
+  // v15: lacats brillants (vernís), si no hi són.
+  const v15m = version < 15 && v14m !== BUILTIN_MATERIALS ? [...v14m, ...missing(GLOSS_MATERIALS, v14m)] : v14m
   // Noms únics (sempre): un de repetit passa a «X 2» amb un avís (abans no es comprovava).
-  const unique = dedupeMaterialNames(v14m)
+  const unique = dedupeMaterialNames(v15m)
   problems.push(...unique.problems)
   const materials = unique.materials
   const renamed = (n: string) => v12.renames.find(([from]) => from === n)?.[1] ?? n

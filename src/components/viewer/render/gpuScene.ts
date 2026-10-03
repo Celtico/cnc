@@ -138,7 +138,7 @@ export function packGpuScene(scene: RenderScene, env: RenderEnv | null, maxBindi
     const o = (matOff + i * MAT_VEC4) * 4
     const e = m.uv
     const em = m.emission ?? [0, 0, 0]
-    f.set([m.color[0], m.color[1], m.color[2], m.map, e[0]!, e[1]!, e[3]!, e[4]!, e[6]!, e[7]!, m.roughness, m.metalness, m.opacity, m.alphaCut, m.bump, scene.textures[m.map]?.lum ?? 0, em[0], em[1], em[2], m.translucent ?? 0, m.normalMap ?? -1, m.roughMap ?? -1, 0, 0], o)
+    f.set([m.color[0], m.color[1], m.color[2], m.map, e[0]!, e[1]!, e[3]!, e[4]!, e[6]!, e[7]!, m.roughness, m.metalness, m.opacity, m.alphaCut, m.bump, scene.textures[m.map]?.lum ?? 0, em[0], em[1], em[2], m.translucent ?? 0, m.normalMap ?? -1, m.roughMap ?? -1, m.coat ?? 0, m.sheen ?? 0], o)
   })
   tex.entries.forEach((t, i) => info.set([t.offset, t.w, t.h, t.flags], (texOff + i) * 4))
   f.set(scene.bevel, bevelOff * 4)

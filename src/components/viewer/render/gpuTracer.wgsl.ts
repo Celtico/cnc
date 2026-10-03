@@ -2,9 +2,12 @@
  * Shader WGSL del path tracer per GPU: el mateix algorisme que `pathWorker.ts` (CPU), línia per
  * línia on es pot. Si en canvies un, canvia l'altre. Dades: `gpuScene.ts`.
  */
+import { COAT_ROUGHNESS } from "./shading"
+
 export const TRACER_WGSL = /* wgsl */ `
 const PI = 3.14159265358979;
 const LUMA = vec3f(0.2126, 0.7152, 0.0722);
+const COAT_ROUGHNESS = ${COAT_ROUGHNESS};
 const INTERNAL = 0x80000000u;
 
 struct Params {
@@ -49,7 +52,7 @@ fn rnd() -> f32 {
 }
 
 // --- Materials i textures ------------------------------------------------------------------
-struct Mat { color: vec3f, map: i32, e: vec4f, e2: vec2f, rough: f32, metal: f32, opacity: f32, alphaCut: f32, bump: f32, lum: f32, emission: vec3f, translucent: f32, normalMap: i32, roughMap: i32 }
+struct Mat { color: vec3f, map: i32, e: vec4f, e2: vec2f, rough: f32, metal: f32, opacity: f32, alphaCut: f32, bump: f32, lum: f32, emission: vec3f, translucent: f32, normalMap: i32, roughMap: i32, coat: f32, sheen: f32 }
 fn getMat(i: u32) -> Mat {
   let b = P.offs.x + i * 6u;
   let a = infoF(b);
@@ -58,7 +61,7 @@ fn getMat(i: u32) -> Mat {
   let e = infoF(b + 3u);
   let f = infoF(b + 4u);
   let g = infoF(b + 5u);
-  return Mat(a.xyz, i32(a.w), c, d.xy, d.z, d.w, e.x, e.y, e.z, e.w, f.xyz, f.w, i32(g.x), i32(g.y));
+  return Mat(a.xyz, i32(a.w), c, d.xy, d.z, d.w, e.x, e.y, e.z, e.w, f.xyz, f.w, i32(g.x), i32(g.y), g.z, g.w);
 }
 fn wrapI(x: i32, n: i32, mode: u32) -> i32 {
   if (mode == 2u) { return clamp(x, 0, n - 1); }
@@ -331,6 +334,12 @@ var<private> F0: vec3f;
 var<private> A2: f32;
 var<private> PS: f32;
 var<private> TR: f32;
+// Vernís (pes, alfa², Fresnel cap a la càmera, probabilitat de triar-lo) i vellut, com al motor de CPU.
+var<private> COAT: f32;
+var<private> CA2: f32;
+var<private> CFV: f32;
+var<private> PC: f32;
+var<private> SH: f32;
 var<private> acc: vec3f;
 var<private> aovA: vec3f;
 var<private> aovN: vec3f;
@@ -346,7 +355,7 @@ fn evalBsdf(l: vec3f, a2: f32) -> vec4f {
   let NoL = dot(N, l);
   let back = dot(l, G) < 0.0;
   if (NoL <= 0.0 || back) {
-    if (TR > 0.0 && back && NoL < 0.0) { return vec4f(KD * TR / PI, (1.0 - PS) * TR * -NoL / PI); }
+    if (TR > 0.0 && back && NoL < 0.0) { return vec4f(KD * TR * (1.0 - COAT * CFV) / PI, (1.0 - PC) * (1.0 - PS) * TR * -NoL / PI); }
     return vec4f(0.0);
   }
   let hs = l + V;
@@ -360,8 +369,20 @@ fn evalBsdf(l: vec3f, a2: f32) -> vec4f {
   let fw = pow(1.0 - VoH, 5.0);
   let Fs = F0 + (1.0 - F0) * fw;
   let kr = (1.0 - TR) / PI;
-  let f = Fs * (D * vis) + KD * (1.0 - Fs) * kr;
-  return vec4f(f, PS * D * NoH / (4.0 * VoH) + (1.0 - PS) * NoL * kr);
+  var f = Fs * (D * vis) + KD * (1.0 - Fs) * kr;
+  if (SH > 0.0) {
+    let LoH = max(0.0, dot(l, h));
+    f += (SH * pow(1.0 - LoH, 5.0) * (1.0 - TR)) * (0.5 + 0.5 * KD);
+  }
+  let pdf = PS * D * NoH / (4.0 * VoH) + (1.0 - PS) * NoL * kr;
+  if (!(COAT > 0.0)) { return vec4f(f, pdf); }
+  let c2 = max(CA2, CA2 + a2 - A2);
+  let dc = NoH * NoH * (c2 - 1.0) + 1.0;
+  let Dc = c2 / (PI * dc * dc);
+  let visc = 0.5 / (NoL * sqrt(NoV * NoV * (1.0 - c2) + c2) + NoV * sqrt(NoL * NoL * (1.0 - c2) + c2));
+  let Fc = COAT * (0.04 + 0.96 * fw);
+  f = f * (1.0 - COAT * CFV) + vec3f(Fc * Dc * visc);
+  return vec4f(f, (1.0 - PC) * pdf + PC * Dc * NoH / (4.0 * VoH));
 }
 fn addC(c: vec3f, k: i32) {
   let l = dot(c, LUMA);
@@ -583,6 +604,14 @@ fn trace(o0: vec3f, d0: vec3f) -> vec4f {
     F0 = mix(vec3f(0.04), al, metal);
     let re = select(rough, max(rough, pathRough), vertex > 0);
     A2 = max(1e-4, re * re * re * re);
+    COAT = clamp(m.coat, 0.0, 1.0);
+    SH = clamp(m.sheen, 0.0, 1.0);
+    {
+      let rc = select(COAT_ROUGHNESS, max(COAT_ROUGHNESS, pathRough), vertex > 0);
+      CA2 = max(1e-5, rc * rc * rc * rc);
+      CFV = 0.04 + 0.96 * pow(1.0 - NoV, 5.0);
+      PC = select(0.0, COAT * min(0.5, 0.15 + CFV), COAT > 0.0);
+    }
     {
       let fw = pow(1.0 - NoV, 5.0);
       let ws = dot(F0, LUMA) * (1.0 - fw) + fw;
@@ -678,8 +707,18 @@ fn trace(o0: vec3f, d0: vec3f) -> vec4f {
     }
     // Rebot.
     var l: vec3f;
-    let spec = rnd() < PS;
-    if (spec) {
+    let coatS = PC > 0.0 && rnd() < PC;
+    var spec = coatS;
+    if (!coatS) { spec = rnd() < PS; }
+    if (coatS) {
+      let u1 = rnd();
+      let u2 = rnd();
+      let ph = 2.0 * PI * u1;
+      let ct = sqrt((1.0 - u2) / (1.0 + (CA2 - 1.0) * u2));
+      let st = sqrt(max(0.0, 1.0 - ct * ct));
+      let h = TT * (cos(ph) * st) + BB * (sin(ph) * st) + N * ct;
+      l = 2.0 * dot(V, h) * h - V;
+    } else if (spec) {
       let u1 = rnd();
       let u2 = rnd();
       let ph = 2.0 * PI * u1;
@@ -705,7 +744,7 @@ fn trace(o0: vec3f, d0: vec3f) -> vec4f {
     let NoL = abs(nl);
     if (!(fb.w > 1e-8)) { break; }
     thr *= fb.xyz * NoL / fb.w;
-    pathRough = max(pathRough, select(P.clampv.z, re * 0.5, spec));
+    pathRough = max(pathRough, select(select(P.clampv.z, re * 0.5, spec), COAT_ROUGHNESS, coatS));
     cp = p;
     cn = N;
     lastPdf = fb.w;

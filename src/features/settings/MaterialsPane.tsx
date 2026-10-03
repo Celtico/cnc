@@ -4,7 +4,7 @@ import { LuCopy, LuImagePlus, LuLayers2, LuLayers3, LuPaintbrush, LuPlus, LuSear
 import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
 import { NumberField } from "../../components/NumRow"
 import { toaster } from "../../components/ui/toaster"
-import { MATERIAL_CATEGORIES, materialCategory, materialNameError, newId, restoredFinish, switchFinish, tidyMaterialName, withCategory, type Finish, type MaterialCategory, type MaterialPref } from "../../core/model"
+import { MATERIAL_CATEGORIES, materialCategory, materialCoat, materialNameError, materialSheen, newId, restoredFinish, switchFinish, tidyMaterialName, withCategory, type Finish, type MaterialCategory, type MaterialPref } from "../../core/model"
 import { GalleryCard } from "../projects/GalleryCard"
 import { GALLERY_COLS, fold } from "../projects/galleryGrid"
 import type { LibraryItem } from "./libraryItems"
@@ -530,6 +530,29 @@ function MaterialCard({ m, dirty, footer, onChange, onRename, nameError, onDupli
           </FormRow>
         )}
         <TextureSetRow finish={finish} onChange={(f) => onChange({ finish: f })} />
+        {/* Només per al render (no canvia el visor): reflex nítid a sobre i lluïssor de les teles. */}
+        <FormRow label="Al render" help="Vernís: un reflex nítid a sobre, com el lacat brillant, el marbre polit o el parquet envernissat. Vellut: la tela s'aclareix a les vores. Sense tocar, els de l'app.">
+          <HStack gap={4} wrap="wrap">
+            {(
+              [
+                ["coat", "Vernís", materialCoat(m)],
+                ["sheen", "Vellut", materialSheen(m)],
+              ] as const
+            ).map(([key, label, v]) => (
+              <HStack key={key} gap={1.5}>
+                <Text fontSize="sm" color="fg.muted" minW="52px">
+                  {label}
+                </Text>
+                <Box w="110px">
+                  <NumberField label="" ariaLabel={`${label} (%)`} value={Math.round(v * 100)} min={0} max={100} step={5} onChange={(x) => x >= 0 && x <= 100 && onChange({ [key]: x / 100 })} />
+                </Box>
+                <Text fontSize="sm" color="fg.muted">
+                  %
+                </Text>
+              </HStack>
+            ))}
+          </HStack>
+        </FormRow>
       </FormSection>
 
       <FormSection title="Fabricació">

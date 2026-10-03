@@ -39,6 +39,10 @@ export interface RenderMaterial {
   /** Mapa de normals (tangent, convenció OpenGL) i de rugositat (canal G): índex de textura o −1. */
   normalMap: number
   roughMap: number
+  /** Vernís (0–1): capa transparent brillant a sobre (lacat brillant, marbre polit, parquet envernissat). */
+  coat?: number
+  /** Vellut (0–1): la tela s'aclareix a les vores. */
+  sheen?: number
 }
 export interface RenderCamera {
   ortho: boolean
@@ -232,6 +236,8 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
       bump: map >= 0 && m.userData.grain && normalMap < 0 ? 1 : 0,
       emission: glow > 0 ? [LAMP_COLOR[0] * glow, LAMP_COLOR[1] * glow, LAMP_COLOR[2] * glow] : [0, 0, 0],
       translucent: Math.min(1, Math.max(0, Number(m.userData.translucent ?? (alphaCut > 0 ? LEAF_TRANSLUCENCY : 0)) || 0)),
+      coat: Math.min(1, Math.max(0, Number(m.userData.coat ?? 0) || 0)),
+      sheen: Math.min(1, Math.max(0, Number(m.userData.sheen ?? 0) || 0)),
       normalMap,
       roughMap,
     })

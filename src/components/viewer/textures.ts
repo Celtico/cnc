@@ -1,6 +1,6 @@
 import { CanvasTexture, MirroredRepeatWrapping, NoColorSpace, RepeatWrapping, SRGBColorSpace, TextureLoader, type Material, type Mesh, type MeshStandardMaterial, type Object3D, type Texture } from "three"
 import { TEXTURE_CACHE_MAX } from "./deviceLimits"
-import { WOOD_PRESETS, type Finish, type MaterialPref, type WoodGen } from "../../core/model"
+import { WOOD_PRESETS, materialCoat, materialSheen, type Finish, type MaterialPref, type WoodGen } from "../../core/model"
 
 /**
  * Acabats visuals dels materials: color llis, lacat o fusta amb veta. Les textures de
@@ -10,10 +10,12 @@ import { WOOD_PRESETS, type Finish, type MaterialPref, type WoodGen } from "../.
 
 export type WoodSpecies = Extract<Finish, { kind: "wood" }>["species"]
 
-/** Efectes del render comuns a tots els acabats: llum que emet i translucidesa (`MaterialPref`). */
+/** Efectes del render comuns a tots els acabats: llum que emet, translucidesa, vernís i vellut (`MaterialPref`). */
 export interface FinishFx {
   glow?: number
   translucent?: number
+  coat?: number
+  sheen?: number
 }
 export type FinishSpec = FinishFx &
   (
@@ -475,7 +477,8 @@ export function patternTexture(pattern: PatternKind, color: string, grout = "#cc
 /** Acabat d'una preferència de material (amb la llum i la translucidesa del render). */
 export function finishOfPref(m: MaterialPref): FinishSpec {
   const f = baseFinishOfPref(m)
-  return m.glow || m.translucent ? { ...f, ...(m.glow ? { glow: m.glow } : {}), ...(m.translucent ? { translucent: m.translucent } : {}) } : f
+  const coat = materialCoat(m), sheen = materialSheen(m)
+  return m.glow || m.translucent || coat || sheen ? { ...f, ...(m.glow ? { glow: m.glow } : {}), ...(m.translucent ? { translucent: m.translucent } : {}), ...(coat ? { coat } : {}), ...(sheen ? { sheen } : {}) } : f
 }
 
 /**
@@ -484,6 +487,9 @@ export function finishOfPref(m: MaterialPref): FinishSpec {
  */
 export function applyFinishFx(mat: MeshStandardMaterial, f: FinishFx): MeshStandardMaterial {
   if (f.translucent) mat.userData.translucent = f.translucent
+  // Vernís i vellut: només els llegeix el render (`extractScene`).
+  if (f.coat) mat.userData.coat = f.coat
+  if (f.sheen) mat.userData.sheen = f.sheen
   if (f.glow) {
     mat.userData.glow = f.glow
     mat.emissive.copy(mat.color)
