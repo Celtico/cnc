@@ -108,7 +108,7 @@ function makeConcrete(): CanvasTexture {
   const c = document.createElement("canvas")
   c.width = px
   c.height = px
-  const g = c.getContext("2d")!
+  const g = c.getContext("2d", { willReadFrequently: true })!
   g.fillStyle = "#a9a59f"
   g.fillRect(0, 0, px, px)
   let seed = 11

@@ -56,7 +56,8 @@ export default defineConfig({
         // Els models 3D (`public/models/*.glb`, ~150 KB cadascun) també: les plantes surten sense connexió.
         globPatterns: ["**/*.{js,css,html,svg,png,woff2,glb,hdr}"],
         // Les pantalles d'inici d'iOS les desa el sistema en instal·lar l'app: no cal precachejar-les.
-        globIgnores: ["splash/**"],
+        // Fallbacks JS de Draco/Basis (de model-viewer, ~0,9 MB): el visor AR no els fa servir mai.
+        globIgnores: ["splash/**", "assets/draco_*", "assets/basis_*"],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         // Textures de foto (~14 MB) i pesos d'OIDN: no es precachegen; es desen el primer cop que es fan servir.
         runtimeCaching: [
@@ -79,7 +80,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         advancedChunks: {
-          groups: [{ name: "three", test: /node_modules[\\/](three|@react-three|three-stdlib)[\\/]/ }],
+          // Només el nucli de three (no `three/examples`: carregadors i exportadors van amb qui els fa servir, a demanda).
+          groups: [{ name: "three", test: /node_modules[\\/](three[\\/]build|@react-three|three-stdlib)[\\/]/ }],
         },
       },
     },

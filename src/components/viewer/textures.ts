@@ -178,7 +178,7 @@ export function woodTexture(species: WoodSpecies, gen?: WoodGen): Texture {
   const canvas = document.createElement("canvas")
   canvas.width = size
   canvas.height = size
-  const g = canvas.getContext("2d")!
+  const g = canvas.getContext("2d", { willReadFrequently: true })!
   const p = { base: hexToRgb(W.base), dark: hexToRgb(W.dark), lines: W.lines, wobble: W.wobble }
   const rnd = rng(W.seed)
   const ck = 0.3 + W.contrast * 1.4

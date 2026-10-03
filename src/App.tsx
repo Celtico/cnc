@@ -1,5 +1,5 @@
-import { Box, Button, Container, Flex, HStack, Heading, IconButton, Menu, Portal, SegmentGroup, Stack, Text } from "@chakra-ui/react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { Box, Button, Container, Flex, HStack, Heading, IconButton, Menu, Portal, SegmentGroup, Spinner, Stack, Text } from "@chakra-ui/react"
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react"
 import type { IconType } from "react-icons"
 import { LuChevronLeft, LuBox, LuDownload, LuDraftingCompass, LuEllipsis, LuHouse, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings, LuSofa } from "react-icons/lu"
 import { Toaster, toaster } from "./components/ui/toaster"
@@ -9,18 +9,12 @@ import { TopBar, TopBarActionsProvider } from "./components/TopBar"
 import { SaveFileDialog } from "./features/file/SaveFileDialog"
 import { db } from "./db/db"
 import { compositionOf } from "./db/compositionStore"
-import { CutListScreen } from "./features/cutlist/CutListScreen"
-import { EditorScreen } from "./features/editor/EditorScreen"
-import { ExportScreen } from "./features/export/ExportScreen"
-import { NestingScreen } from "./features/nesting/NestingScreen"
-import { PhotoScreen } from "./features/photo/PhotoScreen"
 import { ProjectsScreen, type ProjectsRequest } from "./features/projects/ProjectsScreen"
-import { AmbientEditor, AmbientTopBar } from "./features/ambients/AmbientEditor"
+import { AmbientTopBar } from "./features/ambients/AmbientTopBar"
 import { useSessionString } from "./features/settings/useSessionString"
 import { AmbientsScreen } from "./features/ambients/AmbientsScreen"
 import { ObjectsScreen } from "./features/objects/ObjectsScreen"
 import { compositionKind } from "./core/model"
-import { SettingsScreen } from "./features/settings/SettingsScreen"
 import { useSettings } from "./features/settings/SettingsContext"
 import { useLaunchFiles } from "./features/file/useLaunchFiles"
 import { UnitContext } from "./features/units"
@@ -28,6 +22,15 @@ import { usePersistentNumber } from "./features/usePersistentNumber"
 import { isObject as projectIsObject } from "./features/objects/isObject"
 import { usePersistentFlag } from "./features/usePersistentFlag"
 import { useProject } from "./features/useProject"
+
+// Les pàgines pesades (3D, export, preferències) es carreguen a demanda: la primera pantalla (galeries) arrenca abans.
+const EditorScreen = lazy(() => import("./features/editor/EditorScreen").then((m) => ({ default: m.EditorScreen })))
+const CutListScreen = lazy(() => import("./features/cutlist/CutListScreen").then((m) => ({ default: m.CutListScreen })))
+const NestingScreen = lazy(() => import("./features/nesting/NestingScreen").then((m) => ({ default: m.NestingScreen })))
+const ExportScreen = lazy(() => import("./features/export/ExportScreen").then((m) => ({ default: m.ExportScreen })))
+const PhotoScreen = lazy(() => import("./features/photo/PhotoScreen").then((m) => ({ default: m.PhotoScreen })))
+const SettingsScreen = lazy(() => import("./features/settings/SettingsScreen").then((m) => ({ default: m.SettingsScreen })))
+const AmbientEditor = lazy(() => import("./features/ambients/AmbientEditor").then((m) => ({ default: m.AmbientEditor })))
 
 type Screen = "projects" | "objects" | "editor" | "photo" | "cutlist" | "nesting" | "export" | "settings" | "ambients" | "ambient"
 
@@ -420,7 +423,17 @@ export function App() {
           pt={{ base: showTopBar || screen === "ambient" || settingsBackBar ? 4 : "calc(16px + env(safe-area-inset-top, 0px))", md: screen === "editor" || screen === "ambient" ? 4 : 6 }}
           pb={{ base: "calc(76px + env(safe-area-inset-bottom, 0px))", md: screen === "editor" || screen === "ambient" ? 4 : 6 }}
         >
-          <TopBarActionsProvider value={topActions}>{content}</TopBarActionsProvider>
+          <TopBarActionsProvider value={topActions}>
+            <Suspense
+              fallback={
+                <Flex justify="center" py={16}>
+                  <Spinner color="wood.solid" />
+                </Flex>
+              }
+            >
+              {content}
+            </Suspense>
+          </TopBarActionsProvider>
         </Container>
       </Flex>
 

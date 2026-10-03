@@ -73,8 +73,8 @@ import {
   type Wall,
 } from "../../core/model"
 import { compositionOf, updateProjectComposition } from "../../db/compositionStore"
-import { createProject, db, renameAmbient, saveAmbientCamera, updateAmbient, type Project } from "../../db/db"
-import { DocBar, TopBarActions } from "../../components/TopBar"
+import { createProject, db, saveAmbientCamera, updateAmbient, type Project } from "../../db/db"
+import { TopBarActions } from "../../components/TopBar"
 import { uniqueName } from "../../core/file/mobleFile"
 import { NewMobleGallery } from "../projects/NewMobleGallery"
 import { ProjectCard } from "../projects/ProjectCard"
@@ -119,11 +119,6 @@ const SHAPE_LABEL: Record<BlockItem["shape"], string> = { box: "Caixa", sofa: "S
  * Ctrl/⌘ D (duplicar), Ctrl/⌘ Z / Maj Z.
  */
 /** Barra superior de l'ambient obert: «Ambients › nom» (el nom es reanomena amb un clic). */
-export function AmbientTopBar({ ambientId, onBack, onSettings, actionsRef }: { ambientId: number; onBack: () => void; onSettings: () => void; actionsRef: (el: HTMLDivElement | null) => void }) {
-  const row = useLiveQuery(() => db.ambients.get(ambientId), [ambientId])
-  return <DocBar rootLabel="Ambients" name={row?.name ?? ""} nameLabel="Nom de l'ambient" onRename={(v) => void renameAmbient(ambientId, v)} onBack={onBack} onSettings={onSettings} actionsRef={actionsRef} />
-}
-
 export function AmbientEditor({ ambientId, onOpenProject }: { ambientId: number; onOpenProject: (id: number) => void }) {
   const row = useLiveQuery(() => db.ambients.get(ambientId), [ambientId])
   // Els àlies dels materials («X (foto)») depenen de les preferències: s'espera que s'hagin llegit.
