@@ -85,7 +85,9 @@ export function boardName(material: string, thickness: number, n: number): strin
 
 /** El nom del tauler sense el número: també és la clau per numerar-los (dos taulers no es diuen igual). */
 function boardBase(material: string, thickness: number): string {
-  return `${csvField(material).replace(/\s+/g, "_")}_${thick(thickness)}`
+  // ASCII com tot el que va al taller (també és el nom de la peça de treball del .xcs): «Roure massís / xapat» → Roure_massis_xapat.
+  const base = workshopName(material).replace(/[^A-Za-z0-9.-]+/g, "_").replace(/^_+|_+$/g, "")
+  return `${base || "Material"}_${thick(thickness)}`
 }
 
 /** Punt local (u, v) d'una peça → coordenades del tauler segons la col·locació. */
@@ -148,10 +150,10 @@ export function toTopsolidCsv(panels: Panel[], nesting: Nesting, options: Topsol
     })
   }
 
-  const route = csvField(options.project)
+  const route = workshopName(options.project)
   for (const b of boards) {
     const common = [b.name, String(b.pieces.length), num2(b.waste)]
-    const mat = csvField(b.material)
+    const mat = workshopName(b.material)
     lines.push(
       [
         ...common,

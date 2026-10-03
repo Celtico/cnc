@@ -78,7 +78,7 @@ describe("toTopsolidCsv", () => {
     expect(names).toContain("Linia nova")
     const board = rows[1]!.split(";")
     expect(board[3]).toMatch(/^Roure, nat-ural:\d+x\d+x\d+$/)
-    expect(board[0]).toBe("Roure,_nat-ural_19#01")
+    expect(board[0]).toBe("Roure_nat-ural_19#01")
     expect(board[14]).toBe("Prova, v2")
   })
 
