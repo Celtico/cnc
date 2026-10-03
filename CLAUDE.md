@@ -432,6 +432,11 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
     fitxer d'abans importat també les passa); idempotent. Els valors provisionals d'abans (Ø + 1, 300 mm / 0,1 m²) es migren
     un sol cop (`Machine.rulesVersion`, `migrateMachine`) i es desa, així una tria posterior de l'usuari es queda.
     «Restaurar valors inicials» torna a `defaultMachineRules()`.
+- **Coherència (ronda 5)**: les eines surten igual a tot arreu, «codi · nom · Ø» (`toolLabel`, `core/model/machine.ts`: Màquines,
+  Regles i Nesting); els fronts de calaix «auto» es fan a mig mil·límetre cap avall (`snapAutoHeights`: fronts iguals,
+  mateixa mida i mateixos mecanitzats; el que sobra queda al joc de dalt); la separació del nesting només compta les peces que
+  caben en algun tauler (`cncNestOptions`: un taulell de 3500 mm no fa més ampla la separació); l'avís `same-size` diu la ref
+  del taller i el mòdul de cada peça.
 
 ## Pàgines del moble
 Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Exportar**, cadascuna amb un sol propòsit.
@@ -1131,6 +1136,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 
 Les vistes Davant, Darrere, Esquerra, Dreta i Dalt van amb **text**, sense icona. Compte: a Lucide, `square-split-horizontal`
 té la línia **vertical**. Per això és la de "dividir en vertical".
+
 
 ## Com treballar
 - Abans de codi nou al `core/`, escriu o actualitza els tests (Vitest). Canvis de fabricació: proves d'or (vegeu Fabricació).

@@ -134,7 +134,12 @@ describe("calaixos", () => {
     const fronts = panels.filter((p) => p.role === "drawerFront")
     expect(fronts).toHaveLength(4)
     const sum = fronts.reduce((s, f) => s + f.width, 0) // width = alçada del front (costat curt)
-    expect(sum).toBeCloseTo(800 - 2 * 2 - 3 * 3, 1)
+    // Fronts iguals a mig mil·límetre (`snapAutoHeights`): el que sobra (< 0,5 mm per front) queda al joc de dalt.
+    const total = 800 - 2 * 2 - 3 * 3
+    expect(sum).toBeLessThanOrEqual(total + 1e-6)
+    expect(total - sum).toBeLessThan(4 * 0.5)
+    expect(new Set(fronts.map((f) => f.width)).size).toBe(1)
+    expect(fronts[0]!.width * 2).toBe(Math.round(fronts[0]!.width * 2))
   })
 
   it("la guia és la més llarga que hi cap: fondària útil 500 − 18 = 482, menys 10 → 450", () => {

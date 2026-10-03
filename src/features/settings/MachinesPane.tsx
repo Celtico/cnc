@@ -9,6 +9,7 @@ import { SectionLabel } from "../../components/SectionLabel"
 import { toaster } from "../../components/ui/toaster"
 import { isPlaceholderTool, machineNesting, nestProgram, newId, TOOL_EDITABLE, TOOL_KIND_LABELS, type Machine, type MachineTool, type ToolEditable, type ToolKind } from "../../core/model"
 import { usableTool } from "../../core/machine/tools"
+import { toolLabel } from "../../core/model"
 import { importMaestroFiles, pickedFromDrop, pickedFromList, type PickedFile } from "./machineImport"
 import { PaneHeadContext } from "./paneHead"
 import { useSessionString } from "./useSessionString"
@@ -322,7 +323,7 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
                     label="Fresa del contorn"
                     options={[
                       { id: "", label: "Automàtica" },
-                      ...m.tools.filter((t) => t.kind === "router" && usableTool(t)).map((t) => ({ id: t.code, label: `${t.code} · Ø${t.diameter}` })),
+                      ...m.tools.filter((t) => t.kind === "router" && usableTool(t)).map((t) => ({ id: t.code, label: toolLabel(t) })),
                     ]}
                     value={machineNesting(m).tool ?? ""}
                     onChange={(tool) => update({ nesting: { ...machineNesting(m), tool: tool || undefined } })}

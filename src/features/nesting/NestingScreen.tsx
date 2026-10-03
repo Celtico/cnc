@@ -15,7 +15,7 @@ import { useMemo, useState } from "react"
 import { BoardDrawing } from "../../components/BoardDrawing"
 import { STANDARD_SHEETS, type NestOptions } from "../../core/nesting/nest"
 import { nestPlan } from "../../core/nesting/machineNest"
-import { machineNesting, machineWithRules, toolMslName } from "../../core/model"
+import { machineNesting, machineWithRules, toolLabel } from "../../core/model"
 import { updateProjectNesting } from "../../db/db"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { NumRow } from "../../components/NumRow"
@@ -79,7 +79,7 @@ function NestingView({ projectId, initial }: { projectId: number; initial: NestO
           <NumRow label="Ample tauler" value={options.sheet.h} min={300} max={6000} step={10} help={options.sheet.h > options.sheet.w ? "La veta va pel costat llarg: el tauler es fa servir apaïsat." : undefined} onChange={(h) => setOptions((o) => ({ ...o, sheet: { ...o.sheet, h } }))} />
           {plan.machine ? (
             // La separació i el marge són els de la màquina (els mateixos dels programes .xcs per tauler).
-            <FormRow label="Fresa i marge" help={plan.tool ? `Ø de la fresa del contorn més grossa del moble (${toolMslName(plan.tool)}, Ø${comma(plan.tool.diameter)}) + ${comma(machineNesting(plan.machine).spacingExtra)} mm.` : undefined}>
+            <FormRow label="Fresa i marge" help={plan.tool ? `Ø de la fresa del contorn més grossa del moble (${toolLabel(plan.tool)}) + ${comma(machineNesting(plan.machine).spacingExtra)} mm.` : undefined}>
               <Text fontSize="sm" pt="6px">
                 Separació {comma(plan.options.kerf)} mm i marge {comma(plan.options.margin)} mm de la màquina {plan.machine.name} (Preferències › Màquines CNC)
               </Text>

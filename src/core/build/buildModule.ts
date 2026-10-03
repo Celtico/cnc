@@ -1292,7 +1292,7 @@ class Builder {
     while (sizes.length < n) sizes.push("auto")
     // Com les zones: l'últim auto es queda el que sobra; sense cap «auto», l'últim s'ajusta (i s'avisa).
     const fit = fitSizes(ter.y1 - ter.y0, sizes, bg)
-    const heights = fit.sizes
+    const heights = snapAutoHeights(fit.sizes, sizes)
     if (fit.mismatch !== null)
       this.warnings.push({ code: "layout", message: mismatchMessage("Les alçades dels fronts dels calaixos", fit.mismatch, r(ter.y1 - ter.y0), heights.at(-1)!), zoneId: zone.id })
     if (heights.some((h) => h <= 0)) this.warnings.push({ code: "layout", message: `Els ${n} calaixos no hi caben: algun front no té alçada.`, zoneId: zone.id })
@@ -1535,4 +1535,14 @@ function addHandle(p: Panel, cx: number, cy: number, along: "x" | "y"): boolean 
   if (!fits) return false
   for (const [x, y] of pts) (p.cutouts ??= []).push({ kind: "circle", x, y, diameter: 5, tag: "handle" })
   return true
+}
+
+/**
+ * Alçades «auto» dels fronts de calaix a mig mil·límetre cap avall (253,5 i no 253,33): fronts iguals surten amb la
+ * mateixa mida al taller (no 253,34 i 253,33, dues peces diferents a la llista) i amb els mateixos mecanitzats. El que
+ * sobra (menys de 0,5 mm per calaix) queda al joc de dalt de la pila: no es nota.
+ */
+export function snapAutoHeights(heights: number[], sizes: (number | "auto")[]): number[] {
+  if (sizes.filter((x) => x === "auto").length < 2) return heights
+  return heights.map((h, i) => (sizes[i] === "auto" ? Math.floor(h * 2 + 1e-6) / 2 : h))
 }

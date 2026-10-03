@@ -6,6 +6,7 @@ import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
 import { buildFreeParts, type PartJoint } from "./freeParts"
 import { resolveHoleClashes } from "./holeClash"
 import { sameSizeConflicts } from "./sameSize"
+import { pieceRefs } from "../export/refs"
 
 export interface CompositionWarning extends BuildWarning {
   moduleId?: string
@@ -191,10 +192,17 @@ export function buildComposition(input: Composition): CompositionBuild {
   if (clash.length) {
     const [a, b] = clash[0]!
     const moduleId = modules.find((m) => m.index === a.module)?.id
+    // Amb la ref del taller i el mòdul: «Lateral esquerre (A.2.L.1, Calaixos)» i no dues vegades el mateix nom.
+    const refs = pieceRefs(panels)
+    const who = (p: Panel) => {
+      const mod = input.modules.find((m) => m.id === modules.find((x) => x.index === p.module)?.id)?.name
+      const extra = [refs.get(p.id), mod].filter(Boolean).join(", ")
+      return extra ? `${p.label} (${extra})` : p.label
+    }
     const more = clash.length > 1 ? ` (i ${clash.length - 1} ${clash.length === 2 ? "parella més" : "parelles més"})` : ""
     warnings.push({
       code: "same-size",
-      message: `${a.label} i ${b.label} fan ${a.length} × ${a.width} × ${a.thickness} mm de ${a.material} però tenen mecanitzats diferents${more}: el taller casa cada peça amb el seu sòlid només per la mida i els pot intercanviar. Canvia una mica la mida d'una de les dues o avisa el taller.`,
+      message: `${who(a)} i ${who(b)} fan ${a.length} × ${a.width} × ${a.thickness} mm de ${a.material} però tenen mecanitzats diferents${more}: el taller casa cada peça amb el seu sòlid només per la mida i els pot intercanviar. Canvia una mica la mida d'una de les dues o avisa el taller.`,
       panelId: a.id,
       ...(moduleId ? { moduleId } : {}),
     })

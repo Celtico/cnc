@@ -4,15 +4,15 @@
   "csv": {
    "rows": 37,
    "unplaced": 0,
-   "hash": "618410d2"
+   "hash": "41e40196"
   },
   "xcs": {
    "warnings": 12,
    "sheets": [
-    "T01_Noguera_xapada_19.xcs parts:19 drill:drill=60 outer:contour=57 #c2de52e0",
-    "T02_Noguera_xapada_19.xcs parts:5 drill:drill=22 outer:contour=15 #31e59c56",
+    "T01_Noguera_xapada_19.xcs parts:19 drill:drill=60 outer:contour=57 #f1b90a08",
+    "T02_Noguera_xapada_19.xcs parts:5 drill:drill=22 outer:contour=15 #902cf1e7",
     "T03_Contraxapat_fons_10.xcs parts:4 inner:contour=1 outer:contour=10 #3c94a683",
-    "T04_Noguera_xapada_16.xcs parts:9 drill:drill=12 outer:contour=27 #1b5ff61e"
+    "T04_Noguera_xapada_16.xcs parts:9 drill:drill=12 outer:contour=27 #866b6100"
    ]
   },
   "dxf": [
@@ -160,18 +160,18 @@
   "csv": {
    "rows": 89,
    "unplaced": 2,
-   "hash": "6554d4ca"
+   "hash": "3c40099e"
   },
   "xcs": {
    "warnings": 42,
    "sheets": [
-    "T01_Melamina_blanca_19.xcs parts:16 drill:drill=248 outer:contour=48 #9f887326",
-    "T02_Melamina_blanca_19.xcs parts:17 drill:drill=324 outer:contour=51 #e7f06437",
-    "T03_Melamina_blanca_19.xcs parts:8 drill:drill=46 outer:contour=24 #f6349c46",
-    "T04_DM_fons_10.xcs parts:11 outer:contour=33 #a0b85474",
-    "T05_DM_fons_10.xcs parts:4 outer:contour=12 #8cdc0963",
-    "T06_Melamina_roure_19.xcs parts:13 drill:drill=64 outer:contour=39 #76d15804",
-    "T07_Melamina_blanca_16.xcs parts:18 drill:drill=24 outer:contour=54 #42decad5"
+    "T01_Melamina_blanca_19.xcs parts:16 drill:drill=248 outer:contour=48 #a5b2496b",
+    "T02_Melamina_blanca_19.xcs parts:17 drill:drill=324 outer:contour=51 #8d99189e",
+    "T03_Melamina_blanca_19.xcs parts:8 drill:drill=46 outer:contour=24 #a80acb5a",
+    "T04_DM_fons_10.xcs parts:12 outer:contour=36 #4ec061e0",
+    "T05_DM_fons_10.xcs parts:3 outer:contour=9 #c22e62ff",
+    "T06_Melamina_roure_19.xcs parts:13 drill:drill=64 outer:contour=39 #e1adbb2b",
+    "T07_Melamina_blanca_16.xcs parts:18 drill:drill=24 outer:contour=54 #8d5a7400"
    ]
   },
   "dxf": [
@@ -268,14 +268,14 @@
   "csv": {
    "rows": 20,
    "unplaced": 0,
-   "hash": "0b11d97e"
+   "hash": "862e1571"
   },
   "xcs": {
    "warnings": 12,
    "sheets": [
-    "T01_Noguera_xapada_19.xcs parts:7 drill:drill=30 outer:contour=21 #d78c5139",
+    "T01_Noguera_xapada_19.xcs parts:7 drill:drill=30 outer:contour=21 #87c7538e",
     "T02_DM_fons_10.xcs parts:4 outer:contour=10 #f43f463c",
-    "T03_Noguera_xapada_16.xcs parts:9 drill:drill=12 outer:contour=27 #91e8a5ab"
+    "T03_Noguera_xapada_16.xcs parts:9 drill:drill=12 outer:contour=27 #c9e15b32"
    ]
   },
   "dxf": [
@@ -287,7 +287,7 @@
    "CIRCLE@DRILL_H_D8_P20=24",
    "ENDBLK@0=20",
    "INSERT@0=20",
-   "LINE@MITRE_45=20",
+   "LINE@MITRE_45=19",
    "POLYLINE@CONTOUR=20",
    "POLYLINE@GROOVE_W10_P8=9",
    "SEQEND@CONTOUR=20",
@@ -302,18 +302,18 @@
   "csv": {
    "rows": 36,
    "unplaced": 0,
-   "hash": "b4085ec1"
+   "hash": "973ba2bc"
   },
   "xcs": {
    "warnings": 12,
    "sheets": [
-    "T01_Melamina_blanca_19.xcs parts:3 drill:drill=359 outer:contour=3 #0e2dca42",
-    "T02_Melamina_blanca_19.xcs parts:7 drill:drill=97 outer:contour=19 #97f4fc3f",
-    "T03_Melamina_blanca_19.xcs parts:7 drill:drill=25 outer:contour=17 #13ac8343",
-    "T04_Melamina_blanca_19.xcs parts:5 drill:drill=17 outer:contour=15 #b33f0047",
+    "T01_Melamina_blanca_19.xcs parts:3 drill:drill=359 outer:contour=3 #ac6884a4",
+    "T02_Melamina_blanca_19.xcs parts:7 drill:drill=97 outer:contour=19 #bb01f48d",
+    "T03_Melamina_blanca_19.xcs parts:7 drill:drill=25 outer:contour=17 #e4cf5eab",
+    "T04_Melamina_blanca_19.xcs parts:5 drill:drill=17 outer:contour=15 #81dfc3f2",
     "T05_DM_fons_10.xcs parts:4 outer:contour=8 #f80809f5",
     "T06_DM_fons_10.xcs parts:1 outer:contour=3 #a1a52196",
-    "T07_Melamina_blanca_16.xcs parts:9 drill:drill=12 outer:contour=27 #922a8ef0"
+    "T07_Melamina_blanca_16.xcs parts:9 drill:drill=12 outer:contour=27 #1bdaf90a"
    ]
   },
   "dxf": [
@@ -341,14 +341,14 @@
   "csv": {
    "rows": 24,
    "unplaced": 0,
-   "hash": "e75dd87c"
+   "hash": "1c044c4c"
   },
   "xcs": {
    "warnings": 12,
    "sheets": [
-    "T01_Freixe_xapat_19.xcs parts:11 drill:drill=94 outer:contour=33 #4b5eb700",
+    "T01_Freixe_xapat_19.xcs parts:11 drill:drill=94 outer:contour=33 #66b06235",
     "T02_DM_fons_10.xcs parts:4 outer:contour=10 #a5070e74",
-    "T03_Freixe_xapat_16.xcs parts:9 drill:drill=12 outer:contour=27 #360d78f5"
+    "T03_Freixe_xapat_16.xcs parts:9 drill:drill=12 outer:contour=27 #661cc4a3"
    ]
   },
   "dxf": [

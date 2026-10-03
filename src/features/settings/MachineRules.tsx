@@ -3,7 +3,7 @@ import { LuCheck, LuRoute, LuPlus, LuTrash2 } from "react-icons/lu"
 import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
 import { NumberField, NumRow } from "../../components/NumRow"
 import { SettingsGroup } from "../../components/SettingsGroup"
-import { defaultMachine, machineNesting, toolMslName, type Machine, type MachineRules } from "../../core/model"
+import { defaultMachine, machineNesting, toolLabel, toolMslName, type Machine, type MachineRules } from "../../core/model"
 import { findRuleTool, missingRuleTools } from "../../core/machine/rules"
 import { usableTool } from "../../core/machine/tools"
 
@@ -180,11 +180,24 @@ function ToolPick({ machines, label, value, onChange }: { machines: Machine[]; l
   const routers = machines.flatMap((m) => m.tools.filter((t) => t.kind === "router" && usableTool(t) && t.diameter > 0))
   const options = [
     { id: "", label: "Automàtica" },
-    ...routers.map((t) => ({ id: toolMslName(t), label: `${toolMslName(t)}${t.name.trim() && t.name !== toolMslName(t) ? ` (${t.name})` : ""} · Ø${comma(t.diameter)}` })),
+    ...routers.map((t) => ({ id: toolMslName(t), label: toolLabel(t) })),
     ...(value.trim() && !found ? [{ id: value, label: `${value} · falta` }] : []),
   ]
+  // Si el nom de la regla no és a cap màquina però n'hi ha una del mateix Ø (el nom en porta la mida: «14mm diamant
+  // nesting»), un toc la fa servir.
+  const want = !found && value.trim() ? Number(/(\d+(?:[.,]\d+)?)\s*mm/i.exec(value)?.[1]?.replace(",", ".")) : NaN
+  const suggest = Number.isFinite(want) ? routers.find((t) => Math.abs(t.diameter - want) < 0.01) : undefined
   // El valor desat pot ser el nom o el codi: es marca l'eina trobada.
   const current = found ? toolMslName(found) : value
   const seen = new Set<string>()
-  return <ChoiceChips<string> label={label} options={options.filter((o) => !seen.has(o.id) && !!seen.add(o.id))} value={current} onChange={onChange} />
+  return (
+    <Stack gap={1.5}>
+      <ChoiceChips<string> label={label} options={options.filter((o) => !seen.has(o.id) && !!seen.add(o.id))} value={current} onChange={onChange} />
+      {suggest && (
+        <Button size="xs" variant="outline" alignSelf="flex-start" onClick={() => onChange(toolMslName(suggest))}>
+          Fer servir {toolLabel(suggest)}
+        </Button>
+      )}
+    </Stack>
+  )
 }

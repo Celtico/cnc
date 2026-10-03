@@ -115,7 +115,16 @@ export const boardRouter = (rp: RulePicker, m: Machine, T: number, overcut: numb
 export function cncNestOptions(panels: Panel[], m: Machine, base: NestOptions): { options: NestOptions; tool?: MachineTool; spacing: number } {
   const n = machineNesting(m)
   const rp = new RulePicker(m)
-  const tools = [...new Set(panels.map((p) => p.thickness))].map((t) => boardRouter(rp, m, t, n.overcut)).filter((t): t is MachineTool => !!t)
+  // Només els gruixos de les peces que caben en algun tauler: una que no hi cap (un taulell de 3500 mm) no surt a cap
+  // programa i no ha de fer més ampla la separació de tots els taulers.
+  const fits = (p: Panel) => {
+    const sh = base.sheetsByMaterial?.[p.material] ?? base.sheet
+    const W = Math.max(sh.w, sh.h) - 2 * n.edgeTrim, H = Math.min(sh.w, sh.h) - 2 * n.edgeTrim
+    const a = Math.max(p.length, p.width), b = Math.min(p.length, p.width)
+    return a <= W && b <= H
+  }
+  const placed = panels.filter(fits)
+  const tools = [...new Set((placed.length ? placed : panels).map((p) => p.thickness))].map((t) => boardRouter(rp, m, t, n.overcut)).filter((t): t is MachineTool => !!t)
   const tool = tools.sort((a, b) => b.diameter - a.diameter || a.code.localeCompare(b.code))[0]
   const spacing = (tool ? tool.diameter : base.kerf) + n.spacingExtra
   return { options: { ...base, kerf: spacing, margin: n.edgeTrim }, ...(tool ? { tool } : {}), spacing }

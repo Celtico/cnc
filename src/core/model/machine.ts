@@ -272,6 +272,16 @@ export const isPlaceholderTool = (t: Pick<MachineTool, "code" | "manual">): bool
 export const toolMslName = (t: MachineTool): string => t.mslName ?? t.code
 
 /**
+ * Nom d'una eina per a la pantalla, igual a tot arreu: «codi · nom · Ø» («E219 · 14mm diamant nesting · Ø14»). El nom és
+ * el de Maestro (`mslName`) o, si no en té, el del `.tlgx`; si coincideix amb el codi, no es repeteix.
+ */
+export function toolLabel(t: MachineTool): string {
+  const name = (t.mslName ?? t.name ?? "").trim()
+  const d = String(Math.round(t.diameter * 100) / 100).replace(".", ",")
+  return [t.code, name && name !== t.code ? name : "", `Ø${d}`].filter(Boolean).join(" · ")
+}
+
+/**
  * Llegeix una màquina desada sense perdre-la per una eina invàlida: les eines que no passen l'esquema es
  * descarten d'una en una (amb un problema per a cadascuna). Si encara no és vàlida, es tornen a provar sense les regles i
  * després sense les opcions de nesting (valors per defecte, amb un problema). Si tampoc, `machine` és buit.
