@@ -47,6 +47,7 @@ let neeMode = 0
 /** Làmpades: triangles que emeten i el seu multiplicador (0 = apagades). */
 let EM: Emitters = { data: new Float32Array(0), count: 0, total: 0 }
 let lampScale = 1
+let lampView = 1
 
 let S: RenderScene | null = null
 let W = 0
@@ -560,7 +561,8 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
           const pl = cosL > 1e-6 ? ((el / EM.total) * hitT * hitT) / cosL : 0
           w = (lastPdf * lastPdf) / (lastPdf * lastPdf + pl * pl)
         }
-        const k = lampScale * w * emK
+        // Vistes des de la càmera, ×lampView (es veu la tela); la llum que fan, igual.
+        const k = lampScale * w * emK * (vertex < 0 ? lampView : 1)
         add(tr * em[0] * k, tg * em[1] * k, tb * em[2] * k, Math.max(0, vertex))
       }
     }
@@ -899,6 +901,7 @@ self.onmessage = (e: MessageEvent<Msg>) => {
   sunA2 = L.sunA2
   neeMode = L.neeMode
   lampScale = L.lampScale
+  lampView = L.lampView
   ENV = msg.env ?? null
   CDF = ENV ? buildEnvCdf(ENV) : null
   envRot = (O.envRotation ?? 0) / 360

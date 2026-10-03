@@ -14,6 +14,8 @@ export interface LightSetup {
   neeMode: number
   /** Multiplicador de la llum de les làmpades (0 = apagades). */
   lampScale: number
+  /** La llum de les làmpades vista directament des de la càmera (`RenderOpts.lampView`). */
+  lampView: number
 }
 
 /** Llums derivades de les opcions: les mateixes per al worker de CPU i per a la GPU. */
@@ -29,5 +31,6 @@ export function lightSetup(scene: RenderScene, o: RenderOpts, env: RenderEnv | n
     sunA2: (angle / 2) ** 2,
     neeMode: scene.interior && scene.portals.length > 0 ? 2 : env ? 1 : 0,
     lampScale: o.lamps === false ? 0 : Math.max(0, o.lampIntensity ?? 1),
+    lampView: Math.max(0, o.lampView ?? 1),
   }
 }

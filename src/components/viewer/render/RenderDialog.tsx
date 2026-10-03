@@ -107,9 +107,9 @@ const AGX_LUT = makeAgxLut()
 const POW_LUT = makePowLut()
 
 /** Control lliscant compacte en fila: rètol a l'esquerra; el range natiu i el valor a la dreta. */
-function Range({ label, value, min, max, step, format, onChange }: { label: string; value: number; min: number; max: number; step: number; format: (v: number) => string; onChange: (v: number) => void }) {
+function Range({ label, value, min, max, step, format, onChange, help }: { label: string; value: number; min: number; max: number; step: number; format: (v: number) => string; onChange: (v: number) => void; help?: string }) {
   return (
-    <FormRow label={label}>
+    <FormRow label={label} help={help}>
       <HStack gap={2} minH="32px">
         <input
           type="range"
@@ -918,6 +918,7 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
                     </HStack>
                   </FormRow>
                   {opts.lamps !== false && <Range label="Llums · intensitat" value={opts.lampIntensity ?? 1} min={0.1} max={5} step={0.1} format={x} onChange={(v) => set({ lampIntensity: v })} />}
+                  {opts.lamps !== false && <Range label="Llums · com es veuen" help="Com es veuen les pantalles i bombetes a la foto (la llum que fan a l'habitació no canvia). Més baix, es veu la tela de la pantalla; a 1×, una taca blanca com en una foto sense retocar." value={opts.lampView ?? 0.35} min={0.05} max={1} step={0.05} format={x} onChange={(v) => set({ lampView: v })} />}
                 </Sec>
 
                 <Sec id="image" title="Imatge" icon={LuImage} hint="S'aplica a l'instant, sense tornar a començar." badge={look.denoise ? "Sense soroll" : undefined}>

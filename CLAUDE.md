@@ -655,7 +655,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     **Llums que fan llum** (`MaterialPref.glow` → `RenderMaterial.emission`, mostra directa dels emissors, `emitters.ts`;
     «Llums enceses» + intensitat; la llum que es **veu** d'un emissor amb textura va multiplicada per la textura respecte de
     la seva mitjana, `emK`, als dos motors: a la pantalla de lli es veu la tela en lloc d'una taca blanca; la que fa llum,
-    la mitjana). **Translucidesa** (`MaterialPref.translucent`).
+    la mitjana; **«Llums · com es veuen»** (`RenderOpts.lampView`, 0,35 per defecte, `LightSetup.lampView`, GPU `P.lamp.z`):
+    multiplica només la llum dels emissors que veu la càmera directament (`vertex < 0`), no la que fan a l'habitació:
+    la pantalla es veu de tela i no una taca blanca encara que l'exposició automàtica pugi). **Translucidesa** (`MaterialPref.translucent`).
   - **Llum**: sol amb mida (ombres suaus; el reflex s'eixampla amb la mida) i halo ample al cel de dia; cel amb mostra directa
     a cada rebot i MIS: cel llis, **HDRI per importància** (`envSampling.ts`) i, als
     interiors, per les finestres (portals). **Sense ateses**: la indirecta té un màxim relatiu a la llum de l'escena

@@ -25,7 +25,7 @@ struct Params {
   offs: vec4u,     // materials, textures, bevel, finestres (vec4 a info)
   envi: vec4u,     // w, h, inici de la marginal, inici de la condicional
   seed: vec4u,     // llavor, files d'aquesta tanda, 2^reduccions de les textures
-  lamp: vec4f,     // intensitat de les làmpades (0 = apagades), Σ àrea × luminància
+  lamp: vec4f,     // intensitat de les làmpades (0 = apagades), Σ àrea × luminància, com es veuen des de la càmera
   emit: vec4u,     // inici dels emissors (vec4 a info), quants
 }
 
@@ -603,7 +603,9 @@ fn trace(o0: vec3f, d0: vec3f) -> vec4f {
           let pl = select(0.0, el / P.lamp.y * hT * hT / cosL, cosL > 1e-6);
           w = lastPdf * lastPdf / (lastPdf * lastPdf + pl * pl);
         }
-        addC(thr * m.emission * (P.lamp.x * w * emK), max(0, vertex));
+        // Vistes des de la càmera, ×lampView (es veu la tela); la llum que fan, igual.
+        let view = select(1.0, P.lamp.z, vertex < 0);
+        addC(thr * m.emission * (P.lamp.x * w * emK * view), max(0, vertex));
       }
     }
     if (m.opacity < 1.0) {

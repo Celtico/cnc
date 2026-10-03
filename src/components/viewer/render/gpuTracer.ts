@@ -224,7 +224,7 @@ export class GpuEngine implements RenderEngine {
     u.set([gs.matOff, gs.texOff, gs.bevelOff, gs.portalOff], 52)
     u.set([gs.envW, gs.envH, gs.envMarginal, gs.envConditional], 56)
     u.set([this.seed, rows, 2 ** gs.texHalvings, 0], 60)
-    f.set([L.lampScale, gs.emitTotal || 1, 0, 0], 64)
+    f.set([L.lampScale, gs.emitTotal || 1, L.lampView, 0], 64)
     // emit.z: textura de la vista per les finestres + 1 (0 = cap).
     u.set([gs.emitOff, gs.emitCount, s.backdrop !== undefined && s.backdrop >= 0 ? s.backdrop + 1 : 0, 0], 68)
     this.device.queue.writeBuffer(this.params, 0, buf)

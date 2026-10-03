@@ -121,6 +121,11 @@ export interface RenderOpts {
   /** Llums enceses (pantalles i bombetes emeten llum) i la seva intensitat (×). */
   lamps?: boolean
   lampIntensity?: number
+  /**
+   * Com es veuen les pantalles i bombetes des de la càmera (×, només la llum vista directament; la que fan a l'habitació
+   * no canvia): per sota d'1 es veu la tela de la pantalla en lloc d'una taca blanca.
+   */
+  lampView?: number
   /** Verticals rectes (càmera anivellada amb descentrament, com les fotos d'interiors): `photoCamera`. */
   straight?: boolean
   /** Focal equivalent de 35 mm (costat llarg = 36 mm); 0 o res = la del visor. */
@@ -129,7 +134,7 @@ export interface RenderOpts {
   view?: "garden" | "sea" | "photo" | "sky"
 }
 
-export const DEFAULT_RENDER_OPTS: RenderOpts = { bounces: 6, sunAzimuth: 40, sunElevation: 45, sunIntensity: 1, skyIntensity: 1, softness: 0.15, aperture: 0, envRotation: 0, lamps: true, lampIntensity: 1, straight: true, focal: 0, view: "garden" }
+export const DEFAULT_RENDER_OPTS: RenderOpts = { bounces: 6, sunAzimuth: 40, sunElevation: 45, sunIntensity: 1, skyIntensity: 1, softness: 0.15, aperture: 0, envRotation: 0, lamps: true, lampIntensity: 1, lampView: 0.35, straight: true, focal: 0, view: "garden" }
 
 /**
  * La càmera del render com la d'un fotògraf d'interiors:
