@@ -1041,6 +1041,7 @@ function AmbientInspector({
 
       <PanelSection id="amb-finish" title="Acabats" icon={LuPalette}>
         <MaterialPick label="Terra" value={amb.floorMaterial ?? "Parquet de roure"} materials={materials} onChange={(floorMaterial) => onChange({ ...amb, floorMaterial })} onlySim />
+        <MaterialPick label="Terra de fora" value={amb.outsideFloorMaterial ?? "Gespa"} materials={materials} onChange={(outsideFloorMaterial) => onChange({ ...amb, outsideFloorMaterial })} onlySim />
         <MaterialPick label="Parets" value={amb.wallMaterial ?? "Pintura blanca"} materials={materials} onChange={(wallMaterial) => onChange({ ...amb, wallMaterial })} onlySim />
         <MaterialPick label="Sostre" value={amb.ceilingMaterial ?? "Pintura blanca"} materials={materials} onChange={(ceilingMaterial) => onChange({ ...amb, ceilingMaterial })} onlySim />
       </PanelSection>

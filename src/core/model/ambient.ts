@@ -122,6 +122,8 @@ export const AmbientSchema = z.object({
   /** Materials de simulació del terra i de les parets (nom de preferències). */
   floorMaterial: z.string().optional(),
   wallMaterial: z.string().optional(),
+  /** Terra de fora (una habitació tancada amb coses fora, com arbres davant d'una finestra; sense, «Gespa»). */
+  outsideFloorMaterial: z.string().optional(),
   /** Material del sostre (sense, pintura blanca). */
   ceilingMaterial: z.string().optional(),
   /** Última càmera del 3D (es desa sense tocar la data ni el desfer). Opcional. */
@@ -155,6 +157,7 @@ function parseAmbientData(raw: unknown): Ambient {
     ...(typeof o.floorMaterial === "string" ? { floorMaterial: o.floorMaterial } : {}),
     ...(typeof o.wallMaterial === "string" ? { wallMaterial: o.wallMaterial } : {}),
     ...(typeof o.ceilingMaterial === "string" ? { ceilingMaterial: o.ceilingMaterial } : {}),
+    ...(typeof o.outsideFloorMaterial === "string" ? { outsideFloorMaterial: o.outsideFloorMaterial } : {}),
     ...(parseCameraPose(o.camera) ? { camera: parseCameraPose(o.camera) } : {}),
     ...(AmbientRenderSchema.parse(o.render) ? { render: AmbientRenderSchema.parse(o.render) } : {}),
   }

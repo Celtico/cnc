@@ -161,3 +161,11 @@ describe("ambient desat amb dades malmeses", () => {
     expect(p.walls[0]!.material).toBeUndefined()
   })
 })
+
+describe("terra de fora", () => {
+  it("es desa i es llegeix, també d'un ambient amb alguna cosa dolenta", () => {
+    expect(parseAmbient({ walls: [], items: [], outsideFloorMaterial: "Grava" }).outsideFloorMaterial).toBe("Grava")
+    expect(parseAmbient({ walls: "dolent", items: [], outsideFloorMaterial: "Grava" }).outsideFloorMaterial).toBe("Grava")
+    expect(parseAmbient({ walls: [], items: [] }).outsideFloorMaterial).toBeUndefined()
+  })
+})

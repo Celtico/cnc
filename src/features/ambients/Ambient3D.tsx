@@ -20,6 +20,9 @@ import { ambientBox, eyePose, snapGrid } from "./planGeom"
  * Vista 3D de l'ambient (m): terra i parets amb els materials de simulació i cada moble o bloc
  * amb les seves peces de debò i les textures del visor, al seu lloc i girat.
  */
+/** Terra de fora per defecte (`Ambient.outsideFloorMaterial`). */
+const OUTSIDE_FLOOR = "Gespa"
+
 export function Ambient3D({
   ambient,
   geos,
@@ -331,7 +334,7 @@ function Room({
   const rcx = closed ? (Math.min(...wx) + Math.max(...wx)) / 2 : (box.x0 + box.x1) / 2
   const rcy = closed ? (Math.min(...wy) + Math.max(...wy)) / 2 : (box.y0 + box.y1) / 2
   // Habitació tancada amb coses fora (arbres davant d'una finestra): el terra de dins, fins a les parets (amb el gruix),
-  // i fora gespa, una mica més avall.
+  // i fora el «Terra de fora» (`outsideFloorMaterial`, gespa si no se n'ha triat), una mica més avall.
   const rx0 = closed ? Math.min(...wx) - 300 : fx0, rx1 = closed ? Math.max(...wx) + 300 : fx1
   const ry0 = closed ? Math.min(...wy) - 300 : fy0, ry1 = closed ? Math.max(...wy) + 300 : fy1
   const outside = closed && (fx0 < rx0 - 1000 || fx1 > rx1 + 1000 || fy0 < ry0 - 1000 || fy1 > ry1 + 1000)
@@ -346,14 +349,14 @@ function Room({
     if (!outside) return mesh
     const g = new Group()
     const gw = fx1 - fx0 + 4000, gd = fy1 - fy0 + 4000
-    const lawn = new Mesh(new PlaneGeometry(gw / 1000, gd / 1000), surfaceMaterial(materials, "Gespa", gw, gd))
+    const lawn = new Mesh(new PlaneGeometry(gw / 1000, gd / 1000), surfaceMaterial(materials, ambient.outsideFloorMaterial ?? OUTSIDE_FLOOR, gw, gd))
     lawn.rotation.x = -Math.PI / 2
     lawn.position.set((fx0 + fx1) / 2000, -0.004, (fy0 + fy1) / 2000)
     lawn.receiveShadow = true
     lawn.userData.room = "floor"
     g.add(mesh, lawn)
     return g
-  }, [fx0, fx1, fy0, fy1, rx0, rx1, ry0, ry1, outside, materials, ambient.floorMaterial])
+  }, [fx0, fx1, fy0, fy1, rx0, rx1, ry0, ry1, outside, materials, ambient.floorMaterial, ambient.outsideFloorMaterial])
   useEffect(() => () => disposeTree(floor), [floor])
 
   const walls = useMemo(() => {
