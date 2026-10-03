@@ -53,6 +53,9 @@ import {
   type Composition,
   CompositionSchema,
   duplicateItems,
+  pasteItems,
+  parseAmbientClip,
+  type AmbientClip,
   groupIds,
   moveItems,
   newItemGroupName,
@@ -111,6 +114,8 @@ const TOOLS: { id: Tool; label: string; key: string; icon: typeof LuPenTool }[] 
 ]
 
 const SHAPE_LABEL: Record<BlockItem["shape"], string> = { box: "Caixa", sofa: "Sofà", bed: "Llit", table: "Taula" }
+/** Porta-retalls dels ambients (`AmbientClip`), compartit entre ambients. */
+const AMBIENT_CLIP_KEY = "mobles:ambient-clipboard"
 
 /**
  * Editor d'un ambient: el plànol (parets, plànol de fons, mobles i blocs) i la vista 3D. Els
@@ -273,6 +278,37 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
     change(d.ambient, true)
     setSel(d.group ? { kind: "group", id: d.group } : { kind: "item", id: d.ids[0]! })
   }
+  // Copiar · retallar · enganxar (Ctrl/⌘ C · X · V; també entre ambients: localStorage, validat en llegir-lo).
+  const pastes = useRef(0)
+  const copy = (cut: boolean) => {
+    if (!selIds.length) return
+    const clip: AmbientClip = { kind: "ambient-items", items: amb.items.filter((i) => selIds.includes(i.id)) }
+    try {
+      localStorage.setItem(AMBIENT_CLIP_KEY, JSON.stringify(clip))
+    } catch {
+      return
+    }
+    pastes.current = 0
+    if (cut) {
+      change(removeItems(amb, selIds), true)
+      setSel(null)
+    }
+  }
+  const paste = () => {
+    let clip: AmbientClip | null = null
+    try {
+      clip = parseAmbientClip(JSON.parse(localStorage.getItem(AMBIENT_CLIP_KEY) ?? "null"))
+    } catch {
+      clip = null
+    }
+    if (!clip) return
+    // Si els originals hi són (copiats d'aquí), la còpia es desplaça; d'un altre ambient o retallats, al mateix lloc.
+    const here = clip.items.some((c) => amb.items.some((i) => i.id === c.id))
+    const r = pasteItems(amb, clip.items, 300 * (pastes.current + (here ? 1 : 0)))
+    pastes.current++
+    change(r.ambient, true)
+    setSel(r.group ? { kind: "group", id: r.group } : { kind: "item", id: r.ids[0]! })
+  }
   const rotate = (deg: number) => selIds.length && change(rotateItems(amb, selIds, deg), true)
   const nudge = (dx: number, dy: number) => selIds.length && change(moveItems(amb, selIds, dx, dy), true)
   /** Clic a un element (plànol o 3D), com Figma: si és d'un grup, el primer clic tria el grup i el segon, l'element. */
@@ -371,6 +407,18 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
       if (mod && e.key.toLowerCase() === "d") {
         e.preventDefault()
         duplicate()
+        return
+      }
+      if (mod && (e.key.toLowerCase() === "c" || e.key.toLowerCase() === "x")) {
+        // Sense res seleccionat (o amb text triat), el del navegador.
+        if (!selIds.length || window.getSelection()?.toString()) return
+        e.preventDefault()
+        copy(e.key.toLowerCase() === "x")
+        return
+      }
+      if (mod && e.key.toLowerCase() === "v") {
+        e.preventDefault()
+        paste()
         return
       }
       if (mod) return

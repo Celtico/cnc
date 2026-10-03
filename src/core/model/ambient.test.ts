@@ -169,3 +169,29 @@ describe("terra de fora", () => {
     expect(parseAmbient({ walls: [], items: [] }).outsideFloorMaterial).toBeUndefined()
   })
 })
+
+describe("copiar i enganxar elements dels ambients", () => {
+  const it0 = (id: string, group?: string) => ({ kind: "moble", id, projectId: 7, x: 1000, y: 1000, rot: 0, ...(group ? { group } : {}) })
+  const amb = (items: unknown[]) => parseAmbient({ walls: [], items })
+  it("ids nous i desplaçats; d'un altre ambient, al mateix lloc", async () => {
+    const { pasteItems, parseAmbientClip } = await import("./ambient")
+    const a = amb([it0("a")])
+    const clip = parseAmbientClip({ kind: "ambient-items", items: a.items })!
+    const r = pasteItems(a, clip.items, 300)
+    expect(r.ambient.items).toHaveLength(2)
+    expect(r.ids[0]).not.toBe("a")
+    expect([r.ambient.items[1]!.x, r.ambient.items[1]!.y]).toEqual([1300, 1300])
+    expect(pasteItems(amb([]), clip.items, 0).ambient.items[0]!.x).toBe(1000)
+    expect(parseAmbientClip({ kind: "ambient-items", items: [] })).toBeNull()
+    expect(parseAmbientClip("res")).toBeNull()
+  })
+  it("grups: el sencer fa un grup nou; una part s'hi queda; un d'un altre ambient amb el mateix nom, nou", async () => {
+    const { pasteItems } = await import("./ambient")
+    const a = amb([it0("a", "Grup 1"), it0("b", "Grup 1")])
+    expect(pasteItems(a, a.items, 300).group).toBe("Grup 2")
+    expect(pasteItems(a, [a.items[0]!], 300).ambient.items[2]!.group).toBe("Grup 1")
+    const other = amb([it0("x", "Grup 1")])
+    expect(pasteItems(other, a.items, 0).group).toBe("Grup 2")
+    expect(pasteItems(amb([]), a.items, 0).group).toBe("Grup 1")
+  })
+})

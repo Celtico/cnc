@@ -624,3 +624,41 @@ export function duplicateItems(a: Ambient, ids: string[], offset = 300): { ambie
 export function removeItems(a: Ambient, ids: string[]): Ambient {
   return { ...a, items: a.items.filter((i) => !ids.includes(i.id)) }
 }
+
+/** Porta-retalls dels ambients (Ctrl/⌘ C · X · V): els elements copiats, validats en llegir-los (`parseAmbientClip`). */
+export const AmbientClipSchema = z.object({ kind: z.literal("ambient-items"), items: z.array(AmbientItemSchema).min(1) })
+export type AmbientClip = z.infer<typeof AmbientClipSchema>
+
+export function parseAmbientClip(raw: unknown): AmbientClip | null {
+  const r = AmbientClipSchema.safeParse(raw)
+  return r.success ? r.data : null
+}
+
+/**
+ * Enganxa elements copiats (d'aquest ambient o d'un altre): ids nous, desplaçats `offset` (0 = al mateix lloc). Els grups
+ * fan com «Duplicar» (vegeu a sota); `group`: el grup, si tot el que s'enganxa és un sol grup.
+ */
+export function pasteItems(a: Ambient, items: AmbientItem[], offset: number): { ambient: Ambient; ids: string[]; group?: string } {
+  const used = new Set(a.items.map((i) => i.group).filter(Boolean))
+  const renamed = new Map<string, string>()
+  let n = 1
+  const pastedIds = new Set(items.map((i) => i.id))
+  for (const g of new Set(items.map((i) => i.group))) {
+    if (!g) continue
+    // Grup que no hi és: es queda; una part d'un grup d'aquí: la còpia hi va (com «Duplicar»); el grup sencer o un grup
+    // d'un altre ambient amb el mateix nom: grup nou.
+    const here = a.items.filter((i) => i.group === g)
+    const part = here.some((i) => pastedIds.has(i.id)) && !here.every((i) => pastedIds.has(i.id))
+    if (!used.has(g) || part) {
+      renamed.set(g, g)
+      continue
+    }
+    while (used.has(`Grup ${n}`)) n++
+    renamed.set(g, `Grup ${n}`)
+    used.add(`Grup ${n}`)
+  }
+  const copies = items.map((i) => ({ ...i, id: newId("i"), x: i.x + offset, y: i.y + offset, ...(i.group ? { group: renamed.get(i.group)! } : {}) }))
+  const groups = new Set(copies.map((c) => c.group))
+  const only = groups.size === 1 ? [...groups][0] : undefined
+  return { ambient: { ...a, items: [...a.items, ...copies] }, ids: copies.map((c) => c.id), ...(only ? { group: only } : {}) }
+}

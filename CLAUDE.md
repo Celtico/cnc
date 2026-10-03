@@ -831,7 +831,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   **Finestra** (F), **Porta** (D), **Calibrar** (dos punts del plànol de fons i la mida real). Maj: sense angles; Alt: sense
   imant. Arrossegar una paret mou les enganxades; els extrems de la seleccionada s'arrosseguen (només mouen les parets
   enganxades en començar). Elements arrambats a les cares de les parets (`snapToWalls`), R gira 90°, fletxes (Maj ×10), Supr,
-  Ctrl/⌘ D, desfer/refer. Es desa sol. «Encabir» deixa l'habitació fora de les eines i barres (`PLAN_INSETS`); noms i mides
+  Ctrl/⌘ D, desfer/refer (Ctrl/⌘ Z, Maj+Ctrl/⌘ Z, Ctrl Y). **Ctrl/⌘ C · X · V** (plànol i 3D): els elements seleccionats
+  (o el grup) a `localStorage` `mobles:ambient-clipboard` (`AmbientClip`, `parseAmbientClip`), també d'un ambient a un
+  altre; `pasteItems`: ids nous, desplaçats 300 mm si els originals hi són (i 300 més a cada enganxada), si no al mateix
+  lloc; grups com «Duplicar». Els mobles enganxats són el mateix moble enllaçat (com «Duplicar»). Es desa sol. «Encabir» deixa l'habitació fora de les eines i barres (`PLAN_INSETS`); noms i mides
   només si hi caben. **Plànol de fons**: imatge (2400 px JPEG) escalada amb la calibració, opacitat i bloqueig. La vista del
   plànol no es recorda.
 - **Finestres i portes** (`Wall.openings`: finestra amb ampit de pedra, porta amb fulla, vidriera amb travessers):
