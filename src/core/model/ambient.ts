@@ -102,6 +102,19 @@ export const PlanImageSchema = z.object({
   locked: z.boolean().optional(),
 })
 
+/**
+ * Com s'obre el Render d'aquest ambient (les escenes del catàleg el porten): ambient de llum i objectiu. Tolerant: un de
+ * dolent es descarta.
+ */
+export const AmbientRenderSchema = z
+  .object({
+    mood: z.enum(["day", "dusk", "night"]).optional(),
+    focal: z.number().min(10).max(200).optional(),
+  })
+  .optional()
+  .catch(undefined)
+export type AmbientRender = z.infer<typeof AmbientRenderSchema>
+
 export const AmbientSchema = z.object({
   walls: z.array(WallSchema),
   items: z.array(AmbientItemSchema),
@@ -113,6 +126,8 @@ export const AmbientSchema = z.object({
   ceilingMaterial: z.string().optional(),
   /** Última càmera del 3D (es desa sense tocar la data ni el desfer). Opcional. */
   camera: CameraPoseSchema,
+  /** Com s'obre el Render (`AmbientRenderSchema`). Opcional. */
+  render: AmbientRenderSchema,
 })
 export type Ambient = z.infer<typeof AmbientSchema>
 
@@ -141,6 +156,7 @@ function parseAmbientData(raw: unknown): Ambient {
     ...(typeof o.wallMaterial === "string" ? { wallMaterial: o.wallMaterial } : {}),
     ...(typeof o.ceilingMaterial === "string" ? { ceilingMaterial: o.ceilingMaterial } : {}),
     ...(parseCameraPose(o.camera) ? { camera: parseCameraPose(o.camera) } : {}),
+    ...(AmbientRenderSchema.parse(o.render) ? { render: AmbientRenderSchema.parse(o.render) } : {}),
   }
 }
 

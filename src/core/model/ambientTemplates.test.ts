@@ -46,3 +46,17 @@ describe("catàleg d'ambients", () => {
     }
   })
 })
+
+describe("escenes amb el Render a punt (`render`, `eye`)", () => {
+  it("«Saló al vespre»: vespre amb 24 mm, càmera d'interior, i la vitrina amb llum LED", async () => {
+    const { AmbientRenderSchema, parseAmbient } = await import("./ambient")
+    const t = AMBIENT_TEMPLATES.find((x) => x.id === "amb-evening-living")!
+    expect(AmbientRenderSchema.parse(t.render)).toEqual({ mood: "night", focal: 24 })
+    expect(t.eye).toBe(true)
+    const vitrina = resolveTemplateRef(t.items[0]!.ref)!.make()
+    expect(JSON.stringify(vitrina)).toContain('"led":true')
+    // L'ambient el conserva en llegir-lo; un de dolent es descarta sense perdre la resta.
+    expect(parseAmbient({ walls: [], items: [], render: { mood: "night", focal: 35 } }).render).toEqual({ mood: "night", focal: 35 })
+    expect(parseAmbient({ walls: [], items: [], render: { mood: "xx" } }).render).toBeUndefined()
+  })
+})

@@ -535,11 +535,16 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     // Als ambients (llum de dia), exposició automàtica i una mica càlid, com les fotos d'interiors.
     const daylight = !!getScene()?.scene.userData.daylight
     chooseSky(readSky(daylight ? "ambient" : "moble"))
-    if (daylight) {
-      const next = { ...lookRef.current, auto: true, warmth: 0.25 }
+    // L'ambient pot portar com s'obre el Render (escenes del catàleg: `Ambient.render`): ambient de llum i objectiu.
+    const preset = getScene()?.scene.userData.renderPreset as { mood?: Mood; focal?: number } | undefined
+    const mood = preset?.mood && preset.mood in MOODS ? MOODS[preset.mood] : null
+    if (daylight || mood) {
+      const next = { ...lookRef.current, ...(daylight ? { auto: true, warmth: 0.25 } : {}), ...(mood?.look ?? {}) }
       lookRef.current = next
       setLookState(next)
     }
+    if (preset?.mood && mood) setMood(preset.mood)
+    if (mood || preset?.focal) setOpts((o) => ({ ...o, ...(mood?.opts ?? {}), ...(preset?.focal ? { focal: preset.focal } : {}) }))
     return () => {
       alive = false
       disposeEngine()

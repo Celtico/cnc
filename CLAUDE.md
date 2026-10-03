@@ -830,6 +830,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   primeres: models 3D, `F(id)` = `object:object-model-<id>`), **escenes de revista** (`MAG_SCENES`: 14 fetes a partir de fotos;
   la plantilla pot dur `height`, `walls`, `low`, `open`, `openings`; `templateWalls`; mobles `MAG_FURNITURE`,
   `magFurniture.ts`, fets amb `storeBuilders`) i les dues **«Col·lecció · …»** (`COLLECTION_SCENES`).
+  **Render a punt** (per decisió de l'usuari): una plantilla pot dur `render` (`AmbientRender`: `mood` dia/capvespre/vespre i
+  `focal`), que es copia a l'ambient (`Ambient.render`, tolerant) i el 3D passa al Render (`scene.userData.renderPreset`:
+  el diàleg l'aplica en obrir-se), i `eye` (el 3D s'obre amb la càmera d'Interior, `eyePose`, desada com a `camera` amb
+  `pose: "eye"`). La primera és **«Saló al vespre»** (`amb-evening-living`): vitrina «Galeria» amb LED a la paret del fons,
+  res a la paret de davant (hi va la càmera), vespre amb 24 mm.
   `createAmbientFromTemplate` (`features/ambients/fromTemplate.ts`) crea cada moble i objecte (un per plantilla, a l'Historial
   o al grup del client) i l'ambient enllaçat. **Una escena del catàleg s'obre directament** i va a l'Historial (per decisió de l'usuari, sense preguntar).
 - **Ambients per a clients**: menú ⋯ › «Duplicar (per a un client)…» (`duplicateAmbient`): «escena · client», duplica els

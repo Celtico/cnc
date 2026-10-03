@@ -2,6 +2,7 @@ import { buildBounds, buildComposition } from "../../core/build/buildComposition
 import { uniqueName } from "../../core/file/mobleFile"
 import { layoutTemplate, newId, resolveTemplateRef, templateWalls, type Ambient, type AmbientItem, type AmbientTemplate } from "../../core/model"
 import { createAmbient, createProject, db, setAmbientsFolder } from "../../db/db"
+import { eyePose } from "./planGeom"
 
 /**
  * Crea un ambient del catàleg: cada moble i objecte es crea a Mobles / Objectes (un per
@@ -32,7 +33,10 @@ export async function createAmbientFromTemplate(t: AmbientTemplate, client?: str
     const m = made.get(p.ref)
     return m ? [{ id: newId("i"), kind: "moble" as const, projectId: m.id, x: Math.round(p.x), y: Math.round(p.y), rot: p.rot, ...(p.elevation ? { elevation: p.elevation } : {}), ...(p.group ? { group: p.group } : {}) }] : []
   })
-  const data: Ambient = { walls: templateWalls(t), items, floorMaterial: t.floor, wallMaterial: t.wall }
+  const data: Ambient = { walls: templateWalls(t), items, floorMaterial: t.floor, wallMaterial: t.wall, ...(t.render ? { render: t.render } : {}) }
+  // Escenes «com una foto»: el 3D s'obre amb la càmera d'Interior (a l'alçada dels ulls; fov 55 com el botó).
+  const eye = t.eye ? eyePose(data) : null
+  if (eye) data.camera = { position: eye.pos, target: eye.target, fov: 55, pose: "eye" }
   const id = await createAmbient(ambientName, data)
   if (who) await setAmbientsFolder([id], who)
   return id

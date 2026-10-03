@@ -1,4 +1,4 @@
-import { OBJECT_TEMPLATES, roomWalls, type Opening, type Wall } from "./ambient"
+import { OBJECT_TEMPLATES, roomWalls, type AmbientRender, type Opening, type Wall } from "./ambient"
 import { COLLECTION_PIECES } from "./collections"
 import { MAG_FURNITURE } from "./magFurniture"
 import { STORE_CATALOG } from "./storeCatalog"
@@ -67,6 +67,10 @@ export interface AmbientTemplate {
   /** Finestres, portes i vidrieres: `at` = centre, en x (N, S) o en y (E, O) de l'habitació. */
   openings?: (Omit<Opening, "at"> & { side: WallSide; at: number })[]
   items: AmbientTemplateItem[]
+  /** Com s'obre el Render (ambient de llum, objectiu): es copia a l'ambient (`Ambient.render`). */
+  render?: AmbientRender
+  /** El 3D s'obre amb la càmera d'«Interior» (a l'alçada dels ulls), com una foto. */
+  eye?: boolean
 }
 
 /** Parets d'una plantilla: les quatre de l'habitació amb els materials, alçades i obertures. */
@@ -134,6 +138,33 @@ const pendant = (id: string, x: number, y: number, group: string, ceiling = 2600
  * finestres, vidrieres i portes, cortines, coixins, plantes i llums.
  */
 const MAG_SCENES: AmbientTemplate[] = [
+  {
+    id: "amb-evening-living",
+    category: "salo",
+    name: "Saló al vespre",
+    description: "5,4 × 4,4 m · paret del fons de roure i parquet de noguera: vitrina «Galeria» amb llum LED, sofà en L, taula negra, butaca i làmpada de peu. El Render s'obre al vespre, a l'alçada dels ulls i amb un 24 mm (angular d'interiors).",
+    w: 5400,
+    d: 4400,
+    floor: "Parquet de noguera",
+    wall: "Estuc greige",
+    walls: { N: "Revestiment de roure" },
+    openings: [{ side: "E", kind: "window", at: 2200, w: 1400, h: 1900, sill: 400 }],
+    // La càmera d'Interior és a la paret de davant (S) mirant la del fons (N): res a la paret S.
+    items: [
+      { ref: "store:salo:Vitrina «Galeria»", wall: "N", at: 1500 },
+      { ref: O("art-dark"), wall: "N", at: 3700, elevation: 1000 },
+      { ref: O("plant-tropical"), wall: "N", at: 4950, gap: 150 },
+      { ref: O("rug-grey"), x: 2900, y: 2300 },
+      { ref: O("sofa-l"), wall: "W", at: 2300, gap: 100 },
+      { ref: O("low-table-black"), x: 2900, y: 2300 },
+      { ref: O("floor-lamp-arc"), wall: "W", at: 3900, gap: 150 },
+      { ref: O("armchair-grey"), x: 4300, y: 2500, rot: 90 },
+      { ref: O("curtain-linen"), wall: "E", at: 900, group: "Cortines" },
+      { ref: O("curtain-linen"), wall: "E", at: 3500, group: "Cortines" },
+    ],
+    render: { mood: "night", focal: 24 },
+    eye: true,
+  },
   {
     id: "amb-mag-stucco",
     category: "salo",

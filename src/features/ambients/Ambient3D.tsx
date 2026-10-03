@@ -399,6 +399,10 @@ function Room({
     scene.userData.daylight = true
     scene.userData.renderBackground = new Color(RENDER_BG)
   }, [scene])
+  // Com s'obre el Render d'aquest ambient (escenes del catàleg): el diàleg ho llegeix en obrir-se.
+  useEffect(() => {
+    scene.userData.renderPreset = ambient.render
+  }, [scene, ambient.render])
 
   // Com una casa de nines: les parets entre la càmera i l'habitació es fan gairebé transparents.
   const tmp = useMemo(() => new Vector3(), [])
