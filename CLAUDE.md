@@ -620,7 +620,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   - **Opcions** en seccions plegables (`PanelSection`: Qualitat, Càmera, Escena, Llum, Imatge, amb el resum a la insígnia):
     motor, resolució, rebots, aturar a N passades; format (visor, 3:2, 4:5, 16:9, 1:1) i desenfocament (lent fina, enfoca el centre); escena (habitació de
     Presentació / només terra / cap, `userData.room`); sol, intensitat, ombres, **Cel** (`render/skies.ts`: «Dia» procedural,
-    «Núvols» i «Interior» HDRI de Poly Haven reduïts a 1K a `public/hdr/`, precachejats, o un `.hdr` propi, `hdr.ts`, que es pot
+    «Núvols» i «Interior» HDRI de Poly Haven reduïts a 1K a `public/hdr/` (el cel que es veu es llegeix **bilineal** als dos motors, `envSky`: amb el píxel més proper sortia a quadres per les finestres; la mostra per importància continua per píxel), precachejats, o un `.hdr` propi, `hdr.ts`, que es pot
     girar; el de defecte a Preferències › Visor 3D › «Cel del render»: mobles «Interior», ambients «Núvols»); **Imatge, a
     l'instant**: exposició EV, contrast, saturació, «Corba de color» AgX (per defecte) · ACES (`tonemap.ts`), vinyeta (0,2),
     resplendor (**apagada per defecte**, per decisió de l'usuari: l'aura dels leds es veia postissa), fons estudi / blanc /

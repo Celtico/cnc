@@ -227,14 +227,25 @@ fn dirToUv(d: vec3f) -> vec2f {
   let u = fract(atan2(d.x, -d.z) / (2.0 * PI) + 0.5 + P.sky.y);
   return vec2f(u, acos(clamp(d.y, -1.0, 1.0)) / PI);
 }
+fn envPx(x: u32, y: u32, w: u32) -> vec3f {
+  let i = (y * w + x) * 3u;
+  return vec3f(envd[i], envd[i + 1u], envd[i + 2u]);
+}
+// Bilineal (com el CPU): amb el píxel més proper, el cel d'1K es veia a quadres per les finestres.
 fn envSky(d: vec3f) -> vec3f {
   let uv = dirToUv(d);
   let w = P.envi.x;
   let h = P.envi.y;
-  let x = min(w - 1u, u32(floor(uv.x * f32(w))));
-  let y = min(h - 1u, u32(floor(uv.y * f32(h))));
-  let i = (y * w + x) * 3u;
-  return vec3f(envd[i], envd[i + 1u], envd[i + 2u]);
+  let fx = uv.x * f32(w) - 0.5;
+  let fy = clamp(uv.y * f32(h) - 0.5, 0.0, f32(h - 1u));
+  let x0f = floor(fx);
+  let tx = fx - x0f;
+  let x0 = u32(i32(x0f) + i32(w)) % w;
+  let x1 = (x0 + 1u) % w;
+  let y0 = u32(floor(fy));
+  let y1 = min(h - 1u, y0 + 1u);
+  let ty = fy - f32(y0);
+  return mix(mix(envPx(x0, y0, w), envPx(x1, y0, w), tx), mix(envPx(x0, y1, w), envPx(x1, y1, w), tx), ty);
 }
 fn sky(d: vec3f) -> vec3f {
   var c: vec3f;

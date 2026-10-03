@@ -248,15 +248,22 @@ function daySky(dx: number, dy: number, dz: number, out: number[]) {
   out[0] += glow; out[1] += glow * 0.92; out[2] += glow * 0.78
 }
 
-/** Cel HDRI (equirectangular, el píxel més proper) girat `envRot`. */
+/** Cel HDRI (equirectangular, bilineal: amb el píxel més proper es veia a quadres per les finestres) girat `envRot`. */
 function envSky(dx: number, dy: number, dz: number, out: number[]) {
   const e = ENV!
   let u = (Math.atan2(dx, -dz) / (2 * Math.PI) + 0.5 + envRot) % 1
   if (u < 0) u += 1
   const v = Math.acos(Math.max(-1, Math.min(1, dy))) / Math.PI
-  const x = Math.min(e.w - 1, Math.floor(u * e.w)), y = Math.min(e.h - 1, Math.floor(v * e.h))
-  const i = (y * e.w + x) * 3
-  out[0] = e.data[i]!; out[1] = e.data[i + 1]!; out[2] = e.data[i + 2]!
+  const fx = u * e.w - 0.5, fy = Math.max(0, Math.min(e.h - 1, v * e.h - 0.5))
+  const x0f = Math.floor(fx), tx = fx - x0f
+  const x0 = (x0f + e.w) % e.w, x1 = (x0 + 1) % e.w
+  const y0 = Math.floor(fy), y1 = Math.min(e.h - 1, y0 + 1), ty = fy - y0
+  const d = e.data
+  for (let c = 0; c < 3; c++) {
+    const a = d[(y0 * e.w + x0) * 3 + c]! * (1 - tx) + d[(y0 * e.w + x1) * 3 + c]! * tx
+    const b = d[(y1 * e.w + x0) * 3 + c]! * (1 - tx) + d[(y1 * e.w + x1) * 3 + c]! * tx
+    out[c] = a * (1 - ty) + b * ty
+  }
 }
 
 /** Llum del cel en la direcció d (amb la intensitat del cel). */
