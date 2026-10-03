@@ -31,8 +31,10 @@ describe("front d'una zona dividida", () => {
     const b = buildComposition(comp)
     const doors = b.panels.filter((p) => p.module === 1 && p.role === "door")
     expect(doors).toHaveLength(2)
-    // Gairebé tota l'alçada interior (2400 − sòcol 80 − 2 gruixos).
-    expect(Math.max(...doors.map((d) => Math.max(d.length, d.width)))).toBeGreaterThan(2200)
+    // Gairebé tota l'alçada (2280 − sòcol 80), i sense passar dels 2.200 recomanats.
+    const tallest = Math.max(...doors.map((d) => Math.max(d.length, d.width)))
+    expect(tallest).toBeGreaterThan(2100)
+    expect(tallest).toBeLessThanOrEqual(2200)
   })
 })
 

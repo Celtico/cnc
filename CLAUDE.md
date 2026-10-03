@@ -846,7 +846,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   fotos d'interiors (`INSPIRED_TEMPLATES` a `inspiredTemplates.ts`: Moble TV llarg, Llibreria amb baixos negres, Lliteres
   encastades, Consola de noguera a inglet, Moble penjat de noguera, Tauleta cub, Cuina de roure amb illa de calaixos), les
   flat-pack («Prestatgeria d'encaix», «Tamboret flat-pack», `model/flatPack.ts`), les de `kind` taula (Consola, Taula de
-  menjador); `showcase.test.ts` comprova que no fan avisos de xoc ni de talls. Tretes per decisió de l'usuari: Consola ona, Moble TV 3 portes i Moble TV
+  menjador); `showcase.test.ts` comprova que no fan avisos de xoc ni de talls. Cap plantilla de l'app fa avisos de disseny
+  (per decisió de l'usuari): l'Armari 2 portes té una divisió al mig (prestatges de 471 de llum), el Vestidor fa 2.280
+  d'alçada (portes ≤ 2.200; el de doble barra, maleter de 300 perquè les barres tinguin 900) i el mòdul del mig, dues portes.
+  `TV_LIVING_ROOM` es queda amb portes de 616 (és el moble real de casa). Tretes per decisió de l'usuari: Consola ona, Moble TV 3 portes i Moble TV
   menjador (aquest es queda com a `TV_LIVING_ROOM` per als tests i la vista prèvia de l'escena a Preferències). Les «teves
   plantilles» es van convertir en mobles del grup «Les meves plantilles» (`migrateUserTemplates`). Un `.moble` (també les
   plantilles exportades abans, `kind: "plantilla"`) **s'obre sempre com a moble**; no hi ha «Desar com a plantilla».

@@ -57,7 +57,7 @@ const SHOWCASE: Template[] = [
     id: "walk-in-wardrobe",
     kind: "armari",
     name: "Vestidor amb barres",
-    description: "2800 × 2400 × 600: penjador llarg amb maleter, calaixos i prestatges, i doble barra per a camises; barres d'inox (sense nesting).",
+    description: "2800 × 2280 × 600: penjador llarg amb maleter, calaixos i prestatges, i doble barra per a camises; barres d'inox (sense nesting).",
     make: walkInWardrobe,
   },
   {
@@ -111,13 +111,20 @@ export const BUILTIN_TEMPLATES: Template[] = [
     id: "wardrobe-2-doors",
     kind: "armari",
     name: "Armari 2 portes",
-    description: "1000 × 2000 × 600, 4 prestatges regulables, dues portes.",
+    description: "1000 × 2000 × 600, dues columnes amb 4 prestatges regulables cadascuna (llum de 471 mm: no es vinclen), dues portes.",
     make: () => ({
       modules: [
+        // Una divisió al mig: amb prestatges de 19 mm d'una sola llum (962 mm) es vinclarien (màxim 800).
         withRoot(defaultModule(newId("m"), "Armari", { width: 1000, height: 2000, depth: 600, base: { kind: "plinth", height: 80, setback: 30 } }), {
           id: newId(),
-          shelves: { n: 4, adjustable: true },
-          front: { kind: "door", mode: "double", hinge: "left" },
+          split: {
+            dir: "v",
+            sizes: ["auto", "auto"],
+            children: [
+              { id: newId(), shelves: { n: 4, adjustable: true }, front: { kind: "door", mode: "single", hinge: "left" } },
+              { id: newId(), shelves: { n: 4, adjustable: true }, front: { kind: "door", mode: "single", hinge: "right" } },
+            ],
+          },
         }),
       ],
       references: [],
@@ -450,7 +457,8 @@ function kitchenIsland(): Composition {
 
 /** Vestidor de tres cossos amb barres de penjar (tubs d'inox, fora del nesting). */
 function walkInWardrobe(): Composition {
-  const body = { height: 2400, depth: 600, material: "Melamina blanca", frontMaterial: "Melamina roure", thickness: 19, base: { kind: "plinth" as const, height: 80, setback: 30 } }
+  // 2.280 d'alçada: les portes (d'una peça davant del penjador i el maleter) queden per sota dels 2.200 recomanats.
+  const body = { height: 2280, depth: 600, material: "Melamina blanca", frontMaterial: "Melamina roure", thickness: 19, base: { kind: "plinth" as const, height: 80, setback: 30 } }
   const long = withRoot(defaultModule(newId("m"), "Penjador llarg", { ...body, width: 1000 }), {
     id: newId(),
     front: { kind: "door", mode: "double", hinge: "left" },
@@ -463,14 +471,16 @@ function walkInWardrobe(): Composition {
       sizes: [700, "auto"],
       children: [
         { id: newId(), front: { kind: "drawers", n: 3, heights: ["auto", "auto", "auto"] } },
-        { id: newId(), shelves: { n: 4, adjustable: true }, front: { kind: "door", mode: "single", hinge: "right" } },
+        // Dues portes: una de sola faria 796 mm d'amplada (màxim 600).
+        { id: newId(), shelves: { n: 4, adjustable: true }, front: { kind: "door", mode: "double", hinge: "left" } },
       ],
     },
   })
   const double = withRoot(defaultModule(newId("m"), "Doble barra", { ...body, width: 1000 }), {
     id: newId(),
     front: { kind: "door", mode: "double", hinge: "left" },
-    split: { dir: "h", sizes: ["auto", "auto", 400], children: [{ id: newId(), rail: true }, { id: newId(), rail: true }, { id: newId() }] },
+    // Maleter de 300: les dues barres tenen 900 mm cadascuna (la roba hi cap).
+    split: { dir: "h", sizes: ["auto", "auto", 300], children: [{ id: newId(), rail: true }, { id: newId(), rail: true }, { id: newId() }] },
   })
   return { kind: "armari", modules: [long, mid, double], references: [] }
 }

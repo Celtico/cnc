@@ -1001,7 +1001,7 @@ class Builder {
     const innerH = rect.y1 - rect.y0
     const gap = (innerH - n * T) / (n + 1)
     if (width > 800 && t <= 19 && !hollow) {
-      this.warnings.push({ code: "shelf-span", message: `Prestatge de ${t} mm amb una llum de ${r(width)} mm: es vinclarà (màxim recomanat 800).`, zoneId: zone.id })
+      this.warnings.push({ code: "shelf-span", message: `Prestatge de ${num(t)} mm amb una llum de ${num(width)} mm: es vinclarà (màxim recomanat 800).`, zoneId: zone.id })
     }
     const x0 = rect.x0 + c.shelfClearance / 2
     const zF = d.D - setback
@@ -1148,10 +1148,10 @@ class Builder {
     this.doorZones += 1
     const suffix = this.doorZones === 1 ? "" : `-${this.doorZones}`
     const doorH = r(ter.y1 - ter.y0)
-    if (doorH > 2200) this.warnings.push({ code: "door-too-tall", message: `Porta de ${doorH} mm d'alçada (màxim recomanat 2.200).`, zoneId: zone.id })
+    if (doorH > 2200) this.warnings.push({ code: "door-too-tall", message: `Porta de ${num(doorH)} mm d'alçada (màxim recomanat 2.200).`, zoneId: zone.id })
 
     const make = (id: string, name: string, label: string, x0: number, w: number, hinge: "left" | "right") => {
-      if (w > 600) this.warnings.push({ code: "door-too-wide", message: `Porta de ${w} mm d'amplada (màxim recomanat 600).`, zoneId: zone.id })
+      if (w > 600) this.warnings.push({ code: "door-too-wide", message: `Porta de ${num(w)} mm d'amplada (màxim recomanat 600).`, zoneId: zone.id })
       const door = this.frontPanel(id, name, label, "door", x0, ter.y0, w, doorH)
       this.addCups(door, doorH, hinge, w, rowYs, ter.y0, zone.id)
       // Tirador al costat contrari de les frontisses, vertical i a mitja alçada. En una porta estreta cauria a la
