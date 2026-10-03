@@ -3,7 +3,8 @@ import { StatBox } from "../../components/StatBox"
 import { useMemo, useState } from "react"
 import { PanelDrawing } from "../../components/PanelDrawing"
 import { toCutList } from "../../core/cutlist/toCutList"
-import type { Grain } from "../../core/model"
+import { EDGE_NUMBER, EDGE_SIDES, type Grain, type Panel } from "../../core/model"
+import { pieceRefs } from "../../core/export/refs"
 import { useCompositionExtras, useCompositionPanels, useCompositionRead, useProject } from "../useProject"
 import { UnreadableAlert } from "../../components/UnreadableAlert"
 import { SectionLabel } from "../../components/SectionLabel"
@@ -11,6 +12,13 @@ import { SectionLabel } from "../../components/SectionLabel"
 const GRAIN: Record<Grain, string> = { x: "Llarg", y: "Ample", none: "—" }
 
 /** Cantells de la peça: els a inglet (45°) i els folrats, com a etiquetes. */
+/** Cantells i inglets reals d'una peça («cantell 3 · inglet 1, 2, 4»). */
+function realSides(p: Panel): string {
+  const edges = EDGE_SIDES.filter((s) => p.edges[s]).map((s) => EDGE_NUMBER[s]).sort((a, b) => a - b)
+  const mitres = (p.mitres ?? []).map((s) => EDGE_NUMBER[s]).sort((a, b) => a - b)
+  return [edges.length ? `cantell ${edges.join(", ")}` : "", mitres.length ? `inglet ${mitres.join(", ")}` : ""].filter(Boolean).join(" · ") || "sense cantell"
+}
+
 function EdgeBadges({ it }: { it: { mitreNumbers: number[]; edgeNumbers: number[] } }) {
   return (
     <HStack gap={1} wrap="wrap">
@@ -55,6 +63,7 @@ export function CutListScreen({ projectId }: { projectId: number }) {
   const selIdx = Math.max(0, Math.min(selected, list.items.length - 1))
   const sel = list.items[selIdx]
   const selPanel = sel ? panels.find((p) => p.id === sel.panelIds[0]) : undefined
+  const refs = useMemo(() => pieceRefs(panels), [panels])
 
   if (!project) return null
   if (unreadable) return <UnreadableAlert />
@@ -183,7 +192,8 @@ export function CutListScreen({ projectId }: { projectId: number }) {
       </Table.ScrollArea>
       <Text fontSize="xs" color="fg.muted" mt={2}>
         Mides en mm. Cantells: 1 dalt · 2 dreta · 3 baix · 4 esquerra, vist des de la cara mecanitzada. Les peces iguals
-        (i les mirall, com els laterals esquerre i dret) van a la mateixa fila. Clica una peça per veure'n el plànol.
+        (i les mirall, com els laterals esquerre i dret) van a la mateixa fila, amb els cantells en l'orientació
+        normalitzada; els de cada peça tal com és surten al detall. Clica una peça per veure'n el plànol.
       </Text>
       </Box>
 
@@ -198,6 +208,20 @@ export function CutListScreen({ projectId }: { projectId: number }) {
               {sel.length} × {sel.width} × {sel.thickness} mm · {sel.material} · {selPanel.holes.length} {selPanel.holes.length === 1 ? "forat" : "forats"} per peça
               {sel.qty > 1 && ` (${sel.holes} en total a les ${sel.qty} peces)`}
             </Text>
+            {/* Cantells i inglets de cada peça tal com és (la fila els dona en l'orientació normalitzada, per agrupar les
+                mirall): així coincideixen amb el LLEGEIX-ME i la ruta d'Exportar. */}
+            {(sel.edgeNumbers.length > 0 || sel.mitreNumbers.length > 0) && (
+              <Stack gap={0.5} fontSize="xs">
+                {sel.panelIds.map((id) => {
+                  const p = panels.find((x) => x.id === id)
+                  return p ? (
+                    <Text key={id}>
+                      <Text as="span" fontWeight="medium">{refs.get(id) ?? p.label}</Text> · {realSides(p)}
+                    </Text>
+                  ) : null
+                })}
+              </Stack>
+            )}
             <Box bg="bg.muted" rounded="md" p={2}>
               <PanelDrawing panel={selPanel} />
             </Box>

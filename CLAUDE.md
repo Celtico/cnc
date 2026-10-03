@@ -437,6 +437,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   mateixa mida i mateixos mecanitzats; el que sobra queda al joc de dalt); la separació del nesting només compta les peces que
   caben en algun tauler (`cncNestOptions`: un taulell de 3500 mm no fa més ampla la separació); l'avís `same-size` diu la ref
   del taller i el mòdul de cada peça.
+  A Peces, el detall de la fila diu els cantells i inglets **reals** de cada peça (ref), com el LLEGEIX-ME d'Exportar (la fila
+  els dona normalitzats per agrupar les mirall). A Exportar, els avisos del STEP es calculen quan el navegador és lliure.
 
 ## Pàgines del moble
 Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Exportar**, cadascuna amb un sol propòsit.

@@ -1,5 +1,5 @@
 import { Alert, Box, Button, Card, CloseButton, Collapsible, Dialog, HStack, Portal, Stack, Switch, Text, VStack } from "@chakra-ui/react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { usePersistentFlag } from "../usePersistentFlag"
 import { LuBoxes, LuChevronRight, LuCuboid, LuDownload, LuFactory, LuFileDown, LuFileJson, LuLayoutGrid, LuMonitorCog, LuScissors, LuSettings2 } from "react-icons/lu"
 import { PanelGroup, PanelSection } from "../../components/PanelSection"
@@ -64,7 +64,21 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   }, [machine, panels, project?.name, project?.nesting])
   // Materials que no lliguen amb Preferències: al taller sortirien amb un nom o un gruix que no hi ha.
   const matIssues = useMemo(() => (comp && build ? materialIssues(build, comp, settings.materials) : []), [comp, build, settings.materials])
-  const stepWarnings = useMemo(() => (comp && build && panels.length ? toStepCad(stepCadGroups(comp, build, { extras: stepExtras }), { name: "check" }).warnings : []), [comp, build, panels, stepExtras])
+  // Els avisos del STEP demanen fer tot el fitxer (~0,25 s en una cuina gran): es calculen quan el navegador és lliure,
+  // després de pintar la pàgina, i l'alerta surt en acabar (la pàgina no s'encalla en obrir-la ni en tocar un interruptor).
+  const [stepWarningsRaw, setStepWarnings] = useState<string[]>([])
+  const stepWarnings = comp && build && panels.length ? stepWarningsRaw : []
+  useEffect(() => {
+    if (!comp || !build || !panels.length) return
+    const idle = (window as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback
+    const run = () => setStepWarnings(toStepCad(stepCadGroups(comp, build, { extras: stepExtras }), { name: "check" }).warnings)
+    const id = idle ? idle(run, { timeout: 1500 }) : window.setTimeout(run, 50)
+    return () => {
+      const cancel = (window as { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback
+      if (idle && cancel) cancel(id)
+      else window.clearTimeout(id)
+    }
+  }, [comp, build, panels, stepExtras])
 
   if (!project) return null
   // Composició il·legible: res a exportar (seria la caixa per defecte).
