@@ -723,7 +723,8 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
                   </Text>
                 )}
                 <HStack justify="space-between" wrap="wrap" gap={2}>
-                  <Text fontSize="sm" color="fg.muted" data-render-status>
+                  {/* Petit i pot saltar de línia (al mòbil no ha de sortir de la pantalla). */}
+                  <Text fontSize="xs" color="fg.muted" data-render-status minW={0} flex="1 1 180px" overflowWrap="anywhere" fontVariantNumeric="tabular-nums">
                     {status}
                   </Text>
                   <HStack gap={2}>

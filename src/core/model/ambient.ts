@@ -5,7 +5,7 @@ import { DEFAULT_JOINERY, type FreePart } from "./freePart"
 import { defaultModule, newId, type Composition, type Module, type Zone } from "./composition"
 import { MAG_OBJECTS } from "./magObjects"
 import { aliasMaterialRefs } from "./photoUpgrade"
-import { cyl, ellipse, objectComposition } from "./objectShapes"
+import { cyl, ellipse, objectComposition, tube } from "./objectShapes"
 import { MODEL_ASSETS, newModelObject } from "./models"
 import type { Template } from "./templates"
 
@@ -263,12 +263,13 @@ export const OBJECT_TEMPLATES: Template[] = [
     id: "object-floor-lamp",
     kind: "objecte",
     name: "Làmpada de peu",
-    description: "Ø 400 × 1750 mm · peu de ferro i pantalla de lli.",
+    description: "Ø 400 × 1750 mm · peu de ferro i pantalla de lli oberta amb la bombeta a dins.",
     make: () =>
       obj([
         { name: "Base", orient: "flat", material: "Ferro negre", w: 300, h: 300, thickness: 20, x: 50, y: 0, z: 50, shape: ellipse(300, 300) },
-        { name: "Pal", orient: "flat", material: "Ferro negre", w: 20, h: 20, thickness: 1450, x: 190, y: 20, z: 190, shape: ellipse(20, 20) },
-        { name: "Pantalla", orient: "flat", material: "Pantalla de lli", w: 400, h: 400, thickness: 300, x: 0, y: 1450, z: 0, shape: ellipse(400, 400) },
+        { name: "Pal", orient: "flat", material: "Ferro negre", w: 20, h: 20, thickness: 1500, x: 190, y: 20, z: 190, shape: ellipse(20, 20) },
+        cyl("Bombeta", "Bombeta", 200, 1520, 200, 65, 100),
+        ...tube("Pantalla", "Lli blanc", 200, 1450, 200, 400, 300),
       ]),
   },
   {

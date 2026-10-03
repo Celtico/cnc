@@ -625,7 +625,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     (capa transparent: GGX nítid `COAT_ROUGHNESS` 0,08, F0 0,04; la base rep `1 − coat·F(n·v)`; es tria en rebotar amb
     `PC = coat·min(0,5; 0,15 + F)` i la densitat és la mescla) i `sheen` (Disney: `sheen·(1 − l·h)⁵`, del color de la tela
     cap al blanc), als dos motors (`COAT`, `CA2`, `CFV`, `PC`, `SH`; a la GPU, `g.zw` del material). Dels materials:
-    `MaterialPref.coat` / `sheen` (0–1, «Al render» a l'editor de materials); sense valor, el de l'app
+    `MaterialPref.coat` / `sheen` (0–1, «Al render» a l'editor de materials: «Reflex», «Vellut» i «Llum que passa» =
+    `translucent`); sense valor, el de l'app
     (`core/model/materialFx.ts`: teles i vellut per id, cuir, parquet, rajoles, ceràmica, pantalla; pedra polida → vernís),
     així les preferències d'abans també en tenen. Lacats brillants nous (`GLOSS_MATERIALS`, v15): «Lacat negre brillant»
     i «Lacat blanc brillant» (taulers, vernís 1).
@@ -905,7 +906,12 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   a l'historial de Mobles (`isObject`).
 - `OBJECT_TEMPLATES` (`ambient.ts`): els blocs d'abans i cadira, làmpada, planta, mirall, taula rodona. **Objectes de revista**
   (`magObjects.ts`, `MAG_OBJECTS`, formes de `objectShapes.ts`: `ellipse`, `roundRect`, `leaf`, `wave`, `blob`): sofàs,
-  butaques, quadres, miralls, tele, cortines, llums, plantes, catifes, taules, llibres drets, ampolles, gerros, bol, copes… Tot és geometria (perfils extrudits), no física
+  butaques, quadres, miralls, tele, cortines, llums, plantes, catifes, taules, llibres drets, ampolles, gerros, bol, copes…
+  **Làmpades com les de debò** (per decisió de l'usuari, que en va fer una amb un objecte que talla): pantalla = tub obert
+  de «Lli blanc» (`tube` a `objectShapes.ts`: dues meitats d'anella, perquè una peça no té forats; peça estirada, v = 0
+  al davant) i una «Bombeta» a dins amb portalàmpades: la llum surt per dalt i per baix i la tela brilla per la
+  translucidesa (Làmpada de peu de llautó, de taula, de sostre de lli i la «Làmpada de peu» d'`OBJECT_TEMPLATES`).
+  «Pantalla de lli» (tela que fa llum sola) es queda per als objectes d'abans. Tot és geometria (perfils extrudits), no física
   ni shaders: el render ho veu igual que el visor. Categories `OBJECT_CATEGORIES` / `objectCategory`
   (`core/model/objectCategories.ts`).
 - **Mides al mm**: `tidyMm`/`tidyPart` (`freePart.ts`) arrodoneixen al mm els valors amb més d'un decimal (els de l'usuari,
@@ -1087,7 +1093,8 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
 - **`SceneHelpers`** (`StudioEnvironment`, `SceneAccess`) als visors 3D; **`RenderDialog`** a l'editor i als ambients;
   **`MoveGizmo`**, **`BoxFrame`**; **`ViewOptions`** / **`ViewTile`**.
 - **`NameDialog`** (`components/`): posar un nom (grup nou, canviar el nom, mòdul nou), amb un nom per defecte seleccionat.
-- **`MaterialSelect`** (`settings/MaterialSelect.tsx`) a tot arreu on es tria un material: un **botó** (fons suau, a tota
+- **`MaterialSelect`** (`settings/MaterialSelect.tsx`) a tot arreu on es tria un material (amb **cercador** a dalt del calaix,
+  pel nom i sense accents, que obre les categories amb resultats): un **botó** (fons suau, a tota
   l'amplada, sense fletxa ni icona: no ha de semblar un desplegable) amb la mostra i el nom que obre un calaix (a la dreta a
   l'ordinador, de baix al mòbil) amb un acordió per categoria i les mostres (només de la categoria oberta); en tocar-ne una es
   tria i es tanca. `emptyLabel` per a «Com el cos», «Com a Preferències», «Tots els altres», «Cap (fantasma)».

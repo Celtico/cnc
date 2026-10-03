@@ -531,12 +531,13 @@ function MaterialCard({ m, dirty, footer, onChange, onRename, nameError, onDupli
         )}
         <TextureSetRow finish={finish} onChange={(f) => onChange({ finish: f })} />
         {/* Només per al render (no canvia el visor): reflex nítid a sobre i lluïssor de les teles. */}
-        <FormRow label="Al render" help="Vernís: un reflex nítid a sobre, com el lacat brillant, el marbre polit o el parquet envernissat. Vellut: la tela s'aclareix a les vores. Sense tocar, els de l'app.">
+        <FormRow label="Al render" help="Reflex (vernís): un reflex nítid a sobre, com el lacat brillant, el marbre polit o el parquet envernissat. Vellut: la tela s'aclareix a les vores. Llum que passa: la part de la llum que travessa el material sense que s'hi vegi a través (teles de pantalla, cortines, fulles): una pantalla de lli amb una bombeta a dins brilla per fora. Per veure-hi a través (vidre), l'acabat «Vidre» i la seva transparència. Sense tocar, els de l'app.">
           <HStack gap={4} wrap="wrap">
             {(
               [
-                ["coat", "Vernís", materialCoat(m)],
+                ["coat", "Reflex", materialCoat(m)],
                 ["sheen", "Vellut", materialSheen(m)],
+                ["translucent", "Llum que passa", m.translucent ?? 0],
               ] as const
             ).map(([key, label, v]) => (
               <HStack key={key} gap={1.5}>

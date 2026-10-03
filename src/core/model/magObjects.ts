@@ -1,5 +1,5 @@
 import type { Template } from "./templates"
-import { blob, cyl, ellipse, flat, front, leaf, objectComposition as obj, roundRect, side, wave } from "./objectShapes"
+import { blob, cyl, ellipse, flat, front, leaf, objectComposition as obj, roundRect, side, tube, wave } from "./objectShapes"
 
 /**
  * Objectes «de revista» per a les escenes del catàleg d'ambients: sofàs amb coixins, daybeds,
@@ -224,7 +224,9 @@ export const MAG_OBJECTS: Template[] = [
   t("curtain-linen", "Cortina de lli", "1500 × 2600 mm · plecs fins a terra.", () => [flat("Cortina", "Lli blanc", 0, 0, 0, 1500, 160, 2580, wave(1500, 160, 10))]),
   t("curtain-tulle", "Cortina de tul", "1500 × 2600 mm · tul blanc amb plecs.", () => [flat("Cortina", "Tul blanc", 0, 0, 0, 1500, 140, 2580, wave(1500, 140, 12, 10))]),
   // --- Llums ---
-  // Les pantalles de lli i les bombetes fan llum al render (materials «Pantalla de lli» i «Bombeta»).
+  // Les bombetes fan llum al render (material «Bombeta»). Les pantalles de lli són un tub obert de «Lli blanc», que
+  // deixa passar una part de la llum (per decisió de l'usuari, com una làmpada de debò: la llum surt per dalt i per baix
+  // i la tela brilla). «Pantalla de lli» (la tela que fa llum ella sola) es queda per als objectes d'abans.
   t("pendant-dome", "Llum de sostre (cúpula)", "Ø 450 × 1100 mm · penja del sostre (posa'l a 1500 del terra).", () => [
     cyl("Bombeta", "Bombeta", 225, 0, 225, 110, 60),
     flat("Pantalla", "Pintura verd sàlvia", 0, 40, 0, 450, 450, 110, ellipse(450, 450)),
@@ -238,12 +240,24 @@ export const MAG_OBJECTS: Template[] = [
     flat("Pantalla", "Ferro negre", 75, 210, 75, 150, 150, 60, ellipse(150, 150)),
     cyl("Cable", "Pintura negra", 150, 270, 150, 8, 830),
   ]),
-  t("pendant-drum", "Llum de sostre de lli", "Ø 600 × 1000 mm · tambor de lli.", () => [cyl("Pantalla", "Pantalla de lli", 300, 0, 300, 600, 280), cyl("Cable", "Pintura negra", 300, 280, 300, 8, 720)]),
-  t("table-lamp", "Làmpada de taula", "Ø 350 × 580 mm · peu de ceràmica i pantalla de lli.", () => [cyl("Peu", "Ceràmica blanca", 175, 0, 175, 160, 320), cyl("Pantalla", "Pantalla de lli", 175, 320, 175, 350, 260)]),
-  t("floor-lamp-arc", "Làmpada de peu de llautó", "Ø 450 × 1650 mm.", () => [
+  t("pendant-drum", "Llum de sostre de lli", "Ø 600 × 1000 mm · tambor de lli obert amb la bombeta a dins.", () => [
+    ...tube("Pantalla", "Lli blanc", 300, 0, 300, 600, 280),
+    cyl("Bombeta", "Bombeta", 300, 90, 300, 70, 100),
+    cyl("Portalàmpades", "Pintura negra", 300, 190, 300, 30, 50),
+    cyl("Cable", "Pintura negra", 300, 240, 300, 8, 760),
+  ]),
+  t("table-lamp", "Làmpada de taula", "Ø 350 × 600 mm · peu de ceràmica i pantalla de lli oberta amb la bombeta a dins.", () => [
+    cyl("Peu", "Ceràmica blanca", 175, 0, 175, 160, 320),
+    cyl("Portalàmpades", "Llautó", 175, 320, 175, 24, 60),
+    cyl("Bombeta", "Bombeta", 175, 380, 175, 55, 85),
+    ...tube("Pantalla", "Lli blanc", 175, 340, 175, 350, 260),
+  ]),
+  t("floor-lamp-arc", "Làmpada de peu de llautó", "Ø 450 × 1650 mm · pantalla de lli oberta amb la bombeta a dins.", () => [
     cyl("Base", "Pedra calcària", 225, 0, 225, 300, 40),
-    cyl("Pal", "Llautó", 225, 40, 225, 22, 1350),
-    cyl("Pantalla", "Pantalla de lli", 225, 1390, 225, 450, 260),
+    cyl("Pal", "Llautó", 225, 40, 225, 22, 1400),
+    cyl("Portalàmpades", "Llautó", 225, 1440, 225, 30, 50),
+    cyl("Bombeta", "Bombeta", 225, 1490, 225, 65, 100),
+    ...tube("Pantalla", "Lli blanc", 225, 1390, 225, 450, 260),
   ]),
   // --- Plantes ---
   t("plant-tropical", "Planta tropical", "900 × 1900 mm · fulles grans en test blanc.", () => tropicalParts("Ceràmica blanca")),

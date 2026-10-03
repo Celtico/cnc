@@ -75,6 +75,19 @@ export const front = (name: string, material: string, x: number, y: number, z: n
 export const side = (name: string, material: string, x: number, y: number, z: number, d: number, h: number, t: number, shape?: Shape): Q => ({ name, orient: "side", material, x, y, z, w: d, h, thickness: t, ...(shape ? { shape } : {}) })
 /** Cilindre vertical de diàmetre dia centrat a (cx, cz). */
 export const cyl = (name: string, material: string, cx: number, y: number, cz: number, dia: number, h: number): Q => flat(name, material, cx - dia / 2, y, cz - dia / 2, dia, dia, h, ellipse(dia, dia))
+/**
+ * Tub vertical buit (pantalles de làmpada): dues meitats d'anella de gruix t (una peça no pot tenir forats: el perfil és
+ * un sol contorn), de diàmetre dia centrat a (cx, cz). Obert per dalt i per baix: la llum de la bombeta en surt.
+ */
+export const tube = (name: string, material: string, cx: number, y: number, cz: number, dia: number, h: number, t = 3): Q[] => {
+  const R = dia / 2
+  // Peça estirada: v = 0 al davant (z màxima) i creix cap al fons (`freeParts.localRange`).
+  // Meitat del fons (z de cz − R a cz): el costat recte al davant (v = 0, z = cz), l'arc cap al fons (v = R).
+  const back: PNode[] = [{ x: 0, y: 0, b: -1 }, { x: 2 * R, y: 0 }, { x: 2 * R - t, y: 0, b: 1 }, { x: t, y: 0 }]
+  // Meitat del davant (z de cz a cz + R): el costat recte al fons (v = R, z = cz), l'arc cap al davant (v = 0).
+  const fwd: PNode[] = [{ x: 0, y: R, b: 1 }, { x: 2 * R, y: R }, { x: 2 * R - t, y: R, b: -1 }, { x: t, y: R }]
+  return [flat(name, material, cx - R, y, cz - R, dia, R, h, back), flat(name, material, cx - R, y, cz, dia, R, h, fwd)]
+}
 /** El·lipsoide aproximat amb `n` discs (capçades, pufs, arbustos): com més discs, més rodó. */
 export const blob = (name: string, material: string, cx: number, y: number, cz: number, w: number, d: number, h: number, n = 7): Q[] =>
   Array.from({ length: n }, (_, k) => {

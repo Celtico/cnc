@@ -1,6 +1,7 @@
-import { Accordion, Badge, Box, Button, CloseButton, Drawer, Field, HStack, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Accordion, Badge, Box, Button, CloseButton, Drawer, Field, HStack, Input, InputGroup, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
-import { LuCheck, LuTriangleAlert } from "react-icons/lu"
+import { LuCheck, LuSearch, LuTriangleAlert } from "react-icons/lu"
+import { fold } from "../projects/galleryGrid"
 import { MATERIAL_CATEGORIES, materialCategory, type MaterialPref } from "../../core/model"
 import { MaterialThumb } from "./MaterialBits"
 import { useSettings } from "./SettingsContext"
@@ -22,8 +23,16 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
   // continua veient com a valor actual, amb un avís.
   const offList = !!value && !materials.some((m) => m.name === value)
   const offNote = !known ? "No és a Preferències" : materialCategory(current) === "sim" ? "No es talla a la CNC (simulació)" : "No és per a aquí"
-  const cats = MATERIAL_CATEGORIES.map((c) => ({ ...c, list: materials.filter((m) => materialCategory(m) === c.id) })).filter((c) => c.list.length)
+  // Cercador (per decisió de l'usuari): pel nom, sense accents; obre les categories amb resultats.
+  const [query, setQuery] = useState("")
+  const q = fold(query.trim())
+  const cats = MATERIAL_CATEGORIES.map((c) => ({ ...c, list: materials.filter((m) => materialCategory(m) === c.id && (!q || fold(m.name).includes(q))) })).filter((c) => c.list.length)
   const [openCats, setOpenCats] = useState<string[]>([])
+  const search = (v: string) => {
+    setQuery(v)
+    const f = fold(v.trim())
+    if (f) setOpenCats(MATERIAL_CATEGORIES.filter((c) => materials.some((m) => materialCategory(m) === c.id && fold(m.name).includes(f))).map((c) => c.id))
+  }
   const pick = (name: string) => {
     onChange(name)
     setOpen(false)
@@ -42,7 +51,8 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
         fontWeight="normal"
         aria-label={`${label}: ${current?.name ?? (value || emptyLabel || "sense material")}`}
         onClick={() => {
-          // S'obre per la categoria del material triat (sense, si només n'hi ha una, aquella).
+          // S'obre per la categoria del material triat (sense, si només n'hi ha una, aquella), sense cerca.
+          setQuery("")
           setOpenCats(current ? [materialCategory(current)] : cats.length === 1 ? [cats[0]!.id] : [])
           setOpen(true)
         }}
@@ -73,7 +83,15 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
               </Drawer.Header>
               <Drawer.Body>
                 <Stack gap={3}>
-                  {emptyLabel !== undefined && (
+                  <InputGroup startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => search("")} /> : undefined}>
+                    <Input size="sm" placeholder="Buscar un material" aria-label="Buscar un material" value={query} onChange={(e) => search(e.currentTarget.value)} />
+                  </InputGroup>
+                  {q && !cats.length && (
+                    <Text fontSize="sm" color="fg.muted">
+                      Cap material es diu així.
+                    </Text>
+                  )}
+                  {emptyLabel !== undefined && !q && (
                     <Row on={value === ""} onClick={() => pick("")}>
                       <Box w="36px" h="36px" rounded="md" borderWidth="1px" borderStyle="dashed" flexShrink={0} />
                       <Text fontSize="sm">{emptyLabel}</Text>
