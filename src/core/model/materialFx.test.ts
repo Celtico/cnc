@@ -48,3 +48,14 @@ describe("v17: revestiment de fil i pantalles", () => {
     expect(parseSettings(JSON.parse(JSON.stringify(old))).settings.materials.find((m) => m.id === "sim-lampshade")!.glow).toBe(7)
   })
 })
+
+describe("v18: gespa de foto", () => {
+  it("la «Gespa» de tela passa a la foto; una de retocada es queda", async () => {
+    const { LAWN_FINISH } = await import("./settings")
+    const tela = { kind: "fabric" as const, color: "#5b7337" }
+    const old = { ...DEFAULT_SETTINGS, version: 17, materials: DEFAULT_SETTINGS.materials.map((m) => (m.id === "sim-lawn" ? { ...m, finish: tela } : m)) }
+    expect(parseSettings(JSON.parse(JSON.stringify(old))).settings.materials.find((m) => m.id === "sim-lawn")!.finish).toEqual(LAWN_FINISH)
+    const mine = { ...DEFAULT_SETTINGS, version: 17, materials: DEFAULT_SETTINGS.materials.map((m) => (m.id === "sim-lawn" ? { ...m, finish: { ...tela, color: "#336633" } } : m)) }
+    expect(parseSettings(JSON.parse(JSON.stringify(mine))).settings.materials.find((m) => m.id === "sim-lawn")!.finish.kind).toBe("fabric")
+  })
+})

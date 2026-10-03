@@ -174,6 +174,8 @@ const MAG_SCENES: AmbientTemplate[] = [
       // Fora, davant de la vidriera: arbres de veritat (models 3D), amb la foto del jardí al darrere.
       { ref: F("jacaranda"), x: 3300, y: -3600, group: "Jardí", outside: true },
       { ref: F("fir-01"), x: 4900, y: -1400, group: "Jardí", outside: true },
+      { ref: F("grass-patch"), x: 2500, y: -1350, rot: 30, group: "Jardí", outside: true },
+      { ref: F("grass-patch"), x: 4100, y: -1250, rot: 70, group: "Jardí", outside: true },
     ],
     render: { mood: "dusk", focal: 24 },
     eye: true,

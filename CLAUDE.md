@@ -592,7 +592,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   - De l'app: falgueres de Poly Haven (CC0) a `public/models`, textura 1K WebP amb el retall a l'alfa (`alphaTest`, només als
     materials amb alfa). **Arbres** (Xicranda, Avet, de debò 19 m) reduïts amb `scripts/polyhaven-tree-to-glb.py` (Blender com
     a mòdul, `pip install bpy`) i comprimits amb meshopt (`npx gltfpack -c`; `GLTFLoader.setMeshoptDecoder`). Es
-    precachegen. El render per CPU també retalla les fulles (`RenderMaterial.alphaCut`, `alphaAt`).
+    precachegen. **Herba (2 × 2 m)** (`grass-patch`, `models/grass_patch.glb`, 40.000 triangles, 0,75 MB): ~120 mates
+    de `grass_medium_01` escampades (`scripts/polyhaven-grass.py`, `mode: "patch"`); al Showroom, fora de la vidriera. El render per CPU també retalla les fulles (`RenderMaterial.alphaCut`, `alphaAt`).
   - **De l'usuari** (sense llista de models al + —només l'explicació del format i «Triar un fitxer .glb…»—, per decisió de l'usuari: les plantes de l'app són al catàleg d'Objectes;
     a l'inspector, «Model» diu el nom i «Canviar» puja un altre `.glb`; `composition/ModelUpload.tsx`): taula Dexie **v5**
     `models` (`UserModel`: id `user-…`, nom, `blob`, mida en mm); `db/userModels.ts` (`addUserModel` valida amb `GLTFLoader` +
@@ -639,7 +640,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     `BACKDROP_GAIN` (2). Els models 3D d'arbres (Xicranda, Avet) es poden posar fora (plantilla: `outside: true`).
     Terra de fora (`Ambient3D`): una habitació tancada (3+ parets) amb algun element que surt més de 300 mm de les parets té el terra
     de dins fins a l'eix de les parets (on és el vidre: el parquet no surt per la finestra) i fora un pla 4 mm més avall amb `Ambient.outsideFloorMaterial` (Acabats › «Terra
-    de fora»; sense, «Gespa», `sim-lawn`, v17).
+    de fora»; sense, «Gespa», `sim-lawn`, v17). **v18**: la «Gespa» és una foto (`LAWN_FINISH`,
+    `public/textures/grass_lawn/`, 2 × 2 m sense junta) feta amb Blender a partir de les mates d'herba de Poly Haven
+    `grass_medium_01` que va passar l'usuari (`scripts/polyhaven-grass.py`, `mode: "tex"`: vista de dalt amb Cycles; relleu i
+    brillantor de la lluminositat); la de tela de la v17 hi passa sola, una de retocada no.
   - **Materials**: difús + GGX amb Fresnel, metalls, vidre fi (no fa ombra), retall per l'alfa. **Arestes arrodonides** (2 mm,
     `BEVEL_RADIUS`, `userData.bevel`, `bevelNormal`). **Veta amb relleu** (`userData.grain`). **Normals llises**
     (`RenderScene.normals`, `smoothNormal`; GPU: `encodeNormal`); la geomètrica es queda per desplaçar rajos; cantells corbs

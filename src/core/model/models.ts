@@ -21,6 +21,10 @@ export const MODEL_ASSETS: ModelAsset[] = [
   // proporcional a la caixa del GLB (xicranda ≈ 24272 × 19417 × 18448 mm → 6 m d'alt).
   { id: "jacaranda", name: "Xicranda", url: "models/jacaranda_tree.glb", size: [7500, 6000, 5700] },
   { id: "fir-01", name: "Avet", url: "models/fir_tree_01.glb", size: [1735, 5000, 1706] },
+  // Herba alta (per decisió de l'usuari, el seu .blend de Poly Haven grass_medium_01): ~120 mates escampades en 2 × 2 m
+  // (`scripts/polyhaven-grass.py`, LOD2, textura 1K, `gltfpack -c`). Per a vores i racons; la gespa de terra és la
+  // textura «Gespa».
+  { id: "grass-patch", name: "Herba (2 × 2 m)", url: "models/grass_patch.glb", size: [1976, 436, 1882] },
 ]
 
 export const modelAsset = (src: string): ModelAsset | undefined => MODEL_ASSETS.find((a) => a.id === src)

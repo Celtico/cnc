@@ -17,7 +17,7 @@ import { repairValue } from "./repair"
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 17
+export const SETTINGS_VERSION = 18
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -370,12 +370,27 @@ export const RIFT_MATERIALS: MaterialPref[] = [
 ]
 
 /**
+ * Gespa de foto (v18): feta amb Blender amb les mates d'herba de Poly Haven (grass_medium_01, CC0) vistes de dalt
+ * (`public/textures/grass_lawn/`, 2 × 2 m, es repeteix sense junta). Abans (v17) era una tela verda.
+ */
+export const LAWN_FINISH: MaterialPref["finish"] = {
+  kind: "image",
+  src: "textures/grass_lawn/diff.jpg",
+  normalMap: "textures/grass_lawn/nor.jpg",
+  roughMap: "textures/grass_lawn/rough.jpg",
+  tileMm: 2000,
+  seamless: true,
+  color: "#474f27",
+}
+const OLD_LAWN_FINISH: MaterialPref["finish"] = { kind: "fabric", color: "#5b7337" }
+
+/**
  * Revestiment de paret de roure de fil (veta recta, sense les flames de la xapa de foto), com les parets de fusta de les
  * fotos de catàleg, i la gespa de fora. Afegits a la v17.
  */
 export const CLADDING_MATERIALS: MaterialPref[] = [
-  // Fora de les habitacions amb arbres davant de les finestres (terra de fora, `Ambient3D`).
-  { id: "sim-lawn", name: "Gespa", thicknesses: [10], hasGrain: false, finish: { kind: "fabric", color: "#5b7337" }, edge: "", cnc: false, category: "sim" },
+  // Fora de les habitacions amb arbres davant de les finestres (terra de fora, `Ambient3D`). Foto de gespa (v18).
+  { id: "sim-lawn", name: "Gespa", thicknesses: [10], hasGrain: false, finish: LAWN_FINISH, edge: "", cnc: false, category: "sim" },
   { id: "sim-oak-cladding-rift", name: "Revestiment de roure de fil", thicknesses: [10], hasGrain: true, finish: { kind: "wood", species: "oak", gen: { base: "#b48e62", dark: "#8c6a44", lines: 60, wobble: 0.025, bands: 30, contrast: 0.4, figure: 0, pores: 2400, grain: 10, tileMm: 1200, seed: 131 } }, edge: "", cnc: false, category: "sim" },
 ]
 /** v17: les pantalles de lli feien massa llum (surtien blanques del tot al render del vespre). */
@@ -645,8 +660,10 @@ export function parseSettings(raw: unknown): SettingsParse {
   const v17m = version < 17 && v16m !== BUILTIN_MATERIALS
     ? [...v16m.map((m) => (m.id === "sim-lampshade" && m.glow === 4 ? { ...m, glow: LAMPSHADE_GLOW } : m)), ...missing(CLADDING_MATERIALS, v16m)]
     : v16m
+  // v18: la «Gespa» de foto, si encara tenia la tela de la v17.
+  const v18m = version < 18 && v17m !== BUILTIN_MATERIALS ? v17m.map((m) => (m.id === "sim-lawn" && deepEqual(m.finish, OLD_LAWN_FINISH) ? { ...m, finish: LAWN_FINISH } : m)) : v17m
   // Noms únics (sempre): un de repetit passa a «X 2» amb un avís (abans no es comprovava).
-  const unique = dedupeMaterialNames(v17m)
+  const unique = dedupeMaterialNames(v18m)
   problems.push(...unique.problems)
   const materials = unique.materials
   const renamed = (n: string) => v12.renames.find(([from]) => from === n)?.[1] ?? n
