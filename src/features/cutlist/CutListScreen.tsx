@@ -63,8 +63,8 @@ export function CutListScreen({ projectId }: { projectId: number }) {
     <VStack align="stretch" gap={5}>
       <SimpleGrid columns={3} gap={3}>
         <StatBox label="Peces" value={String(list.totalPanels)} />
-        <StatBox label="Superfície" value={`${list.totalArea.toFixed(2)} m²`} />
-        <StatBox label="Cantell" value={`${list.totalEdgeLength.toFixed(1)} m`} />
+        <StatBox label="Superfície" value={`${list.totalArea.toFixed(2).replace(".", ",")} m²`} />
+        <StatBox label="Cantell" value={`${list.totalEdgeLength.toFixed(1).replace(".", ",")} m`} />
       </SimpleGrid>
 
       <Stack direction={{ base: "column", lg: "row" }} gap={4} align="flex-start">

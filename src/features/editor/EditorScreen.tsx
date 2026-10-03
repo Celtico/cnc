@@ -939,7 +939,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                       : kind === "lliure"
                         ? "Flat-pack: només peces lliures (sense mòduls). On dues peces es toquen o s'encreuen s'hi fa l'encaix sol: pestanyes, mitja fusta, dits o espigues. Les de ferro, pedra o vidre no van al nesting."
                       : kind === "taula"
-                        ? "Taula o consola: cada mòdul és un tauler amb dos laterals de panell. Les mides, a Mides; les cantonades a inglet i els laterals, a Estructura."
+                        ? "Taula o consola: cada mòdul és un tauler amb dos laterals de panell. Les mides, a Mides; les cantonades a inglet i els laterals, a Caixa."
                         : "Moble: mòduls lliures (TV, calaixera, prestatgeria…)."}
                 </>
               }
@@ -1011,7 +1011,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           <PanelSection id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
             <CarcassForm module={module} onChange={updateModule} section="dims" />
           </PanelSection>
-            <PanelSection id="mod-position" title="Posició" icon={LuMove} badge={module.carcass.base.kind === "wall" ? `Penjat a ${module.carcass.base.height}` : mountOf(module) === "floor" ? `Al terra · ${module.wallGap ?? 0} de la paret` : "A la paret"}>
+            <PanelSection id="mod-position" title="Posició" icon={LuMove} badge={module.carcass.base.kind === "wall" ? `Penjat a ${module.carcass.base.height}` : mountOf(module) === "floor" ? `Lliure al terra · ${module.wallGap ?? 0} de la paret` : "Arrambat a la paret"}>
               {/* Dues files, com les cuines: a terra (baixos) i penjats (alts). Dins de cada
                   fila, l'ordre és el de l'arbre (d'esquerra a dreta) i cada mòdul va al costat
                   de l'anterior de la seva fila. */}
@@ -1031,9 +1031,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                   hideLabel
                   value={mountOf(module)}
                   options={[
-                    { value: "wall", label: "A la paret", icon: LuBrickWall, hint: "A la paret: a terra, arrambat; es mou de costat" },
+                    { value: "wall", label: "Arrambat a la paret", icon: LuBrickWall, hint: "Arrambat a la paret: a terra; es mou de costat" },
                     { value: "hung", label: "Penjat", icon: LuPanelTop, hint: "Penjat a la paret: es mou de costat i amunt/avall" },
-                    { value: "floor", label: "Al terra", icon: LuArrowDownToLine, hint: "Al terra, lliure: es mou pel terra, també separat de la paret" },
+                    { value: "floor", label: "Lliure al terra", icon: LuArrowDownToLine, hint: "Lliure al terra: es mou pel terra, també separat de la paret" },
                   ]}
                   onChange={(v) => {
                     const c = module.carcass
@@ -1093,7 +1093,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                 />
               )}
             </PanelSection>
-          <PanelSection id="mod-structure" title="Estructura" icon={LuFrame}>
+          <PanelSection id="mod-structure" title="Caixa" icon={LuFrame}>
             <CarcassForm module={module} onChange={updateModule} section="structure" />
           </PanelSection>
           {/* Mòdul dividit: portes que el tapen tot (armari amb penjador i maleter). */}
