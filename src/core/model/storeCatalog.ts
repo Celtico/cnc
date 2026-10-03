@@ -1,6 +1,6 @@
 import { DEFAULT_JOINERY, type FreePart } from "./freePart"
 import type { PNode } from "./polygon"
-import { compositionHeight, compositionWidth, defaultModule, DEFAULT_GRILLE, newId, partsOnlyKind, tableModule, type Carcass, type Composition, type CompositionKind, type Module, type RefObject, type Zone } from "./composition"
+import { defaultModule, modulePlacements, DEFAULT_GRILLE, newId, partsOnlyKind, tableModule, type Carcass, type Composition, type CompositionKind, type Module, type RefObject, type Zone } from "./composition"
 import type { Template } from "./templates"
 
 /**
@@ -418,14 +418,29 @@ interface Variant {
   make: () => Composition
 }
 
-/** Mides exteriors «A × H × F» d'una composició (mòduls i peces lliures). */
+/**
+ * Mides exteriors «A × H × F» d'una composició (mòduls i peces lliures): la caixa que ocupa el moble, no la distància a
+ * la paret ni a l'origen (una tauleta a 1200 de la paret fa 900 de fons, no 2100). L'alçada compta des de terra (potes i
+ * sòcol inclosos), menys si tot va penjat: llavors des de sota del mòdul.
+ */
 export const compositionDims = (c: Composition): string => {
   // Flat-pack i objectes: el mòdul que porten no es fa (no compta per a les mides).
   const mods = partsOnlyKind(c.kind ?? "moble") ? [] : c.modules
-  const d = Math.max(0, ...mods.map((m) => m.carcass.depth + (m.wallGap ?? 0)), ...(c.parts ?? []).map((p) => (p.orient === "flat" ? p.h : p.orient === "side" ? p.w : p.thickness) + p.z))
-  const w = Math.max(mods.length ? compositionWidth(c) : 0, ...(c.parts ?? []).map((p) => p.x + (p.orient === "side" ? p.thickness : p.w)))
-  const hh = Math.max(mods.length ? compositionHeight(c) : 0, ...(c.parts ?? []).map((p) => p.y + (p.orient === "flat" ? p.thickness : p.h)))
-  return `${Math.round(w)} × ${Math.round(hh)} × ${Math.round(d)}`
+  const ps = modulePlacements({ ...c, modules: mods })
+  const xs: [number, number][] = [], ys: [number, number][] = [], zs: [number, number][] = []
+  mods.forEach((m, i) => {
+    const pl = ps[i]!
+    xs.push([pl.x, pl.x + m.carcass.width])
+    ys.push([m.carcass.base.kind === "wall" ? pl.y : 0, pl.y + m.carcass.height])
+    zs.push([pl.z ?? 0, (pl.z ?? 0) + m.carcass.depth])
+  })
+  for (const p of c.parts ?? []) {
+    xs.push([p.x, p.x + (p.orient === "side" ? p.thickness : p.w)])
+    ys.push([p.y, p.y + (p.orient === "flat" ? p.thickness : p.h)])
+    zs.push([p.z, p.z + (p.orient === "flat" ? p.h : p.orient === "side" ? p.w : p.thickness)])
+  }
+  const span = (r: [number, number][]) => (r.length ? Math.max(...r.map((x) => x[1])) - Math.min(...r.map((x) => x[0])) : 0)
+  return `${Math.round(span(xs))} × ${Math.round(span(ys))} × ${Math.round(span(zs))}`
 }
 
 function items(cat: string, type: string, vs: Variant[]): StoreType {

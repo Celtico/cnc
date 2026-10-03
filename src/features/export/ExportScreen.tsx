@@ -21,12 +21,13 @@ import { xcsZip } from "../../core/export/maestroXcs"
 import { cncNestOptions, toMaestroNestXcs } from "../../core/export/maestroNestXcs"
 import { DEFAULT_NEST_OPTIONS, nest } from "../../core/nesting/nest"
 import { machineWithRules } from "../../core/model"
-import { downloadBlob, downloadText, slugify } from "../download"
+import { downloadBlob as saveBlob, downloadText as saveText, slugify } from "../download"
 import { ESTIMATED_WARNING, estimatedApplied } from "../photo/appliedState"
 import { useSettings } from "../settings/SettingsContext"
 import { CamPreview } from "./CamPreview"
 import { useComposition, useCompositionBuild, useCompositionRead, useNesting, useProject } from "../useProject"
 import { UnreadableAlert } from "../../components/UnreadableAlert"
+import { keepProject } from "../../db/db"
 
 export function ExportScreen({ projectId }: { projectId: number }) {
   const project = useProject(projectId)
@@ -84,6 +85,15 @@ export function ExportScreen({ projectId }: { projectId: number }) {
   // Composició il·legible: res a exportar (seria la caixa per defecte).
   if (unreadable) return <UnreadableAlert />
   const base = slugify(project.name)
+  // Exportar-lo el deixa a l'Historial encara que no s'hagi tocat (s'ha de poder trobar què es va enviar al taller).
+  const downloadBlob = (blob: Blob, name: string) => {
+    saveBlob(blob, name)
+    void keepProject(project.id)
+  }
+  const downloadText = (text: string, name: string, mime?: string) => {
+    saveText(text, name, mime)
+    void keepProject(project.id)
+  }
 
   const doStep = () => {
     if (!comp || !build) return

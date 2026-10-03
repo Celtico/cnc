@@ -1,5 +1,5 @@
 import { Box, Button, Container, Flex, HStack, Heading, IconButton, Menu, Portal, SegmentGroup, Spinner, Stack, Text } from "@chakra-ui/react"
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react"
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { IconType } from "react-icons"
 import { LuChevronLeft, LuBox, LuDownload, LuDraftingCompass, LuEllipsis, LuHouse, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings, LuSofa } from "react-icons/lu"
 import { Toaster, toaster } from "./components/ui/toaster"
@@ -7,7 +7,7 @@ import { migrateUserTemplates } from "./db/compositionStore"
 import { Tooltip } from "./components/ui/tooltip"
 import { TopBar, TopBarActionsProvider } from "./components/TopBar"
 import { SaveFileDialog } from "./features/file/SaveFileDialog"
-import { db } from "./db/db"
+import { db, dropDrafts, dropIfDraft } from "./db/db"
 import { compositionOf } from "./db/compositionStore"
 import { ProjectsScreen, type ProjectsRequest } from "./features/projects/ProjectsScreen"
 import { AmbientTopBar } from "./features/ambients/AmbientTopBar"
@@ -103,6 +103,20 @@ export function App() {
   // «Obrir fitxer» del menú: va a la llista de mobles i hi obre el selector de fitxers.
   const [projectsRequest, setProjectsRequest] = useState<ProjectsRequest>(null)
   const clearProjectsRequest = useCallback(() => setProjectsRequest(null), [])
+
+  // Esborranys (plantilles obertes sense tocar, `Project.draft`): en obrir l'app, fora els que han quedat; en deixar un
+  // moble, si encara ho és, s'esborra. Una mica més tard: abans, el desat pendent de l'editor (en desmuntar-se) el salva.
+  useEffect(() => {
+    void dropDrafts(readStoredId())
+  }, [])
+  const openId = useRef(projectId)
+  useEffect(() => {
+    openId.current = projectId
+    if (projectId === null) return
+    const id = projectId
+    // Si es torna a obrir (o és el doble muntatge de StrictMode), no es toca.
+    return () => void setTimeout(() => openId.current !== id && void dropIfDraft(id), 1500)
+  }, [projectId])
 
   // Si el projecte guardat ja no existeix (esborrat), torna a la llista.
   useEffect(() => {

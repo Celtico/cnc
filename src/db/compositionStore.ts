@@ -76,7 +76,7 @@ export async function updateProjectComposition(id: number, composition: Composit
     }
     const camera = parseCameraPose(prev?.composition?.camera) ?? composition.camera
     const { camera: _c, ...rest } = composition
-    await db.projects.update(id, { composition: camera ? { ...rest, camera } : rest, updatedAt: Date.now(), edited: true })
+    await db.projects.update(id, { composition: camera ? { ...rest, camera } : rest, updatedAt: Date.now(), edited: true, draft: undefined })
     return true
   })
 }

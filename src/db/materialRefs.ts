@@ -52,7 +52,7 @@ export async function materialUsage(name: string): Promise<{ projects: string[];
   const [projects, ambients] = await Promise.all([db.projects.toArray(), db.ambients.toArray()])
   const sort = (xs: string[]) => xs.sort((a, b) => a.localeCompare(b, "ca"))
   return {
-    projects: sort(projects.filter((p) => uses(p.composition) || (p.composition === undefined && uses(p.params))).map((p) => p.name)),
+    projects: sort(projects.filter((p) => !p.draft && (uses(p.composition) || (p.composition === undefined && uses(p.params)))).map((p) => p.name)),
     ambients: sort(ambients.filter((a) => uses(a.data)).map((a) => a.name)),
   }
 }

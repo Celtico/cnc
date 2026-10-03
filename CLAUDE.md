@@ -859,7 +859,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   públic, `Template.price` orientatiu), 198 plantilles en una graella per categoria amb el tipus a la targeta. Fora: sofàs,
   butaques, cadires, miralls, gandules i carros (no són de tauler). Els mobles només de peces lliures (llits, capçals, taules
   de pedra) són Flat-pack. Aparadors sobre potes de peces lliures: caixa «penjada» a l'alçada de les potes.
-  `storeCatalog.test.ts`: totes sense avisos de disseny. Objectes: per tipus (`OBJECT_CATEGORIES`). Ambients: per habitació.
+  `storeCatalog.test.ts`: totes sense avisos de disseny. Les mides de la descripció (`compositionDims`, també a les
+  Col·leccions) són la caixa del moble (min…max), no la distància a la paret (`wallGap`) ni a l'origen (`x`); l'alçada,
+  des de terra, menys si tot va penjat (`compositionDims.test.ts`). Objectes: per tipus (`OBJECT_CATEGORIES`). Ambients: per habitació.
 - **Col·leccions de mobles** (`projects/CollectionsSection`, `LuLibrary`; `FURNITURE_COLLECTIONS` a
   `core/model/collections.ts`): Minimalisme arquitectònic i Minimalisme comercial, per famílies, 25 + 25 peces paramètriques
   (fronts push on la fitxa diu «sense tirador») amb una **fitxa d'estudi** (`PieceStudy`: referència, llenguatge, geometria,
@@ -879,6 +881,14 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   etiqueta «Modificat». **Esborrar l'historial** (`projects/ClearHistory.tsx`, amb confirmació, respecta la cerca): no toca
   els Projectes ni els mobles/objectes que són en algun ambient (a Ambients esborra els ambients, els seus mobles es queden);
   avisa dels modificats i permet «Esborrar només els no modificats».
+- **Esborranys** (per decisió de l'usuari: a l'Historial només hi entra el que s'ha fet servir): obrir una plantilla
+  (catàleg, col·leccions, objectes) o un moble en blanc crea el moble amb `Project.draft` (l'editor el necessita a la base
+  de dades). No surt a `useProjects` (Historial, selectors d'ambients) ni als usos d'un material. Deixa de ser esborrany
+  (`draft` fora) amb qualsevol canvi (`updateProjectComposition`, nom, nesting, foto), en posar-lo en un grup, en
+  exportar-lo (qualsevol descàrrega d'Exportar: s'ha de poder trobar què es va enviar al taller) i en desar-lo com a fitxer
+  (`keepProject`). Moure la càmera i la miniatura no compten. En deixar-lo (`App`, 1,5 s després perquè el desat pendent de
+  l'editor el salvi; `dropIfDraft` en una transacció) s'esborra si encara ho és; en obrir l'app, `dropDrafts` esborra els
+  que hagin quedat menys el moble obert. Els `.moble` oberts, els creats per un ambient i les còpies no són esborranys.
 - **Miniatures 3D** (per decisió de l'usuari, en lloc dels dibuixos de línies): **sense cap 3D viu per targeta** (a l'iPhone
   farien tancar la pàgina). `components/viewer/thumbRenderer.ts`: un sol renderitzador fora de pantalla (s'allibera 3 s
   després de buidar la cua) que pinta les peces amb els materials reals sobre el terra i la paret de Presentació, amb ombres,

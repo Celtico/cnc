@@ -65,7 +65,8 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
   /** Crea un moble a partir d'una composició (en blanc o de plantilla) i l'obre. */
   const handleCreate = async (composition: Composition, name: string) => {
     const existing = (await db.projects.toArray()).map((p) => p.name)
-    const id = await createProject(uniqueName(name, existing), undefined, { composition })
+    // Esborrany: si no s'hi canvia res, no queda a l'Historial (`Project.draft`).
+    const id = await createProject(uniqueName(name, existing), undefined, { composition, draft: true })
     onOpen(id)
   }
 

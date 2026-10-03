@@ -88,6 +88,12 @@ export interface Project {
   folder?: string
   /** S'ha modificat després de crear-lo (a l'editor o a l'ambient): esborrar-lo perdria els canvis. */
   edited?: boolean
+  /**
+   * Esborrany: obert del catàleg (o en blanc) i encara sense tocar. No surt a l'Historial ni a cap llista i s'esborra en
+   * sortir-ne (`dropIfDraft`) o en tornar a obrir l'app (`dropDrafts`). Qualsevol canvi, exportar-lo, desar-lo com a
+   * fitxer o posar-lo en un grup el treu (`keepProject`).
+   */
+  draft?: boolean
   /** Miniatura 3D de la targeta (JPEG, data URL), l'`updatedAt` que retrata, la versió i la càmera (`thumbIsStale`). */
   thumb?: string
   thumbAt?: number
@@ -182,11 +188,34 @@ export async function createProject(name?: string, params?: CabinetParams, extra
   return id
 }
 
+/** El moble deixa de ser esborrany (ja surt a l'Historial). No toca `updatedAt`. */
+export async function keepProject(id: number): Promise<void> {
+  const p = await db.projects.get(id)
+  if (p?.draft) await db.projects.update(id, { draft: undefined })
+}
+
+/** Esborra el moble si encara és un esborrany (no s'ha tocat). Dins d'una transacció: un canvi desat just abans el salva. */
+export async function dropIfDraft(id: number): Promise<boolean> {
+  return db.transaction("rw", db.projects, db.photos, async () => {
+    const p = await db.projects.get(id)
+    if (!p?.draft) return false
+    await db.photos.where("projectId").equals(id).delete()
+    await db.projects.delete(id)
+    return true
+  })
+}
+
+/** En obrir l'app: fora els esborranys que han quedat (menys el moble obert, `keep`). */
+export async function dropDrafts(keep: number | null): Promise<void> {
+  const ids = (await db.projects.toArray()).filter((p) => p.draft && p.id !== keep).map((p) => p.id)
+  for (const id of ids) await dropIfDraft(id)
+}
+
 export async function duplicateProject(id: number): Promise<number | undefined> {
   const src = await db.projects.get(id)
   if (!src) return undefined
   // La còpia és nova: sense la marca «Modificat».
-  const { id: _id, name: _name, params: _params, createdAt: _c, updatedAt: _u, photo: _photo, edited: _e, ...rest } = src
+  const { id: _id, name: _name, params: _params, createdAt: _c, updatedAt: _u, photo: _photo, edited: _e, draft: _d, ...rest } = src
   return createProject(`${src.name} (còpia)`, src.params, rest)
 }
 
@@ -209,7 +238,7 @@ export async function addPhoto(photo: Omit<Photo, "id">): Promise<number> {
 export async function updateProjectPhoto(id: number, photo: PhotoCalibration | undefined): Promise<void> {
   await db.transaction("rw", db.projects, db.photos, async () => {
     if (photo && !(await db.photos.get(photo.photoId))) return
-    await db.projects.update(id, { photo, updatedAt: Date.now() })
+    await db.projects.update(id, { photo, updatedAt: Date.now(), draft: undefined })
   })
 }
 
@@ -217,12 +246,12 @@ export async function updateProjectPhoto(id: number, photo: PhotoCalibration | u
 export async function removeProjectPhoto(id: number): Promise<void> {
   await db.transaction("rw", db.projects, db.photos, async () => {
     await db.photos.where("projectId").equals(id).delete()
-    await db.projects.update(id, { photo: undefined, updatedAt: Date.now() })
+    await db.projects.update(id, { photo: undefined, updatedAt: Date.now(), draft: undefined })
   })
 }
 
 export async function updateProjectNesting(id: number, nesting: NestOptions): Promise<void> {
-  await db.projects.update(id, { nesting, updatedAt: Date.now() })
+  await db.projects.update(id, { nesting, updatedAt: Date.now(), draft: undefined })
 }
 
 /** Opcions de nesting guardades, completades amb els defectes si falten o són antigues. */
@@ -232,7 +261,7 @@ export function safeNestOptions(n: unknown, fallback: NestOptions = DEFAULT_NEST
 }
 
 export async function renameProject(id: number, name: string): Promise<void> {
-  await db.projects.update(id, { name: name.trim() || "Sense nom", updatedAt: Date.now() })
+  await db.projects.update(id, { name: name.trim() || "Sense nom", updatedAt: Date.now(), draft: undefined })
 }
 
 /** Els paràmetres guardats poden ser d'una versió antiga: completa'ls amb els defectes. */
@@ -304,7 +333,7 @@ export async function duplicateAmbient(id: number, client?: string): Promise<num
     if (!map.has(it.projectId)) {
       const p = await db.projects.get(it.projectId)
       if (!p) continue
-      const { id: _id, createdAt: _c, updatedAt: _u, photo: _photo, folder: _f, edited: _e, ...rest } = p
+      const { id: _id, createdAt: _c, updatedAt: _u, photo: _photo, folder: _f, edited: _e, draft: _d, ...rest } = p
       const projectNames = (await db.projects.toArray()).map((x) => x.name)
       const pBase = who ? `${p.name.replace(/ · .*$/, "").replace(/ \(\d+\)$/, "")} · ${who}` : `${p.name} (còpia)`
       let pName = pBase
@@ -321,7 +350,7 @@ export async function duplicateAmbient(id: number, client?: string): Promise<num
 
 /** Posa (o treu, amb `undefined`) mobles/objectes d'un grup de l'historial. No canvia la data. */
 export async function setProjectsFolder(ids: number[], folder: string | undefined): Promise<void> {
-  await db.projects.bulkUpdate(ids.map((id) => ({ key: id, changes: { folder } })))
+  await db.projects.bulkUpdate(ids.map((id) => ({ key: id, changes: { folder, draft: undefined } })))
 }
 
 export async function setAmbientsFolder(ids: number[], folder: string | undefined): Promise<void> {

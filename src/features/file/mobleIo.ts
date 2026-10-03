@@ -14,7 +14,7 @@ import {
 } from "../../core/file/mobleFile"
 import { DEFAULT_CABINET, newId, type Settings } from "../../core/model"
 import { readComposition } from "../../db/compositionStore"
-import { addPhoto, createProject, db, safeNestOptions, updateProjectPhoto, type Photo, type Project } from "../../db/db"
+import { addPhoto, createProject, db, keepProject, safeNestOptions, updateProjectPhoto, type Photo, type Project } from "../../db/db"
 import { ensureUserModel, getUserModel } from "../../db/userModels"
 import { downloadBlob } from "../download"
 
@@ -106,6 +106,7 @@ export async function saveProjectAsFile(project: Project, settings: Settings, in
   const blob = mobleBlob(file)
   const filename = mobleFileName(project.name)
   const how = await shareOrDownload(blob, filename)
+  await keepProject(project.id)
   return { filename, bytes: blob.size, how }
 }
 

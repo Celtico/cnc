@@ -11,7 +11,8 @@ import { nestPlan } from "../core/nesting/machineNest"
 import { useSettings } from "./settings/SettingsContext"
 
 export function useProjects(): Project[] | undefined {
-  return useLiveQuery(() => db.projects.orderBy("updatedAt").reverse().toArray(), [])
+  // Sense els esborranys (plantilles obertes i encara sense tocar).
+  return useLiveQuery(() => db.projects.orderBy("updatedAt").reverse().filter((p) => !p.draft).toArray(), [])
 }
 
 /** Projecte amb `params` i `nesting` sempre complets (defectes aplicats). */

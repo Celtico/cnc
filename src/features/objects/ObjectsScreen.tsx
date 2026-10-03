@@ -29,7 +29,7 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
   const [toSave, setToSave] = useState<Project | null>(null)
   const create = async (composition: Composition, name: string) => {
     const existing = (await db.projects.toArray()).map((p) => p.name)
-    onOpen(await createProject(uniqueName(name, existing), undefined, { composition }))
+    onOpen(await createProject(uniqueName(name, existing), undefined, { composition, draft: true }))
   }
   return (
     <VStack align="stretch" gap={5}>
