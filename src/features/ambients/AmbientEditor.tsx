@@ -40,6 +40,9 @@ import {
   LuAppWindow,
   LuDoorOpen,
   LuPanelTop,
+  LuLock,
+  LuLockOpen,
+  LuUndoDot,
 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { RenderDialog, type SceneGetter } from "../../components/viewer/render/RenderDialog"
@@ -53,6 +56,7 @@ import {
   type Composition,
   CompositionSchema,
   duplicateItems,
+  sameCameraPose,
   pasteItems,
   parseAmbientClip,
   type AmbientClip,
@@ -202,13 +206,33 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   useDebouncedSave(amb, (a) => void updateAmbient(ambientId, { data: a }))
   // Última càmera del 3D: es desa a part (sense tocar la data ni el desfer) i el 3D hi torna en obrir-se.
   const cameraRef = useRef(initial.camera)
+  // Càmeres d'abans (per decisió de l'usuari: buscant l'enquadrament del render, un cop de ratolí la movia i es perdia):
+  // «Càmera d'abans» hi torna; i es pot bloquejar (es recorda per ambient).
+  const camPast = useRef<CameraPose[]>([])
+  const [camBack, setCamBack] = useState(0)
+  const [camGoto, setCamGoto] = useState<{ pose: CameraPose; n: number } | undefined>(undefined)
+  const going = useRef(false)
+  const [camLocked, setCamLocked] = usePersistentFlag(`mobles:ambient-camera-lock:${ambientId}`, false)
   const saveCamera = useCallback(
     (c: CameraPose) => {
+      const prev = cameraRef.current
+      if (prev && !going.current && !sameCameraPose(prev, c)) {
+        camPast.current = [...camPast.current.slice(-29), prev]
+        setCamBack(camPast.current.length)
+      }
+      going.current = false
       cameraRef.current = c
       void saveAmbientCamera(ambientId, c)
     },
     [ambientId],
   )
+  const cameraBack = () => {
+    const prev = camPast.current.pop()
+    setCamBack(camPast.current.length)
+    if (!prev) return
+    going.current = true
+    setCamGoto((g) => ({ pose: prev, n: (g?.n ?? 0) + 1 }))
+  }
 
   const change = useCallback((next: Ambient, commit: boolean) => {
     setAmbState(next)
@@ -637,7 +661,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
           ) : (
             // Fons del 3D (el visor és transparent): el mateix gris que el plànol.
             <Box position="absolute" inset={0} rounded="md" overflow="hidden" borderWidth="1px" bg="bg.subtle">
-              <Ambient3D ambient={amb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} onPick={pickItem} onChange={change} snap={snapOn} dollhouse={dollhouse} shadows={shadows} ceiling={ceiling} onPoseChange={setPose} initialCamera={cameraRef.current} onCameraChange={saveCamera} />
+              <Ambient3D ambient={amb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} onPick={pickItem} onChange={change} snap={snapOn} dollhouse={dollhouse} shadows={shadows} ceiling={ceiling} onPoseChange={setPose} initialCamera={cameraRef.current} onCameraChange={saveCamera} cameraLocked={camLocked} cameraGoto={camGoto} />
             </Box>
           )}
             {chrome}
@@ -673,6 +697,21 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                 </Tooltip>
               ))}
             </Stack>
+          )}
+          {/* Càmera del 3D, a baix a l'esquerra: bloquejar-la i tornar a la d'abans. */}
+          {tab === "3d" && (
+            <HStack position="absolute" bottom={3} left={3} zIndex={2} gap={0.5} bg="bg.panel" rounded="md" borderWidth="1px" p={0.5} shadow="sm">
+              <Tooltip content={camLocked ? "Càmera bloquejada: el ratolí no la mou (clic per desbloquejar)" : "Bloquejar la càmera (el ratolí no la mourà: per no perdre l'enquadrament del render)"}>
+                <IconButton aria-label={camLocked ? "Desbloquejar la càmera" : "Bloquejar la càmera"} aria-pressed={camLocked} size="sm" variant={camLocked ? "solid" : "ghost"} colorPalette={camLocked ? "wood" : undefined} onClick={() => setCamLocked((v) => !v)}>
+                  {camLocked ? <LuLock /> : <LuLockOpen />}
+                </IconButton>
+              </Tooltip>
+              <Tooltip content="Tornar a la càmera d'abans">
+                <IconButton aria-label="Càmera d'abans" size="sm" variant="ghost" disabled={!camBack} onClick={cameraBack}>
+                  <LuUndoDot />
+                </IconButton>
+              </Tooltip>
+            </HStack>
           )}
           {/* Opcions de vista (com a l'editor), a dalt a la dreta. */}
           <Box position="absolute" top={3} right={{ base: 3, md: 14 }} zIndex={2}>

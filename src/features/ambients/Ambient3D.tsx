@@ -41,9 +41,15 @@ export function Ambient3D({
   onPoseChange,
   initialCamera,
   onCameraChange,
+  cameraLocked = false,
+  cameraGoto,
 }: {
   /** Càmera desada: en obrir el 3D s'hi torna en lloc d'enquadrar (només es llegeix en muntar-se). */
   initialCamera?: CameraPose
+  /** Càmera bloquejada: el ratolí i els dits no la mouen (per no perdre l'enquadrament del render); els botons sí. */
+  cameraLocked?: boolean
+  /** Anar a una càmera (canvia `n` cada vegada): «Càmera d'abans». */
+  cameraGoto?: { pose: CameraPose; n: number }
   /** La càmera s'ha quedat quieta (1 s després de moure-la, d'«Enquadrar» o d'«Interior»): per desar-la. */
   onCameraChange?: (camera: CameraPose) => void
   /** La càmera és a la posició d'«Enquadrar» (`home`) o d'«Interior» (`eye`), o l'usuari l'ha moguda (`null`): els
@@ -102,9 +108,9 @@ export function Ambient3D({
       <TextureRefresh />
       <hemisphereLight args={["#ffffff", "#b9ad9c", 0.35]} />
       <directionalLight position={[cx + 4, 7, cz + 3]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-span} shadow-camera-right={span} shadow-camera-top={span} shadow-camera-bottom={-span} shadow-bias={-0.0004} />
-      <Room ambient={ambient} geos={geos} materials={materials} box={box} selectedIds={selectedIds} onSelect={onSelect} onPick={onPick} onChange={onChange} snap={snap} dollhouse={dollhouse} showCeiling={showCeiling} />
+      <Room ambient={ambient} geos={geos} materials={materials} box={box} selectedIds={selectedIds} onSelect={onSelect} onPick={onPick} onChange={onChange} snap={snap} dollhouse={dollhouse} showCeiling={showCeiling} cameraLocked={cameraLocked} />
       {/* Com al visor de l'editor: esmorteïment, botó dret o dos dits per desplaçar, roda per apropar. */}
-      <Controls target={[cx, 0.9, cz]} home={[cx + span * 0.5, span * 1.1 + 2, cz + span * 1.4 + 2]} fitSignal={fitSignal} eye={eyePose(ambient)} eyeSignal={eyeSignal} maxDistance={span * 4 + 10} onPoseChange={onPoseChange} initialCamera={initialCamera} onCameraChange={onCameraChange} />
+      <Controls target={[cx, 0.9, cz]} home={[cx + span * 0.5, span * 1.1 + 2, cz + span * 1.4 + 2]} fitSignal={fitSignal} eye={eyePose(ambient)} eyeSignal={eyeSignal} maxDistance={span * 4 + 10} onPoseChange={onPoseChange} initialCamera={initialCamera} onCameraChange={onCameraChange} locked={cameraLocked} goto={cameraGoto} />
       {onSceneAccess && <SceneAccess onAccess={onSceneAccess} />}
     </Canvas>
   )
@@ -115,7 +121,7 @@ const RENDER_BG = "#e9e6e1"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 
-function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance, onPoseChange, initialCamera, onCameraChange }: { target: [number, number, number]; home: [number, number, number]; fitSignal: number; eye: ReturnType<typeof eyePose>; eyeSignal: number; maxDistance: number; onPoseChange?: (pose: "home" | "eye" | null) => void; initialCamera?: CameraPose; onCameraChange?: (camera: CameraPose) => void }) {
+function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance, onPoseChange, initialCamera, onCameraChange, locked, goto }: { target: [number, number, number]; home: [number, number, number]; fitSignal: number; eye: ReturnType<typeof eyePose>; eyeSignal: number; maxDistance: number; onPoseChange?: (pose: "home" | "eye" | null) => void; initialCamera?: CameraPose; onCameraChange?: (camera: CameraPose) => void; locked: boolean; goto?: { pose: CameraPose; n: number } }) {
   const ref = useRef<OrbitControlsImpl>(null)
   const camera = useThree((s) => s.camera) as PerspectiveCamera
   const invalidate = useThree((s) => s.invalidate)
@@ -204,10 +210,19 @@ function Controls({ target, home, fitSignal, eye, eyeSignal, maxDistance, onPose
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eyeSignal])
+  // «Càmera d'abans»: hi torna (i es desa com la d'ara).
+  useEffect(() => {
+    if (!goto) return
+    pose(goto.pose.position, goto.pose.target, goto.pose.fov ?? 40)
+    setMark(goto.pose.pose ?? null)
+    scheduleReport()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goto?.n])
   // Orbitar, desplaçar o fer zoom (l'usuari) treu la marca dels botons.
   return (
     <OrbitControls
       ref={ref}
+      enabled={!locked}
       onStart={() => {
         setMark(null)
         clearTimeout(timer.current)
@@ -309,12 +324,14 @@ function Room({
   onPick,
   onChange,
   snap,
+  cameraLocked,
   dollhouse,
   showCeiling,
 }: {
   onPick?: (id: string) => string[]
   onChange?: (a: Ambient, commit: boolean) => void
   snap: boolean
+  cameraLocked: boolean
   dollhouse: boolean
   showCeiling: boolean
   ambient: Ambient
@@ -615,7 +632,7 @@ function Room({
     if (!st) return
     drag.current = null
     ;(e.target as Element | null)?.releasePointerCapture?.(e.pointerId)
-    if (orbit) orbit.enabled = true
+    if (orbit) orbit.enabled = !cameraLocked
     setActiveAxis(null)
     if (st.moved && onChange) onChange(st.last, true)
   }

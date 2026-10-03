@@ -858,7 +858,12 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   element només es refan si en canvia la geometria o els materials (moure'l només en canvia la posició) i les que ja no es
   dibuixen s'alliberen. La càmera mira el punt de l'obertura (o d'«Enquadrar»), no segueix la caixa de l'ambient. **Interior** (`LuEye`, `eyePose`): càmera anivellada a 1,35 m al costat de la paret de davant
   mirant la del fons, fov 55 («Enquadrar» torna a 40). **La càmera es recorda per ambient** (`Ambient.camera`, `pose` =
-  «home»/«eye»; `saveAmbientCamera` 1 s després, sense `updatedAt` ni desfer; `updateAmbient` la conserva); en obrir el 3D s'hi torna i el botó surt marcat només si és la mateixa d'ara. **Sostre**: opció
+  «home»/«eye»; `saveAmbientCamera` 1 s després, sense `updatedAt` ni desfer; `updateAmbient` la conserva); en obrir el 3D s'hi torna i el botó surt marcat només si és la mateixa d'ara. **Bloquejar la càmera i
+  «Càmera d'abans»** (per decisió de l'usuari: buscant l'enquadrament del render, un cop de ratolí la movia), a baix a
+  l'esquerra del 3D: el cadenat (`LuLock`/`LuLockOpen`, es recorda per ambient, `mobles:ambient-camera-lock:<id>`) treu el
+  ratolí i els dits a `OrbitControls` (`enabled`; el gizmo, en acabar, no el torna a encendre); els botons (Enquadrar,
+  Interior) sí que la mouen. `LuUndoDot` torna a l'anterior de les 30 últimes càmeres desades (`camPast`, `cameraGoto`; no
+  és el desfer de l'ambient). **Sostre**: opció
   de vista (`mobles:ambient-ceiling`) i material a Acabats (`Ambient.ceilingMaterial`), amb una mica de llum pròpia. Fons del
   3D transparent sobre el gris del plànol (`bg.subtle`); el render fa servir el clar (`scene.userData.renderBackground`).
 - **Catàleg d'ambients** (`core/model/ambientTemplates.ts`, `AMBIENT_TEMPLATES`, per categories `AMBIENT_CATEGORIES`):
@@ -1209,6 +1214,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Ambients | Seleccionar · Paret (ploma) · Habitació · Calibrar · Plànol de fons | `LuMousePointer2` · `LuPenTool` · `LuBrickWall` · `LuPencilRuler` · `LuImageUp` |
 | Ambients | Finestra · Porta · Moure a un grup · Grup (carpeta) · Projectes | `LuAppWindow` · `LuDoorOpen` · `LuFolderInput` · `LuFolder` · `LuFolders` |
 | Ambients | Moble · Objecte / bloc · Pestanyes Plànol · 3D · Girar · Peces (plànol) · Interior | `LuBox` · `LuSofa` · `LuMap` · `LuRotate3D` · `LuRotateCw` / `LuRotateCcw` · `LuLayers` · `LuEye` |
+| Ambients | Càmera bloquejada / lliure · Càmera d'abans | `LuLock` / `LuLockOpen` · `LuUndoDot` |
 | Galeries | Historial · Catàleg · Col·leccions de mobles | `LuHistory` · `LuBookOpen` · `LuLibrary` |
 | Exportar | DXF (CNC) · STEP 3D · CSV de nesting · CSV de peces · GLB · Avançat | `LuScissors` · `LuCuboid` · `LuLayoutGrid` · `LuFileDown` · `LuBoxes` · `LuSettings2` |
 | Materials | Categories de la llista: Taulers · Fons · Simulació | `LuLayers3` · `LuLayers2` · `LuSprayCan` |
