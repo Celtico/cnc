@@ -1361,7 +1361,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           direction="row"
           display={viewTab === "3d" ? "flex" : "none"}
         >
-          <RenderDialog open={renderOpen} onClose={() => setRenderOpen(false)} getScene={() => sceneGetter.current?.() ?? null} name={name} />
+          <RenderDialog open={renderOpen} onClose={() => setRenderOpen(false)} getScene={() => sceneGetter.current?.() ?? null} name={name} saveKey={`moble:${projectId}`} />
           <ArDialog open={arOpen} onClose={() => setArOpen(false)} panels={viewerPanels} name={name} models={build?.models} />
           {/* Al mòbil, un calaix de baix amb el seu propi desplaçament; a l'ordinador, un popover. */}
           <ViewOptions lead={viewModes} tiles={viewTiles} open={viewOptsOpen} onOpenChange={setViewOptsOpen}>

@@ -838,7 +838,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
         </Portal>
       </Drawer.Root>
 
-      <RenderDialog open={renderOpen} onClose={() => setRenderOpen(false)} getScene={() => sceneGetter.current?.() ?? null} name={name} />
+      <RenderDialog open={renderOpen} onClose={() => setRenderOpen(false)} getScene={() => sceneGetter.current?.() ?? null} name={name} saveKey={`ambient:${ambientId}`} />
 
       <CalibrateDialog open={calib !== null} measured={calib ? Math.hypot(calib.b[0] - calib.a[0], calib.b[1] - calib.a[1]) : 0} onClose={() => (setCalib(null), setTool("select"))} onApply={applyCalibration} />
     </Flex>

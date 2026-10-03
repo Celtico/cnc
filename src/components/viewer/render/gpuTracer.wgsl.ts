@@ -518,10 +518,13 @@ fn trace(o0: vec3f, d0: vec3f) -> vec4f {
     var al = m.color;
     var rough = m.rough;
     N = smoothNormal(ti, hU, hV);
+    // Llum vista d'un emissor amb textura (pantalla de lli): la de la textura respecte de la mitjana (es veu la tela).
+    var emK = 1.0;
     if (m.map >= 0) {
       let uv = texCoord(ti, m, hU, hV);
       let tc = sampleTex(m.map, uv);
       al *= tc;
+      emK = dot(tc, LUMA) / max(0.02, m.lum);
       if (m.roughMap >= 0) { rough = clamp(rough * sampleTex(m.roughMap, uv).y, 0.02, 1.0); }
       if (m.normalMap >= 0) {
         let A = tris[ti * 5u + 3u];
@@ -600,7 +603,7 @@ fn trace(o0: vec3f, d0: vec3f) -> vec4f {
           let pl = select(0.0, el / P.lamp.y * hT * hT / cosL, cosL > 1e-6);
           w = lastPdf * lastPdf / (lastPdf * lastPdf + pl * pl);
         }
-        addC(thr * m.emission * (P.lamp.x * w), max(0, vertex));
+        addC(thr * m.emission * (P.lamp.x * w * emK), max(0, vertex));
       }
     }
     if (m.opacity < 1.0) {

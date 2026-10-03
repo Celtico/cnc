@@ -157,7 +157,7 @@ const MAG_SCENES: AmbientTemplate[] = [
     items: [
       { ref: "mag:show-vitrine", wall: "N", at: 1250 },
       { ref: "mag:show-sideboard", wall: "E", at: 1350 },
-      { ref: O("art-dark"), wall: "E", at: 1350, elevation: 1150 },
+      { ref: O("tv-65"), wall: "E", at: 1350, elevation: 1150 },
       { ref: O("bottles-amber"), wall: "E", at: 800, gap: 120, elevation: 700 },
       { ref: O("vases-ceramic"), wall: "E", at: 1850, gap: 100, elevation: 700 },
       { ref: O("rug-grey"), x: 2600, y: 2700 },

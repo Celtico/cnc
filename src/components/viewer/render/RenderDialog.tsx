@@ -14,6 +14,7 @@ import { parseHdr } from "./hdr"
 import { oidnDenoise, oidnFailed, oidnReady } from "./oidn"
 import type { UNet } from "oidn-web"
 import { SKIES, loadSky, readSky, type SkyId } from "./skies"
+import { mergeSaved, readRenderPrefs, writeRenderPrefs } from "./renderPrefs"
 import { BACKDROPS, aimBackdrop, loadBackdrop, saveBackdropPhoto, type BackdropKind, type Panorama } from "./backdrops"
 import { DEFAULT_RENDER_OPTS, extractScene, photoCamera, type RenderEnv, type RenderOpts, type RenderRoom } from "./sceneData"
 import { aces, agx, bloomBuffer, createDrawScheduler, makeAgxLut, makePowLut, makeSrgbLut, sampleBloom, srgbLut, vignette, type ToneCurve } from "./tonemap"
@@ -150,7 +151,7 @@ function Sec({ id, title, icon, hint, badge, children }: { id: string; title: st
  * Opcions: motor, qualitat i llum tornen a començar el càlcul; les d'imatge (exposició,
  * contrast, saturació, fons) només retoquen el to, a l'instant.
  */
-export function RenderDialog({ open, onClose, getScene, name }: { open: boolean; onClose: () => void; getScene: SceneGetter; name: string }) {
+export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open: boolean; onClose: () => void; getScene: SceneGetter; name: string; /** Desa la configuració per a aquest document (`renderPrefs.ts`). */ saveKey?: string }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const [passes, setPasses] = useState(0)
   const [running, setRunning] = useState(false)
@@ -185,6 +186,7 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
   const panoRef = useRef(pano)
   panoRef.current = pano
   const [look, setLookState] = useState<Look>(DEFAULT_LOOK)
+  const skipSave = useRef(false)
   const lookRef = useRef(look)
   const limitRef = useRef(limit)
   limitRef.current = limit
@@ -555,6 +557,23 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     }
     if (preset?.mood && mood) setMood(preset.mood)
     if (mood || preset?.focal) setOpts((o) => ({ ...o, ...(mood?.opts ?? {}), ...(preset?.focal ? { focal: preset.focal } : {}) }))
+    // La configuració que s'hi va deixar l'últim cop (mana sobre la de l'escena i la de defecte).
+    const saved = readRenderPrefs(saveKey)
+    skipSave.current = true
+    if (saved) {
+      if (saved.opts) setOpts((o) => mergeSaved(o, saved.opts))
+      if (saved.look) {
+        const next = mergeSaved(lookRef.current, saved.look)
+        lookRef.current = next
+        setLookState(next)
+      }
+      if (saved.mood && saved.mood in MOODS) setMood(saved.mood as Mood)
+      if (saved.res && saved.res in RESOLUTIONS && resolutionAllowed(saved.res as Resolution)) setRes(saved.res as Resolution)
+      if (typeof saved.limit === "number" && Number.isFinite(saved.limit)) setLimit(saved.limit)
+      if (saved.room === "room" || saved.room === "floor" || saved.room === "none") setRoom(saved.room)
+      if (saved.format && saved.format in FORMATS) setFormat(saved.format as Format)
+      if (saved.sky && saved.sky !== "file" && SKIES.some((k) => k.id === saved.sky)) chooseSky(saved.sky as SkyId)
+    }
     return () => {
       alive = false
       disposeEngine()
@@ -566,6 +585,16 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+
+  // Desar la configuració (no la del moment d'obrir: encara és la d'abans de llegir la desada).
+  useEffect(() => {
+    if (!open) return
+    if (skipSave.current) {
+      skipSave.current = false
+      return
+    }
+    writeRenderPrefs(saveKey, { opts: { ...opts }, look: { ...look }, mood, res, limit, room, format, ...(sky !== "file" ? { sky } : {}) })
+  }, [open, saveKey, opts, look, mood, res, limit, room, format, sky])
 
   // Motor, qualitat i llum: un cop començat, es torna a començar (esperant una mica mentre s'arrossega).
   useEffect(() => {

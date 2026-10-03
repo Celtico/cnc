@@ -608,6 +608,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   tracing progressiu amb **dos motors que donen la mateixa imatge** (`ChoiceChips` GPU · CPU, per defecte GPU si n'hi ha,
   `mobles:render-engine`): **GPU** (WebGPU, `gpuTracer.ts` + `gpuTracer.wgsl.ts`) i **CPU** (`cpuEngine.ts`: un `pathWorker`
   per nucli). Sense WebGPU, GPU desactivada amb el motiu; si la GPU falla, CPU amb un avís.
+  - **La configuració es desa per document** (per decisió de l'usuari; `RenderDialog saveKey`: `ambient:<id>`, `moble:<id>`;
+    `renderPrefs.ts`, `localStorage` `mobles:render:<clau>`): opcions, imatge, ambient de llum, resolució, límit, escena,
+    format i cel (no un .hdr propi). En obrir-lo mana sobre la de l'escena (`renderPreset`) i la de defecte; `mergeSaved`
+    només agafa els valors del mateix tipus. No es desa en obrir (`skipSave`). El motor ja es desava (`mobles:render-engine`).
   - **Comença aturat**: obrir el diàleg mostra la imatge del visor (`SceneGetter.snapshot`) i «Començar»; després, les
     opcions de qualitat, motor, escena i llum tornen a començar; aturar/continuar, límit de passades, passades per segon.
   - `extractScene` passa l'escena a triangles + materials + textures; tots dos motors fan servir el **mateix BVH** (`bvh.ts`,
@@ -649,7 +653,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     (`RenderScene.normals`, `smoothNormal`; GPU: `encodeNormal`); la geomètrica es queda per desplaçar rajos; cantells corbs
     llisos (`creaseNormals` a `cutoutGeometry`, < 30°). **Mapes PBR** (`normalMap`/`roughMap`, `tangentFrame`/`perturbNormal`).
     **Llums que fan llum** (`MaterialPref.glow` → `RenderMaterial.emission`, mostra directa dels emissors, `emitters.ts`;
-    «Llums enceses» + intensitat). **Translucidesa** (`MaterialPref.translucent`).
+    «Llums enceses» + intensitat; la llum que es **veu** d'un emissor amb textura va multiplicada per la textura respecte de
+    la seva mitjana, `emK`, als dos motors: a la pantalla de lli es veu la tela en lloc d'una taca blanca; la que fa llum,
+    la mitjana). **Translucidesa** (`MaterialPref.translucent`).
   - **Llum**: sol amb mida (ombres suaus; el reflex s'eixampla amb la mida) i halo ample al cel de dia; cel amb mostra directa
     a cada rebot i MIS: cel llis, **HDRI per importància** (`envSampling.ts`) i, als
     interiors, per les finestres (portals). **Sense ateses**: la indirecta té un màxim relatiu a la llum de l'escena

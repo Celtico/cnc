@@ -470,11 +470,14 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
       const sn = smoothNormal(S!.normals, t, hitU, hitV, [gx, gy, gz])
       nx = sn[0]; ny = sn[1]; nz = sn[2]
     }
+    // Llum vista d'un emissor amb textura (pantalla de lli): la de la textura respecte de la mitjana (es veu la tela).
+    let emK = 1
     if (m.map >= 0) {
       texCoord(t, hitU, hitV)
       const u = tu, v = tv
       sampleTex(m.map, u, v)
       ar *= tc[0]!; ag *= tc[1]!; ab *= tc[2]!
+      emK = (0.2126 * tc[0]! + 0.7152 * tc[1]! + 0.0722 * tc[2]!) / Math.max(0.02, S!.textures[m.map]!.lum)
       if (m.roughMap >= 0) {
         sampleTex(m.roughMap, u, v)
         rough = Math.min(1, Math.max(0.02, rough * tc[1]!))
@@ -557,7 +560,7 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
           const pl = cosL > 1e-6 ? ((el / EM.total) * hitT * hitT) / cosL : 0
           w = (lastPdf * lastPdf) / (lastPdf * lastPdf + pl * pl)
         }
-        const k = lampScale * w
+        const k = lampScale * w * emK
         add(tr * em[0] * k, tg * em[1] * k, tb * em[2] * k, Math.max(0, vertex))
       }
     }
