@@ -139,6 +139,40 @@ const pendant = (id: string, x: number, y: number, group: string, ceiling = 2600
  */
 const MAG_SCENES: AmbientTemplate[] = [
   {
+    id: "amb-showroom",
+    category: "salo",
+    name: "Showroom",
+    description: "5,2 × 4,8 m · per veure el que fa el render: vitrina de roure de fil amb portes de vidre i llum LED, aparador lacat negre brillant amb marbre, sofà de vellut, taula lacada, ampolles, gerros i copes, i el jardí per la vidriera. El Render s'obre al capvespre, a l'alçada dels ulls i amb un 24 mm.",
+    w: 5200,
+    d: 4800,
+    floor: "Parquet de noguera",
+    wall: "Estuc greige",
+    walls: { N: "Revestiment de roure" },
+    openings: [{ side: "N", kind: "glazing", at: 3250, w: 1900, h: 2400, sill: 0, panes: 2 }],
+    // La càmera d'Interior és a la paret de davant (S) mirant la del fons (N): el que s'ha de veure, a la paret N i a prop
+    // de les cantonades del fons; res a la paret S.
+    items: [
+      { ref: "mag:show-vitrine", wall: "N", at: 1250 },
+      { ref: "mag:show-sideboard", wall: "E", at: 1350 },
+      { ref: O("art-dark"), wall: "E", at: 1350, elevation: 1150 },
+      { ref: O("bottles-amber"), wall: "E", at: 800, gap: 120, elevation: 700 },
+      { ref: O("vases-ceramic"), wall: "E", at: 1850, gap: 100, elevation: 700 },
+      { ref: O("rug-grey"), x: 2600, y: 2700 },
+      { ref: O("sofa-olive"), x: 2500, y: 3350, rot: 180 },
+      { ref: "mag:show-coffee", x: 2500, y: 2350 },
+      { ref: O("wine-glasses"), x: 2300, y: 2350, elevation: 330 },
+      { ref: O("bowl-wood"), x: 2750, y: 2380, elevation: 330 },
+      { ref: O("books-standing"), x: 2550, y: 2200, elevation: 330 },
+      { ref: O("floor-lamp-arc"), x: 600, y: 3200 },
+      { ref: O("olive"), wall: "W", at: 2400, gap: 150 },
+      { ref: O("plant-tropical"), wall: "E", at: 3100, gap: 150 },
+      // Una cortina recollida a la dreta: la vidriera es veu gairebé sencera (el jardí).
+      { ref: O("curtain-linen"), wall: "N", at: 4440 },
+    ],
+    render: { mood: "dusk", focal: 24 },
+    eye: true,
+  },
+  {
     id: "amb-evening-living",
     category: "salo",
     name: "Saló al vespre",

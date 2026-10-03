@@ -1,4 +1,101 @@
 {
+ "mag:show-vitrine": {
+  "panels": 35,
+  "extras": 28,
+  "warnings": [
+   "same-size"
+  ],
+  "p": [
+   "back|trassera|2100x1600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@86c1c91a",
+   "bottom|baix|1562x410x19|Roure de fil|x|e0010|h9:3d22b050|g0|c0|o-|@33f2f767",
+   "divider|divisor|1363x410x19|Roure de fil|x|e1000|h170:36594b7e|g0|c0|o-|@21667a40",
+   "divider|divisor|620x410x19|Roure de fil|x|e1000|h14:041d7b8a|g0|c0|o-|@fa5d8254",
+   "drawerBack|darrere calaix|714.5x266x16|Roure de fil|x|e1000|h4:2a9dfc32|g0|c0|o-|@14520ea9",
+   "drawerBack|darrere calaix|714.5x266x16|Roure de fil|x|e1000|h4:2a9dfc32|g0|c0|o-|@aa57ffd9",
+   "drawerBack|darrere calaix|714.5x266x16|Roure de fil|x|e1000|h4:2a9dfc32|g0|c0|o-|@e66a91a0",
+   "drawerBack|darrere calaix|714.5x266x16|Roure de fil|x|e1000|h4:2a9dfc32|g0|c0|o-|@f39ef07c",
+   "drawerBottom|fons calaix|729.5x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@03cd729c",
+   "drawerBottom|fons calaix|729.5x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@188924e2",
+   "drawerBottom|fons calaix|729.5x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@e3e5710a",
+   "drawerBottom|fons calaix|729.5x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@ffbfb314",
+   "drawerFront|frontal calaix|796.5x321x19|Roure de fil|x|e1111|h4:12d330b8|g1:cdd3f769|c2:77aa43a4|o-|@4e1b2d7a",
+   "drawerFront|frontal calaix|796.5x321x19|Roure de fil|x|e1111|h4:12d330b8|g1:cdd3f769|c2:77aa43a4|o-|@76039f82",
+   "drawerFront|frontal calaix|796.5x321x19|Roure de fil|x|e1111|h4:f2b72df8|g1:f91df319|c2:77aa43a4|o-|@96ed635e",
+   "drawerFront|frontal calaix|796.5x321x19|Roure de fil|x|e1111|h4:f2b72df8|g1:f91df319|c2:77aa43a4|o-|@fca0cde6",
+   "drawerSide|lateral calaix|400x288x16|Roure de fil|x|e1000|h6:517484c2|g1:45309763|c0|o-|@4cdd32f1",
+   "drawerSide|lateral calaix|400x288x16|Roure de fil|x|e1000|h6:517484c2|g1:45309763|c0|o-|@6a820828",
+   "drawerSide|lateral calaix|400x288x16|Roure de fil|x|e1000|h6:517484c2|g1:45309763|c0|o-|@ad2c81b6",
+   "drawerSide|lateral calaix|400x288x16|Roure de fil|x|e1000|h6:517484c2|g1:45309763|c0|o-|@bca0d241",
+   "drawerSide|lateral calaix|400x288x16|Roure de fil|x|e1000|h6:834e657a|g1:45309763|c0|o-|@4f7e6f16",
+   "drawerSide|lateral calaix|400x288x16|Roure de fil|x|e1000|h6:834e657a|g1:45309763|c0|o-|@8ba8e674",
+   "drawerSide|lateral calaix|400x288x16|Roure de fil|x|e1000|h6:834e657a|g1:45309763|c0|o-|@c875aea3",
+   "drawerSide|lateral calaix|400x288x16|Roure de fil|x|e1000|h6:834e657a|g1:45309763|c0|o-|@ddcb10db",
+   "fixedShelf|estanter fixe|1562x410x19|Roure de fil|x|e0010|h12:819ed8a2|g0|c0|o-|@278ea21f",
+   "plinth|socol|1562x60x19|Roure de fil|x|e1010|h0|g0|c0|o-|@39ebe8f6",
+   "shelf|estanter 1|770.5x390x19|Roure de fil|x|e0010|h0|g0|c0|o-|@4c539b1e",
+   "shelf|estanter 2|770.5x390x19|Roure de fil|x|e0010|h0|g0|c0|o-|@b417ae00",
+   "shelf|estanter 3|770.5x390x19|Roure de fil|x|e0010|h0|g0|c0|o-|@3de57fdd",
+   "shelf|estanter 4|770.5x390x19|Roure de fil|x|e0010|h0|g0|c0|o-|@a8dfcc02",
+   "shelf|estanter 5|770.5x390x19|Roure de fil|x|e0010|h0|g0|c0|o-|@bc879d64",
+   "shelf|estanter 6|770.5x390x19|Roure de fil|x|e0010|h0|g0|c0|o-|@aae73191",
+   "side|lat d|2100x410x19|Roure de fil|x|e0110|h95:70e7d9ae|g0|c0|o-|@03dc01ef",
+   "side|lat e|2100x410x19|Roure de fil|x|e1100|h95:8c5849de|g0|c0|o-|@641cff2b",
+   "top|dalt|1562x410x19|Roure de fil|x|e1000|h9:3d22b050|g0|c0|o-|@e3e6c571"
+  ]
+ },
+ "mag:show-sideboard": {
+  "panels": 29,
+  "extras": 1,
+  "warnings": [
+   "push"
+  ],
+  "p": [
+   "back|trassera|2000x680x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
+   "bottom|baix|1962x440x19|Lacat negre brillant|x|e0010|h12:7a73bf42|g0|c0|o-|@339b08ee",
+   "divider|divisor|582x440x19|Lacat negre brillant|x|e1000|h44:8eb26a64|g0|c0|o-|@ed07ab6e",
+   "divider|divisor|582x440x19|Lacat negre brillant|x|e1000|h44:a6296c10|g0|c0|o-|@c4c66777",
+   "door|porta d|616x317x19|Lacat negre brillant|x|e1111|h2:cb6301d9|g0|c0|o-|@0714595c|push",
+   "door|porta d|616x317x19|Lacat negre brillant|x|e1111|h2:cb6301d9|g0|c0|o-|@be7f070b|push",
+   "door|porta e|616x317x19|Lacat negre brillant|x|e1111|h2:2ecf669f|g0|c0|o-|@a4cf0319|push",
+   "door|porta e|616x317x19|Lacat negre brillant|x|e1111|h2:2ecf669f|g0|c0|o-|@c6c40cc0|push",
+   "drawerBack|darrere calaix|643x146x16|Lacat negre brillant|x|e1000|h4:7f8d797c|g0|c0|o-|@1fbd663c",
+   "drawerBack|darrere calaix|643x146x16|Lacat negre brillant|x|e1000|h4:7f8d797c|g0|c0|o-|@28609784",
+   "drawerBack|darrere calaix|643x146x16|Lacat negre brillant|x|e1000|h4:7f8d797c|g0|c0|o-|@5b20a6cf",
+   "drawerBottom|fons calaix|658x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@04a4ab21",
+   "drawerBottom|fons calaix|658x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@5f1a413d",
+   "drawerBottom|fons calaix|658x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@e39853bf",
+   "drawerFront|frontal calaix|716x203x19|Lacat negre brillant|x|e1111|h4:131e14f0|g1:501848ff|c0|o-|@418d7979|push",
+   "drawerFront|frontal calaix|716x203x19|Lacat negre brillant|x|e1111|h4:131e14f0|g1:501848ff|c0|o-|@58c18e31|push",
+   "drawerFront|frontal calaix|716x203x19|Lacat negre brillant|x|e1111|h4:131e14f0|g1:501848ff|c0|o-|@6c430c32|push",
+   "drawerSide|lateral calaix|400x168x16|Lacat negre brillant|x|e1000|h6:4aef599a|g1:45309763|c0|o-|@90ae1706",
+   "drawerSide|lateral calaix|400x168x16|Lacat negre brillant|x|e1000|h6:4aef599a|g1:45309763|c0|o-|@a766b3f3",
+   "drawerSide|lateral calaix|400x168x16|Lacat negre brillant|x|e1000|h6:4aef599a|g1:45309763|c0|o-|@e66e9c7a",
+   "drawerSide|lateral calaix|400x168x16|Lacat negre brillant|x|e1000|h6:c9b365b8|g1:45309763|c0|o-|@23900456",
+   "drawerSide|lateral calaix|400x168x16|Lacat negre brillant|x|e1000|h6:c9b365b8|g1:45309763|c0|o-|@8dde8866",
+   "drawerSide|lateral calaix|400x168x16|Lacat negre brillant|x|e1000|h6:c9b365b8|g1:45309763|c0|o-|@ab91a025",
+   "plinth|socol|1962x60x19|Lacat negre brillant|x|e1010|h0|g0|c0|o-|@8d6daeaf",
+   "shelf|estanter 2|611x420x19|Lacat negre brillant|x|e0010|h0|g0|c0|o-|@5de72f62",
+   "shelf|estanter|611x420x19|Lacat negre brillant|x|e0010|h0|g0|c0|o-|@37ad727b",
+   "side|lat d|680x440x19|Lacat negre brillant|x|e0110|h38:2d685f74|g0|c0|o-|@87c089a5",
+   "side|lat e|680x440x19|Lacat negre brillant|x|e1100|h38:2d685f74|g0|c0|o-|@641cff2b",
+   "top|dalt|1962x440x19|Lacat negre brillant|x|e1000|h12:7a73bf42|g0|c0|o-|@e9a3d72c"
+  ]
+ },
+ "mag:show-coffee": {
+  "panels": 5,
+  "extras": 0,
+  "warnings": [
+   "mitre",
+   "mitre"
+  ],
+  "p": [
+   "bottom|baix|1200x700x19|Lacat negre brillant|x|e0010|h0|g0|c0|o-|@4d218dc2|m:left,right",
+   "panel|frontal fix|1196x326x19|Lacat negre brillant|y|e1111|h0|g0|c0|o-|@c69cc942",
+   "side|lat d|700x330x19|Lacat negre brillant|y|e0001|h0|g0|c0|o-|@cd18126d|m:bottom,top",
+   "side|lat e|700x330x19|Lacat negre brillant|y|e0100|h0|g0|c0|o-|@35385b43|m:bottom,top",
+   "top|dalt|1200x700x19|Lacat negre brillant|x|e1000|h0|g0|c0|o-|@d0bfe17d|m:left,right"
+  ]
+ },
  "mag:green-kitchen": {
   "panels": 88,
   "extras": 0,

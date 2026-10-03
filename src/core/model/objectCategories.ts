@@ -38,6 +38,7 @@ const BY_ID: Record<string, ObjectCategory> = {
   "model-fern-02-a": "plantes", "model-fern-02-b": "plantes", "model-fern-02-c": "plantes", "model-fern-02-d": "plantes", "model-fern-pot": "plantes", "model-jacaranda": "plantes", "model-fir-01": "plantes",
   cushion: "textils", throw: "textils", books: "textils", "rug-jute": "textils", "rug-kilim": "textils", "rug-grey": "textils",
   "rug-round": "textils", "rug-white": "textils",
+  "books-standing": "textils", "bottles-amber": "textils", "vases-ceramic": "textils", "bowl-wood": "textils", "wine-glasses": "textils",
 }
 
 /** Categoria d'una plantilla d'objecte (els nous sense categoria van a «Blocs»). */

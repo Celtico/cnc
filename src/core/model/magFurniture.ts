@@ -1,5 +1,6 @@
 import { storeBuilders as B } from "./storeCatalog"
 import type { Template } from "./templates"
+import type { Zone } from "./composition"
 
 /**
  * Mobles de les escenes de revista (catàleg d'ambients) que no eren a les plantilles: cuines
@@ -14,7 +15,37 @@ const GREIGE = "MDF lacat greige"
 const LGREY = "MDF lacat gris clar"
 const WHITE = "MDF lacat"
 
+const RIFT = "Roure de fil"
+const GLOSS = "Lacat negre brillant"
+/** Compartiment de vitrina: portes de vidre amb marc, prestatges i llum LED. */
+const vitrineZone = (): Zone => ({ ...B.doors(3), led: true, front: { kind: "door", mode: "double", hinge: "left", glass: true } })
+
 export const MAG_FURNITURE: Template[] = [
+  // --- Showroom (escena «Showroom»: ensenya el render — LED, vitrina, lacat brillant, marbre polit) ---
+  {
+    id: "show-vitrine",
+    kind: "moble",
+    name: "Vitrina de roure de fil",
+    description: "1600 × 2100 × 420 · dues columnes amb portes de vidre, prestatges i llum LED, calaixos a baix.",
+    make: () => B.one(B.box("Vitrina", { w: 1600, h: 2100, d: 420, mat: RIFT, base: B.plinth(60, 20) }, B.h([620, "auto"], [B.v(["auto", "auto"], [B.drawers(2), B.drawers(2)]), B.v(["auto", "auto"], [vitrineZone(), vitrineZone()])]))),
+  },
+  {
+    id: "show-sideboard",
+    kind: "moble",
+    name: "Aparador lacat negre brillant",
+    description: "2000 × 700 × 460 · lacat negre brillant sense tiradors, sobre de marbre blanc polit.",
+    make: () =>
+      B.one(B.box("Aparador", { w: 2000, h: 680, d: 450, mat: GLOSS, base: B.plinth(60, 40), push: true }, B.v(["auto", 700, "auto"], [B.doors(1), B.drawers(3), B.doors(1)])), {
+        parts: [B.metal({ name: "Sobre de marbre", orient: "flat", material: "Marbre blanc", w: 2010, h: 460, thickness: 20, x: -5, y: 680, z: 0 })],
+      }),
+  },
+  {
+    id: "show-coffee",
+    kind: "moble",
+    name: "Taula de centre lacada negra",
+    description: "1200 × 330 × 700 · cub lacat negre brillant a inglet.",
+    make: () => B.one(B.box("Taula de centre", { w: 1200, h: 330, d: 700, mat: GLOSS, base: B.onFloor, joint: "mitre", back: "none" }, B.panel())),
+  },
   {
     id: "green-kitchen",
     kind: "cuina",

@@ -165,6 +165,10 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     el perfil), material «Tira LED» (`LED_MATERIALS`, `glow` 60, càlid; v14 de les preferències). Res amagat compta: amb
     calaixos o dividit, cap tira (`visibleZone`). Encara sense mecanitzat (ranura per al perfil: pendent del taller). La
     vitrina «Galeria» del catàleg (Saló) en porta (`led.test.ts`).
+  - **Porta de vidre** (`front.glass` d'una porta, «Vitrina» › «Porta de vidre amb marc»; per decisió de l'usuari, com les
+    vitrines de catàleg): `glassDoor` posa a `extras` el marc d'alumini negre (4 perfils de 20 mm, gruix del tauler) i un
+    vidre de 5 mm (entra 5 mm al marc): no hi ha tauler de CNC ni cassoletes ni tirador. Res amagat compta: sense
+    `glass`, la clau no hi és (`visibleZone`). Pendent del taller: frontisses per a marc d'alumini (no surten a ferratges).
   - **Tiradors mecanitzats**: portes (costat contrari de les frontisses, a mitja alçada), calaixos (centrats) i abatibles
     (al cantell que obre): dos forats passants Ø5 a 128 / 96 / 64 com a talls `circle` `tag: "handle"` (el taller els llegeix
     com els passacables); el 3D no els buida (`visualPanel`) i hi col·loca el tirador.
@@ -616,6 +620,13 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     (`core/model/materialFx.ts`: teles i vellut per id, cuir, parquet, rajoles, ceràmica, pantalla; pedra polida → vernís),
     així les preferències d'abans també en tenen. Lacats brillants nous (`GLOSS_MATERIALS`, v15): «Lacat negre brillant»
     i «Lacat blanc brillant» (taulers, vernís 1).
+    Més materials (`RIFT_MATERIALS`, v16): «Roure de fil» i «Noguera de fil» (veta recta, sense flama), «Vidre ambre»,
+    «Ceràmica sorra», «Marbre blanc» i «Marbre negre» (pedra polida).
+  - **Vista per les finestres** (per decisió de l'usuari): `backdrops.ts` fa a mà un panorama equirectangular (Jardí:
+    dues fileres d'arbres, tanca i gespa; Mar), alfa 0 on hi ha cel; `RenderOpts.view` («Per les finestres»: Jardí, Mar,
+    Només cel; només de dia o capvespre amb llum de dia) l'afegeix com a textura i `RenderScene.backdrop` n'és l'índex
+    (GPU: `P.emit.z` = índex + 1). Només el veuen els raigs de càmera directes (`vertex < 0`) que surten per un vidre: no
+    fa llum; es multiplica per la llum del cel a l'horitzó × `BACKDROP_GAIN` (2).
   - **Materials**: difús + GGX amb Fresnel, metalls, vidre fi (no fa ombra), retall per l'alfa. **Arestes arrodonides** (2 mm,
     `BEVEL_RADIUS`, `userData.bevel`, `bevelNormal`). **Veta amb relleu** (`userData.grain`). **Normals llises**
     (`RenderScene.normals`, `smoothNormal`; GPU: `encodeNormal`); la geomètrica es queda per desplaçar rajos; cantells corbs
@@ -843,6 +854,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   el diàleg l'aplica en obrir-se), i `eye` (el 3D s'obre amb la càmera d'Interior, `eyePose`, desada com a `camera` amb
   `pose: "eye"`). La primera és **«Saló al vespre»** (`amb-evening-living`): vitrina «Galeria» amb LED a la paret del fons,
   res a la paret de davant (hi va la càmera), vespre amb 24 mm.
+  La segona és **«Showroom»** (`amb-showroom`), per ensenyar el render: vitrina `show-vitrine` (roure de fil, portes de
+  vidre amb LED), bufet `show-sideboard` (lacat negre brillant, sobre de marbre), tauleta `show-coffee`, ampolles ambre,
+  gerros, copes, llibres i bol, sofà de vellut i vidriera al jardí; capvespre amb 24 mm.
   `createAmbientFromTemplate` (`features/ambients/fromTemplate.ts`) crea cada moble i objecte (un per plantilla, a l'Historial
   o al grup del client) i l'ambient enllaçat. **Una escena del catàleg s'obre directament** i va a l'Historial (per decisió de l'usuari, sense preguntar).
 - **Ambients per a clients**: menú ⋯ › «Duplicar (per a un client)…» (`duplicateAmbient`): «escena · client», duplica els
@@ -855,7 +869,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   a l'historial de Mobles (`isObject`).
 - `OBJECT_TEMPLATES` (`ambient.ts`): els blocs d'abans i cadira, làmpada, planta, mirall, taula rodona. **Objectes de revista**
   (`magObjects.ts`, `MAG_OBJECTS`, formes de `objectShapes.ts`: `ellipse`, `roundRect`, `leaf`, `wave`, `blob`): sofàs,
-  butaques, quadres, miralls, tele, cortines, llums, plantes, catifes, taules… Tot és geometria (perfils extrudits), no física
+  butaques, quadres, miralls, tele, cortines, llums, plantes, catifes, taules, llibres drets, ampolles, gerros, bol, copes… Tot és geometria (perfils extrudits), no física
   ni shaders: el render ho veu igual que el visor. Categories `OBJECT_CATEGORIES` / `objectCategory`
   (`core/model/objectCategories.ts`).
 - **Mides al mm**: `tidyMm`/`tidyPart` (`freePart.ts`) arrodoneixen al mm els valors amb més d'un decimal (els de l'usuari,

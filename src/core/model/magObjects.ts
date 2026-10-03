@@ -55,6 +55,28 @@ function tropicalParts(pot: string, big = true): Q[] {
   return parts
 }
 
+/** Ampolla: cos cilíndric, espatlla arrodonida i coll (discs, com les capçades). */
+function bottle(name: string, mat: string, cx: number, cz: number, dia: number, h: number): Q[] {
+  const body = h * 0.62, shoulder = h * 0.14
+  return [
+    cyl(name, mat, cx, 0, cz, dia, body),
+    ...Array.from({ length: 4 }, (_, k) => cyl(name, mat, cx, body + (shoulder * k) / 4, cz, dia * (1 - 0.17 * (k + 1)), shoulder / 4)),
+    cyl(name, mat, cx, body + shoulder, cz, dia * 0.3, h - body - shoulder),
+  ]
+}
+
+/** Gerro: panxa arrodonida (discs) i coll; `neck` = el coll respecte de l'amplada. */
+function vase(name: string, mat: string, cx: number, cz: number, dia: number, h: number, neck: number): Q[] {
+  const n = 9, bodyH = h * 0.82
+  const parts = Array.from({ length: n }, (_, k) => {
+    const t = (k + 0.5) / n
+    const f = Math.max(neck, Math.sin(Math.PI * (0.15 + 0.8 * t)))
+    return cyl(name, mat, cx, (bodyH * k) / n, cz, dia * f, bodyH / n)
+  })
+  parts.push(cyl(name, mat, cx, bodyH, cz, dia * neck, h - bodyH))
+  return parts
+}
+
 const t = (id: string, name: string, description: string, make: () => Q[]): Template => ({ id: `object-${id}`, kind: "objecte", name, description, make: () => obj(make()) })
 
 export const MAG_OBJECTS: Template[] = [
@@ -271,6 +293,31 @@ export const MAG_OBJECTS: Template[] = [
     front("Coixí", "Teixit sorra", 600, 200, 230, 500, 340, 130, roundRect(500, 340, 110)),
   ]),
   t("books", "Pila de llibres", "500 × 240 × 220 mm.", () => [flat("Llibres", "Llibres", 0, 0, 0, 500, 220, 240)]),
+  // --- Decoració de prestatge i de taula (per als renders: les fotos de catàleg sempre en porten) ---
+  t("books-standing", "Llibres drets", "420 × 260 × 220 mm · una filera de llibres de diverses alçades i gruixos.", () => {
+    const books: [number, number, string][] = [[28, 250, "Llibres"], [36, 235, "Teixit sorra"], [22, 255, "Llibres"], [44, 225, "Teixit blau marí"], [30, 245, "Llibres"], [26, 215, "Teixit ocre"], [40, 240, "Llibres"], [34, 230, "Cuir negre"]]
+    let x = 0
+    return books.map(([w, h, m], i) => {
+      const q = front(`Llibre ${i + 1}`, m, x, 0, 0, w, h, 200)
+      x += w + 2
+      return q
+    })
+  }),
+  t("bottles-amber", "Ampolles d'ambre", "360 × 340 × 120 mm · tres ampolles de vidre ambre.", () =>
+    ([[60, 340, 110], [180, 280, 95], [290, 230, 80]] as const).flatMap(([cx, h, dia], i) => bottle(`Ampolla ${i + 1}`, "Vidre ambre", cx, 60, dia, h)),
+  ),
+  t("vases-ceramic", "Gerros de ceràmica", "420 × 360 × 220 mm · un gerro alt sorra i un de rodó negre.", () => [
+    ...vase("Gerro alt", "Ceràmica sorra", 100, 110, 180, 360, 0.55),
+    ...vase("Gerro rodó", "Ceràmica negra", 300, 110, 220, 230, 0.35),
+  ]),
+  t("bowl-wood", "Bol de fusta", "Ø 320 × 120 mm · noguera.", () => blob("Bol", "Noguera xapada", 160, 0, 160, 320, 320, 120, 5)),
+  t("wine-glasses", "Copes", "260 × 220 × 90 mm · tres copes de vidre.", () =>
+    ([45, 130, 215] as const).flatMap((cx, i) => [
+      cyl(`Peu de copa ${i + 1}`, "Vidre", cx, 0, 45, 70, 6),
+      cyl(`Tija ${i + 1}`, "Vidre", cx, 6, 45, 8, 100),
+      ...blob(`Copa ${i + 1}`, "Vidre", cx, 106, 45, 82, 82, 110, 6),
+    ]),
+  ),
   t("rug-jute", "Catifa de jute", "2400 × 1700 mm.", () => [flat("Catifa", "Jute", 0, 0, 0, 2400, 1700, 12, roundRect(2400, 1700, 30))]),
   t("rug-kilim", "Catifa kilim", "2000 × 3000 mm.", () => [flat("Catifa", "Catifa kilim", 0, 0, 0, 2000, 3000, 10)]),
   t("rug-grey", "Catifa gris gran", "3000 × 2400 mm.", () => [flat("Catifa", "Catifa gris", 0, 0, 0, 3000, 2400, 14)]),

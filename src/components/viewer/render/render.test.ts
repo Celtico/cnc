@@ -447,3 +447,24 @@ describe("càmera de fotògraf (`photoCamera`)", async () => {
     expect(photoCamera({ ...c, aspect: 0.8 }, { focal: 36 }).scale).toBeCloseTo(0.5)
   })
 })
+
+describe("vista per les finestres (`backdrops.ts`)", async () => {
+  const { backdropTexture } = await import("./backdrops")
+  it("jardí i mar: cel transparent a dalt, opac sota l'horitzó, arbres al jardí", () => {
+    for (const kind of ["garden", "sea"] as const) {
+      const t0 = performance.now()
+      const t = backdropTexture(kind)
+      expect(performance.now() - t0).toBeLessThan(5000)
+      const a = (x: number, y: number) => t.data[(y * t.w + x) * 4 + 3]!
+      expect(a(100, 10)).toBe(0)
+      expect(a(100, t.h - 10)).toBe(255)
+      expect(t.wrapT).toBe(2)
+    }
+    // Una mica per sobre de l'horitzó (5°), el jardí té arbres gairebé a tota la volta.
+    const g = backdropTexture("garden")
+    const y = Math.round(g.h / 2 - (5 / 180) * g.h)
+    let n = 0
+    for (let x = 0; x < g.w; x += 8) if (g.data[(y * g.w + x) * 4 + 3]! > 0) n++
+    expect(n / (g.w / 8)).toBeGreaterThan(0.8)
+  })
+})

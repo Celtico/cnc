@@ -25,3 +25,13 @@ describe("vernís i vellut del render", () => {
     expect(names).toContain("Lacat blanc brillant")
   })
 })
+
+describe("v16: fusta de fil", () => {
+  it("«Roure de fil» i «Noguera de fil» s'afegeixen (veta recta, sense arcs)", () => {
+    const old = { ...DEFAULT_SETTINGS, version: 15, materials: DEFAULT_SETTINGS.materials.filter((m) => !/de fil/.test(m.name)) }
+    const ms = parseSettings(JSON.parse(JSON.stringify(old))).settings.materials
+    const rift = ms.find((m) => m.name === "Roure de fil")!
+    expect(rift.finish.kind === "wood" && rift.finish.gen?.figure).toBe(0)
+    expect(ms.some((m) => m.name === "Noguera de fil")).toBe(true)
+  })
+})

@@ -88,6 +88,11 @@ export interface RenderScene {
   interior: boolean
   /** Escena d'ambient: cel de dia (blau, horitzó clar, sol amb halo) en lloc del d'estudi. */
   daylight: boolean
+  /**
+   * Vista per les finestres (`backdrops.ts`): índex de la textura del panorama (alfa 0 = cel) o res. Només als raigs de la
+   * càmera que han passat per un vidre.
+   */
+  backdrop?: number
 }
 
 /** Cel HDRI (equirectangular, RGB lineal) reduït, per als workers. */
@@ -120,9 +125,11 @@ export interface RenderOpts {
   straight?: boolean
   /** Focal equivalent de 35 mm (costat llarg = 36 mm); 0 o res = la del visor. */
   focal?: number
+  /** Què es veu per les finestres dels ambients: jardí, mar o només el cel (`backdrops.ts`). */
+  view?: "garden" | "sea" | "sky"
 }
 
-export const DEFAULT_RENDER_OPTS: RenderOpts = { bounces: 6, sunAzimuth: 40, sunElevation: 45, sunIntensity: 1, skyIntensity: 1, softness: 0.15, aperture: 0, envRotation: 0, lamps: true, lampIntensity: 1, straight: true, focal: 0 }
+export const DEFAULT_RENDER_OPTS: RenderOpts = { bounces: 6, sunAzimuth: 40, sunElevation: 45, sunIntensity: 1, skyIntensity: 1, softness: 0.15, aperture: 0, envRotation: 0, lamps: true, lampIntensity: 1, straight: true, focal: 0, view: "garden" }
 
 /**
  * La càmera del render com la d'un fotògraf d'interiors:

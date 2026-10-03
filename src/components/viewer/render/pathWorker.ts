@@ -24,7 +24,7 @@ import { EMIT_FLOATS, buildEmitters, pickEmitter, type Emitters } from "./emitte
 import { buildEnvCdf, envPdf, sampleEnv, type EnvCdf } from "./envSampling"
 import { lightSetup } from "./lights"
 import type { RenderEnv, RenderOpts, RenderScene } from "./sceneData"
-import { BUMP_STRENGTH, COAT_ROUGHNESS, DIRECT_CLAMP, GLASS_SHADOW, INDIRECT_CLAMP, PATH_ROUGHNESS, bevelNormal, perturbNormal, smoothNormal, tangentFrame } from "./shading"
+import { BACKDROP_GAIN, BUMP_STRENGTH, COAT_ROUGHNESS, DIRECT_CLAMP, GLASS_SHADOW, INDIRECT_CLAMP, PATH_ROUGHNESS, bevelNormal, perturbNormal, smoothNormal, tangentFrame } from "./shading"
 
 type Msg =
   | { type: "scene" | "estimate"; scene: RenderScene; width: number; height: number; seed: number; opts: RenderOpts; env?: RenderEnv | null; auxPasses?: number }
@@ -266,6 +266,32 @@ function envSky(dx: number, dy: number, dz: number, out: number[]) {
   }
 }
 
+/**
+ * Vista per les finestres (`backdrops.ts`): el panorama (alfa 0 = cel) per sobre del cel, amb la llum del cel a
+ * l'horitzó (de dia clar, al vespre fosc). Bilineal, amb el gir del cel.
+ */
+const horizon = [0, 0, 0]
+function backdrop(dx: number, dy: number, dz: number, out: number[]) {
+  const ti = S!.backdrop!
+  const tex = S!.textures[ti]
+  if (!tex) return
+  let u = (Math.atan2(dx, -dz) / (2 * Math.PI) + 0.5 + envRot) % 1
+  if (u < 0) u += 1
+  const v = Math.acos(Math.max(-1, Math.min(1, dy))) / Math.PI
+  // Alfa bilineal.
+  const fx = u * tex.w - 0.5, fy = v * tex.h - 0.5
+  const x0 = Math.floor(fx), y0 = Math.floor(fy), ax = fx - x0, ay = fy - y0
+  const xa = wrapI(x0, tex.w, 0), xb = wrapI(x0 + 1, tex.w, 0), ya = wrapI(y0, tex.h, 2), yb = wrapI(y0 + 1, tex.h, 2)
+  const A = (x: number, y: number) => tex.data[(y * tex.w + x) * 4 + 3]! / 255
+  const a = (A(xa, ya) * (1 - ax) + A(xb, ya) * ax) * (1 - ay) + (A(xa, yb) * (1 - ax) + A(xb, yb) * ax) * ay
+  if (!(a > 0)) return
+  sampleTex(ti, u, v)
+  const hl = Math.hypot(dx, dz) || 1
+  sky(dx / hl * 0.995, 0.1, dz / hl * 0.995, horizon)
+  const L = (0.2126 * horizon[0]! + 0.7152 * horizon[1]! + 0.0722 * horizon[2]!) * BACKDROP_GAIN
+  for (let c = 0; c < 3; c++) out[c] = out[c]! * (1 - a) + tc[c]! * L * a
+}
+
 /** Llum del cel en la direcció d (amb la intensitat del cel). */
 function sky(dx: number, dy: number, dz: number, out: number[]) {
   if (ENV) envSky(dx, dy, dz, out)
@@ -414,6 +440,8 @@ function trace(ox: number, oy: number, oz: number, dx: number, dy: number, dz: n
         break
       }
       sky(dx, dy, dz, env)
+      // Per un vidre sense haver tocat res: la vista de fora (jardí, mar) davant del cel.
+      if (vertex < 0 && S!.backdrop !== undefined && S!.backdrop >= 0) backdrop(dx, dy, dz, env)
       let w = 1
       if (vertex >= 0 && !delta) {
         const pn = neeMode === 2 ? portalPdf(cpx, cpy, cpz, dx, dy, dz) : neeMode === 1 ? envPdf(CDF!, dx, dy, dz, envRot) : Math.max(0, cnx * dx + cny * dy + cnz * dz) / Math.PI

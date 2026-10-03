@@ -1186,6 +1186,7 @@ class Builder {
 
     const make = (id: string, name: string, label: string, x0: number, w: number, hinge: "left" | "right") => {
       if (w > 600) this.warnings.push({ code: "door-too-wide", message: `Porta de ${num(w)} mm d'amplada (màxim recomanat 600).`, zoneId: zone.id })
+      if (front.glass) return this.glassDoor(id, label, x0, ter.y0, w, doorH)
       const door = this.frontPanel(id, name, label, "door", x0, ter.y0, w, doorH)
       this.addCups(door, doorH, hinge, w, rowYs, ter.y0, zone.id)
       // Tirador al costat contrari de les frontisses, vertical i a mitja alçada. En una porta estreta cauria a la
@@ -1202,6 +1203,53 @@ class Builder {
       make(`door${suffix}-left`, "porta e", "Porta esquerra", ter.x0, w, "left")
       make(`door${suffix}-right`, "porta d", "Porta dreta", r(ter.x0 + w + m.fronts.betweenGap), w, "right")
     }
+  }
+
+  /**
+   * Porta de vidre (vitrina): marc de perfil d'alumini negre de 20 mm i vidre de 5 al mig, al lloc de la porta. No és de
+   * CNC: tot va a `extras` («Elements sense nesting», amb les mides per demanar-ho). Les frontisses són les del perfil
+   * (no porta cassoletes al tauler); els laterals mantenen les fileres.
+   */
+  private glassDoor(id: string, label: string, x0: number, y0: number, w: number, h: number): void {
+    const { d } = this
+    const F = 20, G = 5, t = d.t
+    const z = d.frontZ
+    const bar = (sid: string, lbl: string, bx: number, by: number, len: number, wid: number) =>
+      this.extras.push({
+        id: `${id}-${sid}`,
+        name: "perfil vitrina",
+        label: `${label} de vidre (${lbl})`,
+        role: "part",
+        length: r(len),
+        width: r(wid),
+        thickness: t,
+        material: "Alumini negre",
+        grain: "none",
+        edges: { ...NO_EDGES },
+        holes: [],
+        grooves: [],
+        placement: placement([r(bx), r(by), z], Y, X, neg(Z), Z),
+      })
+    bar("left", "perfil esquerre", x0, y0, h, F)
+    bar("right", "perfil dret", x0 + w - F, y0, h, F)
+    bar("bottom", "perfil de baix", x0 + F, y0, F, w - 2 * F)
+    bar("top", "perfil de dalt", x0 + F, y0 + h - F, F, w - 2 * F)
+    this.extras.push({
+      id: `${id}-glass`,
+      name: "vidre vitrina",
+      label: `${label} de vidre (vidre)`,
+      role: "part",
+      length: r(h - 2 * F + 10),
+      width: r(w - 2 * F + 10),
+      thickness: G,
+      material: "Vidre",
+      grain: "none",
+      edges: { ...NO_EDGES },
+      holes: [],
+      grooves: [],
+      // El vidre entra 5 mm a la ranura del perfil per cada costat, centrat en el gruix.
+      placement: placement([r(x0 + F - 5), r(y0 + F - 5), r(z - (t - G) / 2)], Y, X, neg(Z), Z),
+    })
   }
 
   private buildFlap(zone: Zone, front: Extract<Front, { kind: "flap" }>, ter: ZoneRect): void {

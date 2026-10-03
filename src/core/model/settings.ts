@@ -17,7 +17,7 @@ import { repairValue } from "./repair"
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 15
+export const SETTINGS_VERSION = 16
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -353,6 +353,22 @@ export const GLOSS_MATERIALS: MaterialPref[] = [
   { id: "mdf-lacquer-gloss-white", name: "Lacat blanc brillant", thicknesses: [16, 19, 22], hasGrain: false, finish: { kind: "lacquer", color: "#efede8", roughness: 0.3 }, edge: "Lacat (sense cantell)", category: "board", coat: 1 },
 ]
 
+/**
+ * Fusta de fil (tall radial: veta fina i recta, sense arcs), com els mobles de les fotos de catàleg; el tall de sempre
+ * (arcs de «catedral») queda com a «Roure» / «Noguera»; el vidre ambre i la ceràmica sorra de la decoració, i els marbres blanc i negre polits.
+ * Afegits a la v16.
+ */
+export const RIFT_MATERIALS: MaterialPref[] = [
+  { id: "oak-rift", name: "Roure de fil", thicknesses: [16, 19, 30], hasGrain: true, finish: { kind: "wood", species: "oak", gen: { base: "#cfae7f", dark: "#a8865a", lines: 64, wobble: 0.02, bands: 34, contrast: 0.35, figure: 0, pores: 2600, grain: 10, tileMm: 600, seed: 111 } }, edge: "Xapa de roure", category: "board" },
+  { id: "walnut-rift", name: "Noguera de fil", thicknesses: [16, 19, 30], hasGrain: true, finish: { kind: "wood", species: "walnut", gen: { base: "#6a4a31", dark: "#43291a", lines: 56, wobble: 0.02, bands: 30, contrast: 0.4, figure: 0, pores: 1600, grain: 10, tileMm: 600, seed: 212 } }, edge: "Xapa de noguera", category: "board" },
+  // Per a la decoració (ampolles, gerros).
+  { id: "sim-glass-amber", name: "Vidre ambre", thicknesses: [4], hasGrain: false, finish: { kind: "glass", color: "#b8722e", opacity: 0.55 }, edge: "", cnc: false, category: "sim" },
+  { id: "sim-ceramic-sand", name: "Ceràmica sorra", thicknesses: [10], hasGrain: false, finish: { kind: "lacquer", color: "#cdb89a", roughness: 0.6 }, edge: "", cnc: false, category: "sim" },
+  // Marbres polits (vernís pel «Polit»): taulells i sobres del showroom.
+  { id: "sim-marble-white", name: "Marbre blanc", thicknesses: [20, 30], hasGrain: false, finish: { kind: "stone", color: "#eeebe6", vein: "#9a968f", veins: 0.55, size: 1400, seed: 21, style: "marble", polish: 0.85 }, edge: "", cnc: false, category: "sim" },
+  { id: "sim-marble-black", name: "Marbre negre", thicknesses: [20, 30], hasGrain: false, finish: { kind: "stone", color: "#1e1e20", vein: "#d8d4cc", veins: 0.45, size: 1400, seed: 33, style: "marble", polish: 0.9 }, edge: "", cnc: false, category: "sim" },
+]
+
 /** Llum LED dels mobles (`Zone.led`): fa llum al render (càlida). Afegit a la v14. */
 export const LED_MATERIALS: MaterialPref[] = [
   { id: "led-strip", name: "Tira LED", thicknesses: [8], hasGrain: false, finish: { kind: "color", color: "#ffe2b8", roughness: 0.4 }, edge: "", cnc: false, category: "sim", glow: 60 },
@@ -479,6 +495,7 @@ export const BUILTIN_MATERIALS: MaterialPref[] = upgradeToPhoto([
   ...SIM_MATERIALS,
   ...LED_MATERIALS,
   ...GLOSS_MATERIALS,
+  ...RIFT_MATERIALS,
   ...PHOTO_MATERIALS,
 ])
 
@@ -609,8 +626,10 @@ export function parseSettings(raw: unknown): SettingsParse {
   const v14m = version < 14 && v13m !== BUILTIN_MATERIALS ? [...v13m, ...missing(LED_MATERIALS, v13m)] : v13m
   // v15: lacats brillants (vernís), si no hi són.
   const v15m = version < 15 && v14m !== BUILTIN_MATERIALS ? [...v14m, ...missing(GLOSS_MATERIALS, v14m)] : v14m
+  // v16: fusta de fil (roure i noguera), si no hi són.
+  const v16m = version < 16 && v15m !== BUILTIN_MATERIALS ? [...v15m, ...missing(RIFT_MATERIALS, v15m)] : v15m
   // Noms únics (sempre): un de repetit passa a «X 2» amb un avís (abans no es comprovava).
-  const unique = dedupeMaterialNames(v15m)
+  const unique = dedupeMaterialNames(v16m)
   problems.push(...unique.problems)
   const materials = unique.materials
   const renamed = (n: string) => v12.renames.find(([from]) => from === n)?.[1] ?? n

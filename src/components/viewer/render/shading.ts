@@ -19,6 +19,8 @@ export const BUMP_STRENGTH = 6
 export const PATH_ROUGHNESS = 0.45
 /** Rugositat del vernís (`RenderMaterial.coat`): un reflex nítid, com el lacat brillant o el marbre polit. */
 export const COAT_ROUGHNESS = 0.08
+/** Vista per les finestres: el panorama (lineal) × la llum del cel a l'horitzó × això. */
+export const BACKDROP_GAIN = 2
 /** Vidre: llum que deixa passar cap a les ombres (sol i finestres). */
 export const GLASS_SHADOW = 0.85
 

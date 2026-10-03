@@ -2,12 +2,13 @@
  * Shader WGSL del path tracer per GPU: el mateix algorisme que `pathWorker.ts` (CPU), línia per
  * línia on es pot. Si en canvies un, canvia l'altre. Dades: `gpuScene.ts`.
  */
-import { COAT_ROUGHNESS } from "./shading"
+import { BACKDROP_GAIN, COAT_ROUGHNESS } from "./shading"
 
 export const TRACER_WGSL = /* wgsl */ `
 const PI = 3.14159265358979;
 const LUMA = vec3f(0.2126, 0.7152, 0.0722);
 const COAT_ROUGHNESS = ${COAT_ROUGHNESS};
+const BACKDROP_GAIN = ${BACKDROP_GAIN};
 const INTERNAL = 0x80000000u;
 
 struct Params {
@@ -255,6 +256,30 @@ fn sky(d: vec3f) -> vec3f {
   if (P.mode.z == 1u) { c = envSky(d); } else if (P.bg.w > 0.5) { c = daySky(d); } else { c = studioSky(d.y); }
   return c * P.sky.x;
 }
+// Vista per les finestres (CPU: \`backdrop\`): textura P.emit.z − 1 (alfa 0 = cel), amb la llum del cel a l'horitzó.
+fn backdrop(d: vec3f, skyL: vec3f) -> vec3f {
+  let ti = i32(P.emit.z) - 1;
+  let uv = dirToUv(d);
+  let t = info[P.offs.y + u32(ti)];
+  let w = i32(t.y);
+  let h = i32(t.z);
+  let fx = uv.x * f32(w) - 0.5;
+  let fy = uv.y * f32(h) - 0.5;
+  let x0 = i32(floor(fx));
+  let y0 = i32(floor(fy));
+  let ax = fx - floor(fx);
+  let ay = fy - floor(fy);
+  let xa = wrapI(x0, w, 0u);
+  let xb = wrapI(x0 + 1, w, 0u);
+  let ya = wrapI(y0, h, 2u);
+  let yb = wrapI(y0 + 1, h, 2u);
+  let a = mix(mix(texel(t, xa, ya).a, texel(t, xb, ya).a, ax), mix(texel(t, xa, yb).a, texel(t, xb, yb).a, ax), ay);
+  if (!(a > 0.0)) { return skyL; }
+  let c = sampleTex(ti, uv);
+  let hd = normalize(vec3f(d.x, 0.0, d.z) + vec3f(0.0, 0.1, 0.0));
+  let L = dot(sky(hd), LUMA) * BACKDROP_GAIN;
+  return mix(skyL, c * L, a);
+}
 fn envPdf(d: vec3f) -> f32 {
   let uv = dirToUv(d);
   let w = P.envi.x;
@@ -470,7 +495,9 @@ fn trace(o0: vec3f, d0: vec3f) -> vec4f {
         alpha = 0.0;
         break;
       }
-      let L = sky(d);
+      var L = sky(d);
+      // Per un vidre sense haver tocat res: la vista de fora (jardí, mar) davant del cel.
+      if (vertex < 0 && P.emit.z > 0u) { L = backdrop(d, L); }
       var w = 1.0;
       if (vertex >= 0 && !delta) {
         var pn = 0.0;

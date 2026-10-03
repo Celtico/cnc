@@ -150,7 +150,8 @@ export type Carcass = z.infer<typeof CarcassSchema>
 // --- Fronts i zones ----------------------------------------------------------------
 
 export const FrontSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("door"), mode: z.enum(["single", "double"]), hinge: z.enum(["left", "right"]) }),
+  /** `glass`: porta de vidre amb marc de perfil d'alumini (vitrina): no és de CNC (`glassDoor`). */
+  z.object({ kind: z.literal("door"), mode: z.enum(["single", "double"]), hinge: z.enum(["left", "right"]), glass: z.boolean().optional() }),
   z.object({ kind: z.literal("drawers"), n: z.number().int().min(1).max(10), heights: z.array(sizeOrAuto) }),
   z.object({ kind: z.literal("flap"), dir: z.enum(["down", "up"]) }),
   z.object({
@@ -767,7 +768,12 @@ function visibleZone(z: Zone): Zone {
     const heights = f.heights.slice(0, f.n)
     while (heights.length < f.n) heights.push("auto")
     out.front = { ...f, heights }
-  } else if (f?.kind === "door" && f.mode === "double") out.front = { ...f, hinge: "left" }
+  } else if (f?.kind === "door") {
+    const door = { ...f }
+    if (!door.glass) delete door.glass
+    if (door.mode === "double") door.hinge = "left"
+    out.front = door
+  }
   else if (f?.kind === "grille") {
     // Patró: de ranures (amplada i separació) o de forats (Ø i pas); el de l'altre tipus no surt. Amb imants, sense frontisses.
     const p = f.pattern

@@ -14,6 +14,7 @@ import { parseHdr } from "./hdr"
 import { oidnDenoise, oidnFailed, oidnReady } from "./oidn"
 import type { UNet } from "oidn-web"
 import { SKIES, loadSky, readSky, type SkyId } from "./skies"
+import { BACKDROPS, backdropTexture } from "./backdrops"
 import { DEFAULT_RENDER_OPTS, extractScene, photoCamera, type RenderEnv, type RenderOpts, type RenderRoom } from "./sceneData"
 import { aces, agx, bloomBuffer, createDrawScheduler, makeAgxLut, makePowLut, makeSrgbLut, sampleBloom, srgbLut, vignette, type ToneCurve } from "./tonemap"
 
@@ -427,7 +428,10 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
     setElapsed(0)
     setError(null)
     // La càmera de fotògraf (verticals rectes, focal) es fa aquí: l'escena extreta és la del visor.
-    const data: RenderJob = { scene: { ...src.scene, camera: photoCamera(src.scene.camera, o) }, env: envRef.current?.env ?? null, opts: o, w, h }
+    // Vista per les finestres (ambients): el panorama com una textura més (`backdrops.ts`).
+    const view = src.scene.daylight && o.view !== "sky" ? backdropTexture(o.view ?? "garden") : null
+    const scene = { ...src.scene, camera: photoCamera(src.scene.camera, o), ...(view ? { textures: [...src.scene.textures, view], backdrop: src.scene.textures.length } : {}) }
+    const data: RenderJob = { scene, env: envRef.current?.env ?? null, opts: o, w, h }
     // La GPU ha fallat: es fa per CPU i no s'hi torna (fins que es torni a obrir el diàleg, o
     // en canviar de resolució si el problema era la mida).
     const gpuFallback = (message: string, sizeLimit: boolean) => {
@@ -773,6 +777,9 @@ export function RenderDialog({ open, onClose, getScene, name }: { open: boolean;
                       value={room}
                       onChange={setRoom}
                     />
+                  </FormRow>
+                  <FormRow label="Per les finestres" help={`${BACKDROPS.find((b) => b.id === (opts.view ?? "garden"))?.help ?? ""} Només als ambients, a través dels vidres.`}>
+                    <ChoiceChips<string> label="Per les finestres" options={BACKDROPS.map((b) => ({ id: b.id, label: b.label }))} value={opts.view ?? "garden"} onChange={(v) => set({ view: v as RenderOpts["view"] })} />
                   </FormRow>
                 </Sec>
 

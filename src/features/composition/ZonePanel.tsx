@@ -279,6 +279,13 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
               />
             </FormRow>
           )}
+          <FormRow label="Vitrina" help={front.glass ? "Marc de perfil d'alumini negre de 20 mm i vidre de 5 mm, amb frontisses de perfil. No és de CNC: surt a Peces, a «Elements sense nesting», amb les mides per demanar-ho." : undefined}>
+            <Switch.Root size="sm" pt="6px" checked={!!front.glass} onCheckedChange={(e) => onChange({ ...front, glass: e.checked || undefined })}>
+              <Switch.HiddenInput />
+              <Switch.Control />
+              <Switch.Label fontSize="sm">Porta de vidre amb marc</Switch.Label>
+            </Switch.Root>
+          </FormRow>
         </Stack>
       )
     case "drawers":
