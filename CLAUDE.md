@@ -343,6 +343,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   push; al per peça també «Programa cara B: <ref>Volt.xcs») i la ruta («CNC: … → serra (inglets) → cantejadora») van al
   LLEGEIX-ME, al plegable «Després de la CNC» d'Exportar i com a comentaris ASCII a la capçalera (mai missatges a
   l'operari). Cantells amb la numeració de l'app (pendent de confirmar amb el taller).
+- **Avís de calor de la reixeta** (`material-heat`): una reixeta pot ser cobreradiador o decorativa (acanalats), així que
+  diu «si va davant d'un radiador…», un sol cop per mòdul i cap si la reixeta ja és d'un material lacat.
 - **Programa real del taller** (`docs/maestro/samples/taller_U767_Gris_cubanita_19_01.xcs`, TopSolid → Maestro, s'hi va
   mecanitzar; comparació línia a línia a `docs/maestro-xcs.md`). Ja hi som iguals: capçalera (`MachineParameters
   mp=GetMachiningParameters();`, 16777216, `SetPreserveWorkingSequence`, `SetWorkPieceFallPrevention`,
@@ -1075,7 +1077,7 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   fitxer» (espera les preferències). Safari/iOS no ho suporta.
 
 ## PWA
-- **Càrrega a demanda** (`App.tsx`, `React.lazy` + `Suspense`): Editor, Peces, Nesting, Exportar, Foto, Preferències i l'editor d'ambients es carreguen quan s'obren (la barra de l'ambient és a part, `ambients/AmbientTopBar.tsx`). `advancedChunks` només posa al bloc de three el nucli (`three/build`, `@react-three`, `three-stdlib`): els carregadors i exportadors de `three/examples` van amb qui els fa servir. Els fallbacks JS de Draco/Basis no es precachegen. Les textures procedurals que es llegeixen (`getImageData`) fan servir `willReadFrequently`.
+- **Càrrega a demanda** (`App.tsx`, `React.lazy` + `Suspense`): Editor, Peces, Nesting, Exportar, Foto, Preferències i l'editor d'ambients es carreguen quan s'obren (la barra de l'ambient és a part, `ambients/AmbientTopBar.tsx`). `advancedChunks` només posa al bloc de three el nucli (`three/build`, `@react-three`, `three-stdlib`): els carregadors i exportadors de `three/examples` van amb qui els fa servir. React va al seu bloc (`react`, prioritat més alta): si no, entrava al de three i tota l'app carregava three d'entrada. **Res d'entrada importa three**: les galeries carreguen el dibuix de les miniatures amb `import()` (`projects/thumbJobs.ts`, `ambients/ambientRender.ts`; `THUMB_VERSION` és a `viewer/thumbVersion.ts`), `measureGlb` l'importa en pujar un model i `mobleIo` fa `forgetModel` amb `import()`. JS d'entrada ~1,5 MB (430 KB gz), abans 2,5 MB. Els fallbacks JS de Draco/Basis no es precachegen. Les textures procedurals que es llegeixen (`getImageData`) fan servir `willReadFrequently`.
 - **Icones a sang**: quadrat sencer amb el fons `#1a202c`, **sense cantonades rodones ni transparència** (iOS i Android hi
   posen la màscara; si ja és arrodonida, les puntes surten blanques). Font `public/icon.svg` → `pwa-192/512.png`,
   `apple-touch-icon.png` (180); `pwa-maskable-512.png` (`icon-maskable.svg`, la marca al 78 %). El `favicon.svg` sí que és

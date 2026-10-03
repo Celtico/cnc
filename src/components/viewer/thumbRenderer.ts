@@ -20,8 +20,7 @@ export { disposeTree }
 /** 2:1, com les targetes (a l'ordinador, una mica més amples; al mòbil, una mica menys: es retalla poc). */
 const W = 480
 const H = 240
-/** Versió de les miniatures: si canvia la manera de fer-les, es tornen a fer totes. */
-export const THUMB_VERSION = 6
+export { THUMB_VERSION } from "./thumbVersion"
 
 let renderer: WebGLRenderer | null = null
 let env: Texture | null = null

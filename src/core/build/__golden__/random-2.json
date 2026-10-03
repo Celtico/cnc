@@ -574,7 +574,6 @@
    "back-groove",
    "drawer-bottom",
    "grille-open-ratio",
-   "material-heat",
    "same-size"
   ],
   "p": [
@@ -1092,7 +1091,6 @@
    "grille-open-ratio",
    "grille-open-ratio",
    "material-heat",
-   "material-heat",
    "no-side",
    "no-side",
    "no-side",
@@ -1160,7 +1158,6 @@
    "invalid-part",
    "invalid-part",
    "layout",
-   "material-heat",
    "material-heat",
    "mitre",
    "mitre",
@@ -1484,9 +1481,6 @@
    "grille-open-ratio",
    "grille-open-ratio",
    "layout",
-   "material-heat",
-   "material-heat",
-   "material-heat",
    "material-heat",
    "mitre",
    "overlap",

@@ -1234,7 +1234,10 @@ class Builder {
     if (result.openRatio < MIN_OPEN_RATIO) {
       this.warnings.push({ code: "grille-open-ratio", message: `La reixeta només té un ${Math.round(result.openRatio * 100)} % d'àrea oberta (mínim recomanat 40 %).`, zoneId: zone.id, panelId: grille.id })
     }
-    this.warnings.push({ code: "material-heat", message: "Prop d'un radiador: MDF lacat o cantells amb cola PUR (la cola EVA es desenganxa amb la calor).", zoneId: zone.id })
+    // Una reixeta pot ser un cobreradiador (o només decorativa: no se sap): un avís per mòdul, i cap si ja és MDF lacat.
+    if (!/lacat/i.test(grille.material) && !this.warnings.some((w) => w.code === "material-heat")) {
+      this.warnings.push({ code: "material-heat", message: "Reixeta: si va davant d'un radiador, millor MDF lacat o cantells amb cola PUR (la cola EVA es desenganxa amb la calor).", zoneId: zone.id })
+    }
 
     if (hatchLocal) {
       grille.cutouts.push({ kind: "rect", ...hatchLocal, tag: "hatch" })

@@ -1,6 +1,4 @@
-import { Box3, Vector3 } from "three"
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
-import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js"
+import type { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import type { OptimizeReport } from "../components/viewer/optimizeGlbPlan"
 import { db, type UserModel } from "./db"
 
@@ -20,6 +18,8 @@ export async function measureGlb(buffer: ArrayBuffer): Promise<[number, number, 
   // Capçalera binària del glTF: «glTF» als 4 primers bytes.
   const head = new Uint8Array(buffer, 0, Math.min(4, buffer.byteLength))
   if (String.fromCharCode(...head) !== "glTF") throw new Error("No és un fitxer .glb (glTF binari). Exporta'l com a .glb, amb les textures a dins.")
+  // three.js només en pujar un model (no en obrir l'app: `mobleIo` importa aquest fitxer).
+  const [{ Box3, Vector3 }, { GLTFLoader }, { MeshoptDecoder }] = await Promise.all([import("three"), import("three/examples/jsm/loaders/GLTFLoader.js"), import("three/examples/jsm/libs/meshopt_decoder.module.js")])
   loader ??= new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
   let scene
   try {

@@ -15,7 +15,6 @@ import {
 import { DEFAULT_CABINET, newId, type Settings } from "../../core/model"
 import { readComposition } from "../../db/compositionStore"
 import { addPhoto, createProject, db, safeNestOptions, updateProjectPhoto, type Photo, type Project } from "../../db/db"
-import { forgetModel } from "../../components/viewer/models3d"
 import { ensureUserModel, getUserModel } from "../../db/userModels"
 import { downloadBlob } from "../download"
 
@@ -130,7 +129,8 @@ export async function openMobleFile(text: string, settings: Settings, saveSettin
     try {
       const added = await ensureUserModel({ id: m.id, name: m.name, size: m.size, blob: base64ToBlob(m.data, m.mime || "model/gltf-binary"), createdAt: Date.now() })
       // Si abans no hi era, oblida el «no hi és» de la memòria cau.
-      if (added) forgetModel(m.id)
+      // Si el visor ja tenia aquest id a la memòria cau (sense three.js carregat no n'hi ha cap).
+      if (added) void import("../../components/viewer/models3d").then((x) => x.forgetModel(m.id))
     } catch {
       badModels = true
     }

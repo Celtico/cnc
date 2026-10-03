@@ -258,7 +258,6 @@
    "grille-open-ratio",
    "grille-open-ratio",
    "material-heat",
-   "material-heat",
    "mitre",
    "mitre",
    "rail",
@@ -1262,7 +1261,6 @@
    "inset",
    "inset",
    "material-heat",
-   "material-heat",
    "no-side",
    "no-side",
    "same-size",
@@ -1347,7 +1345,6 @@
    "hole-clash",
    "hole-clash",
    "hollow",
-   "material-heat",
    "material-heat",
    "same-size"
   ],

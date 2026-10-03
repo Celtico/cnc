@@ -474,9 +474,6 @@
   "extras": 0,
   "warnings": [
    "material-heat",
-   "material-heat",
-   "material-heat",
-   "material-heat",
    "mitre"
   ],
   "p": [
@@ -1513,7 +1510,6 @@
   "panels": 26,
   "extras": 6,
   "warnings": [
-   "material-heat",
    "material-heat",
    "push",
    "same-size"

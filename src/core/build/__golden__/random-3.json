@@ -86,7 +86,6 @@
    "inset",
    "inset",
    "inset",
-   "material-heat",
    "overlap",
    "overlap",
    "same-size",
@@ -970,7 +969,6 @@
    "grille-open-ratio",
    "grille-open-ratio",
    "hollow",
-   "material-heat",
    "rail",
    "same-size"
   ],
@@ -1525,7 +1523,6 @@
    "hinge",
    "hinge",
    "hinge",
-   "material-heat",
    "material-heat",
    "rail",
    "same-size",

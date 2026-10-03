@@ -41,7 +41,6 @@
    "grille-open-ratio",
    "layout",
    "material-heat",
-   "material-heat",
    "mitre",
    "mitre",
    "rail",
@@ -96,7 +95,6 @@
    "drawer-no-slide",
    "grille-open-ratio",
    "hanging",
-   "material-heat",
    "shelf-span",
    "shelf-span",
    "table"
@@ -896,7 +894,6 @@
    "drawer-box",
    "grille-open-ratio",
    "hole-clash",
-   "material-heat",
    "push",
    "same-size"
   ],
@@ -1054,7 +1051,6 @@
    "invalid-part",
    "invalid-part",
    "layout",
-   "material-heat",
    "material-heat",
    "mitre",
    "mitre",
@@ -1295,7 +1291,6 @@
    "grille-open-ratio",
    "grille-open-ratio",
    "material-heat",
-   "material-heat",
    "mitre",
    "overlap",
    "push",
@@ -1390,9 +1385,7 @@
    "invalid-part",
    "invalid-part",
    "invalid-part",
-   "layout",
-   "material-heat",
-   "material-heat"
+   "layout"
   ],
   "p": [
    "back|trassera|1396x915x8|Contraxapat 4mm|none|e0000|h0|g0|c0|o-|@eeb2f657",

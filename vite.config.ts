@@ -81,7 +81,11 @@ export default defineConfig({
       output: {
         advancedChunks: {
           // Només el nucli de three (no `three/examples`: carregadors i exportadors van amb qui els fa servir, a demanda).
-          groups: [{ name: "three", test: /node_modules[\\/](three[\\/]build|@react-three|three-stdlib)[\\/]/ }],
+          // React a part i abans: si no, three el fa entrar (dependència de @react-three) i tota l'app carrega three d'entrada.
+          groups: [
+            { name: "react", test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/, priority: 20 },
+            { name: "three", test: /node_modules[\\/](three[\\/]build|@react-three|three-stdlib)[\\/]/, priority: 10 },
+          ],
         },
       },
     },
