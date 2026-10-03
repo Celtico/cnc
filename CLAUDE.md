@@ -481,7 +481,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   objectes de referència i models 3D. **Un + a cada grup** (Mòduls · Peces lliures · Objectes de referència · Models 3D; per
   decisió de l'usuari, així es veuen els tipus): demana el nom (`NameDialog`, «Mòdul 3», «Peça 2», «Objecte 1», seleccionat;
   `addElements.ts`) i crea l'element sense més opcions: caixa bàsica, peça de cara, caixa de 600 × 600 × 100. Res de mòduls
-  especials, passacables ni plantilles al +. El + de «Models 3D» obre directament el selector de fitxers (vegeu Visor).
+  especials, passacables ni plantilles al +. **Excepcions** (per decisió de l'usuari): el + d'«Objectes de referència» obre
+  un menú amb els de Preferències › Objectes de referència (els no amagats; `refFromPreset`: de paret, a la seva distància;
+  de terra, estirat; sense fondària, 5 mm) i «En blanc…»; el de «Models 3D», un menú amb «Quin fitxer?»
+  (`MODEL_FORMAT_HELP`: .glb amb les textures a dins, què no serveix i com passar-ho per Blender, mida, unitats, on trobar-ne)
+  i «Triar un fitxer .glb…» (vegeu Visor). `SectionTitle menu`.
   Menú ⋯ per afegir/duplicar/moure/eliminar (manté «Moure amunt/avall», «Moure a l'esquerra/dreta»). **Arrossegar per
   ordenar** (`reorderModule`, `reorderRef`): mòduls dins de la seva fila i objectes; una línia marca on cau. Arrossegar una
   peça lliure sobre la fila d'un grup la hi posa; al costat d'una peça n'agafa el grup; la zona «Treure del grup» surt
@@ -589,7 +593,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     materials amb alfa). **Arbres** (Xicranda, Avet, de debò 19 m) reduïts amb `scripts/polyhaven-tree-to-glb.py` (Blender com
     a mòdul, `pip install bpy`) i comprimits amb meshopt (`npx gltfpack -c`; `GLTFLoader.setMeshoptDecoder`). Es
     precachegen. El render per CPU també retalla les fulles (`RenderMaterial.alphaCut`, `alphaAt`).
-  - **De l'usuari** (sense llista de models al +, per decisió de l'usuari: les plantes de l'app són al catàleg d'Objectes;
+  - **De l'usuari** (sense llista de models al + —només l'explicació del format i «Triar un fitxer .glb…»—, per decisió de l'usuari: les plantes de l'app són al catàleg d'Objectes;
     a l'inspector, «Model» diu el nom i «Canviar» puja un altre `.glb`; `composition/ModelUpload.tsx`): taula Dexie **v5**
     `models` (`UserModel`: id `user-…`, nom, `blob`, mida en mm); `db/userModels.ts` (`addUserModel` valida amb `GLTFLoader` +
     meshopt i mesura; només `.glb` amb les textures a dins; avís si fa més de 15 MB). **S'optimitzen en pujar-los**

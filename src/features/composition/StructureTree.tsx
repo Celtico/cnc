@@ -15,12 +15,13 @@ import {
   LuScissors,
   LuSprout,
   LuTrash2,
+  LuUpload,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcons"
 import { compositionKind, partsOnlyKind, duplicateGroup, removeModule, newGroupName, partGroups, insertModelCopy, insertPartCopy, insertRefCopy, newModelObject, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
 import { NameDialog } from "../../components/NameDialog"
 import { toaster } from "../../components/ui/toaster"
-import { defaultElementName, freePartFor, refFor, type AddKind } from "./addElements"
+import { MODEL_FORMAT_HELP, defaultElementName, freePartFor, refFor, refFromPreset, type AddKind } from "./addElements"
 import { useSettings } from "../settings/SettingsContext"
 import { ORIENT_ICON } from "./partOrient"
 import { zoneLabel } from "./zoneLabel"
@@ -170,6 +171,7 @@ export function StructureTree({
   const modelInput = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const { settings } = useSettings()
+  const refPresets = settings.references.filter((r) => !r.hidden)
   const hasWall = comp.modules.some((m) => rowOf(m) === "wall")
   const rows: { row: "floor" | "wall"; label: string }[] = hasWall
     ? [
@@ -445,7 +447,44 @@ export function StructureTree({
         </HStack>
       )}
 
-      <SectionTitle onAdd={() => setAdding("ref")} addLabel="Afegir objecte de referència">Objectes de referència</SectionTitle>
+      {/* + d'objectes: els de Preferències › Objectes de referència (per decisió de l'usuari) o un en blanc. */}
+      <SectionTitle
+        addLabel="Afegir objecte de referència"
+        menu={
+          <>
+            {refPresets.length > 0 && (
+              <Menu.ItemGroup>
+                <Menu.ItemGroupLabel>De Preferències</Menu.ItemGroupLabel>
+                {refPresets.map((p) => (
+                  <Menu.Item
+                    key={p.id}
+                    value={`preset-${p.id}`}
+                    onClick={() => {
+                      const r = refFromPreset(comp, p)
+                      onChange({ ...comp, references: [...comp.references, r] })
+                      onSelect({ kind: "ref", id: r.id })
+                    }}
+                  >
+                    <LuScan />
+                    <Box flex="1" truncate>
+                      {p.name}
+                    </Box>
+                    <Text as="span" fontSize="xs" color="fg.muted">
+                      {Math.round(p.w)} × {Math.round(p.h)}
+                    </Text>
+                  </Menu.Item>
+                ))}
+              </Menu.ItemGroup>
+            )}
+            {refPresets.length > 0 && <Menu.Separator />}
+            <Menu.Item value="blank" onClick={() => setAdding("ref")}>
+              <LuPlus /> En blanc…
+            </Menu.Item>
+          </>
+        }
+      >
+        Objectes de referència
+      </SectionTitle>
       {comp.references.map((r) => (
         <Row
           key={r.id}
@@ -477,7 +516,32 @@ export function StructureTree({
       ))}
 
       {/* Models 3D (plantes, decoració…): només es veuen; es col·loquen com les peces lliures. */}
-      <SectionTitle onAdd={() => modelInput.current?.click()} addLabel="Pujar un model 3D (.glb)" busy={uploading}>
+      <SectionTitle
+        addLabel="Pujar un model 3D (.glb)"
+        busy={uploading}
+        menu={
+          <>
+            {/* Quin fitxer cal (per decisió de l'usuari: format, extensió, mida…), abans de triar-lo. */}
+            <Menu.ItemGroup>
+              <Menu.ItemGroupLabel>Quin fitxer?</Menu.ItemGroupLabel>
+              <Stack gap={1.5} px={2} pb={2} fontSize="xs" color="fg.muted" lineHeight="1.4">
+                {MODEL_FORMAT_HELP.map(([k, v]) => (
+                  <Text key={k}>
+                    <Text as="span" fontWeight="semibold" color="fg">
+                      {k}:
+                    </Text>{" "}
+                    {v}
+                  </Text>
+                ))}
+              </Stack>
+            </Menu.ItemGroup>
+            <Menu.Separator />
+            <Menu.Item value="upload" onClick={() => modelInput.current?.click()}>
+              <LuUpload /> Triar un fitxer .glb…
+            </Menu.Item>
+          </>
+        }
+      >
         Models 3D
       </SectionTitle>
       {models.map((g) => (
@@ -712,7 +776,29 @@ function RowMenu({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** Títol d'un grup de l'arbre (mòduls, peces lliures, objectes de referència, models 3D) amb el seu + per afegir-ne. */
-function SectionTitle({ children, onAdd, addLabel, busy }: { children: ReactNode; onAdd: () => void; addLabel: string; busy?: boolean }) {
+function SectionTitle({ children, onAdd, addLabel, busy, menu }: { children: ReactNode; onAdd?: () => void; addLabel: string; busy?: boolean; menu?: ReactNode }) {
+  const plus = (
+    <IconButton aria-label={addLabel} title={busy ? "Optimitzant el model…" : addLabel} size="2xs" variant="ghost" onClick={onAdd} disabled={busy} aria-busy={busy}>
+      {busy ? <Spinner size="xs" /> : <LuPlus />}
+    </IconButton>
+  )
+  // Amb `menu`, el + obre un menú (les opcions per afegir-ne); si no, afegeix directament.
+  if (menu)
+    return (
+      <HStack justify="space-between" pt={3} pb={1} px={1}>
+        <SectionLabel>{children}</SectionLabel>
+        <Menu.Root positioning={{ placement: "bottom-end" }}>
+          <Menu.Trigger asChild>{plus}</Menu.Trigger>
+          <Portal>
+            <Menu.Positioner>
+              <Menu.Content maxW="340px" maxH="70vh" overflowY="auto">
+                {menu}
+              </Menu.Content>
+            </Menu.Positioner>
+          </Portal>
+        </Menu.Root>
+      </HStack>
+    )
   return (
     <HStack justify="space-between" pt={3} pb={1} px={1}>
       <SectionLabel>
