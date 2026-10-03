@@ -883,9 +883,12 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   en un JPEG 2:1 de 480 px; cua d'una en una quan el navegador és lliure (`enqueueThumb`; `projects/projectThumbs.ts`;
   `request…Thumb` torna la funció per cancel·lar). Es pinta quan les fotos de textura hi són (`drawWhenReady`; `snapshot` torna
   `null` si se'n baixen); si alguna falla (`photoTextureFailures`), no es desa. Es desa al projecte (`Project.thumb`,
-  `thumbAt`, `thumbV` = `THUMB_VERSION`); les de plantilles, en memòria. Ambients (`ambients/ambientThumbs.ts`): terra,
+  `thumbAt`, `thumbV` = `THUMB_VERSION`); les de plantilles (catàleg, objectes, escenes del catàleg d'ambients), en memòria
+  i a la **Cache Storage** (`projects/thumbStore.ts`, cau `mobles-thumbs-v1`): clau = tipus/id/`THUMB_VERSION`-empremta
+  de la plantilla (`templatePrint`, ids renumerats perquè `newId` canvia cada cop)-empremta dels materials; en desar-ne
+  una s'esborren les velles de la mateixa plantilla. Segona obertura del catàleg: ~6 s → instantani. Ambients (`ambients/ambientThumbs.ts`): terra,
   parets (sense les de davant) i els mobles i objectes, de dalt i de davant, **sense fons** (PNG transparent);
-  `AmbientRow.thumb`; les del catàleg, en memòria (amb les plantilles de les seves referències). **Amb la càmera desada** (`Composition.camera`, `Ambient.camera`) es fa des d'allà (`viewerSize`,
+  `AmbientRow.thumb`; les del catàleg, a la Cache Storage com les plantilles (l'empremta inclou les plantilles de les seves referències). **Amb la càmera desada** (`Composition.camera`, `Ambient.camera`) es fa des d'allà (`viewerSize`,
   `thumbPose`); sense, enquadrament automàtic. `thumbCam` (`cameraSignature`) i `thumbIsStale` la refan si la càmera ha
   canviat; desar la miniatura no toca `updatedAt` ni `edited`. `SnapshotThumb` (2:1, sense fons); sense foto encara, el
   mateix requadre buit (la graella no salta). Cal `scene.updateMatrixWorld(true)` abans de mesurar la caixa.

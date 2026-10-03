@@ -18,9 +18,9 @@ const euros = (n: number) => `${n.toLocaleString("ca-ES")} €`
 /** Targeta d'una plantilla (catàleg, col·leccions, objectes): la miniatura es calcula en muntar-la (al catàleg, en obrir la categoria). */
 export function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?: string; kicker?: string; onPick: (t: Template) => void }) {
   const comp = useMemo(() => t.make(), [t])
-  // Foto 3D feta fora de pantalla (en memòria mentre l'app és oberta); mentrestant, el dibuix.
+  // Foto 3D feta fora de pantalla (desada entre sessions); mentrestant, el dibuix.
   const { settings } = useSettings()
-  const [thumb, setThumb] = useState(() => templateThumb(t.id))
+  const [thumb, setThumb] = useState(() => templateThumb(t.id, comp, settings.materials))
   useEffect(() => (thumb ? undefined : requestTemplateThumb(t.id, () => comp, settings.materials, setThumb)), [t.id, comp, settings.materials, thumb])
   return (
     <GalleryCard

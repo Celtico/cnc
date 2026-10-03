@@ -306,9 +306,9 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
 
 /** Targeta del catàleg: miniatura del plànol moblat (es calcula en obrir el catàleg). */
 function CatalogCard({ t, busy, onPick }: { t: AmbientTemplate; busy: boolean; onPick: () => void }) {
-  // Foto 3D de l'escena amb els mobles de debò (feta fora de pantalla, en memòria); mentrestant, el requadre buit.
+  // Foto 3D de l'escena amb els mobles de debò (feta fora de pantalla, desada entre sessions); mentrestant, el requadre buit.
   const { settings } = useSettings()
-  const [thumb, setThumb] = useState(() => catalogThumb(t.id))
+  const [thumb, setThumb] = useState(() => catalogThumb(t, settings.materials))
   useEffect(() => (thumb ? undefined : requestCatalogThumb(t, settings.materials, setThumb)), [t, thumb, settings.materials])
   return (
     <GalleryCard

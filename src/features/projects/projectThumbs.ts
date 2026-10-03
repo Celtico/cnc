@@ -5,6 +5,7 @@ import { photoTextureFailures, photoTexturesIdle, photoTexturesPending } from ".
 import { preloadModels } from "../../components/viewer/models3d"
 import { compositionOf } from "../../db/compositionStore"
 import { db, type Project } from "../../db/db"
+import { materialsPrint, templatePrint, readThumb, writeThumb } from "./thumbStore"
 
 /**
  * Cua de miniatures 3D dels mobles i objectes: es fan d'una en una quan el navegador està lliure i es desen
@@ -94,47 +95,54 @@ export function requestProjectThumb(p: Project, materials: MaterialPref[]): () =
 }
 
 /**
- * Plantilles (catàleg de botiga, objectes): la miniatura es fa igual però només es guarda en memòria mentre
- * l'app és oberta (no són dades de l'usuari). `onDone` rep la imatge quan és feta.
+ * Plantilles (catàleg de botiga, objectes): la miniatura es fa igual però no és de l'usuari: es guarda en memòria
+ * i a la Cache Storage (`thumbStore`), amb una empremta de la plantilla i dels materials. `onDone` rep la imatge.
  */
 const templateThumbs = new Map<string, string>()
 const templateListeners = new Map<string, Set<(url: string) => void>>()
-export function templateThumb(id: string): string | undefined {
-  return templateThumbs.get(id)
+const templateSig = (comp: Composition, materials: readonly MaterialPref[]) => `${THUMB_VERSION}-${templatePrint(comp)}-${materialsPrint(materials)}`
+export function templateThumb(id: string, comp: Composition, materials: readonly MaterialPref[]): string | undefined {
+  return templateThumbs.get(`${id}|${templateSig(comp, materials)}`)
 }
 export function requestTemplateThumb(id: string, make: () => Composition, materials: MaterialPref[], onDone: (url: string) => void): () => void {
-  const hit = templateThumbs.get(id)
+  const sig = templateSig(make(), materials)
+  const mem = `${id}|${sig}`
+  const hit = templateThumbs.get(mem)
   if (hit) {
     onDone(hit)
     return () => {}
   }
-  const key = `t:${id}`
-  const release = want(key)
+  const key = `t:${mem}`
   // Una altra targeta de la mateixa plantilla (la mateixa a dues categories): també rep la imatge.
-  const listeners = (templateListeners.get(key) ?? new Set<(url: string) => void>())
+  const listeners = templateListeners.get(key) ?? new Set<(url: string) => void>()
   templateListeners.set(key, listeners)
   listeners.add(onDone)
-  const cancel = () => {
-    listeners.delete(onDone)
-    release()
+  const finish = (url: string) => {
+    templateThumbs.set(mem, url)
+    for (const f of templateListeners.get(key) ?? []) f(url)
+    templateListeners.delete(key)
   }
-  if (pending.has(key)) return cancel
-  pending.add(key)
-  queue.push({
-    id: key,
-    run: async () => {
+  let release: (() => void) | undefined
+  let cancelled = false
+  // Primer, la desada d'una altra sessió; si no n'hi ha, a la cua.
+  void readThumb("moble", id, sig).then((saved) => {
+    if (cancelled) return
+    if (saved) return finish(saved)
+    release = enqueueThumb(key, async () => {
       const build = buildComposition(make())
       if (!(await preloadModels(build.models))) return
       const url = await drawWhenReady(() => renderThumb([...build.panels, ...build.extras], materials, undefined, [], build.models))
       if (url) {
-        templateThumbs.set(id, url)
-        for (const f of templateListeners.get(key) ?? []) f(url)
-      }
-      templateListeners.delete(key)
-    },
+        finish(url)
+        void writeThumb("moble", id, sig, url)
+      } else templateListeners.delete(key)
+    })
   })
-  void drain()
-  return cancel
+  return () => {
+    cancelled = true
+    listeners.delete(onDone)
+    release?.()
+  }
 }
 
 /** Afegeix una feina a la cua comuna de miniatures (una cada cop; `key` evita repetir-la). */
