@@ -663,3 +663,93 @@ export function pasteItems(a: Ambient, items: AmbientItem[], offset: number): { 
   const only = groups.size === 1 ? [...groups][0] : undefined
   return { ambient: { ...a, items: [...a.items, ...copies] }, ids: copies.map((c) => c.id), ...(only ? { group: only } : {}) }
 }
+
+/**
+ * Habitacions tancades: les parets encadenades extrem amb extrem (al mm) que tornen al punt de sortida. Cada bucle és el
+ * polígon dels eixos de les parets. Una paret que no tanca res (una paret solta, una terrassa oberta) no hi surt.
+ */
+export function wallLoops(walls: Wall[]): PlanPt[][] {
+  const key = (p: PlanPt) => `${Math.round(p[0])},${Math.round(p[1])}`
+  const at = new Map<string, number[]>()
+  walls.forEach((w, i) => {
+    for (const p of [w.a, w.b]) at.set(key(p), [...(at.get(key(p)) ?? []), i])
+  })
+  const used = new Set<number>()
+  const loops: PlanPt[][] = []
+  for (let s = 0; s < walls.length; s++) {
+    if (used.has(s)) continue
+    const start = walls[s]!
+    const pts: PlanPt[] = [start.a]
+    const chain = [s]
+    let end = start.b
+    let closed = false
+    for (let guard = 0; guard <= walls.length; guard++) {
+      if (key(end) === key(start.a)) {
+        closed = chain.length >= 3
+        break
+      }
+      const here = key(end)
+      const next = (at.get(here) ?? []).find((j) => !chain.includes(j) && !used.has(j))
+      if (next === undefined) break
+      const w = walls[next]!
+      pts.push(end)
+      chain.push(next)
+      end = key(w.a) === here ? w.b : w.a
+    }
+    if (!closed) continue
+    for (const j of chain) used.add(j)
+    loops.push(pts)
+  }
+  return loops
+}
+
+/** Superfície de terra (mm²) de les habitacions tancades, als eixos de les parets (fórmula de l'àrea de Gauss). */
+export function floorArea(walls: Wall[]): number {
+  let total = 0
+  for (const pts of wallLoops(walls)) {
+    let s = 0
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i]!, q = pts[(i + 1) % pts.length]!
+      s += p[0] * q[1] - q[0] * p[1]
+    }
+    total += Math.abs(s) / 2
+  }
+  return total
+}
+
+/** Què és un element de l'ambient per al resum: un moble, un objecte (o bloc) o un moble que ja no hi és. */
+export type AmbientItemKind = "moble" | "object" | "missing"
+
+/** Resum d'un ambient (el «Resum» de l'inspector de l'ambient; el mateix recompte per a qualsevol altre lloc que el digui). */
+export interface AmbientSummary {
+  mobles: number
+  objects: number
+  /** Ids dels mobles enllaçats que ja no hi són (esborrats de la llista). */
+  missing: string[]
+  groups: number
+  walls: number
+  /** Llargada total de les parets (mm, als eixos). */
+  wallLength: number
+  windows: number
+  doors: number
+  glazing: number
+  /** Superfície de terra de les habitacions tancades (mm², als eixos); 0 si no n'hi ha cap. */
+  area: number
+}
+
+export function ambientSummary(a: Ambient, kindOf: (it: AmbientItem) => AmbientItemKind): AmbientSummary {
+  const kinds = a.items.map((it) => [it, kindOf(it)] as const)
+  const openings = a.walls.flatMap((w) => w.openings ?? [])
+  return {
+    mobles: kinds.filter(([, k]) => k === "moble").length,
+    objects: kinds.filter(([, k]) => k === "object").length,
+    missing: kinds.filter(([, k]) => k === "missing").map(([it]) => it.id),
+    groups: new Set(a.items.map((i) => i.group).filter(Boolean)).size,
+    walls: a.walls.length,
+    wallLength: a.walls.reduce((n, w) => n + wallLength(w), 0),
+    windows: openings.filter((o) => o.kind === "window").length,
+    doors: openings.filter((o) => o.kind === "door").length,
+    glazing: openings.filter((o) => o.kind === "glazing").length,
+    area: floorArea(a.walls),
+  }
+}
