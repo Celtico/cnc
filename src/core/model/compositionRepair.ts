@@ -31,6 +31,7 @@ const LABELS: Record<string, string> = {
   joinery: "Encaixos",
   scene: "Acabats de l'escena",
   camera: "Càmera",
+  hardwarePlacements: "Ferratge col·locat",
 }
 
 /** Nom llegible d'un element per a l'avís: «Mòdul «Baix»», «Peça lliure «Tauler» (2)»… */

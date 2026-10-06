@@ -2,11 +2,12 @@ import type { PickedFile } from "../../components/pickedFiles"
 import { listZip, readZipEntry } from "../../core/file/zip"
 import { groupHettich, hettichArticle, hettichFileKind, type HettichArticle, type HettichFile } from "../../core/import/hettich"
 import { articleItem, pairImportedBatch, proposalPlan, proposeArticle } from "../../core/import/importItem"
-import type { HardwareProposal } from "../../core/import/proposal"
+import { modelProposal, type HardwareProposal } from "../../core/import/proposal"
 import { stepFeatures } from "../../core/import/stepGeometry"
 import { readDxf } from "../../core/import/dxf"
+import { hasMachiningLayers, machiningFromDxf, partFromFileName } from "../../core/import/dxfMachining"
 import { viewFromDxf, type HardwareView, type ViewName } from "../../core/import/views"
-import { newId, type HardwareItem } from "../../core/model"
+import { newId, partKindOf, type GenOp, type HardwareItem } from "../../core/model"
 import { newHardwareAssetId, putHardwareAsset } from "../../db/hardwareAssets"
 
 /**
@@ -123,11 +124,34 @@ export async function importArticles(src: ImportSource, articles: HettichArticle
             notes.push(`Vista ${kind}: ${e instanceof Error ? e.message : String(e)}`)
           }
         }
+        // DXF per peça amb les capes de mecanitzat del taller (`<ref>_porta.dxf`…): mecanitzats exactes, que manen sobre
+        // els que s'endevinen del STEP (`dxfMachining.ts`).
+        const machining: GenOp[] = []
+        for (const f of a.files.filter((x) => x.kind === "other" && /\.dxf$/i.test(x.path))) {
+          try {
+            const drawing = readDxf(latin1(await src.read(f.path)))
+            if (!hasMachiningLayers(drawing)) continue
+            const part = partFromFileName(f.path)
+            if (!part) {
+              notes.push(`${baseName(f.path)}: no diu de quina peça és (_porta, _lateral, _tapa…): llegeix-lo a l'editor (Mecanitzats › Llegir un DXF).`)
+              continue
+            }
+            const got = machiningFromDxf(drawing, part, `dxf${machining.length}`)
+            machining.push(...got.ops)
+            notes.push(`${baseName(f.path)}: ${got.ops.length} mecanitzats exactes (${partKindOf(part).label.toLowerCase()}).`, ...got.notes)
+          } catch (e) {
+            notes.push(`${baseName(f.path)}: ${e instanceof Error ? e.message : String(e)}`)
+          }
+        }
         const asset = newHardwareAssetId()
         await putHardwareAsset({ id: asset, name: a.label, ...(glb ? { glb } : {}), views, createdAt: Date.now() })
-        const proposal: HardwareProposal = { ...p, notes: [...p.notes, ...notes] }
+        const fromDxf = machining.length > 0 && p.kind !== "model"
+        const proposal: HardwareProposal = fromDxf
+          ? { ...modelProposal(null, []), frame: p.frame, bbox: p.bbox, notes: [...p.notes, "Els forats del STEP no es fan servir: manen els mecanitzats exactes del DXF (es col·loca a mà al moble).", ...notes] }
+          : { ...p, notes: [...p.notes, ...notes] }
         const extras = { id: newId("hw"), asset, files: a.files.map((f) => baseName(f.path)), ...(points ? { points } : {}) }
-        items.push(articleItem(proposal, a, base, extras))
+        const item = articleItem(proposal, a, base, extras)
+        items.push(machining.length ? { ...item, machining } : item)
       } catch (e) {
         problems.push(`${a.article}: ${e instanceof Error ? e.message : String(e)}`)
       }

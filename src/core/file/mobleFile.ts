@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { CompositionSchema, materialRefNames, usesImportedHardware, migrateFlatPack, migrateRuns, RefPresetSchema, repairComposition, repairValue, resolveMaterialAlias, type Composition, type MaterialPref, type RefPreset } from "../model"
+import { CompositionSchema, materialRefNames, usesHardwarePlacements, usesImportedHardware, migrateFlatPack, migrateRuns, RefPresetSchema, repairComposition, repairValue, resolveMaterialAlias, type Composition, type MaterialPref, type RefPreset } from "../model"
 import { NestOptionsSchema, type NestOptions } from "../nesting/nest"
 
 /**
@@ -14,8 +14,21 @@ export const MOBLE_FORMAT = "mobles-cnc"
  * (que només llegeix la v1) els trauria en silenci i la frontissa pendent foradaria; amb la v2, la rebutja («Fitxer d'una
  * versió més nova»). Un moble sense importats es desa com a **v1** (`MOBLE_BASE_VERSION`) i el poden obrir les d'abans.
  */
-export const MOBLE_VERSION = 2
+export const MOBLE_VERSION = 3
 export const MOBLE_BASE_VERSION = 1
+/** v2: porta ferratges importats (i cap col·locat a mà). */
+export const MOBLE_IMPORTED_VERSION = 2
+/**
+ * **v3** = porta ferratges col·locats a mà (`Composition.hardwarePlacements`, generador de mecanitzats): una app d'abans
+ * els trauria en silenci (el moble sortiria sense les ranures i forats del ferratge); amb la v3, el rebutja.
+ */
+export const MOBLE_PLACEMENTS_VERSION = 3
+
+/** La versió amb què es desa una composició: la més baixa que la llegeix sencera. */
+export function mobleVersionFor(composition: unknown): 1 | 2 | 3 {
+  if (usesHardwarePlacements(composition)) return MOBLE_PLACEMENTS_VERSION
+  return usesImportedHardware(composition) ? MOBLE_IMPORTED_VERSION : MOBLE_BASE_VERSION
+}
 
 const mm = z.number().finite()
 const Pt = z.tuple([mm, mm])
@@ -78,7 +91,7 @@ export type FileModel = z.infer<typeof FileModelSchema>
 
 export const MobleFileSchema = z.object({
   format: z.literal(MOBLE_FORMAT),
-  version: z.union([z.literal(MOBLE_BASE_VERSION), z.literal(MOBLE_VERSION)]),
+  version: z.union([z.literal(MOBLE_BASE_VERSION), z.literal(MOBLE_IMPORTED_VERSION), z.literal(MOBLE_PLACEMENTS_VERSION)]),
   exportedAt: z.string(),
   /** "plantilla" si s'ha exportat des de les plantilles; en obrir-lo es proposa afegir-lo com a plantilla. */
   kind: z.enum(["moble", "plantilla"]).optional(),
@@ -135,8 +148,8 @@ export function buildMobleFile(input: MobleInput): MobleFile {
   const models = (input.models ?? []).filter((m) => used.has(m.id))
   return {
     format: MOBLE_FORMAT,
-    // Només els que porten ferratges importats són v2 (les apps d'abans no els han d'obrir).
-    version: usesImportedHardware(input.composition) ? MOBLE_VERSION : MOBLE_BASE_VERSION,
+    // Només els que porten ferratges importats (v2) o col·locats a mà (v3) pugen de versió (les apps d'abans no els han d'obrir).
+    version: mobleVersionFor(input.composition),
     exportedAt: input.exportedAt ?? new Date().toISOString(),
     ...(input.kind === "plantilla" ? { kind: "plantilla" as const } : {}),
     project: {
@@ -173,8 +186,11 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v)
 }
 
-/** Migracions per versió: cada pas puja una versió. v1 → v2 és additiu (ferratges importats): res a fer. */
-const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string, unknown>> = { 1: (raw) => raw }
+/**
+ * Migracions per versió: cada pas puja una versió. v1 → v2 (ferratges importats) i v2 → v3 (ferratges col·locats a mà)
+ * són additius: res a fer.
+ */
+const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string, unknown>> = { 1: (raw) => raw, 2: (raw) => raw }
 
 /** Llegeix un `.moble`: valida, migra si és d'una versió anterior. Errors en català. */
 export function parseMobleFile(text: string): MobleParse {
