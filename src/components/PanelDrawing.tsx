@@ -13,6 +13,7 @@ export function PanelDrawing({
   caption = true,
   crop,
   dims,
+  underlay,
 }: {
   panel: Panel
   /** Sense la línia de sota (nom, mides i forats): miniatures. */
@@ -21,6 +22,8 @@ export function PanelDrawing({
   crop?: { x: number; y: number; w: number; h: number }
   /** Cotes del primer forat als cantells (el detall dels ferratges). */
   dims?: boolean
+  /** Dibuix de fons (coordenades de la peça, polilínies planes [x0, y0, x1, y1, …]): la vista d'un ferratge importat. */
+  underlay?: number[][]
 }) {
   const { length: L, width: W } = panel
   const pad = Math.max(L, W) * 0.04
@@ -56,6 +59,13 @@ export function PanelDrawing({
               strokeDasharray={g.face === "B" ? `${stroke * 6} ${stroke * 4}` : undefined}
             />
           ))}
+          {underlay && (
+            <g fill="none" stroke="var(--chakra-colors-fg-muted)" strokeWidth={stroke * 0.6} data-testid="panel-underlay">
+              {underlay.map((l, i) => (
+                <polyline key={`u${i}`} points={l.map((v, k) => (k % 2 ? `${v} ` : `${v},`)).join("")} />
+              ))}
+            </g>
+          )}
           {panel.holes.map((h, i) => (
             <circle
               key={`h${i}`}
@@ -63,6 +73,7 @@ export function PanelDrawing({
               cy={h.y}
               r={h.diameter / 2}
               fill={h.face === "edge" ? "none" : "var(--chakra-colors-wood-fg)"}
+              fillOpacity={underlay ? 0.45 : undefined}
               stroke="currentColor"
               strokeWidth={stroke}
               strokeDasharray={h.face === "edge" ? `${stroke * 3} ${stroke * 3}` : undefined}

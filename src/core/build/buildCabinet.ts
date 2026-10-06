@@ -371,6 +371,8 @@ export function normalizePanel(p: Panel): Panel {
       const m = rot(h)
       return h.edge ? { ...m, edge: edgeMap[h.edge] } : m
     }),
+    // Ferratges importats (només visuals): el mateix gir, també la direcció v.
+    ...(p.fittings ? { fittings: p.fittings.map((f) => ({ ...rot(f), v: [f.v[1], -f.v[0]] as [number, number] })) } : {}),
     grooves: p.grooves.map((g) => ({
       ...g,
       x: g.y,

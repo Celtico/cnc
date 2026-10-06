@@ -149,6 +149,14 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
     )
   }
 
+  // Un ferratge importat confirmat (o desconfirmat): els mobles desats amb la còpia d'abans passen a la nova.
+  const confirmedHw = (before: HardwareItem, after: HardwareItem, hardwareLibrary: HardwareItem[]) => {
+    const valid = SettingsSchema.safeParse({ ...draft, hardwareLibrary })
+    void replaceHardwareEverywhere(before, after, valid.success ? () => save(valid.data) : undefined).then((n) => {
+      if (n) toaster.create({ title: `«${after.name}» ${after.imported?.confirmed ? "confirmat" : "sense confirmar"}`, description: `${n} ${n === 1 ? "moble actualitzat" : "mobles actualitzats"}.`, type: "info" })
+    })
+  }
+
   const doExport = () => downloadText(settingsToJson(validation.success ? validation.data : draft), "mobles-preferencies.json", "application/json")
   const doImport = async (file: File | undefined) => {
     if (!file) return
@@ -291,7 +299,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
           </Pane>
 
           <Pane id="hardware" wide title="Ferratges" icon={LuHammer} desc="Frontisses, guies, espigues, imants i tiradors: els seus forats i quin fan servir els mòduls nous." onReset={() => setReset({ key: "hardwareLibrary", label: "Ferratges", note: "Torna la biblioteca inicial (els ferratges afegits es perden) i els per defecte. Els mobles fets porten la seva còpia: no canvien." })}>
-            <HardwareList items={draft.hardwareLibrary} defaults={draft.hardwareDefaults} onChange={(hardwareLibrary) => set("hardwareLibrary", hardwareLibrary)} onDefaults={(hardwareDefaults) => set("hardwareDefaults", hardwareDefaults)} onDelete={setDeletingHw} />
+            <HardwareList items={draft.hardwareLibrary} defaults={draft.hardwareDefaults} onChange={(hardwareLibrary) => set("hardwareLibrary", hardwareLibrary)} onDefaults={(hardwareDefaults) => set("hardwareDefaults", hardwareDefaults)} onDelete={setDeletingHw} onConfirmed={confirmedHw} />
           </Pane>
 
           <Pane
