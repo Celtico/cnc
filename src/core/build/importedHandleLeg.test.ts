@@ -5,7 +5,7 @@ import { modelProposal, type HardwareProposal } from "../import/proposal"
 import { DEFAULT_HARDWARE_KIT, HardwareItemSchema, ModuleSchema, defaultModule, usesImportedHardware, visibleModule, type HardwareItem, type Module, type Panel, type Zone } from "../model"
 import { buildModule } from "./buildModule"
 import { toWorld } from "./geometry"
-import { hardwareMount, mountPlan } from "./hardwareMount"
+import { hardwareMount, mountCamera, mountPlan } from "./hardwareMount"
 import { hardwarePreview } from "./hardwarePreview"
 
 /**
@@ -216,6 +216,12 @@ describe("pota importada", () => {
     expect(bottom.holes.filter((h) => h.tag === "leg")).toHaveLength(16)
     expect(m.proposedTags).toEqual(["leg"])
     expect(mountPlan(m)).not.toBeNull()
+    // La càmera (editor i miniatura): el mig de la pota, de davant i just per sota de la base, prou lluny per veure-la.
+    const c = mountCamera(m)
+    expect(c.target[1]).toBeCloseTo(m.focus!.at[1] - 50, 6)
+    expect(c.dir[2]).toBeGreaterThan(0.8)
+    expect(Math.abs(c.dir[1])).toBeLessThan(0.1)
+    expect(c.dist).toBeGreaterThanOrEqual(480)
   })
 })
 

@@ -59,45 +59,50 @@ export function requestProjectThumb(p: Project, materials: MaterialPref[]): () =
 }
 
 /**
- * Plantilles (catàleg de botiga, objectes): la miniatura es fa igual però no és de l'usuari: es guarda en memòria
- * i a la Cache Storage (`thumbStore`), amb una empremta de la plantilla i dels materials. `onDone` rep la imatge.
+ * Miniatures que no són de l'usuari (plantilles del catàleg, objectes, escenes del catàleg d'ambients, ferratges de
+ * Preferències): es guarden en memòria i a la Cache Storage (`thumbStore`) amb `sig`, una empremta de tot el que les
+ * pinta (versió, contingut, materials). La mateixa (dues targetes iguals) es fa un sol cop i totes la reben.
  */
-const templateThumbs = new Map<string, string>()
-const templateListeners = new Map<string, Set<(url: string) => void>>()
-const templateSig = (comp: Composition, materials: readonly MaterialPref[]) => `${THUMB_VERSION}-${templatePrint(comp)}-${materialsPrint(materials)}`
-export function templateThumb(id: string, comp: Composition, materials: readonly MaterialPref[]): string | undefined {
-  return templateThumbs.get(`${id}|${templateSig(comp, materials)}`)
+const storedThumbs = new Map<string, string>()
+const storedListeners = new Map<string, Set<(url: string) => void>>()
+const storedKey = (kind: string, id: string, sig: string) => `${kind}|${id}|${sig}`
+
+/** La miniatura ja feta en aquesta sessió (o `undefined`). */
+export function storedThumb(kind: string, id: string, sig: string): string | undefined {
+  return storedThumbs.get(storedKey(kind, id, sig))
 }
-export function requestTemplateThumb(id: string, make: () => Composition, materials: MaterialPref[], onDone: (url: string) => void): () => void {
-  const sig = templateSig(make(), materials)
-  const mem = `${id}|${sig}`
-  const hit = templateThumbs.get(mem)
+
+/**
+ * Demana la miniatura `kind`/`id` amb l'empremta `sig`: la de memòria, la desada d'una altra sessió o, si no n'hi ha, a
+ * la cua comuna (`render`, `null` si no surt: no es desa). `onDone` rep la imatge; la funció que torna la cancel·la.
+ */
+export function requestStoredThumb(kind: string, id: string, sig: string, render: () => Promise<string | null>, onDone: (url: string) => void): () => void {
+  const key = storedKey(kind, id, sig)
+  const hit = storedThumbs.get(key)
   if (hit) {
     onDone(hit)
     return () => {}
   }
-  const key = `t:${mem}`
-  // Una altra targeta de la mateixa plantilla (la mateixa a dues categories): també rep la imatge.
-  const listeners = templateListeners.get(key) ?? new Set<(url: string) => void>()
-  templateListeners.set(key, listeners)
+  const listeners = storedListeners.get(key) ?? new Set<(url: string) => void>()
+  storedListeners.set(key, listeners)
   listeners.add(onDone)
   const finish = (url: string) => {
-    templateThumbs.set(mem, url)
-    for (const f of templateListeners.get(key) ?? []) f(url)
-    templateListeners.delete(key)
+    storedThumbs.set(key, url)
+    for (const f of storedListeners.get(key) ?? []) f(url)
+    storedListeners.delete(key)
   }
   let release: (() => void) | undefined
   let cancelled = false
   // Primer, la desada d'una altra sessió; si no n'hi ha, a la cua.
-  void readThumb("moble", id, sig).then((saved) => {
+  void readThumb(kind, id, sig).then((saved) => {
     if (cancelled) return
     if (saved) return finish(saved)
     release = enqueueThumb(key, async () => {
-      const url = await (await jobs()).renderTemplateThumb(make(), materials)
+      const url = await render()
       if (url) {
         finish(url)
-        void writeThumb("moble", id, sig, url)
-      } else templateListeners.delete(key)
+        void writeThumb(kind, id, sig, url)
+      } else storedListeners.delete(key)
     })
   })
   return () => {
@@ -105,6 +110,15 @@ export function requestTemplateThumb(id: string, make: () => Composition, materi
     listeners.delete(onDone)
     release?.()
   }
+}
+
+/** Plantilles (catàleg de botiga, objectes): la miniatura es fa igual que la d'un moble, amb l'empremta de la plantilla. */
+const templateSig = (comp: Composition, materials: readonly MaterialPref[]) => `${THUMB_VERSION}-${templatePrint(comp)}-${materialsPrint(materials)}`
+export function templateThumb(id: string, comp: Composition, materials: readonly MaterialPref[]): string | undefined {
+  return storedThumb("moble", id, templateSig(comp, materials))
+}
+export function requestTemplateThumb(id: string, make: () => Composition, materials: MaterialPref[], onDone: (url: string) => void): () => void {
+  return requestStoredThumb("moble", id, templateSig(make(), materials), async () => (await jobs()).renderTemplateThumb(make(), materials), onDone)
 }
 
 /** Afegeix una feina a la cua comuna de miniatures (una cada cop; `key` evita repetir-la). */
@@ -134,7 +148,7 @@ async function drain() {
       // La targeta que la volia ja no hi és (s'ha tancat l'acordió, s'ha canviat de pàgina): se salta.
       if (!wanted.has(job.id)) {
         pending.delete(job.id)
-        templateListeners.delete(String(job.id))
+        storedListeners.delete(String(job.id))
         continue
       }
       await idle()

@@ -44,9 +44,10 @@ const ROLE_COLOR: Record<PanelRole, number> = {
 /**
  * Escena three.js en METRES (per a AR / visors GLB) a partir de les peces. Amb `real` (al
  * navegador): els materials i les textures del visor, i els tiradors; sense (tests, node):
- * colors per tipus de peça.
+ * colors per tipus de peça. `fitted`: qui la demana hi posa els ferratges importats (miniatures de Ferratges): els
+ * fronts amb un tirador importat no porten la barra genèrica (com al visor).
  */
-export function buildScene(panels: Panel[], name: string, real?: { materials: MaterialPref[]; make: (p: Panel, m: MaterialPref[]) => { geometry: BufferGeometry; material: MeshStandardMaterial[] } }, models: ModelObject[] = []): Scene {
+export function buildScene(panels: Panel[], name: string, real?: { materials: MaterialPref[]; make: (p: Panel, m: MaterialPref[]) => { geometry: BufferGeometry; material: MeshStandardMaterial[] }; fitted?: boolean }, models: ModelObject[] = []): Scene {
   const scene = new Scene()
   scene.name = name
   const root = new Group()
@@ -70,7 +71,7 @@ export function buildScene(panels: Panel[], name: string, real?: { materials: Ma
       // El render arrodoneix les arestes dels taulers (`sceneData`).
       mesh.userData.bevel = true
       holder.add(mesh)
-      for (const h of handleMeshes(p)) holder.add(h)
+      if (!(real.fitted && p.fittings?.some((f) => f.kind === "handle"))) for (const h of handleMeshes(p)) holder.add(h)
       root.add(holder)
       continue
     }

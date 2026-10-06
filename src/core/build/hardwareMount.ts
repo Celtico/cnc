@@ -32,6 +32,11 @@ export interface HardwareMount {
   /** Avisos del motor que toquen aquest ferratge (p. ex. una placa amb un forat fora del lateral). */
   warnings: string[]
   error?: string
+  /**
+   * On mira la càmera de «Com va muntat» si no és el forat principal (`mountCamera`): una pota, el mig de la pota des de
+   * prou lluny per veure-la sencera, de terra a la base (`dist`, mm).
+   */
+  aim?: { at: Vec3; dist: number }
   /** Ferratge «només 3D» (motor `model`): cap peça ni forat, només el model (o la seva caixa) per veure'l. */
   model?: { asset?: string; bbox?: { min: Vec3; max: Vec3 } }
 }
@@ -169,13 +174,18 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
       const score = item.engine === "cup" || item.engine === "plate" ? (h.tag === "hinge" ? at[1] : Infinity) : Math.abs(at[1] - rc.size.height / 2) + (p.role === "side" ? 0 : 0.1)
       if (score < best) {
         best = score
-        // Un tirador es mira des de fora del front (on va el tirador), no des de la cara A.
-        focus = { panelId: p.id, hole: h, at, normal: worldDir(p, e.normal), ...(item.engine === "barHandle" ? { view: [0, 0, 1] as Vec3 } : {}) }
+        // Un tirador es mira des de fora del front (on va el tirador), no des de la cara A; una pota, de davant i just
+        // per sota de la base (es veu dreta sobre el terra amb la placa a sota de la base), no des de sota.
+        const view: Vec3 | undefined = item.engine === "barHandle" ? [0, 0, 1] : item.engine === "leg" ? [0, -0.5, Math.sqrt(0.75)] : undefined
+        focus = { panelId: p.id, hole: h, at, normal: worldDir(p, e.normal), ...(view ? { view } : {}) }
       }
     }
   }
   const door = panels.find((p) => p.role === "door")
   const side = panels.find(isLeftSide)
+  // Una pota va de la cara de sota de la base (el forat principal) cap avall, l'alçada de la base.
+  const legH = legBase?.kind === "legs" ? legBase.height : 0
+  const aim = item.engine === "leg" && focus ? { at: [focus.at[0], focus.at[1] - legH / 2, focus.at[2]] as Vec3, dist: Math.max(480, legH * 2.3) } : undefined
   // Els avisos del ferratge (el mòdul d'exemple de les potes ja té l'alçada de la pota: no avisa de l'alçada).
   const relevant = new Set(["hinge", "hardware", "handle"])
   return {
@@ -184,10 +194,33 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
     proposedTags: pending ? tags : [],
     tags,
     focus,
+    ...(aim ? { aim } : {}),
     ...((item.engine === "cup" || item.engine === "plate") && door && side ? { hinge: { doorId: door.id, sideId: side.id } } : {}),
     size: rc.size,
     warnings: build.warnings.filter((w) => relevant.has(w.code)).map((w) => w.message),
   }
+}
+
+/**
+ * La càmera de «Com va muntat» (el 3D de l'editor en obrir-lo i la miniatura de la targeta, la mateixa vista): mira
+ * el forat principal des de la cara on entra (a les frontisses, des de dins del moble, on es veuen la cassoleta i la
+ * placa; un tirador, des de fora del front), una mica de costat i de dalt; una pota, sencera i de davant (`aim`). Un
+ * «només 3D» mira el centre del model des de prou lluny per veure'l sencer (fov 32°). `target` i `dist` en mm; `dir` unitari, del punt mirat cap a la càmera.
+ */
+export function mountCamera(m: HardwareMount): { target: Vec3; dir: Vec3; dist: number } {
+  const n = m.focus?.view ?? m.focus?.normal ?? ([0, 0, 1] as Vec3)
+  const hinge = !!m.hinge
+  // De costat i de dalt: a les frontisses, cap a dins del moble (+X, lluny del lateral), si no, cap a la dreta.
+  const side: Vec3 = [hinge ? 0.75 : 0.6, hinge ? 0.85 : 0.6, Math.abs(n[2]) > 0.7 ? 0 : 0.5]
+  const k = side[0] * n[0] + side[1] * n[1] + side[2] * n[2]
+  const d: Vec3 = [n[0] + side[0] - k * n[0], n[1] + side[1] - k * n[1], n[2] + side[2] - k * n[2]]
+  const len = Math.hypot(d[0], d[1], d[2]) || 1
+  const dir: Vec3 = [d[0] / len, d[1] / len, d[2] / len]
+  const b = m.model?.bbox
+  const span = b ? Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]) : 0
+  const target: Vec3 = m.aim?.at ?? (m.focus ? m.focus.at : b ? [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2] : [0, 0, 0])
+  const dist = m.aim?.dist ?? (span > 0 && !m.panels.length ? Math.max(150, span * 2) : hinge ? 420 : 480)
+  return { target, dir, dist }
 }
 
 // --- El pla (vista de dalt, secció a l'alçada del forat principal) ----------------------------------------------------
@@ -273,7 +306,7 @@ const BUILTIN_HINGE = (d: number) => ({ min: [-10, -Math.max(20, d) / 2, 0] as V
  * ferratge projectat i les cotes (a les frontisses: cassoleta al cantell, C, recobriment, joc, fondària i la filera de
  * la placa al lateral). Tot surt de les peces del motor.
  */
-export function mountPlan(m: HardwareMount, opts: { dims?: boolean } = {}): MountPlan | null {
+export function mountPlan(m: HardwareMount): MountPlan | null {
   if (!m.focus) return null
   const Y0 = m.focus.at[1]
   const band = 40
@@ -411,7 +444,7 @@ export function mountPlan(m: HardwareMount, opts: { dims?: boolean } = {}): Moun
     for (const x of [rc.x0, rc.x1]) if ((x < x0 && x0 - x < 70) || (x > x1 && x - x1 < 70)) [x0, x1] = [Math.min(x0, x - 12), Math.max(x1, x + 12)]
     for (const z of [rc.z0, rc.z1]) if ((z < z0 && z0 - z < 70) || (z > z1 && z - z1 < 70)) [z0, z1] = [Math.min(z0, z - 12), Math.max(z1, z + 12)]
   }
-  for (const d of opts.dims === false ? [] : dims) {
+  for (const d of dims) {
     const vx = d.b[0] - d.a[0]
     const vz = d.b[1] - d.a[1]
     const len = Math.hypot(vx, vz) || 1
@@ -424,10 +457,9 @@ export function mountPlan(m: HardwareMount, opts: { dims?: boolean } = {}): Moun
       z1 = Math.max(z1, q[1] + oz + 8)
     }
   }
-  // Com a mínim 140 × 100 mm (sense cotes, 80 × 55: la miniatura) i sense ser més alt que ample del compte.
-  const tight = opts.dims === false
-  const w = Math.max(tight ? 80 : 140, x1 - x0)
-  const h = Math.max(tight ? 55 : 100, z1 - z0, w / 2.2)
+  // Com a mínim 140 × 100 mm i sense ser més alt que ample del compte.
+  const w = Math.max(140, x1 - x0)
+  const h = Math.max(100, z1 - z0, w / 2.2)
   const cxv = (x0 + x1) / 2
   const czv = (z0 + z1) / 2
   return { sectionY: Y0, rects, holes, fittings, dims, view: { x: r(cxv - w / 2), z: r(czv - h / 2), w: r(w), h: r(h) } }

@@ -1,4 +1,4 @@
-import { CanvasTexture, MirroredRepeatWrapping, NoColorSpace, RepeatWrapping, SRGBColorSpace, TextureLoader, type Material, type Mesh, type MeshStandardMaterial, type Object3D, type Texture } from "three"
+import { CanvasTexture, MirroredRepeatWrapping, NoColorSpace, RepeatWrapping, SRGBColorSpace, TextureLoader, type InstancedMesh, type Material, type Mesh, type MeshStandardMaterial, type Object3D, type Texture } from "three"
 import { TEXTURE_CACHE_MAX } from "./deviceLimits"
 import { WOOD_PRESETS, materialCoat, materialSheen, type Finish, type MaterialPref, type WoodGen } from "../../core/model"
 
@@ -155,6 +155,8 @@ export function disposeTree(root: Object3D): void {
   root.traverse((o) => {
     const m = o as Mesh
     if (!m.isMesh || m.userData.sharedModel) return
+    // Les instàncies (marques dels forats de les miniatures de Ferratges) tenen el seu buffer a la GPU.
+    if ((m as InstancedMesh).isInstancedMesh) (m as InstancedMesh).dispose()
     m.geometry?.dispose()
     const mats = (Array.isArray(m.material) ? m.material : [m.material]) as Material[]
     for (const mat of new Set(mats)) disposeMaterial(mat)

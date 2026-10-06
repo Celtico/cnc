@@ -51,9 +51,13 @@ import { GalleryCard } from "../projects/GalleryCard"
 import { GALLERY_COLS, fold } from "../projects/galleryGrid"
 import { HARDWARE_ICONS } from "./hardwareIcons"
 import { HardwareMountPlan } from "./HardwareMountPlan"
+import { hardwareThumb, hardwareThumbSig, requestHardwareThumb } from "./hardwareThumbs"
+import { SnapshotThumb } from "../../components/SnapshotThumb"
 import { useSessionString } from "./useSessionString"
 import { ThicknessChips } from "./MaterialBits"
 import { PaneHeadContext } from "./paneHead"
+
+const NO_MATERIALS: MaterialPref[] = []
 
 /** Categories obertes (es recorden durant la sessió). */
 const OPEN_KEY = "mobles:md-open:hardware"
@@ -221,6 +225,7 @@ export function HardwareList({
   }
   // El mòdul d'exemple del muntatge: com un de nou (tauler, gruix, jocs i ferratges per defecte de les preferències).
   const mountBase = useMemo(() => (settings ? applySettingsToModule(settings, defaultModule("mount", "Muntatge")) : undefined), [settings])
+  const materials = settings?.materials ?? NO_MATERIALS
   return (
     <Stack gap={4} minW={0}>
       {head}
@@ -266,7 +271,7 @@ export function HardwareList({
                   return (
                     <GalleryCard
                       key={x.id}
-                      thumb={<HardwareThumb item={x} />}
+                      thumb={<HardwareThumb item={x} base={mountBase} materials={materials} />}
                       title={x.name}
                       kicker={[x.maker, x.ref].filter(Boolean).join(" · ") || undefined}
                       description={hardwareSummary(x)}
@@ -307,7 +312,7 @@ export function HardwareList({
         dirty={dirty}
         focusSelector={it !== null && justAdded === it.id ? "[data-hardware-name]" : null}
       >
-        {it && <HardwareStage item={it} base={mountBase} materials={settings?.materials ?? []} />}
+        {it && <HardwareStage item={it} base={mountBase} materials={materials} />}
         {it && (
           <HardwareCard
             key={it.id}
@@ -362,33 +367,16 @@ function countKinds(items: HardwareItem[]): string {
 }
 
 /**
- * Miniatura de la targeta (sense text): les frontisses i les plaques, el pla del muntatge (porta, lateral, cassoleta i
- * ferratge, `HardwareMountPlan compact`: es veu com va muntat sense cap 3D per targeta); la resta, el detall dels forats
- * de la primera peça d'exemple.
+ * Miniatura 3D de la targeta, com les de Mobles, Objectes i Ambients (`SnapshotThumb` 2:1, sense cap 3D viu per
+ * targeta): el ferratge muntat amb la vista de «Com va muntat», feta pel renderitzador comú fora de pantalla i desada a
+ * la Cache Storage (`hardwareThumbs`). Mentre es fa, el requadre buit.
  */
-function HardwareThumb({ item }: { item: HardwareItem }) {
-  const { panel, crop, plan } = useMemo(() => {
-    const plan = item.engine === "cup" || item.engine === "plate" ? mountPlan(hardwareMount(item), { dims: false }) : null
-    const p = plan ? undefined : hardwarePreview(item).panels[0]
-    return { plan, panel: p, crop: p ? featureCrop(p) : undefined }
-  }, [item])
-  return (
-    <Box w="full" aspectRatio="3 / 2" rounded="md" borderWidth="1px" borderColor="border.emphasized" bg="bg.subtle" display="flex" alignItems="center" justifyContent="center" overflow="hidden">
-      {plan ? (
-        <Box w="full" h="full" p={1}>
-          <HardwareMountPlan plan={plan} compact />
-        </Box>
-      ) : panel ? (
-        <Box w="full" maxH="full">
-          <PanelDrawing panel={panel} crop={crop} caption={false} />
-        </Box>
-      ) : (
-        <Text fontSize="xs" color="fg.muted">
-          {item.engine === "model" ? "Només 3D" : "Sense dibuix"}
-        </Text>
-      )}
-    </Box>
-  )
+function HardwareThumb({ item, base, materials }: { item: HardwareItem; base?: Module; materials: MaterialPref[] }) {
+  const sig = useMemo(() => hardwareThumbSig(item, base, materials), [item, base, materials])
+  const [made, setMade] = useState<{ sig: string; url: string } | null>(null)
+  const url = made?.sig === sig ? made.url : hardwareThumb(item, sig)
+  useEffect(() => (hardwareThumb(item, sig) ? undefined : requestHardwareThumb(item, base, materials, sig, (u) => setMade({ sig, url: u }))), [item, base, materials, sig])
+  return <SnapshotThumb src={url} />
 }
 
 /** La vista registrada al marc del ferratge (la que mira la cara de la peça; a les frontisses, la frontal), o `null`. */

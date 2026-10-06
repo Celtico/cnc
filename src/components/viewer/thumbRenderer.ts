@@ -54,19 +54,22 @@ export function releaseThumbRenderer(): void {
   renderer = null
 }
 
-/** Llums i entorn d'estudi comuns de les miniatures, apuntant a `center`. */
-export function thumbLights(scene: Scene, center: Vector3, ext: number): void {
+/**
+ * Llums i entorn d'estudi comuns de les miniatures, apuntant a `center`. `sun`: d'on ve el sol respecte del centre (per
+ * defecte, de davant a la dreta i de dalt); `normalBias` (m): el de l'ombra, més petit per als primers plans (ferratges).
+ */
+export function thumbLights(scene: Scene, center: Vector3, ext: number, opts: { sun?: Vector3; normalBias?: number } = {}): void {
   ensure()
   scene.environment = env
   scene.environmentIntensity = 0.6
   scene.add(new HemisphereLight("#ffffff", "#8a7a60", 0.45))
   const sun = new DirectionalLight("#ffffff", 1.7)
-  sun.position.set(center.x + 2, center.y + 4, center.z + 3)
+  sun.position.copy(center).add(opts.sun ?? new Vector3(2, 4, 3))
   sun.castShadow = true
   sun.shadow.mapSize.set(1024, 1024)
   Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext, near: 0.1, far: 60 })
   sun.shadow.bias = -0.0004
-  sun.shadow.normalBias = 0.02
+  sun.shadow.normalBias = opts.normalBias ?? 0.02
   sun.target.position.copy(center)
   scene.add(sun, sun.target)
 }
@@ -94,6 +97,44 @@ export function snapshot(scene: Scene, camera: PerspectiveCamera): string | null
 export const THUMB_ASPECT = W / H
 
 /**
+ * Terra (a y = 0) i paret (darrere de tot, a la cara de darrere de `box`) de l'escena de Presentació (Preferències › Visor
+ * 3D) i el fons del color de la paret: l'estudi de totes les miniatures, perquè res quedi flotant. Els acabats propis del
+ * moble (`Composition.scene`) passen per davant dels de Preferències. `wall: false`: sense la paret (la càmera hi és
+ * darrere); `floor: false`, sense el terra (la càmera mira de sota); `reach`: la distància de la càmera (m).
+ */
+export function thumbStudio(scene: Scene, box: Box3, materials: MaterialPref[], finish?: { floor?: string; wall?: string }, opts: { floor?: boolean; wall?: boolean; reach?: number } = {}): void {
+  const size = box.getSize(new Vector3())
+  const center = box.getCenter(new Vector3())
+  const pref = readPresentationScene()
+  const look = { ...pref, ...(finish?.floor ? { floorMaterial: finish.floor } : {}), ...(finish?.wall ? { wallMaterial: finish.wall } : {}) }
+  // Prou gran perquè no se'n vegin les vores (`reach`: a quina distància hi ha la càmera, m).
+  const F = Math.max(6, size.x * 3, size.z * 6, (opts.reach ?? 0) * 3)
+  const wallZ = box.min.z - 0.002
+  if (opts.floor !== false) {
+    const floorMat = look.floorMaterial ? surfaceMaterial(materials, look.floorMaterial, F * 1000, F * 1000) : (() => {
+      const f = makeFloor(look.floor)
+      // Clon de la base compartida (`disposeTree` només allibera el clon).
+      const map = f.map ? tileClone(f.map) : null
+      map?.repeat.set((f.repeat * F) / ROOM, (f.repeat * F) / ROOM)
+      return new MeshStandardMaterial({ map, color: map ? "#ffffff" : "#eeeeec", roughness: f.roughness })
+    })()
+    const floor = new Mesh(new PlaneGeometry(F, F), floorMat)
+    floor.rotation.x = -Math.PI / 2
+    floor.position.set(center.x, 0, wallZ + F / 2)
+    floor.receiveShadow = true
+    scene.add(floor)
+  }
+  if (opts.wall !== false) {
+    const wallMat = look.wallMaterial ? surfaceMaterial(materials, look.wallMaterial, F * 1000, 4000) : new MeshStandardMaterial({ color: look.wall, roughness: 0.95 })
+    const wall = new Mesh(new PlaneGeometry(F, Math.max(4, size.y * 2)), wallMat)
+    wall.position.set(center.x, Math.max(2, size.y), wallZ)
+    wall.receiveShadow = true
+    scene.add(wall)
+  }
+  scene.background = new Color(look.wall)
+}
+
+/**
  * JPEG (data URL) de les peces vistes des de davant, una mica de costat i de dalt (`null` si encara es baixen fotos). Amb `pose` (la càmera desada
  * del document, ja en metres d'aquesta escena: les peces en mm de la composició, sense centrar), des d'allà.
  */
@@ -117,29 +158,7 @@ export function renderThumb(panels: Panel[], materials: MaterialPref[], finish?:
   const size = box.getSize(new Vector3())
   const center = box.getCenter(new Vector3())
 
-  // Terra i paret de l'escena de Presentació (Preferències › Visor 3D): el moble no queda flotant.
-  // Els acabats propis del moble (`Composition.scene`) passen per davant dels de Preferències.
-  const pref = readPresentationScene()
-  const look = { ...pref, ...(finish?.floor ? { floorMaterial: finish.floor } : {}), ...(finish?.wall ? { wallMaterial: finish.wall } : {}) }
-  const F = Math.max(6, size.x * 3, size.z * 6)
-  const floorMat = look.floorMaterial ? surfaceMaterial(materials, look.floorMaterial, F * 1000, F * 1000) : (() => {
-    const f = makeFloor(look.floor)
-    // Clon de la base compartida (`disposeTree` només allibera el clon).
-    const map = f.map ? tileClone(f.map) : null
-    map?.repeat.set((f.repeat * F) / ROOM, (f.repeat * F) / ROOM)
-    return new MeshStandardMaterial({ map, color: map ? "#ffffff" : "#eeeeec", roughness: f.roughness })
-  })()
-  const wallZ = box.min.z - 0.002
-  const floor = new Mesh(new PlaneGeometry(F, F), floorMat)
-  floor.rotation.x = -Math.PI / 2
-  floor.position.set(center.x, 0, wallZ + F / 2)
-  floor.receiveShadow = true
-  const wallMat = look.wallMaterial ? surfaceMaterial(materials, look.wallMaterial, F * 1000, 4000) : new MeshStandardMaterial({ color: look.wall, roughness: 0.95 })
-  const wall = new Mesh(new PlaneGeometry(F, Math.max(4, size.y * 2)), wallMat)
-  wall.position.set(center.x, Math.max(2, size.y), wallZ)
-  wall.receiveShadow = true
-  scene.add(floor, wall)
-  scene.background = new Color(look.wall)
+  thumbStudio(scene, box, materials, finish)
   thumbLights(scene, center, Math.max(size.x, size.y, size.z) * 1.5 + 0.5)
 
   const camera = new PerspectiveCamera(30, W / H, 0.01, 200)

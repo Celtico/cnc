@@ -2,7 +2,7 @@ import { OrbitControls } from "@react-three/drei"
 import { Canvas, useThree } from "@react-three/fiber"
 import { useEffect, useMemo } from "react"
 import { NeutralToneMapping, Vector3, type WebGLRenderer } from "three"
-import type { HardwareMount } from "../../core/build/hardwareMount"
+import { mountCamera, type HardwareMount } from "../../core/build/hardwareMount"
 import type { MaterialPref, Panel } from "../../core/model"
 import { MovingPanel, PanelMesh } from "../../components/viewer/CabinetViewer"
 import { LOW_MEMORY } from "../../components/viewer/deviceLimits"
@@ -23,7 +23,6 @@ export default function HardwareMount3D({ mount, materials, open }: { mount: Har
   useEffect(() => () => releaseModelGpu(), [])
   const groups = useMemo(() => movingGroups(mount.panels), [mount.panels])
   const groupOf = useMemo(() => new Map(groups.flatMap((g) => g.panelIds.map((id) => [id, g] as const))), [groups])
-  const f = mount.focus
   // Només 3D: el model tal qual (una «peça» buida que només porta el model, `PanelFittings`), centrat a la seva caixa.
   const model = mount.model
   const mb = model?.bbox
@@ -34,7 +33,9 @@ export default function HardwareMount3D({ mount, materials, open }: { mount: Har
         : null,
     [model],
   )
-  const center: [number, number, number] = f ? [-f.at[0] * S, -f.at[1] * S, -f.at[2] * S] : mb ? [(-(mb.min[0] + mb.max[0]) / 2) * S, (-(mb.min[1] + mb.max[1]) / 2) * S, (-(mb.min[2] + mb.max[2]) / 2) * S] : [0, 0, 0]
+  // Centrat al punt que mira la càmera (el forat principal o el centre del model), la mateixa vista que la miniatura.
+  const cam = useMemo(() => mountCamera(mount), [mount])
+  const center: [number, number, number] = [-cam.target[0] * S, -cam.target[1] * S, -cam.target[2] * S]
   const span = mb ? Math.max(mb.max[0] - mb.min[0], mb.max[1] - mb.min[1], mb.max[2] - mb.min[2]) * S : 0
   const tags = mount.proposedTags.length ? mount.proposedTags : undefined
   return (
@@ -67,39 +68,25 @@ export default function HardwareMount3D({ mount, materials, open }: { mount: Har
         })}
       </group>
       <OrbitControls makeDefault enableDamping dampingFactor={0.12} target={[0, 0, 0]} minDistance={0.05} maxDistance={Math.max(2, span * 4)} />
-      <Framing mount={mount} span={span} />
+      <Framing dir={cam.dir} dist={cam.dist * S} />
     </Canvas>
   )
 }
 
-/**
- * Càmera al forat principal: mirant la cara on entra (des de dins del moble a les frontisses, on es veuen la cassoleta i
- * la placa), una mica de costat i de dalt. Es torna a posar quan canvia el ferratge (no quan s'obre la porta).
- */
-function Framing({ mount, span }: { mount: HardwareMount; span: number }) {
+/** Càmera de «Com va muntat» (`mountCamera`): es torna a posar quan canvia el ferratge (no quan s'obre la porta). */
+function Framing({ dir, dist }: { dir: [number, number, number]; dist: number }) {
   const camera = useThree((s) => s.camera)
   const controls = useThree((s) => s.controls) as unknown as { target: Vector3; update: () => void } | null
   const invalidate = useThree((s) => s.invalidate)
-  const n = mount.focus?.view ?? mount.focus?.normal
-  const nx = n?.[0] ?? 0
-  const ny = n?.[1] ?? 0
-  const nz = n?.[2] ?? 1
-  const hinge = !!mount.hinge
+  const [dx, dy, dz] = dir
   useEffect(() => {
-    const dir = new Vector3(nx, ny, nz)
-    // De costat i de dalt: a les frontisses, cap a dins del moble (+X, lluny del lateral), si no, cap a la dreta.
-    const side = new Vector3(hinge ? 0.75 : 0.6, hinge ? 0.85 : 0.6, Math.abs(nz) > 0.7 ? 0 : 0.5)
-    side.addScaledVector(dir, -side.dot(dir))
-    dir.add(side).normalize()
-    // Un model sol: prou lluny per veure'l sencer (fov 32°).
-    const dist = span > 0 && !mount.panels.length ? Math.max(0.15, span * 2) : hinge ? 0.42 : 0.48
-    camera.position.copy(dir.multiplyScalar(dist))
+    camera.position.set(dx * dist, dy * dist, dz * dist)
     camera.lookAt(0, 0, 0)
     if (controls) {
       controls.target.set(0, 0, 0)
       controls.update()
     }
     invalidate()
-  }, [nx, ny, nz, hinge, span, mount.panels.length, camera, controls, invalidate])
+  }, [dx, dy, dz, dist, camera, controls, invalidate])
   return null
 }

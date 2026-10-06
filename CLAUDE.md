@@ -692,7 +692,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   hinge/plate/handle/leg): el GLB de la frontissa a cada cassoleta, el de la placa al lateral, el del tirador a la cara de
   fora del front (sense la barra genèrica) i el de la pota a cada cantonada de la base (sense les genèriques,
   `ViewerModule.legs.fitted`) (`loadModel` dels `hwa-…`, taula Dexie `hardwareAssets`,
-  v6), al marc del ferratge (u = v × n); sense el model, la caixa. No surten al render, l'AR ni les exportacions.
+  v6), al marc del ferratge (u = v × n, `fittingMatrix`); sense el model, la caixa. No surten al render, l'AR ni les
+  exportacions (sí a les miniatures de Preferències › Ferratges). El marc, el volum de les frontisses de l'app
+  (`hingeVolumes`) i les marques dels forats (`holeMarkMatrices`) són a `viewer/hardwareShapes.ts`: visor i miniatures.
   `PanelMesh proposedTags`: els forats amb aquestes etiquetes, en taronja (els proposats d'un importat sense confirmar al
   muntatge de Preferències › Ferratges); `MovingPanel` s'exporta per al mateix muntatge.
 - **Textura desplaçada per peça** (`viewer/textureOffset.ts`, test): cada cara de cada peça (`Panel.id` + cara) té un
@@ -1136,7 +1138,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   de la plantilla (`templatePrint`, ids renumerats perquè `newId` canvia cada cop)-empremta dels materials; en desar-ne
   una s'esborren les velles de la mateixa plantilla. Segona obertura del catàleg: ~6 s → instantani. Ambients (`ambients/ambientThumbs.ts`): terra,
   parets (sense les de davant) i els mobles i objectes, de dalt i de davant, **sense fons** (PNG transparent);
-  `AmbientRow.thumb`; les del catàleg, a la Cache Storage com les plantilles (l'empremta inclou les plantilles de les seves referències). **Amb la càmera desada** (`Composition.camera`, `Ambient.camera`) es fa des d'allà (`viewerSize`,
+  `AmbientRow.thumb`; les del catàleg, a la Cache Storage com les plantilles (l'empremta inclou les plantilles de les seves referències).
+  **Totes les que no són de l'usuari** (plantilles, escenes del catàleg, ferratges) passen per `requestStoredThumb(kind, id,
+  sig, render, onDone)` / `storedThumb` (`projectThumbs.ts`: memòria, Cache Storage i la cua comuna; la mateixa feina un sol
+  cop, totes les targetes la reben). L'estudi (terra i paret de Presentació, fons del color de la paret) és `thumbStudio`
+  (opcions `floor`/`wall`/`reach`) i la llum `thumbLights` (`sun`, `normalBias` per als primers plans). **Amb la càmera desada** (`Composition.camera`, `Ambient.camera`) es fa des d'allà (`viewerSize`,
   `thumbPose`); sense, enquadrament automàtic. `thumbCam` (`cameraSignature`) i `thumbIsStale` la refan si la càmera ha
   canviat; desar la miniatura no toca `updatedAt` ni `edited`. `SnapshotThumb` (2:1, sense fons); sense foto encara, el
   mateix requadre buit (la graella no salta). Cal `scene.updateMatrixWorld(true)` abans de mesurar la caixa.
@@ -1193,9 +1199,24 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     la graella només té «‹ Preferències»). Controls de 280 px com a molt.
 - **Ferratges: graella i editor a pantalla completa, com Materials** (`settings/HardwarePane.tsx`, `HardwareList`): cercador
   amb «Afegir» (menú per tipus: copia el per defecte d'aquell lloc), acordió per categoria (`HARDWARE_CATEGORIES`, icones a
-  `settings/hardwareIcons.ts`; oberta la de Frontisses, `mobles:md-open:hardware`), `GalleryCard` amb la miniatura (frontisses
-  i plaques: el pla del muntatge sense cotes, `HardwareMountPlan compact`; la resta, el patró, `PanelDrawing crop`), resum i
-  «★ Per defecte». L'editor (`components/EditorDialog`, el mateix que Materials) comença amb **«Com va muntat»** (vegeu
+  `settings/hardwareIcons.ts`; oberta la de Frontisses, `mobles:md-open:hardware`), `GalleryCard` amb la **miniatura 3D com
+  les de Mobles, Objectes i Ambients** (per decisió de l'usuari: «A Ferratges fes preview 3D com als apartats principals»;
+  `SnapshotThumb` 2:1, buida mentre es fa), resum i «★ Per defecte». La miniatura (`settings/hardwareThumbs.ts` →
+  `hardwareThumbJob.ts` amb `import()` → `components/viewer/hardwareThumb.ts`, `renderHardwareThumb`): el mateix
+  renderitzador fora de pantalla i la mateixa cua (`requestStoredThumb`, tipus `ferratge`), a la Cache Storage amb la clau
+  `THUMB_VERSION.HARDWARE_THUMB_VERSION`-empremta de l'item i del mòdul d'exemple (`templatePrint([item, base])`: editar-lo,
+  confirmar-lo o canviar el tauler o els ferratges per defecte la refà)-empremta dels materials. Hi surt el muntatge de «Com va
+  muntat» (`hardwareMount` amb el mateix mòdul d'exemple que l'editor) amb els materials de debò, els forats (els proposats
+  d'un importat sense confirmar, en taronja), el GLB importat o, si no hi és, la caixa (`bbox`), les frontisses i els tiradors
+  de l'app amb el volum del visor (`hingeVolumes`; `buildScene(…, { fitted: true })`: sense la barra genèrica on hi ha un
+  tirador importat), tot posat a terra (el més baix a y = 0), amb **la mateixa càmera que el 3D de l'editor en obrir-lo**
+  (`mountCamera`, fov 32°) i l'estudi de les altres miniatures (sense terra si es mira de sota, sense paret si és darrere la
+  càmera); un «només 3D», el model sol a terra. Els GLB es llegeixen **fora de la memòria compartida de models**
+  (`readHardwareModel`: n'hi pot haver centenars i cadascun serveix un sol cop) i s'alliberen sencers (`disposeTree`) en
+  acabar; el renderitzador s'allibera com sempre (`releaseThumbRenderer` → `releaseModelGpu`). Si canvia com es fan, s'apuja
+  `HARDWARE_THUMB_VERSION`. Pendent de millorar (com al 3D de l'editor, que fa la mateixa vista): l'espiga (els forats queden
+  dins la unió) i la guia (es veu el front del calaix) no es reconeixen gaire; un «només 3D» llarg i prim (perfil Cadro de
+  3 m) surt com una línia. L'editor (`components/EditorDialog`, el mateix que Materials) comença amb **«Com va muntat»** (vegeu
   més avall), dibuixa les peces d'exemple (`hardwarePreview`) amb un **Detall** acotat (`PanelDrawing dims`) i a la dreta
   General (fabricant, referència, «Per defecte als mòduls nous»), Mides (`HARDWARE_PARAMS`, `NumRow`), llargades de guia
   (`ThicknessChips what`), quantitat per alçada / distància dels forats (`StepRule`) i els mecanitzats (només lectura).
@@ -1236,7 +1257,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     **3D** (`HardwareMount3D`, `React.lazy`: un sol `Canvas` `frameloop="demand"`, dpr ≤ 2 / 1,5 `LOW_MEMORY`,
     `StudioEnvironment`, `OrbitControls`, colors per peça; les peces amb el `PanelMesh` del visor —forats, el GLB importat
     o el volum de la frontissa de l'app (`PanelHardware`)— i `MovingPanel` + `movingGroups` per obrir la porta, l'abatible
-    o el calaix amb el lliscador «Obertura»; càmera al forat principal des de dins; `releaseModelGpu` en tancar; en DEV
+    o el calaix amb el lliscador «Obertura»; càmera `mountCamera` (pura, a `hardwareMount.ts`, la mateixa de la miniatura de
+    la targeta): al forat principal des de la cara on entra —a les frontisses, des de dins—, un tirador des de fora, una pota
+    sencera de davant i just per sota de la base (`HardwareMount.aim`), un «només 3D» des de 2 × la seva mida; `releaseModelGpu` en tancar; en DEV
     `window.__hardwareMount` = el renderitzador) i **Pla** (`mountPlan` + `HardwareMountPlan`: vista de dalt tallada a
     l'alçada de la cassoleta de baix —o del forat principal—, el davant a baix: peces en secció amb el gruix, forats
     tallats buits i els de ±40 mm discontinus, el ferratge projectat —la caixa del model o el volum simplificat— i cotes:

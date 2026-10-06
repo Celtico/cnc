@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
-import { Matrix4, MeshStandardMaterial, Vector3, type Object3D } from "three"
+import { MeshStandardMaterial, type Object3D } from "three"
 import type { Panel, PanelFitting } from "../../core/model"
+import { fittingMatrix, hingeVolumes } from "./hardwareShapes"
 import { loadedModel, loadModel, onModelsLoaded } from "./models3d"
 
 /**
@@ -68,26 +69,23 @@ export function PanelHardware({ panel }: { panel: Panel }) {
       // Calaix: tirador centrat, al llarg del costat llarg.
       handle = { cx: L / 2, cy: W / 2, vertical: false, len: Math.min(192, L * 0.4) }
     }
-    return { cups, inner, outDir, outZ, handle }
+    return { outDir, outZ, handle }
   }, [panel])
   if (!hw) return null
-  const { cups, inner, outDir, outZ, handle } = hw
-  const inDir = -outDir as 1 | -1
-  // Les frontisses importades es dibuixen amb el seu model (`PanelFittings`), no amb la cassoleta genèrica; un tirador
-  // importat, també (cap barra genèrica).
-  const fits = panel.fittings ?? []
-  const drawn = fits.some((f) => f.kind !== "handle" && f.kind !== "leg") ? [] : cups
-  const ownHandle = fits.some((f) => f.kind === "handle")
+  const { outDir, outZ, handle } = hw
+  // Les frontisses importades es dibuixen amb el seu model (`PanelFittings`), no amb la cassoleta genèrica
+  // (`hingeVolumes`); un tirador importat, també (cap barra genèrica).
+  const ownHandle = (panel.fittings ?? []).some((f) => f.kind === "handle")
   return (
     <group>
-      {drawn.map((h, i) => (
+      {hingeVolumes(panel).map((h, i) => (
         <group key={i}>
           {/* Cassoleta i braç de la frontissa, a la cara de dins. */}
-          <mesh position={[h.x * S, h.y * S, (inner + inDir * 1) * S]} rotation={[Math.PI / 2, 0, 0]} material={METAL}>
-            <cylinderGeometry args={[(h.diameter / 2 + 3) * S, (h.diameter / 2 + 3) * S, 2 * S, 20]} />
+          <mesh position={h.disc.position} rotation={[Math.PI / 2, 0, 0]} material={METAL}>
+            <cylinderGeometry args={[h.disc.radius, h.disc.radius, h.disc.height, 20]} />
           </mesh>
-          <mesh position={[h.x * S, h.y * S, (inner + inDir * 7) * S]} material={METAL} castShadow>
-            <boxGeometry args={[20 * S, Math.max(20, h.diameter) * S, 12 * S]} />
+          <mesh position={h.arm.position} material={METAL} castShadow>
+            <boxGeometry args={h.arm.size} />
           </mesh>
         </group>
       ))}
@@ -98,15 +96,6 @@ export function PanelHardware({ panel }: { panel: Panel }) {
 
 const GHOST = new MeshStandardMaterial({ color: "#b9bdc2", metalness: 0.5, roughness: 0.5, transparent: true, opacity: 0.5 })
 GHOST.userData.shared = true
-
-/** Matriu del marc d'un ferratge importat a la peça (m): u = v × n, v al pla de la peça, n fora de la cara. */
-function fittingMatrix(f: PanelFitting, thickness: number): Matrix4 {
-  const nz = f.face === "A" ? 1 : -1
-  const V = new Vector3(f.v[0], f.v[1], 0)
-  const N = new Vector3(0, 0, nz)
-  const U = new Vector3().crossVectors(V, N)
-  return new Matrix4().makeBasis(U, V, N).setPosition(f.x * S, f.y * S, (f.face === "A" ? thickness : 0) * S)
-}
 
 /** Un ferratge importat: el seu model (GLB de Dexie) o, mentre no hi és, la caixa. */
 function Fitting({ f, thickness }: { f: PanelFitting; thickness: number }) {
