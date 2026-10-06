@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
-import { blumFileInfo, blumLabel, blumProduct, blumSeries, classifyBlum, isBlumProductName } from "./blum"
+import { blumFileInfo, blumLabel, blumProduct, blumSeries, classifyBlum, isBlumProductName, migrateBlumItem } from "./blum"
 import { detectMaker, groupImport, importCandidate, importFileKind } from "./makers"
-import { itemSeries } from "./hettichNames"
+import { itemSeries, migrateImportedNames } from "./hettichNames"
 import type { HettichFile } from "./hettich"
 import type { HardwareItem } from "../model"
 
@@ -39,6 +39,10 @@ describe("Blum: noms dels fitxers", () => {
     expect(blumProduct("02000516/ 40.2000_45247349.pgm")).toBeUndefined()
     expect(blumProduct("71T453T_46020103.pgm")).toBeUndefined()
     expect(isBlumProductName("STEP_Scharniere")).toBe(false)
+    // Una carpeta que només diu la marca no és un producte (feia «Accessori Accessoris · 20K1101T»).
+    expect(blumProduct("blum/20K1101T_49480533.step")).toBeUndefined()
+    expect(blumProduct("Descàrregues de Blum/20K1101T_49480533.step")).toBeUndefined()
+    expect(blumProduct("Blum/AVENTOS HK-XS Mecanismo/20K1101T_49480533.step")).toBe("AVENTOS HK-XS Mecanismo")
   })
 })
 
@@ -51,12 +55,28 @@ describe("Blum: què és cada article", () => {
     expect(classifyBlum("Z80.000S", "CABLOXX Caja de cierre, Juego (Caja de cierre, pieza frontal, tapa)")).toMatchObject({ category: "misc", series: "CABLOXX", part: "any" })
     expect(classifyBlum("71B3550", "CLIP top BLUMOTION bisagra 110°")).toMatchObject({ category: "hinge", series: "CLIP top", part: "front" })
     expect(classifyBlum("173L6100", "CLIP Placa en cruz, 0 mm")).toMatchObject({ category: "plate", part: "side" })
+    // El producte només diu «AVENTOS»: la família, de l'article; un producte que no es reconeix: mana l'article.
+    expect(classifyBlum("21FA000", "unidad de accionamiento de SERVO-DRIVE para AVENTOS, HF, HL, HS, preajustado para HF")).toMatchObject({ category: "lift", series: "AVENTOS HF" })
+    expect(classifyBlum("20K1101T", "Envoltura y elem. de ensamb.")).toMatchObject({ category: "lift", series: "AVENTOS HK-XS", from: "article" })
   })
 
   it("pel prefix de l'article (sense producte); si no se sap, sense assignar", () => {
     expect(classifyBlum("71T453T")).toMatchObject({ category: "hinge", noun: "Frontissa", series: "CLIP top", part: "front" })
     expect(classifyBlum("175H3100")).toMatchObject({ category: "plate", part: "side" })
-    expect(classifyBlum("20K1101T")).toMatchObject({ category: "lift", series: "AVENTOS", part: "side" })
+    expect(classifyBlum("20K1101T")).toMatchObject({ category: "lift", noun: "Elevable", series: "AVENTOS HK-XS", part: "side" })
+    expect(classifyBlum("20K2C01T")).toMatchObject({ category: "lift", series: "AVENTOS HK-S" })
+    expect(classifyBlum("24K2300T")).toMatchObject({ category: "lift", series: "AVENTOS HK top" })
+    expect(classifyBlum("22F2500")).toMatchObject({ category: "lift", series: "AVENTOS HF top" })
+    expect(classifyBlum("21F8020")).toMatchObject({ category: "lift", series: "AVENTOS HF" })
+    expect(classifyBlum("20S42E1")).toMatchObject({ category: "lift", series: "AVENTOS HS" })
+    expect(classifyBlum("22L3200")).toMatchObject({ category: "lift", series: "AVENTOS HL top" })
+    expect(classifyBlum("750.4501T")).toMatchObject({ category: "slide", series: "LEGRABOX" })
+    expect(classifyBlum("760H3200S")).toMatchObject({ category: "slide", series: "MOVENTO" })
+    expect(classifyBlum("320K5000C")).toMatchObject({ category: "slide", series: "METABOX" })
+    expect(classifyBlum("378L2702SA")).toMatchObject({ category: "slide", series: "TANDEMBOX" })
+    expect(classifyBlum("800A0002")).toMatchObject({ category: "misc", series: "REVEGO" })
+    // Els 29x.xxxx no són AVENTOS (cal la lletra després de les dues xifres).
+    expect(classifyBlum("295.5501")).toMatchObject({ category: "misc", noun: "Ferratge" })
     expect(classifyBlum("560H5000B")).toMatchObject({ category: "slide", part: "side" })
     expect(classifyBlum("956.1201")).toMatchObject({ category: "push", series: "TIP-ON" })
     expect(classifyBlum("ZF7N70T2")).toMatchObject({ category: "misc", part: "any" })
@@ -66,6 +86,10 @@ describe("Blum: què és cada article", () => {
   it("nom i sèrie", () => {
     expect(blumLabel("71T453T", classifyBlum("71T453T"))).toBe("Frontissa CLIP top · 71T453T")
     expect(blumLabel("48N0510.02", classifyBlum("48N0510.02"), "R")).toBe("Ferratge · 48N0510.02 · dreta")
+    // Mai el nom repetit amb la sèrie.
+    expect(blumLabel("ZF7N70T2", classifyBlum("ZF7N70T2"))).toBe("Accessori · ZF7N70T2")
+    expect(blumLabel("20K1101T", classifyBlum("20K1101T"))).toBe("Elevable AVENTOS HK-XS · 20K1101T")
+    expect(blumLabel("23.8000", classifyBlum("23.8000", "Juego de tapas AVENTOS HF_HS_HL top (incl. Interruptor de activación para taladrar, incluido), dra+izq, para SERVO-DRIVE"))).toBe("Elevable AVENTOS HF/HS/HL top · 23.8000")
     expect(blumSeries("750.4501T", ["Guía de cuerpo LEGRABOX con TIP-ON"])).toEqual({ id: "blum:legrabox", label: "LEGRABOX" })
     const item = { imported: { maker: "Blum", article: "71T453T", folders: [] } } as unknown as HardwareItem
     expect(itemSeries(item)).toEqual({ id: "blum:clip top", label: "CLIP top" })
@@ -134,5 +158,23 @@ describe("Sense assignar", () => {
     const moved = reassignMachining(item.machining!, "any", "side")
     expect(moved[0]!.part).toBe("side")
     expect(confirmProblem({ ...item, machining: moved })).toBeNull()
+  })
+})
+
+describe("Blum: noms dels importats d'abans", () => {
+  const item = (name: string, article: string, folders: string[] = [], category = "misc") =>
+    ({ id: "hw-1", name, category, engine: "model", params: {}, targets: [], version: 1, imported: { maker: "Blum", article, folders, files: [], proposed: [], confirmed: false } }) as unknown as HardwareItem
+
+  it("el nom automàtic d'abans passa al d'ara (i la categoria, si era «Altres»); el de l'usuari es queda", () => {
+    const a = migrateBlumItem(item("Accessori Accessoris · 20K1101T", "20K1101T", ["blum"]))
+    expect(a).toMatchObject({ name: "Elevable AVENTOS HK-XS · 20K1101T", category: "lift", imported: { folders: [] } })
+    expect(migrateBlumItem(a)).toBe(a)
+    expect(migrateBlumItem(item("Accessori Accessoris · ZF7N70T2 2", "ZF7N70T2")).name).toBe("Accessori · ZF7N70T2 2")
+    expect(migrateBlumItem(item("Elevable AVENTOS · 24K2300T · dreta", "24K2300T", [], "lift")).name).toBe("Elevable AVENTOS HK top · 24K2300T · dreta")
+    const mine = item("El meu braç de la cuina", "20K1101T")
+    expect(migrateBlumItem(mine)).toBe(mine)
+    const ok = item("Frontissa CLIP top · 71T453T", "71T453T", [], "hinge")
+    expect(migrateImportedNames([ok])).toEqual({ library: [ok], changed: false })
+    expect(migrateImportedNames([item("Accessori Accessoris · 20K1101T", "20K1101T")]).changed).toBe(true)
   })
 })

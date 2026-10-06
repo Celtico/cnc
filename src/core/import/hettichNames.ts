@@ -1,5 +1,5 @@
 import type { HardwareCategory, HardwareItem } from "../model/hardware"
-import { blumSeries } from "./blum"
+import { blumSeries, migrateBlumItem } from "./blum"
 
 /**
  * Noms, carpetes i sèries dels articles de Hettich: què és cada carpeta (alemany → categoria de l'app), el nom que es
@@ -229,12 +229,18 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
  * Lectura de les preferències: els importats de Hettich amb el nom que posava l'app abans («Porta corredissa ferratges
  * DWG DXF Schiebetuersysteme SlideLine 55 9060402», amb el número de repetit, « 2») passen al d'ara («Porta corredissa
  * SlideLine 55 · 9060402»); un nom que l'usuari ha canviat es queda. Les carpetes desades es netegen (sense la de
- * l'usuari ni la del ZIP, `cleanFolders`). Idempotent; torna la mateixa llista si no canvia res.
+ * l'usuari ni la del ZIP, `cleanFolders`). Els de Blum, `migrateBlumItem`. Idempotent; torna la mateixa llista si no
+ * canvia res.
  */
 export function migrateImportedNames(library: readonly HardwareItem[]): { library: HardwareItem[]; changed: boolean } {
   let changed = false
   const out = library.map((it) => {
     const imp = it.imported
+    if (imp?.maker === "Blum") {
+      const next = migrateBlumItem(it)
+      if (next !== it) changed = true
+      return next
+    }
     if (!imp || imp.damaged || imp.maker !== "Hettich" || !imp.article) return it
     const folders = cleanFolders(imp.folders)
     const sameFolders = folders.length === imp.folders.length && folders.every((f, i) => f === imp.folders[i])

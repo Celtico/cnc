@@ -1,4 +1,4 @@
-import { deepEqual, evalExpr, isDamagedImport, isPendingImport, machiningProblems, type HardwareItem, type HardwareTarget, type MachiningOp } from "../model"
+import { deepEqual, evalExpr, isDamagedImport, isPendingImport, IMPORT_BOX_VERSION, machiningProblems, type HardwareItem, type HardwareTarget, type MachiningOp } from "../model"
 import type { HettichArticle } from "./hettich"
 import { makerOf } from "./makers"
 import { modelProposal, proposeHandle, proposeHinge, proposeLeg, proposePlate, type HardwareProposal } from "./proposal"
@@ -42,7 +42,7 @@ function source(art: HettichArticle, p: HardwareProposal, targets: HardwareTarge
     folders: art.folders,
     files: x.files,
     ...(x.asset ? { asset: x.asset } : {}),
-    ...(emptyBox(p.bbox) ? {} : { bbox: p.bbox }),
+    ...(emptyBox(p.bbox) ? {} : { bbox: p.bbox, ...(p.boxFromMesh ? { boxVersion: IMPORT_BOX_VERSION } : {}) }),
     ...(x.points?.length ? { points: x.points } : {}),
     proposed: structuredClone(targets),
     notes: p.notes,
