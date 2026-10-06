@@ -1,6 +1,7 @@
-import { Badge, CloseButton, Input, InputGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Badge, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { LuFolders, LuHistory, LuSearch } from "react-icons/lu"
+import { LuFolders, LuHistory } from "react-icons/lu"
+import { SearchBar } from "../../components/SearchBar"
 import { SnapshotThumb } from "../../components/SnapshotThumb"
 import { useSettings } from "../settings/SettingsContext"
 import { requestTemplateThumb, templateThumb } from "./projectThumbs"
@@ -56,8 +57,14 @@ export function NewMobleGallery({
   onCreate,
   history,
   storageKey = "mobles:gallery",
+  add,
+  extra,
 }: {
   onCreate: (composition: Composition, name: string) => void
+  /** Botó principal al costat del cercador («Nou moble»); la finestra dels ambients no en porta. */
+  add?: { label: string; onClick: () => void }
+  /** Més accions a la fila del cercador («Obrir fitxer»). */
+  extra?: ReactNode
   /** Historial: els mobles que ja tens (que coincideixen amb la cerca), al primer acordió; `projects`, els dels grups. */
   history: (query: (text: string) => boolean, searching: boolean) => { count: number; node: ReactNode; projects?: { count: number; node: ReactNode } }
   /** Clau de sessió dels acordions oberts (la pàgina Mobles i la finestra dels ambients, per separat). */
@@ -92,9 +99,7 @@ export function NewMobleGallery({
   return (
     <Stack gap={4}>
 
-      <InputGroup maxW={{ base: "full", md: "420px" }} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => setQuery("")} /> : undefined}>
-        <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar: nom, tipus, estil, material, color…" aria-label="Cercar mobles i plantilles" />
-      </InputGroup>
+      <SearchBar value={query} onChange={setQuery} placeholder="Cercar: nom, tipus, estil, material, color…" ariaLabel="Cercar mobles i plantilles" add={add} extra={extra} />
       {q && !found.length && (
         <Text fontSize="sm" color="fg.muted">
           Cap moble ni plantilla no coincideix amb «{query.trim()}».

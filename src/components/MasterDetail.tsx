@@ -1,7 +1,8 @@
-import { Badge, Box, Button, CloseButton, Flex, HStack, IconButton, Input, InputGroup, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, Flex, HStack, Stack, Text } from "@chakra-ui/react"
 import type { ReactNode } from "react"
-import { LuChevronLeft, LuChevronRight, LuPlus, LuSearch } from "react-icons/lu"
+import { LuChevronLeft, LuChevronRight } from "react-icons/lu"
 import { ChoiceChips } from "./FormRow"
+import { SearchBar } from "./SearchBar"
 import { SectionLabel } from "./SectionLabel"
 
 export interface MasterItem {
@@ -83,7 +84,6 @@ export function MasterDetail({
                     bg={on ? "wood.subtle" : undefined}
                     _hover={{ bg: on ? "wood.subtle" : "bg.muted" }}
                     opacity={it.dimmed ? 0.55 : 1}
-                    cursor="pointer"
                     aria-current={on ? "true" : undefined}
                     onClick={() => onSelect(it.id)}
                   >
@@ -124,15 +124,8 @@ export function MasterDetail({
       {head}
       {/* Cercador i filtres sempre a dalt de la llista (la llista es desplaça per sota). */}
       <Stack gap={2} position="sticky" top={0} zIndex={1} bg="bg" pb={1}>
-      <HStack gap={2}>
-        <InputGroup flex={1} minW={0} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => onQuery("")} /> : undefined}>
-          <Input size="sm" value={query} onChange={(e) => onQuery(e.target.value)} placeholder="Cercar…" aria-label="Cercar" />
-        </InputGroup>
-        {/* Només la icona: el cercador té més lloc (el text surt en passar-hi per sobre). */}
-        <IconButton size="sm" variant="outline" flexShrink={0} onClick={onAdd} aria-label={addLabel} title={addLabel}>
-          <LuPlus />
-        </IconButton>
-      </HStack>
+      {/* Només la icona: la columna és estreta i el cercador té més lloc (el text surt al tooltip). */}
+      <SearchBar value={query} onChange={onQuery} maxW="none" iconOnly add={{ label: addLabel, onClick: onAdd }} />
       {/* Categories en pastilles a la seva fila (salten de línia si no hi caben). */}
       {filters && (
         <ChoiceChips

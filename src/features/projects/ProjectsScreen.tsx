@@ -1,12 +1,14 @@
 import {
   Button,
   Dialog,
+  IconButton,
   Portal,
   Text,
   VStack,
 } from "@chakra-ui/react"
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { LuFolderOpen, LuPlus, LuTrash2 } from "react-icons/lu"
+import { LuFolderOpen, LuTrash2 } from "react-icons/lu"
+import { Tooltip } from "../../components/ui/tooltip"
 import { SaveFileDialog } from "../file/SaveFileDialog"
 import { openMobleFile } from "../file/mobleIo"
 import { uniqueName } from "../../core/file/mobleFile"
@@ -89,21 +91,19 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
       <PageHeader
         title="Mobles"
         description="Els mobles que dissenyes i fabriques: comença en blanc, des del catàleg o des d'una col·lecció i continua'l a l'editor. A l'historial hi tens els que ja has fet; el cercador busca a tot arreu (nom, tipus, estil, material, color)."
-        actions={
-          <>
-            {/* El botó principal primer (com a Ambients i Objectes). */}
-            <Button colorPalette="wood" size={{ base: "sm", md: "md" }} onClick={() => void handleCreate(blankMoble(settings), "Moble nou")}>
-              <LuPlus /> Nou moble
-            </Button>
-            <Button variant="outline" size={{ base: "sm", md: "md" }} onClick={() => fileInput.current?.click()}>
-              <LuFolderOpen /> Obrir fitxer
-            </Button>
-          </>
-        }
       />
 
       <NewMobleGallery
         onCreate={(c, n) => void handleCreate(c, n)}
+        // El botó principal al costat del cercador (com a Ambients i Objectes) i «Obrir fitxer» a la mateixa fila.
+        add={{ label: "Nou moble", onClick: () => void handleCreate(blankMoble(settings), "Moble nou") }}
+        extra={
+          <Tooltip content="Obrir fitxer">
+            <IconButton size="sm" variant="outline" flexShrink={0} aria-label="Obrir fitxer" onClick={() => fileInput.current?.click()}>
+              <LuFolderOpen />
+            </IconButton>
+          </Tooltip>
+        }
         history={(matches, searching) => {
           const shown = (projects ?? []).filter((p) => !isObject(p) && (!searching || matches(projectSearchText(p))))
           // Historial = el que és de pas (sense grup); el que es desa en un grup passa a Projectes.
@@ -181,7 +181,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
                 grid("folders", grouped)
               ) : (
                 <Text fontSize="sm" color="fg.muted">
-                  Encara no n'hi ha cap. A l'Historial, «Grup nou» o el menú ⋯ d'un moble › «Moure a un grup…» (p. ex. el nom d'un client): el que hi desis queda aquí i «Esborrar l'historial» no el toca.
+                  Encara no n'hi ha cap. A l'Historial, «Grup nou» o el menú ⋯ d'un moble › «Moure a un grup…» (p. ex. el nom d'un client): el que hi desis queda aquí i «Esborrar» de l'Historial no el toca.
                 </Text>
               ),
             },

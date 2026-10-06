@@ -12,6 +12,7 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { ContactShadow } from "./ContactShadow"
 import { BoxFrame } from "./BoxFrame"
 import { MoveGizmo } from "./MoveGizmo"
+import { useViewerCursor } from "./cursor"
 import { usePixelScale, type Axis } from "./pixelScale"
 import { CircleGeometry, NeutralToneMapping, DoubleSide, Group, InstancedMesh, Matrix4, MeshBasicMaterial, Object3D, Plane, Vector3 } from "three"
 import { type ViewName } from "./viewNames"
@@ -212,7 +213,6 @@ export function CabinetViewer({
   })
   const onPanelHover = useCallback((p: Panel, on: boolean) => {
     setHoverModule((h) => (on ? (p.module ?? null) : h === p.module ? null : h))
-    document.body.style.cursor = on ? "pointer" : ""
   }, [])
   const onPanelClick = useCallback((p: Panel, pt: Vector3) => {
     const l = live.current
@@ -283,6 +283,8 @@ export function CabinetViewer({
         if (onDeselect && d && Math.hypot(e.clientX - d[0], e.clientY - d[1]) < 5) onDeselect()
       }}
     >
+      {/* Mà sobre les peces d'un mòdul que es pot triar. */}
+      <HoverCursor active={hoverModule !== null} />
       <color attach="background" args={[q.guides ? bg : scene.wall]} />
       {/* Llum d'entorn (IBL) d'un estudi procedural, com model-viewer: reflexos i ombrejat suau. És l'única
           de l'escena: abans l'habitació de Presentació en posava una altra i, segons quina s'aplicava l'última
@@ -736,6 +738,13 @@ function snapAxis(pos: number, size: number, targets: number[], free: boolean): 
  * la memòria de `models3d` (`userData.sharedModel`): no s'alliberen mai aquí (`dispose={null}`). `shift`: desplaçament
  * en viu mentre s'arrossega (m).
  */
+/** Cursor de les peces dels mòduls (el hover el porta `CabinetViewer`, fora del Canvas). */
+function HoverCursor({ active }: { active: boolean }) {
+  const cursor = useViewerCursor()
+  useEffect(() => cursor.hover(active ? "pointer" : null), [cursor, active])
+  return null
+}
+
 function ModelMesh({ m, selected, shift, onSelect }: { m: ModelObject; selected: boolean; shift?: [number, number, number]; onSelect?: (id: string) => void }) {
   const [loaded, setLoaded] = useState(0)
   useEffect(() => onModelsLoaded(() => setLoaded((v) => v + 1)), [])
@@ -743,7 +752,7 @@ function ModelMesh({ m, selected, shift, onSelect }: { m: ModelObject; selected:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const obj = useMemo(() => modelInstance({ id, name, src, x, y, z, w, h, d, rot }), [id, name, src, x, y, z, w, h, d, rot, loaded])
   const [hover, setHover] = useState(false)
-  useEffect(() => () => void (document.body.style.cursor = ""), [])
+  const cursor = useViewerCursor()
   if (!obj) return null
   return (
     <group position={shift ?? [0, 0, 0]}>
@@ -757,12 +766,12 @@ function ModelMesh({ m, selected, shift, onSelect }: { m: ModelObject; selected:
         } : undefined}
         onPointerOver={onSelect ? (e: ThreeEvent<PointerEvent>) => {
           e.stopPropagation()
-          document.body.style.cursor = "pointer"
+          cursor.hover("pointer")
           if (e.pointerType === "mouse") setHover(true)
         } : undefined}
         onPointerOut={onSelect ? () => {
           setHover(false)
-          document.body.style.cursor = ""
+          cursor.hover(null)
         } : undefined}
       />
       {/* Seleccionat: contorn gruixut; ratolí a sobre: prim (com els objectes). */}
@@ -845,7 +854,7 @@ function RefGhost({
   const pos = drag ?? g
   // Ratolí a sobre: contorn del color de selecció (més suau), perquè es vegi què es triarà.
   const [hover, setHover] = useState(false)
-  useEffect(() => () => void (document.body.style.cursor = ""), [])
+  const cursor = useViewerCursor()
   // Obstacle en blau; objecte que talla en violeta; seleccionat en taronja; amb problema en vermell.
   const tint = hit ? "#dc2626" : selected ? SELECT_COLOR : g.effect === "cut" ? "#7c3aed" : "#3b82f6"
   const draggable = selected && !!onMove
@@ -929,12 +938,12 @@ function RefGhost({
       } : undefined}
       onPointerOver={onSelect ? (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation()
-        document.body.style.cursor = "pointer"
+        cursor.hover("pointer")
         if (e.pointerType === "mouse") setHover(true)
       } : undefined}
       onPointerOut={onSelect ? () => {
         setHover(false)
-        if (!state.current) document.body.style.cursor = ""
+        cursor.hover(null)
       } : undefined}
       // El cos no s'arrossega (per decisió de l'usuari): només les fletxes del gizmo, així sempre se sap cap on es mourà.
     >
@@ -1058,6 +1067,7 @@ function AddButton({ x, y, z, side, onClick }: { x: number; y: number; z: number
   // Botó 3D (no Html): mida constant a la pantalla, sempre per sobre del moble.
   const scaler = useRef<Group>(null)
   const [hover, setHover] = useState(false)
+  const cursor = useViewerCursor()
   usePixelScale(scaler, 15)
   const white = <meshBasicMaterial color="white" depthTest={false} depthWrite={false} transparent />
   return (
@@ -1070,11 +1080,11 @@ function AddButton({ x, y, z, side, onClick }: { x: number; y: number; z: number
             onPointerOver={(e) => {
               e.stopPropagation()
               setHover(true)
-              document.body.style.cursor = "pointer"
+              cursor.hover("pointer")
             }}
             onPointerOut={() => {
               setHover(false)
-              document.body.style.cursor = ""
+              cursor.hover(null)
             }}
             onClick={(e) => {
               e.stopPropagation()
@@ -1125,6 +1135,7 @@ function MoveHandle({
   const latest = useRef<{ dx: number; dy: number; dz: number; all: boolean } | null>(null)
   const [live, setLive] = useState<{ dx: number; dy: number; dz: number; all: boolean } | null>(null)
   const [hover, setHover] = useState(false)
+  const cursor = useViewerCursor()
   // Al mig de l'aresta de dalt de davant; el cercle va uns píxels més amunt (a la pantalla, `HANDLE_LIFT`).
   const top: [number, number, number] = [(m.x + m.width / 2) * S, (m.y + m.height) * S, ((m.z ?? 0) + m.depth) * S]
   // Mida constant a la pantalla (uns 30 px), s'allunyi o s'acosti la càmera.
@@ -1200,7 +1211,7 @@ function MoveHandle({
     unlisten.current?.()
     ;(e.target as Element | null)?.releasePointerCapture?.(e.pointerId)
     if (controls) controls.enabled = true
-    if (!hover) document.body.style.cursor = ""
+    cursor.drag(null)
     const d = latest.current
     latest.current = null
     setLive(null)
@@ -1221,11 +1232,11 @@ function MoveHandle({
           onPointerOver={(e) => {
             e.stopPropagation()
             setHover(true)
-            document.body.style.cursor = "grab"
+            cursor.hover("grab")
           }}
           onPointerOut={() => {
             setHover(false)
-            if (!start.current) document.body.style.cursor = ""
+            cursor.hover(null)
           }}
           onPointerDown={(e) => {
             e.stopPropagation()
@@ -1234,7 +1245,7 @@ function MoveHandle({
             const plane = new Plane().setFromNormalAndCoplanarPoint(m.free && !e.shiftKey ? new Vector3(0, 1, 0) : new Vector3(0, 0, 1), e.point)
             start.current = { p: e.point.clone(), plane, all: e.shiftKey }
             if (controls) controls.enabled = false
-            document.body.style.cursor = "grabbing"
+            cursor.drag("grabbing")
             listenEnd(e.pointerId)
           }}
           onPointerMove={(e) => {

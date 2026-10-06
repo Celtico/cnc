@@ -83,7 +83,6 @@ export function ProjectCard({
                   maxW="full"
                   minW={0}
                   title={here ? `És a l'ambient «${a.name}»` : `Obrir l'ambient «${a.name}»`}
-                  cursor={here ? undefined : "pointer"}
                   _hover={here ? undefined : { textDecoration: "underline" }}
                 >
                   {here ? (

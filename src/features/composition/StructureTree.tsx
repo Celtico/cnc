@@ -674,7 +674,6 @@ function Row({
       pr={1}
       py={1}
       rounded="md"
-      cursor="pointer"
       bg={selected ? "wood.muted" : undefined}
       color={selected ? "wood.fg" : muted ? "fg.muted" : "fg"}
       _hover={{ bg: selected ? "wood.muted" : "bg.muted" }}
