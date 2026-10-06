@@ -79,7 +79,6 @@ export function DocBar({ onBack, onSettings, actionsRef, menu, tabs, rootLabel, 
             px={1.5}
             py={1}
             rounded="sm"
-            cursor="pointer"
             _hover={{ color: "fg", bg: "bg.muted" }}
           >
             <button type="button" onClick={onBack}>

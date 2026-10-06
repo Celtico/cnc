@@ -72,7 +72,7 @@ export function GalleryCard({
       </Card.Root>
     )
   return (
-    <Card.Root asChild {...card} cursor="pointer">
+    <Card.Root asChild {...card}>
       <button type="button" onClick={onClick} disabled={disabled}>
         {body}
       </button>

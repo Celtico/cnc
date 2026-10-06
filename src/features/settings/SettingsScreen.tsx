@@ -436,7 +436,6 @@ function SettingsPages({ header, children }: { header: ReactNode; children: Reac
                 rounded={{ md: "md" }}
                 borderTopWidth={{ base: i ? "1px" : 0, md: 0 }}
                 textAlign="left"
-                cursor="pointer"
                 bg={{ md: on ? "wood.subtle" : undefined }}
                 color={{ md: on ? "wood.fg" : undefined }}
                 fontWeight={{ md: on ? "semibold" : "normal" }}
@@ -806,7 +805,6 @@ function AccentField() {
               borderWidth="2px"
               borderColor={on ? "fg" : "transparent"}
               p="3px"
-              cursor="pointer"
             >
               <button type="button" role="radio" aria-checked={on} aria-label={a.label} title={a.label} onClick={() => setAccent(a.id)}>
                 <Box w="full" h="full" rounded="full" bg={a.swatch} display="flex" alignItems="center" justifyContent="center" color="white">
@@ -833,7 +831,7 @@ function Swatches<T extends string>({ label, items, value, onChange }: { label: 
       {items.map((a) => {
         const on = a.id === value
         return (
-          <Box key={a.id} asChild w="36px" h="36px" rounded="full" borderWidth="2px" borderColor={on ? "fg" : "transparent"} p="3px" cursor="pointer">
+          <Box key={a.id} asChild w="36px" h="36px" rounded="full" borderWidth="2px" borderColor={on ? "fg" : "transparent"} p="3px">
             <button type="button" role="radio" aria-checked={on} aria-label={a.label} title={a.label} onClick={() => onChange(a.id)}>
               <Box w="full" h="full" rounded="full" bg={a.swatch} borderWidth="1px" borderColor="blackAlpha.200" display="flex" alignItems="center" justifyContent="center" color={isLight(a.swatch) ? "gray.800" : "white"}>
                 {on && <LuCheck />}
@@ -854,7 +852,7 @@ function FloorTiles({ value, onChange }: { value: FloorId; onChange: (v: FloorId
         const on = f.id === value
         const img = floorSwatchUrl(f.id)
         return (
-          <Stack key={f.id} asChild gap={1} align="center" cursor="pointer">
+          <Stack key={f.id} asChild gap={1} align="center">
             <button type="button" role="radio" aria-checked={on} onClick={() => onChange(f.id)}>
               <Box w="72px" h="52px" rounded="md" borderWidth="2px" borderColor={on ? "colorPalette.solid" : "border"} colorPalette="wood" p="2px">
                 <Box w="full" h="full" rounded="sm" bg={f.swatch} bgImage={img ? `url(${img})` : undefined} bgSize="cover" />

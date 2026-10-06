@@ -28,7 +28,7 @@ export function FolderedGrid<T>({
    * (secció «Historial»). La selecció i «Grup nou» treballen amb el que es veu.
    */
   show?: "all" | "folders" | "loose"
-  /** A la dreta de la fila d'eines (p. ex. «Esborrar l'historial»). */
+  /** A la dreta de la fila d'eines (p. ex. «Esborrar» de l'Historial). */
   toolbar?: ReactNode
   /**
    * Seleccionar-ne diversos (botó «Seleccionar»): moure'ls tots a un grup o esborrar-los alhora.

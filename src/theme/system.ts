@@ -2,7 +2,6 @@ import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react"
 
 const config = defineConfig({
   globalCss: {
-    html: { height: "100%" },
     body: {
       minHeight: "100dvh",
       bg: "bg",
@@ -10,6 +9,19 @@ const config = defineConfig({
       overscrollBehavior: "none",
     },
     "#root": { minHeight: "100dvh", display: "flex", flexDirection: "column" },
+    // Cursor, una sola regla (és una app, no una web): fletxa per defecte (res de la I de text sobre etiquetes i
+    // títols), la I només on s'escriu, la mà on un clic fa alguna cosa i `not-allowed` als desactivats. Arrossegar
+    // (`grab`/`grabbing`), dibuixar (`crosshair`) i les vores (`col-resize`) es posen on es fan.
+    html: { height: "100%", cursor: "default" },
+    'input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), textarea, [contenteditable=true]': {
+      cursor: "text",
+    },
+    'button, [role=button], [role=tab], [role=treeitem], [role=menuitem], [role=menuitemradio], [role=menuitemcheckbox], [role=option], [role=radio], [role=checkbox], [role=switch], a[href], summary, select, label:has(> input:not([type=text]):not([type=number])), [data-scope=accordion][data-part=item-trigger], [data-scope=segment-group][data-part=item], [data-scope=tabs][data-part=trigger], [data-scope=switch][data-part=root], [data-scope=checkbox][data-part=root], [data-scope=radio-group][data-part=item]': {
+      cursor: "pointer",
+    },
+    ":disabled, [aria-disabled=true], [data-disabled], :disabled *, [aria-disabled=true] *, [data-disabled] *": {
+      cursor: "not-allowed",
+    },
     // Peu dels diàlegs: si els botons no hi caben, baixen de línia; al mòbil, un per fila
     // a tota l'amplada (l'acció principal a dalt, Cancel·lar a baix).
     ".chakra-dialog__footer": {
@@ -53,6 +65,13 @@ const config = defineConfig({
   },
   theme: {
     tokens: {
+      // Mà = es pot clicar (Chakra hi posa la fletxa als ítems de menú, caselles, opcions i ràdios).
+      cursor: {
+        menuitem: { value: "pointer" },
+        checkbox: { value: "pointer" },
+        option: { value: "pointer" },
+        radio: { value: "pointer" },
+      },
       colors: {
         wood: {
           50: { value: "#fbf6ee" },

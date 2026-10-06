@@ -47,7 +47,7 @@
 :root .gallery-accordion > [data-part="item"] > [data-part="item-content"] > .chakra-accordion__itemBody > p {
   padding: 12px var(--gallery-px);
 }
-/* Barra d'eines de l'historial («Grup nou», «Seleccionar», «Esborrar l'historial»): de vora a vora, enganxada a la
+/* Barra d'eines de l'historial («Grup nou», «Seleccionar», «Esborrar»): de vora a vora, enganxada a la
    capçalera, sense cantonades i amb els botons alineats amb el contingut. */
 :root .gallery-accordion .gallery-toolbar {
   padding-inline: calc(var(--gallery-px) - 4px);

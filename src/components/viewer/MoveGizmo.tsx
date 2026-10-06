@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react"
 import type { Group } from "three"
 import { frontRaycast, noRaycast } from "./gizmoRaycast"
 import { usePixelScale, type Axis } from "./pixelScale"
+import { useViewerCursor } from "./cursor"
 
 const AXIS_COLOR: Record<Axis, string> = { x: "#e5484d", y: "#30a46c", z: "#0090ff" }
 const EDITOR_ONLY = { editorOnly: true }
@@ -29,8 +30,10 @@ export function MoveGizmo({
   const scaler = useRef<Group>(null)
   usePixelScale(scaler, 16)
   const [hover, setHover] = useState<Axis | null>(null)
-  // Si desapareix amb el ratolí a sobre (es deselecciona), el cursor no es queda en «grab».
-  useEffect(() => () => void (document.body.style.cursor = ""), [])
+  // `grab` a sobre d'una fletxa i `grabbing` mentre s'arrossega (com la nansa dels mòduls); si desapareix amb el
+  // ratolí a sobre (es deselecciona), `useViewerCursor` treu el seu i no es queda en «grab».
+  const cursor = useViewerCursor()
+  useEffect(() => cursor.drag(active ? "grabbing" : null), [cursor, active])
   // r3f no fa arribar el `pointercancel` a l'objecte (un gest del sistema a l'iPhone, girar la pantalla…): se
   // n'escolta un a la finestra perquè l'arrossegament s'acabi igualment (els `onEnd` ja ignoren un final repetit).
   const start = (a: Axis, e: ThreeEvent<PointerEvent>) => {
@@ -59,11 +62,11 @@ export function MoveGizmo({
             onPointerOver={(e) => {
               e.stopPropagation()
               setHover(a)
-              document.body.style.cursor = "grab"
+              cursor.hover("grab")
             }}
             onPointerOut={() => {
               setHover(null)
-              if (!active) document.body.style.cursor = ""
+              cursor.hover(null)
             }}
             onPointerDown={(e) => start(a, e)}
             // El clic de la fletxa no arriba a les peces de davant (si no, triaria una altra cosa i es perdria la selecció).

@@ -917,13 +917,15 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Mides al mm**: `tidyMm`/`tidyPart` (`freePart.ts`) arrodoneixen al mm els valors amb més d'un decimal (els de l'usuari,
   com 22,5, es queden) en crear l'objecte i en carregar-lo (`normalizeComposition`).
 
-## Galeries (Mobles · Objectes · Ambients)
-- **Les tres pàgines fan igual**: capçalera `PageHeader` (títol gran, **botó principal a sota** —«Nou moble» · «Nou objecte»
-  · «Nou ambient», `colorPalette="wood"`, en blanc amb `projects/blank.ts`; Mobles també «Obrir fitxer»— i l'explicació),
-  cercador (sense accents; obre les seccions i categories amb resultats) i acordions **tots tancats** en obrir l'app (estat
-  de la sessió, p. ex. `mobles:gallery`): **Historial**, **Projectes** i **Catàleg**; a Mobles, a més, **Col·leccions de
-  mobles**. No hi ha filtre de tipus (el tipus també es busca). Fila d'eines dins dels acordions («Grup nou»,
-  «Seleccionar», «Esborrar l'historial») **a l'esquerra**.
+## Galeries (Mobles · Ambients · Objectes)
+- **Les tres pàgines fan igual**: capçalera `PageHeader` (títol gran i l'explicació), **cercador amb el botó principal al
+  costat** (`components/SearchBar`: «+ Nou moble» · «+ Nou objecte» · «+ Nou ambient», `colorPalette="wood"`, en blanc amb
+  `projects/blank.ts`; amb text a l'ordinador i només la icona al mòbil, amb `aria-label` i tooltip; Mobles també «Obrir
+  fitxer», `LuFolderOpen`, a la mateixa fila; sense accents; obre les seccions i categories amb resultats) i acordions
+  **tots tancats** en obrir l'app (estat de la sessió, p. ex. `mobles:gallery`): **Historial**, **Projectes** i **Catàleg**;
+  a Mobles, a més, **Col·leccions de mobles**. Les galeries de les finestres «+ Moble» / «+ Objecte» dels ambients no
+  porten el botó (`add` opcional). No hi ha filtre de tipus (el tipus també es busca). Fila d'eines dins dels acordions
+  («Grup nou», «Seleccionar», «Esborrar») **a l'esquerra**.
 - **Mobles** (`projects/ProjectsScreen.tsx` + `projects/NewMobleGallery.tsx`, també a la finestra «+ Moble» dels ambients).
   Les **plantilles de l'app** (`BUILTIN_TEMPLATES` a `templates.ts`) **ja no surten a la galeria**: les fan servir les escenes
   (`app:<id>`), el corpus golden, els tests i `modulePresetsFor`. Són: les vitrina (`SHOWCASE`: Aparador sobre ferro, Moble TV
@@ -966,7 +968,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`MoveToFolderDialog`), esborrar. **«Grup nou»** (nom i després es toquen les targetes) i **«Seleccionar»**
   (`FolderedGrid selection`): diverses targetes → moure-les a un grup o esborrar-les (els mobles i objectes que són en un
   ambient es conserven). **Modificats** (`Project.edited`, de `updateProjectComposition`; `isEdited` per als antics):
-  etiqueta «Modificat». **Esborrar l'historial** (`projects/ClearHistory.tsx`, amb confirmació, respecta la cerca): no toca
+  etiqueta «Modificat». **«Esborrar»** de l'Historial (`projects/ClearHistory.tsx`, `title` «Esborrar l'historial»; el
+  diàleg de confirmació es diu «Esborrar l'historial?» i respecta la cerca): no toca
   els Projectes ni els mobles/objectes que són en algun ambient (a Ambients esborra els ambients, els seus mobles es queden);
   avisa dels modificats i permet «Esborrar només els no modificats».
 - **Esborranys** (per decisió de l'usuari: a l'Historial només hi entra el que s'ha fet servir): obrir una plantilla
@@ -1004,8 +1007,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   de **grups sempre oberts** (`components/SettingsGroup`: targeta amb capçalera, res no es plega). Al mòbil, navegació en
   profunditat: apartats › pàgina › element, amb «‹ Tornar»; l'apartat i l'element es recorden durant la sessió
   (`useSessionString`). Les referències creuades als textos diuen «Preferències › <títol de la pàgina>».
-- **Llista i detall** (`components/MasterDetail`: llista agrupada amb mostra; cercador, categories i «Afegir» (només icona)
-  en una fila; `head` = títol de la pàgina a dalt de la llista —`PaneHeadContext` a les pàgines `wide`—; `footer` = sota el
+- **Llista i detall** (`components/MasterDetail`: llista agrupada amb mostra; `SearchBar` amb «Afegir» (només icona,
+  `iconOnly`) i a sota les categories; `head` = títol de la pàgina a dalt de la llista —`PaneHeadContext` a les pàgines `wide`—; `footer` = sota el
   detall) a Objectes de referència i Màquines CNC.
 - **Materials: graella de targetes i edició a pantalla completa** (per decisió de l'usuari, com la finestra del Render;
   `settings/MaterialsPane.tsx`, `MaterialsList`): a dalt el cercador (sense accents, `fold`) i «Afegir» (biblioteca); a sota,
@@ -1025,11 +1028,15 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     cal estirar ≤ 12 % (`ballSpanU`), si no costura darrere; un sol `Canvas` `frameloop="demand"`, dpr ≤ 2 / 1,5
     `LOW_MEMORY`, `resize offsetSize` —el diàleg s'obre escalat—, `StudioEnvironment` + llum principal forta i retall,
     terra de caselles de 50 mm que s'esvaeix sobre el fons d'estudi CSS clar/fosc, ombra de contacte de textura;
-    `OrbitControls` sense zoom ni desplaçar; el material es refà per `ballKey` i s'allibera; només muntada amb l'editor
-    obert; en DEV `window.__materialBall` = el renderitzador per mirar `info.memory`). A l'ordinador gran (`lg`) omplen
-    la columna de l'esquerra (tira a dalt, bola a sota a tota l'amplada) i el formulari va a la dreta (560 px, amb el seu
-    desplaçament); més estret, tira i bola una al costat de l'altra a dalt (meitat i meitat al mòbil, bola de 280 px a
-    `md`) i el formulari (760 px com a molt) a sota, tot es desplaça. Les targetes de la graella es queden en CSS. Formulari (`MaterialCard`): nom editable amb Duplicar/Eliminar i
+    `OrbitControls` sense zoom ni desplaçar; el material es refà per `ballKey` —acabat, llum, translucidesa, Reflex i
+    Vellut— i s'allibera; només muntada amb l'editor obert; en DEV `window.__materialBall` = el renderitzador per mirar
+    `info.memory`). **La bola diu la veritat** (`physicalBall`): còpia `MeshPhysicalMaterial` amb les mateixes textures,
+    «Reflex» = `clearcoat` amb la rugositat del render (`COAT_ROUGHNESS`), «Vellut» = `sheen` del color de la tela cap al
+    blanc, «Llum que passa» = una mica de llum pròpia (aproximació) i la llum que fa, encesa (`applyFinishFx`). **La bola és
+    la protagonista**: a l'ordinador gran (`lg`) omple la columna de l'esquerra i la tira va a sota, baixa
+    (`clamp(140px, 24dvh, 220px)`), i el formulari a la dreta (560 px, amb el seu desplaçament); a `md`, bola de 360 px i la
+    tira al costat; al mòbil, bola quadrada a tota l'amplada i la tira a sota (3:1); el formulari (760 px com a molt) a
+    sota, tot es desplaça. Les targetes de la graella es queden en CSS. Formulari (`MaterialCard`): nom editable amb Duplicar/Eliminar i
     les seccions **Aspecte** (Acabat, Color/Espècie/Foto, mapes de relleu i brillantor, Rajola, Textura, Joc PBR) i
     **Fabricació** (Gruixos `ThicknessChips`, Cantell, Veta, Categoria; als de simulació només Categoria) i, als taulers i
     fons, **«Per defecte als mòduls nous»** (`DefaultPick`). Esc i ✕ tornen a la graella; **Esc amb el nom a mig escriure
@@ -1060,6 +1067,13 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`colorPalette="wood"`, `wood.fg`, `wood.solid`…); res de `blue`, `orange`… per al color principal. Mode fosc suportat
   (dia/nit és a Preferències, no al menú). Controls segmentats en mode fosc: l'indicador triat és gris clar
   (`theme/system.ts`).
+- **Cursor, una sola regla al tema** (`theme/system.ts`, `globalCss` i tokens `cursor`): fletxa per defecte (és una app),
+  la I només als camps on s'escriu, mà (`pointer`) a tot el que fa alguna cosa en clicar (botons, `role` de botó, pestanya,
+  ítem d'arbre i de menú, opcions, triggers d'acordió, segments) i `not-allowed` als desactivats. No es posa
+  `cursor="pointer"` a mà en un `button` o `role`: només en un element clicable que no ho sigui (una fila de taula). Arrossegar
+  (`grab`/`grabbing`), dibuixar (`crosshair`) i les vores (`col-resize`) es posen on es fan. **3D**: `useViewerCursor`
+  (`components/viewer/cursor.ts`: `hover`/`drag`, arrossegar mana, al canvas i es neteja en desmuntar): `pointer` sobre el
+  que es pot triar, `grab` a les fletxes del gizmo i a la nansa, `grabbing` mentre s'arrosseguen.
 - Icones dins dels components de Chakra v3 com a **children**, no amb la prop `icon`:
   ```tsx
   <IconButton aria-label="Mesurar"><LuRuler /></IconButton>
@@ -1116,16 +1130,20 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   (llevat de `defaultOpen`, p. ex. els xocs amb l'obertura actual) i l'estat es recorda durant la sessió
   (`mobles:section:<id>`). Dins d'un `PanelGroup` fan d'acordió (una oberta): només l'«Avançat» d'Exportar. Les Preferències
   no en fan servir (`SettingsGroup`, sempre obert).
-- **`PageHeader`** (`components/PageHeader`, Ambients · Objectes · Mobles · Preferències): títol gran, accions a sota i
-  l'explicació. **Seccions de les galeries sense marge** (`.gallery-accordion`, `layout.css`): barra d'eines i acordions de
+- **`PageHeader`** (`components/PageHeader`, Mobles · Ambients · Objectes · Preferències): títol gran i l'explicació
+  (`actions` opcional, a sota del títol).
+- **`SearchBar`** (`components/SearchBar`): **tots els cercadors** (galeries, `MasterDetail`, Materials, calaix del
+  `MaterialSelect`) amb el «+» al costat (`add`: `wood`, text a l'ordinador i icona al mòbil, `iconOnly` per a columnes
+  estretes) i `extra` per a més accions a la fila. **Seccions de les galeries sense marge** (`.gallery-accordion`, `layout.css`): barra d'eines i acordions de
   dins **a sang**; la resta amb `--gallery-px`. Res de marges negatius.
 
 ### Navegació i barres
-- **Menú global sempre igual** (`App.tsx`, `GLOBAL_NAV`, com Figma o Linear): **Ambients · Objectes · Mobles** i, a baix de
+- **Menú global sempre igual** (`App.tsx`, `GLOBAL_NAV`, com Figma o Linear): **Mobles · Ambients · Objectes** i, a baix de
   tot, Preferències (igual a la barra de baix del mòbil); l'apartat del document obert queda marcat (`section`). L'app s'obre
-  a Ambients si no hi havia res obert. **Cada apartat recorda l'últim obert** (`mobles:last-object`, `mobles:last-moble`): clicar
+  a Mobles (el primer del menú) si no hi havia res obert. **Cada apartat recorda l'últim obert** (`mobles:last-object`, `mobles:last-moble`): clicar
   Objectes o Mobles hi torna si encara existeix; tornar a la llista («Mobles ›», la fletxa o clicar l'apartat del document
-  obert) el deixa d'obrir. **Les accions d'un apartat van a la seva capçalera**, mai al menú.
+  obert) el deixa d'obrir. **Les accions d'un apartat van a la seva pàgina** (el botó principal, al costat del cercador), mai
+  al menú.
 - **Barra superior del document** (`components/TopBar.tsx`, `DocBar` per a moble, objecte i ambient —`AmbientTopBar`—, com
   Figma/Onshape/Notion): `Mobles › Nom` a l'esquerra (nom editable) i les accions del document a la dreta, que cada pàgina hi
   posa amb `<TopBarActions>` (desar, desfer, refer). Les pàgines **no porten títol propi** ni capçaleres pròpies. Les pàgines
@@ -1196,7 +1214,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 
 | Àmbit | Acció | Icona |
 |---|---|---|
-| Navegació | Ambients · Objectes · Mobles (el cub: un moble) | `LuHouse` · `LuSofa` · `LuBox` |
+| Navegació | Mobles (el cub: un moble) · Ambients · Objectes | `LuBox` · `LuHouse` · `LuSofa` |
 | Navegació | Editor · Peces · Nesting / taulers · Exportar | `LuDraftingCompass` · `LuList` · `LuLayoutGrid` · `LuDownload` |
 | Navegació | Tornar (‹ a les barres) · Plegar/desplegar menú · Preferències | `LuChevronLeft` · `LuPanelLeftClose` / `LuPanelLeftOpen` · `LuSettings` |
 | Tipus de moble | Moble · Cuina · Armari · Taula · Flat-pack · Objecte | `LuBox` · `LuCookingPot` · `LuContainer` · `LuTable` · `LuPuzzle` · `LuSofa` |
@@ -1246,6 +1264,18 @@ té la línia **vertical**. Per això és la de "dividir en vertical".
 
 
 ## Com treballar
+- **Regla d'or: coherència i cohesió.** Abans de fer res nou (component, opció, pantalla, interacció), **busca com està
+  resolt el mateix a l'app** i fes-ho igual.
+  - **Reutilitza o generalitza; no copiïs.** Si ja hi ha un component que fa la feina, s'hi afegeix el que falta (prop,
+    variant) a `components/`. Si n'hi ha dos que fan el mateix, s'unifiquen abans d'afegir-ne un tercer.
+  - **Un concepte, un component**: cercador + «+» = `SearchBar`, tria = `ChoiceChips`/`IconChoice`, interruptor = `Switch`,
+    lliscador = `Slider`, material = `MaterialSelect`, camp = `FormRow`. Res d'elements nadius (`<input type="checkbox|range">`)
+    fora de `components/ui`.
+  - **El mateix gest fa el mateix a tot arreu**: seleccionar, cercar, afegir, esborrar, plegar i moure es fan igual a Mobles,
+    Objectes, Ambients i Preferències (mateixa posició, icona del catàleg, text i cursor).
+  - **De punta a punta**: una opció nova es comprova a tots els llocs on té efecte (visor, miniatura, previsualització,
+    render, GLB/USDZ, exports, `.moble`) abans de donar-la per feta. Si una previsualització no la pot mostrar, ho diu.
+  - Quan aparegui un cas nou, s'afegeix aquí.
 - Abans de codi nou al `core/`, escriu o actualitza els tests (Vitest). Canvis de fabricació: proves d'or (vegeu Fabricació).
 - Canvis petits i verificables. Després de cada fase han de passar `pnpm typecheck`, `pnpm lint` (0 errors), `pnpm test` i
   `pnpm build`.
