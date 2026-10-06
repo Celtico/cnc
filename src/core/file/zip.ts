@@ -104,8 +104,17 @@ async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(await new Response(stream).arrayBuffer())
 }
 
-/** Llegeix tots els fitxers d'un .zip. Llança si no ho és o si un fitxer fa servir un mètode desconegut. */
-export async function unzip(bytes: Uint8Array): Promise<ZipEntry[]> {
+/** Un fitxer del directori d'un .zip (sense llegir): per obrir-ne només els que calen (`readZipEntry`). */
+export interface ZipIndexEntry {
+  name: string
+  method: number
+  csize: number
+  size: number
+  offset: number
+}
+
+/** El directori d'un .zip (noms i mides), sense descomprimir res. Llança si no és un .zip. */
+export function listZip(bytes: Uint8Array): ZipIndexEntry[] {
   const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   let eocd = -1
   for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 22 - 65535); i--) {
@@ -118,25 +127,38 @@ export async function unzip(bytes: Uint8Array): Promise<ZipEntry[]> {
   const count = v.getUint16(eocd + 10, true)
   let p = v.getUint32(eocd + 16, true)
   const dec = new TextDecoder()
-  const out: ZipEntry[] = []
+  const out: ZipIndexEntry[] = []
   for (let k = 0; k < count; k++) {
     if (v.getUint32(p, true) !== 0x02014b50) throw new Error("Directori central del .zip malmès")
     const method = v.getUint16(p + 10, true)
     const csize = v.getUint32(p + 20, true)
+    const size = v.getUint32(p + 24, true)
     const nlen = v.getUint16(p + 28, true)
     const xlen = v.getUint16(p + 30, true)
     const clen = v.getUint16(p + 32, true)
-    const lofs = v.getUint32(p + 42, true)
+    const offset = v.getUint32(p + 42, true)
     const name = dec.decode(bytes.subarray(p + 46, p + 46 + nlen))
     p += 46 + nlen + xlen + clen
-    if (name.endsWith("/")) continue
-    const lnlen = v.getUint16(lofs + 26, true)
-    const lxlen = v.getUint16(lofs + 28, true)
-    const start = lofs + 30 + lnlen + lxlen
-    const raw = bytes.subarray(start, start + csize)
-    if (method === 0) out.push({ name, data: raw.slice() })
-    else if (method === 8) out.push({ name, data: await inflateRaw(raw) })
-    else throw new Error(`Mètode de compressió ${method} no suportat (${name})`)
+    if (!name.endsWith("/")) out.push({ name, method, csize, size, offset })
   }
+  return out
+}
+
+/** Llegeix (i descomprimeix) un fitxer del .zip. */
+export async function readZipEntry(bytes: Uint8Array, e: ZipIndexEntry): Promise<Uint8Array> {
+  const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  const lnlen = v.getUint16(e.offset + 26, true)
+  const lxlen = v.getUint16(e.offset + 28, true)
+  const start = e.offset + 30 + lnlen + lxlen
+  const raw = bytes.subarray(start, start + e.csize)
+  if (e.method === 0) return raw.slice()
+  if (e.method === 8) return inflateRaw(raw)
+  throw new Error(`Mètode de compressió ${e.method} no suportat (${e.name})`)
+}
+
+/** Llegeix tots els fitxers d'un .zip. Llança si no ho és o si un fitxer fa servir un mètode desconegut. */
+export async function unzip(bytes: Uint8Array): Promise<ZipEntry[]> {
+  const out: ZipEntry[] = []
+  for (const e of listZip(bytes)) out.push({ name: e.name, data: await readZipEntry(bytes, e) })
   return out
 }

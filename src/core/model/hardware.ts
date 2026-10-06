@@ -84,9 +84,10 @@ const CATEGORY_IDS = HARDWARE_CATEGORIES.map((c) => c.id) as [HardwareCategory, 
 /**
  * Motor (regla de col·locació) que fa servir un ferratge: on va i quants se'n posen ho decideix la regla de cada
  * contingut (la porta posa cassoletes a la filera System 32, el calaix forats de guia…); el ferratge en dona els números
- * i els mecanitzats. Els ferratges manuals (F4) en tindran un de genèric.
+ * i els mecanitzats. Els ferratges manuals (F4) en tindran un de genèric. `plate` (placa de muntatge importada) no té lloc
+ * propi: la frontissa que s'hi aparella en copia els forats (`HardwareItem.plate`, target `side`).
  */
-export const HARDWARE_ENGINES = ["cup", "system32", "dowel", "slide", "flapArm", "magnet", "barHandle"] as const
+export const HARDWARE_ENGINES = ["cup", "system32", "dowel", "slide", "flapArm", "magnet", "barHandle", "plate"] as const
 export type HardwareEngine = (typeof HARDWARE_ENGINES)[number]
 
 /** Mecanitzat en coordenades de la peça, relatiu al punt d'ancoratge (u al llarg, v a través). */
@@ -108,6 +109,34 @@ export type HardwareTarget = z.infer<typeof HardwareTargetSchema>
  * Quantitat (o valor) segons una mida, com a dades: el primer graó amb `x ≤ upTo` (`x < upTo` amb `strict`) dona `n`;
  * si cap, `else`. La taula de `hingeCount` (2/3/4/5 fins a 900/1600/2100) és un d'aquests.
  */
+const V3Schema = z.tuple([mm, mm, mm])
+
+/**
+ * Ferratge importat d'un fabricant (`core/import`, `docs/ferratges-import.md`): d'on surt, el model 3D i les vistes 2D
+ * (`asset`, a Dexie: no viatja amb les còpies dels mòduls) i els mecanitzats tal com es van llegir (`proposed`, per tornar-hi).
+ * **Fins que no es confirma (`confirmed`), no fa cap forat**: es pot triar, però el moble avisa i la porta queda sense
+ * cassoletes (millor cap forat que un de dolent al taller).
+ */
+export const HardwareImportSchema = z.object({
+  maker: z.string(),
+  article: z.string(),
+  /** Carpetes de la descàrrega (en alemany, com venen). */
+  folders: z.array(z.string()),
+  files: z.array(z.string()),
+  /** Model 3D i vistes 2D (`hardwareAssets` de Dexie). */
+  asset: z.string().optional(),
+  /** Caixa del ferratge al seu marc (mm): u al llarg del cantell, v cap a dins, n fora de la cara. */
+  bbox: z.object({ min: V3Schema, max: V3Schema }).optional(),
+  /** Punts de connexió de les vistes 2D (capa CONNECTIONPOINTS), tal com venen. */
+  points: z.array(V3Schema).optional(),
+  /** Mecanitzats proposats en llegir els fitxers (els de `targets` són els editats). */
+  proposed: z.array(HardwareTargetSchema),
+  /** Què s'hi ha trobat i què cal revisar. */
+  notes: z.array(z.string()).optional(),
+  confirmed: z.boolean(),
+})
+export type HardwareImport = z.infer<typeof HardwareImportSchema>
+
 export const StepRuleSchema = z.object({
   steps: z.array(z.object({ upTo: mm, n: mm })),
   else: mm,
@@ -137,6 +166,13 @@ export const HardwareItemSchema = z.object({
   version: z.number().int().min(1),
   /** Inicial de l'app (es pot editar; «Restaurar valors inicials» el torna a deixar com era). */
   builtin: z.boolean().optional(),
+  /** Importat d'un fabricant (v20). */
+  imported: HardwareImportSchema.optional(),
+  /**
+   * Frontisses: la placa de muntatge aparellada (els seus forats són al target `side`, copiats en triar-la; el model és
+   * per veure-la al 3D).
+   */
+  plate: z.object({ id: z.string(), name: z.string(), asset: z.string().optional(), bbox: z.object({ min: V3Schema, max: V3Schema }).optional() }).optional(),
 })
 export type HardwareItem = z.infer<typeof HardwareItemSchema>
 
@@ -236,7 +272,20 @@ export const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
     P("margin", "Marge", 0, 20, 0.5, "Matèria al voltant dels forats (vores i altres forats)."),
     P("inset", "Al cantell", 10, 200, 1, "A les portes i abatibles, del cantell que obre al tirador."),
   ],
+  plate: [
+    P("setback", "Del davant", 0, 200, 0.5, "Del cantell de davant del lateral a la referència de la placa (la filera System 32: 37)."),
+    P("offset", "Alçada", -100, 100, 0.5, "Del centre de la cassoleta a la referència de la placa (amunt, positiu)."),
+  ],
 }
+
+/** Col·locació de la placa d'una frontissa importada (paràmetres de la frontissa, copiats de la placa en aparellar-la). */
+export const HINGE_PLATE_PARAMS: HardwareParamSpec[] = [
+  P("plateSetback", "Placa: del davant", 0, 200, 0.5, "Del cantell de davant del lateral a la referència de la placa (la filera System 32: 37; amb fronts encastats, + el gruix del front)."),
+  P("plateOffset", "Placa: alçada", -100, 100, 0.5, "Del centre de la cassoleta a la referència de la placa (amunt, positiu)."),
+]
+
+/** Importat i encara sense confirmar: no fa cap forat. */
+export const isPendingImport = (item: HardwareItem): boolean => !!item.imported && !item.imported.confirmed
 
 // --- Valors inicials (dels números d'abans) ------------------------------------------------------------------------
 
@@ -473,8 +522,10 @@ export function hardwareSummary(item: HardwareItem): string {
     : item.engine === "system32" ? `pas ${n(p.pitch ?? NaN)} a ${n(p.edgeOffset ?? NaN)} mm`
     : item.engine === "slide" ? `${item.lengths?.length ?? 0} llargades`
     : item.engine === "barHandle" && item.pitch ? [...item.pitch.steps.map((s) => s.n), item.pitch.else].sort((a, b) => b - a).join("/")
+    : item.engine === "plate" ? `a ${n(p.setback ?? NaN)} mm del davant`
     : ""
-  return [holes.join(" · "), extra].filter(Boolean).join(" · ")
+  const pending = isPendingImport(item) ? "sense confirmar" : ""
+  return [pending, holes.join(" · "), extra].filter(Boolean).join(" · ")
 }
 
 /** Item nou de l'usuari a partir d'un altre (mateix motor): id nou, sense marca d'inicial. */
@@ -539,7 +590,8 @@ function eachHardware(comp: unknown, visit: (item: HardwareItem) => HardwareItem
  * biblioteca però un altre contingut (un mòdul d'abans amb una cassoleta de 30) **no** és aquell item.
  */
 export function sameHardware(a: HardwareItem, b: HardwareItem): boolean {
-  const content = ({ id: _i, name: _n, builtin: _b, tags: _t, maker: _m, ref: _r, version: _v, ...rest }: HardwareItem) => rest
+  // D'un importat només compta si està confirmat (el model, les vistes i les notes no fan forats); de la placa, els forats (ja a `targets`).
+  const content = ({ id: _i, name: _n, builtin: _b, tags: _t, maker: _m, ref: _r, version: _v, imported, plate: _p, ...rest }: HardwareItem) => ({ ...rest, ...(imported ? { confirmed: imported.confirmed } : {}) })
   return deepEqual(content(a), content(b))
 }
 

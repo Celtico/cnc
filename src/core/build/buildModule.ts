@@ -12,6 +12,7 @@ import {
   type HardwareItem,
   type HardwareKit,
   type HardwareSlot,
+  type Hole,
   type Module,
   type Panel,
   type PanelRole,
@@ -31,6 +32,7 @@ import {
   addFaceHole,
   dowelJoint,
   dowelsAlong,
+  faceAt,
   neg,
   placement,
   r,
@@ -956,7 +958,7 @@ class Builder {
     const territory = this.frontTerritory(rect, left, right)
     switch (front.kind) {
       case "door":
-        this.buildDoors(zone, front, territory, rowYs)
+        this.buildDoors(zone, front, territory, rowYs, left, right)
         break
       case "drawers":
         this.buildDrawers(zone, front, rect, territory, left, right)
@@ -1172,8 +1174,13 @@ class Builder {
    * quantitat per alçada i els números surten de l'item; la regla (repartides, al mig de dos forats de la filera System
    * 32, sense trepitjar-se) és d'aquí. Els forats, del motor (`applyHardware`).
    */
-  private addCups(door: Panel, doorH: number, hingeSide: "left" | "right", doorW: number, rowYs: number[], doorY0: number, zoneId?: string, hinge = this.kit.hinge): number {
+  private addCups(door: Panel, doorH: number, hingeSide: "left" | "right", doorW: number, rowYs: number[], doorY0: number, zoneId?: string, hinge = this.kit.hinge, side?: VerticalRef): number {
     const h = hinge.spec
+    // Importada i sense confirmar: cap forat (ni a la porta ni al lateral) i un avís; el taller no en rep res.
+    if (h.pending) {
+      this.hardwareWarning(`«${hinge.item.name}» és importada i encara no està confirmada: la porta queda sense cassoletes ni forats. Revisa-la i confirma-la a Preferències › Ferratges.`, zoneId)
+      return 0
+    }
     const half = this.hw.system32.pitch / 2
     // Entre dos forats seguits de la filera (amb trams, no entre l'últim d'un i el primer de l'altre).
     const pitch = this.hw.system32.pitch
@@ -1201,13 +1208,62 @@ class Builder {
       // Ancoratge: al cantell de la frontissa (x local = alçada); a la dreta, des de l'altre cantell.
       const at = applyHardware(hinge.item, "door", {}, { at: { x: r(y - doorY0), y: 0 }, ...(hingeSide === "left" ? {} : { mirrorY: doorW }) })
       door.holes.push(...at.holes)
+      // Ferratge importat: el model (només per veure'l) a la cassoleta i la placa aparellada al lateral.
+      const imp = hinge.item.imported
+      if (imp) {
+        const cupX = r(y - doorY0)
+        const cupY = hingeSide === "left" ? h.cupOffset : r(doorW - h.cupOffset)
+        const face = at.holes[0]?.face === "B" ? "B" : "A"
+        ;(door.fittings ??= []).push({ ...(imp.asset ? { asset: imp.asset } : {}), x: cupX, y: cupY, face, v: [0, hingeSide === "left" ? 1 : -1], ...(imp.bbox ? { bbox: imp.bbox } : {}) })
+      }
+      if (h.plate && side) this.addPlate(side, hingeSide, y, h.plate, hinge.item)
     }
     if (placed.length < count)
       this.warnings.push({ code: "hinge", message: `${door.label} de ${r(doorH)} mm: només hi caben ${placed.length} de ${count} frontisses sense que les cassoletes es trepitgin.`, zoneId, panelId: door.id })
     return placed.length
   }
 
-  private buildDoors(zone: Zone, front: Extract<Front, { kind: "door" }>, ter: ZoneRect, rowYs: number[]): void {
+  /**
+   * Placa de muntatge d'una frontissa importada: els seus forats a la cara de dins del lateral de les frontisses, a la
+   * referència de la placa (`setback` del cantell de davant del lateral, `offset` per sobre del centre de la cassoleta
+   * `yCup`). Marc de la placa: v cap al darrere, n cap a dins del moble, u = v × n (el mateix que el model importat). Un
+   * forat que cau on ja n'hi ha un (la filera System 32) es queda el més gros.
+   */
+  private addPlate(side: VerticalRef, hingeSide: "left" | "right", yCup: number, plate: NonNullable<SlotSpec<"hinge">["plate"]>, item: HardwareItem): void {
+    const xFace = hingeSide === "left" ? side.xR : side.xL
+    const n: Vec3 = hingeSide === "left" ? X : neg(X)
+    const v: Vec3 = neg(Z)
+    const u: Vec3 = [v[1] * n[2] - v[2] * n[1], v[2] * n[0] - v[0] * n[2], v[0] * n[1] - v[1] * n[0]]
+    const o: Vec3 = [xFace, yCup + plate.offset, side.zFront - plate.setback]
+    const at = (du: number, dv: number): Vec3 => [o[0] + du * u[0] + dv * v[0], o[1] + du * u[1] + dv * v[1], o[2] + du * u[2] + dv * v[2]]
+    const p = side.panel
+    for (const hole of plate.holes) {
+      const w = at(hole.u, hole.v)
+      const l = toLocal(p, w)
+      const face = faceAt(p, l)
+      if (!face || face === "edge" || l[0] < 0 || l[0] > p.length || l[1] < 0 || l[1] > p.width) {
+        this.warnings.push({ code: "hinge", message: `Placa de «${item.name}»: un forat cau fora del ${p.label.toLowerCase()} (${num(l[0])}, ${num(l[1])}). No es fa.`, panelId: p.id })
+        continue
+      }
+      const same = p.holes.findIndex((e) => e.face === face && Math.abs(e.x - l[0]) < 0.05 && Math.abs(e.y - l[1]) < 0.05)
+      const next: Hole = { x: l[0], y: l[1], diameter: hole.d, depth: hole.depth, face, tag: hole.tag ?? "plate" }
+      if (same >= 0) {
+        const e = p.holes[same]!
+        if (e.diameter > next.diameter || (e.diameter === next.diameter && e.depth >= next.depth)) continue
+        p.holes.splice(same, 1)
+      }
+      p.holes.push(next)
+    }
+    const pa = item.plate
+    if (pa) {
+      const l = toLocal(p, o)
+      const face = faceAt(p, l)
+      const lv = [v[0] * p.placement.xAxis[0] + v[1] * p.placement.xAxis[1] + v[2] * p.placement.xAxis[2], v[0] * p.placement.yAxis[0] + v[1] * p.placement.yAxis[1] + v[2] * p.placement.yAxis[2]] as [number, number]
+      if (face === "A" || face === "B") (p.fittings ??= []).push({ ...(pa.asset ? { asset: pa.asset } : {}), x: l[0], y: l[1], face, v: lv, ...(pa.bbox ? { bbox: pa.bbox } : {}) })
+    }
+  }
+
+  private buildDoors(zone: Zone, front: Extract<Front, { kind: "door" }>, ter: ZoneRect, rowYs: number[], left?: VerticalRef, right?: VerticalRef): void {
     const { m } = this
     this.doorZones += 1
     const suffix = this.doorZones === 1 ? "" : `-${this.doorZones}`
@@ -1221,7 +1277,7 @@ class Builder {
       if (w > 600) this.warnings.push({ code: "door-too-wide", message: `Porta de ${num(w)} mm d'amplada (màxim recomanat 600).`, zoneId: zone.id })
       if (front.glass) return this.glassDoor(id, label, x0, ter.y0, w, doorH)
       const door = this.frontPanel(id, name, label, "door", x0, ter.y0, w, doorH)
-      this.addCups(door, doorH, hinge, w, rowYs, ter.y0, zone.id, hingeHw)
+      this.addCups(door, doorH, hinge, w, rowYs, ter.y0, zone.id, hingeHw, hinge === "left" ? left : right)
       // Tirador al costat contrari de les frontisses, vertical i a mitja alçada. En una porta estreta cauria a la
       // columna de les cassoletes (on va el braç de la frontissa): no es fa.
       const cupBand = hingeHw.spec.cupOffset + hingeHw.spec.cupDiameter / 2 + hd.diameter / 2 + hd.margin
@@ -1376,7 +1432,7 @@ class Builder {
     }
 
     if (front.mount === "hinged") {
-      this.addCups(grille, grille.length, front.hinge, grille.width, rowYs, ter.y0, zone.id)
+      this.addCups(grille, grille.length, front.hinge, grille.width, rowYs, ter.y0, zone.id, this.kit.hinge, front.hinge === "left" ? left : right)
       return
     }
     // Desmuntable: imants als cantells frontals dels panells dels costats i contraparts al front.

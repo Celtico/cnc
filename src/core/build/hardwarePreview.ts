@@ -1,6 +1,6 @@
 import { NO_EDGES, type HardwareItem, type Hole, type Panel, type PanelRole } from "../model"
 import { r, system32Ys, threeAlong } from "./geometry"
-import { applyHardware, cupSpec, dowelSpec, flapSpec, handleSpec, magnetSpec, slideSpec, system32Spec, HardwareError } from "./hardware"
+import { applyHardware, cupSpec, dowelSpec, flapSpec, handleSpec, magnetSpec, plateSpec, slideSpec, system32Spec, HardwareError } from "./hardware"
 
 /**
  * Peces d'exemple amb el patró de mecanitzats d'un ferratge (Preferències › Ferratges: la targeta i l'editor), fetes amb
@@ -36,6 +36,13 @@ const hole = (x: number, y: number, s: { diameter: number; depth: number; tag?: 
   ...(s.tag ? { tag: s.tag } : {}),
 })
 
+/** Lateral d'exemple amb els forats d'una placa a cada alçada `xs` (marc de la placa: v cap al darrere, u = v × n). */
+function plateSample(xs: number[], s: { setback: number; holes: { u: number; v: number; d: number; depth: number; tag?: string }[] }): Panel {
+  const side = sample("side", "Lateral (placa)", "side", 720, 400)
+  for (const x of xs) for (const h of s.holes) side.holes.push(hole(x + h.u, s.setback + h.v, { diameter: h.d, depth: h.depth, tag: h.tag ?? "plate" }))
+  return side
+}
+
 /** Les peces d'exemple (una o dues). Si l'item no es pot fer servir, l'error en català. */
 export function hardwarePreview(item: HardwareItem): { panels: Panel[]; error?: string } {
   try {
@@ -55,7 +62,14 @@ function previewPanels(item: HardwareItem): Panel[] {
       const span = door.length - 2 * s.endOffset
       const xs = n === 1 ? [door.length / 2] : Array.from({ length: n }, (_, i) => s.endOffset + (span * i) / (n - 1))
       for (const x of xs) door.holes.push(...applyHardware(item, "door", {}, { at: { x: r(x), y: 0 } }).holes)
-      return [door]
+      if (!s.plate) return [door]
+      // Placa aparellada: el lateral (x = alçada, y = fondària des del davant, cara A cap a dins) a l'alçada de cada cassoleta.
+      const side = plateSample(xs.map((x) => x + s.plate!.offset), s.plate)
+      return [door, side]
+    }
+    case "plate": {
+      const s = plateSpec(item)
+      return [plateSample([360 + s.offset], s)]
     }
     case "system32": {
       // Lateral de 720 × 560 (x = alçada) amb les dues fileres.
