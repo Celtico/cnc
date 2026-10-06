@@ -2,6 +2,7 @@ import {
   DEFAULT_HARDWARE_KIT,
   evalExpr,
   hardwareVars,
+  isPendingImport,
   slotOf,
   stepValue,
   type Cutout,
@@ -108,13 +109,27 @@ function expectEngine(item: HardwareItem, engine: HardwareItem["engine"]): void 
   if (item.engine !== engine) throw new HardwareError(`«${item.name}» no és del tipus que toca`)
 }
 
-/** Frontissa de cassoleta: números de la regla (`addCups`) i la quantitat per alçada (la taula de `hingeCount` com a dades). */
+/** Forats cecs de la placa (target `side`) a punt per al lateral: u amunt/avall, v cap al darrere, des de la referència. */
+function plateHoles(item: HardwareItem): { u: number; v: number; d: number; depth: number; tag?: string }[] {
+  return resolveOps(item, "side").flatMap((o) => (o.kind === "drill" ? [{ u: o.u, v: o.v, d: o.d, depth: o.depth, ...(o.tag ? { tag: o.tag } : {}) }] : []))
+}
+
+/**
+ * Frontissa de cassoleta: números de la regla (`addCups`) i la quantitat per alçada (la taula de `hingeCount` com a dades).
+ * Una d'importada pot portar la placa aparellada (`plate`: els seus forats al lateral, a `plateSetback` del davant i
+ * `plateOffset` per sobre de la cassoleta) i, sense confirmar, `pending` (no fa cap forat).
+ */
 export function cupSpec(item: HardwareItem) {
   expectEngine(item, "cup")
   const door = drillSpec(item, "door")
   const count = item.count
   if (!count) throw new HardwareError(`«${item.name}»: falta la quantitat per alçada`)
+  const plate = item.targets.some((t) => t.key === "side")
+    ? { setback: item.params.plateSetback ?? 37, offset: item.params.plateOffset ?? 0, holes: plateHoles(item) }
+    : undefined
   return {
+    pending: isPendingImport(item),
+    ...(plate ? { plate } : {}),
     cupDiameter: param(item, "cupDiameter"),
     cupDepth: param(item, "cupDepth"),
     cupOffset: param(item, "cupOffset"),
@@ -174,6 +189,12 @@ export function handleSpec(item: HardwareItem) {
   // Comprova els talls amb la distància més gran (els de veritat es fan amb la que toca a cada front).
   resolveOps(item, "front", { pitch: rule.else })
   return { diameter: param(item, "diameter"), margin: param(item, "margin"), inset: param(item, "inset"), pitch: (room: number) => stepValue(rule, room) }
+}
+
+/** Placa de muntatge importada (no té lloc: la frontissa que s'hi aparella en copia els forats). */
+export function plateSpec(item: HardwareItem) {
+  expectEngine(item, "plate")
+  return { setback: param(item, "setback"), offset: item.params.offset ?? 0, holes: plateHoles(item) }
 }
 
 const SPECS = { hinge: cupSpec, system32: system32Spec, dowel: dowelSpec, slide: slideSpec, flap: flapSpec, magnet: magnetSpec, handle: handleSpec } as const

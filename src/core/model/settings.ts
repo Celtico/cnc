@@ -18,7 +18,11 @@ import { repairValue } from "./repair"
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 19
+/**
+ * Versió de les preferències. v20: ferratges importats d'un fabricant (`HardwareItem.imported`, `plate`, motor
+ * `plate`): additiu, cap item d'abans no canvia (una v19 es llegeix igual; una app v19 no pot desar sobre una v20).
+ */
+export const SETTINGS_VERSION = 20
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 

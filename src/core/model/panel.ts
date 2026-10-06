@@ -197,9 +197,23 @@ export const PanelSchema = z.object({
   push: z.boolean().optional(),
   /** Número de mòdul (1..n) dins de la composició, per a les refs del taller. */
   module: z.number().int().positive().optional(),
+  /**
+   * Ferratges importats posats sobre la peça (només per veure'ls al 3D, no es fabriquen): el model (`asset`, GLB a
+   * `hardwareAssets`) amb l'origen a (x, y) de la cara `face`, `v` = direcció local de l'eix v del ferratge al pla de la
+   * peça (u = v × normal de la cara) i la caixa al marc del ferratge (mm) per si el model no hi és.
+   */
+  fittings: z.array(z.object({
+    asset: z.string().optional(),
+    x: z.number(),
+    y: z.number(),
+    face: z.enum(["A", "B"]),
+    v: z.tuple([z.number(), z.number()]),
+    bbox: z.object({ min: Vec3Schema, max: Vec3Schema }).optional(),
+  })).optional(),
   placement: PlacementSchema,
 })
 export type Panel = z.infer<typeof PanelSchema>
+export type PanelFitting = NonNullable<Panel["fittings"]>[number]
 
 export const NO_EDGES: EdgeBanding = {
   left: false,
