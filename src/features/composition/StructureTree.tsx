@@ -14,7 +14,8 @@ import {
   LuScissors,
   LuSprout,
   LuTrash2,
-  LuUpload,
+  LuFileUp,
+  LuFolderOpen,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcons"
 import { compositionKind, partsOnlyKind, duplicateGroup, removeModule, newGroupName, partGroups, insertModelCopy, insertPartCopy, insertRefCopy, newModelObject, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
@@ -25,8 +26,8 @@ import { useSettings } from "../settings/SettingsContext"
 import { ORIENT_ICON } from "./partOrient"
 import { zoneLabel } from "./zoneLabel"
 import { TreeRow, TreeRowMenu, TreeSection, type TreeRowDnd } from "../../components/TreeRow"
-import { fileAccept } from "../file/fileAccept"
-import { uploadUserModel, type ModelChoice } from "./useModelAssets"
+import { ModelImportDialog, type ModelImportHandle } from "./ModelImportDialog"
+import type { ModelChoice } from "./useModelAssets"
 
 type DragKind = "module" | "ref" | "part"
 
@@ -166,8 +167,8 @@ export function StructureTree({
     }
   }
   const [adding, setAdding] = useState<AddKind | null>(null)
-  // Model 3D nou: un .glb teu (s'optimitza en pujar-lo).
-  const modelInput = useRef<HTMLInputElement>(null)
+  // Model 3D nou: un .glb, .gltf, .fbx o un zip de Poly Haven (es passa a .glb i s'optimitza en pujar-lo).
+  const modelImport = useRef<ModelImportHandle>(null)
   const [uploading, setUploading] = useState(false)
   const { settings } = useSettings()
   const refPresets = settings.references.filter((r) => !r.hidden)
@@ -249,24 +250,9 @@ export function StructureTree({
           }}
         />
       )}
-      {/* El + de «Models 3D» obre directament el selector de fitxers (un .glb teu): sense llista de models de l'app
-          (per decisió de l'usuari; les plantes de l'app són al catàleg d'Objectes). */}
-      <input
-        ref={modelInput}
-        type="file"
-        accept={fileAccept(".glb,model/gltf-binary")}
-        hidden
-        data-testid="model-upload-input"
-        onChange={async (e) => {
-          const file = e.target.files?.[0]
-          e.target.value = ""
-          if (!file) return
-          setUploading(true)
-          const m = await uploadUserModel(file)
-          setUploading(false)
-          if (m) addModel(m, m.name)
-        }}
-      />
+      {/* El + de «Models 3D»: l'explicació del format i els selectors (sense llista de models de l'app, per decisió de
+          l'usuari; les plantes de l'app són al catàleg d'Objectes). La finestra diu el progrés i el resultat. */}
+      <ModelImportDialog handle={modelImport} onBusy={setUploading} onImported={(m) => addModel(m, m.name)} />
       {!onlyParts && <TreeSection onAdd={() => setAdding("module")} addLabel="Afegir mòdul">Mòduls</TreeSection>}
       {!onlyParts && rows.map(({ row, label }) => (
         <Box key={row}>
@@ -527,7 +513,7 @@ export function StructureTree({
       {/* Models 3D (plantes, decoració…): només es veuen; es col·loquen com les peces lliures. */}
       {showModels && (
       <TreeSection
-        addLabel="Pujar un model 3D (.glb)"
+        addLabel="Importar un model 3D"
         hideAdd={!isObject}
         busy={uploading}
         menu={
@@ -547,8 +533,11 @@ export function StructureTree({
               </Stack>
             </Menu.ItemGroup>
             <Menu.Separator />
-            <Menu.Item value="upload" onClick={() => modelInput.current?.click()}>
-              <LuUpload /> Triar un fitxer .glb…
+            <Menu.Item value="upload" onClick={() => modelImport.current?.pick("files")}>
+              <LuFileUp /> Triar fitxers…
+            </Menu.Item>
+            <Menu.Item value="folder" onClick={() => modelImport.current?.pick("folder")}>
+              <LuFolderOpen /> Triar carpeta…
             </Menu.Item>
           </>
         }

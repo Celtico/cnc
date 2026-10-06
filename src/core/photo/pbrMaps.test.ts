@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { averageColor, classifyTextureFile, fileTokens, fitSize, flipGreen, planTextureSet, toGrayscale } from "./pbrMaps"
+import { averageColor, classifyTextureFile, fileTokens, fitSize, flipGreen, floatToRgba8, groupTextureSets, planTextureSet, textureSetKey, toGrayscale } from "./pbrMaps"
 
 describe("classifyTextureFile", () => {
   it("reconeix els noms de Poly Haven", () => {
@@ -36,7 +36,6 @@ describe("classifyTextureFile", () => {
   })
 
   it("no fa cas del que no és imatge o no és cap mapa", () => {
-    expect(classifyTextureFile("oak_diff_1k.exr")).toBeNull()
     expect(classifyTextureFile("oak_veneer_01.blend")).toBeNull()
     expect(classifyTextureFile("readme.txt")).toBeNull()
     expect(classifyTextureFile("photo.jpg")).toBeNull()
@@ -92,5 +91,48 @@ describe("operacions de píxels", () => {
     expect(fitSize(2048, 1024)).toEqual({ w: 1024, h: 512 })
     expect(fitSize(4000, 3000)).toEqual({ w: 1024, h: 768 })
     expect(fitSize(800, 600)).toEqual({ w: 800, h: 600 })
+  })
+})
+
+describe("EXR i jocs d'un model", () => {
+  it("els EXR de Poly Haven («Blend») són mapes; la imatge guanya a l'EXR del mateix mapa", () => {
+    expect(classifyTextureFile("textures/potted_plant_04_nor_gl_1k.exr")).toEqual({ slot: "normal", directX: false })
+    expect(classifyTextureFile("textures/potted_plant_04_rough_1k.exr")).toEqual({ slot: "rough" })
+    const plan = planTextureSet(["a_rough_1k.exr", "a_rough_1k.jpg", "a_nor_gl_1k.exr", "a_diff_1k.jpg", "a_disp_1k.png"])
+    expect(plan.rough?.path).toBe("a_rough_1k.jpg")
+    expect(plan.normal?.path).toBe("a_nor_gl_1k.exr")
+    // Rugositat pròpia en EXR abans que l'ARM.
+    expect(planTextureSet(["a_rough_1k.exr", "a_arm_1k.jpg"]).rough?.path).toBe("a_rough_1k.exr")
+  })
+
+  it("agrupa els mapes per material", () => {
+    expect(textureSetKey("textures/potted_plant_04_nor_gl_1k.jpg")).toBe("potted plant 04")
+    expect(textureSetKey("rough_plaster_brick_04_diff_1k.jpg")).toBe("rough plaster brick 04")
+    expect(textureSetKey("Wood049_1K-JPG_NormalGL.jpg")).toBe("wood049")
+    expect(textureSetKey("Planks_Base_Color.png")).toBe("planks")
+    expect(textureSetKey("diff.jpg")).toBe("")
+    expect(textureSetKey("photo.jpg")).toBeNull()
+    expect(textureSetKey("a.bin")).toBeNull()
+    const groups = groupTextureSets([
+      "textures/chair_body_diff_1k.jpg",
+      "textures/chair_legs_diff_1k.jpg",
+      "textures/chair_body_nor_gl_1k.jpg",
+      "textures/chair_legs_arm_1k.jpg",
+      "chair.bin",
+    ])
+    expect(groups).toEqual([
+      { key: "chair body", paths: ["textures/chair_body_diff_1k.jpg", "textures/chair_body_nor_gl_1k.jpg"] },
+      { key: "chair legs", paths: ["textures/chair_legs_diff_1k.jpg", "textures/chair_legs_arm_1k.jpg"] },
+    ])
+  })
+
+  it("passa els píxels de coma flotant a 8 bits (de baix a dalt → de dalt a baix)", () => {
+    // 1 × 2: a baix (fila 0 de l'EXR) vermell 1, a dalt 0,5 gris.
+    const data = [1, 0, 0, 1, 0.5, 0.5, 0.5, 1]
+    expect([...floatToRgba8(data, 1, 2)]).toEqual([128, 128, 128, 255, 255, 0, 0, 255])
+    expect([...floatToRgba8(data, 1, 2, { flipY: false })]).toEqual([255, 0, 0, 255, 128, 128, 128, 255])
+    // Fora de 0–1 i NaN es retallen; sRGB per al color.
+    expect([...floatToRgba8([2, -1, Number.NaN, 0], 1, 1)]).toEqual([255, 0, 0, 255])
+    expect(floatToRgba8([0.5, 0.5, 0.5, 1], 1, 1, { srgb: true })[0]).toBe(188)
   })
 })

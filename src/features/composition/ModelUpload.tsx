@@ -1,27 +1,27 @@
-import { Button, Spinner, Stack, Text } from "@chakra-ui/react"
+import { Button, HStack, Spinner, Stack, Text } from "@chakra-ui/react"
 import { useRef, useState } from "react"
-import { LuUpload } from "react-icons/lu"
-import { fileAccept } from "../file/fileAccept"
-import { MODEL_UPLOAD_HELP, uploadUserModel, type ModelChoice } from "./useModelAssets"
+import { LuFileUp, LuFolderOpen } from "react-icons/lu"
+import { ModelImportDialog, type ModelImportHandle } from "./ModelImportDialog"
+import { MODEL_UPLOAD_HELP, type ModelChoice } from "./useModelAssets"
 
-/** Botó «Pujar un model (.glb)…»: obre el selector de fitxers, l'importa (`db.models`) i avisa amb el model nou. */
+/**
+ * «Canviar» el model (inspector): «Triar fitxers…» (un .glb, un .gltf amb el .bin i les textures, un .fbx o un .zip de
+ * Poly Haven) o «Carpeta…»; la finestra d'importar diu el progrés i el resultat i avisa amb el model nou.
+ */
 export function ModelUploadButton({ onUploaded }: { onUploaded: (m: ModelChoice) => void }) {
-  const input = useRef<HTMLInputElement>(null)
+  const dialog = useRef<ModelImportHandle>(null)
   const [busy, setBusy] = useState(false)
-  const pick = async (file: File | undefined) => {
-    if (input.current) input.current.value = ""
-    if (!file) return
-    setBusy(true)
-    const m = await uploadUserModel(file)
-    setBusy(false)
-    if (m) onUploaded(m)
-  }
   return (
     <Stack gap={1} align="flex-start">
-      <input ref={input} type="file" accept={fileAccept(".glb,model/gltf-binary")} hidden data-testid="model-upload-input" onChange={(e) => void pick(e.target.files?.[0])} />
-      <Button size="xs" variant="outline" disabled={busy} aria-busy={busy} onClick={() => input.current?.click()}>
-        {busy ? <Spinner size="xs" /> : <LuUpload />} {busy ? "Optimitzant el model…" : "Pujar un model (.glb)…"}
-      </Button>
+      <ModelImportDialog handle={dialog} onImported={onUploaded} onBusy={setBusy} />
+      <HStack gap={1.5} wrap="wrap">
+        <Button size="xs" variant="outline" disabled={busy} aria-busy={busy} onClick={() => dialog.current?.pick("files")}>
+          {busy ? <Spinner size="xs" /> : <LuFileUp />} {busy ? "Important el model…" : "Triar fitxers…"}
+        </Button>
+        <Button size="xs" variant="ghost" disabled={busy} onClick={() => dialog.current?.pick("folder")}>
+          <LuFolderOpen /> Carpeta…
+        </Button>
+      </HStack>
       <Text fontSize="xs" color="fg.subtle">
         {MODEL_UPLOAD_HELP}
       </Text>

@@ -6,7 +6,8 @@ import { toaster } from "../../components/ui/toaster"
 import type { Finish } from "../../core/model"
 import { classifyTextureFile } from "../../core/photo/pbrMaps"
 import { pickedFromDrop, type PickedFile } from "./machineImport"
-import { encodeMap, loadTextureSet, pickFiles, srcBlob, withTextureSet, type ImageFinish, type LoadedTextureSet } from "./textureImport"
+import { encodeMap, pickFiles, srcBlob, textureSetSummary, withTextureSet, type ImageFinish } from "./textureImport"
+import { readPickedTextureSet } from "./textureMaterials"
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 const imgUrl = (src: string) => (src.startsWith("data:") ? src : `${import.meta.env.BASE_URL}${src}`)
@@ -110,17 +111,6 @@ export function TextureMapRows({ finish, onChange }: { finish: ImageFinish; onCh
   )
 }
 
-/** Resum del que s'ha carregat d'un joc (avís). */
-function setSummary(set: LoadedTextureSet): string {
-  const parts = [
-    set.used.color && `color ${set.used.color}`,
-    set.used.normal && `relleu ${set.used.normal}${set.normalDx ? " (DirectX, verd invertit)" : ""}`,
-    set.used.rough && `brillantor ${set.used.rough}`,
-  ].filter(Boolean)
-  const ignored = set.ignored.length ? ` Sense fer servir: ${set.ignored.slice(0, 6).join(", ")}${set.ignored.length > 6 ? "…" : ""}.` : ""
-  return `${parts.join(" · ")}.${ignored}`
-}
-
 /**
  * «Carregar joc de textures…»: diversos fitxers, una carpeta o un .zip d'un cop (també deixant-los anar a sobre). Es
  * reconeixen pel nom (`planTextureSet`): color, relleu (normal, `_gl`/`_dx`) i brillantor (rugositat o ARM/ORM).
@@ -132,8 +122,11 @@ export function TextureSetRow({ finish, onChange }: { finish: Finish; onChange: 
     if (!picked.length) return
     setBusy(true)
     try {
-      const set = await loadTextureSet(picked, finish.kind === "image" && !!finish.normalDx)
-      const next = withTextureSet(finish, set)
+      const r = await readPickedTextureSet(picked, finish.kind === "image" && !!finish.normalDx)
+      const set = r.set
+      let next = withTextureSet(finish, set)
+      // Un joc de Poly Haven sap la mida real d'una repetició (API): la d'abans era d'una altra foto.
+      if (next && set.color && r.tileMm) next = { ...next, tileMm: r.tileMm }
       if (!next) {
         toaster.create({
           title: "No s'ha trobat el joc de textures",
@@ -144,7 +137,8 @@ export function TextureSetRow({ finish, onChange }: { finish: Finish; onChange: 
         return
       }
       onChange(next)
-      toaster.create({ title: "Joc de textures carregat", description: setSummary(set), type: set.ignored.length ? "info" : "success", duration: 8000 })
+      const size = set.color && r.tileMm ? ` Mida real ${r.tileMm} mm (Poly Haven).` : ""
+      toaster.create({ title: "Joc de textures carregat", description: textureSetSummary(set) + size, type: set.ignored.length ? "info" : "success", duration: 8000 })
     } catch (e) {
       toaster.create({ title: "No s'ha pogut carregar el joc de textures", description: errText(e), type: "error", duration: 8000 })
     } finally {
@@ -152,7 +146,7 @@ export function TextureSetRow({ finish, onChange }: { finish: Finish; onChange: 
     }
   }
   return (
-    <FormRow label="Joc PBR" help="Color, relleu i brillantor d'un cop, com els de Poly Haven: fitxers, una carpeta o un .zip. Es reconeixen pel nom (diff/color/albedo, nor/normal amb _gl o _dx, rough o ARM); la resta (disp, ao…) no es fa servir.">
+    <FormRow label="Joc PBR" help="Color, relleu i brillantor d'un cop, com els de Poly Haven (el .zip tal com es baixa, en qualsevol format; també els EXR): fitxers, una carpeta o un .zip. Es reconeixen pel nom (diff/color/albedo, nor/normal amb _gl o _dx, rough o ARM); la resta (disp, ao…) no es fa servir.">
       <Box
         borderWidth="1px"
         borderStyle="dashed"
@@ -173,7 +167,7 @@ export function TextureSetRow({ finish, onChange }: { finish: Finish; onChange: 
         }}
       >
         <HStack gap={1.5} wrap="wrap">
-          <Button size="xs" variant="outline" colorPalette="wood" loading={busy} onClick={() => void pickFiles({ multiple: true, accept: "image/*,.zip" }).then(load)}>
+          <Button size="xs" variant="outline" colorPalette="wood" loading={busy} onClick={() => void pickFiles({ multiple: true, accept: "image/*,.zip,.exr" }).then(load)}>
             <LuFileUp /> Carregar joc de textures…
           </Button>
           <Button size="xs" variant="ghost" disabled={busy} onClick={() => void pickFiles({ folder: true }).then(load)}>

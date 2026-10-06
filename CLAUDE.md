@@ -542,8 +542,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   especials, passacables ni plantilles al +. **Excepcions** (per decisió de l'usuari): el + d'«Objectes de referència» obre
   un menú amb els de Preferències › Objectes de referència (els no amagats; `refFromPreset`: de paret, a la seva distància;
   de terra, estirat; sense fondària, 5 mm) i «En blanc…»; el de «Models 3D», un menú amb «Quin fitxer?»
-  (`MODEL_FORMAT_HELP`: .glb amb les textures a dins, què no serveix i com passar-ho per Blender, mida, unitats, on trobar-ne)
-  i «Triar un fitxer .glb…» (vegeu Visor). `SectionTitle menu`.
+  (`MODEL_FORMAT_HELP`: formats, Poly Haven, què no serveix i com passar-ho per Blender, mida, unitats, on trobar-ne),
+  «Triar fitxers…» i «Triar carpeta…» (vegeu Visor › Models 3D › De l'usuari). `SectionTitle menu`.
   Menú ⋯ per afegir/duplicar/moure/eliminar (manté «Moure amunt/avall», «Moure a l'esquerra/dreta»). **Arrossegar per
   ordenar** (`reorderModule`, `reorderRef`): mòduls dins de la seva fila i objectes; una línia marca on cau. Arrossegar una
   peça lliure sobre la fila d'un grup la hi posa; al costat d'una peça n'agafa el grup; la zona «Treure del grup» surt
@@ -679,9 +679,26 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     precachegen. **Herba (2 × 2 m)** (`grass-patch`, `models/grass_patch.glb`, 40.000 triangles, 0,75 MB): ~120 mates
     de `grass_medium_01` escampades (`scripts/polyhaven-grass.py`, `mode: "patch"`); al Showroom, fora de la vidriera. El render per CPU també retalla les fulles (`RenderMaterial.alphaCut`, `alphaAt`).
   - **De l'usuari** (sense llista de models al + —només l'explicació del format i «Triar un fitxer .glb…»—, per decisió de l'usuari: les plantes de l'app són al catàleg d'Objectes;
-    a l'inspector, «Model» diu el nom i «Canviar» puja un altre `.glb`; `composition/ModelUpload.tsx`): taula Dexie **v5**
-    `models` (`UserModel`: id `user-…`, nom, `blob`, mida en mm); `db/userModels.ts` (`addUserModel` valida amb `GLTFLoader` +
-    meshopt i mesura; només `.glb` amb les textures a dins; avís si fa més de 15 MB). **S'optimitzen en pujar-los**
+    a l'inspector, «Model» diu el nom i «Canviar» n'importa un altre; `composition/ModelUpload.tsx`): taula Dexie **v5**
+    `models` (`UserModel`: id `user-…`, nom, `blob`, mida en mm); `db/userModels.ts` (`addUserModelBuffer` valida amb
+    `GLTFLoader` + meshopt i mesura; sempre es desa un `.glb`; avís si fa més de 15 MB).
+  - **Importar** (`composition/ModelImportDialog.tsx`, finestra amb el progrés, el resultat i les alternatives si falla;
+    `composition/modelImport.ts`; pur a `core/import/modelFiles.ts` i `core/import/polyHaven.ts` amb tests): fitxers,
+    carpeta o `.zip` (`expandPicked`). El model del conjunt (`pickMainModel`: glb › gltf › fbx › blend › usd): `.glb` tal
+    qual; `.gltf` + `.bin` + textures amb `GLTFLoader` i un `LoadingManager` que serveix el conjunt amb URL de blob
+    (`resolveUri`/`findFile`: `%20`, `../`, camins absoluts, pel nom si la carpeta no hi és; el que falta no va a la xarxa) i
+    `GLTFExporter` → un `.glb` (l'ARM de Poly Haven és el `occlusionRoughnessMetallic` estàndard); `.fbx` amb `FBXLoader`
+    (`UnitScaleFactor` → metres, Phong → estàndard, textures EXR descodificades). **`.blend`/`.usd` no es poden llegir al
+    navegador**: si el nom és de Poly Haven (`<id>_<res>.blend`, `parsePolyHavenName`), es baixa **el mateix model en glTF**
+    de l'API (CORS obert, `features/file/polyHavenApi.ts`; `/files/<id>` → `planPolyHavenDownload`: la mateixa resolució,
+    com a molt 2k; les textures del zip amb el mateix nom —també el `nor_gl`/`rough` en EXR, passats a PNG— no es tornen a
+    baixar) amb el progrés en MB; sense connexió o si no és de Poly Haven, error amb les alternatives (baixar-lo en glTF,
+    Blender, `scripts/polyhaven-tree-to-glb.py`). Un zip de **textura** de Poly Haven (`/info` `type` 1) o sense model:
+    «No és un model 3D» i les textures a Materials. Després, `addUserModelBuffer` (optimitzar, mesurar, desar). El nom, el
+    de l'API si es pot. **«Afegir les textures a Materials»** (`settings/textureMaterials.ts`, `materialsFromTextures`): un
+    material de **Simulació** per joc (`groupTextureSets`/`textureSetKey`: el nom del fitxer sense el mapa ni la resolució),
+    acabat de foto amb relleu i brillantor (`withTextureSet`, `pbrSetMaterial`, nom únic `uniqueMaterialName`), mida real
+    a la finestra (per defecte, la de Poly Haven o la caixa del model). **S'optimitzen en pujar-los**
     (`viewer/optimizeGlb.ts`, a demanda; parts pures i test a `optimizeGlbPlan.ts`): pressupost de **100.000 triangles**; les
     malles opaques es delmen (`MeshoptSimplifier` després de `mergeVertices`, primer amb `LockBorder`, ≥ 25 % del pressupost)
     i les d'alfa no (se'n treuen grups solts i els que queden ≤ 1,5× més grans); textures de més de **1024 px** reduïdes i
@@ -808,8 +825,13 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   grisos (JPEG 0,9; d'un ARM/ORM, el canal verd). El normal es desa sempre en **OpenGL**: «Invertir el verd (DirectX)»
   (`Finish.normalDx`, només recorda l'interruptor) inverteix el verd en carregar-lo i, si ja n'hi ha un, el torna a
   invertir. La foto de color en dona el color mitjà (`Finish.color`, STEP). **«Joc PBR»** (a tots els acabats):
-  «Carregar joc de textures…» (diversos fitxers o un `.zip`, `unzip`), «Carpeta…» (`webkitdirectory`) o deixar-los anar a
-  sobre (`pickedFromDrop`). Es reconeixen pel nom (`classifyTextureFile`/`planTextureSet`: mana l'última paraula que és un
+  «Carregar joc de textures…» (diversos fitxers o un `.zip`, `unzip`; el `.zip` de Poly Haven tal com es baixa, en
+  qualsevol format), «Carpeta…» (`webkitdirectory`) o deixar-los anar a sobre (`pickedFromDrop`). **EXR** (els zips «Blend»
+  de Poly Haven porten el normal i la rugositat en EXR): `components/viewer/exrImage.ts` (`EXRLoader` de three a demanda,
+  `floatToRgba8`: 0–1 → 8 bits, files de baix a dalt; el normal es queda OpenGL); entre dos fitxers del mateix mapa, la
+  imatge guanya a l'EXR. Un joc de Poly Haven (`<id>_<res>` als noms, `readPickedTextureSet`) pren la mida real de l'API
+  (`/info` `dimensions`; sense connexió, la d'abans). **Biblioteca › «Joc de textures…»** fa un material nou de Simulació
+  amb el nom del joc (el de Poly Haven si hi ha connexió). Es reconeixen pel nom (`classifyTextureFile`/`planTextureSet`: mana l'última paraula que és un
   mapa —el nom del material va al davant—; diff/diffuse/albedo/basecolor/color/col → color; nor/normal/nrm, `_gl`/`_dx` →
   relleu i invertir; rough/roughness/rgh i ARM/ORM → brillantor; disp, ao, metal… no es fan servir; el normal OpenGL i la
   rugositat pròpia guanyen). Amb foto de color substitueix foto i mapes (i posa «Sense costures»); sense, només els mapes
@@ -888,7 +910,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   sortirà amb aquest nom») i `thickness-not-listed` («El gruix 18 mm no és dels gruixos de «X»»), a «Avisos de fusteria»
   de l'Editor i a Exportar. A «Per defecte als mòduls nous», un gruix que no és del material és una nota, no una pastilla.
 - **Biblioteca** (`settings/libraryItems.ts`, `MATERIAL_LIBRARY`; diàleg `MaterialLibrary`): «Afegir» obre una graella de
-  materials fets (fustes, lacats, pedres, metalls, vidres, teixits, terres, parets) i «En blanc». `libraryItems.test.ts`.
+  materials fets (fustes, lacats, pedres, metalls, vidres, teixits, terres, parets), «En blanc» i «Joc de textures…» (vegeu Mapes PBR). `libraryItems.test.ts`.
   Els que ja tens (mateix nom o mateix acabat, `ownedMaterial`) porten «Ja el tens»: tocar-ne un no fa un «X 2» en
   silenci, sinó que ofereix «Obrir el meu» o «Afegir una còpia».
   (Les dades no són a `materialLibrary.ts`: vegeu Fast Refresh.)
@@ -1380,7 +1402,8 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   s'ignora.
 - Precache (`vite.config.ts`): models `.glb` i HDRI sí; fotos de textura (`/textures/`) i pesos d'OIDN (`/oidn/`, `oidn.ts`
   els valida i esborra els dolents de la seva memòria cau) no: `runtimeCaching` CacheFirst en fer-los servir; splash no.
-  El WASM d'OpenCascade (`assets/*.wasm`, importar ferratges) tampoc: CacheFirst en fer-lo servir.
+  El WASM d'OpenCascade (`assets/*.wasm`, importar ferratges) tampoc: CacheFirst en fer-lo servir. L'API i els fitxers de
+  Poly Haven (importar models) no passen per cap memòria cau: sense connexió fallen amb `OfflineError` i la UI ho explica.
 
 ## Icones (catàleg fix, `react-icons/lu`)
 Una icona = un significat a tota l'app. No en triïs d'altres per a aquestes accions; si en cal una de nova, afegeix-la aquí.
@@ -1418,7 +1441,8 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Preferències | Visualització · Ferratges (i Fusteria a l'inspector) · Calaixos · System 32 · Cassoleta · Imants | `LuScanEye` · `LuHammer` · `LuArchive` · `LuCircleDot` · `LuCircleDashed` · `LuMagnet` |
 | Ferratges (categories) | Frontisses · Plaques · Guies · Elevables i abatibles · Unions · Suports de prestatge · Potes · Tiradors · Pressió i imants · Perfils · Penjar · Altres | `LuCircleDashed` · `LuSquareDot` · `LuArchive` · `LuPanelBottom` · `LuBolt` · `LuCircleDot` · `LuFootprints` · `LuGripHorizontal` · `LuMagnet` · `LuMinus` · `LuAnchor` · `LuPackage` |
 | Preferències | Visor 3D (els materials per defecte als mòduls nous porten la de Materials, `LuPalette`) | `LuLampFloor` |
-| Fitxer | Desar com a fitxer · Obrir fitxer · Pujar un fitxer (preferències, model `.glb`) | `LuSave` · `LuFolderOpen` · `LuUpload` |
+| Fitxer | Desar com a fitxer · Obrir fitxer · Pujar un fitxer (preferències) | `LuSave` · `LuFolderOpen` · `LuUpload` |
+| Models 3D | Triar fitxers… · Triar carpeta… (importar un model) · Afegir les textures a Materials | `LuFileUp` · `LuFolderOpen` · `LuPalette` |
 | Editor | Estructura · Propietats · Opcions de vista | `LuListTree` · `LuSlidersHorizontal` · `LuSlidersVertical` |
 | Editor | Pestanyes 3D · Alçat · Foto | `LuBox` · `LuLayoutPanelLeft` · `LuCamera` |
 | Estat | Avisos de fusteria · Desfer · Refer | `LuTriangleAlert` · `LuUndo2` · `LuRedo2` |

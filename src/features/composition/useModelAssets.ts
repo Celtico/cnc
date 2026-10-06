@@ -1,10 +1,8 @@
 import { useMemo } from "react"
-import { toaster } from "../../components/ui/toaster"
 import { forgetModel } from "../../components/viewer/models3d"
-import { formatReport } from "../../components/viewer/optimizeGlbPlan"
 import { MODEL_ASSETS } from "../../core/model"
 import { useLiveQuery } from "../../db/useLiveQuery"
-import { addUserModel, deleteUserModel, HEAVY_MODEL_BYTES, listUserModels, type UserModel } from "../../db/userModels"
+import { deleteUserModel, listUserModels, type UserModel } from "../../db/userModels"
 
 /** Un model que es pot triar: els de l'app (`MODEL_ASSETS`) i els pujats per l'usuari (`user`). Mida real en mm. */
 export interface ModelChoice {
@@ -16,7 +14,7 @@ export interface ModelChoice {
   bytes?: number
 }
 
-export const MODEL_UPLOAD_HELP = "Un fitxer .glb (glTF binari). De Blender: Fitxer › Exportar › glTF 2.0 (.glb). Les textures van a dins."
+export const MODEL_UPLOAD_HELP = "Un .glb, un .gltf amb el .bin i les textures (fitxers, carpeta o .zip), un .fbx o el .zip tal com es baixa de Poly Haven (també el de Blender)."
 
 const BUILTIN: ModelChoice[] = MODEL_ASSETS.map((a) => ({ id: a.id, name: a.name, size: a.size }))
 
@@ -31,29 +29,6 @@ export function useModelAssets(): { assets: ModelChoice[]; userModels: ModelChoi
 }
 
 export const modelChoiceOf = (m: UserModel): ModelChoice => ({ id: m.id, name: m.name, size: m.size, user: true, bytes: m.blob.size })
-
-/** Puja un `.glb` amb els avisos (toaster): torna el model o `null` si no s'ha pogut. */
-export async function uploadUserModel(file: File): Promise<ModelChoice | null> {
-  try {
-    const { model: m, report } = await addUserModel(file)
-    forgetModel(m.id)
-    const bytes = m.blob.size
-    if (bytes > HEAVY_MODEL_BYTES) {
-      toaster.create({
-        title: "Model pesat",
-        description: `Fa ${formatBytes(bytes)}: a l'iPhone pot anar lent o no carregar-se. Redueix-lo (textures més petites, menys polígons).`,
-        type: "warning",
-        duration: 8000,
-      })
-    } else if (report.changed) {
-      toaster.create({ title: `Model «${m.name}» afegit`, description: `Optimitzat per al mòbil: ${formatReport(report)}`, type: "success", duration: 8000 })
-    } else toaster.create({ title: `Model «${m.name}» afegit`, type: "success" })
-    return modelChoiceOf(m)
-  } catch (e) {
-    toaster.create({ title: "No s'ha pogut pujar el model", description: e instanceof Error ? e.message : String(e), type: "error" })
-    return null
-  }
-}
 
 export async function removeUserModel(id: string): Promise<void> {
   await deleteUserModel(id)

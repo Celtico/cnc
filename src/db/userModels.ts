@@ -43,7 +43,11 @@ const randomId = () => `${USER_MODEL_PREFIX}${Math.random().toString(36).slice(2
  */
 export async function addUserModel(file: File): Promise<{ model: UserModel; report: OptimizeReport }> {
   if (!/\.glb$/i.test(file.name)) throw new Error("Només es poden pujar fitxers .glb (glTF binari).")
-  const original = await file.arrayBuffer()
+  return addUserModelBuffer(await file.arrayBuffer(), file.name.replace(/\.glb$/i, ""))
+}
+
+/** El mateix amb el `.glb` ja llegit (o fet a partir d'un `.gltf`, un `.fbx` o un zip de Poly Haven, `modelImport.ts`). */
+export async function addUserModelBuffer(original: ArrayBuffer, name: string): Promise<{ model: UserModel; report: OptimizeReport }> {
   // Primer es valida l'original (missatges d'error clars) i després s'optimitza.
   let size = await measureGlb(original)
   const { optimizeGlb } = await import("../components/viewer/optimizeGlb")
@@ -60,7 +64,7 @@ export async function addUserModel(file: File): Promise<{ model: UserModel; repo
   }
   const model: UserModel = {
     id: randomId(),
-    name: file.name.replace(/\.glb$/i, "").trim() || "Model",
+    name: name.trim() || "Model",
     blob: new Blob([buffer], { type: "model/gltf-binary" }),
     size,
     createdAt: Date.now(),

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule } from "./composition"
 import { aliasMaterialRefs, materialRefNames, renameMaterialRefs } from "./photoUpgrade"
-import { backChoices, boardChoices, fixMaterialRefs, materialNameError, materialSettingsUsage, partChoices, removeMaterialFromSettings, renameMaterialInSettings, renameNestingSheets, restoredFinish, switchFinish, tidyMaterialName } from "./materialOps"
+import { backChoices, boardChoices, fixMaterialRefs, materialNameError, materialSettingsUsage, partChoices, removeMaterialFromSettings, renameMaterialInSettings, renameNestingSheets, restoredFinish, switchFinish, pbrSetMaterial, tidyMaterialName, uniqueMaterialName } from "./materialOps"
 import { DEFAULT_SETTINGS, materialCategory, type Settings } from "./settings"
 
 const comp = () => {
@@ -147,5 +147,17 @@ describe("mides de tauler del projecte en canviar el nom", () => {
     expect(renameNestingSheets(n, "A", "B")).toEqual({ sheetsByMaterial: { B: { w: 2440, h: 1220 } } })
     expect(renameNestingSheets(n, "X", "Y")).toBe(n)
     expect(renameNestingSheets(undefined, "A", "B")).toBeUndefined()
+  })
+})
+
+describe("materials nous d'un joc de textures", () => {
+  it("nom únic i material de simulació", () => {
+    const ms = DEFAULT_SETTINGS.materials
+    expect(uniqueMaterialName(ms, "Potted Plant 04")).toBe("Potted Plant 04")
+    expect(uniqueMaterialName(ms, " melamina   BLANCA ")).toBe("melamina BLANCA 2")
+    const m = pbrSetMaterial("x", "Potted Plant 04", { kind: "image", src: "data:,", tileMm: 300 })
+    expect(materialCategory(m)).toBe("sim")
+    expect(m.cnc).toBe(false)
+    expect(uniqueMaterialName([...ms, m], "Potted plant 04")).toBe("Potted plant 04 2")
   })
 })

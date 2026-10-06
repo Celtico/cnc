@@ -64,10 +64,11 @@ export function refFromPreset(comp: Composition, p: RefPreset): RefObject {
 
 /** Què cal per pujar un model 3D (+ de «Models 3D»): format, extensió, mida, unitats i on trobar-ne. */
 export const MODEL_FORMAT_HELP: [string, string][] = [
-  ["Format", "glTF binari, extensió .glb, amb les textures a dins del fitxer."],
-  ["No serveixen", ".gltf amb fitxers a part, .obj, .fbx, .stl, .dae, .skp ni .3ds. Obre'ls a Blender i exporta'ls amb Fitxer › Exportar › glTF 2.0, format «glTF Binary (.glb)»."],
+  ["Format", ".glb (amb les textures a dins), .gltf amb el .bin i la carpeta de textures (tria'ls tots, la carpeta o el .zip) o .fbx. Es desa com a .glb."],
+  ["Poly Haven", "el .zip tal com es baixa, en qualsevol format. El .blend no es pot llegir al navegador: l'app baixa el mateix model en glTF de Poly Haven (cal connexió) i aprofita les textures del zip."],
+  ["No serveixen", ".obj, .stl, .dae, .skp ni .3ds. Obre'ls a Blender i exporta'ls amb Fitxer › Exportar › glTF 2.0, «glTF Binary (.glb)»."],
   ["Mida", "millor de menys de 15 MB. En pujar-lo, l'app el redueix per al mòbil (fins a 100.000 triangles, textures de 1024 px)."],
   ["Unitats", "metres (com tots els glTF). Després pots canviar-ne les mides a l'inspector."],
-  ["Textures", "color, relleu (normal) i brillantor; la transparència (fulles) també."],
-  ["On trobar-ne", "Sketchfab (baixa'l com a «glTF Binary»), Poly Haven (gratuïts, CC0; venen en .gltf: passa'ls per Blender) o els catàlegs 3D dels fabricants."],
+  ["Textures", "color, relleu (normal) i brillantor; la transparència (fulles) també. En acabar, les pots afegir a Materials."],
+  ["On trobar-ne", "Poly Haven (gratuïts, CC0), Sketchfab (baixa'l com a «glTF Binary») o els catàlegs 3D dels fabricants."],
 ]
