@@ -36,3 +36,23 @@ describe("undoKeyAction", () => {
     expect(undoKeyAction(key("z", {}, inDialog), noModal)).toBeNull()
   })
 })
+
+describe("undoKeyAction amb àmbit (desfer propi d'un diàleg)", () => {
+  const inside = { tagName: "svg", closest: (s: string) => (s.includes("dialog") ? {} : null) }
+  const outside = { tagName: "BUTTON", closest: () => null }
+  const scope = { contains: (n: never) => (n as unknown) === inside }
+
+  it("desfà amb les tecles de dins del diàleg encara que sigui modal", () => {
+    expect(undoKeyAction(key("z", {}, inside), modalOpen, scope)).toBe("undo")
+    expect(undoKeyAction(key("z", { shiftKey: true }, inside), modalOpen, scope)).toBe("redo")
+    expect(undoKeyAction(key("y", { metaKey: false, ctrlKey: true }, inside), modalOpen, scope)).toBe("redo")
+    // Focus al body (clic al dibuix): també.
+    expect(undoKeyAction(key("z", {}, { tagName: "BODY" }), modalOpen, scope)).toBe("undo")
+  })
+
+  it("no fa res amb tecles de fora del diàleg ni als camps de text", () => {
+    expect(undoKeyAction(key("z", {}, outside), modalOpen, scope)).toBeNull()
+    const text = { tagName: "INPUT", inputMode: "text", closest: () => ({}) }
+    expect(undoKeyAction(key("z", {}, text), modalOpen, { contains: () => true })).toBeNull()
+  })
+})

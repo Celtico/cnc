@@ -18,11 +18,14 @@ export interface KeyEventLike {
 const OPEN_MODAL = '[role="dialog"][aria-modal="true"]:not([hidden]):not([data-state="closed"]), [role="alertdialog"][aria-modal="true"]:not([hidden]):not([data-state="closed"])'
 
 /**
- * Què fa una tecla amb el desfer/refer del moble: ⌘Z / Ctrl+Z desfer; ⇧⌘Z / Ctrl+Shift+Z / Ctrl+Y refer. Res als camps de
- * text lliure (nom del moble: el desfer propi del navegador; als numèrics sí que es desfà el moble), dins d'un diàleg o
- * amb un diàleg modal obert: amb l'editor de perfils obert, ⌘Z desfeia el moble del darrere.
+ * Què fa una tecla amb el desfer/refer d'un document: ⌘Z / Ctrl+Z desfer; ⇧⌘Z / Ctrl+Shift+Z / Ctrl+Y refer. Res als
+ * camps de text lliure (nom del moble: el desfer propi del navegador; als numèrics sí que es desfà el document), dins d'un
+ * diàleg o amb un diàleg modal obert: amb l'editor de perfils obert, ⌘Z desfeia el moble del darrere.
+ *
+ * `scope` (un diàleg amb desfer propi, com l'editor de perfils): només les tecles de dins del diàleg (o amb el focus al
+ * `body`), sense mirar els diàlegs oberts (és el seu).
  */
-export function undoKeyAction(e: KeyEventLike, doc?: { querySelector: (selector: string) => unknown }): "undo" | "redo" | null {
+export function undoKeyAction(e: KeyEventLike, doc?: { querySelector: (selector: string) => unknown }, scope?: { contains: (node: never) => boolean }): "undo" | "redo" | null {
   if (!(e.metaKey || e.ctrlKey) || e.altKey) return null
   const k = e.key.toLowerCase()
   if (k !== "z" && k !== "y") return null
@@ -31,8 +34,10 @@ export function undoKeyAction(e: KeyEventLike, doc?: { querySelector: (selector:
     const tag = t.tagName
     const numeric = tag === "INPUT" && /decimal|numeric/.test(t.inputMode ?? "")
     if (tag === "TEXTAREA" || t.isContentEditable || (tag === "INPUT" && !numeric)) return null
-    if (t.closest?.('[role="dialog"], [role="alertdialog"]')) return null
-  }
-  if (doc?.querySelector(OPEN_MODAL)) return null
+    if (scope) {
+      if (tag !== "BODY" && !scope.contains(t as never)) return null
+    } else if (t.closest?.('[role="dialog"], [role="alertdialog"]')) return null
+  } else if (scope) return null
+  if (!scope && doc?.querySelector(OPEN_MODAL)) return null
   return k === "y" || e.shiftKey ? "redo" : "undo"
 }

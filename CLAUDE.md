@@ -591,8 +591,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`surfaceMaterial`, amb ombres) i surten a la Presentació i al render; sense («Cap (fantasma)»), fantasma translúcid que el
   render no pinta. Els que tallen només es veuen seleccionats (violeta, a través del moble; també les peces que tallen, id
   `part:<id>`). Els forats del mòdul seleccionat es marquen en taronja a través de les portes (`CableMarks`).
-- **Desfer/refer** (⌘Z, ⇧⌘Z, Ctrl Y; `editor/undoKeys.ts`, `undoKeyAction`, test): no als camps de text lliure ni dins d'un
-  diàleg ni amb un diàleg modal obert (amb l'editor de perfils obert, ⌘Z desfeia el moble del darrere).
+- **Desfer/refer** (⌘Z, ⇧⌘Z, Ctrl Y; vegeu «Desfer/refer comú» a Mòduls compartits): 50 passos, canvis a menys de
+  500 ms = un pas (escriure «1180», arrossegar el gizmo); la càmera i la miniatura en queden fora. No als camps de text
+  lliure ni dins d'un diàleg ni amb un diàleg modal obert (amb l'editor de perfils obert, ⌘Z desfeia el moble del darrere).
 - **Teclat**: Ctrl/⌘ C · X · V · D i Supr per al mòdul, l'objecte, el model o el compartiment (`core/model/editOps.ts`). El
   porta-retalls és a localStorage (`mobles:clipboard`, entre mobles), validat amb zod (`parseClip`); una peça enganxada a un
   mòdul d'un altre moble queda solta, una illa es duplica al costat i no s'enganxen mòduls a un moble només de peces (`lliure`) o objecte. Ctrl/⌘ D
@@ -613,7 +614,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   rombe; Alt trenca el reflex; doble clic node ↔ corba), **Ploma** (clic = cantonada, clic i arrossegar = manegadors
   simètrics, clicar el primer node o Retorn tanca, Esc descarta), **Corbar** (arrossegar el punt del mig d'un costat,
   `bendEdge`; clic a un node commuta corba/cantonada) i **Esborrar**; clic al punt del mig afegeix un node sense canviar la
-  forma (`splitEdge`, de Casteljau); radi de cantonada; imant a la quadrícula.
+  forma (`splitEdge`, de Casteljau); radi de cantonada; imant a la quadrícula. **Desfer/refer propi** (el comú, botons
+  `UndoRedo` al costat de les eines; dreceres només dins del diàleg, `useUndoKeys scope`; el moble del darrere no es toca):
+  un pas per arrossegada, per node de la ploma (⌘Z treu l'últim; sense cap, cancel·la la ploma i torna la forma d'abans) i
+  per acció; escriure a X/Y o les fletxes seguides, un pas (`group`). Es reinicia en obrir-lo. (Què fan Maj/Alt a la
+  ploma: pendent de decidir, `docs/millores-v1/editor-formes.md` §2.)
 - L'Editor espera `useSettings().loading` abans de llegir la composició (vegeu Materials, àlies) i només desa composicions
   que passen `CompositionSchema`.
 
@@ -906,7 +911,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   **Finestra** (F), **Porta** (D), **Calibrar** (dos punts del plànol de fons i la mida real). Maj: sense angles; Alt: sense
   imant. Arrossegar una paret mou les enganxades; els extrems de la seleccionada s'arrosseguen (només mouen les parets
   enganxades en començar). Elements arrambats a les cares de les parets (`snapToWalls`), R gira 90°, fletxes (Maj ×10), Supr,
-  Ctrl/⌘ D, desfer/refer (Ctrl/⌘ Z, Maj+Ctrl/⌘ Z, Ctrl Y). **Ctrl/⌘ C · X · V** (plànol i 3D): els elements seleccionats
+  Ctrl/⌘ D, desfer/refer (Ctrl/⌘ Z, Maj+Ctrl/⌘ Z, Ctrl Y; el comú, 100 passos, arrossegar = un pas). **Ctrl/⌘ C · X · V** (plànol i 3D): els elements seleccionats
   (o el grup) a `localStorage` `mobles:ambient-clipboard` (`AmbientClip`, `parseAmbientClip`), també d'un ambient a un
   altre; `pasteItems`: ids nous, desplaçats 300 mm si els originals hi són (i 300 més a cada enganxada), si no al mateix
   lloc; grups com «Duplicar». Els mobles enganxats són el mateix moble enllaçat (com «Duplicar»). Es desa sol. «Encabir» deixa l'habitació fora de les eines i barres (`PLAN_INSETS`); noms i mides
@@ -1183,6 +1188,11 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
 - **`TreeRow`** · `TreeRowMenu` · `TreeSection` (`components/TreeRow.tsx`): fila d'arbre (sagnat, triada `wood.muted`,
   fletxa de plegar, menú ⋯, arrossegar), menú ⋯ i títol de grup amb el + (o `actions`). Estructura de l'editor i arbre
   dels Ambients.
+- **Desfer/refer comú** (`features/history/`): `history.ts` (pur, test: límit, ajuntar per temps `coalesceMs` o per
+  `group`, canvis en viu `commit: false` + `commitHistory` en deixar anar, refer que es buida) i `useHistory` (React:
+  `value`, `set`, `commit`, `undo`, `redo`, `reset`, `state`/`restore`); `useUndoKeys` amb `undoKeyAction` (`undoKeys.ts`,
+  test; `scope` = un diàleg amb desfer propi) i els botons `components/UndoRedo` (`LuUndo2` · `LuRedo2`). Editor de
+  mobles, Ambients i editor de perfils. Un editor nou amb desfer fa servir aquest, no un de propi.
 - **`NameDialog`** (`components/`): posar un nom (grup nou, canviar el nom, mòdul nou), amb un nom per defecte seleccionat.
 - **`MaterialSelect`** (`settings/MaterialSelect.tsx`) a tot arreu on es tria un material (amb **cercador** a dalt del calaix,
   pel nom i sense accents, que obre les categories amb resultats): un **botó** (fons suau, a tota
