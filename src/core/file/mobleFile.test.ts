@@ -234,7 +234,7 @@ describe("materials que no són a les preferències de qui obre el .moble", () =
       })
 
     it("una versió més nova que la que llegeix l'app es rebutja com abans", () => {
-      expect(MOBLE_VERSION).toBe(2)
+      expect(MOBLE_VERSION).toBe(3)
       const file = buildMobleFile({ name: "x", composition: withImported("kit"), references })
       expect(parseMobleFile(JSON.stringify({ ...file, version: MOBLE_VERSION + 1 }))).toEqual({ ok: false, error: "Fitxer d'una versió més nova de l'app: actualitza-la." })
       expect(parseMobleFile(JSON.stringify({ ...file, version: 0 })).ok).toBe(false)

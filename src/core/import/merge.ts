@@ -46,6 +46,8 @@ export function mergePreview(library: readonly HardwareItem[], a: Pick<HettichAr
   if (VIEW_KINDS.some((k) => kinds.has(k) && !have.has(k))) adds.push("vistes 2D")
   const base = (p: string) => p.split("/").pop()!
   if (a.files.some((f) => isRefKind(f.kind) && !names.has(base(f.path)))) adds.push("plànols de muntatge")
+  // Un DXF del taller per peça (`<art>_porta.dxf`) amb capes de mecanitzat: mecanitzats exactes (si en porta).
+  if (a.files.some((f) => f.kind === "other" && /\.dxf$/i.test(f.path) && !names.has(base(f.path)))) adds.push("mecanitzats del DXF del taller")
   return { items, adds }
 }
 
@@ -85,7 +87,11 @@ function withProposal(item: HardwareItem, targets: HardwareTarget[], params: Rec
 export function applyImportUpdate(item: HardwareItem): HardwareItem {
   const u = item.imported?.update
   if (!u) return item
-  return withProposal(item, u.targets, u.params, u.notes, u.bbox ?? item.imported!.bbox)
+  // Només uns mecanitzats nous del generador: els forats d'ara (encara que s'hagin editat) es queden.
+  const holes = !deepEqual(u.targets, item.imported!.proposed) || !deepEqual(u.params, proposalParams(item))
+  const { update: _u, ...imported } = item.imported!
+  const next = holes ? withProposal(item, u.targets, u.params, u.notes, u.bbox ?? item.imported!.bbox) : { ...item, imported: { ...imported, confirmed: false } }
+  return u.machining ? { ...next, machining: structuredClone(u.machining) } : next
 }
 
 /** Descarta la proposta nova pendent (l'item es queda com era). */
@@ -116,6 +122,32 @@ export interface MergeResult {
  * - un item malmès es torna a fer amb el nou (mateix id i nom, sense confirmar).
  */
 export function mergeImported(existing: HardwareItem, fresh: HardwareItem, withStep: boolean): MergeResult {
+  return mergeMachining(mergeProposal(existing, fresh, withStep), existing, fresh)
+}
+
+/**
+ * Els mecanitzats del generador (`machining`, p. ex. de les capes d'un DXF del taller) com una font més: un item sense
+ * confirmar i sense mecanitzats els rep; si n'ha de canviar uns que ja hi són, o l'item està confirmat, **no es toquen**:
+ * van a la proposta pendent (`imported.update.machining`). Sense mecanitzats nous, es queden els que hi havia.
+ */
+function mergeMachining(r: MergeResult, existing: HardwareItem, fresh: HardwareItem): MergeResult {
+  if (isDamagedImport(existing) || !r.item.imported) return r
+  const had = existing.machining
+  const nm = fresh.machining
+  // Es queden els d'abans (la proposta nova sencera d'un «només 3D» no els porta).
+  const keepOld = (it: HardwareItem): HardwareItem => {
+    const { machining: _m, ...rest } = it
+    return had?.length ? { ...rest, machining: had } : rest
+  }
+  if (!nm?.length || deepEqual(nm, had)) return { ...r, item: keepOld(r.item) }
+  const ex = existing.imported!
+  if (!ex.confirmed && !had?.length) return { item: { ...r.item, machining: structuredClone(nm), imported: { ...r.item.imported, confirmed: false } }, pendingUpdate: r.pendingUpdate, upgraded: true }
+  const cur = r.item.imported
+  const update = cur.update ?? { targets: structuredClone(ex.proposed), params: proposalParams(existing), notes: fresh.imported?.notes ?? [] }
+  return { item: { ...keepOld(r.item), imported: { ...cur, update: { ...update, machining: structuredClone(nm) } } }, pendingUpdate: true, upgraded: r.upgraded }
+}
+
+function mergeProposal(existing: HardwareItem, fresh: HardwareItem, withStep: boolean): MergeResult {
   const ex = existing.imported
   const nw = fresh.imported
   if (!ex || !nw) return { item: existing, pendingUpdate: false, upgraded: false }
@@ -124,7 +156,9 @@ export function mergeImported(existing: HardwareItem, fresh: HardwareItem, withS
   const meta = { ...ex, files, ...(!ex.points?.length && nw.points?.length ? { points: nw.points } : {}) }
   const keep = (imported: NonNullable<HardwareItem["imported"]>): MergeResult => ({ item: { ...existing, imported }, pendingUpdate: false, upgraded: false })
   if (!withStep) return keep(meta)
-  // Sense forats encara (només 3D o només 2D): la proposta nova sencera.
+  // Sense forats encara (només 3D o només 2D): la proposta nova sencera (un «només 3D» confirmat porta mecanitzats del
+  // generador: no es toca).
+  if (existing.engine === "model" && ex.confirmed) return keep(meta)
   if (existing.engine === "model") {
     if (fresh.engine === "model" && ex.bbox) return keep(meta)
     const { plate: _p, ...rest } = fresh

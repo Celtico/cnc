@@ -5,6 +5,7 @@ import { normalizePanel } from "./buildCabinet"
 import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
 import { buildFreeParts, type PartJoint } from "./freeParts"
 import { resolveHoleClashes } from "./holeClash"
+import { applyHardwarePlacements } from "./hardwarePlace"
 import { sameSizeConflicts } from "./sameSize"
 import { pieceRefs } from "../export/refs"
 
@@ -158,6 +159,10 @@ export function buildComposition(input: Composition): CompositionBuild {
     }
     warnings.push({ code: "invalid-part", message: `${p.label} fa ${p.length} × ${p.width} × ${p.thickness} mm: no té mida i no es fabrica. Revisa les mides del mòdul.`, panelId: p.id, ...(mod ? { moduleId: mod.id } : {}) })
   }
+
+  // Ferratges col·locats a mà (generador de mecanitzats): tot o res per ferratge, avís `hardware` si no.
+  if (comp.hardwarePlacements?.length)
+    for (const w of applyHardwarePlacements(comp.hardwarePlacements, panels, [...moduleExtras, ...free.extras]).warnings) warnings.push(w)
 
   // Objectes que tallen: forat a cada peça que travessen.
   // Peces lliures en mode «Talla»: fan forats com els objectes que tallen.

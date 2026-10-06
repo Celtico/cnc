@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildModule } from "../build/buildModule"
-import { DEFAULT_HARDWARE_KIT, DEFAULT_SETTINGS, HardwareItemSchema, defaultModule, parseSettings, type HardwareItem, type Module, type Zone } from "../model"
+import { DEFAULT_HARDWARE_KIT, DEFAULT_SETTINGS, HardwareItemSchema, defaultModule, parseSettings, type GenOp, type HardwareItem, type Module, type Zone } from "../model"
 import { groupHettich, hettichFileKind, type HettichArticle } from "./hettich"
 import { legacyHettichLabel, migrateImportedNames } from "./hettichNames"
 import { articleItem, pairPlate, plateItem, setConfirmed, setHandleDistance } from "./importItem"
@@ -170,6 +170,41 @@ describe("tornar a importar un article: s'amplia", () => {
     expect(r.item.imported!.confirmed).toBe(true)
     expect(r.item.imported!.files).toContain("9071205_2D_front_view.dxf")
     expect(r.item.imported!.points).toEqual([[0, 0, 0]])
+  })
+
+  it("mecanitzats del generador (DXF del taller): s'afegeixen a un sense confirmar; confirmats, mai es toquen", () => {
+    const op = (d: number): GenOp => ({ id: "a", part: "top", kind: "drill", face: "A", d, depth: 12, p: { from: "ref", at: 10 }, q: { from: "ref", at: 30 } })
+    // Sense confirmar i sense mecanitzats: els rep.
+    const pending = fromStep(hingeP())
+    const add = mergeImported(pending, { ...fromStep(hingeP()), machining: [op(5)] }, true)
+    expect(add.item.machining).toEqual([op(5)])
+    expect(add.item.imported!.confirmed).toBe(false)
+    expect(add.pendingUpdate).toBe(false)
+    // Confirmat amb mecanitzats: uns altres van a la proposta pendent; els d'ara i els forats es queden.
+    const ok = setConfirmed({ ...fromStep(hingeP()), machining: [op(5)] }, true)
+    const r = mergeImported(ok, { ...fromStep(hingeP()), machining: [op(8)] }, true)
+    expect(r.pendingUpdate).toBe(true)
+    expect(r.item.machining).toEqual([op(5)])
+    expect(r.item.targets).toEqual(ok.targets)
+    expect(r.item.imported!.confirmed).toBe(true)
+    expect(r.item.imported!.update!.machining).toEqual([op(8)])
+    expect(HardwareItemSchema.parse(r.item).imported!.damaged).toBeUndefined()
+    // Aplicar-la: només canvien els mecanitzats (els forats d'ara es queden), sense confirmar.
+    const applied = applyImportUpdate(r.item)
+    expect(applied.machining).toEqual([op(8)])
+    expect(applied.targets).toEqual(ok.targets)
+    expect(applied.imported!.confirmed).toBe(false)
+    expect(applied.imported!.update).toBeUndefined()
+    // Un import sense mecanitzats no treu els que hi ha.
+    expect(mergeImported(ok, fromStep(hingeP()), true).item.machining).toEqual([op(5)])
+    // Un «només 3D» confirmat amb mecanitzats no es reemplaça per la proposta nova.
+    const m3d = setConfirmed({ ...fromDxf(), machining: [op(5)] }, true)
+    const r3 = mergeImported(m3d, fromStep(hingeP()), true)
+    expect(r3.item.engine).toBe("model")
+    expect(r3.item.machining).toEqual([op(5)])
+    expect(r3.item.imported!.confirmed).toBe(true)
+    // El diàleg diu que un DXF del taller hi afegeix mecanitzats.
+    expect(mergePreview([pending], article([step, `${DIR}/9071205_porta.dxf`]))!.adds).toContain("mecanitzats del DXF del taller")
   })
 
   it("un importat malmès es torna a fer (mateix id i nom), sense confirmar", () => {
