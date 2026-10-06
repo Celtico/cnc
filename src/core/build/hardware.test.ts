@@ -12,7 +12,9 @@ import {
   copyHardwareItem,
   defaultModule,
   fixHardwareDefaults,
+  hardwareChoices,
   hardwareRefIds,
+  isCopyOf,
   kitFromLegacy,
   libraryFromLegacy,
   migrateModuleHardware,
@@ -20,7 +22,9 @@ import {
   parseSettings,
   repairComposition,
   replaceHardwareRefs,
+  sameHardware,
   stepValue,
+  usesHardware,
   type Composition,
   type HardwareItem,
   type LegacyHardware,
@@ -216,12 +220,86 @@ describe("referències als mobles desats (eliminar amb substitut)", () => {
     expect(hardwareRefIds(doors)).toEqual(expect.arrayContaining(["hinge-cup", "hw-1", "slide-ball"]))
     expect(hardwareRefIds(legacy(c))).toEqual(expect.arrayContaining(DEFAULT_HARDWARE_LIBRARY.map((x) => x.id)))
     const other = copyHardwareItem(item("hinge-cup"), "hw-2", "Altra")
-    const out = replaceHardwareRefs(doors, "hw-1", other)
+    const out = replaceHardwareRefs(doors, mine, other)
     expect(hardwareRefIds(out)).not.toContain("hw-1")
     expect(out.modules[0]!.root.split!.children[0]!.front).toMatchObject({ hardware: { id: "hw-2" } })
-    expect(replaceHardwareRefs(doors, "res", other)).toBe(doors)
-    const fromLegacy = replaceHardwareRefs(legacy(c), "hinge-cup", other)
+    expect(replaceHardwareRefs(doors, copyHardwareItem(mine, "res", "Res"), other)).toBe(doors)
+    const fromLegacy = replaceHardwareRefs(legacy(c), item("hinge-cup"), other)
     expect(fromLegacy.modules.every((m) => m.hardware.hinge.id === "hw-2")).toBe(true)
+  })
+})
+
+describe("còpies que no són l'item de la biblioteca amb el mateix id", () => {
+  // Un mòdul d'abans migrat amb una cassoleta de 30: id `hinge-cup`, però no és el `hinge-cup` de la biblioteca.
+  const lib = DEFAULT_HARDWARE_LIBRARY.filter((x) => x.engine === "cup")
+  const cup30: HardwareItem = { ...item("hinge-cup"), params: { ...item("hinge-cup").params, cupDiameter: 30 } }
+
+  it("sameHardware compara el que es fabrica (no el nom, el fabricant, la versió ni `builtin`)", () => {
+    const renamed = { ...copyHardwareItem(item("hinge-cup"), "hinge-cup", "Un altre nom"), maker: "Blum", version: 7 }
+    expect(sameHardware(renamed, item("hinge-cup"))).toBe(true)
+    expect(isCopyOf(renamed, item("hinge-cup"))).toBe(true)
+    expect(sameHardware(cup30, item("hinge-cup"))).toBe(false)
+    expect(isCopyOf(copyHardwareItem(item("hinge-cup"), "hw-1", "Meva"), item("hinge-cup"))).toBe(false)
+  })
+
+  it("hardwareChoices: una còpia diferent surt a part, «del moble», i és la triada", () => {
+    const res = hardwareChoices(lib, cup30)
+    expect(res.options.map((o) => o.key)).toEqual([...lib.map((x) => x.id), expect.stringMatching(/^moble:.*:hinge-cup$/)])
+    const own = res.options.at(-1)!
+    expect(own).toMatchObject({ own: true, label: `${cup30.name} (del moble)`, item: cup30 })
+    expect(res.value).toBe(own.key)
+    expect(new Set(res.options.map((o) => o.key)).size).toBe(res.options.length)
+    // Igual a la de la biblioteca (també amb `builtin` i un altre nom): la de la biblioteca, sense opció de més.
+    const same = hardwareChoices(lib, copyHardwareItem(item("hinge-cup"), "hinge-cup", "Nom vell"))
+    expect(same.options).toHaveLength(lib.length)
+    expect(same.value).toBe("hinge-cup")
+    // Un que ja no és a la biblioteca.
+    const gone = hardwareChoices(lib, copyHardwareItem(item("hinge-cup"), "hw-esborrat", "Esborrada"))
+    expect(gone.options.at(-1)).toMatchObject({ own: true, label: "Esborrada (del moble)" })
+  })
+
+  it("hardwareChoices en un front: el del mòdul (`inheritedKey`) i el propi, cadascun on toca", () => {
+    // Sense propi: el del mòdul (diferent de la biblioteca) és el triat i el que treu el propi.
+    const a = hardwareChoices(lib, cup30, cup30)
+    expect(a.options.filter((o) => o.own)).toHaveLength(1)
+    expect(a.value).toBe(a.inheritedKey)
+    // Propi de la biblioteca i mòdul d'abans: dues opcions diferents.
+    const b = hardwareChoices(lib, item("hinge-cup"), cup30)
+    expect(b.value).toBe("hinge-cup")
+    expect(b.inheritedKey).toMatch(/^moble:/)
+    // Propi i mòdul, tots dos còpies diferents amb el mateix nom: es distingeixen.
+    const cup32: HardwareItem = { ...cup30, params: { ...cup30.params, cupDiameter: 32 } }
+    const c = hardwareChoices(lib, cup32, cup30)
+    const own = c.options.filter((o) => o.own)
+    expect(own.map((o) => o.label).sort()).toEqual([`${cup30.name} (del moble)`, `${cup30.name} (del mòdul)`].sort())
+    expect(c.value).not.toBe(c.inheritedKey)
+    expect(own.find((o) => o.key === c.inheritedKey)!.item).toBe(cup30)
+  })
+
+  it("eliminar amb substitut només canvia les còpies iguals a l'item (no les d'abans amb el mateix id)", () => {
+    const c = TV_LIVING_ROOM.make()
+    const other = copyHardwareItem(item("hinge-cup"), "hw-2", "Altra")
+    const door = (h: HardwareItem) => ({ kind: "door" as const, mode: "single" as const, hinge: "left" as const, hardware: h })
+    const comp: Composition = {
+      ...c,
+      modules: c.modules.map((m, i) =>
+        i === 0
+          ? withRoot({ ...m, hardware: { ...m.hardware, hinge: cup30 } }, { id: "r", split: { dir: "v", sizes: ["auto", "auto"], children: [{ id: "a", front: door(cup30) }, { id: "b", front: door(item("hinge-cup")) }] } })
+          : m,
+      ),
+    }
+    expect(usesHardware(comp, item("hinge-cup"))).toBe(true)
+    const out = replaceHardwareRefs(comp, item("hinge-cup"), other)
+    const m0 = out.modules[0]!
+    expect(m0.hardware.hinge).toEqual(cup30)
+    expect(m0.root.split!.children[0]!.front).toMatchObject({ hardware: cup30 })
+    expect(m0.root.split!.children[1]!.front).toMatchObject({ hardware: { id: "hw-2" } })
+    // La resta de mòduls (còpies iguals) hi passen.
+    expect(out.modules.slice(1).every((m) => m.hardware.hinge.id === "hw-2")).toBe(true)
+    // Un moble que només té la còpia d'abans no fa servir l'item (no cal substitut per ell) i no canvia.
+    const onlyOld: Composition = { ...c, modules: c.modules.map((m) => ({ ...m, hardware: { ...m.hardware, hinge: cup30 } })) }
+    expect(usesHardware(onlyOld, item("hinge-cup"))).toBe(false)
+    expect(replaceHardwareRefs(onlyOld, item("hinge-cup"), other)).toBe(onlyOld)
   })
 })
 

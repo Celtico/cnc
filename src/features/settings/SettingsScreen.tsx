@@ -144,7 +144,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
       return
     }
     const valid = SettingsSchema.safeParse(next)
-    void replaceHardwareEverywhere(it.id, to, valid.success ? () => save(valid.data) : undefined).then((n) =>
+    void replaceHardwareEverywhere(it, to, valid.success ? () => save(valid.data) : undefined).then((n) =>
       toaster.create({ title: `«${it.name}» eliminat`, description: `Passen a «${to.name}»: ${n} ${n === 1 ? "moble actualitzat" : "mobles actualitzats"}.`, type: "success" }),
     )
   }

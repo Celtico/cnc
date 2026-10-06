@@ -105,7 +105,7 @@ export const MachineRulesSchema = z.object({
 export type MachineRules = z.infer<typeof MachineRulesSchema>
 export type CutMode = NonNullable<MachineRules["cutMode"]>
 
-/** Pell dels forats i ranures cecs per defecte (el que es feia sempre): els de gruix − 0,5 o més fondos, a gruix − 1. */
+/** Pell dels forats i ranures cecs per defecte: 1 mm (els de gruix − 0,5 o més fondos ja s'escurçaven a gruix − 1). */
 export const DEFAULT_BLIND: NonNullable<MachineRules["blind"]> = { minSkin: 1, threshold: 0.5 }
 
 /** Pell mínima i llindar dels forats cecs de les regles (amb els valors per defecte). */
@@ -113,11 +113,13 @@ export const blindRule = (r: Pick<MachineRules, "blind">): NonNullable<MachineRu
 
 /**
  * Fondària d'un forat o ranura cec a la CNC: si arriba a `threshold` de la cara de sota, com a molt gruix − `minSkin` (mai
- * menys de 0,5 mm). `shortened` si s'ha escurçat (avís). Amb els valors per defecte: de gruix − 0,5 o més → gruix − 1.
+ * menys de 0,5 mm). `shortened` si s'ha escurçat (avís). La pell mínima es respecta sempre: el llindar efectiu és
+ * `max(threshold, minSkin)` (amb un llindar més petit, un forat entre els dos quedava amb menys pell que la mínima). Amb
+ * els valors per defecte: més fondo que gruix − 1 → gruix − 1.
  */
 export function cncBlindDepth(thickness: number, depth: number, r: Pick<MachineRules, "blind">): { depth: number; shortened: boolean; minSkin: number } {
   const b = blindRule(r)
-  if (depth < thickness - b.threshold) return { depth, shortened: false, minSkin: b.minSkin }
+  if (depth < thickness - Math.max(b.threshold, b.minSkin)) return { depth, shortened: false, minSkin: b.minSkin }
   const d = Math.max(0.5, Math.min(depth, thickness - b.minSkin))
   return { depth: d, shortened: Math.abs(d - depth) > 1e-9, minSkin: b.minSkin }
 }

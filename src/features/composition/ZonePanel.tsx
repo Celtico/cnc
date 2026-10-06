@@ -51,7 +51,8 @@ function defaultFront(kind: Front["kind"]): Front {
 
 /**
  * Accions de la zona seleccionada (van a la capçalera de l'inspector, com a icones):
- * pujar al pare, duplicar (al costat o a sobre) i eliminar.
+ * pujar al pare, duplicar (al costat o a sobre) i eliminar. L'«Interior» (l'arrel) no es duplica ni s'elimina (com amb
+ * ⌘D i Suprimir): no hi ha cap acció.
  */
 export function ZoneActions({ root, zone, onChange, onSelect }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; onSelect: (id: string) => void }) {
   const parent = parentOf(root, zone.id)
@@ -60,6 +61,7 @@ export function ZoneActions({ root, zone, onChange, onSelect }: { root: Zone; zo
     onChange(r.root)
     if (r.copyId) onSelect(r.copyId)
   }
+  if (!parent) return null
   // Un sol botó ⋯ amb totes les accions: la capçalera queda neta.
   return (
     <Menu.Root positioning={{ placement: "bottom-end" }}>
@@ -71,25 +73,19 @@ export function ZoneActions({ root, zone, onChange, onSelect }: { root: Zone; zo
       <Portal>
         <Menu.Positioner>
           <Menu.Content>
-            {parent && (
-              <Menu.Item value="parent" onClick={() => onSelect(parent.id)}>
-                <LuArrowUp /> Seleccionar el pare
-              </Menu.Item>
-            )}
+            <Menu.Item value="parent" onClick={() => onSelect(parent.id)}>
+              <LuArrowUp /> Seleccionar el pare
+            </Menu.Item>
             <Menu.Item value="v" onClick={() => duplicate("v")}>
               <LuCopy /> Duplicar al costat
             </Menu.Item>
             <Menu.Item value="h" onClick={() => duplicate("h")}>
               <LuCopy /> Duplicar a sobre
             </Menu.Item>
-            {parent && (
-              <>
-                <Menu.Separator />
-                <Menu.Item value="del" color="fg.error" onClick={() => onChange(removeZone(root, zone.id))}>
-                  <LuTrash2 /> Eliminar
-                </Menu.Item>
-              </>
-            )}
+            <Menu.Separator />
+            <Menu.Item value="del" color="fg.error" onClick={() => onChange(removeZone(root, zone.id))}>
+              <LuTrash2 /> Eliminar
+            </Menu.Item>
           </Menu.Content>
         </Menu.Positioner>
       </Portal>

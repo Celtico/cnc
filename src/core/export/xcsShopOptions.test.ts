@@ -148,15 +148,27 @@ describe("marge del tauler", () => {
 })
 
 describe("pell dels forats i ranures gairebé passants", () => {
-  it("cncBlindDepth: per defecte, de gruix − 0,5 o més → gruix − 1; amb pell 0,1, el 18,9 es queda", () => {
+  it("cncBlindDepth: per defecte, més fondo que gruix − 1 → gruix − 1; amb pell 0,1, el 18,9 es queda", () => {
     expect(cncBlindDepth(19, 18.9, {})).toEqual({ depth: 18, shortened: true, minSkin: 1 })
-    expect(cncBlindDepth(19, 18.4, {})).toEqual({ depth: 18.4, shortened: false, minSkin: 1 })
+    // Entre gruix − 1 i gruix − 0,5 (el llindar): també a la pell mínima (abans es quedava amb 0,6 mm de pell).
+    expect(cncBlindDepth(19, 18.4, {})).toEqual({ depth: 18, shortened: true, minSkin: 1 })
+    expect(cncBlindDepth(19, 18, {})).toEqual({ depth: 18, shortened: false, minSkin: 1 })
+    expect(cncBlindDepth(19, 17.9, {})).toEqual({ depth: 17.9, shortened: false, minSkin: 1 })
     const thin = { blind: { minSkin: 0.1, threshold: 0.5 } }
     expect(cncBlindDepth(19, 18.9, thin)).toEqual({ depth: 18.9, shortened: false, minSkin: 0.1 })
     expect(cncBlindDepth(19, 19, thin).depth).toBeCloseTo(18.9)
     expect(cncBlindDepth(19, 19, thin).shortened).toBe(true)
     // Mai s'aprofundeix un forat.
     expect(cncBlindDepth(19, 18.6, { blind: { minSkin: 0.1, threshold: 2 } }).depth).toBe(18.6)
+  })
+  it("cncBlindDepth: un llindar més petit que la pell mínima no deixa mai menys pell que la mínima", () => {
+    for (const threshold of [0, 0.1, 0.5, 0.99]) {
+      for (const depth of [18, 18.1, 18.5, 18.9, 18.95, 19]) {
+        const r = cncBlindDepth(19, depth, { blind: { minSkin: 1, threshold } })
+        expect(19 - r.depth).toBeGreaterThanOrEqual(1 - 1e-9)
+        expect(r.depth).toBeLessThanOrEqual(depth)
+      }
+    }
   })
   const holes = [
     { x: 22, y: 93, diameter: 4, depth: 18.9, face: "A" as const },

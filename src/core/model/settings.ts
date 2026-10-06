@@ -867,6 +867,14 @@ export function importSettingsJson(current: Settings, text: string): SettingsPar
     merged.hardwareLibrary = res.settings.hardwareLibrary
     merged.hardwareDefaults = res.settings.hardwareDefaults
   }
+  // Els per defecte de ferratges es comproven contra la biblioteca que queda (no la inicial, com a `parseSettings`): un
+  // fitxer només amb `hardwareDefaults` pot apuntar a un item teu, i un només amb `hardwareLibrary` pot deixar-ne d'orfes.
+  const wantDefaults = "hardwareDefaults" in raw
+    ? { ...merged.hardwareDefaults, ...repairValue(HardwareDefaultsSchema.partial(), raw.hardwareDefaults, {}, () => {}) }
+    : merged.hardwareDefaults
+  const hw = fixHardwareDefaults(merged.hardwareLibrary, wantDefaults)
+  if (hw.changed) merged.hardwareLibrary = hw.library
+  merged.hardwareDefaults = hw.defaults
   // Un fitxer d'abans de la v11 porta les regles a les màquines: es fan servir (`rulesFromMachines`).
   if (!("machiningRules" in raw) && Array.isArray(raw.machines) && raw.machines.some((m) => isRecord(m) && m.rules !== undefined)) {
     merged.machiningRules = res.settings.machiningRules

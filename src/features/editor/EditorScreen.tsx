@@ -469,10 +469,17 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         select({ kind: "zone", moduleId: target.m.id, zoneId: zid })
       }
     }
+    // L'«Interior» (l'arrel del mòdul) no es retalla, no es duplica ni s'elimina (vegeu `remove`).
+    const interior = selection.kind === "zone" && module && selection.zoneId === module.root.id
     if (mod && (key === "c" || key === "x")) {
       const clip = current()
       if (!clip) return
       e.preventDefault()
+      // Es refusa abans de copiar: un ⌘X que no talla no ha de canviar el porta-retalls.
+      if (key === "x" && interior) {
+        refuseInterior("retallar")
+        return
+      }
       writeClip(clip)
       toaster.create({ title: `Copiat: ${clip.label}`, type: "info", duration: 1500 })
       if (key === "x") remove()
@@ -489,6 +496,10 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       // Un compartiment es duplica al costat (o a continuació, dins de la seva divisió), com al menú de l'inspector.
       if (selection.kind === "zone" && module) {
         e.preventDefault()
+        if (interior) {
+          refuseInterior("duplicar")
+          return
+        }
         const parent = parentOf(module.root, selection.zoneId)
         const r = duplicateZone(module.root, selection.zoneId, parent?.split?.dir ?? "v")
         updateModule({ ...module, root: r.root })
@@ -505,6 +516,10 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       if (selection.kind === "moble") return
       e.preventDefault()
       remove()
+    }
+    function refuseInterior(what: "eliminar" | "retallar" | "duplicar") {
+      const description = what === "duplicar" ? "Duplica'n un compartiment, o selecciona el mòdul per duplicar-lo." : "Treu-ne la divisió o el front, o elimina el mòdul."
+      toaster.create({ title: `L'interior no es pot ${what}`, description, type: "info" })
     }
     function remove() {
       if (selection.kind === "module") {
@@ -533,8 +548,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       } else if (selection.kind === "zone") {
         // L'«Interior» (l'arrel) no s'elimina: `deleteZone` buidaria tot el mòdul (divisions, fronts i el front de tot el
         // mòdul). Es buida treient-ne la divisió o el front.
-        if (selection.zoneId === module.root.id) {
-          toaster.create({ title: "L'interior no es pot eliminar", description: "Treu-ne la divisió o el front, o elimina el mòdul.", type: "info" })
+        if (interior) {
+          refuseInterior("eliminar")
           return
         }
         const parent = parentOf(module.root, selection.zoneId)

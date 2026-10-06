@@ -13,6 +13,16 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v)
 }
 
+/**
+ * Esquemes que no es reparen camp a camp: o són vàlids sencers o agafen el `fallback` (o es treuen si són opcionals).
+ * Per a dades que a mitges farien una altra cosa (un ferratge amb una part dels mecanitzats: «mai mig ferratge»).
+ */
+const ATOMIC = new WeakSet<z.ZodType>()
+export function repairAtomically<S extends z.ZodType>(schema: S): S {
+  ATOMIC.add(schema)
+  return schema
+}
+
 const join = (path: string, key: string | number) => (typeof key === "number" ? `${path}[${key}]` : path ? `${path}.${key}` : key)
 
 /**
@@ -38,6 +48,10 @@ export function repairValue<T>(schema: z.ZodType<T>, raw: unknown, fallback: T |
 }
 
 function repairInner(schema: z.ZodType, raw: unknown, fallback: unknown, onIssue: RepairIssue, path: string): unknown {
+  if (ATOMIC.has(schema)) {
+    if (fallback !== undefined && raw !== undefined) onIssue(path, "invàlid: valor inicial")
+    return fallback
+  }
   if (schema instanceof z.ZodOptional) {
     if (raw === undefined) return undefined
     const inner = repairValue(schema.unwrap() as z.ZodType, raw, fallback, onIssue, path)
@@ -73,6 +87,23 @@ function repairInner(schema: z.ZodType, raw: unknown, fallback: unknown, onIssue
     })
     return out
   }
+  // Unió amb discriminant (un front, una base…): es repara camp a camp l'opció del seu tipus; el `fallback` només
+  // hi serveix si és del mateix tipus.
+  if (schema instanceof z.ZodDiscriminatedUnion && isRecord(raw)) {
+    const key = schema.def.discriminator
+    const option = (schema.options as z.ZodType[]).find((o): o is z.ZodObject => o instanceof z.ZodObject && discriminates(o, key, raw[key]))
+    if (option) {
+      const fb = isRecord(fallback) && fallback[key] === raw[key] ? fallback : undefined
+      const v = repairValue(option, raw, fb, onIssue, path)
+      if (v !== undefined) return v
+    }
+  }
   if (fallback !== undefined && raw !== undefined) onIssue(path, "invàlid: valor inicial")
   return fallback
+}
+
+/** L'opció `o` d'una unió és la del valor `value` del discriminant `key`. */
+function discriminates(o: z.ZodObject, key: string, value: unknown): boolean {
+  const d = (o.shape as Record<string, z.ZodType>)[key]
+  return d instanceof z.ZodLiteral && (d.def.values as unknown[]).includes(value)
 }

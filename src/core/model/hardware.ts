@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { DEFAULT_CABINET } from "./cabinet"
 import { tryExpr } from "./expr"
+import { deepEqual } from "./photoUpgrade"
 import { repairValue } from "./repair"
 
 /**
@@ -532,6 +533,52 @@ function eachHardware(comp: unknown, visit: (item: HardwareItem) => HardwareItem
   return changed ? { ...comp, modules } : comp
 }
 
+/**
+ * Dues còpies fan el mateix (mateix motor, paràmetres, llargades, regles i mecanitzats): el nom, el fabricant, la
+ * referència, les etiquetes i la versió no canvien cap forat. Una còpia d'un mòdul amb el mateix id que un de la
+ * biblioteca però un altre contingut (un mòdul d'abans amb una cassoleta de 30) **no** és aquell item.
+ */
+export function sameHardware(a: HardwareItem, b: HardwareItem): boolean {
+  const content = ({ id: _i, name: _n, builtin: _b, tags: _t, maker: _m, ref: _r, version: _v, ...rest }: HardwareItem) => rest
+  return deepEqual(content(a), content(b))
+}
+
+/** La còpia `copy` és de l'item `item` de la biblioteca: mateix id i mateix contingut (`sameHardware`). */
+export const isCopyOf = (copy: HardwareItem, item: HardwareItem): boolean => copy.id === item.id && sameHardware(copy, item)
+
+/** Una opció del selector de ferratge d'un lloc (`hardwareChoices`). */
+export interface HardwareChoice {
+  /** Única entre les opcions: l'id de la biblioteca, o `moble:<n>:<id>` per a una còpia que no hi és tal qual. */
+  key: string
+  item: HardwareItem
+  label: string
+  /** Còpia del moble (no és a la biblioteca o hi és amb un altre contingut). */
+  own: boolean
+}
+
+/**
+ * Opcions del selector de ferratge (`HardwarePick`): els de la biblioteca d'aquell motor i, a part, les còpies del moble
+ * (`current`, i `inherited`, el del mòdul, als fronts) que no són a la biblioteca **tal qual** (`isCopyOf`; no n'hi ha
+ * prou amb l'id): «<nom> (del moble)», per veure el que es fabrica de debò i poder-hi tornar. `value` = l'opció de
+ * `current`; `inheritedKey` = la d'`inherited` (triar-la treu el propi del front).
+ */
+export function hardwareChoices(library: readonly HardwareItem[], current: HardwareItem, inherited?: HardwareItem): { options: HardwareChoice[]; value: string; inheritedKey?: string } {
+  const options: HardwareChoice[] = library.map((x) => ({ key: x.id, item: x, label: x.name, own: false }))
+  const resolve = (it: HardwareItem, label: string): string => {
+    const hit = options.find((o) => isCopyOf(it, o.item))
+    if (hit) return hit.key
+    const key = `moble:${options.length}:${it.id}`
+    options.push({ key, item: it, label, own: true })
+    return key
+  }
+  const inheritedKey = inherited ? resolve(inherited, `${inherited.name} (del moble)`) : undefined
+  const value = resolve(current, `${current.name} (del moble)`)
+  // Dues còpies diferents amb el mateix nom (la del front i la del mòdul): la del mòdul es diu «del mòdul».
+  const own = options.filter((o) => o.own)
+  if (inheritedKey && own.length === 2 && own[0]!.label === own[1]!.label) own.find((o) => o.key === inheritedKey)!.label = `${inherited!.name} (del mòdul)`
+  return { options, value, ...(inheritedKey ? { inheritedKey } : {}) }
+}
+
 /** Ids dels ferratges que fa servir una composició desada (els dels mòduls i els triats a les portes, calaixos…). */
 export function hardwareRefIds(comp: unknown): string[] {
   const ids = new Set<string>()
@@ -542,10 +589,21 @@ export function hardwareRefIds(comp: unknown): string[] {
   return [...ids]
 }
 
+/** La composició desada porta alguna còpia de l'item `item` tal qual (`isCopyOf`): la que canviaria en eliminar-lo. */
+export function usesHardware(comp: unknown, item: HardwareItem): boolean {
+  let hit = false
+  eachHardware(comp, (it) => {
+    if (isCopyOf(it, item)) hit = true
+    return null
+  })
+  return hit
+}
+
 /**
- * Canvia les còpies del ferratge `fromId` d'una composició desada per una còpia de `to` (eliminar amb substitut). Torna
- * el mateix objecte si no en feia servir cap.
+ * Canvia les còpies de l'item `from` d'una composició desada per una còpia de `to` (eliminar amb substitut). Només les
+ * que són `from` tal qual (`isCopyOf`): una còpia amb el mateix id i un altre contingut (un mòdul d'abans, un `.moble`
+ * d'un altre) és la que es fabrica i no es toca. Torna el mateix objecte si no en canvia cap.
  */
-export function replaceHardwareRefs<T>(comp: T, fromId: string, to: HardwareItem): T {
-  return eachHardware(comp, (it) => (it.id === fromId ? structuredClone(to) : null)) as T
+export function replaceHardwareRefs<T>(comp: T, from: HardwareItem, to: HardwareItem): T {
+  return eachHardware(comp, (it) => (isCopyOf(it, from) ? structuredClone(to) : null)) as T
 }
