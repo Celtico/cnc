@@ -1,6 +1,6 @@
-import { Badge, Box, Button, CloseButton, Dialog, HStack, IconButton, Kbd, Portal, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, CloseButton, Dialog, HStack, IconButton, Kbd, Portal, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
-import { LuEraser, LuMousePointer2, LuPenTool, LuSpline, LuTrash2, LuX } from "react-icons/lu"
+import { LuCircleHelp, LuEraser, LuMousePointer2, LuPenTool, LuSpline, LuSquircle, LuTrash2, LuX } from "react-icons/lu"
 import {
   autoHandles,
   bendEdge,
@@ -21,6 +21,7 @@ import {
 } from "../../core/model"
 import { NumberField, NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
+import { FoldItem } from "../../components/Fold"
 import { segGroup, segItem } from "../../components/segmented"
 import { UndoRedo } from "../../components/UndoRedo"
 import { MOD } from "../../components/modKey"
@@ -331,7 +332,7 @@ export function ProfileEditor({
         <Dialog.Backdrop />
         <Dialog.Positioner>
           {/* Al mòbil, a pantalla completa i respectant la zona segura (si no, la capçalera quedava sota l'illa / la barra d'estat). */}
-          <Dialog.Content ref={content} maxW={{ md: "1000px" }} h={{ base: "100dvh", md: "auto" }} minH={{ md: "auto" }} pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} pb={{ base: "env(safe-area-inset-bottom, 0px)", md: 0 }}>
+          <Dialog.Content ref={content} maxW={{ md: "1000px" }} css={{ "--profile-canvas": "max(320px, calc(100dvh - 300px))" }} h={{ base: "100dvh", md: "auto" }} minH={{ md: "auto" }} pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} pb={{ base: "env(safe-area-inset-bottom, 0px)", md: 0 }}>
             <Dialog.Header>
               <Dialog.Title>Forma de la secció</Dialog.Title>
             </Dialog.Header>
@@ -391,7 +392,9 @@ export function ProfileEditor({
                   </HStack>
                 </HStack>
                 <Stack direction={{ base: "column", md: "row" }} gap={3} align="stretch">
-                  <Box flex={1} minW={0} borderWidth="1px" rounded="md" bg="bg.subtle" overflow="hidden">
+                  {/* Dibuix quadrat, com a molt l'alçada que queda a la finestra (el diàleg no es desplaça a l'ordinador). */}
+                  <Box flex={1} minW={0} display="flex" justifyContent="center" alignItems="flex-start">
+                  <Box w="full" maxW={{ md: "var(--profile-canvas)" }} borderWidth="1px" rounded="md" bg="bg.subtle" overflow="hidden">
                     <svg
                       ref={svg}
                       viewBox={`${view.x0} ${-(view.y0 + view.span)} ${view.span} ${view.span}`}
@@ -499,105 +502,108 @@ export function ProfileEditor({
                       })}
                     </svg>
                   </Box>
-                  <Stack w={{ base: "full", md: "280px" }} gap={2} maxH={{ md: "560px" }} overflowY="auto" flexShrink={0}>
-                    <HStack justify="space-between">
-                      <Text textStyle="sm" fontWeight="semibold">
-                        {drawing ? "Dibuixant" : sel !== null ? `Node ${sel + 1}` : "Forma"}
-                      </Text>
-                      <HStack gap={1}>
-                        <Badge size="sm" colorPalette={bad ? "red" : "wood"}>
-                          {Math.round(b.x1 - b.x0)} × {Math.round(b.y1 - b.y0)}
-                        </Badge>
-                        {/* Treure el node: a la capçalera, perquè les coordenades van en files. */}
-                        {!drawing && selNode && (
-                          <IconButton aria-label="Treure el node" size="xs" variant="ghost" disabled={nodes.length <= 3} onClick={() => remove(sel!)}>
+                  </Box>
+                  {/* Opcions en seccions plegables (l'acordió de l'app, recordades durant la sessió): sense desplaçament. */}
+                  <Stack w={{ base: "full", md: "280px" }} gap={0} flexShrink={0}>
+                    <FoldItem
+                      id="profile-node"
+                      icon={LuMousePointer2}
+                      title="Selecció"
+                      badge={drawing ? "Ploma" : sel !== null ? `Node ${sel + 1}` : undefined}
+                      size="sm"
+                      defaultOpen
+                      actions={
+                        // Treure el node: al costat de la capçalera (mai a dins: un botó dins d'un botó no és vàlid).
+                        !drawing && selNode ? (
+                          <IconButton aria-label="Treure el node" title="Treure el node" size="xs" variant="ghost" disabled={nodes.length <= 3} onClick={() => remove(sel!)}>
                             <LuTrash2 />
                           </IconButton>
-                        )}
-                      </HStack>
-                    </HStack>
-                    {drawing ? (
-                      <Text textStyle="xs" color="fg.muted">
-                        Clic: node de cantonada. Clic i arrossegar: node suau (defineixes la corba). Clica el primer node (verd) o prem <Kbd>Retorn</Kbd> per tancar la forma; <Kbd>Esc</Kbd> la descarta.
-                      </Text>
-                    ) : selNode ? (
-                      <>
-                        <NumRow label={axes[0]} value={selNode.x} step={1} onChange={(v) => Number.isFinite(v) && set(sel!, { ...selNode, x: v }, { group: `x:${sel}` })} />
-                        <NumRow label={axes[1]} value={selNode.y} step={1} onChange={(v) => Number.isFinite(v) && set(sel!, { ...selNode, y: v }, { group: `y:${sel}` })} />
-                        <FormRow label="Manegadors" help={HANDLE_HELP[selType]}>
-                          <ChoiceChips
-                            label="Manegadors"
-                            value={selType}
-                            options={[
-                              { id: "corner", label: "Lliures" },
-                              { id: "smooth", label: "Alineats" },
-                              { id: "symmetric", label: "Simètrics" },
-                            ]}
-                            onChange={(t) => setType(sel!, t)}
-                          />
+                        ) : undefined
+                      }
+                    >
+                      {drawing ? (
+                        <Text textStyle="xs" color="fg.muted">
+                          Clic: node de cantonada. Clic i arrossegar: node suau (defineixes la corba). Clica el primer node (verd) o prem <Kbd>Retorn</Kbd> per tancar la forma; <Kbd>Esc</Kbd> la descarta.
+                        </Text>
+                      ) : selNode ? (
+                        <>
+                          <NumRow label={axes[0]} value={selNode.x} step={1} onChange={(v) => Number.isFinite(v) && set(sel!, { ...selNode, x: v }, { group: `x:${sel}` })} />
+                          <NumRow label={axes[1]} value={selNode.y} step={1} onChange={(v) => Number.isFinite(v) && set(sel!, { ...selNode, y: v }, { group: `y:${sel}` })} />
+                          <FormRow label="Manegadors" help={HANDLE_HELP[selType]}>
+                            <ChoiceChips
+                              label="Manegadors"
+                              value={selType}
+                              options={[
+                                { id: "corner", label: "Lliures" },
+                                { id: "smooth", label: "Alineats" },
+                                { id: "symmetric", label: "Simètrics" },
+                              ]}
+                              onChange={(t) => setType(sel!, t)}
+                            />
+                          </FormRow>
+                          {(selNode.in || selNode.out) && (
+                            <Button size="xs" variant="ghost" alignSelf="flex-start" onClick={() => set(sel!, { x: selNode.x, y: selNode.y })}>
+                              Treure els manegadors (cantonada recta)
+                            </Button>
+                          )}
+                        </>
+                      ) : (
+                        <Text textStyle="xs" color="fg.muted">
+                          Tria un node per moure'l amb precisió, canviar-ne el tipus o arrodonir-lo.
+                        </Text>
+                      )}
+                    </FoldItem>
+                    {/* Arrodonir la punta: només en un node entre dos costats rectes. */}
+                    {!drawing && selNode && edgeOf(nodes, (sel! - 1 + nodes.length) % nodes.length).kind === "line" && edgeOf(nodes, sel!).kind === "line" && (
+                      <FoldItem id="profile-fillet" icon={LuSquircle} title="Arrodonir la punta" badge={`${radius} mm`} size="sm">
+                        <Text textStyle="xs" color="fg.muted">
+                          La cantonada passa a ser un arc d'aquest radi, tangent als dos costats.
+                        </Text>
+                        <FormRow label="Radi">
+                          <HStack gap={1} align="start">
+                            <NumberField label="" ariaLabel="Radi" value={radius} min={1} max={2000} step={5} onChange={(v) => Number.isFinite(v) && v > 0 && setRadius(v)} />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={!canFillet}
+                              title={canFillet ? undefined : "El radi és massa gran per als costats"}
+                              onClick={() => {
+                                const next = filletNode(nodes, sel!, radius)
+                                if (next) {
+                                  setNodes(next)
+                                  setSel(null)
+                                }
+                              }}
+                            >
+                              <LuSpline /> Arrodonir
+                            </Button>
+                          </HStack>
                         </FormRow>
-                        {edgeOf(nodes, (sel! - 1 + nodes.length) % nodes.length).kind === "line" && edgeOf(nodes, sel!).kind === "line" && (
-                          <Stack gap={1} borderTopWidth="1px" pt={2}>
-                            <Text textStyle="xs" color="fg.muted">
-                              Arrodonir la punta: la cantonada passa a ser un arc d'aquest radi, tangent als dos costats.
-                            </Text>
-                            <FormRow label="Radi">
-                              <HStack gap={1} align="start">
-                                <NumberField label="" ariaLabel="Radi" value={radius} min={1} max={2000} step={5} onChange={(v) => Number.isFinite(v) && v > 0 && setRadius(v)} />
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  disabled={!canFillet}
-                                  title={canFillet ? undefined : "El radi és massa gran per als costats"}
-                                  onClick={() => {
-                                    const next = filletNode(nodes, sel!, radius)
-                                    if (next) {
-                                      setNodes(next)
-                                      setSel(null)
-                                    }
-                                  }}
-                                >
-                                  <LuSpline /> Arrodonir
-                                </Button>
-                              </HStack>
-                            </FormRow>
-                          </Stack>
-                        )}
-                        {(selNode.in || selNode.out) && (
-                          <Button size="xs" variant="ghost" alignSelf="flex-start" onClick={() => set(sel!, { x: selNode.x, y: selNode.y })}>
-                            Treure els manegadors (cantonada recta)
-                          </Button>
-                        )}
-                      </>
-                    ) : (
-                      <Text textStyle="xs" color="fg.muted">
-                        Tria un node per moure'l amb precisió, canviar-ne el tipus o arrodonir-lo.
-                      </Text>
+                      </FoldItem>
                     )}
-                    <Stack gap={0.5} borderTopWidth="1px" pt={2}>
-                      <Text textStyle="xs" color="fg.muted">
-                        Com funciona
-                      </Text>
-                      <Text textStyle="xs" color="fg.muted">
-                        · Quadrat = cantonada; cercle = node amb corba. Doble clic (o l'eina Corbar) canvia l'un per l'altre.
-                      </Text>
-                      <Text textStyle="xs" color="fg.muted">
-                        · Els manegadors (rombes blaus) donen la direcció i la força de la corba; amb <Kbd>Alt</Kbd> es trenquen.
-                      </Text>
-                      <Text textStyle="xs" color="fg.muted">
-                        · El punt del mig d'un costat: clic hi afegeix un node; arrossegar-lo corba el costat.
-                      </Text>
-                      <Text textStyle="xs" color="fg.muted">
-                        · Imant de {minor} mm (<Kbd>{MOD.replace("+", "")}</Kbd>: lliure). <Kbd>Maj</Kbd>: angles de 45° (ploma i manegadors). <Kbd>Supr</Kbd> treu el node; fletxes l'afinen.
-                      </Text>
-                      <Text textStyle="xs" color="fg.muted">
-                        · <Kbd>{MOD}Z</Kbd> desfà i <Kbd>⇧{MOD}Z</Kbd> refà (amb la ploma, treu l'últim node).
-                      </Text>
-                    </Stack>
+                    <FoldItem id="profile-help" icon={LuCircleHelp} title="Com funciona" size="sm">
+                      <Stack gap={1}>
+                        <Text textStyle="xs" color="fg.muted">
+                          · Quadrat = cantonada; cercle = node amb corba. Doble clic (o l'eina Corbar) canvia l'un per l'altre.
+                        </Text>
+                        <Text textStyle="xs" color="fg.muted">
+                          · Els manegadors (rombes blaus) donen la direcció i la força de la corba; amb <Kbd>Alt</Kbd> es trenquen.
+                        </Text>
+                        <Text textStyle="xs" color="fg.muted">
+                          · El punt del mig d'un costat: clic hi afegeix un node; arrossegar-lo corba el costat.
+                        </Text>
+                        <Text textStyle="xs" color="fg.muted">
+                          · Imant de {minor} mm (<Kbd>{MOD.replace("+", "")}</Kbd>: lliure). <Kbd>Maj</Kbd>: angles de 45° (ploma i manegadors). <Kbd>Supr</Kbd> treu el node; fletxes l'afinen.
+                        </Text>
+                        <Text textStyle="xs" color="fg.muted">
+                          · <Kbd>{MOD}Z</Kbd> desfà i <Kbd>⇧{MOD}Z</Kbd> refà (amb la ploma, treu l'últim node).
+                        </Text>
+                      </Stack>
+                    </FoldItem>
                   </Stack>
                 </Stack>
                 <Text textStyle="xs" color={bad ? "fg.error" : "fg.muted"}>
-                  {bad ? "El contorn es talla a si mateix: mou algun node o manegador." : closed ? `${nodes.length} nodes · àrea ${(area / 1e6).toFixed(3)} m². Les corbes es tallen com a arcs (error < 0,02 mm).` : " "}
+                  {bad ? "El contorn es talla a si mateix: mou algun node o manegador." : closed ? `${Math.round(b.x1 - b.x0)} × ${Math.round(b.y1 - b.y0)} mm · ${nodes.length} nodes · àrea ${(area / 1e6).toFixed(3)} m². Les corbes es tallen com a arcs (error < 0,02 mm).` : " "}
                 </Text>
               </Stack>
             </Dialog.Body>
