@@ -990,7 +990,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         <PartInspector comp={comp} id={selection.id} joints={build?.joints ?? []} onChange={setComp} />
       ) : selection.kind === "zone" && zone ? (
         <Stack gap={3}>
-          <ZonePanel root={module.root} zone={zone} openRatio={moduleBuild?.openRatios[zone.id]} onChange={(root) => updateModule({ ...module, root })} />
+          <ZonePanel root={module.root} zone={zone} hardware={module.hardware} openRatio={moduleBuild?.openRatios[zone.id]} onChange={(root) => updateModule({ ...module, root })} />
         </Stack>
       ) : (
         // Seccions plegables independents (com Figma o Fusion): es poden tenir diverses

@@ -24,7 +24,7 @@ import {
   Text,
 } from "@chakra-ui/react"
 import { Children, Fragment, isValidElement, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { LuArchive, LuFactory, LuArrowDown, LuArrowUp, LuCheck, LuCircleDashed, LuCircleDot, LuMagnet, LuScanEye, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff,  LuHammer, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRotateCw, LuRoute, LuRows3, LuRuler, LuScan, LuSparkles, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
+import { LuFactory, LuArrowDown, LuArrowUp, LuCheck, LuScanEye, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff,  LuHammer, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRotateCw, LuRoute, LuRows3, LuRuler, LuScan, LuSparkles, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { MasterDetail } from "../../components/MasterDetail"
@@ -45,6 +45,7 @@ import {
   newId,
   importSettingsJson,
   settingsToJson,
+  type HardwareItem,
   type MaterialPref,
   type RefPreset,
   type Settings,
@@ -61,6 +62,9 @@ import { PaneHeadContext } from "./paneHead"
 import { MachinesList } from "./MachinesPane"
 import { MachineRulesGroup } from "./MachineRules"
 import { DeleteMaterialDialog } from "./DeleteMaterialDialog"
+import { DeleteHardwareDialog } from "./DeleteHardwareDialog"
+import { HardwareList } from "./HardwarePane"
+import { replaceHardwareEverywhere } from "../../db/hardwareRefs"
 import { renameMaterialEverywhere, type RenameCount } from "../../db/materialRefs"
 
 type SectionKey = keyof Omit<Settings, "version">
@@ -124,6 +128,27 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
     else toaster.create({ title: `«${m.name}» eliminat`, type: "info" })
   }
 
+  // Eliminar un ferratge: si es fa servir, amb substitut (el per defecte i les còpies dels mobles desats hi passen).
+  const [deletingHw, setDeletingHw] = useState<HardwareItem | null>(null)
+  const confirmDeleteHw = (replacement: string | null) => {
+    const it = deletingHw
+    setDeletingHw(null)
+    if (!it) return
+    const hardwareLibrary = draft.hardwareLibrary.filter((x) => x.id !== it.id)
+    const to = replacement ? hardwareLibrary.find((x) => x.id === replacement) : undefined
+    const hardwareDefaults = Object.fromEntries(Object.entries(draft.hardwareDefaults).map(([k, v]) => [k, v === it.id && to ? to.id : v])) as Settings["hardwareDefaults"]
+    const next = { ...draft, hardwareLibrary, hardwareDefaults }
+    setDraft(next)
+    if (!to) {
+      toaster.create({ title: `«${it.name}» eliminat`, type: "info" })
+      return
+    }
+    const valid = SettingsSchema.safeParse(next)
+    void replaceHardwareEverywhere(it.id, to, valid.success ? () => save(valid.data) : undefined).then((n) =>
+      toaster.create({ title: `«${it.name}» eliminat`, description: `Passen a «${to.name}»: ${n} ${n === 1 ? "moble actualitzat" : "mobles actualitzats"}.`, type: "success" }),
+    )
+  }
+
   const doExport = () => downloadText(settingsToJson(validation.success ? validation.data : draft), "mobles-preferencies.json", "application/json")
   const doImport = async (file: File | undefined) => {
     if (!file) return
@@ -143,7 +168,8 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
     const key = reset.key
     // Regles de mecanitzat: `defaultMachineRules()` (les del taller), com la resta de seccions.
     // Després, les referències a materials que ja no hi són (per defecte, mides de tauler) es corregeixen.
-    setDraft((d) => fixMaterialRefs({ ...d, [key]: key === "machiningRules" ? defaultMachineRules() : structuredClone(DEFAULT_SETTINGS[key]) }))
+    // Ferratges: la biblioteca i els per defecte de cada lloc, junts.
+    setDraft((d) => fixMaterialRefs({ ...d, [key]: key === "machiningRules" ? defaultMachineRules() : structuredClone(DEFAULT_SETTINGS[key]), ...(key === "hardwareLibrary" ? { hardwareDefaults: structuredClone(DEFAULT_SETTINGS.hardwareDefaults) } : {}) }))
     toaster.create({ title: `«${reset.label}» restaurat`, type: "info" })
     setReset(null)
   }
@@ -264,8 +290,8 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             </Stack>
           </Pane>
 
-          <Pane id="hardware" title="Ferratges" icon={LuHammer} desc="Frontisses, guies, espigues i els seus forats." onReset={() => setReset({ key: "hardware", label: "Ferratges" })}>
-            <HardwareForm hardware={draft.hardware} onChange={(hardware) => set("hardware", hardware)} />
+          <Pane id="hardware" wide title="Ferratges" icon={LuHammer} desc="Frontisses, guies, espigues, imants i tiradors: els seus forats i quin fan servir els mòduls nous." onReset={() => setReset({ key: "hardwareLibrary", label: "Ferratges", note: "Torna la biblioteca inicial (els ferratges afegits es perden) i els per defecte. Els mobles fets porten la seva còpia: no canvien." })}>
+            <HardwareList items={draft.hardwareLibrary} defaults={draft.hardwareDefaults} onChange={(hardwareLibrary) => set("hardwareLibrary", hardwareLibrary)} onDefaults={(hardwareDefaults) => set("hardwareDefaults", hardwareDefaults)} onDelete={setDeletingHw} />
           </Pane>
 
           <Pane
@@ -329,6 +355,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
       </SettingsPages>
 
       <DeleteMaterialDialog material={deleting} settings={draft} onCancel={() => setDeleting(null)} onConfirm={confirmDelete} />
+      <DeleteHardwareDialog item={deletingHw} items={draft.hardwareLibrary} defaults={draft.hardwareDefaults} onCancel={() => setDeletingHw(null)} onConfirm={confirmDeleteHw} />
 
       <Dialog.Root role="alertdialog" open={reset !== null} onOpenChange={(e) => !e.open && setReset(null)}>
         <Portal>
@@ -659,13 +686,6 @@ function ReferencesList({ refs, onChange }: { refs: RefPreset[]; onChange: (r: R
 
 // --- Materials ---------------------------------------------------------------------------
 
-function parseList(text: string): number[] {
-  return text
-    .split(/[,;·\s]+/)
-    .map((s) => Number(s.replace(",", ".")))
-    .filter((n) => Number.isFinite(n) && n > 0)
-}
-
 /** Material i gruix per defecte en una fila: el gruix es tria d'entre els del material. */
 function DefaultPick({ label, materials, all, material, thickness, onChange }: { label: string; materials: MaterialPref[]; all: MaterialPref[]; material: string; thickness: number; onChange: (material: string, thickness: number) => void }) {
   const known = all.find((m) => m.name === material)
@@ -698,70 +718,6 @@ function DefaultPick({ label, materials, all, material, thickness, onChange }: {
         )
       )}
     </Stack>
-  )
-}
-
-// --- Ferratges -----------------------------------------------------------------------------
-
-function HardwareForm({ hardware: h, onChange }: { hardware: Settings["hardware"]; onChange: (h: Settings["hardware"]) => void }) {
-  // Mentre s'escriu, el text tal com és; si no, el de les preferències (així «Restaurar» i «Importar» es veuen).
-  const [slides, setSlides] = useState<string | null>(null)
-  const sub = <K extends keyof Settings["hardware"]>(key: K, patch: Partial<Settings["hardware"][K]>) => onChange({ ...h, [key]: { ...h[key], ...patch } })
-  return (
-    <FoldGrid>
-      <Group title="Cassoleta de frontissa" icon={LuCircleDashed}>
-        <NumRow label="Diàmetre (Ø)" value={h.hinge.cupDiameter} min={20} max={40} step={1} onChange={(cupDiameter) => sub("hinge", { cupDiameter })} />
-        <NumRow label="Fondària" value={h.hinge.cupDepth} min={5} max={20} step={0.5} onChange={(cupDepth) => sub("hinge", { cupDepth })} />
-        <NumRow label="Al cantell" help="Del cantell de la porta a la vora de la cassoleta." value={h.hinge.cupOffset} min={15} max={30} step={0.5} onChange={(cupOffset) => sub("hinge", { cupOffset })} />
-      </Group>
-      <Group title="System 32" icon={LuCircleDot}>
-        <NumRow label="Filera al cantell" value={h.system32.edgeOffset} min={20} max={60} step={1} onChange={(edgeOffset) => sub("system32", { edgeOffset })} />
-        <NumRow label="Pas" value={h.system32.pitch} min={16} max={64} step={1} onChange={(pitch) => sub("system32", { pitch })} />
-        <NumRow label="Diàmetre (Ø)" value={h.system32.diameter} min={3} max={10} step={0.5} onChange={(diameter) => sub("system32", { diameter })} />
-        <NumRow label="Fondària" value={h.system32.depth} min={5} max={16} step={0.5} onChange={(depth) => sub("system32", { depth })} />
-      </Group>
-      <Group title="Espigues" icon={LuHammer}>
-        <NumRow label="Diàmetre (Ø)" value={h.dowel.diameter} min={5} max={12} step={1} onChange={(diameter) => sub("dowel", { diameter })} />
-        <NumRow label="Als extrems" value={h.dowel.endOffset} min={20} max={120} step={5} onChange={(endOffset) => sub("dowel", { endOffset })} />
-        <NumRow label="Fondària a la cara" value={h.dowel.faceDepth} min={5} max={20} step={0.5} onChange={(faceDepth) => sub("dowel", { faceDepth })} />
-        <NumRow label="Fondària al cantell" value={h.dowel.edgeDepth} min={10} max={40} step={0.5} onChange={(edgeDepth) => sub("dowel", { edgeDepth })} />
-      </Group>
-      <Group title="Calaixos (guia genèrica)" icon={LuArchive}>
-        <FormRow label="Llargades de guia" help="Es tria la més llarga que hi cap." maxW="360px">
-          <Input
-            size="sm"
-            aria-invalid={h.drawer.slideLengths.length === 0 || undefined}
-            value={slides ?? h.drawer.slideLengths.join(" · ")}
-            onChange={(e) => {
-              setSlides(e.target.value)
-              const list = parseList(e.target.value)
-              if (list.length) sub("drawer", { slideLengths: list })
-            }}
-            onBlur={() => setSlides(null)}
-            placeholder="250 · 300 · 350 · 400 · 450 · 500 · 550"
-          />
-        </FormRow>
-        <NumRow label="Joc lateral (costat)" value={h.drawer.sideClearance} min={0} max={30} step={0.5} onChange={(sideClearance) => sub("drawer", { sideClearance })} />
-        <NumRow label="Gruix caixa" value={h.drawer.boxThickness} min={8} max={25} step={1} onChange={(boxThickness) => sub("drawer", { boxThickness })} />
-        <NumRow label="Gruix fons caixa" value={h.drawer.bottomThickness} min={3} max={16} step={1} onChange={(bottomThickness) => sub("drawer", { bottomThickness })} />
-        <NumRow label="Front − caixa" help="Quant més baixa és la caixa que el front." value={h.drawer.boxDrop} min={0} max={100} step={1} onChange={(boxDrop) => sub("drawer", { boxDrop })} />
-        <NumRow label="Fons des de baix" value={h.drawer.bottomOffset} min={0} max={40} step={1} onChange={(bottomOffset) => sub("drawer", { bottomOffset })} />
-        <NumRow label="Joc amb el fons" value={h.drawer.backClearance} min={0} max={60} step={1} onChange={(backClearance) => sub("drawer", { backClearance })} />
-      </Group>
-      <Group title="Imants (reixetes i trapes)" icon={LuMagnet}>
-        <NumRow label="Diàmetre (Ø)" value={h.magnet.diameter} min={5} max={20} step={1} onChange={(diameter) => sub("magnet", { diameter })} />
-        <NumRow label="Fondària" value={h.magnet.depth} min={2} max={15} step={0.5} onChange={(depth) => sub("magnet", { depth })} />
-        <NumRow label="A la cantonada" value={h.magnet.cornerOffset} min={20} max={200} step={5} onChange={(cornerOffset) => sub("magnet", { cornerOffset })} />
-      </Group>
-    </FoldGrid>
-  )
-}
-
-function Group({ title, icon: Icon, children }: { title: string; icon: IconType; children: ReactNode }) {
-  return (
-    <SettingsGroup icon={<Icon />} title={title}>
-      {children}
-    </SettingsGroup>
   )
 }
 

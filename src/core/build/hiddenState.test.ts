@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { DEFAULT_GRILLE, defaultModule, setFront, setShelves, type Carcass, type Composition, type Front, type Module, type Zone } from "../model"
+import { DEFAULT_GRILLE, DEFAULT_HARDWARE_KIT, defaultModule, setFront, setShelves, type Carcass, type Composition, type Front, type Module, type Zone } from "../model"
 import { buildComposition } from "./buildComposition"
 import { catalogCorpus, int, MATERIALS, pick, randomComposition, rng, type Rnd } from "./testCorpus"
 
@@ -83,7 +83,11 @@ function scrambleFront(f: Front, r: Rnd): Front {
       return { ...f, heights: [...f.heights.slice(0, f.n), ...Array.from({ length: int(r, 0, 3) }, () => pick(r, ["auto", 120, 300] as const))] }
     case "door":
       // Dues portes: no surten les frontisses.
-      return f.mode === "double" ? { ...f, hinge: pick(r, ["left", "right"] as const) } : f
+    {
+      const d = f.mode === "double" ? { ...f, hinge: pick(r, ["left", "right"] as const) } : f
+      // Porta de vidre: frontisses del perfil; la frontissa triada (cassoletes) no surt ni compta.
+      return f.glass && r() < 0.7 ? { ...d, hardware: { ...DEFAULT_HARDWARE_KIT.hinge, id: "hw-amagat", params: { ...DEFAULT_HARDWARE_KIT.hinge.params, cupDiameter: 26, cupOffset: 30 } } } : d
+    }
     case "grille": {
       const p = f.pattern
       const pattern = p.kind === "holes" ? { ...p, slotWidth: int(r, 3, 30), slotGap: int(r, 3, 40) } : { ...p, holeDiameter: int(r, 3, 30), holePitch: int(r, 8, 60) }

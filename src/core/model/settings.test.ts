@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule } from "./composition"
+import { DEFAULT_HARDWARE_KIT, DEFAULT_LEGACY_HARDWARE } from "./hardware"
 import {
   BUILTIN_REFERENCES,
   SETTINGS_VERSION,
@@ -43,7 +44,7 @@ describe("preferències", () => {
   it("migra unes preferències d'una versió anterior (sense version i amb `wall`)", () => {
     const old = {
       references: [{ id: "x", name: "Tele vella", w: 1000, h: 600, plane: "wall", wall: 150 }],
-      hardware: DEFAULT_SETTINGS.hardware,
+      hardware: DEFAULT_LEGACY_HARDWARE,
     }
     const res = parseSettings(old)
     expect(res.migrated).toBe(true)
@@ -94,7 +95,7 @@ describe("preferències", () => {
     expect(m.fronts.outerGap).toBe(3)
     expect(m.carcass.material).toBe("MDF lacat")
     expect(m.carcass.thickness).toBe(22)
-    expect(m.hardware).toEqual(DEFAULT_SETTINGS.hardware)
+    expect(m.hardware).toEqual(DEFAULT_HARDWARE_KIT)
   })
 
   it("mida de tauler per material, amb la regla buida com a comodí", () => {
@@ -148,16 +149,30 @@ describe("materials de foto (v6)", () => {
 describe("reparació camp a camp", () => {
   const plain = <T>(v: T): T => JSON.parse(JSON.stringify(v))
 
-  it("un valor de ferratges dolent no torna tots els ferratges als inicials", () => {
-    const s = plain(DEFAULT_SETTINGS) as Record<string, any>
+  it("un valor de ferratges dolent (d'abans de la v19) no torna tots els ferratges als inicials", () => {
+    const { hardwareLibrary: _l, hardwareDefaults: _d, ...rest } = plain(DEFAULT_SETTINGS)
+    const s = { ...rest, version: 18, hardware: plain(DEFAULT_LEGACY_HARDWARE) } as Record<string, any>
     s.hardware.hinge.cupDiameter = 40
     s.hardware.drawer.slideLengths = [300, 0]
     s.hardware.magnet.depth = "x"
     const r = parseSettings(s)
-    expect(r.settings.hardware.hinge.cupDiameter).toBe(40)
-    expect(r.settings.hardware.drawer.slideLengths).toEqual([300])
-    expect(r.settings.hardware.magnet.depth).toBe(DEFAULT_SETTINGS.hardware.magnet.depth)
+    const item = (id: string) => r.settings.hardwareLibrary.find((x) => x.id === id)!
+    expect(item("hinge-cup").params.cupDiameter).toBe(40)
+    expect(item("slide-ball").lengths).toEqual([300])
+    expect(item("magnet").params.depth).toBe(DEFAULT_LEGACY_HARDWARE.magnet.depth)
     expect(r.problems.some((p) => p.startsWith("Ferratges"))).toBe(true)
+  })
+
+  it("un item de la biblioteca de ferratges dolent només treu aquell item", () => {
+    const s = plain(DEFAULT_SETTINGS) as Record<string, any>
+    s.hardwareLibrary.push({ ...s.hardwareLibrary[0], id: "hw-meva", name: "La meva", params: { cupDiameter: "x" } })
+    s.hardwareLibrary.find((x: any) => x.id === "slide-ball").lengths = []
+    const r = parseSettings(s)
+    expect(r.settings.hardwareLibrary.some((x) => x.id === "hw-meva")).toBe(false)
+    // La guia dolenta es treu i, com que el lloc es quedaria sense guia, torna la inicial.
+    expect(r.settings.hardwareLibrary.find((x) => x.id === "slide-ball")).toEqual(DEFAULT_SETTINGS.hardwareLibrary.find((x) => x.id === "slide-ball"))
+    expect(r.settings.hardwareLibrary.filter((x) => x.id !== "slide-ball").map((x) => x.id)).toEqual(DEFAULT_SETTINGS.hardwareLibrary.filter((x) => x.id !== "slide-ball").map((x) => x.id))
+    expect(r.problems.filter((p) => p.startsWith("Ferratges"))).toHaveLength(2)
   })
 
   it("un tauler dolent es treu sol: el gruix de tall i la resta es queden", () => {
@@ -249,7 +264,7 @@ describe("v12: duplicats fora i noms únics", () => {
     expect(names).not.toContain("DM 10")
     expect(names).not.toContain("Pi")
     expect(names).toContain("Fulles de pi")
-    expect(SETTINGS_VERSION).toBe(18)
+    expect(SETTINGS_VERSION).toBe(19)
   })
 
   it("«Melamina 19» i «DM 10» inicials passen als de sempre (amb les referències de les preferències) i «Pi» a «Fulles de pi»", () => {

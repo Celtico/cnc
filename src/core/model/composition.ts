@@ -5,6 +5,7 @@ import { flatten, profileToOutline, sampleProfile, toNodes, type BPt } from "./p
 import { CameraPoseSchema } from "./camera"
 import { aliasMaterialRefs } from "./photoUpgrade"
 import { FreePartSchema, JoinerySchema, PART_AXES as PART_AXES_C, tidyPart, type FreePart } from "./freePart"
+import { DEFAULT_LEGACY_HARDWARE, HardwareItemSchema, HardwareKitSchema, isLegacyHardware, kitFromLegacy, migrateModuleHardware, type HardwareKit } from "./hardware"
 
 /**
  * Model de composició: mòduls d'esquerra a dreta, cadascun amb una carcassa i un
@@ -16,45 +17,12 @@ const sizeOrAuto = z.union([mm.positive(), z.literal("auto")])
 
 // --- Ferratges per defecte ---------------------------------------------------------
 
-export const HardwareSchema = z.object({
-  hinge: z.object({ cupDiameter: mm.positive(), cupDepth: mm.positive(), cupOffset: mm.positive() }),
-  system32: z.object({ edgeOffset: mm.positive(), pitch: mm.positive(), diameter: mm.positive(), depth: mm.positive() }),
-  dowel: z.object({ diameter: mm.positive(), faceDepth: mm.positive(), edgeDepth: mm.positive(), endOffset: mm.positive() }),
-  drawer: z.object({
-    /** Llargades de guia disponibles (mm). */
-    slideLengths: z.array(mm.positive()).min(1),
-    /** Joc lateral per costat entre caixa i lateral del moble (guia de boles: 12,5). */
-    sideClearance: mm.min(0),
-    /** Gruix dels laterals i el darrere de la caixa. */
-    boxThickness: mm.positive(),
-    /** Gruix del fons de la caixa (en ranura). */
-    bottomThickness: mm.positive(),
-    /** Alçada del front menys alçada de la caixa. */
-    boxDrop: mm.min(0),
-    /** Distància del fons del calaix a la vora inferior de la caixa (ranura). */
-    bottomOffset: mm.min(0),
-    /** Joc de la caixa amb el fons del moble. */
-    backClearance: mm.min(0),
-  }),
-  magnet: z.object({ diameter: mm.positive(), depth: mm.positive(), cornerOffset: mm.positive() }),
-})
-export type Hardware = z.infer<typeof HardwareSchema>
-
-export const DEFAULT_HARDWARE: Hardware = {
-  hinge: DEFAULT_CABINET.hinge,
-  system32: DEFAULT_CABINET.system32,
-  dowel: DEFAULT_CABINET.dowel,
-  drawer: {
-    slideLengths: [250, 300, 350, 400, 450, 500, 550],
-    sideClearance: 12.5,
-    boxThickness: 16,
-    bottomThickness: 10,
-    boxDrop: 30,
-    bottomOffset: 12,
-    backClearance: 10,
-  },
-  magnet: { diameter: 10, depth: 5, cornerOffset: 60 },
-}
+/**
+ * Ferratges del mòdul: una còpia dels items de la biblioteca (`HardwareKit`, `core/model/hardware.ts`). Els mòduls desats
+ * abans de la v19 hi porten els números d'abans: es converteixen en llegir-los (`migrateModuleHardware`), amb els mateixos
+ * números (res no canvia de lloc).
+ */
+export const ModuleHardwareSchema = z.preprocess(migrateModuleHardware, HardwareKitSchema)
 
 // --- Carcassa ----------------------------------------------------------------------
 
@@ -151,9 +119,11 @@ export type Carcass = z.infer<typeof CarcassSchema>
 
 export const FrontSchema = z.discriminatedUnion("kind", [
   /** `glass`: porta de vidre amb marc de perfil d'alumini (vitrina): no és de CNC (`glassDoor`). */
-  z.object({ kind: z.literal("door"), mode: z.enum(["single", "double"]), hinge: z.enum(["left", "right"]), glass: z.boolean().optional() }),
-  z.object({ kind: z.literal("drawers"), n: z.number().int().min(1).max(10), heights: z.array(sizeOrAuto) }),
-  z.object({ kind: z.literal("flap"), dir: z.enum(["down", "up"]) }),
+  // `hardware`: el ferratge triat per a aquest front (còpia d'un item de la biblioteca: frontissa, guia o braç); sense, el
+  // del mòdul (`Module.hardware`).
+  z.object({ kind: z.literal("door"), mode: z.enum(["single", "double"]), hinge: z.enum(["left", "right"]), glass: z.boolean().optional(), hardware: HardwareItemSchema.optional() }),
+  z.object({ kind: z.literal("drawers"), n: z.number().int().min(1).max(10), heights: z.array(sizeOrAuto), hardware: HardwareItemSchema.optional() }),
+  z.object({ kind: z.literal("flap"), dir: z.enum(["down", "up"]), hardware: HardwareItemSchema.optional() }),
   z.object({
     kind: z.literal("grille"),
     pattern: GrillePatternSchema,
@@ -273,7 +243,7 @@ export const ModuleSchema = z.object({
     /** Tiradors: barra (per defecte, dos forats Ø5) o cap (obertura per pressió: cal un ferratge push). */
     handles: z.enum(["bar", "none"]).optional(),
   }),
-  hardware: HardwareSchema,
+  hardware: ModuleHardwareSchema,
   extras: CarcassExtrasSchema,
   /**
    * OBSOLET: ancoratge a un altre mòdul (versions anteriors). Ja no es crea: en carregar
@@ -592,7 +562,11 @@ export function normalizeComposition(raw: Composition): Composition {
   const tidy = input.parts?.map(tidyPart)
   const tidied = tidy && tidy.some((p, i) => p !== input.parts![i]) ? { ...input, parts: tidy } : input
   // Flat-pack com a opció de les peces i taulell i sòcol a qualsevol moble (millores v1).
-  const comp = migrateRuns(migrateFlatPack(tidied))
+  const runs = migrateRuns(migrateFlatPack(tidied))
+  // Ferratges d'abans (v19): els números del mòdul passen a una còpia dels items (els mateixos números).
+  const comp = runs.modules.some((m) => isLegacyHardware(m.hardware))
+    ? { ...runs, modules: runs.modules.map((m) => (isLegacyHardware(m.hardware) ? { ...m, hardware: migrateModuleHardware(m.hardware) as HardwareKit } : m)) }
+    : runs
   if (!comp.modules.some((m) => m.anchor)) return comp
   const ps = legacyPlacements(comp)
   const items = comp.modules.map((m, i) => {
@@ -659,12 +633,7 @@ export function cabinetToModule(p: CabinetParams, id = "m1", name = "Mòdul"): M
       ...(front ? { front } : {}),
     },
     fronts: { outerGap: p.doorGap, betweenGap: p.doorGapBetween },
-    hardware: {
-      ...DEFAULT_HARDWARE,
-      hinge: p.hinge,
-      system32: p.system32,
-      dowel: p.dowel,
-    },
+    hardware: kitFromLegacy({ ...DEFAULT_LEGACY_HARDWARE, hinge: p.hinge, system32: p.system32, dowel: p.dowel }),
     extras: { cableHoles: [] },
   }
 }
@@ -828,6 +797,8 @@ function visibleZone(z: Zone): Zone {
   } else if (f?.kind === "door") {
     const door = { ...f }
     if (!door.glass) delete door.glass
+    // Porta de vidre: frontisses del perfil, cap cassoleta (la frontissa triada no compta).
+    else delete door.hardware
     if (door.mode === "double") door.hinge = "left"
     out.front = door
   }

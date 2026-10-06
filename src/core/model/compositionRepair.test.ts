@@ -35,7 +35,7 @@ describe("repairComposition", () => {
     const before = plain(m)
     m.carcass.width = "ample"
     m.carcass.frontMaterial = 7
-    m.hardware.drawer.slideLengths = [300, 0]
+    m.hardware.slide.lengths = [300, 0]
     m.fronts.style = "estrany"
     const r = repairComposition(c)
     const out = r.composition!.modules[0]!
@@ -43,7 +43,7 @@ describe("repairComposition", () => {
     expect(out.carcass.frontMaterial).toBeUndefined()
     expect(out.carcass.height).toBe(before.carcass.height)
     expect(out.carcass.material).toBe(before.carcass.material)
-    expect(out.hardware.drawer.slideLengths).toEqual([300])
+    expect(out.hardware.slide.lengths).toEqual([300])
     expect(out.hardware.hinge).toEqual(before.hardware.hinge)
     expect(out.fronts.style).toBeUndefined()
     expect(out.fronts.outerGap).toBe(before.fronts.outerGap)

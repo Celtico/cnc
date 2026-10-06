@@ -7,7 +7,7 @@ import {
   COLLECTION_PIECES,
   DEFAULT_CABINET,
   DEFAULT_GRILLE,
-  DEFAULT_HARDWARE,
+  DEFAULT_HARDWARE_KIT,
   STORE_TEMPLATES,
   TV_LIVING_ROOM,
   type Base,
@@ -126,7 +126,7 @@ export function randomModule(r: Rnd, id: string): Module {
     carcass,
     root: randomZone(r, `${id}.r`, 0),
     fronts: { outerGap: 2, betweenGap: 3, ...(r() < 0.25 ? { style: "inset" as const } : {}), ...(r() < 0.2 ? { handles: "none" as const } : {}) },
-    hardware: structuredClone(DEFAULT_HARDWARE),
+    hardware: structuredClone(DEFAULT_HARDWARE_KIT),
     extras: { cableHoles: [] },
   }
 }

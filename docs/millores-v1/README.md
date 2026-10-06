@@ -24,7 +24,7 @@ Origen: `docs/prompt/PROMPT-millore-v1.md`. Cada àrea té el seu estudi (com fu
 
 ### Contradiccions i coses a corregir
 
-- `SETTINGS_VERSION` ja és **18** al codi; el `CLAUDE.md` diu 17. La migració dels ferratges serà la **19** (l'estudi de ferratges diu 18 per error).
+- `SETTINGS_VERSION` ja és **18** al codi; el `CLAUDE.md` diu 17. La migració dels ferratges serà la **19** (l'estudi de ferratges diu 18 per error). **Fet**: ferratges F1–F2 amb la v19 (estat a `ferratges.md`).
 - La tecla **Maj** vol dir coses diferents a cada editor (imant d'1 mm a les formes, angle lliure al plànol). El prompt demana Maj = segment recte. Cal una taula única de tecles.
 - El `CLAUDE.md` diu que els **ambients són decoratius** i que no hi dediquem temps mentre la fabricació tingui coses pendents. Les millores d'ambients van després de les de fabricació.
 - **Treure ≠ esborrar**: «Objectes de referència» i «Models 3D» es treuen del menú d'afegir, però si un moble ja en té continuen sortint (no es perden dades). El front de tot el mòdul és un cas real (tots els armaris del catàleg el fan servir): es treu de l'inspector del mòdul i passa a l'«Interior».
