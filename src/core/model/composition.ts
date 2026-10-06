@@ -410,6 +410,8 @@ export const RunSchema = z.discriminatedUnion("kind", [
     overhangLeft: mm.min(0),
     overhangRight: mm.min(0),
     cutouts: z.array(WorktopCutoutSchema),
+    /** Apagat: es conserva però no es fa (`migrateRuns`). */
+    off: z.boolean().optional(),
   }),
   z.object({
     id: z.string(),
@@ -420,6 +422,8 @@ export const RunSchema = z.discriminatedUnion("kind", [
     thickness: mm.positive(),
     /** Retranqueig respecte a la cara dels fronts (mm). */
     setback: mm.min(0),
+    /** Apagat: es conserva però no es fa (`migrateRuns`). */
+    off: z.boolean().optional(),
   }),
 ])
 export type Run = z.infer<typeof RunSchema>
@@ -434,8 +438,10 @@ export const CUTOUT_PRESETS: Record<WorktopCutout["kind"], { w: number; d: numbe
 }
 
 /**
- * Tipus de moble: decideix quines opcions de conjunt surten (taulell i sòcol a la cuina…) i
- * què s'afegeix amb «Afegir mòdul». Opcional: els antics es dedueixen (`compositionKind`).
+ * Tipus de moble: es tria en crear-lo («Nou moble»: Moble · Cuina · Armari · Taula) i no es canvia després. Només
+ * decideix què s'afegeix amb «Afegir mòdul» (Taula), l'etiqueta de la targeta i, `objecte`, que no es fabrica.
+ * `lliure` (el Flat-pack d'abans: només peces, sense mòduls fets) ja no es crea; els que hi ha continuen igual.
+ * Opcional: els antics es dedueixen (`compositionKind`).
  */
 export const CompositionKindSchema = z.enum(["moble", "cuina", "armari", "taula", "lliure", "objecte"])
 export type CompositionKind = z.infer<typeof CompositionKindSchema>
@@ -584,7 +590,9 @@ export function normalizeComposition(raw: Composition): Composition {
   const input = aliasMaterialRefs(raw)
   // Peces lliures amb decimals llargs (objectes fets abans d'arrodonir): al mm.
   const tidy = input.parts?.map(tidyPart)
-  const comp = tidy && tidy.some((p, i) => p !== input.parts![i]) ? { ...input, parts: tidy } : input
+  const tidied = tidy && tidy.some((p, i) => p !== input.parts![i]) ? { ...input, parts: tidy } : input
+  // Flat-pack com a opció de les peces i taulell i sòcol a qualsevol moble (millores v1).
+  const comp = migrateRuns(migrateFlatPack(tidied))
   if (!comp.modules.some((m) => m.anchor)) return comp
   const ps = legacyPlacements(comp)
   const items = comp.modules.map((m, i) => {
@@ -677,6 +685,55 @@ export function compositionKind(c: Composition): CompositionKind {
  * veuen i no es fabriquen).
  */
 export const partsOnlyKind = (k: CompositionKind) => k === "lliure" || k === "objecte"
+
+/**
+ * La peça fa encaixos (Flat-pack, «Encaixos» de la peça): el camp `joinery` i, si encara no s'ha migrat, el del tipus
+ * Flat-pack d'abans (`lliure`: totes menys les `joints: false`). Mai als objectes, que no es fabriquen.
+ */
+export function partJoinery(comp: Composition, p: FreePart): boolean {
+  const kind = compositionKind(comp)
+  if (kind === "objecte") return false
+  return p.joinery ?? (kind === "lliure" && p.joints !== false)
+}
+
+/**
+ * Migració en llegir (millores v1): el Flat-pack deixa de ser un tipus de moble i passa a ser una opció de cada peça
+ * lliure (`joinery`, expressa). Al tipus `lliure`, cada peça porta el valor que tenia (`partJoinery`: el resultat
+ * és el mateix); a la resta no se'n posa cap (no fan encaixos, com abans). El camp vell `joints` es treu. Idempotent:
+ * si no hi ha res a fer, torna la mateixa composició.
+ */
+export function migrateFlatPack(comp: Composition): Composition {
+  const parts = comp.parts
+  if (!parts?.length) return comp
+  const lliure = compositionKind(comp) === "lliure"
+  if (!parts.some((p) => p.joints !== undefined || (lliure && p.joinery === undefined))) return comp
+  return {
+    ...comp,
+    parts: parts.map((p) => {
+      const { joints: _j, ...rest } = p
+      void _j
+      return lliure && p.joinery === undefined ? { ...rest, joinery: partJoinery(comp, p) } : rest
+    }),
+  }
+}
+
+/**
+ * Migració en llegir (millores v1): el taulell i el sòcol correguts es poden posar a qualsevol moble (abans, només a
+ * la Cuina; en canviar de tipus es guardaven sense fer-se). Els d'un moble que **no** és cuina queden apagats
+ * (`off: true`): es veuen a «Taulell i sòcol» i es poden tornar a encendre, però no es fan (la fabricació no canvia).
+ * Només els que encara no porten `off` (els nous en porten `off: false`). Idempotent.
+ */
+export function migrateRuns(comp: Composition): Composition {
+  const runs = comp.runs
+  if (!runs?.length || compositionKind(comp) === "cuina" || !runs.some((r) => r.off === undefined)) return comp
+  return { ...comp, runs: runs.map((r) => (r.off === undefined ? { ...r, off: true } : r)) }
+}
+
+/** Taulells i sòcols que es fan: els que no estan apagats, a qualsevol moble amb mòduls fets. */
+export function activeRuns(comp: Composition): Run[] {
+  if (partsOnlyKind(compositionKind(comp))) return []
+  return (migrateRuns(comp).runs ?? []).filter((r) => !r.off)
+}
 
 /**
  * Taula o consola de panells: tauler a dalt i dos laterals que fan de potes, sense base

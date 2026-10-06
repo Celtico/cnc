@@ -62,7 +62,7 @@ export function NewMobleGallery({
 }: {
   onCreate: (composition: Composition, name: string) => void
   /** Botó principal al costat del cercador («Nou moble»); la finestra dels ambients no en porta. */
-  add?: { label: string; onClick: () => void }
+  add?: { label: string; onClick?: () => void; menu?: ReactNode }
   /** Més accions a la fila del cercador («Obrir fitxer»). */
   extra?: ReactNode
   /** Historial: els mobles que ja tens (que coincideixen amb la cerca), al primer acordió; `projects`, els dels grups. */

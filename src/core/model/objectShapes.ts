@@ -63,7 +63,7 @@ export const objectComposition = (parts: Q[]): Composition => ({
   modules: [defaultModule(newId("m"), "Mòdul 1")],
   references: [],
   // Mides al mm (les formes calculades donen decimals llargs).
-  parts: parts.map((q) => ({ id: newId("p"), nest: false, joints: false, ...tidyPart(q) })),
+  parts: parts.map((q) => ({ id: newId("p"), nest: false, ...tidyPart(q) })),
   joinery: { ...DEFAULT_JOINERY },
 })
 

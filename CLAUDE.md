@@ -104,12 +104,15 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
 - Si una decisió de fusteria no és clara (tolerància, tipus d'unió), pregunta'm en lloc d'inventar-la.
 
 ## Model del moble
-- **Tipus de moble** (`Composition.kind`, `compositionKind`, `features/composition/kinds.ts`): Moble, Cuina, Armari, Taula,
-  Flat-pack (`lliure`) i Objecte (`objecte`, vegeu Objectes). Es canvia a l'inspector del moble (secció Tipus,
-  `MOBLE_KINDS`); un moble nou en blanc és sempre del tipus Moble. Els antics: cuina si tenen `runs`, si no moble. Taulell i
-  sòcol correguts només surten i es construeixen a la Cuina; en canviar de tipus es guarden (no es fan) i tornen. Taula:
-  `tableModule` (tauler + dos laterals de panell, sense base ni fons, cantonades a inglet); «Afegir mòdul» n'afegeix una. Flat-pack: no es fan mòduls (es
-  guarden), l'arbre només mostra peces i objectes.
+- **Tipus de moble** (`Composition.kind`, `compositionKind`, `features/composition/kinds.ts`; per decisió de l'usuari,
+  **sense selector «Tipus»**): es tria en crear-lo, a «+ Nou moble» (`NEW_MOBLE_KINDS`: Moble · Cuina · Armari · Taula,
+  `blankMoble(settings, kind)`) o amb la plantilla, i no canvia. Només decideix l'etiqueta de la targeta i la cerca, i a la
+  Taula «Afegir mòdul» fa un `tableModule` (tauler + dos laterals de panell, sense base ni fons, cantonades a inglet; el
+  blanc de Taula també). Els antics: cuina si tenen `runs`, si no moble. Objecte (`objecte`, vegeu Objectes). **`lliure`**
+  (el Flat-pack d'abans, «Peces lliures» a la targeta): ja no es crea; els que hi ha (i els llits, capçals i taules de pedra
+  del catàleg) continuen igual: no es fan mòduls (es guarden) i l'arbre només mostra peces i objectes.
+  **Pendent (fase 2 de `docs/millores-v1/mobles-peces.md` §3)**: mobles amb 0 mòduls (`lliure` → `moble`); avui l'Editor
+  necessita un mòdul (`comp.modules[0]!`, ~80 usos de `module`), així que un moble nou només de peces encara no es pot fer.
 - **Sense mòduls especials** (per decisió de l'usuari: la caixa es configura a l'inspector). Queden al codi sense UI els de
   `core/model/modulePresets.ts` (`modulePresetsFor`: cuina —baixos de calaixos, porta, fregadera, fogons, forn; columnes forn i rebost; alts porta i
   abatible—, armari —prestatges, penjador amb maleter, calaixos i prestatges—, taula —consola, menjador, centre, banc, «Taula
@@ -173,7 +176,10 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   - **Tiradors mecanitzats**: portes (costat contrari de les frontisses, a mitja alçada), calaixos (centrats) i abatibles
     (al cantell que obre): dos forats passants Ø5 a 128 / 96 / 64 com a talls `circle` `tag: "handle"` (el taller els llegeix
     com els passacables); el 3D no els buida (`visualPanel`) i hi col·loca el tirador.
-- **Peces corregudes** (`comp.runs`, `core/build/runs.ts`, secció «Taulell i sòcol» del moble; `RunsForm`: cada peça és un
+- **Peces corregudes** (`comp.runs`, `core/build/runs.ts`, secció «Taulell i sòcol» de **qualsevol moble** amb mòduls,
+  `activeRuns`; per decisió de l'usuari no es converteixen en peces lliures: es perdria el llarg, el voladís i els forats
+  automàtics). Interruptor «Es fa» (`Run.off`): els d'un moble que no era cuina (abans es guardaven sense fer-se) es migren
+  apagats en llegir (`migrateRuns`, a `normalizeComposition` i al `.moble`; els nous porten `off: false`); `RunsForm`: cada peça és un
   plegable (`FoldItem` variant `card`) amb un resum —de → fins a · gruix · forats—, dins del taulell cada forat també; una oberta alhora, la nova
   s'obre sola):
   **taulell** d'una peça sobre els baixos de la fila (voladís, forats d'encastar de placa, pica o a mida → talls passants) i
@@ -189,10 +195,15 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   manegadors `in`/`out` relatius, `t` = reflex (cantonada · angle · angle i llarg) i `b` (bulge, arcs d'«Arrodonir»); els
   antics `[x, y, bulge]` es llegeixen amb `toNodes`. Per tallar, les cúbiques passen a arcs i rectes (`cubicToArcs`, error
   < 0,02 mm): DXF amb bulge i STEP amb cares cilíndriques; xocs i 3D amb el contorn mostrejat. Pendent: rebaixos de contorn.
-- **Peces lliures i flat-pack** (`Composition.parts`, `model/freePart.ts`, `build/freeParts.ts`): taulers solts col·locats
+- **Peces lliures** (`Composition.parts`, `model/freePart.ts`, `build/freeParts.ts`): taulers solts col·locats
   com els objectes però que són peces de debò (rol `part`, un «mòdul» més per a les refs). Orientació `front` (X·Y) · `side`
   (Z·Y) · `flat` (X·Z, v cap al fons); `w × h` al seu pla, gruix, material, veta, forma amb l'editor de perfils.
-  - **Encaixos automàtics, només al tipus Flat-pack** (a la resta no es fan ni surten les opcions): entra i hi acaba →
+  - **Flat-pack = opció «Encaixos» de cada peça** (per decisió de l'usuari no és un tipus de moble; `FreePart.joinery`,
+    **expressa**: absent = sense encaixos, així els mobles d'abans no en fan de cop; `partJoinery`). A qualsevol moble que es
+    fabrica, només entre peces lliures que tenen totes dues l'opció (no amb els mòduls; si només una la té i s'encavalquen,
+    avís). Els Flat-pack d'abans (`lliure`) es migren en llegir (`migrateFlatPack`, a `normalizeComposition` i al `.moble`):
+    cada peça pren el valor que tenia (el camp vell `joints` es treu) i la fabricació és idèntica
+    (`flatPackOption.test.ts`). Entra i hi acaba →
     pestanyes + mortalles (passants o ranures cegues `tag: "mortise"`); s'encreuen → mitja fusta; totes dues hi acaben →
     dits; cantell contra cara → espigues. `Composition.joinery` (`DEFAULT_JOINERY`): joc, Ø de fresa dels **dogbones**,
     ample de pestanya. Contorn amb `polygon-clipping`; `build.joints` els llista.
@@ -497,8 +508,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   peça lliure sobre la fila d'un grup la hi posa; al costat d'una peça n'agafa el grup; la zona «Treure del grup» surt
   mentre s'arrossega una d'un grup.
 - **Propietats** del que hi ha seleccionat i **només d'això**, en seccions plegables independents (`FoldItem`, vegeu UI):
-  - Moble: Resum (i avisos de fusteria), Tipus, Materials de tot el moble (aplica a tots els mòduls), Taulell i sòcol,
-    Encaixos, Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
+  - Moble: Resum (i avisos de fusteria), Taulell i sòcol (no als de només peces), Encaixos (si alguna peça en fa),
+    Materials de tot el moble (aplica a tots els mòduls), Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
     Preferències»; `CabinetViewer sceneFinish`, `renderThumb(…, finish)`).
   - Mòdul: Mides · Caixa (abans «Estructura», es confonia amb la pestanya de l'arbre) · Materials · Fusteria (avançat). Posició.
     Sense Front (el de tot el mòdul és a l'«Interior»). Materials visibles: cos, **fronts**
@@ -506,8 +517,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   - Compartiment (`ZonePanel`): accions com a icones a la capçalera (Pare · Duplicar · Eliminar) i Front · Prestatges ·
     Mida · Dividir. **Sense «General»**: cada apartat és una secció pròpia amb la seva icona i el valor triat a la insígnia
     (icona dinàmica on hi ha opcions, com els compartiments); el que no toca no surt. Peça lliure (`PartInspector`): Efecte ·
-    Orientació · Mides · Material (amb la Veta) · Forma · CNC (amb el Cantell) · Encaixos (Flat-pack) · Grup · Enganxada (si
-    hi ha mòduls) · Posició · Encaixos (tot el moble); la que talla no té Material ni CNC. Objecte (`RefInspector`, accions
+    Orientació · Mides · Material (amb la Veta) · Forma · CNC (amb el Cantell) · Encaixos (de CNC, no als objectes) · Grup · Enganxada (si
+    hi ha mòduls) · Posició · Encaixos (tot el moble, si la peça en fa); la que talla no té Material ni CNC. Objecte (`RefInspector`, accions
     Desar a preferències · Eliminar): Efecte · Forma · Orientació (la direcció del cilindre i el perfil, o del tall d'una caixa
     que talla) · Mides · Material (no als que tallen) · Enganxada (Al terra / A la paret) · Posició. Model (`ModelInspector`).
     A la pestanya Foto, el calibratge.
@@ -560,7 +571,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   diàleg ni amb un diàleg modal obert (amb l'editor de perfils obert, ⌘Z desfeia el moble del darrere).
 - **Teclat**: Ctrl/⌘ C · X · V · D i Supr per al mòdul, l'objecte, el model o el compartiment (`core/model/editOps.ts`). El
   porta-retalls és a localStorage (`mobles:clipboard`, entre mobles), validat amb zod (`parseClip`); una peça enganxada a un
-  mòdul d'un altre moble queda solta, una illa es duplica al costat i no s'enganxen mòduls a un flat-pack o objecte. Ctrl/⌘ D
+  mòdul d'un altre moble queda solta, una illa es duplica al costat i no s'enganxen mòduls a un moble només de peces (`lliure`) o objecte. Ctrl/⌘ D
   en un compartiment fa `duplicateZone`. **Eliminar un mòdul** = `removeModule`: peces enganxades soltes al mateix lloc,
   taulell i sòcol al mòdul més proper del tram (o fora) i forats del taulell seus fora.
 - **Vistes** (per decisió de l'usuari): només **Davant · Darrere · Esquerra · Dreta · Dalt**, botons de text sense estat triat
@@ -922,7 +933,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 
 ## Objectes
 - Un objecte (sofà, làmpada, planta…) és un moble del tipus **`objecte`** (`partsOnlyKind`: només peces lliures, com el
-  Flat-pack): s'edita amb el **mateix Editor** (peces amb forma, «Talla», materials per categories) però **no es fabrica**
+  `lliure` d'abans): s'edita amb el **mateix Editor** (peces amb forma, «Talla», materials per categories) però **no es fabrica**
   (`buildComposition` en treu el nesting i els encaixos; al menú només hi ha l'Editor; la molla de pa diu «Objectes»). No surten
   a l'historial de Mobles (`isObject`).
 - `OBJECT_TEMPLATES` (`ambient.ts`): els blocs d'abans i cadira, làmpada, planta, mirall, taula rodona. **Objectes de revista**
@@ -941,7 +952,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 ## Galeries (Mobles · Ambients · Objectes)
 - **Les tres pàgines fan igual**: capçalera `PageHeader` (títol gran i l'explicació), **cercador amb el botó principal al
   costat** (`components/SearchBar`: «+ Nou moble» · «+ Nou objecte» · «+ Nou ambient», `colorPalette="wood"`, en blanc amb
-  `projects/blank.ts`; amb text a l'ordinador i només la icona al mòbil, amb `aria-label` i tooltip; Mobles també «Obrir
+  `projects/blank.ts`; «+ Nou moble» obre un menú (`add.menu`, com el + dels grups de l'arbre) amb Moble · Cuina · Armari ·
+  Taula; amb text a l'ordinador i només la icona al mòbil, amb `aria-label` i tooltip; Mobles també «Obrir
   fitxer», `LuFolderOpen`, a la mateixa fila; sense accents; obre les seccions i categories amb resultats) i acordions
   **tots tancats** en obrir l'app (estat de la sessió, p. ex. `mobles:gallery`): **Historial**, **Projectes** i **Catàleg**;
   a Mobles, a més, **Col·leccions de mobles**. Les galeries de les finestres «+ Moble» / «+ Objecte» dels ambients no
@@ -969,7 +981,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   Juvenil, Despatx, Entrada, Emmagatzematge, Bany, Exterior) › tipus › 3 dissenys (nom, estil, mides, materials, ús, colors,
   públic, `Template.price` orientatiu), 198 plantilles en una graella per categoria amb el tipus a la targeta. Fora: sofàs,
   butaques, cadires, miralls, gandules i carros (no són de tauler). Els mobles només de peces lliures (llits, capçals, taules
-  de pedra) són Flat-pack. Aparadors sobre potes de peces lliures: caixa «penjada» a l'alçada de les potes.
+  de pedra) són del tipus `lliure` («Peces lliures»). Aparadors sobre potes de peces lliures: caixa «penjada» a l'alçada de les potes.
   `storeCatalog.test.ts`: totes sense avisos de disseny. Les mides de la descripció (`compositionDims`, també a les
   Col·leccions) són la caixa del moble (min…max), no la distància a la paret (`wallGap`) ni a l'origen (`x`); l'alçada,
   des de terra, menys si tot va penjat (`compositionDims.test.ts`). Objectes: per tipus (`OBJECT_CATEGORIES`). Ambients: per habitació.
@@ -1249,7 +1261,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Navegació | Mobles (el cub: un moble) · Ambients · Objectes | `LuBox` · `LuHouse` · `LuSofa` |
 | Navegació | Editor · Peces · Nesting / taulers · Exportar | `LuDraftingCompass` · `LuList` · `LuLayoutGrid` · `LuDownload` |
 | Navegació | Tornar (‹ a les barres) · Plegar/desplegar menú · Preferències | `LuChevronLeft` · `LuPanelLeftClose` / `LuPanelLeftOpen` · `LuSettings` |
-| Tipus de moble | Moble · Cuina · Armari · Taula · Flat-pack · Objecte | `LuBox` · `LuCookingPot` · `LuContainer` · `LuTable` · `LuPuzzle` · `LuSofa` |
+| Tipus de moble («+ Nou moble» i targetes) | Moble · Cuina · Armari · Taula · Peces lliures (`lliure`, d'abans) · Objecte | `LuBox` · `LuCookingPot` · `LuContainer` · `LuTable` · `LuPuzzle` · `LuSofa` |
 | Zones | Dividir en vertical (divisor vertical, zones esquerra/dreta) | `LuSquareSplitHorizontal` |
 | Zones | Dividir en horitzontal (travesser, zones dalt/baix) | `LuSquareSplitVertical` |
 | Zones | Divisió vertical · horitzontal (un compartiment porta la icona del seu contingut, igual a l'arbre, a la capçalera i a «Front»: `composition/zoneIcons.ts`) | `LuColumns2` · `LuRows2` |
@@ -1258,7 +1270,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Contingut | Abatible · Reixeta · Front fix | `LuPanelBottom` · `LuGrid3X3` · `LuSquare` |
 | Composició | Afegir · Duplicar · Eliminar | `LuPlus` · `LuCopy` · `LuTrash2` |
 | Composició | Objecte de referència · Model 3D (`.glb`) · Menú del document | `LuScan` · `LuSprout` · `LuEllipsis` |
-| Composició | Peces lliures, encaixos i flat-pack (peça, Efecte peça) · Peça/objecte que talla | `LuPuzzle` · `LuScissors` |
+| Composició | Peces lliures, Encaixos (flat-pack) de la peça i del moble (peça, Efecte peça) · Peça/objecte que talla | `LuPuzzle` · `LuScissors` |
 | Composició | Moure a l'esquerra · a la dreta (menú de l'arbre) | `LuArrowLeft` · `LuArrowRight` |
 | Front | Una porta · Dues portes · Abatible avall · amunt · Ranures horitzontals · verticals (reixeta) | `LuDoorClosed` · `LuFlipHorizontal2` · `LuArrowDownToLine` · `LuArrowUpToLine` · `LuAlignJustify` · `LuColumns3` |
 | Front | Recobrents (fronts) | `LuSquareStack` |

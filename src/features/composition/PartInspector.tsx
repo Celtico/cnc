@@ -34,7 +34,7 @@ import {
   PART_AXES,
   partsBox,
   materialCategory,
-  compositionKind, partsOnlyKind,
+  compositionKind, partJoinery, partsOnlyKind,
   partOffset,
   resolveParts,
   partGroups,
@@ -80,10 +80,10 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
   const size = partSize(p)
   const cutter = p.effect === "cut"
   const cnc = p.nest !== false && !cutter
-  // Els encaixos només són del Flat-pack.
-  const flatPack = compositionKind(comp) === "lliure"
   // Objecte (ambients): les peces només es veuen.
   const object = compositionKind(comp) === "objecte"
+  // Flat-pack = «Encaixos» de la peça (opció expressa, a qualsevol moble que es fabrica).
+  const joins = partJoinery(comp, p)
   const mat = materialByName(settings, p.material)
   const mine = joints.filter((j) => j.a === id || j.b === id)
   const nameOf = (pid: string) => comp.parts?.find((x) => x.id === pid)?.name ?? "?"
@@ -222,20 +222,23 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
           )}
         </FoldItem>
       )}
-      {cnc && flatPack && (
-        <FoldItem id="part-joints" title="Encaixos" icon={LuPuzzle} badge={p.joints !== false ? mine.length : "No"}>
-          <FormRow label="Encaixos">
-            <Switch.Root size="sm" pt="6px" checked={p.joints !== false} onCheckedChange={(e) => update({ joints: e.checked ? undefined : false })}>
+      {cnc && !object && (
+        <FoldItem id="part-joints" title="Encaixos" icon={LuPuzzle} badge={joins ? mine.length : "No"} badgePalette={joins ? "wood" : "gray"}>
+          <FormRow
+            label="Encaixos"
+            help="Flat-pack: encaix automàtic amb les altres peces lliures que també en fan (no amb els mòduls)."
+          >
+            <Switch.Root size="sm" pt="6px" checked={joins} onCheckedChange={(e) => update({ joinery: e.checked })}>
               <Switch.HiddenInput />
               <Switch.Control />
               <Switch.Label fontSize="sm">Amb les altres peces</Switch.Label>
             </Switch.Root>
           </FormRow>
-          {p.joints !== false && (
+          {joins && (
             <Stack gap={1}>
               {mine.length === 0 ? (
                 <Text fontSize="xs" color="fg.muted">
-                  Cap encaix: fes que toqui o que entri dins d'una altra peça lliure (d'orientació diferent).
+                  Cap encaix: fes que toqui o que entri dins d'una altra peça lliure amb «Encaixos» (d'orientació diferent).
                 </Text>
               ) : (
                 mine.map((j, i) => {
@@ -293,7 +296,7 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
           {p.module && !partsOnlyKind(compositionKind(comp)) ? `Respecte al mòdul «${comp.modules.find((m) => m.id === p.module)?.name ?? "?"}» (el segueix). ` : ""}Cantonada esquerra, de baix i del darrere. Al 3D, arrossega-la amb les fletxes (s'enganxa a les vores de les altres peces; Alt: lliure). Fletxes del teclat: 1 mm (Maj: 10); Re Pàg / Av Pàg: fons.
         </Text>
       </FoldItem>
-      {flatPack && (
+      {cnc && joins && (
         <FoldItem id="part-joinery" title="Encaixos (tot el moble)" icon={LuPuzzle}>
           <PartJoineryForm comp={comp} onChange={onChange} />
         </FoldItem>

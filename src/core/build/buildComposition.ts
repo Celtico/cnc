@@ -1,4 +1,4 @@
-import { compositionKind, modelFootprint, modulePlacements, partsOnlyKind, partCutters, type Composition, type ModelObject, type Panel, type Vec3 } from "../model"
+import { activeRuns, compositionKind, modelFootprint, modulePlacements, partsOnlyKind, partCutters, type Composition, type ModelObject, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { buildModule, type BuildWarning, type ModuleBuild } from "./buildModule"
 import { normalizePanel } from "./buildCabinet"
@@ -53,7 +53,7 @@ export function buildComposition(input: Composition): CompositionBuild {
   // Passacables de la versió anterior → objectes que tallen.
   const migrated = migrateCableHoles(input, panelBox)
   // Objecte: les peces només es veuen (mai van al nesting ni fan encaixos).
-  const comp = compositionKind(migrated) === "objecte" ? { ...migrated, parts: migrated.parts?.map((p) => ({ ...p, nest: false, joints: false })) } : migrated
+  const comp = compositionKind(migrated) === "objecte" ? { ...migrated, parts: migrated.parts?.map((p) => ({ ...p, nest: false, joinery: false })) } : migrated
   const places = modulePlacements(comp)
   const panels: Panel[] = []
   const warnings: CompositionWarning[] = []
@@ -129,8 +129,8 @@ export function buildComposition(input: Composition): CompositionBuild {
 
   // Peces corregudes (taulell, sòcol): numerades com un «mòdul» més per a les refs del taller.
   const runWarnings: RunWarning[] = []
-  // Només a la cuina: si es canvia de tipus, es conserven però no es fan (es recuperen en tornar-hi).
-  const runs = compositionKind(comp) === "cuina" ? (comp.runs ?? []) : []
+  // A qualsevol moble amb mòduls; els apagats (`off`, els d'un moble que no era cuina) es conserven però no es fan.
+  const runs = activeRuns(comp)
   for (const run of runs) {
     const n = comp.modules.length + 1
     const p = run.kind === "worktop" ? buildWorktop(comp, run, places, n, runWarnings) : buildPlinthRun(comp, run, places, n, runWarnings)

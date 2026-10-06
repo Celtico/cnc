@@ -8,7 +8,7 @@ import {
   partBox,
   polygonArea,
   resolveParts,
-  compositionKind,
+  partJoinery,
   type Composition,
   type Cutout,
   type EdgeSide,
@@ -164,12 +164,13 @@ export function buildFreeParts(comp: Composition, moduleNumber: number): FreePar
   const warnings: FreePartsBuild["warnings"] = []
   const dowel = comp.modules[0]?.hardware?.dowel ?? DOWEL
 
-  // Els encaixos són del Flat-pack: a la resta de mobles les peces lliures van soles.
-  const joinery = compositionKind(comp) === "lliure"
-  for (let i = 0; i < (joinery ? parts.length : 0); i++) {
+  // Flat-pack = opció de cada peça (`joinery`, expressa): només es miren les parelles on alguna en fa.
+  const joinery = new Map(parts.map((p) => [p.id, partJoinery(comp, p)]))
+  for (let i = 0; i < parts.length; i++) {
     for (let k = i + 1; k < parts.length; k++) {
       const A = parts[i]!
       const B = parts[k]!
+      if (!joinery.get(A.id) && !joinery.get(B.id)) continue
       const bA = partBox(A)
       const bB = partBox(B)
       const lo = [0, 1, 2].map((a) => Math.max(bA.min[a]!, bB.min[a]!))
@@ -189,7 +190,7 @@ export function buildFreeParts(comp: Composition, moduleNumber: number): FreePar
       if (dA < -TOL || dB < -TOL) continue
       // Ferro, pedra, vidre…: ni encaixos ni avisos (es munten a part).
       if (A.nest === false || B.nest === false) continue
-      if (A.joints === false || B.joints === false) {
+      if (!joinery.get(A.id) || !joinery.get(B.id)) {
         if (dA > TOL && dB > TOL) warnings.push({ partId: A.id, message: `«${A.name}» i «${B.name}» s'encavalquen i una no fa encaixos.` })
         continue
       }
