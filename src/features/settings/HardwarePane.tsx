@@ -1,6 +1,6 @@
 import { Alert, Badge, Box, Button, HStack, IconButton, Input, Menu, SegmentGroup, SimpleGrid, Slider, Spinner, Stack, Switch, Text } from "@chakra-ui/react"
 import { Suspense, lazy, useContext, useEffect, useMemo, useRef, useState, type RefObject } from "react"
-import { LuBoxes, LuCheck, LuCopy, LuMap, LuPlus, LuRotate3D, LuStar, LuTrash2, LuUndo2 } from "react-icons/lu"
+import { LuBoxes, LuCheck, LuCopy, LuFileDown, LuMap, LuPlus, LuRotate3D, LuStar, LuTrash2, LuUndo2 } from "react-icons/lu"
 import { downloadBlob } from "../download"
 import { EditorDialog } from "../../components/EditorDialog"
 import { FoldGroup, FoldItem } from "../../components/Fold"
@@ -9,9 +9,10 @@ import { ImportDropZone } from "../../components/ImportDropZone"
 import type { PickedFile } from "../../components/pickedFiles"
 import { toaster } from "../../components/ui/toaster"
 import { confirmProblem, cupRel, pairPlate, relV, restoreProposal, setConfirmed, setHandleDistance, setHardwareParam, syncPairedPlates } from "../../core/import/importItem"
-import type { HettichArticle } from "../../core/import/hettich"
+import { itemSeries, type HettichArticle } from "../../core/import/hettich"
+import { applyImportUpdate, dismissImportUpdate, mergePreview } from "../../core/import/merge"
 import { viewBounds, type HardwareView } from "../../core/import/views"
-import { assetViews, getHardwareAsset } from "../../db/hardwareAssets"
+import { assetDocs, assetViews, getHardwareAsset } from "../../db/hardwareAssets"
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { HardwareImportDialog } from "./HardwareImportDialog"
 import { analyseArticle, importArticles, sourceFromPicked, type ImportSource } from "./hardwareImport"
@@ -61,6 +62,29 @@ const NO_MATERIALS: MaterialPref[] = []
 
 /** Categories obertes (es recorden durant la sessió). */
 const OPEN_KEY = "mobles:md-open:hardware"
+/** Sèries obertes dins de les categories («hinge/sensys»…), durant la sessió. */
+const SERIES_KEY = "mobles:md-open:hardware-series"
+
+/**
+ * Els items d'una categoria per sèrie (`itemSeries`: la carpeta del fabricant, «Sensys», «Classic», «SlideLine 55»),
+ * per nom de la sèrie; els que no en tenen (els de l'app, els fitxers solts) van a dalt, sense grup.
+ */
+function seriesGroups(category: string, list: HardwareItem[]): { loose: HardwareItem[]; series: { key: string; label: string; items: HardwareItem[] }[] } {
+  const loose: HardwareItem[] = []
+  const by = new Map<string, { key: string; label: string; items: HardwareItem[] }>()
+  for (const x of list) {
+    const s = itemSeries(x)
+    if (!s) {
+      loose.push(x)
+      continue
+    }
+    const key = `${category}/${s.id}`
+    let g = by.get(key)
+    if (!g) by.set(key, (g = { key, label: s.label, items: [] }))
+    g.items.push(x)
+  }
+  return { loose, series: [...by.values()].sort((a, b) => a.label.localeCompare(b.label, "ca")) }
+}
 
 /** El ferratge muntat en 3D (three, les peces i el GLB, quan s'obre l'editor). */
 const HardwareMount3D = lazy(() => import("./HardwareMount3D"))
@@ -153,10 +177,14 @@ export function HardwareList({
   // La nota de cada fila (llegint el STEP dels tiradors i les potes que es veuen): una funció per font.
   const handleDiameter = importBase().handle.params.diameter
   const analyse = useMemo(() => (importSrc ? (a: HettichArticle) => analyseArticle(importSrc, a, handleDiameter) : undefined), [importSrc, handleDiameter])
+  // Els articles que ja són a la biblioteca (número → carpetes): un ZIP només de plànols de muntatge els amplia.
+  const known = useMemo(() => new Map(items.flatMap((x) => (x.imported?.maker === "Hettich" && x.imported.article ? [[x.imported.article, x.imported.folders] as const] : []))), [items])
+  // Què passarà amb cada fila del diàleg: nou, o «ja existeix · s'hi afegeix…».
+  const mergeOf = useMemo(() => (a: HettichArticle) => mergePreview(items, a), [items])
   const onPicked = async (picked: PickedFile[]) => {
     setImportBusy(true)
     try {
-      const src = await sourceFromPicked(picked)
+      const src = await sourceFromPicked(picked, known)
       if (!src.articles.length)
         toaster.create({ title: "No s'hi ha trobat cap ferratge", description: "Cal una descàrrega de Hettich CAD: el ZIP, la carpeta o els fitxers .stp i _2D_…_view.dxf amb el número d'article.", type: "warning", duration: 8000 })
       else {
@@ -173,26 +201,32 @@ export function HardwareList({
     if (!importSrc) return
     setImportBusy(true)
     try {
-      const r = await importArticles(importSrc, selected, importBase(), (done, total) => setProgress({ done, total }))
+      const r = await importArticles(importSrc, selected, importBase(), items, (done, total) => setProgress({ done, total }))
       const taken = new Set(items.map((x) => fold(x.name.trim())))
+      const byId = new Map(r.updated.map((x) => [x.id, x]))
       const fresh = r.items.map((x) => {
         let name = x.name
         for (let n = 2; taken.has(fold(name)); n++) name = `${x.name} ${n}`
         taken.add(fold(name))
         return { ...x, name }
       })
-      if (fresh.length) {
-        onChange([...fresh, ...items])
-        setOpen([...new Set([...openState, ...fresh.map((x) => x.category)])])
+      if (fresh.length || byId.size) {
+        onChange([...fresh, ...items.map((x) => byId.get(x.id) ?? x)])
+        setOpen([...new Set([...openState, ...fresh.map((x) => x.category), ...r.updated.map((x) => x.category)])])
       }
       const plate = r.plates === 1 ? fresh.find((x) => x.engine === "plate") : undefined
       const hinges = fresh.filter((x) => x.engine === "cup").length
       const only3d = fresh.filter((x) => x.engine === "model").length
       const drill = fresh.length - only3d
       toaster.create({
-        title: fresh.length ? `${fresh.length} ${fresh.length === 1 ? "ferratge importat" : "ferratges importats"}${drill ? ", sense confirmar" : ""}` : "No s'ha importat res",
+        title: fresh.length
+          ? `${fresh.length} ${fresh.length === 1 ? "ferratge importat" : "ferratges importats"}${drill ? ", sense confirmar" : ""}${r.updated.length ? ` i ${r.updated.length} ${r.updated.length === 1 ? "ampliat" : "ampliats"}` : ""}`
+          : r.updated.length ? `${r.updated.length} ${r.updated.length === 1 ? "ferratge ampliat" : "ferratges ampliats"}` : "No s'ha importat res",
         description: [
           countKinds(fresh) + (fresh.length ? "." : ""),
+          r.updated.length ? `${r.updated.length === 1 ? "Ja era a la biblioteca: s'hi ha afegit" : "Ja eren a la biblioteca: s'hi ha afegit"} el que portaven de nou (3D, vistes, plànols).` : "",
+          r.upgraded ? `${r.upgraded} amb forats proposats nous, sense confirmar.` : "",
+          r.pendingUpdates ? `${r.pendingUpdates} ${r.pendingUpdates === 1 ? "té" : "tenen"} una proposta nova per revisar (no s'ha tocat res de confirmat).` : "",
           drill ? "Revisa'n els forats i confirma'ls: fins aleshores no fan cap forat." : "",
           only3d ? `${only3d === 1 ? "El «només 3D» no fa" : "Els «només 3D» no fan"} mai cap forat.` : "",
           r.paired && plate ? `${r.paired} ${r.paired === 1 ? "frontissa aparellada" : "frontisses aparellades"} amb «${plate.name}».` : "",
@@ -203,7 +237,7 @@ export function HardwareList({
         duration: 12000,
       })
       setImportSrc(null)
-      const first = fresh.find((x) => x.engine === "cup") ?? fresh.find((x) => x.engine !== "model") ?? fresh[0]
+      const first = fresh.find((x) => x.engine === "cup") ?? fresh.find((x) => x.engine !== "model") ?? fresh[0] ?? r.updated[0]
       if (first) {
         setSel(first.id)
         setEditorOpen(true)
@@ -217,8 +251,46 @@ export function HardwareList({
   }
 
   const q = fold(query.trim())
-  const groups = HARDWARE_CATEGORIES.map((c) => ({ ...c, items: items.filter((x) => x.category === c.id && (!q || fold(`${x.name} ${x.maker ?? ""} ${x.ref ?? ""}`).includes(q))) })).filter((g) => g.items.length)
+  const [openSeries, setOpenSeries] = useSessionList(SERIES_KEY, [])
+  // Per categoria i, dins, per sèrie (la carpeta del fabricant: Frontisses › Sensys, Tiradors › Classic…).
+  const groups = HARDWARE_CATEGORIES.map((c) => {
+    const list = items.filter((x) => x.category === c.id && (!q || fold(`${x.name} ${x.maker ?? ""} ${x.ref ?? ""} ${x.imported?.article ?? ""} ${itemSeries(x)?.label ?? ""}`).includes(q)))
+    return { ...c, items: list, ...seriesGroups(c.id, list) }
+  }).filter((g) => g.items.length)
   const defaultOf = (x: HardwareItem) => HARDWARE_SLOTS.find((s) => defaults[s.slot] === x.id && s.engine === x.engine)
+  const card = (x: HardwareItem) => {
+    const def = defaultOf(x)
+    return (
+      <GalleryCard
+        key={x.id}
+        thumb={<HardwareThumb item={x} base={mountBase} materials={materials} />}
+        title={x.name}
+        kicker={[x.maker, x.ref].filter(Boolean).join(" · ") || undefined}
+        description={hardwareSummary(x)}
+        tags={
+          def ? (
+            <Badge size="xs" variant="subtle" colorPalette="wood" title={`Per defecte a: ${def.uses}`}>
+              <LuStar /> Per defecte
+            </Badge>
+          ) : x.imported?.update ? (
+            <Badge size="xs" variant="subtle" colorPalette="orange" title="S'ha tornat a importar i els fitxers donen una altra proposta de forats: revisa-la a l'editor">
+              Proposta nova
+            </Badge>
+          ) : x.engine === "model" ? (
+            <Badge size="xs" variant="subtle" colorPalette="gray" title={x.imported && !x.imported.bbox ? "Només les vistes DXF: el 3D (i, si en té, els forats) arribarà amb el STEP" : "Importat sense cap regla de mecanitzat: el model, mai cap forat"}>
+              {x.imported && !x.imported.bbox ? "Només 2D" : "Només 3D"}
+            </Badge>
+          ) : isPendingImport(x) ? (
+            <Badge size="xs" variant="subtle" colorPalette="orange" title="Importat: no fa cap forat fins que el confirmis">
+              Sense confirmar
+            </Badge>
+          ) : undefined
+        }
+        selected={editorOpen && x.id === sel}
+        onClick={() => open(x)}
+      />
+    )
+  }
   const close = () => {
     setEditorOpen(false)
     setJustAdded(null)
@@ -249,7 +321,8 @@ export function HardwareList({
         Descàrregues de <strong>Hettich CAD</strong> (hettich.com › Descàrregues CAD): els ZIP tal com es baixen (STEP i DWG/DXF), una
         carpeta o fitxers <Text as="span" fontFamily="mono">.stp</Text> i <Text as="span" fontFamily="mono">_2D_…_view.dxf</Text>. Frontisses, plaques,
         tiradors i potes: els forats surten del STEP i s'han de confirmar abans que arribin al taller. La resta (estructures de taula, portes
-        corredisses i plegables, Cadro, accessoris) entra com a «només 3D»: el model, sense cap forat.
+        corredisses i plegables, Cadro, accessoris) entra com a «només 3D»: el model, sense cap forat. Un article que ja tens no es repeteix: s'hi afegeix el que
+        porta de nou (el 3D del STEP, les vistes del DWG/DXF, els plànols de muntatge), sense tocar mai uns forats confirmats.
       </ImportDropZone>
       <HardwareImportDialog
         key={importSeq}
@@ -258,6 +331,7 @@ export function HardwareList({
         busy={importBusy}
         progress={progress}
         analyse={analyse}
+        merge={mergeOf}
         onCancel={() => setImportSrc(null)}
         onImport={(sel) => void doImport(sel)}
       />
@@ -265,37 +339,22 @@ export function HardwareList({
         <FoldGroup variant="gallery" value={openState} onValueChange={setOpen} forceOpen={q ? groups.map((g) => g.id) : null}>
           {groups.map((g) => (
             <FoldItem key={g.id} id={g.id} icon={HARDWARE_ICONS[g.id]} title={g.label} count={g.items.length} description={g.hint}>
-              <SimpleGrid columns={GALLERY_COLS} gap={3} p="var(--gallery-px, 0)">
-                {g.items.map((x) => {
-                  const def = defaultOf(x)
-                  return (
-                    <GalleryCard
-                      key={x.id}
-                      thumb={<HardwareThumb item={x} base={mountBase} materials={materials} />}
-                      title={x.name}
-                      kicker={[x.maker, x.ref].filter(Boolean).join(" · ") || undefined}
-                      description={hardwareSummary(x)}
-                      tags={
-                        def ? (
-                          <Badge size="xs" variant="subtle" colorPalette="wood" title={`Per defecte a: ${def.uses}`}>
-                            <LuStar /> Per defecte
-                          </Badge>
-                        ) : x.engine === "model" ? (
-                          <Badge size="xs" variant="subtle" colorPalette="gray" title="Importat sense cap regla de mecanitzat: el model, mai cap forat">
-                            Només 3D
-                          </Badge>
-                        ) : isPendingImport(x) ? (
-                          <Badge size="xs" variant="subtle" colorPalette="orange" title="Importat: no fa cap forat fins que el confirmis">
-                            Sense confirmar
-                          </Badge>
-                        ) : undefined
-                      }
-                      selected={editorOpen && x.id === sel}
-                      onClick={() => open(x)}
-                    />
-                  )
-                })}
-              </SimpleGrid>
+              {g.loose.length > 0 && (
+                <SimpleGrid columns={GALLERY_COLS} gap={3} p="var(--gallery-px, 0)">
+                  {g.loose.map(card)}
+                </SimpleGrid>
+              )}
+              {g.series.length > 0 && (
+                <FoldGroup variant="nested" value={openSeries} onValueChange={setOpenSeries} forceOpen={q ? g.series.map((s) => s.key) : null}>
+                  {g.series.map((s) => (
+                    <FoldItem key={s.key} id={s.key} title={s.label} count={s.items.length}>
+                      <SimpleGrid columns={GALLERY_COLS} gap={3} data-testid={`hardware-series-${s.key}`}>
+                        {s.items.map(card)}
+                      </SimpleGrid>
+                    </FoldItem>
+                  ))}
+                </FoldGroup>
+              )}
             </FoldItem>
           ))}
         </FoldGroup>
@@ -359,10 +418,13 @@ function countKinds(items: HardwareItem[]): string {
     ["leg", "pota", "potes"],
     ["model", "només 3D", "només 3D"],
   ]
+  const flat = (x: HardwareItem) => x.engine === "model" && !!x.imported && !x.imported.bbox
   const parts = names.flatMap(([e, one, many]) => {
-    const n = items.filter((x) => x.engine === e).length
+    const n = items.filter((x) => x.engine === e && !flat(x)).length
     return n ? [`${n} ${n === 1 ? one : many}`] : []
   })
+  const n2d = items.filter(flat).length
+  if (n2d) parts.push(`${n2d} només 2D (falta el STEP)`)
   return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} i ${parts.at(-1)}` : (parts[0] ?? "")
 }
 
@@ -372,6 +434,39 @@ function countKinds(items: HardwareItem[]): string {
  * la Cache Storage (`hardwareThumbs`). Mentre es fa, el requadre buit.
  */
 function HardwareThumb({ item, base, materials }: { item: HardwareItem; base?: Module; materials: MaterialPref[] }) {
+  // Només 2D (sense STEP encara): la vista frontal del DXF.
+  if (item.engine === "model" && item.imported && !item.imported.bbox) return <ViewThumb asset={item.imported.asset} />
+  return <ModelThumb item={item} base={base} materials={materials} />
+}
+
+/** Miniatura d'un «només 2D»: la vista frontal (o la primera) del DXF, al mateix requadre 2:1 que les fotos. */
+function ViewThumb({ asset }: { asset?: string }) {
+  const a = useLiveQuery(() => (asset ? getHardwareAsset(asset) : undefined), [asset])
+  const views = assetViews(a)
+  const view = views.find((v) => v.name === "front") ?? views[0]
+  const b = view ? viewBounds(view.lines) : null
+  if (!view || !b) return <SnapshotThumb />
+  const w = b.x1 - b.x0
+  const h = b.y1 - b.y0
+  // Encaixat al 2:1 amb marge.
+  const W = Math.max(w, h * 2) * 1.15 + 1
+  const H = W / 2
+  const x = b.x0 - (W - w) / 2
+  const y = -b.y1 - (H - h) / 2
+  return (
+    <Box aspectRatio="2 / 1" rounded="md" overflow="hidden" bg="bg.muted" color="fg.muted" data-testid="hardware-thumb-2d">
+      <svg viewBox={`${x} ${y} ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+        <g transform="scale(1 -1)" fill="none" stroke="currentColor" strokeWidth={W / 400}>
+          {view.lines.map((l, i) => (
+            <polyline key={i} points={l.map((v, k) => (k % 2 ? `${v} ` : `${v},`)).join("")} />
+          ))}
+        </g>
+      </svg>
+    </Box>
+  )
+}
+
+function ModelThumb({ item, base, materials }: { item: HardwareItem; base?: Module; materials: MaterialPref[] }) {
   const sig = useMemo(() => hardwareThumbSig(item, base, materials), [item, base, materials])
   const [made, setMade] = useState<{ sig: string; url: string } | null>(null)
   const url = made?.sig === sig ? made.url : hardwareThumb(item, sig)
@@ -575,6 +670,20 @@ function MountPreview({ item, base, materials, noModel }: { item: HardwareItem; 
 /** Un ferratge «només 3D»: el model sol (sense mòdul ni forats), en 3D, amb les mides de la caixa. */
 function ModelPreview({ mount, materials, noModel }: { mount: HardwareMount; materials: MaterialPref[]; noModel: boolean }) {
   const n = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",")
+  if (!mount.model?.bbox && !mount.model?.asset)
+    return null
+  if (!mount.model?.bbox)
+    return (
+      <Stack gap={1} bg="bg" rounded="lg" borderWidth="1px" p={{ base: 3, md: 4 }} data-testid="hardware-mount">
+        <Text fontSize="sm" fontWeight="semibold">
+          Només 2D
+        </Text>
+        <Text fontSize="sm" color="fg.muted">
+          Només s'han importat les vistes del DXF (a sota) i els punts de connexió: falta el STEP, d'on surten el 3D i, a les frontisses, plaques, tiradors i
+          potes, els forats proposats. Importa el ZIP STEP_… de la mateixa família i s'afegirà a aquest ferratge (no se'n farà un de nou).
+        </Text>
+      </Stack>
+    )
   return (
     <Stack gap={3} bg="bg" rounded="lg" borderWidth="1px" p={{ base: 3, md: 4 }} data-testid="hardware-mount">
       <Stack gap={0}>
@@ -644,6 +753,8 @@ const ENGINE_HELP: Partial<Record<HardwareEngine, { label: string; help: string 
   model: { label: "Només 3D", help: "Sense cap regla de mecanitzat: el model i el volum, mai cap forat. No es pot triar a cap lloc del moble; en pots baixar el model (GLB) per posar-lo en un objecte (Models 3D › Triar fitxers)." },
 }
 
+const ONLY_2D_HELP = "Només s'han importat les vistes DXF (i els punts de connexió): cap forat. Quan importis el STEP del mateix article, s'hi afegirà el 3D i, si és una frontissa, placa, tirador o pota, els forats proposats (per revisar i confirmar)."
+
 /** «Model 3D»: baixar el GLB que es va fer en importar (per posar-lo en un objecte com a model 3D). */
 function GlbRow({ asset, name }: { asset: string; name: string }) {
   const a = useLiveQuery(() => getHardwareAsset(asset), [asset])
@@ -657,6 +768,104 @@ function GlbRow({ asset, name }: { asset: string; name: string }) {
         </Button>
       </Box>
     </FormRow>
+  )
+}
+
+/** «Plànols de muntatge»: els DXF i PDF del fabricant adjuntats en importar (`dxf_einbau`, exemples d'aplicació), per baixar-los. */
+function DocsRow({ asset }: { asset: string }) {
+  const a = useLiveQuery(() => getHardwareAsset(asset), [asset])
+  const docs = assetDocs(a)
+  if (!docs.length) return null
+  return (
+    <FormRow label="Plànols" help="Plànols de muntatge i exemples d'aplicació del fabricant que nomenen aquest article (tal com venen, per consultar-los).">
+      <Stack gap={1} pt="2px" data-testid="hardware-docs">
+        {docs.map((d) => (
+          <Box key={d.name}>
+            <Button size="xs" variant="ghost" onClick={() => downloadBlob(d.blob, d.name)} title={d.name} maxW="full" justifyContent="flex-start">
+              <LuFileDown /> <Text as="span" truncate>{d.name}</Text>
+            </Button>
+          </Box>
+        ))}
+      </Stack>
+    </FormRow>
+  )
+}
+
+/** Un mecanitzat en text amb els números de l'item (per comparar la proposta d'ara amb la nova). */
+function opLine(op: MachiningOp, vars: Record<string, number>): string {
+  const v = (e: number | string) => {
+    try {
+      return fmt(Math.round(evalExpr(e, vars) * 100) / 100)
+    } catch {
+      return fmt(e)
+    }
+  }
+  if (op.kind === "edgeDrill") return `Ø${v(op.d)} × ${v(op.depth)} al cantell`
+  if (op.kind === "through") return `Ø${v(op.d)} passant a ${v(op.u)} / ${v(op.v)}`
+  return `Ø${v(op.d)} × ${v(op.depth)} a ${v(op.u)} / ${v(op.v)}`
+}
+
+/**
+ * «Hi ha una proposta nova: revisar»: s'ha tornat a importar l'article i els fitxers donen uns altres forats, però l'item
+ * està confirmat (o se n'han editat els forats) i no s'ha tocat. Compara la d'ara amb la nova; aplicar-la el deixa sense
+ * confirmar (cal revisar-lo i tornar-lo a confirmar); descartar-la no canvia res.
+ */
+function UpdateNotice({ item, onChange }: { item: HardwareItem; onChange: (next: HardwareItem) => void }) {
+  const u = item.imported!.update!
+  const varsNow = { ...item.params, cupOffset: 0, pitch: item.pitch?.else ?? 0 }
+  const { pitch, ...rest } = u.params
+  const varsNew = { ...item.params, ...rest, cupOffset: 0, pitch: pitch ?? item.pitch?.else ?? 0 }
+  const now = item.targets.filter((t) => u.targets.some((x) => x.key === t.key))
+  const col = (title: string, targets: HardwareTarget[], vars: Record<string, number>) => (
+    <Stack gap={0.5} minW={0}>
+      <Text fontSize="xs" fontWeight="semibold">
+        {title}
+      </Text>
+      {item.engine === "barHandle" && (
+        <Text fontSize="xs" fontFamily="mono">
+          {vars.pitch ? `${fmt(vars.pitch)} mm entre centres` : "pom (1 forat)"}
+        </Text>
+      )}
+      {targets.flatMap((t) => t.ops.map((op, k) => (
+        <Text key={`${t.key}${k}`} fontSize="xs" fontFamily="mono" wordBreak="break-word">
+          {opLine(op, vars)}
+        </Text>
+      )))}
+    </Stack>
+  )
+  return (
+    <Box px={{ base: 4, sm: 6 }} pb={4}>
+      <Alert.Root status="warning" size="sm" data-testid="hardware-update">
+        <Alert.Indicator />
+        <Alert.Content gap={2}>
+          <Alert.Title>Hi ha una proposta nova: revisar</Alert.Title>
+          <Alert.Description>
+            <Stack gap={2}>
+              <Text fontSize="sm">
+                S'ha tornat a importar i els fitxers donen uns altres forats. {item.imported!.confirmed ? "Com que està confirmat" : "Com que n'has editat els forats"}, no s'ha tocat res: el moble continua fent els d'ara. Si aplices la nova, queda sense confirmar (cap forat als mobles) fins que la revisis i la confirmis.
+              </Text>
+              <SimpleGrid columns={2} gap={3}>
+                {col("Ara", now, varsNow)}
+                {col("Nova", u.targets, varsNew)}
+              </SimpleGrid>
+              {u.notes.length > 0 && (
+                <Text fontSize="xs" color="fg.muted">
+                  {u.notes.join(" ")}
+                </Text>
+              )}
+              <HStack gap={2} wrap="wrap">
+                <Button size="xs" colorPalette="wood" onClick={() => onChange(applyImportUpdate(item))} data-testid="hardware-update-apply">
+                  Aplicar la nova (sense confirmar)
+                </Button>
+                <Button size="xs" variant="outline" onClick={() => onChange(dismissImportUpdate(item))}>
+                  Descartar-la
+                </Button>
+              </HStack>
+            </Stack>
+          </Alert.Description>
+        </Alert.Content>
+      </Alert.Root>
+    </Box>
   )
 }
 
@@ -714,6 +923,8 @@ function HardwareCard({
     onChange({ ...item, name: next })
   }
   const slot = slotOfEngine(item.engine)
+  // Importat només amb les vistes DXF (sense STEP): ni 3D ni caixa encara.
+  const only2d = item.engine === "model" && !!item.imported && !item.imported.bbox && !item.imported.damaged
   const set = (patch: Partial<HardwareItem>) => onChange({ ...item, ...patch })
   // Canviar els forats d'un importat el torna a deixar sense confirmar (cal tornar-lo a revisar).
   const setTargets = (targets: HardwareTarget[]) => onChange(item.imported ? { ...item, targets, imported: { ...item.imported, confirmed: false } } : { ...item, targets })
@@ -768,9 +979,9 @@ function HardwareCard({
         </HStack>
 
         <FormSection title="General">
-          <FormRow label="Tipus" help={slot ? `Fa de «${slot.label}»: ${slot.uses}. La regla de cada contingut decideix on va i quants se'n posen.` : ENGINE_HELP[item.engine]?.help}>
+          <FormRow label="Tipus" help={slot ? `Fa de «${slot.label}»: ${slot.uses}. La regla de cada contingut decideix on va i quants se'n posen.` : only2d ? ONLY_2D_HELP : ENGINE_HELP[item.engine]?.help}>
             <Text fontSize="sm" pt="6px">
-              {slot?.label ?? ENGINE_HELP[item.engine]?.label ?? item.engine}
+              {slot?.label ?? (only2d ? "Només 2D" : (ENGINE_HELP[item.engine]?.label ?? item.engine))}
             </Text>
           </FormRow>
           <FormRow label="Fabricant">
@@ -790,13 +1001,14 @@ function HardwareCard({
           )}
         </FormSection>
 
+        {item.imported?.update && <UpdateNotice item={item} onChange={onChange} />}
         {item.imported && (
           <FormSection title="Importat del fabricant">
             {item.engine === "model" ? (
-              <FormRow label="Estat" help="No hi ha cap regla de mecanitzat per a aquest ferratge (o no s'hi ha trobat el patró de forats): el model i el volum, mai cap forat. No cal confirmar-lo.">
+              <FormRow label="Estat" help={only2d ? ONLY_2D_HELP : "No hi ha cap regla de mecanitzat per a aquest ferratge (o no s'hi ha trobat el patró de forats): el model i el volum, mai cap forat. No cal confirmar-lo."}>
                 <HStack gap={2} pt="2px">
                   <Badge size="sm" variant="subtle" colorPalette="gray" data-testid="hardware-import-state">
-                    Només 3D
+                    {only2d ? "Només 2D" : "Només 3D"}
                   </Badge>
                 </HStack>
               </FormRow>
@@ -843,6 +1055,7 @@ function HardwareCard({
               </Text>
             </FormRow>
             {item.imported.asset && <GlbRow asset={item.imported.asset} name={item.name} />}
+            {item.imported.asset && <DocsRow asset={item.imported.asset} />}
             {item.imported.notes?.length ? (
               <FormRow label="Proposta">
                 <Stack gap={1} pt="6px">

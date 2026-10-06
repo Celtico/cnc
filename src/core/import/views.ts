@@ -17,6 +17,11 @@ export interface HardwareView {
   points: [number, number, number][]
   /** Al marc del ferratge (u, v) o tal com ve el fitxer. */
   registered: boolean
+  /**
+   * Sense registrar (encara no hi ha forats proposats: només el DXF, sense el STEP): els cercles del dibuix [x, y, r],
+   * per registrar-la quan s'hi afegeixi el STEP (`registerStoredView`).
+   */
+  circles?: [number, number, number][]
 }
 
 const r2 = (x: number) => Math.round(x * 100) / 100
@@ -37,7 +42,7 @@ const ORIENT: ((p: P2) => P2)[] = [
  * Transformació del dibuix al marc (u, v) que fa coincidir els cercles amb els forats `holes` (error mitjà < 0,5 mm),
  * o `null`. El primer forat (la cassoleta, o el primer de la placa) fixa la translació.
  */
-export function registerView(d: DxfDrawing, holes: { u: number; v: number; d: number }[]): ((p: P2) => P2) | null {
+export function registerView(d: Pick<DxfDrawing, "circles">, holes: { u: number; v: number; d: number }[]): ((p: P2) => P2) | null {
   if (!holes.length || !d.circles.length) return null
   let best: { f: (p: P2) => P2; err: number } | null = null
   const anchor = holes[0]!
@@ -74,7 +79,28 @@ export function viewFromDxf(name: ViewName, d: DxfDrawing, holes?: { u: number; 
     .map((p) => simplify(reg ? p.pts.map(reg) : p.pts, 0.02).flatMap(([x, y]) => [r2(x), r2(y)]))
     .filter((l) => l.length >= 4)
   const points = d.points.filter((p) => /CONNECTION/i.test(p.layer)).map((p) => [r2(p.x), r2(p.y), r2(p.z)] as [number, number, number])
-  return { name, lines, points, registered: !!reg }
+  const circles = reg ? [] : d.circles.filter((c) => !/^CONNECTIONPOINTS$/i.test(c.layer)).map((c) => [r2(c.x), r2(c.y), r2(c.r)] as [number, number, number])
+  return { name, lines, points, registered: !!reg, ...(circles.length ? { circles } : {}) }
+}
+
+/**
+ * Una vista desada sense registrar (importada abans que el STEP) posada al marc del ferratge amb els forats d'ara, si
+ * els seus cercles hi encaixen; si no, tal com era.
+ */
+export function registerStoredView(view: HardwareView, holes: { u: number; v: number; d: number }[]): HardwareView {
+  if (view.registered || !view.circles?.length || !holes.length) return view
+  const reg = registerView({ circles: view.circles.map(([x, y, r]) => ({ layer: "", x, y, r })) }, holes)
+  if (!reg) return view
+  const lines = view.lines.map((l) => {
+    const out: number[] = []
+    for (let i = 0; i + 1 < l.length; i += 2) {
+      const [x, y] = reg([l[i]!, l[i + 1]!])
+      out.push(r2(x), r2(y))
+    }
+    return out
+  })
+  const { circles: _c, ...rest } = view
+  return { ...rest, lines, registered: true }
 }
 
 /** Caixa d'unes línies (per encaixar el dibuix). */

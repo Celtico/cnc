@@ -92,7 +92,7 @@ export function renderHardwareThumb(mount: HardwareMount, materials: MaterialPre
   scene.updateMatrixWorld(true)
   const box = new Box3().setFromObject(scene)
 
-  const cam = mountCamera(mount)
+  const cam = mountCamera(mount, THUMB_ASPECT)
   const target = new Vector3(cam.target[0] * S, cam.target[1] * S + lift, cam.target[2] * S)
   const dir = new Vector3(...cam.dir)
   const camera = new PerspectiveCamera(32, THUMB_ASPECT, 0.005, 60)

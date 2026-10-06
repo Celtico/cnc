@@ -4,6 +4,7 @@ import { LuUpload } from "react-icons/lu"
 import { ChoiceChips } from "../../components/FormRow"
 import { SearchBar } from "../../components/SearchBar"
 import type { HettichArticle, ImportKind } from "../../core/import/hettich"
+import { mergeText, type MergePreview } from "../../core/import/merge"
 import { fold } from "../projects/galleryGrid"
 
 /** Quants articles es llisten alhora (un ZIP sencer en porta ~1000: es filtra amb la cerca). */
@@ -21,13 +22,13 @@ const KINDS: { id: ImportKind; one: string; many: string; chip: string }[] = [
   { id: "none", one: "no es pot importar", many: "no es poden importar", chip: "No es poden importar" },
 ]
 
-const FILE_LABEL: Record<string, string> = { step: "STEP", front: "frontal", side: "lateral", top: "planta", dxf3d: "DXF 3D", dwg: "DWG", "3ds": "3DS", pdf: "PDF", other: "altres" }
+const FILE_LABEL: Record<string, string> = { step: "STEP", front: "frontal", side: "lateral", top: "planta", dxf3d: "DXF 3D", dwg: "DWG", "3ds": "3DS", pdf: "PDF", ref: "plànol de muntatge", other: "altres" }
 
 /** «585 tiradors, 74 poms i 88 només 3D es poden importar»: els comptes per tipus. */
 function importSummary(counts: Partial<Record<ImportKind, number>>): string {
   const parts = KINDS.filter((k) => k.id !== "none" && counts[k.id]).map((k) => `${counts[k.id]} ${counts[k.id] === 1 ? k.one : k.many}`)
   const can = parts.length ? `${parts.length > 1 ? `${parts.slice(0, -1).join(", ")} i ${parts.at(-1)}` : parts[0]} es poden importar` : "cap es pot importar"
-  return counts.none ? `${can} · ${counts.none} ${counts.none === 1 ? KINDS.at(-1)!.one : KINDS.at(-1)!.many} (sense STEP)` : can
+  return counts.none ? `${can} · ${counts.none} ${counts.none === 1 ? KINDS.at(-1)!.one : KINDS.at(-1)!.many} (sense STEP ni vistes DXF)` : can
 }
 
 /**
@@ -42,6 +43,7 @@ export function HardwareImportDialog({
   busy,
   progress,
   analyse,
+  merge,
   onCancel,
   onImport,
 }: {
@@ -51,6 +53,8 @@ export function HardwareImportDialog({
   progress: { done: number; total: number } | null
   /** Què farà de debò un article (llegint el STEP): la nota de la fila. */
   analyse?: (a: HettichArticle) => Promise<string>
+  /** Si l'article ja és a la biblioteca: què s'hi afegirà (`mergePreview`); `null` = nou. */
+  merge?: (a: HettichArticle) => MergePreview | null
   onCancel: () => void
   onImport: (selected: HettichArticle[]) => void
 }) {
@@ -63,6 +67,8 @@ export function HardwareImportDialog({
     for (const a of list) c[a.kind] = (c[a.kind] ?? 0) + 1
     return c
   }, [list])
+  const merges = useMemo(() => new Map(list.map((a) => [a.article, merge?.(a) ?? null])), [list, merge])
+  const existing = [...merges.values()].filter(Boolean).length
   const q = fold(query.trim())
   const shown = useMemo(
     () => list.filter((a) => (filter === "all" || a.kind === filter) && (!q || fold(`${a.article} ${a.label} ${a.group} ${a.folders.join(" ")}`).includes(q))),
@@ -99,7 +105,7 @@ export function HardwareImportDialog({
       stop = true
     }
   }, [visible, analyse])
-  const selectable = visible.filter((a) => a.kind !== "none")
+  const selectable = visible.filter((a) => a.kind !== "none" || merges.get(a.article))
   const toggle = (id: string, on: boolean) =>
     setPicked((s) => {
       const n = new Set(s)
@@ -119,6 +125,7 @@ export function HardwareImportDialog({
                 <Dialog.Title>Importar del fabricant</Dialog.Title>
                 <Text fontSize="sm" color="fg.muted">
                   Hettich · {list.length} articles en {fileCount} fitxers · {importSummary(counts)}
+                  {existing ? ` · ${existing} ja ${existing === 1 ? "és" : "són"} a la biblioteca (s'hi afegeix el que falti)` : ""}
                 </Text>
               </Stack>
             </Dialog.Header>
@@ -143,7 +150,8 @@ export function HardwareImportDialog({
                 </HStack>
                 <Stack gap={0} borderWidth="1px" rounded="l2" overflow="hidden">
                   {visible.map((a) => {
-                    const disabled = a.kind === "none"
+                    const m = merges.get(a.article) ?? null
+                    const disabled = a.kind === "none" && !m
                     return (
                       <Box key={a.article} px={3} py={2} borderTopWidth="1px" borderColor="border.muted" _first={{ borderTopWidth: 0 }} opacity={disabled ? 0.6 : 1} data-testid={`hw-article-${a.article}`}>
                         <Checkbox.Root size="sm" checked={picked.has(a.article)} disabled={disabled || busy} onCheckedChange={(e) => toggle(a.article, !!e.checked)} alignItems="flex-start" w="full">
@@ -156,9 +164,19 @@ export function HardwareImportDialog({
                                   {a.article}
                                 </Text>
                                 <Text as="span" fontSize="sm" fontWeight="medium" truncate>
-                                  {a.label.replace(new RegExp(`\\s*${a.article}$`), "")}
+                                  {(m?.items[0]?.name ?? a.label).replace(new RegExp(`\\s*(·\\s*)?${a.article}$`), "")}
                                 </Text>
+                                {!m && (
+                                  <Badge size="xs" variant="subtle" colorPalette="green" flexShrink={0} data-testid={`hw-merge-${a.article}`}>
+                                    Nou
+                                  </Badge>
+                                )}
                               </HStack>
+                              {m && (
+                                <Text fontSize="xs" color={m.adds.length ? "wood.fg" : "fg.muted"} truncate data-testid={`hw-adds-${a.article}`}>
+                                  {mergeText(m)}
+                                </Text>
+                              )}
                               <Text fontSize="xs" color="fg.muted" truncate>
                                 {a.group}
                               </Text>
@@ -168,9 +186,12 @@ export function HardwareImportDialog({
                                     {FILE_LABEL[k]}
                                   </Badge>
                                 ))}
-                                <Text as="span" fontSize="xs" color={a.kind === "none" ? "fg.error" : /^Només 3D/.test(notes[a.article] ?? a.plan ?? "") ? "fg.muted" : "fg"} data-testid={`hw-plan-${a.article}`}>
-                                  {notes[a.article] ?? a.plan ?? a.reason}
-                                </Text>
+                                {/* Ja existeix: el que diu la fila d'abans («s'hi afegeix…»); la nota de què es farà és la d'un de nou. */}
+                                {!(m && (a.only2d || a.refsOnly || a.kind === "none")) && (
+                                  <Text as="span" fontSize="xs" color={a.kind === "none" ? "fg.error" : /^Només [23]D/.test(notes[a.article] ?? a.plan ?? "") ? "fg.muted" : "fg"} data-testid={`hw-plan-${a.article}`}>
+                                    {notes[a.article] ?? a.plan ?? a.reason}
+                                  </Text>
+                                )}
                               </HStack>
                             </Stack>
                           </Checkbox.Label>
@@ -192,7 +213,10 @@ export function HardwareImportDialog({
                 <Text fontSize="xs" color="fg.muted">
                   Dels fitxers STEP en surten els forats proposats i el model 3D; de les vistes DXF, el dibuix. Frontisses, plaques, tiradors i potes entren{" "}
                   <strong>sense confirmar</strong>: no fan cap forat fins que els revisis i els confirmis. El que no té cap regla de mecanitzat (o no s'hi troba el
-                  patró de forats) entra com a <strong>només 3D</strong>: el model, mai cap forat. Les frontisses s'aparellen amb la placa del lot si n'hi ha una.
+                  patró de forats) entra com a <strong>només 3D</strong>: el model, mai cap forat; sense STEP, amb les vistes DXF, «només 2D» fins que s'hi afegeixi el STEP. Un
+                  article que <strong>ja és a la biblioteca</strong> no es repeteix: s'hi afegeix el que porta de nou (el 3D, les vistes, els plànols de muntatge) i
+                  mai es toquen els forats confirmats (si els fitxers en donen uns altres, l'editor ho diu per revisar-ho). Les frontisses s'aparellen amb la placa
+                  del lot si n'hi ha una.
                 </Text>
               </Stack>
             </Dialog.Body>

@@ -136,6 +136,24 @@ export const HardwareImportSchema = z.object({
   points: z.array(V3Schema).optional(),
   /** Mecanitzats proposats en llegir els fitxers (els de `targets` són els editats). */
   proposed: z.array(HardwareTargetSchema),
+  /**
+   * Els números de la proposta que fan els forats (Ø i fondària de la cassoleta; Ø i distància, `pitch`, del tirador),
+   * per saber si un fitxer nou en porta una altra (`mergeImported`). Els importats d'abans no en porten (els d'ara).
+   */
+  proposedParams: z.record(z.string(), mm).optional(),
+  /**
+   * **Proposta nova pendent de revisar**: s'ha tornat a importar l'article i els fitxers en donen una altra, però l'item
+   * està confirmat (o se n'han editat els forats). No es toca res fins que l'usuari l'aplica (`applyImportUpdate`, que el
+   * deixa sense confirmar) o la descarta.
+   */
+  update: z
+    .object({
+      targets: z.array(HardwareTargetSchema),
+      params: z.record(z.string(), mm),
+      notes: z.array(z.string()),
+      bbox: z.object({ min: V3Schema, max: V3Schema }).optional(),
+    })
+    .optional(),
   /** Què s'hi ha trobat i què cal revisar. */
   notes: z.array(z.string()).optional(),
   confirmed: z.boolean(),
@@ -577,10 +595,18 @@ export function hardwareSummary(item: HardwareItem): string {
     : item.engine === "barHandle" && item.pitch ? [...item.pitch.steps.map((s) => s.n), item.pitch.else].sort((a, b) => b - a).join("/")
     : item.engine === "plate" ? `a ${n(p.setback ?? NaN)} mm del davant`
     : item.engine === "leg" ? `a ${n(p.inset ?? NaN)} mm dels cantells`
-    : item.engine === "model" ? "només 3D: sense forats"
+    : item.engine === "model" ? modelSummary(item, n)
     : ""
   const pending = isDamagedImport(item) ? "malmès" : isPendingImport(item) && item.engine !== "model" ? "sense confirmar" : ""
   return [pending, holes.join(" · "), extra].filter(Boolean).join(" · ")
+}
+
+/** «Només 3D: sense forats · 1560 × 12,5 × 6,5 mm» (la caixa del model) o, sense el STEP, «només 2D: falta el STEP». */
+function modelSummary(item: HardwareItem, n: (x: number) => string): string {
+  const b = item.imported?.bbox
+  if (item.imported && !b) return "només 2D: falta el STEP (el 3D)"
+  const size = b ? ` · ${n(b.max[0] - b.min[0])} × ${n(b.max[1] - b.min[1])} × ${n(b.max[2] - b.min[2])} mm` : ""
+  return `només 3D: sense forats${size}`
 }
 
 /** Item nou de l'usuari a partir d'un altre (mateix motor): id nou, sense marca d'inicial. */

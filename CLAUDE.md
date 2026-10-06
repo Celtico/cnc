@@ -46,7 +46,8 @@ plantes, models 3D i renders són **decoratius**: no s'hi dedica temps mentre el
 - [`docs/cad-mobles-cataleg.md`](docs/cad-mobles-cataleg.md): font del catàleg de plantilles per a botigues de mobles.
 - [`docs/ferratges-import.md`](docs/ferratges-import.md): **importar ferratges del fabricant (Hettich)**: estructura de les
   descàrregues, lectors STEP i DXF, proposta de forats, confirmació i col·locació al moble (frontissa + placa, tirador,
-  pota; la resta «només 3D») i el pla del que falta (Cadro, portes corredisses i plegables, taules).
+  pota; la resta «només 3D»; sense STEP, «només 2D»), tornar a importar (s'amplia l'article, mai es toca un mecanitzat
+  confirmat), noms i sèries, i el pla del que falta (Cadro, portes corredisses i plegables, taules).
 
 ## Principi de disseny
 L'usuari dissenya els mobles **des de la UI**, sense tocar codi. El codi defineix **capacitats genèriques** (carcassa,
@@ -286,7 +287,8 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   no, cap forat (s'entren a mà). Tests `build/importedHardware.test.ts`, `build/importedHardwareSafety.test.ts`,
   `core/import/*.test.ts` i `core/import/hettich.roundtrip.test.ts` (`HETTICH_DIR` = carpeta amb els ZIP de Hettich; no
   es copien al repo).
-  **Qualsevol article es pot importar** (amb STEP; `classifyHettich` per la família i la subcarpeta, `proposeArticle`):
+  **Qualsevol article es pot importar** (amb STEP; sense, amb les vistes DXF, **«només 2D»**: motor `model` sense caixa ni
+  3D fins que s'hi afegeix el STEP; `classifyHettich` per la família i la subcarpeta, `proposeArticle`):
   **tiradors** (`Griffe`, `proposeHandle`: els forats de la cara de muntatge → distància entre centres a la de catàleg si
   és a ≤ 0,5 mm, forat passant Ø del tirador per defecte o cargol + 1; un forat = pom; 3–4 = el parell centrat) al motor
   `barHandle` de sempre amb `pitch` sense graons, triable a cada front (`front.handle`) o al mòdul; **potes**
@@ -297,6 +299,19 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   baixar. Tiradors i potes: **sense confirmar, cap forat** i avís `hardware`; malmesos o que fallen, inerts. Preferències
   **v21** (categories `table` «Taules» i `door-system` «Portes corredisses i plegables»). Tests
   `build/importedHandleLeg.test.ts` i `core/import/hettich2.roundtrip.test.ts` (`HETTICH2_DIR`).
+  **Tornar a importar un article amplia el que ja hi és** (per decisió de l'usuari: «mira si ja existeix la referència i si
+  el document importat porta nova informació, la col·loques»; clau fabricant + article, `core/import/merge.ts`,
+  `mergeImported`): el STEP hi afegeix el 3D, la caixa i la proposta si no en tenia (un «només 2D» passa a frontissa,
+  tirador…, sense confirmar, mateix id i nom; les vistes d'abans es registren, `registerStoredView`); el DWG/DXF, les vistes
+  i els punts de connexió; els plànols de muntatge (`dxf_einbau`, exemples, PDF) que nomenen l'article s'hi adjunten
+  (`HardwareAsset.docs`). **Mai es toca un mecanitzat confirmat** (ni uns forats editats): si els fitxers donen una altra
+  proposta, va a `imported.update` («Hi ha una proposta nova: revisar» a l'editor, amb la comparació; aplicar-la la deixa
+  sense confirmar, `applyImportUpdate`; descartar-la, `dismissImportUpdate`); `imported.proposedParams` diu els números de
+  la proposta (Ø i fondària de la cassoleta, Ø i distància del tirador). Noms «<nom> <sèrie> · <article>» sense la carpeta de
+  l'usuari ni la del ZIP (`core/import/hettichNames.ts`: `cleanFolders`, `hettichLabel`, `hettichSeries`); els noms
+  automàtics d'abans es migren en llegir les preferències (`migrateImportedNames`, només si no s'han canviat). Tests
+  `core/import/merge.test.ts` i `core/import/hettichMerge.roundtrip.test.ts` (`HETTICH_DIR`/`HETTICH2_DIR`/`HETTICH_DXF_DIR`).
+  Detall a `docs/ferratges-import.md` §6–§7.
 - **Forats que es trobarien per dins** (`build/holeClash.ts`, `resolveHoleClashes`): System 32 a banda i banda d'un divisor
   → tots dos a (T − 1)/2; si un és d'un ferratge (placa, frontissa: `shortenFitting`), primer s'escurça l'altre, sempre amb
   avís `hole-clash` i mai per sota de 8 mm (si no, no es toca i ho diu); espiga de cantell contra un forat de cara →
@@ -1199,7 +1214,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     la graella només té «‹ Preferències»). Controls de 280 px com a molt.
 - **Ferratges: graella i editor a pantalla completa, com Materials** (`settings/HardwarePane.tsx`, `HardwareList`): cercador
   amb «Afegir» (menú per tipus: copia el per defecte d'aquell lloc), acordió per categoria (`HARDWARE_CATEGORIES`, icones a
-  `settings/hardwareIcons.ts`; oberta la de Frontisses, `mobles:md-open:hardware`), `GalleryCard` amb la **miniatura 3D com
+  `settings/hardwareIcons.ts`; oberta la de Frontisses, `mobles:md-open:hardware`) i, dins, **per sèrie** (per decisió de
+  l'usuari: Frontisses › Sensys · Intermat, Tiradors › Classic · Modern, Portes corredisses › SlideLine 55…; `itemSeries`, la
+  carpeta del fabricant; `FoldItem` niats `nested` amb el nombre, `mobles:md-open:hardware-series`, munta en obrir; els de
+  l'app i els que no en tenen, a dalt de la categoria; la cerca —també pel número i la sèrie— obre les que hi coincideixen;
+  `seriesGroups`), `GalleryCard` amb la **miniatura 3D com
   les de Mobles, Objectes i Ambients** (per decisió de l'usuari: «A Ferratges fes preview 3D com als apartats principals»;
   `SnapshotThumb` 2:1, buida mentre es fa), resum i «★ Per defecte». La miniatura (`settings/hardwareThumbs.ts` →
   `hardwareThumbJob.ts` amb `import()` → `components/viewer/hardwareThumb.ts`, `renderHardwareThumb`): el mateix
@@ -1215,8 +1234,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`readHardwareModel`: n'hi pot haver centenars i cadascun serveix un sol cop) i s'alliberen sencers (`disposeTree`) en
   acabar; el renderitzador s'allibera com sempre (`releaseThumbRenderer` → `releaseModelGpu`). Si canvia com es fan, s'apuja
   `HARDWARE_THUMB_VERSION`. Pendent de millorar (com al 3D de l'editor, que fa la mateixa vista): l'espiga (els forats queden
-  dins la unió) i la guia (es veu el front del calaix) no es reconeixen gaire; un «només 3D» llarg i prim (perfil Cadro de
-  3 m) surt com una línia. L'editor (`components/EditorDialog`, el mateix que Materials) comença amb **«Com va muntat»** (vegeu
+  dins la unió) i la guia (es veu el front del calaix) no es reconeixen gaire. Un **«només 3D»** s'enquadra a la seva caixa
+  (`modelCamera`, a `mountCamera(m, aspect)`, la mateixa al 3D de l'editor i a la miniatura): la càmera més a prop que la
+  veu sencera i, si és llarg i prim (perfil de porta corredissa de 1560 × 12,5 × 6,5), mirat al llarg des d'un extrem perquè
+  se'n vegi la secció (abans sortia una ratlla); al 3D de l'editor, les **cotes** de la caixa (sprites `DimLabel`, no `Html`).
+  Un «només 2D» (sense STEP): la vista frontal del DXF a la targeta. L'editor (`components/EditorDialog`, el mateix que Materials) comença amb **«Com va muntat»** (vegeu
   més avall), dibuixa les peces d'exemple (`hardwarePreview`) amb un **Detall** acotat (`PanelDrawing dims`) i a la dreta
   General (fabricant, referència, «Per defecte als mòduls nous»), Mides (`HARDWARE_PARAMS`, `NumRow`), llargades de guia
   (`ThicknessChips what`), quantitat per alçada / distància dels forats (`StepRule`) i els mecanitzats (només lectura).
@@ -1235,7 +1257,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     i **què se'n farà** («Tirador · 128 mm», «Pota · 4 forats a cada pota», «Només 3D: sense forats (…)»; la dels
     tiradors i les potes llegint el STEP de les files visibles, `analyseArticle`); resum per tipus («742 tiradors, 71 potes
     i 111 només 3D es poden importar»); cerca, filtre per tipus (Frontisses · Plaques · Tiradors · Potes · Només 3D · No es
-    poden importar, només els que hi són), «Triar els visibles», «Importar (n)». Les frontisses s'aparellen amb la placa del lot només si n'hi ha una (amb més, a l'editor). Tot entra **sense confirmar** (insígnia a la
+    poden importar, només els que hi són), «Triar els visibles», «Importar (n)». Cada fila diu **«Nou»** o, si l'article ja
+    és a la biblioteca, «Ja existeix · s'hi afegeix: 3D i forats proposats, vistes 2D…» (`mergePreview`). Les frontisses s'aparellen amb la placa del lot només si n'hi ha una (amb més, a l'editor). Tot entra **sense confirmar** (insígnia a la
     targeta). L'editor d'un importat: el model al muntatge (vegeu «Com va muntat»), la vista del fitxer de fons sota els
     forats proposats (`PanelDrawing underlay`) i les vistes 2D; a la dreta «Importat del fabricant» (estat,
     **Confirmar** / «Treure la confirmació» —els mobles desats amb la còpia d'abans hi passen—, article, carpeta, fitxers,
@@ -1499,7 +1522,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Ferratges | «Com va muntat»: 3D · Pla (com Plànol · 3D dels ambients) | `LuRotate3D` · `LuMap` |
 | Preferències | Visualització · Ferratges (i Fusteria a l'inspector) · Calaixos · System 32 · Cassoleta · Imants | `LuScanEye` · `LuHammer` · `LuArchive` · `LuCircleDot` · `LuCircleDashed` · `LuMagnet` |
 | Ferratges (categories) | Frontisses · Plaques · Guies · Elevables i abatibles · Unions · Suports de prestatge · Potes · Taules · Portes corredisses i plegables · Tiradors · Pressió i imants · Perfils i marcs · Penjar · Altres | `LuCircleDashed` · `LuSquareDot` · `LuArchive` · `LuPanelBottom` · `LuBolt` · `LuCircleDot` · `LuFootprints` · `LuTable` · `LuDoorOpen` · `LuGripHorizontal` · `LuMagnet` · `LuMinus` · `LuAnchor` · `LuPackage` |
-| Ferratges | Baixar el model 3D (.glb) d'un importat | `LuBoxes` |
+| Ferratges | Baixar el model 3D (.glb) d'un importat · Baixar un plànol de muntatge | `LuBoxes` · `LuFileDown` |
 | Preferències | Visor 3D (els materials per defecte als mòduls nous porten la de Materials, `LuPalette`) | `LuLampFloor` |
 | Fitxer | Desar com a fitxer · Obrir fitxer · Pujar un fitxer (preferències) | `LuSave` · `LuFolderOpen` · `LuUpload` |
 | Models 3D | Triar fitxers… · Triar carpeta… (importar un model) · Afegir les textures a Materials | `LuFileUp` · `LuFolderOpen` · `LuPalette` |

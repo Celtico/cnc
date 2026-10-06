@@ -4,7 +4,7 @@ import type { HettichArticle } from "../import/hettich"
 import type { HardwareProposal } from "../import/proposal"
 import { DEFAULT_HARDWARE_KIT, DEFAULT_HARDWARE_LIBRARY, defaultModule, type Module, type Zone } from "../model"
 import { buildModule } from "./buildModule"
-import { hardwareMount, mountCamera, mountPlan } from "./hardwareMount"
+import { hardwareMount, modelCamera, mountCamera, mountPlan } from "./hardwareMount"
 
 /**
  * Ferratge muntat (Preferències › Ferratges, 3D · Pla): les peces surten del motor de sempre (`buildModule`) amb l'item
@@ -127,10 +127,61 @@ describe("ferratge muntat", () => {
     const t = mountCamera(hardwareMount(DEFAULT_HARDWARE_LIBRARY.find((x) => x.engine === "barHandle")!))
     expect(t.dir[2]).toBeGreaterThan(0)
     expect(t.dist).toBe(480)
-    // Només 3D: el centre de la caixa, prou lluny per veure-la sencera.
+    // Només 3D: tota la caixa a la imatge, la càmera tan a prop com es pot (`modelCamera`).
     const model = { ...plate, id: "hw-m", engine: "model" as const, targets: [], imported: { ...plate.imported!, bbox: { min: [0, 0, 0] as [number, number, number], max: [100, 40, 400] as [number, number, number] } } }
     const mm = mountCamera(hardwareMount(model))
-    expect(mm.target).toEqual([50, 20, 200])
-    expect(mm.dist).toBe(800)
+    expect(len(mm.dir)).toBeCloseTo(1, 6)
+    expect(mm.dist).toBeGreaterThan(200)
+    expect(mm.dist).toBeLessThan(1500)
+  })
+
+  /** On cau cada vèrtex de la caixa a la imatge (−1…1) i el tros que ocupa la secció de l'extrem de davant. */
+  function project(b: { min: number[]; max: number[] }, aspect: number) {
+    const c = modelCamera(b as { min: [number, number, number]; max: [number, number, number] }, aspect)
+    const cam = c.target.map((v, i) => v + c.dir[i]! * c.dist)
+    const f = c.dir.map((v) => -v)
+    const unit = (a: number[]) => a.map((x) => x / Math.hypot(...a))
+    const r = unit([f[1]! * 0 - f[2]! * 1, f[2]! * 0 - f[0]! * 0, f[0]! * 1 - f[1]! * 0])
+    const u = [r[1]! * f[2]! - r[2]! * f[1]!, r[2]! * f[0]! - r[0]! * f[2]!, r[0]! * f[1]! - r[1]! * f[0]!]
+    const t = Math.tan((32 * Math.PI) / 360)
+    const pts: [number, number, number][] = []
+    for (const x of [b.min[0]!, b.max[0]!]) for (const y of [b.min[1]!, b.max[1]!]) for (const z of [b.min[2]!, b.max[2]!]) pts.push([x, y, z])
+    const ndc = pts.map((p) => {
+      const d = p.map((v, i) => v - cam[i]!)
+      const z = d[0]! * f[0]! + d[1]! * f[1]! + d[2]! * f[2]!
+      return { x: (d[0]! * r[0]! + d[1]! * r[1]! + d[2]! * r[2]!) / (z * t * aspect), y: (d[0]! * u[0]! + d[1]! * u[1]! + d[2]! * u[2]!) / (z * t), z, p }
+    })
+    return { c, ndc }
+  }
+
+  it("un «només 3D» llarg i prim (perfil de 1560 × 12,5 × 6,5) no surt com una ratlla: mirat al llarg, la secció es veu", () => {
+    const b = { min: [0, 0, 0], max: [1560, 12.5, 6.5] }
+    for (const aspect of [1.6, 2]) {
+      const { ndc } = project(b, aspect)
+      // Tots els vèrtexs, davant de la càmera i dins la imatge.
+      for (const q of ndc) {
+        expect(q.z).toBeGreaterThan(5)
+        expect(Math.abs(q.x)).toBeLessThanOrEqual(1)
+        expect(Math.abs(q.y)).toBeLessThanOrEqual(1)
+      }
+      // La secció de l'extrem de davant (x = 0) ocupa un bon tros de l'alçada (de costat seria < 1 %).
+      const near = ndc.filter((q) => q.p[0] === 0)
+      const h = Math.max(...near.map((q) => q.y)) - Math.min(...near.map((q) => q.y))
+      expect(h / 2).toBeGreaterThan(0.12)
+      // I tot el llarg també hi és: la imatge s'omple d'esquerra a dreta.
+      const w = Math.max(...ndc.map((q) => q.x)) - Math.min(...ndc.map((q) => q.x))
+      expect(w / 2).toBeGreaterThan(0.5)
+    }
+    // El mateix perfil al llarg de Z.
+    const { ndc } = project({ min: [0, 0, 0], max: [6.5, 12.5, 1560] }, 1.6)
+    for (const q of ndc) expect(Math.abs(q.x)).toBeLessThanOrEqual(1)
+  })
+
+  it("un «només 3D» compacte omple la imatge (de 3/4)", () => {
+    const { ndc } = project({ min: [-50, 0, -30], max: [50, 80, 30] }, 1.6)
+    const w = Math.max(...ndc.map((q) => q.x)) - Math.min(...ndc.map((q) => q.x))
+    const h = Math.max(...ndc.map((q) => q.y)) - Math.min(...ndc.map((q) => q.y))
+    expect(Math.max(w, h) / 2).toBeGreaterThan(0.8)
+    for (const q of ndc) expect(Math.max(Math.abs(q.x), Math.abs(q.y))).toBeLessThanOrEqual(1)
   })
 })

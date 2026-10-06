@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { DEFAULT_CABINET } from "./cabinet"
 import { type Module } from "./composition"
+import { migrateImportedNames } from "../import/hettichNames"
 import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, fixHardwareDefaults, kitFrom, libraryFromLegacy } from "./hardware"
 import { PHOTO_MATERIALS } from "./textureSets"
 import { deepEqual, MATERIAL_MERGES, rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
@@ -695,7 +696,10 @@ export function parseSettings(raw: unknown): SettingsParse {
   const hardwareRaw = "hardwareLibrary" in obj
     ? list("hardwareLibrary", HardwareItemSchema, DEFAULT_HARDWARE_LIBRARY, "Ferratges")
     : libraryFromLegacy(section("hardware", LegacyHardwareSchema, DEFAULT_LEGACY_HARDWARE, "Ferratges"))
-  const hardware = fixHardwareDefaults(hardwareRaw, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
+  // Els importats amb el nom que posava l'app abans (carpeta de l'usuari i del ZIP al nom) passen al d'ara.
+  const named = migrateImportedNames(hardwareRaw)
+  if (named.changed) migrated = true
+  const hardware = fixHardwareDefaults(named.library, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
   if (hardware.changed) migrated = true
   // Àlies segons els materials d'aquestes preferències (un «X (foto)» que encara hi és no es toca).
   const names = new Set(materials.map((m) => m.name))

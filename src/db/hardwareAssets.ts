@@ -17,6 +17,11 @@ export function getHardwareAsset(id: string): Promise<HardwareAsset | undefined>
   return db.hardwareAssets.get(id)
 }
 
+/** Els plànols de muntatge desats (validats per forma). */
+export function assetDocs(a: HardwareAsset | undefined): { name: string; blob: Blob }[] {
+  return (a?.docs ?? []).filter((d) => typeof d?.name === "string" && d.blob instanceof Blob)
+}
+
 /** Les vistes 2D desades (validades per forma: una fila d'una versió futura no trenca l'editor). */
 export function assetViews(a: HardwareAsset | undefined): HardwareView[] {
   return (a?.views ?? []).filter((v): v is HardwareView => typeof v === "object" && v !== null && "name" in v && Array.isArray((v as HardwareView).lines))

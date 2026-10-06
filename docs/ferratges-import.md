@@ -18,21 +18,32 @@ Un ZIP per família i format. Dins, carpetes per tipus **en alemany** i un fitxe
 | ZIP | Què hi ha | Què en fem |
 |---|---|---|
 | `STEP_Scharniere.zip` (34 MB, 881 `.stp`) | Un STEP per article (AP203 `CONFIG_CONTROL_DESIGN` o AP214), mm, la majoria d'un sol sòlid; ~150 són conjunts amb transformacions | **Forats** (cilindres) i **3D** (OpenCascade → GLB) |
-| `DWG_DXF_Scharniere.zip` (122 MB, ~4400 fitxers) | Per article: `<art>_2D_front_view.dxf`, `_2D_side_view`, `_2D_top_view` (línies, arcs, cercles, polilínies 3D i 3 `POINT` a la capa `CONNECTIONPOINTS`, majúscules o minúscules) i `<art>_3D.dxf`/`.dwg` (un `3DSOLID` ACIS) | Les tres vistes 2D es dibuixen a l'editor; la que mira la cara de la peça es posa sota els forats. El 3D ACIS i els DWG s'ignoren |
+| `DWG_DXF_Scharniere.zip` (122 MB, ~4400 fitxers), `DWG_DXF_Griffe.zip`, `DWG_DXF_Schiebetuersysteme.zip`… | Per article: `<art>_2D_front_view.dxf`, `_2D_side_view`, `_2D_top_view` (línies, arcs, cercles, polilínies 3D i 3 `POINT` a la capa `CONNECTIONPOINTS`, majúscules o minúscules) i `<art>_3D.dxf`/`.dwg` (un `3DSOLID` ACIS) | Les tres vistes 2D es dibuixen a l'editor; la que mira la cara de la peça es posa sota els forats. El 3D ACIS i els DWG s'ignoren. **Sense el STEP, l'article entra «només 2D»** (§6) |
 | `3DS_Scharniere.zip` | `.3ds` | No (el 3D surt del STEP) |
-| `dxf_einbau.zip` | Seccions de muntatge acotades (DXF + PDF) per família (no per article) | No: documentació per a l'usuari |
-| `Anschlagloesungen_2D_Sensys.zip` | Exemples d'aplicació (seccions) | No |
-| `STEP_Schubkastensysteme.zip` (271 MB) | Calaixos i guies (conjunts sencers: guies, laterals, fronts, accessoris) | «Calaix o guia», **només 3D** (§6) |
+| `dxf_einbau.zip` | Seccions de muntatge acotades (DXF + PDF) per família; les de `Zubehoer/<art>_KB_2d/` nomenen articles al nom (`…_79349_79350_9072231.dxf`) | **Plànols de muntatge**: s'adjunten als articles que nomenen (§6) |
+| `Anschlagloesungen_2D_Sensys.zip` | Exemples d'aplicació (seccions) | Igual, si nomenen algun article (la majoria no: no s'adjunten) |
+| `STEP_Schubkastensysteme.zip` (271 MB) | Calaixos i guies (conjunts sencers: guies, laterals, fronts, accessoris) | «Calaix o guia», **només 3D** (§8) |
 | `STEP_Griffe.zip` (10 MB, 765 `.stp`) | Tiradors i poms per família (`Classic`, `Deluxe`, `Folk`, `Modern`, `Natural`, `New_Modern`, `Organic`, `Touch_In`, `Exclusive_Designgriffe`) i `Zubehoer` | **Tiradors**: la distància entre forats del STEP (§2) |
 | `STEP_Tischgestelle_-beine_Moebelfuesse_Tischausziehfuehrungen.zip` (5 MB) | Potes (`Aluminium_Moebelfuesse`, `Stahl_Moebelfuesse`, `Tischbeine_Moebelfuesse`), estructures de taula (`Change`, `LegaDrive`, `LegaMove`, `Steelforce/…`), guies de taula (`Trimanis`), electrònica i accessoris | **Potes**: forats de la placa (§2); la resta, només 3D |
-| `STEP_Cadro_Aluminiumrahmensystem.zip` (0,7 MB, 70) | Marc d'alumini per a portes de vidre | Només 3D (§6) |
-| `STEP_Schiebetuersysteme.zip` (94 MB, ~940) · `STEP_Falttuersysteme.zip` (22 MB, ~170) | Portes corredisses (perfils, carros, guies) i plegables (WingLine) | Només 3D (§6) |
+| `STEP_Cadro_Aluminiumrahmensystem.zip` (0,7 MB, 70) | Marc d'alumini per a portes de vidre | Només 3D (§8) |
+| `STEP_Schiebetuersysteme.zip` (94 MB, ~940) · `STEP_Falttuersysteme.zip` (22 MB, ~170) | Portes corredisses (perfils, carros, guies) i plegables (WingLine) | Només 3D (§8) |
 
-**Tot es pot importar** (el que porta STEP): el que no té cap regla de mecanitzat a l'app, o del qual no es troba el
-patró de forats, entra com a **«només 3D»** (motor `model`): el model (GLB) i el volum, **mai cap forat**. Sense STEP (només
-les vistes DXF), no es pot importar.
+**Tot es pot importar**: el que no té cap regla de mecanitzat a l'app, o del qual no es troba el patró de forats, entra com
+a **«només 3D»** (motor `model`): el model (GLB) i el volum, **mai cap forat**. Sense STEP però amb les vistes DXF, entra
+**«només 2D»** (motor `model` sense caixa ni 3D: les vistes i els punts de connexió) fins que s'hi afegeix el STEP (§6).
+Només el 3D DWG/DXF o el 3DS sols no es poden importar.
 
-Carpetes → categories de l'app (`classifyHettich`, `core/import/hettich.ts`):
+**Carpetes i nom** (`core/import/hettichNames.ts`, sense dependències del model: també el fa servir la lectura de les
+preferències). De cada camí només compten les carpetes de l'article (`cleanFolders`): fora la carpeta de l'usuari
+(«ferratges», on hi ha els ZIP), la del ZIP o de format (`STEP_…`, `DWG_DXF_…`, `3DS_…`, `dxf_einbau`) i tot el que hi ha
+abans de la família; el mateix article des del STEP i des del DWG/DXF dona les mateixes carpetes. Nom
+(`hettichLabel`): **«<nom en català> <sèrie> · <article>»** («Porta corredissa SlideLine 55 · 9060402», «Frontissa Sensys
+110° · 9071205», «Pota d'acer · 1225», «Tirador Classic · 115001»): com a molt dues paraules de carpeta, sense les que ja
+diu el nom ni les etiquetes (recobrent, encastat), la sèrie en alemany com al catàleg. **Sèrie** (`hettichSeries`,
+`itemSeries`): la carpeta de després de la família («Sensys», «Classic», «SlideLine 55», «System 8099»; les genèriques
+en català: «Acer», «D'angle», «Accessoris»…), per agrupar la biblioteca (§7).
+
+Carpetes → categories de l'app (`classifyHettich`, `core/import/hettichNames.ts`):
 
 | Carpeta | Categoria | Etiquetes / nom |
 |---|---|---|
@@ -43,8 +54,8 @@ Carpetes → categories de l'app (`classifyHettich`, `core/import/hettich.ts`):
 | `Zubehoer`, `Scharniertoepfe` (cassoletes soltes), `Moebelbaender` | Altres (`misc`) | «Accessori», «Cassoleta solta», «Frontissa de pala»: només 3D |
 | `Push_to_open…` | Push | només 3D |
 | `Schubkastensysteme/…` | Guies (`slide`) | «Calaix o guia»: només 3D |
-| `Griffe/<família>` | **Tiradors** (`handle`) | «Tirador Classic 115001», «Tirador Touch-in …»; `Griffe/Zubehoer` → «Accessori de tirador», només 3D |
-| `Tischgestelle_…/Aluminium_Moebelfuesse`, `Stahl_Moebelfuesse` | **Potes i sòcols** (`leg`) | «Pota d'alumini …», «Pota d'acer 1225» |
+| `Griffe/<família>` | **Tiradors** (`handle`) | «Tirador Classic · 115001», «Tirador Touch-in · …»; `Griffe/Zubehoer` → «Accessori de tirador», només 3D |
+| `Tischgestelle_…/Aluminium_Moebelfuesse`, `Stahl_Moebelfuesse` | **Potes i sòcols** (`leg`) | «Pota d'alumini · …», «Pota d'acer · 1225» |
 | `Tischgestelle_…/Tischbeine_Moebelfuesse` | Potes (`leg`) | «Pota de taula …» |
 | `Tischgestelle_…/Change`, `LegaDrive`, `LegaMove`, `Steelforce/…_Line` | **Taules** (`table`) | «Estructura de taula»: només 3D |
 | `Tischgestelle_…/Trimanis` | Taules (`table`) | «Guia de taula»: només 3D |
@@ -58,7 +69,7 @@ subfamílies: el nom del ZIP de taules diu «Moebelfuesse» però una `LegaDrive
 només les paraules de la carpeta que no diu ja el nom («Pota de taula 46048», no «Pota de taula de taula»).
 
 **El diàleg d'importar** (`HardwareImportDialog`): el resum per tipus («742 tiradors, 71 potes i 111 només 3D es poden
-importar · N no es poden importar (sense STEP)»), un filtre per tipus amb els que hi són (Frontisses · Plaques · Tiradors
+importar · N no es poden importar (sense STEP ni vistes DXF) · M ja són a la biblioteca»), un filtre per tipus amb els que hi són (Frontisses · Plaques · Tiradors
 · Potes · Només 3D · No es poden importar; cap «Altres» que amagui res que es pugui importar) i a cada fila **què se'n
 farà** (`HettichArticle.plan`, `importPlan`): «Frontissa · cassoleta i forats del STEP», «Placa · forats del STEP»,
 «Només 3D: sense forats (…per què)». La dels tiradors i les potes es calcula llegint el STEP de les files que es veuen,
@@ -154,14 +165,18 @@ simplificades (Douglas–Peucker 0,02 mm, centèsimes: unes desenes de kB per vi
 (`registerView`): de les 8 orientacions d'eixos, la que fa caure els seus cercles sobre els forats proposats (error mitjà
 < 0,5 mm). A les frontisses, la frontal hi encaixa i l'editor la posa de fons sota els forats; a les plaques sovint no
 (els forats hi són traus). Els `CONNECTIONPOINTS` (tres punts per vista, els mateixos girats a cada vista) es desen tal
-com venen a l'item (`imported.points`); de moment no fan res (vegeu §6).
+com venen a l'item (`imported.points`); de moment no fan res (vegeu §8).
 
 ## 4. Model de dades (preferències v20 i v21, additiu)
 
 `HardwareItem` (`core/model/hardware.ts`):
 - `imported`: `maker`, `article`, `folders` (alemany, com venen), `files`, `asset` (id `hwa-…` de la taula Dexie
   `hardwareAssets`, **v6**: el GLB i les vistes; no viatja amb les còpies dels mòduls ni al `.moble`), `bbox` (marc del
-  ferratge), `points`, `proposed` (els mecanitzats tal com es van llegir), `notes`, **`confirmed`** i `damaged`.
+  ferratge), `points`, `proposed` (els mecanitzats tal com es van llegir), `notes`, **`confirmed`** i `damaged`. Opcionals
+  (additius, sense canviar la versió): `proposedParams` (els números de la proposta que no són als mecanitzats: Ø i
+  fondària de la cassoleta, Ø i distància `pitch` del tirador) i **`update`** (una proposta nova pendent de revisar: forats,
+  números, notes i caixa; §6). Un «només 2D» no porta `bbox`. L'asset (`HardwareAsset`) porta també els plànols de
+  muntatge (`docs`: nom i fitxer) i les vistes sense registrar, els seus cercles (`circles`).
 - **Importat malmès** (`sanitizeImportedHardware`, a `HardwareItemSchema`: preferències, mòduls, fronts i `.moble`): un
   item amb `imported` que no passa l'esquema (un camp dolent a `imported`, un mecanitzat dolent…) **no es repara camp a
   camp** (sense `imported` seria una frontissa que forada; amb mitges dades, mig ferratge): es llegeix **inert**, amb la
@@ -277,7 +292,61 @@ STEP_Cadro_….zip i, si hi són, STEP_Schiebetuersysteme.zip i STEP_Falttuersys
 articles, distàncies de tiradors reals, potes, i un tirador real confirmat fent els forats a 96 en una porta i un calaix).
 **Proves d'or idèntiques.**
 
-## 6. Pendent
+## 6. Tornar a importar: s'amplia (no es repeteix)
+
+«Al importar, mira si ja existeix la referència i si el document importat porta nova informació, la col·loques» (de
+l'usuari). La clau és **(fabricant, article)** (`importedMatches`; també les còpies que n'hagi fet l'usuari). Un article
+que ja és a la biblioteca **s'amplia** (`core/import/merge.ts`, `mergeImported`; Dexie a `hardwareImport.ts`):
+
+- **STEP**: el 3D (GLB, només si encara no en té: OpenCascade no es torna a fer), la caixa i, si no en tenia (un «només
+  2D» o un «només 3D» que ara troba el patró), la proposta sencera (motor, categoria, forats, números), sense confirmar,
+  amb el mateix id i nom. Les vistes desades abans del STEP (sense registrar) porten els seus cercles (`HardwareView.circles`)
+  i es registren ara sobre els forats (`registerStoredView`).
+- **DWG/DXF**: les vistes que falten (una de registrada guanya a una que no) i els punts de connexió.
+- **Plànols de muntatge** (`dxf_einbau`, exemples d'aplicació, PDF; tipus de fitxer `ref`, `refArticles`): s'adjunten tal
+  com venen a l'asset (`HardwareAsset.docs`) dels articles que nomenen (si són al lot o a la biblioteca: un ZIP de plànols
+  sol amplia els que ja tens, `groupHettich(files, known)`); a l'editor, «Plànols» per baixar-los. El 3DS no s'importa.
+- **Mai es toca un mecanitzat confirmat**: si els fitxers nous donen una altra proposta (els forats `proposed` o els números
+  que en surten, `imported.proposedParams`: Ø i fondària de la cassoleta, Ø i distància del tirador), es desa a part,
+  **`imported.update`**, i l'editor ho diu: «Hi ha una proposta nova: revisar», amb la d'ara i la nova costat per costat,
+  «Aplicar la nova (sense confirmar)» (`applyImportUpdate`: els forats nous, sense confirmar; els mobles que el fan servir
+  passen a la còpia sense confirmar, com «Treure la confirmació») i «Descartar-la» (`dismissImportUpdate`). La targeta
+  porta «Proposta nova». El mateix si l'item no està confirmat però se n'han editat els forats (`isUnedited`); si no
+  s'ha editat, els forats nous directament (sense confirmar). La placa aparellada es queda. Una proposta nova que no troba
+  el patró (només 3D) no treu els forats d'un que en té.
+- Un importat **malmès** es torna a fer amb el nou (mateix id i nom, sense confirmar).
+- **Dins d'un mateix lot**, els fitxers del mateix article de diversos ZIP (STEP + DWG/DXF deixats alhora) ja van junts
+  (`groupHettich`). El diàleg diu a cada fila si és **«Nou»** o «Ja existeix · s'hi afegeix: 3D i forats proposats, vistes
+  2D i plànols de muntatge» (o «res de nou», `mergePreview` / `mergeText`), i a dalt quants ja hi són.
+
+Els noms automàtics d'abans («Porta corredissa ferratges DWG DXF Schiebetuersysteme SlideLine 55 9060402»: la carpeta de
+l'usuari i la del ZIP es colaven al nom) passen al d'ara **en llegir les preferències** (`migrateImportedNames`, a
+`parseSettings`), només si encara són el que posava l'app (`legacyHettichLabel`, també amb « 2» de repetit); un nom
+canviat per l'usuari es queda. Les carpetes desades es netegen igual. Idempotent, sense canviar la versió.
+
+Proves: `core/import/merge.test.ts` (només 2D → frontissa; confirmada: res tocat i els mateixos forats al moble, pendent,
+aplicar → sense confirmar; mateixa proposta; editada; placa; tirador; DXF sobre STEP; malmès; noms d'abans i lectura de
+les preferències) i `core/import/hettichMerge.roundtrip.test.ts` (amb els ZIP reals a `HETTICH_DIR`, `HETTICH2_DIR` o
+`HETTICH_DXF_DIR`: el `DWG_DXF_Griffe.zip` sol —769 articles, 21 només al DWG/DXF— i amb el STEP; DXF primer i STEP
+després → tirador de 96 mm amb el mateix id; la vista frontal del Sensys 9071205 desada abans del STEP es registra; el
+perfil SlideLine 55 9060402 fa 1560 × 12,5 × 6,5).
+
+## 7. La biblioteca: categoria › sèrie, i el 3D dels «només 3D»
+
+- **Graella per categoria i sèrie** (Preferències › Ferratges): dins de cada categoria, els que no tenen sèrie (els de
+  l'app, fitxers solts, Cadro) a dalt i un plegable per sèrie (`FoldGroup` `nested`, amb el nombre; ordenades pel nom; les
+  obertes es recorden a la sessió, `mobles:md-open:hardware-series`; el contingut es munta en obrir-les). La cerca (també
+  pel número d'article i la sèrie) obre les que hi coincideixen.
+- **Enquadrar un «només 3D»** (`modelCamera`, a `mountCamera` amb l'aspecte del visor; el 3D de l'editor i la miniatura):
+  la càmera més a prop que veu tota la caixa (els vuit vèrtexs, perspectiva exacta). Un objecte **llarg i prim** (el costat
+  llarg ≥ 5 × el del mig, horitzontal: un perfil de 1560 × 12,5 × 6,5) es mira **al llarg** des d'un extrem, de costat una
+  mica més que la meitat del camp horitzontal i de dalt ~10°: la secció de l'extrem de davant es veu (~30–45 % de l'alçada)
+  i el llarg travessa la imatge en perspectiva (de costat, sortia una ratlla). La resta, de 3/4.
+- **Cotes** al 3D de l'editor: les tres arestes de la caixa que surten del vèrtex del costat de la càmera, amb la mida en
+  mm (sprites de mida constant, no `Html`), i la resta de la caixa fina. Al resum de la targeta, «1560 × 12,5 × 6,5 mm».
+- **Només 2D** (sense STEP): la targeta mostra la vista frontal del DXF (no hi ha 3D) i l'editor ho explica.
+
+## 8. Pendent
 
 Plans per als «només 3D» d'ara (cap regla encara; el que caldria per fer-ne els forats):
 
@@ -313,3 +382,10 @@ Plans per als «només 3D» d'ara (cap regla encara; el que caldria per fer-ne e
 - **Taules de muntatge** (`dxf_einbau`, PDF): «Topfabstand», gruixos i encavalcament per a cada combinació; ara la
   distància de la cassoleta (`cupOffset`) i la placa són les de l'usuari.
 - Altres fabricants (Blum: BXF/CAD), frontisses de vidre i d'alumini (sense forats a la porta) i el `bom`.
+- **Ampliar (§6)**: els plànols de muntatge per família que no nomenen cap article (la majoria de `dxf_einbau` i dels
+  exemples d'aplicació, p. ex. `Intermat_9936_B125_KB_2d/…`) no s'adjunten (caldria saber quin tipus de frontissa és
+  cada article; el STEP no ho diu). Un 3D ja fet no es torna a fer amb un STEP nou (si el fitxer del fabricant canviés la
+  forma, caldria esborrar-lo i tornar-lo a importar). Els importats d'abans de `proposedParams` amb el Ø, la fondària o
+  la distància editats i confirmats poden mostrar una «proposta nova» que només és la del fitxer (es descarta).
+- **Només 2D**: sense el STEP no hi ha caixa ni 3D; la miniatura és la vista frontal del DXF. Un `.3ds` podria donar el
+  3D (sense forats), però no es llegeix.
