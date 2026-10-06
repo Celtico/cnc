@@ -1,5 +1,9 @@
+import type { ThreeEvent } from "@react-three/fiber"
 import { useEffect, useMemo, useState } from "react"
-import { MeshStandardMaterial, type Object3D } from "three"
+import { Box3, MeshStandardMaterial, Vector3 } from "three"
+import { BoxFrame } from "./BoxFrame"
+import { useViewerCursor } from "./cursor"
+import { FittingToolbar, type FittingToolbarActions } from "./FittingToolbar"
 import type { Panel, PanelFitting } from "../../core/model"
 import { fittingMatrix, hingeVolumes } from "./hardwareShapes"
 import { loadedModel, loadModel, onModelsLoaded } from "./models3d"
@@ -97,42 +101,102 @@ export function PanelHardware({ panel }: { panel: Panel }) {
 const GHOST = new MeshStandardMaterial({ color: "#b9bdc2", metalness: 0.5, roughness: 0.5, transparent: true, opacity: 0.5 })
 GHOST.userData.shared = true
 
+type V3 = [number, number, number]
+/** Marge de la zona per clicar un ferratge col·locat (unitats de l'escena: 8 mm). */
+const PICK_PAD = 0.008
+
 /** Un ferratge importat: el seu model (GLB de Dexie) o, mentre no hi és, la caixa. */
-function Fitting({ f, thickness }: { f: PanelFitting; thickness: number }) {
+function Fitting({ f, thickness, model = true, selected = false, toolbar, onSelect, actions }: { f: PanelFitting; thickness: number; model?: boolean; selected?: boolean; toolbar?: boolean; onSelect?: (id: string) => void; actions?: FittingToolbarActions }) {
   const [, setTick] = useState(0)
+  const [hover, setHover] = useState(false)
+  const cursor = useViewerCursor()
   useEffect(() => {
-    if (!f.asset) return
+    if (!f.asset || !model) return
     void loadModel(f.asset)
     return onModelsLoaded(() => setTick((t) => t + 1))
-  }, [f.asset])
-  const l = f.asset ? loadedModel(f.asset) : null
-  const obj = useMemo<Object3D | null>(() => (l ? l.root.clone(true) : null), [l])
+  }, [f.asset, model])
+  const l = f.asset && model ? loadedModel(f.asset) : null
+  // La còpia del model i la seva caixa al marc del ferratge (per al contorn de selecció si el fitxer no en porta).
+  const own = useMemo(() => {
+    if (!l) return null
+    const obj = l.root.clone(true)
+    obj.updateMatrixWorld(true)
+    const box = new Box3().setFromObject(obj)
+    return { obj, box: box.isEmpty() ? null : box }
+  }, [l])
   const m = useMemo(() => fittingMatrix(f, thickness), [f, thickness])
   const b = f.bbox
+  // Caixa per al contorn i la barra (unitats de l'escena): la del fitxer, si no la del model.
+  const frame = useMemo((): { c: V3; s: V3 } | null => {
+    if (b) return { c: [((b.min[0] + b.max[0]) / 2) * S, ((b.min[1] + b.max[1]) / 2) * S, ((b.min[2] + b.max[2]) / 2) * S], s: [(b.max[0] - b.min[0]) * S, (b.max[1] - b.min[1]) * S, (b.max[2] - b.min[2]) * S] }
+    const bx = own?.box
+    if (!bx) return null
+    const c = bx.getCenter(new Vector3()), sz = bx.getSize(new Vector3())
+    return { c: [c.x, c.y, c.z], s: [sz.x, sz.y, sz.z] }
+  }, [b, own])
+  const id = f.placement
+  // Clic i ratolí a sobre: només els col·locats a mà (els de les regles són del mòdul).
+  const pick = id && onSelect
+    ? {
+        onClick: (e: ThreeEvent<MouseEvent>) => {
+          if (e.delta > 4) return
+          e.stopPropagation()
+          onSelect(id)
+        },
+        onPointerOver: (e: ThreeEvent<PointerEvent>) => {
+          if (e.pointerType !== "mouse") return
+          e.stopPropagation()
+          setHover(true)
+          cursor.hover("pointer")
+        },
+        onPointerOut: () => {
+          setHover(false)
+          cursor.hover(null)
+        },
+      }
+    : {}
   return (
     <group matrix={m} matrixAutoUpdate={false}>
-      {obj ? (
-        <primitive object={obj} />
+      {model && (own ? (
+        <primitive object={own.obj} />
       ) : b ? (
-        <mesh position={[((b.min[0] + b.max[0]) / 2) * S, ((b.min[1] + b.max[1]) / 2) * S, ((b.min[2] + b.max[2]) / 2) * S]} material={GHOST}>
-          <boxGeometry args={[(b.max[0] - b.min[0]) * S, (b.max[1] - b.min[1]) * S, (b.max[2] - b.min[2]) * S]} />
+        <mesh position={frame!.c} material={GHOST}>
+          <boxGeometry args={frame!.s} />
         </mesh>
-      ) : null}
+      ) : null)}
+      {/* Zona per clicar-lo: la seva caixa sencera i una mica més (un ferratge és petit; el model pot tenir forats). */}
+      {model && id && onSelect && frame && (
+        <mesh position={frame.c} visible={false} {...pick}>
+          <boxGeometry args={[frame.s[0] + PICK_PAD, frame.s[1] + PICK_PAD, frame.s[2] + PICK_PAD]} />
+        </mesh>
+      )}
+      {frame && (selected || (hover && model)) && (
+        <group position={frame.c}>
+          <BoxFrame w={frame.s[0] + 0.004} h={frame.s[1] + 0.004} d={frame.s[2] + 0.004} strong={selected} />
+        </group>
+      )}
+      {selected && toolbar && actions && id && frame && <FittingToolbar id={id} at={[frame.c[0], frame.c[1], frame.c[2] + frame.s[2] / 2]} actions={actions} />}
     </group>
   )
 }
 
 /**
- * Ferratges importats d'un fabricant (frontisses a la porta, plaques al lateral, `Panel.fittings`): el GLB fet en
- * importar, al seu lloc i girat amb la peça (porta oberta, explosionat). Si el model no hi és, la caixa. Només visual.
+ * Ferratges importats d'un fabricant (frontisses a la porta, plaques al lateral, `Panel.fittings`) i els col·locats a mà
+ * (`kind: "item"`, amb l'id del col·locat): el GLB fet en importar, al seu lloc i girat amb la peça (porta oberta,
+ * explosionat: van dins del grup de la peça). Si el model no hi és, la caixa. Només visual. Un col·locat es tria clicant-lo
+ * (`onSelect`): contorn en passar-hi per sobre i, triat, contorn gruixut amb la barra flotant (`actions`) al primer de
+ * les seves repeticions. Amb «Ferratges» amagat (`models` fals) només es dibuixa el contorn del triat.
  */
-export function PanelFittings({ panel }: { panel: Panel }) {
+export function PanelFittings({ panel, models = true, selected, onSelect, actions }: { panel: Panel; models?: boolean; selected?: string | null; onSelect?: (id: string) => void; actions?: FittingToolbarActions }) {
   if (!panel.fittings?.length) return null
+  const first = selected ? panel.fittings.findIndex((f) => f.placement === selected) : -1
   return (
     <group>
-      {panel.fittings.map((f, i) => (
-        <Fitting key={i} f={f} thickness={panel.thickness} />
-      ))}
+      {panel.fittings.map((f, i) =>
+        models || (selected && f.placement === selected) ? (
+          <Fitting key={i} f={f} thickness={panel.thickness} model={models} selected={!!selected && f.placement === selected} toolbar={i === first} onSelect={onSelect} actions={actions} />
+        ) : null,
+      )}
     </group>
   )
 }

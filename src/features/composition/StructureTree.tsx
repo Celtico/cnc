@@ -41,6 +41,8 @@ export type Selection =
   | { kind: "group"; id: string }
   /** Model 3D (`.glb`, `Composition.models`). */
   | { kind: "model"; id: string }
+  /** Ferratge col·locat a mà (`Composition.hardwarePlacements`, id del col·locat): es tria al 3D o a «Ferratges» del mòdul. */
+  | { kind: "hardware"; id: string }
 
 /**
  * Arbre d'estructura (com l'outliner de Figma o Fusion): el moble, els seus mòduls amb

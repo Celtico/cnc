@@ -11,7 +11,7 @@ import type { StepMesh } from "./stepMesh"
 const BLANK = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII="
 
 /** Malles d'un `.3ds` (unitats del fitxer = mm, com els de Hettich) o d'un `.dae` (unitat del fitxer → mm). */
-export async function meshFileMeshes(kind: "3ds" | "dae", bytes: Uint8Array): Promise<StepMesh[]> {
+export async function meshFileMeshes(kind: "3ds" | "dae" | "glb", bytes: Uint8Array): Promise<StepMesh[]> {
   const three = await import("three")
   const manager = new three.LoadingManager()
   manager.setURLModifier(() => BLANK)
@@ -21,6 +21,13 @@ export async function meshFileMeshes(kind: "3ds" | "dae", bytes: Uint8Array): Pr
     const { TDSLoader } = await import("three/examples/jsm/loaders/TDSLoader.js")
     const buf = bytes.slice().buffer
     root = new TDSLoader(manager).parse(buf, "")
+  } else if (kind === "glb") {
+    // glTF (`.glb` o un `.gltf` amb tot a dins): metres → mm, les coordenades del fitxer.
+    const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js")
+    const { MeshoptDecoder } = await import("three/examples/jsm/libs/meshopt_decoder.module.js")
+    const gltf = await new GLTFLoader(manager).setMeshoptDecoder(MeshoptDecoder).parseAsync(bytes.slice().buffer, "")
+    root = gltf.scene
+    scale = 1000
   } else {
     const { ColladaLoader } = await import("three/examples/jsm/loaders/ColladaLoader.js")
     const r = new ColladaLoader(manager).parse(new TextDecoder().decode(bytes), "")
@@ -50,7 +57,7 @@ export async function meshFileMeshes(kind: "3ds" | "dae", bytes: Uint8Array): Pr
     const index = g.index ? new Uint32Array(g.index.array) : Uint32Array.from({ length: pos.count }, (_, i) => i)
     out.push({ position, index })
   })
-  if (!out.length) throw new Error(`El ${kind === "3ds" ? "3DS" : "Collada (.dae)"} no porta cap malla.`)
+  if (!out.length) throw new Error(`El ${kind === "3ds" ? "3DS" : kind === "glb" ? "glTF (.glb)" : "Collada (.dae)"} no porta cap malla.`)
   return out
 }
 

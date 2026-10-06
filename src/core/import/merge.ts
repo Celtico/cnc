@@ -2,6 +2,7 @@ import { deepEqual, isDamagedImport, type HardwareItem, type HardwareTarget } fr
 import { isRefKind, VIEW_KINDS, type HettichArticle, type HettichFile } from "./hettich"
 import { importFileKind, makerOf } from "./makers"
 import { holeParams } from "./importItem"
+import { MODEL_3D_KINDS } from "./formats"
 
 /**
  * **Tornar a importar un article que ja és a la biblioteca l'amplia** (no en fa un de repetit): la clau és (fabricant,
@@ -43,7 +44,7 @@ export function mergePreview(library: readonly HardwareItem[], a: Pick<HettichAr
   const adds: string[] = []
   const kinds = new Set(a.files.map((f) => f.kind))
   const holes = a.kind === "hinge" || a.kind === "plate" || a.kind === "handle" || a.kind === "leg"
-  const D3 = ["step", "iges", "3ds", "dae"] as const
+  const D3 = MODEL_3D_KINDS
   if (kinds.has("step") && !have.has("step")) adds.push(holes ? "3D i forats proposats" : "3D")
   else if (D3.some((k) => kinds.has(k)) && !D3.some((k) => have.has(k))) adds.push("3D")
   if (VIEW_KINDS.some((k) => kinds.has(k) && !have.has(k))) adds.push("vistes 2D")

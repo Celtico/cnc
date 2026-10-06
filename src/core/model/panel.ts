@@ -215,6 +215,8 @@ export const PanelSchema = z.object({
     face: z.enum(["A", "B"]),
     v: z.tuple([z.number(), z.number()]),
     bbox: z.object({ min: Vec3Schema, max: Vec3Schema }).optional(),
+    /** El ferratge col·locat a mà (`HardwarePlacement.id`) que el dibuixa: per triar-lo al 3D. */
+    placement: z.string().optional(),
   })).optional(),
   placement: PlacementSchema,
 })

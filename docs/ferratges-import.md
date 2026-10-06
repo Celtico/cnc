@@ -408,8 +408,17 @@ llarg d'un eix) → el gir del model 3D. Els altres grups de l'item (p. ex. la r
   polígon) amb l'etiqueta `fitting`: **DXF, .xcs, STEP i CSV sense cap canvi** (els forats de la cara B fan la 2a cara;
   `hardwarePlaceExports.test.ts`). Sense ferratges col·locats, el moble és idèntic (**proves d'or sense canvis**).
 - **3D** (Opcions de vista › Ferratges): el model (GLB de l'importat) o, sense, un volum de l'extensió de les operacions,
-  al punt de referència de cada còpia (`Panel.fittings`, `kind: "item"`), amb l'eix v al llarg del segon eix de la peça
-  (girat amb «Gir del model»).
+  al punt de referència de cada còpia (`Panel.fittings`, `kind: "item"` amb `placement` = l'id del col·locat), amb l'eix
+  v al llarg del segon eix de la peça (girat amb «Gir del model»). El model es veu **també quan no fa cap forat**
+  (importat sense confirmar, mecanitzat dolent o que no hi cap): és només visual, i així es troba i es tria al 3D.
+- **A l'editor, com un configurador de fabricant**: «Ferratges» del mòdul (i de la peça lliure) llista **els col·locats**
+  (Editar · Duplicar · Eliminar; tocar-ne un el tria) i, a sota, **els de les regles** del mòdul comptats
+  (`core/build/hardwareSummary.ts`, `ruleHardwareCounts`: frontisses, tiradors, guies, braços d'abatible, potes, push,
+  imants, espigues). Un col·locat **es tria clicant-lo al 3D** (selecció `hardware`): contorn en passar-hi per sobre i,
+  triat, contorn gruixut i una **barra flotant** Duplicar · Editar · Eliminar (`viewer/FittingToolbar.tsx`: malles de
+  mida constant amb les icones del catàleg, `iconTexture.ts`); l'inspector passa a «Col·locació» del ferratge (amb Pare,
+  anterior/següent). Supr l'elimina, Ctrl/⌘ D el duplica (50 mm més cap a dins al llarg de P, `duplicatePlacement`),
+  i tot va al desfer comú. Segueix la seva peça a l'explosió i en obrir portes.
 - **`.moble` v3** (`MOBLE_PLACEMENTS_VERSION`): un moble amb ferratges col·locats es desa com a v3 (una app d'abans els
   trauria en silenci); amb importats i sense col·locats, v2; si no, v1.
 
@@ -570,7 +579,13 @@ carpeta o ZIP, també barrejats amb els de Hettich) a «Importar del fabricant»
   «Sense assignar» del generador; s'hi poden col·locar, però **no es confirma** fins que s'assignen a una peça
   («Assignar a», `reassignMachining`; `confirmProblem`).
 - **3D**: el STEP (tots els d'un joc, un sol GLB); si no n'hi ha, el `.dae` (`ColladaLoader`, la unitat del fitxer a mm,
-  sense el gir de Z amunt). Sense 3D, només els mecanitzats («sense 3D»).
+  sense el gir de Z amunt) i, si tampoc, un `.glb`/`.gltf` (`GLTFLoader`, metres a mm). Sense 3D, només els mecanitzats
+  («sense 3D»).
+- **Fitxers solts barrejats**: Blum els baixa d'un en un; «Triar fitxers…» n'accepta molts alhora de qualsevol tipus que
+  llegeixi l'importador. **Una sola taula de formats** (`core/import/formats.ts`, `IMPORT_FORMATS`) fa el classificador
+  (`hettichFileKind`, `importFileKind`) i l'`accept` del selector (`IMPORT_ACCEPT`, amb els tipus MIME: el diàleg del Mac
+  deixava el `.dae` en gris), així no poden divergir; els que es llisten però no es llegeixen (DWG, SAT, MAX, `*.mpr`,
+  `*.fmc`/`*.hop`/`*.tcn`) també hi són i surten amb la nota. Test `formats.test.ts`.
 - **Tornar a importar**: com Hettich (§6), clau **Blum + article**: un `.pgm` nou és «mecanitzats exactes (Xilog)»; un
   item confirmat no es toca (va a `imported.update.machining`).
 - **El diàleg**: el fabricant a cada fila i a dalt («Blum · 51 articles en 198 fitxers · 8 amb mecanitzats exactes

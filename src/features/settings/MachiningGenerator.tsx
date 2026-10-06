@@ -1,7 +1,8 @@
 import { Box, Button, HStack, IconButton, Stack, Switch, Text, Textarea } from "@chakra-ui/react"
 import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
-import { LuFileUp, LuPlus, LuTrash2 } from "react-icons/lu"
-import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
+import { LuFactory, LuFileUp, LuPlus, LuTrash2 } from "react-icons/lu"
+import { ChoiceChips, FormRow } from "../../components/FormRow"
+import { FoldItem } from "../../components/Fold"
 import { NumberField } from "../../components/NumRow"
 import { toaster } from "../../components/ui/toaster"
 import { readDxf } from "../../core/import/dxf"
@@ -75,7 +76,14 @@ export function MachiningGenerator({ item, onChange, tools, ui: [ui, patch] }: {
     }
   }
   return (
-    <FormSection title="Generador de mecanitzats">
+    <FoldItem
+      id="hw-generator"
+      icon={LuFactory}
+      title="Generador de mecanitzats"
+      badge={ops.length ? `${ops.length} ${ops.length === 1 ? "operació" : "operacions"}${problems.length ? " · revisar" : ""}` : undefined}
+      badgePalette={problems.length ? "orange" : undefined}
+      defaultOpen={item.engine === "model"}
+    >
       <Text fontSize="sm" color="fg.muted">
         Què fa el ferratge a cada peça quan el col·loques a mà al moble (Editor › mòdul o peça lliure › «Ferratges»): forats, ranures, caixeres i
         contorns, mesurats des del <strong>punt de referència</strong> (on el col·loques; la creu del dibuix) o des d'un cantell de la peça. Les mides
@@ -164,7 +172,7 @@ export function MachiningGenerator({ item, onChange, tools, ui: [ui, patch] }: {
           }}
         />
       </HStack>
-    </FormSection>
+    </FoldItem>
   )
 }
 
