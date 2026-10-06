@@ -632,7 +632,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   rombe; Alt trenca el reflex; doble clic node ↔ corba), **Ploma** (clic = cantonada, clic i arrossegar = manegadors
   simètrics, clicar el primer node o Retorn tanca, Esc descarta), **Corbar** (arrossegar el punt del mig d'un costat,
   `bendEdge`; clic a un node commuta corba/cantonada) i **Esborrar**; clic al punt del mig afegeix un node sense canviar la
-  forma (`splitEdge`, de Casteljau); radi de cantonada; imant a la quadrícula (Ctrl/⌘: lliure, 0,1 mm). **Maj = angles de 45°** (per decisió de l'usuari, com a Figma: `snapAngle45`) al node nou de la ploma respecte de l'anterior i als manegadors (arrossegant-los o amb la ploma); la línia del manegador es posa vermella. **Desfer/refer propi** (el comú, botons
+  forma (`splitEdge`, de Casteljau); radi de cantonada; opcions de la dreta en `FoldItem` `size="sm"` (**Selecció**, oberta,
+  amb el node a la insígnia i la paperera a `actions` · **Arrodonir la punta** · **Com funciona**, tancades) i el dibuix
+  quadrat com a molt de `100dvh − 300px` (`--profile-canvas`): a l'ordinador (1440 × 900, 1280 × 720) no es desplaça; mides
+  i àrea a la línia de sota; imant a la quadrícula (Ctrl/⌘: lliure, 0,1 mm). **Maj = angles de 45°** (per decisió de l'usuari, com a Figma: `snapAngle45`) al node nou de la ploma respecte de l'anterior i als manegadors (arrossegant-los o amb la ploma); la línia del manegador es posa vermella. **Desfer/refer propi** (el comú, botons
   `UndoRedo` al costat de les eines; dreceres només dins del diàleg, `useUndoKeys scope`; el moble del darrere no es toca):
   un pas per arrossegada, per node de la ploma (⌘Z treu l'últim; sense cap, cancel·la la ploma i torna la forma d'abans) i
   per acció; escriure a X/Y o les fletxes seguides, un pas (`group`). Es reinicia en obrir-lo. (Què fan Maj/Alt a la
@@ -1127,9 +1130,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     (`clamp(140px, 24dvh, 220px)`), i el formulari a la dreta (560 px, amb el seu desplaçament); a `md`, bola de 360 px i la
     tira al costat; al mòbil, bola quadrada a tota l'amplada i la tira a sota (3:1); el formulari (760 px com a molt) a
     sota, tot es desplaça. Les targetes de la graella es queden en CSS. Formulari (`MaterialCard`): nom editable amb Duplicar/Eliminar i
-    les seccions **Aspecte** (Acabat, Color/Espècie/Foto, mapes de relleu i brillantor, Rajola, Textura, Joc PBR) i
-    **Fabricació** (Gruixos `ThicknessChips`, Cantell, Veta, Categoria; als de simulació només Categoria) i, als taulers i
-    fons, **«Per defecte als mòduls nous»** (`DefaultPick`). Esc i ✕ tornen a la graella; **Esc amb el nom a mig escriure
+    les seccions plegables (`FoldItem` sols, recordats a la sessió; només **Aspecte** obert d'entrada; insígnia amb
+    l'acabat i la categoria) **Aspecte** (`LuSwatchBook`; Acabat, Color/Espècie/Foto, mapes de relleu i brillantor, Rajola, Textura, Joc PBR) i
+    **Fabricació** (`LuFactory`; Gruixos `ThicknessChips`, Cantell, Veta, Categoria; als de simulació només Categoria) i, als taulers i
+    fons, **«Per defecte als mòduls nous»** (`LuStar`, `DefaultPick`). Esc i ✕ tornen a la graella; **Esc amb el nom a mig escriure
     només el desfà** (no tanca). El focus va al ✕ (al mòbil no surt el teclat), llevat d'un material nou.
   - Un material nou (biblioteca o «En blanc»; nom únic, «Material nou 2», a la categoria oberta si només n'hi ha una) o
     duplicat **obre l'editor** amb el nom seleccionat; «Obrir el meu» de la biblioteca també l'obre. **Eliminar** des de
@@ -1284,10 +1288,17 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
     `defaultOpen`, p. ex. els xocs amb l'obertura actual) i es recorda durant la sessió (`mobles:section:<id>`).
   - **`FoldGroup`**: un acordió compartit; `multiple={false}` = un obert alhora (taulells, forats, eines); estat controlat
     (`value`), de la sessió (`storageKey`, una llista: galeries) o intern; `forceOpen` = la cerca de les galeries.
-  - El contingut es munta en obrir (`lazyMount`). `section`, `card` i `row` el desmunten en tancar i **no animen l'alçada ni
-    retallen** (`overflow: visible`): el `Collapsible` de Chakra es quedava a alçada 0 si el contingut arribava tard
-    (comprovat als inspectors recarregant amb seccions obertes i canviant el contingut amb la secció oberta).
-  - Les Preferències no en fan servir (`SettingsGroup`, sempre obert).
+  - **Totes les variants s'obren i es tanquen amb animació** (200 ms `ease`, com les galeries; res amb
+    `prefers-reduced-motion`) amb el contingut propi `FoldContent` (no l'`ItemContent` de Chakra): una graella d'una fila
+    que passa de `grid-template-rows: 0fr` a `1fr` (+ opacitat), **sense mesurar l'alçada**, així el contingut que arriba
+    tard o canvia amb la secció oberta mai es queda a alçada 0 (el `Collapsible` de Chakra sí). Porta els atributs de
+    l'acordió (`role="region"`, ids, `data-part="item-content"`, `data-state`); estructura `item-content` › `.fold-clip`
+    › `ItemBody` (selectors de `layout.css`). El contingut es munta en obrir (`lazyMount`); `section`, `card` i `row` el
+    desmunten quan s'acaba d'animar el tancament (`transitionend` o un temporitzador) i, oberts i quiets, no retallen
+    (`overflow: visible`; només mentre s'anima); les galeries el conserven amagat (`visibility: hidden`). Comprovat
+    recarregant amb seccions obertes, Peça → Talla amb seccions obertes i l'alçada fotograma a fotograma.
+  - Les pàgines de Preferències no en fan servir (`SettingsGroup`, sempre obert); l'editor de materials sí (Aspecte ·
+    Fabricació · Per defecte).
 - **`PageHeader`** (`components/PageHeader`, Mobles · Ambients · Objectes · Preferències): títol gran i l'explicació
   (`actions` opcional, a sota del títol).
 - **`SearchBar`** (`components/SearchBar`): **tots els cercadors** (galeries, `MasterDetail`, Materials, calaix del
@@ -1427,6 +1438,8 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Màquines | Màquina CNC (pàgina, grups del detall i export Maestro) · Per defecte · Triar carpeta… · Triar fitxers… | `LuFactory` · `LuStar` · `LuFolderOpen` · `LuFileUp` |
 | Màquines | Regles de mecanitzat · Distribució dels taulers (girar peces) · Vista CAM | `LuRoute` · `LuRotateCw` · `LuMonitorCog` |
 | Materials | Posar una foto / mapa (relleu, brillantor) · Carregar joc de textures… · Carpeta… | `LuImagePlus` · `LuFileUp` · `LuFolderOpen` |
+| Materials | Seccions de l'editor: Aspecte · Fabricació · Per defecte als mòduls nous | `LuSwatchBook` · `LuFactory` · `LuStar` |
+| Editor de formes | Selecció (node) · Arrodonir la punta · Com funciona (ajuda) | `LuMousePointer2` · `LuSquircle` · `LuCircleHelp` |
 
 Les vistes Davant, Darrere, Esquerra, Dreta i Dalt van amb **text**, sense icona (no hi ha vista «3D»: és «Enquadrar»). Compte: a Lucide, `square-split-horizontal`
 té la línia **vertical**. Per això és la de "dividir en vertical".

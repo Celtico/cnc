@@ -41,10 +41,10 @@
   padding-inline: 0;
   --gallery-px: var(--accordion-padding-x);
 }
-:root .gallery-accordion > [data-part="item"] > [data-part="item-content"] > .chakra-accordion__itemBody {
+:root .gallery-accordion > [data-part="item"] > [data-part="item-content"] > .fold-clip > .chakra-accordion__itemBody {
   padding: 0;
 }
-:root .gallery-accordion > [data-part="item"] > [data-part="item-content"] > .chakra-accordion__itemBody > p {
+:root .gallery-accordion > [data-part="item"] > [data-part="item-content"] > .fold-clip > .chakra-accordion__itemBody > p {
   padding: 12px var(--gallery-px);
 }
 /* Barra d'eines de l'historial («Grup nou», «Seleccionar», «Esborrar»): de vora a vora, enganxada a la
@@ -66,7 +66,7 @@
   min-height: 2lh;
 }
 /* Les graelles de targetes, amb el mateix marge a dalt i a baix que als costats. */
-:root .gallery-accordion .inner-accordion > [data-part="item"] > [data-part="item-content"] > .chakra-accordion__itemBody {
+:root .gallery-accordion .inner-accordion > [data-part="item"] > [data-part="item-content"] > .fold-clip > .chakra-accordion__itemBody {
   padding-block: var(--gallery-px);
 }
 /* L'últim, tancat, ja toca la vora de la secció: sense la seva línia (si no, en sortirien dues). */
