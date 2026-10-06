@@ -1,5 +1,5 @@
-import { Badge, Box, Button, CloseButton, Dialog, Drawer, Editable, Flex, HStack, IconButton, Menu, Portal, SegmentGroup, SimpleGrid, Slider, Stack, Switch, Text } from "@chakra-ui/react"
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { Alert, Badge, Box, Button, CloseButton, Dialog, Drawer, Editable, Flex, HStack, IconButton, Menu, Portal, SegmentGroup, SimpleGrid, Slider, Stack, Switch, Text } from "@chakra-ui/react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   LuBox,
   LuMove,
@@ -9,7 +9,6 @@ import {
   LuChevronDown,
   LuChevronRight,
   LuCopy,
-  LuEllipsis,
   LuGrid3X3,
   LuGroup,
   LuHouse,
@@ -43,6 +42,7 @@ import {
   LuLock,
   LuLockOpen,
   LuUndoDot,
+  LuTriangleAlert,
 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { RenderDialog, type SceneGetter } from "../../components/viewer/render/RenderDialog"
@@ -72,6 +72,9 @@ import {
   setWallEnds,
   wallLength,
   type Ambient,
+  ambientSummary,
+  type AmbientItemKind,
+  type AmbientSummary,
   type CameraPose,
   type AmbientItem,
   type BlockItem,
@@ -107,7 +110,7 @@ import { itemName, useItemGeometries, type ItemGeometry } from "./ambientData"
 import { PlanCanvas } from "./PlanCanvas"
 import { AMBIENT_TAB_KEY, ambientBox, type Selection, type Tool } from "./planGeom"
 import { useDebouncedSave } from "../useDebouncedSave"
-import { SectionLabel } from "../../components/SectionLabel"
+import { TreeRow, TreeRowMenu, TreeSection } from "../../components/TreeRow"
 
 const TOOLS: { id: Tool; label: string; key: string; icon: typeof LuPenTool }[] = [
   { id: "select", label: "Seleccionar i moure", key: "V", icon: LuMousePointer2 },
@@ -265,6 +268,17 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const isObjItem = (it: AmbientItem) => it.kind === "block" || !!projects?.some((p) => p.id === it.projectId && isObject(p))
   const item = sel?.kind === "item" ? amb.items.find((i) => i.id === sel.id) : undefined
   const wall = sel?.kind === "wall" ? amb.walls.find((w) => w.id === sel.id) : undefined
+  // Un moble enllaçat que ja no és a la llista surt com a absent (mentre la llista es llegeix, encara no).
+  const kindOf = (it: AmbientItem): AmbientItemKind =>
+    it.kind === "block" ? "object" : !projects ? "moble" : !projects.some((p) => p.id === it.projectId) ? "missing" : isObjItem(it) ? "object" : "moble"
+  const summary = ambientSummary(amb, kindOf)
+  // Parets: un grup plegable a l'arbre (com els grups de l'editor); s'obre sol en triar-ne una al plànol.
+  const [wallsOpen, setWallsOpen] = useState(false)
+  const [lastWall, setLastWall] = useState<string | undefined>(undefined)
+  if (wall?.id !== lastWall) {
+    setLastWall(wall?.id)
+    if (wall) setWallsOpen(true)
+  }
 
   const center = (): PlanPt => {
     const b = ambientBox({ ...amb, items: [] }, geos)
@@ -289,6 +303,9 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   // Després de desfer, la selecció pot apuntar a un element que ja no hi és: llavors no es fa res (si no,
   // una fletxa o Supr afegien un pas buit de desfer i es perdia el refer).
   const selIds = sel?.kind === "item" ? (amb.items.some((i) => i.id === sel.id) ? [sel.id] : []) : sel?.kind === "group" ? groupIds(amb, sel.id) : []
+  // L'ambient és el seleccionat quan no n'hi ha cap altre (clic al buit, Esc, la fila de dalt de l'arbre): com el moble a
+  // l'editor. Una selecció que ja no hi és (després de desfer) també torna a l'ambient.
+  const ambientSel = !item && !(sel?.kind === "group" && selIds.length) && !wall
   const remove = () => {
     if (!sel) return
     if (sel.kind === "wall" ? !amb.walls.some((w) => w.id === sel.id) : !selIds.length) return setSel(null)
@@ -357,19 +374,21 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const groups = [...new Set(amb.items.map((i) => i.group).filter((g): g is string => !!g))]
   const itemRow = (it: AmbientItem, depth: number) => {
     const g = geos.get(it.id)
+    const missing = kindOf(it) === "missing"
+    const label = names.get(it.id) ?? ""
     return (
-      <ElementRow
+      <TreeRow
         key={it.id}
         depth={depth}
-        icon={isObjItem(it) ? <LuSofa /> : <LuBox />}
-        iconColor={isObjItem(it) ? "fg.muted" : "wood.fg"}
-        label={names.get(it.id) ?? ""}
-        right={g ? `${Math.round(g.w)} × ${Math.round(g.d)}` : undefined}
-        active={sel?.kind === "item" && sel.id === it.id}
-        inGroup={sel?.kind === "group" && sel.id === it.group}
+        icon={missing ? <LuTriangleAlert /> : isObjItem(it) ? <LuSofa /> : <LuBox />}
+        iconColor={missing ? "fg.error" : isObjItem(it) ? "fg.muted" : "wood.fg"}
+        label={label}
+        hint={g ? `${Math.round(g.w)} × ${Math.round(g.d)}` : undefined}
+        selected={sel?.kind === "item" && sel.id === it.id}
+        highlighted={sel?.kind === "group" && sel.id === it.group}
         onClick={() => (select({ kind: "item", id: it.id }), setTool("select"))}
         menu={
-          <>
+          <TreeRowMenu label={`Accions de «${label}»`}>
             <Menu.Item value="dup" onClick={() => {
               const d = duplicateItems(amb, [it.id])
               change(d.ambient, true)
@@ -406,7 +425,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
             }}>
               <LuTrash2 /> Treure de l'ambient
             </Menu.Item>
-          </>
+          </TreeRowMenu>
         }
       />
     )
@@ -529,13 +548,54 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
       <Workspace
         ws={ws}
         left={
-          <Stack gap={3}>
-            <Stack gap={0.5}>
-              {/* Com els grups de l'arbre de l'editor: títol i, a la dreta, què s'hi pot afegir. */}
-              <HStack justify="space-between" pb={1} px={1}>
-                <SectionLabel>
-                  Elements
-                </SectionLabel>
+          // Com l'Estructura de l'editor (mateixes files, `TreeRow`): l'ambient a dalt (el selecciona), les parets en un
+          // grup plegable i els elements amb els seus grups.
+          <Stack gap={0.5} role="tree" aria-label="Estructura de l'ambient" fontSize="sm">
+            <TreeRow icon={<LuHouse />} label={name || "Ambient"} bold depth={0} selected={ambientSel} onClick={() => (select(null), ws.setMobilePane("props"), setTool("select"))} />
+            {amb.walls.length > 0 && (
+              <Box>
+                <TreeRow
+                  depth={1}
+                  icon={wallsOpen ? <LuChevronDown /> : <LuChevronRight />}
+                  onToggle={() => setWallsOpen((o) => !o)}
+                  toggleLabel={wallsOpen ? "Plegar «Parets»" : "Desplegar «Parets»"}
+                  label="Parets"
+                  hint={`${amb.walls.length} · ${formatLength(Math.round(summary.wallLength), unit)}`}
+                  selected={false}
+                  highlighted={!!wall}
+                  onClick={() => setWallsOpen((o) => !o)}
+                />
+                {wallsOpen &&
+                  amb.walls.map((w, i) => (
+                    <TreeRow
+                      key={w.id}
+                      depth={2}
+                      icon={<LuBrickWall />}
+                      label={`Paret ${i + 1}`}
+                      hint={`${formatLength(Math.round(wallLength(w)), unit)}${w.openings?.length ? ` · ${w.openings.length} ${w.openings.length === 1 ? "obertura" : "obertures"}` : ""}`}
+                      selected={sel?.kind === "wall" && sel.id === w.id}
+                      onClick={() => (select({ kind: "wall", id: w.id }), setTool("select"))}
+                      menu={
+                        <TreeRowMenu label={`Accions de «Paret ${i + 1}»`}>
+                          <Menu.Item
+                            value="del"
+                            color="fg.error"
+                            onClick={() => {
+                              change({ ...amb, walls: amb.walls.filter((x) => x.id !== w.id) }, true)
+                              if (sel?.kind === "wall" && sel.id === w.id) setSel(null)
+                            }}
+                          >
+                            <LuTrash2 /> Eliminar la paret
+                          </Menu.Item>
+                        </TreeRowMenu>
+                      }
+                    />
+                  ))}
+              </Box>
+            )}
+            {/* Com els grups de l'arbre de l'editor: títol i, a la dreta, què s'hi pot afegir. */}
+            <TreeSection
+              actions={
                 <HStack gap={0.5}>
                   <Button size="2xs" variant="ghost" onClick={() => setPicker(true)}>
                     <LuPlus /> Moble
@@ -544,50 +604,48 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                     <LuPlus /> Objecte
                   </Button>
                 </HStack>
-              </HStack>
-              {/* Elements i grups (plegables), amb el menú ⋯ de cada fila, com l'arbre de l'editor. */}
-              {listRows.map((r) =>
-                r.kind === "group" ? (
-                  <Box key={`g:${r.name}`}>
-                    <ElementRow
-                      icon={<LuGroup />}
-                      label={r.name}
-                      right={`${r.items.length}`}
-                      active={sel?.kind === "group" && sel.id === r.name}
-                      folded={folded.includes(r.name)}
-                      onFold={() => setFolded(folded.includes(r.name) ? folded.filter((f) => f !== r.name) : [...folded, r.name])}
-                      onClick={() => (groupSel(r.name), setTool("select"))}
-                      menu={
-                        <>
-                          <Menu.Item value="dup" onClick={() => {
-                            const d = duplicateItems(amb, groupIds(amb, r.name))
-                            change(d.ambient, true)
-                            if (d.group) groupSel(d.group)
-                          }}>
-                            <LuCopy /> Duplicar el grup
-                          </Menu.Item>
-                          <Menu.Item value="ungroup" onClick={() => (change(setItemGroup(amb, groupIds(amb, r.name), undefined), true), setSel(null))}>
-                            <LuUngroup /> Desagrupar
-                          </Menu.Item>
-                          <Menu.Separator />
-                          <Menu.Item value="del" color="fg.error" onClick={() => (change(removeItems(amb, groupIds(amb, r.name)), true), setSel(null))}>
-                            <LuTrash2 /> Eliminar el grup
-                          </Menu.Item>
-                        </>
-                      }
-                    />
-                    {!folded.includes(r.name) && r.items.map((it) => itemRow(it, 1))}
-                  </Box>
-                ) : (
-                  itemRow(r.item, 0)
-                ),
-              )}
-              {amb.walls.length > 0 && (
-                <Text fontSize="xs" color="fg.muted" mt={2}>
-                  {amb.walls.length} {amb.walls.length === 1 ? "paret" : "parets"} · {formatLength(Math.round(amb.walls.reduce((n, w) => n + wallLength(w), 0)), unit)}
-                </Text>
-              )}
-            </Stack>
+              }
+            >
+              Elements
+            </TreeSection>
+            {/* Elements i grups (plegables), amb el menú ⋯ de cada fila, com l'arbre de l'editor. */}
+            {listRows.map((r) => {
+              if (r.kind === "item") return itemRow(r.item, 1)
+              const open = !folded.includes(r.name)
+              return (
+                <Box key={`g:${r.name}`}>
+                  <TreeRow
+                    depth={1}
+                    icon={open ? <LuChevronDown /> : <LuChevronRight />}
+                    onToggle={() => setFolded(open ? [...folded, r.name] : folded.filter((f) => f !== r.name))}
+                    toggleLabel={open ? `Plegar «${r.name}»` : `Desplegar «${r.name}»`}
+                    label={r.name}
+                    hint={`${r.items.length} ${r.items.length === 1 ? "element" : "elements"}`}
+                    selected={sel?.kind === "group" && sel.id === r.name}
+                    onClick={() => (groupSel(r.name), setTool("select"))}
+                    menu={
+                      <TreeRowMenu label={`Accions de «${r.name}»`}>
+                        <Menu.Item value="dup" onClick={() => {
+                          const d = duplicateItems(amb, groupIds(amb, r.name))
+                          change(d.ambient, true)
+                          if (d.group) groupSel(d.group)
+                        }}>
+                          <LuCopy /> Duplicar el grup
+                        </Menu.Item>
+                        <Menu.Item value="ungroup" onClick={() => (change(setItemGroup(amb, groupIds(amb, r.name), undefined), true), setSel(null))}>
+                          <LuUngroup /> Desagrupar
+                        </Menu.Item>
+                        <Menu.Separator />
+                        <Menu.Item value="del" color="fg.error" onClick={() => (change(removeItems(amb, groupIds(amb, r.name)), true), setSel(null))}>
+                          <LuTrash2 /> Eliminar el grup
+                        </Menu.Item>
+                      </TreeRowMenu>
+                    }
+                  />
+                  {open && r.items.map((it) => itemRow(it, 2))}
+                </Box>
+              )
+            })}
           </Stack>
         }
         right={
@@ -623,9 +681,16 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                 onPick={(id) => select({ kind: "item", id })}
               />
             ) : wall ? (
-              <WallInspector key={wall.id} wall={wall} materials={settings.materials} onPatch={(p) => patchWall(wall.id, p)} onDelete={remove} />
+              <WallInspector key={wall.id} wall={wall} label={`Paret ${amb.walls.indexOf(wall) + 1}`}materials={settings.materials} onPatch={(p) => patchWall(wall.id, p)} onDelete={remove} />
             ) : (
               <AmbientInspector
+                name={name}
+                summary={summary}
+                size={(() => {
+                  const b = ambientBox({ ...amb, items: [], plan: undefined }, geos)
+                  return b ? { w: b.x1 - b.x0, d: b.y1 - b.y0 } : null
+                })()}
+                onRemoveMissing={() => change(removeItems(amb, summary.missing), true)}
                 amb={amb}
                 materials={simMaterials}
                 wallDefaults={wallDefaults}
@@ -1008,7 +1073,7 @@ function MobleDims({ project, geo }: { project: Project; geo: ItemGeometry }) {
   )
 }
 
-function WallInspector({ wall, materials, onPatch, onDelete }: { wall: Wall; materials: MaterialPref[]; onPatch: (p: Partial<Wall>) => void; onDelete: () => void }) {
+function WallInspector({ wall, label, materials, onPatch, onDelete }: { wall: Wall; label: string;materials: MaterialPref[]; onPatch: (p: Partial<Wall>) => void; onDelete: () => void }) {
   const L = Math.round(wallLength(wall))
   return (
     <Stack gap={0}>
@@ -1017,7 +1082,7 @@ function WallInspector({ wall, materials, onPatch, onDelete }: { wall: Wall; mat
           <LuBrickWall />
         </Box>
         <Text fontWeight="semibold" flex={1}>
-          Paret
+          {label}
         </Text>
         <IconButton aria-label="Eliminar la paret" size="xs" variant="ghost" colorPalette="red" onClick={onDelete}>
           <LuTrash2 />
@@ -1102,6 +1167,10 @@ function WallInspector({ wall, materials, onPatch, onDelete }: { wall: Wall; mat
 }
 
 function AmbientInspector({
+  name,
+  summary: s,
+  size,
+  onRemoveMissing,
   amb,
   materials,
   wallDefaults,
@@ -1110,6 +1179,11 @@ function AmbientInspector({
   onImportPlan,
   onCalibrate,
 }: {
+  name: string
+  summary: AmbientSummary
+  /** Caixa de les parets (mm), si n'hi ha. */
+  size: { w: number; d: number } | null
+  onRemoveMissing: () => void
   amb: Ambient
   materials: MaterialPref[]
   wallDefaults: { thickness: number; height: number }
@@ -1119,8 +1193,56 @@ function AmbientInspector({
   onCalibrate: () => void
 }) {
   const plan = amb.plan
+  const m = (mm: number) => (mm / 1000).toLocaleString("ca-ES", { maximumFractionDigits: 2 })
+  const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`
+  const line = [
+    n(s.walls, "paret", "parets"),
+    s.area > 0 && `${(s.area / 1e6).toLocaleString("ca-ES", { maximumFractionDigits: 1 })} m² de terra`,
+    size && `${m(size.w)} × ${m(size.d)} m`,
+  ].filter(Boolean)
   return (
     <Stack gap={0}>
+      <HStack gap={2} pb={2}>
+        <Box color="wood.fg">
+          <LuHouse />
+        </Box>
+        <Text fontWeight="semibold" truncate flex={1} data-truncate="">
+          {name || "Ambient"}
+        </Text>
+      </HStack>
+      {/* Resum, com el del moble a l'editor (mateix `FoldItem`): què hi ha a l'ambient. */}
+      <FoldItem id="amb-summary" title="Resum" icon={LuHouse} badge={s.missing.length ? `${s.missing.length} ⚠` : undefined} badgePalette={s.missing.length ? "red" : undefined}>
+        <Text fontSize="sm" color="fg.muted">
+          {line.join(" · ")}
+        </Text>
+        <HStack gap={2} wrap="wrap">
+          <Badge variant="subtle">{n(s.mobles, "moble", "mobles")}</Badge>
+          <Badge variant="subtle">{n(s.objects, "objecte", "objectes")}</Badge>
+          {s.windows > 0 && <Badge variant="subtle">{n(s.windows, "finestra", "finestres")}</Badge>}
+          {s.doors > 0 && <Badge variant="subtle">{n(s.doors, "porta", "portes")}</Badge>}
+          {s.glazing > 0 && <Badge variant="subtle">{n(s.glazing, "vidriera", "vidrieres")}</Badge>}
+          {s.groups > 0 && <Badge variant="subtle">{n(s.groups, "grup", "grups")}</Badge>}
+        </HStack>
+        {s.missing.length > 0 && (
+          <Alert.Root status="warning" size="sm">
+            <Alert.Indicator />
+            <Alert.Content>
+              <Alert.Title>{s.missing.length === 1 ? "Un moble ja no hi és" : `${s.missing.length} mobles ja no hi són`}</Alert.Title>
+              <Alert.Description>
+                <Stack gap={2} align="flex-start">
+                  <Text>S'han esborrat de la llista de Mobles o d'Objectes: a l'ambient no es veuen.</Text>
+                  <Button size="xs" variant="outline" onClick={onRemoveMissing}>
+                    <LuTrash2 /> Treure'ls de l'ambient
+                  </Button>
+                </Stack>
+              </Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        )}
+        <Text fontSize="xs" color="fg.muted">
+          Selecciona una paret o un element a l'esquerra (o clica'l al plànol o al 3D) per editar-lo.
+        </Text>
+      </FoldItem>
       <FoldItem id="amb-newwalls" title="Parets noves" icon={LuBrickWall} badge={`${wallDefaults.thickness} · ${wallDefaults.height}`}>
         <NumRow label="Gruix" value={wallDefaults.thickness} min={20} max={1000} step={10} onChange={(thickness) => thickness >= 20 && onWallDefaults({ ...wallDefaults, thickness })} />
         <NumRow label="Alçada" value={wallDefaults.height} min={200} max={10000} step={10} onChange={(height) => height >= 200 && onWallDefaults({ ...wallDefaults, height })} />
@@ -1254,85 +1376,6 @@ function pickPlanImage(): Promise<{ src: string; w: number; h: number } | null> 
     }
     input.click()
   })
-}
-
-/** Fila de la llista d'elements (com les de l'arbre de l'editor): icona, nom, mida i menú ⋯. */
-function ElementRow({
-  icon,
-  iconColor = "wood.fg",
-  label,
-  right,
-  active,
-  inGroup,
-  depth = 0,
-  folded,
-  onFold,
-  onClick,
-  menu,
-}: {
-  icon: ReactNode
-  iconColor?: string
-  label: string
-  right?: string
-  active: boolean
-  inGroup?: boolean
-  depth?: number
-  folded?: boolean
-  onFold?: () => void
-  onClick: () => void
-  menu: ReactNode
-}) {
-  return (
-    <HStack gap={1} pl={1 + depth * 4} pr={1} py={1} rounded="md" bg={active ? "wood.subtle" : inGroup ? "bg.muted" : undefined} _hover={{ bg: active ? "wood.subtle" : "bg.muted" }}>
-      {onFold && (
-        <IconButton aria-label={folded ? "Desplegar el grup" : "Plegar el grup"} size="2xs" variant="ghost" onClick={onFold}>
-          {folded ? <LuChevronRight /> : <LuChevronDown />}
-        </IconButton>
-      )}
-      <HStack as="button" gap={2} flex={1} minW={0} textAlign="left" onClick={onClick}>
-        <Box color={iconColor} flexShrink={0}>
-          {icon}
-        </Box>
-        {/* El nom sencer a la primera línia i la mida a sota (no li treu lloc al nom); els grups, el
-            nombre d'elements al costat. */}
-        {onFold ? (
-          <>
-            <Text fontSize="sm" truncate flex={1} fontWeight="semibold" title={label}>
-              {label}
-            </Text>
-            {right && (
-              <Text fontSize="xs" color="fg.muted" flexShrink={0}>
-                {right}
-              </Text>
-            )}
-          </>
-        ) : (
-          <Stack gap={0} flex={1} minW={0}>
-            <Text fontSize="sm" truncate title={label}>
-              {label}
-            </Text>
-            {right && (
-              <Text fontSize="xs" color="fg.muted" truncate>
-                {right}
-              </Text>
-            )}
-          </Stack>
-        )}
-      </HStack>
-      <Menu.Root positioning={{ placement: "bottom-end" }}>
-        <Menu.Trigger asChild>
-          <IconButton aria-label={`Accions de «${label}»`} size="2xs" variant="ghost">
-            <LuEllipsis />
-          </IconButton>
-        </Menu.Trigger>
-        <Portal>
-          <Menu.Positioner>
-            <Menu.Content>{menu}</Menu.Content>
-          </Menu.Positioner>
-        </Portal>
-      </Menu.Root>
-    </HStack>
-  )
 }
 
 /** Propietats d'un grup: nom, moure i girar el grup sencer, duplicar, desagrupar i eliminar. */

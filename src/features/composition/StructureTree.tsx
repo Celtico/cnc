@@ -1,5 +1,5 @@
-import { Box, HStack, IconButton, Menu, Portal, Spinner, Stack, Text } from "@chakra-ui/react"
-import { createElement, useRef, useState, type ReactNode } from "react"
+import { Box, HStack, Menu, Stack, Text } from "@chakra-ui/react"
+import { createElement, useRef, useState } from "react"
 import {
   LuArrowLeft,
   LuArrowRight,
@@ -7,7 +7,6 @@ import {
   LuChevronDown,
   LuChevronRight,
   LuCopy,
-  LuEllipsis,
   LuGroup,
   LuUngroup,
   LuPlus,
@@ -25,7 +24,7 @@ import { MODEL_FORMAT_HELP, defaultElementName, freePartFor, refFor, refFromPres
 import { useSettings } from "../settings/SettingsContext"
 import { ORIENT_ICON } from "./partOrient"
 import { zoneLabel } from "./zoneLabel"
-import { SectionLabel } from "../../components/SectionLabel"
+import { TreeRow, TreeRowMenu, TreeSection, type TreeRowDnd } from "../../components/TreeRow"
 import { fileAccept } from "../file/fileAccept"
 import { uploadUserModel, type ModelChoice } from "./useModelAssets"
 
@@ -120,7 +119,7 @@ export function StructureTree({
     const b = comp.modules.find((m) => m.id === id)
     return !!a && !!b && rowOf(a) === rowOf(b)
   }
-  const dnd = (kind: DragKind, id: string): RowDnd => ({
+  const dnd = (kind: DragKind, id: string): TreeRowDnd => ({
     dragging: drag?.id === id,
     indicator: over?.id === id && canDrop(kind, id) ? (over.after ? "after" : "before") : null,
     onStart: () => setDrag({ kind, id }),
@@ -140,7 +139,7 @@ export function StructureTree({
     },
   })
   // La fila d'un grup: s'hi pot deixar una peça (entra al grup).
-  const groupDnd = (g: string): RowDnd => {
+  const groupDnd = (g: string): TreeRowDnd => {
     const ok = () => drag?.kind === "part" && (comp.parts ?? []).find((q) => q.id === drag.id)?.group !== g
     return {
       noDrag: true,
@@ -223,7 +222,7 @@ export function StructureTree({
 
   return (
     <Stack gap={0.5} role="tree" aria-label={compositionKind(comp) === "objecte" ? "Estructura de l'objecte" : "Estructura del moble"} fontSize="sm">
-      <Row icon={<LuBox />} label={name || "Moble"} bold selected={selection.kind === "moble"} onClick={() => onSelect({ kind: "moble" })} depth={0} />
+      <TreeRow icon={<LuBox />} label={name || "Moble"} bold selected={selection.kind === "moble"} onClick={() => onSelect({ kind: "moble" })} depth={0} />
       {/* Un + per a cada tipus d'element (per decisió de l'usuari: així es veu que n'hi ha tres): demana el nom (un per
           defecte, seleccionat) i crea l'element, sense més opcions (es configura a l'inspector). */}
       {adding && (
@@ -268,7 +267,7 @@ export function StructureTree({
           if (m) addModel(m, m.name)
         }}
       />
-      {!onlyParts && <SectionTitle onAdd={() => setAdding("module")} addLabel="Afegir mòdul">Mòduls</SectionTitle>}
+      {!onlyParts && <TreeSection onAdd={() => setAdding("module")} addLabel="Afegir mòdul">Mòduls</TreeSection>}
       {!onlyParts && rows.map(({ row, label }) => (
         <Box key={row}>
           {label && (
@@ -280,7 +279,7 @@ export function StructureTree({
         const open = openId === m.id
         return (
           <Box key={m.id}>
-            <Row
+            <TreeRow
               depth={1}
               icon={open ? <LuChevronDown /> : <LuChevronRight />}
               onToggle={() => toggle(m.id)}
@@ -291,7 +290,7 @@ export function StructureTree({
               onClick={() => onSelect({ kind: "module", id: m.id })}
               dnd={dnd("module", m.id)}
               menu={
-                <RowMenu label={`Opcions de «${m.name}»`}>
+                <TreeRowMenu label={`Opcions de «${m.name}»`}>
                   <Menu.Item value="up" disabled={neighbourIndex(i, -1) < 0} onClick={() => move(i, -1)}>
                     <LuArrowLeft /> Moure a l'esquerra
                   </Menu.Item>
@@ -305,7 +304,7 @@ export function StructureTree({
                   <Menu.Item value="del" color="fg.error" disabled={comp.modules.length <= 1} onClick={() => remove(i)}>
                     <LuTrash2 /> Eliminar
                   </Menu.Item>
-                </RowMenu>
+                </TreeRowMenu>
               }
             />
             {open && <ZoneRows zone={m.root} depth={2} moduleId={m.id} selection={selection} onSelect={onSelect} root />}
@@ -316,14 +315,14 @@ export function StructureTree({
       ))}
 
       {/* Peces lliures (flat-pack): com els objectes, però són peces de debò amb encaixos. */}
-      <SectionTitle onAdd={() => setAdding("part")} addLabel="Afegir peça lliure">Peces lliures</SectionTitle>
+      <TreeSection onAdd={() => setAdding("part")} addLabel="Afegir peça lliure">Peces lliures</TreeSection>
       {(() => {
         const seen = new Set<string>()
         const partRow = (r: (typeof parts)[number], depth: number) => {
           const Icon = r.effect === "cut" ? LuScissors : ORIENT_ICON[r.orient]
           const groups = partGroups(parts).filter((g) => g !== r.group)
           return (
-            <Row
+            <TreeRow
               key={r.id}
               depth={depth}
               icon={<Icon />}
@@ -333,7 +332,7 @@ export function StructureTree({
               onClick={() => onSelect({ kind: "part", id: r.id })}
               dnd={dnd("part", r.id)}
               menu={
-                <RowMenu label={`Opcions de «${r.name}»`}>
+                <TreeRowMenu label={`Opcions de «${r.name}»`}>
                   <Menu.Item
                     value="dup"
                     onClick={() => {
@@ -362,7 +361,7 @@ export function StructureTree({
                   <Menu.Item value="del" color="fg.error" onClick={() => removePart(r.id)}>
                     <LuTrash2 /> Eliminar
                   </Menu.Item>
-                </RowMenu>
+                </TreeRowMenu>
               }
             />
           )
@@ -376,7 +375,7 @@ export function StructureTree({
           const open = openGroups.has(g)
           return (
             <Box key={`g:${g}`}>
-              <Row
+              <TreeRow
                 depth={1}
                 icon={open ? <LuChevronDown /> : <LuChevronRight />}
                 onToggle={() => toggleGroup(g)}
@@ -387,7 +386,7 @@ export function StructureTree({
                 selected={selection.kind === "group" && selection.id === g}
                 onClick={() => onSelect({ kind: "group", id: g })}
                 menu={
-                  <RowMenu label={`Opcions de «${g}»`}>
+                  <TreeRowMenu label={`Opcions de «${g}»`}>
                     <Menu.Item
                       value="dup"
                       onClick={() => {
@@ -412,7 +411,7 @@ export function StructureTree({
                     >
                       <LuTrash2 /> Eliminar el grup
                     </Menu.Item>
-                  </RowMenu>
+                  </TreeRowMenu>
                 }
               />
               {open && members.map((q) => partRow(q, 2))}
@@ -454,7 +453,7 @@ export function StructureTree({
 
       {/* + d'objectes: els de Preferències › Objectes de referència (per decisió de l'usuari) o un en blanc. */}
       {showRefs && (
-      <SectionTitle
+      <TreeSection
         addLabel="Afegir objecte de referència"
         hideAdd={isObject}
         menu={
@@ -491,10 +490,10 @@ export function StructureTree({
         }
       >
         Objectes de referència
-      </SectionTitle>
+      </TreeSection>
       )}
       {showRefs && comp.references.map((r) => (
-        <Row
+        <TreeRow
           key={r.id}
           depth={1}
           icon={<LuScan />}
@@ -504,7 +503,7 @@ export function StructureTree({
           onClick={() => onSelect({ kind: "ref", id: r.id })}
           dnd={dnd("ref", r.id)}
           menu={
-            <RowMenu label={`Opcions de «${r.name}»`}>
+            <TreeRowMenu label={`Opcions de «${r.name}»`}>
               {!isObject && (
                 <Menu.Item
                   value="dup"
@@ -520,14 +519,14 @@ export function StructureTree({
               <Menu.Item value="del" color="fg.error" onClick={() => removeRef(r.id)}>
                 <LuTrash2 /> Eliminar
               </Menu.Item>
-            </RowMenu>
+            </TreeRowMenu>
           }
         />
       ))}
 
       {/* Models 3D (plantes, decoració…): només es veuen; es col·loquen com les peces lliures. */}
       {showModels && (
-      <SectionTitle
+      <TreeSection
         addLabel="Pujar un model 3D (.glb)"
         hideAdd={!isObject}
         busy={uploading}
@@ -555,10 +554,10 @@ export function StructureTree({
         }
       >
         Models 3D
-      </SectionTitle>
+      </TreeSection>
       )}
       {showModels && models.map((g) => (
-        <Row
+        <TreeRow
           key={g.id}
           depth={1}
           icon={<LuSprout />}
@@ -567,7 +566,7 @@ export function StructureTree({
           selected={selection.kind === "model" && selection.id === g.id}
           onClick={() => onSelect({ kind: "model", id: g.id })}
           menu={
-            <RowMenu label={`Opcions de «${g.name}»`}>
+            <TreeRowMenu label={`Opcions de «${g.name}»`}>
               {isObject && (
                 <Menu.Item
                   value="dup"
@@ -583,7 +582,7 @@ export function StructureTree({
               <Menu.Item value="del" color="fg.error" onClick={() => removeModel(g.id)}>
                 <LuTrash2 /> Eliminar
               </Menu.Item>
-            </RowMenu>
+            </TreeRowMenu>
           }
         />
       ))}
@@ -613,213 +612,10 @@ function ZoneRows({
   const icon = createElement(zoneIcon(zone, { root }))
   return (
     <>
-      <Row depth={depth} icon={icon} label={zoneLabel(zone, { root })} selected={selected} onClick={() => onSelect({ kind: "zone", moduleId, zoneId: zone.id })} muted />
+      <TreeRow depth={depth} icon={icon} label={zoneLabel(zone, { root })} selected={selected} onClick={() => onSelect({ kind: "zone", moduleId, zoneId: zone.id })} muted />
       {zone.split?.children.map((c) => (
         <ZoneRows key={c.id} zone={c} depth={depth + 1} moduleId={moduleId} selection={selection} onSelect={onSelect} />
       ))}
     </>
-  )
-}
-
-interface RowDnd {
-  /** Només s'hi pot deixar (la fila no s'arrossega). */
-  noDrag?: boolean
-  dragging: boolean
-  indicator: DropIndicator
-  onStart: () => void
-  /** Torna false si no s'hi pot deixar (p. ex. un mòdul d'una altra fila). */
-  onOver: (after: boolean) => boolean
-  onDrop: (after: boolean) => void
-  onEnd: () => void
-}
-
-/** Indicador de la fila de destí: línia abans/després, o la fila marcada si hi entra (grup). */
-type DropIndicator = "before" | "after" | "inside" | null
-
-function Row({
-  icon,
-  label,
-  hint,
-  selected,
-  onClick,
-  depth,
-  bold,
-  muted,
-  menu,
-  onToggle,
-  toggleLabel,
-  dnd,
-}: {
-  /** Arrossegar per ordenar: la fila es pot agafar i deixar abans/després d'una altra. */
-  dnd?: RowDnd
-  /** Si hi és, la icona és una fletxa que plega/desplega sense seleccionar la fila. */
-  onToggle?: () => void
-  toggleLabel?: string
-  icon: ReactNode
-  label: string
-  hint?: string
-  selected: boolean
-  onClick: () => void
-  depth: number
-  bold?: boolean
-  muted?: boolean
-  menu?: ReactNode
-}) {
-  return (
-    <HStack
-      role="treeitem"
-      aria-selected={selected}
-      gap={2}
-      pl={`${depth * 14 + 6}px`}
-      pr={1}
-      py={1}
-      rounded="md"
-      bg={selected ? "wood.muted" : undefined}
-      color={selected ? "wood.fg" : muted ? "fg.muted" : "fg"}
-      _hover={{ bg: selected ? "wood.muted" : "bg.muted" }}
-      onClick={onClick}
-      className="group"
-      minH="30px"
-      position="relative"
-      opacity={dnd?.dragging ? 0.4 : 1}
-      draggable={!!dnd && !dnd.noDrag}
-      onDragStart={
-        dnd
-          ? (e) => {
-              e.dataTransfer.effectAllowed = "move"
-              e.dataTransfer.setData("text/plain", label)
-              dnd.onStart()
-            }
-          : undefined
-      }
-      onDragOver={
-        dnd
-          ? (e) => {
-              const r = e.currentTarget.getBoundingClientRect()
-              if (dnd.onOver(e.clientY > r.top + r.height / 2)) {
-                e.preventDefault()
-                e.dataTransfer.dropEffect = "move"
-              }
-            }
-          : undefined
-      }
-      onDrop={
-        dnd
-          ? (e) => {
-              e.preventDefault()
-              const r = e.currentTarget.getBoundingClientRect()
-              dnd.onDrop(e.clientY > r.top + r.height / 2)
-            }
-          : undefined
-      }
-      onDragEnd={dnd?.onEnd}
-      outline={dnd?.indicator === "inside" ? "2px solid" : undefined}
-      outlineColor={dnd?.indicator === "inside" ? "wood.solid" : undefined}
-      outlineOffset="-2px"
-      _before={
-        dnd?.indicator && dnd.indicator !== "inside"
-          ? { content: '""', position: "absolute", left: `${depth * 14 + 6}px`, right: 1, height: "2px", bg: "wood.solid", borderRadius: "full", pointerEvents: "none", ...(dnd.indicator === "before" ? { top: "-1px" } : { bottom: "-1px" }) }
-          : undefined
-      }
-    >
-      {onToggle ? (
-        <Box
-          as="button"
-          aria-label={toggleLabel}
-          aria-expanded={toggleLabel?.startsWith("Plegar")}
-          flexShrink={0}
-          fontSize="sm"
-          color={selected ? "wood.fg" : "fg.muted"}
-          rounded="sm"
-          p={0.5}
-          m={-0.5}
-          _hover={{ bg: "bg.emphasized", color: "fg" }}
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggle()
-          }}
-        >
-          {icon}
-        </Box>
-      ) : (
-        <Box flexShrink={0} fontSize="sm" color={selected ? "wood.fg" : "fg.muted"}>
-          {icon}
-        </Box>
-      )}
-      <Text flex={1} truncate fontWeight={bold || selected ? "semibold" : "normal"}>
-        {label}
-      </Text>
-      {/* Mides arrodonides al mm i, si no hi caben, tallades: el nom té preferència. */}
-      {hint && (
-        <Text fontSize="xs" color="fg.subtle" flexShrink={1} maxW="45%" truncate>
-          {hint}
-        </Text>
-      )}
-      {menu && (
-        <Box flexShrink={0} opacity={selected ? 1 : 0} _groupHover={{ opacity: 1 }} onClick={(e) => e.stopPropagation()}>
-          {menu}
-        </Box>
-      )}
-    </HStack>
-  )
-}
-
-function RowMenu({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <Menu.Root positioning={{ placement: "bottom-end" }}>
-      <Menu.Trigger asChild>
-        <IconButton aria-label={label} size="2xs" variant="ghost">
-          <LuEllipsis />
-        </IconButton>
-      </Menu.Trigger>
-      <Portal>
-        <Menu.Positioner>
-          <Menu.Content>{children}</Menu.Content>
-        </Menu.Positioner>
-      </Portal>
-    </Menu.Root>
-  )
-}
-
-/** Títol d'un grup de l'arbre (mòduls, peces lliures, objectes de referència, models 3D) amb el seu + per afegir-ne. */
-function SectionTitle({ children, onAdd, addLabel, busy, menu, hideAdd }: { children: ReactNode; onAdd?: () => void; addLabel: string; busy?: boolean; menu?: ReactNode; hideAdd?: boolean }) {
-  // Sense + (grup que ja no s'ofereix en aquest tipus de document però que encara en té): només el títol.
-  if (hideAdd)
-    return (
-      <HStack pt={3} pb={1} px={1} minH="6">
-        <SectionLabel>{children}</SectionLabel>
-      </HStack>
-    )
-  const plus = (
-    <IconButton aria-label={addLabel} title={busy ? "Optimitzant el model…" : addLabel} size="2xs" variant="ghost" onClick={onAdd} disabled={busy} aria-busy={busy}>
-      {busy ? <Spinner size="xs" /> : <LuPlus />}
-    </IconButton>
-  )
-  // Amb `menu`, el + obre un menú (les opcions per afegir-ne); si no, afegeix directament.
-  if (menu)
-    return (
-      <HStack justify="space-between" pt={3} pb={1} px={1}>
-        <SectionLabel>{children}</SectionLabel>
-        <Menu.Root positioning={{ placement: "bottom-end" }}>
-          <Menu.Trigger asChild>{plus}</Menu.Trigger>
-          <Portal>
-            <Menu.Positioner>
-              <Menu.Content maxW="340px" maxH="70vh" overflowY="auto">
-                {menu}
-              </Menu.Content>
-            </Menu.Positioner>
-          </Portal>
-        </Menu.Root>
-      </HStack>
-    )
-  return (
-    <HStack justify="space-between" pt={3} pb={1} px={1}>
-      <SectionLabel>
-        {children}
-      </SectionLabel>
-      <IconButton aria-label={addLabel} title={busy ? "Optimitzant el model…" : addLabel} size="2xs" variant="ghost" onClick={onAdd} disabled={busy} aria-busy={busy}>
-        {busy ? <Spinner size="xs" /> : <LuPlus />}
-      </IconButton>
-    </HStack>
   )
 }

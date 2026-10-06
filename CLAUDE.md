@@ -856,9 +856,15 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   creen de nous: els `BLOCK_PRESETS` són ara objectes (`object-<id>`). Tot es dibuixa pel mateix camí: build → peces →
   `buildScene`.
 - **Editor** (`features/ambients/AmbientEditor.tsx`, sobre `Workspace`): pestanyes **Plànol · 3D** a dalt al mig del visor
-  (es recorda, `AMBIENT_TAB_KEY`; els creats del catàleg s'obren al 3D); llista «Elements» a l'esquerra amb «+ Moble» ·
-  «+ Objecte»; inspector (element, bloc, paret, grup, ambient) en `FoldItem` (Posició, Mides generals, Bloc, Mides i
-  material, Finestres i portes, Parets noves, Acabats, Plànol de fons, Elements).
+  (es recorda, `AMBIENT_TAB_KEY`; els creats del catàleg s'obren al 3D). **Arbre a l'esquerra com l'Estructura de
+  l'editor** (mateixes files, `TreeRow`): fila de dalt amb `LuHouse` i el nom de l'ambient, que el selecciona (= cap
+  selecció, `sel === null`: clic al buit i Esc fan el mateix; Supr no hi fa res); grup plegable **Parets** («Paret N» amb
+  la llargada; triar-ne una = la selecció `wall` del plànol, que l'obre sola); **Elements** amb «+ Moble» · «+ Objecte»
+  (`TreeSection actions`) i els grups. Un moble que ja no hi és surt amb `LuTriangleAlert`. Inspector (element, bloc,
+  paret, grup, ambient) en `FoldItem`; el de l'ambient comença amb **Resum** (com el del moble: parets, m² de terra de
+  les habitacions tancades —`floorArea`, als eixos—, caixa, mobles, objectes, finestres, portes, vidrieres, grups i un
+  avís amb «Treure'ls de l'ambient» si en falta algun; `ambientSummary` a `core/model/ambient.ts`), després Parets noves,
+  Acabats, Plànol de fons.
 - **Plànol** (`PlanCanvas`, com Figma): roda o dos dits per desplaçar, Ctrl/⌘ + roda o pessigar per fer zoom al punt, espai
   + arrossegar; − / + i l'escala (1:50…) a baix a la dreta; la barra d'eines flota a dalt. Eines en columna a l'esquerra: **Seleccionar** (V), **Paret** (P,
   ploma: angle a 15°, imant als extrems, clicar el primer punt tanca, Retorn/Esc/doble clic acaben), **Habitació** (H, rectangle → 4 parets),
@@ -1127,6 +1133,9 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   botons de les cantonades, pestanyes Estructura · Propietats al mòbil, amplades recordades; a l'Editor i als Ambients.
 - **`SceneHelpers`** (`StudioEnvironment`, `SceneAccess`) als visors 3D; **`RenderDialog`** a l'editor i als ambients;
   **`MoveGizmo`**, **`BoxFrame`**; **`ViewOptions`** / **`ViewTile`**.
+- **`TreeRow`** · `TreeRowMenu` · `TreeSection` (`components/TreeRow.tsx`): fila d'arbre (sagnat, triada `wood.muted`,
+  fletxa de plegar, menú ⋯, arrossegar), menú ⋯ i títol de grup amb el + (o `actions`). Estructura de l'editor i arbre
+  dels Ambients.
 - **`NameDialog`** (`components/`): posar un nom (grup nou, canviar el nom, mòdul nou), amb un nom per defecte seleccionat.
 - **`MaterialSelect`** (`settings/MaterialSelect.tsx`) a tot arreu on es tria un material (amb **cercador** a dalt del calaix,
   pel nom i sense accents, que obre les categories amb resultats): un **botó** (fons suau, a tota
