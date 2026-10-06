@@ -18,8 +18,10 @@ const Ctx = createContext<SettingsCtx>({ settings: DEFAULT_SETTINGS, loading: tr
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   useEffect(() => {
-    void loadSettings().then(({ problems }) => {
+    void loadSettings().then(({ problems, readOnly }) => {
       setReady(true)
+      // Les caixes dels ferratges importats d'abans, refetes del seu model (`hardwareBoxes.ts`).
+      if (!readOnly) void import("./hardwareBoxes").then((m) => m.repairImportedBoxes()).catch(() => {})
       if (problems.length) {
         toaster.create({ title: "Preferències amb problemes", description: problems.join(" "), type: "warning", duration: 8000 })
       }

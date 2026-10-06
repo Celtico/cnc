@@ -54,6 +54,8 @@ export interface HardwareProposal {
   holes: ProposedHole[]
   /** Caixa del ferratge al marc local (mm). */
   bbox: { min: V3; max: V3 }
+  /** La caixa és de la malla al marc (`meshesFrameBox`), la mateixa del GLB. */
+  boxFromMesh?: boolean
   /** Què s'ha trobat i què cal revisar (en català). */
   notes: string[]
 }
@@ -67,6 +69,54 @@ export const toLocal = (f: LocalFrame, p: V3): V3 => {
 }
 
 const r2 = (x: number) => Math.round(x * 100) / 100 || 0
+
+/**
+ * **El 3D al marc del ferratge**: les posicions d'una malla (mm, a les coordenades del fitxer tal com les dona
+ * OpenCascade, amb les posicions de les peces d'un conjunt ja aplicades) passades al marc `f` (u, v, n), per `scale`
+ * (`0.001`: metres, el GLB). Les normals, amb `normals: true` (sense origen ni escala). Una sola transformació per al
+ * GLB (`meshesToGlb`) i per a la caixa (`meshesFrameBox`): així la caixa i el model coincideixen sempre.
+ */
+export function meshToFrame(position: ArrayLike<number>, f: LocalFrame, scale = 1, normals = false): Float32Array {
+  const { origin: o, u, v, n } = f
+  const out = new Float32Array(position.length)
+  for (let i = 0; i + 2 < position.length; i += 3) {
+    const x = position[i]! - (normals ? 0 : o[0])
+    const y = position[i + 1]! - (normals ? 0 : o[1])
+    const z = position[i + 2]! - (normals ? 0 : o[2])
+    const k = normals ? 1 : scale
+    out[i] = (x * u[0] + y * u[1] + z * u[2]) * k
+    out[i + 1] = (x * v[0] + y * v[1] + z * v[2]) * k
+    out[i + 2] = (x * n[0] + y * n[1] + z * n[2]) * k
+  }
+  return out
+}
+
+/** Caixa (mm) de posicions ja al marc, arrodonida a 0,01 mm cap a fora (el model sempre hi cap). `null` si no n'hi ha. */
+export function positionsBox(positions: Iterable<ArrayLike<number>>, scale = 1): { min: V3; max: V3 } | null {
+  const min: V3 = [Infinity, Infinity, Infinity]
+  const max: V3 = [-Infinity, -Infinity, -Infinity]
+  for (const p of positions)
+    for (let i = 0; i + 2 < p.length; i += 3)
+      for (let k = 0; k < 3; k++) {
+        const x = p[i + k]! * scale
+        if (x < min[k]!) min[k] = x
+        if (x > max[k]!) max[k] = x
+      }
+  if (!Number.isFinite(min[0])) return null
+  const down = (x: number) => Math.floor(x * 100 + 1e-6) / 100 || 0
+  const up = (x: number) => Math.ceil(x * 100 - 1e-6) / 100 || 0
+  return { min: min.map(down) as V3, max: max.map(up) as V3 }
+}
+
+/**
+ * La caixa (mm) del ferratge **feta amb la mateixa malla i el mateix marc que el GLB** (`meshToFrame`). La dels punts
+ * del STEP (`bboxOf`) no serveix per al 3D: als conjunts (Blum: 20K1101T, 71T453T) els punts són a les coordenades de
+ * cada peça, sense la seva posició dins del conjunt, i hi ha punts de construcció fora del sòlid; la caixa quedava
+ * girada, desplaçada i més gran que el model.
+ */
+export function meshesFrameBox(meshes: readonly { position: ArrayLike<number> }[], f: LocalFrame): { min: V3; max: V3 } | null {
+  return positionsBox(meshes.map((m) => meshToFrame(m.position, f)))
+}
 const parallel = (a: V3, b: V3, tol = 0.02) => Math.abs(Math.abs(dot(a, b)) - 1) < tol
 
 /** Cilindres sencers (o grups de trossos d'un forat allargat) d'un radi entre `rMin` i `rMax`. */

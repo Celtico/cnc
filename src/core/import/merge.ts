@@ -1,4 +1,4 @@
-import { deepEqual, isDamagedImport, type HardwareItem, type HardwareTarget } from "../model"
+import { deepEqual, IMPORT_BOX_VERSION, isDamagedImport, type HardwareItem, type HardwareTarget } from "../model"
 import { isRefKind, VIEW_KINDS, type HettichArticle, type HettichFile } from "./hettich"
 import { importFileKind, makerOf } from "./makers"
 import { holeParams } from "./importItem"
@@ -159,7 +159,10 @@ function mergeProposal(existing: HardwareItem, fresh: HardwareItem, withStep: bo
   if (!ex || !nw) return { item: existing, pendingUpdate: false, upgraded: false }
   if (isDamagedImport(existing)) return { item: { ...fresh, id: existing.id, name: existing.name, imported: { ...nw, ...(ex.asset ? { asset: ex.asset } : {}) } }, pendingUpdate: false, upgraded: true }
   const files = union(ex.files, nw.files)
-  const meta = { ...ex, files, ...(!ex.points?.length && nw.points?.length ? { points: nw.points } : {}) }
+  // La caixa feta del model (la del GLB) passa davant d'una d'abans (dels punts del STEP).
+  const meshBox = (b?: { boxVersion?: number }) => (b?.boxVersion ?? 0) >= IMPORT_BOX_VERSION
+  const newBox = nw.bbox && meshBox(nw) && !meshBox(ex) ? { bbox: nw.bbox, boxVersion: nw.boxVersion } : {}
+  const meta = { ...ex, files, ...(!ex.points?.length && nw.points?.length ? { points: nw.points } : {}), ...newBox }
   const keep = (imported: NonNullable<HardwareItem["imported"]>): MergeResult => ({ item: { ...existing, imported }, pendingUpdate: false, upgraded: false })
   if (!withStep) return keep(meta)
   // Sense forats encara (només 3D o només 2D): la proposta nova sencera (un «només 3D» confirmat porta mecanitzats del
@@ -174,8 +177,8 @@ function mergeProposal(existing: HardwareItem, fresh: HardwareItem, withStep: bo
       upgraded: fresh.engine !== "model",
     }
   }
-  const bbox = ex.bbox ?? nw.bbox
-  const base = { ...meta, ...(bbox ? { bbox } : {}) }
+  const bbox = meta.bbox ?? nw.bbox
+  const base = { ...meta, ...(bbox ? { bbox } : {}), ...(!meta.bbox && nw.boxVersion !== undefined ? { boxVersion: nw.boxVersion } : {}) }
   // La nova no troba el patró, o és d'un altre tipus: es queda la que hi ha.
   if (fresh.engine !== existing.engine) return keep(base)
   const newTargets = nw.proposed
@@ -194,3 +197,22 @@ function mergeProposal(existing: HardwareItem, fresh: HardwareItem, withStep: bo
 
 /** Els fitxers d'un article que s'afegeixen a l'item (els noms, com `imported.files`). */
 export const articleFileNames = (files: readonly HettichFile[]) => files.map((f) => f.path.split("/").pop()!.trim())
+
+/** Els importats amb la caixa d'abans (`boxVersion` < `IMPORT_BOX_VERSION`): s'ha de refer del model desat. */
+export const needsBoxRepair = (it: HardwareItem): boolean => !!it.imported && !it.imported.damaged && (it.imported.boxVersion ?? 0) < IMPORT_BOX_VERSION
+
+/**
+ * Posa a cada importat d'abans la caixa refeta del seu GLB (`boxes`: id → caixa en mm al marc del ferratge, la de la
+ * malla; sense, o `null` = sense model: es queda com era i es torna a provar). Els refets surten amb `boxVersion` al dia. Pur.
+ */
+export function applyBoxRepair(library: readonly HardwareItem[], boxes: ReadonlyMap<string, { min: [number, number, number]; max: [number, number, number] } | null>): { library: HardwareItem[]; changed: boolean } {
+  let changed = false
+  const out = library.map((it) => {
+    if (!needsBoxRepair(it)) return it
+    const box = boxes.get(it.id)
+    if (!box) return it
+    changed = true
+    return { ...it, imported: { ...it.imported!, bbox: box, boxVersion: IMPORT_BOX_VERSION } }
+  })
+  return { library: changed ? out : (library as HardwareItem[]), changed }
+}

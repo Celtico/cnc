@@ -4,7 +4,7 @@ import { DEFAULT_HARDWARE_KIT, DEFAULT_SETTINGS, HardwareItemSchema, defaultModu
 import { groupHettich, hettichFileKind, type HettichArticle } from "./hettich"
 import { legacyHettichLabel, migrateImportedNames } from "./hettichNames"
 import { articleItem, pairPlate, plateItem, setConfirmed, setHandleDistance } from "./importItem"
-import { applyImportUpdate, dismissImportUpdate, isUnedited, mergeImported, mergePreview, mergeText } from "./merge"
+import { applyBoxRepair, applyImportUpdate, dismissImportUpdate, isUnedited, mergeImported, mergePreview, mergeText, needsBoxRepair } from "./merge"
 import { modelProposal, type HardwareProposal } from "./proposal"
 
 /**
@@ -243,5 +243,26 @@ describe("noms dels importats d'abans", () => {
     expect(res.migrated).toBe(true)
     // Les inicials no canvien.
     expect(res.settings.hardwareLibrary.filter((x) => !x.imported)).toEqual(DEFAULT_SETTINGS.hardwareLibrary)
+  })
+})
+
+describe("caixa del model (boxVersion)", () => {
+  const box = (s: number) => ({ min: [0, 0, 0] as [number, number, number], max: [s, s, s] as [number, number, number] })
+  it("la feta del model (la del GLB) marca la versió; la d'abans es refà del GLB i, en tornar a importar, passa davant", () => {
+    const old = fromStep({ ...hingeP(), bbox: box(10) })
+    expect(old.imported?.boxVersion).toBeUndefined()
+    expect(needsBoxRepair(old)).toBe(true)
+    const fresh = fromStep({ ...hingeP(), bbox: box(20), boxFromMesh: true })
+    expect(fresh.imported?.boxVersion).toBe(1)
+    expect(needsBoxRepair(fresh)).toBe(false)
+    // Tornar a importar: la del model substitueix la dels punts; al revés, no.
+    expect(mergeImported(old, fresh, true).item.imported?.bbox).toEqual(box(20))
+    expect(mergeImported(fresh, old, true).item.imported).toMatchObject({ bbox: box(20), boxVersion: 1 })
+    // Reparació en obrir l'app: amb el model, la seva caixa; sense, es queda com era.
+    const fixed = applyBoxRepair([old], new Map([[old.id, box(30)]]))
+    expect(fixed.changed).toBe(true)
+    expect(fixed.library[0]!.imported).toMatchObject({ bbox: box(30), boxVersion: 1 })
+    expect(applyBoxRepair([old], new Map([[old.id, null]]))).toEqual({ library: [old], changed: false })
+    expect(applyBoxRepair(fixed.library, new Map([[old.id, box(40)]])).changed).toBe(false)
   })
 })

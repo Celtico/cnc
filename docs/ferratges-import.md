@@ -554,13 +554,21 @@ carpeta o ZIP, també barrejats amb els de Hettich) a «Importar del fabricant»
   |---|---|---|
   | «bisagra», «CLIP top», INSERTA · `70T`–`79T` | Frontisses · CLIP top | porta |
   | «Placa…», «plate», «Montageplatte» · `173L`/`174L`/`175L`/`175H` | Plaques · CLIP (TIP-ON → Obertura per pressió) | lateral |
-  | AVENTOS, «compás abatible» · `20K`/`20S`/`21F`/`22F`/`24K` | Elevables · AVENTOS HF/HS/HL/HK… | lateral (la fixació frontal, porta) |
-  | «guía», MOVENTO, TANDEM(BOX), LEGRABOX, METABOX, SPACE STEP · `550`/`560`/`750`/`760`, `320K`… | Guies · la marca | lateral |
+  | AVENTOS, «compás abatible» · `2` + generació + família: `20K1` HK-XS, `20K2` HK-S, `22K`/`24K` HK top, `20F`/`21F` HF, `22F` HF top, `20S` HS, `22S` HS top, `20L`/`21L` HL, `22L` HL top | Elevables i abatibles · AVENTOS HK-XS, HF top… | lateral (la fixació frontal, porta) |
+  | «guía», MOVENTO, TANDEM(BOX), LEGRABOX, METABOX, SPACE STEP · `55x`/`56x` TANDEM, `75x` LEGRABOX, `76x` MOVENTO, `32x` METABOX, `35x`–`37x` TANDEMBOX | Guies · la marca | lateral |
   | TIP-ON, SERVO-DRIVE · `956` | Obertura per pressió · TIP-ON | lateral (placa) o per triar |
-  | CABLOXX, REVEGO, accessoris · `Z…` | Altres · la marca o «Accessoris» | **per triar** |
+  | CABLOXX, REVEGO, accessoris · `800…` REVEGO, `Z…` | Altres · la marca o «Accessoris» | **per triar** |
   | cap | Altres · «Ferratge» | **per triar** |
 
-  Nom «<nom> <sèrie> · <article>» («Frontissa CLIP top · 71T453T», «Placa TIP-ON · 956.1201», «Guia LEGRABOX ·
+  Prefixos (`BLUM_PREFIXES`): els confirmats per un nom de producte de les descàrregues són 22F (HF top), 21F (HF),
+  750/753 (LEGRABOX), 760 (MOVENTO), 320K (METABOX), 956 (TIP-ON) i 800A (REVEGO); la resta (20K1 HK-XS, 20K2 HK-S,
+  22K/24K HK top, HS, HL, TANDEM, TANDEMBOX) són **hipòtesis** del coneixement de Blum. Si el producte només diu
+  «AVENTOS» (sense família) o no es reconeix, mana el prefix. Una carpeta que només diu la marca («blum», «Descàrregues
+  de Blum») **no és un producte** (abans feia «Accessori Accessoris · 20K1101T» a «Altres»).
+
+  Nom «<nom> <sèrie> · <article>» (la sèrie no es posa si repeteix el nom: «Accessori · ZF7N70T2», mai «Accessori
+  Accessoris»; els noms automàtics d'abans es corregeixen en llegir les preferències, `migrateBlumItem`, i si eren a
+  «Altres» passen a la seva categoria; un nom canviat per l'usuari es queda) («Frontissa CLIP top · 71T453T», «Placa TIP-ON · 956.1201», «Guia LEGRABOX ·
   750.4501T»); la sèrie fa el subgrup de la biblioteca (`blumSeries`, `itemSeries`).
 - **El programa Xilog** (`readXilog`, pur, mai llança): el `.pgm` és un contenidor binari (`BMB`, «Xilog3-9.0», taules)
   amb els **registres en ASCII** acabats en NUL (`H DX=200 DY=100 DZ=19 …`, `XBO X=0 Y=-16 Z=-6 x=0 y=0 D=10 R=1# F=1 …`,
@@ -578,6 +586,13 @@ carpeta o ZIP, també barrejats amb els de Hettich) a «Importar del fabricant»
 - **Peça per triar** (`part: "any"`, «Sense assignar»): quan no se sap a quina peça va, els mecanitzats van al grup
   «Sense assignar» del generador; s'hi poden col·locar, però **no es confirma** fins que s'assignen a una peça
   («Assignar a», `reassignMachining`; `confirmProblem`).
+- **Caixa = model** (`meshesFrameBox`, `meshToFrame`; Blum i Hettich): la caixa (cotes de l'editor, contorn de
+  selecció, zona per clicar, càmera de la miniatura) es fa de **la mateixa malla d'OpenCascade passada al mateix marc
+  que el GLB**. Abans sortia dels punts del STEP (`CARTESIAN_POINT`): als conjunts (20K1101T, 71T453T) són a les
+  coordenades de cada peça, sense la seva posició al conjunt (que OpenCascade sí que aplica a la malla), i hi ha punts de
+  construcció fora del sòlid: la caixa de 20K1101T era 20 × 183 × 153 mm i el model fa 20 × 174 × 110, desplaçat. Els
+  importats d'abans (`imported.boxVersion` < `IMPORT_BOX_VERSION`) refan la caixa **del GLB desat** en obrir l'app
+  (`hardwareBoxes.ts`; el GLB ja era bo). Test: `meshBox.roundtrip.test.ts` (`HETTICH_DIR`, `BLUM_DIR`).
 - **3D**: el STEP (tots els d'un joc, un sol GLB); si no n'hi ha, el `.dae` (`ColladaLoader`, la unitat del fitxer a mm,
   sense el gir de Z amunt) i, si tampoc, un `.glb`/`.gltf` (`GLTFLoader`, metres a mm). Sense 3D, només els mecanitzats
   («sense 3D»).

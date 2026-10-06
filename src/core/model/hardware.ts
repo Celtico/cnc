@@ -133,6 +133,11 @@ export const HardwareImportSchema = z.object({
   asset: z.string().optional(),
   /** Caixa del ferratge al seu marc (mm): u al llarg del cantell, v cap a dins, n fora de la cara. */
   bbox: z.object({ min: V3Schema, max: V3Schema }).optional(),
+  /**
+   * Com s'ha fet la caixa (`IMPORT_BOX_VERSION`): 1 = de la mateixa malla i el mateix marc que el GLB (coincideixen). Sense,
+   * és d'abans (dels punts del STEP: als conjunts de Blum no coincidia amb el model) i es refà del GLB desat en obrir l'app.
+   */
+  boxVersion: z.number().int().min(0).optional(),
   /** Punts de connexió de les vistes 2D (capa CONNECTIONPOINTS), tal com venen. */
   points: z.array(V3Schema).optional(),
   /** Mecanitzats proposats en llegir els fitxers (els de `targets` són els editats). */
@@ -167,6 +172,9 @@ export const HardwareImportSchema = z.object({
   damaged: z.boolean().optional(),
 })
 export type HardwareImport = z.infer<typeof HardwareImportSchema>
+
+/** Versió de la caixa dels importats (`HardwareImport.boxVersion`): si puja, la caixa es refà del model desat. */
+export const IMPORT_BOX_VERSION = 1
 
 export const StepRuleSchema = z.object({
   steps: z.array(z.object({ upTo: mm, n: mm })),

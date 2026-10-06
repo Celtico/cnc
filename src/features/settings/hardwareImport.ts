@@ -7,12 +7,12 @@ import { groupImport, has3d, importCandidate, importFileKind, makerOf } from "..
 import { machiningFromXilog } from "../../core/import/xilogPgm"
 import { articleItem, pairImportedBatch, proposalPlan, proposeArticle } from "../../core/import/importItem"
 import { articleFileNames, importedMatches, mergeImported } from "../../core/import/merge"
-import { modelProposal, type HardwareProposal } from "../../core/import/proposal"
+import { meshesFrameBox, modelProposal, type HardwareProposal } from "../../core/import/proposal"
 import { stepFeatures, type StepFeatures } from "../../core/import/stepGeometry"
 import { readDxf } from "../../core/import/dxf"
 import { hasMachiningLayers, machiningFromDxf, partFromFileName } from "../../core/import/dxfMachining"
 import { registerStoredView, viewFromDxf, type HardwareView, type ViewName } from "../../core/import/views"
-import { newId, partKindOf, type GenOp, type HardwareItem } from "../../core/model"
+import { IMPORT_BOX_VERSION, newId, partKindOf, type GenOp, type HardwareItem } from "../../core/model"
 import { assetDocs, assetViews, getHardwareAsset, newHardwareAssetId, putHardwareAsset, type HardwareAsset } from "../../db/hardwareAssets"
 
 /**
@@ -184,16 +184,22 @@ export async function importArticles(
               const mm = await import("../../components/viewer/modelMeshes")
               meshes = await mm.meshFileMeshes(other3d!.kind as "3ds" | "dae" | "glb", await src.read(other3d!.path))
             }
+            // La caixa, de la mateixa malla al mateix marc que el GLB (els punts del STEP no: als conjunts són a les
+            // coordenades de cada peça).
+            const box = meshesFrameBox(meshes, p.frame)
+            if (box) p = { ...p, bbox: box, boxFromMesh: true }
             if (!feats) {
-              const mm = await import("../../components/viewer/modelMeshes")
-              const box = mm.meshesBox(meshes)
-              if (box) p = { ...p, bbox: box }
               notes.push(`El 3D surt del ${other3d!.kind === "iges" ? "IGES" : other3d!.kind === "3ds" ? "3DS" : other3d!.kind === "glb" ? "glTF (.glb)" : "Collada (.dae)"} (sense STEP, cap forat proposat).`)
             }
             glb = (await mesher.meshesToGlb(meshes, p.frame)).glb
           } catch (e) {
             notes.push(`Sense model 3D: ${e instanceof Error ? e.message : String(e)}`)
           }
+        }
+        // Sense malla nova (l'item ja té el 3D): la caixa que ja té, si és la del model (no la dels punts del STEP).
+        if (!p.boxFromMesh) {
+          const had = existing.find((e) => e.imported?.bbox && (e.imported.boxVersion ?? 0) >= IMPORT_BOX_VERSION)?.imported
+          if (had?.bbox) p = { ...p, bbox: had.bbox, boxFromMesh: true }
         }
         for (const k of ["sat", "max"] as const) if (a.files.some((f) => f.kind === k)) notes.push(`El ${k.toUpperCase()} no es llegeix (el 3D surt del STEP, l'IGES o el 3DS).`)
         if (blum) {
@@ -265,7 +271,7 @@ export async function importArticles(
         // Amb els mecanitzats exactes d'un DXF del taller, els forats del STEP no es fan servir (es col·loca a mà).
         const fromDxf = machining.length > 0 && p.kind !== "model"
         const proposal: HardwareProposal = fromDxf
-          ? { ...modelProposal(null, []), frame: p.frame, bbox: p.bbox, notes: [...p.notes, "Els forats del STEP no es fan servir: manen els mecanitzats exactes del DXF (es col·loca a mà al moble).", ...notes] }
+          ? { ...modelProposal(null, []), frame: p.frame, bbox: p.bbox, ...(p.boxFromMesh ? { boxFromMesh: true } : {}), notes: [...p.notes, "Els forats del STEP no es fan servir: manen els mecanitzats exactes del DXF (es col·loca a mà al moble).", ...notes] }
           : { ...p, notes: [...p.notes, ...notes] }
         const withMachining = (it: HardwareItem): HardwareItem => (machining.length ? { ...it, machining } : it)
         const files = articleFileNames(a.files)

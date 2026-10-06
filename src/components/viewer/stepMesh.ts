@@ -1,4 +1,4 @@
-import type { LocalFrame } from "../../core/import/proposal"
+import { meshToFrame, type LocalFrame } from "../../core/import/proposal"
 
 /**
  * STEP → GLB per veure un ferratge importat: OpenCascade fa la malla (`occtWorker.ts`, a demanda) i aquí es passa al
@@ -51,38 +51,21 @@ export function releaseStepWorker(): void {
   waiting.clear()
 }
 
-/** GLB (binari) de les malles passades al marc del ferratge, en metres. Torna també els triangles. */
+/**
+ * GLB (binari) de les malles passades al marc del ferratge, en metres (`meshToFrame`, la mateixa transformació que la caixa,
+ * `meshesFrameBox`). Torna també els triangles.
+ */
 export async function meshesToGlb(meshes: StepMesh[], frame: LocalFrame): Promise<{ glb: Blob; triangles: number }> {
   const [{ BufferAttribute, BufferGeometry, Mesh, MeshStandardMaterial, Scene }, { GLTFExporter }] = await Promise.all([import("three"), import("three/examples/jsm/exporters/GLTFExporter.js")])
   const scene = new Scene()
   const mat = new MeshStandardMaterial({ color: "#b9bdc2", metalness: 0.85, roughness: 0.3 })
-  const { origin: o, u, v, n } = frame
   let triangles = 0
   for (const m of meshes) {
-    const pos = new Float32Array(m.position.length)
-    for (let i = 0; i < m.position.length; i += 3) {
-      const x = m.position[i]! - o[0]
-      const y = m.position[i + 1]! - o[1]
-      const z = m.position[i + 2]! - o[2]
-      pos[i] = (x * u[0] + y * u[1] + z * u[2]) / 1000
-      pos[i + 1] = (x * v[0] + y * v[1] + z * v[2]) / 1000
-      pos[i + 2] = (x * n[0] + y * n[1] + z * n[2]) / 1000
-    }
     const g = new BufferGeometry()
-    g.setAttribute("position", new BufferAttribute(pos, 3))
+    g.setAttribute("position", new BufferAttribute(meshToFrame(m.position, frame, 0.001), 3))
     g.setIndex(new BufferAttribute(m.index, 1))
-    if (m.normal && m.normal.length === m.position.length) {
-      const nor = new Float32Array(m.normal.length)
-      for (let i = 0; i < nor.length; i += 3) {
-        const a = m.normal[i]!
-        const b = m.normal[i + 1]!
-        const c = m.normal[i + 2]!
-        nor[i] = a * u[0] + b * u[1] + c * u[2]
-        nor[i + 1] = a * v[0] + b * v[1] + c * v[2]
-        nor[i + 2] = a * n[0] + b * n[1] + c * n[2]
-      }
-      g.setAttribute("normal", new BufferAttribute(nor, 3))
-    } else g.computeVertexNormals()
+    if (m.normal && m.normal.length === m.position.length) g.setAttribute("normal", new BufferAttribute(meshToFrame(m.normal, frame, 1, true), 3))
+    else g.computeVertexNormals()
     triangles += (g.index?.count ?? 0) / 3
     scene.add(new Mesh(g, mat))
   }
