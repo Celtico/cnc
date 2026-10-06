@@ -1,6 +1,7 @@
 import { Box } from "@chakra-ui/react"
 import { useId } from "react"
-import type { MountPlan, PlanDim, PlanRect } from "../../core/build/hardwareMount"
+import type { MountPlan, PlanRect } from "../../core/build/hardwareMount"
+import { DimLine } from "../../components/DimLine"
 
 const ROLE_NAME: Partial<Record<PlanRect["role"], string>> = { door: "Porta", side: "Lateral", flap: "Abatible", grille: "Reixeta", drawerFront: "Front", drawerSide: "Lateral calaix", bottom: "Base", top: "Tapa", shelf: "Prestatge" }
 const fmt = (v: number) => String(Math.round(v * 100) / 100).replace(".", ",")
@@ -59,7 +60,7 @@ export function HardwareMountPlan({ plan }: { plan: MountPlan }) {
           ) : null
         })}
         {plan.rects.map((r) => <RectLabel key={`l${r.id}`} r={r} fs={fs} view={view} busy={busy} />)}
-        {plan.dims.map((d, i) => <Dim key={`d${i}`} d={d} stroke={stroke} fs={fs} />)}
+        {plan.dims.map((d, i) => <DimLine key={`d${i}`} d={d} stroke={stroke} fs={fs} />)}
       </svg>
     </Box>
   )
@@ -115,52 +116,4 @@ function RectLabel({ r, fs, view, busy }: { r: PlanRect; fs: number; view: Mount
       )
     }
   return null
-}
-
-/** Una cota: línies de referència, línia de cota amb les marques i el valor (al mig, o fora si no hi cap). */
-function Dim({ d, stroke, fs }: { d: PlanDim; stroke: number; fs: number }) {
-  const vx = d.b[0] - d.a[0]
-  const vz = d.b[1] - d.a[1]
-  const len = Math.hypot(vx, vz)
-  if (len < 0.05) return null
-  const ux = vx / len
-  const uz = vz / len
-  const px = -uz
-  const pz = ux
-  const o = d.offset
-  const sg = Math.sign(o) || 1
-  const A: [number, number] = [d.a[0] + px * o, d.a[1] + pz * o]
-  const B: [number, number] = [d.b[0] + px * o, d.b[1] + pz * o]
-  const gap = sg * stroke * 4
-  const over = sg * stroke * 8
-  const tick = fs * 0.32
-  const ticks = [A, B].map(([x, z], k) => <line key={k} x1={x - (ux + px) * tick} y1={z - (uz + pz) * tick} x2={x + (ux + px) * tick} y2={z + (uz + pz) * tick} strokeWidth={stroke * 1.4} />)
-  const tw = d.label.length * fs * 0.56
-  const horizontal = Math.abs(ux) >= Math.abs(uz)
-  const fits = len > tw + fs * 0.6
-  let tx: number
-  let tz: number
-  let anchor: "middle" | "start" | "end" = "middle"
-  if (horizontal) {
-    tx = fits ? (A[0] + B[0]) / 2 : Math.max(A[0], B[0]) + fs * 0.4
-    tz = A[1] + (fits ? (sg > 0 ? fs * 0.95 : -fs * 0.4) : fs * 0.35)
-    if (!fits) anchor = "start"
-  } else {
-    // Al costat de fora de la línia (el text no es gira).
-    tz = (A[1] + B[1]) / 2 + fs * 0.35
-    tx = A[0] + px * sg * fs * 0.35
-    anchor = px * sg > 0 ? "start" : "end"
-  }
-  return (
-    <g stroke="var(--chakra-colors-wood-fg)" fill="none">
-      <title>{`${d.title}: ${d.label.replace(/^C /, "")} mm`}</title>
-      <line x1={d.a[0] + px * gap} y1={d.a[1] + pz * gap} x2={d.a[0] + px * (o + over)} y2={d.a[1] + pz * (o + over)} strokeWidth={stroke * 0.7} />
-      <line x1={d.b[0] + px * gap} y1={d.b[1] + pz * gap} x2={d.b[0] + px * (o + over)} y2={d.b[1] + pz * (o + over)} strokeWidth={stroke * 0.7} />
-      <line x1={A[0]} y1={A[1]} x2={B[0]} y2={B[1]} strokeWidth={stroke} />
-      {ticks}
-      <text x={tx} y={tz} style={{ fontSize: fs }} textAnchor={anchor} fill="var(--chakra-colors-wood-fg)" stroke="var(--chakra-colors-bg)" strokeWidth={stroke * 3} paintOrder="stroke" fontFamily="inherit" fontWeight="600">
-        {d.label}
-      </text>
-    </g>
-  )
 }

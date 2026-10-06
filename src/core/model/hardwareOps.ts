@@ -253,9 +253,105 @@ export function machiningProblems(ops: readonly GenOp[], tools?: readonly GenToo
   return out
 }
 
-/** Repetició d'un ferratge col·locat: `count` còpies separades `spacing` mm al llarg de P o Q. */
-export const RepeatSchema = z.object({ axis: z.enum(["p", "q"]), count: z.number().int().min(1).max(100), spacing: mm })
+/**
+ * Quantitat (o valor) segons una mida, com a dades: el primer graó amb `x ≤ upTo` (`x < upTo` amb `strict`) dona `n`;
+ * si cap, `else`. La taula de `hingeCount` (2/3/4/5 fins a 900/1600/2100) és un d'aquests; també la quantitat d'un
+ * ferratge col·locat repetit segons la llargada de la peça (`Repeat.rule`).
+ */
+export const StepRuleSchema = z.object({
+  steps: z.array(z.object({ upTo: mm, n: mm })),
+  else: mm,
+  strict: z.boolean().optional(),
+})
+export type StepRule = z.infer<typeof StepRuleSchema>
+
+/** Valor d'una regla de graons (`StepRule`). */
+export function stepValue(rule: StepRule, x: number): number {
+  for (const s of rule.steps) if (rule.strict ? x < s.upTo : x <= s.upTo) return s.n
+  return rule.else
+}
+
+/**
+ * Posició **paramètrica** d'un ferratge col·locat al llarg d'un eix de la peça (P o Q): l'ancoratge (`from`: des de
+ * l'inici —el cantell mínim—, des del final, el mig o un `pct` % de la mida) més el desplaçament `at` (mm) o, si n'hi ha,
+ * la fórmula `expr` (sense `eval`, `evalExpr`) amb les mides de la peça: **L** llarg, **A** ample, **G** gruix i **M** la
+ * mida de la peça al llarg d'aquest eix. Es recalcula a cada construcció: si el moble canvia de mida, el ferratge el
+ * segueix (des del final, el mig o el %).
+ */
+export const PlacePosSchema = z.object({
+  from: z.enum(["min", "max", "center", "ratio"]),
+  at: mm,
+  /** `ratio`: on cau l'ancoratge, en % de la mida de la peça (0 = inici, 100 = final). */
+  pct: z.number().finite().min(0).max(100).optional(),
+  /** Desplaçament com a fórmula (mana sobre `at`): «A/2 − 37», «min(100, M/4)». */
+  expr: z.string().min(1).max(200).optional(),
+})
+export type PlacePos = z.infer<typeof PlacePosSchema>
+
+/**
+ * Lectura d'una posició d'abans: «des de la referència» (`ref`) es feia des de l'inici de la peça (el mateix número),
+ * així que passa a `min`. Idempotent; la resta, tal qual.
+ */
+export function migratePlacePos(raw: unknown): unknown {
+  if (raw && typeof raw === "object" && (raw as { from?: unknown }).from === "ref") return { ...(raw as object), from: "min" }
+  return raw
+}
+
+/** Variables de les fórmules d'una posició (`PlacePos.expr`). */
+export const PLACE_VARS = ["L", "A", "G", "M"] as const
+
+/**
+ * Com es reparteixen les còpies d'un ferratge repetit al llarg de l'eix:
+ * - `step` (el d'abans): la primera al punt i les altres cada `spacing` mm;
+ * - `centred`: cada `spacing` mm, el grup centrat al punt;
+ * - `span`: repartides entre els marges (la primera i l'última als marges, iguals entre elles);
+ * - `pitch`: cada `spacing` mm entre els marges, tantes com hi caben, centrades.
+ */
+export const REPEAT_LAYOUTS = ["step", "centred", "span", "pitch"] as const
+export type RepeatLayout = (typeof REPEAT_LAYOUTS)[number]
+
+/**
+ * Repetició d'un ferratge col·locat: `count` còpies (o les que diu la regla `rule` segons la mida de la peça al llarg
+ * de l'eix, com les frontisses: 2 fins a 900, 3 fins a 1600…) al llarg de P o Q, repartides segons `layout` (sense,
+ * `step`) amb els marges dels extrems `margins` (inici, final; `span` i `pitch`).
+ */
+export const RepeatSchema = z.object({
+  axis: z.enum(["p", "q"]),
+  count: z.number().int().min(1).max(100),
+  spacing: mm,
+  layout: z.enum(REPEAT_LAYOUTS).optional(),
+  rule: StepRuleSchema.optional(),
+  margins: z.tuple([mm.min(0), mm.min(0)]).optional(),
+})
 export type Repeat = z.infer<typeof RepeatSchema>
+
+/** Quantes còpies fa una repetició amb la peça de mida `len` al llarg de l'eix (1–100). */
+export function repeatCount(rep: Repeat | undefined, len: number): number {
+  if (!rep) return 1
+  const layout = rep.layout ?? "step"
+  const [m0, m1] = rep.margins ?? [0, 0]
+  let n = rep.rule ? stepValue(rep.rule, len) : rep.count
+  if (layout === "pitch" && !rep.rule) n = rep.spacing > 0 ? Math.floor((len - m0 - m1) / rep.spacing + 1e-9) + 1 : 1
+  return Math.max(1, Math.min(100, Math.round(Number.isFinite(n) ? n : 1)))
+}
+
+/**
+ * Les posicions al llarg de l'eix de la repetició (mm des de l'inici de la peça) per a una peça de mida `len` amb el
+ * punt a `base` (des de l'inici). `step`/`centred` parteixen del punt; `span`/`pitch`, dels marges.
+ */
+export function repeatOffsets(rep: Repeat | undefined, len: number, base: number): number[] {
+  const n = repeatCount(rep, len)
+  if (!rep || n === 1 && (rep.layout ?? "step") !== "span" && (rep.layout ?? "step") !== "pitch") return [base]
+  const layout = rep.layout ?? "step"
+  const [m0, m1] = rep.margins ?? [0, 0]
+  const s = rep.spacing
+  if (layout === "step") return Array.from({ length: n }, (_, k) => base + k * s)
+  if (layout === "centred") return Array.from({ length: n }, (_, k) => base + (k - (n - 1) / 2) * s)
+  const free = len - m0 - m1
+  if (layout === "span") return n === 1 ? [m0 + free / 2] : Array.from({ length: n }, (_, k) => m0 + (k * free) / (n - 1))
+  const start = m0 + (free - (n - 1) * s) / 2
+  return Array.from({ length: n }, (_, k) => start + k * s)
+}
 
 /** On va un ferratge col·locat: una peça d'un mòdul (`panel` = l'id de la peça al mòdul, com la fa el constructor) o una peça lliure. */
 export const PlacementTargetSchema = z.object({

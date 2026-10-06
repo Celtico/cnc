@@ -3,7 +3,7 @@ import { DEFAULT_CABINET } from "./cabinet"
 import { tryExpr } from "./expr"
 import { deepEqual } from "./photoUpgrade"
 import { repairAtomically, repairValue } from "./repair"
-import { MachiningListSchema, PlacementTargetSchema, PosSchema, RepeatSchema } from "./hardwareOps"
+import { MachiningListSchema, migratePlacePos, PlacementTargetSchema, PlacePosSchema, RepeatSchema, stepValue, StepRuleSchema, type StepRule } from "./hardwareOps"
 
 /**
  * Biblioteca de ferratges (millores v1, `docs/millores-v1/ferratges.md` §4): cada ferratge és **dades** (`HardwareItem`:
@@ -111,10 +111,6 @@ export type MachiningOp = z.infer<typeof MachiningOpSchema>
 export const HardwareTargetSchema = z.object({ key: z.string().min(1), label: z.string(), ops: z.array(MachiningOpSchema) })
 export type HardwareTarget = z.infer<typeof HardwareTargetSchema>
 
-/**
- * Quantitat (o valor) segons una mida, com a dades: el primer graó amb `x ≤ upTo` (`x < upTo` amb `strict`) dona `n`;
- * si cap, `else`. La taula de `hingeCount` (2/3/4/5 fins a 900/1600/2100) és un d'aquests.
- */
 const V3Schema = z.tuple([mm, mm, mm])
 
 /**
@@ -176,12 +172,6 @@ export type HardwareImport = z.infer<typeof HardwareImportSchema>
 /** Versió de la caixa dels importats (`HardwareImport.boxVersion`): si puja, la caixa es refà del model desat. */
 export const IMPORT_BOX_VERSION = 1
 
-export const StepRuleSchema = z.object({
-  steps: z.array(z.object({ upTo: mm, n: mm })),
-  else: mm,
-  strict: z.boolean().optional(),
-})
-export type StepRule = z.infer<typeof StepRuleSchema>
 
 /** L'item tal qual (sense la lectura dels importats malmesos, `HardwareItemSchema`). */
 export const HardwareItemObjectSchema = z.object({
@@ -591,12 +581,6 @@ export function hardwareVars(item: HardwareItem, extra: Record<string, number> =
   return { ...item.params, ...extra }
 }
 
-/** Valor d'una regla de graons (`StepRule`). */
-export function stepValue(rule: StepRule, x: number): number {
-  for (const s of rule.steps) if (rule.strict ? x < s.upTo : x <= s.upTo) return s.n
-  return rule.else
-}
-
 /** Resum d'una línia (targeta i capçalera de l'editor): els forats que fa i on. */
 export function hardwareSummary(item: HardwareItem): string {
   const v = hardwareVars(item, { pitch: item.pitch ? stepValue(item.pitch, Infinity) : 0 })
@@ -802,7 +786,11 @@ export function replaceHardwareRefs<T>(comp: T, from: HardwareItem, to: Hardware
 /**
  * Un ferratge col·locat a mà en una peça del moble (`Composition.hardwarePlacements`): una **còpia** de l'item (com els
  * mòduls), la peça principal i, si es tria expressament, altres peces per a la resta de grups de l'item (`targets`), on
- * va el punt de referència (`p`, `q`: des d'un cantell o del mig de la peça) i una repetició opcional. Tot o res: si una
+ * va el punt de referència (`p`, `q`, **paramètrics**: des d'un cantell, del mig o a un % de la peça, més un
+ * desplaçament o una fórmula amb les mides de la peça; `PlacePos`), una repetició opcional (`Repeat`: per quantitat, per
+ * regla segons la mida o cada tants mm entre marges) i el mirall esquerra/dreta. Es recalcula a cada construcció: si el
+ * mòdul canvia de mida, el ferratge el segueix. Les posicions d'abans «des de la referència» (`ref`) es llegeixen com
+ * «des de l'inici» (`migratePlacePos`, el mateix resultat). Tot o res: si una
  * operació no cap a la peça, cap forat d'aquest ferratge (`core/build/hardwarePlace.ts`).
  */
 export const HardwarePlacementSchema = repairAtomically(
@@ -810,9 +798,15 @@ export const HardwarePlacementSchema = repairAtomically(
     id: z.string().min(1),
     item: HardwareItemSchema,
     targets: z.array(PlacementTargetSchema).min(1),
-    p: PosSchema,
-    q: PosSchema,
+    /** Posició del punt de referència per eix (paramètrica: segueix la peça quan el moble canvia de mida). */
+    p: z.preprocess(migratePlacePos, PlacePosSchema),
+    q: z.preprocess(migratePlacePos, PlacePosSchema),
     repeat: RepeatSchema.optional(),
+    /**
+     * **Mirall esquerra/dreta**: també la còpia simètrica respecte del mig del moble en X (al lateral de l'altre costat, o
+     * a la mateixa peça amb la posició reflectida si la peça és de costat a costat). Tot o res amb l'original.
+     */
+    mirror: z.boolean().optional(),
     /** Gir del model 3D al pla de la peça (graus, al voltant de la normal de la cara): només el 3D, no els mecanitzats. */
     turn: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]).optional(),
   }),

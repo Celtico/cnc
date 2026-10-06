@@ -1,6 +1,6 @@
-import { partFrame } from "../../core/build/hardwarePlace"
+import { applyGenOp, frameSpan, mirrorOpP, partFrame, placeAt, placeVars, refPoints } from "../../core/build/hardwarePlace"
 import type { CompositionWarning } from "../../core/build/buildComposition"
-import { AXIS_ENDS, AXIS_NAME, isPlaceable, machiningParts, newId, partKindForRole, PART_KINDS, type Composition, type HardwareItem, type HardwarePlacement, type Panel, type PartKind, type PlacementTarget, type WorldAxis } from "../../core/model"
+import { AXIS_ENDS, AXIS_NAME, exprError, isPlaceable, machiningParts, newId, partKindForRole, PART_KINDS, type Composition, type HardwareItem, type HardwarePlacement, type Panel, type PartKind, type PlacePos, type PlacementTarget, type StepRule, type WorldAxis } from "../../core/model"
 
 /**
  * Ferratges col·locats a mà (Editor › mòdul o peça lliure › «Ferratges»): utilitats sense React per a
@@ -81,7 +81,8 @@ export function duplicatePlacement(comp: Composition, id: string): { comp: Compo
   const i = list.findIndex((p) => p.id === id)
   if (i < 0) return null
   const src = list[i]!
-  const copy: HardwarePlacement = { ...structuredClone(src), id: newId("hp"), p: { ...src.p, at: src.p.at + PLACEMENT_COPY_SHIFT } }
+  const p = src.p.expr ? { ...src.p, expr: `(${src.p.expr}) + ${PLACEMENT_COPY_SHIFT}` } : { ...src.p, at: src.p.at + PLACEMENT_COPY_SHIFT }
+  const copy: HardwarePlacement = { ...structuredClone(src), id: newId("hp"), p }
   const next = [...list]
   next.splice(i + 1, 0, copy)
   return { comp: { ...comp, hardwarePlacements: next }, id: copy.id }
@@ -98,4 +99,66 @@ export function placementScope(pl: HardwarePlacement): PlacementScope | null {
 /** Els avisos d'un col·locat (pel nom de l'item a l'avís `hardware`). */
 export function placementWarnings(warnings: readonly CompositionWarning[], pl: HardwarePlacement): CompositionWarning[] {
   return warnings.filter((w) => w.code === "hardware" && w.message.includes(`«${pl.item.name}»`))
+}
+
+/** La regla inicial de «Per mida» (com les frontisses: 2 fins a 900, 3 fins a 1600, 4 fins a 2100, si no 5). */
+export const DEFAULT_REPEAT_RULE: StepRule = { steps: [{ upTo: 900, n: 2 }, { upTo: 1600, n: 3 }, { upTo: 2100, n: 4 }], else: 5 }
+
+/** Error de la fórmula d'una posició amb la peça d'ara (`null` si és bona o no n'hi ha). */
+export function placePosError(pos: PlacePos, panel: Panel, axis: "p" | "q"): string | null {
+  if (!pos.expr) return null
+  const [lo, hi] = frameSpan(partFrame(panel), axis)
+  return exprError(pos.expr, placeVars(panel, hi - lo))
+}
+
+/** On cau ara una posició (mm des de l'inici de l'eix de la peça), o `null` si la fórmula no es pot avaluar. */
+export function placePosValue(pos: PlacePos, panel: Panel, axis: "p" | "q"): number | null {
+  const f = partFrame(panel)
+  const v = placeAt(f, axis, pos)
+  return typeof v === "number" ? v - frameSpan(f, axis)[0] : null
+}
+
+/** Una marca de la previsualització: la caixa (P, Q des de l'inici de la peça) d'una operació, rodona si és un forat. */
+export interface PreviewMark {
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+  round: boolean
+  mirror: boolean
+}
+
+/**
+ * La previsualització d'un col·locat a la seva peça principal, amb el **mateix càlcul** que el moble (`refPoints`,
+ * `applyGenOp`): la mida de la peça (P × Q), els punts de referència de cada còpia (i del mirall a la mateixa peça), les
+ * marques de les operacions i, si n'hi ha, el problema (fórmula, fora de la peça). Coordenades des de l'inici de cada eix.
+ */
+export function placementPreview(pl: HardwarePlacement, panel: Panel): { size: [number, number]; refs: [number, number][]; mirrored: [number, number][]; marks: PreviewMark[]; error: string | null; otherSide: boolean } {
+  const f = partFrame(panel)
+  const [p0, p1] = frameSpan(f, "p")
+  const [q0, q1] = frameSpan(f, "q")
+  const size: [number, number] = [p1 - p0, q1 - q0]
+  const pts = refPoints(pl, f)
+  if ("error" in pts) return { size, refs: [], mirrored: [], marks: [], error: pts.error, otherSide: false }
+  const ops = (pl.item.machining ?? []).filter((o) => o.part === pl.targets[0]!.part)
+  const inPlane = !!pl.mirror && f.p === "x"
+  const mirrored = inPlane ? pts.map(([p, q]) => [p0 + p1 - p, q] as [number, number]) : []
+  const marks: PreviewMark[] = []
+  let error: string | null = null
+  const add = (refs: [number, number][], list: typeof ops, mirror: boolean) => {
+    for (const [rp, rq] of refs)
+      for (const op of list) {
+        const res = applyGenOp(op, f, rp, rq)
+        if ("error" in res) {
+          error ??= res.error
+          continue
+        }
+        const [a, b, c, d] = res.span
+        marks.push({ x0: a - p0, y0: b - q0, x1: c - p0, y1: d - q0, round: op.kind === "drill" && op.face !== "edge", mirror })
+      }
+  }
+  add(pts, ops, false)
+  if (inPlane) add(mirrored, ops.map(mirrorOpP), true)
+  const rel = (list: [number, number][]) => list.map(([p, q]) => [p - p0, q - q0] as [number, number])
+  return { size, refs: rel(pts), mirrored: rel(mirrored), marks, error, otherSide: !!pl.mirror && !inPlane }
 }

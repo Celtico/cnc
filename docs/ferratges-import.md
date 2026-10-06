@@ -419,6 +419,18 @@ llarg d'un eix) → el gir del model 3D. Els altres grups de l'item (p. ex. la r
   mida constant amb les icones del catàleg, `iconTexture.ts`); l'inspector passa a «Col·locació» del ferratge (amb Pare,
   anterior/següent). Supr l'elimina, Ctrl/⌘ D el duplica (50 mm més cap a dins al llarg de P, `duplicatePlacement`),
   i tot va al desfer comú. Segueix la seva peça a l'explosió i en obrir portes.
+- **Col·locació paramètrica** (per decisió de l'usuari: «la col·locació al moble no hauria de ser paramètrica?»): cada
+  eix del punt de referència és un **ancoratge** (des de l'inici, des del final, el mig o un % de la peça) més un
+  desplaçament o una **fórmula** amb les mides de la peça (L llarg, A ample, G gruix, M la mida al llarg de l'eix; el
+  mateix avaluador sense `eval` dels ferratges). La **repetició** pot anar des del punt, centrada al punt, repartida entre
+  marges o cada tants mm entre marges, amb la quantitat fixa o **per mida** (una regla com la de les frontisses: 2 fins a
+  900, 3 fins a 1600…). **Mirall esquerra/dreta**: també al lateral de l'altre costat, o reflectit a la mateixa peça si va
+  de costat a costat. Tot es recalcula a cada construcció: si el mòdul canvia d'amplada o d'alçada, els ferratges el
+  segueixen (tot o res, també amb les còpies). Les col·locacions d'abans («des de la referència» = des de l'inici) es
+  llegeixen igual. L'inspector en mostra una **previsualització en viu** amb les cotes.
+- **Selector amb calaix**: «Afegir ferratge» (i el Ferratge d'un col·locat, la frontissa, la guia, el tirador, la pota…)
+  obren el mateix calaix que els materials, amb el cercador, les categories › sèries i les miniatures 3D; només els
+  compatibles, els «Sense confirmar» amb la insígnia i les còpies «Del moble» a part.
 - **`.moble` v3** (`MOBLE_PLACEMENTS_VERSION`): un moble amb ferratges col·locats es desa com a v3 (una app d'abans els
   trauria en silenci); amb importats i sense col·locats, v2; si no, v1.
 

@@ -1,5 +1,9 @@
 import {
   damagedImportMessage,
+  evalExpr,
+  ExprError,
+  repeatOffsets,
+  type PlacePos,
   flatten,
   isDamagedImport,
   isPendingImport,
@@ -226,13 +230,69 @@ export function targetPanelId(t: PlacementTarget): string | null {
   return null
 }
 
-/** Les posicions del punt de referència (una per repetició) al moble, (P, Q). */
-function refPoints(pl: HardwarePlacement, f: PartFrame): [number, number][] {
-  const p0 = f.at("p", pl.p.from === "ref" ? { from: "min", at: pl.p.at } : pl.p, 0)
-  const q0 = f.at("q", pl.q.from === "ref" ? { from: "min", at: pl.q.at } : pl.q, 0)
-  const count = pl.repeat?.count ?? 1
-  const step = pl.repeat?.spacing ?? 0
-  return Array.from({ length: count }, (_, k) => (pl.repeat?.axis === "q" ? [p0, q0 + k * step] : [p0 + k * step, q0]))
+const AXIS_OF_PQ = (f: PartFrame, k: "p" | "q") => AXIS_INDEX[k === "p" ? f.p : f.q]
+
+/** La mida de la peça al llarg de P o Q (al moble). */
+export function frameSpan(f: PartFrame, k: "p" | "q"): [number, number] {
+  const i = AXIS_OF_PQ(f, k)
+  return [f.box.min[i]!, f.box.max[i]!]
+}
+
+/** Variables de les fórmules d'una posició: L, A, G (llarg, ample i gruix de la peça) i M (la mida al llarg de l'eix). */
+export function placeVars(panel: Panel, along: number): Record<string, number> {
+  return { L: panel.length, A: panel.width, G: panel.thickness, M: along }
+}
+
+/**
+ * Coordenada del moble d'una posició paramètrica (`PlacePos`) a la peça: l'ancoratge (inici, final, mig o %) i el
+ * desplaçament (`at`, o la fórmula `expr` amb L · A · G · M). `{ error }` si la fórmula no es pot avaluar.
+ */
+export function placeAt(f: PartFrame, k: "p" | "q", pos: PlacePos): number | { error: string } {
+  const [lo, hi] = frameSpan(f, k)
+  const len = hi - lo
+  let off = pos.at
+  if (pos.expr) {
+    try {
+      off = evalExpr(pos.expr, placeVars(f.panel, len))
+    } catch (e) {
+      return { error: `fórmula «${pos.expr}»: ${e instanceof ExprError ? e.message : String(e)}` }
+    }
+  }
+  if (pos.from === "max") return hi - off
+  if (pos.from === "center") return (lo + hi) / 2 + off
+  if (pos.from === "ratio") return lo + ((pos.pct ?? 0) / 100) * len + off
+  return lo + off
+}
+
+/**
+ * Les posicions del punt de referència (una per repetició) al moble, (P, Q): la posició paramètrica de cada eix i la
+ * repetició (quantitat fixa o per regla segons la mida de la peça al llarg de l'eix, i com es reparteixen). Es calcula
+ * a cada construcció amb la caixa de la peça d'ara: si el moble canvia de mida, el ferratge la segueix.
+ */
+export function refPoints(pl: Pick<HardwarePlacement, "p" | "q" | "repeat">, f: PartFrame): [number, number][] | { error: string } {
+  const p0 = placeAt(f, "p", pl.p)
+  if (typeof p0 !== "number") return p0
+  const q0 = placeAt(f, "q", pl.q)
+  if (typeof q0 !== "number") return q0
+  const rep = pl.repeat
+  if (!rep) return [[p0, q0]]
+  const [lo, hi] = frameSpan(f, rep.axis)
+  const base = (rep.axis === "p" ? p0 : q0) - lo
+  return repeatOffsets(rep, hi - lo, base).map((o) => (rep.axis === "p" ? [lo + o, q0] : [p0, lo + o]))
+}
+
+/** Una operació reflectida al llarg de P (el mirall esquerra/dreta a una peça de costat a costat). */
+export function mirrorOpP(op: GenOp): GenOp {
+  const p: Pos = op.p.from === "min" ? { from: "max", at: op.p.at } : op.p.from === "max" ? { from: "min", at: op.p.at } : { ...op.p, at: -op.p.at }
+  const edge = op.edge === "pmin" ? "pmax" : op.edge === "pmax" ? "pmin" : op.edge
+  return { ...op, p, ...(edge ? { edge } : {}), ...(op.points ? { points: op.points.map(([a, b]) => [-a, b] as [number, number]) } : {}) }
+}
+
+/** L'id de la peça de l'altre costat (esquerra ↔ dreta) d'un mòdul, o `null`. */
+export function otherSideId(id: string): string | null {
+  if (/left/.test(id)) return id.replace(/left/g, "right")
+  if (/right/.test(id)) return id.replace(/right/g, "left")
+  return null
 }
 
 export interface PlacementResult {
@@ -259,12 +319,13 @@ export function applyHardwarePlacements(placements: readonly HardwarePlacement[]
       continue
     }
     const ops = item.machining ?? []
+    const find = (id: string | null) => (id ? panels.find((p) => p.id === id) : undefined)
     // Les peces: totes han de ser-hi (de CNC).
     const frames: { t: PlacementTarget; f: PartFrame }[] = []
     let missing: string | null = null
     for (const t of pl.targets) {
       const id = targetPanelId(t)
-      const panel = id ? panels.find((p) => p.id === id) : undefined
+      const panel = find(id)
       if (!panel) {
         const extra = id ? extras.find((p) => p.id === id) : undefined
         missing = extra ? `${extra.label} no és de CNC` : `la peça (${partKindOf(t.part).label.toLowerCase()}) ja no hi és`
@@ -276,58 +337,116 @@ export function applyHardwarePlacements(placements: readonly HardwarePlacement[]
       warn(`${name}: ${missing}; no es fa cap mecanitzat del ferratge.`)
       continue
     }
+    // Cada peça amb les seves posicions (paramètriques: amb la mida d'ara) i, amb el mirall, la còpia simètrica.
+    interface Job {
+      t: PlacementTarget
+      f: PartFrame
+      refs: [number, number][]
+      ops: GenOp[]
+      /** La peça principal (o la seva còpia del mirall): hi va el 3D del ferratge. */
+      main: boolean
+    }
+    const jobs: Job[] = []
+    let posError: { msg: string; panel: Panel } | null = null
+    for (const [i, { t, f }] of frames.entries()) {
+      const refs = refPoints(pl, f)
+      if ("error" in refs) {
+        posError = { msg: refs.error, panel: f.panel }
+        break
+      }
+      const mine = ops.filter((o) => o.part === t.part)
+      jobs.push({ t, f, refs, ops: mine, main: i === 0 })
+      if (!pl.mirror) continue
+      if (f.p === "x") {
+        // De costat a costat (porta, tapa, base, prestatge, fons): a la mateixa peça, reflectit respecte del seu mig.
+        const [lo, hi] = frameSpan(f, "p")
+        jobs.push({ t, f, refs: refs.map(([rp, rq]) => [lo + hi - rp, rq] as [number, number]), ops: mine.map(mirrorOpP), main: i === 0 })
+        continue
+      }
+      // De cara a X (lateral, divisor, lateral de calaix): la peça de l'altre costat, a la mateixa posició.
+      const other = t.module && t.panel ? otherSideId(t.panel) : null
+      const panel = other ? find(`${t.module}:${other}`) : undefined
+      if (!panel) {
+        posError = { msg: "el mirall esquerra/dreta no troba la peça de l'altre costat", panel: f.panel }
+        break
+      }
+      const fo = partFrame(panel)
+      const ro = refPoints(pl, fo)
+      if ("error" in ro) {
+        posError = { msg: ro.error, panel }
+        break
+      }
+      jobs.push({ t: { ...t, panel: other! }, f: fo, refs: ro, ops: mine, main: i === 0 })
+    }
     const mainFrame = frames[0]!.f
-    const mainOps = ops.filter((o) => o.part === main.part)
-    const refsMain = refPoints(pl, mainFrame)
-    // El 3D del ferratge (el GLB de l'importat o un volum fet de les operacions), a la peça principal.
-    const fittings = (mainRes: OpResult[][]): PanelFitting[] => fittingsFor(item, mainFrame, refsMain, mainOps, mainRes, pl.turn ?? 0).map((f) => ({ ...f, placement: pl.id }))
+    if (posError) {
+      warn(`${name} a ${posError.panel.label}: ${posError.msg}; no es fa cap mecanitzat del ferratge.`, posError.panel.id)
+      continue
+    }
+    // El 3D del ferratge (el GLB de l'importat o un volum fet de les operacions), a cada peça principal (i la del mirall).
+    const mainJobs = jobs.filter((j) => j.main)
+    const fittingsOf = (j: Job, res: OpResult[][]) => fittingsFor(item, j.f, j.refs, j.ops, res, pl.turn ?? 0).map((x) => ({ ...x, placement: pl.id }))
+    const visualOnly = () => {
+      for (const j of mainJobs) addFittings(j.f.panel, fittingsOf(j, []))
+    }
     if (!ops.length) {
       warn(item.engine === "model" ? `${name} és «només 3D»: no fa cap forat (afegeix-hi els mecanitzats a Preferències › Ferratges).` : `${name} no té mecanitzats: no fa cap forat.`, mainFrame.panel.id)
-      addFittings(mainFrame.panel, fittings([]))
+      visualOnly()
       continue
     }
     // Sense cap forat, però el model es veu (per trobar-lo i triar-lo al 3D): només visual, mai es fabrica.
     if (isPendingImport(item)) {
       warn(`${name} és importat i encara no està confirmat: no fa cap forat. Revisa'l i confirma'l a Preferències › Ferratges.`, mainFrame.panel.id)
-      addFittings(mainFrame.panel, fittings([]))
+      visualOnly()
       continue
     }
     const problems = machiningProblems(ops)
     if (problems.length) {
       warn(`${name} té un mecanitzat que no es pot fer (${problems[0]!.message.replace(/\.$/, "")}): no fa cap forat.`, mainFrame.panel.id)
-      addFittings(mainFrame.panel, fittings([]))
+      visualOnly()
       continue
     }
     // Tot o res: primer es calcula tot i, si alguna operació no cap, no es fa res.
-    const done: { f: PartFrame; res: OpResult }[] = []
-    const perRef: OpResult[][] = refsMain.map(() => [])
+    const done: { panel: Panel; res: OpResult }[] = []
+    const perJob = new Map<Job, OpResult[][]>()
     let error: { msg: string; panel: Panel } | null = null
-    outer: for (const { t, f } of frames) {
-      const refs = f === mainFrame ? refsMain : refPoints(pl, f)
-      for (const [k, [rp, rq]] of refs.entries()) {
-        for (const op of ops.filter((o) => o.part === t.part)) {
-          const res = applyGenOp(op, f, rp, rq)
+    outer: for (const j of jobs) {
+      const per: OpResult[][] = j.refs.map(() => [])
+      perJob.set(j, per)
+      for (const [k, [rp, rq]] of j.refs.entries()) {
+        for (const op of j.ops) {
+          const res = applyGenOp(op, j.f, rp, rq)
           if ("error" in res) {
-            error = { msg: res.error, panel: f.panel }
+            error = { msg: res.error, panel: j.f.panel }
             break outer
           }
-          done.push({ f, res })
-          if (f === mainFrame) perRef[k]!.push(res)
+          done.push({ panel: j.f.panel, res })
+          per[k]!.push(res)
         }
       }
     }
     if (error) {
       warn(`${name} a ${error.panel.label}: ${error.msg}; no es fa cap mecanitzat del ferratge.`, error.panel.id)
-      addFittings(mainFrame.panel, fittings([]))
+      visualOnly()
       continue
     }
-    for (const { f, res } of done) {
-      const p = f.panel
-      if (res.holes.length) p.holes = [...p.holes, ...res.holes]
-      if (res.grooves.length) p.grooves = [...p.grooves, ...res.grooves]
-      if (res.cutouts.length) p.cutouts = [...(p.cutouts ?? []), ...res.cutouts]
+    // Sense repetits (el mirall d'un ferratge centrat cau a sobre de l'original): un mateix mecanitzat, un cop.
+    const seen = new Set<string>()
+    const fresh = <T>(panel: Panel, list: T[]) => list.filter((x) => {
+      const key = `${panel.id}|${JSON.stringify(x)}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    for (const { panel: p, res } of done) {
+      const holes = fresh(p, res.holes)
+      const grooves = fresh(p, res.grooves)
+      const cutouts = fresh(p, res.cutouts)
+      if (holes.length) p.holes = [...p.holes, ...holes]
+      if (grooves.length) p.grooves = [...p.grooves, ...grooves]
+      if (cutouts.length) p.cutouts = [...(p.cutouts ?? []), ...cutouts]
     }
-    addFittings(mainFrame.panel, fittings(perRef))
+    for (const j of mainJobs) addFittings(j.f.panel, fittingsOf(j, perJob.get(j) ?? []))
     applied++
   }
   return { warnings, applied }

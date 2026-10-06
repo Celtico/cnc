@@ -1,5 +1,7 @@
 import { Box, Text, VStack } from "@chakra-ui/react"
 import { flatten, type Panel } from "../core/model"
+import { dimFont, layoutDims, type DrawFeature } from "./dims"
+import { DimLayer } from "./DimLine"
 
 /** Mm amb coma i dues xifres com a molt (cotes). */
 const fmt = (v: number) => String(Math.round(v * 100) / 100).replace(".", ",")
@@ -20,20 +22,24 @@ export function PanelDrawing({
   caption?: boolean
   /** Només aquest tros de la peça (coordenades de la peça, mm): un detall dels forats. */
   crop?: { x: number; y: number; w: number; h: number }
-  /** Cotes del primer forat als cantells (el detall dels ferratges). */
-  dims?: boolean
+  /**
+   * Cotes: `true` = del primer forat als cantells (el detall dels ferratges); `"full"` = totes (mida total, cotes
+   * encadenades dels forats, talls i ranures des dels cantells i entre ells, Ø × fondària), com les vistes dels ferratges.
+   */
+  dims?: boolean | "full"
   /** Dibuix de fons (coordenades de la peça, polilínies planes [x0, y0, x1, y1, …]): la vista d'un ferratge importat. */
   underlay?: number[][]
 }) {
   const { length: L, width: W } = panel
   const pad = Math.max(L, W) * 0.04
   // Y cap amunt: el tros (x, y des de baix) passa a la y de la pantalla (des de dalt).
-  const view = crop ? { x: crop.x, y: W - crop.y - crop.h, w: crop.w, h: crop.h } : { x: -pad, y: -pad, w: L + 2 * pad, h: W + 2 * pad }
+  const full = dims === "full" && !crop ? fullDims(panel) : null
+  const view = crop ? { x: crop.x, y: W - crop.y - crop.h, w: crop.w, h: crop.h } : full ? full.layout.extent : { x: -pad, y: -pad, w: L + 2 * pad, h: W + 2 * pad }
   const viewBox = `${view.x} ${view.y} ${view.w} ${view.h}`
   const stroke = Math.max(view.w, view.h) / 400
   // Cotes (només amb `dims`): del centre del primer forat (o tall rodó) als dos cantells més propers.
   const first = panel.holes[0] ?? panel.cutouts?.find((c) => c.kind === "circle")
-  const dim = dims && first && "x" in first ? { cx: first.x, cy: first.y, r: "diameter" in first ? first.diameter / 2 : 0, ex: first.x < L / 2 ? 0 : L, ey: first.y < W / 2 ? 0 : W } : null
+  const dim = dims === true && first && "x" in first ? { cx: first.x, cy: first.y, r: "diameter" in first ? first.diameter / 2 : 0, ex: first.x < L / 2 ? 0 : L, ey: first.y < W / 2 ? 0 : W } : null
 
   return (
     <VStack align="stretch" gap={1}>
@@ -101,6 +107,7 @@ export function PanelDrawing({
             </g>
           )}
         </g>
+        {full && <DimLayer layout={full.layout} stroke={stroke} fs={full.fs} />}
         {/* Cotes del primer forat als cantells més propers (fora del grup girat: el text no surt del revés). */}
         {dim && (
           <g fill="var(--chakra-colors-wood-fg)" fontSize={Math.max(view.w, view.h) / 22} fontFamily="inherit">
@@ -119,4 +126,23 @@ export function PanelDrawing({
       </Text>}
     </VStack>
   )
+}
+
+/** Les cotes de tota la peça (y cap avall: `W − y`): forats, talls i ranures. */
+function fullDims(panel: Panel) {
+  const { length: L, width: W } = panel
+  const n = (v: number) => String(Math.round(v * 100) / 100).replace(".", ",")
+  const feats: DrawFeature[] = []
+  for (const h of panel.holes) {
+    const r = h.diameter / 2
+    feats.push({ x: h.x, y: W - h.y, hx: r, hy: r, label: `Ø${n(h.diameter)} × ${n(h.depth)}${h.face === "B" ? " (B)" : h.face === "edge" ? " cantell" : ""}` })
+  }
+  for (const c of panel.cutouts ?? []) {
+    if (c.kind === "circle") feats.push({ x: c.x, y: W - c.y, hx: c.diameter / 2, hy: c.diameter / 2, label: `Ø${n(c.diameter)} passant` })
+    else if (c.kind !== "polygon") feats.push({ x: c.x + c.w / 2, y: W - c.y - c.h / 2, hx: c.w / 2, hy: c.h / 2, label: `${n(c.w)} × ${n(c.h)} passant` })
+  }
+  for (const g of panel.grooves) feats.push({ x: g.x + g.w / 2, y: W - g.y - g.h / 2, hx: g.w / 2, hy: g.h / 2, label: `R ${n(Math.min(g.w, g.h))} × ${n(g.depth)}`, skipX: g.w >= L - 0.05, skipY: g.h >= W - 0.05 })
+  const box = { x0: 0, y0: 0, x1: L, y1: W }
+  const fs = dimFont(box)
+  return { fs, layout: layoutDims(box, feats, fs, { title: panel.label }) }
 }
