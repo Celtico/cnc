@@ -68,7 +68,7 @@ export function registerView(d: DxfDrawing, holes: { u: number; v: number; d: nu
 
 /** Vista per desar: polilínies simplificades (0,02 mm) i, si es pot, al marc del ferratge. */
 export function viewFromDxf(name: ViewName, d: DxfDrawing, holes?: { u: number; v: number; d: number }[]): HardwareView {
-  const reg = name === "front" && holes ? registerView(d, holes) : null
+  const reg = holes ? registerView(d, holes) : null
   const lines = d.polylines
     .filter((p) => !/^CONNECTIONPOINTS$/i.test(p.layer))
     .map((p) => simplify(reg ? p.pts.map(reg) : p.pts, 0.02).flatMap(([x, y]) => [r2(x), r2(y)]))

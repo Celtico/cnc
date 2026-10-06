@@ -44,6 +44,8 @@ plantes, models 3D i renders són **decoratius**: no s'hi dedica temps mentre el
 - [`docs/colleccions-mobles.md`](docs/colleccions-mobles.md): **col·leccions de mobles** (biblioteca de referències:
   minimalisme arquitectònic i comercial; prompt a [`PROMPT-colleccions.md`](docs/prompt/PROMPT-colleccions.md)).
 - [`docs/cad-mobles-cataleg.md`](docs/cad-mobles-cataleg.md): font del catàleg de plantilles per a botigues de mobles.
+- [`docs/ferratges-import.md`](docs/ferratges-import.md): **importar ferratges del fabricant (Hettich)**: estructura de les
+  descàrregues, lectors STEP i DXF, proposta de forats, confirmació i col·locació al moble (frontissa + placa).
 
 ## Principi de disseny
 L'usuari dissenya els mobles **des de la UI**, sense tocar codi. El codi defineix **capacitats genèriques** (carcassa,
@@ -61,6 +63,8 @@ el codi només porta els valors inicials.
 - **polygon-clipping** (booleans de polígons) per als encaixos i osques de les peces lliures.
 - **vite-plugin-pwa** (instal·lable a l'iPhone, funciona sense connexió). **Dexie** (IndexedDB) per a projectes, fotos,
   ambients, models i preferències. **zod** per validar els models. **Vitest** per als tests del nucli.
+- **occt-import-js** (OpenCascade en WASM, ~7,6 MB; aprovat per l'usuari el 2026-10-06): només per fer el 3D dels STEP
+  dels ferratges importats, **a demanda** (`import()` en un worker, `viewer/occtWorker.ts`); el WASM no es precacheja.
 - Lint: `oxlint`. **Mai prettier.**
 
 ## Arquitectura
@@ -76,6 +80,7 @@ src/
     machine/       # importar de Maestro (.machinecontext, .pgmx), tria d'eines, regles de mecanitzat
     process/       # post-processos de cada peça (2a cara, inglet, cantell, encolar, push)
     file/          # fitxer .moble, zip
+    import/        # ferratges del fabricant: lector STEP (cilindres) i DXF (vistes 2D), Hettich, proposta de forats
     photo/         # homografia, calibració amb referència, EXIF
   features/        # pantalles: projects (Mobles), editor, composition (arbre i inspectors), cutlist (Peces), nesting,
                    #   export, photo, ambients, objects, settings, file
@@ -253,6 +258,16 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   (`hardware` → `hardwareLibrary` + `hardwareDefaults`, `libraryFromLegacy`, `fixHardwareDefaults`): **proves d'or idèntiques**.
   Ara les guies i l'abatible porten els seus números (abans `system32.edgeOffset` i `hinge.cupOffset`). `hardwarePreview`
   (peces d'exemple amb el motor) per al dibuix de Preferències. Tests a `build/hardware.test.ts` i `model/expr.test.ts`.
+- **Ferratges importats del fabricant** (Hettich, [`docs/ferratges-import.md`](docs/ferratges-import.md); preferències
+  **v20**, additiu: `HardwareItem.imported`, `plate`, motor `plate`): una frontissa importada fa servir les regles de
+  sempre (`addCups`: quantitat per alçada, filera System 32, `cupOffset`, cara A) amb **tots** els forats del target
+  `door` (cassoleta + cargols/espigues del fitxer, tags `hinge-screw`/`hinge-dowel`) i, amb una placa aparellada
+  (`addPlate`), els forats de la placa (target `side`, tag `plate`) a la cara de dins del **lateral de les frontisses**, a
+  `zFront − plateSetback` (37) i a l'alçada de cada cassoleta + `plateOffset`; un forat de placa sobre un del System 32
+  es queda el més gros (cargol euro Ø5 × 12 = el mateix forat). **Sense confirmar (`imported.confirmed`), cap forat**
+  (ni a la porta ni al lateral) i avís `hardware`: el taller no rep res que no s'hagi revisat. El model només per veure
+  (`Panel.fittings`, GLB de `hardwareAssets`). Tests `build/importedHardware.test.ts`, `core/import/*.test.ts` i
+  `core/import/hettich.roundtrip.test.ts` (`HETTICH_DIR` = carpeta amb els ZIP de Hettich; no es copien al repo).
 - **Forats que es trobarien per dins** (`build/holeClash.ts`, `resolveHoleClashes`): System 32 a banda i banda d'un divisor
   → tots dos a (T − 1)/2; espiga de cantell contra un forat de cara → l'espiga s'atura 1 mm abans (mínim 10 mm, si no avís
   `hole-clash`). Els forats de guia de la caixa del calaix no arriben a la ranura del fons.
@@ -431,7 +446,7 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
 - **Màquines CNC** (`settings/MachinesPane.tsx`, `MasterDetail`): la SCM del taller (Xilog Maestro 2.00.004, sèrie
   AA10008021) s'**importa de Maestro** amb un **sol importador** (`core/machine/maestroImport.ts`, `importMaestro`; zona
   «Importar de Maestro» amb «Triar carpeta…» (`webkitdirectory`) · «Triar fitxers…» i drag & drop de fitxers i carpetes,
-  `webkitGetAsEntry`): la carpeta `<sèrie>.machinecontext`, un projecte `.pgmx` (zip o carpeta desplegada amb l'XML,
+  `webkitGetAsEntry`; component compartit `components/ImportDropZone`, `components/pickedFiles.ts`): la carpeta `<sèrie>.machinecontext`, un projecte `.pgmx` (zip o carpeta desplegada amb l'XML,
   `def.atrx`, `*.cfgx`) o fitxers solts. Tipus pel **contingut** (`detectMaestroFile`), agrupat per carpeta
   (`planMaestroImport`); primer el context (crea o actualitza per sèrie) i després els .pgmx: a la màquina de la seva
   carpeta (sèrie del `.cfgx`; sense `.tlgx`, eines de l'`.atrx` sense mides, `machineFromAtrx`), a la triada, a la per
@@ -640,7 +655,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`tileClone`), i el render fa com a molt 1600 px («Alta» i «Màxima» desactivades amb l'explicació) i, per CPU, com a molt
   2 processos (`cpuThreads`, menys fils com més gran és la imatge).
 - **Ferratges visuals** (`viewer/Hardware.tsx`, «Ferratges» a Opcions de vista, `mobles:viewer-hardware`): frontisses,
-  tirador de barra, potes regulables. Només es dibuixen.
+  tirador de barra, potes regulables. Només es dibuixen. Els **importats** (`PanelFittings`, `Panel.fittings`): el GLB
+  de la frontissa a cada cassoleta i el de la placa al lateral (`loadModel` dels `hwa-…`, taula Dexie `hardwareAssets`,
+  v6), al marc del ferratge (u = v × n); sense el model, la caixa. No surten al render, l'AR ni les exportacions.
 - **Textura desplaçada per peça** (`viewer/textureOffset.ts`, test): cada cara de cada peça (`Panel.id` + cara) té un
   desplaçament determinista (hash FNV-1a) i, a l'atzar, un gir de 180°, a la matriu UV (`faceTexture(…, off)`), que llegeixen
   el visor, el render (`sceneData`, també la base tangent) i el GLB/USDZ. Canviar el hash canvia la veta de tots els mobles.
@@ -1129,13 +1146,25 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   `HardwarePick` (`ChoiceChips` dels del mateix tipus; el del mòdul = sense camp) i a Fusteria el de cada lloc del mòdul.
   Les còpies que no són a la biblioteca tal qual (`hardwareChoices`, per contingut, no per id) surten a part, «<nom> (del
   moble)», triades: es veu el que es fabrica i s'hi pot tornar; triar-ne un de la biblioteca canvia la còpia.
+  - **«Importar del fabricant»** (`HardwarePane`, zona `components/ImportDropZone` —la mateixa que «Importar de Maestro»,
+    amb «Triar carpeta…» · «Triar fitxers…» i deixar anar—, `settings/hardwareImport.ts`): ZIP de Hettich tal com es
+    baixen (STEP i DWG/DXF; només es descomprimeixen els articles triats, `listZip`/`readZipEntry`), carpetes o fitxers.
+    Diàleg `HardwareImportDialog`: articles per número amb la categoria i la carpeta traduïdes, els fitxers que porten
+    i, si no es poden importar, per què; cerca, filtre Frontisses · Plaques · Altres, «Triar els visibles», «Importar
+    (n)». Les frontisses s'aparellen amb la primera placa del mateix lot. Tot entra **sense confirmar** (insígnia a la
+    targeta). L'editor d'un importat: la vista del fitxer de fons sota els forats proposats (`PanelDrawing underlay`),
+    el 3D (`HardwareModelPreview`, `React.lazy`) i les vistes 2D; a la dreta «Importat del fabricant» (estat,
+    **Confirmar** / «Treure la confirmació» —els mobles desats amb la còpia d'abans hi passen—, article, carpeta, fitxers,
+    què s'ha trobat, «Tornar a la proposta»), «Placa de muntatge» (frontisses: triar-ne una o cap, «Placa: del davant» i
+    «Placa: alçada») i els forats editables (al llarg, cap a dins des del centre de la cassoleta, Ø, fondària; tocar-los
+    torna a deixar l'item sense confirmar).
 - **Objectes de referència inicials** (`BUILTIN_REFERENCES`): genèrics (A4, rajoles, portes, **una sola tele** de 55″,
   radiador, endoll; per decisió de l'usuari, no una llista de teles). Les teles antigues es treuen (`RETIRED_REFERENCES`,
   `isRetired`, també les còpies «TV Sony KD-55XD8505…»).
 - **Visor 3D**: qualitat, escena de Presentació (terra i paret: materials de la biblioteca, `PresentationScene.floorMaterial`
   / `wallMaterial`, o les mostres ràpides; terra per defecte «Parquet de roure»), llum i «Cel del render». **Tema**:
   dia/nit/sistema i color principal (`theme/accent.ts` redirigeix les variables CSS de `wood`).
-- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 19: biblioteca de ferratges): les migracions depenen només de la versió
+- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 20: ferratges importats; 19: biblioteca de ferratges): les migracions depenen només de la versió
   desada, que **mai baixa** (`saveSettings` desa la més alta). **Desades per una versió més nova**: només lectura
   (`saveSettings` torna `false` amb `console.warn`; `loadSettings` avisa). **Lectura camp a camp** (`repairValue`,
   `core/model/repair.ts`): un valor dolent d'una secció només torna aquell valor a l'inicial (un tauler o una llargada de guia
@@ -1314,6 +1343,7 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   s'ignora.
 - Precache (`vite.config.ts`): models `.glb` i HDRI sí; fotos de textura (`/textures/`) i pesos d'OIDN (`/oidn/`, `oidn.ts`
   els valida i esborra els dolents de la seva memòria cau) no: `runtimeCaching` CacheFirst en fer-los servir; splash no.
+  El WASM d'OpenCascade (`assets/*.wasm`, importar ferratges) tampoc: CacheFirst en fer-lo servir.
 
 ## Icones (catàleg fix, `react-icons/lu`)
 Una icona = un significat a tota l'app. No en triïs d'altres per a aquestes accions; si en cal una de nova, afegeix-la aquí.
@@ -1346,6 +1376,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Render | Qualitat · Càmera · Escena · Llums · Sol · Cel · Llum (materials que fan llum) · Imatge | `LuGauge` · `LuCamera` · `LuHouse` · `LuLightbulb` · `LuSun` · `LuCloudSun` · `LuLamp` · `LuImage` |
 | Inspector | Anterior · Següent · Accions de la selecció (menú) | `LuChevronLeft` · `LuChevronRight` · `LuEllipsis` |
 | Preferències | Tema (dia/nit/sistema) · Color principal | `LuSunMoon` (`LuSun` · `LuMoon` · `LuMonitor`) · `LuCheck` a la mostra triada |
+| Ferratges | Importar del fabricant · Confirmar (importat) · Tornar a la proposta · Afegir forat | `LuUpload` · `LuCheck` · `LuUndo2` · `LuPlus` |
 | Preferències | Visualització · Ferratges (i Fusteria a l'inspector) · Calaixos · System 32 · Cassoleta · Imants | `LuScanEye` · `LuHammer` · `LuArchive` · `LuCircleDot` · `LuCircleDashed` · `LuMagnet` |
 | Ferratges (categories) | Frontisses · Plaques · Guies · Elevables i abatibles · Unions · Suports de prestatge · Potes · Tiradors · Pressió i imants · Perfils · Penjar · Altres | `LuCircleDashed` · `LuSquareDot` · `LuArchive` · `LuPanelBottom` · `LuBolt` · `LuCircleDot` · `LuFootprints` · `LuGripHorizontal` · `LuMagnet` · `LuMinus` · `LuAnchor` · `LuPackage` |
 | Preferències | Visor 3D (els materials per defecte als mòduls nous porten la de Materials, `LuPalette`) | `LuLampFloor` |

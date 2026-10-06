@@ -321,9 +321,9 @@ function HardwareThumb({ item }: { item: HardwareItem }) {
   )
 }
 
-/** Vista frontal registrada (al marc del ferratge) d'un model desat, o `null`. */
+/** La vista registrada al marc del ferratge (la que mira la cara de la peça; a les frontisses, la frontal), o `null`. */
 function frontView(views: HardwareView[]): HardwareView | null {
-  return views.find((v) => v.name === "front" && v.registered) ?? null
+  return views.find((v) => v.name === "front" && v.registered) ?? views.find((v) => v.registered) ?? null
 }
 
 /** La vista (marc u, v del ferratge) posada a cada punt d'ancoratge de la peça: u al llarg de x, v al llarg de y. */
@@ -395,7 +395,7 @@ function HardwareStage({ item }: { item: HardwareItem }) {
         })}
         <Text fontSize="xs" color="fg.muted" textAlign="center">
           Patró de mecanitzats sobre una peça d'exemple, vist des de la cara A: forats de cara plens, de cantell discontinus i passants buits. Al moble, la regla de cada contingut els col·loca (les cassoletes, a la filera System 32).
-          {item.imported && " En gris, la vista frontal del fitxer del fabricant, encaixada sobre els forats proposats."}
+          {item.imported && " En gris, la vista del fitxer del fabricant que mira la cara de la peça, encaixada sobre els forats proposats (si hi encaixa)."}
         </Text>
         {item.imported && ownId && (
           <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
