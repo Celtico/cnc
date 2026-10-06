@@ -1,7 +1,7 @@
 import { Badge, Box, Button, HStack, IconButton, Input, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
 import { useContext, useEffect, useRef, useState, type ReactNode, type RefObject } from "react"
-import { LuCopy, LuImagePlus, LuLayers2, LuLayers3, LuPaintbrush, LuSprayCan, LuStar, LuTrash2 } from "react-icons/lu"
-import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
+import { LuCopy, LuFactory, LuImagePlus, LuLayers2, LuLayers3, LuPaintbrush, LuSprayCan, LuStar, LuSwatchBook, LuTrash2 } from "react-icons/lu"
+import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { EditorDialog } from "../../components/EditorDialog"
 import { SearchBar } from "../../components/SearchBar"
 import { NumberField } from "../../components/NumRow"
@@ -359,7 +359,9 @@ function MaterialCard({ m, dirty, footer, onChange, onRename, nameError, onDupli
         </HStack>
       </HStack>
 
-      <FormSection title="Aspecte">
+      {/* Seccions plegables (l'acordió de l'app, independents i recordades durant la sessió): Aspecte obert. */}
+      <Box className="form-section" borderTopWidth="1px">
+      <FoldItem id="material-look" icon={LuSwatchBook} title="Aspecte" badge={FINISH_LABEL[finish.kind]} defaultOpen>
         <FormRow label="Acabat">
           <ChoiceChips<Finish["kind"]>
             label="Acabat"
@@ -471,9 +473,9 @@ function MaterialCard({ m, dirty, footer, onChange, onRename, nameError, onDupli
             ))}
           </HStack>
         </FormRow>
-      </FormSection>
+      </FoldItem>
 
-      <FormSection title="Fabricació">
+      <FoldItem id="material-make" icon={LuFactory} title="Fabricació" badge={category.label}>
         {/* Els de simulació només es veuen: sense gruixos, cantell ni veta (es conserven per si es canvia de categoria). */}
         {category.id !== "sim" && <>
         <FormRow label="Gruixos" help="Els que es poden triar a les peces d'aquest material.">
@@ -502,8 +504,13 @@ function MaterialCard({ m, dirty, footer, onChange, onRename, nameError, onDupli
             }}
           />
         </FormRow>
-      </FormSection>
-      {footer && <FormSection title="Per defecte als mòduls nous">{footer}</FormSection>}
+      </FoldItem>
+      {footer && (
+        <FoldItem id="material-default" icon={LuStar} title="Per defecte als mòduls nous">
+          {footer}
+        </FoldItem>
+      )}
+      </Box>
       </Box>
       </Box>
     </>
