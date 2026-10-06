@@ -1,8 +1,8 @@
-import { Alert, Box, Button, Card, CloseButton, Collapsible, Dialog, HStack, Portal, Stack, Switch, Text, VStack } from "@chakra-ui/react"
+import { Alert, Box, Button, Card, CloseButton, Dialog, HStack, Portal, Stack, Switch, Text, VStack } from "@chakra-ui/react"
 import { useEffect, useMemo, useState } from "react"
 import { usePersistentFlag } from "../usePersistentFlag"
-import { LuBoxes, LuChevronRight, LuCuboid, LuDownload, LuFactory, LuFileDown, LuFileJson, LuLayoutGrid, LuMonitorCog, LuScissors, LuSettings2 } from "react-icons/lu"
-import { PanelGroup, PanelSection } from "../../components/PanelSection"
+import { LuBoxes, LuCuboid, LuDownload, LuFactory, LuFileDown, LuFileJson, LuLayoutGrid, LuMonitorCog, LuScissors, LuSettings2 } from "react-icons/lu"
+import { FoldItem } from "../../components/Fold"
 import { FormRow } from "../../components/FormRow"
 import { exportGlb } from "../../components/viewer/exportGlb"
 import { exportablePanel } from "../../components/viewer/exportablePanel"
@@ -280,33 +280,26 @@ export function ExportScreen({ projectId }: { projectId: number }) {
         )}
         {xcs && xcs.postProcessPanels > 0 && (
           // Inglets, cantells, encolar…: no són avisos, és el que toca després de la CNC (també al LLEGEIX-ME).
-          <Collapsible.Root>
-            <Collapsible.Trigger asChild>
-              <Button variant="ghost" size="sm" px={1} css={{ "&[data-state=open] svg": { transform: "rotate(90deg)" } }}>
-                <LuChevronRight /> Després de la CNC ({xcs.postProcessPanels} {xcs.postProcessPanels === 1 ? "peça" : "peces"})
-              </Button>
-            </Collapsible.Trigger>
-            <Collapsible.Content>
-              <Stack gap={2} fontSize="sm" mt={1}>
-                {xcs.rows.map((r) =>
-                  r.postProcesses.length ? (
-                    <Box key={r.ref}>
-                      <Text fontWeight="medium">
-                        {r.ref} · {r.label}
-                      </Text>
-                      <Text color="fg.muted">{r.route}</Text>
-                      <Stack as="ol" gap={0} ps={5} listStyleType="decimal">
-                        {r.postProcesses.map((x, k) => (
-                          <li key={k}>{x.text}</li>
-                        ))}
-                      </Stack>
-                    </Box>
-                  ) : null,
-                )}
-                <Text color="fg.muted">Cantells amb la numeració de l'app (1 dalt · 2 dreta · 3 baix · 4 esquerra).</Text>
-              </Stack>
-            </Collapsible.Content>
-          </Collapsible.Root>
+          <FoldItem id="export-after-cnc" variant="nested" title="Després de la CNC" count={xcs.postProcessPanels}>
+            <Stack gap={2} fontSize="sm" mt={1}>
+              {xcs.rows.map((r) =>
+                r.postProcesses.length ? (
+                  <Box key={r.ref}>
+                    <Text fontWeight="medium">
+                      {r.ref} · {r.label}
+                    </Text>
+                    <Text color="fg.muted">{r.route}</Text>
+                    <Stack as="ol" gap={0} ps={5} listStyleType="decimal">
+                      {r.postProcesses.map((x, k) => (
+                        <li key={k}>{x.text}</li>
+                      ))}
+                    </Stack>
+                  </Box>
+                ) : null,
+              )}
+              <Text color="fg.muted">Cantells amb la numeració de l'app (1 dalt · 2 dreta · 3 baix · 4 esquerra).</Text>
+            </Stack>
+          </FoldItem>
         )}
       </ExportCard>
 
@@ -421,8 +414,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
         }
       />
 
-      <PanelGroup storageKey="mobles:export-open-section" defaultOpen="">
-        <PanelSection id="advanced" title="Avançat" icon={LuSettings2}>
+      <FoldItem id="advanced" title="Avançat" icon={LuSettings2}>
           <HStack justify="space-between" gap={3} wrap="wrap">
             <Text fontSize="sm" color="fg.muted" flex={1} minW="240px">
               JSON del taller (UnifiedData): el que el taller obtindria en llegir el STEP i el CSV ({nesting?.boards.length ?? 0} taulers). Només
@@ -432,8 +424,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
               <LuFileJson /> Descarregar JSON
             </Button>
           </HStack>
-        </PanelSection>
-      </PanelGroup>
+      </FoldItem>
     </VStack>
   )
 }

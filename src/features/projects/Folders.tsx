@@ -1,9 +1,9 @@
-import { Accordion, Box, Button, Dialog, HStack, IconButton, Input, Menu, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, Dialog, HStack, IconButton, Input, Menu, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
 import { LuCircle, LuCircleCheck, LuEllipsis, LuFolder, LuFolderInput, LuFolderMinus, LuFolderPlus, LuListChecks, LuPencil, LuTrash2, LuX } from "react-icons/lu"
 import { NameDialog } from "../../components/NameDialog"
-import { FoldTitle } from "./FoldTitle"
-import { GALLERY_COLS, groupByFolder, useSessionList } from "./galleryGrid"
+import { FoldGroup, FoldItem } from "../../components/Fold"
+import { GALLERY_COLS, groupByFolder } from "./galleryGrid"
 
 /**
  * Graella amb grups (carpetes), la mateixa a l'historial de Mobles, Objectes i Ambients i a «Les
@@ -53,7 +53,6 @@ export function FolderedGrid<T>({
   const folders = show === "loose" ? [] : grouped.folders
   const loose = show === "folders" ? [] : grouped.loose
   const visible = [...folders.flatMap(([, l]) => l), ...loose]
-  const [open, setOpen] = useSessionList(storageKey)
   const [renaming, setRenaming] = useState<string | null>(null)
   // Mode selecció: cada targeta es marca en tocar-la (no s'obre).
   const [picking, setPicking] = useState(false)
@@ -160,16 +159,17 @@ export function FolderedGrid<T>({
         </HStack>
       )}
       {folders.length > 0 && (
-        <Accordion.Root className="inner-accordion" multiple collapsible lazyMount variant="plain" value={searching || picking ? folders.map((f) => f[0]) : open} onValueChange={(e) => !searching && !picking && setOpen(e.value)}>
+        // Línia sota cada grup (com les categories del catàleg): el que hi ha a dins no queda penjat. Dins dels acordions
+        // de les galeries, a sang (`.inner-accordion`, layout.css).
+        <FoldGroup variant="nested" storageKey={storageKey} forceOpen={searching || picking ? folders.map((f) => f[0]) : null}>
           {folders.map(([name, list]) => (
-            <Accordion.Item key={name} value={name}>
-              {/* Línia sota cada grup (com les categories del catàleg): el que hi ha a dins no queda penjat. Dins dels acordions
-                  de les galeries, a sang (`.inner-accordion`, layout.css). */}
-              <HStack className="inner-head" gap={1} borderBottomWidth="1px">
-                <Accordion.ItemTrigger cursor="pointer" flex={1}>
-                  <FoldTitle icon={<LuFolder />} title={name} count={list.length} />
-                  <Accordion.ItemIndicator />
-                </Accordion.ItemTrigger>
+            <FoldItem
+              key={name}
+              id={name}
+              icon={LuFolder}
+              title={name}
+              count={list.length}
+              actions={
                 <Menu.Root positioning={{ placement: "bottom-end" }}>
                   <Menu.Trigger asChild>
                     <IconButton aria-label={`Opcions del grup «${name}»`} size="xs" variant="ghost">
@@ -189,17 +189,14 @@ export function FolderedGrid<T>({
                     </Menu.Positioner>
                   </Portal>
                 </Menu.Root>
-              </HStack>
-              <Accordion.ItemContent>
-                <Accordion.ItemBody>
-                  <SimpleGrid columns={GALLERY_COLS} gap={3}>
-                    {list.map(cell)}
-                  </SimpleGrid>
-                </Accordion.ItemBody>
-              </Accordion.ItemContent>
-            </Accordion.Item>
+              }
+            >
+              <SimpleGrid columns={GALLERY_COLS} gap={3}>
+                {list.map(cell)}
+              </SimpleGrid>
+            </FoldItem>
           ))}
-        </Accordion.Root>
+        </FoldGroup>
       )}
       {loose.length > 0 && (
         // Dins d'una secció de galeria (sense marge), el marge de la secció (`--gallery-px`, layout.css).

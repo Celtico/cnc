@@ -79,7 +79,7 @@ src/
     photo/         # homografia, calibració amb referència, EXIF
   features/        # pantalles: projects (Mobles), editor, composition (arbre i inspectors), cutlist (Peces), nesting,
                    #   export, photo, ambients, objects, settings, file
-  components/      # mòduls compartits (Workspace, TopBar, FormRow, MasterDetail, PanelSection…)
+  components/      # mòduls compartits (Workspace, TopBar, FormRow, MasterDetail, Fold…)
     ui/            # snippets de la CLI de Chakra (retocats només on cal: toaster)
     viewer/        # escena 3D (r3f), textures, miniatures, GLB/USDZ (exportGlb.ts, exportUsdz.ts), render/
   theme/           # createSystem, tokens, accent, layout.css
@@ -173,7 +173,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     (al cantell que obre): dos forats passants Ø5 a 128 / 96 / 64 com a talls `circle` `tag: "handle"` (el taller els llegeix
     com els passacables); el 3D no els buida (`visualPanel`) i hi col·loca el tirador.
 - **Peces corregudes** (`comp.runs`, `core/build/runs.ts`, secció «Taulell i sòcol» del moble; `RunsForm`: cada peça és un
-  plegable `Fold` amb un resum —de → fins a · gruix · forats—, dins del taulell cada forat també; una oberta alhora, la nova
+  plegable (`FoldItem` variant `card`) amb un resum —de → fins a · gruix · forats—, dins del taulell cada forat també; una oberta alhora, la nova
   s'obre sola):
   **taulell** d'una peça sobre els baixos de la fila (voladís, forats d'encastar de placa, pica o a mida → talls passants) i
   **sòcol corregut** (davant de les potes, retranquejat). Es numeren com un mòdul més (n + 1) per a les refs. No arriben a
@@ -490,15 +490,20 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   ordenar** (`reorderModule`, `reorderRef`): mòduls dins de la seva fila i objectes; una línia marca on cau. Arrossegar una
   peça lliure sobre la fila d'un grup la hi posa; al costat d'una peça n'agafa el grup; la zona «Treure del grup» surt
   mentre s'arrossega una d'un grup.
-- **Propietats** del que hi ha seleccionat i **només d'això**, en seccions plegables independents (`PanelSection`, vegeu UI):
+- **Propietats** del que hi ha seleccionat i **només d'això**, en seccions plegables independents (`FoldItem`, vegeu UI):
   - Moble: Resum (i avisos de fusteria), Tipus, Materials de tot el moble (aplica a tots els mòduls), Taulell i sòcol,
     Encaixos, Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
     Preferències»; `CabinetViewer sceneFinish`, `renderThumb(…, finish)`).
   - Mòdul: Mides · Caixa (abans «Estructura», es confonia amb la pestanya de l'arbre) · Materials · Fusteria (avançat). Posició. Materials visibles: cos, **fronts**
     (`frontMaterial`, buit = el del cos) i fons.
   - Compartiment (`ZonePanel`): accions com a icones a la capçalera (Pare · Duplicar · Eliminar) i Front · Prestatges ·
-    Mida · Dividir. Objecte (`RefInspector`): General · Mides · Posició (accions Desar a preferències · Eliminar). Peça lliure
-    (`PartInspector`), model (`ModelInspector`). A la pestanya Foto, el calibratge.
+    Mida · Dividir. **Sense «General»**: cada apartat és una secció pròpia amb la seva icona i el valor triat a la insígnia
+    (icona dinàmica on hi ha opcions, com els compartiments); el que no toca no surt. Peça lliure (`PartInspector`): Efecte ·
+    Orientació · Mides · Material (amb la Veta) · Forma · CNC (amb el Cantell) · Encaixos (Flat-pack) · Grup · Enganxada (si
+    hi ha mòduls) · Posició · Encaixos (tot el moble); la que talla no té Material ni CNC. Objecte (`RefInspector`, accions
+    Desar a preferències · Eliminar): Efecte · Forma · Orientació (la direcció del cilindre i el perfil, o del tall d'una caixa
+    que talla) · Mides · Material (no als que tallen) · Enganxada (Al terra / A la paret) · Posició. Model (`ModelInspector`).
+    A la pestanya Foto, el calibratge.
   - **Nom a la capçalera de l'inspector**: el del mòdul i de l'objecte es canvia clicant-lo (`Editable`, com Figma); el del
     moble, a la barra de dalt.
   - **Opcions que no toquen s'amaguen** (sense fons no surten material, gruix ni ranura del fons; Cantonades només si hi ha
@@ -540,7 +545,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     `NumberField.label` accepta un ReactNode). «Al terra» (y = 0) i «A la paret» (z = 0) (`RefObject.onFloor`, `onWall`,
     `anchorRef`, aplicat a l'inspector, a l'arrossegament i a les fletxes; el camp fixat queda desactivat).
   - Teclat: fletxes 1 mm (Maj 10), Re Pàg / Av Pàg per a Z.
-- **Objectes de referència al 3D**: amb material (`RefObject.material`, a General; no als que tallen) es veuen sòlids
+- **Objectes de referència al 3D**: amb material (`RefObject.material`, secció Material; no als que tallen) es veuen sòlids
   (`surfaceMaterial`, amb ombres) i surten a la Presentació i al render; sense («Cap (fantasma)»), fantasma translúcid que el
   render no pinta. Els que tallen només es veuen seleccionats (violeta, a través del moble; també les peces que tallen, id
   `part:<id>`). Els forats del mòdul seleccionat es marquen en taronja a través de les portes (`CableMarks`).
@@ -678,7 +683,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     llum mitjana més fosca (`Look.key` 0,1 / 0,06 en lloc de 0,18) i amb més contrast. El fons (raigs que no toquen res)
     es multiplica per la llum del cel als dos motors (al vespre, fosc). Obrir el Render des de l'editor treu els colors
     per rol del mode Ràpid (si no, el render sortia amb els colors de les peces).
-  - **Opcions** en seccions plegables (`PanelSection`: Qualitat, Càmera, Escena, Llum, Imatge, amb el resum a la insígnia):
+  - **Opcions** en seccions plegables (`FoldItem`: Qualitat, Càmera, Escena, Llums, Imatge, amb el resum a la insígnia; a
+    Llums, l'Ambient a dalt i les subseccions `size="sm"` **Sol** · **Cel** · **Llum** (la dels materials que fan llum); la
+    columna porta 3 px a l'esquerra perquè el desplaçament no talli els controls, i els interruptors són el `Switch` de l'app):
     motor, resolució, rebots, aturar a N passades; format (visor, 3:2, 4:5, 16:9, 1:1) i desenfocament (lent fina, enfoca el centre); escena (habitació de
     Presentació / només terra / cap, `userData.room`); sol, intensitat, ombres, **Cel** (`render/skies.ts`: «Dia» procedural,
     «Núvols» i «Interior» HDRI de Poly Haven reduïts a 1K a `public/hdr/` (el cel que es veu es llegeix **bilineal** als dos motors, `envSky`: amb el píxel més proper sortia a quadres per les finestres; la mostra per importància continua per píxel), precachejats, o un `.hdr` propi, `hdr.ts`, que es pot
@@ -836,7 +843,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   `buildScene`.
 - **Editor** (`features/ambients/AmbientEditor.tsx`, sobre `Workspace`): pestanyes **Plànol · 3D** a dalt al mig del visor
   (es recorda, `AMBIENT_TAB_KEY`; els creats del catàleg s'obren al 3D); llista «Elements» a l'esquerra amb «+ Moble» ·
-  «+ Objecte»; inspector (element, bloc, paret, grup, ambient) en `PanelSection` (Posició, Mides generals, Bloc, Mides i
+  «+ Objecte»; inspector (element, bloc, paret, grup, ambient) en `FoldItem` (Posició, Mides generals, Bloc, Mides i
   material, Finestres i portes, Parets noves, Acabats, Plànol de fons, Elements).
 - **Plànol** (`PlanCanvas`, com Figma): roda o dos dits per desplaçar, Ctrl/⌘ + roda o pessigar per fer zoom al punt, espai
   + arrossegar; − / + i l'escala (1:50…) a baix a la dreta; la barra d'eines flota a dalt. Eines en columna a l'esquerra: **Seleccionar** (V), **Paret** (P,
@@ -1111,11 +1118,22 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   `ViewTile`, Forma, «Al terra / A la paret» i les eines de la Foto. Base, Fons, Tapa, Patró de reixeta, Direcció dels
   objectes són només icona; Efecte i Forma dels objectes, portes (una/dues, frontisses), abatible i muntatge de la reixeta,
   segments amb icona i text.
-- **Seccions plegables** (`components/PanelSection.tsx`): totes iguals (icona + títol + insígnia + fletxa, sense fons),
-  **independents** (se'n poden tenir diverses obertes) als inspectors i al Render; **comencen tancades** en obrir l'app
-  (llevat de `defaultOpen`, p. ex. els xocs amb l'obertura actual) i l'estat es recorda durant la sessió
-  (`mobles:section:<id>`). Dins d'un `PanelGroup` fan d'acordió (una oberta): només l'«Avançat» d'Exportar. Les Preferències
-  no en fan servir (`SettingsGroup`, sempre obert).
+- **Un sol acordió** (`components/Fold.tsx`, `FoldGroup` + `FoldItem`, sobre `Accordion` de Chakra; context i tipus a
+  `foldContext.ts`, estat de sessió a `sessionState.ts`): inspectors, Render, Foto, Exportar, galeries, calaix de materials,
+  taulells i forats (`RunsForm`) i eines de la màquina. Res d'`Accordion`/`Collapsible` de Chakra ni de plegables propis fora
+  d'aquí. `FoldItem`: `id`, `icon` (del catàleg, obligatòria a les seccions), `title`, `badge`/`badgePalette`, `count`,
+  `description` (sempre), `summary` (tancat), `actions` (al costat de la capçalera, mai a dins), `header` (fila de taula).
+  Variants: `section` (inspectors i Render: icona + títol + insígnia + fletxa, sense fons; `size="sm"` per a subseccions),
+  `gallery` (`.gallery-accordion`), `nested` (`.inner-accordion`, categories), `card` (vora i resum: taulells, forats) i
+  `row` (fila de taula desplegable: eines).
+  - **Sol** (sense `FoldGroup`): **independent** (se'n poden tenir diverses obertes), **comença tancat** (llevat de
+    `defaultOpen`, p. ex. els xocs amb l'obertura actual) i es recorda durant la sessió (`mobles:section:<id>`).
+  - **`FoldGroup`**: un acordió compartit; `multiple={false}` = un obert alhora (taulells, forats, eines); estat controlat
+    (`value`), de la sessió (`storageKey`, una llista: galeries) o intern; `forceOpen` = la cerca de les galeries.
+  - El contingut es munta en obrir (`lazyMount`). `section`, `card` i `row` el desmunten en tancar i **no animen l'alçada ni
+    retallen** (`overflow: visible`): el `Collapsible` de Chakra es quedava a alçada 0 si el contingut arribava tard
+    (comprovat als inspectors recarregant amb seccions obertes i canviant el contingut amb la secció oberta).
+  - Les Preferències no en fan servir (`SettingsGroup`, sempre obert).
 - **`PageHeader`** (`components/PageHeader`, Ambients · Objectes · Mobles · Preferències): títol gran, accions a sota i
   l'explicació. **Seccions de les galeries sense marge** (`.gallery-accordion`, `layout.css`): barra d'eines i acordions de
   dins **a sang**; la resta amb `--gallery-px`. Res de marges negatius.
@@ -1216,6 +1234,9 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Inspector | Mides · Caixa (base, fons, tapa, laterals) · Materials · Fusteria · Front · Pare | `LuMoveDiagonal` · `LuFrame` · `LuPalette` · `LuHammer` · `LuDoorClosed` · `LuArrowUp` |
 | Inspector | Fons en ranura · Cargolat darrere · Encastat · Sense fons | `LuLayers2` · `LuDrill` · `LuInspectionPanel` · `LuSquareDashed` |
 | Inspector | Resum del moble · Posició | `LuBox` · `LuMove` |
+| Inspector | Grup (peces lliures) · Enganxada (a un mòdul, al terra / a la paret) · CNC de la peça (la de Màquina CNC) | `LuGroup` · `LuLink` · `LuFactory` |
+| Forma | Forma a mida / perfil · Cilindre (la caixa, `LuBox`) | `LuSpline` · `LuCylinder` |
+| Render | Qualitat · Càmera · Escena · Llums · Sol · Cel · Llum (materials que fan llum) · Imatge | `LuGauge` · `LuCamera` · `LuHouse` · `LuLightbulb` · `LuSun` · `LuCloudSun` · `LuLamp` · `LuImage` |
 | Inspector | Anterior · Següent · Accions de la selecció (menú) | `LuChevronLeft` · `LuChevronRight` · `LuEllipsis` |
 | Preferències | Tema (dia/nit/sistema) · Color principal | `LuSunMoon` (`LuSun` · `LuMoon` · `LuMonitor`) · `LuCheck` a la mostra triada |
 | Preferències | Visualització · Ferratges (i Fusteria a l'inspector) · Calaixos · System 32 · Cassoleta · Imants | `LuScanEye` · `LuHammer` · `LuArchive` · `LuCircleDot` · `LuCircleDashed` · `LuMagnet` |

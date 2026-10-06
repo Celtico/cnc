@@ -36,7 +36,7 @@ import {
   LuUndo2,
   LuView,
 } from "react-icons/lu"
-import { PanelSection } from "../../components/PanelSection"
+import { FoldItem } from "../../components/Fold"
 import { Workspace } from "../../components/Workspace"
 import { ViewOptions, ViewTile } from "../../components/ViewOptions"
 import { useWorkspace } from "../../components/useWorkspace"
@@ -904,7 +904,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         <Box ref={setPhotoControls} />
       ) : selection.kind === "moble" ? (
         <Stack gap={0}>
-          <PanelSection id="moble-summary" title="Resum" icon={LuBox}>
+          <FoldItem id="moble-summary" title="Resum" icon={LuBox}>
             <Text fontSize="sm" color="fg.muted">
               {comp.modules.length} {comp.modules.length === 1 ? "mòdul" : "mòduls"} · {size.width} × {size.height} × {size.depth} mm
             </Text>
@@ -917,14 +917,14 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             <Text fontSize="xs" color="fg.muted">
               Selecciona un mòdul, un compartiment o un objecte a l'estructura (o clica'l al 3D) per editar-lo.
             </Text>
-          </PanelSection>
+          </FoldItem>
           {/* Tipus de moble: decideix les opcions de conjunt (taulell i sòcol només a la cuina). */}
           {kind === "objecte" ? (
             <Text fontSize="xs" color="fg.muted" px={1} py={2}>
               Objecte per als ambients: fes-lo amb peces lliures (forma amb l'editor de perfils, «Talla» per als forats i buidats) i materials de simulació. Només es veu: no va al nesting ni als fitxers del taller.
             </Text>
           ) : (
-          <PanelSection id="moble-kind" title="Tipus" icon={KINDS.find((k) => k.value === kind)!.icon} badge={KINDS.find((k) => k.value === kind)!.label}>
+          <FoldItem id="moble-kind" title="Tipus" icon={KINDS.find((k) => k.value === kind)!.icon} badge={KINDS.find((k) => k.value === kind)!.label}>
             <FormRow
               label="Tipus de moble"
               help={
@@ -946,20 +946,20 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             >
               <IconChoice label="Tipus de moble" hideLabel value={kind} options={MOBLE_KINDS} onChange={(k) => setComp((c) => ({ ...c, kind: k }))} />
             </FormRow>
-          </PanelSection>
+          </FoldItem>
           )}
           {kind === "cuina" && (
-            <PanelSection id="moble-runs" title="Taulell i sòcol" icon={LuPanelTop} badge={comp.runs?.length || undefined}>
+            <FoldItem id="moble-runs" title="Taulell i sòcol" icon={LuPanelTop} badge={comp.runs?.length || undefined}>
               <RunsForm comp={comp} onChange={setComp} />
-            </PanelSection>
+            </FoldItem>
           )}
           {kind === "lliure" && (comp.parts?.length ?? 0) > 0 && (
-            <PanelSection id="moble-joinery" title="Encaixos" icon={LuPuzzle} badge={build?.joints.length || undefined}>
+            <FoldItem id="moble-joinery" title="Encaixos" icon={LuPuzzle} badge={build?.joints.length || undefined}>
               <PartJoineryForm comp={comp} onChange={setComp} />
-            </PanelSection>
+            </FoldItem>
           )}
           {/* Com els Acabats dels ambients: terra i paret de l'escena on es presenta (per defecte, les de Preferències). */}
-          <PanelSection id="moble-scene" title="Acabats de l'escena" icon={LuLampFloor} badge={comp.scene?.floor || comp.scene?.wall ? "Propis" : undefined}>
+          <FoldItem id="moble-scene" title="Acabats de l'escena" icon={LuLampFloor} badge={comp.scene?.floor || comp.scene?.wall ? "Propis" : undefined}>
             <Stack gap={0}>
               {(["floor", "wall"] as const).map((k) => (
                 <FormRow key={k} label={k === "floor" ? "Terra" : "Paret"} help={k === "wall" ? "Es veuen en mode Presentació i a la miniatura de la targeta." : undefined} maxW="280px">
@@ -978,8 +978,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                 </FormRow>
               ))}
             </Stack>
-          </PanelSection>
-          {!partsOnlyKind(kind) && <PanelSection id="moble-materials" title="Materials de tot el moble" icon={LuPalette}>
+          </FoldItem>
+          {!partsOnlyKind(kind) && <FoldItem id="moble-materials" title="Materials de tot el moble" icon={LuPalette}>
             <MaterialsForm
               carcass={comp.modules[0]!.carcass}
               hasBack={comp.modules.some((m) => m.carcass.back !== "none")}
@@ -990,7 +990,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
               })}
               onPatch={(patch) => setComp((c) => ({ ...c, modules: c.modules.map((m) => ({ ...m, carcass: { ...m.carcass, ...patch } })) }))}
             />
-          </PanelSection>}
+          </FoldItem>}
         </Stack>
       ) : selection.kind === "model" ? (
         <ModelInspector comp={comp} id={selection.id} onChange={setComp} />
@@ -1008,10 +1008,10 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         // Seccions plegables independents (com Figma o Fusion): es poden tenir diverses
         // obertes i cada una recorda el seu estat.
         <Stack gap={0}>
-          <PanelSection id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
+          <FoldItem id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
             <CarcassForm module={module} onChange={updateModule} section="dims" />
-          </PanelSection>
-            <PanelSection id="mod-position" title="Posició" icon={LuMove} badge={module.carcass.base.kind === "wall" ? `Penjat a ${module.carcass.base.height}` : mountOf(module) === "floor" ? `Lliure al terra · ${module.wallGap ?? 0} de la paret` : "Arrambat a la paret"}>
+          </FoldItem>
+            <FoldItem id="mod-position" title="Posició" icon={LuMove} badge={module.carcass.base.kind === "wall" ? `Penjat a ${module.carcass.base.height}` : mountOf(module) === "floor" ? `Lliure al terra · ${module.wallGap ?? 0} de la paret` : "Arrambat a la paret"}>
               {/* Dues files, com les cuines: a terra (baixos) i penjats (alts). Dins de cada
                   fila, l'ordre és el de l'arbre (d'esquerra a dreta) i cada mòdul va al costat
                   de l'anterior de la seva fila. */}
@@ -1092,18 +1092,18 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                   help={rowIndex > 0 ? `Des de «${rowPrev!.name}», a l'esquerra en la mateixa fila.` : "És el primer de la fila: la distància des de l'esquerra del moble."}
                 />
               )}
-            </PanelSection>
-          <PanelSection id="mod-structure" title="Caixa" icon={LuFrame}>
+            </FoldItem>
+          <FoldItem id="mod-structure" title="Caixa" icon={LuFrame}>
             <CarcassForm module={module} onChange={updateModule} section="structure" />
-          </PanelSection>
+          </FoldItem>
           {/* Mòdul dividit: portes que el tapen tot (armari amb penjador i maleter). */}
           {module.root.split && <ZoneFrontSection root={module.root} zone={module.root} onChange={(root) => updateModule({ ...module, root })} kinds={["none", "door", "panel"]} title="Front de tot el mòdul" id="module-front" />}
-          <PanelSection id="mod-materials" title="Materials" icon={LuPalette}>
+          <FoldItem id="mod-materials" title="Materials" icon={LuPalette}>
             <MaterialsForm carcass={module.carcass} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
-          </PanelSection>
-          <PanelSection id="mod-joinery" title="Fusteria (avançat)" icon={LuHammer} defaultOpen={false}>
+          </FoldItem>
+          <FoldItem id="mod-joinery" title="Fusteria (avançat)" icon={LuHammer} defaultOpen={false}>
             <JoineryForm module={module} onChange={updateModule} />
-          </PanelSection>
+          </FoldItem>
         </Stack>
       )}
 
@@ -1118,7 +1118,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         )}
 
         {collisions.length > 0 && (
-          <PanelSection id="collisions" title="Amb l'obertura actual" icon={LuDoorOpen} defaultOpen badge={collisions.length} badgePalette="orange">
+          <FoldItem id="collisions" title="Amb l'obertura actual" icon={LuDoorOpen} defaultOpen badge={collisions.length} badgePalette="orange">
             {collisions.map((c) => (
               <Alert.Root key={c.groupId} status="warning" size="sm">
                 <Alert.Indicator />
@@ -1127,11 +1127,11 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                 </Alert.Content>
               </Alert.Root>
             ))}
-          </PanelSection>
+          </FoldItem>
         )}
 
         {moduleWarnings.length > 0 && (
-          <PanelSection id="warnings" title="Avisos de fusteria" icon={LuTriangleAlert} badge={moduleWarnings.length} badgePalette="orange">
+          <FoldItem id="warnings" title="Avisos de fusteria" icon={LuTriangleAlert} badge={moduleWarnings.length} badgePalette="orange">
             {moduleWarnings.map((w, i) => (
               <Alert.Root key={i} status={w.code === "material-heat" || w.code === "mitre" || w.code === "push" || (w.code === "inset" && w.message.startsWith("Fronts")) ? "info" : "warning"} size="sm">
                 <Alert.Indicator />
@@ -1158,7 +1158,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                 </Alert.Content>
               </Alert.Root>
             ))}
-          </PanelSection>
+          </FoldItem>
         )}
     </Stack>
   )

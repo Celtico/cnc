@@ -1,8 +1,8 @@
-import { Accordion, Badge, Box, Button, CloseButton, Drawer, HStack, Link, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, CloseButton, Drawer, HStack, Link, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState } from "react"
 import { LuExternalLink, LuLibrary, LuPlus } from "react-icons/lu"
 import type { CollectionPiece, FurnitureCollection, Grade, PieceStudy } from "../../core/model"
-import { FoldTitle } from "./FoldTitle"
+import { FoldGroup, FoldItem } from "../../components/Fold"
 import { GALLERY_COLS } from "./galleryGrid"
 import { TemplateCard } from "./NewMobleGallery"
 
@@ -162,40 +162,26 @@ export function CollectionsSection({
   const [sheet, setSheet] = useState<CollectionPiece | null>(null)
   const shown = collections.filter((c) => c.pieces.length > 0)
   return (
-    <Accordion.Item value={value}>
-      <Accordion.ItemTrigger cursor="pointer">
-        <FoldTitle icon={<LuLibrary />} title="Col·leccions de mobles" count={shown.reduce((n, c) => n + c.pieces.length, 0)} />
-        <Accordion.ItemIndicator />
-      </Accordion.ItemTrigger>
-      <Accordion.ItemContent>
-        <Accordion.ItemBody>
-          <Stack gap={3}>
-            <Text fontSize="xs" color="fg.muted" px="var(--gallery-px, 0)" pt={3}>
-              Biblioteca de referències per dissenyar una col·lecció pròpia: peces paramètriques amb la fitxa d'estudi (llenguatge, proporcions, materials, gruixos, ferratges i graus). Toca'n una per veure la fitxa.
-            </Text>
-            <Accordion.Root className="inner-accordion" multiple collapsible lazyMount variant="plain" value={searching ? shown.map((c) => c.id) : open} onValueChange={(e) => !searching && onOpenChange(e.value)}>
-              {shown.map((c) => (
-                <Accordion.Item key={c.id} value={c.id}>
-                  <Accordion.ItemTrigger className="inner-head" cursor="pointer" borderBottomWidth="1px" rounded="none" px={0}>
-                    <FoldTitle title={c.name} count={c.pieces.length} />
-                    <Accordion.ItemIndicator />
-                  </Accordion.ItemTrigger>
-                  <Accordion.ItemContent>
-                    <Accordion.ItemBody px={0}>
-                      {!searching && <CollectionIntro c={c} />}
-                      <SimpleGrid columns={GALLERY_COLS} gap={3}>
-                        {c.pieces.map((p) => (
-                          <TemplateCard key={p.id} t={p} kicker={p.type} title={p.name.replace(`${p.type} `, "")} onPick={() => setSheet(p)} />
-                        ))}
-                      </SimpleGrid>
-                    </Accordion.ItemBody>
-                  </Accordion.ItemContent>
-                </Accordion.Item>
-              ))}
-            </Accordion.Root>
-          </Stack>
-        </Accordion.ItemBody>
-      </Accordion.ItemContent>
+    <>
+      <FoldItem id={value} icon={LuLibrary} title="Col·leccions de mobles" count={shown.reduce((n, c) => n + c.pieces.length, 0)}>
+        <Stack gap={3}>
+          <Text fontSize="xs" color="fg.muted" px="var(--gallery-px, 0)" pt={3}>
+            Biblioteca de referències per dissenyar una col·lecció pròpia: peces paramètriques amb la fitxa d'estudi (llenguatge, proporcions, materials, gruixos, ferratges i graus). Toca'n una per veure la fitxa.
+          </Text>
+          <FoldGroup variant="nested" value={open} onValueChange={onOpenChange} forceOpen={searching ? shown.map((c) => c.id) : null}>
+            {shown.map((c) => (
+              <FoldItem key={c.id} id={c.id} title={c.name} count={c.pieces.length}>
+                {!searching && <CollectionIntro c={c} />}
+                <SimpleGrid columns={GALLERY_COLS} gap={3}>
+                  {c.pieces.map((p) => (
+                    <TemplateCard key={p.id} t={p} kicker={p.type} title={p.name.replace(`${p.type} `, "")} onPick={() => setSheet(p)} />
+                  ))}
+                </SimpleGrid>
+              </FoldItem>
+            ))}
+          </FoldGroup>
+        </Stack>
+      </FoldItem>
       <PieceSheet
         piece={sheet}
         onClose={() => setSheet(null)}
@@ -204,6 +190,6 @@ export function CollectionsSection({
           onCreate(p)
         }}
       />
-    </Accordion.Item>
+    </>
   )
 }

@@ -1,6 +1,6 @@
 import { Button, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
 import { LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuSprout, LuTrash2 } from "react-icons/lu"
-import { PanelSection } from "../../components/PanelSection"
+import { FoldItem } from "../../components/Fold"
 import { NumRow } from "../../components/NumRow"
 import { FormRow } from "../../components/FormRow"
 import { insertModelCopy, type Composition, type ModelObject } from "../../core/model"
@@ -18,7 +18,7 @@ export function ModelInspector({ comp, id, onChange }: { comp: Composition; id: 
   const original = !!asset && asset.size[0] === g.w && asset.size[1] === g.h && asset.size[2] === g.d
   return (
     <Stack gap={0}>
-      <PanelSection id="model-asset" title="Model" icon={LuSprout} badge={asset?.name}>
+      <FoldItem id="model-asset" title="Model" icon={LuSprout} badge={asset?.name}>
         {/* Sense llista de models (per decisió de l'usuari): el nom del que hi ha i, per canviar-lo, un altre .glb teu. */}
         <FormRow label="Model">
           <Text fontSize="sm" pt="6px" truncate title={asset?.name}>
@@ -33,8 +33,8 @@ export function ModelInspector({ comp, id, onChange }: { comp: Composition; id: 
         <FormRow label="Canviar">
           <ModelUploadButton onUploaded={(m) => update({ src: m.id, w: m.size[0], h: m.size[1], d: m.size[2] })} />
         </FormRow>
-      </PanelSection>
-      <PanelSection id="model-size" title="Mides" icon={LuMoveDiagonal} badge={`${Math.round(g.w)} × ${Math.round(g.h)}`}>
+      </FoldItem>
+      <FoldItem id="model-size" title="Mides" icon={LuMoveDiagonal} badge={`${Math.round(g.w)} × ${Math.round(g.h)}`}>
         <NumRow label="Ample" value={g.w} min={1} max={20000} step={10} onChange={(w) => w > 0 && update({ w })} />
         <NumRow label="Alt" value={g.h} min={1} max={20000} step={10} onChange={(h) => h > 0 && update({ h })} />
         <NumRow label="Fons" value={g.d} min={1} max={20000} step={10} onChange={(d) => d > 0 && update({ d })} />
@@ -45,8 +45,8 @@ export function ModelInspector({ comp, id, onChange }: { comp: Composition; id: 
             </Button>
           </FormRow>
         )}
-      </PanelSection>
-      <PanelSection id="model-position" title="Posició" icon={LuMove}>
+      </FoldItem>
+      <FoldItem id="model-position" title="Posició" icon={LuMove}>
         <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra del moble" />} ariaLabel="De costat (X)" value={g.x} min={-30000} max={30000} step={10} onChange={(x) => update({ x })} />
         <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={g.y} min={0} max={30000} step={10} onChange={(y) => update({ y })} />
         <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fons (Z)" value={g.z} min={-30000} max={30000} step={10} onChange={(z) => update({ z })} />
@@ -54,7 +54,7 @@ export function ModelInspector({ comp, id, onChange }: { comp: Composition; id: 
         <Text fontSize="xs" color="fg.muted">
           Al 3D es mou amb les fletxes del gizmo. Fletxes del teclat: 1 mm (Maj: 10 mm); Re Pàg / Av Pàg: fondària.
         </Text>
-      </PanelSection>
+      </FoldItem>
     </Stack>
   )
 }

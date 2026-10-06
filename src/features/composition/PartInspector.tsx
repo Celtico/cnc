@@ -5,13 +5,18 @@ import {
   LuBan,
   LuCopy,
   LuEllipsis,
+  LuFactory,
+  LuGroup,
+  LuLink,
   LuMove,
   LuMoveDiagonal,
   LuMoveDiagonal2,
   LuMoveHorizontal,
   LuMoveVertical,
+  LuPalette,
   LuPencilRuler,
   LuPuzzle,
+  LuRectangleHorizontal,
   LuSpline,
   LuScissors,
   LuSquare,
@@ -19,7 +24,7 @@ import {
   LuUngroup,
 } from "react-icons/lu"
 import { IconChoice, type IconOption } from "../../components/IconChoice"
-import { PanelSection } from "../../components/PanelSection"
+import { FoldItem } from "../../components/Fold"
 import {
   DEFAULT_JOINERY,
   insertPartCopy,
@@ -90,13 +95,14 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
     // Si el material no es talla a la CNC (ferro, pedra, vidre…), la peça surt del nesting.
     update({ material: name, thickness: object ? p.thickness : t, nest: (m && materialCategory(m) === "sim") || object ? false : undefined })
   }
+  const groupLabel = p.group ?? "Sense grup"
+  const attachable = !partsOnlyKind(compositionKind(comp)) && comp.modules.length > 0
+  const attachedTo = p.module ? (comp.modules.find((m) => m.id === p.module)?.name ?? "?") : "Res"
+  // Cada apartat, una secció pròpia (sense «General»); el que no toca, no surt.
   return (
     <Stack gap={0}>
-      <PanelSection id="part-general" title="General" icon={LuPuzzle} badge={ORIENTS.find((o) => o.value === p.orient)!.label}>
-        <FormRow label="Orientació">
-          <IconChoice label="Orientació" hideLabel value={p.orient} options={ORIENTS} onChange={(o) => onChange({ ...comp, parts: (comp.parts ?? []).map((x) => (x.id === id ? reorientPart(x, o) : x)) })} />
-        </FormRow>
-        {/* Peça o forat (booleana), com els objectes de referència. */}
+      {/* Peça o forat (booleana), com els objectes de referència. */}
+      <FoldItem id="part-effect" title="Efecte" icon={cutter ? LuScissors : LuPuzzle} badge={cutter ? "Talla" : "Peça"}>
         <FormRow
           label="Efecte"
           help={
@@ -115,94 +121,13 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
             onChange={(v) => update({ effect: v === "cut" ? "cut" : undefined })}
           />
         </FormRow>
-        {!cutter && (
-          <FormRow label="Material" maxW="280px">
-            <MaterialSelect label="Material" hideLabel materials={boards} value={p.material} onChange={pickMaterial} />
-          </FormRow>
-        )}
-        {!partsOnlyKind(compositionKind(comp)) && comp.modules.length > 0 && (
-          <FormRow label="Enganxada a" help="«Res»: lliure al moble. Enganxada a un mòdul, el segueix quan es mou (el taulell de l'illa).">
-            <ChoiceChips
-              label="Enganxada a"
-              options={[{ id: "", label: "Res" }, ...moduleChips(comp.modules, p.module)]}
-              value={p.module ?? ""}
-              onChange={(v) => {
-                // Es queda on és: les coordenades passen a ser relatives al mòdul nou.
-                const from = partOffset(comp, p)
-                const next = { ...p, module: v || undefined }
-                const to = partOffset(comp, next)
-                update({ module: next.module, x: p.x + from[0] - to[0], y: p.y + from[1] - to[1], z: p.z + from[2] - to[2] })
-              }}
-            />
-          </FormRow>
-        )}
-        <FormRow label="Grup">
-          <ChoiceChips
-            label="Grup"
-            options={[{ id: "", label: "Sense grup" }, ...partGroups(comp.parts ?? []).map((g) => ({ id: g, label: g })), { id: NEW_GROUP, label: "+ Grup nou" }]}
-            value={p.group ?? ""}
-            onChange={(v) => update({ group: v === NEW_GROUP ? newGroupName(comp) : v || undefined })}
-          />
+      </FoldItem>
+      <FoldItem id="part-orient" title="Orientació" icon={ORIENT_ICON[p.orient]} badge={ORIENTS.find((o) => o.value === p.orient)!.label}>
+        <FormRow label="Orientació">
+          <IconChoice label="Orientació" hideLabel value={p.orient} options={ORIENTS} onChange={(o) => onChange({ ...comp, parts: (comp.parts ?? []).map((x) => (x.id === id ? reorientPart(x, o) : x)) })} />
         </FormRow>
-        {!cutter && (
-          <FormRow label="CNC" help={p.nest === false ? `No és de CNC (${p.material}): es veu al 3D però no va al nesting ni als fitxers del taller. Surt a Peces, a «Elements sense nesting». Sense encaixos.` : undefined}>
-            <Switch.Root size="sm" pt="6px" checked={p.nest !== false} onCheckedChange={(e) => update({ nest: e.checked ? undefined : false })}>
-              <Switch.HiddenInput />
-              <Switch.Control />
-              <Switch.Label fontSize="sm">Es talla a la CNC (va al nesting)</Switch.Label>
-            </Switch.Root>
-          </FormRow>
-        )}
-        {/* Ferro, pedra, vidre…: sense veta ni encaixos. */}
-        {cnc && (
-          <FormRow label="Veta">
-            <IconChoice label="Veta" hideLabel value={p.grain ?? "u"} options={GRAIN} onChange={(g) => update({ grain: g === "u" ? undefined : g })} />
-          </FormRow>
-        )}
-        {cnc && p.nest !== false && (
-          <FormRow label="Cantell">
-            <Switch.Root size="sm" pt="6px" checked={!!p.edged} onCheckedChange={(e) => update({ edged: e.checked ? true : undefined })}>
-              <Switch.HiddenInput />
-              <Switch.Control />
-              <Switch.Label fontSize="sm">Als quatre costats</Switch.Label>
-            </Switch.Root>
-          </FormRow>
-        )}
-        {cnc && flatPack && (
-          <FormRow label="Encaixos">
-            <Switch.Root size="sm" pt="6px" disabled={p.nest === false} checked={p.joints !== false && p.nest !== false} onCheckedChange={(e) => update({ joints: e.checked ? undefined : false })}>
-              <Switch.HiddenInput />
-              <Switch.Control />
-              <Switch.Label fontSize="sm">Amb les altres peces</Switch.Label>
-            </Switch.Root>
-          </FormRow>
-        )}
-        {flatPack && p.joints !== false && p.nest !== false && (
-          <Stack gap={1}>
-            {mine.length === 0 ? (
-              <Text fontSize="xs" color="fg.muted">
-                Cap encaix: fes que toqui o que entri dins d'una altra peça lliure (d'orientació diferent).
-              </Text>
-            ) : (
-              mine.map((j, i) => {
-                const other = nameOf(j.a === id ? j.b : j.a)
-                const detail = j.kind === "tab" ? (j.into === id ? "hi entra" : j.through ? "mortalles passants" : "mortalles cegues") : j.kind === "dowel" ? (j.into === id ? "cantell" : "cara") : ""
-                return (
-                  <HStack key={i} gap={2} fontSize="xs">
-                    <Badge variant="subtle" colorPalette="wood">
-                      {JOINT_LABEL[j.kind]}
-                    </Badge>
-                    <Text truncate data-truncate="">
-                      amb «{other}»{detail ? ` · ${detail}` : ""}
-                    </Text>
-                  </HStack>
-                )
-              })
-            )}
-          </Stack>
-        )}
-      </PanelSection>
-      <PanelSection id="part-size" title="Mides" icon={LuMoveDiagonal} badge={size.join(" × ")}>
+      </FoldItem>
+      <FoldItem id="part-size" title="Mides" icon={LuMoveDiagonal} badge={size.join(" × ")}>
         {/* Sempre ample (X), alt (Y) i fondària (Z) com la resta de l'app; la del gruix depèn de
             l'orientació. De CNC: el gruix, només els del tauler. Si no és de CNC: tot lliure. */}
         {(["Ample", "Alt", "Fondària"] as const).map((label, a) => {
@@ -239,8 +164,21 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
             No és de CNC: les tres mides són lliures (també el gruix).
           </Text>
         )}
-      </PanelSection>
-      <PanelSection id="part-shape" title="Forma" icon={LuSpline} badge={p.shape ? "A mida" : "Rectangle"}>
+      </FoldItem>
+      {!cutter && (
+        <FoldItem id="part-material" title="Material" icon={LuPalette} badge={p.material}>
+          <FormRow label="Material" maxW="280px">
+            <MaterialSelect label="Material" hideLabel materials={boards} value={p.material} onChange={pickMaterial} />
+          </FormRow>
+          {/* La veta és del tauler. Ferro, pedra, vidre…: sense veta. */}
+          {cnc && (
+            <FormRow label="Veta">
+              <IconChoice label="Veta" hideLabel value={p.grain ?? "u"} options={GRAIN} onChange={(g) => update({ grain: g === "u" ? undefined : g })} />
+            </FormRow>
+          )}
+        </FoldItem>
+      )}
+      <FoldItem id="part-shape" title="Forma" icon={p.shape ? LuSpline : LuRectangleHorizontal} badge={p.shape ? "A mida" : "Rectangle"}>
         <FormRow label="Forma" help={`La forma s'escala a ${un.toLowerCase()} × ${vn.toLowerCase()}. Els encaixos es retallen sobre la forma (pestanyes, osques i mortalles).`}>
           <HStack {...segGroup}>
             <Button {...segItem(!p.shape)} px={2} onClick={() => update({ shape: undefined })}>
@@ -251,7 +189,7 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
             </Button>
           </HStack>
         </FormRow>
-      </PanelSection>
+      </FoldItem>
       <ProfileEditor
         key={editing ? "open" : "closed"}
         open={editing}
@@ -263,18 +201,102 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
           setEditing(false)
         }}
       />
-      <PanelSection id="part-position" title="Posició" icon={LuMove}>
+      {!cutter && (
+        <FoldItem id="part-cnc" title="CNC" icon={LuFactory} badge={p.nest === false ? "No" : "Sí"} badgePalette={p.nest === false ? "gray" : "wood"}>
+          <FormRow label="CNC" help={p.nest === false ? `No és de CNC (${p.material}): es veu al 3D però no va al nesting ni als fitxers del taller. Surt a Peces, a «Elements sense nesting». Sense encaixos.` : undefined}>
+            <Switch.Root size="sm" pt="6px" checked={p.nest !== false} onCheckedChange={(e) => update({ nest: e.checked ? undefined : false })}>
+              <Switch.HiddenInput />
+              <Switch.Control />
+              <Switch.Label fontSize="sm">Es talla a la CNC (va al nesting)</Switch.Label>
+            </Switch.Root>
+          </FormRow>
+          {/* El cantell és de fabricació (cantejadora). */}
+          {cnc && (
+            <FormRow label="Cantell">
+              <Switch.Root size="sm" pt="6px" checked={!!p.edged} onCheckedChange={(e) => update({ edged: e.checked ? true : undefined })}>
+                <Switch.HiddenInput />
+                <Switch.Control />
+                <Switch.Label fontSize="sm">Als quatre costats</Switch.Label>
+              </Switch.Root>
+            </FormRow>
+          )}
+        </FoldItem>
+      )}
+      {cnc && flatPack && (
+        <FoldItem id="part-joints" title="Encaixos" icon={LuPuzzle} badge={p.joints !== false ? mine.length : "No"}>
+          <FormRow label="Encaixos">
+            <Switch.Root size="sm" pt="6px" checked={p.joints !== false} onCheckedChange={(e) => update({ joints: e.checked ? undefined : false })}>
+              <Switch.HiddenInput />
+              <Switch.Control />
+              <Switch.Label fontSize="sm">Amb les altres peces</Switch.Label>
+            </Switch.Root>
+          </FormRow>
+          {p.joints !== false && (
+            <Stack gap={1}>
+              {mine.length === 0 ? (
+                <Text fontSize="xs" color="fg.muted">
+                  Cap encaix: fes que toqui o que entri dins d'una altra peça lliure (d'orientació diferent).
+                </Text>
+              ) : (
+                mine.map((j, i) => {
+                  const other = nameOf(j.a === id ? j.b : j.a)
+                  const detail = j.kind === "tab" ? (j.into === id ? "hi entra" : j.through ? "mortalles passants" : "mortalles cegues") : j.kind === "dowel" ? (j.into === id ? "cantell" : "cara") : ""
+                  return (
+                    <HStack key={i} gap={2} fontSize="xs">
+                      <Badge variant="subtle" colorPalette="wood">
+                        {JOINT_LABEL[j.kind]}
+                      </Badge>
+                      <Text truncate data-truncate="">
+                        amb «{other}»{detail ? ` · ${detail}` : ""}
+                      </Text>
+                    </HStack>
+                  )
+                })
+              )}
+            </Stack>
+          )}
+        </FoldItem>
+      )}
+      <FoldItem id="part-group" title="Grup" icon={LuGroup} badge={groupLabel} badgePalette={p.group ? "wood" : "gray"}>
+        <FormRow label="Grup">
+          <ChoiceChips
+            label="Grup"
+            options={[{ id: "", label: "Sense grup" }, ...partGroups(comp.parts ?? []).map((g) => ({ id: g, label: g })), { id: NEW_GROUP, label: "+ Grup nou" }]}
+            value={p.group ?? ""}
+            onChange={(v) => update({ group: v === NEW_GROUP ? newGroupName(comp) : v || undefined })}
+          />
+        </FormRow>
+      </FoldItem>
+      {attachable && (
+        <FoldItem id="part-attach" title="Enganxada" icon={LuLink} badge={attachedTo} badgePalette={p.module ? "wood" : "gray"}>
+          <FormRow label="Enganxada a" help="«Res»: lliure al moble. Enganxada a un mòdul, el segueix quan es mou (el taulell de l'illa).">
+            <ChoiceChips
+              label="Enganxada a"
+              options={[{ id: "", label: "Res" }, ...moduleChips(comp.modules, p.module)]}
+              value={p.module ?? ""}
+              onChange={(v) => {
+                // Es queda on és: les coordenades passen a ser relatives al mòdul nou.
+                const from = partOffset(comp, p)
+                const next = { ...p, module: v || undefined }
+                const to = partOffset(comp, next)
+                update({ module: next.module, x: p.x + from[0] - to[0], y: p.y + from[1] - to[1], z: p.z + from[2] - to[2] })
+              }}
+            />
+          </FormRow>
+        </FoldItem>
+      )}
+      <FoldItem id="part-position" title="Posició" icon={LuMove}>
         <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra" />} ariaLabel="De costat (X)" value={p.x} min={-30000} max={30000} step={1} onChange={(x) => update({ x })} />
         <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={p.y} min={0} max={30000} step={1} onChange={(y) => update({ y })} />
         <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fons (Z)" value={p.z} min={-30000} max={30000} step={1} onChange={(z) => update({ z })} />
         <Text fontSize="xs" color="fg.muted">
           {p.module && !partsOnlyKind(compositionKind(comp)) ? `Respecte al mòdul «${comp.modules.find((m) => m.id === p.module)?.name ?? "?"}» (el segueix). ` : ""}Cantonada esquerra, de baix i del darrere. Al 3D, arrossega-la amb les fletxes (s'enganxa a les vores de les altres peces; Alt: lliure). Fletxes del teclat: 1 mm (Maj: 10); Re Pàg / Av Pàg: fons.
         </Text>
-      </PanelSection>
+      </FoldItem>
       {flatPack && (
-        <PanelSection id="part-joinery" title="Encaixos (tot el moble)" icon={LuPuzzle}>
+        <FoldItem id="part-joinery" title="Encaixos (tot el moble)" icon={LuPuzzle}>
           <PartJoineryForm comp={comp} onChange={onChange} />
-        </PanelSection>
+        </FoldItem>
       )}
     </Stack>
   )
@@ -358,15 +380,15 @@ export function GroupInspector({ comp, group, onChange, onSelectPart, onMove }: 
   const size = [0, 1, 2].map((a) => Math.round(b.max[a]! - b.min[a]!))
   return (
     <Stack gap={0}>
-      <PanelSection id="group-position" title="Posició del grup" icon={LuMove} badge={size.join(" × ")}>
+      <FoldItem id="group-position" title="Posició del grup" icon={LuMove} badge={size.join(" × ")}>
         <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra" />} ariaLabel="De costat (X)" value={b.min[0]} min={-30000} max={30000} step={10} onChange={(x) => Number.isFinite(x) && onMove(x - b.min[0], 0, 0)} />
         <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={b.min[1]} min={0} max={30000} step={10} onChange={(y) => Number.isFinite(y) && onMove(0, y - b.min[1], 0)} />
         <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fons (Z)" value={b.min[2]} min={-30000} max={30000} step={10} onChange={(z) => Number.isFinite(z) && onMove(0, 0, z - b.min[2])} />
         <Text fontSize="xs" color="fg.muted">
           Tot el grup es mou junt: amb les fletxes del 3D, del teclat o aquí. Al 3D, el primer clic selecciona el grup i el segon, la peça.
         </Text>
-      </PanelSection>
-      <PanelSection id="group-parts" title="Peces" icon={LuPuzzle} badge={members.length}>
+      </FoldItem>
+      <FoldItem id="group-parts" title="Peces" icon={LuPuzzle} badge={members.length}>
         <Stack gap={0.5}>
           {members.map((p) => {
             const Icon = ORIENT_ICON[p.orient]
@@ -385,7 +407,7 @@ export function GroupInspector({ comp, group, onChange, onSelectPart, onMove }: 
             <LuUngroup /> Desagrupar
           </Button>
         </HStack>
-      </PanelSection>
+      </FoldItem>
     </Stack>
   )
 }
