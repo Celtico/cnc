@@ -42,7 +42,8 @@ import { ViewOptions, ViewTile } from "../../components/ViewOptions"
 import { useWorkspace } from "../../components/useWorkspace"
 import { TopBarActions } from "../../components/TopBar"
 import { toaster } from "../../components/ui/toaster"
-import { CabinetViewer, type ViewerModule, type ZoneLight } from "../../components/viewer/CabinetViewer"
+import { CabinetViewer, type ViewerModule } from "../../components/viewer/CabinetViewer"
+import type { ViewName } from "../../components/viewer/viewNames"
 import { ArDialog } from "../../components/viewer/ArDialog"
 import { RenderDialog, type SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
@@ -60,7 +61,7 @@ import { GroupInspector, PartActions, PartInspector, PartJoineryForm } from "../
 import { ORIENT_ICON } from "../composition/partOrient"
 import { StructureTree, type Selection } from "../composition/StructureTree"
 import { Tooltip } from "../../components/ui/tooltip"
-import { ZoneActions, ZoneFrontSection, ZonePanel } from "../composition/ZonePanel"
+import { ZoneActions, ZonePanel } from "../composition/ZonePanel"
 import { RunsForm } from "../composition/RunsForm"
 import { zoneLabel } from "../composition/zoneLabel"
 import { zoneIcon } from "../composition/zoneIcons"
@@ -75,7 +76,8 @@ import { useCompositionBuild, useProject } from "../useProject"
 import { RoleLegend } from "../../components/viewer/roleColors"
 import { IconChoice } from "../../components/IconChoice"
 import { KINDS, MOBLE_KINDS } from "../composition/kinds"
-import { ViewBar, ViewerControls, type ViewerState } from "./ViewerControls"
+import { ViewerControls, type ViewerState } from "./ViewerControls"
+import { undoKeyAction } from "./undoKeys"
 import { useDebouncedSave } from "../useDebouncedSave"
 import { MaterialSelect } from "../settings/MaterialSelect"
 
@@ -170,22 +172,14 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     setHistory((h) => (h.future.length ? { past: [...h.past, h.present], present: h.future[0]!, future: h.future.slice(1) } : h))
   }
 
-  // Dreceres: ⌘Z / Ctrl+Z desfer; ⇧⌘Z / Ctrl+Shift+Z / Ctrl+Y refer. Als camps de text
-  // lliure (nom del moble, plantilla) es deixa el desfer propi del navegador; als
-  // numèrics es desfà el moble.
+  // Dreceres de desfer/refer (`undoKeyAction`): no als camps de text lliure ni amb un diàleg modal obert (l'editor de
+  // perfils: ⌘Z hi desfeia el moble del darrere).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.altKey) return
-      const k = e.key.toLowerCase()
-      if (k !== "z" && k !== "y") return
-      const t = e.target as HTMLElement | null
-      if (t) {
-        const tag = t.tagName
-        const numeric = tag === "INPUT" && /decimal|numeric/.test((t as HTMLInputElement).inputMode)
-        if (tag === "TEXTAREA" || t.isContentEditable || (tag === "INPUT" && !numeric)) return
-      }
+      const action = undoKeyAction(e, document)
+      if (!action) return
       e.preventDefault()
-      if (k === "y" || e.shiftKey) redo()
+      if (action === "redo") redo()
       else undo()
     }
     window.addEventListener("keydown", onKey)
@@ -228,7 +222,14 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   // els colors per peça (tenen la seva pròpia preferència).
   const [roleColors, setRoleColors] = usePersistentFlag(compositionKind(initial) === "objecte" ? "mobles:viewer-role-colors-object" : "mobles:viewer-role-colors-fast", compositionKind(initial) !== "objecte")
   const [quality, setQuality] = useRenderQuality()
-  const [viewer, setViewerState] = useState<Omit<ViewerState, "materialMode">>({ view: "3d", opening: 0, openOnlySelected: false })
+  const [viewer, setViewerState] = useState<Omit<ViewerState, "materialMode">>({ opening: 0, openOnlySelected: false })
+  // Costat des d'on enquadra la càmera (null = el 3/4 d'«Enquadrar»). Triar una vista compta com «Enquadrar»: la càmera
+  // hi va (perspectiva, es pot girar després) i es desa com qualsevol altra.
+  const [viewDir, setViewDir] = useState<ViewName | null>(null)
+  const frameFrom = (dir: ViewName | null) => {
+    setViewDir(dir)
+    setFitKey((k) => k + 1)
+  }
   const viewerState: ViewerState = { ...viewer, materialMode: quality === "fast" && roleColors ? "role" : "material" }
   // Mode del visor: Per peça (ràpid, colors per tipus), Textura (ràpid, materials) o Presentació.
   const viewMode: ViewMode = quality === "presentation" ? "presentation" : roleColors ? "pieces" : "texture"
@@ -479,6 +480,10 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         setComp(res.comp)
         select({ kind: "module", id: res.id })
       } else if (clip.kind === "ref") {
+        if (compositionKind(comp) === "objecte") {
+          toaster.create({ title: "Aquí no es poden enganxar objectes de referència", description: "Un objecte es fa amb peces lliures (per tallar, una peça amb l'efecte «Talla»).", type: "info" })
+          return
+        }
         const res = insertRefCopy(comp, clip.data)
         setComp(res.comp)
         select({ kind: "ref", id: res.id })
@@ -487,6 +492,10 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         setComp(res.comp)
         select({ kind: "part", id: res.id })
       } else if (clip.kind === "model") {
+        if (compositionKind(comp) !== "objecte") {
+          toaster.create({ title: "Aquí no es poden enganxar models 3D", description: "Els models 3D van als objectes (sofàs, plantes…), no als mobles.", type: "info" })
+          return
+        }
         const res = insertModelCopy(comp, clip.data)
         setComp(res.comp)
         select({ kind: "model", id: res.id })
@@ -564,9 +573,15 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         setComp({ ...comp, models: (comp.models ?? []).filter((g) => g.id !== selection.id) })
         select({ kind: "moble" })
       } else if (selection.kind === "zone") {
+        // L'«Interior» (l'arrel) no s'elimina: `deleteZone` buidaria tot el mòdul (divisions, fronts i el front de tot el
+        // mòdul). Es buida treient-ne la divisió o el front.
+        if (selection.zoneId === module.root.id) {
+          toaster.create({ title: "L'interior no es pot eliminar", description: "Treu-ne la divisió o el front, o elimina el mòdul.", type: "info" })
+          return
+        }
         const parent = parentOf(module.root, selection.zoneId)
         updateModule({ ...module, root: deleteZone(module.root, selection.zoneId) })
-        if (parent && parent.id !== module.root.id) select({ kind: "zone", moduleId: module.id, zoneId: parent.id })
+        if (parent) select({ kind: "zone", moduleId: module.id, zoneId: parent.id })
         else select({ kind: "module", id: module.id })
       }
     }
@@ -637,7 +652,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       const sel = findZone(mod.root, selection.zoneId)
       if (sel && (sel.id === best.id || findZone(sel, best.id))) {
         const parent = parentOf(mod.root, sel.id)
-        return parent && parent.id !== mod.root.id ? select({ kind: "zone", moduleId: id, zoneId: parent.id }) : selectModule(id)
+        // Del compartiment es puja a la divisió, a l'«Interior» (l'arrel, amb el front de tot el mòdul) i al mòdul.
+        return parent ? select({ kind: "zone", moduleId: id, zoneId: parent.id }) : selectModule(id)
       }
     }
     select({ kind: "zone", moduleId: id, zoneId: best.id })
@@ -752,17 +768,10 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     return ids
   }, [viewer.openOnlySelected, zoneRect, build, moduleIndex, groups, panels])
   const collisions = useMemo(() => openingCollisions(panels, groups, viewer.opening, comp.references, openOnly ?? undefined), [panels, groups, viewer.opening, comp.references, openOnly])
-  const lights = useMemo<ZoneLight[]>(
-    () => (build?.modules ?? []).flatMap((m) => m.build.layout.leaves.map((z) => {
-      const r = m.build.layout.rects.get(z.id)!
-      return { module: m.index, x0: m.x + r.x0, x1: m.x + r.x1, y0: m.y + r.y0, y1: m.y + r.y1 }
-    })),
-    [build],
-  )
   const downloadImage = async () => {
     if (!capture.current) return
     try {
-      downloadBlob(await capture.current(), `${slugify(name)}-${viewer.view}.png`)
+      downloadBlob(await capture.current(), `${slugify(name)}.png`)
     } catch (e) {
       toaster.create({ title: "No s'ha pogut generar la imatge", description: String(e), type: "error" })
     }
@@ -808,7 +817,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       : selection.kind === "ref"
         ? { icon: <LuScan />, text: comp.references.find((r) => r.id === selection.id)?.name ?? "Objecte", parent: "Objecte de referència", onRename: (v) => renameRef(selection.id, v) }
         : selection.kind === "zone" && zone
-          ? { icon: createElement(zoneIcon(zone)), text: zoneLabel(zone), parent: module.name }
+          ? { icon: createElement(zoneIcon(zone, { root: zone.id === module.root.id })), text: zoneLabel(zone, { root: zone.id === module.root.id }), parent: module.name }
           : { icon: <LuBox />, text: module.name, parent: name || "Moble", onRename: (v) => updateModule({ ...module, name: v }) }
 
   // Accions ràpides del visor, a dalt de «Opcions de vista» (com el menú de visualització
@@ -822,7 +831,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   )
   const viewTiles = (
     <>
-      {tile("fit", "Enquadrar", <LuVideo />, framed, () => setFitKey((k) => k + 1), framed ? "Càmera enquadrada (no es mou sola en editar)" : "Enquadrar el moble")}
+      {tile("fit", "Enquadrar", <LuVideo />, framed, () => frameFrom(null), framed ? "Càmera enquadrada (no es mou sola en editar)" : "Enquadrar el moble")}
       {tile("holes", "Forats", <LuCircleDot />, showHoles, () => setShowHoles((v) => !v), showHoles ? "Amagar forats" : "Mostrar forats")}
       {tile("explode", "Explosió", exploded ? <LuShrink /> : <LuExpand />, exploded, () => setExploded((v) => !v), exploded ? "Vista muntada" : "Vista explosionada")}
       {tile("hardware", "Ferratges", <LuWrench />, hardware, () => setHardware((v) => !v), hardware ? "Amagar frontisses, tiradors i potes" : "Mostrar frontisses, tiradors i potes")}
@@ -1096,8 +1105,6 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           <PanelSection id="mod-structure" title="Caixa" icon={LuFrame}>
             <CarcassForm module={module} onChange={updateModule} section="structure" />
           </PanelSection>
-          {/* Mòdul dividit: portes que el tapen tot (armari amb penjador i maleter). */}
-          {module.root.split && <ZoneFrontSection root={module.root} zone={module.root} onChange={(root) => updateModule({ ...module, root })} kinds={["none", "door", "panel"]} title="Front de tot el mòdul" id="module-front" />}
           <PanelSection id="mod-materials" title="Materials" icon={LuPalette}>
             <MaterialsForm carcass={module.carcass} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
           </PanelSection>
@@ -1266,12 +1273,11 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             onSelectModule={selectFrom3D}
             onAddModule={addModuleBeside}
             ghosts={ghosts}
-            view={viewer.view}
+            viewDir={viewDir}
             opening={viewer.opening}
             openOnly={openOnly}
             materialMode={viewerState.materialMode}
             materials={settings.materials}
-            lights={lights}
             onCapture={registerCapture}
             quality={quality}
             onDeselect={() => select({ kind: "moble" })}
@@ -1302,12 +1308,6 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         {viewTab === "3d" && viewerState.materialMode === "role" && (
           <Box position="absolute" bottom={3} left={3} zIndex={2} display={{ base: "none", md: "block" }}>
             <RoleLegend panels={panels} />
-          </Box>
-        )}
-        {/* Amb el visor estret, les vistes es trien a «Opcions de vista» (no hi caben a baix). */}
-        {viewTab === "3d" && !viewerNarrow && (
-          <Box position="absolute" bottom={3} left="50%" transform="translateX(-50%)" zIndex={2}>
-            <ViewBar view={viewer.view} onChange={(view) => setViewer({ view })} />
           </Box>
         )}
         {/* La recepta del SegmentGroup força position: relative; el posicionem amb un embolcall. */}
@@ -1366,7 +1366,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           {/* Al mòbil, un calaix de baix amb el seu propi desplaçament; a l'ordinador, un popover. */}
           <ViewOptions lead={viewModes} tiles={viewTiles} open={viewOptsOpen} onOpenChange={setViewOptsOpen}>
             <Box pt={3} borderTopWidth="1px">
-              <ViewerControls state={viewerState} onChange={setViewer} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} />
+              <ViewerControls state={viewerState} onChange={setViewer} onView={(v) => frameFrom(v)} hasMoving={groups.length > 0} hasSelectedZone={!!zoneRect} onImage={() => void downloadImage()} />
             </Box>
           </ViewOptions>
         </Stack>

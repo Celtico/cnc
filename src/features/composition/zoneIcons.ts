@@ -14,9 +14,11 @@ export const FRONT_ICONS: Record<NonNullable<Zone["front"]>["kind"] | "none", Ic
 
 /**
  * Icona d'una zona segons el que és: divisió (columnes / files) o compartiment segons el seu
- * front; si és obert, prestatges o buit.
+ * front; si és obert, prestatges o buit. L'arrel dividida (`root`, l'«Interior») amb el front de tot el mòdul
+ * porta la icona del front.
  */
-export function zoneIcon(z: Zone): IconType {
+export function zoneIcon(z: Zone, opts?: { root?: boolean }): IconType {
+  if (opts?.root && z.split && z.front) return FRONT_ICONS[z.front.kind]
   if (z.split) return z.split.dir === "v" ? LuColumns2 : LuRows2
   if (z.front) return FRONT_ICONS[z.front.kind]
   if (z.rail) return LuShirt
