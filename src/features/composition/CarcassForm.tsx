@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { DEFAULT_GRILLE, HARDWARE_SLOTS, backChoices, boardChoices, hardwareChoices, hardwareSummary, jointApplies, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, HARDWARE_SLOTS, backChoices, boardChoices, hardwareSummary, jointApplies, materialByName, type Base, type Carcass, type HardwareItem, type Module, type Top } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
@@ -11,6 +11,7 @@ import { LuArrowDownToLine, LuDrill, LuGrid3X3, LuInspectionPanel, LuLayers2, Lu
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { HardwarePick } from "./HardwarePick"
+import { HardwareSelect } from "../settings/HardwareSelect"
 
 export type CarcassSection = "dims" | "structure"
 
@@ -382,19 +383,17 @@ function LegPick({ base, onChange }: { base: Extract<Base, { kind: "legs" }>; on
   const { settings } = useSettings()
   const legs = settings.hardwareLibrary.filter((x) => x.engine === "leg")
   const cur = base.hardware
-  const choices = cur ? hardwareChoices(legs, cur) : { options: legs.map((x) => ({ key: x.id, item: x, label: x.name, own: false })), value: "none" }
   if (!legs.length && !cur) return null
-  const pick = (key: string) => {
-    if (key === "none") {
+  const pick = (item: HardwareItem | undefined) => {
+    if (!item) {
       const { hardware: _h, ...rest } = base
       return onChange(rest)
     }
-    const hit = choices.options.find((o) => o.key === key)
-    if (hit) onChange({ ...base, hardware: structuredClone(hit.item) })
+    onChange({ ...base, hardware: item })
   }
   return (
     <FormRow label="Pota" help={cur ? hardwareSummary(cur) : "Genèriques: només es veuen al 3D (cap forat). Les potes importades (Preferències › Ferratges) fan els forats de la placa a la cara de sota de la base."}>
-      <ChoiceChips label="Pota" value={choices.value} options={[{ id: "none", label: "Genèriques" }, ...choices.options.map((o) => ({ id: o.key, label: o.label }))]} onChange={pick} />
+      <HardwareSelect label="Pota" items={legs} current={cur} emptyLabel="Genèriques" onPick={pick} />
     </FormRow>
   )
 }

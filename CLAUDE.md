@@ -335,6 +335,20 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   3D: `Panel.fittings` `kind: "item"` amb `placement` = l'id del col·locat (GLB o el volum de les operacions;
   `hingeVolumes` no el confon amb una frontissa); el model es veu també quan no fa cap forat (sense confirmar, mecanitzat
   dolent o que no hi cap: només visual, per trobar-lo i triar-lo al 3D).
+  **Paramètrics** (per decisió de l'usuari: «la col·locació al moble no hauria de ser paramètrica?»; `PlacePos` i
+  `Repeat` a `core/model/hardwareOps.ts`, `refPoints`/`placeAt` a `hardwarePlace.ts`): per eix, ancoratge des de l'inici
+  (`min`), des del final (`max`), el mig o un `%` (`ratio`, `pct`) més el desplaçament `at` o una **fórmula** `expr`
+  (`evalExpr`, sense `eval`; **L** llarg, **A** ample, **G** gruix de la peça, **M** la mida al llarg de l'eix; una fórmula
+  dolenta → cap forat i avís); repetició `step` (des del punt, la d'abans) · `centred` · `span` (repartides entre els
+  `margins`) · `pitch` (cada `spacing` entre marges, centrades), amb la quantitat fixa o per regla segons la llargada de la
+  peça (`rule`, `StepRule` com `hingeCount`; `repeatCount`/`repeatOffsets`); **mirall esquerra/dreta** (`mirror`: al
+  lateral de l'altre costat —`otherSideId`, la mateixa P·Q i cara de dins— o, a una peça de costat a costat, reflectit
+  respecte del seu mig amb les operacions reflectides, `mirrorOpP`; sense peça a l'altre costat, cap forat; un mecanitzat
+  repetit pel mirall es fa un cop). Es recalcula a cada construcció: si el mòdul canvia de mida, el ferratge el segueix;
+  tot o res també amb les còpies i el mirall. Les posicions d'abans «des de la referència» (`ref` = des de l'inici) es
+  llegeixen `min` (`migratePlacePos`, `z.preprocess` a `HardwarePlacementSchema`, idempotent): el mateix resultat.
+  `StepRule`/`stepValue` són ara a `hardwareOps.ts`. Tests `build/hardwarePlaceParam.test.ts` (canviar l'amplada i
+  l'alçada → les posicions segueixen; regla per mida; marges; mirall; fórmules; migració; `.moble`).
   `eachHardware` els recorre (confirmar/eliminar a Preferències hi passa; `.moble` **v3**, `mobleVersionFor`). **DXF del
   taller** (`core/import/dxfMachining.ts`): capes `DRILL_D<Ø>_P<f>` (`DRILL_B_…`), `GROOVE_W<a>_P<f>`, `POCKET_P<f>`,
   `CUT_THROUGH`, `CONTOUR` (el contorn que ho envolta tot no es talla) → operacions exactes; peça pel sufix del nom
@@ -653,8 +667,14 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     `core/build/hardwareSummary.ts`: frontisses, tiradors, guies en parells, braços d'abatible, potes, push, imants,
     espigues en forats; només els que hi són). La peça lliure (no als objectes) també té «Ferratges» (sense les regles).
     Un **col·locat triat** (selecció `hardware`, `PlacementInspector`): capçalera «Ferratge · <mòdul>» amb Pare ·
-    Duplicar · Eliminar i anterior/següent dins del mateix mòdul, i la secció **Col·locació** (Ferratge · Peça ·
-    «Mecanitzats de» · posició del punt de referència per eixos · Repetir · Gir del model · «També: <peça>»). Posició.
+    Duplicar · Eliminar i anterior/següent dins del mateix mòdul, i la secció **Col·locació** (Ferratge amb el
+    `HardwareSelect` · Peça · «Mecanitzats de» · **previsualització en viu** (`PlacementPreview`, `placementPreview` a
+    `placements.ts`: la peça en P × Q amb les còpies, el mirall i les operacions pel mateix càlcul que el moble, i les cotes
+    de `layoutDims`) · posició paramètrica per eix (`PlacePosRow`: Des de l'esquerra/dreta… · Mig · %, distància i
+    «Fórmula (opcional)» amb l'error en vermell i on cau ara) · Repetir (No · Des del punt · Centrades · Repartides · Cada
+    X mm; Al llarg de; Quantes Fixa / Per mida amb `StepRuleRows editCount`; Separació/Cada; Marges) · Mirall · Gir del
+    model · «També: <peça>»). «Afegir ferratge» obre el calaix del `HardwareSelect` (`HardwareDrawer`) amb els que es
+    poden posar a les peces d'aquí (`placeableOn`) i el col·loca al mig de la peça. Duplicar amb fórmula: `(expr) + 50`.
     Sense Front (el de tot el mòdul és a l'«Interior»). Materials visibles: cos, **fronts**
     (`frontMaterial`, buit = el del cos) i fons.
   - Compartiment (`ZonePanel`): accions com a icones a la capçalera (Pare · Duplicar · Eliminar; a l'«Interior», l'arrel,
@@ -1310,7 +1330,14 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   dins la unió) i la guia (es veu el front del calaix) no es reconeixen gaire. Un **«només 3D»** s'enquadra a la seva caixa
   (`modelCamera`, a `mountCamera(m, aspect)`, la mateixa al 3D de l'editor i a la miniatura): la càmera més a prop que la
   veu sencera i, si és llarg i prim (perfil de porta corredissa de 1560 × 12,5 × 6,5), mirat al llarg des d'un extrem perquè
-  se'n vegi la secció (abans sortia una ratlla); al 3D de l'editor, les **cotes** de la caixa (sprites `DimLabel`, no `Html`).
+  se'n vegi la secció (abans sortia una ratlla). **Al 3D, cap cota** (per decisió de l'usuari: «a les vistes posar les mides
+  de tot, i al 3D cap mida»; ni a «Com va muntat» ni als «només 3D» ni a les miniatures): les mides són als plànols 2D.
+  **Plànols acotats** (`components/dims.ts` `layoutDims` + `components/DimLine.tsx` `DimLine`/`DimLayer`, el mateix
+  primitiu que el Pla del muntatge): mida total, cotes encadenades des dels cantells, entre forats i amb el punt de
+  referència, i l'etiqueta de cada element (Ø × fondària, ranura, caixera) on no tapi res (els textos que no caben pugen
+  de fila, `shift`); al dibuix del generador (i a sota, la llista «referència … · cantells …», `opPlace`), a les vistes
+  DXF del fabricant (cercles `viewCircles` amb el Ø) i a la peça d'exemple (`PanelDrawing dims="full"`). Lletra
+  proporcional (`dimFont`), `style={{ fontSize }}`. Test `components/dims.test.ts`.
   Un «només 2D» (sense STEP): la vista frontal del DXF a la targeta. L'editor (`components/EditorDialog`, el mateix que Materials) comença amb **«Com va muntat»** (vegeu
   més avall), dibuixa les peces d'exemple (`hardwarePreview`) amb un **Detall** acotat (`PanelDrawing dims`) i a la dreta
   les opcions en **l'acordió de l'app, com l'editor de materials** (`FoldItem` sols, recordats a la sessió, insígnia amb el
@@ -1325,10 +1352,18 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`hardwareUsage`), cal un substitut del mateix tipus; els mobles hi passen (`replaceHardwareEverywhere`, sense `updatedAt`).
   Només les còpies **iguals** a l'item (`isCopyOf`: mateix id i `sameHardware`, el contingut sense nom/fabricant/versió); una
   amb el mateix id i un altre contingut (un mòdul d'abans amb una cassoleta de 30) és la que es fabrica i no es toca.
-  «Restaurar valors inicials» torna biblioteca i per defecte. **A l'editor**: Front de porta, calaixos i abatible amb
-  `HardwarePick` (`ChoiceChips` dels del mateix tipus; el del mòdul = sense camp) i a Fusteria el de cada lloc del mòdul.
-  Les còpies que no són a la biblioteca tal qual (`hardwareChoices`, per contingut, no per id) surten a part, «<nom> (del
-  moble)», triades: es veu el que es fabrica i s'hi pot tornar; triar-ne un de la biblioteca canvia la còpia.
+  «Restaurar valors inicials» torna biblioteca i per defecte. **A l'editor, un sol selector** (per decisió de l'usuari: «el
+  selector a Mobles que surti amb un drawer com fa la col·locació de materials i objectes als ambients»):
+  `settings/HardwareSelect.tsx` (`HardwareSelect` = botó amb la miniatura 3D de la targeta i el nom; `HardwareDrawer` = el
+  calaix sol) sobre el calaix comú `components/PickerDrawer.tsx` (`PickerDrawer`, `PickerButton`, `PickerRow`; el
+  mateix que el `MaterialSelect`): cercador (`hardwareMatches`), categories › sèries (`seriesGroups`, a
+  `settings/hardwareGroups.ts`, com Preferències) i `GalleryCard` amb la miniatura (`settings/HardwareThumb.tsx`, mòdul
+  d'exemple `useMountBase`: les mateixes miniatures desades). Frontissa, guia, braç, tirador de cada front
+  (`HardwarePick`, a dalt «El del mòdul»), els ferratges de la Fusteria del mòdul, la Pota de la base (a dalt
+  «Genèriques») i «Afegir ferratge» / Ferratge d'un col·locat (només els compatibles amb les peces, `placeableOn`). Les
+  còpies que no són a la biblioteca tal qual (`hardwareChoices`, per contingut, no per id) surten a part, «Del moble»,
+  triades: es veu el que es fabrica i s'hi pot tornar; els importats sense confirmar porten «Sense confirmar» i la nota a
+  dalt del calaix (es poden triar, no fan cap forat); triar-ne un de la biblioteca canvia la còpia.
   - **«Importar del fabricant»** (`HardwarePane`, zona `components/ImportDropZone` —la mateixa que «Importar de Maestro»,
     amb «Triar carpeta…» · «Triar fitxers…» i deixar anar—, `settings/hardwareImport.ts`): ZIP de Hettich tal com es
     baixen (STEP, IGES, 3DS i DWG/DXF; només es descomprimeixen els articles triats, `listZip`/`readZipEntry`), carpetes o
@@ -1450,6 +1485,12 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   test; `scope` = un diàleg amb desfer propi) i els botons `components/UndoRedo` (`LuUndo2` · `LuRedo2`). Editor de
   mobles, Ambients i editor de perfils. Un editor nou amb desfer fa servir aquest, no un de propi.
 - **`NameDialog`** (`components/`): posar un nom (grup nou, canviar el nom, mòdul nou), amb un nom per defecte seleccionat.
+- **`PickerDrawer`** (`components/PickerDrawer.tsx`: `PickerDrawer`, `PickerButton`, `PickerRow`): el calaix dels
+  selectors (dreta a l'ordinador, de baix al mòbil, cercador a dalt). El fan servir el `MaterialSelect` i el
+  **`HardwareSelect`** (tria d'un ferratge al moble, vegeu Preferències › Ferratges).
+- **Plànols acotats** (`components/dims.ts` + `components/DimLine.tsx`): totes les cotes dels dibuixos 2D (pla del
+  muntatge, generador, vistes DXF, peça d'exemple, col·locació). **`StepRuleRows`** (`components/StepRuleRows.tsx`): les
+  regles de graons (frontisses per alçada, distància del tirador, còpies d'un col·locat per mida).
 - **`MaterialSelect`** (`settings/MaterialSelect.tsx`) a tot arreu on es tria un material (amb **cercador** a dalt del calaix,
   pel nom i sense accents, que obre les categories amb resultats): un **botó** (fons suau, a tota
   l'amplada, sense fletxa ni icona: no ha de semblar un desplegable) amb la mostra i el nom que obre un calaix (a la dreta a
@@ -1653,7 +1694,8 @@ té la línia **vertical**. Per això és la de "dividir en vertical".
   - **Reutilitza o generalitza; no copiïs.** Si ja hi ha un component que fa la feina, s'hi afegeix el que falta (prop,
     variant) a `components/`. Si n'hi ha dos que fan el mateix, s'unifiquen abans d'afegir-ne un tercer.
   - **Un concepte, un component**: cercador + «+» = `SearchBar`, tria = `ChoiceChips`/`IconChoice`, interruptor = `Switch`,
-    lliscador = `Slider`, material = `MaterialSelect`, camp = `FormRow`. Res d'elements nadius (`<input type="checkbox|range">`)
+    lliscador = `Slider`, material = `MaterialSelect`, ferratge = `HardwareSelect`, calaix de tria = `PickerDrawer`,
+    cota = `layoutDims` + `DimLine`, camp = `FormRow`. Res d'elements nadius (`<input type="checkbox|range">`)
     fora de `components/ui`.
   - **El mateix gest fa el mateix a tot arreu**: seleccionar, cercar, afegir, esborrar, plegar i moure es fan igual a Mobles,
     Objectes, Ambients i Preferències (mateixa posició, icona del catàleg, text i cursor).

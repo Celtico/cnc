@@ -1,4 +1,5 @@
-import { Badge, Box, Button, chakra, HStack, IconButton, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, chakra, HStack, IconButton, Input, Stack, Switch, Text } from "@chakra-ui/react"
+import { useState } from "react"
 import type { IconType } from "react-icons"
 import { LuCopy, LuPencil, LuPlus, LuTrash2, LuWrench } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
@@ -6,10 +7,15 @@ import { SectionLabel } from "../../components/SectionLabel"
 import type { RuleHardwareCount } from "../../core/build/hardwareSummary"
 import { HARDWARE_ICONS } from "../settings/hardwareIcons"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
-import { NumberField } from "../../components/NumRow"
-import { hardwareSummary, isPendingImport, machiningParts, type Composition, type HardwareItem, type HardwarePlacement, type Panel, type Pos } from "../../core/model"
+import { NumberField, NumRow } from "../../components/NumRow"
+import { StepRuleRows } from "../../components/StepRuleRows"
+import { dimFont, fmtMm, layoutDims } from "../../components/dims"
+import { DimLayer } from "../../components/DimLine"
+import { HardwareDrawer, HardwareSelect } from "../settings/HardwareSelect"
+import { placeableOn } from "../settings/hardwareGroups"
+import { hardwareSummary, isPendingImport, machiningParts, type Composition, type HardwareItem, type HardwarePlacement, type Panel, type PlacePos, type Repeat, type RepeatLayout } from "../../core/model"
 import type { CompositionWarning } from "../../core/build/buildComposition"
-import { newPlacement, panelAxes, partLabel, placeableItems, placementScope, placementWarnings, roleFor, scopePanels, scopePlacements, updatePlacement, type PlacementScope } from "./placements"
+import { DEFAULT_REPEAT_RULE, newPlacement, panelAxes, partLabel, placeableItems, placementPreview, placementScope, placementWarnings, placePosError, placePosValue, roleFor, scopePanels, scopePlacements, updatePlacement, type PlacementScope } from "./placements"
 
 /**
  * **Ferratges col·locats a mà** (millores v1 F4; Editor › mòdul o peça lliure › «Ferratges»): «Afegir ferratge» → un de
@@ -68,12 +74,13 @@ export function HardwarePlacements({
   /** Els de les regles del mòdul (`ruleHardwareCounts`). */
   rules?: readonly RuleHardwareCount[]
 }) {
-  const items = placeableItems(library)
   const here = scopePanels(scope, panels)
+  // Només els que es poden col·locar en alguna peça d'aquí (amb mecanitzats per a una d'elles, o «només 3D»).
+  const items = placeableItems(library).filter((x) => placeableOn(x, here.map((h) => h.part)))
   const list = scopePlacements(comp, scope)
-  const add = () => {
-    const item = items[0]
-    const on = here.find((h) => machiningParts(item?.machining ?? []).includes(h.part)) ?? here[0]
+  const [picking, setPicking] = useState(false)
+  const add = (item: HardwareItem | undefined) => {
+    const on = item && (here.find((h) => machiningParts(item.machining ?? []).includes(h.part)) ?? here[0])
     if (!item || !on) return
     const pl = newPlacement(item, on)
     onChange({ ...comp, hardwarePlacements: [...(comp.hardwarePlacements ?? []), pl] })
@@ -93,7 +100,8 @@ export function HardwarePlacements({
               {/* Un botó que es pot encongir (el `Button` de Chakra no: la fila sortia del panell i tapava les accions). */}
               <chakra.button type="button" flex={1} minW={0} textAlign="start" fontSize="sm" fontWeight="medium" py={1} truncate onClick={() => actions.onSelect(pl.id)} aria-pressed={on} title={`${pl.item.name} · ${main?.label ?? "peça que ja no hi és"} — triar-lo (es ressalta al 3D)`}>
                 {pl.item.name} · {main?.label ?? "peça que ja no hi és"}
-                {pl.repeat && pl.repeat.count > 1 ? ` × ${pl.repeat.count}` : ""}
+                {main && pl.repeat ? ` × ${placementPreview(pl, main.panel).refs.length}` : ""}
+                {pl.mirror ? " · mirall" : ""}
               </chakra.button>
               <PlacementButtons id={pl.id} name={pl.item.name} actions={actions} />
             </HStack>
@@ -105,7 +113,7 @@ export function HardwarePlacements({
           </Box>
         )
       })}
-      {!items.length ? (
+      {!placeableItems(library).length ? (
         <Text fontSize="sm" color="fg.muted">
           Cap ferratge amb mecanitzats a la biblioteca: fes-ne un (o importa'l) a Preferències › Ferratges i posa-li els mecanitzats al «Generador de mecanitzats».
         </Text>
@@ -115,9 +123,17 @@ export function HardwarePlacements({
         </Text>
       ) : (
         <Box>
-          <Button size="xs" variant="outline" onClick={add} data-testid="placement-add">
+          <Button size="xs" variant="outline" onClick={() => setPicking(true)} data-testid="placement-add">
             <LuPlus /> Afegir ferratge
           </Button>
+          <HardwareDrawer
+            open={picking}
+            onOpenChange={setPicking}
+            label="Afegir ferratge"
+            items={items}
+            note="Els ferratges amb mecanitzats del generador (o «només 3D») que es poden posar a les peces d'aquí. En triar-ne un es col·loca al mig de la peça i se n'obre la col·locació."
+            onPick={add}
+          />
         </Box>
       )}
       {rules && (
@@ -199,7 +215,7 @@ export function PlacementInspector({ comp, id, panels, library, warnings, onChan
         </Stack>
       )}
       <FoldItem id="hw-place" icon={LuWrench} title="Col·locació" badge={main?.label} defaultOpen>
-        <PlacementEditor pl={pl} here={here} items={placeableItems(library)} onChange={(next) => onChange(updatePlacement(comp, next))} />
+        <PlacementEditor pl={pl} here={here} items={placeableItems(library).filter((x) => placeableOn(x, here.map((h) => h.part)))} onChange={(next) => onChange(updatePlacement(comp, next))} />
       </FoldItem>
     </Stack>
   )
@@ -210,23 +226,28 @@ function PlacementEditor({ pl, here, items, onChange }: { pl: HardwarePlacement;
   const key = (t: { panel?: string; freePart?: string }) => t.panel ?? t.freePart ?? ""
   const on = here.find((h) => key(h.target) === key(main))
   const parts = machiningParts(pl.item.machining ?? [])
-  const lib = items.find((x) => x.id === pl.item.id)
   const axes = on ? panelAxes(on.panel) : null
-  const setPos = (k: "p" | "q", pos: Pos) => onChange({ ...pl, [k]: pos })
+  const setPos = (k: "p" | "q", pos: PlacePos) => onChange({ ...pl, [k]: pos })
   // Les altres peces (grups de l'item que no són el de la peça principal): només si es trien.
   const others = parts.filter((p) => p !== main.part)
+  const rep = pl.repeat
+  const layout = rep?.layout ?? "step"
+  // Amb «Repartides» o «Cada X mm», la posició al llarg de l'eix de la repetició la donen els marges.
+  const byMargins = !!rep && (layout === "span" || layout === "pitch")
+  const setRepeat = (patch: Partial<Repeat> | null) => {
+    const { repeat: _r, ...rest } = pl
+    if (!patch) return onChange(rest)
+    const cur: Repeat = rep ?? { axis: "p", count: 2, spacing: 100 }
+    onChange({ ...rest, repeat: { ...cur, ...patch } })
+  }
   return (
     <Stack gap={0} pt={2}>
       <FormRow label="Ferratge" help={hardwareSummary(pl.item) + (isPendingImport(pl.item) ? " — importat sense confirmar: no fa cap forat." : "")}>
-        <ChoiceChips
+        <HardwareSelect
           label="Ferratge"
-          value={lib ? pl.item.id : `own:${pl.item.id}`}
-          options={[...items.map((x) => ({ id: x.id, label: x.name })), ...(lib ? [] : [{ id: `own:${pl.item.id}`, label: `${pl.item.name} (del moble)` }])]}
-          onChange={(id) => {
-            const item = items.find((x) => x.id === id)
-            if (!item) return
-            onChange({ ...pl, item: structuredClone(item), targets: [{ ...main, part: on ? roleFor(item, on.part) : main.part }] })
-          }}
+          items={items}
+          current={pl.item}
+          onPick={(item) => item && onChange({ ...pl, item, targets: [{ ...main, part: on ? roleFor(item, on.part) : main.part }] })}
         />
       </FormRow>
       {here.length > 1 && (
@@ -247,47 +268,100 @@ function PlacementEditor({ pl, here, items, onChange }: { pl: HardwarePlacement;
           <ChoiceChips label="Mecanitzats de" value={main.part} options={parts.map((p) => ({ id: p, label: partLabel(p) }))} onChange={(part) => onChange({ ...pl, targets: [{ ...main, part }, ...pl.targets.slice(1).filter((t) => t.part !== part)] })} />
         </FormRow>
       )}
+      {on && <PlacementPreview pl={pl} panel={on.panel} />}
       {axes &&
-        (["p", "q"] as const).map((k) => (
-          <FormRow key={k} label={axes[k].name} help={k === "p" ? "On va el punt de referència del ferratge (la creu del generador)." : undefined}>
-            <Stack gap={1.5}>
-              <ChoiceChips
-                label={axes[k].name}
-                value={pl[k].from === "ref" ? "min" : pl[k].from}
-                options={[
-                  { id: "min", label: `Des de ${axes[k].ends[0] === "esquerra" ? "l'esquerra" : axes[k].ends[0]}` },
-                  { id: "max", label: `Des de ${axes[k].ends[1] === "dreta" ? "la dreta" : axes[k].ends[1]}` },
-                  { id: "center", label: "Mig" },
-                ]}
-                onChange={(from) => setPos(k, { ...pl[k], from })}
-              />
-              <Box maxW="160px">
-                <NumberField label="" ariaLabel={`${axes[k].name}: distància`} value={pl[k].at} min={-5000} max={5000} step={1} onChange={(at) => Number.isFinite(at) && setPos(k, { ...pl[k], at })} />
-              </Box>
-            </Stack>
-          </FormRow>
-        ))}
+        on &&
+        (["p", "q"] as const).map((k) =>
+          byMargins && rep!.axis === k ? (
+            <FormRow key={k} label={axes[k].name}>
+              <Text fontSize="sm" color="fg.muted" pt="6px">
+                La donen la repetició i els marges.
+              </Text>
+            </FormRow>
+          ) : (
+            <PlacePosRow key={k} axis={k} names={axes[k]} pos={pl[k]} panel={on.panel} onChange={(pos) => setPos(k, pos)} />
+          ),
+        )}
       {axes && (
-        <FormRow label="Repetir" help="Còpies del ferratge (amb tots els seus mecanitzats) separades al llarg d'un eix. 1 = sense repetir.">
-          <HStack gap={2} wrap="wrap" align="flex-end">
-            <Box w="90px">
-              <NumberField label="Quants" ariaLabel="Quantes còpies" suffix="u" value={pl.repeat?.count ?? 1} min={1} max={100} step={1} onChange={(v) => {
-                if (!Number.isFinite(v)) return
-                const count = Math.max(1, Math.round(v))
-                const { repeat: _r, ...rest } = pl
-                onChange(count > 1 ? { ...rest, repeat: { axis: pl.repeat?.axis ?? "p", spacing: pl.repeat?.spacing ?? 100, count } } : rest)
-              }} />
-            </Box>
-            {pl.repeat && pl.repeat.count > 1 && (
-              <>
-                <Box w="110px">
-                  <NumberField label="Cada" ariaLabel="Separació" value={pl.repeat.spacing} min={-5000} max={5000} step={1} onChange={(spacing) => Number.isFinite(spacing) && onChange({ ...pl, repeat: { ...pl.repeat!, spacing } })} />
-                </Box>
-                <ChoiceChips label="Al llarg de" value={pl.repeat.axis} options={[{ id: "p", label: axes.p.name }, { id: "q", label: axes.q.name }]} onChange={(axis) => onChange({ ...pl, repeat: { ...pl.repeat!, axis } })} />
-              </>
-            )}
-          </HStack>
-        </FormRow>
+        <>
+          <FormRow
+            label="Repetir"
+            help="Còpies del ferratge (amb tots els seus mecanitzats) al llarg d'un eix: des del punt, centrades al punt, repartides entre els marges (la primera i l'última als marges) o cada tants mm entre els marges. Es recalculen quan el moble canvia de mida."
+          >
+            <ChoiceChips
+              label="Repetir"
+              value={rep ? layout : "none"}
+              options={[
+                { id: "none", label: "No" },
+                { id: "step", label: "Des del punt" },
+                { id: "centred", label: "Centrades" },
+                { id: "span", label: "Repartides" },
+                { id: "pitch", label: "Cada X mm" },
+              ]}
+              onChange={(v) => (v === "none" ? setRepeat(null) : setRepeat({ layout: v as RepeatLayout, ...(v === "span" || v === "pitch" ? { margins: rep?.margins ?? [50, 50] } : {}), ...(v === "pitch" && !rep ? { spacing: 32 } : {}) }))}
+            />
+          </FormRow>
+          {rep && (
+            <>
+              <FormRow label="Al llarg de">
+                <ChoiceChips label="Al llarg de" value={rep.axis} options={[{ id: "p", label: axes.p.name }, { id: "q", label: axes.q.name }]} onChange={(axis) => setRepeat({ axis })} />
+              </FormRow>
+              {layout !== "pitch" && (
+                <FormRow label="Quantes" help="Fixa, o per mida: segons la llargada de la peça al llarg de l'eix, com les frontisses (2 fins a 900, 3 fins a 1600…).">
+                  <ChoiceChips
+                    label="Quantes"
+                    value={rep.rule ? "rule" : "fixed"}
+                    options={[
+                      { id: "fixed", label: "Fixa" },
+                      { id: "rule", label: "Per mida" },
+                    ]}
+                    onChange={(v) => {
+                      const { rule: _rule, ...rest } = rep
+                      onChange({ ...pl, repeat: v === "rule" ? { ...rest, rule: DEFAULT_REPEAT_RULE } : rest })
+                    }}
+                  />
+                </FormRow>
+              )}
+              {layout !== "pitch" && !rep.rule && (
+                <NumRow label="Còpies" suffix="u" value={rep.count} min={1} max={100} step={1} onChange={(v) => Number.isFinite(v) && setRepeat({ count: Math.max(1, Math.min(100, Math.round(v))) })} />
+              )}
+              {layout !== "pitch" && rep.rule && (
+                <StepRuleRows
+                  rule={rep.rule}
+                  kind="count"
+                  editCount
+                  words={{ unit: "còpies", upToHelp: "Fins a aquesta llargada de la peça (mm).", elseLabel: "Més llargues", elseHelp: "Còpies si la peça és més llarga que l'últim graó." }}
+                  onChange={(rule) => setRepeat({ rule })}
+                />
+              )}
+              {layout !== "span" && (
+                <NumRow label={layout === "pitch" ? "Cada" : "Separació"} value={rep.spacing} min={layout === "pitch" ? 1 : -5000} max={5000} step={1} onChange={(spacing) => Number.isFinite(spacing) && setRepeat({ spacing })} help={layout === "pitch" ? "Tantes còpies com hi caben entre els marges, centrades." : undefined} />
+              )}
+              {byMargins && (
+                <FormRow label="Marges" help={`Dels extrems de la peça: ${axes[rep.axis].ends[0]} · ${axes[rep.axis].ends[1]}.`}>
+                  <HStack gap={2}>
+                    <Box w="120px">
+                      <NumberField label="" ariaLabel={`Marge ${axes[rep.axis].ends[0]}`} value={rep.margins?.[0] ?? 0} min={0} max={5000} step={1} onChange={(m) => Number.isFinite(m) && setRepeat({ margins: [Math.max(0, m), rep.margins?.[1] ?? 0] })} />
+                    </Box>
+                    <Box w="120px">
+                      <NumberField label="" ariaLabel={`Marge ${axes[rep.axis].ends[1]}`} value={rep.margins?.[1] ?? 0} min={0} max={5000} step={1} onChange={(m) => Number.isFinite(m) && setRepeat({ margins: [rep.margins?.[0] ?? 0, Math.max(0, m)] })} />
+                    </Box>
+                  </HStack>
+                </FormRow>
+              )}
+            </>
+          )}
+          <FormRow label="Mirall" help="També la còpia simètrica d'esquerra a dreta: al lateral (o lateral de calaix) de l'altre costat, a la mateixa alçada i fondària; a una peça de costat a costat (porta, tapa, base, prestatge, fons), reflectida respecte del seu mig. Tot o res amb l'original.">
+            <Switch.Root size="sm" pt="6px" checked={!!pl.mirror} onCheckedChange={(e) => {
+              const { mirror: _m, ...rest } = pl
+              onChange(e.checked ? { ...rest, mirror: true } : rest)
+            }}>
+              <Switch.HiddenInput />
+              <Switch.Control />
+              <Switch.Label fontSize="sm">Esquerra / dreta</Switch.Label>
+            </Switch.Root>
+          </FormRow>
+        </>
       )}
       {(pl.item.imported?.asset || pl.item.imported?.bbox) && (
         <FormRow label="Gir del model" help="Només el model 3D (amb «Ferratges» a Opcions de vista): el gira al pla de la peça. Els mecanitzats no canvien.">
@@ -321,6 +395,130 @@ function PlacementEditor({ pl, here, items, onChange }: { pl: HardwarePlacement;
           </FormRow>
         )
       })}
+    </Stack>
+  )
+}
+
+/**
+ * La posició paramètrica d'un eix (`PlacePos`): l'ancoratge (des de l'inici, des del final, el mig o un %), el
+ * desplaçament i, opcional, la fórmula (L · A · G · M, sense `eval`) amb l'error en vermell; a sota, on cau ara.
+ */
+function PlacePosRow({ axis, names, pos, panel, onChange }: { axis: "p" | "q"; names: { name: string; ends: [string, string] }; pos: PlacePos; panel: Panel; onChange: (p: PlacePos) => void }) {
+  const err = placePosError(pos, panel, axis)
+  const now = placePosValue(pos, panel, axis)
+  const [draft, setDraft] = useState<string | null>(null)
+  const from0 = names.ends[0] === "esquerra" ? "l'esquerra" : names.ends[0]
+  const from1 = names.ends[1] === "dreta" ? "la dreta" : names.ends[1]
+  return (
+    <FormRow label={names.name} help={`On va el punt de referència del ferratge (la creu del generador). Fórmula opcional en lloc del número: L, A i G = llarg, ample i gruix de la peça; M = la mida de la peça al llarg d'aquest eix (p. ex. «M/3», «A − 37»). ${now !== null ? `Ara: a ${fmtMm(now)} mm de ${from0}.` : ""}`}>
+      <Stack gap={1.5}>
+        <ChoiceChips
+          label={names.name}
+          value={pos.from}
+          options={[
+            { id: "min", label: `Des de ${from0}` },
+            { id: "max", label: `Des de ${from1}` },
+            { id: "center", label: "Mig" },
+            { id: "ratio", label: "%" },
+          ]}
+          onChange={(from) => onChange(from === "ratio" ? { ...pos, from, pct: pos.pct ?? 50 } : (({ pct: _p, ...rest }) => ({ ...rest, from }))(pos))}
+        />
+        <HStack gap={2} wrap="wrap" align="flex-end">
+          {pos.from === "ratio" && (
+            <Box w="100px">
+              <NumberField label="" ariaLabel={`${names.name}: percentatge`} suffix="%" value={pos.pct ?? 50} min={0} max={100} step={1} onChange={(pct) => Number.isFinite(pct) && onChange({ ...pos, pct: Math.max(0, Math.min(100, pct)) })} />
+            </Box>
+          )}
+          {!pos.expr && (
+            <Box w="130px">
+              <NumberField label="" ariaLabel={`${names.name}: distància`} value={pos.at} min={-5000} max={5000} step={1} onChange={(at) => Number.isFinite(at) && onChange({ ...pos, at })} />
+            </Box>
+          )}
+          <Input
+            size="sm"
+            flex={1}
+            minW="120px"
+            maxW="220px"
+            fontFamily="mono"
+            placeholder="Fórmula (opcional)"
+            aria-label={`${names.name}: fórmula`}
+            value={draft ?? pos.expr ?? ""}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => {
+              if (draft === null) return
+              const t = draft.trim().slice(0, 200)
+              setDraft(null)
+              const { expr: _e, ...rest } = pos
+              onChange(t ? { ...rest, expr: t } : rest)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur()
+              if (e.key === "Escape") setDraft(null)
+            }}
+          />
+        </HStack>
+        {err && (
+          <Text fontSize="xs" color="red.fg">
+            Fórmula: {err}
+          </Text>
+        )}
+      </Stack>
+    </FormRow>
+  )
+}
+
+/**
+ * Previsualització en viu de la col·locació a la peça (el mateix càlcul que el moble): la peça en P × Q, les còpies (i el
+ * mirall) amb les seves operacions i les cotes (total, encadenades des dels cantells i entre còpies).
+ */
+function PlacementPreview({ pl, panel }: { pl: HardwarePlacement; panel: Panel }) {
+  const pv = placementPreview(pl, panel)
+  const axes = panelAxes(panel)
+  const [W, H] = pv.size
+  const box = { x0: 0, y0: 0, x1: W, y1: H }
+  // Una mica més gran que als plànols de Preferències: la columna de l'inspector és estreta.
+  const fs = dimFont(box) * 1.35
+  // y cap avall: Q amunt a la peça.
+  const all = [...pv.refs, ...pv.mirrored]
+  const feats = all.map(([p, q]) => ({ x: p, y: H - q, hx: fs * 0.3, hy: fs * 0.3 }))
+  const layout = layoutDims(box, feats, fs, { title: panel.label })
+  const vb = layout.extent
+  const stroke = Math.max(vb.w, vb.h) / 500
+  const cross = fs * 0.55
+  return (
+    <Stack gap={1} py={2} data-testid="placement-preview">
+      <Box asChild w="full" maxH="300px" style={{ aspectRatio: `${vb.w} / ${vb.h}` }} rounded="md" borderWidth="1px" bg="bg.subtle">
+        <svg viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} role="img" aria-label={`Col·locació a ${panel.label}`}>
+          <rect x={0} y={0} width={W} height={H} fill="var(--chakra-colors-wood-subtle)" stroke="currentColor" strokeWidth={stroke * 1.5} />
+          {pv.marks.map((m, i) =>
+            m.round ? (
+              <circle key={i} cx={(m.x0 + m.x1) / 2} cy={H - (m.y0 + m.y1) / 2} r={Math.max((m.x1 - m.x0) / 2, fs * 0.18)} fill="var(--chakra-colors-wood-fg)" fillOpacity={m.mirror ? 0.5 : 0.85} stroke="none" />
+            ) : (
+              <rect key={i} x={m.x0} y={H - m.y1} width={Math.max(m.x1 - m.x0, stroke)} height={Math.max(m.y1 - m.y0, stroke)} fill="var(--chakra-colors-wood-emphasized)" fillOpacity={m.mirror ? 0.5 : 0.9} stroke="currentColor" strokeWidth={stroke} />
+            ),
+          )}
+          {all.map(([p, q], i) => (
+            <g key={`r${i}`} stroke={i >= pv.refs.length ? "var(--chakra-colors-fg-muted)" : "var(--chakra-colors-wood-solid)"} strokeWidth={stroke * 1.6}>
+              <line x1={p - cross} y1={H - q} x2={p + cross} y2={H - q} />
+              <line x1={p} y1={H - q - cross} x2={p} y2={H - q + cross} />
+            </g>
+          ))}
+          <DimLayer layout={layout} stroke={stroke} fs={fs} />
+          <g fill="var(--chakra-colors-fg-subtle)">
+            <text x={fs * 0.4} y={fs * 1.1} style={{ fontSize: fs * 0.75 }}>
+              {axes.q.ends[1]} ↑
+            </text>
+            <text x={W - fs * 0.4} y={H - fs * 0.4} textAnchor="end" style={{ fontSize: fs * 0.75 }}>
+              {axes.p.ends[1]} →
+            </text>
+          </g>
+        </svg>
+      </Box>
+      <Text fontSize="xs" color={pv.error ? "orange.fg" : "fg.muted"}>
+        {pv.error
+          ? `No hi cap: ${pv.error}. No es fa cap mecanitzat del ferratge.`
+          : `${panel.label} de ${fmtMm(W)} × ${fmtMm(H)} mm (${axes.p.name.toLowerCase()} × ${axes.q.name.toLowerCase()}): ${pv.refs.length === 1 ? "1 ferratge" : `${pv.refs.length} còpies`}${pv.mirrored.length ? ` i ${pv.mirrored.length} al mirall` : ""}${pv.otherSide ? " (i les mateixes a la peça de l'altre costat)" : ""}. Segueix la peça si el moble canvia de mida.`}
+      </Text>
     </Stack>
   )
 }

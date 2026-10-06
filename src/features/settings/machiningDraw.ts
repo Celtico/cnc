@@ -2,6 +2,7 @@ import { useCallback, useState } from "react"
 import { AXIS_ENDS, axisRect, newId, partAxes, type GenOp, type GenTool, type MachineTool, type PartKind, type Pos } from "../../core/model"
 import type { HardwareView } from "../../core/import/views"
 import { toolLabel } from "../../core/model"
+import { fmtMm, type DrawFeature } from "../../components/dims"
 
 /**
  * Geometria del dibuix del generador de mecanitzats (Preferències › Ferratges): una peça d'exemple de cada grup en el
@@ -96,6 +97,43 @@ export function opShape(op: GenOp, size: [number, number], ref: [number, number]
   const rect = !through ? axisRect(pts) : null
   if (rect) return { kind: "rect", x0: rect[0], y0: rect[1], x1: rect[2], y1: rect[3], through, faceB }
   return { kind: "poly", pts, through, faceB }
+}
+
+/** Text curt de la mida d'una operació per al dibuix: «Ø8 × 10», «Ø35 passant», «R 8 × 10», «40 × 20 × 5». */
+export function opSizeLabel(op: GenOp): string {
+  const depth = op.through ? " passant" : ` × ${fmtMm(op.depth)}`
+  const side = op.face === "B" ? " (B)" : op.face === "edge" ? " cantell" : ""
+  if (op.kind === "drill") return `Ø${fmtMm(op.d ?? 0)}${depth}${side}`
+  if (op.kind === "groove") return `R ${fmtMm(op.w ?? 0)}${depth}${side}`
+  if (op.kind === "pocket") return `${fmtMm(op.w ?? 0)} × ${fmtMm(op.h ?? 0)}${depth}${side}`
+  return `Contorn${depth}${side}`
+}
+
+/**
+ * L'element que es cota d'una operació al dibuix (coordenades de l'SVG, y cap avall: `-q`): el centre, la mida i el
+ * text. Una ranura de cantell a cantell no té posició al llarg; un forat de cantell, només al llarg del cantell.
+ */
+export function opFeature(op: GenOp, size: [number, number], ref: [number, number]): DrawFeature | null {
+  const s = opShape(op, size, ref)
+  if (!s) return null
+  const label = opSizeLabel(op)
+  if (s.kind === "circle") return { x: s.cx, y: -s.cy, hx: s.r, hy: s.r, label }
+  if (s.kind === "edge") return { x: s.cx, y: -s.cy, hx: s.r, hy: s.r, label, skipX: s.dx !== 0, skipY: s.dy !== 0 }
+  if (s.kind === "rect") return { x: (s.x0 + s.x1) / 2, y: -(s.y0 + s.y1) / 2, hx: (s.x1 - s.x0) / 2, hy: (s.y1 - s.y0) / 2, label, skipX: op.kind === "groove" && !!op.full && op.along !== "q", skipY: op.kind === "groove" && !!op.full && op.along === "q" }
+  const xs = s.pts.map((p) => p[0]), ys = s.pts.map((p) => p[1])
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)]
+  return { x: (x0 + x1) / 2, y: -(y0 + y1) / 2, hx: (x1 - x0) / 2, hy: (y1 - y0) / 2, label }
+}
+
+/**
+ * On és una operació a la peça d'exemple: des del punt de referència (P, Q) i des dels quatre cantells (inici i final
+ * de cada eix), per a la llista de sota del dibuix.
+ */
+export function opPlace(op: GenOp, size: [number, number], ref: [number, number]): { fromRef: [number, number]; fromEdges: [number, number, number, number] } | null {
+  const s = opShape(op, size, ref)
+  if (!s) return null
+  const [cx, cy] = s.kind === "circle" || s.kind === "edge" ? [s.cx, s.cy] : s.kind === "rect" ? [(s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2] : [s.pts.reduce((a, p) => a + p[0], 0) / s.pts.length, s.pts.reduce((a, p) => a + p[1], 0) / s.pts.length]
+  return { fromRef: [cx - ref[0], cy - ref[1]], fromEdges: [cx, size[0] - cx, cy, size[1] - cy] }
 }
 
 /** Gir d'una vista (graus, antihorari) i transformació al punt de referència. */

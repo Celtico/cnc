@@ -9,7 +9,7 @@ import { ImportDropZone } from "../../components/ImportDropZone"
 import type { PickedFile } from "../../components/pickedFiles"
 import { toaster } from "../../components/ui/toaster"
 import { confirmProblem, cupRel, pairPlate, relV, restoreProposal, setConfirmed, setHandleDistance, setHardwareParam, syncPairedPlates } from "../../core/import/importItem"
-import { itemSeries, type HettichArticle } from "../../core/import/hettich"
+import type { HettichArticle } from "../../core/import/hettich"
 import { applyImportUpdate, dismissImportUpdate, mergePreview } from "../../core/import/merge"
 import { viewBounds, type HardwareView } from "../../core/import/views"
 import { IMPORT_ACCEPT, importFormatsText } from "../../core/import/formats"
@@ -19,15 +19,18 @@ import { HardwareImportDialog } from "./HardwareImportDialog"
 import { analyseArticle, importArticles, sourceFromPicked, type ImportSource } from "./hardwareImport"
 import { NumberField, NumRow } from "../../components/NumRow"
 import { PanelDrawing } from "../../components/PanelDrawing"
+import { StepRuleRows } from "../../components/StepRuleRows"
+import { HardwareThumb } from "./HardwareThumb"
+import { hardwareMatches, seriesGroups, useMountBase } from "./hardwareGroups"
+import { dimFont, fmtMm, layoutDims, viewCircles } from "../../components/dims"
+import { DimLayer } from "../../components/DimLine"
 import { SearchBar } from "../../components/SearchBar"
 import { useSessionList } from "../../components/sessionState"
 import { featureCrop, hardwarePreview } from "../../core/build/hardwarePreview"
 import { hardwareMount, mountPlan, type HardwareMount } from "../../core/build/hardwareMount"
 import { movingGroups } from "../../components/viewer/opening"
 import {
-  applySettingsToModule,
   DEFAULT_HARDWARE_KIT,
-  defaultModule,
   HARDWARE_CATEGORIES,
   HARDWARE_PARAMS,
   HARDWARE_SLOTS,
@@ -55,8 +58,6 @@ import { GalleryCard } from "../projects/GalleryCard"
 import { GALLERY_COLS, fold } from "../projects/galleryGrid"
 import { HARDWARE_ICONS } from "./hardwareIcons"
 import { HardwareMountPlan } from "./HardwareMountPlan"
-import { hardwareThumb, hardwareThumbSig, requestHardwareThumb } from "./hardwareThumbs"
-import { SnapshotThumb } from "../../components/SnapshotThumb"
 import { useSessionString } from "./useSessionString"
 import { ThicknessChips } from "./MaterialBits"
 import { PaneHeadContext } from "./paneHead"
@@ -69,27 +70,6 @@ const NO_MATERIALS: MaterialPref[] = []
 const OPEN_KEY = "mobles:md-open:hardware"
 /** Sèries obertes dins de les categories («hinge/sensys»…), durant la sessió. */
 const SERIES_KEY = "mobles:md-open:hardware-series"
-
-/**
- * Els items d'una categoria per sèrie (`itemSeries`: la carpeta del fabricant, «Sensys», «Classic», «SlideLine 55»),
- * per nom de la sèrie; els que no en tenen (els de l'app, els fitxers solts) van a dalt, sense grup.
- */
-function seriesGroups(category: string, list: HardwareItem[]): { loose: HardwareItem[]; series: { key: string; label: string; items: HardwareItem[] }[] } {
-  const loose: HardwareItem[] = []
-  const by = new Map<string, { key: string; label: string; items: HardwareItem[] }>()
-  for (const x of list) {
-    const s = itemSeries(x)
-    if (!s) {
-      loose.push(x)
-      continue
-    }
-    const key = `${category}/${s.id}`
-    let g = by.get(key)
-    if (!g) by.set(key, (g = { key, label: s.label, items: [] }))
-    g.items.push(x)
-  }
-  return { loose, series: [...by.values()].sort((a, b) => a.label.localeCompare(b.label, "ca")) }
-}
 
 /** El ferratge muntat en 3D (three, les peces i el GLB, quan s'obre l'editor). */
 const HardwareMount3D = lazy(() => import("./HardwareMount3D"))
@@ -259,7 +239,7 @@ export function HardwareList({
   const [openSeries, setOpenSeries] = useSessionList(SERIES_KEY, [])
   // Per categoria i, dins, per sèrie (la carpeta del fabricant: Frontisses › Sensys, Tiradors › Classic…).
   const groups = HARDWARE_CATEGORIES.map((c) => {
-    const list = items.filter((x) => x.category === c.id && (!q || fold(`${x.name} ${x.maker ?? ""} ${x.ref ?? ""} ${x.imported?.article ?? ""} ${itemSeries(x)?.label ?? ""}`).includes(q)))
+    const list = items.filter((x) => x.category === c.id && (!q || hardwareMatches(x, q)))
     return { ...c, items: list, ...seriesGroups(c.id, list) }
   }).filter((g) => g.items.length)
   const defaultOf = (x: HardwareItem) => HARDWARE_SLOTS.find((s) => defaults[s.slot] === x.id && s.engine === x.engine)
@@ -301,7 +281,7 @@ export function HardwareList({
     setJustAdded(null)
   }
   // El mòdul d'exemple del muntatge: com un de nou (tauler, gruix, jocs i ferratges per defecte de les preferències).
-  const mountBase = useMemo(() => (settings ? applySettingsToModule(settings, defaultModule("mount", "Muntatge")) : undefined), [settings])
+  const mountBase = useMountBase(settings)
   const materials = settings?.materials ?? NO_MATERIALS
   // Les eines de la màquina per defecte (generador de mecanitzats).
   const tools = useMemo(() => genTools(defaultMachine(settings?.machines ?? [])?.tools ?? []), [settings?.machines])
@@ -450,52 +430,6 @@ function countKinds(items: HardwareItem[]): string {
   return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} i ${parts.at(-1)}` : (parts[0] ?? "")
 }
 
-/**
- * Miniatura 3D de la targeta, com les de Mobles, Objectes i Ambients (`SnapshotThumb` 2:1, sense cap 3D viu per
- * targeta): el ferratge muntat amb la vista de «Com va muntat», feta pel renderitzador comú fora de pantalla i desada a
- * la Cache Storage (`hardwareThumbs`). Mentre es fa, el requadre buit.
- */
-function HardwareThumb({ item, base, materials }: { item: HardwareItem; base?: Module; materials: MaterialPref[] }) {
-  // Només 2D (sense STEP encara): la vista frontal del DXF.
-  if (item.engine === "model" && item.imported && !item.imported.bbox) return <ViewThumb asset={item.imported.asset} />
-  return <ModelThumb item={item} base={base} materials={materials} />
-}
-
-/** Miniatura d'un «només 2D»: la vista frontal (o la primera) del DXF, al mateix requadre 2:1 que les fotos. */
-function ViewThumb({ asset }: { asset?: string }) {
-  const a = useLiveQuery(() => (asset ? getHardwareAsset(asset) : undefined), [asset])
-  const views = assetViews(a)
-  const view = views.find((v) => v.name === "front") ?? views[0]
-  const b = view ? viewBounds(view.lines) : null
-  if (!view || !b) return <SnapshotThumb />
-  const w = b.x1 - b.x0
-  const h = b.y1 - b.y0
-  // Encaixat al 2:1 amb marge.
-  const W = Math.max(w, h * 2) * 1.15 + 1
-  const H = W / 2
-  const x = b.x0 - (W - w) / 2
-  const y = -b.y1 - (H - h) / 2
-  return (
-    <Box aspectRatio="2 / 1" rounded="md" overflow="hidden" bg="bg.muted" color="fg.muted" data-testid="hardware-thumb-2d">
-      <svg viewBox={`${x} ${y} ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-        <g transform="scale(1 -1)" fill="none" stroke="currentColor" strokeWidth={W / 400}>
-          {view.lines.map((l, i) => (
-            <polyline key={i} points={l.map((v, k) => (k % 2 ? `${v} ` : `${v},`)).join("")} />
-          ))}
-        </g>
-      </svg>
-    </Box>
-  )
-}
-
-function ModelThumb({ item, base, materials }: { item: HardwareItem; base?: Module; materials: MaterialPref[] }) {
-  const sig = useMemo(() => hardwareThumbSig(item, base, materials), [item, base, materials])
-  const [made, setMade] = useState<{ sig: string; url: string } | null>(null)
-  const url = made?.sig === sig ? made.url : hardwareThumb(item, sig)
-  useEffect(() => (hardwareThumb(item, sig) ? undefined : requestHardwareThumb(item, base, materials, sig, (u) => setMade({ sig, url: u }))), [item, base, materials, sig])
-  return <SnapshotThumb src={url} />
-}
-
 /** La vista registrada al marc del ferratge (la que mira la cara de la peça; a les frontisses, la frontal), o `null`. */
 function frontView(views: HardwareView[]): HardwareView | null {
   return views.find((v) => v.name === "front" && v.registered) ?? views.find((v) => v.registered) ?? null
@@ -556,7 +490,7 @@ function HardwareStage({ item, base, materials, mui, onChange }: { item: Hardwar
           const crop = featureCrop(p)
           return (
             <SimpleGrid key={p.id} columns={{ base: 1, md: crop ? 2 : 1 }} gap={3} bg="bg" rounded="lg" borderWidth="1px" p={{ base: 3, md: 4 }} alignItems="center" data-testid={`hardware-sample-${p.id}`}>
-              <PanelDrawing panel={p} underlay={under[p.id]} />
+              <PanelDrawing panel={p} dims="full" underlay={under[p.id]} />
               {crop && (
                 <Stack gap={1}>
                   <Box rounded="md" borderWidth="1px" borderColor="border.muted" overflow="hidden">
@@ -731,13 +665,24 @@ function ModelPreview({ mount, materials, noModel, generated }: { mount: Hardwar
 
 const VIEW_LABEL: Record<HardwareView["name"], string> = { front: "Vista frontal", side: "Vista lateral", top: "Vista de dalt" }
 
-/** Una vista 2D del fitxer (línies i punts de connexió), tal com ve o encaixada al marc del ferratge. */
+/**
+ * Una vista 2D del fitxer (línies i punts de connexió), tal com ve o encaixada al marc del ferratge, **acotada** (per
+ * decisió de l'usuari, «a les vistes les mides de tot»): la mida total, els cercles (forats) amb el Ø i les cotes
+ * encadenades des dels cantells, entre forats i, si la vista és al marc dels forats, des del punt de referència.
+ */
 function ViewDrawing({ view }: { view: HardwareView }) {
-  const b = viewBounds(view.lines)
-  if (!b) return null
-  const pad = Math.max(b.x1 - b.x0, b.y1 - b.y0) * 0.06 + 1
-  const vb = { x: b.x0 - pad, y: -b.y1 - pad, w: b.x1 - b.x0 + 2 * pad, h: b.y1 - b.y0 + 2 * pad }
-  const stroke = Math.max(vb.w, vb.h) / 350
+  const layout = useMemo(() => {
+    const b = viewBounds(view.lines)
+    if (!b) return null
+    const box = { x0: b.x0, y0: -b.y1, x1: b.x1, y1: -b.y0 }
+    const fs = dimFont(box)
+    const feats = viewCircles(view.lines).map((c) => ({ x: c.x, y: -c.y, hx: c.r, hy: c.r, label: `Ø${fmtMm(Math.round(c.r * 20) / 10)}` }))
+    return { fs, l: layoutDims(box, feats, fs, { ...(view.registered ? { ref: [0, 0] as [number, number] } : {}), title: VIEW_LABEL[view.name] }) }
+  }, [view])
+  if (!layout) return null
+  const vb = layout.l.extent
+  const stroke = Math.max(vb.w, vb.h) / 500
+  const mark = layout.fs * 0.5
   return (
     <Stack gap={1} bg="bg" rounded="lg" borderWidth="1px" p={2} data-testid={`hardware-view-${view.name}`}>
       <Text fontSize="sm" fontWeight="medium" px={1}>
@@ -749,7 +694,7 @@ function ViewDrawing({ view }: { view: HardwareView }) {
           </Text>
         )}
       </Text>
-      <Box asChild color="fg" w="full" style={{ aspectRatio: `${vb.w} / ${vb.h}` }} maxH="260px">
+      <Box asChild color="fg" w="full" style={{ aspectRatio: `${vb.w} / ${vb.h}` }} maxH="340px">
         <svg viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}>
           <g transform="scale(1 -1)" fill="none" stroke="currentColor" strokeWidth={stroke}>
             {view.lines.map((l, i) => (
@@ -758,11 +703,18 @@ function ViewDrawing({ view }: { view: HardwareView }) {
             {!view.registered &&
               view.points.map(([x, y], i) => (
                 <g key={`p${i}`} stroke="var(--chakra-colors-wood-solid)" strokeWidth={stroke * 1.5}>
-                  <line x1={x - pad / 3} y1={y} x2={x + pad / 3} y2={y} />
-                  <line x1={x} y1={y - pad / 3} x2={x} y2={y + pad / 3} />
+                  <line x1={x - mark} y1={y} x2={x + mark} y2={y} />
+                  <line x1={x} y1={y - mark} x2={x} y2={y + mark} />
                 </g>
               ))}
+            {view.registered && (
+              <g stroke="var(--chakra-colors-wood-solid)" strokeWidth={stroke * 1.5}>
+                <line x1={-mark} y1={0} x2={mark} y2={0} />
+                <line x1={0} y1={-mark} x2={0} y2={mark} />
+              </g>
+            )}
           </g>
+          <DimLayer layout={layout.l} stroke={stroke} fs={layout.fs} />
         </svg>
       </Box>
     </Stack>
@@ -1185,7 +1137,7 @@ function HardwareCard({
 
         {item.count && (
           <FoldItem id="hw-count" icon={LuListOrdered} title="Quantitat per alçada" badge={stepBadge(item.count, "")}>
-            <StepRows rule={item.count} kind="count" onChange={(count) => set({ count })} />
+            <StepRuleRows rule={item.count} kind="count" onChange={(count) => set({ count })} />
           </FoldItem>
         )}
         {item.pitch && item.imported && item.engine === "barHandle" ? (
@@ -1208,7 +1160,7 @@ function HardwareCard({
           </FoldItem>
         ) : item.pitch ? (
           <FoldItem id="hw-pitch" icon={LuRuler} title="Distància entre forats" badge={stepBadge(item.pitch, " mm")}>
-            <StepRows rule={item.pitch} kind="pitch" onChange={(pitch) => set({ pitch })} />
+            <StepRuleRows rule={item.pitch} kind="pitch" onChange={(pitch) => set({ pitch })} />
           </FoldItem>
         ) : null}
 
@@ -1343,32 +1295,6 @@ function OpsEditor({ item, target, onChange }: { item: HardwareItem; target: Har
         )}
       </Stack>
     </FormRow>
-  )
-}
-
-/** Graons d'una regla (`StepRule`): frontisses per alçada de porta, o distància dels forats del tirador per espai. */
-function StepRows({ rule, kind, onChange }: { rule: StepRule; kind: "count" | "pitch"; onChange: (r: StepRule) => void }) {
-  const setStep = (i: number, patch: Partial<StepRule["steps"][number]>) => onChange({ ...rule, steps: rule.steps.map((s, k) => (k === i ? { ...s, ...patch } : s)) })
-  if (kind === "count")
-    return (
-      <>
-        {rule.steps.map((s, i) => (
-          <NumRow key={i} label={`${s.n} frontisses`} help={i === 0 ? "Fins a aquesta alçada de porta." : undefined} value={s.upTo} min={i > 0 ? rule.steps[i - 1]!.upTo + 1 : 100} max={i < rule.steps.length - 1 ? rule.steps[i + 1]!.upTo - 1 : 4000} step={10} onChange={(upTo) => Number.isFinite(upTo) && setStep(i, { upTo })} />
-        ))}
-        <FormRow label="Més altes" help="Frontisses de les portes més altes que l'últim graó.">
-          <Box w="120px">
-            <NumberField label="" ariaLabel="Frontisses de les portes més altes" suffix="u" value={rule.else} min={1} max={12} step={1} onChange={(v) => Number.isFinite(v) && v >= 1 && onChange({ ...rule, else: Math.round(v) })} />
-          </Box>
-        </FormRow>
-      </>
-    )
-  return (
-    <>
-      {rule.steps.map((s, i) => (
-        <NumRow key={i} label={`Menys de ${s.upTo}`} help={i === 0 ? "Distància entre els dos forats si el front fa menys d'aquesta mida." : undefined} value={s.n} min={16} max={1000} step={1} onChange={(n) => Number.isFinite(n) && setStep(i, { n })} />
-      ))}
-      <NumRow label="Si hi cap" help="La distància quan hi ha prou lloc." value={rule.else} min={16} max={1000} step={1} onChange={(v) => Number.isFinite(v) && onChange({ ...rule, else: v })} />
-    </>
   )
 }
 

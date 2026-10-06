@@ -28,12 +28,15 @@ import {
   type PartKind,
   type Pos,
 } from "../../core/model"
-import { atFor, axisNames, newOp, opShape, parsePoints, placeLines, pointsText, SAMPLE, snapPoints, snapTo, withKind, type MachiningUi, type Shape } from "./machiningDraw"
+import { atFor, axisNames, newOp, opFeature, opPlace, opShape, parsePoints, placeLines, pointsText, SAMPLE, snapPoints, snapTo, withKind, type MachiningUi, type Shape } from "./machiningDraw"
+import { dimFont, layoutDims } from "../../components/dims"
+import { DimLayer } from "../../components/DimLine"
 
 /** Des d'on es mira el dibuix (P cap a la dreta, Q amunt), segons la normal de la peça. */
 const VIEW_FROM: Record<"x" | "y" | "z", string> = { x: "vista des de l'esquerra", y: "vista de sota (el davant amunt)", z: "vista de davant" }
 const VIEW_LABEL: Record<HardwareView["name"], string> = { front: "Frontal", side: "Lateral", top: "De dalt" }
 const n = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",")
+const sgn = (v: number) => `${v > 0.05 ? "+" : ""}${n(v)}`
 
 /**
  * **Generador de mecanitzats** d'un ferratge (qualsevol: també els «només 3D» i els importats): què li fa a cada peça
@@ -229,9 +232,13 @@ function MachiningDrawing({ part, ops, sel, view, rot, mirror, onSelect, onPick 
   const lines = useMemo(() => (view ? placeLines(view, rot, mirror, [size[0] / 2, size[1] / 2]) : []), [view, rot, mirror, size])
   const snaps = useMemo(() => snapPoints(lines), [lines])
   const [hover, setHover] = useState<[number, number] | null>(null)
-  const pad = Math.max(size[0], size[1]) * 0.08
-  const vb = { x: -pad, y: -size[1] - pad, w: size[0] + 2 * pad, h: size[1] + 2 * pad }
-  const stroke = Math.max(vb.w, vb.h) / 400
+  // Cotes (per decisió de l'usuari, «a les vistes les mides de tot»): total, encadenades amb la referència i les mides.
+  const box = { x0: 0, y0: -size[1], x1: size[0], y1: 0 }
+  const fs = dimFont(box)
+  const layout = layoutDims(box, ops.flatMap((o) => opFeature(o, size, ref) ?? []), fs, { ref: [ref[0], -ref[1]], title: "Peça d'exemple" })
+  const vb = layout.extent
+  const pad = fs * 2
+  const stroke = Math.max(vb.w, vb.h) / 500
   const names = axisNames(part)
   const toPlane = (e: ReactPointerEvent<SVGSVGElement>): [number, number] | null => {
     const svg = e.currentTarget
@@ -275,14 +282,16 @@ function MachiningDrawing({ part, ops, sel, view, rot, mirror, onSelect, onPick 
             </g>
             {hover && selected && <circle cx={hover[0]} cy={hover[1]} r={stroke * 4} fill="var(--chakra-colors-wood-solid)" />}
           </g>
-          <g fontSize={pad * 0.32} fill="var(--chakra-colors-fg-muted)">
-            <text x={0} y={-size[1] - pad * 0.3} style={{ fontSize: pad * 0.32 }}>
+          <DimLayer layout={layout} stroke={stroke} fs={fs} />
+          {/* Els cantells (eixos del moble), a dins de la peça: fora hi ha les cotes. */}
+          <g fill="var(--chakra-colors-fg-subtle)">
+            <text x={fs * 0.4} y={-size[1] + fs * 1.1} style={{ fontSize: fs * 0.75 }}>
               {names.q.ends[1]} ↑
             </text>
-            <text x={size[0]} y={pad * 0.6} textAnchor="end" style={{ fontSize: pad * 0.32 }}>
+            <text x={size[0] - fs * 0.4} y={-fs * 0.4} textAnchor="end" style={{ fontSize: fs * 0.75 }}>
               {names.p.ends[1]} →
             </text>
-            <text x={0} y={pad * 0.6} style={{ fontSize: pad * 0.32 }}>
+            <text x={fs * 0.4} y={-fs * 0.4} style={{ fontSize: fs * 0.75 }}>
               {names.p.ends[0]}
             </text>
           </g>
@@ -293,6 +302,21 @@ function MachiningDrawing({ part, ops, sel, view, rot, mirror, onSelect, onPick 
         és el punt de referència. Cara B, discontinu. {hover ? `Punter: ${names.p.name} ${n(hover[0] - ref[0])} · ${names.q.name} ${n(hover[1] - ref[1])} des de la referència. ` : ""}
         {selected ? "Clic per posar-hi el mecanitzat triat." : "Tria un mecanitzat (al dibuix o a la llista) per posar-lo amb un clic."}
       </Text>
+      {ops.length > 0 && (
+        <Stack gap={0.5} data-testid="machining-places">
+          {ops.map((o) => {
+            const at = opPlace(o, size, ref)
+            if (!at) return null
+            const [l, r, b, t] = at.fromEdges
+            return (
+              <Text key={o.id} fontSize="xs" color={o.id === sel ? "wood.fg" : "fg.muted"} fontWeight={o.id === sel ? "semibold" : undefined}>
+                {o.label ? `${o.label}: ` : ""}
+                {genOpText(o)} · referència {sgn(at.fromRef[0])} / {sgn(at.fromRef[1])} · cantells {names.p.ends[0]} {n(l)}, {names.p.ends[1]} {n(r)}, {names.q.ends[0]} {n(b)}, {names.q.ends[1]} {n(t)}
+              </Text>
+            )
+          })}
+        </Stack>
+      )}
     </Stack>
   )
 }
