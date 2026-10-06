@@ -76,6 +76,44 @@ describe.skipIf(!has)("descàrregues reals de Hettich", () => {
     ])
   })
 
+  it("plaques: només els forats de muntatge de la cara del lateral (9071680 en dona 2; 9071650, sense forats de més)", async () => {
+    // 9071680 (per pressió): les dues espigues Ø10; el trau d'ajust de la placa (Ø5 a 16 / 11,4) no és del lateral.
+    expect(holes(ok(proposePlate(await read("9071680"))))).toEqual([
+      ["dowel", 16, 0, 10, 11],
+      ["dowel", 16, 0, 10, 11],
+    ])
+    // 9071650 (Hettich Direkt): els dos forats a ±16,19 del model; ni el rectangle arrodonit ni el tetó de l'altra cara.
+    expect(holes(ok(proposePlate(await read("9071650"))))).toEqual([
+      ["screw", 16.19, 0, 5, 12],
+      ["screw", 16.19, 0, 5, 12],
+    ])
+    // 9313868 (System 4899): cargols sense parell → ambigua, cap forat (s'entren a mà).
+    const amb = ok(proposePlate(await read("9313868")))
+    expect(amb.holes).toEqual([])
+    expect(amb.notes.join(" ")).toMatch(/ambigua/)
+  })
+
+  it("totes les plaques: parells simètrics a la cara del lateral o cap forat", async () => {
+    const g = groupHettich(step.index.map((e) => ({ path: e.name, kind: hettichFileKind(e.name) })))
+    const counts: Record<string, number> = {}
+    for (const a of g.filter((x) => x.kind === "plate")) {
+      const p = proposePlate(await read(a.article))
+      const k = "error" in p ? "error" : String(p.holes.length)
+      counts[k] = (counts[k] ?? 0) + 1
+      if ("error" in p) continue
+      // Cada forat té el seu parell (−u, la mateixa v i broca) i és una broca de debò, amb una fondària de lateral.
+      for (const h of p.holes) {
+        expect(p.holes.some((o) => o !== h && Math.abs(o.u + h.u) < 1 && Math.abs(o.v - h.v) < 1 && o.d === h.d)).toBe(true)
+        expect(h.d).toBeGreaterThanOrEqual(2.5)
+        expect(h.d).toBeLessThanOrEqual(12)
+        expect(h.depth).toBeGreaterThan(0)
+        expect(h.depth).toBeLessThanOrEqual(15)
+      }
+    }
+    console.log("Plaques (forats proposats → articles):", JSON.stringify(counts))
+    expect(counts["2"]! + (counts["4"] ?? 0)).toBeGreaterThan(120)
+  }, 120_000)
+
   it("la gran majoria de frontisses i plaques del ZIP donen una proposta", async () => {
     const g = groupHettich(step.index.map((e) => ({ path: e.name, kind: hettichFileKind(e.name) })))
     const tally = { hinge: [0, 0], plate: [0, 0] }
@@ -85,7 +123,8 @@ describe.skipIf(!has)("descàrregues reals de Hettich", () => {
       const f = stepFeatures(await step.text(e))
       const p = a.kind === "hinge" ? proposeHinge(f) : proposePlate(f)
       tally[a.kind][0]!++
-      if (!("error" in p)) tally[a.kind][1]!++
+      // Una placa ambigua dona una proposta sense forats (s'entren a mà): no compta.
+      if (!("error" in p) && p.holes.length) tally[a.kind][1]!++
     }
     console.log("Propostes:", JSON.stringify(tally))
     expect(tally.hinge[1]! / tally.hinge[0]!).toBeGreaterThan(0.6)

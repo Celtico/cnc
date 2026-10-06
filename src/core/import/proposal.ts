@@ -70,7 +70,7 @@ const r2 = (x: number) => Math.round(x * 100) / 100 || 0
 const parallel = (a: V3, b: V3, tol = 0.02) => Math.abs(Math.abs(dot(a, b)) - 1) < tol
 
 /** Cilindres sencers (o grups de trossos d'un forat allargat) d'un radi entre `rMin` i `rMax`. */
-function holeCandidates(cyls: StepCylinder[], rMin: number, rMax: number): StepCylinder[] {
+function holeCandidates(cyls: StepCylinder[], rMin: number, rMax: number, strict = false): StepCylinder[] {
   const small = cyls.filter((c) => c.radius >= rMin && c.radius <= rMax)
   const full = small.filter((c) => c.coverage >= 300)
   // Forats allargats (traus) fets de trossos paral·lels i propers: el centre del grup, el radi més petit.
@@ -95,6 +95,9 @@ function holeCandidates(cyls: StepCylinder[], rMin: number, rMax: number): StepC
     }
     const cov = group.reduce((s, x) => s + x.coverage, 0)
     if (group.length < 2 || cov < 300) continue
+    // Placa: un trau és d'un sol radi i els seus trossos van en línia; si no (un forat en forma de clau, un rectangle
+    // arrodonit), no és un forat de broca.
+    if (strict && !slotLike(group)) continue
     const axis = group[0]!.axis
     const base = group[0]!.origin
     const centre = mul(group.reduce((s, x) => add(s, x.origin), [0, 0, 0] as V3), 1 / group.length)
@@ -102,6 +105,24 @@ function holeCandidates(cyls: StepCylinder[], rMin: number, rMax: number): StepC
     merged.push({ origin: centre, axis, radius: Math.min(...group.map((x) => x.radius)), t0: Math.min(...group.map((x) => x.t0)) - shift, t1: Math.max(...group.map((x) => x.t1)) - shift, coverage: 360, boss: false })
   }
   return [...full, ...merged]
+}
+
+/** Trossos d'un trau: el mateix radi (±0,3) i els centres en línia (±0,3 mm). */
+function slotLike(group: StepCylinder[]): boolean {
+  const rs = group.map((x) => x.radius)
+  if (Math.max(...rs) - Math.min(...rs) > 0.3) return false
+  const axis = group[0]!.axis
+  const flat = group.map((x) => sub(x.origin, mul(axis, dot(x.origin, axis))))
+  let a = flat[0]!
+  let b = flat[0]!
+  for (const p of flat) for (const q of flat) if (Math.hypot(...sub(p, q)) > Math.hypot(...sub(a, b))) [a, b] = [p, q]
+  const len = Math.hypot(...sub(a, b))
+  if (len < 1e-6) return true
+  const dir = mul(sub(b, a), 1 / len)
+  return flat.every((p) => {
+    const d = sub(p, a)
+    return Math.hypot(...sub(d, mul(dir, dot(d, dir)))) <= 0.3
+  })
 }
 
 /** Tram del cilindre a l'eix normal `n` des del pla de la cara (`h` = 0 a la cara, positiu cap a fora). */
@@ -232,10 +253,20 @@ export function proposeHinge(f: StepFeatures): HardwareProposal | { error: strin
   return { kind: "hinge", frame, holes: out, bbox: bboxOf(f.points, frame), notes }
 }
 
-/** Placa de muntatge: els forats de cargol (o les espigues) que van al lateral, al voltant de la referència. */
+/** Un extrem del tram toca el pla de la cara (±0,3 mm). */
+const ON_FACE = 0.3
+
+/**
+ * Placa de muntatge: **només els forats de muntatge de la cara que toca el lateral** (el pla per l'origen del fitxer, la
+ * referència de Hettich): espigues (tetons) que surten d'aquest pla cap al lateral (fondària = el que hi entren) i forats
+ * de cargol que travessen el cos de la placa des d'aquest pla (fondària del cargol euro). Els altres cilindres (traus
+ * d'ajust, el clip del braç, rebaixos, tetons de l'altra cara) no són forats del lateral. Els forats van per parells
+ * simètrics respecte a la referència (±16 a les 8099); si en queda algun sense parell, la placa és **ambigua**: cap
+ * proposta (es poden entrar a mà) millor que un forat dolent.
+ */
 export function proposePlate(f: StepFeatures): HardwareProposal | { error: string } {
   const notes: string[] = []
-  const cands = holeCandidates(f.cylinders, 0.9, 6)
+  const cands = holeCandidates(f.cylinders, 0.9, 6, true)
   if (!cands.length) return { error: "No s'hi troben forats (cilindres sencers de Ø2 a Ø12)." }
   // Eix dels forats: el que tenen més candidats a prop de l'origen.
   const groups: { axis: V3; list: StepCylinder[] }[] = []
@@ -249,21 +280,38 @@ export function proposePlate(f: StepFeatures): HardwareProposal | { error: strin
   const g = groups[0]!
   const list = g.list.filter(nearOrigin)
   if (!list.length) return { error: "Els forats de la placa són lluny de l'origen del fitxer." }
-  // Cara del lateral: el pla per l'origen; la placa (el gruix del cos) cap a fora.
-  // Les espigues (tetons) entren al lateral: el cos de la placa és a l'altre costat. Sense, el centre dels vèrtexs.
-  let n = norm(g.axis)
-  const bosses = list.filter((c) => c.boss)
-  const side = bosses.length
-    ? -bosses.reduce((s, c) => s + dot(add(c.origin, mul(c.axis, (c.t0 + c.t1) / 2)), n), 0)
-    : dot(mean(f.points), n)
-  if (side < 0) n = mul(n, -1)
   const origin: V3 = [0, 0, 0]
+  // Cara del lateral: el pla per l'origen. De quin costat és el cos de la placa: els forats de cargol que neixen al pla
+  // hi van (travessen el cos); les espigues que neixen al pla van a l'altre costat (entren al lateral). Sense cap pista,
+  // el centre dels vèrtexs.
+  let n = norm(g.axis)
+  const at0 = (c: StepCylinder) => heights(c, { origin, u: [0, 0, 0], v: [0, 0, 0], n })
+  let vote = 0
+  for (const c of list) {
+    const h = at0(c)
+    const from = Math.abs(h[0]) < ON_FACE ? 1 : Math.abs(h[1]) < ON_FACE ? -1 : 0
+    if (!from) continue
+    vote += c.boss ? -from : from
+  }
+  const side = vote || Math.sign(dot(mean(f.points), n))
+  if (side < 0) n = mul(n, -1)
   const pre: LocalFrame = { origin, u: [0, 0, 0], v: [0, 0, 0], n }
-  const pts = list.map((c) => {
+  const pts: { c: StepCylinder; at: V3; h: [number, number]; dowel: boolean }[] = []
+  let skipped = 0
+  for (const c of list) {
+    const h = heights(c, pre)
     const at = sub(c.origin, mul(n, dot(c.origin, n)))
-    return { c, at, h: heights(c, pre) }
-  })
-  // Un per centre.
+    const d = c.radius * 2
+    // Espiga: tetó del pla cap al lateral; cargol: forat del pla cap al cos de la placa. Broques de Ø2,5 a Ø12.
+    const dowel = c.boss && Math.abs(h[1]) < ON_FACE && h[0] < -1
+    const screw = !c.boss && Math.abs(h[0]) < ON_FACE && h[1] > 0.5
+    if ((!dowel && !screw) || d < 2.4 || d > 12.5) {
+      skipped++
+      continue
+    }
+    pts.push({ c, at, h, dowel })
+  }
+  // Un per centre (el que entra més al lateral o, si no, el més estret).
   const holes: typeof pts = []
   for (const x of pts) {
     const same = holes.findIndex((y) => Math.hypot(...sub(x.at, y.at)) < 0.5)
@@ -277,26 +325,38 @@ export function proposePlate(f: StepFeatures): HardwareProposal | { error: strin
   if (ext.length && Math.max(...ext) < -Math.min(...ext)) v = mul(v, -1)
   const u = cross(v, n)
   const frame: LocalFrame = { origin, u, v, n }
+  const bbox = bboxOf(f.points, frame)
   const out: ProposedHole[] = holes
     .sort((a, b) => dot(a.at, u) - dot(b.at, u))
     .map((x) => {
       const inside = -x.h[0]
-      const dowel = inside > 0.5
       return {
-        role: dowel ? "dowel" : "screw",
+        role: x.dowel ? "dowel" : "screw",
         u: r2(dot(x.at, u)),
         v: r2(dot(x.at, v)),
         d: snapDrill(x.c.radius * 2),
         measured: r2(x.c.radius * 2),
-        depth: dowel ? upHalf(inside) : DEFAULT_DEPTHS.plateScrew,
-        depthFrom: dowel ? "file" : "default",
+        depth: x.dowel ? upHalf(inside) : DEFAULT_DEPTHS.plateScrew,
+        depthFrom: x.dowel ? "file" : "default",
       } satisfies ProposedHole
     })
+  if (skipped) notes.push(`${skipped} cilindre${skipped === 1 ? "" : "s"} de la placa no ${skipped === 1 ? "és" : "són"} de muntatge (no neixen a la cara del lateral): no es proposen.`)
+  // Parells simètrics respecte a la referència (u ↔ −u, la mateixa v i la mateixa broca).
+  const lone = out.filter((h) => !out.some((o) => o !== h && Math.abs(o.u + h.u) < 1 && Math.abs(o.v - h.v) < 1 && o.d === h.d))
+  const list2 = (hs: ProposedHole[]) => hs.map((h) => `Ø${fmt(h.d)}${h.d !== h.measured ? ` (model Ø${fmt(h.measured)})` : ""} a ${fmt(h.u)} / ${fmt(h.v)}`).join(" · ")
+  if (!out.length || lone.length) {
+    notes.push(
+      out.length
+        ? `Placa ambigua: ${lone.length === 1 ? "un forat" : `${lone.length} forats`} de muntatge sense parell (${list2(lone)} mm). No es proposa cap forat: entra'ls a mà.`
+        : "No s'hi troba cap forat de muntatge a la cara del lateral. No es proposa cap forat: entra'ls a mà.",
+    )
+    return { kind: "plate", frame, holes: [], bbox, notes }
+  }
   notes.push(
-    `${out.length} forat${out.length === 1 ? "" : "s"} al lateral: ${out.map((h) => `Ø${fmt(h.d)}${h.d !== h.measured ? ` (model Ø${fmt(h.measured)})` : ""} a ${fmt(h.u)} / ${fmt(h.v)}`).join(" · ")} mm (al llarg / fondària)${out.some((h) => h.depthFrom === "default") ? `; fondària per defecte ${DEFAULT_DEPTHS.plateScrew} mm (cargol euro)` : ""}.`,
+    `${out.length} forat${out.length === 1 ? "" : "s"} al lateral: ${list2(out)} mm (al llarg / fondària)${out.some((h) => h.depthFrom === "default") ? `; fondària per defecte ${DEFAULT_DEPTHS.plateScrew} mm (cargol euro)` : ""}.`,
   )
   if (out.some((h) => Math.abs(h.v) > 0.5)) notes.push("Hi ha forats fora de la línia de la referència: comprova cap a on és el davant.")
-  return { kind: "plate", frame, holes: out, bbox: bboxOf(f.points, frame), notes }
+  return { kind: "plate", frame, holes: out, bbox, notes }
 }
 
 const fmt = (x: number) => String(Math.round(x * 100) / 100).replace(".", ",")

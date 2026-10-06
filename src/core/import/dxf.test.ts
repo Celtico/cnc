@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { readDxf, simplify } from "./dxf"
+import { DXF_LIMITS, readDxf, simplify } from "./dxf"
 import { registerView, viewFromDxf } from "./views"
 
 /** DXF de text mínim a partir de parells (codi, valor). */
@@ -120,5 +120,50 @@ describe("lector DXF de les vistes 2D", () => {
     const view = viewFromDxf("front", d, holes)
     expect(view.registered).toBe(true)
     expect(registerView(d, [{ u: 0, v: 0, d: 35 }, { u: 0, v: 40, d: 5 }])).toBeNull()
+  })
+
+  describe("fitxers malmesos o fets per fer mal: acaba de pressa", () => {
+    const quick = (ents: (string | number)[], blocks: (string | number)[] = []) => {
+      const t0 = performance.now()
+      let out: ReturnType<typeof readDxf> | Error
+      try {
+        out = readDxf(dxf([], blocks, ents))
+      } catch (e) {
+        out = e as Error
+      }
+      expect(performance.now() - t0).toBeLessThan(2000)
+      return out
+    }
+
+    it("arc amb angles enormes o no finits (abans, bucle infinit)", () => {
+      const d = quick([0, "ARC", 8, "0", 10, 0, 20, 0, 40, 5, 50, "1e300", 51, 0, 0, "ARC", 8, "0", 10, 0, 20, 0, 40, 5, 50, -1e12, 51, 90, 0, "ARC", 8, "0", 10, 0, 20, 0, 40, 5, 50, "nan", 51, 90])
+      expect(d).not.toBeInstanceOf(Error)
+      const pl = (d as ReturnType<typeof readDxf>).polylines
+      expect(pl.every((p) => p.pts.length <= 200)).toBe(true)
+      // −1e12 mod 360 = 80 → de 80° a 90°: un arc curt.
+      expect(pl.some((p) => p.pts.length < 10)).toBe(true)
+    })
+
+    it("el·lipse amb paràmetres enormes: com a molt una volta", () => {
+      const d = quick([0, "ELLIPSE", 8, "0", 10, 0, 20, 0, 11, 10, 21, 0, 40, 0.5, 41, 0, 42, 1e15]) as ReturnType<typeof readDxf>
+      expect(d.polylines[0]!.pts.length).toBeLessThanOrEqual(73)
+    })
+
+    it("INSERT amb milions de còpies o niats que es multipliquen: error clar", () => {
+      const huge = quick([0, "INSERT", 8, "0", 2, "B", 10, 0, 20, 0, 70, 100000, 71, 100000, 44, 1, 45, 1], [0, "BLOCK", 2, "B", 10, 0, 20, 0, 0, "LINE", 8, "0", 10, 0, 20, 0, 11, 1, 21, 0, 0, "ENDBLK"])
+      expect(huge).toBeInstanceOf(Error)
+      expect((huge as Error).message).toMatch(/massa gran/)
+      // B1 = 50 × 50 còpies de B0, B2 = 50 × 50 de B1…: més entitats que el límit.
+      const blocks: (string | number)[] = [0, "BLOCK", 2, "B0", 10, 0, 20, 0, 0, "LINE", 8, "0", 10, 0, 20, 0, 11, 1, 21, 0, 0, "ENDBLK"]
+      for (let k = 1; k <= 4; k++) blocks.push(0, "BLOCK", 2, `B${k}`, 10, 0, 20, 0, 0, "INSERT", 8, "0", 2, `B${k - 1}`, 10, 0, 20, 0, 70, 50, 71, 50, 44, 1, 45, 1, 0, "ENDBLK")
+      const nested = quick([0, "INSERT", 8, "0", 2, "B4", 10, 0, 20, 0], blocks)
+      expect(nested).toBeInstanceOf(Error)
+      expect(DXF_LIMITS.entities).toBeGreaterThan(10_000)
+    })
+
+    it("spline amb un grau absurd: els punts de control", () => {
+      const d = quick([0, "SPLINE", 8, "0", 71, 1e9, 10, 0, 20, 0, 10, 1, 20, 1, 10, 2, 20, 0]) as ReturnType<typeof readDxf>
+      expect(d.polylines[0]!.pts).toHaveLength(3)
+    })
   })
 })

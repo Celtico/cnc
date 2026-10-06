@@ -1,4 +1,4 @@
-import { evalExpr, isPendingImport, type HardwareItem, type HardwareTarget, type MachiningOp } from "../model"
+import { deepEqual, evalExpr, isDamagedImport, isPendingImport, type HardwareItem, type HardwareTarget, type MachiningOp } from "../model"
 import type { HettichArticle } from "./hettich"
 import type { HardwareProposal } from "./proposal"
 
@@ -108,6 +108,58 @@ export function pairPlate(hinge: HardwareItem, plate: HardwareItem | null): Hard
   }
 }
 
+/**
+ * La placa aparellada es guarda **per referència** (`plate.id`) i la frontissa en porta una **instantània** (el target
+ * `side`, com les còpies dels mòduls): cada cop que canvia la biblioteca, les frontisses agafen els forats i el model de la
+ * placa d'ara. Si canvien, la frontissa torna a quedar sense confirmar (els forats que es van revisar ja no són aquests).
+ * Una placa que ja no hi és deixa la instantània com estava (els mobles fets la porten igual). Torna la mateixa llista si
+ * no canvia res.
+ */
+export function syncPairedPlates(library: readonly HardwareItem[]): HardwareItem[] {
+  let changed = false
+  const out = library.map((h) => {
+    if (h.engine !== "cup" || !h.plate) return h
+    const plate = library.find((x) => x.id === h.plate!.id && x.engine === "plate")
+    if (!plate) return h
+    const want = plate.targets.find((t) => t.key === "side")?.ops ?? []
+    const have = h.targets.find((t) => t.key === "side")?.ops ?? []
+    const meta = { id: plate.id, name: plate.name, ...(plate.imported?.asset ? { asset: plate.imported.asset } : {}), ...(plate.imported?.bbox ? { bbox: plate.imported.bbox } : {}) }
+    const holesChanged = !deepEqual(want, have)
+    if (!holesChanged && deepEqual(meta, h.plate)) return h
+    changed = true
+    const targets = holesChanged ? [...h.targets.filter((t) => t.key !== "side"), { key: "side", label: "Lateral (placa)", ops: structuredClone(want) }] : h.targets
+    const imported = holesChanged && h.imported ? { ...h.imported, confirmed: false } : h.imported
+    return { ...h, targets, plate: meta, ...(imported ? { imported } : {}) }
+  })
+  return changed ? out : (library as HardwareItem[])
+}
+
+/** Paràmetres d'una frontissa importada que canvien els forats revisats (Ø i fondària de la cassoleta, on va la placa). */
+export const IMPORTED_HOLE_PARAMS: readonly string[] = ["cupDiameter", "cupDepth", "plateSetback", "plateOffset"]
+
+/** Canvia un paràmetre; si és d'un importat i canvia els forats (`IMPORTED_HOLE_PARAMS`), el deixa sense confirmar. */
+export function setHardwareParam(item: HardwareItem, key: string, value: number): HardwareItem {
+  if (item.params[key] === value) return item
+  const next = { ...item, params: { ...item.params, [key]: value } }
+  return item.imported?.confirmed && IMPORTED_HOLE_PARAMS.includes(key) ? setConfirmed(next, false) : next
+}
+
+/**
+ * Frontisses i plaques importades al mateix lot: si hi ha **una sola** placa, totes les frontisses s'hi aparellen; amb
+ * més d'una no se'n tria cap (quina va amb quina ho decideix l'usuari a l'editor) i `plates` ho diu.
+ */
+export function pairImportedBatch(items: readonly HardwareItem[]): { items: HardwareItem[]; paired: number; plates: number } {
+  const plates = items.filter((x) => x.engine === "plate")
+  const plate = plates.length === 1 ? plates[0]! : null
+  let paired = 0
+  const out = items.map((x) => {
+    if (x.engine !== "cup" || !plate) return x
+    paired++
+    return pairPlate(x, plate)
+  })
+  return { items: out, paired, plates: plates.length }
+}
+
 /** Confirma (o desfà la confirmació d') un importat. */
 export function setConfirmed(item: HardwareItem, confirmed: boolean): HardwareItem {
   if (!item.imported) return item
@@ -121,9 +173,18 @@ export function restoreProposal(item: HardwareItem): HardwareItem {
   return { ...item, targets: [...structuredClone(item.imported.proposed), ...side], imported: { ...item.imported, confirmed: false } }
 }
 
-/** Per què encara no es pot confirmar (o `null`): una frontissa sense cassoleta, Ø o fondàries absurdes. */
-export function confirmProblem(item: HardwareItem): string | null {
+/**
+ * Per què encara no es pot confirmar (o `null`): malmès, una frontissa sense cassoleta, una placa sense forats, Ø o
+ * fondàries absurdes, o una frontissa amb una placa (de la biblioteca `library`) que encara no està confirmada.
+ */
+export function confirmProblem(item: HardwareItem, library: readonly HardwareItem[] = []): string | null {
   if (!item.imported) return null
+  if (isDamagedImport(item)) return "Està malmès (no s'ha pogut llegir sencer): torna'l a importar."
+  if (item.engine === "plate" && !item.targets.find((t) => t.key === "side")?.ops.length) return "La placa no té cap forat: entra'ls a mà (Mecanitzats)."
+  if (item.engine === "cup" && item.plate) {
+    const plate = library.find((x) => x.id === item.plate!.id && x.engine === "plate")
+    if (plate && (isPendingImport(plate) || isDamagedImport(plate))) return `La placa «${plate.name}» encara no està confirmada: confirma-la primer.`
+  }
   for (const t of item.targets)
     for (const op of t.ops) {
       if (op.kind === "edgeDrill") continue

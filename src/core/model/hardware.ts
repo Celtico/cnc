@@ -134,6 +134,11 @@ export const HardwareImportSchema = z.object({
   /** Què s'hi ha trobat i què cal revisar. */
   notes: z.array(z.string()).optional(),
   confirmed: z.boolean(),
+  /**
+   * Malmès en llegir-lo (`sanitizeImportedHardware`): l'item desat no passava l'esquema i se n'ha quedat només la marca.
+   * No es pot confirmar ni fa cap forat (avís «ferratge importat malmès: no es mecanitza»); cal tornar-lo a importar.
+   */
+  damaged: z.boolean().optional(),
 })
 export type HardwareImport = z.infer<typeof HardwareImportSchema>
 
@@ -144,7 +149,8 @@ export const StepRuleSchema = z.object({
 })
 export type StepRule = z.infer<typeof StepRuleSchema>
 
-export const HardwareItemSchema = z.object({
+/** L'item tal qual (sense la lectura dels importats malmesos, `HardwareItemSchema`). */
+export const HardwareItemObjectSchema = z.object({
   /** `hinge-cup`… (inicials) o `hw-…` (de l'usuari). */
   id: z.string().min(1),
   name: z.string().min(1),
@@ -174,7 +180,46 @@ export const HardwareItemSchema = z.object({
    */
   plate: z.object({ id: z.string(), name: z.string(), asset: z.string().optional(), bbox: z.object({ min: V3Schema, max: V3Schema }).optional() }).optional(),
 })
-export type HardwareItem = z.infer<typeof HardwareItemSchema>
+export type HardwareItem = z.infer<typeof HardwareItemObjectSchema>
+
+const IMPORT_MARKER = "ferratge importat malmès: no es mecanitza"
+
+/**
+ * Un importat que no passa l'esquema (un camp dolent a `imported`, un mecanitzat dolent…) **no es repara camp a camp**:
+ * sense `imported` passaria a ser una frontissa normal que forada, i amb mitja dada podria fer mig ferratge. Es queda
+ * **inert**: la marca (`imported.damaged`, sense mecanitzats ni confirmació) amb l'id, el nom, la categoria i el motor que
+ * es puguin llegir; no fa cap forat i el moble avisa (`cupSpec`). Els que no són importats no es toquen (es reparen com
+ * sempre). Per a les preferències (`hardwareLibrary`), els mòduls, els fronts i el `.moble`.
+ */
+export function sanitizeImportedHardware(raw: unknown): unknown {
+  if (!isRecord(raw) || raw.imported === undefined) return raw
+  if (HardwareItemObjectSchema.safeParse(raw).success) return raw
+  const str = (v: unknown, fb: string) => (typeof v === "string" && v.length ? v : fb)
+  const imp = isRecord(raw.imported) ? raw.imported : {}
+  const engine = (HARDWARE_ENGINES as readonly unknown[]).includes(raw.engine) ? (raw.engine as HardwareEngine) : "cup"
+  const category = engine === "plate" ? "plate" : engine === "cup" ? "hinge" : (CATEGORY_IDS as readonly unknown[]).includes(raw.category) ? (raw.category as HardwareCategory) : "misc"
+  const key = engine === "plate" ? "side" : engine === "cup" ? "door" : "front"
+  const item: HardwareItem = {
+    id: str(raw.id, "hw-damaged"),
+    name: str(raw.name, "Ferratge importat"),
+    category,
+    engine,
+    ...(typeof raw.maker === "string" ? { maker: raw.maker } : {}),
+    ...(typeof raw.ref === "string" ? { ref: raw.ref } : {}),
+    params: {},
+    targets: [{ key, label: IMPORT_MARKER, ops: [] }],
+    version: 1,
+    imported: { maker: str(imp.maker, typeof raw.maker === "string" ? raw.maker : ""), article: str(imp.article, typeof raw.ref === "string" ? raw.ref : ""), folders: [], files: [], proposed: [], notes: [`El ${IMPORT_MARKER}: torna'l a importar.`], confirmed: false, damaged: true },
+  }
+  return item
+}
+
+/** Un item de la biblioteca o una còpia (un importat malmès es llegeix inert, `sanitizeImportedHardware`). */
+export const HardwareItemSchema = z.preprocess(sanitizeImportedHardware, HardwareItemObjectSchema)
+
+/** L'avís d'un importat malmès (el text que surt al moble). */
+export const damagedImportMessage = (item: Pick<HardwareItem, "name">) => `«${item.name}»: ${IMPORT_MARKER} (torna'l a importar).`
+export const isDamagedImport = (item: HardwareItem): boolean => !!item.imported?.damaged
 
 /** Llocs de cada mòdul que fan servir un ferratge (el motor que hi va i la categoria de la biblioteca). */
 export const HARDWARE_SLOTS = [
@@ -280,7 +325,7 @@ export const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
 
 /** Col·locació de la placa d'una frontissa importada (paràmetres de la frontissa, copiats de la placa en aparellar-la). */
 export const HINGE_PLATE_PARAMS: HardwareParamSpec[] = [
-  P("plateSetback", "Placa: del davant", 0, 200, 0.5, "Del cantell de davant del lateral a la referència de la placa (la filera System 32: 37; amb fronts encastats, + el gruix del front)."),
+  P("plateSetback", "Placa: del davant", 0, 200, 0.5, "De la cara de darrere de la porta a la referència de la placa (la filera System 32: 37). Amb fronts encastats el gruix del front ja s'hi suma sol."),
   P("plateOffset", "Placa: alçada", -100, 100, 0.5, "Del centre de la cassoleta a la referència de la placa (amunt, positiu)."),
 ]
 
@@ -524,7 +569,7 @@ export function hardwareSummary(item: HardwareItem): string {
     : item.engine === "barHandle" && item.pitch ? [...item.pitch.steps.map((s) => s.n), item.pitch.else].sort((a, b) => b - a).join("/")
     : item.engine === "plate" ? `a ${n(p.setback ?? NaN)} mm del davant`
     : ""
-  const pending = isPendingImport(item) ? "sense confirmar" : ""
+  const pending = isDamagedImport(item) ? "malmès" : isPendingImport(item) ? "sense confirmar" : ""
   return [pending, holes.join(" · "), extra].filter(Boolean).join(" · ")
 }
 
@@ -639,6 +684,16 @@ export function hardwareRefIds(comp: unknown): string[] {
     return null
   })
   return [...ids]
+}
+
+/** La composició porta algun ferratge importat (al kit d'un mòdul o triat en un front): el `.moble` és v2. */
+export function usesImportedHardware(comp: unknown): boolean {
+  let hit = false
+  eachHardware(comp, (it) => {
+    if (it.imported) hit = true
+    return null
+  })
+  return hit
 }
 
 /** La composició desada porta alguna còpia de l'item `item` tal qual (`isCopyOf`): la que canviaria en eliminar-lo. */

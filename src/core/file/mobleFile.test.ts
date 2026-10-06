@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "../build/buildComposition"
-import { TV_LIVING_ROOM, DEFAULT_SETTINGS, materialRefNames, type Composition, type RefPreset } from "../model"
+import { TV_LIVING_ROOM, DEFAULT_HARDWARE_KIT, DEFAULT_SETTINGS, materialRefNames, type Composition, type RefPreset } from "../model"
 import { DEFAULT_NEST_OPTIONS } from "../nesting/nest"
-import { buildMobleFile, FileCalibrationSchema, missingMaterials, missingMaterialsWarning, missingReferences, usedUserModelIds, mobleFileName, mobleToJson, parseMobleFile, uniqueName, usedReferences, type FileCalibration } from "./mobleFile"
+import { buildMobleFile, FileCalibrationSchema, MOBLE_BASE_VERSION, MOBLE_VERSION, missingMaterials, missingMaterialsWarning, missingReferences, usedUserModelIds, mobleFileName, mobleToJson, parseMobleFile, uniqueName, usedReferences, type FileCalibration } from "./mobleFile"
 import type { PhotoCalibration } from "../../db/db"
 
 const comp = TV_LIVING_ROOM.make()
@@ -202,5 +202,44 @@ describe("materials que no són a les preferències de qui obre el .moble", () =
     expect(missingMaterialsWarning(["A", "B"])).toBe(
       "Materials que no tens a Preferències: A, B; es veuran amb un color per defecte i al taller sortiran amb aquest nom. Afegeix-los a Preferències › Materials.",
     )
+  })
+
+  describe("versió: v2 només amb ferratges importats", () => {
+    const imported = { ...DEFAULT_HARDWARE_KIT.hinge, id: "hw-imp", name: "Sensys", imported: { maker: "Hettich", article: "9071205", folders: [], files: [], proposed: [], confirmed: false } }
+    const withImported = (where: "kit" | "front"): Composition => {
+      const c = structuredClone(comp)
+      const m = c.modules[0]!
+      if (where === "kit") m.hardware = { ...m.hardware, hinge: imported }
+      else m.root = { id: "r", front: { kind: "door", mode: "single", hinge: "left", hardware: imported } }
+      return c
+    }
+
+    it("un moble sense importats es desa com a v1 (les apps d'abans l'obren)", () => {
+      expect(MOBLE_BASE_VERSION).toBe(1)
+      expect(buildMobleFile({ name: "x", composition: comp, references }).version).toBe(1)
+    })
+
+    for (const where of ["kit", "front"] as const)
+      it(`amb un importat (${where === "kit" ? "frontissa del mòdul" : "triat a la porta"}) és v2 i es torna a llegir amb l'importat`, () => {
+        const file = buildMobleFile({ name: "x", composition: withImported(where), references })
+        expect(file.version).toBe(2)
+        // Una app d'abans (només llegeix la v1: `version > 1` → rebutja) no el pot obrir i treure-li l'importat.
+        expect(file.version).toBeGreaterThan(MOBLE_BASE_VERSION)
+        const res = parseMobleFile(mobleToJson(file))
+        expect(res.ok).toBe(true)
+        if (!res.ok) return
+        const m = res.file.project.composition.modules[0]!
+        const got = where === "kit" ? m.hardware.hinge : (m.root.front as { hardware?: typeof imported }).hardware
+        expect(got?.imported).toMatchObject({ article: "9071205", confirmed: false })
+      })
+
+    it("una versió més nova que la que llegeix l'app es rebutja com abans", () => {
+      expect(MOBLE_VERSION).toBe(2)
+      const file = buildMobleFile({ name: "x", composition: withImported("kit"), references })
+      expect(parseMobleFile(JSON.stringify({ ...file, version: MOBLE_VERSION + 1 }))).toEqual({ ok: false, error: "Fitxer d'una versió més nova de l'app: actualitza-la." })
+      expect(parseMobleFile(JSON.stringify({ ...file, version: 0 })).ok).toBe(false)
+      // Un v1 d'abans continua obrint-se.
+      expect(parseMobleFile(mobleToJson(buildMobleFile({ name: "x", composition: comp, references }))).ok).toBe(true)
+    })
   })
 })

@@ -7,7 +7,7 @@ import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
 import { ImportDropZone } from "../../components/ImportDropZone"
 import type { PickedFile } from "../../components/pickedFiles"
 import { toaster } from "../../components/ui/toaster"
-import { confirmProblem, cupRel, pairPlate, relV, restoreProposal, setConfirmed } from "../../core/import/importItem"
+import { confirmProblem, cupRel, pairPlate, relV, restoreProposal, setConfirmed, setHardwareParam, syncPairedPlates } from "../../core/import/importItem"
 import type { HettichArticle } from "../../core/import/hettich"
 import { viewBounds, type HardwareView } from "../../core/import/views"
 import { assetViews, getHardwareAsset } from "../../db/hardwareAssets"
@@ -74,7 +74,7 @@ const slotOfEngine = (e: HardwareEngine) => HARDWARE_SLOTS.find((s) => s.engine 
 export function HardwareList({
   items,
   defaults,
-  onChange,
+  onChange: onChangeRaw,
   onDefaults,
   onDelete,
   onConfirmed,
@@ -93,6 +93,8 @@ export function HardwareList({
   /** Les preferències (en edició): el gruix, els jocs, els materials i la frontissa per defecte del muntatge. */
   settings?: Settings
 }) {
+  // La placa aparellada és per referència: les frontisses agafen sempre els forats de la placa d'ara (`syncPairedPlates`).
+  const onChange = (list: HardwareItem[]) => onChangeRaw(syncPairedPlates(list))
   const head = useContext(PaneHeadContext)
   const [sel, setSel] = useState<string | null>(null)
   const [editorOpen, setEditorOpen] = useState(false)
@@ -165,12 +167,14 @@ export function HardwareList({
         onChange([...fresh, ...items])
         setOpen([...new Set([...openState, ...fresh.map((x) => x.category)])])
       }
-      const plate = fresh.find((x) => x.engine === "plate")
+      const plate = r.plates === 1 ? fresh.find((x) => x.engine === "plate") : undefined
+      const hinges = fresh.filter((x) => x.engine === "cup").length
       toaster.create({
         title: fresh.length ? `${fresh.length} ${fresh.length === 1 ? "ferratge importat" : "ferratges importats"}, sense confirmar` : "No s'ha importat res",
         description: [
           fresh.length ? "Revisa'n els forats i confirma'ls: fins aleshores no fan cap forat." : "",
           r.paired && plate ? `${r.paired} ${r.paired === 1 ? "frontissa aparellada" : "frontisses aparellades"} amb «${plate.name}».` : "",
+          r.plates > 1 && hinges ? `${r.plates} plaques al lot: tria la de cada frontissa a «Placa de muntatge».` : "",
           ...r.problems,
         ].filter(Boolean).join(" "),
         type: r.problems.length ? "warning" : "success",
@@ -285,6 +289,7 @@ export function HardwareList({
             item={it}
             dirty={dirty}
             plates={items.filter((x) => x.engine === "plate")}
+            library={items}
             isDefault={(() => {
               const sl = slotOfEngine(it.engine)
               return !!sl && defaults[sl.slot] === it.id
@@ -294,7 +299,7 @@ export function HardwareList({
               if (sl) onDefaults({ ...defaults, [sl.slot]: it.id })
             }}
             onChange={(next) => {
-              const list = items.map((x, k) => (k === i ? next : x))
+              const list = syncPairedPlates(items.map((x, k) => (k === i ? next : x)))
               onChange(list)
               if (it.imported && next.imported && it.imported.confirmed !== next.imported.confirmed) onConfirmed?.(it, next, list)
             }}
@@ -587,6 +592,7 @@ function HardwareCard({
   item,
   dirty,
   plates,
+  library,
   isDefault,
   onDefault,
   onChange,
@@ -598,6 +604,8 @@ function HardwareCard({
   dirty: RefObject<boolean>
   /** Les plaques de la biblioteca (per aparellar-ne una a una frontissa importada). */
   plates: HardwareItem[]
+  /** Tota la biblioteca (una frontissa no es confirma amb la placa sense confirmar). */
+  library: HardwareItem[]
   isDefault: boolean
   onDefault: () => void
   onChange: (next: HardwareItem) => void
@@ -629,8 +637,9 @@ function HardwareCard({
   const set = (patch: Partial<HardwareItem>) => onChange({ ...item, ...patch })
   // Canviar els forats d'un importat el torna a deixar sense confirmar (cal tornar-lo a revisar).
   const setTargets = (targets: HardwareTarget[]) => onChange(item.imported ? { ...item, targets, imported: { ...item.imported, confirmed: false } } : { ...item, targets })
-  const problem = confirmProblem(item)
-  const setParam = (key: string, v: number) => Number.isFinite(v) && set({ params: { ...item.params, [key]: v } })
+  const problem = confirmProblem(item, library)
+  // Canviar el Ø o la fondària de la cassoleta o on va la placa d'un importat el torna a deixar sense confirmar.
+  const setParam = (key: string, v: number) => Number.isFinite(v) && onChange(setHardwareParam(item, key, v))
   const setText = (key: "maker" | "ref", v: string) => {
     const { [key]: _old, ...rest } = item
     onChange(v.trim() ? { ...rest, [key]: v } : rest)
