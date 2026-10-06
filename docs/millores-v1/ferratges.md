@@ -1,6 +1,6 @@
 # Ferratges: estudi i proposta (millores v1, §8–10)
 
-## Estat (2026-10-06)
+## Estat (2026-10-06, actualitzat amb la importació)
 
 - **F1 · Motor i migració: fet.** `core/model/hardware.ts` (esquemes zod, `HARDWARE_SLOTS`, valors inicials amb els números
   d'abans, `libraryFromLegacy`, `kitFromLegacy`, `migrateModuleHardware`, `fixHardwareDefaults`, `hardwareRefIds`,
@@ -21,9 +21,21 @@
   detall acotat, paràmetres, per defecte, eliminar amb substitut, selector a la porta, calaixos, abatible i Fusteria).
   Pendent de F2: editar els mecanitzats (taula d'operacions; ara només lectura), exportar/importar ferratges sols (ara van
   amb les preferències) i l'avís «hi ha una versió nova» quan la biblioteca canvia (`version` no es puja en editar).
-- **Pendents: F3** (nivells de visualització Cap · Forats · Volum · 3D, volums i xocs `hardware-clash`, GLB per item),
-  **F4** (ferratges manuals, unions de 2 peces, minifix, confirmat, suport de prestatge, potes, placa de frontissa, perfil
-  LED, push com a item, llista de ferratges a Exportar) i **F5** (importar DXF, BXF, STEP).
+- **F5 · Importació (Hettich): fet en part** (2026-10-06, [`docs/ferratges-import.md`](../ferratges-import.md)).
+  Preferències › Ferratges › «Importar del fabricant»: ZIP/carpeta/fitxers de Hettich CAD → articles per número →
+  frontisses i plaques de muntatge **sense confirmar**, amb els forats proposats del **STEP** (lector propi de cilindres,
+  pur, a `core/import`; no el DXF de forats que preveia aquest estudi: Hettich no en dona per article, només vistes) i
+  el 3D amb **OpenCascade** (`occt-import-js`, dependència aprovada per l'usuari). Les vistes DXF 2D es dibuixen i la
+  frontal es posa sota els forats. Al moble: la frontissa importada fa cassoleta + cargols amb les regles de sempre i la
+  **placa** (aparellada a la frontissa: es copien els forats, com tota la resta de còpies) els seus forats al lateral a
+  la filera de davant; sense confirmar, cap forat i avís. També hi ha el **model per item al 3D** (part de F3: GLB a
+  cada frontissa i placa) i la **placa de frontissa** (part de F4, només importada). Preferències **v20**.
+  Diferències amb l'estudi: STEP sí (cilindres → forats; el 3D és OpenCascade al navegador, a demanda, sense precache);
+  BXF i Blum no; **guies i calaixos** (`Schubkastensysteme`) es llisten però no s'importen (cal la regla de la guia).
+- **Pendents: F3** (nivells de visualització Cap · Forats · Volum · 3D, volums i xocs `hardware-clash`; el GLB per item
+  ja hi és per als importats), **F4** (ferratges manuals, unions de 2 peces, minifix, confirmat, suport de prestatge,
+  potes, placa de frontissa d'inici, perfil LED, push com a item, llista de ferratges a Exportar) i la resta de **F5**
+  (guies de calaix importades, Blum/BXF, altres fabricants).
 
 > Estudi de l'àrea **Ferratges** de [`PROMPT-millore-v1.md`](../prompt/PROMPT-millore-v1.md) (§8 proveïdors, §9 gestió,
 > §10 visualització). Document de disseny: **no toca codi**. Les mides de ferratges concrets que no surten del codi actual
