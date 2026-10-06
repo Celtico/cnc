@@ -1,7 +1,7 @@
-import { deepEqual, evalExpr, isDamagedImport, isPendingImport, IMPORT_BOX_VERSION, machiningProblems, type HardwareItem, type HardwareTarget, type MachiningOp } from "../model"
+import { DEFAULT_HARDWARE_LIBRARY, deepEqual, evalExpr, isDamagedImport, isPendingImport, IMPORT_BOX_VERSION, machiningProblems, roleOf, type HardwareEngine, type HardwareItem, type HardwareTarget, type MachiningOp } from "../model"
 import type { HettichArticle } from "./hettich"
 import { makerOf } from "./makers"
-import { modelProposal, proposeHandle, proposeHinge, proposeLeg, proposePlate, type HardwareProposal } from "./proposal"
+import { modelProposal, partialProposal, proposeHandle, proposeHinge, proposeLeg, proposePlate, type HardwareProposal, type LocalFrame } from "./proposal"
 import type { StepFeatures } from "./stepGeometry"
 
 /**
@@ -44,11 +44,16 @@ function source(art: HettichArticle, p: HardwareProposal, targets: HardwareTarge
     ...(x.asset ? { asset: x.asset } : {}),
     ...(emptyBox(p.bbox) ? {} : { bbox: p.bbox, ...(p.boxFromMesh ? { boxVersion: IMPORT_BOX_VERSION } : {}) }),
     ...(x.points?.length ? { points: x.points } : {}),
+    ...(p.kind !== "model" ? { mountFrame: cleanFrame(p.frame), frameFrom: p.frameFrom ?? "step" } : {}),
     proposed: structuredClone(targets),
     notes: p.notes,
     confirmed: false,
   }
 }
+
+const r3 = (x: number) => Math.round(x * 1000) / 1000 || 0
+/** El marc arrodonit (0,001 mm), sense zeros negatius: el que es desa a l'item. */
+export const cleanFrame = (f: LocalFrame): LocalFrame => ({ origin: f.origin.map(r3) as LocalFrame["origin"], u: f.u.map(r3) as LocalFrame["u"], v: f.v.map(r3) as LocalFrame["v"], n: f.n.map(r3) as LocalFrame["n"] })
 
 /** Frontissa importada: parteix de la frontissa per defecte (quantitat per alçada, extrems, separació, `cupOffset`). */
 export function hingeItem(p: HardwareProposal, art: HettichArticle, base: HardwareItem, x: ImportedExtras): HardwareItem {
@@ -108,6 +113,24 @@ export function handleItem(p: HardwareProposal, art: HettichArticle, base: Hardw
         { kind: "through", u: "pitch/2", v: 0, d: "diameter", tag: "handle" },
       ]
     : [{ kind: "through", u: 0, v: 0, d: "diameter", tag: "handle" }]
+  // Sense patró al fitxer (proposta parcial): el tirador de l'app tal qual (dos forats a la distància per regla).
+  if (!p.holes.length) {
+    const targets = structuredClone(base.targets)
+    return {
+      id: x.id,
+      name: art.label,
+      category: "handle",
+      engine: "barHandle",
+      ...(art.tags.length ? { tags: [...art.tags] } : {}),
+      maker: makerOf(art),
+      ref: art.article,
+      params: { ...base.params },
+      ...(base.pitch ? { pitch: structuredClone(base.pitch) } : {}),
+      targets,
+      version: 1,
+      imported: source(art, p, targets, x),
+    }
+  }
   const targets: HardwareTarget[] = [{ key: "front", label: "Front", ops }]
   return {
     id: x.id,
@@ -163,6 +186,74 @@ export function modelItem(p: HardwareProposal, art: HettichArticle, x: ImportedE
     targets,
     version: 1,
     imported: source(art, p, targets, x),
+  }
+}
+
+/**
+ * **Canvia què és** un ferratge importat (el seu lloc, `engine`; «Què és» a l'editor): l'item passa al motor triat amb
+ * els números i els mecanitzats per defecte d'aquell tipus (el ferratge d'inici de l'app del mateix motor; la placa i
+ * la pota, els seus), **sense confirmar** i amb la proposta = aquests mecanitzats (res d'editat). Es queden l'identitat
+ * (id, nom, fabricant, referència), el model i les dades de la importació (fitxers, caixa, marc, notes) i els
+ * mecanitzats del generador. Una frontissa que deixa de ser-ho perd la placa aparellada. Si ja és d'aquest motor, el
+ * mateix item. Pur; el marc del model 3D (si cal refer-lo de la malla) el fa `features/settings/hardwareReframe.ts`.
+ */
+export function retargetImported(item: HardwareItem, engine: HardwareEngine, library: readonly HardwareItem[] = []): HardwareItem {
+  if (!item.imported || item.engine === engine) return item
+  const role = roleOf(engine)
+  const base = library.find((x) => x.engine === engine && !x.imported) ?? DEFAULT_HARDWARE_LIBRARY.find((x) => x.engine === engine)
+  const { plate: _plate, count: _c, pitch: _p, lengths: _l, ...rest } = item
+  const targets: HardwareTarget[] =
+    engine === "plate" ? [{ key: "side", label: "Lateral", ops: [] }]
+    : engine === "leg" ? [{ key: "base", label: "Base (cara de sota)", ops: [] }]
+    : engine === "model" ? [{ key: "model", label: "Només 3D", ops: [] }]
+    : structuredClone(base?.targets ?? [])
+  const params: Record<string, number> = engine === "plate" ? { setback: 37, offset: 0 } : engine === "leg" ? { inset: 50 } : engine === "model" ? {} : { ...(base?.params ?? {}) }
+  const { update: _u, proposedParams: _pp, ...imported } = item.imported
+  const next: HardwareItem = {
+    ...rest,
+    category: role.category,
+    engine,
+    params,
+    ...(base?.count && engine !== "model" ? { count: structuredClone(base.count) } : {}),
+    ...(base?.pitch && engine !== "model" ? { pitch: structuredClone(base.pitch) } : {}),
+    ...(base?.lengths && engine !== "model" ? { lengths: [...base.lengths] } : {}),
+    targets,
+    imported: { ...imported, proposed: structuredClone(targets), confirmed: false },
+  }
+  const hp = holeParams(next)
+  return Object.keys(hp).length ? { ...next, imported: { ...next.imported!, proposedParams: hp } } : next
+}
+
+/**
+ * Aplica a un importat una proposta **del seu mateix tipus** feta després d'importar-lo (el marc estimat de la malla en
+ * canviar «què és», `hardwareReframe.ts`): els mecanitzats i els números de la proposta (com `articleItem`), la caixa, el
+ * marc i les notes, **sense confirmar**. Una frontissa es queda la placa aparellada (target `side`). Pur.
+ */
+export function applyProposal(item: HardwareItem, p: HardwareProposal, base: { hinge: HardwareItem; handle: HardwareItem }, frame?: LocalFrame): HardwareItem {
+  if (!item.imported) return item
+  const art: HettichArticle = { maker: item.imported.maker, article: item.imported.article, folders: item.imported.folders, category: item.category, tags: item.tags ?? [], label: item.name, group: "", kind: p.kind, files: [] }
+  const x: ImportedExtras = { id: item.id, files: item.imported.files, ...(item.imported.asset ? { asset: item.imported.asset } : {}), ...(item.imported.points ? { points: item.imported.points } : {}) }
+  const fresh = articleItem(p, art, base, x)
+  if (fresh.engine !== item.engine) return item
+  const side = item.engine === "cup" && item.plate ? item.targets.filter((t) => t.key === "side") : []
+  const { update: _u, ...imported } = item.imported
+  const { mountFrame: _mf, frameFrom: _ff, ...rest } = imported
+  return {
+    ...item,
+    params: { ...fresh.params, ...(item.plate ? { plateSetback: item.params.plateSetback ?? 37, plateOffset: item.params.plateOffset ?? 0 } : {}) },
+    ...(fresh.pitch ? { pitch: fresh.pitch } : {}),
+    ...(fresh.count ? { count: fresh.count } : {}),
+    targets: [...fresh.targets, ...side],
+    imported: {
+      ...rest,
+      proposed: structuredClone(fresh.targets),
+      ...(fresh.imported?.proposedParams ? { proposedParams: fresh.imported.proposedParams } : {}),
+      ...(fresh.imported?.bbox ? { bbox: fresh.imported.bbox, ...(fresh.imported.boxVersion !== undefined ? { boxVersion: fresh.imported.boxVersion } : {}) } : {}),
+      ...(frame ? { mountFrame: cleanFrame(frame) } : {}),
+      ...(p.frameFrom ? { frameFrom: p.frameFrom } : {}),
+      notes: p.notes,
+      confirmed: false,
+    },
   }
 }
 
@@ -275,7 +366,7 @@ export function confirmProblem(item: HardwareItem, library: readonly HardwareIte
   // Generador de mecanitzats: una operació dolenta no es confirma (mai faria cap forat).
   const gen = machiningProblems(item.machining ?? [])
   if (gen.length) return `Mecanitzats: ${gen[0]!.message}`
-  if (item.machining?.some((o) => o.part === "any")) return "Hi ha mecanitzats sense assignar: tria a quina peça van (Generador de mecanitzats › Peça «Sense assignar» › Assignar a)."
+  if (item.engine === "model" && item.machining?.some((o) => o.part === "any")) return "Hi ha mecanitzats sense assignar: tria a quina peça van (Generador de mecanitzats › Peça «Sense assignar» › Assignar a)."
   if (item.engine === "model" && !item.machining?.length) return "És només 3D: no fa cap forat (no cal confirmar-lo). Si hi afegeixes mecanitzats (generador), s'haurà de confirmar."
   if (item.engine === "plate" && !item.targets.find((t) => t.key === "side")?.ops.length) return "La placa no té cap forat: entra'ls a mà (Mecanitzats)."
   if (item.engine === "leg" && !item.targets.find((t) => t.key === "base")?.ops.length) return "La pota no té cap forat: entra'ls a mà (Mecanitzats)."
@@ -322,8 +413,10 @@ export function proposeArticle(a: Pick<HettichArticle, "kind" | "plan">, f: Step
     : a.kind === "leg" ? proposeLeg(f)
     : null
   if (!p) return modelProposal(f, [a.plan ?? "Només 3D: sense forats."])
-  if ("error" in p) return modelProposal(f, [`${p.error} S'importa només el model 3D (sense forats).`])
-  return p
+  // El tipus se sap (frontissa, placa, tirador, pota) però no el patró: parcial, mai «només 3D» (es completa a l'editor,
+  // o la malla en dona el marc, `meshFrame.ts`).
+  if ("error" in p) return partialProposal(a.kind as Exclude<HardwareProposal["kind"], "model">, f, p.error)
+  return { ...p, frameFrom: "step" }
 }
 
 /**
@@ -353,6 +446,7 @@ export function articleItem(p: HardwareProposal, a: HettichArticle, base: { hing
 export function proposalPlan(p: HardwareProposal): string {
   const n = (x: number) => String(Math.round(x * 100) / 100).replace(".", ",")
   const holes = (k: number) => `${k} forat${k === 1 ? "" : "s"}`
+  if (p.partial) return `${{ hinge: "Frontissa", plate: "Placa", handle: "Tirador", leg: "Pota", model: "Només 3D" }[p.kind]} · sense patró al fitxer: mides per omplir`
   switch (p.kind) {
     case "hinge":
       return `Frontissa · cassoleta Ø${n(p.holes[0]?.d ?? 0)}${p.holes.length > 1 ? ` i ${holes(p.holes.length - 1)}` : ""}`

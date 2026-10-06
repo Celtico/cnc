@@ -136,6 +136,17 @@ export const HardwareImportSchema = z.object({
   boxVersion: z.number().int().min(0).optional(),
   /** Punts de connexió de les vistes 2D (capa CONNECTIONPOINTS), tal com venen. */
   points: z.array(V3Schema).optional(),
+  /**
+   * **Marc de muntatge** (coordenades del fitxer del fabricant, mm): l'origen i els eixos `u` (al llarg del cantell),
+   * `v` (cap a dins de la peça) i `n` (fora de la cara, cap al cos del ferratge) amb què es va passar el model al seu
+   * lloc (el GLB desat ja hi és). Per a una frontissa, l'eix de la cassoleta i el seu centre a la cara de la porta; per a
+   * una placa, la cara del lateral i la referència; per a un tirador, la cara de muntatge i la línia dels forats; per a
+   * una pota, la placa. El visor posa el GLB amb la mateixa transformació que el motor fa servir per al lloc, i el 3D
+   * entra tal com es veuria col·locat. Els importats d'abans no en porten (el GLB ja era al marc de la proposta).
+   */
+  mountFrame: z.object({ origin: V3Schema, u: V3Schema, v: V3Schema, n: V3Schema }).optional(),
+  /** D'on surt el marc: dels cilindres del STEP, estimat de la malla (`meshFrame.ts`) o el del fitxer tal qual. */
+  frameFrom: z.enum(["step", "mesh", "file"]).optional(),
   /** Mecanitzats proposats en llegir els fitxers (els de `targets` són els editats). */
   proposed: z.array(HardwareTargetSchema),
   /**
@@ -363,6 +374,25 @@ export const HINGE_PLATE_PARAMS: HardwareParamSpec[] = [
 
 /** Importat i encara sense confirmar: no fa cap forat. */
 export const isPendingImport = (item: HardwareItem): boolean => !!item.imported && !item.imported.confirmed
+
+/**
+ * **Què és** un ferratge importat (el seu *lloc*, `engine`): un dels motors paramètrics de l'app o «només 3D» (`model`,
+ * cap regla: es col·loca a mà). L'usuari ho pot canviar a l'editor (`retargetImported`): les regles del lloc el posen al
+ * moble i el model 3D entra pel seu marc. L'ordre és el de l'editor.
+ */
+export const HARDWARE_ROLES: readonly { engine: HardwareEngine; label: string; category: HardwareCategory; help: string }[] = [
+  { engine: "cup", label: "Frontissa", category: "hinge", help: "Cassoleta a la porta (quantitat per alçada, a la filera System 32) i, si té placa, els forats de la placa al lateral." },
+  { engine: "plate", label: "Placa de frontissa", category: "plate", help: "Es tria a una frontissa importada: els seus forats van al lateral de les frontisses, a l'alçada de cada cassoleta." },
+  { engine: "barHandle", label: "Tirador", category: "handle", help: "Forats passants al front: centrat als calaixos, al cantell que obre a portes i abatibles." },
+  { engine: "slide", label: "Guia de calaix", category: "slide", help: "Forats al lateral del moble i a la caixa del calaix." },
+  { engine: "flapArm", label: "Braç d'abatible", category: "lift", help: "Forats a l'abatible, al cantell de gir." },
+  { engine: "leg", label: "Pota", category: "leg", help: "Forats a la cara de sota de la base, a cada cantonada." },
+  { engine: "magnet", label: "Imant", category: "push", help: "Forat al front i al cantell del lateral (reixetes i trapes)." },
+  { engine: "dowel", label: "Espiga", category: "connector", help: "Unions de la caixa, divisors i prestatges fixos." },
+  { engine: "system32", label: "Filera System 32", category: "shelf-support", help: "La filera de forats dels laterals." },
+  { engine: "model", label: "Només 3D", category: "misc", help: "Cap regla de mecanitzat: el model i, si en té, els mecanitzats del generador; es col·loca a mà." },
+]
+export const roleOf = (e: HardwareEngine) => HARDWARE_ROLES.find((r) => r.engine === e)!
 
 // --- Valors inicials (dels números d'abans) ------------------------------------------------------------------------
 
@@ -825,5 +855,9 @@ export function setMachining(item: HardwareItem, ops: HardwareItem["machining"])
   return next.imported ? { ...next, imported: { ...next.imported, confirmed: false } } : next
 }
 
-/** Es pot col·locar a mà: té mecanitzats del generador o és «només 3D» (el model, sense forats). */
-export const isPlaceable = (item: HardwareItem): boolean => (item.machining?.length ?? 0) > 0 || item.engine === "model"
+/**
+ * Es pot col·locar a mà: només els **«només 3D»** (`model`: sense cap lloc al moble; amb els mecanitzats del generador
+ * o sense). Els d'un lloc (frontissa, placa, tirador…) els posen les regles del mòdul: no es col·loquen a mà (els
+ * col·locats d'abans d'un d'aquests es continuen llegint i fabricant, `hardwarePlace.ts`).
+ */
+export const isPlaceable = (item: HardwareItem): boolean => item.engine === "model"

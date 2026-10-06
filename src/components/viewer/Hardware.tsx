@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react"
 import { Box3, MeshStandardMaterial, Vector3 } from "three"
 import { BoxFrame } from "./BoxFrame"
 import { useViewerCursor } from "./cursor"
-import { FittingToolbar, type FittingToolbarActions } from "./FittingToolbar"
 import type { Panel, PanelFitting } from "../../core/model"
 import { fittingMatrix, hingeVolumes } from "./hardwareShapes"
 import { loadedModel, loadModel, onModelsLoaded } from "./models3d"
@@ -98,7 +97,8 @@ export function PanelHardware({ panel }: { panel: Panel }) {
   )
 }
 
-const GHOST = new MeshStandardMaterial({ color: "#b9bdc2", metalness: 0.5, roughness: 0.5, transparent: true, opacity: 0.5 })
+/** La caixa d'un ferratge sense model: opaca (un ferratge mai es dibuixa translúcid, ni triat ni dins d'un mòdul translúcid). */
+const GHOST = new MeshStandardMaterial({ color: "#a9adb3", metalness: 0.5, roughness: 0.5 })
 GHOST.userData.shared = true
 
 type V3 = [number, number, number]
@@ -106,7 +106,7 @@ type V3 = [number, number, number]
 const PICK_PAD = 0.008
 
 /** Un ferratge importat: el seu model (GLB de Dexie) o, mentre no hi és, la caixa. */
-function Fitting({ f, thickness, model = true, selected = false, toolbar, onSelect, actions }: { f: PanelFitting; thickness: number; model?: boolean; selected?: boolean; toolbar?: boolean; onSelect?: (id: string) => void; actions?: FittingToolbarActions }) {
+function Fitting({ f, thickness, model = true, selected = false, onSelect }: { f: PanelFitting; thickness: number; model?: boolean; selected?: boolean; onSelect?: (id: string) => void }) {
   const [, setTick] = useState(0)
   const [hover, setHover] = useState(false)
   const cursor = useViewerCursor()
@@ -170,32 +170,30 @@ function Fitting({ f, thickness, model = true, selected = false, toolbar, onSele
           <boxGeometry args={[frame.s[0] + PICK_PAD, frame.s[1] + PICK_PAD, frame.s[2] + PICK_PAD]} />
         </mesh>
       )}
+      {/* Triat o amb el ratolí a sobre: només el contorn (el model es queda opac, tal com és). */}
       {frame && (selected || (hover && model)) && (
         <group position={frame.c}>
           <BoxFrame w={frame.s[0] + 0.004} h={frame.s[1] + 0.004} d={frame.s[2] + 0.004} strong={selected} />
         </group>
       )}
-      {selected && toolbar && actions && id && frame && <FittingToolbar id={id} at={[frame.c[0], frame.c[1], frame.c[2] + frame.s[2] / 2]} actions={actions} />}
     </group>
   )
 }
 
 /**
  * Ferratges importats d'un fabricant (frontisses a la porta, plaques al lateral, `Panel.fittings`) i els col·locats a mà
- * (`kind: "item"`, amb l'id del col·locat): el GLB fet en importar, al seu lloc i girat amb la peça (porta oberta,
- * explosionat: van dins del grup de la peça). Si el model no hi és, la caixa. Només visual. Un col·locat es tria clicant-lo
- * (`onSelect`): contorn en passar-hi per sobre i, triat, contorn gruixut amb la barra flotant (`actions`) al primer de
- * les seves repeticions. Amb «Ferratges» amagat (`models` fals) només es dibuixa el contorn del triat.
+ * (`kind: "item"`, amb l'id del col·locat): el GLB fet en importar (ja al marc de muntatge), al seu lloc i girat amb la
+ * peça (porta oberta, explosionat: van dins del grup de la peça). Si el model no hi és, la caixa. Només visual. Un
+ * col·locat es tria clicant-lo (`onSelect`): contorn en passar-hi per sobre i, triat, contorn gruixut; s'edita a
+ * l'inspector (cap barra flotant al 3D). Amb «Ferratges» amagat (`models` fals) només es dibuixa el triat (sencer).
  */
-export function PanelFittings({ panel, models = true, selected, onSelect, actions }: { panel: Panel; models?: boolean; selected?: string | null; onSelect?: (id: string) => void; actions?: FittingToolbarActions }) {
+export function PanelFittings({ panel, models = true, selected, onSelect }: { panel: Panel; models?: boolean; selected?: string | null; onSelect?: (id: string) => void }) {
   if (!panel.fittings?.length) return null
-  const first = selected ? panel.fittings.findIndex((f) => f.placement === selected) : -1
   return (
     <group>
       {panel.fittings.map((f, i) =>
-        models || (selected && f.placement === selected) ? (
-          <Fitting key={i} f={f} thickness={panel.thickness} model={models} selected={!!selected && f.placement === selected} toolbar={i === first} onSelect={onSelect} actions={actions} />
-        ) : null,
+        // El triat es veu sempre sencer (el model, opac), també amb «Ferratges» amagat: si no, només en quedaria el contorn.
+        models || (selected && f.placement === selected) ? <Fitting key={i} f={f} thickness={panel.thickness} model={models || f.placement === selected} selected={!!selected && f.placement === selected} onSelect={onSelect} /> : null,
       )}
     </group>
   )

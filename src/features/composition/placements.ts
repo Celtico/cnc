@@ -101,6 +101,41 @@ export function placementWarnings(warnings: readonly CompositionWarning[], pl: H
   return warnings.filter((w) => w.code === "hardware" && w.message.includes(`«${pl.item.name}»`))
 }
 
+/**
+ * El col·locat fa servir opcions **avançades** d'una versió anterior (repetició, mirall, gir del model, fórmula o
+ * percentatge): es continuen llegint i fabricant igual, però ja no s'editen (la col·locació a mà és només la peça i la
+ * posició; les repeticions i el mirall són cosa de les regles). L'inspector les mostra i deixa simplificar-les.
+ */
+export function placementAdvanced(pl: HardwarePlacement): string[] {
+  const out: string[] = []
+  if (pl.repeat) out.push(`repetició (${pl.repeat.layout ?? "des del punt"}, ${pl.repeat.rule ? "per mida" : `${pl.repeat.count} còpies`})`)
+  if (pl.mirror) out.push("mirall esquerra/dreta")
+  if (pl.turn) out.push(`gir del model ${pl.turn}°`)
+  for (const k of ["p", "q"] as const) {
+    if (pl[k].expr) out.push(`fórmula «${pl[k].expr}»`)
+    else if (pl[k].from === "ratio") out.push(`${pl[k].pct ?? 50} % de la peça`)
+  }
+  return out
+}
+
+/**
+ * **Simplifica** un col·locat avançat a la forma d'ara: una sola posició (la de la primera còpia, on cau avui, des de
+ * l'inici de cada eix), sense repetició, mirall, gir ni fórmules. Si la fórmula no es pot avaluar, es queda la
+ * distància que tenia. El mateix objecte si ja és simple.
+ */
+export function simplifyPlacement(pl: HardwarePlacement, panel: Panel | undefined): HardwarePlacement {
+  if (!placementAdvanced(pl).length) return pl
+  const { repeat: _r, mirror: _m, turn: _t, ...rest } = pl
+  const pos = (k: "p" | "q"): PlacePos => {
+    const cur = pl[k]
+    const now = panel ? placePosValue(cur, panel, k) : null
+    if (now !== null) return { from: "min", at: Math.round(now * 100) / 100 }
+    const { expr: _e, pct: _p, ...keep } = cur
+    return keep.from === "ratio" ? { from: "min", at: keep.at } : keep
+  }
+  return { ...rest, p: pos("p"), q: pos("q") }
+}
+
 /** La regla inicial de «Per mida» (com les frontisses: 2 fins a 900, 3 fins a 1600, 4 fins a 2100, si no 5). */
 export const DEFAULT_REPEAT_RULE: StepRule = { steps: [{ upTo: 900, n: 2 }, { upTo: 1600, n: 3 }, { upTo: 2100, n: 4 }], else: 5 }
 

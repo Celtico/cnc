@@ -17,6 +17,7 @@ import { assetDocs, assetViews, getHardwareAsset } from "../../db/hardwareAssets
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { HardwareImportDialog } from "./HardwareImportDialog"
 import { analyseArticle, importArticles, sourceFromPicked, type ImportSource } from "./hardwareImport"
+import { reframeImported } from "./hardwareReframe"
 import { NumberField, NumRow } from "../../components/NumRow"
 import { PanelDrawing } from "../../components/PanelDrawing"
 import { StepRuleRows } from "../../components/StepRuleRows"
@@ -33,6 +34,7 @@ import {
   DEFAULT_HARDWARE_KIT,
   HARDWARE_CATEGORIES,
   HARDWARE_PARAMS,
+  HARDWARE_ROLES,
   HARDWARE_SLOTS,
   HINGE_PLATE_PARAMS,
   copyHardwareItem,
@@ -390,6 +392,12 @@ export function HardwareList({
               if (sl) onDefaults({ ...defaults, [sl.slot]: it.id })
             }}
             onChange={changeItem}
+            onRetarget={async (engine) => {
+              // Canviar «què és»: el motor nou i el model 3D refet al seu marc (estimat de la malla), sense confirmar.
+              const r = await reframeImported(it, engine, items, importBase())
+              changeItem(r.item)
+              if (r.note) toaster.create({ title: "Model 3D sense orientar", description: r.note, type: "warning", duration: 9000 })
+            }}
             autoFocusName={justAdded === it.id}
             onDuplicate={() => {
               const copy = copyHardwareItem(it, newId("hw"), uniqueName(`${it.name} (còpia)`))
@@ -891,6 +899,7 @@ function HardwareCard({
   isDefault,
   onDefault,
   onChange,
+  onRetarget,
   onDuplicate,
   onDelete,
   autoFocusName,
@@ -908,10 +917,13 @@ function HardwareCard({
   isDefault: boolean
   onDefault: () => void
   onChange: (next: HardwareItem) => void
+  /** Canviar «què és» un importat (el lloc, `engine`): refà el model al seu marc i deixa l'item sense confirmar. */
+  onRetarget?: (engine: HardwareEngine) => Promise<void>
   onDuplicate: () => void
   onDelete: () => void
   autoFocusName?: boolean
 }) {
+  const [retargeting, setRetargeting] = useState(false)
   // El nom es canvia en acabar (sortir del camp o Retorn), com als materials; buit, es queda l'antic. Esc el desfà.
   const [nameText, setNameText] = useState(item.name)
   useEffect(() => setNameText(item.name), [item.name])
@@ -1000,6 +1012,30 @@ function HardwareCard({
         {/* Seccions plegables (l'acordió de l'app, com l'editor de materials): independents i recordades durant la sessió. */}
         <Box className="form-section" borderTopWidth="1px" data-testid="hardware-sections">
         <FoldItem id="hw-general" icon={LuInfo} title="General" badge={typeLabel} defaultOpen>
+          {item.imported && onRetarget && !item.imported.damaged ? (
+            <FormRow
+              label="Què és"
+              help={`${HARDWARE_ROLES.find((r) => r.engine === item.engine)?.help ?? ""} Canviar-ho posa el ferratge al lloc triat amb els números per defecte d'aquell tipus (per omplir i confirmar) i orienta el model 3D segons el que s'hi troba (la cassoleta, la cara de muntatge i els forats): comprova-ho a «Com va muntat».`}
+            >
+              <Stack gap={1} pt="2px">
+                <ChoiceChips
+                  label="Què és"
+                  value={item.engine}
+                  options={HARDWARE_ROLES.map((r) => ({ id: r.engine, label: r.label }))}
+                  onChange={(engine) => {
+                    if (engine === item.engine || retargeting) return
+                    setRetargeting(true)
+                    void onRetarget(engine).finally(() => setRetargeting(false))
+                  }}
+                />
+                {retargeting && (
+                  <HStack gap={2} fontSize="xs" color="fg.muted">
+                    <Spinner size="xs" /> Orientant el model 3D…
+                  </HStack>
+                )}
+              </Stack>
+            </FormRow>
+          ) : (
           <FormRow
             label="Tipus"
             help={
@@ -1013,6 +1049,7 @@ function HardwareCard({
               {typeLabel}
             </Text>
           </FormRow>
+          )}
           <FormRow label="Fabricant">
             <Input size="sm" maxW="280px" value={item.maker ?? ""} onChange={(e) => setText("maker", e.target.value)} placeholder="Opcional" />
           </FormRow>

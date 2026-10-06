@@ -8,12 +8,14 @@ import { machiningFromXilog } from "../../core/import/xilogPgm"
 import { articleItem, pairImportedBatch, proposalPlan, proposeArticle } from "../../core/import/importItem"
 import { articleFileNames, importedMatches, mergeImported } from "../../core/import/merge"
 import { meshesFrameBox, modelProposal, type HardwareProposal } from "../../core/import/proposal"
+import { frameFromMesh } from "../../core/import/meshFrame"
 import { stepFeatures, type StepFeatures } from "../../core/import/stepGeometry"
 import { readDxf } from "../../core/import/dxf"
 import { hasMachiningLayers, machiningFromDxf, partFromFileName } from "../../core/import/dxfMachining"
 import { registerStoredView, viewFromDxf, type HardwareView, type ViewName } from "../../core/import/views"
 import { IMPORT_BOX_VERSION, newId, partKindOf, type GenOp, type HardwareItem } from "../../core/model"
 import { assetDocs, assetViews, getHardwareAsset, newHardwareAssetId, putHardwareAsset, type HardwareAsset } from "../../db/hardwareAssets"
+import { forgetModel } from "../../components/viewer/models3d"
 
 /**
  * Importar ferratges d'un fabricant (Hettich) a Preferències › Ferratges: fitxers solts, carpetes i ZIP tal com es
@@ -169,10 +171,12 @@ export async function importArticles(
           const cur = feats as StepFeatures | null
           feats = cur ? { ...cur, cylinders: [...cur.cylinders, ...got.cylinders], points: [...cur.points, ...got.points], solids: cur.solids + got.solids } : got
         }
-        let p: HardwareProposal = !feats ? modelProposal(null, [a.plan ?? "Només 2D: falta el STEP."]) : blum ? modelProposal(feats, []) : proposeArticle(a, feats, { throughDiameter: base.handle.params.diameter ?? 5 })
-        // El 3D només si algun dels que hi ha no el té (o és nou): STEP, si no IGES, 3DS o Collada.
+        const opts = { throughDiameter: base.handle.params.diameter ?? 5 }
+        let p: HardwareProposal = !feats ? modelProposal(null, [a.plan ?? "Només 2D: falta el STEP."]) : blum && a.kind === "model" ? modelProposal(feats, []) : proposeArticle(a, feats, opts)
+        // El 3D si algun dels que hi ha no el té (o és nou), o si l'article passa a tenir un lloc (frontissa, placa…) i
+        // el model desat era al marc del fitxer (un «només 3D» d'abans): el GLB s'ha de refer al marc de muntatge.
         let glb: Blob | undefined
-        const need3d = !existing.length || existing.some((e) => !e.imported?.asset || !oldAssets.get(e.imported.asset)?.glb)
+        const need3d = !existing.length || existing.some((e) => !e.imported?.asset || !oldAssets.get(e.imported.asset)?.glb || (p.kind !== "model" && e.engine === "model"))
         const other3d = MODEL_3D_KINDS.slice(1).map((k) => a.files.find((f) => f.kind === k)).find((f) => !!f)
         if (need3d && (stepBytes.length || other3d)) {
           try {
@@ -183,6 +187,12 @@ export async function importArticles(
             else {
               const mm = await import("../../components/viewer/modelMeshes")
               meshes = await mm.meshFileMeshes(other3d!.kind as "3ds" | "dae" | "glb", await src.read(other3d!.path))
+            }
+            // Sense el patró als cilindres del STEP (proposta parcial: els conjunts de Blum, una cassoleta que no és un
+            // cilindre), el marc i els forats s'estimen de la malla (`meshFrame.ts`); si tampoc, es queda la parcial.
+            if (p.kind !== "model" && p.partial) {
+              const est = frameFromMesh(p.kind, meshes, 1, opts)
+              if (est) p = { ...est, frameFrom: "mesh", notes: [...est.notes, ...p.notes.filter((n) => !/Entra .* a l'editor/.test(n))] }
             }
             // La caixa, de la mateixa malla al mateix marc que el GLB (els punts del STEP no: als conjunts són a les
             // coordenades de cada peça).
@@ -269,7 +279,8 @@ export async function importArticles(
         }
         if (blum) notes.push("Blum: les dades CAM són per producte; on va a la peça ho tries en col·locar-lo (Editor › mòdul › Ferratges).")
         // Amb els mecanitzats exactes d'un DXF del taller, els forats del STEP no es fan servir (es col·loca a mà).
-        const fromDxf = machining.length > 0 && p.kind !== "model"
+        // (Blum: el programa Xilog es queda com a referència al generador; el lloc i les regles de l'app manen.)
+        const fromDxf = machining.length > 0 && p.kind !== "model" && !blum
         const proposal: HardwareProposal = fromDxf
           ? { ...modelProposal(null, []), frame: p.frame, bbox: p.bbox, ...(p.boxFromMesh ? { boxFromMesh: true } : {}), notes: [...p.notes, "Els forats del STEP no es fan servir: manen els mecanitzats exactes del DXF (es col·loca a mà al moble).", ...notes] }
           : { ...p, notes: [...p.notes, ...notes] }
@@ -294,12 +305,14 @@ export async function importArticles(
             await putHardwareAsset({
               id: asset,
               name: old?.name ?? a.label,
-              ...(old?.glb ? { glb: old.glb } : glb ? { glb } : {}),
+              // El GLB nou (refet al marc de muntatge) passa davant del d'abans.
+              ...(glb ? { glb } : old?.glb ? { glb: old.glb } : {}),
               views: mergeViews(assetViews(old), views, p.holes),
               ...(keepDocs.length || docs.length ? { docs: [...keepDocs, ...docs.filter((d) => !names.has(d.name))] } : {}),
               createdAt: old?.createdAt ?? Date.now(),
             })
             if (oldId) written.set(oldId, asset)
+            if (glb) forgetModel(asset)
           }
           const fresh = withMachining(articleItem(proposal, a, base, { id: e.id, asset, files, ...(points ? { points } : {}) }))
           const withAsset: HardwareItem = e.imported && !e.imported.asset ? { ...e, imported: { ...e.imported, asset } } : e

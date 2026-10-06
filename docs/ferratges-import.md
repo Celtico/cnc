@@ -11,7 +11,9 @@ CAD › [Descàrregues CAD](https://www.hettich.com/es-es/services/hettich-cad/d
 Dexie, com els models 3D de l'usuari. Segon fabricant: **Blum** (E-SERVICES; §10), amb els mecanitzats **exactes** dels
 programes Xilog (`*.pgm`). **Un sol camí** per als dos (`core/import/makers.ts`): el fabricant es reconeix pel nom dels
 fitxers (`detectMaker`), cadascun agrupa per article a la seva manera i la resta (proposta, 3D, mecanitzats, ampliar el
-que ja hi és amb la clau fabricant + article) és comuna.
+que ja hi és amb la clau fabricant + article) és comuna. **Cada importat té un lloc** («Què és»: frontissa, placa,
+tirador, pota… o «només 3D») que posen les regles del mòdul, i el 3D entra pel seu **marc de muntatge** (§11; la
+col·locació a mà queda per als «només 3D», mínima).
 
 ## 1. Què es baixa de Hettich
 
@@ -631,3 +633,72 @@ classificació, agrupar, Hettich + Blum al mateix lot, PDF per sèrie, IGES i 3D
 (cassoleta a la filera, placa aparellada) amb els forats del programa, el mirall automàtic de l'altra mà, els fresats del
 Xilog (`XG0`/`XL2P`/`XA2P` → ranures i contorns), confirmar la numeració de cares dels forats de cantell amb un programa
 real, i els PDF de Blum («Explicación de los nombres de los ficheros»).
+
+## 11. El lloc de cada ferratge («Què és»), el marc de muntatge i la col·locació a mà mínima
+
+> Decisió de l'usuari: la col·locació a mà era massa complicada; el 3D d'un col·locat no era on tocava i no es podia
+> orientar; una frontissa importada «s'hauria de substituir pel paramètric que ja tenim»; «el 3D hauria d'entrar tal com
+> es veuria col·locat a la realitat»; fora la barra flotant del 3D; la configuració del ferratge va al ferratge.
+
+**Un ferratge importat té un lloc** (`HardwareItem.engine`, «Què és» a l'editor; `HARDWARE_ROLES` a
+`core/model/hardware.ts`): frontissa (`cup`), placa de frontissa (`plate`), tirador (`barHandle`), guia de calaix
+(`slide`), braç d'abatible (`flapArm`), pota (`leg`), imant (`magnet`), espiga (`dowel`), filera System 32 (`system32`)
+o **«només 3D»** (`model`, cap regla). El lloc el posen les **regles de sempre** del mòdul (`buildModule`: cassoletes a
+la filera, placa al lateral, tirador al front, potes a la base…): **cap col·locació a mà** per als ferratges d'un lloc.
+Els números del lloc (Ø i fondària de la cassoleta, distància al cantell, cargols, placa aparellada; `setback` i forats
+de la placa; distància i Ø del tirador; patró de la pota) són **a l'item** (`params`, `targets`, `pitch`, `count`),
+prefilats de la proposta del STEP quan n'hi ha, editables a l'editor, i es confirmen com fins ara.
+
+- **Importar** (`proposeArticle`, `importItem.ts`): la carpeta del fabricant diu què és; si el STEP no en dona el patró
+  (`proposeHinge` sense cassoleta, placa sense parell…), la proposta és **parcial** (`partialProposal`: el tipus, cap
+  forat, el marc per defecte) i l'item surt **del tipus que toca amb els números per defecte** (la frontissa d'inici, el
+  tirador d'inici, placa i pota sense forats), sense confirmar, «mides per omplir»: mai «només 3D» per un patró que no
+  s'ha trobat. (La cassoleta Ø26 —r 13— sempre s'havia acceptat als cilindres del STEP: Ø25–41; els 72966/72965/72959/77725
+  surten frontisses Ø26 × 11–12 amb els cargols Ø4 o les espigues Ø8 a ±19 / 8.)
+- **Blum** (`groupBlum`): una frontissa, placa, tirador o pota amb 3D va al seu lloc (`kind` hinge/plate/handle/leg); el
+  programa Xilog es queda com a mecanitzats del generador, de referència. La resta, «només 3D» (col·locats a mà).
+- **Canviar «què és»** a l'editor (`retargetImported`, pur; `features/settings/hardwareReframe.ts`): l'item passa al
+  motor triat amb els números i mecanitzats per defecte d'aquell tipus (`proposed` = aquests, sense confirmar); es
+  queden la identitat, el model, els fitxers, la caixa i els mecanitzats del generador. Si el tipus té marc (frontissa,
+  placa, tirador, pota), el marc i els forats s'**estimen de la malla del GLB desat** i el GLB es refà en aquest marc
+  (`applyProposal`).
+
+**Marc de muntatge** (`imported.mountFrame`, `frameFrom`: `step` | `mesh` | `file`; coordenades del fitxer, mm): origen
+i eixos `u` (al llarg del cantell), `v` (cap a dins de la peça) i `n` (fora de la cara, cap al cos) amb què es passa el
+model al seu lloc (`meshesToGlb`: el GLB desat ja hi és). Frontissa: eix de la cassoleta = `n`, centre a la cara de la
+porta = origen, `v` cap als cargols de l'ala (lluny del cantell); placa: cara del lateral, referència, `v` cap al
+darrere; tirador: cara de muntatge, origen al mig dels forats, `u` al llarg; pota: la placa. El visor (`fittingMatrix`,
+`Panel.fittings`: `x`, `y`, `face`, `v`) posa el GLB amb **la mateixa transformació que el motor fa servir per al lloc**
+(cassoleta a `cupOffset` del cantell i a la filera; placa a `plateSetback` del davant del lateral; tirador al front; pota
+a la base): el 3D entra tal com es veuria col·locat (tancat; el model no s'articula: amb la porta oberta gira amb ella).
+Mirall per a frontisses dreta/esquerra (`v` = ±1 al pla de la porta).
+
+- **Del STEP** (`proposal.ts`): els cilindres (`CYLINDRICAL_SURFACE`) donen la cassoleta, els forats i el marc, com fins
+  ara.
+- **De la malla** (`core/import/meshFrame.ts`), quan no hi ha el patró als cilindres (conjunts de Blum: la cassoleta no és
+  cap cilindre; un item que canvia de «què és» i només té el GLB): tot són **cercles**. Els vèrtexs d'una malla de CAD
+  que són en un cilindre cauen exactament en un cercle del pla perpendicular al seu eix, i els de la mateixa alçada formen
+  un **anell**: per cada eix del fitxer (els models són alineats als eixos), RANSAC dins de cada anell (tres punts del
+  mateix cercle), confirmat amb tota la volta, i cada cercle trobat es busca a la resta d'anells (el tram del cilindre).
+  Frontissa: el cercle més gros de Ø25–41 amb ≥ 2 anells (fondària ≥ 5) és la cassoleta (eix, centre, fondària; la cara
+  és l'extrem del costat del cos); els cercles Ø3–7 a ≤ 45 mm, els cargols o espigues (`v` cap a ells). **Sense cassoleta
+  rodona** (CLIP top EXPANDO T 71T453T: cònica), el parell de fixacions iguals a 28–50 mm (els patrons de 32 i de 45) dona
+  la cara i el cantell, i la cassoleta es proposa al mig amb Ø35 × 13 per revisar. Placa, tirador, pota: la cara d'on
+  neixen els forats petits (l'extrem del seu tram, el pla amb més vèrtexs), `n` cap al cos, origen al mig del parell o al
+  centre dels forats. Les notes diuen «marc estimat: comprova'l al 3D». Amb els fitxers reals dona **el mateix marc i els
+  mateixos forats** que els cilindres del STEP (Sensys 9071205, Ø26 72966, placa 9071615;
+  `meshFrame.roundtrip.test.ts`, `HETTICH_DIR`/`BLUM_DIR`, tessel·lat amb `occt-import-js` al Node).
+
+**Col·locació a mà, mínima** (`HardwarePlacements.tsx`): només els **«només 3D»** (`isPlaceable` = motor `model`), i
+només la **peça** i la **posició** per eix (des d'un cantell o del mig + mm). Fora de la UI: repeticions, fórmules,
+percentatge, mirall i «Gir del model». El model de dades es queda tolerant (`HardwarePlacementSchema` llegeix i
+`hardwarePlace.ts` fabrica igual els d'abans); un col·locat que en fa servir surt a l'inspector com a **«Avançat»**
+(`placementAdvanced`), de només lectura, amb **«Simplificar»** (`simplifyPlacement`: una sola posició, la de la primera
+còpia d'ara, des de l'inici de l'eix). Al 3D: clicar un col·locat el tria (contorn), **sense barra flotant**
+(`FittingToolbar` eliminat); editar, duplicar i eliminar són a la llista de l'inspector. Un ferratge triat o amb el
+ratolí a sobre es dibuixa **opac** (només el contorn; la caixa sense model també és opaca) i el triat es veu sencer
+encara que «Ferratges» estigui amagat.
+
+Tests: `core/import/slot.test.ts` (proposta parcial, `retargetImported`, `applyProposal`, les regles posen la frontissa
+retargetada), `core/import/meshFrame.test.ts` (malles sintètiques) i `meshFrame.roundtrip.test.ts` (fitxers reals),
+`features/composition/placements.test.ts` (avançat → simplificar). **Proves d'or idèntiques.**

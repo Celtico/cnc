@@ -1349,7 +1349,6 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             onSelectModel={(id) => select({ kind: "model", id })}
             selectedHardwareId={selection.kind === "hardware" ? selection.id : null}
             onSelectHardware={(id) => select({ kind: "hardware", id })}
-            hardwareActions={hardwareActions}
             onMoveModel={moveModel}
             onMoveModule={(id, dx, dy, all, dz) => setComp((c) => (all ? moveAllBy(c, dx) : moveModuleBy(c, id, dx, dy, dz)))}
           />

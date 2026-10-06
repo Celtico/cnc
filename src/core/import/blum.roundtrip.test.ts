@@ -64,7 +64,8 @@ run("Blum (descàrregues reals)", () => {
     expect(articles.every((a) => a.maker === "Blum")).toBe(true)
     expect(loose).toEqual([])
     const by = new Map(articles.map((a) => [a.article, a]))
-    expect(by.get("71T453T")).toMatchObject({ category: "hinge", part: "front", kind: "model" })
+    // Amb 3D, la frontissa de Blum va al lloc de frontissa (abans «només 3D» col·locada a mà).
+    expect(by.get("71T453T")).toMatchObject({ category: "hinge", part: "front", kind: "hinge" })
     expect(by.get("48N0510.02")).toMatchObject({ hand: "R" })
     expect(by.get("48N0510.03")).toMatchObject({ hand: "L" })
     // Els ZIP repetits (« (1)») i els STEP/DXF de cada joc van al mateix article.
