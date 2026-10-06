@@ -118,6 +118,11 @@ la migració ha de conservar aquests `id`.
 
 ## 2. Treure l'opció «Tipus» dels mobles — **M**
 
+> **Estat (bloc D, fet):** sense secció Tipus; «+ Nou moble» ofereix Moble · Cuina · Armari · Taula (`blankMoble(settings,
+> kind)`). Taulell i sòcol a qualsevol moble amb mòduls (opció A), **sense esborrar** els d'un moble que no era cuina: es
+> migren apagats (`Run.off`, `migrateRuns`) i es poden tornar a encendre amb «Es fa». «Afegir mòdul» continua llegint el
+> tipus (Taula). Proves d'or sense canvis.
+
 ### Com funciona avui
 - UI: `EditorScreen.tsx:921-950`, secció `moble-kind` de l'inspector del moble: `IconChoice` amb `MOBLE_KINDS`
   (`features/composition/kinds.ts:6-16`: Moble · Cuina · Armari · Taula · Flat-pack; Objecte fora). Canviar fa
@@ -189,6 +194,13 @@ d'or han de quedar igual (comprovar-ho és la validació del canvi).
 ---
 
 ## 3. Flat-pack: d'un tipus de moble a una opció de les peces lliures — **L** (en dues fases: M + M)
+
+> **Estat (bloc D):** fase 1 feta (opció A: `FreePart.joinery` expressa, `partJoinery`, `migrateFlatPack` a
+> `normalizeComposition` i al `.moble`; encaixos a qualsevol moble entre peces que tenen l'opció; `flatPackOption.test.ts`;
+> proves d'or sense canvis). Els parells on cap de les dues té l'opció ja no avisen si s'encavalquen. **Fase 2 pendent**
+> (mobles amb 0 mòduls): l'Editor depèn d'un mòdul (`comp.modules[0]!`, ~80 usos de `module` a `EditorScreen`), no és
+> immediata. Mentrestant no es pot crear de zero un moble només de peces (els `lliure` d'abans i els del catàleg sí que
+> funcionen; a la targeta, «Peces lliures»).
 
 ### Com funciona avui
 - **Tipus `lliure`** («Flat-pack», `kinds.ts:11`). Plantilles: `flatPack.ts` (`flatPack()`, `:34-36`; escriptori,

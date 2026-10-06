@@ -194,7 +194,7 @@ export const BLOCK_PRESETS: BlockPreset[] = [
 
 /** Composició (peces lliures sense nesting) que dibuixa un bloc, a la seva petjada (0..w, 0..d). */
 export function blockComposition(b: Pick<BlockItem, "shape" | "w" | "h" | "d" | "material" | "material2" | "name">): Composition {
-  const p = (q: Omit<FreePart, "id" | "nest" | "joints">): FreePart => ({ id: newId("p"), nest: false, joints: false, ...q })
+  const p = (q: Omit<FreePart, "id" | "nest" | "joints">): FreePart => ({ id: newId("p"), nest: false, ...q })
   const { w, h, d } = b
   const m = b.material
   const m2 = b.material2 ?? b.material

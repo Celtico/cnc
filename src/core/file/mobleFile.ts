@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { CompositionSchema, materialRefNames, RefPresetSchema, repairComposition, repairValue, resolveMaterialAlias, type Composition, type MaterialPref, type RefPreset } from "../model"
+import { CompositionSchema, materialRefNames, migrateFlatPack, migrateRuns, RefPresetSchema, repairComposition, repairValue, resolveMaterialAlias, type Composition, type MaterialPref, type RefPreset } from "../model"
 import { NestOptionsSchema, type NestOptions } from "../nesting/nest"
 
 /**
@@ -220,7 +220,8 @@ export function parseMobleFile(text: string): MobleParse {
       const rep = repairComposition(project.composition)
       if (!rep.composition) return { ok: false, error: `Aquest fitxer no és un moble vàlid (composició: ${rep.problems.at(-1) ?? "invàlida"}).` }
       if (rep.problems.length) warnings.push(`S'han tret dades malmeses del moble: ${rep.problems.join(" ")}`)
-      project = { ...project, composition: rep.composition }
+      // Migracions que no depenen de les preferències (Flat-pack com a opció de les peces, taulell i sòcol a tot arreu).
+      project = { ...project, composition: migrateRuns(migrateFlatPack(rep.composition)) }
     }
     obj = { ...obj, project }
   }

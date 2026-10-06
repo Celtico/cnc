@@ -1,4 +1,4 @@
-import { Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react"
+import { Button, HStack, IconButton, Stack, Switch, Text } from "@chakra-ui/react"
 import { useState } from "react"
 import { LuPanelBottom, LuPanelTop, LuPlus, LuSquareDashed, LuTrash2 } from "react-icons/lu"
 import { CUTOUT_PRESETS, boardChoices, newId, type Composition, type Run, type WorktopCutout, type WorktopRun } from "../../core/model"
@@ -31,14 +31,15 @@ export function RunsForm({ comp, onChange }: { comp: Composition; onChange: (c: 
     setOpenId(id)
     setRuns([
       ...runs,
-      { id, kind: "worktop", from: first.id, to: last.id, material: "Roure massís / xapat", thickness: 30, overhangFront: 20, overhangLeft: 0, overhangRight: 0, cutouts: [] },
+      // `off: false`: es fa (els que no en porten, d'un moble que no era cuina, `migrateRuns` els apaga en llegir).
+      { id, kind: "worktop", from: first.id, to: last.id, material: "Roure massís / xapat", thickness: 30, overhangFront: 20, overhangLeft: 0, overhangRight: 0, cutouts: [], off: false },
     ])
   }
   const addPlinth = () => {
     if (!first || !last) return
     const id = newId("run")
     setOpenId(id)
-    setRuns([...runs, { id, kind: "plinth", from: first.id, to: last.id, material: first.carcass.frontMaterial ?? first.carcass.material, thickness: 16, setback: 50 }])
+    setRuns([...runs, { id, kind: "plinth", from: first.id, to: last.id, material: first.carcass.frontMaterial ?? first.carcass.material, thickness: 16, setback: 50, off: false }])
   }
 
   const moduleSelect = (label: string, value: string, onPick: (id: string) => void) => (
@@ -62,9 +63,19 @@ export function RunsForm({ comp, onChange }: { comp: Composition; onChange: (c: 
               id={r.id}
               icon={r.kind === "worktop" ? LuPanelTop : LuPanelBottom}
               title={r.kind === "worktop" ? "Taulell" : "Sòcol corregut"}
-              summary={`${name(r.from)} → ${name(r.to)} · ${r.thickness} mm${r.kind === "worktop" && r.cutouts.length ? ` · ${r.cutouts.length} ${r.cutouts.length === 1 ? "forat" : "forats"}` : ""}`}
+              badge={r.off ? "Apagat" : undefined}
+              badgePalette="gray"
+              summary={`${r.off ? "Apagat · " : ""}${name(r.from)} → ${name(r.to)} · ${r.thickness} mm${r.kind === "worktop" && r.cutouts.length ? ` · ${r.cutouts.length} ${r.cutouts.length === 1 ? "forat" : "forats"}` : ""}`}
               actions={<RemoveButton label={r.kind === "worktop" ? "Eliminar el taulell" : "Eliminar el sòcol"} onClick={() => setRuns(runs.filter((x) => x.id !== r.id))} />}
             >
+              {/* Res amagat compta: un d'apagat (el d'un moble que no era cuina) es conserva però no es fa. */}
+              <FormRow label="Es fa" help={r.off ? "Apagat: es conserva però no surt a les peces ni als fitxers del taller." : undefined}>
+                <Switch.Root size="sm" pt="6px" checked={!r.off} onCheckedChange={(e) => update(r.id, { off: !e.checked })}>
+                  <Switch.HiddenInput />
+                  <Switch.Control />
+                  <Switch.Label fontSize="sm">{r.kind === "worktop" ? "Fer el taulell" : "Fer el sòcol"}</Switch.Label>
+                </Switch.Root>
+              </FormRow>
               {moduleSelect("Des de", r.from, (from) => update(r.id, { from }))}
               {moduleSelect("Fins a", r.to, (to) => update(r.id, { to }))}
               <FormRow label="Material" maxW="280px">

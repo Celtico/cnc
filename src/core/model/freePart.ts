@@ -53,7 +53,15 @@ export const FreePartSchema = z.object({
    * travessa en la direcció del seu gruix, amb la seva forma (com els objectes que tallen).
    */
   effect: z.literal("cut").optional(),
-  /** false: la peça no fa encaixos amb les altres (per defecte, sí). */
+  /**
+   * **Flat-pack** («Encaixos» de la peça): true = fa encaixos (pestanyes, mitja fusta, dits, espigues) amb les altres
+   * peces que també en fan. Opció expressa: absent o false, la peça va sola (a qualsevol moble).
+   */
+  joinery: z.boolean().optional(),
+  /**
+   * Obsolet (el tipus Flat-pack d'abans): false = sense encaixos; absent = sí, però només al tipus `lliure`.
+   * Es llegeix per migrar-lo a `joinery` (`migrateFlatPack`); no s'escriu.
+   */
   joints: z.boolean().optional(),
   /** Veta al llarg de u (per defecte), de v o sense. */
   grain: z.enum(["u", "v", "none"]).optional(),

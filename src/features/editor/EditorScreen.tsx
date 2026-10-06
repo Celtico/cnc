@@ -50,7 +50,7 @@ import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
 import { materialIssues } from "../../core/build/materialIssues"
-import { applySettingsToModule,  defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule,  defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -75,7 +75,6 @@ import { usePersistentFlag } from "../usePersistentFlag"
 import { useCompositionBuild, useProject } from "../useProject"
 import { RoleLegend } from "../../components/viewer/roleColors"
 import { IconChoice } from "../../components/IconChoice"
-import { KINDS, MOBLE_KINDS } from "../composition/kinds"
 import { ViewerControls, type ViewerState } from "./ViewerControls"
 import { undoKeyAction } from "./undoKeys"
 import { useDebouncedSave } from "../useDebouncedSave"
@@ -927,42 +926,22 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
               Selecciona un mòdul, un compartiment o un objecte a l'estructura (o clica'l al 3D) per editar-lo.
             </Text>
           </FoldItem>
-          {/* Tipus de moble: decideix les opcions de conjunt (taulell i sòcol només a la cuina). */}
+          {/* Sense «Tipus» (es tria en crear el moble). Els documents només de peces ho diuen aquí. */}
           {kind === "objecte" ? (
             <Text fontSize="xs" color="fg.muted" px={1} py={2}>
               Objecte per als ambients: fes-lo amb peces lliures (forma amb l'editor de perfils, «Talla» per als forats i buidats) i materials de simulació. Només es veu: no va al nesting ni als fitxers del taller.
             </Text>
-          ) : (
-          <FoldItem id="moble-kind" title="Tipus" icon={KINDS.find((k) => k.value === kind)!.icon} badge={KINDS.find((k) => k.value === kind)!.label}>
-            <FormRow
-              label="Tipus de moble"
-              help={
-                <>
-                  {kind !== "cuina" && comp.runs?.length
-                    ? `Aquest moble té ${comp.runs.length === 1 ? "un taulell o sòcol corregut" : `${comp.runs.length} taulells o sòcols correguts`}: només es fan a la Cuina. Es guarden per si hi tornes. `
-                    : ""}
-                  {kind === "cuina"
-                    ? "Cuina: baixos a terra i alts penjats, amb taulell i sòcol correguts per sobre i per sota de diversos mòduls."
-                    : kind === "armari"
-                      ? "Armari: mòduls alts; les portes i els prestatges van a cada mòdul."
-                      : kind === "lliure"
-                        ? "Flat-pack: només peces lliures (sense mòduls). On dues peces es toquen o s'encreuen s'hi fa l'encaix sol: pestanyes, mitja fusta, dits o espigues. Les de ferro, pedra o vidre no van al nesting."
-                      : kind === "taula"
-                        ? "Taula o consola: cada mòdul és un tauler amb dos laterals de panell. Les mides, a Mides; les cantonades a inglet i els laterals, a Caixa."
-                        : "Moble: mòduls lliures (TV, calaixera, prestatgeria…)."}
-                </>
-              }
-            >
-              <IconChoice label="Tipus de moble" hideLabel value={kind} options={MOBLE_KINDS} onChange={(k) => setComp((c) => ({ ...c, kind: k }))} />
-            </FormRow>
-          </FoldItem>
-          )}
-          {kind === "cuina" && (
+          ) : kind === "lliure" ? (
+            <Text fontSize="xs" color="fg.muted" px={1} py={2}>
+              Moble només de peces lliures (sense mòduls). Les que tenen «Encaixos» activat fan l'encaix sol on es toquen o s'encreuen: pestanyes, mitja fusta, dits o espigues. Les de ferro, pedra o vidre no van al nesting.
+            </Text>
+          ) : null}
+          {!partsOnlyKind(kind) && (
             <FoldItem id="moble-runs" title="Taulell i sòcol" icon={LuPanelTop} badge={comp.runs?.length || undefined}>
               <RunsForm comp={comp} onChange={setComp} />
             </FoldItem>
           )}
-          {kind === "lliure" && (comp.parts?.length ?? 0) > 0 && (
+          {(comp.parts ?? []).some((p) => partJoinery(comp, p)) && (
             <FoldItem id="moble-joinery" title="Encaixos" icon={LuPuzzle} badge={build?.joints.length || undefined}>
               <PartJoineryForm comp={comp} onChange={setComp} />
             </FoldItem>
