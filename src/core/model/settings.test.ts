@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule } from "./composition"
-import { DEFAULT_HARDWARE_KIT, DEFAULT_LEGACY_HARDWARE } from "./hardware"
+import { DEFAULT_HARDWARE_KIT, DEFAULT_LEGACY_HARDWARE, copyHardwareItem } from "./hardware"
 import {
   BUILTIN_REFERENCES,
   SETTINGS_VERSION,
@@ -242,6 +242,26 @@ describe("importar preferències", () => {
     expect(r.settings.boards.kerf).toBe(3)
     expect(r.settings.materials).toBe(current.materials)
     expect(r.settings.version).toBe(SETTINGS_VERSION)
+  })
+
+  it("ferratges: els per defecte es comproven contra la biblioteca que queda, no la inicial", () => {
+    const mine = copyHardwareItem(DEFAULT_SETTINGS.hardwareLibrary.find((x) => x.id === "hinge-cup")!, "hw-mine", "Meva")
+    const current: Settings = { ...DEFAULT_SETTINGS, hardwareLibrary: [...DEFAULT_SETTINGS.hardwareLibrary, mine], hardwareDefaults: { ...DEFAULT_SETTINGS.hardwareDefaults, hinge: "hw-mine" } }
+    // Només els per defecte, apuntant a un item teu que hi és: es queda.
+    const onlyDefaults = importSettingsJson(current, JSON.stringify({ version: SETTINGS_VERSION, hardwareDefaults: { ...current.hardwareDefaults } }))
+    expect(onlyDefaults.settings.hardwareDefaults.hinge).toBe("hw-mine")
+    expect(onlyDefaults.settings.hardwareLibrary).toBe(current.hardwareLibrary)
+    // Un per defecte que no hi és: el primer del mateix motor.
+    const missing = importSettingsJson(current, JSON.stringify({ version: SETTINGS_VERSION, hardwareDefaults: { ...current.hardwareDefaults, slide: "hw-cap" } }))
+    expect(missing.settings.hardwareDefaults.slide).toBe("slide-ball")
+    expect(missing.settings.hardwareDefaults.hinge).toBe("hw-mine")
+    // Només la biblioteca (sense el teu): el per defecte que hi apuntava passa a un que hi és.
+    const onlyLibrary = importSettingsJson(current, JSON.stringify({ version: SETTINGS_VERSION, hardwareLibrary: DEFAULT_SETTINGS.hardwareLibrary }))
+    const lib = onlyLibrary.settings.hardwareLibrary
+    expect(lib.some((x) => x.id === "hw-mine")).toBe(false)
+    expect(onlyLibrary.settings.hardwareDefaults.hinge).toBe("hinge-cup")
+    for (const [slot, id] of Object.entries(onlyLibrary.settings.hardwareDefaults)) expect(lib.some((x) => x.id === id), slot).toBe(true)
+    expect(SettingsSchema.safeParse(onlyLibrary.settings).success).toBe(true)
   })
 
   it("un fitxer que no és JSON no toca res", () => {

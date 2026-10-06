@@ -7,7 +7,7 @@ import { hardwareUsage } from "../../db/hardwareRefs"
 
 /**
  * Confirmació d'eliminar un ferratge de la biblioteca (com `DeleteMaterialDialog`): diu on es fa servir (mobles desats que
- * en porten una còpia, i si és el per defecte d'algun lloc). **Si es fa servir, cal triar un substitut** del mateix tipus:
+ * en porten una còpia igual, `hardwareUsage`, i si és el per defecte d'algun lloc). **Si es fa servir, cal triar un substitut** del mateix tipus:
  * els mobles hi passen (les seves còpies es canvien) i el per defecte també. Sense cap altre del mateix tipus, no es pot.
  */
 export function DeleteHardwareDialog({ item, items, defaults, onCancel, onConfirm }: { item: HardwareItem | null; items: HardwareItem[]; defaults: HardwareDefaults; onCancel: () => void; onConfirm: (replacement: string | null) => void }) {
@@ -16,13 +16,13 @@ export function DeleteHardwareDialog({ item, items, defaults, onCancel, onConfir
   const [pick, setPick] = useState({ of: "", id: "" })
   const replacement = pick.of === id ? pick.id : ""
   useEffect(() => {
-    if (!id) return
+    if (!item) return
     let live = true
-    void hardwareUsage(id).then((projects) => live && setUsage({ id, projects }))
+    void hardwareUsage(item).then((projects) => live && setUsage({ id: item.id, projects }))
     return () => {
       live = false
     }
-  }, [id])
+  }, [item])
   const loaded = usage?.id === id ? usage : null
   const slots = item ? HARDWARE_SLOTS.filter((s) => defaults[s.slot] === item.id) : []
   const choices = item ? items.filter((x) => x.engine === item.engine && x.id !== item.id) : []

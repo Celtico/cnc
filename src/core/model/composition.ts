@@ -6,6 +6,7 @@ import { CameraPoseSchema } from "./camera"
 import { aliasMaterialRefs } from "./photoUpgrade"
 import { FreePartSchema, JoinerySchema, PART_AXES as PART_AXES_C, tidyPart, type FreePart } from "./freePart"
 import { DEFAULT_LEGACY_HARDWARE, HardwareItemSchema, HardwareKitSchema, isLegacyHardware, kitFromLegacy, migrateModuleHardware, type HardwareKit } from "./hardware"
+import { repairAtomically } from "./repair"
 
 /**
  * Model de composició: mòduls d'esquerra a dreta, cadascun amb una carcassa i un
@@ -117,13 +118,20 @@ export type Carcass = z.infer<typeof CarcassSchema>
 
 // --- Fronts i zones ----------------------------------------------------------------
 
+/**
+ * El ferratge propi d'un front es llegeix **sencer o res** (`repairAtomically`): si és dolent (un paràmetre que no és un
+ * número, un motor d'una versió més nova, un mecanitzat dolent) es treu i el front fa servir el del mòdul; reparat camp a
+ * camp en quedaria mig (menys mecanitzats) i el front es fabricaria diferent sense dir-ho.
+ */
+const FrontHardwareSchema = repairAtomically(HardwareItemSchema.extend({}))
+
 export const FrontSchema = z.discriminatedUnion("kind", [
   /** `glass`: porta de vidre amb marc de perfil d'alumini (vitrina): no és de CNC (`glassDoor`). */
   // `hardware`: el ferratge triat per a aquest front (còpia d'un item de la biblioteca: frontissa, guia o braç); sense, el
   // del mòdul (`Module.hardware`).
-  z.object({ kind: z.literal("door"), mode: z.enum(["single", "double"]), hinge: z.enum(["left", "right"]), glass: z.boolean().optional(), hardware: HardwareItemSchema.optional() }),
-  z.object({ kind: z.literal("drawers"), n: z.number().int().min(1).max(10), heights: z.array(sizeOrAuto), hardware: HardwareItemSchema.optional() }),
-  z.object({ kind: z.literal("flap"), dir: z.enum(["down", "up"]), hardware: HardwareItemSchema.optional() }),
+  z.object({ kind: z.literal("door"), mode: z.enum(["single", "double"]), hinge: z.enum(["left", "right"]), glass: z.boolean().optional(), hardware: FrontHardwareSchema.optional() }),
+  z.object({ kind: z.literal("drawers"), n: z.number().int().min(1).max(10), heights: z.array(sizeOrAuto), hardware: FrontHardwareSchema.optional() }),
+  z.object({ kind: z.literal("flap"), dir: z.enum(["down", "up"]), hardware: FrontHardwareSchema.optional() }),
   z.object({
     kind: z.literal("grille"),
     pattern: GrillePatternSchema,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { BUILTIN_TEMPLATES } from "./templates"
-import { CompositionSchema, defaultModule, type Composition } from "./composition"
+import { CompositionSchema, DEFAULT_GRILLE, defaultModule, type Composition, type Front } from "./composition"
+import { DEFAULT_HARDWARE_KIT } from "./hardware"
 import { repairComposition } from "./compositionRepair"
 
 const plain = <T>(v: T): T => JSON.parse(JSON.stringify(v))
@@ -59,6 +60,54 @@ describe("repairComposition", () => {
     expect(out.split!.children[0]!.front).toEqual({ kind: "door", mode: "single", hinge: "left" })
     expect(out.split!.children[1]!.front).toBeUndefined()
     expect(out.split!.children[1]!.shelves).toEqual({ n: 2, adjustable: true })
+  })
+
+  it("un ferratge dolent d'un front (porta, calaixos, abatible) treu només el ferratge, no el front", () => {
+    const fronts: Front[] = [
+      { kind: "door", mode: "double", hinge: "right", hardware: DEFAULT_HARDWARE_KIT.hinge },
+      { kind: "drawers", n: 2, heights: [200, "auto"], hardware: DEFAULT_HARDWARE_KIT.slide },
+      { kind: "flap", dir: "up", hardware: DEFAULT_HARDWARE_KIT.flap },
+    ]
+    // Un paràmetre que no és un número, un motor d'una versió més nova, o un mecanitzat dolent (mai mig ferratge).
+    const breakers: ((h: Record<string, any>) => void)[] = [
+      (h) => (h.params = { ...h.params, cupDiameter: "x" }),
+      (h) => (h.engine = "quantum"),
+      (h) => h.targets[0].ops.push({ kind: "drill", face: "C" }),
+    ]
+    for (const front of fronts) {
+      for (const breakIt of breakers) {
+        const bad = plain(front) as Record<string, any>
+        breakIt(bad.hardware)
+        const root = { id: "r", split: { dir: "v", sizes: ["auto", "auto"], children: [{ id: "a", front: bad, shelves: { n: 1, adjustable: false } }, { id: "b", front: plain(front) }] } }
+        const r = repairComposition({ modules: [{ ...defaultModule("m1", "Baix"), root }], references: [] })
+        const out = r.composition!.modules[0]!.root.split!.children
+        const { hardware: _h, ...rest } = front as Front & { hardware?: unknown }
+        expect(out[0]!.front, `${front.kind}`).toEqual(rest)
+        expect(out[0]!.shelves).toEqual({ n: 1, adjustable: false })
+        expect(out[1]!.front).toEqual(front)
+        expect(r.problems.some((p) => p.includes("hardware") && p.includes("tret")), r.problems.join(" | ")).toBe(true)
+      }
+    }
+  })
+
+  it("un ferratge dolent del mòdul no toca els altres llocs", () => {
+    const m = plain(defaultModule("m1", "Baix")) as Record<string, any>
+    m.hardware.hinge.params.cupOffset = 21
+    m.hardware.slide.params.boxThickness = "x"
+    const r = repairComposition({ modules: [m], references: [] })
+    const kit = r.composition!.modules[0]!.hardware
+    expect(kit.hinge.params.cupOffset).toBe(21)
+    expect(kit.slide.params).toEqual(DEFAULT_HARDWARE_KIT.slide.params)
+  })
+
+  it("un front es repara dins del seu tipus: una trapa dolenta de la reixeta no treu la reixeta", () => {
+    const grille = { kind: "grille", pattern: DEFAULT_GRILLE, mount: "hinged", hinge: "right" }
+    const root = { id: "r", front: { ...grille, hatch: { x: 0, y: 0, w: -5, h: 100 } } }
+    const r = repairComposition({ modules: [{ ...defaultModule("m1", "Baix"), root }], references: [] })
+    expect(r.composition!.modules[0]!.root.front).toEqual(grille)
+    // Un camp obligatori dolent sense valor del mateix tipus: el front es treu, com abans.
+    const r2 = repairComposition({ modules: [{ ...defaultModule("m1", "Baix"), root: { id: "r", front: { ...grille, mount: "glued" } } }], references: [] })
+    expect(r2.composition!.modules[0]!.root.front).toBeUndefined()
   })
 
   it("un forat dolent del taulell no treu el taulell", () => {

@@ -467,7 +467,7 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   (8–22 → «12mm diamant nesting», 23–41 → «14mm diamant nesting»), rampa als perfilats del nesting (`SetApproachStrategy(true,
   false, k)`, des del mig del costat recte més llarg), peces petites (menys de 0,8 m²; `maxSide` 0 = no compta) en 3 passades
   (Z/XY 1/1, 0,5/0 i la final al martiri o als passants, `overMaterial`). Opcionals, amb el comportament d'abans si no hi
-  són: **pell dels forats i ranures gairebé passants** (`blind`, `cncBlindDepth`: 1 mm a partir de gruix − 0,5; només al
+  són: **pell dels forats i ranures gairebé passants** (`blind`, `cncBlindDepth`: 1 mm de pell; el llindar «a partir de», per defecte 0,5, compta com a mínim la pell mínima, mai en queda menys; només al
   .xcs, el STEP es queda amb 1) i **sentit dels contorns i talls** (`cutMode`: `asIs` · `conventional` = en oposició, com
   TopSolid · `climb`; `cutLoop`, i a la Vista CAM una punta amb el sentit).
   - Eines **pel nom a la màquina que exporta** (`findRuleTool`, només `usableTool`, les mateixes que ofereix el selector, amb
@@ -538,7 +538,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   - Mòdul: Mides · Caixa (abans «Estructura», es confonia amb la pestanya de l'arbre) · Materials · Fusteria (avançat). Posició.
     Sense Front (el de tot el mòdul és a l'«Interior»). Materials visibles: cos, **fronts**
     (`frontMaterial`, buit = el del cos) i fons.
-  - Compartiment (`ZonePanel`): accions com a icones a la capçalera (Pare · Duplicar · Eliminar) i Front · Prestatges ·
+  - Compartiment (`ZonePanel`): accions com a icones a la capçalera (Pare · Duplicar · Eliminar; a l'«Interior», l'arrel,
+    cap: no es duplica, no es retalla ni s'elimina, i ⌘D, ⌘X i Suprimir avisen sense tocar el porta-retalls) i Front · Prestatges ·
     Mida · Dividir. **Sense «General»**: cada apartat és una secció pròpia amb la seva icona i el valor triat a la insígnia
     (icona dinàmica on hi ha opcions, com els compartiments); el que no toca no surt. Peça lliure (`PartInspector`): Efecte ·
     Orientació · Mides · Material (amb la Veta) · Forma · CNC (amb el Cantell) · Encaixos (de CNC, no als objectes) · Grup · Enganxada (si
@@ -1122,8 +1123,12 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`ThicknessChips what`), quantitat per alçada / distància dels forats (`StepRule`) i els mecanitzats (només lectura).
   **Eliminar** (`DeleteHardwareDialog`, com el dels materials): si és un per defecte o el fa servir algun moble desat
   (`hardwareUsage`), cal un substitut del mateix tipus; els mobles hi passen (`replaceHardwareEverywhere`, sense `updatedAt`).
+  Només les còpies **iguals** a l'item (`isCopyOf`: mateix id i `sameHardware`, el contingut sense nom/fabricant/versió); una
+  amb el mateix id i un altre contingut (un mòdul d'abans amb una cassoleta de 30) és la que es fabrica i no es toca.
   «Restaurar valors inicials» torna biblioteca i per defecte. **A l'editor**: Front de porta, calaixos i abatible amb
   `HardwarePick` (`ChoiceChips` dels del mateix tipus; el del mòdul = sense camp) i a Fusteria el de cada lloc del mòdul.
+  Les còpies que no són a la biblioteca tal qual (`hardwareChoices`, per contingut, no per id) surten a part, «<nom> (del
+  moble)», triades: es veu el que es fabrica i s'hi pot tornar; triar-ne un de la biblioteca canvia la còpia.
 - **Objectes de referència inicials** (`BUILTIN_REFERENCES`): genèrics (A4, rajoles, portes, **una sola tele** de 55″,
   radiador, endoll; per decisió de l'usuari, no una llista de teles). Les teles antigues es treuen (`RETIRED_REFERENCES`,
   `isRetired`, també les còpies «TV Sony KD-55XD8505…»).
@@ -1272,7 +1277,10 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   ni surt «Modificat»). Si `save` falla o torna `false`, aquell valor no compta com a desat i torna a quedar pendent.
 - **Llegir sense perdre res** (`repairComposition`, `core/model/compositionRepair.ts`, test): una composició que no passa
   l'esquema es repara **element a element** (un objecte, una peça lliure, un model, un taulell o un forat dolents es treuen
-  sols; d'un mòdul només els camps dolents; a l'arbre de zones, només el camp dolent). `readComposition`
+  sols; d'un mòdul només els camps dolents; a l'arbre de zones, només el camp dolent; les unions amb `kind` —fronts,
+  base, tapa…— es reparen camp a camp dins del seu tipus). El ferratge d'un front es llegeix **sencer o res**
+  (`repairAtomically`): un `front.hardware` dolent (un paràmetre que no és un número, un `engine` d'una versió nova, un
+  mecanitzat dolent) es treu sol, amb avís, i la porta, els calaixos o l'abatible es queden amb el del mòdul. `readComposition`
   (`db/compositionStore.ts`; la fa servir `compositionOf`) dona també `problems` i `unreadable`: sense cap mòdul bo, el del
   mòdul de caixa (`params`); si no es pot reparar, caixa per defecte i **no es desa a sobre** (`updateProjectComposition` torna
   `false`; l'Editor no desa i avisa). Peces, Nesting i Exportar mostren l'error (`UnreadableAlert`, `useCompositionRead`) i
