@@ -24,7 +24,6 @@ import {
   LuMaximize2,
   LuMinimize2,
   LuMoveDiagonal,
-  LuRedo2,
   LuScan,
   LuShrink,
   LuSparkles,
@@ -33,7 +32,6 @@ import {
   LuTrees,
   LuVideo,
   LuTriangleAlert,
-  LuUndo2,
   LuView,
 } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
@@ -76,7 +74,8 @@ import { useCompositionBuild, useProject } from "../useProject"
 import { RoleLegend } from "../../components/viewer/roleColors"
 import { IconChoice } from "../../components/IconChoice"
 import { ViewerControls, type ViewerState } from "./ViewerControls"
-import { undoKeyAction } from "./undoKeys"
+import { useHistory, useUndoKeys } from "../history/useHistory"
+import { UndoRedo } from "../../components/UndoRedo"
 import { useDebouncedSave } from "../useDebouncedSave"
 import { MaterialSelect } from "../settings/MaterialSelect"
 
@@ -111,12 +110,6 @@ export function EditorScreen({ projectId }: { projectId: number }) {
   return <Editor key={project.id} projectId={project.id} name={project.name} initial={read.composition} read={read} project={project} />
 }
 
-interface History {
-  past: Composition[]
-  present: Composition
-  future: Composition[]
-}
-
 /** Porta-retalls de l'editor (mòdul, objecte, compartiment, peça o model 3D). */
 type Clip = EditClip
 const CLIP_KEY = "mobles:clipboard"
@@ -140,51 +133,17 @@ function readClip(): Clip | null {
   return memClip
 }
 
-/** Símbol de la tecla de drecera: ⌘ al Mac/iPad, Ctrl a la resta. */
-const MOD = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? "⌘" : "Ctrl+"
 
 function Editor({ projectId, name, initial, read: readNow, project }: { projectId: number; name: string; initial: Composition; read: CompositionRead; project: Project }) {
   // La lectura en obrir-lo (la de després de cada desada ja no cal: és la que hem desat).
   const [read] = useState(readNow)
-  // Composició amb desfer/refer (fins a 50 passos).
-  const [history, setHistory] = useState<History>({ past: [], present: initial, future: [] })
-  const comp = history.present
-  // Canvis seguits (menys de 500 ms entre ells, p. ex. escriure "1180" o arrossegar)
-  // compten com un sol pas de desfer.
-  const lastEdit = useRef(0)
-  const setComp = (next: Composition | ((c: Composition) => Composition)) =>
-    setHistory((h) => {
-      const n = typeof next === "function" ? next(h.present) : next
-      if (n === h.present) return h
-      const now = Date.now()
-      const coalesce = now - lastEdit.current < 500 && h.past.length > 0
-      lastEdit.current = now
-      if (coalesce) return { past: h.past, present: n, future: [] }
-      return { past: [...h.past.slice(-49), h.present], present: n, future: [] }
-    })
-  const undo = () => {
-    lastEdit.current = 0
-    setHistory((h) => (h.past.length ? { past: h.past.slice(0, -1), present: h.past.at(-1)!, future: [h.present, ...h.future] } : h))
-  }
-  const redo = () => {
-    lastEdit.current = 0
-    setHistory((h) => (h.future.length ? { past: [...h.past, h.present], present: h.future[0]!, future: h.future.slice(1) } : h))
-  }
-
+  // Composició amb desfer/refer (`useHistory`, fins a 50 passos). Canvis seguits (menys de 500 ms entre ells, p. ex.
+  // escriure "1180" o arrossegar) compten com un sol pas. La càmera i la miniatura es desen a part (fora del desfer).
+  const history = useHistory<Composition>(initial, { limit: 50, coalesceMs: 500 })
+  const { value: comp, set: setComp, undo, redo } = history
   // Dreceres de desfer/refer (`undoKeyAction`): no als camps de text lliure ni amb un diàleg modal obert (l'editor de
-  // perfils: ⌘Z hi desfeia el moble del darrere).
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const action = undoKeyAction(e, document)
-      if (!action) return
-      e.preventDefault()
-      if (action === "redo") redo()
-      else undo()
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // perfils té el seu desfer: ⌘Z hi desfeia el moble del darrere).
+  useUndoKeys(undo, redo)
 
   // Selecció única (arbre, 3D i alçat van sincronitzats): moble, mòdul, compartiment o objecte.
   const [selectedModule, setSelectedModule] = useState<string>(initial.modules[0]!.id)
@@ -1153,14 +1112,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   return (
     <>
       <TopBarActions>
-        <HStack gap={1}>
-          <IconButton aria-label="Desfer" title={`Desfer (${MOD}Z)`} size="sm" variant="ghost" disabled={history.past.length === 0} onClick={undo}>
-            <LuUndo2 />
-          </IconButton>
-          <IconButton aria-label="Refer" title={`Refer (⇧${MOD}Z)`} size="sm" variant="ghost" disabled={history.future.length === 0} onClick={redo}>
-            <LuRedo2 />
-          </IconButton>
-        </HStack>
+        <UndoRedo {...history} />
       </TopBarActions>
 
       <Workspace

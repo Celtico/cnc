@@ -21,6 +21,10 @@ import {
 import { NumberField, NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { segGroup, segItem } from "../../components/segmented"
+import { UndoRedo } from "../../components/UndoRedo"
+import { MOD } from "../../components/modKey"
+import { useHistory, useUndoKeys } from "../history/useHistory"
+import type { History, SetOptions } from "../history/history"
 import { PRESETS } from "./profilePresets"
 
 const r1 = (v: number) => Math.round(v * 10) / 10
@@ -30,6 +34,8 @@ const HANDLE_HELP: Record<"corner" | "smooth" | "symmetric", string> = {
   smooth: "Alineats: mateixa direcció, cada un amb la seva llargada (corba suau).",
   symmetric: "Simètrics: mateixa direcció i mateixa llargada.",
 }
+/** Canvi en viu (arrossegant): el pas de desfer es fa en deixar anar. */
+const LIVE: SetOptions = { commit: false }
 /** Blau dels nodes i manegadors (com a Figma). */
 const HANDLE = "#1e88e5"
 /** Constant del cercle amb cúbiques: manegador = k · radi. */
@@ -62,6 +68,8 @@ function edgeMid(nodes: PNode[], i: number): Vec2 {
  * - Ploma: clic = node de cantonada, clic i arrossegar = node suau amb manegadors; clicar el
  *   primer node tanca la forma.
  * Imant a la quadrícula (Maj: 1 mm). No deixa aplicar un contorn que es talli a si mateix.
+ * Desfer/refer propi (`useHistory`, dreceres només dins del diàleg): cada arrossegada, cada node de la ploma i cada acció
+ * és un pas; el moble del darrere no es toca.
  */
 export function ProfileEditor({
   open,
@@ -77,25 +85,29 @@ export function ProfileEditor({
   onClose: () => void
   onApply: (p: { points: PNode[]; w: number; h: number }) => void
 }) {
-  const [nodes, setNodes] = useState<PNode[]>(initial)
+  // La forma amb desfer/refer: arrossegar és en viu (`commit: false`) i fa un sol pas en deixar anar.
+  const history = useHistory<PNode[]>(initial)
+  const { value: nodes, set: setNodes, commit, reset } = history
   const [sel, setSel] = useState<number | null>(null)
   const [tool, setTool] = useState<"edit" | "pen" | "bend" | "erase">("edit")
   const [radius, setRadius] = useState(20)
   const [drag, setDrag] = useState<Drag | null>(null)
   const [cursor, setCursor] = useState<Vec2 | null>(null)
-  const before = useRef<PNode[]>(initial)
+  // Historial en començar la ploma: cancel·lar-la hi torna (sense deixar passos de la forma descartada).
+  const beforePen = useRef<History<PNode[]> | null>(null)
+  const content = useRef<HTMLDivElement>(null)
   const svg = useRef<SVGSVGElement>(null)
   // Només en obrir-se: el pare pot tornar a renderitzar amb un `initial` nou (mateix contingut).
   const initialRef = useRef(initial)
   initialRef.current = initial
   useEffect(() => {
     if (open) {
-      setNodes(initialRef.current)
+      reset(initialRef.current)
       setView(viewOf(initialRef.current))
       setSel(null)
       setTool("edit")
     }
-  }, [open])
+  }, [open, reset])
 
   const drawing = tool === "pen"
   const closed = !drawing && nodes.length >= 3
@@ -123,7 +135,7 @@ export function ProfileEditor({
     return [q.x, -q.y]
   }
   const snap = (v: number, fine: boolean) => (fine ? r1(v) : Math.round(v / minor) * minor)
-  const set = (i: number, n: PNode) => setNodes((cur) => cur.map((q, k) => (k === i ? n : q)))
+  const set = (i: number, n: PNode, opts?: SetOptions) => setNodes((cur) => cur.map((q, k) => (k === i ? n : q)), opts)
 
   const remove = (i: number) => {
     if (nodes.length <= 3) return
@@ -147,13 +159,14 @@ export function ProfileEditor({
     set(i, next)
   }
   const startPen = () => {
-    before.current = nodes
+    beforePen.current = history.state
     setNodes([])
     setSel(null)
     setTool("pen")
   }
   const cancelPen = () => {
-    setNodes(before.current)
+    if (beforePen.current) history.restore(beforePen.current)
+    setDrag(null)
     setTool("edit")
     setCursor(null)
   }
@@ -163,6 +176,21 @@ export function ProfileEditor({
       setCursor(null)
     }
   }
+
+  // Desfer/refer (⌘Z, ⇧⌘Z, Ctrl Y, només dins del diàleg). Amb la ploma, desfer treu l'últim node; sense cap node, la
+  // cancel·la (torna la forma d'abans).
+  const undo = () => {
+    if (drawing && nodes.length === 0) return cancelPen()
+    history.undo()
+    setDrag(null)
+    setSel(null)
+  }
+  const redo = () => {
+    history.redo()
+    setDrag(null)
+    setSel(null)
+  }
+  useUndoKeys(undo, redo, { enabled: open, scope: content })
 
   // Teclat.
   useEffect(() => {
@@ -189,7 +217,7 @@ export function ProfileEditor({
       if (!d) return
       e.preventDefault()
       const p = nodes[sel]!
-      set(sel, { ...p, x: r1(p.x + d[0]!), y: r1(p.y + d[1]!) })
+      set(sel, { ...p, x: r1(p.x + d[0]!), y: r1(p.y + d[1]!) }, { group: `nudge:${sel}` })
     }
     window.addEventListener("keydown", onKey, true)
     return () => window.removeEventListener("keydown", onKey, true)
@@ -215,7 +243,7 @@ export function ProfileEditor({
     }
     ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
     const p: PNode = { x: snap(x, e.shiftKey), y: snap(y, e.shiftKey) }
-    setNodes((cur) => [...cur, p])
+    setNodes((cur) => [...cur, p], LIVE)
     setDrag({ kind: "pen", i: nodes.length, x: e.clientX, y: e.clientY, moved: false })
   }
   const onMove = (e: ReactPointerEvent) => {
@@ -230,21 +258,23 @@ export function ProfileEditor({
     const [x, y] = at
     if (drag.kind === "node") {
       const n = nodes[drag.i]!
-      set(drag.i, { ...n, x: snap(x, e.shiftKey), y: snap(y, e.shiftKey) })
+      set(drag.i, { ...n, x: snap(x, e.shiftKey), y: snap(y, e.shiftKey) }, LIVE)
     } else if (drag.kind === "handle") {
       const n = nodes[drag.i]!
       const h: Vec2 = [r1(x - n.x), r1(y - n.y)]
-      set(drag.i, moveHandle(e.altKey ? { ...n, t: "corner" } : n, drag.which, h))
+      set(drag.i, moveHandle(e.altKey ? { ...n, t: "corner" } : n, drag.which, h), LIVE)
     } else if (drag.kind === "edge") {
-      setNodes((cur) => bendEdge(cur, drag.i, [x, y]))
+      setNodes((cur) => bendEdge(cur, drag.i, [x, y]), LIVE)
     } else {
       // Ploma arrossegant: manegadors simètrics del node nou.
       const n = nodes[drag.i]!
       const h: Vec2 = [r1(x - n.x), r1(y - n.y)]
-      set(drag.i, { x: n.x, y: n.y, out: h, in: [-h[0], -h[1]], t: "symmetric" })
+      set(drag.i, { x: n.x, y: n.y, out: h, in: [-h[0], -h[1]], t: "symmetric" }, LIVE)
     }
   }
   const onUp = () => {
+    // Un pas per arrossegada (i per node de la ploma).
+    commit()
     if (drag?.kind === "node" && !drag.moved && drag.from === "bend") toggleSmooth(drag.i)
     if (drag?.kind === "node" && !drag.moved && drag.from === "erase") remove(drag.i)
     if (drag?.kind === "edge" && !drag.moved) {
@@ -288,7 +318,7 @@ export function ProfileEditor({
         <Dialog.Backdrop />
         <Dialog.Positioner>
           {/* Al mòbil, a pantalla completa i respectant la zona segura (si no, la capçalera quedava sota l'illa / la barra d'estat). */}
-          <Dialog.Content maxW={{ md: "1000px" }} h={{ base: "100dvh", md: "auto" }} minH={{ md: "auto" }} pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} pb={{ base: "env(safe-area-inset-bottom, 0px)", md: 0 }}>
+          <Dialog.Content ref={content} maxW={{ md: "1000px" }} h={{ base: "100dvh", md: "auto" }} minH={{ md: "auto" }} pt={{ base: "env(safe-area-inset-top, 0px)", md: 0 }} pb={{ base: "env(safe-area-inset-bottom, 0px)", md: 0 }}>
             <Dialog.Header>
               <Dialog.Title>Forma de la secció</Dialog.Title>
             </Dialog.Header>
@@ -296,34 +326,37 @@ export function ProfileEditor({
               <Stack gap={3}>
                 <HStack gap={2} wrap="wrap" justify="space-between">
                   {/* Eines, com al mode d'edició de vectors de Figma (el control segmentat comú, com les eines de la Foto). */}
-                  <HStack {...segGroup}>
-                    {(
-                      [
-                        ["edit", "Moure", LuMousePointer2, "Arrossega nodes i manegadors"],
-                        ["pen", "Ploma", LuPenTool, "Dibuixa una forma nova node a node"],
-                        ["bend", "Corbar", LuSpline, "Arrossega un costat per corbar-lo; clic a un node el fa suau o cantonada"],
-                        ["erase", "Esborrar", LuEraser, "Clic a un node per treure'l"],
-                      ] as const
-                    ).map(([id, label, Icon, title]) => (
-                      <Button
-                        key={id}
-                        {...segItem(tool === id || (id === "pen" && drawing))}
-                        title={title}
-                        aria-pressed={tool === id}
-                        disabled={drawing && id !== "pen" && nodes.length < 3}
-                        onClick={() => {
-                          if (id === "pen") {
-                            if (drawing) cancelPen()
-                            else startPen()
-                            return
-                          }
-                          if (drawing) finishPen()
-                          setTool(id)
-                        }}
-                      >
-                        {id === "pen" && drawing ? <LuX /> : <Icon />} {id === "pen" && drawing ? "Cancel·lar" : label}
-                      </Button>
-                    ))}
+                  <HStack gap={2} wrap="wrap">
+                    <HStack {...segGroup}>
+                      {(
+                        [
+                          ["edit", "Moure", LuMousePointer2, "Arrossega nodes i manegadors"],
+                          ["pen", "Ploma", LuPenTool, "Dibuixa una forma nova node a node"],
+                          ["bend", "Corbar", LuSpline, "Arrossega un costat per corbar-lo; clic a un node el fa suau o cantonada"],
+                          ["erase", "Esborrar", LuEraser, "Clic a un node per treure'l"],
+                        ] as const
+                      ).map(([id, label, Icon, title]) => (
+                        <Button
+                          key={id}
+                          {...segItem(tool === id || (id === "pen" && drawing))}
+                          title={title}
+                          aria-pressed={tool === id}
+                          disabled={drawing && id !== "pen" && nodes.length < 3}
+                          onClick={() => {
+                            if (id === "pen") {
+                              if (drawing) cancelPen()
+                              else startPen()
+                              return
+                            }
+                            if (drawing) finishPen()
+                            setTool(id)
+                          }}
+                        >
+                          {id === "pen" && drawing ? <LuX /> : <Icon />} {id === "pen" && drawing ? "Cancel·lar" : label}
+                        </Button>
+                      ))}
+                    </HStack>
+                    <UndoRedo size="xs" canUndo={history.canUndo || (drawing && nodes.length === 0)} canRedo={history.canRedo} undo={undo} redo={redo} />
                   </HStack>
                   <HStack gap={1} wrap="wrap">
                     {PRESETS.map((p) => (
@@ -476,8 +509,8 @@ export function ProfileEditor({
                       </Text>
                     ) : selNode ? (
                       <>
-                        <NumRow label={axes[0]} value={selNode.x} step={1} onChange={(v) => Number.isFinite(v) && set(sel!, { ...selNode, x: v })} />
-                        <NumRow label={axes[1]} value={selNode.y} step={1} onChange={(v) => Number.isFinite(v) && set(sel!, { ...selNode, y: v })} />
+                        <NumRow label={axes[0]} value={selNode.x} step={1} onChange={(v) => Number.isFinite(v) && set(sel!, { ...selNode, x: v }, { group: `x:${sel}` })} />
+                        <NumRow label={axes[1]} value={selNode.y} step={1} onChange={(v) => Number.isFinite(v) && set(sel!, { ...selNode, y: v }, { group: `y:${sel}` })} />
                         <FormRow label="Manegadors" help={HANDLE_HELP[selType]}>
                           <ChoiceChips
                             label="Manegadors"
@@ -543,6 +576,9 @@ export function ProfileEditor({
                       </Text>
                       <Text textStyle="xs" color="fg.muted">
                         · Imant de {minor} mm (<Kbd>Maj</Kbd>: lliure). <Kbd>Supr</Kbd> treu el node; fletxes l'afinen.
+                      </Text>
+                      <Text textStyle="xs" color="fg.muted">
+                        · <Kbd>{MOD}Z</Kbd> desfà i <Kbd>⇧{MOD}Z</Kbd> refà (amb la ploma, treu l'últim node).
                       </Text>
                     </Stack>
                   </Stack>
