@@ -26,14 +26,12 @@ import {
   LuPencilRuler,
   LuPenTool,
   LuPlus,
-  LuRedo2,
   LuRotate3D,
   LuRotateCcw,
   LuRotateCw,
   LuSofa,
   LuAperture,
   LuTrash2,
-  LuUndo2,
   LuVideo,
   LuEye,
   LuAppWindow,
@@ -110,6 +108,8 @@ import { itemName, useItemGeometries, type ItemGeometry } from "./ambientData"
 import { PlanCanvas } from "./PlanCanvas"
 import { AMBIENT_TAB_KEY, ambientBox, type Selection, type Tool } from "./planGeom"
 import { useDebouncedSave } from "../useDebouncedSave"
+import { useHistory, useUndoKeys } from "../history/useHistory"
+import { UndoRedo } from "../../components/UndoRedo"
 import { TreeRow, TreeRowMenu, TreeSection } from "../../components/TreeRow"
 
 const TOOLS: { id: Tool; label: string; key: string; icon: typeof LuPenTool }[] = [
@@ -144,7 +144,9 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const { settings } = useSettings()
   const unit = useUnit()
   const projects = useProjects()
-  const [amb, setAmbState] = useState<Ambient>(initial)
+  // Ambient amb desfer/refer (`useHistory`, fins a 100 passos; la càmera es desa a part, fora del desfer).
+  const history = useHistory<Ambient>(initial, { limit: 100 })
+  const { value: amb, set: setAmb, undo, redo } = history
   const [sel, setSel] = useState<Selection>(null)
   const [tool, setTool] = useState<Tool>("select")
   // La vista (Plànol · 3D) es recorda; els ambients del catàleg s'obren al 3D.
@@ -199,11 +201,6 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
     sceneGetter.current = g
   }, [])
   const membership = useAmbientMembership()
-  const past = useRef<Ambient[]>([])
-  const future = useRef<Ambient[]>([])
-  const committed = useRef<Ambient>(initial)
-  const [hist, setHist] = useState({ undo: 0, redo: 0 })
-  const syncHist = () => setHist({ undo: past.current.length, redo: future.current.length })
 
   // Desar (esperant una mica mentre s'arrossega; el que queda pendent, en sortir). Obrir-lo no el desa.
   useDebouncedSave(amb, (a) => void updateAmbient(ambientId, { data: a }))
@@ -237,31 +234,10 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
     setCamGoto((g) => ({ pose: prev, n: (g?.n ?? 0) + 1 }))
   }
 
-  const change = useCallback((next: Ambient, commit: boolean) => {
-    setAmbState(next)
-    if (commit) {
-      past.current = [...past.current.slice(-99), committed.current]
-      future.current = []
-      committed.current = next
-      syncHist()
-    }
-  }, [])
-  const undo = useCallback(() => {
-    const prev = past.current.pop()
-    if (!prev) return
-    future.current.push(committed.current)
-    committed.current = prev
-    setAmbState(prev)
-    syncHist()
-  }, [])
-  const redo = useCallback(() => {
-    const next = future.current.pop()
-    if (!next) return
-    past.current.push(committed.current)
-    committed.current = next
-    setAmbState(next)
-    syncHist()
-  }, [])
+  // Canvi de l'ambient: `commit` = un pas de desfer (en deixar anar); si no, en viu (arrossegant).
+  const change = useCallback((next: Ambient, commit: boolean) => setAmb(next, { commit }), [setAmb])
+  // Dreceres de desfer/refer, les mateixes que a l'editor (`undoKeyAction`: no amb un diàleg modal obert).
+  useUndoKeys(undo, redo)
 
   const geos = useItemGeometries(amb.items, projects)
   const names = useMemo(() => new Map(amb.items.map((it) => [it.id, itemName(it, projects)])), [amb.items, projects])
@@ -436,17 +412,8 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
     const key = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest?.("input, textarea, select, [contenteditable], [role=dialog]")) return
       const mod = e.metaKey || e.ctrlKey
-      if (mod && e.key.toLowerCase() === "z") {
-        e.preventDefault()
-        if (e.shiftKey) redo()
-        else undo()
-        return
-      }
-      if (mod && e.key.toLowerCase() === "y") {
-        e.preventDefault()
-        redo()
-        return
-      }
+      // Desfer/refer: `useUndoKeys`.
+      if (mod && (e.key.toLowerCase() === "z" || e.key.toLowerCase() === "y")) return
       if (mod && e.key.toLowerCase() === "d") {
         e.preventDefault()
         duplicate()
@@ -533,16 +500,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
     <Flex direction="column" flex={1} minH={0} gap={2}>
       {/* Desfer/refer a la barra superior (la mateixa que la dels mobles: «Ambients › nom»). */}
       <TopBarActions>
-        <Tooltip content="Desfer (Ctrl/⌘ Z)">
-          <IconButton aria-label="Desfer" size="sm" variant="ghost" disabled={!hist.undo} onClick={undo}>
-            <LuUndo2 />
-          </IconButton>
-        </Tooltip>
-        <Tooltip content="Refer (Maj Ctrl/⌘ Z)">
-          <IconButton aria-label="Refer" size="sm" variant="ghost" disabled={!hist.redo} onClick={redo}>
-            <LuRedo2 />
-          </IconButton>
-        </Tooltip>
+        <UndoRedo {...history} />
       </TopBarActions>
 
       <Workspace
