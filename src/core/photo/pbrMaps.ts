@@ -17,6 +17,8 @@ export interface PbrFileClass {
 
 /** Extensions que el navegador sap llegir com a imatge (EXR, TIFF i PSD no). */
 const IMAGE_EXT = /\.(jpe?g|png|webp|avif|gif|bmp)$/i
+/** OpenEXR (els mapes de dades dels jocs «Blend» de Poly Haven): es descodifica amb l'`EXRLoader` de three. */
+const EXR_EXT = /\.exr$/i
 
 /** Paraules del nom → mapa. `null` = mapa conegut que no es fa servir (relleu de desplaçament, oclusió, metall…). */
 const KEYWORDS: Record<string, PbrFileClass | null> = {
@@ -79,6 +81,9 @@ export function fileTokens(path: string): string[] {
 
 /** El navegador el pot llegir com a imatge. */
 export const isImageFile = (path: string): boolean => IMAGE_EXT.test(path)
+export const isExrFile = (path: string): boolean => EXR_EXT.test(path)
+/** Una imatge o un EXR: el que pot ser un mapa d'un joc. */
+export const isTextureFile = (path: string): boolean => isImageFile(path) || isExrFile(path)
 export const isZipFile = (path: string): boolean => /\.zip$/i.test(path)
 
 /**
@@ -88,7 +93,7 @@ export const isZipFile = (path: string): boolean => /\.zip$/i.test(path)
  * faci servir.
  */
 export function classifyTextureFile(path: string): PbrFileClass | null {
-  if (!isImageFile(path)) return null
+  if (!isTextureFile(path)) return null
   const tokens = fileTokens(path)
   let found: PbrFileClass | null | undefined
   for (let i = 0; i < tokens.length; i++) {
@@ -116,11 +121,15 @@ export interface PbrPlan {
   ignored: string[]
 }
 
-/** Puntuació per triar entre dos fitxers del mateix mapa: normal OpenGL abans que DirectX, rugositat pròpia abans que ARM. */
+/**
+ * Puntuació per triar entre dos fitxers del mateix mapa: normal OpenGL abans que DirectX, rugositat pròpia abans que ARM
+ * i, si no, una imatge abans que un EXR (no cal descodificar-lo).
+ */
 function preference(c: PbrPlanItem): number {
-  if (c.slot === "normal") return c.directX ? 0 : 1
-  if (c.slot === "rough") return c.channel ? 0 : 1
-  return 0
+  const img = isExrFile(c.path) ? 0 : 0.5
+  if (c.slot === "normal") return (c.directX ? 0 : 1) + img
+  if (c.slot === "rough") return (c.channel ? 0 : 1) + img
+  return img
 }
 
 /** Reparteix els fitxers d'un joc (noms o camins) entre color, relleu i brillantor. */
@@ -140,6 +149,65 @@ export function planTextureSet(paths: string[]): PbrPlan {
     } else plan.ignored.push(path)
   }
   return plan
+}
+
+/** Paraules que no són del nom del material: resolució (`1k`, `2K`), format i convenció del normal. */
+const NOISE = /^(\d+k|jpe?g|png|exr|gl|dx|opengl|directx)$/
+
+/**
+ * Clau del joc d'un mapa: el nom del fitxer sense el mapa, la resolució ni la convenció (`potted_plant_04_nor_gl_1k.jpg`
+ * → `potted plant 04`). Els mapes amb la mateixa clau són del mateix material (un model pot portar-ne diversos jocs).
+ * `null` si no és cap mapa.
+ */
+export function textureSetKey(path: string): string | null {
+  if (!isTextureFile(path)) return null
+  const tokens = fileTokens(path)
+  // On comença l'última paraula (o parella de paraules) que és un mapa: el que va després és la resolució o la convenció.
+  let start = -1
+  for (let i = 0; i < tokens.length; i++) {
+    if (i > 0 && tokens[i - 1]! + tokens[i]! in KEYWORDS) start = i - 1
+    else if (tokens[i]! in KEYWORDS) start = i
+  }
+  if (start < 0) return null
+  return tokens.slice(0, start).filter((t) => !NOISE.test(t)).join(" ")
+}
+
+/**
+ * Agrupa els mapes per joc (`textureSetKey`), en l'ordre en què surten. Els que no són mapes no hi van.
+ */
+export function groupTextureSets(paths: string[]): { key: string; paths: string[] }[] {
+  const out = new Map<string, string[]>()
+  for (const p of paths) {
+    const k = textureSetKey(p)
+    if (k === null) continue
+    const list = out.get(k)
+    if (list) list.push(p)
+    else out.set(k, [p])
+  }
+  return [...out].map(([key, list]) => ({ key, paths: list }))
+}
+
+/**
+ * Píxels de coma flotant (RGBA, com els dona l'`EXRLoader`: de baix a dalt) a RGBA de 8 bits de dalt a baix. Els mapes
+ * de dades (normal, rugositat) es passen tal qual (0–1 → 0–255); el color (`srgb`), de lineal a sRGB. L'alfa, opac.
+ */
+export function floatToRgba8(data: ArrayLike<number>, w: number, h: number, opts: { srgb?: boolean; flipY?: boolean } = {}): Uint8ClampedArray {
+  const out = new Uint8ClampedArray(w * h * 4)
+  const flip = opts.flipY ?? true
+  const enc = opts.srgb ? (v: number) => (v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055) : (v: number) => v
+  for (let y = 0; y < h; y++) {
+    const sy = flip ? h - 1 - y : y
+    for (let x = 0; x < w; x++) {
+      const s = (sy * w + x) * 4
+      const d = (y * w + x) * 4
+      for (let c = 0; c < 3; c++) {
+        const v = data[s + c]!
+        out[d + c] = Math.round(enc(Math.min(1, Math.max(0, Number.isFinite(v) ? v : 0))) * 255)
+      }
+      out[d + 3] = 255
+    }
+  }
+  return out
 }
 
 /** Inverteix el canal verd (RGBA, al lloc): normal DirectX ↔ OpenGL. */

@@ -6,7 +6,7 @@ import { EditorDialog } from "../../components/EditorDialog"
 import { SearchBar } from "../../components/SearchBar"
 import { NumberField } from "../../components/NumRow"
 import { toaster } from "../../components/ui/toaster"
-import { MATERIAL_CATEGORIES, materialCategory, materialCoat, materialNameError, materialSheen, newId, restoredFinish, switchFinish, tidyMaterialName, withCategory, type Finish, type MaterialCategory, type MaterialPref } from "../../core/model"
+import { MATERIAL_CATEGORIES, materialCategory, materialCoat, materialNameError, materialSheen, newId, pbrSetMaterial, restoredFinish, switchFinish, tidyMaterialName, uniqueMaterialName, withCategory, type Finish, type MaterialCategory, type MaterialPref } from "../../core/model"
 import { GalleryCard } from "../projects/GalleryCard"
 import { GALLERY_COLS, fold } from "../projects/galleryGrid"
 import { FoldGroup, FoldItem } from "../../components/Fold"
@@ -21,7 +21,8 @@ import { isEditable, previewStyle } from "./materialPreview"
 import { PaneHeadContext } from "./paneHead"
 import { TextureEditor } from "./TextureEditor"
 import { MapThumb, TextureMapRows, TextureSetRow } from "./TextureMapRows"
-import { encodeMap, pickFiles } from "./textureImport"
+import { encodeMap, pickFiles, textureSetSummary } from "./textureImport"
+import { readPickedTextureSet } from "./textureMaterials"
 
 /** Icones de les categories (com els apartats de les pàgines principals). */
 const CATEGORY_ICONS: Record<MaterialCategory, IconType> = { board: LuLayers3, back: LuLayers2, sim: LuSprayCan }
@@ -64,13 +65,7 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
   const [openState, setOpen] = useSessionList(OPEN_KEY, ["board"])
   const update = (i: number, patch: Partial<MaterialPref>) => onChange(materials.map((m, k) => (k === i ? { ...m, ...patch } : m)))
   // Noms únics sense majúscules ni espais (com l'esquema, `materialNameKey`).
-  const uniqueName = (base: string) => {
-    const taken = (n: string) => materialNameError(materials, "", n) !== null
-    if (!taken(base)) return base
-    let n = 2
-    while (taken(`${base} ${n}`)) n++
-    return `${base} ${n}`
-  }
+  const uniqueName = (base: string) => uniqueMaterialName(materials, base)
   // Obrir un material a l'editor; la seva categoria queda oberta a la graella (en tancar-lo, es veu on és).
   const open = (m: MaterialPref) => {
     const c = materialCategory(m)
@@ -91,6 +86,29 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
     addMaterial(only && only !== "board" ? withCategory(base, only) : base)
   }
   const fromLibrary = ({ group: _g, ...item }: LibraryItem) => addMaterial({ ...structuredClone(item), id: newId("mat"), name: uniqueName(item.name) })
+  // «Joc de textures…» de la biblioteca: un material de foto amb relleu i brillantor, amb el nom (i, si és de Poly Haven
+  // i hi ha connexió, la mida real) del joc. De Simulació (una textura no diu si és un tauler): la Categoria es canvia a
+  // l'editor.
+  const fromTextureSet = async () => {
+    const picked = await pickFiles({ multiple: true, accept: "image/*,.zip,.exr", testId: "library-texture-files" })
+    if (!picked.length) return
+    const wait = toaster.create({ title: "Llegint el joc de textures…", type: "loading" })
+    try {
+      const r = await readPickedTextureSet(picked)
+      toaster.dismiss(wait)
+      if (!r.finish) {
+        toaster.create({ title: "No s'ha trobat el joc de textures", description: `Falta la foto de color (diff, color, albedo…).${r.set.ignored.length ? ` Fitxers: ${r.set.ignored.slice(0, 6).join(", ")}.` : ""}`, type: "warning", duration: 10000 })
+        return
+      }
+      const name = uniqueName(r.name)
+      addMaterial(pbrSetMaterial(newId("mat"), name, r.finish))
+      const size = r.tileMm ? ` Mida real ${r.tileMm} mm (Poly Haven).` : ` Mida real ${r.finish.tileMm} mm: canvia-la a «Foto».`
+      toaster.create({ title: `Material «${name}» afegit a Simulació`, description: textureSetSummary(r.set) + size, type: "success", duration: 8000 })
+    } catch (e) {
+      toaster.dismiss(wait)
+      toaster.create({ title: "No s'ha pogut carregar el joc de textures", description: e instanceof Error ? e.message : String(e), type: "error", duration: 8000 })
+    }
+  }
   const q = fold(query.trim())
   const i = materials.findIndex((m) => m.id === sel)
   const m = i >= 0 ? materials[i]! : null
@@ -184,7 +202,7 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
           />
         )}
       </EditorDialog>
-      <MaterialLibrary open={library} onClose={() => setLibrary(false)} onPick={fromLibrary} onBlank={blank} materials={materials} onOpenExisting={(id) => {
+      <MaterialLibrary open={library} onClose={() => setLibrary(false)} onPick={fromLibrary} onBlank={blank} onTextureSet={() => void fromTextureSet()} materials={materials} onOpenExisting={(id) => {
         const x = materials.find((y) => y.id === id)
         if (x) open(x)
       }} />

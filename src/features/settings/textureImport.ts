@@ -1,6 +1,8 @@
+import { exrToCanvas, isExrBlob } from "../../components/viewer/exrImage"
 import { unzip } from "../../core/file/zip"
+import { isJunkPath, polyHavenRefOf, type PolyHavenRef } from "../../core/import"
 import type { Finish } from "../../core/model"
-import { averageColor, fitSize, flipGreen, isImageFile, isZipFile, planTextureSet, toGrayscale, type PbrSlot } from "../../core/photo/pbrMaps"
+import { averageColor, fitSize, flipGreen, isTextureFile, isZipFile, planTextureSet, textureSetKey, toGrayscale, type PbrSlot } from "../../core/photo/pbrMaps"
 import { pickedFromList, type PickedFile } from "./machineImport"
 
 /**
@@ -21,8 +23,12 @@ export interface EncodedMap {
 const MAX_PX = 1024
 const QUALITY: Record<PbrSlot, number> = { color: 0.85, normal: 0.95, rough: 0.9 }
 
-/** Llegeix una imatge; `raw` = sense gestió de color (mapes de dades). */
+/** Llegeix una imatge; `raw` = sense gestió de color (mapes de dades). Un EXR es descodifica a 8 bits (`exrToCanvas`). */
 async function decode(blob: Blob, raw: boolean): Promise<{ img: CanvasImageSource; w: number; h: number; close: () => void }> {
+  if (await isExrBlob(blob)) {
+    const c = await exrToCanvas(blob, { srgb: !raw })
+    return { img: c, w: c.width, h: c.height, close: () => (c.width = c.height = 0) }
+  }
   if (typeof createImageBitmap === "function") {
     try {
       const b = await createImageBitmap(blob, raw ? { colorSpaceConversion: "none", premultiplyAlpha: "none" } : {})
@@ -88,14 +94,14 @@ export async function srcBlob(src: string): Promise<Blob> {
 }
 
 /** Obre el selector de fitxers (o de carpeta) i torna el que s'ha triat (buit si es cancel·la). */
-export function pickFiles(opts: { multiple?: boolean; folder?: boolean; accept?: string } = {}): Promise<PickedFile[]> {
+export function pickFiles(opts: { multiple?: boolean; folder?: boolean; accept?: string; testId?: string } = {}): Promise<PickedFile[]> {
   return new Promise((resolve) => {
     const input = document.createElement("input")
     input.type = "file"
     if (opts.multiple || opts.folder) input.multiple = true
     if (opts.folder) input.setAttribute("webkitdirectory", "")
     if (opts.accept && !opts.folder) input.accept = opts.accept
-    input.dataset.testid = opts.folder ? "texture-folder" : opts.multiple ? "texture-files" : "texture-file"
+    input.dataset.testid = opts.testId ?? (opts.folder ? "texture-folder" : opts.multiple ? "texture-files" : "texture-file")
     input.hidden = true
     input.onchange = () => {
       resolve(pickedFromList(input.files ?? []))
@@ -121,29 +127,60 @@ export interface LoadedTextureSet {
   /** Nom del fitxer de cada mapa. */
   used: Partial<Record<PbrSlot, string>>
   ignored: string[]
+  /** Nom del material segons els fitxers (`textureSetKey` del color o d'un altre mapa: «rough plaster brick 04»). */
+  key?: string
+  /** Si és un joc de Poly Haven (`<id>_<res>.…`): per al nom i la mida real (API). */
+  polyHaven?: PolyHavenRef
 }
 
 const baseName = (p: string) => p.split(/[\\/]/).pop() ?? p
+
+/** Fitxers triats (i el contingut dels `.zip`) en un mapa camí → fitxer; `skipped` = els dels zips que no són textures. */
+export async function expandPicked(picked: PickedFile[], keep: (path: string) => boolean = isTextureFile): Promise<{ files: Map<string, Blob>; skipped: string[]; zipNames: string[] }> {
+  const files = new Map<string, Blob>()
+  const skipped: string[] = []
+  const zipNames: string[] = []
+  const many = picked.filter((p) => isZipFile(p.path)).length > 1
+  for (const p of picked) {
+    if (isZipFile(p.path)) {
+      zipNames.push(baseName(p.path))
+      let entries
+      try {
+        entries = await unzip(new Uint8Array(await p.file.arrayBuffer()))
+      } catch {
+        throw new Error(`No s'ha pogut obrir «${baseName(p.path)}»: no és un .zip o està malmès.`)
+      }
+      for (const e of entries) {
+        if (e.name.endsWith("/") || isJunkPath(e.name)) continue
+        // Amb un sol zip, els camins són els de dins (com els d'una carpeta); amb més, amb el nom del zip al davant.
+        const path = many ? `${p.path}/${e.name}` : e.name
+        if (keep(e.name)) files.set(path, new Blob([e.data as Uint8Array<ArrayBuffer>]))
+        else skipped.push(baseName(e.name))
+      }
+    } else if (!isJunkPath(p.path)) files.set(p.path, p.file)
+  }
+  return { files, skipped, zipNames }
+}
 
 /**
  * Llegeix un joc de textures (fitxers, una carpeta o un .zip): tria el color, el normal i la rugositat pel nom
  * (`planTextureSet`) i els codifica. `normalDx` = què fer amb un normal que el nom no diu si és `_gl` o `_dx`.
  */
 export async function loadTextureSet(picked: PickedFile[], normalDx: boolean): Promise<LoadedTextureSet> {
-  const files = new Map<string, Blob>()
-  const ignored: string[] = []
-  for (const p of picked) {
-    if (isZipFile(p.path)) {
-      const entries = await unzip(new Uint8Array(await p.file.arrayBuffer()))
-      for (const e of entries) {
-        if (e.name.endsWith("/") || /(^|\/)(__MACOSX|\.)/.test(e.name)) continue
-        if (isImageFile(e.name)) files.set(`${p.path}/${e.name}`, new Blob([e.data as Uint8Array<ArrayBuffer>]))
-        else ignored.push(baseName(e.name))
-      }
-    } else if (!/(^|\/)\./.test(p.path)) files.set(p.path, p.file)
-  }
-  const plan = planTextureSet([...files.keys()])
+  const { files, skipped, zipNames } = await expandPicked(picked)
+  const out = await loadTextureFiles(files, normalDx, skipped)
+  const ref = polyHavenRefOf([...files.keys(), ...skipped], zipNames[0])
+  if (ref) out.polyHaven = ref
+  return out
+}
+
+/** El mateix amb els fitxers ja llegits (camí → fitxer): els jocs de textures d'un model importat. */
+export async function loadTextureFiles(files: Map<string, Blob>, normalDx: boolean, ignored: string[] = []): Promise<LoadedTextureSet> {
+  const plan = planTextureSet([...files.keys()].filter((p) => isTextureFile(p)))
   const out: LoadedTextureSet = { used: {}, ignored: [...ignored, ...plan.ignored.map(baseName)] }
+  const first = plan.color ?? plan.normal ?? plan.rough
+  const key = first ? textureSetKey(first.path) : null
+  if (key) out.key = key
   if (plan.color) {
     out.color = await encodeMap(files.get(plan.color.path)!, "color")
     out.used.color = baseName(plan.color.path)
@@ -194,3 +231,15 @@ export function withTextureSet(current: Finish, set: LoadedTextureSet, tileMm = 
   if (set.rough) next.roughMap = set.rough.src
   return next
 }
+
+/** Resum del que s'ha carregat d'un joc (avís). */
+export function textureSetSummary(set: LoadedTextureSet): string {
+  const parts = [
+    set.used.color && `color ${set.used.color}`,
+    set.used.normal && `relleu ${set.used.normal}${set.normalDx ? " (DirectX, verd invertit)" : ""}`,
+    set.used.rough && `brillantor ${set.used.rough}`,
+  ].filter(Boolean)
+  const ignored = set.ignored.length ? ` Sense fer servir: ${set.ignored.slice(0, 6).join(", ")}${set.ignored.length > 6 ? "…" : ""}.` : ""
+  return `${parts.join(" · ")}.${ignored}`
+}
+

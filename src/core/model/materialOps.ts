@@ -42,6 +42,24 @@ export function materialNameError(materials: readonly MaterialPref[], self: stri
   return other ? `Ja hi ha un material que es diu «${other.name}».` : null
 }
 
+/** Un nom que no tingui cap altre material: `base`, si no «base 2», «base 3»… (com l'esquema, `materialNameKey`). */
+export function uniqueMaterialName(materials: readonly MaterialPref[], base: string): string {
+  const taken = (n: string) => materialNameError(materials, "", n) !== null
+  const b = tidyMaterialName(base) || "Material nou"
+  if (!taken(b)) return b
+  let n = 2
+  while (taken(`${b} ${n}`)) n++
+  return `${b} ${n}`
+}
+
+/**
+ * Material de simulació fet amb un joc de textures (foto de color amb relleu i brillantor, p. ex. les d'un model de Poly
+ * Haven): només es veu, no es talla. `finish` és l'acabat de foto ja fet (`withTextureSet`).
+ */
+export function pbrSetMaterial(id: string, name: string, finish: MaterialPref["finish"]): MaterialPref {
+  return { id, name, thicknesses: [10], hasGrain: false, finish, edge: "", cnc: false, category: "sim" }
+}
+
 /** Nom net (sense espais als extrems ni repetits) per desar. */
 export const tidyMaterialName = (name: string) => name.trim().replace(/\s+/g, " ")
 
