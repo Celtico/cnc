@@ -137,6 +137,7 @@ export function mergeReimport(old: Machine, fresh: Machine): Machine {
     throughExtra: old.throughExtra,
     grooves: old.grooves,
     verticalDrills: old.verticalDrills,
+    ...(old.xcsEncoding ? { xcsEncoding: old.xcsEncoding } : {}),
     ...(old.nesting ? { nesting: old.nesting } : {}),
     // Les opcions d'abans es queden, i també quines migracions ja s'hi han fet.
     rulesVersion: old.rulesVersion,
