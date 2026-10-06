@@ -51,7 +51,6 @@ export function MaterialLibrary({ open, onClose, onPick, onBlank, materials, onO
                           borderWidth="1px"
                           borderColor="transparent"
                           _hover={{ borderColor: "wood.solid", bg: "bg.muted" }}
-                          cursor="pointer"
                           aria-label={mine ? `${m.name} (ja el tens: ${mine.name})` : m.name}
                           onClick={() => {
                             if (mine) {

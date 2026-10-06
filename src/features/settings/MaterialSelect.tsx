@@ -1,6 +1,7 @@
-import { Badge, Box, Button, CloseButton, Drawer, Field, HStack, Input, InputGroup, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, CloseButton, Drawer, Field, HStack, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
-import { LuCheck, LuSearch, LuTriangleAlert } from "react-icons/lu"
+import { LuCheck, LuTriangleAlert } from "react-icons/lu"
+import { SearchBar } from "../../components/SearchBar"
 import { fold } from "../projects/galleryGrid"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import { MATERIAL_CATEGORIES, materialCategory, type MaterialPref } from "../../core/model"
@@ -84,9 +85,7 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
               </Drawer.Header>
               <Drawer.Body>
                 <Stack gap={3}>
-                  <InputGroup startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => search("")} /> : undefined}>
-                    <Input size="sm" placeholder="Buscar un material" aria-label="Buscar un material" value={query} onChange={(e) => search(e.currentTarget.value)} />
-                  </InputGroup>
+                  <SearchBar value={query} onChange={search} placeholder="Buscar un material" ariaLabel="Buscar un material" maxW="none" />
                   {q && !cats.length && (
                     <Text fontSize="sm" color="fg.muted">
                       Cap material es diu així.
@@ -114,7 +113,7 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
                           {c.list.map((m) => {
                             const on = m.name === value
                             return (
-                              <Box key={m.id} asChild rounded="md" cursor="pointer" textAlign="start" role="group" focusRing="outside">
+                              <Box key={m.id} asChild rounded="md" textAlign="start" role="group" focusRing="outside">
                                 <button type="button" onClick={() => pick(m.name)} aria-pressed={on}>
                                   <Stack gap={1.5}>
                                     <Box position="relative" rounded="md" outline={on ? "2px solid" : undefined} outlineColor="wood.solid" outlineOffset="2px" _groupHover={on ? undefined : { opacity: 0.85 }}>
@@ -153,7 +152,7 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
 
 function Row({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <Box asChild p={1.5} rounded="md" borderWidth="2px" borderColor={on ? "wood.solid" : "transparent"} bg={on ? "wood.subtle" : undefined} _hover={{ bg: "bg.muted" }} cursor="pointer">
+    <Box asChild p={1.5} rounded="md" borderWidth="2px" borderColor={on ? "wood.solid" : "transparent"} bg={on ? "wood.subtle" : undefined} _hover={{ bg: "bg.muted" }}>
       <button type="button" onClick={onClick} aria-pressed={on}>
         <HStack gap={3}>{children}</HStack>
       </button>

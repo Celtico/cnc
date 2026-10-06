@@ -1,7 +1,8 @@
-import { CloseButton, Input, InputGroup, SimpleGrid, Stack } from "@chakra-ui/react"
+import { SimpleGrid, Stack } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 import { useState } from "react"
-import { LuFolders, LuHistory, LuSearch } from "react-icons/lu"
+import { LuFolders, LuHistory } from "react-icons/lu"
+import { SearchBar } from "../../components/SearchBar"
 import { OBJECT_CATEGORIES, OBJECT_TEMPLATES, objectCategory, type Composition, type Template } from "../../core/model"
 import { TemplateCard } from "../projects/NewMobleGallery"
 import { FoldGroup, FoldItem } from "../../components/Fold"
@@ -17,8 +18,11 @@ export function ObjectsGallery({
   onCreate,
   history,
   storageKey = "mobles:objects",
+  add,
 }: {
   onCreate: (composition: Composition, name: string) => void
+  /** Botó principal al costat del cercador («Nou objecte»); la finestra dels ambients no en porta. */
+  add?: { label: string; onClick: () => void }
   history: (query: (text: string) => boolean, searching: boolean) => { count: number; node: ReactNode; projects?: { count: number; node: ReactNode } }
   storageKey?: string
 }) {
@@ -33,9 +37,7 @@ export function ObjectsGallery({
   const pick = (t: Template) => onCreate({ ...t.make(), kind: "objecte" }, t.name)
   return (
     <Stack gap={4}>
-      <InputGroup maxW={{ base: "full", md: "420px" }} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => setQuery("")} /> : undefined}>
-        <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar objectes: nom, material…" aria-label="Cercar objectes" />
-      </InputGroup>
+      <SearchBar value={query} onChange={setQuery} placeholder="Cercar objectes: nom, material…" ariaLabel="Cercar objectes" add={add} />
       <FoldGroup variant="gallery" storageKey={storageKey} forceOpen={q ? found : null}>
         <FoldItem id="mine" icon={LuHistory} title="Historial" count={hist.count}>
           {hist.node}

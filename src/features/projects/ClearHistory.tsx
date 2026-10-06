@@ -3,7 +3,7 @@ import { useState } from "react"
 import { LuTrash2 } from "react-icons/lu"
 
 /**
- * «Esborrar l'historial» (el mateix a Mobles, Objectes i Ambients): botó a la fila d'eines de
+ * «Esborrar» de l'Historial (el mateix a Mobles, Objectes i Ambients; el `title` diu «Esborrar l'historial»): botó a la fila d'eines de
  * l'historial (`FolderedGrid toolbar`) i confirmació amb quants se n'esborraran i quants es
  * conserven (els que són en un ambient). Si n'hi ha de **modificats**, avisa que es perdrien els
  * canvis i deixa esborrar només els que no s'han tocat.
@@ -43,8 +43,8 @@ export function ClearHistory({
   const shown = edited.slice(0, 4).map((x) => `«${x}»`).join(", ") + (edited.length > 4 ? ` i ${edited.length - 4} més` : "")
   return (
     <>
-      <Button size="xs" variant="ghost" colorPalette="red" onClick={() => setOpen(true)} disabled={!count}>
-        <LuTrash2 /> Esborrar l'historial
+      <Button size="xs" variant="ghost" colorPalette="red" title="Esborrar l'historial" onClick={() => setOpen(true)} disabled={!count}>
+        <LuTrash2 /> Esborrar
       </Button>
       <Dialog.Root role="alertdialog" open={open} onOpenChange={(e) => !e.open && setOpen(false)}>
         <Portal>
