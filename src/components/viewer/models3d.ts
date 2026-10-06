@@ -107,6 +107,27 @@ export function loadModel(src: string): Promise<Loaded | null> {
   return job
 }
 
+/**
+ * El model d'un ferratge importat llegit de nou, **fora de la memòria compartida** (miniatures de Preferències ›
+ * Ferratges: n'hi pot haver centenars i cadascun es fa servir un sol cop). Qui el demana l'allibera sencer
+ * (`disposeTree`: no porta `sharedModel`). `null` si el model no hi és o no es pot llegir (llavors, la caixa).
+ */
+export async function readHardwareModel(src: string): Promise<Object3D | null> {
+  if (!isHardwareAssetSrc(src)) return null
+  try {
+    const blob = (await getHardwareAsset(src))?.glb
+    if (!blob) return null
+    const gl = (loader ??= new GLTFLoader().setMeshoptDecoder(MeshoptDecoder))
+    const root = (await gl.parseAsync(await blob.arrayBuffer(), "")).scene
+    root.traverse((o) => {
+      if ((o as Mesh).isMesh) o.castShadow = o.receiveShadow = true
+    })
+    return root
+  } catch {
+    return null
+  }
+}
+
 /** El model ja carregat (sense còpia): els ferratges importats el posen al seu lloc amb el seu marc (`Hardware.tsx`). */
 export function loadedModel(src: string): Loaded | null {
   return cache.get(src) ?? null

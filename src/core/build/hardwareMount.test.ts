@@ -4,7 +4,7 @@ import type { HettichArticle } from "../import/hettich"
 import type { HardwareProposal } from "../import/proposal"
 import { DEFAULT_HARDWARE_KIT, DEFAULT_HARDWARE_LIBRARY, defaultModule, type Module, type Zone } from "../model"
 import { buildModule } from "./buildModule"
-import { hardwareMount, mountPlan } from "./hardwareMount"
+import { hardwareMount, mountCamera, mountPlan } from "./hardwareMount"
 
 /**
  * Ferratge muntat (Preferències › Ferratges, 3D · Pla): les peces surten del motor de sempre (`buildModule`) amb l'item
@@ -110,5 +110,27 @@ describe("ferratge muntat", () => {
     }
     expect(labels(DEFAULT_HARDWARE_LIBRARY.find((x) => x.engine === "system32")!)).toContain("37")
     expect(labels(DEFAULT_HARDWARE_LIBRARY.find((x) => x.engine === "barHandle")!)).toContain("128")
+  })
+
+  it("la càmera de «Com va muntat» (editor i miniatura): al forat principal, des de la cara on entra", () => {
+    const len = (v: number[]) => Math.hypot(v[0]!, v[1]!, v[2]!)
+    // Frontissa: des de dins del moble (la cara de la cassoleta mira enrere), de dalt i cap a dins (+X).
+    const h = hardwareMount(DEFAULT_HARDWARE_KIT.hinge)
+    const c = mountCamera(h)
+    expect(c.target).toEqual(h.focus!.at)
+    expect(len(c.dir)).toBeCloseTo(1, 6)
+    expect(c.dir[2]).toBeLessThan(0)
+    expect(c.dir[0]).toBeGreaterThan(0)
+    expect(c.dir[1]).toBeGreaterThan(0)
+    expect(c.dist).toBe(420)
+    // Tirador: des de fora del front.
+    const t = mountCamera(hardwareMount(DEFAULT_HARDWARE_LIBRARY.find((x) => x.engine === "barHandle")!))
+    expect(t.dir[2]).toBeGreaterThan(0)
+    expect(t.dist).toBe(480)
+    // Només 3D: el centre de la caixa, prou lluny per veure-la sencera.
+    const model = { ...plate, id: "hw-m", engine: "model" as const, targets: [], imported: { ...plate.imported!, bbox: { min: [0, 0, 0] as [number, number, number], max: [100, 40, 400] as [number, number, number] } } }
+    const mm = mountCamera(hardwareMount(model))
+    expect(mm.target).toEqual([50, 20, 200])
+    expect(mm.dist).toBe(800)
   })
 })

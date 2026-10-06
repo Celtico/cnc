@@ -26,6 +26,7 @@ import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
 import { cutoutMaterials, panelMaterials, panelVisualKey, visualPanel } from "./exportablePanel"
 import { disposeMaterial } from "./textures"
+import { HOLE_COLOR, holeMarkMatrices, PROPOSED_HOLE_COLOR } from "./hardwareShapes"
 
 /** Color de selecció (el mateix taronja que els botons + del 3D). */
 const SELECT_COLOR = "#b57a37"
@@ -1470,53 +1471,20 @@ export const PanelMesh = memo(function PanelMesh({
   )
 }, samePanelProps)
 
-const HOLE_COLOR = "#3b2f1f"
-const EPS = 0.0004
 /** Disc de radi 1 i material comuns a totes les marques de forat (cada forat és una instància, escalada al seu radi). */
 const HOLE_GEO = new CircleGeometry(1, 20)
 const HOLE_MAT = new MeshBasicMaterial({ color: HOLE_COLOR })
 HOLE_MAT.userData.shared = true
 /** Forats proposats (ferratge importat sense confirmar): taronja, com la insígnia «Sense confirmar». */
-const PROPOSED_MAT = new MeshBasicMaterial({ color: "#e8590c" })
+const PROPOSED_MAT = new MeshBasicMaterial({ color: PROPOSED_HOLE_COLOR })
 PROPOSED_MAT.userData.shared = true
-
-/** Gir de la marca d'un forat de cantell: disc perpendicular al cantell, al mig del gruix. */
-const EDGE_MARK: Record<string, { d: [number, number, number]; r: [number, number, number] }> = {
-  left: { d: [-EPS, 0, 0], r: [0, -Math.PI / 2, 0] },
-  right: { d: [EPS, 0, 0], r: [0, Math.PI / 2, 0] },
-  bottom: { d: [0, -EPS, 0], r: [Math.PI / 2, 0, 0] },
-  top: { d: [0, EPS, 0], r: [-Math.PI / 2, 0, 0] },
-}
 
 /**
  * Marques dels forats d'una peça (discos foscos a la cara A, a la B o al cantell): una sola malla instanciada per peça
  * amb la geometria i el material comuns (abans, una malla i un material per forat: centenars per moble).
  */
 function HoleMarks({ holes, thickness, material = HOLE_MAT }: { holes: Hole[]; thickness: number; material?: MeshBasicMaterial }) {
-  const marks = useMemo(() => {
-    const o = new Object3D()
-    const out: Matrix4[] = []
-    for (const h of holes) {
-      const x = h.x * S
-      const y = h.y * S
-      if (h.face === "A") {
-        o.position.set(x, y, thickness + EPS)
-        o.rotation.set(0, 0, 0)
-      } else if (h.face === "B") {
-        o.position.set(x, y, -EPS)
-        o.rotation.set(Math.PI, 0, 0)
-      } else {
-        const e = h.edge ? EDGE_MARK[h.edge] : undefined
-        if (!e) continue
-        o.position.set(x + e.d[0], y + e.d[1], thickness / 2 + e.d[2])
-        o.rotation.set(...e.r)
-      }
-      o.scale.setScalar((h.diameter / 2) * S)
-      o.updateMatrix()
-      out.push(o.matrix.clone())
-    }
-    return out
-  }, [holes, thickness])
+  const marks = useMemo(() => holeMarkMatrices(holes, thickness), [holes, thickness])
   const ref = useRef<InstancedMesh>(null)
   const invalidate = useThree((st) => st.invalidate)
   useLayoutEffect(() => {

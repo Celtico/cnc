@@ -1,8 +1,8 @@
 import { THUMB_VERSION } from "../../components/viewer/thumbVersion"
 import { cameraSignature, resolveTemplateRef, thumbIsStale, type AmbientTemplate, type MaterialPref } from "../../core/model"
 import { db, type AmbientRow } from "../../db/db"
-import { enqueueThumb } from "../projects/projectThumbs"
-import { materialsPrint, templatePrint, readThumb, writeThumb } from "../projects/thumbStore"
+import { enqueueThumb, requestStoredThumb, storedThumb } from "../projects/projectThumbs"
+import { materialsPrint, templatePrint } from "../projects/thumbStore"
 
 /**
  * Miniatures 3D dels ambients (Historial, Projectes i Catàleg), fetes fora de pantalla com les dels mobles:
@@ -31,7 +31,6 @@ export function requestAmbientThumb(r: AmbientRow, materials: MaterialPref[]): (
   })
 }
 
-const catalogThumbs = new Map<string, string>()
 /** Empremta d'una escena del catàleg: l'escena, les plantilles que hi surten i els materials. */
 const sceneSigs = new WeakMap<AmbientTemplate, string>()
 function catalogSig(t: AmbientTemplate, materials: readonly MaterialPref[]): string {
@@ -47,50 +46,13 @@ function catalogSig(t: AmbientTemplate, materials: readonly MaterialPref[]): str
   return `${THUMB_VERSION}-${s}-${materialsPrint(materials)}`
 }
 export function catalogThumb(t: AmbientTemplate, materials: readonly MaterialPref[]): string | undefined {
-  return catalogThumbs.get(`${t.id}|${catalogSig(t, materials)}`)
+  return storedThumb("escena", t.id, catalogSig(t, materials))
 }
 
 /**
  * Miniatura d'una escena del catàleg, amb els mobles i objectes de les seves plantilles (en memòria i desada entre
- * sessions, `thumbStore`). La mateixa escena pot sortir a dues seccions: totes les targetes reben la imatge.
+ * sessions, `requestStoredThumb`). La mateixa escena pot sortir a dues seccions: totes les targetes reben la imatge.
  */
-const catalogListeners = new Map<string, Set<(url: string) => void>>()
 export function requestCatalogThumb(t: AmbientTemplate, materials: MaterialPref[], onDone: (url: string) => void): () => void {
-  const sig = catalogSig(t, materials)
-  const mem = `${t.id}|${sig}`
-  const hit = catalogThumbs.get(mem)
-  if (hit) {
-    onDone(hit)
-    return () => {}
-  }
-  const listeners = catalogListeners.get(mem) ?? new Set<(url: string) => void>()
-  catalogListeners.set(mem, listeners)
-  listeners.add(onDone)
-  const finish = (url: string) => {
-    catalogThumbs.set(mem, url)
-    for (const f of catalogListeners.get(mem) ?? []) f(url)
-    catalogListeners.delete(mem)
-  }
-  let release: (() => void) | undefined
-  let cancelled = false
-  void readThumb("escena", t.id, sig).then((saved) => {
-    if (cancelled) return
-    if (saved) return finish(saved)
-    release = queueCatalog(t, materials, sig, mem, finish)
-  })
-  return () => {
-    cancelled = true
-    listeners.delete(onDone)
-    release?.()
-  }
-}
-
-function queueCatalog(t: AmbientTemplate, materials: MaterialPref[], sig: string, mem: string, finish: (url: string) => void): () => void {
-  return enqueueThumb(`c:${mem}`, async () => {
-    const url = await (await renderer()).renderCatalogScene(t, materials)
-    if (url) {
-      finish(url)
-      void writeThumb("escena", t.id, sig, url)
-    } else catalogListeners.delete(mem)
-  })
+  return requestStoredThumb("escena", t.id, catalogSig(t, materials), async () => (await renderer()).renderCatalogScene(t, materials), onDone)
 }

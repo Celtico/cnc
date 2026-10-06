@@ -9,10 +9,9 @@ const fmt = (v: number) => String(Math.round(v * 100) / 100).replace(".", ",")
  * El pla del muntatge d'un ferratge (Preferències › Ferratges, «Pla»): vista de dalt amb el tall a l'alçada del forat
  * principal (`mountPlan`, del motor): les peces en secció amb el gruix, els forats (els que el tall travessa, buits; els
  * de sobre i sota, discontinus; els proposats d'un importat sense confirmar, en taronja), el ferratge (el volum del model
- * importat o un de simplificat, discontinu) i les cotes. El davant del moble queda a baix. `compact`: sense cotes ni
- * noms (miniatura de la targeta).
+ * importat o un de simplificat, discontinu) i les cotes. El davant del moble queda a baix.
  */
-export function HardwareMountPlan({ plan, compact = false }: { plan: MountPlan; compact?: boolean }) {
+export function HardwareMountPlan({ plan }: { plan: MountPlan }) {
   const { view } = plan
   const s = Math.max(view.w, view.h)
   const stroke = s / 420
@@ -20,7 +19,7 @@ export function HardwareMountPlan({ plan, compact = false }: { plan: MountPlan; 
   const busy = obstacles(plan)
   const hatch = `mount-hatch-${useId().replace(/:/g, "")}`
   return (
-    <Box asChild color="fg" w="full" h={compact ? "full" : undefined} style={compact ? undefined : { aspectRatio: `${view.w} / ${view.h}` }} data-testid="hardware-mount-plan">
+    <Box asChild color="fg" w="full" style={{ aspectRatio: `${view.w} / ${view.h}` }} data-testid="hardware-mount-plan">
       <svg viewBox={`${view.x} ${view.z} ${view.w} ${view.h}`} role="img" aria-label={`Pla del muntatge, tall a ${fmt(plan.sectionY)} mm d'alçada`}>
         <defs>
           <pattern id={hatch} width={s / 60} height={s / 60} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
@@ -59,8 +58,8 @@ export function HardwareMountPlan({ plan, compact = false }: { plan: MountPlan; 
             <circle key={`h${i}`} cx={h.circle.cx} cy={h.circle.cz} r={h.circle.r} fill={fill} stroke={color} strokeWidth={sw} strokeDasharray={dash} data-proposed={h.proposed || undefined} />
           ) : null
         })}
-        {!compact && plan.rects.map((r) => <RectLabel key={`l${r.id}`} r={r} fs={fs} view={view} busy={busy} />)}
-        {!compact && plan.dims.map((d, i) => <Dim key={`d${i}`} d={d} stroke={stroke} fs={fs} />)}
+        {plan.rects.map((r) => <RectLabel key={`l${r.id}`} r={r} fs={fs} view={view} busy={busy} />)}
+        {plan.dims.map((d, i) => <Dim key={`d${i}`} d={d} stroke={stroke} fs={fs} />)}
       </svg>
     </Box>
   )
