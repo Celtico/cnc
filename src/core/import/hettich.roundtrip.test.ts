@@ -118,7 +118,8 @@ describe.skipIf(!has)("descàrregues reals de Hettich", () => {
     const g = groupHettich(step.index.map((e) => ({ path: e.name, kind: hettichFileKind(e.name) })))
     const tally = { hinge: [0, 0], plate: [0, 0] }
     for (const a of g) {
-      if (a.kind === "none") continue
+      // Els «només 3D» (accessoris, guies, cassoletes soltes…) no tenen proposta de forats.
+      if (a.kind !== "hinge" && a.kind !== "plate") continue
       const e = step.find(new RegExp(`/${a.article}\\.stp$`))!
       const f = stepFeatures(await step.text(e))
       const p = a.kind === "hinge" ? proposeHinge(f) : proposePlate(f)

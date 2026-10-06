@@ -48,7 +48,7 @@ import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
 import { materialIssues } from "../../core/build/materialIssues"
-import { applySettingsToModule,  defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule,  defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -290,7 +290,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       (build?.modules ?? []).map((m) => {
         const c = comp.modules[m.index - 1]!.carcass
         const mod = comp.modules[m.index - 1]!
-        return { id: m.id, index: m.index, x: m.x, y: m.y, z: m.z, width: c.width, height: c.height, depth: c.depth + c.thickness, wall: c.base.kind === "wall", free: mountOf(mod) === "floor", ...(c.base.kind === "legs" ? { legs: { height: c.base.height, depth: c.depth } } : {}) }
+        return { id: m.id, index: m.index, x: m.x, y: m.y, z: m.z, width: c.width, height: c.height, depth: c.depth + c.thickness, wall: c.base.kind === "wall", free: mountOf(mod) === "floor", ...(c.base.kind === "legs" ? { legs: legsView(c.base, c.depth, m.build.panels) } : {}) }
       }),
     [build, comp],
   )
@@ -964,7 +964,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         <PartInspector comp={comp} id={selection.id} joints={build?.joints ?? []} onChange={setComp} />
       ) : selection.kind === "zone" && zone ? (
         <Stack gap={3}>
-          <ZonePanel root={module.root} zone={zone} hardware={module.hardware} openRatio={moduleBuild?.openRatios[zone.id]} onChange={(root) => updateModule({ ...module, root })} />
+          <ZonePanel root={module.root} zone={zone} hardware={module.hardware} noHandles={module.fronts.handles === "none"} openRatio={moduleBuild?.openRatios[zone.id]} onChange={(root) => updateModule({ ...module, root })} />
         </Stack>
       ) : (
         // Seccions plegables independents (com Figma o Fusion): es poden tenir diverses
@@ -1323,4 +1323,12 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   )
 }
 
-
+/**
+ * Les potes d'un mòdul al visor: on van (`inset` de la pota triada, si n'hi ha) i si ja es dibuixen amb el model de la
+ * pota importada (la base en porta els `fittings`): aleshores no es dibuixen les genèriques.
+ */
+function legsView(base: { height: number; hardware?: HardwareItem }, depth: number, panels: Panel[]): { height: number; depth: number; inset?: number; fitted?: boolean } {
+  const inset = base.hardware?.engine === "leg" ? base.hardware.params.inset : undefined
+  const fitted = panels.some((p) => p.fittings?.some((f) => f.kind === "leg"))
+  return { height: base.height, depth, ...(inset !== undefined ? { inset } : {}), ...(fitted ? { fitted } : {}) }
+}

@@ -27,13 +27,23 @@ export const ModuleHardwareSchema = z.preprocess(migrateModuleHardware, Hardware
 
 // --- Carcassa ----------------------------------------------------------------------
 
+/**
+ * El ferratge propi d'un front (o la pota de la base) es llegeix **sencer o res** (`repairAtomically`): si és dolent (un
+ * paràmetre que no és un número, un motor d'una versió més nova, un mecanitzat dolent) es treu i el front fa servir el del
+ * mòdul; reparat camp a camp en quedaria mig (menys mecanitzats) i el front es fabricaria diferent sense dir-ho.
+ */
+const FrontHardwareSchema = repairAtomically(z.preprocess(sanitizeImportedHardware, HardwareItemObjectSchema))
+
 export const BaseSchema = z.discriminatedUnion("kind", [
   /** Base a terra (com el mòdul de caixa actual). */
   z.object({ kind: z.literal("none") }),
   /** Sòcol: laterals fins a terra, base aixecada i frontal de sòcol retranquejat. */
   z.object({ kind: z.literal("plinth"), height: mm.positive(), setback: mm.min(0) }),
-  /** Potes: cap peça; el mòdul s'aixeca al 3D. */
-  z.object({ kind: z.literal("legs"), height: mm.positive() }),
+  /**
+   * Potes: cap peça; el mòdul s'aixeca al 3D. `hardware`: la pota triada (còpia d'un item `leg` de la biblioteca, una
+   * pota importada): forats a la cara de sota de la base a cada pota; sense, les potes només es veuen.
+   */
+  z.object({ kind: z.literal("legs"), height: mm.positive(), hardware: FrontHardwareSchema.optional() }),
   /** Sense base: laterals fins a terra i el buit obert (cobreradiador). */
   z.object({ kind: z.literal("open") }),
   /** Penjat a la paret: cap peça de base; `height` = alçada de la base del mòdul des del terra. */
@@ -118,20 +128,15 @@ export type Carcass = z.infer<typeof CarcassSchema>
 
 // --- Fronts i zones ----------------------------------------------------------------
 
-/**
- * El ferratge propi d'un front es llegeix **sencer o res** (`repairAtomically`): si és dolent (un paràmetre que no és un
- * número, un motor d'una versió més nova, un mecanitzat dolent) es treu i el front fa servir el del mòdul; reparat camp a
- * camp en quedaria mig (menys mecanitzats) i el front es fabricaria diferent sense dir-ho.
- */
-const FrontHardwareSchema = repairAtomically(z.preprocess(sanitizeImportedHardware, HardwareItemObjectSchema))
 
 export const FrontSchema = z.discriminatedUnion("kind", [
   /** `glass`: porta de vidre amb marc de perfil d'alumini (vitrina): no és de CNC (`glassDoor`). */
   // `hardware`: el ferratge triat per a aquest front (còpia d'un item de la biblioteca: frontissa, guia o braç); sense, el
-  // del mòdul (`Module.hardware`).
-  z.object({ kind: z.literal("door"), mode: z.enum(["single", "double"]), hinge: z.enum(["left", "right"]), glass: z.boolean().optional(), hardware: FrontHardwareSchema.optional() }),
-  z.object({ kind: z.literal("drawers"), n: z.number().int().min(1).max(10), heights: z.array(sizeOrAuto), hardware: FrontHardwareSchema.optional() }),
-  z.object({ kind: z.literal("flap"), dir: z.enum(["down", "up"]), hardware: FrontHardwareSchema.optional() }),
+  // del mòdul (`Module.hardware`). `handle`: el tirador triat (còpia d'un item `barHandle`, p. ex. un d'importat);
+  // sense, el del mòdul.
+  z.object({ kind: z.literal("door"), mode: z.enum(["single", "double"]), hinge: z.enum(["left", "right"]), glass: z.boolean().optional(), hardware: FrontHardwareSchema.optional(), handle: FrontHardwareSchema.optional() }),
+  z.object({ kind: z.literal("drawers"), n: z.number().int().min(1).max(10), heights: z.array(sizeOrAuto), hardware: FrontHardwareSchema.optional(), handle: FrontHardwareSchema.optional() }),
+  z.object({ kind: z.literal("flap"), dir: z.enum(["down", "up"]), hardware: FrontHardwareSchema.optional(), handle: FrontHardwareSchema.optional() }),
   z.object({
     kind: z.literal("grille"),
     pattern: GrillePatternSchema,
@@ -766,18 +771,19 @@ export function visibleModule(m: Module): Module {
   const fronts = { ...m.fronts }
   if (fronts.style === "overlay") delete fronts.style
   if (fronts.handles === "bar") delete fronts.handles
-  return { ...m, carcass, fronts, root: visibleZone(m.root) }
+  // Sense tiradors (push), el tirador triat als fronts no surt ni compta.
+  return { ...m, carcass, fronts, root: visibleZone(m.root, m.fronts.handles === "none") }
 }
 
-/** Un compartiment tal com es veu (vegeu `visibleModule`). */
-function visibleZone(z: Zone): Zone {
+/** Un compartiment tal com es veu (vegeu `visibleModule`). `noHandles`: el mòdul no porta tiradors. */
+function visibleZone(z: Zone, noHandles = false): Zone {
   const out: Zone = { ...z }
   if (z.split) {
     // Un compartiment dividit no té prestatges ni barra (l'inspector no els ensenya).
     delete out.shelves
     delete out.rail
     delete out.led
-    out.split = { ...z.split, children: z.split.children.map(visibleZone) }
+    out.split = { ...z.split, children: z.split.children.map((c) => visibleZone(c, noHandles)) }
   } else {
     // Sense prestatges (0): gruix i «a ras» no compten; «Regulables» sí (les fileres System 32 per posar-n'hi després),
     // i sense `shelves` és com no regulables.
@@ -793,7 +799,9 @@ function visibleZone(z: Zone): Zone {
     if (!z.rail) delete out.rail
     if (!z.led) delete out.led
   }
-  const f = z.front
+  const f0 = z.front
+  const f = noHandles && f0 && "handle" in f0 && f0.handle ? (({ handle: _h, ...rest }) => rest)(f0) as Front : f0
+  if (f !== f0) out.front = f
   if (f?.kind === "drawers") {
     // Els calaixos ocupen el compartiment: la secció Prestatges (prestatges, barra i llum) no surt.
     delete out.shelves
@@ -805,8 +813,11 @@ function visibleZone(z: Zone): Zone {
   } else if (f?.kind === "door") {
     const door = { ...f }
     if (!door.glass) delete door.glass
-    // Porta de vidre: frontisses del perfil, cap cassoleta (la frontissa triada no compta).
-    else delete door.hardware
+    // Porta de vidre: frontisses del perfil, cap cassoleta ni tirador (la frontissa i el tirador triats no compten).
+    else {
+      delete door.hardware
+      delete door.handle
+    }
     if (door.mode === "double") door.hinge = "left"
     out.front = door
   }

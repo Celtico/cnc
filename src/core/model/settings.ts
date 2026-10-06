@@ -21,8 +21,10 @@ const mm = z.number().finite()
 /**
  * Versió de les preferències. v20: ferratges importats d'un fabricant (`HardwareItem.imported`, `plate`, motor
  * `plate`): additiu, cap item d'abans no canvia (una v19 es llegeix igual; una app v19 no pot desar sobre una v20).
+ * v21: tiradors, potes i «només 3D» importats (motors `leg` i `model`, categories `table` i `door-system`): additiu; una
+ * app v20 no les pot desar (perdria els items que no sap llegir).
  */
-export const SETTINGS_VERSION = 20
+export const SETTINGS_VERSION = 21
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 

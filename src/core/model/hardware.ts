@@ -71,12 +71,14 @@ export const HARDWARE_CATEGORIES = [
   { id: "lift", label: "Elevables i abatibles", hint: "Braços i frontisses dels abatibles." },
   { id: "connector", label: "Unions", hint: "Espigues i altres unions entre dues peces." },
   { id: "shelf-support", label: "Suports de prestatge", hint: "La filera System 32 dels laterals (prestatges regulables i plaques)." },
-  { id: "leg", label: "Potes i sòcols", hint: "Potes regulables i clips de sòcol." },
+  { id: "leg", label: "Potes i sòcols", hint: "Potes del moble (forats a la cara de sota de la base), potes regulables i clips de sòcol." },
+  { id: "table", label: "Taules", hint: "Estructures de taula i guies d'extensió (només 3D)." },
+  { id: "door-system", label: "Portes corredisses i plegables", hint: "Sistemes de portes corredisses i plegables (només 3D)." },
   { id: "handle", label: "Tiradors", hint: "Forats dels tiradors de portes, calaixos i abatibles." },
   { id: "push", label: "Obertura per pressió i imants", hint: "Imants de les reixetes i trapes, push." },
-  { id: "profile", label: "Perfils", hint: "Perfils d'alumini i de LED." },
+  { id: "profile", label: "Perfils i marcs", hint: "Perfils d'alumini i de LED, marcs d'alumini per a portes de vidre (Cadro)." },
   { id: "wall", label: "Penjar", hint: "Penjadors i regletes." },
-  { id: "misc", label: "Altres", hint: "Passacables, ventilació…" },
+  { id: "misc", label: "Altres", hint: "Accessoris, electrònica, passacables, ventilació…" },
 ] as const
 export type HardwareCategory = (typeof HARDWARE_CATEGORIES)[number]["id"]
 const CATEGORY_IDS = HARDWARE_CATEGORIES.map((c) => c.id) as [HardwareCategory, ...HardwareCategory[]]
@@ -85,9 +87,12 @@ const CATEGORY_IDS = HARDWARE_CATEGORIES.map((c) => c.id) as [HardwareCategory, 
  * Motor (regla de col·locació) que fa servir un ferratge: on va i quants se'n posen ho decideix la regla de cada
  * contingut (la porta posa cassoletes a la filera System 32, el calaix forats de guia…); el ferratge en dona els números
  * i els mecanitzats. Els ferratges manuals (F4) en tindran un de genèric. `plate` (placa de muntatge importada) no té lloc
- * propi: la frontissa que s'hi aparella en copia els forats (`HardwareItem.plate`, target `side`).
+ * propi: la frontissa que s'hi aparella en copia els forats (`HardwareItem.plate`, target `side`). `leg` (pota importada):
+ * tampoc, es tria a la base «Potes» del mòdul (`Base.hardware`): forats a la cara de sota de la base, a cada pota (target
+ * `base`). `model` («només 3D»): un ferratge importat sense cap regla de mecanitzat (estructures de taula, portes
+ * corredisses…): el model i el volum, **mai cap forat** (target `model` buit).
  */
-export const HARDWARE_ENGINES = ["cup", "system32", "dowel", "slide", "flapArm", "magnet", "barHandle", "plate"] as const
+export const HARDWARE_ENGINES = ["cup", "system32", "dowel", "slide", "flapArm", "magnet", "barHandle", "plate", "leg", "model"] as const
 export type HardwareEngine = (typeof HARDWARE_ENGINES)[number]
 
 /** Mecanitzat en coordenades de la peça, relatiu al punt d'ancoratge (u al llarg, v a través). */
@@ -198,7 +203,7 @@ export function sanitizeImportedHardware(raw: unknown): unknown {
   const imp = isRecord(raw.imported) ? raw.imported : {}
   const engine = (HARDWARE_ENGINES as readonly unknown[]).includes(raw.engine) ? (raw.engine as HardwareEngine) : "cup"
   const category = engine === "plate" ? "plate" : engine === "cup" ? "hinge" : (CATEGORY_IDS as readonly unknown[]).includes(raw.category) ? (raw.category as HardwareCategory) : "misc"
-  const key = engine === "plate" ? "side" : engine === "cup" ? "door" : "front"
+  const key = engine === "plate" ? "side" : engine === "cup" ? "door" : engine === "leg" ? "base" : engine === "model" ? "model" : "front"
   const item: HardwareItem = {
     id: str(raw.id, "hw-damaged"),
     name: str(raw.name, "Ferratge importat"),
@@ -317,6 +322,8 @@ export const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
     P("margin", "Marge", 0, 20, 0.5, "Matèria al voltant dels forats (vores i altres forats)."),
     P("inset", "Al cantell", 10, 200, 1, "A les portes i abatibles, del cantell que obre al tirador."),
   ],
+  leg: [P("inset", "Als cantells", 20, 300, 1, "De la vora de fora del mòdul a l'eix de cada pota (de costat i de davant/darrere).")],
+  model: [],
   plate: [
     P("setback", "Del davant", 0, 200, 0.5, "Del cantell de davant del lateral a la referència de la placa (la filera System 32: 37)."),
     P("offset", "Alçada", -100, 100, 0.5, "Del centre de la cassoleta a la referència de la placa (amunt, positiu)."),
@@ -566,10 +573,13 @@ export function hardwareSummary(item: HardwareItem): string {
     item.engine === "cup" ? `a ${n(p.cupOffset ?? NaN)} mm`
     : item.engine === "system32" ? `pas ${n(p.pitch ?? NaN)} a ${n(p.edgeOffset ?? NaN)} mm`
     : item.engine === "slide" ? `${item.lengths?.length ?? 0} llargades`
+    : item.engine === "barHandle" && item.imported ? (item.pitch && item.pitch.else > 0 ? `${n(item.pitch.else)} mm` : "1 forat (pom)")
     : item.engine === "barHandle" && item.pitch ? [...item.pitch.steps.map((s) => s.n), item.pitch.else].sort((a, b) => b - a).join("/")
     : item.engine === "plate" ? `a ${n(p.setback ?? NaN)} mm del davant`
+    : item.engine === "leg" ? `a ${n(p.inset ?? NaN)} mm dels cantells`
+    : item.engine === "model" ? "només 3D: sense forats"
     : ""
-  const pending = isDamagedImport(item) ? "malmès" : isPendingImport(item) ? "sense confirmar" : ""
+  const pending = isDamagedImport(item) ? "malmès" : isPendingImport(item) && item.engine !== "model" ? "sense confirmar" : ""
   return [pending, holes.join(" · "), extra].filter(Boolean).join(" · ")
 }
 
@@ -591,10 +601,16 @@ function eachHardware(comp: unknown, visit: (item: HardwareItem) => HardwareItem
     if (!isRecord(z)) return z
     let out: Record<string, unknown> = z
     const f = z.front
-    if (isRecord(f) && typeof f.kind === "string" && FRONT_SLOT[f.kind] && isRecord(f.hardware)) {
-      const parsed = HardwareItemSchema.safeParse(f.hardware)
-      const next = parsed.success ? visit(parsed.data) : null
-      if (next) out = { ...out, front: { ...f, hardware: next } }
+    if (isRecord(f) && typeof f.kind === "string" && FRONT_SLOT[f.kind]) {
+      // El ferratge propi del front (frontissa, guia, braç) i el tirador triat (`front.handle`).
+      let front: Record<string, unknown> = f
+      for (const key of ["hardware", "handle"] as const) {
+        if (!isRecord(f[key])) continue
+        const parsed = HardwareItemSchema.safeParse(f[key])
+        const next = parsed.success ? visit(parsed.data) : null
+        if (next) front = { ...front, [key]: next }
+      }
+      if (front !== f) out = { ...out, front }
     }
     const split = z.split
     if (isRecord(split) && Array.isArray(split.children)) {
@@ -620,6 +636,13 @@ function eachHardware(comp: unknown, visit: (item: HardwareItem) => HardwareItem
         }
       }
       if (touched) out = { ...out, hardware: next }
+    }
+    // La pota triada a la base «Potes» (`Base.hardware`).
+    const c = m.carcass
+    if (isRecord(c) && isRecord(c.base) && c.base.kind === "legs" && isRecord(c.base.hardware)) {
+      const parsed = HardwareItemSchema.safeParse(c.base.hardware)
+      const next = parsed.success ? visit(parsed.data) : null
+      if (next) out = { ...out, carcass: { ...c, base: { ...c.base, hardware: next } } }
     }
     const root = zone(m.root)
     if (root !== m.root) out = { ...out, root }

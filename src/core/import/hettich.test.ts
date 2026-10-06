@@ -21,9 +21,31 @@ describe("descàrregues de Hettich", () => {
     expect(classifyHettich(["Scharniere", "Sensys", "Oeffnungswinkel_165_Glas", "aufliegend"])).toMatchObject({ category: "hinge", tags: ["vidre", "recobrent"], noun: "Frontissa de vidre" })
     expect(classifyHettich(["Scharniere", "Alurahmen-Scharniere"])).toMatchObject({ category: "hinge", tags: ["alumini"] })
     expect(classifyHettich(["Scharniere", "Montageplatten", "System_8099", "Mit_vor_Euroschrauben"])).toMatchObject({ category: "plate", kind: "plate" })
-    expect(classifyHettich(["Scharniere", "Zubehoer"])).toMatchObject({ category: "misc", kind: "none" })
-    expect(classifyHettich(["Scharniere", "Eingelenkscharniere", "Scharniertoepfe"])).toMatchObject({ kind: "none" })
-    expect(classifyHettich(["Schubkastensysteme", "Doppelwandiges_System_ArciTech"])).toMatchObject({ category: "slide", kind: "none" })
+    // Sense regla de mecanitzat: es poden importar igual, «només 3D».
+    expect(classifyHettich(["Scharniere", "Zubehoer"])).toMatchObject({ category: "misc", kind: "model", noun: "Accessori" })
+    expect(classifyHettich(["Scharniere", "Eingelenkscharniere", "Scharniertoepfe"])).toMatchObject({ kind: "model" })
+    expect(classifyHettich(["Schubkastensysteme", "Doppelwandiges_System_ArciTech"])).toMatchObject({ category: "slide", kind: "model" })
+  })
+
+  it("altres famílies: tiradors, potes, taules, Cadro, portes corredisses i plegables, accessoris i carpetes desconegudes", () => {
+    expect(classifyHettich(["Griffe", "Classic"])).toMatchObject({ category: "handle", kind: "handle", noun: "Tirador" })
+    expect(classifyHettich(["Griffe", "Touch_In"])).toMatchObject({ category: "handle", kind: "handle", noun: "Tirador Touch-in" })
+    expect(classifyHettich(["Griffe", "Zubehoer"])).toMatchObject({ category: "handle", kind: "model", noun: "Accessori de tirador" })
+    const T = "Tischgestelle_-beine_Moebelfuesse_Tischausziehfuehrungen"
+    expect(classifyHettich([T, "Stahl_Moebelfuesse"])).toMatchObject({ category: "leg", kind: "leg", noun: "Pota" })
+    expect(classifyHettich([T, "Aluminium_Moebelfuesse"])).toMatchObject({ category: "leg", kind: "leg", noun: "Pota" })
+    expect(classifyHettich([T, "Tischbeine_Moebelfuesse"])).toMatchObject({ category: "leg", kind: "leg", noun: "Pota de taula" })
+    // La carpeta de la família diu «Moebelfuesse», però una estructura no és una pota.
+    expect(classifyHettich([T, "LegaDrive"])).toMatchObject({ category: "table", kind: "model", noun: "Estructura de taula" })
+    expect(classifyHettich([T, "Change"])).toMatchObject({ category: "table", kind: "model", noun: "Estructura de taula" })
+    expect(classifyHettich([T, "Trimanis"])).toMatchObject({ category: "table", kind: "model", noun: "Guia de taula" })
+    expect(classifyHettich([T, "Steelforce", "Steelforce_SLS_Professional_Line"])).toMatchObject({ category: "table", kind: "model" })
+    expect(classifyHettich([T, "Steelforce", "Steelforce_Elektronik", "Handschalter"])).toMatchObject({ category: "misc", kind: "model", noun: "Accessori" })
+    expect(classifyHettich([T, "Steelforce", "Zubehoer", "Kabelmanagement"])).toMatchObject({ category: "misc", kind: "model", noun: "Accessori" })
+    expect(classifyHettich(["Cadro_Aluminiumrahmensystem"])).toMatchObject({ category: "profile", kind: "model", noun: "Marc d'alumini (Cadro)" })
+    expect(classifyHettich(["Schiebetuersysteme", "TopLine_XL", "Profilsets"])).toMatchObject({ category: "door-system", kind: "model", noun: "Porta corredissa" })
+    expect(classifyHettich(["Falttuersysteme", "WingLine_L"])).toMatchObject({ category: "door-system", kind: "model", noun: "Porta plegable" })
+    expect(classifyHettich(["Qualsevol_Cosa", "Nova"])).toMatchObject({ category: "misc", kind: "model", noun: "Ferratge" })
   })
 
   it("agrupa per article els fitxers de diversos ZIP (STEP i DXF junts)", () => {
@@ -40,9 +62,13 @@ describe("descàrregues de Hettich", () => {
     expect(g.map((a) => [a.article, a.category, a.kind])).toEqual([
       ["9071205", "hinge", "hinge"],
       ["9071620", "plate", "plate"],
-      ["9999999", "misc", "none"],
       ["9100116", "misc", "none"],
+      ["9999999", "misc", "none"],
     ])
+    // Què se'n farà (la nota de la fila del diàleg): mai «Carpeta desconeguda».
+    expect(g[0]!.plan).toBe("Frontissa · cassoleta i forats del STEP")
+    expect(g[2]!.plan).toMatch(/STEP/)
+    expect(g.some((a) => /desconeguda/.test(a.plan ?? ""))).toBe(false)
     const h = g[0]!
     expect(h.folders).toEqual(["Scharniere", "Sensys", "Oeffnungswinkel_110", "aufliegend"])
     expect(h.files.map((f) => f.kind)).toEqual(["step", "front", "side", "dwg"])

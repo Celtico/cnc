@@ -187,13 +187,41 @@ export function magnetSpec(item: HardwareItem) {
   return { diameter: param(item, "diameter"), depth: param(item, "depth"), cornerOffset: param(item, "cornerOffset"), front: drillSpec(item, "front"), side: drillSpec(item, "side") }
 }
 
+/**
+ * Tirador: els números de la regla (`handle` de `buildModule`: centrat als calaixos, a `inset` del cantell que obre a les
+ * portes i abatibles) i la distància entre forats segons l'espai. Un d'importat (`imported`) en porta una de fixa (la del
+ * fitxer, `pitch` sense graons) i, sense confirmar, `pending`: cap forat.
+ */
 export function handleSpec(item: HardwareItem) {
   expectEngine(item, "barHandle")
+  if (isDamagedImport(item)) throw new HardwareError(damagedImportMessage(item))
   const rule = item.pitch
   if (!rule) throw new HardwareError(`«${item.name}»: falta la distància entre forats`)
   // Comprova els talls amb la distància més gran (els de veritat es fan amb la que toca a cada front).
-  resolveOps(item, "front", { pitch: rule.else })
-  return { diameter: param(item, "diameter"), margin: param(item, "margin"), inset: param(item, "inset"), pitch: (room: number) => stepValue(rule, room) }
+  const ops = resolveOps(item, "front", { pitch: rule.else })
+  if (item.imported && !ops.length) throw new HardwareError(`«${item.name}»: no té cap forat`)
+  return {
+    pending: isPendingImport(item),
+    /** Importat que no es pot fer servir (malmès o amb un error): cap forat i aquest avís (`inertHandle`). */
+    unusable: undefined as string | undefined,
+    diameter: param(item, "diameter"),
+    margin: param(item, "margin"),
+    inset: param(item, "inset"),
+    pitch: (room: number) => stepValue(rule, room),
+  }
+}
+
+/**
+ * Pota importada (`Base.hardware` de la base «Potes»): a `inset` de les vores de fora del mòdul, una a cada cantonada;
+ * els forats de la placa (target `base`, al marc de la pota: u = X del mòdul, v = cap al davant) a la cara de sota de la
+ * base. Sense confirmar, `pending`: cap forat.
+ */
+export function legSpec(item: HardwareItem) {
+  expectEngine(item, "leg")
+  if (isDamagedImport(item)) throw new HardwareError(damagedImportMessage(item))
+  const holes = resolveOps(item, "base").flatMap((o) => (o.kind === "drill" ? [{ u: o.u, v: o.v, d: o.d, depth: o.depth, tag: o.tag ?? "leg" }] : []))
+  if (!holes.length) throw new HardwareError(`«${item.name}»: no té cap forat`)
+  return { pending: isPendingImport(item), inset: param(item, "inset"), holes }
 }
 
 /** Placa de muntatge importada (no té lloc: la frontissa que s'hi aparella en copia els forats). */
@@ -218,6 +246,15 @@ function inertHinge(item: HardwareItem, error: string): SlotSpec<"hinge"> {
   return { ...base, pending: true, unusable }
 }
 
+/** Tirador importat que no serveix: cap forat (ni els del tirador d'inici), amb l'avís del nom de l'item. */
+function inertHandle(item: HardwareItem, error: string): SlotSpec<"handle"> {
+  const base = handleSpec(DEFAULT_HARDWARE_KIT.handle)
+  const prefix = `«${item.name}»`
+  const why = error.startsWith(prefix) ? error.slice(prefix.length).replace(/^[:,]\s*/, "") : error
+  const unusable = isDamagedImport(item) ? damagedImportMessage(item) : `«${item.name}» és un tirador importat i no es pot fer servir (${why}): el front queda sense forats del tirador. Revisa'l a Preferències › Ferratges.`
+  return { ...base, pending: true, unusable }
+}
+
 /**
  * Els números d'un lloc amb un item; si l'item no serveix (un altre tipus, un paràmetre que falta, una fórmula dolenta),
  * el d'inici de l'app i un avís (`onError`): mai es fa mig ferratge. **Un importat que no serveix no torna mai al d'inici**
@@ -231,6 +268,7 @@ export function slotSpec<S extends HardwareSlot>(slot: S, item: HardwareItem | u
     } catch (err) {
       const why = err instanceof Error ? err.message : String(err)
       if (item.imported && slot === "hinge") return { spec: inertHinge(item, why) as SlotSpec<S>, item, failed: true }
+      if (item.imported && slot === "handle") return { spec: inertHandle(item, why) as SlotSpec<S>, item, failed: true }
       onError?.(`${slotOf(slot).label}: ${why}. Es fa servir el d'inici de l'app.`)
     }
   }

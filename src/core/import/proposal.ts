@@ -49,7 +49,7 @@ export interface LocalFrame {
 }
 
 export interface HardwareProposal {
-  kind: "hinge" | "plate"
+  kind: "hinge" | "plate" | "handle" | "leg" | "model"
   frame: LocalFrame
   holes: ProposedHole[]
   /** Caixa del ferratge al marc local (mm). */
@@ -360,3 +360,155 @@ export function proposePlate(f: StepFeatures): HardwareProposal | { error: strin
 }
 
 const fmt = (x: number) => String(Math.round(x * 100) / 100).replace(".", ",")
+
+/** Distància entre forats d'un tirador: a la de catàleg més propera (múltiples de 32: 64, 96, 128, 160…) si és a ≤ 0,5 mm. */
+export function snapHandleDistance(d: number): number {
+  const k = Math.round(d / 32) * 32
+  return k > 0 && Math.abs(k - d) <= 0.5 ? k : Math.round(d * 10) / 10
+}
+
+/** Forat passant del front per a un cargol de tirador de Ø `screw`: el Ø del tirador de l'app (5) si hi passa, si no 1 mm més ample. */
+export function handleThroughDiameter(screw: number, base = 5): number {
+  return screw + 0.5 <= base ? base : Math.ceil(screw + 1)
+}
+
+/**
+ * Forats que neixen en un pla per l'origen del fitxer (la referència dels models de Hettich: la cara de muntatge del
+ * tirador o la placa de la pota): cilindres sencers (forats, no tetons) de radi `rMin`–`rMax` amb un extrem al pla.
+ * Torna la normal del pla cap al cos del ferratge (on van els forats) i els centres al pla, sense repetits (concèntrics).
+ */
+function faceHoles(f: StepFeatures, rMin: number, rMax: number, tol = ON_FACE): { n: V3; holes: { at: V3; d: number }[] } | null {
+  const cands = f.cylinders.filter((c) => !c.boss && c.coverage >= 300 && c.radius >= rMin && c.radius <= rMax)
+  const groups: { axis: V3; list: { c: StepCylinder; side: number }[] }[] = []
+  for (const c of cands) {
+    const ax = norm(c.axis)
+    // Extrems del tram a l'eix des del pla per l'origen perpendicular a l'eix.
+    const base = dot(c.origin, ax)
+    const a = base + c.t0
+    const b = base + c.t1
+    // Un extrem al pla (o just a sota, `tol`: forats que comencen una mica endins) i l'altre més enllà, cap al cos.
+    const side = Math.abs(a) < tol && Math.abs(b) >= Math.abs(a) + 1 ? Math.sign(b) : Math.abs(b) < tol && Math.abs(a) >= Math.abs(b) + 1 ? Math.sign(a) : 0
+    if (!side) continue
+    const g = groups.find((x) => parallel(x.axis, ax))
+    // El sentit cap al cos, a l'eix del grup.
+    if (g) g.list.push({ c, side: side * Math.sign(dot(ax, g.axis)) })
+    else groups.push({ axis: ax, list: [{ c, side }] })
+  }
+  if (!groups.length) return null
+  groups.sort((a, b) => b.list.length - a.list.length)
+  const g = groups[0]!
+  const vote = g.list.reduce((s, x) => s + x.side, 0)
+  const sideSign = vote ? Math.sign(vote) : Math.sign(dot(mean(f.points), g.axis)) || 1
+  const n = mul(g.axis, sideSign)
+  const holes: { at: V3; d: number }[] = []
+  for (const { c, side } of g.list) {
+    if (side !== sideSign) continue
+    const at = sub(c.origin, mul(n, dot(c.origin, n)))
+    const same = holes.find((h) => Math.hypot(...sub(h.at, at)) < 0.5)
+    // Concèntrics (un avellanat i el forat): el més estret és el del cargol.
+    if (same) same.d = Math.min(same.d, c.radius * 2)
+    else holes.push({ at, d: c.radius * 2 })
+  }
+  return holes.length ? { n, holes } : null
+}
+
+/**
+ * Tirador (descàrregues `Griffe` de Hettich): els forats roscats de la cara de muntatge (el pla per l'origen del fitxer,
+ * on hi ha el primer forat) → la **distància entre centres** (a la de catàleg si és a ≤ 0,5 mm) i un forat passant al
+ * front per a cada cargol (Ø del tirador de l'app, `throughDiameter`, o 1 mm més que el cargol). Un sol forat = pom
+ * (un forat al centre). Amb 3 o 4 forats (tiradors amb dues distàncies), el parell simètric que passa per l'origen; amb
+ * més (perfils), cap proposta: només 3D. Marc: origen al mig dels forats a la cara del front, `u` al llarg dels forats,
+ * `n` cap al tirador (fora del front), `v` = `n × u`.
+ */
+export function proposeHandle(f: StepFeatures, opts: { throughDiameter?: number } = {}): HardwareProposal | { error: string } {
+  const found = faceHoles(f, 1.4, 4.5, 3.5)
+  if (!found) return { error: "No s'hi troben els forats dels cargols a la cara de muntatge (cilindres de Ø3 a Ø9 que neixen al pla de l'origen)." }
+  const { n } = found
+  const notes: string[] = []
+  let holes = found.holes
+  if (holes.length > 4) return { error: `${holes.length} forats a la cara de muntatge (perfil?): no és un tirador de dos forats.` }
+  if (holes.length > 2) {
+    // Tiradors amb més d'una distància (3 o 4 forats): el parell centrat al tirador (el mig del parell al mig de la caixa
+    // del model, a ±1 mm) que passa per l'origen (la referència de Hettich); si no, el centrat més llarg.
+    const box = bboxOf(f.points, { origin: [0, 0, 0], u: [1, 0, 0], v: [0, 1, 0], n: [0, 0, 1] })
+    const mid = mul(add(box.min, box.max), 0.5)
+    const pairs: [typeof holes[number], typeof holes[number]][] = []
+    for (let i = 0; i < holes.length; i++) for (let j = i + 1; j < holes.length; j++) pairs.push([holes[i]!, holes[j]!])
+    const atOrigin = (p: (typeof pairs)[number]) => p.some((h) => Math.hypot(...h.at) < 0.5)
+    const len = (p: (typeof pairs)[number]) => Math.hypot(...sub(p[0].at, p[1].at))
+    // Distància del mig del parell al mig del model, al llarg del parell (de costat no compta: el tirador sobresurt).
+    const offCentre = (p: (typeof pairs)[number]) => {
+      const m = mul(add(p[0].at, p[1].at), 0.5)
+      const dir = norm(sub(p[1].at, p[0].at))
+      return Math.abs(dot(sub(mid, m), dir))
+    }
+    const centred = pairs.filter((p) => offCentre(p) <= 1)
+    if (!centred.length) return { error: `${holes.length} forats a la cara de muntatge sense cap parell centrat al tirador: no se sap quins fa servir.` }
+    centred.sort((a, b) => Number(atOrigin(b)) - Number(atOrigin(a)) || len(b) - len(a))
+    const best = centred[0]!
+    const others = pairs.filter((p) => p !== best && (atOrigin(p) || offCentre(p) <= 1)).map((p) => `${fmt(snapHandleDistance(len(p)))} mm`)
+    holes = best
+    notes.push(`El tirador té ${found.holes.length} forats: es proposa el parell centrat de ${fmt(snapHandleDistance(len(best)))} mm${others.length ? ` (també es pot muntar a ${[...new Set(others)].join(", ")}: canvia la distància a mà)` : ""}.`)
+  }
+  const screw = Math.min(...holes.map((h) => h.d))
+  const through = handleThroughDiameter(Math.round(screw * 10) / 10, opts.throughDiameter ?? 5)
+  const centre = holes.length === 2 ? mul(add(holes[0]!.at, holes[1]!.at), 0.5) : holes[0]!.at
+  let u: V3
+  if (holes.length === 2) {
+    u = norm(sub(holes[1]!.at, holes[0]!.at))
+    // Sentit estable: cap a +X (o +Z, +Y) del fitxer.
+    const ref = [u[0], u[2], u[1]].find((x) => Math.abs(x) > 1e-6) ?? 1
+    if (ref < 0) u = mul(u, -1)
+  } else u = fallbackAlong(n)
+  const v = norm(cross(n, u))
+  const frame: LocalFrame = { origin: centre, u, v, n }
+  const bbox = bboxOf(f.points, frame)
+  const measured = holes.length === 2 ? Math.hypot(...sub(holes[0]!.at, holes[1]!.at)) : 0
+  const dist = holes.length === 2 ? snapHandleDistance(measured) : 0
+  const out: ProposedHole[] = (holes.length === 2 ? [-dist / 2, dist / 2] : [0]).map((x) => ({ role: "hole", u: r2(x), v: 0, d: through, measured: r2(screw), depth: 0, depthFrom: "default" }))
+  if (holes.length === 2)
+    notes.push(
+      `Tirador de dos forats a ${fmt(dist)} mm entre centres${Math.abs(dist - measured) > 0.005 ? ` (al model ${fmt(r2(measured))})` : ""}: cargols de Ø${fmt(r2(screw))} → forats passants Ø${fmt(through)} al front.`,
+    )
+  else notes.push(`Pom d'un sol forat: cargol de Ø${fmt(r2(screw))} → un forat passant Ø${fmt(through)} al centre.`)
+  if (Math.abs(dot(n, [0, 1, 0])) < 0.98 && Math.abs(dot(n, [0, 0, 1])) < 0.98 && Math.abs(dot(n, [1, 0, 0])) < 0.98) notes.push("Els forats del model són inclinats: s'han girat al pla del front.")
+  return { kind: "handle", frame, holes: out, bbox, notes }
+}
+
+/** Broca de pilot per a un cargol de fusta que passa per un forat de Ø `d` de la placa (Ø4 → 2,5; Ø6,5 → 4). */
+export const legPilot = (d: number): number => snapDrill(d * 0.65)
+
+/**
+ * Pota (descàrregues `Moebelfuesse` de Hettich): els forats de la placa de muntatge (el pla per l'origen del fitxer, la
+ * cara que toca la base del moble; l'eix de la pota és a l'origen). Es proposen forats de pilot per als cargols (Ø de
+ * `legPilot`, 12 mm de fondària) a la cara de sota de la base, en el marc de la pota: `n` cap a la pota (fora de la
+ * base), `u` = X del fitxer, `v` = `n × u`.
+ */
+export function proposeLeg(f: StepFeatures): HardwareProposal | { error: string } {
+  const found = faceHoles(f, 1, 5)
+  if (!found) return { error: "No s'hi troben els forats de la placa de muntatge (cilindres de Ø2 a Ø10 que neixen al pla de l'origen)." }
+  const { n, holes } = found
+  const reach = Math.max(...holes.map((h) => Math.hypot(...h.at)))
+  if (holes.length > 12 || reach > 200) return { error: `${holes.length} forats fins a ${fmt(r2(reach))} mm de l'eix: no és la placa d'una pota (una estructura?).` }
+  // `u` = X del fitxer al pla de la placa (si la pota no mira cap a X).
+  const xIn = sub([1, 0, 0], mul(n, n[0]))
+  const along = Math.hypot(...xIn) > 0.5 ? norm(xIn) : fallbackAlong(n)
+  const v = norm(cross(n, along))
+  const frame: LocalFrame = { origin: [0, 0, 0], u: along, v, n }
+  const bbox = bboxOf(f.points, frame)
+  const out: ProposedHole[] = holes
+    .map((h) => ({ role: "screw" as const, u: r2(dot(h.at, along)), v: r2(dot(h.at, v)), d: legPilot(h.d), measured: r2(h.d), depth: DEFAULT_DEPTHS.plateScrew, depthFrom: "default" as const }))
+    .sort((a, b) => a.u - b.u || a.v - b.v)
+  const c = out.reduce<[number, number]>((s, h) => [s[0] + h.u / out.length, s[1] + h.v / out.length], [0, 0])
+  const notes = [
+    `${out.length} forat${out.length === 1 ? "" : "s"} de cargol a la placa (Ø${[...new Set(out.map((h) => fmt(h.measured)))].join(", Ø")} al model) → forats de pilot Ø${[...new Set(out.map((h) => fmt(h.d)))].join(", Ø")} × ${DEFAULT_DEPTHS.plateScrew} a la cara de sota de la base, al voltant de l'eix de la pota.`,
+  ]
+  if (Math.hypot(c[0], c[1]) > 1) notes.push("Els forats no són centrats a l'eix de la pota: totes les potes es posen girades igual (comprova que la placa hi cap a cada cantonada).")
+  return { kind: "leg", frame, holes: out, bbox, notes }
+}
+
+/** Marc d'un model «només 3D»: el del fitxer (mm), sense forats. */
+export function modelProposal(f: StepFeatures | null, notes: string[]): HardwareProposal {
+  const frame: LocalFrame = { origin: [0, 0, 0], u: [1, 0, 0], v: [0, 1, 0], n: [0, 0, 1] }
+  return { kind: "model", frame, holes: [], bbox: f?.points.length ? bboxOf(f.points, frame) : { min: [0, 0, 0], max: [0, 0, 0] }, notes }
+}

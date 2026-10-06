@@ -1,8 +1,8 @@
 import type { PickedFile } from "../../components/pickedFiles"
 import { listZip, readZipEntry } from "../../core/file/zip"
 import { groupHettich, hettichArticle, hettichFileKind, type HettichArticle, type HettichFile } from "../../core/import/hettich"
-import { hingeItem, pairImportedBatch, plateItem } from "../../core/import/importItem"
-import { proposeHinge, proposePlate, type HardwareProposal } from "../../core/import/proposal"
+import { articleItem, pairImportedBatch, proposalPlan, proposeArticle } from "../../core/import/importItem"
+import type { HardwareProposal } from "../../core/import/proposal"
 import { stepFeatures } from "../../core/import/stepGeometry"
 import { readDxf } from "../../core/import/dxf"
 import { viewFromDxf, type HardwareView, type ViewName } from "../../core/import/views"
@@ -69,11 +69,27 @@ export interface ImportOutcome {
 }
 
 /**
- * Importa els articles triats: proposta de mecanitzats (STEP), model 3D (STEP → GLB) i vistes 2D (DXF). Les frontisses
- * parteixen de la frontissa per defecte (`baseHinge`) i, si al mateix lot hi ha **una sola** placa, s'hi aparellen
- * (`pairImportedBatch`; amb més d'una, a l'editor). Tot surt **sense confirmar**.
+ * Què farà de debò un article (la nota de la fila del diàleg, «Tirador · 128 mm», «Pota · 4 forats a cada pota»): llegeix
+ * el STEP i en fa la proposta (`proposeArticle`), sense el 3D. Les frontisses i les plaques no es llegeixen (la nota
+ * d'abans ja ho diu); els «només 3D», tampoc.
  */
-export async function importArticles(src: ImportSource, articles: HettichArticle[], baseHinge: HardwareItem, progress?: (done: number, total: number) => void): Promise<ImportOutcome> {
+export async function analyseArticle(src: ImportSource, a: HettichArticle, throughDiameter?: number): Promise<string> {
+  const step = a.files.find((f) => f.kind === "step")
+  if (!step || (a.kind !== "handle" && a.kind !== "leg")) return a.plan ?? ""
+  try {
+    return proposalPlan(proposeArticle(a, stepFeatures(latin1(await src.read(step.path))), { ...(throughDiameter ? { throughDiameter } : {}) }))
+  } catch (e) {
+    return `Només 3D: ${e instanceof Error ? e.message : String(e)}`
+  }
+}
+
+/**
+ * Importa els articles triats: proposta de mecanitzats (STEP, `proposeArticle`: frontissa, placa, tirador, pota o només
+ * 3D), model 3D (STEP → GLB) i vistes 2D (DXF). Les frontisses parteixen de la frontissa per defecte i els tiradors del
+ * tirador per defecte (`base`: el marge, el cantell i el Ø del forat passant); si al mateix lot hi ha **una sola** placa,
+ * les frontisses s'hi aparellen (`pairImportedBatch`; amb més d'una, a l'editor). Tot surt **sense confirmar**.
+ */
+export async function importArticles(src: ImportSource, articles: HettichArticle[], base: { hinge: HardwareItem; handle: HardwareItem }, progress?: (done: number, total: number) => void): Promise<ImportOutcome> {
   const items: HardwareItem[] = []
   const problems: string[] = []
   const { stepMeshes, meshesToGlb, releaseStepWorker } = await import("../../components/viewer/stepMesh")
@@ -86,8 +102,7 @@ export async function importArticles(src: ImportSource, articles: HettichArticle
         if (!step || a.kind === "none") throw new Error(a.reason ?? "No es pot importar.")
         const bytes = await src.read(step.path)
         const features = stepFeatures(latin1(bytes))
-        const p = a.kind === "hinge" ? proposeHinge(features) : proposePlate(features)
-        if ("error" in p) throw new Error(p.error)
+        const p = proposeArticle(a, features, { throughDiameter: base.handle.params.diameter ?? 5 })
         const notes: string[] = []
         let glb: Blob | undefined
         try {
@@ -112,7 +127,7 @@ export async function importArticles(src: ImportSource, articles: HettichArticle
         await putHardwareAsset({ id: asset, name: a.label, ...(glb ? { glb } : {}), views, createdAt: Date.now() })
         const proposal: HardwareProposal = { ...p, notes: [...p.notes, ...notes] }
         const extras = { id: newId("hw"), asset, files: a.files.map((f) => baseName(f.path)), ...(points ? { points } : {}) }
-        items.push(a.kind === "hinge" ? hingeItem(proposal, a, baseHinge, extras) : plateItem(proposal, a, extras))
+        items.push(articleItem(proposal, a, base, extras))
       } catch (e) {
         problems.push(`${a.article}: ${e instanceof Error ? e.message : String(e)}`)
       }
