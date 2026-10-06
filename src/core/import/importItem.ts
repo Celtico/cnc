@@ -1,6 +1,7 @@
 import { deepEqual, evalExpr, isDamagedImport, isPendingImport, type HardwareItem, type HardwareTarget, type MachiningOp } from "../model"
 import type { HettichArticle } from "./hettich"
-import type { HardwareProposal } from "./proposal"
+import { modelProposal, proposeHandle, proposeHinge, proposeLeg, proposePlate, type HardwareProposal } from "./proposal"
+import type { StepFeatures } from "./stepGeometry"
 
 /**
  * D'una proposta (`proposal.ts`) a un item de la biblioteca (`HardwareItem`), **sense confirmar**: una frontissa fa servir
@@ -89,6 +90,79 @@ export function plateItem(p: HardwareProposal, art: HettichArticle, x: ImportedE
 }
 
 /**
+ * Tirador importat: el motor del tirador de sempre (`barHandle`: centrat als calaixos, a `inset` del cantell que obre a
+ * les portes i abatibles, avís si no hi cap) amb la **distància del fitxer** (`pitch` sense graons: la mateixa a tots els
+ * fronts) i el Ø del forat passant (`diameter`). Un pom (un sol forat): un forat al centre, `pitch` 0. El marge i el
+ * cantell, del tirador de l'app (`base`).
+ */
+export function handleItem(p: HardwareProposal, art: HettichArticle, base: HardwareItem, x: ImportedExtras): HardwareItem {
+  const two = p.holes.length === 2
+  const dist = two ? Math.abs(p.holes[1]!.u - p.holes[0]!.u) : 0
+  const ops: MachiningOp[] = two
+    ? [
+        { kind: "through", u: "-pitch/2", v: 0, d: "diameter", tag: "handle" },
+        { kind: "through", u: "pitch/2", v: 0, d: "diameter", tag: "handle" },
+      ]
+    : [{ kind: "through", u: 0, v: 0, d: "diameter", tag: "handle" }]
+  const targets: HardwareTarget[] = [{ key: "front", label: "Front", ops }]
+  return {
+    id: x.id,
+    name: art.label,
+    category: "handle",
+    engine: "barHandle",
+    ...(art.tags.length ? { tags: [...art.tags] } : {}),
+    maker: "Hettich",
+    ref: art.article,
+    params: { margin: base.params.margin ?? 3, inset: base.params.inset ?? 40, diameter: p.holes[0]?.d ?? base.params.diameter ?? 5 },
+    pitch: { steps: [], else: num(dist) },
+    targets,
+    version: 1,
+    imported: source(art, p, targets, x),
+  }
+}
+
+/** Pota importada: els forats de la placa a la cara de sota de la base, a 50 mm dels cantells del mòdul. */
+export function legItem(p: HardwareProposal, art: HettichArticle, x: ImportedExtras): HardwareItem {
+  const ops: MachiningOp[] = p.holes.map((h) => ({ kind: "drill", face: "A", u: h.u, v: h.v, d: h.d, depth: h.depth, tag: "leg" }))
+  const targets: HardwareTarget[] = [{ key: "base", label: "Base (cara de sota)", ops }]
+  return {
+    id: x.id,
+    name: art.label,
+    category: "leg",
+    engine: "leg",
+    ...(art.tags.length ? { tags: [...art.tags] } : {}),
+    maker: "Hettich",
+    ref: art.article,
+    params: { inset: 50 },
+    targets,
+    version: 1,
+    imported: source(art, p, targets, x),
+  }
+}
+
+/**
+ * «Només 3D» (motor `model`): el model i el volum del fitxer, **cap forat** (no hi ha cap regla de mecanitzat per a
+ * aquesta família, o no s'ha trobat el patró): es veu a l'editor i se'n pot baixar el GLB. No es confirma mai (no hi ha
+ * res a revisar: no fa cap forat ni es pot triar a cap lloc del moble).
+ */
+export function modelItem(p: HardwareProposal, art: HettichArticle, x: ImportedExtras): HardwareItem {
+  const targets: HardwareTarget[] = [{ key: "model", label: "Només 3D", ops: [] }]
+  return {
+    id: x.id,
+    name: art.label,
+    category: art.category,
+    engine: "model",
+    ...(art.tags.length ? { tags: [...art.tags] } : {}),
+    maker: "Hettich",
+    ref: art.article,
+    params: {},
+    targets,
+    version: 1,
+    imported: source(art, p, targets, x),
+  }
+}
+
+/**
  * Aparella una placa a una frontissa: en copia els forats (target `side`), on va (`plateSetback`, `plateOffset`) i el
  * model. Sense placa (`null`), la frontissa no fa forats al lateral (la filera System 32 la sosté, com les d'inici).
  */
@@ -137,11 +211,25 @@ export function syncPairedPlates(library: readonly HardwareItem[]): HardwareItem
 /** Paràmetres d'una frontissa importada que canvien els forats revisats (Ø i fondària de la cassoleta, on va la placa). */
 export const IMPORTED_HOLE_PARAMS: readonly string[] = ["cupDiameter", "cupDepth", "plateSetback", "plateOffset"]
 
-/** Canvia un paràmetre; si és d'un importat i canvia els forats (`IMPORTED_HOLE_PARAMS`), el deixa sense confirmar. */
+/** Els paràmetres que canvien els forats revisats, per motor: la cassoleta i la placa, el Ø del tirador, on van les potes. */
+export const IMPORTED_HOLE_PARAMS_BY_ENGINE: Partial<Record<HardwareItem["engine"], readonly string[]>> = {
+  cup: IMPORTED_HOLE_PARAMS,
+  barHandle: ["diameter"],
+  leg: ["inset"],
+}
+
+/** Canvia un paràmetre; si és d'un importat i canvia els forats (`IMPORTED_HOLE_PARAMS_BY_ENGINE`), el deixa sense confirmar. */
 export function setHardwareParam(item: HardwareItem, key: string, value: number): HardwareItem {
   if (item.params[key] === value) return item
   const next = { ...item, params: { ...item.params, [key]: value } }
-  return item.imported?.confirmed && IMPORTED_HOLE_PARAMS.includes(key) ? setConfirmed(next, false) : next
+  return item.imported?.confirmed && (IMPORTED_HOLE_PARAMS_BY_ENGINE[item.engine] ?? []).includes(key) ? setConfirmed(next, false) : next
+}
+
+/** Canvia la distància entre forats d'un tirador importat (`pitch` sense graons); el deixa sense confirmar. */
+export function setHandleDistance(item: HardwareItem, dist: number): HardwareItem {
+  if (!(dist >= 0) || item.pitch?.else === dist) return item
+  const next = { ...item, pitch: { steps: [], else: dist } }
+  return item.imported ? setConfirmed(next, false) : next
 }
 
 /**
@@ -180,7 +268,15 @@ export function restoreProposal(item: HardwareItem): HardwareItem {
 export function confirmProblem(item: HardwareItem, library: readonly HardwareItem[] = []): string | null {
   if (!item.imported) return null
   if (isDamagedImport(item)) return "Està malmès (no s'ha pogut llegir sencer): torna'l a importar."
+  if (item.engine === "model") return "És només 3D: no fa cap forat (no cal confirmar-lo)."
   if (item.engine === "plate" && !item.targets.find((t) => t.key === "side")?.ops.length) return "La placa no té cap forat: entra'ls a mà (Mecanitzats)."
+  if (item.engine === "leg" && !item.targets.find((t) => t.key === "base")?.ops.length) return "La pota no té cap forat: entra'ls a mà (Mecanitzats)."
+  if (item.engine === "barHandle") {
+    const n = item.targets.find((t) => t.key === "front")?.ops.length ?? 0
+    if (!n) return "El tirador no té cap forat."
+    const dist = item.pitch?.else ?? NaN
+    if (n === 2 && !(dist >= 16 && dist <= 2000)) return `Distància entre forats de ${dist} mm: entra-la a «Distància entre forats».`
+  }
   if (item.engine === "cup" && item.plate) {
     const plate = library.find((x) => x.id === item.plate!.id && x.engine === "plate")
     if (plate && (isPendingImport(plate) || isDamagedImport(plate))) return `La placa «${plate.name}» encara no està confirmada: confirma-la primer.`
@@ -188,7 +284,7 @@ export function confirmProblem(item: HardwareItem, library: readonly HardwareIte
   for (const t of item.targets)
     for (const op of t.ops) {
       if (op.kind === "edgeDrill") continue
-      const vars = { ...item.params }
+      const vars = { ...item.params, pitch: item.pitch?.else ?? 0 }
       try {
         const d = evalExpr(op.d, vars)
         if (!(d >= 1 && d <= 60)) return `${t.label}: un forat de Ø${d}.`
@@ -205,3 +301,54 @@ export function confirmProblem(item: HardwareItem, library: readonly HardwareIte
 }
 
 export { isPendingImport }
+
+/**
+ * La proposta d'un article segons què és (`HettichArticle.kind`): frontissa, placa, tirador o pota; si no s'hi troba el
+ * patró (o la família no té regla), **només 3D** (`kind: "model"`) amb el perquè a les notes. Pur.
+ */
+export function proposeArticle(a: Pick<HettichArticle, "kind" | "plan">, f: StepFeatures, opts: { throughDiameter?: number } = {}): HardwareProposal {
+  const p =
+    a.kind === "hinge" ? proposeHinge(f)
+    : a.kind === "plate" ? proposePlate(f)
+    : a.kind === "handle" ? proposeHandle(f, opts)
+    : a.kind === "leg" ? proposeLeg(f)
+    : null
+  if (!p) return modelProposal(f, [a.plan ?? "Només 3D: sense forats."])
+  if ("error" in p) return modelProposal(f, [`${p.error} S'importa només el model 3D (sense forats).`])
+  return p
+}
+
+/** L'item de la biblioteca d'una proposta (`proposeArticle`), sense confirmar. */
+export function articleItem(p: HardwareProposal, a: HettichArticle, base: { hinge: HardwareItem; handle: HardwareItem }, x: ImportedExtras): HardwareItem {
+  switch (p.kind) {
+    case "hinge":
+      return hingeItem(p, a, base.hinge, x)
+    case "plate":
+      return plateItem(p, a, x)
+    case "handle":
+      return handleItem(p, a, base.handle, x)
+    case "leg":
+      return legItem(p, a, x)
+    case "model":
+      return modelItem(p, a, x)
+  }
+}
+
+/** La nota de la fila del diàleg d'importar un cop llegit el STEP: què farà de debò («Tirador · 128 mm»). */
+export function proposalPlan(p: HardwareProposal): string {
+  const n = (x: number) => String(Math.round(x * 100) / 100).replace(".", ",")
+  const holes = (k: number) => `${k} forat${k === 1 ? "" : "s"}`
+  switch (p.kind) {
+    case "hinge":
+      return `Frontissa · cassoleta Ø${n(p.holes[0]?.d ?? 0)}${p.holes.length > 1 ? ` i ${holes(p.holes.length - 1)}` : ""}`
+    case "plate":
+      return p.holes.length ? `Placa · ${holes(p.holes.length)}` : "Placa ambigua: sense forats (entra'ls a mà)"
+    case "handle":
+      return p.holes.length === 2 ? `Tirador · ${n(Math.abs(p.holes[1]!.u - p.holes[0]!.u))} mm` : "Pom · 1 forat"
+    case "leg":
+      return `Pota · ${holes(p.holes.length)} a cada pota`
+    case "model":
+      if (p.notes[0] && /^Només 3D/.test(p.notes[0])) return p.notes[0]
+      return `Només 3D: sense forats${p.notes[0] ? ` (${p.notes[0].replace(/ S'importa només.*$/, "").replace(/\.$/, "")})` : ""}`
+  }
+}

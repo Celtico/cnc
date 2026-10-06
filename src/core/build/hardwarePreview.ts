@@ -1,6 +1,6 @@
 import { NO_EDGES, type HardwareItem, type Hole, type Panel, type PanelRole } from "../model"
 import { r, system32Ys, threeAlong } from "./geometry"
-import { applyHardware, cupSpec, dowelSpec, flapSpec, handleSpec, magnetSpec, plateSpec, slideSpec, system32Spec, HardwareError } from "./hardware"
+import { applyHardware, cupSpec, dowelSpec, flapSpec, handleSpec, legSpec, magnetSpec, plateSpec, slideSpec, system32Spec, HardwareError } from "./hardware"
 
 /**
  * Peces d'exemple amb el patró de mecanitzats d'un ferratge (Preferències › Ferratges: la targeta i l'editor), fetes amb
@@ -128,6 +128,16 @@ function previewPanels(item: HardwareItem): Panel[] {
         return p
       })
     }
+    case "leg": {
+      // Base de 600 × 450 vista des de sota (x = amplada, y = fondària des del darrere): una placa a cada cantonada.
+      const s = legSpec(item)
+      const base = sample("base", "Base (cara de sota)", "bottom", 600, 450)
+      for (const x of [s.inset, base.length - s.inset]) for (const y of [s.inset, base.width - s.inset]) for (const h of s.holes) base.holes.push(hole(x + h.u, y + h.v, { diameter: h.d, depth: h.depth, tag: h.tag }))
+      return [base]
+    }
+    case "model":
+      // Només 3D: cap peça ni forat.
+      return []
   }
 }
 

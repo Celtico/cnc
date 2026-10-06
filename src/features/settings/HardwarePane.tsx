@@ -1,19 +1,20 @@
 import { Alert, Badge, Box, Button, HStack, IconButton, Input, Menu, SegmentGroup, SimpleGrid, Slider, Spinner, Stack, Switch, Text } from "@chakra-ui/react"
 import { Suspense, lazy, useContext, useEffect, useMemo, useRef, useState, type RefObject } from "react"
-import { LuCheck, LuCopy, LuMap, LuPlus, LuRotate3D, LuStar, LuTrash2, LuUndo2 } from "react-icons/lu"
+import { LuBoxes, LuCheck, LuCopy, LuMap, LuPlus, LuRotate3D, LuStar, LuTrash2, LuUndo2 } from "react-icons/lu"
+import { downloadBlob } from "../download"
 import { EditorDialog } from "../../components/EditorDialog"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
 import { ImportDropZone } from "../../components/ImportDropZone"
 import type { PickedFile } from "../../components/pickedFiles"
 import { toaster } from "../../components/ui/toaster"
-import { confirmProblem, cupRel, pairPlate, relV, restoreProposal, setConfirmed, setHardwareParam, syncPairedPlates } from "../../core/import/importItem"
+import { confirmProblem, cupRel, pairPlate, relV, restoreProposal, setConfirmed, setHandleDistance, setHardwareParam, syncPairedPlates } from "../../core/import/importItem"
 import type { HettichArticle } from "../../core/import/hettich"
 import { viewBounds, type HardwareView } from "../../core/import/views"
 import { assetViews, getHardwareAsset } from "../../db/hardwareAssets"
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { HardwareImportDialog } from "./HardwareImportDialog"
-import { importArticles, sourceFromPicked, type ImportSource } from "./hardwareImport"
+import { analyseArticle, importArticles, sourceFromPicked, type ImportSource } from "./hardwareImport"
 import { NumberField, NumRow } from "../../components/NumRow"
 import { PanelDrawing } from "../../components/PanelDrawing"
 import { SearchBar } from "../../components/SearchBar"
@@ -133,17 +134,31 @@ export function HardwareList({
     open(item)
     setJustAdded(item.id)
   }
+  // Les bases dels importats: la frontissa per defecte (quantitat, extrems, cantell) i el tirador per defecte (marge,
+  // cantell i el Ø del forat passant), si no són importats; si no, les d'inici de l'app.
+  const importBase = () => ({
+    hinge: items.find((x) => x.id === defaults.hinge && x.engine === "cup" && !x.imported) ?? DEFAULT_HARDWARE_KIT.hinge,
+    handle: items.find((x) => x.id === defaults.handle && x.engine === "barHandle" && !x.imported) ?? DEFAULT_HARDWARE_KIT.handle,
+  })
   // Importar del fabricant: els fitxers triats → la llista d'articles (diàleg) → els items, sense confirmar.
   const [importSrc, setImportSrc] = useState<ImportSource | null>(null)
+  // Un diàleg nou (triats, notes) per a cada lot de fitxers.
+  const [importSeq, setImportSeq] = useState(0)
   const [importBusy, setImportBusy] = useState(false)
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
+  // La nota de cada fila (llegint el STEP dels tiradors i les potes que es veuen): una funció per font.
+  const handleDiameter = importBase().handle.params.diameter
+  const analyse = useMemo(() => (importSrc ? (a: HettichArticle) => analyseArticle(importSrc, a, handleDiameter) : undefined), [importSrc, handleDiameter])
   const onPicked = async (picked: PickedFile[]) => {
     setImportBusy(true)
     try {
       const src = await sourceFromPicked(picked)
       if (!src.articles.length)
         toaster.create({ title: "No s'hi ha trobat cap ferratge", description: "Cal una descàrrega de Hettich CAD: el ZIP, la carpeta o els fitxers .stp i _2D_…_view.dxf amb el número d'article.", type: "warning", duration: 8000 })
-      else setImportSrc(src)
+      else {
+        setImportSeq((n) => n + 1)
+        setImportSrc(src)
+      }
     } catch (e) {
       toaster.create({ title: "No s'ha pogut llegir", description: e instanceof Error ? e.message : String(e), type: "error", duration: 8000 })
     } finally {
@@ -154,8 +169,7 @@ export function HardwareList({
     if (!importSrc) return
     setImportBusy(true)
     try {
-      const base = items.find((x) => x.id === defaults.hinge && x.engine === "cup") ?? DEFAULT_HARDWARE_KIT.hinge
-      const r = await importArticles(importSrc, selected, base, (done, total) => setProgress({ done, total }))
+      const r = await importArticles(importSrc, selected, importBase(), (done, total) => setProgress({ done, total }))
       const taken = new Set(items.map((x) => fold(x.name.trim())))
       const fresh = r.items.map((x) => {
         let name = x.name
@@ -169,10 +183,14 @@ export function HardwareList({
       }
       const plate = r.plates === 1 ? fresh.find((x) => x.engine === "plate") : undefined
       const hinges = fresh.filter((x) => x.engine === "cup").length
+      const only3d = fresh.filter((x) => x.engine === "model").length
+      const drill = fresh.length - only3d
       toaster.create({
-        title: fresh.length ? `${fresh.length} ${fresh.length === 1 ? "ferratge importat" : "ferratges importats"}, sense confirmar` : "No s'ha importat res",
+        title: fresh.length ? `${fresh.length} ${fresh.length === 1 ? "ferratge importat" : "ferratges importats"}${drill ? ", sense confirmar" : ""}` : "No s'ha importat res",
         description: [
-          fresh.length ? "Revisa'n els forats i confirma'ls: fins aleshores no fan cap forat." : "",
+          countKinds(fresh) + (fresh.length ? "." : ""),
+          drill ? "Revisa'n els forats i confirma'ls: fins aleshores no fan cap forat." : "",
+          only3d ? `${only3d === 1 ? "El «només 3D» no fa" : "Els «només 3D» no fan"} mai cap forat.` : "",
           r.paired && plate ? `${r.paired} ${r.paired === 1 ? "frontissa aparellada" : "frontisses aparellades"} amb «${plate.name}».` : "",
           r.plates > 1 && hinges ? `${r.plates} plaques al lot: tria la de cada frontissa a «Placa de muntatge».` : "",
           ...r.problems,
@@ -181,7 +199,7 @@ export function HardwareList({
         duration: 12000,
       })
       setImportSrc(null)
-      const first = fresh.find((x) => x.engine === "cup") ?? fresh[0]
+      const first = fresh.find((x) => x.engine === "cup") ?? fresh.find((x) => x.engine !== "model") ?? fresh[0]
       if (first) {
         setSel(first.id)
         setEditorOpen(true)
@@ -224,14 +242,17 @@ export function HardwareList({
       />
       <ImportDropZone title="Importar del fabricant" accept=".zip,.stp,.step,.dxf" busy={importBusy && !importSrc} onPicked={onPicked} testId="hardware-import">
         Descàrregues de <strong>Hettich CAD</strong> (hettich.com › Descàrregues CAD): els ZIP tal com es baixen (STEP i DWG/DXF), una
-        carpeta o fitxers <Text as="span" fontFamily="mono">.stp</Text> i <Text as="span" fontFamily="mono">_2D_…_view.dxf</Text>. Frontisses i plaques de
-        muntatge: els forats surten del STEP i s'han de confirmar abans que arribin al taller.
+        carpeta o fitxers <Text as="span" fontFamily="mono">.stp</Text> i <Text as="span" fontFamily="mono">_2D_…_view.dxf</Text>. Frontisses, plaques,
+        tiradors i potes: els forats surten del STEP i s'han de confirmar abans que arribin al taller. La resta (estructures de taula, portes
+        corredisses i plegables, Cadro, accessoris) entra com a «només 3D»: el model, sense cap forat.
       </ImportDropZone>
       <HardwareImportDialog
+        key={importSeq}
         articles={importSrc?.articles ?? null}
         fileCount={importSrc?.fileCount ?? 0}
         busy={importBusy}
         progress={progress}
+        analyse={analyse}
         onCancel={() => setImportSrc(null)}
         onImport={(sel) => void doImport(sel)}
       />
@@ -253,6 +274,10 @@ export function HardwareList({
                         def ? (
                           <Badge size="xs" variant="subtle" colorPalette="wood" title={`Per defecte a: ${def.uses}`}>
                             <LuStar /> Per defecte
+                          </Badge>
+                        ) : x.engine === "model" ? (
+                          <Badge size="xs" variant="subtle" colorPalette="gray" title="Importat sense cap regla de mecanitzat: el model, mai cap forat">
+                            Només 3D
                           </Badge>
                         ) : isPendingImport(x) ? (
                           <Badge size="xs" variant="subtle" colorPalette="orange" title="Importat: no fa cap forat fins que el confirmis">
@@ -320,6 +345,22 @@ export function HardwareList({
   )
 }
 
+/** «2 tiradors, 1 pota i 3 només 3D»: què s'ha importat, per tipus. */
+function countKinds(items: HardwareItem[]): string {
+  const names: [HardwareEngine, string, string][] = [
+    ["cup", "frontissa", "frontisses"],
+    ["plate", "placa", "plaques"],
+    ["barHandle", "tirador", "tiradors"],
+    ["leg", "pota", "potes"],
+    ["model", "només 3D", "només 3D"],
+  ]
+  const parts = names.flatMap(([e, one, many]) => {
+    const n = items.filter((x) => x.engine === e).length
+    return n ? [`${n} ${n === 1 ? one : many}`] : []
+  })
+  return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} i ${parts.at(-1)}` : (parts[0] ?? "")
+}
+
 /**
  * Miniatura de la targeta (sense text): les frontisses i les plaques, el pla del muntatge (porta, lateral, cassoleta i
  * ferratge, `HardwareMountPlan compact`: es veu com va muntat sense cap 3D per targeta); la resta, el detall dels forats
@@ -343,7 +384,7 @@ function HardwareThumb({ item }: { item: HardwareItem }) {
         </Box>
       ) : (
         <Text fontSize="xs" color="fg.muted">
-          Sense dibuix
+          {item.engine === "model" ? "Només 3D" : "Sense dibuix"}
         </Text>
       )}
     </Box>
@@ -423,10 +464,12 @@ function HardwareStage({ item, base, materials }: { item: HardwareItem; base?: M
             </SimpleGrid>
           )
         })}
+        {preview.panels.length > 0 && (
         <Text fontSize="xs" color="fg.muted" textAlign="center">
           Patró de mecanitzats sobre una peça d'exemple, vist des de la cara A: forats de cara plens, de cantell discontinus i passants buits. Al moble, la regla de cada contingut els col·loca (les cassoletes, a la filera System 32).
           {item.imported && " En gris, la vista del fitxer del fabricant que mira la cara de la peça, encaixada sobre els forats proposats (si hi encaixa)."}
         </Text>
+        )}
         {item.imported && ownViews.length > 0 && (
           <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
             {ownViews.map((v) => (
@@ -455,7 +498,8 @@ function MountPreview({ item, base, materials, noModel }: { item: HardwareItem; 
   const [open, setOpen] = useState(0)
   const mount = useMemo(() => hardwareMount(item, base), [item, base])
   const plan = useMemo(() => mountPlan(mount), [mount])
-  if (mount.error || !mount.panels.length) return null
+  if (mount.error || (!mount.panels.length && !mount.model)) return null
+  if (mount.model) return <ModelPreview mount={mount} materials={materials} noModel={noModel} />
   const cutY = plan ? Math.round(plan.sectionY * 10) / 10 : null
   return (
     <Stack gap={3} bg="bg" rounded="lg" borderWidth="1px" p={{ base: 3, md: 4 }} data-testid="hardware-mount">
@@ -492,7 +536,7 @@ function MountPreview({ item, base, materials, noModel }: { item: HardwareItem; 
           <Alert.Indicator />
           <Alert.Content>
             <Alert.Description>
-              Sense confirmar: <strong>en taronja, els forats proposats</strong>. Fins que el confirmis, el moble no els fa (ni a la porta ni al lateral).
+              Sense confirmar: <strong>en taronja, els forats proposats</strong>. Fins que el confirmis, el moble no els fa{mount.hinge ? " (ni a la porta ni al lateral)" : ""}.
             </Alert.Description>
           </Alert.Content>
         </Alert.Root>
@@ -540,6 +584,31 @@ function MountPreview({ item, base, materials, noModel }: { item: HardwareItem; 
   )
 }
 
+/** Un ferratge «només 3D»: el model sol (sense mòdul ni forats), en 3D, amb les mides de la caixa. */
+function ModelPreview({ mount, materials, noModel }: { mount: HardwareMount; materials: MaterialPref[]; noModel: boolean }) {
+  const n = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",")
+  return (
+    <Stack gap={3} bg="bg" rounded="lg" borderWidth="1px" p={{ base: 3, md: 4 }} data-testid="hardware-mount">
+      <Stack gap={0}>
+        <Text fontSize="sm" fontWeight="semibold">
+          Només 3D
+        </Text>
+        <Text fontSize="xs" color="fg.muted">
+          {mount.model?.bbox ? `Caixa de ${n(mount.size.width)} × ${n(mount.size.height)} × ${n(mount.size.depth)} mm · ` : ""}sense cap forat: no hi ha cap regla del moble per a aquest ferratge.
+        </Text>
+      </Stack>
+      <Box h={{ base: "300px", md: "380px", lg: "420px" }} rounded="md" overflow="hidden" bg="bg.subtle" data-testid="hardware-mount-3d">
+        <Suspense fallback={<Spinner size="sm" color="wood.solid" m={3} />}>
+          <HardwareMount3D mount={mount} materials={materials} open={0} />
+        </Suspense>
+      </Box>
+      <Text fontSize="xs" color="fg.muted">
+        Arrossega per girar-lo; amb dos dits o la roda, més a prop.{noModel && " Sense el model 3D del fitxer: es veu la caixa que ocupa."}
+      </Text>
+    </Stack>
+  )
+}
+
 const VIEW_LABEL: Record<HardwareView["name"], string> = { front: "Vista frontal", side: "Vista lateral", top: "Vista de dalt" }
 
 /** Una vista 2D del fitxer (línies i punts de connexió), tal com ve o encaixada al marc del ferratge. */
@@ -577,6 +646,29 @@ function ViewDrawing({ view }: { view: HardwareView }) {
         </svg>
       </Box>
     </Stack>
+  )
+}
+
+/** Els tipus que no tenen lloc al joc del mòdul: què són i on es fan servir. */
+const ENGINE_HELP: Partial<Record<HardwareEngine, { label: string; help: string }>> = {
+  plate: { label: "Placa de muntatge", help: "Placa de muntatge: no va sola; la frontissa importada que s'hi aparella en copia els forats (al lateral, a l'alçada de cada cassoleta)." },
+  leg: { label: "Pota", help: "Es tria a la base «Potes» del mòdul (Caixa › Base › Pota): els forats de la placa van a la cara de sota de la base, a cada pota (a «Als cantells» de les vores de fora)." },
+  model: { label: "Només 3D", help: "Sense cap regla de mecanitzat: el model i el volum, mai cap forat. No es pot triar a cap lloc del moble; en pots baixar el model (GLB) per posar-lo en un objecte (Models 3D › Triar fitxers)." },
+}
+
+/** «Model 3D»: baixar el GLB que es va fer en importar (per posar-lo en un objecte com a model 3D). */
+function GlbRow({ asset, name }: { asset: string; name: string }) {
+  const a = useLiveQuery(() => getHardwareAsset(asset), [asset])
+  if (!a?.glb) return null
+  const glb = a.glb
+  return (
+    <FormRow label="Model 3D" help="El model del fitxer en GLB (metres, al marc del ferratge). Per veure'l en un objecte: Models 3D › Triar fitxers.">
+      <Box pt="2px">
+        <Button size="xs" variant="outline" onClick={() => downloadBlob(glb, `${name.replace(/[\\/:*?"<>|]+/g, " ").trim() || "ferratge"}.glb`)} data-testid="hardware-glb">
+          <LuBoxes /> Baixar el model 3D (.glb)
+        </Button>
+      </Box>
+    </FormRow>
   )
 }
 
@@ -688,12 +780,9 @@ function HardwareCard({
         </HStack>
 
         <FormSection title="General">
-          <FormRow
-            label="Tipus"
-            help={slot ? `Fa de «${slot.label}»: ${slot.uses}. La regla de cada contingut decideix on va i quants se'n posen.` : "Placa de muntatge: no va sola; la frontissa importada que s'hi aparella en copia els forats (al lateral, a l'alçada de cada cassoleta)."}
-          >
+          <FormRow label="Tipus" help={slot ? `Fa de «${slot.label}»: ${slot.uses}. La regla de cada contingut decideix on va i quants se'n posen.` : ENGINE_HELP[item.engine]?.help}>
             <Text fontSize="sm" pt="6px">
-              {slot?.label ?? "Placa de muntatge"}
+              {slot?.label ?? ENGINE_HELP[item.engine]?.label ?? item.engine}
             </Text>
           </FormRow>
           <FormRow label="Fabricant">
@@ -715,6 +804,15 @@ function HardwareCard({
 
         {item.imported && (
           <FormSection title="Importat del fabricant">
+            {item.engine === "model" ? (
+              <FormRow label="Estat" help="No hi ha cap regla de mecanitzat per a aquest ferratge (o no s'hi ha trobat el patró de forats): el model i el volum, mai cap forat. No cal confirmar-lo.">
+                <HStack gap={2} pt="2px">
+                  <Badge size="sm" variant="subtle" colorPalette="gray" data-testid="hardware-import-state">
+                    Només 3D
+                  </Badge>
+                </HStack>
+              </FormRow>
+            ) : (
             <FormRow
               label="Estat"
               help={
@@ -738,6 +836,7 @@ function HardwareCard({
                 )}
               </HStack>
             </FormRow>
+            )}
             <FormRow label="Article">
               <Text fontSize="sm" pt="6px">
                 {item.imported.maker} {item.imported.article}
@@ -755,6 +854,7 @@ function HardwareCard({
                 {item.imported.files.join(" · ")}
               </Text>
             </FormRow>
+            {item.imported.asset && <GlbRow asset={item.imported.asset} name={item.name} />}
             {item.imported.notes?.length ? (
               <FormRow label="Proposta">
                 <Stack gap={1} pt="6px">
@@ -766,11 +866,13 @@ function HardwareCard({
                 </Stack>
               </FormRow>
             ) : null}
-            <FormRow label="" help="Els forats tornen a ser els que es van llegir del fitxer (sense confirmar).">
-              <Button size="xs" variant="ghost" onClick={() => onChange(restoreProposal(item))}>
-                <LuUndo2 /> Tornar a la proposta
-              </Button>
-            </FormRow>
+            {item.engine !== "model" && (
+              <FormRow label="" help="Els forats tornen a ser els que es van llegir del fitxer (sense confirmar).">
+                <Button size="xs" variant="ghost" onClick={() => onChange(restoreProposal(item))}>
+                  <LuUndo2 /> Tornar a la proposta
+                </Button>
+              </FormRow>
+            )}
           </FormSection>
         )}
 
@@ -791,6 +893,7 @@ function HardwareCard({
           </FormSection>
         )}
 
+        {(HARDWARE_PARAMS[item.engine].length > 0 || item.lengths) && (
         <FormSection title="Mides">
           {HARDWARE_PARAMS[item.engine].map((p) => (
             <NumRow key={p.key} label={p.label} help={p.help} value={item.params[p.key] ?? 0} min={p.min} max={p.max} step={p.step} onChange={(v) => setParam(p.key, v)} />
@@ -801,19 +904,38 @@ function HardwareCard({
             </FormRow>
           )}
         </FormSection>
+        )}
 
         {item.count && (
           <FormSection title="Quantitat per alçada">
             <StepRows rule={item.count} kind="count" onChange={(count) => set({ count })} />
           </FormSection>
         )}
-        {item.pitch && (
+        {item.pitch && item.imported && item.engine === "barHandle" ? (
+          <FormSection title="Distància entre forats">
+            {(item.targets.find((t) => t.key === "front")?.ops.length ?? 0) >= 2 ? (
+              <NumRow
+                label="Entre centres"
+                help="La del fitxer del fabricant (a la de catàleg més propera si hi era a menys de 0,5 mm). És la mateixa a totes les portes, calaixos i abatibles que triïn aquest tirador. Canviar-la el deixa sense confirmar."
+                value={item.pitch.else}
+                min={16}
+                max={2000}
+                step={1}
+                onChange={(v) => Number.isFinite(v) && onChange(setHandleDistance(item, v))}
+              />
+            ) : (
+              <Text fontSize="sm" color="fg.muted" px={{ base: 4, sm: 6 }} pb={2}>
+                Pom: un sol forat, al mateix lloc que el centre del tirador de l'app.
+              </Text>
+            )}
+          </FormSection>
+        ) : item.pitch ? (
           <FormSection title="Distància entre forats">
             <StepRows rule={item.pitch} kind="pitch" onChange={(pitch) => set({ pitch })} />
           </FormSection>
-        )}
+        ) : null}
 
-        {item.imported ? (
+        {item.engine === "model" ? null : item.imported && item.engine !== "barHandle" ? (
           <FormSection title="Mecanitzats">
             {item.targets.map((t) => (
               <OpsEditor key={t.key} item={item} target={t} onChange={(next) => setTargets(item.targets.map((x) => (x.key === t.key ? next : x)))} />
@@ -834,7 +956,9 @@ function HardwareCard({
             </FormRow>
           ))}
           <Text fontSize="xs" color="fg.muted" px={{ base: 4, sm: 6 }} pb={2}>
-            En coordenades de la peça (u al llarg del cantell de referència, v cap a dins), amb els noms de les mides de dalt. Editar-los i afegir-ne és per a més endavant (ferratges manuals).
+            {item.imported
+              ? "Forats passants al front, al voltant del centre del tirador (pitch = la distància entre forats, diameter = el Ø de Mides)."
+              : "En coordenades de la peça (u al llarg del cantell de referència, v cap a dins), amb els noms de les mides de dalt. Editar-los i afegir-ne és per a més endavant (ferratges manuals)."}
           </Text>
         </FormSection>
         )}
@@ -843,7 +967,7 @@ function HardwareCard({
   )
 }
 
-const TAG_LABEL: Record<string, string> = { hinge: "Cassoleta", "hinge-screw": "Cargol", "hinge-dowel": "Espiga", plate: "Placa" }
+const TAG_LABEL: Record<string, string> = { hinge: "Cassoleta", "hinge-screw": "Cargol", "hinge-dowel": "Espiga", plate: "Placa", leg: "Cargol", handle: "Forat" }
 const num = (e: number | string, vars: Record<string, number>) => {
   try {
     return evalExpr(e, vars)
@@ -860,6 +984,7 @@ const num = (e: number | string, vars: Record<string, number>) => {
 function OpsEditor({ item, target, onChange }: { item: HardwareItem; target: HardwareTarget; onChange: (t: HardwareTarget) => void }) {
   const fromPlate = item.engine === "cup" && target.key === "side"
   const door = item.engine === "cup" && target.key === "door"
+  const leg = item.engine === "leg"
   const vars = item.params
   const setOp = (k: number, patch: { u?: number; v?: number; d?: number; depth?: number }) =>
     onChange({
@@ -874,9 +999,17 @@ function OpsEditor({ item, target, onChange }: { item: HardwareItem; target: Har
         return next
       }),
     })
-  const add = () => onChange({ ...target, ops: [...target.ops, { kind: "drill", face: "A", u: 0, v: door ? cupRel(10) : 0, d: 5, depth: 10, tag: door ? "hinge-screw" : "plate" }] })
+  const add = () => onChange({ ...target, ops: [...target.ops, { kind: "drill", face: "A", u: 0, v: door ? cupRel(10) : 0, d: leg ? 3 : 5, depth: leg ? 12 : 10, tag: door ? "hinge-screw" : leg ? "leg" : "plate" }] })
   return (
-    <FormRow label={target.label} help={fromPlate ? "De la placa aparellada: per canviar-los, edita la placa i torna-la a triar." : door ? "Al llarg del cantell i cap a dins des del centre de la cassoleta (mm)." : "Al llarg (amunt) i cap al darrere des de la referència de la placa (mm)."}>
+    <FormRow
+      label={target.label}
+      help={
+        fromPlate ? "De la placa aparellada: per canviar-los, edita la placa i torna-la a triar."
+        : door ? "Al llarg del cantell i cap a dins des del centre de la cassoleta (mm)."
+        : leg ? "Al voltant de l'eix de la pota, a la cara de sota de la base: al llarg (d'esquerra a dreta del moble) i cap al davant (mm)."
+        : "Al llarg (amunt) i cap al darrere des de la referència de la placa (mm)."
+      }
+    >
       <Stack gap={2} pt="2px" data-testid={`hardware-ops-${target.key}`}>
         {target.ops.map((op, k) => {
           if (op.kind === "edgeDrill") return null
@@ -915,7 +1048,7 @@ function OpsEditor({ item, target, onChange }: { item: HardwareItem; target: Har
               </HStack>
               <SimpleGrid columns={2} gap={2}>
                 <NumberField label="Al llarg" ariaLabel={`${name}: al llarg`} value={num(op.u, vars)} min={-300} max={300} step={0.5} onChange={(x) => setOp(k, { u: x })} />
-                <NumberField label={door ? "Cap a dins" : "Al darrere"} ariaLabel={`${name}: ${door ? "cap a dins" : "al darrere"}`} value={v} min={-300} max={300} step={0.5} onChange={(x) => setOp(k, { v: x })} />
+                <NumberField label={door ? "Cap a dins" : leg ? "Cap al davant" : "Al darrere"} ariaLabel={`${name}: ${door ? "cap a dins" : leg ? "cap al davant" : "al darrere"}`} value={v} min={-300} max={300} step={0.5} onChange={(x) => setOp(k, { v: x })} />
                 <NumberField label="Ø" ariaLabel={`${name}: diàmetre`} value={num(op.d, vars)} min={1} max={60} step={0.5} onChange={(x) => setOp(k, { d: x })} />
                 <NumberField label="Fondària" ariaLabel={`${name}: fondària`} value={depth} min={0.5} max={40} step={0.5} onChange={(x) => setOp(k, { depth: x })} />
               </SimpleGrid>

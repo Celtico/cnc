@@ -73,8 +73,11 @@ export function PanelHardware({ panel }: { panel: Panel }) {
   if (!hw) return null
   const { cups, inner, outDir, outZ, handle } = hw
   const inDir = -outDir as 1 | -1
-  // Les frontisses importades es dibuixen amb el seu model (`PanelFittings`), no amb la cassoleta genèrica.
-  const drawn = panel.fittings?.length ? [] : cups
+  // Les frontisses importades es dibuixen amb el seu model (`PanelFittings`), no amb la cassoleta genèrica; un tirador
+  // importat, també (cap barra genèrica).
+  const fits = panel.fittings ?? []
+  const drawn = fits.some((f) => f.kind !== "handle" && f.kind !== "leg") ? [] : cups
+  const ownHandle = fits.some((f) => f.kind === "handle")
   return (
     <group>
       {drawn.map((h, i) => (
@@ -88,7 +91,7 @@ export function PanelHardware({ panel }: { panel: Panel }) {
           </mesh>
         </group>
       ))}
-      {!panel.push && <BarHandle cx={handle.cx} cy={handle.cy} z={outZ} dir={outDir} len={handle.len} vertical={handle.vertical} />}
+      {!panel.push && !ownHandle && <BarHandle cx={handle.cx} cy={handle.cy} z={outZ} dir={outDir} len={handle.len} vertical={handle.vertical} />}
     </group>
   )
 }
@@ -146,8 +149,7 @@ export function PanelFittings({ panel }: { panel: Panel }) {
 }
 
 /** Potes regulables sota un mòdul (coordenades de la composició, mm). */
-export function ModuleLegs({ x, z, width, depth, height }: { x: number; z: number; width: number; depth: number; height: number }) {
-  const inset = 50
+export function ModuleLegs({ x, z, width, depth, height, inset = 50 }: { x: number; z: number; width: number; depth: number; height: number; inset?: number }) {
   const pts: [number, number][] = [
     [x + inset, z + inset],
     [x + width - inset, z + inset],

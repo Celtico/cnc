@@ -24,7 +24,7 @@ export interface HardwareMount {
   /** Etiquetes dels forats del ferratge (els altres, com la filera System 32, són del moble). */
   tags: string[]
   /** Forat principal (el centre de l'entrada, mm del mòdul) i la normal de la cara on entra (cap a fora de la peça). */
-  focus: { panelId: string; hole: Hole; at: Vec3; normal: Vec3 } | null
+  focus: { panelId: string; hole: Hole; at: Vec3; normal: Vec3; /** D'on es mira al 3D, si no és la normal (un tirador: des de fora del front). */ view?: Vec3 } | null
   /** Frontissa (o placa): la porta i el lateral, i a quin costat (sempre l'esquerre). */
   hinge?: { doorId: string; sideId: string }
   /** Mides del mòdul d'exemple (mm). */
@@ -32,6 +32,8 @@ export interface HardwareMount {
   /** Avisos del motor que toquen aquest ferratge (p. ex. una placa amb un forat fora del lateral). */
   warnings: string[]
   error?: string
+  /** Ferratge «només 3D» (motor `model`): cap peça ni forat, només el model (o la seva caixa) per veure'l. */
+  model?: { asset?: string; bbox?: { min: Vec3; max: Vec3 } }
 }
 
 /** Etiquetes dels mecanitzats d'un item (els de la placa aparellada, «plate»). */
@@ -51,6 +53,8 @@ function hostHinge(base: Module): HardwareItem {
 
 interface Recipe {
   size: { width: number; height: number; depth: number }
+  /** Base del mòdul (per defecte, cap: el muntatge només mira les peces del ferratge). */
+  base?: Module["carcass"]["base"]
   front?: Front
   shelves?: { n: number; adjustable: boolean }
   /** Peces que sempre hi són (a més de les que porten forats del ferratge). */
@@ -59,7 +63,7 @@ interface Recipe {
 
 const isLeftSide = (p: Panel) => p.id === "side-left"
 
-function recipe(item: HardwareItem): Recipe {
+function recipe(item: HardwareItem): Recipe | null {
   const small = { width: 400, height: 450, depth: 320 }
   switch (item.engine) {
     case "cup":
@@ -77,6 +81,11 @@ function recipe(item: HardwareItem): Recipe {
       return { size: small, front: { kind: "grille", pattern: DEFAULT_GRILLE, mount: "removable", hinge: "left" }, keep: (p) => isLeftSide(p) || p.role === "grille" }
     case "barHandle":
       return { size: { width: 450, height: 300, depth: 450 }, front: { kind: "drawers", n: 1, heights: ["auto"] }, keep: (p) => p.role === "drawerFront" || isLeftSide(p) }
+    case "leg":
+      // Mòdul baix sobre potes: la base (amb els forats de les quatre potes) i el lateral esquerre.
+      return { size: { width: 500, height: 300, depth: 450 }, base: { kind: "legs", height: Math.max(20, item.imported?.bbox?.max[2] ?? 100), hardware: item }, keep: (p) => p.role === "bottom" || isLeftSide(p) }
+    case "model":
+      return null
   }
 }
 
@@ -113,15 +122,23 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
   const rc = recipe(item)
   const pending = isPendingImport(item)
   const tags = itemTags(item)
+  if (!rc) {
+    // Només 3D: el model tal qual (cap peça, cap forat).
+    const imp = item.imported
+    const b = imp?.bbox
+    const size = b ? { width: r(b.max[0] - b.min[0]), height: r(b.max[1] - b.min[1]), depth: r(b.max[2] - b.min[2]) } : { width: 0, height: 0, depth: 0 }
+    return { panels: [], pending, proposedTags: [], tags, focus: null, size, warnings: [], model: { ...(imp?.asset ? { asset: imp.asset } : {}), ...(b ? { bbox: b } : {}) } }
+  }
   const empty = { panels: [], pending, proposedTags: [], tags, focus: null, size: rc.size, warnings: [] }
   // El que es construeix: l'item confirmat (si no, no faria cap forat), al seu lloc del joc del mòdul.
   const made = pending ? setConfirmed(item, true) : item
   const hardware = { ...base.hardware }
   if (made.engine === "plate") hardware.hinge = setConfirmed(pairPlate(hostHinge(base), made), true)
-  else hardware[slotForEngine(made.engine).slot] = made
+  else if (made.engine !== "leg") hardware[slotForEngine(made.engine).slot] = made
+  const legBase = rc.base?.kind === "legs" ? { ...rc.base, hardware: made } : rc.base
   const module: Module = {
     ...base,
-    carcass: { ...base.carcass, ...rc.size, sides: { left: true, right: true }, base: { kind: "none" }, top: { kind: "full" }, hollow: undefined, tableTop: undefined, joint: "butt" },
+    carcass: { ...base.carcass, ...rc.size, sides: { left: true, right: true }, base: legBase ?? { kind: "none" }, top: { kind: "full" }, hollow: undefined, tableTop: undefined, joint: "butt" },
     root: { id: "mount-root", ...(rc.shelves ? { shelves: rc.shelves } : {}), ...(rc.front ? { front: rc.front } : {}) },
     fronts: { ...base.fronts, style: "overlay", handles: "bar" },
     hardware,
@@ -152,13 +169,15 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
       const score = item.engine === "cup" || item.engine === "plate" ? (h.tag === "hinge" ? at[1] : Infinity) : Math.abs(at[1] - rc.size.height / 2) + (p.role === "side" ? 0 : 0.1)
       if (score < best) {
         best = score
-        focus = { panelId: p.id, hole: h, at, normal: worldDir(p, e.normal) }
+        // Un tirador es mira des de fora del front (on va el tirador), no des de la cara A.
+        focus = { panelId: p.id, hole: h, at, normal: worldDir(p, e.normal), ...(item.engine === "barHandle" ? { view: [0, 0, 1] as Vec3 } : {}) }
       }
     }
   }
   const door = panels.find((p) => p.role === "door")
   const side = panels.find(isLeftSide)
-  const relevant = new Set(["hinge", "hardware"])
+  // Els avisos del ferratge (el mòdul d'exemple de les potes ja té l'alçada de la pota: no avisa de l'alçada).
+  const relevant = new Set(["hinge", "hardware", "handle"])
   return {
     panels,
     pending,

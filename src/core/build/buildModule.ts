@@ -18,12 +18,14 @@ import {
   type PanelRole,
   type Vec3,
   type Zone,
+  damagedImportMessage,
+  isDamagedImport,
   isLegacyHardware,
   migrateModuleHardware,
   visibleModule,
 } from "../model"
 import { normalizePanel } from "./buildCabinet"
-import { applyHardware, resolveKit, slotSpec, type ResolvedKit, type SlotSpec } from "./hardware"
+import { applyHardware, legSpec, resolveKit, slotSpec, type ResolvedKit, type SlotSpec } from "./hardware"
 import {
   X,
   Y,
@@ -1136,12 +1138,39 @@ class Builder {
     return { x0: r(x0), x1: r(x1), y0: r(y0), y1: r(y1) }
   }
 
-  /** Peça de front vertical (porta, reixeta, fix): cara A cap a dins, x local = alçada. */
-  /** Tirador del front; sense tiradors (`handles: "none"`), cap forat i un avís (una vegada) del ferratge push. */
-  private handle(p: Panel, cx: number, cy: number, along: "x" | "y"): void {
+  /**
+   * El tirador d'un front: el triat a la porta, el calaix o l'abatible (`front.handle`) o, si no, el del mòdul. Un que no
+   * serveix torna al del mòdul; un d'**importat** que no serveix queda inert (cap forat, `inertHandle`), mai el del mòdul.
+   */
+  private frontHandle(item: HardwareItem | undefined, zoneId?: string): { spec: SlotSpec<"handle">; item: HardwareItem } {
+    if (!item) return this.kit.handle
+    const res = slotSpec("handle", item, (message) => this.hardwareWarning(message, zoneId))
+    return res.failed && !item.imported ? this.kit.handle : res
+  }
+
+  /**
+   * Tirador del front; sense tiradors (`handles: "none"`), cap forat i un avís (una vegada) del ferratge push. Un tirador
+   * importat **sense confirmar** (o que no serveix) no fa cap forat: avís `hardware` (el taller no rep res que no s'hagi
+   * revisat). Un d'importat i confirmat posa el seu model al 3D (`Panel.fittings`, a la cara de fora).
+   */
+  private handle(p: Panel, cx: number, cy: number, along: "x" | "y", hs: { spec: SlotSpec<"handle">; item: HardwareItem } = this.kit.handle, zoneId?: string): void {
     if (this.m.fronts.handles !== "none") {
-      if (!addHandle(p, cx, cy, along, this.kit.handle.item, this.hw.handle))
+      const { spec, item } = hs
+      if (spec.pending) {
+        this.hardwareWarning(spec.unusable ?? `«${item.name}» és un tirador importat i encara no està confirmat: els fronts que el porten no fan els forats del tirador. Revisa'l i confirma'l a Preferències › Ferratges.`, zoneId)
+        return
+      }
+      if (!addHandle(p, cx, cy, along, item, spec)) {
         this.warnings.push({ code: "handle", message: `${p.label} de ${num(p.width)} × ${num(p.length)} mm: massa petit per als forats del tirador (o toparien amb les cassoletes). No es fan: posa-hi un pom o un tirador de cantell.`, panelId: p.id })
+        return
+      }
+      const imp = item.imported
+      if (imp && (imp.asset || imp.bbox)) {
+        // Cara de fora del front (la que mira cap al davant del moble) i el marc del tirador: u al llarg dels forats.
+        const face = p.placement.zAxis[2] > 0 ? "A" : "B"
+        const v: [number, number] = along === "x" ? [0, face === "A" ? 1 : -1] : [face === "A" ? -1 : 1, 0]
+        ;(p.fittings ??= []).push({ kind: "handle", ...(imp.asset ? { asset: imp.asset } : {}), x: r(cx), y: r(cy), face, v, ...(imp.bbox ? { bbox: imp.bbox } : {}) })
+      }
       return
     }
     p.push = true
@@ -1310,7 +1339,9 @@ class Builder {
 
     // La frontissa triada a la porta (si no, la del mòdul); la de vidre no en porta.
     const hingeHw = front.glass ? this.kit.hinge : this.frontHardware("hinge", front.hardware, zone.id)
-    const hd = this.hw.handle
+    // El tirador triat a la porta (si no, el del mòdul).
+    const handleHw = front.glass ? this.kit.handle : this.frontHandle(front.handle, zone.id)
+    const hd = handleHw.spec
     const make = (id: string, name: string, label: string, x0: number, w: number, hinge: "left" | "right") => {
       if (w > 600) this.warnings.push({ code: "door-too-wide", message: `Porta de ${num(w)} mm d'amplada (màxim recomanat 600).`, zoneId: zone.id })
       if (front.glass) return this.glassDoor(id, label, x0, ter.y0, w, doorH)
@@ -1321,7 +1352,7 @@ class Builder {
       const cupBand = hingeHw.spec.cupOffset + hingeHw.spec.cupDiameter / 2 + hd.diameter / 2 + hd.margin
       if (m.fronts.handles !== "none" && w - hd.inset < cupBand)
         this.warnings.push({ code: "handle", message: `${door.label} de ${num(w)} mm d'amplada: el tirador cauria sobre les frontisses (calen ${num(cupBand + hd.inset)} mm). No es fan els forats: posa-hi un pom o un tirador de cantell.`, zoneId: zone.id, panelId: door.id })
-      else this.handle(door, doorH / 2, hinge === "left" ? w - hd.inset : hd.inset, "x")
+      else this.handle(door, doorH / 2, hinge === "left" ? w - hd.inset : hd.inset, "x", handleHw, zone.id)
     }
     if (front.mode === "single") {
       make(`door${suffix}`, "porta", "Porta", ter.x0, r(ter.x1 - ter.x0), front.hinge)
@@ -1396,8 +1427,9 @@ class Builder {
       flap.holes.push(...applyHardware(arm.item, "flap", {}, { at: { x: 0, y }, ...(front.dir === "down" ? {} : { mirrorX: along }) }).holes)
     }
     // Tirador al cantell que obre (el contrari del gir), horitzontal i centrat.
-    const inset = this.hw.handle.inset
-    this.handle(flap, front.dir === "down" ? along - inset : inset, across / 2, "y")
+    const handleHw = this.frontHandle(front.handle, zone.id)
+    const inset = handleHw.spec.inset
+    this.handle(flap, front.dir === "down" ? along - inset : inset, across / 2, "y", handleHw, zone.id)
   }
 
   private buildGrille(
@@ -1501,6 +1533,8 @@ class Builder {
     const c = m.carcass
     // La guia triada al calaix (si no, la del mòdul): llargades, jocs, caixa i forats.
     const hw = this.frontHardware("slide", front.hardware, zone.id).spec
+    // El tirador triat al calaix (si no, el del mòdul).
+    const handleHw = this.frontHandle(front.handle, zone.id)
     const n = front.n
     const bg = m.fronts.betweenGap
     const sizes = front.heights.slice(0, n)
@@ -1577,7 +1611,7 @@ class Builder {
         ...(mL || mR || mT || mB ? { mitres: [...(mL ? (["left"] as const) : []), ...(mR ? (["right"] as const) : []), ...(mT ? (["bottom"] as const) : []), ...(mB ? (["top"] as const) : [])] } : {}),
       })
       // Tirador centrat (x local = amplada, y local = cap avall).
-      this.handle(frontPanel, fw / 2, fh / 2, "x")
+      this.handle(frontPanel, fw / 2, fh / 2, "x", handleHw, zone.id)
       const sb = shared.get(groupOf(fh))!
       const boxH = r(sb.hi - sb.lo)
       if (boxH < minBox) {
@@ -1649,6 +1683,83 @@ class Builder {
       this.warnings.push({ code: "drawer-box", message: "Caixa del calaix massa baixa per a les espigues: alguna unió queda sense espiga (cal cargolar-la).", zoneId: zone.id })
   }
 
+  /**
+   * Potes amb una pota importada triada (`Base.hardware` de la base «Potes»): una a cada cantonada, a `inset` de les vores
+   * de fora del mòdul (on les dibuixa el 3D), amb els forats de la placa a la **cara de sota de la base** (u = X del
+   * mòdul, v = cap al davant: totes girades igual). **Totes o cap**: si una placa no hi cap sencera (amb 3 mm de marge, sense
+   * trepitjar cap forat) no se'n fa cap i avisa; sense confirmar (o malmesa), cap forat i avís `hardware`.
+   */
+  buildLegs(): void {
+    const base = this.m.carcass.base
+    if (base.kind !== "legs" || !base.hardware) return
+    const item = base.hardware
+    let spec: ReturnType<typeof legSpec>
+    try {
+      spec = legSpec(item)
+    } catch (err) {
+      const why = err instanceof Error ? err.message : String(err)
+      this.hardwareWarning(isDamagedImport(item) ? damagedImportMessage(item) : `Potes: ${why}. Les potes no fan cap forat.`)
+      return
+    }
+    if (spec.pending) {
+      this.hardwareWarning(`«${item.name}» és una pota importada i encara no està confirmada: la base no fa els forats de les potes. Revisa-la i confirma-la a Preferències › Ferratges.`)
+      return
+    }
+    const { d } = this
+    const legLen = item.imported?.bbox?.max[2]
+    if (legLen !== undefined && Math.abs(legLen - base.height) > 1)
+      this.hardwareWarning(`«${item.name}» fa ${num(legLen)} mm d'alçada i la base «Potes» en diu ${num(base.height)}: el moble quedarà a una altra alçada (posa-hi ${num(legLen)}).`)
+    // La base: la peça de baix amb la cara a Y = 0 (la de fora, si les parets són buides).
+    const bottom = this.panels.find((p) => p.role === "bottom" && faceAt(p, toLocal(p, [d.W / 2, d.baseY, d.D / 2])) !== null)
+    if (!bottom) {
+      this.hardwareWarning(`«${item.name}»: el mòdul no té base on cargolar les potes. No es fan els forats.`)
+      return
+    }
+    const inset = spec.inset
+    const legs: [number, number][] = [
+      [inset, inset],
+      [d.W - inset, inset],
+      [inset, d.D - inset],
+      [d.W - inset, d.D - inset],
+    ]
+    const T = bottom.thickness
+    const margin = 3
+    const holes: Hole[] = []
+    let deep = false
+    for (const [lx, lz] of legs)
+      for (const h of spec.holes) {
+        const l = toLocal(bottom, [r(lx + h.u), d.baseY, r(lz + h.v)])
+        const face = faceAt(bottom, l)
+        const R = h.d / 2
+        const fits =
+          face !== null &&
+          l[0] - R >= margin &&
+          l[0] + R <= bottom.length - margin &&
+          l[1] - R >= margin &&
+          l[1] + R <= bottom.width - margin &&
+          bottom.holes.every((e) => e.face === "edge" || e.face !== face || Math.hypot(e.x - l[0], e.y - l[1]) >= e.diameter / 2 + R + 1)
+        if (!fits || !face) {
+          this.hardwareWarning(`«${item.name}»: la placa d'alguna pota no hi cap sencera a la base (a ${num(inset)} mm dels cantells, amb ${margin} mm de marge i sense trepitjar altres forats). No es fa cap forat de les potes: canvia «Als cantells» de la pota.`)
+          return
+        }
+        const depth = Math.min(h.depth, T - 1)
+        if (depth < h.depth) deep = true
+        holes.push({ x: l[0], y: l[1], diameter: h.d, depth: r(depth), face, tag: h.tag })
+      }
+    bottom.holes.push(...holes)
+    if (deep) this.hardwareWarning(`«${item.name}»: els forats de les potes són més fondos que la base: es fan a ${num(T - 1)} mm (1 mm de pell).`)
+    const imp = item.imported
+    if (imp && (imp.asset || imp.bbox)) {
+      const z = bottom.placement
+      const lv: [number, number] = [z.xAxis[2], z.yAxis[2]]
+      for (const [lx, lz] of legs) {
+        const l = toLocal(bottom, [lx, d.baseY, lz])
+        const face = faceAt(bottom, l)
+        if (face === "A" || face === "B") (bottom.fittings ??= []).push({ kind: "leg", ...(imp.asset ? { asset: imp.asset } : {}), x: l[0], y: l[1], face, v: lv, ...(imp.bbox ? { bbox: imp.bbox } : {}) })
+      }
+    }
+  }
+
   private cableHole(hole: CableHole): void {
     const { d } = this
     const target =
@@ -1694,6 +1805,7 @@ export function buildModule(input: Module): ModuleBuild {
   const b = new Builder(visibleModule(input))
   b.buildCarcass()
   const layout = b.buildZones()
+  b.buildLegs()
   const panels = b.panels.map((p) => normalizePanel(p.cutouts && p.cutouts.length === 0 ? { ...p, cutouts: undefined } : p))
   return { panels, extras: b.extras, warnings: b.warnings, layout, openRatios: b.openRatios }
 }

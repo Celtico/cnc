@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { DEFAULT_GRILLE, HARDWARE_SLOTS, backChoices, boardChoices, jointApplies, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, HARDWARE_SLOTS, backChoices, boardChoices, hardwareChoices, hardwareSummary, jointApplies, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
@@ -68,7 +68,10 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
           </>
         )}
         {c.base.kind === "legs" && (
-          <NumRow label="Alçada potes" value={c.base.height} min={20} max={400} step={5} onChange={(height) => set({ base: { kind: "legs", height } })} />
+          <>
+            <NumRow label="Alçada potes" value={c.base.height} min={20} max={400} step={5} onChange={(height) => set({ base: { ...(c.base as Extract<Base, { kind: "legs" }>), height } })} />
+            <LegPick base={c.base} onChange={(base) => set({ base })} />
+          </>
         )}
 
         <FormRow label="Fons">
@@ -368,4 +371,30 @@ function TableTopFields({ module, onChange }: { module: Module; onChange: (m: Mo
 /** Gruixos del material com a opcions, amb l'actual si no n'és cap (no es perd en obrir-lo). */
 function thicknessOptions(list: number[], current: number): { id: string; label: string }[] {
   return (list.includes(current) ? list : [current, ...list]).map((t) => ({ id: String(t), label: `${t} mm` }))
+}
+
+/**
+ * La pota de la base «Potes» (`Base.hardware`): les genèriques (només es veuen, cap forat) o una pota importada de la
+ * biblioteca (Preferències › Ferratges, una **còpia**): un cop confirmada, els forats de la placa a la cara de sota de la
+ * base, a cada pota. Una còpia que no és a la biblioteca tal qual surt a part, «del moble» (`hardwareChoices`).
+ */
+function LegPick({ base, onChange }: { base: Extract<Base, { kind: "legs" }>; onChange: (b: Base) => void }) {
+  const { settings } = useSettings()
+  const legs = settings.hardwareLibrary.filter((x) => x.engine === "leg")
+  const cur = base.hardware
+  const choices = cur ? hardwareChoices(legs, cur) : { options: legs.map((x) => ({ key: x.id, item: x, label: x.name, own: false })), value: "none" }
+  if (!legs.length && !cur) return null
+  const pick = (key: string) => {
+    if (key === "none") {
+      const { hardware: _h, ...rest } = base
+      return onChange(rest)
+    }
+    const hit = choices.options.find((o) => o.key === key)
+    if (hit) onChange({ ...base, hardware: structuredClone(hit.item) })
+  }
+  return (
+    <FormRow label="Pota" help={cur ? hardwareSummary(cur) : "Genèriques: només es veuen al 3D (cap forat). Les potes importades (Preferències › Ferratges) fan els forats de la placa a la cara de sota de la base."}>
+      <ChoiceChips label="Pota" value={choices.value} options={[{ id: "none", label: "Genèriques" }, ...choices.options.map((o) => ({ id: o.key, label: o.label }))]} onChange={pick} />
+    </FormRow>
+  )
 }

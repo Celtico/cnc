@@ -57,7 +57,8 @@ export interface ViewerModule {
   /** «Al terra» lliure: es mou pel terra (de costat i endavant/enrere). */
   free?: boolean
   /** Potes regulables: alçada (mm) i fondària de la caixa, per dibuixar-les. */
-  legs?: { height: number; depth: number }
+  /** Potes (base «Potes»): `inset` de les vores; `fitted` = la pota importada i confirmada ja es dibuixa amb el seu model (`Panel.fittings`). */
+  legs?: { height: number; depth: number; inset?: number; fitted?: boolean }
 }
 
 export interface CabinetViewerProps {
@@ -404,7 +405,7 @@ export function CabinetViewer({
             outline
           />
         )}
-        {hardware && modules?.map((m) => m.legs && !(moduleDrag && (moduleDrag.all || moduleDrag.index === m.index)) && <ModuleLegs key={`legs-${m.id}`} x={m.x} z={m.z ?? 0} width={m.width} depth={m.legs.depth} height={m.legs.height} />)}
+        {hardware && modules?.map((m) => m.legs && !m.legs.fitted && !(moduleDrag && (moduleDrag.all || moduleDrag.index === m.index)) && <ModuleLegs key={`legs-${m.id}`} x={m.x} z={m.z ?? 0} width={m.width} depth={m.legs.depth} height={m.legs.height} inset={m.legs.inset} />)}
         {highlightZone && <ZoneHighlight box={highlightZone} />}
         {(() => {
           const hm = hoverModule !== null && hoverModule !== selectedIndex && !moduleDrag ? modules?.find((m) => m.index === hoverModule) : undefined

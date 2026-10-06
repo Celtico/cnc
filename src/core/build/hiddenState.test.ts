@@ -45,21 +45,21 @@ function scrambleHidden(m: Module, r: Rnd): Module {
   const fronts = { ...m.fronts }
   if (!fronts.style && r() < 0.5) fronts.style = "overlay"
   if (!fronts.handles && r() < 0.5) fronts.handles = "bar"
-  return { ...m, carcass: c, fronts, root: scrambleZone(m.root, r) }
+  return { ...m, carcass: c, fronts, root: scrambleZone(m.root, r, m.fronts.handles === "none") }
 }
 
 function randomShelves(r: Rnd): Zone["shelves"] {
   return { n: int(r, 0, 5), adjustable: r() < 0.5, ...(r() < 0.5 ? { thickness: pick(r, [40, 60]) } : {}), ...(r() < 0.5 ? { flush: true } : {}) }
 }
 
-function scrambleZone(z: Zone, r: Rnd): Zone {
+function scrambleZone(z: Zone, r: Rnd, noHandles: boolean): Zone {
   const out: Zone = { ...z }
   const f = z.front
   if (z.split) {
     // Un compartiment dividit no ensenya Prestatges (ni la barra).
     if (r() < 0.5) out.shelves = randomShelves(r)
     if (r() < 0.3) out.rail = true
-    out.split = { ...z.split, children: z.split.children.map((c) => scrambleZone(c, r)) }
+    out.split = { ...z.split, children: z.split.children.map((c) => scrambleZone(c, r, noHandles)) }
   } else if (f?.kind === "drawers") {
     // Calaixos: la secció Prestatges (i la barra) no surt.
     if (r() < 0.6) out.shelves = randomShelves(r)
@@ -72,11 +72,16 @@ function scrambleZone(z: Zone, r: Rnd): Zone {
     if (!out.shelves) delete out.shelves
     if (!z.rail && r() < 0.3) out.rail = false
   }
-  if (f) out.front = scrambleFront(f, r)
+  if (f) out.front = scrambleFront(f, r, noHandles)
   return out
 }
 
-function scrambleFront(f: Front, r: Rnd): Front {
+/** Un tirador diferent del del mòdul (una altra distància i Ø): el que es triaria a «Tirador» d'un front. */
+const OTHER_HANDLE = { ...DEFAULT_HARDWARE_KIT.handle, id: "hw-tirador-amagat", params: { ...DEFAULT_HARDWARE_KIT.handle.params, diameter: 8 }, pitch: { steps: [], else: 320 } }
+
+function scrambleFront(f0: Front, r: Rnd, noHandles: boolean): Front {
+  // Sense tiradors (push): el «Tirador» dels fronts no surt ni compta.
+  const f = noHandles && (f0.kind === "door" || f0.kind === "drawers" || f0.kind === "flap") && r() < 0.6 ? { ...f0, handle: OTHER_HANDLE } : f0
   switch (f.kind) {
     case "drawers":
       // Només es veu el nombre de calaixos: les alçades de més no compten.
@@ -86,7 +91,8 @@ function scrambleFront(f: Front, r: Rnd): Front {
     {
       const d = f.mode === "double" ? { ...f, hinge: pick(r, ["left", "right"] as const) } : f
       // Porta de vidre: frontisses del perfil; la frontissa triada (cassoletes) no surt ni compta.
-      return f.glass && r() < 0.7 ? { ...d, hardware: { ...DEFAULT_HARDWARE_KIT.hinge, id: "hw-amagat", params: { ...DEFAULT_HARDWARE_KIT.hinge.params, cupDiameter: 26, cupOffset: 30 } } } : d
+      // Ni el tirador triat.
+      return f.glass && r() < 0.7 ? { ...d, hardware: { ...DEFAULT_HARDWARE_KIT.hinge, id: "hw-amagat", params: { ...DEFAULT_HARDWARE_KIT.hinge.params, cupDiameter: 26, cupOffset: 30 } }, ...(r() < 0.5 ? { handle: OTHER_HANDLE } : {}) } : d
     }
     case "grille": {
       const p = f.pattern

@@ -200,9 +200,12 @@ export const PanelSchema = z.object({
   /**
    * Ferratges importats posats sobre la peça (només per veure'ls al 3D, no es fabriquen): el model (`asset`, GLB a
    * `hardwareAssets`) amb l'origen a (x, y) de la cara `face`, `v` = direcció local de l'eix v del ferratge al pla de la
-   * peça (u = v × normal de la cara) i la caixa al marc del ferratge (mm) per si el model no hi és.
+   * peça (u = v × normal de la cara) i la caixa al marc del ferratge (mm) per si el model no hi és. Els tiradors, a la cara de
+   * fora del front; les potes, a la cara de sota de la base.
    */
   fittings: z.array(z.object({
+    /** Què és (per no dibuixar-hi també el genèric de l'app): frontissa, placa, tirador o pota. Absent = frontissa o placa. */
+    kind: z.enum(["hinge", "plate", "handle", "leg"]).optional(),
     asset: z.string().optional(),
     x: z.number(),
     y: z.number(),

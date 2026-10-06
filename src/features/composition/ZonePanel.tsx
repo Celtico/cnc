@@ -100,6 +100,7 @@ export function ZonePanel({
   openRatio,
   onChange,
   hardware,
+  noHandles = false,
 }: {
   root: Zone
   zone: Zone
@@ -108,6 +109,8 @@ export function ZonePanel({
   onChange: (root: Zone) => void
   /** Ferratges del mòdul (els fronts en poden triar un altre). */
   hardware: HardwareKit
+  /** El mòdul no porta tiradors (fronts push): el «Tirador» dels fronts no surt. */
+  noHandles?: boolean
 }) {
   const parent = parentOf(root, zone.id)
   const index = parent?.split ? parent.split.children.findIndex((c) => c.id === zone.id) : -1
@@ -145,12 +148,12 @@ export function ZonePanel({
             </HStack>
           </FoldItem>
           {/* Portes que tapen tota la zona dividida (armari: penjador i maleter darrere). */}
-          <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} kinds={["none", "door", "panel"]} title="Front de tota la zona" />
+          <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} kinds={["none", "door", "panel"]} title="Front de tota la zona" />
           {sizeField}
         </>
       ) : (
         <>
-          <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} hardware={hardware} />
+          <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} hardware={hardware} noHandles={noHandles} />
 
           {zone.front?.kind !== "drawers" && (
             <FoldItem id="zone-shelves" title="Prestatges" badge={zone.shelves?.n || undefined} icon={LuRows3}>
@@ -257,7 +260,17 @@ function withHardware<F extends Extract<Front, { kind: "door" | "drawers" | "fla
   return rest as F
 }
 
-function FrontFields({ front, openRatio, onChange, hardware }: { front: Front; openRatio?: number; onChange: (f: Front) => void; hardware: HardwareKit }) {
+/** El tirador propi d'un front: sense (`undefined`), el del mòdul. */
+function withHandle<F extends Extract<Front, { kind: "door" | "drawers" | "flap" }>>(front: F, item: HardwareItem | undefined): F {
+  if (item) return { ...front, handle: item }
+  const { handle: _h, ...rest } = front
+  return rest as F
+}
+
+function FrontFields({ front, openRatio, onChange, hardware, noHandles }: { front: Front; openRatio?: number; onChange: (f: Front) => void; hardware: HardwareKit; noHandles: boolean }) {
+  // «Tirador»: el del mòdul (Fusteria) o un altre de la biblioteca (un d'importat i confirmat fa els forats a la seva distància).
+  const handlePick = (f: Extract<Front, { kind: "door" | "drawers" | "flap" }>) =>
+    noHandles ? null : <HardwarePick slot="handle" label="Tirador" current={f.handle ?? hardware.handle} inherited={hardware.handle} onPick={(h) => onChange(withHandle(f, h))} />
   switch (front.kind) {
     case "door":
       // Un camp per fila: dos grups de botons no hi caben de costat a l'inspector.
@@ -297,6 +310,7 @@ function FrontFields({ front, openRatio, onChange, hardware }: { front: Front; o
           </FormRow>
           {/* La de vidre porta les frontisses del perfil (cap cassoleta): no surt. */}
           {!front.glass && <HardwarePick slot="hinge" current={front.hardware ?? hardware.hinge} inherited={hardware.hinge} onPick={(h) => onChange(withHardware(front, h))} />}
+          {!front.glass && handlePick(front)}
         </Stack>
       )
     case "drawers":
@@ -308,6 +322,7 @@ function FrontFields({ front, openRatio, onChange, hardware }: { front: Front; o
             onChange({ ...front, n: k, heights: Array.from({ length: k }, (_, i) => front.heights[i] ?? "auto") })
           }} />
           <HardwarePick slot="slide" current={front.hardware ?? hardware.slide} inherited={hardware.slide} onPick={(h) => onChange(withHardware(front, h))} />
+          {handlePick(front)}
         </Stack>
       )
     case "flap":
@@ -325,6 +340,7 @@ function FrontFields({ front, openRatio, onChange, hardware }: { front: Front; o
             />
           </FormRow>
           <HardwarePick slot="flap" current={front.hardware ?? hardware.flap} inherited={hardware.flap} onPick={(h) => onChange(withHardware(front, h))} />
+          {handlePick(front)}
         </Stack>
       )
     case "grille": {
@@ -408,7 +424,7 @@ function FrontFields({ front, openRatio, onChange, hardware }: { front: Front; o
  * Tipus de front d'una zona (botons d'icona) i els seus camps. En una zona dividida, només
  * portes o front fix, que tapen tota la zona (les fulles de dins queden darrere).
  */
-export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title = "Front", id, hardware }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; hardware: HardwareKit; kinds?: (Front["kind"] | "none")[]; title?: string; /** Id de la secció plegable (cada lloc el seu: recorda si és oberta). */ id?: string }) {
+export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title = "Front", id, hardware, noHandles = false }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; hardware: HardwareKit; noHandles?: boolean; kinds?: (Front["kind"] | "none")[]; title?: string; /** Id de la secció plegable (cada lloc el seu: recorda si és oberta). */ id?: string }) {
   const options = kinds ?? (Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[])
   return (
           <FoldItem id={id ?? (kinds ? "zone-parent-front" : "zone-front")} title={title} badge={FRONT_LABELS[zone.front?.kind ?? "none"]} icon={FRONT_ICONS[zone.front?.kind ?? "none"]}>
@@ -422,7 +438,7 @@ export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title
                 onChange={(k) => onChange(setFront(root, zone.id, k === "none" ? null : defaultFront(k)))}
               />
             </FormRow>
-            {zone.front && <FrontFields front={zone.front} openRatio={openRatio} hardware={hardware} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
+            {zone.front && <FrontFields front={zone.front} openRatio={openRatio} hardware={hardware} noHandles={noHandles} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
           </FoldItem>
   )
 }

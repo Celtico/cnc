@@ -4,7 +4,8 @@
 > baixat del web del fabricant ha d'acabar fent **els forats bons a les peces bones** del moble. El 3D i els dibuixos
 > són per revisar-lo; el que mana és el patró de forats confirmat.
 
-Preferències › Ferratges › **«Importar del fabricant»**. Primer fabricant: **Hettich** (hettich.com › Serveis › Hettich
+Preferències › Ferratges › **«Importar del fabricant»**. Primer fabricant: **Hettich** (frontisses, plaques, tiradors,
+potes i, com a «només 3D», la resta) (hettich.com › Serveis › Hettich
 CAD › [Descàrregues CAD](https://www.hettich.com/es-es/services/hettich-cad/descargas-cad)). Els fitxers del fabricant
 **no es copien mai al repo** (llicència d'ús per planificar); l'app els llegeix al navegador i en desa el que cal a
 Dexie, com els models 3D de l'usuari.
@@ -21,7 +22,15 @@ Un ZIP per família i format. Dins, carpetes per tipus **en alemany** i un fitxe
 | `3DS_Scharniere.zip` | `.3ds` | No (el 3D surt del STEP) |
 | `dxf_einbau.zip` | Seccions de muntatge acotades (DXF + PDF) per família (no per article) | No: documentació per a l'usuari |
 | `Anschlagloesungen_2D_Sensys.zip` | Exemples d'aplicació (seccions) | No |
-| `STEP_Schubkastensysteme.zip` (271 MB) | Calaixos i guies (conjunts sencers: guies, laterals, fronts, accessoris) | Es llisten com a «Calaix o guia» però **encara no s'importen** (§6) |
+| `STEP_Schubkastensysteme.zip` (271 MB) | Calaixos i guies (conjunts sencers: guies, laterals, fronts, accessoris) | «Calaix o guia», **només 3D** (§6) |
+| `STEP_Griffe.zip` (10 MB, 765 `.stp`) | Tiradors i poms per família (`Classic`, `Deluxe`, `Folk`, `Modern`, `Natural`, `New_Modern`, `Organic`, `Touch_In`, `Exclusive_Designgriffe`) i `Zubehoer` | **Tiradors**: la distància entre forats del STEP (§2) |
+| `STEP_Tischgestelle_-beine_Moebelfuesse_Tischausziehfuehrungen.zip` (5 MB) | Potes (`Aluminium_Moebelfuesse`, `Stahl_Moebelfuesse`, `Tischbeine_Moebelfuesse`), estructures de taula (`Change`, `LegaDrive`, `LegaMove`, `Steelforce/…`), guies de taula (`Trimanis`), electrònica i accessoris | **Potes**: forats de la placa (§2); la resta, només 3D |
+| `STEP_Cadro_Aluminiumrahmensystem.zip` (0,7 MB, 70) | Marc d'alumini per a portes de vidre | Només 3D (§6) |
+| `STEP_Schiebetuersysteme.zip` (94 MB, ~940) · `STEP_Falttuersysteme.zip` (22 MB, ~170) | Portes corredisses (perfils, carros, guies) i plegables (WingLine) | Només 3D (§6) |
+
+**Tot es pot importar** (el que porta STEP): el que no té cap regla de mecanitzat a l'app, o del qual no es troba el
+patró de forats, entra com a **«només 3D»** (motor `model`): el model (GLB) i el volum, **mai cap forat**. Sense STEP (només
+les vistes DXF), no es pot importar.
 
 Carpetes → categories de l'app (`classifyHettich`, `core/import/hettich.ts`):
 
@@ -31,9 +40,30 @@ Carpetes → categories de l'app (`classifyHettich`, `core/import/hettich.ts`):
 | `…_Glas`, `Glastuerscharniere` | Frontisses, etiqueta `vidre` | «Frontissa de vidre» |
 | `Alurahmen-Scharniere` | Frontisses, etiqueta `alumini` | «Frontissa per a marc d'alumini» |
 | `Montageplatten/System_8099/…` | **Plaques de frontissa** (`plate`) | `Mit_vor_Euroschrauben` → amb cargols euro · `Zum_Einpressen` → per pressió (espigues) · `Zum_Anschrauben` → per cargolar… |
-| `Zubehoer`, `Scharniertoepfe` (cassoletes soltes), `Moebelbaender` | Altres (`misc`) | no s'importen |
-| `Push_to_open…` | Push | no s'importen |
-| `Schubkastensysteme/…` | Guies (`slide`) | no s'importen |
+| `Zubehoer`, `Scharniertoepfe` (cassoletes soltes), `Moebelbaender` | Altres (`misc`) | «Accessori», «Cassoleta solta», «Frontissa de pala»: només 3D |
+| `Push_to_open…` | Push | només 3D |
+| `Schubkastensysteme/…` | Guies (`slide`) | «Calaix o guia»: només 3D |
+| `Griffe/<família>` | **Tiradors** (`handle`) | «Tirador Classic 115001», «Tirador Touch-in …»; `Griffe/Zubehoer` → «Accessori de tirador», només 3D |
+| `Tischgestelle_…/Aluminium_Moebelfuesse`, `Stahl_Moebelfuesse` | **Potes i sòcols** (`leg`) | «Pota d'alumini …», «Pota d'acer 1225» |
+| `Tischgestelle_…/Tischbeine_Moebelfuesse` | Potes (`leg`) | «Pota de taula …» |
+| `Tischgestelle_…/Change`, `LegaDrive`, `LegaMove`, `Steelforce/…_Line` | **Taules** (`table`) | «Estructura de taula»: només 3D |
+| `Tischgestelle_…/Trimanis` | Taules (`table`) | «Guia de taula»: només 3D |
+| `…/Steelforce_Elektronik/…`, `…/Steelforce/Zubehoer/…` (passacables, pantalles, calaixos) | Altres (`misc`) | «Accessori»: només 3D |
+| `Cadro_Aluminiumrahmensystem` | **Perfils i marcs** (`profile`) | «Marc d'alumini (Cadro)»: només 3D |
+| `Schiebetuersysteme/…` · `Falttuersysteme/…` | **Portes corredisses i plegables** (`door-system`) | «Porta corredissa», «Porta plegable»: només 3D |
+| qualsevol altra | Altres (`misc`) | «Ferratge»: només 3D (mai «Carpeta desconeguda») |
+
+La carpeta de la família (la de dalt: `Griffe`, `Tischgestelle_-beine_Moebelfuesse_…`) **no compta** per a les
+subfamílies: el nom del ZIP de taules diu «Moebelfuesse» però una `LegaDrive` no és una pota (`FAMILY_DIRS`). Al nom,
+només les paraules de la carpeta que no diu ja el nom («Pota de taula 46048», no «Pota de taula de taula»).
+
+**El diàleg d'importar** (`HardwareImportDialog`): el resum per tipus («742 tiradors, 71 potes i 111 només 3D es poden
+importar · N no es poden importar (sense STEP)»), un filtre per tipus amb els que hi són (Frontisses · Plaques · Tiradors
+· Potes · Només 3D · No es poden importar; cap «Altres» que amagui res que es pugui importar) i a cada fila **què se'n
+farà** (`HettichArticle.plan`, `importPlan`): «Frontissa · cassoleta i forats del STEP», «Placa · forats del STEP»,
+«Només 3D: sense forats (…per què)». La dels tiradors i les potes es calcula llegint el STEP de les files que es veuen,
+de mica en mica (`analyseArticle` → `proposalPlan`): «Tirador · 128 mm», «Pom · 1 forat», «Pota · 4 forats a cada pota»
+o «Només 3D: …» si no s'hi troba el patró (un ZIP de 750 tiradors es llegeix sencer en ~4 s).
 
 ## 2. D'on surten els forats: el STEP
 
@@ -67,6 +97,26 @@ unitats (`SI_UNIT(.MILLI.,.METRE.)`, metres, polzades) i conjunts (`CONTEXT_DEPE
   del braç, tetons de l'altra cara) no es proposa. Els forats van per **parells simètrics** (u ↔ −u); si en queda algun
   sense parell, la placa és **ambigua: cap forat** i la nota ho diu (s'entren a mà a l'editor; no es pot confirmar una
   placa sense forats). `n` = fora del lateral, `u` = la línia dels forats (amunt/avall), `v` = fondària (cap al darrere).
+- **Tirador** (`proposeHandle`): els forats roscats que **neixen al pla per l'origen** del fitxer (la cara de muntatge:
+  als models de Hettich l'origen és al primer forat, el tirador cap a un costat), cilindres sencers (forats, no tetons)
+  de Ø2,8–Ø9; s'admeten forats que comencen fins a 3,5 mm endins (alguns `Folk`/`Deluxe`). Concèntrics → el més estret
+  (el cargol). **Dos forats** → la distància entre centres, a la de catàleg (múltiple de 32: 64, 96, 128, 160, 192…) si
+  hi és a ≤ 0,5 mm (`snapHandleDistance`; si no, a la dècima: 50, 260, 310…). **Un** → pom (un forat al centre). **Tres o
+  quatre** (tiradors que es poden muntar a dues distàncies) → el parell **centrat al tirador** (el mig del parell al mig de
+  la caixa del model, ±1 mm, al llarg dels forats) que passa per l'origen, si no el més llarg; les altres surten a la nota
+  («també es pot muntar a 128 mm»). **Més de quatre** (perfils de tirador amb una filera de cargols) o cap parell
+  centrat → cap proposta: **només 3D**. El forat del front és **passant** (`handleThroughDiameter`): el Ø del tirador
+  per defecte de l'app (5) si el cargol hi passa (cargol + 0,5 ≤ 5: M3, M4), si no 1 mm més ample arrodonit amunt (M5 → 6,
+  Ø6,4 → 8). Marc: origen al mig dels forats a la cara del front, `u` al llarg dels forats, `n` cap al tirador (fora del
+  front), `v = n × u`.
+- **Pota** (`proposeLeg`): els forats que neixen al pla per l'origen (la cara de la placa que toca la base; l'eix de la
+  pota és a l'origen), de Ø2–Ø10, al voltant de l'eix: forats de **pilot** per al cargol de fusta (`legPilot`: Ø de la
+  placa × 0,65 a la broca habitual: Ø4 → 2,5, Ø6,5 → 4) de 12 mm. `n` cap a la pota, `u` = X del fitxer, `v = n × u`.
+  Més de 12 forats o més lluny de 200 mm de l'eix → no és una pota (una estructura): només 3D. Si els forats no són
+  centrats a l'eix (potes de cantonada), la nota ho diu: totes les potes es posen girades igual.
+- **Només 3D** (`modelProposal`): el marc del fitxer, la caixa i el perquè a les notes; cap forat.
+- Totes passen per `proposeArticle` (`importItem.ts`), que tria segons el tipus de l'article i, si la proposta falla, en
+  fa una de només 3D amb el motiu (abans, una frontissa sense cassoleta no s'importava). `articleItem` en fa l'item.
 - **Broques** (`snapDrill`): a la més propera de 35, 26, 20, 15, 10, 8, 5, 4, 3, 2,5 (±12 %); un forat de pas una mica
   més ample (Ø5,25 o Ø5,7 d'un cargol de 5) va a la de sota. **Fondàries**: del tram dins de la peça arrodonit amunt al
   mig mil·límetre (cassoleta 12,8 → 13); si no n'hi ha, la de la categoria (cargol d'ala 10, cargol de placa 12).
@@ -79,6 +129,14 @@ frontisses donen una proposta (les que no: sense cassoleta reconeixible, de vidr
 plaques, 123 en donen 2 forats i 16 en donen 4 (System 4899: espiga o cargol a la filera i cargol a 13), 71 són
 ambigües (plaques lineals amb els forats en fondària, adaptadors, System 4899 amb cargols en creu…) i 9 no tenen cap
 forat reconeixible.
+
+Amb els ZIP de tiradors i potes (`hettich2.roundtrip.test.ts`, `HETTICH2_DIR`): de 742 tiradors, **585 donen la
+distància** (Classic 115001 → 160; 9070102 → 96; Modern 115147 → 128 amb cargols M5 → Ø6; Deluxe 9113674, 4 forats → 96 i
+la nota «també a 128»; New Modern 9064670, 3 forats → 360; Folk 9132268, forats 2,8 mm endins → 128), 74 són poms i ~83
+queden només 3D (perfils de 5–20 cargols, perfils de 3,5 m, fitxers que el lector no entén); cap distància fora de
+16–2000. De 71 potes, 70 donen forats (pota d'acer 1225: 4 forats Ø4 a ±22,5 → pilots Ø2,5 × 12; alumini 45084: 7) i les
+estructures de 32 forats (70147, 70202) queden només 3D. Cadro (70), portes corredisses (~940) i plegables (~170): tot
+només 3D.
 
 El 3D: **OpenCascade** (`occt-import-js`, WASM de ~7,6 MB) en un worker (`components/viewer/occtWorker.ts`), només en
 importar; `stepMesh.ts` passa la malla al marc del ferratge (m) i en fa un GLB (`GLTFExporter`, normals de les cares).
@@ -98,7 +156,7 @@ simplificades (Douglas–Peucker 0,02 mm, centèsimes: unes desenes de kB per vi
 (els forats hi són traus). Els `CONNECTIONPOINTS` (tres punts per vista, els mateixos girats a cada vista) es desen tal
 com venen a l'item (`imported.points`); de moment no fan res (vegeu §6).
 
-## 4. Model de dades (preferències v20, additiu)
+## 4. Model de dades (preferències v20 i v21, additiu)
 
 `HardwareItem` (`core/model/hardware.ts`):
 - `imported`: `maker`, `article`, `folders` (alemany, com venen), `files`, `asset` (id `hwa-…` de la taula Dexie
@@ -121,6 +179,16 @@ com venen a l'item (`imported.points`); de moment no fan res (vegeu §6).
   instantània. En importar, les frontisses s'aparellen amb la placa del lot **només si n'hi ha una** (`pairImportedBatch`;
   amb més, s'aparellen a l'editor).
 - Plaques: motor nou `plate` (sense lloc del mòdul: només s'aparellen), `params.setback` i `offset`, target `side`.
+- **Tiradors** (`handleItem`): el motor del tirador de sempre (`barHandle`, lloc «Tirador») amb la **distància del fitxer**
+  com a regla sense graons (`pitch: { steps: [], else: 160 }`: la mateixa a tots els fronts, no la de l'espai), els
+  forats passants `±pitch/2` (o un a 0, pom, `pitch` 0) de Ø `diameter`, i el marge i el cantell (`inset`) del tirador per
+  defecte. Canviar la distància (`setHandleDistance`) o el Ø el deixa sense confirmar (`IMPORTED_HOLE_PARAMS_BY_ENGINE`).
+- **Potes** (`legItem`): motor nou `leg` (sense lloc del joc del mòdul: es tria a la base «Potes», `Base.hardware`),
+  `params.inset` (50, dels cantells de fora del mòdul a l'eix de la pota), target `base` (forats al marc de la pota).
+- **Només 3D** (`modelItem`): motor nou `model`, la categoria de la família (`table`, `door-system`, `profile`, `misc`…),
+  target `model` sense cap mecanitzat; no es confirma mai (`confirmProblem`: «És només 3D») ni es pot triar enlloc.
+- Categories noves (preferències **v21**, additiu): **Taules** (`table`, `LuTable`) i **Portes corredisses i plegables**
+  (`door-system`, `LuDoorOpen`); «Perfils» passa a «Perfils i marcs» (Cadro).
 - `sameHardware` no compara el model, les vistes ni les notes, però **sí** `confirmed`.
 
 ## 5. Al moble (la regla i el mecanitzat)
@@ -156,6 +224,30 @@ sola. **Plaques a banda i banda d'un divisor** (o sobre la filera de l'altra car
 `shortenFitting` escurça primer el forat que no és del ferratge i, si no n'hi ha prou, tots dos a (T − 1)/2, sempre amb
 avís `hole-clash` i mai per sota de 8 mm (`MIN_FITTING_DEPTH`): si no es pot, no es toca i l'avís ho diu clar.
 
+**Tiradors importats** (`buildModule.handle`, `frontHandle`): cada porta, calaix o abatible pot triar el seu tirador
+(`front.handle`, una còpia, com `front.hardware`; a l'inspector, «Tirador» al Front, sota la frontissa/guia/braç, amb el
+del mòdul per defecte = el comportament d'abans; no surt a la porta de vidre ni amb fronts push, `visibleModule`). La
+regla és la de sempre (porta: a `inset` del cantell que obre, a mitja alçada; calaix: centrat; abatible: a `inset` del
+cantell que obre), però amb la distància del fitxer; si no hi cap, l'avís `handle` de sempre i cap forat. Confirmat, el
+model del tirador va a la cara de fora del front (`Panel.fittings` amb `kind: "handle"`) i el 3D no hi posa la barra
+genèrica. **Sense confirmar, cap forat** (ni el del tirador de l'app) i avís `hardware`; malmès o que fa fallar el motor:
+inert (`inertHandle`), mai el del mòdul. També com a tirador de tot el mòdul (Fusteria).
+
+**Potes importades** (`buildModule.buildLegs`): amb una pota triada a la base «Potes» (Caixa › Base › «Pota»: Genèriques
+o les de la biblioteca), una a cada cantonada a `inset` de les vores de fora del mòdul (on les dibuixa el 3D), els forats
+de la placa a la **cara de sota de la base** (u = X del mòdul, v = cap al davant: totes girades igual). **Totes o cap**:
+si una placa no hi cap sencera (3 mm de marge, sense trepitjar cap forat; p. ex. sota un lateral) no se'n fa cap i avisa;
+més fonda que la base → gruix − 1. Si la pota fa una altra alçada que la base «Potes», avís. Confirmada, el model de la
+pota a cada cantonada (`fittings` `kind: "leg"`) en lloc de les potes genèriques. Sense confirmar, cap forat i avís.
+
+**Només 3D**: mai cap forat: no tenen lloc al joc del mòdul ni als fronts (un que s'hi forcés queda inert: ni frontissa
+ni tirador ni pota). A l'editor del ferratge es veuen en 3D (el model sol, amb la caixa) i se'n pot **baixar el GLB**
+(«Model 3D › Baixar el model 3D (.glb)», també per als altres importats) per posar-lo en un objecte (Models 3D › Triar
+fitxers): per decisió de l'usuari els models 3D només van als objectes, no als mobles.
+
+**«Com va muntat»**: els tiradors, en un calaix d'exemple (3D mirat des de fora, amb el model del tirador; Pla amb la cota
+entre centres); les potes, en un mòdul baix sobre potes (la base amb les quatre plaques, mirat des de sota).
+
 **`.moble` v2** (`MOBLE_VERSION`): un moble amb algun ferratge importat es desa com a **v2**; una app d'abans (que només
 llegeix la v1) el rebutja («Fitxer d'una versió més nova») en lloc de treure'n `imported` en silenci i foradar la
 frontissa pendent. Els que no en porten es continuen desant com a v1 (`MOBLE_BASE_VERSION`).
@@ -177,14 +269,45 @@ confirmar, res; placa euro = forats del System 32; porta girada), `core/build/im
 errors del motor, divisor, plaques fondes, portes baixes, encastats, sense lateral, placa per referència),
 `core/file/mobleFile.test.ts` (v1/v2), `core/import/*.test.ts` (fitxers sintètics, DXF malmesos) i
 `hettich.roundtrip.test.ts` (`HETTICH_DIR=<carpeta amb els ZIP> pnpm exec vitest run src/core/import/hettich.roundtrip.test.ts`;
-se salta sense la carpeta). **Proves d'or idèntiques.**
+se salta sense la carpeta). Tiradors, potes i només 3D: `core/build/importedHandleLeg.test.ts` (tirador confirmat a porta,
+calaix i abatible a la seva distància; pom; sense confirmar, malmès o d'error: cap forat; porta de vidre i push; `.moble`
+v2; potes a la cara de sota de la base, totes o cap, alçada; un només 3D forçat a qualsevol lloc no forada) i
+`core/import/hettich2.roundtrip.test.ts` (`HETTICH2_DIR=<carpeta amb STEP_Griffe.zip, STEP_Tischgestelle_….zip,
+STEP_Cadro_….zip i, si hi són, STEP_Schiebetuersysteme.zip i STEP_Falttuersysteme.zip>`: classificació de tots els
+articles, distàncies de tiradors reals, potes, i un tirador real confirmat fent els forats a 96 en una porta i un calaix).
+**Proves d'or idèntiques.**
 
 ## 6. Pendent
 
+Plans per als «només 3D» d'ara (cap regla encara; el que caldria per fer-ne els forats):
+
+- **Cadro (marc d'alumini per a portes de vidre)** ↔ `front.glass` (la porta de vidre, que avui fa un marc genèric de 20
+  mm a `extras`): triar el perfil Cadro com a «marc» de la porta de vidre (mides del perfil i del vidre del fitxer, en
+  lloc dels 20 / 5 fixos) i les **frontisses per a marc d'alumini** (`Alurahmen-Scharniere`, ja classificades com a
+  frontisses amb l'etiqueta `alumini`): els seus forats van al **lateral** (placa) però no a la porta (el marc no és de
+  CNC). Cal: llegir el perfil (secció i ranura del vidre) del STEP, la regla «frontissa sense cassoleta» (només placa) i
+  el pendent del taller «frontisses de porta de vidre».
+- **Portes corredisses** (`Schiebetuersysteme`: TopLine, SlideLine, InLine…): **ranures** (o perfils encastats) a la tapa
+  i la base al llarg de tota l'amplada per als carrils de dalt i de baix (amplada, fondària i distància al davant de
+  cada sistema, del fitxer del perfil o de la taula de muntatge `dxf_einbau`), i els forats dels carros a les portes
+  (a `x` del cantell de dalt/baix). Cal un front nou «porta corredissa» (dues o més fulles encavalcades) i triar quin
+  sòlid del conjunt és el perfil.
+- **Portes plegables** (`Falttuersysteme`, WingLine): **frontisses entre fulles** (cassoletes a les dues fulles al seu
+  cantell comú) i el carril de dalt com les corredisses (ranura o perfil a la tapa) amb el pern de la primera fulla. Cal
+  un front «plegable» (n fulles) i la regla de les cassoletes entre fulles.
+- **Estructures i guies de taula** (`Change`, `LegaDrive`, `LegaMove`, `Steelforce`, `Trimanis`): forats al **tauler de
+  taula** (cara de sota) on es cargola el bastidor; cal la posició del bastidor respecte al tauler (centrat, voladissos)
+  i triar del conjunt les plaques de muntatge.
+- **Potes de cantonada** (`Tischbeine_Moebelfuesse`, forats no centrats a l'eix): girar o fer mirall del patró a cada
+  cantonada (avui totes van girades igual: els forats són bons però una pota de cantonada pot quedar mirant enfora; si
+  no hi cap, cap forat i avís). **Potes regulables de sòcol** (clips): sense descàrrega STEP encara.
+- **Perfils de tirador** (tiradors amb 5–20 cargols, `Griffe/New_Modern` de 1–3,5 m): una regla de N forats a pas fix
+  al llarg del front.
+
 - **Guies i calaixos** (`Schubkastensysteme`): són conjunts sencers (guia, laterals de calaix, fronts) i els forats de la
   guia al lateral depenen de la llargada i del sistema (InnoTech, ArciTech, AvanTech): cal la regla (la del motor
-  `slide`: 1r forat a `frontOffset`, 2n a `secondOffset`) i triar del conjunt quin sòlid és la guia. Es llisten però no
-  s'importen.
+  `slide`: 1r forat a `frontOffset`, 2n a `secondOffset`) i triar del conjunt quin sòlid és la guia. Ara s'importen com
+  a només 3D.
 - **Punts de connexió**: només es desen. Podrien dir la posició de la frontissa respecte a la placa i el lateral (el
   «Mittelseiten» mou un punt 9,5 mm): serviria per comprovar l'encavalcament i el «Topfabstand» del fabricant.
 - **Taules de muntatge** (`dxf_einbau`, PDF): «Topfabstand», gruixos i encavalcament per a cada combinació; ara la
