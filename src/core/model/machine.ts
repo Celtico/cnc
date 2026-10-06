@@ -87,8 +87,43 @@ export const MachineRulesSchema = z.object({
     maxArea: z.number().min(0),
     passes: z.array(z.object({ z: z.number().min(0).max(20), xy: z.number().min(0).max(10) })),
   }),
+  /**
+   * Forats i ranures cecs gairebé passants al .xcs: si la fondària arriba a `threshold` mm de la cara de sota (o més), es
+   * deixen com a molt a gruix − `minSkin` (pell mínima) i avisa. Opcional: sense, `DEFAULT_BLIND` (1 i 0,5, el d'abans). El
+   * programa real del taller fa Ø4 × 18,9 en 19 (0,1 de pell): pendent de confirmar amb el taller. El STEP no en fa cas
+   * (el seu 1 mm és pel parser del taller).
+   */
+  blind: z.object({ minSkin: z.number().min(0).max(10), threshold: z.number().min(0).max(10) }).optional(),
+  /**
+   * Fresat dels contorns per fora i talls per dins (les freses giren a dretes): «asIs» = com surt la geometria (contorns de
+   * fora i talls de dins antihoraris, el d'abans); «conventional» = tot en oposició (fora antihorari, dins horari, com
+   * TopSolid al programa real del taller); «climb» = tot en concordança (fora horari, dins antihorari). Opcional: sense,
+   * «asIs». Pendent de confirmar amb el taller.
+   */
+  cutMode: z.enum(["asIs", "conventional", "climb"]).optional(),
 })
 export type MachineRules = z.infer<typeof MachineRulesSchema>
+export type CutMode = NonNullable<MachineRules["cutMode"]>
+
+/** Pell dels forats i ranures cecs per defecte (el que es feia sempre): els de gruix − 0,5 o més fondos, a gruix − 1. */
+export const DEFAULT_BLIND: NonNullable<MachineRules["blind"]> = { minSkin: 1, threshold: 0.5 }
+
+/** Pell mínima i llindar dels forats cecs de les regles (amb els valors per defecte). */
+export const blindRule = (r: Pick<MachineRules, "blind">): NonNullable<MachineRules["blind"]> => ({ ...DEFAULT_BLIND, ...r.blind })
+
+/**
+ * Fondària d'un forat o ranura cec a la CNC: si arriba a `threshold` de la cara de sota, com a molt gruix − `minSkin` (mai
+ * menys de 0,5 mm). `shortened` si s'ha escurçat (avís). Amb els valors per defecte: de gruix − 0,5 o més → gruix − 1.
+ */
+export function cncBlindDepth(thickness: number, depth: number, r: Pick<MachineRules, "blind">): { depth: number; shortened: boolean; minSkin: number } {
+  const b = blindRule(r)
+  if (depth < thickness - b.threshold) return { depth, shortened: false, minSkin: b.minSkin }
+  const d = Math.max(0.5, Math.min(depth, thickness - b.minSkin))
+  return { depth: d, shortened: Math.abs(d - depth) > 1e-9, minSkin: b.minSkin }
+}
+
+/** Sentit del fresat de les regles (sense: «asIs»). */
+export const cutModeOf = (r: Pick<MachineRules, "cutMode">): CutMode => r.cutMode ?? "asIs"
 
 /**
  * Regles per defecte (les del germà, 2026): ranures «8mm diamant» a 6 mm per passada; caixeres «12mm diamant
@@ -190,6 +225,12 @@ export const MachineSchema = z.object({
    */
   verticalDrills: z.enum(["auto", "tool"]).default("auto"),
   /**
+   * Codificació dels .xcs: «utf8-bom» = UTF-8 amb BOM (el d'abans) · «ascii» = sense BOM, byte a byte com el programa real
+   * del taller (ASCII; un nom d'eina amb accents hi va en UTF-8 i avisa). El LLEGEIX-ME sempre amb BOM (porta accents).
+   * Opcional: sense, `"utf8-bom"`. Pendent de confirmar amb el taller.
+   */
+  xcsEncoding: z.enum(["utf8-bom", "ascii"]).optional(),
+  /**
    * Programes per tauler (nesting): fresa del contorn, separació entre peces, marge del tauler i passada
    * dins del martiri. Opcional: sense, `DEFAULT_MACHINE_NESTING` (`machineNesting`).
    */
@@ -197,8 +238,16 @@ export const MachineSchema = z.object({
     .object({
       /** Codi de la fresa de nesting; sense, la que diu «nesting» al nom o la més petita que travessa. */
       tool: z.string().optional(),
-      /** Marge de la vora del tauler que no s'aprofita (mm). */
+      /** Marge de la vora del tauler que no s'aprofita (mm), amb el mode «fixed». */
       edgeTrim: z.number().min(0).max(100),
+      /**
+       * Com es calcula el marge: «fixed» = `edgeTrim` (el d'abans, 10 mm) · «tool» = Ø de la fresa del contorn (la que fixa
+       * la separació) + `edgeTrimExtra`: la passada del contorn neteja la vora del tauler (al programa real del taller, 12 =
+       * Ø12). Opcional: sense, «fixed». Pendent de confirmar amb el taller.
+       */
+      edgeTrimMode: z.enum(["fixed", "tool"]).optional(),
+      /** Amb el mode «tool»: mm de més sobre el Ø de la fresa (sense: 0). */
+      edgeTrimExtra: z.number().min(0).max(50).optional(),
       /** Separació entre peces = Ø de la fresa + això (mm). */
       spacingExtra: z.number().min(0).max(20),
       /** Passada de més dins del martiri als talls passants i contorns (mm). */
@@ -217,6 +266,14 @@ export const MachineSchema = z.object({
           setupPosition: z.object({ x: z.number(), y: z.number(), z: z.number(), rot: z.number() }),
           /** La macro de càrrega del taller `CreateMacro("Pload", "PLOAD", …)` (§3.6.2 p103), tal com surt al real. */
           loadMacro: z.boolean(),
+          /**
+           * Paràmetres de la macro després de `"PLOAD"`, separats per comes (números o true/false). Opcional: sense,
+           * `DEFAULT_LOAD_MACRO_ARGS` (els del programa real).
+           */
+          loadMacroArgs: z
+            .string()
+            .refine((v) => parseMacroArgs(v) !== null, "paràmetres de la macro: números o true/false separats per comes")
+            .optional(),
           /** `SetPneumaticHoodPosition(n)` (Table 50 p79: 0 = alta, 1–8 = baixa a la posició n; el real: 1). */
           pneumaticHood: z.number().int().min(0).max(8),
           /** `SetWorkPieceFallPrevention(true)` (no és al manual R4; el real el porta). */
@@ -264,6 +321,46 @@ export const DEFAULT_NEST_PROGRAM: NestProgram = { mechanicalOptions: 16777216, 
 
 /** Capçalera dels programes per tauler de la màquina (amb els valors per defecte). */
 export const nestProgram = (m: Pick<Machine, "nesting">): NestProgram => ({ ...DEFAULT_NEST_PROGRAM, ...m.nesting?.program })
+
+/** Paràmetres de la macro `PLOAD` del programa real del taller (després de `"Pload", "PLOAD"`). */
+export const DEFAULT_LOAD_MACRO_ARGS = "1, 0, 1, 0, 4, 2, false, 0, 0, 0, 0"
+
+/**
+ * Paràmetres d'una macro escrits a mà («1, 0, 1, 0, 4, 2, false, 0, 0, 0, 0»): cada un, un número o true/false. Torna la
+ * llista normalitzada o `null` si n'hi ha algun que no ho és.
+ */
+export function parseMacroArgs(text: string): string[] | null {
+  const parts = text.split(",").map((x) => x.trim())
+  if (parts.some((x) => !/^(-?\d+(\.\d+)?|true|false)$/.test(x))) return null
+  return parts
+}
+
+/** Bits encesos d'un número (`MechanicalOptions`): 16777216 → [24]. */
+export function setBits(n: number): number[] {
+  const out: number[] = []
+  let v = Math.max(0, Math.floor(n))
+  for (let b = 0; v > 0 && b < 64; b++) {
+    if (v % 2 === 1) out.push(b)
+    v = Math.floor(v / 2)
+  }
+  return out
+}
+
+/** «0x01000000 · bit 24»: per contrastar-ho amb les caselles del diàleg del Maestro. */
+export function bitsLabel(n: number): string {
+  const bits = setBits(n)
+  const hex = `0x${Math.max(0, Math.floor(n)).toString(16).toUpperCase().padStart(8, "0")}`
+  return bits.length ? `${hex} · ${bits.length === 1 ? "bit" : "bits"} ${bits.join(", ")}` : `${hex} · cap bit`
+}
+
+/**
+ * Marge del tauler del nesting de la CNC: fix (`edgeTrim`) o, amb el mode «tool», el Ø de la fresa del contorn +
+ * `edgeTrimExtra` (sense fresa, el fix).
+ */
+export function boardMargin(n: MachineNesting, tool: Pick<MachineTool, "diameter"> | undefined): number {
+  if (n.edgeTrimMode !== "tool" || !tool) return n.edgeTrim
+  return Math.min(100, tool.diameter + (n.edgeTrimExtra ?? 0))
+}
 
 /** Codi provisional d'una «Eina nova» (`NOVA1`…): no es tria fins que no se li posa el codi de Maestro. */
 export const isPlaceholderTool = (t: Pick<MachineTool, "code" | "manual">): boolean => !!t.manual && /^NOVA\d+$/.test(t.code)

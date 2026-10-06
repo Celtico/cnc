@@ -3,7 +3,7 @@ import { LuCheck, LuRoute, LuPlus, LuTrash2 } from "react-icons/lu"
 import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
 import { NumberField, NumRow } from "../../components/NumRow"
 import { SettingsGroup } from "../../components/SettingsGroup"
-import { defaultMachine, machineNesting, toolLabel, toolMslName, type Machine, type MachineRules } from "../../core/model"
+import { blindRule, cutModeOf, defaultMachine, machineNesting, toolLabel, toolMslName, type CutMode, type Machine, type MachineRules } from "../../core/model"
 import { findRuleTool, missingRuleTools } from "../../core/machine/rules"
 import { usableTool } from "../../core/machine/tools"
 
@@ -62,6 +62,34 @@ export function MachineRulesGroup({ rules: r, machines, onChange }: { rules: Mac
       <FormSection title="Caixeres">
         <FormRow label="Fresa" help="Rebaixos cecs tancats pels quatre costats (CreateContourPocket). Si la fresa no hi cap, es fan com una ranura.">
           <ToolPick machines={machines} label="Fresa de les caixeres" value={r.pockets.tool} onChange={(tool) => set({ pockets: { tool } })} />
+        </FormRow>
+      </FormSection>
+
+      <FormSection title="Forats i ranures gairebé passants">
+        <Text fontSize="sm" color="fg.muted">
+          Un forat o una ranura de cara (no passant) que arriba massa a prop de la cara de sota es deixa amb una pell mínima i avisa. Fins ara: 1 mm
+          de pell, a partir de gruix − 0,5. El programa real del taller fa forats de Ø4 × 18,9 en 19 (0,1 mm de pell): pendent de confirmar amb el
+          taller. Només als programes .xcs (el STEP continua amb 1 mm, que és el que llegeix el taller).
+        </Text>
+        <NumRow label="Pell mínima" help="El que queda de tauler sota el forat o la ranura com a mínim." value={blindRule(r).minSkin} min={0} max={10} step={0.1} onChange={(minSkin) => set({ blind: { ...blindRule(r), minSkin } })} />
+        <NumRow label="A partir de" help="Mm de la cara de sota: els més fondos s'escurcen fins a la pell mínima." value={blindRule(r).threshold} min={0} max={10} step={0.1} onChange={(threshold) => set({ blind: { ...blindRule(r), threshold } })} />
+      </FormSection>
+
+      <FormSection title="Sentit dels contorns i talls">
+        <FormRow
+          label="Fresat"
+          help="Les freses giren a dretes. «Com surt»: contorns de fora i talls de dins antihoraris (el que feia l'app; dins queda en concordança i fora en oposició). «En oposició»: fora antihorari i dins horari, com TopSolid al programa real del taller. «En concordança»: fora horari i dins antihorari (millor acabat, però estira les peces petites). Pendent de confirmar amb el taller."
+        >
+          <ChoiceChips<CutMode>
+            label="Fresat"
+            options={[
+              { id: "asIs", label: "Com surt" },
+              { id: "conventional", label: "En oposició (com TopSolid)" },
+              { id: "climb", label: "En concordança" },
+            ]}
+            value={cutModeOf(r)}
+            onChange={(cutMode) => set({ cutMode })}
+          />
         </FormRow>
       </FormSection>
 

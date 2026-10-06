@@ -1,7 +1,7 @@
 import { zipStore } from "../file/zip"
 import { pickBlade, pickDrill, pickRouter, pickSmallRouter, drillsOfDiameter } from "../machine/tools"
 import { arcOf, bulgeOf, EDGE_NUMBER, flatten, polygonArea, type BPt, type Cutout, type EdgeSide, type Groove, type Hole, type Panel } from "../model"
-import { isSmallPart, machineRules, toolMslName, type Machine, type MachineRules, type MachineTool } from "../model/machine"
+import { blindRule, cncBlindDepth, cutModeOf, isSmallPart, machineRules, toolMslName, type CutMode, type Machine, type MachineRules, type MachineTool } from "../model/machine"
 import { RulePicker } from "../machine/rules"
 import { needsSecondFace, panelProcesses, secondFaceProgram, type ProcessKind } from "../process/processes"
 import { pieceRefs } from "./refs"
@@ -32,7 +32,8 @@ import { asciiFold } from "./text"
  * també l'eina (`"-1"`, p36): el parell esquerra/dreta depèn del cantell i no surt a l'.atrx. Les
  * verticals, `"-1"` per defecte (com els .pgmx del taller) o el nom de la broca (`Machine.verticalDrills`).
  * L'eina va pel seu nom de Maestro (`toolMslName`: el del .pgmx importat o el codi del .tlgx), sense
- * canviar-lo: cadena C# amb `\` i `"` escapats. Fitxer en UTF-8 amb BOM (`xcsBytes`; pendent de validar).
+ * canviar-lo: cadena C# amb `\` i `"` escapats. Fitxer en UTF-8 amb BOM o sense
+ * (`Machine.xcsEncoding`, `xcsBytes`/`xcsZip`; pendent de validar).
  *
  * Coordenades (vegeu docs/maestro-xcs.md, verificades amb el revisor): X = u (la llargada de la peça a
  * l'app, `length`), Y = v (`width`), origen a la cantonada de baix a l'esquerra de la cara A vista des de
@@ -255,6 +256,45 @@ export function slotPts(c: Extract<Cutout, { kind: "slot" }>): BPt[] {
     [c.x, c.y + r, 1],
   ]
 }
+
+/**
+ * El mateix contorn tancat recorregut a l'inrevés: els punts en ordre invers (comença pel mateix) i cada arc amb el bulge
+ * canviat de signe (el bulge va al punt on comença el tram).
+ */
+export function reverseLoop(pts: BPt[]): BPt[] {
+  const n = pts.length
+  return pts.map((_, j) => {
+    const p = pts[(n - j) % n]!
+    const b = -bulgeOf(pts[(2 * n - j - 1) % n]!)
+    return Math.abs(b) < 1e-12 ? [p[0], p[1]] : [p[0], p[1], b]
+  })
+}
+
+/** Antihorari (àrea amb signe positiva, amb els arcs). */
+export const isCcw = (pts: BPt[]): boolean => {
+  const flat = flatten(pts)
+  let area = 0
+  for (let i = 0; i < flat.length; i++) {
+    const a = flat[i]!
+    const b = flat[(i + 1) % flat.length]!
+    area += a[0] * b[1] - b[0] * a[1]
+  }
+  return area > 0
+}
+
+/**
+ * Sentit d'un contorn tancat segons el fresat de les regles (`MachineRules.cutMode`; les freses giren a dretes):
+ * «conventional» (oposició, l'eina a la dreta de la marxa) = per fora antihorari i per dins horari, com TopSolid;
+ * «climb» (concordança) = per fora horari i per dins antihorari; «asIs» = tal com ve (el d'abans).
+ */
+export function cutLoop(pts: BPt[], side: "inside" | "outside", mode: CutMode): BPt[] {
+  if (mode === "asIs" || pts.length < 2) return pts
+  const wantCcw = (side === "outside") === (mode === "conventional")
+  return isCcw(pts) === wantCcw ? pts : reverseLoop(pts)
+}
+
+/** `isClockwise` del `CreateCircleCenterRadius` d'un tall per dins: horari només en oposició (el d'abans, antihorari). */
+export const insideCircleClockwise = (mode: CutMode): boolean => mode === "conventional"
 
 const bbox = (pts: [number, number][]) => {
   const xs = pts.map((p) => p[0])
@@ -527,7 +567,15 @@ export function rulesReadme(r: MachineRules, nesting: boolean): string[] {
     `- Regles del taller: ranures amb «${r.grooves.tool || "automàtica"}» (com a molt ${num(r.grooves.maxPass)} mm per passada), caixeres amb «${r.pockets.tool || "automàtica"}» (CreateContourPocket), perfilar per gruix: ${prof || "automàtica"}.`,
     `- Peces petites (menys de ${num(r.small.maxArea)} m²${r.small.maxSide > 0 ? ` o algun costat < ${num(r.small.maxSide)} mm` : ""}; les grans, d'una passada): contorn en ${r.small.passes.length + 1} passades (${r.small.passes.map((p) => `deixa Z ${num(p.z)} · XY ${num(p.xy)}`).join(", ")}${r.small.passes.length ? ", " : ""}final ${nesting ? "al martiri" : "als passants"}).`,
     ...(nesting && r.ramp.enabled ? [`- Perfilats amb entrada en rampa de ${num(r.ramp.length)} mm (com a molt la meitat del costat recte més llarg), començant al mig d'aquest costat.`] : []),
+    `- Forats i ranures cecs: els que arriben a ${num(blindRule(r).threshold)} mm de la cara de sota es deixen a gruix − ${num(blindRule(r).minSkin)} mm (pell mínima).`,
+    `- Sentit dels contorns i talls: ${CUT_MODE_README[cutModeOf(r)]}.`,
   ]
+}
+
+const CUT_MODE_README: Record<CutMode, string> = {
+  asIs: "com surt la geometria (contorns de fora i talls de dins antihoraris)",
+  conventional: "fresat en oposició (contorns de fora antihoraris, talls de dins horaris, com TopSolid)",
+  climb: "fresat en concordança (contorns de fora horaris, talls de dins antihoraris)",
 }
 
 /**
@@ -544,6 +592,8 @@ export function panelXcs(p: Panel, ref: string, m: Machine, rules?: RulePicker):
   let skipped = 0
   let missingTool = 0
   const rp = rules ?? new RulePicker(m)
+  // Sentit dels contorns i talls (regles del taller; «asIs» = tal com surt la geometria).
+  const cutMode = cutModeOf(rp.rules)
   // `tool`: no surt perquè falta una eina (o no hi arriba).
   const skip = (what: string, why: string, tool = false) => {
     skipped++
@@ -569,11 +619,9 @@ export function panelXcs(p: Panel, ref: string, m: Machine, rules?: RulePicker):
     if (h.face === "edge") continue
     features++
     const s = h.face === "A" ? A : B
-    let depth = h.depth
-    if (depth >= T - 0.5) {
-      depth = Math.max(0.5, T - 1)
-      warnings.push(`${holeWhat(h)}: més fondo que el gruix − 1; s'escurça a ${num(depth)} (com al STEP)`)
-    }
+    const bd = cncBlindDepth(T, h.depth, rp.rules)
+    const depth = bd.depth
+    if (bd.shortened) warnings.push(`${holeWhat(h)}: més fondo que el gruix − ${num(bd.minSkin)}; s'escurça a ${num(depth)}${bd.minSkin === 1 ? " (com al STEP)" : ""}`)
     const t = pickDrill(m, h.diameter, depth, "vertical")
     if (!t) {
       const same = drillsOfDiameter(m, h.diameter, "vertical")
@@ -638,11 +686,9 @@ export function panelXcs(p: Panel, ref: string, m: Machine, rules?: RulePicker):
       skip(grooveWhat(g), "fora de la peça")
       continue
     }
-    let depth = g.depth
-    if (depth >= T - 0.5) {
-      depth = Math.max(0.5, T - 1)
-      warnings.push(`${grooveWhat(g)}: més fonda que el gruix − 1; s'escurça a ${num(depth)}`)
-    }
+    const bd = cncBlindDepth(T, g.depth, rp.rules)
+    const depth = bd.depth
+    if (bd.shortened) warnings.push(`${grooveWhat(g)}: més fonda que el gruix − ${num(bd.minSkin)}; s'escurça a ${num(depth)}`)
     const alongX = x1 - x0 >= y1 - y0
     // Coordenades en «llarg» (a) i «ample» (b) de la ranura.
     const [a0, a1, b0, b1, aMax] = alongX ? [x0, x1, y0, y1, L] : [y0, y1, x0, x1, W]
@@ -727,14 +773,14 @@ export function panelXcs(p: Panel, ref: string, m: Machine, rules?: RulePicker):
       }
       A.select("Top")
       const name = A.name("Tall")
-      A.lines.push(`CreateCircleCenterRadius(${cs(`${name}_G`)}, ${num(c.x)}, ${num(c.y)}, ${num(c.diameter / 2)}, false);`)
+      A.lines.push(`CreateCircleCenterRadius(${cs(`${name}_G`)}, ${num(c.x)}, ${num(c.y)}, ${num(c.diameter / 2)}, ${insideCircleClockwise(cutMode)});`)
       A.lines.push(contourLine(name, through, 0, "tall passant", router))
       const pts = flatten([[c.x + c.diameter / 2, c.y, 1], [c.x - c.diameter / 2, c.y, 1]])
       A.op({ kind: "contour", tool: router.code, depth: through, points: pts, what: cutWhat(c) })
       handled++
       continue
     }
-    const pts = dedupePolyline(c.kind === "rect" ? rectPts(c.x, c.y, c.w, c.h) : c.kind === "slot" ? slotPts(c) : c.points)
+    const pts = cutLoop(dedupePolyline(c.kind === "rect" ? rectPts(c.x, c.y, c.w, c.h) : c.kind === "slot" ? slotPts(c) : c.points), "inside", cutMode)
     if (pts.length < 2) {
       skip(cutWhat(c), "contorn sense mida")
       continue
@@ -762,7 +808,7 @@ export function panelXcs(p: Panel, ref: string, m: Machine, rules?: RulePicker):
   // --- Contorn de les peces amb forma (programa A, l'últim) -----------------------------------
   if (p.outline?.length) {
     features++
-    const outline = dedupePolyline(p.outline)
+    const outline = cutLoop(dedupePolyline(p.outline), "outside", cutMode)
     const maxDia = maxToolDiameter(outline, "outside")
     const sharp = sharpCorners(outline, "outside")
     const ruled = sharp ? undefined : rp.profileTool(T, maxDia, through)
@@ -867,6 +913,8 @@ export function postProcessesOf(p: Panel, ref: string, hasB: boolean, edgeHolesD
 
 export interface XcsExport {
   files: { name: string; text: string }[]
+  /** Codificació dels .xcs (la de la màquina): `xcsZip` la fa servir. */
+  encoding: NonNullable<Machine["xcsEncoding"]>
   panels: XcsPanelResult[]
   /** Avisos amb la peça (només problemes de debò): «A.1.L.1 (lat e): forat Ø5…». */
   warnings: string[]
@@ -877,18 +925,41 @@ export interface XcsExport {
   programs: number
 }
 
-/** Bytes d'un fitxer de l'export: UTF-8 amb BOM (els .xcs i el LLEGEIX-ME; pendent de validar a Maestro). */
-export function xcsBytes(text: string): Uint8Array {
+/**
+ * Bytes d'un fitxer de l'export: UTF-8 amb BOM (per defecte; pendent de validar a Maestro) o sense (`bom` false: el
+ * programa real del taller és ASCII sense BOM; amb text ASCII, els bytes són els mateixos).
+ */
+export function xcsBytes(text: string, bom = true): Uint8Array {
   const body = new TextEncoder().encode(text)
+  if (!bom) return body
   const out = new Uint8Array(body.length + 3)
   out.set([0xef, 0xbb, 0xbf])
   out.set(body, 3)
   return out
 }
 
-/** El .zip de l'export (sense compressió). */
-export function xcsZip(x: Pick<XcsExport, "files">, when?: Date): Uint8Array {
-  return zipStore(x.files.map((f) => ({ name: f.name, data: xcsBytes(f.text) })), when)
+/** Codificació dels .xcs de la màquina (`Machine.xcsEncoding`; sense, UTF-8 amb BOM). */
+export const xcsEncodingOf = (m: Pick<Machine, "xcsEncoding">): NonNullable<Machine["xcsEncoding"]> => m.xcsEncoding ?? "utf8-bom"
+
+/** Text de la codificació per al LLEGEIX-ME. */
+export const encodingReadme = (m: Pick<Machine, "xcsEncoding">): string =>
+  xcsEncodingOf(m) === "ascii" ? "- Fitxers .xcs sense BOM (ASCII, com els programes de TopSolid; un nom d'eina amb accents hi va en UTF-8)." : "- Fitxers .xcs en UTF-8 amb BOM."
+
+/** Avís si els .xcs van sense BOM però algun porta caràcters que no són ASCII (noms d'eina): el Maestro els podria llegir malament. */
+export function encodingWarning(m: Pick<Machine, "xcsEncoding">, files: readonly { name: string; text: string }[]): string | null {
+  if (xcsEncodingOf(m) !== "ascii") return null
+  // eslint-disable-next-line no-control-regex
+  const odd = files.filter((f) => f.name.toLowerCase().endsWith(".xcs") && /[^\x00-\x7f]/.test(f.text)).map((f) => f.name)
+  return odd.length ? `fitxers sense BOM amb caràcters que no són ASCII (noms d'eina?): ${odd.join(", ")}; van en UTF-8 i el Maestro els podria llegir malament` : null
+}
+
+/**
+ * El .zip de l'export (sense compressió). Els .xcs amb la codificació de l'export (`encoding`, la de la màquina; sense,
+ * UTF-8 amb BOM); el LLEGEIX-ME sempre amb BOM (porta accents).
+ */
+export function xcsZip(x: Pick<XcsExport, "files"> & { encoding?: Machine["xcsEncoding"] }, when?: Date): Uint8Array {
+  const bom = (name: string) => x.encoding !== "ascii" || !name.toLowerCase().endsWith(".xcs")
+  return zipStore(x.files.map((f) => ({ name: f.name, data: xcsBytes(f.text, bom(f.name)) })), when)
 }
 
 /** Tots els programes d'un moble + un LLEGEIX-ME.txt. */
@@ -904,9 +975,12 @@ export function toMaestroXcs(panels: Panel[], m: Machine, opts: { project: strin
     for (const w of r.warnings) warnings.push(`${r.ref} (${panels[i]!.label}): ${w}`)
   })
   const empty = results.filter((r) => !r.programs.length).map((r) => r.ref)
+  const enc = encodingWarning(m, files)
+  if (enc) warnings.unshift(enc)
   files.push({ name: "LLEGEIX-ME.txt", text: readme(opts.project, m, results, panels, warnings, empty, opts.date ?? new Date()) })
   return {
     files,
+    encoding: xcsEncodingOf(m),
     panels: results,
     warnings,
     missingTool: results.reduce((a, r) => a + r.missingTool, 0) + rp.missing,
@@ -940,7 +1014,7 @@ function readme(project: string, m: Machine, results: XcsPanelResult[], panels: 
     "  a mig gruix. Broques horitzontals amb eina automàtica (\"-1\").",
     m.verticalDrills === "tool" ? "- Broques verticals: el nom de la broca que ha triat l'app." : "- Broques verticals: eina automàtica (\"-1\"), com als projectes del taller.",
     `- Eines pel nom de Maestro${m.pgmx ? ` (noms del projecte ${m.pgmx.file}, Maestro ${m.pgmx.version})` : " (codi del .tlgx)"}.`,
-    "- Fitxers .xcs en UTF-8 amb BOM.",
+    encodingReadme(m),
     "- Cantells amb la numeració de l'app: 1 dalt · 2 dreta · 3 baix · 4 esquerra (pendent de confirmar",
     "  amb la del taller).",
     `- Talls i forats passants: gruix + ${num(m.throughExtra)} mm.`,
