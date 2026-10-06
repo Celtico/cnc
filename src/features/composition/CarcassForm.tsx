@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { DEFAULT_GRILLE, backChoices, boardChoices, jointApplies, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, HARDWARE_SLOTS, backChoices, boardChoices, jointApplies, materialByName, type Base, type Carcass, type Module, type Top } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
@@ -10,6 +10,7 @@ import { LuCircle, LuPencilRuler, LuRectangleHorizontal, LuSquircle } from "reac
 import { LuArrowDownToLine, LuDrill, LuGrid3X3, LuInspectionPanel, LuLayers2, LuPanelBottom, LuPanelTop, LuSquareDashed, LuSquare, LuSquareDashedBottom, LuSquareSquare, LuSquareStack, LuTable, LuTriangleRight, LuWind } from "react-icons/lu"
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/MaterialSelect"
+import { HardwarePick } from "./HardwarePick"
 
 export type CarcassSection = "dims" | "structure"
 
@@ -295,11 +296,12 @@ export function JoineryForm({ module, onChange }: { module: Module; onChange: (m
       <NumRow label="Retranqueig prest." value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set({ shelfSetback })} />
       {c.back === "groove" && <NumRow label="Ranura del fons" value={c.backSetback} min={0} max={60} step={1} onChange={(backSetback) => set({ backSetback })} help="Distància al cantell posterior" />}
       {c.back === "inset" && <NumRow label="Retirada del fons" value={c.backInsetSetback ?? 0} min={0} max={60} step={1} onChange={(backInsetSetback) => set({ backInsetSetback })} help="Distància del fons encastat al cantell posterior (0 = enrasat)" />}
-      <NumRow label="Cassoleta (Ø)" value={module.hardware.hinge.cupDiameter} min={20} max={40} step={1} onChange={(cupDiameter) => onChange({ ...module, hardware: { ...module.hardware, hinge: { ...module.hardware.hinge, cupDiameter } } })} />
-      <NumRow label="Pas System 32" value={module.hardware.system32.pitch} min={16} max={64} step={1} onChange={(pitch) => onChange({ ...module, hardware: { ...module.hardware, system32: { ...module.hardware.system32, pitch } } })} />
-      <NumRow label="Espiga (Ø)" value={module.hardware.dowel.diameter} min={5} max={12} step={1} onChange={(diameter) => onChange({ ...module, hardware: { ...module.hardware, dowel: { ...module.hardware.dowel, diameter } } })} />
+      {/* Ferratges del mòdul (una còpia de cada un de la biblioteca): les portes, calaixos i abatibles en poden triar un altre. */}
+      {HARDWARE_SLOTS.map(({ slot }) => (
+        <HardwarePick key={slot} slot={slot} current={module.hardware[slot]} onPick={(item) => item && onChange({ ...module, hardware: { ...module.hardware, [slot]: item } })} />
+      ))}
       <Text fontSize="xs" color="fg.muted">
-        Guies de calaix: {module.hardware.drawer.slideLengths.join(" · ")} mm, joc lateral {module.hardware.drawer.sideClearance} mm per costat.
+        Ferratges de tot el mòdul (Preferències › Ferratges). Cada porta, calaix o abatible en pot triar un altre al seu Front.
       </Text>
     </Stack>
   )

@@ -45,6 +45,12 @@ function repairInner(schema: z.ZodType, raw: unknown, fallback: unknown, onIssue
     return inner
   }
   if (schema instanceof z.ZodLazy) return repairValue(schema.unwrap() as z.ZodType, raw, fallback, onIssue, path)
+  // `z.preprocess` (migració en llegir, p. ex. els ferratges d'abans d'un mòdul): primer la migració i després es repara
+  // el resultat camp a camp contra l'esquema de sortida.
+  if (schema instanceof z.ZodPipe && schema.in instanceof z.ZodTransform) {
+    const pre = (schema.in as z.ZodType).safeParse(raw)
+    return repairValue(schema.out as z.ZodType, pre.success ? pre.data : raw, fallback, onIssue, path)
+  }
   if (schema instanceof z.ZodObject && isRecord(raw)) {
     const shape = schema.shape as Record<string, z.ZodType>
     const fb = isRecord(fallback) ? fallback : {}

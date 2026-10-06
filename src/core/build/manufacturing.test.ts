@@ -48,7 +48,7 @@ describe("1 · fronts encastats sobre una zona dividida", () => {
     const fy = panelBox(fixed).min[1] + t / 2
     const zs = holesW(side, "dowel").filter((w) => Math.abs(w[1] - fy) < 0.6).map((w) => w[2])
     expect(zs).toHaveLength(3)
-    expect(Math.max(...zs)).toBe(zFront - m.hardware.dowel.endOffset)
+    expect(Math.max(...zs)).toBe(zFront - m.hardware.dowel.params.endOffset!)
   })
 
   it("amb fronts recobrents no canvia res", () => {
@@ -218,7 +218,7 @@ describe("10 · material del fons dels calaixos", () => {
     const m = withRoot(defaultModule("m", "x", { width: 600, height: 720, depth: 560, backMaterial: "Melamina negra", backThickness: 16 }), { id: "root", front: { kind: "drawers", n: 3, heights: ["auto", "auto", "auto"] } })
     const b = buildModule(m)
     const bottoms = b.panels.filter((p) => p.role === "drawerBottom")
-    expect(bottoms.every((p) => p.thickness === m.hardware.drawer.bottomThickness)).toBe(true)
+    expect(bottoms.every((p) => p.thickness === m.hardware.slide.params.bottomThickness)).toBe(true)
     expect(b.warnings.filter((w) => w.code === "drawer-bottom")).toHaveLength(1)
   })
 })

@@ -1,5 +1,30 @@
 # Ferratges: estudi i proposta (millores v1, §8–10)
 
+## Estat (2026-10-06)
+
+- **F1 · Motor i migració: fet.** `core/model/hardware.ts` (esquemes zod, `HARDWARE_SLOTS`, valors inicials amb els números
+  d'abans, `libraryFromLegacy`, `kitFromLegacy`, `migrateModuleHardware`, `fixHardwareDefaults`, `hardwareRefIds`,
+  `replaceHardwareRefs`), `core/model/expr.ts` (avaluador sense `eval`), `core/build/hardware.ts` (`applyHardware`,
+  `resolveOps`, `drillSpec`, `cupSpec`…`handleSpec`, `slotSpec`, `resolveKit`). Tots els ferratges de §1 que fan forats
+  (cassoleta, System 32, espiga, guia, braç d'abatible, imant, tirador) passen pel motor; preferències **v19** (no v18:
+  vegeu README) i mòduls en llegir. **Proves d'or idèntiques** (sense `UPDATE_GOLDEN`). Diferències amb aquest estudi:
+  - Cap item s'ha quedat al camí vell. Però **la col·locació és del constructor** (`buildModule`: on van les cassoletes a la
+    filera, els forats de guia, les espigues de cada unió, els imants de la reixeta): l'item en dona els números (`params`,
+    `count`, `pitch`, `lengths`) i els forats (`ops`: Ø, fondària, tag; al tirador, a la cassoleta i a l'abatible també la
+    posició relativa). L'`Anchor` genèric (§4) i el `HardwareInstance` són per als ferratges manuals (F4).
+  - El model no porta `groove`/`pocket`, `envelope`, `asset`, `bom` ni `requires` (F3–F4).
+  - La guia i el braç d'abatible tenen els seus números (`frontOffset`, `offset`); abans feien servir `system32.edgeOffset`
+    i `hinge.cupOffset` del mòdul (la migració els copia: res no canvia de lloc).
+  - Cada front només pot triar el seu ferratge principal (porta → frontissa, calaixos → guia, abatible → braç), com a còpia
+    a `front.hardware`; el mòdul té una còpia de cada lloc (`Module.hardware`, a Fusteria es pot canviar).
+- **F2 · Preferències › Ferratges: fet** (graella per categories, editor a pantalla completa amb el dibuix del patró i un
+  detall acotat, paràmetres, per defecte, eliminar amb substitut, selector a la porta, calaixos, abatible i Fusteria).
+  Pendent de F2: editar els mecanitzats (taula d'operacions; ara només lectura), exportar/importar ferratges sols (ara van
+  amb les preferències) i l'avís «hi ha una versió nova» quan la biblioteca canvia (`version` no es puja en editar).
+- **Pendents: F3** (nivells de visualització Cap · Forats · Volum · 3D, volums i xocs `hardware-clash`, GLB per item),
+  **F4** (ferratges manuals, unions de 2 peces, minifix, confirmat, suport de prestatge, potes, placa de frontissa, perfil
+  LED, push com a item, llista de ferratges a Exportar) i **F5** (importar DXF, BXF, STEP).
+
 > Estudi de l'àrea **Ferratges** de [`PROMPT-millore-v1.md`](../prompt/PROMPT-millore-v1.md) (§8 proveïdors, §9 gestió,
 > §10 visualització). Document de disseny: **no toca codi**. Les mides de ferratges concrets que no surten del codi actual
 > van marcades **[a confirmar]** (regla del `CLAUDE.md`: si no és clar, preguntar, no inventar).

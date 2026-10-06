@@ -177,7 +177,7 @@ describe("fons encastat", () => {
       const side = panelsOf(m).find((p) => p.id === "side-left")!
       return side.holes.filter((h) => h.tag === "system32").map((h) => toWorld(side, [h.x, h.y, 0])[2])
     }
-    const d = defaultModule("x", "X").hardware.system32.diameter
+    const d = defaultModule("x", "X").hardware.system32.params.diameter!
     // 30: a 37 del darrere (la cara del fons és a 30, el forat la passa de 7 − Ø/2).
     expect(Math.min(...rearZs(mod({ backThickness: 30, backMaterial: "Tauler 30" })))).toBe(37)
     // 40: a un Ø de la cara del fons (no a 37, que seria dins del fons).

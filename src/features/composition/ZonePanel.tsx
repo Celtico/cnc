@@ -14,11 +14,14 @@ import {
   unsplitZone,
   updateZone,
   type Front,
+  type HardwareItem,
+  type HardwareKit,
   type Zone,
 } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { FRONT_ICONS } from "./zoneIcons"
+import { HardwarePick } from "./HardwarePick"
 import { IconChoice } from "../../components/IconChoice"
 import { LuAlignJustify, LuArrowDownToLine, LuArrowUpToLine, LuColumns3, LuDoorClosed, LuDoorOpen, LuFlipHorizontal2, LuGrip, LuMagnet, LuPanelLeft, LuPanelRight } from "react-icons/lu"
 
@@ -100,12 +103,15 @@ export function ZonePanel({
   zone,
   openRatio,
   onChange,
+  hardware,
 }: {
   root: Zone
   zone: Zone
   /** % d'àrea oberta si la zona té reixeta. */
   openRatio?: number
   onChange: (root: Zone) => void
+  /** Ferratges del mòdul (els fronts en poden triar un altre). */
+  hardware: HardwareKit
 }) {
   const parent = parentOf(root, zone.id)
   const index = parent?.split ? parent.split.children.findIndex((c) => c.id === zone.id) : -1
@@ -143,12 +149,12 @@ export function ZonePanel({
             </HStack>
           </FoldItem>
           {/* Portes que tapen tota la zona dividida (armari: penjador i maleter darrere). */}
-          <ZoneFrontSection root={root} zone={zone} onChange={onChange} kinds={["none", "door", "panel"]} title="Front de tota la zona" />
+          <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} kinds={["none", "door", "panel"]} title="Front de tota la zona" />
           {sizeField}
         </>
       ) : (
         <>
-          <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} />
+          <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} hardware={hardware} />
 
           {zone.front?.kind !== "drawers" && (
             <FoldItem id="zone-shelves" title="Prestatges" badge={zone.shelves?.n || undefined} icon={LuRows3}>
@@ -248,7 +254,14 @@ export function ZonePanel({
   )
 }
 
-function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?: number; onChange: (f: Front) => void }) {
+/** El front amb el seu ferratge (una còpia) o, sense, amb el del mòdul (el camp fora). */
+function withHardware<F extends Extract<Front, { kind: "door" | "drawers" | "flap" }>>(front: F, item: HardwareItem | undefined): F {
+  if (item) return { ...front, hardware: item }
+  const { hardware: _h, ...rest } = front
+  return rest as F
+}
+
+function FrontFields({ front, openRatio, onChange, hardware }: { front: Front; openRatio?: number; onChange: (f: Front) => void; hardware: HardwareKit }) {
   switch (front.kind) {
     case "door":
       // Un camp per fila: dos grups de botons no hi caben de costat a l'inspector.
@@ -286,6 +299,8 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
               <Switch.Label fontSize="sm">Porta de vidre amb marc</Switch.Label>
             </Switch.Root>
           </FormRow>
+          {/* La de vidre porta les frontisses del perfil (cap cassoleta): no surt. */}
+          {!front.glass && <HardwarePick slot="hinge" current={front.hardware ?? hardware.hinge} inherited={hardware.hinge} onPick={(h) => onChange(withHardware(front, h))} />}
         </Stack>
       )
     case "drawers":
@@ -296,21 +311,25 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
             const k = Math.max(1, Math.min(10, Math.round(n)))
             onChange({ ...front, n: k, heights: Array.from({ length: k }, (_, i) => front.heights[i] ?? "auto") })
           }} />
+          <HardwarePick slot="slide" current={front.hardware ?? hardware.slide} inherited={hardware.slide} onPick={(h) => onChange(withHardware(front, h))} />
         </Stack>
       )
     case "flap":
       return (
-        <FormRow label="Obre cap a">
-          <ChoiceChips
-            label="Obre cap a"
-            value={front.dir}
-            options={[
-              { id: "down", label: <><LuArrowDownToLine /> Avall</> },
-              { id: "up", label: <><LuArrowUpToLine /> Amunt</> },
-            ]}
-            onChange={(dir) => onChange({ ...front, dir })}
-          />
-        </FormRow>
+        <Stack gap={3}>
+          <FormRow label="Obre cap a">
+            <ChoiceChips
+              label="Obre cap a"
+              value={front.dir}
+              options={[
+                { id: "down", label: <><LuArrowDownToLine /> Avall</> },
+                { id: "up", label: <><LuArrowUpToLine /> Amunt</> },
+              ]}
+              onChange={(dir) => onChange({ ...front, dir })}
+            />
+          </FormRow>
+          <HardwarePick slot="flap" current={front.hardware ?? hardware.flap} inherited={hardware.flap} onPick={(h) => onChange(withHardware(front, h))} />
+        </Stack>
       )
     case "grille": {
       const p = front.pattern
@@ -393,7 +412,7 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
  * Tipus de front d'una zona (botons d'icona) i els seus camps. En una zona dividida, només
  * portes o front fix, que tapen tota la zona (les fulles de dins queden darrere).
  */
-export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title = "Front", id }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; kinds?: (Front["kind"] | "none")[]; title?: string; /** Id de la secció plegable (cada lloc el seu: recorda si és oberta). */ id?: string }) {
+export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title = "Front", id, hardware }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; hardware: HardwareKit; kinds?: (Front["kind"] | "none")[]; title?: string; /** Id de la secció plegable (cada lloc el seu: recorda si és oberta). */ id?: string }) {
   const options = kinds ?? (Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[])
   return (
           <FoldItem id={id ?? (kinds ? "zone-parent-front" : "zone-front")} title={title} badge={FRONT_LABELS[zone.front?.kind ?? "none"]} icon={FRONT_ICONS[zone.front?.kind ?? "none"]}>
@@ -407,7 +426,7 @@ export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title
                 onChange={(k) => onChange(setFront(root, zone.id, k === "none" ? null : defaultFront(k)))}
               />
             </FormRow>
-            {zone.front && <FrontFields front={zone.front} openRatio={openRatio} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
+            {zone.front && <FrontFields front={zone.front} openRatio={openRatio} hardware={hardware} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
           </FoldItem>
   )
 }

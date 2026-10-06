@@ -235,10 +235,24 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   System 32 als trams lliures entre prestatges fixos (placa de la frontissa); forats de guia dels calaixos des del davant de
   la caixa (`zFront − 37`); trapa de reixeta darrere del front encastat; ranura del fons sempre dins de la peça i allargada
   `g` on la tapa/base passa per sobre del lateral (inglet, tauler de taula); fons sota el tauler de taula i fins a
-  `interior.y1` amb ranura d'aire; `hingeCount` (`geometry.ts`: 2/3/4/5 fins a 900/1600/2100) i cassoletes separades
-  ≥ Ø + 10 (si no, menys i avís `hinge`); fons del calaix amb material del seu gruix (avís `drawer-bottom`); peces amb
+  `interior.y1` amb ranura d'aire; frontisses per alçada (2/3/4/5 fins a 900/1600/2100, ara `count` de l'item; `hingeCount`
+  només al `buildCabinet` antic) i cassoletes separades ≥ Ø + 10 (si no, menys i avís `hinge`); fons del calaix amb material del seu gruix (avís `drawer-bottom`); peces amb
   alguna mida ≤ 0 fora amb avís `invalid-part`. **Pendent de decidir amb el taller**: joc de les ranures i descompte del
   gruix del cantell.
+- **Ferratges com a dades** (millores v1 F1–F2, [`docs/millores-v1/ferratges.md`](docs/millores-v1/ferratges.md)):
+  `core/model/hardware.ts` (`HardwareItem`: categoria, motor `engine`, `params`, mecanitzats `targets[].ops` amb fórmules
+  `Expr`, `count`/`pitch` = `StepRule`, `lengths`) i `core/model/expr.ts` (`evalExpr`, analitzador propi **sense `eval`**:
+  `+ − × ÷`, parèntesis, `min/max/abs/floor/ceil/round`, variables). Motor pur `core/build/hardware.ts`: `applyHardware`
+  (ops → `Hole`/`Cutout` en un punt d'ancoratge, mirall i gir), `drillSpec`, `cupSpec`… i `slotSpec`/`resolveKit` (un item
+  que no serveix → el d'inici i avís `hardware`; mai mig ferratge). Les **regles** de col·locació es queden a `buildModule`
+  (cassoletes a la filera, guies a `zFront − frontOffset`, espigues…): els números i els forats surten de l'item. Llocs
+  (`HARDWARE_SLOTS`): frontissa, System 32, espiga, guia, braç d'abatible, imant, tirador. Cada mòdul en porta una **còpia**
+  (`Module.hardware` = `HardwareKit`) i la porta, el calaix o l'abatible en poden triar un altre (`front.hardware`, còpia;
+  la porta de vidre no, `visibleModule`). Migració: mòduls d'abans en llegir (`z.preprocess(migrateModuleHardware)`,
+  `normalizeComposition`, i `buildModule` amb dades crues; un número dolent, camp a camp) i preferències **v19**
+  (`hardware` → `hardwareLibrary` + `hardwareDefaults`, `libraryFromLegacy`, `fixHardwareDefaults`): **proves d'or idèntiques**.
+  Ara les guies i l'abatible porten els seus números (abans `system32.edgeOffset` i `hinge.cupOffset`). `hardwarePreview`
+  (peces d'exemple amb el motor) per al dibuix de Preferències. Tests a `build/hardware.test.ts` i `model/expr.test.ts`.
 - **Forats que es trobarien per dins** (`build/holeClash.ts`, `resolveHoleClashes`): System 32 a banda i banda d'un divisor
   → tots dos a (T − 1)/2; espiga de cantell contra un forat de cara → l'espiga s'atura 1 mm abans (mínim 10 mm, si no avís
   `hole-clash`). Els forats de guia de la caixa del calaix no arriben a la ranura del fons.
@@ -1048,7 +1062,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 ## Preferències
 - **Com la Configuració de macOS / Figma** (`SettingsPages` + `Pane` a `SettingsScreen`): a l'esquerra els apartats per
   categories (`SETTINGS_GROUPS`; no és un acordió): **Fabricació** — Màquines CNC, Regles de mecanitzat, Ferratges
-  (frontisses, guies, espigues i els seus forats), Jocs per defecte, Materials, **Taulers** (camp de treball de la màquina per
+  (biblioteca, vegeu més avall), Jocs per defecte, Materials, **Taulers** (camp de treball de la màquina per
   defecte o «importa-la a Màquines CNC»; «Mides de tauler de fàbrica» per material; «Distribució»: girar les peces amb veta;
   sense «Tall»: separació i marge són de la màquina; sense avís si el tauler passa del camp: 2800 × 2070 sobre 5020 × 1905 va
   bé), Etiquetes —, **Foto i visor 3D** — Objectes de referència, Visor 3D — i **App** — Visualització, Tema. A la dreta la
@@ -1068,7 +1082,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   `GALLERY_COLS` de **`GalleryCard`** (marge `--gallery-px`): la mostra del material de debò (`MaterialSwatch`, 3:2, CSS de
   `previewStyle` a escala fixa: sense canvas per targeta, les procedurals es pinten un cop i es recorden), nom de dues línies,
   «Acabat · gruixos · cantell» (`materialSummary`) i l'etiqueta «★ Tauler per defecte» / «★ Fons per defecte».
-  - Tocar una targeta obre l'**editor a pantalla completa** (`MaterialEditorDialog`: `Dialog size="full"`, 100vw × 100dvh,
+  - Tocar una targeta obre l'**editor a pantalla completa** (`components/EditorDialog`, també el dels ferratges: `Dialog size="full"`, 100vw × 100dvh,
     zona segura als quatre costats, ✕ a `calc(env(safe-area-inset-top) + 8px)` i el títol a la seva altura: nom del material
     i categoria). Mostres (`MaterialStage`, fora de la `MaterialCard` amb `key`: canviar de material no refà el 3D): la
     **tira a escala real** (`MaterialHero fill`, 600 mm = l'amplada, «A escala real») i la **bola de material**
@@ -1094,13 +1108,24 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     duplicat **obre l'editor** amb el nom seleccionat; «Obrir el meu» de la biblioteca també l'obre. **Eliminar** des de
     l'editor el tanca. Al mòbil l'editor fa de pàgina de detall: el seu ✕ és el «Tornar» (cap «‹ Materials»; la pàgina de
     la graella només té «‹ Preferències»). Controls de 280 px com a molt.
+- **Ferratges: graella i editor a pantalla completa, com Materials** (`settings/HardwarePane.tsx`, `HardwareList`): cercador
+  amb «Afegir» (menú per tipus: copia el per defecte d'aquell lloc), acordió per categoria (`HARDWARE_CATEGORIES`, icones a
+  `settings/hardwareIcons.ts`; oberta la de Frontisses, `mobles:md-open:hardware`), `GalleryCard` amb la miniatura del
+  patró (`PanelDrawing crop`, el detall dels forats), resum i «★ Per defecte». L'editor (`components/EditorDialog`, el mateix
+  que Materials) dibuixa les peces d'exemple (`hardwarePreview`) amb un **Detall** acotat (`PanelDrawing dims`) i a la dreta
+  General (fabricant, referència, «Per defecte als mòduls nous»), Mides (`HARDWARE_PARAMS`, `NumRow`), llargades de guia
+  (`ThicknessChips what`), quantitat per alçada / distància dels forats (`StepRule`) i els mecanitzats (només lectura).
+  **Eliminar** (`DeleteHardwareDialog`, com el dels materials): si és un per defecte o el fa servir algun moble desat
+  (`hardwareUsage`), cal un substitut del mateix tipus; els mobles hi passen (`replaceHardwareEverywhere`, sense `updatedAt`).
+  «Restaurar valors inicials» torna biblioteca i per defecte. **A l'editor**: Front de porta, calaixos i abatible amb
+  `HardwarePick` (`ChoiceChips` dels del mateix tipus; el del mòdul = sense camp) i a Fusteria el de cada lloc del mòdul.
 - **Objectes de referència inicials** (`BUILTIN_REFERENCES`): genèrics (A4, rajoles, portes, **una sola tele** de 55″,
   radiador, endoll; per decisió de l'usuari, no una llista de teles). Les teles antigues es treuen (`RETIRED_REFERENCES`,
   `isRetired`, també les còpies «TV Sony KD-55XD8505…»).
 - **Visor 3D**: qualitat, escena de Presentació (terra i paret: materials de la biblioteca, `PresentationScene.floorMaterial`
   / `wallMaterial`, o les mostres ràpides; terra per defecte «Parquet de roure»), llum i «Cel del render». **Tema**:
   dia/nit/sistema i color principal (`theme/accent.ts` redirigeix les variables CSS de `wood`).
-- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 18): les migracions depenen només de la versió
+- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 19: biblioteca de ferratges): les migracions depenen només de la versió
   desada, que **mai baixa** (`saveSettings` desa la més alta). **Desades per una versió més nova**: només lectura
   (`saveSettings` torna `false` amb `console.warn`; `loadSettings` avisa). **Lectura camp a camp** (`repairValue`,
   `core/model/repair.ts`): un valor dolent d'una secció només torna aquell valor a l'inicial (un tauler o una llargada de guia
@@ -1247,8 +1272,9 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   treu amb un avís el nesting, el calibratge de la foto (camp a camp) i les referències malmesos). Porta la càmera i els models
   de l'usuari que fa servir. El calibratge (`FileCalibrationSchema`) té els mateixos camps que `PhotoCalibration` (un test ho
   comprova en compilar). `updateProjectPhoto` no desa un calibratge d'una foto que ja no hi és.
-- **El `.moble` no porta preferències** (per decisió de l'usuari): forats, ferratges, jocs, l'aspecte dels materials i la
-  màquina són de **qui l'obre** (el moble s'hi adapta en silenci). Només s'avisa dels **materials** de la composició
+- **El `.moble` no porta preferències** (per decisió de l'usuari): jocs per defecte, l'aspecte dels materials i la
+  màquina són de **qui l'obre** (el moble s'hi adapta en silenci). Els ferratges sí que hi van, com a **còpia** a cada mòdul
+  i front (`Module.hardware`, `front.hardware`): el moble es fabrica igual. Només s'avisa dels **materials** de la composició
   (`materialRefNames`, les claus d'`aliasMaterialRefs`) que no són a les preferències després dels àlies (`missingMaterials`,
   `missingMaterialsWarning` a `openMobleFile`: «Materials que no tens a Preferències: …; es veuran amb un color per defecte i
   al taller sortiran amb aquest nom. Afegeix-los a Preferències › Materials.»). Les referències que falten s'afegeixen.
@@ -1303,6 +1329,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Inspector | Anterior · Següent · Accions de la selecció (menú) | `LuChevronLeft` · `LuChevronRight` · `LuEllipsis` |
 | Preferències | Tema (dia/nit/sistema) · Color principal | `LuSunMoon` (`LuSun` · `LuMoon` · `LuMonitor`) · `LuCheck` a la mostra triada |
 | Preferències | Visualització · Ferratges (i Fusteria a l'inspector) · Calaixos · System 32 · Cassoleta · Imants | `LuScanEye` · `LuHammer` · `LuArchive` · `LuCircleDot` · `LuCircleDashed` · `LuMagnet` |
+| Ferratges (categories) | Frontisses · Plaques · Guies · Elevables i abatibles · Unions · Suports de prestatge · Potes · Tiradors · Pressió i imants · Perfils · Penjar · Altres | `LuCircleDashed` · `LuSquareDot` · `LuArchive` · `LuPanelBottom` · `LuBolt` · `LuCircleDot` · `LuFootprints` · `LuGripHorizontal` · `LuMagnet` · `LuMinus` · `LuAnchor` · `LuPackage` |
 | Preferències | Visor 3D (els materials per defecte als mòduls nous porten la de Materials, `LuPalette`) | `LuLampFloor` |
 | Fitxer | Desar com a fitxer · Obrir fitxer · Pujar un fitxer (preferències, model `.glb`) | `LuSave` · `LuFolderOpen` · `LuUpload` |
 | Editor | Estructura · Propietats · Opcions de vista | `LuListTree` · `LuSlidersHorizontal` · `LuSlidersVertical` |

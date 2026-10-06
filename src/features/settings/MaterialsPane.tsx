@@ -1,7 +1,8 @@
-import { Badge, Box, Button, CloseButton, Dialog, HStack, IconButton, Input, Portal, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, HStack, IconButton, Input, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
 import { useContext, useEffect, useRef, useState, type ReactNode, type RefObject } from "react"
 import { LuCopy, LuImagePlus, LuLayers2, LuLayers3, LuPaintbrush, LuSprayCan, LuStar, LuTrash2 } from "react-icons/lu"
 import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
+import { EditorDialog } from "../../components/EditorDialog"
 import { SearchBar } from "../../components/SearchBar"
 import { NumberField } from "../../components/NumRow"
 import { toaster } from "../../components/ui/toaster"
@@ -149,7 +150,15 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
           {q ? "Cap resultat." : "Encara no n'hi ha cap."}
         </Text>
       )}
-      <MaterialEditorDialog open={editorOpen && m !== null} m={shownM} onClose={close} dirty={dirty} focusName={shownM !== null && justAdded === shownM.id}>
+      <EditorDialog
+        open={editorOpen && m !== null}
+        title={shownM?.name}
+        subtitle={shownM ? MATERIAL_CATEGORIES.find((c) => c.id === materialCategory(shownM))?.label : undefined}
+        onClose={close}
+        dirty={dirty}
+        // Sense el teclat al mòbil: el focus va al ✕; un material nou, al nom (seleccionat, `autoFocusName`).
+        focusSelector={shownM !== null && justAdded === shownM.id ? "[data-material-name]" : null}
+      >
         {shownM && <MaterialStage m={shownM} live={editorOpen} />}
         {shownM && (
           <MaterialCard
@@ -174,7 +183,7 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
             canDelete={materials.length > 1}
           />
         )}
-      </MaterialEditorDialog>
+      </EditorDialog>
       <MaterialLibrary open={library} onClose={() => setLibrary(false)} onPick={fromLibrary} onBlank={blank} materials={materials} onOpenExisting={(id) => {
         const x = materials.find((y) => y.id === id)
         if (x) open(x)
@@ -189,54 +198,6 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
  */
 function MaterialSwatch({ m }: { m: MaterialPref }) {
   return <Box w="full" aspectRatio="3 / 2" rounded="md" borderWidth="1px" borderColor="border.emphasized" style={previewStyle(m, 240)} backgroundRepeat="repeat" />
-}
-
-/**
- * Editor d'un material a pantalla completa (com la finestra del Render: 100vw × 100dvh, zona segura als quatre costats i
- * el ✕ a `calc(env(safe-area-inset-top) + 8px)`). Esc i ✕ tornen a la graella; Esc amb el nom a mig escriure només el desfà.
- */
-function MaterialEditorDialog({ open, m, onClose, dirty, focusName, children }: { open: boolean; m: MaterialPref | null; onClose: () => void; dirty: RefObject<boolean>; focusName: boolean; children: ReactNode }) {
-  const closeRef = useRef<HTMLButtonElement>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
-  const shown = m
-  return (
-    <Dialog.Root
-      open={open}
-      onOpenChange={(e) => !e.open && onClose()}
-      size="full"
-      placement="center"
-      onEscapeKeyDown={(e) => dirty.current && e.preventDefault()}
-      // Sense el teclat al mòbil: el focus va al ✕; un material nou, al nom (seleccionat, `autoFocusName`).
-      initialFocusEl={() => (focusName ? contentRef.current?.querySelector<HTMLElement>("[data-material-name]") : null) ?? closeRef.current}
-    >
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content ref={contentRef} w="100vw" maxW="100vw" h="100dvh" maxH="100dvh" rounded="none" display="flex" flexDirection="column" overflow="hidden" pt="env(safe-area-inset-top, 0px)" pb="env(safe-area-inset-bottom, 0px)" ps="env(safe-area-inset-left, 0px)" pe="env(safe-area-inset-right, 0px)">
-            {/* A l'altura del ✕ (a 8 px de dalt): el títol queda centrat amb ell. */}
-            <Dialog.Header py={0} pe={14} minH="calc(var(--chakra-sizes-9) + 16px)" display="flex" alignItems="center" borderBottomWidth="1px">
-              <HStack gap={2} minW={0}>
-                <Dialog.Title truncate fontSize="md">
-                  {shown?.name}
-                </Dialog.Title>
-                {shown && (
-                  <Text fontSize="sm" color="fg.muted" flexShrink={0}>
-                    {MATERIAL_CATEGORIES.find((c) => c.id === materialCategory(shown))?.label}
-                  </Text>
-                )}
-              </HStack>
-            </Dialog.Header>
-            <Dialog.Body p={0} flex={1} minH={0} display="flex" flexDirection={{ base: "column", lg: "row" }} overflowY={{ base: "auto", lg: "hidden" }}>
-              {children}
-            </Dialog.Body>
-            <Dialog.CloseTrigger asChild top="calc(env(safe-area-inset-top, 0px) + 8px)" insetEnd="calc(env(safe-area-inset-right, 0px) + 8px)">
-              <CloseButton ref={closeRef} size="sm" aria-label="Tancar" />
-            </Dialog.CloseTrigger>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
-  )
 }
 
 /** Fons d'estudi de la bola (el terra s'hi esvaeix): clar o fosc com el tema. */

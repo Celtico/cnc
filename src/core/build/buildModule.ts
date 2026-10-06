@@ -9,14 +9,20 @@ import {
   type EdgeBanding,
   type EdgeSide,
   type Front,
+  type HardwareItem,
+  type HardwareKit,
+  type HardwareSlot,
   type Module,
   type Panel,
   type PanelRole,
   type Vec3,
   type Zone,
+  isLegacyHardware,
+  migrateModuleHardware,
   visibleModule,
 } from "../model"
 import { normalizePanel } from "./buildCabinet"
+import { applyHardware, resolveKit, slotSpec, type ResolvedKit, type SlotSpec } from "./hardware"
 import {
   X,
   Y,
@@ -25,7 +31,6 @@ import {
   addFaceHole,
   dowelJoint,
   dowelsAlong,
-  hingeCount,
   neg,
   placement,
   r,
@@ -72,6 +77,8 @@ export interface BuildWarning {
     | "drawer-box"
     | "handle"
     | "shelves"
+    // Un ferratge del mòdul o d'un front que no es pot fer servir (paràmetre que falta, fórmula dolenta, tipus que no toca).
+    | "hardware"
     // Materials que no lliguen amb Preferències (`materialIssues`, fora del build: el build no llegeix preferències).
     | "unknown-material"
     | "thickness-not-listed"
@@ -257,9 +264,34 @@ class Builder {
   private drawerCount = 0
   private frontCount = 0
 
+  /** Ferratges del mòdul resolts (números i mecanitzats de cada lloc, `core/build/hardware.ts`). */
+  readonly kit: ResolvedKit
+  readonly hw: { [S in HardwareSlot]: SlotSpec<S> }
+
   constructor(m: Module) {
     this.m = m
     this.d = derive(m)
+    // Mòduls d'abans que no han passat per l'esquema: els números d'abans, com a kit (els mateixos números).
+    const kit = (isLegacyHardware(m.hardware) ? migrateModuleHardware(m.hardware) : m.hardware) as HardwareKit
+    this.kit = resolveKit(kit, (message) => this.hardwareWarning(message))
+    const k = this.kit
+    this.hw = { hinge: k.hinge.spec, system32: k.system32.spec, dowel: k.dowel.spec, slide: k.slide.spec, flap: k.flap.spec, magnet: k.magnet.spec, handle: k.handle.spec }
+  }
+
+  private hardwareWarning(message: string, zoneId?: string): void {
+    if (!this.warnings.some((w) => w.code === "hardware" && w.message === message)) this.warnings.push({ code: "hardware", message, ...(zoneId ? { zoneId } : {}) })
+  }
+
+  /** El ferratge d'un front (el triat a la porta, el calaix o l'abatible; si no, el del mòdul). */
+  private frontHardware<S extends "hinge" | "slide" | "flap">(slot: S, item: HardwareItem | undefined, zoneId?: string): { spec: SlotSpec<S>; item: HardwareItem } {
+    if (!item) return this.kit[slot] as { spec: SlotSpec<S>; item: HardwareItem }
+    let failed = false
+    const res = slotSpec(slot, item, (message) => {
+      failed = true
+      this.hardwareWarning(message, zoneId)
+    })
+    // No serveix: el del mòdul (no el d'inici de l'app).
+    return failed ? (this.kit[slot] as { spec: SlotSpec<S>; item: HardwareItem }) : res
   }
 
   private add(panel: Panel): Panel {
@@ -560,7 +592,7 @@ class Builder {
       // Fons encastat: la franja on el fons toca la tapa (amb les espigues) queda sense ranures, com la trapa o els imants.
       const exclude: Rect[] = []
       if (c.back === "inset") {
-        const pad = m.hardware.dowel.diameter / 2 + 1
+        const pad = this.hw.dowel.diameter / 2 + 1
         exclude.push({ x: 0, y: (c.backInsetSetback ?? 0) - zRear - pad, w: panel.length, h: d.tb + 2 * pad })
       }
       const g = grilleCutouts(panel.length, panel.width, c.top.pattern, exclude)
@@ -585,8 +617,8 @@ class Builder {
       const xFace = near(v.xR, interior.x0) ? v.xR : v.xL
       if (!near(xFace, interior.x0) && !near(xFace, interior.x1)) continue
       // Sobre la fondària real de la peça (la tapa amb ranura d'aire és més curta).
-      const zs = threeAlong(zRear, d.D, m.hardware.dowel.endOffset)
-      dowelJoint(panel, v.panel, zs.map((z): Vec3 => [xFace, yMid, z]), m.hardware.dowel)
+      const zs = threeAlong(zRear, d.D, this.hw.dowel.endOffset)
+      dowelJoint(panel, v.panel, zs.map((z): Vec3 => [xFace, yMid, z]), this.hw.dowel, this.hw.dowel.tag)
     }
   }
 
@@ -656,7 +688,7 @@ class Builder {
     }
     // Fondària que queda davant del fons: hi han de cabre les dues fileres System 32 (`rows`: la de darrere no es fa si
     // arribaria a la de davant).
-    const s32 = m.hardware.system32
+    const s32 = this.hw.system32
     const need = 2 * s32.edgeOffset + s32.diameter
     if (d.D - d.backInnerZ < need) {
       this.warnings.push({
@@ -669,7 +701,7 @@ class Builder {
       this.warnings.push({ code: "back-inset", message: `Fons encastat de ${d.tb} mm: massa prim per a espigues al cantell (calen 15 mm o més). Fixa'l amb cargols des dels laterals, la base i la tapa, o posa'l en ranura.`, panelId: back.id })
       return
     }
-    const dw = m.hardware.dowel
+    const dw = this.hw.dowel
     const zMid = z0 + d.tb / 2
     const rad = dw.diameter / 2
     // Només els punts que cauen dins de la peça que continua (la tapa amb ranura d'aire no arriba al fons).
@@ -677,7 +709,7 @@ class Builder {
       dowelJoint(back, through, pts.filter((w) => {
         const l = toLocal(through, w)
         return l[0] >= rad && l[0] <= through.length - rad && l[1] >= rad && l[1] <= through.width - rad
-      }), dw)
+      }), dw, dw.tag)
     for (const v of this.verticals) {
       if (!v.outer) continue
       const xFace = near(v.xR, interior.x0) ? v.xR : near(v.xL, interior.x1) ? v.xL : null
@@ -803,13 +835,12 @@ class Builder {
    * curt). Si el tram és massa curt per a tres, dues o una (`dowelsAlong`).
    */
   private sharedDowelZs(z0: number, z1: number): number[] {
-    const dw = this.m.hardware.dowel
+    const dw = this.hw.dowel
     if (z1 - z0 >= 2 * dw.endOffset + dw.diameter) return threeAlong(z0, z1, dw.endOffset)
     return dowelsAlong(z0, z1, Math.min(dw.endOffset, (z1 - z0) / 4), dw.diameter)
   }
 
   private joinDivider(v: VerticalRef): void {
-    const { m } = this
     const xMid = (v.xL + v.xR) / 2
     const rect: ZoneRect = { x0: v.xL, x1: v.xR, y0: v.yB, y1: v.yT }
     const below = this.findBelow(rect)
@@ -817,12 +848,11 @@ class Builder {
     for (const [h, y] of [[below, v.yB], [above, v.yT]] as const) {
       if (!h) continue
       const zs = this.sharedDowelZs(Math.max(v.zRear, h.zRear), Math.min(v.zFront, h.zFront))
-      dowelJoint(v.panel, h.panel, zs.map((z): Vec3 => [xMid, y, z]), m.hardware.dowel)
+      dowelJoint(v.panel, h.panel, zs.map((z): Vec3 => [xMid, y, z]), this.hw.dowel, this.hw.dowel.tag)
     }
   }
 
   private joinFixedShelf(h: HorizontalRef): void {
-    const { m } = this
     const yMid = (h.yBottom + h.yTop) / 2
     const rect: ZoneRect = { x0: h.xL, x1: h.xR, y0: h.yBottom, y1: h.yTop }
     const left = this.findLeft(rect)
@@ -830,13 +860,13 @@ class Builder {
     for (const [v, x] of [[left, h.xL], [right, h.xR]] as const) {
       if (!v) continue
       const zs = this.sharedDowelZs(Math.max(v.zRear, h.zRear), Math.min(v.zFront, h.zFront))
-      dowelJoint(h.panel, v.panel, zs.map((z): Vec3 => [x, yMid, z]), m.hardware.dowel)
+      dowelJoint(h.panel, v.panel, zs.map((z): Vec3 => [x, yMid, z]), this.hw.dowel, this.hw.dowel.tag)
     }
   }
 
   /** Filera System 32 sobre la cara d'un panell vertical, per al tram d'una zona. */
   private rows(v: VerticalRef, rect: ZoneRect, side: "left" | "right"): number[] {
-    const s = this.m.hardware.system32
+    const s = this.hw.system32
     const ys = system32Ys(rect.y0, rect.y1, s.edgeOffset, s.pitch)
     const xFace = side === "left" ? v.xR : v.xL
     // Fons encastat retirat: la filera de darrere es mesura des del darrere del fons, però mai dins del fons (gruixos de 30
@@ -847,14 +877,14 @@ class Builder {
     // Si la de darrere arribaria a la de davant (mòdul massa poc fondo), només la de davant (la de les frontisses).
     const rear = zBack <= zFront - s.diameter
     for (const y of ys) {
-      addFaceHole(v.panel, [xFace, y, zFront], { diameter: s.diameter, depth: s.depth, tag: "system32" })
-      if (rear) addFaceHole(v.panel, [xFace, y, zBack], { diameter: s.diameter, depth: s.depth, tag: "system32" })
+      addFaceHole(v.panel, [xFace, y, zFront], s.hole)
+      if (rear) addFaceHole(v.panel, [xFace, y, zBack], s.hole)
     }
     return ys
   }
 
   private buildLeaf(zone: Zone, rect: ZoneRect): void {
-    const { m, d } = this
+    const { d } = this
     const left = this.findLeft(rect)
     const right = this.findRight(rect)
     const front = zone.front
@@ -873,7 +903,7 @@ class Builder {
       if (right) ysRight = this.rows(right, rect, "right")
       else this.warnings.push({ code: "no-side", message: `La zona no té panell a la dreta per a la filera System 32.`, zoneId: zone.id })
     }
-    const s = m.hardware.system32
+    const s = this.hw.system32
     const rowYs = ysLeft.length ? ysLeft : ysRight.length ? ysRight : system32Ys(rect.y0, rect.y1, s.edgeOffset, s.pitch)
 
     // Prestatges.
@@ -892,7 +922,7 @@ class Builder {
    * maleter): cobreix tota la zona; les fulles de dins queden darrere.
    */
   private buildParentFront(zone: Zone, rect: ZoneRect): void {
-    const s = this.m.hardware.system32
+    const s = this.hw.system32
     const front = zone.front!
     const left = this.findLeft(rect)
     const right = this.findRight(rect)
@@ -1112,7 +1142,7 @@ class Builder {
   /** Tirador del front; sense tiradors (`handles: "none"`), cap forat i un avís (una vegada) del ferratge push. */
   private handle(p: Panel, cx: number, cy: number, along: "x" | "y"): void {
     if (this.m.fronts.handles !== "none") {
-      if (!addHandle(p, cx, cy, along))
+      if (!addHandle(p, cx, cy, along, this.kit.handle.item, this.hw.handle))
         this.warnings.push({ code: "handle", message: `${p.label} de ${num(p.width)} × ${num(p.length)} mm: massa petit per als forats del tirador (o toparien amb les cassoletes). No es fan: posa-hi un pom o un tirador de cantell.`, panelId: p.id })
       return
     }
@@ -1137,40 +1167,40 @@ class Builder {
     return p
   }
 
-  private addCups(door: Panel, doorH: number, hingeSide: "left" | "right", doorW: number, rowYs: number[], doorY0: number, zoneId?: string): number {
-    const { m } = this
-    const half = m.hardware.system32.pitch / 2
+  /**
+   * Cassoletes d'una porta (o reixeta amb frontisses) amb la frontissa `hinge` (la de la porta o la del mòdul): la
+   * quantitat per alçada i els números surten de l'item; la regla (repartides, al mig de dos forats de la filera System
+   * 32, sense trepitjar-se) és d'aquí. Els forats, del motor (`applyHardware`).
+   */
+  private addCups(door: Panel, doorH: number, hingeSide: "left" | "right", doorW: number, rowYs: number[], doorY0: number, zoneId?: string, hinge = this.kit.hinge): number {
+    const h = hinge.spec
+    const half = this.hw.system32.pitch / 2
     // Entre dos forats seguits de la filera (amb trams, no entre l'últim d'un i el primer de l'altre).
-    const pitch = m.hardware.system32.pitch
+    const pitch = this.hw.system32.pitch
     const midpoints = rowYs.filter((y) => rowYs.some((z) => Math.abs(z - y - pitch) < 0.01)).map((y) => r(y + half))
-    const count = hingeCount(doorH)
-    const span = doorH - 200
-    const targets = Array.from({ length: count }, (_, i) => 100 + (span * i) / (count - 1))
+    const count = h.count(doorH)
+    const span = doorH - 2 * h.endOffset
+    const targets = count === 1 ? [doorH / 2] : Array.from({ length: count }, (_, i) => h.endOffset + (span * i) / (count - 1))
     // Cassoletes sense trepitjar-se: entre centres, almenys el diàmetre i 10 mm, i dins de la porta.
-    const dia = m.hardware.hinge.cupDiameter
+    const dia = h.cupDiameter
     // Porta massa estreta: la cassoleta (a `cupOffset` del cantell) sortiria per l'altre costat.
-    const minW = m.hardware.hinge.cupOffset + dia / 2 + 3
+    const minW = h.cupOffset + dia / 2 + h.margin
     if (doorW < minW) {
       this.warnings.push({ code: "hinge", message: `${door.label} de ${num(doorW)} mm d'amplada: no hi cap la cassoleta de la frontissa (calen ${num(minW)} mm). Fes-la més ampla o posa-hi un front fix.`, zoneId, panelId: door.id })
       return 0
     }
-    const minGap = dia + 10
-    const lo = doorY0 + dia / 2 + 3
-    const hi = doorY0 + doorH - dia / 2 - 3
+    const minGap = dia + h.gap
+    const lo = doorY0 + dia / 2 + h.margin
+    const hi = doorY0 + doorH - dia / 2 - h.margin
     const placed: number[] = []
     for (const target of targets) {
       const pool = (midpoints.length ? midpoints : [r(Math.min(hi, Math.max(lo, target + doorY0)))]).filter((y) => y >= lo && y <= hi && placed.every((p) => Math.abs(p - y) >= minGap))
       if (!pool.length) continue
       const y = snap(target + doorY0, pool)
       placed.push(y)
-      door.holes.push({
-        x: r(y - doorY0),
-        y: hingeSide === "left" ? m.hardware.hinge.cupOffset : r(doorW - m.hardware.hinge.cupOffset),
-        diameter: m.hardware.hinge.cupDiameter,
-        depth: m.hardware.hinge.cupDepth,
-        face: "A",
-        tag: "hinge",
-      })
+      // Ancoratge: al cantell de la frontissa (x local = alçada); a la dreta, des de l'altre cantell.
+      const at = applyHardware(hinge.item, "door", {}, { at: { x: r(y - doorY0), y: 0 }, ...(hingeSide === "left" ? {} : { mirrorY: doorW }) })
+      door.holes.push(...at.holes)
     }
     if (placed.length < count)
       this.warnings.push({ code: "hinge", message: `${door.label} de ${r(doorH)} mm: només hi caben ${placed.length} de ${count} frontisses sense que les cassoletes es trepitgin.`, zoneId, panelId: door.id })
@@ -1184,17 +1214,20 @@ class Builder {
     const doorH = r(ter.y1 - ter.y0)
     if (doorH > 2200) this.warnings.push({ code: "door-too-tall", message: `Porta de ${num(doorH)} mm d'alçada (màxim recomanat 2.200).`, zoneId: zone.id })
 
+    // La frontissa triada a la porta (si no, la del mòdul); la de vidre no en porta.
+    const hingeHw = front.glass ? this.kit.hinge : this.frontHardware("hinge", front.hardware, zone.id)
+    const hd = this.hw.handle
     const make = (id: string, name: string, label: string, x0: number, w: number, hinge: "left" | "right") => {
       if (w > 600) this.warnings.push({ code: "door-too-wide", message: `Porta de ${num(w)} mm d'amplada (màxim recomanat 600).`, zoneId: zone.id })
       if (front.glass) return this.glassDoor(id, label, x0, ter.y0, w, doorH)
       const door = this.frontPanel(id, name, label, "door", x0, ter.y0, w, doorH)
-      this.addCups(door, doorH, hinge, w, rowYs, ter.y0, zone.id)
+      this.addCups(door, doorH, hinge, w, rowYs, ter.y0, zone.id, hingeHw)
       // Tirador al costat contrari de les frontisses, vertical i a mitja alçada. En una porta estreta cauria a la
       // columna de les cassoletes (on va el braç de la frontissa): no es fa.
-      const cupBand = m.hardware.hinge.cupOffset + m.hardware.hinge.cupDiameter / 2 + 2.5 + 3
-      if (m.fronts.handles !== "none" && w - 40 < cupBand)
-        this.warnings.push({ code: "handle", message: `${door.label} de ${num(w)} mm d'amplada: el tirador cauria sobre les frontisses (calen ${num(cupBand + 40)} mm). No es fan els forats: posa-hi un pom o un tirador de cantell.`, zoneId: zone.id, panelId: door.id })
-      else this.handle(door, doorH / 2, hinge === "left" ? w - 40 : 40, "x")
+      const cupBand = hingeHw.spec.cupOffset + hingeHw.spec.cupDiameter / 2 + hd.diameter / 2 + hd.margin
+      if (m.fronts.handles !== "none" && w - hd.inset < cupBand)
+        this.warnings.push({ code: "handle", message: `${door.label} de ${num(w)} mm d'amplada: el tirador cauria sobre les frontisses (calen ${num(cupBand + hd.inset)} mm). No es fan els forats: posa-hi un pom o un tirador de cantell.`, zoneId: zone.id, panelId: door.id })
+      else this.handle(door, doorH / 2, hinge === "left" ? w - hd.inset : hd.inset, "x")
     }
     if (front.mode === "single") {
       make(`door${suffix}`, "porta", "Porta", ter.x0, r(ter.x1 - ter.x0), front.hinge)
@@ -1253,22 +1286,24 @@ class Builder {
   }
 
   private buildFlap(zone: Zone, front: Extract<Front, { kind: "flap" }>, ter: ZoneRect): void {
-    const { m } = this
     const flap = this.buildFrontPanel(zone, ter, "flap", "abatible", "Abatible")
-    // Forats genèrics de frontissa: dos per costat, a 22,5 del cantell de gir.
+    // El braç triat a l'abatible (si no, el del mòdul): dos forats a `offset` del cantell de gir (22,5).
+    const arm = this.frontHardware("flap", front.hardware, zone.id)
+    const f = arm.spec
     const along = flap.length // alçada
     const across = flap.width
-    const x = front.dir === "down" ? m.hardware.hinge.cupOffset : r(along - m.hardware.hinge.cupOffset)
-    // Abatibles estrets: si els dos forats no hi caben a 100 mm dels costats, a un quart i a tres quarts (com a mínim un
-    // Ø de matèria entre ells); més estret encara, no se'n fan i s'avisa.
-    const fitsAlong = along >= m.hardware.hinge.cupOffset + 4 + 1
-    const ys = !fitsAlong ? [] : across >= 216 ? [100, r(across - 100)] : across >= 32 ? [r(across / 4), r((3 * across) / 4)] : []
+    // Abatibles estrets: si els dos forats no hi caben a `endOffset` (100) dels costats, a un quart i a tres quarts (com a
+    // mínim un Ø de matèria entre ells); més estret encara, no se'n fan i s'avisa.
+    const fitsAlong = along >= f.offset + f.diameter / 2 + 1
+    const ys = !fitsAlong ? [] : across >= 2 * f.endOffset + 2 * f.diameter ? [f.endOffset, r(across - f.endOffset)] : across >= 4 * f.diameter ? [r(across / 4), r((3 * across) / 4)] : []
     if (!ys.length) this.warnings.push({ code: "hinge", message: `Abatible de ${num(across)} × ${num(along)} mm: no hi caben els forats de les frontisses.`, zoneId: zone.id, panelId: flap.id })
     for (const y of ys) {
-      flap.holes.push({ x, y, diameter: 8, depth: 12, face: "A", tag: "flap" })
+      // Ancoratge al cantell de gir (x local = alçada): avall, el de baix; amunt, el de dalt.
+      flap.holes.push(...applyHardware(arm.item, "flap", {}, { at: { x: 0, y }, ...(front.dir === "down" ? {} : { mirrorX: along }) }).holes)
     }
     // Tirador al cantell que obre (el contrari del gir), horitzontal i centrat.
-    this.handle(flap, front.dir === "down" ? along - 40 : 40, across / 2, "y")
+    const inset = this.hw.handle.inset
+    this.handle(flap, front.dir === "down" ? along - inset : inset, across / 2, "y")
   }
 
   private buildGrille(
@@ -1298,7 +1333,7 @@ class Builder {
     // Imants (reixeta desmuntable): cap ranura a sobre ni a tocar dels forats dels imants.
     // Si no, amb un marge petit les ranures els travessen i la peça no es pot fer.
     if (front.mount !== "hinged") {
-      const mg = m.hardware.magnet
+      const mg = this.hw.magnet
       const clear = mg.diameter / 2 + Math.max(6, front.pattern.slotGap / 2)
       for (const ref of [left, right]) {
         if (!ref) continue
@@ -1331,12 +1366,12 @@ class Builder {
       const hatch = this.add(
         this.basePanel(`hatch-${this.frontCount}`, "trapa", "Trapa", "hatch", hh, hw, d.t, frontMaterialOf(m), "x", edges("left", "right", "bottom", "top"), placement([hx0, hy0, d.frontZ - d.t], Y, X, neg(Z), Z)),
       )
-      const mg = m.hardware.magnet
+      const mg = this.hw.magnet
       for (const [lx, ly] of [[lip / 2, lip / 2], [hh - lip / 2, lip / 2], [lip / 2, hw - lip / 2], [hh - lip / 2, hw - lip / 2]] as [number, number][]) {
         // Imant a la cara B de la trapa (la que toca el front) i contrapart a la cara A del front.
-        hatch.holes.push({ x: r(lx), y: r(ly), diameter: mg.diameter, depth: mg.depth, face: "B", tag: "magnet" })
+        hatch.holes.push({ x: r(lx), y: r(ly), diameter: mg.front.diameter, depth: mg.front.depth, face: "B", ...(mg.front.tag ? { tag: mg.front.tag } : {}) })
         const w: Vec3 = [hx0 + ly, hy0 + lx, d.frontZ - d.t]
-        addFaceHole(grille, w, { diameter: mg.diameter, depth: mg.depth, tag: "magnet" })
+        addFaceHole(grille, w, mg.front)
       }
     }
 
@@ -1345,7 +1380,7 @@ class Builder {
       return
     }
     // Desmuntable: imants als cantells frontals dels panells dels costats i contraparts al front.
-    const mg = m.hardware.magnet
+    const mg = this.hw.magnet
     for (const [ref, side] of [[left, "left"], [right, "right"]] as [VerticalRef | undefined, "left" | "right"][]) {
       if (!ref) {
         this.warnings.push({ code: "no-side", message: `La reixeta no té panell a la ${side === "left" ? "esquerra" : "dreta"} on posar els imants.`, zoneId: zone.id })
@@ -1354,8 +1389,8 @@ class Builder {
       const xMid = (ref.xL + ref.xR) / 2
       for (const y of [rect.y0 + mg.cornerOffset, rect.y1 - mg.cornerOffset]) {
         const w: Vec3 = [r(xMid), r(y), ref.zFront]
-        addEdgeHole(ref.panel, w, { diameter: mg.diameter, depth: mg.depth, tag: "magnet" })
-        addFaceHole(grille, w, { diameter: mg.diameter, depth: mg.depth, tag: "magnet" })
+        addEdgeHole(ref.panel, w, mg.side)
+        addFaceHole(grille, w, mg.front)
       }
     }
   }
@@ -1370,7 +1405,8 @@ class Builder {
   ): void {
     const { m, d } = this
     const c = m.carcass
-    const hw = m.hardware.drawer
+    // La guia triada al calaix (si no, la del mòdul): llargades, jocs, caixa i forats.
+    const hw = this.frontHardware("slide", front.hardware, zone.id).spec
     const n = front.n
     const bg = m.fronts.betweenGap
     const sizes = front.heights.slice(0, n)
@@ -1495,15 +1531,17 @@ class Builder {
       }
       // Forats de guia: al lateral del moble (Ø5 P12) i al lateral de la caixa (Ø4 P10).
       // Des de la cara de darrere del front (encastat: un gruix més endins que el recobrent).
-      const zs = [zFront - m.hardware.system32.edgeOffset, zFront - m.hardware.system32.edgeOffset - 256].filter((z) => z > zBack)
-      const ySlide = r(boxY0 + 20)
+      // Els números i els forats (Ø, fondària) són de la guia (la triada al calaix o la del mòdul).
+      const zs = [zFront - hw.frontOffset, zFront - hw.frontOffset - hw.secondOffset].filter((z) => z > zBack)
+      const ySlide = r(boxY0 + hw.holeHeight)
+      const boxR = hw.box.diameter / 2
       for (const [ref, sidePanel, xBox] of [[left, sideL, boxX0], [right, sideR, boxX0 + boxW]] as [VerticalRef | undefined, Panel, number][]) {
         for (const z of zs) {
-          if (ref) addFaceHole(ref.panel, [ref === left ? ref.xR : ref.xL, ySlide, r(z)], { diameter: 5, depth: 12, tag: "slide" })
+          if (ref) addFaceHole(ref.panel, [ref === left ? ref.xR : ref.xL, ySlide, r(z)], hw.side)
           // Si cau a l'alçada de la ranura del fons (per l'altra cara), no pot arribar-hi: es
           // limita la fondària perquè quedi 1 mm de matèria.
-          const inGroove = ySlide - 2 < boxY0 + hw.bottomOffset + tbb && ySlide + 2 > boxY0 + hw.bottomOffset
-          addFaceHole(sidePanel, [xBox, ySlide, r(z)], { diameter: 4, depth: inGroove ? Math.min(10, r(bt - g - 1)) : 10, tag: "slide" })
+          const inGroove = ySlide - boxR < boxY0 + hw.bottomOffset + tbb && ySlide + boxR > boxY0 + hw.bottomOffset
+          addFaceHole(sidePanel, [xBox, ySlide, r(z)], { ...hw.box, depth: inGroove ? Math.min(hw.box.depth, r(bt - g - 1)) : hw.box.depth })
         }
       }
     }
@@ -1605,20 +1643,22 @@ function onlyDrawers(root: Zone): boolean {
  * hi cap, 96 / 64) al voltant de (cx, cy), al llarg de l'eix local `along`. Van com a talls
  * passants (com els passacables): així els llegeix el taller i es fan al nesting.
  */
-function addHandle(p: Panel, cx: number, cy: number, along: "x" | "y"): boolean {
+function addHandle(p: Panel, cx: number, cy: number, along: "x" | "y", item: HardwareItem, spec: SlotSpec<"handle">): boolean {
   const room = along === "x" ? p.length : p.width
-  const spacing = room >= 260 ? 128 : room >= 200 ? 96 : 64
-  const R = 2.5
-  // Cada forat sencer dins de la peça amb 3 mm de matèria al voltant i sense tocar cap altre forat de cara (les
+  // La distància entre forats segons l'espai (128 o, si no hi cap, 96 / 64: la regla del tirador).
+  const pitch = spec.pitch(room)
+  const m = spec.margin
+  const { cutouts } = applyHardware(item, "front", { pitch }, { at: { x: cx, y: cy }, axis: along, round: true })
+  // Cada forat sencer dins de la peça amb `margin` (3 mm) de matèria al voltant i sense tocar cap altre forat de cara (les
   // cassoletes de les frontisses d'una porta estreta): si no, no es fa cap dels dos.
-  const pts = [-spacing / 2, spacing / 2].map((s): [number, number] => [r(along === "x" ? cx + s : cx), r(along === "y" ? cy + s : cy)])
-  const fits = pts.every(
-    ([x, y]) =>
-      x - R >= 3 && x + R <= p.length - 3 && y - R >= 3 && y + R <= p.width - 3 &&
-      p.holes.every((h) => h.face === "edge" || Math.hypot(h.x - x, h.y - y) >= h.diameter / 2 + R + 3),
-  )
+  const fits = cutouts.every((c) => {
+    if (c.kind !== "circle") return false
+    const R = c.diameter / 2
+    const { x, y } = c
+    return x - R >= m && x + R <= p.length - m && y - R >= m && y + R <= p.width - m && p.holes.every((h) => h.face === "edge" || Math.hypot(h.x - x, h.y - y) >= h.diameter / 2 + R + m)
+  })
   if (!fits) return false
-  for (const [x, y] of pts) (p.cutouts ??= []).push({ kind: "circle", x, y, diameter: 5, tag: "handle" })
+  ;(p.cutouts ??= []).push(...cutouts)
   return true
 }
 

@@ -50,12 +50,12 @@ export function MaterialThumb({ m, size = 36, fill }: { m: MaterialPref; size?: 
   return <Box w={fill ? "full" : `${size}px`} h={fill ? undefined : `${size}px`} aspectRatio={fill ? "1" : undefined} rounded="md" borderWidth="1px" borderColor="border.emphasized" flexShrink={0} style={previewStyle(m, size * 2)} backgroundRepeat="repeat" />
 }
 
-/** Gruixos com a etiquetes (treure amb ×, afegir amb «+»), ordenats. */
-export function ThicknessChips({ value, onChange, label = true }: { value: number[]; onChange: (v: number[]) => void; label?: boolean }) {
+/** Gruixos (o altres mides: llargades de guia, `what`/`range`) com a etiquetes (treure amb ×, afegir amb «+»), ordenats. */
+export function ThicknessChips({ value, onChange, label = true, what = "gruix", range = [3, 60] }: { value: number[]; onChange: (v: number[]) => void; label?: boolean; what?: string; range?: [number, number] }) {
   const [text, setText] = useState("")
   const add = () => {
     const n = Number(text.replace(",", "."))
-    if (Number.isFinite(n) && n >= 3 && n <= 60 && !value.includes(n)) onChange([...value, n].sort((a, b) => a - b))
+    if (Number.isFinite(n) && n >= range[0] && n <= range[1] && !value.includes(n)) onChange([...value, n].sort((a, b) => a - b))
     setText("")
   }
   return (
@@ -69,14 +69,14 @@ export function ThicknessChips({ value, onChange, label = true }: { value: numbe
         {value.map((t) => (
           <Badge key={t} size="lg" variant="subtle" colorPalette="wood" pr={0.5}>
             {t} mm
-            <IconButton aria-label={`Treure el gruix de ${t} mm`} size="2xs" variant="ghost" disabled={value.length <= 1} onClick={() => onChange(value.filter((x) => x !== t))}>
+            <IconButton aria-label={`Treure ${what === "gruix" ? "el gruix" : `la ${what}`} de ${t} mm`} size="2xs" variant="ghost" disabled={value.length <= 1} onClick={() => onChange(value.filter((x) => x !== t))}>
               <LuX />
             </IconButton>
           </Badge>
         ))}
         <HStack gap={0} as="form" onSubmit={(e) => (e.preventDefault(), add())}>
-          <Input size="xs" w="72px" type="number" inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} placeholder="mm" aria-label="Gruix nou (mm)" />
-          <IconButton type="submit" aria-label="Afegir el gruix" size="xs" variant="ghost" disabled={!text}>
+          <Input size="xs" w="72px" type="number" inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} placeholder="mm" aria-label={`${what === "gruix" ? "Gruix nou" : `${what[0]!.toUpperCase()}${what.slice(1)} nova`} (mm)`} />
+          <IconButton type="submit" aria-label={what === "gruix" ? "Afegir el gruix" : `Afegir la ${what}`} size="xs" variant="ghost" disabled={!text}>
             <LuPlus />
           </IconButton>
         </HStack>

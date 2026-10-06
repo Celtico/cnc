@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { DEFAULT_CABINET } from "./cabinet"
-import { DEFAULT_HARDWARE, HardwareSchema, type Module } from "./composition"
+import { type Module } from "./composition"
+import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, fixHardwareDefaults, kitFrom, libraryFromLegacy } from "./hardware"
 import { PHOTO_MATERIALS } from "./textureSets"
 import { deepEqual, MATERIAL_MERGES, rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
 import { defaultMachine, defaultMachineRules, MachineRulesSchema, MachineSchema, migrateMachine, repairMachine, withWorkshopRules, type Machine, type MachineRules } from "./machine"
@@ -17,7 +18,7 @@ import { repairValue } from "./repair"
 
 const mm = z.number().finite()
 
-export const SETTINGS_VERSION = 18
+export const SETTINGS_VERSION = 19
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -289,7 +290,13 @@ export const SettingsSchema = z.object({
   references: z.array(RefPresetSchema),
   materials: MaterialListSchema,
   boards: BoardsPrefSchema,
-  hardware: HardwareSchema,
+  /**
+   * Biblioteca de ferratges (v19): frontisses, guies, espigues… com a dades (`core/model/hardware.ts`). Abans eren uns
+   * números (`hardware`); la migració en fa els items inicials amb aquells números.
+   */
+  hardwareLibrary: z.array(HardwareItemSchema),
+  /** Quin item de la biblioteca fa servir cada lloc als mòduls nous (`HARDWARE_SLOTS`). */
+  hardwareDefaults: HardwareDefaultsSchema,
   gaps: GapsPrefSchema,
   label: LabelPrefSchema,
   display: DisplayPrefSchema,
@@ -537,7 +544,8 @@ export const DEFAULT_SETTINGS: Settings = {
     margin: 10,
     ignoreGrain: false,
   },
-  hardware: DEFAULT_HARDWARE,
+  hardwareLibrary: DEFAULT_HARDWARE_LIBRARY,
+  hardwareDefaults: DEFAULT_HARDWARE_DEFAULTS,
   gaps: {
     outerGap: DEFAULT_CABINET.doorGap,
     betweenGap: DEFAULT_CABINET.doorGapBetween,
@@ -676,6 +684,13 @@ export function parseSettings(raw: unknown): SettingsParse {
     ? section("machiningRules", MachineRulesSchema, defaultMachineRules(), "Regles de mecanitzat")
     : (rulesFromMachines(machines) ?? defaultMachineRules())
   if (machines.some((m) => m.rules !== undefined)) migrated = true
+  // v19: biblioteca de ferratges. Sense (anteriors a la v19), els items inicials amb els números d'abans (`hardware`):
+  // cap forat no canvia de lloc. Un item dolent només treu aquell item; cada lloc apunta a un item que hi és.
+  const hardwareRaw = "hardwareLibrary" in obj
+    ? list("hardwareLibrary", HardwareItemSchema, DEFAULT_HARDWARE_LIBRARY, "Ferratges")
+    : libraryFromLegacy(section("hardware", LegacyHardwareSchema, DEFAULT_LEGACY_HARDWARE, "Ferratges"))
+  const hardware = fixHardwareDefaults(hardwareRaw, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
+  if (hardware.changed) migrated = true
   // Àlies segons els materials d'aquestes preferències (un «X (foto)» que encara hi és no es toca).
   const names = new Set(materials.map((m) => m.name))
   const alias = (n: string) => resolveMaterialAlias(n, names)
@@ -684,7 +699,8 @@ export function parseSettings(raw: unknown): SettingsParse {
     references,
     materials,
     boards: v7 || v12.renames.length ? { ...boards, sheets: boards.sheets.map((x) => ({ ...x, material: renamed(v7 ? alias(x.material) : x.material) })) } : boards,
-    hardware: section("hardware", HardwareSchema, DEFAULT_SETTINGS.hardware, "Ferratges"),
+    hardwareLibrary: hardware.library,
+    hardwareDefaults: hardware.defaults,
     gaps: section("gaps", GapsPrefSchema, DEFAULT_SETTINGS.gaps, "Jocs per defecte"),
     label: section("label", LabelPrefSchema, DEFAULT_SETTINGS.label, "Etiquetes"),
     display: section("display", DisplayPrefSchema, DEFAULT_SETTINGS.display, "Visualització"),
@@ -846,6 +862,11 @@ export function importSettingsJson(current: Settings, text: string): SettingsPar
   for (const key of Object.keys(current) as (keyof Settings)[]) {
     if (key !== "version" && key in raw) (merged as Record<string, unknown>)[key] = res.settings[key]
   }
+  // Un fitxer d'abans de la v19 porta els ferratges com a números (`hardware`): la biblioteca que en surt.
+  if (!("hardwareLibrary" in raw) && "hardware" in raw) {
+    merged.hardwareLibrary = res.settings.hardwareLibrary
+    merged.hardwareDefaults = res.settings.hardwareDefaults
+  }
   // Un fitxer d'abans de la v11 porta les regles a les màquines: es fan servir (`rulesFromMachines`).
   if (!("machiningRules" in raw) && Array.isArray(raw.machines) && raw.machines.some((m) => isRecord(m) && m.rules !== undefined)) {
     merged.machiningRules = res.settings.machiningRules
@@ -901,7 +922,7 @@ export function applySettingsToModule(s: Settings, m: Module): Module {
       grooveDepth: s.gaps.grooveDepth,
     },
     fronts: { ...m.fronts, outerGap: s.gaps.outerGap, betweenGap: s.gaps.betweenGap },
-    hardware: structuredClone(s.hardware),
+    hardware: kitFrom(s.hardwareLibrary, s.hardwareDefaults),
   }
 }
 
