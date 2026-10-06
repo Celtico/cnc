@@ -1,7 +1,7 @@
 import { OrbitControls } from "@react-three/drei"
 import { Canvas, useThree } from "@react-three/fiber"
 import { useEffect, useState } from "react"
-import { CanvasTexture, CircleGeometry, MeshStandardMaterial, NearestFilter, NeutralToneMapping, RepeatWrapping, SphereGeometry, SRGBColorSpace, type WebGLRenderer } from "three"
+import { CanvasTexture, CircleGeometry, MeshStandardMaterial, NearestFilter, type MeshPhysicalMaterial, NeutralToneMapping, RepeatWrapping, SphereGeometry, SRGBColorSpace, type WebGLRenderer } from "three"
 import type { MaterialPref } from "../../core/model"
 import { BALL_MM, ballKey, ballMaterial } from "../../components/viewer/ballMaterial"
 import { LOW_MEMORY } from "../../components/viewer/deviceLimits"
@@ -56,7 +56,7 @@ export function MaterialBall({ m, dark }: { m: MaterialPref; dark: boolean }) {
 function Ball({ m }: { m: MaterialPref }) {
   const invalidate = useThree((st) => st.invalidate)
   const [geo, setGeo] = useState<SphereGeometry | null>(null)
-  const [mat, setMat] = useState<MeshStandardMaterial | null>(null)
+  const [mat, setMat] = useState<MeshPhysicalMaterial | null>(null)
   useEffect(() => {
     const g = new SphereGeometry(R, 96, 64)
     setGeo(g)

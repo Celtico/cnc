@@ -1,7 +1,8 @@
-import type { MeshStandardMaterial } from "three"
-import type { MaterialPref } from "../../core/model"
+import { Color, MeshPhysicalMaterial, MeshStandardMaterial } from "three"
+import { materialCoat, materialSheen, type MaterialPref } from "../../core/model"
 import { finishMaterial } from "./exportablePanel"
-import { finishOfPref, woodGenOf, type FinishSpec } from "./textures"
+import { COAT_ROUGHNESS } from "./render/shading"
+import { finishOfPref, woodGenOf, type FinishFx, type FinishSpec } from "./textures"
 
 /** Diàmetre real de la bola de material (mm): la textura hi va a la mateixa escala que a les peces. */
 export const BALL_MM = 300
@@ -24,13 +25,46 @@ export function ballSpanU(f: FinishSpec): number {
   return Math.abs(whole / n - 1) <= 0.12 ? whole * period : u
 }
 
-/** Material de la bola (el mateix camí que les peces del visor: `finishMaterial`), a escala real. */
-export function ballMaterial(m: MaterialPref): MeshStandardMaterial {
+/**
+ * Material de la bola (el mateix camí que les peces del visor: `finishMaterial`), a escala real, i amb el que al visor
+ * només llegeix el render (`userData`) fet visible perquè la bola digui la veritat: vegeu `physicalBall`.
+ */
+export function ballMaterial(m: MaterialPref): MeshPhysicalMaterial {
   const f = finishOfPref(m)
-  return finishMaterial(f, ballSpanU(f), (Math.PI * BALL_MM) / 2)
+  return physicalBall(finishMaterial(f, ballSpanU(f), (Math.PI * BALL_MM) / 2), f)
 }
 
-/** Tot el que canvia l'aspecte de la bola (si no canvia, no es refà el material). */
+/**
+ * Còpia física del material de la peça (les mateixes textures, sense copiar-les) amb els efectes «Al render»
+ * aproximats com el path tracer: **Reflex** (`coat`) = vernís (`clearcoat`, la rugositat del render
+ * `COAT_ROUGHNESS`); **Vellut** (`sheen`) = el brill rasant de la tela, del color de la tela cap al blanc; **Llum que
+ * passa** (`translucent`) = una mica de llum pròpia del mateix color (al render, part del difús passa a l'altra cara:
+ * la cara a l'ombra no queda negra). La llum que fa (`glow`) ja la porta `applyFinishFx` (encesa).
+ */
+export function physicalBall(std: MeshStandardMaterial, f: FinishFx): MeshPhysicalMaterial {
+  const p = new MeshPhysicalMaterial()
+  // Només les propietats de l'estàndard (la còpia de la física llegiria camps que l'estàndard no té).
+  MeshStandardMaterial.prototype.copy.call(p, std)
+  p.defines = { STANDARD: "", PHYSICAL: "" }
+  std.dispose()
+  if (f.coat) {
+    p.clearcoat = f.coat
+    p.clearcoatRoughness = COAT_ROUGHNESS
+  }
+  if (f.sheen) {
+    p.sheen = f.sheen
+    p.sheenColor.copy(p.color).lerp(new Color(1, 1, 1), 0.5)
+    p.sheenRoughness = 0.35
+  }
+  if (f.translucent && !f.glow) {
+    p.emissive.copy(p.color)
+    p.emissiveMap = p.map
+    p.emissiveIntensity = 0.3 * f.translucent
+  }
+  return p
+}
+
+/** Tot el que canvia l'aspecte de la bola (si no canvia, no es refà el material): també Reflex i Vellut. */
 export function ballKey(m: MaterialPref): string {
-  return JSON.stringify([m.finish, m.glow ?? 0, m.translucent ?? 0])
+  return JSON.stringify([m.finish, m.glow ?? 0, m.translucent ?? 0, materialCoat(m), materialSheen(m)])
 }

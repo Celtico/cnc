@@ -48,7 +48,7 @@ const OBJECTS_ENTRY: NavEntry = { id: "objects", label: "Objectes", icon: LuSofa
 const AMBIENTS_ENTRY: NavEntry = { id: "ambients", label: "Ambients", icon: LuHouse }
 const SETTINGS_ENTRY: NavEntry = { id: "settings", label: "Preferències", icon: LuSettings }
 /** Apartats del menú global (barra lateral); Preferències va a baix de tot. */
-const GLOBAL_NAV: NavEntry[] = [AMBIENTS_ENTRY, OBJECTS_ENTRY, PROJECTS_ENTRY]
+const GLOBAL_NAV: NavEntry[] = [PROJECTS_ENTRY, AMBIENTS_ENTRY, OBJECTS_ENTRY]
 /** Mòbil: la barra de baix amb els apartats i Preferències. */
 const GLOBAL_NAV_MOBILE: NavEntry[] = [...GLOBAL_NAV, SETTINGS_ENTRY]
 
@@ -81,8 +81,8 @@ export function App() {
     })
   }, [])
   const [projectId, setProjectId] = useState<number | null>(readStoredId)
-  // Si hi havia un moble obert, es torna al seu Editor; si no, a Ambients (el primer del menú).
-  const [screen, setScreen] = useState<Screen>(() => (readStoredId() !== null ? "editor" : readAmbientId() !== null ? "ambient" : "ambients"))
+  // Si hi havia un moble obert, es torna al seu Editor; si no, a Mobles (el primer del menú).
+  const [screen, setScreen] = useState<Screen>(() => (readStoredId() !== null ? "editor" : readAmbientId() !== null ? "ambient" : "projects"))
   // L'últim moble i l'últim objecte oberts (com l'ambient): el menú hi torna directament.
   const [lastMoble, setLastMoble] = usePersistentNumber("mobles:last-moble", 0)
   const [lastObject, setLastObject] = usePersistentNumber("mobles:last-object", 0)
@@ -288,7 +288,6 @@ export function App() {
             color={on ? "wood.fg" : "fg.muted"}
             borderBottomWidth="2px"
             borderColor={on ? "wood.solid" : "transparent"}
-            cursor="pointer"
           >
             <button type="button" role="tab" aria-selected={on} onClick={() => go(n.id as Screen)}>
               <Stack align="center" gap={0.5}>
@@ -478,7 +477,6 @@ export function App() {
               py={2}
               color={active ? "wood.fg" : disabled ? "fg.subtle" : "fg.muted"}
               opacity={disabled ? 0.5 : 1}
-              cursor={disabled ? "not-allowed" : "pointer"}
             >
               <button disabled={disabled} onClick={() => goSection(n.id)} aria-current={active ? "page" : undefined}>
                 <Stack align="center" gap={0.5}>
@@ -529,7 +527,6 @@ function NavItem({
         bg={active ? "wood.muted" : "transparent"}
         color={active ? "wood.fg" : disabled ? "fg.subtle" : "fg"}
         _hover={disabled ? {} : { bg: active ? "wood.muted" : "bg.muted" }}
-        cursor={disabled ? "not-allowed" : "pointer"}
         fontWeight={active ? "semibold" : "normal"}
       >
         <button

@@ -1,7 +1,8 @@
-import { Accordion, Badge, Box, Button, CloseButton, Dialog, HStack, IconButton, Input, InputGroup, Portal, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
+import { Accordion, Badge, Box, Button, CloseButton, Dialog, HStack, IconButton, Input, Portal, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
 import { useContext, useEffect, useRef, useState, type ReactNode, type RefObject } from "react"
-import { LuCopy, LuImagePlus, LuLayers2, LuLayers3, LuPaintbrush, LuPlus, LuSearch, LuSprayCan, LuStar, LuTrash2 } from "react-icons/lu"
+import { LuCopy, LuImagePlus, LuLayers2, LuLayers3, LuPaintbrush, LuSprayCan, LuStar, LuTrash2 } from "react-icons/lu"
 import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
+import { SearchBar } from "../../components/SearchBar"
 import { NumberField } from "../../components/NumRow"
 import { toaster } from "../../components/ui/toaster"
 import { MATERIAL_CATEGORIES, materialCategory, materialCoat, materialNameError, materialSheen, newId, restoredFinish, switchFinish, tidyMaterialName, withCategory, type Finish, type MaterialCategory, type MaterialPref } from "../../core/model"
@@ -127,14 +128,7 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
   return (
     <Stack gap={4} minW={0}>
       {head}
-      <HStack gap={2}>
-        <InputGroup flex={1} minW={0} maxW={{ md: "420px" }} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => setQuery("")} /> : undefined}>
-          <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar…" aria-label="Cercar materials" />
-        </InputGroup>
-        <Button size="sm" colorPalette="wood" flexShrink={0} onClick={() => setLibrary(true)}>
-          <LuPlus /> Afegir
-        </Button>
-      </HStack>
+      <SearchBar value={query} onChange={setQuery} ariaLabel="Cercar materials" add={{ label: "Afegir", onClick: () => setLibrary(true) }} />
       {groups.length ? (
         // El mateix acordió que els apartats de les galeries (Historial, Catàleg…): tancat amb vora, icona, nom i
         // comptador; a sota del nom, per a què serveix. Les targetes només es munten en obrir la categoria.
@@ -289,10 +283,11 @@ const STUDIO_BG = "radial-gradient(120% 95% at 50% 30%, #fbfaf8 0%, #ebe8e3 55%,
 const STUDIO_BG_DARK = "radial-gradient(120% 95% at 50% 30%, #4a4a4e 0%, #3a3a3d 50%, #2c2c2f 100%)"
 
 /**
- * Mostres de l'editor: la tira plana a escala real (`MaterialHero`) i la bola de material (`MaterialBall`). A l'ordinador
- * gran omplen la columna de l'esquerra (la tira a dalt i la bola a sota, a tota l'amplada); més estret, una al costat de
- * l'altra a dalt del formulari. Fora de la targeta (que es refà per material): canviar de material no refà el 3D. `live`:
- * la bola només es munta amb l'editor obert (a l'iPhone, cap context de WebGL amagat).
+ * Mostres de l'editor: la bola de material (`MaterialBall`), la protagonista, i la tira plana a escala real
+ * (`MaterialHero`), més petita. A l'ordinador gran omplen la columna de l'esquerra (la bola a dalt, tot el que hi cap;
+ * la tira a sota, baixa); a `md`, la bola de 360 px i la tira al costat; al mòbil, la bola quadrada a tota l'amplada i
+ * la tira a sota (3:1). Fora de la targeta (que es refà per material): canviar de material no refà el 3D. `live`: la
+ * bola només es munta amb l'editor obert (a l'iPhone, cap context de WebGL amagat).
  */
 function MaterialStage({ m, live }: { m: MaterialPref; live: boolean }) {
   const dark = useColorMode().colorMode === "dark"
@@ -302,18 +297,18 @@ function MaterialStage({ m, live }: { m: MaterialPref; live: boolean }) {
     </Text>
   )
   return (
-    <Box flex={{ lg: 1 }} flexShrink={0} minW={0} minH={0} bg="bg.subtle" display="flex" flexDirection={{ base: "row", lg: "column" }} gap={{ base: 3, lg: 4 }} p={{ base: 3, sm: 4, lg: 5 }}>
-      <Stack flex={1} minW={0} minH={0} gap={1.5}>
-        <Box flex={{ lg: 1 }} minH={0} aspectRatio={{ base: 1, md: "auto" }} h={{ md: "280px", lg: "auto" }} rounded="lg" overflow="hidden" borderWidth="1px">
-          <MaterialHero m={m} fill />
-        </Box>
-        {caption("A escala real")}
-      </Stack>
-      <Stack w={{ base: "calc(50% - 6px)", md: "280px", lg: "full" }} flexShrink={0} minW={0} gap={1.5}>
-        <Box aspectRatio={{ base: 1, lg: "auto" }} h={{ lg: "min(380px, 42dvh)" }} rounded="lg" overflow="hidden" borderWidth="1px" cursor="grab" _active={{ cursor: "grabbing" }} style={{ background: dark ? STUDIO_BG_DARK : STUDIO_BG }} title="Arrossega per girar-la">
+    <Box flex={{ lg: 1 }} flexShrink={0} minW={0} minH={0} bg="bg.subtle" display="flex" flexDirection={{ base: "column", md: "row", lg: "column" }} gap={{ base: 3, lg: 4 }} p={{ base: 3, sm: 4, lg: 5 }}>
+      <Stack w={{ base: "full", md: "360px", lg: "full" }} flex={{ lg: 1 }} flexShrink={0} minW={0} minH={0} gap={1.5}>
+        <Box flex={{ lg: 1 }} minH={0} aspectRatio={{ base: 1, lg: "auto" }} rounded="lg" overflow="hidden" borderWidth="1px" cursor="grab" _active={{ cursor: "grabbing" }} style={{ background: dark ? STUDIO_BG_DARK : STUDIO_BG }} title="Arrossega per girar-la">
           {live && <MaterialBall m={m} dark={dark} />}
         </Box>
         {caption("Bola de material")}
+      </Stack>
+      <Stack flex={{ md: 1, lg: "none" }} minW={0} minH={0} gap={1.5}>
+        <Box minH={0} aspectRatio={{ base: 3, md: "auto" }} h={{ md: "360px", lg: "clamp(140px, 24dvh, 220px)" }} rounded="lg" overflow="hidden" borderWidth="1px">
+          <MaterialHero m={m} fill />
+        </Box>
+        {caption("A escala real")}
       </Stack>
     </Box>
   )
@@ -531,7 +526,7 @@ function MaterialCard({ m, dirty, footer, onChange, onRename, nameError, onDupli
         )}
         <TextureSetRow finish={finish} onChange={(f) => onChange({ finish: f })} />
         {/* Només per al render (no canvia el visor): reflex nítid a sobre i lluïssor de les teles. */}
-        <FormRow label="Al render" help="Reflex (vernís): un reflex nítid a sobre, com el lacat brillant, el marbre polit o el parquet envernissat. Vellut: la tela s'aclareix a les vores. Llum que passa: la part de la llum que travessa el material sense que s'hi vegi a través (teles de pantalla, cortines, fulles): una pantalla de lli amb una bombeta a dins brilla per fora. Per veure-hi a través (vidre), l'acabat «Vidre» i la seva transparència. Sense tocar, els de l'app.">
+        <FormRow label="Al render" help="Reflex (vernís): un reflex nítid a sobre, com el lacat brillant, el marbre polit o el parquet envernissat. Vellut: la tela s'aclareix a les vores. Llum que passa: la part de la llum que travessa el material sense que s'hi vegi a través (teles de pantalla, cortines, fulles): una pantalla de lli amb una bombeta a dins brilla per fora. Per veure-hi a través (vidre), l'acabat «Vidre» i la seva transparència. Sense tocar, els de l'app. La bola de material els mostra aproximats (el visor 3D, no).">
           <HStack gap={4} wrap="wrap">
             {(
               [

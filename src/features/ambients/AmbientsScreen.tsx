@@ -1,6 +1,7 @@
-import { Accordion, Badge, Button, CloseButton, Dialog, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
+import { Accordion, Badge, Button, Dialog, IconButton, Input, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
 import { useEffect, useState, type ReactNode } from "react"
-import { LuFolders, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu"
+import { LuFolders, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuTrash2 } from "react-icons/lu"
+import { SearchBar } from "../../components/SearchBar"
 import { toaster } from "../../components/ui/toaster"
 import { uniqueName } from "../../core/file/mobleFile"
 import { AMBIENT_CATEGORIES, AMBIENT_TEMPLATES, EMPTY_AMBIENT, parseAmbient, roomWalls, type Ambient, type AmbientTemplate } from "../../core/model"
@@ -135,16 +136,9 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
       <PageHeader
         title="Ambients"
         description="El plànol de la casa amb els mobles al seu lloc: dibuixa les parets (o posa-hi la imatge d'un plànol), col·loca-hi els teus mobles i objectes i mira-ho en 3D o fes-ne un render. Al catàleg hi ha habitacions moblades, a punt per a renders."
-        actions={
-          <Button colorPalette="wood" size={{ base: "sm", md: "md" }} onClick={() => void create()}>
-            <LuPlus /> Nou ambient
-          </Button>
-        }
       />
       <Stack gap={4}>
-        <InputGroup maxW={{ base: "full", md: "420px" }} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => setQuery("")} /> : undefined}>
-          <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar ambients: nom, habitació, material…" aria-label="Cercar ambients" />
-        </InputGroup>
+        <SearchBar value={query} onChange={setQuery} placeholder="Cercar ambients: nom, habitació, material…" ariaLabel="Cercar ambients" add={{ label: "Nou ambient", onClick: () => void create() }} />
         <Accordion.Root className="gallery-accordion" multiple collapsible lazyMount variant="enclosed" value={q ? found : open} onValueChange={(e) => !q && setOpen(e.value)}>
           <Accordion.Item value="history">
             <Accordion.ItemTrigger cursor="pointer">
@@ -185,7 +179,7 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                   ambGrid("folders", groupedRows)
                 ) : (
                   <Text fontSize="sm" color="fg.muted">
-                    Encara no n'hi ha cap. Amb «Duplicar (per a un client)…» d'un ambient, o amb «Grup nou» a l'Historial: el que hi desis queda aquí i «Esborrar l'historial» no el toca.
+                    Encara no n'hi ha cap. Amb «Duplicar (per a un client)…» d'un ambient, o amb «Grup nou» a l'Historial: el que hi desis queda aquí i «Esborrar» de l'Historial no el toca.
                   </Text>
                 )}
               </Accordion.ItemBody>

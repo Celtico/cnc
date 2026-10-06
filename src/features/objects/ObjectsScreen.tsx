@@ -1,6 +1,6 @@
 import { Button, Dialog, Portal, Text, VStack } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
-import { LuPlus, LuTrash2 } from "react-icons/lu"
+import { LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { uniqueName } from "../../core/file/mobleFile"
 import type { Composition } from "../../core/model"
@@ -36,14 +36,10 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
       <PageHeader
         title="Objectes"
         description="Sofàs, llits, làmpades, plantes… per col·locar als ambients. Es fan com un moble flat-pack (peces amb forma, «Talla» per als forats i materials de simulació), però només es veuen: no es fabriquen."
-        actions={
-          <Button colorPalette="wood" size={{ base: "sm", md: "md" }} onClick={() => void create(blankObject(), "Objecte nou")}>
-            <LuPlus /> Nou objecte
-          </Button>
-        }
       />
       <ObjectsGallery
         onCreate={(c, n) => void create(c, n)}
+        add={{ label: "Nou objecte", onClick: () => void create(blankObject(), "Objecte nou") }}
         history={(matches, searching) => {
           const shown = (projects ?? []).filter((p) => isObject(p) && (!searching || matches(projectSearchText(p))))
           // Historial = el que és de pas (sense grup); el que es desa en un grup passa a Projectes.
@@ -119,7 +115,7 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                 grid("folders", grouped)
               ) : (
                 <Text fontSize="sm" color="fg.muted">
-                  Encara no n'hi ha cap. A l'Historial, «Grup nou» o el menú ⋯ d'un objecte › «Moure a un grup…»: el que hi desis queda aquí i «Esborrar l'historial» no el toca.
+                  Encara no n'hi ha cap. A l'Historial, «Grup nou» o el menú ⋯ d'un objecte › «Moure a un grup…»: el que hi desis queda aquí i «Esborrar» de l'Historial no el toca.
                 </Text>
               ),
             },

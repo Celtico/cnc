@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react"
 import { BoxGeometry, Color, Group, Mesh, MeshStandardMaterial, NeutralToneMapping, PerspectiveCamera, Plane, PlaneGeometry, Vector3, type Object3D } from "three"
 import { BoxFrame } from "../../components/viewer/BoxFrame"
 import { MoveGizmo } from "../../components/viewer/MoveGizmo"
+import { useViewerCursor } from "../../components/viewer/cursor"
 import type { Axis } from "../../components/viewer/pixelScale"
 import { exportablePanel } from "../../components/viewer/exportablePanel"
 import { buildScene } from "../../components/viewer/exportGlb"
@@ -524,7 +525,8 @@ function Room({
   // de desfer en deixar-lo anar).
   const { camera, controls } = useThree()
   const [hoverId, setHoverId] = useState<string | null>(null)
-  useEffect(() => () => void (document.body.style.cursor = ""), [])
+  // Mà sobre els elements que es poden triar (es neteja sola en desmuntar-se).
+  const cursor = useViewerCursor()
   const sel = useMemo(() => ambient.items.filter((it) => selectedIds.includes(it.id) && geos.get(it.id)), [ambient.items, selectedIds, geos])
   // Al centre de la selecció (també en alçada: un moble penjat el porta a la seva altura).
   const gizmoAt = useMemo((): [number, number, number] | null => {
@@ -648,11 +650,11 @@ function Room({
           object={s.obj}
           onPointerOver={(e: ThreeEvent<PointerEvent>) => {
             e.stopPropagation()
-            document.body.style.cursor = "pointer"
+            cursor.hover(onPick || onSelect ? "pointer" : null)
             if (e.pointerType === "mouse") setHoverId(s.id)
           }}
           onPointerOut={() => {
-            document.body.style.cursor = ""
+            cursor.hover(null)
             setHoverId((h) => (h === s.id ? null : h))
           }}
           onClick={(e: ThreeEvent<MouseEvent>) => {
