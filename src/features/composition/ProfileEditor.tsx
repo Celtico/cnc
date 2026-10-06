@@ -8,6 +8,7 @@ import {
   edgeOf,
   filletNode,
   moveHandle,
+  snapAngle45,
   normalizeNodes,
   polygonArea,
   sampleProfile,
@@ -67,7 +68,7 @@ function edgeMid(nodes: PNode[], i: number): Vec2 {
  *   arrossegar un manegador el trenca (cantonada); Supr, fletxes.
  * - Ploma: clic = node de cantonada, clic i arrossegar = node suau amb manegadors; clicar el
  *   primer node tanca la forma.
- * Imant a la quadrícula (Maj: 1 mm). No deixa aplicar un contorn que es talli a si mateix.
+ * Imant a la quadrícula (Ctrl/⌘: 0,1 mm). Maj: angles de 45° a la ploma i als manegadors (com a Figma). No deixa aplicar un contorn que es talli a si mateix.
  * Desfer/refer propi (`useHistory`, dreceres només dins del diàleg): cada arrossegada, cada node de la ploma i cada acció
  * és un pas; el moble del darrere no es toca.
  */
@@ -92,6 +93,8 @@ export function ProfileEditor({
   const [tool, setTool] = useState<"edit" | "pen" | "bend" | "erase">("edit")
   const [radius, setRadius] = useState(20)
   const [drag, setDrag] = useState<Drag | null>(null)
+  // Maj premuda mentre s'arrossega un manegador: angle fixat (línia vermella, com a Figma).
+  const [angleLock, setAngleLock] = useState(false)
   const [cursor, setCursor] = useState<Vec2 | null>(null)
   // Historial en començar la ploma: cancel·lar-la hi torna (sense deixar passos de la forma descartada).
   const beforePen = useRef<History<PNode[]> | null>(null)
@@ -242,7 +245,12 @@ export function ProfileEditor({
       return
     }
     ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
-    const p: PNode = { x: snap(x, e.shiftKey), y: snap(y, e.shiftKey) }
+    // Maj: angle a passos de 45° des del node d'abans (com a Figma); Ctrl/⌘: sense imant.
+    const prev = nodes[nodes.length - 1]
+    const fine = e.ctrlKey || e.metaKey
+    const p: PNode = e.shiftKey && prev
+      ? (([dx, dy]) => ({ x: r1(prev.x + dx), y: r1(prev.y + dy) }))(snapAngle45([x - prev.x, y - prev.y]))
+      : { x: snap(x, fine), y: snap(y, fine) }
     setNodes((cur) => [...cur, p], LIVE)
     setDrag({ kind: "pen", i: nodes.length, x: e.clientX, y: e.clientY, moved: false })
   }
@@ -256,25 +264,30 @@ export function ProfileEditor({
       if (drag.kind === "node" && drag.from) setTool("edit")
     }
     const [x, y] = at
+    setAngleLock(e.shiftKey && (drag.kind === "handle" || drag.kind === "pen"))
     if (drag.kind === "node") {
       const n = nodes[drag.i]!
-      set(drag.i, { ...n, x: snap(x, e.shiftKey), y: snap(y, e.shiftKey) }, LIVE)
+      const fine = e.ctrlKey || e.metaKey
+      set(drag.i, { ...n, x: snap(x, fine), y: snap(y, fine) }, LIVE)
     } else if (drag.kind === "handle") {
       const n = nodes[drag.i]!
-      const h: Vec2 = [r1(x - n.x), r1(y - n.y)]
+      const raw: Vec2 = [r1(x - n.x), r1(y - n.y)]
+      const h: Vec2 = e.shiftKey ? snapAngle45(raw) : raw
       set(drag.i, moveHandle(e.altKey ? { ...n, t: "corner" } : n, drag.which, h), LIVE)
     } else if (drag.kind === "edge") {
       setNodes((cur) => bendEdge(cur, drag.i, [x, y]), LIVE)
     } else {
       // Ploma arrossegant: manegadors simètrics del node nou.
       const n = nodes[drag.i]!
-      const h: Vec2 = [r1(x - n.x), r1(y - n.y)]
+      const raw: Vec2 = [r1(x - n.x), r1(y - n.y)]
+      const h: Vec2 = e.shiftKey ? snapAngle45(raw) : raw
       set(drag.i, { x: n.x, y: n.y, out: h, in: [-h[0], -h[1]], t: "symmetric" }, LIVE)
     }
   }
   const onUp = () => {
     // Un pas per arrossegada (i per node de la ploma).
     commit()
+    setAngleLock(false)
     if (drag?.kind === "node" && !drag.moved && drag.from === "bend") toggleSmooth(drag.i)
     if (drag?.kind === "node" && !drag.moved && drag.from === "erase") remove(drag.i)
     if (drag?.kind === "edge" && !drag.moved) {
@@ -433,7 +446,7 @@ export function ProfileEditor({
                               const hx = n.x + h[0], hy = n.y + h[1]
                               return (
                                 <g key={`h${i}${which}`}>
-                                  <line x1={n.x} y1={-n.y} x2={hx} y2={-hy} stroke="#9ca3af" strokeWidth={unit * 0.2} />
+                                  <line x1={n.x} y1={-n.y} x2={hx} y2={-hy} stroke={angleLock && drag?.i === i ? "#ef4444" : "#9ca3af"} strokeWidth={unit * 0.2} />
                                   {/* Manegador en rombe (com a Figma). */}
                                   <rect
                                     x={hx - unit * 0.9}
@@ -575,7 +588,7 @@ export function ProfileEditor({
                         · El punt del mig d'un costat: clic hi afegeix un node; arrossegar-lo corba el costat.
                       </Text>
                       <Text textStyle="xs" color="fg.muted">
-                        · Imant de {minor} mm (<Kbd>Maj</Kbd>: lliure). <Kbd>Supr</Kbd> treu el node; fletxes l'afinen.
+                        · Imant de {minor} mm (<Kbd>{MOD.replace("+", "")}</Kbd>: lliure). <Kbd>Maj</Kbd>: angles de 45° (ploma i manegadors). <Kbd>Supr</Kbd> treu el node; fletxes l'afinen.
                       </Text>
                       <Text textStyle="xs" color="fg.muted">
                         · <Kbd>{MOD}Z</Kbd> desfà i <Kbd>⇧{MOD}Z</Kbd> refà (amb la ploma, treu l'últim node).

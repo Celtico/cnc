@@ -615,7 +615,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   rombe; Alt trenca el reflex; doble clic node ↔ corba), **Ploma** (clic = cantonada, clic i arrossegar = manegadors
   simètrics, clicar el primer node o Retorn tanca, Esc descarta), **Corbar** (arrossegar el punt del mig d'un costat,
   `bendEdge`; clic a un node commuta corba/cantonada) i **Esborrar**; clic al punt del mig afegeix un node sense canviar la
-  forma (`splitEdge`, de Casteljau); radi de cantonada; imant a la quadrícula. **Desfer/refer propi** (el comú, botons
+  forma (`splitEdge`, de Casteljau); radi de cantonada; imant a la quadrícula (Ctrl/⌘: lliure, 0,1 mm). **Maj = angles de 45°** (per decisió de l'usuari, com a Figma: `snapAngle45`) al node nou de la ploma respecte de l'anterior i als manegadors (arrossegant-los o amb la ploma); la línia del manegador es posa vermella. **Desfer/refer propi** (el comú, botons
   `UndoRedo` al costat de les eines; dreceres només dins del diàleg, `useUndoKeys scope`; el moble del darrere no es toca):
   un pas per arrossegada, per node de la ploma (⌘Z treu l'últim; sense cap, cancel·la la ploma i torna la forma d'abans) i
   per acció; escriure a X/Y o les fletxes seguides, un pas (`group`). Es reinicia en obrir-lo. (Què fan Maj/Alt a la
