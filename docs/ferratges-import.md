@@ -1,4 +1,4 @@
-# Importar ferratges del fabricant (Hettich)
+# Importar ferratges del fabricant (Hettich i Blum)
 
 > Objectiu (del germà): «lo important es que després es pugui encaixar al moble per fer el mecanitzat». Un ferratge
 > baixat del web del fabricant ha d'acabar fent **els forats bons a les peces bones** del moble. El 3D i els dibuixos
@@ -8,7 +8,10 @@ Preferències › Ferratges › **«Importar del fabricant»**. Primer fabricant
 potes i, com a «només 3D», la resta) (hettich.com › Serveis › Hettich
 CAD › [Descàrregues CAD](https://www.hettich.com/es-es/services/hettich-cad/descargas-cad)). Els fitxers del fabricant
 **no es copien mai al repo** (llicència d'ús per planificar); l'app els llegeix al navegador i en desa el que cal a
-Dexie, com els models 3D de l'usuari.
+Dexie, com els models 3D de l'usuari. Segon fabricant: **Blum** (E-SERVICES; §10), amb els mecanitzats **exactes** dels
+programes Xilog (`*.pgm`). **Un sol camí** per als dos (`core/import/makers.ts`): el fabricant es reconeix pel nom dels
+fitxers (`detectMaker`), cadascun agrupa per article a la seva manera i la resta (proposta, 3D, mecanitzats, ampliar el
+que ja hi és amb la clau fabricant + article) és comuna.
 
 ## 1. Què es baixa de Hettich
 
@@ -19,7 +22,10 @@ Un ZIP per família i format. Dins, carpetes per tipus **en alemany** i un fitxe
 |---|---|---|
 | `STEP_Scharniere.zip` (34 MB, 881 `.stp`) | Un STEP per article (AP203 `CONFIG_CONTROL_DESIGN` o AP214), mm, la majoria d'un sol sòlid; ~150 són conjunts amb transformacions | **Forats** (cilindres) i **3D** (OpenCascade → GLB) |
 | `DWG_DXF_Scharniere.zip` (122 MB, ~4400 fitxers), `DWG_DXF_Griffe.zip`, `DWG_DXF_Schiebetuersysteme.zip`… | Per article: `<art>_2D_front_view.dxf`, `_2D_side_view`, `_2D_top_view` (línies, arcs, cercles, polilínies 3D i 3 `POINT` a la capa `CONNECTIONPOINTS`, majúscules o minúscules) i `<art>_3D.dxf`/`.dwg` (un `3DSOLID` ACIS) | Les tres vistes 2D es dibuixen a l'editor; la que mira la cara de la peça es posa sota els forats. El 3D ACIS i els DWG s'ignoren. **Sense el STEP, l'article entra «només 2D»** (§6) |
-| `3DS_Scharniere.zip` | `.3ds` | No (el 3D surt del STEP) |
+| `3DS_Scharniere.zip`, `3DS_Griffe.zip`… | `<art>_3d.3ds` (mm, a les coordenades del STEP) | El **3D** si no hi ha STEP ni IGES (`TDSLoader` de three): «només 3D», sense forats |
+| `IGES_Griffe.zip`, `IGES_Scharniere.zip`, `IGES_Tischgestelle_….zip` (`Planning/CAD-Files/` o `Planning/CAD/`) | `<art>.igs` | El **3D** si no hi ha STEP (OpenCascade, `ReadIgesFile`, el mateix worker): «només 3D», sense forats (la proposta de forats només surt del STEP) |
+| `SAT_*.zip`, `MAX_*.zip` | ACIS i 3ds Max | No es llegeixen (l'article ho diu a les notes) |
+| PDF (`Overview_Uebersicht.pdf`, `Planungshandbuch…`, `2D_Konfiguration_*`, `Anschlagloesungen_*`, el contingut de `Planungshilfen_*.zip`) | Manuals i plànols | S'adjunten als articles que nomenen (número) o, si nomenen una **sèrie** («Sensys»), als articles d'aquella sèrie del lot (com a molt 12, `MAX_SERIES_DOCS`); la resta, el diàleg els diu **«sense article»** i no s'importen |
 | `dxf_einbau.zip` | Seccions de muntatge acotades (DXF + PDF) per família; les de `Zubehoer/<art>_KB_2d/` nomenen articles al nom (`…_79349_79350_9072231.dxf`) | **Plànols de muntatge**: s'adjunten als articles que nomenen (§6) |
 | `Anschlagloesungen_2D_Sensys.zip` | Exemples d'aplicació (seccions) | Igual, si nomenen algun article (la majoria no: no s'adjunten) |
 | `STEP_Schubkastensysteme.zip` (271 MB) | Calaixos i guies (conjunts sencers: guies, laterals, fronts, accessoris) | «Calaix o guia», **només 3D** (§9) |
@@ -31,7 +37,8 @@ Un ZIP per família i format. Dins, carpetes per tipus **en alemany** i un fitxe
 **Tot es pot importar**: el que no té cap regla de mecanitzat a l'app, o del qual no es troba el patró de forats, entra com
 a **«només 3D»** (motor `model`): el model (GLB) i el volum, **mai cap forat**. Sense STEP però amb les vistes DXF, entra
 **«només 2D»** (motor `model` sense caixa ni 3D: les vistes i els punts de connexió) fins que s'hi afegeix el STEP (§6).
-Només el 3D DWG/DXF o el 3DS sols no es poden importar.
+Sense STEP però amb IGES o 3DS, entra «només 3D» amb aquest 3D (la caixa surt de la malla). Només el 3D DWG/DXF, el SAT
+o el MAX sols no es poden importar.
 
 **Carpetes i nom** (`core/import/hettichNames.ts`, sense dependències del model: també el fa servir la lectura de les
 preferències). De cada camí només compten les carpetes de l'article (`cleanFolders`): fora la carpeta de l'usuari
@@ -493,11 +500,92 @@ Plans per als «només 3D» d'ara (cap regla encara; el que caldria per fer-ne e
   «Mittelseiten» mou un punt 9,5 mm): serviria per comprovar l'encavalcament i el «Topfabstand» del fabricant.
 - **Taules de muntatge** (`dxf_einbau`, PDF): «Topfabstand», gruixos i encavalcament per a cada combinació; ara la
   distància de la cassoleta (`cupOffset`) i la placa són les de l'usuari.
-- Altres fabricants (Blum: BXF/CAD), frontisses de vidre i d'alumini (sense forats a la porta) i el `bom`.
+- Frontisses de vidre i d'alumini (sense forats a la porta) i el `bom`. Blum: vegeu §10 (pendents).
 - **Ampliar (§6)**: els plànols de muntatge per família que no nomenen cap article (la majoria de `dxf_einbau` i dels
   exemples d'aplicació, p. ex. `Intermat_9936_B125_KB_2d/…`) no s'adjunten (caldria saber quin tipus de frontissa és
   cada article; el STEP no ho diu). Un 3D ja fet no es torna a fer amb un STEP nou (si el fitxer del fabricant canviés la
   forma, caldria esborrar-lo i tornar-lo a importar). Els importats d'abans de `proposedParams` amb el Ø, la fondària o
   la distància editats i confirmats poden mostrar una «proposta nova» que només és la del fitxer (es descarta).
-- **Només 2D**: sense el STEP no hi ha caixa ni 3D; la miniatura és la vista frontal del DXF. Un `.3ds` podria donar el
-  3D (sense forats), però no es llegeix.
+- **Només 2D**: sense el STEP (ni IGES ni 3DS) no hi ha caixa ni 3D; la miniatura és la vista frontal del DXF.
+
+## 10. Blum (E-SERVICES): STEP + «Esquemas de taladrado» en Xilog
+
+> Les dades CAM de Blum són **per producte** («la posició correcta sobre les peces de fusta s'ha de fer manualment»,
+> diu E-SERVICES): el programa diu els forats des del punt de referència del producte, no on va a la peça. Per això un
+> article de Blum entra com un ferratge **que es col·loca a mà** (§8) amb els mecanitzats **exactes** del programa.
+
+### Què es baixa
+
+[E-SERVICES](https://e-services.blum.com) › Catàleg de productes › **Búsqueda individual de producte** › el producte ›
+«Detalles de producto»:
+- **Producte individual (3D)**: el **STEP** (i, si es vol, el `.dae`; el `.dxf` de Blum és un sòlid 3D ACIS que no es
+  llegeix).
+- **Esquemas de taladrado**: tria **`*.pgm` Xilog (SCM)** (el format de la màquina del taller) i «Descarga». Els altres
+  (`*.fmc` IMA, `*.hop` Biesse, `*.mpr` woodWOP, `*.tcn` Felder) no es llegeixen.
+
+Es baixen com a fitxers solts `<article>_<id del document de 8 xifres>[_R|_L].<ext>` (`71T453T_46020103.step`,
+`48N0510.02_41302774_R.pgm`) o en un **ZIP amb el nom del producte** en castellà («Placa soporte TIP-ON para puertas,
+Versión corta, recto, Tornillos.zip», amb els fitxers a dins amb un espai al davant). Es deixen anar tal qual (fitxers,
+carpeta o ZIP, també barrejats amb els de Hettich) a «Importar del fabricant».
+
+### Com es fa servir (`core/import/blum.ts`, `makers.ts`, `xilogPgm.ts`)
+
+- **Fabricant** (`detectMaker`): un nom `<article>_<8 xifres>` amb alguna lletra o punt a l'article és de Blum (els de
+  Hettich són només xifres). **Article** (`blumFileInfo`): sense l'id del document ni la mà; el ZIP repetit del
+  navegador (« (1)») i el mateix fitxer dues vegades compten un sol cop. **Producte**: la carpeta (el ZIP) que en sembla
+  un (`blumProduct`: paraules de Blum —AVENTOS, CLIP, MOVENTO, TANDEM, LEGRABOX, TIP-ON…— o un nom de tres paraules o
+  més), en NFC (els noms del Mac arriben descompostos).
+- **Mans** (`_R`/`_L`): **un item per article**. Dues mans amb articles diferents (`48N0510.02_…_R`, `48N0510.03_…_L`)
+  són dos items amb la mà al nom («· dreta», «· esquerra»). Si un mateix article porta tots dos programes, es fa servir
+  el dret i l'altre es diu a les notes (l'altra mà és el mirall; pendent).
+- **Què és** (`classifyBlum`): pel **nom del producte** (castellà, anglès o alemany) i, si no n'hi ha, pel **prefix de
+  l'article**:
+
+  | Producte / prefix | Categoria · sèrie | Peça dels forats |
+  |---|---|---|
+  | «bisagra», «CLIP top», INSERTA · `70T`–`79T` | Frontisses · CLIP top | porta |
+  | «Placa…», «plate», «Montageplatte» · `173L`/`174L`/`175L`/`175H` | Plaques · CLIP (TIP-ON → Obertura per pressió) | lateral |
+  | AVENTOS, «compás abatible» · `20K`/`20S`/`21F`/`22F`/`24K` | Elevables · AVENTOS HF/HS/HL/HK… | lateral (la fixació frontal, porta) |
+  | «guía», MOVENTO, TANDEM(BOX), LEGRABOX, METABOX, SPACE STEP · `550`/`560`/`750`/`760`, `320K`… | Guies · la marca | lateral |
+  | TIP-ON, SERVO-DRIVE · `956` | Obertura per pressió · TIP-ON | lateral (placa) o per triar |
+  | CABLOXX, REVEGO, accessoris · `Z…` | Altres · la marca o «Accessoris» | **per triar** |
+  | cap | Altres · «Ferratge» | **per triar** |
+
+  Nom «<nom> <sèrie> · <article>» («Frontissa CLIP top · 71T453T», «Placa TIP-ON · 956.1201», «Guia LEGRABOX ·
+  750.4501T»); la sèrie fa el subgrup de la biblioteca (`blumSeries`, `itemSeries`).
+- **El programa Xilog** (`readXilog`, pur, mai llança): el `.pgm` és un contenidor binari (`BMB`, «Xilog3-9.0», taules)
+  amb els **registres en ASCII** acabats en NUL (`H DX=200 DY=100 DZ=19 …`, `XBO X=0 Y=-16 Z=-6 x=0 y=0 D=10 R=1# F=1 …`,
+  `N X=0 Y=0`); també es llegeix un programa en text. **Hipòtesis** (cap manual del Xilog3 a mà; contrastades amb els
+  programes de Blum i el manual de Xilog Plus): `H` = peça de treball (Blum hi posa una de mostra de 200 × 100 × 19);
+  `XBO` = forat a (X, Y) des del **punt de referència del producte**, `Z` negatiu = fondària (`Z ≤ −DZ` → passant),
+  `D` = Ø, `F` = cara (1 = **cara A**; 2 dreta, 3 esquerra, 4 davant, 5 darrere = **cantells**, la fondària `|Z|`;
+  6 = cara B), `R` = nombre total de forats amb el pas `x`, `y`. Els fresats (`XG0`, `XL2P`, `XA2P`…) i els registres
+  desconeguts no es llegeixen: es compten i surten a les notes («entra'ls a mà»).
+- **Mecanitzats exactes** (`machiningFromXilog`): cada forat és una operació del generador (§8) de la peça de la taula,
+  **X → eix P, Y → eix Q** de la peça, des del punt de referència. Com les capes d'un DXF del taller, **manen**: un
+  article de Blum mai fa servir les regles automàtiques de Hettich (cassoleta, placa aparellada): entra com a motor
+  `model` amb aquests mecanitzats i **es col·loca a mà** (Editor › mòdul › «Ferratges»; «Mecanitzats de» tria el grup:
+  els de la «porta» d'una CLIP es poden posar al lateral si cal). **Sense confirmar, cap forat.**
+- **Peça per triar** (`part: "any"`, «Sense assignar»): quan no se sap a quina peça va, els mecanitzats van al grup
+  «Sense assignar» del generador; s'hi poden col·locar, però **no es confirma** fins que s'assignen a una peça
+  («Assignar a», `reassignMachining`; `confirmProblem`).
+- **3D**: el STEP (tots els d'un joc, un sol GLB); si no n'hi ha, el `.dae` (`ColladaLoader`, la unitat del fitxer a mm,
+  sense el gir de Z amunt). Sense 3D, només els mecanitzats («sense 3D»).
+- **Tornar a importar**: com Hettich (§6), clau **Blum + article**: un `.pgm` nou és «mecanitzats exactes (Xilog)»; un
+  item confirmat no es toca (va a `imported.update.machining`).
+- **El diàleg**: el fabricant a cada fila i a dalt («Blum · 51 articles en 198 fitxers · 8 amb mecanitzats exactes
+  (Xilog) i 43 només 3D…»), les fonts (STEP · PGM (Xilog) · DAE · DXF 3D, les que no es llegeixen més clares), el filtre
+  «Mecanitzats exactes» i què se'n farà («Mecanitzats exactes (Xilog) · porta / front», «… · peça per triar · sense 3D»).
+
+Resultats amb les descàrregues reals (`blum.roundtrip.test.ts`, `BLUM_DIR`): els 9 `.pgm` es llegeixen sencers (Xilog3-9.0,
+200 × 100 × 19, cap registre desconegut); 51 articles dels fitxers solts i els 28 ZIP; 71T453T → dues espigues **Ø10 × 6 a
+±16** a la porta; confirmat i col·locat al lateral esquerre, el DXF del moble porta els dos cercles a `DRILL_D10_P6` a 32 mm;
+48N0510.02 (_R) i 48N0510.03 (_L) → dos forats Ø2,5 × 3 a 0 i −32, sense assignar. Proves sintètiques: `xilogPgm.test.ts`
+(binari com el de Blum, text, passants, repeticions, cantells, cara B, fresats, brossa) i `blum.test.ts` (noms, producte,
+classificació, agrupar, Hettich + Blum al mateix lot, PDF per sèrie, IGES i 3DS). IGES i 3DS de Hettich:
+`hettich3.roundtrip.test.ts` (`HETTICH3_DIR` amb `IGES_Griffe.zip` i `3DS_Griffe.zip`).
+
+**Pendent (Blum)**: `*.mpr` woodWOP (macros `BO` de forat; no fet, cap mostra), les regles automàtiques per a les CLIP top
+(cassoleta a la filera, placa aparellada) amb els forats del programa, el mirall automàtic de l'altra mà, els fresats del
+Xilog (`XG0`/`XL2P`/`XA2P` → ranures i contorns), confirmar la numeració de cares dels forats de cantell amb un programa
+real, i els PDF de Blum («Explicación de los nombres de los ficheros»).

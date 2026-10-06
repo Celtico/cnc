@@ -1,4 +1,5 @@
 import type { HardwareCategory, HardwareItem } from "../model/hardware"
+import { blumSeries } from "./blum"
 
 /**
  * Noms, carpetes i sèries dels articles de Hettich: què és cada carpeta (alemany → categoria de l'app), el nom que es
@@ -215,9 +216,12 @@ export function hettichSeries(folders: readonly string[]): { id: string; label: 
   return { id: dir.toLowerCase(), label: label.charAt(0).toUpperCase() + label.slice(1) }
 }
 
-/** La sèrie d'un item de la biblioteca (els importats de Hettich), o `null`. */
+/** La sèrie d'un item de la biblioteca (els importats de Hettich i de Blum), o `null`. */
 export const itemSeries = (item: HardwareItem): { id: string; label: string } | null =>
-  item.imported && !item.imported.damaged && item.imported.maker === "Hettich" ? hettichSeries(item.imported.folders) : null
+  !item.imported || item.imported.damaged ? null
+  : item.imported.maker === "Hettich" ? hettichSeries(item.imported.folders)
+  : item.imported.maker === "Blum" ? blumSeries(item.imported.article, item.imported.folders)
+  : null
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 

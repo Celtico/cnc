@@ -614,7 +614,7 @@ export function hardwareSummary(item: HardwareItem): string {
 /** «Només 3D: sense forats · 1560 × 12,5 × 6,5 mm» (la caixa del model) o, sense el STEP, «només 2D: falta el STEP». */
 function modelSummary(item: HardwareItem, n: (x: number) => string): string {
   const b = item.imported?.bbox
-  if (item.imported && !b) return "només 2D: falta el STEP (el 3D)"
+  if (item.imported && !b) return item.machining?.length ? "sense 3D" : "només 2D: falta el STEP (el 3D)"
   const size = b ? ` · ${n(b.max[0] - b.min[0])} × ${n(b.max[1] - b.min[1])} × ${n(b.max[2] - b.min[2])} mm` : ""
   return `${item.machining?.length ? "només 3D" : "només 3D: sense forats"}${size}`
 }

@@ -190,7 +190,7 @@ export function HardwareList({
     try {
       const src = await sourceFromPicked(picked, known)
       if (!src.articles.length)
-        toaster.create({ title: "No s'hi ha trobat cap ferratge", description: "Cal una descàrrega de Hettich CAD: el ZIP, la carpeta o els fitxers .stp i _2D_…_view.dxf amb el número d'article.", type: "warning", duration: 8000 })
+        toaster.create({ title: "No s'hi ha trobat cap ferratge", description: "Cal una descàrrega de Hettich CAD (el ZIP, la carpeta o els fitxers .stp i _2D_…_view.dxf amb el número d'article) o de Blum E-SERVICES (els fitxers <article>_<document>.step / .pgm / .dae, o els ZIP del producte).", type: "warning", duration: 8000 })
       else {
         setImportSeq((n) => n + 1)
         setImportSrc(src)
@@ -280,7 +280,7 @@ export function HardwareList({
             <Badge size="xs" variant="subtle" colorPalette="orange" title="S'ha tornat a importar i els fitxers donen una altra proposta de forats: revisa-la a l'editor">
               Proposta nova
             </Badge>
-          ) : x.engine === "model" ? (
+          ) : x.engine === "model" && !x.machining?.length ? (
             <Badge size="xs" variant="subtle" colorPalette="gray" title={x.imported && !x.imported.bbox ? "Només les vistes DXF: el 3D (i, si en té, els forats) arribarà amb el STEP" : "Importat sense cap regla de mecanitzat: el model, mai cap forat"}>
               {x.imported && !x.imported.bbox ? "Només 2D" : "Només 3D"}
             </Badge>
@@ -332,17 +332,20 @@ export function HardwareList({
           }),
         }}
       />
-      <ImportDropZone title="Importar del fabricant" accept=".zip,.stp,.step,.dxf" busy={importBusy && !importSrc} onPicked={onPicked} testId="hardware-import">
-        Descàrregues de <strong>Hettich CAD</strong> (hettich.com › Descàrregues CAD): els ZIP tal com es baixen (STEP i DWG/DXF), una
+      <ImportDropZone title="Importar del fabricant" accept=".zip,.stp,.step,.dxf,.igs,.iges,.3ds,.dae,.pgm,.mpr,.pdf" busy={importBusy && !importSrc} onPicked={onPicked} testId="hardware-import">
+        Descàrregues de <strong>Hettich CAD</strong> (hettich.com › Descàrregues CAD): els ZIP tal com es baixen (STEP, IGES, 3DS i DWG/DXF), una
         carpeta o fitxers <Text as="span" fontFamily="mono">.stp</Text> i <Text as="span" fontFamily="mono">_2D_…_view.dxf</Text>. Frontisses, plaques,
         tiradors i potes: els forats surten del STEP i s'han de confirmar abans que arribin al taller. La resta (estructures de taula, portes
         corredisses i plegables, Cadro, accessoris) entra com a «només 3D»: el model, sense cap forat. Un article que ja tens no es repeteix: s'hi afegeix el que
-        porta de nou (el 3D del STEP, les vistes del DWG/DXF, els plànols de muntatge), sense tocar mai uns forats confirmats.
+        porta de nou (el 3D del STEP, les vistes del DWG/DXF, els plànols de muntatge), sense tocar mai uns forats confirmats. De{" "}
+        <strong>Blum E-SERVICES</strong> (cerca de producte): el 3D (STEP o .dae) i l'«Esquema de taladrado» en <Text as="span" fontFamily="mono">Xilog *.pgm</Text>, que dona
+        els mecanitzats exactes (es revisen, es confirmen i es col·loquen a mà a la peça).
       </ImportDropZone>
       <HardwareImportDialog
         key={importSeq}
         articles={importSrc?.articles ?? null}
         fileCount={importSrc?.fileCount ?? 0}
+        loose={importSrc?.loose ?? []}
         busy={importBusy}
         progress={progress}
         analyse={analyse}
@@ -431,11 +434,15 @@ function countKinds(items: HardwareItem[]): string {
     ["leg", "pota", "potes"],
     ["model", "només 3D", "només 3D"],
   ]
-  const flat = (x: HardwareItem) => x.engine === "model" && !!x.imported && !x.imported.bbox
+  // Amb mecanitzats (Xilog de Blum, DXF del taller): no són «només 3D».
+  const gen = (x: HardwareItem) => x.engine === "model" && !!x.machining?.length
+  const flat = (x: HardwareItem) => x.engine === "model" && !!x.imported && !x.imported.bbox && !gen(x)
   const parts = names.flatMap(([e, one, many]) => {
-    const n = items.filter((x) => x.engine === e && !flat(x)).length
+    const n = items.filter((x) => x.engine === e && !flat(x) && !gen(x)).length
     return n ? [`${n} ${n === 1 ? one : many}`] : []
   })
+  const ng = items.filter(gen).length
+  if (ng) parts.unshift(`${ng} amb mecanitzats exactes (es col·loquen a mà)`)
   const n2d = items.filter(flat).length
   if (n2d) parts.push(`${n2d} només 2D (falta el STEP)`)
   return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} i ${parts.at(-1)}` : (parts[0] ?? "")
@@ -702,7 +709,7 @@ function ModelPreview({ mount, materials, noModel, generated }: { mount: Hardwar
     <Stack gap={3} bg="bg" rounded="lg" borderWidth="1px" p={{ base: 3, md: 4 }} data-testid="hardware-mount">
       <Stack gap={0}>
         <Text fontSize="sm" fontWeight="semibold">
-          Només 3D
+          {generated ? "Model 3D" : "Només 3D"}
         </Text>
         <Text fontSize="xs" color="fg.muted">
           {mount.model?.bbox ? `Caixa de ${n(mount.size.width)} × ${n(mount.size.height)} × ${n(mount.size.depth)} mm · ` : ""}{generated ? `cap regla del moble: els ${generated} mecanitzats del generador es fan quan el col·loques a mà.` : "sense cap forat: no hi ha cap regla del moble per a aquest ferratge."}
@@ -766,6 +773,9 @@ const ENGINE_HELP: Partial<Record<HardwareEngine, { label: string; help: string 
   leg: { label: "Pota", help: "Es tria a la base «Potes» del mòdul (Caixa › Base › Pota): els forats de la placa van a la cara de sota de la base, a cada pota (a «Als cantells» de les vores de fora)." },
   model: { label: "Només 3D", help: "Sense cap regla de mecanitzat: el model i el volum, mai cap forat. No es pot triar a cap lloc del moble; en pots baixar el model (GLB) per posar-lo en un objecte (Models 3D › Triar fitxers)." },
 }
+
+const PLACED_HELP =
+  "Sense regla del moble: els mecanitzats del generador (escrits a mà, d'un DXF del taller o d'un programa Xilog del fabricant) es fan on el col·loques (Editor › mòdul o peça lliure › «Ferratges»), un cop confirmat. El model 3D és per veure'l."
 
 const ONLY_2D_HELP = "Només s'han importat les vistes DXF (i els punts de connexió): cap forat. Quan importis el STEP del mateix article, s'hi afegirà el 3D i, si és una frontissa, placa, tirador o pota, els forats proposats (per revisar i confirmar)."
 
@@ -1004,9 +1014,17 @@ function HardwareCard({
         </HStack>
 
         <FormSection title="General">
-          <FormRow label="Tipus" help={slot ? `Fa de «${slot.label}»: ${slot.uses}. La regla de cada contingut decideix on va i quants se'n posen.` : only2d ? ONLY_2D_HELP : ENGINE_HELP[item.engine]?.help}>
+          <FormRow
+            label="Tipus"
+            help={
+              slot ? `Fa de «${slot.label}»: ${slot.uses}. La regla de cada contingut decideix on va i quants se'n posen.`
+              : item.engine === "model" && item.machining?.length ? PLACED_HELP
+              : only2d ? ONLY_2D_HELP
+              : ENGINE_HELP[item.engine]?.help
+            }
+          >
             <Text fontSize="sm" pt="6px">
-              {slot?.label ?? (only2d ? "Només 2D" : (ENGINE_HELP[item.engine]?.label ?? item.engine))}
+              {slot?.label ?? (item.engine === "model" && item.machining?.length ? "Es col·loca a mà" : only2d ? "Només 2D" : (ENGINE_HELP[item.engine]?.label ?? item.engine))}
             </Text>
           </FormRow>
           <FormRow label="Fabricant">

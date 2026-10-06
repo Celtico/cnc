@@ -27,6 +27,12 @@ export const PART_KINDS = [
   { id: "back", label: "Fons", roles: ["back"], normal: "z" },
   { id: "drawer", label: "Caixa del calaix", roles: ["drawerSide", "drawerBack"], normal: "x" },
   { id: "part", label: "Peça lliure", roles: ["part"], normal: null },
+  /**
+   * **Sense assignar**: mecanitzats exactes d'un fitxer que no diu a quina peça van (un programa Xilog de Blum d'un
+   * producte que no es reconeix). Es poden col·locar a qualsevol peça, però l'item no es confirma fins que l'usuari
+   * tria la peça al generador (`confirmProblem`).
+   */
+  { id: "any", label: "Sense assignar", roles: [], normal: null },
 ] as const
 export type PartKind = (typeof PART_KINDS)[number]["id"]
 const PART_IDS = PART_KINDS.map((p) => p.id) as [PartKind, ...PartKind[]]
@@ -114,6 +120,11 @@ export type GenOp = z.infer<typeof GenOpSchema>
 
 /** Els mecanitzats d'un item: tots o cap (una operació dolenta treu tota la llista en llegir-la, mai la meitat). */
 export const MachiningListSchema = repairAtomically(z.array(GenOpSchema))
+
+/** Mou els mecanitzats d'una peça a una altra (assignar els «sense assignar»); els ids es queden. */
+export function reassignMachining(ops: readonly GenOp[], from: PartKind, to: PartKind): GenOp[] {
+  return ops.map((o) => (o.part === from ? { ...o, part: to } : o))
+}
 
 /** Les peces que fa servir una llista d'operacions (en l'ordre de `PART_KINDS`). */
 export function machiningParts(ops: readonly GenOp[]): PartKind[] {

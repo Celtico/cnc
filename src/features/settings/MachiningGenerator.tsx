@@ -18,6 +18,7 @@ import {
   newId,
   PART_KINDS,
   partKindOf,
+  reassignMachining,
   setMachining,
   type EdgeRef,
   type GenOp,
@@ -92,13 +93,29 @@ export function MachiningGenerator({ item, onChange, tools, ui: [ui, patch] }: {
         <ChoiceChips
           label="Peça"
           value={part}
-          options={PART_KINDS.map((p) => {
+          options={PART_KINDS.filter((p) => p.id !== "any" || part === "any" || ops.some((o) => o.part === "any")).map((p) => {
             const k = ops.filter((o) => o.part === p.id).length
             return { id: p.id, label: k ? `${p.label} (${k})` : p.label }
           })}
           onChange={(p) => patch({ part: p, sel: null })}
         />
       </FormRow>
+      {part === "any" && mine.length > 0 && (
+        <FormRow
+          label="Assignar a"
+          help="El fitxer no diu a quina peça van aquests mecanitzats (exactes: el Ø, la fondària i la posició són els del programa). Tria-la: fins aleshores el ferratge no es pot confirmar."
+        >
+          <ChoiceChips
+            label="Assignar a"
+            value={"any" as PartKind}
+            options={PART_KINDS.filter((p) => p.id !== "any").map((p) => ({ id: p.id, label: p.label }))}
+            onChange={(to) => {
+              set(reassignMachining(ops, "any", to))
+              patch({ part: to, sel: null })
+            }}
+          />
+        </FormRow>
+      )}
       <Stack gap={2} data-testid="machining-ops">
         {mine.map((op, i) => (
           <OpEditor
