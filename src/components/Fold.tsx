@@ -1,5 +1,5 @@
-import { Accordion, Badge, Box, HStack, Heading, Stack, Text, useAccordionItemContext, type AccordionRootProps } from "@chakra-ui/react"
-import { useContext, useEffect, useState, type ReactNode } from "react"
+import { Accordion, Badge, Box, HStack, Heading, Stack, Text, chakra, useAccordionContext, useAccordionItemContext, useAccordionStyles, type AccordionRootProps } from "@chakra-ui/react"
+import { useContext, useEffect, useRef, useState, type ReactNode, type TransitionEvent } from "react"
 import type { IconType } from "react-icons"
 import { LuChevronRight } from "react-icons/lu"
 import { readSessionFlag, readSessionList, writeSessionFlag } from "./sessionState"
@@ -15,9 +15,11 @@ import { FoldContext, STATIC_VARIANTS, sectionKey, type FoldGroupState, type Fol
  *   (`value`/`onValueChange`), de la sessió (`storageKey`: una llista) o intern (`defaultValue`). `forceOpen` (p. ex. la
  *   cerca de les galeries) obre aquests i no deixa canviar res.
  *
- * El contingut només es munta obert (`lazyMount`); les variants de formulari (`section`, `card`, `row`) el desmunten en
- * tancar i **no animen l'alçada** ni retallen: el `Collapsible` de Chakra mesurava l'alçada en obrir i, si el contingut
- * arribava després (preferències que es carreguen, un portal), es quedava a 0.
+ * El contingut només es munta en obrir-lo (`lazyMount`); les variants de formulari (`section`, `card`, `row`) el desmunten
+ * quan s'acaba d'animar el tancament. **Totes s'obren i es tanquen amb animació** (`FoldContent`): una graella que passa
+ * de `0fr` a `1fr` (200 ms, `ease`), sense mesurar l'alçada. El `Collapsible` de Chakra la mesurava en obrir i, si el
+ * contingut arribava després (preferències que es carreguen, un portal), es quedava a 0; amb la graella, la fila sempre
+ * fa l'alçada del contingut. Les variants de formulari només retallen mentre s'anima (després, `overflow: visible`).
  */
 export function FoldGroup({
   variant = "section",
@@ -131,12 +133,10 @@ function SoloFold(props: FoldItemProps) {
 }
 
 function rootProps(variant: FoldVariant, className?: string): AccordionRootProps {
-  const stat = STATIC_VARIANTS.has(variant)
   const cls = [variant === "gallery" ? "gallery-accordion" : variant === "nested" ? "inner-accordion" : undefined, className].filter(Boolean).join(" ")
+  // `lazyMount` i el desmuntatge en tancar els fa `FoldContent` (no es fa servir l'`ItemContent` de Chakra).
   return {
     collapsible: true,
-    lazyMount: true,
-    unmountOnExit: stat,
     variant: variant === "gallery" ? "enclosed" : "plain",
     className: cls || undefined,
     ...(variant === "card" ? { display: "flex", flexDirection: "column", gap: 3 } : {}),
@@ -149,13 +149,90 @@ function FoldItemBody({ id, children, group, ...p }: FoldItemProps & { group: Fo
   return (
     <Accordion.Item value={id} {...itemStyle(variant)}>
       <FoldHead {...p} id={id} variant={variant} size={size} />
-      <Accordion.ItemContent {...(stat ? { overflow: "visible", _open: { animationName: "none" }, _closed: { animationName: "none" } } : {})}>
+      <FoldContent id={id} form={stat}>
         {/* Dins del contingut, un FoldItem sol torna a ser independent (no és del grup de fora). */}
         <FoldContext.Provider value={null}>
           <Accordion.ItemBody {...bodyStyle(variant)}>{wrapContent(variant, size, children)}</Accordion.ItemBody>
         </FoldContext.Provider>
-      </Accordion.ItemContent>
+      </FoldContent>
     </Accordion.Item>
+  )
+}
+
+/** Durada de l'animació d'obrir i tancar (la de les galeries de Chakra, `moderate`). */
+const FOLD_MS = 200
+
+const reducedMotion = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+
+/**
+ * El contingut d'un element, amb l'animació d'obrir i tancar. En lloc de l'`ItemContent` de Chakra (que mesura l'alçada),
+ * una graella d'una fila: `grid-template-rows` passa de `0fr` a `1fr` i la fila fa sempre l'alçada del contingut, encara
+ * que arribi tard o canviï amb la secció oberta. Porta els atributs de l'acordió (`role="region"`, `aria-labelledby`,
+ * l'id de l'`aria-controls`, `data-part="item-content"`, `data-state`).
+ * - `lazyMount`: el contingut es munta en obrir-lo per primer cop.
+ * - `form` (`section`, `card`, `row`): es desmunta quan s'acaba de tancar i, obert i quiet, no retalla (`overflow:
+ *   visible`). Les galeries el conserven tancat (amagat amb `visibility: hidden`: el tabulador no hi entra).
+ * - `prefers-reduced-motion`: sense animació.
+ */
+function FoldContent({ id, form, children }: { id: string; form: boolean; children: ReactNode }) {
+  const api = useAccordionContext()
+  const { expanded } = useAccordionItemContext()
+  const styles = useAccordionStyles()
+  const { hidden: _hidden, ...region } = api.getItemContentProps({ value: id })
+  const [present, setPresent] = useState(expanded)
+  const [moving, setMoving] = useState(false)
+  // Obrir o tancar: es munta el contingut (si cal) i comença l'animació. L'estat s'ajusta durant el render (sense
+  // efecte): la graella ja era al DOM a `0fr` i el contingut hi entra al mateix commit que passa a `1fr`.
+  const [seen, setSeen] = useState(expanded)
+  if (seen !== expanded) {
+    setSeen(expanded)
+    const still = reducedMotion()
+    if (expanded) setPresent(true)
+    else if (still && form) setPresent(false)
+    setMoving(!still)
+  }
+  const done = useRef(() => {})
+  useEffect(() => {
+    done.current = () => {
+      setMoving(false)
+      if (!expanded && form) setPresent(false)
+    }
+  })
+  // Per si no arriba el `transitionend` (pestanya amagada, cap canvi d'alçada).
+  useEffect(() => {
+    if (!moving) return
+    const t = window.setTimeout(() => done.current(), FOLD_MS + 150)
+    return () => window.clearTimeout(t)
+  }, [moving, expanded])
+  const onEnd = (e: TransitionEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget && e.propertyName === "grid-template-rows") done.current()
+  }
+  const clip = !expanded || moving || !form
+  return (
+    <chakra.div
+      {...region}
+      data-state={expanded ? "open" : "closed"}
+      css={[
+        styles.itemContent,
+        {
+          animation: "none",
+          overflow: "visible",
+          borderRadius: 0,
+          display: "grid",
+          gridTemplateRows: "0fr",
+          opacity: 0,
+          visibility: "hidden",
+          transition: `grid-template-rows ${FOLD_MS}ms ease, opacity ${FOLD_MS}ms ease, visibility 0s linear ${FOLD_MS}ms`,
+          "&[data-state=open]": { gridTemplateRows: "1fr", opacity: 1, visibility: "visible", transition: `grid-template-rows ${FOLD_MS}ms ease, opacity ${FOLD_MS}ms ease, visibility 0s` },
+          _motionReduce: { transition: "none !important" },
+        },
+      ]}
+      onTransitionEnd={onEnd}
+    >
+      <Box className="fold-clip" minH={0} overflow={clip ? "hidden" : "visible"}>
+        {present && children}
+      </Box>
+    </chakra.div>
   )
 }
 
