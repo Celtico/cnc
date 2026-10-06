@@ -1,4 +1,4 @@
-import { deepEqual, evalExpr, isDamagedImport, isPendingImport, type HardwareItem, type HardwareTarget, type MachiningOp } from "../model"
+import { deepEqual, evalExpr, isDamagedImport, isPendingImport, machiningProblems, type HardwareItem, type HardwareTarget, type MachiningOp } from "../model"
 import type { HettichArticle } from "./hettich"
 import { modelProposal, proposeHandle, proposeHinge, proposeLeg, proposePlate, type HardwareProposal } from "./proposal"
 import type { StepFeatures } from "./stepGeometry"
@@ -268,7 +268,10 @@ export function restoreProposal(item: HardwareItem): HardwareItem {
 export function confirmProblem(item: HardwareItem, library: readonly HardwareItem[] = []): string | null {
   if (!item.imported) return null
   if (isDamagedImport(item)) return "Està malmès (no s'ha pogut llegir sencer): torna'l a importar."
-  if (item.engine === "model") return "És només 3D: no fa cap forat (no cal confirmar-lo)."
+  // Generador de mecanitzats: una operació dolenta no es confirma (mai faria cap forat).
+  const gen = machiningProblems(item.machining ?? [])
+  if (gen.length) return `Mecanitzats: ${gen[0]!.message}`
+  if (item.engine === "model" && !item.machining?.length) return "És només 3D: no fa cap forat (no cal confirmar-lo). Si hi afegeixes mecanitzats (generador), s'haurà de confirmar."
   if (item.engine === "plate" && !item.targets.find((t) => t.key === "side")?.ops.length) return "La placa no té cap forat: entra'ls a mà (Mecanitzats)."
   if (item.engine === "leg" && !item.targets.find((t) => t.key === "base")?.ops.length) return "La pota no té cap forat: entra'ls a mà (Mecanitzats)."
   if (item.engine === "barHandle") {

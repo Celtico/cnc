@@ -2,7 +2,8 @@ import { z } from "zod"
 import { DEFAULT_CABINET } from "./cabinet"
 import { tryExpr } from "./expr"
 import { deepEqual } from "./photoUpgrade"
-import { repairValue } from "./repair"
+import { repairAtomically, repairValue } from "./repair"
+import { MachiningListSchema, PlacementTargetSchema, PosSchema, RepeatSchema } from "./hardwareOps"
 
 /**
  * Biblioteca de ferratges (millores v1, `docs/millores-v1/ferratges.md` §4): cada ferratge és **dades** (`HardwareItem`:
@@ -184,6 +185,12 @@ export const HardwareItemObjectSchema = z.object({
    * per veure-la al 3D).
    */
   plate: z.object({ id: z.string(), name: z.string(), asset: z.string().optional(), bbox: z.object({ min: V3Schema, max: V3Schema }).optional() }).optional(),
+  /**
+   * Generador de mecanitzats (v22, `hardwareOps.ts`): el que el ferratge fa a cada peça quan es **col·loca a mà** al moble
+   * (`Composition.hardwarePlacements`). Tots o cap: una operació dolenta treu tota la llista en llegir-la. D'un importat,
+   * només fa forats confirmat (`imported.confirmed`).
+   */
+  machining: MachiningListSchema.optional(),
 })
 export type HardwareItem = z.infer<typeof HardwareItemObjectSchema>
 
@@ -577,10 +584,11 @@ export function hardwareSummary(item: HardwareItem): string {
     : item.engine === "barHandle" && item.pitch ? [...item.pitch.steps.map((s) => s.n), item.pitch.else].sort((a, b) => b - a).join("/")
     : item.engine === "plate" ? `a ${n(p.setback ?? NaN)} mm del davant`
     : item.engine === "leg" ? `a ${n(p.inset ?? NaN)} mm dels cantells`
-    : item.engine === "model" ? "només 3D: sense forats"
+    : item.engine === "model" ? (item.machining?.length ? "només 3D" : "només 3D: sense forats")
     : ""
-  const pending = isDamagedImport(item) ? "malmès" : isPendingImport(item) && item.engine !== "model" ? "sense confirmar" : ""
-  return [pending, holes.join(" · "), extra].filter(Boolean).join(" · ")
+  const gen = item.machining?.length ? `${item.machining.length} ${item.machining.length === 1 ? "mecanitzat" : "mecanitzats"} a mà` : ""
+  const pending = isDamagedImport(item) ? "malmès" : isPendingImport(item) && (item.engine !== "model" || gen) ? "sense confirmar" : ""
+  return [pending, holes.join(" · "), extra, gen].filter(Boolean).join(" · ")
 }
 
 /** Item nou de l'usuari a partir d'un altre (mateix motor): id nou, sense marca d'inicial. */
@@ -649,7 +657,22 @@ function eachHardware(comp: unknown, visit: (item: HardwareItem) => HardwareItem
     if (out !== m) changed = true
     return out
   })
-  return changed ? { ...comp, modules } : comp
+  // Ferratges col·locats a mà (`hardwarePlacements`): la còpia de cada un.
+  let placements = comp.hardwarePlacements
+  if (Array.isArray(placements)) {
+    const before = placements as unknown[]
+    const after = before.map((pl) => {
+      if (!isRecord(pl) || !isRecord(pl.item)) return pl
+      const parsed = HardwareItemSchema.safeParse(pl.item)
+      const next = parsed.success ? visit(parsed.data) : null
+      return next ? { ...pl, item: next } : pl
+    })
+    if (after.some((x, i) => x !== before[i])) {
+      placements = after
+      changed = true
+    }
+  }
+  return changed ? { ...comp, modules, ...(placements !== comp.hardwarePlacements ? { hardwarePlacements: placements } : {}) } : comp
 }
 
 /**
@@ -737,3 +760,40 @@ export function usesHardware(comp: unknown, item: HardwareItem): boolean {
 export function replaceHardwareRefs<T>(comp: T, from: HardwareItem, to: HardwareItem): T {
   return eachHardware(comp, (it) => (isCopyOf(it, from) ? structuredClone(to) : null)) as T
 }
+
+// --- Ferratges col·locats a mà (generador de mecanitzats, v22) -------------------------------------------------------
+
+/**
+ * Un ferratge col·locat a mà en una peça del moble (`Composition.hardwarePlacements`): una **còpia** de l'item (com els
+ * mòduls), la peça principal i, si es tria expressament, altres peces per a la resta de grups de l'item (`targets`), on
+ * va el punt de referència (`p`, `q`: des d'un cantell o del mig de la peça) i una repetició opcional. Tot o res: si una
+ * operació no cap a la peça, cap forat d'aquest ferratge (`core/build/hardwarePlace.ts`).
+ */
+export const HardwarePlacementSchema = repairAtomically(
+  z.object({
+    id: z.string().min(1),
+    item: HardwareItemSchema,
+    targets: z.array(PlacementTargetSchema).min(1),
+    p: PosSchema,
+    q: PosSchema,
+    repeat: RepeatSchema.optional(),
+    /** Gir del model 3D al pla de la peça (graus, al voltant de la normal de la cara): només el 3D, no els mecanitzats. */
+    turn: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]).optional(),
+  }),
+)
+export type HardwarePlacement = z.infer<typeof HardwarePlacementSchema>
+
+/** La composició porta algun ferratge col·locat a mà (el `.moble` és v3: una app d'abans els trauria en silenci). */
+export function usesHardwarePlacements(comp: unknown): boolean {
+  return isRecord(comp) && Array.isArray(comp.hardwarePlacements) && comp.hardwarePlacements.length > 0
+}
+
+/** Canvia els mecanitzats del generador; d'un importat, el deixa sense confirmar (cal tornar-lo a revisar). */
+export function setMachining(item: HardwareItem, ops: HardwareItem["machining"]): HardwareItem {
+  const { machining: _old, ...rest } = item
+  const next: HardwareItem = ops?.length ? { ...rest, machining: ops } : rest
+  return next.imported ? { ...next, imported: { ...next.imported, confirmed: false } } : next
+}
+
+/** Es pot col·locar a mà: té mecanitzats del generador o és «només 3D» (el model, sense forats). */
+export const isPlaceable = (item: HardwareItem): boolean => (item.machining?.length ?? 0) > 0 || item.engine === "model"

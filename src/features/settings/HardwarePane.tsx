@@ -31,6 +31,7 @@ import {
   HARDWARE_SLOTS,
   HINGE_PLATE_PARAMS,
   copyHardwareItem,
+  defaultMachine,
   evalExpr,
   hardwareSummary,
   isPendingImport,
@@ -39,6 +40,7 @@ import {
   type HardwareDefaults,
   type HardwareEngine,
   type HardwareItem,
+  type GenTool,
   type HardwareTarget,
   type MachiningOp,
   type MaterialPref,
@@ -56,6 +58,8 @@ import { SnapshotThumb } from "../../components/SnapshotThumb"
 import { useSessionString } from "./useSessionString"
 import { ThicknessChips } from "./MaterialBits"
 import { PaneHeadContext } from "./paneHead"
+import { MachiningGenerator, MachiningStage } from "./MachiningGenerator"
+import { genTools, useMachiningUi, type MachiningUi } from "./machiningDraw"
 
 const NO_MATERIALS: MaterialPref[] = []
 
@@ -187,7 +191,7 @@ export function HardwareList({
       }
       const plate = r.plates === 1 ? fresh.find((x) => x.engine === "plate") : undefined
       const hinges = fresh.filter((x) => x.engine === "cup").length
-      const only3d = fresh.filter((x) => x.engine === "model").length
+      const only3d = fresh.filter((x) => x.engine === "model" && !x.machining?.length).length
       const drill = fresh.length - only3d
       toaster.create({
         title: fresh.length ? `${fresh.length} ${fresh.length === 1 ? "ferratge importat" : "ferratges importats"}${drill ? ", sense confirmar" : ""}` : "No s'ha importat res",
@@ -226,6 +230,17 @@ export function HardwareList({
   // El mòdul d'exemple del muntatge: com un de nou (tauler, gruix, jocs i ferratges per defecte de les preferències).
   const mountBase = useMemo(() => (settings ? applySettingsToModule(settings, defaultModule("mount", "Muntatge")) : undefined), [settings])
   const materials = settings?.materials ?? NO_MATERIALS
+  // Les eines de la màquina per defecte (generador de mecanitzats).
+  const tools = useMemo(() => genTools(defaultMachine(settings?.machines ?? [])?.tools ?? []), [settings?.machines])
+  // Canvi de l'item obert (formulari o dibuix del generador): si canvia de confirmat, els mobles desats hi passen.
+  const changeItem = (next: HardwareItem) => {
+    if (!it) return
+    const list = syncPairedPlates(items.map((x, k) => (k === i ? next : x)))
+    onChange(list)
+    if (it.imported && next.imported && it.imported.confirmed !== next.imported.confirmed) onConfirmed?.(it, next, list)
+  }
+  // El generador: el dibuix (escenari) i el formulari comparteixen la peça, el mecanitzat triat i la vista de fons.
+  const mui = useMachiningUi(it?.id)
   return (
     <Stack gap={4} minW={0}>
       {head}
@@ -312,7 +327,7 @@ export function HardwareList({
         dirty={dirty}
         focusSelector={it !== null && justAdded === it.id ? "[data-hardware-name]" : null}
       >
-        {it && <HardwareStage item={it} base={mountBase} materials={materials} />}
+        {it && <HardwareStage item={it} base={mountBase} materials={materials} mui={mui} onChange={changeItem} />}
         {it && (
           <HardwareCard
             key={it.id}
@@ -320,6 +335,8 @@ export function HardwareList({
             dirty={dirty}
             plates={items.filter((x) => x.engine === "plate")}
             library={items}
+            tools={tools}
+            mui={mui}
             isDefault={(() => {
               const sl = slotOfEngine(it.engine)
               return !!sl && defaults[sl.slot] === it.id
@@ -328,11 +345,7 @@ export function HardwareList({
               const sl = slotOfEngine(it.engine)
               if (sl) onDefaults({ ...defaults, [sl.slot]: it.id })
             }}
-            onChange={(next) => {
-              const list = syncPairedPlates(items.map((x, k) => (k === i ? next : x)))
-              onChange(list)
-              if (it.imported && next.imported && it.imported.confirmed !== next.imported.confirmed) onConfirmed?.(it, next, list)
-            }}
+            onChange={changeItem}
             autoFocusName={justAdded === it.id}
             onDuplicate={() => {
               const copy = copyHardwareItem(it, newId("hw"), uniqueName(`${it.name} (còpia)`))
@@ -411,7 +424,7 @@ function underlays(item: HardwareItem, panels: Panel[], own: HardwareView[], pla
  * (els de cantell, discontinus; els passants, buits) i, d'un importat, la vista frontal del fitxer de fons (si s'ha pogut
  * registrar sobre els forats proposats) i les vistes 2D tal com venen.
  */
-function HardwareStage({ item, base, materials }: { item: HardwareItem; base?: Module; materials: MaterialPref[] }) {
+function HardwareStage({ item, base, materials, mui, onChange }: { item: HardwareItem; base?: Module; materials: MaterialPref[]; mui: [MachiningUi, (p: Partial<MachiningUi>) => void]; onChange: (next: HardwareItem) => void }) {
   const preview = useMemo(() => hardwarePreview(item), [item])
   const ownId = item.imported?.asset
   const plateId = item.plate?.asset
@@ -433,6 +446,7 @@ function HardwareStage({ item, base, materials }: { item: HardwareItem; base?: M
           </Alert.Root>
         )}
         {!preview.error && <MountPreview item={item} base={base} materials={materials} noModel={!!item.imported && own !== undefined && !own?.glb} />}
+        <MachiningStage item={item} onChange={onChange} ui={mui} />
         {preview.panels.map((p) => {
           // Al costat, el detall dels forats (amb el cantell): a la peça sencera, una espiga Ø8 és un punt.
           const crop = featureCrop(p)
@@ -487,7 +501,7 @@ function MountPreview({ item, base, materials, noModel }: { item: HardwareItem; 
   const mount = useMemo(() => hardwareMount(item, base), [item, base])
   const plan = useMemo(() => mountPlan(mount), [mount])
   if (mount.error || (!mount.panels.length && !mount.model)) return null
-  if (mount.model) return <ModelPreview mount={mount} materials={materials} noModel={noModel} />
+  if (mount.model) return <ModelPreview mount={mount} materials={materials} noModel={noModel} generated={item.machining?.length ?? 0} />
   const cutY = plan ? Math.round(plan.sectionY * 10) / 10 : null
   return (
     <Stack gap={3} bg="bg" rounded="lg" borderWidth="1px" p={{ base: 3, md: 4 }} data-testid="hardware-mount">
@@ -573,7 +587,7 @@ function MountPreview({ item, base, materials, noModel }: { item: HardwareItem; 
 }
 
 /** Un ferratge «només 3D»: el model sol (sense mòdul ni forats), en 3D, amb les mides de la caixa. */
-function ModelPreview({ mount, materials, noModel }: { mount: HardwareMount; materials: MaterialPref[]; noModel: boolean }) {
+function ModelPreview({ mount, materials, noModel, generated }: { mount: HardwareMount; materials: MaterialPref[]; noModel: boolean; generated: number }) {
   const n = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",")
   return (
     <Stack gap={3} bg="bg" rounded="lg" borderWidth="1px" p={{ base: 3, md: 4 }} data-testid="hardware-mount">
@@ -582,7 +596,7 @@ function ModelPreview({ mount, materials, noModel }: { mount: HardwareMount; mat
           Només 3D
         </Text>
         <Text fontSize="xs" color="fg.muted">
-          {mount.model?.bbox ? `Caixa de ${n(mount.size.width)} × ${n(mount.size.height)} × ${n(mount.size.depth)} mm · ` : ""}sense cap forat: no hi ha cap regla del moble per a aquest ferratge.
+          {mount.model?.bbox ? `Caixa de ${n(mount.size.width)} × ${n(mount.size.height)} × ${n(mount.size.depth)} mm · ` : ""}{generated ? `cap regla del moble: els ${generated} mecanitzats del generador es fan quan el col·loques a mà.` : "sense cap forat: no hi ha cap regla del moble per a aquest ferratge."}
         </Text>
       </Stack>
       <Box h={{ base: "300px", md: "380px", lg: "420px" }} rounded="md" overflow="hidden" bg="bg.subtle" data-testid="hardware-mount-3d">
@@ -673,6 +687,8 @@ function HardwareCard({
   dirty,
   plates,
   library,
+  tools,
+  mui,
   isDefault,
   onDefault,
   onChange,
@@ -686,6 +702,10 @@ function HardwareCard({
   plates: HardwareItem[]
   /** Tota la biblioteca (una frontissa no es confirma amb la placa sense confirmar). */
   library: HardwareItem[]
+  /** Eines de la màquina per defecte (generador de mecanitzats). */
+  tools: GenTool[]
+  /** Estat del generador compartit amb el dibuix de l'escenari. */
+  mui: [MachiningUi, (p: Partial<MachiningUi>) => void]
   isDefault: boolean
   onDefault: () => void
   onChange: (next: HardwareItem) => void
@@ -792,7 +812,7 @@ function HardwareCard({
 
         {item.imported && (
           <FormSection title="Importat del fabricant">
-            {item.engine === "model" ? (
+            {item.engine === "model" && !item.machining?.length ? (
               <FormRow label="Estat" help="No hi ha cap regla de mecanitzat per a aquest ferratge (o no s'hi ha trobat el patró de forats): el model i el volum, mai cap forat. No cal confirmar-lo.">
                 <HStack gap={2} pt="2px">
                   <Badge size="sm" variant="subtle" colorPalette="gray" data-testid="hardware-import-state">
@@ -950,6 +970,7 @@ function HardwareCard({
           </Text>
         </FormSection>
         )}
+        <MachiningGenerator item={item} onChange={onChange} tools={tools} ui={mui} />
       </Box>
     </Box>
   )

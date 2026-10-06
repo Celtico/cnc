@@ -61,6 +61,8 @@ import { StructureTree, type Selection } from "../composition/StructureTree"
 import { Tooltip } from "../../components/ui/tooltip"
 import { ZoneActions, ZonePanel } from "../composition/ZonePanel"
 import { RunsForm } from "../composition/RunsForm"
+import { HardwarePlacements } from "../composition/HardwarePlacements"
+import { scopePlacements } from "../composition/placements"
 import { zoneLabel } from "../composition/zoneLabel"
 import { zoneIcon } from "../composition/zoneIcons"
 import { downloadBlob, slugify } from "../download"
@@ -961,7 +963,15 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       ) : selection.kind === "group" ? (
         <GroupInspector comp={comp} group={selection.id} onChange={setComp} onSelectPart={(id) => select({ kind: "part", id })} onMove={(dx, dy, dz) => moveGroup(selection.id, dx, dy, dz)} />
       ) : selection.kind === "part" ? (
-        <PartInspector comp={comp} id={selection.id} joints={build?.joints ?? []} onChange={setComp} />
+        <Stack gap={0}>
+          <PartInspector comp={comp} id={selection.id} joints={build?.joints ?? []} onChange={setComp} />
+          {/* Ferratges col·locats a mà (generador de mecanitzats de Preferències › Ferratges). */}
+          {!partsOnlyKind(kind) || kind === "lliure" ? (
+            <FoldItem id="part-hardware" title="Ferratges" icon={LuWrench} badge={scopePlacements(comp, { kind: "part", partId: selection.id }).length || undefined}>
+              <HardwarePlacements comp={comp} scope={{ kind: "part", partId: selection.id }} panels={panels} library={settings.hardwareLibrary} warnings={warnings} onChange={setComp} />
+            </FoldItem>
+          ) : null}
+        </Stack>
       ) : selection.kind === "zone" && zone ? (
         <Stack gap={3}>
           <ZonePanel root={module.root} zone={zone} hardware={module.hardware} noHandles={module.fronts.handles === "none"} openRatio={moduleBuild?.openRatios[zone.id]} onChange={(root) => updateModule({ ...module, root })} />
@@ -1063,6 +1073,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           </FoldItem>
           <FoldItem id="mod-joinery" title="Fusteria (avançat)" icon={LuHammer} defaultOpen={false}>
             <JoineryForm module={module} onChange={updateModule} />
+          </FoldItem>
+          <FoldItem id="mod-hardware" title="Ferratges" icon={LuWrench} badge={scopePlacements(comp, { kind: "module", moduleId: module.id }).length || undefined}>
+            <HardwarePlacements comp={comp} scope={{ kind: "module", moduleId: module.id }} panels={panels} library={settings.hardwareLibrary} warnings={warnings} onChange={setComp} />
           </FoldItem>
         </Stack>
       )}

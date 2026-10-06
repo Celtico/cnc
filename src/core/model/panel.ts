@@ -204,8 +204,11 @@ export const PanelSchema = z.object({
    * fora del front; les potes, a la cara de sota de la base.
    */
   fittings: z.array(z.object({
-    /** Què és (per no dibuixar-hi també el genèric de l'app): frontissa, placa, tirador o pota. Absent = frontissa o placa. */
-    kind: z.enum(["hinge", "plate", "handle", "leg"]).optional(),
+    /**
+     * Què és (per no dibuixar-hi també el genèric de l'app): frontissa, placa, tirador, pota o un ferratge col·locat a mà
+     * (`item`, `Composition.hardwarePlacements`). Absent = frontissa o placa.
+     */
+    kind: z.enum(["hinge", "plate", "handle", "leg", "item"]).optional(),
     asset: z.string().optional(),
     x: z.number(),
     y: z.number(),

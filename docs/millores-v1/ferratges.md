@@ -32,6 +32,13 @@
   cada frontissa i placa) i la **placa de frontissa** (part de F4, només importada). Preferències **v20**.
   Diferències amb l'estudi: STEP sí (cilindres → forats; el 3D és OpenCascade al navegador, a demanda, sense precache);
   BXF i Blum no; **guies i calaixos** (`Schubkastensysteme`) es llisten però no s'importen (cal la regla de la guia).
+- **F4 · Ferratges manuals: fet en part** (2026-10-06, [`docs/ferratges-import.md`](../ferratges-import.md) §7):
+  **generador de mecanitzats** a l'editor de qualsevol ferratge (`HardwareItem.machining`, preferències **v22**: forats
+  de cara i de cantell, ranures, caixeres i contorns per peça, des del punt de referència o dels cantells, eina de la
+  màquina per defecte) i **col·locació a mà** a l'Editor (mòdul o peça lliure › «Ferratges»,
+  `Composition.hardwarePlacements`, tot o res, `.moble` v3); capes de mecanitzat dels DXF del taller. Diferències amb
+  l'estudi: en lloc de l'`Anchor`/`AlongRule` genèric, posicions amb eixos del moble (`Pos`) i una repetició simple;
+  sense unions de 2 peces automàtiques (minifix), ni grup a l'arbre, ni llista de ferratges a Exportar.
 - **Pendents: F3** (nivells de visualització Cap · Forats · Volum · 3D, volums i xocs `hardware-clash`; el GLB per item
   ja hi és per als importats), **F4** (ferratges manuals, unions de 2 peces, minifix, confirmat, suport de prestatge,
   potes, placa de frontissa d'inici, perfil LED, push com a item, llista de ferratges a Exportar) i la resta de **F5**

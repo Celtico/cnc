@@ -25,11 +25,11 @@ export interface HingeVolume {
 
 /**
  * Les frontisses de l'app d'un front (a cada cassoleta, a la cara de dins). Cap si la peça porta el model d'una
- * frontissa importada (`fittings`, llevat del tirador i la pota, que no són a les cassoletes).
+ * frontissa importada (`fittings`, llevat del tirador, la pota i els col·locats a mà, que no són a les cassoletes).
  */
 export function hingeVolumes(panel: Panel): HingeVolume[] {
   if (panel.role !== "door" && panel.role !== "drawerFront" && panel.role !== "flap") return []
-  if ((panel.fittings ?? []).some((f) => f.kind !== "handle" && f.kind !== "leg")) return []
+  if ((panel.fittings ?? []).some((f) => f.kind !== "handle" && f.kind !== "leg" && f.kind !== "item")) return []
   const T = panel.thickness
   const cups = panel.holes.filter((h) => h.tag === "hinge")
   // Cara de dins: la de les cassoletes (A, z = T).
