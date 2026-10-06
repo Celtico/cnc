@@ -1,4 +1,4 @@
-import { Accordion, Badge, CloseButton, Input, InputGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Badge, CloseButton, Input, InputGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { LuFolders, LuHistory, LuSearch } from "react-icons/lu"
 import { SnapshotThumb } from "../../components/SnapshotThumb"
@@ -6,7 +6,7 @@ import { useSettings } from "../settings/SettingsContext"
 import { requestTemplateThumb, templateThumb } from "./projectThumbs"
 import { FURNITURE_COLLECTIONS, STORE_CATALOG, type Composition, type CompositionKind, type Template } from "../../core/model"
 import { KINDS } from "../composition/kinds"
-import { FoldTitle } from "./FoldTitle"
+import { FoldGroup, FoldItem } from "../../components/Fold"
 import { GalleryCard } from "./GalleryCard"
 import { GALLERY_COLS, fold, useSessionList } from "./galleryGrid"
 import { CatalogSection } from "./CatalogSection"
@@ -45,8 +45,6 @@ export function TemplateCard({ t, title, kicker, onPick }: { t: Template; title?
   )
 }
 
-/** Títol d'un acordió de la galeria: icona, nom i quantitat. */
-export { FoldTitle } from "./FoldTitle"
 
 const COLS = GALLERY_COLS
 
@@ -83,7 +81,6 @@ export function NewMobleGallery({
     pieces: c.pieces.filter((t) => !q || fold(`${c.name} ${t.name} ${t.description} ${kindLabel(t.kind)} ${Object.values(t.study).join(" ")}`).includes(q)),
   }))
   const collectionsCount = collections.reduce((n, c) => n + c.pieces.length, 0)
-  const [openSections, setOpenSections] = useSessionList(storageKey)
   const [openCats, setOpenCats] = useSessionList(`${storageKey}-store`)
   const [openCols, setOpenCols] = useSessionList(`${storageKey}-collections`)
   const hist = history(matches, !!q)
@@ -105,26 +102,14 @@ export function NewMobleGallery({
       )}
 
 
-      <Accordion.Root className="gallery-accordion" multiple collapsible lazyMount variant="enclosed" value={q ? found : openSections} onValueChange={(e) => !q && setOpenSections(e.value)}>
-        <Accordion.Item value="history">
-          <Accordion.ItemTrigger cursor="pointer">
-            <FoldTitle icon={<LuHistory />} title="Historial" count={hist.count} />
-            <Accordion.ItemIndicator />
-          </Accordion.ItemTrigger>
-          <Accordion.ItemContent>
-            <Accordion.ItemBody>{hist.node}</Accordion.ItemBody>
-          </Accordion.ItemContent>
-        </Accordion.Item>
+      <FoldGroup variant="gallery" storageKey={storageKey} forceOpen={q ? found : null}>
+        <FoldItem id="history" icon={LuHistory} title="Historial" count={hist.count}>
+          {hist.node}
+        </FoldItem>
         {hist.projects && (
-          <Accordion.Item value="projects">
-            <Accordion.ItemTrigger cursor="pointer">
-              <FoldTitle icon={<LuFolders />} title="Projectes" count={hist.projects.count} />
-              <Accordion.ItemIndicator />
-            </Accordion.ItemTrigger>
-            <Accordion.ItemContent>
-              <Accordion.ItemBody>{hist.projects.node}</Accordion.ItemBody>
-            </Accordion.ItemContent>
-          </Accordion.Item>
+          <FoldItem id="projects" icon={LuFolders} title="Projectes" count={hist.projects.count}>
+            {hist.projects.node}
+          </FoldItem>
         )}
 
         <CatalogSection
@@ -146,7 +131,7 @@ export function NewMobleGallery({
           }))}
         />
         <CollectionsSection value="collections" collections={collections} searching={!!q} open={openCols} onOpenChange={setOpenCols} onCreate={pick} />
-      </Accordion.Root>
+      </FoldGroup>
 
     </Stack>
   )

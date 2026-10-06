@@ -1,7 +1,8 @@
 import { Badge, Box, Button, Grid, HStack, IconButton, Input, Stack, Switch, Text } from "@chakra-ui/react"
-import { Fragment, useContext, useEffect, useRef, useState } from "react"
+import { useContext, useEffect, useRef, useState } from "react"
 import { LuCopy, LuFactory, LuFileUp, LuFolderOpen, LuPlus, LuStar, LuTrash2, LuUpload } from "react-icons/lu"
 import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
+import { FoldGroup, FoldItem } from "../../components/Fold"
 import { MasterDetail } from "../../components/MasterDetail"
 import { NumRow } from "../../components/NumRow"
 import { SettingsGroup } from "../../components/SettingsGroup"
@@ -478,31 +479,32 @@ function ToolsTable({ tools, onChange }: { tools: MachineTool[]; onChange: (t: M
                 </Text>
                 <Text pe={2} display={MD_ONLY}>Posició</Text>
               </Grid>
-              {list.map((t) => {
-                const on = open === t.code
-                const dim = !t.mounted || !t.auto
-                return (
-                  <Fragment key={t.code}>
-                    <Box gridColumn="1 / -1" as="button" textAlign="left" cursor="pointer" borderTopWidth="1px" bg={on ? "wood.subtle" : undefined} _hover={{ bg: on ? "wood.subtle" : "bg.muted" }} onClick={() => setOpen(on ? null : t.code)} aria-expanded={on}>
-                      <Grid templateColumns={COLS} columnGap={COL_GAP} alignItems="center" py={1.5} opacity={dim ? 0.55 : 1}>
-                        <Text fontFamily="mono" fontSize="xs" px={2} truncate>{t.code}</Text>
-                        <Box minW={0}>
-                          <Text truncate title={t.mslName ? `${t.name} · a l'MSL: ${t.mslName}` : t.name}>{t.name}{t.manual ? " · a mà" : ""}{isPlaceholderTool(t) ? " · falta el codi" : ""}</Text>
-                          <Text fontSize="xs" color="fg.muted" truncate display={BASE_ONLY}>{where(t)}</Text>
-                        </Box>
-                        <Text textAlign="right">{String(t.diameter).replace(".", ",")}</Text>
-                        <Text textAlign="right" pe={{ base: 2, md: 0 }}>{t.maxDepth ? String(t.maxDepth).replace(".", ",") : "—"}</Text>
-                        <Text fontSize="xs" color="fg.muted" truncate pe={2} display={MD_ONLY}>{where(t)}</Text>
-                      </Grid>
-                    </Box>
-                    {on && (
-                      <Box gridColumn="1 / -1" borderTopWidth="1px">
-                        <ToolEditor tool={t} codes={tools.map((x) => x.code)} onChange={(patch) => { set(t.code, patch); if (patch.code) setOpen(patch.code) }} onDelete={t.manual ? () => { onChange(tools.filter((x) => x.code !== t.code)); setOpen(null) } : undefined} />
-                      </Box>
-                    )}
-                  </Fragment>
-                )
-              })}
+              <FoldGroup variant="row" multiple={false} value={open ? [open] : []} onValueChange={(v) => setOpen(v[0] ?? null)}>
+                {list.map((t) => {
+                  const dim = !t.mounted || !t.auto
+                  return (
+                    <FoldItem
+                      key={t.code}
+                      id={t.code}
+                      title={t.name}
+                      header={
+                        <Grid templateColumns={COLS} columnGap={COL_GAP} alignItems="center" py={1.5} opacity={dim ? 0.55 : 1}>
+                          <Text fontFamily="mono" fontSize="xs" px={2} truncate>{t.code}</Text>
+                          <Box minW={0}>
+                            <Text truncate title={t.mslName ? `${t.name} · a l'MSL: ${t.mslName}` : t.name}>{t.name}{t.manual ? " · a mà" : ""}{isPlaceholderTool(t) ? " · falta el codi" : ""}</Text>
+                            <Text fontSize="xs" color="fg.muted" truncate display={BASE_ONLY}>{where(t)}</Text>
+                          </Box>
+                          <Text textAlign="right">{String(t.diameter).replace(".", ",")}</Text>
+                          <Text textAlign="right" pe={{ base: 2, md: 0 }}>{t.maxDepth ? String(t.maxDepth).replace(".", ",") : "—"}</Text>
+                          <Text fontSize="xs" color="fg.muted" truncate pe={2} display={MD_ONLY}>{where(t)}</Text>
+                        </Grid>
+                      }
+                    >
+                      <ToolEditor tool={t} codes={tools.map((x) => x.code)} onChange={(patch) => { set(t.code, patch); if (patch.code) setOpen(patch.code) }} onDelete={t.manual ? () => { onChange(tools.filter((x) => x.code !== t.code)); setOpen(null) } : undefined} />
+                    </FoldItem>
+                  )
+                })}
+              </FoldGroup>
             </Grid>
           </Stack>
         )

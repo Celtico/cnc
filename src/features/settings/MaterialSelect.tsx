@@ -1,7 +1,8 @@
-import { Accordion, Badge, Box, Button, CloseButton, Drawer, Field, HStack, Input, InputGroup, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, CloseButton, Drawer, Field, HStack, Input, InputGroup, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
 import { LuCheck, LuSearch, LuTriangleAlert } from "react-icons/lu"
 import { fold } from "../projects/galleryGrid"
+import { FoldGroup, FoldItem } from "../../components/Fold"
 import { MATERIAL_CATEGORIES, materialCategory, type MaterialPref } from "../../core/model"
 import { MaterialThumb } from "./MaterialBits"
 import { useSettings } from "./SettingsContext"
@@ -102,55 +103,40 @@ export function MaterialSelect({ label, materials, value, onChange, emptyLabel, 
                       Ara: «{value}» ({offNote.toLowerCase()}). Es manté fins que en triïs un altre.
                     </Text>
                   )}
-                  <Accordion.Root multiple collapsible lazyMount variant="plain" value={openCats} onValueChange={(e) => setOpenCats(e.value)}>
+                  <FoldGroup variant="nested" value={openCats} onValueChange={setOpenCats}>
                     {cats.map((c) => (
-                      <Accordion.Item key={c.id} value={c.id}>
-                        <Accordion.ItemTrigger cursor="pointer" borderBottomWidth="1px" rounded="none" px={0}>
-                          <HStack flex={1} gap={2}>
-                            <Text fontWeight="semibold" fontSize="sm">
-                              {c.label}
-                            </Text>
-                            <Text fontSize="xs" color="fg.muted">
-                              {c.list.length}
-                            </Text>
-                          </HStack>
-                          <Accordion.ItemIndicator />
-                        </Accordion.ItemTrigger>
-                        <Accordion.ItemContent>
-                          <Accordion.ItemBody px={0}>
-                            {/* Mostres de la textura: només les de la categoria oberta (lazyMount). */}
-                            {/* Mostres quadrades a tota l'amplada de la columna, alineades a dalt; el nom, sempre dues línies
-                                d'alt. La triada: vora del color principal al voltant de la mostra i ✓ a la cantonada. */}
-                            {/* 5 px de marge: la vora de la triada (outline a 2 px) no queda tallada pels costats. */}
-                            <SimpleGrid columns={3} gap={3} alignItems="start" p="5px">
-                              {c.list.map((m) => {
-                                const on = m.name === value
-                                return (
-                                  <Box key={m.id} asChild rounded="md" cursor="pointer" textAlign="start" role="group" focusRing="outside">
-                                    <button type="button" onClick={() => pick(m.name)} aria-pressed={on}>
-                                      <Stack gap={1.5}>
-                                        <Box position="relative" rounded="md" outline={on ? "2px solid" : undefined} outlineColor="wood.solid" outlineOffset="2px" _groupHover={on ? undefined : { opacity: 0.85 }}>
-                                          <MaterialThumb m={m} size={96} fill />
-                                          {on && (
-                                            <Box position="absolute" top={1.5} right={1.5} w="22px" h="22px" bg="wood.solid" color="wood.contrast" rounded="full" display="flex" alignItems="center" justifyContent="center" fontSize="xs" shadow="md">
-                                              <LuCheck />
-                                            </Box>
-                                          )}
+                      <FoldItem key={c.id} id={c.id} title={c.label} count={c.list.length}>
+                        {/* Mostres de la textura: només les de la categoria oberta (lazyMount). */}
+                        {/* Mostres quadrades a tota l'amplada de la columna, alineades a dalt; el nom, sempre dues línies
+                            d'alt. La triada: vora del color principal al voltant de la mostra i ✓ a la cantonada. */}
+                        {/* 5 px de marge: la vora de la triada (outline a 2 px) no queda tallada pels costats. */}
+                        <SimpleGrid columns={3} gap={3} alignItems="start" p="5px">
+                          {c.list.map((m) => {
+                            const on = m.name === value
+                            return (
+                              <Box key={m.id} asChild rounded="md" cursor="pointer" textAlign="start" role="group" focusRing="outside">
+                                <button type="button" onClick={() => pick(m.name)} aria-pressed={on}>
+                                  <Stack gap={1.5}>
+                                    <Box position="relative" rounded="md" outline={on ? "2px solid" : undefined} outlineColor="wood.solid" outlineOffset="2px" _groupHover={on ? undefined : { opacity: 0.85 }}>
+                                      <MaterialThumb m={m} size={96} fill />
+                                      {on && (
+                                        <Box position="absolute" top={1.5} right={1.5} w="22px" h="22px" bg="wood.solid" color="wood.contrast" rounded="full" display="flex" alignItems="center" justifyContent="center" fontSize="xs" shadow="md">
+                                          <LuCheck />
                                         </Box>
-                                        <Text fontSize="xs" lineClamp={2} minH="2lh" color={on ? "wood.fg" : undefined} fontWeight={on ? "semibold" : undefined}>
-                                          {m.name}
-                                        </Text>
-                                      </Stack>
-                                    </button>
-                                  </Box>
-                                )
-                              })}
-                            </SimpleGrid>
-                          </Accordion.ItemBody>
-                        </Accordion.ItemContent>
-                      </Accordion.Item>
+                                      )}
+                                    </Box>
+                                    <Text fontSize="xs" lineClamp={2} minH="2lh" color={on ? "wood.fg" : undefined} fontWeight={on ? "semibold" : undefined}>
+                                      {m.name}
+                                    </Text>
+                                  </Stack>
+                                </button>
+                              </Box>
+                            )
+                          })}
+                        </SimpleGrid>
+                      </FoldItem>
                     ))}
-                  </Accordion.Root>
+                  </FoldGroup>
                 </Stack>
               </Drawer.Body>
               {/* Al mòbil és un full de baix: la zona segura de dalt no hi toca (només a la columna de la dreta, a l'iPad). */}

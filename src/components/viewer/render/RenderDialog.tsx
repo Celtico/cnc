@@ -1,9 +1,9 @@
-import { Box, Button, CloseButton, Dialog, HStack, Image, Portal, Stack, Text } from "@chakra-ui/react"
+import { Box, Button, CloseButton, Dialog, HStack, Image, Portal, Stack, Switch, Text } from "@chakra-ui/react"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import type { IconType } from "react-icons"
-import { LuCamera, LuDownload, LuGauge, LuHouse, LuImage, LuImageUp, LuPause, LuPlay, LuRotateCcw, LuSun } from "react-icons/lu"
+import { LuCamera, LuDownload, LuGauge, LuHouse, LuImage, LuImageUp, LuLamp, LuLightbulb, LuCloudSun, LuPause, LuPlay, LuRotateCcw, LuSun } from "react-icons/lu"
 import { ChoiceChips, FormRow } from "../../FormRow"
-import { PanelSection } from "../../PanelSection"
+import { FoldItem } from "../../Fold"
 import type { Camera, Scene } from "three"
 import { LOW_MEMORY } from "../deviceLimits"
 import { CpuEngine } from "./cpuEngine"
@@ -129,17 +129,30 @@ function Range({ label, value, min, max, step, format, onChange, help }: { label
   )
 }
 
-/** Secció plegable de les opcions (la mateixa `PanelSection` dels inspectors): comencen tancades i es recorden durant la sessió. */
+/** Interruptor (el `Switch` de l'app, com a la resta de formularis) amb el rètol a la `FormRow`. */
+function Toggle({ label, checked, onChange, children }: { label: string; checked: boolean; onChange: (v: boolean) => void; children?: ReactNode }) {
+  return (
+    <HStack minH="32px" gap={2}>
+      <Switch.Root size="sm" checked={checked} onCheckedChange={(e) => onChange(e.checked)}>
+        <Switch.HiddenInput aria-label={label} />
+        <Switch.Control />
+      </Switch.Root>
+      {children}
+    </HStack>
+  )
+}
+
+/** Secció plegable de les opcions (la mateixa `FoldItem` dels inspectors): comencen tancades i es recorden durant la sessió. */
 function Sec({ id, title, icon, hint, badge, children }: { id: string; title: string; icon: IconType; hint: string; badge?: ReactNode; children: ReactNode }) {
   return (
-    <PanelSection id={`render-${id}`} title={title} icon={icon} badge={badge}>
+    <FoldItem id={`render-${id}`} title={title} icon={icon} badge={badge}>
       <Stack gap={3}>
         {children}
         <Text fontSize="2xs" color="fg.subtle">
           {hint}
         </Text>
       </Stack>
-    </PanelSection>
+    </FoldItem>
   )
 }
 
@@ -744,7 +757,8 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
                 </HStack>
               </Stack>
 
-              <Stack w={{ base: "full", md: "300px" }} flexShrink={0} gap={1} overflowY={{ base: "visible", md: "auto" }} pr={1} pb={{ base: 4, md: 0 }}>
+              {/* 3 px a l'esquerra: el desplaçament de la columna no talla la vora ni l'anell de focus dels controls. */}
+              <Stack w={{ base: "full", md: "300px" }} flexShrink={0} gap={1} overflowY={{ base: "visible", md: "auto" }} ps="3px" pe={1} pb={{ base: 4, md: 0 }}>
                 <Sec id="quality" title="Qualitat" icon={LuGauge} hint="Els canvis tornen a començar el render." badge={`${effectiveKind === "gpu" ? "GPU" : "CPU"} · ${RESOLUTIONS[res].label} · ${opts.bounces} rebots`}>
                   <FormRow
                     label="Motor"
@@ -797,9 +811,7 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
                     <ChoiceChips label="Format" options={(Object.keys(FORMATS) as Format[]).map((k) => ({ id: k, label: k === "view" ? "Visor" : k }))} value={format} onChange={setFormat} />
                   </FormRow>
                   <FormRow label="Verticals rectes" help="Com les fotos d'interiors: la càmera s'anivella i les parets i els mobles no «cauen». Mirant molt de dalt no es fa.">
-                    <HStack minH="32px">
-                      <input type="checkbox" aria-label="Verticals rectes" checked={opts.straight !== false} onChange={(e) => set({ straight: e.currentTarget.checked })} style={{ accentColor: "var(--chakra-colors-wood-solid)" }} />
-                    </HStack>
+                    <Toggle label="Verticals rectes" checked={opts.straight !== false} onChange={(straight) => set({ straight })} />
                   </FormRow>
                   <FormRow label="Objectiu" help="Equivalent de 35 mm: 24 angular (habitacions petites), 35 interiors, 50 detall i mobles sols. «Visor»: l'angle del visor 3D.">
                     <ChoiceChips<string>
@@ -858,7 +870,8 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
                   </FormRow>
                 </Sec>
 
-                <Sec id="light" title="Llum" icon={LuSun} hint="Els canvis tornen a començar el render." badge={mood !== "day" ? MOODS[mood].label : env ? "HDRI" : undefined}>
+                <Sec id="light" title="Llums" icon={LuLightbulb} hint="Els canvis tornen a començar el render." badge={mood !== "day" ? MOODS[mood].label : env ? "HDRI" : undefined}>
+                  {/* L'ambient, a dalt: els canvia tots (sol, cel i llums). */}
                   <FormRow label="Ambient" help={MOODS[mood].help}>
                     <ChoiceChips<Mood>
                       label="Ambient"
@@ -871,78 +884,80 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
                       }}
                     />
                   </FormRow>
-                  <Range label="Sol · direcció" value={opts.sunAzimuth} min={-180} max={180} step={5} format={deg} onChange={(v) => set({ sunAzimuth: v })} />
-                  <Range label="Sol · alçada" value={opts.sunElevation} min={5} max={85} step={1} format={deg} onChange={(v) => set({ sunElevation: v })} />
-                  <Range label="Sol · intensitat" value={opts.sunIntensity} min={0} max={3} step={0.1} format={x} onChange={(v) => set({ sunIntensity: v })} />
-                  <Range label="Ombres (dures → suaus)" value={opts.softness} min={0} max={1} step={0.05} format={(v) => `${Math.round(v * 100)} %`} onChange={(v) => set({ softness: v })} />
-                  <Range label="Cel (llum ambient)" value={opts.skyIntensity} min={0} max={3} step={0.1} format={x} onChange={(v) => set({ skyIntensity: v })} />
-                  <FormRow label="Cel" help={sky === "file" ? `El teu cel HDRI: ${env?.name ?? ""}` : `${SKIES.find((k) => k.id === sky)?.help ?? ""} El de defecte, a Preferències › Visor 3D.`}>
-                    <Stack gap={2}>
-                      <ChoiceChips<SkyId | "file">
-                        label="Cel"
-                        options={[...SKIES.map((k) => ({ id: k.id as SkyId | "file", label: k.label })), ...(env?.sky === "file" ? [{ id: "file" as const, label: "El teu .hdr" }] : [])]}
-                        value={sky}
-                        onChange={(v) => v !== "file" && chooseSky(v)}
-                      />
-                      <Button size="xs" variant="outline" alignSelf="flex-start" asChild>
-                        <label>
-                          <LuImageUp /> Carregar un .hdr teu
-                          <input
-                            type="file"
-                            accept=".hdr"
-                            hidden
-                            onChange={async (e) => {
-                              const f = e.currentTarget.files?.[0]
-                              e.currentTarget.value = ""
-                              if (!f) return
-                              try {
-                                const parsed = parseHdr(await f.arrayBuffer())
-                                skyReq.current++
-                                setEnv({ name: f.name, env: parsed, sky: "file" })
-                                setSky("file")
-                                // Un .hdr propi (un jardí, el mar…) es veu tal qual per les finestres.
-                                setOpts((o) => ({ ...o, view: "sky" }))
-                                setNotice(null)
-                              } catch (err) {
-                                setNotice(`No s'ha pogut llegir el cel HDRI: ${err instanceof Error ? err.message : String(err)}`)
-                              }
-                            }}
+                  {/* Subseccions independents (el mateix acordió, més petit): Sol · Cel · Llum. */}
+                  <Box>
+                    <FoldItem id="render-light-sun" size="sm" title="Sol" icon={LuSun} badge={`${deg(opts.sunElevation)} · ${x(opts.sunIntensity)}`}>
+                      <Range label="Sol · direcció" value={opts.sunAzimuth} min={-180} max={180} step={5} format={deg} onChange={(v) => set({ sunAzimuth: v })} />
+                      <Range label="Sol · alçada" value={opts.sunElevation} min={5} max={85} step={1} format={deg} onChange={(v) => set({ sunElevation: v })} />
+                      <Range label="Sol · intensitat" value={opts.sunIntensity} min={0} max={3} step={0.1} format={x} onChange={(v) => set({ sunIntensity: v })} />
+                      <Range label="Ombres (dures → suaus)" value={opts.softness} min={0} max={1} step={0.05} format={(v) => `${Math.round(v * 100)} %`} onChange={(v) => set({ softness: v })} />
+                    </FoldItem>
+                    <FoldItem id="render-light-sky" size="sm" title="Cel" icon={LuCloudSun} badge={sky === "file" ? "El teu .hdr" : SKIES.find((k) => k.id === sky)?.label}>
+                      <FormRow label="Cel" help={sky === "file" ? `El teu cel HDRI: ${env?.name ?? ""}` : `${SKIES.find((k) => k.id === sky)?.help ?? ""} El de defecte, a Preferències › Visor 3D.`}>
+                        <Stack gap={2}>
+                          <ChoiceChips<SkyId | "file">
+                            label="Cel"
+                            options={[...SKIES.map((k) => ({ id: k.id as SkyId | "file", label: k.label })), ...(env?.sky === "file" ? [{ id: "file" as const, label: "El teu .hdr" }] : [])]}
+                            value={sky}
+                            onChange={(v) => v !== "file" && chooseSky(v)}
                           />
-                        </label>
-                      </Button>
-                    </Stack>
-                  </FormRow>
-                  {env && <Range label="Gir del cel" value={opts.envRotation ?? 0} min={0} max={360} step={5} format={deg} onChange={(v) => set({ envRotation: v })} />}
-                  <FormRow label="Llums enceses" help="Les pantalles de lli i les bombetes dels llums fan llum (materials «Pantalla de lli» i «Bombeta»).">
-                    <HStack minH="32px">
-                      <input type="checkbox" aria-label="Llums enceses" checked={opts.lamps !== false} onChange={(e) => set({ lamps: e.currentTarget.checked })} style={{ accentColor: "var(--chakra-colors-wood-solid)" }} />
-                    </HStack>
-                  </FormRow>
-                  {opts.lamps !== false && <Range label="Llums · intensitat" value={opts.lampIntensity ?? 1} min={0.1} max={5} step={0.1} format={x} onChange={(v) => set({ lampIntensity: v })} />}
-                  {opts.lamps !== false && <Range label="Llums · com es veuen" help="Com es veuen les pantalles i bombetes a la foto (la llum que fan a l'habitació no canvia). Més baix, es veu la tela de la pantalla; a 1×, una taca blanca com en una foto sense retocar." value={opts.lampView ?? 0.35} min={0.05} max={1} step={0.05} format={x} onChange={(v) => set({ lampView: v })} />}
+                          <Button size="xs" variant="outline" alignSelf="flex-start" asChild>
+                            <label>
+                              <LuImageUp /> Carregar un .hdr teu
+                              <input
+                                type="file"
+                                accept=".hdr"
+                                hidden
+                                onChange={async (e) => {
+                                  const f = e.currentTarget.files?.[0]
+                                  e.currentTarget.value = ""
+                                  if (!f) return
+                                  try {
+                                    const parsed = parseHdr(await f.arrayBuffer())
+                                    skyReq.current++
+                                    setEnv({ name: f.name, env: parsed, sky: "file" })
+                                    setSky("file")
+                                    // Un .hdr propi (un jardí, el mar…) es veu tal qual per les finestres.
+                                    setOpts((o) => ({ ...o, view: "sky" }))
+                                    setNotice(null)
+                                  } catch (err) {
+                                    setNotice(`No s'ha pogut llegir el cel HDRI: ${err instanceof Error ? err.message : String(err)}`)
+                                  }
+                                }}
+                              />
+                            </label>
+                          </Button>
+                        </Stack>
+                      </FormRow>
+                      <Range label="Cel (llum ambient)" value={opts.skyIntensity} min={0} max={3} step={0.1} format={x} onChange={(v) => set({ skyIntensity: v })} />
+                      {env && <Range label="Gir del cel" value={opts.envRotation ?? 0} min={0} max={360} step={5} format={deg} onChange={(v) => set({ envRotation: v })} />}
+                    </FoldItem>
+                    <FoldItem id="render-light-lamps" size="sm" title="Llum" icon={LuLamp} badge={opts.lamps !== false ? "Enceses" : "Apagades"} badgePalette={opts.lamps !== false ? "wood" : "gray"}>
+                      <FormRow label="Llums enceses" help="Les pantalles de lli i les bombetes dels llums fan llum (materials «Pantalla de lli» i «Bombeta»).">
+                        <Toggle label="Llums enceses" checked={opts.lamps !== false} onChange={(lamps) => set({ lamps })} />
+                      </FormRow>
+                      {opts.lamps !== false && <Range label="Llums · intensitat" value={opts.lampIntensity ?? 1} min={0.1} max={5} step={0.1} format={x} onChange={(v) => set({ lampIntensity: v })} />}
+                      {opts.lamps !== false && <Range label="Llums · com es veuen" help="Com es veuen les pantalles i bombetes a la foto (la llum que fan a l'habitació no canvia). Més baix, es veu la tela de la pantalla; a 1×, una taca blanca com en una foto sense retocar." value={opts.lampView ?? 0.35} min={0.05} max={1} step={0.05} format={x} onChange={(v) => set({ lampView: v })} />}
+                    </FoldItem>
+                  </Box>
                 </Sec>
 
                 <Sec id="image" title="Imatge" icon={LuImage} hint="S'aplica a l'instant, sense tornar a començar." badge={look.denoise ? "Sense soroll" : undefined}>
                   <FormRow label="Exposició automàtica">
-                    <HStack minH="32px">
-                      <input type="checkbox" aria-label="Exposició automàtica" checked={look.auto} onChange={(e) => setLook({ auto: e.currentTarget.checked })} style={{ accentColor: "var(--chakra-colors-wood-solid)" }} />
-                    </HStack>
+                    <Toggle label="Exposició automàtica" checked={look.auto} onChange={(auto) => setLook({ auto })} />
                   </FormRow>
                   <FormRow label="Reduir el soroll" help={denoiser === "oidn" ? "Amb Open Image Denoise (IA, a la GPU): a les 4, 16, 64, 256… passades i en aturar." : "Filtre guiat per l'albedo i les normals."}>
-                    <HStack minH="32px">
-                      <input
-                        type="checkbox"
-                        aria-label="Reduir el soroll"
-                        checked={look.denoise}
-                        onChange={(e) => {
-                          setLook({ denoise: e.currentTarget.checked })
-                          if (e.currentTarget.checked) scheduleDenoise(true)
-                        }}
-                        style={{ accentColor: "var(--chakra-colors-wood-solid)" }}
-                      />
+                    <Toggle
+                      label="Reduir el soroll"
+                      checked={look.denoise}
+                      onChange={(denoise) => {
+                        setLook({ denoise })
+                        if (denoise) scheduleDenoise(true)
+                      }}
+                    >
                       {/* Quin filtre fa servir (discret) */}
                       <Text fontSize="xs" color="fg.subtle">{denoiser === "oidn" ? "Intel OIDN" : "bàsic"}</Text>
-                    </HStack>
+                    </Toggle>
                   </FormRow>
                   <FormRow label="Corba de color" help="AgX: natural, com les fotos (les llums es tornen blanques suaument). ACES: més contrast i color.">
                     <ChoiceChips<ToneCurve>

@@ -1,0 +1,308 @@
+import { Accordion, Badge, Box, HStack, Heading, Stack, Text, useAccordionItemContext, type AccordionRootProps } from "@chakra-ui/react"
+import { useContext, useEffect, useState, type ReactNode } from "react"
+import type { IconType } from "react-icons"
+import { LuChevronRight } from "react-icons/lu"
+import { readSessionFlag, readSessionList, writeSessionFlag } from "./sessionState"
+import { FoldContext, STATIC_VARIANTS, sectionKey, type FoldGroupState, type FoldVariant } from "./foldContext"
+
+/**
+ * L'acordió de tota l'app (sobre `Accordion` de Chakra): un sol component per a les seccions dels inspectors, el
+ * Render, la Foto, Exportar, les galeries, el calaix de materials, els taulells i les eines de la màquina.
+ *
+ * - **`FoldItem` sol** (sense `FoldGroup`): secció independent (se'n poden tenir diverses obertes), que comença tancada
+ *   (llevat de `defaultOpen`) i es recorda durant la sessió amb la clau `mobles:section:<id>`.
+ * - **`FoldGroup`**: un `Accordion.Root` compartit; `multiple={false}` = només una oberta. L'estat és controlat
+ *   (`value`/`onValueChange`), de la sessió (`storageKey`: una llista) o intern (`defaultValue`). `forceOpen` (p. ex. la
+ *   cerca de les galeries) obre aquests i no deixa canviar res.
+ *
+ * El contingut només es munta obert (`lazyMount`); les variants de formulari (`section`, `card`, `row`) el desmunten en
+ * tancar i **no animen l'alçada** ni retallen: el `Collapsible` de Chakra mesurava l'alçada en obrir i, si el contingut
+ * arribava després (preferències que es carreguen, un portal), es quedava a 0.
+ */
+export function FoldGroup({
+  variant = "section",
+  size = "md",
+  multiple = true,
+  value,
+  onValueChange,
+  storageKey,
+  defaultValue,
+  forceOpen,
+  className,
+  children,
+}: {
+  variant?: FoldVariant
+  size?: "sm" | "md"
+  /** `false`: només un obert alhora (en obrir-ne un, es tanca l'altre). */
+  multiple?: boolean
+  value?: string[]
+  onValueChange?: (value: string[]) => void
+  /** Recorda els oberts durant la sessió (sessionStorage, una llista). */
+  storageKey?: string
+  /** Els oberts d'entrada (si no n'hi ha de desats). */
+  defaultValue?: string[]
+  /** Oberts a la força (la cerca): mentre hi és, no es pot plegar res. */
+  forceOpen?: string[] | null
+  className?: string
+  children: ReactNode
+}) {
+  const [own, setOwn] = useState<string[]>(() => (storageKey ? readSessionList(storageKey) : null) ?? defaultValue ?? [])
+  useEffect(() => {
+    if (!storageKey) return
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(own))
+    } catch {
+      /* sense sessionStorage: només en memòria */
+    }
+  }, [storageKey, own])
+  const current = forceOpen ?? value ?? own
+  const change = (next: string[]) => {
+    if (forceOpen) return
+    if (value === undefined) setOwn(next)
+    onValueChange?.(next)
+  }
+  return (
+    <FoldContext.Provider value={{ variant, size }}>
+      <Accordion.Root {...rootProps(variant, className)} multiple={multiple} value={current} onValueChange={(e) => change(e.value)}>
+        {children}
+      </Accordion.Root>
+    </FoldContext.Provider>
+  )
+}
+
+interface FoldItemProps {
+  /** Valor dins del grup i, sol, la clau de la sessió (`mobles:section:<id>`). */
+  id: string
+  title: ReactNode
+  /** Icona del catàleg (`react-icons/lu`): obligatòria a les seccions. */
+  icon?: IconType
+  /** Resum curt al costat del títol, en una insígnia (p. ex. el nombre de prestatges). */
+  badge?: ReactNode
+  /** Color de la insígnia (per defecte el color principal; `orange` per a avisos). */
+  badgePalette?: string
+  /** Nombre d'elements (galeries), en una insígnia grisa. */
+  count?: number
+  /** Línia a sota del títol, sempre (galeries: per a què serveix). */
+  description?: ReactNode
+  /** Línia a sota del títol quan és tancat (`card`: «de → fins a · gruix»). */
+  summary?: ReactNode
+  /** Botons al costat de la capçalera (mai a dins: un botó dins d'un botó no és vàlid). No pleguen. */
+  actions?: ReactNode
+  /** Capçalera feta per qui el fa servir (variant `row`: la fila de la taula). */
+  header?: ReactNode
+  /** Sol: si comença obert (per defecte, tancat; després es recorda el que triï l'usuari durant la sessió). */
+  defaultOpen?: boolean
+  /** Sol: `false` = no es recorda (cada vegada, `defaultOpen`). */
+  persist?: boolean
+  /** Sol: l'aspecte (dins d'un grup, el del grup). */
+  variant?: FoldVariant
+  /** Sol: `sm` per a les subseccions (dins d'una altra secció). */
+  size?: "sm" | "md"
+  children?: ReactNode
+}
+
+/** Un element plegable: dins d'un `FoldGroup` fa servir el seu acordió; sol, en fa un de propi (independent). */
+export function FoldItem(props: FoldItemProps) {
+  const group = useContext(FoldContext)
+  if (!group) return <SoloFold {...props} />
+  return <FoldItemBody {...props} group={group} />
+}
+
+function SoloFold(props: FoldItemProps) {
+  const { id, defaultOpen = false, persist = true, variant = "section", size = "md" } = props
+  const key = sectionKey(id)
+  const [open, setOpen] = useState(() => (persist ? readSessionFlag(key) : null) ?? defaultOpen)
+  const group: FoldGroupState = { variant, size }
+  return (
+    <FoldContext.Provider value={group}>
+      <Accordion.Root
+        {...rootProps(variant)}
+        value={open ? [id] : []}
+        onValueChange={(e) => {
+          const next = e.value.includes(id)
+          setOpen(next)
+          if (persist) writeSessionFlag(key, next)
+        }}
+      >
+        <FoldItemBody {...props} group={group} />
+      </Accordion.Root>
+    </FoldContext.Provider>
+  )
+}
+
+function rootProps(variant: FoldVariant, className?: string): AccordionRootProps {
+  const stat = STATIC_VARIANTS.has(variant)
+  const cls = [variant === "gallery" ? "gallery-accordion" : variant === "nested" ? "inner-accordion" : undefined, className].filter(Boolean).join(" ")
+  return {
+    collapsible: true,
+    lazyMount: true,
+    unmountOnExit: stat,
+    variant: variant === "gallery" ? "enclosed" : "plain",
+    className: cls || undefined,
+    ...(variant === "card" ? { display: "flex", flexDirection: "column", gap: 3 } : {}),
+  }
+}
+
+function FoldItemBody({ id, children, group, ...p }: FoldItemProps & { group: FoldGroupState }) {
+  const { variant, size } = group
+  const stat = STATIC_VARIANTS.has(variant)
+  return (
+    <Accordion.Item value={id} {...itemStyle(variant)}>
+      <FoldHead {...p} id={id} variant={variant} size={size} />
+      <Accordion.ItemContent {...(stat ? { overflow: "visible", _open: { animationName: "none" }, _closed: { animationName: "none" } } : {})}>
+        {/* Dins del contingut, un FoldItem sol torna a ser independent (no és del grup de fora). */}
+        <FoldContext.Provider value={null}>
+          <Accordion.ItemBody {...bodyStyle(variant)}>{wrapContent(variant, size, children)}</Accordion.ItemBody>
+        </FoldContext.Provider>
+      </Accordion.ItemContent>
+    </Accordion.Item>
+  )
+}
+
+function itemStyle(variant: FoldVariant) {
+  if (variant === "section") return { borderBottomWidth: "1px" }
+  if (variant === "card") return { borderWidth: "1px", rounded: "md", _closed: { bg: "bg.subtle" } }
+  return {}
+}
+
+function bodyStyle(variant: FoldVariant) {
+  if (variant === "gallery") return {}
+  if (variant === "nested") return { px: 0 }
+  return { p: 0 }
+}
+
+function wrapContent(variant: FoldVariant, size: "sm" | "md", children: ReactNode) {
+  if (variant === "section")
+    return (
+      <Stack gap={size === "sm" ? 3 : 4} pb={4}>
+        {children}
+      </Stack>
+    )
+  if (variant === "card")
+    return (
+      <Stack gap={3} px={3} pb={3} pt={1}>
+        {children}
+      </Stack>
+    )
+  if (variant === "row") return <Box borderTopWidth="1px">{children}</Box>
+  return children
+}
+
+function FoldHead({ title, icon: Icon, badge, badgePalette = "wood", count, description, summary, actions, header, variant, size }: Omit<FoldItemProps, "children"> & { variant: FoldVariant; size: "sm" | "md" }) {
+  const { expanded } = useAccordionItemContext()
+  const hasBadge = badge !== undefined && badge !== null && badge !== ""
+
+  if (variant === "row")
+    return (
+      <Accordion.ItemTrigger display="block" p={0} gap={0} rounded="none" textAlign="left" fontWeight="inherit" borderTopWidth="1px" css={{ "&[data-state=open]": { bg: "wood.subtle" }, "&:hover:not([data-state=open])": { bg: "bg.muted" } }}>
+        {header}
+      </Accordion.ItemTrigger>
+    )
+
+  if (variant === "section") {
+    const sm = size === "sm"
+    return (
+      <HStack gap={1}>
+        <Accordion.ItemTrigger flex={1} minW={0} justifyContent="space-between" px={0} py={sm ? 2 : 3} rounded="none" fontWeight="inherit" color={expanded ? "fg" : "fg.muted"} _hover={{ color: "fg" }}>
+          <HStack gap={sm ? 2 : 2.5} minW={0}>
+            {Icon && (
+              <Box color={expanded ? "wood.fg" : "fg.muted"} fontSize={sm ? "sm" : "md"} display="inline-flex" flexShrink={0}>
+                <Icon />
+              </Box>
+            )}
+            <Heading size={sm ? "xs" : "sm"} truncate>
+              {title}
+            </Heading>
+            {hasBadge && (
+              <Badge size={sm ? "xs" : "sm"} variant="subtle" colorPalette={badgePalette} flexShrink={0}>
+                {badge}
+              </Badge>
+            )}
+          </HStack>
+          <Accordion.ItemIndicator color="inherit" />
+        </Accordion.ItemTrigger>
+        {actions}
+      </HStack>
+    )
+  }
+
+  if (variant === "card") {
+    const sm = size === "sm"
+    return (
+      <HStack gap={1} pl={2} pr={1} py={sm ? 1 : 1.5}>
+        <Accordion.ItemTrigger flex={1} minW={0} gap={2} p={0} rounded="sm" fontWeight="inherit">
+          <Box color="fg.muted" flexShrink={0} display="inline-flex" transition="rotate 0.2s" rotate={expanded ? "90deg" : undefined}>
+            <LuChevronRight />
+          </Box>
+          {Icon && (
+            <Box color="wood.fg" flexShrink={0} display="inline-flex">
+              <Icon />
+            </Box>
+          )}
+          <Stack gap={0} minW={0}>
+            <Text fontWeight="semibold" fontSize="sm" truncate>
+              {title}
+            </Text>
+            {!expanded && summary && (
+              <Text fontSize="xs" color="fg.muted" truncate>
+                {summary}
+              </Text>
+            )}
+          </Stack>
+        </Accordion.ItemTrigger>
+        {actions}
+      </HStack>
+    )
+  }
+
+  // Galeries (`gallery`) i acordions de dins (`nested`): icona, nom i comptador, la fletxa a la dreta.
+  const nested = variant === "nested"
+  const trigger = (
+    <Accordion.ItemTrigger
+      {...(nested && !actions ? { className: "inner-head", borderBottomWidth: "1px" } : {})}
+      {...(nested ? { rounded: "none", px: 0 } : {})}
+      flex={actions ? 1 : undefined}
+    >
+      <Stack flex={1} gap={0.5} minW={0} textAlign="left">
+        <HStack gap={2} minW={0}>
+          {Icon && (
+            <Box color="wood.fg" display="inline-flex" flexShrink={0}>
+              <Icon />
+            </Box>
+          )}
+          <Text fontWeight="semibold" fontSize="sm" truncate>
+            {title}
+          </Text>
+          {count !== undefined && (
+            <Badge size="xs" variant="subtle" colorPalette="gray" flexShrink={0}>
+              {count}
+            </Badge>
+          )}
+          {hasBadge && (
+            <Badge size="xs" variant="subtle" colorPalette={badgePalette} flexShrink={0}>
+              {badge}
+            </Badge>
+          )}
+        </HStack>
+        {description && (
+          <Text fontSize="xs" color="fg.muted" fontWeight="normal">
+            {description}
+          </Text>
+        )}
+        {!expanded && summary && (
+          <Text fontSize="xs" color="fg.muted" fontWeight="normal" truncate>
+            {summary}
+          </Text>
+        )}
+      </Stack>
+      <Accordion.ItemIndicator />
+    </Accordion.ItemTrigger>
+  )
+  if (!actions) return trigger
+  return (
+    <HStack className={nested ? "inner-head" : undefined} gap={1} borderBottomWidth={nested ? "1px" : undefined}>
+      {trigger}
+      {actions}
+    </HStack>
+  )
+}

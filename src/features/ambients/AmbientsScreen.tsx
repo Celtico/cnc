@@ -1,4 +1,4 @@
-import { Accordion, Badge, Button, CloseButton, Dialog, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
+import { Badge, Button, CloseButton, Dialog, IconButton, Input, InputGroup, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
 import { useEffect, useState, type ReactNode } from "react"
 import { LuFolders, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
@@ -7,7 +7,7 @@ import { AMBIENT_CATEGORIES, AMBIENT_TEMPLATES, EMPTY_AMBIENT, parseAmbient, roo
 import { createAmbient, db, deleteAmbient, duplicateAmbient, setAmbientsFolder, type AmbientRow } from "../../db/db"
 import { useSettings } from "../settings/SettingsContext"
 import { useLiveQuery } from "../../db/useLiveQuery"
-import { FoldTitle } from "../projects/NewMobleGallery"
+import { FoldGroup, FoldItem } from "../../components/Fold"
 import { GALLERY_COLS, fold, useSessionList } from "../projects/galleryGrid"
 import { ClearHistory } from "../projects/ClearHistory"
 import { FolderedGrid, MoveToFolderDialog } from "../projects/Folders"
@@ -39,7 +39,6 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
   const shownTemplates = AMBIENT_TEMPLATES.filter((t) => matches(`${t.name} ${t.description} ${catLabel(t.category)}`))
   const shownCats = AMBIENT_CATEGORIES.filter((c) => shownTemplates.some((t) => t.category === c.id))
   const [openCats, setOpenCats] = useSessionList("mobles:ambients-categories")
-  const [open, setOpen] = useSessionList("mobles:ambients")
   const found = [...(groupedRows.length ? ["projects"] : []), ...(looseRows.length ? ["history"] : []), ...(shownTemplates.length ? ["catalog"] : [])]
   const create = async () => {
     const names = (await db.ambients.toArray()).map((a) => a.name)
@@ -145,52 +144,36 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
         <InputGroup maxW={{ base: "full", md: "420px" }} startElement={<LuSearch />} endElement={query ? <CloseButton size="xs" aria-label="Esborrar la cerca" onClick={() => setQuery("")} /> : undefined}>
           <Input size="sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cercar ambients: nom, habitació, material…" aria-label="Cercar ambients" />
         </InputGroup>
-        <Accordion.Root className="gallery-accordion" multiple collapsible lazyMount variant="enclosed" value={q ? found : open} onValueChange={(e) => !q && setOpen(e.value)}>
-          <Accordion.Item value="history">
-            <Accordion.ItemTrigger cursor="pointer">
-              <FoldTitle icon={<LuHistory />} title="Historial" count={looseRows.length} />
-              <Accordion.ItemIndicator />
-            </Accordion.ItemTrigger>
-            <Accordion.ItemContent>
-              <Accordion.ItemBody>
-                {looseRows.length === 0 ? (
-                  <Text fontSize="sm" color="fg.muted">
-                    {shownRows.length ? "L'historial és buit: el que tens és a Projectes." : rows?.length ? "Cap ambient no coincideix amb la cerca." : "Encara no en tens: comença en blanc o des del catàleg."}
-                  </Text>
-                ) : (
-                  ambGrid(
-                    "loose",
-                    looseRows,
-                        <ClearHistory
-                          count={looseRows.length}
-                          noun={["ambient", "ambients"]}
-                          onConfirm={async () => {
-                            for (const r of looseRows) await deleteAmbient(r.id)
-                            toaster.create({ title: "Historial esborrat", description: "Els dels Projectes es conserven; els mobles i objectes que hi havia es queden a Mobles i Objectes.", type: "info" })
-                          }}
-                        />,
-                  )
-                )}
-              </Accordion.ItemBody>
-            </Accordion.ItemContent>
-          </Accordion.Item>
-          <Accordion.Item value="projects">
-            <Accordion.ItemTrigger cursor="pointer">
-              <FoldTitle icon={<LuFolders />} title="Projectes" count={groupedRows.length} />
-              <Accordion.ItemIndicator />
-            </Accordion.ItemTrigger>
-            <Accordion.ItemContent>
-              <Accordion.ItemBody>
-                {groupedRows.length ? (
-                  ambGrid("folders", groupedRows)
-                ) : (
-                  <Text fontSize="sm" color="fg.muted">
-                    Encara no n'hi ha cap. Amb «Duplicar (per a un client)…» d'un ambient, o amb «Grup nou» a l'Historial: el que hi desis queda aquí i «Esborrar l'historial» no el toca.
-                  </Text>
-                )}
-              </Accordion.ItemBody>
-            </Accordion.ItemContent>
-          </Accordion.Item>
+        <FoldGroup variant="gallery" storageKey="mobles:ambients" forceOpen={q ? found : null}>
+          <FoldItem id="history" icon={LuHistory} title="Historial" count={looseRows.length}>
+            {looseRows.length === 0 ? (
+              <Text fontSize="sm" color="fg.muted">
+                {shownRows.length ? "L'historial és buit: el que tens és a Projectes." : rows?.length ? "Cap ambient no coincideix amb la cerca." : "Encara no en tens: comença en blanc o des del catàleg."}
+              </Text>
+            ) : (
+              ambGrid(
+                "loose",
+                looseRows,
+                    <ClearHistory
+                      count={looseRows.length}
+                      noun={["ambient", "ambients"]}
+                      onConfirm={async () => {
+                        for (const r of looseRows) await deleteAmbient(r.id)
+                        toaster.create({ title: "Historial esborrat", description: "Els dels Projectes es conserven; els mobles i objectes que hi havia es queden a Mobles i Objectes.", type: "info" })
+                      }}
+                    />,
+              )
+            )}
+          </FoldItem>
+          <FoldItem id="projects" icon={LuFolders} title="Projectes" count={groupedRows.length}>
+            {groupedRows.length ? (
+              ambGrid("folders", groupedRows)
+            ) : (
+              <Text fontSize="sm" color="fg.muted">
+                Encara no n'hi ha cap. Amb «Duplicar (per a un client)…» d'un ambient, o amb «Grup nou» a l'Historial: el que hi desis queda aquí i «Esborrar l'historial» no el toca.
+              </Text>
+            )}
+          </FoldItem>
           <CatalogSection
             value="catalog"
             description="Habitacions moblades amb mobles de les plantilles i objectes, per fer-ne renders per a la web o el catàleg. En triar-ne una, els mobles es creen a Mobles i Objectes i queden enllaçats."
@@ -213,7 +196,7 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
               }
             })}
           />
-        </Accordion.Root>
+        </FoldGroup>
       </Stack>
 
       <Dialog.Root open={asking !== null} onOpenChange={(e) => !e.open && setAsking(null)} size="sm">

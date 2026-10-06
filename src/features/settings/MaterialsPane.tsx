@@ -1,4 +1,4 @@
-import { Accordion, Badge, Box, Button, CloseButton, Dialog, HStack, IconButton, Input, InputGroup, Portal, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, CloseButton, Dialog, HStack, IconButton, Input, InputGroup, Portal, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
 import { useContext, useEffect, useRef, useState, type ReactNode, type RefObject } from "react"
 import { LuCopy, LuImagePlus, LuLayers2, LuLayers3, LuPaintbrush, LuPlus, LuSearch, LuSprayCan, LuStar, LuTrash2 } from "react-icons/lu"
 import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
@@ -7,6 +7,9 @@ import { toaster } from "../../components/ui/toaster"
 import { MATERIAL_CATEGORIES, materialCategory, materialCoat, materialNameError, materialSheen, newId, restoredFinish, switchFinish, tidyMaterialName, withCategory, type Finish, type MaterialCategory, type MaterialPref } from "../../core/model"
 import { GalleryCard } from "../projects/GalleryCard"
 import { GALLERY_COLS, fold } from "../projects/galleryGrid"
+import { FoldGroup, FoldItem } from "../../components/Fold"
+import { useSessionList } from "../../components/sessionState"
+import type { IconType } from "react-icons"
 import type { LibraryItem } from "./libraryItems"
 import { useColorMode } from "../../components/ui/color-mode"
 import { MaterialBall } from "./MaterialBall"
@@ -19,7 +22,7 @@ import { MapThumb, TextureMapRows, TextureSetRow } from "./TextureMapRows"
 import { encodeMap, pickFiles } from "./textureImport"
 
 /** Icones de les categories (com els apartats de les pàgines principals). */
-const CATEGORY_ICONS: Record<MaterialCategory, ReactNode> = { board: <LuLayers3 />, back: <LuLayers2 />, sim: <LuSprayCan /> }
+const CATEGORY_ICONS: Record<MaterialCategory, IconType> = { board: LuLayers3, back: LuLayers2, sim: LuSprayCan }
 /** Per a què serveix cada categoria (sota el nom, a l'acordió). */
 const CATEGORY_HINTS: Record<MaterialCategory, string> = {
   board: "Materials per al nesting: es tallen a la CNC (cossos, fronts, taulells).",
@@ -55,26 +58,8 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
   const [justAdded, setJustAdded] = useState<string | null>(null)
   // El nom a mig escriure: Esc només el desfà (no tanca l'editor).
   const dirty = useRef(false)
-  const [openState, setOpenState] = useState<string[]>(() => {
-    try {
-      const raw = JSON.parse(sessionStorage.getItem(OPEN_KEY) ?? "null") as unknown
-      // Abans es desava un objecte { id: obert }.
-      if (Array.isArray(raw)) return raw.filter((x): x is string => typeof x === "string")
-      if (raw && typeof raw === "object") return Object.entries(raw).filter(([, v]) => v === true).map(([k]) => k)
-    } catch {
-      /* res desat */
-    }
-    // La primera vegada, els taulers (el que més es toca).
-    return ["board"]
-  })
-  const setOpen = (ids: string[]) => {
-    setOpenState(ids)
-    try {
-      sessionStorage.setItem(OPEN_KEY, JSON.stringify(ids))
-    } catch {
-      /* només aquesta vista */
-    }
-  }
+  // Categories obertes, recordades durant la sessió; la primera vegada, els taulers (el que més es toca).
+  const [openState, setOpen] = useSessionList(OPEN_KEY, ["board"])
   const update = (i: number, patch: Partial<MaterialPref>) => onChange(materials.map((m, k) => (k === i ? { ...m, ...patch } : m)))
   // Noms únics sense majúscules ni espais (com l'esquema, `materialNameKey`).
   const uniqueName = (base: string) => {
@@ -116,7 +101,6 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
   }, [sel, i])
   const groups = MATERIAL_CATEGORIES.map((c) => ({ ...c, items: materials.filter((x) => materialCategory(x) === c.id && (!q || fold(x.name).includes(q))) })).filter((g) => g.items.length)
   // La cerca obre les categories amb resultats.
-  const openIds = q ? groups.map((g) => g.id) : openState
   const shownM = m
   // En tancar, `sel` es queda: mentre es tanca (l'animació de sortida) es veu el mateix material.
   const close = () => {
@@ -138,57 +122,34 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
       {groups.length ? (
         // El mateix acordió que els apartats de les galeries (Historial, Catàleg…): tancat amb vora, icona, nom i
         // comptador; a sota del nom, per a què serveix. Les targetes només es munten en obrir la categoria.
-        <Accordion.Root className="gallery-accordion" multiple collapsible lazyMount variant="enclosed" value={openIds} onValueChange={(e) => !q && setOpen(e.value)}>
+        <FoldGroup variant="gallery" value={openState} onValueChange={setOpen} forceOpen={q ? groups.map((g) => g.id) : null}>
           {groups.map((g) => (
-            <Accordion.Item key={g.id} value={g.id}>
-              <Accordion.ItemTrigger cursor="pointer">
-                <Stack flex={1} gap={0.5} minW={0} textAlign="left">
-                  <HStack gap={2} minW={0}>
-                    <Box color="wood.fg" display="inline-flex">
-                      {CATEGORY_ICONS[g.id]}
-                    </Box>
-                    <Text fontWeight="semibold" fontSize="sm" truncate>
-                      {g.label}
-                    </Text>
-                    <Badge size="xs" variant="subtle" colorPalette="gray">
-                      {g.items.length}
-                    </Badge>
-                  </HStack>
-                  <Text fontSize="xs" color="fg.muted" fontWeight="normal">
-                    {CATEGORY_HINTS[g.id]}
-                  </Text>
-                </Stack>
-                <Accordion.ItemIndicator />
-              </Accordion.ItemTrigger>
-              <Accordion.ItemContent>
-                <Accordion.ItemBody>
-                  <SimpleGrid columns={GALLERY_COLS} gap={3} p="var(--gallery-px, 0)">
-                    {g.items.map((x) => {
-                      const def = defaultOf(x)
-                      return (
-                        <GalleryCard
-                          key={x.id}
-                          thumb={<MaterialSwatch m={x} />}
-                          title={x.name}
-                          description={materialSummary(x)}
-                          tags={
-                            def ? (
-                              <Badge size="xs" variant="subtle" colorPalette="wood" title={`${def} als mòduls nous`}>
-                                <LuStar /> {def}
-                              </Badge>
-                            ) : undefined
-                          }
-                          selected={editorOpen && x.id === sel}
-                          onClick={() => open(x)}
-                        />
-                      )
-                    })}
-                  </SimpleGrid>
-                </Accordion.ItemBody>
-              </Accordion.ItemContent>
-            </Accordion.Item>
+            <FoldItem key={g.id} id={g.id} icon={CATEGORY_ICONS[g.id]} title={g.label} count={g.items.length} description={CATEGORY_HINTS[g.id]}>
+              <SimpleGrid columns={GALLERY_COLS} gap={3} p="var(--gallery-px, 0)">
+                {g.items.map((x) => {
+                  const def = defaultOf(x)
+                  return (
+                    <GalleryCard
+                      key={x.id}
+                      thumb={<MaterialSwatch m={x} />}
+                      title={x.name}
+                      description={materialSummary(x)}
+                      tags={
+                        def ? (
+                          <Badge size="xs" variant="subtle" colorPalette="wood" title={`${def} als mòduls nous`}>
+                            <LuStar /> {def}
+                          </Badge>
+                        ) : undefined
+                      }
+                      selected={editorOpen && x.id === sel}
+                      onClick={() => open(x)}
+                    />
+                  )
+                })}
+              </SimpleGrid>
+            </FoldItem>
           ))}
-        </Accordion.Root>
+        </FoldGroup>
       ) : (
         <Text fontSize="sm" color="fg.muted" px={1}>
           {q ? "Cap resultat." : "Encara no n'hi ha cap."}

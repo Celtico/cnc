@@ -35,7 +35,7 @@ import {
 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
-import { PanelSection } from "../../components/PanelSection"
+import { FoldItem } from "../../components/Fold"
 import { usePresentationScene } from "../../components/viewer/presentationScene"
 import { panelBox } from "../../core/build/buildComposition"
 import { PhotoRender } from "./PhotoRender"
@@ -861,7 +861,7 @@ function PhotoCalibrator({
 
             {/* Seccions plegables, com la resta de l'inspector. */}
             <Stack gap={0}>
-              <PanelSection id="photo-ref" title="Referència" icon={LuCrosshair}>
+              <FoldItem id="photo-ref" title="Referència" icon={LuCrosshair}>
               <FormRow label="Rectangle de referència">
                 <ChoiceChips
                   label="Rectangle de referència"
@@ -945,8 +945,8 @@ function PhotoCalibrator({
               <Button variant="outline" size="sm" alignSelf="flex-start" onClick={() => setCal((c) => ({ ...c, points: [] }))}>
                 <LuRotateCcw /> Tornar a marcar els punts
               </Button>
-              </PanelSection>
-              <PanelSection id="photo-tools" title="Eines" icon={LuPencilLine}>
+              </FoldItem>
+              <FoldItem id="photo-tools" title="Eines" icon={LuPencilLine}>
               <HStack {...segGroup}>
                 {toolButton("origin", "Origen", <LuLocateFixed />)}
                 {toolButton("distance", "Distància", <LuMoveHorizontal />)}
@@ -963,16 +963,16 @@ function PhotoCalibrator({
                 {origin3 ? `Origen a ${Math.round(originZ)} mm de la paret${floor ? "; terra a la línia verda" : ""}.` : "Sense origen, es compta des de la cantonada baix-esquerra de la referència."}
                 {!floor && cal.plane === "wall" && " Marca la línia del terra per mesurar fondàries i recolzar-hi el moble."}
               </Text>
-              </PanelSection>
-              <PanelSection id="photo-measures" title="Mesures" icon={LuMoveHorizontal} badge={measures.length || undefined}>
+              </FoldItem>
+              <FoldItem id="photo-measures" title="Mesures" icon={LuMoveHorizontal} badge={measures.length || undefined}>
               <MeasureTable measures={measures} values={values} targets={targets} applied={appliedByMeasure} onChange={updateMeasure} onRemove={removeMeasure} onApply={applyMeasure} />
-              </PanelSection>
-              <PanelSection id="photo-position" title="Posició del moble" icon={LuMove}>
+              </FoldItem>
+              <FoldItem id="photo-position" title="Posició del moble" icon={LuMove}>
               <NumRow label="X (de costat)" value={cal.offset[0]} min={-10000} max={10000} step={10} onChange={(x) => setCal((c) => ({ ...c, offset: [x, c.offset[1]] }))} />
               <NumRow label={cal.plane === "wall" ? "Y (alçada)" : "Y (distància)"} value={cal.offset[1]} min={-10000} max={10000} step={10} onChange={(y) => setCal((c) => ({ ...c, offset: [c.offset[0], y] }))} />
               {cal.plane === "wall" && <NumRow label="Z (paret)" value={cal.offsetZ ?? 0} min={0} max={3000} step={10} onChange={(z) => setCal((c) => ({ ...c, offsetZ: Number.isFinite(z) ? z : 0 }))} />}
-              </PanelSection>
-              <PanelSection id="photo-look" title="Aspecte" icon={LuPaintbrush} badge={renderMode === "realistic" ? "Realista" : "Línies"}>
+              </FoldItem>
+              <FoldItem id="photo-look" title="Aspecte" icon={LuPaintbrush} badge={renderMode === "realistic" ? "Realista" : "Línies"}>
               <FormRow
                 label="Aspecte del moble"
                 help={
@@ -1039,7 +1039,7 @@ function PhotoCalibrator({
               <Button size="xs" variant="outline" alignSelf="flex-start" disabled={!camera} onClick={() => void downloadPng()}>
                 <LuImageDown /> Imatge PNG
               </Button>
-              </PanelSection>
+              </FoldItem>
             </Stack>
           </Card.Body>
         </Card.Root>
