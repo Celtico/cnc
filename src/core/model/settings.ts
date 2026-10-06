@@ -24,8 +24,10 @@ const mm = z.number().finite()
  * `plate`): additiu, cap item d'abans no canvia (una v19 es llegeix igual; una app v19 no pot desar sobre una v20).
  * v21: tiradors, potes i «només 3D» importats (motors `leg` i `model`, categories `table` i `door-system`): additiu; una
  * app v20 no les pot desar (perdria els items que no sap llegir).
+ * v22: generador de mecanitzats dels ferratges (`HardwareItem.machining`, `hardwareOps.ts`): additiu, res a migrar; una
+ * app v21 no les pot desar (trauria les operacions en silenci).
  */
-export const SETTINGS_VERSION = 21
+export const SETTINGS_VERSION = 22
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 

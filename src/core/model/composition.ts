@@ -5,7 +5,7 @@ import { flatten, profileToOutline, sampleProfile, toNodes, type BPt } from "./p
 import { CameraPoseSchema } from "./camera"
 import { aliasMaterialRefs } from "./photoUpgrade"
 import { FreePartSchema, JoinerySchema, PART_AXES as PART_AXES_C, tidyPart, type FreePart } from "./freePart"
-import { DEFAULT_LEGACY_HARDWARE, HardwareItemObjectSchema, HardwareKitSchema, sanitizeImportedHardware, isLegacyHardware, kitFromLegacy, migrateModuleHardware, type HardwareKit } from "./hardware"
+import { DEFAULT_LEGACY_HARDWARE, HardwareItemObjectSchema, HardwareKitSchema, HardwarePlacementSchema, sanitizeImportedHardware, isLegacyHardware, kitFromLegacy, migrateModuleHardware, type HardwareKit } from "./hardware"
 import { repairAtomically } from "./repair"
 
 /**
@@ -468,6 +468,11 @@ export const CompositionSchema = z.object({
   scene: z.object({ floor: z.string().optional(), wall: z.string().optional() }).optional(),
   /** Última càmera del visor 3D (es desa sense marcar el moble com a modificat). Opcional. */
   camera: CameraPoseSchema,
+  /**
+   * Ferratges col·locats a mà en una peça (generador de mecanitzats, `hardwareOps.ts`): una còpia de cada item. Cadascun
+   * es llegeix sencer o es treu (`repairAtomically`): mai mig ferratge. Un `.moble` que en porta és v3.
+   */
+  hardwarePlacements: z.array(HardwarePlacementSchema).optional(),
 })
 export type Composition = z.infer<typeof CompositionSchema>
 

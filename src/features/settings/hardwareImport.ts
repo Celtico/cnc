@@ -6,8 +6,9 @@ import { articleFileNames, importedMatches, mergeImported } from "../../core/imp
 import { modelProposal, type HardwareProposal } from "../../core/import/proposal"
 import { stepFeatures } from "../../core/import/stepGeometry"
 import { readDxf } from "../../core/import/dxf"
+import { hasMachiningLayers, machiningFromDxf, partFromFileName } from "../../core/import/dxfMachining"
 import { registerStoredView, viewFromDxf, type HardwareView, type ViewName } from "../../core/import/views"
-import { newId, type HardwareItem } from "../../core/model"
+import { newId, partKindOf, type GenOp, type HardwareItem } from "../../core/model"
 import { assetDocs, assetViews, getHardwareAsset, newHardwareAssetId, putHardwareAsset, type HardwareAsset } from "../../db/hardwareAssets"
 
 /**
@@ -186,12 +187,36 @@ export async function importArticles(
             notes.push(`${baseName(f.path)}: ${e instanceof Error ? e.message : String(e)}`)
           }
         }
-        const proposal: HardwareProposal = { ...p, notes: [...p.notes, ...notes] }
+        // DXF per peça amb les capes de mecanitzat del taller (`<ref>_porta.dxf`…): mecanitzats exactes, que manen sobre
+        // els que s'endevinen del STEP (`dxfMachining.ts`).
+        const machining: GenOp[] = []
+        for (const f of a.files.filter((x) => x.kind === "other" && /\.dxf$/i.test(x.path))) {
+          try {
+            const drawing = readDxf(latin1(await src.read(f.path)))
+            if (!hasMachiningLayers(drawing)) continue
+            const part = partFromFileName(f.path)
+            if (!part) {
+              notes.push(`${baseName(f.path)}: no diu de quina peça és (_porta, _lateral, _tapa…): llegeix-lo a l'editor (Mecanitzats › Llegir un DXF).`)
+              continue
+            }
+            const got = machiningFromDxf(drawing, part, `dxf${machining.length}`)
+            machining.push(...got.ops)
+            notes.push(`${baseName(f.path)}: ${got.ops.length} mecanitzats exactes (${partKindOf(part).label.toLowerCase()}).`, ...got.notes)
+          } catch (e) {
+            notes.push(`${baseName(f.path)}: ${e instanceof Error ? e.message : String(e)}`)
+          }
+        }
+        // Amb els mecanitzats exactes d'un DXF del taller, els forats del STEP no es fan servir (es col·loca a mà).
+        const fromDxf = machining.length > 0 && p.kind !== "model"
+        const proposal: HardwareProposal = fromDxf
+          ? { ...modelProposal(null, []), frame: p.frame, bbox: p.bbox, notes: [...p.notes, "Els forats del STEP no es fan servir: manen els mecanitzats exactes del DXF (es col·loca a mà al moble).", ...notes] }
+          : { ...p, notes: [...p.notes, ...notes] }
+        const withMachining = (it: HardwareItem): HardwareItem => (machining.length ? { ...it, machining } : it)
         const files = articleFileNames(a.files)
         if (!existing.length) {
           const asset = newHardwareAssetId()
           await putHardwareAsset({ id: asset, name: a.label, ...(glb ? { glb } : {}), views, ...(docs.length ? { docs } : {}), createdAt: Date.now() })
-          items.push(articleItem(proposal, a, base, { id: newId("hw"), asset, files, ...(points ? { points } : {}) }))
+          items.push(withMachining(articleItem(proposal, a, base, { id: newId("hw"), asset, files, ...(points ? { points } : {}) })))
           continue
         }
         // Ja hi és: s'amplia cada item de l'article (un asset compartit, un sol cop).
@@ -214,7 +239,7 @@ export async function importArticles(
             })
             if (oldId) written.set(oldId, asset)
           }
-          const fresh = articleItem(proposal, a, base, { id: e.id, asset, files, ...(points ? { points } : {}) })
+          const fresh = withMachining(articleItem(proposal, a, base, { id: e.id, asset, files, ...(points ? { points } : {}) }))
           const withAsset: HardwareItem = e.imported && !e.imported.asset ? { ...e, imported: { ...e.imported, asset } } : e
           const r = mergeImported(withAsset, fresh, !!step)
           if (r.pendingUpdate) pendingUpdates++

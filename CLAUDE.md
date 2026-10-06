@@ -47,7 +47,9 @@ plantes, models 3D i renders són **decoratius**: no s'hi dedica temps mentre el
 - [`docs/ferratges-import.md`](docs/ferratges-import.md): **importar ferratges del fabricant (Hettich)**: estructura de les
   descàrregues, lectors STEP i DXF, proposta de forats, confirmació i col·locació al moble (frontissa + placa, tirador,
   pota; la resta «només 3D»; sense STEP, «només 2D»), tornar a importar (s'amplia l'article, mai es toca un mecanitzat
-  confirmat), noms i sèries, i el pla del que falta (Cadro, portes corredisses i plegables, taules).
+  confirmat), noms i sèries, el pla del que falta (Cadro, portes corredisses i plegables, taules) i, §8, el **generador
+  de mecanitzats**, els **ferratges col·locats a mà**, les capes de mecanitzat dels DXF per peça i **«Com exportar des de
+  TopSolid»** (per al germà).
 
 ## Principi de disseny
 L'usuari dissenya els mobles **des de la UI**, sense tocar codi. El codi defineix **capacitats genèriques** (carcassa,
@@ -311,7 +313,32 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   l'usuari ni la del ZIP (`core/import/hettichNames.ts`: `cleanFolders`, `hettichLabel`, `hettichSeries`); els noms
   automàtics d'abans es migren en llegir les preferències (`migrateImportedNames`, només si no s'han canviat). Tests
   `core/import/merge.test.ts` i `core/import/hettichMerge.roundtrip.test.ts` (`HETTICH_DIR`/`HETTICH2_DIR`/`HETTICH_DXF_DIR`).
-  Detall a `docs/ferratges-import.md` §6–§7.
+  Els mecanitzats del generador (`machining`) també: confirmats no es toquen (pendents a `update.machining`) i un DXF
+  del taller amb capes de mecanitzat és informació nova. Detall a `docs/ferratges-import.md` §6–§7.
+- **Generador de mecanitzats i ferratges col·locats a mà** (millores v1 F4, `docs/ferratges-import.md` §8; per decisió
+  de l'usuari: «selecciones l'eina i el que li ha de fer a la fusta… i que es pugui posar»). Preferències **v22** (additiu):
+  `HardwareItem.machining` = `GenOp[]` (`core/model/hardwareOps.ts`): per peça (`PART_KINDS`: porta/front, lateral, base,
+  tapa/tauler de taula, prestatge, fons, caixa del calaix, peça lliure) forat (cara A/B, passant o **de cantell**), ranura
+  (amplada, al llarg de P o Q, llargada o de cantell a cantell), caixera (rectangle, radi) i contorn (passant, o rectangle
+  si és cec); posició del **centre** en els **eixos del moble** del pla de la peça (`planeAxes`: de cara X·Y, de costat
+  Z·Y, estirada X·Z = P·Q) des del **punt de referència** o d'un cantell / del mig (`Pos`); eina de la màquina per
+  defecte (`GenTool`). `machiningProblems` (pur) valida mides, cantell, contorn i eina (tipus, Ø, amplada, fondària útil);
+  la llista es llegeix **sencera o res** (`MachiningListSchema`, `repairAtomically`). Editar-los en un importat el
+  desconfirma (`setMachining`); un «només 3D» amb mecanitzats es confirma (`confirmProblem`). **Col·locats**
+  (`Composition.hardwarePlacements`, `HardwarePlacementSchema` atòmic: còpia de l'item, `targets` = peça del mòdul
+  (`module` + id local del constructor) o `freePart`, i quin grup de l'item hi va; `p`/`q` del punt de referència;
+  `repeat`; `turn` del model 3D): `core/build/hardwarePlace.ts` (`applyHardwarePlacements`, a `buildComposition` abans dels
+  objectes que tallen; `partFrame`: P·Q des de la normal de la peça i `toLocal`): `Hole` / `Groove` / `Cutout` amb tag
+  `fitting`. **Tot o res** per col·locat (una operació fora de la peça o més fonda que el gruix → cap i avís `hardware`);
+  importat sense confirmar, malmès, «només 3D» sense operacions, operació dolenta, peça que no hi és (res amagat compta) o
+  que no és de CNC → cap forat i avís. Els grups de l'item sense peça triada no es fan (els «mirall» només si es trien).
+  3D: `Panel.fittings` `kind: "item"` (GLB o el volum de les operacions; `hingeVolumes` no el confon amb una frontissa).
+  `eachHardware` els recorre (confirmar/eliminar a Preferències hi passa; `.moble` **v3**, `mobleVersionFor`). **DXF del
+  taller** (`core/import/dxfMachining.ts`): capes `DRILL_D<Ø>_P<f>` (`DRILL_B_…`), `GROOVE_W<a>_P<f>`, `POCKET_P<f>`,
+  `CUT_THROUGH`, `CONTOUR` (el contorn que ho envolta tot no es talla) → operacions exactes; peça pel sufix del nom
+  (`partFromFileName`: `_porta`, `_lateral`, `_tapa`…); en importar (`hardwareImport.ts`) manen sobre el STEP. Tests
+  `core/import/dxfMachining.test.ts`, `build/hardwarePlace.test.ts`, `build/hardwarePlaceExports.test.ts`. **Proves d'or
+  idèntiques.**
 - **Forats que es trobarien per dins** (`build/holeClash.ts`, `resolveHoleClashes`): System 32 a banda i banda d'un divisor
   → tots dos a (T − 1)/2; si un és d'un ferratge (placa, frontissa: `shortenFitting`), primer s'escurça l'altre, sempre amb
   avís `hole-clash` i mai per sota de 8 mm (si no, no es toca i ho diu); espiga de cantell contra un forat de cara →
@@ -595,7 +622,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   - Moble: Resum (i avisos de fusteria), Taulell i sòcol (no als de només peces), Encaixos (si alguna peça en fa),
     Materials de tot el moble (aplica a tots els mòduls), Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
     Preferències»; `CabinetViewer sceneFinish`, `renderThumb(…, finish)`).
-  - Mòdul: Mides · Caixa (abans «Estructura», es confonia amb la pestanya de l'arbre) · Materials · Fusteria (avançat). Posició.
+  - Mòdul: Mides · Caixa (abans «Estructura», es confonia amb la pestanya de l'arbre) · Materials · Fusteria (avançat) ·
+    **Ferratges** (`LuWrench`; col·locats a mà, `composition/HardwarePlacements.tsx` + `placements.ts`: «Afegir ferratge»,
+    i a cada un Ferratge · Peça del mòdul · «Mecanitzats de» (grup de l'item) · posició del punt de referència per eixos ·
+    Repetir · Gir del model · «També: <peça>»; l'avís del ferratge a la seva fila). Posició. La peça lliure (no als
+    objectes) també té «Ferratges».
     Sense Front (el de tot el mòdul és a l'«Interior»). Materials visibles: cos, **fronts**
     (`frontMaterial`, buit = el del cos) i fons.
   - Compartiment (`ZonePanel`): accions com a icones a la capçalera (Pare · Duplicar · Eliminar; a l'«Interior», l'arrel,
@@ -1265,6 +1296,14 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     què s'ha trobat, «Tornar a la proposta»), «Placa de muntatge» (frontisses: triar-ne una o cap, «Placa: del davant» i
     «Placa: alçada») i els forats editables (al llarg, cap a dins des del centre de la cassoleta, Ø, fondària; tocar-los
     torna a deixar l'item sense confirmar).
+  - **Generador de mecanitzats** (`settings/MachiningGenerator.tsx`: `MachiningGenerator` = el formulari a la dreta,
+    `MachiningStage` = el dibuix a l'esquerra sota «Com va muntat», estat compartit `useMachiningUi` a `machiningDraw.ts`):
+    a **qualsevol** ferratge (també «només 3D» i importats). «Peça» (`ChoiceChips` amb el nombre d'operacions), una
+    targeta per operació (Què és · Cara · Cantell · posició P i Q amb «Referència / Des de … / Mig» · Mides · Passant ·
+    Punts · Eina de la màquina per defecte, que posa el Ø o l'amplada), els problemes en vermell, «Afegir mecanitzat» i
+    **«Llegir un DXF…»** (capes del taller). El dibuix: peça d'exemple (`SAMPLE`) en P·Q amb la creu del punt de
+    referència, la vista 2D de l'importat de fons (gir i mirall) i **clic = posar-hi el mecanitzat triat** (s'enganxa als
+    vèrtexs i als centres de cercle de la vista; el punter diu la distància a la referència). Caixa del model u · v · n.
   - **«Com va muntat»** (per decisió de l'usuari: «preview 3D i en pla, amb el panell de com va muntat al moble»;
     `MountPreview` a `HardwarePane`): el ferratge **muntat** en un mòdul petit fet pel **camí de fabricació de sempre**
     (`core/build/hardwareMount.ts`, `hardwareMount(item, base)`: `buildModule` amb l'item al seu lloc del joc; el mòdul
@@ -1296,7 +1335,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Visor 3D**: qualitat, escena de Presentació (terra i paret: materials de la biblioteca, `PresentationScene.floorMaterial`
   / `wallMaterial`, o les mostres ràpides; terra per defecte «Parquet de roure»), llum i «Cel del render». **Tema**:
   dia/nit/sistema i color principal (`theme/accent.ts` redirigeix les variables CSS de `wood`).
-- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 21: tiradors, potes i «només 3D» importats; 20: ferratges importats; 19: biblioteca de ferratges): les migracions depenen només de la versió
+- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 22: generador de mecanitzats; 21: tiradors, potes i «només 3D» importats; 20: ferratges importats; 19: biblioteca de ferratges): les migracions depenen només de la versió
   desada, que **mai baixa** (`saveSettings` desa la més alta). **Desades per una versió més nova**: només lectura
   (`saveSettings` torna `false` amb `console.warn`; `loadSettings` avisa). **Lectura camp a camp** (`repairValue`,
   `core/model/repair.ts`): un valor dolent d'una secció només torna aquell valor a l'inicial (un tauler o una llargada de guia
@@ -1454,8 +1493,9 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   `false`; l'Editor no desa i avisa). Peces, Nesting i Exportar mostren l'error (`UnreadableAlert`, `useCompositionRead`) i
   no fan res, i el `.moble` no es desa (`projectToMoble` llança `UNREADABLE_COMPOSITION`). L'Editor avisa del que s'ha tret.
   Les parets dels ambients (`parseAmbient`) també: una obertura o un material dolents no treuen la paret.
-- **Fitxer `.moble`** (`core/file/mobleFile.ts`, JSON versionat amb foto opcional; **v2 només si porta ferratges
-  importats** (`usesImportedHardware`): una app d'abans el rebutja en lloc de treure'n `imported`; sense, v1; `parseMobleFile` fa la mateixa reparació i
+- **Fitxer `.moble`** (`core/file/mobleFile.ts`, JSON versionat amb foto opcional; **v3 si porta ferratges col·locats a
+  mà** (`usesHardwarePlacements`), **v2 si porta ferratges importats** (`usesImportedHardware`): una app d'abans el
+  rebutja en lloc de treure'n `imported` o els col·locats; sense, v1 (`mobleVersionFor`); `parseMobleFile` fa la mateixa reparació i
   treu amb un avís el nesting, el calibratge de la foto (camp a camp) i les referències malmesos). Porta la càmera i els models
   de l'usuari que fa servir. El calibratge (`FileCalibrationSchema`) té els mateixos camps que `PhotoCalibration` (un test ho
   comprova en compilar). `updateProjectPhoto` no desa un calibratge d'una foto que ja no hi és.
@@ -1523,6 +1563,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Preferències | Visualització · Ferratges (i Fusteria a l'inspector) · Calaixos · System 32 · Cassoleta · Imants | `LuScanEye` · `LuHammer` · `LuArchive` · `LuCircleDot` · `LuCircleDashed` · `LuMagnet` |
 | Ferratges (categories) | Frontisses · Plaques · Guies · Elevables i abatibles · Unions · Suports de prestatge · Potes · Taules · Portes corredisses i plegables · Tiradors · Pressió i imants · Perfils i marcs · Penjar · Altres | `LuCircleDashed` · `LuSquareDot` · `LuArchive` · `LuPanelBottom` · `LuBolt` · `LuCircleDot` · `LuFootprints` · `LuTable` · `LuDoorOpen` · `LuGripHorizontal` · `LuMagnet` · `LuMinus` · `LuAnchor` · `LuPackage` |
 | Ferratges | Baixar el model 3D (.glb) d'un importat · Baixar un plànol de muntatge | `LuBoxes` · `LuFileDown` |
+| Ferratges | Generador: Afegir mecanitzat · Llegir un DXF… · Treure · Ferratges col·locats a mà (inspector del mòdul i de la peça; la de «Ferratges» del visor) | `LuPlus` · `LuFileUp` · `LuTrash2` · `LuWrench` |
 | Preferències | Visor 3D (els materials per defecte als mòduls nous porten la de Materials, `LuPalette`) | `LuLampFloor` |
 | Fitxer | Desar com a fitxer · Obrir fitxer · Pujar un fitxer (preferències) | `LuSave` · `LuFolderOpen` · `LuUpload` |
 | Models 3D | Triar fitxers… · Triar carpeta… (importar un model) · Afegir les textures a Materials | `LuFileUp` · `LuFolderOpen` · `LuPalette` |

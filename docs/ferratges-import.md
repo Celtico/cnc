@@ -22,11 +22,11 @@ Un ZIP per família i format. Dins, carpetes per tipus **en alemany** i un fitxe
 | `3DS_Scharniere.zip` | `.3ds` | No (el 3D surt del STEP) |
 | `dxf_einbau.zip` | Seccions de muntatge acotades (DXF + PDF) per família; les de `Zubehoer/<art>_KB_2d/` nomenen articles al nom (`…_79349_79350_9072231.dxf`) | **Plànols de muntatge**: s'adjunten als articles que nomenen (§6) |
 | `Anschlagloesungen_2D_Sensys.zip` | Exemples d'aplicació (seccions) | Igual, si nomenen algun article (la majoria no: no s'adjunten) |
-| `STEP_Schubkastensysteme.zip` (271 MB) | Calaixos i guies (conjunts sencers: guies, laterals, fronts, accessoris) | «Calaix o guia», **només 3D** (§8) |
+| `STEP_Schubkastensysteme.zip` (271 MB) | Calaixos i guies (conjunts sencers: guies, laterals, fronts, accessoris) | «Calaix o guia», **només 3D** (§9) |
 | `STEP_Griffe.zip` (10 MB, 765 `.stp`) | Tiradors i poms per família (`Classic`, `Deluxe`, `Folk`, `Modern`, `Natural`, `New_Modern`, `Organic`, `Touch_In`, `Exclusive_Designgriffe`) i `Zubehoer` | **Tiradors**: la distància entre forats del STEP (§2) |
 | `STEP_Tischgestelle_-beine_Moebelfuesse_Tischausziehfuehrungen.zip` (5 MB) | Potes (`Aluminium_Moebelfuesse`, `Stahl_Moebelfuesse`, `Tischbeine_Moebelfuesse`), estructures de taula (`Change`, `LegaDrive`, `LegaMove`, `Steelforce/…`), guies de taula (`Trimanis`), electrònica i accessoris | **Potes**: forats de la placa (§2); la resta, només 3D |
-| `STEP_Cadro_Aluminiumrahmensystem.zip` (0,7 MB, 70) | Marc d'alumini per a portes de vidre | Només 3D (§8) |
-| `STEP_Schiebetuersysteme.zip` (94 MB, ~940) · `STEP_Falttuersysteme.zip` (22 MB, ~170) | Portes corredisses (perfils, carros, guies) i plegables (WingLine) | Només 3D (§8) |
+| `STEP_Cadro_Aluminiumrahmensystem.zip` (0,7 MB, 70) | Marc d'alumini per a portes de vidre | Només 3D (§9) |
+| `STEP_Schiebetuersysteme.zip` (94 MB, ~940) · `STEP_Falttuersysteme.zip` (22 MB, ~170) | Portes corredisses (perfils, carros, guies) i plegables (WingLine) | Només 3D (§9) |
 
 **Tot es pot importar**: el que no té cap regla de mecanitzat a l'app, o del qual no es troba el patró de forats, entra com
 a **«només 3D»** (motor `model`): el model (GLB) i el volum, **mai cap forat**. Sense STEP però amb les vistes DXF, entra
@@ -165,7 +165,7 @@ simplificades (Douglas–Peucker 0,02 mm, centèsimes: unes desenes de kB per vi
 (`registerView`): de les 8 orientacions d'eixos, la que fa caure els seus cercles sobre els forats proposats (error mitjà
 < 0,5 mm). A les frontisses, la frontal hi encaixa i l'editor la posa de fons sota els forats; a les plaques sovint no
 (els forats hi són traus). Els `CONNECTIONPOINTS` (tres punts per vista, els mateixos girats a cada vista) es desen tal
-com venen a l'item (`imported.points`); de moment no fan res (vegeu §8).
+com venen a l'item (`imported.points`); de moment no fan res (vegeu §9).
 
 ## 4. Model de dades (preferències v20 i v21, additiu)
 
@@ -314,6 +314,12 @@ que ja és a la biblioteca **s'amplia** (`core/import/merge.ts`, `mergeImported`
   porta «Proposta nova». El mateix si l'item no està confirmat però se n'han editat els forats (`isUnedited`); si no
   s'ha editat, els forats nous directament (sense confirmar). La placa aparellada es queda. Una proposta nova que no troba
   el patró (només 3D) no treu els forats d'un que en té.
+- **Mecanitzats del generador** (`machining`, §8): un **DXF del taller per peça** (`<art>_porta.dxf` amb capes de
+  mecanitzat) és informació nova (el diàleg diu «mecanitzats del DXF del taller»). Un item sense confirmar i sense
+  mecanitzats els rep (sense confirmar); si ja en té uns altres, o està confirmat, **no es toquen**: van a
+  `imported.update.machining` i l'avís «Hi ha una proposta nova» els compara; aplicar-los el deixa sense confirmar (si
+  només canvien els mecanitzats, els forats d'ara es queden). Un import sense mecanitzats nous conserva els que hi havia
+  (també quan un «només 2D» passa a tenir el STEP). Un «només 3D» confirmat (amb mecanitzats) no es reemplaça.
 - Un importat **malmès** es torna a fer amb el nou (mateix id i nom, sense confirmar).
 - **Dins d'un mateix lot**, els fitxers del mateix article de diversos ZIP (STEP + DWG/DXF deixats alhora) ja van junts
   (`groupHettich`). El diàleg diu a cada fila si és **«Nou»** o «Ja existeix · s'hi afegeix: 3D i forats proposats, vistes
@@ -346,7 +352,113 @@ perfil SlideLine 55 9060402 fa 1560 × 12,5 × 6,5).
   mm (sprites de mida constant, no `Html`), i la resta de la caixa fina. Al resum de la targeta, «1560 × 12,5 × 6,5 mm».
 - **Només 2D** (sense STEP): la targeta mostra la vista frontal del DXF (no hi ha 3D) i l'editor ho explica.
 
-## 8. Pendent
+## 8. Generador de mecanitzats i ferratges col·locats a mà
+
+> Petició de l'usuari: «No podem saber les mides del 3D? Es podria fer un generador de mecanitzat: selecciones l'eina i
+> el que li ha de fer a la fusta per mecanitzar la peça i que es pugui posar». Per als «només 3D» (i qualsevol altre
+> ferratge) que no tenen cap regla de l'app: les mides les diu l'usuari (o un DXF del taller) i el ferratge es col·loca
+> a mà a la peça del moble.
+
+**Generador** (Preferències › Ferratges › editor del ferratge, secció «Generador de mecanitzats»; preferències **v22**,
+additiu: `HardwareItem.machining`, `core/model/hardwareOps.ts`). Per a cada **peça** (`PART_KINDS`: porta / front ·
+lateral · base · tapa / tauler de taula · prestatge · fons · caixa del calaix · peça lliure), una llista d'operacions
+(`GenOp`):
+
+- **Forat** (Ø, fondària, passant) a la cara A o B, o **de cantell** (cantell de davant, de dalt…; a mig gruix).
+- **Ranura** (amplada, fondària, al llarg de quin eix, llargada o **de cantell a cantell**, passant).
+- **Caixera** (rectangle al llarg × a través, fondària, radi de les cantonades: el fa la fresa, ha de ser ≥ Ø/2).
+- **Contorn** (punts, tancat): passant (un tall amb forma) o, si no ho és, un rectangle (la peça no té fresats cecs en
+  corba).
+- **On**: el centre, en el pla de la peça amb els **eixos del moble** (`partAxes`: de cara X·Y, de costat Z·Y, estirada
+  X·Z), des del **punt de referència** del ferratge (on es col·loca) o des d'un **cantell** (de l'esquerra, de davant,
+  de dalt…) o del mig.
+- **Eina**: les broques i freses muntades de la màquina per defecte (`toolLabel` «codi · nom · Ø»): la broca dona el Ø, la
+  fresa l'amplada de la ranura (o el radi de la caixera); es comprova que hi cap i que arriba a la fondària (fondària útil).
+- **Validació** pura (`machiningProblems`): mides, cantell, contorn, eina; amb algun problema el ferratge no fa res i no es
+  pot confirmar. En llegir les preferències o un moble, una llista d'operacions dolenta es treu **sencera**
+  (`repairAtomically`): mai mig ferratge.
+- A l'esquerra, sota el 3D (amb les mides de la caixa del model u · v · n): el **dibuix** d'una peça d'exemple amb la creu
+  del punt de referència, les operacions (cara B discontínua) i de fons la vista 2D del fitxer (girada i en mirall si
+  cal). **Un clic al dibuix posa el mecanitzat triat** en aquell punt (s'enganxa als vèrtexs de la vista i als centres dels
+  cercles); el punter diu la distància a la referència.
+- **Importats**: tocar-ne els mecanitzats els deixa **sense confirmar**; fins que es confirmen no fan cap forat. Un
+  «només 3D» amb mecanitzats es pot confirmar (sense, continua sense cap forat i no cal confirmar-lo).
+
+**Col·locar-lo al moble** (Editor › mòdul › «Ferratges», o peça lliure › «Ferratges»; `Composition.hardwarePlacements`,
+`core/build/hardwarePlace.ts`): «Afegir ferratge» → el ferratge (els de la biblioteca amb mecanitzats o «només 3D») → la
+peça del mòdul (Lateral esquerre, Sostre, Base, Fons, Prestatge…) i quin grup de mecanitzats de l'item li toca → on va
+el punt de referència (des d'un cantell o del mig, amb els eixos de la peça) → repetició opcional (n còpies cada x mm al
+llarg d'un eix) → el gir del model 3D. Els altres grups de l'item (p. ex. la ranura de la base d'una porta corredissa)
+**només es fan si es tria expressament** la peça («També: Base»). Es guarda una **còpia** de l'item, com els mòduls
+(confirmar o eliminar a Preferències hi passa, `replaceHardwareEverywhere`).
+
+- **Tot o res** per ferratge col·locat: si una operació no cap sencera a la peça (fora del rectangle o del contorn, més
+  fonda que el gruix, un forat de cantell fora del cantell), **cap** de les seves operacions a cap peça, i avís
+  `hardware` a «Avisos de fusteria» i a la fila del ferratge. També sense cap forat (i avís): importat sense confirmar,
+  malmès, «només 3D» sense operacions, una operació dolenta, o la peça que ja no hi és (res amagat compta: un fons
+  apagat, un mòdul esborrat) o que no és de CNC.
+- Acaba en `Hole` (cara A/B o de cantell), `Groove` (ranures i caixeres cegues) i `Cutout` (passants: cercle, rectangle,
+  polígon) amb l'etiqueta `fitting`: **DXF, .xcs, STEP i CSV sense cap canvi** (els forats de la cara B fan la 2a cara;
+  `hardwarePlaceExports.test.ts`). Sense ferratges col·locats, el moble és idèntic (**proves d'or sense canvis**).
+- **3D** (Opcions de vista › Ferratges): el model (GLB de l'importat) o, sense, un volum de l'extensió de les operacions,
+  al punt de referència de cada còpia (`Panel.fittings`, `kind: "item"`), amb l'eix v al llarg del segon eix de la peça
+  (girat amb «Gir del model»).
+- **`.moble` v3** (`MOBLE_PLACEMENTS_VERSION`): un moble amb ferratges col·locats es desa com a v3 (una app d'abans els
+  trauria en silenci); amb importats i sense col·locats, v2; si no, v1.
+
+Proves: `core/model` i `core/import/dxfMachining.test.ts` (validació, capes, noms de fitxer), `core/build/hardwarePlace.test.ts`
+(cara A/B, cantell, ranura de cantell a cantell, passant, repetició, fora de la peça → cap, importat sense confirmar,
+«només 3D» sense operacions, peça que no hi és, peça lliure, grups de l'item només si es trien, gir del model, lectura
+atòmica, migració idempotent, `.moble` v3) i `hardwarePlaceExports.test.ts` (DXF, .xcs, STEP, CSV).
+
+### Mecanitzats exactes d'un DXF per peça (capes del taller)
+
+Un DXF d'una peça amb les **capes del nostre export DXF** (`core/import/dxfMachining.ts`) dona les operacions exactes,
+sense endevinar res. En importar (al costat del STEP, mateix número: `70147.stp` + `70147_tapa.dxf`) **manen sobre els
+forats que s'endevinen del STEP** (l'item passa a «només 3D» amb aquests mecanitzats, sense confirmar); a l'editor,
+«Llegir un DXF…» els posa a la peça del nom del fitxer o, si no en diu cap, a la peça triada (substitueix les seves).
+
+| Capa | Entitats | Operació |
+|---|---|---|
+| `DRILL_D<Ø>_P<fondària>` (cara A) · `DRILL_B_D…_P…` (cara B) | cercles | forat cec amb el Ø de la capa |
+| `GROOVE_W<amplada>_P<fondària>` · `GROOVE_B_…` | rectangle tancat, o línia central (fa la llargada + l'amplada) | ranura |
+| `POCKET_P<fondària>` · `POCKET_B_P…` | rectangle tancat | caixera |
+| `CUT_THROUGH` | cercles (forat passant) i polilínies tancades | tall passant |
+| `CONTOUR` | polilínies tancades | tall passant; la més gran, si ho envolta tot, és el contorn de la peça i no es talla |
+
+Decimals amb `_` (`P17_5` = 17,5 mm). No es llegeixen (i es diu): forats de cantell (`DRILL_H_…`), ranures en diagonal,
+caixeres que no són rectangles.
+
+### Com exportar des de TopSolid
+
+*(Per passar-ho al germà.)* Per a cada ferratge que no té regla a l'app (perfil de porta corredissa, estructura de taula,
+accessori…), dos tipus de fitxers amb el **mateix número de referència** al davant del nom (només xifres, p. ex.
+`70147`):
+
+1. **El 3D: `70147.stp`** — STEP **AP214**, en **mil·límetres**, del ferratge sol. L'**origen** (0, 0, 0) al **punt de
+   referència de muntatge** (el punt que es col·locarà a la peça: el centre del forat principal, l'extrem del perfil, el
+   centre de la placa…). Eixos: **Z cap enfora** de la cara de la peça on va muntat, **Y** al llarg del segon eix de la
+   peça (amunt en una porta o un lateral, cap al davant en una tapa, una base o un prestatge), **X** el que queda
+   (regla de la mà dreta). Si no quadra, a l'app es pot girar el model (només el 3D).
+2. **Els mecanitzats: un DXF per peça que es mecanitza**, `70147_<peça>.dxf` amb `<peça>` = `porta`, `lateral`, `base`,
+   `tapa`, `prestatge`, `fons`, `calaix` o `peca` (peça lliure). Dins:
+   - Vista de la peça **amb els eixos del moble**: X cap a la dreta (en un lateral, cap al davant) i Y cap amunt (en una
+     tapa, base o prestatge, cap al davant). **Origen al mateix punt de referència** que el STEP. Mil·límetres.
+   - Cada mecanitzat a la capa que diu què és, com les capes del DXF que treu l'app:
+     - forats: cercles a `DRILL_D5_P12` (Ø 5, fondària 12) a la cara A, `DRILL_B_D5_P12` a la cara B; un forat que
+       travessa, cercle a `CUT_THROUGH`;
+     - ranures: el rectangle de la ranura (o la línia del centre) a `GROOVE_W8_P10` (amplada 8, fondària 10);
+     - caixeres (buidats rectangulars): el rectangle a `POCKET_P12`;
+     - talls que travessen: el contorn tancat a `CUT_THROUGH`;
+     - els decimals amb guió baix: `DRILL_D8_P17_5`.
+   - **Cara A** = la cara de dins del moble (la que mecanitza la CNC: sota a la tapa, dalt a la base, dins als laterals i
+     a les portes, davant al fons). Els forats de cantell no es llegeixen del DXF: s'entren a mà a l'app.
+   - El contorn de la peça a la capa `CONTOUR` és opcional (si envolta tot el dibuix, no es talla).
+3. Passar-ho junt (els fitxers o un ZIP) a Preferències › Ferratges › «Importar del fabricant». Entren **sense
+   confirmar**: es revisen al dibuix del generador i es confirmen; després, al moble: mòdul › «Ferratges» › «Afegir
+   ferratge».
+
+## 9. Pendent
 
 Plans per als «només 3D» d'ara (cap regla encara; el que caldria per fer-ne els forats):
 

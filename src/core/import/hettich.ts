@@ -177,5 +177,7 @@ export function groupHettich(files: HettichFile[], known?: ReadonlyMap<string, r
 /** Vol dir que el fitxer pot ser d'una descàrrega de Hettich (per no llegir la resta d'una carpeta). */
 export const hettichCandidate = (path: string): boolean => {
   const k = hettichFileKind(path)
-  return k !== "other" && (hettichArticle(path) !== null || (isRefKind(k) && refArticles(path).length > 0))
+  // Amb número d'article: també els DXF del taller per peça (`<art>_porta.dxf`, capes de mecanitzat; tipus `other`).
+  if (hettichArticle(path) !== null) return k !== "other" || /\.dxf$/i.test(path)
+  return isRefKind(k) && refArticles(path).length > 0
 }
