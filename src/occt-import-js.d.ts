@@ -12,6 +12,7 @@ declare module "occt-import-js" {
   }
   export interface Occt {
     ReadStepFile(content: Uint8Array, params: Record<string, unknown> | null): OcctResult
+    ReadIgesFile(content: Uint8Array, params: Record<string, unknown> | null): OcctResult
   }
   const occtimportjs: (module?: { locateFile?: (path: string) => string }) => Promise<Occt>
   export default occtimportjs

@@ -4,13 +4,16 @@ import { LuUpload } from "react-icons/lu"
 import { ChoiceChips } from "../../components/FormRow"
 import { SearchBar } from "../../components/SearchBar"
 import type { HettichArticle, ImportKind } from "../../core/import/hettich"
+import { FILE_SOURCE, makerOf } from "../../core/import/makers"
 import { mergeText, type MergePreview } from "../../core/import/merge"
 import { fold } from "../projects/galleryGrid"
 
 /** Quants articles es llisten alhora (un ZIP sencer en porta ~1000: es filtra amb la cerca). */
 const MAX_ROWS = 250
 
-type Filter = "all" | ImportKind
+/** `xilog`: els que porten un programa Xilog (mecanitzats exactes). */
+type Filter = "all" | ImportKind | "xilog"
+const hasPgm = (a: HettichArticle) => a.files.some((f) => f.kind === "pgm")
 
 /** Els tipus del filtre, en aquest ordre (només surten els que hi són). */
 const KINDS: { id: ImportKind; one: string; many: string; chip: string }[] = [
@@ -22,13 +25,16 @@ const KINDS: { id: ImportKind; one: string; many: string; chip: string }[] = [
   { id: "none", one: "no es pot importar", many: "no es poden importar", chip: "No es poden importar" },
 ]
 
-const FILE_LABEL: Record<string, string> = { step: "STEP", front: "frontal", side: "lateral", top: "planta", dxf3d: "DXF 3D", dwg: "DWG", "3ds": "3DS", pdf: "PDF", ref: "plànol de muntatge", other: "altres" }
+/** Les fonts d'un article: «STEP», «DXF», «PGM (Xilog)»… (les vistes 2D i el DXF del taller, «DXF»). */
+const sourceLabel = (k: string) => FILE_SOURCE[k as keyof typeof FILE_SOURCE] ?? (k === "other" ? "DXF" : k)
+/** Les fonts que es fan servir (en color); la resta (DWG, DXF 3D, SAT, MAX, altres CAM) no es llegeixen. */
+const USED = new Set(["STEP", "IGES", "3DS", "DAE", "PGM (Xilog)", "DXF", "PDF", "PDF / plànol"])
 
 /** «585 tiradors, 74 poms i 88 només 3D es poden importar»: els comptes per tipus. */
-function importSummary(counts: Partial<Record<ImportKind, number>>): string {
-  const parts = KINDS.filter((k) => k.id !== "none" && counts[k.id]).map((k) => `${counts[k.id]} ${counts[k.id] === 1 ? k.one : k.many}`)
+function importSummary(counts: Partial<Record<ImportKind, number>>, xilog = 0): string {
+  const parts = [...(xilog ? [`${xilog} amb mecanitzats exactes (Xilog)`] : []), ...KINDS.filter((k) => k.id !== "none" && counts[k.id]).map((k) => `${counts[k.id]} ${counts[k.id] === 1 ? k.one : k.many}`)]
   const can = parts.length ? `${parts.length > 1 ? `${parts.slice(0, -1).join(", ")} i ${parts.at(-1)}` : parts[0]} es poden importar` : "cap es pot importar"
-  return counts.none ? `${can} · ${counts.none} ${counts.none === 1 ? KINDS.at(-1)!.one : KINDS.at(-1)!.many} (sense STEP ni vistes DXF)` : can
+  return counts.none ? `${can} · ${counts.none} ${counts.none === 1 ? KINDS.at(-1)!.one : KINDS.at(-1)!.many} (sense cap fitxer que es llegeixi)` : can
 }
 
 /**
@@ -40,6 +46,7 @@ function importSummary(counts: Partial<Record<ImportKind, number>>): string {
 export function HardwareImportDialog({
   articles,
   fileCount,
+  loose = [],
   busy,
   progress,
   analyse,
@@ -49,6 +56,8 @@ export function HardwareImportDialog({
 }: {
   articles: HettichArticle[] | null
   fileCount: number
+  /** Fitxers sense article (no s'importen): es diuen a sota. */
+  loose?: string[]
   busy: boolean
   progress: { done: number; total: number } | null
   /** Què farà de debò un article (llegint el STEP): la nota de la fila. */
@@ -64,16 +73,19 @@ export function HardwareImportDialog({
   const list = useMemo(() => articles ?? [], [articles])
   const counts = useMemo(() => {
     const c: Partial<Record<ImportKind, number>> = {}
-    for (const a of list) c[a.kind] = (c[a.kind] ?? 0) + 1
+    // Els que porten un programa Xilog es compten a part (no són «només 3D»: tenen mecanitzats exactes).
+    for (const a of list) if (!(a.kind === "model" && hasPgm(a))) c[a.kind] = (c[a.kind] ?? 0) + 1
     return c
   }, [list])
   const merges = useMemo(() => new Map(list.map((a) => [a.article, merge?.(a) ?? null])), [list, merge])
   const existing = [...merges.values()].filter(Boolean).length
   const q = fold(query.trim())
   const shown = useMemo(
-    () => list.filter((a) => (filter === "all" || a.kind === filter) && (!q || fold(`${a.article} ${a.label} ${a.group} ${a.folders.join(" ")}`).includes(q))),
+    () => list.filter((a) => (filter === "all" || (filter === "xilog" ? hasPgm(a) : a.kind === filter && !(filter === "model" && hasPgm(a)))) && (!q || fold(`${a.article} ${a.label} ${a.group} ${a.folders.join(" ")} ${makerOf(a)}`).includes(q))),
     [list, filter, q],
   )
+  const makers = useMemo(() => [...new Set(list.map(makerOf))], [list])
+  const xilog = useMemo(() => list.filter(hasPgm).length, [list])
   const visible = useMemo(() => shown.slice(0, MAX_ROWS), [shown])
   // Notes calculades (llegint el STEP) dels tiradors i les potes que es veuen, de mica en mica.
   const [notes, setNotes] = useState<Record<string, string>>({})
@@ -124,7 +136,7 @@ export function HardwareImportDialog({
               <Stack gap={0.5}>
                 <Dialog.Title>Importar del fabricant</Dialog.Title>
                 <Text fontSize="sm" color="fg.muted">
-                  Hettich · {list.length} articles en {fileCount} fitxers · {importSummary(counts)}
+                  {makers.join(" · ") || "Fabricant"} · {list.length} articles en {fileCount} fitxers · {importSummary(counts, xilog)}
                   {existing ? ` · ${existing} ja ${existing === 1 ? "és" : "són"} a la biblioteca (s'hi afegeix el que falti)` : ""}
                 </Text>
               </Stack>
@@ -137,7 +149,11 @@ export function HardwareImportDialog({
                     label="Tipus"
                     value={filter}
                     onChange={setFilter}
-                    options={[{ id: "all" as Filter, label: `Tots (${list.length})` }, ...KINDS.filter((k) => counts[k.id]).map((k) => ({ id: k.id as Filter, label: `${k.chip} (${counts[k.id]})` }))]}
+                    options={[
+                      { id: "all" as Filter, label: `Tots (${list.length})` },
+                      ...(xilog ? [{ id: "xilog" as Filter, label: `Mecanitzats exactes (${xilog})` }] : []),
+                      ...KINDS.filter((k) => counts[k.id]).map((k) => ({ id: k.id as Filter, label: `${k.chip} (${counts[k.id]})` })),
+                    ]}
                   />
                   <HStack gap={1}>
                     <Button size="xs" variant="ghost" disabled={!selectable.length} onClick={() => setPicked((s) => new Set([...s, ...selectable.map((a) => a.article)]))}>
@@ -160,6 +176,11 @@ export function HardwareImportDialog({
                           <Checkbox.Label flex={1} minW={0}>
                             <Stack gap={0.5} minW={0}>
                               <HStack gap={2} minW={0}>
+                                {makers.length > 1 || makerOf(a) !== "Hettich" ? (
+                                  <Badge size="xs" variant="outline" flexShrink={0} data-testid={`hw-maker-${a.article}`}>
+                                    {makerOf(a)}
+                                  </Badge>
+                                ) : null}
                                 <Text as="span" fontFamily="mono" fontSize="sm">
                                   {a.article}
                                 </Text>
@@ -181,9 +202,17 @@ export function HardwareImportDialog({
                                 {a.group}
                               </Text>
                               <HStack gap={1} wrap="wrap">
-                                {[...new Set(a.files.map((f) => f.kind))].map((k) => (
-                                  <Badge key={k} size="xs" variant={k === "step" ? "solid" : "subtle"} colorPalette={k === "step" ? "wood" : "gray"}>
-                                    {FILE_LABEL[k]}
+                                {[...new Set(a.files.map((f) => sourceLabel(f.kind)))].map((k) => (
+                                  <Badge
+                                    key={k}
+                                    size="xs"
+                                    variant={k === "STEP" || k === "PGM (Xilog)" ? "solid" : "subtle"}
+                                    colorPalette={k === "STEP" || k === "PGM (Xilog)" ? "wood" : "gray"}
+                                    opacity={USED.has(k) ? 1 : 0.6}
+                                    title={USED.has(k) ? undefined : "No es llegeix"}
+                                    data-testid={`hw-src-${a.article}-${k.split(" ")[0]}`}
+                                  >
+                                    {k}
                                   </Badge>
                                 ))}
                                 {/* Ja existeix: el que diu la fila d'abans («s'hi afegeix…»); la nota de què es farà és la d'un de nou. */}
@@ -205,6 +234,13 @@ export function HardwareImportDialog({
                     </Text>
                   )}
                 </Stack>
+                {loose.length > 0 && (
+                  <Text fontSize="xs" color="fg.muted" data-testid="hw-loose">
+                    {loose.length} {loose.length === 1 ? "fitxer" : "fitxers"} sense article (no s'adjunten a cap ferratge):{" "}
+                    {loose.slice(0, 8).map((p) => p.split("/").pop()).join(", ")}
+                    {loose.length > 8 ? "…" : ""}
+                  </Text>
+                )}
                 {shown.length > visible.length && (
                   <Text fontSize="xs" color="fg.muted">
                     … i {shown.length - visible.length} més: afina la cerca.
@@ -216,7 +252,8 @@ export function HardwareImportDialog({
                   patró de forats) entra com a <strong>només 3D</strong>: el model, mai cap forat; sense STEP, amb les vistes DXF, «només 2D» fins que s'hi afegeixi el STEP. Un
                   article que <strong>ja és a la biblioteca</strong> no es repeteix: s'hi afegeix el que porta de nou (el 3D, les vistes, els plànols de muntatge) i
                   mai es toquen els forats confirmats (si els fitxers en donen uns altres, l'editor ho diu per revisar-ho). Les frontisses s'aparellen amb la placa
-                  del lot si n'hi ha una.
+                  del lot si n'hi ha una. De <strong>Blum</strong>, el programa <strong>Xilog (*.pgm)</strong> dona els mecanitzats exactes (el Ø, la fondària i la
+                  posició des del punt de referència del producte): entren sense confirmar i es col·loquen a mà a la peça.
                 </Text>
               </Stack>
             </Dialog.Body>

@@ -1,5 +1,6 @@
 import { deepEqual, evalExpr, isDamagedImport, isPendingImport, machiningProblems, type HardwareItem, type HardwareTarget, type MachiningOp } from "../model"
 import type { HettichArticle } from "./hettich"
+import { makerOf } from "./makers"
 import { modelProposal, proposeHandle, proposeHinge, proposeLeg, proposePlate, type HardwareProposal } from "./proposal"
 import type { StepFeatures } from "./stepGeometry"
 
@@ -36,7 +37,7 @@ const emptyBox = (b: HardwareProposal["bbox"]) => [...b.min, ...b.max].every((v)
 
 function source(art: HettichArticle, p: HardwareProposal, targets: HardwareTarget[], x: ImportedExtras): NonNullable<HardwareItem["imported"]> {
   return {
-    maker: "Hettich",
+    maker: makerOf(art),
     article: art.article,
     folders: art.folders,
     files: x.files,
@@ -63,7 +64,7 @@ export function hingeItem(p: HardwareProposal, art: HettichArticle, base: Hardwa
     category: "hinge",
     engine: "cup",
     ...(art.tags.length ? { tags: [...art.tags] } : {}),
-    maker: "Hettich",
+    maker: makerOf(art),
     ref: art.article,
     params: { ...base.params, cupDiameter: cup?.d ?? base.params.cupDiameter ?? 35, cupDepth: cup?.depth ?? base.params.cupDepth ?? 13 },
     ...(base.count ? { count: structuredClone(base.count) } : {}),
@@ -83,7 +84,7 @@ export function plateItem(p: HardwareProposal, art: HettichArticle, x: ImportedE
     category: "plate",
     engine: "plate",
     ...(art.tags.length ? { tags: [...art.tags] } : {}),
-    maker: "Hettich",
+    maker: makerOf(art),
     ref: art.article,
     params: { setback: 37, offset: 0 },
     targets,
@@ -114,7 +115,7 @@ export function handleItem(p: HardwareProposal, art: HettichArticle, base: Hardw
     category: "handle",
     engine: "barHandle",
     ...(art.tags.length ? { tags: [...art.tags] } : {}),
-    maker: "Hettich",
+    maker: makerOf(art),
     ref: art.article,
     params: { margin: base.params.margin ?? 3, inset: base.params.inset ?? 40, diameter: p.holes[0]?.d ?? base.params.diameter ?? 5 },
     pitch: { steps: [], else: num(dist) },
@@ -134,7 +135,7 @@ export function legItem(p: HardwareProposal, art: HettichArticle, x: ImportedExt
     category: "leg",
     engine: "leg",
     ...(art.tags.length ? { tags: [...art.tags] } : {}),
-    maker: "Hettich",
+    maker: makerOf(art),
     ref: art.article,
     params: { inset: 50 },
     targets,
@@ -156,7 +157,7 @@ export function modelItem(p: HardwareProposal, art: HettichArticle, x: ImportedE
     category: art.category,
     engine: "model",
     ...(art.tags.length ? { tags: [...art.tags] } : {}),
-    maker: "Hettich",
+    maker: makerOf(art),
     ref: art.article,
     params: {},
     targets,
@@ -274,6 +275,7 @@ export function confirmProblem(item: HardwareItem, library: readonly HardwareIte
   // Generador de mecanitzats: una operació dolenta no es confirma (mai faria cap forat).
   const gen = machiningProblems(item.machining ?? [])
   if (gen.length) return `Mecanitzats: ${gen[0]!.message}`
+  if (item.machining?.some((o) => o.part === "any")) return "Hi ha mecanitzats sense assignar: tria a quina peça van (Generador de mecanitzats › Peça «Sense assignar» › Assignar a)."
   if (item.engine === "model" && !item.machining?.length) return "És només 3D: no fa cap forat (no cal confirmar-lo). Si hi afegeixes mecanitzats (generador), s'haurà de confirmar."
   if (item.engine === "plate" && !item.targets.find((t) => t.key === "side")?.ops.length) return "La placa no té cap forat: entra'ls a mà (Mecanitzats)."
   if (item.engine === "leg" && !item.targets.find((t) => t.key === "base")?.ops.length) return "La pota no té cap forat: entra'ls a mà (Mecanitzats)."

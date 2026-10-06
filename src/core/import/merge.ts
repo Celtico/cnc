@@ -1,5 +1,6 @@
 import { deepEqual, isDamagedImport, type HardwareItem, type HardwareTarget } from "../model"
-import { hettichFileKind, isRefKind, VIEW_KINDS, type HettichArticle, type HettichFile } from "./hettich"
+import { isRefKind, VIEW_KINDS, type HettichArticle, type HettichFile } from "./hettich"
+import { importFileKind, makerOf } from "./makers"
 import { holeParams } from "./importItem"
 
 /**
@@ -18,7 +19,7 @@ export function importedMatches(library: readonly HardwareItem[], maker: string,
 
 /** Què hi ha als fitxers d'un item (pels noms desats a `imported.files`). */
 function kindsOf(item: HardwareItem): Set<string> {
-  return new Set((item.imported?.files ?? []).map((n) => hettichFileKind(n)))
+  return new Set((item.imported?.files ?? []).map((n) => importFileKind(n)))
 }
 
 export interface MergePreview {
@@ -29,8 +30,8 @@ export interface MergePreview {
 }
 
 /** Quan es torna a importar un article: els items que ja hi són i què s'hi afegirà (la fila del diàleg). `null` = nou. */
-export function mergePreview(library: readonly HardwareItem[], a: Pick<HettichArticle, "article" | "kind" | "files">, maker = "Hettich"): MergePreview | null {
-  const items = importedMatches(library, maker, a.article)
+export function mergePreview(library: readonly HardwareItem[], a: Pick<HettichArticle, "article" | "kind" | "files" | "maker">): MergePreview | null {
+  const items = importedMatches(library, makerOf(a), a.article)
   if (!items.length) return null
   if (items.some(isDamagedImport)) return { items, adds: ["es torna a llegir (estava malmès)"] }
   const have = new Set<string>()
@@ -42,12 +43,16 @@ export function mergePreview(library: readonly HardwareItem[], a: Pick<HettichAr
   const adds: string[] = []
   const kinds = new Set(a.files.map((f) => f.kind))
   const holes = a.kind === "hinge" || a.kind === "plate" || a.kind === "handle" || a.kind === "leg"
+  const D3 = ["step", "iges", "3ds", "dae"] as const
   if (kinds.has("step") && !have.has("step")) adds.push(holes ? "3D i forats proposats" : "3D")
+  else if (D3.some((k) => kinds.has(k)) && !D3.some((k) => have.has(k))) adds.push("3D")
   if (VIEW_KINDS.some((k) => kinds.has(k) && !have.has(k))) adds.push("vistes 2D")
-  const base = (p: string) => p.split("/").pop()!
+  const base = (p: string) => p.split("/").pop()!.trim()
   if (a.files.some((f) => isRefKind(f.kind) && !names.has(base(f.path)))) adds.push("plànols de muntatge")
   // Un DXF del taller per peça (`<art>_porta.dxf`) amb capes de mecanitzat: mecanitzats exactes (si en porta).
   if (a.files.some((f) => f.kind === "other" && /\.dxf$/i.test(f.path) && !names.has(base(f.path)))) adds.push("mecanitzats del DXF del taller")
+  // Un programa Xilog (Blum): mecanitzats exactes.
+  if (a.files.some((f) => f.kind === "pgm" && !names.has(base(f.path)))) adds.push("mecanitzats exactes (Xilog)")
   return { items, adds }
 }
 
@@ -187,4 +192,4 @@ function mergeProposal(existing: HardwareItem, fresh: HardwareItem, withStep: bo
 }
 
 /** Els fitxers d'un article que s'afegeixen a l'item (els noms, com `imported.files`). */
-export const articleFileNames = (files: readonly HettichFile[]) => files.map((f) => f.path.split("/").pop()!)
+export const articleFileNames = (files: readonly HettichFile[]) => files.map((f) => f.path.split("/").pop()!.trim())

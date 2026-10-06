@@ -1,10 +1,13 @@
 import type { PickedFile } from "../../components/pickedFiles"
 import { listZip, readZipEntry } from "../../core/file/zip"
-import { groupHettich, hettichCandidate, hettichFileKind, isRefKind, VIEW_KINDS, type HettichArticle, type HettichFile } from "../../core/import/hettich"
+import { isRefKind, VIEW_KINDS, type HettichArticle, type HettichFile } from "../../core/import/hettich"
+import { BLUM } from "../../core/import/blum"
+import { groupImport, has3d, importCandidate, importFileKind, makerOf } from "../../core/import/makers"
+import { machiningFromXilog } from "../../core/import/xilogPgm"
 import { articleItem, pairImportedBatch, proposalPlan, proposeArticle } from "../../core/import/importItem"
 import { articleFileNames, importedMatches, mergeImported } from "../../core/import/merge"
 import { modelProposal, type HardwareProposal } from "../../core/import/proposal"
-import { stepFeatures } from "../../core/import/stepGeometry"
+import { stepFeatures, type StepFeatures } from "../../core/import/stepGeometry"
 import { readDxf } from "../../core/import/dxf"
 import { hasMachiningLayers, machiningFromDxf, partFromFileName } from "../../core/import/dxfMachining"
 import { registerStoredView, viewFromDxf, type HardwareView, type ViewName } from "../../core/import/views"
@@ -24,6 +27,8 @@ export interface ImportSource {
   read: (path: string) => Promise<Uint8Array>
   /** Fitxers llegits (per dir-ho). */
   fileCount: number
+  /** Fitxers que no són de cap article (manuals, «Overview»…): el diàleg els diu «sense article». */
+  loose: string[]
 }
 
 /**
@@ -41,18 +46,20 @@ export async function sourceFromPicked(picked: PickedFile[], known?: ReadonlyMap
       for (const e of listZip(bytes)) {
         if (e.name.endsWith("/")) continue
         const path = `${base}/${e.name}`
-        if (!hettichCandidate(path)) continue
+        if (!importCandidate(path)) continue
         loaders.set(path, () => readZipEntry(bytes, e))
-        files.push({ path, kind: hettichFileKind(path), size: e.size })
+        files.push({ path, kind: importFileKind(path), size: e.size })
       }
       continue
     }
-    if (!hettichCandidate(p.path)) continue
+    if (!importCandidate(p.path)) continue
     loaders.set(p.path, async () => new Uint8Array(await p.file.arrayBuffer()))
-    files.push({ path: p.path, kind: hettichFileKind(p.path), size: p.file.size })
+    files.push({ path: p.path, kind: importFileKind(p.path), size: p.file.size })
   }
+  const grouped = groupImport(files, known)
   return {
-    articles: groupHettich(files, known),
+    articles: grouped.articles,
+    loose: grouped.loose,
     fileCount: files.length,
     read: (path) => {
       const l = loaders.get(path)
@@ -89,7 +96,7 @@ export interface ImportOutcome {
  */
 export async function analyseArticle(src: ImportSource, a: HettichArticle, throughDiameter?: number): Promise<string> {
   const step = a.files.find((f) => f.kind === "step")
-  if (!step || (a.kind !== "handle" && a.kind !== "leg")) return a.plan ?? ""
+  if (!step || makerOf(a) !== "Hettich" || (a.kind !== "handle" && a.kind !== "leg")) return a.plan ?? ""
   try {
     return proposalPlan(proposeArticle(a, stepFeatures(latin1(await src.read(step.path))), { ...(throughDiameter ? { throughDiameter } : {}) }))
   } catch (e) {
@@ -135,7 +142,9 @@ export async function importArticles(
     for (const a of articles) {
       progress?.(done++, articles.length)
       try {
-        const existing = importedMatches(library, "Hettich", a.article)
+        const maker = makerOf(a)
+        const blum = maker === BLUM
+        const existing = importedMatches(library, maker, a.article)
         if (a.kind === "none" && !existing.length) throw new Error(a.reason ?? "No es pot importar.")
         if (a.refsOnly && !existing.length) throw new Error("Només hi ha plànols de muntatge d'un article que no és a la biblioteca.")
         // Els assets d'abans (el model i les vistes) dels items que ja hi són.
@@ -148,23 +157,48 @@ export async function importArticles(
           }
         }
         const notes: string[] = []
-        const step = a.files.find((f) => f.kind === "step")
-        let p: HardwareProposal
+        // STEP: la proposta (Hettich) o la caixa (Blum: un producte pot portar diversos STEP, les peces d'un joc).
+        const steps = a.files.filter((f) => f.kind === "step").slice(0, blum ? 12 : 1)
+        const stepBytes: Uint8Array[] = []
+        let feats: StepFeatures | null = null
+        for (const f of steps) {
+          const bytes = await src.read(f.path)
+          stepBytes.push(bytes)
+          const got = stepFeatures(latin1(bytes))
+          const cur = feats as StepFeatures | null
+          feats = cur ? { ...cur, cylinders: [...cur.cylinders, ...got.cylinders], points: [...cur.points, ...got.points], solids: cur.solids + got.solids } : got
+        }
+        let p: HardwareProposal = !feats ? modelProposal(null, [a.plan ?? "Només 2D: falta el STEP."]) : blum ? modelProposal(feats, []) : proposeArticle(a, feats, { throughDiameter: base.handle.params.diameter ?? 5 })
+        // El 3D només si algun dels que hi ha no el té (o és nou): STEP, si no IGES, 3DS o Collada.
         let glb: Blob | undefined
-        if (step) {
-          const bytes = await src.read(step.path)
-          p = proposeArticle(a, stepFeatures(latin1(bytes)), { throughDiameter: base.handle.params.diameter ?? 5 })
-          // El 3D només si algun dels que hi ha no el té (o és nou).
-          const need3d = !existing.length || existing.some((e) => !e.imported?.asset || !oldAssets.get(e.imported.asset)?.glb)
-          if (need3d) {
-            try {
-              mesher ??= await import("../../components/viewer/stepMesh")
-              glb = (await mesher.meshesToGlb(await mesher.stepMeshes(bytes), p.frame)).glb
-            } catch (e) {
-              notes.push(`Sense model 3D: ${e instanceof Error ? e.message : String(e)}`)
+        const need3d = !existing.length || existing.some((e) => !e.imported?.asset || !oldAssets.get(e.imported.asset)?.glb)
+        const other3d = a.files.find((f) => f.kind === "iges") ?? a.files.find((f) => f.kind === "3ds") ?? a.files.find((f) => f.kind === "dae")
+        if (need3d && (stepBytes.length || other3d)) {
+          try {
+            mesher ??= await import("../../components/viewer/stepMesh")
+            let meshes: import("../../components/viewer/stepMesh").StepMesh[] = []
+            if (stepBytes.length) for (const b of stepBytes) meshes.push(...(await mesher.stepMeshes(b)))
+            else if (other3d!.kind === "iges") meshes = await mesher.stepMeshes(await src.read(other3d!.path), "iges")
+            else {
+              const mm = await import("../../components/viewer/modelMeshes")
+              meshes = await mm.meshFileMeshes(other3d!.kind as "3ds" | "dae", await src.read(other3d!.path))
             }
+            if (!feats) {
+              const mm = await import("../../components/viewer/modelMeshes")
+              const box = mm.meshesBox(meshes)
+              if (box) p = { ...p, bbox: box }
+              notes.push(`El 3D surt del ${other3d!.kind === "iges" ? "IGES" : other3d!.kind === "3ds" ? "3DS" : "Collada (.dae)"} (sense STEP, cap forat proposat).`)
+            }
+            glb = (await mesher.meshesToGlb(meshes, p.frame)).glb
+          } catch (e) {
+            notes.push(`Sense model 3D: ${e instanceof Error ? e.message : String(e)}`)
           }
-        } else p = modelProposal(null, [a.plan ?? "Només 2D: falta el STEP."])
+        }
+        for (const k of ["sat", "max"] as const) if (a.files.some((f) => f.kind === k)) notes.push(`El ${k.toUpperCase()} no es llegeix (el 3D surt del STEP, l'IGES o el 3DS).`)
+        if (blum) {
+          if (a.files.some((f) => f.kind === "dxf3d")) notes.push("El DXF de Blum és un sòlid 3D (ACIS): no es llegeix (el 3D surt del STEP o del .dae).")
+          if (a.files.some((f) => f.kind === "mpr" || f.kind === "cam")) notes.push("Les dades CAM d'altres màquines (*.mpr, *.hop, *.fmc, *.tcn) no es llegeixen: l'app llegeix el Xilog (*.pgm).")
+        }
         const views: HardwareView[] = []
         let points: [number, number, number][] | undefined
         for (const kind of VIEW_KINDS as ViewName[]) {
@@ -206,6 +240,27 @@ export async function importArticles(
             notes.push(`${baseName(f.path)}: ${e instanceof Error ? e.message : String(e)}`)
           }
         }
+        // Programes Xilog (Blum, «Esquemas de taladrado»): mecanitzats exactes, a la peça que diu el producte (o sense
+        // assignar). Un item per article: si hi ha les dues mans, la dreta (l'altra es diu a les notes).
+        const pgms = a.files.filter((f) => f.kind === "pgm")
+        if (pgms.length) {
+          const handOf = (f: HettichFile) => /_([RL])(?: \(\d+\))?\.pgm$/i.exec(f.path)?.[1]?.toUpperCase()
+          const pick = pgms.find((f) => handOf(f) === (a.hand ?? "R")) ?? pgms[0]!
+          try {
+            const part = a.part ?? "any"
+            const got = machiningFromXilog(await src.read(pick.path), part, `pgm${machining.length}`)
+            machining.push(...got.ops)
+            notes.push(
+              `${baseName(pick.path).trim()}: ${got.ops.length} mecanitzats exactes (Xilog${got.program.version ? ` ${got.program.version.replace(/^Xilog/, "")}` : ""}) ${part === "any" ? "sense assignar: tria a quina peça van (Generador de mecanitzats)" : `a ${partKindOf(part).label.toLowerCase()}`}.`,
+              ...got.notes,
+            )
+          } catch (e) {
+            notes.push(`${baseName(pick.path).trim()}: ${e instanceof Error ? e.message : String(e)}`)
+          }
+          const others = pgms.filter((f) => f !== pick && handOf(f) !== handOf(pick))
+          if (others.length) notes.push(`També hi ha el programa de l'altra mà (${others.map((f) => baseName(f.path).trim()).join(", ")}): no s'importa (un item per article; l'altra mà és el mirall).`)
+        }
+        if (blum) notes.push("Blum: les dades CAM són per producte; on va a la peça ho tries en col·locar-lo (Editor › mòdul › Ferratges).")
         // Amb els mecanitzats exactes d'un DXF del taller, els forats del STEP no es fan servir (es col·loca a mà).
         const fromDxf = machining.length > 0 && p.kind !== "model"
         const proposal: HardwareProposal = fromDxf
@@ -241,7 +296,7 @@ export async function importArticles(
           }
           const fresh = withMachining(articleItem(proposal, a, base, { id: e.id, asset, files, ...(points ? { points } : {}) }))
           const withAsset: HardwareItem = e.imported && !e.imported.asset ? { ...e, imported: { ...e.imported, asset } } : e
-          const r = mergeImported(withAsset, fresh, !!step)
+          const r = mergeImported(withAsset, fresh, has3d(a.files))
           if (r.pendingUpdate) pendingUpdates++
           if (r.upgraded) upgraded++
           updated.push(r.item)

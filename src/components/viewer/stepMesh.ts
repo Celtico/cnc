@@ -17,8 +17,8 @@ let worker: Worker | null = null
 let seq = 0
 const waiting = new Map<number, { ok: (m: StepMesh[]) => void; ko: (e: Error) => void }>()
 
-/** Malles del STEP (mm, coordenades del fitxer). */
-export function stepMeshes(bytes: Uint8Array): Promise<StepMesh[]> {
+/** Malles del STEP (o de l'IGES, `format`) en mm, a les coordenades del fitxer. */
+export function stepMeshes(bytes: Uint8Array, format: "step" | "iges" = "step"): Promise<StepMesh[]> {
   if (!worker) {
     worker = new Worker(new URL("./occtWorker.ts", import.meta.url), { type: "module" })
     worker.onmessage = (e: MessageEvent<{ id: number; meshes?: StepMesh[]; error?: string }>) => {
@@ -39,7 +39,7 @@ export function stepMeshes(bytes: Uint8Array): Promise<StepMesh[]> {
   const copy = bytes.slice()
   return new Promise((ok, ko) => {
     waiting.set(id, { ok, ko })
-    worker!.postMessage({ id, bytes: copy }, [copy.buffer])
+    worker!.postMessage({ id, bytes: copy, format }, [copy.buffer])
   })
 }
 

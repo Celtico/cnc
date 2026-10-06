@@ -38,6 +38,7 @@ export const SAMPLE: Record<PartKind, [number, number]> = {
   back: [600, 720],
   drawer: [500, 160],
   part: [600, 400],
+  any: [600, 400],
 }
 
 /** Noms dels dos eixos i dels seus cantells per a un grup («De costat: esquerra · dreta»). */

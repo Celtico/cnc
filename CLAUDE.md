@@ -44,12 +44,12 @@ plantes, models 3D i renders són **decoratius**: no s'hi dedica temps mentre el
 - [`docs/colleccions-mobles.md`](docs/colleccions-mobles.md): **col·leccions de mobles** (biblioteca de referències:
   minimalisme arquitectònic i comercial; prompt a [`PROMPT-colleccions.md`](docs/prompt/PROMPT-colleccions.md)).
 - [`docs/cad-mobles-cataleg.md`](docs/cad-mobles-cataleg.md): font del catàleg de plantilles per a botigues de mobles.
-- [`docs/ferratges-import.md`](docs/ferratges-import.md): **importar ferratges del fabricant (Hettich)**: estructura de les
+- [`docs/ferratges-import.md`](docs/ferratges-import.md): **importar ferratges del fabricant (Hettich i, §10, Blum)**: estructura de les
   descàrregues, lectors STEP i DXF, proposta de forats, confirmació i col·locació al moble (frontissa + placa, tirador,
   pota; la resta «només 3D»; sense STEP, «només 2D»), tornar a importar (s'amplia l'article, mai es toca un mecanitzat
   confirmat), noms i sèries, el pla del que falta (Cadro, portes corredisses i plegables, taules) i, §8, el **generador
   de mecanitzats**, els **ferratges col·locats a mà**, les capes de mecanitzat dels DXF per peça i **«Com exportar des de
-  TopSolid»** (per al germà).
+  TopSolid»** (per al germà). §10: **Blum** (E-SERVICES: STEP + «Esquemas de taladrado» en Xilog `*.pgm`).
 
 ## Principi de disseny
 L'usuari dissenya els mobles **des de la UI**, sense tocar codi. El codi defineix **capacitats genèriques** (carcassa,
@@ -339,6 +339,23 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   (`partFromFileName`: `_porta`, `_lateral`, `_tapa`…); en importar (`hardwareImport.ts`) manen sobre el STEP. Tests
   `core/import/dxfMachining.test.ts`, `build/hardwarePlace.test.ts`, `build/hardwarePlaceExports.test.ts`. **Proves d'or
   idèntiques.**
+- **Blum i un sol camí per fabricant** (per decisió de l'usuari: «estén el pipeline, no el dupliquis»; `docs/ferratges-import.md`
+  §10): `core/import/makers.ts` (`detectMaker`, `importFileKind`, `importCandidate`, `groupImport` = Hettich +
+  `groupBlum`, `makerOf`; `HettichArticle.maker`) i la resta comuna (`articleItem`, `mergeImported` amb la clau fabricant +
+  article, `hardwareImport.ts`). Blum (`core/import/blum.ts`): fitxers `<article>_<doc 8 xifres>[_R|_L].<ext>` (solts o
+  als ZIP amb el nom del producte en castellà, NFC), un item per article (mà al nom; amb les dues mans del mateix
+  article, la dreta i nota), `classifyBlum` pel producte o el prefix (CLIP top → porta, plaques/guies/AVENTOS/TIP-ON →
+  lateral, accessoris o desconeguts → **«Sense assignar»**, `PartKind` `any`: es pot col·locar però no es confirma fins
+  que s'assigna, «Assignar a» al generador). **Programes Xilog** (`core/import/xilogPgm.ts`, `readXilog` /
+  `machiningFromXilog`, pur, mai llança; registres ASCII del contenidor binari; hipòtesis documentades: `XBO` X/Y des del
+  punt de referència, Z negatiu = fondària, `Z ≤ −DZ` passant, F 1 = cara A, 2–5 cantells, 6 cara B, R = total amb pas
+  x/y; fresats i desconeguts a les notes): mecanitzats **exactes** del generador (X → P, Y → Q), motor `model`, sempre
+  **col·locats a mà** i **sense confirmar, cap forat**. 3D: STEP (tots els del joc), si no `.dae` (`ColladaLoader`); el
+  `.dxf` de Blum és ACIS (no es llegeix). Hettich, formats de més: IGES (`ReadIgesFile` al mateix worker d'OpenCascade) i
+  3DS (`TDSLoader`, mm) donen el 3D d'un «només 3D» sense STEP (`components/viewer/modelMeshes.ts`); SAT i MAX no; els
+  PDF sense número s'adjunten per sèrie (≤ 12 articles) o surten «sense article» al diàleg (`ImportSource.loose`). Tests
+  `core/import/xilogPgm.test.ts`, `blum.test.ts`, `blum.roundtrip.test.ts` (`BLUM_DIR`) i `hettich3.roundtrip.test.ts`
+  (`HETTICH3_DIR`: `IGES_Griffe.zip`, `3DS_Griffe.zip`). **Proves d'or idèntiques.**
 - **Forats que es trobarien per dins** (`build/holeClash.ts`, `resolveHoleClashes`): System 32 a banda i banda d'un divisor
   → tots dos a (T − 1)/2; si un és d'un ferratge (placa, frontissa: `shortenFitting`), primer s'escurça l'altre, sempre amb
   avís `hole-clash` i mai per sota de 8 mm (si no, no es toca i ho diu); espiga de cantell contra un forat de cara →
@@ -1283,7 +1300,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   moble)», triades: es veu el que es fabrica i s'hi pot tornar; triar-ne un de la biblioteca canvia la còpia.
   - **«Importar del fabricant»** (`HardwarePane`, zona `components/ImportDropZone` —la mateixa que «Importar de Maestro»,
     amb «Triar carpeta…» · «Triar fitxers…» i deixar anar—, `settings/hardwareImport.ts`): ZIP de Hettich tal com es
-    baixen (STEP i DWG/DXF; només es descomprimeixen els articles triats, `listZip`/`readZipEntry`), carpetes o fitxers.
+    baixen (STEP, IGES, 3DS i DWG/DXF; només es descomprimeixen els articles triats, `listZip`/`readZipEntry`), carpetes o
+    fitxers; també els de **Blum** E-SERVICES (STEP, `.dae`, Xilog `*.pgm`, els ZIP del producte), barrejats o no. El diàleg diu
+    el fabricant, les fonts de cada fila (STEP · IGES · 3DS · DXF · PGM (Xilog) · DAE · PDF; les que no es llegeixen, més
+    clares), «Mecanitzats exactes» (filtre i resum) i els fitxers «sense article».
     Diàleg `HardwareImportDialog`: articles per número amb la categoria i la carpeta traduïdes, els fitxers que porten
     i **què se'n farà** («Tirador · 128 mm», «Pota · 4 forats a cada pota», «Només 3D: sense forats (…)»; la dels
     tiradors i les potes llegint el STEP de les files visibles, `analyseArticle`); resum per tipus («742 tiradors, 71 potes
