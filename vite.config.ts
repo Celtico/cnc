@@ -23,6 +23,9 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(version),
     __APP_COMMIT__: JSON.stringify(commit),
   },
+  // OpenCascade només es carrega en importar un ferratge (worker). Sense això, `pnpm dev` el descobria en aquell moment,
+  // l'optimitzava i recarregava la pàgina a mitja importació.
+  optimizeDeps: { include: ["occt-import-js"] },
   plugins: [
     react(),
     VitePWA({
