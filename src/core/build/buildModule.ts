@@ -287,13 +287,9 @@ class Builder {
   /** El ferratge d'un front (el triat a la porta, el calaix o l'abatible; si no, el del mòdul). */
   private frontHardware<S extends "hinge" | "slide" | "flap">(slot: S, item: HardwareItem | undefined, zoneId?: string): { spec: SlotSpec<S>; item: HardwareItem } {
     if (!item) return this.kit[slot] as { spec: SlotSpec<S>; item: HardwareItem }
-    let failed = false
-    const res = slotSpec(slot, item, (message) => {
-      failed = true
-      this.hardwareWarning(message, zoneId)
-    })
-    // No serveix: el del mòdul (no el d'inici de l'app).
-    return failed ? (this.kit[slot] as { spec: SlotSpec<S>; item: HardwareItem }) : res
+    const res = slotSpec(slot, item, (message) => this.hardwareWarning(message, zoneId))
+    // No serveix: el del mòdul (no el d'inici de l'app). Un importat que no serveix queda inert (cap forat), mai el del mòdul.
+    return res.failed && !item.imported ? (this.kit[slot] as { spec: SlotSpec<S>; item: HardwareItem }) : res
   }
 
   private add(panel: Panel): Panel {
@@ -1178,7 +1174,7 @@ class Builder {
     const h = hinge.spec
     // Importada i sense confirmar: cap forat (ni a la porta ni al lateral) i un avís; el taller no en rep res.
     if (h.pending) {
-      this.hardwareWarning(`«${hinge.item.name}» és importada i encara no està confirmada: la porta queda sense cassoletes ni forats. Revisa-la i confirma-la a Preferències › Ferratges.`, zoneId)
+      this.hardwareWarning(h.unusable ?? `«${hinge.item.name}» és importada i encara no està confirmada: la porta queda sense cassoletes ni forats. Revisa-la i confirma-la a Preferències › Ferratges.`, zoneId)
       return 0
     }
     const half = this.hw.system32.pitch / 2
@@ -1190,18 +1186,35 @@ class Builder {
     const targets = count === 1 ? [doorH / 2] : Array.from({ length: count }, (_, i) => h.endOffset + (span * i) / (count - 1))
     // Cassoletes sense trepitjar-se: entre centres, almenys el diàmetre i 10 mm, i dins de la porta.
     const dia = h.cupDiameter
-    // Porta massa estreta: la cassoleta (a `cupOffset` del cantell) sortiria per l'altre costat.
-    const minW = h.cupOffset + dia / 2 + h.margin
-    if (doorW < minW) {
+    // Tot el patró de la frontissa (cassoleta i cargols o espigues) ha de cabre a la porta amb el marge: al llarg del
+    // cantell (de `lo` a `hi`) i a través (la cassoleta, a `cupOffset` del cantell, no ha de sortir per l'altre costat).
+    // Amb la frontissa d'inici el patró és només la cassoleta (els números de sempre).
+    const pattern = applyHardware(hinge.item, "door", {}, { at: { x: 0, y: 0 } }).holes
+    const below = Math.max(dia / 2, ...pattern.map((o) => o.diameter / 2 - o.x))
+    const above = Math.max(dia / 2, ...pattern.map((o) => o.x + o.diameter / 2))
+    const across = Math.max(h.cupOffset + dia / 2, ...pattern.map((o) => o.y + o.diameter / 2))
+    const nearEdge = Math.min(h.cupOffset - dia / 2, ...pattern.map((o) => o.y - o.diameter / 2))
+    // Porta massa estreta: la cassoleta (a `cupOffset` del cantell) o un cargol sortiria per l'altre costat.
+    const minW = across + h.margin
+    if (doorW < minW || nearEdge < 0) {
       this.warnings.push({ code: "hinge", message: `${door.label} de ${num(doorW)} mm d'amplada: no hi cap la cassoleta de la frontissa (calen ${num(minW)} mm). Fes-la més ampla o posa-hi un front fix.`, zoneId, panelId: door.id })
       return 0
     }
     const minGap = dia + h.gap
-    const lo = doorY0 + dia / 2 + h.margin
-    const hi = doorY0 + doorH - dia / 2 - h.margin
+    const lo = doorY0 + below + h.margin
+    const hi = doorY0 + doorH - above - h.margin
+    // La placa (si n'hi ha) ha de cabre sencera al lateral a cada alçada; si no, aquella frontissa no es fa.
+    if (h.plate && !side) this.warnings.push({ code: "hinge", message: `${door.label}: la placa de «${hinge.item.name}» va al lateral de les frontisses i aquest mòdul no en té (${hingeSide === "left" ? "esquerra" : "dreta"}). Els forats de la placa no es fan: fes-los on vagi muntada.`, zoneId, panelId: door.id })
+    const plateWhy = new Set<string>()
+    const plateAt = (y: number) => {
+      if (!h.plate || !side) return null
+      const res = this.plateHoles(side, hingeSide, y, h.plate, hinge.item)
+      if ("error" in res) plateWhy.add(res.error)
+      return res
+    }
     const placed: number[] = []
     for (const target of targets) {
-      const pool = (midpoints.length ? midpoints : [r(Math.min(hi, Math.max(lo, target + doorY0)))]).filter((y) => y >= lo && y <= hi && placed.every((p) => Math.abs(p - y) >= minGap))
+      const pool = (midpoints.length ? midpoints : [r(Math.min(hi, Math.max(lo, target + doorY0)))]).filter((y) => y >= lo && y <= hi && placed.every((p) => Math.abs(p - y) >= minGap) && !(plateAt(y) && "error" in plateAt(y)!))
       if (!pool.length) continue
       const y = snap(target + doorY0, pool)
       placed.push(y)
@@ -1216,37 +1229,61 @@ class Builder {
         const face = at.holes[0]?.face === "B" ? "B" : "A"
         ;(door.fittings ??= []).push({ ...(imp.asset ? { asset: imp.asset } : {}), x: cupX, y: cupY, face, v: [0, hingeSide === "left" ? 1 : -1], ...(imp.bbox ? { bbox: imp.bbox } : {}) })
       }
-      if (h.plate && side) this.addPlate(side, hingeSide, y, h.plate, hinge.item)
+      const plate = plateAt(y)
+      if (plate && !("error" in plate)) this.addPlate(side!, plate, hinge.item, zoneId)
     }
     if (placed.length < count)
-      this.warnings.push({ code: "hinge", message: `${door.label} de ${r(doorH)} mm: només hi caben ${placed.length} de ${count} frontisses sense que les cassoletes es trepitgin.`, zoneId, panelId: door.id })
+      this.warnings.push({ code: "hinge", message: `${door.label} de ${r(doorH)} mm: només hi caben ${placed.length} de ${count} frontisses sense que les cassoletes es trepitgin${plateWhy.size ? ` ni que la placa surti del lateral o caigui en una unió (${[...plateWhy].join(" ")})` : ""}.`, zoneId, panelId: door.id })
     return placed.length
   }
 
   /**
-   * Placa de muntatge d'una frontissa importada: els seus forats a la cara de dins del lateral de les frontisses, a la
-   * referència de la placa (`setback` del cantell de davant del lateral, `offset` per sobre del centre de la cassoleta
-   * `yCup`). Marc de la placa: v cap al darrere, n cap a dins del moble, u = v × n (el mateix que el model importat). Un
-   * forat que cau on ja n'hi ha un (la filera System 32) es queda el més gros.
+   * Forats de la placa de muntatge d'una frontissa importada, a la cara de dins del lateral de les frontisses: a la
+   * referència de la placa (`setback` darrere de la cara de darrere de la porta —amb fronts recobrents, el cantell de
+   * davant del lateral; amb encastats, un gruix de front més endins— i `offset` per sobre del centre de la cassoleta
+   * `yCup`). Marc de la placa: v cap al darrere, n cap a dins del moble, u = v × n (el mateix que el model importat).
+   * **Tota o res**: si un forat (amb el seu radi) sortiria del lateral o cauria a la unió amb la base, la tapa o un
+   * prestatge fix, `error`. Un forat més fondo que el lateral es deixa a gruix − 1 (pell d'1 mm) i ho diu `notes`.
    */
-  private addPlate(side: VerticalRef, hingeSide: "left" | "right", yCup: number, plate: NonNullable<SlotSpec<"hinge">["plate"]>, item: HardwareItem): void {
+  private plateHoles(side: VerticalRef, hingeSide: "left" | "right", yCup: number, plate: NonNullable<SlotSpec<"hinge">["plate"]>, item: HardwareItem): { holes: Hole[]; notes: string[]; origin: Vec3; v: Vec3 } | { error: string } {
+    const { d } = this
     const xFace = hingeSide === "left" ? side.xR : side.xL
     const n: Vec3 = hingeSide === "left" ? X : neg(X)
     const v: Vec3 = neg(Z)
     const u: Vec3 = [v[1] * n[2] - v[2] * n[1], v[2] * n[0] - v[0] * n[2], v[0] * n[1] - v[1] * n[0]]
-    const o: Vec3 = [xFace, yCup + plate.offset, side.zFront - plate.setback]
+    // La referència es mesura des de la cara de darrere de la porta (recobrent: el davant del moble; encastada: un gruix
+    // de front més endins). Amb fronts recobrents és el cantell de davant del lateral de sempre (37).
+    const o: Vec3 = [xFace, yCup + plate.offset, d.frontZ - d.t - plate.setback]
     const at = (du: number, dv: number): Vec3 => [o[0] + du * u[0] + dv * v[0], o[1] + du * u[1] + dv * v[1], o[2] + du * u[2] + dv * v[2]]
     const p = side.panel
+    const holes: Hole[] = []
+    const notes: string[] = []
     for (const hole of plate.holes) {
       const w = at(hole.u, hole.v)
       const l = toLocal(p, w)
       const face = faceAt(p, l)
-      if (!face || face === "edge" || l[0] < 0 || l[0] > p.length || l[1] < 0 || l[1] > p.width) {
-        this.warnings.push({ code: "hinge", message: `Placa de «${item.name}»: un forat cau fora del ${p.label.toLowerCase()} (${num(l[0])}, ${num(l[1])}). No es fa.`, panelId: p.id })
-        continue
+      const rad = hole.d / 2
+      if (!face || face === "edge" || l[0] - rad < 0 || l[0] + rad > p.length || l[1] - rad < 0 || l[1] + rad > p.width)
+        return { error: `Placa de «${item.name}»: un forat Ø${num(hole.d)} surt del ${p.label.toLowerCase()}.` }
+      // Unions de la base, la tapa i els prestatges fixos que topen a aquesta cara: espigues i cantell.
+      const joint = this.horizontals.find((hz) => (near(hz.xL, xFace) || near(hz.xR, xFace)) && w[1] + rad > hz.yBottom && w[1] - rad < hz.yTop && w[2] + rad > hz.zRear && w[2] - rad < hz.zFront)
+      if (joint) return { error: `Placa de «${item.name}»: un forat cau a la unió amb ${joint.panel.label.toLowerCase()}.` }
+      let depth = hole.depth
+      if (depth > p.thickness - 1) {
+        depth = Math.max(0.5, Math.floor((p.thickness - 1) * 2) / 2)
+        notes.push(`Placa de «${item.name}»: un forat de ${num(hole.depth)} mm és massa fondo per al ${p.label.toLowerCase()} de ${num(p.thickness)} mm; es fa de ${num(depth)} mm (1 mm de pell). Comprova que la placa hi aguanta.`)
       }
-      const same = p.holes.findIndex((e) => e.face === face && Math.abs(e.x - l[0]) < 0.05 && Math.abs(e.y - l[1]) < 0.05)
-      const next: Hole = { x: l[0], y: l[1], diameter: hole.d, depth: hole.depth, face, tag: hole.tag ?? "plate" }
+      holes.push({ x: l[0], y: l[1], diameter: hole.d, depth, face, tag: hole.tag ?? "plate" })
+    }
+    return { holes, notes, origin: o, v }
+  }
+
+  /** Posa els forats de la placa (`plateHoles`) al lateral. Un forat que cau on ja n'hi ha un (la filera System 32) es queda el més gros. */
+  private addPlate(side: VerticalRef, plate: { holes: Hole[]; notes: string[]; origin: Vec3; v: Vec3 }, item: HardwareItem, zoneId?: string): void {
+    const p = side.panel
+    for (const message of plate.notes) if (!this.warnings.some((w) => w.code === "hinge" && w.message === message)) this.warnings.push({ code: "hinge", message, panelId: p.id, ...(zoneId ? { zoneId } : {}) })
+    for (const next of plate.holes) {
+      const same = p.holes.findIndex((e) => e.face === next.face && Math.abs(e.x - next.x) < 0.05 && Math.abs(e.y - next.y) < 0.05)
       if (same >= 0) {
         const e = p.holes[same]!
         if (e.diameter > next.diameter || (e.diameter === next.diameter && e.depth >= next.depth)) continue
@@ -1256,6 +1293,7 @@ class Builder {
     }
     const pa = item.plate
     if (pa) {
+      const { origin: o, v } = plate
       const l = toLocal(p, o)
       const face = faceAt(p, l)
       const lv = [v[0] * p.placement.xAxis[0] + v[1] * p.placement.xAxis[1] + v[2] * p.placement.xAxis[2], v[0] * p.placement.yAxis[0] + v[1] * p.placement.yAxis[1] + v[2] * p.placement.yAxis[2]] as [number, number]

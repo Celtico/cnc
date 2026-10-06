@@ -1,7 +1,9 @@
 import {
   DEFAULT_HARDWARE_KIT,
+  damagedImportMessage,
   evalExpr,
   hardwareVars,
+  isDamagedImport,
   isPendingImport,
   slotOf,
   stepValue,
@@ -121,6 +123,7 @@ function plateHoles(item: HardwareItem): { u: number; v: number; d: number; dept
  */
 export function cupSpec(item: HardwareItem) {
   expectEngine(item, "cup")
+  if (isDamagedImport(item)) throw new HardwareError(damagedImportMessage(item))
   const door = drillSpec(item, "door")
   const count = item.count
   if (!count) throw new HardwareError(`«${item.name}»: falta la quantitat per alçada`)
@@ -129,6 +132,8 @@ export function cupSpec(item: HardwareItem) {
     : undefined
   return {
     pending: isPendingImport(item),
+    /** Importat que no es pot fer servir (malmès o amb un error): cap forat i aquest avís (`inertHinge`). */
+    unusable: undefined as string | undefined,
     ...(plate ? { plate } : {}),
     cupDiameter: param(item, "cupDiameter"),
     cupDepth: param(item, "cupDepth"),
@@ -201,20 +206,36 @@ const SPECS = { hinge: cupSpec, system32: system32Spec, dowel: dowelSpec, slide:
 export type SlotSpec<S extends HardwareSlot> = ReturnType<(typeof SPECS)[S]>
 
 /**
- * Els números d'un lloc amb un item; si l'item no serveix (un altre tipus, un paràmetre que falta, una fórmula dolenta),
- * el d'inici de l'app i un avís (`onError`): mai es fa mig ferratge.
+ * Frontissa importada que no serveix (malmesa, o un mecanitzat o paràmetre dolent): **cap forat**, ni la del d'inici. Els
+ * números (per al tirador, la reixeta…) són els de la frontissa d'inici, però `pending` i `unusable` fan que `addCups` no
+ * foradi res i avisi amb el nom de l'item.
  */
-export function slotSpec<S extends HardwareSlot>(slot: S, item: HardwareItem | undefined, onError?: (message: string) => void): { spec: SlotSpec<S>; item: HardwareItem } {
+function inertHinge(item: HardwareItem, error: string): SlotSpec<"hinge"> {
+  const base = cupSpec(DEFAULT_HARDWARE_KIT.hinge)
+  const prefix = `«${item.name}»`
+  const why = error.startsWith(prefix) ? error.slice(prefix.length).replace(/^[:,]\s*/, "") : error
+  const unusable = isDamagedImport(item) ? damagedImportMessage(item) : `«${item.name}» és importada i no es pot fer servir (${why}): la porta queda sense cassoletes ni forats. Revisa-la a Preferències › Ferratges.`
+  return { ...base, pending: true, unusable }
+}
+
+/**
+ * Els números d'un lloc amb un item; si l'item no serveix (un altre tipus, un paràmetre que falta, una fórmula dolenta),
+ * el d'inici de l'app i un avís (`onError`): mai es fa mig ferratge. **Un importat que no serveix no torna mai al d'inici**
+ * (forataria on no s'ha revisat): queda inert (`inertHinge`, `failed`) i l'avís el fa qui el fa servir (`addCups`).
+ */
+export function slotSpec<S extends HardwareSlot>(slot: S, item: HardwareItem | undefined, onError?: (message: string) => void): { spec: SlotSpec<S>; item: HardwareItem; failed?: boolean } {
   const fn = SPECS[slot] as (i: HardwareItem) => SlotSpec<S>
   if (item) {
     try {
       return { spec: fn(item), item }
     } catch (err) {
-      onError?.(`${slotOf(slot).label}: ${err instanceof Error ? err.message : String(err)}. Es fa servir el d'inici de l'app.`)
+      const why = err instanceof Error ? err.message : String(err)
+      if (item.imported && slot === "hinge") return { spec: inertHinge(item, why) as SlotSpec<S>, item, failed: true }
+      onError?.(`${slotOf(slot).label}: ${why}. Es fa servir el d'inici de l'app.`)
     }
   }
   const fallback = DEFAULT_HARDWARE_KIT[slot]
-  return { spec: fn(fallback), item: fallback }
+  return { spec: fn(fallback), item: fallback, ...(item ? { failed: true } : {}) }
 }
 
 /** Tots els llocs d'un kit resolts (els del mòdul). */

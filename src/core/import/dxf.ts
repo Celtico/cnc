@@ -122,10 +122,27 @@ function ocs(n: [number, number, number]): ((x: number, y: number) => P2) | null
 
 const extrusion = (e: RawEntity): [number, number, number] => [num(e, 210, 0), num(e, 220, 0), num(e, 230, 1)]
 
-/** Arc (graus, antihorari) a punts amb un error de corda de ~0,02 mm (mínim 4 trams). */
-function arcPts(cx: number, cy: number, r: number, a0: number, a1: number): P2[] {
+/**
+ * Límits del lector (un DXF malmès o fet per fer mal no ha de penjar la pàgina): entitats dibuixades (comptant les de
+ * cada INSERT i les seves files × columnes), punts en total i còpies d'un sol INSERT. Les vistes de Hettich en fan uns
+ * quants milers.
+ */
+export const DXF_LIMITS = { entities: 200_000, points: 2_000_000, insertCopies: 10_000 } as const
+
+/** Error del lector per un fitxer massa gran o absurd (en català). */
+export class DxfLimitError extends Error {}
+
+/** Angle en graus a [0, 360); `null` si no és un número. */
+const deg360 = (a: number): number | null => (Number.isFinite(a) ? ((a % 360) + 360) % 360 : null)
+
+/** Arc (graus, antihorari) a punts amb un error de corda de ~0,02 mm (mínim 4 trams, com a molt 180). */
+function arcPts(cx: number, cy: number, r: number, a0In: number, a1In: number): P2[] {
+  // Angles normalitzats (amb un angle enorme, `while (sweep <= 0) sweep += 360` no acabava mai).
+  const a0 = deg360(a0In)
+  const a1 = deg360(a1In)
+  if (a0 === null || a1 === null || !Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(r)) return []
   let sweep = a1 - a0
-  while (sweep <= 0) sweep += 360
+  if (sweep <= 1e-9) sweep += 360
   const tol = 0.02
   const step = r > tol ? Math.max(2, Math.min(15, (2 * Math.acos(Math.max(-1, 1 - tol / r)) * 180) / Math.PI)) : 15
   const n = Math.max(4, Math.ceil(sweep / step))
@@ -173,7 +190,8 @@ function splinePts(e: RawEntity): P2[] {
   const fy = all(e, 21)
   const fit: P2[] = fx.map((x, i) => [x, fy[i] ?? 0])
   const n = ctrl.length
-  if (n < 2 || knots.length !== n + degree + 1) return fit.length >= 2 ? fit : ctrl
+  // Grau absurd (un fitxer malmès): els punts de pas o de control, sense l'algorisme (seria d'un cost sense límit).
+  if (n < 2 || !Number.isInteger(degree) || degree < 1 || degree > 11 || knots.length !== n + degree + 1) return fit.length >= 2 ? fit : ctrl
   const w = weights.length === n ? weights : ctrl.map(() => 1)
   const lo = knots[degree]!
   const hi = knots[n]!
@@ -250,12 +268,20 @@ export function readDxf(text: string): DxfDrawing {
   }
   const out: DxfDrawing = { unit, polylines: [], circles: [], points: [], skipped: {} }
   const skip = (t: string) => (out.skipped[t] = (out.skipped[t] ?? 0) + 1)
+  let entityCount = 0
+  let pointCount = 0
+  const tooBig = (what: string) => {
+    throw new DxfLimitError(`El DXF és massa gran o està malmès (${what}): no es llegeix.`)
+  }
   const emit = (xf: Xf2, layer: string, pts: P2[], closed: boolean) => {
     if (pts.length < 2) return
+    pointCount += pts.length
+    if (pointCount > DXF_LIMITS.points) tooBig(`més de ${DXF_LIMITS.points.toLocaleString("ca")} punts`)
     out.polylines.push({ layer, pts: pts.map((p) => ap(xf, p)).map(([x, y]) => [x * unit, y * unit]), closed })
   }
   const draw = (ents: RawEntity[], xf: Xf2, depth: number, inherited?: string) => {
     for (const e of ents) {
+      if (++entityCount > DXF_LIMITS.entities) tooBig(`més de ${DXF_LIMITS.entities.toLocaleString("ca")} entitats`)
       const raw = str(e, 8, "0")
       // Capa «0» dins d'un bloc: la de l'INSERT.
       const layer = raw === "0" && inherited ? inherited : raw
@@ -318,11 +344,16 @@ export function readDxf(text: string): DxfDrawing {
           const mx = num(e, 11)
           const my = num(e, 21)
           const ratio = num(e, 40, 1)
-          const t0 = num(e, 41, 0)
-          let t1 = num(e, 42, Math.PI * 2)
-          if (t1 <= t0) t1 += Math.PI * 2
+          const TAU = Math.PI * 2
+          const r0 = num(e, 41, 0)
+          const r1 = num(e, 42, TAU)
+          if (!Number.isFinite(r0) || !Number.isFinite(r1)) break
+          // Paràmetres normalitzats a una volta com a molt (amb uns de molt grans, `n` no tenia límit).
+          const t0 = ((r0 % TAU) + TAU) % TAU
+          let t1 = t0 + ((((r1 - r0) % TAU) + TAU) % TAU)
+          if (t1 - t0 < 1e-9) t1 = t0 + TAU
           const a = Math.hypot(mx, my)
-          if (!(a > 0)) break
+          if (!(a > 0) || !Number.isFinite(a)) break
           const ux = mx / a
           const uy = my / a
           const n = Math.max(8, Math.ceil(((t1 - t0) / (Math.PI * 2)) * 72))
@@ -357,8 +388,9 @@ export function readDxf(text: string): DxfDrawing {
           const local: Xf2 = { a: cos * sx, b: sin * sx, c: -sin * sy, d: cos * sy, e: 0, f: 0 }
           const base = ap(local, b.base)
           const t: Xf2 = { ...local, e: ix - base[0], f: iy - base[1] }
-          const cols = Math.max(1, num(e, 70, 1))
-          const rows = Math.max(1, num(e, 71, 1))
+          const cols = Math.max(1, Math.floor(num(e, 70, 1)) || 1)
+          const rows = Math.max(1, Math.floor(num(e, 71, 1)) || 1)
+          if (cols * rows > DXF_LIMITS.insertCopies) tooBig(`un INSERT de ${cols} × ${rows} còpies`)
           for (let ci = 0; ci < cols; ci++)
             for (let ri = 0; ri < rows; ri++) {
               const off: Xf2 = { ...ID2, e: ci * num(e, 44) * cos - ri * num(e, 45) * sin, f: ci * num(e, 44) * sin + ri * num(e, 45) * cos }

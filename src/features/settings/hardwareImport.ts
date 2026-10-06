@@ -1,7 +1,7 @@
 import type { PickedFile } from "../../components/pickedFiles"
 import { listZip, readZipEntry } from "../../core/file/zip"
 import { groupHettich, hettichArticle, hettichFileKind, type HettichArticle, type HettichFile } from "../../core/import/hettich"
-import { hingeItem, pairPlate, plateItem } from "../../core/import/importItem"
+import { hingeItem, pairImportedBatch, plateItem } from "../../core/import/importItem"
 import { proposeHinge, proposePlate, type HardwareProposal } from "../../core/import/proposal"
 import { stepFeatures } from "../../core/import/stepGeometry"
 import { readDxf } from "../../core/import/dxf"
@@ -62,14 +62,16 @@ export interface ImportOutcome {
   items: HardwareItem[]
   /** Una línia per article que no s'ha pogut importar (o amb avisos). */
   problems: string[]
-  /** Frontisses aparellades amb una placa del mateix lot. */
+  /** Frontisses aparellades amb la placa del lot (només si n'hi ha una). */
   paired: number
+  /** Plaques del lot (amb més d'una, les frontisses queden sense aparellar). */
+  plates: number
 }
 
 /**
  * Importa els articles triats: proposta de mecanitzats (STEP), model 3D (STEP → GLB) i vistes 2D (DXF). Les frontisses
- * parteixen de la frontissa per defecte (`baseHinge`) i, si al mateix lot hi ha plaques, s'aparellen amb la primera
- * (es pot canviar a l'editor). Tot surt **sense confirmar**.
+ * parteixen de la frontissa per defecte (`baseHinge`) i, si al mateix lot hi ha **una sola** placa, s'hi aparellen
+ * (`pairImportedBatch`; amb més d'una, a l'editor). Tot surt **sense confirmar**.
  */
 export async function importArticles(src: ImportSource, articles: HettichArticle[], baseHinge: HardwareItem, progress?: (done: number, total: number) => void): Promise<ImportOutcome> {
   const items: HardwareItem[] = []
@@ -119,13 +121,6 @@ export async function importArticles(src: ImportSource, articles: HettichArticle
   } finally {
     releaseStepWorker()
   }
-  // Frontisses i plaques del mateix lot: la primera placa.
-  const plate = items.find((x) => x.engine === "plate")
-  let paired = 0
-  const out = items.map((x) => {
-    if (x.engine !== "cup" || !plate) return x
-    paired++
-    return pairPlate(x, plate)
-  })
-  return { items: out, problems, paired }
+  // Frontisses i plaques del mateix lot: només amb una sola placa.
+  return { ...pairImportedBatch(items), problems }
 }

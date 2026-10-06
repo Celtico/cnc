@@ -5,7 +5,7 @@ import { flatten, profileToOutline, sampleProfile, toNodes, type BPt } from "./p
 import { CameraPoseSchema } from "./camera"
 import { aliasMaterialRefs } from "./photoUpgrade"
 import { FreePartSchema, JoinerySchema, PART_AXES as PART_AXES_C, tidyPart, type FreePart } from "./freePart"
-import { DEFAULT_LEGACY_HARDWARE, HardwareItemSchema, HardwareKitSchema, isLegacyHardware, kitFromLegacy, migrateModuleHardware, type HardwareKit } from "./hardware"
+import { DEFAULT_LEGACY_HARDWARE, HardwareItemObjectSchema, HardwareKitSchema, sanitizeImportedHardware, isLegacyHardware, kitFromLegacy, migrateModuleHardware, type HardwareKit } from "./hardware"
 import { repairAtomically } from "./repair"
 
 /**
@@ -123,7 +123,7 @@ export type Carcass = z.infer<typeof CarcassSchema>
  * número, un motor d'una versió més nova, un mecanitzat dolent) es treu i el front fa servir el del mòdul; reparat camp a
  * camp en quedaria mig (menys mecanitzats) i el front es fabricaria diferent sense dir-ho.
  */
-const FrontHardwareSchema = repairAtomically(HardwareItemSchema.extend({}))
+const FrontHardwareSchema = repairAtomically(z.preprocess(sanitizeImportedHardware, HardwareItemObjectSchema))
 
 export const FrontSchema = z.discriminatedUnion("kind", [
   /** `glass`: porta de vidre amb marc de perfil d'alumini (vitrina): no és de CNC (`glassDoor`). */

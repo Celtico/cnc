@@ -57,19 +57,28 @@ unitats (`SI_UNIT(.MILLI.,.METRE.)`, metres, polzades) i conjunts (`CONTEXT_DEPE
   model). Concèntrics → un. La línia del parell simètric dona l'eix `u`; els cargols van més lluny del cantell que el
   centre (Sensys: 52 / 5,5 mm), d'aquí el sentit de `v`. Cassoletes inclinades (frontisses d'angle, W30): es giren al
   pla de la porta.
-- **Placa** (`proposePlate`): els forats sencers de Ø2–Ø12 paral·lels entre ells a prop de l'origen (la referència de
-  Hettich: a la filera, al mig de la placa). Els **traus** (forats allargats fets de dos semicercles i un tros, com els
-  de les plaques amb cargols euro) es tornen un forat al centre. `n` = fora del lateral (el cos de la placa; amb
-  espigues, al costat contrari d'on surten), `u` = la línia dels forats (amunt/avall), `v` = fondària (cap al darrere).
-  Cargols euro: Ø5 × 12 (el System 32); espigues: la fondària del model (Ø10 × 11,5).
+- **Placa** (`proposePlate`): **només els forats de muntatge de la cara que toca el lateral** (el pla per l'origen del
+  fitxer, la referència de Hettich: a la filera, al mig de la placa): **espigues** (tetons que neixen en aquest pla i
+  entren al lateral; fondària del model) i **forats de cargol** que travessen el cos de la placa des d'aquest pla
+  (fondària del cargol euro, 12), de Ø2,5 a Ø12. De quin costat és el cos: els forats que neixen al pla hi van, les
+  espigues a l'altre costat (si no, el centre dels vèrtexs). Els **traus** (forats allargats fets de dos semicercles i
+  un tros, com els de les plaques amb cargols euro) es tornen un forat al centre **només si són d'un sol radi i en
+  línia** (un trau en forma de clau o un rectangle arrodonit no és un forat de broca). La resta (traus d'ajust, el clip
+  del braç, tetons de l'altra cara) no es proposa. Els forats van per **parells simètrics** (u ↔ −u); si en queda algun
+  sense parell, la placa és **ambigua: cap forat** i la nota ho diu (s'entren a mà a l'editor; no es pot confirmar una
+  placa sense forats). `n` = fora del lateral, `u` = la línia dels forats (amunt/avall), `v` = fondària (cap al darrere).
 - **Broques** (`snapDrill`): a la més propera de 35, 26, 20, 15, 10, 8, 5, 4, 3, 2,5 (±12 %); un forat de pas una mica
   més ample (Ø5,25 o Ø5,7 d'un cargol de 5) va a la de sota. **Fondàries**: del tram dins de la peça arrodonit amunt al
   mig mil·límetre (cassoleta 12,8 → 13); si no n'hi ha, la de la categoria (cargol d'ala 10, cargol de placa 12).
 
 Resultats amb les descàrregues reals (`hettich.roundtrip.test.ts`): Sensys 110° recobrent 9071205 → cassoleta Ø35 × 13
 i cargols Ø5 a ±26 / 5,5; Sensys d'angle W30 9085166 → igual al pla de la porta; placa 8099 per pressió 9071615 →
-espigues Ø10 × 11,5 a ±16; placa amb cargols euro 9071620 → Ø5 × 12 a ±16. De tot el ZIP: 472 de 554 frontisses i 210
-de 219 plaques donen una proposta (les que no: sense cassoleta reconeixible, de vidre o d'alumini de pinça…).
+espigues Ø10 × 11,5 a ±16; placa amb cargols euro 9071620 → Ø5 × 12 a ±16; 9071680 → les dues espigues (abans, també
+un trau d'ajust); Hettich Direkt 9071650 → els dos forats a ±16,19 (abans, quatre). De tot el ZIP: 472 de 554
+frontisses donen una proposta (les que no: sense cassoleta reconeixible, de vidre o d'alumini de pinça…); de 219
+plaques, 123 en donen 2 forats i 16 en donen 4 (System 4899: espiga o cargol a la filera i cargol a 13), 71 són
+ambigües (plaques lineals amb els forats en fondària, adaptadors, System 4899 amb cargols en creu…) i 9 no tenen cap
+forat reconeixible.
 
 El 3D: **OpenCascade** (`occt-import-js`, WASM de ~7,6 MB) en un worker (`components/viewer/occtWorker.ts`), només en
 importar; `stepMesh.ts` passa la malla al marc del ferratge (m) i en fa un GLB (`GLTFExporter`, normals de les cares).
@@ -79,7 +88,10 @@ Una frontissa Sensys són ~1.800 triangles (~70 kB de GLB).
 
 Lector propi (`core/import/dxf.ts`): `LINE`, `ARC`, `CIRCLE`, `LWPOLYLINE` i `POLYLINE` (2D amb bulge, 3D), `ELLIPSE`,
 `SPLINE` (de Boor), `POINT`, `INSERT` (escala, gir, blocs niats, la capa «0» hereta la de l'INSERT), extrusió (eix
-arbitrari) i `$INSUNITS` (0 = mm, com els de Hettich). Cotes, textos, ombrejats i sòlids s'ignoren. Es desen
+arbitrari) i `$INSUNITS` (0 = mm, com els de Hettich). Cotes, textos, ombrejats i sòlids s'ignoren. **Límits**
+(`DXF_LIMITS`; un fitxer malmès no penja la pàgina): angles d'arc i paràmetres d'el·lipse normalitzats a una volta,
+splines de grau absurd → punts de control, i com a molt 200.000 entitats (comptant les còpies dels INSERT), 2 milions
+de punts i 10.000 còpies per INSERT; si no, error «El DXF és massa gran o està malmès» (la vista no s'importa). Es desen
 simplificades (Douglas–Peucker 0,02 mm, centèsimes: unes desenes de kB per vista). Cada vista es **registra**
 (`registerView`): de les 8 orientacions d'eixos, la que fa caure els seus cercles sobre els forats proposats (error mitjà
 < 0,5 mm). A les frontisses, la frontal hi encaixa i l'editor la posa de fons sota els forats; a les plaques sovint no
@@ -91,14 +103,23 @@ com venen a l'item (`imported.points`); de moment no fan res (vegeu §6).
 `HardwareItem` (`core/model/hardware.ts`):
 - `imported`: `maker`, `article`, `folders` (alemany, com venen), `files`, `asset` (id `hwa-…` de la taula Dexie
   `hardwareAssets`, **v6**: el GLB i les vistes; no viatja amb les còpies dels mòduls ni al `.moble`), `bbox` (marc del
-  ferratge), `points`, `proposed` (els mecanitzats tal com es van llegir), `notes` i **`confirmed`**.
+  ferratge), `points`, `proposed` (els mecanitzats tal com es van llegir), `notes`, **`confirmed`** i `damaged`.
+- **Importat malmès** (`sanitizeImportedHardware`, a `HardwareItemSchema`: preferències, mòduls, fronts i `.moble`): un
+  item amb `imported` que no passa l'esquema (un camp dolent a `imported`, un mecanitzat dolent…) **no es repara camp a
+  camp** (sense `imported` seria una frontissa que forada; amb mitges dades, mig ferratge): es llegeix **inert**, amb la
+  marca `imported.damaged`, sense mecanitzats ni confirmació, amb l'id, el nom i el motor. No fa cap forat i el moble
+  avisa «… ferratge importat malmès: no es mecanitza»; no es pot confirmar (cal tornar-lo a importar).
 - Frontisses: el motor de sempre (`cup`). Target `door`: la cassoleta (`v = cupOffset`, Ø i fondària = `cupDiameter`,
   `cupDepth`) i els cargols o espigues amb `v = "cupOffset±x"` (relatius al centre de la cassoleta, tags `hinge-screw` /
   `hinge-dowel`). La quantitat per alçada, els extrems, la separació i `cupOffset` («distància de la cassoleta», «Al
   cantell» a Mides) es copien de la frontissa per defecte.
-- Placa aparellada: `plate` (`id`, nom, model) i el target `side` amb els forats de la placa copiats, i
-  `params.plateSetback` (del cantell de davant del lateral a la referència de la placa, 37 = filera System 32) i
-  `plateOffset` (alçada de la referència respecte al centre de la cassoleta, 0).
+- Placa aparellada **per referència**: `plate` (`id`, nom, model) i el target `side` amb una **instantània** dels forats
+  de la placa (com les còpies dels mòduls), i `params.plateSetback` (de la cara de darrere de la porta a la referència
+  de la placa, 37 = filera System 32 amb fronts recobrents) i `plateOffset` (alçada de la referència respecte al centre
+  de la cassoleta, 0). Cada canvi de la biblioteca passa per `syncPairedPlates`: les frontisses agafen els forats i el
+  model de la placa d'ara i, si els forats han canviat, tornen a quedar sense confirmar. Una placa eliminada deixa la
+  instantània. En importar, les frontisses s'aparellen amb la placa del lot **només si n'hi ha una** (`pairImportedBatch`;
+  amb més, s'aparellen a l'editor).
 - Plaques: motor nou `plate` (sense lloc del mòdul: només s'aparellen), `params.setback` i `offset`, target `side`.
 - `sameHardware` no compara el model, les vistes ni les notes, però **sí** `confirmed`.
 
@@ -115,7 +136,29 @@ Tot acaba en `Hole` normals: **DXF, .xcs, STEP i CSV sense cap canvi**.
 **Sense confirmar, cap forat**: es pot triar a la porta o com a frontissa del mòdul, però la porta queda sense
 cassoletes ni forats (ni la placa) i el moble avisa (`hardware`): «… és importada i encara no està confirmada…». Millor
 cap forat que un de dolent al taller. Confirmar (o treure la confirmació) **actualitza els mobles desats** que en porten
-la còpia d'abans (`replaceHardwareEverywhere`). Editar els forats d'un importat el torna a deixar sense confirmar.
+la còpia d'abans (`replaceHardwareEverywhere`). Editar els forats d'un importat, o el Ø o la fondària de la cassoleta o
+on va la placa (`setHardwareParam`, `IMPORTED_HOLE_PARAMS`), el torna a deixar sense confirmar. **No es confirma**
+(`confirmProblem`) un malmès, una placa sense forats, ni una frontissa amb la placa aparellada sense confirmar.
+
+**Un importat que no serveix mai torna a la frontissa d'inici** (`slotSpec`, `inertHinge`): si el motor falla (un Ø 0,
+una fórmula dolenta, un paràmetre que falta), la porta queda sense cassoletes ni forats i l'avís `hardware` diu el nom
+de l'item; ni al front torna a la del mòdul. Els ferratges que no són importats continuen tornant al d'inici (al
+mòdul) o al del mòdul (al front), com sempre.
+
+**Tota la frontissa o res** (`addCups` i `plateHoles`): el patró sencer (cassoleta i cargols o espigues, amb el seu Ø)
+ha de cabre a la porta amb el marge, i la placa sencera al lateral, fora de la unió amb la base, la tapa o un
+prestatge fix (espigues i cantell). Una alçada on no hi cap no fa ni la cassoleta ni la placa; si en queden menys de
+les que toquen, l'avís `hinge` de sempre (amb el perquè de la placa). Un forat de la placa més fondo que el lateral es
+fa a gruix − 1 (1 mm de pell, com els forats cecs del STEP) i avisa. Sense lateral al costat de les frontisses
+(`sides.left: false`), la porta fa les cassoletes i un avís diu que els forats de la placa no es fan. **Fronts
+encastats**: la referència de la placa es mesura des de la cara de darrere de la porta (un gruix de front més endins),
+sola. **Plaques a banda i banda d'un divisor** (o sobre la filera de l'altra cara): `resolveHoleClashes` /
+`shortenFitting` escurça primer el forat que no és del ferratge i, si no n'hi ha prou, tots dos a (T − 1)/2, sempre amb
+avís `hole-clash` i mai per sota de 8 mm (`MIN_FITTING_DEPTH`): si no es pot, no es toca i l'avís ho diu clar.
+
+**`.moble` v2** (`MOBLE_VERSION`): un moble amb algun ferratge importat es desa com a **v2**; una app d'abans (que només
+llegeix la v1) el rebutja («Fitxer d'una versió més nova») en lloc de treure'n `imported` en silenci i foradar la
+frontissa pendent. Els que no en porten es continuen desant com a v1 (`MOBLE_BASE_VERSION`).
 
 El visor 3D (Opcions de vista › Ferratges) posa el GLB de la frontissa a cada cassoleta i el de la placa al lateral
 (`Panel.fittings`, que segueixen la peça: porta oberta, explosionat, peces girades per `normalizePanel`); mentre no hi
@@ -130,7 +173,9 @@ confirmada i els forats del ferratge surten en taronja (proposats): és el que f
 
 Proves: `core/build/importedHardware.test.ts` (porta esquerra i dreta: cassoletes iguals que les d'inici, cargols a ±26
 i 5,5 cap a dins, placa a ±16 de cada cassoleta a 37 del davant a la cara de dins del lateral de les frontisses; sense
-confirmar, res; placa euro = forats del System 32; porta girada), `core/import/*.test.ts` (fitxers sintètics) i
+confirmar, res; placa euro = forats del System 32; porta girada), `core/build/importedHardwareSafety.test.ts` (malmesos,
+errors del motor, divisor, plaques fondes, portes baixes, encastats, sense lateral, placa per referència),
+`core/file/mobleFile.test.ts` (v1/v2), `core/import/*.test.ts` (fitxers sintètics, DXF malmesos) i
 `hettich.roundtrip.test.ts` (`HETTICH_DIR=<carpeta amb els ZIP> pnpm exec vitest run src/core/import/hettich.roundtrip.test.ts`;
 se salta sense la carpeta). **Proves d'or idèntiques.**
 
@@ -144,6 +189,4 @@ se salta sense la carpeta). **Proves d'or idèntiques.**
   «Mittelseiten» mou un punt 9,5 mm): serviria per comprovar l'encavalcament i el «Topfabstand» del fabricant.
 - **Taules de muntatge** (`dxf_einbau`, PDF): «Topfabstand», gruixos i encavalcament per a cada combinació; ara la
   distància de la cassoleta (`cupOffset`) i la placa són les de l'usuari.
-- Fronts encastats: la placa va a `plateSetback` del davant del lateral (37 per defecte); amb portes encastades cal
-  sumar-hi el gruix del front a mà.
 - Altres fabricants (Blum: BXF/CAD), frontisses de vidre i d'alumini (sense forats a la porta) i el `bom`.

@@ -160,9 +160,11 @@ describe("proposta de mecanitzats", () => {
     const plate: Cyl[] = [
       { o: [0, 0, 16], d: [1, 0, 0], r: 2.85, h: 6.4, hole: true },
       { o: [0, 0, -16], d: [1, 0, 0], r: 2.85, h: 6.4, hole: true },
-      // Un trau de dos semicercles (Ø5,25) centrat a z = 40: un sol forat al centre.
+      // Traus de dos semicercles (Ø5,25) centrats a z = ±40: un sol forat al centre de cadascun.
       { o: [0, 0, 36.9], d: [1, 0, 0], r: 2.625, h: 2, hole: true, sweep: 180 },
       { o: [0, 0, 43.1], d: [1, 0, 0], r: 2.625, h: 2, hole: true, sweep: 180 },
+      { o: [0, 0, -36.9], d: [1, 0, 0], r: 2.625, h: 2, hole: true, sweep: 180 },
+      { o: [0, 0, -43.1], d: [1, 0, 0], r: 2.625, h: 2, hole: true, sweep: 180 },
     ]
     const p = proposePlate(stepFeatures(makeStep(plate, { extraPoints: body })))
     if ("error" in p) throw new Error(p.error)
@@ -170,7 +172,38 @@ describe("proposta de mecanitzats", () => {
     const holes = p.holes.map((h) => [Math.abs(h.u), h.v, h.d, h.depth])
     expect(holes).toContainEqual([16, 0, 5, 12])
     expect(holes.filter((h) => h[0] === 16)).toHaveLength(2)
-    expect(holes).toContainEqual([40, 0, 5, 12])
+    expect(holes.filter((h) => h[0] === 40)).toEqual([[40, 0, 5, 12], [40, 0, 5, 12]])
+  })
+
+  it("placa: els cilindres que no neixen a la cara del lateral i els traus que no són de broca no es proposen", () => {
+    const body: V3[] = [[0, -19, -27], [6, -19, -27], [6, 31, 27], [0, 31, 27]]
+    const plate: Cyl[] = [
+      { o: [0, 0, 16], d: [1, 0, 0], r: 2.85, h: 6.4, hole: true },
+      { o: [0, 0, -16], d: [1, 0, 0], r: 2.85, h: 6.4, hole: true },
+      // Un forat dins del cos de la placa (de 2 a 4 mm, no toca el lateral) i un trau en forma de clau (dos radis).
+      { o: [2, 12, 0], d: [1, 0, 0], r: 2.5, h: 2, hole: true },
+      { o: [0, 12, 20], d: [1, 0, 0], r: 2.5, h: 4, hole: true, sweep: 180 },
+      { o: [0, 16, 20], d: [1, 0, 0], r: 3.9, h: 4, hole: true, sweep: 180 },
+    ]
+    const p = proposePlate(stepFeatures(makeStep(plate, { extraPoints: body })))
+    if ("error" in p) throw new Error(p.error)
+    expect(p.holes.map((h) => [Math.abs(h.u), h.v, h.d])).toEqual([
+      [16, 0, 5],
+      [16, 0, 5],
+    ])
+  })
+
+  it("placa ambigua (un forat de muntatge sense parell): cap forat i la nota", () => {
+    const body: V3[] = [[0, -19, -27], [6, -19, -27], [6, 31, 27], [0, 31, 27]]
+    const plate: Cyl[] = [
+      { o: [0, 0, 16], d: [1, 0, 0], r: 2.85, h: 6.4, hole: true },
+      { o: [0, 0, -16], d: [1, 0, 0], r: 2.85, h: 6.4, hole: true },
+      { o: [0, 10, 9], d: [1, 0, 0], r: 2.5, h: 6.4, hole: true },
+    ]
+    const p = proposePlate(stepFeatures(makeStep(plate, { extraPoints: body })))
+    if ("error" in p) throw new Error(p.error)
+    expect(p.holes).toEqual([])
+    expect(p.notes.join(" ")).toMatch(/ambigua/)
   })
 
   it("placa per pressió: espigues Ø10 que entren 11,5 al lateral", () => {

@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 import { VitePWA } from "vite-plugin-pwa"
 import { execSync } from "node:child_process"
+import { WASM_RUNTIME_CACHING } from "./src/pwaWasmCache.ts"
 
 /** Versió que només puja: el nombre de commits de la branca, llegit de git en construir (com a rack). */
 function gitVersion(): { version: string; commit: string } {
@@ -63,11 +64,8 @@ export default defineConfig({
         // OpenCascade (`occt-import-js`, WASM de ~7,6 MB, només per importar ferratges): tampoc (`globPatterns` no hi
         // porta `.wasm`); es desa en fer-lo servir.
         runtimeCaching: [
-          {
-            urlPattern: ({ url }) => url.pathname.startsWith("/assets/") && url.pathname.endsWith(".wasm"),
-            handler: "CacheFirst",
-            options: { cacheName: "mobles-wasm", expiration: { maxEntries: 4 }, cacheableResponse: { statuses: [200] } },
-          },
+          // OpenCascade a part de Draco i Basis (`src/pwaWasmCache.ts`).
+          ...WASM_RUNTIME_CACHING,
           {
             urlPattern: ({ url }) => url.pathname.startsWith("/textures/"),
             handler: "CacheFirst",

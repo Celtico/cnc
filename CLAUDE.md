@@ -268,11 +268,23 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   `zFront − plateSetback` (37) i a l'alçada de cada cassoleta + `plateOffset`; un forat de placa sobre un del System 32
   es queda el més gros (cargol euro Ø5 × 12 = el mateix forat). **Sense confirmar (`imported.confirmed`), cap forat**
   (ni a la porta ni al lateral) i avís `hardware`: el taller no rep res que no s'hagi revisat. El model només per veure
-  (`Panel.fittings`, GLB de `hardwareAssets`). Tests `build/importedHardware.test.ts`, `core/import/*.test.ts` i
-  `core/import/hettich.roundtrip.test.ts` (`HETTICH_DIR` = carpeta amb els ZIP de Hettich; no es copien al repo).
+  (`Panel.fittings`, GLB de `hardwareAssets`). **Mai mig ferratge ni una frontissa que no s'ha revisat**: un importat que
+  no passa l'esquema es llegeix **inert** (`sanitizeImportedHardware` a `HardwareItemSchema`: preferències, mòduls,
+  fronts i `.moble`; marca `imported.damaged`, avís «ferratge importat malmès: no es mecanitza»); un importat que fa
+  fallar el motor queda sense forats (`inertHinge`), mai el d'inici ni el del mòdul; tot el patró (cassoleta i cargols) a
+  la porta i la placa sencera al lateral i fora de les unions amb base, tapa i prestatges fixos, o res d'aquella frontissa;
+  placa més fonda que el lateral → gruix − 1 i avís; sense lateral → avís; amb fronts encastats la placa es mesura des
+  del darrere de la porta (sola). La placa aparellada és **per referència** (`syncPairedPlates` a cada canvi de la
+  biblioteca; si en canvien els forats, la frontissa es desconfirma); no es confirma una frontissa amb la placa
+  pendent, ni una placa sense forats (`confirmProblem`); canviar Ø/fondària de la cassoleta o on va la placa desconfirma
+  (`setHardwareParam`). `proposePlate`: només els forats de muntatge de la cara del lateral, per parells simètrics; si
+  no, cap forat (s'entren a mà). Tests `build/importedHardware.test.ts`, `build/importedHardwareSafety.test.ts`,
+  `core/import/*.test.ts` i `core/import/hettich.roundtrip.test.ts` (`HETTICH_DIR` = carpeta amb els ZIP de Hettich; no
+  es copien al repo).
 - **Forats que es trobarien per dins** (`build/holeClash.ts`, `resolveHoleClashes`): System 32 a banda i banda d'un divisor
-  → tots dos a (T − 1)/2; espiga de cantell contra un forat de cara → l'espiga s'atura 1 mm abans (mínim 10 mm, si no avís
-  `hole-clash`). Els forats de guia de la caixa del calaix no arriben a la ranura del fons.
+  → tots dos a (T − 1)/2; si un és d'un ferratge (placa, frontissa: `shortenFitting`), primer s'escurça l'altre, sempre amb
+  avís `hole-clash` i mai per sota de 8 mm (si no, no es toca i ho diu); espiga de cantell contra un forat de cara →
+  l'espiga s'atura 1 mm abans (mínim 10 mm, si no avís `hole-clash`). Els forats de guia de la caixa del calaix no arriben a la ranura del fons.
 - **Casos degenerats** (trobats amb un fuzzer; `build/robustness.test.ts`): res surt de les peces i **mai mitja unió**
   (`dowelJoint`: si l'espiga no cap sencera al cantell i a la cara, no es fa cap dels dos forats). Espigues de divisors i
   prestatges fixos sobre el **tram de fondària comú** (`HorizontalRef.zRear/zFront`). Mides fixes que no sumen el total
@@ -1182,7 +1194,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     baixen (STEP i DWG/DXF; només es descomprimeixen els articles triats, `listZip`/`readZipEntry`), carpetes o fitxers.
     Diàleg `HardwareImportDialog`: articles per número amb la categoria i la carpeta traduïdes, els fitxers que porten
     i, si no es poden importar, per què; cerca, filtre Frontisses · Plaques · Altres, «Triar els visibles», «Importar
-    (n)». Les frontisses s'aparellen amb la primera placa del mateix lot. Tot entra **sense confirmar** (insígnia a la
+    (n)». Les frontisses s'aparellen amb la placa del lot només si n'hi ha una (amb més, a l'editor). Tot entra **sense confirmar** (insígnia a la
     targeta). L'editor d'un importat: el model al muntatge (vegeu «Com va muntat»), la vista del fitxer de fons sota els
     forats proposats (`PanelDrawing underlay`) i les vistes 2D; a la dreta «Importat del fabricant» (estat,
     **Confirmar** / «Treure la confirmació» —els mobles desats amb la còpia d'abans hi passen—, article, carpeta, fitxers,
@@ -1374,7 +1386,8 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   `false`; l'Editor no desa i avisa). Peces, Nesting i Exportar mostren l'error (`UnreadableAlert`, `useCompositionRead`) i
   no fan res, i el `.moble` no es desa (`projectToMoble` llança `UNREADABLE_COMPOSITION`). L'Editor avisa del que s'ha tret.
   Les parets dels ambients (`parseAmbient`) també: una obertura o un material dolents no treuen la paret.
-- **Fitxer `.moble`** (`core/file/mobleFile.ts`, JSON versionat amb foto opcional; `parseMobleFile` fa la mateixa reparació i
+- **Fitxer `.moble`** (`core/file/mobleFile.ts`, JSON versionat amb foto opcional; **v2 només si porta ferratges
+  importats** (`usesImportedHardware`): una app d'abans el rebutja en lloc de treure'n `imported`; sense, v1; `parseMobleFile` fa la mateixa reparació i
   treu amb un avís el nesting, el calibratge de la foto (camp a camp) i les referències malmesos). Porta la càmera i els models
   de l'usuari que fa servir. El calibratge (`FileCalibrationSchema`) té els mateixos camps que `PhotoCalibration` (un test ho
   comprova en compilar). `updateProjectPhoto` no desa un calibratge d'una foto que ja no hi és.
@@ -1402,7 +1415,8 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   s'ignora.
 - Precache (`vite.config.ts`): models `.glb` i HDRI sí; fotos de textura (`/textures/`) i pesos d'OIDN (`/oidn/`, `oidn.ts`
   els valida i esborra els dolents de la seva memòria cau) no: `runtimeCaching` CacheFirst en fer-los servir; splash no.
-  El WASM d'OpenCascade (`assets/*.wasm`, importar ferratges) tampoc: CacheFirst en fer-lo servir. L'API i els fitxers de
+  El WASM d'OpenCascade (`assets/occt-import-js-*.wasm`, importar ferratges) tampoc: CacheFirst en fer-lo servir, a la
+  seva memòria (`mobles-occt`, `src/pwaWasmCache.ts`; amb Draco i Basis a la mateixa de 4, en sortia). L'API i els fitxers de
   Poly Haven (importar models) no passen per cap memòria cau: sense connexió fallen amb `OfflineError` i la UI ho explica.
 
 ## Icones (catàleg fix, `react-icons/lu`)
