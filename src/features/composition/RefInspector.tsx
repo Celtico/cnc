@@ -4,8 +4,8 @@ import { useState, type ReactNode } from "react"
 import { ProfileEditor } from "./ProfileEditor"
 import type { IconType } from "react-icons"
 import { IconChoice, type IconOption } from "../../components/IconChoice"
-import { LuBox, LuCylinder, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuScissors, LuShield, LuSpline, LuArrowDownToLine, LuBrickWall, LuBookmark, LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuScan, LuTrash2 } from "react-icons/lu"
-import { PanelSection } from "../../components/PanelSection"
+import { LuBox, LuCylinder, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuScissors, LuShield, LuSpline, LuArrowDownToLine, LuBrickWall, LuBookmark, LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuLink, LuPalette, LuTrash2 } from "react-icons/lu"
+import { FoldItem } from "../../components/Fold"
 import { toaster } from "../../components/ui/toaster"
 import { AXIS_INDEX, SECTION_AXES, anchorRef, insertRefCopy, toNodes, newId, type Composition, type RefObject } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
@@ -20,10 +20,17 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
   const o = comp.references.find((r) => r.id === id)
   if (!o) return null
   const update = (patch: Partial<RefObject>) => onChange({ ...comp, references: comp.references.map((r) => (r.id === id ? anchorRef({ ...r, ...patch }) : r)) })
-  // Mateix patró que la resta de l'inspector: accions a la capçalera (RefActions) i seccions plegables.
+  // Mateix patró que la peça lliure: accions a la capçalera (RefActions) i una secció per apartat (sense «General»).
+  const shape = o.shape ?? "box"
+  const axis = (o.axis ?? "z") as Axis
+  const axisOpt = AXIS_OPTIONS.find((a) => a.value === axis)!
+  // La direcció: la del cilindre i el perfil, o la del tall d'una caixa que talla.
+  const oriented = shape !== "box" || o.effect === "cut"
+  const shapeOpt = SHAPE_OPTIONS.find((s) => s.id === shape)!
+  const attached = o.onFloor && o.onWall ? "Terra i paret" : o.onFloor ? "Al terra" : o.onWall ? "A la paret" : "Res"
   return (
     <Stack gap={0}>
-      <PanelSection id="ref-general" title="General" icon={LuScan}>
+      <FoldItem id="ref-effect" title="Efecte" icon={o.effect === "cut" ? LuScissors : LuShield} badge={o.effect === "cut" ? "Talla" : "Obstacle"}>
         <FormRow
           label="Efecte"
           help={
@@ -42,12 +49,14 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
             onChange={(v) => update({ effect: v === "cut" ? "cut" : undefined })}
           />
         </FormRow>
+      </FoldItem>
+      <FoldItem id="ref-shape" title="Forma" icon={shapeOpt.icon} badge={shapeOpt.name}>
         <FormRow label="Forma">
           {/* Pastilles que salten de línia: tres opcions amb icona no hi caben en un segmentat. */}
           <Stack gap={2}>
             <ChoiceChips
               label="Forma"
-              value={o.shape ?? "box"}
+              value={shape}
               options={SHAPE_OPTIONS}
               onChange={(v) => {
                 if (v === "cylinder") update(cylinderPatch(o, o.axis ?? "z"))
@@ -64,18 +73,27 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
             )}
           </Stack>
         </FormRow>
-        {o.effect !== "cut" && (
-          <FormRow label="Material" help={o.material ? "Es veu sòlid amb aquest material i surt a la Presentació i al render." : "Sense material, és un fantasma translúcid (només per comprovar que tot hi cap; no surt al render)."} maxW="280px">
-            <MaterialSelect label="Material" materials={settings.materials} value={o.material ?? ""} emptyLabel="Cap (fantasma)" hideLabel onChange={(v) => update({ material: v || undefined })} />
-          </FormRow>
-        )}
-      </PanelSection>
-      <PanelSection id="ref-size" title="Mides" icon={LuMoveDiagonal}>
+      </FoldItem>
+      {oriented && (
+        <FoldItem id="ref-orient" title="Orientació" icon={axisOpt.icon} badge={axisOpt.label}>
+          {o.shape === "profile" ? (
+            <FormRow label="Direcció">
+              <IconChoice label="Direcció" hideLabel value={axis} options={AXIS_OPTIONS} onChange={(a) => update(profileAxisPatch(o, a))} />
+            </FormRow>
+          ) : o.shape === "cylinder" ? (
+            <FormRow label="Direcció">
+              <IconChoice label="Direcció" hideLabel value={axis} options={AXIS_OPTIONS} onChange={(a) => update(cylinderPatch(o, a))} />
+            </FormRow>
+          ) : (
+            <FormRow label="Direcció del tall">
+              <IconChoice label="Direcció del tall" hideLabel value={axis} options={AXIS_OPTIONS} onChange={(a) => update({ axis: a === "z" ? undefined : a })} />
+            </FormRow>
+          )}
+        </FoldItem>
+      )}
+      <FoldItem id="ref-size" title="Mides" icon={LuMoveDiagonal}>
         {o.shape === "profile" ? (
           <>
-            <FormRow label="Direcció">
-              <IconChoice label="Direcció" hideLabel value={(o.axis ?? "z") as Axis} options={AXIS_OPTIONS} onChange={(a) => update(profileAxisPatch(o, a))} />
-            </FormRow>
             <NumRow label="Llarg" value={sectionOf(o).length} min={1} max={20000} step={10} onChange={(length) => update(sizePatch(o, { length }))} />
             <FormRow label="Secció">
               <Text fontSize="sm" color="fg.muted" pt={1.5}>
@@ -85,25 +103,24 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
           </>
         ) : o.shape === "cylinder" ? (
           <>
-            <FormRow label="Direcció">
-              <IconChoice label="Direcció" hideLabel value={(o.axis ?? "z") as Axis} options={AXIS_OPTIONS} onChange={(a) => update(cylinderPatch(o, a))} />
-            </FormRow>
             <NumRow label="Diàmetre (Ø)" value={cylinderDims(o).diameter} min={1} max={20000} step={5} onChange={(diameter) => update(cylinderPatch(o, o.axis ?? "z", { diameter }))} />
             <NumRow label="Llarg" value={cylinderDims(o).length} min={1} max={20000} step={10} onChange={(length) => update(cylinderPatch(o, o.axis ?? "z", { length }))} />
           </>
         ) : (
           <>
-          {o.effect === "cut" && (
-            <FormRow label="Direcció del tall">
-              <IconChoice label="Direcció del tall" hideLabel value={(o.axis ?? "z") as Axis} options={AXIS_OPTIONS} onChange={(a) => update({ axis: a === "z" ? undefined : a })} />
-            </FormRow>
-          )}
-          <NumRow label="Ample" value={o.w} min={1} max={20000} step={10} onChange={(w) => update({ w })} />
-          <NumRow label="Alt" value={o.h} min={1} max={20000} step={10} onChange={(h) => update({ h })} />
-          <NumRow label="Fondària" value={o.d} min={1} max={20000} step={10} onChange={(d) => update({ d })} />
+            <NumRow label="Ample" value={o.w} min={1} max={20000} step={10} onChange={(w) => update({ w })} />
+            <NumRow label="Alt" value={o.h} min={1} max={20000} step={10} onChange={(h) => update({ h })} />
+            <NumRow label="Fondària" value={o.d} min={1} max={20000} step={10} onChange={(d) => update({ d })} />
           </>
         )}
-      </PanelSection>
+      </FoldItem>
+      {o.effect !== "cut" && (
+        <FoldItem id="ref-material" title="Material" icon={LuPalette} badge={o.material ?? "Fantasma"} badgePalette={o.material ? "wood" : "gray"}>
+          <FormRow label="Material" help={o.material ? "Es veu sòlid amb aquest material i surt a la Presentació i al render." : "Sense material, és un fantasma translúcid (només per comprovar que tot hi cap; no surt al render)."} maxW="280px">
+            <MaterialSelect label="Material" materials={settings.materials} value={o.material ?? ""} emptyLabel="Cap (fantasma)" hideLabel onChange={(v) => update({ material: v || undefined })} />
+          </FormRow>
+        </FoldItem>
+      )}
       {o.shape === "profile" && o.profile && (
         <ProfileEditor
           open={editing}
@@ -116,7 +133,7 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
           }}
         />
       )}
-      <PanelSection id="ref-position" title="Posició" icon={LuMove}>
+      <FoldItem id="ref-attach" title="Enganxada" icon={LuLink} badge={attached} badgePalette={o.onFloor || o.onWall ? "wood" : "gray"}>
         {/* Enganxar-lo: interruptors discrets (es poden activar tots dos). */}
         <FormRow label="Enganxat">
           <HStack {...segGroup}>
@@ -128,13 +145,6 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
             </Button>
           </HStack>
         </FormRow>
-        {/* Cada direcció amb la seva icona i un nom, no només la lletra de l'eix. */}
-        <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra del moble" />} ariaLabel="De costat (X)" value={o.x} min={-30000} max={30000} step={10} onChange={(x) => update({ x })} />
-        <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={o.y} min={-30000} max={30000} step={10} disabled={!!o.onFloor} onChange={(y) => update({ y })} />
-        <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fons (Z)" value={o.z} min={-30000} max={30000} step={10} disabled={!!o.onWall} onChange={(z) => update({ z })} />
-        <Text fontSize="xs" color="fg.muted">
-          De costat (X) des de l'esquerra del moble · Alçada (Y) des del terra · Fons (Z) des de la paret cap endavant.
-        </Text>
         <Text fontSize="xs" color="fg.muted">
           {o.onFloor && o.onWall
             ? "Al terra i a la paret: al 3D només es mou de costat."
@@ -142,10 +152,19 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
               ? "Al terra: al 3D es mou lliscant pel terra."
               : o.onWall
                 ? "A la paret: al 3D es mou per la paret (amunt, avall i de costat)."
-                : "Al 3D, arrossega'l: s'enganxa a les vores dels mòduls i dels altres objectes (Alt: lliure; Maj: pel terra)."}{" "}
-          Fletxes: 1 mm (Maj: 10 mm); Re Pàg / Av Pàg: fondària.
+                : "Al 3D, arrossega'l: s'enganxa a les vores dels mòduls i dels altres objectes (Alt: lliure; Maj: pel terra)."}
         </Text>
-      </PanelSection>
+      </FoldItem>
+      <FoldItem id="ref-position" title="Posició" icon={LuMove}>
+        {/* Cada direcció amb la seva icona i un nom, no només la lletra de l'eix. */}
+        <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra del moble" />} ariaLabel="De costat (X)" value={o.x} min={-30000} max={30000} step={10} onChange={(x) => update({ x })} />
+        <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={o.y} min={-30000} max={30000} step={10} disabled={!!o.onFloor} onChange={(y) => update({ y })} />
+        <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fons (Z)" value={o.z} min={-30000} max={30000} step={10} disabled={!!o.onWall} onChange={(z) => update({ z })} />
+        <Text fontSize="xs" color="fg.muted">
+          De costat (X) des de l'esquerra del moble · Alçada (Y) des del terra · Fons (Z) des de la paret cap endavant.
+          {o.onFloor || o.onWall ? " El que és enganxat (Enganxada) no es pot canviar aquí." : ""} Fletxes: 1 mm (Maj: 10 mm); Re Pàg / Av Pàg: fondària.
+        </Text>
+      </FoldItem>
     </Stack>
   )
 }
@@ -159,12 +178,20 @@ const AXIS_OPTIONS: IconOption<Axis>[] = [
   { value: "x", label: "De costat", icon: LuMoveHorizontal, hint: "De costat (talla laterals i divisions)" },
 ]
 
-/** Forma de l'objecte: pastilles amb icona i nom. */
-const SHAPE_OPTIONS: { id: "box" | "cylinder" | "profile"; label: ReactNode }[] = [
-  { id: "box", label: <><LuBox /> Caixa</> },
-  { id: "cylinder", label: <><LuCylinder /> Cilindre</> },
-  { id: "profile", label: <><LuSpline /> Perfil</> },
+/** Forma de l'objecte: pastilles amb icona i nom (la icona també és la de la secció). */
+const SHAPES: { id: "box" | "cylinder" | "profile"; name: string; icon: IconType }[] = [
+  { id: "box", name: "Caixa", icon: LuBox },
+  { id: "cylinder", name: "Cilindre", icon: LuCylinder },
+  { id: "profile", name: "Perfil", icon: LuSpline },
 ]
+const SHAPE_OPTIONS: { id: "box" | "cylinder" | "profile"; name: string; icon: IconType; label: ReactNode }[] = SHAPES.map((s) => ({
+  ...s,
+  label: (
+    <>
+      <s.icon /> {s.name}
+    </>
+  ),
+}))
 
 /** Noms dels eixos (u, v) de la secció per a cada direcció (`SECTION_AXES`). */
 const AXIS_NAMES: Record<Axis, [string, string]> = { z: ["Ample", "Alt"], y: ["Ample", "Fondària"], x: ["Fondària", "Alt"] }

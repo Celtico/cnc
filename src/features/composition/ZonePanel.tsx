@@ -1,6 +1,6 @@
 import { Button, HStack, IconButton, Menu, Portal, Stack, Switch, Text } from "@chakra-ui/react"
 import { LuArrowUp, LuCopy, LuEllipsis, LuColumns2, LuRows2, LuPlus, LuRows3, LuRuler, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
-import { PanelSection } from "../../components/PanelSection"
+import { FoldItem } from "../../components/Fold"
 import {
   DEFAULT_GRILLE,
   addChild,
@@ -112,7 +112,7 @@ export function ZonePanel({
   const size = parent?.split ? (parent.split.sizes[index] ?? "auto") : undefined
 
   const sizeField = parent?.split && size !== undefined && (
-    <PanelSection id="zone-size" title={parent.split.dir === "v" ? "Amplada" : "Alçada"} icon={LuRuler} badge={size === "auto" ? "Auto" : `${size} mm`}>
+    <FoldItem id="zone-size" title={parent.split.dir === "v" ? "Amplada" : "Alçada"} icon={LuRuler} badge={size === "auto" ? "Auto" : `${size} mm`}>
       <FormRow label="Mida" help={`${parent.split.dir === "v" ? "Amplada" : "Alçada"} de la llum. Les automàtiques es reparteixen el que queda.`}>
         <Switch.Root size="sm" pt="6px" checked={size === "auto"} onCheckedChange={(e) => onChange(setChildSize(root, parent.id, index, e.checked ? "auto" : 400))}>
           <Switch.HiddenInput />
@@ -121,7 +121,7 @@ export function ZonePanel({
         </Switch.Root>
       </FormRow>
       {size !== "auto" && <NumRow label={parent.split.dir === "v" ? "Amplada" : "Alçada"} value={size} min={50} max={3000} step={10} onChange={(v) => onChange(setChildSize(root, parent.id, index, v))} />}
-    </PanelSection>
+    </FoldItem>
   )
 
   return (
@@ -129,7 +129,7 @@ export function ZonePanel({
 
       {zone.split ? (
         <>
-          <PanelSection id="zone-split" title={`Divisió ${zone.split.dir === "v" ? "vertical" : "horitzontal"}`} badge={`${zone.split.children.length} zones`} icon={zone.split.dir === "v" ? LuColumns2 : LuRows2}>
+          <FoldItem id="zone-split" title={`Divisió ${zone.split.dir === "v" ? "vertical" : "horitzontal"}`} badge={`${zone.split.children.length} zones`} icon={zone.split.dir === "v" ? LuColumns2 : LuRows2}>
             <Text fontSize="sm" color="fg.muted">
               Toca una zona a l'estructura o al dibuix per editar-la.
             </Text>
@@ -141,7 +141,7 @@ export function ZonePanel({
                 <LuUngroup /> Treure la divisió
               </Button>
             </HStack>
-          </PanelSection>
+          </FoldItem>
           {/* Portes que tapen tota la zona dividida (armari: penjador i maleter darrere). */}
           <ZoneFrontSection root={root} zone={zone} onChange={onChange} kinds={["none", "door", "panel"]} title="Front de tota la zona" />
           {sizeField}
@@ -151,7 +151,7 @@ export function ZonePanel({
           <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} />
 
           {zone.front?.kind !== "drawers" && (
-            <PanelSection id="zone-shelves" title="Prestatges" badge={zone.shelves?.n || undefined} icon={LuRows3}>
+            <FoldItem id="zone-shelves" title="Prestatges" badge={zone.shelves?.n || undefined} icon={LuRows3}>
               <NumRow
                 label="Quantitat"
                 suffix="u"
@@ -224,12 +224,12 @@ export function ZonePanel({
                   </Switch.Root>
                 </FormRow>
               )}
-            </PanelSection>
+            </FoldItem>
           )}
 
           {sizeField}
 
-          <PanelSection id="zone-divide" title="Dividir" icon={LuSquareSplitHorizontal} defaultOpen={false}>
+          <FoldItem id="zone-divide" title="Dividir" icon={LuSquareSplitHorizontal} defaultOpen={false}>
             <Text textStyle="xs" color="fg.muted">
               Parteix aquest compartiment en dos. El contingut es queda al primer.
             </Text>
@@ -241,7 +241,7 @@ export function ZonePanel({
                 <LuSquareSplitVertical /> En horitzontal
               </Button>
             </HStack>
-          </PanelSection>
+          </FoldItem>
         </>
       )}
     </Stack>
@@ -396,7 +396,7 @@ function FrontFields({ front, openRatio, onChange }: { front: Front; openRatio?:
 export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title = "Front", id }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; kinds?: (Front["kind"] | "none")[]; title?: string; /** Id de la secció plegable (cada lloc el seu: recorda si és oberta). */ id?: string }) {
   const options = kinds ?? (Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[])
   return (
-          <PanelSection id={id ?? (kinds ? "zone-parent-front" : "zone-front")} title={title} badge={FRONT_LABELS[zone.front?.kind ?? "none"]} icon={FRONT_ICONS[zone.front?.kind ?? "none"]}>
+          <FoldItem id={id ?? (kinds ? "zone-parent-front" : "zone-front")} title={title} badge={FRONT_LABELS[zone.front?.kind ?? "none"]} icon={FRONT_ICONS[zone.front?.kind ?? "none"]}>
             {/* Tipus de front: un botó amb la icona de cada tipus (el nom, al tooltip, a sota i a la insígnia). */}
             <FormRow label="Contingut">
               <IconChoice
@@ -408,6 +408,6 @@ export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title
               />
             </FormRow>
             {zone.front && <FrontFields front={zone.front} openRatio={openRatio} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
-          </PanelSection>
+          </FoldItem>
   )
 }

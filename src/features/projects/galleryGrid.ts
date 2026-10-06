@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react"
-
 /** Columnes de totes les graelles de la pàgina Mobles (historial i plantilles): la mateixa mida de targeta. */
 export const GALLERY_COLS = { base: 2, md: 3, lg: 4, "2xl": 5 }
 
@@ -7,23 +5,7 @@ export const GALLERY_COLS = { base: 2, md: 3, lg: 4, "2xl": 5 }
 export const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
 
 /** Acordions oberts: comencen tancats i es recorden només durant la sessió (com les seccions). */
-export function useSessionList(key: string): [string[], (v: string[]) => void] {
-  const [v, setV] = useState<string[]>(() => {
-    try {
-      return JSON.parse(sessionStorage.getItem(key) ?? "[]") as string[]
-    } catch {
-      return []
-    }
-  })
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(key, JSON.stringify(v))
-    } catch {
-      /* sense sessionStorage: només en memòria */
-    }
-  }, [key, v])
-  return [v, setV]
-}
+export { useSessionList } from "../../components/sessionState"
 
 /** Separa una llista pels seus grups (carpetes, ordenats pel nom) i els que no en tenen. */
 export function groupByFolder<T>(items: T[], folderOf: (t: T) => string | undefined): { folders: [string, T[]][]; loose: T[] } {

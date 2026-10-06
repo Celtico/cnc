@@ -1,8 +1,9 @@
-import { Box, Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react"
-import { useState, type ReactNode } from "react"
-import { LuChevronDown, LuChevronRight, LuPanelBottom, LuPanelTop, LuPlus, LuSquareDashed, LuTrash2 } from "react-icons/lu"
+import { Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react"
+import { useState } from "react"
+import { LuPanelBottom, LuPanelTop, LuPlus, LuSquareDashed, LuTrash2 } from "react-icons/lu"
 import { CUTOUT_PRESETS, boardChoices, newId, type Composition, type Run, type WorktopCutout, type WorktopRun } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
+import { FoldGroup, FoldItem } from "../../components/Fold"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { moduleChips } from "./moduleChips"
 import { MaterialSelect } from "../settings/MaterialSelect"
@@ -53,32 +54,34 @@ export function RunsForm({ comp, onChange }: { comp: Composition; onChange: (c: 
           Peces d'una sola tirada per sobre o per sota de diversos mòduls: el taulell (amb els forats de la pica i la vitro) i el sòcol de davant de les potes.
         </Text>
       )}
-      {runs.map((r) => (
-        <Fold
-          key={r.id}
-          open={openId === r.id}
-          onToggle={() => setOpenId(openId === r.id ? null : r.id)}
-          icon={r.kind === "worktop" ? <LuPanelTop /> : <LuPanelBottom />}
-          title={r.kind === "worktop" ? "Taulell" : "Sòcol corregut"}
-          summary={`${name(r.from)} → ${name(r.to)} · ${r.thickness} mm${r.kind === "worktop" && r.cutouts.length ? ` · ${r.cutouts.length} ${r.cutouts.length === 1 ? "forat" : "forats"}` : ""}`}
-          onRemove={() => setRuns(runs.filter((x) => x.id !== r.id))}
-          removeLabel={r.kind === "worktop" ? "Eliminar el taulell" : "Eliminar el sòcol"}
-        >
-          {moduleSelect("Des de", r.from, (from) => update(r.id, { from }))}
-          {moduleSelect("Fins a", r.to, (to) => update(r.id, { to }))}
-          <FormRow label="Material" maxW="280px">
-            <MaterialSelect label="Material" hideLabel materials={boardChoices(settings.materials)} value={r.material} onChange={(material) => update(r.id, { material })} />
-          </FormRow>
-          <NumRow label="Gruix" value={r.thickness} min={10} max={60} step={1} onChange={(thickness) => update(r.id, { thickness })} />
-          {r.kind === "plinth" ? (
-            <>
-              <NumRow label="Retranqueig" value={r.setback} min={0} max={150} step={5} onChange={(setback) => update(r.id, { setback })} help="Des de la cara dels fronts. L'alçada és la de les potes." />
-            </>
-          ) : (
-            <WorktopFields run={r} comp={comp} onChange={(patch) => update(r.id, patch)} />
-          )}
-        </Fold>
-      ))}
+      {runs.length > 0 && (
+        <FoldGroup variant="card" multiple={false} value={openId ? [openId] : []} onValueChange={(v) => setOpenId(v[0] ?? null)}>
+          {runs.map((r) => (
+            <FoldItem
+              key={r.id}
+              id={r.id}
+              icon={r.kind === "worktop" ? LuPanelTop : LuPanelBottom}
+              title={r.kind === "worktop" ? "Taulell" : "Sòcol corregut"}
+              summary={`${name(r.from)} → ${name(r.to)} · ${r.thickness} mm${r.kind === "worktop" && r.cutouts.length ? ` · ${r.cutouts.length} ${r.cutouts.length === 1 ? "forat" : "forats"}` : ""}`}
+              actions={<RemoveButton label={r.kind === "worktop" ? "Eliminar el taulell" : "Eliminar el sòcol"} onClick={() => setRuns(runs.filter((x) => x.id !== r.id))} />}
+            >
+              {moduleSelect("Des de", r.from, (from) => update(r.id, { from }))}
+              {moduleSelect("Fins a", r.to, (to) => update(r.id, { to }))}
+              <FormRow label="Material" maxW="280px">
+                <MaterialSelect label="Material" hideLabel materials={boardChoices(settings.materials)} value={r.material} onChange={(material) => update(r.id, { material })} />
+              </FormRow>
+              <NumRow label="Gruix" value={r.thickness} min={10} max={60} step={1} onChange={(thickness) => update(r.id, { thickness })} />
+              {r.kind === "plinth" ? (
+                <>
+                  <NumRow label="Retranqueig" value={r.setback} min={0} max={150} step={5} onChange={(setback) => update(r.id, { setback })} help="Des de la cara dels fronts. L'alçada és la de les potes." />
+                </>
+              ) : (
+                <WorktopFields run={r} comp={comp} onChange={(patch) => update(r.id, patch)} />
+              )}
+            </FoldItem>
+          ))}
+        </FoldGroup>
+      )}
       <HStack wrap="wrap" gap={2}>
         <Button size="xs" variant="outline" disabled={!first} onClick={addWorktop}>
           <LuPlus /> Taulell
@@ -107,41 +110,42 @@ function WorktopFields({ run, comp, onChange }: { run: WorktopRun; comp: Composi
       <NumRow label="Voladís davant" help="Per davant dels fronts." value={run.overhangFront} min={0} max={200} step={5} onChange={(overhangFront) => onChange({ overhangFront })} />
       <NumRow label="Voladís esquerra" value={run.overhangLeft} min={0} max={500} step={5} onChange={(overhangLeft) => onChange({ overhangLeft })} />
       <NumRow label="Voladís dreta" value={run.overhangRight} min={0} max={500} step={5} onChange={(overhangRight) => onChange({ overhangRight })} />
-      {run.cutouts.map((c) => (
-        <Fold
-          key={c.id}
-          small
-          open={openCut === c.id}
-          onToggle={() => setOpenCut(openCut === c.id ? null : c.id)}
-          icon={<LuSquareDashed />}
-          title={CUTOUT_PRESETS[c.kind].label}
-          summary={`${c.w} × ${c.d} · ${comp.modules.find((m) => m.id === c.module)?.name ?? "?"}`}
-          onRemove={() => onChange({ cutouts: run.cutouts.filter((x) => x.id !== c.id) })}
-          removeLabel="Treure el forat"
-        >
-          <Stack gap={2}>
-            <FormRow label="Tipus">
-              <ChoiceChips
-                label="Tipus"
-                options={(Object.keys(CUTOUT_PRESETS) as WorktopCutout["kind"][]).map((k) => ({ id: k, label: CUTOUT_PRESETS[k].label }))}
-                value={c.kind}
-                onChange={(kind) => setCut(c.id, { kind })}
-              />
-            </FormRow>
-            <FormRow label="Sobre">
-              <ChoiceChips
-                label="Sobre"
-                options={moduleChips(comp.modules.filter((m) => m.carcass.base.kind !== "wall"), c.module)}
-                value={c.module}
-                onChange={(module) => setCut(c.id, { module })}
-              />
-            </FormRow>
-            <NumRow label="Ample" value={c.w} min={50} max={2000} step={5} onChange={(w) => setCut(c.id, { w })} />
-            <NumRow label="Fons" value={c.d} min={50} max={1000} step={5} onChange={(d) => setCut(c.id, { d })} />
-            <NumRow label="Desplaçament" help="Mida del forat d'encastar (la del full d'instruccions de l'aparell), centrat al mòdul; el desplaçament el mou a la dreta (+) o a l'esquerra (−)." value={c.dx} min={-1000} max={1000} step={5} onChange={(dx) => setCut(c.id, { dx })} />
-          </Stack>
-        </Fold>
-      ))}
+      {run.cutouts.length > 0 && (
+        <FoldGroup variant="card" size="sm" multiple={false} value={openCut ? [openCut] : []} onValueChange={(v) => setOpenCut(v[0] ?? null)}>
+          {run.cutouts.map((c) => (
+            <FoldItem
+              key={c.id}
+              id={c.id}
+              icon={LuSquareDashed}
+              title={CUTOUT_PRESETS[c.kind].label}
+              summary={`${c.w} × ${c.d} · ${comp.modules.find((m) => m.id === c.module)?.name ?? "?"}`}
+              actions={<RemoveButton label="Treure el forat" onClick={() => onChange({ cutouts: run.cutouts.filter((x) => x.id !== c.id) })} />}
+            >
+              <Stack gap={2}>
+                <FormRow label="Tipus">
+                  <ChoiceChips
+                    label="Tipus"
+                    options={(Object.keys(CUTOUT_PRESETS) as WorktopCutout["kind"][]).map((k) => ({ id: k, label: CUTOUT_PRESETS[k].label }))}
+                    value={c.kind}
+                    onChange={(kind) => setCut(c.id, { kind })}
+                  />
+                </FormRow>
+                <FormRow label="Sobre">
+                  <ChoiceChips
+                    label="Sobre"
+                    options={moduleChips(comp.modules.filter((m) => m.carcass.base.kind !== "wall"), c.module)}
+                    value={c.module}
+                    onChange={(module) => setCut(c.id, { module })}
+                  />
+                </FormRow>
+                <NumRow label="Ample" value={c.w} min={50} max={2000} step={5} onChange={(w) => setCut(c.id, { w })} />
+                <NumRow label="Fons" value={c.d} min={50} max={1000} step={5} onChange={(d) => setCut(c.id, { d })} />
+                <NumRow label="Desplaçament" help="Mida del forat d'encastar (la del full d'instruccions de l'aparell), centrat al mòdul; el desplaçament el mou a la dreta (+) o a l'esquerra (−)." value={c.dx} min={-1000} max={1000} step={5} onChange={(dx) => setCut(c.id, { dx })} />
+              </Stack>
+            </FoldItem>
+          ))}
+        </FoldGroup>
+      )}
       <HStack wrap="wrap" gap={2}>
         <Button size="xs" variant="ghost" onClick={() => addCut("hob")}>
           <LuPlus /> Forat de placa
@@ -157,58 +161,11 @@ function WorktopFields({ run, comp, onChange }: { run: WorktopRun; comp: Composi
   )
 }
 
-/** Element plegable (acordió) dins del formulari: capçalera amb resum i paperera. */
-function Fold({
-  open,
-  onToggle,
-  icon,
-  title,
-  summary,
-  onRemove,
-  removeLabel,
-  small,
-  children,
-}: {
-  open: boolean
-  onToggle: () => void
-  icon: ReactNode
-  title: string
-  summary: string
-  onRemove: () => void
-  removeLabel: string
-  small?: boolean
-  children: ReactNode
-}) {
+/** La paperera de la capçalera d'un taulell, sòcol o forat (al costat del plegable, no a dins). */
+function RemoveButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <Box borderWidth="1px" rounded="md" bg={open ? undefined : "bg.subtle"}>
-      <HStack gap={1} pl={2} pr={1} py={small ? 1 : 1.5}>
-        <HStack as="button" flex={1} minW={0} gap={2} textAlign="left" cursor="pointer" onClick={onToggle} aria-expanded={open}>
-          <Box color="fg.muted" flexShrink={0}>
-            {open ? <LuChevronDown /> : <LuChevronRight />}
-          </Box>
-          <Box color="wood.fg" flexShrink={0}>
-            {icon}
-          </Box>
-          <Stack gap={0} minW={0}>
-            <Text fontWeight="semibold" fontSize="sm" truncate>
-              {title}
-            </Text>
-            {!open && (
-              <Text fontSize="xs" color="fg.muted" truncate>
-                {summary}
-              </Text>
-            )}
-          </Stack>
-        </HStack>
-        <IconButton size="xs" variant="ghost" colorPalette="red" aria-label={removeLabel} title={removeLabel} onClick={onRemove}>
-          <LuTrash2 />
-        </IconButton>
-      </HStack>
-      {open && (
-        <Stack gap={3} px={3} pb={3} pt={1}>
-          {children}
-        </Stack>
-      )}
-    </Box>
+    <IconButton size="xs" variant="ghost" colorPalette="red" aria-label={label} title={label} onClick={onClick}>
+      <LuTrash2 />
+    </IconButton>
   )
 }
