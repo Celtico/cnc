@@ -467,7 +467,7 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   (8–22 → «12mm diamant nesting», 23–41 → «14mm diamant nesting»), rampa als perfilats del nesting (`SetApproachStrategy(true,
   false, k)`, des del mig del costat recte més llarg), peces petites (menys de 0,8 m²; `maxSide` 0 = no compta) en 3 passades
   (Z/XY 1/1, 0,5/0 i la final al martiri o als passants, `overMaterial`). Opcionals, amb el comportament d'abans si no hi
-  són: **pell dels forats i ranures gairebé passants** (`blind`, `cncBlindDepth`: 1 mm de pell; el llindar «a partir de», per defecte 0,5, compta com a mínim la pell mínima, mai en queda menys; només al
+  són: **pell dels forats i ranures gairebé passants** (`blind`, `cncBlindDepth`: 1 mm a partir de gruix − 0,5, el que es feia sempre; només al
   .xcs, el STEP es queda amb 1) i **sentit dels contorns i talls** (`cutMode`: `asIs` · `conventional` = en oposició, com
   TopSolid · `climb`; `cutLoop`, i a la Vista CAM una punta amb el sentit).
   - Eines **pel nom a la màquina que exporta** (`findRuleTool`, només `usableTool`, les mateixes que ofereix el selector, amb
