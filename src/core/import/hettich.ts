@@ -1,5 +1,6 @@
 import { HARDWARE_CATEGORIES, type HardwareCategory } from "../model"
 import { classifyHettich, cleanFolders, FAMILY_DIRS, hettichLabel, tr, type ImportKind } from "./hettichNames"
+import { importFormatOf } from "./formats"
 
 export { classifyHettich, cleanFolders, hettichLabel, hettichSeries, itemSeries, migrateImportedNames, type Classified, type ImportKind } from "./hettichNames"
 
@@ -29,6 +30,8 @@ export type HettichFileKind =
   | "iges"
   /** Collada (`.dae`, Blum): el 3D si no hi ha STEP ni IGES. */
   | "dae"
+  /** glTF (`.glb`, o `.gltf` sense fitxers a part): el 3D si no hi ha STEP, IGES, 3DS ni Collada. */
+  | "glb"
   /** Programa Xilog de SCM (`.pgm`, «Esquemas de taladrado» de Blum): mecanitzats exactes. */
   | "pgm"
   /** woodWOP (`.mpr`): no es llegeix (encara). */
@@ -80,22 +83,16 @@ const isRefPath = (path: string) => /(^|\/)(dxf_einbau|Anschlagloesungen[^/]*|An
 /** Tipus de fitxer pel camí (les vistes 2D: `<art>_2D_front_view.dxf`, majúscules o minúscules). */
 export function hettichFileKind(path: string): HettichFileKind {
   const name = path.split("/").pop()!.toLowerCase()
-  if (/\.(stp|step)$/.test(name)) return "step"
-  if (/\.(igs|iges)$/.test(name)) return "iges"
-  if (name.endsWith(".dae")) return "dae"
-  if (name.endsWith(".pgm")) return "pgm"
-  if (name.endsWith(".mpr")) return "mpr"
-  if (/\.(fmc|hop|tcn)$/.test(name)) return "cam"
-  if (name.endsWith(".sat")) return "sat"
-  if (name.endsWith(".max")) return "max"
-  if (name.endsWith(".pdf")) return isRefPath(path) || !hettichArticle(path) ? "ref" : "pdf"
-  if (name.endsWith(".dxf") && (isRefPath(path) || !hettichArticle(path))) return "ref"
+  // Pel format (la mateixa taula que l'`accept` del selector, `formats.ts`); els DXF i els PDF, també pel nom.
+  const kind = importFormatOf(name)?.kind
+  if (!kind || kind === "zip") return "other"
+  if (kind === "pdf") return isRefPath(path) || !hettichArticle(path) ? "ref" : "pdf"
+  if (kind !== "dxf") return kind
+  if (isRefPath(path) || !hettichArticle(path)) return "ref"
   if (/_2d_front_view\.dxf$/.test(name)) return "front"
   if (/_2d_side_view\.dxf$/.test(name)) return "side"
   if (/_2d_top_view\.dxf$/.test(name)) return "top"
   if (/_3d\.dxf$/.test(name)) return "dxf3d"
-  if (name.endsWith(".dwg")) return "dwg"
-  if (name.endsWith(".3ds")) return "3ds"
   return "other"
 }
 

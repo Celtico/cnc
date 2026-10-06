@@ -2,6 +2,7 @@ import type { PickedFile } from "../../components/pickedFiles"
 import { listZip, readZipEntry } from "../../core/file/zip"
 import { isRefKind, VIEW_KINDS, type HettichArticle, type HettichFile } from "../../core/import/hettich"
 import { BLUM } from "../../core/import/blum"
+import { MODEL_3D_KINDS } from "../../core/import/formats"
 import { groupImport, has3d, importCandidate, importFileKind, makerOf } from "../../core/import/makers"
 import { machiningFromXilog } from "../../core/import/xilogPgm"
 import { articleItem, pairImportedBatch, proposalPlan, proposeArticle } from "../../core/import/importItem"
@@ -172,7 +173,7 @@ export async function importArticles(
         // El 3D només si algun dels que hi ha no el té (o és nou): STEP, si no IGES, 3DS o Collada.
         let glb: Blob | undefined
         const need3d = !existing.length || existing.some((e) => !e.imported?.asset || !oldAssets.get(e.imported.asset)?.glb)
-        const other3d = a.files.find((f) => f.kind === "iges") ?? a.files.find((f) => f.kind === "3ds") ?? a.files.find((f) => f.kind === "dae")
+        const other3d = MODEL_3D_KINDS.slice(1).map((k) => a.files.find((f) => f.kind === k)).find((f) => !!f)
         if (need3d && (stepBytes.length || other3d)) {
           try {
             mesher ??= await import("../../components/viewer/stepMesh")
@@ -181,13 +182,13 @@ export async function importArticles(
             else if (other3d!.kind === "iges") meshes = await mesher.stepMeshes(await src.read(other3d!.path), "iges")
             else {
               const mm = await import("../../components/viewer/modelMeshes")
-              meshes = await mm.meshFileMeshes(other3d!.kind as "3ds" | "dae", await src.read(other3d!.path))
+              meshes = await mm.meshFileMeshes(other3d!.kind as "3ds" | "dae" | "glb", await src.read(other3d!.path))
             }
             if (!feats) {
               const mm = await import("../../components/viewer/modelMeshes")
               const box = mm.meshesBox(meshes)
               if (box) p = { ...p, bbox: box }
-              notes.push(`El 3D surt del ${other3d!.kind === "iges" ? "IGES" : other3d!.kind === "3ds" ? "3DS" : "Collada (.dae)"} (sense STEP, cap forat proposat).`)
+              notes.push(`El 3D surt del ${other3d!.kind === "iges" ? "IGES" : other3d!.kind === "3ds" ? "3DS" : other3d!.kind === "glb" ? "glTF (.glb)" : "Collada (.dae)"} (sense STEP, cap forat proposat).`)
             }
             glb = (await mesher.meshesToGlb(meshes, p.frame)).glb
           } catch (e) {

@@ -1,4 +1,5 @@
 import { partKindOf } from "../model/hardwareOps"
+import { MODEL_3D_KINDS } from "./formats"
 import { BLUM, blumFileInfo, blumLabel, blumProduct, classifyBlum, isBlumProductName } from "./blum"
 import { groupHettich, hettichCandidate, hettichFileKind, type HettichArticle, type HettichFile, type HettichFileKind } from "./hettich"
 
@@ -15,7 +16,7 @@ export type Maker = "Hettich" | "Blum"
 export function detectMaker(path: string): Maker {
   if (blumFileInfo(path)) return BLUM
   const dirs = path.split("/").slice(0, -1)
-  if (dirs.some((d) => /\bblum\b/i.test(d)) && /\.(pgm|mpr|dae|step|stp)$/i.test(path)) return BLUM
+  if (dirs.some((d) => /\bblum\b/i.test(d)) && /\.(pgm|mpr|dae|glb|gltf|step|stp)$/i.test(path)) return BLUM
   if (dirs.some(isBlumProductName) && !/^\d{4,9}(?=[._ -]|$)/.test(path.split("/").pop()!)) return BLUM
   return "Hettich"
 }
@@ -41,6 +42,7 @@ export const FILE_SOURCE: Partial<Record<HettichFileKind, string>> = {
   iges: "IGES",
   "3ds": "3DS",
   dae: "DAE",
+  glb: "GLB",
   pgm: "PGM (Xilog)",
   mpr: "MPR",
   cam: "CAM",
@@ -59,7 +61,7 @@ export const FILE_SOURCE: Partial<Record<HettichFileKind, string>> = {
 const FILE_ORDER = Object.keys(FILE_SOURCE)
 
 /** Té 3D (algun format que es llegeix). */
-export const has3d = (files: readonly { kind: HettichFileKind }[]) => files.some((f) => f.kind === "step" || f.kind === "iges" || f.kind === "3ds" || f.kind === "dae")
+export const has3d = (files: readonly { kind: HettichFileKind }[]) => files.some((f) => (MODEL_3D_KINDS as readonly string[]).includes(f.kind))
 
 /**
  * Agrupa els fitxers de Blum per article: el número sense l'id del document ni la mà (`_R`/`_L`); el nom del producte

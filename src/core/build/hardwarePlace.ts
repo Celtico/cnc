@@ -280,19 +280,22 @@ export function applyHardwarePlacements(placements: readonly HardwarePlacement[]
     const mainOps = ops.filter((o) => o.part === main.part)
     const refsMain = refPoints(pl, mainFrame)
     // El 3D del ferratge (el GLB de l'importat o un volum fet de les operacions), a la peça principal.
-    const fittings = (mainRes: OpResult[][]): PanelFitting[] => fittingsFor(item, mainFrame, refsMain, mainOps, mainRes, pl.turn ?? 0)
+    const fittings = (mainRes: OpResult[][]): PanelFitting[] => fittingsFor(item, mainFrame, refsMain, mainOps, mainRes, pl.turn ?? 0).map((f) => ({ ...f, placement: pl.id }))
     if (!ops.length) {
       warn(item.engine === "model" ? `${name} és «només 3D»: no fa cap forat (afegeix-hi els mecanitzats a Preferències › Ferratges).` : `${name} no té mecanitzats: no fa cap forat.`, mainFrame.panel.id)
       addFittings(mainFrame.panel, fittings([]))
       continue
     }
+    // Sense cap forat, però el model es veu (per trobar-lo i triar-lo al 3D): només visual, mai es fabrica.
     if (isPendingImport(item)) {
       warn(`${name} és importat i encara no està confirmat: no fa cap forat. Revisa'l i confirma'l a Preferències › Ferratges.`, mainFrame.panel.id)
+      addFittings(mainFrame.panel, fittings([]))
       continue
     }
     const problems = machiningProblems(ops)
     if (problems.length) {
       warn(`${name} té un mecanitzat que no es pot fer (${problems[0]!.message.replace(/\.$/, "")}): no fa cap forat.`, mainFrame.panel.id)
+      addFittings(mainFrame.panel, fittings([]))
       continue
     }
     // Tot o res: primer es calcula tot i, si alguna operació no cap, no es fa res.
@@ -315,6 +318,7 @@ export function applyHardwarePlacements(placements: readonly HardwarePlacement[]
     }
     if (error) {
       warn(`${name} a ${error.panel.label}: ${error.msg}; no es fa cap mecanitzat del ferratge.`, error.panel.id)
+      addFittings(mainFrame.panel, fittings([]))
       continue
     }
     for (const { f, res } of done) {

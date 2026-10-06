@@ -2,6 +2,7 @@ import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import { QUALITY, type RenderQuality } from "./renderQuality"
 import { PresentationRoom } from "./PresentationRoom"
 import { ModuleLegs, PanelFittings, PanelHardware } from "./Hardware"
+import type { FittingToolbarActions } from "./FittingToolbar"
 import type { SceneGetter } from "./render/RenderDialog"
 import { SceneAccess, StudioEnvironment, TextureRefresh } from "./SceneHelpers"
 import { surfaceMaterial } from "./surfaceMaterial"
@@ -115,6 +116,11 @@ export interface CabinetViewerProps {
   models?: ModelObject[]
   selectedModelId?: string | null
   onSelectModel?: (id: string) => void
+  /** Ferratge col·locat a mà triat (`Composition.hardwarePlacements`): contorn i barra flotant (Duplicar · Editar · Eliminar). */
+  selectedHardwareId?: string | null
+  /** Clic a un ferratge col·locat (amb «Ferratges» visible). */
+  onSelectHardware?: (id: string) => void
+  hardwareActions?: FittingToolbarActions
   onMoveModel?: (id: string, pos: { x: number; y: number; z: number }) => void
   /** Objectes que xoquen amb alguna peça: es pinten de vermell. */
   collidingRefIds?: Set<string>
@@ -166,6 +172,9 @@ export function CabinetViewer({
   selectedModelId,
   onSelectModel,
   onMoveModel,
+  selectedHardwareId,
+  onSelectHardware,
+  hardwareActions,
   collidingRefIds,
   highlightZone,
   fitKey = 0,
@@ -209,10 +218,20 @@ export function CabinetViewer({
     return m
   }, [panels, holesDrawn])
   // Callbacks estables per a totes les peces (la peça arriba com a dada): el que fan llegeix les props d'ara.
-  const live = useRef({ onSelectModule, onSelectPart, modules, size })
+  const live = useRef({ onSelectModule, onSelectPart, onSelectHardware, hardwareActions, modules, size })
   useEffect(() => {
-    live.current = { onSelectModule, onSelectPart, modules, size }
+    live.current = { onSelectModule, onSelectPart, onSelectHardware, hardwareActions, modules, size }
   })
+  // Ferratges col·locats: callbacks estables (les peces no es tornen a dibuixar en canviar la selecció d'una altra).
+  const onFittingSelect = useCallback((id: string) => live.current.onSelectHardware?.(id), [])
+  const fittingActions = useMemo<FittingToolbarActions>(
+    () => ({
+      onDuplicate: (id) => live.current.hardwareActions?.onDuplicate(id),
+      onEdit: (id) => live.current.hardwareActions?.onEdit(id),
+      onRemove: (id) => live.current.hardwareActions?.onRemove(id),
+    }),
+    [],
+  )
   const onPanelHover = useCallback((p: Panel, on: boolean) => {
     setHoverModule((h) => (on ? (p.module ?? null) : h === p.module ? null : h))
   }, [])
@@ -334,6 +353,9 @@ export function CabinetViewer({
                 hardware={hardware}
                 onHover={onSelectModule && !isPart ? onPanelHover : undefined}
                 onClick={(isPart ? onSelectPart : onSelectModule) ? onPanelClick : undefined}
+                selectedFitting={selectedHardwareId && p.fittings?.some((f) => f.placement === selectedHardwareId) ? selectedHardwareId : null}
+                onSelectFitting={onSelectHardware ? onFittingSelect : undefined}
+                fittingActions={hardwareActions ? fittingActions : undefined}
               />
             </MovingPanel>
             </group>
@@ -406,7 +428,12 @@ export function CabinetViewer({
             outline
           />
         )}
-        {hardware && modules?.map((m) => m.legs && !m.legs.fitted && !(moduleDrag && (moduleDrag.all || moduleDrag.index === m.index)) && <ModuleLegs key={`legs-${m.id}`} x={m.x} z={m.z ?? 0} width={m.width} depth={m.legs.depth} height={m.legs.height} inset={m.legs.inset} />)}
+        {/* Les potes de l'app van amb la base (que a l'explosió baixa). */}
+        {hardware && modules?.map((m) => m.legs && !m.legs.fitted && !(moduleDrag && (moduleDrag.all || moduleDrag.index === m.index)) && (
+          <ExplodeWith key={`legs-${m.id}`} exploded={exploded} dir={DOWN}>
+            <ModuleLegs x={m.x} z={m.z ?? 0} width={m.width} depth={m.legs.depth} height={m.legs.height} inset={m.legs.inset} />
+          </ExplodeWith>
+        ))}
         {highlightZone && <ZoneHighlight box={highlightZone} />}
         {(() => {
           const hm = hoverModule !== null && hoverModule !== selectedIndex && !moduleDrag ? modules?.find((m) => m.index === hoverModule) : undefined
@@ -1299,6 +1326,39 @@ function MoveHandle({
 
 const BEVEL_USERDATA = { bevel: true }
 
+/**
+ * Explosionar o muntar un grup (una peça, o el que va amb ella): el desplaça `offset` (unitats de l'escena) amb la mateixa
+ * animació per a tots; `useFrame` demana els fotogrames fins que arriba.
+ */
+function useExplode(group: React.RefObject<Group | null>, exploded: boolean, offset: Vector3) {
+  const amount = useRef(exploded ? 1 : 0)
+  const running = useRef(false)
+  const invalidate = useThree((st) => st.invalidate)
+  useEffect(() => invalidate(), [exploded, invalidate])
+  useFrame((st, dt) => {
+    const g = group.current
+    if (!g) return
+    const target = exploded ? 1 : 0
+    if (amount.current !== target) {
+      amount.current += (target - amount.current) * Math.min(1, animStep(running, dt) * 7)
+      if (Math.abs(target - amount.current) < 0.002) {
+        amount.current = target
+        running.current = false
+      } else st.invalidate()
+    }
+    g.position.copy(offset).multiplyScalar(amount.current)
+  })
+}
+
+/** El que no és una peça però hi va enganxat (les potes de l'app sota la base) es mou amb ella a la vista explosionada. */
+function ExplodeWith({ exploded, dir, children }: { exploded: boolean; dir: [number, number, number]; children: React.ReactNode }) {
+  const group = useRef<Group>(null)
+  const offset = useMemo(() => new Vector3(...dir).multiplyScalar(EXPLODE_MM * S), [dir])
+  useExplode(group, exploded, offset)
+  return <group ref={group}>{children}</group>
+}
+const DOWN: [number, number, number] = [0, -1, 0]
+
 interface PanelMeshProps {
   /**
    * Signatura visual de la peça (`panelVisualKey`) i col·locació (JSON): si no canvien (i la resta de props tampoc),
@@ -1326,6 +1386,12 @@ interface PanelMeshProps {
   materials: MaterialPref[]
   /** Clic a la peça, amb el punt tocat (coordenades del món, m). Estable: la peça va com a dada. */
   onClick?: (panel: Panel, point: Vector3) => void
+  /** El ferratge col·locat triat, si és d'aquesta peça (contorn i barra flotant). */
+  selectedFitting?: string | null
+  /** Clic a un ferratge col·locat (id del col·locat). Estable. */
+  onSelectFitting?: (id: string) => void
+  /** Les accions de la barra flotant del ferratge triat. Estables. */
+  fittingActions?: FittingToolbarActions
 }
 
 /** Les mateixes props: per signatura si n'hi ha (la peça és un objecte nou a cada construcció), si no per referència. */
@@ -1340,7 +1406,10 @@ const samePanelProps = (a: PanelMeshProps, b: PanelMeshProps) =>
   a.materialMode === b.materialMode &&
   a.materials === b.materials &&
   a.onClick === b.onClick &&
-  a.onHover === b.onHover
+  a.onHover === b.onHover &&
+  a.selectedFitting === b.selectedFitting &&
+  a.onSelectFitting === b.onSelectFitting &&
+  a.fittingActions === b.fittingActions
 
 /** Peça del moble al visor (també a la foto realista). Només es torna a pintar si canvia el que es veu (`samePanelProps`). */
 export const PanelMesh = memo(function PanelMesh({
@@ -1356,11 +1425,11 @@ export const PanelMesh = memo(function PanelMesh({
   edges = true,
   hardware = false,
   proposedTags,
+  selectedFitting,
+  onSelectFitting,
+  fittingActions,
 }: PanelMeshProps) {
   const group = useRef<Group>(null)
-  const amount = useRef(exploded ? 1 : 0)
-  const running = useRef(false)
-  const invalidate = useThree((st) => st.invalidate)
   const ownSig = useMemo(() => (givenSig === undefined ? panelVisualKey(panel, showHoles || hardware) : ""), [givenSig, panel, showHoles, hardware])
   const sig = givenSig ?? ownSig
   // La peça que es dibuixa: la mateixa mentre la signatura no canviï (una construcció nova la torna a fer igual).
@@ -1402,21 +1471,7 @@ export const PanelMesh = memo(function PanelMesh({
     [mats],
   )
 
-  // Explosionar o muntar: l'animació (`useFrame`) demana els fotogrames fins que arriba.
-  useEffect(() => invalidate(), [exploded, invalidate])
-  useFrame((st, dt) => {
-    const g = group.current
-    if (!g) return
-    const target = exploded ? 1 : 0
-    if (amount.current !== target) {
-      amount.current += (target - amount.current) * Math.min(1, animStep(running, dt) * 7)
-      if (Math.abs(target - amount.current) < 0.002) {
-        amount.current = target
-        running.current = false
-      } else st.invalidate()
-    }
-    g.position.copy(explode).multiplyScalar(amount.current)
-  })
+  useExplode(group, exploded, explode)
 
   const L = vpanel.length * S
   const W = vpanel.width * S
@@ -1458,7 +1513,7 @@ export const PanelMesh = memo(function PanelMesh({
           <HoleMarks holes={vpanel.holes} thickness={T} />
         ))}
         {hardware && <PanelHardware panel={vpanel} />}
-        {hardware && <PanelFittings panel={vpanel} />}
+        {(hardware || selectedFitting) && <PanelFittings panel={vpanel} models={hardware} selected={selectedFitting} onSelect={onSelectFitting} actions={fittingActions} />}
         {vpanel.grooves.map((g, i) => (
           <mesh key={`g${i}`} position={[(g.x + g.w / 2) * S, (g.y + g.h / 2) * S, g.face === "A" ? T - (g.depth * S) / 2 + 0.0002 : (g.depth * S) / 2 - 0.0002]}>
             <boxGeometry args={[g.w * S, g.h * S, g.depth * S]} />

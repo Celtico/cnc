@@ -12,6 +12,7 @@ import {
   LuPalette,
   LuPuzzle,
   LuAperture,
+  LuArrowUp,
   LuWrench,
   LuGroup,
   LuPanelTop,
@@ -35,6 +36,9 @@ import {
   LuView,
 } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
+import { sectionKey } from "../../components/foldContext"
+import { writeSessionFlag } from "../../components/sessionState"
+import { ruleHardwareCounts } from "../../core/build/hardwareSummary"
 import { Workspace } from "../../components/Workspace"
 import { ViewOptions, ViewTile } from "../../components/ViewOptions"
 import { useWorkspace } from "../../components/useWorkspace"
@@ -61,8 +65,8 @@ import { StructureTree, type Selection } from "../composition/StructureTree"
 import { Tooltip } from "../../components/ui/tooltip"
 import { ZoneActions, ZonePanel } from "../composition/ZonePanel"
 import { RunsForm } from "../composition/RunsForm"
-import { HardwarePlacements } from "../composition/HardwarePlacements"
-import { scopePlacements } from "../composition/placements"
+import { HardwarePlacements, PlacementButtons, PlacementInspector, type PlacementActions } from "../composition/HardwarePlacements"
+import { duplicatePlacement, placementScope, removePlacement, scopePlacements } from "../composition/placements"
 import { zoneLabel } from "../composition/zoneLabel"
 import { zoneIcon } from "../composition/zoneIcons"
 import { downloadBlob, slugify } from "../download"
@@ -150,11 +154,12 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   // Selecció única (arbre, 3D i alçat van sincronitzats): moble, mòdul, compartiment o objecte.
   const [selectedModule, setSelectedModule] = useState<string>(initial.modules[0]!.id)
   const [selectedZone, setSelectedZone] = useState<string | null>(null)
-  const [selKind, setSelKind] = useState<"moble" | "module" | "zone" | "ref" | "part" | "group" | "model">(partsOnlyKind(compositionKind(initial)) ? "moble" : "module")
+  const [selKind, setSelKind] = useState<"moble" | "module" | "zone" | "ref" | "part" | "group" | "model" | "hardware">(partsOnlyKind(compositionKind(initial)) ? "moble" : "module")
   const [selectedRef, setSelectedRef] = useState<string | null>(null)
   const [selectedPart, setSelectedPart] = useState<string | null>(null)
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [selectedModel, setSelectedModel] = useState<string | null>(null)
+  const [selectedHardware, setSelectedHardware] = useState<string | null>(null)
   // Espai de treball compartit (Workspace): panells, amplades i pestanya del mòbil.
   const ws = useWorkspace("editor", { tree: 280, form: 340 })
   const { setMobilePane } = ws
@@ -310,6 +315,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             ? { kind: "group", id: selectedGroup }
           : selKind === "model" && selectedModel && comp.models?.some((g) => g.id === selectedModel)
             ? { kind: "model", id: selectedModel }
+          : selKind === "hardware" && selectedHardware && comp.hardwarePlacements?.some((h) => h.id === selectedHardware)
+            ? { kind: "hardware", id: selectedHardware }
           : partsOnlyKind(kind) || selKind === "ref" || selKind === "part" || selKind === "group" || selKind === "model"
             ? { kind: "moble" }
             : selectedZone && zone
@@ -334,6 +341,15 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     } else if (s.kind === "model") {
       setSelectedModel(s.id)
       setSelKind("model")
+    } else if (s.kind === "hardware") {
+      // El mòdul del ferratge passa a ser el de treball (alçat, veïns); si el ferratge desapareix (desfer), s'hi torna.
+      const main = comp.hardwarePlacements?.find((h) => h.id === s.id)?.targets[0]
+      if (main?.module) {
+        setSelectedModule(main.module)
+        setSelectedZone(null)
+      }
+      setSelectedHardware(s.id)
+      setSelKind("hardware")
     } else if (s.kind === "module") {
       setSelectedModule(s.id)
       setSelectedZone(null)
@@ -363,6 +379,31 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     return () => window.removeEventListener("keydown", onKey)
   }, [])
   const selectZone = (id: string) => select({ kind: "zone", moduleId: module.id, zoneId: id })
+  // Ferratges col·locats a mà (llista de l'inspector, barra flotant del 3D i teclat): un sol camí, un pas de desfer.
+  const duplicateHardware = (id: string) => {
+    const r = duplicatePlacement(comp, id)
+    if (!r) return
+    setComp(r.comp)
+    select({ kind: "hardware", id: r.id })
+  }
+  const editHardware = (id: string) => {
+    writeSessionFlag(sectionKey("hw-place"), true)
+    ws.setPropsHidden(false)
+    select({ kind: "hardware", id }, true)
+  }
+  const hardwareActions: PlacementActions = {
+    onSelect: (id) => select({ kind: "hardware", id }),
+    onEdit: editHardware,
+    onDuplicate: duplicateHardware,
+    onRemove: (id) => removeHardware(id),
+  }
+  const removeHardware = (id: string) => {
+    const pl = comp.hardwarePlacements?.find((h) => h.id === id)
+    setComp(removePlacement(comp, id))
+    const scope = pl && placementScope(pl)
+    if (selection.kind === "hardware" && selection.id === id)
+      select(scope?.kind === "module" ? { kind: "module", id: scope.moduleId } : scope?.kind === "part" ? { kind: "part", id: scope.partId } : { kind: "moble" })
+  }
 
   /** Mou un grup de peces lliures (desplaçament en mm). */
   const moveGroup = (group: string, dx: number, dy: number, dz: number) => setComp((c) => moveGroupBy(c, group, dx, dy, dz))
@@ -494,6 +535,11 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       paste(clip)
       return
     }
+    if (mod && key === "d" && selection.kind === "hardware") {
+      e.preventDefault()
+      duplicateHardware(selection.id)
+      return
+    }
     if (mod && key === "d") {
       // Un compartiment es duplica al costat (o a continuació, dins de la seva divisió), com al menú de l'inspector.
       if (selection.kind === "zone" && module) {
@@ -547,6 +593,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       } else if (selection.kind === "model") {
         setComp({ ...comp, models: (comp.models ?? []).filter((g) => g.id !== selection.id) })
         select({ kind: "moble" })
+      } else if (selection.kind === "hardware") {
+        removeHardware(selection.id)
       } else if (selection.kind === "zone") {
         // L'«Interior» (l'arrel) no s'elimina: `deleteZone` buidaria tot el mòdul (divisions, fronts i el front de tot el
         // mòdul). Es buida treient-ne la divisió o el front.
@@ -642,6 +690,13 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     const around = <T,>(list: T[], i: number, to: (t: T) => Selection) =>
       i < 0 || list.length < 2 ? null : { prev: i > 0 ? to(list[i - 1]!) : null, next: i < list.length - 1 ? to(list[i + 1]!) : null, pos: `${i + 1}/${list.length}` }
     if (selection.kind === "module") return around(comp.modules, comp.modules.findIndex((m) => m.id === selection.id), (m) => ({ kind: "module", id: m.id }))
+    if (selection.kind === "hardware") {
+      // Els col·locats del mateix mòdul (o peça lliure), com a la llista de l'inspector.
+      const pl = comp.hardwarePlacements?.find((h) => h.id === selection.id)
+      const scope = pl && placementScope(pl)
+      const list = scope ? scopePlacements(comp, scope) : []
+      return around(list, list.findIndex((h) => h.id === selection.id), (h) => ({ kind: "hardware", id: h.id }))
+    }
     if (selection.kind === "ref") return around(comp.references, comp.references.findIndex((r) => r.id === selection.id), (r) => ({ kind: "ref", id: r.id }))
     if (selection.kind === "part") return around(comp.parts ?? [], (comp.parts ?? []).findIndex((r) => r.id === selection.id), (r) => ({ kind: "part", id: r.id }))
     if (selection.kind === "model") return around(comp.models ?? [], (comp.models ?? []).findIndex((g) => g.id === selection.id), (g) => ({ kind: "model", id: g.id }))
@@ -657,7 +712,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       return around(list, list.findIndex((z) => z.id === zone.id), (z) => ({ kind: "zone", moduleId: module.id, zoneId: z.id }))
     }
     return null
-  }, [selection, comp.modules, comp.references, comp.parts, comp.models, zone, module, moduleBuild])
+  }, [selection, comp, zone, module, moduleBuild])
 
   /** Enganxa un mòdul nou al costat del seleccionat, amb la mateixa alçada i fondària. */
   const addModuleBeside = (side: "left" | "right") => {
@@ -761,7 +816,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         ? warnings.filter((w) => w.refId === selection.id)
         : selection.kind === "part"
           ? warnings.filter((w) => w.partId === selection.id)
-          : selection.kind === "model"
+          : selection.kind === "model" || selection.kind === "hardware"
             ? NO_WARNINGS
             : warnings
   const collidingRefs = useMemo(() => new Set(warnings.flatMap((w) => (w.refId ? [w.refId] : []))), [warnings])
@@ -773,6 +828,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   // Títol en dues línies: on és (petit i apagat) i què és (el nom), perquè no es talli.
   const renamePart = (id: string, v: string) => setComp((c) => ({ ...c, parts: (c.parts ?? []).map((r) => (r.id === id ? { ...r, name: v } : r)) }))
   const selPart = selection.kind === "part" ? comp.parts?.find((r) => r.id === selection.id) : undefined
+  const selHardware = selection.kind === "hardware" ? comp.hardwarePlacements?.find((h) => h.id === selection.id) : undefined
+  const selHardwareScope = selHardware ? placementScope(selHardware) : null
+  const hardwareOwnerName = selHardwareScope?.kind === "module" ? (comp.modules.find((m) => m.id === selHardwareScope.moduleId)?.name ?? "") : selHardwareScope?.kind === "part" ? (comp.parts?.find((q) => q.id === selHardwareScope.partId)?.name ?? "") : ""
   const renameModel = (id: string, v: string) => setComp((c) => ({ ...c, models: (c.models ?? []).map((g) => (g.id === id ? { ...g, name: v } : g)) }))
   const renameRef = (id: string, v: string) => setComp((c) => ({ ...c, references: c.references.map((r) => (r.id === id ? { ...r, name: v } : r)) }))
   const inspectorTitle: { icon: ReactNode; text: string; parent?: string; onRename?: (v: string) => void } = photoInspector
@@ -791,6 +849,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         ? { icon: <LuSprout />, text: comp.models?.find((g) => g.id === selection.id)?.name ?? "Model", parent: "Model 3D", onRename: (v) => renameModel(selection.id, v) }
       : selection.kind === "ref"
         ? { icon: <LuScan />, text: comp.references.find((r) => r.id === selection.id)?.name ?? "Objecte", parent: "Objecte de referència", onRename: (v) => renameRef(selection.id, v) }
+      : selection.kind === "hardware" && selHardware
+        ? { icon: <LuWrench />, text: selHardware.item.name, parent: `Ferratge · ${hardwareOwnerName}` }
         : selection.kind === "zone" && zone
           ? { icon: createElement(zoneIcon(zone, { root: zone.id === module.root.id })), text: zoneLabel(zone, { root: zone.id === module.root.id }), parent: module.name }
           : { icon: <LuBox />, text: module.name, parent: name || "Moble", onRename: (v) => updateModule({ ...module, name: v }) }
@@ -807,7 +867,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   const viewTiles = (
     <>
       {tile("fit", "Enquadrar", <LuVideo />, framed, () => frameFrom(null), framed ? "Càmera enquadrada (no es mou sola en editar)" : "Enquadrar el moble")}
-      {tile("holes", "Forats", <LuCircleDot />, showHoles, () => setShowHoles((v) => !v), showHoles ? "Amagar forats" : "Mostrar forats")}
+      {tile("holes", "Forats", <LuCircleDot />, showHoles || exploded, () => setShowHoles((v) => !v), exploded ? "A la vista explosionada els forats sempre es veuen" : showHoles ? "Amagar forats" : "Mostrar forats")}
       {tile("explode", "Explosió", exploded ? <LuShrink /> : <LuExpand />, exploded, () => setExploded((v) => !v), exploded ? "Vista muntada" : "Vista explosionada")}
       {tile("hardware", "Ferratges", <LuWrench />, hardware, () => setHardware((v) => !v), hardware ? "Amagar frontisses, tiradors i potes" : "Mostrar frontisses, tiradors i potes")}
       {tile("render", "Render", <LuAperture />, false, () => (setViewOptsOpen(false), quality === "fast" && roleColors && setRoleColors(false), setRenderOpen(true)), "Render fotorealista (GPU o CPU, com Cinema 4D): es va afinant i es desa en PNG")}
@@ -873,6 +933,21 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         )}
         {!photoInspector && selection.kind === "model" && (
           <ModelActions comp={comp} id={selection.id} onChange={setComp} onRemoved={() => select({ kind: "moble" })} onSelected={(id) => select({ kind: "model", id })} />
+        )}
+        {!photoInspector && selection.kind === "hardware" && selHardware && (
+          <HStack gap={0} flexShrink={0}>
+            <Tooltip content={`Pare: ${hardwareOwnerName}`}>
+              <IconButton
+                size="xs"
+                variant="ghost"
+                aria-label="Pare"
+                onClick={() => select(selHardwareScope?.kind === "module" ? { kind: "module", id: selHardwareScope.moduleId } : selHardwareScope?.kind === "part" ? { kind: "part", id: selHardwareScope.partId } : { kind: "moble" })}
+              >
+                <LuArrowUp />
+              </IconButton>
+            </Tooltip>
+            <PlacementButtons id={selHardware.id} name={selHardware.item.name} actions={hardwareActions} edit={false} />
+          </HStack>
         )}
         {!photoInspector && selection.kind === "ref" && (
           <RefActions comp={comp} id={selection.id} onChange={setComp} onRemoved={() => select({ kind: "moble" })} onSelected={(id) => select({ kind: "ref", id })} />
@@ -958,6 +1033,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         </Stack>
       ) : selection.kind === "model" ? (
         <ModelInspector comp={comp} id={selection.id} onChange={setComp} />
+      ) : selection.kind === "hardware" ? (
+        <PlacementInspector comp={comp} id={selection.id} panels={panels} library={settings.hardwareLibrary} warnings={warnings} onChange={setComp} />
       ) : selection.kind === "ref" ? (
         <RefInspector comp={comp} id={selection.id} onChange={setComp} />
       ) : selection.kind === "group" ? (
@@ -968,7 +1045,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           {/* Ferratges col·locats a mà (generador de mecanitzats de Preferències › Ferratges). */}
           {!partsOnlyKind(kind) || kind === "lliure" ? (
             <FoldItem id="part-hardware" title="Ferratges" icon={LuWrench} badge={scopePlacements(comp, { kind: "part", partId: selection.id }).length || undefined}>
-              <HardwarePlacements comp={comp} scope={{ kind: "part", partId: selection.id }} panels={panels} library={settings.hardwareLibrary} warnings={warnings} onChange={setComp} />
+              <HardwarePlacements comp={comp} scope={{ kind: "part", partId: selection.id }} panels={panels} library={settings.hardwareLibrary} warnings={warnings} onChange={setComp} actions={hardwareActions} />
             </FoldItem>
           ) : null}
         </Stack>
@@ -1074,8 +1151,17 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           <FoldItem id="mod-joinery" title="Fusteria (avançat)" icon={LuHammer} defaultOpen={false}>
             <JoineryForm module={module} onChange={updateModule} />
           </FoldItem>
-          <FoldItem id="mod-hardware" title="Ferratges" icon={LuWrench} badge={scopePlacements(comp, { kind: "module", moduleId: module.id }).length || undefined}>
-            <HardwarePlacements comp={comp} scope={{ kind: "module", moduleId: module.id }} panels={panels} library={settings.hardwareLibrary} warnings={warnings} onChange={setComp} />
+          <FoldItem id="mod-hardware" title="Ferratges" icon={LuWrench} badge={hardwareBadge(scopePlacements(comp, { kind: "module", moduleId: module.id }).length, panels.filter((p) => p.module === moduleIndex + 1), module.carcass.base.kind === "legs" ? 4 : 0)}>
+            <HardwarePlacements
+              comp={comp}
+              scope={{ kind: "module", moduleId: module.id }}
+              panels={panels}
+              library={settings.hardwareLibrary}
+              warnings={warnings}
+              onChange={setComp}
+              actions={hardwareActions}
+              rules={ruleHardwareCounts(panels.filter((p) => p.module === moduleIndex + 1), module.carcass.base.kind === "legs" ? 4 : 0)}
+            />
           </FoldItem>
         </Stack>
       )}
@@ -1226,7 +1312,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             panels={viewerPanels}
             size={size}
             exploded={exploded}
-            showHoles={showHoles}
+            // A la vista explosionada els forats i les ranures sempre es veuen (per això se separen les peces).
+            showHoles={showHoles || exploded}
             modules={viewerModules}
             selectedModuleId={selection.kind === "module" || selection.kind === "zone" ? module.id : null}
             onSelectModule={selectFrom3D}
@@ -1260,6 +1347,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             models={comp.models}
             selectedModelId={selection.kind === "model" ? selection.id : null}
             onSelectModel={(id) => select({ kind: "model", id })}
+            selectedHardwareId={selection.kind === "hardware" ? selection.id : null}
+            onSelectHardware={(id) => select({ kind: "hardware", id })}
+            hardwareActions={hardwareActions}
             onMoveModel={moveModel}
             onMoveModule={(id, dx, dy, all, dz) => setComp((c) => (all ? moveAllBy(c, dx) : moveModuleBy(c, id, dx, dy, dz)))}
           />
@@ -1344,4 +1434,10 @@ function legsView(base: { height: number; hardware?: HardwareItem }, depth: numb
   const inset = base.hardware?.engine === "leg" ? base.hardware.params.inset : undefined
   const fitted = panels.some((p) => p.fittings?.some((f) => f.kind === "leg"))
   return { height: base.height, depth, ...(inset !== undefined ? { inset } : {}), ...(fitted ? { fitted } : {}) }
+}
+
+/** Insígnia de «Ferratges» del mòdul: els col·locats a mà i els de les regles (sense les espigues, que són forats). */
+function hardwareBadge(placed: number, panels: Panel[], legs: number): string | undefined {
+  const rules = ruleHardwareCounts(panels, legs).filter((r) => r.id !== "dowel").reduce((a, r) => a + r.count, 0)
+  return [placed ? `${placed} a mà` : "", rules ? `${rules} de regles` : ""].filter(Boolean).join(" · ") || undefined
 }

@@ -1,10 +1,10 @@
 import { Alert, Badge, Box, Button, HStack, IconButton, Input, Menu, SegmentGroup, SimpleGrid, Slider, Spinner, Stack, Switch, Text } from "@chakra-ui/react"
 import { Suspense, lazy, useContext, useEffect, useMemo, useRef, useState, type RefObject } from "react"
-import { LuBoxes, LuCheck, LuCopy, LuFileDown, LuMap, LuPlus, LuRotate3D, LuStar, LuTrash2, LuUndo2 } from "react-icons/lu"
+import { LuBoxes, LuCheck, LuCircleDot, LuCopy, LuFileDown, LuFileText, LuInfo, LuListOrdered, LuMap, LuMoveDiagonal, LuPlus, LuRotate3D, LuRuler, LuSquareDot, LuStar, LuTrash2, LuUndo2, LuUpload } from "react-icons/lu"
 import { downloadBlob } from "../download"
 import { EditorDialog } from "../../components/EditorDialog"
 import { FoldGroup, FoldItem } from "../../components/Fold"
-import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
+import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { ImportDropZone } from "../../components/ImportDropZone"
 import type { PickedFile } from "../../components/pickedFiles"
 import { toaster } from "../../components/ui/toaster"
@@ -12,6 +12,7 @@ import { confirmProblem, cupRel, pairPlate, relV, restoreProposal, setConfirmed,
 import { itemSeries, type HettichArticle } from "../../core/import/hettich"
 import { applyImportUpdate, dismissImportUpdate, mergePreview } from "../../core/import/merge"
 import { viewBounds, type HardwareView } from "../../core/import/views"
+import { IMPORT_ACCEPT, importFormatsText } from "../../core/import/formats"
 import { assetDocs, assetViews, getHardwareAsset } from "../../db/hardwareAssets"
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { HardwareImportDialog } from "./HardwareImportDialog"
@@ -332,14 +333,15 @@ export function HardwareList({
           }),
         }}
       />
-      <ImportDropZone title="Importar del fabricant" accept=".zip,.stp,.step,.dxf,.igs,.iges,.3ds,.dae,.pgm,.mpr,.pdf" busy={importBusy && !importSrc} onPicked={onPicked} testId="hardware-import">
+      <ImportDropZone title="Importar del fabricant" accept={IMPORT_ACCEPT} busy={importBusy && !importSrc} onPicked={onPicked} testId="hardware-import">
         Descàrregues de <strong>Hettich CAD</strong> (hettich.com › Descàrregues CAD): els ZIP tal com es baixen (STEP, IGES, 3DS i DWG/DXF), una
         carpeta o fitxers <Text as="span" fontFamily="mono">.stp</Text> i <Text as="span" fontFamily="mono">_2D_…_view.dxf</Text>. Frontisses, plaques,
         tiradors i potes: els forats surten del STEP i s'han de confirmar abans que arribin al taller. La resta (estructures de taula, portes
         corredisses i plegables, Cadro, accessoris) entra com a «només 3D»: el model, sense cap forat. Un article que ja tens no es repeteix: s'hi afegeix el que
         porta de nou (el 3D del STEP, les vistes del DWG/DXF, els plànols de muntatge), sense tocar mai uns forats confirmats. De{" "}
         <strong>Blum E-SERVICES</strong> (cerca de producte): el 3D (STEP o .dae) i l'«Esquema de taladrado» en <Text as="span" fontFamily="mono">Xilog *.pgm</Text>, que dona
-        els mecanitzats exactes (es revisen, es confirmen i es col·loquen a mà a la peça).
+        els mecanitzats exactes (es revisen, es confirmen i es col·loquen a mà a la peça). Es poden triar molts fitxers solts alhora, de tipus barrejats
+        (Blum els baixa d'un en un). Es llegeixen: {importFormatsText()}.
       </ImportDropZone>
       <HardwareImportDialog
         key={importSeq}
@@ -779,6 +781,27 @@ const PLACED_HELP =
 
 const ONLY_2D_HELP = "Només s'han importat les vistes DXF (i els punts de connexió): cap forat. Quan importis el STEP del mateix article, s'hi afegirà el 3D i, si és una frontissa, placa, tirador o pota, els forats proposats (per revisar i confirmar)."
 
+/** Resum d'una regla per graons per a la insígnia («2–5», «64–128 mm»). */
+function stepBadge(rule: StepRule, unit: string): string {
+  const all = [...rule.steps.map((x) => x.n), rule.else]
+  const lo = Math.min(...all), hi = Math.max(...all)
+  return `${lo === hi ? fmt(lo) : `${fmt(lo)}–${fmt(hi)}`}${unit}`
+}
+
+/** «Plànols i documents»: el GLB per baixar i els plànols del fabricant (només si l'asset en porta). */
+function DocsSection({ asset, name }: { asset: string; name: string }) {
+  const a = useLiveQuery(() => getHardwareAsset(asset), [asset])
+  const docs = assetDocs(a)
+  if (!a?.glb && !docs.length) return null
+  const badge = [a?.glb ? "GLB" : "", docs.length ? `${docs.length} ${docs.length === 1 ? "plànol" : "plànols"}` : ""].filter(Boolean).join(" · ")
+  return (
+    <FoldItem id="hw-docs" icon={LuFileText} title="Plànols i documents" badge={badge}>
+      <GlbRow asset={asset} name={name} />
+      <DocsRow asset={asset} />
+    </FoldItem>
+  )
+}
+
 /** «Model 3D»: baixar el GLB que es va fer en importar (per posar-lo en un objecte com a model 3D). */
 function GlbRow({ asset, name }: { asset: string; name: string }) {
   const a = useLiveQuery(() => getHardwareAsset(asset), [asset])
@@ -863,7 +886,7 @@ function UpdateNotice({ item, onChange }: { item: HardwareItem; onChange: (next:
     </Stack>
   )
   return (
-    <Box px={{ base: 4, sm: 6 }} pb={4}>
+    <Box py={2}>
       <Alert.Root status="warning" size="sm" data-testid="hardware-update">
         <Alert.Indicator />
         <Alert.Content gap={2}>
@@ -970,6 +993,15 @@ function HardwareCard({
     const { [key]: _old, ...rest } = item
     onChange(v.trim() ? { ...rest, [key]: v } : rest)
   }
+  // Resums de les insígnies de les seccions (tancades es llegeix què hi ha a dins).
+  const typeLabel = slot?.label ?? (item.engine === "model" && item.machining?.length ? "Es col·loca a mà" : only2d ? "Només 2D" : (ENGINE_HELP[item.engine]?.label ?? item.engine))
+  const importState: { label: string; palette: string } =
+    item.engine === "model" && !item.machining?.length ? { label: only2d ? "Només 2D" : "Només 3D", palette: "gray" }
+    : item.imported?.confirmed ? { label: "Confirmat", palette: "green" }
+    : { label: "Sense confirmar", palette: "orange" }
+  const dimsBadge = HARDWARE_PARAMS[item.engine].slice(0, 2).map((p) => `${p.label.replace(/ \(.*\)$/, "")} ${fmt(item.params[p.key] ?? 0)}`).join(" · ") || (item.lengths ? `${item.lengths.length} llargades` : undefined)
+  const nOps = item.targets.reduce((a, t) => a + t.ops.length, 0)
+  const opsBadge = nOps ? `${nOps} ${nOps === 1 ? "forat" : "forats"}` : undefined
   return (
     <Box w={{ base: "full", lg: "min(560px, 48%)" }} flexShrink={0} overflowY={{ lg: "auto" }} borderStartWidth={{ lg: "1px" }} css={{ scrollbarWidth: "thin", scrollbarGutter: "stable" }}>
       <Box maxW={{ base: "760px", lg: "none" }} mx="auto" pb={{ base: 8, lg: 6 }}>
@@ -1013,7 +1045,9 @@ function HardwareCard({
           </HStack>
         </HStack>
 
-        <FormSection title="General">
+        {/* Seccions plegables (l'acordió de l'app, com l'editor de materials): independents i recordades durant la sessió. */}
+        <Box className="form-section" borderTopWidth="1px" data-testid="hardware-sections">
+        <FoldItem id="hw-general" icon={LuInfo} title="General" badge={typeLabel} defaultOpen>
           <FormRow
             label="Tipus"
             help={
@@ -1024,7 +1058,7 @@ function HardwareCard({
             }
           >
             <Text fontSize="sm" pt="6px">
-              {slot?.label ?? (item.engine === "model" && item.machining?.length ? "Es col·loca a mà" : only2d ? "Només 2D" : (ENGINE_HELP[item.engine]?.label ?? item.engine))}
+              {typeLabel}
             </Text>
           </FormRow>
           <FormRow label="Fabricant">
@@ -1042,11 +1076,11 @@ function HardwareCard({
               </Switch.Root>
             </FormRow>
           )}
-        </FormSection>
+        </FoldItem>
 
         {item.imported?.update && <UpdateNotice item={item} onChange={onChange} />}
         {item.imported && (
-          <FormSection title="Importat del fabricant">
+          <FoldItem id="hw-imported" icon={LuUpload} title="Importat del fabricant" badge={importState.label} badgePalette={importState.palette} defaultOpen>
             {item.engine === "model" && !item.machining?.length ? (
               <FormRow label="Estat" help={only2d ? ONLY_2D_HELP : "No hi ha cap regla de mecanitzat per a aquest ferratge (o no s'hi ha trobat el patró de forats): el model i el volum, mai cap forat. No cal confirmar-lo."}>
                 <HStack gap={2} pt="2px">
@@ -1097,8 +1131,6 @@ function HardwareCard({
                 {item.imported.files.join(" · ")}
               </Text>
             </FormRow>
-            {item.imported.asset && <GlbRow asset={item.imported.asset} name={item.name} />}
-            {item.imported.asset && <DocsRow asset={item.imported.asset} />}
             {item.imported.notes?.length ? (
               <FormRow label="Proposta">
                 <Stack gap={1} pt="6px">
@@ -1117,11 +1149,12 @@ function HardwareCard({
                 </Button>
               </FormRow>
             )}
-          </FormSection>
+          </FoldItem>
         )}
+        {item.imported?.asset && <DocsSection asset={item.imported.asset} name={item.name} />}
 
         {item.imported && item.engine === "cup" && (
-          <FormSection title="Placa de muntatge">
+          <FoldItem id="hw-plate" icon={LuSquareDot} title="Placa de muntatge" badge={item.plate ? (plates.find((x) => x.id === item.plate!.id)?.name ?? "Del moble") : "Cap"}>
             <FormRow label="Placa" help="La placa del lateral: els seus forats van a la cara de dins del lateral de les frontisses, a la filera de davant i a l'alçada de cada cassoleta. Sense, cap forat al lateral (la filera System 32 la sosté).">
               <ChoiceChips
                 label="Placa"
@@ -1134,11 +1167,11 @@ function HardwareCard({
               HINGE_PLATE_PARAMS.map((p) => (
                 <NumRow key={p.key} label={p.label} help={p.help} value={item.params[p.key] ?? 0} min={p.min} max={p.max} step={p.step} onChange={(v) => setParam(p.key, v)} />
               ))}
-          </FormSection>
+          </FoldItem>
         )}
 
         {(HARDWARE_PARAMS[item.engine].length > 0 || item.lengths) && (
-        <FormSection title="Mides">
+        <FoldItem id="hw-dims" icon={LuMoveDiagonal} title="Mides" badge={dimsBadge}>
           {HARDWARE_PARAMS[item.engine].map((p) => (
             <NumRow key={p.key} label={p.label} help={p.help} value={item.params[p.key] ?? 0} min={p.min} max={p.max} step={p.step} onChange={(v) => setParam(p.key, v)} />
           ))}
@@ -1147,16 +1180,16 @@ function HardwareCard({
               <ThicknessChips value={item.lengths} onChange={(lengths) => set({ lengths })} label={false} what="llargada" range={[100, 1500]} />
             </FormRow>
           )}
-        </FormSection>
+        </FoldItem>
         )}
 
         {item.count && (
-          <FormSection title="Quantitat per alçada">
+          <FoldItem id="hw-count" icon={LuListOrdered} title="Quantitat per alçada" badge={stepBadge(item.count, "")}>
             <StepRows rule={item.count} kind="count" onChange={(count) => set({ count })} />
-          </FormSection>
+          </FoldItem>
         )}
         {item.pitch && item.imported && item.engine === "barHandle" ? (
-          <FormSection title="Distància entre forats">
+          <FoldItem id="hw-pitch" icon={LuRuler} title="Distància entre forats" badge={`${fmt(item.pitch.else)} mm`}>
             {(item.targets.find((t) => t.key === "front")?.ops.length ?? 0) >= 2 ? (
               <NumRow
                 label="Entre centres"
@@ -1168,25 +1201,25 @@ function HardwareCard({
                 onChange={(v) => Number.isFinite(v) && onChange(setHandleDistance(item, v))}
               />
             ) : (
-              <Text fontSize="sm" color="fg.muted" px={{ base: 4, sm: 6 }} pb={2}>
+              <Text fontSize="sm" color="fg.muted" pb={2}>
                 Pom: un sol forat, al mateix lloc que el centre del tirador de l'app.
               </Text>
             )}
-          </FormSection>
+          </FoldItem>
         ) : item.pitch ? (
-          <FormSection title="Distància entre forats">
+          <FoldItem id="hw-pitch" icon={LuRuler} title="Distància entre forats" badge={stepBadge(item.pitch, " mm")}>
             <StepRows rule={item.pitch} kind="pitch" onChange={(pitch) => set({ pitch })} />
-          </FormSection>
+          </FoldItem>
         ) : null}
 
         {item.engine === "model" ? null : item.imported && item.engine !== "barHandle" ? (
-          <FormSection title="Mecanitzats">
+          <FoldItem id="hw-ops" icon={LuCircleDot} title="Mecanitzats" badge={opsBadge}>
             {item.targets.map((t) => (
               <OpsEditor key={t.key} item={item} target={t} onChange={(next) => setTargets(item.targets.map((x) => (x.key === t.key ? next : x)))} />
             ))}
-          </FormSection>
+          </FoldItem>
         ) : (
-        <FormSection title="Mecanitzats">
+        <FoldItem id="hw-ops" icon={LuCircleDot} title="Mecanitzats" badge={opsBadge}>
           {item.targets.map((t) => (
             <FormRow key={t.key} label={t.label}>
               <Stack gap={0.5} pt="6px">
@@ -1199,14 +1232,15 @@ function HardwareCard({
               </Stack>
             </FormRow>
           ))}
-          <Text fontSize="xs" color="fg.muted" px={{ base: 4, sm: 6 }} pb={2}>
+          <Text fontSize="xs" color="fg.muted" pb={2}>
             {item.imported
               ? "Forats passants al front, al voltant del centre del tirador (pitch = la distància entre forats, diameter = el Ø de Mides)."
               : "En coordenades de la peça (u al llarg del cantell de referència, v cap a dins), amb els noms de les mides de dalt. Editar-los i afegir-ne és per a més endavant (ferratges manuals)."}
           </Text>
-        </FormSection>
+        </FoldItem>
         )}
         <MachiningGenerator item={item} onChange={onChange} tools={tools} ui={mui} />
+        </Box>
       </Box>
     </Box>
   )

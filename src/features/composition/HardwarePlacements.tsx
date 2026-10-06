@@ -1,11 +1,15 @@
-import { Box, Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react"
-import { useState } from "react"
-import { LuPlus, LuTrash2 } from "react-icons/lu"
+import { Badge, Box, Button, chakra, HStack, IconButton, Stack, Text } from "@chakra-ui/react"
+import type { IconType } from "react-icons"
+import { LuCopy, LuPencil, LuPlus, LuTrash2, LuWrench } from "react-icons/lu"
+import { FoldItem } from "../../components/Fold"
+import { SectionLabel } from "../../components/SectionLabel"
+import type { RuleHardwareCount } from "../../core/build/hardwareSummary"
+import { HARDWARE_ICONS } from "../settings/hardwareIcons"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { NumberField } from "../../components/NumRow"
 import { hardwareSummary, isPendingImport, machiningParts, type Composition, type HardwareItem, type HardwarePlacement, type Panel, type Pos } from "../../core/model"
 import type { CompositionWarning } from "../../core/build/buildComposition"
-import { newPlacement, panelAxes, partLabel, placeableItems, removePlacement, roleFor, scopePanels, scopePlacements, updatePlacement, type PlacementScope } from "./placements"
+import { newPlacement, panelAxes, partLabel, placeableItems, placementScope, placementWarnings, roleFor, scopePanels, scopePlacements, updatePlacement, type PlacementScope } from "./placements"
 
 /**
  * **Ferratges col·locats a mà** (millores v1 F4; Editor › mòdul o peça lliure › «Ferratges»): «Afegir ferratge» → un de
@@ -14,43 +18,90 @@ import { newPlacement, panelAxes, partLabel, placeableItems, removePlacement, ro
  * altres peces de l'item (p. ex. la base d'un perfil de porta corredissa) només si es trien aquí. Es guarda una còpia
  * de l'item (com els mòduls). Tot o res: si no hi cap, cap forat i l'avís surt a «Avisos de fusteria».
  */
-export function HardwarePlacements({ comp, scope, panels, library, warnings, onChange }: { comp: Composition; scope: PlacementScope; panels: readonly Panel[]; library: readonly HardwareItem[]; warnings: readonly CompositionWarning[]; onChange: (c: Composition) => void }) {
+const RULE_ICONS: Record<RuleHardwareCount["id"], IconType> = {
+  hinge: HARDWARE_ICONS.hinge,
+  handle: HARDWARE_ICONS.handle,
+  slide: HARDWARE_ICONS.slide,
+  flap: HARDWARE_ICONS.lift,
+  leg: HARDWARE_ICONS.leg,
+  push: HARDWARE_ICONS.push,
+  magnet: HARDWARE_ICONS.push,
+  dowel: HARDWARE_ICONS.connector,
+}
+
+/** Les accions d'un col·locat (llista de l'inspector i barra flotant del 3D): el mateix camí i un pas de desfer. */
+export interface PlacementActions {
+  /** Triar-lo (es ressalta al 3D i l'inspector passa a ell). */
+  onSelect: (id: string) => void
+  /** Editar-lo: triar-lo i portar l'inspector a la vista (al mòbil, la pestanya Propietats). */
+  onEdit: (id: string) => void
+  onDuplicate: (id: string) => void
+  onRemove: (id: string) => void
+}
+
+/**
+ * **Ferratges del mòdul o de la peça lliure** (Editor › «Ferratges», com la llista de ferratges d'un configurador de
+ * fabricant): els **col·locats a mà** (millores v1 F4), un per fila amb Editar · Duplicar · Eliminar (triar-ne un el
+ * ressalta al 3D), «Afegir ferratge» i, a sota, els que posen **les regles** del mòdul (frontisses, tiradors, guies,
+ * potes…), comptats. Es guarda una còpia de l'item (com els mòduls). Tot o res: si no hi cap, cap forat i l'avís surt a
+ * la seva fila i a «Avisos de fusteria».
+ */
+export function HardwarePlacements({
+  comp,
+  scope,
+  panels,
+  library,
+  warnings,
+  onChange,
+  selectedId,
+  actions,
+  rules,
+}: {
+  comp: Composition
+  scope: PlacementScope
+  panels: readonly Panel[]
+  library: readonly HardwareItem[]
+  warnings: readonly CompositionWarning[]
+  onChange: (c: Composition) => void
+  selectedId?: string | null
+  actions: PlacementActions
+  /** Els de les regles del mòdul (`ruleHardwareCounts`). */
+  rules?: readonly RuleHardwareCount[]
+}) {
   const items = placeableItems(library)
   const here = scopePanels(scope, panels)
   const list = scopePlacements(comp, scope)
-  const [open, setOpen] = useState<string | null>(null)
   const add = () => {
     const item = items[0]
     const on = here.find((h) => machiningParts(item?.machining ?? []).includes(h.part)) ?? here[0]
     if (!item || !on) return
     const pl = newPlacement(item, on)
     onChange({ ...comp, hardwarePlacements: [...(comp.hardwarePlacements ?? []), pl] })
-    setOpen(pl.id)
+    actions.onEdit(pl.id)
   }
   return (
-    <Stack gap={2} data-testid="hardware-placements">
+    // `inline-size`: les files llargues es tallen amb «…» en lloc d'eixamplar la secció (i tapar-ne les accions).
+    <Stack gap={2} data-testid="hardware-placements" css={{ containerType: "inline-size" }}>
+      <SectionLabel>Col·locats a mà</SectionLabel>
       {list.map((pl) => {
         const main = here.find((h) => (h.target.panel ?? h.target.freePart) === (pl.targets[0]!.panel ?? pl.targets[0]!.freePart))
-        const mine = warnings.filter((w) => w.code === "hardware" && w.message.includes(`«${pl.item.name}»`))
+        const mine = placementWarnings(warnings, pl)
+        const on = selectedId === pl.id
         return (
-          <Box key={pl.id} borderWidth="1px" borderColor={open === pl.id ? "wood.solid" : "border.muted"} rounded="md" p={2}>
-            <HStack justify="space-between" gap={2}>
-              <Button variant="plain" size="sm" px={0} minW={0} flex={1} justifyContent="flex-start" onClick={() => setOpen(open === pl.id ? null : pl.id)} aria-expanded={open === pl.id}>
-                <Text as="span" truncate fontWeight="medium">
-                  {pl.item.name} · {main?.label ?? "peça que ja no hi és"}
-                  {pl.repeat && pl.repeat.count > 1 ? ` × ${pl.repeat.count}` : ""}
-                </Text>
-              </Button>
-              <IconButton aria-label={`Treure «${pl.item.name}»`} title="Treure el ferratge" size="2xs" variant="ghost" colorPalette="red" onClick={() => onChange(removePlacement(comp, pl.id))}>
-                <LuTrash2 />
-              </IconButton>
+          <Box key={pl.id} minW={0} borderWidth="1px" borderColor={on ? "wood.solid" : "border.muted"} bg={on ? "wood.subtle" : undefined} rounded="md" px={2} py={1} data-testid="placement-row">
+            <HStack justify="space-between" gap={1}>
+              {/* Un botó que es pot encongir (el `Button` de Chakra no: la fila sortia del panell i tapava les accions). */}
+              <chakra.button type="button" flex={1} minW={0} textAlign="start" fontSize="sm" fontWeight="medium" py={1} truncate onClick={() => actions.onSelect(pl.id)} aria-pressed={on} title={`${pl.item.name} · ${main?.label ?? "peça que ja no hi és"} — triar-lo (es ressalta al 3D)`}>
+                {pl.item.name} · {main?.label ?? "peça que ja no hi és"}
+                {pl.repeat && pl.repeat.count > 1 ? ` × ${pl.repeat.count}` : ""}
+              </chakra.button>
+              <PlacementButtons id={pl.id} name={pl.item.name} actions={actions} />
             </HStack>
             {mine.map((w, i) => (
               <Text key={i} fontSize="xs" color="orange.fg">
                 {w.message}
               </Text>
             ))}
-            {open === pl.id && <PlacementEditor pl={pl} here={here} items={items} onChange={(next) => onChange(updatePlacement(comp, next))} />}
           </Box>
         )
       })}
@@ -69,6 +120,87 @@ export function HardwarePlacements({ comp, scope, panels, library, warnings, onC
           </Button>
         </Box>
       )}
+      {rules && (
+        <>
+          <SectionLabel pt={2}>De les regles del mòdul</SectionLabel>
+          {rules.length ? (
+            <Stack gap={1} data-testid="rule-hardware">
+              {rules.map((r) => {
+                const Icon = RULE_ICONS[r.id]
+                return (
+                  <HStack key={r.id} gap={2} fontSize="sm">
+                    <Box color="fg.muted" flexShrink={0}>
+                      <Icon />
+                    </Box>
+                    <Text flex={1} truncate>
+                      {r.label}
+                    </Text>
+                    <Badge size="sm" variant="subtle">
+                      {r.count}
+                      {r.unit ? ` ${r.unit}` : ""}
+                    </Badge>
+                  </HStack>
+                )
+              })}
+              <Text fontSize="xs" color="fg.muted">
+                Els posa el mòdul (fronts, calaixos, base): es canvien a Fusteria i al Front de cada porta, calaix o abatible.
+              </Text>
+            </Stack>
+          ) : (
+            <Text fontSize="sm" color="fg.muted">
+              Cap (sense portes, calaixos, abatibles ni potes).
+            </Text>
+          )}
+        </>
+      )}
+    </Stack>
+  )
+}
+
+/** Editar · Duplicar · Eliminar (icones del catàleg) d'un col·locat. */
+export function PlacementButtons({ id, name, actions, edit = true }: { id: string; name: string; actions: Pick<PlacementActions, "onEdit" | "onDuplicate" | "onRemove">; edit?: boolean }) {
+  return (
+    <HStack gap={0} flexShrink={0}>
+      {edit && (
+        <IconButton aria-label={`Editar «${name}»`} title="Editar" size="2xs" variant="ghost" onClick={() => actions.onEdit(id)}>
+          <LuPencil />
+        </IconButton>
+      )}
+      <IconButton aria-label={`Duplicar «${name}»`} title="Duplicar" size="2xs" variant="ghost" onClick={() => actions.onDuplicate(id)}>
+        <LuCopy />
+      </IconButton>
+      <IconButton aria-label={`Eliminar «${name}»`} title="Eliminar" size="2xs" variant="ghost" colorPalette="red" onClick={() => actions.onRemove(id)}>
+        <LuTrash2 />
+      </IconButton>
+    </HStack>
+  )
+}
+
+/**
+ * Inspector d'un ferratge col·locat (selecció `hardware`: clic al 3D, a la llista o «Editar»): el ferratge, la peça, la
+ * posició del punt de referència, la repetició i el gir del model, amb els seus avisos.
+ */
+export function PlacementInspector({ comp, id, panels, library, warnings, onChange }: { comp: Composition; id: string; panels: readonly Panel[]; library: readonly HardwareItem[]; warnings: readonly CompositionWarning[]; onChange: (c: Composition) => void }) {
+  const pl = comp.hardwarePlacements?.find((h) => h.id === id)
+  const scope = pl && placementScope(pl)
+  if (!pl || !scope) return null
+  const here = scopePanels(scope, panels)
+  const mine = placementWarnings(warnings, pl)
+  const main = here.find((h) => (h.target.panel ?? h.target.freePart) === (pl.targets[0]!.panel ?? pl.targets[0]!.freePart))
+  return (
+    <Stack gap={0}>
+      {mine.length > 0 && (
+        <Stack gap={1} py={2}>
+          {mine.map((w, i) => (
+            <Text key={i} fontSize="xs" color="orange.fg">
+              {w.message}
+            </Text>
+          ))}
+        </Stack>
+      )}
+      <FoldItem id="hw-place" icon={LuWrench} title="Col·locació" badge={main?.label} defaultOpen>
+        <PlacementEditor pl={pl} here={here} items={placeableItems(library)} onChange={(next) => onChange(updatePlacement(comp, next))} />
+      </FoldItem>
     </Stack>
   )
 }

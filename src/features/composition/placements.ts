@@ -1,4 +1,5 @@
 import { partFrame } from "../../core/build/hardwarePlace"
+import type { CompositionWarning } from "../../core/build/buildComposition"
 import { AXIS_ENDS, AXIS_NAME, isPlaceable, machiningParts, newId, partKindForRole, PART_KINDS, type Composition, type HardwareItem, type HardwarePlacement, type Panel, type PartKind, type PlacementTarget, type WorldAxis } from "../../core/model"
 
 /**
@@ -70,3 +71,31 @@ export function removePlacement(comp: Composition, id: string): Composition {
 }
 
 export const partLabel = (k: PartKind) => PART_KINDS.find((p) => p.id === k)!.label
+
+/** On cau la còpia d'un col·locat: 50 mm més cap a dins al llarg de P (no a sobre de l'original, com «Duplicar» d'un objecte). */
+export const PLACEMENT_COPY_SHIFT = 50
+
+/** Duplica un col·locat (Duplicar del 3D, de la llista i Ctrl/⌘ D): una còpia desplaçada al llarg de P, just després. */
+export function duplicatePlacement(comp: Composition, id: string): { comp: Composition; id: string } | null {
+  const list = comp.hardwarePlacements ?? []
+  const i = list.findIndex((p) => p.id === id)
+  if (i < 0) return null
+  const src = list[i]!
+  const copy: HardwarePlacement = { ...structuredClone(src), id: newId("hp"), p: { ...src.p, at: src.p.at + PLACEMENT_COPY_SHIFT } }
+  const next = [...list]
+  next.splice(i + 1, 0, copy)
+  return { comp: { ...comp, hardwarePlacements: next }, id: copy.id }
+}
+
+/** L'àmbit d'un col·locat (el mòdul o la peça lliure de la seva peça principal). */
+export function placementScope(pl: HardwarePlacement): PlacementScope | null {
+  const main = pl.targets[0]
+  if (main?.module) return { kind: "module", moduleId: main.module }
+  if (main?.freePart) return { kind: "part", partId: main.freePart }
+  return null
+}
+
+/** Els avisos d'un col·locat (pel nom de l'item a l'avís `hardware`). */
+export function placementWarnings(warnings: readonly CompositionWarning[], pl: HardwarePlacement): CompositionWarning[] {
+  return warnings.filter((w) => w.code === "hardware" && w.message.includes(`«${pl.item.name}»`))
+}
