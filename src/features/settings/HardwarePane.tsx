@@ -1,6 +1,6 @@
-import { Alert, Badge, Box, Button, HStack, IconButton, Input, Menu, SimpleGrid, Spinner, Stack, Switch, Text } from "@chakra-ui/react"
+import { Alert, Badge, Box, Button, HStack, IconButton, Input, Menu, SegmentGroup, SimpleGrid, Slider, Spinner, Stack, Switch, Text } from "@chakra-ui/react"
 import { Suspense, lazy, useContext, useEffect, useMemo, useRef, useState, type RefObject } from "react"
-import { LuCheck, LuCopy, LuPlus, LuStar, LuTrash2, LuUndo2 } from "react-icons/lu"
+import { LuCheck, LuCopy, LuMap, LuPlus, LuRotate3D, LuStar, LuTrash2, LuUndo2 } from "react-icons/lu"
 import { EditorDialog } from "../../components/EditorDialog"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
@@ -19,8 +19,12 @@ import { PanelDrawing } from "../../components/PanelDrawing"
 import { SearchBar } from "../../components/SearchBar"
 import { useSessionList } from "../../components/sessionState"
 import { featureCrop, hardwarePreview } from "../../core/build/hardwarePreview"
+import { hardwareMount, mountPlan, type HardwareMount } from "../../core/build/hardwareMount"
+import { movingGroups } from "../../components/viewer/opening"
 import {
+  applySettingsToModule,
   DEFAULT_HARDWARE_KIT,
+  defaultModule,
   HARDWARE_CATEGORIES,
   HARDWARE_PARAMS,
   HARDWARE_SLOTS,
@@ -36,20 +40,27 @@ import {
   type HardwareItem,
   type HardwareTarget,
   type MachiningOp,
+  type MaterialPref,
+  type Module,
   type Panel,
+  type Settings,
   type StepRule,
 } from "../../core/model"
 import { GalleryCard } from "../projects/GalleryCard"
 import { GALLERY_COLS, fold } from "../projects/galleryGrid"
 import { HARDWARE_ICONS } from "./hardwareIcons"
+import { HardwareMountPlan } from "./HardwareMountPlan"
+import { useSessionString } from "./useSessionString"
 import { ThicknessChips } from "./MaterialBits"
 import { PaneHeadContext } from "./paneHead"
 
 /** Categories obertes (es recorden durant la sessió). */
 const OPEN_KEY = "mobles:md-open:hardware"
 
-/** El 3D d'un ferratge importat (three i el GLB, quan s'obre l'editor). */
-const HardwareModelPreview = lazy(() => import("./HardwareModelPreview"))
+/** El ferratge muntat en 3D (three, les peces i el GLB, quan s'obre l'editor). */
+const HardwareMount3D = lazy(() => import("./HardwareMount3D"))
+/** Pestanya del muntatge (3D · Pla), recordada durant la sessió. */
+const MOUNT_VIEW_KEY = "mobles:hardware-mount-view"
 
 /** El lloc del moble que fa servir un tipus de ferratge (les plaques importades no en tenen: van amb la frontissa). */
 const slotOfEngine = (e: HardwareEngine) => HARDWARE_SLOTS.find((s) => s.engine === e)
@@ -67,6 +78,7 @@ export function HardwareList({
   onDefaults,
   onDelete,
   onConfirmed,
+  settings,
 }: {
   items: HardwareItem[]
   defaults: HardwareDefaults
@@ -78,6 +90,8 @@ export function HardwareList({
    * còpia d'abans hi passen (`replaceHardwareEverywhere`), si no es quedarien sense forats.
    */
   onConfirmed?: (before: HardwareItem, after: HardwareItem, items: HardwareItem[]) => void
+  /** Les preferències (en edició): el gruix, els jocs, els materials i la frontissa per defecte del muntatge. */
+  settings?: Settings
 }) {
   const head = useContext(PaneHeadContext)
   const [sel, setSel] = useState<string | null>(null)
@@ -183,6 +197,8 @@ export function HardwareList({
     setEditorOpen(false)
     setJustAdded(null)
   }
+  // El mòdul d'exemple del muntatge: com un de nou (tauler, gruix, jocs i ferratges per defecte de les preferències).
+  const mountBase = useMemo(() => (settings ? applySettingsToModule(settings, defaultModule("mount", "Muntatge")) : undefined), [settings])
   return (
     <Stack gap={4} minW={0}>
       {head}
@@ -262,7 +278,7 @@ export function HardwareList({
         dirty={dirty}
         focusSelector={it !== null && justAdded === it.id ? "[data-hardware-name]" : null}
       >
-        {it && <HardwareStage item={it} />}
+        {it && <HardwareStage item={it} base={mountBase} materials={settings?.materials ?? []} />}
         {it && (
           <HardwareCard
             key={it.id}
@@ -299,16 +315,24 @@ export function HardwareList({
   )
 }
 
-/** Miniatura de la targeta: el patró de mecanitzats de la primera peça d'exemple (sense text). */
+/**
+ * Miniatura de la targeta (sense text): les frontisses i les plaques, el pla del muntatge (porta, lateral, cassoleta i
+ * ferratge, `HardwareMountPlan compact`: es veu com va muntat sense cap 3D per targeta); la resta, el detall dels forats
+ * de la primera peça d'exemple.
+ */
 function HardwareThumb({ item }: { item: HardwareItem }) {
-  // El detall dels forats de la primera peça d'exemple (a la peça sencera, els forats petits no es veurien).
-  const { panel, crop } = useMemo(() => {
-    const p = hardwarePreview(item).panels[0]
-    return { panel: p, crop: p ? featureCrop(p) : undefined }
+  const { panel, crop, plan } = useMemo(() => {
+    const plan = item.engine === "cup" || item.engine === "plate" ? mountPlan(hardwareMount(item), { dims: false }) : null
+    const p = plan ? undefined : hardwarePreview(item).panels[0]
+    return { plan, panel: p, crop: p ? featureCrop(p) : undefined }
   }, [item])
   return (
     <Box w="full" aspectRatio="3 / 2" rounded="md" borderWidth="1px" borderColor="border.emphasized" bg="bg.subtle" display="flex" alignItems="center" justifyContent="center" overflow="hidden">
-      {panel ? (
+      {plan ? (
+        <Box w="full" h="full" p={1}>
+          <HardwareMountPlan plan={plan} compact />
+        </Box>
+      ) : panel ? (
         <Box w="full" maxH="full">
           <PanelDrawing panel={panel} crop={crop} caption={false} />
         </Box>
@@ -348,12 +372,12 @@ function underlays(item: HardwareItem, panels: Panel[], own: HardwareView[], pla
 }
 
 /**
- * Dibuix del patró de mecanitzats (a l'esquerra de l'editor, a la columna gran a l'ordinador): una o dues peces d'exemple
- * amb els forats que hi fa el motor, vistes des de la cara A (els de cantell, discontinus; els passants, buits). D'un
- * importat, a sota dels forats la vista frontal del fitxer (si s'ha pogut registrar sobre els forats proposats), les
- * vistes 2D tal com venen i el 3D.
+ * L'escenari de l'editor (a l'esquerra, a la columna gran a l'ordinador): a dalt, **com va muntat** (`MountPreview`: el
+ * ferratge sobre un mòdul petit fet pel motor, en 3D o en pla); a sota, el patró de mecanitzats sobre una peça d'exemple
+ * (els de cantell, discontinus; els passants, buits) i, d'un importat, la vista frontal del fitxer de fons (si s'ha pogut
+ * registrar sobre els forats proposats) i les vistes 2D tal com venen.
  */
-function HardwareStage({ item }: { item: HardwareItem }) {
+function HardwareStage({ item, base, materials }: { item: HardwareItem; base?: Module; materials: MaterialPref[] }) {
   const preview = useMemo(() => hardwarePreview(item), [item])
   const ownId = item.imported?.asset
   const plateId = item.plate?.asset
@@ -374,6 +398,7 @@ function HardwareStage({ item }: { item: HardwareItem }) {
             </Alert.Content>
           </Alert.Root>
         )}
+        {!preview.error && <MountPreview item={item} base={base} materials={materials} noModel={!!item.imported && own !== undefined && !own?.glb} />}
         {preview.panels.map((p) => {
           // Al costat, el detall dels forats (amb el cantell): a la peça sencera, una espiga Ø8 és un punt.
           const crop = featureCrop(p)
@@ -397,24 +422,8 @@ function HardwareStage({ item }: { item: HardwareItem }) {
           Patró de mecanitzats sobre una peça d'exemple, vist des de la cara A: forats de cara plens, de cantell discontinus i passants buits. Al moble, la regla de cada contingut els col·loca (les cassoletes, a la filera System 32).
           {item.imported && " En gris, la vista del fitxer del fabricant que mira la cara de la peça, encaixada sobre els forats proposats (si hi encaixa)."}
         </Text>
-        {item.imported && ownId && (
+        {item.imported && ownViews.length > 0 && (
           <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
-            <Stack gap={1} bg="bg" rounded="lg" borderWidth="1px" p={2} minH="260px">
-              <Text fontSize="sm" fontWeight="medium" px={1}>
-                3D
-              </Text>
-              <Box flex={1} minH="220px" rounded="md" overflow="hidden" data-testid="hardware-3d">
-                {own === undefined ? null : own?.glb ? (
-                  <Suspense fallback={<Spinner size="sm" color="wood.solid" m={3} />}>
-                    <HardwareModelPreview asset={ownId} edge={item.engine === "plate" ? (item.params.setback ?? 37) : (item.params.cupOffset ?? 22.5)} plate={item.engine === "plate"} />
-                  </Suspense>
-                ) : (
-                  <Text fontSize="xs" color="fg.muted" p={2}>
-                    Sense model 3D (OpenCascade no l'ha pogut fer).
-                  </Text>
-                )}
-              </Box>
-            </Stack>
             {ownViews.map((v) => (
               <ViewDrawing key={v.name} view={v} />
             ))}
@@ -422,6 +431,107 @@ function HardwareStage({ item }: { item: HardwareItem }) {
         )}
       </Stack>
     </Box>
+  )
+}
+
+/** Es pot obrir (porta, abatible, calaix) al 3D del muntatge. */
+const opensIn = (m: HardwareMount) => movingGroups(m.panels).length > 0
+
+/**
+ * Com va muntat (`hardwareMount`): el ferratge sobre un mòdul petit fet pel motor de sempre (porta i lateral de les
+ * frontisses i les plaques; el lateral i la caixa de les guies…), amb el gruix i els jocs de les preferències. Dues
+ * vistes, com «3D · Alçat» de l'editor: **3D** (un sol `Canvas`, a demanda, `HardwareMount3D`) amb la porta tancada o
+ * oberta (lliscador «Obertura»), i **Pla** (`HardwareMountPlan`: vista de dalt tallada a l'alçada de la cassoleta, amb
+ * les cotes). D'un importat sense confirmar, els forats proposats en taronja i l'avís.
+ */
+function MountPreview({ item, base, materials, noModel }: { item: HardwareItem; base?: Module; materials: MaterialPref[]; noModel: boolean }) {
+  const [tab, setTab] = useSessionString(MOUNT_VIEW_KEY)
+  const view = tab === "plan" ? "plan" : "3d"
+  const [open, setOpen] = useState(0)
+  const mount = useMemo(() => hardwareMount(item, base), [item, base])
+  const plan = useMemo(() => mountPlan(mount), [mount])
+  if (mount.error || !mount.panels.length) return null
+  const cutY = plan ? Math.round(plan.sectionY * 10) / 10 : null
+  return (
+    <Stack gap={3} bg="bg" rounded="lg" borderWidth="1px" p={{ base: 3, md: 4 }} data-testid="hardware-mount">
+      <HStack justify="space-between" gap={3} wrap="wrap">
+        <Stack gap={0} minW={0}>
+          <Text fontSize="sm" fontWeight="semibold">
+            Com va muntat
+          </Text>
+          <Text fontSize="xs" color="fg.muted">
+            Mòdul d'exemple de {mount.size.width} × {mount.size.height} × {mount.size.depth} amb tauler de {mount.panels[0]!.thickness} mm
+          </Text>
+        </Stack>
+        <SegmentGroup.Root size="sm" value={view} onValueChange={(e) => e.value && setTab(e.value)}>
+          <SegmentGroup.Indicator />
+          {(
+            [
+              ["3d", "3D", LuRotate3D, "El ferratge muntat en 3D"],
+              ["plan", "Pla", LuMap, "Pla del muntatge: vista de dalt amb les cotes"],
+            ] as const
+          ).map(([v, label, Icon, aria]) => (
+            <SegmentGroup.Item key={v} value={v} aria-label={aria}>
+              <SegmentGroup.ItemText>
+                <HStack gap={1.5}>
+                  <Icon /> {label}
+                </HStack>
+              </SegmentGroup.ItemText>
+              <SegmentGroup.ItemHiddenInput />
+            </SegmentGroup.Item>
+          ))}
+        </SegmentGroup.Root>
+      </HStack>
+      {mount.pending && (
+        <Alert.Root status="warning" size="sm" data-testid="hardware-mount-pending">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Description>
+              Sense confirmar: <strong>en taronja, els forats proposats</strong>. Fins que el confirmis, el moble no els fa (ni a la porta ni al lateral).
+            </Alert.Description>
+          </Alert.Content>
+        </Alert.Root>
+      )}
+      {view === "3d" ? (
+        <Stack gap={2}>
+          <Box h={{ base: "300px", md: "380px", lg: "420px" }} rounded="md" overflow="hidden" bg="bg.subtle" data-testid="hardware-mount-3d">
+            <Suspense fallback={<Spinner size="sm" color="wood.solid" m={3} />}>
+              <HardwareMount3D mount={mount} materials={materials} open={open} />
+            </Suspense>
+          </Box>
+          {opensIn(mount) && (
+            <FormRow label="Obertura" help="Obre la porta (o l'abatible, o el calaix) per veure'n la cara de dins.">
+              <Slider.Root size="sm" w="full" maxW="280px" pt="10px" aria-label={["Obertura"]} min={0} max={1} step={0.05} value={[open]} onValueChange={(e) => setOpen(e.value[0] ?? 0)}>
+                <Slider.Control>
+                  <Slider.Track>
+                    <Slider.Range />
+                  </Slider.Track>
+                  <Slider.Thumbs />
+                </Slider.Control>
+              </Slider.Root>
+            </FormRow>
+          )}
+          <Text fontSize="xs" color="fg.muted">
+            Arrossega per girar-lo; amb dos dits o la roda, més a prop. Les peces, els forats{mount.hinge ? ", la frontissa i la placa" : ""} surten del mateix càlcul que el moble.
+            {noModel && " Sense el model 3D del fitxer: es veu la caixa que ocupa."}
+          </Text>
+        </Stack>
+      ) : plan ? (
+        <Stack gap={2}>
+          <Box w="full" maxW="560px" mx="auto">
+            <HardwareMountPlan plan={plan} />
+          </Box>
+          <Text fontSize="xs" color="fg.muted">
+            Vista de dalt tallada a {String(cutY).replace(".", ",")} mm d'alçada{mount.hinge ? " (al centre de la cassoleta de baix)" : ""}; el davant del moble, a baix. Forats tallats buits; els de sobre o sota, discontinus{mount.pending ? "; els proposats, en taronja" : ""}. {mount.hinge ? "Cotes: joc i recobriment de la porta, del cantell de la porta al centre de la cassoleta i a la seva vora (C), fondària, i la filera del lateral des del davant. " : ""}Mides en mm.
+          </Text>
+        </Stack>
+      ) : null}
+      {mount.warnings.map((w, i) => (
+        <Text key={i} fontSize="xs" color="orange.fg">
+          {w}
+        </Text>
+      ))}
+    </Stack>
   )
 }
 

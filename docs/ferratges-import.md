@@ -121,6 +121,13 @@ El visor 3D (Opcions de vista › Ferratges) posa el GLB de la frontissa a cada 
 (`Panel.fittings`, que segueixen la peça: porta oberta, explosionat, peces girades per `normalizePanel`); mentre no hi
 és (un altre ordinador, sense el model), la caixa. No surten al render, a l'AR ni a les exportacions (decoratiu).
 
+**Per revisar-lo abans de confirmar**: a l'editor del ferratge, «Com va muntat» (`core/build/hardwareMount.ts`) el
+munta en un mòdul petit fet per `buildModule` (porta de 450 d'alt amb la frontissa a l'esquerra, lateral amb la placa,
+el gruix del tauler per defecte): **3D** (el GLB de la frontissa a la cassoleta i el de la placa al lateral, la porta
+es pot obrir) i **Pla** (vista de dalt tallada a la cassoleta de baix, amb el joc, el recobriment, el cantell → centre
+de la cassoleta, C, la fondària i la filera de la placa des del davant). Sense confirmar, es construeix amb una còpia
+confirmada i els forats del ferratge surten en taronja (proposats): és el que faria el moble un cop confirmat.
+
 Proves: `core/build/importedHardware.test.ts` (porta esquerra i dreta: cassoletes iguals que les d'inici, cargols a ±26
 i 5,5 cap a dins, placa a ±16 de cada cassoleta a 37 del davant a la cara de dins del lateral de les frontisses; sense
 confirmar, res; placa euro = forats del System 32; porta girada), `core/import/*.test.ts` (fitxers sintètics) i

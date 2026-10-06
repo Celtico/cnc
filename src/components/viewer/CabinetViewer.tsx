@@ -470,8 +470,8 @@ function animStep(running: { current: boolean }, dt: number): number {
   return step
 }
 
-/** Aplica el moviment d'obertura (gir sobre el pivot o desplaçament) a una peça. */
-function MovingPanel({ transform, children }: { transform: ReturnType<typeof transformAt> | null; children: React.ReactNode }) {
+/** Aplica el moviment d'obertura (gir sobre el pivot o desplaçament) a una peça (també al muntatge dels ferratges). */
+export function MovingPanel({ transform, children }: { transform: ReturnType<typeof transformAt> | null; children: React.ReactNode }) {
   const outer = useRef<Group>(null)
   const target = useRef(transform)
   const running = useRef(false)
@@ -1308,6 +1308,11 @@ interface PanelMeshProps {
   onHover?: (panel: Panel, on: boolean) => void
   /** Ferratges visuals de la peça (frontisses i tirador als fronts). */
   hardware?: boolean
+  /**
+   * Forats amb aquestes etiquetes d'un altre color: els proposats d'un ferratge importat sense confirmar (Preferències ›
+   * Ferratges, el muntatge), que el moble encara no fa.
+   */
+  proposedTags?: readonly string[]
   panel: Panel
   exploded: boolean
   showHoles: boolean
@@ -1329,6 +1334,7 @@ const samePanelProps = (a: PanelMeshProps, b: PanelMeshProps) =>
   a.dimmed === b.dimmed &&
   a.edges === b.edges &&
   a.hardware === b.hardware &&
+  a.proposedTags === b.proposedTags &&
   a.materialMode === b.materialMode &&
   a.materials === b.materials &&
   a.onClick === b.onClick &&
@@ -1347,6 +1353,7 @@ export const PanelMesh = memo(function PanelMesh({
   onHover,
   edges = true,
   hardware = false,
+  proposedTags,
 }: PanelMeshProps) {
   const group = useRef<Group>(null)
   const amount = useRef(exploded ? 1 : 0)
@@ -1440,7 +1447,14 @@ export const PanelMesh = memo(function PanelMesh({
           {!cut && <boxGeometry args={[L, W, T]} />}
           {edges && <Edges color={dimmed ? "#a08a6a" : "#6b5a3e"} threshold={15} />}
         </mesh>
-        {showHoles && vpanel.holes.length > 0 && <HoleMarks holes={vpanel.holes} thickness={T} />}
+        {showHoles && vpanel.holes.length > 0 && (proposedTags?.length ? (
+          <>
+            <HoleMarks holes={vpanel.holes.filter((h) => !h.tag || !proposedTags.includes(h.tag))} thickness={T} />
+            <HoleMarks holes={vpanel.holes.filter((h) => !!h.tag && proposedTags.includes(h.tag))} thickness={T} material={PROPOSED_MAT} />
+          </>
+        ) : (
+          <HoleMarks holes={vpanel.holes} thickness={T} />
+        ))}
         {hardware && <PanelHardware panel={vpanel} />}
         {hardware && <PanelFittings panel={vpanel} />}
         {vpanel.grooves.map((g, i) => (
@@ -1461,6 +1475,9 @@ const EPS = 0.0004
 const HOLE_GEO = new CircleGeometry(1, 20)
 const HOLE_MAT = new MeshBasicMaterial({ color: HOLE_COLOR })
 HOLE_MAT.userData.shared = true
+/** Forats proposats (ferratge importat sense confirmar): taronja, com la insígnia «Sense confirmar». */
+const PROPOSED_MAT = new MeshBasicMaterial({ color: "#e8590c" })
+PROPOSED_MAT.userData.shared = true
 
 /** Gir de la marca d'un forat de cantell: disc perpendicular al cantell, al mig del gruix. */
 const EDGE_MARK: Record<string, { d: [number, number, number]; r: [number, number, number] }> = {
@@ -1474,7 +1491,7 @@ const EDGE_MARK: Record<string, { d: [number, number, number]; r: [number, numbe
  * Marques dels forats d'una peça (discos foscos a la cara A, a la B o al cantell): una sola malla instanciada per peça
  * amb la geometria i el material comuns (abans, una malla i un material per forat: centenars per moble).
  */
-function HoleMarks({ holes, thickness }: { holes: Hole[]; thickness: number }) {
+function HoleMarks({ holes, thickness, material = HOLE_MAT }: { holes: Hole[]; thickness: number; material?: MeshBasicMaterial }) {
   const marks = useMemo(() => {
     const o = new Object3D()
     const out: Matrix4[] = []
@@ -1511,7 +1528,7 @@ function HoleMarks({ holes, thickness }: { holes: Hole[]; thickness: number }) {
   }, [marks, invalidate])
   if (!marks.length) return null
   // La mida de la malla és el nombre de forats: si canvia, se'n fa una de nova.
-  return <instancedMesh key={marks.length} ref={ref} args={[HOLE_GEO, HOLE_MAT, marks.length]} />
+  return <instancedMesh key={marks.length} ref={ref} args={[HOLE_GEO, material, marks.length]} />
 }
 
 
