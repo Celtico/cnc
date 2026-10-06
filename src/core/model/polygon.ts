@@ -356,6 +356,15 @@ export function autoHandles(nodes: PNode[], i: number): PNode {
 }
 
 /** Mou el manegador `which` d'un node respectant-ne el tipus. */
+/** Maj (com a Figma): el vector `[dx, dy]` girat a l'angle múltiple de 45° més proper, amb la mateixa llargada. */
+export function snapAngle45([dx, dy]: Vec2): Vec2 {
+  const len = Math.hypot(dx, dy)
+  if (len < 1e-9) return [0, 0]
+  const a = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4)
+  const r = (v: number) => Math.round(v * 10) / 10 + 0
+  return [r(Math.cos(a) * len), r(Math.sin(a) * len)]
+}
+
 export function moveHandle(node: PNode, which: "in" | "out", h: Vec2): PNode {
   const other = which === "in" ? "out" : "in"
   const next: PNode = { ...node, [which]: h, b: undefined }
