@@ -7,7 +7,7 @@ import { SceneAccess, StudioEnvironment, TextureRefresh } from "./SceneHelpers"
 import { surfaceMaterial } from "./surfaceMaterial"
 import { profileGeometry } from "./refGeometry"
 import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
-import { Billboard, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
+import { Billboard, Edges, Grid, Html, Line, OrbitControls, PerspectiveCamera } from "@react-three/drei"
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react"
 import { ContactShadow } from "./ContactShadow"
 import { BoxFrame } from "./BoxFrame"
@@ -59,16 +59,6 @@ export interface ViewerModule {
   legs?: { height: number; depth: number }
 }
 
-/** Llum d'un compartiment (mm, coordenades de la composició), per acotar-la a la vista de davant. */
-export interface ZoneLight {
-  /** Mòdul al qual pertany (`ViewerModule.index`). */
-  module?: number
-  x0: number
-  x1: number
-  y0: number
-  y1: number
-}
-
 export interface CabinetViewerProps {
   /** Acabats propis de l'escena de Presentació (`Composition.scene`): terra i paret. */
   sceneFinish?: { floor?: string; wall?: string }
@@ -85,8 +75,8 @@ export interface CabinetViewerProps {
   onAddModule?: (side: "left" | "right") => void
   /** Objectes fantasma (translúcids). */
   ghosts?: RefObject[]
-  /** Vista: 3D en perspectiva o ortogràfica estàndard. */
-  view?: ViewName
+  /** Costat des d'on enquadra la càmera (perspectiva) quan canvia `fitKey`: null = el 3/4 d'«Enquadrar». */
+  viewDir?: ViewName | null
   /** Obertura de portes i calaixos, 0..1. */
   opening?: number
   /** Si hi és, només s'obren aquests grups (ids de `movingGroups`). */
@@ -95,8 +85,6 @@ export interface CabinetViewerProps {
   materialMode?: "material" | "role"
   /** Materials de les preferències, per resoldre els acabats. */
   materials?: MaterialPref[]
-  /** Llums dels compartiments, acotades a la vista de davant. */
-  lights?: ZoneLight[]
   /** Rep la funció de captura (PNG a 2×, fons net). */
   onCapture?: (capture: () => Promise<Blob>) => void
   /** Qualitat del render (resolució i ombres). */
@@ -151,12 +139,11 @@ export function CabinetViewer({
   onSelectModule,
   onAddModule,
   ghosts,
-  view = "3d",
+  viewDir = null,
   opening = 0,
   openOnly = null,
   materialMode = "material",
   materials = [],
-  lights = [],
   onCapture,
   quality = "fast",
   hardware = true,
@@ -195,7 +182,6 @@ export function CabinetViewer({
   const bg = useColorModeValue("#f4f1ea", "#1b1a17")
   const gridCell = useColorModeValue("#d8d2c4", "#33302a")
   const gridSection = useColorModeValue("#b9b1a0", "#4a463d")
-  const dimColor = useColorModeValue("#3b2f1f", "#e8dcc6")
   const selected = modules?.find((m) => m.id === selectedModuleId)
   const selectedIndex = selected?.index
   const groups = useMemo(() => movingGroups(panels), [panels])
@@ -245,7 +231,6 @@ export function CabinetViewer({
     }
     return t
   }, [modules, size.width, size.height, size.depth])
-  const ortho = view !== "3d"
   // Caixa de cada peça lliure com a «objecte» (per reutilitzar l'arrossegament i el gizmo).
   const partBoxes = useMemo((): RefObject[] => (parts ?? []).map((p) => {
     const s = partSize(p)
@@ -298,15 +283,14 @@ export function CabinetViewer({
         if (onDeselect && d && Math.hypot(e.clientX - d[0], e.clientY - d[1]) < 5) onDeselect()
       }}
     >
-      {/* Les vistes ortogràfiques són plànols: sempre fons de dibuix, també a Presentació. */}
-      <color attach="background" args={[q.guides || ortho ? bg : scene.wall]} />
+      <color attach="background" args={[q.guides ? bg : scene.wall]} />
       {/* Llum d'entorn (IBL) d'un estudi procedural, com model-viewer: reflexos i ombrejat suau. És l'única
           de l'escena: abans l'habitació de Presentació en posava una altra i, segons quina s'aplicava l'última
           (en clicar al 3D es tornava a aplicar la de l'habitació), tot el visor canviava de to. */}
       <StudioEnvironment intensity={q.guides ? 0.6 : 0.5 * light.env} />
       <TextureRefresh />
       <hemisphereLight intensity={(q.guides ? 0.55 : light.ambient) * 0.45} groundColor="#8a7a60" />
-      {!q.guides && !ortho && <PresentationRoom backZ={-size.depth * S * 0.5} scene={scene} materials={materials} />}
+      {!q.guides && <PresentationRoom backZ={-size.depth * S * 0.5} scene={scene} materials={materials} />}
       {/* bias i normalBias eviten les ratlles (shadow acne) de les cares que s'ombregen a si mateixes. */}
       <directionalLight
         key={q.shadowMap}
@@ -360,7 +344,6 @@ export function CabinetViewer({
             selected={g.id === selectedRefId}
             hit={collidingRefIds?.has(g.id) ?? false}
             guides={q.guides}
-            view={view}
             offset={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}
             targets={snapTargets}
             others={ghosts}
@@ -376,7 +359,6 @@ export function CabinetViewer({
             selected
             hit={false}
             guides={q.guides}
-            view={view}
             offset={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}
             targets={snapTargets}
             others={[...partBoxes, ...(ghosts ?? [])]}
@@ -397,7 +379,6 @@ export function CabinetViewer({
             selected
             hit={false}
             guides={q.guides}
-            view={view}
             offset={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}
             targets={snapTargets}
             others={[...modelBoxes, ...partBoxes, ...(ghosts ?? [])]}
@@ -414,7 +395,6 @@ export function CabinetViewer({
             selected
             hit={false}
             guides={q.guides}
-            view={view}
             offset={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}
             targets={snapTargets}
             others={[...partBoxes.filter((b) => !(parts ?? []).some((p) => p.id === b.id && p.group === selectedGroup)), ...(ghosts ?? [])]}
@@ -433,7 +413,7 @@ export function CabinetViewer({
           ) : null
         })()}
         {selectedIndex !== undefined && q.guides && <CableMarks panels={panels.filter((p) => p.module === selectedIndex)} />}
-        {selected && onMoveModule && view !== "top" && (
+        {selected && onMoveModule && (
           <MoveHandle
             m={selected}
             others={[...(modules ?? []).filter((o) => o.id !== selected.id).flatMap((o) => [o.x, o.x + o.width]), ...(ghosts ?? []).flatMap((g) => [g.x, g.x + g.w])]}
@@ -444,23 +424,13 @@ export function CabinetViewer({
             }}
           />
         )}
-        {selected && onAddModule && !ortho && q.guides && (
+        {selected && onAddModule && q.guides && (
           <>
             {/* A l'aresta de davant de cada costat, a mitja alçada, i apartats uns píxels cap a fora a la pantalla: la nansa
                 ↔ (a dalt al mig) no els tapa ni en un mòdul baix i fondo. */}
             <AddButton x={selected.x} y={selected.y + selected.height / 2} z={(selected.z ?? 0) + selected.depth} side="left" onClick={() => onAddModule("left")} />
             <AddButton x={selected.x + selected.width} y={selected.y + selected.height / 2} z={(selected.z ?? 0) + selected.depth} side="right" onClick={() => onAddModule("right")} />
           </>
-        )}
-        {ortho && (
-          <Dimensions
-            view={view}
-            size={size}
-            modules={modules ?? []}
-            lights={selectedIndex === undefined ? [] : lights.filter((l) => l.module === undefined || l.module === selectedIndex)}
-            color={dimColor}
-            labelBg={bg}
-          />
         )}
       </group>
 
@@ -478,7 +448,7 @@ export function CabinetViewer({
           resolution={q.contactResolution}
         />
       )}
-      <CameraRig size={size} view={view} fitKey={fitKey} onFramedChange={onFramedChange} initialCamera={initialCamera} onCameraChange={onCameraChange} />
+      <CameraRig size={size} viewDir={viewDir} fitKey={fitKey} onFramedChange={onFramedChange} initialCamera={initialCamera} onCameraChange={onCameraChange} />
       {onCapture && <Capture onCapture={onCapture} gridRef={gridRef} />}
       {onSceneAccess && <SceneAccess onAccess={onSceneAccess} />}
     </Canvas>
@@ -549,8 +519,9 @@ function MovingPanel({ transform, children }: { transform: ReturnType<typeof tra
 /** Distància màxima de la càmera de l'editor (m). */
 const MAX_DISTANCE = 12
 
+/** Direcció de la càmera d'«Enquadrar» (3/4) i de cada vista. */
+const FIT_DIR: [number, number, number] = [0.72, 0.45, 0.95]
 const VIEW_DIR: Record<ViewName, [number, number, number]> = {
-  "3d": [0.72, 0.45, 0.95],
   front: [0, 0, 1],
   back: [0, 0, -1],
   left: [-1, 0, 0],
@@ -559,14 +530,11 @@ const VIEW_DIR: Record<ViewName, [number, number, number]> = {
 }
 
 /**
- * Enquadra el moble sencer: perspectiva 3/4 a la vista 3D, càmera ortogràfica a les
- * vistes estàndard (zoom perquè hi càpiga tot), amb transició suau.
+ * Càmera (sempre perspectiva): enquadra el moble sencer en muntar-se, en redimensionar el visor i quan canvia `fitKey`,
+ * des del 3/4 («Enquadrar») o del costat de la vista triada (`viewDir`), amb transició suau. Editar el moble (mides,
+ * mòduls, objectes) no la mou: es queda on l'has deixat.
  */
-/**
- * Càmera: s'enquadra en muntar-se, en canviar de vista, en redimensionar el visor i quan
- * canvia `fitKey`. Editar el moble (mides, mòduls, objectes) no la mou: es queda on l'has deixat.
- */
-function CameraRig({ size, view, fitKey, onFramedChange, initialCamera, onCameraChange }: { size: CabinetViewerProps["size"]; view: ViewName; fitKey: number; onFramedChange?: (framed: boolean) => void; initialCamera?: CameraPose; onCameraChange?: (camera: CameraPose) => void }) {
+function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCameraChange }: { size: CabinetViewerProps["size"]; viewDir: ViewName | null; fitKey: number; onFramedChange?: (framed: boolean) => void; initialCamera?: CameraPose; onCameraChange?: (camera: CameraPose) => void }) {
   const controls = useRef<OrbitControlsImpl>(null)
   const { camera, size: viewport, invalidate } = useThree()
   const w = size.width * S
@@ -574,14 +542,12 @@ function CameraRig({ size, view, fitKey, onFramedChange, initialCamera, onCamera
   const d = size.depth * S
   const targetY = h * 0.5
   const aspect = viewport.width / Math.max(viewport.height, 1)
-  const goal = useRef<{ pos: Vector3; zoom: number } | null>(null)
+  const goal = useRef<{ pos: Vector3 } | null>(null)
   const goalRunning = useRef(false)
   const lastPos = useRef<Vector3 | null>(null)
-  const lastZoom = useRef(1)
-  const ortho = view !== "3d"
   // Enquadrat = la càmera és on l'ha deixat l'últim enquadrament i el moble té la mateixa mida.
   const fittedSize = useRef("")
-  // Càmera desada que s'ha restaurat (fins que s'enquadri o es canviï de vista) i els disparadors ja vistos
+  // Càmera desada que s'ha restaurat (fins que s'enquadri o es triï una vista) i els disparadors ja vistos
   // (vista | fitKey): un de nou és de l'usuari; els altres reenquadraments són de redimensionar el visor.
   const restored = useRef<CameraPose | null>(null)
   const fitTriggered = useRef(new Set<string>())
@@ -602,7 +568,7 @@ function CameraRig({ size, view, fitKey, onFramedChange, initialCamera, onCamera
       clearTimeout(reportTimer.current)
       pendingReport.current = null
       const tt = t ?? controls.current?.target
-      if (!tt || !("fov" in camera) || ("isOrthographicCamera" in camera && camera.isOrthographicCamera)) return
+      if (!tt || !("fov" in camera)) return
       const r = (v: number) => Math.round(v * 10000) / 10000
       const pose: CameraPose = { position: [r(camera.position.x), r(camera.position.y), r(camera.position.z)], target: [r(tt.x), r(tt.y), r(tt.z)], fov: camera.fov as number }
       if ([...pose.position, ...pose.target].every(Number.isFinite)) reportRef.current?.(pose)
@@ -631,32 +597,22 @@ function CameraRig({ size, view, fitKey, onFramedChange, initialCamera, onCamera
 
   useEffect(() => {
     const radius = 0.5 * Math.sqrt(w * w + h * h + d * d)
-    const dir = VIEW_DIR[view]
+    const dir = viewDir ? VIEW_DIR[viewDir] : FIT_DIR
     const len = Math.hypot(dir[0], dir[1], dir[2])
-    let dist: number
-    let zoom = 1
-    if ("fov" in camera && !ortho) {
-      const vHalf = ((camera.fov as number) * Math.PI) / 360
-      const hHalf = Math.atan(Math.tan(vHalf) * aspect)
-      // Com a molt la distància màxima dels controls: més enllà, els controls la retenien i l'animació no arribava
-      // mai (amb `frameloop="demand"`, el visor no pararia de pintar).
-      dist = Math.min(MAX_DISTANCE * 0.999, (radius / Math.sin(Math.min(vHalf, hHalf))) * 1.08)
-    } else {
-      dist = radius * 4 + 1
-      // Extensió visible segons la vista, amb marge per a les cotes.
-      const [ew, eh] = view === "top" ? [w, d] : view === "left" || view === "right" ? [d, h] : [w, h]
-      // Marge per a les cotes (fins a 2 línies a cada costat) i per a les barres del visor
-      // (pestanyes a dalt i vistes a baix, ~56 px cadascuna), perquè no tapin cap cota.
-      zoom = Math.min((viewport.width - 40) / (ew + 0.5), (viewport.height - 120) / (eh + 0.5))
-    }
+    const fov = "fov" in camera ? (camera.fov as number) : 38
+    const vHalf = (fov * Math.PI) / 360
+    const hHalf = Math.atan(Math.tan(vHalf) * aspect)
+    // Com a molt la distància màxima dels controls: més enllà, els controls la retenien i l'animació no arribava
+    // mai (amb `frameloop="demand"`, el visor no pararia de pintar).
+    const dist = Math.min(MAX_DISTANCE * 0.999, (radius / Math.sin(Math.min(vHalf, hHalf))) * 1.08)
     const pos = new Vector3((dir[0] / len) * dist, targetY + (dir[1] / len) * dist, (dir[2] / len) * dist)
-    // Càmera desada: en obrir-lo (vista 3D) es torna on es va deixar. Mentre no s'enquadri ni es canviï de vista,
-    // redimensionar el visor (la disposició es mou en obrir-se) no la treu d'allà.
-    const restore = restored.current ?? (!ortho && initialCamera && !fitTriggered.current.size ? initialCamera : null)
-    const trigger = `${view}|${fitKey}`
+    // Càmera desada: en obrir-lo es torna on es va deixar. Mentre no s'enquadri ni es triï una vista, redimensionar el
+    // visor (la disposició es mou en obrir-se) no la treu d'allà.
+    const restore = restored.current ?? (initialCamera && !fitTriggered.current.size ? initialCamera : null)
+    const trigger = `${viewDir ?? "fit"}|${fitKey}`
     const userFit = fitTriggered.current.size > 0 && !fitTriggered.current.has(trigger)
     fitTriggered.current.add(trigger)
-    if (restore && !userFit && !ortho) {
+    if (restore && !userFit) {
       restored.current = restore
       goal.current = null
       camera.position.set(...restore.position)
@@ -668,17 +624,19 @@ function CameraRig({ size, view, fitKey, onFramedChange, initialCamera, onCamera
       return
     }
     restored.current = null
-    reportAfterGoal.current = userFit && !ortho
-    goal.current = { pos, zoom }
+    // «Enquadrar» o una vista triada: la càmera nova es desa com qualsevol òrbita.
+    reportAfterGoal.current = userFit
+    goal.current = { pos }
     fittedSize.current = `${size.width}x${size.height}x${size.depth}`
-    setFramed(true)
+    // El botó «Enquadrar» surt marcat només amb el 3/4 (una vista és una altra càmera).
+    setFramed(!viewDir)
     controls.current?.target.set(0, targetY, 0)
     controls.current?.update()
     // L'animació cap a l'enquadrament (`useFrame`) demana els fotogrames fins que arriba.
     invalidate()
     // Les mides es llegeixen però no disparen el reenquadrament.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [camera, view, ortho, viewport.width, viewport.height, fitKey])
+  }, [camera, viewDir, viewport.width, viewport.height, fitKey])
 
   useFrame((st, dt) => {
     const g = goal.current
@@ -688,21 +646,15 @@ function CameraRig({ size, view, fitKey, onFramedChange, initialCamera, onCamera
     }
     const k = Math.min(1, animStep(goalRunning, dt) * 6)
     camera.position.lerp(g.pos, k)
-    if ("isOrthographicCamera" in camera && camera.isOrthographicCamera) {
-      camera.zoom += (g.zoom - camera.zoom) * k
-      camera.updateProjectionMatrix()
-    }
     controls.current?.update()
     // Arribat, o encallat (els controls no la deixen anar més enllà, p. ex. el límit d'angle): s'acaba.
-    const zoom = "isOrthographicCamera" in camera && camera.isOrthographicCamera ? camera.zoom : 1
-    const stuck = lastPos.current !== null && camera.position.distanceToSquared(lastPos.current) < 1e-14 && Math.abs(zoom - lastZoom.current) < 1e-6
+    const stuck = lastPos.current !== null && camera.position.distanceToSquared(lastPos.current) < 1e-14
     lastPos.current = (lastPos.current ?? new Vector3()).copy(camera.position)
-    lastZoom.current = zoom
-    if (stuck || (camera.position.distanceTo(g.pos) < 0.002 && (!("isOrthographicCamera" in camera) || Math.abs(camera.zoom - g.zoom) < 0.5))) {
+    if (stuck || camera.position.distanceTo(g.pos) < 0.002) {
       goal.current = null
       goalRunning.current = false
       lastPos.current = null
-      // «Enquadrar» (o tornar a la vista 3D): la càmera nova també es desa.
+      // «Enquadrar» (o una vista): la càmera nova també es desa.
       if (reportAfterGoal.current) {
         reportAfterGoal.current = false
         scheduleReport()
@@ -712,22 +664,20 @@ function CameraRig({ size, view, fitKey, onFramedChange, initialCamera, onCamera
 
   return (
     <>
-      {ortho ? <OrthographicCamera makeDefault near={-50} far={100} position={[0, targetY, 5]} zoom={80} /> : <PerspectiveCamera makeDefault fov={38} near={0.01} far={100} position={[1.4, 1.1, 1.9]} />}
-      <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={MAX_DISTANCE} maxPolarAngle={Math.PI * 0.55} enableRotate={!ortho} onStart={() => {
+      <PerspectiveCamera makeDefault fov={38} near={0.01} far={100} position={[1.4, 1.1, 1.9]} />
+      <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={MAX_DISTANCE} maxPolarAngle={Math.PI * 0.55} onStart={() => {
           goal.current = null
           restored.current = null
           setFramed(false)
           clearTimeout(reportTimer.current)
-        }} onEnd={() => {
-          if (!ortho) scheduleReport()
-        }} />
+        }} onEnd={() => scheduleReport()} />
     </>
   )
 }
 
 /**
  * Captura la vista actual en PNG, tal com es veu: mateix fons, llum, to i antialiàsing
- * (es renderitza al mateix canvas a resolució alta), sense la graella i amb les cotes.
+ * (es renderitza al mateix canvas a resolució alta), sense la graella.
  */
 function Capture({ onCapture, gridRef }: { onCapture: (fn: () => Promise<Blob>) => void; gridRef: React.RefObject<Object3D | null> }) {
   const { gl, scene, camera, size } = useThree()
@@ -751,36 +701,10 @@ function Capture({ onCapture, gridRef }: { onCapture: (fn: () => Promise<Blob>) 
       gl.setSize(size.width, size.height, false)
       if (grid) grid.visible = gridVisible
       gl.render(scene, camera)
-      drawLabels(ctx, gl.domElement, canvas.width / size.width)
       return new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("No s'ha pogut generar el PNG"))), "image/png"))
     })
   }, [onCapture, gl, scene, camera, size, gridRef])
   return null
-}
-
-/** Pinta al PNG les etiquetes HTML de les cotes (són DOM, no surten al WebGL). */
-function drawLabels(ctx: CanvasRenderingContext2D, glCanvas: HTMLCanvasElement, k: number) {
-  const host = glCanvas.parentElement?.parentElement
-  if (!host) return
-  const origin = glCanvas.getBoundingClientRect()
-  for (const el of host.querySelectorAll<HTMLElement>("[data-dim-label]")) {
-    const r = el.getBoundingClientRect()
-    if (r.width === 0 || r.right < origin.left || r.left > origin.right || r.bottom < origin.top || r.top > origin.bottom) continue
-    const cs = getComputedStyle(el)
-    const x = (r.left - origin.left) * k
-    const y = (r.top - origin.top) * k
-    const w = r.width * k
-    const h = r.height * k
-    ctx.fillStyle = cs.backgroundColor
-    ctx.beginPath()
-    ctx.roundRect(x, y, w, h, 4 * k)
-    ctx.fill()
-    ctx.fillStyle = cs.color
-    ctx.font = `${cs.fontWeight} ${parseFloat(cs.fontSize) * k}px ${cs.fontFamily}`
-    ctx.textAlign = "center"
-    ctx.textBaseline = "middle"
-    ctx.fillText(el.textContent ?? "", x + w / 2, y + h / 2)
-  }
 }
 
 interface SnapTargets {
@@ -856,12 +780,27 @@ function ModelMesh({ m, selected, shift, onSelect }: { m: ModelObject; selected:
  * una en la seva direcció; el cos no s'arrossega). S'enganxa a les arestes dels mòduls i dels altres objectes (Alt: sense
  * imant). Amb el ratolí a sobre, contorn del color de selecció.
  */
+/** Eix del món que la càmera mira gairebé de cara (|cos| > 0,97, unes vistes de costat o de dalt), o null. */
+function useFacingAxis(): Axis | null {
+  const [axis, setAxis] = useState<Axis | null>(null)
+  const cur = useRef<Axis | null>(null)
+  const v = useMemo(() => new Vector3(), [])
+  useFrame(({ camera }) => {
+    camera.getWorldDirection(v)
+    const a: Axis | null = Math.abs(v.x) > 0.97 ? "x" : Math.abs(v.y) > 0.97 ? "y" : Math.abs(v.z) > 0.97 ? "z" : null
+    if (a !== cur.current) {
+      cur.current = a
+      setAxis(a)
+    }
+  })
+  return axis
+}
+
 function RefGhost({
   g,
   selected,
   hit,
   guides,
-  view,
   offset,
   targets,
   others,
@@ -881,7 +820,6 @@ function RefGhost({
   selected: boolean
   hit: boolean
   guides: boolean
-  view: ViewName
   offset: [number, number, number]
   targets: SnapTargets
   /** Tots els objectes: les arestes dels altres també enganxen. */
@@ -971,10 +909,10 @@ function RefGhost({
     ;(e.target as Element | null)?.setPointerCapture?.(e.pointerId)
     if (controls) controls.enabled = false
   }
-  // Direccions que es poden moure (els enganxaments en fixen alguna) i visibles des d'aquesta vista.
-  const gizmoAxes = (["x", "y", "z"] as Axis[]).filter(
-    (a) => !(a === "y" && g.onFloor) && !(a === "z" && g.onWall) && !(a === "z" && (view === "front" || view === "back")) && !(a === "y" && view === "top") && !(a === "x" && (view === "left" || view === "right")),
-  )
+  // Direccions que es poden moure (els enganxaments en fixen alguna); la que mira a la càmera (una vista de costat o de
+  // dalt) no es pot arrossegar i s'amaga.
+  const facing = useFacingAxis()
+  const gizmoAxes = (["x", "y", "z"] as Axis[]).filter((a) => !(a === "y" && g.onFloor) && !(a === "z" && g.onWall) && a !== facing)
 
   return (
     <group position={[(pos.x + g.w / 2) * S, (pos.y + g.h / 2) * S, (pos.z + g.d / 2) * S]}>
@@ -1033,136 +971,6 @@ function RefGhost({
           </span>
         </Html>
       )}
-    </group>
-  )
-}
-
-type P3 = [number, number, number]
-interface DimSpec {
-  a: P3
-  b: P3
-  label: string
-  /** Punts de l'objecte d'on surten les línies de referència cap a `a` i `b`. */
-  from?: [P3, P3]
-  /** Cota interior (llum d'un compartiment): etiqueta fosca sobre el material. */
-  inner?: boolean
-}
-
-/**
- * Cotes de les vistes ortogràfiques, com en un plànol de fusteria:
- *  - exteriors (fora del moble): cadena d'amplades de cada mòdul i total a sota, alçada
- *    total a la dreta; línies de referència i marques a 45° als extrems;
- *  - interiors: llums (amplada × alçada) dels compartiments del mòdul seleccionat, en creu
- *    dins de cada compartiment. Les massa petites per llegir-se s'ometen.
- * Les etiquetes porten fons: es llegeixen sobre qualsevol material i en tots dos temes.
- */
-function Dimensions({ view, size, modules, lights, color, labelBg }: { view: ViewName; size: CabinetViewerProps["size"]; modules: ViewerModule[]; lights: ZoneLight[]; color: string; labelBg: string }) {
-  // Píxels per mm a la pantalla (zoom de la càmera ortogràfica), per ometre les cotes que
-  // no s'hi poden llegir. Es refresca quan el zoom canvia més d'un 8 %.
-  const { camera } = useThree()
-  const [pxPerMm, setPxPerMm] = useState(() => camera.zoom * S)
-  useFrame(() => {
-    const v = camera.zoom * S
-    if (Math.abs(v - pxPerMm) / pxPerMm > 0.08) setPxPerMm(v)
-  })
-  const W = size.width
-  const H = size.height
-  const D = size.depth
-  const near = 80 // primera línia de cota
-  const far = 170 // segona línia (totals)
-  const dims: DimSpec[] = []
-  const normal: P3 = VIEW_DIR[view]
-  if (view === "front" || view === "back") {
-    const z = view === "front" ? D + 1 : -1
-    const chain = modules.length > 1
-    if (chain)
-      for (const m of modules)
-        dims.push({ a: [m.x, -near, z], b: [m.x + m.width, -near, z], label: round(m.width), from: [[m.x, 0, z], [m.x + m.width, 0, z]] })
-    const yw = chain ? -far : -near
-    dims.push({ a: [0, yw, z], b: [W, yw, z], label: round(W), from: [[0, 0, z], [W, 0, z]] })
-    dims.push({ a: [W + near, 0, z], b: [W + near, H, z], label: round(H), from: [[W, 0, z], [W, H, z]] })
-    if (view === "front")
-      for (const l of lights) {
-        const cw = l.x1 - l.x0
-        const ch = l.y1 - l.y0
-        const cx = (l.x0 + l.x1) / 2
-        const cy = (l.y0 + l.y1) / 2
-        // Mínim en píxels: l'etiqueta ha de cabre al llarg de la cota i el compartiment ha
-        // de tenir prou gruix per no tapar-ne els veïns.
-        const pw = cw * pxPerMm
-        const ph = ch * pxPerMm
-        if (pw >= 48 && ph >= 22) dims.push({ a: [l.x0, cy, z + 1], b: [l.x1, cy, z + 1], label: round(cw), inner: true })
-        if (ph >= 48 && pw >= 36) dims.push({ a: [cx, l.y0, z + 1], b: [cx, l.y1, z + 1], label: round(ch), inner: true })
-      }
-  } else if (view === "left" || view === "right") {
-    const x = view === "left" ? -1 : W + 1
-    dims.push({ a: [x, -near, 0], b: [x, -near, D], label: round(D), from: [[x, 0, 0], [x, 0, D]] })
-    const zh = view === "left" ? D + near : -near
-    const zf = view === "left" ? D : 0
-    dims.push({ a: [x, 0, zh], b: [x, H, zh], label: round(H), from: [[x, 0, zf], [x, H, zf]] })
-  } else if (view === "top") {
-    dims.push({ a: [0, H + 1, D + near], b: [W, H + 1, D + near], label: round(W), from: [[0, H + 1, D], [W, H + 1, D]] })
-    dims.push({ a: [W + near, H + 1, 0], b: [W + near, H + 1, D], label: round(D), from: [[W, H + 1, 0], [W, H + 1, D]] })
-  }
-  return (
-    <>
-      {dims.map((dm, i) => (
-        <Dim key={i} spec={dm} normal={normal} color={color} labelBg={labelBg} />
-      ))}
-    </>
-  )
-}
-
-const round = (v: number): string => String(Math.round(v))
-
-const v3 = (p: P3) => new Vector3(p[0] * S, p[1] * S, p[2] * S)
-
-function Dim({ spec, normal, color, labelBg }: { spec: DimSpec; normal: P3; color: string; labelBg: string }) {
-  const pa = v3(spec.a)
-  const pb = v3(spec.b)
-  const mid = pa.clone().add(pb).multiplyScalar(0.5)
-  const dir = pb.clone().sub(pa).normalize()
-  // Marca a 45° (convenció de fusteria/arquitectura): diagonal entre la cota i la perpendicular.
-  const perp = new Vector3(...normal).normalize().cross(dir)
-  const tick = dir.clone().add(perp).normalize().multiplyScalar((spec.inner ? 22 : 35) * S)
-  const lineColor = spec.inner ? "#ffffff" : color
-  const ext = spec.from?.map((f, i) => {
-    const end = i === 0 ? pa : pb
-    const start = v3(f)
-    // la línia de referència deixa un petit buit a l'objecte i passa una mica la cota
-    const d = end.clone().sub(start)
-    const len = d.length()
-    if (len < 1e-6) return null
-    d.normalize()
-    return [start.clone().addScaledVector(d, 15 * S), end.clone().addScaledVector(d, 25 * S)] as [Vector3, Vector3]
-  })
-  return (
-    <group>
-      {spec.inner && <Line points={[pa, pb]} color="#000000" lineWidth={3} transparent opacity={0.35} />}
-      <Line points={[pa, pb]} color={lineColor} lineWidth={1.2} />
-      <Line points={[pa.clone().sub(tick), pa.clone().add(tick)]} color={lineColor} lineWidth={1.6} />
-      <Line points={[pb.clone().sub(tick), pb.clone().add(tick)]} color={lineColor} lineWidth={1.6} />
-      {ext?.map((e, i) => e && <Line key={i} points={e} color={color} lineWidth={0.8} transparent opacity={0.7} />)}
-      <Html position={mid} center zIndexRange={[5, 0]} style={{ pointerEvents: "none" }}>
-        <span
-          data-dim-label
-          style={{
-            fontFamily: "system-ui, sans-serif",
-            fontSize: spec.inner ? 11 : 12,
-            fontWeight: 600,
-            fontVariantNumeric: "tabular-nums",
-            color: spec.inner ? "#ffffff" : color,
-            background: spec.inner ? "rgba(20, 16, 12, 0.72)" : labelBg,
-            padding: "1px 5px",
-            borderRadius: 4,
-            whiteSpace: "nowrap",
-            lineHeight: "16px",
-            display: "block",
-          }}
-        >
-          {spec.label}
-        </span>
-      </Html>
     </group>
   )
 }
