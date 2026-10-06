@@ -112,9 +112,10 @@ describe("Blum: agrupar per article", () => {
     ])
     const by = new Map(articles.map((a) => [a.article, a]))
     const clip = by.get("71T453T")!
-    expect(clip).toMatchObject({ maker: "Blum", category: "hinge", kind: "model", part: "front", label: "Frontissa CLIP top · 71T453T" })
+    // Una frontissa de Blum amb 3D va al lloc de frontissa (regles de l'app; el Xilog, de referència), no «només 3D».
+    expect(clip).toMatchObject({ maker: "Blum", category: "hinge", kind: "hinge", part: "front", label: "Frontissa CLIP top · 71T453T" })
     expect(clip.files.map((f) => f.kind).sort()).toEqual(["dxf3d", "pgm", "step"])
-    expect(clip.plan).toBe("Mecanitzats exactes (Xilog) · porta / front")
+    expect(clip.plan).toBe("Frontissa · regles de l'app (marc del 3D estimat del model) · mecanitzats del Xilog com a referència")
     expect(by.get("48N0510.02")).toMatchObject({ hand: "R", label: "Ferratge · 48N0510.02 · dreta", part: "any" })
     expect(by.get("48N0510.03")).toMatchObject({ hand: "L", plan: "Mecanitzats exactes (Xilog) · peça per triar · sense 3D" })
     expect(by.get("38B355BF22")!.plan).toMatch(/^Només 3D/)

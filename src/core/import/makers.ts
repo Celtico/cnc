@@ -91,10 +91,14 @@ export function groupBlum(files: HettichFile[]): HettichArticle[] {
     const pgm = a.files.some((f) => f.kind === "pgm")
     const model = has3d(a.files)
     const where = c.part === "any" ? "peça per triar" : partKindOf(c.part).label.toLowerCase()
-    let kind: HettichArticle["kind"] = "model"
+    // Una frontissa, una placa, un tirador o una pota de Blum va al seu lloc (les regles de l'app el posen; el marc del 3D
+    // s'estima de la malla, `meshFrame.ts`); la resta, només 3D (i els mecanitzats del Xilog, a mà).
+    const slot: HettichArticle["kind"] | null = c.category === "hinge" ? "hinge" : c.category === "plate" ? "plate" : c.category === "handle" ? "handle" : c.category === "leg" ? "leg" : null
+    let kind: HettichArticle["kind"] = slot && model ? slot : "model"
     let plan: string
     let reason: string | undefined
-    if (pgm) plan = `Mecanitzats exactes (Xilog) · ${where}${model ? "" : " · sense 3D"}`
+    if (slot && model) plan = `${c.noun} · regles de l'app (marc del 3D estimat del model)${pgm ? " · mecanitzats del Xilog com a referència" : ""}`
+    else if (pgm) plan = `Mecanitzats exactes (Xilog) · ${where}${model ? "" : " · sense 3D"}`
     else if (model) plan = "Només 3D: sense forats (per als forats, baixa l'«Esquema de taladrado» en Xilog *.pgm)"
     else {
       kind = "none"

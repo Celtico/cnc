@@ -58,6 +58,13 @@ export interface HardwareProposal {
   boxFromMesh?: boolean
   /** Què s'ha trobat i què cal revisar (en català). */
   notes: string[]
+  /**
+   * No s'hi ha trobat el patró de forats: se sap **què és** (frontissa, placa…) però no els forats ni el marc; l'item
+   * surt amb els números per defecte del seu tipus, per omplir i revisar a l'editor (`partialProposal`).
+   */
+  partial?: boolean
+  /** D'on surt el marc: dels cilindres del STEP, estimat de la malla (`meshFrame.ts`) o el del fitxer tal qual. */
+  frameFrom?: "step" | "mesh" | "file"
 }
 
 /** Fondàries per defecte quan el fitxer no les diu (cargols d'ala: no entren a la peça al model). */
@@ -555,6 +562,33 @@ export function proposeLeg(f: StepFeatures): HardwareProposal | { error: string 
   ]
   if (Math.hypot(c[0], c[1]) > 1) notes.push("Els forats no són centrats a l'eix de la pota: totes les potes es posen girades igual (comprova que la placa hi cap a cada cantonada).")
   return { kind: "leg", frame, holes: out, bbox, notes }
+}
+
+/**
+ * Marc per defecte d'un tipus quan no s'hi troba el patró: el dels models de Hettich (frontissa: cassoleta a l'eix Y,
+ * cantell a Z; placa: cara del lateral a X; tirador i pota: cara de muntatge a Z). Només fins que la malla o l'usuari en
+ * donin un de millor.
+ */
+export function defaultFrame(kind: HardwareProposal["kind"]): LocalFrame {
+  switch (kind) {
+    case "hinge":
+      return { origin: [0, 0, 0], u: [0, 0, 1], v: [1, 0, 0], n: [0, 1, 0] }
+    case "plate":
+      return { origin: [0, 0, 0], u: [0, 0, 1], v: [0, -1, 0], n: [1, 0, 0] }
+    default:
+      return { origin: [0, 0, 0], u: [1, 0, 0], v: [0, 1, 0], n: [0, 0, 1] }
+  }
+}
+
+/**
+ * Proposta **parcial**: el tipus se sap (per la carpeta del fabricant) però el fitxer no en dona el patró de forats (o no
+ * hi ha STEP): cap forat, el marc per defecte i el perquè a les notes. L'item surt del tipus que toca amb els números
+ * per defecte, sense confirmar, perquè es puguin omplir a l'editor (mai «només 3D» per un patró que no s'ha trobat).
+ */
+export function partialProposal(kind: Exclude<HardwareProposal["kind"], "model">, f: StepFeatures | null, why: string): HardwareProposal {
+  const frame = defaultFrame(kind)
+  const what = kind === "hinge" ? "la cassoleta i els cargols" : kind === "plate" ? "els forats de la placa" : kind === "handle" ? "la distància entre forats" : "els forats de la placa de la pota"
+  return { kind, frame, holes: [], bbox: f?.points.length ? bboxOf(f.points, frame) : { min: [0, 0, 0], max: [0, 0, 0] }, notes: [`${why} Entra ${what} a l'editor (Mides i Mecanitzats) i confirma'l; fins aleshores no fa cap forat.`], partial: true, frameFrom: "file" }
 }
 
 /** Marc d'un model «només 3D»: el del fitxer (mm), sense forats. */
