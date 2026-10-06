@@ -139,6 +139,8 @@ export interface HardwareAsset {
   glb?: Blob
   /** `HardwareView[]` (`core/import/views.ts`). */
   views: unknown[]
+  /** Plànols de muntatge i exemples d'aplicació del fabricant (DXF, PDF), tal com venen, per baixar-los. */
+  docs?: { name: string; blob: Blob }[]
   createdAt: number
 }
 

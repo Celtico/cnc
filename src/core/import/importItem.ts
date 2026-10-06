@@ -31,6 +31,9 @@ export interface ImportedExtras {
   files: string[]
 }
 
+/** Una caixa buida (sense STEP: només les vistes DXF) no es desa. */
+const emptyBox = (b: HardwareProposal["bbox"]) => [...b.min, ...b.max].every((v) => v === 0)
+
 function source(art: HettichArticle, p: HardwareProposal, targets: HardwareTarget[], x: ImportedExtras): NonNullable<HardwareItem["imported"]> {
   return {
     maker: "Hettich",
@@ -38,7 +41,7 @@ function source(art: HettichArticle, p: HardwareProposal, targets: HardwareTarge
     folders: art.folders,
     files: x.files,
     ...(x.asset ? { asset: x.asset } : {}),
-    bbox: p.bbox,
+    ...(emptyBox(p.bbox) ? {} : { bbox: p.bbox }),
     ...(x.points?.length ? { points: x.points } : {}),
     proposed: structuredClone(targets),
     notes: p.notes,
@@ -318,20 +321,27 @@ export function proposeArticle(a: Pick<HettichArticle, "kind" | "plan">, f: Step
   return p
 }
 
+/**
+ * Els números que fan els forats de la proposta i no són als mecanitzats (que en diuen el nom): Ø i fondària de la
+ * cassoleta, Ø i distància (`pitch`) del tirador. On va la placa o la pota (`plateSetback`, `inset`) no surten del fitxer.
+ */
+export function holeParams(item: HardwareItem): Record<string, number> {
+  const pick = (keys: string[]) => Object.fromEntries(keys.filter((k) => item.params[k] !== undefined).map((k) => [k, item.params[k]!]))
+  if (item.engine === "cup") return pick(["cupDiameter", "cupDepth"])
+  if (item.engine === "barHandle") return { ...pick(["diameter"]), pitch: item.pitch?.else ?? 0 }
+  return {}
+}
+
 /** L'item de la biblioteca d'una proposta (`proposeArticle`), sense confirmar. */
 export function articleItem(p: HardwareProposal, a: HettichArticle, base: { hinge: HardwareItem; handle: HardwareItem }, x: ImportedExtras): HardwareItem {
-  switch (p.kind) {
-    case "hinge":
-      return hingeItem(p, a, base.hinge, x)
-    case "plate":
-      return plateItem(p, a, x)
-    case "handle":
-      return handleItem(p, a, base.handle, x)
-    case "leg":
-      return legItem(p, a, x)
-    case "model":
-      return modelItem(p, a, x)
-  }
+  const item =
+    p.kind === "hinge" ? hingeItem(p, a, base.hinge, x)
+    : p.kind === "plate" ? plateItem(p, a, x)
+    : p.kind === "handle" ? handleItem(p, a, base.handle, x)
+    : p.kind === "leg" ? legItem(p, a, x)
+    : modelItem(p, a, x)
+  const params = holeParams(item)
+  return Object.keys(params).length && item.imported ? { ...item, imported: { ...item.imported, proposedParams: params } } : item
 }
 
 /** La nota de la fila del diàleg d'importar un cop llegit el STEP: què farà de debò («Tirador · 128 mm»). */

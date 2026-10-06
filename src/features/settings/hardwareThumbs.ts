@@ -11,7 +11,7 @@ import { materialsPrint, templatePrint } from "../projects/thumbStore"
 const job = () => import("./hardwareThumbJob")
 
 /** Si canvia la manera de fer les dels ferratges (a més de `THUMB_VERSION`, la de totes), es tornen a fer. */
-const HARDWARE_THUMB_VERSION = 1
+const HARDWARE_THUMB_VERSION = 2
 
 /**
  * Empremta de la miniatura: la versió, el contingut de l'item (forats, placa aparellada, confirmat o no, model), el mòdul

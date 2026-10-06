@@ -54,8 +54,8 @@ describe.skipIf(!has(GRIFFE))("tiradors (STEP_Griffe.zip)", () => {
     expect(count(z.articles)).toEqual({ handle: z.articles.length - 5, model: 5 })
     expect(z.articles.every((a) => a.category === "handle")).toBe(true)
     expect(z.articles.some((a) => /desconeguda/i.test(`${a.plan} ${a.reason ?? ""}`))).toBe(false)
-    expect(z.article("115001")).toMatchObject({ label: "Tirador Classic 115001", group: "Classic", plan: "Tirador · distància dels forats del STEP" })
-    expect(z.article("9086698")).toMatchObject({ kind: "handle", label: "Tirador Touch-in 9086698" })
+    expect(z.article("115001")).toMatchObject({ label: "Tirador Classic · 115001", group: "Classic", plan: "Tirador · distància dels forats del STEP" })
+    expect(z.article("9086698")).toMatchObject({ kind: "handle", label: "Tirador Touch-in · 9086698" })
   })
 
   it("distància entre forats del STEP (a la de catàleg) i forat passant al front", async () => {
@@ -129,9 +129,9 @@ describe.skipIf(!has(LEGS))("potes i taules (STEP_Tischgestelle_…zip)", () => 
   const z = has(LEGS) ? open(LEGS) : null!
 
   it("potes de moble i de taula; estructures i guies de taula, només 3D; electrònica i accessoris, «Accessori»", () => {
-    expect(z.article("1225")).toMatchObject({ kind: "leg", category: "leg", label: "Pota d'acer 1225" })
+    expect(z.article("1225")).toMatchObject({ kind: "leg", category: "leg", label: "Pota d'acer · 1225" })
     expect(z.article("45084")).toMatchObject({ kind: "leg", category: "leg" })
-    expect(z.article("46048")).toMatchObject({ kind: "leg", category: "leg", label: "Pota de taula 46048" })
+    expect(z.article("46048")).toMatchObject({ kind: "leg", category: "leg", label: "Pota de taula · 46048" })
     expect(z.article("48443")).toMatchObject({ kind: "model", category: "table" })
     expect(z.article("45823")).toMatchObject({ kind: "model", category: "table" })
     expect(z.article("9079740")).toMatchObject({ kind: "model", category: "table", label: expect.stringMatching(/^Guia de taula/) })
