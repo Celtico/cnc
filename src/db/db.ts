@@ -129,6 +129,19 @@ export interface UserModel {
   createdAt: number
 }
 
+/**
+ * Model 3D (GLB, al marc del ferratge: u, v, n en metres) i vistes 2D d'un ferratge importat d'un fabricant
+ * (`HardwareItem.imported.asset` = `id`, "hwa-…"). No viatja amb les còpies dels mòduls: és només per veure'l.
+ */
+export interface HardwareAsset {
+  id: string
+  name: string
+  glb?: Blob
+  /** `HardwareView[]` (`core/import/views.ts`). */
+  views: unknown[]
+  createdAt: number
+}
+
 /** Fila única de preferències (id = "user"). El contingut es valida amb zod en llegir-lo. */
 export interface SettingsRow {
   id: string
@@ -142,6 +155,7 @@ class MoblesDB extends Dexie {
   settings!: EntityTable<SettingsRow, "id">
   ambients!: EntityTable<AmbientRow, "id">
   models!: EntityTable<UserModel, "id">
+  hardwareAssets!: EntityTable<HardwareAsset, "id">
 
   constructor() {
     super("mobles-cnc")
@@ -169,6 +183,14 @@ class MoblesDB extends Dexie {
       settings: "id",
       ambients: "++id, name, updatedAt",
       models: "id, createdAt",
+    })
+    this.version(6).stores({
+      projects: "++id, name, updatedAt",
+      photos: "++id, projectId",
+      settings: "id",
+      ambients: "++id, name, updatedAt",
+      models: "id, createdAt",
+      hardwareAssets: "id, createdAt",
     })
   }
 }

@@ -103,7 +103,7 @@ export function pairPlate(hinge: HardwareItem, plate: HardwareItem | null): Hard
   return {
     ...rest,
     params: { ...params, plateSetback: plate.params.setback ?? 37, plateOffset: plate.params.offset ?? 0 },
-    targets: [...doorTargets, { key: "side", label: `Lateral (${plate.name})`, ops: structuredClone(side?.ops ?? []) }],
+    targets: [...doorTargets, { key: "side", label: "Lateral (placa)", ops: structuredClone(side?.ops ?? []) }],
     plate: { id: plate.id, name: plate.name, ...(plate.imported?.asset ? { asset: plate.imported.asset } : {}), ...(plate.imported?.bbox ? { bbox: plate.imported.bbox } : {}) },
   }
 }

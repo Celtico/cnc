@@ -1,6 +1,6 @@
 import { Badge, Box, Button, Grid, HStack, IconButton, Input, Stack, Switch, Text } from "@chakra-ui/react"
 import { useContext, useEffect, useRef, useState } from "react"
-import { LuCopy, LuFactory, LuFileUp, LuFolderOpen, LuPlus, LuStar, LuTrash2, LuUpload } from "react-icons/lu"
+import { LuCopy, LuFactory, LuPlus, LuStar, LuTrash2, LuUpload } from "react-icons/lu"
 import { ChoiceChips, FormRow, FormSection } from "../../components/FormRow"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import { MasterDetail } from "../../components/MasterDetail"
@@ -11,7 +11,8 @@ import { toaster } from "../../components/ui/toaster"
 import { bitsLabel, DEFAULT_LOAD_MACRO_ARGS, isPlaceholderTool, machineNesting, nestProgram, newId, parseMacroArgs, TOOL_EDITABLE, TOOL_KIND_LABELS, type Machine, type MachineTool, type ToolEditable, type ToolKind } from "../../core/model"
 import { usableTool } from "../../core/machine/tools"
 import { toolLabel } from "../../core/model"
-import { importMaestroFiles, pickedFromDrop, pickedFromList, type PickedFile } from "./machineImport"
+import { importMaestroFiles, type PickedFile } from "./machineImport"
+import { ImportDropZone, type ImportDropZoneHandle } from "../../components/ImportDropZone"
 import { PaneHeadContext } from "./paneHead"
 import { useSessionString } from "./useSessionString"
 
@@ -47,8 +48,7 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
   const [sel, setSel] = useSessionString(KEY)
   const [query, setQuery] = useState("")
   const [busy, setBusy] = useState(false)
-  const folderInput = useRef<HTMLInputElement>(null)
-  const filesInput = useRef<HTMLInputElement>(null)
+  const zone = useRef<ImportDropZoneHandle>(null)
   const i = machines.findIndex((m) => m.id === sel)
   const m = i >= 0 ? machines[i]! : null
   useEffect(() => {
@@ -60,9 +60,8 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
 
   /** Màquina on van els .pgmx sense màquina pròpia: la del botó del detall o la seleccionada. */
   const target = useRef<string | undefined>(undefined)
-  const [dragOver, setDragOver] = useState(false)
 
-  const doImport = async (picked: PickedFile[], input?: HTMLInputElement | null) => {
+  const doImport = async (picked: PickedFile[]) => {
     if (!picked.length) return
     setBusy(true)
     try {
@@ -80,12 +79,11 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
     } finally {
       setBusy(false)
       target.current = undefined
-      if (input) input.value = ""
     }
   }
   const pick = (which: "folder" | "files", machineId?: string) => {
     target.current = machineId
-    ;(which === "folder" ? folderInput : filesInput).current?.click()
+    zone.current?.pick(which)
   }
 
   const q = query.trim().toLowerCase()
@@ -93,52 +91,16 @@ export function MachinesList({ machines, onChange }: { machines: Machine[]; onCh
 
   return (
     <>
-      {/* Carpeta (`webkitdirectory`: .machinecontext o .pgmx desplegat) o fitxers; el navegador no deixa triar totes dues coses alhora. */}
-      <input ref={(el) => { folderInput.current = el; el?.setAttribute("webkitdirectory", "") }} type="file" multiple hidden data-testid="machine-folder" onChange={(e) => void doImport(pickedFromList(e.target.files ?? []), e.target)} />
-      <input ref={filesInput} type="file" multiple hidden accept=".pgmx,.xml,.zip,.tlgx,.atrx,.cfgx" data-testid="machine-files" onChange={(e) => void doImport(pickedFromList(e.target.files ?? []), e.target)} />
       <MasterDetail
         head={
           <Stack gap={3}>
             {head}
-            <Box
-              borderWidth="1px"
-              borderStyle="dashed"
-              borderColor={dragOver ? "wood.solid" : "border"}
-              bg={dragOver ? "wood.subtle" : "bg.subtle"}
-              rounded="l2"
-              p={3}
-              data-testid="machine-drop"
-              onDragOver={(e) => {
-                e.preventDefault()
-                setDragOver(true)
-              }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={(e) => {
-                e.preventDefault()
-                setDragOver(false)
-                void pickedFromDrop(e.dataTransfer).then((p) => doImport(p))
-              }}
-            >
-              <Stack gap={2}>
-                <Text fontSize="sm" fontWeight="medium">
-                  <LuUpload style={{ display: "inline", verticalAlign: "-2px" }} /> Importar de Maestro
-                </Text>
-                <Text fontSize="xs" color="fg.muted">
-                  Carpeta <Text as="span" fontFamily="mono">.machinecontext</Text> (configuració de la màquina) · Projecte{" "}
-                  <Text as="span" fontFamily="mono">.pgmx</Text> (fitxer o carpeta desplegada) · fitxers <Text as="span" fontFamily="mono">.tlgx</Text> /{" "}
-                  <Text as="span" fontFamily="mono">.atrx</Text>. També es poden deixar anar aquí. El context crea o actualitza la màquina; el
-                  .pgmx hi posa els noms de les eines del taller i la capçalera.
-                </Text>
-                <HStack gap={2} wrap="wrap">
-                  <Button colorPalette="wood" size="sm" loading={busy} onClick={() => pick("folder")}>
-                    <LuFolderOpen /> Triar carpeta…
-                  </Button>
-                  <Button variant="outline" size="sm" disabled={busy} onClick={() => pick("files")}>
-                    <LuFileUp /> Triar fitxers…
-                  </Button>
-                </HStack>
-              </Stack>
-            </Box>
+            <ImportDropZone title="Importar de Maestro" accept=".pgmx,.xml,.zip,.tlgx,.atrx,.cfgx" busy={busy} onPicked={doImport} testId="machine" handle={zone}>
+              Carpeta <Text as="span" fontFamily="mono">.machinecontext</Text> (configuració de la màquina) · Projecte{" "}
+              <Text as="span" fontFamily="mono">.pgmx</Text> (fitxer o carpeta desplegada) · fitxers <Text as="span" fontFamily="mono">.tlgx</Text> /{" "}
+              <Text as="span" fontFamily="mono">.atrx</Text>. També es poden deixar anar aquí. El context crea o actualitza la màquina; el
+              .pgmx hi posa els noms de les eines del taller i la capçalera.
+            </ImportDropZone>
           </Stack>
         }
         groups={[

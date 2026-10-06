@@ -100,6 +100,20 @@ describe("ferratges importats al moble", () => {
       expect(b.warnings.filter((w) => w.code === "hardware" || w.code === "hinge")).toEqual([])
     })
 
+  it("una porta més ampla que alta (la peça es gira): el model segueix la cassoleta", () => {
+    const wide: Module = { ...defaultModule("w", "x", { width: 900, height: 400, depth: 560 }), root: { id: "r", front: { kind: "door", mode: "single", hinge: "left", hardware: paired } } as Zone }
+    const door = buildModule(wide).panels.find((p) => p.role === "door")!
+    expect(door.length).toBeGreaterThan(door.width)
+    const cups = door.holes.filter((h) => h.tag === "hinge")
+    expect(cups.length).toBeGreaterThan(0)
+    expect(door.fittings!.map((f) => [f.x, f.y])).toEqual(cups.map((h) => [h.x, h.y]))
+    // v (cap a dins de la porta, lluny del cantell de les frontisses) es gira amb la peça: apunta de la cassoleta cap als cargols.
+    const f = door.fittings![0]!
+    const screws = door.holes.filter((h) => h.tag === "hinge-screw" && Math.hypot(h.x - f.x, h.y - f.y) < 30)
+    const mid = { x: screws.reduce((a, h) => a + h.x, 0) / screws.length, y: screws.reduce((a, h) => a + h.y, 0) / screws.length }
+    expect((mid.x - f.x) * f.v[0] + (mid.y - f.y) * f.v[1]).toBeCloseTo(5.5)
+  })
+
   it("sense confirmar: cap forat a la porta ni al lateral, i un avís", () => {
     const pending = pairPlate(hinge, plate)
     const b = buildModule(withDoor("left", pending))

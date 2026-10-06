@@ -1,7 +1,7 @@
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import { QUALITY, type RenderQuality } from "./renderQuality"
 import { PresentationRoom } from "./PresentationRoom"
-import { ModuleLegs, PanelHardware } from "./Hardware"
+import { ModuleLegs, PanelFittings, PanelHardware } from "./Hardware"
 import type { SceneGetter } from "./render/RenderDialog"
 import { SceneAccess, StudioEnvironment, TextureRefresh } from "./SceneHelpers"
 import { surfaceMaterial } from "./surfaceMaterial"
@@ -1442,6 +1442,7 @@ export const PanelMesh = memo(function PanelMesh({
         </mesh>
         {showHoles && vpanel.holes.length > 0 && <HoleMarks holes={vpanel.holes} thickness={T} />}
         {hardware && <PanelHardware panel={vpanel} />}
+        {hardware && <PanelFittings panel={vpanel} />}
         {vpanel.grooves.map((g, i) => (
           <mesh key={`g${i}`} position={[(g.x + g.w / 2) * S, (g.y + g.h / 2) * S, g.face === "A" ? T - (g.depth * S) / 2 + 0.0002 : (g.depth * S) / 2 - 0.0002]}>
             <boxGeometry args={[g.w * S, g.h * S, g.depth * S]} />

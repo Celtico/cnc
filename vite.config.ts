@@ -60,7 +60,14 @@ export default defineConfig({
         globIgnores: ["splash/**", "assets/draco_*", "assets/basis_*"],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         // Textures de foto (~14 MB) i pesos d'OIDN: no es precachegen; es desen el primer cop que es fan servir.
+        // OpenCascade (`occt-import-js`, WASM de ~7,6 MB, només per importar ferratges): tampoc (`globPatterns` no hi
+        // porta `.wasm`); es desa en fer-lo servir.
         runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith("/assets/") && url.pathname.endsWith(".wasm"),
+            handler: "CacheFirst",
+            options: { cacheName: "mobles-wasm", expiration: { maxEntries: 4 }, cacheableResponse: { statuses: [200] } },
+          },
           {
             urlPattern: ({ url }) => url.pathname.startsWith("/textures/"),
             handler: "CacheFirst",

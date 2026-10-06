@@ -2,6 +2,7 @@ import { Box3, DoubleSide, Group, Mesh, MeshStandardMaterial, Vector3, type Mate
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js"
 import { modelAsset, type ModelObject } from "../../core/model"
+import { getHardwareAsset, isHardwareAssetSrc } from "../../db/hardwareAssets"
 import { getUserModel, isUserModelSrc } from "../../db/userModels"
 import { disposeMaterial } from "./textures"
 
@@ -69,7 +70,9 @@ export function loadModel(src: string): Promise<Loaded | null> {
   if (hit) return Promise.resolve(hit)
   const p = pending.get(src)
   if (p) return p
-  const user = isUserModelSrc(src)
+  // Ferratges importats (`hwa-…`, `db.hardwareAssets`): com els de l'usuari, el `.glb` és a Dexie.
+  const hw = isHardwareAssetSrc(src)
+  const user = isUserModelSrc(src) || hw
   const url = user ? null : urlOf(src)
   if (!user && !url) return Promise.resolve(null)
   const at = failed.get(src)
@@ -78,13 +81,13 @@ export function loadModel(src: string): Promise<Loaded | null> {
   const gl = (loader ??= new GLTFLoader().setMeshoptDecoder(MeshoptDecoder))
   // Els de l'usuari: el `.glb` és a Dexie (`db.models`).
   const read = user
-    ? getUserModel(src).then(async (row) => {
-        if (!row) {
+    ? (hw ? getHardwareAsset(src).then((a) => a?.glb) : getUserModel(src).then((row) => row?.blob)).then(async (blob) => {
+        if (!blob) {
           missing.add(src)
           throw new Error("missing")
         }
         missing.delete(src)
-        return gl.parseAsync(await row.blob.arrayBuffer(), "")
+        return gl.parseAsync(await blob.arrayBuffer(), "")
       })
     : gl.loadAsync(url!)
   const job = read
@@ -102,6 +105,11 @@ export function loadModel(src: string): Promise<Loaded | null> {
     .finally(() => pending.delete(src))
   pending.set(src, job)
   return job
+}
+
+/** El model ja carregat (sense còpia): els ferratges importats el posen al seu lloc amb el seu marc (`Hardware.tsx`). */
+export function loadedModel(src: string): Loaded | null {
+  return cache.get(src) ?? null
 }
 
 /** Espera que estiguin carregats tots els models de la llista (miniatures, exportacions). `true` si hi són tots. */
