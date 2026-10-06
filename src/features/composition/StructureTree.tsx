@@ -180,6 +180,12 @@ export function StructureTree({
       ]
     : [{ row: "floor", label: "" }]
   const onlyParts = partsOnlyKind(compositionKind(comp))
+  // Objectes de referència només als mobles i models 3D només als objectes (per decisió de l'usuari). Treure ≠ esborrar:
+  // si un document ja en té (fets abans), el grup surt sense el + perquè es puguin triar i eliminar.
+  const isObject = compositionKind(comp) === "objecte"
+  const models = comp.models ?? []
+  const showRefs = !isObject || comp.references.length > 0
+  const showModels = isObject || models.length > 0
   const parts = comp.parts ?? []
   // Grups de peces: plegats; s'obre sol el de la peça seleccionada.
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
@@ -199,7 +205,6 @@ export function StructureTree({
     onChange({ ...comp, parts: parts.filter((r) => r.id !== id) })
     if (selection.kind === "part" && selection.id === id) onSelect({ kind: "moble" })
   }
-  const models = comp.models ?? []
   const addModel = (asset: ModelChoice, label: string) => {
     const [w, , d] = asset.size
     // El centre de la petjada on surten les peces noves, a terra.
@@ -448,8 +453,10 @@ export function StructureTree({
       )}
 
       {/* + d'objectes: els de Preferències › Objectes de referència (per decisió de l'usuari) o un en blanc. */}
+      {showRefs && (
       <SectionTitle
         addLabel="Afegir objecte de referència"
+        hideAdd={isObject}
         menu={
           <>
             {refPresets.length > 0 && (
@@ -485,7 +492,8 @@ export function StructureTree({
       >
         Objectes de referència
       </SectionTitle>
-      {comp.references.map((r) => (
+      )}
+      {showRefs && comp.references.map((r) => (
         <Row
           key={r.id}
           depth={1}
@@ -497,16 +505,18 @@ export function StructureTree({
           dnd={dnd("ref", r.id)}
           menu={
             <RowMenu label={`Opcions de «${r.name}»`}>
-              <Menu.Item
-                value="dup"
-                onClick={() => {
-                  const res = insertRefCopy(comp, r)
-                  onChange(res.comp)
-                  onSelect({ kind: "ref", id: res.id })
-                }}
-              >
-                <LuCopy /> Duplicar
-              </Menu.Item>
+              {!isObject && (
+                <Menu.Item
+                  value="dup"
+                  onClick={() => {
+                    const res = insertRefCopy(comp, r)
+                    onChange(res.comp)
+                    onSelect({ kind: "ref", id: res.id })
+                  }}
+                >
+                  <LuCopy /> Duplicar
+                </Menu.Item>
+              )}
               <Menu.Item value="del" color="fg.error" onClick={() => removeRef(r.id)}>
                 <LuTrash2 /> Eliminar
               </Menu.Item>
@@ -516,8 +526,10 @@ export function StructureTree({
       ))}
 
       {/* Models 3D (plantes, decoració…): només es veuen; es col·loquen com les peces lliures. */}
+      {showModels && (
       <SectionTitle
         addLabel="Pujar un model 3D (.glb)"
+        hideAdd={!isObject}
         busy={uploading}
         menu={
           <>
@@ -544,7 +556,8 @@ export function StructureTree({
       >
         Models 3D
       </SectionTitle>
-      {models.map((g) => (
+      )}
+      {showModels && models.map((g) => (
         <Row
           key={g.id}
           depth={1}
@@ -555,16 +568,18 @@ export function StructureTree({
           onClick={() => onSelect({ kind: "model", id: g.id })}
           menu={
             <RowMenu label={`Opcions de «${g.name}»`}>
-              <Menu.Item
-                value="dup"
-                onClick={() => {
-                  const res = insertModelCopy(comp, g)
-                  onChange(res.comp)
-                  onSelect({ kind: "model", id: res.id })
-                }}
-              >
-                <LuCopy /> Duplicar
-              </Menu.Item>
+              {isObject && (
+                <Menu.Item
+                  value="dup"
+                  onClick={() => {
+                    const res = insertModelCopy(comp, g)
+                    onChange(res.comp)
+                    onSelect({ kind: "model", id: res.id })
+                  }}
+                >
+                  <LuCopy /> Duplicar
+                </Menu.Item>
+              )}
               <Menu.Item value="del" color="fg.error" onClick={() => removeModel(g.id)}>
                 <LuTrash2 /> Eliminar
               </Menu.Item>
@@ -591,22 +606,14 @@ function ZoneRows({
   onSelect: (s: Selection) => void
   root?: boolean
 }) {
-  // L'arrel sense divisions és el mòdul sencer: es mostra com un compartiment.
-  if (root && zone.split) {
-    return (
-      <>
-        {zone.split.children.map((c) => (
-          <ZoneRows key={c.id} zone={c} depth={depth} moduleId={moduleId} selection={selection} onSelect={onSelect} />
-        ))}
-      </>
-    )
-  }
+  // L'arrel és l'«Interior» del mòdul (dividida o no): seleccionar-la dona el seu Front (el de tot el mòdul, p. ex. les
+  // portes d'un armari amb penjador i maleter). Els compartiments hi pengen a sota.
   const selected = selection.kind === "zone" && selection.zoneId === zone.id
   // Icona segons el contingut (la mateixa que a les propietats).
-  const icon = createElement(zoneIcon(zone))
+  const icon = createElement(zoneIcon(zone, { root }))
   return (
     <>
-      <Row depth={depth} icon={icon} label={zoneLabel(zone)} selected={selected} onClick={() => onSelect({ kind: "zone", moduleId, zoneId: zone.id })} muted />
+      <Row depth={depth} icon={icon} label={zoneLabel(zone, { root })} selected={selected} onClick={() => onSelect({ kind: "zone", moduleId, zoneId: zone.id })} muted />
       {zone.split?.children.map((c) => (
         <ZoneRows key={c.id} zone={c} depth={depth + 1} moduleId={moduleId} selection={selection} onSelect={onSelect} />
       ))}
@@ -776,7 +783,14 @@ function RowMenu({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** Títol d'un grup de l'arbre (mòduls, peces lliures, objectes de referència, models 3D) amb el seu + per afegir-ne. */
-function SectionTitle({ children, onAdd, addLabel, busy, menu }: { children: ReactNode; onAdd?: () => void; addLabel: string; busy?: boolean; menu?: ReactNode }) {
+function SectionTitle({ children, onAdd, addLabel, busy, menu, hideAdd }: { children: ReactNode; onAdd?: () => void; addLabel: string; busy?: boolean; menu?: ReactNode; hideAdd?: boolean }) {
+  // Sense + (grup que ja no s'ofereix en aquest tipus de document però que encara en té): només el títol.
+  if (hideAdd)
+    return (
+      <HStack pt={3} pb={1} px={1} minH="6">
+        <SectionLabel>{children}</SectionLabel>
+      </HStack>
+    )
   const plus = (
     <IconButton aria-label={addLabel} title={busy ? "Optimitzant el model…" : addLabel} size="2xs" variant="ghost" onClick={onAdd} disabled={busy} aria-busy={busy}>
       {busy ? <Spinner size="xs" /> : <LuPlus />}

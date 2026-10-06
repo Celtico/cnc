@@ -156,7 +156,8 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   - **Prestatges gruixuts** (`zone.shelves.thickness`, «Gruixuts (buits)»): pells, tira i llistons. **A ras del davant**
     (`zone.shelves.flush`); amb fronts encastats, només als compartiments sense front (si no, es retiren i avisa).
   - **Front d'una zona dividida** (`buildParentFront`; portes d'armari de dalt a baix amb penjador i maleter darrere): les
-    fulles de sota queden `covered`. «Front de tota la zona» i, al mòdul, «Front de tot el mòdul»: només portes o front fix.
+    fulles de sota queden `covered`. «Front de tota la zona»: només portes o front fix. El **front de tot el mòdul** (tots els
+    armaris del catàleg) és el de l'arrel: no surt a l'inspector del mòdul, sinó seleccionant l'**«Interior»** a l'arbre.
   - **Barra de penjar** (`Zone.rail`, a Prestatges): tub d'inox Ø25 a 50 mm del sostre, de lateral a lateral; va a
     `ModuleBuild.extras` → «Elements sense nesting». Avís `rail` si el compartiment fa menys de 900 mm.
   - **Tira LED** (`Zone.led`, a Prestatges, «Llum»; per decisió de l'usuari, com les fotos de catàleg): perfil de 16 × 8
@@ -211,7 +212,8 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
 - **Models 3D** (`Composition.models`, `ModelObject` a `model/composition.ts`: `src` = id de `MODEL_ASSETS` (`model/models.ts`)
   o `user-…`, cantonada x/y/z i caixa w/h/d en mm, `rot` en graus al voltant del vertical): malles `.glb` que **només es
   veuen** (vegeu Visor 3D). El gir compta a les caixes (`modelFootprint`: enquadrar, plànol dels ambients, contorn i imant).
-  A l'editor: grup «Models 3D» a l'arbre (⋯ Duplicar · Eliminar, `insertModelCopy`), clic al 3D per triar-lo (`ModelMesh` a
+  Només als **Objectes** (per decisió de l'usuari; un moble que ja en tenia els conserva: es veuen i es poden triar i
+  eliminar, però sense + ni Duplicar ni enganxar). A l'editor: grup «Models 3D» a l'arbre (⋯ Duplicar · Eliminar, `insertModelCopy`), clic al 3D per triar-lo (`ModelMesh` a
   `CabinetViewer`), contorn i gizmo (`RefGhost outline`, es mou en viu), fletxes, Supr, Ctrl/⌘ C · V · D, i `ModelInspector`
   (Model · Mides amb «Mida original» · Posició amb el Gir a passos de 15°). Compten per enquadrar la càmera.
 
@@ -470,15 +472,19 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Tres columnes, com Figma / Fusion 360** (`features/editor/EditorScreen.tsx` sobre `Workspace`): Estructura (arbre) ·
   Visor · Propietats. Arbre de 280 px i propietats de 340 px per defecte, amb vora arrossegable (`ResizeHandle`, 48–900 px,
   nansa al mig; amplades recordades per editor); si el panell és més estret que el contingut, desplaçament horitzontal (com
-  IntelliJ). Visor amb mínim de 320 px; si fa menys de 640 px, pestanyes només amb icona, botons en columna i la barra de
-  vistes s'amaga (les vistes, a «Opcions de vista»). Cada panell lateral es plega amb els botons de les cantonades del visor
+  IntelliJ). Visor amb mínim de 320 px; si fa menys de 640 px, pestanyes només amb icona, i botons en columna. Cada panell lateral es plega amb els botons de les cantonades del visor
   (`LuPanelLeftClose/Open` · `LuPanelRightClose/Open`). L'app ocupa just la finestra; cada panell té la seva barra de
   desplaçament fina amb lloc reservat (`scrollbarGutter: stable`). **Mòbil**: visor a dalt i pestanyes `Estructura` ·
   `Propietats` (triar a l'arbre porta a Propietats); «Ampliar el visor».
 - **Una sola selecció** (`Selection`), sincronitzada entre arbre, 3D i alçat. Controls nous: decideix a quin nivell pertanyen
   i posa'ls a l'inspector d'aquell nivell.
 - **Estructura** (`composition/StructureTree.tsx`): moble › mòduls (agrupats per fila) › compartiments, peces lliures,
-  objectes de referència i models 3D. **Un + a cada grup** (Mòduls · Peces lliures · Objectes de referència · Models 3D; per
+  objectes de referència i models 3D. L'arrel de cada mòdul surt com a **«Interior · …»** (`zoneLabel(z, { root })`; «Interior ·
+  2 portes» si porta el front de tot el mòdul) amb els compartiments a sota: seleccionar-la dona Divisió i «Front de tota la
+  zona» (Obert · Porta · Front fix). Pujar des d'un compartiment (clic al 3D, eliminar) passa per l'Interior abans del mòdul;
+  Supr / ⌘X a l'Interior no fa res (avís: `deleteZone` buidaria tot el mòdul). **Objectes de referència només als mobles i
+  Models 3D només als objectes** (per decisió de l'usuari; treure ≠ esborrar: si el document ja en té, el grup surt sense +
+  ni Duplicar, i enganxar-ne avisa). **Un + a cada grup** (Mòduls · Peces lliures · Objectes de referència · Models 3D; per
   decisió de l'usuari, així es veuen els tipus): demana el nom (`NameDialog`, «Mòdul 3», «Peça 2», «Objecte 1», seleccionat;
   `addElements.ts`) i crea l'element sense més opcions: caixa bàsica, peça de cara, caixa de 600 × 600 × 100. Res de mòduls
   especials, passacables ni plantilles al +. **Excepcions** (per decisió de l'usuari): el + d'«Objectes de referència» obre
@@ -494,7 +500,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   - Moble: Resum (i avisos de fusteria), Tipus, Materials de tot el moble (aplica a tots els mòduls), Taulell i sòcol,
     Encaixos, Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
     Preferències»; `CabinetViewer sceneFinish`, `renderThumb(…, finish)`).
-  - Mòdul: Mides · Caixa (abans «Estructura», es confonia amb la pestanya de l'arbre) · Materials · Fusteria (avançat). Posició. Materials visibles: cos, **fronts**
+  - Mòdul: Mides · Caixa (abans «Estructura», es confonia amb la pestanya de l'arbre) · Materials · Fusteria (avançat). Posició.
+    Sense Front (el de tot el mòdul és a l'«Interior»). Materials visibles: cos, **fronts**
     (`frontMaterial`, buit = el del cos) i fons.
   - Compartiment (`ZonePanel`): accions com a icones a la capçalera (Pare · Duplicar · Eliminar) i Front · Prestatges ·
     Mida · Dividir. **Sense «General»**: cada apartat és una secció pròpia amb la seva icona i el valor triat a la insígnia
@@ -514,7 +521,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Barra del visor**: fora només «Opcions de vista» (i amagar propietats). Opcions de vista (`components/ViewOptions`:
   `ViewOptions` + `ViewTile`, popover a l'ordinador, calaix de baix al mòbil; es tanca en obrir el Render): a dalt els tres
   modes i les accions ràpides només amb icona i el nom al tooltip (`tile`/`viewTiles` a `EditorScreen`): Enquadrar, Forats,
-  Explosió, Ferratges, Render i Veure a casa (AR); a sota, la vista, l'obertura i la imatge. El visor de tots els documents
+  Explosió, Ferratges, Render i Veure a casa (AR); a sota, les vistes (l'únic lloc on es trien), l'obertura i la imatge. El visor de tots els documents
   (moble, objecte i ambient) amb el mateix aire: 16 a dalt al mòbil i 16 al voltant a l'ordinador.
 - **Mode del visor** (`VIEW_MODES`): **Per peça** (`LuShapes`: colors per tipus de peça, paleta `ROLE_GROUPS` a
   `viewer/roleColorMap.ts` i llegenda a `viewer/roleColors.tsx`), **Textura** (`LuTrees`: materials i veta) i
@@ -530,7 +537,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Moure** (per decisió de l'usuari **el cos no s'arrossega**, així sempre se sap cap on es mourà):
   - **Gizmo** (`viewer/MoveGizmo`): tres fletxes (vermella X de costat, verda Y amunt, blava Z endavant), de mida constant i
     per sobre de tot; cada una arrossega només en la seva direcció (pla que conté l'eix i mira a la càmera). S'amaguen les
-    fixades (al terra: Y; a la paret: Z) i les que miren a la càmera en vistes ortogràfiques. `frontRaycast`: les fletxes es
+    fixades (al terra: Y; a la paret: Z) i la que mira a la càmera (`useFacingAxis`, |cos| > 0,97: vistes de costat o de dalt). `frontRaycast`: les fletxes es
     poden agafar encara que l'objecte sigui dins d'un altre, i el seu clic no tria el que hi ha davant. Per a objectes de
     referència (`RefGhost`), peces lliures, grups i models 3D. Imant de 15 mm a les vores dels mòduls, altres objectes, terra
     i paret (Alt: sense); etiqueta amb la posició mentre s'arrossega; es desa en deixar-lo anar (un pas de desfer). Grups de
@@ -549,17 +556,24 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`surfaceMaterial`, amb ombres) i surten a la Presentació i al render; sense («Cap (fantasma)»), fantasma translúcid que el
   render no pinta. Els que tallen només es veuen seleccionats (violeta, a través del moble; també les peces que tallen, id
   `part:<id>`). Els forats del mòdul seleccionat es marquen en taronja a través de les portes (`CableMarks`).
+- **Desfer/refer** (⌘Z, ⇧⌘Z, Ctrl Y; `editor/undoKeys.ts`, `undoKeyAction`, test): no als camps de text lliure ni dins d'un
+  diàleg ni amb un diàleg modal obert (amb l'editor de perfils obert, ⌘Z desfeia el moble del darrere).
 - **Teclat**: Ctrl/⌘ C · X · V · D i Supr per al mòdul, l'objecte, el model o el compartiment (`core/model/editOps.ts`). El
   porta-retalls és a localStorage (`mobles:clipboard`, entre mobles), validat amb zod (`parseClip`); una peça enganxada a un
   mòdul d'un altre moble queda solta, una illa es duplica al costat i no s'enganxen mòduls a un flat-pack o objecte. Ctrl/⌘ D
   en un compartiment fa `duplicateZone`. **Eliminar un mòdul** = `removeModule`: peces enganxades soltes al mateix lloc,
   taulell i sòcol al mòdul més proper del tram (o fora) i forats del taulell seus fora.
-- **Càmera**: s'enquadra en obrir, canviar de vista, redimensionar o amb «Enquadrar» (`LuVideo`); editar no la mou. El botó
+- **Vistes** (per decisió de l'usuari): només **Davant · Darrere · Esquerra · Dreta · Dalt**, botons de text sense estat triat
+  (`CameraViews` a `ViewerControls`, `viewNames.ts`) en un sol lloc, Opcions de vista (ordinador i mòbil). Només col·loquen
+  la càmera **perspectiva** d'aquell costat i enquadren (`CabinetViewer viewDir` + `fitKey`); després s'orbita com sempre.
+  Sense cotes (són a l'Alçat), sense mode ortogràfic ni canvi de fons. Triar-ne una compta com «Enquadrar» (es desa a
+  `Composition.camera`); «Enquadrar» torna al 3/4 i només surt marcat amb el 3/4.
+- **Càmera**: s'enquadra en obrir, triar una vista, redimensionar o amb «Enquadrar» (`LuVideo`); editar no la mou. El botó
   surt **marcat** mentre la càmera és a l'enquadrament (`onFramedChange`). **Es recorda per moble** (`Composition.camera`,
-  `CameraPose` a `core/model/camera.ts`: posició, punt mirat i fov; una de no vàlida es descarta): 1 s després d'orbitar o
-  d'«Enquadrar» (només a la vista 3D) es desa amb `saveProjectCamera`, **sense tocar `updatedAt` ni `edited`** i fora del
+  `CameraPose` a `core/model/camera.ts`: posició, punt mirat i fov; una de no vàlida es descarta): 1 s després d'orbitar,
+  d'«Enquadrar» o de triar una vista es desa amb `saveProjectCamera`, **sense tocar `updatedAt` ni `edited`** i fora del
   desfer; `updateProjectComposition` conserva la desada. En obrir-lo `CabinetViewer initialCamera` hi torna; redimensionar no
-  la treu fins que s'orbita, s'enquadra o es canvia de vista. Va al `.moble`.
+  la treu fins que s'orbita, s'enquadra o es tria una vista. Va al `.moble`.
 - **Editor de perfils** (`composition/ProfileEditor.tsx`, com el mode vector de Figma): **Moure** (nodes i manegadors en
   rombe; Alt trenca el reflex; doble clic node ↔ corba), **Ploma** (clic = cantonada, clic i arrossegar = manegadors
   simètrics, clicar el primer node o Retorn tanca, Esc descarta), **Corbar** (arrossegar el punt del mig d'un costat,
@@ -1262,7 +1276,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Màquines | Regles de mecanitzat · Distribució dels taulers (girar peces) · Vista CAM | `LuRoute` · `LuRotateCw` · `LuMonitorCog` |
 | Materials | Posar una foto / mapa (relleu, brillantor) · Carregar joc de textures… · Carpeta… | `LuImagePlus` · `LuFileUp` · `LuFolderOpen` |
 
-Les vistes Davant, Darrere, Esquerra, Dreta i Dalt van amb **text**, sense icona. Compte: a Lucide, `square-split-horizontal`
+Les vistes Davant, Darrere, Esquerra, Dreta i Dalt van amb **text**, sense icona (no hi ha vista «3D»: és «Enquadrar»). Compte: a Lucide, `square-split-horizontal`
 té la línia **vertical**. Per això és la de "dividir en vertical".
 
 
