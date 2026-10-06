@@ -5,7 +5,7 @@ FROM node:22-alpine AS build
 WORKDIR /app
 # git llegeix el número de versió (commits) en construir, com a rack.
 RUN corepack enable && apk add --no-cache git
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 # Si alguna dependència té una vulnerabilitat alta o crítica coneguda, la build s'atura.
 RUN pnpm audit --audit-level high
