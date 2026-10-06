@@ -93,7 +93,7 @@ import { isObject } from "../objects/isObject"
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
-import { PanelSection } from "../../components/PanelSection"
+import { FoldItem } from "../../components/Fold"
 import { Workspace } from "../../components/Workspace"
 import { ViewOptions, ViewTile } from "../../components/ViewOptions"
 import { usePersistentFlag } from "../usePersistentFlag"
@@ -859,7 +859,7 @@ function MaterialPick({ label, value, materials, onChange, emptyLabel }: { label
 
 function Placement({ item, onPatch }: { item: AmbientItem; onPatch: (p: Partial<AmbientItem>) => void }) {
   return (
-    <PanelSection id="amb-place" title="Posició" icon={LuMove}>
+    <FoldItem id="amb-place" title="Posició" icon={LuMove}>
       <NumRow label="X (centre)" value={item.x} step={10} onChange={(x) => Number.isFinite(x) && onPatch({ x })} />
       <NumRow label="Y (centre)" value={item.y} step={10} onChange={(y) => Number.isFinite(y) && onPatch({ y })} />
       <NumRow label="Gir" suffix="°" value={item.rot} step={15} onChange={(rot) => Number.isFinite(rot) && onPatch({ rot: ((rot % 360) + 360) % 360 })} />
@@ -872,7 +872,7 @@ function Placement({ item, onPatch }: { item: AmbientItem; onPatch: (p: Partial<
           <LuRotateCw /> +90° (R)
         </Button>
       </HStack>
-    </PanelSection>
+    </FoldItem>
   )
 }
 
@@ -937,7 +937,7 @@ function ItemInspector({
           </Text>
         )
       ) : (
-        <PanelSection id="amb-block" title="Bloc" icon={LuSofa}>
+        <FoldItem id="amb-block" title="Bloc" icon={LuSofa}>
           <FormRow label="Forma">
             <ChoiceChips label="Forma" options={BlockShapeSchema.options.map((s) => ({ id: s, label: SHAPE_LABEL[s] }))} value={item.shape} onChange={(shape) => onPatch({ shape })} />
           </FormRow>
@@ -951,7 +951,7 @@ function ItemInspector({
           <Text fontSize="xs" color="fg.muted">
             Els blocs només es veuen: no es fabriquen ni surten a les peces.
           </Text>
-        </PanelSection>
+        </FoldItem>
       )}
       <Placement item={item} onPatch={onPatch} />
     </Stack>
@@ -985,7 +985,7 @@ function MobleDims({ project, geo }: { project: Project; geo: ItemGeometry }) {
     }
   }
   return (
-    <PanelSection id="amb-dims" title="Mides generals" icon={LuMoveDiagonal} badge={`${cur.w} × ${cur.h} × ${cur.d}`}>
+    <FoldItem id="amb-dims" title="Mides generals" icon={LuMoveDiagonal} badge={`${cur.w} × ${cur.h} × ${cur.d}`}>
       <Stack gap={4} onKeyDown={(e) => e.key === "Enter" && void apply()}>
       <NumRow label="Ample" value={draft.w} min={100} step={10} onChange={(w) => setDraft({ ...draft, w })} />
       <NumRow label="Alt" value={draft.h} min={100} step={10} onChange={(h) => setDraft({ ...draft, h })} />
@@ -1004,7 +1004,7 @@ function MobleDims({ project, geo }: { project: Project; geo: ItemGeometry }) {
         És el mateix moble de la llista: canviar-ne les mides el canvia a tot arreu. L'interior (compartiments, portes, calaixos) es toca a l'editor.
       </Text>
       </Stack>
-    </PanelSection>
+    </FoldItem>
   )
 }
 
@@ -1023,7 +1023,7 @@ function WallInspector({ wall, materials, onPatch, onDelete }: { wall: Wall; mat
           <LuTrash2 />
         </IconButton>
       </HStack>
-      <PanelSection id="amb-wall" title="Mides i material" icon={LuRuler} badge={`${L} mm`}>
+      <FoldItem id="amb-wall" title="Mides i material" icon={LuRuler} badge={`${L} mm`}>
       <NumRow
         label="Llarg"
         value={L}
@@ -1044,8 +1044,8 @@ function WallInspector({ wall, materials, onPatch, onDelete }: { wall: Wall; mat
       <Text fontSize="xs" color="fg.muted">
         Arrossega-la per moure-la (les parets enganxades la segueixen) o arrossega'n els extrems. Maj: sense angles · Alt: sense imant.
       </Text>
-      </PanelSection>
-      <PanelSection id="amb-openings" title="Finestres i portes" icon={LuAppWindow} badge={wall.openings?.length || undefined}>
+      </FoldItem>
+      <FoldItem id="amb-openings" title="Finestres i portes" icon={LuAppWindow} badge={wall.openings?.length || undefined}>
         {(wall.openings ?? []).map((o, i) => {
           const set = (patch: Partial<Opening>) => onPatch({ openings: wall.openings!.map((q, j) => (j === i ? clampOpening(wall, { ...q, ...patch }) : q)) })
           return (
@@ -1096,7 +1096,7 @@ function WallInspector({ wall, materials, onPatch, onDelete }: { wall: Wall; mat
         <Text fontSize="xs" color="fg.muted">
           També amb les eines Finestra (F) i Porta (D): clic sobre la paret. Al plànol s'arrosseguen al llarg de la paret.
         </Text>
-      </PanelSection>
+      </FoldItem>
     </Stack>
   )
 }
@@ -1121,19 +1121,19 @@ function AmbientInspector({
   const plan = amb.plan
   return (
     <Stack gap={0}>
-      <PanelSection id="amb-newwalls" title="Parets noves" icon={LuBrickWall} badge={`${wallDefaults.thickness} · ${wallDefaults.height}`}>
+      <FoldItem id="amb-newwalls" title="Parets noves" icon={LuBrickWall} badge={`${wallDefaults.thickness} · ${wallDefaults.height}`}>
         <NumRow label="Gruix" value={wallDefaults.thickness} min={20} max={1000} step={10} onChange={(thickness) => thickness >= 20 && onWallDefaults({ ...wallDefaults, thickness })} />
         <NumRow label="Alçada" value={wallDefaults.height} min={200} max={10000} step={10} onChange={(height) => height >= 200 && onWallDefaults({ ...wallDefaults, height })} />
-      </PanelSection>
+      </FoldItem>
 
-      <PanelSection id="amb-finish" title="Acabats" icon={LuPalette}>
+      <FoldItem id="amb-finish" title="Acabats" icon={LuPalette}>
         <MaterialPick label="Terra" value={amb.floorMaterial ?? "Parquet de roure"} materials={materials} onChange={(floorMaterial) => onChange({ ...amb, floorMaterial })} onlySim />
         <MaterialPick label="Terra de fora" value={amb.outsideFloorMaterial ?? "Gespa"} materials={materials} onChange={(outsideFloorMaterial) => onChange({ ...amb, outsideFloorMaterial })} onlySim />
         <MaterialPick label="Parets" value={amb.wallMaterial ?? "Pintura blanca"} materials={materials} onChange={(wallMaterial) => onChange({ ...amb, wallMaterial })} onlySim />
         <MaterialPick label="Sostre" value={amb.ceilingMaterial ?? "Pintura blanca"} materials={materials} onChange={(ceilingMaterial) => onChange({ ...amb, ceilingMaterial })} onlySim />
-      </PanelSection>
+      </FoldItem>
 
-      <PanelSection id="amb-plan" title="Plànol de fons" icon={LuImageUp} badge={plan ? "Sí" : undefined}>
+      <FoldItem id="amb-plan" title="Plànol de fons" icon={LuImageUp} badge={plan ? "Sí" : undefined}>
         {plan ? (
           <>
             <HStack gap={3}>
@@ -1181,7 +1181,7 @@ function AmbientInspector({
             </Text>
           </>
         )}
-      </PanelSection>
+      </FoldItem>
       <Text fontSize="xs" color="fg.muted" pt={4}>
         <LuPlus style={{ display: "inline" }} /> Afegeix mobles i objectes des de l'esquerra. Selecciona'ls per moure'ls, girar-los (R) o canviar-ne les mides.
       </Text>
@@ -1387,7 +1387,7 @@ function GroupInspector({
           </IconButton>
         </Tooltip>
       </HStack>
-      <PanelSection id="amb-group-place" title="Posició del grup" icon={LuMove}>
+      <FoldItem id="amb-group-place" title="Posició del grup" icon={LuMove}>
         <NumRow label="X (centre)" value={cx} step={10} onChange={(x) => Number.isFinite(x) && onMove(x - cx, 0)} />
         <NumRow label="Y (centre)" value={cy} step={10} onChange={(y) => Number.isFinite(y) && onMove(0, y - cy)} />
         <HStack gap={2}>
@@ -1398,8 +1398,8 @@ function GroupInspector({
             <LuRotateCw /> +90° (R)
           </Button>
         </HStack>
-      </PanelSection>
-      <PanelSection id="amb-group-items" title="Elements" icon={LuGroup} badge={items.length}>
+      </FoldItem>
+      <FoldItem id="amb-group-items" title="Elements" icon={LuGroup} badge={items.length}>
         <Stack gap={1}>
         {items.map((i) => (
           <Button key={i.id} size="xs" variant="ghost" justifyContent="flex-start" onClick={() => onPick(i.id)}>
@@ -1410,7 +1410,7 @@ function GroupInspector({
           Com a l'editor: el primer clic a un element agrupat tria el grup; el segon, l'element.
         </Text>
         </Stack>
-      </PanelSection>
+      </FoldItem>
     </Stack>
   )
 }
