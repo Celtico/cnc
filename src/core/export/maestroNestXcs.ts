@@ -1,6 +1,19 @@
 import { drillsOfDiameter, pickDrill, pickRouter, pickSmallRouter, usableTool } from "../machine/tools"
 import { flatten, polygonArea, type BPt, type Cutout, type Panel } from "../model"
-import { isSmallPart, machineNesting, machineRules, nestProgram, toolMslName, type Machine, type MachineTool } from "../model/machine"
+import {
+  boardMargin,
+  cncBlindDepth,
+  cutModeOf,
+  DEFAULT_LOAD_MACRO_ARGS,
+  isSmallPart,
+  machineNesting,
+  machineRules,
+  nestProgram,
+  parseMacroArgs,
+  toolMslName,
+  type Machine,
+  type MachineTool,
+} from "../model/machine"
 import { RulePicker } from "../machine/rules"
 import type { NestOptions, Nesting } from "../nesting/nest"
 import { needsSecondFace } from "../process/processes"
@@ -10,14 +23,18 @@ import {
   contourLine,
   contourPasses,
   cs,
+  cutLoop,
   cutWhat,
   dedupePolyline,
+  encodingReadme,
+  encodingWarning,
   EOL,
   grooveRouterPath,
   grooveStrategy,
   grooveWhat,
   HEAD,
   holeWhat,
+  insideCircleClockwise,
   maxToolDiameter,
   num,
   passDepths,
@@ -31,6 +48,7 @@ import {
   sharpCorners,
   slotPts,
   toolArg,
+  xcsEncodingOf,
   type XcsOp,
   type XcsPostProcess,
 } from "./maestroXcs"
@@ -112,22 +130,30 @@ export const boardRouter = (rp: RulePicker, m: Machine, T: number, overcut: numb
  * + `spacingExtra` (en lloc del gruix de la serra) i el marge del tauler de la màquina (`edgeTrim`). La separació és una
  * per a tots els taulers: la del Ø més gros de les freses de contorn de cada gruix (`boardRouter`); `tool` és aquesta.
  */
-export function cncNestOptions(panels: Panel[], m: Machine, base: NestOptions): { options: NestOptions; tool?: MachineTool; spacing: number } {
+export function cncNestOptions(panels: Panel[], m: Machine, base: NestOptions): { options: NestOptions; tool?: MachineTool; spacing: number; margin: number } {
   const n = machineNesting(m)
   const rp = new RulePicker(m)
+  const routerOf = (ps: Panel[]) =>
+    [...new Set(ps.map((p) => p.thickness))]
+      .map((t) => boardRouter(rp, m, t, n.overcut))
+      .filter((t): t is MachineTool => !!t)
+      .sort((a, b) => b.diameter - a.diameter || a.code.localeCompare(b.code))[0]
+  // Marge per triar les peces que caben: el fix o, amb «Ø de la fresa», el de la fresa més grossa de tots els gruixos.
+  const fitMargin = boardMargin(n, n.edgeTrimMode === "tool" ? routerOf(panels) : undefined)
   // Només els gruixos de les peces que caben en algun tauler: una que no hi cap (un taulell de 3500 mm) no surt a cap
   // programa i no ha de fer més ampla la separació de tots els taulers.
   const fits = (p: Panel) => {
     const sh = base.sheetsByMaterial?.[p.material] ?? base.sheet
-    const W = Math.max(sh.w, sh.h) - 2 * n.edgeTrim, H = Math.min(sh.w, sh.h) - 2 * n.edgeTrim
+    const W = Math.max(sh.w, sh.h) - 2 * fitMargin, H = Math.min(sh.w, sh.h) - 2 * fitMargin
     const a = Math.max(p.length, p.width), b = Math.min(p.length, p.width)
     return a <= W && b <= H
   }
   const placed = panels.filter(fits)
-  const tools = [...new Set((placed.length ? placed : panels).map((p) => p.thickness))].map((t) => boardRouter(rp, m, t, n.overcut)).filter((t): t is MachineTool => !!t)
-  const tool = tools.sort((a, b) => b.diameter - a.diameter || a.code.localeCompare(b.code))[0]
+  const tool = routerOf(placed.length ? placed : panels)
   const spacing = (tool ? tool.diameter : base.kerf) + n.spacingExtra
-  return { options: { ...base, kerf: spacing, margin: n.edgeTrim }, ...(tool ? { tool } : {}), spacing }
+  // Un sol marge per a tots els taulers: amb «Ø de la fresa», el de la fresa que fixa la separació (la més grossa).
+  const margin = boardMargin(n, tool)
+  return { options: { ...base, kerf: spacing, margin }, ...(tool ? { tool } : {}), spacing, margin }
 }
 
 export type NestStage = "drill" | "groove" | "inner" | "outer"
@@ -185,6 +211,8 @@ export interface NestPanelInfo {
 
 export interface XcsNestExport {
   files: { name: string; text: string }[]
+  /** Codificació dels .xcs (la de la màquina): `xcsZip` la fa servir. */
+  encoding: NonNullable<Machine["xcsEncoding"]>
   sheets: NestSheetXcs[]
   panels: NestPanelInfo[]
   warnings: string[]
@@ -292,8 +320,15 @@ const EPS = 0.01
 export const drillLine = (name: string, x: number, y: number, depth: number, diameter: number, tool: string): string =>
   `CreateDrill(${cs(name)}, ${num(x)}, ${num(y)}, ${num(depth)}, ${num(diameter)}, "", TypeOfProcess.Drilling, ${tool}, ${HEAD}, 0, -1, -1, "P", 0, 2);`
 
-/** La macro de càrrega del taller, tal com surt al programa real (§3.6.2 p103: aplica una macro .xsp que ja és a Maestro). */
-export const LOAD_MACRO = `CreateMacro("Pload", "PLOAD", 1, 0, 1, 0, 4, 2, false, 0, 0, 0, 0);`
+/**
+ * La macro de càrrega del taller (§3.6.2 p103: aplica una macro .xsp que ja és a Maestro) amb els paràmetres de la màquina
+ * (`NestProgram.loadMacroArgs`; sense, o si no es poden llegir, els del programa real).
+ */
+export const loadMacroLine = (args?: string): string =>
+  `CreateMacro("Pload", "PLOAD", ${(parseMacroArgs(args ?? DEFAULT_LOAD_MACRO_ARGS) ?? parseMacroArgs(DEFAULT_LOAD_MACRO_ARGS)!).join(", ")});`
+
+/** La macro de càrrega tal com surt al programa real. */
+export const LOAD_MACRO = loadMacroLine()
 
 /** Comentari d'eina com el del programa real (`//BROCA PLANA FO-FPL-8`, `//FRESA PLANA 12mm diamant nesting`), en ASCII. */
 export const toolComment = (t: { kind: "BROCA" | "FRESA"; name: string }): string => `//${t.kind} PLANA ${comment(t.name).slice(3)}`
@@ -312,10 +347,14 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
   const maxT = panels.reduce((a, p) => Math.max(a, p.thickness), 0)
   const rp = new RulePicker(m)
   const rules = rp.rules
+  // Sentit dels contorns i talls (regles del taller; «asIs» = tal com surt la geometria).
+  const cutMode = cutModeOf(rules)
   const prog = nestProgram(m)
   const boardCount = new Map<string, number>()
   const mainTool = boardRouter(rp, m, maxT, nopt.overcut)
   const spacing = nesting.options.kerf
+  // El marge amb què s'ha fet el nesting (`cncNestOptions`: fix o Ø de la fresa).
+  const margin = nesting.options.margin
   // La fresa que ha fixat la separació (la més grossa dels gruixos del moble), si el nesting es va fer amb aquesta.
   const plan = cncNestOptions(panels, m, nesting.options)
   const spacingTool = plan.tool && Math.abs(plan.spacing - spacing) < 1e-6 ? plan.tool : undefined
@@ -372,11 +411,9 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
       // Forats de la cara A.
       for (const h of p.holes) {
         if (h.face !== "A") continue
-        let depth = h.depth
-        if (depth >= T - 0.5) {
-          depth = Math.max(0.5, T - 1)
-          warn(holeWhat(h), `més fondo que el gruix − 1; s'escurça a ${num(depth)}`)
-        }
+        const bd = cncBlindDepth(T, h.depth, rules)
+        const depth = bd.depth
+        if (bd.shortened) warn(holeWhat(h), `més fondo que el gruix − ${num(bd.minSkin)}; s'escurça a ${num(depth)}`)
         const t = pickDrill(m, h.diameter, depth, "vertical")
         if (!t) {
           const same = drillsOfDiameter(m, h.diameter, "vertical")
@@ -398,11 +435,9 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
           warn(grooveWhat(g), "fora de la peça")
           continue
         }
-        let depth = g.depth
-        if (depth >= T - 0.5) {
-          depth = Math.max(0.5, T - 1)
-          warn(grooveWhat(g), `més fonda que el gruix − 1; s'escurça a ${num(depth)}`)
-        }
+        const bd = cncBlindDepth(T, g.depth, rules)
+        const depth = bd.depth
+        if (bd.shortened) warn(grooveWhat(g), `més fonda que el gruix − ${num(bd.minSkin)}; s'escurça a ${num(depth)}`)
         const width = Math.min(x1 - x0, y1 - y0)
         const alongX = x1 - x0 >= y1 - y0
         const closed = alongX ? x0 > EPS && x1 < p.length - EPS : y0 > EPS && y1 < p.width - EPS
@@ -477,7 +512,7 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
             area: 0,
             tool: { kind: "FRESA", name: toolMslName(t) },
             lines: [
-              `CreateCircleCenterRadius(${cs(`${n}_G`)}, ${num(x)}, ${num(y)}, ${num(c.diameter / 2)}, false);`,
+              `CreateCircleCenterRadius(${cs(`${n}_G`)}, ${num(x)}, ${num(y)}, ${num(c.diameter / 2)}, ${insideCircleClockwise(cutMode)});`,
               contourLine(n, through, 0, "tall passant", t),
             ],
             op: { program: "A", plane: "Top", kind: "contour", tool: t.code, depth: through, points: flatten([[x + c.diameter / 2, y, 1], [x - c.diameter / 2, y, 1]]), what: cutWhat(c), ref, stage: "inner" },
@@ -497,7 +532,7 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
           continue
         }
         if (sharp && t.diameter / 2 > 0.5) warn(cutWhat(c), `${sharp} cantonades vives queden amb radi ${num(t.diameter / 2)} mm (fresa ${toolMslName(t)} Ø${num(t.diameter)})`)
-        const pts = toBoardPts(place, local)
+        const pts = cutLoop(toBoardPts(place, local), "inside", cutMode)
         const n = name("Tall")
         const pr = profiled(n, pts, t, (nm) => [contourLine(nm, through, 0, "tall passant", t)])
         feats.push({
@@ -523,7 +558,7 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
           warn("contorn de la peça", `cap fresa${Number.isFinite(maxDia) ? ` de Ø ≤ ${num(maxDia)}` : ""} que arribi a ${num(through)} mm`, true)
         } else {
           if (sharp && t.diameter / 2 > 0.5) warn("contorn de la peça", `${sharp} cantonades entrants queden amb radi ${num(t.diameter / 2)} mm (fresa ${toolMslName(t)} Ø${num(t.diameter)})`)
-          const pts = toBoardPts(place, outline)
+          const pts = cutLoop(toBoardPts(place, outline), "outside", cutMode)
           const n = name("Contorn")
           // Peça petita: passades de desbast (regles) i la final al martiri; normal: una passada.
           const small = isSmallPart(rules, p.length, p.width, area)
@@ -599,7 +634,7 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
       comment(`Tauler ${wp} (${workpiece}): ${b.material} - ${num(b.w)} x ${num(b.h)} x ${num(T)} - ${parts.length} peces - aprofitament ${Math.round(b.efficiency * 100)}%`),
       comment(`Cara de dalt (cara A de les peces). X, Y del tauler, origen a la cantonada de baix a l'esquerra`),
       comment(
-        `Marge del tauler ${num(nopt.edgeTrim)} mm, separacio ${num(spacing)} mm${spacingTool ? ` (${toolMslName(spacingTool)} D${num(spacingTool.diameter)} + ${num(nopt.spacingExtra)})` : ""}${router ? `, contorns amb ${toolMslName(router)} (D${num(router.diameter)})` : ""}, passants fins a ${num(through)} (gruix + ${num(nopt.overcut)} al martiri)`,
+        `Marge del tauler ${num(nesting.options.margin)} mm, separacio ${num(spacing)} mm${spacingTool ? ` (${toolMslName(spacingTool)} D${num(spacingTool.diameter)} + ${num(nopt.spacingExtra)})` : ""}${router ? `, contorns amb ${toolMslName(router)} (D${num(router.diameter)})` : ""}, passants fins a ${num(through)} (gruix + ${num(nopt.overcut)} al martiri)`,
       ),
       comment(`Maquina ${m.name}${m.serial ? ` (${m.serial})` : ""}${m.maestroVersion ? ` - Maestro ${m.maestroVersion}` : ""}`),
       ...(m.pgmx ? [comment(`Noms d'eina i capcalera del projecte ${m.pgmx.file} (Maestro ${m.pgmx.version})`)] : []),
@@ -621,7 +656,7 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
       `CreateFinishedWorkpieceBox(${cs(workpiece)}, ${num(b.w)}, ${num(b.h)}, ${num(T)});`,
       `CreateRawWorkpiece(${cs(workpiece)}, 0, 0, 0, 0, 0, 0);`,
       `SetWorkpieceSetupPosition(${num(prog.setupPosition.x)}, ${num(prog.setupPosition.y)}, ${num(prog.setupPosition.z)}, ${num(prog.setupPosition.rot)});`,
-      ...(prog.loadMacro ? [LOAD_MACRO] : []),
+      ...(prog.loadMacro ? [loadMacroLine(prog.loadMacroArgs)] : []),
     ]
     sheets.push({ file, workpiece, tab: b.tab, material: b.material, thickness: T, w: b.w, h: b.h, efficiency: b.efficiency, parts, ops: ordered.map((f) => f.op), text: [...header, ...body, ""].join(EOL) })
   }
@@ -656,9 +691,12 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
   warnings.unshift(...rp.notes)
   missingTool += rp.missing
   const files = sheets.map((s) => ({ name: s.file, text: s.text }))
-  files.push({ name: "LLEGEIX-ME.txt", text: nestReadme(opts.project, m, sheets, infos, unplaced, warnings, spacing, spacingTool, opts.date ?? new Date()) })
+  const enc = encodingWarning(m, files)
+  if (enc) warnings.unshift(enc)
+  files.push({ name: "LLEGEIX-ME.txt", text: nestReadme(opts.project, m, sheets, infos, unplaced, warnings, spacing, spacingTool, margin, opts.date ?? new Date()) })
   return {
     files,
+    encoding: xcsEncodingOf(m),
     sheets,
     panels: infos,
     warnings,
@@ -671,7 +709,7 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
   }
 }
 
-function nestReadme(project: string, m: Machine, sheets: NestSheetXcs[], infos: NestPanelInfo[], unplaced: string[], warnings: string[], spacing: number, tool: MachineTool | undefined, date: Date): string {
+function nestReadme(project: string, m: Machine, sheets: NestSheetXcs[], infos: NestPanelInfo[], unplaced: string[], warnings: string[], spacing: number, tool: MachineTool | undefined, margin: number, date: Date): string {
   const n = machineNesting(m)
   const prog = nestProgram(m)
   const lines = [
@@ -693,7 +731,7 @@ function nestReadme(project: string, m: Machine, sheets: NestSheetXcs[], infos: 
     "",
     "Convencions",
     "- X, Y del tauler, origen a la cantonada de baix a l'esquerra, cara de dalt = cara A de les peces.",
-    `- Marge del tauler ${num(n.edgeTrim)} mm; separació entre peces ${num(spacing)} mm${tool ? ` (fresa ${toolMslName(tool)} Ø${num(tool.diameter)} + ${num(n.spacingExtra)})` : ""}.`,
+    `- Marge del tauler ${num(margin)} mm; separació entre peces ${num(spacing)} mm${tool ? ` (fresa ${toolMslName(tool)} Ø${num(tool.diameter)} + ${num(n.spacingExtra)})` : ""}.`,
     `- Contorns per fora i talls passants fins a gruix + ${num(n.overcut)} mm (dins del martiri).`,
     "- Ranures sempre amb fresa (un disc de cantell a cantell tallaria les peces del costat).",
     "- Forats de cantell, mecanitzats de la cara B i inglets no es fan al nesting: van a la ruta de cada peça.",
@@ -701,7 +739,7 @@ function nestReadme(project: string, m: Machine, sheets: NestSheetXcs[], infos: 
     "- Cada peça porta un comentari amb la ref i el centre (per a l'etiqueta) abans del seu contorn.",
     ...rulesReadme(machineRules(m), true),
     `- Capçalera com el programa de nesting real del taller: MechanicalOptions ${prog.mechanicalOptions}, SetPreserveWorkingSequence, SetWorkPieceFallPrevention(${prog.fallPrevention}), SetWorkpieceSetupPosition(${num(prog.setupPosition.x)}, ${num(prog.setupPosition.y)}, ${num(prog.setupPosition.z)}, ${num(prog.setupPosition.rot)})${prog.loadMacro ? ", macro Pload" : ""}, campana ${prog.pneumaticHood}. La peça de treball es diu com el tauler del CSV (<material>_<gruix>#NN).`,
-    "- Fitxers .xcs en UTF-8 amb BOM.",
+    encodingReadme(m),
     "",
     `Taulers: ${sheets.length}`,
   ]

@@ -76,6 +76,26 @@ export function CamPreview({ sheets, machine }: { sheets: CamSheet[]; machine?: 
       </g>
     )
   }
+  /** Sentit d'un contorn o tall: una punta al mig del primer tram prou llarg de la geometria. */
+  const direction = (o: CamOp, color: string) => {
+    const d = view.draws.get(o.n)
+    if (o.kind !== "contour" || !d?.closed || d.outline.length < 2) return null
+    for (let i = 0; i < d.outline.length; i++) {
+      const a = d.outline[i]!
+      const b = d.outline[(i + 1) % d.outline.length]!
+      const l = Math.hypot(b[0] - a[0], b[1] - a[1])
+      if (l < px(12)) continue
+      const ux = (b[0] - a[0]) / l
+      const uy = (b[1] - a[1]) / l
+      const tip: Pt = [(a[0] + b[0]) / 2 + ux * px(4), (a[1] + b[1]) / 2 + uy * px(4)]
+      const s = px(8)
+      const q = px(4)
+      const base: Pt = [tip[0] - ux * s, tip[1] - uy * s]
+      const pts: Pt[] = [tip, [base[0] - uy * q, base[1] + ux * q], [base[0] + uy * q, base[1] - ux * q]]
+      return <path key={`s${o.n}`} d={svgPath(pts, true, W)} fill={color} />
+    }
+    return null
+  }
   const anchor = (o: CamOp): Pt | null => {
     if (o.kind === "drill") return [o.x ?? 0, o.y ?? 0]
     const d = view.draws.get(o.n)
@@ -194,6 +214,8 @@ export function CamPreview({ sheets, machine }: { sheets: CamSheet[]; machine?: 
                 <circle key={`d${o.n}`} cx={o.x} cy={Y(o.y ?? 0)} r={drillR(o)} fill={colorFor(view, o)} stroke={selected.has(o.n) ? token("fg") : "none"} strokeWidth={2} vectorEffect="non-scaling-stroke" />
               ) : null,
             )}
+            {/* Sentit de cada contorn i tall (horari / antihorari: el tipus de fresat). */}
+            {top.map((o) => direction(o, colorFor(view, o)))}
             {/* Entrades en rampa. */}
             {top.map((o) => {
               const r = ramp(o)
@@ -248,7 +270,7 @@ export function CamPreview({ sheets, machine }: { sheets: CamSheet[]; machine?: 
             )}
           </HStack>
           <Text fontSize="xs" color="fg.muted">
-            Línia: la geometria del programa. Discontínua i franja: el centre de l'eina i el que treu (aproximat, només per veure-ho). Fletxa: entrada en rampa.
+            Línia: la geometria del programa. Discontínua i franja: el centre de l'eina i el que treu (aproximat, només per veure-ho). Fletxa: entrada en rampa. Punta: sentit de cada contorn i tall (Preferències › Regles de mecanitzat › «Sentit dels contorns i talls»).
           </Text>
           {p.unknown > 0 && (
             <Text fontSize="xs" color="fg.warning">

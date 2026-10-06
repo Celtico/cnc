@@ -332,7 +332,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   `CreateBidirectionalMillingStrategy`, `Set/ResetApproachStrategy`, `Set/ResetRetractStrategy`, polilínia/cercle +
   `CreateContour` (semicercles amb `AddArc2PointCenterToPolyline`). Capçal sempre `"-1"`. Broques verticals amb eina `"-1"`
   per defecte (com el .pgmx; opció «Broques: tria el Maestro / eina concreta», `Machine.verticalDrills`). Noms d'eina sense
-  plegar a ASCII, cadenes C# escapades (`cs`); fitxers en **UTF-8 amb BOM** (`xcsBytes`/`xcsZip`, pendent de validar).
+  plegar a ASCII, cadenes C# escapades (`cs`); fitxers en **UTF-8 amb BOM** o sense (`Machine.xcsEncoding`, «Codificació»;
+  `xcsBytes`/`xcsZip` amb l'`encoding` de l'export; LLEGEIX-ME sempre amb BOM; sense BOM i noms no ASCII → avís).
 - **Eixos**: X = u (`length`), Y = v, origen a baix a l'esquerra de la cara A; forats de cantell a les cares estàndard
   (3 Front · 1 Back · 4 Left · 2 Right, vistes des de fora, a mig gruix, broca horitzontal `"-1"`; a les peces amb forma només
   si el contorn toca la cara); cara B girada sobre X: (x, A − y). **Orígens verificats** (taula a `docs/maestro-xcs.md`).
@@ -343,7 +344,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   avisa. Les **regles de mecanitzat** del taller manen (vegeu Màquines).
 - **Separació i marge**: `nest()` amb separació = Ø de la fresa de contorn més grossa dels gruixos del moble (`boardRouter`
   per gruix: la de la regla de perfilar o la de nesting; 19 + 30 → 14 + 2 = 16) + `spacingExtra`, i marge `edgeTrim`
-  (`Machine.nesting`, `machineNesting`: 10 mm, Ø + 2, martiri 0,3 mm). La mateixa xifra al LLEGEIX-ME, la capçalera i la
+  (`Machine.nesting`, `machineNesting`: 10 mm, Ø + 2, martiri 0,3 mm; o, amb `edgeTrimMode: "tool"`, Ø de la mateixa fresa +
+  `edgeTrimExtra`, `boardMargin`; `cncNestOptions` torna el `margin`). La mateixa xifra al LLEGEIX-ME, la capçalera i la
   targeta d'Exportar. **El mateix nesting a tot arreu** (`core/nesting/machineNest.ts`, `nestPlan`, a `useNesting`): amb una
   màquina per defecte, la pàgina Nesting, el CSV de TopSolid, el JSON i els .xcs fan servir aquesta separació i marge; sense
   màquina, el `kerf`/`margin` del projecte (que de nou surten de `Settings.boards`, sense UI a Preferències: es queden a
@@ -370,6 +372,10 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   buit, etiquetes, prova a la màquina (`PROVA_ORIENTACIO.xcs`), UTF-8 amb BOM (el real és ASCII sense BOM), noms de totes les
   eines al Maestro 2.0.5, bits de `MechanicalOptions` i el −20, disc o fresa per a les ranures, fixació, eines que falten al
   `.tlgx`, recorreguts explícits o calculats, sentit dels talls interiors, marge (el real: 12 = Ø), forats gairebé passants.
+- **Opcions pendents del taller** (millores v1, `docs/millores-v1/preguntes-germa.md`, el missatge per al germà): codificació,
+  marge, pell dels forats gairebé passants, sentit del fresat i capçalera ja són preferències **amb el valor d'abans com a
+  inicial** (cap diff del golden; tests a `export/xcsShopOptions.test.ts`). Quan respongui, es canvia l'inicial i
+  `UPDATE_GOLDEN=1`. Pendents de construir: ranura del perfil LED i frontisses de porta de vidre.
 
 ### Vista CAM
 - Exportar › Màquina CNC (Maestro) › «Vista CAM» (`LuMonitorCog`): perquè el taller revisi cada programa a l'app abans
@@ -409,8 +415,9 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
 - Desat a `Settings.machines` (**preferències v10**, additiu); **una per defecte** (`defaultMachine`, ★): la de l'export .xcs
   i la que dona la separació i el marge del nesting. Detall: nom, sèrie, configuració, Maestro, camp, per defecte, «Projecte
   de Maestro (.pgmx)», «Programes .xcs» (àrea de treball, repeticions, taula, cicle continu, passants de més, broques,
-  ranures disc/fresa), «Programes per tauler» (separació, marge, martiri, peces petites al final/principi i la capçalera del
-  nesting) i **taula d'eines per tipus** (codi · nom · Ø · fondària · posició; tocar-ne una l'edita; «Afegir eina» per a les
+  ranures disc/fresa, codificació amb/sense BOM), «Programes per tauler» (separació, marge fix o «Ø de la fresa +», martiri,
+  peces petites al final/principi i la capçalera del nesting: opcions mecàniques amb l'hex i els bits al costat, `bitsLabel`;
+  posició X/Y/Z/gir; paràmetres de `Pload` com a text, `loadMacroArgs`, es desen en sortir si són vàlids) i **taula d'eines per tipus** (codi · nom · Ø · fondària · posició; tocar-ne una l'edita; «Afegir eina» per a les
   que el `.tlgx` no porta, amb el codi de Maestro; una «Eina nova» `NOVA1` no es tria fins que té codi). Tornar a importar
   la mateixa sèrie (`mergeReimport`) conserva, eina per eina, els camps tocats a mà (`MachineTool.edited`), les eines
   afegides i les opcions. Una eina invàlida a les preferències només treu aquella eina (`repairMachine`; si encara falla, es
@@ -432,7 +439,10 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
   passada (`CreateBidirectionalMillingStrategy`), caixeres «12mm diamant nesting» (`CreateContourPocket`), perfilar per gruix
   (8–22 → «12mm diamant nesting», 23–41 → «14mm diamant nesting»), rampa als perfilats del nesting (`SetApproachStrategy(true,
   false, k)`, des del mig del costat recte més llarg), peces petites (menys de 0,8 m²; `maxSide` 0 = no compta) en 3 passades
-  (Z/XY 1/1, 0,5/0 i la final al martiri o als passants, `overMaterial`).
+  (Z/XY 1/1, 0,5/0 i la final al martiri o als passants, `overMaterial`). Opcionals, amb el comportament d'abans si no hi
+  són: **pell dels forats i ranures gairebé passants** (`blind`, `cncBlindDepth`: 1 mm a partir de gruix − 0,5; només al
+  .xcs, el STEP es queda amb 1) i **sentit dels contorns i talls** (`cutMode`: `asIs` · `conventional` = en oposició, com
+  TopSolid · `climb`; `cutLoop`, i a la Vista CAM una punta amb el sentit).
   - Eines **pel nom a la màquina que exporta** (`findRuleTool`, només `usableTool`, les mateixes que ofereix el selector, amb
     les freses de totes les màquines); si falta, no es pot fer servir o no arriba, tria de sempre i un sol avís per regla i
     eina. A la pàgina, una línia per màquina: «✓ té totes les eines» o «falta «X»» (`missingRuleTools`).
@@ -1044,7 +1054,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Visor 3D**: qualitat, escena de Presentació (terra i paret: materials de la biblioteca, `PresentationScene.floorMaterial`
   / `wallMaterial`, o les mostres ràpides; terra per defecte «Parquet de roure»), llum i «Cel del render». **Tema**:
   dia/nit/sistema i color principal (`theme/accent.ts` redirigeix les variables CSS de `wood`).
-- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 17): les migracions depenen només de la versió
+- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 18): les migracions depenen només de la versió
   desada, que **mai baixa** (`saveSettings` desa la més alta). **Desades per una versió més nova**: només lectura
   (`saveSettings` torna `false` amb `console.warn`; `loadSettings` avisa). **Lectura camp a camp** (`repairValue`,
   `core/model/repair.ts`): un valor dolent d'una secció només torna aquell valor a l'inicial (un tauler o una llargada de guia
