@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { DEFAULT_GRILLE, HARDWARE_SLOTS, backChoices, boardChoices, hardwareSummary, jointApplies, materialByName, type Base, type Carcass, type HardwareItem, type Module, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, HARDWARE_SLOTS, backChoices, boardChoices, hardwareSummary, jointApplies, materialByName, type Base, type Carcass, type HardwareItem, type HardwareSlot, type Module, type Top } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
@@ -289,25 +289,56 @@ export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !==
   )
 }
 
-/** Jocs i ferratges del mòdul seleccionat (secció «Fusteria (avançat)»). */
+/** Llocs de ferratge de la caixa (laterals, unions, fons): surten a la Fusteria del mòdul. La resta són dels fronts. */
+const BOX_SLOTS: ReadonlySet<HardwareSlot> = new Set<HardwareSlot>(["dowel", "system32"])
+
+/** Només els ferratges que el mòdul fa servir de debò (forats a les seves peces); sense peces (encara), tots. */
+const slotsFor = (usedSlots: ReadonlySet<string> | undefined, box: boolean) => HARDWARE_SLOTS.filter(({ slot }) => BOX_SLOTS.has(slot) === box && (!usedSlots || usedSlots.has(slot)))
+
+/** Ferratges per defecte del mòdul (una còpia de cada un de la biblioteca); els fronts en poden triar un altre. */
+function ModuleHardwarePicks({ module, onChange, slots }: { module: Module; onChange: (m: Module) => void; slots: readonly (typeof HARDWARE_SLOTS)[number][] }) {
+  return slots.map(({ slot }) => (
+    <HardwarePick key={slot} slot={slot} current={module.hardware[slot]} onPick={(item) => item && onChange({ ...module, hardware: { ...module.hardware, [slot]: item } })} />
+  ))
+}
+
+/**
+ * Fusteria de la **caixa** del mòdul seleccionat (secció «Fusteria (avançat)»): el fons i els ferratges dels laterals i
+ * de les unions (espiga, filera System 32). Els jocs i els ferratges dels fronts són a l'«Interior» (`FrontsForm`).
+ */
 export function JoineryForm({ module, onChange, usedSlots }: { module: Module; onChange: (m: Module) => void; usedSlots?: ReadonlySet<string> }) {
   const c = module.carcass
-  // Només els ferratges que el mòdul fa servir de debò (forats a les seves peces); sense peces (encara), tots.
-  const slots = usedSlots ? HARDWARE_SLOTS.filter(({ slot }) => usedSlots.has(slot)) : HARDWARE_SLOTS
+  const slots = slotsFor(usedSlots, true)
   const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
+  const hasBackRow = c.back === "groove" || c.back === "inset"
+  return (
+    <Stack gap={3}>
+      {c.back === "groove" && <NumRow label="Ranura del fons" value={c.backSetback} min={0} max={60} step={1} onChange={(backSetback) => set({ backSetback })} help="Distància al cantell posterior" />}
+      {c.back === "inset" && <NumRow label="Retirada del fons" value={c.backInsetSetback ?? 0} min={0} max={60} step={1} onChange={(backInsetSetback) => set({ backInsetSetback })} help="Distància del fons encastat al cantell posterior (0 = enrasat)" />}
+      <ModuleHardwarePicks module={module} onChange={onChange} slots={slots} />
+      <Text fontSize="xs" color="fg.muted">
+        {slots.length ? "Ferratges de la caixa que fa servir aquest mòdul (Preferències › Ferratges). Els dels fronts i calaixos són a l'«Interior»." : hasBackRow ? "Aquest mòdul no fa servir cap ferratge a la caixa." : "Aquesta caixa no té res a ajustar."}
+      </Text>
+    </Stack>
+  )
+}
+
+/**
+ * Fronts i calaixos del mòdul (secció «Fronts i calaixos» de l'«Interior», l'arrel): els jocs dels fronts, el retranqueig
+ * dels prestatges i els ferratges per defecte dels fronts (frontissa, guia o joc de calaix, braç, imant, tirador). Edita
+ * `module.fronts` i `module.hardware`: cada porta, calaix o abatible en pot triar un altre al seu Front.
+ */
+export function FrontsForm({ module, onChange, usedSlots }: { module: Module; onChange: (m: Module) => void; usedSlots?: ReadonlySet<string> }) {
+  const c = module.carcass
+  const slots = slotsFor(usedSlots, false)
   return (
     <Stack gap={3}>
       <NumRow label="Joc front–cos" value={module.fronts.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => onChange({ ...module, fronts: { ...module.fronts, outerGap } })} />
       <NumRow label="Joc entre fronts" value={module.fronts.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => onChange({ ...module, fronts: { ...module.fronts, betweenGap } })} />
-      <NumRow label="Retranqueig prest." value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set({ shelfSetback })} />
-      {c.back === "groove" && <NumRow label="Ranura del fons" value={c.backSetback} min={0} max={60} step={1} onChange={(backSetback) => set({ backSetback })} help="Distància al cantell posterior" />}
-      {c.back === "inset" && <NumRow label="Retirada del fons" value={c.backInsetSetback ?? 0} min={0} max={60} step={1} onChange={(backInsetSetback) => set({ backInsetSetback })} help="Distància del fons encastat al cantell posterior (0 = enrasat)" />}
-      {/* Ferratges del mòdul (una còpia de cada un de la biblioteca): les portes, calaixos i abatibles en poden triar un altre. */}
-      {slots.map(({ slot }) => (
-        <HardwarePick key={slot} slot={slot} current={module.hardware[slot]} onPick={(item) => item && onChange({ ...module, hardware: { ...module.hardware, [slot]: item } })} />
-      ))}
+      <NumRow label="Retranqueig prest." value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => onChange({ ...module, carcass: { ...c, shelfSetback } })} />
+      <ModuleHardwarePicks module={module} onChange={onChange} slots={slots} />
       <Text fontSize="xs" color="fg.muted">
-        {slots.length ? "Ferratges que fa servir aquest mòdul (Preferències › Ferratges). Cada porta, calaix o abatible en pot triar un altre al seu Front." : "Aquest mòdul no fa servir cap ferratge."}
+        {slots.length ? "Per defecte per a tots els fronts del mòdul; cada porta, calaix o abatible en pot triar un altre al seu Front." : "Aquest mòdul no té cap front amb ferratges."}
       </Text>
     </Stack>
   )

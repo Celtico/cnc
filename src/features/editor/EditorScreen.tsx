@@ -18,6 +18,7 @@ import {
   LuPanelTop,
   LuCamera,
   LuCircleDot,
+  LuDoorClosed,
   LuDoorOpen,
   LuExpand,
   LuHammer,
@@ -55,7 +56,7 @@ import { materialIssues } from "../../core/build/materialIssues"
 import { applySettingsToModule,  defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
-import { CarcassForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
+import { CarcassForm, FrontsForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
 import { ElevationEditor } from "../composition/ElevationEditor"
 import { RefActions, RefInspector } from "../composition/RefInspector"
 import { ModelActions, ModelInspector } from "../composition/ModelInspector"
@@ -1051,7 +1052,24 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         </Stack>
       ) : selection.kind === "zone" && zone ? (
         <Stack gap={3}>
-          <ZonePanel root={module.root} zone={zone} hardware={module.hardware} noHandles={module.fronts.handles === "none"} openRatio={moduleBuild?.openRatios[zone.id]} kits={moduleBuild?.hardwareKits.filter((k) => k.zoneId === zone.id)} onChange={(root) => updateModule({ ...module, root })} />
+          <ZonePanel
+            root={module.root}
+            zone={zone}
+            hardware={module.hardware}
+            noHandles={module.fronts.handles === "none"}
+            openRatio={moduleBuild?.openRatios[zone.id]}
+            kits={moduleBuild?.hardwareKits.filter((k) => k.zoneId === zone.id)}
+            onChange={(root) => updateModule({ ...module, root })}
+            afterFront={
+              // A l'«Interior» (l'arrel), el que és de tots els fronts del mòdul: jocs i ferratges per defecte
+              // (`module.fronts`, `module.hardware`). La caixa (fons, espigues, System 32) és a la Fusteria del mòdul.
+              zone.id === module.root.id && (
+                <FoldItem id="zone-fronts" title="Fronts i calaixos" icon={LuDoorClosed} defaultOpen={false}>
+                  <FrontsForm module={module} onChange={updateModule} usedSlots={usedHardwareSlots(panels.filter((p) => p.module === moduleIndex + 1))} />
+                </FoldItem>
+              )
+            }
+          />
         </Stack>
       ) : (
         // Seccions plegables independents (com Figma o Fusion): es poden tenir diverses

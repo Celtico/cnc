@@ -55,7 +55,7 @@ const SLOT_TAGS: Record<string, string> = { hinge: "hinge", system32: "system32"
 
 /**
  * Llocs de ferratge que el mòdul **fa servir de debò** (hi ha algun forat o tall amb la seva etiqueta a les seves peces):
- * «Fusteria (avançat)» només ensenya aquests, no els set. Un mòdul amb un calaix i un compartiment obert no té frontissa,
+ * La Fusteria del mòdul i «Fronts i calaixos» de l'Interior només ensenyen aquests, no els set. Un mòdul amb un calaix i un compartiment obert no té frontissa,
  * braç ni imant. Un calaix amb joc paramètric (prebroques `kit-*`) compta com a guia.
  */
 export function usedHardwareSlots(panels: readonly Panel[]): Set<string> {

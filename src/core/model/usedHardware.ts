@@ -4,7 +4,7 @@ import type { HardwareSlot } from "./hardware"
 
 /**
  * **Quins ferratges fa servir un mòdul**, segons el que té (res amagat compta: es mira el mòdul tal com es veu). És el
- * que l'inspector ensenya a «Fusteria (avançat)»: en una tauleta amb un calaix no hi pinten res la frontissa, el braç
+ * que l'inspector ensenya (Fusteria del mòdul i «Fronts i calaixos» de l'Interior): en una tauleta amb un calaix no hi pinten res la frontissa, el braç
  * d'abatible ni l'imant. Per a cada lloc, quants elements el fan servir (portes, calaixos…), per dir-ho a la fila.
  * - frontissa i System 32: portes (no de vidre) i reixetes amb frontisses; System 32 també amb prestatges regulables;
  * - guia: compartiments de calaixos; braç: abatibles; imant: reixetes desmuntables;
