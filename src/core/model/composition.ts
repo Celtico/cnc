@@ -152,11 +152,20 @@ export const FrontSchema = z.discriminatedUnion("kind", [
 ])
 export type Front = z.infer<typeof FrontSchema>
 
+/** Tipus de front (contingut) d'un compartiment. */
+export const FRONT_KINDS = ["door", "drawers", "flap", "grille", "panel"] as const satisfies readonly Front["kind"][]
+
 export interface Zone {
   id: string
   split?: { dir: "v" | "h"; sizes: (number | "auto")[]; children: Zone[] }
   shelves?: { n: number; adjustable: boolean; thickness?: number; flush?: boolean }
   front?: Front
+  /**
+   * L'últim front de cada tipus que ha tingut el compartiment (res amagat compta: canviar el contingut de calaixos a
+   * abatible i tornar recupera el nombre de calaixos, les alçades, el joc i les seves opcions, el ferratge i el tirador).
+   * Només per a la UI (`setFront`): la construcció no els llegeix (`visibleZone` els treu).
+   */
+  fronts?: Partial<Record<Front["kind"], Front>>
   /** Barra de penjar (tub d'inox Ø25 a 50 mm del sostre del compartiment). */
   rail?: boolean
   /** Llum LED: perfil amb tira LED sota el sostre del compartiment i sota cada prestatge (render i llista; no és de CNC). */
@@ -187,10 +196,19 @@ export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
       })
       .optional(),
     front: FrontSchema.optional(),
+    fronts: z.preprocess(dropMismatchedFronts, z.object({ door: FrontSchema.optional(), drawers: FrontSchema.optional(), flap: FrontSchema.optional(), grille: FrontSchema.optional(), panel: FrontSchema.optional() })).optional(),
     rail: z.boolean().optional(),
     led: z.boolean().optional(),
   }),
 )
+
+/** Un front recordat sota la clau d'un altre tipus (dada tocada) no es llegeix. */
+function dropMismatchedFronts(raw: unknown): unknown {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return raw
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) if (typeof v === "object" && v !== null && (v as { kind?: unknown }).kind === k) out[k] = v
+  return out
+}
 
 /**
  * Passacables: forat passant al centre (x, y) d'una peça de la carcassa, en coordenades
@@ -792,6 +810,8 @@ export function visibleModule(m: Module): Module {
  */
 function visibleZone(z: Zone, noHandles = false, kitDefault = false): Zone {
   const out: Zone = { ...z }
+  // Els fronts recordats dels altres tipus (`fronts`) són només per tornar-hi: no construeixen res.
+  delete out.fronts
   if (z.split) {
     // Un compartiment dividit no té prestatges ni barra (l'inspector no els ensenya).
     delete out.shelves

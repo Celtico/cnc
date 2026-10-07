@@ -1,4 +1,4 @@
-import { newId, type Front, type Zone } from "./composition"
+import { DEFAULT_GRILLE, findZone, newId, type Front, type Zone } from "./composition"
 
 /** Operacions immutables sobre l'arbre de zones. Cap no modifica l'arbre d'entrada. */
 
@@ -138,18 +138,53 @@ export function setShelves(root: Zone, id: string, shelves: Zone["shelves"] | nu
   })
 }
 
+/** El front en blanc de cada tipus (el que posa «Contingut» quan el compartiment no n'ha tingut mai cap d'aquell tipus). */
+export function defaultFront(kind: Front["kind"]): Front {
+  switch (kind) {
+    case "door":
+      return { kind, mode: "single", hinge: "left" }
+    case "drawers":
+      return { kind, n: 3, heights: ["auto", "auto", "auto"] }
+    case "flap":
+      return { kind, dir: "down" }
+    case "grille":
+      return { kind, pattern: DEFAULT_GRILLE, mount: "removable", hinge: "left" }
+    case "panel":
+      return { kind }
+  }
+}
+
+/**
+ * Posa (o treu, `null`) el front d'un compartiment. **Res amagat compta**: si el tipus canvia, el front d'abans es recorda a
+ * `fronts[kind]` (tornar-hi el recupera sencer: calaixos, alçades, joc i opcions, ferratge, tirador); els prestatges, la
+ * barra i la llum no es toquen (amb calaixos no es veuen ni compten, `visibleZone`, i tornen amb el contingut d'abans).
+ */
 export function setFront(root: Zone, id: string, front: Front | null): Zone {
   return updateZone(root, id, (z) => {
-    const { front: _old, ...rest } = z
-    void _old
-    // Els calaixos ocupen tot el compartiment: sense prestatges.
-    if (front?.kind === "drawers") {
-      const { shelves: _s, ...noShelves } = rest
-      void _s
-      return { ...noShelves, front }
-    }
-    return front ? { ...rest, front } : rest
+    const { front: old, fronts: _f, ...rest } = z
+    const fronts = { ...z.fronts }
+    if (old && old.kind !== front?.kind) fronts[old.kind] = old
+    if (front) delete fronts[front.kind]
+    const kept = Object.keys(fronts).length ? { fronts } : {}
+    return front ? { ...rest, ...kept, front } : { ...rest, ...kept }
   })
+}
+
+/**
+ * Canvia el **tipus** de contingut («Contingut» de l'inspector): el front recordat d'aquell tipus (`fronts[kind]`) o, si
+ * no n'hi ha, el front en blanc (`defaultFront`), amb el tirador propi del front d'abans si el nou tipus també en pot
+ * portar (porta, calaixos i abatible). `"none"` = obert.
+ */
+export function switchFront(root: Zone, id: string, kind: Front["kind"] | "none"): Zone {
+  if (kind === "none") return setFront(root, id, null)
+  const z = findZone(root, id)
+  if (!z) return root
+  if (z.front?.kind === kind) return root
+  const remembered = z.fronts?.[kind]
+  const next: Front = remembered ? structuredClone(remembered) : defaultFront(kind)
+  const oldHandle = z.front && "handle" in z.front ? z.front.handle : undefined
+  if (!remembered && oldHandle && (next.kind === "door" || next.kind === "drawers" || next.kind === "flap")) next.handle = structuredClone(oldHandle)
+  return setFront(root, id, next)
 }
 
 /** Nombre de fulles de l'arbre. */
