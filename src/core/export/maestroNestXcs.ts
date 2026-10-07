@@ -53,6 +53,8 @@ import {
   type XcsPostProcess,
 } from "./maestroXcs"
 import { pieceRefs } from "./refs"
+import type { KitOrder } from "../build/buildModule"
+import { kitReadmeLines } from "../build/kitOrders"
 import { boardName } from "./topsolidCsv"
 import { asciiFold } from "./text"
 
@@ -334,7 +336,7 @@ export const LOAD_MACRO = loadMacroLine()
 export const toolComment = (t: { kind: "BROCA" | "FRESA"; name: string }): string => `//${t.kind} PLANA ${comment(t.name).slice(3)}`
 
 /** Programes per tauler d'un nesting fet amb `cncNestOptions`. */
-export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, opts: { project: string; date?: Date }): XcsNestExport {
+export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, opts: { project: string; date?: Date; /** Jocs de calaix (comanda) per al LLEGEIX-ME. */ kits?: readonly (KitOrder & { module?: number })[] }): XcsNestExport {
   const nopt = machineNesting(m)
   const refs = pieceRefs(panels)
   const byId = new Map(panels.map((p) => [p.id, p]))
@@ -693,7 +695,7 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
   const files = sheets.map((s) => ({ name: s.file, text: s.text }))
   const enc = encodingWarning(m, files)
   if (enc) warnings.unshift(enc)
-  files.push({ name: "LLEGEIX-ME.txt", text: nestReadme(opts.project, m, sheets, infos, unplaced, warnings, spacing, spacingTool, margin, opts.date ?? new Date()) })
+  files.push({ name: "LLEGEIX-ME.txt", text: nestReadme(opts.project, m, sheets, infos, unplaced, warnings, spacing, spacingTool, margin, opts.date ?? new Date(), opts.kits ?? []) })
   return {
     files,
     encoding: xcsEncodingOf(m),
@@ -709,7 +711,7 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
   }
 }
 
-function nestReadme(project: string, m: Machine, sheets: NestSheetXcs[], infos: NestPanelInfo[], unplaced: string[], warnings: string[], spacing: number, tool: MachineTool | undefined, margin: number, date: Date): string {
+function nestReadme(project: string, m: Machine, sheets: NestSheetXcs[], infos: NestPanelInfo[], unplaced: string[], warnings: string[], spacing: number, tool: MachineTool | undefined, margin: number, date: Date, kits: readonly (KitOrder & { module?: number })[]): string {
   const n = machineNesting(m)
   const prog = nestProgram(m)
   const lines = [
@@ -758,6 +760,8 @@ function nestReadme(project: string, m: Machine, sheets: NestSheetXcs[], infos: 
     }
   }
   if (!withPost.length) lines.push("", "Cap peça té res a fer després de la CNC.")
+  // Calaixos de doble paret: el que cal comprar (números del catàleg) i la fusta que demana cada calaix.
+  if (kits.length) lines.push("", "Ferratges dels jocs de calaix (comanda)", ...kitReadmeLines(kits))
   if (warnings.length) {
     lines.push("", `Avisos (${warnings.length}): el que no surt als programes o s'ha canviat`)
     for (const w of warnings) lines.push(`- ${w}`)

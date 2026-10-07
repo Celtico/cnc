@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 import { buildComposition } from "../build/buildComposition"
 import { toDxf } from "../export/dxf"
 import { listZip, readZipEntry } from "../file/zip"
-import { DEFAULT_HARDWARE_KIT, defaultModule, type HardwareItem, type Panel } from "../model"
+import { DEFAULT_MODULE_HARDWARE, defaultModule, type HardwareItem, type Panel } from "../model"
 import type { HettichFile } from "./hettich"
 import { articleItem, confirmProblem, setConfirmed } from "./importItem"
 import { groupImport, importCandidate, importFileKind } from "./makers"
@@ -88,7 +88,7 @@ run("Blum (descàrregues reals)", () => {
       ["front", "A", 10, 6, 0, -16],
       ["front", "A", 10, 6, 0, 16],
     ])
-    let item: HardwareItem = { ...articleItem(p, a, { hinge: DEFAULT_HARDWARE_KIT.hinge, handle: DEFAULT_HARDWARE_KIT.handle }, { id: "hw-71t", files: a.files.map((f) => f.path) }), machining: m.ops }
+    let item: HardwareItem = { ...articleItem(p, a, { hinge: DEFAULT_MODULE_HARDWARE.hinge, handle: DEFAULT_MODULE_HARDWARE.handle }, { id: "hw-71t", files: a.files.map((f) => f.path) }), machining: m.ops }
     expect(item).toMatchObject({ maker: "Blum", ref: "71T453T", engine: "model", category: "hinge", imported: { maker: "Blum", article: "71T453T", confirmed: false } })
     expect(item.imported!.bbox).toBeDefined()
     // Sense confirmar, cap forat. Al lateral amb el grup «porta» de l'item (com fa «Mecanitzats de» a l'editor).
@@ -122,7 +122,7 @@ run("Blum (descàrregues reals)", () => {
     const { files, read } = await picked(DIR!)
     const a = groupImport(files).articles.find((x) => x.article === "70T453T.TL")!
     const m = machiningFromXilog(await read.get(a.files.find((f) => f.kind === "pgm")!.path)!(), "side", "pgm")
-    const base = { hinge: DEFAULT_HARDWARE_KIT.hinge, handle: DEFAULT_HARDWARE_KIT.handle }
+    const base = { hinge: DEFAULT_MODULE_HARDWARE.hinge, handle: DEFAULT_MODULE_HARDWARE.handle }
     const confirmed = setConfirmed({ ...articleItem(modelProposal(null, []), a, base, { id: "hw-1", files: [] }), machining: m.ops }, true)
     expect(mergePreview([confirmed], a)!.adds).toEqual(expect.arrayContaining(["mecanitzats exactes (Xilog)"]))
     expect(mergePreview([confirmed], { ...a, maker: "Hettich" })).toBeNull()

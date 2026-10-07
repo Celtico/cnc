@@ -74,8 +74,10 @@ export function movingGroups(panels: Panel[]): MovingGroup[] {
 
   for (const [key, parts] of drawers) {
     const side = parts.find((p) => p.role === "drawerSide")
+    // Calaix amb joc paramètric: la guia (component del joc) diu la llargada.
+    const slide = parts.find((p) => p.role === "hardware" && p.id.includes("-kit-slide-"))
     const front = parts.find((p) => p.role === "drawerFront")
-    const distance = side ? side.length : front ? Math.min(front.length, 400) : 400
+    const distance = side ? side.length : slide ? slide.thickness : front ? Math.min(front.length, 400) : 400
     groups.push({ id: key, label: front?.label ?? key, panelIds: parts.map((p) => p.id), motion: { kind: "slide", dir: [0, 0, 1], distance } })
   }
   return groups

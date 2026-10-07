@@ -5,7 +5,8 @@ import { PanelDrawing } from "../../components/PanelDrawing"
 import { toCutList } from "../../core/cutlist/toCutList"
 import { EDGE_NUMBER, EDGE_SIDES, type Grain, type Panel } from "../../core/model"
 import { pieceRefs } from "../../core/export/refs"
-import { useCompositionExtras, useCompositionPanels, useCompositionRead, useProject } from "../useProject"
+import { useCompositionExtras, useCompositionKits, useCompositionPanels, useCompositionRead, useProject } from "../useProject"
+import { kitGroups } from "../../core/build/kitOrders"
 import { UnreadableAlert } from "../../components/UnreadableAlert"
 import { SectionLabel } from "../../components/SectionLabel"
 
@@ -46,10 +47,14 @@ export function CutListScreen({ projectId }: { projectId: number }) {
   const panels = useCompositionPanels(project)
   const list = useMemo(() => toCutList(panels), [panels])
   const extras = useCompositionExtras(project)
-  // Elements iguals (material i mides) agrupats.
+  // Calaixos amb joc paramètric: la comanda (components iguals agrupats, amb el número d'article).
+  const kits = useCompositionKits(project)
+  const kitRows = useMemo(() => kitGroups(kits), [kits])
+  // Elements iguals (material i mides) agrupats. Els components dels jocs de calaix (rol `hardware`) van a la seva taula.
   const extraRows = useMemo(() => {
     const rows = new Map<string, { label: string; material: string; l: number; w: number; t: number; qty: number }>()
     for (const p of extras) {
+      if (p.role === "hardware") continue
       const key = `${p.material}|${p.length}|${p.width}|${p.thickness}|${p.label}`
       const r = rows.get(key)
       if (r) r.qty += 1
@@ -234,6 +239,50 @@ export function CutListScreen({ projectId }: { projectId: number }) {
       )}
       </Stack>
 
+      {kitRows.length > 0 && (
+        <Stack gap={2} data-testid="kit-orders">
+          <SectionLabel>Ferratges dels jocs</SectionLabel>
+          {kitRows.map((g) => (
+            <Stack key={g.key} gap={1}>
+              <Text fontSize="sm" fontWeight="medium">
+                {g.title}
+              </Text>
+              <Table.ScrollArea borderWidth="1px" rounded="lg">
+                <Table.Root size="sm" variant="line" striped>
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeader>Component</Table.ColumnHeader>
+                      <Table.ColumnHeader textAlign="end">Qt</Table.ColumnHeader>
+                      <Table.ColumnHeader>Referència</Table.ColumnHeader>
+                      <Table.ColumnHeader>Notes</Table.ColumnHeader>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
+                    {g.lines.map((l, i) => (
+                      <Table.Row key={i}>
+                        <Table.Cell fontWeight="medium">{l.name}</Table.Cell>
+                        <Table.Cell textAlign="end">{l.qty}</Table.Cell>
+                        <Table.Cell fontFamily="mono" fontSize="xs">
+                          {l.item ?? "—"}
+                        </Table.Cell>
+                        <Table.Cell fontSize="xs" color="fg.muted">
+                          {[l.cutLength !== undefined ? `tallar a ${l.cutLength} mm` : "", l.note ?? ""].filter(Boolean).join(" · ")}
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Root>
+              </Table.ScrollArea>
+              <Text fontSize="xs" color="fg.muted">
+                {g.wood}
+              </Text>
+            </Stack>
+          ))}
+          <Text fontSize="xs" color="fg.muted">
+            Calaixos de doble paret: el joc del fabricant (números d'article del catàleg) i la fusta que demana (el fons i el darrere ja són a la llista de peces; cap lateral de fusta).
+          </Text>
+        </Stack>
+      )}
       {extraRows.length > 0 && (
         <Stack gap={2}>
           <SectionLabel>Elements sense nesting</SectionLabel>

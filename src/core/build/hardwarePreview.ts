@@ -1,5 +1,6 @@
 import { NO_EDGES, type HardwareItem, type Hole, type Panel, type PanelRole } from "../model"
 import { r, system32Ys, threeAlong } from "./geometry"
+import { planKit } from "./drawerKit"
 import { applyHardware, cupSpec, dowelSpec, flapSpec, handleSpec, legSpec, magnetSpec, plateSpec, slideSpec, system32Spec, HardwareError } from "./hardware"
 
 /**
@@ -138,6 +139,18 @@ function previewPanels(item: HardwareItem): Panel[] {
     case "model":
       // Només 3D: cap peça ni forat.
       return []
+    case "drawerKit": {
+      // Lateral del moble (x = fondària des del darrere; el front a la dreta) amb les prebroques de la guia més llarga que hi cap.
+      const side = sample("side", "Lateral del moble", "side", 560, 200)
+      const res = planKit(item, { LW: 564, depth: side.length - 10, G: 19, TB: 16 })
+      if (!res.plan) throw new HardwareError(res.warnings[0] ?? `«${item.name}»: cap llargada hi cap`)
+      const p = res.plan.pilot
+      if (!p) return [side]
+      const y0 = 40
+      for (const h of res.plan.sidePilots) side.holes.push(hole(side.length - h.z, y0 + h.y, { ...p, tag: "kit-slide" }))
+      side.label = `Lateral del moble (NL ${res.plan.nl})`
+      return [side]
+    }
   }
 }
 

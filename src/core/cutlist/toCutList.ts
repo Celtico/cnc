@@ -32,6 +32,7 @@ export const ROLE_LABELS: Record<PanelRole, string> = {
   spacer: "Llistó interior",
   facing: "Tira frontal",
   part: "Peça lliure",
+  hardware: "Ferratge",
 }
 
 export interface CutListItem {

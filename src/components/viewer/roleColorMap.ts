@@ -15,6 +15,7 @@ export const ROLE_GROUPS: { label: string; color: string; roles: PanelRole[] }[]
   { label: "Sòcol", color: "#8e8780", roles: ["plinth"] },
   { label: "Taulell", color: "#c6924f", roles: ["worktop"] },
   { label: "Peces lliures", color: "#e7a8c9", roles: ["part"] },
+  { label: "Ferratges", color: "#9aa0a6", roles: ["hardware"] },
 ]
 
 export const ROLE_COLOR = Object.fromEntries(ROLE_GROUPS.flatMap((g) => g.roles.map((r) => [r, g.color]))) as Record<PanelRole, string>

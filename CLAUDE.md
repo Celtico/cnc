@@ -50,6 +50,9 @@ plantes, models 3D i renders són **decoratius**: no s'hi dedica temps mentre el
   confirmat), noms i sèries, el pla del que falta (Cadro, portes corredisses i plegables, taules) i, §8, el **generador
   de mecanitzats**, els **ferratges col·locats a mà**, les capes de mecanitzat dels DXF per peça i **«Com exportar des de
   TopSolid»** (per al germà). §10: **Blum** (E-SERVICES: STEP + «Esquemas de taladrado» en Xilog `*.pgm`).
+- [`docs/ferratges-jocs.md`](docs/ferratges-jocs.md): **jocs de ferratges paramètrics** llegits del catàleg en PDF (el camí
+  principal a partir d'ara): el model `HardwareKit`, el calaix de doble paret DTC MAGIC-PRO, com es construeix, com s'afegeix
+  un joc nou i les hipòtesis de lectura pendents del taller.
 
 ## Principi de disseny
 L'usuari dissenya els mobles **des de la UI**, sense tocar codi. El codi defineix **capacitats genèriques** (carcassa,
@@ -189,6 +192,20 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     com els passacables); el 3D no els buida (`visualPanel`) i hi col·loca el tirador. Cada porta, calaix o abatible pot
     triar el seu («Tirador» al Front, `front.handle`, còpia; sense, el del mòdul = el d'abans): un tirador importat
     confirmat fa els forats a la distància del fitxer (vegeu Ferratges importats).
+  - **Calaixos amb joc paramètric** (`docs/ferratges-jocs.md`; per decisió de l'usuari, el model dels ferratges a partir
+    d'ara: el **joc** del fabricant llegit del catàleg, no un STEP): a Front › **Guia** es pot triar, en lloc de la guia,
+    un joc de **calaix de doble paret** (DTC MAGIC-PRO N/M/K/C/F, `HardwareItem.kit`, motor `drawerKit`), amb
+    **Tancament** (suau · push-open · push + suau) i **Darrere** (fusta · metàl·lic) (`Front.kit`; res amagat compta: amb
+    una guia normal no es llegeixen). El joc s'adapta al moble (NL = la més gran amb NL + 3 ≤ fondària darrere del front;
+    estabilitzador i barra de sincronització per KB = LW + 32) i la fusta s'adapta al joc: **cap lateral de fusta**; fons A
+    (LW − 19 × NL − 29, o NL − 27 amb darrere metàl·lic, gruix del joc: 16, material del fons dels calaixos) i darrere B
+    (LW − 40 × 63 a la M, tauler del cos). Mecanitzats: **prebroques Ø2 × 10** dels cargols de la guia als dos laterals del
+    moble (mirall, a les columnes de cada NL), dels suports de davant al darrere del front i dels de darrere al darrere.
+    Els components (guies, laterals de doble paret, suports, darrere metàl·lic, barra tallada a LW − 167 / LW − 238) van
+    a `extras` com a peces de només veure (rol `hardware`, es mouen amb el calaix) i la **comanda** amb els números del
+    catàleg a `build.hardwareKits` (Peces › «Ferratges dels jocs», LLEGEIX-ME de Maestro, fitxa «Joc» de l'inspector).
+    Tot o res per calaix (sense NL, sense lateral o sense alçada: només el front i avís `hardware`). Les alçades de les
+    fileres de cargols i la posició vertical del joc són **hipòtesis** del catàleg (`hypotheses`, a l'editor del joc).
 - **Peces corregudes** (`comp.runs`, `core/build/runs.ts`, secció «Taulell i sòcol» de **qualsevol moble** amb mòduls,
   `activeRuns`; per decisió de l'usuari no es converteixen en peces lliures: es perdria el llarg, el voladís i els forats
   automàtics). Interruptor «Es fa» (`Run.off`): els d'un moble que no era cuina (abans es guardaven sense fer-se) es migren
@@ -260,14 +277,25 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   que no serveix → el d'inici i avís `hardware`; mai mig ferratge). Les **regles** de col·locació es queden a `buildModule`
   (cassoletes a la filera, guies a `zFront − frontOffset`, espigues…): els números i els forats surten de l'item. Llocs
   (`HARDWARE_SLOTS`): frontissa, System 32, espiga, guia, braç d'abatible, imant, tirador. Cada mòdul en porta una **còpia**
-  (`Module.hardware` = `HardwareKit`) i la porta, el calaix o l'abatible en poden triar un altre (`front.hardware`, còpia;
+  (`Module.hardware` = `ModuleHardware`) i la porta, el calaix o l'abatible en poden triar un altre (`front.hardware`, còpia;
   la porta de vidre no, `visibleModule`). Migració: mòduls d'abans en llegir (`z.preprocess(migrateModuleHardware)`,
   `normalizeComposition`, i `buildModule` amb dades crues; un número dolent, camp a camp) i preferències **v19**
   (`hardware` → `hardwareLibrary` + `hardwareDefaults`, `libraryFromLegacy`, `fixHardwareDefaults`): **proves d'or idèntiques**.
   Ara les guies i l'abatible porten els seus números (abans `system32.edgeOffset` i `hinge.cupOffset`). `hardwarePreview`
   (peces d'exemple amb el motor) per al dibuix de Preferències i `hardwareMount` / `mountPlan` (el ferratge muntat en un
   mòdul petit per `buildModule`, en 3D i en pla). Tests a `build/hardware.test.ts`, `build/hardwareMount.test.ts` i
-  `model/expr.test.ts`.
+  `model/expr.test.ts`. Cada mòdul en porta una **còpia** per lloc (`Module.hardware` = `ModuleHardware`).
+- **Jocs paramètrics** (`core/model/hardwareKit.ts`, dades a `core/model/kits/dtcMagicPro.ts`, constructor
+  `core/build/drawerKit.ts` + `buildKitDrawers`, comanda `core/build/kitOrders.ts`; preferències **v23**, additiu: els jocs
+  inicials s'afegeixen si no hi són): vegeu Model del moble › Calaixos amb joc paramètric i `docs/ferratges-jocs.md`.
+  Categoria «Calaixos de doble paret» (`drawer-system`); l'editor del joc (`settings/KitSections.tsx`) és **només lectura**
+  (variants, opcions, regles, components, fusta, mecanitzats, hipòtesis; duplicar-lo per canviar la prebroca a «Mides»).
+  **Regla del taller «prebroca dels cargols»** (Preferències › Ferratges › «Prebroca dels cargols», `kitPilot` /
+  `setKitPilot`: Ø2 × 10, activada): un forat guia a cada cargol d'un ferratge que no té mecanitzat propi; s'aplica als jocs
+  (els ferratges de sempre ja foraden cada cargol: guia Ø5 / Ø4, placa i System 32 Ø5, espigues, imants, braços; l'ala de
+  la frontissa genèrica no en té de posicions conegudes). El `ModuleHardware` (abans `HardwareKit`) és la còpia dels items
+  per lloc del mòdul; `HardwareKit` és ara el joc paramètric. Tests `build/drawerKit.test.ts` i el moble fix `kit-dtc-ht11`
+  del corpus de les proves d'or (`testCorpus.ts`).
 - **Ferratges importats del fabricant** (Hettich, [`docs/ferratges-import.md`](docs/ferratges-import.md); preferències
   **v20**, additiu: `HardwareItem.imported`, `plate`, motor `plate`): una frontissa importada fa servir les regles de
   sempre (`addCups`: quantitat per alçada, filera System 32, `cupOffset`, cara A) amb **tots** els forats del target
@@ -641,7 +669,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   mirall esquerra/dreta, dalt/baix o girada 180° cauen a la mateixa fila), 2a cara, forats de cantell, encolar, push i, de
   qualsevol rol, contorn i talls (peces lliures: també forats i ranures). CSV de peces: cometes als números si la coma
   decimal és el separador i als textos amb `\r`. Al mòbil, una **targeta per peça** i la triada porta el plànol a dins.
-  «Elements sense nesting» per a `build.extras`.
+  «Elements sense nesting» per a `build.extras` (sense els components dels jocs, rol `hardware`) i **«Ferratges dels
+  jocs»** (`build.hardwareKits`, `kitGroups`: la comanda dels calaixos de doble paret amb els números del catàleg i la
+  fusta per calaix).
 - **Nesting**: mides del tauler i, amb màquina, la línia «Separació X mm i marge Y mm de la màquina … (Preferències ›
   Màquines CNC)»; sense màquina, «Separació (fresa)» i «Marge tauler». Les peces amb `outline` es dibuixen amb el contorn
   real (el rectangle que ocupen, discontinu); el nesting reserva el rectangle. Marca de veta al tauler (`BoardDrawing`):
@@ -722,7 +752,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   animació, `useExplode`). El visor de tots els documents
   (moble, objecte i ambient) amb el mateix aire: 16 a dalt al mòbil i 16 al voltant a l'ordinador.
 - **Mode del visor** (`VIEW_MODES`): **Per peça** (`LuShapes`: colors per tipus de peça, paleta `ROLE_GROUPS` a
-  `viewer/roleColorMap.ts` i llegenda a `viewer/roleColors.tsx`), **Textura** (`LuTrees`: materials i veta) i
+  `viewer/roleColorMap.ts` i llegenda a `viewer/roleColors.tsx`; «Ferratges» = rol `hardware`, els components dels
+  jocs), **Textura** (`LuTrees`: materials i veta) i
   **Presentació** (`LuSparkles`: ombres, sense perfils, graella ni «+»; terra i paret amb llum d'estudi,
   `viewer/PresentationRoom.tsx`, escena a `viewer/presentationScene.ts`). Per dins: la qualitat (`viewer/renderQuality.ts`:
   fast / presentation, també a Preferències › Visor 3D) més `mobles:viewer-role-colors-fast` (els objectes en tenen una de
@@ -1440,7 +1471,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Visor 3D**: qualitat, escena de Presentació (terra i paret: materials de la biblioteca, `PresentationScene.floorMaterial`
   / `wallMaterial`, o les mostres ràpides; terra per defecte «Parquet de roure»), llum i «Cel del render». **Tema**:
   dia/nit/sistema i color principal (`theme/accent.ts` redirigeix les variables CSS de `wood`).
-- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 22: generador de mecanitzats; 21: tiradors, potes i «només 3D» importats; 20: ferratges importats; 19: biblioteca de ferratges): les migracions depenen només de la versió
+- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 23: jocs paramètrics de calaix (DTC MAGIC-PRO); 22: generador de mecanitzats; 21: tiradors, potes i «només 3D» importats; 20: ferratges importats; 19: biblioteca de ferratges): les migracions depenen només de la versió
   desada, que **mai baixa** (`saveSettings` desa la més alta). **Desades per una versió més nova**: només lectura
   (`saveSettings` torna `false` amb `console.warn`; `loadSettings` avisa). **Lectura camp a camp** (`repairValue`,
   `core/model/repair.ts`): un valor dolent d'una secció només torna aquell valor a l'inicial (un tauler o una llargada de guia
@@ -1673,7 +1704,8 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Ferratges | Importar del fabricant · Confirmar (importat) · Tornar a la proposta · Afegir forat | `LuUpload` · `LuCheck` · `LuUndo2` · `LuPlus` |
 | Ferratges | «Com va muntat»: 3D · Pla (com Plànol · 3D dels ambients) | `LuRotate3D` · `LuMap` |
 | Preferències | Visualització · Ferratges (i Fusteria a l'inspector) · Calaixos · System 32 · Cassoleta · Imants | `LuScanEye` · `LuHammer` · `LuArchive` · `LuCircleDot` · `LuCircleDashed` · `LuMagnet` |
-| Ferratges (categories) | Frontisses · Plaques · Guies · Elevables i abatibles · Unions · Suports de prestatge · Potes · Taules · Portes corredisses i plegables · Tiradors · Pressió i imants · Perfils i marcs · Penjar · Altres | `LuCircleDashed` · `LuSquareDot` · `LuArchive` · `LuPanelBottom` · `LuBolt` · `LuCircleDot` · `LuFootprints` · `LuTable` · `LuDoorOpen` · `LuGripHorizontal` · `LuMagnet` · `LuMinus` · `LuAnchor` · `LuPackage` |
+| Ferratges (categories) | Frontisses · Plaques · Guies · Calaixos de doble paret (jocs) · Elevables i abatibles · Unions · Suports de prestatge · Potes · Taules · Portes corredisses i plegables · Tiradors · Pressió i imants · Perfils i marcs · Penjar · Altres | `LuCircleDashed` · `LuSquareDot` · `LuArchive` · `LuPackageOpen` · `LuPanelBottom` · `LuBolt` · `LuCircleDot` · `LuFootprints` · `LuTable` · `LuDoorOpen` · `LuGripHorizontal` · `LuMagnet` · `LuMinus` · `LuAnchor` · `LuPackage` |
+| Ferratges (joc) | Seccions de l'editor del joc: Del catàleg · Llargades i números · Regles de tria · Components · Peces de fusta · Mecanitzats del joc · Hipòtesis · Prebroca dels cargols (Preferències) | `LuBookOpen` · `LuListOrdered` · `LuRoute` · `LuPackageOpen` · `LuLayers2` · `LuCircleDot` · `LuBookOpen` · `LuDrill` |
 | Ferratges | Baixar el model 3D (.glb) d'un importat · Baixar un plànol de muntatge | `LuBoxes` · `LuFileDown` |
 | Ferratges | Generador: Afegir mecanitzat · Llegir un DXF… · Treure · Ferratges col·locats a mà (inspector del mòdul i de la peça; la de «Ferratges» del visor) | `LuPlus` · `LuFileUp` · `LuTrash2` · `LuWrench` |
 | Ferratges | Col·locat a mà (llista de l'inspector): Editar · Duplicar · Eliminar | `LuPencil` · `LuCopy` · `LuTrash2` |

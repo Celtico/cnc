@@ -1025,5 +1025,35 @@
    "top|dalt|1812x410x19|Melamina blanca|x|e1000|h12:47bd12b2|g0|c0|o-|@2b337446",
    "top|dalt|752x360x19|Melamina blanca|x|e1000|h6:1eb3eabf|g0|c0|o-|@d1bb113a"
   ]
+ },
+ "kit-dtc-ht11": {
+  "panels": 23,
+  "extras": 70,
+  "warnings": [],
+  "p": [
+   "back|trassera|583x483x10|DM (fons)|none|e0000|h0|g0|c0|o-|@ab5270ce",
+   "back|trassera|715x703x10|DM (fons)|none|e0000|h0|g0|c0|o-|@43617b57",
+   "bottom|baix|568x450x16|Melamina blanca|x|e0010|h6:0fae082e|g1:8a65216a|c0|o-|@b0c714c3",
+   "bottom|baix|700x500x16|Melamina blanca|x|e0010|h6:2c6a2612|g1:4706ece1|c0|o-|@c751be67",
+   "drawerBack|darrere calaix|660x63x16|Melamina blanca|x|e1000|h4:7f989f1c|g0|c0|o-|@58bcb461",
+   "drawerBack|darrere calaix|660x63x16|Melamina blanca|x|e1000|h4:7f989f1c|g0|c0|o-|@d9eb93f6",
+   "drawerBack|darrere calaix|660x63x16|Melamina blanca|x|e1000|h4:7f989f1c|g0|c0|o-|@dfda5287",
+   "drawerBottom|fons calaix|549x373x16|Melamina blanca|none|e0000|h0|g0|c0|o-|@723b9464",
+   "drawerBottom|fons calaix|549x373x16|Melamina blanca|none|e0000|h0|g0|c0|o-|@c7f08720",
+   "drawerBottom|fons calaix|681x421x16|Melamina blanca|none|e0000|h0|g0|c0|o-|@0e30f2e7",
+   "drawerBottom|fons calaix|681x421x16|Melamina blanca|none|e0000|h0|g0|c0|o-|@9737e519",
+   "drawerBottom|fons calaix|681x421x16|Melamina blanca|none|e0000|h0|g0|c0|o-|@abddb387",
+   "drawerFront|frontal calaix|596x246.5x16|Melamina blanca|x|e1111|h4:160ccee4|g0|c2:2f3161c8|o-|@12594977",
+   "drawerFront|frontal calaix|596x246.5x16|Melamina blanca|x|e1111|h4:160ccee4|g0|c2:2f3161c8|o-|@14ccac31",
+   "drawerFront|frontal calaix|728x236.5x16|Melamina blanca|x|e1111|h4:371fb0ee|g0|c2:2fd8ee03|o-|@622a3386",
+   "drawerFront|frontal calaix|728x236.5x16|Melamina blanca|x|e1111|h4:371fb0ee|g0|c2:2fd8ee03|o-|@e8c230ee",
+   "drawerFront|frontal calaix|728x236.5x16|Melamina blanca|x|e1111|h4:371fb0ee|g0|c2:2fd8ee03|o-|@f817f4bd",
+   "side|lat d|500x450x16|Melamina blanca|x|e0110|h22:77e1cc4f|g1:5347f1e3|c0|o-|@a5ff8948",
+   "side|lat d|720x500x16|Melamina blanca|x|e0110|h30:3476dcd6|g1:53aacd5d|c0|o-|@2c901cef",
+   "side|lat e|500x450x16|Melamina blanca|x|e1100|h22:85886611|g1:26230a19|c0|o-|@8b746362",
+   "side|lat e|720x500x16|Melamina blanca|x|e1100|h30:efbb16aa|g1:ada08f78|c0|o-|@84a01218",
+   "top|dalt|568x450x16|Melamina blanca|x|e1000|h6:0fae082e|g1:3048ee04|c0|o-|@d8a3b82f",
+   "top|dalt|700x500x16|Melamina blanca|x|e1000|h6:2c6a2612|g1:25c95c54|c0|o-|@ec2e0f41"
+  ]
  }
 }

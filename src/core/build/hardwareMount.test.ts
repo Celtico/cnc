@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { hingeItem, pairPlate, plateItem, setConfirmed } from "../import/importItem"
 import type { HettichArticle } from "../import/hettich"
 import type { HardwareProposal } from "../import/proposal"
-import { DEFAULT_HARDWARE_KIT, DEFAULT_HARDWARE_LIBRARY, defaultModule, type Module, type Zone } from "../model"
+import { DEFAULT_MODULE_HARDWARE, DEFAULT_HARDWARE_LIBRARY, defaultModule, type Module, type Zone } from "../model"
 import { buildModule } from "./buildModule"
 import { hardwareMount, modelCamera, mountCamera, mountPlan } from "./hardwareMount"
 
@@ -34,14 +34,14 @@ const plateProposal: HardwareProposal = {
   notes: [],
 }
 const art = (article: string, kind: "hinge" | "plate"): HettichArticle => ({ article, folders: [], category: kind, tags: [], label: `${kind} ${article}`, group: "", kind, files: [] })
-const hinge = hingeItem(hingeProposal, art("9071205", "hinge"), DEFAULT_HARDWARE_KIT.hinge, { id: "hw-h", asset: "hwa-1", files: [] })
+const hinge = hingeItem(hingeProposal, art("9071205", "hinge"), DEFAULT_MODULE_HARDWARE.hinge, { id: "hw-h", asset: "hwa-1", files: [] })
 const plate = plateItem(plateProposal, art("9071615", "plate"), { id: "hw-p", asset: "hwa-2", files: [] })
 
 const labels = (item: Parameters<typeof hardwareMount>[0]) => mountPlan(hardwareMount(item))!.dims.map((d) => d.label)
 
 describe("ferratge muntat", () => {
   it("frontissa de l'app: porta i lateral del motor, cotes del muntatge", () => {
-    const m = hardwareMount(DEFAULT_HARDWARE_KIT.hinge)
+    const m = hardwareMount(DEFAULT_MODULE_HARDWARE.hinge)
     expect(m.error).toBeUndefined()
     expect(m.pending).toBe(false)
     expect(m.panels.map((p) => p.id)).toEqual(["side-left", "door"])
@@ -63,7 +63,7 @@ describe("ferratge muntat", () => {
 
   it("el gruix del tauler per defecte canvia el muntatge", () => {
     const base = defaultModule("mount", "Muntatge")
-    const m = hardwareMount(DEFAULT_HARDWARE_KIT.hinge, { ...base, carcass: { ...base.carcass, thickness: 16 } })
+    const m = hardwareMount(DEFAULT_MODULE_HARDWARE.hinge, { ...base, carcass: { ...base.carcass, thickness: 16 } })
     expect(m.panels.every((p) => p.thickness === 16)).toBe(true)
     expect(mountPlan(m)!.dims.map((d) => d.label)).toContain("14")
   })
@@ -115,7 +115,7 @@ describe("ferratge muntat", () => {
   it("la càmera de «Com va muntat» (editor i miniatura): al forat principal, des de la cara on entra", () => {
     const len = (v: number[]) => Math.hypot(v[0]!, v[1]!, v[2]!)
     // Frontissa: des de dins del moble (la cara de la cassoleta mira enrere), de dalt i cap a dins (+X).
-    const h = hardwareMount(DEFAULT_HARDWARE_KIT.hinge)
+    const h = hardwareMount(DEFAULT_MODULE_HARDWARE.hinge)
     const c = mountCamera(h)
     expect(c.target).toEqual(h.focus!.at)
     expect(len(c.dir)).toBeCloseTo(1, 6)

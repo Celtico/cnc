@@ -16,7 +16,8 @@ export function HardwarePick({ slot, current, inherited, onPick, label }: { slot
   const name = label ?? s.label
   return (
     <FormRow label={name} help={`${hardwareSummary(current)}${inherited && current === inherited ? " · la del mòdul" : ""}`}>
-      <HardwareSelect label={name} items={settings.hardwareLibrary.filter((x) => x.engine === s.engine)} current={current} inherited={inherited} onPick={onPick} />
+      {/* A «Guia» també els jocs paramètrics de calaix de doble paret (es trien en lloc de la guia). */}
+      <HardwareSelect label={name} items={settings.hardwareLibrary.filter((x) => x.engine === s.engine || (slot === "slide" && x.engine === "drawerKit"))} current={current} inherited={inherited} onPick={onPick} />
     </FormRow>
   )
 }

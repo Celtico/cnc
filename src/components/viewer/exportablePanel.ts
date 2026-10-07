@@ -101,7 +101,7 @@ export function panelMaterials(p: Panel, mode: "material" | "role", materials: M
   const big = (face: string) => makeMaterial(finish, L, W, grainY, opts, off(face))
   // Materials massissos (ferro, pedra, vidre, teixits de simulació): el cantell és el mateix material.
   const mat = materials.find((m) => m.name === p.material)
-  const solid = !!mat && materialCategory(mat) === "sim"
+  const solid = !!mat && (materialCategory(mat) === "sim" || mat.cnc === false)
   const raw = (face: string) => (solid ? makeMaterial(finish, L, T, false, opts, off(face)) : new MeshStandardMaterial({ color: RAW_EDGE_COLOR, roughness: 0.95, metalness: 0, ...opts }))
   // +x / −x: cara T × W (u = gruix, v = amplada): la veta ha d'anar en v.
   const edgeX = (banded: boolean, face: string) => (banded ? makeMaterial(edgeFinish, T, W, true, opts, off(face)) : raw(face))

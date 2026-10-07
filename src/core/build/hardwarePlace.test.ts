@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { buildComposition } from "./buildComposition"
 import {
   CompositionSchema,
-  DEFAULT_HARDWARE_KIT,
+  DEFAULT_MODULE_HARDWARE,
   defaultModule,
   normalizeComposition,
   repairComposition,
@@ -191,7 +191,7 @@ describe("lectura i fitxer", () => {
     expect(res.file.project.composition.hardwarePlacements).toEqual([good])
     // Sense col·locats: com abans.
     expect(buildMobleFile({ name: "x", composition: { modules: [defaultModule("m1", "Baix")], references: [] }, references: [] }).version).toBe(1)
-    const withImported = { modules: [{ ...defaultModule("m1", "Baix"), hardware: { ...DEFAULT_HARDWARE_KIT, hinge: { ...DEFAULT_HARDWARE_KIT.hinge, imported: { maker: "H", article: "1", folders: [], files: [], proposed: [], confirmed: true } } } }], references: [] }
+    const withImported = { modules: [{ ...defaultModule("m1", "Baix"), hardware: { ...DEFAULT_MODULE_HARDWARE, hinge: { ...DEFAULT_MODULE_HARDWARE.hinge, imported: { maker: "H", article: "1", folders: [], files: [], proposed: [], confirmed: true } } } }], references: [] }
     expect(buildMobleFile({ name: "x", composition: withImported, references: [] }).version).toBe(2)
   })
 })

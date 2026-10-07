@@ -39,6 +39,7 @@ const ROLE_COLOR: Record<PanelRole, number> = {
   spacer: 0xe6cfa6,
   facing: 0xe6cfa6,
   part: 0xd9b98a,
+  hardware: 0x9aa0a6,
 }
 
 /**

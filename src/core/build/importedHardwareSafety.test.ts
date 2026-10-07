@@ -3,7 +3,7 @@ import { confirmProblem, hingeItem, pairImportedBatch, pairPlate, plateItem, set
 import type { HettichArticle } from "../import/hettich"
 import type { HardwareProposal } from "../import/proposal"
 import {
-  DEFAULT_HARDWARE_KIT,
+  DEFAULT_MODULE_HARDWARE,
   DEFAULT_SETTINGS,
   HardwareItemSchema,
   defaultModule,
@@ -47,7 +47,7 @@ const plateProposal = (holes: [number, number, number, number][]): HardwarePropo
   notes: [],
 })
 const art = (a: string, k: "hinge" | "plate"): HettichArticle => ({ article: a, folders: ["x"], category: k, tags: [], label: `${k} ${a}`, group: "", kind: k, files: [] })
-const hinge = hingeItem(hingeProposal, art("1", "hinge"), DEFAULT_HARDWARE_KIT.hinge, { id: "hw-h", files: [] })
+const hinge = hingeItem(hingeProposal, art("1", "hinge"), DEFAULT_MODULE_HARDWARE.hinge, { id: "hw-h", files: [] })
 const plate = setConfirmed(plateItem(plateProposal([[-16, 0, 10, 11.5], [16, 0, 10, 11.5]]), art("2", "plate"), { id: "hw-p", files: [] }), true)
 const confirmed = setConfirmed(pairPlate(hinge, plate), true)
 
@@ -101,13 +101,13 @@ describe("importat malmès: inert, mai una frontissa que forada", () => {
 
   it("un importat que passa l'esquema es llegeix tal qual; un que no és importat es repara camp a camp com sempre", () => {
     expect(HardwareItemSchema.parse(confirmed)).toEqual(confirmed)
-    const builtin = JSON.parse(JSON.stringify(DEFAULT_HARDWARE_KIT.hinge))
+    const builtin = JSON.parse(JSON.stringify(DEFAULT_MODULE_HARDWARE.hinge))
     builtin.params.endOffset = "x"
     const m = JSON.parse(JSON.stringify(comp(defaultModule("m", "x", { width: 500, height: 720, depth: 560 }))))
     m.modules[0].hardware.hinge = builtin
     const rep = repairComposition(m)
     expect(rep.composition!.modules[0]!.hardware.hinge.imported).toBeUndefined()
-    expect(rep.composition!.modules[0]!.hardware.hinge.params.endOffset).toBe(DEFAULT_HARDWARE_KIT.hinge.params.endOffset)
+    expect(rep.composition!.modules[0]!.hardware.hinge.params.endOffset).toBe(DEFAULT_MODULE_HARDWARE.hinge.params.endOffset)
   })
 })
 
@@ -121,7 +121,7 @@ describe("importat amb un error del motor: cap forat, mai la frontissa d'inici",
       expect(slotSpec("hinge", item).failed).toBe(true)
       expect(slotSpec("hinge", item).spec).toMatchObject({ pending: true })
       // Al front i com a frontissa del mòdul.
-      for (const m of [mod(item), { ...mod(confirmed), root: { id: "r", front: { kind: "door", mode: "single", hinge: "left" } } as Zone, hardware: { ...DEFAULT_HARDWARE_KIT, hinge: item } }]) {
+      for (const m of [mod(item), { ...mod(confirmed), root: { id: "r", front: { kind: "door", mode: "single", hinge: "left" } } as Zone, hardware: { ...DEFAULT_MODULE_HARDWARE, hinge: item } }]) {
         const b = buildModule(m)
         const d = b.panels.find((p) => p.role === "door")!
         expect(d.holes).toEqual([])
@@ -130,7 +130,7 @@ describe("importat amb un error del motor: cap forat, mai la frontissa d'inici",
     })
 
   it("un ferratge normal que falla al front continua fent servir el del mòdul", () => {
-    const bad = { ...DEFAULT_HARDWARE_KIT.hinge, id: "x", params: { ...DEFAULT_HARDWARE_KIT.hinge.params, cupOffset: Number.NaN } }
+    const bad = { ...DEFAULT_MODULE_HARDWARE.hinge, id: "x", params: { ...DEFAULT_MODULE_HARDWARE.hinge.params, cupOffset: Number.NaN } }
     const d = buildModule(mod(bad)).panels.find((p) => p.role === "door")!
     expect(d.holes.filter((h) => h.tag === "hinge")).toHaveLength(2)
   })
@@ -255,6 +255,6 @@ describe("placa aparellada per referència", () => {
   it("canviar el Ø o la fondària de la cassoleta o on va la placa d'un importat el desconfirma", () => {
     for (const key of ["cupDiameter", "cupDepth", "plateSetback", "plateOffset"]) expect(setHardwareParam(confirmed, key, 3).imported!.confirmed).toBe(false)
     expect(setHardwareParam(confirmed, "endOffset", 120).imported!.confirmed).toBe(true)
-    expect(setHardwareParam(DEFAULT_HARDWARE_KIT.hinge, "cupDepth", 12).params.cupDepth).toBe(12)
+    expect(setHardwareParam(DEFAULT_MODULE_HARDWARE.hinge, "cupDepth", 12).params.cupDepth).toBe(12)
   })
 })

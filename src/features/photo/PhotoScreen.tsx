@@ -103,6 +103,7 @@ const ROLE_FILL: Record<PanelRole, string> = {
   spacer: "#c6924f",
   facing: "#c6924f",
   part: "#b98a4f",
+  hardware: "#9aa0a6",
 }
 
 export type Tool = "none" | "origin" | "distance" | "rect" | "floor" | "depth"

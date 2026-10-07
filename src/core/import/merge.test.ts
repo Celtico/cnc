@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildModule } from "../build/buildModule"
-import { DEFAULT_HARDWARE_KIT, DEFAULT_SETTINGS, HardwareItemSchema, defaultModule, parseSettings, type GenOp, type HardwareItem, type Module, type Zone } from "../model"
+import { DEFAULT_MODULE_HARDWARE, DEFAULT_SETTINGS, HardwareItemSchema, defaultModule, parseSettings, type GenOp, type HardwareItem, type Module, type Zone } from "../model"
 import { groupHettich, hettichFileKind, type HettichArticle } from "./hettich"
 import { legacyHettichLabel, migrateImportedNames } from "./hettichNames"
 import { articleItem, pairPlate, plateItem, setConfirmed, setHandleDistance } from "./importItem"
@@ -34,7 +34,7 @@ const plateP: HardwareProposal = {
   bbox: { min: [-27.7, -22.6, -11.4], max: [27.7, 69.5, 6.4] },
   notes: [],
 }
-const base = { hinge: DEFAULT_HARDWARE_KIT.hinge, handle: DEFAULT_HARDWARE_KIT.handle }
+const base = { hinge: DEFAULT_MODULE_HARDWARE.hinge, handle: DEFAULT_MODULE_HARDWARE.handle }
 
 /** L'article tal com el dona `groupHettich` amb uns fitxers. */
 function article(paths: string[]): HettichArticle {

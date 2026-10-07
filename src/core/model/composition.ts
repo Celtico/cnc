@@ -5,8 +5,9 @@ import { flatten, profileToOutline, sampleProfile, toNodes, type BPt } from "./p
 import { CameraPoseSchema } from "./camera"
 import { aliasMaterialRefs } from "./photoUpgrade"
 import { FreePartSchema, JoinerySchema, PART_AXES as PART_AXES_C, tidyPart, type FreePart } from "./freePart"
-import { DEFAULT_LEGACY_HARDWARE, HardwareItemObjectSchema, HardwareKitSchema, HardwarePlacementSchema, sanitizeImportedHardware, isLegacyHardware, kitFromLegacy, migrateModuleHardware, type HardwareKit } from "./hardware"
+import { DEFAULT_LEGACY_HARDWARE, HardwareItemObjectSchema, ModuleHardwareKitSchema, HardwarePlacementSchema, sanitizeImportedHardware, isLegacyHardware, kitFromLegacy, migrateModuleHardware, type ModuleHardware } from "./hardware"
 import { repairAtomically } from "./repair"
+import { KitOptionsSchema } from "./hardwareKit"
 
 /**
  * Model de composició: mòduls d'esquerra a dreta, cadascun amb una carcassa i un
@@ -19,11 +20,11 @@ const sizeOrAuto = z.union([mm.positive(), z.literal("auto")])
 // --- Ferratges per defecte ---------------------------------------------------------
 
 /**
- * Ferratges del mòdul: una còpia dels items de la biblioteca (`HardwareKit`, `core/model/hardware.ts`). Els mòduls desats
+ * Ferratges del mòdul: una còpia dels items de la biblioteca (`ModuleHardware`, `core/model/hardware.ts`). Els mòduls desats
  * abans de la v19 hi porten els números d'abans: es converteixen en llegir-los (`migrateModuleHardware`), amb els mateixos
  * números (res no canvia de lloc).
  */
-export const ModuleHardwareSchema = z.preprocess(migrateModuleHardware, HardwareKitSchema)
+export const ModuleHardwareSchema = z.preprocess(migrateModuleHardware, ModuleHardwareKitSchema)
 
 // --- Carcassa ----------------------------------------------------------------------
 
@@ -135,7 +136,9 @@ export const FrontSchema = z.discriminatedUnion("kind", [
   // del mòdul (`Module.hardware`). `handle`: el tirador triat (còpia d'un item `barHandle`, p. ex. un d'importat);
   // sense, el del mòdul.
   z.object({ kind: z.literal("door"), mode: z.enum(["single", "double"]), hinge: z.enum(["left", "right"]), glass: z.boolean().optional(), hardware: FrontHardwareSchema.optional(), handle: FrontHardwareSchema.optional() }),
-  z.object({ kind: z.literal("drawers"), n: z.number().int().min(1).max(10), heights: z.array(sizeOrAuto), hardware: FrontHardwareSchema.optional(), handle: FrontHardwareSchema.optional() }),
+  // `kit`: les opcions del joc paramètric (tancament, darrere) si `hardware` és un joc de calaix (`drawerKit`); sense, les
+  // primeres del joc. Res amagat compta: amb una guia normal no es llegeix (`visibleZone`).
+  z.object({ kind: z.literal("drawers"), n: z.number().int().min(1).max(10), heights: z.array(sizeOrAuto), hardware: FrontHardwareSchema.optional(), handle: FrontHardwareSchema.optional(), kit: KitOptionsSchema.partial().optional() }),
   z.object({ kind: z.literal("flap"), dir: z.enum(["down", "up"]), hardware: FrontHardwareSchema.optional(), handle: FrontHardwareSchema.optional() }),
   z.object({
     kind: z.literal("grille"),
@@ -583,7 +586,7 @@ export function normalizeComposition(raw: Composition): Composition {
   const runs = migrateRuns(migrateFlatPack(tidied))
   // Ferratges d'abans (v19): els números del mòdul passen a una còpia dels items (els mateixos números).
   const comp = runs.modules.some((m) => isLegacyHardware(m.hardware))
-    ? { ...runs, modules: runs.modules.map((m) => (isLegacyHardware(m.hardware) ? { ...m, hardware: migrateModuleHardware(m.hardware) as HardwareKit } : m)) }
+    ? { ...runs, modules: runs.modules.map((m) => (isLegacyHardware(m.hardware) ? { ...m, hardware: migrateModuleHardware(m.hardware) as ModuleHardware } : m)) }
     : runs
   if (!comp.modules.some((m) => m.anchor)) return comp
   const ps = legacyPlacements(comp)
@@ -814,7 +817,10 @@ function visibleZone(z: Zone, noHandles = false): Zone {
     delete out.led
     const heights = f.heights.slice(0, f.n)
     while (heights.length < f.n) heights.push("auto")
-    out.front = { ...f, heights }
+    const drawers = { ...f, heights }
+    // Les opcions del joc només compten amb un joc de calaix triat (amb la guia normal, el camp no es veu).
+    if (f.hardware?.engine !== "drawerKit" || !f.kit || !Object.keys(f.kit).length) delete drawers.kit
+    out.front = drawers
   } else if (f?.kind === "door") {
     const door = { ...f }
     if (!door.glass) delete door.glass

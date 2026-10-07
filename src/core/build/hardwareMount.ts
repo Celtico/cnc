@@ -1,6 +1,7 @@
 import { pairPlate, setConfirmed } from "../import/importItem"
-import { DEFAULT_GRILLE, DEFAULT_HARDWARE_KIT, defaultModule, isPendingImport, slotForEngine, type Front, type HardwareItem, type Hole, type Module, type Panel, type PanelFitting, type Vec3 } from "../model"
+import { DEFAULT_GRILLE, DEFAULT_MODULE_HARDWARE, defaultModule, isPendingImport, slotForEngine, type Front, type HardwareItem, type Hole, type Module, type Panel, type PanelFitting, type Vec3 } from "../model"
 import { buildModule } from "./buildModule"
+import { kitHeight } from "./drawerKit"
 import { r, toWorld } from "./geometry"
 import { HardwareError } from "./hardware"
 
@@ -24,7 +25,7 @@ export interface HardwareMount {
   /** Etiquetes dels forats del ferratge (els altres, com la filera System 32, són del moble). */
   tags: string[]
   /** Forat principal (el centre de l'entrada, mm del mòdul) i la normal de la cara on entra (cap a fora de la peça). */
-  focus: { panelId: string; hole: Hole; at: Vec3; normal: Vec3; /** D'on es mira al 3D, si no és la normal (un tirador: des de fora del front). */ view?: Vec3 } | null
+  focus: { panelId: string; hole: Hole; at: Vec3; normal: Vec3; /** D'on es mira al 3D, si no és la normal (un tirador: des de fora del front). */ view?: Vec3; /** `view` tal qual, sense apartar-se de costat (un joc de calaix: des de dins i del darrere). */ exact?: boolean } | null
   /** Frontissa (o placa): la porta i el lateral, i a quin costat (sempre l'esquerre). */
   hinge?: { doorId: string; sideId: string }
   /** Mides del mòdul d'exemple (mm). */
@@ -53,7 +54,7 @@ function itemTags(item: HardwareItem): string[] {
 /** Frontissa de base per veure una placa: la del mòdul si no és un importat pendent; si no, la d'inici de l'app. */
 function hostHinge(base: Module): HardwareItem {
   const h = base.hardware.hinge
-  return h.engine === "cup" && !isPendingImport(h) ? h : DEFAULT_HARDWARE_KIT.hinge
+  return h.engine === "cup" && !isPendingImport(h) ? h : DEFAULT_MODULE_HARDWARE.hinge
 }
 
 interface Recipe {
@@ -91,6 +92,10 @@ function recipe(item: HardwareItem): Recipe | null {
       return { size: { width: 500, height: 300, depth: 450 }, base: { kind: "legs", height: Math.max(20, item.imported?.bbox?.max[2] ?? 100), hardware: item }, keep: (p) => p.role === "bottom" || isLeftSide(p) }
     case "model":
       return null
+    case "drawerKit":
+      // Calaix amb joc: el lateral esquerre (prebroques de la guia), el front, el fons i el darrere de fusta i els components.
+      // Prou alt perquè hi càpiga el joc (la F fa 248).
+      return { size: { width: 450, height: Math.max(300, (item.kit ? kitHeight(item.kit) : 0) + 140), depth: 500 }, front: { kind: "drawers", n: 1, heights: ["auto"] }, keep: (p) => isLeftSide(p) || p.role === "drawerFront" || p.role === "drawerBottom" || p.role === "drawerBack" }
   }
 }
 
@@ -138,13 +143,15 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
   // El que es construeix: l'item confirmat (si no, no faria cap forat), al seu lloc del joc del mòdul.
   const made = pending ? setConfirmed(item, true) : item
   const hardware = { ...base.hardware }
+  // Un joc de calaix es tria al front dels calaixos (no té lloc al joc del mòdul).
+  const front = rc.front?.kind === "drawers" && made.engine === "drawerKit" ? { ...rc.front, hardware: made } : rc.front
   if (made.engine === "plate") hardware.hinge = setConfirmed(pairPlate(hostHinge(base), made), true)
-  else if (made.engine !== "leg") hardware[slotForEngine(made.engine).slot] = made
+  else if (made.engine !== "leg" && made.engine !== "drawerKit") hardware[slotForEngine(made.engine).slot] = made
   const legBase = rc.base?.kind === "legs" ? { ...rc.base, hardware: made } : rc.base
   const module: Module = {
     ...base,
     carcass: { ...base.carcass, ...rc.size, sides: { left: true, right: true }, base: legBase ?? { kind: "none" }, top: { kind: "full" }, hollow: undefined, tableTop: undefined, joint: "butt" },
-    root: { id: "mount-root", ...(rc.shelves ? { shelves: rc.shelves } : {}), ...(rc.front ? { front: rc.front } : {}) },
+    root: { id: "mount-root", ...(rc.shelves ? { shelves: rc.shelves } : {}), ...(front ? { front } : {}) },
     fronts: { ...base.fronts, style: "overlay", handles: "bar" },
     hardware,
     extras: { cableHoles: [] },
@@ -156,18 +163,22 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
     return { ...empty, error: err instanceof HardwareError ? err.message : String(err) }
   }
   const own = (h: { tag?: string }) => !!h.tag && tags.includes(h.tag)
+  // El forat principal d'un joc de calaix: una prebroca de la guia al lateral (no les del front ni del darrere).
+  const focusTag = (h: { tag?: string }) => (item.engine === "drawerKit" ? h.tag === "kit-slide" : own(h))
   const panels = build.panels.filter((p) => {
     if (rc.keep(p)) return true
     // Les peces amb forats del ferratge a la meitat esquerra (la dreta és el mirall).
     return mountHoles(p).some((h) => own(h) && toWorld(p, holeEntry(p, h).at)[0] <= rc.size.width / 2 + 0.5)
   })
+  // Els components d'un joc de calaix (peces de només veure, `extras`): es veuen muntats amb la fusta.
+  if (item.engine === "drawerKit") panels.push(...build.extras.filter((p) => p.role === "hardware"))
   // El forat principal: la primera cassoleta (la de baix) o, si no, el forat del ferratge més a prop del mig de la seva peça.
   let focus: HardwareMount["focus"] = null
   let best = Infinity
   for (const p of panels) {
     for (const h of mountHoles(p)) {
       // Una placa es mira des de la cassoleta de la seva frontissa (la placa va a la seva alçada).
-      if (!own(h) && !(item.engine === "plate" && h.tag === "hinge")) continue
+      if (!focusTag(h) && !(item.engine === "plate" && h.tag === "hinge")) continue
       const e = holeEntry(p, h)
       const at = toWorld(p, e.at)
       if (at[0] > rc.size.width / 2 + 0.5) continue
@@ -176,8 +187,9 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
         best = score
         // Un tirador es mira des de fora del front (on va el tirador), no des de la cara A; una pota, de davant i just
         // per sota de la base (es veu dreta sobre el terra amb la placa a sota de la base), no des de sota.
-        const view: Vec3 | undefined = item.engine === "barHandle" ? [0, 0, 1] : item.engine === "leg" ? [0, -0.5, Math.sqrt(0.75)] : undefined
-        focus = { panelId: p.id, hole: h, at, normal: worldDir(p, e.normal), ...(view ? { view } : {}) }
+        // Un joc de calaix, des de dins del moble i una mica del darrere (el front tapa la guia si es mira de davant).
+        const view: Vec3 | undefined = item.engine === "barHandle" ? [0, 0, 1] : item.engine === "leg" ? [0, -0.5, Math.sqrt(0.75)] : item.engine === "drawerKit" ? unit3([1, 0.6, -0.35]) : undefined
+        focus = { panelId: p.id, hole: h, at, normal: worldDir(p, e.normal), ...(view ? { view } : {}), ...(item.engine === "drawerKit" ? { exact: true } : {}) }
       }
     }
   }
@@ -216,11 +228,11 @@ export function mountCamera(m: HardwareMount, aspect = 1.6): { target: Vec3; dir
   const k = side[0] * n[0] + side[1] * n[1] + side[2] * n[2]
   const d: Vec3 = [n[0] + side[0] - k * n[0], n[1] + side[1] - k * n[1], n[2] + side[2] - k * n[2]]
   const len = Math.hypot(d[0], d[1], d[2]) || 1
-  const dir: Vec3 = [d[0] / len, d[1] / len, d[2] / len]
+  const dir: Vec3 = m.focus?.exact && m.focus.view ? m.focus.view : [d[0] / len, d[1] / len, d[2] / len]
   const b = m.model?.bbox
   const span = b ? Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]) : 0
   const target: Vec3 = m.aim?.at ?? (m.focus ? m.focus.at : b ? [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2] : [0, 0, 0])
-  const dist = m.aim?.dist ?? (span > 0 && !m.panels.length ? Math.max(150, span * 2) : hinge ? 420 : 480)
+  const dist = m.aim?.dist ?? (span > 0 && !m.panels.length ? Math.max(150, span * 2) : hinge ? 420 : m.focus?.hole.tag === "kit-slide" ? 1050 : 480)
   return { target, dir, dist }
 }
 
