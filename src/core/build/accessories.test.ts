@@ -108,3 +108,25 @@ describe("push: una sola font", () => {
     expect(usedHardwareSlots(soft).has("handle")).toBe(true)
   })
 })
+
+describe("«Fons del calaix»: material propi (auditoria D1 / A3)", () => {
+  const m = (): Module => {
+    const base = defaultModule("m1", "M", { width: 600, height: 700, depth: 500, backMaterial: "DM (fons)", backThickness: 10 })
+    return { ...base, root: setFront(base.root, base.root.id, { kind: "drawers", n: 2, heights: ["auto", "auto"] }) }
+  }
+  const bottoms = (x: Module) => buildModule(x).panels.filter((p) => p.role === "drawerBottom")
+  it("sense triar-ne cap, com fins ara (del fons del mòdul); amb un de triat, aquell i cap avís", () => {
+    const a = m()
+    expect(bottoms(a).map((p) => p.material)).toEqual(["DM (fons)", "DM (fons)"])
+    const b: Module = { ...a, carcass: { ...a.carcass, drawerBottomMaterial: "Contraxapat 10" } }
+    expect(bottoms(b).map((p) => p.material)).toEqual(["Contraxapat 10", "Contraxapat 10"])
+    expect(buildModule(b).warnings.some((w) => w.code === "drawer-bottom")).toBe(false)
+    expect(bottoms(b)[0]!.label).toBe("Fons calaix 1")
+  })
+  it("sense calaixos no compta (res amagat compta)", () => {
+    const base = defaultModule("m1", "M")
+    const a = buildModule(base), b = buildModule({ ...base, carcass: { ...base.carcass, drawerBottomMaterial: "Contraxapat 10" } })
+    expect(b.panels).toEqual(a.panels)
+    expect(b.warnings).toEqual(a.warnings)
+  })
+})

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { DEFAULT_GRILLE, DEFAULT_MODULE_HARDWARE, HARDWARE_SLOTS, defaultModule, isLegacyHardware, setFront, setShelves, usedHardwareSlots, type Carcass, type Composition, type Front, type Module, type ModuleHardware, type Zone } from "../model"
+import { DEFAULT_GRILLE, DEFAULT_MODULE_HARDWARE, HARDWARE_SLOTS, defaultModule, hasDrawers, isLegacyHardware, setFront, setShelves, usedHardwareSlots, type Carcass, type Composition, type Front, type Module, type ModuleHardware, type Zone } from "../model"
 import { buildComposition } from "./buildComposition"
 import { catalogCorpus, int, MATERIALS, pick, randomComposition, rng, type Rnd } from "./testCorpus"
 
@@ -39,6 +39,8 @@ function scrambleHidden(m: Module, r: Rnd): Module {
     if (r() < 0.5) c.joint = "butt"
     else delete c.joint
   }
+  // Fons del calaix (MaterialsForm): només amb calaixos.
+  if (!hasDrawers(m.root) && r() < 0.5) c.drawerBottomMaterial = pick(r, MATERIALS)
   // Tauler de taula: només amb la tapa sencera.
   if (c.top.kind !== "full")
     c.tableTop = r() < 0.5 ? { overhang: int(r, 0, 300) } : { overhang: int(r, 0, 300), shape: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 50 }, { x: 0, y: 50 }] }

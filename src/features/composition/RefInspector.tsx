@@ -159,9 +159,9 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
         {/* Cada direcció amb la seva icona i un nom, no només la lletra de l'eix. */}
         <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra del moble" />} ariaLabel="De costat (X)" value={o.x} min={-30000} max={30000} step={10} onChange={(x) => update({ x })} />
         <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={o.y} min={-30000} max={30000} step={10} disabled={!!o.onFloor} onChange={(y) => update({ y })} />
-        <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fons (Z)" value={o.z} min={-30000} max={30000} step={10} disabled={!!o.onWall} onChange={(z) => update({ z })} />
+        <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fondària" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fondària (Z)" value={o.z} min={-30000} max={30000} step={10} disabled={!!o.onWall} onChange={(z) => update({ z })} />
         <Text fontSize="xs" color="fg.muted">
-          De costat (X) des de l'esquerra del moble · Alçada (Y) des del terra · Fons (Z) des de la paret cap endavant.
+          De costat (X) des de l'esquerra del moble · Alçada (Y) des del terra · Fondària (Z) des de la paret cap endavant.
           {o.onFloor || o.onWall ? " El que és enganxat (Enganxada) no es pot canviar aquí." : ""} Fletxes: 1 mm (Maj: 10 mm); Re Pàg / Av Pàg: fondària.
         </Text>
       </FoldItem>

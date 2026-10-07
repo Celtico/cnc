@@ -291,7 +291,7 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
       <FoldItem id="part-position" title="Posició" icon={LuMove}>
         <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra" />} ariaLabel="De costat (X)" value={p.x} min={-30000} max={30000} step={1} onChange={(x) => update({ x })} />
         <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={p.y} min={0} max={30000} step={1} onChange={(y) => update({ y })} />
-        <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fons (Z)" value={p.z} min={-30000} max={30000} step={1} onChange={(z) => update({ z })} />
+        <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fondària" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fondària (Z)" value={p.z} min={-30000} max={30000} step={1} onChange={(z) => update({ z })} />
         <Text fontSize="xs" color="fg.muted">
           {p.module && !partsOnlyKind(compositionKind(comp)) ? `Respecte al mòdul «${comp.modules.find((m) => m.id === p.module)?.name ?? "?"}» (el segueix). ` : ""}Cantonada esquerra, de baix i del darrere. Al 3D, arrossega-la amb les fletxes (s'enganxa a les vores de les altres peces; Alt: lliure). Fletxes del teclat: 1 mm (Maj: 10); Re Pàg / Av Pàg: fons.
         </Text>
@@ -323,7 +323,7 @@ export function PartJoineryForm({ comp, onChange }: { comp: Composition; onChang
         </Switch.Root>
       </FormRow>
       <Text fontSize="xs" color="fg.muted">
-        Joc {j.clearance} mm: encaix {fit}. Les mortalles surten el joc més amples que la pestanya. La fresa no fa cantonades vives: el dogbone (Ø fresa) les buida perquè la peça hi entri fins al fons.
+        Folgança {j.clearance} mm: encaix {fit}. Les mortalles surten la folgança més amples que la pestanya. La fresa no fa cantonades vives: el dogbone (Ø fresa) les buida perquè la peça hi entri fins al fons.
       </Text>
       <Text fontSize="xs" color="fg.muted">
         Com es fa cada encaix: si una peça entra dins d'una altra i hi acaba → pestanyes i mortalles (passants si la travessa); si s'encreuen → mitja fusta; si totes dues hi acaben (cantonada) → dits; si només es toquen cantell contra cara → espigues.
@@ -386,7 +386,7 @@ export function GroupInspector({ comp, group, onChange, onSelectPart, onMove }: 
       <FoldItem id="group-position" title="Posició del grup" icon={LuMove} badge={size.join(" × ")}>
         <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra" />} ariaLabel="De costat (X)" value={b.min[0]} min={-30000} max={30000} step={10} onChange={(x) => Number.isFinite(x) && onMove(x - b.min[0], 0, 0)} />
         <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={b.min[1]} min={0} max={30000} step={10} onChange={(y) => Number.isFinite(y) && onMove(0, y - b.min[1], 0)} />
-        <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fons" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fons (Z)" value={b.min[2]} min={-30000} max={30000} step={10} onChange={(z) => Number.isFinite(z) && onMove(0, 0, z - b.min[2])} />
+        <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fondària" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fondària (Z)" value={b.min[2]} min={-30000} max={30000} step={10} onChange={(z) => Number.isFinite(z) && onMove(0, 0, z - b.min[2])} />
         <Text fontSize="xs" color="fg.muted">
           Tot el grup es mou junt: amb les fletxes del 3D, del teclat o aquí. Al 3D, el primer clic selecciona el grup i el segon, la peça.
         </Text>

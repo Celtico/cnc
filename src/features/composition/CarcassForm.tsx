@@ -7,7 +7,7 @@ import { useState } from "react"
 import { ProfileEditor } from "./ProfileEditor"
 import { PRESETS, matchPreset } from "./profilePresets"
 import { LuCircle, LuPencilRuler, LuRectangleHorizontal, LuSquircle } from "react-icons/lu"
-import { LuArrowDownToLine, LuDrill, LuGrid3X3, LuInspectionPanel, LuLayers2, LuPanelBottom, LuPanelTop, LuSquareDashed, LuSquare, LuSquareDashedBottom, LuSquareSquare, LuSquareStack, LuTable, LuTriangleRight, LuWind } from "react-icons/lu"
+import { LuArrowDownToLine, LuDrill, LuFootprints, LuGrid3X3, LuInspectionPanel, LuLayers2, LuPanelBottom, LuPanelTop, LuSquareDashed, LuSquare, LuSquareDashedBottom, LuSquareSquare, LuSquareStack, LuTriangleRight, LuWind } from "react-icons/lu"
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { HardwarePick } from "./HardwarePick"
@@ -50,7 +50,7 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
               options={[
                 { value: "none", label: "Directe a terra", icon: LuArrowDownToLine, hint: "Directe a terra, sense sòcol ni potes" },
                 { value: "plinth", label: "Sòcol", icon: LuPanelBottom, hint: "Sòcol retranquejat a sota" },
-                { value: "legs", label: "Potes", icon: LuTable, hint: "Potes regulables" },
+                { value: "legs", label: "Potes", icon: LuFootprints, hint: "Potes regulables" },
                 { value: "open", label: "Sense base (obert)", icon: LuSquareDashedBottom, hint: "Sense base: obert per sota" },
               ]}
               onChange={(k) => {
@@ -191,7 +191,7 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
 /** Valor del desplegable del fons per a «Com el cos» (mateix material i gruix). */
 const SAME = "__com-el-cos__"
 
-export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !== "none" }: { carcass: Carcass; onPatch: (patch: Partial<Carcass>) => void; mixed?: boolean; /** Sense fons: no surten les opcions del fons. */ hasBack?: boolean }) {
+export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !== "none", hasDrawers = false }: { carcass: Carcass; onPatch: (patch: Partial<Carcass>) => void; mixed?: boolean; /** Sense fons: no surten les opcions del fons. */ hasBack?: boolean; /** Amb calaixos: la fila «Fons del calaix». */ hasDrawers?: boolean }) {
   const { settings } = useSettings()
   const mat = materialByName(settings, c.material)
   const backMat = materialByName(settings, c.backMaterial)
@@ -247,6 +247,12 @@ export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !==
           <NumRow label="Gruix del fons" value={c.backThickness} min={3} max={40} step={1} onChange={(backThickness) => onPatch({ backThickness })} />
         )}
       </>}
+      {/* Fons del calaix: el seu material (el gruix el demana la guia o el joc). Buit = com fins ara, del fons del mòdul o del cos. */}
+      {hasDrawers && (
+        <FormRow label="Fons del calaix" help="Tauler dels fons dels calaixos. El gruix el demana la guia (Gruix del fons del calaix) o el joc (16). Sense triar-ne cap, surt del fons del mòdul (amb el gruix adaptat) o del cos." maxW="280px">
+          <MaterialSelect label="Fons del calaix" hideLabel materials={backChoices(settings.materials)} value={c.drawerBottomMaterial ?? ""} emptyLabel={hasBack ? "Com el fons" : "Com el cos"} onChange={(v) => onPatch({ drawerBottomMaterial: v || undefined })} />
+        </FormRow>
+      )}
       {hasBack && backApart && (
         <HStack gap={2} fontSize="xs" color="fg.muted" wrap="wrap">
           <Text>
@@ -357,8 +363,8 @@ export function FrontsForm({ module, onChange, usedSlots }: { module: Module; on
           onChange={(style) => onChange({ ...module, fronts: { ...module.fronts, style: style === "overlay" ? undefined : style } })}
         />
       </FormRow>
-      <NumRow label="Joc front–cos" value={module.fronts.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => onChange({ ...module, fronts: { ...module.fronts, outerGap } })} />
-      <NumRow label="Joc entre fronts" value={module.fronts.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => onChange({ ...module, fronts: { ...module.fronts, betweenGap } })} />
+      <NumRow label="Folgança front–cos" value={module.fronts.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => onChange({ ...module, fronts: { ...module.fronts, outerGap } })} />
+      <NumRow label="Folgança entre fronts" value={module.fronts.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => onChange({ ...module, fronts: { ...module.fronts, betweenGap } })} />
       <NumRow label="Retranqueig dels prestatges" value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => onChange({ ...module, carcass: { ...c, shelfSetback } })} help="Del davant de la caixa al cantell dels prestatges (amb fronts encastats, almenys un gruix)." />
       {handleRow && <ModuleHandlePick module={module} onChange={onChange} />}
       <ModuleHardwarePicks module={module} onChange={onChange} slots={slots} />

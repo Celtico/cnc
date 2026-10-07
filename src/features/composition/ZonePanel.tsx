@@ -303,7 +303,7 @@ function KitFields({ front, kit, kits, onChange }: { front: Extract<Front, { kin
           <ChoiceChips label="Acabat" value={o.finish} options={finishes.map((f) => ({ id: f, label: KIT_FINISHES.find((x) => x.id === f)!.short }))} onChange={(finish) => setKit({ finish })} />
         </FormRow>
       )}
-      <FormRow label="Fons" help={`El joc demana un fons de calaix de ${TB} mm (catàleg): no es tria. El material és el del fons del moble (o el del cos si fa ${TB} mm).`}>
+      <FormRow label="Fons del calaix" help={`El joc demana un fons del calaix de ${TB} mm (catàleg): el gruix no es tria. El material, a Materials › «Fons del calaix» (sense, el del fons del mòdul adaptat al gruix, o el del cos si fa ${TB} mm).`}>
         <Text fontSize="sm" pt="6px" data-testid="kit-bottom">
           {TB} mm · el joc demana {TB} mm
         </Text>

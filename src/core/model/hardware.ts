@@ -375,12 +375,12 @@ export const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
     P("endOffset", "Als extrems", 20, 200, 1, "Primera i última espiga, des dels extrems de la unió."),
   ],
   slide: [
-    P("sideClearance", "Joc lateral", 0, 30, 0.5, "Per costat, entre la caixa i el lateral del moble."),
+    P("sideClearance", "Folgança lateral", 0, 30, 0.5, "Per costat, entre la caixa i el lateral del moble."),
     P("boxThickness", "Gruix de la caixa", 8, 25, 1),
-    P("bottomThickness", "Gruix del fons", 3, 19, 1),
+    P("bottomThickness", "Fons del calaix (gruix)", 3, 19, 1),
     P("boxDrop", "Front − caixa", 0, 100, 1, "Alçada del front menys alçada de la caixa."),
-    P("bottomOffset", "Fons a", 0, 40, 1, "Del cantell de baix de la caixa a la ranura del fons."),
-    P("backClearance", "Joc darrere", 0, 50, 1),
+    P("bottomOffset", "Fons del calaix a", 0, 40, 1, "Del cantell de baix de la caixa a la ranura del fons del calaix."),
+    P("backClearance", "Folgança darrere", 0, 50, 1),
     P("frontOffset", "1r forat", 10, 200, 0.5, "Des del darrere del front."),
     P("secondOffset", "2n forat", 32, 600, 1, "Després del primer."),
     P("holeHeight", "Alçada", 5, 100, 0.5, "Dels forats, des de baix de la caixa."),
@@ -903,7 +903,7 @@ export const UI_PATHS = {
   frontsAndDrawers: "Interior › Fronts i calaixos",
   joinery: "Mòdul › Fusteria (avançat)",
   hardwarePrefs: "Preferències › Ferratges",
-  gapsPrefs: "Preferències › Jocs per defecte",
+  gapsPrefs: "Preferències › Folgances per defecte",
 } as const
 
 /** Una opció del selector de ferratge d'un lloc (`hardwareChoices`). */

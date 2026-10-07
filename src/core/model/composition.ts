@@ -90,6 +90,12 @@ export const CarcassSchema = z.object({
   frontMaterial: z.string().optional(),
   backMaterial: z.string(),
   backThickness: mm.min(3).max(40),
+  /**
+   * Material del **fons dels calaixos** (Materials › «Fons del calaix»). Buit = com fins ara: el del fons del mòdul
+   * (adaptant-ne el gruix al que demana la guia o el joc) o, sense fons o si el cos fa el gruix, el del cos. El gruix
+   * el demana sempre la guia (`bottomThickness`) o el joc (`TB`), no es tria aquí.
+   */
+  drawerBottomMaterial: z.string().optional(),
   base: BaseSchema,
   /**
    * Fons: en ranura, cargolat per darrere, encastat (entre laterals, tapa i base, amb espigues:
@@ -813,6 +819,8 @@ export function visibleModule(m: Module): Module {
   if (c.joint !== "mitre" || !jointApplies(c)) delete carcass.joint
   // Tauler de taula: només amb la tapa sencera.
   if (c.top.kind !== "full") delete carcass.tableTop
+  // Fons del calaix: només amb calaixos (la fila de Materials no surt sense).
+  if (!hasDrawers(m.root) || !c.drawerBottomMaterial) delete carcass.drawerBottomMaterial
   const fronts = { ...m.fronts }
   if (fronts.style === "overlay") delete fronts.style
   if (fronts.handles === "bar") delete fronts.handles
@@ -820,6 +828,15 @@ export function visibleModule(m: Module): Module {
   const hw = m.hardware as Partial<ModuleHardware> | undefined
   const kitDefault = !isLegacyHardware(hw) && hw?.slide?.engine === "drawerKit"
   return { ...m, carcass, fronts, root: visibleZone(m.root, kitDefault) }
+}
+
+/** El mòdul té algun compartiment de calaixos (la fila «Fons del calaix» de Materials). */
+export function hasDrawers(root: Zone): boolean {
+  let hit = false
+  walkZones(root, (z) => {
+    if (z.front?.kind === "drawers") hit = true
+  })
+  return hit
 }
 
 /**
