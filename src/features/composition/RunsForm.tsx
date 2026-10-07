@@ -150,7 +150,7 @@ function WorktopFields({ run, comp, onChange }: { run: WorktopRun; comp: Composi
                   />
                 </FormRow>
                 <NumRow label="Ample" value={c.w} min={50} max={2000} step={5} onChange={(w) => setCut(c.id, { w })} />
-                <NumRow label="Fons" value={c.d} min={50} max={1000} step={5} onChange={(d) => setCut(c.id, { d })} />
+                <NumRow label="Fondària" value={c.d} min={50} max={1000} step={5} onChange={(d) => setCut(c.id, { d })} />
                 <NumRow label="Desplaçament" help="Mida del forat d'encastar (la del full d'instruccions de l'aparell), centrat al mòdul; el desplaçament el mou a la dreta (+) o a l'esquerra (−)." value={c.dx} min={-1000} max={1000} step={5} onChange={(dx) => setCut(c.id, { dx })} />
               </Stack>
             </FoldItem>

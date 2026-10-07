@@ -730,7 +730,7 @@ export function parseSettings(raw: unknown): SettingsParse {
     boards: v7 || v12.renames.length ? { ...boards, sheets: boards.sheets.map((x) => ({ ...x, material: renamed(v7 ? alias(x.material) : x.material) })) } : boards,
     hardwareLibrary: hardware.library,
     hardwareDefaults: hardware.defaults,
-    gaps: section("gaps", GapsPrefSchema, DEFAULT_SETTINGS.gaps, "Jocs per defecte"),
+    gaps: section("gaps", GapsPrefSchema, DEFAULT_SETTINGS.gaps, "Folgances per defecte"),
     label: section("label", LabelPrefSchema, DEFAULT_SETTINGS.label, "Etiquetes"),
     display: section("display", DisplayPrefSchema, DEFAULT_SETTINGS.display, "Visualització"),
     defaults: v7 || v12.renames.length ? { ...defaults, material: renamed(v7 ? alias(defaults.material) : defaults.material), backMaterial: renamed(v7 ? alias(defaults.backMaterial) : defaults.backMaterial) } : defaults,

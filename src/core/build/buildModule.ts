@@ -1690,9 +1690,9 @@ class Builder {
     const bt = hw.boxThickness
     const tbb = hw.bottomThickness
     const g = c.grooveDepth
-    const bottomMat = drawerBottomMaterial(c.backMaterial, c.backThickness, tbb)
+    const bottomMat = c.drawerBottomMaterial ? { name: c.drawerBottomMaterial, warn: false } : drawerBottomMaterial(c.backMaterial, c.backThickness, tbb)
     if (n > 0 && bottomMat.warn && !this.warnings.some((w) => w.code === "drawer-bottom"))
-      this.warnings.push({ code: "drawer-bottom", message: `Fons dels calaixos de ${tbb} mm en «${bottomMat.name}» (${c.back === "none" ? `el mòdul no té fons: el material del cos, de ${c.thickness} mm` : `el fons del moble és de ${c.backThickness} mm`}): comprova que aquest material es ven en ${tbb} mm.`, zoneId: zone.id })
+      this.warnings.push({ code: "drawer-bottom", message: `Fons del calaix de ${tbb} mm en «${bottomMat.name}» (${c.back === "none" ? `sense fons al mòdul, surt del material del cos, de ${c.thickness} mm` : `surt del fons del mòdul, de ${c.backThickness} mm`}): comprova que aquest material es ven en ${tbb} mm, o tria'n un a Materials › «Fons del calaix».`, zoneId: zone.id })
 
     // Caixa de cada calaix (relativa a la vora de baix del front): centrada al front (`boxDrop`) però sempre dins de la
     // llum (el front del primer i de l'últim calaix sobresurt per sobre de la tapa o la base i la caixa hi toparia). Els
@@ -1831,9 +1831,9 @@ class Builder {
     const plan = res.plan
     // El gruix del fons el demana el joc (16, `TB`): no és cap tria del moble ni s'hi suggereix res; només s'avisa si
     // el material del fons no se sap si es ven en aquest gruix.
-    const bottomMat = c.thickness === TB ? { name: c.material, warn: false } : drawerBottomMaterial(c.backMaterial, c.backThickness, TB)
+    const bottomMat = c.drawerBottomMaterial ? { name: c.drawerBottomMaterial, warn: false } : c.thickness === TB ? { name: c.material, warn: false } : drawerBottomMaterial(c.backMaterial, c.backThickness, TB)
     if (plan && front.n > 0 && bottomMat.warn && !this.warnings.some((w) => w.code === "drawer-bottom"))
-      this.warnings.push({ code: "drawer-bottom", message: `Fons dels calaixos de ${TB} mm en «${bottomMat.name}» (el joc «${item.name}» demana un fons de ${TB} mm; ${c.back === "none" ? `el mòdul no té fons: el material del cos, de ${c.thickness} mm` : `el fons del moble és de ${c.backThickness} mm`}): comprova que aquest material es ven en ${TB} mm.`, zoneId: zone.id })
+      this.warnings.push({ code: "drawer-bottom", message: `Fons del calaix de ${TB} mm en «${bottomMat.name}» (el joc «${item.name}» demana un fons del calaix de ${TB} mm; ${c.back === "none" ? `sense fons al mòdul, surt del material del cos, de ${c.thickness} mm` : `surt del fons del mòdul, de ${c.backThickness} mm`}): comprova que aquest material es ven en ${TB} mm, o tria'n un a Materials › «Fons del calaix».`, zoneId: zone.id })
     if (plan && (!left || !right)) this.hardwareWarning(`«${item.name}»: el compartiment no té lateral a ${!left ? "l'esquerra" : "la dreta"} on cargolar la guia. Els calaixos es queden només amb el front.`, zone.id)
     const kit = plan?.kit
     const totalH = kit ? kitHeight(kit) : 0

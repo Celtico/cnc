@@ -1,16 +1,17 @@
 import type { IconType } from "react-icons"
-import { LuAnchor, LuArchive, LuBolt, LuCircleDashed, LuCircleDot, LuDoorOpen, LuFootprints, LuGripHorizontal, LuMagnet, LuMinus, LuPackage, LuPackageOpen, LuPanelBottom, LuSquareDot, LuTable } from "react-icons/lu"
+import { LuAnchor, LuBolt, LuCircleDashed, LuCircleDot, LuDoorOpen, LuFootprints, LuGripHorizontal, LuMagnet, LuMinus, LuPackage, LuPackageOpen, LuPanelBottom, LuRailSymbol, LuSquareDot, LuTable } from "react-icons/lu"
 import type { HardwareCategory } from "../../core/model"
 
 /**
  * Icona de cada categoria de ferratges (la graella de Preferències › Ferratges i l'«Afegir»), del catàleg d'icones del
- * `CLAUDE.md`: cassoleta, System 32, calaixos, abatible i imants són les de sempre; taules, la Taula; portes corredisses i
- * plegables, la porta oberta.
+ * `CLAUDE.md`: cassoleta, System 32, abatible i imants són les de sempre; les guies porten el carril (`LuRailSymbol`, no
+ * la del contingut Calaixos); potes, les petjades (no la Taula); taules, la Taula; portes corredisses i plegables, la
+ * porta oberta.
  */
 export const HARDWARE_ICONS: Record<HardwareCategory, IconType> = {
   hinge: LuCircleDashed,
   plate: LuSquareDot,
-  slide: LuArchive,
+  slide: LuRailSymbol,
   lift: LuPanelBottom,
   connector: LuBolt,
   "shelf-support": LuCircleDot,

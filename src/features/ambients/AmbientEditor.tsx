@@ -966,7 +966,7 @@ function ItemInspector({
           </FormRow>
           <NumRow label="Ample" value={item.w} min={10} step={10} onChange={(w) => w >= 10 && onPatch({ w })} />
           <NumRow label="Alt" value={item.h} min={5} step={10} onChange={(h) => h >= 5 && onPatch({ h })} />
-          <NumRow label="Fons" value={item.d} min={10} step={10} onChange={(d) => d >= 10 && onPatch({ d })} />
+          <NumRow label="Fondària" value={item.d} min={10} step={10} onChange={(d) => d >= 10 && onPatch({ d })} />
           <MaterialPick label="Material" value={item.material} materials={materials} onChange={(material) => onPatch({ material })} />
           {(item.shape === "bed" || item.shape === "sofa") && (
             <MaterialPick label={item.shape === "bed" ? "Matalàs" : "Coixins"} value={item.material2 ?? item.material} materials={materials} onChange={(material2) => onPatch({ material2 })} onlySim />
@@ -1012,7 +1012,7 @@ function MobleDims({ project, geo }: { project: Project; geo: ItemGeometry }) {
       <Stack gap={4} onKeyDown={(e) => e.key === "Enter" && void apply()}>
       <NumRow label="Ample" value={draft.w} min={100} step={10} onChange={(w) => setDraft({ ...draft, w })} />
       <NumRow label="Alt" value={draft.h} min={100} step={10} onChange={(h) => setDraft({ ...draft, h })} />
-      <NumRow label="Fons" value={draft.d} min={100} step={10} onChange={(d) => setDraft({ ...draft, d })} />
+      <NumRow label="Fondària" value={draft.d} min={100} step={10} onChange={(d) => setDraft({ ...draft, d })} />
       {dirty && (
         <HStack gap={2}>
           <Button size="xs" colorPalette="wood" onClick={() => void apply()}>

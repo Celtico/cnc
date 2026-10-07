@@ -53,7 +53,7 @@ import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
 import { materialIssues } from "../../core/build/materialIssues"
-import { applySettingsToModule, usedSlotSet, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule, usedSlotSet, hasDrawers, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, FrontsForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -1024,6 +1024,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             <MaterialsForm
               carcass={comp.modules[0]!.carcass}
               hasBack={comp.modules.some((m) => m.carcass.back !== "none")}
+              hasDrawers={comp.modules.some((m) => hasDrawers(m.root))}
               mixed={comp.modules.some((m) => {
                 const a = m.carcass
                 const b = comp.modules[0]!.carcass
@@ -1165,7 +1166,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             <CarcassForm module={module} onChange={updateModule} section="structure" />
           </FoldItem>
           <FoldItem id="mod-materials" title="Materials" icon={LuPalette}>
-            <MaterialsForm carcass={module.carcass} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
+            <MaterialsForm carcass={module.carcass} hasDrawers={hasDrawers(module.root)} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
           </FoldItem>
           <FoldItem id="mod-joinery" title="Fusteria (avançat)" icon={LuHammer} defaultOpen={false}>
             <JoineryForm module={module} onChange={updateModule} usedSlots={usedSlotSet(module)} />
