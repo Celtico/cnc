@@ -23,6 +23,8 @@ export function zoneLabel(z: Zone, opts?: { root?: boolean }): string {
 function ownLabel(z: Zone): string {
   if (z.split) return `${z.split.dir === "v" ? "Divisió vertical" : "Divisió horitzontal"} (${z.split.children.length})`
   const parts: string[] = [frontLabel(z.front)]
+  // Amb calaixos, els prestatges i la barra es conserven però no es veuen (res amagat compta).
+  if (z.front?.kind === "drawers") return parts[0]!
   if (z.rail) parts.push("barra")
   if (z.shelves && z.shelves.n > 0) parts.push(`${z.shelves.n} ${z.shelves.n === 1 ? "prestatge" : "prestatges"}`)
   return parts.join(" · ")
