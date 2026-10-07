@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { DEFAULT_GRILLE, HARDWARE_SLOTS, backChoices, boardChoices, jointApplies, materialByName, moduleSlotItem, type Base, type Carcass, type HardwareItem, type HardwareSlot, type Module, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, HARDWARE_SLOTS, backChoices, boardChoices, jointApplies, materialByName, moduleSlotItem, visibleModule, walkZones, type Base, type Carcass, type HardwareItem, type HardwareSlot, type Module, type Top } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
@@ -161,29 +161,7 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
             />
           </FormRow>
         )}
-        <FormRow label="Fronts">
-          <IconChoice
-            hideLabel
-            label="Fronts"
-            value={module.fronts.style ?? "overlay"}
-            options={[
-              { value: "overlay", label: "Recobrents", icon: LuSquareStack, hint: "Recobrents: per davant de la caixa, tapant els cantells" },
-              { value: "inset", label: "Encastats", icon: LuSquareSquare, hint: "Encastats: dins de la llum, a nivell amb el davant de la caixa" },
-            ]}
-            onChange={(style) => onChange({ ...module, fronts: { ...module.fronts, style: style === "overlay" ? undefined : style } })}
-          />
-        </FormRow>
-        <FormRow label="Tiradors" help="Sense tirador: obertura per pressió (push); cal el ferratge a cada front.">
-          <ChoiceChips
-            label="Tiradors"
-            value={module.fronts.handles ?? "bar"}
-            options={[
-              { id: "bar", label: "Barra" },
-              { id: "none", label: "Sense (push)" },
-            ]}
-            onChange={(handles) => onChange({ ...module, fronts: { ...module.fronts, handles: handles === "bar" ? undefined : handles } })}
-          />
-        </FormRow>
+        {/* L'estil dels fronts i el tirador per defecte són dels fronts: a l'«Interior» (`FrontsForm`), no a la caixa. */}
 
         {/* No dins d'un Field.Root: el Field dona el mateix id als dos interruptors i els dos
             rètols activaven el mateix (no es podia treure el lateral dret). */}
@@ -301,6 +279,39 @@ function ModuleHardwarePicks({ module, onChange, slots }: { module: Module; onCh
   ))
 }
 
+/** El mòdul té algun front que pot portar tirador (porta que no és de vidre, calaixos, abatible). */
+function hasHandleFronts(module: Module): boolean {
+  let hit = false
+  walkZones(visibleModule(module).root, (z) => {
+    const f = z.front
+    if (f && ((f.kind === "door" && !f.glass) || f.kind === "drawers" || f.kind === "flap")) hit = true
+  })
+  return hit
+}
+
+/**
+ * El **tirador per defecte** del mòdul (Interior › Fronts i calaixos): un de la biblioteca o «Cap (push)»
+ * (`fronts.handles: "none"`, auditoria C2: el push és una tria del tirador, no de la caixa). Cada front pot dir-ne un
+ * altre al seu Front; un joc de calaix push-open mana sobre tots dos.
+ */
+function ModuleHandlePick({ module, onChange }: { module: Module; onChange: (m: Module) => void }) {
+  const push = module.fronts.handles === "none"
+  return (
+    <HardwarePick
+      slot="handle"
+      label="Tirador"
+      current={push ? undefined : moduleSlotItem(module.hardware, "handle")}
+      none={{
+        label: "Cap (push)",
+        help: "Per defecte, fronts sense tirador: obertura per pressió (cal el ferratge push a cada front; als calaixos amb joc, el tancament push-open ja ho fa). Cada front pot triar un tirador al seu Front.",
+        selected: push,
+        onPick: () => onChange({ ...module, fronts: { ...module.fronts, handles: "none" } }),
+      }}
+      onPick={(item) => item && onChange({ ...module, fronts: { ...module.fronts, handles: undefined }, hardware: { ...module.hardware, handle: item } })}
+    />
+  )
+}
+
 /**
  * Fusteria de la **caixa** del mòdul seleccionat (secció «Fusteria (avançat)»): el fons i els ferratges dels laterals i
  * de les unions (espiga, filera System 32). Els jocs i els ferratges dels fronts són a l'«Interior» (`FrontsForm`).
@@ -329,15 +340,30 @@ export function JoineryForm({ module, onChange, usedSlots }: { module: Module; o
  */
 export function FrontsForm({ module, onChange, usedSlots }: { module: Module; onChange: (m: Module) => void; usedSlots?: ReadonlySet<string> }) {
   const c = module.carcass
-  const slots = slotsFor(usedSlots, false)
+  // El tirador per defecte té la seva fila (amb «Cap (push)»): surt sempre que hi hagi fronts que en puguin portar.
+  const slots = slotsFor(usedSlots, false).filter(({ slot }) => slot !== "handle")
+  const handleRow = hasHandleFronts(module)
   return (
     <Stack gap={3}>
+      <FormRow label="Estil">
+        <IconChoice
+          hideLabel
+          label="Estil dels fronts"
+          value={module.fronts.style ?? "overlay"}
+          options={[
+            { value: "overlay", label: "Recobrents", icon: LuSquareStack, hint: "Recobrents: per davant de la caixa, tapant els cantells" },
+            { value: "inset", label: "Encastats", icon: LuSquareSquare, hint: "Encastats: dins de la llum, a nivell amb el davant de la caixa" },
+          ]}
+          onChange={(style) => onChange({ ...module, fronts: { ...module.fronts, style: style === "overlay" ? undefined : style } })}
+        />
+      </FormRow>
       <NumRow label="Joc front–cos" value={module.fronts.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => onChange({ ...module, fronts: { ...module.fronts, outerGap } })} />
       <NumRow label="Joc entre fronts" value={module.fronts.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => onChange({ ...module, fronts: { ...module.fronts, betweenGap } })} />
-      <NumRow label="Retranqueig prest." value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => onChange({ ...module, carcass: { ...c, shelfSetback } })} />
+      <NumRow label="Retranqueig dels prestatges" value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => onChange({ ...module, carcass: { ...c, shelfSetback } })} help="Del davant de la caixa al cantell dels prestatges (amb fronts encastats, almenys un gruix)." />
+      {handleRow && <ModuleHandlePick module={module} onChange={onChange} />}
       <ModuleHardwarePicks module={module} onChange={onChange} slots={slots} />
       <Text fontSize="xs" color="fg.muted">
-        {slots.length ? "Per defecte per a tots els fronts del mòdul; cada porta, calaix o abatible en pot triar un altre al seu Front." : "Aquest mòdul no té cap front amb ferratges."}
+        {slots.length || handleRow ? "Per defecte per a tots els fronts del mòdul; cada porta, calaix o abatible en pot triar un altre al seu Front." : "Aquest mòdul no té cap front amb ferratges."}
       </Text>
     </Stack>
   )

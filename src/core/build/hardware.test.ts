@@ -245,11 +245,11 @@ describe("còpies que no són l'item de la biblioteca amb el mateix id", () => {
     expect(isCopyOf(copyHardwareItem(item("hinge-cup"), "hw-1", "Meva"), item("hinge-cup"))).toBe(false)
   })
 
-  it("hardwareChoices: una còpia diferent surt a part, «del moble», i és la triada", () => {
+  it("hardwareChoices: una còpia diferent surt a part, «còpia pròpia», i és la triada", () => {
     const res = hardwareChoices(lib, cup30)
     expect(res.options.map((o) => o.key)).toEqual([...lib.map((x) => x.id), expect.stringMatching(/^moble:.*:hinge-cup$/)])
     const own = res.options.at(-1)!
-    expect(own).toMatchObject({ own: true, label: `${cup30.name} (del moble)`, item: cup30 })
+    expect(own).toMatchObject({ own: true, label: `${cup30.name} (còpia pròpia)`, item: cup30 })
     expect(res.value).toBe(own.key)
     expect(new Set(res.options.map((o) => o.key)).size).toBe(res.options.length)
     // Igual a la de la biblioteca (també amb `builtin` i un altre nom): la de la biblioteca, sense opció de més.
@@ -258,7 +258,7 @@ describe("còpies que no són l'item de la biblioteca amb el mateix id", () => {
     expect(same.value).toBe("hinge-cup")
     // Un que ja no és a la biblioteca.
     const gone = hardwareChoices(lib, copyHardwareItem(item("hinge-cup"), "hw-esborrat", "Esborrada"))
-    expect(gone.options.at(-1)).toMatchObject({ own: true, label: "Esborrada (del moble)" })
+    expect(gone.options.at(-1)).toMatchObject({ own: true, label: "Esborrada (còpia pròpia)" })
   })
 
   it("hardwareChoices en un front: el del mòdul (`inheritedKey`) i el propi, cadascun on toca", () => {
@@ -274,7 +274,7 @@ describe("còpies que no són l'item de la biblioteca amb el mateix id", () => {
     const cup32: HardwareItem = { ...cup30, params: { ...cup30.params, cupDiameter: 32 } }
     const c = hardwareChoices(lib, cup32, cup30)
     const own = c.options.filter((o) => o.own)
-    expect(own.map((o) => o.label).sort()).toEqual([`${cup30.name} (del moble)`, `${cup30.name} (del mòdul)`].sort())
+    expect(own.map((o) => o.label).sort()).toEqual([`${cup30.name} (còpia pròpia)`, `${cup30.name} (com el mòdul)`].sort())
     expect(c.value).not.toBe(c.inheritedKey)
     expect(own.find((o) => o.key === c.inheritedKey)!.item).toBe(cup30)
   })

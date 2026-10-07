@@ -890,6 +890,22 @@ export function sameHardware(a: HardwareItem, b: HardwareItem): boolean {
 /** La còpia `copy` és de l'item `item` de la biblioteca: mateix id i mateix contingut (`sameHardware`). */
 export const isCopyOf = (copy: HardwareItem, item: HardwareItem): boolean => copy.id === item.id && sameHardware(copy, item)
 
+/**
+ * Una sola paraula per a la precedència dels ferratges (auditoria C3, sense gènere): **«Com el mòdul»** = heretat (el front o
+ * l'accessori fa servir la còpia del mòdul, com «Com el cos» del material del fons); **«Còpia pròpia»** = una còpia que no
+ * és a la biblioteca tal qual (esborrada, d'un altre fitxer o amb un altre contingut): és la que es fabrica.
+ */
+export const INHERITED_LABEL = "Com el mòdul"
+export const OWN_COPY_LABEL = "Còpia pròpia"
+
+/** Camins de les seccions de l'editor que surten als avisos i a les ajudes (un sol lloc: si una secció es mou, es canvia aquí). */
+export const UI_PATHS = {
+  frontsAndDrawers: "Interior › Fronts i calaixos",
+  joinery: "Mòdul › Fusteria (avançat)",
+  hardwarePrefs: "Preferències › Ferratges",
+  gapsPrefs: "Preferències › Jocs per defecte",
+} as const
+
 /** Una opció del selector de ferratge d'un lloc (`hardwareChoices`). */
 export interface HardwareChoice {
   /** Única entre les opcions: l'id de la biblioteca, o `moble:<n>:<id>` per a una còpia que no hi és tal qual. */
@@ -903,7 +919,7 @@ export interface HardwareChoice {
 /**
  * Opcions del selector de ferratge (`HardwarePick`): els de la biblioteca d'aquell motor i, a part, les còpies del moble
  * (`current`, i `inherited`, el del mòdul, als fronts) que no són a la biblioteca **tal qual** (`isCopyOf`; no n'hi ha
- * prou amb l'id): «<nom> (del moble)», per veure el que es fabrica de debò i poder-hi tornar. `value` = l'opció de
+ * prou amb l'id): «<nom> (còpia pròpia)», per veure el que es fabrica de debò i poder-hi tornar. `value` = l'opció de
  * `current`; `inheritedKey` = la d'`inherited` (triar-la treu el propi del front).
  */
 export function hardwareChoices(library: readonly HardwareItem[], current: HardwareItem, inherited?: HardwareItem): { options: HardwareChoice[]; value: string; inheritedKey?: string } {
@@ -915,11 +931,11 @@ export function hardwareChoices(library: readonly HardwareItem[], current: Hardw
     options.push({ key, item: it, label, own: true })
     return key
   }
-  const inheritedKey = inherited ? resolve(inherited, `${inherited.name} (del moble)`) : undefined
-  const value = resolve(current, `${current.name} (del moble)`)
-  // Dues còpies diferents amb el mateix nom (la del front i la del mòdul): la del mòdul es diu «del mòdul».
+  const inheritedKey = inherited ? resolve(inherited, `${inherited.name} (${OWN_COPY_LABEL.toLowerCase()})`) : undefined
+  const value = resolve(current, `${current.name} (${OWN_COPY_LABEL.toLowerCase()})`)
+  // Dues còpies diferents amb el mateix nom (la del front i la del mòdul): la del mòdul es diu «com el mòdul».
   const own = options.filter((o) => o.own)
-  if (inheritedKey && own.length === 2 && own[0]!.label === own[1]!.label) own.find((o) => o.key === inheritedKey)!.label = `${inherited!.name} (del mòdul)`
+  if (inheritedKey && own.length === 2 && own[0]!.label === own[1]!.label) own.find((o) => o.key === inheritedKey)!.label = `${inherited!.name} (${INHERITED_LABEL.toLowerCase()})`
   return { options, value, ...(inheritedKey ? { inheritedKey } : {}) }
 }
 

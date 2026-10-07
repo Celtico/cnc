@@ -21,6 +21,7 @@ import {
   type PanelRole,
   type Vec3,
   type Zone,
+  UI_PATHS,
   damagedImportMessage,
   isDamagedImport,
   isDrawerKit,
@@ -393,7 +394,7 @@ class Builder {
     if (d.inset) {
       this.warnings.push({ code: "inset", message: "Fronts encastats: van dins de la llum amb el joc a tot el voltant; calen frontisses per a porta encastada." })
       if (c.shelfSetback < d.t)
-        this.warnings.push({ code: "inset", message: `Els prestatges van retirats ${c.shelfSetback} mm i el front encastat entra ${d.t} mm: retira'ls almenys ${d.t} mm (Fusteria › Retranqueig dels prestatges).` })
+        this.warnings.push({ code: "inset", message: `Els prestatges van retirats ${c.shelfSetback} mm i el front encastat entra ${d.t} mm: retira'ls almenys ${d.t} mm (${UI_PATHS.frontsAndDrawers} › Retranqueig dels prestatges).` })
     }
     // Fons en ranura massa gruixut: la ranura deixaria el lateral sense material.
     if (c.back === "groove" && d.tb > d.t - 6) {

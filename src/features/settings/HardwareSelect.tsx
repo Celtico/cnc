@@ -2,7 +2,7 @@ import { Badge, Box, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import { PickerButton, PickerDrawer, PickerRow } from "../../components/PickerDrawer"
-import { HARDWARE_CATEGORIES, hardwareChoices, hardwareSummary, isDrawerKit, isPendingImport, type HardwareChoice, type HardwareItem } from "../../core/model"
+import { HARDWARE_CATEGORIES, INHERITED_LABEL, OWN_COPY_LABEL, hardwareChoices, hardwareSummary, isDrawerKit, isPendingImport, type HardwareChoice, type HardwareItem } from "../../core/model"
 import { GalleryCard } from "../projects/GalleryCard"
 import { fold } from "../projects/galleryGrid"
 import { HARDWARE_ICONS } from "./hardwareIcons"
@@ -20,7 +20,7 @@ export interface HardwareDrawerProps {
   items: readonly HardwareItem[]
   /** La còpia que porta el moble (sense, `emptyLabel` o res triat). */
   current?: HardwareItem
-  /** El del mòdul (als fronts): triar-lo treu el propi (`onPick(undefined)`). */
+  /** El del mòdul (als fronts i accessoris, «Com el mòdul»): triar-lo treu el propi (`onPick(undefined)`). */
   inherited?: HardwareItem
   /** Una primera opció sense ferratge («Genèriques»), que dona `undefined`. */
   emptyLabel?: string
@@ -45,7 +45,7 @@ export interface HardwareNoneOption {
  * mòdul, la pota de la base i «Afegir ferratge» (col·locats a mà). Un botó (`PickerButton`: la miniatura 3D de la
  * targeta de Preferències › Ferratges i el nom) que obre el calaix comú (`PickerDrawer`) amb el cercador, les categories
  * › sèries i les targetes (`GalleryCard` amb la miniatura 3D). En triar-ne un, se'n desa una **còpia** (`onPick`), com
- * fan els mòduls. Les còpies que no són a la biblioteca tal qual (`hardwareChoices`) surten a part, «Del moble», i els
+ * fan els mòduls. Les còpies que no són a la biblioteca tal qual (`hardwareChoices`) surten a part, «Còpia pròpia», i els
  * importats sense confirmar porten la insígnia (es poden triar, però no fan cap forat).
  */
 export function HardwareSelect(props: HardwareDrawerProps & { hideLabel?: boolean }) {
@@ -54,7 +54,7 @@ export function HardwareSelect(props: HardwareDrawerProps & { hideLabel?: boolea
   const base = useMountBase(settings)
   const { label, items, current, inherited, emptyLabel, none } = props
   const shown = none?.selected ? undefined : (current ?? inherited)
-  // Una còpia que no és a la biblioteca tal qual: «(del moble)».
+  // Una còpia que no és a la biblioteca tal qual: «(còpia pròpia)».
   const ownCopy = !!current && hardwareChoices(items, current).options.some((o) => o.own)
   return (
     <Stack gap={0} flex={1} minW={0} align="stretch">
@@ -65,7 +65,7 @@ export function HardwareSelect(props: HardwareDrawerProps & { hideLabel?: boolea
             {shown ? <HardwareThumb item={shown} base={base} materials={settings.materials} /> : <Box aspectRatio="2 / 1" rounded="md" borderWidth="1px" borderStyle="dashed" />}
           </Box>
         }
-        text={none?.selected ? none.label : shown ? `${shown.name}${ownCopy ? " (del moble)" : ""}${inherited && (!current || current === inherited) ? " · la del mòdul" : ""}` : (emptyLabel ?? "(cap)")}
+        text={none?.selected ? none.label : shown ? `${shown.name}${ownCopy ? ` (${OWN_COPY_LABEL.toLowerCase()})` : ""}${inherited && (!current || current === inherited) ? ` · ${INHERITED_LABEL}` : ""}` : (emptyLabel ?? "(cap)")}
         warn={current && !none?.selected && isPendingImport(current) ? "Sense confirmar: no fa cap forat" : undefined}
         onClick={() => setOpen(true)}
       />
@@ -123,7 +123,7 @@ export function HardwareDrawer({ open, onOpenChange, label, items, current, inhe
         <>
           {isOwn && (
             <Badge size="xs" variant="subtle" colorPalette="wood" title="La còpia que porta el moble: no és a la biblioteca tal qual (esborrada, d'un altre fitxer o amb un altre contingut). És la que es fabrica.">
-              Del moble
+              {OWN_COPY_LABEL}
             </Badge>
           )}
           {isPendingImport(item) && (
@@ -182,7 +182,7 @@ export function HardwareDrawer({ open, onOpenChange, label, items, current, inhe
             {inherited ? <HardwareThumb item={inherited} base={base} materials={settings.materials} /> : <Box aspectRatio="2 / 1" rounded="md" borderWidth="1px" borderStyle="dashed" />}
           </Box>
           <Stack gap={0} align="start" minW={0}>
-            <Text fontSize="sm">{inherited ? (isDrawerKit(inherited) ? "El del mòdul (joc de calaix)" : "El del mòdul") : emptyLabel}</Text>
+            <Text fontSize="sm">{inherited ? (isDrawerKit(inherited) ? `${INHERITED_LABEL} (joc de calaix)` : INHERITED_LABEL) : emptyLabel}</Text>
             {inherited && (
               <Text fontSize="xs" color="fg.muted" truncate>
                 {inherited.name}
@@ -194,7 +194,7 @@ export function HardwareDrawer({ open, onOpenChange, label, items, current, inhe
       {own.length > 0 && (
         <Stack gap={2}>
           <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
-            Del moble
+            Còpies pròpies
           </Text>
           <SimpleGrid columns={COLS} gap={3} p="5px">
             {own.map((o) => card(o.item, o.key, true))}

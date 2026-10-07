@@ -435,7 +435,7 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits }: 
     case "drawers":
       return (
         <Stack gap={3}>
-          <NumRow label="Calaixos" help="Alçades de front: auto (iguals). Caixa amb guia genèrica de la llargada més gran que hi cap." suffix="u" value={front.n} min={1} max={10} step={1} onChange={(n) => {
+          <NumRow label="Calaixos" help={isDrawerKit(front.hardware ?? hardware.slide) ? "Alçades de front: auto (iguals). Calaixos del joc de doble paret (sense laterals de fusta), amb la llargada nominal més gran que hi cap." : "Alçades de front: auto (iguals). Caixa de fusta amb la guia de la llargada més gran que hi cap."} suffix="u" value={front.n} min={1} max={10} step={1} onChange={(n) => {
             if (!Number.isFinite(n)) return
             const k = Math.max(1, Math.min(10, Math.round(n)))
             onChange({ ...front, n: k, heights: Array.from({ length: k }, (_, i) => front.heights[i] ?? "auto") })
