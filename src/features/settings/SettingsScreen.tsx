@@ -4,7 +4,7 @@ import { QUALITY_LABELS, useRenderQuality, type RenderQuality } from "../../comp
 import { SKIES, useSkyPref, type SkyId } from "../../components/viewer/render/skies"
 import { FLOORS, LIGHTS, SKIRTINGS, WALLS, renamePresentationMaterial, usePresentationScene, type FloorId } from "../../components/viewer/presentationScene"
 import { floorSwatchUrl } from "../../components/viewer/floorTextures"
-import type { Composition } from "../../core/model"
+import { kitPilot, setKitPilot, type Composition } from "../../core/model"
 import { ScenePreview } from "./ScenePreview"
 import {
   Alert,
@@ -24,7 +24,7 @@ import {
   Text,
 } from "@chakra-ui/react"
 import { Children, Fragment, isValidElement, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { LuFactory, LuArrowDown, LuArrowUp, LuCheck, LuScanEye, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff,  LuHammer, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRotateCw, LuRoute, LuRows3, LuRuler, LuScan, LuSparkles, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
+import { LuFactory, LuArrowDown, LuDrill, LuArrowUp, LuCheck, LuScanEye, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff,  LuHammer, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRotateCw, LuRoute, LuRows3, LuRuler, LuScan, LuSparkles, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { MasterDetail } from "../../components/MasterDetail"
@@ -300,6 +300,27 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
 
           <Pane id="hardware" wide title="Ferratges" icon={LuHammer} desc="Frontisses, guies, espigues, imants i tiradors: els seus forats i quin fan servir els mòduls nous." onReset={() => setReset({ key: "hardwareLibrary", label: "Ferratges", note: "Torna la biblioteca inicial (els ferratges afegits es perden) i els per defecte. Els mobles fets porten la seva còpia: no canvien." })}>
             <HardwareList items={draft.hardwareLibrary} defaults={draft.hardwareDefaults} onChange={(hardwareLibrary) => set("hardwareLibrary", hardwareLibrary)} onDefaults={(hardwareDefaults) => set("hardwareDefaults", hardwareDefaults)} onDelete={setDeletingHw} onConfirmed={confirmedHw} settings={draft} />
+            {(() => {
+              // Regla del taller: prebroca a cada cargol d'un ferratge que no té mecanitzat propi. S'aplica als jocs de
+              // calaix de la biblioteca (els ferratges de sempre ja foraden cada cargol); els mobles fets no canvien.
+              const pilot = kitPilot(draft.hardwareLibrary)
+              const setPilot = (patch: Partial<typeof pilot>) => set("hardwareLibrary", setKitPilot(draft.hardwareLibrary, { ...pilot, ...patch }))
+              return (
+                <Box maxW="760px" w="full">
+                  <SettingsGroup icon={<LuDrill />} title="Prebroca dels cargols" summary={pilot.enabled ? `Ø${pilot.diameter} × ${pilot.depth}, activada` : "desactivada"}>
+                    <FormRow label="Prebroca" help="Forat guia a cada cargol d'un ferratge que no té mecanitzat propi: els de la guia al lateral del moble i els dels suports al front i al darrere dels jocs de calaix de doble paret. Els ferratges de sempre ja foraden cada cargol (guia Ø5 / Ø4, placa i System 32 Ø5, espigues, imants, braços). S'aplica als jocs de la biblioteca; els mobles fets porten la seva còpia.">
+                      <Switch.Root size="sm" pt={1.5} checked={pilot.enabled} onCheckedChange={(e) => setPilot({ enabled: e.checked })} data-testid="pilot-switch">
+                        <Switch.HiddenInput />
+                        <Switch.Control />
+                        <Switch.Label fontSize="sm">Prebrocar els cargols</Switch.Label>
+                      </Switch.Root>
+                    </FormRow>
+                    <NumRow label="Diàmetre" value={pilot.diameter} min={1} max={6} step={0.5} onChange={(diameter) => setPilot({ diameter })} />
+                    <NumRow label="Fondària" value={pilot.depth} min={3} max={30} step={1} onChange={(depth) => setPilot({ depth })} />
+                  </SettingsGroup>
+                </Box>
+              )
+            })()}
           </Pane>
 
           <Pane

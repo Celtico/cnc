@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { hingeItem, pairPlate, plateItem, restoreProposal, setConfirmed } from "../import/importItem"
 import type { HettichArticle } from "../import/hettich"
 import type { HardwareProposal } from "../import/proposal"
-import { DEFAULT_HARDWARE_KIT, HardwareItemSchema, defaultModule, hardwareChoices, isCopyOf, sameHardware, type Module, type Panel, type Zone } from "../model"
+import { DEFAULT_MODULE_HARDWARE, HardwareItemSchema, defaultModule, hardwareChoices, isCopyOf, sameHardware, type Module, type Panel, type Zone } from "../model"
 import { buildModule } from "./buildModule"
 import { toWorld } from "./geometry"
 import { cupSpec } from "./hardware"
@@ -37,7 +37,7 @@ const plateProposal: HardwareProposal = {
   notes: [],
 }
 const art = (article: string, kind: "hinge" | "plate"): HettichArticle => ({ article, folders: [], category: kind, tags: [], label: `${kind} ${article}`, group: "", kind, files: [] })
-const hinge = hingeItem(hingeProposal, art("9071205", "hinge"), DEFAULT_HARDWARE_KIT.hinge, { id: "hw-h", asset: "hwa-1", files: ["9071205.stp"] })
+const hinge = hingeItem(hingeProposal, art("9071205", "hinge"), DEFAULT_MODULE_HARDWARE.hinge, { id: "hw-h", asset: "hwa-1", files: ["9071205.stp"] })
 const plate = plateItem(plateProposal, art("9071615", "plate"), { id: "hw-p", asset: "hwa-2", files: ["9071615.stp"] })
 const paired = setConfirmed(pairPlate(hinge, setConfirmed(plate, true)), true)
 

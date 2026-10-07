@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildModule } from "../build/buildModule"
-import { DEFAULT_HARDWARE_KIT, HardwareItemSchema, HARDWARE_ROLES, defaultModule, isPlaceable, type HardwareItem, type Module, type Zone } from "../model"
+import { DEFAULT_MODULE_HARDWARE, HardwareItemSchema, HARDWARE_ROLES, defaultModule, isPlaceable, type HardwareItem, type Module, type Zone } from "../model"
 import { groupHettich, hettichFileKind } from "./hettich"
 import { applyProposal, articleItem, confirmProblem, proposalPlan, proposeArticle, retargetImported, setConfirmed } from "./importItem"
 import { defaultFrame, partialProposal, type HardwareProposal } from "./proposal"
@@ -13,7 +13,7 @@ import type { StepFeatures } from "./stepGeometry"
  * col·loquen a mà.
  */
 
-const base = { hinge: DEFAULT_HARDWARE_KIT.hinge, handle: DEFAULT_HARDWARE_KIT.handle }
+const base = { hinge: DEFAULT_MODULE_HARDWARE.hinge, handle: DEFAULT_MODULE_HARDWARE.handle }
 const art = (path: string) => groupHettich([{ path, kind: hettichFileKind(path) }])[0]!
 /** Un STEP sense cap cilindre: cap patró de forats. */
 const noCyl: StepFeatures = { schema: "AP214", unit: 1, cylinders: [], points: [[0, 0, 0], [60, 20, 70]], solids: 1 }
@@ -31,7 +31,7 @@ describe("proposta parcial: el tipus se sap, el patró no", () => {
     const item = articleItem(p, a, base, { id: "hw-1", files: ["72966.stp"] })
     expect(item.engine).toBe("cup")
     expect(item.category).toBe("hinge")
-    expect(item.params).toMatchObject({ cupDiameter: 35, cupDepth: 13, cupOffset: DEFAULT_HARDWARE_KIT.hinge.params.cupOffset })
+    expect(item.params).toMatchObject({ cupDiameter: 35, cupDepth: 13, cupOffset: DEFAULT_MODULE_HARDWARE.hinge.params.cupOffset })
     expect(item.targets[0]!.ops).toHaveLength(1)
     expect(item.imported).toMatchObject({ confirmed: false, frameFrom: "file" })
     expect(item.imported!.notes!.join(" ")).toMatch(/Entra la cassoleta i els cargols a l'editor/)
@@ -43,7 +43,7 @@ describe("proposta parcial: el tipus se sap, el patró no", () => {
     const handle = articleItem(partialProposal("handle", noCyl, "Res."), art("STEP_Griffe/Griffe/Classic/9070102.stp"), base, { id: "hw-h", files: [] })
     expect(handle.engine).toBe("barHandle")
     expect(handle.targets[0]!.ops).toHaveLength(2)
-    expect(handle.pitch).toEqual(DEFAULT_HARDWARE_KIT.handle.pitch)
+    expect(handle.pitch).toEqual(DEFAULT_MODULE_HARDWARE.handle.pitch)
     const leg = articleItem(partialProposal("leg", noCyl, "Res."), art("STEP_Moebelfuesse/Moebelfuesse/Stahl_Moebelfuesse/1225.stp"), base, { id: "hw-l", files: [] })
     expect(leg.engine).toBe("leg")
     expect(confirmProblem(leg)).toMatch(/no té cap forat/)
@@ -77,10 +77,10 @@ describe("canviar «què és» (retargetImported)", () => {
   it("un «només 3D» passa a frontissa: motor cup, números de la frontissa d'inici, sense confirmar; es queden la identitat, el model i els mecanitzats del generador", () => {
     const h = retargetImported(only3d, "cup")
     expect(h).toMatchObject({ id: "hw-m", name: only3d.name, maker: "Blum", ref: "71T453T", engine: "cup", category: "hinge" })
-    expect(h.params).toEqual(DEFAULT_HARDWARE_KIT.hinge.params)
-    expect(h.count).toEqual(DEFAULT_HARDWARE_KIT.hinge.count)
-    expect(h.targets).toEqual(DEFAULT_HARDWARE_KIT.hinge.targets)
-    expect(h.imported).toMatchObject({ asset: "hwa-x", bbox: only3d.imported!.bbox, confirmed: false, proposed: DEFAULT_HARDWARE_KIT.hinge.targets, proposedParams: { cupDiameter: 35, cupDepth: 13 } })
+    expect(h.params).toEqual(DEFAULT_MODULE_HARDWARE.hinge.params)
+    expect(h.count).toEqual(DEFAULT_MODULE_HARDWARE.hinge.count)
+    expect(h.targets).toEqual(DEFAULT_MODULE_HARDWARE.hinge.targets)
+    expect(h.imported).toMatchObject({ asset: "hwa-x", bbox: only3d.imported!.bbox, confirmed: false, proposed: DEFAULT_MODULE_HARDWARE.hinge.targets, proposedParams: { cupDiameter: 35, cupDepth: 13 } })
     expect(h.machining).toEqual(only3d.machining)
     // Ja no es col·loca a mà: el posen les regles.
     expect(isPlaceable(h)).toBe(false)
@@ -94,14 +94,14 @@ describe("canviar «què és» (retargetImported)", () => {
     expect(retargetImported(only3d, "leg")).toMatchObject({ engine: "leg", category: "leg", params: { inset: 50 }, targets: [{ key: "base", ops: [] }] })
     const slide = retargetImported(only3d, "slide")
     expect(slide.engine).toBe("slide")
-    expect(slide.lengths).toEqual(DEFAULT_HARDWARE_KIT.slide.lengths)
-    expect(retargetImported(only3d, "system32").params).toEqual(DEFAULT_HARDWARE_KIT.system32.params)
-    expect(retargetImported(only3d, "barHandle").pitch).toEqual(DEFAULT_HARDWARE_KIT.handle.pitch)
+    expect(slide.lengths).toEqual(DEFAULT_MODULE_HARDWARE.slide.lengths)
+    expect(retargetImported(only3d, "system32").params).toEqual(DEFAULT_MODULE_HARDWARE.system32.params)
+    expect(retargetImported(only3d, "barHandle").pitch).toEqual(DEFAULT_MODULE_HARDWARE.handle.pitch)
     // Una frontissa que deixa de ser-ho perd la placa aparellada.
     const hinge = { ...retargetImported(only3d, "cup"), plate: { id: "pl", name: "Placa" } }
     expect(retargetImported(hinge, "barHandle").plate).toBeUndefined()
     // Un que no és importat no canvia.
-    expect(retargetImported(DEFAULT_HARDWARE_KIT.hinge, "plate")).toBe(DEFAULT_HARDWARE_KIT.hinge)
+    expect(retargetImported(DEFAULT_MODULE_HARDWARE.hinge, "plate")).toBe(DEFAULT_MODULE_HARDWARE.hinge)
   })
   it("tots els llocs de «Què és» són motors de l'app, amb la categoria de la biblioteca que toca", () => {
     for (const r of HARDWARE_ROLES) {

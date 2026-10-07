@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { BUILTIN_TEMPLATES } from "./templates"
 import { CompositionSchema, DEFAULT_GRILLE, defaultModule, type Composition, type Front } from "./composition"
-import { DEFAULT_HARDWARE_KIT } from "./hardware"
+import { DEFAULT_MODULE_HARDWARE } from "./hardware"
 import { repairComposition } from "./compositionRepair"
 
 const plain = <T>(v: T): T => JSON.parse(JSON.stringify(v))
@@ -64,9 +64,9 @@ describe("repairComposition", () => {
 
   it("un ferratge dolent d'un front (porta, calaixos, abatible) treu només el ferratge, no el front", () => {
     const fronts: Front[] = [
-      { kind: "door", mode: "double", hinge: "right", hardware: DEFAULT_HARDWARE_KIT.hinge },
-      { kind: "drawers", n: 2, heights: [200, "auto"], hardware: DEFAULT_HARDWARE_KIT.slide },
-      { kind: "flap", dir: "up", hardware: DEFAULT_HARDWARE_KIT.flap },
+      { kind: "door", mode: "double", hinge: "right", hardware: DEFAULT_MODULE_HARDWARE.hinge },
+      { kind: "drawers", n: 2, heights: [200, "auto"], hardware: DEFAULT_MODULE_HARDWARE.slide },
+      { kind: "flap", dir: "up", hardware: DEFAULT_MODULE_HARDWARE.flap },
     ]
     // Un paràmetre que no és un número, un motor d'una versió més nova, o un mecanitzat dolent (mai mig ferratge).
     const breakers: ((h: Record<string, any>) => void)[] = [
@@ -97,7 +97,7 @@ describe("repairComposition", () => {
     const r = repairComposition({ modules: [m], references: [] })
     const kit = r.composition!.modules[0]!.hardware
     expect(kit.hinge.params.cupOffset).toBe(21)
-    expect(kit.slide.params).toEqual(DEFAULT_HARDWARE_KIT.slide.params)
+    expect(kit.slide.params).toEqual(DEFAULT_MODULE_HARDWARE.slide.params)
   })
 
   it("un front es repara dins del seu tipus: una trapa dolenta de la reixeta no treu la reixeta", () => {

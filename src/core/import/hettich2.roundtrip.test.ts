@@ -10,7 +10,7 @@ import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { buildModule } from "../build/buildModule"
 import { listZip, readZipEntry } from "../file/zip"
-import { DEFAULT_HARDWARE_KIT, defaultModule, type Panel, type Zone } from "../model"
+import { DEFAULT_MODULE_HARDWARE, defaultModule, type Panel, type Zone } from "../model"
 import { groupHettich, hettichFileKind, type HettichArticle } from "./hettich"
 import { articleItem, proposalPlan, proposeArticle, setConfirmed } from "./importItem"
 import type { HardwareProposal } from "./proposal"
@@ -111,7 +111,7 @@ describe.skipIf(!has(GRIFFE))("tiradors (STEP_Griffe.zip)", () => {
 
   it("un tirador real confirmat, a una porta i a un calaix: els forats a la seva distància", async () => {
     const a = z.article("9070102")
-    const item = setConfirmed(articleItem(await z.propose(a), a, DEFAULT_HARDWARE_KIT, { id: "hw-r", files: [] }), true)
+    const item = setConfirmed(articleItem(await z.propose(a), a, DEFAULT_MODULE_HARDWARE, { id: "hw-r", files: [] }), true)
     const base = defaultModule("m", "x", { width: 500, height: 720, depth: 560 })
     const cut = (p: Panel) => (p.cutouts ?? []).filter((c): c is Extract<NonNullable<Panel["cutouts"]>[number], { kind: "circle" }> => c.kind === "circle" && c.tag === "handle")
     for (const front of [{ kind: "door", mode: "single", hinge: "right", handle: item }, { kind: "drawers", n: 2, heights: ["auto", "auto"], handle: item }] as NonNullable<Zone["front"]>[]) {

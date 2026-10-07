@@ -21,7 +21,7 @@ import {
   type Vec3,
   isLegacyHardware,
   migrateModuleHardware,
-  type HardwareKit,
+  type ModuleHardware,
 } from "../model"
 import { slotSpec } from "./hardware"
 import { normalizePanel } from "./buildCabinet"
@@ -168,7 +168,7 @@ export function buildFreeParts(comp: Composition, moduleNumber: number): FreePar
   const warnings: FreePartsBuild["warnings"] = []
   // Les espigues del primer mòdul (la seva còpia de la biblioteca de ferratges), si n'hi ha.
   const kit = comp.modules[0]?.hardware
-  const dowel = kit ? slotSpec("dowel", ((isLegacyHardware(kit) ? migrateModuleHardware(kit) : kit) as HardwareKit).dowel).spec : DOWEL
+  const dowel = kit ? slotSpec("dowel", ((isLegacyHardware(kit) ? migrateModuleHardware(kit) : kit) as ModuleHardware).dowel).spec : DOWEL
 
   // Flat-pack = opció de cada peça (`joinery`, expressa): només es miren les parelles on alguna en fa.
   const joinery = new Map(parts.map((p) => [p.id, partJoinery(comp, p)]))

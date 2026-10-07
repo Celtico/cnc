@@ -1,5 +1,5 @@
 import type { IconType } from "react-icons"
-import { LuAnchor, LuArchive, LuBolt, LuCircleDashed, LuCircleDot, LuDoorOpen, LuFootprints, LuGripHorizontal, LuMagnet, LuMinus, LuPackage, LuPanelBottom, LuSquareDot, LuTable } from "react-icons/lu"
+import { LuAnchor, LuArchive, LuBolt, LuCircleDashed, LuCircleDot, LuDoorOpen, LuFootprints, LuGripHorizontal, LuMagnet, LuMinus, LuPackage, LuPackageOpen, LuPanelBottom, LuSquareDot, LuTable } from "react-icons/lu"
 import type { HardwareCategory } from "../../core/model"
 
 /**
@@ -17,6 +17,7 @@ export const HARDWARE_ICONS: Record<HardwareCategory, IconType> = {
   leg: LuFootprints,
   table: LuTable,
   "door-system": LuDoorOpen,
+  "drawer-system": LuPackageOpen,
   handle: LuGripHorizontal,
   push: LuMagnet,
   profile: LuMinus,

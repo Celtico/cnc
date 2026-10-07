@@ -23,6 +23,7 @@ const ROLE_LETTER: Record<PanelRole, string> = {
   spacer: "H",
   facing: "F",
   part: "P",
+  hardware: "H",
 }
 
 /**

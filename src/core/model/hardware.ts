@@ -4,12 +4,14 @@ import { tryExpr } from "./expr"
 import { deepEqual } from "./photoUpgrade"
 import { repairAtomically, repairValue } from "./repair"
 import { MachiningListSchema, migratePlacePos, PlacementTargetSchema, PlacePosSchema, RepeatSchema, stepValue, StepRuleSchema, type StepRule } from "./hardwareOps"
+import { HardwareKitSchema, KIT_PILOT_PARAMS, kitSummary, type HardwareKit } from "./hardwareKit"
+import { DTC_MAGIC_PRO_KITS } from "./kits/dtcMagicPro"
 
 /**
  * Biblioteca de ferratges (millores v1, `docs/millores-v1/ferratges.md` §4): cada ferratge és **dades** (`HardwareItem`:
  * paràmetres, mecanitzats paramètrics en coordenades de peça, regla de quantitat) i el codi només porta el **motor**
  * (`core/build/hardware.ts`) i els valors inicials. Les preferències en guarden la biblioteca i quin fa servir cada lloc
- * per defecte (`hardwareDefaults`); cada mòdul en guarda una **còpia** (`Module.hardware`, un `HardwareKit`), com abans
+ * per defecte (`hardwareDefaults`); cada mòdul en guarda una **còpia** (`Module.hardware`, un `ModuleHardware`), com abans
  * guardava els números: el moble és reproduïble encara que la biblioteca canviï. Una porta, un calaix o un abatible poden
  * triar-ne un altre de la biblioteca (`front.hardware`, també una còpia).
  */
@@ -69,6 +71,7 @@ export const HARDWARE_CATEGORIES = [
   { id: "hinge", label: "Frontisses", hint: "Cassoletes de les portes (i de les reixetes amb frontisses)." },
   { id: "plate", label: "Plaques de frontissa", hint: "Plaques al lateral, a la filera System 32." },
   { id: "slide", label: "Guies", hint: "Guies dels calaixos: forats al lateral del moble i a la caixa." },
+  { id: "drawer-system", label: "Calaixos de doble paret", hint: "Jocs paramètrics del fabricant (guies + laterals metàl·lics + suports): el calaix no porta laterals de fusta; el fons i el darrere surten de les fórmules del catàleg." },
   { id: "lift", label: "Elevables i abatibles", hint: "Braços i frontisses dels abatibles." },
   { id: "connector", label: "Unions", hint: "Espigues i altres unions entre dues peces." },
   { id: "shelf-support", label: "Suports de prestatge", hint: "La filera System 32 dels laterals (prestatges regulables i plaques)." },
@@ -93,7 +96,7 @@ const CATEGORY_IDS = HARDWARE_CATEGORIES.map((c) => c.id) as [HardwareCategory, 
  * `base`). `model` («només 3D»): un ferratge importat sense cap regla de mecanitzat (estructures de taula, portes
  * corredisses…): el model i el volum, **mai cap forat** (target `model` buit).
  */
-export const HARDWARE_ENGINES = ["cup", "system32", "dowel", "slide", "flapArm", "magnet", "barHandle", "plate", "leg", "model"] as const
+export const HARDWARE_ENGINES = ["cup", "system32", "dowel", "slide", "flapArm", "magnet", "barHandle", "plate", "leg", "model", "drawerKit"] as const
 export type HardwareEngine = (typeof HARDWARE_ENGINES)[number]
 
 /** Mecanitzat en coordenades de la peça, relatiu al punt d'ancoratge (u al llarg, v a través). */
@@ -220,6 +223,12 @@ export const HardwareItemObjectSchema = z.object({
    * només fa forats confirmat (`imported.confirmed`).
    */
   machining: MachiningListSchema.optional(),
+  /**
+   * Joc paramètric (v23, motor `drawerKit`, `hardwareKit.ts`): components, opcions, regles, peces de fusta i mecanitzats
+   * llegits del catàleg del fabricant. Els `params` porten la prebroca dels cargols (`pilotDiameter`, `pilotDepth`; 0 =
+   * sense) i els `targets` descriuen el forat de prebroca de cada peça (lateral, front, darrere).
+   */
+  kit: HardwareKitSchema.optional(),
 })
 export type HardwareItem = z.infer<typeof HardwareItemObjectSchema>
 
@@ -277,7 +286,7 @@ export const slotOf = (s: HardwareSlot) => HARDWARE_SLOTS.find((x) => x.slot ===
 export const slotForEngine = (e: HardwareEngine) => HARDWARE_SLOTS.find((x) => x.engine === e)!
 
 /** Còpia dels ferratges d'un mòdul: un item per lloc. */
-export const HardwareKitSchema = z.object({
+export const ModuleHardwareKitSchema = z.object({
   hinge: HardwareItemSchema,
   system32: HardwareItemSchema,
   dowel: HardwareItemSchema,
@@ -286,7 +295,7 @@ export const HardwareKitSchema = z.object({
   magnet: HardwareItemSchema,
   handle: HardwareItemSchema,
 })
-export type HardwareKit = z.infer<typeof HardwareKitSchema>
+export type ModuleHardware = z.infer<typeof ModuleHardwareKitSchema>
 
 /** Quin item de la biblioteca fa servir cada lloc als mòduls nous. */
 export const HardwareDefaultsSchema = z.object({
@@ -360,6 +369,10 @@ export const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
   ],
   leg: [P("inset", "Als cantells", 20, 300, 1, "De la vora de fora del mòdul a l'eix de cada pota (de costat i de davant/darrere).")],
   model: [],
+  drawerKit: [
+    P("pilotDiameter", "Prebroca (Ø)", 0, 6, 0.5, "Forat guia a cada cargol de la guia, dels suports del front i del darrere (0 = cap)."),
+    P("pilotDepth", "Prebroca (fondària)", 3, 30, 1),
+  ],
   plate: [
     P("setback", "Del davant", 0, 200, 0.5, "Del cantell de davant del lateral a la referència de la placa (la filera System 32: 37)."),
     P("offset", "Alçada", -100, 100, 0.5, "Del centre de la cassoleta a la referència de la placa (amunt, positiu)."),
@@ -523,7 +536,38 @@ export function libraryFromLegacy(h: LegacyHardware): HardwareItem[] {
   ]
 }
 
-export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = libraryFromLegacy(DEFAULT_LEGACY_HARDWARE)
+/**
+ * Un joc paramètric com a item de la biblioteca (motor `drawerKit`): el joc a `kit`, la prebroca als `params` i un forat de
+ * prebroca per peça als `targets` (el constructor en pren el Ø i la fondària, `drawerKit.ts`).
+ */
+export function kitItem(id: string, name: string, kit: HardwareKit, pilot: { pilotDiameter: number; pilotDepth: number } = KIT_PILOT_PARAMS): HardwareItem {
+  const pilotOp = (tag: string) => ({ kind: "drill" as const, face: "A" as const, u: 0, v: 0, d: "pilotDiameter", depth: "pilotDepth", tag })
+  return {
+    id,
+    name,
+    category: "drawer-system",
+    engine: "drawerKit",
+    maker: kit.maker,
+    ref: kit.series,
+    params: { ...pilot },
+    targets: [
+      { key: "side", label: "Lateral del moble (cargols de la guia)", ops: [pilotOp("kit-slide")] },
+      { key: "front", label: "Front del calaix (suports de davant)", ops: [pilotOp("kit-front")] },
+      { key: "back", label: "Darrere del calaix (suports de darrere)", ops: [pilotOp("kit-back")] },
+    ],
+    version: 1,
+    builtin: true,
+    kit: structuredClone(kit),
+  }
+}
+
+/** Els jocs inicials de l'app (DTC MAGIC-PRO, de la N a la F). */
+export const DEFAULT_HARDWARE_KITS: HardwareItem[] = DTC_MAGIC_PRO_KITS.map((k) => kitItem(k.id, k.name, k.kit))
+
+export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS]
+
+/** Un item és un joc paramètric que es pot fer servir (motor `drawerKit` amb el joc). */
+export const isDrawerKit = (item: HardwareItem): item is HardwareItem & { kit: HardwareKit } => item.engine === "drawerKit" && !!item.kit
 
 export const DEFAULT_HARDWARE_DEFAULTS: HardwareDefaults = {
   hinge: "hinge-cup",
@@ -536,13 +580,13 @@ export const DEFAULT_HARDWARE_DEFAULTS: HardwareDefaults = {
 }
 
 /** Els ferratges inicials d'un mòdul, amb els números d'abans (`Module.hardware` d'un mòdul desat abans de la v19). */
-export function kitFromLegacy(h: LegacyHardware): HardwareKit {
+export function kitFromLegacy(h: LegacyHardware): ModuleHardware {
   const lib = libraryFromLegacy(h)
   return kitFrom(lib, DEFAULT_HARDWARE_DEFAULTS)
 }
 
 /** Un kit (còpia) amb els items per defecte de cada lloc (`fixHardwareDefaults` ja garanteix que hi són). */
-export function kitFrom(library: readonly HardwareItem[], defaults: HardwareDefaults): HardwareKit {
+export function kitFrom(library: readonly HardwareItem[], defaults: HardwareDefaults): ModuleHardware {
   const pick = (slot: HardwareSlot): HardwareItem => {
     const engine = slotOf(slot).engine
     const hit = library.find((x) => x.id === defaults[slot] && x.engine === engine) ?? library.find((x) => x.engine === engine) ?? DEFAULT_HARDWARE_LIBRARY.find((x) => x.engine === engine)!
@@ -551,7 +595,7 @@ export function kitFrom(library: readonly HardwareItem[], defaults: HardwareDefa
   return { hinge: pick("hinge"), system32: pick("system32"), dowel: pick("dowel"), slide: pick("slide"), flap: pick("flap"), magnet: pick("magnet"), handle: pick("handle") }
 }
 
-export const DEFAULT_HARDWARE_KIT: HardwareKit = kitFromLegacy(DEFAULT_LEGACY_HARDWARE)
+export const DEFAULT_MODULE_HARDWARE: ModuleHardware = kitFromLegacy(DEFAULT_LEGACY_HARDWARE)
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v)
@@ -615,7 +659,7 @@ export function hardwareVars(item: HardwareItem, extra: Record<string, number> =
 export function hardwareSummary(item: HardwareItem): string {
   const v = hardwareVars(item, { pitch: item.pitch ? stepValue(item.pitch, Infinity) : 0 })
   const n = (x: number) => (Number.isFinite(x) ? String(Math.round(x * 100) / 100).replace(".", ",") : "?")
-  const ops = item.targets.flatMap((t) => t.ops)
+  const ops = item.engine === "drawerKit" && !((item.params.pilotDiameter ?? 0) > 0) ? [] : item.targets.flatMap((t) => t.ops)
   const holes = [...new Set(ops.map((o) => (o.kind === "through" ? `Ø${n(tryExpr(o.d, v))} passant` : `Ø${n(tryExpr(o.d, v))} × ${n(tryExpr(o.depth, v))}`)))]
   const p = item.params
   const extra =
@@ -627,6 +671,7 @@ export function hardwareSummary(item: HardwareItem): string {
     : item.engine === "plate" ? `a ${n(p.setback ?? NaN)} mm del davant`
     : item.engine === "leg" ? `a ${n(p.inset ?? NaN)} mm dels cantells`
     : item.engine === "model" ? modelSummary(item, n)
+    : item.engine === "drawerKit" && item.kit ? kitSummary(item.kit)
     : ""
   const gen = item.machining?.length ? `${item.machining.length} ${item.machining.length === 1 ? "mecanitzat" : "mecanitzats"} a mà` : ""
   const pending = isDamagedImport(item) ? "malmès" : isPendingImport(item) && (item.engine !== "model" || gen) ? "sense confirmar" : ""
@@ -682,7 +727,7 @@ function eachHardware(comp: unknown, visit: (item: HardwareItem) => HardwareItem
   const modules = comp.modules.map((m) => {
     if (!isRecord(m)) return m
     let out: Record<string, unknown> = m
-    const kit = HardwareKitSchema.safeParse(migrateModuleHardware(m.hardware))
+    const kit = ModuleHardwareKitSchema.safeParse(migrateModuleHardware(m.hardware))
     if (kit.success) {
       const next = { ...kit.data }
       let touched = false
@@ -861,3 +906,29 @@ export function setMachining(item: HardwareItem, ops: HardwareItem["machining"])
  * col·locats d'abans d'un d'aquests es continuen llegint i fabricant, `hardwarePlace.ts`).
  */
 export const isPlaceable = (item: HardwareItem): boolean => item.engine === "model"
+
+// --- Prebroca dels cargols (regla del taller) -----------------------------------------------------------------------
+
+/** La prebroca que fan els jocs de la biblioteca (la del primer joc; cap joc → la inicial). */
+export function kitPilot(library: readonly HardwareItem[]): { enabled: boolean; diameter: number; depth: number } {
+  const kit = library.find((x) => x.engine === "drawerKit")
+  if (!kit) return { enabled: true, ...KIT_PILOT_PARAMS_PLAIN }
+  const d = kit.params.pilotDiameter ?? 0
+  return { enabled: d > 0, diameter: d > 0 ? d : (kit.params.pilotOffDiameter ?? KIT_PILOT_PARAMS_PLAIN.diameter), depth: kit.params.pilotDepth ?? KIT_PILOT_PARAMS_PLAIN.depth }
+}
+const KIT_PILOT_PARAMS_PLAIN = { diameter: KIT_PILOT_PARAMS.pilotDiameter, depth: KIT_PILOT_PARAMS.pilotDepth }
+
+/**
+ * Regla del taller «prebroca dels cargols: Ø2 × 10» (Preferències › Ferratges) aplicada a tots els jocs de la biblioteca:
+ * cada joc porta la prebroca als seus `params` (les còpies dels mobles fets no canvien). Apagada, Ø 0 (cap forat) i el Ø
+ * es recorda a `pilotOffDiameter` per tornar-hi. Els ferratges de l'app de sempre ja foraden cada cargol (guia Ø5 / Ø4,
+ * placa i System 32 Ø5, espigues, imants, braços): no hi ha res més a prebrocar.
+ */
+export function setKitPilot(library: readonly HardwareItem[], pilot: { enabled: boolean; diameter: number; depth: number }): HardwareItem[] {
+  return library.map((x) => {
+    if (x.engine !== "drawerKit") return x
+    const { pilotOffDiameter: _o, ...rest } = x.params
+    const params = pilot.enabled ? { ...rest, pilotDiameter: pilot.diameter, pilotDepth: pilot.depth } : { ...rest, pilotDiameter: 0, pilotDepth: pilot.depth, pilotOffDiameter: pilot.diameter }
+    return { ...x, params }
+  })
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "../build/buildComposition"
-import { TV_LIVING_ROOM, DEFAULT_HARDWARE_KIT, DEFAULT_SETTINGS, materialRefNames, type Composition, type RefPreset } from "../model"
+import { TV_LIVING_ROOM, DEFAULT_MODULE_HARDWARE, DEFAULT_SETTINGS, materialRefNames, type Composition, type RefPreset } from "../model"
 import { DEFAULT_NEST_OPTIONS } from "../nesting/nest"
 import { buildMobleFile, FileCalibrationSchema, MOBLE_BASE_VERSION, MOBLE_VERSION, missingMaterials, missingMaterialsWarning, missingReferences, usedUserModelIds, mobleFileName, mobleToJson, parseMobleFile, uniqueName, usedReferences, type FileCalibration } from "./mobleFile"
 import type { PhotoCalibration } from "../../db/db"
@@ -205,7 +205,7 @@ describe("materials que no són a les preferències de qui obre el .moble", () =
   })
 
   describe("versió: v2 només amb ferratges importats", () => {
-    const imported = { ...DEFAULT_HARDWARE_KIT.hinge, id: "hw-imp", name: "Sensys", imported: { maker: "Hettich", article: "9071205", folders: [], files: [], proposed: [], confirmed: false } }
+    const imported = { ...DEFAULT_MODULE_HARDWARE.hinge, id: "hw-imp", name: "Sensys", imported: { maker: "Hettich", article: "9071205", folders: [], files: [], proposed: [], confirmed: false } }
     const withImported = (where: "kit" | "front"): Composition => {
       const c = structuredClone(comp)
       const m = c.modules[0]!

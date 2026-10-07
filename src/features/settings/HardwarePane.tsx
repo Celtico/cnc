@@ -31,7 +31,7 @@ import { featureCrop, hardwarePreview } from "../../core/build/hardwarePreview"
 import { hardwareMount, mountPlan, type HardwareMount } from "../../core/build/hardwareMount"
 import { movingGroups } from "../../components/viewer/opening"
 import {
-  DEFAULT_HARDWARE_KIT,
+  DEFAULT_MODULE_HARDWARE,
   HARDWARE_CATEGORIES,
   HARDWARE_PARAMS,
   HARDWARE_ROLES,
@@ -60,6 +60,7 @@ import { GalleryCard } from "../projects/GalleryCard"
 import { GALLERY_COLS, fold } from "../projects/galleryGrid"
 import { HARDWARE_ICONS } from "./hardwareIcons"
 import { HardwareMountPlan } from "./HardwareMountPlan"
+import { KitSections } from "./KitSections"
 import { useSessionString } from "./useSessionString"
 import { ThicknessChips } from "./MaterialBits"
 import { PaneHeadContext } from "./paneHead"
@@ -152,8 +153,8 @@ export function HardwareList({
   // Les bases dels importats: la frontissa per defecte (quantitat, extrems, cantell) i el tirador per defecte (marge,
   // cantell i el Ø del forat passant), si no són importats; si no, les d'inici de l'app.
   const importBase = () => ({
-    hinge: items.find((x) => x.id === defaults.hinge && x.engine === "cup" && !x.imported) ?? DEFAULT_HARDWARE_KIT.hinge,
-    handle: items.find((x) => x.id === defaults.handle && x.engine === "barHandle" && !x.imported) ?? DEFAULT_HARDWARE_KIT.handle,
+    hinge: items.find((x) => x.id === defaults.hinge && x.engine === "cup" && !x.imported) ?? DEFAULT_MODULE_HARDWARE.hinge,
+    handle: items.find((x) => x.id === defaults.handle && x.engine === "barHandle" && !x.imported) ?? DEFAULT_MODULE_HARDWARE.handle,
   })
   // Importar del fabricant: els fitxers triats → la llista d'articles (diàleg) → els items, sense confirmar.
   const [importSrc, setImportSrc] = useState<ImportSource | null>(null)
@@ -734,6 +735,7 @@ const ENGINE_HELP: Partial<Record<HardwareEngine, { label: string; help: string 
   plate: { label: "Placa de muntatge", help: "Placa de muntatge: no va sola; la frontissa importada que s'hi aparella en copia els forats (al lateral, a l'alçada de cada cassoleta)." },
   leg: { label: "Pota", help: "Es tria a la base «Potes» del mòdul (Caixa › Base › Pota): els forats de la placa van a la cara de sota de la base, a cada pota (a «Als cantells» de les vores de fora)." },
   model: { label: "Només 3D", help: "Sense cap regla de mecanitzat: el model i el volum, mai cap forat. No es pot triar a cap lloc del moble; en pots baixar el model (GLB) per posar-lo en un objecte (Models 3D › Triar fitxers)." },
+  drawerKit: { label: "Joc de calaix de doble paret", help: "Es tria al calaix en lloc de la guia (Front › Guia): el joc decideix la llargada nominal per la fondària, els números d'article, el fons i el darrere de fusta (sense laterals de fusta) i les prebroques dels cargols. Les dades del joc són les del catàleg (només lectura; duplica'l per canviar-les)." },
 }
 
 const PLACED_HELP =
@@ -1067,6 +1069,7 @@ function HardwareCard({
           )}
         </FoldItem>
 
+        {item.kit && <KitSections item={item} kit={item.kit} />}
         {item.imported?.update && <UpdateNotice item={item} onChange={onChange} />}
         {item.imported && (
           <FoldItem id="hw-imported" icon={LuUpload} title="Importat del fabricant" badge={importState.label} badgePalette={importState.palette} defaultOpen>
@@ -1224,6 +1227,7 @@ function HardwareCard({
           <Text fontSize="xs" color="fg.muted" pb={2}>
             {item.imported
               ? "Forats passants al front, al voltant del centre del tirador (pitch = la distància entre forats, diameter = el Ø de Mides)."
+              : item.kit ? "La prebroca de cada cargol (Ø i fondària de «Mides»); on van, ho diu el joc («Mecanitzats del joc»)."
               : "En coordenades de la peça (u al llarg del cantell de referència, v cap a dins), amb els noms de les mides de dalt. Editar-los i afegir-ne és per a més endavant (ferratges manuals)."}
           </Text>
         </FoldItem>

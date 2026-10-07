@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { confirmProblem, handleItem, legItem, modelItem, setConfirmed, setHandleDistance, setHardwareParam } from "../import/importItem"
 import type { HettichArticle } from "../import/hettich"
 import { modelProposal, type HardwareProposal } from "../import/proposal"
-import { DEFAULT_HARDWARE_KIT, HardwareItemSchema, ModuleSchema, defaultModule, usesImportedHardware, visibleModule, type HardwareItem, type Module, type Panel, type Zone } from "../model"
+import { DEFAULT_MODULE_HARDWARE, HardwareItemSchema, ModuleSchema, defaultModule, usesImportedHardware, visibleModule, type HardwareItem, type Module, type Panel, type Zone } from "../model"
 import { buildModule } from "./buildModule"
 import { toWorld } from "./geometry"
 import { hardwareMount, mountCamera, mountPlan } from "./hardwareMount"
@@ -24,7 +24,7 @@ const handleProposal = (dist: number, d = 5): HardwareProposal => ({
   bbox: { min: [-dist / 2 - 6, -10, 0], max: [dist / 2 + 6, 10, 35] },
   notes: [],
 })
-const handle = (dist: number, id = `hw-t${dist}`) => handleItem(handleProposal(dist), art(String(dist), "handle", "handle"), DEFAULT_HARDWARE_KIT.handle, { id, asset: "hwa-t", files: [] })
+const handle = (dist: number, id = `hw-t${dist}`) => handleItem(handleProposal(dist), art(String(dist), "handle", "handle"), DEFAULT_MODULE_HARDWARE.handle, { id, asset: "hwa-t", files: [] })
 const h160 = setConfirmed(handle(160), true)
 const knob = setConfirmed(handle(0, "hw-knob"), true)
 

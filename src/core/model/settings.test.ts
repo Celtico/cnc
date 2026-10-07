@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule } from "./composition"
-import { DEFAULT_HARDWARE_KIT, DEFAULT_LEGACY_HARDWARE, copyHardwareItem } from "./hardware"
+import { DEFAULT_HARDWARE_KITS, DEFAULT_MODULE_HARDWARE, DEFAULT_LEGACY_HARDWARE, copyHardwareItem } from "./hardware"
 import {
   BUILTIN_REFERENCES,
   SETTINGS_VERSION,
@@ -95,7 +95,7 @@ describe("preferències", () => {
     expect(m.fronts.outerGap).toBe(3)
     expect(m.carcass.material).toBe("MDF lacat")
     expect(m.carcass.thickness).toBe(22)
-    expect(m.hardware).toEqual(DEFAULT_HARDWARE_KIT)
+    expect(m.hardware).toEqual(DEFAULT_MODULE_HARDWARE)
   })
 
   it("mida de tauler per material, amb la regla buida com a comodí", () => {
@@ -284,7 +284,7 @@ describe("v12: duplicats fora i noms únics", () => {
     expect(names).not.toContain("DM 10")
     expect(names).not.toContain("Pi")
     expect(names).toContain("Fulles de pi")
-    expect(SETTINGS_VERSION).toBe(22)
+    expect(SETTINGS_VERSION).toBe(23)
   })
 
   it("«Melamina 19» i «DM 10» inicials passen als de sempre (amb les referències de les preferències) i «Pi» a «Fulles de pi»", () => {
@@ -355,5 +355,21 @@ describe("v14: llum LED dels mobles", () => {
     expect(led).toHaveLength(1)
     expect(led[0]!.glow).toBeGreaterThan(0)
     expect(parseSettings(JSON.parse(JSON.stringify(res.settings))).settings.materials.filter((m) => m.name === "Tira LED")).toHaveLength(1)
+  })
+})
+
+describe("v23: jocs de calaix de doble paret", () => {
+  it("unes preferències v22 reben els jocs inicials; unes v23 sense jocs no els tornen a rebre", () => {
+    const v22 = { ...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), version: 22, hardwareLibrary: DEFAULT_SETTINGS.hardwareLibrary.filter((x) => x.engine !== "drawerKit") }
+    const res = parseSettings(v22)
+    expect(res.migrated).toBe(true)
+    expect(res.settings.hardwareLibrary.filter((x) => x.engine === "drawerKit").map((x) => x.id)).toEqual(DEFAULT_HARDWARE_KITS.map((k) => k.id))
+    const v23 = { ...JSON.parse(JSON.stringify(res.settings)), hardwareLibrary: res.settings.hardwareLibrary.filter((x) => x.id !== "kit-dtc-ht14") }
+    expect(parseSettings(v23).settings.hardwareLibrary.some((x) => x.id === "kit-dtc-ht14")).toBe(false)
+    // Un joc amb el camp `kit` dolent només treu aquell item.
+    const bad = { ...v23, hardwareLibrary: v23.hardwareLibrary.map((x: { id: string }) => (x.id === "kit-dtc-ht11" ? { ...x, kit: { maker: 1 } } : x)) }
+    const r2 = parseSettings(bad)
+    expect(r2.settings.hardwareLibrary.some((x) => x.id === "kit-dtc-ht11")).toBe(false)
+    expect(r2.settings.hardwareLibrary.some((x) => x.id === "kit-dtc-ht12")).toBe(true)
   })
 })

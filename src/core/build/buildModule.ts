@@ -10,7 +10,9 @@ import {
   type EdgeSide,
   type Front,
   type HardwareItem,
-  type HardwareKit,
+  type KitLevel,
+  type KitOptions,
+  type ModuleHardware,
   type HardwareSlot,
   type Hole,
   type Module,
@@ -20,12 +22,14 @@ import {
   type Zone,
   damagedImportMessage,
   isDamagedImport,
+  isDrawerKit,
   isLegacyHardware,
   migrateModuleHardware,
   visibleModule,
 } from "../model"
 import { normalizePanel } from "./buildCabinet"
 import { applyHardware, legSpec, resolveKit, slotSpec, type ResolvedKit, type SlotSpec } from "./hardware"
+import { kitBottomThickness, kitHeight, kitSolidPanels, planKit, type KitOrderLine, type KitWoodSize } from "./drawerKit"
 import {
   X,
   Y,
@@ -91,10 +95,27 @@ export interface BuildWarning {
   panelId?: string
 }
 
+/** Un calaix fet amb un joc paramètric: el que cal comprar (números d'article) i la fusta que demana. */
+export interface KitOrder {
+  zoneId: string
+  drawer: number
+  /** Nom de l'item de la biblioteca i del joc («DTC MAGIC-PRO HT11 M»). */
+  item: string
+  kit: string
+  nl: number
+  options: KitOptions
+  lines: KitOrderLine[]
+  wood: KitWoodSize[]
+  rule?: { stabilizer: KitLevel; syncRod: KitLevel }
+  syncRod?: number
+}
+
 export interface ModuleBuild {
   panels: Panel[]
-  /** Elements que no són de CNC (barres de penjar): 3D i llista, sense nesting. */
+  /** Elements que no són de CNC (barres de penjar; components dels jocs de calaix, rol `hardware`): 3D i llista, sense nesting. */
   extras: Panel[]
+  /** Calaixos amb joc paramètric: la comanda per al taller (Peces › «Ferratges dels jocs», LLEGEIX-ME). */
+  hardwareKits: KitOrder[]
   warnings: BuildWarning[]
   layout: Layout
   /** % d'àrea oberta de cada reixeta, per id de zona (o "top" per a la tapa). */
@@ -257,6 +278,7 @@ class Builder {
   readonly warnings: BuildWarning[] = []
   readonly openRatios: Record<string, number> = {}
   readonly extras: Panel[] = []
+  readonly hardwareKits: KitOrder[] = []
   /** Zones que queden darrere del front d'una zona pare. */
   readonly covered = new Set<string>()
   /** Totes les zones per id. */
@@ -276,7 +298,7 @@ class Builder {
     this.m = m
     this.d = derive(m)
     // Mòduls d'abans que no han passat per l'esquema: els números d'abans, com a kit (els mateixos números).
-    const kit = (isLegacyHardware(m.hardware) ? migrateModuleHardware(m.hardware) : m.hardware) as HardwareKit
+    const kit = (isLegacyHardware(m.hardware) ? migrateModuleHardware(m.hardware) : m.hardware) as ModuleHardware
     this.kit = resolveKit(kit, (message) => this.hardwareWarning(message))
     const k = this.kit
     this.hw = { hinge: k.hinge.spec, system32: k.system32.spec, dowel: k.dowel.spec, slide: k.slide.spec, flap: k.flap.spec, magnet: k.magnet.spec, handle: k.handle.spec }
@@ -1521,6 +1543,47 @@ class Builder {
     }
   }
 
+  /** Alçades i Y de baix de cada front d'una pila de calaixos (l'últim «auto» es queda el que sobra; iguals a mig mm). */
+  private drawerLayout(zone: Zone, front: Extract<Front, { kind: "drawers" }>, ter: ZoneRect): { heights: number[]; ys: number[] } {
+    const n = front.n
+    const bg = this.m.fronts.betweenGap
+    const sizes = front.heights.slice(0, n)
+    while (sizes.length < n) sizes.push("auto")
+    // Com les zones: l'últim auto es queda el que sobra; sense cap «auto», l'últim s'ajusta (i s'avisa).
+    const fit = fitSizes(ter.y1 - ter.y0, sizes, bg)
+    const heights = snapAutoHeights(fit.sizes, sizes)
+    if (fit.mismatch !== null)
+      this.warnings.push({ code: "layout", message: mismatchMessage("Les alçades dels fronts dels calaixos", fit.mismatch, r(ter.y1 - ter.y0), heights.at(-1)!), zoneId: zone.id })
+    if (heights.some((h) => h <= 0)) this.warnings.push({ code: "layout", message: `Els ${n} calaixos no hi caben: algun front no té alçada.`, zoneId: zone.id })
+    const ys: number[] = []
+    for (let i = 0, yy = ter.y0; i < n; i++) {
+      ys.push(yy)
+      yy = r(yy + heights[i]! + bg)
+    }
+    return { heights, ys }
+  }
+
+  /** El front d'un calaix (cara A cap a dins, x local = amplada) amb el tirador centrat i, si toca, els inglets. */
+  private addDrawerFront(k: number, ter: ZoneRect, y: number, fh: number, handleHw: ReturnType<Builder["frontHandle"]>, zone: Zone): Panel {
+    const { d } = this
+    const c = this.m.carcass
+    const fw = r(ter.x1 - ter.x0)
+    // A inglet amb els laterals: el costat que arriba a fora del moble, tallat a 45°.
+    const mL = d.mitreFronts && ter.x0 <= 0.01 && c.sides.left
+    const mR = d.mitreFronts && ter.x1 >= d.W - 0.01 && c.sides.right
+    // Primer i últim calaix: també a inglet amb la tapa i la base (y local cap avall: el
+    // cantell de dalt és «bottom» i el de baix, «top»).
+    const mT = d.mitreFronts && d.mitreTop && y + fh >= d.H - 0.01
+    const mB = d.mitreFronts && d.mitreBottom && y <= d.baseY + 0.01
+    const frontPanel = this.add({
+      ...this.basePanel(`drawer-${k}-front`, "frontal calaix", `Front calaix ${k}`, "drawerFront", fw, fh, d.t, frontMaterialOf(this.m), "x", edges(...(mT ? [] : (["bottom"] as const)), ...(mB ? [] : (["top"] as const)), ...(mL ? [] : (["left"] as const)), ...(mR ? [] : (["right"] as const))), placement([ter.x0, y + fh, d.frontZ], X, neg(Y), neg(Z), Z)),
+      ...(mL || mR || mT || mB ? { mitres: [...(mL ? (["left"] as const) : []), ...(mR ? (["right"] as const) : []), ...(mT ? (["bottom"] as const) : []), ...(mB ? (["top"] as const) : [])] } : {}),
+    })
+    // Tirador centrat (x local = amplada, y local = cap avall).
+    this.handle(frontPanel, fw / 2, fh / 2, "x", handleHw, zone.id)
+    return frontPanel
+  }
+
   private buildDrawers(
     zone: Zone,
     front: Extract<Front, { kind: "drawers" }>,
@@ -1531,20 +1594,17 @@ class Builder {
   ): void {
     const { m, d } = this
     const c = m.carcass
-    // La guia triada al calaix (si no, la del mòdul): llargades, jocs, caixa i forats.
-    const hw = this.frontHardware("slide", front.hardware, zone.id).spec
     // El tirador triat al calaix (si no, el del mòdul).
     const handleHw = this.frontHandle(front.handle, zone.id)
+    // Un joc paramètric de calaix de doble paret (DTC MAGIC-PRO): cap lateral de fusta; el joc mana.
+    if (front.hardware && isDrawerKit(front.hardware)) {
+      this.buildKitDrawers(zone, front, front.hardware, rect, ter, left, right, handleHw)
+      return
+    }
+    // La guia triada al calaix (si no, la del mòdul): llargades, jocs, caixa i forats.
+    const hw = this.frontHardware("slide", front.hardware, zone.id).spec
     const n = front.n
-    const bg = m.fronts.betweenGap
-    const sizes = front.heights.slice(0, n)
-    while (sizes.length < n) sizes.push("auto")
-    // Com les zones: l'últim auto es queda el que sobra; sense cap «auto», l'últim s'ajusta (i s'avisa).
-    const fit = fitSizes(ter.y1 - ter.y0, sizes, bg)
-    const heights = snapAutoHeights(fit.sizes, sizes)
-    if (fit.mismatch !== null)
-      this.warnings.push({ code: "layout", message: mismatchMessage("Les alçades dels fronts dels calaixos", fit.mismatch, r(ter.y1 - ter.y0), heights.at(-1)!), zoneId: zone.id })
-    if (heights.some((h) => h <= 0)) this.warnings.push({ code: "layout", message: `Els ${n} calaixos no hi caben: algun front no té alçada.`, zoneId: zone.id })
+    const { heights, ys } = this.drawerLayout(zone, front, ter)
 
     const boxW = r(rect.x1 - rect.x0 - 2 * hw.sideClearance)
     // Amb el front encastat, la caixa del calaix comença un gruix més endins.
@@ -1565,11 +1625,6 @@ class Builder {
     // llum (el front del primer i de l'últim calaix sobresurt per sobre de la tapa o la base i la caixa hi toparia). Els
     // fronts iguals fan servir la mateixa caixa (la més justa del grup): així tenen exactament els mateixos mecanitzats
     // i el taller, que casa les peces per mida, no en barreja dos de diferents.
-    const ys: number[] = []
-    for (let i = 0, yy = ter.y0; i < n; i++) {
-      ys.push(yy)
-      yy = r(yy + heights[i]! + bg)
-    }
     const box = heights.map((fh, i) => ({
       lo: Math.max(hw.boxDrop / 2, rect.y0 + 1 - ys[i]!),
       hi: Math.min(fh - hw.boxDrop / 2, rect.y1 - 1 - ys[i]!),
@@ -1597,21 +1652,7 @@ class Builder {
       const k = this.drawerCount
       const fh = heights[i]!
       const y = ys[i]!
-      const fw = r(ter.x1 - ter.x0)
-      // Front (cara A cap a dins, x local = amplada).
-      // A inglet amb els laterals: el costat que arriba a fora del moble, tallat a 45°.
-      const mL = d.mitreFronts && ter.x0 <= 0.01 && c.sides.left
-      const mR = d.mitreFronts && ter.x1 >= d.W - 0.01 && c.sides.right
-      // Primer i últim calaix: també a inglet amb la tapa i la base (y local cap avall: el
-      // cantell de dalt és «bottom» i el de baix, «top»).
-      const mT = d.mitreFronts && d.mitreTop && y + fh >= d.H - 0.01
-      const mB = d.mitreFronts && d.mitreBottom && y <= d.baseY + 0.01
-      const frontPanel = this.add({
-        ...this.basePanel(`drawer-${k}-front`, "frontal calaix", `Front calaix ${k}`, "drawerFront", fw, fh, d.t, frontMaterialOf(this.m), "x", edges(...(mT ? [] : (["bottom"] as const)), ...(mB ? [] : (["top"] as const)), ...(mL ? [] : (["left"] as const)), ...(mR ? [] : (["right"] as const))), placement([ter.x0, y + fh, d.frontZ], X, neg(Y), neg(Z), Z)),
-        ...(mL || mR || mT || mB ? { mitres: [...(mL ? (["left"] as const) : []), ...(mR ? (["right"] as const) : []), ...(mT ? (["bottom"] as const) : []), ...(mB ? (["top"] as const) : [])] } : {}),
-      })
-      // Tirador centrat (x local = amplada, y local = cap avall).
-      this.handle(frontPanel, fw / 2, fh / 2, "x", handleHw, zone.id)
+      const frontPanel = this.addDrawerFront(k, ter, y, fh, handleHw, zone)
       const sb = shared.get(groupOf(fh))!
       const boxH = r(sb.hi - sb.lo)
       if (boxH < minBox) {
@@ -1681,6 +1722,91 @@ class Builder {
       })
     if (noDowel)
       this.warnings.push({ code: "drawer-box", message: "Caixa del calaix massa baixa per a les espigues: alguna unió queda sense espiga (cal cargolar-la).", zoneId: zone.id })
+  }
+
+  /**
+   * Calaixos amb un **joc paramètric de doble paret** (`drawerKit`, `core/build/drawerKit.ts`): el front de sempre i, per
+   * cada calaix, el pla del joc (`planKit`: la NL més gran que hi cap darrere del front, components amb el número
+   * d'article, fons A i darrere B per fórmula, prebroques). **Cap lateral de fusta.** Peces: el fons (del material del
+   * fons dels calaixos, gruix del joc) i el darrere (del tauler del cos); mecanitzats: prebroques Ø2 × 10 dels cargols de
+   * la guia als dos laterals del moble (mirall), dels suports de davant al darrere del front i dels de darrere al darrere.
+   * Els components van a `extras` com a peces de només veure (rol `hardware`, `drawer-<k>-kit-…`: el visor les mou amb el
+   * calaix) i la comanda a `hardwareKits`. **Tot o res** per calaix: sense NL que hi càpiga, sense lateral del moble a un
+   * costat o sense lloc en alçada, només el front i avís `hardware`. La vora inferior de la guia va a `baseAboveFront`
+   * del cantell de baix del front (hipòtesi del catàleg) i, si cal, puja perquè el joc quedi dins de la llum.
+   */
+  private buildKitDrawers(
+    zone: Zone,
+    front: Extract<Front, { kind: "drawers" }>,
+    item: HardwareItem,
+    rect: ZoneRect,
+    ter: ZoneRect,
+    left: VerticalRef | undefined,
+    right: VerticalRef | undefined,
+    handleHw: ReturnType<Builder["frontHandle"]>,
+  ): void {
+    const { m, d } = this
+    const c = m.carcass
+    const { heights, ys } = this.drawerLayout(zone, front, ter)
+    const LW = r(rect.x1 - rect.x0)
+    const zFront = d.frontZ - d.t // cara posterior del front
+    // Fondària darrere del front fins al fons del moble (encastat: el front ja és dins de la llum).
+    const depth = r(zFront - d.backInnerZ)
+    const TB = kitBottomThickness(item)
+    const res = planKit(item, { LW, depth, G: c.thickness, TB, options: front.kit })
+    for (const w of res.warnings) this.hardwareWarning(w, zone.id)
+    const plan = res.plan
+    const bottomMat = c.thickness === TB ? { name: c.material, warn: false } : drawerBottomMaterial(c.backMaterial, c.backThickness, TB)
+    if (plan && front.n > 0 && bottomMat.warn && !this.warnings.some((w) => w.code === "drawer-bottom"))
+      this.warnings.push({ code: "drawer-bottom", message: `Fons dels calaixos de ${TB} mm en «${bottomMat.name}» (${c.back === "none" ? `el mòdul no té fons: el material del cos, de ${c.thickness} mm` : `el fons del moble és de ${c.backThickness} mm`}): comprova que aquest material es ven en ${TB} mm.`, zoneId: zone.id })
+    if (plan && (!left || !right)) this.hardwareWarning(`«${item.name}»: el compartiment no té lateral a ${!left ? "l'esquerra" : "la dreta"} on cargolar la guia. Els calaixos es queden només amb el front.`, zone.id)
+    const kit = plan?.kit
+    const totalH = kit ? kitHeight(kit) : 0
+    for (let i = 0; i < front.n; i++) {
+      this.drawerCount += 1
+      const k = this.drawerCount
+      const fh = heights[i]!
+      const y = ys[i]!
+      const frontPanel = this.addDrawerFront(k, ter, y, fh, handleHw, zone)
+      if (!plan || !kit || !left || !right) continue
+      // Vora inferior de la guia: a `baseAboveFront` del cantell de baix del front, dins de la llum (1 mm de marge).
+      const y0 = r(Math.max(y + kit.rules.baseAboveFront, rect.y0 + 1))
+      if (y0 + totalH > rect.y1 - 1) {
+        this.hardwareWarning(`«${item.name}» (${kit.heightClass.code}, ${num(totalH)} mm d'alçada) no cap al calaix ${k}: en queden ${num(rect.y1 - 1 - y0)} per sobre de la guia. Només es fa el front: posa menys calaixos o un joc més baix.`, zone.id)
+        continue
+      }
+      const at = { x0: rect.x0, y0, zFront }
+      const pilot = plan.pilot
+      // Prebroques dels cargols de la guia als dos laterals del moble (el dret, mirall): z des del cantell de davant del
+      // lateral (= la cara de darrere del front, amb els fronts recobrents).
+      if (pilot) {
+        const spec = { ...pilot, tag: "kit-slide" }
+        for (const ref of [left, right])
+          for (const h of plan.sidePilots) addFaceHole(ref.panel, [ref === left ? ref.xR : ref.xL, r(y0 + h.y), r(zFront - h.z)], spec)
+        // Suports de davant: al darrere del front (cara A), a `x` de cada lateral.
+        for (const h of plan.frontPilots) for (const x of [rect.x0 + h.x, rect.x1 - h.x]) addFaceHole(frontPanel, [r(x), r(y0 + h.y), zFront], { ...pilot, tag: "kit-front" })
+      }
+      // Fusta: fons A (sobre la guia del lateral) i darrere B (sobre el fons, al final).
+      const bottom = plan.wood.find((w) => w.key === "bottom")
+      const back = plan.wood.find((w) => w.key === "back")
+      const zSlide = zFront - kit.rules.slideSetback
+      if (bottom && bottom.depth !== undefined) {
+        const bx0 = r(rect.x0 + (LW - bottom.width) / 2)
+        this.add(
+          this.basePanel(`drawer-${k}-bottom`, "fons calaix", `Fons calaix ${k}`, "drawerBottom", bottom.width, bottom.depth, TB, bottomMat.name, "none", { ...NO_EDGES }, placement([bx0, y0 + kit.geometry.bottomBase, zSlide], X, neg(Z), Y, neg(Y))),
+        )
+      }
+      if (back && back.height !== undefined && bottom && bottom.depth !== undefined) {
+        const bx0 = r(rect.x0 + (LW - back.width) / 2)
+        const yB = r(y0 + kit.geometry.bottomBase + TB)
+        const zB = r(zSlide - bottom.depth)
+        // Cara A cap al darrere del moble (on van els suports): x local = amplada, y local amunt.
+        const backPanel = this.add(this.basePanel(`drawer-${k}-back`, "darrere calaix", `Darrere calaix ${k}`, "drawerBack", back.width, back.height, c.thickness, c.material, "x", edges("top"), placement([bx0, yB, zB + c.thickness], X, Y, neg(Z), neg(Z))))
+        if (pilot) for (const h of plan.backPilots) for (const x of [bx0 + h.x, bx0 + back.width - h.x]) addFaceHole(backPanel, [r(x), r(yB + h.y), zB], { ...pilot, tag: "kit-back" })
+      }
+      this.extras.push(...kitSolidPanels(plan, k, at, LW))
+      this.hardwareKits.push({ zoneId: zone.id, drawer: k, item: item.name, kit: `${kit.maker} ${kit.series} ${kit.heightClass.code}`, nl: plan.nl, options: plan.options, lines: plan.lines, wood: plan.wood, ...(plan.rule ? { rule: plan.rule } : {}), ...(plan.syncRod !== undefined ? { syncRod: plan.syncRod } : {}) })
+    }
   }
 
   /**
@@ -1807,7 +1933,7 @@ export function buildModule(input: Module): ModuleBuild {
   const layout = b.buildZones()
   b.buildLegs()
   const panels = b.panels.map((p) => normalizePanel(p.cutouts && p.cutouts.length === 0 ? { ...p, cutouts: undefined } : p))
-  return { panels, extras: b.extras, warnings: b.warnings, layout, openRatios: b.openRatios }
+  return { panels, extras: b.extras, hardwareKits: b.hardwareKits, warnings: b.warnings, layout, openRatios: b.openRatios }
 }
 
 /** Material dels fronts (portes, calaixos, abatibles, reixetes, fixos): el propi o, si no n'hi ha, el del cos. */

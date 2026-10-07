@@ -91,4 +91,12 @@ export function useCompositionExtras(project: Pick<Project, "params" | "composit
   return build?.extras ?? EMPTY
 }
 
+/** Calaixos amb joc paramètric de tota la composició: la comanda per al taller (Peces › «Ferratges dels jocs»). */
+export function useCompositionKits(project: Pick<Project, "params" | "composition" | "name"> | undefined): CompositionBuild["hardwareKits"] {
+  const comp = useComposition(project)
+  const build = useCompositionBuild(comp)
+  return build?.hardwareKits ?? EMPTY_KITS
+}
+
 const EMPTY: Panel[] = []
+const EMPTY_KITS: CompositionBuild["hardwareKits"] = []

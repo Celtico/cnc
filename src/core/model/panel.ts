@@ -46,6 +46,8 @@ export const PanelRoleSchema = z.enum([
   "facing",
   /** Peça lliure (flat-pack, encaixos). */
   "part",
+  /** Component d'un ferratge (joc de calaix): només es veu, no es fabrica ni va al nesting (`build.extras`). */
+  "hardware",
 ])
 export type PanelRole = z.infer<typeof PanelRoleSchema>
 

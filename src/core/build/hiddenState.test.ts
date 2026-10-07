@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { DEFAULT_GRILLE, DEFAULT_HARDWARE_KIT, defaultModule, setFront, setShelves, type Carcass, type Composition, type Front, type Module, type Zone } from "../model"
+import { DEFAULT_GRILLE, DEFAULT_MODULE_HARDWARE, defaultModule, setFront, setShelves, type Carcass, type Composition, type Front, type Module, type Zone } from "../model"
 import { buildComposition } from "./buildComposition"
 import { catalogCorpus, int, MATERIALS, pick, randomComposition, rng, type Rnd } from "./testCorpus"
 
@@ -77,22 +77,27 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean): Zone {
 }
 
 /** Un tirador diferent del del mòdul (una altra distància i Ø): el que es triaria a «Tirador» d'un front. */
-const OTHER_HANDLE = { ...DEFAULT_HARDWARE_KIT.handle, id: "hw-tirador-amagat", params: { ...DEFAULT_HARDWARE_KIT.handle.params, diameter: 8 }, pitch: { steps: [], else: 320 } }
+const OTHER_HANDLE = { ...DEFAULT_MODULE_HARDWARE.handle, id: "hw-tirador-amagat", params: { ...DEFAULT_MODULE_HARDWARE.handle.params, diameter: 8 }, pitch: { steps: [], else: 320 } }
 
 function scrambleFront(f0: Front, r: Rnd, noHandles: boolean): Front {
   // Sense tiradors (push): el «Tirador» dels fronts no surt ni compta.
   const f = noHandles && (f0.kind === "door" || f0.kind === "drawers" || f0.kind === "flap") && r() < 0.6 ? { ...f0, handle: OTHER_HANDLE } : f0
   switch (f.kind) {
     case "drawers":
-      // Només es veu el nombre de calaixos: les alçades de més no compten.
-      return { ...f, heights: [...f.heights.slice(0, f.n), ...Array.from({ length: int(r, 0, 3) }, () => pick(r, ["auto", 120, 300] as const))] }
+      // Només es veu el nombre de calaixos: les alçades de més no compten. Les opcions del joc de calaix (tancament,
+      // darrere) només surten amb un joc triat a «Guia»: amb la guia normal no compten.
+      return {
+        ...f,
+        heights: [...f.heights.slice(0, f.n), ...Array.from({ length: int(r, 0, 3) }, () => pick(r, ["auto", 120, 300] as const))],
+        ...(f.hardware?.engine !== "drawerKit" && r() < 0.5 ? { kit: { closing: pick(r, ["push", "pushSoft"] as const), back: "metal" as const } } : {}),
+      }
     case "door":
       // Dues portes: no surten les frontisses.
     {
       const d = f.mode === "double" ? { ...f, hinge: pick(r, ["left", "right"] as const) } : f
       // Porta de vidre: frontisses del perfil; la frontissa triada (cassoletes) no surt ni compta.
       // Ni el tirador triat.
-      return f.glass && r() < 0.7 ? { ...d, hardware: { ...DEFAULT_HARDWARE_KIT.hinge, id: "hw-amagat", params: { ...DEFAULT_HARDWARE_KIT.hinge.params, cupDiameter: 26, cupOffset: 30 } }, ...(r() < 0.5 ? { handle: OTHER_HANDLE } : {}) } : d
+      return f.glass && r() < 0.7 ? { ...d, hardware: { ...DEFAULT_MODULE_HARDWARE.hinge, id: "hw-amagat", params: { ...DEFAULT_MODULE_HARDWARE.hinge.params, cupDiameter: 26, cupOffset: 30 } }, ...(r() < 0.5 ? { handle: OTHER_HANDLE } : {}) } : d
     }
     case "grille": {
       const p = f.pattern

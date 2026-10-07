@@ -1,5 +1,5 @@
 import {
-  DEFAULT_HARDWARE_KIT,
+  DEFAULT_MODULE_HARDWARE,
   damagedImportMessage,
   evalExpr,
   hardwareVars,
@@ -9,7 +9,7 @@ import {
   stepValue,
   type Cutout,
   type HardwareItem,
-  type HardwareKit,
+  type ModuleHardware,
   type HardwareSlot,
   type Hole,
 } from "../model"
@@ -239,7 +239,7 @@ export type SlotSpec<S extends HardwareSlot> = ReturnType<(typeof SPECS)[S]>
  * foradi res i avisi amb el nom de l'item.
  */
 function inertHinge(item: HardwareItem, error: string): SlotSpec<"hinge"> {
-  const base = cupSpec(DEFAULT_HARDWARE_KIT.hinge)
+  const base = cupSpec(DEFAULT_MODULE_HARDWARE.hinge)
   const prefix = `«${item.name}»`
   const why = error.startsWith(prefix) ? error.slice(prefix.length).replace(/^[:,]\s*/, "") : error
   const unusable = isDamagedImport(item) ? damagedImportMessage(item) : `«${item.name}» és importada i no es pot fer servir (${why}): la porta queda sense cassoletes ni forats. Revisa-la a Preferències › Ferratges.`
@@ -248,7 +248,7 @@ function inertHinge(item: HardwareItem, error: string): SlotSpec<"hinge"> {
 
 /** Tirador importat que no serveix: cap forat (ni els del tirador d'inici), amb l'avís del nom de l'item. */
 function inertHandle(item: HardwareItem, error: string): SlotSpec<"handle"> {
-  const base = handleSpec(DEFAULT_HARDWARE_KIT.handle)
+  const base = handleSpec(DEFAULT_MODULE_HARDWARE.handle)
   const prefix = `«${item.name}»`
   const why = error.startsWith(prefix) ? error.slice(prefix.length).replace(/^[:,]\s*/, "") : error
   const unusable = isDamagedImport(item) ? damagedImportMessage(item) : `«${item.name}» és un tirador importat i no es pot fer servir (${why}): el front queda sense forats del tirador. Revisa'l a Preferències › Ferratges.`
@@ -272,12 +272,12 @@ export function slotSpec<S extends HardwareSlot>(slot: S, item: HardwareItem | u
       onError?.(`${slotOf(slot).label}: ${why}. Es fa servir el d'inici de l'app.`)
     }
   }
-  const fallback = DEFAULT_HARDWARE_KIT[slot]
+  const fallback = DEFAULT_MODULE_HARDWARE[slot]
   return { spec: fn(fallback), item: fallback, ...(item ? { failed: true } : {}) }
 }
 
 /** Tots els llocs d'un kit resolts (els del mòdul). */
-export function resolveKit(kit: HardwareKit, onError?: (message: string) => void) {
+export function resolveKit(kit: ModuleHardware, onError?: (message: string) => void) {
   return {
     hinge: slotSpec("hinge", kit.hinge, onError),
     system32: slotSpec("system32", kit.system32, onError),

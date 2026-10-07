@@ -13,11 +13,19 @@ import {
   splitZone,
   unsplitZone,
   updateZone,
+  KIT_BACKS,
+  KIT_CLOSINGS,
+  KIT_LEVEL_LABEL,
+  fmtMm,
+  isDrawerKit,
+  kitOptionsOf,
   type Front,
   type HardwareItem,
-  type HardwareKit,
+  type ModuleHardware,
   type Zone,
 } from "../../core/model"
+import type { KitOrder } from "../../core/build/buildModule"
+import { kitLineText, kitWoodText } from "../../core/build/drawerKit"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { FRONT_ICONS } from "./zoneIcons"
@@ -101,6 +109,7 @@ export function ZonePanel({
   onChange,
   hardware,
   noHandles = false,
+  kits,
 }: {
   root: Zone
   zone: Zone
@@ -108,9 +117,11 @@ export function ZonePanel({
   openRatio?: number
   onChange: (root: Zone) => void
   /** Ferratges del mòdul (els fronts en poden triar un altre). */
-  hardware: HardwareKit
+  hardware: ModuleHardware
   /** El mòdul no porta tiradors (fronts push): el «Tirador» dels fronts no surt. */
   noHandles?: boolean
+  /** Calaixos d'aquesta zona fets amb un joc paramètric (del constructor): NL, números i fusta. */
+  kits?: KitOrder[]
 }) {
   const parent = parentOf(root, zone.id)
   const index = parent?.split ? parent.split.children.findIndex((c) => c.id === zone.id) : -1
@@ -153,7 +164,7 @@ export function ZonePanel({
         </>
       ) : (
         <>
-          <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} hardware={hardware} noHandles={noHandles} />
+          <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} />
 
           {zone.front?.kind !== "drawers" && (
             <FoldItem id="zone-shelves" title="Prestatges" badge={zone.shelves?.n || undefined} icon={LuRows3}>
@@ -253,6 +264,53 @@ export function ZonePanel({
   )
 }
 
+/**
+ * Calaixos amb un joc paramètric de doble paret triat a «Guia»: les opcions del joc (tancament i darrere) i el que el
+ * constructor n'ha tret per a aquest compartiment (`kits`): la NL triada, els números d'article i les mides del fons A i
+ * del darrere B. Cap lateral de fusta.
+ */
+function KitFields({ front, kit, kits, onChange }: { front: Extract<Front, { kind: "drawers" }>; kit: HardwareItem & { kit: NonNullable<HardwareItem["kit"]> }; kits?: KitOrder[]; onChange: (f: Front) => void }) {
+  const o = kitOptionsOf(kit.kit, front.kit)
+  const setKit = (patch: Partial<typeof o>) => onChange({ ...front, kit: { ...o, ...patch } })
+  const first = kits?.[0]
+  return (
+    <>
+      <FormRow label="Tancament" help="Com tanca el calaix: suau (amortit), push-open (sense tirador, amb barra de sincronització) o les dues coses. Canvia els números d'article i si cal la barra.">
+        <ChoiceChips label="Tancament" value={o.closing} options={kit.kit.options.closing.map((c) => ({ id: c, label: KIT_CLOSINGS.find((x) => x.id === c)!.short }))} onChange={(closing) => setKit({ closing })} />
+      </FormRow>
+      <FormRow label="Darrere" help="De fusta (peça B del tauler del cos, amb els suports de darrere) o metàl·lic del fabricant (per amplada del moble; el fons és 2 mm més llarg).">
+        <ChoiceChips label="Darrere" value={o.back} options={kit.kit.options.back.map((b) => ({ id: b, label: KIT_BACKS.find((x) => x.id === b)!.short }))} onChange={(back) => setKit({ back })} />
+      </FormRow>
+      {first ? (
+        <FormRow label="Joc" help={`${first.kit}: la llargada nominal més gran que hi cap darrere del front (LT = NL + 3). Sense laterals de fusta: el fons i el darrere surten de les fórmules del catàleg. Els components i els números són a Peces › «Ferratges dels jocs».`}>
+          <Stack gap={0.5} pt="6px" fontSize="sm" data-testid="kit-info">
+            <Text fontWeight="medium">NL {first.nl} · {kits!.length} {kits!.length === 1 ? "calaix" : "calaixos"}</Text>
+            {first.lines.slice(0, 4).map((l) => (
+              <Text key={l.component} fontSize="xs" color="fg.muted">
+                {kitLineText(l)}
+              </Text>
+            ))}
+            {first.wood.map((w) => (
+              <Text key={w.key} fontSize="xs">
+                {kitWoodText(w)}
+              </Text>
+            ))}
+            {first.rule && (
+              <Text fontSize="xs" color="fg.muted">
+                Estabilitzador {KIT_LEVEL_LABEL[first.rule.stabilizer]} · barra {KIT_LEVEL_LABEL[first.rule.syncRod]}{first.syncRod !== undefined ? ` (tallar a ${fmtMm(first.syncRod)})` : ""}
+              </Text>
+            )}
+          </Stack>
+        </FormRow>
+      ) : (
+        <Text fontSize="xs" color="fg.muted">
+          El joc no hi cap: mira els avisos del moble (fondària, alçada o laterals).
+        </Text>
+      )}
+    </>
+  )
+}
+
 /** El front amb el seu ferratge (una còpia) o, sense, amb el del mòdul (el camp fora). */
 function withHardware<F extends Extract<Front, { kind: "door" | "drawers" | "flap" }>>(front: F, item: HardwareItem | undefined): F {
   if (item) return { ...front, hardware: item }
@@ -267,7 +325,7 @@ function withHandle<F extends Extract<Front, { kind: "door" | "drawers" | "flap"
   return rest as F
 }
 
-function FrontFields({ front, openRatio, onChange, hardware, noHandles }: { front: Front; openRatio?: number; onChange: (f: Front) => void; hardware: HardwareKit; noHandles: boolean }) {
+function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits }: { front: Front; openRatio?: number; onChange: (f: Front) => void; hardware: ModuleHardware; noHandles: boolean; kits?: KitOrder[] }) {
   // «Tirador»: el del mòdul (Fusteria) o un altre de la biblioteca (un d'importat i confirmat fa els forats a la seva distància).
   const handlePick = (f: Extract<Front, { kind: "door" | "drawers" | "flap" }>) =>
     noHandles ? null : <HardwarePick slot="handle" label="Tirador" current={f.handle ?? hardware.handle} inherited={hardware.handle} onPick={(h) => onChange(withHandle(f, h))} />
@@ -322,6 +380,7 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles }: { fron
             onChange({ ...front, n: k, heights: Array.from({ length: k }, (_, i) => front.heights[i] ?? "auto") })
           }} />
           <HardwarePick slot="slide" current={front.hardware ?? hardware.slide} inherited={hardware.slide} onPick={(h) => onChange(withHardware(front, h))} />
+          {front.hardware && isDrawerKit(front.hardware) && <KitFields front={front} kit={front.hardware} kits={kits} onChange={onChange} />}
           {handlePick(front)}
         </Stack>
       )
@@ -424,7 +483,7 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles }: { fron
  * Tipus de front d'una zona (botons d'icona) i els seus camps. En una zona dividida, només
  * portes o front fix, que tapen tota la zona (les fulles de dins queden darrere).
  */
-export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title = "Front", id, hardware, noHandles = false }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; hardware: HardwareKit; noHandles?: boolean; kinds?: (Front["kind"] | "none")[]; title?: string; /** Id de la secció plegable (cada lloc el seu: recorda si és oberta). */ id?: string }) {
+export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title = "Front", id, hardware, noHandles = false, kits }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; hardware: ModuleHardware; noHandles?: boolean; kits?: KitOrder[]; kinds?: (Front["kind"] | "none")[]; title?: string; /** Id de la secció plegable (cada lloc el seu: recorda si és oberta). */ id?: string }) {
   const options = kinds ?? (Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[])
   return (
           <FoldItem id={id ?? (kinds ? "zone-parent-front" : "zone-front")} title={title} badge={FRONT_LABELS[zone.front?.kind ?? "none"]} icon={FRONT_ICONS[zone.front?.kind ?? "none"]}>
@@ -438,7 +497,7 @@ export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title
                 onChange={(k) => onChange(setFront(root, zone.id, k === "none" ? null : defaultFront(k)))}
               />
             </FormRow>
-            {zone.front && <FrontFields front={zone.front} openRatio={openRatio} hardware={hardware} noHandles={noHandles} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
+            {zone.front && <FrontFields front={zone.front} openRatio={openRatio} hardware={hardware} noHandles={noHandles} kits={kits} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
           </FoldItem>
   )
 }

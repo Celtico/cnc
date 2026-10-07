@@ -1051,7 +1051,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         </Stack>
       ) : selection.kind === "zone" && zone ? (
         <Stack gap={3}>
-          <ZonePanel root={module.root} zone={zone} hardware={module.hardware} noHandles={module.fronts.handles === "none"} openRatio={moduleBuild?.openRatios[zone.id]} onChange={(root) => updateModule({ ...module, root })} />
+          <ZonePanel root={module.root} zone={zone} hardware={module.hardware} noHandles={module.fronts.handles === "none"} openRatio={moduleBuild?.openRatios[zone.id]} kits={moduleBuild?.hardwareKits.filter((k) => k.zoneId === zone.id)} onChange={(root) => updateModule({ ...module, root })} />
         </Stack>
       ) : (
         // Seccions plegables independents (com Figma o Fusion): es poden tenir diverses
@@ -1355,7 +1355,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         )}
         {viewTab === "3d" && viewerState.materialMode === "role" && (
           <Box position="absolute" bottom={3} left={3} zIndex={2} display={{ base: "none", md: "block" }}>
-            <RoleLegend panels={panels} />
+            <RoleLegend panels={viewerPanels} />
           </Box>
         )}
         {/* La recepta del SegmentGroup força position: relative; el posicionem amb un embolcall. */}

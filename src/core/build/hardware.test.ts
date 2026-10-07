@@ -3,7 +3,8 @@ import { buildMobleFile, mobleToJson, parseMobleFile } from "../file/mobleFile"
 import {
   CompositionSchema,
   DEFAULT_HARDWARE_DEFAULTS,
-  DEFAULT_HARDWARE_KIT,
+  DEFAULT_MODULE_HARDWARE,
+  DEFAULT_HARDWARE_KITS,
   DEFAULT_HARDWARE_LIBRARY,
   DEFAULT_LEGACY_HARDWARE,
   DEFAULT_SETTINGS,
@@ -74,10 +75,10 @@ describe("motor de ferratges (F1)", () => {
   it("un item dolent (fórmula, paràmetre que falta, un altre tipus) no fa mig ferratge: el d'inici i un avís", () => {
     const warn: string[] = []
     const bad = { ...item("hinge-cup"), targets: [{ key: "door", label: "Porta", ops: [{ kind: "drill" as const, face: "A" as const, u: 0, v: "cupOfset", d: "cupDiameter", depth: "cupDepth" }] }] }
-    expect(slotSpec("hinge", bad, (m) => warn.push(m)).item).toBe(DEFAULT_HARDWARE_KIT.hinge)
-    expect(slotSpec("hinge", item("slide-ball"), (m) => warn.push(m)).item).toBe(DEFAULT_HARDWARE_KIT.hinge)
+    expect(slotSpec("hinge", bad, (m) => warn.push(m)).item).toBe(DEFAULT_MODULE_HARDWARE.hinge)
+    expect(slotSpec("hinge", item("slide-ball"), (m) => warn.push(m)).item).toBe(DEFAULT_MODULE_HARDWARE.hinge)
     const { cupDepth: _c, ...params } = item("hinge-cup").params
-    expect(slotSpec("hinge", { ...item("hinge-cup"), params }, (m) => warn.push(m)).item).toBe(DEFAULT_HARDWARE_KIT.hinge)
+    expect(slotSpec("hinge", { ...item("hinge-cup"), params }, (m) => warn.push(m)).item).toBe(DEFAULT_MODULE_HARDWARE.hinge)
     expect(warn).toHaveLength(3)
     expect(warn[0]).toMatch(/cupOfset/)
   })
@@ -118,9 +119,9 @@ describe("ferratges per front (porta, calaix, abatible)", () => {
 
 describe("migració dels ferratges (v19)", () => {
   it("els items inicials surten dels números d'abans, i el kit d'un mòdul d'abans és el mateix que el d'un de nou", () => {
-    expect(libraryFromLegacy(DEFAULT_LEGACY_HARDWARE)).toEqual(DEFAULT_HARDWARE_LIBRARY)
-    expect(kitFromLegacy(DEFAULT_LEGACY_HARDWARE)).toEqual(DEFAULT_HARDWARE_KIT)
-    expect(defaultModule("m", "x").hardware).toEqual(DEFAULT_HARDWARE_KIT)
+    expect([...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS]).toEqual(DEFAULT_HARDWARE_LIBRARY)
+    expect(kitFromLegacy(DEFAULT_LEGACY_HARDWARE)).toEqual(DEFAULT_MODULE_HARDWARE)
+    expect(defaultModule("m", "x").hardware).toEqual(DEFAULT_MODULE_HARDWARE)
     for (const it of DEFAULT_HARDWARE_LIBRARY) expect(HardwareItemSchema.safeParse(it).success).toBe(true)
   })
 
@@ -147,7 +148,7 @@ describe("migració dels ferratges (v19)", () => {
     const m = { ...withRoot(defaultModule("m", "x", { width: 500, height: 720, depth: 560 }), { id: "r", front: { kind: "door", mode: "single", hinge: "left" } }), hardware: h } as unknown as Module
     const door = buildModule(m).panels.find((p) => p.role === "door")!
     expect(door.holes.filter((h) => h.tag === "hinge").map((x) => [x.y, x.diameter, x.depth])).toEqual([[21, 30, 11], [21, 30, 11]])
-    const kit = migrateModuleHardware(h) as typeof DEFAULT_HARDWARE_KIT
+    const kit = migrateModuleHardware(h) as typeof DEFAULT_MODULE_HARDWARE
     expect(kit.slide.params.frontOffset).toBe(40)
     expect(kit.flap.params.offset).toBe(21)
     expect(kit.magnet.params).toEqual({ diameter: 8, depth: 4, cornerOffset: 50 })
@@ -181,7 +182,7 @@ describe("migració dels ferratges (v19)", () => {
     const res = parseMobleFile(JSON.stringify(file))
     expect(res.ok).toBe(true)
     if (!res.ok) return
-    expect(res.file.project.composition.modules[0]!.hardware).toEqual(DEFAULT_HARDWARE_KIT)
+    expect(res.file.project.composition.modules[0]!.hardware).toEqual(DEFAULT_MODULE_HARDWARE)
     expect(buildComposition(res.file.project.composition).panels).toEqual(buildComposition(c).panels)
     // I un d'ara: anada i tornada amb la frontissa d'una porta.
     const mine = copyHardwareItem(item("hinge-cup"), "hw-1", "Meva")
@@ -195,7 +196,7 @@ describe("migració dels ferratges (v19)", () => {
     old.modules[0].hardware.drawer.slideLengths = [300, 0]
     const r = repairComposition(old)
     expect(r.composition!.modules[0]!.hardware.slide.lengths).toEqual([300])
-    expect(r.composition!.modules[0]!.hardware.hinge).toEqual(DEFAULT_HARDWARE_KIT.hinge)
+    expect(r.composition!.modules[0]!.hardware.hinge).toEqual(DEFAULT_MODULE_HARDWARE.hinge)
   })
 
   it("preferències coherents: cada lloc apunta a un item del seu tipus (si no, el primer o l'inicial)", () => {
@@ -218,7 +219,8 @@ describe("referències als mobles desats (eliminar amb substitut)", () => {
     const mine = copyHardwareItem(item("hinge-cup"), "hw-1", "Meva")
     const doors = { ...c, modules: c.modules.map((m, i) => (i === 0 ? withRoot(m, { id: "r", split: { dir: "v" as const, sizes: ["auto", "auto"] as ("auto" | number)[], children: [{ id: "a", front: { kind: "door" as const, mode: "single" as const, hinge: "left" as const, hardware: mine } }, { id: "b" }] } }) : m)) }
     expect(hardwareRefIds(doors)).toEqual(expect.arrayContaining(["hinge-cup", "hw-1", "slide-ball"]))
-    expect(hardwareRefIds(legacy(c))).toEqual(expect.arrayContaining(DEFAULT_HARDWARE_LIBRARY.map((x) => x.id)))
+    // Els jocs de calaix no tenen lloc al mòdul: només hi són si es trien a un calaix.
+    expect(hardwareRefIds(legacy(c))).toEqual(expect.arrayContaining(DEFAULT_HARDWARE_LIBRARY.filter((x) => x.engine !== "drawerKit").map((x) => x.id)))
     const other = copyHardwareItem(item("hinge-cup"), "hw-2", "Altra")
     const out = replaceHardwareRefs(doors, mine, other)
     expect(hardwareRefIds(out)).not.toContain("hw-1")

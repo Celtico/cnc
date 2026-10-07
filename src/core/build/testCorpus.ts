@@ -7,8 +7,10 @@ import {
   COLLECTION_PIECES,
   DEFAULT_CABINET,
   DEFAULT_GRILLE,
-  DEFAULT_HARDWARE_KIT,
+  DEFAULT_HARDWARE_KITS,
+  DEFAULT_MODULE_HARDWARE,
   STORE_TEMPLATES,
+  defaultModule,
   TV_LIVING_ROOM,
   type Base,
   type Carcass,
@@ -126,7 +128,7 @@ export function randomModule(r: Rnd, id: string): Module {
     carcass,
     root: randomZone(r, `${id}.r`, 0),
     fronts: { outerGap: 2, betweenGap: 3, ...(r() < 0.25 ? { style: "inset" as const } : {}), ...(r() < 0.2 ? { handles: "none" as const } : {}) },
-    hardware: structuredClone(DEFAULT_HARDWARE_KIT),
+    hardware: structuredClone(DEFAULT_MODULE_HARDWARE),
     extras: { cableHoles: [] },
   }
 }
@@ -178,8 +180,29 @@ export interface CorpusItem {
   make: () => Composition
 }
 
-/** Totes les plantilles del catàleg: les de l'app, les de botiga, les col·leccions i els mobles de revista. */
+/**
+ * Calaixos amb joc paramètric de doble paret (DTC MAGIC-PRO HT11 M): un mòdul de 732 × 720 × 500 amb tauler de 16 (LW
+ * 700 → NL 450, fons 681 × 421, darrere 660 × 63) amb tres calaixos de tancament suau i darrere de fusta, i un altre de
+ * 600 × 500 × 450 amb dos de push-open i darrere metàl·lic (barra de sincronització). Fix al corpus: cap plantilla fa
+ * servir jocs.
+ */
+export function kitDrawerComposition(): Composition {
+  const ht11 = DEFAULT_HARDWARE_KITS.find((k) => k.id === "kit-dtc-ht11")!
+  const a = defaultModule("kit-a", "Calaixos DTC", { width: 732, height: 720, depth: 500, thickness: 16 })
+  const b = defaultModule("kit-b", "Calaixos push", { width: 600, height: 500, depth: 450, thickness: 16 })
+  const drawers = (n: number, kit?: { closing: "soft" | "push" | "pushSoft"; back: "wood" | "metal" }): Zone => ({ id: "root", front: { kind: "drawers", n, heights: Array.from({ length: n }, () => "auto"), hardware: structuredClone(ht11), ...(kit ? { kit } : {}) } })
+  return {
+    kind: "moble",
+    modules: [
+      { ...a, root: drawers(3) },
+      { ...b, gapBefore: 20, root: drawers(2, { closing: "push", back: "metal" }) },
+    ],
+    references: [],
+  }
+}
+
+/** Totes les plantilles del catàleg: les de l'app, les de botiga, les col·leccions i els mobles de revista, i el moble fix dels jocs de calaix. */
 export function catalogCorpus(): CorpusItem[] {
-  const all = [...BUILTIN_TEMPLATES, TV_LIVING_ROOM, ...STORE_TEMPLATES, ...COLLECTION_PIECES.map((p) => ({ ...p, id: `col:${p.id}` })), ...MAG_FURNITURE.map((t) => ({ ...t, id: `mag:${t.id}` }))]
+  const all = [...BUILTIN_TEMPLATES, TV_LIVING_ROOM, ...STORE_TEMPLATES, ...COLLECTION_PIECES.map((p) => ({ ...p, id: `col:${p.id}` })), ...MAG_FURNITURE.map((t) => ({ ...t, id: `mag:${t.id}` })), { id: "kit-dtc-ht11", make: kitDrawerComposition }]
   return all.map((t) => ({ id: t.id, make: () => stableIds(t.make()) }))
 }

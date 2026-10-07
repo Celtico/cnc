@@ -9,7 +9,7 @@ import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { modelCamera } from "../build/hardwareMount"
 import { listZip, readZipEntry, type ZipEntry } from "../file/zip"
-import { DEFAULT_HARDWARE_KIT } from "../model"
+import { DEFAULT_MODULE_HARDWARE } from "../model"
 import { readDxf } from "./dxf"
 import { groupHettich, hettichCandidate, hettichFileKind, type HettichArticle } from "./hettich"
 import { articleItem, proposeArticle } from "./importItem"
@@ -47,7 +47,7 @@ const text = async (o: Opened[], path: string) => {
   }
   throw new Error(path)
 }
-const base = { hinge: DEFAULT_HARDWARE_KIT.hinge, handle: DEFAULT_HARDWARE_KIT.handle }
+const base = { hinge: DEFAULT_MODULE_HARDWARE.hinge, handle: DEFAULT_MODULE_HARDWARE.handle }
 const names = (a: HettichArticle) => a.files.map((f) => f.path.split("/").pop()!)
 
 describe.skipIf(!has("DWG_DXF_Griffe.zip", "STEP_Griffe.zip"))("tiradors: DWG_DXF_Griffe.zip i STEP_Griffe.zip", { timeout: 60000 }, () => {
