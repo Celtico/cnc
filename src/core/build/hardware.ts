@@ -232,7 +232,25 @@ export function plateSpec(item: HardwareItem) {
   return { setback: param(item, "setback"), offset: item.params.offset ?? 0, holes: plateHoles(item) }
 }
 
-const SPECS = { hinge: cupSpec, system32: system32Spec, dowel: dowelSpec, slide: slideSpec, flap: flapSpec, magnet: magnetSpec, handle: handleSpec } as const
+/** Barra de penjar (accessori d'un compartiment): Ø del tub i distància del sostre a l'eix. Sense mecanitzat (suports: pendent). */
+export function railSpec(item: HardwareItem) {
+  expectEngine(item, "rail")
+  return { diameter: param(item, "diameter"), drop: param(item, "drop") }
+}
+
+/** Perfil de tira LED (accessori d'un compartiment): secció i retirada del davant del prestatge. Sense mecanitzat (ranura: pendent). */
+export function ledSpec(item: HardwareItem) {
+  expectEngine(item, "ledProfile")
+  return { width: param(item, "width"), height: param(item, "height"), setback: param(item, "setback") }
+}
+
+/** Marc d'alumini d'una porta de vidre (vitrina): amplada del perfil i gruix del vidre. Sense mecanitzat (frontisses de perfil: pendent). */
+export function glassFrameSpec(item: HardwareItem) {
+  expectEngine(item, "glassFrame")
+  return { frame: param(item, "frame"), glass: param(item, "glass") }
+}
+
+const SPECS = { hinge: cupSpec, system32: system32Spec, dowel: dowelSpec, slide: slideSpec, flap: flapSpec, magnet: magnetSpec, handle: handleSpec, rail: railSpec, led: ledSpec, glassFrame: glassFrameSpec } as const
 export type SlotSpec<S extends HardwareSlot> = ReturnType<(typeof SPECS)[S]>
 
 /**

@@ -96,7 +96,7 @@ const CATEGORY_IDS = HARDWARE_CATEGORIES.map((c) => c.id) as [HardwareCategory, 
  * `base`). `model` («només 3D»): un ferratge importat sense cap regla de mecanitzat (estructures de taula, portes
  * corredisses…): el model i el volum, **mai cap forat** (target `model` buit).
  */
-export const HARDWARE_ENGINES = ["cup", "system32", "dowel", "slide", "flapArm", "magnet", "barHandle", "plate", "leg", "model", "drawerKit"] as const
+export const HARDWARE_ENGINES = ["cup", "system32", "dowel", "slide", "flapArm", "magnet", "barHandle", "plate", "leg", "model", "drawerKit", "rail", "ledProfile", "glassFrame"] as const
 export type HardwareEngine = (typeof HARDWARE_ENGINES)[number]
 
 /** Mecanitzat en coordenades de la peça, relatiu al punt d'ancoratge (u al llarg, v a través). */
@@ -271,7 +271,12 @@ export const HardwareItemSchema = z.preprocess(sanitizeImportedHardware, Hardwar
 export const damagedImportMessage = (item: Pick<HardwareItem, "name">) => `«${item.name}»: ${IMPORT_MARKER} (torna'l a importar).`
 export const isDamagedImport = (item: HardwareItem): boolean => !!item.imported?.damaged
 
-/** Llocs de cada mòdul que fan servir un ferratge (el motor que hi va i la categoria de la biblioteca). */
+/**
+ * Llocs de cada mòdul que fan servir un ferratge (el motor que hi va i la categoria de la biblioteca). Els set primers són
+ * els de sempre (cada mòdul en porta una còpia); els **accessoris** (barra de penjar, tira LED, marc de vitrina;
+ * `ACCESSORY_SLOTS`) són opcionals a la còpia del mòdul: sense, l'item d'inici de l'app. Cada compartiment o porta en pot
+ * triar un altre (`Zone.rail.hardware`, `Zone.led.hardware`, `front.frame`).
+ */
 export const HARDWARE_SLOTS = [
   { slot: "hinge", engine: "cup", category: "hinge", label: "Frontissa", uses: "portes i reixetes amb frontisses" },
   { slot: "system32", engine: "system32", category: "shelf-support", label: "Filera System 32", uses: "laterals (prestatges regulables i frontisses)" },
@@ -280,8 +285,15 @@ export const HARDWARE_SLOTS = [
   { slot: "flap", engine: "flapArm", category: "lift", label: "Braç d'abatible", uses: "abatibles" },
   { slot: "magnet", engine: "magnet", category: "push", label: "Imant", uses: "reixetes desmuntables i trapes" },
   { slot: "handle", engine: "barHandle", category: "handle", label: "Tirador", uses: "portes, calaixos i abatibles amb tirador" },
+  { slot: "rail", engine: "rail", category: "wall", label: "Barra de penjar", uses: "compartiments amb barra de penjar" },
+  { slot: "led", engine: "ledProfile", category: "profile", label: "Tira LED", uses: "compartiments amb llum" },
+  { slot: "glassFrame", engine: "glassFrame", category: "profile", label: "Marc de vitrina", uses: "portes de vidre" },
 ] as const
 export type HardwareSlot = (typeof HARDWARE_SLOTS)[number]["slot"]
+/** Llocs d'accessoris: opcionals a la còpia del mòdul (sense, l'item d'inici). */
+export const ACCESSORY_SLOTS = ["rail", "led", "glassFrame"] as const satisfies readonly HardwareSlot[]
+export type AccessorySlot = (typeof ACCESSORY_SLOTS)[number]
+export type CoreSlot = Exclude<HardwareSlot, AccessorySlot>
 export const slotOf = (s: HardwareSlot) => HARDWARE_SLOTS.find((x) => x.slot === s)!
 export const slotForEngine = (e: HardwareEngine) => HARDWARE_SLOTS.find((x) => x.engine === e)!
 
@@ -299,7 +311,7 @@ export const slotAccepts = (slot: HardwareSlot, item: Pick<HardwareItem, "engine
  */
 const moduleSlotSchema = () => repairAtomically(z.preprocess(sanitizeImportedHardware, HardwareItemObjectSchema))
 
-/** Còpia dels ferratges d'un mòdul: un item per lloc. */
+/** Còpia dels ferratges d'un mòdul: un item per lloc (els accessoris, opcionals: sense, l'item d'inici). */
 export const ModuleHardwareKitSchema = z.object({
   hinge: moduleSlotSchema(),
   system32: moduleSlotSchema(),
@@ -308,8 +320,13 @@ export const ModuleHardwareKitSchema = z.object({
   flap: moduleSlotSchema(),
   magnet: moduleSlotSchema(),
   handle: moduleSlotSchema(),
+  rail: moduleSlotSchema().optional(),
+  led: moduleSlotSchema().optional(),
+  glassFrame: moduleSlotSchema().optional(),
 })
 export type ModuleHardware = z.infer<typeof ModuleHardwareKitSchema>
+/** Una còpia amb tots els llocs (la d'un mòdul nou, `kitFrom`). */
+export type FullModuleHardware = Required<ModuleHardware>
 
 /** Quin item de la biblioteca fa servir cada lloc als mòduls nous. */
 export const HardwareDefaultsSchema = z.object({
@@ -320,6 +337,9 @@ export const HardwareDefaultsSchema = z.object({
   flap: z.string(),
   magnet: z.string(),
   handle: z.string(),
+  rail: z.string().optional(),
+  led: z.string().optional(),
+  glassFrame: z.string().optional(),
 })
 export type HardwareDefaults = z.infer<typeof HardwareDefaultsSchema>
 
@@ -390,6 +410,19 @@ export const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
   plate: [
     P("setback", "Del davant", 0, 200, 0.5, "Del cantell de davant del lateral a la referència de la placa (la filera System 32: 37)."),
     P("offset", "Alçada", -100, 100, 0.5, "Del centre de la cassoleta a la referència de la placa (amunt, positiu)."),
+  ],
+  rail: [
+    P("diameter", "Diàmetre", 10, 40, 1, "Del tub."),
+    P("drop", "Del sostre", 20, 200, 5, "Del sostre del compartiment a l'eix de la barra."),
+  ],
+  ledProfile: [
+    P("width", "Amplada", 6, 40, 1, "Del perfil (de costat a costat)."),
+    P("height", "Alçada", 4, 30, 1, "Del perfil (el que baixa del prestatge)."),
+    P("setback", "Del davant", 0, 100, 5, "Del cantell de davant del prestatge al perfil."),
+  ],
+  glassFrame: [
+    P("frame", "Perfil", 10, 60, 1, "Amplada vista del perfil d'alumini del marc."),
+    P("glass", "Vidre", 3, 10, 0.5, "Gruix del vidre (entra 5 mm al perfil)."),
   ],
 }
 
@@ -578,12 +611,50 @@ export function kitItem(id: string, name: string, kit: HardwareKit, pilot: { pil
 /** Els jocs inicials de l'app (DTC MAGIC-PRO, de la N a la F). */
 export const DEFAULT_HARDWARE_KITS: HardwareItem[] = DTC_MAGIC_PRO_KITS.map((k) => kitItem(k.id, k.name, k.kit))
 
-export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS]
+/**
+ * Accessoris inicials (abans eren interruptors de fusta a Prestatges i a la porta; auditoria B): la geometria d'ara, tal
+ * qual. **Sense mecanitzat** de moment: els suports de la barra i la ranura del perfil LED al prestatge els ha de dir el
+ * taller (el `label` del target ho recorda); les frontisses del marc de vitrina també.
+ */
+export const ACCESSORY_ITEMS: HardwareItem[] = [
+  {
+    id: "rail-inox-25",
+    name: "Barra de penjar Ø25 inox",
+    category: "wall",
+    engine: "rail",
+    params: { diameter: 25, drop: 50 },
+    targets: [{ key: "side", label: "Lateral (suports: mecanitzat pendent del taller)", ops: [] }],
+    version: 1,
+    builtin: true,
+  },
+  {
+    id: "led-profile-16x8",
+    name: "Perfil LED 16 × 8",
+    category: "profile",
+    engine: "ledProfile",
+    params: { width: 16, height: 8, setback: 20 },
+    targets: [{ key: "shelf", label: "Prestatge (ranura del perfil: pendent del taller)", ops: [] }],
+    version: 1,
+    builtin: true,
+  },
+  {
+    id: "glass-frame-20",
+    name: "Marc d'alumini negre 20 mm",
+    category: "profile",
+    engine: "glassFrame",
+    params: { frame: 20, glass: 5 },
+    targets: [{ key: "frame", label: "Marc (frontisses de perfil: pendent del taller)", ops: [] }],
+    version: 1,
+    builtin: true,
+  },
+]
+
+export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...ACCESSORY_ITEMS]
 
 /** Un item és un joc paramètric que es pot fer servir (motor `drawerKit` amb el joc). */
 export const isDrawerKit = (item: HardwareItem): item is HardwareItem & { kit: HardwareKit } => item.engine === "drawerKit" && !!item.kit
 
-export const DEFAULT_HARDWARE_DEFAULTS: HardwareDefaults = {
+export const DEFAULT_HARDWARE_DEFAULTS: Required<HardwareDefaults> = {
   hinge: "hinge-cup",
   system32: "system32",
   dowel: "dowel",
@@ -591,25 +662,33 @@ export const DEFAULT_HARDWARE_DEFAULTS: HardwareDefaults = {
   flap: "flap-arm",
   magnet: "magnet",
   handle: "handle-bar",
+  rail: "rail-inox-25",
+  led: "led-profile-16x8",
+  glassFrame: "glass-frame-20",
 }
 
 /** Els ferratges inicials d'un mòdul, amb els números d'abans (`Module.hardware` d'un mòdul desat abans de la v19). */
-export function kitFromLegacy(h: LegacyHardware): ModuleHardware {
+export function kitFromLegacy(h: LegacyHardware): FullModuleHardware {
   const lib = libraryFromLegacy(h)
   return kitFrom(lib, DEFAULT_HARDWARE_DEFAULTS)
 }
 
 /** Un kit (còpia) amb els items per defecte de cada lloc (`fixHardwareDefaults` ja garanteix que hi són). */
-export function kitFrom(library: readonly HardwareItem[], defaults: HardwareDefaults): ModuleHardware {
+export function kitFrom(library: readonly HardwareItem[], defaults: HardwareDefaults): FullModuleHardware {
   const pick = (slot: HardwareSlot): HardwareItem => {
     const engine = slotOf(slot).engine
     const hit = library.find((x) => x.id === defaults[slot] && slotAccepts(slot, x)) ?? library.find((x) => x.engine === engine) ?? DEFAULT_HARDWARE_LIBRARY.find((x) => x.engine === engine)!
     return structuredClone(hit)
   }
-  return { hinge: pick("hinge"), system32: pick("system32"), dowel: pick("dowel"), slide: pick("slide"), flap: pick("flap"), magnet: pick("magnet"), handle: pick("handle") }
+  const out = {} as FullModuleHardware
+  for (const { slot } of HARDWARE_SLOTS) out[slot] = pick(slot)
+  return out
 }
 
-export const DEFAULT_MODULE_HARDWARE: ModuleHardware = kitFromLegacy(DEFAULT_LEGACY_HARDWARE)
+export const DEFAULT_MODULE_HARDWARE: FullModuleHardware = kitFromLegacy(DEFAULT_LEGACY_HARDWARE)
+
+/** L'item d'un lloc d'un mòdul: la seva còpia o, als accessoris sense còpia, l'item d'inici. */
+export const moduleSlotItem = (hw: ModuleHardware, slot: HardwareSlot): HardwareItem => hw[slot] ?? DEFAULT_MODULE_HARDWARE[slot]
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v)
@@ -647,7 +726,7 @@ export function fixHardwareDefaults(library: readonly HardwareItem[], defaults: 
     seen.add(it.id)
     lib.push(it)
   }
-  const out = { ...DEFAULT_HARDWARE_DEFAULTS }
+  const out: Required<HardwareDefaults> = { ...DEFAULT_HARDWARE_DEFAULTS }
   for (const { slot, engine } of HARDWARE_SLOTS) {
     const want = defaults[slot]
     const hit = lib.find((x) => x.id === want && slotAccepts(slot, x)) ?? lib.find((x) => x.engine === engine)
@@ -686,6 +765,9 @@ export function hardwareSummary(item: HardwareItem): string {
     : item.engine === "leg" ? `a ${n(p.inset ?? NaN)} mm dels cantells`
     : item.engine === "model" ? modelSummary(item, n)
     : item.engine === "drawerKit" && item.kit ? kitSummary(item.kit)
+    : item.engine === "rail" ? `Ø${n(p.diameter ?? NaN)} a ${n(p.drop ?? NaN)} mm del sostre`
+    : item.engine === "ledProfile" ? `${n(p.width ?? NaN)} × ${n(p.height ?? NaN)} a ${n(p.setback ?? NaN)} mm del davant`
+    : item.engine === "glassFrame" ? `perfil de ${n(p.frame ?? NaN)} mm, vidre de ${n(p.glass ?? NaN)} mm`
     : ""
   const gen = item.machining?.length ? `${item.machining.length} ${item.machining.length === 1 ? "mecanitzat" : "mecanitzats"} a mà` : ""
   const pending = isDamagedImport(item) ? "malmès" : isPendingImport(item) && (item.engine !== "model" || gen) ? "sense confirmar" : ""
@@ -708,8 +790,8 @@ export function copyHardwareItem(item: HardwareItem, id: string, name: string): 
 
 // --- Referències als mobles desats (eliminar amb substitut) ---------------------------------------------------------
 
-/** Les fronts que poden triar un ferratge propi (`front.hardware`). */
-const FRONT_SLOT: Record<string, HardwareSlot> = { door: "hinge", drawers: "slide", flap: "flap" }
+/** Les fronts que poden triar un ferratge propi (`front.hardware`): frontissa, guia, braç i, a la reixeta, l'imant. */
+const FRONT_SLOT: Record<string, HardwareSlot> = { door: "hinge", drawers: "slide", flap: "flap", grille: "magnet" }
 
 /** Recorre els ferratges d'una composició desada (també d'abans: `Module.hardware` amb els números). */
 function eachHardware(comp: unknown, visit: (item: HardwareItem) => HardwareItem | null): unknown {
@@ -719,15 +801,23 @@ function eachHardware(comp: unknown, visit: (item: HardwareItem) => HardwareItem
     let out: Record<string, unknown> = z
     const f = z.front
     if (isRecord(f) && typeof f.kind === "string" && FRONT_SLOT[f.kind]) {
-      // El ferratge propi del front (frontissa, guia, braç) i el tirador triat (`front.handle`).
+      // El ferratge propi del front (frontissa, guia, braç, imant), el tirador triat (`front.handle`) i el marc de vitrina (`front.frame`).
       let front: Record<string, unknown> = f
-      for (const key of ["hardware", "handle"] as const) {
+      for (const key of ["hardware", "handle", "frame"] as const) {
         if (!isRecord(f[key])) continue
         const parsed = HardwareItemSchema.safeParse(f[key])
         const next = parsed.success ? visit(parsed.data) : null
         if (next) front = { ...front, [key]: next }
       }
       if (front !== f) out = { ...out, front }
+    }
+    // Accessoris del compartiment amb ferratge propi (barra, tira LED).
+    for (const key of ["rail", "led"] as const) {
+      const acc = z[key]
+      if (!isRecord(acc) || !isRecord(acc.hardware)) continue
+      const parsed = HardwareItemSchema.safeParse(acc.hardware)
+      const next = parsed.success ? visit(parsed.data) : null
+      if (next) out = { ...out, [key]: { ...acc, hardware: next } }
     }
     const split = z.split
     if (isRecord(split) && Array.isArray(split.children)) {
@@ -746,7 +836,9 @@ function eachHardware(comp: unknown, visit: (item: HardwareItem) => HardwareItem
       const next = { ...kit.data }
       let touched = false
       for (const { slot } of HARDWARE_SLOTS) {
-        const v = visit(next[slot])
+        const cur = next[slot]
+        if (!cur) continue
+        const v = visit(cur)
         if (v) {
           next[slot] = v
           touched = true

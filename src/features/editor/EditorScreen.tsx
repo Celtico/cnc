@@ -289,6 +289,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   const rowIndex = rowMates.indexOf(module)
   const rowPrev = rowIndex > 0 ? rowMates[rowIndex - 1] : undefined
   const moduleBuild = build?.modules[moduleIndex]?.build
+  const moduleExtras = useMemo(() => (build?.extras ?? NO_PANELS).filter((p) => p.module === moduleIndex + 1), [build, moduleIndex])
   const zone = selectedZone ? findZone(module.root, selectedZone) : undefined
 
   const size = useMemo(() => viewerSize(comp), [comp])
@@ -1169,7 +1170,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           <FoldItem id="mod-joinery" title="Fusteria (avançat)" icon={LuHammer} defaultOpen={false}>
             <JoineryForm module={module} onChange={updateModule} usedSlots={usedSlotSet(module)} />
           </FoldItem>
-          <FoldItem id="mod-hardware" title="Ferratges" icon={LuWrench} badge={hardwareBadge(scopePlacements(comp, { kind: "module", moduleId: module.id }).length, panels.filter((p) => p.module === moduleIndex + 1), module.carcass.base.kind === "legs" ? 4 : 0)}>
+          <FoldItem id="mod-hardware" title="Ferratges" icon={LuWrench} badge={hardwareBadge(scopePlacements(comp, { kind: "module", moduleId: module.id }).length, panels.filter((p) => p.module === moduleIndex + 1), module.carcass.base.kind === "legs" ? 4 : 0, moduleExtras)}>
             <HardwarePlacements
               comp={comp}
               scope={{ kind: "module", moduleId: module.id }}
@@ -1178,7 +1179,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
               warnings={warnings}
               onChange={setComp}
               actions={hardwareActions}
-              rules={ruleHardwareCounts(panels.filter((p) => p.module === moduleIndex + 1), module.carcass.base.kind === "legs" ? 4 : 0)}
+              rules={ruleHardwareCounts(panels.filter((p) => p.module === moduleIndex + 1), module.carcass.base.kind === "legs" ? 4 : 0, moduleExtras)}
             />
           </FoldItem>
         </Stack>
@@ -1454,7 +1455,7 @@ function legsView(base: { height: number; hardware?: HardwareItem }, depth: numb
 }
 
 /** Insígnia de «Ferratges» del mòdul: els col·locats a mà i els de les regles (sense les espigues, que són forats). */
-function hardwareBadge(placed: number, panels: Panel[], legs: number): string | undefined {
-  const rules = ruleHardwareCounts(panels, legs).filter((r) => r.id !== "dowel").reduce((a, r) => a + r.count, 0)
+function hardwareBadge(placed: number, panels: Panel[], legs: number, extras: Panel[]): string | undefined {
+  const rules = ruleHardwareCounts(panels, legs, extras).filter((r) => r.id !== "dowel").reduce((a, r) => a + r.count, 0)
   return [placed ? `${placed} a mà` : "", rules ? `${rules} de regles` : ""].filter(Boolean).join(" · ") || undefined
 }

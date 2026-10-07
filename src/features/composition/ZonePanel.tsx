@@ -1,5 +1,5 @@
 import { Button, HStack, IconButton, Menu, Portal, Stack, Switch, Text } from "@chakra-ui/react"
-import { LuArrowUp, LuCopy, LuEllipsis, LuColumns2, LuRows2, LuPlus, LuRows3, LuRuler, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
+import { LuArrowUp, LuCopy, LuEllipsis, LuColumns2, LuRows2, LuPlus, LuRows3, LuRuler, LuShirt, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
 import type { ReactNode } from "react"
 import { FoldItem } from "../../components/Fold"
 import {
@@ -20,11 +20,16 @@ import {
   KIT_LEVEL_LABEL,
   fmtMm,
   isDrawerKit,
+  isPushClosing,
   kitOptionsOf,
+  moduleSlotItem,
+  slotOf,
   type Front,
+  type FrontHandle,
   type HardwareItem,
   type ModuleHardware,
   type Zone,
+  type ZoneAccessory,
 } from "../../core/model"
 import type { KitOrder } from "../../core/build/buildModule"
 import { kitBottomThickness, kitLineText, kitWoodText } from "../../core/build/drawerKit"
@@ -212,28 +217,11 @@ export function ZonePanel({
                 />
               )}
               </>}
-              {/* Barra de penjar (armaris): no és de CNC, surt a «Elements sense nesting». */}
-              {!zone.split && (
-                <FormRow label="Penjador" help={zone.rail ? "Tub d'inox Ø25 a 50 mm del sostre, de lateral a lateral. Surt a Peces, a «Elements sense nesting»." : undefined}>
-                  <Switch.Root size="sm" pt="6px" checked={!!zone.rail} onCheckedChange={(e) => onChange(updateZone(root, zone.id, (z) => ({ ...z, rail: e.checked || undefined })))}>
-                    <Switch.HiddenInput />
-                    <Switch.Control />
-                    <Switch.Label fontSize="sm">Barra de penjar</Switch.Label>
-                  </Switch.Root>
-                </FormRow>
-              )}
-              {/* Llum LED (vitrines, prestatgeries, nínxols): fa llum al render; el perfil surt a Peces sense nesting. */}
-              {!zone.split && (
-                <FormRow label="Llum" help={zone.led ? "Perfil amb tira LED càlida sota el sostre i sota cada prestatge, a prop del davant. Fa llum al render i surt a Peces, a «Elements sense nesting», amb el llarg per tallar el perfil." : undefined}>
-                  <Switch.Root size="sm" pt="6px" checked={!!zone.led} onCheckedChange={(e) => onChange(updateZone(root, zone.id, (z) => ({ ...z, led: e.checked || undefined })))}>
-                    <Switch.HiddenInput />
-                    <Switch.Control />
-                    <Switch.Label fontSize="sm">Tira LED</Switch.Label>
-                  </Switch.Root>
-                </FormRow>
-              )}
             </FoldItem>
           )}
+
+          {/* Accessoris del compartiment: ferratges (barra de penjar, tira LED), no fusta. Amb calaixos no hi caben. */}
+          {zone.front?.kind !== "drawers" && <AccessoriesSection root={root} zone={zone} hardware={hardware} onChange={onChange} />}
 
           {sizeField}
 
@@ -253,6 +241,41 @@ export function ZonePanel({
         </>
       )}
     </Stack>
+  )
+}
+
+/** Resum d'un accessori per a la insígnia. */
+const ACCESSORY_LABELS = { rail: "Barra", led: "LED" } as const
+
+/**
+ * **Accessoris** d'un compartiment (auditoria B): barra de penjar i tira LED, ferratges de la biblioteca (motors `rail` i
+ * `ledProfile`) triats amb el mateix `HardwarePick` que la frontissa; sense còpia pròpia, el del mòdul («Com el mòdul»).
+ * Abans eren dos interruptors a Prestatges. No són de CNC: surten a Peces, a «Elements sense nesting».
+ */
+function AccessoriesSection({ root, zone, hardware, onChange }: { root: Zone; zone: Zone; hardware: ModuleHardware; onChange: (root: Zone) => void }) {
+  const on = (["rail", "led"] as const).filter((k) => zone[k]).map((k) => ACCESSORY_LABELS[k])
+  const setAcc = (key: "rail" | "led", value: ZoneAccessory | undefined) =>
+    onChange(updateZone(root, zone.id, (z) => {
+      const { [key]: _old, ...rest } = z
+      return value ? { ...rest, [key]: value } : rest
+    }))
+  const row = (key: "rail" | "led", slot: "rail" | "led", label: string, help: string) => (
+    <>
+      <FormRow label={label} help={zone[key] ? help : undefined}>
+        <Switch.Root size="sm" pt="6px" checked={!!zone[key]} onCheckedChange={(e) => setAcc(key, e.checked ? {} : undefined)}>
+          <Switch.HiddenInput />
+          <Switch.Control />
+          <Switch.Label fontSize="sm">{slotOf(slot).label}</Switch.Label>
+        </Switch.Root>
+      </FormRow>
+      {zone[key] && <HardwarePick slot={slot} label="Ferratge" current={zone[key]!.hardware ?? moduleSlotItem(hardware, slot)} inherited={moduleSlotItem(hardware, slot)} onPick={(item) => setAcc(key, item ? { hardware: item } : {})} />}
+    </>
+  )
+  return (
+    <FoldItem id="zone-accessories" title="Accessoris" badge={on.length ? on.join(" · ") : undefined} icon={LuShirt}>
+      {row("rail", "rail", "Penjar", "Tub de lateral a lateral sota el sostre del compartiment. Surt a Peces, a «Elements sense nesting».")}
+      {row("led", "led", "Llum", "Perfil amb tira LED càlida sota el sostre i sota cada prestatge, a prop del davant. Fa llum al render i surt a Peces, a «Elements sense nesting», amb el llarg per tallar el perfil.")}
+    </FoldItem>
   )
 }
 
@@ -322,17 +345,50 @@ function withHardware<F extends Extract<Front, { kind: "door" | "drawers" | "fla
   return rest as F
 }
 
-/** El tirador propi d'un front: sense (`undefined`), el del mòdul. */
-function withHandle<F extends Extract<Front, { kind: "door" | "drawers" | "flap" }>>(front: F, item: HardwareItem | undefined): F {
+/** El tirador propi d'un front: sense (`undefined`), el del mòdul; «Cap (push)» (`"none"`); o una còpia d'un item. */
+function withHandle<F extends Extract<Front, { kind: "door" | "drawers" | "flap" }>>(front: F, item: FrontHandle | undefined): F {
   if (item) return { ...front, handle: item }
   const { handle: _h, ...rest } = front
   return rest as F
 }
 
+/**
+ * Un calaix amb joc: el tancament del joc i el tirador són **una sola dada**. Triar «Cap (push)» posa el joc a push-open
+ * (`pushSoft` si el joc el té i el tancament era suau, si no `push`); triar un tirador el torna a suau.
+ */
+function kitClosingFor(kit: HardwareItem & { kit: NonNullable<HardwareItem["kit"]> }, current: ReturnType<typeof kitOptionsOf>, push: boolean): ReturnType<typeof kitOptionsOf> {
+  const opts = kit.kit.options.closing
+  if (push) return isPushClosing(current.closing) ? current : { ...current, closing: opts.includes("pushSoft") ? "pushSoft" : opts.includes("push") ? "push" : current.closing }
+  return isPushClosing(current.closing) ? { ...current, closing: opts.includes("soft") ? "soft" : current.closing } : current
+}
+
 function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits }: { front: Front; openRatio?: number; onChange: (f: Front) => void; hardware: ModuleHardware; noHandles: boolean; kits?: KitOrder[] }) {
-  // «Tirador»: el del mòdul (Fusteria) o un altre de la biblioteca (un d'importat i confirmat fa els forats a la seva distància).
-  const handlePick = (f: Extract<Front, { kind: "door" | "drawers" | "flap" }>) =>
-    noHandles ? null : <HardwarePick slot="handle" label="Tirador" current={f.handle ?? hardware.handle} inherited={hardware.handle} onPick={(h) => onChange(withHandle(f, h))} />
+  // «Tirador»: el del mòdul (Interior › Fronts i calaixos), un altre de la biblioteca (un d'importat i confirmat fa els
+  // forats a la seva distància) o «Cap (push)». Als calaixos amb joc, el tancament del joc mana (`kitClosingFor`).
+  const handlePick = (f: Extract<Front, { kind: "door" | "drawers" | "flap" }>, kit?: HardwareItem & { kit: NonNullable<HardwareItem["kit"]> }) => {
+    const kitOpts = kit && f.kind === "drawers" ? kitOptionsOf(kit.kit, f.kit) : undefined
+    const kitPush = !!kitOpts && isPushClosing(kitOpts.closing)
+    const push = kitPush || f.handle === "none" || (!f.handle && noHandles)
+    const inheritedNone = !f.handle && noHandles && !kitPush
+    const setHandle = (h: FrontHandle | undefined) => {
+      const next = withHandle(f, h)
+      // Amb joc: el tancament segueix la tria (push ⇔ cap tirador) i el front no guarda «none» (el joc ja ho diu).
+      if (kit && kitOpts && next.kind === "drawers") onChange({ ...withHandle(next, h === "none" ? undefined : h), kit: kitClosingFor(kit, kitOpts, h === "none") })
+      else onChange(next)
+    }
+    const help = kitPush ? "El joc obre per pressió (push-open): cap tirador ni forats. Canvia el Tancament del joc per posar-n'hi." : inheritedNone ? "El mòdul és push (Interior › Fronts i calaixos): cap forat; tria'n un aquí si aquest front n'ha de portar." : "Obertura per pressió: cap forat. Cal el ferratge push (Tip-On) a aquest front."
+    return (
+      <HardwarePick
+        slot="handle"
+        label="Tirador"
+        current={f.handle && f.handle !== "none" ? f.handle : push ? undefined : moduleSlotItem(hardware, "handle")}
+        inherited={noHandles ? undefined : moduleSlotItem(hardware, "handle")}
+        emptyLabel={noHandles ? "Com el mòdul (cap, push)" : undefined}
+        none={{ label: "Cap (push)", help, selected: push && !inheritedNone, onPick: () => setHandle("none") }}
+        onPick={(h) => setHandle(h)}
+      />
+    )
+  }
   switch (front.kind) {
     case "door":
       // Un camp per fila: dos grups de botons no hi caben de costat a l'inspector.
@@ -370,7 +426,8 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits }: 
               <Switch.Label fontSize="sm">Porta de vidre amb marc</Switch.Label>
             </Switch.Root>
           </FormRow>
-          {/* La de vidre porta les frontisses del perfil (cap cassoleta): no surt. */}
+          {/* La de vidre porta el marc d'alumini (ferratge `glassFrame`) i les frontisses del perfil (cap cassoleta): la frontissa i el tirador no surten. */}
+          {front.glass && <HardwarePick slot="glassFrame" label="Marc" current={front.frame ?? moduleSlotItem(hardware, "glassFrame")} inherited={moduleSlotItem(hardware, "glassFrame")} onPick={(h) => onChange(h ? { ...front, frame: h } : (({ frame: _f, ...rest }) => rest)(front))} />}
           {!front.glass && <HardwarePick slot="hinge" current={front.hardware ?? hardware.hinge} inherited={hardware.hinge} onPick={(h) => onChange(withHardware(front, h))} />}
           {!front.glass && handlePick(front)}
         </Stack>
@@ -387,9 +444,14 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits }: 
           {/* Un joc de calaix, triat aquí o com a guia del mòdul: les opcions del joc. */}
           {(() => {
             const slide = front.hardware ?? hardware.slide
-            return isDrawerKit(slide) ? <KitFields front={front} kit={slide} kits={kits} onChange={onChange} /> : null
+            const kit = isDrawerKit(slide) ? slide : undefined
+            return (
+              <>
+                {kit && <KitFields front={front} kit={kit} kits={kits} onChange={onChange} />}
+                {handlePick(front, kit)}
+              </>
+            )
           })()}
-          {handlePick(front)}
         </Stack>
       )
     case "flap":
@@ -441,6 +503,8 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits }: 
               onChange={(mount) => onChange({ ...front, mount })}
             />
           </FormRow>
+          {/* L'imant (reixeta desmuntable i trapa): el del mòdul o un altre de la biblioteca. */}
+          {(front.mount === "removable" || front.hatch) && <HardwarePick slot="magnet" current={front.hardware ?? hardware.magnet} inherited={hardware.magnet} onPick={(h) => onChange(h ? { ...front, hardware: h } : (({ hardware: _h, ...rest }) => rest)(front))} />}
 
           {p.kind === "holes" ? (
             <>

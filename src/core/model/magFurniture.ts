@@ -18,7 +18,7 @@ const WHITE = "MDF lacat"
 const RIFT = "Roure de fil"
 const GLOSS = "Lacat negre brillant"
 /** Compartiment de vitrina: portes de vidre amb marc, prestatges i llum LED. */
-const vitrineZone = (): Zone => ({ ...B.doors(3), led: true, front: { kind: "door", mode: "double", hinge: "left", glass: true } })
+const vitrineZone = (): Zone => ({ ...B.doors(3), led: {}, front: { kind: "door", mode: "double", hinge: "left", glass: true } })
 
 export const MAG_FURNITURE: Template[] = [
   // --- Showroom (escena «Showroom»: ensenya el render — LED, vitrina, lacat brillant, marbre polit) ---

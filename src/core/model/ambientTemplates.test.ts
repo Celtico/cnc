@@ -60,7 +60,7 @@ describe("escenes amb el Render a punt (`render`, `eye`)", () => {
     expect(AmbientRenderSchema.parse(t.render)).toEqual({ mood: "night", focal: 24 })
     expect(t.eye).toBe(true)
     const vitrina = resolveTemplateRef(t.items[0]!.ref)!.make()
-    expect(JSON.stringify(vitrina)).toContain('"led":true')
+    expect(JSON.stringify(vitrina)).toContain('"led":{}')
     // L'ambient el conserva en llegir-lo; un de dolent es descarta sense perdre la resta.
     expect(parseAmbient({ walls: [], items: [], render: { mood: "night", focal: 35 } }).render).toEqual({ mood: "night", focal: 35 })
     expect(parseAmbient({ walls: [], items: [], render: { mood: "xx" } }).render).toBeUndefined()

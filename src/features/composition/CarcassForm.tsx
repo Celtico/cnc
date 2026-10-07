@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { DEFAULT_GRILLE, HARDWARE_SLOTS, backChoices, boardChoices, hardwareSummary, jointApplies, materialByName, type Base, type Carcass, type HardwareItem, type HardwareSlot, type Module, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, HARDWARE_SLOTS, backChoices, boardChoices, jointApplies, materialByName, moduleSlotItem, type Base, type Carcass, type HardwareItem, type HardwareSlot, type Module, type Top } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
@@ -11,7 +11,6 @@ import { LuArrowDownToLine, LuDrill, LuGrid3X3, LuInspectionPanel, LuLayers2, Lu
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { HardwarePick } from "./HardwarePick"
-import { HardwareSelect } from "../settings/HardwareSelect"
 
 export type CarcassSection = "dims" | "structure"
 
@@ -298,7 +297,7 @@ const slotsFor = (usedSlots: ReadonlySet<string> | undefined, box: boolean) => H
 /** Ferratges per defecte del mòdul (una còpia de cada un de la biblioteca); els fronts en poden triar un altre. */
 function ModuleHardwarePicks({ module, onChange, slots }: { module: Module; onChange: (m: Module) => void; slots: readonly (typeof HARDWARE_SLOTS)[number][] }) {
   return slots.map(({ slot }) => (
-    <HardwarePick key={slot} slot={slot} current={module.hardware[slot]} onPick={(item) => item && onChange({ ...module, hardware: { ...module.hardware, [slot]: item } })} />
+    <HardwarePick key={slot} slot={slot} current={moduleSlotItem(module.hardware, slot)} onPick={(item) => item && onChange({ ...module, hardware: { ...module.hardware, [slot]: item } })} />
   ))
 }
 
@@ -410,7 +409,7 @@ function thicknessOptions(list: number[], current: number): { id: string; label:
 /**
  * La pota de la base «Potes» (`Base.hardware`): les genèriques (només es veuen, cap forat) o una pota importada de la
  * biblioteca (Preferències › Ferratges, una **còpia**): un cop confirmada, els forats de la placa a la cara de sota de la
- * base, a cada pota. Una còpia que no és a la biblioteca tal qual surt a part, «del moble» (`hardwareChoices`).
+ * base, a cada pota. El mateix `HardwarePick` que la resta de ferratges del moble (motor `leg`, sense lloc al mòdul).
  */
 function LegPick({ base, onChange }: { base: Extract<Base, { kind: "legs" }>; onChange: (b: Base) => void }) {
   const { settings } = useSettings()
@@ -424,9 +423,5 @@ function LegPick({ base, onChange }: { base: Extract<Base, { kind: "legs" }>; on
     }
     onChange({ ...base, hardware: item })
   }
-  return (
-    <FormRow label="Pota" help={cur ? hardwareSummary(cur) : "Genèriques: només es veuen al 3D (cap forat). Les potes importades (Preferències › Ferratges) fan els forats de la placa a la cara de sota de la base."}>
-      <HardwareSelect label="Pota" items={legs} current={cur} emptyLabel="Genèriques" onPick={pick} />
-    </FormRow>
-  )
+  return <HardwarePick engine="leg" label="Pota" current={cur} emptyLabel="Genèriques" help={cur ? undefined : "Genèriques: només es veuen al 3D (cap forat). Les potes importades (Preferències › Ferratges) fan els forats de la placa a la cara de sota de la base."} onPick={pick} />
 }

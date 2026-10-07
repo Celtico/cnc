@@ -462,7 +462,7 @@ function walkInWardrobe(): Composition {
   const long = withRoot(defaultModule(newId("m"), "Penjador llarg", { ...body, width: 1000 }), {
     id: newId(),
     front: { kind: "door", mode: "double", hinge: "left" },
-    split: { dir: "h", sizes: ["auto", 400], children: [{ id: newId(), rail: true }, { id: newId() }] },
+    split: { dir: "h", sizes: ["auto", 400], children: [{ id: newId(), rail: {} }, { id: newId() }] },
   })
   const mid = withRoot(defaultModule(newId("m"), "Calaixos i prestatges", { ...body, width: 800 }), {
     id: newId(),
@@ -480,7 +480,7 @@ function walkInWardrobe(): Composition {
     id: newId(),
     front: { kind: "door", mode: "double", hinge: "left" },
     // Maleter de 300: les dues barres tenen 900 mm cadascuna (la roba hi cap).
-    split: { dir: "h", sizes: ["auto", "auto", 300], children: [{ id: newId(), rail: true }, { id: newId(), rail: true }, { id: newId() }] },
+    split: { dir: "h", sizes: ["auto", "auto", 300], children: [{ id: newId(), rail: {} }, { id: newId(), rail: {} }, { id: newId() }] },
   })
   return { kind: "armari", modules: [long, mid, double], references: [] }
 }

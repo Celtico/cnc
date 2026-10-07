@@ -72,19 +72,22 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean): Zone {
   if (z.split) {
     // Un compartiment dividit no ensenya Prestatges (ni la barra).
     if (r() < 0.5) out.shelves = randomShelves(r)
-    if (r() < 0.3) out.rail = true
+    if (r() < 0.3) out.rail = {}
+    if (r() < 0.3) out.led = { hardware: { ...DEFAULT_MODULE_HARDWARE.led, params: { ...DEFAULT_MODULE_HARDWARE.led.params, height: 12 } } }
     out.split = { ...z.split, children: z.split.children.map((c) => scrambleZone(c, r, noHandles)) }
   } else if (f?.kind === "drawers") {
     // Calaixos: la secció Prestatges (i la barra) no surt.
     if (r() < 0.6) out.shelves = randomShelves(r)
-    if (r() < 0.3) out.rail = true
+    if (r() < 0.3) out.rail = {}
+    if (r() < 0.3) out.led = {}
   } else {
     // Cap prestatge: «a ras» i el gruix no surten; regulables sí (i sense `shelves`, no regulables).
     const n = z.shelves?.n ?? 0
     if (n === 0 && !z.shelves?.adjustable) out.shelves = r() < 0.4 ? undefined : { n: 0, adjustable: false, ...(r() < 0.5 ? { thickness: 50 } : {}), ...(r() < 0.5 ? { flush: true } : {}) }
     else if (n === 0) out.shelves = { n: 0, adjustable: true, ...(r() < 0.5 ? { thickness: 50 } : {}), ...(r() < 0.5 ? { flush: true } : {}) }
     if (!out.shelves) delete out.shelves
-    if (!z.rail && r() < 0.3) out.rail = false
+    // Un `false` d'abans (fitxers antics): cap barra.
+    if (!z.rail && r() < 0.3) (out as { rail?: unknown }).rail = false
   }
   if (f) out.front = scrambleFront(f, r, noHandles)
   return out
@@ -102,9 +105,8 @@ const REMEMBERED: Front[] = [
   { kind: "panel" },
 ]
 
-function scrambleFront(f0: Front, r: Rnd, noHandles: boolean): Front {
-  // Sense tiradors (push): el «Tirador» dels fronts no surt ni compta.
-  const f = noHandles && (f0.kind === "door" || f0.kind === "drawers" || f0.kind === "flap") && r() < 0.6 ? { ...f0, handle: OTHER_HANDLE } : f0
+function scrambleFront(f: Front, r: Rnd, _noHandles: boolean): Front {
+  // (El «Tirador» de cada front compta sempre, també amb el mòdul push: el del mòdul només és el per defecte.)
   switch (f.kind) {
     case "drawers":
       // Només es veu el nombre de calaixos: les alçades de més no compten. Les opcions del joc de calaix (tancament,
@@ -118,15 +120,17 @@ function scrambleFront(f0: Front, r: Rnd, noHandles: boolean): Front {
       // Dues portes: no surten les frontisses.
     {
       const d = f.mode === "double" ? { ...f, hinge: pick(r, ["left", "right"] as const) } : f
-      // Porta de vidre: frontisses del perfil; la frontissa triada (cassoletes) no surt ni compta.
-      // Ni el tirador triat.
-      return f.glass && r() < 0.7 ? { ...d, hardware: { ...DEFAULT_MODULE_HARDWARE.hinge, id: "hw-amagat", params: { ...DEFAULT_MODULE_HARDWARE.hinge.params, cupDiameter: 26, cupOffset: 30 } }, ...(r() < 0.5 ? { handle: OTHER_HANDLE } : {}) } : d
+      // Porta de vidre: frontisses del perfil; la frontissa triada (cassoletes) no surt ni compta. Ni el tirador triat.
+      // Sense vidre, el marc de vitrina triat no compta.
+      if (f.glass) return r() < 0.7 ? { ...d, hardware: { ...DEFAULT_MODULE_HARDWARE.hinge, id: "hw-amagat", params: { ...DEFAULT_MODULE_HARDWARE.hinge.params, cupDiameter: 26, cupOffset: 30 } }, ...(r() < 0.5 ? { handle: OTHER_HANDLE } : {}) } : d
+      return r() < 0.5 ? { ...d, frame: { ...DEFAULT_MODULE_HARDWARE.glassFrame, params: { frame: 30, glass: 6 } } } : d
     }
     case "grille": {
       const p = f.pattern
       const pattern = p.kind === "holes" ? { ...p, slotWidth: int(r, 3, 30), slotGap: int(r, 3, 40) } : { ...p, holeDiameter: int(r, 3, 30), holePitch: int(r, 8, 60) }
-      // Les frontisses de la reixeta no surten mai; amb imants no compten.
-      return { ...f, pattern, ...(f.mount === "removable" ? { hinge: pick(r, ["left", "right"] as const) } : {}) }
+      // Les frontisses de la reixeta no surten mai; amb imants no compten. L'imant triat només compta amb imants (desmuntable o trapa).
+      const magnet = f.mount === "hinged" && !f.hatch && r() < 0.5 ? { hardware: { ...DEFAULT_MODULE_HARDWARE.magnet, params: { ...DEFAULT_MODULE_HARDWARE.magnet.params, diameter: 20 } } } : {}
+      return { ...f, pattern, ...magnet, ...(f.mount === "removable" ? { hinge: pick(r, ["left", "right"] as const) } : {}) }
     }
     default:
       return f

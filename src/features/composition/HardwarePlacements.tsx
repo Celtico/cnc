@@ -34,6 +34,9 @@ const RULE_ICONS: Record<RuleHardwareCount["id"], IconType> = {
   push: HARDWARE_ICONS.push,
   magnet: HARDWARE_ICONS.push,
   dowel: HARDWARE_ICONS.connector,
+  rail: HARDWARE_ICONS.wall,
+  led: HARDWARE_ICONS.profile,
+  glassFrame: HARDWARE_ICONS.profile,
 }
 
 /** Les accions d'un col·locat (llista de l'inspector i barra flotant del 3D): el mateix camí i un pas de desfer. */
@@ -151,6 +154,7 @@ export function HardwarePlacements({
                     </Box>
                     <Text flex={1} truncate>
                       {r.label}
+                      {r.detail ? <Text as="span" color="fg.muted"> · {r.detail}</Text> : null}
                     </Text>
                     <Badge size="sm" variant="subtle">
                       {r.count}

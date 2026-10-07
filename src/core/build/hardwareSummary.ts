@@ -2,11 +2,13 @@ import type { Panel } from "../model"
 
 /** Un tipus de ferratge que posen les regles del mòdul, amb quants n'hi ha (Editor › mòdul › «Ferratges»). */
 export interface RuleHardwareCount {
-  id: "hinge" | "handle" | "slide" | "flap" | "leg" | "push" | "magnet" | "dowel"
+  id: "hinge" | "handle" | "slide" | "flap" | "leg" | "push" | "magnet" | "dowel" | "rail" | "led" | "glassFrame"
   label: string
   count: number
   /** Unitat del nombre si no és «un per ferratge» («parells», «forats»). */
   unit?: string
+  /** Detall («12,4 m de perfil»). */
+  detail?: string
 }
 
 const FRONT_ROLES = new Set(["door", "drawerFront", "flap"])
@@ -17,8 +19,19 @@ const FRONT_ROLES = new Set(["door", "drawerFront", "flap"])
  * mòdul) i de la base: el resum de la secció «Ferratges» de l'inspector, com la llista de ferratges d'un configurador
  * de fabricant. Només els que hi són. Pur.
  */
-export function ruleHardwareCounts(panels: readonly Panel[], legs = 0): RuleHardwareCount[] {
+export function ruleHardwareCounts(panels: readonly Panel[], legs = 0, extras: readonly Panel[] = []): RuleHardwareCount[] {
   let hinge = 0, handle = 0, drawerSides = 0, flap = 0, push = 0, magnet = 0, dowel = 0
+  // Accessoris (elements sense nesting): barres de penjar, perfils LED (amb el llarg) i marcs de vitrina.
+  let rail = 0, led = 0, ledLen = 0, glass = 0
+  for (const p of extras) {
+    // Els ids d'una composició porten el mòdul al davant (`m1:rail-…`).
+    const id = p.id.slice(p.id.indexOf(":") + 1)
+    if (id.startsWith("rail-")) rail++
+    else if (id.startsWith("led-")) {
+      led++
+      ledLen += p.length
+    } else if (id.endsWith("-glass")) glass++
+  }
   // Calaixos amb joc paramètric: cap lateral de fusta; un fons de calaix sense lateral és un calaix amb joc (un parell de guies).
   const boxes = new Set<string>()
   const sided = new Set<string>()
@@ -46,6 +59,9 @@ export function ruleHardwareCounts(panels: readonly Panel[], legs = 0): RuleHard
     { id: "push", label: "Push (Tip-On)", count: push },
     { id: "magnet", label: "Imants", count: magnet },
     { id: "dowel", label: "Espigues", count: dowel, unit: "forats" },
+    { id: "rail", label: "Barres de penjar", count: rail },
+    { id: "led", label: "Perfils LED", count: led, ...(led ? { detail: `${(ledLen / 1000).toFixed(2).replace(".", ",")} m de perfil` } : {}) },
+    { id: "glassFrame", label: "Marcs de vitrina", count: glass },
   ]
   return out.filter((c) => c.count > 0)
 }

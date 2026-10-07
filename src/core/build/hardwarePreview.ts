@@ -1,7 +1,7 @@
 import { NO_EDGES, type HardwareItem, type Hole, type Panel, type PanelRole } from "../model"
 import { r, system32Ys, threeAlong } from "./geometry"
 import { planKit } from "./drawerKit"
-import { applyHardware, cupSpec, dowelSpec, flapSpec, handleSpec, legSpec, magnetSpec, plateSpec, slideSpec, system32Spec, HardwareError } from "./hardware"
+import { applyHardware, cupSpec, dowelSpec, flapSpec, glassFrameSpec, handleSpec, ledSpec, legSpec, magnetSpec, plateSpec, railSpec, slideSpec, system32Spec, HardwareError } from "./hardware"
 
 /**
  * Peces d'exemple amb el patró de mecanitzats d'un ferratge (Preferències › Ferratges: la targeta i l'editor), fetes amb
@@ -138,6 +138,13 @@ function previewPanels(item: HardwareItem): Panel[] {
     }
     case "model":
       // Només 3D: cap peça ni forat.
+      return []
+    case "rail":
+    case "ledProfile":
+    case "glassFrame":
+      // Accessoris: sense mecanitzat de moment (suports de la barra, ranura del perfil i frontisses del marc: pendents del
+      // taller). Es comprova que els números hi siguin; el muntatge («Com va muntat») els ensenya.
+      (item.engine === "rail" ? railSpec : item.engine === "ledProfile" ? ledSpec : glassFrameSpec)(item)
       return []
     case "drawerKit": {
       // Lateral del moble (x = fondària des del darrere; el front a la dreta) amb les prebroques de la guia més llarga que hi cap.

@@ -62,7 +62,7 @@ export const MODULE_PRESETS: ModulePreset[] = [
     id: "w-hanging",
     kind: "armari",
     name: "Penjador (maleter a dalt)",
-    make: () => mod("Penjador", wardrobe(1000), { split: { dir: "h", sizes: ["auto", 400], children: [{ id: newId(), rail: true }, { id: newId() }] }, front: doors }),
+    make: () => mod("Penjador", wardrobe(1000), { split: { dir: "h", sizes: ["auto", 400], children: [{ id: newId(), rail: {} }, { id: newId() }] }, front: doors }),
   },
   {
     id: "w-drawers",

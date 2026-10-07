@@ -26,7 +26,17 @@ export interface HardwareDrawerProps {
   emptyLabel?: string
   /** Una nota a dalt del calaix (què passa en triar-ne un). */
   note?: ReactNode
+  /** Una opció més sense cap ferratge («Cap (push)» al tirador): es tria amb el seu `onPick`. */
+  none?: HardwareNoneOption
   onPick: (item: HardwareItem | undefined) => void
+}
+
+/** Opció «cap ferratge» d'un selector (el push d'un tirador). */
+export interface HardwareNoneOption {
+  label: string
+  help?: string
+  selected: boolean
+  onPick: () => void
 }
 
 /**
@@ -42,21 +52,21 @@ export function HardwareSelect(props: HardwareDrawerProps & { hideLabel?: boolea
   const [open, setOpen] = useState(false)
   const { settings } = useSettings()
   const base = useMountBase(settings)
-  const { label, items, current, inherited, emptyLabel } = props
-  const shown = current ?? inherited
+  const { label, items, current, inherited, emptyLabel, none } = props
+  const shown = none?.selected ? undefined : (current ?? inherited)
   // Una còpia que no és a la biblioteca tal qual: «(del moble)».
   const ownCopy = !!current && hardwareChoices(items, current).options.some((o) => o.own)
   return (
     <Stack gap={0} flex={1} minW={0} align="stretch">
       <PickerButton
-        ariaLabel={`${label}: ${shown?.name ?? emptyLabel ?? "cap"}`}
+        ariaLabel={`${label}: ${none?.selected ? none.label : (shown?.name ?? emptyLabel ?? "cap")}`}
         swatch={
           <Box w="44px" flexShrink={0}>
             {shown ? <HardwareThumb item={shown} base={base} materials={settings.materials} /> : <Box aspectRatio="2 / 1" rounded="md" borderWidth="1px" borderStyle="dashed" />}
           </Box>
         }
-        text={shown ? `${shown.name}${ownCopy ? " (del moble)" : ""}${inherited && (!current || current === inherited) ? " · la del mòdul" : ""}` : (emptyLabel ?? "(cap)")}
-        warn={current && isPendingImport(current) ? "Sense confirmar: no fa cap forat" : undefined}
+        text={none?.selected ? none.label : shown ? `${shown.name}${ownCopy ? " (del moble)" : ""}${inherited && (!current || current === inherited) ? " · la del mòdul" : ""}` : (emptyLabel ?? "(cap)")}
+        warn={current && !none?.selected && isPendingImport(current) ? "Sense confirmar: no fa cap forat" : undefined}
         onClick={() => setOpen(true)}
       />
       <HardwareDrawer {...props} open={open} onOpenChange={setOpen} />
@@ -65,7 +75,7 @@ export function HardwareSelect(props: HardwareDrawerProps & { hideLabel?: boolea
 }
 
 /** El calaix del selector de ferratges (també sol, sense botó: «Afegir ferratge»). */
-export function HardwareDrawer({ open, onOpenChange, label, items, current, inherited, emptyLabel, note, onPick }: HardwareDrawerProps & { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function HardwareDrawer({ open, onOpenChange, label, items, current, inherited, emptyLabel, note, none, onPick }: HardwareDrawerProps & { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { settings } = useSettings()
   const base = useMountBase(settings)
   const [query, setQuery] = useState("")
@@ -73,7 +83,9 @@ export function HardwareDrawer({ open, onOpenChange, label, items, current, inhe
   // Sense còpia pròpia (un front amb el del mòdul): la triada és la del mòdul.
   const cur = current ?? inherited
   const choices = cur ? hardwareChoices(items, cur, inherited) : { options: items.map((x): HardwareChoice => ({ key: x.id, item: x, label: x.name, own: false })), value: "none", inheritedKey: undefined }
-  const { options, value, inheritedKey } = choices
+  const { options, inheritedKey } = choices
+  // Amb «cap» triat (push), cap targeta marcada.
+  const value = none?.selected ? "__none__" : choices.value
   const lib = options.filter((o) => !o.own)
   const own = options.filter((o) => o.own && (!q || hardwareMatches(o.item, q)))
   const groups = HARDWARE_CATEGORIES.map((c) => {
@@ -150,6 +162,19 @@ export function HardwareDrawer({ open, onOpenChange, label, items, current, inhe
         <Text fontSize="xs" color="orange.fg" data-testid="hardware-drawer-pending">
           Els que diuen «Sense confirmar» són importats que encara no s'han revisat: es poden triar, però no fan cap forat (ni ho fa el taller) fins que els confirmis a Preferències › Ferratges.
         </Text>
+      )}
+      {none && !q && (
+        <PickerRow on={none.selected} onClick={() => { onOpenChange(false); none.onPick() }} testId="hardware-drawer-none">
+          <Box w="64px" flexShrink={0} aspectRatio="2 / 1" rounded="md" borderWidth="1px" borderStyle="dashed" />
+          <Stack gap={0} align="start" minW={0}>
+            <Text fontSize="sm">{none.label}</Text>
+            {none.help && (
+              <Text fontSize="xs" color="fg.muted" truncate>
+                {none.help}
+              </Text>
+            )}
+          </Stack>
+        </PickerRow>
       )}
       {(emptyLabel !== undefined || inheritedKey !== undefined) && !q && (
         <PickerRow on={value === "none" || value === inheritedKey} onClick={() => pick(inheritedKey ?? "none")} testId="hardware-drawer-empty">

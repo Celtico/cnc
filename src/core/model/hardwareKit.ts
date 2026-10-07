@@ -29,6 +29,8 @@ export const KIT_CLOSINGS = [
   { id: "pushSoft", label: "Push-open + tancament suau", short: "Push + suau" },
 ] as const
 export type KitClosing = (typeof KIT_CLOSINGS)[number]["id"]
+/** El tancament obre per pressió: el calaix no porta tirador (push-open; una sola font amb el «Tirador» del front). */
+export const isPushClosing = (c: KitClosing): boolean => c === "push" || c === "pushSoft"
 const CLOSING_IDS = KIT_CLOSINGS.map((c) => c.id) as [KitClosing, ...KitClosing[]]
 
 export const KIT_BACKS = [
