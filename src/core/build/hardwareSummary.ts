@@ -19,7 +19,12 @@ const FRONT_ROLES = new Set(["door", "drawerFront", "flap"])
  */
 export function ruleHardwareCounts(panels: readonly Panel[], legs = 0): RuleHardwareCount[] {
   let hinge = 0, handle = 0, drawerSides = 0, flap = 0, push = 0, magnet = 0, dowel = 0
+  // Calaixos amb joc paramètric: cap lateral de fusta; un fons de calaix sense lateral és un calaix amb joc (un parell de guies).
+  const boxes = new Set<string>()
+  const sided = new Set<string>()
   for (const p of panels) {
+    const m = /^(.*drawer-\d+)-(bottom|side-left)$/.exec(p.id)
+    if (m) (m[2] === "bottom" ? boxes : sided).add(m[1]!)
     for (const h of p.holes) {
       if (h.tag === "hinge") hinge++
       else if (h.tag === "magnet") magnet++
@@ -35,7 +40,7 @@ export function ruleHardwareCounts(panels: readonly Panel[], legs = 0): RuleHard
   const out: RuleHardwareCount[] = [
     { id: "hinge", label: "Frontisses", count: hinge },
     { id: "handle", label: "Tiradors", count: handle },
-    { id: "slide", label: "Guies de calaix", count: Math.floor(drawerSides / 2), unit: "parells" },
+    { id: "slide", label: "Guies de calaix", count: Math.floor(drawerSides / 2) + [...boxes].filter((k) => !sided.has(k)).length, unit: "parells" },
     { id: "flap", label: "Braços d'abatible", count: flap * 2 },
     { id: "leg", label: "Potes", count: legs },
     { id: "push", label: "Push (Tip-On)", count: push },

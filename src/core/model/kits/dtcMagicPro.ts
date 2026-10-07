@@ -15,7 +15,7 @@ import type { HardwareKit, KitClosing, KitVariant } from "../hardwareKit"
  * Fets de les pàgines: NL ∈ {270, 300, 350, 400, 450, 500, 550, 600}; joc complet `HT<S><NL/10>04A11` (tancament suau),
  * `HT6<s><NL/10>04A11` (push-open), `HT5<s><NL/10>04A11` (push-open + suau, només des de 350); guies industrials
  * `HT10<NL/10>04H` / `HT10<NL/10>04GX` / `HT50<NL/10>04H` (iguals per a totes les alçades); joc de laterals
- * `HT<S><NL/10>01`; suports de davant (cargolats / a pressió) per sèrie; suports de darrere `HT<S>031`; barra de
+ * `HT<S><NL/10>01` (acabats blanc seda i gris, mateix número); suports de davant (cargolats / a pressió) per sèrie; suports de darrere `HT<S>031`; barra de
  * sincronització GG0FH01 de 1100, tallada a LW − 167 (push-open) o LW − 238 (push + suau). Instal·lació: LT = NL + 3
  * (LT = fondària interior), guia a 3 del cantell de davant, «tercer forat» a 37; taula KB → estabilitzador / barra:
  * 300–600 (− / ○) i 800–1200 (○ / ●), igual a totes les alçades. Fusta: darrere LW − 40 (+1/−0) × alçada de la classe,
@@ -69,6 +69,14 @@ interface SeriesSpec {
 const SIDE_BASE = 10
 const BOTTOM_BASE = 19
 
+/**
+ * Materials del 3D dels dos cossos de la guia: no són a Materials, el color surt de la paraula clau «acer»
+ * (`resolveFinish`: gris fosc metàl·lic) i d'«Acer inox» (de Materials: gris clar). El cos fix es veu fosc contra el
+ * lateral del moble; la corredora i els laterals (blanc seda o gris mat, `KIT_FINISHES`) surten amb el calaix.
+ */
+export const KIT_RAIL_MATERIAL = "Acer fosc"
+export const KIT_RUNNER_MATERIAL = "Acer inox"
+
 function dtcKit(sp: SeriesSpec): HardwareKit {
   const H = sp.boxSideHeight
   const c = SIDE_BASE + H / 2
@@ -79,7 +87,7 @@ function dtcKit(sp: SeriesSpec): HardwareKit {
     family: "double-wall-drawer",
     heightClass: { code: sp.code, boxSideHeight: H, backHeight: sp.backHeight },
     variants: variants(sp.series),
-    options: { closing: ["soft", "push", "pushSoft"], back: ["wood", "metal"] },
+    options: { closing: ["soft", "push", "pushSoft"], back: ["wood", "metal"], finish: ["white", "grey"] },
     rules: {
       depthMargin: 3,
       slideSetback: 3,
@@ -100,7 +108,12 @@ function dtcKit(sp: SeriesSpec): HardwareKit {
         mount: "cabinet",
         qty: 1,
         item: { kind: "variant", field: "slides" },
-        shapes: [{ kind: "box", x: 0, y: 0, z: 3, w: 13, h: 47.5, d: "NL" }],
+        // Telescòpica, un sol article: el **cos** (perfil contra el lateral del moble, fix: `kitfix-`, acer fosc) i la
+        // **corredora** (sota el lateral de doble paret, surt amb el calaix: `drawer-`, acer clar). Totes dues NL de llarg.
+        shapes: [
+          { kind: "box", x: 0, y: 0, z: 3, w: 7.6, h: 47.5, d: "NL", material: KIT_RAIL_MATERIAL },
+          { kind: "box", x: 7.6, y: SIDE_BASE, z: 3, w: 13, h: BOTTOM_BASE - SIDE_BASE, d: "NL", mount: "drawer", material: KIT_RUNNER_MATERIAL },
+        ],
       },
       {
         id: "boxSide",
@@ -109,13 +122,14 @@ function dtcKit(sp: SeriesSpec): HardwareKit {
         mount: "drawer",
         qty: 1,
         item: { kind: "variant", field: "sideKit" },
+        finish: true,
         note: "El número és del joc de laterals (esquerre i dret).",
         shapes: [
-          // Pell de fora, pell de dins (des del fons cap amunt), tapa de dalt i la guia del fons (el fons hi reposa).
+          // Pell de fora, pell de dins (des del fons cap amunt) i tapa de dalt; a sota hi va la corredora de la guia
+          // (el fons reposa sobre la corredora, a `BOTTOM_BASE`).
           { kind: "box", x: 7.6, y: SIDE_BASE, z: 3, w: 1.5, h: H, d: "NL" },
           { kind: "box", x: 19.1, y: `${BOTTOM_BASE}+TB`, z: 3, w: 1.5, h: `${SIDE_BASE + H}-${BOTTOM_BASE}-TB`, d: "NL" },
           { kind: "box", x: 7.6, y: SIDE_BASE + H - 3, z: 3, w: 13, h: 3, d: "NL" },
-          { kind: "box", x: 7.6, y: SIDE_BASE, z: 3, w: 13, h: BOTTOM_BASE - SIDE_BASE, d: "NL" },
         ],
       },
       {

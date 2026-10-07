@@ -2,7 +2,7 @@ import { Badge, Box, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import { PickerButton, PickerDrawer, PickerRow } from "../../components/PickerDrawer"
-import { HARDWARE_CATEGORIES, hardwareChoices, hardwareSummary, isPendingImport, type HardwareChoice, type HardwareItem } from "../../core/model"
+import { HARDWARE_CATEGORIES, hardwareChoices, hardwareSummary, isDrawerKit, isPendingImport, type HardwareChoice, type HardwareItem } from "../../core/model"
 import { GalleryCard } from "../projects/GalleryCard"
 import { fold } from "../projects/galleryGrid"
 import { HARDWARE_ICONS } from "./hardwareIcons"
@@ -157,7 +157,7 @@ export function HardwareDrawer({ open, onOpenChange, label, items, current, inhe
             {inherited ? <HardwareThumb item={inherited} base={base} materials={settings.materials} /> : <Box aspectRatio="2 / 1" rounded="md" borderWidth="1px" borderStyle="dashed" />}
           </Box>
           <Stack gap={0} align="start" minW={0}>
-            <Text fontSize="sm">{inherited ? "El del mòdul" : emptyLabel}</Text>
+            <Text fontSize="sm">{inherited ? (isDrawerKit(inherited) ? "El del mòdul (joc de calaix)" : "El del mòdul") : emptyLabel}</Text>
             {inherited && (
               <Text fontSize="xs" color="fg.muted" truncate>
                 {inherited.name}

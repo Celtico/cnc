@@ -780,18 +780,24 @@ export function visibleModule(m: Module): Module {
   if (fronts.style === "overlay") delete fronts.style
   if (fronts.handles === "bar") delete fronts.handles
   // Sense tiradors (push), el tirador triat als fronts no surt ni compta.
-  return { ...m, carcass, fronts, root: visibleZone(m.root, m.fronts.handles === "none") }
+  // La guia del mòdul pot ser un joc de calaix (`drawerKit`): els calaixos sense guia pròpia hi llegeixen les opcions.
+  const hw = m.hardware as Partial<ModuleHardware> | undefined
+  const kitDefault = !isLegacyHardware(hw) && hw?.slide?.engine === "drawerKit"
+  return { ...m, carcass, fronts, root: visibleZone(m.root, m.fronts.handles === "none", kitDefault) }
 }
 
-/** Un compartiment tal com es veu (vegeu `visibleModule`). `noHandles`: el mòdul no porta tiradors. */
-function visibleZone(z: Zone, noHandles = false): Zone {
+/**
+ * Un compartiment tal com es veu (vegeu `visibleModule`). `noHandles`: el mòdul no porta tiradors; `kitDefault`: la guia
+ * del mòdul és un joc de calaix (els calaixos sense guia pròpia el fan servir).
+ */
+function visibleZone(z: Zone, noHandles = false, kitDefault = false): Zone {
   const out: Zone = { ...z }
   if (z.split) {
     // Un compartiment dividit no té prestatges ni barra (l'inspector no els ensenya).
     delete out.shelves
     delete out.rail
     delete out.led
-    out.split = { ...z.split, children: z.split.children.map((c) => visibleZone(c, noHandles)) }
+    out.split = { ...z.split, children: z.split.children.map((c) => visibleZone(c, noHandles, kitDefault)) }
   } else {
     // Sense prestatges (0): gruix i «a ras» no compten; «Regulables» sí (les fileres System 32 per posar-n'hi després),
     // i sense `shelves` és com no regulables.
@@ -818,8 +824,10 @@ function visibleZone(z: Zone, noHandles = false): Zone {
     const heights = f.heights.slice(0, f.n)
     while (heights.length < f.n) heights.push("auto")
     const drawers = { ...f, heights }
-    // Les opcions del joc només compten amb un joc de calaix triat (amb la guia normal, el camp no es veu).
-    if (f.hardware?.engine !== "drawerKit" || !f.kit || !Object.keys(f.kit).length) delete drawers.kit
+    // Les opcions del joc només compten amb un joc de calaix (el triat al calaix o, sense guia pròpia, el del mòdul);
+    // amb la guia normal, el camp no es veu.
+    const kit = f.hardware ? f.hardware.engine === "drawerKit" : kitDefault
+    if (!kit || !f.kit || !Object.keys(f.kit).length) delete drawers.kit
     out.front = drawers
   } else if (f?.kind === "door") {
     const door = { ...f }

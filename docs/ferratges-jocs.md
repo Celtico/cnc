@@ -20,8 +20,17 @@ l'HT10 N (62,5), l'HT12 K (126), l'HT13 C (174) i l'HT14 F (238), que tenen la m
   mobles (`front.hardware`) i al `.moble` sense cap camí nou. Preferències **v23** (additiu): els jocs inicials s'afegeixen
   a la biblioteca si no hi són (per id).
 - Es tria al **calaix**: Front › **Guia** llista les guies i els jocs. Amb un joc, surten **Tancament** (suau · push-open ·
-  push + suau) i **Darrere** (fusta · metàl·lic) (`Front.kit`, `KitOptions`; res amagat compta: amb una guia normal no es
-  llegeixen) i la fitxa **Joc**: NL triada, primeres línies de la comanda i les mides del fons A i del darrere B.
+  push + suau), **Darrere** (fusta · metàl·lic) i **Acabat** dels laterals (blanc seda · gris mat; només el color del 3D,
+  `KIT_FINISHES`, el número és el mateix) (`Front.kit`, `KitOptions`; res amagat compta: amb una guia normal no es
+  llegeixen), la fila **Fons** (el gruix que demana el joc, 16: fix, «el joc demana 16 mm») i la fitxa **Joc**: NL triada,
+  primeres línies de la comanda i les mides del fons A i del darrere B.
+- O al **mòdul**: Fusteria (avançat) › **Guia de calaix** accepta un joc (`slotAccepts`; `slotSpec("slide", joc)` el deixa
+  passar amb l'`item` = el joc i el `spec` de la guia d'inici, sense cap avís; `kitFrom` / `fixHardwareDefaults` també, així
+  Preferències › Ferratges pot tenir-lo per defecte als mòduls nous). Tots els calaixos del mòdul sense guia pròpia es fan
+  amb el joc, exactament igual que triat al front (`buildDrawers` mira `isDrawerKit(item)` de la guia resolta); el front
+  hi llegeix les opcions (`visibleZone(kitDefault)`) i el selector diu «El del mòdul (joc de calaix)». Una guia normal
+  triada al calaix guanya el joc del mòdul. «Guies de calaix» de l'inspector (`ruleHardwareCounts`) compta també els
+  calaixos amb joc (un parell per calaix: fons sense lateral de fusta).
 - Els `params` de l'item porten la **prebroca** (`pilotDiameter`, `pilotDepth`; 0 = cap forat) i els `targets` descriuen
   el forat de prebroca de cada peça (`side`, `front`, `back`). «Mides» de l'editor els canvia; Preferències › Ferratges ›
   **«Prebroca dels cargols»** (`kitPilot` / `setKitPilot`) els canvia a tots els jocs de la biblioteca alhora.
@@ -33,10 +42,10 @@ l'HT10 N (62,5), l'HT12 K (126), l'HT13 C (174) i l'HT14 F (238), que tenen la m
 | `maker`, `series`, `family` | DTC · MAGIC-PRO HT11 · `double-wall-drawer` |
 | `heightClass` | codi (N/M/K/C/F), alçada del lateral del calaix, alçada del darrere de fusta |
 | `variants[]` | per NL: números del joc complet (`kit`) i de les guies (`slides`) per tancament, joc de laterals (`sideKit`) i les **columnes de cargols** de la guia (`screws.both` a les dues fileres, `screws.top` només a la de dalt), en z des del cantell de davant del lateral |
-| `options` | tancaments i darreres que es venen |
+| `options` | tancaments, darreres i acabats (`finish`, opcional) que es venen |
 | `rules` | `depthMargin` (LT = NL + 3), `slideSetback` (3), `baseAboveFront` (38), taula `widths` KB → estabilitzador / barra (0 no · 1 recomanat · 2 molt recomanat), `syncRodCut` per tancament (`LW-167`, `LW-238`), `metalBackSideThickness` (16) |
 | `geometry` | on comença el lateral del calaix (`sideBase`) i el fons (`bottomBase`) per sobre de la vora inferior de la guia, gruixos del lateral i de la guia |
-| `components[]` | id, nom, costat (`both` = mirall, `center`), `mount` (`cabinet`: fix al moble, com la guia; `drawer`: surt amb el calaix), quantitat, número (`fixed` · `variant` · `byWidth` · `none`), condició `when` (tancament, darrere, regla d'amplada), llargada de tall, formes 3D (`box` / `rod`) en coordenades del joc |
+| `components[]` | id, nom, costat (`both` = mirall, `center`), `mount` (`cabinet`: fix al moble, com la guia; `drawer`: surt amb el calaix), quantitat, número (`fixed` · `variant` · `byWidth` · `none`), condició `when` (tancament, darrere, regla d'amplada), llargada de tall, `finish` (pren l'acabat triat: els laterals), formes 3D (`box` / `rod`) en coordenades del joc; cada forma pot dir el seu `mount` i `material` (la guia telescòpica és **un sol article** amb el cos fix al moble, `KIT_RAIL_MATERIAL` «Acer fosc», i la corredora que surt sota el lateral, `KIT_RUNNER_MATERIAL` «Acer inox»; totes dues NL) |
 | `wood[]` | fons A i darrere B: amplada i fondària/alçada per fórmula, gruix del fons (`TB`) o del tauler (`G`), condició, nota de tolerància |
 | `machining` | lateral: fileres de cargols (y); front: forats dels suports a `x` de cada lateral i a les alçades `ys` (mín. del cantell de baix); darrere: cargols dels suports |
 | `source`, `photo`, `hypotheses` | pàgines del catàleg, foto retallada (`public/hardware/`), hipòtesis pendents del taller |
@@ -58,8 +67,11 @@ gruix del fons del calaix, `H` alçada del lateral, `BH` alçada del darrere i `
    fons (material del fons dels calaixos, gruix del joc: 16) sobre la guia del lateral, darrere (tauler del cos) sobre el
    fons al final. **Mecanitzats**: prebroques dels cargols de la guia als **dos laterals del moble** (mirall), dels suports
    de davant al darrere del front (cara A) i dels de darrere al darrere (cara de darrere). **Components** a `extras` com a
-   peces de només veure (rol `hardware`, ids `drawer-<k>-kit-…`: el visor les mou amb el calaix, `opening.ts` agafa la NL
-   de la guia). La comanda a `ModuleBuild.hardwareKits` → `CompositionBuild.hardwareKits` (amb el mòdul).
+   peces de només veure (rol `hardware`, massisses i pintades pel nom del material; ids `drawer-<k>-kit-…`: el visor les
+   mou amb el calaix; `kitfix-<k>-kit-…` les formes muntades al moble, el cos de la guia, es queden fixes i `opening.ts`
+   n'agafa la NL). El fons: material del fons del moble (o del cos si fa el gruix del joc) i gruix del joc (`TB`, 16): no
+   és cap tria del moble, i l'avís `drawer-bottom` només diu si aquest material es ven en 16. La comanda a
+   `ModuleBuild.hardwareKits` → `CompositionBuild.hardwareKits` (amb el mòdul).
 3. **Tot o res** per calaix: sense NL, sense lateral a un costat o sense alçada → només el front i avís `hardware`.
 
 On surt: **Peces › «Ferratges dels jocs»** (`kitGroups`, calaixos iguals sumats, amb la fusta per calaix; els components no
@@ -67,9 +79,10 @@ van a «Elements sense nesting»), el **LLEGEIX-ME** dels programes Maestro (`ki
 (components grisos, mode Per peça «Ferratges»), «Com va muntat» i la miniatura de la targeta (mòdul d'exemple de
 450 × (alçada del joc + 140) × 500, càmera des de dins i del darrere), la peça d'exemple (lateral amb les prebroques).
 
-Proves: `core/build/drawerKit.test.ts` (regles, números, pla, construcció, mirall, tot o res, opcions, muntatge), la
-composició fixa `kit-dtc-ht11` del corpus de les proves d'or (`testCorpus.ts`), `settings.test.ts` (v23) i
-`hiddenState.test.ts` (les opcions del joc amb una guia normal no compten).
+Proves: `core/build/drawerKit.test.ts` (regles, números, pla, construcció, mirall, tot o res, opcions, guia telescòpica i
+acabats, el joc com a guia del mòdul, muntatge), la composició fixa `kit-dtc-ht11` del corpus de les proves d'or
+(`testCorpus.ts`), `settings.test.ts` (v23, v24: els jocs inicials reben les dades d'ara) i `hiddenState.test.ts` (les
+opcions del joc amb una guia normal no compten).
 
 ## Com afegir un joc d'un catàleg
 

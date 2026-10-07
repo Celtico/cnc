@@ -285,6 +285,12 @@ export type HardwareSlot = (typeof HARDWARE_SLOTS)[number]["slot"]
 export const slotOf = (s: HardwareSlot) => HARDWARE_SLOTS.find((x) => x.slot === s)!
 export const slotForEngine = (e: HardwareEngine) => HARDWARE_SLOTS.find((x) => x.engine === e)!
 
+/**
+ * Si un item pot anar en un lloc: el motor del lloc o, a «Guia de calaix», també un joc de calaix de doble paret
+ * (`drawerKit`): llavors els calaixos del mòdul sense guia pròpia es fan amb el joc.
+ */
+export const slotAccepts = (slot: HardwareSlot, item: Pick<HardwareItem, "engine">): boolean => item.engine === slotOf(slot).engine || (slot === "slide" && item.engine === "drawerKit")
+
 /** Còpia dels ferratges d'un mòdul: un item per lloc. */
 export const ModuleHardwareKitSchema = z.object({
   hinge: HardwareItemSchema,
@@ -589,7 +595,7 @@ export function kitFromLegacy(h: LegacyHardware): ModuleHardware {
 export function kitFrom(library: readonly HardwareItem[], defaults: HardwareDefaults): ModuleHardware {
   const pick = (slot: HardwareSlot): HardwareItem => {
     const engine = slotOf(slot).engine
-    const hit = library.find((x) => x.id === defaults[slot] && x.engine === engine) ?? library.find((x) => x.engine === engine) ?? DEFAULT_HARDWARE_LIBRARY.find((x) => x.engine === engine)!
+    const hit = library.find((x) => x.id === defaults[slot] && slotAccepts(slot, x)) ?? library.find((x) => x.engine === engine) ?? DEFAULT_HARDWARE_LIBRARY.find((x) => x.engine === engine)!
     return structuredClone(hit)
   }
   return { hinge: pick("hinge"), system32: pick("system32"), dowel: pick("dowel"), slide: pick("slide"), flap: pick("flap"), magnet: pick("magnet"), handle: pick("handle") }
@@ -636,7 +642,7 @@ export function fixHardwareDefaults(library: readonly HardwareItem[], defaults: 
   const out = { ...DEFAULT_HARDWARE_DEFAULTS }
   for (const { slot, engine } of HARDWARE_SLOTS) {
     const want = defaults[slot]
-    const hit = lib.find((x) => x.id === want && x.engine === engine) ?? lib.find((x) => x.engine === engine)
+    const hit = lib.find((x) => x.id === want && slotAccepts(slot, x)) ?? lib.find((x) => x.engine === engine)
     if (hit) {
       out[slot] = hit.id
       if (hit.id !== want) changed = true

@@ -4,6 +4,7 @@ import {
   evalExpr,
   hardwareVars,
   isDamagedImport,
+  isDrawerKit,
   isPendingImport,
   slotOf,
   stepValue,
@@ -262,6 +263,10 @@ function inertHandle(item: HardwareItem, error: string): SlotSpec<"handle"> {
  */
 export function slotSpec<S extends HardwareSlot>(slot: S, item: HardwareItem | undefined, onError?: (message: string) => void): { spec: SlotSpec<S>; item: HardwareItem; failed?: boolean } {
   const fn = SPECS[slot] as (i: HardwareItem) => SlotSpec<S>
+  // Al lloc «Guia de calaix» hi pot anar un joc de calaix de doble paret (`drawerKit`): els calaixos sense guia pròpia
+  // es fan amb el joc (`buildKitDrawers`), no amb aquests números. El `spec` és el de la guia d'inici (el tipus del lloc),
+  // però l'`item` és el joc: qui construeix mira `isDrawerKit(item)`.
+  if (item && slot === "slide" && isDrawerKit(item)) return { spec: fn(DEFAULT_MODULE_HARDWARE.slide), item }
   if (item) {
     try {
       return { spec: fn(item), item }
