@@ -85,7 +85,7 @@ export function PickerButton({ ariaLabel, swatch, text, warn, onClick }: { ariaL
   )
 }
 
-/** Una fila d'opció sense mostra a dalt del calaix («Com el cos», «El del mòdul», «Genèriques»). */
+/** Una fila d'opció sense mostra a dalt del calaix («Com el cos», «Com el mòdul», «Genèriques»). */
 export function PickerRow({ on, onClick, children, testId }: { on: boolean; onClick: () => void; children: ReactNode; testId?: string }) {
   return (
     <Box asChild p={1.5} rounded="md" borderWidth="2px" borderColor={on ? "wood.solid" : "transparent"} bg={on ? "wood.subtle" : undefined} _hover={{ bg: "bg.muted" }}>

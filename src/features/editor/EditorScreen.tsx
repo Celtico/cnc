@@ -1062,8 +1062,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             kits={moduleBuild?.hardwareKits.filter((k) => k.zoneId === zone.id)}
             onChange={(root) => updateModule({ ...module, root })}
             afterFront={
-              // A l'«Interior» (l'arrel), el que és de tots els fronts del mòdul: jocs i ferratges per defecte
-              // (`module.fronts`, `module.hardware`). La caixa (fons, espigues, System 32) és a la Fusteria del mòdul.
+              // A l'«Interior» (l'arrel), el que és de tots els fronts del mòdul: estil, jocs, tirador i ferratges per
+              // defecte (`module.fronts`, `module.hardware`). La caixa (fons, espigues, System 32) és a la Fusteria del mòdul.
               zone.id === module.root.id && (
                 <FoldItem id="zone-fronts" title="Fronts i calaixos" icon={LuDoorClosed} defaultOpen={false}>
                   <FrontsForm module={module} onChange={updateModule} usedSlots={usedSlotSet(module)} />

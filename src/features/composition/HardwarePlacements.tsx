@@ -12,7 +12,7 @@ import { dimFont, fmtMm, layoutDims } from "../../components/dims"
 import { DimLayer } from "../../components/DimLine"
 import { HardwareDrawer, HardwareSelect } from "../settings/HardwareSelect"
 import { placeableOn } from "../settings/hardwareGroups"
-import { hardwareSummary, isPendingImport, machiningParts, type Composition, type HardwareItem, type HardwarePlacement, type Panel, type PlacePos } from "../../core/model"
+import { UI_PATHS, hardwareSummary, isPendingImport, machiningParts, type Composition, type HardwareItem, type HardwarePlacement, type Panel, type PlacePos } from "../../core/model"
 import type { CompositionWarning } from "../../core/build/buildComposition"
 import { newPlacement, panelAxes, partLabel, placeableItems, placementAdvanced, placementPreview, placementScope, placementWarnings, placePosValue, roleFor, scopePanels, scopePlacements, simplifyPlacement, updatePlacement, type PlacementScope } from "./placements"
 
@@ -164,7 +164,7 @@ export function HardwarePlacements({
                 )
               })}
               <Text fontSize="xs" color="fg.muted">
-                Els posa el mòdul (fronts, calaixos, base): es canvien a Fusteria i al Front de cada porta, calaix o abatible.
+                Els posa el mòdul. Quins són: a {UI_PATHS.frontsAndDrawers} (frontissa, guia o joc, braç, imant, tirador), a {UI_PATHS.joinery} (espiga, System 32), a la base «Potes» i al Front o als Accessoris de cada compartiment.
               </Text>
             </Stack>
           ) : (
