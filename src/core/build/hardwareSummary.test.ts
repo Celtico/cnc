@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "./buildComposition"
-import { ruleHardwareCounts } from "./hardwareSummary"
-import { cabinetToModule, DEFAULT_CABINET, defaultModule, type Composition, type HardwareItem, type HardwarePlacement } from "../model"
+import { ruleHardwareCounts, usedHardwareSlots } from "./hardwareSummary"
+import { cabinetToModule, DEFAULT_CABINET, defaultModule, type Composition, type HardwareItem, type HardwarePlacement, type Panel } from "../model"
 
 describe("ferratges de les regles d'un mòdul (resum de l'inspector)", () => {
   it("una porta: frontisses i tirador; amb potes, quatre", () => {
@@ -44,5 +44,16 @@ describe("ferratges col·locats al 3D", () => {
     const top = buildComposition(comp).panels.find((p) => p.id === "m1:top")!
     expect(top.holes.some((h) => h.tag === "fitting")).toBe(false)
     expect(top.fittings?.length).toBe(1)
+  })
+})
+
+describe("usedHardwareSlots", () => {
+  it("només els llocs amb forats o talls del mòdul", () => {
+    const panels = [
+      { role: "side", holes: [{ tag: "dowel" }, { tag: "slide" }], cutouts: [], fittings: [] },
+      { role: "drawerFront", holes: [], cutouts: [{ tag: "handle" }], fittings: [] },
+    ] as unknown as Panel[]
+    expect([...usedHardwareSlots(panels)].sort()).toEqual(["dowel", "handle", "slide"])
+    expect(usedHardwareSlots([{ role: "side", holes: [{ tag: "kit-slide" }], cutouts: [] } as unknown as Panel]).has("slide")).toBe(true)
   })
 })

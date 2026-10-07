@@ -290,8 +290,10 @@ export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !==
 }
 
 /** Jocs i ferratges del mòdul seleccionat (secció «Fusteria (avançat)»). */
-export function JoineryForm({ module, onChange }: { module: Module; onChange: (m: Module) => void }) {
+export function JoineryForm({ module, onChange, usedSlots }: { module: Module; onChange: (m: Module) => void; usedSlots?: ReadonlySet<string> }) {
   const c = module.carcass
+  // Només els ferratges que el mòdul fa servir de debò (forats a les seves peces); sense peces (encara), tots.
+  const slots = usedSlots ? HARDWARE_SLOTS.filter(({ slot }) => usedSlots.has(slot)) : HARDWARE_SLOTS
   const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
   return (
     <Stack gap={3}>
@@ -301,11 +303,11 @@ export function JoineryForm({ module, onChange }: { module: Module; onChange: (m
       {c.back === "groove" && <NumRow label="Ranura del fons" value={c.backSetback} min={0} max={60} step={1} onChange={(backSetback) => set({ backSetback })} help="Distància al cantell posterior" />}
       {c.back === "inset" && <NumRow label="Retirada del fons" value={c.backInsetSetback ?? 0} min={0} max={60} step={1} onChange={(backInsetSetback) => set({ backInsetSetback })} help="Distància del fons encastat al cantell posterior (0 = enrasat)" />}
       {/* Ferratges del mòdul (una còpia de cada un de la biblioteca): les portes, calaixos i abatibles en poden triar un altre. */}
-      {HARDWARE_SLOTS.map(({ slot }) => (
+      {slots.map(({ slot }) => (
         <HardwarePick key={slot} slot={slot} current={module.hardware[slot]} onPick={(item) => item && onChange({ ...module, hardware: { ...module.hardware, [slot]: item } })} />
       ))}
       <Text fontSize="xs" color="fg.muted">
-        Ferratges de tot el mòdul (Preferències › Ferratges). Cada porta, calaix o abatible en pot triar un altre al seu Front.
+        {slots.length ? "Ferratges que fa servir aquest mòdul (Preferències › Ferratges). Cada porta, calaix o abatible en pot triar un altre al seu Front." : "Aquest mòdul no fa servir cap ferratge."}
       </Text>
     </Stack>
   )

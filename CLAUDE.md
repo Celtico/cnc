@@ -710,7 +710,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   - Moble: Resum (i avisos de fusteria), Taulell i sòcol (no als de només peces), Encaixos (si alguna peça en fa),
     Materials de tot el moble (aplica a tots els mòduls), Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
     Preferències»; `CabinetViewer sceneFinish`, `renderThumb(…, finish)`).
-  - Mòdul: Mides · Caixa (abans «Estructura», es confonia amb la pestanya de l'arbre) · Materials · Fusteria (avançat) ·
+  - Mòdul: Mides · Caixa (abans «Estructura», es confonia amb la pestanya de l'arbre) · Materials · Fusteria (avançat;
+    els jocs i **només els ferratges que el mòdul fa servir**: `usedHardwareSlots`, pels forats i talls de les seves peces;
+    un mòdul amb un calaix i un compartiment obert no ensenya frontissa, braç ni imant) ·
     **Ferratges** (`LuWrench`; com la llista d'un configurador de fabricant, `composition/HardwarePlacements.tsx` +
     `placements.ts`; insígnia «n a mà · m de regles»): **Col·locats a mà**, una fila per col·locat (nom · peça, l'avís a
     sota) amb Editar · Duplicar · Eliminar (`LuPencil` · `LuCopy` · `LuTrash2`, `PlacementButtons`); tocar-ne un el tria

@@ -44,3 +44,25 @@ export function ruleHardwareCounts(panels: readonly Panel[], legs = 0): RuleHard
   ]
   return out.filter((c) => c.count > 0)
 }
+
+/** Etiqueta dels forats de cada lloc de ferratge del mòdul (`HARDWARE_SLOTS`). */
+const SLOT_TAGS: Record<string, string> = { hinge: "hinge", system32: "system32", dowel: "dowel", slide: "slide", flap: "flap", magnet: "magnet", handle: "handle" }
+
+/**
+ * Llocs de ferratge que el mòdul **fa servir de debò** (hi ha algun forat o tall amb la seva etiqueta a les seves peces):
+ * «Fusteria (avançat)» només ensenya aquests, no els set. Un mòdul amb un calaix i un compartiment obert no té frontissa,
+ * braç ni imant. Un calaix amb joc paramètric (prebroques `kit-*`) compta com a guia.
+ */
+export function usedHardwareSlots(panels: readonly Panel[]): Set<string> {
+  const used = new Set<string>()
+  for (const p of panels) {
+    for (const h of p.holes) {
+      if (!h.tag) continue
+      if (h.tag.startsWith("kit-")) used.add("slide")
+      for (const [slot, tag] of Object.entries(SLOT_TAGS)) if (h.tag === tag) used.add(slot)
+    }
+    if ((p.cutouts ?? []).some((c) => c.tag === "handle") || (p.fittings ?? []).some((f) => f.kind === "handle")) used.add("handle")
+    if (p.role === "drawerSide") used.add("slide")
+  }
+  return used
+}
