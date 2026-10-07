@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule } from "./composition"
-import { DEFAULT_HARDWARE_KITS, DEFAULT_MODULE_HARDWARE, DEFAULT_LEGACY_HARDWARE, copyHardwareItem } from "./hardware"
+import { DEFAULT_HARDWARE_KITS, DEFAULT_MODULE_HARDWARE, DEFAULT_LEGACY_HARDWARE, copyHardwareItem, setKitPilot } from "./hardware"
 import {
   BUILTIN_REFERENCES,
   SETTINGS_VERSION,
@@ -372,14 +372,20 @@ describe("v23: jocs de calaix de doble paret", () => {
     expect(r2.settings.hardwareLibrary.some((x) => x.id === "kit-dtc-ht11")).toBe(false)
     expect(r2.settings.hardwareLibrary.some((x) => x.id === "kit-dtc-ht12")).toBe(true)
   })
-  it("v24: els jocs inicials reben les dades d'ara (guia de dos cossos, acabats) i es queden la prebroca de l'usuari", () => {
+  it("v24: els jocs inicials reben les dades d'ara (guia de dos cossos, acabats) i es queda la prebroca de l'usuari, que passa a ser la regla `kitPilot`", () => {
     const ht11 = DEFAULT_HARDWARE_KITS.find((k) => k.id === "kit-dtc-ht11")!
     const oldKit = { ...structuredClone(ht11.kit!), options: { closing: ["soft"], back: ["wood"] }, components: ht11.kit!.components.map((c) => ({ ...c, shapes: c.id === "slide" ? [c.shapes[0]!] : c.shapes })) }
-    const v23 = { ...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), version: 23, hardwareLibrary: DEFAULT_SETTINGS.hardwareLibrary.map((x) => (x.id === "kit-dtc-ht11" ? { ...x, params: { pilotDiameter: 3, pilotDepth: 12 }, kit: oldKit } : x)) }
+    // Unes preferències d'abans: sense la regla, i la prebroca de l'usuari (3 × 12) a tots els jocs (com la posava `setKitPilot`).
+    const { kitPilot: _k, ...rest } = JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+    const v23 = { ...rest, version: 23, hardwareLibrary: DEFAULT_SETTINGS.hardwareLibrary.map((x) => (x.engine === "drawerKit" ? { ...x, params: { pilotDiameter: 3, pilotDepth: 12 }, ...(x.id === "kit-dtc-ht11" ? { kit: oldKit } : {}) } : x)) }
     const res = parseSettings(v23)
     expect(res.migrated).toBe(true)
     const got = res.settings.hardwareLibrary.find((x) => x.id === "kit-dtc-ht11")!
     expect(got.kit).toEqual(ht11.kit)
     expect(got.params).toEqual({ pilotDiameter: 3, pilotDepth: 12 })
+    expect(res.settings.kitPilot).toEqual({ enabled: true, diameter: 3, depth: 12 })
+    // Una sola font: canviar la regla posa els números a tots els jocs.
+    const off = setKitPilot(res.settings.hardwareLibrary, { enabled: false, diameter: 3, depth: 12 })
+    expect(off.filter((x) => x.engine === "drawerKit").every((x) => x.params.pilotDiameter === 0)).toBe(true)
   })
 })

@@ -2,7 +2,8 @@ import { z } from "zod"
 import { DEFAULT_CABINET } from "./cabinet"
 import { type Module } from "./composition"
 import { migrateImportedNames } from "../import/hettichNames"
-import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, fixHardwareDefaults, kitFrom, libraryFromLegacy } from "./hardware"
+import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, fixHardwareDefaults, kitFrom, kitPilotFromLibrary, libraryFromLegacy, setKitPilot } from "./hardware"
+import { DEFAULT_KIT_PILOT, KitPilotSchema } from "./hardwareKit"
 import { PHOTO_MATERIALS } from "./textureSets"
 import { deepEqual, MATERIAL_MERGES, rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
 import { defaultMachine, defaultMachineRules, MachineRulesSchema, MachineSchema, migrateMachine, repairMachine, withWorkshopRules, type Machine, type MachineRules } from "./machine"
@@ -312,6 +313,8 @@ export const SettingsSchema = z.object({
   hardwareLibrary: z.array(HardwareItemSchema),
   /** Quin item de la biblioteca fa servir cada lloc als mòduls nous (`HARDWARE_SLOTS`). */
   hardwareDefaults: HardwareDefaultsSchema,
+  /** Regla del taller «prebroca dels cargols» dels jocs (una sola font; els jocs de la biblioteca i les còpies la segueixen). */
+  kitPilot: KitPilotSchema,
   gaps: GapsPrefSchema,
   label: LabelPrefSchema,
   display: DisplayPrefSchema,
@@ -561,6 +564,7 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   hardwareLibrary: DEFAULT_HARDWARE_LIBRARY,
   hardwareDefaults: DEFAULT_HARDWARE_DEFAULTS,
+  kitPilot: DEFAULT_KIT_PILOT,
   gaps: {
     outerGap: DEFAULT_CABINET.doorGap,
     betweenGap: DEFAULT_CABINET.doorGapBetween,
@@ -720,6 +724,14 @@ export function parseSettings(raw: unknown): SettingsParse {
   if (freshKits.some((x, i) => x !== withKits[i])) migrated = true
   const hardware = fixHardwareDefaults(freshKits, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
   if (hardware.changed) migrated = true
+  // Prebroca dels cargols, una sola font: la regla desada o, a les preferències d'abans, la del primer joc de la
+  // biblioteca (el que es feia servir); els jocs de la biblioteca en copien els números.
+  const pilotRule = (() => {
+    const pilot = "kitPilot" in obj ? section("kitPilot", KitPilotSchema, kitPilotFromLibrary(hardware.library), "Ferratges (prebroca)") : kitPilotFromLibrary(hardware.library)
+    if (!("kitPilot" in obj)) migrated = true
+    const library = setKitPilot(hardware.library, pilot)
+    return { pilot, library: library.some((x, i) => x !== hardware.library[i]) ? library : hardware.library }
+  })()
   // Àlies segons els materials d'aquestes preferències (un «X (foto)» que encara hi és no es toca).
   const names = new Set(materials.map((m) => m.name))
   const alias = (n: string) => resolveMaterialAlias(n, names)
@@ -728,8 +740,9 @@ export function parseSettings(raw: unknown): SettingsParse {
     references,
     materials,
     boards: v7 || v12.renames.length ? { ...boards, sheets: boards.sheets.map((x) => ({ ...x, material: renamed(v7 ? alias(x.material) : x.material) })) } : boards,
-    hardwareLibrary: hardware.library,
+    hardwareLibrary: pilotRule.library,
     hardwareDefaults: hardware.defaults,
+    kitPilot: pilotRule.pilot,
     gaps: section("gaps", GapsPrefSchema, DEFAULT_SETTINGS.gaps, "Folgances per defecte"),
     label: section("label", LabelPrefSchema, DEFAULT_SETTINGS.label, "Etiquetes"),
     display: section("display", DisplayPrefSchema, DEFAULT_SETTINGS.display, "Visualització"),

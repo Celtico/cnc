@@ -208,6 +208,24 @@ export type HardwareKit = z.infer<typeof HardwareKitSchema>
 /** Paràmetres de l'item d'un joc (`HardwareItem.params`): la prebroca dels cargols (0 = sense). */
 export const KIT_PILOT_PARAMS = { pilotDiameter: 2, pilotDepth: 10 } as const
 
+/** Regla del taller «prebroca dels cargols» (Preferències › Ferratges): activada, Ø i fondària. */
+export const KitPilotSchema = z.object({ enabled: z.boolean(), diameter: z.number().finite().min(0.5).max(10), depth: z.number().finite().min(1).max(50) })
+export type KitPilot = z.infer<typeof KitPilotSchema>
+export const DEFAULT_KIT_PILOT: KitPilot = { enabled: true, diameter: KIT_PILOT_PARAMS.pilotDiameter, depth: KIT_PILOT_PARAMS.pilotDepth }
+
+/**
+ * **Una sola font** per a la prebroca (auditoria C6): la regla és `Settings.kitPilot`; els jocs de la biblioteca en
+ * copien els números (`setKitPilot`) i les còpies dels mòduls la **segueixen en construir** (`planKit` llegeix la regla
+ * vigent, com el moble s'adapta a la màquina i als materials de qui l'obre: és una regla del taller, no una dada del
+ * moble). La posen les preferències en carregar-se (`setKitPilotRule`, `db/settingsStore.ts`); sense (tests, Node), els
+ * `params` de cada còpia.
+ */
+let PILOT_RULE: KitPilot | null = null
+export function setKitPilotRule(rule: KitPilot | null): void {
+  PILOT_RULE = rule
+}
+export const kitPilotRule = (): KitPilot | null => PILOT_RULE
+
 /** Variables de les fórmules d'un joc. */
 export interface KitVars {
   LW: number

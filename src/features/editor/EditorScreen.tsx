@@ -52,6 +52,7 @@ import { RenderDialog, type SceneGetter } from "../../components/viewer/render/R
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
+import type { KitOrder } from "../../core/build/buildModule"
 import { materialIssues } from "../../core/build/materialIssues"
 import { applySettingsToModule, usedSlotSet, hasDrawers, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
@@ -100,6 +101,7 @@ function readTab(): ViewTab {
 type ViewMode = "pieces" | "texture" | "presentation"
 /** Llista buida estable (mentre no hi ha moble construït). */
 const NO_PANELS: Panel[] = []
+const NO_KITS: KitOrder[] = []
 const NO_WARNINGS: CompositionWarning[] = []
 
 const VIEW_MODES: [ViewMode, string, string, typeof LuShapes][] = [
@@ -1171,7 +1173,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           <FoldItem id="mod-joinery" title="Fusteria (avançat)" icon={LuHammer} defaultOpen={false}>
             <JoineryForm module={module} onChange={updateModule} usedSlots={usedSlotSet(module)} />
           </FoldItem>
-          <FoldItem id="mod-hardware" title="Ferratges" icon={LuWrench} badge={hardwareBadge(scopePlacements(comp, { kind: "module", moduleId: module.id }).length, panels.filter((p) => p.module === moduleIndex + 1), module.carcass.base.kind === "legs" ? 4 : 0, moduleExtras)}>
+          <FoldItem id="mod-hardware" title="Ferratges" icon={LuWrench} badge={hardwareBadge(scopePlacements(comp, { kind: "module", moduleId: module.id }).length, panels.filter((p) => p.module === moduleIndex + 1), module.carcass.base.kind === "legs" ? 4 : 0, moduleExtras, moduleBuild?.hardwareKits ?? NO_KITS)}>
             <HardwarePlacements
               comp={comp}
               scope={{ kind: "module", moduleId: module.id }}
@@ -1180,7 +1182,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
               warnings={warnings}
               onChange={setComp}
               actions={hardwareActions}
-              rules={ruleHardwareCounts(panels.filter((p) => p.module === moduleIndex + 1), module.carcass.base.kind === "legs" ? 4 : 0, moduleExtras)}
+              rules={ruleHardwareCounts(panels.filter((p) => p.module === moduleIndex + 1), module.carcass.base.kind === "legs" ? 4 : 0, moduleExtras, moduleBuild?.hardwareKits ?? NO_KITS)}
             />
           </FoldItem>
         </Stack>
@@ -1258,7 +1260,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           selection={selection}
           onSelect={(s) => select(s, true)}
           onChange={setComp}
-          newModule={(id, n) => (kind === "taula" ? tableModule(id, n) : applySettingsToModule(settings, defaultModule(id, n)))}
+          newModule={(id, n) => applySettingsToModule(settings, kind === "taula" ? tableModule(id, n) : defaultModule(id, n))}
           partCenter={{ x: Math.round(size.width / 2), y: partsOnlyKind(kind) ? 0 : Math.round(size.height / 2), z: partsOnlyKind(kind) ? 0 : Math.round(size.depth + 50) }}
         />
         }
@@ -1456,7 +1458,7 @@ function legsView(base: { height: number; hardware?: HardwareItem }, depth: numb
 }
 
 /** Insígnia de «Ferratges» del mòdul: els col·locats a mà i els de les regles (sense les espigues, que són forats). */
-function hardwareBadge(placed: number, panels: Panel[], legs: number, extras: Panel[]): string | undefined {
-  const rules = ruleHardwareCounts(panels, legs, extras).filter((r) => r.id !== "dowel").reduce((a, r) => a + r.count, 0)
+function hardwareBadge(placed: number, panels: Panel[], legs: number, extras: Panel[], kits: readonly KitOrder[]): string | undefined {
+  const rules = ruleHardwareCounts(panels, legs, extras, kits).filter((r) => r.id !== "dowel").reduce((a, r) => a + r.count, 0)
   return [placed ? `${placed} a mà` : "", rules ? `${rules} de regles` : ""].filter(Boolean).join(" · ") || undefined
 }
