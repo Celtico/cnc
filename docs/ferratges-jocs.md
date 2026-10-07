@@ -36,7 +36,7 @@ l'HT10 N (62,5), l'HT12 K (126), l'HT13 C (174) i l'HT14 F (238), que tenen la m
 | `options` | tancaments i darreres que es venen |
 | `rules` | `depthMargin` (LT = NL + 3), `slideSetback` (3), `baseAboveFront` (38), taula `widths` KB → estabilitzador / barra (0 no · 1 recomanat · 2 molt recomanat), `syncRodCut` per tancament (`LW-167`, `LW-238`), `metalBackSideThickness` (16) |
 | `geometry` | on comença el lateral del calaix (`sideBase`) i el fons (`bottomBase`) per sobre de la vora inferior de la guia, gruixos del lateral i de la guia |
-| `components[]` | id, nom, costat (`both` = mirall, `center`), quantitat, número (`fixed` · `variant` · `byWidth` · `none`), condició `when` (tancament, darrere, regla d'amplada), llargada de tall, formes 3D (`box` / `rod`) en coordenades del joc |
+| `components[]` | id, nom, costat (`both` = mirall, `center`), `mount` (`cabinet`: fix al moble, com la guia; `drawer`: surt amb el calaix), quantitat, número (`fixed` · `variant` · `byWidth` · `none`), condició `when` (tancament, darrere, regla d'amplada), llargada de tall, formes 3D (`box` / `rod`) en coordenades del joc |
 | `wood[]` | fons A i darrere B: amplada i fondària/alçada per fórmula, gruix del fons (`TB`) o del tauler (`G`), condició, nota de tolerància |
 | `machining` | lateral: fileres de cargols (y); front: forats dels suports a `x` de cada lateral i a les alçades `ys` (mín. del cantell de baix); darrere: cargols dels suports |
 | `source`, `photo`, `hypotheses` | pàgines del catàleg, foto retallada (`public/hardware/`), hipòtesis pendents del taller |

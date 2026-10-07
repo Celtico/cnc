@@ -93,6 +93,8 @@ export const KitComponentSchema = z.object({
   name: z.string().min(1),
   /** A quin costat va: a cada lateral (`both`: es fa el mirall), o un de sol al mig. */
   side: z.enum(["both", "left", "right", "center"]),
+  /** On va cargolat: al `drawer` (surt amb el calaix en obrir-lo) o al `cabinet` (la guia: fixa al lateral del moble). */
+  mount: z.enum(["drawer", "cabinet"]).default("drawer"),
   /** Quants per calaix (per costat si `both`). */
   qty: z.number().int().positive(),
   item: KitItemRefSchema,

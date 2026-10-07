@@ -92,11 +92,12 @@ describe("joc paramètric: construcció", () => {
     expect(bottoms[0]!.material).toBe(b.panels[0]!.material)
     expect(b.hardwareKits).toHaveLength(2)
     expect(b.hardwareKits[0]).toMatchObject({ drawer: 1, nl: 450, options: { closing: "soft", back: "wood" } })
-    // Components de només veure, que es mouen amb el calaix.
+    // Components de només veure: la guia fixa al moble (`kitfix-`), la resta surt amb el calaix (`drawer-`).
     const solids = b.extras.filter((p) => p.role === "hardware")
     expect(solids.length).toBeGreaterThan(8)
-    expect(solids.every((p) => /^drawer-[12]-kit-/.test(p.id))).toBe(true)
-    const slide = solids.find((p) => p.id.startsWith("drawer-1-kit-slide-left"))!
+    expect(solids.every((p) => /^(drawer|kitfix)-[12]-kit-/.test(p.id))).toBe(true)
+    expect(solids.filter((p) => p.id.startsWith("kitfix-")).every((p) => p.id.includes("-kit-slide-"))).toBe(true)
+    const slide = solids.find((p) => p.id.startsWith("kitfix-1-kit-slide-left"))!
     expect(slide.thickness).toBe(450)
     expect(b.warnings.filter((w) => w.code === "hardware")).toEqual([])
   })
