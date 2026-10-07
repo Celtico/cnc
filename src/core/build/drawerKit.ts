@@ -1,6 +1,7 @@
 import {
   KIT_BACKS,
   KIT_CLOSINGS,
+  KIT_FINISHES,
   KIT_LEVEL_LABEL,
   NO_EDGES,
   chooseVariant,
@@ -8,6 +9,7 @@ import {
   fmtMm,
   isDrawerKit,
   kitApplies,
+  kitFinishMaterial,
   kitItemNumber,
   kitOptionsOf,
   kitVars,
@@ -61,6 +63,10 @@ export interface KitSolid {
   component: KitComponent
   /** Caixa: cantonada mínima i mides; barra: cilindre al llarg de X. */
   shape: { kind: "box"; min: Vec3; size: Vec3 } | { kind: "rod"; x: number; y: number; z: number; len: number; diameter: number }
+  /** On va muntada aquesta forma (la del component si no en diu cap): la corredora d'una guia surt amb el calaix. */
+  mount: "drawer" | "cabinet"
+  /** Material del 3D d'aquesta forma (si en diu un). */
+  material?: string
 }
 
 export interface KitPlan {
@@ -137,7 +143,7 @@ export function planKit(item: HardwareItem, input: KitInput): { plan: KitPlan | 
     const note = [c.note, level !== undefined ? KIT_LEVEL_LABEL[level] : undefined].filter(Boolean).join(" · ")
     const cutLength = c.cutLength !== undefined ? evalKit(c.cutLength, vars) : undefined
     lines.push({ component: c.id, name: c.name, qty, ...(item ? { item } : {}), ...(cutLength !== undefined ? { cutLength } : {}), ...(note ? { note } : {}) })
-    for (const s of c.shapes) solids.push({ component: c, shape: solidOf(s, vars) })
+    for (const s of c.shapes) solids.push({ component: c, shape: solidOf(s, vars), mount: s.mount ?? c.mount, ...(s.material ? { material: s.material } : {}) })
   }
   const wood: KitWoodSize[] = []
   for (const w of kit.wood) {
@@ -182,18 +188,20 @@ export const kitHeight = (kit: HardwareKit): number => kit.geometry.sideBase + k
  * Les formes dels components com a peces de només veure (`Panel`, rol `hardware`, sense nesting) col·locades al moble:
  * `at` = punt del joc (x de la cara interior del lateral esquerre, y de la vora inferior de la guia, z de la cara de
  * darrere del front, en coordenades del mòdul) i `LW` per fer el mirall del costat dret. Els ids porten `drawer-<k>-`
- * perquè el visor les mogui amb el calaix.
+ * perquè el visor les mogui amb el calaix, o `kitfix-<k>-` si la forma va muntada al moble (el cos de la guia: el visor
+ * la deixa quieta). Material: el de la forma, el de l'acabat triat (`finish`: els laterals), el del component o acer.
  */
 export function kitSolidPanels(plan: KitPlan, k: number, at: { x0: number; y0: number; zFront: number }, LW: number): Panel[] {
   const out: Panel[] = []
   let n = 0
-  const material = (c: KitComponent) => c.material ?? "Acer inox"
-  for (const { component: c, shape } of plan.solids) {
+  const finish = plan.options.finish ? kitFinishMaterial(plan.options.finish) : undefined
+  const material = (c: KitComponent, own?: string) => own ?? (c.finish && finish ? finish : (c.material ?? "Acer inox"))
+  for (const { component: c, shape, mount, material: own } of plan.solids) {
     const sides: ("left" | "right")[] = c.side === "both" ? ["left", "right"] : c.side === "right" ? ["right"] : ["left"]
     for (const side of sides) {
       n += 1
-      // Els del moble (la guia) no porten el prefix `drawer-`: el visor no els mou amb el calaix (`movingGroups`).
-      const id = `${c.mount === "cabinet" ? "kitfix" : "drawer"}-${k}-kit-${c.id}-${side}-${n}`
+      // Els del moble (el cos de la guia) no porten el prefix `drawer-`: el visor no els mou amb el calaix (`movingGroups`).
+      const id = `${mount === "cabinet" ? "kitfix" : "drawer"}-${k}-kit-${c.id}-${side}-${n}`
       const label = `${c.name}${c.side === "both" ? (side === "left" ? " esq." : " dr.") : ""}`
       if (shape.kind === "rod") {
         const R = shape.diameter / 2
@@ -208,7 +216,7 @@ export function kitSolidPanels(plan: KitPlan, k: number, at: { x0: number; y0: n
           length: shape.diameter,
           width: shape.diameter,
           thickness: shape.len,
-          material: material(c),
+          material: material(c, own),
           grain: "none",
           edges: { ...NO_EDGES },
           holes: [],
@@ -235,7 +243,7 @@ export function kitSolidPanels(plan: KitPlan, k: number, at: { x0: number; y0: n
         length: r(w),
         width: r(h),
         thickness: r(d),
-        material: material(c),
+        material: material(c, own),
         grain: "none",
         edges: { ...NO_EDGES },
         holes: [],
@@ -262,7 +270,8 @@ export function kitWoodText(w: KitWoodSize): string {
   return `${w.name} · ${fmtMm(w.width)} × ${fmtMm(second)} × ${fmtMm(w.thickness)}`
 }
 
-/** L'etiqueta de les opcions: «Tancament suau · darrere de fusta». */
+/** L'etiqueta de les opcions: «Tancament suau · darrere de fusta · blanc seda». */
 export function kitOptionsText(o: KitOptions): string {
-  return `${KIT_CLOSINGS.find((c) => c.id === o.closing)!.label} · ${KIT_BACKS.find((b) => b.id === o.back)!.label.toLowerCase()}`
+  const finish = o.finish ? KIT_FINISHES.find((f) => f.id === o.finish) : undefined
+  return `${KIT_CLOSINGS.find((c) => c.id === o.closing)!.label} · ${KIT_BACKS.find((b) => b.id === o.back)!.label.toLowerCase()}${finish ? ` · ${finish.label.toLowerCase()}` : ""}`
 }

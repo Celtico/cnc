@@ -195,14 +195,21 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   - **Calaixos amb joc paramètric** (`docs/ferratges-jocs.md`; per decisió de l'usuari, el model dels ferratges a partir
     d'ara: el **joc** del fabricant llegit del catàleg, no un STEP): a Front › **Guia** es pot triar, en lloc de la guia,
     un joc de **calaix de doble paret** (DTC MAGIC-PRO N/M/K/C/F, `HardwareItem.kit`, motor `drawerKit`), amb
-    **Tancament** (suau · push-open · push + suau) i **Darrere** (fusta · metàl·lic) (`Front.kit`; res amagat compta: amb
-    una guia normal no es llegeixen). El joc s'adapta al moble (NL = la més gran amb NL + 3 ≤ fondària darrere del front;
+    **Tancament** (suau · push-open · push + suau), **Darrere** (fusta · metàl·lic) i **Acabat** dels laterals (blanc seda ·
+    gris mat, només el color del 3D) (`Front.kit`; res amagat compta: amb una guia normal no es llegeixen). El joc també
+    pot ser la **«Guia de calaix» del mòdul** (Fusteria avançat, `module.hardware.slide`; `slotAccepts`, `slotSpec` el
+    deixa passar amb l'item = el joc): tots els calaixos sense guia pròpia es fan amb el joc, igual que triat al front (el
+    front hi llegeix les opcions, «El del mòdul (joc de calaix)» al selector). El gruix del fons el **demana el joc** (16,
+    `TB`): la fitxa del calaix el mostra fix («el joc demana 16 mm»), res a triar ni suggerir (el «Gruix del fons» de la
+    Caixa és el fons del moble, una altra cosa). El joc s'adapta al moble (NL = la més gran amb NL + 3 ≤ fondària darrere del front;
     estabilitzador i barra de sincronització per KB = LW + 32) i la fusta s'adapta al joc: **cap lateral de fusta**; fons A
     (LW − 19 × NL − 29, o NL − 27 amb darrere metàl·lic, gruix del joc: 16, material del fons dels calaixos) i darrere B
     (LW − 40 × 63 a la M, tauler del cos). Mecanitzats: **prebroques Ø2 × 10** dels cargols de la guia als dos laterals del
     moble (mirall, a les columnes de cada NL), dels suports de davant al darrere del front i dels de darrere al darrere.
     Els components (guies, laterals de doble paret, suports, darrere metàl·lic, barra tallada a LW − 167 / LW − 238) van
-    a `extras` com a peces de només veure (rol `hardware`, es mouen amb el calaix) i la **comanda** amb els números del
+    a `extras` com a peces de només veure (rol `hardware`; surten amb el calaix llevat del **cos de la guia**, fix al
+    lateral del moble: `kitfix-`, acer fosc; la guia és telescòpica, un sol article amb el cos fix i la **corredora** que
+    surt sota el lateral, `KitShape.mount` / `material`) i la **comanda** amb els números del
     catàleg a `build.hardwareKits` (Peces › «Ferratges dels jocs», LLEGEIX-ME de Maestro, fitxa «Joc» de l'inspector).
     Tot o res per calaix (sense NL, sense lateral o sense alçada: només el front i avís `hardware`). Les alçades de les
     fileres de cargols i la posició vertical del joc són **hipòtesis** del catàleg (`hypotheses`, a l'editor del joc).
@@ -288,6 +295,8 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
 - **Jocs paramètrics** (`core/model/hardwareKit.ts`, dades a `core/model/kits/dtcMagicPro.ts`, constructor
   `core/build/drawerKit.ts` + `buildKitDrawers`, comanda `core/build/kitOrders.ts`; preferències **v23**, additiu: els jocs
   inicials s'afegeixen si no hi són): vegeu Model del moble › Calaixos amb joc paramètric i `docs/ferratges-jocs.md`.
+  Preferències **v24**: els jocs inicials (`builtin`) reben les dades del joc d'ara (guia de dos cossos, acabats); nom i
+  prebroca es queden; les còpies dels mobles no es toquen (es veuen com abans fins a tornar a triar el joc).
   Categoria «Calaixos de doble paret» (`drawer-system`); l'editor del joc (`settings/KitSections.tsx`) és **només lectura**
   (variants, opcions, regles, components, fusta, mecanitzats, hipòtesis; duplicar-lo per canviar la prebroca a «Mides»).
   **Regla del taller «prebroca dels cargols»** (Preferències › Ferratges › «Prebroca dels cargols», `kitPilot` /
@@ -857,6 +866,13 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   cassoleta hi entra tal com es veuria col·locat.
   `PanelMesh proposedTags`: els forats amb aquestes etiquetes, en taronja (els proposats d'un importat sense confirmar al
   muntatge de Preferències › Ferratges); `MovingPanel` s'exporta per al mateix muntatge.
+- **Components dels jocs de calaix** (`extras` amb rol `hardware`, `kitSolidPanels`): peces de caixa normals, **massisses**
+  (`panelMaterials`: totes les cares amb l'acabat del material, mai el color del tauler vist als cantells) i pintades pel
+  nom del material amb `resolveFinish` (paraula clau si no és a Materials: «Acer fosc» → gris fosc metàl·lic, «Blanc
+  seda» / «Gris mat» → blanc / gris mat; `materialIssues` no avisa d'aquests noms). En obrir un calaix (`opening.ts`,
+  `movingGroups`), surten els `drawer-<k>-…` (laterals de doble paret, corredora de la guia, suports, darrere, barra) i el
+  **cos de la guia** (`kitfix-<k>-kit-slide-…`, acer fosc) es queda fix al lateral del moble: es veu de seguida què és fix
+  i què es mou. La NL de l'obertura surt del gruix del cos fix.
 - **Textura desplaçada per peça** (`viewer/textureOffset.ts`, test): cada cara de cada peça (`Panel.id` + cara) té un
   desplaçament determinista (hash FNV-1a) i, a l'atzar, un gir de 180°, a la matriu UV (`faceTexture(…, off)`), que llegeixen
   el visor, el render (`sceneData`, també la base tangent) i el GLB/USDZ. Canviar el hash canvia la veta de tots els mobles.

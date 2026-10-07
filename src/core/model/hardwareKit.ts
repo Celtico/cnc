@@ -38,8 +38,21 @@ export const KIT_BACKS = [
 export type KitBack = (typeof KIT_BACKS)[number]["id"]
 const BACK_IDS = KIT_BACKS.map((b) => b.id) as [KitBack, ...KitBack[]]
 
+/**
+ * Acabats (color) dels laterals de doble paret que es venen: el nom és el d'un material del 3D (`resolveFinish`: si no
+ * és a Materials, el color surt de la paraula clau «blanc» / «gris»). Només canvia el color al visor; els números
+ * d'article del catàleg són els mateixos.
+ */
+export const KIT_FINISHES = [
+  { id: "white", label: "Blanc seda", short: "Blanc", material: "Blanc seda" },
+  { id: "grey", label: "Gris mat", short: "Gris", material: "Gris mat" },
+] as const
+export type KitFinish = (typeof KIT_FINISHES)[number]["id"]
+const FINISH_IDS = KIT_FINISHES.map((f) => f.id) as [KitFinish, ...KitFinish[]]
+export const kitFinishMaterial = (f: KitFinish): string => KIT_FINISHES.find((x) => x.id === f)!.material
+
 /** Opcions triades a un calaix (`Front.kit`); sense, les primeres del joc. */
-export const KitOptionsSchema = z.object({ closing: z.enum(CLOSING_IDS), back: z.enum(BACK_IDS) })
+export const KitOptionsSchema = z.object({ closing: z.enum(CLOSING_IDS), back: z.enum(BACK_IDS), finish: z.enum(FINISH_IDS).optional() })
 export type KitOptions = z.infer<typeof KitOptionsSchema>
 
 /** Una llargada nominal del joc: números d'article i on van els cargols de la guia. */
@@ -58,12 +71,18 @@ export const KitVariantSchema = z.object({
 })
 export type KitVariant = z.infer<typeof KitVariantSchema>
 
+/**
+ * Una forma pot anar muntada en un altre lloc que el seu component (`mount`: una guia telescòpica és un sol article amb
+ * el cos fix al moble i la corredora que surt amb el calaix) i tenir el seu material del 3D (`material`).
+ */
+const ShapeExtras = { mount: z.enum(["drawer", "cabinet"]).optional(), material: z.string().optional() }
+
 /** Forma senzilla d'un component en coordenades del joc (sense GLB): caixa o cilindre. */
 export const KitShapeSchema = z.discriminatedUnion("kind", [
   /** Caixa: cantonada mínima (x, y, z) i mides (w cap a dins, h amunt, d cap al fons). */
-  z.object({ kind: z.literal("box"), x: KitExpr, y: KitExpr, z: KitExpr, w: KitExpr, h: KitExpr, d: KitExpr }),
+  z.object({ kind: z.literal("box"), x: KitExpr, y: KitExpr, z: KitExpr, w: KitExpr, h: KitExpr, d: KitExpr, ...ShapeExtras }),
   /** Cilindre al llarg de X (barra): inici x, centre (y, z), llargada i Ø. */
-  z.object({ kind: z.literal("rod"), x: KitExpr, y: KitExpr, z: KitExpr, len: KitExpr, diameter: KitExpr }),
+  z.object({ kind: z.literal("rod"), x: KitExpr, y: KitExpr, z: KitExpr, len: KitExpr, diameter: KitExpr, ...ShapeExtras }),
 ])
 export type KitShape = z.infer<typeof KitShapeSchema>
 
@@ -104,6 +123,8 @@ export const KitComponentSchema = z.object({
   shapes: z.array(KitShapeSchema),
   /** Material del 3D (nom de Materials; sense, acer). */
   material: z.string().optional(),
+  /** Pren l'acabat (color) triat al calaix (`KitOptions.finish`): els laterals de doble paret. */
+  finish: z.boolean().optional(),
   note: z.string().optional(),
 })
 export type KitComponent = z.infer<typeof KitComponentSchema>
@@ -136,7 +157,7 @@ export const HardwareKitSchema = z.object({
   /** Classe d'alçada del catàleg (N · M · K · C · F) i les seves mides. */
   heightClass: z.object({ code: z.string().min(1), boxSideHeight: mm.positive(), backHeight: mm.positive() }),
   variants: z.array(KitVariantSchema).min(1),
-  options: z.object({ closing: z.array(z.enum(CLOSING_IDS)).min(1), back: z.array(z.enum(BACK_IDS)).min(1) }),
+  options: z.object({ closing: z.array(z.enum(CLOSING_IDS)).min(1), back: z.array(z.enum(BACK_IDS)).min(1), finish: z.array(z.enum(FINISH_IDS)).min(1).optional() }),
   rules: z.object({
     /** Fondària interior mínima: LT = NL + depthMargin. */
     depthMargin: mm.min(0),
@@ -204,7 +225,10 @@ export const evalKit = (e: Expr, vars: Record<string, number>): number => Math.r
 export function kitOptionsOf(kit: HardwareKit, o?: Partial<KitOptions>): KitOptions {
   const closing = o?.closing && kit.options.closing.includes(o.closing) ? o.closing : kit.options.closing[0]!
   const back = o?.back && kit.options.back.includes(o.back) ? o.back : kit.options.back[0]!
-  return { closing, back }
+  // L'acabat només si el joc en ven més d'un (si no, el camp no surt i no compta: «res amagat compta»).
+  const finishes = kit.options.finish ?? []
+  const finish = finishes.length > 1 ? (o?.finish && finishes.includes(o.finish) ? o.finish : finishes[0]!) : undefined
+  return { closing, back, ...(finish ? { finish } : {}) }
 }
 
 /**

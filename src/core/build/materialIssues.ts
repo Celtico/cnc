@@ -5,7 +5,7 @@ import type { CompositionWarning } from "./buildComposition"
  * Materials del moble que no lliguen amb Preferències (el build no les llegeix: es comprova a part, a l'Editor i a
  * Exportar):
  * - `unknown-material`: una peça (o un objecte de referència) d'un material que no és a Preferències: es veu amb un color
- *   per defecte i al taller surt amb aquest nom.
+ *   per defecte i al taller surt amb aquest nom. Els components dels jocs (rol `hardware`) no compten.
  * - `thickness-not-listed`: una peça de CNC d'un gruix que no és dels del seu material (p. ex. 18 en un de 16 · 19).
  * Un avís per material (i per gruix), en l'ordre de les peces.
  */
@@ -33,7 +33,9 @@ export function materialIssues(
     thick.add(key)
     out.push({ code: "thickness-not-listed", message: `El gruix ${fmt(p.thickness)} mm no és dels gruixos de «${m.name}» (${m.thicknesses.map(fmt).join(" · ")} mm).` })
   }
-  for (const p of build.extras ?? []) checkName(p.material)
+  // Els components dels jocs de ferratges (rol `hardware`) no són cap tria del moble: el 3D els pinta pel nom
+  // («Acer fosc», «Blanc seda», `resolveFinish`) i no van al taller com a peces.
+  for (const p of build.extras ?? []) if (p.role !== "hardware") checkName(p.material)
   for (const r of comp.references) checkName(r.material)
   return out
 }

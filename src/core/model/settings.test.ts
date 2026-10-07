@@ -284,7 +284,7 @@ describe("v12: duplicats fora i noms únics", () => {
     expect(names).not.toContain("DM 10")
     expect(names).not.toContain("Pi")
     expect(names).toContain("Fulles de pi")
-    expect(SETTINGS_VERSION).toBe(23)
+    expect(SETTINGS_VERSION).toBe(24)
   })
 
   it("«Melamina 19» i «DM 10» inicials passen als de sempre (amb les referències de les preferències) i «Pi» a «Fulles de pi»", () => {
@@ -371,5 +371,15 @@ describe("v23: jocs de calaix de doble paret", () => {
     const r2 = parseSettings(bad)
     expect(r2.settings.hardwareLibrary.some((x) => x.id === "kit-dtc-ht11")).toBe(false)
     expect(r2.settings.hardwareLibrary.some((x) => x.id === "kit-dtc-ht12")).toBe(true)
+  })
+  it("v24: els jocs inicials reben les dades d'ara (guia de dos cossos, acabats) i es queden la prebroca de l'usuari", () => {
+    const ht11 = DEFAULT_HARDWARE_KITS.find((k) => k.id === "kit-dtc-ht11")!
+    const oldKit = { ...structuredClone(ht11.kit!), options: { closing: ["soft"], back: ["wood"] }, components: ht11.kit!.components.map((c) => ({ ...c, shapes: c.id === "slide" ? [c.shapes[0]!] : c.shapes })) }
+    const v23 = { ...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), version: 23, hardwareLibrary: DEFAULT_SETTINGS.hardwareLibrary.map((x) => (x.id === "kit-dtc-ht11" ? { ...x, params: { pilotDiameter: 3, pilotDepth: 12 }, kit: oldKit } : x)) }
+    const res = parseSettings(v23)
+    expect(res.migrated).toBe(true)
+    const got = res.settings.hardwareLibrary.find((x) => x.id === "kit-dtc-ht11")!
+    expect(got.kit).toEqual(ht11.kit)
+    expect(got.params).toEqual({ pilotDiameter: 3, pilotDepth: 12 })
   })
 })

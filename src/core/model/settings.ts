@@ -29,8 +29,11 @@ const mm = z.number().finite()
  * v23: jocs paramètrics de calaix de doble paret (`HardwareItem.kit`, motor `drawerKit`, categoria `drawer-system`,
  * `hardwareKit.ts`): additiu; els jocs inicials (DTC MAGIC-PRO) s'afegeixen a la biblioteca si no hi són (per id). Una
  * app v22 no les pot desar (perdria els jocs).
+ * v24: els jocs inicials (`builtin`, id dels de l'app) reben les dades del joc d'ara (`kit`: guia telescòpica de dos
+ * cossos, acabats dels laterals); el nom i la prebroca (`params`) de l'usuari es queden. Les còpies dels mobles no es
+ * toquen.
  */
-export const SETTINGS_VERSION = 23
+export const SETTINGS_VERSION = 24
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -707,7 +710,15 @@ export function parseSettings(raw: unknown): SettingsParse {
   // v23: els jocs de calaix inicials, si no hi són (per id; un d'esborrat a propòsit torna un sol cop, com els materials).
   const withKits = version < 23 ? [...named.library, ...DEFAULT_HARDWARE_KITS.filter((k) => !named.library.some((x) => x.id === k.id)).map((k) => structuredClone(k))] : named.library
   if (withKits !== named.library && withKits.length !== named.library.length) migrated = true
-  const hardware = fixHardwareDefaults(withKits, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
+  // v24: els jocs inicials reben les dades del joc d'ara (formes 3D, acabats); nom i prebroca de l'usuari es queden.
+  const freshKits = version < 24
+    ? withKits.map((x) => {
+        const fresh = x.builtin && x.engine === "drawerKit" ? DEFAULT_HARDWARE_KITS.find((k) => k.id === x.id) : undefined
+        return fresh?.kit ? { ...x, kit: structuredClone(fresh.kit) } : x
+      })
+    : withKits
+  if (freshKits.some((x, i) => x !== withKits[i])) migrated = true
+  const hardware = fixHardwareDefaults(freshKits, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
   if (hardware.changed) migrated = true
   // Àlies segons els materials d'aquestes preferències (un «X (foto)» que encara hi és no es toca).
   const names = new Set(materials.map((m) => m.name))

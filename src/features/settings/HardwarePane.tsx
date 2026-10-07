@@ -43,6 +43,7 @@ import {
   hardwareSummary,
   isPendingImport,
   newId,
+  slotAccepts,
   slotForEngine,
   type HardwareDefaults,
   type HardwareEngine,
@@ -80,7 +81,8 @@ const HardwareMount3D = lazy(() => import("./HardwareMount3D"))
 const MOUNT_VIEW_KEY = "mobles:hardware-mount-view"
 
 /** El lloc del moble que fa servir un tipus de ferratge (les plaques importades no en tenen: van amb la frontissa). */
-const slotOfEngine = (e: HardwareEngine) => HARDWARE_SLOTS.find((s) => s.engine === e)
+/** El lloc d'un motor; un joc de calaix (`drawerKit`) pot ser el per defecte de «Guia de calaix» (`slotAccepts`). */
+const slotOfEngine = (e: HardwareEngine) => HARDWARE_SLOTS.find((s) => slotAccepts(s.slot, { engine: e }))
 
 /**
  * Preferències › Ferratges (millores v1 F2): la biblioteca com a graella de targetes per categoria (el mateix acordió que
@@ -143,7 +145,8 @@ export function HardwareList({
   const add = (engine: HardwareEngine) => {
     // Un de nou parteix del per defecte d'aquell lloc (els mateixos mecanitzats i números), amb id i nom nous.
     const slot = slotForEngine(engine)
-    const base = items.find((x) => x.id === defaults[slot.slot]) ?? items.find((x) => x.engine === engine)
+    // (El per defecte de «Guia de calaix» pot ser un joc: una guia nova parteix sempre d'una guia.)
+    const base = items.find((x) => x.id === defaults[slot.slot] && x.engine === engine) ?? items.find((x) => x.engine === engine)
     if (!base) return
     const item = copyHardwareItem(base, newId("hw"), uniqueName(`${slot.label} nova`))
     onChange([item, ...items])
@@ -245,7 +248,7 @@ export function HardwareList({
     const list = items.filter((x) => x.category === c.id && (!q || hardwareMatches(x, q)))
     return { ...c, items: list, ...seriesGroups(c.id, list) }
   }).filter((g) => g.items.length)
-  const defaultOf = (x: HardwareItem) => HARDWARE_SLOTS.find((s) => defaults[s.slot] === x.id && s.engine === x.engine)
+  const defaultOf = (x: HardwareItem) => HARDWARE_SLOTS.find((s) => defaults[s.slot] === x.id && slotAccepts(s.slot, x))
   const card = (x: HardwareItem) => {
     const def = defaultOf(x)
     return (

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { DEFAULT_HARDWARE_KITS, DEFAULT_MODULE_HARDWARE, DTC_MAGIC_PRO_HT11, HardwareItemSchema, chooseVariant, defaultModule, kitItem, widthRule, type Module, type Zone } from "../model"
+import { DEFAULT_HARDWARE_KITS, DEFAULT_MODULE_HARDWARE, DTC_MAGIC_PRO_HT11, HardwareItemSchema, KIT_RAIL_MATERIAL, KIT_RUNNER_MATERIAL, chooseVariant, defaultModule, fixHardwareDefaults, kitFrom, kitItem, visibleModule, widthRule, type Module, type Zone } from "../model"
 import { buildModule } from "./buildModule"
 import { kitLineText, planKit } from "./drawerKit"
+import { slotSpec } from "./hardware"
+import { ruleHardwareCounts, usedHardwareSlots } from "./hardwareSummary"
 import { hardwareMount } from "./hardwareMount"
 import { hardwarePreview } from "./hardwarePreview"
 
@@ -13,7 +15,7 @@ import { hardwarePreview } from "./hardwarePreview"
 const HT11 = DEFAULT_HARDWARE_KITS.find((k) => k.id === "kit-dtc-ht11")!
 
 /** Mòdul de 732 × 720 × 500 (tauler 16: LW 700) amb una pila de 2 calaixos amb el joc. */
-function kitModule(n = 2, overrides: Partial<Module["carcass"]> = {}, kit = HT11, options?: { closing?: "soft" | "push" | "pushSoft"; back?: "wood" | "metal" }): Module {
+function kitModule(n = 2, overrides: Partial<Module["carcass"]> = {}, kit = HT11, options?: { closing?: "soft" | "push" | "pushSoft"; back?: "wood" | "metal"; finish?: "white" | "grey" }): Module {
   const base = defaultModule("m", "Calaixos", { width: 732, height: 720, depth: 500, thickness: 16, ...overrides })
   const root: Zone = { id: "root", front: { kind: "drawers", n, heights: Array.from({ length: n }, () => "auto"), hardware: structuredClone(kit), ...(options ? { kit: options } : {}) } }
   return { ...base, root }
@@ -158,6 +160,71 @@ describe("joc paramètric: construcció", () => {
     const b = buildModule({ ...m, hardware: DEFAULT_MODULE_HARDWARE })
     expect(b.panels.filter((p) => p.role === "drawerSide")).toHaveLength(4)
     expect(b.hardwareKits).toEqual([])
+  })
+  it("la guia telescòpica: el cos fix al moble (acer fosc) i la corredora que surt amb el calaix (acer clar), totes dues NL; els laterals de l'acabat triat", () => {
+    const b = buildModule(kitModule(1))
+    const solids = b.extras.filter((p) => p.role === "hardware")
+    const rails = solids.filter((p) => p.id.includes("-kit-slide-"))
+    const fixed = rails.filter((p) => p.id.startsWith("kitfix-1-"))
+    const runners = rails.filter((p) => p.id.startsWith("drawer-1-"))
+    expect(fixed).toHaveLength(2)
+    expect(runners).toHaveLength(2)
+    expect(fixed.every((p) => p.thickness === 450 && p.material === KIT_RAIL_MATERIAL)).toBe(true)
+    expect(runners.every((p) => p.thickness === 450 && p.material === KIT_RUNNER_MATERIAL)).toBe(true)
+    // El cos contra el lateral del moble (x 0–7,6 de la cara interior) i la corredora sota el lateral de doble paret.
+    const railL = fixed.find((p) => p.id.includes("-left-"))!
+    const runnerL = runners.find((p) => p.id.includes("-left-"))!
+    expect(railL.placement.origin[0]).toBe(16)
+    expect(railL.length).toBe(7.6)
+    expect(runnerL.placement.origin[0]).toBeCloseTo(16 + 7.6)
+    // Els laterals de doble paret prenen l'acabat: blanc seda per defecte, gris si es tria.
+    const sides = solids.filter((p) => p.id.includes("-kit-boxSide-"))
+    expect(sides.length).toBe(6)
+    expect(sides.every((p) => p.material === "Blanc seda")).toBe(true)
+    const grey = buildModule(kitModule(1, {}, HT11, { finish: "grey" }))
+    expect(grey.extras.filter((p) => p.id.includes("-kit-boxSide-")).every((p) => p.material === "Gris mat")).toBe(true)
+    expect(grey.hardwareKits[0]!.options.finish).toBe("grey")
+    // La comanda no canvia amb l'acabat ni amb els dos cossos (un sol article de guia).
+    expect(grey.hardwareKits[0]!.lines.map((l) => l.component)).toEqual(b.hardwareKits[0]!.lines.map((l) => l.component))
+    expect(b.hardwareKits[0]!.lines.filter((l) => l.component === "slide")).toHaveLength(1)
+  })
+  it("el joc com a «Guia de calaix» del mòdul: els calaixos sense guia pròpia es fan amb el joc, sense avís", () => {
+    const m = kitModule(2)
+    const root = m.root as Zone & { front: { hardware?: unknown } }
+    delete root.front.hardware
+    const withKit = { ...m, hardware: { ...DEFAULT_MODULE_HARDWARE, slide: structuredClone(HT11) } }
+    const b = buildModule(withKit)
+    expect(b.warnings.filter((w) => w.code === "hardware")).toEqual([])
+    expect(b.panels.filter((p) => p.role === "drawerSide")).toHaveLength(0)
+    expect(b.hardwareKits).toHaveLength(2)
+    expect(b.hardwareKits[0]).toMatchObject({ drawer: 1, nl: 450, options: { closing: "soft", back: "wood" } })
+    const bottoms = b.panels.filter((p) => p.role === "drawerBottom")
+    expect(bottoms.map((p) => [p.length, p.width, p.thickness])).toEqual([[681, 421, 16], [681, 421, 16]])
+    expect(b.panels.filter((p) => p.role === "drawerBack").map((p) => [p.length, p.width])).toEqual([[660, 63], [660, 63]])
+    expect(b.panels.find((p) => p.id === "side-left")!.holes.filter((h) => h.tag === "kit-slide")).toHaveLength(16)
+    // Exactament el mateix que triat al front.
+    const front = buildModule(kitModule(2))
+    const digest = (x: typeof b) => x.panels.map((p) => [p.id, p.length, p.width, p.thickness, p.holes.length]).concat(x.extras.map((p) => [p.id, p.material]))
+    expect(digest(b)).toEqual(digest(front))
+    // Les opcions del joc al calaix compten amb el joc del mòdul («res amagat compta»).
+    const opts = { ...withKit, root: { ...withKit.root, front: { ...withKit.root.front!, kit: { closing: "push", back: "metal" } } } } as Module
+    expect((visibleModule(opts).root.front as { kit?: unknown }).kit).toEqual({ closing: "push", back: "metal" })
+    expect(buildModule(opts).hardwareKits[0]!.options).toMatchObject({ closing: "push", back: "metal" })
+    // Una guia normal triada al calaix guanya el joc del mòdul.
+    const normal = { ...withKit, root: { ...withKit.root, front: { ...withKit.root.front!, hardware: structuredClone(DEFAULT_MODULE_HARDWARE.slide) } } } as Module
+    expect(buildModule(normal).panels.filter((p) => p.role === "drawerSide")).toHaveLength(4)
+    // El lloc accepta el joc (cap avís, l'item és el joc) i les preferències també el poden tenir per defecte.
+    const warnings: string[] = []
+    const spec = slotSpec("slide", HT11, (w) => warnings.push(w))
+    expect(warnings).toEqual([])
+    expect(spec.item).toBe(HT11)
+    expect(spec.failed).toBeUndefined()
+    const lib = [...Object.values(DEFAULT_MODULE_HARDWARE), HT11]
+    expect(kitFrom(lib, { hinge: "hinge-cup", system32: "system32", dowel: "dowel", slide: "kit-dtc-ht11", flap: "flap-arm", magnet: "magnet", handle: "handle-bar" }).slide.id).toBe("kit-dtc-ht11")
+    expect(fixHardwareDefaults(lib, { slide: "kit-dtc-ht11" }).defaults.slide).toBe("kit-dtc-ht11")
+    // El resum «Guies de calaix» compta els calaixos amb joc (parells) i el lloc «guia» surt a la Fusteria.
+    expect(ruleHardwareCounts(b.panels).find((c) => c.id === "slide")).toMatchObject({ count: 2, unit: "parells" })
+    expect(usedHardwareSlots(b.panels).has("slide")).toBe(true)
   })
   it("«Com va muntat» i la peça d'exemple: el lateral amb les prebroques i els components", () => {
     const m = hardwareMount(HT11)

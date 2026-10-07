@@ -1596,13 +1596,15 @@ class Builder {
     const c = m.carcass
     // El tirador triat al calaix (si no, el del mòdul).
     const handleHw = this.frontHandle(front.handle, zone.id)
-    // Un joc paramètric de calaix de doble paret (DTC MAGIC-PRO): cap lateral de fusta; el joc mana.
-    if (front.hardware && isDrawerKit(front.hardware)) {
-      this.buildKitDrawers(zone, front, front.hardware, rect, ter, left, right, handleHw)
+    // La guia triada al calaix (si no, la del mòdul). Un joc paramètric de calaix de doble paret (DTC MAGIC-PRO), triat
+    // al calaix o com a guia del mòdul: cap lateral de fusta; el joc mana.
+    const slideHw = this.frontHardware("slide", front.hardware, zone.id)
+    if (isDrawerKit(slideHw.item)) {
+      this.buildKitDrawers(zone, front, slideHw.item, rect, ter, left, right, handleHw)
       return
     }
-    // La guia triada al calaix (si no, la del mòdul): llargades, jocs, caixa i forats.
-    const hw = this.frontHardware("slide", front.hardware, zone.id).spec
+    // Llargades, jocs, caixa i forats de la guia.
+    const hw = slideHw.spec
     const n = front.n
     const { heights, ys } = this.drawerLayout(zone, front, ter)
 
@@ -1756,9 +1758,11 @@ class Builder {
     const res = planKit(item, { LW, depth, G: c.thickness, TB, options: front.kit })
     for (const w of res.warnings) this.hardwareWarning(w, zone.id)
     const plan = res.plan
+    // El gruix del fons el demana el joc (16, `TB`): no és cap tria del moble ni s'hi suggereix res; només s'avisa si
+    // el material del fons no se sap si es ven en aquest gruix.
     const bottomMat = c.thickness === TB ? { name: c.material, warn: false } : drawerBottomMaterial(c.backMaterial, c.backThickness, TB)
     if (plan && front.n > 0 && bottomMat.warn && !this.warnings.some((w) => w.code === "drawer-bottom"))
-      this.warnings.push({ code: "drawer-bottom", message: `Fons dels calaixos de ${TB} mm en «${bottomMat.name}» (${c.back === "none" ? `el mòdul no té fons: el material del cos, de ${c.thickness} mm` : `el fons del moble és de ${c.backThickness} mm`}): comprova que aquest material es ven en ${TB} mm.`, zoneId: zone.id })
+      this.warnings.push({ code: "drawer-bottom", message: `Fons dels calaixos de ${TB} mm en «${bottomMat.name}» (el joc «${item.name}» demana un fons de ${TB} mm; ${c.back === "none" ? `el mòdul no té fons: el material del cos, de ${c.thickness} mm` : `el fons del moble és de ${c.backThickness} mm`}): comprova que aquest material es ven en ${TB} mm.`, zoneId: zone.id })
     if (plan && (!left || !right)) this.hardwareWarning(`«${item.name}»: el compartiment no té lateral a ${!left ? "l'esquerra" : "la dreta"} on cargolar la guia. Els calaixos es queden només amb el front.`, zone.id)
     const kit = plan?.kit
     const totalH = kit ? kitHeight(kit) : 0

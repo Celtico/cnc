@@ -15,6 +15,7 @@ import {
   updateZone,
   KIT_BACKS,
   KIT_CLOSINGS,
+  KIT_FINISHES,
   KIT_LEVEL_LABEL,
   fmtMm,
   isDrawerKit,
@@ -25,7 +26,7 @@ import {
   type Zone,
 } from "../../core/model"
 import type { KitOrder } from "../../core/build/buildModule"
-import { kitLineText, kitWoodText } from "../../core/build/drawerKit"
+import { kitBottomThickness, kitLineText, kitWoodText } from "../../core/build/drawerKit"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { FRONT_ICONS } from "./zoneIcons"
@@ -265,14 +266,16 @@ export function ZonePanel({
 }
 
 /**
- * Calaixos amb un joc paramètric de doble paret triat a «Guia»: les opcions del joc (tancament i darrere) i el que el
- * constructor n'ha tret per a aquest compartiment (`kits`): la NL triada, els números d'article i les mides del fons A i
- * del darrere B. Cap lateral de fusta.
+ * Calaixos amb un joc paramètric de doble paret (triat a «Guia» o com a guia del mòdul): les opcions del joc (tancament,
+ * darrere i acabat) i el que el constructor n'ha tret per a aquest compartiment (`kits`): la NL triada, els números
+ * d'article i les mides del fons A i del darrere B. Cap lateral de fusta; el gruix del fons el demana el joc (16).
  */
 function KitFields({ front, kit, kits, onChange }: { front: Extract<Front, { kind: "drawers" }>; kit: HardwareItem & { kit: NonNullable<HardwareItem["kit"]> }; kits?: KitOrder[]; onChange: (f: Front) => void }) {
   const o = kitOptionsOf(kit.kit, front.kit)
   const setKit = (patch: Partial<typeof o>) => onChange({ ...front, kit: { ...o, ...patch } })
   const first = kits?.[0]
+  const finishes = kit.kit.options.finish ?? []
+  const TB = kitBottomThickness(kit)
   return (
     <>
       <FormRow label="Tancament" help="Com tanca el calaix: suau (amortit), push-open (sense tirador, amb barra de sincronització) o les dues coses. Canvia els números d'article i si cal la barra.">
@@ -280,6 +283,16 @@ function KitFields({ front, kit, kits, onChange }: { front: Extract<Front, { kin
       </FormRow>
       <FormRow label="Darrere" help="De fusta (peça B del tauler del cos, amb els suports de darrere) o metàl·lic del fabricant (per amplada del moble; el fons és 2 mm més llarg).">
         <ChoiceChips label="Darrere" value={o.back} options={kit.kit.options.back.map((b) => ({ id: b, label: KIT_BACKS.find((x) => x.id === b)!.short }))} onChange={(back) => setKit({ back })} />
+      </FormRow>
+      {finishes.length > 1 && o.finish && (
+        <FormRow label="Acabat" help="Color dels laterals de doble paret (només canvia el 3D; els números d'article són els mateixos).">
+          <ChoiceChips label="Acabat" value={o.finish} options={finishes.map((f) => ({ id: f, label: KIT_FINISHES.find((x) => x.id === f)!.short }))} onChange={(finish) => setKit({ finish })} />
+        </FormRow>
+      )}
+      <FormRow label="Fons" help={`El joc demana un fons de calaix de ${TB} mm (catàleg): no es tria. El material és el del fons del moble (o el del cos si fa ${TB} mm).`}>
+        <Text fontSize="sm" pt="6px" data-testid="kit-bottom">
+          {TB} mm · el joc demana {TB} mm
+        </Text>
       </FormRow>
       {first ? (
         <FormRow label="Joc" help={`${first.kit}: la llargada nominal més gran que hi cap darrere del front (LT = NL + 3). Sense laterals de fusta: el fons i el darrere surten de les fórmules del catàleg. Els components i els números són a Peces › «Ferratges dels jocs».`}>
@@ -380,7 +393,11 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits }: 
             onChange({ ...front, n: k, heights: Array.from({ length: k }, (_, i) => front.heights[i] ?? "auto") })
           }} />
           <HardwarePick slot="slide" current={front.hardware ?? hardware.slide} inherited={hardware.slide} onPick={(h) => onChange(withHardware(front, h))} />
-          {front.hardware && isDrawerKit(front.hardware) && <KitFields front={front} kit={front.hardware} kits={kits} onChange={onChange} />}
+          {/* Un joc de calaix, triat aquí o com a guia del mòdul: les opcions del joc. */}
+          {(() => {
+            const slide = front.hardware ?? hardware.slide
+            return isDrawerKit(slide) ? <KitFields front={front} kit={slide} kits={kits} onChange={onChange} /> : null
+          })()}
           {handlePick(front)}
         </Stack>
       )
