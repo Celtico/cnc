@@ -1444,11 +1444,19 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   de l'app amb el volum del visor (`hingeVolumes`; `buildScene(…, { fitted: true })`: sense la barra genèrica on hi ha un
   tirador importat), tot posat a terra (el més baix a y = 0), amb **la mateixa càmera que el 3D de l'editor en obrir-lo**
   (`mountCamera`, fov 32°) i l'estudi de les altres miniatures (sense terra si es mira de sota, sense paret si és darrere la
-  càmera); un «només 3D», el model sol a terra. Els GLB es llegeixen **fora de la memòria compartida de models**
+  càmera); un «només 3D», el model sol a terra. **La càmera enquadra el ferratge sempre** (per decisió de l'usuari: «mira
+  d'enquadrar l'objecte, a vegades no es veu»): `hardwareMount` calcula la **regió** (`HardwareMount.region`, mm del
+  mòdul: el ferratge —GLB o caixa, el volum de la frontissa o del tirador de l'app, els components d'un joc, els perfils
+  d'un accessori—, els forats que fa amb la fondària i 40 mm de peça al voltant; els que es repeteixen —frontisses,
+  filera System 32, espigues, imants, potes— només a 120 mm del forat principal: la frontissa de baix amb la placa, una
+  pota amb la cantonada de la base; guia, braç, tirador, joc, barra, LED i marc sencers) i `mountCamera` hi fa cabre
+  **exactament** la càmera (`fitCamera`, la mateixa cerca que `modelCamera`) per a la direcció de cada tipus (les de
+  sempre) i l'aspecte real (miniatura 2:1, editor el del visor), entre `MOUNT_CAMERA_DIST` (260–1600 mm: ni un punt ni
+  retallat). Test `build/mountCamera.test.ts`: la regió projectada cau dins la imatge amb marge a tots els de l'app, els
+  jocs, importats de mostra i, amb `HETTICH_DIR` / `BLUM_DIR`, els de debò. Els GLB es llegeixen **fora de la memòria compartida de models**
   (`readHardwareModel`: n'hi pot haver centenars i cadascun serveix un sol cop) i s'alliberen sencers (`disposeTree`) en
   acabar; el renderitzador s'allibera com sempre (`releaseThumbRenderer` → `releaseModelGpu`). Si canvia com es fan, s'apuja
-  `HARDWARE_THUMB_VERSION`. Pendent de millorar (com al 3D de l'editor, que fa la mateixa vista): l'espiga (els forats queden
-  dins la unió) i la guia (es veu el front del calaix) no es reconeixen gaire. Un **«només 3D»** s'enquadra a la seva caixa
+  `HARDWARE_THUMB_VERSION` (ara 5). Un **«només 3D»** s'enquadra a la seva caixa
   (`modelCamera`, a `mountCamera(m, aspect)`, la mateixa al 3D de l'editor i a la miniatura): la càmera més a prop que la
   veu sencera i, si és llarg i prim (perfil de porta corredissa de 1560 × 12,5 × 6,5), mirat al llarg des d'un extrem perquè
   se'n vegi la secció (abans sortia una ratlla). **Al 3D, cap cota** (per decisió de l'usuari: «a les vistes posar les mides
@@ -1516,7 +1524,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     (`core/build/hardwareMount.ts`, `hardwareMount(item, base)`: `buildModule` amb l'item al seu lloc del joc; el mòdul
     surt de `applySettingsToModule` —tauler, gruix, jocs i ferratges per defecte de les preferències en edició, `settings`
     de `HardwareList`—). Se'n queden les peces on fa forats (frontissa i placa: la porta i el lateral de les frontisses;
-    System 32: lateral i prestatge; espiga: lateral, base i tapa; guia: lateral, caixa i front; abatible, imant, tirador).
+    System 32: lateral i prestatge; abatible, imant, tirador), **menys les que taparien el ferratge** (`Recipe.drop`):
+    l'espiga, només el lateral (la base i la tapa amaguen els forats dins la unió); la guia, el lateral i el front (sense
+    la caixa del calaix, que tapa els forats del lateral); i la reixeta de l'imant s'aparta 60 mm del davant
+    (`Recipe.shift`) perquè es vegin l'imant del cantell i la placa.
     Una placa sola es munta amb la frontissa per defecte (o la d'inici, si aquella és un importat pendent). Un tirador,
     en un calaix (3D mirat des de fora, `focus.view`); una pota, en un mòdul baix sobre potes (la base amb les quatre
     plaques); un «només 3D», el model sol (`HardwareMount.model`, `ModelPreview`) amb «Baixar el model 3D (.glb)». Un importat
@@ -1527,8 +1538,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     `StudioEnvironment`, `OrbitControls`, colors per peça; les peces amb el `PanelMesh` del visor —forats, el GLB importat
     o el volum de la frontissa de l'app (`PanelHardware`)— i `MovingPanel` + `movingGroups` per obrir la porta, l'abatible
     o el calaix amb el lliscador «Obertura»; càmera `mountCamera` (pura, a `hardwareMount.ts`, la mateixa de la miniatura de
-    la targeta): al forat principal des de la cara on entra —a les frontisses, des de dins—, un tirador des de fora, una pota
-    sencera de davant i just per sota de la base (`HardwareMount.aim`), un «només 3D» des de 2 × la seva mida; `releaseModelGpu` en tancar; en DEV
+    la targeta): des de la cara on entra el forat principal —a les frontisses, des de dins—, un tirador des de fora, una pota
+    de davant i una mica de sota, un joc des de dins i del darrere, enquadrant la **regió** del ferratge (vegeu Galeries ›
+    Miniatures 3D); un «només 3D», `modelCamera`; `releaseModelGpu` en tancar; en DEV
     `window.__hardwareMount` = el renderitzador) i **Pla** (`mountPlan` + `HardwareMountPlan`: vista de dalt tallada a
     l'alçada de la cassoleta de baix —o del forat principal—, el davant a baix: peces en secció amb el gruix, forats
     tallats buits i els de ±40 mm discontinus, el ferratge projectat —la caixa del model o el volum simplificat— i cotes:

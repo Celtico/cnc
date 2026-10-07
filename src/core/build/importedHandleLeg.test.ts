@@ -222,12 +222,15 @@ describe("pota importada", () => {
     expect(bottom.holes.filter((h) => h.tag === "leg")).toHaveLength(16)
     expect(m.proposedTags).toEqual(["leg"])
     expect(mountPlan(m)).not.toBeNull()
-    // La càmera (editor i miniatura): el mig de la pota, de davant i just per sota de la base, prou lluny per veure-la.
+    // La càmera (editor i miniatura): la pota sencera amb la cantonada de la base, de davant i una mica de sota.
     const c = mountCamera(m)
-    expect(c.target[1]).toBeCloseTo(m.focus!.at[1] - 50, 6)
+    expect(c.target[1]).toBeLessThan(m.focus!.at[1])
+    expect(c.target[1]).toBeGreaterThan(m.focus!.at[1] - 100)
     expect(c.dir[2]).toBeGreaterThan(0.8)
     expect(Math.abs(c.dir[1])).toBeLessThan(0.1)
-    expect(c.dist).toBeGreaterThanOrEqual(480)
+    // La regió: de sota la pota fins a dins la base, només la cantonada (no les quatre potes).
+    expect(m.region.min[1]).toBeLessThan(m.focus!.at[1] - 100)
+    expect(m.region.max[0] - m.region.min[0]).toBeLessThan(300)
   })
 })
 
