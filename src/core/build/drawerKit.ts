@@ -192,7 +192,8 @@ export function kitSolidPanels(plan: KitPlan, k: number, at: { x0: number; y0: n
     const sides: ("left" | "right")[] = c.side === "both" ? ["left", "right"] : c.side === "right" ? ["right"] : ["left"]
     for (const side of sides) {
       n += 1
-      const id = `drawer-${k}-kit-${c.id}-${side}-${n}`
+      // Els del moble (la guia) no porten el prefix `drawer-`: el visor no els mou amb el calaix (`movingGroups`).
+      const id = `${c.mount === "cabinet" ? "kitfix" : "drawer"}-${k}-kit-${c.id}-${side}-${n}`
       const label = `${c.name}${c.side === "both" ? (side === "left" ? " esq." : " dr.") : ""}`
       if (shape.kind === "rod") {
         const R = shape.diameter / 2
