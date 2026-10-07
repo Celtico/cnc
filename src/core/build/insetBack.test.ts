@@ -61,7 +61,7 @@ describe("fons encastat", () => {
         sizes: ["auto", "auto"],
         children: [
           { id: "a", shelves: { n: 2, adjustable: true }, front: { kind: "door", mode: "single", hinge: "left" } },
-          { id: "b", split: { dir: "h", sizes: ["auto", "auto"], children: [{ id: "b1", front: { kind: "drawers", n: 2, heights: [] } }, { id: "b2", rail: false }] } },
+          { id: "b", split: { dir: "h", sizes: ["auto", "auto"], children: [{ id: "b1", front: { kind: "drawers", n: 2, heights: [] } }, { id: "b2" }] } },
         ],
       },
     }

@@ -9,6 +9,7 @@ import {
   type EdgeBanding,
   type EdgeSide,
   type Front,
+  type FrontHandle,
   type HardwareItem,
   type KitLevel,
   type KitOptions,
@@ -24,6 +25,8 @@ import {
   isDamagedImport,
   isDrawerKit,
   isLegacyHardware,
+  isPushClosing,
+  kitOptionsOf,
   migrateModuleHardware,
   visibleModule,
 } from "../model"
@@ -271,6 +274,14 @@ interface HorizontalRef {
 
 const near = (a: number, b: number): boolean => Math.abs(a - b) < 0.51
 
+/** El tirador resolt d'un front (`Builder.frontHandle`): push (cap forat) o els números del tirador, a demanda. */
+interface HandleChoice {
+  push: boolean
+  kitPush: boolean
+  readonly spec: SlotSpec<"handle">
+  readonly item: HardwareItem
+}
+
 class Builder {
   readonly m: Module
   readonly d: Derived
@@ -312,6 +323,9 @@ class Builder {
       get flap() { return k.flap.spec },
       get magnet() { return k.magnet.spec },
       get handle() { return k.handle.spec },
+      get rail() { return k.rail.spec },
+      get led() { return k.led.spec },
+      get glassFrame() { return k.glassFrame.spec },
     }
   }
 
@@ -319,12 +333,24 @@ class Builder {
     if (!this.warnings.some((w) => w.code === "hardware" && w.message === message)) this.warnings.push({ code: "hardware", message, ...(zoneId ? { zoneId } : {}) })
   }
 
-  /** El ferratge d'un front (el triat a la porta, el calaix o l'abatible; si no, el del mòdul). */
-  private frontHardware<S extends "hinge" | "slide" | "flap">(slot: S, item: HardwareItem | undefined, zoneId?: string): { spec: SlotSpec<S>; item: HardwareItem } {
-    if (!item) return this.kit[slot] as { spec: SlotSpec<S>; item: HardwareItem }
-    const res = slotSpec(slot, item, (message) => this.hardwareWarning(message, zoneId))
-    // No serveix: el del mòdul (no el d'inici de l'app). Un importat que no serveix queda inert (cap forat), mai el del mòdul.
-    return res.failed && !item.imported ? (this.kit[slot] as { spec: SlotSpec<S>; item: HardwareItem }) : res
+  /**
+   * El ferratge d'un front o d'un accessori (el triat a la porta, el calaix, l'abatible, la reixeta, la barra o la llum;
+   * si no, el del mòdul).
+   */
+  private frontHardware<S extends HardwareSlot>(slot: S, item: HardwareItem | undefined, zoneId?: string): { spec: SlotSpec<S>; item: HardwareItem } {
+    // A demanda (com els llocs del mòdul): si ningú llegeix el lloc (l'imant d'una reixeta amb frontisses), no es valida.
+    let cached: { spec: SlotSpec<S>; item: HardwareItem } | undefined
+    const resolve = () => {
+      if (cached) return cached
+      if (!item) return (cached = this.kit[slot] as { spec: SlotSpec<S>; item: HardwareItem })
+      const res = slotSpec(slot, item, (message) => this.hardwareWarning(message, zoneId))
+      // No serveix: el del mòdul (no el d'inici de l'app). Un importat que no serveix queda inert (cap forat), mai el del mòdul.
+      return (cached = res.failed && !item.imported ? (this.kit[slot] as { spec: SlotSpec<S>; item: HardwareItem }) : res)
+    }
+    return {
+      get spec() { return resolve().spec },
+      get item() { return resolve().item },
+    }
   }
 
   private add(panel: Panel): Panel {
@@ -1015,9 +1041,11 @@ class Builder {
    */
   private buildRail(zone: Zone, rect: ZoneRect): void {
     const { d } = this
-    const R = 25
+    // Els números són de l'item (la barra triada al compartiment o la del mòdul; d'inici Ø25 a 50 del sostre).
+    const spec = this.frontHardware("rail", zone.rail?.hardware, zone.id).spec
+    const R = spec.diameter
     const len = r(rect.x1 - rect.x0 - 2)
-    const cy = rect.y1 - 50
+    const cy = rect.y1 - spec.drop
     const cz = d.backInnerZ + (d.D - d.backInnerZ) / 2
     if (rect.y1 - rect.y0 < 900) this.warnings.push({ code: "rail", message: "Barra de penjar en un compartiment de menys de 900 mm: la roba llarga no hi cap.", zoneId: zone.id })
     const b = Math.tan(Math.PI / 8)
@@ -1052,10 +1080,12 @@ class Builder {
    */
   private buildLed(zone: Zone, rect: ZoneRect, shelfYs: number[]): void {
     const { m, d } = this
-    const W = 16, H = 8
+    // Els números són de l'item (el perfil triat al compartiment o el del mòdul; d'inici 16 × 8 a 20 del davant).
+    const spec = this.frontHardware("led", zone.led?.hardware, zone.id).spec
+    const W = spec.width, H = spec.height
     const len = r(rect.x1 - rect.x0 - 20)
     if (len < 50) return
-    const zFront = d.D - m.carcass.shelfSetback - 20
+    const zFront = d.D - m.carcass.shelfSetback - spec.setback
     const ys = [rect.y1, ...shelfYs].map((y) => r(y - H))
     ys.forEach((y, i) => {
       this.extras.push({
@@ -1177,28 +1207,38 @@ class Builder {
    * El tirador d'un front: el triat a la porta, el calaix o l'abatible (`front.handle`) o, si no, el del mòdul. Un que no
    * serveix torna al del mòdul; un d'**importat** que no serveix queda inert (cap forat, `inertHandle`), mai el del mòdul.
    */
-  private frontHandle(item: HardwareItem | undefined, zoneId?: string): { spec: SlotSpec<"handle">; item: HardwareItem } {
-    // A demanda: sense tiradors (push) ningú el llegeix i el lloc «tirador» no es valida (res amagat compta).
+  /**
+   * El tirador d'un front, **una sola font**: «Cap (push)» si el front ho diu (`handle: "none"`), si el front no en diu
+   * res i el mòdul és push (`fronts.handles: "none"`, el per defecte) o si el joc del calaix obre per pressió (`kitPush`);
+   * si no, el triat al front o el del mòdul.
+   * A demanda: amb push ningú llegeix el lloc «tirador» i no es valida (res amagat compta).
+   */
+  private frontHandle(item: FrontHandle | undefined, zoneId?: string, kitPush = false): HandleChoice {
+    const push = item === "none" || (item === undefined && this.m.fronts.handles === "none") || kitPush
     let cached: { spec: SlotSpec<"handle">; item: HardwareItem } | undefined
     const resolve = () => {
       if (cached) return cached
-      if (!item) return (cached = this.kit.handle)
+      if (!item || item === "none") return (cached = this.kit.handle)
       const res = slotSpec("handle", item, (message) => this.hardwareWarning(message, zoneId))
       return (cached = res.failed && !item.imported ? this.kit.handle : res)
     }
     return {
+      push,
+      /** El push el posa el joc del calaix: cap altre ferratge a demanar. */
+      kitPush,
       get spec() { return resolve().spec },
       get item() { return resolve().item },
     }
   }
 
   /**
-   * Tirador del front; sense tiradors (`handles: "none"`), cap forat i un avís (una vegada) del ferratge push. Un tirador
-   * importat **sense confirmar** (o que no serveix) no fa cap forat: avís `hardware` (el taller no rep res que no s'hagi
-   * revisat). Un d'importat i confirmat posa el seu model al 3D (`Panel.fittings`, a la cara de fora).
+   * Tirador del front; amb push (`HandleChoice.push`), cap forat i un avís (una vegada) del ferratge push (llevat que el
+   * posi el joc del calaix). Un tirador importat **sense confirmar** (o que no serveix) no fa cap forat: avís `hardware`
+   * (el taller no rep res que no s'hagi revisat). Un d'importat i confirmat posa el seu model al 3D (`Panel.fittings`, a
+   * la cara de fora).
    */
-  private handle(p: Panel, cx: number, cy: number, along: "x" | "y", hs: { spec: SlotSpec<"handle">; item: HardwareItem } = this.kit.handle, zoneId?: string): void {
-    if (this.m.fronts.handles !== "none") {
+  private handle(p: Panel, cx: number, cy: number, along: "x" | "y", hs: HandleChoice, zoneId?: string): void {
+    if (!hs.push) {
       const { spec, item } = hs
       if (spec.pending) {
         this.hardwareWarning(spec.unusable ?? `«${item.name}» és un tirador importat i encara no està confirmat: els fronts que el porten no fan els forats del tirador. Revisa'l i confirma'l a Preferències › Ferratges.`, zoneId)
@@ -1218,7 +1258,7 @@ class Builder {
       return
     }
     p.push = true
-    if (!this.warnings.some((w) => w.code === "push"))
+    if (!hs.kitPush && !this.warnings.some((w) => w.code === "push"))
       this.warnings.push({ code: "push", message: "Fronts sense tirador: cada porta, calaix o abatible necessita un ferratge d'obertura per pressió (push, p. ex. Tip-On o Push-to-open); als calaixos, guies amb push; a les portes, frontisses sense molla (sense retenció), perquè el push les pugui obrir." })
   }
 
@@ -1388,11 +1428,11 @@ class Builder {
     const handleHw = this.frontHandle(front.glass ? undefined : front.handle, zone.id)
     const make = (id: string, name: string, label: string, x0: number, w: number, hinge: "left" | "right") => {
       if (w > 600) this.warnings.push({ code: "door-too-wide", message: `Porta de ${num(w)} mm d'amplada (màxim recomanat 600).`, zoneId: zone.id })
-      if (front.glass || !hingeHw) return this.glassDoor(id, label, x0, ter.y0, w, doorH)
+      if (front.glass || !hingeHw) return this.glassDoor(id, label, x0, ter.y0, w, doorH, this.frontHardware("glassFrame", front.frame, zone.id).spec)
       const door = this.frontPanel(id, name, label, "door", x0, ter.y0, w, doorH)
       this.addCups(door, doorH, hinge, w, rowYs, ter.y0, zone.id, hingeHw, hinge === "left" ? left : right)
-      // Sense tiradors (push): cap forat ni cap lectura del lloc «tirador».
-      if (m.fronts.handles === "none") return this.handle(door, doorH / 2, 0, "x", handleHw, zone.id)
+      // Sense tirador (push): cap forat ni cap lectura del lloc «tirador».
+      if (handleHw.push) return this.handle(door, doorH / 2, 0, "x", handleHw, zone.id)
       // Tirador al costat contrari de les frontisses, vertical i a mitja alçada. En una porta estreta cauria a la
       // columna de les cassoletes (on va el braç de la frontissa): no es fa.
       const hd = handleHw.spec
@@ -1415,9 +1455,9 @@ class Builder {
    * CNC: tot va a `extras` («Elements sense nesting», amb les mides per demanar-ho). Les frontisses són les del perfil
    * (no porta cassoletes al tauler); els laterals mantenen les fileres.
    */
-  private glassDoor(id: string, label: string, x0: number, y0: number, w: number, h: number): void {
+  private glassDoor(id: string, label: string, x0: number, y0: number, w: number, h: number, frame: SlotSpec<"glassFrame">): void {
     const { d } = this
-    const F = 20, G = 5, t = d.t
+    const F = frame.frame, G = frame.glass, t = d.t
     const z = d.frontZ
     const bar = (sid: string, lbl: string, bx: number, by: number, len: number, wid: number) =>
       this.extras.push({
@@ -1476,7 +1516,7 @@ class Builder {
     // Tirador al cantell que obre (el contrari del gir), horitzontal i centrat.
     const handleHw = this.frontHandle(front.handle, zone.id)
     // Sense tiradors no es llegeix el lloc (`handle` només marca el push).
-    const inset = this.m.fronts.handles === "none" ? 0 : handleHw.spec.inset
+    const inset = handleHw.push ? 0 : handleHw.spec.inset
     this.handle(flap, front.dir === "down" ? along - inset : inset, across / 2, "y", handleHw, zone.id)
   }
 
@@ -1506,8 +1546,10 @@ class Builder {
     }
     // Imants (reixeta desmuntable): cap ranura a sobre ni a tocar dels forats dels imants.
     // Si no, amb un marge petit les ranures els travessen i la peça no es pot fer.
+    // L'imant triat a la reixeta (si no, el del mòdul): desmuntable i trapa.
+    const magnet = this.frontHardware("magnet", front.hardware, zone.id)
     if (front.mount !== "hinged") {
-      const mg = this.hw.magnet
+      const mg = magnet.spec
       const clear = mg.diameter / 2 + Math.max(6, front.pattern.slotGap / 2)
       for (const ref of [left, right]) {
         if (!ref) continue
@@ -1540,7 +1582,7 @@ class Builder {
       const hatch = this.add(
         this.basePanel(`hatch-${this.frontCount}`, "trapa", "Trapa", "hatch", hh, hw, d.t, frontMaterialOf(m), "x", edges("left", "right", "bottom", "top"), placement([hx0, hy0, d.frontZ - d.t], Y, X, neg(Z), Z)),
       )
-      const mg = this.hw.magnet
+      const mg = magnet.spec
       for (const [lx, ly] of [[lip / 2, lip / 2], [hh - lip / 2, lip / 2], [lip / 2, hw - lip / 2], [hh - lip / 2, hw - lip / 2]] as [number, number][]) {
         // Imant a la cara B de la trapa (la que toca el front) i contrapart a la cara A del front.
         hatch.holes.push({ x: r(lx), y: r(ly), diameter: mg.front.diameter, depth: mg.front.depth, face: "B", ...(mg.front.tag ? { tag: mg.front.tag } : {}) })
@@ -1554,7 +1596,7 @@ class Builder {
       return
     }
     // Desmuntable: imants als cantells frontals dels panells dels costats i contraparts al front.
-    const mg = this.hw.magnet
+    const mg = magnet.spec
     for (const [ref, side] of [[left, "left"], [right, "right"]] as [VerticalRef | undefined, "left" | "right"][]) {
       if (!ref) {
         this.warnings.push({ code: "no-side", message: `La reixeta no té panell a la ${side === "left" ? "esquerra" : "dreta"} on posar els imants.`, zoneId: zone.id })
@@ -1590,7 +1632,7 @@ class Builder {
   }
 
   /** El front d'un calaix (cara A cap a dins, x local = amplada) amb el tirador centrat i, si toca, els inglets. */
-  private addDrawerFront(k: number, ter: ZoneRect, y: number, fh: number, handleHw: ReturnType<Builder["frontHandle"]>, zone: Zone): Panel {
+  private addDrawerFront(k: number, ter: ZoneRect, y: number, fh: number, handleHw: HandleChoice, zone: Zone): Panel {
     const { d } = this
     const c = this.m.carcass
     const fw = r(ter.x1 - ter.x0)
@@ -1620,15 +1662,17 @@ class Builder {
   ): void {
     const { m, d } = this
     const c = m.carcass
-    // El tirador triat al calaix (si no, el del mòdul).
-    const handleHw = this.frontHandle(front.handle, zone.id)
     // La guia triada al calaix (si no, la del mòdul). Un joc paramètric de calaix de doble paret (DTC MAGIC-PRO), triat
     // al calaix o com a guia del mòdul: cap lateral de fusta; el joc mana.
     const slideHw = this.frontHardware("slide", front.hardware, zone.id)
     if (isDrawerKit(slideHw.item)) {
-      this.buildKitDrawers(zone, front, slideHw.item, rect, ter, left, right, handleHw)
+      // El tancament del joc mana: push-open ⇒ cap tirador (el push el posa el joc).
+      const kitPush = isPushClosing(kitOptionsOf(slideHw.item.kit, front.kit).closing)
+      this.buildKitDrawers(zone, front, slideHw.item, rect, ter, left, right, this.frontHandle(front.handle, zone.id, kitPush))
       return
     }
+    // El tirador triat al calaix (si no, el del mòdul).
+    const handleHw = this.frontHandle(front.handle, zone.id)
     // Llargades, jocs, caixa i forats de la guia.
     const hw = slideHw.spec
     const n = front.n
@@ -1771,7 +1815,7 @@ class Builder {
     ter: ZoneRect,
     left: VerticalRef | undefined,
     right: VerticalRef | undefined,
-    handleHw: ReturnType<Builder["frontHandle"]>,
+    handleHw: HandleChoice,
   ): void {
     const { m, d } = this
     const c = m.carcass

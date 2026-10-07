@@ -142,12 +142,18 @@ describe("tirador importat", () => {
     expect(pb.warnings.some((w) => /malmès/.test(w.message))).toBe(true)
   })
 
-  it("porta de vidre i fronts push: el tirador triat no surt ni compta", () => {
+  it("porta de vidre: el tirador triat no surt ni compta; mòdul push: el per defecte és cap, el tirador del front mana", () => {
     const glass = withFront({ kind: "door", mode: "single", hinge: "left", glass: true, handle: h160 })
     expect(visibleModule(glass).root.front).not.toHaveProperty("handle")
-    const push: Module = { ...withFront({ kind: "drawers", n: 1, heights: ["auto"], handle: h160 }), fronts: { ...base.fronts, handles: "none" } }
-    expect(visibleModule(push).root.front).not.toHaveProperty("handle")
-    expect(handles(front(buildModule(push), "drawerFront"))).toEqual([])
+    // El mòdul és push (per defecte dels fronts): un calaix sense dir res és push; un amb tirador propi el porta.
+    const push: Module = { ...withFront({ kind: "drawers", n: 1, heights: ["auto"] }), fronts: { ...base.fronts, handles: "none" } }
+    expect(front(buildModule(push), "drawerFront").push).toBe(true)
+    const own: Module = { ...withFront({ kind: "drawers", n: 1, heights: ["auto"], handle: h160 }), fronts: { ...base.fronts, handles: "none" } }
+    expect(gap(handles(front(buildModule(own), "drawerFront")))).toBeCloseTo(160)
+    // I al revés: «Cap (push)» al front d'un mòdul amb tiradors.
+    const none = withFront({ kind: "drawers", n: 1, heights: ["auto"], handle: "none" })
+    expect(handles(front(buildModule(none), "drawerFront"))).toEqual([])
+    expect(front(buildModule(none), "drawerFront").push).toBe(true)
   })
 
   it("el moble que en porta un és un .moble v2 (una app d'abans no el llegiria a mitges)", () => {

@@ -5,6 +5,7 @@ import {
   DEFAULT_HARDWARE_DEFAULTS,
   DEFAULT_MODULE_HARDWARE,
   DEFAULT_HARDWARE_KITS,
+  ACCESSORY_ITEMS,
   DEFAULT_HARDWARE_LIBRARY,
   DEFAULT_LEGACY_HARDWARE,
   DEFAULT_SETTINGS,
@@ -119,7 +120,7 @@ describe("ferratges per front (porta, calaix, abatible)", () => {
 
 describe("migració dels ferratges (v19)", () => {
   it("els items inicials surten dels números d'abans, i el kit d'un mòdul d'abans és el mateix que el d'un de nou", () => {
-    expect([...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS]).toEqual(DEFAULT_HARDWARE_LIBRARY)
+    expect([...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...ACCESSORY_ITEMS]).toEqual(DEFAULT_HARDWARE_LIBRARY)
     expect(kitFromLegacy(DEFAULT_LEGACY_HARDWARE)).toEqual(DEFAULT_MODULE_HARDWARE)
     expect(defaultModule("m", "x").hardware).toEqual(DEFAULT_MODULE_HARDWARE)
     for (const it of DEFAULT_HARDWARE_LIBRARY) expect(HardwareItemSchema.safeParse(it).success).toBe(true)
@@ -310,6 +311,11 @@ describe("dibuix del patró (Preferències › Ferratges)", () => {
     for (const it of DEFAULT_HARDWARE_LIBRARY) {
       const p = hardwarePreview(it)
       expect(p.error, it.id).toBeUndefined()
+      // Els accessoris no mecanitzen res (pendent del taller): cap peça d'exemple.
+      if (ACCESSORY_ITEMS.includes(it)) {
+        expect(p.panels).toEqual([])
+        continue
+      }
       expect(p.panels.length, it.id).toBeGreaterThan(0)
       expect(p.panels.reduce((n, x) => n + x.holes.length + (x.cutouts?.length ?? 0), 0), it.id).toBeGreaterThan(0)
     }

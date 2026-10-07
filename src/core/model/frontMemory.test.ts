@@ -10,7 +10,7 @@ import { DEFAULT_HARDWARE_KITS, DEFAULT_MODULE_HARDWARE, ZoneSchema, defaultModu
 
 const kit14 = DEFAULT_HARDWARE_KITS.find((k) => k.id === "kit-dtc-ht14")!
 const drawers: Front = { kind: "drawers", n: 4, heights: [150, "auto", "auto", "auto"], hardware: structuredClone(kit14), kit: { closing: "push", back: "metal" }, handle: { ...DEFAULT_MODULE_HARDWARE.handle, id: "hw-t" } }
-const start = (): Zone => ({ id: "r", shelves: { n: 2, adjustable: true }, rail: true, led: true })
+const start = (): Zone => ({ id: "r", shelves: { n: 2, adjustable: true }, rail: {}, led: {} })
 
 describe("E1: el front de cada tipus es recorda", () => {
   it("calaixos → abatible → calaixos: n, alçades, joc, opcions, ferratge i tirador tornen", () => {
@@ -26,8 +26,8 @@ describe("E1: el front de cada tipus es recorda", () => {
   it("setFront no toca els prestatges, la barra ni la llum (amb calaixos no es veuen; tornen amb el contingut d'abans)", () => {
     let z = setFront(start(), "r", drawers)
     expect(z.shelves).toEqual({ n: 2, adjustable: true })
-    expect(z.rail).toBe(true)
-    expect(z.led).toBe(true)
+    expect(z.rail).toEqual({})
+    expect(z.led).toEqual({})
     z = switchFront(z, "r", "none")
     expect(z.front).toBeUndefined()
     expect(z.shelves).toEqual({ n: 2, adjustable: true })

@@ -122,8 +122,8 @@ describe("plantilles", () => {
 
 describe("zoneOps: barra de penjar", () => {
   it("dividir i desfer la divisió conserven la barra", () => {
-    const z = splitZone({ id: "a", rail: true, shelves: { n: 1, adjustable: true } }, "a", "h")
-    expect(z.split!.children[0]!.rail).toBe(true)
-    expect(unsplitZone(z, "a").rail).toBe(true)
+    const z = splitZone({ id: "a", rail: {}, shelves: { n: 1, adjustable: true } }, "a", "h")
+    expect(z.split!.children[0]!.rail).toEqual({})
+    expect(unsplitZone(z, "a").rail).toEqual({})
   })
 })

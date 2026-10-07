@@ -75,7 +75,7 @@ function randomLeaf(r: Rnd, id: string): Zone {
     const n = int(r, 0, 4)
     z.shelves = { n, adjustable: r() < 0.6, ...(r() < 0.15 ? { thickness: pick(r, [40, 50, 60]) } : {}), ...(r() < 0.15 ? { flush: true } : {}) }
   }
-  if (front?.kind !== "drawers" && r() < 0.1) z.rail = true
+  if (front?.kind !== "drawers" && r() < 0.1) z.rail = {}
   return z
 }
 

@@ -51,7 +51,7 @@ const doors = (shelves = 1): Zone => ({ id: id(), shelves: { n: shelves, adjusta
 const flap = (dir: "down" | "up" = "down", shelves = 0): Zone => ({ id: id(), shelves: { n: shelves, adjustable: true }, front: { kind: "flap", dir } })
 const panel = (): Zone => ({ id: id(), front: { kind: "panel" } })
 const grille = (hinge: "left" | "right" = "left"): Zone => ({ id: id(), shelves: { n: 1, adjustable: true }, front: { kind: "grille", pattern: { ...DEFAULT_GRILLE, margin: 40, slotWidth: 10, slotGap: 8 }, mount: "hinged", hinge } })
-const rail = (): Zone => ({ id: id(), rail: true })
+const rail = (): Zone => ({ id: id(), rail: {} })
 const v = (sizes: (number | "auto")[], children: Zone[]): Zone => ({ id: id(), split: { dir: "v", sizes, children } })
 /** Divisió horitzontal: els fills van de baix a dalt. */
 const h = (sizes: (number | "auto")[], children: Zone[]): Zone => ({ id: id(), split: { dir: "h", sizes, children } })
@@ -526,7 +526,7 @@ export const STORE_CATALOG: StoreCategory[] = [
       ]),
       items("salo", "Vitrina", [
         { name: "Cristall", style: "Contemporani", materials: "MDF lacat amb prestatges de vidre", colors: "blanc, greige", use: "Part de dalt oberta amb prestatges de vidre i portes a baix", audience: "col·leccionistes", price: 890, make: () => one(box("Vitrina", { w: 800, h: 1900, d: 400, mat: LAC, base: plinth(60, 20) }, h([720, "auto"], [doors(1), open()])), { parts: [1100, 1450].map((y) => glassShelf(19, 762, 360, y)) }) },
-        { name: "Galeria", style: "Modern luxe", materials: "noguera amb fons negre i prestatges de vidre", colors: "noguera, negre", use: "Dues columnes obertes amb llum LED sota cada prestatge i calaixos a baix", audience: "salons elegants", price: 1340, make: () => row([0, 1].map((i) => box(`Vitrina ${i + 1}`, { w: 700, h: 2000, d: 420, mat: WAL, base: plinth(60, 20) }, h([500, "auto"], [drawers(2), { ...open(3), led: true }])))) },
+        { name: "Galeria", style: "Modern luxe", materials: "noguera amb fons negre i prestatges de vidre", colors: "noguera, negre", use: "Dues columnes obertes amb llum LED sota cada prestatge i calaixos a baix", audience: "salons elegants", price: 1340, make: () => row([0, 1].map((i) => box(`Vitrina ${i + 1}`, { w: 700, h: 2000, d: 420, mat: WAL, base: plinth(60, 20) }, h([500, "auto"], [drawers(2), { ...open(3), led: {} }])))) },
         { name: "Pilar", style: "Minimalista", materials: "roure xapat, alta i estreta", colors: "roure natural", use: "Columna oberta amb calaix inferior", audience: "racons i entrades", price: 560, make: () => one(box("Vitrina", { w: 500, h: 1800, d: 380, mat: OAK, base: plinth(60, 20) }, h([250, "auto"], [drawers(1), open(4)]))) },
       ]),
       items("salo", "Llibreria", [

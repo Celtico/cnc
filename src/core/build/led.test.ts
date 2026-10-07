@@ -7,7 +7,7 @@ const mod = (root: Omit<Zone, "id">) => ({ ...defaultModule("m", "Vitrina", { wi
 
 describe("llum LED (`Zone.led`)", () => {
   it("una tira sota el sostre del compartiment i una sota cada prestatge, fora del nesting", () => {
-    const b = buildModule(mod({ shelves: { n: 2, adjustable: false }, led: true }))
+    const b = buildModule(mod({ shelves: { n: 2, adjustable: false }, led: {} }))
     const leds = b.extras.filter((p) => p.label === "Tira LED")
     expect(leds).toHaveLength(3)
     expect(b.panels.some((p) => p.label === "Tira LED")).toBe(false)
@@ -19,8 +19,8 @@ describe("llum LED (`Zone.led`)", () => {
     expect(materialIssues({ panels: b.panels, extras: b.extras }, { references: [] }, DEFAULT_SETTINGS.materials)).toEqual([])
   })
   it("res amagat compta: amb calaixos o dividit, cap tira", () => {
-    expect(buildModule(mod({ led: true, front: { kind: "drawers", n: 2, heights: ["auto", "auto"] } })).extras.filter((p) => p.label === "Tira LED")).toHaveLength(0)
-    expect(buildModule(mod({ led: true, split: { dir: "v", sizes: ["auto", "auto"], children: [{ id: "a" }, { id: "b" }] } })).extras.filter((p) => p.label === "Tira LED")).toHaveLength(0)
+    expect(buildModule(mod({ led: {}, front: { kind: "drawers", n: 2, heights: ["auto", "auto"] } })).extras.filter((p) => p.label === "Tira LED")).toHaveLength(0)
+    expect(buildModule(mod({ led: {}, split: { dir: "v", sizes: ["auto", "auto"], children: [{ id: "a" }, { id: "b" }] } })).extras.filter((p) => p.label === "Tira LED")).toHaveLength(0)
   })
 })
 

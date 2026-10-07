@@ -63,8 +63,13 @@ interface Recipe {
   base?: Module["carcass"]["base"]
   front?: Front
   shelves?: { n: number; adjustable: boolean }
+  /** Accessoris del compartiment (barra, llum): hi són amb l'item. */
+  rail?: boolean
+  led?: boolean
   /** Peces que sempre hi són (a més de les que porten forats del ferratge). */
   keep: (p: Panel) => boolean
+  /** Elements sense nesting (`extras`) que es veuen muntats (la barra, els perfils, el marc i el vidre). */
+  extras?: (p: Panel) => boolean
 }
 
 const isLeftSide = (p: Panel) => p.id === "side-left"
@@ -96,6 +101,15 @@ function recipe(item: HardwareItem): Recipe | null {
       // Calaix amb joc: el lateral esquerre (prebroques de la guia), el front, el fons i el darrere de fusta i els components.
       // Prou alt perquè hi càpiga el joc (la F fa 248).
       return { size: { width: 450, height: Math.max(300, (item.kit ? kitHeight(item.kit) : 0) + 140), depth: 500 }, front: { kind: "drawers", n: 1, heights: ["auto"] }, keep: (p) => isLeftSide(p) || p.role === "drawerFront" || p.role === "drawerBottom" || p.role === "drawerBack" }
+    case "rail":
+      // Compartiment de penjar: els dos laterals, la tapa i la barra.
+      return { size: { width: 600, height: 1000, depth: 500 }, rail: true, keep: (p) => p.role === "side" || p.role === "top", extras: (p) => p.id.startsWith("rail-") }
+    case "ledProfile":
+      // Prestatge amb la llum a sota: lateral esquerre, tapa, prestatge i els perfils.
+      return { size: { width: 600, height: 600, depth: 350 }, shelves: { n: 1, adjustable: false }, led: true, keep: (p) => isLeftSide(p) || p.role === "shelf" || p.role === "top", extras: (p) => p.id.startsWith("led-") }
+    case "glassFrame":
+      // Porta de vidre: el lateral esquerre i el marc amb el vidre.
+      return { size: small, front: { kind: "door", mode: "single", hinge: "left", glass: true }, keep: isLeftSide, extras: (p) => /-(left|right|top|bottom|glass)$/.test(p.id) }
   }
 }
 
@@ -146,12 +160,12 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
   // Un joc de calaix es tria al front dels calaixos (no té lloc al joc del mòdul).
   const front = rc.front?.kind === "drawers" && made.engine === "drawerKit" ? { ...rc.front, hardware: made } : rc.front
   if (made.engine === "plate") hardware.hinge = setConfirmed(pairPlate(hostHinge(base), made), true)
-  else if (made.engine !== "leg" && made.engine !== "drawerKit") hardware[slotForEngine(made.engine).slot] = made
+  else if (made.engine !== "leg" && made.engine !== "drawerKit" && made.engine !== "model") hardware[slotForEngine(made.engine).slot] = made
   const legBase = rc.base?.kind === "legs" ? { ...rc.base, hardware: made } : rc.base
   const module: Module = {
     ...base,
     carcass: { ...base.carcass, ...rc.size, sides: { left: true, right: true }, base: legBase ?? { kind: "none" }, top: { kind: "full" }, hollow: undefined, tableTop: undefined, joint: "butt" },
-    root: { id: "mount-root", ...(rc.shelves ? { shelves: rc.shelves } : {}), ...(front ? { front } : {}) },
+    root: { id: "mount-root", ...(rc.shelves ? { shelves: rc.shelves } : {}), ...(front ? { front } : {}), ...(rc.rail ? { rail: {} } : {}), ...(rc.led ? { led: {} } : {}) },
     fronts: { ...base.fronts, style: "overlay", handles: "bar" },
     hardware,
     extras: { cableHoles: [] },
@@ -170,8 +184,9 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
     // Les peces amb forats del ferratge a la meitat esquerra (la dreta és el mirall).
     return mountHoles(p).some((h) => own(h) && toWorld(p, holeEntry(p, h).at)[0] <= rc.size.width / 2 + 0.5)
   })
-  // Els components d'un joc de calaix (peces de només veure, `extras`): es veuen muntats amb la fusta.
+  // Els components d'un joc de calaix (peces de només veure, `extras`): es veuen muntats amb la fusta. Els accessoris també.
   if (item.engine === "drawerKit") panels.push(...build.extras.filter((p) => p.role === "hardware"))
+  if (rc.extras) panels.push(...build.extras.filter(rc.extras))
   // El forat principal: la primera cassoleta (la de baix) o, si no, el forat del ferratge més a prop del mig de la seva peça.
   let focus: HardwareMount["focus"] = null
   let best = Infinity
@@ -197,7 +212,13 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
   const side = panels.find(isLeftSide)
   // Una pota va de la cara de sota de la base (el forat principal) cap avall, l'alçada de la base.
   const legH = legBase?.kind === "legs" ? legBase.height : 0
-  const aim = item.engine === "leg" && focus ? { at: [focus.at[0], focus.at[1] - legH / 2, focus.at[2]] as Vec3, dist: Math.max(480, legH * 2.3) } : undefined
+  let aim = item.engine === "leg" && focus ? { at: [focus.at[0], focus.at[1] - legH / 2, focus.at[2]] as Vec3, dist: Math.max(480, legH * 2.3) } : undefined
+  // Un accessori no fa cap forat: es mira el mig del que es veu (la barra, els perfils, el marc), de davant.
+  if (!focus && !aim && rc.extras) {
+    // El primer (la barra; el perfil de sota el sostre; el perfil de dalt del marc): el pla es talla a la seva alçada.
+    const first = panels.find(rc.extras)
+    if (first) aim = { at: toWorld(first, [first.length / 2, first.width / 2, first.thickness / 2]), dist: Math.max(480, rc.size.width * 1.4) }
+  }
   // Els avisos del ferratge (el mòdul d'exemple de les potes ja té l'alçada de la pota: no avisa de l'alçada).
   const relevant = new Set(["hinge", "hardware", "handle"])
   return {
@@ -434,8 +455,10 @@ const BUILTIN_HINGE = (d: number) => ({ min: [-10, -Math.max(20, d) / 2, 0] as V
  * la placa al lateral). Tot surt de les peces del motor.
  */
 export function mountPlan(m: HardwareMount): MountPlan | null {
-  if (!m.focus) return null
-  const Y0 = m.focus.at[1]
+  // Un accessori sense cap forat (barra, perfil LED, marc): el tall a l'alçada del que es veu (`aim`).
+  const at = m.focus?.at ?? m.aim?.at
+  if (!at) return null
+  const Y0 = at[1]
   const band = 40
   const rects: PlanRect[] = []
   const holes: PlanHole[] = []
@@ -520,6 +543,13 @@ export function mountPlan(m: HardwareMount): MountPlan | null {
       const z = zMid(rowHole.poly)
       dims.push({ a: [side.x0, side.z1], b: [side.x0, z], offset: -14, label: fmt(side.z1 - z), title: rowHole.tag === "plate" ? "Placa: del davant del lateral a la filera dels forats" : "Filera System 32: del davant del lateral" })
     }
+  } else if (!m.focus) {
+    // Accessori sense forats: la mida de la peça que es veu (la barra, el perfil, el marc) i on és respecte del lateral.
+    const own = rects.filter((x) => x.role === "part")
+    const first = own[0]
+    const side = rects.find((x) => x.role === "side")
+    if (first) dims.push({ a: [first.x0, first.z0], b: [first.x1, first.z0], offset: -16, label: fmt(first.x1 - first.x0), title: `${first.label}: llarg` })
+    if (first && side && side.z1 > first.z1 + 0.5) dims.push({ a: [first.x0, first.z1], b: [first.x0, side.z1], offset: -14, label: fmt(side.z1 - first.z1), title: "Del davant del lateral a l'accessori" })
   } else {
     // Qualsevol altre: el forat principal fins als cantells de la seva peça.
     const f = m.focus
@@ -553,8 +583,8 @@ export function mountPlan(m: HardwareMount): MountPlan | null {
   }
   // Vista: els forats del ferratge a prop del principal, amb els cantells propers i les cotes.
   const pts: [number, number][] = []
-  const fx = m.focus.at[0]
-  const fz = m.focus.at[2]
+  const fx = at[0]
+  const fz = at[2]
   for (const h of holes) {
     if (!h.own) continue
     const ps = h.poly ?? (h.circle ? [[h.circle.cx - h.circle.r, h.circle.cz - h.circle.r], [h.circle.cx + h.circle.r, h.circle.cz + h.circle.r]] as [number, number][] : [])

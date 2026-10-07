@@ -5,7 +5,7 @@ import { flatten, profileToOutline, sampleProfile, toNodes, type BPt } from "./p
 import { CameraPoseSchema } from "./camera"
 import { aliasMaterialRefs } from "./photoUpgrade"
 import { FreePartSchema, JoinerySchema, PART_AXES as PART_AXES_C, tidyPart, type FreePart } from "./freePart"
-import { DEFAULT_LEGACY_HARDWARE, HardwareItemObjectSchema, ModuleHardwareKitSchema, HardwarePlacementSchema, sanitizeImportedHardware, isLegacyHardware, kitFromLegacy, migrateModuleHardware, type ModuleHardware } from "./hardware"
+import { DEFAULT_LEGACY_HARDWARE, HardwareItemObjectSchema, ModuleHardwareKitSchema, HardwarePlacementSchema, sanitizeImportedHardware, isLegacyHardware, kitFromLegacy, migrateModuleHardware, type HardwareItem, type ModuleHardware } from "./hardware"
 import { repairAtomically } from "./repair"
 import { KitOptionsSchema } from "./hardwareKit"
 
@@ -130,16 +130,24 @@ export type Carcass = z.infer<typeof CarcassSchema>
 // --- Fronts i zones ----------------------------------------------------------------
 
 
+/**
+ * El tirador d'un front: sense, el del mòdul (`Module.hardware.handle`, o cap si el mòdul és push); una còpia d'un item
+ * `barHandle` (p. ex. un d'importat); o **«Cap (push)»** (`"none"`): obertura per pressió, cap forat (`Panel.push`). Als
+ * calaixos amb joc, el tancament del joc mana (`kitPush`): push-open ⇒ cap tirador.
+ */
+const FrontHandleSchema = z.union([FrontHardwareSchema, z.literal("none")])
+export type FrontHandle = z.infer<typeof FrontHandleSchema>
+
 export const FrontSchema = z.discriminatedUnion("kind", [
-  /** `glass`: porta de vidre amb marc de perfil d'alumini (vitrina): no és de CNC (`glassDoor`). */
+  /** `glass`: porta de vidre amb marc de perfil d'alumini (vitrina): no és de CNC (`glassDoor`); `frame` = el marc triat
+   * (còpia d'un item `glassFrame`); sense, el del mòdul (`Module.hardware.glassFrame`, o el d'inici). */
   // `hardware`: el ferratge triat per a aquest front (còpia d'un item de la biblioteca: frontissa, guia o braç); sense, el
-  // del mòdul (`Module.hardware`). `handle`: el tirador triat (còpia d'un item `barHandle`, p. ex. un d'importat);
-  // sense, el del mòdul.
-  z.object({ kind: z.literal("door"), mode: z.enum(["single", "double"]), hinge: z.enum(["left", "right"]), glass: z.boolean().optional(), hardware: FrontHardwareSchema.optional(), handle: FrontHardwareSchema.optional() }),
+  // del mòdul (`Module.hardware`). `handle`: el tirador triat (`FrontHandle`); sense, el del mòdul.
+  z.object({ kind: z.literal("door"), mode: z.enum(["single", "double"]), hinge: z.enum(["left", "right"]), glass: z.boolean().optional(), frame: FrontHardwareSchema.optional(), hardware: FrontHardwareSchema.optional(), handle: FrontHandleSchema.optional() }),
   // `kit`: les opcions del joc paramètric (tancament, darrere) si `hardware` és un joc de calaix (`drawerKit`); sense, les
   // primeres del joc. Res amagat compta: amb una guia normal no es llegeix (`visibleZone`).
-  z.object({ kind: z.literal("drawers"), n: z.number().int().min(1).max(10), heights: z.array(sizeOrAuto), hardware: FrontHardwareSchema.optional(), handle: FrontHardwareSchema.optional(), kit: KitOptionsSchema.partial().optional() }),
-  z.object({ kind: z.literal("flap"), dir: z.enum(["down", "up"]), hardware: FrontHardwareSchema.optional(), handle: FrontHardwareSchema.optional() }),
+  z.object({ kind: z.literal("drawers"), n: z.number().int().min(1).max(10), heights: z.array(sizeOrAuto), hardware: FrontHardwareSchema.optional(), handle: FrontHandleSchema.optional(), kit: KitOptionsSchema.partial().optional() }),
+  z.object({ kind: z.literal("flap"), dir: z.enum(["down", "up"]), hardware: FrontHardwareSchema.optional(), handle: FrontHandleSchema.optional() }),
   z.object({
     kind: z.literal("grille"),
     pattern: GrillePatternSchema,
@@ -147,10 +155,21 @@ export const FrontSchema = z.discriminatedUnion("kind", [
     hinge: z.enum(["left", "right"]),
     /** Trapa petita, en coordenades de la zona (des de baix-esquerra de la llum). */
     hatch: z.object({ x: mm, y: mm, w: mm.positive(), h: mm.positive() }).optional(),
+    /** L'imant triat (reixeta desmuntable i trapa; còpia d'un item `magnet`); sense, el del mòdul. */
+    hardware: FrontHardwareSchema.optional(),
   }),
   z.object({ kind: z.literal("panel") }),
 ])
 export type Front = z.infer<typeof FrontSchema>
+
+/**
+ * Accessori d'un compartiment (barra de penjar, tira LED): hi és (`{}`) amb el ferratge del mòdul (o el d'inici), o amb
+ * una còpia pròpia (`hardware`). Els `true`/`false` d'abans es llegeixen com a `{}` / cap (`ZoneAccessorySchema`).
+ */
+export interface ZoneAccessory {
+  hardware?: HardwareItem
+}
+const ZoneAccessorySchema = z.preprocess((v) => (v === true ? {} : v === false ? undefined : v), z.object({ hardware: FrontHardwareSchema.optional() }).optional())
 
 /** Tipus de front (contingut) d'un compartiment. */
 export const FRONT_KINDS = ["door", "drawers", "flap", "grille", "panel"] as const satisfies readonly Front["kind"][]
@@ -166,10 +185,10 @@ export interface Zone {
    * Només per a la UI (`setFront`): la construcció no els llegeix (`visibleZone` els treu).
    */
   fronts?: Partial<Record<Front["kind"], Front>>
-  /** Barra de penjar (tub d'inox Ø25 a 50 mm del sostre del compartiment). */
-  rail?: boolean
-  /** Llum LED: perfil amb tira LED sota el sostre del compartiment i sota cada prestatge (render i llista; no és de CNC). */
-  led?: boolean
+  /** Barra de penjar (tub d'inox de lateral a lateral, sota el sostre del compartiment; ferratge `rail`). */
+  rail?: ZoneAccessory
+  /** Llum LED: perfil amb tira LED sota el sostre del compartiment i sota cada prestatge (ferratge `ledProfile`; render i llista; no és de CNC). */
+  led?: ZoneAccessory
 }
 
 export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
@@ -197,8 +216,8 @@ export const ZoneSchema: z.ZodType<Zone> = z.lazy(() =>
       .optional(),
     front: FrontSchema.optional(),
     fronts: z.preprocess(dropMismatchedFronts, z.object({ door: FrontSchema.optional(), drawers: FrontSchema.optional(), flap: FrontSchema.optional(), grille: FrontSchema.optional(), panel: FrontSchema.optional() })).optional(),
-    rail: z.boolean().optional(),
-    led: z.boolean().optional(),
+    rail: ZoneAccessorySchema,
+    led: ZoneAccessorySchema,
   }),
 )
 
@@ -797,18 +816,18 @@ export function visibleModule(m: Module): Module {
   const fronts = { ...m.fronts }
   if (fronts.style === "overlay") delete fronts.style
   if (fronts.handles === "bar") delete fronts.handles
-  // Sense tiradors (push), el tirador triat als fronts no surt ni compta.
   // La guia del mòdul pot ser un joc de calaix (`drawerKit`): els calaixos sense guia pròpia hi llegeixen les opcions.
   const hw = m.hardware as Partial<ModuleHardware> | undefined
   const kitDefault = !isLegacyHardware(hw) && hw?.slide?.engine === "drawerKit"
-  return { ...m, carcass, fronts, root: visibleZone(m.root, m.fronts.handles === "none", kitDefault) }
+  return { ...m, carcass, fronts, root: visibleZone(m.root, kitDefault) }
 }
 
 /**
- * Un compartiment tal com es veu (vegeu `visibleModule`). `noHandles`: el mòdul no porta tiradors; `kitDefault`: la guia
- * del mòdul és un joc de calaix (els calaixos sense guia pròpia el fan servir).
+ * Un compartiment tal com es veu (vegeu `visibleModule`). `kitDefault`: la guia del mòdul és un joc de calaix (els
+ * calaixos sense guia pròpia el fan servir). El «Tirador» de cada front compta sempre (també «Cap (push)»): el del mòdul
+ * només és el per defecte.
  */
-function visibleZone(z: Zone, noHandles = false, kitDefault = false): Zone {
+function visibleZone(z: Zone, kitDefault = false): Zone {
   const out: Zone = { ...z }
   // Els fronts recordats dels altres tipus (`fronts`) són només per tornar-hi: no construeixen res.
   delete out.fronts
@@ -817,7 +836,7 @@ function visibleZone(z: Zone, noHandles = false, kitDefault = false): Zone {
     delete out.shelves
     delete out.rail
     delete out.led
-    out.split = { ...z.split, children: z.split.children.map((c) => visibleZone(c, noHandles, kitDefault)) }
+    out.split = { ...z.split, children: z.split.children.map((c) => visibleZone(c, kitDefault)) }
   } else {
     // Sense prestatges (0): gruix i «a ras» no compten; «Regulables» sí (les fileres System 32 per posar-n'hi després),
     // i sense `shelves` és com no regulables.
@@ -833,9 +852,7 @@ function visibleZone(z: Zone, noHandles = false, kitDefault = false): Zone {
     if (!z.rail) delete out.rail
     if (!z.led) delete out.led
   }
-  const f0 = z.front
-  const f = noHandles && f0 && "handle" in f0 && f0.handle ? (({ handle: _h, ...rest }) => rest)(f0) as Front : f0
-  if (f !== f0) out.front = f
+  const f = z.front
   if (f?.kind === "drawers") {
     // Els calaixos ocupen el compartiment: la secció Prestatges (prestatges, barra i llum) no surt.
     delete out.shelves
@@ -851,9 +868,12 @@ function visibleZone(z: Zone, noHandles = false, kitDefault = false): Zone {
     out.front = drawers
   } else if (f?.kind === "door") {
     const door = { ...f }
-    if (!door.glass) delete door.glass
-    // Porta de vidre: frontisses del perfil, cap cassoleta ni tirador (la frontissa i el tirador triats no compten).
-    else {
+    // Sense vidre, el marc triat no compta; de vidre: frontisses del perfil, cap cassoleta ni tirador (la frontissa i el
+    // tirador triats no compten).
+    if (!door.glass) {
+      delete door.glass
+      delete door.frame
+    } else {
       delete door.hardware
       delete door.handle
     }
@@ -864,7 +884,10 @@ function visibleZone(z: Zone, noHandles = false, kitDefault = false): Zone {
     // Patró: de ranures (amplada i separació) o de forats (Ø i pas); el de l'altre tipus no surt. Amb imants, sense frontisses.
     const p = f.pattern
     const pattern = p.kind === "holes" ? { ...p, slotWidth: DEFAULT_GRILLE.slotWidth, slotGap: DEFAULT_GRILLE.slotGap } : { ...p, holeDiameter: DEFAULT_GRILLE.holeDiameter, holePitch: DEFAULT_GRILLE.holePitch }
-    out.front = { ...f, pattern, ...(f.mount === "removable" ? { hinge: "left" as const } : {}) }
+    const grille = { ...f, pattern, ...(f.mount === "removable" ? { hinge: "left" as const } : {}) }
+    // L'imant triat només compta si hi ha imants (reixeta desmuntable o trapa).
+    if (f.mount !== "removable" && !f.hatch) delete grille.hardware
+    out.front = grille
   }
   return out
 }

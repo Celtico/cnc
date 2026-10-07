@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { hingeItem, pairPlate, plateItem, setConfirmed } from "../import/importItem"
 import type { HettichArticle } from "../import/hettich"
 import type { HardwareProposal } from "../import/proposal"
-import { DEFAULT_MODULE_HARDWARE, DEFAULT_HARDWARE_LIBRARY, defaultModule, type Module, type Zone } from "../model"
+import { ACCESSORY_ITEMS, DEFAULT_MODULE_HARDWARE, DEFAULT_HARDWARE_LIBRARY, defaultModule, type Module, type Zone } from "../model"
 import { buildModule } from "./buildModule"
 import { hardwareMount, modelCamera, mountCamera, mountPlan } from "./hardwareMount"
 
@@ -102,7 +102,11 @@ describe("ferratge muntat", () => {
     for (const item of DEFAULT_HARDWARE_LIBRARY) {
       const m = hardwareMount(item)
       expect(m.error, item.engine).toBeUndefined()
-      expect(m.focus, item.engine).not.toBeNull()
+      // Els accessoris (barra, perfil LED, marc de vitrina) encara no fan cap forat: es miren pel mig del que es veu (`aim`).
+      if (ACCESSORY_ITEMS.includes(item)) {
+        expect(m.aim, item.engine).toBeDefined()
+        expect(m.panels.some((p) => p.role === "part"), item.engine).toBe(true)
+      } else expect(m.focus, item.engine).not.toBeNull()
       const plan = mountPlan(m)!
       expect(plan.rects.length, item.engine).toBeGreaterThan(0)
       expect(plan.dims.length, item.engine).toBeGreaterThan(0)
