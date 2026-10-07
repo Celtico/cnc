@@ -222,8 +222,8 @@ describe("joc paramètric: construcció", () => {
     const lib = [...Object.values(DEFAULT_MODULE_HARDWARE), HT11]
     expect(kitFrom(lib, { hinge: "hinge-cup", system32: "system32", dowel: "dowel", slide: "kit-dtc-ht11", flap: "flap-arm", magnet: "magnet", handle: "handle-bar" }).slide.id).toBe("kit-dtc-ht11")
     expect(fixHardwareDefaults(lib, { slide: "kit-dtc-ht11" }).defaults.slide).toBe("kit-dtc-ht11")
-    // El resum «Guies de calaix» compta els calaixos amb joc (parells) i el lloc «guia» surt a la Fusteria.
-    expect(ruleHardwareCounts(b.panels).find((c) => c.id === "slide")).toMatchObject({ count: 2, unit: "parells" })
+    // El resum de «Ferratges» compta els jocs de calaix (un per calaix).
+    expect(ruleHardwareCounts(b.panels, 0, b.extras, b.hardwareKits).find((c) => c.id === "kit")).toMatchObject({ count: 2 })
   })
   it("«Com va muntat» i la peça d'exemple: el lateral amb les prebroques i els components", () => {
     const m = hardwareMount(HT11)

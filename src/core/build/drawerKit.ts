@@ -12,6 +12,7 @@ import {
   kitFinishMaterial,
   kitItemNumber,
   kitOptionsOf,
+  kitPilotRule,
   kitVars,
   widthRule,
   type HardwareItem,
@@ -127,8 +128,10 @@ export function planKit(item: HardwareItem, input: KitInput): { plan: KitPlan | 
   const cut = kit.rules.syncRodCut[options.closing]
   const syncRod = cut !== undefined && rule && rule.syncRod >= 1 ? evalKit(cut, vars0) : undefined
   const vars = { ...vars0, SR: syncRod ?? 0 }
-  const pilotD = item.params.pilotDiameter ?? 0
-  const pilotP = item.params.pilotDepth ?? 0
+  // La regla del taller vigent (`kitPilotRule`) mana sobre la còpia; sense regla, els `params` de l'item.
+  const pilotRule = kitPilotRule()
+  const pilotD = pilotRule ? (pilotRule.enabled ? pilotRule.diameter : 0) : (item.params.pilotDiameter ?? 0)
+  const pilotP = pilotRule ? pilotRule.depth : (item.params.pilotDepth ?? 0)
   const pilot = pilotD > 0 && pilotP > 0 ? { diameter: pilotD, depth: pilotP } : null
 
   const lines: KitOrderLine[] = []

@@ -4,7 +4,7 @@ import { QUALITY_LABELS, useRenderQuality, type RenderQuality } from "../../comp
 import { SKIES, useSkyPref, type SkyId } from "../../components/viewer/render/skies"
 import { FLOORS, LIGHTS, SKIRTINGS, WALLS, renamePresentationMaterial, usePresentationScene, type FloorId } from "../../components/viewer/presentationScene"
 import { floorSwatchUrl } from "../../components/viewer/floorTextures"
-import { kitPilot, setKitPilot, type Composition } from "../../core/model"
+import { setKitPilot, type Composition } from "../../core/model"
 import { ScenePreview } from "./ScenePreview"
 import {
   Alert,
@@ -301,14 +301,17 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
           <Pane id="hardware" wide title="Ferratges" icon={LuWrench} desc="La biblioteca: frontisses i plaques, guies i jocs de calaix, espigues, System 32, braços, imants, tiradors, potes, accessoris (barra de penjar, perfil LED, marc de vitrina) i els importats del fabricant; els seus forats i quin fa servir cada lloc als mòduls nous." onReset={() => setReset({ key: "hardwareLibrary", label: "Ferratges", note: "Torna la biblioteca inicial (els ferratges afegits es perden) i els per defecte. Els mobles fets porten la seva còpia: no canvien." })}>
             <HardwareList items={draft.hardwareLibrary} defaults={draft.hardwareDefaults} onChange={(hardwareLibrary) => set("hardwareLibrary", hardwareLibrary)} onDefaults={(hardwareDefaults) => set("hardwareDefaults", hardwareDefaults)} onDelete={setDeletingHw} onConfirmed={confirmedHw} settings={draft} />
             {(() => {
-              // Regla del taller: prebroca a cada cargol d'un ferratge que no té mecanitzat propi. S'aplica als jocs de
-              // calaix de la biblioteca (els ferratges de sempre ja foraden cada cargol); els mobles fets no canvien.
-              const pilot = kitPilot(draft.hardwareLibrary)
-              const setPilot = (patch: Partial<typeof pilot>) => set("hardwareLibrary", setKitPilot(draft.hardwareLibrary, { ...pilot, ...patch }))
+              // Regla del taller (una sola font, `Settings.kitPilot`): prebroca a cada cargol d'un ferratge que no té
+              // mecanitzat propi. Els jocs de la biblioteca en copien els números i les còpies dels mobles la segueixen en construir.
+              const pilot = draft.kitPilot
+              const setPilot = (patch: Partial<typeof pilot>) => {
+                const next = { ...pilot, ...patch }
+                setDraft((d) => ({ ...d, kitPilot: next, hardwareLibrary: setKitPilot(d.hardwareLibrary, next) }))
+              }
               return (
                 <Box maxW="760px" w="full">
                   <SettingsGroup icon={<LuDrill />} title="Prebroca dels cargols" summary={pilot.enabled ? `Ø${pilot.diameter} × ${pilot.depth}, activada` : "desactivada"}>
-                    <FormRow label="Prebroca" help="Forat guia a cada cargol d'un ferratge que no té mecanitzat propi: els de la guia al lateral del moble i els dels suports al front i al darrere dels jocs de calaix de doble paret. Els ferratges de sempre ja foraden cada cargol (guia Ø5 / Ø4, placa i System 32 Ø5, espigues, imants, braços). S'aplica als jocs de la biblioteca; els mobles fets porten la seva còpia.">
+                    <FormRow label="Prebroca" help="Forat guia a cada cargol d'un ferratge que no té mecanitzat propi: els de la guia al lateral del moble i els dels suports al front i al darrere dels jocs de calaix de doble paret. Els ferratges de sempre ja foraden cada cargol (guia Ø5 / Ø4, placa i System 32 Ø5, espigues, imants, braços). Regla del taller: la segueixen tots els jocs, també els dels mobles fets.">
                       <Switch.Root size="sm" pt={1.5} checked={pilot.enabled} onCheckedChange={(e) => setPilot({ enabled: e.checked })} data-testid="pilot-switch">
                         <Switch.HiddenInput />
                         <Switch.Control />

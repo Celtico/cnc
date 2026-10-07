@@ -1230,7 +1230,7 @@ function HardwareCard({
           <Text fontSize="xs" color="fg.muted" pb={2}>
             {item.imported
               ? "Forats passants al front, al voltant del centre del tirador (pitch = la distància entre forats, diameter = el Ø de Mides)."
-              : item.kit ? "La prebroca de cada cargol (Ø i fondària de «Mides»); on van, ho diu el joc («Mecanitzats del joc»)."
+              : item.kit ? "La prebroca de cada cargol (Ø i fondària de la regla del taller, Preferències › Ferratges › «Prebroca dels cargols»); on van, ho diu el joc («Mecanitzats del joc»)."
               : "En coordenades de la peça (u al llarg del cantell de referència, v cap a dins), amb els noms de les mides de dalt. Editar-los i afegir-ne és per a més endavant (ferratges manuals)."}
           </Text>
         </FoldItem>

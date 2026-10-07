@@ -4,7 +4,7 @@ import { tryExpr } from "./expr"
 import { deepEqual } from "./photoUpgrade"
 import { repairAtomically, repairValue } from "./repair"
 import { MachiningListSchema, migratePlacePos, PlacementTargetSchema, PlacePosSchema, RepeatSchema, stepValue, StepRuleSchema, type StepRule } from "./hardwareOps"
-import { HardwareKitSchema, KIT_PILOT_PARAMS, kitSummary, type HardwareKit } from "./hardwareKit"
+import { HardwareKitSchema, KIT_PILOT_PARAMS, kitSummary, type HardwareKit, type KitPilot } from "./hardwareKit"
 import { DTC_MAGIC_PRO_KITS } from "./kits/dtcMagicPro"
 
 /**
@@ -403,10 +403,9 @@ export const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
   ],
   leg: [P("inset", "Als cantells", 20, 300, 1, "De la vora de fora del mòdul a l'eix de cada pota (de costat i de davant/darrere).")],
   model: [],
-  drawerKit: [
-    P("pilotDiameter", "Prebroca (Ø)", 0, 6, 0.5, "Forat guia a cada cargol de la guia, dels suports del front i del darrere (0 = cap)."),
-    P("pilotDepth", "Prebroca (fondària)", 3, 30, 1),
-  ],
+  // La prebroca dels cargols és una regla del taller (Preferències › Ferratges › «Prebroca dels cargols», `Settings.kitPilot`),
+  // no un número de cada joc: res a editar aquí (els `params` es queden per compatibilitat i els omple `setKitPilot`).
+  drawerKit: [],
   plate: [
     P("setback", "Del davant", 0, 200, 0.5, "Del cantell de davant del lateral a la referència de la placa (la filera System 32: 37)."),
     P("offset", "Alçada", -100, 100, 0.5, "Del centre de la cassoleta a la referència de la placa (amunt, positiu)."),
@@ -1031,8 +1030,11 @@ export const isPlaceable = (item: HardwareItem): boolean => item.engine === "mod
 
 // --- Prebroca dels cargols (regla del taller) -----------------------------------------------------------------------
 
-/** La prebroca que fan els jocs de la biblioteca (la del primer joc; cap joc → la inicial). */
-export function kitPilot(library: readonly HardwareItem[]): { enabled: boolean; diameter: number; depth: number } {
+/**
+ * La prebroca que fan els jocs de la biblioteca (la del primer joc; cap joc → la inicial): per llegir unes preferències
+ * d'abans que no tenien la regla `Settings.kitPilot`. La font és `Settings.kitPilot`.
+ */
+export function kitPilotFromLibrary(library: readonly HardwareItem[]): KitPilot {
   const kit = library.find((x) => x.engine === "drawerKit")
   if (!kit) return { enabled: true, ...KIT_PILOT_PARAMS_PLAIN }
   const d = kit.params.pilotDiameter ?? 0
@@ -1046,11 +1048,11 @@ const KIT_PILOT_PARAMS_PLAIN = { diameter: KIT_PILOT_PARAMS.pilotDiameter, depth
  * es recorda a `pilotOffDiameter` per tornar-hi. Els ferratges de l'app de sempre ja foraden cada cargol (guia Ø5 / Ø4,
  * placa i System 32 Ø5, espigues, imants, braços): no hi ha res més a prebrocar.
  */
-export function setKitPilot(library: readonly HardwareItem[], pilot: { enabled: boolean; diameter: number; depth: number }): HardwareItem[] {
+export function setKitPilot(library: readonly HardwareItem[], pilot: KitPilot): HardwareItem[] {
   return library.map((x) => {
     if (x.engine !== "drawerKit") return x
     const { pilotOffDiameter: _o, ...rest } = x.params
     const params = pilot.enabled ? { ...rest, pilotDiameter: pilot.diameter, pilotDepth: pilot.depth } : { ...rest, pilotDiameter: 0, pilotDepth: pilot.depth, pilotOffDiameter: pilot.diameter }
-    return { ...x, params }
+    return deepEqual(params, x.params) ? x : { ...x, params }
   })
 }

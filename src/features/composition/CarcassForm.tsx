@@ -272,6 +272,21 @@ export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !==
   )
 }
 
+/** «Com a Preferències» quan el valor és el de Preferències › Folgances per defecte (com als Acabats de l'escena). */
+const prefHint = (value: number, pref: number): string => (value === pref ? "Com a Preferències." : `A Preferències: ${String(pref).replace(".", ",")} mm.`)
+
+/** Botó per tornar al valor de Preferències quan el mòdul en té un altre. */
+function PrefReset({ value, pref, onReset }: { value: number; pref: number; onReset: () => void }) {
+  if (value === pref) return null
+  return (
+    <HStack justify="flex-end" mt={-2}>
+      <Button size="2xs" variant="ghost" colorPalette="wood" onClick={onReset}>
+        Com a Preferències ({String(pref).replace(".", ",")} mm)
+      </Button>
+    </HStack>
+  )
+}
+
 /** Llocs de ferratge de la caixa (laterals, unions, fons): surten a la Fusteria del mòdul. La resta són dels fronts. */
 const BOX_SLOTS: ReadonlySet<HardwareSlot> = new Set<HardwareSlot>(["dowel", "system32"])
 
@@ -346,6 +361,7 @@ export function JoineryForm({ module, onChange, usedSlots }: { module: Module; o
  */
 export function FrontsForm({ module, onChange, usedSlots }: { module: Module; onChange: (m: Module) => void; usedSlots?: ReadonlySet<string> }) {
   const c = module.carcass
+  const { gaps } = useSettings().settings
   // El tirador per defecte té la seva fila (amb «Cap (push)»): surt sempre que hi hagi fronts que en puguin portar.
   const slots = slotsFor(usedSlots, false).filter(({ slot }) => slot !== "handle")
   const handleRow = hasHandleFronts(module)
@@ -363,9 +379,12 @@ export function FrontsForm({ module, onChange, usedSlots }: { module: Module; on
           onChange={(style) => onChange({ ...module, fronts: { ...module.fronts, style: style === "overlay" ? undefined : style } })}
         />
       </FormRow>
-      <NumRow label="Folgança front–cos" value={module.fronts.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => onChange({ ...module, fronts: { ...module.fronts, outerGap } })} />
-      <NumRow label="Folgança entre fronts" value={module.fronts.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => onChange({ ...module, fronts: { ...module.fronts, betweenGap } })} />
-      <NumRow label="Retranqueig dels prestatges" value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => onChange({ ...module, carcass: { ...c, shelfSetback } })} help="Del davant de la caixa al cantell dels prestatges (amb fronts encastats, almenys un gruix)." />
+      <NumRow label="Folgança front–cos" value={module.fronts.outerGap} min={0} max={10} step={0.5} onChange={(outerGap) => onChange({ ...module, fronts: { ...module.fronts, outerGap } })} help={prefHint(module.fronts.outerGap, gaps.outerGap)} />
+      <PrefReset value={module.fronts.outerGap} pref={gaps.outerGap} onReset={() => onChange({ ...module, fronts: { ...module.fronts, outerGap: gaps.outerGap } })} />
+      <NumRow label="Folgança entre fronts" value={module.fronts.betweenGap} min={0} max={10} step={0.5} onChange={(betweenGap) => onChange({ ...module, fronts: { ...module.fronts, betweenGap } })} help={prefHint(module.fronts.betweenGap, gaps.betweenGap)} />
+      <PrefReset value={module.fronts.betweenGap} pref={gaps.betweenGap} onReset={() => onChange({ ...module, fronts: { ...module.fronts, betweenGap: gaps.betweenGap } })} />
+      <NumRow label="Retranqueig dels prestatges" value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => onChange({ ...module, carcass: { ...c, shelfSetback } })} help={`Del davant de la caixa al cantell dels prestatges (amb fronts encastats, almenys un gruix). ${prefHint(c.shelfSetback, gaps.shelfSetback)}`} />
+      <PrefReset value={c.shelfSetback} pref={gaps.shelfSetback} onReset={() => onChange({ ...module, carcass: { ...c, shelfSetback: gaps.shelfSetback } })} />
       {handleRow && <ModuleHandlePick module={module} onChange={onChange} />}
       <ModuleHardwarePicks module={module} onChange={onChange} slots={slots} />
       <Text fontSize="xs" color="fg.muted">

@@ -130,3 +130,40 @@ describe("«Fons del calaix»: material propi (auditoria D1 / A3)", () => {
     expect(b.warnings).toEqual(a.warnings)
   })
 })
+
+describe("F: una sola font i comptes del que s'ha construït", () => {
+  const kit14 = DEFAULT_HARDWARE_KITS.find((k) => k.id === "kit-dtc-ht14")!
+  it("la prebroca dels cargols és la regla del taller: les còpies dels mòduls la segueixen en construir", async () => {
+    const { setKitPilotRule } = await import("../model/hardwareKit")
+    const m = defaultModule("m1", "M", { width: 600, height: 700, depth: 500 })
+    const mod: Module = { ...m, root: setFront(m.root, m.root.id, { kind: "drawers", n: 1, heights: ["auto"], hardware: { ...structuredClone(kit14), params: { pilotDiameter: 3, pilotDepth: 12 } } }) }
+    const pilots = (x: Module) => buildModule(x).panels.find((p) => p.id === "side-left")!.holes.filter((h) => h.tag === "kit-slide")
+    // Sense regla (Node, tests): els números de la còpia.
+    expect(pilots(mod)[0]).toMatchObject({ diameter: 3, depth: 12 })
+    try {
+      setKitPilotRule({ enabled: true, diameter: 2, depth: 10 })
+      expect(pilots(mod)[0]).toMatchObject({ diameter: 2, depth: 10 })
+      setKitPilotRule({ enabled: false, diameter: 2, depth: 10 })
+      expect(pilots(mod)).toEqual([])
+    } finally {
+      setKitPilotRule(null)
+    }
+  })
+  it("«Ferratges»: els jocs de calaix amb el nom i la NL, els braços pels forats, les potes pels models de la base", () => {
+    const m = defaultModule("m1", "M", { width: 732, height: 720, depth: 500, thickness: 16 })
+    const mod: Module = { ...m, root: setFront(m.root, m.root.id, { kind: "drawers", n: 2, heights: ["auto", "auto"], hardware: structuredClone(kit14) }) }
+    const b = buildModule(mod)
+    const counts = ruleHardwareCounts(b.panels, 0, b.extras, b.hardwareKits)
+    const kit = counts.find((c) => c.id === "kit")!
+    expect(kit.count).toBe(2)
+    expect(kit.detail).toMatch(/DTC MAGIC-PRO .* · NL \d+/)
+    expect(counts.find((c) => c.id === "slide")).toBeUndefined()
+    const flap: Module = { ...m, root: setFront(m.root, m.root.id, { kind: "flap", dir: "down" }) }
+    const fb = buildModule(flap)
+    expect(ruleHardwareCounts(fb.panels).find((c) => c.id === "flap")!.count).toBe(fb.panels.find((p) => p.role === "flap")!.holes.filter((h) => h.tag === "flap").length)
+    // Potes genèriques: les que diu la base; amb models de pota a la base, aquells.
+    expect(ruleHardwareCounts([], 4).find((c) => c.id === "leg")!.count).toBe(4)
+    const base = { role: "bottom", holes: [], fittings: [{ kind: "leg" }, { kind: "leg" }, { kind: "leg" }, { kind: "leg" }, { kind: "leg" }, { kind: "leg" }] } as unknown as Parameters<typeof ruleHardwareCounts>[0][number]
+    expect(ruleHardwareCounts([base], 4).find((c) => c.id === "leg")!.count).toBe(6)
+  })
+})

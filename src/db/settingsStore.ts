@@ -1,5 +1,6 @@
 import { DEFAULT_SETTINGS, SETTINGS_VERSION, parseSettings, type Settings } from "../core/model"
 import { setKnownMaterialNames } from "../core/model/photoUpgrade"
+import { setKitPilotRule } from "../core/model/hardwareKit"
 import { db } from "./db"
 import { renameMaterialEverywhere } from "./materialRefs"
 
@@ -27,9 +28,13 @@ export async function loadSettings(): Promise<{ settings: Settings; problems: st
   return remember({ settings: res.settings, problems: res.problems, readOnly: false })
 }
 
-/** Els àlies dels noms antics de material («X (foto)») depenen dels materials de l'usuari. */
+/**
+ * Els àlies dels noms antics de material («X (foto)») depenen dels materials de l'usuari, i la regla del taller de la
+ * prebroca (`kitPilot`) la llegeix el constructor dels jocs (`planKit`): es posen en carregar i en desar.
+ */
 function remember<T extends { settings: Settings }>(r: T): T {
   setKnownMaterialNames(r.settings.materials.map((m) => m.name))
+  setKitPilotRule(r.settings.kitPilot)
   return r
 }
 
@@ -54,6 +59,7 @@ export async function saveSettings(settings: Settings): Promise<boolean> {
     }
     const version = Math.max(settings.version, storedVersion(prev?.data))
     await db.settings.put({ id: ROW_ID, data: version === settings.version ? settings : { ...settings, version }, updatedAt: Date.now() })
+    setKitPilotRule(settings.kitPilot)
     return true
   })
 }

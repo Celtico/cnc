@@ -6,8 +6,8 @@ import { KIT_BACKS, KIT_CLOSINGS, KIT_LEVEL_LABEL, fmtMm, type HardwareItem, typ
 
 /**
  * Seccions de l'editor d'un **joc paramètric** (Preferències › Ferratges › Calaixos de doble paret): el que s'ha llegit
- * del catàleg, **només lectura** (els jocs de l'app es dupliquen per canviar-ne els números: la prebroca es canvia a
- * «Mides»; la resta de dades del joc, de moment, només al fitxer `core/model/kits/*.ts`). Taula de variants (NL i números
+ * del catàleg, **només lectura** (la prebroca dels cargols és una regla del taller, Preferències › Ferratges › «Prebroca
+ * dels cargols»; la resta de dades del joc, de moment, només al fitxer `core/model/kits/*.ts`). Taula de variants (NL i números
  * d'article), opcions, regles de tria, components, peces de fusta amb les fórmules i mecanitzats, i les hipòtesis de
  * lectura pendents del taller.
  */
