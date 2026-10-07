@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { DEFAULT_GRILLE, DEFAULT_MODULE_HARDWARE, defaultModule, setFront, setShelves, type Carcass, type Composition, type Front, type Module, type Zone } from "../model"
+import { DEFAULT_GRILLE, DEFAULT_MODULE_HARDWARE, HARDWARE_SLOTS, defaultModule, isLegacyHardware, setFront, setShelves, usedHardwareSlots, type Carcass, type Composition, type Front, type Module, type ModuleHardware, type Zone } from "../model"
 import { buildComposition } from "./buildComposition"
 import { catalogCorpus, int, MATERIALS, pick, randomComposition, rng, type Rnd } from "./testCorpus"
 
@@ -45,7 +45,16 @@ function scrambleHidden(m: Module, r: Rnd): Module {
   const fronts = { ...m.fronts }
   if (!fronts.style && r() < 0.5) fronts.style = "overlay"
   if (!fronts.handles && r() < 0.5) fronts.handles = "bar"
-  return { ...m, carcass: c, fronts, root: scrambleZone(m.root, r, m.fronts.handles === "none") }
+  // Llocs de ferratge que el mòdul no fa servir (JoineryForm i FrontsForm només ensenyen `usedHardwareSlots`): un item
+  // d'un altre tipus o un joc sense `kit` no canvia res ni avisa.
+  const used = usedHardwareSlots(m)
+  const hardware = isLegacyHardware(m.hardware) ? m.hardware : { ...(m.hardware as ModuleHardware) }
+  if (!isLegacyHardware(m.hardware))
+    for (const { slot } of HARDWARE_SLOTS) {
+      if (used.has(slot) || r() < 0.4) continue
+      ;(hardware as ModuleHardware)[slot] = r() < 0.5 ? structuredClone(DEFAULT_MODULE_HARDWARE.dowel) : { ...structuredClone(DEFAULT_MODULE_HARDWARE.slide), engine: "drawerKit", name: "Joc sense dades" }
+    }
+  return { ...m, carcass: c, fronts, hardware, root: scrambleZone(m.root, r, m.fronts.handles === "none") }
 }
 
 function randomShelves(r: Rnd): Zone["shelves"] {

@@ -44,7 +44,9 @@ describe("repairComposition", () => {
     expect(out.carcass.frontMaterial).toBeUndefined()
     expect(out.carcass.height).toBe(before.carcass.height)
     expect(out.carcass.material).toBe(before.carcass.material)
-    expect(out.hardware.slide.lengths).toEqual([300])
+    // La còpia d'un lloc es llegeix sencera o res («mai mig ferratge»): una llargada dolenta torna tot el lloc a l'item d'inici.
+    expect(out.hardware.slide).toEqual(DEFAULT_MODULE_HARDWARE.slide)
+    expect(r.problems.some((p) => p.includes("hardware.slide"))).toBe(true)
     expect(out.hardware.hinge).toEqual(before.hardware.hinge)
     expect(out.fronts.style).toBeUndefined()
     expect(out.fronts.outerGap).toBe(before.fronts.outerGap)

@@ -3,7 +3,7 @@ import { DEFAULT_HARDWARE_KITS, DEFAULT_MODULE_HARDWARE, DTC_MAGIC_PRO_HT11, Har
 import { buildModule } from "./buildModule"
 import { kitLineText, planKit } from "./drawerKit"
 import { slotSpec } from "./hardware"
-import { ruleHardwareCounts, usedHardwareSlots } from "./hardwareSummary"
+import { ruleHardwareCounts } from "./hardwareSummary"
 import { hardwareMount } from "./hardwareMount"
 import { hardwarePreview } from "./hardwarePreview"
 
@@ -224,7 +224,6 @@ describe("joc paramètric: construcció", () => {
     expect(fixHardwareDefaults(lib, { slide: "kit-dtc-ht11" }).defaults.slide).toBe("kit-dtc-ht11")
     // El resum «Guies de calaix» compta els calaixos amb joc (parells) i el lloc «guia» surt a la Fusteria.
     expect(ruleHardwareCounts(b.panels).find((c) => c.id === "slide")).toMatchObject({ count: 2, unit: "parells" })
-    expect(usedHardwareSlots(b.panels).has("slide")).toBe(true)
   })
   it("«Com va muntat» i la peça d'exemple: el lateral amb les prebroques i els components", () => {
     const m = hardwareMount(HT11)

@@ -291,15 +291,23 @@ export const slotForEngine = (e: HardwareEngine) => HARDWARE_SLOTS.find((x) => x
  */
 export const slotAccepts = (slot: HardwareSlot, item: Pick<HardwareItem, "engine">): boolean => item.engine === slotOf(slot).engine || (slot === "slide" && item.engine === "drawerKit")
 
+/**
+ * La còpia d'un lloc del mòdul es llegeix **sencera o res** (`repairAtomically`, com el ferratge d'un front): reparada camp
+ * a camp, un joc de calaix amb el `kit` dolent (còpia d'una versió anterior, dada tocada) quedava amb nom de joc, motor
+ * `drawerKit` i sense `kit`, i el constructor deia «no és del tipus que toca». Ara, si no passa l'esquema, el lloc agafa
+ * l'item d'inici (el del mòdul de referència en reparar, `fallback`) amb l'avís de reparació.
+ */
+const moduleSlotSchema = () => repairAtomically(z.preprocess(sanitizeImportedHardware, HardwareItemObjectSchema))
+
 /** Còpia dels ferratges d'un mòdul: un item per lloc. */
 export const ModuleHardwareKitSchema = z.object({
-  hinge: HardwareItemSchema,
-  system32: HardwareItemSchema,
-  dowel: HardwareItemSchema,
-  slide: HardwareItemSchema,
-  flap: HardwareItemSchema,
-  magnet: HardwareItemSchema,
-  handle: HardwareItemSchema,
+  hinge: moduleSlotSchema(),
+  system32: moduleSlotSchema(),
+  dowel: moduleSlotSchema(),
+  slide: moduleSlotSchema(),
+  flap: moduleSlotSchema(),
+  magnet: moduleSlotSchema(),
+  handle: moduleSlotSchema(),
 })
 export type ModuleHardware = z.infer<typeof ModuleHardwareKitSchema>
 
