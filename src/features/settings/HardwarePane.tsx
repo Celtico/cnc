@@ -485,7 +485,8 @@ function HardwareStage({ item, base, materials, mui, onChange }: { item: Hardwar
   const under = useMemo(() => (item.imported ? underlays(item, preview.panels, ownViews, plateViews) : {}), [item, preview, ownViews, plateViews])
   return (
     <Box flex={{ lg: 1 }} flexShrink={0} minW={0} minH={0} bg="bg.subtle" overflowY={{ lg: "auto" }} p={{ base: 3, sm: 4, lg: 6 }}>
-      <Stack gap={5} maxW="760px" mx="auto">
+      {/* A tota l'amplada de la columna (per decisió de l'usuari): el 3D, el pla i les vistes aprofiten la pantalla. */}
+      <Stack gap={5} w="full">
         {preview.error && (
           <Alert.Root status="warning" size="sm">
             <Alert.Indicator />
@@ -595,7 +596,7 @@ function MountPreview({ item, base, materials, noModel }: { item: HardwareItem; 
       )}
       {view === "3d" ? (
         <Stack gap={2}>
-          <Box h={{ base: "300px", md: "380px", lg: "420px" }} rounded="md" overflow="hidden" bg="bg.subtle" data-testid="hardware-mount-3d">
+          <Box h={{ base: "300px", md: "420px", lg: "min(560px, 55dvh)" }} rounded="md" overflow="hidden" bg="bg.subtle" data-testid="hardware-mount-3d">
             <Suspense fallback={<Spinner size="sm" color="wood.solid" m={3} />}>
               <HardwareMount3D mount={mount} materials={materials} open={open} />
             </Suspense>
@@ -619,7 +620,7 @@ function MountPreview({ item, base, materials, noModel }: { item: HardwareItem; 
         </Stack>
       ) : plan ? (
         <Stack gap={2}>
-          <Box w="full" maxW="560px" mx="auto">
+          <Box w="full" maxW="1100px" mx="auto">
             <HardwareMountPlan plan={plan} />
           </Box>
           <Text fontSize="xs" color="fg.muted">
@@ -663,7 +664,7 @@ function ModelPreview({ mount, materials, noModel, generated }: { mount: Hardwar
           {mount.model?.bbox ? `Caixa de ${n(mount.size.width)} × ${n(mount.size.height)} × ${n(mount.size.depth)} mm · ` : ""}{generated ? `cap regla del moble: els ${generated} mecanitzats del generador es fan quan el col·loques a mà.` : "sense cap forat: no hi ha cap regla del moble per a aquest ferratge."}
         </Text>
       </Stack>
-      <Box h={{ base: "300px", md: "380px", lg: "420px" }} rounded="md" overflow="hidden" bg="bg.subtle" data-testid="hardware-mount-3d">
+      <Box h={{ base: "300px", md: "420px", lg: "min(560px, 55dvh)" }} rounded="md" overflow="hidden" bg="bg.subtle" data-testid="hardware-mount-3d">
         <Suspense fallback={<Spinner size="sm" color="wood.solid" m={3} />}>
           <HardwareMount3D mount={mount} materials={materials} open={0} />
         </Suspense>
