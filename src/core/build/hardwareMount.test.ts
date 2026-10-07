@@ -4,7 +4,7 @@ import type { HettichArticle } from "../import/hettich"
 import type { HardwareProposal } from "../import/proposal"
 import { ACCESSORY_ITEMS, DEFAULT_MODULE_HARDWARE, DEFAULT_HARDWARE_LIBRARY, defaultModule, type Module, type Zone } from "../model"
 import { buildModule } from "./buildModule"
-import { hardwareMount, modelCamera, mountCamera, mountPlan } from "./hardwareMount"
+import { hardwareMount, modelCamera, MOUNT_CAMERA_DIST, mountCamera, mountPlan } from "./hardwareMount"
 
 /**
  * Ferratge muntat (Preferències › Ferratges, 3D · Pla): les peces surten del motor de sempre (`buildModule`) amb l'item
@@ -121,16 +121,22 @@ describe("ferratge muntat", () => {
     // Frontissa: des de dins del moble (la cara de la cassoleta mira enrere), de dalt i cap a dins (+X).
     const h = hardwareMount(DEFAULT_MODULE_HARDWARE.hinge)
     const c = mountCamera(h)
-    expect(c.target).toEqual(h.focus!.at)
+    // Mira el mig del que enquadra (la frontissa de baix amb la placa), a tocar del forat principal.
+    for (const k of [0, 1, 2]) expect(Math.abs(c.target[k]! - h.focus!.at[k]!)).toBeLessThan(40)
     expect(len(c.dir)).toBeCloseTo(1, 6)
     expect(c.dir[2]).toBeLessThan(0)
     expect(c.dir[0]).toBeGreaterThan(0)
     expect(c.dir[1]).toBeGreaterThan(0)
-    expect(c.dist).toBe(420)
+    expect(c.dist).toBeGreaterThanOrEqual(MOUNT_CAMERA_DIST.min)
+    expect(c.dist).toBeLessThan(600)
+    // La regió: la cassoleta de baix (Ø35 × 13) amb el braç i la placa al lateral, no la de dalt.
+    expect(h.region.max[1] - h.region.min[1]).toBeLessThan(250)
+    expect(h.region.min[1]).toBeLessThan(h.focus!.at[1])
     // Tirador: des de fora del front.
     const t = mountCamera(hardwareMount(DEFAULT_HARDWARE_LIBRARY.find((x) => x.engine === "barHandle")!))
     expect(t.dir[2]).toBeGreaterThan(0)
-    expect(t.dist).toBe(480)
+    expect(t.dist).toBeGreaterThanOrEqual(MOUNT_CAMERA_DIST.min)
+    expect(t.dist).toBeLessThanOrEqual(MOUNT_CAMERA_DIST.max)
     // Només 3D: tota la caixa a la imatge, la càmera tan a prop com es pot (`modelCamera`).
     const model = { ...plate, id: "hw-m", engine: "model" as const, targets: [], imported: { ...plate.imported!, bbox: { min: [0, 0, 0] as [number, number, number], max: [100, 40, 400] as [number, number, number] } } }
     const mm = mountCamera(hardwareMount(model))

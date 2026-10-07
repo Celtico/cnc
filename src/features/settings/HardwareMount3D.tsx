@@ -16,7 +16,8 @@ const S = 0.001
 /**
  * El ferratge muntat en 3D (Preferències › Ferratges, «3D»): les peces del mòdul d'exemple (`hardwareMount`, fetes pel
  * motor) amb el mateix `PanelMesh` que el visor del moble —materials, forats i ferratges (el GLB importat o el volum de
- * la frontissa de l'app)—, centrades al forat principal. La porta (o l'abatible) s'obre amb `open` (0–1) com al visor.
+ * la frontissa de l'app)—, centrades al punt que mira la càmera (`mountCamera`: enquadra el ferratge amb els seus forats i un
+ * marge de peça, `HardwareMount.region`). La porta (o l'abatible) s'obre amb `open` (0–1) com al visor.
  * Un «només 3D», el model sol enquadrat a la seva caixa (`modelCamera`: un perfil llarg i prim, mirat al llarg perquè se'n
  * vegi la secció). **Sense cap cota** (per decisió de l'usuari: «a les vistes les mides de tot, i al 3D cap mida»; les
  * mides són als plànols 2D de l'editor). Un sol `Canvas` que pinta a demanda; es
