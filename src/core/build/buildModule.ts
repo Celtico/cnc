@@ -290,7 +290,10 @@ class Builder {
   private drawerCount = 0
   private frontCount = 0
 
-  /** Ferratges del mòdul resolts (números i mecanitzats de cada lloc, `core/build/hardware.ts`). */
+  /**
+   * Ferratges del mòdul resolts (números i mecanitzats de cada lloc, `core/build/hardware.ts`), **a demanda**: un lloc
+   * que cap peça fa servir no es llegeix ni avisa (res amagat compta: la frontissa d'un mòdul només de calaixos no hi pinta res).
+   */
   readonly kit: ResolvedKit
   readonly hw: { [S in HardwareSlot]: SlotSpec<S> }
 
@@ -301,7 +304,15 @@ class Builder {
     const kit = (isLegacyHardware(m.hardware) ? migrateModuleHardware(m.hardware) : m.hardware) as ModuleHardware
     this.kit = resolveKit(kit, (message) => this.hardwareWarning(message))
     const k = this.kit
-    this.hw = { hinge: k.hinge.spec, system32: k.system32.spec, dowel: k.dowel.spec, slide: k.slide.spec, flap: k.flap.spec, magnet: k.magnet.spec, handle: k.handle.spec }
+    this.hw = {
+      get hinge() { return k.hinge.spec },
+      get system32() { return k.system32.spec },
+      get dowel() { return k.dowel.spec },
+      get slide() { return k.slide.spec },
+      get flap() { return k.flap.spec },
+      get magnet() { return k.magnet.spec },
+      get handle() { return k.handle.spec },
+    }
   }
 
   private hardwareWarning(message: string, zoneId?: string): void {
@@ -925,8 +936,10 @@ class Builder {
       if (right) ysRight = this.rows(right, rect, "right")
       else this.warnings.push({ code: "no-side", message: `La zona no té panell a la dreta per a la filera System 32.`, zoneId: zone.id })
     }
-    const s = this.hw.system32
-    const rowYs = ysLeft.length ? ysLeft : ysRight.length ? ysRight : system32Ys(rect.y0, rect.y1, s.edgeOffset, s.pitch)
+    // Només qui llegeix la filera (portes, reixetes, prestatges regulables) la necessita: als calaixos i als compartiments
+    // oberts no es toca el System 32 (res amagat compta: un item dolent al lloc no avisa si no es fa servir).
+    const needsRows = (zone.shelves?.adjustable ?? false) || front?.kind === "door" || (front?.kind === "grille" && front.mount === "hinged")
+    const rowYs = ysLeft.length ? ysLeft : ysRight.length ? ysRight : needsRows ? system32Ys(rect.y0, rect.y1, this.hw.system32.edgeOffset, this.hw.system32.pitch) : []
 
     // Prestatges.
     const shelfYs = zone.shelves && zone.shelves.n > 0 ? this.buildShelves(zone, rect, rowYs) : []
@@ -944,7 +957,6 @@ class Builder {
    * maleter): cobreix tota la zona; les fulles de dins queden darrere.
    */
   private buildParentFront(zone: Zone, rect: ZoneRect): void {
-    const s = this.hw.system32
     const front = zone.front!
     const left = this.findLeft(rect)
     const right = this.findRight(rect)
@@ -971,7 +983,8 @@ class Builder {
         if (!ys.length) ys = got
       } else this.warnings.push({ code: "no-side", message: `La zona no té panell a la ${side === "left" ? "esquerra" : "dreta"} per a la filera System 32.`, zoneId: zone.id })
     }
-    this.buildFront(zone, front, rect, left, right, ys.length ? ys : system32Ys(rect.y0, rect.y1, s.edgeOffset, s.pitch))
+    const needsRows = front.kind === "door" || (front.kind === "grille" && front.mount === "hinged")
+    this.buildFront(zone, front, rect, left, right, ys.length ? ys : needsRows ? system32Ys(rect.y0, rect.y1, this.hw.system32.edgeOffset, this.hw.system32.pitch) : [])
   }
 
   private buildFront(zone: Zone, front: Front, rect: ZoneRect, left: VerticalRef | undefined, right: VerticalRef | undefined, rowYs: number[]): void {
@@ -1165,9 +1178,18 @@ class Builder {
    * serveix torna al del mòdul; un d'**importat** que no serveix queda inert (cap forat, `inertHandle`), mai el del mòdul.
    */
   private frontHandle(item: HardwareItem | undefined, zoneId?: string): { spec: SlotSpec<"handle">; item: HardwareItem } {
-    if (!item) return this.kit.handle
-    const res = slotSpec("handle", item, (message) => this.hardwareWarning(message, zoneId))
-    return res.failed && !item.imported ? this.kit.handle : res
+    // A demanda: sense tiradors (push) ningú el llegeix i el lloc «tirador» no es valida (res amagat compta).
+    let cached: { spec: SlotSpec<"handle">; item: HardwareItem } | undefined
+    const resolve = () => {
+      if (cached) return cached
+      if (!item) return (cached = this.kit.handle)
+      const res = slotSpec("handle", item, (message) => this.hardwareWarning(message, zoneId))
+      return (cached = res.failed && !item.imported ? this.kit.handle : res)
+    }
+    return {
+      get spec() { return resolve().spec },
+      get item() { return resolve().item },
+    }
   }
 
   /**
@@ -1360,19 +1382,22 @@ class Builder {
     if (doorH > 2200) this.warnings.push({ code: "door-too-tall", message: `Porta de ${num(doorH)} mm d'alçada (màxim recomanat 2.200).`, zoneId: zone.id })
 
     // La frontissa triada a la porta (si no, la del mòdul); la de vidre no en porta.
-    const hingeHw = front.glass ? this.kit.hinge : this.frontHardware("hinge", front.hardware, zone.id)
+    // (Els llocs es llegeixen a demanda: la porta de vidre no toca ni la frontissa ni el tirador.)
+    const hingeHw = front.glass ? undefined : this.frontHardware("hinge", front.hardware, zone.id)
     // El tirador triat a la porta (si no, el del mòdul).
-    const handleHw = front.glass ? this.kit.handle : this.frontHandle(front.handle, zone.id)
-    const hd = handleHw.spec
+    const handleHw = this.frontHandle(front.glass ? undefined : front.handle, zone.id)
     const make = (id: string, name: string, label: string, x0: number, w: number, hinge: "left" | "right") => {
       if (w > 600) this.warnings.push({ code: "door-too-wide", message: `Porta de ${num(w)} mm d'amplada (màxim recomanat 600).`, zoneId: zone.id })
-      if (front.glass) return this.glassDoor(id, label, x0, ter.y0, w, doorH)
+      if (front.glass || !hingeHw) return this.glassDoor(id, label, x0, ter.y0, w, doorH)
       const door = this.frontPanel(id, name, label, "door", x0, ter.y0, w, doorH)
       this.addCups(door, doorH, hinge, w, rowYs, ter.y0, zone.id, hingeHw, hinge === "left" ? left : right)
+      // Sense tiradors (push): cap forat ni cap lectura del lloc «tirador».
+      if (m.fronts.handles === "none") return this.handle(door, doorH / 2, 0, "x", handleHw, zone.id)
       // Tirador al costat contrari de les frontisses, vertical i a mitja alçada. En una porta estreta cauria a la
       // columna de les cassoletes (on va el braç de la frontissa): no es fa.
+      const hd = handleHw.spec
       const cupBand = hingeHw.spec.cupOffset + hingeHw.spec.cupDiameter / 2 + hd.diameter / 2 + hd.margin
-      if (m.fronts.handles !== "none" && w - hd.inset < cupBand)
+      if (w - hd.inset < cupBand)
         this.warnings.push({ code: "handle", message: `${door.label} de ${num(w)} mm d'amplada: el tirador cauria sobre les frontisses (calen ${num(cupBand + hd.inset)} mm). No es fan els forats: posa-hi un pom o un tirador de cantell.`, zoneId: zone.id, panelId: door.id })
       else this.handle(door, doorH / 2, hinge === "left" ? w - hd.inset : hd.inset, "x", handleHw, zone.id)
     }
@@ -1450,7 +1475,8 @@ class Builder {
     }
     // Tirador al cantell que obre (el contrari del gir), horitzontal i centrat.
     const handleHw = this.frontHandle(front.handle, zone.id)
-    const inset = handleHw.spec.inset
+    // Sense tiradors no es llegeix el lloc (`handle` només marca el push).
+    const inset = this.m.fronts.handles === "none" ? 0 : handleHw.spec.inset
     this.handle(flap, front.dir === "down" ? along - inset : inset, across / 2, "y", handleHw, zone.id)
   }
 

@@ -1,5 +1,6 @@
 import {
   DEFAULT_MODULE_HARDWARE,
+  HARDWARE_SLOTS,
   damagedImportMessage,
   evalExpr,
   hardwareVars,
@@ -267,6 +268,12 @@ export function slotSpec<S extends HardwareSlot>(slot: S, item: HardwareItem | u
   // es fan amb el joc (`buildKitDrawers`), no amb aquests números. El `spec` és el de la guia d'inici (el tipus del lloc),
   // però l'`item` és el joc: qui construeix mira `isDrawerKit(item)`.
   if (item && slot === "slide" && isDrawerKit(item)) return { spec: fn(DEFAULT_MODULE_HARDWARE.slide), item }
+  // Un joc sense les dades del joc (`kit`) no és «del tipus que no toca»: és un joc malmès (còpia d'una versió anterior).
+  if (item && item.engine === "drawerKit") {
+    onError?.(`${slotOf(slot).label}: «${item.name}» és un joc de calaix malmès (sense les dades del joc). Es fa servir el d'inici de l'app.`)
+    const fallback = DEFAULT_MODULE_HARDWARE[slot]
+    return { spec: fn(fallback), item: fallback, failed: true }
+  }
   if (item) {
     try {
       return { spec: fn(item), item }
@@ -281,16 +288,23 @@ export function slotSpec<S extends HardwareSlot>(slot: S, item: HardwareItem | u
   return { spec: fn(fallback), item: fallback, ...(item ? { failed: true } : {}) }
 }
 
-/** Tots els llocs d'un kit resolts (els del mòdul). */
-export function resolveKit(kit: ModuleHardware, onError?: (message: string) => void) {
-  return {
-    hinge: slotSpec("hinge", kit.hinge, onError),
-    system32: slotSpec("system32", kit.system32, onError),
-    dowel: slotSpec("dowel", kit.dowel, onError),
-    slide: slotSpec("slide", kit.slide, onError),
-    flap: slotSpec("flap", kit.flap, onError),
-    magnet: slotSpec("magnet", kit.magnet, onError),
-    handle: slotSpec("handle", kit.handle, onError),
+/** Un lloc resolt: els números (`spec`) i l'item que els dona (el del mòdul, o el d'inici si aquell no serveix). */
+export type ResolvedSlot<S extends HardwareSlot> = { spec: SlotSpec<S>; item: HardwareItem; failed?: boolean }
+export type ResolvedKit = { [S in HardwareSlot]: ResolvedSlot<S> }
+
+/**
+ * Els llocs d'un kit (els del mòdul) resolts **a demanda**: cada lloc es llegeix (i, si no serveix, avisa) el primer cop
+ * que algú el fa servir. Un lloc que el mòdul no fa servir (la frontissa d'un mòdul només de calaixos, la guia d'un
+ * abatible) no es valida ni avisa: res amagat compta (`usedHardwareSlots`, `core/model/usedHardware.ts`, diu els mateixos).
+ */
+export function resolveKit(kit: ModuleHardware, onError?: (message: string) => void): ResolvedKit {
+  const cache: Partial<ResolvedKit> = {}
+  const out = {} as ResolvedKit
+  for (const { slot } of HARDWARE_SLOTS) {
+    Object.defineProperty(out, slot, {
+      enumerable: true,
+      get: () => (cache[slot] ??= slotSpec(slot, kit[slot], onError) as never),
+    })
   }
+  return out
 }
-export type ResolvedKit = ReturnType<typeof resolveKit>

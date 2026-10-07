@@ -39,7 +39,7 @@ import {
 import { FoldItem } from "../../components/Fold"
 import { sectionKey } from "../../components/foldContext"
 import { writeSessionFlag } from "../../components/sessionState"
-import { ruleHardwareCounts, usedHardwareSlots } from "../../core/build/hardwareSummary"
+import { ruleHardwareCounts } from "../../core/build/hardwareSummary"
 import { Workspace } from "../../components/Workspace"
 import { ViewOptions, ViewTile } from "../../components/ViewOptions"
 import { useWorkspace } from "../../components/useWorkspace"
@@ -53,7 +53,7 @@ import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
 import { materialIssues } from "../../core/build/materialIssues"
-import { applySettingsToModule,  defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule, usedSlotSet, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, FrontsForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -1065,7 +1065,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
               // (`module.fronts`, `module.hardware`). La caixa (fons, espigues, System 32) és a la Fusteria del mòdul.
               zone.id === module.root.id && (
                 <FoldItem id="zone-fronts" title="Fronts i calaixos" icon={LuDoorClosed} defaultOpen={false}>
-                  <FrontsForm module={module} onChange={updateModule} usedSlots={usedHardwareSlots(panels.filter((p) => p.module === moduleIndex + 1))} />
+                  <FrontsForm module={module} onChange={updateModule} usedSlots={usedSlotSet(module)} />
                 </FoldItem>
               )
             }
@@ -1167,7 +1167,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             <MaterialsForm carcass={module.carcass} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
           </FoldItem>
           <FoldItem id="mod-joinery" title="Fusteria (avançat)" icon={LuHammer} defaultOpen={false}>
-            <JoineryForm module={module} onChange={updateModule} usedSlots={usedHardwareSlots(panels.filter((p) => p.module === moduleIndex + 1))} />
+            <JoineryForm module={module} onChange={updateModule} usedSlots={usedSlotSet(module)} />
           </FoldItem>
           <FoldItem id="mod-hardware" title="Ferratges" icon={LuWrench} badge={hardwareBadge(scopePlacements(comp, { kind: "module", moduleId: module.id }).length, panels.filter((p) => p.module === moduleIndex + 1), module.carcass.base.kind === "legs" ? 4 : 0)}>
             <HardwarePlacements
