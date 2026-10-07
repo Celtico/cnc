@@ -3,7 +3,6 @@ import { LuArrowUp, LuCopy, LuEllipsis, LuColumns2, LuRows2, LuPlus, LuRows3, Lu
 import type { ReactNode } from "react"
 import { FoldItem } from "../../components/Fold"
 import {
-  DEFAULT_GRILLE,
   addChild,
   duplicateZone,
   parentOf,
@@ -12,6 +11,7 @@ import {
   setFront,
   setShelves,
   splitZone,
+  switchFront,
   unsplitZone,
   updateZone,
   KIT_BACKS,
@@ -42,21 +42,6 @@ const FRONT_LABELS: Record<Front["kind"] | "none", string> = {
   flap: "Abatible",
   grille: "Reixeta",
   panel: "Front fix",
-}
-
-function defaultFront(kind: Front["kind"]): Front {
-  switch (kind) {
-    case "door":
-      return { kind, mode: "single", hinge: "left" }
-    case "drawers":
-      return { kind, n: 3, heights: ["auto", "auto", "auto"] }
-    case "flap":
-      return { kind, dir: "down" }
-    case "grille":
-      return { kind, pattern: DEFAULT_GRILLE, mount: "removable", hinge: "left" }
-    case "panel":
-      return { kind }
-  }
 }
 
 /**
@@ -517,7 +502,7 @@ export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title
                 label="Tipus de front"
                 value={zone.front?.kind ?? "none"}
                 options={options.map((k) => ({ value: k, label: FRONT_LABELS[k], icon: FRONT_ICONS[k] }))}
-                onChange={(k) => onChange(setFront(root, zone.id, k === "none" ? null : defaultFront(k)))}
+                onChange={(k) => onChange(switchFront(root, zone.id, k))}
               />
             </FormRow>
             {zone.front && <FrontFields front={zone.front} openRatio={openRatio} hardware={hardware} noHandles={noHandles} kits={kits} onChange={(f) => onChange(setFront(root, zone.id, f))} />}

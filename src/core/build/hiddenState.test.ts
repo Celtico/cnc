@@ -64,6 +64,11 @@ function randomShelves(r: Rnd): Zone["shelves"] {
 function scrambleZone(z: Zone, r: Rnd, noHandles: boolean): Zone {
   const out: Zone = { ...z }
   const f = z.front
+  if (r() < 0.5) {
+    const fronts: NonNullable<Zone["fronts"]> = {}
+    for (const rf of REMEMBERED) if (rf.kind !== f?.kind && r() < 0.5) fronts[rf.kind] = structuredClone(rf)
+    if (Object.keys(fronts).length) out.fronts = fronts
+  }
   if (z.split) {
     // Un compartiment dividit no ensenya Prestatges (ni la barra).
     if (r() < 0.5) out.shelves = randomShelves(r)
@@ -87,6 +92,15 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean): Zone {
 
 /** Un tirador diferent del del mòdul (una altra distància i Ø): el que es triaria a «Tirador» d'un front. */
 const OTHER_HANDLE = { ...DEFAULT_MODULE_HARDWARE.handle, id: "hw-tirador-amagat", params: { ...DEFAULT_MODULE_HARDWARE.handle.params, diameter: 8 }, pitch: { steps: [], else: 320 } }
+
+/** Un front recordat d'un altre tipus (`Zone.fronts`, el que es recupera en tornar a aquell contingut): no construeix res. */
+const REMEMBERED: Front[] = [
+  { kind: "drawers", n: 4, heights: [150, "auto", "auto", "auto"], kit: { closing: "push", back: "metal" }, handle: OTHER_HANDLE },
+  { kind: "door", mode: "double", hinge: "right", glass: true },
+  { kind: "flap", dir: "up", hardware: { ...DEFAULT_MODULE_HARDWARE.flap, params: { ...DEFAULT_MODULE_HARDWARE.flap.params, diameter: 10 } } },
+  { kind: "grille", pattern: DEFAULT_GRILLE, mount: "hinged", hinge: "right", hatch: { x: 50, y: 50, w: 120, h: 120 } },
+  { kind: "panel" },
+]
 
 function scrambleFront(f0: Front, r: Rnd, noHandles: boolean): Front {
   // Sense tiradors (push): el «Tirador» dels fronts no surt ni compta.

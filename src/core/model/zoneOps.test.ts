@@ -56,11 +56,14 @@ describe("zoneOps", () => {
     expect(z.split!.children[0]!.shelves).toBeUndefined()
     z = setShelves(z, c0, { n: 1, adjustable: false })
     z = setFront(z, c0, { kind: "drawers", n: 3, heights: [] })
-    // Els calaixos treuen els prestatges.
-    expect(z.split!.children[0]!.shelves).toBeUndefined()
+    // Els calaixos no treuen els prestatges: amb calaixos no es veuen ni compten (`visibleZone`) i tornen en treure'ls.
+    expect(z.split!.children[0]!.shelves).toEqual({ n: 1, adjustable: false })
     expect(z.split!.children[0]!.front?.kind).toBe("drawers")
     z = setFront(z, c0, null)
     expect(z.split!.children[0]!.front).toBeUndefined()
+    expect(z.split!.children[0]!.shelves).toEqual({ n: 1, adjustable: false })
+    // El front d'abans es recorda per si s'hi torna.
+    expect(z.split!.children[0]!.fronts?.drawers?.kind).toBe("drawers")
   })
 })
 
