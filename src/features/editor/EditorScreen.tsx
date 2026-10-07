@@ -38,7 +38,7 @@ import {
 import { FoldItem } from "../../components/Fold"
 import { sectionKey } from "../../components/foldContext"
 import { writeSessionFlag } from "../../components/sessionState"
-import { ruleHardwareCounts } from "../../core/build/hardwareSummary"
+import { ruleHardwareCounts, usedHardwareSlots } from "../../core/build/hardwareSummary"
 import { Workspace } from "../../components/Workspace"
 import { ViewOptions, ViewTile } from "../../components/ViewOptions"
 import { useWorkspace } from "../../components/useWorkspace"
@@ -1149,7 +1149,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             <MaterialsForm carcass={module.carcass} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
           </FoldItem>
           <FoldItem id="mod-joinery" title="Fusteria (avançat)" icon={LuHammer} defaultOpen={false}>
-            <JoineryForm module={module} onChange={updateModule} />
+            <JoineryForm module={module} onChange={updateModule} usedSlots={usedHardwareSlots(panels.filter((p) => p.module === moduleIndex + 1))} />
           </FoldItem>
           <FoldItem id="mod-hardware" title="Ferratges" icon={LuWrench} badge={hardwareBadge(scopePlacements(comp, { kind: "module", moduleId: module.id }).length, panels.filter((p) => p.module === moduleIndex + 1), module.carcass.base.kind === "legs" ? 4 : 0)}>
             <HardwarePlacements
