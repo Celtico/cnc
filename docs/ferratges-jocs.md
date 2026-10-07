@@ -24,7 +24,7 @@ l'HT10 N (62,5), l'HT12 K (126), l'HT13 C (174) i l'HT14 F (238), que tenen la m
   `KIT_FINISHES`, el número és el mateix) (`Front.kit`, `KitOptions`; res amagat compta: amb una guia normal no es
   llegeixen), la fila **Fons** (el gruix que demana el joc, 16: fix, «el joc demana 16 mm») i la fitxa **Joc**: NL triada,
   primeres línies de la comanda i les mides del fons A i del darrere B.
-- O al **mòdul**: Fusteria (avançat) › **Guia de calaix** accepta un joc (`slotAccepts`; `slotSpec("slide", joc)` el deixa
+- O al **mòdul**: Interior › Fronts i calaixos › **Guia de calaix** accepta un joc (`slotAccepts`; `slotSpec("slide", joc)` el deixa
   passar amb l'`item` = el joc i el `spec` de la guia d'inici, sense cap avís; `kitFrom` / `fixHardwareDefaults` també, així
   Preferències › Ferratges pot tenir-lo per defecte als mòduls nous). Tots els calaixos del mòdul sense guia pròpia es fan
   amb el joc, exactament igual que triat al front (`buildDrawers` mira `isDrawerKit(item)` de la guia resolta); el front

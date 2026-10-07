@@ -1,5 +1,6 @@
 import { Button, HStack, IconButton, Menu, Portal, Stack, Switch, Text } from "@chakra-ui/react"
 import { LuArrowUp, LuCopy, LuEllipsis, LuColumns2, LuRows2, LuPlus, LuRows3, LuRuler, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
+import type { ReactNode } from "react"
 import { FoldItem } from "../../components/Fold"
 import {
   DEFAULT_GRILLE,
@@ -111,6 +112,7 @@ export function ZonePanel({
   hardware,
   noHandles = false,
   kits,
+  afterFront,
 }: {
   root: Zone
   zone: Zone
@@ -123,6 +125,8 @@ export function ZonePanel({
   noHandles?: boolean
   /** Calaixos d'aquesta zona fets amb un joc paramètric (del constructor): NL, números i fusta. */
   kits?: KitOrder[]
+  /** Seccions de després del Front (a l'«Interior», l'arrel: «Fronts i calaixos» del mòdul). */
+  afterFront?: ReactNode
 }) {
   const parent = parentOf(root, zone.id)
   const index = parent?.split ? parent.split.children.findIndex((c) => c.id === zone.id) : -1
@@ -161,11 +165,13 @@ export function ZonePanel({
           </FoldItem>
           {/* Portes que tapen tota la zona dividida (armari: penjador i maleter darrere). */}
           <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} kinds={["none", "door", "panel"]} title="Front de tota la zona" />
+          {afterFront}
           {sizeField}
         </>
       ) : (
         <>
           <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} />
+          {afterFront}
 
           {zone.front?.kind !== "drawers" && (
             <FoldItem id="zone-shelves" title="Prestatges" badge={zone.shelves?.n || undefined} icon={LuRows3}>

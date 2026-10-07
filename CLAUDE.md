@@ -197,7 +197,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     un joc de **calaix de doble paret** (DTC MAGIC-PRO N/M/K/C/F, `HardwareItem.kit`, motor `drawerKit`), amb
     **Tancament** (suau · push-open · push + suau), **Darrere** (fusta · metàl·lic) i **Acabat** dels laterals (blanc seda ·
     gris mat, només el color del 3D) (`Front.kit`; res amagat compta: amb una guia normal no es llegeixen). El joc també
-    pot ser la **«Guia de calaix» del mòdul** (Fusteria avançat, `module.hardware.slide`; `slotAccepts`, `slotSpec` el
+    pot ser la **«Guia de calaix» del mòdul** (Interior › Fronts i calaixos, `module.hardware.slide`; `slotAccepts`, `slotSpec` el
     deixa passar amb l'item = el joc): tots els calaixos sense guia pròpia es fan amb el joc, igual que triat al front (el
     front hi llegeix les opcions, «El del mòdul (joc de calaix)» al selector). El gruix del fons el **demana el joc** (16,
     `TB`): la fitxa del calaix el mostra fix («el joc demana 16 mm»), res a triar ni suggerir (el «Gruix del fons» de la
@@ -720,8 +720,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     Materials de tot el moble (aplica a tots els mòduls), Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
     Preferències»; `CabinetViewer sceneFinish`, `renderThumb(…, finish)`).
   - Mòdul: Mides · Caixa (abans «Estructura», es confonia amb la pestanya de l'arbre) · Materials · Fusteria (avançat;
-    els jocs i **només els ferratges que el mòdul fa servir**: `usedHardwareSlots`, pels forats i talls de les seves peces;
-    un mòdul amb un calaix i un compartiment obert no ensenya frontissa, braç ni imant) ·
+    **només la caixa**, per decisió de l'usuari: Ranura o Retirada del fons quan toca i els ferratges dels laterals i de
+    les unions, Espiga i Filera System 32, `JoineryForm`; **només els que el mòdul fa servir**: `usedHardwareSlots`, pels
+    forats i talls de les seves peces) ·
     **Ferratges** (`LuWrench`; com la llista d'un configurador de fabricant, `composition/HardwarePlacements.tsx` +
     `placements.ts`; insígnia «n a mà · m de regles»): **Col·locats a mà**, una fila per col·locat (nom · peça, l'avís a
     sota) amb Editar · Duplicar · Eliminar (`LuPencil` · `LuCopy` · `LuTrash2`, `PlacementButtons`); tocar-ne un el tria
@@ -739,7 +740,12 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     (`frontMaterial`, buit = el del cos) i fons.
   - Compartiment (`ZonePanel`): accions com a icones a la capçalera (Pare · Duplicar · Eliminar; a l'«Interior», l'arrel,
     cap: no es duplica, no es retalla ni s'elimina, i ⌘D, ⌘X i Suprimir avisen sense tocar el porta-retalls) i Front · Prestatges ·
-    Mida · Dividir. **Sense «General»**: cada apartat és una secció pròpia amb la seva icona i el valor triat a la insígnia
+    Mida · Dividir. **L'inspector del mòdul és de la caixa; el de l'«Interior» (l'arrel), dels fronts i calaixos**: només
+    a l'arrel, després del Front, la secció **«Fronts i calaixos»** (`LuDoorClosed`, `FrontsForm` a `CarcassForm.tsx`,
+    `afterFront` del `ZonePanel`) amb Joc front–cos · Joc entre fronts · Retranqueig prest. i els ferratges **per defecte**
+    del mòdul (Frontissa · Guia de calaix, també els jocs · Braç d'abatible · Imant · Tirador; `HardwarePick`, filtrats per
+    `usedHardwareSlots`): editen `module.fronts` i `module.hardware` (les mateixes dades d'abans, només canvia la UI);
+    cada porta, calaix o abatible en pot triar un altre al seu Front. **Sense «General»**: cada apartat és una secció pròpia amb la seva icona i el valor triat a la insígnia
     (icona dinàmica on hi ha opcions, com els compartiments); el que no toca no surt. Peça lliure (`PartInspector`): Efecte ·
     Orientació · Mides · Material (amb la Veta) · Forma · CNC (amb el Cantell) · Encaixos (de CNC, no als objectes) · Grup · Enganxada (si
     hi ha mòduls) · Posició · Encaixos (tot el moble, si la peça en fa); la que talla no té Material ni CNC. Objecte (`RefInspector`, accions
@@ -1711,7 +1717,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Front | Una porta · Dues portes · Abatible avall · amunt · Ranures horitzontals · verticals (reixeta) | `LuDoorClosed` · `LuFlipHorizontal2` · `LuArrowDownToLine` · `LuArrowUpToLine` · `LuAlignJustify` · `LuColumns3` |
 | Front | Recobrents (fronts) | `LuSquareStack` |
 | Forma | Rectangle · Arrodonit · Oval (tauler de taula) · Efecte obstacle | `LuRectangleHorizontal` · `LuSquircle` · `LuCircle` · `LuShield` |
-| Inspector | Mides · Caixa (base, fons, tapa, laterals) · Materials · Fusteria · Front · Pare | `LuMoveDiagonal` · `LuFrame` · `LuPalette` · `LuHammer` · `LuDoorClosed` · `LuArrowUp` |
+| Inspector | Mides · Caixa (base, fons, tapa, laterals) · Materials · Fusteria · Front · Fronts i calaixos (Interior) · Pare | `LuMoveDiagonal` · `LuFrame` · `LuPalette` · `LuHammer` · `LuDoorClosed` · `LuDoorClosed` · `LuArrowUp` |
 | Inspector | Fons en ranura · Cargolat darrere · Encastat · Sense fons | `LuLayers2` · `LuDrill` · `LuInspectionPanel` · `LuSquareDashed` |
 | Inspector | Resum del moble · Posició | `LuBox` · `LuMove` |
 | Inspector | Grup (peces lliures) · Enganxada (a un mòdul, al terra / a la paret) · CNC de la peça (la de Màquina CNC) | `LuGroup` · `LuLink` · `LuFactory` |
