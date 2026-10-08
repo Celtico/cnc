@@ -52,7 +52,7 @@ import { movingGroups, openingCollisions } from "../../components/viewer/opening
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
 import { materialIssues } from "../../core/build/materialIssues"
 import { splitChildSizes } from "../../core/build/layout"
-import { applySettingsToModule, moduleHasInnerPieces, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, moduleRows, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule, moduleHasInnerPieces, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, moduleRows, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, InnerClearanceRow, JointForm, MaterialsForm } from "../composition/CarcassForm"
@@ -722,33 +722,6 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     return null
   }, [selection, comp, zone, module, moduleBuild])
 
-  /** Enganxa un mòdul nou al costat del seleccionat, amb la mateixa alçada i fondària. */
-  const addModuleBeside = (side: "left" | "right") => {
-    if (!module) return
-    const fresh = applySettingsToModule(settings, defaultModule(newId("m"), `Mòdul ${comp.modules.length + 1}`))
-    const m: Module = {
-      ...fresh,
-      carcass: {
-        ...fresh.carcass,
-        width: 600,
-        height: module.carcass.height,
-        depth: module.carcass.depth,
-        material: module.carcass.material,
-        thickness: module.carcass.thickness,
-        base: module.carcass.base,
-        back: module.carcass.back,
-        // El fons igual que el del costat (encastat: retirada, material i gruix; si no, el mòdul nou seria diferent).
-        backMaterial: module.carcass.backMaterial,
-        backThickness: module.carcass.backThickness,
-        ...(module.carcass.backInsetSetback !== undefined ? { backInsetSetback: module.carcass.backInsetSetback } : {}),
-      },
-    }
-    const modules = [...comp.modules]
-    modules.splice(side === "left" ? moduleIndex : moduleIndex + 1, 0, { ...m, gapBefore: 0 })
-    setComp({ ...comp, modules })
-    selectModule(m.id)
-  }
-
   // Els de fusteria i, com que el build no llegeix Preferències, els de materials (no hi és, gruix que no té).
   const warnings = useMemo(() => {
     if (!build) return NO_WARNINGS
@@ -1383,7 +1356,6 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             modules={viewerModules}
             selectedModuleId={(selection.kind === "module" || selection.kind === "zone") && module ? module.id : null}
             onSelectModule={selectFrom3D}
-            onAddModule={addModuleBeside}
             ghosts={ghosts}
             viewDir={viewDir}
             opening={viewer.opening}
