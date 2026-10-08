@@ -8,7 +8,7 @@ import { FreePartSchema, JoinerySchema, PART_AXES as PART_AXES_C, tidyPart, type
 import { DEFAULT_LEGACY_HARDWARE, HardwareItemObjectSchema, ModuleHardwareKitSchema, HardwarePlacementSchema, sanitizeImportedHardware, isLegacyHardware, kitFromLegacy, migrateModuleHardware, type HardwareItem, type ModuleHardware } from "./hardware"
 import { repairAtomically } from "./repair"
 import { KitOptionsSchema } from "./hardwareKit"
-import { canHoldShelves, carcassBounds, type ZoneBounds } from "./zoneSupport"
+import { canHoldFront, canHoldShelves, carcassBounds, childBounds, type ZoneBounds } from "./zoneSupport"
 
 /**
  * Model de composició: mòduls d'esquerra a dreta, cadascun amb una carcassa i un
@@ -839,14 +839,14 @@ export function visibleModule(m: Module): Module {
   if (c.joint !== "mitre" || !jointApplies(c)) delete carcass.joint
   // Tauler de taula: només amb la tapa sencera.
   if (c.top.kind !== "full") delete carcass.tableTop
-  // Fons del calaix: només amb calaixos (la fila de Materials no surt sense).
-  if (!hasDrawers(m.root) || !c.drawerBottomMaterial) delete carcass.drawerBottomMaterial
   const root = visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(c))
+  // Fons del calaix: només amb calaixos que es fan (la fila de Materials no surt sense).
+  if (!hasDrawers(root) || !c.drawerBottomMaterial) delete carcass.drawerBottomMaterial
   // Folgança de les peces de dins: només amb l'arrel dividida (la fila no surt sense); 0 és l'absència.
   if (!carcass.innerClearance || !hasInnerPieces(root)) delete carcass.innerClearance
   const fronts = { ...m.fronts }
   // L'estil (recobrents / encastats) només compta si hi ha algun front que es construeix (la fila «Estil» no surt sense).
-  if (fronts.style === "overlay" || !hasBuiltFronts(m.root)) delete fronts.style
+  if (fronts.style === "overlay" || !hasBuiltFronts(root)) delete fronts.style
   if (fronts.handles === "bar") delete fronts.handles
   return { ...m, carcass, fronts, root }
 }
@@ -936,8 +936,11 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
   delete out.fronts
   // Tapat pel front d'una zona de més amunt (`walkBuiltZones`): el seu front no es fa (es conserva a la composició) i el
   // compartiment és com si fos obert (els prestatges, la barra i la llum de dins sí que es fan).
-  const childCovered = covered || !!z.front
   if (covered) delete out.front
+  // Un front d'un compartiment que no és aguantat pels quatre costats (`canHoldFront`, `zoneSupport.ts`) no es fa: el
+  // compartiment és com obert (es conserva i torna amb la peça que hi falta). Tampoc no tapa els de dins.
+  if (out.front && !canHoldFront(bounds, out.front.kind)) delete out.front
+  const childCovered = covered || !!out.front
   if (z.split) {
     // Un compartiment dividit no té prestatges ni barra (l'inspector no els ensenya).
     delete out.shelves
@@ -948,7 +951,7 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
     out.split = {
       ...z.split,
       children: z.split.children.map((c, i) =>
-        visibleZone(c, kitDefault, childCovered, dir === "v" ? { ...bounds, left: bounds.left || i > 0, right: bounds.right || i < n - 1 } : { ...bounds, bottom: bounds.bottom || i > 0, top: bounds.top || i < n - 1 }),
+        visibleZone(c, kitDefault, childCovered, childBounds(bounds, dir, i === 0, i === n - 1)),
       ),
     }
   } else if (!canHoldShelves(bounds)) {

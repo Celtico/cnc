@@ -192,10 +192,16 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     **Accessoris** (barra, llum): una peça a cada costat (`canHoldShelves`); sense, `visibleZone` no els fa (res amagat
     compta: cap prestatge flotant, es conserven i tornen amb els laterals) i no surten. **Dividir**: només les direccions
     on el divisor té on unir-se (`splitDirsFor`: el vertical, a sota i a sobre; el travesser, als dos costats; cap, la
-    secció no surt; una divisió que ja hi és es pot treure sempre). **Contingut** (`canHoldFront`): porta i abatible, un
-    lateral o divisor; calaixos, tots dos; reixeta i front fix, alguna peça; obert sempre. Els que no hi poden anar no
-    surten (el triat sí) i l'ajuda diu per què (`frontLimitsHelp`); «Dues» portes, el costat de les frontisses i la
-    reixeta amb frontisses, igual. Tests `model/zoneSupport.test.ts` i `build/hiddenState.test.ts`.
+    secció no surt; una divisió que ja hi és es pot treure sempre). **Contingut** (`canHoldFront`): un front (porta,
+    calaixos, abatible, reixeta, front fix) només amb el compartiment **aguantat pels quatre costats** (`frontHeld`:
+    lateral o divisor a esquerra i dreta, peça a sota i a sobre; els travessers i divisors de dins sempre compten). Per
+    decisió de l'usuari («si no té tapa o no té base, es queda com està»), la tapa o la base que el mòdul no té («Sense
+    tapa», «Sense base»; `ZoneBounds.noTop/noBase`, només als compartiments de la vora) compten com a aguantades: a la
+    pràctica, a sota i a sobre sempre ho són i manen els costats. A sobre, les regles de cada tipus (calaixos, «Dues»
+    portes, el costat de les frontisses, la reixeta amb frontisses). Els que no hi poden anar no surten (el triat sí) i
+    l'ajuda diu per què (`frontLimitsHelp`; del triat, que no es fa). Res amagat compta: `visibleZone` fa el
+    compartiment com obert (el front es conserva, no tapa els de dins i torna amb la peça). Tests
+    `model/zoneSupport.test.ts` i `build/hiddenState.test.ts`.
   - **Peces de dins** (`Carcass.innerClearance`, 0–3 mm; per decisió de l'usuari: «no ha de comptar el nivell de divisió,
     ja sigui horitzontal o vertical; només a partir del primer nivell de la divisió, i només a les peces de divisió interior
     1 mm menys»): si l'**arrel del mòdul és dividida**, **tots** els divisors i prestatges fixos (de qualsevol nivell,
@@ -531,7 +537,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   surt (també els fronts dels calaixos), tauler de taula sense tapa sencera, prestatges i barra als calaixos, al **front fix** i als
   compartiments dividits, gruix i «a ras» sense prestatges, alçades de calaix de més, frontissa de les dues portes, patró de
   reixeta de l'altre tipus, l'imant triat d'una reixeta amb frontisses i sense trapa, el marc d'una porta que no és de vidre,
-  el «Fons del calaix» sense calaixos, els prestatges, les fileres, la barra i la llum d'un compartiment sense una peça a cada costat (`zoneSupport.ts`), l'estil dels fronts sense cap front, la folgança de les peces de dins d'un mòdul sense dividir, el front d'un compartiment **tapat** pel
+  el «Fons del calaix» sense calaixos, els prestatges, les fileres, la barra i la llum d'un compartiment sense una peça a cada costat i el front d'un compartiment que no és aguantat pels quatre costats (`zoneSupport.ts`), l'estil dels fronts sense cap front, la folgança de les peces de dins d'un mòdul sense dividir, el front d'un compartiment **tapat** pel
   d'una zona de més amunt (el compartiment és com obert: prestatges i accessoris sí), i els **fronts recordats** (`Zone.fronts`). Sense fons, el fons dels calaixos surt
   del material del cos. Sense cap prestatge, «Regulables» es veu i compta (fileres System 32). **Els llocs de ferratge que
   el mòdul no fa servir no es llegeixen** (vegeu Ferratges com a dades). **Una opció nova que amaga camps s'afegeix a
@@ -1932,7 +1938,7 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
     sota, mai al revés (Laterals abans de Parets i Cantonades; l'imant de la reixeta després de Muntatge i Trapa;
     «Acabats» de l'Interior després del que ensenya la pantalla). El que una opció de dalt fa irrellevant no
     surt (un compartiment tapat no ensenya el seu Front; sense fronts, ni estil ni folgances ni material dels fronts;
-    sense laterals ni divisors, ni prestatges ni accessoris; sense on unir el divisor, ni Dividir: `zoneSupport.ts`).
+    sense laterals ni divisors, ni prestatges ni accessoris ni fronts; sense on unir el divisor, ni Dividir: `zoneSupport.ts`).
   - **Un sol lloc per decisió**: una tria surt un cop a cada pantalla. Els **per defecte** del mòdul («Per defecte dels
     compartiments») només surten si algun compartiment els hereta («Com el mòdul») i no és el que ja ensenya la seva
     fila a la mateixa pantalla. Res del que la construcció no llegeix no surt, i al revés (`usedHardwareSlots`,

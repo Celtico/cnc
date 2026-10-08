@@ -52,6 +52,6 @@ describe("mòdul nou del + de «Mòduls»", () => {
     expect(b.panels.map((p) => p.role)).toEqual(["bottom"])
     expect(b.warnings).toEqual([])
     expect(visibleModule(m).root.shelves).toBeUndefined()
-    expect(zoneBounds(m, m.root.id)).toEqual({ left: false, right: false, bottom: true, top: false })
+    expect(zoneBounds(m, m.root.id)).toEqual({ left: false, right: false, bottom: true, top: false, noBase: false, noTop: true })
   })
 })

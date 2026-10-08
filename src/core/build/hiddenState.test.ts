@@ -49,7 +49,7 @@ function scrambleHidden(m: Module, r: Rnd): Module {
   if (!fronts.handles && r() < 0.5) fronts.handles = "bar"
   // Interior › Acabats: sense cap front que es faci (els tapats no compten) no surten l'estil ni les folgances;
   // sense cap prestatge (ni llum) que es retiri, el retranqueig.
-  if (!anyBuiltFront(m.root)) {
+  if (!anyBuiltFront(m.root, { left: c.sides.left, right: c.sides.right })) {
     // Materials › Fronts tampoc no surt.
     if (r() < 0.5) c.frontMaterial = pick(r, MATERIALS)
     if (r() < 0.5) fronts.style = pick(r, ["overlay", "inset"] as const)
@@ -75,10 +75,15 @@ function scrambleHidden(m: Module, r: Rnd): Module {
   return { ...m, carcass: c, fronts, hardware, root: scrambleZone(m.root, r, m.fronts.handles === "none", false, { left: c.sides.left, right: c.sides.right }) }
 }
 
-/** Algun front que es fa: el d'un compartiment que no és dins d'un altre amb front (escrit a part de `walkBuiltZones`). */
-function anyBuiltFront(z: Zone, covered = false): boolean {
-  if (z.front && !covered) return true
-  return !!z.split?.children.some((c) => anyBuiltFront(c, covered || !!z.front))
+/**
+ * Algun front que es fa: el d'un compartiment aguantat pels quatre costats que no és dins d'un altre amb front (escrit a
+ * part de `walkBuiltZones` i `zoneBoundsMap`).
+ */
+function anyBuiltFront(z: Zone, sides: Sides, covered = false): boolean {
+  const held = frontHeld(sides)
+  if (z.front && held && !covered) return true
+  const n = z.split?.children.length ?? 0
+  return !!z.split?.children.some((c, i) => anyBuiltFront(c, childSides(sides, z.split!.dir, i, n), covered || (!!z.front && held)))
 }
 
 /** Algun compartiment final (no de calaixos ni de front fix que es fan) amb prestatges o amb llum. */
@@ -103,6 +108,14 @@ function randomShelves(r: Rnd): Zone["shelves"] {
  */
 type Sides = { left: boolean; right: boolean }
 
+const childSides = (sides: Sides, dir: "v" | "h", i: number, n: number): Sides => (dir === "v" ? { left: sides.left || i > 0, right: sides.right || i < n - 1 } : sides)
+
+/**
+ * Un front només es fa aguantat pels quatre costats. A sota i a sobre sempre ho és: la base o la tapa del mòdul, la que
+ * falta («Sense base», «Sense tapa», per decisió de l'usuari: es queda com està) o un travesser. Queden els costats.
+ */
+const frontHeld = (sides: Sides): boolean => sides.left && sides.right
+
 function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sides: Sides): Zone {
   const out: Zone = { ...z }
   const f = z.front
@@ -111,7 +124,8 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sid
     for (const rf of REMEMBERED) if (rf.kind !== f?.kind && r() < 0.5) fronts[rf.kind] = structuredClone(rf)
     if (Object.keys(fronts).length) out.fronts = fronts
   }
-  if (z.split && z.front) {
+  const held = frontHeld(sides)
+  if (z.split && z.front && held) {
     // Portes de tota la zona: els fronts dels compartiments de dins queden tapats i no es fan (es conserven).
     out.split = { ...z.split, children: z.split.children.map((c) => (r() < 0.5 ? coverFront(c, r) : c)) }
   }
@@ -122,7 +136,7 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sid
     if (r() < 0.3) out.led = { hardware: { ...DEFAULT_MODULE_HARDWARE.led, params: { ...DEFAULT_MODULE_HARDWARE.led.params, height: 12 } } }
     const n = out.split!.children.length
     const v = out.split!.dir === "v"
-    out.split = { ...out.split!, children: out.split!.children.map((c, i) => scrambleZone(c, r, noHandles, covered || !!z.front, v ? { left: sides.left || i > 0, right: sides.right || i < n - 1 } : sides)) }
+    out.split = { ...out.split!, children: out.split!.children.map((c, i) => scrambleZone(c, r, noHandles, covered || (!!z.front && held), childSides(sides, v ? "v" : "h", i, n))) }
   } else if (!sides.left || !sides.right) {
     // Res a cada costat per aguantar-los: ni Prestatges ni Accessoris.
     if (r() < 0.6) out.shelves = randomShelves(r)
@@ -142,7 +156,12 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sid
     // Un `false` d'abans (fitxers antics): cap barra.
     if (!z.rail && r() < 0.3) (out as { rail?: unknown }).rail = false
   }
-  if (f) out.front = scrambleFront(f, r, noHandles)
+  if (!held && !covered) {
+    // Sense un lateral o divisor a cada costat el front no es fa (el compartiment és com obert): qualsevol front o cap.
+    const any = pick(r, [undefined, ...REMEMBERED, { kind: "door", mode: "single", hinge: "right", hardware: structuredClone(DEFAULT_MODULE_HARDWARE.dowel) } as Front])
+    if (any) out.front = structuredClone(any)
+    else delete out.front
+  } else if (f) out.front = scrambleFront(f, r, noHandles)
   return out
 }
 
@@ -337,6 +356,25 @@ describe("independència del camí: el mateix estat visible fa el mateix moble",
     expect(run([shelvesN(3), rail, panel, rootFront(null)])).toBe(run([shelvesN(3), rail]))
     const door = rootFront({ kind: "door", mode: "single", hinge: "left" })
     expect(run([shelvesN(3), rail, panel, door])).toBe(run([shelvesN(3), rail, door]))
+  })
+  it("sense un lateral, el front d'abans no es fa (com obert) i torna amb el lateral; sense tapa o sense base, sí", () => {
+    const noRight = carcass({ sides: { left: true, right: false } })
+    const both = carcass({ sides: { left: true, right: true } })
+    const fronts: Front[] = [
+      { kind: "door", mode: "single", hinge: "left" },
+      { kind: "drawers", n: 3, heights: ["auto", "auto", "auto"] },
+      { kind: "flap", dir: "down" },
+      { kind: "grille", pattern: DEFAULT_GRILLE, mount: "hinged", hinge: "left" },
+      { kind: "panel" },
+    ]
+    const ref = run([noRight])
+    for (const f of fronts) {
+      for (const p of permutations([rootFront(f), noRight])) expect(run(p)).toBe(ref)
+      expect(run([rootFront(f), noRight, both])).toBe(run([rootFront(f)]))
+      // «Sense tapa» o «Sense base» (la de cuina, el cobreradiador): el front es fa igual.
+      expect(run([rootFront(f), setTop("none")])).not.toBe(run([setTop("none")]))
+      expect(run([rootFront(f), carcass({ base: { kind: "open" } })])).not.toBe(run([carcass({ base: { kind: "open" } })]))
+    }
   })
   it("portes: de dues fulles, la frontissa d'abans no compta", () => {
     expect(run([rootFront({ kind: "door", mode: "single", hinge: "right" }), rootFront({ kind: "door", mode: "double", hinge: "right" })])).toBe(run([rootFront({ kind: "door", mode: "double", hinge: "left" })]))
