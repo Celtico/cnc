@@ -167,6 +167,7 @@ describe.skipIf(!existsSync(TALLER))("anada i tornada amb els parsers del taller
 })
 
 describe.skipIf(!existsSync(TALLER))("2a cara: el taller rep el programa de les peces amb mecanitzats a la cara B", async () => {
+  if (!existsSync(TALLER)) return
   const { assemble } = (await import(/* @vite-ignore */ TALLER)) as { assemble: (csv: string, step: string, mueble: string) => { pieces: { ref: string; mec2?: string | null }[] } }
   const { needsSecondFace } = await import("../process/processes")
   const comp = TV_LIVING_ROOM.make()
@@ -185,6 +186,7 @@ describe.skipIf(!existsSync(TALLER))("2a cara: el taller rep el programa de les 
 })
 
 describe.skipIf(!existsSync(TALLER))("flat-pack: peces lliures amb encaixos al taller", async () => {
+  if (!existsSync(TALLER)) return
   const { assemble } = (await import(/* @vite-ignore */ TALLER)) as { assemble: Assemble }
   const { flatPackShelf, flatPackStool } = await import("../model")
   it("prestatgeria d'encaix i tamboret: totes les peces lligades a un sòlid", () => {
@@ -201,6 +203,7 @@ describe.skipIf(!existsSync(TALLER))("flat-pack: peces lliures amb encaixos al t
 })
 
 describe.skipIf(!existsSync(TALLER))("el STEP de TopSolid (amb conjunts, ingletes i colors) el taller el llegeix igual", async () => {
+  if (!existsSync(TALLER)) return
   const { assemble } = (await import(/* @vite-ignore */ TALLER)) as { assemble: Assemble }
   const { toStepCad } = await import("./step")
   const { stepCadGroups } = await import("./stepGroups")
@@ -227,6 +230,7 @@ describe.skipIf(!existsSync(TALLER))("el STEP de TopSolid (amb conjunts, inglete
 })
 
 describe.skipIf(!existsSync(TALLER))("noms amb `;`, `:` i accents: el taller els llegeix sencers, iguals al CSV i al STEP", async () => {
+  if (!existsSync(TALLER)) return
   const { assemble } = (await import(/* @vite-ignore */ TALLER)) as { assemble: Assemble }
   const { toStepCad } = await import("./step")
   const { stepCadGroups } = await import("./stepGroups")
@@ -254,6 +258,7 @@ describe.skipIf(!existsSync(TALLER))("noms amb `;`, `:` i accents: el taller els
 })
 
 describe.skipIf(!existsSync(TALLER))("cassoleta Ø35 × 13 en tauler de 12: el taller la veu (a gruix − 1)", async () => {
+  if (!existsSync(TALLER)) return
   const { assemble } = (await import(/* @vite-ignore */ TALLER)) as { assemble: Assemble }
   it("mach amb fondària 11", () => {
     const ps = buildComposition(cabinetToComposition(DEFAULT_CABINET)).panels
@@ -269,6 +274,7 @@ describe.skipIf(!existsSync(TALLER))("cassoleta Ø35 × 13 en tauler de 12: el t
 })
 
 describe.skipIf(!existsSync(TALLER))("fons encastat del mateix tauler: el taller el llegeix (rol back, espigues de cantell i de cara)", async () => {
+  if (!existsSync(TALLER)) return
   const { assemble } = (await import(/* @vite-ignore */ TALLER)) as { assemble: Assemble }
   const insetOf = (comp: ReturnType<typeof cabinetToComposition>) => ({
     ...comp,
