@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from "dexie"
-import { DEFAULT_CABINET, parseCabinetParams, type CabinetParams } from "../core/model"
+import { DEFAULT_CABINET, linkedProjectIds, parseAmbient, parseCabinetParams, remapMobleItems, type CabinetParams } from "../core/model"
 import { DEFAULT_NEST_OPTIONS, NestOptionsSchema, type NestOptions } from "../core/nesting/nest"
 import type { Pt } from "../core/photo/homography"
 import type { ReferencePlane } from "../core/photo/camera"
@@ -350,23 +350,20 @@ export async function duplicateAmbient(id: number, client?: string): Promise<num
   let name = base
   for (let n = 2; names.includes(name); n++) name = `${base} (${n})`
   const folder = who
-  const data = structuredClone(src.data) as { items?: { kind?: string; projectId?: number }[] }
+  const ambient = parseAmbient(src.data)
   const map = new Map<number, number>()
-  for (const it of data.items ?? []) {
-    if (it.kind !== "moble" || typeof it.projectId !== "number") continue
-    if (!map.has(it.projectId)) {
-      const p = await db.projects.get(it.projectId)
-      if (!p) continue
-      const { id: _id, createdAt: _c, updatedAt: _u, photo: _photo, folder: _f, edited: _e, draft: _d, ...rest } = p
-      const projectNames = (await db.projects.toArray()).map((x) => x.name)
-      const pBase = who ? `${p.name.replace(/ · .*$/, "").replace(/ \(\d+\)$/, "")} · ${who}` : `${p.name} (còpia)`
-      let pName = pBase
-      for (let n = 2; projectNames.includes(pName); n++) pName = `${pBase} (${n})`
-      map.set(it.projectId, await createProject(pName, p.params, { ...rest, name: pName, ...(folder ? { folder } : {}) }))
-    }
-    it.projectId = map.get(it.projectId)
+  for (const projectId of linkedProjectIds(ambient)) {
+    const p = await db.projects.get(projectId)
+    if (!p) continue
+    const { id: _id, createdAt: _c, updatedAt: _u, photo: _photo, folder: _f, edited: _e, draft: _d, ...rest } = p
+    const projectNames = (await db.projects.toArray()).map((x) => x.name)
+    const pBase = who ? `${p.name.replace(/ · .*$/, "").replace(/ \(\d+\)$/, "")} · ${who}` : `${p.name} (còpia)`
+    let pName = pBase
+    for (let n = 2; projectNames.includes(pName); n++) pName = `${pBase} (${n})`
+    map.set(projectId, await createProject(pName, p.params, { ...rest, name: pName, ...(folder ? { folder } : {}) }))
   }
-  const copy = await createAmbient(name, data)
+  // Cada element apunta a la seva còpia (els d'un moble que ja no hi és es treuen, com abans).
+  const copy = await createAmbient(name, remapMobleItems(ambient, map))
   const ambientFolder = who ?? src.folder
   if (ambientFolder) await db.ambients.update(copy, { folder: ambientFolder })
   return copy

@@ -200,9 +200,20 @@ export function parseMobleFile(text: string): MobleParse {
   } catch {
     return { ok: false, error: "Aquest fitxer no és un moble (no és un JSON vàlid)." }
   }
+  return parseMobleData(raw)
+}
+
+/** Error de `parseMobleData` per a un moble d'una versió més nova (el `.ambient` el reconeix per rebutjar el fitxer sencer). */
+export const NEWER_VERSION_ERROR = "Fitxer d'una versió més nova de l'app: actualitza-la."
+
+/**
+ * El mateix que `parseMobleFile` amb el JSON ja llegit: el fa servir també el `.ambient`, que porta un `.moble` sencer per
+ * a cada moble i objecte (`core/file/ambientFile.ts`).
+ */
+export function parseMobleData(raw: unknown): MobleParse {
   if (!isRecord(raw) || raw.format !== MOBLE_FORMAT) return { ok: false, error: "Aquest fitxer no és un moble." }
   let version = typeof raw.version === "number" ? raw.version : 0
-  if (version > MOBLE_VERSION) return { ok: false, error: "Fitxer d'una versió més nova de l'app: actualitza-la." }
+  if (version > MOBLE_VERSION) return { ok: false, error: NEWER_VERSION_ERROR }
   let obj: Record<string, unknown> = raw
   while (version < MOBLE_VERSION) {
     const step = MIGRATIONS[version]
@@ -287,9 +298,10 @@ export function missingReferences(file: MobleFile, mine: RefPreset[]): RefPreset
  * materials i la màquina són de qui l'obre; un material que no hi és es veu amb un color per defecte i al taller surt amb
  * aquest nom.
  */
-export function missingMaterials(composition: Composition, mine: readonly Pick<MaterialPref, "name">[]): string[] {
+export function missingMaterials(composition: unknown, mine: readonly Pick<MaterialPref, "name">[]): string[] {
   const names = new Set(mine.map((m) => m.name))
   const out = new Set<string>()
+  // Qualsevol dada amb les claus de `materialRefNames` (composició, ambient, la llista dels mobles d'un `.ambient`).
   for (const n of materialRefNames(composition)) {
     const r = resolveMaterialAlias(n, names)
     if (!names.has(r)) out.add(r)
