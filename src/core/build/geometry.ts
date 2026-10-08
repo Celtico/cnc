@@ -116,13 +116,16 @@ export interface DowelSpec {
  * (`through`) rep forats de cara. `points` són els centres de les espigues, al moble,
  * sobre la superfície de contacte.
  */
-export function dowelJoint(butt: Panel, through: Panel, points: Vec3[], spec: DowelSpec, tag = "dowel"): number {
+export function dowelJoint(butt: Panel, through: Panel, points: Vec3[], spec: DowelSpec, tag = "dowel", buttShift?: Vec3): number {
   // Mai mitja unió: si l'espiga no cap sencera a les dues peces (forat dins del cantell i de la cara), no es fa cap dels
   // dos forats. Retorna quantes espigues s'han fet.
+  // `buttShift`: la peça que hi topa s'atura una mica abans de la cara (folgança de les peces de dins): el forat de
+  // cantell és al seu cantell (el punt desplaçat) i el de cara, a la cara de l'altra (el punt), a la mateixa línia.
   const rad = spec.diameter / 2
   let n = 0
   for (const w of points) {
-    const e = edgeHoleAt(butt, w, { diameter: spec.diameter, depth: spec.edgeDepth, tag }, rad - EPS)
+    const we: Vec3 = buttShift ? [w[0] + buttShift[0], w[1] + buttShift[1], w[2] + buttShift[2]] : w
+    const e = edgeHoleAt(butt, we, { diameter: spec.diameter, depth: spec.edgeDepth, tag }, rad - EPS)
     const f = faceHoleAt(through, w, { diameter: spec.diameter, depth: spec.faceDepth, tag }, rad - EPS)
     if (!e || !f) continue
     addHole(butt, e)

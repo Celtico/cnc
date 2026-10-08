@@ -130,6 +130,14 @@ export const CarcassSchema = z.object({
   backClearance: mm.min(0).max(4),
   shelfSetback: mm.min(0).max(100),
   shelfClearance: mm.min(0).max(5),
+  /**
+   * Folgança de les peces de dins (Preferències › Folgances per defecte › «Peces de dins»): els divisors i els prestatges
+   * fixos **a partir de la segona divisió** (dins d'un compartiment que ja és fruit d'una divisió: entre un divisor i un
+   * lateral o entre divisors) es fan aquests mm més curts de llarg, la meitat a cada cap i centrats (els forats de les
+   * unions no es mouen). Els de la primera divisió (els de l'arrel) van sencers entre la caixa. Sense valor (mòduls
+   * d'abans): 0, la fabricació no canvia. Només compta si el mòdul té alguna d'aquestes peces (`hasInnerPieces`).
+   */
+  innerClearance: mm.min(0).max(3).optional(),
 })
 export type Carcass = z.infer<typeof CarcassSchema>
 
@@ -821,14 +829,55 @@ export function visibleModule(m: Module): Module {
   if (c.top.kind !== "full") delete carcass.tableTop
   // Fons del calaix: només amb calaixos (la fila de Materials no surt sense).
   if (!hasDrawers(m.root) || !c.drawerBottomMaterial) delete carcass.drawerBottomMaterial
+  const root = visibleZone(m.root, kitDefaultOf(m))
+  // Folgança de les peces de dins: només amb divisors o prestatges fixos a partir de la segona divisió (la fila no surt
+  // sense); 0 és l'absència.
+  if (!carcass.innerClearance || !hasInnerPieces(root)) delete carcass.innerClearance
   const fronts = { ...m.fronts }
   // L'estil (recobrents / encastats) només compta si hi ha algun front que es construeix (la fila «Estil» no surt sense).
   if (fronts.style === "overlay" || !hasBuiltFronts(m.root)) delete fronts.style
   if (fronts.handles === "bar") delete fronts.handles
-  // La guia del mòdul pot ser un joc de calaix (`drawerKit`): els calaixos sense guia pròpia hi llegeixen les opcions.
+  return { ...m, carcass, fronts, root }
+}
+
+/** La guia del mòdul pot ser un joc de calaix (`drawerKit`): els calaixos sense guia pròpia hi llegeixen les opcions. */
+function kitDefaultOf(m: Module): boolean {
   const hw = m.hardware as Partial<ModuleHardware> | undefined
-  const kitDefault = !isLegacyHardware(hw) && hw?.slide?.engine === "drawerKit"
-  return { ...m, carcass, fronts, root: visibleZone(m.root, kitDefault) }
+  return !isLegacyHardware(hw) && hw?.slide?.engine === "drawerKit"
+}
+
+/**
+ * La zona `z` és «de dins»: un compartiment que ja és fruit d'una divisió (no l'arrel). Els seus divisors i prestatges
+ * fixos porten la folgança de les peces de dins (`Carcass.innerClearance`).
+ */
+export const isInnerZone = (root: Zone, z: Zone): boolean => z.id !== root.id
+
+/**
+ * El mòdul (tal com es construeix: passa-li `visibleModule(m).root`, o fa servir `moduleHasInnerPieces`) té alguna peça
+ * que porta la folgança de les peces de dins: un divisor o un prestatge fix (de la divisió horitzontal o de la secció
+ * Prestatges sense «Regulables») dins d'un compartiment que no és l'arrel.
+ */
+export function hasInnerPieces(root: Zone): boolean {
+  let hit = false
+  walkZones(root, (z) => {
+    if (!isInnerZone(root, z)) return
+    if (z.split && z.split.children.length > 1) hit = true
+    else if (!z.split && z.shelves && z.shelves.n > 0 && !z.shelves.adjustable) hit = true
+  })
+  return hit
+}
+
+/** `hasInnerPieces` del mòdul tal com es construeix (`visibleModule`): la fila «Peces de dins» de l'Interior. */
+export const moduleHasInnerPieces = (m: Module): boolean => hasInnerPieces(visibleZone(m.root, kitDefaultOf(m)))
+
+/**
+ * Plantilla instanciada a partir d'ara (catàleg, col·leccions, escenes): els mòduls que no diuen res de la folgança de
+ * les peces de dins prenen la de Preferències (com un mòdul nou, `applySettingsToModule`). Els que ja en diuen alguna
+ * cosa no es toquen.
+ */
+export function withInnerClearance<T extends { modules: Module[] }>(comp: T, innerClearance: number): T {
+  if (!comp.modules.some((m) => m.carcass.innerClearance === undefined)) return comp
+  return { ...comp, modules: comp.modules.map((m) => (m.carcass.innerClearance === undefined ? { ...m, carcass: { ...m.carcass, innerClearance } } : m)) }
 }
 
 /** El mòdul té algun compartiment de calaixos (la fila «Fons del calaix» de Materials). */

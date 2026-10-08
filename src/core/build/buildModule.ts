@@ -258,6 +258,11 @@ interface VerticalRef {
   zRear: number
   zFront: number
   outer: boolean
+  /**
+   * Folgança de les peces de dins: la peça s'atura aquests mm abans a cada cap (`yB`/`yT` són els de la llum; la peça
+   * va de `yB + endGap` a `yT − endGap`). Sense (laterals, divisors de la primera divisió): 0.
+   */
+  endGap?: number
 }
 
 /** Panells horitzontals registrats (base, tapa, prestatges fixos). */
@@ -272,6 +277,8 @@ interface HorizontalRef {
    * ranura d'aire: comença després de la ranura). Les espigues dels divisors van dins del tram comú. */
   zRear: number
   zFront: number
+  /** Com `VerticalRef.endGap`: la peça va de `xL + endGap` a `xR − endGap`. */
+  endGap?: number
 }
 
 const near = (a: number, b: number): boolean => Math.abs(a - b) < 0.51
@@ -823,11 +830,13 @@ class Builder {
     }
     walk(m.root, false)
 
-    // 1) Divisors i prestatges fixos de totes les divisions.
+    // 1) Divisors i prestatges fixos de totes les divisions. A partir de la segona divisió (zona pare que no és l'arrel),
+    // la folgança de les peces de dins: més curts, centrats.
     layout.dividers.forEach((div, i) => {
       const cut = this.insetCut(div.parentId)
-      if (div.dir === "v") this.buildDivider(div.at, div.from, div.to, `divider-${i + 1}`, cut)
-      else this.buildFixedShelf(div.at, div.from, div.to, `fixed-${i + 1}`, cut)
+      const gap = this.innerGap(div.parentId)
+      if (div.dir === "v") this.buildDivider(div.at, div.from, div.to, `divider-${i + 1}`, cut, gap)
+      else this.buildFixedShelf(div.at, div.from, div.to, `fixed-${i + 1}`, cut, gap)
     })
     // 2) Unions dels divisors amb el que tenen a sota i a sobre, i dels fixos amb els costats.
     for (const v of this.verticals) if (!v.outer) this.joinDivider(v)
@@ -859,23 +868,34 @@ class Builder {
     return d.inset && (!!z?.front || this.covered.has(parentId)) ? d.t + m.fronts.outerGap : 0
   }
 
-  private buildDivider(x: number, yFrom: number, yTo: number, id: string, cut = 0): void {
-    const { m, d } = this
-    const t = d.t
-    const panel = this.add(
-      this.basePanel(id, "divisor", "Divisor", "divider", yTo - yFrom, d.availDepth - cut, t, m.carcass.material, "x", edges("top"), placement([x, yFrom, d.backInnerZ], Y, Z, X, Z)),
-    )
-    this.verticals.push({ panel, xL: x, xR: x + t, yB: yFrom, yT: yTo, zRear: d.backInnerZ, zFront: d.D - cut, outer: false })
+  /**
+   * Folgança de les peces de dins (`Carcass.innerClearance`, sense = 0) dels divisors i prestatges fixos de la zona
+   * `zoneId`: només a partir de la segona divisió (la zona no és l'arrel); els de la primera van sencers entre la caixa.
+   */
+  private innerGap(zoneId: string): number {
+    const g = this.m.carcass.innerClearance ?? 0
+    return g > 0 && zoneId !== this.m.root.id ? g : 0
   }
 
-  private buildFixedShelf(y: number, xFrom: number, xTo: number, id: string, cut = 0): void {
+  private buildDivider(x: number, yFrom: number, yTo: number, id: string, cut = 0, gap = 0): void {
     const { m, d } = this
     const t = d.t
+    const e = gap / 2
+    const panel = this.add(
+      this.basePanel(id, "divisor", "Divisor", "divider", yTo - yFrom - gap, d.availDepth - cut, t, m.carcass.material, "x", edges("top"), placement([x, yFrom + e, d.backInnerZ], Y, Z, X, Z)),
+    )
+    this.verticals.push({ panel, xL: x, xR: x + t, yB: yFrom, yT: yTo, zRear: d.backInnerZ, zFront: d.D - cut, outer: false, ...(e ? { endGap: e } : {}) })
+  }
+
+  private buildFixedShelf(y: number, xFrom: number, xTo: number, id: string, cut = 0, gap = 0): void {
+    const { m, d } = this
+    const t = d.t
+    const e = gap / 2
     const zFront = d.D - cut
     const panel = this.add(
-      this.basePanel(id, "estanter fixe", "Prestatge fix", "fixedShelf", xTo - xFrom, d.availDepth - cut, t, m.carcass.material, "x", edges("bottom"), placement([xFrom, y, zFront], X, neg(Z), Y, Z)),
+      this.basePanel(id, "estanter fixe", "Prestatge fix", "fixedShelf", xTo - xFrom - gap, d.availDepth - cut, t, m.carcass.material, "x", edges("bottom"), placement([xFrom + e, y, zFront], X, neg(Z), Y, Z)),
     )
-    this.horizontals.push({ panel, yBottom: y, yTop: y + t, xL: xFrom, xR: xTo, outer: false, zRear: d.backInnerZ, zFront })
+    this.horizontals.push({ panel, yBottom: y, yTop: y + t, xL: xFrom, xR: xTo, outer: false, zRear: d.backInnerZ, zFront, ...(e ? { endGap: e } : {}) })
   }
 
   private findBelow(rect: ZoneRect): HorizontalRef | undefined {
@@ -907,10 +927,11 @@ class Builder {
     const rect: ZoneRect = { x0: v.xL, x1: v.xR, y0: v.yB, y1: v.yT }
     const below = this.findBelow(rect)
     const above = this.findAbove(rect)
-    for (const [h, y] of [[below, v.yB], [above, v.yT]] as const) {
+    for (const [h, y, dir] of [[below, v.yB, 1], [above, v.yT, -1]] as const) {
       if (!h) continue
       const zs = this.sharedDowelZs(Math.max(v.zRear, h.zRear), Math.min(v.zFront, h.zFront))
-      dowelJoint(v.panel, h.panel, zs.map((z): Vec3 => [xMid, y, z]), this.hw.dowel, this.hw.dowel.tag)
+      // Folgança de les peces de dins: el cantell del divisor s'atura abans de la cara (el forat de cara no es mou).
+      dowelJoint(v.panel, h.panel, zs.map((z): Vec3 => [xMid, y, z]), this.hw.dowel, this.hw.dowel.tag, v.endGap ? [0, dir * v.endGap, 0] : undefined)
     }
   }
 
@@ -919,10 +940,10 @@ class Builder {
     const rect: ZoneRect = { x0: h.xL, x1: h.xR, y0: h.yBottom, y1: h.yTop }
     const left = this.findLeft(rect)
     const right = this.findRight(rect)
-    for (const [v, x] of [[left, h.xL], [right, h.xR]] as const) {
+    for (const [v, x, dir] of [[left, h.xL, 1], [right, h.xR, -1]] as const) {
       if (!v) continue
       const zs = this.sharedDowelZs(Math.max(v.zRear, h.zRear), Math.min(v.zFront, h.zFront))
-      dowelJoint(h.panel, v.panel, zs.map((z): Vec3 => [x, yMid, z]), this.hw.dowel, this.hw.dowel.tag)
+      dowelJoint(h.panel, v.panel, zs.map((z): Vec3 => [x, yMid, z]), this.hw.dowel, this.hw.dowel.tag, h.endGap ? [dir * h.endGap, 0, 0] : undefined)
     }
   }
 
@@ -1121,7 +1142,9 @@ class Builder {
     const hollow = T > t
     if (want && !hollow) this.warnings.push({ code: "hollow", message: `Prestatges de ${want} mm: amb tauler de ${t} cal un gruix d'almenys ${2 * t + 6} mm. Es fan massissos.`, zoneId: zone.id })
     const width = rect.x1 - rect.x0
-    const length = width - c.shelfClearance
+    // Prestatges fixos (sense «Regulables») d'un compartiment de dins: també la folgança de les peces de dins.
+    const inner = zone.shelves!.adjustable ? 0 : this.innerGap(zone.id)
+    const length = width - c.shelfClearance - inner
     // A ras del davant (a sang): sense retranqueig. Amb fronts encastats no hi cabria la porta.
     // Amb fronts encastats, a ras només es pot si el compartiment és obert (sense front).
     const blocked = d.inset && (!!zone.front || this.covered.has(zone.id))
@@ -1134,7 +1157,7 @@ class Builder {
     if (width > 800 && t <= 19 && !hollow) {
       this.warnings.push({ code: "shelf-span", message: `Prestatge de ${num(t)} mm amb una llum de ${num(width)} mm: es vinclarà (màxim recomanat 800).`, zoneId: zone.id })
     }
-    const x0 = rect.x0 + c.shelfClearance / 2
+    const x0 = rect.x0 + (c.shelfClearance + inner) / 2
     const zF = d.D - setback
     // On va cada prestatge. Regulables: a la filera més propera que no trepitgi cap altre prestatge (si no n'hi ha cap
     // de lliure, no es fa). Fixos: si no hi caben amb 10 mm entre ells, només els que hi caben.
