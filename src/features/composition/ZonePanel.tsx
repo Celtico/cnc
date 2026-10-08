@@ -115,7 +115,6 @@ export function ZonePanel({
   hardware,
   noHandles = false,
   kits,
-  afterFront,
   splitExtra,
   coveredBy,
   coveredByFixed = false,
@@ -139,11 +138,6 @@ export function ZonePanel({
   noHandles?: boolean
   /** Calaixos d'aquesta zona fets amb un joc paramètric (del constructor): NL, números i fusta. */
   kits?: KitOrder[]
-  /**
-   * Seccions de l'«Interior» (l'arrel): «Acabats» del mòdul. Van després del que ensenya la mateixa pantalla
-   * (Front, i sense divisió Prestatges i Accessoris): en depenen (opcions en cascada).
-   */
-  afterFront?: ReactNode
   /** Més files de la secció «Divisió» (a l'«Interior»: la folgança de les peces de dins del mòdul). */
   splitExtra?: ReactNode
   /** Nom de la zona de més amunt el front de la qual tapa aquest compartiment: el seu Front no es fa (es conserva). */
@@ -196,7 +190,6 @@ export function ZonePanel({
           </FoldItem>
           {/* Portes que tapen tota la zona dividida (armari: penjador i maleter darrere). */}
           {coveredBy ? <CoveredFront id="zone-parent-front" title="Front de tota la zona" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} kinds={["none", "door", "panel"]} title="Front de tota la zona" bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} />}
-          {afterFront}
           {sizeField}
         </>
       ) : (
@@ -267,8 +260,6 @@ export function ZonePanel({
 
           {/* Accessoris del compartiment: ferratges (barra de penjar, tira LED), no fusta. Amb calaixos o un front fix, no. */}
           {shelvesBehind && canHoldAccessories(bounds) && <AccessoriesSection root={root} zone={zone} hardware={hardware} onChange={onChange} />}
-
-          {afterFront}
 
           {sizeField}
 
@@ -430,7 +421,7 @@ function kitClosingFor(kit: HardwareItem & { kit: NonNullable<HardwareItem["kit"
 }
 
 function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bounds, afterHinge }: { front: Front; openRatio?: number; onChange: (f: Front) => void; hardware: ModuleHardware; noHandles: boolean; kits?: KitOrder[]; bounds: ZoneBounds; /** La filera System 32 del mòdul (placa de la frontissa), si surt aquí. */ afterHinge?: ReactNode }) {
-  // «Tirador»: el del mòdul (Interior › Acabats), un altre de la biblioteca (un d'importat i confirmat fa els
+  // «Tirador»: el del mòdul (Mòdul › Acabats), un altre de la biblioteca (un d'importat i confirmat fa els
   // forats a la seva distància) o «Cap (push)». Als calaixos amb joc, el tancament del joc mana (`kitClosingFor`).
   const handlePick = (f: Extract<Front, { kind: "door" | "drawers" | "flap" }>, kit?: HardwareItem & { kit: NonNullable<HardwareItem["kit"]> }) => {
     const kitOpts = kit && f.kind === "drawers" ? kitOptionsOf(kit.kit, f.kit) : undefined
@@ -443,7 +434,7 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bo
       if (kit && kitOpts && next.kind === "drawers") onChange({ ...withHandle(next, h === "none" ? undefined : h), kit: kitClosingFor(kit, kitOpts, h === "none") })
       else onChange(next)
     }
-    const help = kitPush ? "El joc obre per pressió (push-open): cap tirador ni forats. Canvia el Tancament del joc per posar-n'hi." : inheritedNone ? "El mòdul és push (Interior › Acabats): cap forat; tria'n un aquí si aquest front n'ha de portar." : "Obertura per pressió: cap forat. Cal el ferratge push (Tip-On) a aquest front."
+    const help = kitPush ? "El joc obre per pressió (push-open): cap tirador ni forats. Canvia el Tancament del joc per posar-n'hi." : inheritedNone ? "El mòdul és push (Mòdul › Acabats): cap forat; tria'n un aquí si aquest front n'ha de portar." : "Obertura per pressió: cap forat. Cal el ferratge push (Tip-On) a aquest front."
     return (
       <HardwarePick
         slot="handle"

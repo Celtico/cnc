@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { DEFAULT_MODULE_HARDWARE, carcassDowels, coveringZone, defaultModule, frontsSection, frontsSectionEmpty, frontOptionsUse, inheritedSlots, setFront, splitZone, usedHardwareSlots, type Carcass, type Front, type Module, type Zone } from "../model"
+import { DEFAULT_MODULE_HARDWARE, carcassDowels, coveringZone, defaultModule, finishesSection, finishesSectionEmpty, frontOptionsUse, inheritedSlots, setFront, splitZone, usedHardwareSlots, type Carcass, type Front, type Module, type Zone } from "../model"
 import { buildModule } from "./buildModule"
 import { buildComposition } from "./buildComposition"
 import { int, pick, randomComposition, rng } from "./testCorpus"
 
 /**
- * Interior › «Acabats» (`FrontsForm`) i Fusteria del mòdul (`JoineryForm`): **un sol lloc per decisió** i només
+ * Mòdul › «Acabats» (`FinishesForm`, una sola secció): **un sol lloc per decisió** i només
  * el que la construcció llegeix (`frontOptionsUse`, `inheritedSlots`, `usedHardwareSlots` a `core/model/usedHardware.ts`).
  */
 
@@ -55,18 +55,33 @@ describe("Per defecte dels compartiments (`inheritedSlots`): només on algun com
   })
 })
 
-describe("la secció sencera (`frontsSection`) i els compartiments tapats (`coveringZone`)", () => {
-  it("una porta sola a l'Interior: estil i folgança front–cos, retranqueig (prestatge), cap per defecte", () => {
-    const s = frontsSection(withRoot(mod(), door))
-    expect(s).toEqual({ style: true, outerGap: true, betweenGap: false, shelfSetback: true, defaults: [] })
+describe("la secció sencera (`finishesSection`, Mòdul › Acabats) i els compartiments tapats (`coveringZone`)", () => {
+  it("una porta sola a l'Interior: estil i folgança front–cos, retranqueig (prestatge), la caixa i els per defecte que hereta", () => {
+    const m = withRoot(mod(), door)
+    const s = finishesSection(m)
+    expect({ ...s, defaults: s.defaults.map((d) => d.slot) }).toEqual({ style: true, outerGap: true, betweenGap: false, shelfSetback: true, back: m.carcass.back === "groove" || m.carcass.back === "inset" ? m.carcass.back : undefined, dowel: true, defaults: ["handle", "hinge"] })
+  })
+  it("cap compartiment exclòs: l'Interior que hereta també compta (ja no és a la mateixa pantalla)", () => {
+    const m = withRoot(mod(), door)
+    expect(finishesSection(m).defaults.map((d) => d.slot)).toEqual(keys(inheritedSlots(m)))
   })
   it("dividit amb calaixos i una porta: el tirador primer i després la frontissa i la guia", () => {
-    const s = frontsSection(divided(door, drawers3))
+    const s = finishesSection(divided(door, drawers3))
     expect(s.defaults.map((d) => d.slot)).toEqual(["handle", "hinge", "slide"])
   })
-  it("obert sense prestatges: res (la secció no surt)", () => {
-    const m = withRoot(mod(), null)
-    expect(frontsSectionEmpty(frontsSection({ ...m, root: { ...m.root, shelves: undefined } }))).toBe(true)
+  it("la caixa: Ranura o Retirada del fons segons el fons, res sense fons", () => {
+    expect(finishesSection(mod({ back: "groove" })).back).toBe("groove")
+    expect(finishesSection(mod({ back: "inset" })).back).toBe("inset")
+    expect(finishesSection(mod({ back: "none" })).back).toBeUndefined()
+  })
+  it("obert sense prestatges, sense fons ni espigues: res (la secció no surt)", () => {
+    const m = withRoot(mod({ back: "none", joint: "mitre" }), null)
+    const bare = { ...m, root: { ...m.root, shelves: undefined } }
+    expect(carcassDowels(bare)).toEqual([])
+    expect(finishesSectionEmpty(finishesSection(bare))).toBe(true)
+    // Amb espigues a la caixa, l'Espiga sí: la secció surt.
+    const butt = { ...bare, carcass: { ...bare.carcass, joint: undefined } }
+    expect(finishesSectionEmpty(finishesSection(butt))).toBe(carcassDowels(butt).length === 0)
   })
   it("un compartiment sota les portes de tota la zona sap qui el tapa", () => {
     const inner = divided(drawers3, null)

@@ -171,7 +171,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     la tapa i la base a inglet no en porten (s'encolen amb lamel·les o Clamex, avís `mitre`); les de divisors, prestatges
     fixos, fons encastat i una base amb sòcol sí. `carcassDowels` (`core/model/usedHardware.ts`) diu on n'hi ha: un
     mòdul tot a inglet sense divisions ni fons encastat no ensenya l'**Espiga** a «Acabats» (`frontsInspector.test.ts`).
-  - **Fronts** Recobrents / Encastats (`fronts.style`; s'edita a Interior › Acabats, «Estil», no a la Caixa: és
+  - **Fronts** Recobrents / Encastats (`fronts.style`; s'edita a Mòdul › Acabats, «Estil», no a la Caixa: és
     dels fronts; sense cap front no surt ni compta, `visibleModule`): encastats dins de la llum amb la folgança a tot el voltant, a nivell amb
     el davant (`frontZ`), caixa del calaix un gruix més curta i avís si els prestatges no es retiren prou.
   - **Parets buides** (`Carcass.hollow.thickness`): laterals, base i tapa de pell de fora + pell de dins (`*-inner`, fa de
@@ -256,7 +256,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     com els passacables); el 3D no els buida (`visualPanel`) i hi col·loca el tirador. **Una sola font** (auditoria C2):
     el «Tirador» de cada front (`front.handle`, `FrontHandle`) és el del mòdul (res), una còpia d'un item (un d'importat
     confirmat fa els forats a la distància del fitxer, vegeu Ferratges importats) o **«Cap (push)»** (`"none"`: cap
-    forat, `Panel.push`, avís `push`). El del mòdul (Interior › Acabats › Tirador, també amb «Cap (push)» =
+    forat, `Panel.push`, avís `push`). El del mòdul (Mòdul › Acabats › Tirador, també amb «Cap (push)» =
     `fronts.handles: "none"`) és només el **per defecte**: el del front mana. Als calaixos amb joc, el **tancament del
     joc** mana (`isPushClosing`): push-open ⇒ cap tirador (sense l'avís `push`: el posa el joc); triar «Cap (push)» posa
     el joc a push i triar un tirador el torna a suau (`kitClosingFor`).
@@ -265,7 +265,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     un joc de **calaix de doble paret** (DTC MAGIC-PRO N/M/K/C/F, `HardwareItem.kit`, motor `drawerKit`), amb
     **Tancament** (suau · push-open · push + suau), **Darrere** (fusta · metàl·lic) i **Acabat** dels laterals (blanc seda ·
     gris mat, només el color del 3D) (`Front.kit`; res amagat compta: amb una guia normal no es llegeixen). El joc també
-    pot ser la **«Guia de calaix» del mòdul** (Interior › Acabats, `module.hardware.slide`; `slotAccepts`, `slotSpec` el
+    pot ser la **«Guia de calaix» del mòdul** (Mòdul › Acabats, `module.hardware.slide`; `slotAccepts`, `slotSpec` el
     deixa passar amb l'item = el joc): tots els calaixos sense guia pròpia es fan amb el joc, igual que triat al front (el
     front hi llegeix les opcions, «Com el mòdul (joc de calaix)» al selector). El gruix del fons el **demana el joc** (16,
     `TB`): la fitxa del calaix el mostra fix («Fons del calaix: el joc demana 16 mm»), res a triar ni suggerir; el
@@ -818,12 +818,24 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     Preferències»; `CabinetViewer sceneFinish`, `renderThumb(…, finish)`).
   - Mòdul: Mides · Posició · Caixa (abans «Estructura», es confonia amb la pestanya de l'arbre; **només la caixa**: base
     —amb la «Pota» pel mateix `HardwarePick`—, fons, tapa, laterals, parets, cantonades (en cascada); l'estil dels fronts i el
-    tirador són a l'Interior) · Materials (cos, fons i, amb calaixos, **«Fons del calaix»**,
-    `Carcass.drawerBottomMaterial`; el dels fronts és a Interior › Acabats › Material dels fronts) · **Acabats**
-    (abans «Fusteria (avançat)», per decisió de l'usuari; id de secció `mod-joinery`, `LuHammer`;
-    **només la caixa**, per decisió de l'usuari: Ranura o Retirada del fons quan toca i els ferratges dels laterals i de
-    les unions, l'Espiga, `JoineryForm`; **només els que el mòdul fa servir**: `usedHardwareSlots`, pels
-    forats i talls de les seves peces). **La «Filera System 32» no hi és** (per decisió de l'usuari, 2026-10-08: és dels
+    tirador són a Acabats) · Materials (cos, fons i, amb calaixos, **«Fons del calaix»**,
+    `Carcass.drawerBottomMaterial`; el dels fronts és a Acabats › Material dels fronts) · **Acabats** (**l'única
+    secció «Acabats» de l'editor**, per decisió de l'usuari, 2026-10-08: «els acabats haurien d'anar al mòdul»; abans
+    n'hi havia una altra a l'Interior, «Fronts i calaixos», `zone-fronts`, que ja no existeix; id de secció `mod-joinery`,
+    `LuHammer`, després de Materials; insígnia Recobrents/Encastats si hi ha estil; `FinishesForm` a `CarcassForm.tsx`).
+    **Un sol lloc per decisió i només el que la construcció llegeix** (`finishesSection` a `core/model/usedHardware.ts`;
+    sense res, la secció no surt, `finishesSectionEmpty`), en cascada i en aquest ordre: **Estil** (Recobrents /
+    Encastats) i Folgança front–cos si hi ha algun front que es fa (un front fix també: cap ferratge) · Folgança entre
+    fronts amb dues portes, dos calaixos o un front recobrent al costat d'un divisor · Retranqueig dels prestatges amb
+    prestatges que es retiren o una tira LED (`frontOptionsUse`; totes amb «Com a Preferències» quan coincideixen amb
+    Preferències › Folgances per defecte i un botó per tornar-hi) · **Material dels fronts** (`frontMaterial`, «Com el
+    cos», `MaterialSelect`; només amb algun front que es fa, com l'Estil; no és a Materials del mòdul, «Materials de tot
+    el moble» encara el posa a tots) · **Caixa**: Ranura o Retirada del fons quan toca i l'**Espiga** si la caixa en fa
+    (`usedHardwareSlots`, `carcassDowels`) · **«Per defecte dels compartiments»**: el **Tirador** (amb «Cap (push)») i els
+    ferratges del mòdul (Frontissa · Guia de calaix, també els jocs · Braç d'abatible · Imant · Barra · Tira LED · Marc;
+    `HardwarePick` amb «Com el mòdul a: …» a l'ajuda) **només si algun compartiment l'hereta** («Com el mòdul»,
+    `inheritedSlots`, cap exclòs: cap compartiment no és a la pantalla del mòdul, l'Interior inclòs). Editen
+    `module.fronts`, `module.carcass` i `module.hardware`; amagats es conserven. **La «Filera System 32» no hi és** (per decisió de l'usuari, 2026-10-08: és dels
     prestatges): surt a l'inspector del compartiment, on diu `system32RowPlace` (`core/model/usedHardware.ts`,
     `system32Row.test.ts`), i edita la del mòdul (`module.hardware.system32`, una per mòdul; `System32Pick`, ajuda «La de
     tot el mòdul: …»): als **Prestatges**, després de «Regulables», dels compartiments amb regulables que es fan; si no n'hi
@@ -843,33 +855,18 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     (`PlacePosRow`: Des de l'esquerra/dreta… · Mig, i la distància) · «També: <peça>»). Els col·locats d'una versió
     anterior amb repetició, mirall, gir o fórmula surten com a **«Avançat»** (només lectura) amb «Simplificar».
     Sense Front (el de tot el mòdul és a l'«Interior»). Materials visibles: cos i fons (els **fronts**, `frontMaterial`,
-    buit = el del cos, a Interior › Acabats › Material dels fronts).
+    buit = el del cos, a Mòdul › Acabats › Material dels fronts).
   - Compartiment (`ZonePanel`): accions com a icones a la capçalera (Pare · Duplicar · Eliminar; a l'«Interior», l'arrel,
     cap: no es duplica, no es retalla ni s'elimina, i ⌘D, ⌘X i Suprimir avisen sense tocar el porta-retalls) i Front ·
     Prestatges (només fusta: Quantitat · Regulables · Filera System 32 si li toca, vegeu Mòdul · A ras · Gruixuts) · **Accessoris** (`LuShirt`: Barra de penjar i
     Tira LED, interruptor + `HardwarePick` «Com el mòdul») · Mida · Dividir (Prestatges, Accessoris, Dividir i els tipus
     de Contingut, només si el compartiment els pot aguantar: Model del moble › Zones › Què aguanta cada compartiment; Prestatges i Accessoris tampoc amb calaixos o un front fix, propi o de tota la zona que el tapa). Al Front: el ferratge del tipus (frontissa,
     guia o joc, braç; a la reixeta, l'**imant** després de «Muntatge» i «Trapa»; a la vitrina, el **marc**) i el «Tirador» (amb «Cap
-    (push)»). **L'inspector del mòdul és de la caixa; el de l'«Interior» (l'arrel), dels fronts i calaixos**: només
-    a l'arrel, la secció **«Acabats»** (abans «Fronts i calaixos», per decisió de l'usuari; id `zone-fronts`, el
-    mateix: es recorda si és oberta; `LuDoorClosed`, `FrontsForm` a `CarcassForm.tsx`, `afterFront` del
-    `ZonePanel`: després del Front i, sense divisió, també després de Prestatges i Accessoris, perquè en depèn), **un sol
-    lloc per decisió i només el que la construcció llegeix** (`frontsSection` a `core/model/usedHardware.ts`; sense res,
-    la secció no surt): **Estil** (Recobrents / Encastats) i Folgança front–cos si hi ha algun front que es fa (un front
-    fix també: cap ferratge) · Folgança entre fronts amb dues portes, dos calaixos o un front recobrent al costat d'un
-    divisor · Retranqueig dels prestatges amb prestatges que es retiren o una tira LED (`frontOptionsUse`; totes amb «Com
-    a Preferències» quan coincideixen amb Preferències › Folgances per defecte i un botó per tornar-hi) i, a sota,
-    **«Per defecte dels compartiments»**: el **Tirador** (amb «Cap (push)») i els ferratges del mòdul (Frontissa · Guia
-    de calaix, també els jocs · Braç d'abatible · Imant · Barra · Tira LED · Marc; `HardwarePick` amb «Com el mòdul a:
-    …» a l'ajuda) **només si algun compartiment l'hereta** («Com el mòdul», `inheritedSlots`) i no és la mateixa
-    pantalla: l'Interior sense divisió ja ensenya el seu Front i els seus Accessoris, així que no hi surt cap per
-    defecte. Editen `module.fronts` i `module.hardware`; amagats es conserven. Un compartiment **tapat** pel front d'una
+    (push)»). **L'«Interior» (l'arrel) no té secció «Acabats»** (per decisió de l'usuari, 2026-10-08: tot el que és de
+    tots els fronts del mòdul —estil, folgances, retranqueig, material dels fronts, per defecte dels compartiments— és a
+    Mòdul › Acabats; vegeu Mòdul). Un compartiment **tapat** pel front d'una
     zona de més amunt (`coveringZone`) ensenya «Front · Tapat» sense opcions: el seu front no es fa (es conserva) i els
-    prestatges i accessoris de dins sí (`walkBuiltZones`, `visibleZone`), menys si el tapa un front fix (no surten). **Material dels fronts** (per decisió de l'usuari: «a
-    Fronts i calaixos ficar Acabats»; el grup es deia «Acabats», ara és el títol de la secció): el material dels
-    fronts (`frontMaterial`, «Com el cos», `MaterialSelect`), només amb algun
-    front que es fa (com l'Estil); ja no és a Materials del mòdul (un sol lloc per decisió; «Materials de tot el moble»
-    encara el posa a tots els mòduls). **Una sola paraula per a la precedència** (auditoria C3):
+    prestatges i accessoris de dins sí (`walkBuiltZones`, `visibleZone`), menys si el tapa un front fix (no surten). **Una sola paraula per a la precedència** (auditoria C3):
     **«Com el mòdul»** = heretat i **«Còpia pròpia»** = una còpia que no és a la biblioteca tal qual (`INHERITED_LABEL`,
     `OWN_COPY_LABEL`, a `HardwarePick`, `HardwareSelect` i `hardwareChoices`). Els camins de secció dels avisos i les
     ajudes surten d'`UI_PATHS`. **Sense «General»**: cada apartat és una secció pròpia amb la seva icona i el valor triat a la insígnia
@@ -1893,7 +1890,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Front | Una porta · Dues portes · Abatible avall · amunt · Ranures horitzontals · verticals (reixeta) | `LuDoorClosed` · `LuFlipHorizontal2` · `LuArrowDownToLine` · `LuArrowUpToLine` · `LuAlignJustify` · `LuColumns3` |
 | Front | Recobrents (fronts) | `LuSquareStack` |
 | Forma | Rectangle · Arrodonit · Oval (tauler de taula) · Efecte obstacle | `LuRectangleHorizontal` · `LuSquircle` · `LuCircle` · `LuShield` |
-| Inspector | Mides · Caixa (base, fons, tapa, laterals) · Materials · Acabats (només l'inspector del mòdul) · Ferratges (inspector de la peça lliure, Preferències i visor; no al mòdul) · Front · Acabats (Interior; abans Fronts i calaixos) · Pare | `LuMoveDiagonal` · `LuFrame` · `LuPalette` · `LuHammer` · `LuWrench` · `LuDoorClosed` · `LuDoorClosed` · `LuArrowUp` |
+| Inspector | Mides · Caixa (base, fons, tapa, laterals) · Materials · Acabats (una sola, a l'inspector del mòdul: fronts, caixa i per defecte dels compartiments) · Ferratges (inspector de la peça lliure, Preferències i visor; no al mòdul) · Front · Pare | `LuMoveDiagonal` · `LuFrame` · `LuPalette` · `LuHammer` · `LuWrench` · `LuDoorClosed` · `LuArrowUp` |
 | Inspector | Base: Directe a terra · Sòcol · Potes (la de la categoria Potes, no la Taula) · Sense base | `LuArrowDownToLine` · `LuPanelBottom` · `LuFootprints` · `LuSquareDashedBottom` |
 | Inspector | Fons en ranura · Cargolat darrere · Encastat · Sense fons | `LuLayers2` · `LuDrill` · `LuInspectionPanel` · `LuSquareDashed` |
 | Inspector | Resum del moble · Posició | `LuBox` · `LuMove` |
@@ -1949,11 +1946,11 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
 | **Cos** | la caixa del mòdul (laterals, base, tapa, fons) i el seu material («Com el cos») |
 | **Fons** | la peça del darrere del mòdul (el `trassera` del taller); **Fons del calaix**, la del calaix (fila del joc, avís `drawer-bottom`, material propi a Materials; el nom de peça `fons calaix` i l'etiqueta `Fons calaix n` no canvien: són els dels fitxers del taller) |
 | **Fondària** | l'eix Z i la mida en Z (mai «Fons Z») |
-| **Front** | porta, front de calaix, abatible, reixeta, front fix (la secció de l'Interior que en té l'estil, les folgances i el material és **Acabats**, abans «Fronts i calaixos») |
+| **Front** | porta, front de calaix, abatible, reixeta, front fix (l'estil, les folgances i el material de tots els fronts del mòdul són a Mòdul › **Acabats**) |
 | **Folgança** | separacions: front–cos, entre fronts, lateral i darrere de la guia, prestatge, fons, encaixos, peces de dins; **Folgances per defecte** a Preferències |
 | **Joc** | només el joc paramètric del fabricant (`HardwareKit`, «joc de calaix», «Ferratges dels jocs») |
 | **Ferratge** | qualsevol `HardwareItem`; **Ferratges**, la secció de l'inspector de la peça lliure (no la del mòdul), la biblioteca de Preferències i l'opció del visor (`LuWrench`) |
-| **Acabats** | dues seccions amb el mateix nom (per decisió de l'usuari), una a cada nivell: la del **mòdul** (abans «Fusteria (avançat)», `LuHammer`): ranura i retirada del fons i l'espiga de la caixa; la de l'**Interior** (`LuDoorClosed`): estil, folgances, **material dels fronts** i ferratges per defecte dels compartiments. **Acabats de l'escena**: terra i paret de la presentació |
+| **Acabats** | una sola secció, a l'inspector del **mòdul** (per decisió de l'usuari, 2026-10-08: «els acabats haurien d'anar al mòdul»; abans «Fusteria (avançat)» i, a l'Interior, «Fronts i calaixos»; `LuHammer`): estil dels fronts, folgances, retranqueig dels prestatges, **material dels fronts**, ranura o retirada del fons i espiga de la caixa, i ferratges per defecte dels compartiments. **Acabats de l'escena**: terra i paret de la presentació |
 | **Com el mòdul** / **Com el cos** / **Com a Preferències** | heretat; **Còpia pròpia**, la còpia d'un ferratge que ja no és a la biblioteca tal qual |
 | **Accessoris** | barra de penjar, tira LED (ferratges del compartiment); el marc de vitrina va amb la porta de vidre |
 | **Cap (push)** | el tirador que no hi és: obertura per pressió |
@@ -1976,13 +1973,12 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
   - **Opcions en cascada** (per decisió de l'usuari: «les opcions de més avall s'adapten a les de més amunt»): a cada
     inspector, cada opció depèn només de les de més amunt; canviar-ne una de dalt fa aparèixer o desaparèixer les de
     sota, mai al revés (Laterals abans de Parets i Cantonades; l'imant de la reixeta després de Muntatge i Trapa;
-    «Acabats» de l'Interior després del que ensenya la pantalla). El que una opció de dalt fa irrellevant no
+    a Mòdul › Acabats, els fronts abans de la caixa i els per defecte al final). El que una opció de dalt fa irrellevant no
     surt (un compartiment tapat no ensenya el seu Front; sense fronts, ni estil ni folgances ni material dels fronts;
     sense laterals ni divisors, ni prestatges ni accessoris ni fronts; sense on unir el divisor, ni Dividir: `zoneSupport.ts`).
   - **Un sol lloc per decisió**: una tria surt un cop a cada pantalla. Els **per defecte** del mòdul («Per defecte dels
-    compartiments») només surten si algun compartiment els hereta («Com el mòdul») i no és el que ja ensenya la seva
-    fila a la mateixa pantalla. Res del que la construcció no llegeix no surt, i al revés (`usedHardwareSlots`,
-    `frontsSection`; res amagat compta).
+    compartiments», a Mòdul › Acabats) només surten si algun compartiment els hereta («Com el mòdul»). Res del que la construcció no llegeix no surt, i al revés (`usedHardwareSlots`,
+    `finishesSection`; res amagat compta).
   - Quan aparegui un cas nou, s'afegeix aquí.
 - Abans de codi nou al `core/`, escriu o actualitza els tests (Vitest). Canvis de fabricació: proves d'or (vegeu Fabricació).
 - Canvis petits i verificables. Després de cada fase han de passar `pnpm typecheck`, `pnpm lint` (0 errors), `pnpm test` i

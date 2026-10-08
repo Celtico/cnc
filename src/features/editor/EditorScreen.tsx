@@ -18,7 +18,6 @@ import {
   LuPanelTop,
   LuCamera,
   LuCircleDot,
-  LuDoorClosed,
   LuDoorOpen,
   LuExpand,
   LuHammer,
@@ -52,10 +51,10 @@ import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
 import { materialIssues } from "../../core/build/materialIssues"
-import { applySettingsToModule, moduleHasInnerPieces, usedSlotSet, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, frontsSection, frontsSectionEmpty, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule, moduleHasInnerPieces, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, finishesSection, finishesSectionEmpty, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
-import { CarcassForm, FrontsForm, InnerClearanceRow, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
+import { CarcassForm, FinishesForm, InnerClearanceRow, MaterialsForm } from "../composition/CarcassForm"
 import { System32Pick } from "../composition/HardwarePick"
 import { ElevationEditor } from "../composition/ElevationEditor"
 import { RefActions, RefInspector } from "../composition/RefInspector"
@@ -1086,22 +1085,6 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             // A l'«Interior» (l'arrel), a la Divisió: la folgança de les peces de dins, només amb l'arrel dividida (tots els
             // divisors i prestatges fixos; opcions en cascada).
             splitExtra={zone.id === module.root.id && moduleHasInnerPieces(module) ? <InnerClearanceRow module={module} onChange={updateModule} /> : null}
-            afterFront={
-              // A l'«Interior» (l'arrel), el que és de tots els fronts del mòdul: estil, folgances, retranqueig i els
-              // ferratges per defecte que algun compartiment hereta (`frontsSection`: un sol lloc per decisió, només el que
-              // es llegeix; sense res, la secció no surt). La caixa (fons, espigues) és a «Acabats» del mòdul; la filera System 32, als Prestatges o al Front del compartiment.
-              zone.id === module.root.id &&
-              (() => {
-                const section = frontsSection(module)
-                if (frontsSectionEmpty(section)) return null
-                return (
-                  // «Acabats» (abans «Fronts i calaixos», per decisió de l'usuari; l'id es queda: es recorda si és oberta).
-                  <FoldItem id="zone-fronts" title="Acabats" icon={LuDoorClosed} defaultOpen={false} badge={section.style ? (module.fronts.style === "inset" ? "Encastats" : "Recobrents") : undefined}>
-                    <FrontsForm module={module} onChange={updateModule} section={section} />
-                  </FoldItem>
-                )
-              })()
-            }
           />
         </Stack>
       ) : module ? (
@@ -1199,10 +1182,18 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           <FoldItem id="mod-materials" title="Materials" icon={LuPalette}>
             <MaterialsForm carcass={module.carcass} hasDrawers={hasDrawers(visibleModule(module).root)} hasFronts={false} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
           </FoldItem>
-          {/* «Acabats» (abans «Fusteria (avançat)», per decisió de l'usuari; l'id es queda: es recorda si és oberta). */}
-          <FoldItem id="mod-joinery" title="Acabats" icon={LuHammer} defaultOpen={false}>
-            <JoineryForm module={module} onChange={updateModule} usedSlots={usedSlotSet(module)} />
-          </FoldItem>
+          {/* «Acabats»: una sola secció, la del mòdul (per decisió de l'usuari: «els acabats haurien d'anar al mòdul»; abans
+              n'hi havia una altra a l'Interior). Fronts, caixa i per defecte dels compartiments, només el que es llegeix
+              (`finishesSection`); sense res, no surt. L'id es queda: es recorda si és oberta. */}
+          {(() => {
+            const section = finishesSection(module)
+            if (finishesSectionEmpty(section)) return null
+            return (
+              <FoldItem id="mod-joinery" title="Acabats" icon={LuHammer} defaultOpen={false} badge={section.style ? (module.fronts.style === "inset" ? "Encastats" : "Recobrents") : undefined}>
+                <FinishesForm module={module} onChange={updateModule} section={section} />
+              </FoldItem>
+            )
+          })()}
           {/* «Ferratges» (col·locats a mà i els de les regles) no surt a l'inspector del mòdul (per decisió de l'usuari,
               2026-10-08): els col·locats es conserven, es fabriquen i es veuen al 3D (on es trien i s'editen). */}
         </Stack>

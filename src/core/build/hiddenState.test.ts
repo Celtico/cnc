@@ -5,7 +5,7 @@ import { catalogCorpus, int, MATERIALS, pick, randomComposition, rng, type Rnd }
 
 /**
  * Regla «res amagat compta»: el que la UI amaga perquè la seva opció és apagada no pot canviar les peces ni els avisos.
- * La llista de camps amagats surt dels formularis (`CarcassForm`, `JoineryForm`, `MaterialsForm`, `ZonePanel`) i es
+ * La llista de camps amagats surt dels formularis (`CarcassForm`, `FinishesForm`, `MaterialsForm`, `ZonePanel`) i es
  * reescriu aquí a part (no amb `visibleModule`), perquè el test no es doni la raó a si mateix.
  */
 
@@ -20,12 +20,12 @@ function scrambleHidden(m: Module, r: Rnd): Module {
     c.backMaterial = pick(r, MATERIALS)
     c.backThickness = pick(r, [3, 8, 10, 16, 19, 30])
   }
-  // Ranura del fons (JoineryForm): només en ranura. El joc del fons en ranura no surt mai: només compta en ranura.
+  // Ranura del fons (Mòdul › Acabats): només en ranura. El joc del fons en ranura no surt mai: només compta en ranura.
   if (c.back !== "groove") {
     c.backSetback = int(r, 0, 60)
     c.backClearance = pick(r, [0, 0.5, 1, 2, 4])
   }
-  // Retirada del fons (JoineryForm): només encastat.
+  // Retirada del fons (Mòdul › Acabats): només encastat.
   if (c.back !== "inset") {
     if (r() < 0.5) delete c.backInsetSetback
     else c.backInsetSetback = int(r, 0, 60)
@@ -47,7 +47,7 @@ function scrambleHidden(m: Module, r: Rnd): Module {
   const fronts = { ...m.fronts }
   if (!fronts.style && r() < 0.5) fronts.style = "overlay"
   if (!fronts.handles && r() < 0.5) fronts.handles = "bar"
-  // Interior › Acabats: sense cap front que es faci (els tapats no compten) no surten l'estil ni les folgances;
+  // Mòdul › Acabats: sense cap front que es faci (els tapats no compten) no surten l'estil ni les folgances;
   // sense cap prestatge (ni llum) que es retiri, el retranqueig.
   if (!anyBuiltFront(m.root, { left: c.sides.left, right: c.sides.right })) {
     // Materials › Fronts tampoc no surt.
@@ -63,7 +63,7 @@ function scrambleHidden(m: Module, r: Rnd): Module {
     if (g === undefined) delete c.innerClearance
     else c.innerClearance = g
   } else if (!c.innerClearance && r() < 0.5) c.innerClearance = 0
-  // Llocs de ferratge que el mòdul no fa servir (JoineryForm i FrontsForm només ensenyen `usedHardwareSlots`): un item
+  // Llocs de ferratge que el mòdul no fa servir (Mòdul › Acabats només ensenya `usedHardwareSlots`): un item
   // d'un altre tipus o un joc sense `kit` no canvia res ni avisa.
   const used = usedHardwareSlots(m)
   const hardware = isLegacyHardware(m.hardware) ? m.hardware : { ...(m.hardware as ModuleHardware) }

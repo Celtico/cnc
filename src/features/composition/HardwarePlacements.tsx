@@ -129,7 +129,7 @@ export function HardwarePlacements({
                 )
               })}
               <Text fontSize="xs" color="fg.muted">
-                Els posa el mòdul. Quins són: a {UI_PATHS.frontsAndDrawers} (frontissa, guia o joc, braç, imant, tirador), a {UI_PATHS.joinery} (espiga), a la base «Potes» i al Front, als Prestatges (filera System 32) o als Accessoris de cada compartiment.
+                Els posa el mòdul. Quins són: a {UI_PATHS.finishes} (frontissa, guia o joc, braç, imant, tirador, espiga), a la base «Potes» i al Front, als Prestatges (filera System 32) o als Accessoris de cada compartiment.
               </Text>
             </Stack>
           ) : (
