@@ -5,7 +5,7 @@ import { buildComposition } from "./buildComposition"
 import { int, pick, randomComposition, rng } from "./testCorpus"
 
 /**
- * Interior › «Fronts i calaixos» (`FrontsForm`) i Fusteria del mòdul (`JoineryForm`): **un sol lloc per decisió** i només
+ * Interior › «Acabats» (`FrontsForm`) i Fusteria del mòdul (`JoineryForm`): **un sol lloc per decisió** i només
  * el que la construcció llegeix (`frontOptionsUse`, `inheritedSlots`, `usedHardwareSlots` a `core/model/usedHardware.ts`).
  */
 
@@ -78,7 +78,7 @@ describe("la secció sencera (`frontsSection`) i els compartiments tapats (`cove
   })
 })
 
-describe("Fronts i calaixos: estil, folgances i retranqueig (`frontOptionsUse`)", () => {
+describe("Acabats: estil, folgances i retranqueig (`frontOptionsUse`)", () => {
   it("sense fronts no surt res dels fronts; amb prestatges, el retranqueig", () => {
     expect(frontOptionsUse(withRoot(mod(), null))).toEqual({ style: false, outerGap: false, betweenGap: false, shelfSetback: true })
     const bare = withRoot(mod(), null)

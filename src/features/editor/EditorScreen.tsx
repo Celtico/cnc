@@ -1087,7 +1087,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                 const section = frontsSection(module)
                 if (frontsSectionEmpty(section)) return null
                 return (
-                  <FoldItem id="zone-fronts" title="Fronts i calaixos" icon={LuDoorClosed} defaultOpen={false} badge={section.style ? (module.fronts.style === "inset" ? "Encastats" : "Recobrents") : undefined}>
+                  // «Acabats» (abans «Fronts i calaixos», per decisió de l'usuari; l'id es queda: es recorda si és oberta).
+                  <FoldItem id="zone-fronts" title="Acabats" icon={LuDoorClosed} defaultOpen={false} badge={section.style ? (module.fronts.style === "inset" ? "Encastats" : "Recobrents") : undefined}>
                     <FrontsForm module={module} onChange={updateModule} section={section} />
                   </FoldItem>
                 )

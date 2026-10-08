@@ -47,7 +47,7 @@ function scrambleHidden(m: Module, r: Rnd): Module {
   const fronts = { ...m.fronts }
   if (!fronts.style && r() < 0.5) fronts.style = "overlay"
   if (!fronts.handles && r() < 0.5) fronts.handles = "bar"
-  // Interior › Fronts i calaixos: sense cap front que es faci (els tapats no compten) no surten l'estil ni les folgances;
+  // Interior › Acabats: sense cap front que es faci (els tapats no compten) no surten l'estil ni les folgances;
   // sense cap prestatge (ni llum) que es retiri, el retranqueig.
   if (!anyBuiltFront(m.root)) {
     // Materials › Fronts tampoc no surt.
