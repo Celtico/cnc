@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { DEFAULT_MODULE_HARDWARE, carcassDowels, defaultModule, frontOptionsUse, inheritedSlots, setFront, splitZone, usedHardwareSlots, type Carcass, type Front, type Module, type Zone } from "../model"
+import { DEFAULT_MODULE_HARDWARE, carcassDowels, coveringZone, defaultModule, frontsSection, frontsSectionEmpty, frontOptionsUse, inheritedSlots, setFront, splitZone, usedHardwareSlots, type Carcass, type Front, type Module, type Zone } from "../model"
 import { buildModule } from "./buildModule"
 import { buildComposition } from "./buildComposition"
 import { int, pick, randomComposition, rng } from "./testCorpus"
@@ -52,6 +52,29 @@ describe("Per defecte dels compartiments (`inheritedSlots`): només on algun com
     expect(used.has("flap")).toBe(false)
     expect(used.get("hinge")).toEqual({ count: 2, what: "portes" })
     expect(keys(inheritedSlots(m, new Set([m.root.id])))).toEqual([])
+  })
+})
+
+describe("la secció sencera (`frontsSection`) i els compartiments tapats (`coveringZone`)", () => {
+  it("una porta sola a l'Interior: estil i folgança front–cos, retranqueig (prestatge), cap per defecte", () => {
+    const s = frontsSection(withRoot(mod(), door))
+    expect(s).toEqual({ style: true, outerGap: true, betweenGap: false, shelfSetback: true, defaults: [] })
+  })
+  it("dividit amb calaixos i una porta: el tirador primer i després la frontissa i la guia", () => {
+    const s = frontsSection(divided(door, drawers3))
+    expect(s.defaults.map((d) => d.slot)).toEqual(["handle", "hinge", "slide"])
+  })
+  it("obert sense prestatges: res (la secció no surt)", () => {
+    const m = withRoot(mod(), null)
+    expect(frontsSectionEmpty(frontsSection({ ...m, root: { ...m.root, shelves: undefined } }))).toBe(true)
+  })
+  it("un compartiment sota les portes de tota la zona sap qui el tapa", () => {
+    const inner = divided(drawers3, null)
+    const m: Module = { ...inner, root: { ...inner.root, front: door } }
+    const child = m.root.split!.children[0]!
+    expect(coveringZone(m.root, child.id)?.id).toBe(m.root.id)
+    expect(coveringZone(m.root, m.root.id)).toBeUndefined()
+    expect(coveringZone(inner.root, child.id)).toBeUndefined()
   })
 })
 

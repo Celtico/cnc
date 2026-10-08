@@ -50,6 +50,8 @@ function scrambleHidden(m: Module, r: Rnd): Module {
   // Interior › Fronts i calaixos: sense cap front que es faci (els tapats no compten) no surten l'estil ni les folgances;
   // sense cap prestatge (ni llum) que es retiri, el retranqueig.
   if (!anyBuiltFront(m.root)) {
+    // Materials › Fronts tampoc no surt.
+    if (r() < 0.5) c.frontMaterial = pick(r, MATERIALS)
     if (r() < 0.5) fronts.style = pick(r, ["overlay", "inset"] as const)
     fronts.outerGap = pick(r, [0, 1.5, 4, 10])
     fronts.betweenGap = pick(r, [0, 2, 6])
