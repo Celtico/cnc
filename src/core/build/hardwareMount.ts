@@ -2,6 +2,7 @@ import { pairPlate, setConfirmed } from "../import/importItem"
 import { DEFAULT_GRILLE, DEFAULT_MODULE_HARDWARE, defaultModule, isPendingImport, slotForEngine, type Front, type HardwareItem, type Hole, type Module, type Panel, type PanelFitting, type Vec3 } from "../model"
 import { buildModule } from "./buildModule"
 import { kitHeight } from "./drawerKit"
+import { builtinSolids, shelfPins, solidBox } from "./hardwareSolids"
 import { r, toWorld } from "./geometry"
 import { HardwareError } from "./hardware"
 
@@ -47,6 +48,11 @@ export interface HardwareMount {
    * amb la placa; a una pota, la pota i la cantonada de la base; als jocs, les guies i els perfils, tot el llarg.
    */
   region: { min: Vec3; max: Vec3 }
+  /**
+   * Les peces que són el ferratge (components d'un joc, perfils i barra d'un accessori): es dibuixen opaques. La resta és
+   * fusta, que «Com va muntat» i la miniatura dibuixen translúcida perquè el ferratge sigui el protagonista.
+   */
+  solid: string[]
 }
 
 type Box = { min: Vec3; max: Vec3 }
@@ -68,6 +74,16 @@ function boxDistance(b: Box, p: Vec3): number {
   let d = 0
   for (const k of [0, 1, 2] as const) {
     const e = Math.max(b.min[k] - p[k], 0, p[k] - b.max[k])
+    d += e * e
+  }
+  return Math.sqrt(d)
+}
+
+/** Distància entre dues caixes (0 si es toquen o s'encavalquen). */
+function boxGap(a: Box, b: Box): number {
+  let d = 0
+  for (const k of [0, 1, 2] as const) {
+    const e = Math.max(a.min[k] - b.max[k], 0, b.min[k] - a.max[k])
     d += e * e
   }
   return Math.sqrt(d)
@@ -95,7 +111,7 @@ function fittingBox(p: Panel, f: Pick<PanelFitting, "x" | "y" | "face" | "v">, b
   return { min: [0, 1, 2].map((k) => Math.min(...cs.map((c) => c[k]!))) as Vec3, max: [0, 1, 2].map((k) => Math.max(...cs.map((c) => c[k]!))) as Vec3 }
 }
 
-/** Volum simplificat d'una frontissa de l'app (com `PanelHardware`: cassoleta i braç cap a dins). */
+/** Volum simplificat d'una frontissa de l'app al pla del muntatge (`mountPlan`; el 3D és el de `builtinSolids`). */
 const BUILTIN_HINGE = (d: number) => ({ min: [-10, -Math.max(20, d) / 2, 0] as Vec3, max: [10, Math.max(20, d) / 2, 13] as Vec3 })
 
 /**
@@ -246,9 +262,9 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
     const size = b ? { width: r(b.max[0] - b.min[0]), height: r(b.max[1] - b.min[1]), depth: r(b.max[2] - b.min[2]) } : { width: 0, height: 0, depth: 0 }
     // La caixa del model (un STEP pla té una mida 0: com a mínim 1 mm perquè la càmera tingui alguna cosa a enquadrar).
     const region = b ? { min: b.min.map((v, k) => (b.max[k]! - v < 1 ? v - 0.5 : v)) as Vec3, max: b.max.map((v, k) => (v - b.min[k]! < 1 ? v + 0.5 : v)) as Vec3 } : { min: [-50, -50, -50] as Vec3, max: [50, 50, 50] as Vec3 }
-    return { panels: [], pending, proposedTags: [], tags, focus: null, size, warnings: [], model: { ...(imp?.asset ? { asset: imp.asset } : {}), ...(b ? { bbox: b } : {}) }, region }
+    return { panels: [], pending, proposedTags: [], tags, focus: null, size, warnings: [], model: { ...(imp?.asset ? { asset: imp.asset } : {}), ...(b ? { bbox: b } : {}) }, region, solid: [] }
   }
-  const empty = { panels: [], pending, proposedTags: [], tags, focus: null, size: rc.size, warnings: [], region: { min: [0, 0, 0] as Vec3, max: [rc.size.width, rc.size.height, rc.size.depth] as Vec3 } }
+  const empty = { panels: [], pending, proposedTags: [], tags, focus: null, size: rc.size, warnings: [], region: { min: [0, 0, 0] as Vec3, max: [rc.size.width, rc.size.height, rc.size.depth] as Vec3 }, solid: [] }
   // El que es construeix: l'item confirmat (si no, no faria cap forat), al seu lloc del joc del mòdul.
   const made = pending ? setConfirmed(item, true) : item
   const hardware = { ...base.hardware }
@@ -288,8 +304,12 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
       if (sh) panels[i] = { ...p, placement: { ...p.placement, origin: [p.placement.origin[0] + sh[0], p.placement.origin[1] + sh[1], p.placement.origin[2] + sh[2]] } }
     }
   // Els components d'un joc de calaix (peces de només veure, `extras`): es veuen muntats amb la fusta. Els accessoris també.
-  if (item.engine === "drawerKit") panels.push(...build.extras.filter((p) => p.role === "hardware"))
-  if (rc.extras) panels.push(...build.extras.filter(rc.extras))
+  const solid: string[] = []
+  for (const p of [...(item.engine === "drawerKit" ? build.extras.filter((p) => p.role === "hardware") : []), ...(rc.extras ? build.extras.filter(rc.extras) : [])]) {
+    // Opacs tal com són (el vidre del marc d'una vitrina ja és transparent pel seu material).
+    panels.push(p)
+    solid.push(p.id)
+  }
   // El forat principal: la primera cassoleta (la de baix) o, si no, el forat del ferratge més a prop del mig de la seva peça.
   let focus: HardwareMount["focus"] = null
   let best = Infinity
@@ -338,6 +358,7 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
     size: rc.size,
     warnings: build.warnings.filter((w) => relevant.has(w.code)).map((w) => w.message),
     region: mountRegion(item.engine, panels, tags, focus?.at ?? aim?.at ?? null, rc),
+    solid,
   }
 }
 
@@ -373,10 +394,20 @@ function mountRegion(engine: HardwareItem["engine"], panels: Panel[], tags: stri
       take(hb)
     }
     for (const f of p.fittings ?? []) if (f.bbox) take(fittingBox(p, f, f.bbox))
-    if (p.role === "door" && !p.fittings?.length) for (const h of p.holes.filter((x) => x.tag === "hinge")) take(fittingBox(p, { x: h.x, y: h.y, face: h.face === "B" ? "B" : "A", v: [0, 1] }, BUILTIN_HINGE(h.diameter)))
     if (engine === "barHandle") {
       const hb = builtinHandleBox(p)
       if (hb) take(localBox(p, hb))
+    }
+  }
+  // El dibuix 3D dels ferratges de sèrie (frontissa amb braç i placa, guia, suports de prestatge, braç, barra, perfil…):
+  // el mateix que pinten el visor i la miniatura (`builtinSolids`), només el que toca el ferratge (no les espigues de la
+  // caixa d'un lateral que hi surt per a una altra cosa).
+  if (boxHas(region)) {
+    const base: Box = { min: [...region.min], max: [...region.max] }
+    const pins = shelfPins(panels)
+    for (const p of panels) for (const s of builtinSolids(p, pins.get(p.id))) {
+      const b = solidBox(p, s)
+      if (boxGap(b, base) <= 30) addBox(region, b)
     }
   }
   if (!boxHas(region)) {

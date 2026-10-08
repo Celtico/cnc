@@ -1,10 +1,11 @@
-import { Matrix4, Object3D, Vector3 } from "three"
+import { BoxGeometry, CylinderGeometry, Group, Matrix4, Mesh, MeshStandardMaterial, Object3D, Vector3 } from "three"
+import { basisFor, builtinSolids, type HwMaterial } from "../../core/build/hardwareSolids"
 import type { Hole, Panel, PanelFitting } from "../../core/model"
 
 /**
- * Formes dels ferratges que comparteixen el visor (`Hardware.tsx`) i les miniatures de Preferències › Ferratges
- * (`hardwareThumb.ts`): el marc d'un ferratge importat i el volum simplificat de les frontisses de l'app. Coordenades
- * locals de la peça, en metres.
+ * Formes dels ferratges que comparteixen el visor (`Hardware.tsx`), «Com va muntat» i les miniatures de Preferències ›
+ * Ferratges (`hardwareThumb.ts`): el marc d'un ferratge importat, el dibuix 3D dels ferratges de sèrie (els sòlids de
+ * `core/build/hardwareSolids.ts`) i les marques dels forats. Coordenades locals de la peça, en metres.
  */
 const S = 0.001
 
@@ -17,28 +18,55 @@ export function fittingMatrix(f: Pick<PanelFitting, "x" | "y" | "face" | "v">, t
   return new Matrix4().makeBasis(U, V, N).setPosition(f.x * S, f.y * S, (f.face === "A" ? thickness : 0) * S)
 }
 
-/** Volum d'una frontissa de l'app: la tapa de la cassoleta (disc) i el braç cap a dins (caixa). */
-export interface HingeVolume {
-  disc: { position: [number, number, number]; radius: number; height: number }
-  arm: { position: [number, number, number]; size: [number, number, number] }
+/**
+ * Materials dels ferratges de sèrie (`HwMaterial`): niquelat, acer zincat, gris fosc, plàstic fosc, faig (espigues) i
+ * alumini. Compartits per tots els visors i les miniatures (`userData.shared`: `disposeMaterial` no els allibera).
+ */
+const HW_MATERIALS: Record<HwMaterial, MeshStandardMaterial> = {
+  nickel: new MeshStandardMaterial({ color: "#c9cdd2", metalness: 0.9, roughness: 0.28, name: "Niquelat" }),
+  steel: new MeshStandardMaterial({ color: "#a7abb1", metalness: 0.8, roughness: 0.38, name: "Acer" }),
+  dark: new MeshStandardMaterial({ color: "#3a3c40", metalness: 0.55, roughness: 0.42, name: "Gris fosc" }),
+  plastic: new MeshStandardMaterial({ color: "#4b4d52", metalness: 0, roughness: 0.6, name: "Plàstic" }),
+  beech: new MeshStandardMaterial({ color: "#d9ba8c", metalness: 0, roughness: 0.8, name: "Faig" }),
+  alu: new MeshStandardMaterial({ color: "#b9bdc2", metalness: 0.7, roughness: 0.35, name: "Alumini" }),
 }
+for (const m of Object.values(HW_MATERIALS)) m.userData.shared = true
+
+/** Geometries unitàries compartides (cada sòlid és una malla escalada): mai s'alliberen (`userData.sharedModel`). */
+const UNIT_BOX = new BoxGeometry(1, 1, 1)
+const UNIT_CYL = new CylinderGeometry(1, 1, 1, 20)
 
 /**
- * Les frontisses de l'app d'un front (a cada cassoleta, a la cara de dins). Cap si la peça porta el model d'una
- * frontissa importada (`fittings`, llevat del tirador, la pota i els col·locats a mà, que no són a les cassoletes).
+ * Els ferratges de sèrie d'una peça (`builtinSolids`: frontisses, suports de prestatge, espigues, guies, braços,
+ * imants, push, suports de la barra i perfil LED) com a malles three, en coordenades locals de la peça (m). El mateix al
+ * visor (`PanelHardware`), al 3D de «Com va muntat» i a les miniatures de Ferratges. El grup porta
+ * `userData.editorOnly`: **només es veuen**, no surten al render (`sceneData`), ni a la imatge del visor per al Render,
+ * ni a l'AR ni a les exportacions (aquests fan l'escena amb `buildScene`, sense ells). Les malles no s'han d'alliberar
+ * (geometries i materials compartits: `userData.sharedModel` perquè `disposeTree` se les salti).
  */
-export function hingeVolumes(panel: Panel): HingeVolume[] {
-  if (panel.role !== "door" && panel.role !== "drawerFront" && panel.role !== "flap") return []
-  if ((panel.fittings ?? []).some((f) => f.kind !== "handle" && f.kind !== "leg" && f.kind !== "item")) return []
-  const T = panel.thickness
-  const cups = panel.holes.filter((h) => h.tag === "hinge")
-  // Cara de dins: la de les cassoletes (A, z = T).
-  const inner = cups[0]?.face === "B" ? 0 : T
-  const inDir = inner === T ? 1 : -1
-  return cups.map((h) => ({
-    disc: { position: [h.x * S, h.y * S, (inner + inDir * 1) * S], radius: (h.diameter / 2 + 3) * S, height: 2 * S },
-    arm: { position: [h.x * S, h.y * S, (inner + inDir * 7) * S], size: [20 * S, Math.max(20, h.diameter) * S, 12 * S] },
-  }))
+export function builtinHardwareGroup(panel: Panel, pins?: readonly Hole[]): Group | null {
+  const solids = builtinSolids(panel, pins)
+  if (!solids.length) return null
+  const g = new Group()
+  g.name = "ferratges"
+  g.userData.editorOnly = true
+  for (const s of solids) {
+    const mesh = new Mesh(s.kind === "box" ? UNIT_BOX : UNIT_CYL, HW_MATERIALS[s.mat])
+    mesh.userData.sharedModel = true
+    mesh.castShadow = true
+    mesh.matrixAutoUpdate = false
+    if (s.kind === "box") {
+      const [u, v, w] = s.axes
+      mesh.matrix.makeBasis(new Vector3(...u).multiplyScalar(s.size[0] * S), new Vector3(...v).multiplyScalar(s.size[1] * S), new Vector3(...w).multiplyScalar(s.size[2] * S))
+    } else {
+      // El cilindre de three va al llarg de y: (u, eix, v) amb el radi a u i v i el llarg a l'eix.
+      const [u, v, w] = basisFor(s.axis)
+      mesh.matrix.makeBasis(new Vector3(...u).multiplyScalar(s.r * S), new Vector3(...w).multiplyScalar(s.h * S), new Vector3(...v).multiplyScalar(-s.r * S))
+    }
+    mesh.matrix.setPosition(s.c[0] * S, s.c[1] * S, s.c[2] * S)
+    g.add(mesh)
+  }
+  return g
 }
 
 /** Color de les marques dels forats i dels forats proposats (importat sense confirmar: taronja, com la insígnia). */

@@ -14,7 +14,8 @@ import { BoxFrame } from "./BoxFrame"
 import { MoveGizmo } from "./MoveGizmo"
 import { useViewerCursor } from "./cursor"
 import { usePixelScale, type Axis } from "./pixelScale"
-import { CircleGeometry, NeutralToneMapping, DoubleSide, Group, InstancedMesh, Matrix4, MeshBasicMaterial, Object3D, Plane, Vector3 } from "three"
+import { CircleGeometry, NeutralToneMapping, DoubleSide, Group, InstancedMesh, Matrix4, MeshBasicMaterial, Object3D, Plane, Vector3, type Material } from "three"
+import { shelfPins } from "../../core/build/hardwareSolids"
 import { type ViewName } from "./viewNames"
 export type { ViewName } from "./viewNames"
 
@@ -214,6 +215,23 @@ export function CabinetViewer({
     for (const p of panels) m.set(p.id, { sig: panelVisualKey(p, holesDrawn), place: `${p.module ?? ""}|${JSON.stringify(p.placement)}` })
     return m
   }, [panels, holesDrawn])
+  // Suports de prestatge (forats System 32 just sota un prestatge) per peça, per al dibuix dels ferratges. La mateixa
+  // llista (referència) mentre no canviï: les peces que no hi tenen res nou no es tornen a dibuixar.
+  const pinCache = useRef(new Map<string, { key: string; holes: Hole[] }>())
+  const pinsOf = useMemo(() => {
+    const out = new Map<string, Hole[]>()
+    if (!hardware) return out
+    const next = new Map<string, { key: string; holes: Hole[] }>()
+    for (const [id, holes] of shelfPins(panels)) {
+      const key = JSON.stringify(holes)
+      const prev = pinCache.current.get(id)
+      const keep = prev && prev.key === key ? prev : { key, holes }
+      next.set(id, keep)
+      out.set(id, keep.holes)
+    }
+    pinCache.current = next
+    return out
+  }, [panels, hardware])
   // Callbacks estables per a totes les peces (la peça arriba com a dada): el que fan llegeix les props d'ara.
   const live = useRef({ onSelectModule, onSelectPart, onSelectHardware, modules, size })
   useEffect(() => {
@@ -340,6 +358,7 @@ export function CabinetViewer({
                 materialMode={materialMode}
                 materials={materials}
                 hardware={hardware}
+                pins={pinsOf.get(p.id)}
                 onHover={onSelectModule && !isPart ? onPanelHover : undefined}
                 onClick={(isPart ? onSelectPart : onSelectModule) ? onPanelClick : undefined}
                 selectedFitting={selectedHardwareId && p.fittings?.some((f) => f.placement === selectedHardwareId) ? selectedHardwareId : null}
@@ -1356,8 +1375,15 @@ interface PanelMeshProps {
   place?: string
   /** El ratolí entra o surt de la peça (ressaltat del mòdul en passar-hi per sobre). Estable: la peça va com a dada. */
   onHover?: (panel: Panel, on: boolean) => void
-  /** Ferratges visuals de la peça (frontisses i tirador als fronts). */
+  /** Ferratges visuals de la peça (frontisses i tirador als fronts, guies, espigues, suports…). */
   hardware?: boolean
+  /** Forats de la filera System 32 de la peça amb un suport de prestatge (`shelfPins`), per al dibuix dels ferratges. */
+  pins?: readonly Hole[]
+  /**
+   * Fusta translúcida («Com va muntat» de Preferències › Ferratges): la peça es veu a través (opacitat 0,4, sense
+   * escriure la profunditat) i el ferratge, opac, és el protagonista. Els forats es continuen veient.
+   */
+  seeThrough?: boolean
   /**
    * Forats amb aquestes etiquetes d'un altre color: els proposats d'un ferratge importat sense confirmar (Preferències ›
    * Ferratges, el muntatge), que el moble encara no fa.
@@ -1388,6 +1414,8 @@ const samePanelProps = (a: PanelMeshProps, b: PanelMeshProps) =>
   a.dimmed === b.dimmed &&
   a.edges === b.edges &&
   a.hardware === b.hardware &&
+  a.pins === b.pins &&
+  a.seeThrough === b.seeThrough &&
   a.proposedTags === b.proposedTags &&
   a.materialMode === b.materialMode &&
   a.materials === b.materials &&
@@ -1409,6 +1437,8 @@ export const PanelMesh = memo(function PanelMesh({
   onHover,
   edges = true,
   hardware = false,
+  pins,
+  seeThrough = false,
   proposedTags,
   selectedFitting,
   onSelectFitting,
@@ -1427,7 +1457,7 @@ export const PanelMesh = memo(function PanelMesh({
     return { matrix: m, explode: new Vector3(...explodeDir).multiplyScalar(EXPLODE_MM * S) }
   }, [panel.placement])
 
-  const mats = useMemo(() => panelMaterials(vpanel, materialMode, materials, dimmed), [vpanel, materialMode, materials, dimmed])
+  const mats = useMemo(() => veil(panelMaterials(vpanel, materialMode, materials, dimmed || seeThrough), seeThrough), [vpanel, materialMode, materials, dimmed, seeThrough])
   // Peces amb talls passants (reixetes, taulell amb pica i vitro, passacables): geometria
   // extruïda amb els forats de debò, perquè es vegi a través.
   // Peces a inglet (sense talls): secció en trapezi, perquè la cantonada es vegi a 45°.
@@ -1437,10 +1467,10 @@ export const PanelMesh = memo(function PanelMesh({
   const cut = useMemo(() => (isShaped(vis) ? shapedGeometry(vis) : vis.mitres?.length ? mitreGeometry(vis) : null), [vis])
   const cutMats = useMemo(() => {
     if (!cut) return null
-    const m = cutoutMaterials(vpanel, materialMode, materials, dimmed)
+    const m = veil(cutoutMaterials(vpanel, materialMode, materials, dimmed || seeThrough), seeThrough)
     // A la geometria d'inglet els grups van al revés: [0] puntes (cantell), [1] cares.
     return isShaped(vis) ? m : [m[1]!, m[0]!]
-  }, [cut, vpanel, vis, materialMode, materials, dimmed])
+  }, [cut, vpanel, vis, materialMode, materials, dimmed, seeThrough])
   useEffect(
     () => () => {
       cut?.dispose()
@@ -1486,7 +1516,7 @@ export const PanelMesh = memo(function PanelMesh({
           onPointerOut={onHover ? () => onHover(panel, false) : undefined}
         >
           {!cut && <boxGeometry args={[L, W, T]} />}
-          {edges && <Edges color={dimmed ? "#a08a6a" : "#6b5a3e"} threshold={15} />}
+          {edges && <Edges color={dimmed || seeThrough ? "#a08a6a" : "#6b5a3e"} threshold={15} />}
         </mesh>
         {showHoles && vpanel.holes.length > 0 && (proposedTags?.length ? (
           <>
@@ -1496,7 +1526,7 @@ export const PanelMesh = memo(function PanelMesh({
         ) : (
           <HoleMarks holes={vpanel.holes} thickness={T} />
         ))}
-        {hardware && <PanelHardware panel={vpanel} />}
+        {hardware && <PanelHardware panel={vpanel} pins={pins} />}
         {(hardware || selectedFitting) && <PanelFittings panel={vpanel} models={hardware} selected={selectedFitting} onSelect={onSelectFitting} />}
         {vpanel.grooves.map((g, i) => (
           <mesh key={`g${i}`} position={[(g.x + g.w / 2) * S, (g.y + g.h / 2) * S, g.face === "A" ? T - (g.depth * S) / 2 + 0.0002 : (g.depth * S) / 2 - 0.0002]}>
@@ -1509,6 +1539,25 @@ export const PanelMesh = memo(function PanelMesh({
     </group>
   )
 }, samePanelProps)
+
+/** Opacitat de la fusta translúcida (`seeThrough`). */
+const SEE_THROUGH_OPACITY = 0.4
+
+/**
+ * Fusta translúcida (`seeThrough`): els materials de la peça (ja transparents, `panelMaterials(…, true)`) a
+ * `SEE_THROUGH_OPACITY` i sense escriure la profunditat, perquè el ferratge (opac) es vegi sencer a través. Els
+ * materials són propis de la peça (es fan per a ella), així que es poden tocar.
+ */
+function veil<T extends Material>(mats: T[], on: boolean): T[] {
+  if (on)
+    for (const m of mats) {
+      if (m.userData.shared) continue
+      m.transparent = true
+      m.opacity = Math.min(m.opacity, SEE_THROUGH_OPACITY)
+      m.depthWrite = false
+    }
+  return mats
+}
 
 /** Disc de radi 1 i material comuns a totes les marques de forat (cada forat és una instància, escalada al seu radi). */
 const HOLE_GEO = new CircleGeometry(1, 20)
