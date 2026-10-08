@@ -33,6 +33,8 @@ type Assemble = (csv: string, step: string, mueble: string) => Unified
 const sortDesc = (a: number[]) => [...a].sort((x, y) => y - x)
 
 describe.skipIf(!existsSync(TALLER))("anada i tornada amb els parsers del taller", async () => {
+  // Vitest still runs a skipped describe factory to collect its tests: don't import without the repo.
+  if (!existsSync(TALLER)) return
   const { assemble } = (await import(/* @vite-ignore */ TALLER)) as { assemble: Assemble }
   const panels = buildComposition(cabinetToComposition(DEFAULT_CABINET)).panels
   const nesting = nest(panels, DEFAULT_NEST_OPTIONS)
