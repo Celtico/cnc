@@ -162,10 +162,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     cantell de dalt del fons, si és del cos, es canteja). Tapa de reixeta: la franja del fons queda sense ranures. Passar a
     «Encastat» amb un fons de menys de 15 mm el posa «Com el cos». «Afegir mòdul al costat» copia el fons sencer.
   - **Cantonades** Normals / A inglet (`Carcass.joint`): la tapa arriba a fora dels laterals; la base també (`mitreBottom`)
-    si és a baix de tot (a terra, potes o penjat; amb sòcol no). No surt si no hi ha res a unir (`jointApplies`) ni amb
-    **fronts encastats** (per decisió de l'usuari: «si l'estil va encastat, les cantonades no poden anar a inglet»; amb
-    algun front que es fa; compten com a Normals i l'inglet guardat torna amb Recobrents: `visibleModule`,
-    `moduleRows().joint`). Les parets buides, a inglet igualment (`hollowCorners`, pells estructurals). Si el
+    si és a baix de tot (a terra, potes o penjat; amb sòcol no). No surt si no hi ha res a unir (`jointApplies`). Si el
     mòdul només té calaixos i fronts recobrents, **els fronts dels calaixos van a inglet** (`mitreFronts`): laterals fins a
     la cara dels fronts amb el cantell de davant a 45°, fronts de fora a fora, el primer i l'últim també amb tapa i base;
     amb portes no (toparien en obrir). La caixa del calaix queda sempre dins de la llum. El tall a 45° és un post-procés
@@ -174,8 +171,8 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     la tapa i la base a inglet no en porten (s'encolen amb lamel·les o Clamex, avís `mitre`); les de divisors, prestatges
     fixos, fons encastat i una base amb sòcol sí. `carcassDowels` (`core/model/usedHardware.ts`) diu on n'hi ha: un
     mòdul tot a inglet sense divisions ni fons encastat no ensenya la secció **Unió** (l'Espiga; `frontsInspector.test.ts`).
-  - **Fronts** Recobrents / Encastats (`fronts.style`; s'edita a Mòdul › Caixa, «Estil dels fronts», després de Parets i
-    abans de les Cantonades, que en depenen; sense cap front no surt ni compta, `visibleModule`): encastats dins de la llum amb la folgança a tot el voltant, a nivell amb
+  - **Fronts** Recobrents / Encastats (`fronts.style`; s'edita a Mòdul › Caixa, «Estil dels fronts», al final, després de
+    les Cantonades; sense cap front no surt ni compta, `visibleModule`): encastats dins de la llum amb la folgança a tot el voltant, a nivell amb
     el davant (`frontZ`), caixa del calaix un gruix més curta i avís si els prestatges no es retiren prou.
   - **Parets buides** (`Carcass.hollow.thickness`): laterals, base i tapa de pell de fora + pell de dins (`*-inner`, fa de
     paret per a forats, guies i ranura del fons), llistons (rol `spacer`) i tira del davant (rol `facing`). `derive` dona
@@ -543,7 +540,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
 - **Res amagat compta** (regla): el que s'amaga a la UI es conserva (tornar a encendre l'opció recupera els valors), però
   `buildModule` construeix des de `visibleModule` (`model/composition.ts`), que posa a un valor fix els camps de les opcions
   apagades: fons (material i gruix sense fons; ranura sense ranura; retirada si no és encastat), inglet si Cantonades no
-  surt (res a unir o fronts encastats; també els fronts dels calaixos), tauler de taula sense tapa sencera, prestatges i barra als calaixos, al **front fix** i als
+  surt (també els fronts dels calaixos), tauler de taula sense tapa sencera, prestatges i barra als calaixos, al **front fix** i als
   compartiments dividits, gruix i «a ras» sense prestatges, alçades de calaix de més, frontissa de les dues portes, patró de
   reixeta de l'altre tipus, l'imant triat d'una reixeta amb frontisses i sense trapa, el marc d'una porta que no és de vidre,
   el «Fons del calaix» sense calaixos, els prestatges, les fileres, la barra i la llum d'un compartiment sense una peça a cada costat i el front d'un compartiment que no és aguantat pels quatre costats (`zoneSupport.ts`), l'estil dels fronts sense cap front, la folgança de les peces de dins d'un mòdul sense dividir, el front d'un compartiment **tapat** pel
@@ -827,12 +824,12 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     `core/model/usedHardware.ts`, `frontsInspector.test.ts`), en cascada:
     - **Caixa** (`mod-structure`, `LuFrame`; abans «Estructura», es confonia amb la pestanya de l'arbre; `CarcassForm`):
       base —amb la «Pota» pel mateix `HardwarePick`—, fons i, just a sota, **Ranura del fons** (en ranura) o **Retirada
-      del fons** (encastat), tapa, laterals, parets, el que és de tots els fronts del mòdul —**Estil dels fronts**
-      (Recobrents / Encastats) i Folgança front–cos si hi ha algun front que es fa (un front fix també) · Folgança entre
-      fronts amb dues portes, dos calaixos o un front recobrent al costat d'un divisor · Retranqueig dels prestatges amb
-      prestatges que es retiren o una tira LED (`frontOptionsUse`; totes amb «Com a Preferències» quan coincideixen amb
-      Preferències › Folgances per defecte i un botó per tornar-hi)— i, al final, **Cantonades** (`moduleRows().joint`: no
-      surt amb fronts encastats). Insígnia Recobrents/Encastats si hi ha estil.
+      del fons** (encastat), tapa, laterals, parets, cantonades i, al final, el que és de tots els fronts del mòdul:
+      **Estil dels fronts** (Recobrents / Encastats) i Folgança front–cos si hi ha algun front que es fa (un front fix
+      també) · Folgança entre fronts amb dues portes, dos calaixos o un front recobrent al costat d'un divisor ·
+      Retranqueig dels prestatges amb prestatges que es retiren o una tira LED (`frontOptionsUse`; totes amb «Com a
+      Preferències» quan coincideixen amb Preferències › Folgances per defecte i un botó per tornar-hi). Insígnia
+      Recobrents/Encastats si hi ha estil.
     - **Materials** (`mod-materials`, `LuPalette`, `MaterialsForm`): cos, **Fronts** (`frontMaterial`, «Com el cos»;
       només amb algun front que es fa, com l'Estil), fons i, amb calaixos, **«Fons del calaix»**
       (`Carcass.drawerBottomMaterial`).
@@ -893,7 +890,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   - **Nom a la capçalera de l'inspector**: el del mòdul i de l'objecte es canvia clicant-lo (`Editable`, com Figma); el del
     moble, a la barra de dalt.
   - **Opcions que no toquen s'amaguen** (sense fons no surten material, gruix ni ranura del fons; Cantonades només si hi ha
-    res a unir i els fronts no són encastats) i hi val la regla **res amagat compta**.
+    res a unir) i hi val la regla **res amagat compta**.
   - Res de botons «Veure a l'alçat»: les pestanyes 3D · Alçat · Foto ja són a dalt del visor.
 - **Centre — Visor** amb pestanyes `3D` · `Alçat` · `Foto`. **Alçat** (`ElevationEditor`): el mòdul en edició i, translúcids,
   els veïns (costats, a sobre i a sota); clicar un veí hi passa (`neighbors`).

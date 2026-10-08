@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { DEFAULT_GRILLE, UI_PATHS, backChoices, boardChoices, hardwareSummary, materialByName, moduleRows, moduleSlotItem, type Base, type Carcass, type HardwareItem, type Module, type ModuleRows, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, UI_PATHS, backChoices, boardChoices, hardwareSummary, jointApplies, materialByName, moduleRows, moduleSlotItem, type Base, type Carcass, type HardwareItem, type Module, type ModuleRows, type Top } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
@@ -16,10 +16,9 @@ export type CarcassSection = "dims" | "structure"
 
 /**
  * Formulari de la carcassa del mòdul seleccionat, per seccions (l'inspector en fa una secció plegable per a cadascuna):
- * mides i la **Caixa**, en cascada: base, fons (amb la Ranura o la Retirada del fons), tapa, laterals, parets, el que és
- * de tots els fronts del mòdul (l'Estil, les folgances i el Retranqueig dels prestatges; per decisió de l'usuari,
- * 2026-10-08: «l'Estil també a la Caixa», abans eren a «Acabats») i, al final, les cantonades (no surten amb fronts
- * encastats). Només el que la construcció
+ * mides i la **Caixa**, en cascada: base, fons (amb la Ranura o la Retirada del fons), tapa, laterals, parets, cantonades
+ * i, al final, el que és de tots els fronts del mòdul: l'Estil, les folgances i el Retranqueig dels prestatges (per
+ * decisió de l'usuari, 2026-10-08: «l'Estil també a la Caixa»; abans eren a «Acabats»). Només el que la construcció
  * llegeix (`moduleRows`, `core/model/usedHardware.ts`). Els passacables són a `CableHolesForm`.
  */
 export function CarcassForm({ module, onChange, section, rows = moduleRows(module) }: { module: Module; onChange: (m: Module) => void; section: CarcassSection; rows?: ModuleRows }) {
@@ -162,10 +161,35 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
           />
         )}
 
-        {/* Tots els fronts del mòdul, després de Laterals i Parets (en depenen: un front només es fa aguantat per un
-            lateral o divisor a cada costat; el davant de la caixa, la llum) i abans de Cantonades (que en depèn: amb
-            fronts encastats no surt). Només si es llegeixen (`frontOptionsUse`): sense cap front que es fa, ni estil ni
-            folgances. El tirador i els ferratges de cada front es trien al seu compartiment. */}
+        {/* Cantonades: com s'uneix la tapa amb els laterals. */}
+        {/* Sense laterals, o sense tapa ni base a baix dels laterals (amb sòcol la base queda
+            entre els laterals), no hi ha cantonades a unir a inglet. */}
+        {/* La mateixa condició que fa servir la construcció (`jointApplies`): si el control no surt, `joint` no compta. */}
+        {c.hollow && (c.sides.left || c.sides.right) ? (
+          // Amb parets buides les cantonades són sempre a inglet (com un bloc massís).
+          <FormRow label="Cantonades" help="Amb parets buides, sempre a inglet: pells de fora a 45° i tires del davant en marc.">
+            <Text fontSize="sm" pt="7px">
+              A inglet
+            </Text>
+          </FormRow>
+        ) : !jointApplies(c) ? null : (
+          <FormRow label="Cantonades">
+            <IconChoice
+              hideLabel
+              label="Cantonades"
+              value={c.joint ?? "butt"}
+              options={[
+                { value: "butt", label: "Normals", icon: LuSquare, hint: "Normals: la tapa entre els laterals, amb espigues" },
+                { value: "mitre", label: "A inglet", icon: LuTriangleRight, hint: "A inglet: tapa i base (si és a baix de tot, sense sòcol) tallades a 45° amb els laterals, no es veu cap cantell" },
+              ]}
+              onChange={(joint) => set({ joint: joint === "butt" ? undefined : joint })}
+            />
+          </FormRow>
+        )}
+
+        {/* Tots els fronts del mòdul, al final de la Caixa (en depenen: el davant de la caixa, la llum). Només si es
+            llegeixen (`frontOptionsUse`): sense cap front que es fa, ni estil ni folgances. El tirador i els ferratges
+            de cada front es trien al seu compartiment. */}
         {rows.style && (
           <FormRow label="Estil dels fronts">
             <IconChoice
@@ -192,34 +216,6 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
           <NumRow label="Retranqueig dels prestatges" value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set({ shelfSetback })} help={`Del davant de la caixa al cantell dels prestatges de tot el mòdul (amb fronts encastats, almenys un gruix). ${prefHint(c.shelfSetback, gaps.shelfSetback)}`} />
           <PrefReset value={c.shelfSetback} pref={gaps.shelfSetback} onReset={() => set({ shelfSetback: gaps.shelfSetback })} />
         </>}
-
-        {/* Cantonades: com s'uneix la tapa amb els laterals. */}
-        {/* Sense laterals, o sense tapa ni base a baix dels laterals (amb sòcol la base queda
-            entre els laterals), no hi ha cantonades a unir a inglet. */}
-        {/* La mateixa condició que fa servir la construcció (`jointApplies` i, a `visibleModule`, l'Estil): si el control no
-            surt, `joint` no compta. Amb fronts encastats no surt (per decisió de l'usuari: «si l'estil va encastat, les
-            cantonades no poden anar a inglet»); torna amb Recobrents amb el valor d'abans. */}
-        {c.hollow && (c.sides.left || c.sides.right) ? (
-          // Amb parets buides les cantonades són sempre a inglet (com un bloc massís).
-          <FormRow label="Cantonades" help="Amb parets buides, sempre a inglet: pells de fora a 45° i tires del davant en marc.">
-            <Text fontSize="sm" pt="7px">
-              A inglet
-            </Text>
-          </FormRow>
-        ) : !rows.joint ? null : (
-          <FormRow label="Cantonades">
-            <IconChoice
-              hideLabel
-              label="Cantonades"
-              value={c.joint ?? "butt"}
-              options={[
-                { value: "butt", label: "Normals", icon: LuSquare, hint: "Normals: la tapa entre els laterals, amb espigues" },
-                { value: "mitre", label: "A inglet", icon: LuTriangleRight, hint: "A inglet: tapa i base (si és a baix de tot, sense sòcol) tallades a 45° amb els laterals, no es veu cap cantell" },
-              ]}
-              onChange={(joint) => set({ joint: joint === "butt" ? undefined : joint })}
-            />
-          </FormRow>
-        )}
       </Stack>
     )
   return null

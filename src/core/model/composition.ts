@@ -807,8 +807,7 @@ export function defaultModule(id: string, name: string, overrides: Partial<Carca
 /**
  * Cantonades (Normals / A inglet) es poden triar: hi ha algun lateral, les parets no són buides (amb parets buides
  * són sempre a inglet) i hi ha una tapa o una base a baix de tot dels laterals per unir-hi (amb sòcol la base queda
- * entre els laterals). Amb fronts encastats tampoc no surt (`jointShown`). És la mateixa condició que fa sortir el control
- * a l'inspector: si no surt, `joint` no compta.
+ * entre els laterals). És la mateixa condició que fa sortir el control a l'inspector: si no surt, `joint` no compta.
  */
 export function jointApplies(c: Pick<Carcass, "sides" | "hollow" | "top" | "base">): boolean {
   if (!(c.sides.left || c.sides.right) || c.hollow) return false
@@ -836,6 +835,8 @@ export function visibleModule(m: Module): Module {
     carcass.backClearance = DEFAULT_CABINET.backClearance
   }
   if (c.back !== "inset") delete carcass.backInsetSetback
+  // Cantonades: només si el control surt (`jointApplies`); «Normals» és l'absència.
+  if (c.joint !== "mitre" || !jointApplies(c)) delete carcass.joint
   // Tauler de taula: només amb la tapa sencera.
   if (c.top.kind !== "full") delete carcass.tableTop
   const root = visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(c))
@@ -846,9 +847,6 @@ export function visibleModule(m: Module): Module {
   const fronts = { ...m.fronts }
   // L'estil (recobrents / encastats) només compta si hi ha algun front que es construeix (la fila «Estil» no surt sense).
   if (fronts.style === "overlay" || !hasBuiltFronts(root)) delete fronts.style
-  // Cantonades: només si el control surt (`jointApplies`) i els fronts no són encastats (per decisió de l'usuari: «si
-  // l'estil va encastat, les cantonades no poden anar a inglet»; l'Estil és a sobre a la Caixa). «Normals» és l'absència.
-  if (c.joint !== "mitre" || !jointApplies(c) || fronts.style === "inset") delete carcass.joint
   if (fronts.handles === "bar") delete fronts.handles
   return { ...m, carcass, fronts, root }
 }
