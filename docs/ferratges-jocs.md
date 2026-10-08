@@ -32,7 +32,7 @@ l'HT10 N (62,5), l'HT12 K (126), l'HT13 C (174) i l'HT14 F (238), que tenen la m
   triada al calaix guanya el joc del mòdul. «Guies de calaix» de l'inspector (`ruleHardwareCounts`) compta també els
   calaixos amb joc (un parell per calaix: fons sense lateral de fusta).
 - Els `params` de l'item porten la **prebroca** (`pilotDiameter`, `pilotDepth`; 0 = cap forat) i els `targets` descriuen
-  el forat de prebroca de cada peça (`side`, `front`, `back`). «Mides» de l'editor els canvia; Preferències › Ferratges ›
+  el forat de prebroca de cada peça (`side`, `front`, `back`). Preferències › Regles de mecanitzat ›
   **«Prebroca dels cargols»** (`kitPilot` / `setKitPilot`) els canvia a tots els jocs de la biblioteca alhora.
 
 ## Model (`HardwareKitSchema`)
