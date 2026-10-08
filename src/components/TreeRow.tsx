@@ -176,19 +176,18 @@ export function TreeRowMenu({ label, children }: { label: string; children: Reac
 }
 
 /**
- * Títol d'un grup de l'arbre (mòduls, peces lliures, objectes de referència, models 3D, elements d'un ambient) amb el seu
- * + per afegir-ne. `menu`: el + obre un menú; `actions`: botons propis en lloc del + (els «+ Moble» · «+ Objecte» dels
- * ambients); `hideAdd`: només el títol.
+ * Títol d'un grup de l'arbre (mòduls, peces lliures, objectes de referència, models 3D; mobles i objectes d'un ambient)
+ * amb el seu + per afegir-ne. `menu`: el + obre un menú; `hideAdd`: només el títol.
  */
-export function TreeSection({ children, onAdd, addLabel, busy, menu, hideAdd, actions }: { children: ReactNode; onAdd?: () => void; addLabel?: string; busy?: boolean; menu?: ReactNode; hideAdd?: boolean; actions?: ReactNode }) {
+export function TreeSection({ children, onAdd, addLabel, busy, menu, hideAdd }: { children: ReactNode; onAdd?: () => void; addLabel?: string; busy?: boolean; menu?: ReactNode; hideAdd?: boolean }) {
   // Sense + (grup que ja no s'ofereix en aquest tipus de document però que encara en té): només el títol.
-  if (hideAdd || (!actions && !addLabel))
+  if (hideAdd || !addLabel)
     return (
       <HStack pt={3} pb={1} px={1} minH="6">
         <SectionLabel>{children}</SectionLabel>
       </HStack>
     )
-  const plus = actions ?? (
+  const plus = (
     <IconButton aria-label={addLabel} title={busy ? "Optimitzant el model…" : addLabel} size="2xs" variant="ghost" onClick={onAdd} disabled={busy} aria-busy={busy}>
       {busy ? <Spinner size="xs" /> : <LuPlus />}
     </IconButton>
@@ -197,7 +196,7 @@ export function TreeSection({ children, onAdd, addLabel, busy, menu, hideAdd, ac
     <HStack justify="space-between" pt={3} pb={1} px={1}>
       <SectionLabel>{children}</SectionLabel>
       {/* Amb `menu`, el + obre un menú (les opcions per afegir-ne); si no, afegeix directament. */}
-      {menu && !actions ? (
+      {menu ? (
         <Menu.Root positioning={{ placement: "bottom-end" }}>
           <Menu.Trigger asChild>{plus}</Menu.Trigger>
           <Portal>

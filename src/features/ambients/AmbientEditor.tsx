@@ -334,13 +334,22 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   }
   const groupSel = (name: string) => select({ kind: "group", id: name })
 
-  // Llista d'elements: els grups (en l'ordre del primer element) amb els seus a dins.
+  // Arbre: dos apartats, **Mobles** i **Objectes** (com «Peces lliures» i «Models 3D» de l'editor), cadascun amb els seus
+  // elements i els grups (en l'ordre del primer element) amb els seus a dins. Un grup amb mobles i objectes surt als dos
+  // apartats, a cadascun amb els seus; triar-lo tria tot el grup. Els blocs d'abans van amb els objectes; un moble que ja no
+  // hi és, amb els mobles.
   const [folded, setFolded] = useState<string[]>([])
-  const listRows: ({ kind: "group"; name: string; items: AmbientItem[] } | { kind: "item"; item: AmbientItem })[] = []
-  for (const it of amb.items) {
-    if (!it.group) listRows.push({ kind: "item", item: it })
-    else if (!listRows.some((r) => r.kind === "group" && r.name === it.group)) listRows.push({ kind: "group", name: it.group, items: amb.items.filter((x) => x.group === it.group) })
+  type ListRow = { kind: "group"; name: string; items: AmbientItem[] } | { kind: "item"; item: AmbientItem }
+  const rowsOf = (list: AmbientItem[]): ListRow[] => {
+    const out: ListRow[] = []
+    for (const it of list) {
+      if (!it.group) out.push({ kind: "item", item: it })
+      else if (!out.some((r) => r.kind === "group" && r.name === it.group)) out.push({ kind: "group", name: it.group, items: list.filter((x) => x.group === it.group) })
+    }
+    return out
   }
+  const objectItems = amb.items.filter((it) => kindOf(it) === "object")
+  const mobleItems = amb.items.filter((it) => kindOf(it) !== "object")
   const groups = [...new Set(amb.items.map((i) => i.group).filter((g): g is string => !!g))]
   const itemRow = (it: AmbientItem, depth: number) => {
     const g = geos.get(it.id)
@@ -353,7 +362,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
         icon={missing ? <LuTriangleAlert /> : isObjItem(it) ? <LuSofa /> : <LuBox />}
         iconColor={missing ? "fg.error" : isObjItem(it) ? "fg.muted" : "wood.fg"}
         label={label}
-        hint={g ? `${Math.round(g.w)} × ${Math.round(g.d)}` : undefined}
+        hint={isEmptyGeometry(g) ? "Buit" : g ? `${Math.round(g.w)} × ${Math.round(g.d)}` : undefined}
         selected={sel?.kind === "item" && sel.id === it.id}
         highlighted={sel?.kind === "group" && sel.id === it.group}
         onClick={() => (select({ kind: "item", id: it.id }), setTool("select"))}
@@ -398,6 +407,46 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
           </TreeRowMenu>
         }
       />
+    )
+  }
+
+  /** Fila de l'arbre: un element o un grup (plegable, amb els seus elements de l'apartat `section` a dins). */
+  const listRow = (r: ListRow, section: "moble" | "object") => {
+    if (r.kind === "item") return itemRow(r.item, 1)
+    const fold = `${section}:${r.name}`
+    const open = !folded.includes(fold)
+    return (
+      <Box key={`g:${section}:${r.name}`}>
+        <TreeRow
+          depth={1}
+          icon={open ? <LuChevronDown /> : <LuChevronRight />}
+          onToggle={() => setFolded(open ? [...folded, fold] : folded.filter((f) => f !== fold))}
+          toggleLabel={open ? `Plegar «${r.name}»` : `Desplegar «${r.name}»`}
+          label={r.name}
+          hint={`${r.items.length} ${section === "moble" ? (r.items.length === 1 ? "moble" : "mobles") : r.items.length === 1 ? "objecte" : "objectes"}`}
+          selected={sel?.kind === "group" && sel.id === r.name}
+          onClick={() => (groupSel(r.name), setTool("select"))}
+          menu={
+            <TreeRowMenu label={`Accions de «${r.name}»`}>
+              <Menu.Item value="dup" onClick={() => {
+                const d = duplicateItems(amb, groupIds(amb, r.name))
+                change(d.ambient, true)
+                if (d.group) groupSel(d.group)
+              }}>
+                <LuCopy /> Duplicar el grup
+              </Menu.Item>
+              <Menu.Item value="ungroup" onClick={() => (change(setItemGroup(amb, groupIds(amb, r.name), undefined), true), setSel(null))}>
+                <LuUngroup /> Desagrupar
+              </Menu.Item>
+              <Menu.Separator />
+              <Menu.Item value="del" color="fg.error" onClick={() => (change(removeItems(amb, groupIds(amb, r.name)), true), setSel(null))}>
+                <LuTrash2 /> Eliminar el grup
+              </Menu.Item>
+            </TreeRowMenu>
+          }
+        />
+        {open && r.items.map((it) => itemRow(it, 2))}
+      </Box>
     )
   }
 
@@ -501,7 +550,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
         ws={ws}
         left={
           // Com l'Estructura de l'editor (mateixes files, `TreeRow`): l'ambient a dalt (el selecciona), les parets en un
-          // grup plegable i els elements amb els seus grups.
+          // grup plegable i dos apartats, Mobles i Objectes, amb el + i els seus elements i grups.
           <Stack gap={0.5} role="tree" aria-label="Estructura de l'ambient" fontSize="sm">
             <TreeRow icon={<LuHouse />} label={name || "Ambient"} bold depth={0} selected={ambientSel} onClick={() => (select(null), ws.setMobilePane("props"), setTool("select"))} />
             {amb.walls.length > 0 && (
@@ -545,59 +594,15 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                   ))}
               </Box>
             )}
-            {/* Com els grups de l'arbre de l'editor: títol i, a la dreta, què s'hi pot afegir. */}
-            <TreeSection
-              actions={
-                <HStack gap={0.5}>
-                  <Button size="2xs" variant="ghost" onClick={() => setPicker(true)}>
-                    <LuPlus /> Moble
-                  </Button>
-                  <Button size="2xs" variant="ghost" onClick={() => setObjPicker(true)}>
-                    <LuPlus /> Objecte
-                  </Button>
-                </HStack>
-              }
-            >
-              Elements
+            {/* Com els grups de l'arbre de l'editor (Peces lliures +, Models 3D +): títol i el + que obre la galeria. */}
+            <TreeSection onAdd={() => setPicker(true)} addLabel="Afegir moble">
+              Mobles
             </TreeSection>
-            {/* Elements i grups (plegables), amb el menú ⋯ de cada fila, com l'arbre de l'editor. */}
-            {listRows.map((r) => {
-              if (r.kind === "item") return itemRow(r.item, 1)
-              const open = !folded.includes(r.name)
-              return (
-                <Box key={`g:${r.name}`}>
-                  <TreeRow
-                    depth={1}
-                    icon={open ? <LuChevronDown /> : <LuChevronRight />}
-                    onToggle={() => setFolded(open ? [...folded, r.name] : folded.filter((f) => f !== r.name))}
-                    toggleLabel={open ? `Plegar «${r.name}»` : `Desplegar «${r.name}»`}
-                    label={r.name}
-                    hint={`${r.items.length} ${r.items.length === 1 ? "element" : "elements"}`}
-                    selected={sel?.kind === "group" && sel.id === r.name}
-                    onClick={() => (groupSel(r.name), setTool("select"))}
-                    menu={
-                      <TreeRowMenu label={`Accions de «${r.name}»`}>
-                        <Menu.Item value="dup" onClick={() => {
-                          const d = duplicateItems(amb, groupIds(amb, r.name))
-                          change(d.ambient, true)
-                          if (d.group) groupSel(d.group)
-                        }}>
-                          <LuCopy /> Duplicar el grup
-                        </Menu.Item>
-                        <Menu.Item value="ungroup" onClick={() => (change(setItemGroup(amb, groupIds(amb, r.name), undefined), true), setSel(null))}>
-                          <LuUngroup /> Desagrupar
-                        </Menu.Item>
-                        <Menu.Separator />
-                        <Menu.Item value="del" color="fg.error" onClick={() => (change(removeItems(amb, groupIds(amb, r.name)), true), setSel(null))}>
-                          <LuTrash2 /> Eliminar el grup
-                        </Menu.Item>
-                      </TreeRowMenu>
-                    }
-                  />
-                  {open && r.items.map((it) => itemRow(it, 2))}
-                </Box>
-              )
-            })}
+            {rowsOf(mobleItems).map((r) => listRow(r, "moble"))}
+            <TreeSection onAdd={() => setObjPicker(true)} addLabel="Afegir objecte">
+              Objectes
+            </TreeSection>
+            {rowsOf(objectItems).map((r) => listRow(r, "object"))}
           </Stack>
         }
         right={
