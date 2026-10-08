@@ -39,7 +39,6 @@ import {
 import { FoldItem } from "../../components/Fold"
 import { sectionKey } from "../../components/foldContext"
 import { writeSessionFlag } from "../../components/sessionState"
-import { ruleHardwareCounts } from "../../core/build/hardwareSummary"
 import { Workspace } from "../../components/Workspace"
 import { ViewOptions, ViewTile } from "../../components/ViewOptions"
 import { useWorkspace } from "../../components/useWorkspace"
@@ -52,7 +51,6 @@ import { RenderDialog, type SceneGetter } from "../../components/viewer/render/R
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
-import type { KitOrder } from "../../core/build/buildModule"
 import { materialIssues } from "../../core/build/materialIssues"
 import { applySettingsToModule, moduleHasInnerPieces, usedSlotSet, hasDrawers, coveringZone, frontsSection, frontsSectionEmpty, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
@@ -101,7 +99,6 @@ function readTab(): ViewTab {
 type ViewMode = "pieces" | "texture" | "presentation"
 /** Llista buida estable (mentre no hi ha moble construït). */
 const NO_PANELS: Panel[] = []
-const NO_KITS: KitOrder[] = []
 const NO_WARNINGS: CompositionWarning[] = []
 
 /** Mida (mm) de l'escena d'un document buit: el que ocuparia un moble mitjà, per enquadrar la càmera i el terra. */
@@ -295,7 +292,6 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   const rowIndex = module ? rowMates.indexOf(module) : -1
   const rowPrev = rowIndex > 0 ? rowMates[rowIndex - 1] : undefined
   const moduleBuild = build?.modules[moduleIndex]?.build
-  const moduleExtras = useMemo(() => (build?.extras ?? NO_PANELS).filter((p) => p.module === moduleIndex + 1), [build, moduleIndex])
   const zone = selectedZone && module ? findZone(module.root, selectedZone) : undefined
 
   const size = useMemo(() => viewerSize(comp), [comp])
@@ -702,7 +698,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       i < 0 || list.length < 2 ? null : { prev: i > 0 ? to(list[i - 1]!) : null, next: i < list.length - 1 ? to(list[i + 1]!) : null, pos: `${i + 1}/${list.length}` }
     if (selection.kind === "module") return around(comp.modules, comp.modules.findIndex((m) => m.id === selection.id), (m) => ({ kind: "module", id: m.id }))
     if (selection.kind === "hardware") {
-      // Els col·locats del mateix mòdul (o peça lliure), com a la llista de l'inspector.
+      // Els col·locats del mateix mòdul (o peça lliure), en l'ordre de la composició.
       const pl = comp.hardwarePlacements?.find((h) => h.id === selection.id)
       const scope = pl && placementScope(pl)
       const list = scope ? scopePlacements(comp, scope) : []
@@ -1198,16 +1194,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           <FoldItem id="mod-joinery" title="Acabats i ferratges" icon={LuHammer} defaultOpen={false}>
             <JoineryForm module={module} onChange={updateModule} usedSlots={usedSlotSet(module)} />
           </FoldItem>
-          <FoldItem id="mod-hardware" title="Ferratges" icon={LuWrench} badge={hardwareBadge(scopePlacements(comp, { kind: "module", moduleId: module.id }).length, panels.filter((p) => p.module === moduleIndex + 1), module.carcass.base.kind === "legs" ? 4 : 0, moduleExtras, moduleBuild?.hardwareKits ?? NO_KITS)}>
-            <HardwarePlacements
-              comp={comp}
-              scope={{ kind: "module", moduleId: module.id }}
-              panels={panels}
-              warnings={warnings}
-              actions={hardwareActions}
-              rules={ruleHardwareCounts(panels.filter((p) => p.module === moduleIndex + 1), module.carcass.base.kind === "legs" ? 4 : 0, moduleExtras, moduleBuild?.hardwareKits ?? NO_KITS)}
-            />
-          </FoldItem>
+          {/* «Ferratges» (col·locats a mà i els de les regles) no surt a l'inspector del mòdul (per decisió de l'usuari,
+              2026-10-08): els col·locats es conserven, es fabriquen i es veuen al 3D (on es trien i s'editen). */}
         </Stack>
       ) : null}
 
@@ -1489,8 +1477,3 @@ function legsView(base: { height: number; hardware?: HardwareItem }, depth: numb
   return { height: base.height, depth, ...(inset !== undefined ? { inset } : {}), ...(fitted ? { fitted } : {}) }
 }
 
-/** Insígnia de «Ferratges» del mòdul: els col·locats a mà i els de les regles (sense les espigues, que són forats). */
-function hardwareBadge(placed: number, panels: Panel[], legs: number, extras: Panel[], kits: readonly KitOrder[]): string | undefined {
-  const rules = ruleHardwareCounts(panels, legs, extras, kits).filter((r) => r.id !== "dowel").reduce((a, r) => a + r.count, 0)
-  return [placed ? `${placed} a mà` : "", rules ? `${rules} de regles` : ""].filter(Boolean).join(" · ") || undefined
-}
