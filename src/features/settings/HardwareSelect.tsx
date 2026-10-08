@@ -166,10 +166,10 @@ export function HardwareDrawer({ open, onOpenChange, label, items, current, inhe
       {none && !q && (
         <PickerRow on={none.selected} onClick={() => { onOpenChange(false); none.onPick() }} testId="hardware-drawer-none">
           <Box w="64px" flexShrink={0} aspectRatio="2 / 1" rounded="md" borderWidth="1px" borderStyle="dashed" />
-          <Stack gap={0} align="start" minW={0}>
+          <Stack gap={0} align="start" minW={0} flex="1">
             <Text fontSize="sm">{none.label}</Text>
             {none.help && (
-              <Text fontSize="xs" color="fg.muted" truncate>
+              <Text fontSize="xs" color="fg.muted">
                 {none.help}
               </Text>
             )}
@@ -181,10 +181,10 @@ export function HardwareDrawer({ open, onOpenChange, label, items, current, inhe
           <Box w="64px" flexShrink={0}>
             {inherited ? <HardwareThumb item={inherited} base={base} materials={settings.materials} /> : <Box aspectRatio="2 / 1" rounded="md" borderWidth="1px" borderStyle="dashed" />}
           </Box>
-          <Stack gap={0} align="start" minW={0}>
+          <Stack gap={0} align="start" minW={0} flex="1">
             <Text fontSize="sm">{inherited ? (isDrawerKit(inherited) ? `${INHERITED_LABEL} (joc de calaix)` : INHERITED_LABEL) : emptyLabel}</Text>
             {inherited && (
-              <Text fontSize="xs" color="fg.muted" truncate>
+              <Text fontSize="xs" color="fg.muted">
                 {inherited.name}
               </Text>
             )}
