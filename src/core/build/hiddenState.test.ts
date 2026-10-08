@@ -57,8 +57,7 @@ function scrambleHidden(m: Module, r: Rnd): Module {
     fronts.betweenGap = pick(r, [0, 2, 6])
   }
   if (!anyRetiredShelf(m.root)) c.shelfSetback = int(r, 0, 100)
-  // Interior › Divisió › «Peces de dins»: sense divisors ni prestatges fixos a partir de la segona divisió no surt (i 0 =
-  // sense valor).
+  // Interior › Divisió › «Peces de dins»: sense dividir l'arrel no surt (i 0 = sense valor).
   if (!anyInnerPiece(m.root)) {
     const g = pick(r, [undefined, 0, 0.5, 1, 3])
     if (g === undefined) delete c.innerClearance
@@ -89,14 +88,9 @@ function anyRetiredShelf(z: Zone): boolean {
   return (z.shelves?.n ?? 0) > 0 || !!z.led
 }
 
-/**
- * Algun divisor o prestatge fix (divisió horitzontal, o prestatges sense «Regulables» d'un compartiment que no és de
- * calaixos que es fan) dins d'un compartiment que ja és fruit d'una divisió (no l'arrel).
- */
-function anyInnerPiece(z: Zone, isRoot = true, covered = false): boolean {
-  if (z.split) return !isRoot || z.split.children.some((c) => anyInnerPiece(c, false, covered || !!z.front))
-  if (isRoot || (z.front?.kind === "drawers" && !covered)) return false
-  return (z.shelves?.n ?? 0) > 0 && !z.shelves!.adjustable
+/** Peces de dins: l'arrel és dividida (tots els divisors i prestatges fixos la porten; sense dividir, cap). */
+function anyInnerPiece(root: Zone): boolean {
+  return (root.split?.children.length ?? 0) > 1
 }
 
 function randomShelves(r: Rnd): Zone["shelves"] {
@@ -239,7 +233,7 @@ describe("res amagat compta: els camps de les opcions apagades no canvien res", 
     }
     expect([...new Set(bad)]).toEqual([])
   })
-  it("mòduls aleatoris amb la folgança de les peces de dins (1 mm): només compta amb divisors o prestatges fixos de dins", () => {
+  it("mòduls aleatoris amb la folgança de les peces de dins (1 mm): només compta amb l'arrel dividida", () => {
     const bad: number[] = []
     const r = rng(13)
     for (let seed = 1; seed <= 150; seed++) {

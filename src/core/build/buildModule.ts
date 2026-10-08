@@ -31,6 +31,7 @@ import {
   migrateModuleHardware,
   visibleModule,
   frontOptionsUse,
+  hasInnerPieces,
 } from "../model"
 import { normalizePanel } from "./buildCabinet"
 import { applyHardware, legSpec, resolveKit, slotSpec, type ResolvedKit, type SlotSpec } from "./hardware"
@@ -260,7 +261,7 @@ interface VerticalRef {
   outer: boolean
   /**
    * Folgança de les peces de dins: la peça s'atura aquests mm abans a cada cap (`yB`/`yT` són els de la llum; la peça
-   * va de `yB + endGap` a `yT − endGap`). Sense (laterals, divisors de la primera divisió): 0.
+   * va de `yB + endGap` a `yT − endGap`). Sense (laterals, mòdul sense dividir): 0.
    */
   endGap?: number
 }
@@ -830,11 +831,10 @@ class Builder {
     }
     walk(m.root, false)
 
-    // 1) Divisors i prestatges fixos de totes les divisions. A partir de la segona divisió (zona pare que no és l'arrel),
-    // la folgança de les peces de dins: més curts, centrats.
+    // 1) Divisors i prestatges fixos de totes les divisions, amb la folgança de les peces de dins: més curts, centrats.
     layout.dividers.forEach((div, i) => {
       const cut = this.insetCut(div.parentId)
-      const gap = this.innerGap(div.parentId)
+      const gap = this.innerGap()
       if (div.dir === "v") this.buildDivider(div.at, div.from, div.to, `divider-${i + 1}`, cut, gap)
       else this.buildFixedShelf(div.at, div.from, div.to, `fixed-${i + 1}`, cut, gap)
     })
@@ -869,12 +869,13 @@ class Builder {
   }
 
   /**
-   * Folgança de les peces de dins (`Carcass.innerClearance`, sense = 0) dels divisors i prestatges fixos de la zona
-   * `zoneId`: només a partir de la segona divisió (la zona no és l'arrel); els de la primera van sencers entre la caixa.
+   * Folgança de les peces de dins (`Carcass.innerClearance`, sense = 0) dels divisors i prestatges fixos: amb l'arrel
+   * dividida, tots (de qualsevol nivell, també els de l'arrel; `hasInnerPieces`); sense dividir, cap (els prestatges
+   * fixos van sencers entre la caixa).
    */
-  private innerGap(zoneId: string): number {
+  private innerGap(): number {
     const g = this.m.carcass.innerClearance ?? 0
-    return g > 0 && zoneId !== this.m.root.id ? g : 0
+    return g > 0 && hasInnerPieces(this.m.root) ? g : 0
   }
 
   private buildDivider(x: number, yFrom: number, yTo: number, id: string, cut = 0, gap = 0): void {
@@ -1142,8 +1143,8 @@ class Builder {
     const hollow = T > t
     if (want && !hollow) this.warnings.push({ code: "hollow", message: `Prestatges de ${want} mm: amb tauler de ${t} cal un gruix d'almenys ${2 * t + 6} mm. Es fan massissos.`, zoneId: zone.id })
     const width = rect.x1 - rect.x0
-    // Prestatges fixos (sense «Regulables») d'un compartiment de dins: també la folgança de les peces de dins.
-    const inner = zone.shelves!.adjustable ? 0 : this.innerGap(zone.id)
+    // Prestatges fixos (sense «Regulables») d'un mòdul dividit: també la folgança de les peces de dins.
+    const inner = zone.shelves!.adjustable ? 0 : this.innerGap()
     const length = width - c.shelfClearance - inner
     // A ras del davant (a sang): sense retranqueig. Amb fronts encastats no hi cabria la porta.
     // Amb fronts encastats, a ras només es pot si el compartiment és obert (sense front).

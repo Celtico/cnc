@@ -350,7 +350,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             <NumRow label="Fondària ranura" value={draft.gaps.grooveDepth} min={3} max={15} step={1} onChange={(grooveDepth) => set("gaps", { ...draft.gaps, grooveDepth })} />
             </SettingsGroup>
             <SettingsGroup icon={<LuColumns2 />} title="Divisions" summary={`peces de dins ${String(draft.gaps.innerClearance).replace(".", ",")}`}>
-            <NumRow label="Peces de dins" help="Divisors i prestatges fixos a partir de la segona divisió: tant menys de llarg, la meitat a cada cap. Els de la primera divisió van sencers entre la caixa." value={draft.gaps.innerClearance} min={0} max={3} step={0.5} onChange={(innerClearance) => set("gaps", { ...draft.gaps, innerClearance })} />
+            <NumRow label="Peces de dins" help="Amb el mòdul dividit, tots els divisors i prestatges fixos, de qualsevol nivell (horitzontal o vertical): tant menys de llarg, la meitat a cada cap. Sense dividir, els prestatges fixos van sencers; la caixa, mai." value={draft.gaps.innerClearance} min={0} max={3} step={0.5} onChange={(innerClearance) => set("gaps", { ...draft.gaps, innerClearance })} />
             </SettingsGroup>
             </FoldGrid>
           </Pane>

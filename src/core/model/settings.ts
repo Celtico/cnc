@@ -298,8 +298,8 @@ export const GapsPrefSchema = z.object({
   backSetback: mm.min(0).max(60),
   grooveDepth: mm.min(3).max(15),
   /**
-   * Peces de dins (v25): divisors i prestatges fixos a partir de la segona divisió, tants mm menys de llarg (la meitat a
-   * cada cap). Es copia a cada mòdul nou (`Carcass.innerClearance`).
+   * Peces de dins (v25): divisors i prestatges fixos d'un mòdul dividit (de qualsevol nivell), tants mm menys de llarg
+   * (la meitat a cada cap). Es copia a cada mòdul nou (`Carcass.innerClearance`).
    */
   innerClearance: mm.min(0).max(3),
 })
@@ -559,7 +559,7 @@ export const BUILTIN_MATERIALS: MaterialPref[] = upgradeToPhoto([
   ...PHOTO_MATERIALS,
 ])
 
-/** Folgança inicial de les peces de dins (mm): divisors i prestatges fixos a partir de la segona divisió. */
+/** Folgança inicial de les peces de dins (mm): divisors i prestatges fixos d'un mòdul dividit. */
 export const DEFAULT_INNER_CLEARANCE = 1
 
 export const DEFAULT_SETTINGS: Settings = {
