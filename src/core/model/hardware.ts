@@ -899,8 +899,12 @@ export const OWN_COPY_LABEL = "Còpia pròpia"
 
 /** Camins de les seccions de l'editor que surten als avisos i a les ajudes (un sol lloc: si una secció es mou, es canvia aquí). */
 export const UI_PATHS = {
-  /** L'única secció «Acabats» (fronts, caixa i per defecte dels compartiments). */
-  finishes: "Mòdul › Acabats",
+  /** La caixa del mòdul: també el fons (ranura, retirada), l'estil dels fronts, les folgances i el retranqueig. */
+  box: "Mòdul › Caixa",
+  /** Els materials del mòdul: cos, fronts, fons i fons del calaix. */
+  materials: "Mòdul › Materials",
+  /** Les unions de la caixa: l'espiga. */
+  joint: "Mòdul › Unió",
   hardwarePrefs: "Preferències › Ferratges",
   gapsPrefs: "Preferències › Folgances per defecte",
 } as const
