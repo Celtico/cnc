@@ -1360,11 +1360,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 
 ## Galeries (Mobles · Ambients · Objectes)
 - **Les tres pàgines fan igual**: capçalera `PageHeader` (títol gran i l'explicació), **cercador amb el botó principal al
-  costat** (`components/SearchBar`: «+ Nou moble» · «+ Nou objecte» · «+ Nou ambient», `colorPalette="wood"`, **buits** (per
+  costat, a l'esquerra** (per decisió de l'usuari: primer els botons i després el cercador; `components/SearchBar`: «+ Nou moble» · «+ Nou objecte» · «+ Nou ambient», `colorPalette="wood"`, **buits** (per
   decisió de l'usuari: «que no fiqui res»): `projects/blank.ts` (moble sense mòduls, objecte sense peces) i l'ambient
   sense parets (`EMPTY_AMBIENT`); «+ Nou moble» obre un menú (`add.menu`, com el + dels grups de l'arbre) amb Moble · Cuina · Armari ·
   Taula; amb text a l'ordinador i només la icona al mòbil, amb `aria-label` i tooltip; Mobles també «Obrir
-  fitxer», `LuFolderOpen`, a la mateixa fila; sense accents; obre les seccions i categories amb resultats) i acordions
+  fitxer», `LuFolderOpen`, a la mateixa fila, entre el «+» i el cercador; sense accents; obre les seccions i categories amb resultats) i acordions
   **tots tancats** en obrir l'app (estat de la sessió, p. ex. `mobles:gallery`): **Historial**, **Projectes** i **Catàleg**;
   a Mobles, a més, **Col·leccions de mobles**. Les galeries de les finestres «+ Moble» / «+ Objecte» dels ambients no
   porten el botó (`add` opcional). No hi ha filtre de tipus (el tipus també es busca). Fila d'eines dins dels acordions
@@ -1721,9 +1721,11 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
     una graella d'una columna `minmax(0, 1fr)`: una taula ampla es desplaça a dins (`overflowX`), no eixampla la secció.
 - **`PageHeader`** (`components/PageHeader`, Mobles · Ambients · Objectes · Preferències): títol gran i l'explicació
   (`actions` opcional, a sota del títol).
-- **`SearchBar`** (`components/SearchBar`): **tots els cercadors** (galeries, `MasterDetail`, Materials, calaix del
-  `MaterialSelect`) amb el «+» al costat (`add`: `wood`, text a l'ordinador i icona al mòbil, `iconOnly` per a columnes
-  estretes) i `extra` per a més accions a la fila. **Seccions de les galeries sense marge** (`.gallery-accordion`, `layout.css`): barra d'eines i acordions de
+- **`SearchBar`** (`components/SearchBar`): **tots els cercadors** (galeries, `MasterDetail`, Materials, Ferratges, calaix
+  del `MaterialSelect`) amb el «+» al costat (`add`: `wood`, text a l'ordinador i icona al mòbil, `iconOnly` per a columnes
+  estretes) i `extra` per a més accions a la fila. **Primer els botons i després el cercador** (per decisió de l'usuari, a
+  tot arreu igual: galeries, llistes de Preferències i Materials): «+» · `extra` · cercador, que s'estira (el menú del
+  «+» s'obre cap a la dreta, `bottom-start`). **Seccions de les galeries sense marge** (`.gallery-accordion`, `layout.css`): barra d'eines i acordions de
   dins **a sang**; la resta amb `--gallery-px`. Res de marges negatius.
 
 ### Navegació i barres
