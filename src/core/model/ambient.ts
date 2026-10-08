@@ -622,6 +622,27 @@ export function duplicateItems(a: Ambient, ids: string[], offset = 300): { ambie
   return { ambient: { ...a, items: [...a.items, ...copies] }, ids: copies.map((c) => c.id), group }
 }
 
+/**
+ * Torna a enllaçar els mobles i objectes de l'ambient (`projectId` → `map`): els que no hi són es treuen (no es deixa un
+ * enllaç a un moble que no és el seu). Els blocs es queden. «Duplicar (per a un client)» (`duplicateAmbient`) i obrir un
+ * `.ambient` (les còpies noves dels mobles del fitxer).
+ */
+export function remapMobleItems(a: Ambient, map: ReadonlyMap<number, number>): Ambient {
+  return {
+    ...a,
+    items: a.items.flatMap((i): AmbientItem[] => {
+      if (i.kind !== "moble") return [i]
+      const to = map.get(i.projectId)
+      return to === undefined ? [] : [{ ...i, projectId: to }]
+    }),
+  }
+}
+
+/** Mobles i objectes enllaçats (`projectId`), sense repetir, en l'ordre en què surten. */
+export function linkedProjectIds(a: Ambient): number[] {
+  return [...new Set(a.items.flatMap((i) => (i.kind === "moble" ? [i.projectId] : [])))]
+}
+
 export function removeItems(a: Ambient, ids: string[]): Ambient {
   return { ...a, items: a.items.filter((i) => !ids.includes(i.id)) }
 }
