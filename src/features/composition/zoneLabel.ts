@@ -29,3 +29,13 @@ function ownLabel(z: Zone): string {
   if (z.shelves && z.shelves.n > 0) parts.push(`${z.shelves.n} ${z.shelves.n === 1 ? "prestatge" : "prestatges"}`)
   return parts.join(" · ")
 }
+
+/**
+ * Les files de la secció «Divisió» d'una zona dividida, una per fill i en ordre: «1 · Obert», «2 · Porta»… (el mateix
+ * nom que a l'arbre) i la seva mida (mm o «auto»; si en falta, «auto», com `padSizes`). Sense divisió, cap.
+ */
+export function splitRows(z: Zone): { id: string; label: string; size: number | "auto" }[] {
+  if (!z.split) return []
+  const { children, sizes } = z.split
+  return children.map((c, i) => ({ id: c.id, label: `${i + 1} · ${zoneLabel(c)}`, size: sizes[i] ?? "auto" }))
+}

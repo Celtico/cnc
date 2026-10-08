@@ -184,7 +184,8 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     3D/GLB extruït, DXF amb bulge, STEP prisma amb cares cilíndriques (`outlineSolid`). `shapeOutline` escala per
     l'extensió real de la corba mostrejada (no pels nodes: les cúbiques sortien del rectangle del nesting). Els fronts
     recobrents s'aturen a sota del voladís (joc `outerGap`).
-- **Zones** (compartiments): divisions verticals/horitzontals amb mides fixes o «auto» (l'últim «auto» agafa el que sobra);
+- **Zones** (compartiments): divisions verticals/horitzontals amb mides fixes o «auto» (l'últim «auto» agafa el que sobra;
+  la mida de cada fill es decideix a la Divisió del pare, no al compartiment: vegeu Editor › Propietats);
   contingut obert, prestatges, porta, calaixos, abatible, reixeta o front fix.
   - **Què aguanta cada compartiment** (`core/model/zoneSupport.ts`, `zoneBoundsMap`; per decisió de l'usuari: en un mòdul
     sense caixa «no són possibles les opcions de prestatges ni accessoris ni Dividir»): a cada costat hi ha una peça si és
@@ -793,8 +794,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   i posa'ls a l'inspector d'aquell nivell.
 - **Estructura** (`composition/StructureTree.tsx`): moble › mòduls (agrupats per fila) › compartiments, peces lliures,
   objectes de referència i models 3D. L'arrel de cada mòdul surt com a **«Interior · …»** (`zoneLabel(z, { root })`; «Interior ·
-  2 portes» si porta el front de tot el mòdul) amb els compartiments a sota: seleccionar-la dona Divisió (amb «Peces de dins» si n'hi ha) i «Front de tota la
-  zona» (Obert · Porta · Front fix). Pujar des d'un compartiment (clic al 3D, eliminar) passa per l'Interior abans del mòdul;
+  2 portes» si porta el front de tot el mòdul) amb els compartiments a sota: seleccionar-la dona Divisió (les mides de les zones, «Afegir zona» · «Treure
+  la divisió» i «Peces de dins» si n'hi ha) i «Front de tota la zona» (Obert · Porta · Front fix). Pujar des d'un compartiment (clic al 3D, eliminar) passa per l'Interior abans del mòdul;
   Supr / ⌘X a l'Interior no fa res (avís: `deleteZone` buidaria tot el mòdul). **Objectes de referència només als mobles i
   Models 3D només als objectes** (per decisió de l'usuari; treure ≠ esborrar: si el document ja en té, el grup surt sense +
   ni Duplicar, i enganxar-ne avisa). **Un + a cada grup** (Mòduls · Peces lliures · Objectes de referència · Models 3D; per
@@ -859,10 +860,17 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   - Compartiment (`ZonePanel`): accions com a icones a la capçalera (Pare · Duplicar · Eliminar; a l'«Interior», l'arrel,
     cap: no es duplica, no es retalla ni s'elimina, i ⌘D, ⌘X i Suprimir avisen sense tocar el porta-retalls) i Front ·
     Prestatges (només fusta: Quantitat · Regulables · Filera System 32 si li toca, vegeu Mòdul · A ras · Gruixuts) · **Accessoris** (`LuShirt`: Barra de penjar i
-    Tira LED, interruptor + `HardwarePick` «Com el mòdul») · Mida · Dividir (Prestatges, Accessoris, Dividir i els tipus
+    Tira LED, interruptor + `HardwarePick` «Com el mòdul») · Dividir (Prestatges, Accessoris, Dividir i els tipus
     de Contingut, només si el compartiment els pot aguantar: Model del moble › Zones › Què aguanta cada compartiment; Prestatges i Accessoris tampoc amb calaixos o un front fix, propi o de tota la zona que el tapa). Al Front: el ferratge del tipus (frontissa,
     guia o joc, braç; a la reixeta, l'**imant** després de «Muntatge» i «Trapa»; a la vitrina, el **marc**) i el «Tirador» (amb «Cap
-    (push)»). **L'«Interior» (l'arrel) no té secció «Acabats»** (per decisió de l'usuari, 2026-10-08: tot el que és de
+    (push)»). **Sense «Mida»** (per decisió de l'usuari, 2026-10-08: «a les obertures no té sentit l'amplada; ha
+    d'anar a la divisió»): l'amplada o l'alçada de cada compartiment és a la **Divisió** del pare (`SplitSizes` a
+    `ZonePanel`): una fila per fill, en ordre, amb el nom de l'arbre («1 · Obert», «2 · Porta»; `splitRows` a
+    `zoneLabel.ts`, `zoneLabel.test.ts`; clicar-lo selecciona el compartiment) i «Auto» o els mm (`setChildSize`; en
+    treure l'«Auto», 400 mm); les automàtiques es reparteixen el que queda i, sense cap, l'última s'ajusta (`fitSizes`,
+    avís `layout`). Després, «Afegir zona» · «Treure la divisió» (i a l'«Interior», «Peces de dins»). Una zona dividida
+    (l'«Interior» o una de dins) dona Divisió i «Front de tota la zona» (per decisió de l'usuari es queda: portes o front
+    fix que tapen tota la zona). **L'«Interior» (l'arrel) no té secció «Acabats»** (per decisió de l'usuari, 2026-10-08: tot el que és de
     tots els fronts del mòdul —estil, folgances, retranqueig, material dels fronts, per defecte dels compartiments— és a
     Mòdul › Acabats; vegeu Mòdul). Un compartiment **tapat** pel front d'una
     zona de més amunt (`coveringZone`) ensenya «Front · Tapat» sense opcions: el seu front no es fa (es conserva) i els
@@ -1880,7 +1888,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Zones | Dividir en vertical (divisor vertical, zones esquerra/dreta) | `LuSquareSplitHorizontal` |
 | Zones | Dividir en horitzontal (travesser, zones dalt/baix) | `LuSquareSplitVertical` |
 | Zones | Divisió vertical · horitzontal (un compartiment porta la icona del seu contingut, igual a l'arbre, a la capçalera i a «Front»: `composition/zoneIcons.ts`) | `LuColumns2` · `LuRows2` |
-| Zones | Eliminar divisió · Mida | `LuUngroup` · `LuRuler` |
+| Zones | Eliminar divisió (la mida de cada zona és a la Divisió, sense icona pròpia) | `LuUngroup` |
 | Contingut | Obert · Prestatges · Porta · Calaixos · Barra de penjar (i la secció Accessoris del compartiment) | `LuSquareDashed` · `LuRows3` · `LuDoorClosed` · `LuArchive` · `LuShirt` |
 | Contingut | Abatible · Reixeta · Front fix | `LuPanelBottom` · `LuGrid3X3` · `LuSquare` |
 | Composició | Afegir · Duplicar · Eliminar | `LuPlus` · `LuCopy` · `LuTrash2` |

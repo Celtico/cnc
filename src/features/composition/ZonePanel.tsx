@@ -1,5 +1,5 @@
-import { Button, HStack, IconButton, Menu, Portal, Stack, Switch, Text } from "@chakra-ui/react"
-import { LuArrowUp, LuCopy, LuEllipsis, LuColumns2, LuRows2, LuPlus, LuRows3, LuRuler, LuShirt, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
+import { Box, Button, HStack, IconButton, Menu, Portal, Stack, Switch, Text } from "@chakra-ui/react"
+import { LuArrowUp, LuCopy, LuEllipsis, LuColumns2, LuRows2, LuPlus, LuRows3, LuShirt, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
 import type { ReactNode } from "react"
 import { FoldItem } from "../../components/Fold"
 import {
@@ -40,7 +40,8 @@ import {
 } from "../../core/model"
 import type { KitOrder } from "../../core/build/buildModule"
 import { kitBottomThickness, kitLineText, kitWoodText } from "../../core/build/drawerKit"
-import { NumRow } from "../../components/NumRow"
+import { NumberField, NumRow } from "../../components/NumRow"
+import { splitRows } from "./zoneLabel"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { FRONT_ICONS } from "./zoneIcons"
 import { HardwarePick } from "./HardwarePick"
@@ -106,7 +107,7 @@ export function ZoneActions({ root, zone, onChange, onSelect }: { root: Zone; zo
  */
 const fillsZone = (f: Front | undefined): boolean => f?.kind === "drawers" || f?.kind === "panel"
 
-/** Panell d'edició de la zona seleccionada: dividir, contingut, mida, eliminar. */
+/** Panell d'edició de la zona seleccionada: dividir, contingut, mides de les zones (a la divisió), eliminar. */
 export function ZonePanel({
   root,
   zone,
@@ -120,6 +121,7 @@ export function ZonePanel({
   coveredByFixed = false,
   bounds,
   system32,
+  onSelect,
 }: {
   root: Zone
   zone: Zone
@@ -149,35 +151,18 @@ export function ZonePanel({
    * Prestatges (al costat de «Regulables») o al Front (després de la «Frontissa»). Mai a tots dos.
    */
   system32?: { at: "shelves" | "front"; row: ReactNode }
+  /** Seleccionar un compartiment (les files de la «Divisió» hi porten). */
+  onSelect?: (id: string) => void
 }) {
-  const parent = parentOf(root, zone.id)
   // Hi ha on fer servir prestatges i accessoris: tapat per portes (com obert), o el seu contingut no l'omple.
   const shelvesBehind = coveredBy ? !coveredByFixed : !fillsZone(zone.front)
-  const index = parent?.split ? parent.split.children.findIndex((c) => c.id === zone.id) : -1
-  const size = parent?.split ? (parent.split.sizes[index] ?? "auto") : undefined
-
-  const sizeField = parent?.split && size !== undefined && (
-    <FoldItem id="zone-size" title={parent.split.dir === "v" ? "Amplada" : "Alçada"} icon={LuRuler} badge={size === "auto" ? "Auto" : `${size} mm`}>
-      <FormRow label="Mida" help={`${parent.split.dir === "v" ? "Amplada" : "Alçada"} de la llum. Les automàtiques es reparteixen el que queda.`}>
-        <Switch.Root size="sm" pt="6px" checked={size === "auto"} onCheckedChange={(e) => onChange(setChildSize(root, parent.id, index, e.checked ? "auto" : 400))}>
-          <Switch.HiddenInput />
-          <Switch.Control />
-          <Switch.Label fontSize="sm">Automàtica</Switch.Label>
-        </Switch.Root>
-      </FormRow>
-      {size !== "auto" && <NumRow label={parent.split.dir === "v" ? "Amplada" : "Alçada"} value={size} min={50} max={3000} step={10} onChange={(v) => onChange(setChildSize(root, parent.id, index, v))} />}
-    </FoldItem>
-  )
-
   return (
     <Stack gap={0}>
 
       {zone.split ? (
         <>
           <FoldItem id="zone-split" title={`Divisió ${zone.split.dir === "v" ? "vertical" : "horitzontal"}`} badge={`${zone.split.children.length} zones`} icon={zone.split.dir === "v" ? LuColumns2 : LuRows2}>
-            <Text fontSize="sm" color="fg.muted">
-              Toca una zona a l'estructura o al dibuix per editar-la.
-            </Text>
+            <SplitSizes root={root} zone={zone} onChange={onChange} onSelect={onSelect} />
             <HStack wrap="wrap">
               <Button size="sm" variant="outline" onClick={() => onChange(addChild(root, zone.id))}>
                 <LuPlus /> Afegir zona
@@ -190,7 +175,6 @@ export function ZonePanel({
           </FoldItem>
           {/* Portes que tapen tota la zona dividida (armari: penjador i maleter darrere). */}
           {coveredBy ? <CoveredFront id="zone-parent-front" title="Front de tota la zona" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} kinds={["none", "door", "panel"]} title="Front de tota la zona" bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} />}
-          {sizeField}
         </>
       ) : (
         <>
@@ -261,8 +245,6 @@ export function ZonePanel({
           {/* Accessoris del compartiment: ferratges (barra de penjar, tira LED), no fusta. Amb calaixos o un front fix, no. */}
           {shelvesBehind && canHoldAccessories(bounds) && <AccessoriesSection root={root} zone={zone} hardware={hardware} onChange={onChange} />}
 
-          {sizeField}
-
           {/* Només les direccions on el divisor té on unir-se (`splitDirsFor`): el vertical, a sota i a sobre; el
               travesser, als dos costats. Sense cap, la secció no surt. */}
           {splitDirsFor(bounds).length > 0 && (
@@ -287,6 +269,50 @@ export function ZonePanel({
           )}
         </>
       )}
+    </Stack>
+  )
+}
+
+/**
+ * La mida de cada zona d'una divisió, al pare (per decisió de l'usuari, 2026-10-08: «a les obertures no té sentit
+ * l'amplada; ha d'anar a la divisió»): una fila per fill, en ordre, amb el nom de l'arbre (clicar-lo el selecciona) i
+ * «Auto» o els mm. Les automàtiques es reparteixen el que queda; sense cap, l'última s'ajusta (`fitSizes`, avís).
+ */
+function SplitSizes({ root, zone, onChange, onSelect }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; onSelect?: (id: string) => void }) {
+  if (!zone.split) return null
+  const what = zone.split.dir === "v" ? "Amplada" : "Alçada"
+  return (
+    <Stack gap={2}>
+      <Text textStyle="xs" color="fg.muted">
+        {what} de la llum de cada zona. Les automàtiques es reparteixen el que queda; si no n'hi ha cap, l'última s'ajusta.
+      </Text>
+      {splitRows(zone).map((row, i) => (
+        <FormRow
+          key={row.id}
+          label={
+            onSelect ? (
+              <Button variant="plain" size="sm" h="auto" p={0} minW={0} fontWeight="normal" color="fg.muted" textAlign="start" whiteSpace="normal" _hover={{ color: "fg", textDecoration: "underline" }} title="Seleccionar el compartiment" onClick={() => onSelect(row.id)}>
+                {row.label}
+              </Button>
+            ) : (
+              row.label
+            )
+          }
+        >
+          <HStack gap={3}>
+            <Switch.Root size="sm" flexShrink={0} checked={row.size === "auto"} onCheckedChange={(e) => onChange(setChildSize(root, zone.id, i, e.checked ? "auto" : 400))}>
+              <Switch.HiddenInput />
+              <Switch.Control />
+              <Switch.Label fontSize="sm">Auto</Switch.Label>
+            </Switch.Root>
+            {row.size !== "auto" && (
+              <Box flex="1" minW={0} maxW="160px">
+                <NumberField label="" ariaLabel={`${what} ${row.label}`} value={row.size} min={50} max={3000} step={10} onChange={(v) => onChange(setChildSize(root, zone.id, i, v))} />
+              </Box>
+            )}
+          </HStack>
+        </FormRow>
+      ))}
     </Stack>
   )
 }
