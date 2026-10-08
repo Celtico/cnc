@@ -333,11 +333,13 @@ function ModuleHandlePick({ module, onChange, usedBy }: { module: Module; onChan
 
 /**
  * Acabats i ferratges de la **caixa** del mòdul seleccionat (secció «Acabats i ferratges», abans «Fusteria (avançat)»): el fons i els ferratges dels laterals i
- * de les unions (espiga, filera System 32). Els jocs i els ferratges dels fronts són a l'«Interior» (`FrontsForm`).
+ * de les unions (espiga). Els jocs i els ferratges dels fronts són a l'«Interior» (`FrontsForm`); la filera System 32, als Prestatges
+ * o al Front del compartiment que la fa servir (`system32RowPlace`).
  */
 export function JoineryForm({ module, onChange, usedSlots }: { module: Module; onChange: (m: Module) => void; usedSlots?: ReadonlySet<string> }) {
   const c = module.carcass
-  const slots = slotsFor(usedSlots, true).map(({ slot }) => slot)
+  // La filera System 32 no és aquí: és de qui fa les fileres (Prestatges o Front del compartiment, `system32RowPlace`).
+  const slots = slotsFor(usedSlots, true).map(({ slot }) => slot).filter((slot) => slot !== "system32")
   const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
   const hasBackRow = c.back === "groove" || c.back === "inset"
   return (

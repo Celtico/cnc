@@ -822,8 +822,15 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     `Carcass.drawerBottomMaterial`; el dels fronts és a Interior › Acabats › Material dels fronts) · **Acabats i ferratges**
     (abans «Fusteria (avançat)», per decisió de l'usuari; id de secció `mod-joinery`, `LuHammer`;
     **només la caixa**, per decisió de l'usuari: Ranura o Retirada del fons quan toca i els ferratges dels laterals i de
-    les unions, Espiga i Filera System 32, `JoineryForm`; **només els que el mòdul fa servir**: `usedHardwareSlots`, pels
-    forats i talls de les seves peces). **Sense «Ferratges»** a l'inspector del mòdul (per decisió de l'usuari,
+    les unions, l'Espiga, `JoineryForm`; **només els que el mòdul fa servir**: `usedHardwareSlots`, pels
+    forats i talls de les seves peces). **La «Filera System 32» no hi és** (per decisió de l'usuari, 2026-10-08: és dels
+    prestatges): surt a l'inspector del compartiment, on diu `system32RowPlace` (`core/model/usedHardware.ts`,
+    `system32Row.test.ts`), i edita la del mòdul (`module.hardware.system32`, una per mòdul; `System32Pick`, ajuda «La de
+    tot el mòdul: …»): als **Prestatges**, després de «Regulables», dels compartiments amb regulables que es fan; si no n'hi
+    ha cap, al **Front** (després de la «Frontissa»; a la reixeta amb frontisses, després de «Muntatge») dels compartiments
+    amb una porta que no és de vidre o una reixeta amb frontisses (placa de la frontissa; també el «Front de tota la
+    zona»). Mai a tots dos llocs; si no és cap d'aquests (p. ex. només el fons encastat, que en llegeix els números per a
+    l'avís), enlloc. **Sense «Ferratges»** a l'inspector del mòdul (per decisió de l'usuari,
     2026-10-08: la secció `mod-hardware`, `LuWrench`, amb la llista dels col·locats a mà i **De les regles del mòdul**,
     no surt; el codi es queda: `composition/HardwarePlacements.tsx`, `placements.ts`, `ruleHardwareCounts` a
     `core/build/hardwareSummary.ts`). Treure ≠ esborrar: els col·locats a mà es conserven, es fabriquen i es veuen al 3D,
@@ -839,7 +846,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     buit = el del cos, a Interior › Acabats › Material dels fronts).
   - Compartiment (`ZonePanel`): accions com a icones a la capçalera (Pare · Duplicar · Eliminar; a l'«Interior», l'arrel,
     cap: no es duplica, no es retalla ni s'elimina, i ⌘D, ⌘X i Suprimir avisen sense tocar el porta-retalls) i Front ·
-    Prestatges (només fusta: Quantitat · Regulables · A ras · Gruixuts) · **Accessoris** (`LuShirt`: Barra de penjar i
+    Prestatges (només fusta: Quantitat · Regulables · Filera System 32 si li toca, vegeu Mòdul · A ras · Gruixuts) · **Accessoris** (`LuShirt`: Barra de penjar i
     Tira LED, interruptor + `HardwarePick` «Com el mòdul») · Mida · Dividir (Prestatges, Accessoris, Dividir i els tipus
     de Contingut, només si el compartiment els pot aguantar: Model del moble › Zones › Què aguanta cada compartiment; Prestatges i Accessoris tampoc amb calaixos o un front fix, propi o de tota la zona que el tapa). Al Front: el ferratge del tipus (frontissa,
     guia o joc, braç; a la reixeta, l'**imant** després de «Muntatge» i «Trapa»; a la vitrina, el **marc**) i el «Tirador» (amb «Cap
@@ -1946,7 +1953,7 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
 | **Folgança** | separacions: front–cos, entre fronts, lateral i darrere de la guia, prestatge, fons, encaixos, peces de dins; **Folgances per defecte** a Preferències |
 | **Joc** | només el joc paramètric del fabricant (`HardwareKit`, «joc de calaix», «Ferratges dels jocs») |
 | **Ferratge** | qualsevol `HardwareItem`; **Ferratges**, la secció de l'inspector de la peça lliure (no la del mòdul), la biblioteca de Preferències i l'opció del visor (`LuWrench`) |
-| **Acabats i ferratges** | la secció del mòdul (abans «Fusteria (avançat)»): les mides d'unió de fusta (ranura i retirada del fons) i els ferratges de la caixa (espiga, System 32) (`LuHammer`) |
+| **Acabats i ferratges** | la secció del mòdul (abans «Fusteria (avançat)»): les mides d'unió de fusta (ranura i retirada del fons) i els ferratges de la caixa (espiga; la filera System 32 és als Prestatges o al Front del compartiment) (`LuHammer`) |
 | **Acabats** | la secció de l'Interior amb l'estil, les folgances, el **material dels fronts** i els ferratges per defecte dels compartiments; **Acabats de l'escena**, terra i paret de la presentació |
 | **Com el mòdul** / **Com el cos** / **Com a Preferències** | heretat; **Còpia pròpia**, la còpia d'un ferratge que ja no és a la biblioteca tal qual |
 | **Accessoris** | barra de penjar, tira LED (ferratges del compartiment); el marc de vitrina va amb la porta de vidre |

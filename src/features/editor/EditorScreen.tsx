@@ -52,10 +52,11 @@ import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
 import { materialIssues } from "../../core/build/materialIssues"
-import { applySettingsToModule, moduleHasInnerPieces, usedSlotSet, hasDrawers, coveringZone, frontsSection, frontsSectionEmpty, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule, moduleHasInnerPieces, usedSlotSet, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, frontsSection, frontsSectionEmpty, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, FrontsForm, InnerClearanceRow, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
+import { System32Pick } from "../composition/HardwarePick"
 import { ElevationEditor } from "../composition/ElevationEditor"
 import { RefActions, RefInspector } from "../composition/RefInspector"
 import { ModelActions, ModelInspector } from "../composition/ModelInspector"
@@ -1076,13 +1077,19 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             openRatio={moduleBuild?.openRatios[zone.id]}
             kits={moduleBuild?.hardwareKits.filter((k) => k.zoneId === zone.id)}
             onChange={(root) => updateModule({ ...module, root })}
+            // La filera System 32 del mòdul: als Prestatges o al Front d'aquest compartiment, si li toca (`system32RowPlace`).
+            system32={(() => {
+              const place = system32RowPlace(module)
+              if (!place?.zones.has(zone.id)) return undefined
+              return { at: place.at, row: <System32Pick current={moduleSlotItem(module.hardware, "system32")} what={place.what} onPick={(system32) => updateModule({ ...module, hardware: { ...module.hardware, system32 } })} /> }
+            })()}
             // A l'«Interior» (l'arrel), a la Divisió: la folgança de les peces de dins, només amb l'arrel dividida (tots els
             // divisors i prestatges fixos; opcions en cascada).
             splitExtra={zone.id === module.root.id && moduleHasInnerPieces(module) ? <InnerClearanceRow module={module} onChange={updateModule} /> : null}
             afterFront={
               // A l'«Interior» (l'arrel), el que és de tots els fronts del mòdul: estil, folgances, retranqueig i els
               // ferratges per defecte que algun compartiment hereta (`frontsSection`: un sol lloc per decisió, només el que
-              // es llegeix; sense res, la secció no surt). La caixa (fons, espigues, System 32) és a «Acabats i ferratges» del mòdul.
+              // es llegeix; sense res, la secció no surt). La caixa (fons, espigues) és a «Acabats i ferratges» del mòdul; la filera System 32, als Prestatges o al Front del compartiment.
               zone.id === module.root.id &&
               (() => {
                 const section = frontsSection(module)

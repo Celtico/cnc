@@ -120,6 +120,7 @@ export function ZonePanel({
   coveredBy,
   coveredByFixed = false,
   bounds,
+  system32,
 }: {
   root: Zone
   zone: Zone
@@ -149,6 +150,11 @@ export function ZonePanel({
   coveredBy?: string
   /** El front que el tapa és un front fix (no portes): darrere no hi ha res a fer servir, ni Prestatges ni Accessoris. */
   coveredByFixed?: boolean
+  /**
+   * La «Filera System 32» del mòdul (`System32Pick`), si aquest compartiment l'ensenya (`system32RowPlace`): als
+   * Prestatges (al costat de «Regulables») o al Front (després de la «Frontissa»). Mai a tots dos.
+   */
+  system32?: { at: "shelves" | "front"; row: ReactNode }
 }) {
   const parent = parentOf(root, zone.id)
   // Hi ha on fer servir prestatges i accessoris: tapat per portes (com obert), o el seu contingut no l'omple.
@@ -189,13 +195,13 @@ export function ZonePanel({
             {splitExtra}
           </FoldItem>
           {/* Portes que tapen tota la zona dividida (armari: penjador i maleter darrere). */}
-          {coveredBy ? <CoveredFront id="zone-parent-front" title="Front de tota la zona" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} kinds={["none", "door", "panel"]} title="Front de tota la zona" bounds={bounds} />}
+          {coveredBy ? <CoveredFront id="zone-parent-front" title="Front de tota la zona" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} kinds={["none", "door", "panel"]} title="Front de tota la zona" bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} />}
           {afterFront}
           {sizeField}
         </>
       ) : (
         <>
-          {coveredBy ? <CoveredFront id="zone-front" title="Front" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} />}
+          {coveredBy ? <CoveredFront id="zone-front" title="Front" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} />}
 
           {/* Tapat: el seu front (es conserva) no es fa i el compartiment és com obert (`visibleZone`). Sense una peça a
               cada costat (lateral o divisor), cap prestatge: no surt (es conserva i torna amb els laterals). Amb calaixos
@@ -219,6 +225,8 @@ export function ZonePanel({
                   <Switch.Label fontSize="sm">Regulables</Switch.Label>
                 </Switch.Root>
               </FormRow>
+              {/* La filera dels regulables (la de tot el mòdul), només si es fan (`system32RowPlace`). */}
+              {system32?.at === "shelves" && system32.row}
               {/* Sense prestatges, «a ras» i el gruix no compten (la construcció tampoc els llegeix): no surten. */}
               {(zone.shelves?.n ?? 0) > 0 && <>
               {/* A ras del davant (a sang): el cantell del prestatge enrasat amb el de la caixa. */}
@@ -421,7 +429,7 @@ function kitClosingFor(kit: HardwareItem & { kit: NonNullable<HardwareItem["kit"
   return isPushClosing(current.closing) ? { ...current, closing: opts.includes("soft") ? "soft" : current.closing } : current
 }
 
-function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bounds }: { front: Front; openRatio?: number; onChange: (f: Front) => void; hardware: ModuleHardware; noHandles: boolean; kits?: KitOrder[]; bounds: ZoneBounds }) {
+function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bounds, afterHinge }: { front: Front; openRatio?: number; onChange: (f: Front) => void; hardware: ModuleHardware; noHandles: boolean; kits?: KitOrder[]; bounds: ZoneBounds; /** La filera System 32 del mòdul (placa de la frontissa), si surt aquí. */ afterHinge?: ReactNode }) {
   // «Tirador»: el del mòdul (Interior › Acabats), un altre de la biblioteca (un d'importat i confirmat fa els
   // forats a la seva distància) o «Cap (push)». Als calaixos amb joc, el tancament del joc mana (`kitClosingFor`).
   const handlePick = (f: Extract<Front, { kind: "door" | "drawers" | "flap" }>, kit?: HardwareItem & { kit: NonNullable<HardwareItem["kit"]> }) => {
@@ -490,6 +498,7 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bo
           {/* La de vidre porta el marc d'alumini (ferratge `glassFrame`) i les frontisses del perfil (cap cassoleta): la frontissa i el tirador no surten. */}
           {front.glass && <HardwarePick slot="glassFrame" label="Marc" current={front.frame ?? moduleSlotItem(hardware, "glassFrame")} inherited={moduleSlotItem(hardware, "glassFrame")} onPick={(h) => onChange(h ? { ...front, frame: h } : (({ frame: _f, ...rest }) => rest)(front))} />}
           {!front.glass && <HardwarePick slot="hinge" current={front.hardware ?? hardware.hinge} inherited={hardware.hinge} onPick={(h) => onChange(withHardware(front, h))} />}
+          {!front.glass && afterHinge}
           {!front.glass && handlePick(front)}
         </Stack>
       )
@@ -565,6 +574,8 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bo
               onChange={(mount) => onChange({ ...front, mount })}
             />
           </FormRow>
+          {/* Amb frontisses (les del mòdul): la filera de la placa. */}
+          {front.mount !== "removable" && afterHinge}
           {p.kind === "holes" ? (
             <>
               <NumRow label="Diàmetre forat" value={p.holeDiameter} min={3} max={60} step={1} onChange={(holeDiameter) => setP({ holeDiameter })} />
@@ -617,7 +628,7 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bo
  * Tipus de front d'una zona (botons d'icona) i els seus camps. En una zona dividida, només
  * portes o front fix, que tapen tota la zona (les fulles de dins queden darrere).
  */
-export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title = "Front", id, hardware, noHandles = false, kits, bounds }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; hardware: ModuleHardware; noHandles?: boolean; kits?: KitOrder[]; kinds?: (Front["kind"] | "none")[]; title?: string; /** Id de la secció plegable (cada lloc el seu: recorda si és oberta). */ id?: string; /** Què aguanta el compartiment: els fronts que no s'hi poden fixar no surten (el triat, sí). */ bounds: ZoneBounds }) {
+export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title = "Front", id, hardware, noHandles = false, kits, bounds, afterHinge }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; hardware: ModuleHardware; noHandles?: boolean; kits?: KitOrder[]; kinds?: (Front["kind"] | "none")[]; title?: string; /** Id de la secció plegable (cada lloc el seu: recorda si és oberta). */ id?: string; /** Què aguanta el compartiment: els fronts que no s'hi poden fixar no surten (el triat, sí). */ bounds: ZoneBounds; /** Després de la «Frontissa» (la filera System 32 del mòdul). */ afterHinge?: ReactNode }) {
   const all = kinds ?? (Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[])
   const current = zone.front?.kind ?? "none"
   const options = all.filter((k) => k === current || canHoldFront(bounds, k))
@@ -643,7 +654,7 @@ export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title
                 onChange={choose}
               />
             </FormRow>
-            {zone.front && <FrontFields front={zone.front} openRatio={openRatio} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
+            {zone.front && <FrontFields front={zone.front} openRatio={openRatio} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} afterHinge={afterHinge} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
           </FoldItem>
   )
 }

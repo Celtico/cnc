@@ -27,3 +27,12 @@ export function HardwarePick({ slot, engine, current, inherited, onPick, label, 
     </FormRow>
   )
 }
+
+/**
+ * La **filera System 32 del mòdul** (`module.hardware.system32`, una per mòdul) a l'inspector del compartiment: als
+ * Prestatges (al costat de «Regulables») o al Front (després de la «Frontissa»), on diu `system32RowPlace`. Edita la de tot
+ * el mòdul: l'ajuda ho diu.
+ */
+export function System32Pick({ current, what, onPick }: { current: HardwareItem; /** Qui la fa servir (`usedHardwareSlots`). */ what: string; onPick: (item: HardwareItem) => void }) {
+  return <HardwarePick slot="system32" label="Filera System 32" current={current} help={`La de tot el mòdul: la fan servir ${what} de tots els compartiments. ${hardwareSummary(current)}.`} onPick={(next) => next && onPick(next)} />
+}

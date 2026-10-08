@@ -179,7 +179,10 @@ function frontHasHandle(m: Module, f: Extract<Front, { kind: "door" | "drawers" 
   return m.fronts.handles !== "none"
 }
 
-/** Llocs de ferratge de la **caixa** (laterals, unions, fons): surten a «Acabats i ferratges» del mòdul. La resta són dels fronts. */
+/**
+ * Llocs de ferratge que no són per defecte dels fronts (Interior › Acabats no els ensenya): l'espiga, a «Acabats i
+ * ferratges» del mòdul, i la filera System 32, als Prestatges o al Front del compartiment (`system32RowPlace`).
+ */
 export const BOX_SLOTS: ReadonlySet<HardwareSlot> = new Set<HardwareSlot>(["dowel", "system32"])
 
 /** El que ensenya Interior › «Acabats»: les opcions de tots els fronts que es llegeixen i els per defecte que algú hereta. */
@@ -206,3 +209,36 @@ export const frontsSectionEmpty = (s: FrontsSection): boolean => !s.style && !s.
 
 /** Els llocs que fa servir el mòdul, com a conjunt (per filtrar els selectors de l'inspector). */
 export const usedSlotSet = (module: Module): ReadonlySet<HardwareSlot> => new Set(usedHardwareSlots(module).keys())
+
+/** On surt la «Filera System 32» del mòdul a l'inspector del compartiment (`system32RowPlace`). */
+export interface System32RowPlace {
+  /** «Prestatges» (al costat de «Regulables») o «Front» (després de la «Frontissa»). */
+  at: "shelves" | "front"
+  /** Els compartiments que l'ensenyen (cada un a la seva pantalla: mai dos llocs a la mateixa). */
+  zones: ReadonlySet<string>
+  /** Qui la fa servir (tot el mòdul), per dir-ho a l'ajuda. */
+  what: string
+}
+
+/**
+ * **On s'edita la filera System 32** (una per mòdul, `module.hardware.system32`): no és de la caixa sinó de qui fa les
+ * fileres (opcions en cascada, un sol lloc per decisió). Als **Prestatges** dels compartiments amb prestatges regulables
+ * que es fan; si no n'hi ha cap, al **Front** dels compartiments amb una porta (o una reixeta amb frontisses) que la fa
+ * servir per a la placa de la frontissa (també les portes de tota una zona). Si el mòdul no la fa servir per a cap
+ * d'aquests (`usedHardwareSlots`; el fons encastat només en llegeix els números per a un avís), enlloc.
+ */
+export function system32RowPlace(module: Module): System32RowPlace | undefined {
+  const used = usedHardwareSlots(module).get("system32")
+  if (!used) return undefined
+  const m = visibleModule(module)
+  const shelves = new Set<string>()
+  const doors = new Set<string>()
+  walkBuiltZones(m.root, (z, { covered }) => {
+    if (z.shelves?.adjustable) shelves.add(z.id)
+    const f = covered ? undefined : z.front
+    if ((f?.kind === "door" && !f.glass) || (f?.kind === "grille" && f.mount !== "removable")) doors.add(z.id)
+  })
+  if (shelves.size) return { at: "shelves", zones: shelves, what: used.what }
+  if (doors.size) return { at: "front", zones: doors, what: used.what }
+  return undefined
+}
