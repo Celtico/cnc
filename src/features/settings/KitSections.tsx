@@ -11,6 +11,13 @@ import { KIT_BACKS, KIT_CLOSINGS, KIT_LEVEL_LABEL, fmtMm, type HardwareItem, typ
  * d'article), opcions, regles de tria, components, peces de fusta amb les fórmules i mecanitzats, i les hipòtesis de
  * lectura pendents del taller.
  */
+/** Totes les cel·les en una línia i la primera columna (NL) enganxada a l'esquerra mentre es desplaça la taula. */
+const STICKY_FIRST = {
+  "& th, & td": { whiteSpace: "nowrap" },
+  "& th:first-of-type, & td:first-of-type": { position: "sticky", left: 0, zIndex: 1, bg: "bg", borderEndWidth: "1px" },
+  "& tbody tr:nth-of-type(odd) td:first-of-type": { bg: "bg.muted" },
+}
+
 export function KitSections({ item, kit }: { item: HardwareItem; kit: HardwareKit }) {
   const closings = kit.options.closing
   const nls = kit.variants.map((v) => v.nl)
@@ -42,8 +49,9 @@ export function KitSections({ item, kit }: { item: HardwareItem; kit: HardwareKi
       </FoldItem>
 
       <FoldItem id="kit-variants" icon={LuListOrdered} title="Llargades i números d'article" badge={`${kit.variants.length} NL`}>
-        <Box overflowX="auto" py={2}>
-          <Table.Root size="sm" variant="line" striped>
+        {/* Desplaçament horitzontal (també al mòbil): la taula fa l'amplada que cal i la columna NL es queda fixa. */}
+        <Box overflowX="auto" maxW="full" my={2} borderWidth="1px" borderColor="border.muted" rounded="md" css={{ scrollbarWidth: "thin", scrollbarGutter: "stable" }} data-testid="kit-variants-table">
+          <Table.Root size="sm" variant="line" striped minW="max-content" css={STICKY_FIRST}>
             <Table.Header>
               <Table.Row>
                 <Table.ColumnHeader>NL</Table.ColumnHeader>

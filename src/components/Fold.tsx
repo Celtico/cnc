@@ -219,6 +219,8 @@ function FoldContent({ id, form, children }: { id: string; form: boolean; childr
           overflow: "visible",
           borderRadius: 0,
           display: "grid",
+          // Una columna que no s'eixampla amb el contingut (una taula ampla es desplaça a dins, no estira la secció).
+          gridTemplateColumns: "minmax(0, 1fr)",
           gridTemplateRows: "0fr",
           opacity: 0,
           visibility: "hidden",
@@ -229,7 +231,7 @@ function FoldContent({ id, form, children }: { id: string; form: boolean; childr
       ]}
       onTransitionEnd={onEnd}
     >
-      <Box className="fold-clip" minH={0} overflow={clip ? "hidden" : "visible"}>
+      <Box className="fold-clip" minH={0} minW={0} overflow={clip ? "hidden" : "visible"}>
         {present && children}
       </Box>
     </chakra.div>
