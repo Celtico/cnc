@@ -54,7 +54,7 @@ import { movingGroups, openingCollisions } from "../../components/viewer/opening
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
 import type { KitOrder } from "../../core/build/buildModule"
 import { materialIssues } from "../../core/build/materialIssues"
-import { applySettingsToModule, moduleHasInnerPieces, usedSlotSet, hasDrawers, hasBuiltFronts, coveringZone, frontsSection, frontsSectionEmpty, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule, moduleHasInnerPieces, usedSlotSet, hasDrawers, hasBuiltFronts, coveringZone, frontsSection, frontsSectionEmpty, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, FrontsForm, InnerClearanceRow, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -1069,6 +1069,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           <ZonePanel
             root={module.root}
             zone={zone}
+            bounds={zoneBounds(module, zone.id) ?? carcassBounds(module.carcass)}
             coveredBy={(() => {
               const cover = coveringZone(module.root, zone.id)
               return cover ? zoneLabel(cover, { root: cover.id === module.root.id }) : undefined

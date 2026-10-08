@@ -14,6 +14,12 @@ import {
   switchFront,
   unsplitZone,
   updateZone,
+  canHoldAccessories,
+  canHoldFront,
+  canHoldShelves,
+  frontLimitsHelp,
+  splitDirsFor,
+  findZone,
   KIT_BACKS,
   KIT_CLOSINGS,
   KIT_FINISHES,
@@ -30,6 +36,7 @@ import {
   type ModuleHardware,
   type Zone,
   type ZoneAccessory,
+  type ZoneBounds,
 } from "../../core/model"
 import type { KitOrder } from "../../core/build/buildModule"
 import { kitBottomThickness, kitLineText, kitWoodText } from "../../core/build/drawerKit"
@@ -105,9 +112,16 @@ export function ZonePanel({
   afterFront,
   splitExtra,
   coveredBy,
+  bounds,
 }: {
   root: Zone
   zone: Zone
+  /**
+   * Què aguanta el compartiment (laterals, base, tapa o divisors; `zoneBoundsMap`): opcions en cascada, el que no s'hi
+   * pot construir no surt (prestatges i accessoris sense una peça a cada costat, dividir sense on unir el divisor, els
+   * fronts que no s'hi poden fixar).
+   */
+  bounds: ZoneBounds
   /** % d'àrea oberta si la zona té reixeta. */
   openRatio?: number
   onChange: (root: Zone) => void
@@ -164,16 +178,17 @@ export function ZonePanel({
             {splitExtra}
           </FoldItem>
           {/* Portes que tapen tota la zona dividida (armari: penjador i maleter darrere). */}
-          {coveredBy ? <CoveredFront id="zone-parent-front" title="Front de tota la zona" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} kinds={["none", "door", "panel"]} title="Front de tota la zona" />}
+          {coveredBy ? <CoveredFront id="zone-parent-front" title="Front de tota la zona" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} kinds={["none", "door", "panel"]} title="Front de tota la zona" bounds={bounds} />}
           {afterFront}
           {sizeField}
         </>
       ) : (
         <>
-          {coveredBy ? <CoveredFront id="zone-front" title="Front" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} />}
+          {coveredBy ? <CoveredFront id="zone-front" title="Front" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} />}
 
-          {/* Tapat: el seu front (es conserva) no es fa i el compartiment és com obert (`visibleZone`). */}
-          {(coveredBy || zone.front?.kind !== "drawers") && (
+          {/* Tapat: el seu front (es conserva) no es fa i el compartiment és com obert (`visibleZone`). Sense una peça a
+              cada costat (lateral o divisor), cap prestatge: no surt (es conserva i torna amb els laterals). */}
+          {(coveredBy || zone.front?.kind !== "drawers") && canHoldShelves(bounds) && (
             <FoldItem id="zone-shelves" title="Prestatges" badge={zone.shelves?.n || undefined} icon={LuRows3}>
               <NumRow
                 label="Quantitat"
@@ -231,25 +246,34 @@ export function ZonePanel({
           )}
 
           {/* Accessoris del compartiment: ferratges (barra de penjar, tira LED), no fusta. Amb calaixos no hi caben. */}
-          {(coveredBy || zone.front?.kind !== "drawers") && <AccessoriesSection root={root} zone={zone} hardware={hardware} onChange={onChange} />}
+          {(coveredBy || zone.front?.kind !== "drawers") && canHoldAccessories(bounds) && <AccessoriesSection root={root} zone={zone} hardware={hardware} onChange={onChange} />}
 
           {afterFront}
 
           {sizeField}
 
-          <FoldItem id="zone-divide" title="Dividir" icon={LuSquareSplitHorizontal} defaultOpen={false}>
-            <Text textStyle="xs" color="fg.muted">
-              Parteix aquest compartiment en dos. El contingut es queda al primer.
-            </Text>
-            <HStack wrap="wrap">
-              <Button size="sm" variant="outline" onClick={() => onChange(splitZone(root, zone.id, "v", 2))}>
-                <LuSquareSplitHorizontal /> En vertical
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => onChange(splitZone(root, zone.id, "h", 2))}>
-                <LuSquareSplitVertical /> En horitzontal
-              </Button>
-            </HStack>
-          </FoldItem>
+          {/* Només les direccions on el divisor té on unir-se (`splitDirsFor`): el vertical, a sota i a sobre; el
+              travesser, als dos costats. Sense cap, la secció no surt. */}
+          {splitDirsFor(bounds).length > 0 && (
+            <FoldItem id="zone-divide" title="Dividir" icon={LuSquareSplitHorizontal} defaultOpen={false}>
+              <Text textStyle="xs" color="fg.muted">
+                Parteix aquest compartiment en dos. El contingut es queda al primer.
+                {splitDirsFor(bounds).length < 2 && (splitDirsFor(bounds)[0] === "v" ? " En horitzontal no: el travesser necessita un lateral o un divisor a cada costat." : " En vertical no: el divisor necessita una peça a sota i una a sobre (base, tapa o travesser).")}
+              </Text>
+              <HStack wrap="wrap">
+                {splitDirsFor(bounds).includes("v") && (
+                  <Button size="sm" variant="outline" onClick={() => onChange(splitZone(root, zone.id, "v", 2))}>
+                    <LuSquareSplitHorizontal /> En vertical
+                  </Button>
+                )}
+                {splitDirsFor(bounds).includes("h") && (
+                  <Button size="sm" variant="outline" onClick={() => onChange(splitZone(root, zone.id, "h", 2))}>
+                    <LuSquareSplitVertical /> En horitzontal
+                  </Button>
+                )}
+              </HStack>
+            </FoldItem>
+          )}
         </>
       )}
     </Stack>
@@ -385,7 +409,7 @@ function kitClosingFor(kit: HardwareItem & { kit: NonNullable<HardwareItem["kit"
   return isPushClosing(current.closing) ? { ...current, closing: opts.includes("soft") ? "soft" : current.closing } : current
 }
 
-function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits }: { front: Front; openRatio?: number; onChange: (f: Front) => void; hardware: ModuleHardware; noHandles: boolean; kits?: KitOrder[] }) {
+function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bounds }: { front: Front; openRatio?: number; onChange: (f: Front) => void; hardware: ModuleHardware; noHandles: boolean; kits?: KitOrder[]; bounds: ZoneBounds }) {
   // «Tirador»: el del mòdul (Interior › Fronts i calaixos), un altre de la biblioteca (un d'importat i confirmat fa els
   // forats a la seva distància) o «Cap (push)». Als calaixos amb joc, el tancament del joc mana (`kitClosingFor`).
   const handlePick = (f: Extract<Front, { kind: "door" | "drawers" | "flap" }>, kit?: HardwareItem & { kit: NonNullable<HardwareItem["kit"]> }) => {
@@ -421,9 +445,10 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits }: 
             <ChoiceChips
               label="Portes"
               value={front.mode}
+              // Dues portes: frontisses als dos costats (cal un lateral o un divisor a cada un).
               options={[
                 { id: "single", label: <><LuDoorClosed /> Una</> },
-                { id: "double", label: <><LuFlipHorizontal2 /> Dues</> },
+                ...(bounds.left && bounds.right || front.mode === "double" ? [{ id: "double" as const, label: <><LuFlipHorizontal2 /> Dues</> }] : []),
               ]}
               onChange={(mode) => onChange({ ...front, mode })}
             />
@@ -434,9 +459,10 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits }: 
               <ChoiceChips
                 label="Frontisses"
                 value={front.hinge}
+                // Només els costats on hi ha un lateral o un divisor per a les plaques (i el triat, si ja no n'hi ha).
                 options={[
-                  { id: "left", label: <><LuPanelLeft /> Esquerra</> },
-                  { id: "right", label: <><LuPanelRight /> Dreta</> },
+                  ...(bounds.left || front.hinge === "left" ? [{ id: "left" as const, label: <><LuPanelLeft /> Esquerra</> }] : []),
+                  ...(bounds.right || front.hinge === "right" ? [{ id: "right" as const, label: <><LuPanelRight /> Dreta</> }] : []),
                 ]}
                 onChange={(hinge) => onChange({ ...front, hinge })}
               />
@@ -519,9 +545,10 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits }: 
             <ChoiceChips
               label="Muntatge"
               value={front.mount}
+              // Amb frontisses, a un lateral o a un divisor (i la triada, si ja no n'hi ha).
               options={[
                 { id: "removable", label: <><LuMagnet /> Imants</> },
-                { id: "hinged", label: <><LuDoorOpen /> Frontisses</> },
+                ...(bounds.left || bounds.right || front.mount === "hinged" ? [{ id: "hinged" as const, label: <><LuDoorOpen /> Frontisses</> }] : []),
               ]}
               onChange={(mount) => onChange({ ...front, mount })}
             />
@@ -578,21 +605,31 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits }: 
  * Tipus de front d'una zona (botons d'icona) i els seus camps. En una zona dividida, només
  * portes o front fix, que tapen tota la zona (les fulles de dins queden darrere).
  */
-export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title = "Front", id, hardware, noHandles = false, kits }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; hardware: ModuleHardware; noHandles?: boolean; kits?: KitOrder[]; kinds?: (Front["kind"] | "none")[]; title?: string; /** Id de la secció plegable (cada lloc el seu: recorda si és oberta). */ id?: string }) {
-  const options = kinds ?? (Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[])
+export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title = "Front", id, hardware, noHandles = false, kits, bounds }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; hardware: ModuleHardware; noHandles?: boolean; kits?: KitOrder[]; kinds?: (Front["kind"] | "none")[]; title?: string; /** Id de la secció plegable (cada lloc el seu: recorda si és oberta). */ id?: string; /** Què aguanta el compartiment: els fronts que no s'hi poden fixar no surten (el triat, sí). */ bounds: ZoneBounds }) {
+  const all = kinds ?? (Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[])
+  const current = zone.front?.kind ?? "none"
+  const options = all.filter((k) => k === current || canHoldFront(bounds, k))
+  const limits = frontLimitsHelp(bounds, all)
+  /** Una porta nova va amb les frontisses a un costat on hi ha on posar-les. */
+  const choose = (k: Front["kind"] | "none") => {
+    const next = switchFront(root, zone.id, k)
+    const f = findZone(next, zone.id)?.front
+    if (f?.kind === "door" && f.mode === "single" && !bounds[f.hinge] && bounds[f.hinge === "left" ? "right" : "left"]) onChange(setFront(next, zone.id, { ...f, hinge: f.hinge === "left" ? "right" : "left" }))
+    else onChange(next)
+  }
   return (
           <FoldItem id={id ?? (kinds ? "zone-parent-front" : "zone-front")} title={title} badge={FRONT_LABELS[zone.front?.kind ?? "none"]} icon={FRONT_ICONS[zone.front?.kind ?? "none"]}>
             {/* Tipus de front: un botó amb la icona de cada tipus (el nom, al tooltip, a sota i a la insígnia). */}
-            <FormRow label="Contingut">
+            <FormRow label="Contingut" help={limits}>
               <IconChoice
                 hideLabel
                 label="Tipus de front"
-                value={zone.front?.kind ?? "none"}
+                value={current}
                 options={options.map((k) => ({ value: k, label: FRONT_LABELS[k], icon: FRONT_ICONS[k] }))}
-                onChange={(k) => onChange(switchFront(root, zone.id, k))}
+                onChange={choose}
               />
             </FormRow>
-            {zone.front && <FrontFields front={zone.front} openRatio={openRatio} hardware={hardware} noHandles={noHandles} kits={kits} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
+            {zone.front && <FrontFields front={zone.front} openRatio={openRatio} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
           </FoldItem>
   )
 }
