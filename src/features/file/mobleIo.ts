@@ -5,14 +5,14 @@ import {
   missingReferences,
   mobleFileName,
   mobleToJson,
-  parseMobleFile,
+  parseMobleData,
   uniqueName,
   usedUserModelIds,
   type FileModel,
   type FilePhoto,
   type MobleFile,
 } from "../../core/file/mobleFile"
-import { DEFAULT_CABINET, newId, type Settings } from "../../core/model"
+import { DEFAULT_CABINET, newId, type RefPreset, type Settings } from "../../core/model"
 import { readComposition } from "../../db/compositionStore"
 import { addPhoto, createProject, db, keepProject, safeNestOptions, updateProjectPhoto, type Photo, type Project } from "../../db/db"
 import { ensureUserModel, getUserModel } from "../../db/userModels"
@@ -113,38 +113,35 @@ export async function saveProjectAsFile(project: Project, settings: Settings, in
 export type OpenResult = { ok: true; projectId: number; name: string; warnings: string[] } | { ok: false; error: string }
 
 /**
- * Obre un `.moble`: sempre crea un moble nou (mai en sobreescriu cap), amb la foto si
- * n'hi ha, i afegeix a les preferències les referències que faltin. El fitxer no porta preferències: el moble s'adapta
- * a les de qui l'obre (forats, ferratges, aspecte dels materials, màquina; en silenci). Només s'avisa dels materials
- * que no hi són (`missingMaterials`).
+ * Torna a crear els models 3D de l'usuari d'un fitxer amb el mateix id (si ja hi són, es fan servir els que hi ha). Torna
+ * l'avís si algun està malmès. `.moble` i `.ambient`.
  */
-export async function openMobleFile(text: string, settings: Settings, saveSettings: (s: Settings) => Promise<void>): Promise<OpenResult> {
-  const res = parseMobleFile(text)
-  if (!res.ok) return res
-  const { file } = res
-  const warnings = [...res.warnings]
-
-  // Models 3D de l'usuari: es tornen a crear amb el mateix id (si ja hi són, es fan servir els que hi ha).
-  let badModels = false
-  for (const m of file.models ?? []) {
+export async function restoreUserModels(models: readonly FileModel[]): Promise<string | undefined> {
+  let bad = false
+  for (const m of models) {
     try {
       const added = await ensureUserModel({ id: m.id, name: m.name, size: m.size, blob: base64ToBlob(m.data, m.mime || "model/gltf-binary"), createdAt: Date.now() })
-      // Si abans no hi era, oblida el «no hi és» de la memòria cau.
-      // Si el visor ja tenia aquest id a la memòria cau (sense three.js carregat no n'hi ha cap).
+      // Si el visor ja tenia aquest id a la memòria cau com a «no hi és», l'oblida (sense three.js carregat no n'hi ha cap).
       if (added) void import("../../components/viewer/models3d").then((x) => x.forgetModel(m.id))
     } catch {
-      badModels = true
+      bad = true
     }
   }
-  if (badModels) warnings.push("Algun model 3D del fitxer està malmès; no es veurà.")
+  return bad ? "Algun model 3D del fitxer està malmès; no es veurà." : undefined
+}
 
-  const existing = (await db.projects.toArray()).map((p) => p.name)
+/**
+ * Crea un moble nou amb el contingut d'un `.moble` (composició, nesting i, si n'hi ha, la foto amb el calibratge): el
+ * nom, únic entre `existing`; `folder`, el grup. Els models i les referències van a part. `.moble` i `.ambient`.
+ */
+export async function createProjectFromMoble(file: MobleFile, existing: readonly string[], folder?: string): Promise<{ projectId: number; name: string; warnings: string[] }> {
+  const warnings: string[] = []
   const name = uniqueName(file.project.name.trim() || "Moble", existing)
   const projectId = await createProject(name, DEFAULT_CABINET, {
     composition: file.project.composition,
     ...(file.project.nesting ? { nesting: file.project.nesting } : {}),
+    ...(folder ? { folder } : {}),
   })
-
   if (file.photo && file.project.photo) {
     try {
       const blob = base64ToBlob(file.photo.data, file.photo.mime)
@@ -152,17 +149,49 @@ export async function openMobleFile(text: string, settings: Settings, saveSettin
       const photoId = await addPhoto(photo)
       await updateProjectPhoto(projectId, { photoId, ...file.project.photo })
     } catch {
-      warnings.push("La foto del fitxer està malmesa; s'ha obert sense foto.")
+      warnings.push(`La foto de «${name}» està malmesa; s'ha obert sense foto.`)
     }
   }
-
-  const missing = missingReferences(file, settings.references)
-  if (missing.length) {
-    await saveSettings({ ...settings, references: [...missing.map((r) => ({ ...r, id: newId("ref") })), ...settings.references] })
-    warnings.push(`${missing.length === 1 ? "S'ha afegit una referència" : `S'han afegit ${missing.length} referències`} a les preferències: ${missing.map((r) => r.name).join(", ")}.`)
-  }
-  const noMaterials = missingMaterialsWarning(missingMaterials(file.project.composition, settings.materials))
-  if (noMaterials) warnings.push(noMaterials)
-  return { ok: true, projectId, name, warnings }
+  return { projectId, name, warnings }
 }
 
+/** Afegeix a les preferències les referències que falten i torna l'avís (o res). `.moble` i `.ambient`. */
+export async function addMissingReferences(missing: readonly RefPreset[], settings: Settings, saveSettings: (s: Settings) => Promise<void>): Promise<string | undefined> {
+  if (!missing.length) return undefined
+  await saveSettings({ ...settings, references: [...missing.map((r) => ({ ...r, id: newId("ref") })), ...settings.references] })
+  return `${missing.length === 1 ? "S'ha afegit una referència" : `S'han afegit ${missing.length} referències`} a les preferències: ${missing.map((r) => r.name).join(", ")}.`
+}
+
+/**
+ * Obre un `.moble`: sempre crea un moble nou (mai en sobreescriu cap), amb la foto si
+ * n'hi ha, i afegeix a les preferències les referències que faltin. El fitxer no porta preferències: el moble s'adapta
+ * a les de qui l'obre (forats, ferratges, aspecte dels materials, màquina; en silenci). Només s'avisa dels materials
+ * que no hi són (`missingMaterials`).
+ */
+export async function openMobleFile(text: string, settings: Settings, saveSettings: (s: Settings) => Promise<void>): Promise<OpenResult> {
+  let raw: unknown
+  try {
+    raw = JSON.parse(text)
+  } catch {
+    return { ok: false, error: "Aquest fitxer no és un moble (no és un JSON vàlid)." }
+  }
+  return openMobleData(raw, settings, saveSettings)
+}
+
+/** `openMobleFile` amb el JSON ja llegit (`openAnyFile`). */
+export async function openMobleData(raw: unknown, settings: Settings, saveSettings: (s: Settings) => Promise<void>): Promise<OpenResult> {
+  const res = parseMobleData(raw)
+  if (!res.ok) return res
+  const { file } = res
+  const warnings = [...res.warnings]
+  const badModels = await restoreUserModels(file.models ?? [])
+  if (badModels) warnings.push(badModels)
+  const existing = (await db.projects.toArray()).map((p) => p.name)
+  const created = await createProjectFromMoble(file, existing)
+  warnings.push(...created.warnings)
+  const refs = await addMissingReferences(missingReferences(file, settings.references), settings, saveSettings)
+  if (refs) warnings.push(refs)
+  const noMaterials = missingMaterialsWarning(missingMaterials(file.project.composition, settings.materials))
+  if (noMaterials) warnings.push(noMaterials)
+  return { ok: true, projectId: created.projectId, name: created.name, warnings }
+}
