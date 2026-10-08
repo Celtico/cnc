@@ -73,7 +73,7 @@ function scrambleHidden(m: Module, r: Rnd): Module {
       if (used.has(slot) || r() < 0.4) continue
       ;(hardware as ModuleHardware)[slot] = r() < 0.5 ? structuredClone(DEFAULT_MODULE_HARDWARE.dowel) : { ...structuredClone(DEFAULT_MODULE_HARDWARE.slide), engine: "drawerKit", name: "Joc sense dades" }
     }
-  return { ...m, carcass: c, fronts, hardware, root: scrambleZone(m.root, r, m.fronts.handles === "none") }
+  return { ...m, carcass: c, fronts, hardware, root: scrambleZone(m.root, r, m.fronts.handles === "none", false, { left: c.sides.left, right: c.sides.right }) }
 }
 
 /** Algun front que es fa: el d'un compartiment que no és dins d'un altre amb front (escrit a part de `walkBuiltZones`). */
@@ -103,7 +103,13 @@ function randomShelves(r: Rnd): Zone["shelves"] {
   return { n: int(r, 0, 5), adjustable: r() < 0.5, ...(r() < 0.5 ? { thickness: pick(r, [40, 60]) } : {}), ...(r() < 0.5 ? { flush: true } : {}) }
 }
 
-function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered = false): Zone {
+/**
+ * Sense una peça a cada costat del compartiment (lateral o divisor, escrit a part de `zoneBoundsMap`) no surten
+ * Prestatges ni Accessoris: cap prestatge, filera, barra ni llum no compta.
+ */
+type Sides = { left: boolean; right: boolean }
+
+function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sides: Sides): Zone {
   const out: Zone = { ...z }
   const f = z.front
   if (r() < 0.5) {
@@ -120,7 +126,14 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered = false): Zon
     if (r() < 0.5) out.shelves = randomShelves(r)
     if (r() < 0.3) out.rail = {}
     if (r() < 0.3) out.led = { hardware: { ...DEFAULT_MODULE_HARDWARE.led, params: { ...DEFAULT_MODULE_HARDWARE.led.params, height: 12 } } }
-    out.split = { ...out.split!, children: out.split!.children.map((c) => scrambleZone(c, r, noHandles, covered || !!z.front)) }
+    const n = out.split!.children.length
+    const v = out.split!.dir === "v"
+    out.split = { ...out.split!, children: out.split!.children.map((c, i) => scrambleZone(c, r, noHandles, covered || !!z.front, v ? { left: sides.left || i > 0, right: sides.right || i < n - 1 } : sides)) }
+  } else if (!sides.left || !sides.right) {
+    // Res a cada costat per aguantar-los: ni Prestatges ni Accessoris.
+    if (r() < 0.6) out.shelves = randomShelves(r)
+    if (r() < 0.3) out.rail = {}
+    if (r() < 0.3) out.led = {}
   } else if (f?.kind === "drawers" && !covered) {
     // Calaixos: la secció Prestatges (i la barra) no surt.
     if (r() < 0.6) out.shelves = randomShelves(r)
@@ -309,6 +322,15 @@ describe("independència del camí: el mateix estat visible fa el mateix moble",
     expect(run([shelvesN(0), adjustable(false)])).toBe(run([noShelves]))
     // Regulables sense cap prestatge (es veu): les fileres hi són, vingui d'on vingui.
     expect(run([shelvesN(2), thickShelves, shelvesN(0)])).toBe(run([noShelves, adjustable(true)]))
+  })
+  it("sense un lateral, els prestatges, les fileres, la barra i la llum d'abans no compten (ni prestatges flotants)", () => {
+    const noLeft = carcass({ sides: { left: false, right: true } })
+    const noShelves: Op = (m) => ({ ...m, root: setShelves(m.root, m.root.id, null) })
+    const rail: Op = (m) => ({ ...m, root: { ...m.root, rail: {}, led: {} } })
+    const ref = run([noLeft, noShelves])
+    for (const p of permutations([shelvesN(3), thickShelves, rail, noLeft])) expect(run(p)).toBe(ref)
+    // Tornar a posar el lateral recupera els prestatges que hi havia.
+    expect(run([shelvesN(3), noLeft, carcass({ sides: { left: true, right: true } })])).toBe(run([shelvesN(3)]))
   })
   it("portes: de dues fulles, la frontissa d'abans no compta", () => {
     expect(run([rootFront({ kind: "door", mode: "single", hinge: "right" }), rootFront({ kind: "door", mode: "double", hinge: "right" })])).toBe(run([rootFront({ kind: "door", mode: "double", hinge: "left" })]))
