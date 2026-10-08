@@ -179,8 +179,12 @@ for (let i = 0; i < 256; i++) {
   LIN[i] = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
 }
 
+/**
+ * Es veu (ell i tots els pares visibles) i no és un element només del visor (`userData.editorOnly`: nanses, gizmo i el
+ * dibuix dels ferratges de sèrie, que no surten al render).
+ */
 function visibleChain(o: Object3D): boolean {
-  for (let p: Object3D | null = o; p; p = p.parent) if (!p.visible) return false
+  for (let p: Object3D | null = o; p; p = p.parent) if (!p.visible || p.userData.editorOnly) return false
   return true
 }
 

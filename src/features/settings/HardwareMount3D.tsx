@@ -3,6 +3,7 @@ import { Canvas, useThree } from "@react-three/fiber"
 import { useEffect, useMemo } from "react"
 import { NeutralToneMapping, Vector3, type WebGLRenderer } from "three"
 import { mountCamera, type HardwareMount } from "../../core/build/hardwareMount"
+import { shelfPins } from "../../core/build/hardwareSolids"
 import type { MaterialPref, Panel } from "../../core/model"
 import { MovingPanel, PanelMesh } from "../../components/viewer/CabinetViewer"
 import { LOW_MEMORY } from "../../components/viewer/deviceLimits"
@@ -15,8 +16,9 @@ const S = 0.001
 
 /**
  * El ferratge muntat en 3D (Preferències › Ferratges, «3D»): les peces del mòdul d'exemple (`hardwareMount`, fetes pel
- * motor) amb el mateix `PanelMesh` que el visor del moble —materials, forats i ferratges (el GLB importat o el volum de
- * la frontissa de l'app)—, centrades al punt que mira la càmera (`mountCamera`: enquadra el ferratge amb els seus forats i un
+ * motor) amb el mateix `PanelMesh` que el visor del moble —materials, forats i ferratges (el GLB importat o el dibuix 3D
+ * dels de sèrie, `builtinSolids`)—, la **fusta translúcida** (`seeThrough`: el ferratge és el protagonista; les peces
+ * que són el ferratge, `HardwareMount.solid`, opaques), centrades al punt que mira la càmera (`mountCamera`: enquadra el ferratge amb els seus forats i un
  * marge de peça, `HardwareMount.region`). La porta (o l'abatible) s'obre amb `open` (0–1) com al visor.
  * Un «només 3D», el model sol enquadrat a la seva caixa (`modelCamera`: un perfil llarg i prim, mirat al llarg perquè se'n
  * vegi la secció). **Sense cap cota** (per decisió de l'usuari: «a les vistes les mides de tot, i al 3D cap mida»; les
@@ -71,6 +73,9 @@ function MountScene({ mount, materials, open }: { mount: HardwareMount; material
   const cam = useMemo(() => mountCamera(mount, aspect), [mount, aspect])
   const center: [number, number, number] = [-cam.target[0] * S, -cam.target[1] * S, -cam.target[2] * S]
   const tags = mount.proposedTags.length ? mount.proposedTags : undefined
+  // Fusta translúcida i el ferratge opac (el protagonista); els suports de prestatge als forats de sota el prestatge.
+  const solid = useMemo(() => new Set(mount.solid), [mount.solid])
+  const pins = useMemo(() => shelfPins(mount.panels), [mount.panels])
   return (
     <>
       <group position={center}>
@@ -79,7 +84,7 @@ function MountScene({ mount, materials, open }: { mount: HardwareMount; material
           const g = groupOf.get(p.id)
           return (
             <MovingPanel key={p.id} transform={g ? transformAt(g.motion, open) : null}>
-              <PanelMesh panel={p} exploded={false} showHoles edges materialMode="role" materials={materials} hardware proposedTags={tags} />
+              <PanelMesh panel={p} exploded={false} showHoles edges materialMode="role" materials={materials} hardware pins={pins.get(p.id)} seeThrough={!solid.has(p.id)} proposedTags={tags} />
             </MovingPanel>
           )
         })}

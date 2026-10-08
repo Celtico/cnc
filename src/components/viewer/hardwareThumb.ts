@@ -1,12 +1,15 @@
-import { Box3, BoxGeometry, CircleGeometry, CylinderGeometry, Group, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial, PerspectiveCamera, Vector3, type Object3D } from "three"
+import { Box3, BoxGeometry, CircleGeometry, Group, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial, PerspectiveCamera, Vector3, type Object3D } from "three"
 import { mountCamera, type HardwareMount } from "../../core/build/hardwareMount"
+import { shelfPins } from "../../core/build/hardwareSolids"
 import type { MaterialPref, Panel, PanelFitting } from "../../core/model"
 import { buildScene } from "./exportGlb"
 import { exportablePanel } from "./exportablePanel"
-import { fittingMatrix, hingeVolumes, holeMarkMatrices, HOLE_COLOR, PROPOSED_HOLE_COLOR } from "./hardwareShapes"
+import { builtinHardwareGroup, fittingMatrix, holeMarkMatrices, HOLE_COLOR, PROPOSED_HOLE_COLOR } from "./hardwareShapes"
 import { snapshot, THUMB_ASPECT, thumbLights, thumbStudio } from "./thumbRenderer"
 
 const S = 0.001
+/** Opacitat de la fusta a la miniatura (la mateixa que a «Com va muntat»). */
+const WOOD_OPACITY = 0.4
 
 /**
  * Miniatura d'un ferratge (Preferències › Ferratges): el muntatge de «Com va muntat» (`hardwareMount`: les peces del
@@ -23,7 +26,6 @@ export function renderHardwareThumb(mount: HardwareMount, materials: MaterialPre
   const scene = buildScene(mount.panels, "thumb", { materials, make: exportablePanel, fitted: true })
   const root = scene.children[0]!
   // Comuns a la miniatura (`snapshot` → `disposeTree` els allibera amb l'escena).
-  const metal = new MeshStandardMaterial({ color: 0xb9bdc2, metalness: 0.85, roughness: 0.3 })
   const ghost = new MeshStandardMaterial({ color: 0xb9bdc2, metalness: 0.5, roughness: 0.45 })
   const disc = new CircleGeometry(1, 20)
   const holeMat = new MeshBasicMaterial({ color: HOLE_COLOR })
@@ -46,10 +48,23 @@ export function renderHardwareThumb(mount: HardwareMount, materials: MaterialPre
     return g
   }
 
-  // Les peces surten a `root` en el mateix ordre (`buildScene`): forats, frontisses de l'app i ferratges importats.
+  // Les peces surten a `root` en el mateix ordre (`buildScene`): forats, ferratges de sèrie i ferratges importats. La
+  // fusta, translúcida i sense fer ombra (com a «Com va muntat»): el ferratge, opac, és el protagonista.
+  const solid = new Set(mount.solid)
+  const pins = shelfPins(mount.panels)
   mount.panels.forEach((p: Panel, i) => {
     const holder = root.children[i]
     if (!holder) return
+    const wood = holder.children[0] as Mesh | undefined
+    if (wood?.isMesh && !solid.has(p.id)) {
+      for (const m of Array.isArray(wood.material) ? wood.material : [wood.material]) {
+        if (m.userData.shared) continue
+        m.transparent = true
+        m.opacity = Math.min(m.opacity, WOOD_OPACITY)
+        m.depthWrite = false
+      }
+      wood.userData.seeThrough = true
+    }
     const T = p.thickness * S
     for (const [holes, mat] of [
       [p.holes.filter((h) => !h.tag || !proposed.has(h.tag)), holeMat],
@@ -62,14 +77,8 @@ export function renderHardwareThumb(mount: HardwareMount, materials: MaterialPre
       im.computeBoundingSphere()
       holder.add(im)
     }
-    for (const h of hingeVolumes(p)) {
-      const cap = new Mesh(new CylinderGeometry(h.disc.radius, h.disc.radius, h.disc.height, 20), metal)
-      cap.position.set(...h.disc.position)
-      cap.rotation.x = Math.PI / 2
-      const arm = new Mesh(new BoxGeometry(...h.arm.size), metal)
-      arm.position.set(...h.arm.position)
-      holder.add(cap, arm)
-    }
+    const builtin = builtinHardwareGroup(p, pins.get(p.id))
+    if (builtin) holder.add(builtin)
     for (const f of p.fittings ?? []) {
       const o = fitting(f, p.thickness)
       if (o) holder.add(o)
@@ -82,7 +91,10 @@ export function renderHardwareThumb(mount: HardwareMount, materials: MaterialPre
     if (o) root.add(o)
   }
   scene.traverse((o) => {
-    if ((o as Mesh).isMesh && !(o as InstancedMesh).isInstancedMesh) o.castShadow = o.receiveShadow = true
+    if ((o as Mesh).isMesh && !(o as InstancedMesh).isInstancedMesh) {
+      o.castShadow = !o.userData.seeThrough
+      o.receiveShadow = true
+    }
   })
   // A terra: el més baix a y = 0 (el model sol; les potes, que van cap avall des de la base del mòdul d'exemple).
   scene.updateMatrixWorld(true)

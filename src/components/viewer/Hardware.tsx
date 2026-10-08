@@ -3,8 +3,8 @@ import { useEffect, useMemo, useState } from "react"
 import { Box3, MeshStandardMaterial, Vector3 } from "three"
 import { BoxFrame } from "./BoxFrame"
 import { useViewerCursor } from "./cursor"
-import type { Panel, PanelFitting } from "../../core/model"
-import { fittingMatrix, hingeVolumes } from "./hardwareShapes"
+import type { Hole, Panel, PanelFitting } from "../../core/model"
+import { builtinHardwareGroup, fittingMatrix } from "./hardwareShapes"
 import { loadedModel, loadModel, onModelsLoaded } from "./models3d"
 
 /**
@@ -40,7 +40,24 @@ function BarHandle({ cx, cy, z, dir, len, vertical }: { cx: number; cy: number; 
   )
 }
 
-export function PanelHardware({ panel }: { panel: Panel }) {
+/**
+ * Els ferratges d'una peça al visor: el dibuix 3D dels de sèrie (`builtinHardwareGroup`: frontisses, guies, espigues,
+ * suports de prestatge —`pins`—, braços, imants, push, suports de la barra, perfil LED; només visuals, fora del render)
+ * i, als fronts, el tirador de barra genèric.
+ */
+export function PanelHardware({ panel, pins }: { panel: Panel; pins?: readonly Hole[] }) {
+  const builtin = useMemo(() => builtinHardwareGroup(panel, pins), [panel, pins])
+  return (
+    <>
+      {/* Geometries i materials compartits: r3f no els ha d'alliberar en desmuntar-se. */}
+      {builtin && <primitive object={builtin} dispose={null} />}
+      <FrontHandle panel={panel} />
+    </>
+  )
+}
+
+/** El tirador de barra genèric d'un front (cap si és push o si porta un tirador importat). */
+function FrontHandle({ panel }: { panel: Panel }) {
   const hw = useMemo(() => {
     const isFront = panel.role === "door" || panel.role === "drawerFront" || panel.role === "flap"
     if (!isFront) return null
@@ -76,25 +93,10 @@ export function PanelHardware({ panel }: { panel: Panel }) {
   }, [panel])
   if (!hw) return null
   const { outDir, outZ, handle } = hw
-  // Les frontisses importades es dibuixen amb el seu model (`PanelFittings`), no amb la cassoleta genèrica
-  // (`hingeVolumes`); un tirador importat, també (cap barra genèrica).
+  // Un tirador importat es dibuixa amb el seu model (`PanelFittings`): cap barra genèrica.
   const ownHandle = (panel.fittings ?? []).some((f) => f.kind === "handle")
-  return (
-    <group>
-      {hingeVolumes(panel).map((h, i) => (
-        <group key={i}>
-          {/* Cassoleta i braç de la frontissa, a la cara de dins. */}
-          <mesh position={h.disc.position} rotation={[Math.PI / 2, 0, 0]} material={METAL}>
-            <cylinderGeometry args={[h.disc.radius, h.disc.radius, h.disc.height, 20]} />
-          </mesh>
-          <mesh position={h.arm.position} material={METAL} castShadow>
-            <boxGeometry args={h.arm.size} />
-          </mesh>
-        </group>
-      ))}
-      {!panel.push && !ownHandle && <BarHandle cx={handle.cx} cy={handle.cy} z={outZ} dir={outDir} len={handle.len} vertical={handle.vertical} />}
-    </group>
-  )
+  if (panel.push || ownHandle) return null
+  return <BarHandle cx={handle.cx} cy={handle.cy} z={outZ} dir={outDir} len={handle.len} vertical={handle.vertical} />
 }
 
 /** La caixa d'un ferratge sense model: opaca (un ferratge mai es dibuixa translúcid, ni triat ni dins d'un mòdul translúcid). */
