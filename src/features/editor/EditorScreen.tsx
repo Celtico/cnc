@@ -63,7 +63,7 @@ import { GroupInspector, PartActions, PartInspector, PartJoineryForm } from "../
 import { ORIENT_ICON } from "../composition/partOrient"
 import { StructureTree, type Selection } from "../composition/StructureTree"
 import { Tooltip } from "../../components/ui/tooltip"
-import { ZoneActions, ZonePanel } from "../composition/ZonePanel"
+import { ModuleDoorsSection, ZoneActions, ZonePanel } from "../composition/ZonePanel"
 import { RunsForm } from "../composition/RunsForm"
 import { HardwarePlacements, PlacementButtons, PlacementInspector, type PlacementActions } from "../composition/HardwarePlacements"
 import { duplicatePlacement, placementScope, removePlacement, scopePlacements } from "../composition/placements"
@@ -602,8 +602,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       } else if (selection.kind === "hardware") {
         removeHardware(selection.id)
       } else if (selection.kind === "zone") {
-        // L'«Interior» (l'arrel) no s'elimina: `deleteZone` buidaria tot el mòdul (divisions, fronts i el front de tot el
-        // mòdul). Es buida treient-ne la divisió o el front.
+        // L'«Interior» (l'arrel) no s'elimina: `deleteZone` buidaria tot el mòdul (divisions, fronts i les portes de tot el
+        // mòdul). Es buida treient-ne la divisió, el front o les portes (Mòdul › Portes).
         if (interior) {
           refuseInterior("eliminar")
           return
@@ -682,7 +682,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       const sel = findZone(mod.root, selection.zoneId)
       if (sel && (sel.id === best.id || findZone(sel, best.id))) {
         const parent = parentOf(mod.root, sel.id)
-        // Del compartiment es puja a la divisió, a l'«Interior» (l'arrel, amb el front de tot el mòdul) i al mòdul.
+        // Del compartiment es puja a la divisió, a l'«Interior» (l'arrel) i al mòdul (amb les portes de tot el mòdul).
         return parent ? select({ kind: "zone", moduleId: id, zoneId: parent.id }) : selectModule(id)
       }
     }
@@ -1188,6 +1188,23 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                 <FoldItem id="mod-structure" title="Caixa" icon={LuFrame} badge={rows.style ? (module.fronts.style === "inset" ? "Encastats" : "Recobrents") : undefined}>
                   <CarcassForm module={module} onChange={updateModule} section="structure" rows={rows} />
                 </FoldItem>
+                {/* Portes de dalt a baix de tot el mòdul (armari), només amb l'Interior dividit: sense dividir, el Front és el
+                    del compartiment. Després de la Caixa (els laterals diuen on hi caben) i abans dels Materials (Fronts). */}
+                {module.root.split && (
+                  <ModuleDoorsSection
+                    root={module.root}
+                    bounds={zoneBounds(module, module.root.id) ?? carcassBounds(module.carcass)}
+                    hardware={module.hardware}
+                    noHandles={module.fronts.handles === "none"}
+                    onChange={(root) => updateModule({ ...module, root })}
+                    // La filera System 32 del mòdul, després de la «Frontissa» si li toca a aquestes portes (`system32RowPlace`).
+                    afterHinge={(() => {
+                      const place = system32RowPlace(module)
+                      if (place?.at !== "front" || !place.zones.has(module.root.id)) return undefined
+                      return <System32Pick current={moduleSlotItem(module.hardware, "system32")} what={place.what} onPick={(system32) => updateModule({ ...module, hardware: { ...module.hardware, system32 } })} />
+                    })()}
+                  />
+                )}
                 <FoldItem id="mod-materials" title="Materials" icon={LuPalette}>
                   <MaterialsForm carcass={module.carcass} hasDrawers={hasDrawers(visibleModule(module).root)} hasFronts={rows.frontMaterial} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
                 </FoldItem>

@@ -12,10 +12,11 @@ function frontLabel(f: Zone["front"]): string {
 
 /**
  * Nom curt d'un compartiment per a l'arbre: «2 portes», «3 calaixos», «Obert · 2 prestatges»...
- * L'arrel del mòdul (`root`) és l'«Interior»: «Interior · 2 portes» si porta el front de tot el mòdul.
+ * L'arrel del mòdul (`root`) és l'«Interior»: «Interior · 2 portes» si porta les portes de tot el mòdul
+ * (Mòdul › Portes; un altre front d'una zona dividida no es fa i no surt).
  */
 export function zoneLabel(z: Zone, opts?: { root?: boolean }): string {
-  if (opts?.root && z.split && z.front) return `Interior · ${frontLabel(z.front)}`
+  if (opts?.root && z.split && z.front?.kind === "door") return `Interior · ${frontLabel(z.front)}`
   const own = ownLabel(z)
   return opts?.root ? `Interior · ${own}` : own
 }
