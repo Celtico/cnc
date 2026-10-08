@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { carcassDowels, coveringZone, defaultModule, frontOptionsUse, moduleRows, setFront, splitZone, usedHardwareSlots, visibleModule, type Carcass, type Front, type Module, type Zone } from "../model"
+import { carcassDowels, coveringZone, defaultModule, frontOptionsUse, moduleRows, setFront, splitZone, usedHardwareSlots, type Carcass, type Front, type Module, type Zone } from "../model"
 import { buildModule } from "./buildModule"
 import { buildComposition } from "./buildComposition"
 import { int, pick, randomComposition, rng } from "./testCorpus"
@@ -42,7 +42,7 @@ describe("ferratges que el mòdul fa servir (`usedHardwareSlots`)", () => {
 describe("les files de cada secció (`moduleRows`: Caixa, Materials, Unió) i els compartiments tapats (`coveringZone`)", () => {
   it("una porta sola a l'Interior: estil i folgança front–cos i retranqueig (prestatge) a la Caixa, Fronts a Materials, Espiga a Unió", () => {
     const m = withRoot(mod(), door)
-    expect(moduleRows(m)).toEqual({ style: true, outerGap: true, betweenGap: false, shelfSetback: true, back: m.carcass.back === "groove" || m.carcass.back === "inset" ? m.carcass.back : undefined, frontMaterial: true, dowel: true, joint: true })
+    expect(moduleRows(m)).toEqual({ style: true, outerGap: true, betweenGap: false, shelfSetback: true, back: m.carcass.back === "groove" || m.carcass.back === "inset" ? m.carcass.back : undefined, frontMaterial: true, dowel: true })
   })
   it("Materials › Fronts només amb algun front que es fa (com l'Estil)", () => {
     expect(moduleRows(withRoot(mod(), null)).frontMaterial).toBe(false)
@@ -50,20 +50,6 @@ describe("les files de cada secció (`moduleRows`: Caixa, Materials, Unió) i el
     // Tapats pel front de tota la zona: compta el de la zona.
     const inner = divided(drawers3, null)
     expect(moduleRows({ ...inner, root: { ...inner.root, front: door } }).frontMaterial).toBe(true)
-  })
-  it("Caixa › Cantonades: no surt amb fronts encastats (amb algun front que es fa) i l'inglet no compta", () => {
-    const m = withRoot(mod({ joint: "mitre" }), door)
-    const inset: Module = { ...m, fronts: { ...m.fronts, style: "inset" } }
-    expect(moduleRows(m).joint).toBe(true)
-    expect(moduleRows(inset).joint).toBe(false)
-    expect(visibleModule(inset).carcass.joint).toBeUndefined()
-    expect(carcassDowels(visibleModule(inset))).toContain("tapa")
-    // Sense cap front que es faci, l'Estil no surt ni compta: Cantonades sí.
-    const open: Module = { ...inset, root: { ...inset.root, front: undefined } }
-    expect(moduleRows(open).joint).toBe(true)
-    expect(visibleModule(open).carcass.joint).toBe("mitre")
-    // Parets buides: Cantonades no es tria (sempre a inglet, `hollowCorners`), amb qualsevol estil.
-    expect(moduleRows({ ...m, carcass: { ...m.carcass, hollow: { thickness: 60 } } }).joint).toBe(false)
   })
   it("Caixa: Ranura o Retirada del fons segons el fons, res sense fons", () => {
     expect(moduleRows(mod({ back: "groove" })).back).toBe("groove")
@@ -75,7 +61,7 @@ describe("les files de cada secció (`moduleRows`: Caixa, Materials, Unió) i el
     const m = withRoot(mod({ back: "none", joint: "mitre" }), null)
     const bare = { ...m, root: { ...m.root, shelves: undefined } }
     expect(carcassDowels(bare)).toEqual([])
-    expect(moduleRows(bare)).toEqual({ style: false, outerGap: false, betweenGap: false, shelfSetback: false, back: undefined, frontMaterial: false, dowel: false, joint: true })
+    expect(moduleRows(bare)).toEqual({ style: false, outerGap: false, betweenGap: false, shelfSetback: false, back: undefined, frontMaterial: false, dowel: false })
     const butt = { ...bare, carcass: { ...bare.carcass, joint: undefined } }
     expect(moduleRows(butt).dowel).toBe(carcassDowels(butt).length > 0)
   })
