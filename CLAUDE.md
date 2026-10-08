@@ -44,7 +44,8 @@ plantes, models 3D i renders són **decoratius**: no s'hi dedica temps mentre el
 - [`docs/colleccions-mobles.md`](docs/colleccions-mobles.md): **col·leccions de mobles** (biblioteca de referències:
   minimalisme arquitectònic i comercial; prompt a [`PROMPT-colleccions.md`](docs/prompt/PROMPT-colleccions.md)).
 - [`docs/cad-mobles-cataleg.md`](docs/cad-mobles-cataleg.md): font del catàleg de plantilles per a botigues de mobles.
-- [`docs/ferratges-import.md`](docs/ferratges-import.md): **importar ferratges del fabricant (Hettich i, §10, Blum)**: estructura de les
+- [`docs/ferratges-import.md`](docs/ferratges-import.md): **(adormit des del 2026-10-08: sense UI, vegeu Preferències ›
+  Ferratges)** **importar ferratges del fabricant (Hettich i, §10, Blum)**: estructura de les
   descàrregues, lectors STEP i DXF, proposta de forats, confirmació i col·locació al moble (frontissa + placa, tirador,
   pota; la resta «només 3D»; sense STEP, «només 2D»), tornar a importar (s'amplia l'article, mai es toca un mecanitzat
   confirmat), noms i sèries, el pla del que falta (Cadro, portes corredisses i plegables, taules) i, §8, el **generador
@@ -381,7 +382,10 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   Els mecanitzats del generador (`machining`) també: confirmats no es toquen (pendents a `update.machining`) i un DXF
   del taller amb capes de mecanitzat és informació nova. Detall a `docs/ferratges-import.md` §6–§7.
 - **Generador de mecanitzats i ferratges col·locats a mà** (millores v1 F4, `docs/ferratges-import.md` §8; per decisió
-  de l'usuari: «selecciones l'eina i el que li ha de fer a la fusta… i que es pugui posar»). Preferències **v22** (additiu):
+  de l'usuari: «selecciones l'eina i el que li ha de fer a la fusta… i que es pugui posar»). **Sense UI des del
+  2026-10-08** (per decisió de l'usuari: «el Generador de mecanitzats no cal… ara ho fiquem nosaltres a partir del
+  catàleg»): no hi ha ni el formulari, ni el dibuix, ni «Llegir un DXF…», ni «Afegir ferratge»; el model, la fabricació
+  i els col·locats que ja hi són es queden igual (treure ≠ esborrar; proves d'or idèntiques). Preferències **v22** (additiu):
   `HardwareItem.machining` = `GenOp[]` (`core/model/hardwareOps.ts`): per peça (`PART_KINDS`: porta/front, lateral, base,
   tapa/tauler de taula, prestatge, fons, caixa del calaix, peça lliure) forat (cara A/B, passant o **de cantell**), ranura
   (amplada, al llarg de P o Q, llargada o de cantell a cantell), caixera (rectangle, radi) i contorn (passant, o rectangle
@@ -417,13 +421,13 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   `eachHardware` els recorre (confirmar/eliminar a Preferències hi passa; `.moble` **v3**, `mobleVersionFor`). **DXF del
   taller** (`core/import/dxfMachining.ts`): capes `DRILL_D<Ø>_P<f>` (`DRILL_B_…`), `GROOVE_W<a>_P<f>`, `POCKET_P<f>`,
   `CUT_THROUGH`, `CONTOUR` (el contorn que ho envolta tot no es talla) → operacions exactes; peça pel sufix del nom
-  (`partFromFileName`: `_porta`, `_lateral`, `_tapa`…); en importar (`hardwareImport.ts`) manen sobre el STEP. Tests
+  (`partFromFileName`: `_porta`, `_lateral`, `_tapa`…); en importar (`settings/hardwareImport.ts`, tret amb la UI el 2026-10-08) manen sobre el STEP. Tests
   `core/import/dxfMachining.test.ts`, `build/hardwarePlace.test.ts`, `build/hardwarePlaceExports.test.ts`. **Proves d'or
   idèntiques.**
 - **Blum i un sol camí per fabricant** (per decisió de l'usuari: «estén el pipeline, no el dupliquis»; `docs/ferratges-import.md`
   §10): `core/import/makers.ts` (`detectMaker`, `importFileKind`, `importCandidate`, `groupImport` = Hettich +
   `groupBlum`, `makerOf`; `HettichArticle.maker`) i la resta comuna (`articleItem`, `mergeImported` amb la clau fabricant +
-  article, `hardwareImport.ts`). Blum (`core/import/blum.ts`): fitxers `<article>_<doc 8 xifres>[_R|_L].<ext>` (solts o
+  article; el diàleg i `settings/hardwareImport.ts`, trets amb la UI el 2026-10-08). Blum (`core/import/blum.ts`): fitxers `<article>_<doc 8 xifres>[_R|_L].<ext>` (solts o
   als ZIP amb el nom del producte en castellà, NFC), un item per article (mà al nom; amb les dues mans del mateix
   article, la dreta i nota), `classifyBlum` pel producte o el prefix (CLIP top → porta, plaques/guies/AVENTOS/TIP-ON →
   lateral, accessoris o desconeguts → **«Sense assignar»**, `PartKind` `any`: es pot col·locar però no es confirma fins
@@ -765,16 +769,16 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     **Ferratges** (`LuWrench`; com la llista d'un configurador de fabricant, `composition/HardwarePlacements.tsx` +
     `placements.ts`; insígnia «n a mà · m de regles»): **Col·locats a mà**, una fila per col·locat (nom · peça, l'avís a
     sota) amb Editar · Duplicar · Eliminar (`LuPencil` · `LuCopy` · `LuTrash2`, `PlacementButtons`); tocar-ne un el tria
-    (es ressalta al 3D), «Afegir ferratge» el crea i el tria; a sota, **De les regles del mòdul** (`ruleHardwareCounts`,
+    (es ressalta al 3D); només surten si n'hi ha (**sense «Afegir ferratge»** des del 2026-10-08, per decisió de l'usuari:
+    només servia per als «només 3D» importats; treure ≠ esborrar); a sota, **De les regles del mòdul** (`ruleHardwareCounts`,
     `core/build/hardwareSummary.ts`: frontisses, tiradors, guies en parells, braços d'abatible, potes, push, imants,
-    espigues en forats; només els que hi són). La peça lliure (no als objectes) també té «Ferratges» (sense les regles).
+    espigues en forats; només els que hi són). La peça lliure (no als objectes) també té «Ferratges» (sense les regles),
+    només si ja en porta.
     Un **col·locat triat** (selecció `hardware`, `PlacementInspector`): capçalera «Ferratge · <mòdul>» amb Pare ·
     Duplicar · Eliminar i anterior/següent dins del mateix mòdul, i la secció **Col·locació**, mínima (Ferratge amb el
     `HardwareSelect` · Peça · «Mecanitzats de» · **previsualització en viu** (`PlacementPreview`) · posició per eix
     (`PlacePosRow`: Des de l'esquerra/dreta… · Mig, i la distància) · «També: <peça>»). Els col·locats d'una versió
-    anterior amb repetició, mirall, gir o fórmula surten com a **«Avançat»** (només lectura) amb «Simplificar». «Afegir
-    ferratge» obre el calaix del `HardwareSelect` (`HardwareDrawer`) només amb els «només 3D» (`placeableOn`) i el
-    col·loca al mig de la peça.
+    anterior amb repetició, mirall, gir o fórmula surten com a **«Avançat»** (només lectura) amb «Simplificar».
     Sense Front (el de tot el mòdul és a l'«Interior»). Materials visibles: cos, **fronts**
     (`frontMaterial`, buit = el del cos) i fons.
   - Compartiment (`ZonePanel`): accions com a icones a la capçalera (Pare · Duplicar · Eliminar; a l'«Interior», l'arrel,
@@ -906,19 +910,31 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   si es fa servir), les memòries de textures (`remember`) en guarden 12 i alliberen les que en surten **sense clons vius**
   (`tileClone`), i el render fa com a molt 1600 px («Alta» i «Màxima» desactivades amb l'explicació) i, per CPU, com a molt
   2 processos (`cpuThreads`, menys fils com més gran és la imatge).
-- **Ferratges visuals** (`viewer/Hardware.tsx`, «Ferratges» a Opcions de vista, `mobles:viewer-hardware`): frontisses,
-  tirador de barra, potes regulables. Només es dibuixen. Els **importats** (`PanelFittings`, `Panel.fittings`, `kind`
+- **Ferratges visuals** (`viewer/Hardware.tsx`, «Ferratges» a Opcions de vista, `mobles:viewer-hardware`): tirador de
+  barra, potes regulables i el **dibuix 3D dels ferratges de sèrie** (per decisió de l'usuari, 2026-10-08: «els ferratges
+  que teníem de sèrie fes el dibuix 3D»; `core/build/hardwareSolids.ts`, pur: caixes i cilindres en coordenades de la
+  peça, posats amb els forats i els accessoris que fa el motor; `builtinHardwareGroup` a `viewer/hardwareShapes.ts` els
+  fa malles amb geometries unitàries i materials niquelat / acer / gris fosc / plàstic / faig / alumini compartits):
+  **frontissa** (cassoleta dins del forat amb l'ala, braç contra la cara de dins del lateral i placa; va amb el front),
+  **suport de prestatge** als forats System 32 just sota un prestatge (`shelfPins`), **espiga** de faig des del forat de
+  cara (un cop per espiga), **guia** (cos al lateral des de 34 mm davant del primer forat, corredora a la caixa),
+  **braç d'abatible** (placa i braç), **imant** (catxet al cantell, placa d'acer a la cara), **push** (cos del Tip-On a la
+  vora que obre), **barra** (suports dels extrems) i **tira LED** (perfil d'alumini). El grup porta `userData.editorOnly`
+  i el render el salta (`sceneData`, `visibleChain`): **no surten al render, l'AR ni les exportacions** (que fan l'escena
+  amb `buildScene`). Només es dibuixen. Els **importats** (`PanelFittings`, `Panel.fittings`, `kind`
   hinge/plate/handle/leg): el GLB de la frontissa a cada cassoleta, el de la placa al lateral, el del tirador a la cara de
   fora del front (sense la barra genèrica) i el de la pota a cada cantonada de la base (sense les genèriques,
   `ViewerModule.legs.fitted`) (`loadModel` dels `hwa-…`, taula Dexie `hardwareAssets`,
   v6), al marc del ferratge (u = v × n, `fittingMatrix`); sense el model, la caixa. No surten al render, l'AR ni les
-  exportacions (sí a les miniatures de Preferències › Ferratges). El marc, el volum de les frontisses de l'app
-  (`hingeVolumes`) i les marques dels forats (`holeMarkMatrices`) són a `viewer/hardwareShapes.ts`: visor i miniatures.
+  exportacions (sí a les miniatures de Preferències › Ferratges). El marc, el dibuix dels de sèrie
+  (`builtinHardwareGroup`) i les marques dels forats (`holeMarkMatrices`) són a `viewer/hardwareShapes.ts`: visor,
+  «Com va muntat» i miniatures.
   Els col·locats a mà es trien al 3D (`PanelFittings selected/onSelect`, vegeu Editor › Ferratges col·locats al 3D). El GLB
   d'un importat ja és al seu **marc de muntatge** (`imported.mountFrame`, §11 de `docs/ferratges-import.md`): a la
   cassoleta hi entra tal com es veuria col·locat.
   `PanelMesh proposedTags`: els forats amb aquestes etiquetes, en taronja (els proposats d'un importat sense confirmar al
-  muntatge de Preferències › Ferratges); `MovingPanel` s'exporta per al mateix muntatge.
+  muntatge de Preferències › Ferratges); `PanelMesh pins` (suports de prestatge) i `seeThrough` (fusta translúcida a
+  0,4 sense escriure la profunditat, al muntatge); `MovingPanel` s'exporta per al mateix muntatge.
 - **Components dels jocs de calaix** (`extras` amb rol `hardware`, `kitSolidPanels`): peces de caixa normals, **massisses**
   (`panelMaterials`: totes les cares amb l'acabat del material, mai el color del tauler vist als cantells) i pintades pel
   nom del material amb `resolveFinish` (paraula clau si no és a Materials: «Acer fosc» → gris fosc metàl·lic, «Blanc
@@ -1440,14 +1456,15 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   `THUMB_VERSION.HARDWARE_THUMB_VERSION`-empremta de l'item i del mòdul d'exemple (`templatePrint([item, base])`: editar-lo,
   confirmar-lo o canviar el tauler o els ferratges per defecte la refà)-empremta dels materials. Hi surt el muntatge de «Com va
   muntat» (`hardwareMount` amb el mateix mòdul d'exemple que l'editor) amb els materials de debò, els forats (els proposats
-  d'un importat sense confirmar, en taronja), el GLB importat o, si no hi és, la caixa (`bbox`), les frontisses i els tiradors
-  de l'app amb el volum del visor (`hingeVolumes`; `buildScene(…, { fitted: true })`: sense la barra genèrica on hi ha un
-  tirador importat), tot posat a terra (el més baix a y = 0), amb **la mateixa càmera que el 3D de l'editor en obrir-lo**
+  d'un importat sense confirmar, en taronja), el GLB importat o, si no hi és, la caixa (`bbox`), el dibuix 3D dels ferratges
+  de sèrie (`builtinHardwareGroup`, el mateix del visor) i el tirador de l'app (`buildScene(…, { fitted: true })`: sense la
+  barra genèrica on hi ha un tirador importat), la **fusta translúcida** (0,4, sense ombra; les peces que són el
+  ferratge, `HardwareMount.solid`, opaques), tot posat a terra (el més baix a y = 0), amb **la mateixa càmera que el 3D de l'editor en obrir-lo**
   (`mountCamera`, fov 32°) i l'estudi de les altres miniatures (sense terra si es mira de sota, sense paret si és darrere la
   càmera); un «només 3D», el model sol a terra. **La càmera enquadra el ferratge sempre** (per decisió de l'usuari: «mira
   d'enquadrar l'objecte, a vegades no es veu»): `hardwareMount` calcula la **regió** (`HardwareMount.region`, mm del
-  mòdul: el ferratge —GLB o caixa, el volum de la frontissa o del tirador de l'app, els components d'un joc, els perfils
-  d'un accessori—, els forats que fa amb la fondària i 40 mm de peça al voltant; els que es repeteixen —frontisses,
+  mòdul: el ferratge —GLB o caixa, el tirador de l'app, els components d'un joc, els perfils d'un accessori i el dibuix
+  dels de sèrie que toca el ferratge (`builtinSolids` a ≤ 30 mm: no les espigues de la caixa d'un lateral)—, els forats que fa amb la fondària i 40 mm de peça al voltant; els que es repeteixen —frontisses,
   filera System 32, espigues, imants, potes— només a 120 mm del forat principal: la frontissa de baix amb la placa, una
   pota amb la cantonada de la base; guia, braç, tirador, joc, barra, LED i marc sencers) i `mountCamera` hi fa cabre
   **exactament** la càmera (`fitCamera`, la mateixa cerca que `modelCamera`) per a la direcció de cada tipus (les de
@@ -1456,7 +1473,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   jocs, importats de mostra i, amb `HETTICH_DIR` / `BLUM_DIR`, els de debò. Els GLB es llegeixen **fora de la memòria compartida de models**
   (`readHardwareModel`: n'hi pot haver centenars i cadascun serveix un sol cop) i s'alliberen sencers (`disposeTree`) en
   acabar; el renderitzador s'allibera com sempre (`releaseThumbRenderer` → `releaseModelGpu`). Si canvia com es fan, s'apuja
-  `HARDWARE_THUMB_VERSION` (ara 5). Un **«només 3D»** s'enquadra a la seva caixa
+  `HARDWARE_THUMB_VERSION` (ara 6: ferratges de sèrie en 3D i fusta translúcida). Un **«només 3D»** s'enquadra a la seva caixa
   (`modelCamera`, a `mountCamera(m, aspect)`, la mateixa al 3D de l'editor i a la miniatura): la càmera més a prop que la
   veu sencera i, si és llarg i prim (perfil de porta corredissa de 1560 × 12,5 × 6,5), mirat al llarg des d'un extrem perquè
   se'n vegi la secció (abans sortia una ratlla). **Al 3D, cap cota** (per decisió de l'usuari: «a les vistes posar les mides
@@ -1471,12 +1488,20 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   més avall), dibuixa les peces d'exemple (`hardwarePreview`) amb un **Detall** acotat (`PanelDrawing dims`) i a la dreta
   les opcions en **l'acordió de l'app, com l'editor de materials** (`FoldItem` sols, recordats a la sessió, insígnia amb el
   resum; `data-testid="hardware-sections"`): **General** (`LuInfo`, oberta; tipus a la insígnia; fabricant, referència,
-  «Per defecte als mòduls nous») · **Importat del fabricant** (`LuUpload`, oberta; Confirmat / Sense confirmar / Només
-  3D) · **Plànols i documents** (`LuFileText`; GLB i plànols, si n'hi ha) · **Placa de muntatge** (`LuSquareDot`) ·
-  **Mides** (`LuMoveDiagonal`; `HARDWARE_PARAMS`, `NumRow`, llargades de guia) · **Quantitat per alçada**
-  (`LuListOrdered`, «2–5») · **Distància entre forats** (`LuRuler`, `StepRule`) · **Mecanitzats** (`LuCircleDot`, «n
-  forats») · **Generador de mecanitzats** (`LuFactory`, «n operacions», taronja si n'hi ha de dolentes; oberta als «es
-  col·loca a mà»).
+  «Per defecte als mòduls nous») · **Importat del fabricant** (`LuUpload`, oberta; només als que ja s'havien importat:
+  Confirmat / Sense confirmar / Només 3D) · **Plànols i documents** (`LuFileText`; GLB i plànols, si n'hi ha) · **Placa
+  de muntatge** (`LuSquareDot`) · **Mides** (`LuMoveDiagonal`; `HARDWARE_PARAMS`, `NumRow`, llargades de guia) ·
+  **Quantitat per alçada** (`LuListOrdered`, «2–5») · **Distància entre forats** (`LuRuler`, `StepRule`) ·
+  **Mecanitzats** (`LuCircleDot`, «n forats») i, als jocs, les seves seccions (`KitSections`: Del catàleg · Llargades i
+  números d'article —la taula es desplaça de costat amb la columna NL fixa, també al mòbil— · Regles de tria ·
+  Components · Peces de fusta · Mecanitzats del joc · Hipòtesis).
+  **Treure ≠ esborrar** (per decisió de l'usuari, 2026-10-08): **sense «Importar del fabricant»** («millor que ho anem
+  fent nostres»: els jocs llegits dels PDF del catàleg, [`docs/ferratges-jocs.md`](docs/ferratges-jocs.md), són el camí)
+  i **sense «Generador de mecanitzats»** («ara ho fiquem nosaltres a partir del catàleg»). Se'n va treure la UI
+  (`HardwareImportDialog`, `settings/hardwareImport.ts`, `MachiningGenerator`, `machiningDraw.ts`); el codi del nucli
+  (`core/import/*`, amb els tests), `HardwareItem.machining`/`GenOp`, `hardwarePlace.ts` i els col·locats es queden
+  **adormits**: els importats i els col·locats que ja hi són es llegeixen, es fabriquen igual (proves d'or idèntiques)
+  i es poden confirmar, editar i treure. «Què és» d'un importat (`hardwareReframe.ts`) continua.
   **Eliminar** (`DeleteHardwareDialog`, com el dels materials): si és un per defecte o el fa servir algun moble desat
   (`hardwareUsage`), cal un substitut del mateix tipus; els mobles hi passen (`replaceHardwareEverywhere`, sense `updatedAt`).
   Només les còpies **iguals** a l'item (`isCopyOf`: mateix id i `sameHardware`, el contingut sense nom/fabricant/versió); una
@@ -1489,36 +1514,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   `settings/hardwareGroups.ts`, com Preferències) i `GalleryCard` amb la miniatura (`settings/HardwareThumb.tsx`, mòdul
   d'exemple `useMountBase`: les mateixes miniatures desades). Frontissa, guia, braç, tirador de cada front
   (`HardwarePick`, a dalt «Com el mòdul»), els ferratges de la Fusteria del mòdul, la Pota de la base (a dalt
-  «Genèriques») i «Afegir ferratge» / Ferratge d'un col·locat (només els compatibles amb les peces, `placeableOn`). Les
+  «Genèriques») i el Ferratge d'un col·locat (només els compatibles amb les peces, `placeableOn`). Les
   còpies que no són a la biblioteca tal qual (`hardwareChoices`, per contingut, no per id) surten a part, «Còpia pròpia»,
   triades: es veu el que es fabrica i s'hi pot tornar; els importats sense confirmar porten «Sense confirmar» i la nota a
   dalt del calaix (es poden triar, no fan cap forat); triar-ne un de la biblioteca canvia la còpia.
-  - **«Importar del fabricant»** (`HardwarePane`, zona `components/ImportDropZone` —la mateixa que «Importar de Maestro»,
-    amb «Triar carpeta…» · «Triar fitxers…» i deixar anar—, `settings/hardwareImport.ts`): ZIP de Hettich tal com es
-    baixen (STEP, IGES, 3DS i DWG/DXF; només es descomprimeixen els articles triats, `listZip`/`readZipEntry`), carpetes o
-    fitxers; també els de **Blum** E-SERVICES (STEP, `.dae`, Xilog `*.pgm`, els ZIP del producte), barrejats o no. El diàleg diu
-    el fabricant, les fonts de cada fila (STEP · IGES · 3DS · DXF · PGM (Xilog) · DAE · PDF; les que no es llegeixen, més
-    clares), «Mecanitzats exactes» (filtre i resum) i els fitxers «sense article».
-    Diàleg `HardwareImportDialog`: articles per número amb la categoria i la carpeta traduïdes, els fitxers que porten
-    i **què se'n farà** («Tirador · 128 mm», «Pota · 4 forats a cada pota», «Només 3D: sense forats (…)»; la dels
-    tiradors i les potes llegint el STEP de les files visibles, `analyseArticle`); resum per tipus («742 tiradors, 71 potes
-    i 111 només 3D es poden importar»); cerca, filtre per tipus (Frontisses · Plaques · Tiradors · Potes · Només 3D · No es
-    poden importar, només els que hi són), «Triar els visibles», «Importar (n)». Cada fila diu **«Nou»** o, si l'article ja
-    és a la biblioteca, «Ja existeix · s'hi afegeix: 3D i forats proposats, vistes 2D…» (`mergePreview`). Les frontisses s'aparellen amb la placa del lot només si n'hi ha una (amb més, a l'editor). Tot entra **sense confirmar** (insígnia a la
-    targeta). L'editor d'un importat: el model al muntatge (vegeu «Com va muntat»), la vista del fitxer de fons sota els
-    forats proposats (`PanelDrawing underlay`) i les vistes 2D; a la dreta «Importat del fabricant» (estat,
-    **Confirmar** / «Treure la confirmació» —els mobles desats amb la còpia d'abans hi passen—, article, carpeta, fitxers,
-    què s'ha trobat, «Tornar a la proposta»), «Placa de muntatge» (frontisses: triar-ne una o cap, «Placa: del davant» i
-    «Placa: alçada») i els forats editables (al llarg, cap a dins des del centre de la cassoleta, Ø, fondària; tocar-los
-    torna a deixar l'item sense confirmar).
-  - **Generador de mecanitzats** (`settings/MachiningGenerator.tsx`: `MachiningGenerator` = el formulari a la dreta,
-    `MachiningStage` = el dibuix a l'esquerra sota «Com va muntat», estat compartit `useMachiningUi` a `machiningDraw.ts`):
-    a **qualsevol** ferratge (també «només 3D» i importats). «Peça» (`ChoiceChips` amb el nombre d'operacions), una
-    targeta per operació (Què és · Cara · Cantell · posició P i Q amb «Referència / Des de … / Mig» · Mides · Passant ·
-    Punts · Eina de la màquina per defecte, que posa el Ø o l'amplada), els problemes en vermell, «Afegir mecanitzat» i
-    **«Llegir un DXF…»** (capes del taller). El dibuix: peça d'exemple (`SAMPLE`) en P·Q amb la creu del punt de
-    referència, la vista 2D de l'importat de fons (gir i mirall) i **clic = posar-hi el mecanitzat triat** (s'enganxa als
-    vèrtexs i als centres de cercle de la vista; el punter diu la distància a la referència). Caixa del model u · v · n.
   - **«Com va muntat»** (per decisió de l'usuari: «preview 3D i en pla, amb el panell de com va muntat al moble»;
     `MountPreview` a `HardwarePane`): el ferratge **muntat** en un mòdul petit fet pel **camí de fabricació de sempre**
     (`core/build/hardwareMount.ts`, `hardwareMount(item, base)`: `buildModule` amb l'item al seu lloc del joc; el mòdul
@@ -1536,7 +1535,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     de les pestanyes de l'editor (`LuRotate3D` 3D · `LuMap` Pla, recordada a la sessió `mobles:hardware-mount-view`):
     **3D** (`HardwareMount3D`, `React.lazy`: un sol `Canvas` `frameloop="demand"`, dpr ≤ 2 / 1,5 `LOW_MEMORY`,
     `StudioEnvironment`, `OrbitControls`, colors per peça; les peces amb el `PanelMesh` del visor —forats, el GLB importat
-    o el volum de la frontissa de l'app (`PanelHardware`)— i `MovingPanel` + `movingGroups` per obrir la porta, l'abatible
+    o el dibuix 3D dels de sèrie (`PanelHardware`, amb els suports de prestatge `shelfPins`)— amb la **fusta translúcida**
+    (`seeThrough`, per decisió de l'usuari: el ferratge és el protagonista; `HardwareMount.solid` opac) i `MovingPanel` + `movingGroups` per obrir la porta, l'abatible
     o el calaix amb el lliscador «Obertura»; càmera `mountCamera` (pura, a `hardwareMount.ts`, la mateixa de la miniatura de
     la targeta): des de la cara on entra el forat principal —a les frontisses, des de dins—, un tirador des de fora, una pota
     de davant i una mica de sota, un joc des de dins i del darrere, enquadrant la **regió** del ferratge (vegeu Galeries ›
@@ -1664,8 +1664,9 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
     (`overflow: visible`; només mentre s'anima); les galeries el conserven amagat (`visibility: hidden`). Comprovat
     recarregant amb seccions obertes, Peça → Talla amb seccions obertes i l'alçada fotograma a fotograma.
   - Les pàgines de Preferències no en fan servir (`SettingsGroup`, sempre obert); l'editor de materials sí (Aspecte ·
-    Fabricació · Per defecte) i el de ferratges també (General · Importat del fabricant · Plànols i documents · Placa ·
-    Mides · Quantitat · Distància · Mecanitzats · Generador).
+    Fabricació · Per defecte) i el de ferratges també (General · Importat del fabricant (només els importats) · Plànols i
+    documents · Placa · Mides · Quantitat · Distància · Mecanitzats · als jocs, les seves seccions). El contingut és
+    una graella d'una columna `minmax(0, 1fr)`: una taula ampla es desplaça a dins (`overflowX`), no eixampla la secció.
 - **`PageHeader`** (`components/PageHeader`, Mobles · Ambients · Objectes · Preferències): títol gran i l'explicació
   (`actions` opcional, a sota del títol).
 - **`SearchBar`** (`components/SearchBar`): **tots els cercadors** (galeries, `MasterDetail`, Materials, calaix del
@@ -1785,15 +1786,15 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Render | Qualitat · Càmera · Escena · Llums · Sol · Cel · Llum (materials que fan llum) · Imatge | `LuGauge` · `LuCamera` · `LuHouse` · `LuLightbulb` · `LuSun` · `LuCloudSun` · `LuLamp` · `LuImage` |
 | Inspector | Anterior · Següent · Accions de la selecció (menú) | `LuChevronLeft` · `LuChevronRight` · `LuEllipsis` |
 | Preferències | Tema (dia/nit/sistema) · Color principal | `LuSunMoon` (`LuSun` · `LuMoon` · `LuMonitor`) · `LuCheck` a la mostra triada |
-| Ferratges | Importar del fabricant · Confirmar (importat) · Tornar a la proposta · Afegir forat | `LuUpload` · `LuCheck` · `LuUndo2` · `LuPlus` |
+| Ferratges | Confirmar (importat) · Tornar a la proposta · Afegir forat | `LuCheck` · `LuUndo2` · `LuPlus` |
 | Ferratges | «Com va muntat»: 3D · Pla (com Plànol · 3D dels ambients) | `LuRotate3D` · `LuMap` |
 | Preferències | Visualització · Ferratges · Calaixos (contingut) · Guies (categoria) · System 32 · Cassoleta · Imants | `LuScanEye` · `LuWrench` · `LuArchive` · `LuRailSymbol` · `LuCircleDot` · `LuCircleDashed` · `LuMagnet` |
 | Ferratges (categories) | Frontisses · Plaques · Guies · Calaixos de doble paret (jocs) · Elevables i abatibles · Unions · Suports de prestatge · Potes · Taules · Portes corredisses i plegables · Tiradors · Pressió i imants · Perfils i marcs · Penjar · Altres | `LuCircleDashed` · `LuSquareDot` · `LuRailSymbol` · `LuPackageOpen` · `LuPanelBottom` · `LuBolt` · `LuCircleDot` · `LuFootprints` · `LuTable` · `LuDoorOpen` · `LuGripHorizontal` · `LuMagnet` · `LuMinus` · `LuAnchor` · `LuPackage` |
 | Ferratges (joc) | Seccions de l'editor del joc: Del catàleg · Llargades i números · Regles de tria · Components · Peces de fusta · Mecanitzats del joc · Hipòtesis · Prebroca dels cargols (Preferències) | `LuBookOpen` · `LuListOrdered` · `LuRoute` · `LuPackageOpen` · `LuLayers2` · `LuCircleDot` · `LuBookOpen` · `LuDrill` |
 | Ferratges | Baixar el model 3D (.glb) d'un importat · Baixar un plànol de muntatge | `LuBoxes` · `LuFileDown` |
-| Ferratges | Generador: Afegir mecanitzat · Llegir un DXF… · Treure · Ferratges col·locats a mà (inspector del mòdul i de la peça; la de «Ferratges» del visor) | `LuPlus` · `LuFileUp` · `LuTrash2` · `LuWrench` |
+| Ferratges | Ferratges col·locats a mà (inspector del mòdul i de la peça; la de «Ferratges» del visor) | `LuWrench` |
 | Ferratges | Col·locat a mà (llista de l'inspector): Editar · Duplicar · Eliminar | `LuPencil` · `LuCopy` · `LuTrash2` |
-| Ferratges | Seccions de l'editor: General · Importat del fabricant · Plànols i documents · Placa · Mides · Quantitat per alçada · Distància entre forats · Mecanitzats · Generador de mecanitzats | `LuInfo` · `LuUpload` · `LuFileText` · `LuSquareDot` · `LuMoveDiagonal` · `LuListOrdered` · `LuRuler` · `LuCircleDot` · `LuFactory` |
+| Ferratges | Seccions de l'editor: General · Importat del fabricant (només els ja importats) · Plànols i documents · Placa · Mides · Quantitat per alçada · Distància entre forats · Mecanitzats | `LuInfo` · `LuUpload` · `LuFileText` · `LuSquareDot` · `LuMoveDiagonal` · `LuListOrdered` · `LuRuler` · `LuCircleDot` |
 | Preferències | Visor 3D (els materials per defecte als mòduls nous porten la de Materials, `LuPalette`) | `LuLampFloor` |
 | Fitxer | Desar com a fitxer · Obrir fitxer · Pujar un fitxer (preferències) | `LuSave` · `LuFolderOpen` · `LuUpload` |
 | Models 3D | Triar fitxers… · Triar carpeta… (importar un model) · Afegir les textures a Materials | `LuFileUp` · `LuFolderOpen` · `LuPalette` |
