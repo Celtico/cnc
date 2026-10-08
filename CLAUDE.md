@@ -1365,7 +1365,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Ambients per a clients**: menú ⋯ › «Duplicar (per a un client)…» (`duplicateAmbient`): «escena · client», duplica els
   mobles i objectes enllaçats i ho posa tot al grup del client: dos clients no comparteixen cap moble (`remapMobleItems`,
   el mateix que en obrir un `.ambient`).
-- **Desar com a fitxer** (`.ambient`, vegeu Desar i fitxers): menú ⋯ de la targeta i ⋯ de la barra de l'ambient obert.
+- **Desar com a fitxer** (`.moble`, vegeu Desar i fitxers › Fitxer d'ambient): menú ⋯ de la targeta i ⋯ de la barra de l'ambient obert.
 
 ## Objectes
 - Un objecte (sofà, làmpada, planta…) és un moble del tipus **`objecte`** (`partsOnlyKind`: només peces lliures, com el
@@ -1435,7 +1435,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Historial i Projectes**: primer l'**Historial** (el que és de pas, sense grup) i a sota **Projectes** (el que es desa en
   un grup, p. ex. un per client; `FolderedGrid show="loose"|"folders"`, `projects/Folders.tsx`: grups plegables amb ⋯
   canviar el nom / desagrupar; la cerca obre els grups amb resultats). Grups: `Project.folder`, `AmbientRow.folder`;
-  `setProjectsFolder`, `setAmbientsFolder`. Menú ⋯ de cada targeta: desar com a fitxer (`.moble`; a Ambients, `.ambient`), duplicar, **moure a un grup…**
+  `setProjectsFolder`, `setAmbientsFolder`. Menú ⋯ de cada targeta: desar com a fitxer (`.moble`, també els ambients), duplicar, **moure a un grup…**
   (`MoveToFolderDialog`), esborrar. **«Grup nou»** (nom i després es toquen les targetes) i **«Seleccionar»**
   (`FolderedGrid selection`): diverses targetes → moure-les a un grup o esborrar-les (els mobles i objectes que són en un
   ambient es conserven). **Modificats** (`Project.edited`, de `updateProjectComposition`; `isEdited` per als antics):
@@ -1814,8 +1814,10 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   (`materialRefNames`, les claus d'`aliasMaterialRefs`) que no són a les preferències després dels àlies (`missingMaterials`,
   `missingMaterialsWarning` a `openMobleFile`: «Materials que no tens a Preferències: …; es veuran amb un color per defecte i
   al taller sortiran amb aquest nom. Afegeix-los a Preferències › Materials.»). Les referències que falten s'afegeixen.
-- **Fitxer `.ambient`** (`core/file/ambientFile.ts`, pur, test `ambientFile.test.ts`; I/O a `features/file/ambientIo.ts`;
-  per decisió de l'usuari, «guardar un ambient com es fa als mobles i als objectes»): JSON versionat (`format:
+- **Fitxer d'ambient** (`core/file/ambientFile.ts`, pur, test `ambientFile.test.ts`; I/O a `features/file/ambientIo.ts`;
+  per decisió de l'usuari, «guardar un ambient com es fa als mobles i als objectes»). **Extensió `.moble`, com els mobles i
+  els objectes** (per decisió de l'usuari: una sola extensió; el `format` de dins diu què és i qualsevol «Obrir fitxer» el
+  porta al seu lloc; els `.ambient` desats abans es continuen obrint). JSON versionat (`format:
   "mobles-cnc-ambient"`, `version: 1`) amb `ambient` (`name` i `data` = l'`Ambient` sencer: parets i obertures, elements,
   grups, blocs, plànol de fons, materials, càmera i render a punt), `furniture` (un **`.moble` sencer** per cada moble i
   objecte enllaçat, `{ key, moble: MobleFile }`; els elements apunten a `key`, dos elements del mateix moble la
@@ -1902,7 +1904,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Ferratges | Col·locat a mà (llista de l'inspector): Editar · Duplicar · Eliminar | `LuPencil` · `LuCopy` · `LuTrash2` |
 | Ferratges | Seccions de l'editor: General · Importat del fabricant (només els ja importats) · Plànols i documents · Placa · Mides · Quantitat per alçada · Distància entre forats · Mecanitzats | `LuInfo` · `LuUpload` · `LuFileText` · `LuSquareDot` · `LuMoveDiagonal` · `LuListOrdered` · `LuRuler` · `LuCircleDot` |
 | Preferències | Visor 3D (els materials per defecte als mòduls nous porten la de Materials, `LuPalette`) | `LuLampFloor` |
-| Fitxer | Desar com a fitxer (`.moble`, `.ambient`) · Obrir fitxer (Mobles, Objectes, Ambients) · Pujar un fitxer (preferències) | `LuSave` · `LuFolderOpen` · `LuUpload` |
+| Fitxer | Desar com a fitxer (`.moble`, també els ambients) · Obrir fitxer (Mobles, Objectes, Ambients) · Pujar un fitxer (preferències) | `LuSave` · `LuFolderOpen` · `LuUpload` |
 | Models 3D | Triar fitxers… · Triar carpeta… (importar un model) · Afegir les textures a Materials | `LuFileUp` · `LuFolderOpen` · `LuPalette` |
 | Editor | Estructura · Propietats · Opcions de vista | `LuListTree` · `LuSlidersHorizontal` · `LuSlidersVertical` |
 | Editor | Pestanyes 3D · Alçat · Foto | `LuBox` · `LuLayoutPanelLeft` · `LuCamera` |

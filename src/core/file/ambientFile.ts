@@ -82,14 +82,14 @@ export function ambientToJson(file: AmbientFile): string {
   return JSON.stringify(file, null, 2)
 }
 
-/** Nom de fitxer segur: `<nom de l'ambient>.ambient` (la mateixa neteja que `mobleFileName`). */
+/** Nom de fitxer segur: `<nom de l'ambient>.moble` (per decisió de l'usuari, la mateixa extensió per a tot: el `format` de dins diu què és; els `.ambient` d'abans es continuen obrint). */
 export function ambientFileName(name: string): string {
   const safe = name
     .trim()
     .replace(/[\\/:*?"<>|]+/g, "-")
     .replace(/\s+/g, " ")
     .slice(0, 80)
-  return `${safe || "ambient"}.ambient`
+  return `${safe || "ambient"}.moble`
 }
 
 export type AmbientParse = { ok: true; file: AmbientFile; warnings: string[] } | { ok: false; error: string }

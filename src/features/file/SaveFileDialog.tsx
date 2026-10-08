@@ -164,7 +164,7 @@ export function SaveAmbientFileDialog({ ambientId, name, open, onClose }: { ambi
       open={open}
       onClose={onClose}
       name={name}
-      intro={`Fitxer ${ambientFileName(name)}: l'ambient (parets, elements, grups, plànol de fons, materials, càmera i render) amb una còpia dels seus mobles i objectes i els models 3D que fan servir. Es pot obrir des d'«Ambients › Obrir fitxer» en aquest o en un altre dispositiu: es crea un ambient nou amb còpies dels mobles.`}
+      intro={`Fitxer ${ambientFileName(name)}: l'ambient (parets, elements, grups, plànol de fons, materials, càmera i render) amb una còpia dels seus mobles i objectes i els models 3D que fan servir. Es pot obrir des de qualsevol «Obrir fitxer» (Mobles, Objectes o Ambients), en aquest o en un altre dispositiu: l'app sap que és un ambient i en crea un de nou amb còpies dels mobles.`}
       photoLabel="Incloure les fotos dels mobles"
       noPhotoLabel="cap moble en té"
       photoDefault={false}
