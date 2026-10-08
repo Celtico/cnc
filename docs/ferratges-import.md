@@ -1,5 +1,14 @@
 # Importar ferratges del fabricant (Hettich i Blum)
 
+> **Estat: adormit (2026-10-08).** Per decisió de l'usuari («lo de Importar del fabricant ho treurem perquè és millor
+> que ho anem fent nostres»; «el Generador de mecanitzats no cal… ara ho fiquem nosaltres a partir del catàleg») ja no
+> hi ha ni la zona «Importar del fabricant» ni el diàleg ni el «Generador de mecanitzats» (amb «Llegir un DXF…») ni
+> «Afegir ferratge» a l'inspector. El camí d'ara són els **jocs llegits dels PDF del catàleg**
+> ([`ferratges-jocs.md`](ferratges-jocs.md)). Treure ≠ esborrar: el codi del nucli (`core/import/*`, amb els tests), el
+> model (`HardwareItem.imported`, `machining`, `GenOp`, `hardwarePlace.ts`) i els col·locats es queden; els ferratges ja
+> importats de la biblioteca i els col·locats dels mobles es llegeixen, es fabriquen igual i es poden confirmar,
+> editar o treure. El que segueix descriu com funcionava (i com tornaria a funcionar si es recuperés la UI).
+
 > Objectiu (del germà): «lo important es que després es pugui encaixar al moble per fer el mecanitzat». Un ferratge
 > baixat del web del fabricant ha d'acabar fent **els forats bons a les peces bones** del moble. El 3D i els dibuixos
 > són per revisar-lo; el que mana és el patró de forats confirmat.
