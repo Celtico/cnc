@@ -100,6 +100,12 @@ export function ZoneActions({ root, zone, onChange, onSelect }: { root: Zone; zo
   )
 }
 
+/**
+ * El contingut ocupa el compartiment i no deixa res a fer servir darrere: calaixos o un front fix (per decisió de
+ * l'usuari). Prestatges i Accessoris no surten (`visibleZone` no els fa; es conserven i tornen si canvia el contingut).
+ */
+const fillsZone = (f: Front | undefined): boolean => f?.kind === "drawers" || f?.kind === "panel"
+
 /** Panell d'edició de la zona seleccionada: dividir, contingut, mida, eliminar. */
 export function ZonePanel({
   root,
@@ -187,8 +193,9 @@ export function ZonePanel({
           {coveredBy ? <CoveredFront id="zone-front" title="Front" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} />}
 
           {/* Tapat: el seu front (es conserva) no es fa i el compartiment és com obert (`visibleZone`). Sense una peça a
-              cada costat (lateral o divisor), cap prestatge: no surt (es conserva i torna amb els laterals). */}
-          {(coveredBy || zone.front?.kind !== "drawers") && canHoldShelves(bounds) && (
+              cada costat (lateral o divisor), cap prestatge: no surt (es conserva i torna amb els laterals). Amb calaixos
+              o un front fix (darrere no hi ha res a fer servir), tampoc. */}
+          {(coveredBy || !fillsZone(zone.front)) && canHoldShelves(bounds) && (
             <FoldItem id="zone-shelves" title="Prestatges" badge={zone.shelves?.n || undefined} icon={LuRows3}>
               <NumRow
                 label="Quantitat"
@@ -245,8 +252,8 @@ export function ZonePanel({
             </FoldItem>
           )}
 
-          {/* Accessoris del compartiment: ferratges (barra de penjar, tira LED), no fusta. Amb calaixos no hi caben. */}
-          {(coveredBy || zone.front?.kind !== "drawers") && canHoldAccessories(bounds) && <AccessoriesSection root={root} zone={zone} hardware={hardware} onChange={onChange} />}
+          {/* Accessoris del compartiment: ferratges (barra de penjar, tira LED), no fusta. Amb calaixos o un front fix, no. */}
+          {(coveredBy || !fillsZone(zone.front)) && canHoldAccessories(bounds) && <AccessoriesSection root={root} zone={zone} hardware={hardware} onChange={onChange} />}
 
           {afterFront}
 

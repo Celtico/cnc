@@ -81,10 +81,10 @@ function anyBuiltFront(z: Zone, covered = false): boolean {
   return !!z.split?.children.some((c) => anyBuiltFront(c, covered || !!z.front))
 }
 
-/** Algun compartiment final (no de calaixos) amb prestatges o amb llum. */
-function anyRetiredShelf(z: Zone): boolean {
-  if (z.split) return z.split.children.some(anyRetiredShelf)
-  if (z.front?.kind === "drawers") return false
+/** Algun compartiment final (no de calaixos ni de front fix que es fan) amb prestatges o amb llum. */
+function anyRetiredShelf(z: Zone, covered = false): boolean {
+  if (z.split) return z.split.children.some((c) => anyRetiredShelf(c, covered || !!z.front))
+  if (z.front?.kind === "drawers" || (z.front?.kind === "panel" && !covered)) return false
   return (z.shelves?.n ?? 0) > 0 || !!z.led
 }
 
@@ -128,8 +128,8 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sid
     if (r() < 0.6) out.shelves = randomShelves(r)
     if (r() < 0.3) out.rail = {}
     if (r() < 0.3) out.led = {}
-  } else if (f?.kind === "drawers" && !covered) {
-    // Calaixos: la secció Prestatges (i la barra) no surt.
+  } else if ((f?.kind === "drawers" || f?.kind === "panel") && !covered) {
+    // Calaixos o front fix: les seccions Prestatges i Accessoris no surten.
     if (r() < 0.6) out.shelves = randomShelves(r)
     if (r() < 0.3) out.rail = {}
     if (r() < 0.3) out.led = {}
@@ -325,6 +325,18 @@ describe("independència del camí: el mateix estat visible fa el mateix moble",
     for (const p of permutations([shelvesN(3), thickShelves, rail, noLeft])) expect(run(p)).toBe(ref)
     // Tornar a posar el lateral recupera els prestatges que hi havia.
     expect(run([shelvesN(3), noLeft, carcass({ sides: { left: true, right: true } })])).toBe(run([shelvesN(3)]))
+  })
+  it("front fix: els prestatges, les fileres, la barra i la llum d'abans no compten i tornen en canviar el contingut", () => {
+    const noShelves: Op = (m) => ({ ...m, root: setShelves(m.root, m.root.id, null) })
+    const rail: Op = (m) => ({ ...m, root: { ...m.root, rail: {}, led: {} } })
+    const panel = rootFront({ kind: "panel" })
+    const ref = run([noShelves, panel])
+    for (const p of permutations([shelvesN(3), thickShelves, rail, panel])) expect(run(p)).toBe(ref)
+    expect(run([shelvesN(2), adjustable(true), panel])).toBe(ref)
+    // Tornar a obert o a porta: els prestatges i els accessoris hi tornen.
+    expect(run([shelvesN(3), rail, panel, rootFront(null)])).toBe(run([shelvesN(3), rail]))
+    const door = rootFront({ kind: "door", mode: "single", hinge: "left" })
+    expect(run([shelvesN(3), rail, panel, door])).toBe(run([shelvesN(3), rail, door]))
   })
   it("portes: de dues fulles, la frontissa d'abans no compta", () => {
     expect(run([rootFront({ kind: "door", mode: "single", hinge: "right" }), rootFront({ kind: "door", mode: "double", hinge: "right" })])).toBe(run([rootFront({ kind: "door", mode: "double", hinge: "left" })]))
