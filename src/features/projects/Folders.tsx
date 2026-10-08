@@ -46,8 +46,9 @@ export function FolderedGrid<T>({
   render: (t: T) => ReactNode
   storageKey: string
   searching?: boolean
-  onRenameFolder: (from: string, to: string) => void
-  onUngroup: (name: string) => void
+  /** Menú ⋯ de cada grup (canviar el nom, desagrupar). Sense (triar per a un ambient), els grups no porten menú. */
+  onRenameFolder?: (from: string, to: string) => void
+  onUngroup?: (name: string) => void
 }) {
   const grouped = groupByFolder(items, folderOf)
   const folders = show === "loose" ? [] : grouped.folders
@@ -170,6 +171,7 @@ export function FolderedGrid<T>({
               title={name}
               count={list.length}
               actions={
+                (onRenameFolder || onUngroup) && (
                 <Menu.Root positioning={{ placement: "bottom-end" }}>
                   <Menu.Trigger asChild>
                     <IconButton aria-label={`Opcions del grup «${name}»`} size="xs" variant="ghost">
@@ -179,16 +181,21 @@ export function FolderedGrid<T>({
                   <Portal>
                     <Menu.Positioner>
                       <Menu.Content>
-                        <Menu.Item value="rename" onClick={() => setRenaming(name)}>
-                          <LuPencil /> Canviar el nom
-                        </Menu.Item>
-                        <Menu.Item value="ungroup" onClick={() => onUngroup(name)}>
-                          <LuFolderMinus /> Desagrupar
-                        </Menu.Item>
+                        {onRenameFolder && (
+                          <Menu.Item value="rename" onClick={() => setRenaming(name)}>
+                            <LuPencil /> Canviar el nom
+                          </Menu.Item>
+                        )}
+                        {onUngroup && (
+                          <Menu.Item value="ungroup" onClick={() => onUngroup(name)}>
+                            <LuFolderMinus /> Desagrupar
+                          </Menu.Item>
+                        )}
                       </Menu.Content>
                     </Menu.Positioner>
                   </Portal>
                 </Menu.Root>
+                )
               }
             >
               <SimpleGrid columns={GALLERY_COLS} gap={3}>
@@ -274,7 +281,7 @@ export function FolderedGrid<T>({
         initial={renaming ?? ""}
         onClose={() => setRenaming(null)}
         onSave={(to) => {
-          if (renaming && to && to !== renaming) onRenameFolder(renaming, to)
+          if (renaming && to && to !== renaming) onRenameFolder?.(renaming, to)
           setRenaming(null)
         }}
       />

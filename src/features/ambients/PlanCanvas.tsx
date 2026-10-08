@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as RPoi
 import { footprintBox, newId, roomWalls, snapToWalls, wallCorners, wallLength, addOpening, clampOpening, nearestWall, setWallEnds, type Ambient, type AmbientItem, type PlanPt, type Wall } from "../../core/model"
 import { toaster } from "../../components/ui/toaster"
 import { formatLength, useUnit } from "../units"
-import type { ItemGeometry } from "./ambientData"
+import { isEmptyGeometry, type ItemGeometry } from "./ambientData"
 import { ambientBox, fitView, nearestEndpoint, samePt, snapAngle, snapGrid, type Selection, type Tool, type View } from "./planGeom"
 
 const C = {
@@ -460,10 +460,12 @@ export function PlanCanvas({
           {ambient.items.map((it) => {
             const g = geos.get(it.id)
             const sel = selectedIds.includes(it.id)
-            const w = g?.w ?? 600, d = g?.d ?? 600
+            // Sense geometria (esborrat) o buit (moble nou sense mòduls): requadre discontinu de 600 × 600.
+            const ghost = !g || isEmptyGeometry(g)
+            const w = ghost ? 600 : g.w, d = ghost ? 600 : g.d
             return (
               <g key={it.id} transform={`translate(${it.x} ${it.y}) rotate(${it.rot})`} style={{ cursor: tool === "select" ? "move" : undefined }} onPointerDown={(e) => startItem(e, it)}>
-                <rect x={-w / 2} y={-d / 2} width={w} height={d} fill={C.item} fillOpacity={0.92} stroke={sel ? C.accent : C.wall} strokeWidth={px(sel ? 2 : 1)} strokeDasharray={g ? undefined : `${px(4)} ${px(3)}`} />
+                <rect x={-w / 2} y={-d / 2} width={w} height={d} fill={C.item} fillOpacity={0.92} stroke={sel ? C.accent : C.wall} strokeWidth={px(sel ? 2 : 1)} strokeDasharray={ghost ? `${px(4)} ${px(3)}` : undefined} />
                 {g && show.detail && view.s > 0.04 &&
                   g.rects.map((r, i) => <rect key={i} x={r.x0} y={r.z0} width={Math.max(0.1, r.x1 - r.x0)} height={Math.max(0.1, r.z1 - r.z0)} fill="none" stroke={C.line} strokeWidth={px(0.6)} />)}
                 {/* El davant: línia gruixuda. */}
@@ -473,7 +475,7 @@ export function PlanCanvas({
                   <text textAnchor="middle" style={{ fontSize: px(12) }} fill={C.wall} fontWeight={600} y={px(-2)}>
                     {names.get(it.id)}
                   </text>
-                  {g && labelFits(`${Math.round(w)} × ${Math.round(d)}`, w, d, it.rot, view.s, 10.5, 34) && (
+                  {!ghost && labelFits(`${Math.round(w)} × ${Math.round(d)}`, w, d, it.rot, view.s, 10.5, 34) && (
                     <text textAnchor="middle" style={{ fontSize: px(10.5) }} fill={C.muted} y={px(12)}>
                       {Math.round(w)} × {Math.round(d)}
                     </text>

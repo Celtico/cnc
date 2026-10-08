@@ -54,6 +54,12 @@ export function itemGeometry(comp: Composition): ItemGeometry {
   }
 }
 
+/**
+ * Un moble o objecte buit (nou, encara sense mòduls ni peces): no fa caixa. Al plànol es dibuixa amb el requadre
+ * discontinu de 600 × 600 (com un element que ja no hi és) perquè es vegi, es pugui triar i moure.
+ */
+export const isEmptyGeometry = (g: ItemGeometry | null | undefined): boolean => !!g && g.w < 1 && g.d < 1 && g.h < 1
+
 const blockKey = (b: BlockItem) => `${b.shape}|${b.w}|${b.h}|${b.d}|${b.material}|${b.material2 ?? ""}|${b.name}`
 
 /**
