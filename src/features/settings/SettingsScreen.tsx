@@ -300,8 +300,18 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
 
           <Pane id="hardware" wide title="Ferratges" icon={LuWrench} desc="La biblioteca: frontisses i plaques, guies i jocs de calaix, espigues, System 32, braços, imants, tiradors, potes, accessoris (barra de penjar, perfil LED, marc de vitrina) i els importats del fabricant; els seus forats i quin fa servir cada lloc als mòduls nous." onReset={() => setReset({ key: "hardwareLibrary", label: "Ferratges", note: "Torna la biblioteca inicial (els ferratges afegits es perden) i els per defecte. Els mobles fets porten la seva còpia: no canvien." })}>
             <HardwareList items={draft.hardwareLibrary} defaults={draft.hardwareDefaults} onChange={(hardwareLibrary) => set("hardwareLibrary", hardwareLibrary)} onDefaults={(hardwareDefaults) => set("hardwareDefaults", hardwareDefaults)} onDelete={setDeletingHw} onConfirmed={confirmedHw} settings={draft} />
+          </Pane>
+
+          <Pane
+            id="rules"
+            title="Regles de mecanitzat"
+            icon={LuRoute}
+            desc="Com mecanitza la CNC: freses per a cada cosa, passades, rampa, peces petites i la prebroca dels cargols."
+            onReset={() => setReset({ key: "machiningRules", label: "Regles de mecanitzat", note: "Les regles tornen a les del taller (les mateixes per a totes les màquines). Les eines de les màquines no canvien." })}
+          >
+            <MachineRulesGroup rules={draft.machiningRules} machines={draft.machines} onChange={(rules) => set("machiningRules", rules)} />
             {(() => {
-              // Regla del taller (una sola font, `Settings.kitPilot`): prebroca a cada cargol d'un ferratge que no té
+              // Regla del taller, amb les altres regles de mecanitzat (per decisió de l'usuari: no és un ferratge; una sola font, `Settings.kitPilot`): prebroca a cada cargol d'un ferratge que no té
               // mecanitzat propi. Els jocs de la biblioteca en copien els números i les còpies dels mobles la segueixen en construir.
               const pilot = draft.kitPilot
               const setPilot = (patch: Partial<typeof pilot>) => {
@@ -324,16 +334,6 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
                 </Box>
               )
             })()}
-          </Pane>
-
-          <Pane
-            id="rules"
-            title="Regles de mecanitzat"
-            icon={LuRoute}
-            desc="Com mecanitza la CNC: freses per a cada cosa, passades, rampa i peces petites."
-            onReset={() => setReset({ key: "machiningRules", label: "Regles de mecanitzat", note: "Les regles tornen a les del taller (les mateixes per a totes les màquines). Les eines de les màquines no canvien." })}
-          >
-            <MachineRulesGroup rules={draft.machiningRules} machines={draft.machines} onChange={(rules) => set("machiningRules", rules)} />
           </Pane>
 
           <Pane id="gaps" title="Folgances per defecte" icon={LuRuler} desc="Separacions (folgances) dels fronts i de les peces de dins, retranqueig dels prestatges i ranura del fons, per als mòduls nous." onReset={() => setReset({ key: "gaps", label: "Folgances per defecte" })}>

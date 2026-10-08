@@ -377,7 +377,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   prebroca es queden; les còpies dels mobles no es toquen (es veuen com abans fins a tornar a triar el joc).
   Categoria «Calaixos de doble paret» (`drawer-system`); l'editor del joc (`settings/KitSections.tsx`) és **només lectura**
   (variants, opcions, regles, components, fusta, mecanitzats, hipòtesis; duplicar-lo per canviar la prebroca a «Mides»).
-  **Regla del taller «prebroca dels cargols»** (Preferències › Ferratges › «Prebroca dels cargols», **una sola font**:
+  **Regla del taller «prebroca dels cargols»** (Preferències › Regles de mecanitzat › «Prebroca dels cargols», **una sola font**:
   `Settings.kitPilot`, `KitPilot`; Ø2 × 10, activada; les preferències d'abans la prenen del primer joc,
   `kitPilotFromLibrary`): un forat guia a cada cargol d'un ferratge que no té mecanitzat propi; els jocs de la biblioteca
   en copien els números (`setKitPilot`) i les còpies dels mòduls la **segueixen en construir** (`setKitPilotRule` des de
@@ -737,7 +737,8 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
 - **Regles de mecanitzat** (del germà; **del taller, no de cada màquina**: `Settings.machiningRules`, per decisió de l'usuari
   «en un taller les regles són les mateixes per a les dues CNC»). Pàgina pròpia Preferències › **Regles de mecanitzat**
   (`rules`, `LuRoute`, just després de Màquines CNC), sense triar màquina; `settings/MachineRules.tsx`, `RulePicker`;
-  `core/machine/rules.ts`; detall a `docs/maestro-xcs.md`. Inicials (`defaultMachineRules`): ranures «8mm diamant» a 6 mm per
+  `core/machine/rules.ts`; detall a `docs/maestro-xcs.md`. A sota, el grup **«Prebroca dels cargols»** (`Settings.kitPilot`;
+  per decisió de l'usuari, aquí i no a Ferratges: no és un ferratge, és una regla del taller). Inicials (`defaultMachineRules`): ranures «8mm diamant» a 6 mm per
   passada (`CreateBidirectionalMillingStrategy`), caixeres «12mm diamant nesting» (`CreateContourPocket`), perfilar per gruix
   (8–22 → «12mm diamant nesting», 23–41 → «14mm diamant nesting»), rampa als perfilats del nesting (`SetApproachStrategy(true,
   false, k)`, des del mig del costat recte més llarg), peces petites (menys de 0,8 m²; `maxSide` 0 = no compta) en 3 passades
@@ -1898,7 +1899,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Ferratges | «Com va muntat»: 3D · Pla (com Plànol · 3D dels ambients) | `LuRotate3D` · `LuMap` |
 | Preferències | Visualització · Ferratges · Calaixos (contingut) · Guies (categoria) · System 32 · Cassoleta · Imants | `LuScanEye` · `LuWrench` · `LuArchive` · `LuRailSymbol` · `LuCircleDot` · `LuCircleDashed` · `LuMagnet` |
 | Ferratges (categories) | Frontisses · Plaques · Guies · Calaixos de doble paret (jocs) · Elevables i abatibles · Unions · Suports de prestatge · Potes · Taules · Portes corredisses i plegables · Tiradors · Pressió i imants · Perfils i marcs · Penjar · Altres | `LuCircleDashed` · `LuSquareDot` · `LuRailSymbol` · `LuPackageOpen` · `LuPanelBottom` · `LuBolt` · `LuCircleDot` · `LuFootprints` · `LuTable` · `LuDoorOpen` · `LuGripHorizontal` · `LuMagnet` · `LuMinus` · `LuAnchor` · `LuPackage` |
-| Ferratges (joc) | Seccions de l'editor del joc: Del catàleg · Llargades i números · Regles de tria · Components · Peces de fusta · Mecanitzats del joc · Hipòtesis · Prebroca dels cargols (Preferències) | `LuBookOpen` · `LuListOrdered` · `LuRoute` · `LuPackageOpen` · `LuLayers2` · `LuCircleDot` · `LuBookOpen` · `LuDrill` |
+| Ferratges (joc) | Seccions de l'editor del joc: Del catàleg · Llargades i números · Regles de tria · Components · Peces de fusta · Mecanitzats del joc · Hipòtesis · Prebroca dels cargols (Preferències › Regles de mecanitzat) | `LuBookOpen` · `LuListOrdered` · `LuRoute` · `LuPackageOpen` · `LuLayers2` · `LuCircleDot` · `LuBookOpen` · `LuDrill` |
 | Ferratges | Baixar el model 3D (.glb) d'un importat · Baixar un plànol de muntatge | `LuBoxes` · `LuFileDown` |
 | Ferratges | Ferratges col·locats a mà (inspector de la peça lliure; el del mòdul no la té; la de «Ferratges» del visor) | `LuWrench` |
 | Ferratges | Col·locat a mà (llista de l'inspector): Editar · Duplicar · Eliminar | `LuPencil` · `LuCopy` · `LuTrash2` |

@@ -403,7 +403,7 @@ export const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
   ],
   leg: [P("inset", "Als cantells", 20, 300, 1, "De la vora de fora del mòdul a l'eix de cada pota (de costat i de davant/darrere).")],
   model: [],
-  // La prebroca dels cargols és una regla del taller (Preferències › Ferratges › «Prebroca dels cargols», `Settings.kitPilot`),
+  // La prebroca dels cargols és una regla del taller (Preferències › Regles de mecanitzat › «Prebroca dels cargols», `Settings.kitPilot`),
   // no un número de cada joc: res a editar aquí (els `params` es queden per compatibilitat i els omple `setKitPilot`).
   drawerKit: [],
   plate: [
