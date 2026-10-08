@@ -822,7 +822,8 @@ export function visibleModule(m: Module): Module {
   // Fons del calaix: només amb calaixos (la fila de Materials no surt sense).
   if (!hasDrawers(m.root) || !c.drawerBottomMaterial) delete carcass.drawerBottomMaterial
   const fronts = { ...m.fronts }
-  if (fronts.style === "overlay") delete fronts.style
+  // L'estil (recobrents / encastats) només compta si hi ha algun front que es construeix (la fila «Estil» no surt sense).
+  if (fronts.style === "overlay" || !hasBuiltFronts(m.root)) delete fronts.style
   if (fronts.handles === "bar") delete fronts.handles
   // La guia del mòdul pot ser un joc de calaix (`drawerKit`): els calaixos sense guia pròpia hi llegeixen les opcions.
   const hw = m.hardware as Partial<ModuleHardware> | undefined
@@ -833,8 +834,31 @@ export function visibleModule(m: Module): Module {
 /** El mòdul té algun compartiment de calaixos (la fila «Fons del calaix» de Materials). */
 export function hasDrawers(root: Zone): boolean {
   let hit = false
-  walkZones(root, (z) => {
-    if (z.front?.kind === "drawers") hit = true
+  // Els calaixos d'un compartiment tapat pel front d'una zona de més amunt no es fan.
+  walkBuiltZones(root, (z, { covered }) => {
+    if (z.front?.kind === "drawers" && !covered) hit = true
+  })
+  return hit
+}
+
+/**
+ * Recorre els compartiments com els construeix `buildModule`: `covered` = un compartiment de més amunt porta un front que
+ * el tapa (portes d'armari de dalt a baix), i el seu propi front **no es fa** (es conserva, no compta); els prestatges,
+ * la barra i la llum de dins sí. `isRoot`: l'«Interior» (l'arrel del mòdul).
+ */
+export function walkBuiltZones(root: Zone, fn: (z: Zone, info: { covered: boolean; isRoot: boolean }) => void): void {
+  const walk = (z: Zone, covered: boolean) => {
+    fn(z, { covered, isRoot: z === root })
+    z.split?.children.forEach((c) => walk(c, covered || !!z.front))
+  }
+  walk(root, false)
+}
+
+/** El mòdul té algun front que es construeix (porta, calaixos, abatible, reixeta o front fix; els tapats no compten). */
+export function hasBuiltFronts(root: Zone): boolean {
+  let hit = false
+  walkBuiltZones(root, (z, { covered }) => {
+    if (z.front && !covered) hit = true
   })
   return hit
 }
@@ -844,16 +868,20 @@ export function hasDrawers(root: Zone): boolean {
  * calaixos sense guia pròpia el fan servir). El «Tirador» de cada front compta sempre (també «Cap (push)»): el del mòdul
  * només és el per defecte.
  */
-function visibleZone(z: Zone, kitDefault = false): Zone {
+function visibleZone(z: Zone, kitDefault = false, covered = false): Zone {
   const out: Zone = { ...z }
   // Els fronts recordats dels altres tipus (`fronts`) són només per tornar-hi: no construeixen res.
   delete out.fronts
+  // Tapat pel front d'una zona de més amunt (`walkBuiltZones`): el seu front no es fa (es conserva a la composició) i el
+  // compartiment és com si fos obert (els prestatges, la barra i la llum de dins sí que es fan).
+  const childCovered = covered || !!z.front
+  if (covered) delete out.front
   if (z.split) {
     // Un compartiment dividit no té prestatges ni barra (l'inspector no els ensenya).
     delete out.shelves
     delete out.rail
     delete out.led
-    out.split = { ...z.split, children: z.split.children.map((c) => visibleZone(c, kitDefault)) }
+    out.split = { ...z.split, children: z.split.children.map((c) => visibleZone(c, kitDefault, childCovered)) }
   } else {
     // Sense prestatges (0): gruix i «a ras» no compten; «Regulables» sí (les fileres System 32 per posar-n'hi després),
     // i sense `shelves` és com no regulables.
@@ -869,7 +897,7 @@ function visibleZone(z: Zone, kitDefault = false): Zone {
     if (!z.rail) delete out.rail
     if (!z.led) delete out.led
   }
-  const f = z.front
+  const f = out.front
   if (f?.kind === "drawers") {
     // Els calaixos ocupen el compartiment: la secció Prestatges (prestatges, barra i llum) no surt.
     delete out.shelves

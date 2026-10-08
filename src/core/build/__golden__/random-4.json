@@ -219,7 +219,6 @@
   "warnings": [
    "drawer-bottom",
    "inset",
-   "inset",
    "mitre",
    "overlap"
   ],
@@ -766,7 +765,6 @@
   "warnings": [
    "drawer-bottom",
    "hollow",
-   "inset",
    "inset"
   ],
   "p": [
@@ -990,7 +988,6 @@
    "drawer-bottom",
    "grille-open-ratio",
    "hanging",
-   "inset",
    "same-size",
    "shelf-span"
   ],
@@ -1167,8 +1164,7 @@
   "panels": 9,
   "extras": 0,
   "warnings": [
-   "back-inset",
-   "inset"
+   "back-inset"
   ],
   "p": [
    "back|trassera|1611x732x10|Roure massís / xapat|none|e0000|h0|g0|c0|o-|@69966f8a",
@@ -1536,8 +1532,6 @@
    "grille-open-ratio",
    "grille-open-ratio",
    "hollow",
-   "inset",
-   "inset",
    "inset",
    "material-heat",
    "mitre",

@@ -47,6 +47,14 @@ function scrambleHidden(m: Module, r: Rnd): Module {
   const fronts = { ...m.fronts }
   if (!fronts.style && r() < 0.5) fronts.style = "overlay"
   if (!fronts.handles && r() < 0.5) fronts.handles = "bar"
+  // Interior › Fronts i calaixos: sense cap front que es faci (els tapats no compten) no surten l'estil ni les folgances;
+  // sense cap prestatge (ni llum) que es retiri, el retranqueig.
+  if (!anyBuiltFront(m.root)) {
+    if (r() < 0.5) fronts.style = pick(r, ["overlay", "inset"] as const)
+    fronts.outerGap = pick(r, [0, 1.5, 4, 10])
+    fronts.betweenGap = pick(r, [0, 2, 6])
+  }
+  if (!anyRetiredShelf(m.root)) c.shelfSetback = int(r, 0, 100)
   // Llocs de ferratge que el mòdul no fa servir (JoineryForm i FrontsForm només ensenyen `usedHardwareSlots`): un item
   // d'un altre tipus o un joc sense `kit` no canvia res ni avisa.
   const used = usedHardwareSlots(m)
@@ -59,11 +67,24 @@ function scrambleHidden(m: Module, r: Rnd): Module {
   return { ...m, carcass: c, fronts, hardware, root: scrambleZone(m.root, r, m.fronts.handles === "none") }
 }
 
+/** Algun front que es fa: el d'un compartiment que no és dins d'un altre amb front (escrit a part de `walkBuiltZones`). */
+function anyBuiltFront(z: Zone, covered = false): boolean {
+  if (z.front && !covered) return true
+  return !!z.split?.children.some((c) => anyBuiltFront(c, covered || !!z.front))
+}
+
+/** Algun compartiment final (no de calaixos) amb prestatges o amb llum. */
+function anyRetiredShelf(z: Zone): boolean {
+  if (z.split) return z.split.children.some(anyRetiredShelf)
+  if (z.front?.kind === "drawers") return false
+  return (z.shelves?.n ?? 0) > 0 || !!z.led
+}
+
 function randomShelves(r: Rnd): Zone["shelves"] {
   return { n: int(r, 0, 5), adjustable: r() < 0.5, ...(r() < 0.5 ? { thickness: pick(r, [40, 60]) } : {}), ...(r() < 0.5 ? { flush: true } : {}) }
 }
 
-function scrambleZone(z: Zone, r: Rnd, noHandles: boolean): Zone {
+function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered = false): Zone {
   const out: Zone = { ...z }
   const f = z.front
   if (r() < 0.5) {
@@ -71,13 +92,17 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean): Zone {
     for (const rf of REMEMBERED) if (rf.kind !== f?.kind && r() < 0.5) fronts[rf.kind] = structuredClone(rf)
     if (Object.keys(fronts).length) out.fronts = fronts
   }
+  if (z.split && z.front) {
+    // Portes de tota la zona: els fronts dels compartiments de dins queden tapats i no es fan (es conserven).
+    out.split = { ...z.split, children: z.split.children.map((c) => (r() < 0.5 ? coverFront(c, r) : c)) }
+  }
   if (z.split) {
     // Un compartiment dividit no ensenya Prestatges (ni la barra).
     if (r() < 0.5) out.shelves = randomShelves(r)
     if (r() < 0.3) out.rail = {}
     if (r() < 0.3) out.led = { hardware: { ...DEFAULT_MODULE_HARDWARE.led, params: { ...DEFAULT_MODULE_HARDWARE.led.params, height: 12 } } }
-    out.split = { ...z.split, children: z.split.children.map((c) => scrambleZone(c, r, noHandles)) }
-  } else if (f?.kind === "drawers") {
+    out.split = { ...out.split!, children: out.split!.children.map((c) => scrambleZone(c, r, noHandles, covered || !!z.front)) }
+  } else if (f?.kind === "drawers" && !covered) {
     // Calaixos: la secció Prestatges (i la barra) no surt.
     if (r() < 0.6) out.shelves = randomShelves(r)
     if (r() < 0.3) out.rail = {}
@@ -93,6 +118,20 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean): Zone {
   }
   if (f) out.front = scrambleFront(f, r, noHandles)
   return out
+}
+
+/** Un front qualsevol (amb ferratges propis dolents) a un compartiment tapat pel front d'una zona de més amunt. */
+function coverFront(z: Zone, r: Rnd): Zone {
+  if (z.split) return { ...z, split: { ...z.split, children: z.split.children.map((c) => coverFront(c, r)) } }
+  const bad = structuredClone(DEFAULT_MODULE_HARDWARE.dowel)
+  const front = pick(r, [
+    { kind: "drawers", n: 3, heights: ["auto", "auto", "auto"], hardware: bad },
+    { kind: "flap", dir: "down", hardware: bad, handle: OTHER_HANDLE },
+    { kind: "door", mode: "single", hinge: "left", hardware: bad },
+    { kind: "grille", pattern: DEFAULT_GRILLE, mount: "removable", hinge: "left" },
+    { kind: "panel" },
+  ] as Front[])
+  return { ...z, front }
 }
 
 /** Un tirador diferent del del mòdul (una altra distància i Ø): el que es triaria a «Tirador» d'un front. */
