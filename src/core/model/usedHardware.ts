@@ -1,6 +1,6 @@
 import type { Front, Module, Zone } from "./composition"
 import { visibleModule, walkBuiltZones } from "./composition"
-import { isDrawerKit, moduleSlotItem, type HardwareItem, type HardwareSlot } from "./hardware"
+import { HARDWARE_SLOTS, isDrawerKit, moduleSlotItem, type HardwareItem, type HardwareSlot } from "./hardware"
 import { isPushClosing, kitOptionsOf, type HardwareKit } from "./hardwareKit"
 
 type SlotUse = Map<HardwareSlot, { count: number; what: string }>
@@ -178,6 +178,31 @@ function frontHasHandle(m: Module, f: Extract<Front, { kind: "door" | "drawers" 
   if (f.handle) return true
   return m.fronts.handles !== "none"
 }
+
+/** Llocs de ferratge de la **caixa** (laterals, unions, fons): surten a la Fusteria del mòdul. La resta són dels fronts. */
+export const BOX_SLOTS: ReadonlySet<HardwareSlot> = new Set<HardwareSlot>(["dowel", "system32"])
+
+/** El que ensenya Interior › «Fronts i calaixos»: les opcions de tots els fronts que es llegeixen i els per defecte que algú hereta. */
+export interface FrontsSection extends FrontOptionsUse {
+  /** «Per defecte dels compartiments»: el tirador primer i després en l'ordre de `HARDWARE_SLOTS`. */
+  defaults: { slot: HardwareSlot; count: number; what: string }[]
+}
+
+/**
+ * Les files de «Fronts i calaixos» (Interior, l'arrel del mòdul), **un sol lloc per decisió**: l'estil, les folgances i
+ * el retranqueig només si la construcció els llegeix (`frontOptionsUse`); els ferratges per defecte del mòdul només si
+ * algun compartiment els hereta («Com el mòdul») i no és a la mateixa pantalla (`shown`: l'arrel, que ja ensenya el seu
+ * Front i els seus Accessoris). Sense res, la secció no surt.
+ */
+export function frontsSection(module: Module, shown: ReadonlySet<string> = new Set([module.root.id])): FrontsSection {
+  const inherited = inheritedSlots(module, shown)
+  const order: HardwareSlot[] = ["handle", ...HARDWARE_SLOTS.map((x) => x.slot).filter((x) => x !== "handle")]
+  const defaults = order.filter((slot) => !BOX_SLOTS.has(slot) && inherited.has(slot)).map((slot) => ({ slot, ...inherited.get(slot)! }))
+  return { ...frontOptionsUse(module), defaults }
+}
+
+/** La secció «Fronts i calaixos» no té res a ensenyar. */
+export const frontsSectionEmpty = (s: FrontsSection): boolean => !s.style && !s.outerGap && !s.betweenGap && !s.shelfSetback && !s.defaults.length
 
 /** Els llocs que fa servir el mòdul, com a conjunt (per filtrar els selectors de l'inspector). */
 export const usedSlotSet = (module: Module): ReadonlySet<HardwareSlot> => new Set(usedHardwareSlots(module).keys())

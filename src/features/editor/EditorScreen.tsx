@@ -54,7 +54,7 @@ import { movingGroups, openingCollisions } from "../../components/viewer/opening
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
 import type { KitOrder } from "../../core/build/buildModule"
 import { materialIssues } from "../../core/build/materialIssues"
-import { applySettingsToModule, usedSlotSet, hasDrawers, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule, usedSlotSet, hasDrawers, hasBuiltFronts, coveringZone, frontsSection, frontsSectionEmpty, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, FrontsForm, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -1059,19 +1059,29 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           <ZonePanel
             root={module.root}
             zone={zone}
+            coveredBy={(() => {
+              const cover = coveringZone(module.root, zone.id)
+              return cover ? zoneLabel(cover, { root: cover.id === module.root.id }) : undefined
+            })()}
             hardware={module.hardware}
             noHandles={module.fronts.handles === "none"}
             openRatio={moduleBuild?.openRatios[zone.id]}
             kits={moduleBuild?.hardwareKits.filter((k) => k.zoneId === zone.id)}
             onChange={(root) => updateModule({ ...module, root })}
             afterFront={
-              // A l'«Interior» (l'arrel), el que és de tots els fronts del mòdul: estil, jocs, tirador i ferratges per
-              // defecte (`module.fronts`, `module.hardware`). La caixa (fons, espigues, System 32) és a la Fusteria del mòdul.
-              zone.id === module.root.id && (
-                <FoldItem id="zone-fronts" title="Fronts i calaixos" icon={LuDoorClosed} defaultOpen={false}>
-                  <FrontsForm module={module} onChange={updateModule} usedSlots={usedSlotSet(module)} />
-                </FoldItem>
-              )
+              // A l'«Interior» (l'arrel), el que és de tots els fronts del mòdul: estil, folgances, retranqueig i els
+              // ferratges per defecte que algun compartiment hereta (`frontsSection`: un sol lloc per decisió, només el que
+              // es llegeix; sense res, la secció no surt). La caixa (fons, espigues, System 32) és a la Fusteria del mòdul.
+              zone.id === module.root.id &&
+              (() => {
+                const section = frontsSection(module)
+                if (frontsSectionEmpty(section)) return null
+                return (
+                  <FoldItem id="zone-fronts" title="Fronts i calaixos" icon={LuDoorClosed} defaultOpen={false} badge={section.style ? (module.fronts.style === "inset" ? "Encastats" : "Recobrents") : undefined}>
+                    <FrontsForm module={module} onChange={updateModule} section={section} />
+                  </FoldItem>
+                )
+              })()
             }
           />
         </Stack>
@@ -1168,7 +1178,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             <CarcassForm module={module} onChange={updateModule} section="structure" />
           </FoldItem>
           <FoldItem id="mod-materials" title="Materials" icon={LuPalette}>
-            <MaterialsForm carcass={module.carcass} hasDrawers={hasDrawers(module.root)} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
+            <MaterialsForm carcass={module.carcass} hasDrawers={hasDrawers(module.root)} hasFronts={hasBuiltFronts(module.root)} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
           </FoldItem>
           <FoldItem id="mod-joinery" title="Fusteria (avançat)" icon={LuHammer} defaultOpen={false}>
             <JoineryForm module={module} onChange={updateModule} usedSlots={usedSlotSet(module)} />

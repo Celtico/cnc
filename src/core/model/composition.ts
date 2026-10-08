@@ -854,6 +854,19 @@ export function walkBuiltZones(root: Zone, fn: (z: Zone, info: { covered: boolea
   walk(root, false)
 }
 
+/** La zona de més amunt el front de la qual tapa `id` (portes de tota la zona); cap si no n'hi ha. */
+export function coveringZone(root: Zone, id: string): Zone | undefined {
+  const find = (z: Zone, cover: Zone | undefined): Zone | undefined | null => {
+    if (z.id === id) return cover
+    for (const c of z.split?.children ?? []) {
+      const r = find(c, cover ?? (z.front ? z : undefined))
+      if (r !== null) return r
+    }
+    return null
+  }
+  return find(root, undefined) ?? undefined
+}
+
 /** El mòdul té algun front que es construeix (porta, calaixos, abatible, reixeta o front fix; els tapats no compten). */
 export function hasBuiltFronts(root: Zone): boolean {
   let hit = false

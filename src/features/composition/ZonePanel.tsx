@@ -103,6 +103,7 @@ export function ZonePanel({
   noHandles = false,
   kits,
   afterFront,
+  coveredBy,
 }: {
   root: Zone
   zone: Zone
@@ -115,8 +116,13 @@ export function ZonePanel({
   noHandles?: boolean
   /** Calaixos d'aquesta zona fets amb un joc paramètric (del constructor): NL, números i fusta. */
   kits?: KitOrder[]
-  /** Seccions de després del Front (a l'«Interior», l'arrel: «Fronts i calaixos» del mòdul). */
+  /**
+   * Seccions de l'«Interior» (l'arrel): «Fronts i calaixos» del mòdul. Van després del que ensenya la mateixa pantalla
+   * (Front, i sense divisió Prestatges i Accessoris): en depenen (opcions en cascada).
+   */
   afterFront?: ReactNode
+  /** Nom de la zona de més amunt el front de la qual tapa aquest compartiment: el seu Front no es fa (es conserva). */
+  coveredBy?: string
 }) {
   const parent = parentOf(root, zone.id)
   const index = parent?.split ? parent.split.children.findIndex((c) => c.id === zone.id) : -1
@@ -154,16 +160,16 @@ export function ZonePanel({
             </HStack>
           </FoldItem>
           {/* Portes que tapen tota la zona dividida (armari: penjador i maleter darrere). */}
-          <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} kinds={["none", "door", "panel"]} title="Front de tota la zona" />
+          {coveredBy ? <CoveredFront id="zone-parent-front" title="Front de tota la zona" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} kinds={["none", "door", "panel"]} title="Front de tota la zona" />}
           {afterFront}
           {sizeField}
         </>
       ) : (
         <>
-          <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} />
-          {afterFront}
+          {coveredBy ? <CoveredFront id="zone-front" title="Front" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} />}
 
-          {zone.front?.kind !== "drawers" && (
+          {/* Tapat: el seu front (es conserva) no es fa i el compartiment és com obert (`visibleZone`). */}
+          {(coveredBy || zone.front?.kind !== "drawers") && (
             <FoldItem id="zone-shelves" title="Prestatges" badge={zone.shelves?.n || undefined} icon={LuRows3}>
               <NumRow
                 label="Quantitat"
@@ -221,7 +227,9 @@ export function ZonePanel({
           )}
 
           {/* Accessoris del compartiment: ferratges (barra de penjar, tira LED), no fusta. Amb calaixos no hi caben. */}
-          {zone.front?.kind !== "drawers" && <AccessoriesSection root={root} zone={zone} hardware={hardware} onChange={onChange} />}
+          {(coveredBy || zone.front?.kind !== "drawers") && <AccessoriesSection root={root} zone={zone} hardware={hardware} onChange={onChange} />}
+
+          {afterFront}
 
           {sizeField}
 
@@ -241,6 +249,17 @@ export function ZonePanel({
         </>
       )}
     </Stack>
+  )
+}
+
+/** El Front d'un compartiment tapat pel front d'una zona de més amunt: no es fa (opcions en cascada: el de dalt mana). */
+function CoveredFront({ id, title, coveredBy }: { id: string; title: string; coveredBy: string }) {
+  return (
+    <FoldItem id={id} title={title} badge="Tapat" icon={FRONT_ICONS.none}>
+      <Text fontSize="sm" color="fg.muted">
+        El tapa el front de «{coveredBy}»: aquest compartiment no en porta (el que hi havia es conserva i torna si treus aquell front).
+      </Text>
+    </FoldItem>
   )
 }
 
@@ -503,9 +522,6 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits }: 
               onChange={(mount) => onChange({ ...front, mount })}
             />
           </FormRow>
-          {/* L'imant (reixeta desmuntable i trapa): el del mòdul o un altre de la biblioteca. */}
-          {(front.mount === "removable" || front.hatch) && <HardwarePick slot="magnet" current={front.hardware ?? hardware.magnet} inherited={hardware.magnet} onPick={(h) => onChange(h ? { ...front, hardware: h } : (({ hardware: _h, ...rest }) => rest)(front))} />}
-
           {p.kind === "holes" ? (
             <>
               <NumRow label="Diàmetre forat" value={p.holeDiameter} min={3} max={60} step={1} onChange={(holeDiameter) => setP({ holeDiameter })} />
@@ -543,6 +559,9 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits }: 
               <NumRow label="Alt" value={front.hatch.h} min={50} max={600} step={10} onChange={(h) => onChange({ ...front, hatch: { ...front.hatch!, h } })} />
             </>
           )}
+          {/* Després de Muntatge i Trapa (en depèn: opcions en cascada). */}
+          {/* L'imant (reixeta desmuntable i trapa): el del mòdul o un altre de la biblioteca. */}
+          {(front.mount === "removable" || front.hatch) && <HardwarePick slot="magnet" current={front.hardware ?? hardware.magnet} inherited={hardware.magnet} onPick={(h) => onChange(h ? { ...front, hardware: h } : (({ hardware: _h, ...rest }) => rest)(front))} />}
         </Stack>
       )
     }
