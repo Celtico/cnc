@@ -435,3 +435,31 @@ Un sol principi: **cada dada a l'inspector del seu nivell**, i a cada nivell **l
 Capçalera igual a tots els nivells: icona del nivell · nom (editable on toca) · menú ⋯ amb Pare · Duplicar · Eliminar
 (les accions que no toquen, desactivades i no absents), i la insígnia de cada secció amb el valor triat («Com el mòdul»
 quan és heretat).
+
+---
+
+## G. Interior › Fronts i calaixos: un sol lloc per decisió i opcions en cascada (2026-10-08)
+
+Per decisió de l'usuari: «les opcions de tirador i guia es repeteixen del que hi ha al front, és molt confús; amb el
+front fix no hauria de sortir cap opció de l'interior; les opcions de més avall s'adapten a les de més amunt».
+
+- **Per defecte dels compartiments.** A l'Interior sense divisió, el Front de la mateixa pantalla ja ensenya Tirador,
+  Frontissa i Guia: «Fronts i calaixos» ja no els repeteix. Els per defecte del mòdul surten a sota, amb el títol «Per
+  defecte dels compartiments», **només si algun altre compartiment els hereta** («Com el mòdul»; `inheritedSlots`), amb
+  qui els fa servir a l'ajuda («Com el mòdul» a: portes, calaixos (4)). Amagats, es conserven.
+- **Només el que es llegeix** (`frontsSection` / `frontOptionsUse`): Estil i Folgança front–cos amb algun front que es fa
+  (també un front fix, que no té cap ferratge), Folgança entre fronts amb dues portes, dos calaixos o un front recobrent
+  al costat d'un divisor, Retranqueig amb prestatges que es retiren o LED. Sense res, la secció no surt. Sense fronts,
+  l'estil no compta (`visibleModule`) i Materials › Fronts no surt.
+- **Fronts tapats** pel front de tota la zona: no es fan (ja era així al constructor), però `usedHardwareSlots` els
+  comptava i els calaixos tapats amagaven els prestatges. Ara no compten (`walkBuiltZones`) i el compartiment ensenya
+  «Front · Tapat».
+- **Inglet ⇒ espigues**: el constructor ja no en posava a la tapa i la base a inglet (lamel·les o Clamex); la Fusteria
+  ensenyava l'Espiga igualment. `carcassDowels` diu on n'hi ha (tapa/base a topar, fons encastat, divisions).
+- **Cascada**: Caixa › Laterals abans de Parets i Cantonades; l'imant de la reixeta després de Trapa; a l'Interior sense
+  divisió, «Fronts i calaixos» després de Prestatges i Accessoris. Regla a `CLAUDE.md` › Regla d'or.
+- **Proves d'or**: cap peça canvia; només fora 19 avisos `inset` que no tocaven (fronts encastats en mòduls sense cap
+  front, i «retira els prestatges» sense prestatges que es retirin). Tests `build/frontsInspector.test.ts` i
+  `build/hiddenState.test.ts` (fronts tapats, estil, folgances, retranqueig i material dels fronts amagats).
+- **Pendent de decidir**: prestatges i accessoris darrere d'un front fix (no s'hi arriba); «A ras del davant» amb fronts
+  encastats en un compartiment amb front (avui surt i avisa).
