@@ -1,4 +1,4 @@
-import { Alert, Badge, Box, Button, CloseButton, Dialog, Drawer, Editable, Flex, HStack, IconButton, Menu, Portal, SegmentGroup, SimpleGrid, Slider, Stack, Switch, Text } from "@chakra-ui/react"
+import { Alert, Badge, Box, Button, Dialog, Editable, Flex, HStack, IconButton, Menu, Portal, SegmentGroup, Slider, Stack, Switch, Text } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   LuBox,
@@ -84,12 +84,7 @@ import { compositionOf, updateProjectComposition } from "../../db/compositionSto
 import { createProject, db, saveAmbientCamera, updateAmbient, type Project } from "../../db/db"
 import { TopBarActions } from "../../components/TopBar"
 import { uniqueName } from "../../core/file/mobleFile"
-import { NewMobleGallery } from "../projects/NewMobleGallery"
-import { ProjectCard } from "../projects/ProjectCard"
-import { GALLERY_COLS } from "../projects/galleryGrid"
-import { projectSearchText } from "../projects/searchText"
-import { useAmbientMembership } from "./useAmbientMembership"
-import { ObjectsGallery } from "../objects/ObjectsGallery"
+import { AmbientPicker } from "./AmbientPicker"
 import { isObject } from "../objects/isObject"
 import { useLiveQuery } from "../../db/useLiveQuery"
 import { NumRow } from "../../components/NumRow"
@@ -104,7 +99,7 @@ import { useSettings } from "../settings/SettingsContext"
 import { formatLength, useUnit } from "../units"
 import { useProjects } from "../useProject"
 import { Ambient3D } from "./Ambient3D"
-import { itemName, useItemGeometries, type ItemGeometry } from "./ambientData"
+import { isEmptyGeometry, itemName, useItemGeometries, type ItemGeometry } from "./ambientData"
 import { PlanCanvas } from "./PlanCanvas"
 import { AMBIENT_TAB_KEY, ambientBox, type Selection, type Tool } from "./planGeom"
 import { useDebouncedSave } from "../useDebouncedSave"
@@ -200,7 +195,6 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const onSceneAccess = useCallback((g: SceneGetter) => {
     sceneGetter.current = g
   }, [])
-  const membership = useAmbientMembership()
 
   // Desar (esperant una mica mentre s'arrossega; el que queda pendent, en sortir). Obrir-lo no el desa.
   useDebouncedSave(amb, (a) => void updateAmbient(ambientId, { data: a }))
@@ -775,91 +769,9 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
         )}
       />
 
-      {/* Afegir un moble: la mateixa pàgina de Mobles (historial i plantilles) a pantalla completa. */}
-      <Drawer.Root open={picker} onOpenChange={(e) => setPicker(e.open)} size="full" placement="bottom">
-        <Portal>
-          <Drawer.Backdrop />
-          <Drawer.Positioner>
-            {/* A pantalla completa: fora de la barra d'estat del telèfon (zona segura). */}
-            <Drawer.Content pt="env(safe-area-inset-top, 0px)" pb="env(safe-area-inset-bottom, 0px)">
-              <Drawer.Header>
-                <Drawer.Title flex={1}>Afegir un moble a «{name}»</Drawer.Title>
-                <Drawer.CloseTrigger asChild top="calc(env(safe-area-inset-top, 0px) + 8px)">
-                  <CloseButton size="sm" aria-label="Tancar" />
-                </Drawer.CloseTrigger>
-              </Drawer.Header>
-              <Drawer.Body>
-                {picker && (
-                  <NewMobleGallery
-                    storageKey="mobles:ambient-picker"
-                    onCreate={(c, n) => createAndAdd(c, n, "moble")}
-                    history={(matches, searching) => {
-                      const shown = (projects ?? []).filter((p) => !isObject(p) && (!searching || matches(projectSearchText(p))))
-                      return {
-                        count: shown.length,
-                        node: shown.length ? (
-                          <SimpleGrid columns={GALLERY_COLS} gap={3}>
-                            {shown.map((p) => (
-                              <ProjectCard key={p.id} project={p} ambients={membership.get(p.id)} currentAmbient={ambientId} onAdd={() => (addMoble(p), setPicker(false))} />
-                            ))}
-                          </SimpleGrid>
-                        ) : (
-                          <Text fontSize="sm" color="fg.muted">
-                            {projects?.length ? "Cap moble no coincideix amb la cerca." : "Encara no tens cap moble: comença en blanc o des del catàleg."}
-                          </Text>
-                        ),
-                      }
-                    }}
-                  />
-                )}
-              </Drawer.Body>
-            </Drawer.Content>
-          </Drawer.Positioner>
-        </Portal>
-      </Drawer.Root>
-
-      {/* Afegir un objecte: la galeria d'objectes (els teus i les plantilles) a pantalla completa. */}
-      <Drawer.Root open={objPicker} onOpenChange={(e) => setObjPicker(e.open)} size="full" placement="bottom">
-        <Portal>
-          <Drawer.Backdrop />
-          <Drawer.Positioner>
-            {/* A pantalla completa: fora de la barra d'estat del telèfon (zona segura). */}
-            <Drawer.Content pt="env(safe-area-inset-top, 0px)" pb="env(safe-area-inset-bottom, 0px)">
-              <Drawer.Header>
-                <Drawer.Title flex={1}>Afegir un objecte a «{name}»</Drawer.Title>
-                <Drawer.CloseTrigger asChild top="calc(env(safe-area-inset-top, 0px) + 8px)">
-                  <CloseButton size="sm" aria-label="Tancar" />
-                </Drawer.CloseTrigger>
-              </Drawer.Header>
-              <Drawer.Body>
-                {objPicker && (
-                  <ObjectsGallery
-                    storageKey="mobles:ambient-objects"
-                    onCreate={(c, n) => createAndAdd(c, n, "object")}
-                    history={(matches, searching) => {
-                      const shown = (projects ?? []).filter((p) => isObject(p) && (!searching || matches(projectSearchText(p))))
-                      return {
-                        count: shown.length,
-                        node: shown.length ? (
-                          <SimpleGrid columns={GALLERY_COLS} gap={3}>
-                            {shown.map((p) => (
-                              <ProjectCard key={p.id} project={p} ambients={membership.get(p.id)} currentAmbient={ambientId} onAdd={() => (addMoble(p), setObjPicker(false))} />
-                            ))}
-                          </SimpleGrid>
-                        ) : (
-                          <Text fontSize="sm" color="fg.muted">
-                            {projects?.some(isObject) ? "Cap objecte no coincideix amb la cerca." : "Encara no tens cap objecte: tria'n un de les plantilles o comença en blanc."}
-                          </Text>
-                        ),
-                      }
-                    }}
-                  />
-                )}
-              </Drawer.Body>
-            </Drawer.Content>
-          </Drawer.Positioner>
-        </Portal>
-      </Drawer.Root>
+      {/* Afegir un moble o un objecte: la mateixa galeria de la pàgina (Historial · Projectes · Catàleg) a pantalla completa. */}
+      <AmbientPicker what="moble" open={picker} onClose={() => setPicker(false)} ambientId={ambientId} ambientName={name} projects={projects} onAdd={(p) => (addMoble(p), setPicker(false))} onCreate={(c, n) => createAndAdd(c, n, "moble")} />
+      <AmbientPicker what="object" open={objPicker} onClose={() => setObjPicker(false)} ambientId={ambientId} ambientName={name} projects={projects} onAdd={(p) => (addMoble(p), setObjPicker(false))} onCreate={(c, n) => createAndAdd(c, n, "object")} />
 
       <RenderDialog open={renderOpen} onClose={() => setRenderOpen(false)} getScene={() => sceneGetter.current?.() ?? null} name={name} saveKey={`ambient:${ambientId}`} />
 
@@ -923,7 +835,8 @@ function ItemInspector({
   return (
     <Stack gap={0}>
       <HStack gap={2} pb={2}>
-        <Box color={item.kind === "moble" ? "wood.fg" : "fg.muted"}>{item.kind === "moble" ? <LuBox /> : <LuSofa />}</Box>
+        {/* La mateixa icona que a l'arbre: moble o objecte. */}
+        <Box color={item.kind === "moble" && !(project && isObject(project)) ? "wood.fg" : "fg.muted"}>{item.kind === "moble" && !(project && isObject(project)) ? <LuBox /> : <LuSofa />}</Box>
         {item.kind === "block" ? (
           <Editable.Root value={item.name} onValueChange={(e) => onPatch({ name: e.value })} fontWeight="semibold" flex={1} minW={0} aria-label="Nom del bloc">
             <Editable.Preview truncate />
@@ -949,7 +862,14 @@ function ItemInspector({
       {item.kind === "moble" ? (
         project && geo ? (
           <>
-            <MobleDims project={project} geo={geo} />
+            {isEmptyGeometry(geo) ? (
+              // Un moble nou és buit (sense mòduls ni peces): no hi ha mides per escalar; es fa a l'editor.
+              <Text fontSize="sm" color="fg.muted" pt={1}>
+                És buit: encara no té mòduls ni peces. Obre'l a l'editor per fer-lo; al plànol surt com un requadre discontinu.
+              </Text>
+            ) : (
+              <MobleDims project={project} geo={geo} />
+            )}
             <Button size="sm" variant="outline" alignSelf="flex-start" my={3} onClick={onOpen}>
               <LuExternalLink /> Obrir a l'editor
             </Button>
