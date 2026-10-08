@@ -361,6 +361,21 @@ export function JoineryForm({ module, onChange, usedSlots }: { module: Module; o
  * pantalla (el Front i els Accessoris de l'Interior ja tenen la seva fila). Cada porta, calaix, abatible o compartiment en
  * pot triar un altre al seu Front o als Accessoris.
  */
+/**
+ * Interior › Divisió › «Peces de dins» (`Carcass.innerClearance`): només a l'arrel i si el mòdul té divisors o prestatges
+ * fixos a partir de la segona divisió (`moduleHasInnerPieces`). Sense valor (mòduls d'abans): 0.
+ */
+export function InnerClearanceRow({ module, onChange }: { module: Module; onChange: (m: Module) => void }) {
+  const c = module.carcass
+  const { gaps } = useSettings().settings
+  const value = c.innerClearance ?? 0
+  const set = (innerClearance: number) => onChange({ ...module, carcass: { ...c, innerClearance } })
+  return <>
+    <NumRow label="Peces de dins" value={value} min={0} max={3} step={0.5} onChange={set} help={`Divisors i prestatges fixos a partir de la segona divisió: tant menys de llarg, la meitat a cada cap (els de la primera van sencers). ${prefHint(value, gaps.innerClearance)}`} />
+    <PrefReset value={value} pref={gaps.innerClearance} onReset={() => set(gaps.innerClearance)} />
+  </>
+}
+
 export function FrontsForm({ module, onChange, section = frontsSection(module) }: { module: Module; onChange: (m: Module) => void; section?: FrontsSection }) {
   const c = module.carcass
   const { gaps } = useSettings().settings

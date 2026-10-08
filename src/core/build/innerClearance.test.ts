@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { DEFAULT_SETTINGS, ModuleSchema, applySettingsToModule, defaultModule, hasInnerPieces, moduleHasInnerPieces, parseSettings, visibleModule, withInnerClearance, type Carcass, type Hole, type Module, type Panel, type Vec3, type Zone } from "../model"
+import { buildMobleFile, mobleToJson, parseMobleFile } from "../file/mobleFile"
+import { DEFAULT_NEST_OPTIONS } from "../nesting/nest"
+import { buildComposition } from "./buildComposition"
 import { buildModule } from "./buildModule"
 import { toWorld } from "./geometry"
 
@@ -153,6 +156,15 @@ describe("folgança de les peces de dins", () => {
     const parsed = ModuleSchema.parse(JSON.parse(JSON.stringify(m)))
     expect(parsed.carcass.innerClearance).toBeUndefined()
     expect(buildModule(parsed).panels).toEqual(buildModule(mod(nested(), 0)).panels)
+  })
+
+  it("fitxer .moble: anada i tornada amb la folgança (i sense, 0)", () => {
+    const comp = { kind: "moble" as const, modules: [mod(nested(), 1.5), { ...mod(nested()), id: "m2", gapBefore: 10 }], references: [] }
+    const res = parseMobleFile(mobleToJson(buildMobleFile({ name: "Dins", composition: comp, nesting: DEFAULT_NEST_OPTIONS, references: [], exportedAt: "2026-10-08T12:00:00Z" })))
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.file.project.composition.modules.map((m) => m.carcass.innerClearance)).toEqual([1.5, undefined])
+    expect(buildComposition(res.file.project.composition).panels).toEqual(buildComposition(comp).panels)
   })
 
   it("res amagat compta: sense peces de dins (o a 0), el camp no compta", () => {
