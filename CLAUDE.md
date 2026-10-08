@@ -1262,9 +1262,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Mobles enllaçats** (`item.kind = "moble"`, `projectId`): és el mateix moble de la llista. A l'ambient només se'n toquen
   les **mides generals** (`resizeComposition`: escala amplades, separacions, alçades, fondàries, mides fixes, peces lliures,
   objectes i models; els gruixos no; una divisió amb totes les mides fixes deixa l'última «auto») i la posició; «Obrir a
-  l'editor» per a l'interior. Els objectes es col·loquen igual. «+ Moble» / «+ Objecte» obren la galeria a **pantalla
-  completa** (`Drawer` full: la de Mobles, `NewMobleGallery`, o la d'Objectes) **sense** botó «Nou moble» / «Nou objecte»
-  (per decisió de l'usuari: un moble en blanc a l'ambient no servia i despistava); a l'historial, «Afegir»; una plantilla crea el moble i el col·loca. Els que ja són en un ambient
+  l'editor» per a l'interior. Els objectes es col·loquen igual. El + de «Mobles» / «Objectes» obre la galeria a **pantalla
+  completa** (`AmbientPicker`: `Drawer` full amb la de Mobles, `NewMobleGallery`, o la d'Objectes) **sense** botó «Nou moble» / «Nou objecte»
+  (per decisió de l'usuari: un moble en blanc a l'ambient no servia i despistava), amb les mateixes seccions que la pàgina:
+  **Historial** (sense grup), **Projectes** (els grups, `FolderedGrid show="folders"`) i Catàleg; sense «Seleccionar», «Grup
+  nou» ni el menú dels grups (aquí només es tria: tocar una targeta o «Afegir» la col·loca); una plantilla crea el moble i el col·loca. Els que ja són en un ambient
   porten la marca (`useAmbientMembership`, `ProjectCard`), destacada (✓ i vora) a la finestra de l'ambient obert.
 - **Blocs** (`kind = "block"`, `blockComposition`): llegat; els antics es veuen i s'editen (inspector «Bloc»), però no se'n
   creen de nous: els `BLOCK_PRESETS` són ara objectes (`object-<id>`). Tot es dibuixa pel mateix camí: build → peces →
@@ -1273,8 +1275,13 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (es recorda, `AMBIENT_TAB_KEY`; els creats del catàleg s'obren al 3D). **Arbre a l'esquerra com l'Estructura de
   l'editor** (mateixes files, `TreeRow`): fila de dalt amb `LuHouse` i el nom de l'ambient, que el selecciona (= cap
   selecció, `sel === null`: clic al buit i Esc fan el mateix; Supr no hi fa res); grup plegable **Parets** («Paret N» amb
-  la llargada; triar-ne una = la selecció `wall` del plànol, que l'obre sola); **Elements** amb «+ Moble» · «+ Objecte»
-  (`TreeSection actions`) i els grups. Un moble que ja no hi és surt amb `LuTriangleAlert`. Inspector (element, bloc,
+  la llargada; triar-ne una = la selecció `wall` del plànol, que l'obre sola); **Mobles** amb el seu + i a sota
+  **Objectes** amb el seu + (per decisió de l'usuari, la mateixa lògica que «Peces lliures +» i «Models 3D +» de l'editor:
+  `TreeSection onAdd`, el + obre la galeria de Mobles o d'Objectes), cadascun amb els seus elements i grups (els blocs
+  d'abans, a Objectes; un moble que ja no hi és, a Mobles, amb `LuTriangleAlert`). **Un grup amb mobles i objectes surt
+  als dos apartats**, a cadascun amb els seus (plegat per apartat); triar-lo des de qualsevol tria tot el grup (les dues
+  files queden marcades). Un moble buit (sense mòduls ni peces, `isEmptyGeometry`) diu «Buit» a l'arbre, al plànol és el
+  requadre discontinu de 600 × 600 (com un esborrat) i l'inspector diu que s'ha de fer a l'editor (sense Mides generals). Inspector (element, bloc,
   paret, grup, ambient) en `FoldItem`; el de l'ambient comença amb **Resum** (com el del moble: parets, m² de terra de
   les habitacions tancades —`floorArea`, als eixos—, caixa, mobles, objectes, finestres, portes, vidrieres, grups i un
   avís amb «Treure'ls de l'ambient» si en falta algun; `ambientSummary` a `core/model/ambient.ts`), després Parets noves,
@@ -1366,10 +1373,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   Taula; amb text a l'ordinador i només la icona al mòbil, amb `aria-label` i tooltip; Mobles també «Obrir
   fitxer», `LuFolderOpen`, a la mateixa fila, entre el «+» i el cercador; sense accents; obre les seccions i categories amb resultats) i acordions
   **tots tancats** en obrir l'app (estat de la sessió, p. ex. `mobles:gallery`): **Historial**, **Projectes** i **Catàleg**;
-  a Mobles, a més, **Col·leccions de mobles**. Les galeries de les finestres «+ Moble» / «+ Objecte» dels ambients no
-  porten el botó (`add` opcional). No hi ha filtre de tipus (el tipus també es busca). Fila d'eines dins dels acordions
+  a Mobles, a més, **Col·leccions de mobles**. Les galeries de les finestres «Afegir un moble» / «Afegir un objecte» dels ambients
+  (`ambients/AmbientPicker.tsx`) no porten el botó (`add` opcional) ni la fila d'eines, però sí Historial · Projectes (amb els
+  grups) · Catàleg. No hi ha filtre de tipus (el tipus també es busca). Fila d'eines dins dels acordions
   («Grup nou», «Seleccionar», «Esborrar») **a l'esquerra**.
-- **Mobles** (`projects/ProjectsScreen.tsx` + `projects/NewMobleGallery.tsx`, també a la finestra «+ Moble» dels ambients).
+- **Mobles** (`projects/ProjectsScreen.tsx` + `projects/NewMobleGallery.tsx`, també a la finestra «Afegir un moble» dels ambients).
   Les **plantilles de l'app** (`BUILTIN_TEMPLATES` a `templates.ts`) **ja no surten a la galeria**: les fan servir les escenes
   (`app:<id>`), el corpus golden, els tests i `modulePresetsFor`. Són: les vitrina (`SHOWCASE`: Aparador sobre ferro, Moble TV
   flotant, Moble de bany amb pedra, Cuina amb illa de pedra, Vestidor amb barres, Escriptori flat-pack), les inspirades en
@@ -1662,7 +1670,7 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
 - **`SceneHelpers`** (`StudioEnvironment`, `SceneAccess`) als visors 3D; **`RenderDialog`** a l'editor i als ambients;
   **`MoveGizmo`**, **`BoxFrame`**; **`ViewOptions`** / **`ViewTile`**.
 - **`TreeRow`** · `TreeRowMenu` · `TreeSection` (`components/TreeRow.tsx`): fila d'arbre (sagnat, triada `wood.muted`,
-  fletxa de plegar, menú ⋯, arrossegar), menú ⋯ i títol de grup amb el + (o `actions`). Estructura de l'editor i arbre
+  fletxa de plegar, menú ⋯, arrossegar), menú ⋯ i títol de grup amb el + (o un menú, `menu`). Estructura de l'editor i arbre
   dels Ambients.
 - **Desfer/refer comú** (`features/history/`): `history.ts` (pur, test: límit, ajuntar per temps `coalesceMs` o per
   `group`, canvis en viu `commit: false` + `commitHistory` en deixar anar, refer que es buida) i `useHistory` (React:
