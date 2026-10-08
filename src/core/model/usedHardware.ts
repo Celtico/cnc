@@ -1,6 +1,6 @@
 import type { Front, Module, Zone } from "./composition"
 import { visibleModule, walkBuiltZones } from "./composition"
-import { HARDWARE_SLOTS, isDrawerKit, moduleSlotItem, type HardwareItem, type HardwareSlot } from "./hardware"
+import { isDrawerKit, moduleSlotItem, type HardwareItem, type HardwareSlot } from "./hardware"
 import { isPushClosing, kitOptionsOf, type HardwareKit } from "./hardwareKit"
 
 type SlotUse = Map<HardwareSlot, { count: number; what: string }>
@@ -18,7 +18,7 @@ function slotCounter(): { out: SlotUse; add: (slot: HardwareSlot, n: number, wha
 
 /**
  * **Quins ferratges fa servir un mòdul**, segons el que té (res amagat compta: es mira el mòdul tal com es veu). És el
- * que l'inspector ensenya («Acabats» del mòdul): en una tauleta amb un calaix no hi
+ * que l'inspector ensenya (l'Espiga a Mòdul › Unió, la filera System 32 al compartiment): en una tauleta amb un calaix no hi
  * pinten res la frontissa, el braç d'abatible ni l'imant. Per a cada lloc, quants elements el fan servir (portes,
  * calaixos…), per dir-ho a la fila. **L'única font** (abans n'hi havia una altra que mirava les peces construïdes: amb un
  * joc de calaix que no hi cap no hi ha cap forat de guia i la fila «Guia de calaix» desapareixia justament quan cal
@@ -44,68 +44,41 @@ export function usedHardwareSlots(module: Module): SlotUse {
     if (z.rail) add("rail", 1, "barres de penjar")
     if (z.led) add("led", 1, "llums")
     if (!z.front || covered) return
-    frontSlots(m, z.front, add, false)
+    frontSlots(m, z.front, add)
   })
   return out
 }
 
-/**
- * Els llocs de cada front: tots (`inheritedOnly = false`, el que el mòdul fa servir) o només els que llegeixen el **per
- * defecte del mòdul** (`true`: el front no en té un de propi; «Com el mòdul»).
- */
-function frontSlots(m: Module, f: Front, add: (slot: HardwareSlot, n: number, what: string) => void, inheritedOnly: boolean): void {
-  const own = (x: unknown) => inheritedOnly && x !== undefined
+/** Els llocs de ferratge de cada front (el seu o, «Com el mòdul», el del mòdul: tots dos compten). */
+function frontSlots(m: Module, f: Front, add: (slot: HardwareSlot, n: number, what: string) => void): void {
   if (f.kind === "door" && f.glass) {
-    if (!own(f.frame)) add("glassFrame", f.mode === "double" ? 2 : 1, "vitrines")
+    add("glassFrame", f.mode === "double" ? 2 : 1, "vitrines")
   } else if (f.kind === "door") {
     const doors = f.mode === "double" ? 2 : 1
-    if (!own(f.hardware)) add("hinge", doors, "portes")
-    // La filera System 32 és de la caixa (Acabats): no té per defecte als fronts.
-    if (!inheritedOnly) add("system32", doors, "portes")
-    if (frontHasHandle(m, f) && !own(f.handle)) add("handle", doors, "portes")
+    add("hinge", doors, "portes")
+    add("system32", doors, "portes")
+    if (frontHasHandle(m, f)) add("handle", doors, "portes")
   } else if (f.kind === "drawers") {
-    if (!own(f.hardware)) add("slide", f.n, "calaixos")
+    add("slide", f.n, "calaixos")
     const moduleKit = isDrawerKit(moduleSlotItem(m.hardware, "slide"))
     const kit = f.hardware ? (isDrawerKit(f.hardware) ? f.hardware : undefined) : moduleKit ? (moduleSlotItem(m.hardware, "slide") as HardwareItem & { kit: HardwareKit }) : undefined
     // El tancament del joc mana: push-open ⇒ cap tirador.
-    if (frontHasHandle(m, f) && !own(f.handle) && !(kit && isPushClosing(kitOptionsOf(kit.kit, f.kit).closing))) add("handle", f.n, "calaixos")
+    if (frontHasHandle(m, f) && !(kit && isPushClosing(kitOptionsOf(kit.kit, f.kit).closing))) add("handle", f.n, "calaixos")
   } else if (f.kind === "flap") {
-    if (!own(f.hardware)) add("flap", 1, "abatibles")
-    if (frontHasHandle(m, f) && !own(f.handle)) add("handle", 1, "abatibles")
+    add("flap", 1, "abatibles")
+    if (frontHasHandle(m, f)) add("handle", 1, "abatibles")
   } else if (f.kind === "grille") {
-    // L'imant d'una reixeta (desmuntable o trapa) pot ser propi; les frontisses d'una reixeta són sempre les del mòdul.
-    const magnets = (f.mount === "removable" ? 1 : 0) + (f.hatch ? 1 : 0)
-    if (magnets && !own(f.hardware)) {
-      if (f.mount === "removable") add("magnet", 1, "reixetes")
-      if (f.hatch) add("magnet", 1, "trapes")
-    }
+    if (f.mount === "removable") add("magnet", 1, "reixetes")
+    if (f.hatch) add("magnet", 1, "trapes")
     if (f.mount !== "removable") {
       add("hinge", 1, "reixetes")
-      if (!inheritedOnly) add("system32", 1, "reixetes")
+      add("system32", 1, "reixetes")
     }
   }
   // Front fix: cap ferratge (ni tirador, ni frontissa).
 }
 
-/**
- * Els llocs on el **per defecte del mòdul** fa de debò de per defecte: algun compartiment (un front o un accessori, no
- * tapat) no en té un de propi i el llegeix («Com el mòdul»). `exclude`: compartiments que no s'han de comptar. És el que
- * ensenya Mòdul › «Acabats › Per defecte dels compartiments» (un sol lloc per decisió).
- */
-export function inheritedSlots(module: Module, exclude: ReadonlySet<string> = new Set()): SlotUse {
-  const m = visibleModule(module)
-  const { out, add } = slotCounter()
-  walkBuiltZones(m.root, (z, { covered }) => {
-    if (exclude.has(z.id)) return
-    if (z.rail && !z.rail.hardware) add("rail", 1, "barres de penjar")
-    if (z.led && !z.led.hardware) add("led", 1, "llums")
-    if (!z.front || covered) return
-    frontSlots(m, z.front, add, true)
-  })
-  return out
-}
-
-/** Quines opcions de tots els fronts del mòdul (Mòdul › Acabats) llegeix la construcció. */
+/** Quines opcions de tots els fronts del mòdul (Mòdul › Caixa) llegeix la construcció. */
 export interface FrontOptionsUse {
   /** Recobrents / Encastats i la folgança front–cos: hi ha algun front que es fa (també un front fix o una reixeta). */
   style: boolean
@@ -117,7 +90,7 @@ export interface FrontOptionsUse {
 }
 
 /**
- * Les opcions de «Acabats» que la construcció llegeix per a aquest mòdul (la UI només ensenya aquestes; les
+ * Les opcions dels fronts (Mòdul › Caixa) que la construcció llegeix per a aquest mòdul (la UI només ensenya aquestes; les
  * altres es conserven i no compten). La mateixa lògica que `frontTerritory`, `buildShelves` i `buildLed` de `buildModule`.
  */
 export function frontOptionsUse(module: Module): FrontOptionsUse {
@@ -179,40 +152,30 @@ function frontHasHandle(m: Module, f: Extract<Front, { kind: "door" | "drawers" 
 }
 
 /**
- * Llocs de ferratge que no són per defecte dels compartiments: l'espiga (Mòdul › Acabats, amb la caixa) i la filera
- * System 32, als Prestatges o al Front del compartiment (`system32RowPlace`).
+ * Les files de l'inspector del mòdul que no són sempre a la vista, **un sol lloc per decisió** i **només el que la
+ * construcció llegeix** (per decisió de l'usuari, 2026-10-08, ja no hi ha secció «Acabats»: cada fila és a la secció del
+ * que toca):
+ * - **Caixa**: Ranura o Retirada del fons (fons en ranura o encastat), l'Estil dels fronts, les folgances i el
+ *   Retranqueig dels prestatges (`frontOptionsUse`);
+ * - **Materials**: «Fronts» (`frontMaterial`) amb algun front que es fa (com l'Estil);
+ * - **Unió**: l'Espiga si la caixa en fa (`usedHardwareSlots`, `carcassDowels`); sense, la secció no surt.
+ * Els ferratges per defecte del mòdul (`module.hardware`, `module.fronts.handles`) no surten enlloc: cada compartiment
+ * tria el seu al Front o als Accessoris i els que diuen «Com el mòdul» els hereten (res amagat compta).
  */
-export const BOX_SLOTS: ReadonlySet<HardwareSlot> = new Set<HardwareSlot>(["dowel", "system32"])
-
-/**
- * El que ensenya Mòdul › «Acabats», en l'ordre de la secció: les opcions de tots els fronts que es llegeixen, les de la
- * caixa (fons, espiga) i els per defecte que algun compartiment hereta.
- */
-export interface FinishesSection extends FrontOptionsUse {
-  /** «Ranura del fons» (fons en ranura) o «Retirada del fons» (fons encastat). */
+export interface ModuleRows extends FrontOptionsUse {
+  /** Caixa: «Ranura del fons» (fons en ranura) o «Retirada del fons» (fons encastat). */
   back?: "groove" | "inset"
-  /** L'espiga del mòdul (`usedHardwareSlots`: la caixa en fa, `carcassDowels`). */
+  /** Materials › «Fronts». */
+  frontMaterial: boolean
+  /** Unió › «Espiga». */
   dowel: boolean
-  /** «Per defecte dels compartiments»: el tirador primer i després en l'ordre de `HARDWARE_SLOTS`. */
-  defaults: { slot: HardwareSlot; count: number; what: string }[]
 }
 
-/**
- * Les files de Mòdul › «Acabats», **un sol lloc per decisió** i **només el que la construcció llegeix**: l'estil, les
- * folgances, el retranqueig i el material dels fronts si es llegeixen (`frontOptionsUse`), la ranura o retirada del fons
- * i l'espiga si la caixa en fa, i els ferratges per defecte del mòdul que algun compartiment hereta («Com el mòdul»,
- * `inheritedSlots`; cap exclòs: cap compartiment no és a la pantalla del mòdul). Sense res, la secció no surt.
- */
-export function finishesSection(module: Module): FinishesSection {
-  const inherited = inheritedSlots(module)
-  const order: HardwareSlot[] = ["handle", ...HARDWARE_SLOTS.map((x) => x.slot).filter((x) => x !== "handle")]
-  const defaults = order.filter((slot) => !BOX_SLOTS.has(slot) && inherited.has(slot)).map((slot) => ({ slot, ...inherited.get(slot)! }))
+export function moduleRows(module: Module): ModuleRows {
+  const use = frontOptionsUse(module)
   const b = module.carcass.back
-  return { ...frontOptionsUse(module), back: b === "groove" || b === "inset" ? b : undefined, dowel: usedHardwareSlots(module).has("dowel"), defaults }
+  return { ...use, back: b === "groove" || b === "inset" ? b : undefined, frontMaterial: use.style, dowel: usedHardwareSlots(module).has("dowel") }
 }
-
-/** La secció «Acabats» no té res a ensenyar. */
-export const finishesSectionEmpty = (s: FinishesSection): boolean => !s.style && !s.outerGap && !s.betweenGap && !s.shelfSetback && !s.back && !s.dowel && !s.defaults.length
 
 /** On surt la «Filera System 32» del mòdul a l'inspector del compartiment (`system32RowPlace`). */
 export interface System32RowPlace {
