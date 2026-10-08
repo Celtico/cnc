@@ -18,7 +18,7 @@ function slotCounter(): { out: SlotUse; add: (slot: HardwareSlot, n: number, wha
 
 /**
  * **Quins ferratges fa servir un mòdul**, segons el que té (res amagat compta: es mira el mòdul tal com es veu). És el
- * que l'inspector ensenya («Acabats i ferratges» del mòdul i «Fronts i calaixos» de l'Interior): en una tauleta amb un calaix no hi
+ * que l'inspector ensenya («Acabats i ferratges» del mòdul i «Acabats» de l'Interior): en una tauleta amb un calaix no hi
  * pinten res la frontissa, el braç d'abatible ni l'imant. Per a cada lloc, quants elements el fan servir (portes,
  * calaixos…), per dir-ho a la fila. **L'única font** (abans n'hi havia una altra que mirava les peces construïdes: amb un
  * joc de calaix que no hi cap no hi ha cap forat de guia i la fila «Guia de calaix» desapareixia justament quan cal
@@ -91,7 +91,7 @@ function frontSlots(m: Module, f: Front, add: (slot: HardwareSlot, n: number, wh
  * Els llocs on el **per defecte del mòdul** fa de debò de per defecte: algun compartiment (un front o un accessori, no
  * tapat) no en té un de propi i el llegeix («Com el mòdul»). `exclude`: compartiments que ja ensenyen la seva tria a la
  * mateixa pantalla (a l'«Interior», l'arrel: el seu Front i els seus Accessoris), perquè no surti dues vegades. És el que
- * ensenya «Fronts i calaixos › Per defecte dels compartiments» (un sol lloc per decisió).
+ * ensenya «Acabats › Per defecte dels compartiments» (un sol lloc per decisió).
  */
 export function inheritedSlots(module: Module, exclude: ReadonlySet<string> = new Set()): SlotUse {
   const m = visibleModule(module)
@@ -106,7 +106,7 @@ export function inheritedSlots(module: Module, exclude: ReadonlySet<string> = ne
   return out
 }
 
-/** Quines opcions de tots els fronts del mòdul (Interior › Fronts i calaixos) llegeix la construcció. */
+/** Quines opcions de tots els fronts del mòdul (Interior › Acabats) llegeix la construcció. */
 export interface FrontOptionsUse {
   /** Recobrents / Encastats i la folgança front–cos: hi ha algun front que es fa (també un front fix o una reixeta). */
   style: boolean
@@ -118,7 +118,7 @@ export interface FrontOptionsUse {
 }
 
 /**
- * Les opcions de «Fronts i calaixos» que la construcció llegeix per a aquest mòdul (la UI només ensenya aquestes; les
+ * Les opcions de «Acabats» que la construcció llegeix per a aquest mòdul (la UI només ensenya aquestes; les
  * altres es conserven i no compten). La mateixa lògica que `frontTerritory`, `buildShelves` i `buildLed` de `buildModule`.
  */
 export function frontOptionsUse(module: Module): FrontOptionsUse {
@@ -182,14 +182,14 @@ function frontHasHandle(m: Module, f: Extract<Front, { kind: "door" | "drawers" 
 /** Llocs de ferratge de la **caixa** (laterals, unions, fons): surten a «Acabats i ferratges» del mòdul. La resta són dels fronts. */
 export const BOX_SLOTS: ReadonlySet<HardwareSlot> = new Set<HardwareSlot>(["dowel", "system32"])
 
-/** El que ensenya Interior › «Fronts i calaixos»: les opcions de tots els fronts que es llegeixen i els per defecte que algú hereta. */
+/** El que ensenya Interior › «Acabats»: les opcions de tots els fronts que es llegeixen i els per defecte que algú hereta. */
 export interface FrontsSection extends FrontOptionsUse {
   /** «Per defecte dels compartiments»: el tirador primer i després en l'ordre de `HARDWARE_SLOTS`. */
   defaults: { slot: HardwareSlot; count: number; what: string }[]
 }
 
 /**
- * Les files de «Fronts i calaixos» (Interior, l'arrel del mòdul), **un sol lloc per decisió**: l'estil, les folgances i
+ * Les files de «Acabats» (Interior, l'arrel del mòdul), **un sol lloc per decisió**: l'estil, les folgances i
  * el retranqueig només si la construcció els llegeix (`frontOptionsUse`); els ferratges per defecte del mòdul només si
  * algun compartiment els hereta («Com el mòdul») i no és a la mateixa pantalla (`shown`: l'arrel, que ja ensenya el seu
  * Front i els seus Accessoris). Sense res, la secció no surt.
@@ -201,7 +201,7 @@ export function frontsSection(module: Module, shown: ReadonlySet<string> = new S
   return { ...frontOptionsUse(module), defaults }
 }
 
-/** La secció «Fronts i calaixos» no té res a ensenyar. */
+/** La secció «Acabats» no té res a ensenyar. */
 export const frontsSectionEmpty = (s: FrontsSection): boolean => !s.style && !s.outerGap && !s.betweenGap && !s.shelfSetback && !s.defaults.length
 
 /** Els llocs que fa servir el mòdul, com a conjunt (per filtrar els selectors de l'inspector). */

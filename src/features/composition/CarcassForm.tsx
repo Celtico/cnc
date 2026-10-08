@@ -188,13 +188,13 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
 }
 
 /**
- * Materials del cos, dels fronts i del fons. Es fa servir per a un mòdul (sense els fronts: són a Interior › Fronts i
- * calaixos › Acabats) i també per al moble sencer (aplica el canvi a tots els mòduls).
+ * Materials del cos, dels fronts i del fons. Es fa servir per a un mòdul (sense els fronts: són a Interior › Acabats ›
+ * Material dels fronts) i també per al moble sencer (aplica el canvi a tots els mòduls).
  */
 /** Valor del desplegable del fons per a «Com el cos» (mateix material i gruix). */
 const SAME = "__com-el-cos__"
 
-export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !== "none", hasDrawers = false, hasFronts = true }: { carcass: Carcass; onPatch: (patch: Partial<Carcass>) => void; mixed?: boolean; /** Sense fons: no surten les opcions del fons. */ hasBack?: boolean; /** Amb calaixos: la fila «Fons del calaix». */ hasDrawers?: boolean; /** La fila «Fronts» (el moble sencer; al mòdul és a Interior › Fronts i calaixos › Acabats). */ hasFronts?: boolean }) {
+export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !== "none", hasDrawers = false, hasFronts = true }: { carcass: Carcass; onPatch: (patch: Partial<Carcass>) => void; mixed?: boolean; /** Sense fons: no surten les opcions del fons. */ hasBack?: boolean; /** Amb calaixos: la fila «Fons del calaix». */ hasDrawers?: boolean; /** La fila «Fronts» (el moble sencer; al mòdul és a Interior › Acabats › Material dels fronts). */ hasFronts?: boolean }) {
   const { settings } = useSettings()
   const mat = materialByName(settings, c.material)
   const backMat = materialByName(settings, c.backMaterial)
@@ -307,7 +307,7 @@ function ModuleHardwarePicks({ module, onChange, slots, help }: { module: Module
 const inheritedBy = (d: { count: number; what: string }) => `«Com el mòdul» a: ${d.what} (${d.count}).`
 
 /**
- * El **tirador per defecte** del mòdul (Interior › Fronts i calaixos): un de la biblioteca o «Cap (push)»
+ * El **tirador per defecte** del mòdul (Interior › Acabats): un de la biblioteca o «Cap (push)»
  * (`fronts.handles: "none"`, auditoria C2: el push és una tria del tirador, no de la caixa). Cada front pot dir-ne un
  * altre al seu Front; un joc de calaix push-open mana sobre tots dos.
  */
@@ -353,15 +353,6 @@ export function JoineryForm({ module, onChange, usedSlots }: { module: Module; o
 }
 
 /**
- * Fronts i calaixos del mòdul (secció «Fronts i calaixos» de l'«Interior», l'arrel), **un sol lloc per decisió** i
- * **només el que la construcció llegeix** (`frontsSection`, `core/model/usedHardware.ts`): l'estil i les folgances si hi
- * ha algun front que es fa (un front fix també: estil i folgança front–cos, cap ferratge), el retranqueig si hi ha
- * prestatges que es retiren, i a sota **«Per defecte dels compartiments»**: el tirador i els ferratges del mòdul
- * (`module.fronts.handles`, `module.hardware`) que algun compartiment hereta («Com el mòdul») i que no ensenya la mateixa
- * pantalla (el Front i els Accessoris de l'Interior ja tenen la seva fila). Cada porta, calaix, abatible o compartiment en
- * pot triar un altre al seu Front o als Accessoris.
- */
-/**
  * Interior › Divisió › «Peces de dins» (`Carcass.innerClearance`): només a l'arrel i si és dividida
  * (`moduleHasInnerPieces`). Sense valor (mòduls d'abans): 0.
  */
@@ -376,6 +367,15 @@ export function InnerClearanceRow({ module, onChange }: { module: Module; onChan
   </>
 }
 
+/**
+ * Acabats del mòdul (secció «Acabats» de l'«Interior», l'arrel; abans «Acabats»), **un sol lloc per decisió** i
+ * **només el que la construcció llegeix** (`frontsSection`, `core/model/usedHardware.ts`): l'estil i les folgances si hi
+ * ha algun front que es fa (un front fix també: estil i folgança front–cos, cap ferratge), el retranqueig si hi ha
+ * prestatges que es retiren, i a sota **«Per defecte dels compartiments»**: el tirador i els ferratges del mòdul
+ * (`module.fronts.handles`, `module.hardware`) que algun compartiment hereta («Com el mòdul») i que no ensenya la mateixa
+ * pantalla (el Front i els Accessoris de l'Interior ja tenen la seva fila). Cada porta, calaix, abatible o compartiment en
+ * pot triar un altre al seu Front o als Accessoris.
+ */
 export function FrontsForm({ module, onChange, section = frontsSection(module) }: { module: Module; onChange: (m: Module) => void; section?: FrontsSection }) {
   const c = module.carcass
   const { settings } = useSettings()
@@ -411,11 +411,12 @@ export function FrontsForm({ module, onChange, section = frontsSection(module) }
         <NumRow label="Retranqueig dels prestatges" value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => onChange({ ...module, carcass: { ...c, shelfSetback } })} help={`Del davant de la caixa al cantell dels prestatges de tot el mòdul (amb fronts encastats, almenys un gruix). ${prefHint(c.shelfSetback, gaps.shelfSetback)}`} />
         <PrefReset value={c.shelfSetback} pref={gaps.shelfSetback} onReset={() => onChange({ ...module, carcass: { ...c, shelfSetback: gaps.shelfSetback } })} />
       </>}
-      {/* Acabats dels fronts (per decisió de l'usuari, aquí i no a Materials del mòdul: un sol lloc per decisió). Només
-          amb algun front que es fa (el mateix que l'Estil); sense, el material es conserva i no compta. */}
+      {/* Material dels fronts (per decisió de l'usuari, aquí i no a Materials del mòdul: un sol lloc per decisió; abans el
+          grup «Acabats», ara el títol de la secció). Només amb algun front que es fa (el mateix que l'Estil); sense, el
+          material es conserva i no compta. */}
       {section.style && (
         <Stack gap={3} pt={2}>
-          <SectionLabel>Acabats</SectionLabel>
+          <SectionLabel>Material dels fronts</SectionLabel>
           <FormRow label="Fronts" help="Material de portes, fronts de calaix, abatibles, reixetes i fronts fixos. Mateix gruix que el cos." maxW="280px">
             <MaterialSelect label="Fronts" hideLabel materials={boardChoices(settings.materials)} value={c.frontMaterial ?? ""} emptyLabel="Com el cos" onChange={(v) => onChange({ ...module, carcass: { ...c, frontMaterial: v || undefined } })} />
           </FormRow>

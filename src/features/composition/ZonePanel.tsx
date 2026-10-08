@@ -132,7 +132,7 @@ export function ZonePanel({
   /** Calaixos d'aquesta zona fets amb un joc paramètric (del constructor): NL, números i fusta. */
   kits?: KitOrder[]
   /**
-   * Seccions de l'«Interior» (l'arrel): «Fronts i calaixos» del mòdul. Van després del que ensenya la mateixa pantalla
+   * Seccions de l'«Interior» (l'arrel): «Acabats» del mòdul. Van després del que ensenya la mateixa pantalla
    * (Front, i sense divisió Prestatges i Accessoris): en depenen (opcions en cascada).
    */
   afterFront?: ReactNode
@@ -410,7 +410,7 @@ function kitClosingFor(kit: HardwareItem & { kit: NonNullable<HardwareItem["kit"
 }
 
 function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bounds }: { front: Front; openRatio?: number; onChange: (f: Front) => void; hardware: ModuleHardware; noHandles: boolean; kits?: KitOrder[]; bounds: ZoneBounds }) {
-  // «Tirador»: el del mòdul (Interior › Fronts i calaixos), un altre de la biblioteca (un d'importat i confirmat fa els
+  // «Tirador»: el del mòdul (Interior › Acabats), un altre de la biblioteca (un d'importat i confirmat fa els
   // forats a la seva distància) o «Cap (push)». Als calaixos amb joc, el tancament del joc mana (`kitClosingFor`).
   const handlePick = (f: Extract<Front, { kind: "door" | "drawers" | "flap" }>, kit?: HardwareItem & { kit: NonNullable<HardwareItem["kit"]> }) => {
     const kitOpts = kit && f.kind === "drawers" ? kitOptionsOf(kit.kit, f.kit) : undefined
@@ -423,7 +423,7 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bo
       if (kit && kitOpts && next.kind === "drawers") onChange({ ...withHandle(next, h === "none" ? undefined : h), kit: kitClosingFor(kit, kitOpts, h === "none") })
       else onChange(next)
     }
-    const help = kitPush ? "El joc obre per pressió (push-open): cap tirador ni forats. Canvia el Tancament del joc per posar-n'hi." : inheritedNone ? "El mòdul és push (Interior › Fronts i calaixos): cap forat; tria'n un aquí si aquest front n'ha de portar." : "Obertura per pressió: cap forat. Cal el ferratge push (Tip-On) a aquest front."
+    const help = kitPush ? "El joc obre per pressió (push-open): cap tirador ni forats. Canvia el Tancament del joc per posar-n'hi." : inheritedNone ? "El mòdul és push (Interior › Acabats): cap forat; tria'n un aquí si aquest front n'ha de portar." : "Obertura per pressió: cap forat. Cal el ferratge push (Tip-On) a aquest front."
     return (
       <HardwarePick
         slot="handle"
