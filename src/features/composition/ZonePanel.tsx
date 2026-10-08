@@ -118,6 +118,7 @@ export function ZonePanel({
   afterFront,
   splitExtra,
   coveredBy,
+  coveredByFixed = false,
   bounds,
 }: {
   root: Zone
@@ -146,8 +147,12 @@ export function ZonePanel({
   splitExtra?: ReactNode
   /** Nom de la zona de més amunt el front de la qual tapa aquest compartiment: el seu Front no es fa (es conserva). */
   coveredBy?: string
+  /** El front que el tapa és un front fix (no portes): darrere no hi ha res a fer servir, ni Prestatges ni Accessoris. */
+  coveredByFixed?: boolean
 }) {
   const parent = parentOf(root, zone.id)
+  // Hi ha on fer servir prestatges i accessoris: tapat per portes (com obert), o el seu contingut no l'omple.
+  const shelvesBehind = coveredBy ? !coveredByFixed : !fillsZone(zone.front)
   const index = parent?.split ? parent.split.children.findIndex((c) => c.id === zone.id) : -1
   const size = parent?.split ? (parent.split.sizes[index] ?? "auto") : undefined
 
@@ -194,8 +199,8 @@ export function ZonePanel({
 
           {/* Tapat: el seu front (es conserva) no es fa i el compartiment és com obert (`visibleZone`). Sense una peça a
               cada costat (lateral o divisor), cap prestatge: no surt (es conserva i torna amb els laterals). Amb calaixos
-              o un front fix (darrere no hi ha res a fer servir), tampoc. */}
-          {(coveredBy || !fillsZone(zone.front)) && canHoldShelves(bounds) && (
+              o un front fix (darrere no hi ha res a fer servir), tampoc; ni tapat per un front fix de tota la zona. */}
+          {shelvesBehind && canHoldShelves(bounds) && (
             <FoldItem id="zone-shelves" title="Prestatges" badge={zone.shelves?.n || undefined} icon={LuRows3}>
               <NumRow
                 label="Quantitat"
@@ -253,7 +258,7 @@ export function ZonePanel({
           )}
 
           {/* Accessoris del compartiment: ferratges (barra de penjar, tira LED), no fusta. Amb calaixos o un front fix, no. */}
-          {(coveredBy || !fillsZone(zone.front)) && canHoldAccessories(bounds) && <AccessoriesSection root={root} zone={zone} hardware={hardware} onChange={onChange} />}
+          {shelvesBehind && canHoldAccessories(bounds) && <AccessoriesSection root={root} zone={zone} hardware={hardware} onChange={onChange} />}
 
           {afterFront}
 

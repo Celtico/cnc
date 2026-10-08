@@ -56,7 +56,7 @@ function scrambleHidden(m: Module, r: Rnd): Module {
     fronts.outerGap = pick(r, [0, 1.5, 4, 10])
     fronts.betweenGap = pick(r, [0, 2, 6])
   }
-  if (!anyRetiredShelf(m.root)) c.shelfSetback = int(r, 0, 100)
+  if (!anyRetiredShelf(m.root, { left: c.sides.left, right: c.sides.right })) c.shelfSetback = int(r, 0, 100)
   // Interior › Divisió › «Peces de dins»: sense dividir l'arrel no surt (i 0 = sense valor).
   if (!anyInnerPiece(m.root)) {
     const g = pick(r, [undefined, 0, 0.5, 1, 3])
@@ -72,7 +72,7 @@ function scrambleHidden(m: Module, r: Rnd): Module {
       if (used.has(slot) || r() < 0.4) continue
       ;(hardware as ModuleHardware)[slot] = r() < 0.5 ? structuredClone(DEFAULT_MODULE_HARDWARE.dowel) : { ...structuredClone(DEFAULT_MODULE_HARDWARE.slide), engine: "drawerKit", name: "Joc sense dades" }
     }
-  return { ...m, carcass: c, fronts, hardware, root: scrambleZone(m.root, r, m.fronts.handles === "none", false, { left: c.sides.left, right: c.sides.right }) }
+  return { ...m, carcass: c, fronts, hardware, root: scrambleZone(m.root, r, m.fronts.handles === "none", false, { left: c.sides.left, right: c.sides.right }, false) }
 }
 
 /**
@@ -86,10 +86,17 @@ function anyBuiltFront(z: Zone, sides: Sides, covered = false): boolean {
   return !!z.split?.children.some((c, i) => anyBuiltFront(c, childSides(sides, z.split!.dir, i, n), covered || (!!z.front && held)))
 }
 
-/** Algun compartiment final (no de calaixos ni de front fix que es fan) amb prestatges o amb llum. */
-function anyRetiredShelf(z: Zone, covered = false): boolean {
-  if (z.split) return z.split.children.some((c) => anyRetiredShelf(c, covered || !!z.front))
-  if (z.front?.kind === "drawers" || (z.front?.kind === "panel" && !covered)) return false
+/**
+ * Algun compartiment final (no de calaixos ni de front fix que es fan, ni tapat per un front fix de tota la zona que es
+ * fa) amb prestatges o amb llum.
+ */
+function anyRetiredShelf(z: Zone, sides: Sides, covered = false, fixedCover = false): boolean {
+  const built = !!z.front && frontHeld(sides) && !covered
+  if (z.split) {
+    const n = z.split.children.length
+    return z.split.children.some((c, i) => anyRetiredShelf(c, childSides(sides, z.split!.dir, i, n), covered || !!z.front, fixedCover || (built && z.front!.kind === "panel")))
+  }
+  if (fixedCover || z.front?.kind === "drawers" || (z.front?.kind === "panel" && !covered)) return false
   return (z.shelves?.n ?? 0) > 0 || !!z.led
 }
 
@@ -116,7 +123,8 @@ const childSides = (sides: Sides, dir: "v" | "h", i: number, n: number): Sides =
  */
 const frontHeld = (sides: Sides): boolean => sides.left && sides.right
 
-function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sides: Sides): Zone {
+/** `fixedCover`: tapat per un front fix de tota la zona que es fa (ni Prestatges ni Accessoris, com el front fix propi). */
+function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sides: Sides, fixedCover: boolean): Zone {
   const out: Zone = { ...z }
   const f = z.front
   if (r() < 0.5) {
@@ -136,14 +144,14 @@ function scrambleZone(z: Zone, r: Rnd, noHandles: boolean, covered: boolean, sid
     if (r() < 0.3) out.led = { hardware: { ...DEFAULT_MODULE_HARDWARE.led, params: { ...DEFAULT_MODULE_HARDWARE.led.params, height: 12 } } }
     const n = out.split!.children.length
     const v = out.split!.dir === "v"
-    out.split = { ...out.split!, children: out.split!.children.map((c, i) => scrambleZone(c, r, noHandles, covered || (!!z.front && held), childSides(sides, v ? "v" : "h", i, n))) }
+    out.split = { ...out.split!, children: out.split!.children.map((c, i) => scrambleZone(c, r, noHandles, covered || (!!z.front && held), childSides(sides, v ? "v" : "h", i, n), fixedCover || (z.front?.kind === "panel" && held && !covered))) }
   } else if (!sides.left || !sides.right) {
     // Res a cada costat per aguantar-los: ni Prestatges ni Accessoris.
     if (r() < 0.6) out.shelves = randomShelves(r)
     if (r() < 0.3) out.rail = {}
     if (r() < 0.3) out.led = {}
-  } else if ((f?.kind === "drawers" || f?.kind === "panel") && !covered) {
-    // Calaixos o front fix: les seccions Prestatges i Accessoris no surten.
+  } else if (((f?.kind === "drawers" || f?.kind === "panel") && !covered) || fixedCover) {
+    // Calaixos o front fix (el seu o el de tota la zona que el tapa): les seccions Prestatges i Accessoris no surten.
     if (r() < 0.6) out.shelves = randomShelves(r)
     if (r() < 0.3) out.rail = {}
     if (r() < 0.3) out.led = {}
@@ -356,6 +364,34 @@ describe("independència del camí: el mateix estat visible fa el mateix moble",
     expect(run([shelvesN(3), rail, panel, rootFront(null)])).toBe(run([shelvesN(3), rail]))
     const door = rootFront({ kind: "door", mode: "single", hinge: "left" })
     expect(run([shelvesN(3), rail, panel, door])).toBe(run([shelvesN(3), rail, door]))
+  })
+  it("front fix de tota la zona: els compartiments que tapa no fan prestatges, fileres, barra ni llum (els divisors sí)", () => {
+    // L'«Interior» dividit en dos (ids fixos) i els seus compartiments.
+    const split = (dir: "v" | "h"): Op => (m) => ({ ...m, root: { id: m.root.id, split: { dir, sizes: ["auto", "auto"], children: [{ id: "a" }, { id: "b" }] } } })
+    const at = (id: string, f: (z: Zone) => Zone): Op => (m) => ({ ...m, root: { ...m.root, split: { ...m.root.split!, children: m.root.split!.children.map((c) => (c.id === id ? f(c) : c)) } } })
+    const shelves = at("a", (z) => ({ ...z, shelves: { n: 3, adjustable: true, thickness: 50 } }))
+    const rows = at("b", (z) => ({ ...z, shelves: { n: 0, adjustable: true } }))
+    const acc = at("b", (z) => ({ ...z, rail: {}, led: {} }))
+    const panel = rootFront({ kind: "panel" })
+    const door = rootFront({ kind: "door", mode: "double", hinge: "left" })
+    const ref = run([split("h"), panel])
+    for (const p of permutations([shelves, rows, acc, panel])) expect(run([split("h"), ...p])).toBe(ref)
+    // Els divisors hi són: no és el mòdul sense dividir.
+    expect(ref).not.toBe(run([panel]))
+    // Amb portes de tota la zona, els prestatges i els accessoris hi tornen (armari amb penjador darrere).
+    expect(run([split("h"), shelves, rows, acc, panel, door])).toBe(run([split("h"), shelves, rows, acc, door]))
+    expect(run([split("h"), shelves, rows, acc, door])).not.toBe(run([split("h"), door]))
+    // Treure el front: també.
+    expect(run([split("h"), shelves, acc, panel, rootFront(null)])).toBe(run([split("h"), shelves, acc]))
+    // Un front fix que no es fa (sense lateral dret no s'aguanta) no tapa res: el compartiment de l'esquerra (lateral i
+    // divisor) fa els seus prestatges.
+    const noRight = carcass({ sides: { left: true, right: false } })
+    expect(run([split("v"), shelves, panel, noRight])).toBe(run([split("v"), shelves, noRight]))
+    expect(run([split("v"), shelves, noRight])).not.toBe(run([split("v"), noRight]))
+    // Un front fix tapat per les portes de tota una zona de més amunt no es fa: no amaga res.
+    const nested: Op = (m) => ({ ...m, root: { id: m.root.id, split: { dir: "h", sizes: ["auto", "auto"], children: [{ id: "p", front: { kind: "panel" }, split: { dir: "v", sizes: ["auto", "auto"], children: [{ id: "a", shelves: { n: 2, adjustable: false } }, { id: "c" }] } }, { id: "b" }] } } })
+    const nestedNoPanel: Op = (m) => ({ ...m, root: { id: m.root.id, split: { dir: "h", sizes: ["auto", "auto"], children: [{ id: "p", split: { dir: "v", sizes: ["auto", "auto"], children: [{ id: "a", shelves: { n: 2, adjustable: false } }, { id: "c" }] } }, { id: "b" }] } } })
+    expect(run([nested, door])).toBe(run([nestedNoPanel, door]))
   })
   it("sense un lateral, el front d'abans no es fa (com obert) i torna amb el lateral; sense tapa o sense base, sí", () => {
     const noRight = carcass({ sides: { left: true, right: false } })
