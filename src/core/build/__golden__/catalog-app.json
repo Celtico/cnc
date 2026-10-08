@@ -1055,5 +1055,57 @@
    "top|dalt|568x450x16|Melamina blanca|x|e1000|h6:0fae082e|g1:3048ee04|c0|o-|@d8a3b82f",
    "top|dalt|700x500x16|Melamina blanca|x|e1000|h6:2c6a2612|g1:25c95c54|c0|o-|@ec2e0f41"
   ]
+ },
+ "inner-clearance": {
+  "panels": 42,
+  "extras": 0,
+  "warnings": [
+   "inset",
+   "same-size"
+  ],
+  "p": [
+   "back|trassera|1177x777x10|DM (fons)|none|e0000|h0|g0|c0|o-|@9bbe88bc",
+   "back|trassera|1777x877x10|DM (fons)|none|e0000|h0|g0|c0|o-|@dfeb8e16",
+   "bottom|baix|762x500x19|Melamina blanca|x|e0010|h6:115be2d2|g1:78930635|c0|o-|@fe8ca509",
+   "bottom|baix|862x560x19|Melamina blanca|x|e0010|h9:c1152c7b|g1:44106f53|c0|o-|@fa238132",
+   "divider|divisor|1762x540x19|Melamina blanca|x|e1000|h66:8a6216d1|g0|c0|o-|@9aa08185",
+   "divider|divisor|569.5x459x19|Melamina blanca|x|e1000|h9:09258c92|g0|c0|o-|@74995c98",
+   "divider|divisor|870.5x540x19|Melamina blanca|x|e1000|h56:81687d19|g0|c0|o-|@3cfbfba8",
+   "door|porta d|1158x377.5x19|Melamina blanca|x|e1111|h3:e40ea1bf|g0|c2:f3b8e8e0|o-|@5733a721",
+   "door|porta e|1158x377.5x19|Melamina blanca|x|e1111|h3:07a89c51|g0|c2:ea5c850a|o-|@5e26c0b7",
+   "door|porta|896.5x446.5x19|Melamina blanca|x|e1111|h2:ec1b9c43|g0|c2:64a8d047|o-|@30c5950a",
+   "drawerBack|darrere calaix|391.5x364.5x16|Melamina blanca|y|e0100|h4:f490210c|g0|c0|o-|@1d4266a9",
+   "drawerBack|darrere calaix|391.5x364.5x16|Melamina blanca|y|e0100|h4:f490210c|g0|c0|o-|@2384b8d0",
+   "drawerBottom|fons calaix|507x379.5x10|DM (fons)|none|e0000|h0|g0|c0|o-|@7629ec6c",
+   "drawerBottom|fons calaix|507x379.5x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c7258cbd",
+   "drawerFront|frontal calaix|446.5x446.5x19|Melamina blanca|x|e1111|h4:fdd9bd98|g1:d47b0e46|c2:3aa33ac2|o-|@18cc33c1",
+   "drawerFront|frontal calaix|446.5x446.5x19|Melamina blanca|x|e1111|h4:fdd9bd98|g1:d47b0e46|c2:3aa33ac2|o-|@dd46221d",
+   "drawerSide|lateral calaix|500x413.5x16|Melamina blanca|x|e1000|h6:3978d1ba|g1:51ac37d2|c0|o-|@d8f46d5e",
+   "drawerSide|lateral calaix|500x413.5x16|Melamina blanca|x|e1000|h6:3978d1ba|g1:51ac37d2|c0|o-|@daec04fc",
+   "drawerSide|lateral calaix|500x413.5x16|Melamina blanca|x|e1000|h6:e0975ade|g1:51ac37d2|c0|o-|@b1ea9a13",
+   "drawerSide|lateral calaix|500x413.5x16|Melamina blanca|x|e1000|h6:e0975ade|g1:51ac37d2|c0|o-|@e3427301",
+   "facing|estanter 6|199.3x50x19|Melamina blanca|x|e1111|h0|g0|c0|o-|@e831de21|glue",
+   "fixedShelf|estanter fixe|459x369.5x19|Melamina blanca|y|e0001|h6:1fd72979|g0|c0|o-|@d64889b3",
+   "fixedShelf|estanter fixe|540x420.5x19|Melamina blanca|y|e0001|h6:8a238c9f|g0|c0|o-|@bfdd6d4d",
+   "fixedShelf|estanter fixe|540x420.5x19|Melamina blanca|y|e0001|h9:50d6cd47|g0|c0|o-|@fffbf88c",
+   "fixedShelf|estanter fixe|762x459x19|Melamina blanca|x|e0010|h9:779e4972|g0|c0|o-|@6d304731",
+   "shelf|estanter 1|520x419.5x19|Melamina blanca|y|e0001|h0|g0|c0|o-|@b89b096a",
+   "shelf|estanter 2|520x419.5x19|Melamina blanca|y|e0001|h0|g0|c0|o-|@0c84f6fb",
+   "shelf|estanter 3|520x200.3x19|Melamina blanca|y|e0001|h0|g0|c0|o-|@85781f0d",
+   "shelf|estanter 4|520x200.3x19|Melamina blanca|y|e0001|h0|g0|c0|o-|@da70c6aa",
+   "shelf|estanter 5|520x200.3x19|Melamina blanca|y|e0001|h0|g0|c0|o-|@5e099e2a",
+   "shelf|estanter 6|501x199.3x19|Melamina blanca|y|e0000|h0|g0|c0|o-|@0c7d8ff1|glue",
+   "shelf|estanter 6|501x199.3x19|Melamina blanca|y|e0000|h0|g0|c0|o-|@fd21e72d|glue",
+   "shelf|estanter|759x460x19|Melamina blanca|x|e0010|h0|g0|c0|o-|@782679ae",
+   "side|lat d|1200x500x19|Melamina blanca|x|e0110|h72:655c7aed|g1:b9adee07|c0|o-|@0c2ba103",
+   "side|lat d|1800x560x19|Melamina blanca|x|e0110|h13:1bae5f6f|g1:ee40d864|c0|o-|@8e0e5d7e",
+   "side|lat e|1200x500x19|Melamina blanca|x|e1100|h73:dfd23a70|g1:2e8b1244|c0|o-|@9cdaea3d",
+   "side|lat e|1800x560x19|Melamina blanca|x|e1100|h59:90705435|g1:5e8a7cce|c0|o-|@84a01218",
+   "spacer|estanter 6|199.3x12x19|Melamina blanca|x|e0000|h0|g0|c0|o-|@84871f83|glue",
+   "spacer|estanter 6|482x12x19|Melamina blanca|x|e0000|h0|g0|c0|o-|@c0c24726|glue",
+   "spacer|estanter 6|482x12x19|Melamina blanca|x|e0000|h0|g0|c0|o-|@c65d8d4f|glue",
+   "top|dalt|762x500x19|Melamina blanca|x|e1000|h9:3d941670|g1:0d67662c|c0|o-|@0ba6d9bf",
+   "top|dalt|862x560x19|Melamina blanca|x|e1000|h12:dd6bf0da|g1:3fa5a615|c0|o-|@3a5d08da"
+  ]
  }
 }

@@ -201,8 +201,37 @@ export function kitDrawerComposition(): Composition {
   }
 }
 
-/** Totes les plantilles del catàleg: les de l'app, les de botiga, les col·leccions i els mobles de revista, i el moble fix dels jocs de calaix. */
+/**
+ * Folgança de les peces de dins (`Carcass.innerClearance`): un moble de dues columnes amb divisors i prestatges fixos a
+ * la primera divisió (sencers) i a la segona i la tercera (1 mm menys, centrats), prestatges fixos i regulables, una porta
+ * i calaixos; i un d'encastat amb les portes de tota la zona i 2 mm. Fix al corpus: cap plantilla porta el camp.
+ */
+export function innerClearanceComposition(): Composition {
+  const a = defaultModule("in-a", "Dues columnes", { width: 900, height: 1800, depth: 560, innerClearance: 1 })
+  const b = defaultModule("in-b", "Encastat", { width: 800, height: 1200, depth: 500, innerClearance: 2 })
+  const two = (id: string, dir: "v" | "h", x: Zone, y: Zone): Zone => ({ id, split: { dir, sizes: ["auto", "auto"], children: [x, y] } })
+  return {
+    kind: "moble",
+    modules: [
+      {
+        ...a,
+        root: two("root", "v",
+          two("a", "h", { id: "a1", front: { kind: "door", mode: "single", hinge: "left" } }, { id: "a2", shelves: { n: 2, adjustable: false } }),
+          two("b", "h", { id: "b1", front: { kind: "drawers", n: 2, heights: ["auto", "auto"] } }, two("b2", "v", { id: "b21", shelves: { n: 3, adjustable: true } }, { id: "b22", shelves: { n: 1, adjustable: false, thickness: 50 } }))),
+      },
+      {
+        ...b,
+        gapBefore: 20,
+        fronts: { ...b.fronts, style: "inset" },
+        root: { ...two("root", "h", { id: "c1", shelves: { n: 1, adjustable: false } }, two("c2", "v", { id: "c21" }, two("c22", "h", { id: "c221" }, { id: "c222" }))), front: { kind: "door", mode: "double", hinge: "left" } },
+      },
+    ],
+    references: [],
+  }
+}
+
+/** Totes les plantilles del catàleg: les de l'app, les de botiga, les col·leccions i els mobles de revista, i els mobles fixos dels jocs de calaix i de la folgança de les peces de dins. */
 export function catalogCorpus(): CorpusItem[] {
-  const all = [...BUILTIN_TEMPLATES, TV_LIVING_ROOM, ...STORE_TEMPLATES, ...COLLECTION_PIECES.map((p) => ({ ...p, id: `col:${p.id}` })), ...MAG_FURNITURE.map((t) => ({ ...t, id: `mag:${t.id}` })), { id: "kit-dtc-ht11", make: kitDrawerComposition }]
+  const all = [...BUILTIN_TEMPLATES, TV_LIVING_ROOM, ...STORE_TEMPLATES, ...COLLECTION_PIECES.map((p) => ({ ...p, id: `col:${p.id}` })), ...MAG_FURNITURE.map((t) => ({ ...t, id: `mag:${t.id}` })), { id: "kit-dtc-ht11", make: kitDrawerComposition }, { id: "inner-clearance", make: innerClearanceComposition }]
   return all.map((t) => ({ id: t.id, make: () => stableIds(t.make()) }))
 }
