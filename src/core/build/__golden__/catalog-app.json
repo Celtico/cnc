@@ -4,13 +4,11 @@
   "extras": 6,
   "warnings": [
    "inset",
-   "mitre",
-   "mitre",
    "same-size"
   ],
   "p": [
    "back|trassera|1800x700x10|Contraxapat (fons)|none|e0000|h0|g0|c1:3b76db09|o-|@b2c626a6",
-   "bottom|baix|1800x440x19|Noguera xapada|x|e0010|h6:f1390da6|g0|c0|o-|@d291077a|m:left,right",
+   "bottom|baix|1762x440x19|Noguera xapada|x|e0010|h12:538f3b36|g0|c0|o-|@6e73024a",
    "divider|divisor|662x440x19|Noguera xapada|x|e1000|h12:e2e4f2b1|g0|c0|o-|@58b73340",
    "divider|divisor|662x440x19|Noguera xapada|x|e1000|h50:c2985e08|g0|c0|o-|@c8f8ceb1",
    "door|porta d|658x302.5x19|Noguera xapada|x|e1111|h2:e464d4cf|g0|c2:d983cabc|o-|@2753e0d3",
@@ -37,15 +35,15 @@
    "shelf|estanter 3|611x421x19|Noguera xapada|x|e0000|h0|g0|c0|o-|@00310cf1|glue",
    "shelf|estanter 3|611x421x19|Noguera xapada|x|e0000|h0|g0|c0|o-|@ce9747ab|glue",
    "shelf|estanter|611x420x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@dd80029e",
-   "side|lat d|700x440x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@31d9965a|m:left,right",
-   "side|lat e|700x440x19|Noguera xapada|x|e1000|h38:737d4ce1|g0|c0|o-|@4bec8771|m:left,right",
+   "side|lat d|700x440x19|Noguera xapada|x|e0110|h6:d2425234|g0|c0|o-|@31d9965a",
+   "side|lat e|700x440x19|Noguera xapada|x|e1100|h44:cd177927|g0|c0|o-|@4bec8771",
    "spacer|estanter 2|402x12x19|Noguera xapada|x|e0000|h0|g0|c0|o-|@2caefed1|glue",
    "spacer|estanter 2|402x12x19|Noguera xapada|x|e0000|h0|g0|c0|o-|@2ded98cb|glue",
    "spacer|estanter 2|611x12x19|Noguera xapada|x|e0000|h0|g0|c0|o-|@ad14c5d9|glue",
    "spacer|estanter 3|402x12x19|Noguera xapada|x|e0000|h0|g0|c0|o-|@81238f02|glue",
    "spacer|estanter 3|402x12x19|Noguera xapada|x|e0000|h0|g0|c0|o-|@8e871d48|glue",
    "spacer|estanter 3|611x12x19|Noguera xapada|x|e0000|h0|g0|c0|o-|@513a59b4|glue",
-   "top|dalt|1800x440x19|Noguera xapada|x|e1000|h6:f1390da6|g0|c0|o-|@bbb928be|m:left,right"
+   "top|dalt|1762x440x19|Noguera xapada|x|e1000|h12:538f3b36|g0|c0|o-|@4e73dace"
   ]
  },
  "floating-tv": {

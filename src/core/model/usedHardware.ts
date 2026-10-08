@@ -1,5 +1,5 @@
 import type { Front, Module, Zone } from "./composition"
-import { visibleModule, walkBuiltZones } from "./composition"
+import { jointApplies, visibleModule, walkBuiltZones } from "./composition"
 import { isDrawerKit, moduleSlotItem, type HardwareItem, type HardwareSlot } from "./hardware"
 import { isPushClosing, kitOptionsOf, type HardwareKit } from "./hardwareKit"
 
@@ -169,12 +169,18 @@ export interface ModuleRows extends FrontOptionsUse {
   frontMaterial: boolean
   /** Unió › «Espiga». */
   dowel: boolean
+  /**
+   * Caixa › «Cantonades» (Normals / A inglet): hi ha res a unir (`jointApplies`) i els fronts no són encastats (amb
+   * l'Estil a «Encastats», no surt i compta com a Normals: `visibleModule`). Les parets buides ensenyen «A inglet» a part.
+   */
+  joint: boolean
 }
 
 export function moduleRows(module: Module): ModuleRows {
   const use = frontOptionsUse(module)
   const b = module.carcass.back
-  return { ...use, back: b === "groove" || b === "inset" ? b : undefined, frontMaterial: use.style, dowel: usedHardwareSlots(module).has("dowel") }
+  const joint = jointApplies(module.carcass) && !(use.style && module.fronts.style === "inset")
+  return { ...use, back: b === "groove" || b === "inset" ? b : undefined, frontMaterial: use.style, dowel: usedHardwareSlots(module).has("dowel"), joint }
 }
 
 /** On surt la «Filera System 32» del mòdul a l'inspector del compartiment (`system32RowPlace`). */

@@ -30,8 +30,10 @@ function scrambleHidden(m: Module, r: Rnd): Module {
     if (r() < 0.5) delete c.backInsetSetback
     else c.backInsetSetback = int(r, 0, 60)
   }
-  // Cantonades: si el control no surt, qualsevol valor; si surt, «Normals» = buit = "butt".
-  if (!jointShown(c)) {
+  // Cantonades: si el control no surt (tampoc amb l'Estil a «Encastats», que surt a sobre si hi ha algun front que es fa),
+  // qualsevol valor; si surt, «Normals» = buit = "butt".
+  const insetShown = m.fronts.style === "inset" && anyBuiltFront(m.root, { left: c.sides.left, right: c.sides.right })
+  if (!jointShown(c) || insetShown) {
     const j = pick(r, [undefined, "butt", "mitre"] as const)
     if (j) c.joint = j
     else delete c.joint
@@ -329,6 +331,20 @@ describe("independència del camí: el mateix estat visible fa el mateix moble",
   it("cantonades amagades (sense tapa i amb sòcol): l'inglet d'abans no compta", () => {
     const ref = run([drawers, setTop("none"), plinth])
     for (const p of permutations([setJoint("mitre"), setTop("none"), plinth])) expect(run([drawers, ...p])).toBe(ref)
+  })
+  it("fronts encastats: Cantonades no surt i l'inglet d'abans no compta; torna amb Recobrents", () => {
+    const style = (st: "overlay" | "inset"): Op => (m) => ({ ...m, fronts: { ...m.fronts, style: st === "overlay" ? undefined : st } })
+    const door = rootFront({ kind: "door", mode: "single", hinge: "left" })
+    for (const f of [drawers, door]) {
+      const ref = run([f, style("inset")])
+      for (const p of permutations([f, setJoint("mitre"), style("inset")])) expect(run(p)).toBe(ref)
+      // L'inglet es conserva i torna en passar a Recobrents.
+      expect(run([f, setJoint("mitre"), style("inset"), style("overlay")])).toBe(run([f, setJoint("mitre")]))
+      expect(run([f, setJoint("mitre")])).not.toBe(run([f]))
+    }
+    // Sense cap front que es faci l'Estil no surt: l'inglet compta encara que l'estil guardat sigui «Encastats».
+    expect(run([style("inset"), setJoint("mitre")])).toBe(run([setJoint("mitre")]))
+    expect(run([setJoint("mitre")])).not.toBe(run([]))
   })
   it("tauler de taula amagat (la tapa ja no és sencera)", () => {
     expect(run([tableTop(true), setTop("ventSlot")])).toBe(run([setTop("ventSlot")]))
