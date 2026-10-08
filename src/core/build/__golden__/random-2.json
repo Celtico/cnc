@@ -1256,7 +1256,6 @@
    "hanging",
    "inset",
    "inset",
-   "mitre",
    "overlap",
    "same-size"
   ],
@@ -1276,12 +1275,12 @@
    "drawerSide|lateral calaix|400x60x16|Roure massís / xapat|x|e1000|h4:fdf7609b|g1:45309763|c0|o-|@0a09bc8c",
    "panel|frontal fix|694x567x16|MDF lacat|x|e1111|h0|g0|c0|o-|@2c0129d1",
    "panel|frontal fix|694x567x16|MDF lacat|x|e1111|h0|g0|c0|o-|@4ebd2c47",
-   "side|lat d|2030x450x19|Roure massís / xapat|x|e0010|h4:c62e853c|g1:42f3623e|c0|o-|@51ee5437|m:right",
+   "side|lat d|2030x450x19|Roure massís / xapat|x|e0110|h7:7ae00077|g1:42f3623e|c0|o-|@51ee5437",
    "side|lat d|730x280x16|Noguera xapada|x|e0110|h6:c5b00077|g0|c0|o-|@dcfb7e9b",
-   "side|lat e|2030x450x19|Roure massís / xapat|x|e1000|h4:cd475c6a|g1:d5aedaaa|c0|o-|@84a01218|m:right",
+   "side|lat e|2030x450x19|Roure massís / xapat|x|e1100|h7:b34f76e3|g1:d5aedaaa|c0|o-|@84a01218",
    "side|lat e|730x280x16|Noguera xapada|x|e1100|h6:c5b00077|g0|c0|o-|@f146f8f6",
    "top|dalt|1158x280x16|Noguera xapada|x|e1000|h9:768c09ba|g0|c10:9633ec34|o-|@88c35e33",
-   "top|dalt|450x420x19|Roure massís / xapat|y|e0100|h0|g1:474f22a4|c0|o-|@bdf4c399|m:bottom,top"
+   "top|dalt|450x382x19|Roure massís / xapat|y|e0100|h6:89e7902b|g1:2fef8125|c0|o-|@47ed8cb2"
   ]
  },
  "seed-84": {

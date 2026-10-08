@@ -329,13 +329,11 @@
   "extras": 0,
   "warnings": [
    "inset",
-   "mitre",
-   "mitre",
    "push"
   ],
   "p": [
    "back|trassera|710x500x10|DM (fons)|none|e0000|h0|g0|c0|o-|@6c80140c",
-   "bottom|baix|750x500x19|Noguera xapada|y|e0001|h0|g0|c0|o-|@a1652518|m:bottom,top",
+   "bottom|baix|750x462x19|Noguera xapada|y|e0001|h6:be98e286|g0|c0|o-|@fbc38015",
    "drawerBack|darrere calaix|405x168.5x16|Noguera xapada|x|e1000|h4:f2acccde|g0|c0|o-|@02cb6030",
    "drawerBack|darrere calaix|405x168.5x16|Noguera xapada|x|e1000|h4:f2acccde|g0|c0|o-|@32c2762d",
    "drawerBack|darrere calaix|405x168.5x16|Noguera xapada|x|e1000|h4:f2acccde|g0|c0|o-|@d246798c",
@@ -353,9 +351,9 @@
    "drawerSide|lateral calaix|550x190.5x16|Noguera xapada|x|e1000|h6:f6e7b3da|g1:43be8519|c0|o-|@68847943",
    "part|Pla|740x710x30|Noguera xapada|x|e1111|h0|g0|c0|o-|@915a4c7c",
    "part|Tauler|1800x800x30|Noguera xapada|x|e1111|h0|g0|c0|o-|@dd9e0155",
-   "side|lat d|750x710x19|Noguera xapada|y|e0001|h6:df4f00cb|g0|c0|o-|@0899337b|m:bottom,top",
-   "side|lat e|750x710x19|Noguera xapada|y|e0100|h6:d71b514c|g0|c0|o-|@62d1546a|m:bottom,top",
-   "top|dalt|750x500x19|Noguera xapada|y|e0100|h0|g0|c0|o-|@81b54fc2|m:bottom,top"
+   "side|lat d|750x710x19|Noguera xapada|y|e0011|h12:34e9ce09|g0|c0|o-|@0899337b",
+   "side|lat e|750x710x19|Noguera xapada|y|e0110|h12:d9e2afda|g0|c0|o-|@62d1546a",
+   "top|dalt|750x462x19|Noguera xapada|y|e0100|h6:be98e286|g0|c0|o-|@52cb7869"
   ]
  },
  "col:col-arquitectonic-wall-head-bed": {
@@ -379,21 +377,19 @@
   "extras": 0,
   "warnings": [
    "inset",
-   "mitre",
-   "mitre",
    "push"
   ],
   "p": [
    "back|trassera|500x180x10|DM (fons)|none|e0000|h0|g0|c0|o-|@8ad89855",
-   "bottom|baix|500x370x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@75953f31|m:left,right",
+   "bottom|baix|462x370x19|Noguera xapada|x|e0010|h6:97d4bf03|g0|c0|o-|@69a9f4c1",
    "drawerBack|darrere calaix|405x86x16|Noguera xapada|x|e1000|h4:2785d7f8|g0|c0|o-|@3e7805ea",
    "drawerBottom|fons calaix|420x307x10|DM (fons)|none|e0000|h0|g0|c0|o-|@4fecc792",
    "drawerFront|frontal calaix|458x138x19|Noguera xapada|x|e1111|h4:dc2817f4|g1:cce91ae9|c0|o-|@ed0a5bff|push",
    "drawerSide|lateral calaix|300x108x16|Noguera xapada|x|e1000|h6:4c9e90ac|g1:6d432c08|c0|o-|@210f16b0",
    "drawerSide|lateral calaix|300x108x16|Noguera xapada|x|e1000|h6:6185f120|g1:6d432c08|c0|o-|@333a851f",
-   "side|lat d|370x180x19|Noguera xapada|y|e0001|h2:6a207225|g0|c0|o-|@4bd94fc6|m:bottom,top",
-   "side|lat e|370x180x19|Noguera xapada|y|e0100|h2:c7720dd1|g0|c0|o-|@e022a6dd|m:bottom,top",
-   "top|dalt|500x370x19|Noguera xapada|x|e1000|h0|g0|c0|o-|@15735097|m:left,right"
+   "side|lat d|370x180x19|Noguera xapada|y|e0011|h8:f36014c6|g0|c0|o-|@4bd94fc6",
+   "side|lat e|370x180x19|Noguera xapada|y|e0110|h8:e1ccdea2|g0|c0|o-|@e022a6dd",
+   "top|dalt|462x370x19|Noguera xapada|x|e1000|h6:97d4bf03|g0|c0|o-|@a955b327"
   ]
  },
  "col:col-arquitectonic-wall-wardrobe": {
@@ -501,13 +497,11 @@
   "extras": 0,
   "warnings": [
    "inset",
-   "mitre",
-   "mitre",
    "push"
   ],
   "p": [
    "back|trassera|1600x180x10|DM (fons)|none|e0000|h0|g0|c0|o-|@2008ce48",
-   "bottom|baix|1600x440x19|Roure massís / xapat|x|e0010|h3:0ab8ee82|g0|c0|o-|@5d1cb0c2|m:left,right",
+   "bottom|baix|1562x440x19|Roure massís / xapat|x|e0010|h9:07203475|g0|c0|o-|@b946de92",
    "divider|divisor|440x142x19|Roure massís / xapat|y|e0100|h10:0cec03cf|g0|c0|o-|@93797140",
    "drawerBack|darrere calaix|714.5x86x16|Roure massís / xapat|x|e1000|h4:f703a100|g0|c0|o-|@72be3341",
    "drawerBack|darrere calaix|714.5x86x16|Roure massís / xapat|x|e1000|h4:f703a100|g0|c0|o-|@d470f7ec",
@@ -519,9 +513,9 @@
    "drawerSide|lateral calaix|400x108x16|Roure massís / xapat|x|e1000|h6:3697375a|g1:45309763|c0|o-|@aa6e1db7",
    "drawerSide|lateral calaix|400x108x16|Roure massís / xapat|x|e1000|h6:68cdc65a|g1:45309763|c0|o-|@df00e3c9",
    "drawerSide|lateral calaix|400x108x16|Roure massís / xapat|x|e1000|h6:68cdc65a|g1:45309763|c0|o-|@e639dcb0",
-   "side|lat d|440x180x19|Roure massís / xapat|y|e0001|h2:6a207225|g0|c0|o-|@aad3fc3b|m:bottom,top",
-   "side|lat e|440x180x19|Roure massís / xapat|y|e0100|h2:8ce56740|g0|c0|o-|@d9439768|m:bottom,top",
-   "top|dalt|1600x440x19|Roure massís / xapat|x|e1000|h3:0ab8ee82|g0|c0|o-|@701f6966|m:left,right"
+   "side|lat d|440x180x19|Roure massís / xapat|y|e0011|h8:caae52ae|g0|c0|o-|@aad3fc3b",
+   "side|lat e|440x180x19|Roure massís / xapat|y|e0110|h8:74e99431|g0|c0|o-|@d9439768",
+   "top|dalt|1562x440x19|Roure massís / xapat|x|e1000|h9:07203475|g0|c0|o-|@9dc06fb6"
   ]
  },
  "col:col-arquitectonic-bench-library": {
@@ -566,7 +560,6 @@
   "extras": 0,
   "warnings": [
    "inset",
-   "mitre",
    "push"
   ],
   "p": [
@@ -584,9 +577,9 @@
    "shelf|estanter 6|470.5x420x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@35692915",
    "shelf|estanter 7|470.5x420x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@a3813b2c",
    "shelf|estanter 8|470.5x420x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@0cf1be81",
-   "side|lat d|2200x440x19|Roure massís / xapat|x|e0010|h129:36d4ffec|g0|c0|o-|@0a0346fe|m:right",
-   "side|lat e|2200x440x19|Roure massís / xapat|x|e1000|h129:36d4ffec|g0|c0|o-|@641cff2b|m:right",
-   "top|dalt|1000x440x19|Roure massís / xapat|x|e1000|h3:0231bb95|g0|c0|o-|@cce8b238|m:left,right"
+   "side|lat d|2200x440x19|Roure massís / xapat|x|e0110|h132:0ea77bd3|g0|c0|o-|@0a0346fe",
+   "side|lat e|2200x440x19|Roure massís / xapat|x|e1100|h132:0ea77bd3|g0|c0|o-|@641cff2b",
+   "top|dalt|962x440x19|Roure massís / xapat|x|e1000|h9:9fea46af|g0|c0|o-|@f613ffc8"
   ]
  },
  "col:col-arquitectonic-waterfall-table": {
@@ -730,13 +723,11 @@
   "extras": 0,
   "warnings": [
    "inset",
-   "mitre",
-   "mitre",
    "push"
   ],
   "p": [
    "back|trassera|1000x170x10|DM (fons)|none|e0000|h0|g0|c0|o-|@faa6ae0e",
-   "bottom|baix|1000x590x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@fcd797d1|m:left,right",
+   "bottom|baix|962x590x19|Roure massís / xapat|x|e0010|h6:fc7d690c|g0|c0|o-|@defafd87",
    "drawerBack|darrere calaix|905x76x16|Roure massís / xapat|x|e1000|h4:17bebfd8|g0|c0|o-|@ce41886d",
    "drawerBottom|fons calaix|920x557x10|DM (fons)|none|e0000|h0|g0|c0|o-|@876702bd",
    "drawerFront|frontal calaix|958x128x19|Roure massís / xapat|x|e1111|h4:a4c431fa|g1:d3db65d6|c0|o-|@c3cd5bbf|push",
@@ -745,9 +736,9 @@
    "part|Pota|710x650x30|Roure massís / xapat|y|e1111|h0|g0|c0|o-|@84d81347",
    "part|Pota|710x650x30|Roure massís / xapat|y|e1111|h0|g0|c0|o-|@c416e383",
    "part|Tauler|1600x750x30|Roure massís / xapat|x|e1111|h0|g0|c0|o-|@e2e3af89",
-   "side|lat d|590x170x19|Roure massís / xapat|y|e0001|h2:3a78d06f|g0|c0|o-|@c0662507|m:bottom,top",
-   "side|lat e|590x170x19|Roure massís / xapat|y|e0100|h2:e0614b09|g0|c0|o-|@421e8da5|m:bottom,top",
-   "top|dalt|1000x590x19|Roure massís / xapat|x|e1000|h0|g0|c0|o-|@1f76fc3f|m:left,right"
+   "side|lat d|590x170x19|Roure massís / xapat|y|e0011|h8:b05388c9|g0|c0|o-|@c0662507",
+   "side|lat e|590x170x19|Roure massís / xapat|y|e0110|h8:43701c9b|g0|c0|o-|@421e8da5",
+   "top|dalt|962x590x19|Roure massís / xapat|x|e1000|h6:fc7d690c|g0|c0|o-|@a3aeef09"
   ]
  },
  "col:col-arquitectonic-chamber-wardrobe": {
@@ -1146,8 +1137,6 @@
    "inset",
    "mitre",
    "mitre",
-   "mitre",
-   "mitre",
    "push",
    "same-size"
   ],
@@ -1155,7 +1144,7 @@
    "back|trassera|1220x495x10|DM (fons)|none|e0000|h0|g0|c0|o-|@7dfbc10e",
    "back|trassera|1300x495x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
    "bottom|baix|1220x540x19|Freixe xapat|x|e0010|h0|g0|c0|o-|@0abc52a1|m:left,right",
-   "bottom|baix|1300x540x19|Freixe xapat|x|e0010|h3:a9384d71|g0|c0|o-|@60caf54f|m:left,right",
+   "bottom|baix|1262x540x19|Freixe xapat|x|e0010|h9:b4d4b7a8|g0|c0|o-|@d8ba92df",
    "divider|divisor|540x457x19|Freixe xapat|y|e0100|h10:b30c66c6|g0|c0|o-|@c69a4b1e",
    "drawerBack|darrere calaix|564.5x401x16|Freixe xapat|x|e1000|h4:1e5e84f8|g0|c0|o-|@7c90720f",
    "drawerBack|darrere calaix|564.5x401x16|Freixe xapat|x|e1000|h4:1e5e84f8|g0|c0|o-|@c9e8be37",
@@ -1168,11 +1157,11 @@
    "drawerSide|lateral calaix|500x423x16|Freixe xapat|x|e1000|h6:b9f3936d|g1:51ac37d2|c0|o-|@0ba3a6fc",
    "drawerSide|lateral calaix|500x423x16|Freixe xapat|x|e1000|h6:b9f3936d|g1:51ac37d2|c0|o-|@a76c97e6",
    "side|lat d|540x495x19|Freixe xapat|y|e0001|h24:cbef79be|g0|c0|o-|@5f17c44c|m:bottom,top",
-   "side|lat d|540x495x19|Freixe xapat|y|e0001|h2:dc4145fb|g0|c0|o-|@107a9931|m:bottom,top",
+   "side|lat d|540x495x19|Freixe xapat|y|e0011|h8:a1822ed7|g0|c0|o-|@107a9931",
    "side|lat e|540x495x19|Freixe xapat|y|e0100|h24:cbef79be|g0|c0|o-|@974c5684|m:bottom,top",
-   "side|lat e|540x495x19|Freixe xapat|y|e0100|h2:8a4ed53c|g0|c0|o-|@b6a66186|m:bottom,top",
+   "side|lat e|540x495x19|Freixe xapat|y|e0110|h8:027e9fa0|g0|c0|o-|@b6a66186",
    "top|dalt|1220x540x19|Freixe xapat|x|e1000|h0|g0|c0|o-|@ddd69422|m:left,right",
-   "top|dalt|1300x540x19|Freixe xapat|x|e1000|h3:a9384d71|g0|c0|o-|@dc79180c|m:left,right"
+   "top|dalt|1262x540x19|Freixe xapat|x|e1000|h9:b4d4b7a8|g0|c0|o-|@85495b9c"
   ]
  },
  "col:col-comercial-twin-coffee": {
@@ -1194,13 +1183,11 @@
   "extras": 0,
   "warnings": [
    "inset",
-   "mitre",
-   "mitre",
    "push"
   ],
   "p": [
    "back|trassera|2200x400x10|DM (fons)|none|e0000|h0|g0|c0|o-|@755c9b41",
-   "bottom|baix|2200x440x19|Freixe xapat|x|e0010|h6:aa92288e|g0|c0|o-|@069f76b1|m:left,right",
+   "bottom|baix|2162x440x19|Freixe xapat|x|e0010|h12:09a0acc6|g0|c0|o-|@8ab69e41",
    "divider|divisor|440x362x19|Freixe xapat|y|e0100|h28:83d5a9df|g0|c0|o-|@cd7f73a7",
    "divider|divisor|440x362x19|Freixe xapat|y|e0100|h28:c52767e1|g0|c0|o-|@ac806eef",
    "drawerBack|darrere calaix|651x306x16|Freixe xapat|x|e1000|h4:d120c924|g0|c0|o-|@a5431464",
@@ -1213,9 +1200,9 @@
    "drawerSide|lateral calaix|400x328x16|Freixe xapat|x|e1000|h6:a934c881|g1:45309763|c0|o-|@8f1f2163",
    "drawerSide|lateral calaix|400x328x16|Freixe xapat|x|e1000|h6:e55b6963|g1:45309763|c0|o-|@389c7897",
    "drawerSide|lateral calaix|400x328x16|Freixe xapat|x|e1000|h6:e55b6963|g1:45309763|c0|o-|@4e61078d",
-   "side|lat d|440x400x19|Freixe xapat|y|e0001|h2:c85eb0a9|g0|c0|o-|@a7bd6a1d|m:bottom,top",
-   "side|lat e|440x400x19|Freixe xapat|y|e0100|h2:093e11f4|g0|c0|o-|@cb4ebf71|m:bottom,top",
-   "top|dalt|2200x440x19|Freixe xapat|x|e1000|h6:aa92288e|g0|c0|o-|@f788e62b|m:left,right"
+   "side|lat d|440x400x19|Freixe xapat|y|e0011|h8:c2c606ea|g0|c0|o-|@a7bd6a1d",
+   "side|lat e|440x400x19|Freixe xapat|y|e0110|h8:e1c6716d|g0|c0|o-|@cb4ebf71",
+   "top|dalt|2162x440x19|Freixe xapat|x|e1000|h12:09a0acc6|g0|c0|o-|@5071fffb"
   ]
  },
  "col:col-comercial-linea-table": {
@@ -1488,22 +1475,20 @@
   "extras": 0,
   "warnings": [
    "inset",
-   "mitre",
-   "mitre",
    "push"
   ],
   "p": [
    "back|trassera|500x360x10|DM (fons)|none|e0000|h0|g0|c0|o-|@755c9b41",
-   "bottom|baix|500x390x19|Freixe xapat|x|e0010|h0|g0|c0|o-|@feface82|m:left,right",
+   "bottom|baix|462x390x19|Freixe xapat|x|e0010|h6:eb3c8593|g0|c0|o-|@f26bdd12",
    "drawerBack|darrere calaix|405x95.5x16|Freixe xapat|x|e1000|h4:ef5e865a|g0|c0|o-|@a5431464",
    "drawerBottom|fons calaix|420x357x10|DM (fons)|none|e0000|h0|g0|c0|o-|@8cee2d7c",
    "drawerFront|frontal calaix|458x147.5x19|Freixe xapat|x|e1111|h4:2bbc15d2|g1:6dd39d3c|c0|o-|@57b76494|push",
    "drawerSide|lateral calaix|350x117.5x16|Freixe xapat|x|e1000|h6:4ccd1843|g1:84e1fe9f|c0|o-|@389c7897",
    "drawerSide|lateral calaix|350x117.5x16|Freixe xapat|x|e1000|h6:b8cbc3a8|g1:84e1fe9f|c0|o-|@086950e3",
    "fixedShelf|estanter fixe|462x390x19|Freixe xapat|x|e0010|h6:eb3c8593|g0|c0|o-|@3347717f",
-   "side|lat d|390x360x19|Freixe xapat|y|e0001|h11:60b5b058|g0|c0|o-|@9150d3be|m:bottom,top",
-   "side|lat e|390x360x19|Freixe xapat|y|e0100|h11:320444e0|g0|c0|o-|@f82500bc|m:bottom,top",
-   "top|dalt|500x390x19|Freixe xapat|x|e1000|h0|g0|c0|o-|@43051b9a|m:left,right"
+   "side|lat d|390x360x19|Freixe xapat|y|e0011|h17:cf25ea4f|g0|c0|o-|@9150d3be",
+   "side|lat e|390x360x19|Freixe xapat|y|e0110|h17:d671a0e7|g0|c0|o-|@f82500bc",
+   "top|dalt|462x390x19|Freixe xapat|x|e1000|h6:eb3c8593|g0|c0|o-|@c014f72a"
   ]
  },
  "col:col-comercial-linea-fluted": {
@@ -1573,7 +1558,6 @@
   "extras": 1,
   "warnings": [
    "inset",
-   "mitre",
    "push"
   ],
   "p": [
@@ -1642,9 +1626,9 @@
    "drawerSide|lateral calaix|550x152x16|Noguera xapada|x|e1000|h6:e675059b|g1:43be8519|c0|o-|@dc99bf4a",
    "drawerSide|lateral calaix|550x152x16|Noguera xapada|x|e1000|h6:e675059b|g1:43be8519|c0|o-|@f2809209",
    "plinth|socol|1762x80x19|Noguera xapada|x|e1010|h0|g0|c0|o-|@9860c150",
-   "side|lat d|860x590x19|Noguera xapada|x|e0010|h11:f7d41c52|g0|c0|o-|@4b03004d|m:right",
-   "side|lat e|860x590x19|Noguera xapada|x|e1000|h11:edfebf2a|g0|c0|o-|@641cff2b|m:right",
-   "top|dalt|1800x590x19|Noguera xapada|x|e1000|h6:8e9d6d50|g0|c0|o-|@70aa465c|m:left,right"
+   "side|lat d|860x590x19|Noguera xapada|x|e0110|h14:8eac8f36|g0|c0|o-|@4b03004d",
+   "side|lat e|860x590x19|Noguera xapada|x|e1100|h14:ba0d9bce|g0|c0|o-|@641cff2b",
+   "top|dalt|1762x590x19|Noguera xapada|x|e1000|h12:9e62ac54|g0|c0|o-|@db95812c"
   ]
  }
 }

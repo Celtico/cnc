@@ -4,12 +4,12 @@
   "csv": {
    "rows": 37,
    "unplaced": 0,
-   "hash": "41e40196"
+   "hash": "a6275976"
   },
   "xcs": {
    "warnings": 12,
    "sheets": [
-    "T01_Noguera_xapada_19.xcs parts:19 drill:drill=60 outer:contour=57 #f1b90a08",
+    "T01_Noguera_xapada_19.xcs parts:19 drill:drill=72 outer:contour=57 #1bc1b60f",
     "T02_Noguera_xapada_19.xcs parts:5 drill:drill=22 outer:contour=15 #902cf1e7",
     "T03_Contraxapat_fons_10.xcs parts:4 inner:contour=1 outer:contour=10 #3c94a683",
     "T04_Noguera_xapada_16.xcs parts:9 drill:drill=12 outer:contour=27 #866b6100"
@@ -23,11 +23,10 @@
    "CIRCLE@DRILL_D35_P13=4",
    "CIRCLE@DRILL_D5_P12=44",
    "CIRCLE@DRILL_D8_P10=24",
-   "CIRCLE@DRILL_D8_P12=12",
-   "CIRCLE@DRILL_H_D8_P20=36",
+   "CIRCLE@DRILL_D8_P12=24",
+   "CIRCLE@DRILL_H_D8_P20=48",
    "ENDBLK@0=37",
    "INSERT@0=37",
-   "LINE@MITRE_45=8",
    "POLYLINE@CONTOUR=37",
    "POLYLINE@GROOVE_W10_P8=9",
    "SEQEND@CONTOUR=37",
