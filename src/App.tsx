@@ -17,6 +17,7 @@ import { ObjectsScreen } from "./features/objects/ObjectsScreen"
 import { compositionKind } from "./core/model"
 import { useSettings } from "./features/settings/SettingsContext"
 import { useLaunchFiles } from "./features/file/useLaunchFiles"
+import { showAmbient } from "./features/file/openAnyFile"
 import { UnitContext } from "./features/units"
 import { usePersistentNumber } from "./features/usePersistentNumber"
 import { isObject as projectIsObject } from "./features/objects/isObject"
@@ -142,8 +143,8 @@ export function App() {
     setProjectId(id)
     setScreen("editor")
   }
-  // Doble clic a un .moble (app instal·lada): l'obre com «Obrir fitxer».
-  useLaunchFiles(openProject)
+  // Doble clic a un .moble o un .ambient (app instal·lada): l'obre com «Obrir fitxer».
+  useLaunchFiles(openProject, showAmbient)
 
   const inProject = projectId !== null
   // Un objecte (per als ambients) s'edita amb el mateix Editor, però no té peces, nesting ni export.
@@ -232,7 +233,7 @@ export function App() {
     screen === "objects" ? (
       <ObjectsScreen onOpen={openProject} />
     ) : screen === "ambients" ? (
-      <AmbientsScreen onOpen={openAmbient} />
+      <AmbientsScreen onOpen={openAmbient} onOpenProject={openProject} />
     ) : screen === "ambient" && ambientId !== null ? (
       <AmbientEditor ambientId={ambientId} onOpenProject={openProject} />
     ) : screen === "settings" ? (

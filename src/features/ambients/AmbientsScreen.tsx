@@ -1,7 +1,9 @@
 import { Badge, Button, Dialog, Input, IconButton, Menu, Portal, SimpleGrid, Stack, Text, VStack } from "@chakra-ui/react"
 import { useEffect, useState, type ReactNode } from "react"
-import { LuFolders, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuTrash2 } from "react-icons/lu"
+import { LuFolders, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuSave, LuTrash2 } from "react-icons/lu"
 import { SearchBar } from "../../components/SearchBar"
+import { OpenFileButton } from "../file/OpenFileButton"
+import { SaveAmbientFileDialog } from "../file/SaveFileDialog"
 import { toaster } from "../../components/ui/toaster"
 import { uniqueName } from "../../core/file/mobleFile"
 import { AMBIENT_CATEGORIES, AMBIENT_TEMPLATES, EMPTY_AMBIENT, parseAmbient, type Ambient, type AmbientTemplate } from "../../core/model"
@@ -25,9 +27,10 @@ import { catalogThumb, needsAmbientThumb, requestAmbientThumb, requestCatalogThu
  * blocs senzills. Cada targeta és un ambient; «Ambient nou» en crea un amb una habitació de
  * 4 × 3 m per començar.
  */
-export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
+export function AmbientsScreen({ onOpen, onOpenProject }: { onOpen: (id: number) => void; onOpenProject: (id: number) => void }) {
   const rows = useLiveQuery(() => db.ambients.orderBy("updatedAt").reverse().toArray(), [])
   const [toDelete, setToDelete] = useState<AmbientRow | null>(null)
+  const [toSave, setToSave] = useState<AmbientRow | null>(null)
   const [toMove, setToMove] = useState<AmbientRow | null>(null)
   const [query, setQuery] = useState("")
   const [busy, setBusy] = useState<string | null>(null)
@@ -109,6 +112,9 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
                   <Portal>
                     <Menu.Positioner>
                       <Menu.Content>
+                        <Menu.Item value="file" onClick={() => setToSave(r)}>
+                          <LuSave /> Desar com a fitxer…
+                        </Menu.Item>
                         <Menu.Item value="dup" onClick={() => (setClient(""), setAsking({ row: r }))}>
                           <LuCopy /> Duplicar (per a un client)…
                         </Menu.Item>
@@ -138,7 +144,10 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
         description="El plànol de la casa amb els mobles al seu lloc: dibuixa les parets (o posa-hi la imatge d'un plànol), col·loca-hi els teus mobles i objectes i mira-ho en 3D o fes-ne un render. Al catàleg hi ha habitacions moblades, a punt per a renders."
       />
       <Stack gap={4}>
-        <SearchBar value={query} onChange={setQuery} placeholder="Cercar ambients: nom, habitació, material…" ariaLabel="Cercar ambients" add={{ label: "Nou ambient", onClick: () => void create() }} />
+        <SearchBar value={query} onChange={setQuery} placeholder="Cercar ambients: nom, habitació, material…" ariaLabel="Cercar ambients" add={{ label: "Nou ambient", onClick: () => void create() }}
+          // Com a Mobles i Objectes: un .ambient crea un ambient nou amb còpies dels seus mobles; un .moble s'obre a Mobles o Objectes.
+          extra={<OpenFileButton page="ambient" onOpened={(o) => (o.kind === "ambient" ? onOpen(o.ambientId) : onOpenProject(o.projectId))} />}
+        />
         <FoldGroup variant="gallery" storageKey="mobles:ambients" forceOpen={q ? found : null}>
           <FoldItem id="history" icon={LuHistory} title="Historial" count={looseRows.length}>
             {looseRows.length === 0 ? (
@@ -241,6 +250,7 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
           </Dialog.Positioner>
         </Portal>
       </Dialog.Root>
+      <SaveAmbientFileDialog ambientId={toSave?.id ?? null} name={toSave?.name ?? ""} open={toSave !== null} onClose={() => setToSave(null)} />
       <MoveToFolderDialog
         open={toMove !== null}
         what={toMove?.name ?? ""}

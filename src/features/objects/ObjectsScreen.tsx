@@ -7,6 +7,8 @@ import type { Composition } from "../../core/model"
 import { ClearHistory } from "../projects/ClearHistory"
 import { blankObject } from "../projects/blank"
 import { SaveFileDialog } from "../file/SaveFileDialog"
+import { OpenFileButton } from "../file/OpenFileButton"
+import { showAmbient } from "../file/openAnyFile"
 import { FolderedGrid, MoveToFolderDialog } from "../projects/Folders"
 import { createProject, db, deleteProject, isEdited, setProjectsFolder, duplicateProject, type Project } from "../../db/db"
 import { useAmbientMembership } from "../ambients/useAmbientMembership"
@@ -40,6 +42,8 @@ export function ObjectsScreen({ onOpen }: { onOpen: (id: number) => void }) {
       <ObjectsGallery
         onCreate={(c, n) => void create(c, n)}
         add={{ label: "Nou objecte", onClick: () => void create(blankObject(), "Objecte nou") }}
+        // Com a Mobles: un .moble que no és un objecte s'obre igualment (com a moble, i ho diu), i un .ambient, a Ambients.
+        extra={<OpenFileButton page="objecte" onOpened={(o) => (o.kind === "ambient" ? showAmbient(o.ambientId) : onOpen(o.projectId))} />}
         history={(matches, searching) => {
           const shown = (projects ?? []).filter((p) => isObject(p) && (!searching || matches(projectSearchText(p))))
           // Historial = el que és de pas (sense grup); el que es desa en un grup passa a Projectes.

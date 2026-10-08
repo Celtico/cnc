@@ -19,10 +19,13 @@ export function ObjectsGallery({
   history,
   storageKey = "mobles:objects",
   add,
+  extra,
 }: {
   onCreate: (composition: Composition, name: string) => void
   /** Botó principal al costat del cercador («Nou objecte»); la finestra dels ambients no en porta. */
   add?: { label: string; onClick: () => void }
+  /** Més accions a la fila del cercador (a la pàgina, «Obrir fitxer»). */
+  extra?: ReactNode
   history: (query: (text: string) => boolean, searching: boolean) => { count: number; node: ReactNode; projects?: { count: number; node: ReactNode } }
   storageKey?: string
 }) {
@@ -37,7 +40,7 @@ export function ObjectsGallery({
   const pick = (t: Template) => onCreate({ ...t.make(), kind: "objecte" }, t.name)
   return (
     <Stack gap={4}>
-      <SearchBar value={query} onChange={setQuery} placeholder="Cercar objectes: nom, material…" ariaLabel="Cercar objectes" add={add} />
+      <SearchBar value={query} onChange={setQuery} placeholder="Cercar objectes: nom, material…" ariaLabel="Cercar objectes" add={add} extra={extra} />
       <FoldGroup variant="gallery" storageKey={storageKey} forceOpen={q ? found : null}>
         <FoldItem id="mine" icon={LuHistory} title="Historial" count={hist.count}>
           {hist.node}

@@ -1,16 +1,15 @@
 import {
   Button,
   Dialog,
-  IconButton,
   Portal,
   Text,
   VStack,
 } from "@chakra-ui/react"
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { LuFolderOpen, LuTrash2 } from "react-icons/lu"
-import { Tooltip } from "../../components/ui/tooltip"
+import { LuTrash2 } from "react-icons/lu"
 import { SaveFileDialog } from "../file/SaveFileDialog"
-import { openMobleFile } from "../file/mobleIo"
+import { OpenFileButton } from "../file/OpenFileButton"
+import { showAmbient } from "../file/openAnyFile"
 import { uniqueName } from "../../core/file/mobleFile"
 import { NewMobleGallery } from "./NewMobleGallery"
 import { ProjectCard } from "./ProjectCard"
@@ -19,12 +18,10 @@ import { useAmbientMembership } from "../ambients/useAmbientMembership"
 import type { Composition } from "../../core/model"
 import { ClearHistory } from "./ClearHistory"
 import { blankMoble, NEW_MOBLE_NAMES } from "./blank"
-import { useSettings } from "../settings/SettingsContext"
 import { FolderedGrid, MoveToFolderDialog } from "./Folders"
 import { createProject, db, deleteProject, isEdited, setProjectsFolder, duplicateProject, type Project } from "../../db/db"
 import { useProjects } from "../useProject"
 import { toaster } from "../../components/ui/toaster"
-import { fileAccept } from "../file/fileAccept"
 import { PageHeader } from "../../components/PageHeader"
 import { projectSearchText } from "./searchText"
 
@@ -34,7 +31,6 @@ export type ProjectsRequest = { kind: "open"; n: number } | null
 export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOpen: (id: number) => void; request?: ProjectsRequest; onRequestDone?: () => void }) {
   const projects = useProjects()
   const membership = useAmbientMembership()
-  const { settings, save } = useSettings()
   const [toDelete, setToDelete] = useState<Project | null>(null)
   const [toSave, setToSave] = useState<Project | null>(null)
   const [toMove, setToMove] = useState<Project | null>(null)
@@ -50,20 +46,6 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
     onRequestDone?.()
     fileInput.current?.click()
   }, [request, onRequestDone])
-  const handleOpenFile = async (file: File | undefined) => {
-    if (fileInput.current) fileInput.current.value = ""
-    if (!file) return
-    const text = await file.text()
-    // Un .moble (també les plantilles exportades abans) s'obre sempre com a moble.
-    const res = await openMobleFile(text, settings, save)
-    if (!res.ok) {
-      toaster.create({ title: "No s'ha pogut obrir el fitxer", description: res.error, type: "error" })
-      return
-    }
-    toaster.create({ title: `«${res.name}» obert`, description: res.warnings.join(" ") || undefined, type: res.warnings.length ? "warning" : "success", duration: res.warnings.length ? 8000 : undefined })
-    onOpen(res.projectId)
-  }
-
   /** Crea un moble a partir d'una composició (en blanc o de plantilla) i l'obre. */
   const handleCreate = async (composition: Composition, name: string) => {
     const existing = (await db.projects.toArray()).map((p) => p.name)
@@ -86,7 +68,6 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
 
   return (
     <VStack align="stretch" gap={5}>
-      <input ref={fileInput} type="file" accept={fileAccept(".moble,.json,application/json")} hidden onChange={(e) => void handleOpenFile(e.target.files?.[0])} />
       {/* Accions de l'apartat a la seva capçalera (no al menú global), com a les apps professionals. */}
       <PageHeader
         title="Mobles"
@@ -98,13 +79,8 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
         // El botó principal al costat del cercador (com a Ambients i Objectes) i «Obrir fitxer» a la mateixa fila.
         // «Nou moble» crea directament un moble en blanc (per decisió de l'usuari, sense menú de tipus).
         add={{ label: "Nou moble", onClick: () => void handleCreate(blankMoble("moble"), NEW_MOBLE_NAMES.moble) }}
-        extra={
-          <Tooltip content="Obrir fitxer">
-            <IconButton size="sm" variant="outline" flexShrink={0} aria-label="Obrir fitxer" onClick={() => fileInput.current?.click()}>
-              <LuFolderOpen />
-            </IconButton>
-          </Tooltip>
-        }
+        // Un .moble (també les plantilles exportades abans) s'obre sempre com a moble; un objecte o un .ambient, com el que són.
+        extra={<OpenFileButton page="moble" inputRef={fileInput} onOpened={(o) => (o.kind === "ambient" ? showAmbient(o.ambientId) : onOpen(o.projectId))} />}
         history={(matches, searching) => {
           const shown = (projects ?? []).filter((p) => !isObject(p) && (!searching || matches(projectSearchText(p))))
           // Historial = el que és de pas (sense grup); el que es desa en un grup passa a Projectes.
