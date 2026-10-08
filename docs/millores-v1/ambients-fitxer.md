@@ -1,7 +1,29 @@
 # Desar ambients com a fitxer (`.ambient`)
 
+> **FET (2026-10-08)**, per la petició del propietari: «poder guardar un ambient com es fa als mobles i als objectes, i
+> posar el botó Obrir a Objectes i a Ambients». Descripció vigent a `CLAUDE.md` › Desar i fitxers › Fitxer `.ambient` i
+> Obrir fitxer. **El que difereix d'aquest estudi:**
+>
+> - **Sempre còpia, mai enllaç** (decisió del propietari): obrir un `.ambient` crea un ambient nou i còpies noves de
+>   tots els seus mobles i objectes, al grup amb el nom de l'ambient (com «Duplicar (per a un client)»). Per això no hi ha
+>   `ref` ni empremta (`templatePrint` no s'ha mogut), ni `matchFurniture`, ni el diàleg «Obrir l'ambient» de §3.1-3.2
+>   (restaurar / deixar absents / fer còpies), ni `origin`.
+> - **Cada moble és un `.moble` sencer** (`furniture: [{ key, moble: MobleFile }]`) en lloc del bloc `project` + `ref`:
+>   la foto (opcional, «Incloure les fotos dels mobles», apagat) i les referències van dins de cada moble (no hi ha
+>   `photos` ni `references` a dalt) i es llegeix amb `parseMobleData` (el mateix lector). Els models 3D sí que van un sol
+>   cop a dalt (`models`).
+> - **No porta** la foto de les finestres (`backdrop`, global: pregunta 3 oberta), el bloqueig de la càmera ni el `folder`;
+>   sí la configuració del Render (`render`, `SavedRender`), que en obrir-lo va a la clau de l'ambient nou.
+> - Materials (pregunta 1): com el `.moble`, no es porten; s'avisa dels que falten (`missingAmbientMaterials`).
+> - El despatxador (`openAnyFile`) es fa servir a **les tres** galeries (Mobles, Objectes, Ambients) i al doble clic: un
+>   fitxer s'obre sempre com el que és i el missatge diu on ha anat si no és de la pàgina.
+> - El diàleg de desar és el del `.moble` generalitzat (`SaveFileDialog.tsx`), no un de nou; la marca de «falta» i el
+>   Resum (§3.2, §4) ja existien i no s'han tocat.
+>
+> El text de sota és l'estudi original.
+
 Estudi per a la millora «Desar ambients» de [`PROMPT-millore-v1.md`](../prompt/PROMPT-millore-v1.md) §5 (línies 176-190)
-i la relació amb «Selecció dels ambients» (línies 194-206). **Només estudi: no s'ha tocat cap fitxer de codi.**
+i la relació amb «Selecció dels ambients» (línies 194-206).
 
 > Objectiu del propietari: «Desar com a fitxer» un ambient amb els mobles, els seus plànols, la vista/càmera, la
 > configuració del render i la resta del que cal. En obrir-lo, buscar si els mobles encara existeixen; els que no hi són

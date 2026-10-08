@@ -31,7 +31,8 @@ plantes, models 3D i renders són **decoratius**: no s'hi dedica temps mentre el
   (calibratge amb referència, mesures **relatives / estimades / reals**, recalibratge, qualitat, línia del terra i fondària).
 - [`docs/prompt/PROMPT-preferencies.md`](docs/prompt/PROMPT-preferencies.md): pantalla de **Preferències** (prompt inicial;
   els noms dels apartats d'ara són els d'aquest fitxer).
-- [`docs/prompt/PROMPT-fitxer-moble.md`](docs/prompt/PROMPT-fitxer-moble.md): **desar i obrir mobles com a fitxer `.moble`**.
+- [`docs/prompt/PROMPT-fitxer-moble.md`](docs/prompt/PROMPT-fitxer-moble.md): **desar i obrir mobles com a fitxer `.moble`**;
+  [`docs/millores-v1/ambients-fitxer.md`](docs/millores-v1/ambients-fitxer.md): el `.ambient` (estudi i el que s'ha fet).
 - [`docs/prompt/PROMPT-export-taller.md`](docs/prompt/PROMPT-export-taller.md) i [`docs/export-taller.md`](docs/export-taller.md):
   **export en format TopSolid (STEP 3D + CSV de nesting)**: eixos, numeració de cantells del taller, geometria de forats i
   ranures, etiqueta, test d'anada i tornada.
@@ -90,7 +91,7 @@ src/
     export/        # STEP, CSV de TopSolid, DXF, .xcs de Maestro, lector d'.xcs (Vista CAM), UnifiedData (JSON)
     machine/       # importar de Maestro (.machinecontext, .pgmx), tria d'eines, regles de mecanitzat
     process/       # post-processos de cada peça (2a cara, inglet, cantell, encolar, push)
-    file/          # fitxer .moble, zip
+    file/          # fitxers .moble i .ambient, zip
     import/        # ferratges del fabricant: lector STEP (cilindres) i DXF (vistes 2D), Hettich, proposta de forats
     photo/         # homografia, calibració amb referència, EXIF
   features/        # pantalles: projects (Mobles), editor, composition (arbre i inspectors), cutlist (Peces), nesting,
@@ -1362,7 +1363,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   `createAmbientFromTemplate` (`features/ambients/fromTemplate.ts`) crea cada moble i objecte (un per plantilla, a l'Historial
   o al grup del client) i l'ambient enllaçat. **Una escena del catàleg s'obre directament** i va a l'Historial (per decisió de l'usuari, sense preguntar).
 - **Ambients per a clients**: menú ⋯ › «Duplicar (per a un client)…» (`duplicateAmbient`): «escena · client», duplica els
-  mobles i objectes enllaçats i ho posa tot al grup del client: dos clients no comparteixen cap moble.
+  mobles i objectes enllaçats i ho posa tot al grup del client: dos clients no comparteixen cap moble (`remapMobleItems`,
+  el mateix que en obrir un `.ambient`).
+- **Desar com a fitxer** (`.ambient`, vegeu Desar i fitxers): menú ⋯ de la targeta i ⋯ de la barra de l'ambient obert.
 
 ## Objectes
 - Un objecte (sofà, làmpada, planta…) és un moble del tipus **`objecte`** (`partsOnlyKind`: només peces lliures, com el
@@ -1386,8 +1389,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Les tres pàgines fan igual**: capçalera `PageHeader` (títol gran i l'explicació), **cercador amb el botó principal al
   costat, a l'esquerra** (per decisió de l'usuari: primer els botons i després el cercador; `components/SearchBar`: «+ Nou moble» · «+ Nou objecte» · «+ Nou ambient», `colorPalette="wood"`, **buits** (per
   decisió de l'usuari: «que no fiqui res»): `projects/blank.ts` (moble sense mòduls, objecte sense peces) i l'ambient
-  sense parets (`EMPTY_AMBIENT`); «+ Nou moble» crea el moble directament (sense menú); amb text a l'ordinador i només la icona al mòbil, amb `aria-label` i tooltip; Mobles també «Obrir
-  fitxer», `LuFolderOpen`, a la mateixa fila, entre el «+» i el cercador; sense accents; obre les seccions i categories amb resultats) i acordions
+  sense parets (`EMPTY_AMBIENT`); «+ Nou moble» crea el moble directament (sense menú); amb text a l'ordinador i només la icona al mòbil, amb `aria-label` i tooltip; **«Obrir
+  fitxer»** (`LuFolderOpen`, `file/OpenFileButton.tsx`) a les tres, a la mateixa fila, entre el «+» i el cercador (vegeu
+  Desar i fitxers › Obrir fitxer); sense accents; obre les seccions i categories amb resultats) i acordions
   **tots tancats** en obrir l'app (estat de la sessió, p. ex. `mobles:gallery`): **Historial**, **Projectes** i **Catàleg**;
   a Mobles, a més, **Col·leccions de mobles**. Les galeries de les finestres «Afegir un moble» / «Afegir un objecte» dels ambients
   (`ambients/AmbientPicker.tsx`) no porten el botó (`add` opcional) ni la fila d'eines, però sí Historial · Projectes (amb els
@@ -1431,7 +1435,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Historial i Projectes**: primer l'**Historial** (el que és de pas, sense grup) i a sota **Projectes** (el que es desa en
   un grup, p. ex. un per client; `FolderedGrid show="loose"|"folders"`, `projects/Folders.tsx`: grups plegables amb ⋯
   canviar el nom / desagrupar; la cerca obre els grups amb resultats). Grups: `Project.folder`, `AmbientRow.folder`;
-  `setProjectsFolder`, `setAmbientsFolder`. Menú ⋯ de cada targeta: desar com a fitxer, duplicar, **moure a un grup…**
+  `setProjectsFolder`, `setAmbientsFolder`. Menú ⋯ de cada targeta: desar com a fitxer (`.moble`; a Ambients, `.ambient`), duplicar, **moure a un grup…**
   (`MoveToFolderDialog`), esborrar. **«Grup nou»** (nom i després es toquen les targetes) i **«Seleccionar»**
   (`FolderedGrid selection`): diverses targetes → moure-les a un grup o esborrar-les (els mobles i objectes que són en un
   ambient es conserven). **Modificats** (`Project.edited`, de `updateProjectComposition`; `isEdited` per als antics):
@@ -1810,9 +1814,33 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   (`materialRefNames`, les claus d'`aliasMaterialRefs`) que no són a les preferències després dels àlies (`missingMaterials`,
   `missingMaterialsWarning` a `openMobleFile`: «Materials que no tens a Preferències: …; es veuran amb un color per defecte i
   al taller sortiran amb aquest nom. Afegeix-los a Preferències › Materials.»). Les referències que falten s'afegeixen.
-- **Obrir un `.moble` amb doble clic** (app instal·lada, Chromium): `file_handlers` i `launch_handler` `focus-existing` al
-  manifest; `useLaunchFiles` (`features/file/useLaunchFiles.ts`, a `App`) llegeix la `launchQueue` i fa el mateix que «Obrir
-  fitxer» (espera les preferències). Safari/iOS no ho suporta.
+- **Fitxer `.ambient`** (`core/file/ambientFile.ts`, pur, test `ambientFile.test.ts`; I/O a `features/file/ambientIo.ts`;
+  per decisió de l'usuari, «guardar un ambient com es fa als mobles i als objectes»): JSON versionat (`format:
+  "mobles-cnc-ambient"`, `version: 1`) amb `ambient` (`name` i `data` = l'`Ambient` sencer: parets i obertures, elements,
+  grups, blocs, plànol de fons, materials, càmera i render a punt), `furniture` (un **`.moble` sencer** per cada moble i
+  objecte enllaçat, `{ key, moble: MobleFile }`; els elements apunten a `key`, dos elements del mateix moble la
+  comparteixen), `models` (GLB de l'usuari, **un sol cop** per id, no a cada moble) i `render` (la configuració del Render
+  desada per a l'ambient, `SavedRender`). Es desa amb «Desar com a fitxer…» (`LuSave`) al ⋯ de la targeta d'Ambients i al
+  ⋯ de la barra de l'ambient obert (`mobles:flush-save` abans), amb el diàleg comú del `.moble` (`SaveFileDialog.tsx`:
+  `SaveAmbientFileDialog`; interruptor «Incloure les fotos dels mobles», **apagat**, mida en viu i avisos): un moble que
+  ja no existeix o amb la composició il·legible no hi va (ni els seus elements) i el diàleg ho diu. `parseAmbientData`
+  repara **part a part** com el `.moble`: cada moble passa per `parseMobleData` (la mateixa reparació; un moble d'una
+  versió més nova rebutja el fitxer sencer), un moble il·legible es treu amb els seus elements, models i render malmesos
+  fora amb avís, l'ambient amb `parseAmbient`; un `.moble` triat com a ambient: «és un moble, no un ambient». **Obrir-lo
+  crea sempre un ambient nou i còpies noves dels seus mobles i objectes** (ids nous, enllaçats a l'ambient nou, no
+  esborranys; per decisió de l'usuari, no es busquen els que ja tens), tot al **grup amb el nom de l'ambient** (com
+  «Duplicar (per a un client)»: `remapMobleItems`); els models es tornen a crear amb el mateix id i les referències que
+  falten s'afegeixen (les peces de `mobleIo.ts`: `restoreUserModels`, `createProjectFromMoble`, `addMissingReferences`), i
+  s'avisa dels materials que no tens de l'ambient i dels mobles (`missingAmbientMaterials` → `missingMaterialsWarning`).
+  **No porta**: preferències (com el `.moble`), la foto de les finestres del render (és global) ni el bloqueig de la càmera.
+- **Obrir fitxer** (`features/file/openAnyFile.ts`, `openAnyFile`, i el botó `OpenFileButton`): les tres galeries (Mobles ·
+  Objectes · Ambients) i el doble clic obren **qualsevol** fitxer de l'app pel seu `format` (`fileKind`) i **com el que
+  és**: un `.moble` com a moble o objecte (segons la composició) i un `.ambient` com a ambient, sigui quina sigui la pàgina;
+  si no és de la pàgina, el missatge ho diu (`openedNote`: «És un moble: s'ha obert a Mobles.»). Un sol `accept`
+  (`.moble,.ambient,.json`).
+- **Obrir un `.moble` o un `.ambient` amb doble clic** (app instal·lada, Chromium): `file_handlers` (`.moble`, `.ambient`)
+  i `launch_handler` `focus-existing` al manifest; `useLaunchFiles` (`features/file/useLaunchFiles.ts`, a `App`) llegeix la
+  `launchQueue` i fa el mateix que «Obrir fitxer» (`openAnyFile`; espera les preferències). Safari/iOS no ho suporta.
 
 ## PWA
 - **Càrrega a demanda** (`App.tsx`, `React.lazy` + `Suspense`): Editor, Peces, Nesting, Exportar, Foto, Preferències i l'editor d'ambients es carreguen quan s'obren (la barra de l'ambient és a part, `ambients/AmbientTopBar.tsx`). `advancedChunks` només posa al bloc de three el nucli (`three/build`, `@react-three`, `three-stdlib`): els carregadors i exportadors de `three/examples` van amb qui els fa servir. React va al seu bloc (`react`, prioritat més alta): si no, entrava al de three i tota l'app carregava three d'entrada. **Res d'entrada importa three**: les galeries carreguen el dibuix de les miniatures amb `import()` (`projects/thumbJobs.ts`, `ambients/ambientRender.ts`; `THUMB_VERSION` és a `viewer/thumbVersion.ts`), `measureGlb` l'importa en pujar un model i `mobleIo` fa `forgetModel` amb `import()`. JS d'entrada ~1,5 MB (430 KB gz), abans 2,5 MB. Els fallbacks JS de Draco/Basis no es precachegen. Les textures procedurals que es llegeixen (`getImageData`) fan servir `willReadFrequently`.
@@ -1874,7 +1902,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Ferratges | Col·locat a mà (llista de l'inspector): Editar · Duplicar · Eliminar | `LuPencil` · `LuCopy` · `LuTrash2` |
 | Ferratges | Seccions de l'editor: General · Importat del fabricant (només els ja importats) · Plànols i documents · Placa · Mides · Quantitat per alçada · Distància entre forats · Mecanitzats | `LuInfo` · `LuUpload` · `LuFileText` · `LuSquareDot` · `LuMoveDiagonal` · `LuListOrdered` · `LuRuler` · `LuCircleDot` |
 | Preferències | Visor 3D (els materials per defecte als mòduls nous porten la de Materials, `LuPalette`) | `LuLampFloor` |
-| Fitxer | Desar com a fitxer · Obrir fitxer · Pujar un fitxer (preferències) | `LuSave` · `LuFolderOpen` · `LuUpload` |
+| Fitxer | Desar com a fitxer (`.moble`, `.ambient`) · Obrir fitxer (Mobles, Objectes, Ambients) · Pujar un fitxer (preferències) | `LuSave` · `LuFolderOpen` · `LuUpload` |
 | Models 3D | Triar fitxers… · Triar carpeta… (importar un model) · Afegir les textures a Materials | `LuFileUp` · `LuFolderOpen` · `LuPalette` |
 | Editor | Estructura · Propietats · Opcions de vista | `LuListTree` · `LuSlidersHorizontal` · `LuSlidersVertical` |
 | Editor | Pestanyes 3D · Alçat · Foto | `LuBox` · `LuLayoutPanelLeft` · `LuCamera` |
