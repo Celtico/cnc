@@ -156,6 +156,8 @@ export function ZonePanel({
 }) {
   // Hi ha on fer servir prestatges i accessoris: tapat per portes (com obert), o el seu contingut no l'omple.
   const shelvesBehind = coveredBy ? !coveredByFixed : !fillsZone(zone.front)
+  // Darrere d'un front fix (el seu o el de tota la zona que el tapa) no es divideix: les peces no es veurien ni es farien servir.
+  const behindFixed = coveredBy ? !!coveredByFixed : zone.front?.kind === "panel"
   return (
     <Stack gap={0}>
 
@@ -246,8 +248,8 @@ export function ZonePanel({
           {shelvesBehind && canHoldAccessories(bounds) && <AccessoriesSection root={root} zone={zone} hardware={hardware} onChange={onChange} />}
 
           {/* Només les direccions on el divisor té on unir-se (`splitDirsFor`): el vertical, a sota i a sobre; el
-              travesser, als dos costats. Sense cap, la secció no surt. */}
-          {splitDirsFor(bounds).length > 0 && (
+              travesser, als dos costats. Sense cap, o darrere d'un front fix, la secció no surt. */}
+          {splitDirsFor(bounds).length > 0 && !behindFixed && (
             <FoldItem id="zone-divide" title="Dividir" icon={LuSquareSplitHorizontal} defaultOpen={false}>
               <Text textStyle="xs" color="fg.muted">
                 Parteix aquest compartiment en dos. El contingut es queda al primer.
