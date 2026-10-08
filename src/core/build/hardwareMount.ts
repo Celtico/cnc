@@ -303,6 +303,13 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
       const sh = rc.shift(p)
       if (sh) panels[i] = { ...p, placement: { ...p.placement, origin: [p.placement.origin[0] + sh[0], p.placement.origin[1] + sh[1], p.placement.origin[2] + sh[2]] } }
     }
+  // Les espigues de la caixa només es veuen quan el ferratge és l'espiga: a la resta (sense base ni tapa al muntatge)
+  // sortien soltes i distreien del que es mira. És un dibuix: el moble es fabrica igual.
+  if (item.engine !== "dowel")
+    for (let i = 0; i < panels.length; i++) {
+      const p = panels[i]!
+      if (p.holes.some((h) => h.tag === "dowel")) panels[i] = { ...p, holes: p.holes.filter((h) => h.tag !== "dowel") }
+    }
   // Els components d'un joc de calaix (peces de només veure, `extras`): es veuen muntats amb la fusta. Els accessoris també.
   const solid: string[] = []
   for (const p of [...(item.engine === "drawerKit" ? build.extras.filter((p) => p.role === "hardware") : []), ...(rc.extras ? build.extras.filter(rc.extras) : [])]) {

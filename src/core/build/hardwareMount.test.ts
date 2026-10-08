@@ -46,11 +46,11 @@ describe("ferratge muntat", () => {
     expect(m.pending).toBe(false)
     expect(m.panels.map((p) => p.id)).toEqual(["side-left", "door"])
     expect(m.hinge).toEqual({ doorId: "door", sideId: "side-left" })
-    // Les mateixes peces que un mòdul igual fet a mà.
+    // Les mateixes peces que un mòdul igual fet a mà (sense les espigues de la caixa: només es dibuixen al de l'espiga).
     const base = defaultModule("mount", "Muntatge")
     const same: Module = { ...base, carcass: { ...base.carcass, width: 400, height: 450, depth: 320 }, root: { id: "mount-root", front: { kind: "door", mode: "single", hinge: "left" } } as Zone }
     const ref = buildModule(same).panels
-    for (const p of m.panels) expect(p.holes).toEqual(ref.find((x) => x.id === p.id)!.holes)
+    for (const p of m.panels) expect(p.holes).toEqual(ref.find((x) => x.id === p.id)!.holes.filter((h) => h.tag !== "dowel"))
     // La primera cassoleta (la de baix), a la cara de dins de la porta.
     expect(m.focus).toMatchObject({ panelId: "door", hole: { tag: "hinge", diameter: 35 }, normal: [0, 0, -1] })
     const plan = mountPlan(m)!
