@@ -153,7 +153,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     la placa a la cara de sota de la base a cada pota (`buildLegs`).
   - **Fons** (`Carcass.back`): en ranura · cargolat darrere · **encastat** · sense. Encastat (`buildInsetBack`): ocupa la
     llum interior (on falta una peça, fins a fora; parets buides: entre les pells de dins), enrasat o retirat
-    `backInsetSetback` (Acabats i ferratges, «Retirada del fons»); pot ser del tauler del cos (veta vertical, cantell només on no toca
+    `backInsetSetback` (Acabats, «Retirada del fons»); pot ser del tauler del cos (veta vertical, cantell només on no toca
     res). S'uneix com un prestatge fix: 3 espigues per costat (`threeAlong`, `endOffset`) a laterals, base i tapa (no al
     tauler de taula ni on la tapa amb ranura d'aire no arriba); amb menys de 15 mm, sense espigues i avís `back-inset`
     (cargolar-lo). L'interior comença a `backInnerZ` = retirada + gruix; la filera System 32 de darrere es mesura des del
@@ -170,7 +170,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     avís informatiu), capa DXF `MITRE_45`, «n∠45°» al llistat i al CSV, trapezi al 3D/GLB, 45° al STEP. **Espigues**:
     la tapa i la base a inglet no en porten (s'encolen amb lamel·les o Clamex, avís `mitre`); les de divisors, prestatges
     fixos, fons encastat i una base amb sòcol sí. `carcassDowels` (`core/model/usedHardware.ts`) diu on n'hi ha: un
-    mòdul tot a inglet sense divisions ni fons encastat no ensenya l'**Espiga** a «Acabats i ferratges» (`frontsInspector.test.ts`).
+    mòdul tot a inglet sense divisions ni fons encastat no ensenya l'**Espiga** a «Acabats» (`frontsInspector.test.ts`).
   - **Fronts** Recobrents / Encastats (`fronts.style`; s'edita a Interior › Acabats, «Estil», no a la Caixa: és
     dels fronts; sense cap front no surt ni compta, `visibleModule`): encastats dins de la llum amb la folgança a tot el voltant, a nivell amb
     el davant (`frontZ`), caixa del calaix un gruix més curta i avís si els prestatges no es retiren prou.
@@ -819,7 +819,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   - Mòdul: Mides · Posició · Caixa (abans «Estructura», es confonia amb la pestanya de l'arbre; **només la caixa**: base
     —amb la «Pota» pel mateix `HardwarePick`—, fons, tapa, laterals, parets, cantonades (en cascada); l'estil dels fronts i el
     tirador són a l'Interior) · Materials (cos, fons i, amb calaixos, **«Fons del calaix»**,
-    `Carcass.drawerBottomMaterial`; el dels fronts és a Interior › Acabats › Material dels fronts) · **Acabats i ferratges**
+    `Carcass.drawerBottomMaterial`; el dels fronts és a Interior › Acabats › Material dels fronts) · **Acabats**
     (abans «Fusteria (avançat)», per decisió de l'usuari; id de secció `mod-joinery`, `LuHammer`;
     **només la caixa**, per decisió de l'usuari: Ranura o Retirada del fons quan toca i els ferratges dels laterals i de
     les unions, l'Espiga, `JoineryForm`; **només els que el mòdul fa servir**: `usedHardwareSlots`, pels
@@ -1601,7 +1601,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   mateix que el `MaterialSelect`): cercador (`hardwareMatches`), categories › sèries (`seriesGroups`, a
   `settings/hardwareGroups.ts`, com Preferències) i `GalleryCard` amb la miniatura (`settings/HardwareThumb.tsx`, mòdul
   d'exemple `useMountBase`: les mateixes miniatures desades). Frontissa, guia, braç, tirador de cada front
-  (`HardwarePick`, a dalt «Com el mòdul»), els ferratges d'«Acabats i ferratges» del mòdul, la Pota de la base (a dalt
+  (`HardwarePick`, a dalt «Com el mòdul»), els ferratges d'«Acabats» del mòdul, la Pota de la base (a dalt
   «Genèriques») i el Ferratge d'un col·locat (només els compatibles amb les peces, `placeableOn`). Les
   còpies que no són a la biblioteca tal qual (`hardwareChoices`, per contingut, no per id) surten a part, «Còpia pròpia»,
   triades: es veu el que es fabrica i s'hi pot tornar; els importats sense confirmar porten «Sense confirmar» i la nota a
@@ -1893,7 +1893,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Front | Una porta · Dues portes · Abatible avall · amunt · Ranures horitzontals · verticals (reixeta) | `LuDoorClosed` · `LuFlipHorizontal2` · `LuArrowDownToLine` · `LuArrowUpToLine` · `LuAlignJustify` · `LuColumns3` |
 | Front | Recobrents (fronts) | `LuSquareStack` |
 | Forma | Rectangle · Arrodonit · Oval (tauler de taula) · Efecte obstacle | `LuRectangleHorizontal` · `LuSquircle` · `LuCircle` · `LuShield` |
-| Inspector | Mides · Caixa (base, fons, tapa, laterals) · Materials · Acabats i ferratges (només l'inspector del mòdul) · Ferratges (inspector de la peça lliure, Preferències i visor; no al mòdul) · Front · Acabats (Interior; abans Fronts i calaixos) · Pare | `LuMoveDiagonal` · `LuFrame` · `LuPalette` · `LuHammer` · `LuWrench` · `LuDoorClosed` · `LuDoorClosed` · `LuArrowUp` |
+| Inspector | Mides · Caixa (base, fons, tapa, laterals) · Materials · Acabats (només l'inspector del mòdul) · Ferratges (inspector de la peça lliure, Preferències i visor; no al mòdul) · Front · Acabats (Interior; abans Fronts i calaixos) · Pare | `LuMoveDiagonal` · `LuFrame` · `LuPalette` · `LuHammer` · `LuWrench` · `LuDoorClosed` · `LuDoorClosed` · `LuArrowUp` |
 | Inspector | Base: Directe a terra · Sòcol · Potes (la de la categoria Potes, no la Taula) · Sense base | `LuArrowDownToLine` · `LuPanelBottom` · `LuFootprints` · `LuSquareDashedBottom` |
 | Inspector | Fons en ranura · Cargolat darrere · Encastat · Sense fons | `LuLayers2` · `LuDrill` · `LuInspectionPanel` · `LuSquareDashed` |
 | Inspector | Resum del moble · Posició | `LuBox` · `LuMove` |
@@ -1953,8 +1953,7 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
 | **Folgança** | separacions: front–cos, entre fronts, lateral i darrere de la guia, prestatge, fons, encaixos, peces de dins; **Folgances per defecte** a Preferències |
 | **Joc** | només el joc paramètric del fabricant (`HardwareKit`, «joc de calaix», «Ferratges dels jocs») |
 | **Ferratge** | qualsevol `HardwareItem`; **Ferratges**, la secció de l'inspector de la peça lliure (no la del mòdul), la biblioteca de Preferències i l'opció del visor (`LuWrench`) |
-| **Acabats i ferratges** | la secció del mòdul (abans «Fusteria (avançat)»): les mides d'unió de fusta (ranura i retirada del fons) i els ferratges de la caixa (espiga; la filera System 32 és als Prestatges o al Front del compartiment) (`LuHammer`) |
-| **Acabats** | la secció de l'Interior amb l'estil, les folgances, el **material dels fronts** i els ferratges per defecte dels compartiments; **Acabats de l'escena**, terra i paret de la presentació |
+| **Acabats** | dues seccions amb el mateix nom (per decisió de l'usuari), una a cada nivell: la del **mòdul** (abans «Fusteria (avançat)», `LuHammer`): ranura i retirada del fons i l'espiga de la caixa; la de l'**Interior** (`LuDoorClosed`): estil, folgances, **material dels fronts** i ferratges per defecte dels compartiments. **Acabats de l'escena**: terra i paret de la presentació |
 | **Com el mòdul** / **Com el cos** / **Com a Preferències** | heretat; **Còpia pròpia**, la còpia d'un ferratge que ja no és a la biblioteca tal qual |
 | **Accessoris** | barra de penjar, tira LED (ferratges del compartiment); el marc de vitrina va amb la porta de vidre |
 | **Cap (push)** | el tirador que no hi és: obertura per pressió |

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { defaultModule, setFront, setShelves, splitZone, system32RowPlace, type Carcass, type Front, type Module, type Zone } from "."
 
 /**
- * On surt la «Filera System 32» del mòdul (`system32RowPlace`): no a «Acabats i ferratges» del mòdul sinó als
+ * On surt la «Filera System 32» del mòdul (`system32RowPlace`): no a «Acabats» del mòdul sinó als
  * Prestatges (regulables que es fan) o, sense, al Front de la porta que la fa servir. Mai als dos; si no, enlloc.
  */
 

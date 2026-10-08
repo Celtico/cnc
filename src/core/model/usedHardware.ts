@@ -18,7 +18,7 @@ function slotCounter(): { out: SlotUse; add: (slot: HardwareSlot, n: number, wha
 
 /**
  * **Quins ferratges fa servir un mòdul**, segons el que té (res amagat compta: es mira el mòdul tal com es veu). És el
- * que l'inspector ensenya («Acabats i ferratges» del mòdul i «Acabats» de l'Interior): en una tauleta amb un calaix no hi
+ * que l'inspector ensenya («Acabats» del mòdul i «Acabats» de l'Interior): en una tauleta amb un calaix no hi
  * pinten res la frontissa, el braç d'abatible ni l'imant. Per a cada lloc, quants elements el fan servir (portes,
  * calaixos…), per dir-ho a la fila. **L'única font** (abans n'hi havia una altra que mirava les peces construïdes: amb un
  * joc de calaix que no hi cap no hi ha cap forat de guia i la fila «Guia de calaix» desapareixia justament quan cal
@@ -60,7 +60,7 @@ function frontSlots(m: Module, f: Front, add: (slot: HardwareSlot, n: number, wh
   } else if (f.kind === "door") {
     const doors = f.mode === "double" ? 2 : 1
     if (!own(f.hardware)) add("hinge", doors, "portes")
-    // La filera System 32 és de la caixa (Acabats i ferratges): no té per defecte als fronts.
+    // La filera System 32 és de la caixa (Acabats): no té per defecte als fronts.
     if (!inheritedOnly) add("system32", doors, "portes")
     if (frontHasHandle(m, f) && !own(f.handle)) add("handle", doors, "portes")
   } else if (f.kind === "drawers") {
