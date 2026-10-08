@@ -8,6 +8,7 @@ import { FreePartSchema, JoinerySchema, PART_AXES as PART_AXES_C, tidyPart, type
 import { DEFAULT_LEGACY_HARDWARE, HardwareItemObjectSchema, ModuleHardwareKitSchema, HardwarePlacementSchema, sanitizeImportedHardware, isLegacyHardware, kitFromLegacy, migrateModuleHardware, type HardwareItem, type ModuleHardware } from "./hardware"
 import { repairAtomically } from "./repair"
 import { KitOptionsSchema } from "./hardwareKit"
+import { canHoldShelves, carcassBounds, type ZoneBounds } from "./zoneSupport"
 
 /**
  * Model de composició: mòduls d'esquerra a dreta, cadascun amb una carcassa i un
@@ -829,7 +830,7 @@ export function visibleModule(m: Module): Module {
   if (c.top.kind !== "full") delete carcass.tableTop
   // Fons del calaix: només amb calaixos (la fila de Materials no surt sense).
   if (!hasDrawers(m.root) || !c.drawerBottomMaterial) delete carcass.drawerBottomMaterial
-  const root = visibleZone(m.root, kitDefaultOf(m))
+  const root = visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(c))
   // Folgança de les peces de dins: només amb divisors o prestatges fixos a partir de la segona divisió (la fila no surt
   // sense); 0 és l'absència.
   if (!carcass.innerClearance || !hasInnerPieces(root)) delete carcass.innerClearance
@@ -868,7 +869,7 @@ export function hasInnerPieces(root: Zone): boolean {
 }
 
 /** `hasInnerPieces` del mòdul tal com es construeix (`visibleModule`): la fila «Peces de dins» de l'Interior. */
-export const moduleHasInnerPieces = (m: Module): boolean => hasInnerPieces(visibleZone(m.root, kitDefaultOf(m)))
+export const moduleHasInnerPieces = (m: Module): boolean => hasInnerPieces(visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(m.carcass)))
 
 /**
  * Plantilla instanciada a partir d'ara (catàleg, col·leccions, escenes): els mòduls que no diuen res de la folgança de
@@ -930,7 +931,7 @@ export function hasBuiltFronts(root: Zone): boolean {
  * calaixos sense guia pròpia el fan servir). El «Tirador» de cada front compta sempre (també «Cap (push)»): el del mòdul
  * només és el per defecte.
  */
-function visibleZone(z: Zone, kitDefault = false, covered = false): Zone {
+function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: ZoneBounds): Zone {
   const out: Zone = { ...z }
   // Els fronts recordats dels altres tipus (`fronts`) són només per tornar-hi: no construeixen res.
   delete out.fronts
@@ -943,7 +944,20 @@ function visibleZone(z: Zone, kitDefault = false, covered = false): Zone {
     delete out.shelves
     delete out.rail
     delete out.led
-    out.split = { ...z.split, children: z.split.children.map((c) => visibleZone(c, kitDefault, childCovered)) }
+    const n = z.split.children.length
+    const dir = z.split.dir
+    out.split = {
+      ...z.split,
+      children: z.split.children.map((c, i) =>
+        visibleZone(c, kitDefault, childCovered, dir === "v" ? { ...bounds, left: bounds.left || i > 0, right: bounds.right || i < n - 1 } : { ...bounds, bottom: bounds.bottom || i > 0, top: bounds.top || i < n - 1 }),
+      ),
+    }
+  } else if (!canHoldShelves(bounds)) {
+    // Sense una peça a cada costat (laterals o divisors; `zoneBoundsMap`) no hi ha on aguantar prestatges, fileres System
+    // 32, barra ni llum: no surten a l'inspector i no es fan (es conserven per quan hi hagi laterals).
+    delete out.shelves
+    delete out.rail
+    delete out.led
   } else {
     // Sense prestatges (0): gruix i «a ras» no compten; «Regulables» sí (les fileres System 32 per posar-n'hi després),
     // i sense `shelves` és com no regulables.
