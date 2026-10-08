@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { BOX_SLOTS, DEFAULT_GRILLE, HARDWARE_SLOTS, backChoices, boardChoices, frontsSection, hardwareSummary, jointApplies, materialByName, moduleSlotItem, type Base, type Carcass, type FrontsSection, type HardwareItem, type HardwareSlot, type Module, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, UI_PATHS, backChoices, boardChoices, finishesSection, hardwareSummary, jointApplies, materialByName, moduleSlotItem, type Base, type Carcass, type FinishesSection, type HardwareItem, type HardwareSlot, type Module, type Top } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { SectionLabel } from "../../components/SectionLabel"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
@@ -180,7 +180,7 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
             />
           </FormRow>
         )}
-        {/* L'estil dels fronts i el tirador per defecte són dels fronts: a l'«Interior» (`FrontsForm`), no a la caixa. */}
+        {/* L'estil dels fronts i el tirador per defecte són a Mòdul › Acabats (`FinishesForm`), no a la Caixa. */}
 
       </Stack>
     )
@@ -188,13 +188,13 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
 }
 
 /**
- * Materials del cos, dels fronts i del fons. Es fa servir per a un mòdul (sense els fronts: són a Interior › Acabats ›
+ * Materials del cos, dels fronts i del fons. Es fa servir per a un mòdul (sense els fronts: són a Mòdul › Acabats ›
  * Material dels fronts) i també per al moble sencer (aplica el canvi a tots els mòduls).
  */
 /** Valor del desplegable del fons per a «Com el cos» (mateix material i gruix). */
 const SAME = "__com-el-cos__"
 
-export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !== "none", hasDrawers = false, hasFronts = true }: { carcass: Carcass; onPatch: (patch: Partial<Carcass>) => void; mixed?: boolean; /** Sense fons: no surten les opcions del fons. */ hasBack?: boolean; /** Amb calaixos: la fila «Fons del calaix». */ hasDrawers?: boolean; /** La fila «Fronts» (el moble sencer; al mòdul és a Interior › Acabats › Material dels fronts). */ hasFronts?: boolean }) {
+export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !== "none", hasDrawers = false, hasFronts = true }: { carcass: Carcass; onPatch: (patch: Partial<Carcass>) => void; mixed?: boolean; /** Sense fons: no surten les opcions del fons. */ hasBack?: boolean; /** Amb calaixos: la fila «Fons del calaix». */ hasDrawers?: boolean; /** La fila «Fronts» (el moble sencer; al mòdul és a Mòdul › Acabats › Material dels fronts). */ hasFronts?: boolean }) {
   const { settings } = useSettings()
   const mat = materialByName(settings, c.material)
   const backMat = materialByName(settings, c.backMaterial)
@@ -292,9 +292,6 @@ function PrefReset({ value, pref, onReset }: { value: number; pref: number; onRe
   )
 }
 
-/** Només els ferratges que el mòdul fa servir de debò (forats a les seves peces); sense peces (encara), tots. */
-const slotsFor = (usedSlots: ReadonlySet<string> | undefined, box: boolean) => HARDWARE_SLOTS.filter(({ slot }) => BOX_SLOTS.has(slot) === box && (!usedSlots || usedSlots.has(slot)))
-
 /** Ferratges per defecte del mòdul (una còpia de cada un de la biblioteca); els fronts en poden triar un altre. */
 function ModuleHardwarePicks({ module, onChange, slots, help }: { module: Module; onChange: (m: Module) => void; slots: readonly HardwareSlot[]; /** Ajuda de cada fila (qui el fa servir). */ help?: (slot: HardwareSlot, item: HardwareItem) => string }) {
   return slots.map((slot) => {
@@ -307,7 +304,7 @@ function ModuleHardwarePicks({ module, onChange, slots, help }: { module: Module
 const inheritedBy = (d: { count: number; what: string }) => `«Com el mòdul» a: ${d.what} (${d.count}).`
 
 /**
- * El **tirador per defecte** del mòdul (Interior › Acabats): un de la biblioteca o «Cap (push)»
+ * El **tirador per defecte** del mòdul (Mòdul › Acabats): un de la biblioteca o «Cap (push)»
  * (`fronts.handles: "none"`, auditoria C2: el push és una tria del tirador, no de la caixa). Cada front pot dir-ne un
  * altre al seu Front; un joc de calaix push-open mana sobre tots dos.
  */
@@ -332,29 +329,6 @@ function ModuleHandlePick({ module, onChange, usedBy }: { module: Module; onChan
 }
 
 /**
- * Acabats de la **caixa** del mòdul seleccionat (secció «Acabats», abans «Fusteria (avançat)»): el fons i els ferratges dels laterals i
- * de les unions (espiga). Els jocs i els ferratges dels fronts són a l'«Interior» (`FrontsForm`); la filera System 32, als Prestatges
- * o al Front del compartiment que la fa servir (`system32RowPlace`).
- */
-export function JoineryForm({ module, onChange, usedSlots }: { module: Module; onChange: (m: Module) => void; usedSlots?: ReadonlySet<string> }) {
-  const c = module.carcass
-  // La filera System 32 no és aquí: és de qui fa les fileres (Prestatges o Front del compartiment, `system32RowPlace`).
-  const slots = slotsFor(usedSlots, true).map(({ slot }) => slot).filter((slot) => slot !== "system32")
-  const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
-  const hasBackRow = c.back === "groove" || c.back === "inset"
-  return (
-    <Stack gap={3}>
-      {c.back === "groove" && <NumRow label="Ranura del fons" value={c.backSetback} min={0} max={60} step={1} onChange={(backSetback) => set({ backSetback })} help="Distància al cantell posterior" />}
-      {c.back === "inset" && <NumRow label="Retirada del fons" value={c.backInsetSetback ?? 0} min={0} max={60} step={1} onChange={(backInsetSetback) => set({ backInsetSetback })} help="Distància del fons encastat al cantell posterior (0 = enrasat)" />}
-      <ModuleHardwarePicks module={module} onChange={onChange} slots={slots} />
-      <Text fontSize="xs" color="fg.muted">
-        {slots.length ? "Ferratges de la caixa que fa servir aquest mòdul (Preferències › Ferratges). Els dels fronts i calaixos són a l'«Interior»." : hasBackRow ? "Aquest mòdul no fa servir cap ferratge a la caixa." : "Aquesta caixa no té res a ajustar."}
-      </Text>
-    </Stack>
-  )
-}
-
-/**
  * Interior › Divisió › «Peces de dins» (`Carcass.innerClearance`): només a l'arrel i si és dividida
  * (`moduleHasInnerPieces`). Sense valor (mòduls d'abans): 0.
  */
@@ -370,21 +344,24 @@ export function InnerClearanceRow({ module, onChange }: { module: Module; onChan
 }
 
 /**
- * Acabats del mòdul (secció «Acabats» de l'«Interior», l'arrel; abans «Acabats»), **un sol lloc per decisió** i
- * **només el que la construcció llegeix** (`frontsSection`, `core/model/usedHardware.ts`): l'estil i les folgances si hi
- * ha algun front que es fa (un front fix també: estil i folgança front–cos, cap ferratge), el retranqueig si hi ha
- * prestatges que es retiren, i a sota **«Per defecte dels compartiments»**: el tirador i els ferratges del mòdul
- * (`module.fronts.handles`, `module.hardware`) que algun compartiment hereta («Com el mòdul») i que no ensenya la mateixa
- * pantalla (el Front i els Accessoris de l'Interior ja tenen la seva fila). Cada porta, calaix, abatible o compartiment en
- * pot triar un altre al seu Front o als Accessoris.
+ * Mòdul › **«Acabats»** (una sola secció, per decisió de l'usuari: «els acabats haurien d'anar al mòdul»), **un sol lloc
+ * per decisió** i **només el que la construcció llegeix** (`finishesSection`, `core/model/usedHardware.ts`), en cascada:
+ * l'estil, les folgances i el retranqueig si es llegeixen (un front fix també: estil i folgança front–cos, cap
+ * ferratge), el material dels fronts amb algun front que es fa, la caixa (Ranura o Retirada del fons, l'Espiga) i a sota
+ * **«Per defecte dels compartiments»**: el tirador i els ferratges del mòdul (`module.fronts.handles`, `module.hardware`)
+ * que algun compartiment hereta («Com el mòdul»). Cada porta, calaix, abatible o compartiment en pot triar un altre al
+ * seu Front o als Accessoris; la filera System 32 és als Prestatges o al Front del compartiment (`system32RowPlace`).
  */
-export function FrontsForm({ module, onChange, section = frontsSection(module) }: { module: Module; onChange: (m: Module) => void; section?: FrontsSection }) {
+export function FinishesForm({ module, onChange, section = finishesSection(module) }: { module: Module; onChange: (m: Module) => void; section?: FinishesSection }) {
   const c = module.carcass
   const { settings } = useSettings()
   const { gaps } = settings
   const handle = section.defaults.find((d) => d.slot === "handle")
   const slots = section.defaults.filter((d) => d.slot !== "handle")
   const by = new Map(section.defaults.map((d) => [d.slot, d]))
+  const frontRows = section.style || section.outerGap || section.betweenGap || section.shelfSetback
+  const boxRows = !!section.back || section.dowel
+  const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
   return (
     <Stack gap={3}>
       {section.style && (
@@ -410,22 +387,30 @@ export function FrontsForm({ module, onChange, section = frontsSection(module) }
         <PrefReset value={module.fronts.betweenGap} pref={gaps.betweenGap} onReset={() => onChange({ ...module, fronts: { ...module.fronts, betweenGap: gaps.betweenGap } })} />
       </>}
       {section.shelfSetback && <>
-        <NumRow label="Retranqueig dels prestatges" value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => onChange({ ...module, carcass: { ...c, shelfSetback } })} help={`Del davant de la caixa al cantell dels prestatges de tot el mòdul (amb fronts encastats, almenys un gruix). ${prefHint(c.shelfSetback, gaps.shelfSetback)}`} />
-        <PrefReset value={c.shelfSetback} pref={gaps.shelfSetback} onReset={() => onChange({ ...module, carcass: { ...c, shelfSetback: gaps.shelfSetback } })} />
+        <NumRow label="Retranqueig dels prestatges" value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => set({ shelfSetback })} help={`Del davant de la caixa al cantell dels prestatges de tot el mòdul (amb fronts encastats, almenys un gruix). ${prefHint(c.shelfSetback, gaps.shelfSetback)}`} />
+        <PrefReset value={c.shelfSetback} pref={gaps.shelfSetback} onReset={() => set({ shelfSetback: gaps.shelfSetback })} />
       </>}
-      {/* Material dels fronts (per decisió de l'usuari, aquí i no a Materials del mòdul: un sol lloc per decisió; abans el
-          grup «Acabats», ara el títol de la secció). Només amb algun front que es fa (el mateix que l'Estil); sense, el
-          material es conserva i no compta. */}
+      {/* Material dels fronts (per decisió de l'usuari, aquí i no a Materials del mòdul: un sol lloc per decisió). Només
+          amb algun front que es fa (el mateix que l'Estil); sense, el material es conserva i no compta. */}
       {section.style && (
         <Stack gap={3} pt={2}>
           <SectionLabel>Material dels fronts</SectionLabel>
           <FormRow label="Fronts" help="Material de portes, fronts de calaix, abatibles, reixetes i fronts fixos. Mateix gruix que el cos." maxW="280px">
-            <MaterialSelect label="Fronts" hideLabel materials={boardChoices(settings.materials)} value={c.frontMaterial ?? ""} emptyLabel="Com el cos" onChange={(v) => onChange({ ...module, carcass: { ...c, frontMaterial: v || undefined } })} />
+            <MaterialSelect label="Fronts" hideLabel materials={boardChoices(settings.materials)} value={c.frontMaterial ?? ""} emptyLabel="Com el cos" onChange={(v) => set({ frontMaterial: v || undefined })} />
           </FormRow>
         </Stack>
       )}
+      {/* La caixa: el fons (ranura o encastat) i l'espiga, només si la caixa en fa (`usedHardwareSlots`). */}
+      {boxRows && (
+        <Stack gap={3} pt={frontRows ? 2 : 0}>
+          {frontRows && <SectionLabel>Caixa</SectionLabel>}
+          {section.back === "groove" && <NumRow label="Ranura del fons" value={c.backSetback} min={0} max={60} step={1} onChange={(backSetback) => set({ backSetback })} help="Distància al cantell posterior" />}
+          {section.back === "inset" && <NumRow label="Retirada del fons" value={c.backInsetSetback ?? 0} min={0} max={60} step={1} onChange={(backInsetSetback) => set({ backInsetSetback })} help="Distància del fons encastat al cantell posterior (0 = enrasat)" />}
+          {section.dowel && <ModuleHardwarePicks module={module} onChange={onChange} slots={["dowel"]} help={(_, item) => `${hardwareSummary(item)}. Les unions de la caixa (${UI_PATHS.hardwarePrefs}).`} />}
+        </Stack>
+      )}
       {section.defaults.length > 0 && (
-        <Stack gap={3} pt={section.style || section.shelfSetback ? 2 : 0}>
+        <Stack gap={3} pt={frontRows || boxRows ? 2 : 0}>
           <SectionLabel>Per defecte dels compartiments</SectionLabel>
           <Text fontSize="xs" color="fg.muted" mt={-2}>
             Els fronts i accessoris que diuen «Com el mòdul» fan servir aquests. Cada compartiment en pot triar un altre al seu Front o als Accessoris.
