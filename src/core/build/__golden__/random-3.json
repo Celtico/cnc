@@ -37,7 +37,6 @@
   "extras": 0,
   "warnings": [
    "inset",
-   "inset",
    "table"
   ],
   "p": [
@@ -607,7 +606,6 @@
   "extras": 0,
   "warnings": [
    "back-inset",
-   "inset",
    "inset"
   ],
   "p": [
@@ -1363,7 +1361,6 @@
   "panels": 7,
   "extras": 0,
   "warnings": [
-   "inset",
    "mitre",
    "shelf-span",
    "table"
@@ -1402,7 +1399,6 @@
   "extras": 0,
   "warnings": [
    "drawer-bottom",
-   "inset",
    "inset",
    "inset",
    "mitre",
@@ -1701,9 +1697,7 @@
  "seed-144": {
   "panels": 7,
   "extras": 1,
-  "warnings": [
-   "inset"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|1700x540x3|DM 10|none|e0000|h0|g0|c0|o-|@0c1a0be4",
    "bottom|baix|502x317x19|Roure massís / xapat|x|e0010|h6:c9c81fae|g0|c0|o-|@644400c8",
@@ -1804,7 +1798,6 @@
   "extras": 0,
   "warnings": [
    "drawer-bottom",
-   "inset",
    "inset",
    "mitre",
    "mitre",

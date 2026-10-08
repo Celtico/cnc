@@ -1,4 +1,4 @@
-import { CUTOUT_PRESETS, freeX, type Composition, type Module, type Panel, type PlinthRun, type WorktopRun } from "../model"
+import { CUTOUT_PRESETS, freeX, visibleModule, type Composition, type Module, type Panel, type PlinthRun, type WorktopRun } from "../model"
 import type { ModulePlacement } from "../model/composition"
 
 export interface RunWarning {
@@ -32,7 +32,8 @@ const r1 = (v: number) => Math.round(v * 10) / 10
  * encastats, a nivell amb el davant de la caixa.
  */
 function frontFace(m: Composition["modules"][number]): number {
-  return m.carcass.depth + (m.fronts.style === "inset" ? 0 : m.carcass.thickness)
+  // Res amagat compta: sense cap front, l'estil no surt ni compta (`visibleModule`).
+  return m.carcass.depth + (visibleModule(m).fronts.style === "inset" ? 0 : m.carcass.thickness)
 }
 
 /**

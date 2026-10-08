@@ -468,7 +468,6 @@
   "warnings": [
    "drawer-bottom",
    "inset",
-   "inset",
    "mitre"
   ],
   "p": [
@@ -885,7 +884,6 @@
    "grille-open-ratio",
    "hanging",
    "inset",
-   "inset",
    "material-heat",
    "push"
   ],
@@ -950,7 +948,6 @@
   "panels": 8,
   "extras": 0,
   "warnings": [
-   "inset",
    "mitre",
    "mitre",
    "no-side",
@@ -1128,7 +1125,6 @@
   "warnings": [
    "door-too-wide",
    "hanging",
-   "inset",
    "no-side",
    "push",
    "shelf-span"

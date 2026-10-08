@@ -4,7 +4,6 @@
   "extras": 0,
   "warnings": [
    "inset",
-   "inset",
    "mitre",
    "mitre"
   ],
@@ -500,8 +499,6 @@
   "panels": 8,
   "extras": 0,
   "warnings": [
-   "inset",
-   "inset",
    "shelf-span"
   ],
   "p": [
