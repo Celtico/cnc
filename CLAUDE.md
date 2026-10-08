@@ -121,8 +121,9 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
 
 ## Model del moble
 - **Tipus de moble** (`Composition.kind`, `compositionKind`, `features/composition/kinds.ts`; per decisió de l'usuari,
-  **sense selector «Tipus»**): es tria en crear-lo, a «+ Nou moble» (`NEW_MOBLE_KINDS`: Moble · Cuina · Armari · Taula,
-  `blankMoble(kind)`, **buit**: cap mòdul) o amb la plantilla, i no canvia. Només decideix l'etiqueta de la targeta i la cerca, i a la
+  **sense selector «Tipus»**): ve de la plantilla i no canvia; «+ Nou moble» crea
+  directament un moble del tipus Moble (`blankMoble("moble")`, **buit**: cap mòdul; per decisió de l'usuari, sense menú de
+  tipus; `NEW_MOBLE_KINDS` queda sense UI). Només decideix l'etiqueta de la targeta i la cerca, i a la
   Taula «Afegir mòdul» fa un `tableModule` (tauler + dos laterals de panell, sense base ni fons, cantonades a inglet; el
   Taula nova comença buida com les altres). Els antics: cuina si tenen `runs`, si no moble. Objecte (`objecte`, vegeu Objectes). **`lliure`**
   (el Flat-pack d'abans, «Peces lliures» a la targeta): ja no es crea; els que hi ha (i els llits, capçals i taules de pedra
@@ -1369,8 +1370,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Les tres pàgines fan igual**: capçalera `PageHeader` (títol gran i l'explicació), **cercador amb el botó principal al
   costat, a l'esquerra** (per decisió de l'usuari: primer els botons i després el cercador; `components/SearchBar`: «+ Nou moble» · «+ Nou objecte» · «+ Nou ambient», `colorPalette="wood"`, **buits** (per
   decisió de l'usuari: «que no fiqui res»): `projects/blank.ts` (moble sense mòduls, objecte sense peces) i l'ambient
-  sense parets (`EMPTY_AMBIENT`); «+ Nou moble» obre un menú (`add.menu`, com el + dels grups de l'arbre) amb Moble · Cuina · Armari ·
-  Taula; amb text a l'ordinador i només la icona al mòbil, amb `aria-label` i tooltip; Mobles també «Obrir
+  sense parets (`EMPTY_AMBIENT`); «+ Nou moble» crea el moble directament (sense menú); amb text a l'ordinador i només la icona al mòbil, amb `aria-label` i tooltip; Mobles també «Obrir
   fitxer», `LuFolderOpen`, a la mateixa fila, entre el «+» i el cercador; sense accents; obre les seccions i categories amb resultats) i acordions
   **tots tancats** en obrir l'app (estat de la sessió, p. ex. `mobles:gallery`): **Historial**, **Projectes** i **Catàleg**;
   a Mobles, a més, **Col·leccions de mobles**. Les galeries de les finestres «Afegir un moble» / «Afegir un objecte» dels ambients
