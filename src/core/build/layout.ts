@@ -122,6 +122,22 @@ export function layoutZones(root: Zone, interior: ZoneRect, thickness: number): 
   return { rects, leaves, dividers, problems }
 }
 
+/**
+ * Les mides reals (mm de llum) dels fills d'una zona dividida, en ordre, tal com les construeix `layoutZones` (després
+ * dels gruixos dels divisors i de `fitSizes`): l'amplada amb una divisió vertical i l'alçada amb una d'horitzontal. Les
+ * fa servir la «Divisió» de l'editor (les «Auto» i l'última, el que sobra). Sense divisió o sense els rectangles, cap.
+ */
+export function splitChildSizes(layout: Pick<Layout, "rects">, zone: Zone): number[] | undefined {
+  if (!zone.split) return undefined
+  const out: number[] = []
+  for (const c of zone.split.children) {
+    const rect = layout.rects.get(c.id)
+    if (!rect) return undefined
+    out.push(r(zone.split.dir === "v" ? rect.x1 - rect.x0 : rect.y1 - rect.y0))
+  }
+  return out
+}
+
 /** Si falten mides, les completa amb "auto"; si en sobren, les talla. */
 function padSizes(sizes: (number | "auto")[], n: number): (number | "auto")[] {
   const out = sizes.slice(0, n)

@@ -130,6 +130,30 @@ export function setChildSize(root: Zone, parentId: string, index: number, size: 
   })
 }
 
+/**
+ * Canvia la mida del fill `index` (no l'últim) d'una divisió des de la «Divisió» de l'editor (per decisió de l'usuari:
+ * amb n zones es posen n−1 mides; l'última és el que sobra). Si l'última ja és «auto», com `setChildSize`. Si no
+ * (dades d'abans: l'última fixa, potser amb una altra «auto»), primer es reescriuen les mides sense canviar la geometria
+ * (`current`, les mides reals de cada fill, `splitChildSizes`): les «auto» que no són l'última passen als seus mm i
+ * l'última a «auto» (agafa el que sobra, que és el que ja feia); després s'aplica el canvi. La construcció no canvia:
+ * només es reescriu en editar.
+ */
+export function setSplitSize(root: Zone, parentId: string, index: number, size: number | "auto", current?: readonly number[]): Zone {
+  return updateZone(root, parentId, (p) => {
+    if (!p.split) return p
+    const n = p.split.children.length
+    if (index < 0 || index >= n - 1) return p
+    const sizes = p.split.sizes.slice(0, n)
+    while (sizes.length < n) sizes.push("auto")
+    if (sizes[n - 1] !== "auto") {
+      if (current && current.length === n) for (let i = 0; i < n - 1; i++) if (sizes[i] === "auto") sizes[i] = current[i]!
+      sizes[n - 1] = "auto"
+    }
+    sizes[index] = size
+    return { ...p, split: { ...p.split, sizes } }
+  })
+}
+
 export function setShelves(root: Zone, id: string, shelves: Zone["shelves"] | null): Zone {
   return updateZone(root, id, (z) => {
     const { shelves: _old, ...rest } = z

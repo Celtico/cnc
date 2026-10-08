@@ -7,7 +7,7 @@ import {
   duplicateZone,
   parentOf,
   removeZone,
-  setChildSize,
+  setSplitSize,
   setFront,
   setShelves,
   splitZone,
@@ -123,6 +123,7 @@ export function ZonePanel({
   bounds,
   system32,
   onSelect,
+  childSizes,
 }: {
   root: Zone
   zone: Zone
@@ -154,6 +155,11 @@ export function ZonePanel({
   system32?: { at: "shelves" | "front"; row: ReactNode }
   /** Seleccionar un compartiment (les files de la «Divisió» hi porten). */
   onSelect?: (id: string) => void
+  /**
+   * Amb una divisió, les mides reals de cada fill (mm de llum), de la mateixa construcció (`splitChildSizes` sobre el
+   * `layout` del mòdul): les de les zones «Auto» i el que sobra a l'última.
+   */
+  childSizes?: number[]
 }) {
   // Hi ha on fer servir prestatges i accessoris: tapat per portes (com obert), o el seu contingut no l'omple.
   const shelvesBehind = coveredBy ? !coveredByFixed : !fillsZone(zone.front)
@@ -166,7 +172,7 @@ export function ZonePanel({
       {zone.split ? (
         <>
           <FoldItem id="zone-split" title={`Divisió ${zone.split.dir === "v" ? "vertical" : "horitzontal"}`} badge={`${zone.split.children.length} zones`} icon={zone.split.dir === "v" ? LuColumns2 : LuRows2}>
-            <SplitSizes root={root} zone={zone} onChange={onChange} onSelect={onSelect} />
+            <SplitSizes root={root} zone={zone} onChange={onChange} onSelect={onSelect} childSizes={childSizes} />
             <HStack wrap="wrap">
               <Button size="sm" variant="outline" onClick={() => onChange(addChild(root, zone.id))}>
                 <LuPlus /> Afegir zona
@@ -279,44 +285,60 @@ export function ZonePanel({
 
 /**
  * La mida de cada zona d'una divisió, al pare (per decisió de l'usuari, 2026-10-08: «a les obertures no té sentit
- * l'amplada; ha d'anar a la divisió»): una fila per fill, en ordre, amb el nom de l'arbre (clicar-lo el selecciona) i
- * «Auto» o els mm. Les automàtiques es reparteixen el que queda; sense cap, l'última s'ajusta (`fitSizes`, avís).
+ * l'amplada; ha d'anar a la divisió»). Amb n zones es posen n−1 mides (per decisió de l'usuari: «si només hi ha dos,
+ * només pot posar una mida»): les files «Amplada 1»… (vertical) o «Alçada 1»… (horitzontal), «Auto» o els mm (clicar el
+ * nom selecciona el compartiment; el nom de l'arbre, a l'ajuda), i l'última no s'edita: diu el que sobra. Al costat de
+ * les «Auto», els mm que fan (les reals, `childSizes`).
  */
-function SplitSizes({ root, zone, onChange, onSelect }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; onSelect?: (id: string) => void }) {
+function SplitSizes({ root, zone, onChange, onSelect, childSizes }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; onSelect?: (id: string) => void; childSizes?: number[] }) {
   if (!zone.split) return null
   const what = zone.split.dir === "v" ? "Amplada" : "Alçada"
+  const set = (i: number, size: number | "auto") => onChange(setSplitSize(root, zone.id, i, size, childSizes))
   return (
     <Stack gap={2}>
       <Text textStyle="xs" color="fg.muted">
-        {what} de la llum de cada zona. Les automàtiques es reparteixen el que queda; si no n'hi ha cap, l'última s'ajusta.
+        {what} de la llum de cada zona. Les «Auto» es reparteixen el que queda; l'última és el que sobra.
       </Text>
-      {splitRows(zone).map((row, i) => (
-        <FormRow
-          key={row.id}
-          label={
-            onSelect ? (
-              <Button variant="plain" size="sm" h="auto" p={0} minW={0} fontWeight="normal" color="fg.muted" textAlign="start" whiteSpace="normal" _hover={{ color: "fg", textDecoration: "underline" }} title="Seleccionar el compartiment" onClick={() => onSelect(row.id)}>
-                {row.label}
-              </Button>
+      {splitRows(zone).map((row, i) => {
+        const real = childSizes?.[i]
+        return (
+          <FormRow
+            key={row.id}
+            label={
+              onSelect ? (
+                <Button variant="plain" size="sm" h="auto" p={0} minW={0} fontWeight="normal" color="fg.muted" textAlign="start" whiteSpace="normal" _hover={{ color: "fg", textDecoration: "underline" }} title={`${row.name} · seleccionar el compartiment`} onClick={() => onSelect(row.id)}>
+                  {row.label}
+                </Button>
+              ) : (
+                <span title={row.name}>{row.label}</span>
+              )
+            }
+          >
+            {row.rest ? (
+              <Text fontSize="sm" color="fg.muted">
+                {real !== undefined ? `${fmtMm(real)} mm` : "—"} (el que sobra)
+              </Text>
             ) : (
-              row.label
-            )
-          }
-        >
-          <HStack gap={3}>
-            <Switch.Root size="sm" flexShrink={0} checked={row.size === "auto"} onCheckedChange={(e) => onChange(setChildSize(root, zone.id, i, e.checked ? "auto" : 400))}>
-              <Switch.HiddenInput />
-              <Switch.Control />
-              <Switch.Label fontSize="sm">Auto</Switch.Label>
-            </Switch.Root>
-            {row.size !== "auto" && (
-              <Box flex="1" minW={0} maxW="160px">
-                <NumberField label="" ariaLabel={`${what} ${row.label}`} value={row.size} min={50} max={3000} step={10} onChange={(v) => onChange(setChildSize(root, zone.id, i, v))} />
-              </Box>
+              <HStack gap={3}>
+                <Switch.Root size="sm" flexShrink={0} checked={row.size === "auto"} onCheckedChange={(e) => set(i, e.checked ? "auto" : real !== undefined && real > 0 ? Math.round(real) : 400)}>
+                  <Switch.HiddenInput />
+                  <Switch.Control />
+                  <Switch.Label fontSize="sm">Auto</Switch.Label>
+                </Switch.Root>
+                {row.size !== "auto" ? (
+                  <Box flex="1" minW={0} maxW="160px">
+                    <NumberField label="" ariaLabel={`${row.label} (${row.name})`} value={row.size} min={50} max={3000} step={10} onChange={(v) => set(i, v)} />
+                  </Box>
+                ) : real !== undefined ? (
+                  <Text fontSize="sm" color="fg.muted">
+                    {fmtMm(real)} mm
+                  </Text>
+                ) : null}
+              </HStack>
             )}
-          </HStack>
-        </FormRow>
-      ))}
+          </FormRow>
+        )
+      })}
     </Stack>
   )
 }
