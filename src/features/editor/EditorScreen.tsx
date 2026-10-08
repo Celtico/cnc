@@ -1047,10 +1047,10 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       ) : selection.kind === "part" ? (
         <Stack gap={0}>
           <PartInspector comp={comp} id={selection.id} joints={build?.joints ?? []} onChange={setComp} />
-          {/* Ferratges col·locats a mà (generador de mecanitzats de Preferències › Ferratges). */}
-          {!partsOnlyKind(kind) || kind === "lliure" ? (
+          {/* Ferratges col·locats a mà que ja porta la peça (ja no se n'afegeixen: treure ≠ esborrar). */}
+          {(!partsOnlyKind(kind) || kind === "lliure") && scopePlacements(comp, { kind: "part", partId: selection.id }).length > 0 ? (
             <FoldItem id="part-hardware" title="Ferratges" icon={LuWrench} badge={scopePlacements(comp, { kind: "part", partId: selection.id }).length || undefined}>
-              <HardwarePlacements comp={comp} scope={{ kind: "part", partId: selection.id }} panels={panels} library={settings.hardwareLibrary} warnings={warnings} onChange={setComp} actions={hardwareActions} />
+              <HardwarePlacements comp={comp} scope={{ kind: "part", partId: selection.id }} panels={panels} warnings={warnings} actions={hardwareActions} />
             </FoldItem>
           ) : null}
         </Stack>
@@ -1178,9 +1178,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
               comp={comp}
               scope={{ kind: "module", moduleId: module.id }}
               panels={panels}
-              library={settings.hardwareLibrary}
               warnings={warnings}
-              onChange={setComp}
               actions={hardwareActions}
               rules={ruleHardwareCounts(panels.filter((p) => p.module === moduleIndex + 1), module.carcass.base.kind === "legs" ? 4 : 0, moduleExtras, moduleBuild?.hardwareKits ?? NO_KITS)}
             />

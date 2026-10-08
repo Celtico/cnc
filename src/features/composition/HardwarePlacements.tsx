@@ -1,7 +1,6 @@
 import { Badge, Box, Button, chakra, HStack, IconButton, Stack, Text } from "@chakra-ui/react"
-import { useState } from "react"
 import type { IconType } from "react-icons"
-import { LuCopy, LuPencil, LuPlus, LuTrash2, LuWrench } from "react-icons/lu"
+import { LuCopy, LuPencil, LuTrash2, LuWrench } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { SectionLabel } from "../../components/SectionLabel"
 import type { RuleHardwareCount } from "../../core/build/hardwareSummary"
@@ -10,15 +9,15 @@ import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { NumberField } from "../../components/NumRow"
 import { dimFont, fmtMm, layoutDims } from "../../components/dims"
 import { DimLayer } from "../../components/DimLine"
-import { HardwareDrawer, HardwareSelect } from "../settings/HardwareSelect"
+import { HardwareSelect } from "../settings/HardwareSelect"
 import { placeableOn } from "../settings/hardwareGroups"
 import { UI_PATHS, hardwareSummary, isPendingImport, machiningParts, type Composition, type HardwareItem, type HardwarePlacement, type Panel, type PlacePos } from "../../core/model"
 import type { CompositionWarning } from "../../core/build/buildComposition"
-import { newPlacement, panelAxes, partLabel, placeableItems, placementAdvanced, placementPreview, placementScope, placementWarnings, placePosValue, roleFor, scopePanels, scopePlacements, simplifyPlacement, updatePlacement, type PlacementScope } from "./placements"
+import { panelAxes, partLabel, placeableItems, placementAdvanced, placementPreview, placementScope, placementWarnings, placePosValue, roleFor, scopePanels, scopePlacements, simplifyPlacement, updatePlacement, type PlacementScope } from "./placements"
 
 /**
  * **Ferratges col·locats a mà** (millores v1 F4; Editor › mòdul o peça lliure › «Ferratges»): només els **«només 3D»**
- * (sense cap lloc al moble; els d'un lloc els posen les regles). «Afegir ferratge» → un de la biblioteca → la peça del
+ * (sense cap lloc al moble; els d'un lloc els posen les regles), els que ja porta el moble. La col·locació: la peça del
  * mòdul on va i quin grup de mecanitzats de l'item li toca → on va el punt de referència (des d'un cantell o del mig,
  * amb els eixos del moble, més la distància). Res més: ni repeticions, ni mirall, ni fórmules, ni gir del model (les
  * d'una versió anterior es llegeixen igual i surten com a «Avançat», amb «Simplificar»). Les altres peces de l'item
@@ -52,18 +51,18 @@ export interface PlacementActions {
 
 /**
  * **Ferratges del mòdul o de la peça lliure** (Editor › «Ferratges», com la llista de ferratges d'un configurador de
- * fabricant): els **col·locats a mà** (millores v1 F4), un per fila amb Editar · Duplicar · Eliminar (triar-ne un el
- * ressalta al 3D), «Afegir ferratge» i, a sota, els que posen **les regles** del mòdul (frontisses, tiradors, guies,
- * potes…), comptats. Es guarda una còpia de l'item (com els mòduls). Tot o res: si no hi cap, cap forat i l'avís surt a
- * la seva fila i a «Avisos de fusteria».
+ * fabricant): els **col·locats a mà** que ja porta el moble (millores v1 F4), un per fila amb Editar · Duplicar ·
+ * Eliminar (triar-ne un el ressalta al 3D) i, a sota, els que posen **les regles** del mòdul (frontisses, tiradors,
+ * guies, potes…), comptats. **Sense «Afegir ferratge»** (per decisió de l'usuari, 2026-10-08: només servia per als
+ * «només 3D» importats, i la importació i el generador de mecanitzats ja no tenen UI; treure ≠ esborrar: els que hi
+ * són es veuen, es fabriquen igual i es poden editar). Tot o res: si no hi cap, cap forat i l'avís surt a la seva fila
+ * i a «Avisos de fusteria».
  */
 export function HardwarePlacements({
   comp,
   scope,
   panels,
-  library,
   warnings,
-  onChange,
   selectedId,
   actions,
   rules,
@@ -71,30 +70,18 @@ export function HardwarePlacements({
   comp: Composition
   scope: PlacementScope
   panels: readonly Panel[]
-  library: readonly HardwareItem[]
   warnings: readonly CompositionWarning[]
-  onChange: (c: Composition) => void
   selectedId?: string | null
   actions: PlacementActions
   /** Els de les regles del mòdul (`ruleHardwareCounts`). */
   rules?: readonly RuleHardwareCount[]
 }) {
   const here = scopePanels(scope, panels)
-  // Només els que es poden col·locar en alguna peça d'aquí (amb mecanitzats per a una d'elles, o «només 3D»).
-  const items = placeableItems(library).filter((x) => placeableOn(x, here.map((h) => h.part)))
   const list = scopePlacements(comp, scope)
-  const [picking, setPicking] = useState(false)
-  const add = (item: HardwareItem | undefined) => {
-    const on = item && (here.find((h) => machiningParts(item.machining ?? []).includes(h.part)) ?? here[0])
-    if (!item || !on) return
-    const pl = newPlacement(item, on)
-    onChange({ ...comp, hardwarePlacements: [...(comp.hardwarePlacements ?? []), pl] })
-    actions.onEdit(pl.id)
-  }
   return (
     // `inline-size`: les files llargues es tallen amb «…» en lloc d'eixamplar la secció (i tapar-ne les accions).
     <Stack gap={2} data-testid="hardware-placements" css={{ containerType: "inline-size" }}>
-      <SectionLabel>Col·locats a mà</SectionLabel>
+      {list.length > 0 && <SectionLabel>Col·locats a mà</SectionLabel>}
       {list.map((pl) => {
         const main = here.find((h) => (h.target.panel ?? h.target.freePart) === (pl.targets[0]!.panel ?? pl.targets[0]!.freePart))
         const mine = placementWarnings(warnings, pl)
@@ -118,32 +105,9 @@ export function HardwarePlacements({
           </Box>
         )
       })}
-      {!placeableItems(library).length ? (
-        <Text fontSize="sm" color="fg.muted">
-          Cap ferratge amb mecanitzats a la biblioteca: fes-ne un (o importa'l) a Preferències › Ferratges i posa-li els mecanitzats al «Generador de mecanitzats».
-        </Text>
-      ) : !here.length ? (
-        <Text fontSize="sm" color="fg.muted">
-          Aquesta peça no és de CNC: no s'hi pot col·locar cap ferratge.
-        </Text>
-      ) : (
-        <Box>
-          <Button size="xs" variant="outline" onClick={() => setPicking(true)} data-testid="placement-add">
-            <LuPlus /> Afegir ferratge
-          </Button>
-          <HardwareDrawer
-            open={picking}
-            onOpenChange={setPicking}
-            label="Afegir ferratge"
-            items={items}
-            note="Els ferratges amb mecanitzats del generador (o «només 3D») que es poden posar a les peces d'aquí. En triar-ne un es col·loca al mig de la peça i se n'obre la col·locació."
-            onPick={add}
-          />
-        </Box>
-      )}
       {rules && (
         <>
-          <SectionLabel pt={2}>De les regles del mòdul</SectionLabel>
+          <SectionLabel pt={list.length ? 2 : 0}>De les regles del mòdul</SectionLabel>
           {rules.length ? (
             <Stack gap={1} data-testid="rule-hardware">
               {rules.map((r) => {
@@ -312,7 +276,7 @@ function PlacePosRow({ axis, names, pos, panel, onChange }: { axis: "p" | "q"; n
   const from0 = names.ends[0] === "esquerra" ? "l'esquerra" : names.ends[0]
   const from1 = names.ends[1] === "dreta" ? "la dreta" : names.ends[1]
   return (
-    <FormRow label={names.name} help={`On va el punt de referència del ferratge (la creu del generador): des d'un cantell o del mig de la peça, més la distància. ${now !== null ? `Ara: a ${fmtMm(now)} mm de ${from0}.` : ""}`}>
+    <FormRow label={names.name} help={`On va el punt de referència del ferratge (la creu de la previsualització): des d'un cantell o del mig de la peça, més la distància. ${now !== null ? `Ara: a ${fmtMm(now)} mm de ${from0}.` : ""}`}>
       <Stack gap={1.5}>
         <ChoiceChips
           label={names.name}

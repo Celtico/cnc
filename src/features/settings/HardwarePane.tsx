@@ -5,18 +5,12 @@ import { downloadBlob } from "../download"
 import { EditorDialog } from "../../components/EditorDialog"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
-import { ImportDropZone } from "../../components/ImportDropZone"
-import type { PickedFile } from "../../components/pickedFiles"
 import { toaster } from "../../components/ui/toaster"
 import { confirmProblem, cupRel, pairPlate, relV, restoreProposal, setConfirmed, setHandleDistance, setHardwareParam, syncPairedPlates } from "../../core/import/importItem"
-import type { HettichArticle } from "../../core/import/hettich"
-import { applyImportUpdate, dismissImportUpdate, mergePreview } from "../../core/import/merge"
+import { applyImportUpdate, dismissImportUpdate } from "../../core/import/merge"
 import { viewBounds, type HardwareView } from "../../core/import/views"
-import { IMPORT_ACCEPT, importFormatsText } from "../../core/import/formats"
 import { assetDocs, assetViews, getHardwareAsset } from "../../db/hardwareAssets"
 import { useLiveQuery } from "../../db/useLiveQuery"
-import { HardwareImportDialog } from "./HardwareImportDialog"
-import { analyseArticle, importArticles, sourceFromPicked, type ImportSource } from "./hardwareImport"
 import { reframeImported } from "./hardwareReframe"
 import { NumberField, NumRow } from "../../components/NumRow"
 import { PanelDrawing } from "../../components/PanelDrawing"
@@ -38,7 +32,6 @@ import {
   HARDWARE_SLOTS,
   HINGE_PLATE_PARAMS,
   copyHardwareItem,
-  defaultMachine,
   evalExpr,
   hardwareSummary,
   isPendingImport,
@@ -48,7 +41,6 @@ import {
   type HardwareDefaults,
   type HardwareEngine,
   type HardwareItem,
-  type GenTool,
   type HardwareTarget,
   type MachiningOp,
   type MaterialPref,
@@ -65,8 +57,6 @@ import { KitSections } from "./KitSections"
 import { useSessionString } from "./useSessionString"
 import { ThicknessChips } from "./MaterialBits"
 import { PaneHeadContext } from "./paneHead"
-import { MachiningGenerator, MachiningStage } from "./MachiningGenerator"
-import { genTools, useMachiningUi, type MachiningUi } from "./machiningDraw"
 
 const NO_MATERIALS: MaterialPref[] = []
 
@@ -159,88 +149,6 @@ export function HardwareList({
     hinge: items.find((x) => x.id === defaults.hinge && x.engine === "cup" && !x.imported) ?? DEFAULT_MODULE_HARDWARE.hinge,
     handle: items.find((x) => x.id === defaults.handle && x.engine === "barHandle" && !x.imported) ?? DEFAULT_MODULE_HARDWARE.handle,
   })
-  // Importar del fabricant: els fitxers triats → la llista d'articles (diàleg) → els items, sense confirmar.
-  const [importSrc, setImportSrc] = useState<ImportSource | null>(null)
-  // Un diàleg nou (triats, notes) per a cada lot de fitxers.
-  const [importSeq, setImportSeq] = useState(0)
-  const [importBusy, setImportBusy] = useState(false)
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
-  // La nota de cada fila (llegint el STEP dels tiradors i les potes que es veuen): una funció per font.
-  const handleDiameter = importBase().handle.params.diameter
-  const analyse = useMemo(() => (importSrc ? (a: HettichArticle) => analyseArticle(importSrc, a, handleDiameter) : undefined), [importSrc, handleDiameter])
-  // Els articles que ja són a la biblioteca (número → carpetes): un ZIP només de plànols de muntatge els amplia.
-  const known = useMemo(() => new Map(items.flatMap((x) => (x.imported?.maker === "Hettich" && x.imported.article ? [[x.imported.article, x.imported.folders] as const] : []))), [items])
-  // Què passarà amb cada fila del diàleg: nou, o «ja existeix · s'hi afegeix…».
-  const mergeOf = useMemo(() => (a: HettichArticle) => mergePreview(items, a), [items])
-  const onPicked = async (picked: PickedFile[]) => {
-    setImportBusy(true)
-    try {
-      const src = await sourceFromPicked(picked, known)
-      if (!src.articles.length)
-        toaster.create({ title: "No s'hi ha trobat cap ferratge", description: "Cal una descàrrega de Hettich CAD (el ZIP, la carpeta o els fitxers .stp i _2D_…_view.dxf amb el número d'article) o de Blum E-SERVICES (els fitxers <article>_<document>.step / .pgm / .dae, o els ZIP del producte).", type: "warning", duration: 8000 })
-      else {
-        setImportSeq((n) => n + 1)
-        setImportSrc(src)
-      }
-    } catch (e) {
-      toaster.create({ title: "No s'ha pogut llegir", description: e instanceof Error ? e.message : String(e), type: "error", duration: 8000 })
-    } finally {
-      setImportBusy(false)
-    }
-  }
-  const doImport = async (selected: HettichArticle[]) => {
-    if (!importSrc) return
-    setImportBusy(true)
-    try {
-      const r = await importArticles(importSrc, selected, importBase(), items, (done, total) => setProgress({ done, total }))
-      const taken = new Set(items.map((x) => fold(x.name.trim())))
-      const byId = new Map(r.updated.map((x) => [x.id, x]))
-      const fresh = r.items.map((x) => {
-        let name = x.name
-        for (let n = 2; taken.has(fold(name)); n++) name = `${x.name} ${n}`
-        taken.add(fold(name))
-        return { ...x, name }
-      })
-      if (fresh.length || byId.size) {
-        onChange([...fresh, ...items.map((x) => byId.get(x.id) ?? x)])
-        setOpen([...new Set([...openState, ...fresh.map((x) => x.category), ...r.updated.map((x) => x.category)])])
-      }
-      const plate = r.plates === 1 ? fresh.find((x) => x.engine === "plate") : undefined
-      const hinges = fresh.filter((x) => x.engine === "cup").length
-      const only3d = fresh.filter((x) => x.engine === "model" && !x.machining?.length).length
-      const drill = fresh.length - only3d
-      toaster.create({
-        title: fresh.length
-          ? `${fresh.length} ${fresh.length === 1 ? "ferratge importat" : "ferratges importats"}${drill ? ", sense confirmar" : ""}${r.updated.length ? ` i ${r.updated.length} ${r.updated.length === 1 ? "ampliat" : "ampliats"}` : ""}`
-          : r.updated.length ? `${r.updated.length} ${r.updated.length === 1 ? "ferratge ampliat" : "ferratges ampliats"}` : "No s'ha importat res",
-        description: [
-          countKinds(fresh) + (fresh.length ? "." : ""),
-          r.updated.length ? `${r.updated.length === 1 ? "Ja era a la biblioteca: s'hi ha afegit" : "Ja eren a la biblioteca: s'hi ha afegit"} el que portaven de nou (3D, vistes, plànols).` : "",
-          r.upgraded ? `${r.upgraded} amb forats proposats nous, sense confirmar.` : "",
-          r.pendingUpdates ? `${r.pendingUpdates} ${r.pendingUpdates === 1 ? "té" : "tenen"} una proposta nova per revisar (no s'ha tocat res de confirmat).` : "",
-          drill ? "Revisa'n els forats i confirma'ls: fins aleshores no fan cap forat." : "",
-          only3d ? `${only3d === 1 ? "El «només 3D» no fa" : "Els «només 3D» no fan"} mai cap forat.` : "",
-          r.paired && plate ? `${r.paired} ${r.paired === 1 ? "frontissa aparellada" : "frontisses aparellades"} amb «${plate.name}».` : "",
-          r.plates > 1 && hinges ? `${r.plates} plaques al lot: tria la de cada frontissa a «Placa de muntatge».` : "",
-          ...r.problems,
-        ].filter(Boolean).join(" "),
-        type: r.problems.length ? "warning" : "success",
-        duration: 12000,
-      })
-      setImportSrc(null)
-      const first = fresh.find((x) => x.engine === "cup") ?? fresh.find((x) => x.engine !== "model") ?? fresh[0] ?? r.updated[0]
-      if (first) {
-        setSel(first.id)
-        setEditorOpen(true)
-      }
-    } catch (e) {
-      toaster.create({ title: "No s'ha pogut importar", description: e instanceof Error ? e.message : String(e), type: "error", duration: 8000 })
-    } finally {
-      setImportBusy(false)
-      setProgress(null)
-    }
-  }
-
   const q = fold(query.trim())
   const [openSeries, setOpenSeries] = useSessionList(SERIES_KEY, [])
   // Per categoria i, dins, per sèrie (la carpeta del fabricant: Frontisses › Sensys, Tiradors › Classic…).
@@ -289,17 +197,13 @@ export function HardwareList({
   // El mòdul d'exemple del muntatge: com un de nou (tauler, gruix, jocs i ferratges per defecte de les preferències).
   const mountBase = useMountBase(settings)
   const materials = settings?.materials ?? NO_MATERIALS
-  // Les eines de la màquina per defecte (generador de mecanitzats).
-  const tools = useMemo(() => genTools(defaultMachine(settings?.machines ?? [])?.tools ?? []), [settings?.machines])
-  // Canvi de l'item obert (formulari o dibuix del generador): si canvia de confirmat, els mobles desats hi passen.
+  // Canvi de l'item obert: si canvia de confirmat, els mobles desats hi passen.
   const changeItem = (next: HardwareItem) => {
     if (!it) return
     const list = syncPairedPlates(items.map((x, k) => (k === i ? next : x)))
     onChange(list)
     if (it.imported && next.imported && it.imported.confirmed !== next.imported.confirmed) onConfirmed?.(it, next, list)
   }
-  // El generador: el dibuix (escenari) i el formulari comparteixen la peça, el mecanitzat triat i la vista de fons.
-  const mui = useMachiningUi(it?.id)
   return (
     <Stack gap={4} minW={0}>
       {head}
@@ -318,28 +222,6 @@ export function HardwareList({
             )
           }),
         }}
-      />
-      <ImportDropZone title="Importar del fabricant" accept={IMPORT_ACCEPT} busy={importBusy && !importSrc} onPicked={onPicked} testId="hardware-import">
-        Descàrregues de <strong>Hettich CAD</strong> (hettich.com › Descàrregues CAD): els ZIP tal com es baixen (STEP, IGES, 3DS i DWG/DXF), una
-        carpeta o fitxers <Text as="span" fontFamily="mono">.stp</Text> i <Text as="span" fontFamily="mono">_2D_…_view.dxf</Text>. Frontisses, plaques,
-        tiradors i potes: els forats surten del STEP i s'han de confirmar abans que arribin al taller. La resta (estructures de taula, portes
-        corredisses i plegables, Cadro, accessoris) entra com a «només 3D»: el model, sense cap forat. Un article que ja tens no es repeteix: s'hi afegeix el que
-        porta de nou (el 3D del STEP, les vistes del DWG/DXF, els plànols de muntatge), sense tocar mai uns forats confirmats. De{" "}
-        <strong>Blum E-SERVICES</strong> (cerca de producte): el 3D (STEP o .dae) i l'«Esquema de taladrado» en <Text as="span" fontFamily="mono">Xilog *.pgm</Text>, que dona
-        els mecanitzats exactes (es revisen, es confirmen i es col·loquen a mà a la peça). Es poden triar molts fitxers solts alhora, de tipus barrejats
-        (Blum els baixa d'un en un). Es llegeixen: {importFormatsText()}.
-      </ImportDropZone>
-      <HardwareImportDialog
-        key={importSeq}
-        articles={importSrc?.articles ?? null}
-        fileCount={importSrc?.fileCount ?? 0}
-        loose={importSrc?.loose ?? []}
-        busy={importBusy}
-        progress={progress}
-        analyse={analyse}
-        merge={mergeOf}
-        onCancel={() => setImportSrc(null)}
-        onImport={(sel) => void doImport(sel)}
       />
       {groups.length ? (
         <FoldGroup variant="gallery" value={openState} onValueChange={setOpen} forceOpen={q ? groups.map((g) => g.id) : null}>
@@ -377,7 +259,7 @@ export function HardwareList({
         dirty={dirty}
         focusSelector={it !== null && justAdded === it.id ? "[data-hardware-name]" : null}
       >
-        {it && <HardwareStage item={it} base={mountBase} materials={materials} mui={mui} onChange={changeItem} />}
+        {it && <HardwareStage item={it} base={mountBase} materials={materials} />}
         {it && (
           <HardwareCard
             key={it.id}
@@ -385,8 +267,6 @@ export function HardwareList({
             dirty={dirty}
             plates={items.filter((x) => x.engine === "plate")}
             library={items}
-            tools={tools}
-            mui={mui}
             isDefault={(() => {
               const sl = slotOfEngine(it.engine)
               return !!sl && defaults[sl.slot] === it.id
@@ -417,29 +297,6 @@ export function HardwareList({
       </EditorDialog>
     </Stack>
   )
-}
-
-/** «2 tiradors, 1 pota i 3 només 3D»: què s'ha importat, per tipus. */
-function countKinds(items: HardwareItem[]): string {
-  const names: [HardwareEngine, string, string][] = [
-    ["cup", "frontissa", "frontisses"],
-    ["plate", "placa", "plaques"],
-    ["barHandle", "tirador", "tiradors"],
-    ["leg", "pota", "potes"],
-    ["model", "només 3D", "només 3D"],
-  ]
-  // Amb mecanitzats (Xilog de Blum, DXF del taller): no són «només 3D».
-  const gen = (x: HardwareItem) => x.engine === "model" && !!x.machining?.length
-  const flat = (x: HardwareItem) => x.engine === "model" && !!x.imported && !x.imported.bbox && !gen(x)
-  const parts = names.flatMap(([e, one, many]) => {
-    const n = items.filter((x) => x.engine === e && !flat(x) && !gen(x)).length
-    return n ? [`${n} ${n === 1 ? one : many}`] : []
-  })
-  const ng = items.filter(gen).length
-  if (ng) parts.unshift(`${ng} amb mecanitzats exactes (es col·loquen a mà)`)
-  const n2d = items.filter(flat).length
-  if (n2d) parts.push(`${n2d} només 2D (falta el STEP)`)
-  return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} i ${parts.at(-1)}` : (parts[0] ?? "")
 }
 
 /** La vista registrada al marc del ferratge (la que mira la cara de la peça; a les frontisses, la frontal), o `null`. */
@@ -474,7 +331,7 @@ function underlays(item: HardwareItem, panels: Panel[], own: HardwareView[], pla
  * (els de cantell, discontinus; els passants, buits) i, d'un importat, la vista frontal del fitxer de fons (si s'ha pogut
  * registrar sobre els forats proposats) i les vistes 2D tal com venen.
  */
-function HardwareStage({ item, base, materials, mui, onChange }: { item: HardwareItem; base?: Module; materials: MaterialPref[]; mui: [MachiningUi, (p: Partial<MachiningUi>) => void]; onChange: (next: HardwareItem) => void }) {
+function HardwareStage({ item, base, materials }: { item: HardwareItem; base?: Module; materials: MaterialPref[] }) {
   const preview = useMemo(() => hardwarePreview(item), [item])
   const ownId = item.imported?.asset
   const plateId = item.plate?.asset
@@ -497,7 +354,6 @@ function HardwareStage({ item, base, materials, mui, onChange }: { item: Hardwar
           </Alert.Root>
         )}
         {!preview.error && <MountPreview item={item} base={base} materials={materials} noModel={!!item.imported && own !== undefined && !own?.glb} />}
-        <MachiningStage item={item} onChange={onChange} ui={mui} />
         {preview.panels.map((p) => {
           // Al costat, el detall dels forats (amb el cantell): a la peça sencera, una espiga Ø8 és un punt.
           const crop = featureCrop(p)
@@ -650,7 +506,7 @@ function ModelPreview({ mount, materials, noModel, generated }: { mount: Hardwar
         </Text>
         <Text fontSize="sm" color="fg.muted">
           Només s'han importat les vistes del DXF (a sota) i els punts de connexió: falta el STEP, d'on surten el 3D i, a les frontisses, plaques, tiradors i
-          potes, els forats proposats. Importa el ZIP STEP_… de la mateixa família i s'afegirà a aquest ferratge (no se'n farà un de nou).
+          potes, els forats proposats. (La importació del fabricant ja no es fa des de l'app: els ferratges nous es fan a partir del catàleg.)
         </Text>
       </Stack>
     )
@@ -661,7 +517,7 @@ function ModelPreview({ mount, materials, noModel, generated }: { mount: Hardwar
           {generated ? "Model 3D" : "Només 3D"}
         </Text>
         <Text fontSize="xs" color="fg.muted">
-          {mount.model?.bbox ? `Caixa de ${n(mount.size.width)} × ${n(mount.size.height)} × ${n(mount.size.depth)} mm · ` : ""}{generated ? `cap regla del moble: els ${generated} mecanitzats del generador es fan quan el col·loques a mà.` : "sense cap forat: no hi ha cap regla del moble per a aquest ferratge."}
+          {mount.model?.bbox ? `Caixa de ${n(mount.size.width)} × ${n(mount.size.height)} × ${n(mount.size.depth)} mm · ` : ""}{generated ? `cap regla del moble: els seus ${generated} mecanitzats es fan als mobles on ja està col·locat a mà.` : "sense cap forat: no hi ha cap regla del moble per a aquest ferratge."}
         </Text>
       </Stack>
       <Box h={{ base: "300px", md: "420px", lg: "min(560px, 55dvh)" }} rounded="md" overflow="hidden" bg="bg.subtle" data-testid="hardware-mount-3d">
@@ -743,7 +599,7 @@ const ENGINE_HELP: Partial<Record<HardwareEngine, { label: string; help: string 
 }
 
 const PLACED_HELP =
-  "Sense regla del moble: els mecanitzats del generador (escrits a mà, d'un DXF del taller o d'un programa Xilog del fabricant) es fan on el col·loques (Editor › mòdul o peça lliure › «Ferratges»), un cop confirmat. El model 3D és per veure'l."
+  "Sense regla del moble: els seus mecanitzats (d'abans, escrits a mà, d'un DXF del taller o d'un programa Xilog del fabricant) es fan on ja està col·locat (Editor › mòdul o peça lliure › «Ferratges»), un cop confirmat. El model 3D és per veure'l."
 
 const ONLY_2D_HELP = "Només s'han importat les vistes DXF (i els punts de connexió): cap forat. Quan importis el STEP del mateix article, s'hi afegirà el 3D i, si és una frontissa, placa, tirador o pota, els forats proposats (per revisar i confirmar)."
 
@@ -846,7 +702,7 @@ function UpdateNotice({ item, onChange }: { item: HardwareItem; onChange: (next:
       )))}
       {u.machining && (
         <Text fontSize="xs" fontFamily="mono">
-          {gen ?? 0} {gen === 1 ? "mecanitzat" : "mecanitzats"} del generador
+          {gen ?? 0} {gen === 1 ? "mecanitzat col·locat a mà" : "mecanitzats col·locats a mà"}
         </Text>
       )}
     </Stack>
@@ -900,8 +756,6 @@ function HardwareCard({
   dirty,
   plates,
   library,
-  tools,
-  mui,
   isDefault,
   onDefault,
   onChange,
@@ -916,10 +770,6 @@ function HardwareCard({
   plates: HardwareItem[]
   /** Tota la biblioteca (una frontissa no es confirma amb la placa sense confirmar). */
   library: HardwareItem[]
-  /** Eines de la màquina per defecte (generador de mecanitzats). */
-  tools: GenTool[]
-  /** Estat del generador compartit amb el dibuix de l'escenari. */
-  mui: [MachiningUi, (p: Partial<MachiningUi>) => void]
   isDefault: boolean
   onDefault: () => void
   onChange: (next: HardwareItem) => void
@@ -1236,7 +1086,6 @@ function HardwareCard({
           </Text>
         </FoldItem>
         )}
-        <MachiningGenerator item={item} onChange={onChange} tools={tools} ui={mui} />
         </Box>
       </Box>
     </Box>
