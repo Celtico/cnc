@@ -57,6 +57,13 @@ function scrambleHidden(m: Module, r: Rnd): Module {
     fronts.betweenGap = pick(r, [0, 2, 6])
   }
   if (!anyRetiredShelf(m.root)) c.shelfSetback = int(r, 0, 100)
+  // Interior › Divisió › «Peces de dins»: sense divisors ni prestatges fixos a partir de la segona divisió no surt (i 0 =
+  // sense valor).
+  if (!anyInnerPiece(m.root)) {
+    const g = pick(r, [undefined, 0, 0.5, 1, 3])
+    if (g === undefined) delete c.innerClearance
+    else c.innerClearance = g
+  } else if (!c.innerClearance && r() < 0.5) c.innerClearance = 0
   // Llocs de ferratge que el mòdul no fa servir (JoineryForm i FrontsForm només ensenyen `usedHardwareSlots`): un item
   // d'un altre tipus o un joc sense `kit` no canvia res ni avisa.
   const used = usedHardwareSlots(m)
@@ -80,6 +87,16 @@ function anyRetiredShelf(z: Zone): boolean {
   if (z.split) return z.split.children.some(anyRetiredShelf)
   if (z.front?.kind === "drawers") return false
   return (z.shelves?.n ?? 0) > 0 || !!z.led
+}
+
+/**
+ * Algun divisor o prestatge fix (divisió horitzontal, o prestatges sense «Regulables» d'un compartiment que no és de
+ * calaixos que es fan) dins d'un compartiment que ja és fruit d'una divisió (no l'arrel).
+ */
+function anyInnerPiece(z: Zone, isRoot = true, covered = false): boolean {
+  if (z.split) return !isRoot || z.split.children.some((c) => anyInnerPiece(c, false, covered || !!z.front))
+  if (isRoot || (z.front?.kind === "drawers" && !covered)) return false
+  return (z.shelves?.n ?? 0) > 0 && !z.shelves!.adjustable
 }
 
 function randomShelves(r: Rnd): Zone["shelves"] {
@@ -206,6 +223,17 @@ describe("res amagat compta: els camps de les opcions apagades no canvien res", 
       const c = randomComposition(seed)
       const ref = out(c)
       for (let k = 0; k < 3; k++) if (out(scrambled(c, r)) !== ref) bad.push(seed)
+    }
+    expect([...new Set(bad)]).toEqual([])
+  })
+  it("mòduls aleatoris amb la folgança de les peces de dins (1 mm): només compta amb divisors o prestatges fixos de dins", () => {
+    const bad: number[] = []
+    const r = rng(13)
+    for (let seed = 1; seed <= 150; seed++) {
+      const base = randomComposition(seed)
+      const c = { ...base, modules: base.modules.map((m) => ({ ...m, carcass: { ...m.carcass, innerClearance: 1 } })) }
+      const ref = out(c)
+      for (let k = 0; k < 2; k++) if (out(scrambled(c, r)) !== ref) bad.push(seed)
     }
     expect([...new Set(bad)]).toEqual([])
   })

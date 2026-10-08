@@ -33,8 +33,10 @@ const mm = z.number().finite()
  * v24: els jocs inicials (`builtin`, id dels de l'app) reben les dades del joc d'ara (`kit`: guia telescòpica de dos
  * cossos, acabats dels laterals); el nom i la prebroca (`params`) de l'usuari es queden. Les còpies dels mobles no es
  * toquen.
+ * v25: folgança de les peces de dins (`gaps.innerClearance`, 1 mm): additiu; les preferències d'abans la reben amb el
+ * valor inicial (si ja n'hi ha una, es queda). Els mobles desats no canvien (sense el camp, 0).
  */
-export const SETTINGS_VERSION = 24
+export const SETTINGS_VERSION = 25
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -295,6 +297,11 @@ export const GapsPrefSchema = z.object({
   backClearance: mm.min(0).max(4),
   backSetback: mm.min(0).max(60),
   grooveDepth: mm.min(3).max(15),
+  /**
+   * Peces de dins (v25): divisors i prestatges fixos a partir de la segona divisió, tants mm menys de llarg (la meitat a
+   * cada cap). Es copia a cada mòdul nou (`Carcass.innerClearance`).
+   */
+  innerClearance: mm.min(0).max(3),
 })
 
 export const LabelPrefSchema = z.object({ w: mm.min(10).max(300), h: mm.min(10).max(300) })
@@ -552,6 +559,9 @@ export const BUILTIN_MATERIALS: MaterialPref[] = upgradeToPhoto([
   ...PHOTO_MATERIALS,
 ])
 
+/** Folgança inicial de les peces de dins (mm): divisors i prestatges fixos a partir de la segona divisió. */
+export const DEFAULT_INNER_CLEARANCE = 1
+
 export const DEFAULT_SETTINGS: Settings = {
   version: SETTINGS_VERSION,
   references: BUILTIN_REFERENCES,
@@ -573,6 +583,7 @@ export const DEFAULT_SETTINGS: Settings = {
     backClearance: DEFAULT_CABINET.backClearance,
     backSetback: DEFAULT_CABINET.backSetback,
     grooveDepth: DEFAULT_CABINET.grooveDepth,
+    innerClearance: DEFAULT_INNER_CLEARANCE,
   },
   label: { w: 99, h: 68 },
   display: { unit: "mm" },
@@ -624,6 +635,8 @@ export function parseSettings(raw: unknown): SettingsParse {
   // desa la més alta): un fitxer ja migrat no torna a afegir els materials que l'usuari ha esborrat.
   if (version < SETTINGS_VERSION) migrated = true
   if (version > SETTINGS_VERSION) problems.push(`Preferències d'una versió més nova (${version}); s'ha llegit el que s'ha pogut.`)
+  // v25: la folgança de les peces de dins, amb el valor inicial (additiu: si ja n'hi ha una, es queda).
+  if (version < 25 && isRecord(obj.gaps) && !("innerClearance" in obj.gaps)) obj = { ...obj, gaps: { ...obj.gaps, innerClearance: DEFAULT_INNER_CLEARANCE } }
 
   // Camp a camp (`repairValue`): un valor dolent només torna aquell valor a l'inicial (un tauler o una llargada de
   // guia dolents només es treuen), no tota la secció.
@@ -970,6 +983,7 @@ export function applySettingsToModule(s: Settings, m: Module): Module {
       backClearance: s.gaps.backClearance,
       backSetback: s.gaps.backSetback,
       grooveDepth: s.gaps.grooveDepth,
+      innerClearance: s.gaps.innerClearance,
     },
     fronts: { ...m.fronts, outerGap: s.gaps.outerGap, betweenGap: s.gaps.betweenGap },
     hardware: kitFrom(s.hardwareLibrary, s.hardwareDefaults),
