@@ -2,7 +2,6 @@ import {
   Button,
   Dialog,
   IconButton,
-  Menu,
   Portal,
   Text,
   VStack,
@@ -19,8 +18,7 @@ import { isObject } from "../objects/isObject"
 import { useAmbientMembership } from "../ambients/useAmbientMembership"
 import type { Composition } from "../../core/model"
 import { ClearHistory } from "./ClearHistory"
-import { blankMoble, NEW_MOBLE_NAMES, type NewMobleKind } from "./blank"
-import { NEW_MOBLE_KINDS } from "../composition/kinds"
+import { blankMoble, NEW_MOBLE_NAMES } from "./blank"
 import { useSettings } from "../settings/SettingsContext"
 import { FolderedGrid, MoveToFolderDialog } from "./Folders"
 import { createProject, db, deleteProject, isEdited, setProjectsFolder, duplicateProject, type Project } from "../../db/db"
@@ -98,24 +96,8 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
       <NewMobleGallery
         onCreate={(c, n) => void handleCreate(c, n)}
         // El botó principal al costat del cercador (com a Ambients i Objectes) i «Obrir fitxer» a la mateixa fila.
-        // «Nou moble» ofereix els punts de partida (el tipus es tria aquí; no hi ha selector de tipus a l'editor).
-        add={{
-          label: "Nou moble",
-          menu: NEW_MOBLE_KINDS.map((k) => {
-            const kind = k.value as NewMobleKind
-            return (
-              <Menu.Item key={kind} value={kind} onClick={() => void handleCreate(blankMoble(kind), NEW_MOBLE_NAMES[kind])}>
-                <k.icon />
-                <VStack align="start" gap={0}>
-                  <Text>{k.label}</Text>
-                  <Text fontSize="xs" color="fg.muted">
-                    {k.hint}
-                  </Text>
-                </VStack>
-              </Menu.Item>
-            )
-          }),
-        }}
+        // «Nou moble» crea directament un moble en blanc (per decisió de l'usuari, sense menú de tipus).
+        add={{ label: "Nou moble", onClick: () => void handleCreate(blankMoble("moble"), NEW_MOBLE_NAMES.moble) }}
         extra={
           <Tooltip content="Obrir fitxer">
             <IconButton size="sm" variant="outline" flexShrink={0} aria-label="Obrir fitxer" onClick={() => fileInput.current?.click()}>
