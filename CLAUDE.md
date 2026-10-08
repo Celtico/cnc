@@ -185,6 +185,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     l'extensió real de la corba mostrejada (no pels nodes: les cúbiques sortien del rectangle del nesting). Els fronts
     recobrents s'aturen a sota del voladís (joc `outerGap`).
 - **Zones** (compartiments): divisions verticals/horitzontals amb mides fixes o «auto» (l'últim «auto» agafa el que sobra;
+  a l'editor, l'última zona sempre és el que sobra;
   la mida de cada fill es decideix a la Divisió del pare, no al compartiment: vegeu Editor › Propietats);
   contingut obert, prestatges, porta, calaixos, abatible, reixeta o front fix.
   - **Què aguanta cada compartiment** (`core/model/zoneSupport.ts`, `zoneBoundsMap`; per decisió de l'usuari: en un mòdul
@@ -883,10 +884,16 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     guia o joc, braç; a la reixeta, l'**imant** després de «Muntatge» i «Trapa»; a la vitrina, el **marc**) i el «Tirador» (amb «Cap
     (push)»). **Sense «Mida»** (per decisió de l'usuari, 2026-10-08: «a les obertures no té sentit l'amplada; ha
     d'anar a la divisió»): l'amplada o l'alçada de cada compartiment és a la **Divisió** del pare (`SplitSizes` a
-    `ZonePanel`): una fila per fill, en ordre, amb el nom de l'arbre («1 · Obert», «2 · Porta»; `splitRows` a
-    `zoneLabel.ts`, `zoneLabel.test.ts`; clicar-lo selecciona el compartiment) i «Auto» o els mm (`setChildSize`; en
-    treure l'«Auto», 400 mm); les automàtiques es reparteixen el que queda i, sense cap, l'última s'ajusta (`fitSizes`,
-    avís `layout`). Després, «Afegir zona» · «Treure la divisió» (i a l'«Interior», «Peces de dins»). Una zona dividida
+    `ZonePanel`): una fila per fill, en ordre, **«Amplada 1», «Amplada 2»…** (divisió vertical) o **«Alçada 1»…**
+    (horitzontal) (`splitRows` a `zoneLabel.ts`, `zoneLabel.test.ts`; clicar-lo selecciona el compartiment, el nom de
+    l'arbre surt a l'ajuda). Per decisió de l'usuari («si només hi ha dos, només pot posar una mida; si n'hi ha 3, 2»):
+    **amb n zones s'editen les n−1 primeres** («Auto» o els mm; en treure l'«Auto», els mm que feia) i **l'última no
+    s'edita**: diu el que sobra («412 mm (el que sobra)»). Al costat de cada «Auto», els mm que fa. Les mides reals són
+    les de la construcció (`splitChildSizes` a `build/layout.ts` sobre `ModuleBuild.layout`: després dels gruixos dels
+    divisors i `fitSizes`; `build/splitSizes.test.ts`). **Dades d'abans amb l'última fixa** (potser amb una altra
+    «auto»): la construcció no canvia (l'última s'ajusta, `fitSizes`, avís `layout` si no quadrava); en editar qualsevol
+    mida de la divisió (`setSplitSize`), primer les «auto» que no són l'última passen als seus mm i l'última a «auto»,
+    sense canviar la geometria (mateixes peces), i després s'aplica el canvi. Després, «Afegir zona» · «Treure la divisió» (i a l'«Interior», «Peces de dins»). Una zona dividida
     (l'«Interior» o una de dins) dona només la Divisió: **cap «Front de tota la zona»** (per decisió de l'usuari,
     2026-10-08: les portes de dalt a baix són a Mòdul › Portes). **L'«Interior» (l'arrel) no té opcions de tots els fronts** (per decisió de l'usuari, 2026-10-08: l'estil, les
     folgances i el retranqueig són a Mòdul › Caixa i el material dels fronts a Mòdul › Materials; vegeu Mòdul). Un compartiment **tapat** per les portes de

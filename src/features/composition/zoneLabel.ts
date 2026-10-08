@@ -32,11 +32,14 @@ function ownLabel(z: Zone): string {
 }
 
 /**
- * Les files de la secció «Divisió» d'una zona dividida, una per fill i en ordre: «1 · Obert», «2 · Porta»… (el mateix
- * nom que a l'arbre) i la seva mida (mm o «auto»; si en falta, «auto», com `padSizes`). Sense divisió, cap.
+ * Les files de la secció «Divisió» d'una zona dividida, una per fill i en ordre (per decisió de l'usuari): «Amplada 1»,
+ * «Amplada 2»… amb una divisió vertical i «Alçada 1»… amb una d'horitzontal; `name` és el nom de l'arbre del compartiment
+ * («Obert», «Porta»…), `size` la mida desada (mm o «auto»; si en falta, «auto», com `padSizes`) i `rest` marca l'última,
+ * que no s'edita: és el que sobra. Sense divisió, cap.
  */
-export function splitRows(z: Zone): { id: string; label: string; size: number | "auto" }[] {
+export function splitRows(z: Zone): { id: string; label: string; name: string; size: number | "auto"; rest: boolean }[] {
   if (!z.split) return []
-  const { children, sizes } = z.split
-  return children.map((c, i) => ({ id: c.id, label: `${i + 1} · ${zoneLabel(c)}`, size: sizes[i] ?? "auto" }))
+  const { children, sizes, dir } = z.split
+  const what = dir === "v" ? "Amplada" : "Alçada"
+  return children.map((c, i) => ({ id: c.id, label: `${what} ${i + 1}`, name: zoneLabel(c), size: sizes[i] ?? "auto", rest: i === children.length - 1 }))
 }
