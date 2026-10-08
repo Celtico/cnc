@@ -50,10 +50,9 @@ export function readComposition(project: Pick<Project, "params" | "composition" 
   if (raw === undefined || raw === null) return { composition: legacy(), problems: [], unreadable: false }
   const { composition, problems } = repairCached(raw)
   if (!composition) return { composition: legacy(), problems, unreadable: true }
-  // Sense cap mòdul bo (l'Editor en necessita un): el del mòdul de caixa, conservant la resta.
-  const withModule = composition.modules.length > 0 ? composition : { ...composition, modules: legacy().modules }
+  // Sense cap mòdul (un moble nou, un objecte buit) es queda així: l'Editor treballa amb 0 mòduls.
   // Els passacables dels mòduls (versió anterior) passen a ser objectes que tallen.
-  return { composition: migrateCableHoles(normalizeComposition(withModule), panelBox), problems, unreadable: false }
+  return { composition: migrateCableHoles(normalizeComposition(composition), panelBox), problems, unreadable: false }
 }
 
 /** Composició d'un projecte, reparada si cal i migrant el mòdul de caixa antic. */

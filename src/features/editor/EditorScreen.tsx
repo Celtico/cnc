@@ -54,7 +54,7 @@ import { movingGroups, openingCollisions } from "../../components/viewer/opening
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
 import type { KitOrder } from "../../core/build/buildModule"
 import { materialIssues } from "../../core/build/materialIssues"
-import { applySettingsToModule, moduleHasInnerPieces, usedSlotSet, hasDrawers, hasBuiltFronts, coveringZone, frontsSection, frontsSectionEmpty, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule, moduleHasInnerPieces, usedSlotSet, hasDrawers, hasBuiltFronts, coveringZone, frontsSection, frontsSectionEmpty, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, FrontsForm, InnerClearanceRow, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -103,6 +103,9 @@ type ViewMode = "pieces" | "texture" | "presentation"
 const NO_PANELS: Panel[] = []
 const NO_KITS: KitOrder[] = []
 const NO_WARNINGS: CompositionWarning[] = []
+
+/** Mida (mm) de l'escena d'un document buit: el que ocuparia un moble mitjà, per enquadrar la càmera i el terra. */
+const EMPTY_STAGE = { width: 1200, height: 900, depth: 600 }
 
 const VIEW_MODES: [ViewMode, string, string, typeof LuShapes][] = [
   ["pieces", "Per peça", "cada tipus de peça d'un color, ràpid i amb guies", LuShapes],
@@ -155,9 +158,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   useUndoKeys(undo, redo)
 
   // Selecció única (arbre, 3D i alçat van sincronitzats): moble, mòdul, compartiment o objecte.
-  const [selectedModule, setSelectedModule] = useState<string>(initial.modules[0]!.id)
+  const [selectedModule, setSelectedModule] = useState<string>(initial.modules[0]?.id ?? "")
   const [selectedZone, setSelectedZone] = useState<string | null>(null)
-  const [selKind, setSelKind] = useState<"moble" | "module" | "zone" | "ref" | "part" | "group" | "model" | "hardware">(partsOnlyKind(compositionKind(initial)) ? "moble" : "module")
+  const [selKind, setSelKind] = useState<"moble" | "module" | "zone" | "ref" | "part" | "group" | "model" | "hardware">(partsOnlyKind(compositionKind(initial)) || !initial.modules.length ? "moble" : "module")
   const [selectedRef, setSelectedRef] = useState<string | null>(null)
   const [selectedPart, setSelectedPart] = useState<string | null>(null)
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
@@ -284,17 +287,22 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   }, [])
 
   const kind = compositionKind(comp)
-  const module: Module = comp.modules.find((m) => m.id === selectedModule) ?? comp.modules[0]!
-  const moduleIndex = comp.modules.indexOf(module)
+  // El mòdul de treball (alçat, inspector, veïns): el seleccionat o el primer. Un moble nou no en té cap (0 mòduls).
+  const module: Module | undefined = comp.modules.find((m) => m.id === selectedModule) ?? comp.modules[0]
+  const moduleIndex = module ? comp.modules.indexOf(module) : -1
   // Posició dins de la seva fila (a terra o penjats) i el mòdul anterior de la fila.
-  const rowMates = comp.modules.filter((m) => rowOf(m) === rowOf(module) && !freeX(m))
-  const rowIndex = rowMates.indexOf(module)
+  const rowMates = module ? comp.modules.filter((m) => rowOf(m) === rowOf(module) && !freeX(m)) : []
+  const rowIndex = module ? rowMates.indexOf(module) : -1
   const rowPrev = rowIndex > 0 ? rowMates[rowIndex - 1] : undefined
   const moduleBuild = build?.modules[moduleIndex]?.build
   const moduleExtras = useMemo(() => (build?.extras ?? NO_PANELS).filter((p) => p.module === moduleIndex + 1), [build, moduleIndex])
-  const zone = selectedZone ? findZone(module.root, selectedZone) : undefined
+  const zone = selectedZone && module ? findZone(module.root, selectedZone) : undefined
 
   const size = useMemo(() => viewerSize(comp), [comp])
+  // Document buit (un moble o un objecte nou): res a enquadrar; el visor mostra el terra d'una escena de mida normal i
+  // s'hi pot orbitar. En afegir-hi el primer element, el visor no es mou (editar no mou la càmera).
+  const empty = isEmptyComposition(comp)
+  const frameSize = empty ? EMPTY_STAGE : size
 
   const viewerModules: ViewerModule[] = useMemo(
     () =>
@@ -321,7 +329,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             ? { kind: "model", id: selectedModel }
           : selKind === "hardware" && selectedHardware && comp.hardwarePlacements?.some((h) => h.id === selectedHardware)
             ? { kind: "hardware", id: selectedHardware }
-          : partsOnlyKind(kind) || selKind === "ref" || selKind === "part" || selKind === "group" || selKind === "model"
+          : partsOnlyKind(kind) || !module || selKind === "ref" || selKind === "part" || selKind === "group" || selKind === "model"
             ? { kind: "moble" }
             : selectedZone && zone
           ? { kind: "zone", moduleId: module.id, zoneId: selectedZone }
@@ -382,7 +390,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [])
-  const selectZone = (id: string) => select({ kind: "zone", moduleId: module.id, zoneId: id })
+  const selectZone = (id: string) => module && select({ kind: "zone", moduleId: module.id, zoneId: id })
   // Ferratges col·locats a mà (llista de l'inspector, barra flotant del 3D i teclat): un sol camí, un pas de desfer.
   const duplicateHardware = (id: string) => {
     const r = duplicatePlacement(comp, id)
@@ -575,16 +583,14 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     }
     function remove() {
       if (selection.kind === "module") {
-        if (comp.modules.length <= 1) {
-          toaster.create({ title: "El moble ha de tenir almenys un mòdul", type: "info" })
-          return
-        }
         const i = comp.modules.findIndex((x) => x.id === selection.id)
-        // Peces enganxades, taulell i sòcol i forats del taulell que en depenen (`removeModule`).
+        // Peces enganxades, taulell i sòcol i forats del taulell que en depenen (`removeModule`). Pot quedar sense cap
+        // mòdul (com un moble nou): aleshores, el moble.
         const res = removeModule(comp, selection.id)
         setComp(res.comp)
         for (const n of res.notes) toaster.create({ title: n, type: "info" })
-        select({ kind: "module", id: res.comp.modules[Math.max(0, i - 1)]!.id })
+        const next = res.comp.modules[Math.max(0, i - 1)]
+        select(next ? { kind: "module", id: next.id } : { kind: "moble" })
       } else if (selection.kind === "ref") {
         setComp({ ...comp, references: comp.references.filter((r) => r.id !== selection.id) })
         select({ kind: "moble" })
@@ -606,6 +612,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           refuseInterior("eliminar")
           return
         }
+        if (!module) return
         const parent = parentOf(module.root, selection.zoneId)
         updateModule({ ...module, root: deleteZone(module.root, selection.zoneId) })
         if (parent) select({ kind: "zone", moduleId: module.id, zoneId: parent.id })
@@ -704,7 +711,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     if (selection.kind === "ref") return around(comp.references, comp.references.findIndex((r) => r.id === selection.id), (r) => ({ kind: "ref", id: r.id }))
     if (selection.kind === "part") return around(comp.parts ?? [], (comp.parts ?? []).findIndex((r) => r.id === selection.id), (r) => ({ kind: "part", id: r.id }))
     if (selection.kind === "model") return around(comp.models ?? [], (comp.models ?? []).findIndex((g) => g.id === selection.id), (g) => ({ kind: "model", id: g.id }))
-    if (selection.kind === "zone" && zone && moduleBuild) {
+    if (selection.kind === "zone" && zone && moduleBuild && module) {
       const wantLeaves = !zone.split
       const list: { id: string; cx: number; cy: number }[] = []
       walkZones(module.root, (z) => {
@@ -720,6 +727,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
 
   /** Enganxa un mòdul nou al costat del seleccionat, amb la mateixa alçada i fondària. */
   const addModuleBeside = (side: "left" | "right") => {
+    if (!module) return
     const fresh = applySettingsToModule(settings, defaultModule(newId("m"), `Mòdul ${comp.modules.length + 1}`))
     const m: Module = {
       ...fresh,
@@ -776,14 +784,14 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   const highlightZone = useMemo(() => {
     if (!build) return null
     const mod = build.modules[moduleIndex]
-    if (!mod) return null
+    if (!mod || !module) return null
     const c = module.carcass
     // Mòdul seleccionat: només el contorn, sense vel i sòlid (translúcid només amb un compartiment).
     if (selection.kind === "module")
       return { x0: mod.x, x1: mod.x + c.width, y0: mod.y, y1: mod.y + c.height, z0: mod.z, z1: mod.z + c.depth + c.thickness, veil: false }
     if (selection.kind !== "zone" || !zoneRect) return null
     return { x0: mod.x + zoneRect.x0, x1: mod.x + zoneRect.x1, y0: mod.y + zoneRect.y0, y1: mod.y + zoneRect.y1, z0: mod.z, z1: mod.z + c.depth + c.thickness }
-  }, [selection.kind, zoneRect, build, moduleIndex, module.carcass])
+  }, [selection.kind, zoneRect, build, moduleIndex, module])
   const openOnly = useMemo(() => {
     if (!viewer.openOnlySelected || !zoneRect || !build) return null
     const mod = build.modules[moduleIndex]
@@ -815,7 +823,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   // de l'objecte de referència seleccionat, o tots si és el moble.
   const moduleWarnings =
     selection.kind === "module" || selection.kind === "zone"
-      ? warnings.filter((w) => !w.moduleId || w.moduleId === module.id)
+      ? warnings.filter((w) => !w.moduleId || w.moduleId === module?.id)
       : selection.kind === "ref"
         ? warnings.filter((w) => w.refId === selection.id)
         : selection.kind === "part"
@@ -855,9 +863,11 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         ? { icon: <LuScan />, text: comp.references.find((r) => r.id === selection.id)?.name ?? "Objecte", parent: "Objecte de referència", onRename: (v) => renameRef(selection.id, v) }
       : selection.kind === "hardware" && selHardware
         ? { icon: <LuWrench />, text: selHardware.item.name, parent: `Ferratge · ${hardwareOwnerName}` }
-        : selection.kind === "zone" && zone
+        : selection.kind === "zone" && zone && module
           ? { icon: createElement(zoneIcon(zone, { root: zone.id === module.root.id })), text: zoneLabel(zone, { root: zone.id === module.root.id }), parent: module.name }
-          : { icon: <LuBox />, text: module.name, parent: name || "Moble", onRename: (v) => updateModule({ ...module, name: v }) }
+          : module
+            ? { icon: <LuBox />, text: module.name, parent: name || "Moble", onRename: (v) => updateModule({ ...module, name: v }) }
+            : { icon: <LuBox />, text: name || "Moble" }
 
   // Accions ràpides del visor, a dalt de «Opcions de vista» (com el menú de visualització
   // de Fusion o Blender): el mode en un grup i la resta com a botons amb icona i nom.
@@ -929,7 +939,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             </Tooltip>
           </HStack>
         )}
-        {!photoInspector && selection.kind === "zone" && zone && (
+        {!photoInspector && selection.kind === "zone" && zone && module && (
           <ZoneActions root={module.root} zone={zone} onChange={(root) => updateModule({ ...module, root })} onSelect={selectZone} />
         )}
         {!photoInspector && selection.kind === "part" && (
@@ -969,7 +979,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         <Stack gap={0}>
           <FoldItem id="moble-summary" title="Resum" icon={LuBox}>
             <Text fontSize="sm" color="fg.muted">
-              {comp.modules.length} {comp.modules.length === 1 ? "mòdul" : "mòduls"} · {size.width} × {size.height} × {size.depth} mm
+              {empty ? (partsOnlyKind(kind) ? "Buit: afegeix-hi peces amb el + de «Peces lliures»." : "Buit: comença amb el + de «Mòduls» (o de «Peces lliures»).") : `${comp.modules.length} ${comp.modules.length === 1 ? "mòdul" : "mòduls"} · ${size.width} × ${size.height} × ${size.depth} mm`}
             </Text>
             <HStack gap={2} wrap="wrap">
               <Badge variant="subtle">{panels.length} peces</Badge>
@@ -977,7 +987,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
               {comp.references.length > 0 && <Badge variant="subtle">{comp.references.length} objectes de referència</Badge>}
               {(comp.models?.length ?? 0) > 0 && <Badge variant="subtle">{comp.models!.length === 1 ? "1 model 3D" : `${comp.models!.length} models 3D`}</Badge>}
             </HStack>
-            <Text fontSize="xs" color="fg.muted">
+            <Text fontSize="xs" color="fg.muted" display={empty ? "none" : undefined}>
               Selecciona un mòdul, un compartiment o un objecte a l'estructura (o clica'l al 3D) per editar-lo.
             </Text>
           </FoldItem>
@@ -991,7 +1001,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
               Moble només de peces lliures (sense mòduls). Les que tenen «Encaixos» activat fan l'encaix sol on es toquen o s'encreuen: pestanyes, mitja fusta, dits o espigues. Les de ferro, pedra o vidre no van al nesting.
             </Text>
           ) : null}
-          {!partsOnlyKind(kind) && (
+          {!partsOnlyKind(kind) && comp.modules.length > 0 && (
             <FoldItem id="moble-runs" title="Taulell i sòcol" icon={LuPanelTop} badge={comp.runs?.length || undefined}>
               <RunsForm comp={comp} onChange={setComp} />
             </FoldItem>
@@ -1022,9 +1032,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
               ))}
             </Stack>
           </FoldItem>
-          {!partsOnlyKind(kind) && <FoldItem id="moble-materials" title="Materials de tot el moble" icon={LuPalette}>
+          {!partsOnlyKind(kind) && comp.modules[0] && <FoldItem id="moble-materials" title="Materials de tot el moble" icon={LuPalette}>
             <MaterialsForm
-              carcass={comp.modules[0]!.carcass}
+              carcass={comp.modules[0].carcass}
               hasBack={comp.modules.some((m) => m.carcass.back !== "none")}
               hasDrawers={comp.modules.some((m) => hasDrawers(m.root))}
               mixed={comp.modules.some((m) => {
@@ -1054,7 +1064,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             </FoldItem>
           ) : null}
         </Stack>
-      ) : selection.kind === "zone" && zone ? (
+      ) : selection.kind === "zone" && zone && module ? (
         <Stack gap={3}>
           <ZonePanel
             root={module.root}
@@ -1088,7 +1098,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             }
           />
         </Stack>
-      ) : (
+      ) : module ? (
         // Seccions plegables independents (com Figma o Fusion): es poden tenir diverses
         // obertes i cada una recorda el seu estat.
         <Stack gap={0}>
@@ -1197,7 +1207,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             />
           </FoldItem>
         </Stack>
-      )}
+      ) : null}
 
         {estimated.length > 0 && (
           <Alert.Root status="warning" size="sm" mt={3}>
@@ -1241,7 +1251,10 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                         size="xs"
                         variant="plain"
                         ml={2}
-                        onClick={() => select({ kind: "zone", moduleId: w.moduleId ?? module.id, zoneId: w.zoneId! })}
+                        onClick={() => {
+                          const moduleId = w.moduleId ?? module?.id
+                          if (moduleId) select({ kind: "zone", moduleId, zoneId: w.zoneId! })
+                        }}
                       >
                         Anar-hi
                       </Button>
@@ -1271,7 +1284,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           selection={selection}
           onSelect={(s) => select(s, true)}
           onChange={setComp}
-          newModule={(id, n) => applySettingsToModule(settings, kind === "taula" ? tableModule(id, n) : defaultModule(id, n))}
+          newModule={(id, n) => applySettingsToModule(settings, kind === "taula" ? tableModule(id, n) : emptyModule(id, n))}
           partCenter={{ x: Math.round(size.width / 2), y: partsOnlyKind(kind) ? 0 : Math.round(size.height / 2), z: partsOnlyKind(kind) ? 0 : Math.round(size.depth + 50) }}
         />
         }
@@ -1304,7 +1317,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           </Box>
         ) : viewTab === "elevation" ? (
           <Box position="absolute" inset={0} overflow="hidden" pt={14} px={4} pb={4} display="flex" flexDirection="column" alignItems="center" gap={2}>
-            {moduleBuild && (
+            {moduleBuild && module && (
               <Box
                 w="full"
                 maxW="900px"
@@ -1334,21 +1347,27 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                 />
               </Box>
             )}
-            <Text fontSize="xs" color="fg.muted" textAlign="center" display={{ base: "none", md: "block" }}>
-              Alçat de «{module.name}». Toca un compartiment per editar-lo; llums interiors en mm.
-              {comp.modules.length > 1 && " Els mòduls del costat surten translúcids: clica'n un per passar-hi."}
-            </Text>
+            {module ? (
+              <Text fontSize="xs" color="fg.muted" textAlign="center" display={{ base: "none", md: "block" }}>
+                Alçat de «{module.name}». Toca un compartiment per editar-lo; llums interiors en mm.
+                {comp.modules.length > 1 && " Els mòduls del costat surten translúcids: clica'n un per passar-hi."}
+              </Text>
+            ) : (
+              <Text fontSize="sm" color="fg.muted" textAlign="center" m="auto">
+                {partsOnlyKind(kind) ? "L'alçat és dels mòduls: aquí no n'hi ha." : "Encara no hi ha cap mòdul: afegeix-ne un amb el + de «Mòduls» a l'estructura."}
+              </Text>
+            )}
           </Box>
         ) : (
           <CabinetViewer
             sceneFinish={comp.scene}
             panels={viewerPanels}
-            size={size}
+            size={frameSize}
             exploded={exploded}
             // A la vista explosionada els forats i les ranures sempre es veuen (per això se separen les peces).
             showHoles={showHoles || exploded}
             modules={viewerModules}
-            selectedModuleId={selection.kind === "module" || selection.kind === "zone" ? module.id : null}
+            selectedModuleId={(selection.kind === "module" || selection.kind === "zone") && module ? module.id : null}
             onSelectModule={selectFrom3D}
             onAddModule={addModuleBeside}
             ghosts={ghosts}

@@ -110,7 +110,8 @@ function WorktopFields({ run, comp, onChange }: { run: WorktopRun; comp: Composi
   const setCut = (id: string, patch: Partial<WorktopCutout>) => onChange({ cutouts: run.cutouts.map((c) => (c.id === id ? { ...c, ...patch } : c)) })
   const addCut = (kind: WorktopCutout["kind"]) => {
     const p = CUTOUT_PRESETS[kind]
-    const target = comp.modules.find((m) => m.id === run.from) ?? comp.modules[0]!
+    const target = comp.modules.find((m) => m.id === run.from) ?? comp.modules[0]
+    if (!target) return
     const id = newId("cut")
     setOpenCut(id)
     onChange({ cutouts: [...run.cutouts, { id, kind, module: target.id, w: p.w, d: p.d, dx: 0 }] })
