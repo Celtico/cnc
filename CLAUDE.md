@@ -807,15 +807,13 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     (abans «Fusteria (avançat)», per decisió de l'usuari; id de secció `mod-joinery`, `LuHammer`;
     **només la caixa**, per decisió de l'usuari: Ranura o Retirada del fons quan toca i els ferratges dels laterals i de
     les unions, Espiga i Filera System 32, `JoineryForm`; **només els que el mòdul fa servir**: `usedHardwareSlots`, pels
-    forats i talls de les seves peces) ·
-    **Ferratges** (`LuWrench`; com la llista d'un configurador de fabricant, `composition/HardwarePlacements.tsx` +
-    `placements.ts`; insígnia «n a mà · m de regles»): **Col·locats a mà**, una fila per col·locat (nom · peça, l'avís a
-    sota) amb Editar · Duplicar · Eliminar (`LuPencil` · `LuCopy` · `LuTrash2`, `PlacementButtons`); tocar-ne un el tria
-    (es ressalta al 3D); només surten si n'hi ha (**sense «Afegir ferratge»** des del 2026-10-08, per decisió de l'usuari:
-    només servia per als «només 3D» importats; treure ≠ esborrar); a sota, **De les regles del mòdul** (`ruleHardwareCounts`,
-    `core/build/hardwareSummary.ts`: frontisses, tiradors, guies en parells, braços d'abatible, potes, push, imants,
-    espigues en forats; només els que hi són). La peça lliure (no als objectes) també té «Ferratges» (sense les regles),
-    només si ja en porta.
+    forats i talls de les seves peces). **Sense «Ferratges»** a l'inspector del mòdul (per decisió de l'usuari,
+    2026-10-08: la secció `mod-hardware`, `LuWrench`, amb la llista dels col·locats a mà i **De les regles del mòdul**,
+    no surt; el codi es queda: `composition/HardwarePlacements.tsx`, `placements.ts`, `ruleHardwareCounts` a
+    `core/build/hardwareSummary.ts`). Treure ≠ esborrar: els col·locats a mà es conserven, es fabriquen i es veuen al 3D,
+    on es trien (i llavors s'editen, es dupliquen o s'eliminen al seu inspector o amb el teclat). La peça lliure (no als
+    objectes) sí que té «Ferratges» (`HardwarePlacements`, sense les regles; Editar · Duplicar · Eliminar, `LuPencil` ·
+    `LuCopy` · `LuTrash2`, `PlacementButtons`), només si ja en porta (**sense «Afegir ferratge»** des del 2026-10-08).
     Un **col·locat triat** (selecció `hardware`, `PlacementInspector`): capçalera «Ferratge · <mòdul>» amb Pare ·
     Duplicar · Eliminar i anterior/següent dins del mateix mòdul, i la secció **Col·locació**, mínima (Ferratge amb el
     `HardwareSelect` · Peça · «Mecanitzats de» · **previsualització en viu** (`PlacementPreview`) · posició per eix
@@ -887,7 +885,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Ferratges col·locats al 3D** (amb «Ferratges» visible): clicar-ne un el tria (selecció `hardware`; zona de clic = la
   seva caixa + 8 mm, malla invisible); contorn en passar-hi per sobre, gruixut triat (el triat es veu sencer també amb
   «Ferratges» amagat; mai translúcid). **Cap barra flotant** (per decisió de l'usuari): editar, duplicar i eliminar són a
-  la llista de l'inspector (`PlacementButtons`) i al teclat, un sol camí (`hardwareActions` a `EditorScreen`:
+  l'inspector del col·locat (i a la llista de la peça lliure, `PlacementButtons`) i al teclat, un sol camí (`hardwareActions` a `EditorScreen`:
   `duplicatePlacement` —50 mm més cap a dins al llarg de P—, `removePlacement`), un pas de desfer. Els de les regles
   (frontisses, tiradors, potes) són del mòdul: clicar-los tria el mòdul.
 - **Moure** (per decisió de l'usuari **el cos no s'arrossega**, així sempre se sap cap on es mourà):
@@ -1841,7 +1839,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Front | Una porta · Dues portes · Abatible avall · amunt · Ranures horitzontals · verticals (reixeta) | `LuDoorClosed` · `LuFlipHorizontal2` · `LuArrowDownToLine` · `LuArrowUpToLine` · `LuAlignJustify` · `LuColumns3` |
 | Front | Recobrents (fronts) | `LuSquareStack` |
 | Forma | Rectangle · Arrodonit · Oval (tauler de taula) · Efecte obstacle | `LuRectangleHorizontal` · `LuSquircle` · `LuCircle` · `LuShield` |
-| Inspector | Mides · Caixa (base, fons, tapa, laterals) · Materials · Acabats i ferratges (només l'inspector del mòdul) · Ferratges (inspector, Preferències i visor) · Front · Fronts i calaixos (Interior) · Pare | `LuMoveDiagonal` · `LuFrame` · `LuPalette` · `LuHammer` · `LuWrench` · `LuDoorClosed` · `LuDoorClosed` · `LuArrowUp` |
+| Inspector | Mides · Caixa (base, fons, tapa, laterals) · Materials · Acabats i ferratges (només l'inspector del mòdul) · Ferratges (inspector de la peça lliure, Preferències i visor; no al mòdul) · Front · Fronts i calaixos (Interior) · Pare | `LuMoveDiagonal` · `LuFrame` · `LuPalette` · `LuHammer` · `LuWrench` · `LuDoorClosed` · `LuDoorClosed` · `LuArrowUp` |
 | Inspector | Base: Directe a terra · Sòcol · Potes (la de la categoria Potes, no la Taula) · Sense base | `LuArrowDownToLine` · `LuPanelBottom` · `LuFootprints` · `LuSquareDashedBottom` |
 | Inspector | Fons en ranura · Cargolat darrere · Encastat · Sense fons | `LuLayers2` · `LuDrill` · `LuInspectionPanel` · `LuSquareDashed` |
 | Inspector | Resum del moble · Posició | `LuBox` · `LuMove` |
@@ -1856,7 +1854,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Ferratges (categories) | Frontisses · Plaques · Guies · Calaixos de doble paret (jocs) · Elevables i abatibles · Unions · Suports de prestatge · Potes · Taules · Portes corredisses i plegables · Tiradors · Pressió i imants · Perfils i marcs · Penjar · Altres | `LuCircleDashed` · `LuSquareDot` · `LuRailSymbol` · `LuPackageOpen` · `LuPanelBottom` · `LuBolt` · `LuCircleDot` · `LuFootprints` · `LuTable` · `LuDoorOpen` · `LuGripHorizontal` · `LuMagnet` · `LuMinus` · `LuAnchor` · `LuPackage` |
 | Ferratges (joc) | Seccions de l'editor del joc: Del catàleg · Llargades i números · Regles de tria · Components · Peces de fusta · Mecanitzats del joc · Hipòtesis · Prebroca dels cargols (Preferències) | `LuBookOpen` · `LuListOrdered` · `LuRoute` · `LuPackageOpen` · `LuLayers2` · `LuCircleDot` · `LuBookOpen` · `LuDrill` |
 | Ferratges | Baixar el model 3D (.glb) d'un importat · Baixar un plànol de muntatge | `LuBoxes` · `LuFileDown` |
-| Ferratges | Ferratges col·locats a mà (inspector del mòdul i de la peça; la de «Ferratges» del visor) | `LuWrench` |
+| Ferratges | Ferratges col·locats a mà (inspector de la peça lliure; el del mòdul no la té; la de «Ferratges» del visor) | `LuWrench` |
 | Ferratges | Col·locat a mà (llista de l'inspector): Editar · Duplicar · Eliminar | `LuPencil` · `LuCopy` · `LuTrash2` |
 | Ferratges | Seccions de l'editor: General · Importat del fabricant (només els ja importats) · Plànols i documents · Placa · Mides · Quantitat per alçada · Distància entre forats · Mecanitzats | `LuInfo` · `LuUpload` · `LuFileText` · `LuSquareDot` · `LuMoveDiagonal` · `LuListOrdered` · `LuRuler` · `LuCircleDot` |
 | Preferències | Visor 3D (els materials per defecte als mòduls nous porten la de Materials, `LuPalette`) | `LuLampFloor` |
@@ -1900,7 +1898,7 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
 | **Front** | porta, front de calaix, abatible, reixeta, front fix; **Fronts i calaixos**, la secció de l'Interior |
 | **Folgança** | separacions: front–cos, entre fronts, lateral i darrere de la guia, prestatge, fons, encaixos, peces de dins; **Folgances per defecte** a Preferències |
 | **Joc** | només el joc paramètric del fabricant (`HardwareKit`, «joc de calaix», «Ferratges dels jocs») |
-| **Ferratge** | qualsevol `HardwareItem`; **Ferratges**, la secció de l'inspector, la biblioteca de Preferències i l'opció del visor (`LuWrench`) |
+| **Ferratge** | qualsevol `HardwareItem`; **Ferratges**, la secció de l'inspector de la peça lliure (no la del mòdul), la biblioteca de Preferències i l'opció del visor (`LuWrench`) |
 | **Acabats i ferratges** | la secció del mòdul (abans «Fusteria (avançat)»): les mides d'unió de fusta (ranura i retirada del fons) i els ferratges de la caixa (espiga, System 32) (`LuHammer`) |
 | **Acabats** | a Interior › Fronts i calaixos, el material dels fronts; **Acabats de l'escena**, terra i paret de la presentació |
 | **Com el mòdul** / **Com el cos** / **Com a Preferències** | heretat; **Còpia pròpia**, la còpia d'un ferratge que ja no és a la biblioteca tal qual |
