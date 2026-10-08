@@ -1,7 +1,8 @@
 import { buildBounds, buildComposition } from "../../core/build/buildComposition"
 import { uniqueName } from "../../core/file/mobleFile"
-import { layoutTemplate, newId, resolveTemplateRef, templateWalls, type Ambient, type AmbientItem, type AmbientTemplate } from "../../core/model"
+import { layoutTemplate, newId, resolveTemplateRef, templateWalls, withInnerClearance, type Ambient, type AmbientItem, type AmbientTemplate } from "../../core/model"
 import { createAmbient, createProject, db, setAmbientsFolder } from "../../db/db"
+import { currentSettings } from "../../db/settingsStore"
 import { eyePose } from "./planGeom"
 
 /**
@@ -19,10 +20,12 @@ export async function createAmbientFromTemplate(t: AmbientTemplate, client?: str
   const folder = who
   const names = (await db.projects.toArray()).map((p) => p.name)
   const made = new Map<string, { id: number; w: number; d: number }>()
+  // Els mobles nous prenen la folgança de les peces de dins de Preferències (com un mòdul nou).
+  const { gaps } = await currentSettings()
   for (const ref of [...new Set(t.items.map((i) => i.ref))]) {
     const tpl = resolveTemplateRef(ref)
     if (!tpl) continue
-    const comp = { ...tpl.make(), kind: tpl.kind }
+    const comp = withInnerClearance({ ...tpl.make(), kind: tpl.kind }, gaps.innerClearance)
     const name = uniqueName(tpl.name, names)
     names.push(name)
     const id = await createProject(name, undefined, { composition: comp, ...(folder ? { folder } : {}) })

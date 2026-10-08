@@ -5,7 +5,7 @@ import { SearchBar } from "../../components/SearchBar"
 import { SnapshotThumb } from "../../components/SnapshotThumb"
 import { useSettings } from "../settings/SettingsContext"
 import { requestTemplateThumb, templateThumb } from "./projectThumbs"
-import { FURNITURE_COLLECTIONS, STORE_CATALOG, type Composition, type CompositionKind, type Template } from "../../core/model"
+import { FURNITURE_COLLECTIONS, STORE_CATALOG, withInnerClearance, type Composition, type CompositionKind, type Template } from "../../core/model"
 import { KINDS } from "../composition/kinds"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import { GalleryCard } from "./GalleryCard"
@@ -93,7 +93,9 @@ export function NewMobleGallery({
   const hist = history(matches, !!q)
   // Amb cerca, s'obren les seccions que tenen resultats.
   const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["history"] : []), ...(storeCount ? ["store"] : []), ...(collectionsCount ? ["collections"] : [])]
-  const pick = (t: Template) => onCreate({ ...t.make(), kind: t.kind }, t.name)
+  // Una plantilla instanciada a partir d'ara pren la folgança de les peces de dins de Preferències (com un mòdul nou).
+  const { settings } = useSettings()
+  const pick = (t: Template) => onCreate(withInnerClearance({ ...t.make(), kind: t.kind }, settings.gaps.innerClearance), t.name)
 
 
   return (

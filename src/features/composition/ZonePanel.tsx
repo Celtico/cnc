@@ -103,6 +103,7 @@ export function ZonePanel({
   noHandles = false,
   kits,
   afterFront,
+  splitExtra,
   coveredBy,
 }: {
   root: Zone
@@ -121,6 +122,8 @@ export function ZonePanel({
    * (Front, i sense divisió Prestatges i Accessoris): en depenen (opcions en cascada).
    */
   afterFront?: ReactNode
+  /** Més files de la secció «Divisió» (a l'«Interior»: la folgança de les peces de dins del mòdul). */
+  splitExtra?: ReactNode
   /** Nom de la zona de més amunt el front de la qual tapa aquest compartiment: el seu Front no es fa (es conserva). */
   coveredBy?: string
 }) {
@@ -158,6 +161,7 @@ export function ZonePanel({
                 <LuUngroup /> Treure la divisió
               </Button>
             </HStack>
+            {splitExtra}
           </FoldItem>
           {/* Portes que tapen tota la zona dividida (armari: penjador i maleter darrere). */}
           {coveredBy ? <CoveredFront id="zone-parent-front" title="Front de tota la zona" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} kinds={["none", "door", "panel"]} title="Front de tota la zona" />}
