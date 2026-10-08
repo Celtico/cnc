@@ -930,7 +930,7 @@ export function hasBuiltFronts(root: Zone): boolean {
  * calaixos sense guia pròpia el fan servir). El «Tirador» de cada front compta sempre (també «Cap (push)»): el del mòdul
  * només és el per defecte.
  */
-function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: ZoneBounds): Zone {
+function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: ZoneBounds, fixedCover = false): Zone {
   const out: Zone = { ...z }
   // Els fronts recordats dels altres tipus (`fronts`) són només per tornar-hi: no construeixen res.
   delete out.fronts
@@ -941,6 +941,9 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
   // compartiment és com obert (es conserva i torna amb la peça que hi falta). Tampoc no tapa els de dins.
   if (out.front && !canHoldFront(bounds, out.front.kind)) delete out.front
   const childCovered = covered || !!out.front
+  // Tapat per un front fix de tota la zona (`buildParentFront`; el d'una zona de més amunt que es fa, no el que no
+  // s'aguanta): com el front fix propi, darrere no hi ha res a fer servir (per decisió de l'usuari). Les portes, no.
+  const childFixed = fixedCover || out.front?.kind === "panel"
   if (z.split) {
     // Un compartiment dividit no té prestatges ni barra (l'inspector no els ensenya).
     delete out.shelves
@@ -951,7 +954,7 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
     out.split = {
       ...z.split,
       children: z.split.children.map((c, i) =>
-        visibleZone(c, kitDefault, childCovered, childBounds(bounds, dir, i === 0, i === n - 1)),
+        visibleZone(c, kitDefault, childCovered, childBounds(bounds, dir, i === 0, i === n - 1), childFixed),
       ),
     }
   } else if (!canHoldShelves(bounds)) {
@@ -976,9 +979,9 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
     if (!z.led) delete out.led
   }
   const f = out.front
-  if (f?.kind === "panel") {
-    // Front fix (per decisió de l'usuari): darrere no hi ha res a fer servir; ni Prestatges ni Accessoris (es conserven i
-    // tornen si canvia el contingut).
+  if (f?.kind === "panel" || fixedCover) {
+    // Front fix, el seu o el de tota una zona de més amunt que el tapa (per decisió de l'usuari): darrere no hi ha res a
+    // fer servir; ni Prestatges ni Accessoris (es conserven i tornen si canvia el contingut o el front de més amunt).
     delete out.shelves
     delete out.rail
     delete out.led

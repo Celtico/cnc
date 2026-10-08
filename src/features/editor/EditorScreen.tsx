@@ -1066,10 +1066,10 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             root={module.root}
             zone={zone}
             bounds={zoneBounds(module, zone.id) ?? carcassBounds(module.carcass)}
-            coveredBy={(() => {
+            {...(() => {
               // Com es construeix: un front que no es fa (compartiment sense un costat, `zoneSupport.ts`) no tapa res.
               const cover = coveringZone(visibleModule(module).root, zone.id)
-              return cover ? zoneLabel(cover, { root: cover.id === module.root.id }) : undefined
+              return cover ? { coveredBy: zoneLabel(cover, { root: cover.id === module.root.id }), coveredByFixed: cover.front?.kind === "panel" } : {}
             })()}
             hardware={module.hardware}
             noHandles={module.fronts.handles === "none"}

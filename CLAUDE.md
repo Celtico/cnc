@@ -219,8 +219,11 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   - **Front fix ⇒ ni Prestatges ni Accessoris** (per decisió de l'usuari): un compartiment el contingut del qual és
     «Front fix» (el seu, no tapat) no ensenya Prestatges ni Accessoris (`ZonePanel`, `fillsZone`, com els calaixos) i
     `visibleZone` no hi fa prestatges, fileres System 32, barra ni llum (res amagat compta: es conserven i tornen en
-    canviar el contingut; `build/hiddenState.test.ts`). Dubte obert: el «Front de tota la zona» fix d'una zona dividida
-    no ho fa als compartiments que tapa (la decisió parla del contingut del compartiment).
+    canviar el contingut; `build/hiddenState.test.ts`). **També el «Front de tota la zona» fix** (`buildParentFront`,
+    també el de tot el mòdul a l'«Interior»; per decisió de l'usuari): els compartiments que tapa no fan prestatges,
+    fileres, pells ni accessoris i no els ensenyen (`ZonePanel` `coveredByFixed`); els divisors de dins sí. Només un front
+    fix que es fa (no el que no s'aguanta pels quatre costats ni el tapat per portes de més amunt). Les **portes** de tota
+    la zona, no: darrere hi ha prestatges i penjador (armari).
   - **Prestatges gruixuts** (`zone.shelves.thickness`, «Gruixuts (buits)»): pells, tira i llistons. **A ras del davant**
     (`zone.shelves.flush`); amb fronts encastats, només als compartiments sense front (si no, es retiren i avisa).
   - **Front d'una zona dividida** (`buildParentFront`; portes d'armari de dalt a baix amb penjador i maleter darrere): les
@@ -538,7 +541,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   compartiments dividits, gruix i «a ras» sense prestatges, alçades de calaix de més, frontissa de les dues portes, patró de
   reixeta de l'altre tipus, l'imant triat d'una reixeta amb frontisses i sense trapa, el marc d'una porta que no és de vidre,
   el «Fons del calaix» sense calaixos, els prestatges, les fileres, la barra i la llum d'un compartiment sense una peça a cada costat i el front d'un compartiment que no és aguantat pels quatre costats (`zoneSupport.ts`), l'estil dels fronts sense cap front, la folgança de les peces de dins d'un mòdul sense dividir, el front d'un compartiment **tapat** pel
-  d'una zona de més amunt (el compartiment és com obert: prestatges i accessoris sí), i els **fronts recordats** (`Zone.fronts`). Sense fons, el fons dels calaixos surt
+  d'una zona de més amunt (el compartiment és com obert: prestatges i accessoris sí, menys si el tapa un **front fix**), i els **fronts recordats** (`Zone.fronts`). Sense fons, el fons dels calaixos surt
   del material del cos. Sense cap prestatge, «Regulables» es veu i compta (fileres System 32). **Els llocs de ferratge que
   el mòdul no fa servir no es llegeixen** (vegeu Ferratges com a dades). **Una opció nova que amaga camps s'afegeix a
   `visibleModule` i a `build/hiddenState.test.ts`** (camps amagats a l'atzar i camins de la UI en un altre ordre → les
@@ -836,7 +839,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     cap: no es duplica, no es retalla ni s'elimina, i ⌘D, ⌘X i Suprimir avisen sense tocar el porta-retalls) i Front ·
     Prestatges (només fusta: Quantitat · Regulables · A ras · Gruixuts) · **Accessoris** (`LuShirt`: Barra de penjar i
     Tira LED, interruptor + `HardwarePick` «Com el mòdul») · Mida · Dividir (Prestatges, Accessoris, Dividir i els tipus
-    de Contingut, només si el compartiment els pot aguantar: Model del moble › Zones › Què aguanta cada compartiment; Prestatges i Accessoris tampoc amb calaixos o un front fix). Al Front: el ferratge del tipus (frontissa,
+    de Contingut, només si el compartiment els pot aguantar: Model del moble › Zones › Què aguanta cada compartiment; Prestatges i Accessoris tampoc amb calaixos o un front fix, propi o de tota la zona que el tapa). Al Front: el ferratge del tipus (frontissa,
     guia o joc, braç; a la reixeta, l'**imant** després de «Muntatge» i «Trapa»; a la vitrina, el **marc**) i el «Tirador» (amb «Cap
     (push)»). **L'inspector del mòdul és de la caixa; el de l'«Interior» (l'arrel), dels fronts i calaixos**: només
     a l'arrel, la secció **«Acabats»** (abans «Fronts i calaixos», per decisió de l'usuari; id `zone-fronts`, el
@@ -853,7 +856,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     pantalla: l'Interior sense divisió ja ensenya el seu Front i els seus Accessoris, així que no hi surt cap per
     defecte. Editen `module.fronts` i `module.hardware`; amagats es conserven. Un compartiment **tapat** pel front d'una
     zona de més amunt (`coveringZone`) ensenya «Front · Tapat» sense opcions: el seu front no es fa (es conserva) i els
-    prestatges i accessoris de dins sí (`walkBuiltZones`, `visibleZone`). **Material dels fronts** (per decisió de l'usuari: «a
+    prestatges i accessoris de dins sí (`walkBuiltZones`, `visibleZone`), menys si el tapa un front fix (no surten). **Material dels fronts** (per decisió de l'usuari: «a
     Fronts i calaixos ficar Acabats»; el grup es deia «Acabats», ara és el títol de la secció): el material dels
     fronts (`frontMaterial`, «Com el cos», `MaterialSelect`), només amb algun
     front que es fa (com l'Estil); ja no és a Materials del mòdul (un sol lloc per decisió; «Materials de tot el moble»
