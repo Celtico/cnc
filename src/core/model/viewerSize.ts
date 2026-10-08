@@ -31,3 +31,12 @@ export function viewerSize(comp: Composition): { width: number; height: number; 
   }
   return { width: Math.max(1, w), height: Math.max(1, h), depth: Math.max(1, d) }
 }
+
+/**
+ * Document buit: res que es vegi (un moble nou sense cap mòdul, un objecte nou sense peces). Els mòduls d'un document
+ * només de peces no compten (no es fan).
+ */
+export function isEmptyComposition(comp: Composition): boolean {
+  const modules = partsOnlyKind(compositionKind(comp)) ? 0 : comp.modules.length
+  return !modules && !comp.parts?.length && !comp.references.length && !comp.models?.length
+}

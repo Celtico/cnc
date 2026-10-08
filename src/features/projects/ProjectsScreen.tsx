@@ -104,7 +104,7 @@ export function ProjectsScreen({ onOpen, request = null, onRequestDone }: { onOp
           menu: NEW_MOBLE_KINDS.map((k) => {
             const kind = k.value as NewMobleKind
             return (
-              <Menu.Item key={kind} value={kind} onClick={() => void handleCreate(blankMoble(settings, kind), NEW_MOBLE_NAMES[kind])}>
+              <Menu.Item key={kind} value={kind} onClick={() => void handleCreate(blankMoble(kind), NEW_MOBLE_NAMES[kind])}>
                 <k.icon />
                 <VStack align="start" gap={0}>
                   <Text>{k.label}</Text>

@@ -1,4 +1,4 @@
-import { cameraSignature, thumbIsStale, type Composition, type MaterialPref } from "../../core/model"
+import { cameraSignature, isEmptyComposition, thumbIsStale, type Composition, type MaterialPref } from "../../core/model"
 import { THUMB_VERSION } from "../../components/viewer/thumbVersion"
 import { compositionOf } from "../../db/compositionStore"
 import { db, type Project } from "../../db/db"
@@ -48,10 +48,13 @@ export function requestProjectThumb(p: Project, materials: MaterialPref[]): () =
     run: async () => {
       const fresh = await db.projects.get(p.id)
       if (!fresh || !needsThumb(fresh)) return
-      const url = await (await jobs()).renderProjectThumb(compositionOf(fresh), materials)
+      const comp = compositionOf(fresh)
+      const url = await (await jobs()).renderProjectThumb(comp, materials)
       // Sense tocar `updatedAt` ni `edited`. `thumbCam` és la de la fila (la que mira `needsThumb`).
       const cam = cameraSignature(fresh.composition?.camera)
       if (url) await db.projects.update(p.id, { thumb: url, thumbAt: fresh.updatedAt, thumbV: THUMB_VERSION, thumbCam: cam })
+      // Buit (s'han tret tots els mòduls): fora la miniatura d'abans, que ensenyaria el que ja no hi és.
+      else if (fresh.thumb && isEmptyComposition(comp)) await db.projects.update(p.id, { thumb: undefined })
     },
   })
   void drain()

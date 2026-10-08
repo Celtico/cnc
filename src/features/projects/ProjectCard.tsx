@@ -40,10 +40,12 @@ export function ProjectCard({
 }) {
   const p = safeParams(project.params)
   const comp = compositionOf(project)
-  const first = comp.modules[0]!.carcass
+  const first = comp.modules[0]?.carcass
   const width = Math.round(compositionWidth(comp))
   const height = Math.round(compositionHeight(comp))
-  const depth = Math.max(...comp.modules.map((m) => m.carcass.depth))
+  const depth = Math.max(0, ...comp.modules.map((m) => m.carcass.depth))
+  // Un moble nou (0 mòduls): el que té, o que és buit.
+  const loose = comp.parts?.length ?? 0
   const here = currentAmbient !== undefined && ambients.some((a) => a.id === currentAmbient)
   const click = onAdd ?? onOpen
   const { settings } = useSettings()
@@ -55,8 +57,10 @@ export function ProjectCard({
       title={project.name}
       description={
         <>
+          {!first ? (loose ? `Sense mòduls · ${loose === 1 ? "1 peça lliure" : `${loose} peces lliures`}` : "Buit: sense cap mòdul") : <>
           {width} × {height} × {depth} mm ·{" "}
           {comp.modules.length === 1 ? `1 mòdul · ${first.material}` : `${comp.modules.length} mòduls: ${comp.modules.map((m) => m.name).join(", ")}`}
+          </>}
           {!project.composition && ` · ${p.shelves} ${p.shelves === 1 ? "prestatge" : "prestatges"} · ${p.doors} ${p.doors === 1 ? "porta" : "portes"}`}
         </>
       }

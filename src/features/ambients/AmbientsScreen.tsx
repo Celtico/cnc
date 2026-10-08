@@ -4,7 +4,7 @@ import { LuFolders, LuCopy, LuEllipsis, LuFolderInput, LuHistory, LuPlus, LuTras
 import { SearchBar } from "../../components/SearchBar"
 import { toaster } from "../../components/ui/toaster"
 import { uniqueName } from "../../core/file/mobleFile"
-import { AMBIENT_CATEGORIES, AMBIENT_TEMPLATES, EMPTY_AMBIENT, parseAmbient, roomWalls, type Ambient, type AmbientTemplate } from "../../core/model"
+import { AMBIENT_CATEGORIES, AMBIENT_TEMPLATES, EMPTY_AMBIENT, parseAmbient, type Ambient, type AmbientTemplate } from "../../core/model"
 import { createAmbient, db, deleteAmbient, duplicateAmbient, setAmbientsFolder, type AmbientRow } from "../../db/db"
 import { useSettings } from "../settings/SettingsContext"
 import { useLiveQuery } from "../../db/useLiveQuery"
@@ -43,7 +43,8 @@ export function AmbientsScreen({ onOpen }: { onOpen: (id: number) => void }) {
   const found = [...(groupedRows.length ? ["projects"] : []), ...(looseRows.length ? ["history"] : []), ...(shownTemplates.length ? ["catalog"] : [])]
   const create = async () => {
     const names = (await db.ambients.toArray()).map((a) => a.name)
-    const data: Ambient = { ...EMPTY_AMBIENT, walls: roomWalls(0, 0, 4000, 3000) }
+    // Buit (per decisió de l'usuari: «que no fiqui res»): sense parets ni elements; es dibuixen al plànol.
+    const data: Ambient = { ...EMPTY_AMBIENT }
     onOpen(await createAmbient(uniqueName("Ambient nou", names), data))
   }
   // «Duplicar (per a un client)…»: es pregunta per a qui és (client o projecte, opcional). Les escenes del catàleg s'obren directament.

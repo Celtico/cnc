@@ -92,12 +92,12 @@ export function StructureTree({
     onSelect({ kind: "module", id: copy.id })
   }
   const remove = (i: number) => {
-    if (comp.modules.length <= 1) return
-    // Peces enganxades, taulell i sòcol i forats del taulell que en depenen (`removeModule`).
+    // Peces enganxades, taulell i sòcol i forats del taulell que en depenen (`removeModule`). Pot quedar sense cap mòdul.
     const res = removeModule(comp, comp.modules[i]!.id)
     onChange(res.comp)
     for (const n of res.notes) toaster.create({ title: n, type: "info" })
-    onSelect({ kind: "module", id: res.comp.modules[Math.max(0, i - 1)]!.id })
+    const next = res.comp.modules[Math.max(0, i - 1)]
+    onSelect(next ? { kind: "module", id: next.id } : { kind: "moble" })
   }
   /** Veí de la mateixa fila (a terra / penjats) cap a l'esquerra (-1) o la dreta (1). */
   const neighbourIndex = (i: number, dir: -1 | 1): number => {
@@ -289,7 +289,7 @@ export function StructureTree({
                     <LuCopy /> Duplicar
                   </Menu.Item>
                   <Menu.Separator />
-                  <Menu.Item value="del" color="fg.error" disabled={comp.modules.length <= 1} onClick={() => remove(i)}>
+                  <Menu.Item value="del" color="fg.error" onClick={() => remove(i)}>
                     <LuTrash2 /> Eliminar
                   </Menu.Item>
                 </TreeRowMenu>

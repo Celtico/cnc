@@ -786,6 +786,17 @@ export function tableModule(id: string, name: string, overrides: Partial<Carcass
   return { ...m, root: { id: newId() } }
 }
 
+/**
+ * Mòdul nou del + de «Mòduls» (per decisió de l'usuari: el que es va deixar preparat al navegador): 600 × 100 × 560,
+ * directe a terra, sense laterals, tapa ni fons, i l'interior obert sense prestatges. Es completa a la Caixa (opcions en
+ * cascada: prestatges, accessoris i dividir surten quan hi ha on aguantar-los, `zoneSupport.ts`). Els materials, els
+ * gruixos i les folgances, de Preferències (`applySettingsToModule`).
+ */
+export function emptyModule(id: string, name: string): Module {
+  const m = defaultModule(id, name, { width: 600, height: 100, depth: 560, base: { kind: "none" }, back: "none", top: { kind: "none" }, sides: { left: false, right: false } })
+  return { ...m, root: { id: `${id}-root`, shelves: { n: 0, adjustable: true } } }
+}
+
 export function defaultModule(id: string, name: string, overrides: Partial<Carcass> = {}): Module {
   const m = cabinetToModule({ ...DEFAULT_CABINET, doors: 0, shelves: 1 }, id, name)
   return { ...m, carcass: { ...m.carcass, ...overrides } }
