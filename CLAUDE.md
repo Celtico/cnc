@@ -160,7 +160,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     darrere del fons però mai dins (`max(retirada + 37, backInnerZ + Ø)`); si arribaria a la de davant, no es fa. Més avisos
     `back-inset`: poca fondària davant del fons (< 2 × 37 + Ø) i, amb ranura d'aire, menys de 10 mm entre fons i tapa (el
     cantell de dalt del fons, si és del cos, es canteja). Tapa de reixeta: la franja del fons queda sense ranures. Passar a
-    «Encastat» amb un fons de menys de 15 mm el posa «Com el cos». «Afegir mòdul al costat» copia el fons sencer.
+    «Encastat» amb un fons de menys de 15 mm el posa «Com el cos».
   - **Cantonades** Normals / A inglet (`Carcass.joint`): la tapa arriba a fora dels laterals; la base també (`mitreBottom`)
     si és a baix de tot (a terra, potes o penjat; amb sòcol no). No surt si no hi ha res a unir (`jointApplies`). Si el
     mòdul només té calaixos i fronts recobrents, **els fronts dels calaixos van a inglet** (`mitreFronts`): laterals fins a
@@ -814,8 +814,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   decisió de l'usuari, així es veuen els tipus): demana el nom (`NameDialog`, «Mòdul 3», «Peça 2», «Objecte 1», seleccionat;
   `addElements.ts`) i crea l'element sense més opcions: **mòdul buit** (`emptyModule`, per decisió de l'usuari, el que
   es va deixar preparat al navegador: 600 × 100 × 560, directe a terra, sense laterals, tapa ni fons, obert i sense
-  prestatges; materials, gruixos, folgances i ferratges de Preferències; a la Taula, `tableModule`; «Afegir mòdul al
-  costat» del 3D copia el veí), peça de cara, caixa de 600 × 600 × 100. L'últim mòdul també s'elimina (queda el moble buit). Res de mòduls
+  prestatges; materials, gruixos, folgances i ferratges de Preferències; a la Taula, `tableModule`), peça de cara, caixa de 600 × 600 × 100. L'últim mòdul també s'elimina (queda el moble buit). Res de mòduls
   especials, passacables ni plantilles al +. **Excepcions** (per decisió de l'usuari): el + d'«Objectes de referència» obre
   un menú amb els de Preferències › Objectes de referència (els no amagats; `refFromPreset`: de paret, a la seva distància;
   de terra, estirat; sense fondària, 5 mm) i «En blanc…»; el de «Models 3D», un menú amb «Quin fitxer?»
@@ -951,11 +950,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     i paret (Alt: sense); etiqueta amb la posició mentre s'arrossega; es desa en deixar-lo anar (un pas de desfer). Grups de
     peces: caixa del grup amb el gizmo; el primer clic selecciona el grup i el segon la peça.
   - **Mòduls**: nansa ↔ (`MoveHandle`) uns píxels per sobre de l'aresta de dalt (en un mòdul alt que no hi cap, baixa fins a
-    sota de la barra del visor); els + a l'aresta de davant de cada costat apartats cap a fora; arrossegar-la el mou a la
+    sota de la barra del visor); **sense els + als costats** (per decisió de l'usuari, 2026-10-08: els mòduls s'afegeixen amb el + de l'arbre; `AddButton`/`onAddModule` queden sense ús); arrossegar-la el mou a la
     seva fila (`moveModuleBy`: els de la dreta es queden on eren) i, si és penjat, amunt i avall; al terra, de costat i
     endavant/enrere (`dz`); amb Maj, tot el moble (`moveAllBy`). Imant a les vores dels mòduls i dels objectes. Nanses, + i gizmo són malles 3D de mida constant
     (`usePixelScale`), no `Html` de drei (fallaven en muntar-se i desmuntar-se amb React 19), amb `userData.editorOnly` (la
-    imatge per al Render no els porta). La nansa surt també a Presentació (els + no).
+    imatge per al Render no els porta). La nansa surt també a Presentació.
   - **Posició dels objectes**: camps «↔ De costat X», «↕ Alçada Y», «⤢ Fons Z» (`AxisLabel`, colors com les fletxes;
     `NumberField.label` accepta un ReactNode). «Al terra» (y = 0) i «A la paret» (z = 0) (`RefObject.onFloor`, `onWall`,
     `anchorRef`, aplicat a l'inspector, a l'arrossegament i a les fletxes; el camp fixat queda desactivat).
