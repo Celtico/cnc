@@ -362,8 +362,8 @@ export function JoineryForm({ module, onChange, usedSlots }: { module: Module; o
  * pot triar un altre al seu Front o als Accessoris.
  */
 /**
- * Interior › Divisió › «Peces de dins» (`Carcass.innerClearance`): només a l'arrel i si el mòdul té divisors o prestatges
- * fixos a partir de la segona divisió (`moduleHasInnerPieces`). Sense valor (mòduls d'abans): 0.
+ * Interior › Divisió › «Peces de dins» (`Carcass.innerClearance`): només a l'arrel i si és dividida
+ * (`moduleHasInnerPieces`). Sense valor (mòduls d'abans): 0.
  */
 export function InnerClearanceRow({ module, onChange }: { module: Module; onChange: (m: Module) => void }) {
   const c = module.carcass
@@ -371,7 +371,7 @@ export function InnerClearanceRow({ module, onChange }: { module: Module; onChan
   const value = c.innerClearance ?? 0
   const set = (innerClearance: number) => onChange({ ...module, carcass: { ...c, innerClearance } })
   return <>
-    <NumRow label="Peces de dins" value={value} min={0} max={3} step={0.5} onChange={set} help={`Divisors i prestatges fixos a partir de la segona divisió: tant menys de llarg, la meitat a cada cap (els de la primera van sencers). ${prefHint(value, gaps.innerClearance)}`} />
+    <NumRow label="Peces de dins" value={value} min={0} max={3} step={0.5} onChange={set} help={`Tots els divisors i prestatges fixos del mòdul dividit, de qualsevol nivell: tant menys de llarg, la meitat a cada cap. La caixa no es toca. ${prefHint(value, gaps.innerClearance)}`} />
     <PrefReset value={value} pref={gaps.innerClearance} onReset={() => set(gaps.innerClearance)} />
   </>
 }

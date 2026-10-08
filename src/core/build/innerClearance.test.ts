@@ -8,8 +8,9 @@ import { toWorld } from "./geometry"
 
 /**
  * Folgança de les peces de dins (`Carcass.innerClearance`, Preferències › Folgances per defecte › «Peces de dins»):
- * divisors i prestatges fixos a partir de la segona divisió, tants mm menys de llarg, la meitat a cada cap i centrats;
- * els de la primera divisió (i els prestatges fixos d'un mòdul sense dividir) sencers; els regulables no es toquen.
+ * amb l'arrel dividida, tots els divisors i prestatges fixos (de qualsevol nivell, també els de l'arrel; per decisió de
+ * l'usuari, «no ha de comptar el nivell de divisió»), tants mm menys de llarg, la meitat a cada cap i centrats; els
+ * prestatges fixos d'un mòdul sense dividir, sencers; els regulables i la caixa no es toquen.
  */
 
 const mod = (root: Zone, innerClearance?: number, carcass: Partial<Carcass> = {}, inset = false): Module => {
@@ -66,20 +67,30 @@ describe("folgança de les peces de dins", () => {
     expect(hasInnerPieces(root)).toBe(false)
   })
 
-  it("divisors i prestatges fixos de la primera divisió: sencers", () => {
+  it("divisors i prestatges fixos de la primera divisió (vertical o horitzontal): també 1 mm menys, centrats", () => {
     for (const dir of ["v", "h"] as const) {
       const root: Zone = { id: "root", split: { dir, sizes: ["auto", "auto", "auto"], children: [{ id: "a" }, { id: "b" }, { id: "c" }] } }
-      const a = buildModule(mod(root, 1)), b = buildModule(mod(root, 0))
-      expect(a.panels).toEqual(b.panels)
-      expect(a.panels.filter((p) => p.role === (dir === "v" ? "divider" : "fixedShelf"))).toHaveLength(2)
+      const a = byId(buildModule(mod(root, 1)).panels), b = byId(buildModule(mod(root, 0)).panels)
+      const role = dir === "v" ? "divider" : "fixedShelf"
+      const inner = [...a.values()].filter((p) => p.role === role)
+      expect(inner).toHaveLength(2)
+      for (const p of inner) {
+        const q = b.get(p.id)!
+        expect(size(p), p.id).toBeCloseTo(size(q) - 1, 6)
+        const mid = (x: Panel) => toWorld(x, [x.length / 2, x.width / 2, 0])
+        expect(mid(p), p.id).toEqual(mid(q))
+      }
+      // La caixa, igual.
+      for (const [id, p] of a) if (p.role !== role) expect(size(p), id).toBe(size(b.get(id)!))
+      expectPaired([...a.values()], (p) => (p.role === role ? 0.5 : 0))
     }
   })
 
-  it("divisor i prestatges fixos de dins: 1 mm menys de llarg, centrats; els regulables i la resta, iguals", () => {
+  it("divisors i prestatges fixos de tots els nivells: 1 mm menys de llarg, centrats; els regulables i la caixa, iguals", () => {
     const withGap = byId(buildModule(mod(nested(), 1)).panels)
     const without = byId(buildModule(mod(nested(), 0)).panels)
     expect([...withGap.keys()].sort()).toEqual([...without.keys()].sort())
-    // `divider-1` = el de l'arrel (sencer); el prestatge fix de «a» i el divisor de «b», de dins.
+    // El divisor de l'arrel, el prestatge fix de «a» i el divisor de «b».
     const changed = new Set<string>()
     for (const [id, p] of withGap) {
       const q = without.get(id)!
@@ -96,10 +107,8 @@ describe("folgança de les peces de dins", () => {
       expect(mid(p), id).toEqual(mid(q))
     }
     const roles = [...changed].map((id) => withGap.get(id)!.role).sort()
-    // Prestatge fix de la divisió horitzontal, divisor de dins i el prestatge fix (no regulable) de «b1».
-    expect(roles).toEqual(["divider", "fixedShelf", "shelf"])
-    const rootDivider = [...withGap.values()].find((p) => p.role === "divider" && !changed.has(p.id))!
-    expect(size(rootDivider)).toBe(size(without.get(rootDivider.id)!))
+    // Els dos divisors (l'arrel i «b»), el prestatge fix de la divisió horitzontal i el prestatge fix (no regulable) de «b1».
+    expect(roles).toEqual(["divider", "divider", "fixedShelf", "shelf"])
     // Els regulables de «b2»: iguals.
     const adjustable = [...withGap.values()].filter((p) => p.role === "shelf" && !changed.has(p.id))
     expect(adjustable).toHaveLength(2)
@@ -109,7 +118,7 @@ describe("folgança de les peces de dins", () => {
     const a = buildModule(mod(nested(), 1)).panels
     const b = byId(buildModule(mod(nested(), 0)).panels)
     const inner = new Set(a.filter((p) => size(p) !== size(b.get(p.id)!)).map((p) => p.id))
-    expect(inner.size).toBe(3)
+    expect(inner.size).toBe(4)
     // Les peces que no canvien porten els mateixos forats (els de cara de les unions amb les de dins, també).
     for (const p of a) if (!inner.has(p.id)) expect(p.holes, p.id).toEqual(b.get(p.id)!.holes)
     // Les de dins: tantes espigues com sense folgança, al seu cantell i alineades amb el forat de cara.
@@ -171,11 +180,20 @@ describe("folgança de les peces de dins", () => {
     expect(moduleHasInnerPieces(mod(nested(), 1))).toBe(true)
     expect(visibleModule(mod(nested(), 1)).carcass.innerClearance).toBe(1)
     expect(visibleModule(mod(nested(), 0)).carcass.innerClearance).toBeUndefined()
-    // Només la primera divisió, o els prestatges de dins regulables, o tapats per calaixos: no n'hi ha.
-    const flat: Zone = { id: "root", split: { dir: "v", sizes: ["auto", "auto"], children: [{ id: "a", shelves: { n: 2, adjustable: true } }, { id: "b", front: { kind: "drawers", n: 2, heights: ["auto", "auto"] }, shelves: { n: 2, adjustable: false } }] } }
-    expect(moduleHasInnerPieces(mod(flat, 1))).toBe(false)
-    expect(visibleModule(mod(flat, 1)).carcass.innerClearance).toBeUndefined()
-    expect(buildModule(mod(flat, 1)).panels).toEqual(buildModule(mod(flat)).panels)
+    // Sense dividir (amb prestatges fixos o regulables, o calaixos): no n'hi ha.
+    for (const flat of [
+      { id: "root", shelves: { n: 2, adjustable: false } },
+      { id: "root", shelves: { n: 2, adjustable: true } },
+      { id: "root", front: { kind: "drawers", n: 2, heights: ["auto", "auto"] }, shelves: { n: 2, adjustable: false } },
+    ] satisfies Zone[]) {
+      expect(moduleHasInnerPieces(mod(flat, 1))).toBe(false)
+      expect(visibleModule(mod(flat, 1)).carcass.innerClearance).toBeUndefined()
+      expect(buildModule(mod(flat, 1)).panels).toEqual(buildModule(mod(flat)).panels)
+    }
+    // Dividida només en la primera divisió, amb regulables o calaixos: el divisor de l'arrel ja la porta.
+    const first: Zone = { id: "root", split: { dir: "v", sizes: ["auto", "auto"], children: [{ id: "a", shelves: { n: 2, adjustable: true } }, { id: "b", front: { kind: "drawers", n: 2, heights: ["auto", "auto"] }, shelves: { n: 2, adjustable: false } }] } }
+    expect(moduleHasInnerPieces(mod(first, 1))).toBe(true)
+    expect(visibleModule(mod(first, 1)).carcass.innerClearance).toBe(1)
   })
 
   it("mòduls nous i plantilles: la de Preferències (1 mm); els que ja en diuen alguna cosa no es toquen", () => {

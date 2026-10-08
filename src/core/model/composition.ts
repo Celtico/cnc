@@ -132,11 +132,11 @@ export const CarcassSchema = z.object({
   shelfSetback: mm.min(0).max(100),
   shelfClearance: mm.min(0).max(5),
   /**
-   * Folgança de les peces de dins (Preferències › Folgances per defecte › «Peces de dins»): els divisors i els prestatges
-   * fixos **a partir de la segona divisió** (dins d'un compartiment que ja és fruit d'una divisió: entre un divisor i un
-   * lateral o entre divisors) es fan aquests mm més curts de llarg, la meitat a cada cap i centrats (els forats de les
-   * unions no es mouen). Els de la primera divisió (els de l'arrel) van sencers entre la caixa. Sense valor (mòduls
-   * d'abans): 0, la fabricació no canvia. Només compta si el mòdul té alguna d'aquestes peces (`hasInnerPieces`).
+   * Folgança de les peces de dins (Preferències › Folgances per defecte › «Peces de dins»): amb l'arrel dividida, **tots**
+   * els divisors i prestatges fixos (de qualsevol nivell, també els de l'arrel) es fan aquests mm més curts de llarg, la
+   * meitat a cada cap i centrats (els forats de les unions no es mouen). Sense dividir, els prestatges fixos van sencers;
+   * la caixa, mai. Sense valor (mòduls d'abans): 0, la fabricació no canvia. Només compta amb l'arrel dividida
+   * (`hasInnerPieces`).
    */
   innerClearance: mm.min(0).max(3).optional(),
 })
@@ -842,8 +842,7 @@ export function visibleModule(m: Module): Module {
   // Fons del calaix: només amb calaixos (la fila de Materials no surt sense).
   if (!hasDrawers(m.root) || !c.drawerBottomMaterial) delete carcass.drawerBottomMaterial
   const root = visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(c))
-  // Folgança de les peces de dins: només amb divisors o prestatges fixos a partir de la segona divisió (la fila no surt
-  // sense); 0 és l'absència.
+  // Folgança de les peces de dins: només amb l'arrel dividida (la fila no surt sense); 0 és l'absència.
   if (!carcass.innerClearance || !hasInnerPieces(root)) delete carcass.innerClearance
   const fronts = { ...m.fronts }
   // L'estil (recobrents / encastats) només compta si hi ha algun front que es construeix (la fila «Estil» no surt sense).
@@ -859,24 +858,13 @@ function kitDefaultOf(m: Module): boolean {
 }
 
 /**
- * La zona `z` és «de dins»: un compartiment que ja és fruit d'una divisió (no l'arrel). Els seus divisors i prestatges
- * fixos porten la folgança de les peces de dins (`Carcass.innerClearance`).
- */
-export const isInnerZone = (root: Zone, z: Zone): boolean => z.id !== root.id
-
-/**
  * El mòdul (tal com es construeix: passa-li `visibleModule(m).root`, o fa servir `moduleHasInnerPieces`) té alguna peça
- * que porta la folgança de les peces de dins: un divisor o un prestatge fix (de la divisió horitzontal o de la secció
- * Prestatges sense «Regulables») dins d'un compartiment que no és l'arrel.
+ * que porta la folgança de les peces de dins (per decisió de l'usuari: «no ha de comptar el nivell de divisió, ja sigui
+ * horitzontal o vertical»): l'arrel és dividida, i llavors tots els divisors (també els de l'arrel) i els prestatges
+ * fixos dels compartiments la porten. Un mòdul sense dividir no en té (els seus prestatges fixos van sencers).
  */
 export function hasInnerPieces(root: Zone): boolean {
-  let hit = false
-  walkZones(root, (z) => {
-    if (!isInnerZone(root, z)) return
-    if (z.split && z.split.children.length > 1) hit = true
-    else if (!z.split && z.shelves && z.shelves.n > 0 && !z.shelves.adjustable) hit = true
-  })
-  return hit
+  return !!root.split && root.split.children.length > 1
 }
 
 /** `hasInnerPieces` del mòdul tal com es construeix (`visibleModule`): la fila «Peces de dins» de l'Interior. */

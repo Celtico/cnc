@@ -203,7 +203,7 @@ export function kitDrawerComposition(): Composition {
 
 /**
  * Folgança de les peces de dins (`Carcass.innerClearance`): un moble de dues columnes amb divisors i prestatges fixos a
- * la primera divisió (sencers) i a la segona i la tercera (1 mm menys, centrats), prestatges fixos i regulables, una porta
+ * la primera, la segona i la tercera divisió (tots 1 mm menys, centrats), prestatges fixos i regulables, una porta
  * i calaixos; i un d'encastat amb les portes de tota la zona i 2 mm. Fix al corpus: cap plantilla porta el camp.
  */
 export function innerClearanceComposition(): Composition {

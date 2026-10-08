@@ -1079,8 +1079,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             openRatio={moduleBuild?.openRatios[zone.id]}
             kits={moduleBuild?.hardwareKits.filter((k) => k.zoneId === zone.id)}
             onChange={(root) => updateModule({ ...module, root })}
-            // A l'«Interior» (l'arrel), a la Divisió: la folgança de les peces de dins, només si n'hi ha (divisors o
-            // prestatges fixos a partir de la segona divisió; opcions en cascada).
+            // A l'«Interior» (l'arrel), a la Divisió: la folgança de les peces de dins, només amb l'arrel dividida (tots els
+            // divisors i prestatges fixos; opcions en cascada).
             splitExtra={zone.id === module.root.id && moduleHasInnerPieces(module) ? <InnerClearanceRow module={module} onChange={updateModule} /> : null}
             afterFront={
               // A l'«Interior» (l'arrel), el que és de tots els fronts del mòdul: estil, folgances, retranqueig i els

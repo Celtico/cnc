@@ -196,18 +196,20 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     lateral o divisor; calaixos, tots dos; reixeta i front fix, alguna peça; obert sempre. Els que no hi poden anar no
     surten (el triat sí) i l'ajuda diu per què (`frontLimitsHelp`); «Dues» portes, el costat de les frontisses i la
     reixeta amb frontisses, igual. Tests `model/zoneSupport.test.ts` i `build/hiddenState.test.ts`.
-  - **Peces de dins** (`Carcass.innerClearance`, 0–3 mm; per decisió de l'usuari: «després de la primera divisió del
-    moble les peces de dins un mil·límetre menys»): els divisors i els prestatges fixos (divisió horitzontal i prestatges
-    sense «Regulables», també els gruixuts) d'un compartiment que **no és l'arrel** es fan tants mm més curts de llarg,
-    la meitat a cada cap i **centrats** (`Builder.innerGap`, `endGap` a les refs): els forats de cara de les peces del
-    voltant no es mouen i l'espiga de cantell va al cantell nou, a la mateixa línia (`dowelJoint(…, buttShift)`; tot o
-    res igual). Els de la primera divisió (i els fixos d'un mòdul sense dividir) van sencers entre la caixa; els
-    regulables, mai (ja porten la folgança del prestatge). Sense el camp (mòduls d'abans): 0, la fabricació no canvia;
-    els mòduls nous (`applySettingsToModule`) i les plantilles instanciades (`withInnerClearance`: catàleg, col·leccions,
-    escenes) prenen el de Preferències. Es posa a l'**Interior › Divisió** («Peces de dins», amb «Com a Preferències»),
-    només si n'hi ha (`moduleHasInnerPieces`; res amagat compta). Tests `build/innerClearance.test.ts`, moble fix
-    `inner-clearance` del corpus de les proves d'or. Dubte obert: amb l'arrel dividida en horitzontal, els prestatges
-    fixos d'un compartiment de baix també van de lateral a lateral i també es fan més curts (la regla és per nivell).
+  - **Peces de dins** (`Carcass.innerClearance`, 0–3 mm; per decisió de l'usuari: «no ha de comptar el nivell de divisió,
+    ja sigui horitzontal o vertical; només a partir del primer nivell de la divisió, i només a les peces de divisió interior
+    1 mm menys»): si l'**arrel del mòdul és dividida**, **tots** els divisors i prestatges fixos (de qualsevol nivell,
+    també els de la divisió de l'arrel, horitzontal o vertical, i els prestatges sense «Regulables» dels compartiments,
+    també els gruixuts) es fan tants mm més curts de llarg, la meitat a cada cap i **centrats** (`Builder.innerGap`,
+    `hasInnerPieces`, `endGap` a les refs): els forats de cara de les peces del voltant no es mouen i l'espiga de cantell
+    va al cantell nou, a la mateixa línia (`dowelJoint(…, buttShift)`; tot o res igual). Un mòdul **sense dividir**: els
+    prestatges fixos van sencers entre la caixa; la **caixa**, mai; els regulables, mai aquesta (ja porten la folgança
+    del prestatge). Els prestatges fixos d'un mòdul dividit porten les dues (la del prestatge i aquesta: 2 mm amb els
+    valors inicials, confirmat per l'usuari). Sense el camp (mòduls d'abans): 0, la fabricació no canvia; els mòduls
+    nous (`applySettingsToModule`) i les plantilles instanciades (`withInnerClearance`: catàleg, col·leccions, escenes)
+    prenen el de Preferències. Es posa a l'**Interior › Divisió** («Peces de dins», amb «Com a Preferències»), només
+    amb l'arrel dividida (`moduleHasInnerPieces`; res amagat compta). Tests `build/innerClearance.test.ts`, moble fix
+    `inner-clearance` del corpus de les proves d'or.
   - **Prestatges gruixuts** (`zone.shelves.thickness`, «Gruixuts (buits)»): pells, tira i llistons. **A ras del davant**
     (`zone.shelves.flush`); amb fronts encastats, només als compartiments sense front (si no, es retiren i avisa).
   - **Front d'una zona dividida** (`buildParentFront`; portes d'armari de dalt a baix amb penjador i maleter darrere): les
@@ -320,7 +322,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
 ## Fabricació
 ### Regles de construcció (`core/build/`)
 - **Regles revisades** (`build/manufacturing.test.ts`): amb fronts encastats, divisors i prestatges fixos d'una zona coberta
-  es retiren `t + outerGap` (`insetCut`, espigues i System 32 al cantell nou); a partir de la segona divisió, divisors i
+  es retiren `t + outerGap` (`insetCut`, espigues i System 32 al cantell nou); en un mòdul dividit, tots els divisors i
   prestatges fixos més curts per la folgança de les peces de dins (vegeu Model del moble › Zones); les portes d'una zona pare fan la filera
   System 32 als trams lliures entre prestatges fixos (placa de la frontissa); forats de guia dels calaixos des del davant de
   la caixa (`zFront − 37`); trapa de reixeta darrere del front encastat; ranura del fons sempre dins de la peça i allargada
@@ -524,7 +526,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   surt (també els fronts dels calaixos), tauler de taula sense tapa sencera, prestatges i barra als calaixos i als
   compartiments dividits, gruix i «a ras» sense prestatges, alçades de calaix de més, frontissa de les dues portes, patró de
   reixeta de l'altre tipus, l'imant triat d'una reixeta amb frontisses i sense trapa, el marc d'una porta que no és de vidre,
-  el «Fons del calaix» sense calaixos, els prestatges, les fileres, la barra i la llum d'un compartiment sense una peça a cada costat (`zoneSupport.ts`), l'estil dels fronts sense cap front, la folgança de les peces de dins sense divisors ni prestatges fixos a partir de la segona divisió, el front d'un compartiment **tapat** pel
+  el «Fons del calaix» sense calaixos, els prestatges, les fileres, la barra i la llum d'un compartiment sense una peça a cada costat (`zoneSupport.ts`), l'estil dels fronts sense cap front, la folgança de les peces de dins d'un mòdul sense dividir, el front d'un compartiment **tapat** pel
   d'una zona de més amunt (el compartiment és com obert: prestatges i accessoris sí), i els **fronts recordats** (`Zone.fronts`). Sense fons, el fons dels calaixos surt
   del material del cos. Sense cap prestatge, «Regulables» es veu i compta (fileres System 32). **Els llocs de ferratge que
   el mòdul no fa servir no es llegeixen** (vegeu Ferratges com a dades). **Una opció nova que amaga camps s'afegeix a
@@ -1455,7 +1457,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Com la Configuració de macOS / Figma** (`SettingsPages` + `Pane` a `SettingsScreen`): a l'esquerra els apartats per
   categories (`SETTINGS_GROUPS`; no és un acordió): **Fabricació** — Màquines CNC, Regles de mecanitzat, Ferratges
   (biblioteca, vegeu més avall), Folgances per defecte (fronts, prestatges i fons i **Divisions** › «Peces de dins», 1 mm:
-  divisors i prestatges fixos a partir de la segona divisió), Materials, **Taulers** (camp de treball de la màquina per
+  tots els divisors i prestatges fixos d'un mòdul dividit), Materials, **Taulers** (camp de treball de la màquina per
   defecte o «importa-la a Màquines CNC»; «Mides de tauler de fàbrica» per material; «Distribució»: girar les peces amb veta;
   sense «Tall»: separació i marge són de la màquina; sense avís si el tauler passa del camp: 2800 × 2070 sobre 5020 × 1905 va
   bé), Etiquetes —, **Foto i visor 3D** — Objectes de referència, Visor 3D — i **App** — Visualització, Tema. A la dreta la
