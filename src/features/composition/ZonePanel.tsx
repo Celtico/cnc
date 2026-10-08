@@ -616,7 +616,9 @@ export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title
   const all = kinds ?? (Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[])
   const current = zone.front?.kind ?? "none"
   const options = all.filter((k) => k === current || canHoldFront(bounds, k))
-  const limits = frontLimitsHelp(bounds, all)
+  // Els fronts només es fan amb el compartiment aguantat pels quatre costats (`frontHeld`): els altres no surten, el triat
+  // sí (es conserva) i l'ajuda diu per què no es fa.
+  const limits = frontLimitsHelp(bounds, all, current)
   /** Una porta nova va amb les frontisses a un costat on hi ha on posar-les. */
   const choose = (k: Front["kind"] | "none") => {
     const next = switchFront(root, zone.id, k)

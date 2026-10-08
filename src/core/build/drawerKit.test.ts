@@ -131,15 +131,20 @@ describe("joc paramètric: construcció", () => {
     const bk = back.holes.filter((h) => h.tag === "kit-back")
     expect(bk.map((h) => [h.x, h.y]).sort()).toEqual([[9, 19], [9, 51], [651, 19], [651, 51]].sort())
   })
-  it("tot o res: sense fondària, només els fronts i l'avís; sense un lateral, igual", () => {
+  it("tot o res: sense fondària, només els fronts i l'avís; sense un lateral, ni el front (`zoneSupport.ts`)", () => {
     const shallow = buildModule(kitModule(1, { depth: 260 }))
     expect(shallow.panels.filter((p) => p.role === "drawerBottom")).toHaveLength(0)
     expect(shallow.panels.filter((p) => p.role === "drawerFront")).toHaveLength(1)
     expect(shallow.hardwareKits).toHaveLength(0)
     expect(shallow.warnings.some((w) => w.code === "hardware" && w.message.includes("cap llargada"))).toBe(true)
+    // Sense un lateral el compartiment no aguanta cap front: ni calaix ni front ni avís del joc; amb els dos, el calaix sencer.
     const noSide = buildModule(kitModule(1, { sides: { left: true, right: false } }))
-    expect(noSide.panels.filter((p) => p.role === "drawerBottom")).toHaveLength(0)
-    expect(noSide.warnings.some((w) => w.code === "hardware" && w.message.includes("no té lateral"))).toBe(true)
+    expect(noSide.panels.filter((p) => p.role === "drawerBottom" || p.role === "drawerFront")).toHaveLength(0)
+    expect(noSide.hardwareKits).toHaveLength(0)
+    expect(noSide.warnings.filter((w) => w.code === "hardware")).toEqual([])
+    const sides = buildModule(kitModule(1))
+    expect(sides.panels.filter((p) => p.role === "drawerBottom")).toHaveLength(1)
+    expect(sides.hardwareKits).toHaveLength(1)
     // Massa calaixos per a l'alçada: els que no hi caben, només el front.
     const many = buildModule(kitModule(6))
     expect(many.warnings.some((w) => w.code === "hardware" && w.message.includes("no cap al calaix"))).toBe(true)

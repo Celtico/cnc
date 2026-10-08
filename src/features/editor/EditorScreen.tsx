@@ -52,7 +52,7 @@ import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
 import { materialIssues } from "../../core/build/materialIssues"
-import { applySettingsToModule, moduleHasInnerPieces, usedSlotSet, hasDrawers, coveringZone, frontsSection, frontsSectionEmpty, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule, moduleHasInnerPieces, usedSlotSet, hasDrawers, coveringZone, frontsSection, frontsSectionEmpty, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, FrontsForm, InnerClearanceRow, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -1032,7 +1032,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             <MaterialsForm
               carcass={comp.modules[0].carcass}
               hasBack={comp.modules.some((m) => m.carcass.back !== "none")}
-              hasDrawers={comp.modules.some((m) => hasDrawers(m.root))}
+              hasDrawers={comp.modules.some((m) => hasDrawers(visibleModule(m).root))}
               mixed={comp.modules.some((m) => {
                 const a = m.carcass
                 const b = comp.modules[0]!.carcass
@@ -1067,7 +1067,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             zone={zone}
             bounds={zoneBounds(module, zone.id) ?? carcassBounds(module.carcass)}
             coveredBy={(() => {
-              const cover = coveringZone(module.root, zone.id)
+              // Com es construeix: un front que no es fa (compartiment sense un costat, `zoneSupport.ts`) no tapa res.
+              const cover = coveringZone(visibleModule(module).root, zone.id)
               return cover ? zoneLabel(cover, { root: cover.id === module.root.id }) : undefined
             })()}
             hardware={module.hardware}
@@ -1189,7 +1190,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             <CarcassForm module={module} onChange={updateModule} section="structure" />
           </FoldItem>
           <FoldItem id="mod-materials" title="Materials" icon={LuPalette}>
-            <MaterialsForm carcass={module.carcass} hasDrawers={hasDrawers(module.root)} hasFronts={false} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
+            <MaterialsForm carcass={module.carcass} hasDrawers={hasDrawers(visibleModule(module).root)} hasFronts={false} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
           </FoldItem>
           {/* «Acabats i ferratges» (abans «Fusteria (avançat)», per decisió de l'usuari; l'id es queda: es recorda si és oberta). */}
           <FoldItem id="mod-joinery" title="Acabats i ferratges" icon={LuHammer} defaultOpen={false}>

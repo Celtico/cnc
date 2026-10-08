@@ -211,11 +211,15 @@ describe("la placa al lateral", () => {
     expect(z(ins)).toEqual([560 - 19 - 37])
   })
 
-  it("sense lateral a les frontisses: avís de la placa (i la porta fa les cassoletes)", () => {
+  it("sense lateral a les frontisses: la porta no es fa (compartiment sense un costat, `zoneSupport.ts`); amb el lateral, la placa sí", () => {
     const base = defaultModule("m", "x", { width: 500, height: 720, depth: 560 })
     const b = buildModule({ ...base, carcass: { ...base.carcass, sides: { left: false, right: true } }, root: door(confirmed) })
+    expect(b.panels.filter((p) => p.role === "door")).toEqual([])
     expect(plateHoles(b.panels)).toEqual([])
-    expect(b.warnings.some((w) => w.code === "hinge" && /placa/.test(w.message) && /no en té/.test(w.message))).toBe(true)
+    expect(b.warnings.filter((w) => w.code === "hinge")).toEqual([])
+    const withSide = buildModule({ ...base, root: door(confirmed) })
+    expect(withSide.panels.filter((p) => p.role === "door")).toHaveLength(1)
+    expect(plateHoles(withSide.panels).length).toBeGreaterThan(0)
   })
 })
 
