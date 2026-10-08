@@ -490,7 +490,7 @@ export function PlanCanvas({
             (() => {
               const bs = ambient.items.filter((i) => selectedIds.includes(i.id)).flatMap((i) => {
                 const g = geos.get(i.id)
-                return g ? [footprintBox(i.x, i.y, g.w, g.d, i.rot)] : []
+                return g ? [isEmptyGeometry(g) ? footprintBox(i.x, i.y, 600, 600, i.rot) : footprintBox(i.x, i.y, g.w, g.d, i.rot)] : []
               })
               if (!bs.length) return null
               const x0 = Math.min(...bs.map((b) => b.x0)), y0 = Math.min(...bs.map((b) => b.y0)), x1 = Math.max(...bs.map((b) => b.x1)), y1 = Math.max(...bs.map((b) => b.y1))
