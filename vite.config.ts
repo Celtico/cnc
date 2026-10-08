@@ -44,9 +44,9 @@ export default defineConfig({
         display: "standalone",
         orientation: "any",
         start_url: "/",
-        // Chrome d'escriptori: obrir els .moble amb l'app en fer-hi doble clic.
-        file_handlers: [{ action: "/", accept: { "application/json": [".moble"] } }],
-        // Un .moble obert amb doble clic va a la finestra de l'app que ja hi ha (launchQueue), no n'obre una altra.
+        // Chrome d'escriptori: obrir els .moble i els .ambient amb l'app en fer-hi doble clic.
+        file_handlers: [{ action: "/", accept: { "application/json": [".moble", ".ambient"] } }],
+        // Un .moble o .ambient obert amb doble clic va a la finestra de l'app que ja hi ha (launchQueue), no n'obre una altra.
         launch_handler: { client_mode: "focus-existing" },
         icons: [
           // Icones a sang (quadrat sencer, sense cantonades rodones): el sistema hi posa la màscara.

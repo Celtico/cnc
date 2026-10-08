@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react"
 import { toaster } from "../../components/ui/toaster"
 import { useSettings } from "../settings/SettingsContext"
-import { openMobleFile } from "./mobleIo"
+import { openAnyFile } from "./openAnyFile"
 
 /** API de llançament de fitxers de la PWA (Chromium): `file_handlers` del manifest. */
 interface LaunchParams {
@@ -12,16 +12,16 @@ interface LaunchQueue {
 }
 
 /**
- * Obrir un `.moble` amb doble clic (o «Obre amb» Mobles): el sistema obre l'app instal·lada i li passa el fitxer
- * per la `launchQueue`. Es fa el mateix que «Obrir fitxer» de Mobles (crear el moble i obrir-lo). Els fitxers que
- * arriben abans que es carreguin les preferències s'esperen.
+ * Obrir un `.moble` o un `.ambient` amb doble clic (o «Obre amb» Mobles): el sistema obre l'app instal·lada i li passa
+ * el fitxer per la `launchQueue`. Es fa el mateix que «Obrir fitxer» (`openAnyFile`: crear el moble, o l'ambient amb
+ * còpies dels seus mobles, i obrir-lo). Els fitxers que arriben abans que es carreguin les preferències s'esperen.
  */
-export function useLaunchFiles(onOpen: (projectId: number) => void) {
+export function useLaunchFiles(onOpen: (projectId: number) => void, onOpenAmbient: (ambientId: number) => void) {
   const { settings, save, loading } = useSettings()
   const pending = useRef<FileSystemFileHandle[]>([])
   const ready = useRef<() => void>(() => {})
-  const latest = useRef({ settings, save, onOpen })
-  latest.current = { settings, save, onOpen }
+  const latest = useRef({ settings, save, onOpen, onOpenAmbient })
+  latest.current = { settings, save, onOpen, onOpenAmbient }
 
   useEffect(() => {
     const queue = (window as unknown as { launchQueue?: LaunchQueue }).launchQueue
@@ -40,14 +40,15 @@ export function useLaunchFiles(onOpen: (projectId: number) => void) {
         const handle = pending.current.shift()!
         try {
           const file = await handle.getFile()
-          const { settings: s, save: sv, onOpen: open } = latest.current
-          const res = await openMobleFile(await file.text(), s, sv)
+          const { settings: s, save: sv, onOpen: open, onOpenAmbient: openAmbient } = latest.current
+          const res = await openAnyFile(await file.text(), s, sv)
           if (!res.ok) {
             toaster.create({ title: `No s'ha pogut obrir «${file.name}»`, description: res.error, type: "error" })
             continue
           }
           toaster.create({ title: `«${res.name}» obert`, description: res.warnings.join(" ") || undefined, type: res.warnings.length ? "warning" : "success", duration: res.warnings.length ? 8000 : undefined })
-          open(res.projectId)
+          if (res.kind === "ambient") openAmbient(res.ambientId)
+          else open(res.projectId)
         } catch (e) {
           toaster.create({ title: "No s'ha pogut obrir el fitxer", description: String(e), type: "error" })
         }
