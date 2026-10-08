@@ -178,6 +178,18 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     recobrents s'aturen a sota del voladís (joc `outerGap`).
 - **Zones** (compartiments): divisions verticals/horitzontals amb mides fixes o «auto» (l'últim «auto» agafa el que sobra);
   contingut obert, prestatges, porta, calaixos, abatible, reixeta o front fix.
+  - **Peces de dins** (`Carcass.innerClearance`, 0–3 mm; per decisió de l'usuari: «després de la primera divisió del
+    moble les peces de dins un mil·límetre menys»): els divisors i els prestatges fixos (divisió horitzontal i prestatges
+    sense «Regulables», també els gruixuts) d'un compartiment que **no és l'arrel** es fan tants mm més curts de llarg,
+    la meitat a cada cap i **centrats** (`Builder.innerGap`, `endGap` a les refs): els forats de cara de les peces del
+    voltant no es mouen i l'espiga de cantell va al cantell nou, a la mateixa línia (`dowelJoint(…, buttShift)`; tot o
+    res igual). Els de la primera divisió (i els fixos d'un mòdul sense dividir) van sencers entre la caixa; els
+    regulables, mai (ja porten la folgança del prestatge). Sense el camp (mòduls d'abans): 0, la fabricació no canvia;
+    els mòduls nous (`applySettingsToModule`) i les plantilles instanciades (`withInnerClearance`: catàleg, col·leccions,
+    escenes) prenen el de Preferències. Es posa a l'**Interior › Divisió** («Peces de dins», amb «Com a Preferències»),
+    només si n'hi ha (`moduleHasInnerPieces`; res amagat compta). Tests `build/innerClearance.test.ts`, moble fix
+    `inner-clearance` del corpus de les proves d'or. Dubte obert: amb l'arrel dividida en horitzontal, els prestatges
+    fixos d'un compartiment de baix també van de lateral a lateral i també es fan més curts (la regla és per nivell).
   - **Prestatges gruixuts** (`zone.shelves.thickness`, «Gruixuts (buits)»): pells, tira i llistons. **A ras del davant**
     (`zone.shelves.flush`); amb fronts encastats, només als compartiments sense front (si no, es retiren i avisa).
   - **Front d'una zona dividida** (`buildParentFront`; portes d'armari de dalt a baix amb penjador i maleter darrere): les
@@ -290,7 +302,8 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
 ## Fabricació
 ### Regles de construcció (`core/build/`)
 - **Regles revisades** (`build/manufacturing.test.ts`): amb fronts encastats, divisors i prestatges fixos d'una zona coberta
-  es retiren `t + outerGap` (`insetCut`, espigues i System 32 al cantell nou); les portes d'una zona pare fan la filera
+  es retiren `t + outerGap` (`insetCut`, espigues i System 32 al cantell nou); a partir de la segona divisió, divisors i
+  prestatges fixos més curts per la folgança de les peces de dins (vegeu Model del moble › Zones); les portes d'una zona pare fan la filera
   System 32 als trams lliures entre prestatges fixos (placa de la frontissa); forats de guia dels calaixos des del davant de
   la caixa (`zFront − 37`); trapa de reixeta darrere del front encastat; ranura del fons sempre dins de la peça i allargada
   `g` on la tapa/base passa per sobre del lateral (inglet, tauler de taula); fons sota el tauler de taula i fins a
@@ -493,7 +506,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   surt (també els fronts dels calaixos), tauler de taula sense tapa sencera, prestatges i barra als calaixos i als
   compartiments dividits, gruix i «a ras» sense prestatges, alçades de calaix de més, frontissa de les dues portes, patró de
   reixeta de l'altre tipus, l'imant triat d'una reixeta amb frontisses i sense trapa, el marc d'una porta que no és de vidre,
-  el «Fons del calaix» sense calaixos, l'estil dels fronts sense cap front, el front d'un compartiment **tapat** pel
+  el «Fons del calaix» sense calaixos, l'estil dels fronts sense cap front, la folgança de les peces de dins sense divisors ni prestatges fixos a partir de la segona divisió, el front d'un compartiment **tapat** pel
   d'una zona de més amunt (el compartiment és com obert: prestatges i accessoris sí), i els **fronts recordats** (`Zone.fronts`). Sense fons, el fons dels calaixos surt
   del material del cos. Sense cap prestatge, «Regulables» es veu i compta (fileres System 32). **Els llocs de ferratge que
   el mòdul no fa servir no es llegeixen** (vegeu Ferratges com a dades). **Una opció nova que amaga camps s'afegeix a
@@ -744,7 +757,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   i posa'ls a l'inspector d'aquell nivell.
 - **Estructura** (`composition/StructureTree.tsx`): moble › mòduls (agrupats per fila) › compartiments, peces lliures,
   objectes de referència i models 3D. L'arrel de cada mòdul surt com a **«Interior · …»** (`zoneLabel(z, { root })`; «Interior ·
-  2 portes» si porta el front de tot el mòdul) amb els compartiments a sota: seleccionar-la dona Divisió i «Front de tota la
+  2 portes» si porta el front de tot el mòdul) amb els compartiments a sota: seleccionar-la dona Divisió (amb «Peces de dins» si n'hi ha) i «Front de tota la
   zona» (Obert · Porta · Front fix). Pujar des d'un compartiment (clic al 3D, eliminar) passa per l'Interior abans del mòdul;
   Supr / ⌘X a l'Interior no fa res (avís: `deleteZone` buidaria tot el mòdul). **Objectes de referència només als mobles i
   Models 3D només als objectes** (per decisió de l'usuari; treure ≠ esborrar: si el document ja en té, el grup surt sense +
@@ -1408,7 +1421,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 ## Preferències
 - **Com la Configuració de macOS / Figma** (`SettingsPages` + `Pane` a `SettingsScreen`): a l'esquerra els apartats per
   categories (`SETTINGS_GROUPS`; no és un acordió): **Fabricació** — Màquines CNC, Regles de mecanitzat, Ferratges
-  (biblioteca, vegeu més avall), Folgances per defecte, Materials, **Taulers** (camp de treball de la màquina per
+  (biblioteca, vegeu més avall), Folgances per defecte (fronts, prestatges i fons i **Divisions** › «Peces de dins», 1 mm:
+  divisors i prestatges fixos a partir de la segona divisió), Materials, **Taulers** (camp de treball de la màquina per
   defecte o «importa-la a Màquines CNC»; «Mides de tauler de fàbrica» per material; «Distribució»: girar les peces amb veta;
   sense «Tall»: separació i marge són de la màquina; sense avís si el tauler passa del camp: 2800 × 2070 sobre 5020 × 1905 va
   bé), Etiquetes —, **Foto i visor 3D** — Objectes de referència, Visor 3D — i **App** — Visualització, Tema. A la dreta la
@@ -1567,7 +1581,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Visor 3D**: qualitat, escena de Presentació (terra i paret: materials de la biblioteca, `PresentationScene.floorMaterial`
   / `wallMaterial`, o les mostres ràpides; terra per defecte «Parquet de roure»), llum i «Cel del render». **Tema**:
   dia/nit/sistema i color principal (`theme/accent.ts` redirigeix les variables CSS de `wood`).
-- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 24 (jocs inicials amb les dades d'ara); 23: jocs paramètrics de calaix (DTC MAGIC-PRO); 22: generador de mecanitzats; 21: tiradors, potes i «només 3D» importats; 20: ferratges importats; 19: biblioteca de ferratges; sense versió, additius en llegir: els accessoris de la biblioteca (`fixHardwareDefaults` afegeix l'item d'inici de cada lloc que falta) i la regla `kitPilot`): les migracions depenen només de la versió
+- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 25 (`gaps.innerClearance`, 1 mm, additiu); 24: jocs inicials amb les dades d'ara; 23: jocs paramètrics de calaix (DTC MAGIC-PRO); 22: generador de mecanitzats; 21: tiradors, potes i «només 3D» importats; 20: ferratges importats; 19: biblioteca de ferratges; sense versió, additius en llegir: els accessoris de la biblioteca (`fixHardwareDefaults` afegeix l'item d'inici de cada lloc que falta) i la regla `kitPilot`): les migracions depenen només de la versió
   desada, que **mai baixa** (`saveSettings` desa la més alta). **Desades per una versió més nova**: només lectura
   (`saveSettings` torna `false` amb `console.warn`; `loadSettings` avisa). **Lectura camp a camp** (`repairValue`,
   `core/model/repair.ts`): un valor dolent d'una secció només torna aquell valor a l'inicial (un tauler o una llargada de guia
@@ -1847,7 +1861,7 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
 | **Fons** | la peça del darrere del mòdul (el `trassera` del taller); **Fons del calaix**, la del calaix (fila del joc, avís `drawer-bottom`, material propi a Materials; el nom de peça `fons calaix` i l'etiqueta `Fons calaix n` no canvien: són els dels fitxers del taller) |
 | **Fondària** | l'eix Z i la mida en Z (mai «Fons Z») |
 | **Front** | porta, front de calaix, abatible, reixeta, front fix; **Fronts i calaixos**, la secció de l'Interior |
-| **Folgança** | separacions: front–cos, entre fronts, lateral i darrere de la guia, prestatge, fons, encaixos; **Folgances per defecte** a Preferències |
+| **Folgança** | separacions: front–cos, entre fronts, lateral i darrere de la guia, prestatge, fons, encaixos, peces de dins; **Folgances per defecte** a Preferències |
 | **Joc** | només el joc paramètric del fabricant (`HardwareKit`, «joc de calaix», «Ferratges dels jocs») |
 | **Ferratge** | qualsevol `HardwareItem`; **Ferratges**, la secció de l'inspector, la biblioteca de Preferències i l'opció del visor (`LuWrench`) |
 | **Fusteria** | les mides d'unió de fusta del mòdul (ranura i retirada del fons) i els ferratges de la caixa (espiga, System 32) (`LuHammer`) |
