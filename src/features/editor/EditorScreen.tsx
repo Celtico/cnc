@@ -1089,7 +1089,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             afterFront={
               // A l'«Interior» (l'arrel), el que és de tots els fronts del mòdul: estil, folgances, retranqueig i els
               // ferratges per defecte que algun compartiment hereta (`frontsSection`: un sol lloc per decisió, només el que
-              // es llegeix; sense res, la secció no surt). La caixa (fons, espigues) és a «Acabats i ferratges» del mòdul; la filera System 32, als Prestatges o al Front del compartiment.
+              // es llegeix; sense res, la secció no surt). La caixa (fons, espigues) és a «Acabats» del mòdul; la filera System 32, als Prestatges o al Front del compartiment.
               zone.id === module.root.id &&
               (() => {
                 const section = frontsSection(module)
@@ -1199,8 +1199,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           <FoldItem id="mod-materials" title="Materials" icon={LuPalette}>
             <MaterialsForm carcass={module.carcass} hasDrawers={hasDrawers(visibleModule(module).root)} hasFronts={false} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
           </FoldItem>
-          {/* «Acabats i ferratges» (abans «Fusteria (avançat)», per decisió de l'usuari; l'id es queda: es recorda si és oberta). */}
-          <FoldItem id="mod-joinery" title="Acabats i ferratges" icon={LuHammer} defaultOpen={false}>
+          {/* «Acabats» (abans «Fusteria (avançat)», per decisió de l'usuari; l'id es queda: es recorda si és oberta). */}
+          <FoldItem id="mod-joinery" title="Acabats" icon={LuHammer} defaultOpen={false}>
             <JoineryForm module={module} onChange={updateModule} usedSlots={usedSlotSet(module)} />
           </FoldItem>
           {/* «Ferratges» (col·locats a mà i els de les regles) no surt a l'inspector del mòdul (per decisió de l'usuari,

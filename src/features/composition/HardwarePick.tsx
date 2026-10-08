@@ -6,7 +6,7 @@ import { useSettings } from "../settings/SettingsContext"
 /**
  * Quin ferratge de la biblioteca fa servir un lloc (la frontissa d'una porta, la guia dels calaixos, el braç d'un
  * abatible, el tirador, l'imant d'una reixeta, la barra o la llum d'un compartiment, el marc d'una vitrina, la pota de la
- * base o, a Interior › Acabats i a «Acabats i ferratges» del mòdul, el de tot el mòdul): el selector comú amb calaix (`HardwareSelect`) amb
+ * base o, a Interior › Acabats i a «Acabats» del mòdul, el de tot el mòdul): el selector comú amb calaix (`HardwareSelect`) amb
  * els de Preferències › Ferratges del mateix tipus. En triar-ne un, se'n desa una **còpia** (`onPick`), com fan els
  * mòduls: el moble no canvia si la biblioteca canvia. `inherited` = el del mòdul (als fronts i compartiments): triar-lo
  * treu el propi (`onPick(undefined)`). Una còpia que no és a la biblioteca **tal qual** surt a part, «Còpia pròpia», i és la
