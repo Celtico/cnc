@@ -210,6 +210,11 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     prenen el de Preferències. Es posa a l'**Interior › Divisió** («Peces de dins», amb «Com a Preferències»), només
     amb l'arrel dividida (`moduleHasInnerPieces`; res amagat compta). Tests `build/innerClearance.test.ts`, moble fix
     `inner-clearance` del corpus de les proves d'or.
+  - **Front fix ⇒ ni Prestatges ni Accessoris** (per decisió de l'usuari): un compartiment el contingut del qual és
+    «Front fix» (el seu, no tapat) no ensenya Prestatges ni Accessoris (`ZonePanel`, `fillsZone`, com els calaixos) i
+    `visibleZone` no hi fa prestatges, fileres System 32, barra ni llum (res amagat compta: es conserven i tornen en
+    canviar el contingut; `build/hiddenState.test.ts`). Dubte obert: el «Front de tota la zona» fix d'una zona dividida
+    no ho fa als compartiments que tapa (la decisió parla del contingut del compartiment).
   - **Prestatges gruixuts** (`zone.shelves.thickness`, «Gruixuts (buits)»): pells, tira i llistons. **A ras del davant**
     (`zone.shelves.flush`); amb fronts encastats, només als compartiments sense front (si no, es retiren i avisa).
   - **Front d'una zona dividida** (`buildParentFront`; portes d'armari de dalt a baix amb penjador i maleter darrere): les
@@ -228,7 +233,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
       com les fotos de catàleg): perfil amb tira LED sota el sostre del compartiment i sota cada prestatge (`buildLed`,
       `buildShelves` torna on és cada prestatge); `extras` (no és de CNC: «Elements sense nesting», amb el llarg per
       tallar el perfil), material «Tira LED» (`LED_MATERIALS`, `glow` 60, càlid; v14 de les preferències). Res amagat
-      compta: amb calaixos o dividit, cap tira (`visibleZone`). Encara sense mecanitzat (ranura per al perfil: pendent
+      compta: amb calaixos, front fix o dividit, cap tira (`visibleZone`). Encara sense mecanitzat (ranura per al perfil: pendent
       del taller). La vitrina «Galeria» del catàleg (Saló) en porta (`led.test.ts`).
   - **Porta de vidre** (`front.glass` d'una porta, «Vitrina» › «Porta de vidre amb marc»; per decisió de l'usuari, com les
     vitrines de catàleg): el **marc** és un ferratge (motor `glassFrame`, item `glass-frame-20`: perfil de 20, vidre de
@@ -523,7 +528,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
 - **Res amagat compta** (regla): el que s'amaga a la UI es conserva (tornar a encendre l'opció recupera els valors), però
   `buildModule` construeix des de `visibleModule` (`model/composition.ts`), que posa a un valor fix els camps de les opcions
   apagades: fons (material i gruix sense fons; ranura sense ranura; retirada si no és encastat), inglet si Cantonades no
-  surt (també els fronts dels calaixos), tauler de taula sense tapa sencera, prestatges i barra als calaixos i als
+  surt (també els fronts dels calaixos), tauler de taula sense tapa sencera, prestatges i barra als calaixos, al **front fix** i als
   compartiments dividits, gruix i «a ras» sense prestatges, alçades de calaix de més, frontissa de les dues portes, patró de
   reixeta de l'altre tipus, l'imant triat d'una reixeta amb frontisses i sense trapa, el marc d'una porta que no és de vidre,
   el «Fons del calaix» sense calaixos, els prestatges, les fileres, la barra i la llum d'un compartiment sense una peça a cada costat (`zoneSupport.ts`), l'estil dels fronts sense cap front, la folgança de les peces de dins d'un mòdul sense dividir, el front d'un compartiment **tapat** pel
@@ -825,7 +830,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     cap: no es duplica, no es retalla ni s'elimina, i ⌘D, ⌘X i Suprimir avisen sense tocar el porta-retalls) i Front ·
     Prestatges (només fusta: Quantitat · Regulables · A ras · Gruixuts) · **Accessoris** (`LuShirt`: Barra de penjar i
     Tira LED, interruptor + `HardwarePick` «Com el mòdul») · Mida · Dividir (Prestatges, Accessoris, Dividir i els tipus
-    de Contingut, només si el compartiment els pot aguantar: Model del moble › Zones › Què aguanta cada compartiment). Al Front: el ferratge del tipus (frontissa,
+    de Contingut, només si el compartiment els pot aguantar: Model del moble › Zones › Què aguanta cada compartiment; Prestatges i Accessoris tampoc amb calaixos o un front fix). Al Front: el ferratge del tipus (frontissa,
     guia o joc, braç; a la reixeta, l'**imant** després de «Muntatge» i «Trapa»; a la vitrina, el **marc**) i el «Tirador» (amb «Cap
     (push)»). **L'inspector del mòdul és de la caixa; el de l'«Interior» (l'arrel), dels fronts i calaixos**: només
     a l'arrel, la secció **«Acabats»** (abans «Fronts i calaixos», per decisió de l'usuari; id `zone-fronts`, el

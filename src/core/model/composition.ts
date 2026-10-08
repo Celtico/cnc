@@ -973,7 +973,13 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
     if (!z.led) delete out.led
   }
   const f = out.front
-  if (f?.kind === "drawers") {
+  if (f?.kind === "panel") {
+    // Front fix (per decisió de l'usuari): darrere no hi ha res a fer servir; ni Prestatges ni Accessoris (es conserven i
+    // tornen si canvia el contingut).
+    delete out.shelves
+    delete out.rail
+    delete out.led
+  } else if (f?.kind === "drawers") {
     // Els calaixos ocupen el compartiment: la secció Prestatges (prestatges, barra i llum) no surt.
     delete out.shelves
     delete out.rail
