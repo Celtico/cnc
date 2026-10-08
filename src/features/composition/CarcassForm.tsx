@@ -188,13 +188,13 @@ export function CarcassForm({ module, onChange, section }: { module: Module; onC
 }
 
 /**
- * Materials del cos, dels fronts i del fons. Es fa servir per a un mòdul i també per al
- * moble sencer (aplica el canvi a tots els mòduls).
+ * Materials del cos, dels fronts i del fons. Es fa servir per a un mòdul (sense els fronts: són a Interior › Fronts i
+ * calaixos › Acabats) i també per al moble sencer (aplica el canvi a tots els mòduls).
  */
 /** Valor del desplegable del fons per a «Com el cos» (mateix material i gruix). */
 const SAME = "__com-el-cos__"
 
-export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !== "none", hasDrawers = false, hasFronts = true }: { carcass: Carcass; onPatch: (patch: Partial<Carcass>) => void; mixed?: boolean; /** Sense fons: no surten les opcions del fons. */ hasBack?: boolean; /** Amb calaixos: la fila «Fons del calaix». */ hasDrawers?: boolean; /** Sense cap front (obert, prestatges): la fila «Fronts» no surt (el material es conserva). */ hasFronts?: boolean }) {
+export function MaterialsForm({ carcass: c, onPatch, mixed, hasBack = c.back !== "none", hasDrawers = false, hasFronts = true }: { carcass: Carcass; onPatch: (patch: Partial<Carcass>) => void; mixed?: boolean; /** Sense fons: no surten les opcions del fons. */ hasBack?: boolean; /** Amb calaixos: la fila «Fons del calaix». */ hasDrawers?: boolean; /** La fila «Fronts» (el moble sencer; al mòdul és a Interior › Fronts i calaixos › Acabats). */ hasFronts?: boolean }) {
   const { settings } = useSettings()
   const mat = materialByName(settings, c.material)
   const backMat = materialByName(settings, c.backMaterial)
@@ -332,7 +332,7 @@ function ModuleHandlePick({ module, onChange, usedBy }: { module: Module; onChan
 }
 
 /**
- * Fusteria de la **caixa** del mòdul seleccionat (secció «Fusteria (avançat)»): el fons i els ferratges dels laterals i
+ * Acabats i ferratges de la **caixa** del mòdul seleccionat (secció «Acabats i ferratges», abans «Fusteria (avançat)»): el fons i els ferratges dels laterals i
  * de les unions (espiga, filera System 32). Els jocs i els ferratges dels fronts són a l'«Interior» (`FrontsForm`).
  */
 export function JoineryForm({ module, onChange, usedSlots }: { module: Module; onChange: (m: Module) => void; usedSlots?: ReadonlySet<string> }) {
@@ -378,7 +378,8 @@ export function InnerClearanceRow({ module, onChange }: { module: Module; onChan
 
 export function FrontsForm({ module, onChange, section = frontsSection(module) }: { module: Module; onChange: (m: Module) => void; section?: FrontsSection }) {
   const c = module.carcass
-  const { gaps } = useSettings().settings
+  const { settings } = useSettings()
+  const { gaps } = settings
   const handle = section.defaults.find((d) => d.slot === "handle")
   const slots = section.defaults.filter((d) => d.slot !== "handle")
   const by = new Map(section.defaults.map((d) => [d.slot, d]))
@@ -410,6 +411,16 @@ export function FrontsForm({ module, onChange, section = frontsSection(module) }
         <NumRow label="Retranqueig dels prestatges" value={c.shelfSetback} min={0} max={100} step={1} onChange={(shelfSetback) => onChange({ ...module, carcass: { ...c, shelfSetback } })} help={`Del davant de la caixa al cantell dels prestatges de tot el mòdul (amb fronts encastats, almenys un gruix). ${prefHint(c.shelfSetback, gaps.shelfSetback)}`} />
         <PrefReset value={c.shelfSetback} pref={gaps.shelfSetback} onReset={() => onChange({ ...module, carcass: { ...c, shelfSetback: gaps.shelfSetback } })} />
       </>}
+      {/* Acabats dels fronts (per decisió de l'usuari, aquí i no a Materials del mòdul: un sol lloc per decisió). Només
+          amb algun front que es fa (el mateix que l'Estil); sense, el material es conserva i no compta. */}
+      {section.style && (
+        <Stack gap={3} pt={2}>
+          <SectionLabel>Acabats</SectionLabel>
+          <FormRow label="Fronts" help="Material de portes, fronts de calaix, abatibles, reixetes i fronts fixos. Mateix gruix que el cos." maxW="280px">
+            <MaterialSelect label="Fronts" hideLabel materials={boardChoices(settings.materials)} value={c.frontMaterial ?? ""} emptyLabel="Com el cos" onChange={(v) => onChange({ ...module, carcass: { ...c, frontMaterial: v || undefined } })} />
+          </FormRow>
+        </Stack>
+      )}
       {section.defaults.length > 0 && (
         <Stack gap={3} pt={section.style || section.shelfSetback ? 2 : 0}>
           <SectionLabel>Per defecte dels compartiments</SectionLabel>

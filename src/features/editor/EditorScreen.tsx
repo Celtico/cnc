@@ -54,7 +54,7 @@ import { movingGroups, openingCollisions } from "../../components/viewer/opening
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
 import type { KitOrder } from "../../core/build/buildModule"
 import { materialIssues } from "../../core/build/materialIssues"
-import { applySettingsToModule, moduleHasInnerPieces, usedSlotSet, hasDrawers, hasBuiltFronts, coveringZone, frontsSection, frontsSectionEmpty, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule, moduleHasInnerPieces, usedSlotSet, hasDrawers, coveringZone, frontsSection, frontsSectionEmpty, defaultModule, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, newId, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, FrontsForm, InnerClearanceRow, JoineryForm, MaterialsForm } from "../composition/CarcassForm"
@@ -1085,7 +1085,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             afterFront={
               // A l'«Interior» (l'arrel), el que és de tots els fronts del mòdul: estil, folgances, retranqueig i els
               // ferratges per defecte que algun compartiment hereta (`frontsSection`: un sol lloc per decisió, només el que
-              // es llegeix; sense res, la secció no surt). La caixa (fons, espigues, System 32) és a la Fusteria del mòdul.
+              // es llegeix; sense res, la secció no surt). La caixa (fons, espigues, System 32) és a «Acabats i ferratges» del mòdul.
               zone.id === module.root.id &&
               (() => {
                 const section = frontsSection(module)
@@ -1192,9 +1192,10 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             <CarcassForm module={module} onChange={updateModule} section="structure" />
           </FoldItem>
           <FoldItem id="mod-materials" title="Materials" icon={LuPalette}>
-            <MaterialsForm carcass={module.carcass} hasDrawers={hasDrawers(module.root)} hasFronts={hasBuiltFronts(module.root)} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
+            <MaterialsForm carcass={module.carcass} hasDrawers={hasDrawers(module.root)} hasFronts={false} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
           </FoldItem>
-          <FoldItem id="mod-joinery" title="Fusteria (avançat)" icon={LuHammer} defaultOpen={false}>
+          {/* «Acabats i ferratges» (abans «Fusteria (avançat)», per decisió de l'usuari; l'id es queda: es recorda si és oberta). */}
+          <FoldItem id="mod-joinery" title="Acabats i ferratges" icon={LuHammer} defaultOpen={false}>
             <JoineryForm module={module} onChange={updateModule} usedSlots={usedSlotSet(module)} />
           </FoldItem>
           <FoldItem id="mod-hardware" title="Ferratges" icon={LuWrench} badge={hardwareBadge(scopePlacements(comp, { kind: "module", moduleId: module.id }).length, panels.filter((p) => p.module === moduleIndex + 1), module.carcass.base.kind === "legs" ? 4 : 0, moduleExtras, moduleBuild?.hardwareKits ?? NO_KITS)}>
