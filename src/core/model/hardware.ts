@@ -905,6 +905,8 @@ export const UI_PATHS = {
   materials: "Mòdul › Materials",
   /** Les unions de la caixa: l'espiga. */
   joint: "Mòdul › Unió",
+  /** Les portes de dalt a baix de tot el mòdul (l'Interior dividit): Cap · Una · Dues i les opcions de la porta. */
+  doors: "Mòdul › Portes",
   hardwarePrefs: "Preferències › Ferratges",
   gapsPrefs: "Preferències › Folgances per defecte",
 } as const

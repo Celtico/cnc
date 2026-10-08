@@ -24,3 +24,14 @@ describe("splitRows", () => {
     expect(splitRows({ id: "x" })).toEqual([])
   })
 })
+
+describe("zoneLabel de l'«Interior»", () => {
+  const split: Zone["split"] = { dir: "v", sizes: ["auto", "auto"], children: [{ id: "a" }, { id: "b" }] }
+  it("dividit amb les portes de tot el mòdul (Mòdul › Portes): «Interior · 2 portes»", () => {
+    expect(zoneLabel({ id: "r", split, front: { kind: "door", mode: "double", hinge: "left" } }, { root: true })).toBe("Interior · 2 portes")
+    expect(zoneLabel({ id: "r", split, front: { kind: "door", mode: "single", hinge: "left" } }, { root: true })).toBe("Interior · Porta")
+  })
+  it("un front fix de tota la zona (dades d'abans) no es fa: no surt", () => {
+    expect(zoneLabel({ id: "r", split, front: { kind: "panel" } }, { root: true })).toBe("Interior · Divisió vertical (2)")
+  })
+})

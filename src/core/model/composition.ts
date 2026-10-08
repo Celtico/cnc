@@ -839,7 +839,7 @@ export function visibleModule(m: Module): Module {
   if (c.joint !== "mitre" || !jointApplies(c)) delete carcass.joint
   // Tauler de taula: només amb la tapa sencera.
   if (c.top.kind !== "full") delete carcass.tableTop
-  const root = visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(c))
+  const root = visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(c), false, true)
   // Fons del calaix: només amb calaixos que es fan (la fila de Materials no surt sense).
   if (!hasDrawers(root) || !c.drawerBottomMaterial) delete carcass.drawerBottomMaterial
   // Folgança de les peces de dins: només amb l'arrel dividida (la fila no surt sense); 0 és l'absència.
@@ -868,7 +868,7 @@ export function hasInnerPieces(root: Zone): boolean {
 }
 
 /** `hasInnerPieces` del mòdul tal com es construeix (`visibleModule`): la fila «Peces de dins» de l'Interior. */
-export const moduleHasInnerPieces = (m: Module): boolean => hasInnerPieces(visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(m.carcass)))
+export const moduleHasInnerPieces = (m: Module): boolean => hasInnerPieces(visibleZone(m.root, kitDefaultOf(m), false, carcassBounds(m.carcass), false, true))
 
 /**
  * Plantilla instanciada a partir d'ara (catàleg, col·leccions, escenes): els mòduls que no diuen res de la folgança de
@@ -930,7 +930,7 @@ export function hasBuiltFronts(root: Zone): boolean {
  * calaixos sense guia pròpia el fan servir). El «Tirador» de cada front compta sempre (també «Cap (push)»): el del mòdul
  * només és el per defecte.
  */
-function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: ZoneBounds, fixedCover = false): Zone {
+function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: ZoneBounds, fixedCover = false, isRoot = false): Zone {
   const out: Zone = { ...z }
   // Els fronts recordats dels altres tipus (`fronts`) són només per tornar-hi: no construeixen res.
   delete out.fronts
@@ -940,6 +940,10 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
   // Un front d'un compartiment que no és aguantat pels quatre costats (`canHoldFront`, `zoneSupport.ts`) no es fa: el
   // compartiment és com obert (es conserva i torna amb la peça que hi falta). Tampoc no tapa els de dins.
   if (out.front && !canHoldFront(bounds, out.front.kind)) delete out.front
+  // El front d'una zona dividida només es fa a l'arrel i amb portes (Mòdul › Portes; per decisió de l'usuari: l'armari
+  // amb portes de dalt a baix). El front fix de tota la zona i qualsevol front d'una divisió de dins ja no es poden
+  // triar: no es fan (es conserven) i no tapen els de dins (res amagat compta).
+  if (out.front && z.split && !(isRoot && out.front.kind === "door")) delete out.front
   const childCovered = covered || !!out.front
   // Tapat per un front fix de tota la zona (`buildParentFront`; el d'una zona de més amunt que es fa, no el que no
   // s'aguanta): com el front fix propi, darrere no hi ha res a fer servir (per decisió de l'usuari). Les portes, no.

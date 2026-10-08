@@ -14,6 +14,7 @@ import {
   switchFront,
   unsplitZone,
   updateZone,
+  UI_PATHS,
   canHoldAccessories,
   canHoldFront,
   canHoldShelves,
@@ -46,7 +47,7 @@ import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { FRONT_ICONS } from "./zoneIcons"
 import { HardwarePick } from "./HardwarePick"
 import { IconChoice } from "../../components/IconChoice"
-import { LuAlignJustify, LuArrowDownToLine, LuArrowUpToLine, LuColumns3, LuDoorClosed, LuDoorOpen, LuFlipHorizontal2, LuGrip, LuMagnet, LuPanelLeft, LuPanelRight } from "react-icons/lu"
+import { LuAlignJustify, LuArrowDownToLine, LuArrowUpToLine, LuColumns3, LuDoorClosed, LuDoorOpen, LuFlipHorizontal2, LuGrip, LuMagnet, LuPanelLeft, LuPanelRight, LuSquareDashed } from "react-icons/lu"
 
 const FRONT_LABELS: Record<Front["kind"] | "none", string> = {
   none: "Obert",
@@ -156,7 +157,8 @@ export function ZonePanel({
 }) {
   // Hi ha on fer servir prestatges i accessoris: tapat per portes (com obert), o el seu contingut no l'omple.
   const shelvesBehind = coveredBy ? !coveredByFixed : !fillsZone(zone.front)
-  // Darrere d'un front fix (el seu o el de tota la zona que el tapa) no es divideix: les peces no es veurien ni es farien servir.
+  // Darrere d'un front fix (el seu o, a les dades d'abans, el de tota la zona que el tapa si es fes) no es divideix: les
+  // peces no es veurien ni es farien servir.
   const behindFixed = coveredBy ? !!coveredByFixed : zone.front?.kind === "panel"
   return (
     <Stack gap={0}>
@@ -175,8 +177,8 @@ export function ZonePanel({
             </HStack>
             {splitExtra}
           </FoldItem>
-          {/* Portes que tapen tota la zona dividida (armari: penjador i maleter darrere). */}
-          {coveredBy ? <CoveredFront id="zone-parent-front" title="Front de tota la zona" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} kinds={["none", "door", "panel"]} title="Front de tota la zona" bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} />}
+          {/* Cap front a les zones dividides (per decisió de l'usuari): les portes de dalt a baix de tot el mòdul (armari amb
+              penjador i maleter darrere) són a Mòdul › Portes (`ModuleDoorsSection`). */}
         </>
       ) : (
         <>
@@ -324,7 +326,7 @@ function CoveredFront({ id, title, coveredBy }: { id: string; title: string; cov
   return (
     <FoldItem id={id} title={title} badge="Tapat" icon={FRONT_ICONS.none}>
       <Text fontSize="sm" color="fg.muted">
-        El tapa el front de «{coveredBy}»: aquest compartiment no en porta (el que hi havia es conserva i torna si treus aquell front).
+        El tapen les portes de «{coveredBy}» ({UI_PATHS.doors}): aquest compartiment no en porta (el que hi havia es conserva i torna si treus les portes).
       </Text>
     </FoldItem>
   )
@@ -448,7 +450,7 @@ function kitClosingFor(kit: HardwareItem & { kit: NonNullable<HardwareItem["kit"
   return isPushClosing(current.closing) ? { ...current, closing: opts.includes("soft") ? "soft" : current.closing } : current
 }
 
-function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bounds, afterHinge }: { front: Front; openRatio?: number; onChange: (f: Front) => void; hardware: ModuleHardware; noHandles: boolean; kits?: KitOrder[]; bounds: ZoneBounds; /** La filera System 32 del mòdul (placa de la frontissa), si surt aquí. */ afterHinge?: ReactNode }) {
+function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bounds, afterHinge, noMode = false }: { front: Front; openRatio?: number; onChange: (f: Front) => void; hardware: ModuleHardware; noHandles: boolean; kits?: KitOrder[]; bounds: ZoneBounds; /** La filera System 32 del mòdul (placa de la frontissa), si surt aquí. */ afterHinge?: ReactNode; /** Una o dues portes ja es tria a dalt (Mòdul › Portes): la fila «Portes» no surt. */ noMode?: boolean }) {
   // «Tirador»: el del mòdul («Com el mòdul»), un altre de la biblioteca (un d'importat i confirmat fa els
   // forats a la seva distància) o «Cap (push)». Als calaixos amb joc, el tancament del joc mana (`kitClosingFor`).
   const handlePick = (f: Extract<Front, { kind: "door" | "drawers" | "flap" }>, kit?: HardwareItem & { kit: NonNullable<HardwareItem["kit"]> }) => {
@@ -480,7 +482,7 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bo
       // Un camp per fila: dos grups de botons no hi caben de costat a l'inspector.
       return (
         <Stack gap={3}>
-          <FormRow label="Portes">
+          {!noMode && <FormRow label="Portes">
             <ChoiceChips
               label="Portes"
               value={front.mode}
@@ -491,7 +493,7 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bo
               ]}
               onChange={(mode) => onChange({ ...front, mode })}
             />
-          </FormRow>
+          </FormRow>}
           {front.mode === "single" && (
             <FormRow label="Frontisses">
               {/* Pastilles: «Esquerra» amb icona no cap en mig control segmentat. */}
@@ -644,11 +646,47 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bo
 }
 
 /**
- * Tipus de front d'una zona (botons d'icona) i els seus camps. En una zona dividida, només
- * portes o front fix, que tapen tota la zona (les fulles de dins queden darrere).
+ * Mòdul › Portes (per decisió de l'usuari: «el Front de tota la zona no té sentit que surti a totes les divisions»): les
+ * portes de dalt a baix de l'arrel dividida (armari amb penjador i maleter darrere), que tapen tots els compartiments.
+ * Només Cap · Una · Dues i les opcions de la porta (`FrontFields`). Un mòdul sense dividir fa servir el Front del
+ * compartiment. Un altre front de l'arrel dividida (el front fix d'abans) no es fa i surt com a «Cap» (es conserva).
  */
-export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title = "Front", id, hardware, noHandles = false, kits, bounds, afterHinge }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; hardware: ModuleHardware; noHandles?: boolean; kits?: KitOrder[]; kinds?: (Front["kind"] | "none")[]; title?: string; /** Id de la secció plegable (cada lloc el seu: recorda si és oberta). */ id?: string; /** Què aguanta el compartiment: els fronts que no s'hi poden fixar no surten (el triat, sí). */ bounds: ZoneBounds; /** Després de la «Frontissa» (la filera System 32 del mòdul). */ afterHinge?: ReactNode }) {
-  const all = kinds ?? (Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[])
+export function ModuleDoorsSection({ root, onChange, hardware, noHandles, bounds, afterHinge }: { root: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; noHandles: boolean; /** Què aguanta l'arrel (`canHoldFront`: pels quatre costats). */ bounds: ZoneBounds; /** Després de la «Frontissa» (la filera System 32 del mòdul). */ afterHinge?: ReactNode }) {
+  const door = root.front?.kind === "door" ? root.front : undefined
+  const value = door?.mode ?? "none"
+  const canDoor = canHoldFront(bounds, "door")
+  const choose = (mode: "none" | "single" | "double") => {
+    if (mode === "none") return onChange(switchFront(root, root.id, "none"))
+    const base = door ? root : switchFront(root, root.id, "door")
+    const f = findZone(base, root.id)?.front
+    if (f?.kind !== "door") return
+    // Una porta nova va amb les frontisses a un costat on hi ha on posar-les.
+    const hinge = mode === "single" && !bounds[f.hinge] && bounds[f.hinge === "left" ? "right" : "left"] ? (f.hinge === "left" ? "right" : "left") : f.hinge
+    onChange(setFront(base, root.id, { ...f, mode, hinge }))
+  }
+  return (
+    <FoldItem id="mod-doors" title="Portes" icon={LuDoorClosed} badge={door ? (door.mode === "double" ? "Dues portes" : "Una porta") : undefined}>
+      <FormRow label="Portes" help={frontLimitsHelp(bounds, ["none", "door"], door ? "door" : "none") ?? "De dalt a baix: tapen tots els compartiments (armari amb penjador i maleter darrere)."}>
+        <ChoiceChips
+          label="Portes"
+          value={value}
+          // Dues portes: frontisses als dos costats (cal un lateral o un divisor a cada un). El triat surt sempre.
+          options={[
+            { id: "none" as const, label: <><LuSquareDashed /> Cap</> },
+            ...(canDoor || value === "single" ? [{ id: "single" as const, label: <><LuDoorClosed /> Una</> }] : []),
+            ...((canDoor && bounds.left && bounds.right) || value === "double" ? [{ id: "double" as const, label: <><LuFlipHorizontal2 /> Dues</> }] : []),
+          ]}
+          onChange={choose}
+        />
+      </FormRow>
+      {door && <FrontFields front={door} noMode hardware={hardware} noHandles={noHandles} bounds={bounds} afterHinge={afterHinge} onChange={(f) => onChange(setFront(root, root.id, f))} />}
+    </FoldItem>
+  )
+}
+
+/** Tipus de front d'un compartiment (botons d'icona) i els seus camps. */
+function ZoneFrontSection({ root, zone, onChange, openRatio, hardware, noHandles = false, kits, bounds, afterHinge }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; hardware: ModuleHardware; noHandles?: boolean; kits?: KitOrder[]; /** Què aguanta el compartiment: els fronts que no s'hi poden fixar no surten (el triat, sí). */ bounds: ZoneBounds; /** Després de la «Frontissa» (la filera System 32 del mòdul). */ afterHinge?: ReactNode }) {
+  const all = Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[]
   const current = zone.front?.kind ?? "none"
   const options = all.filter((k) => k === current || canHoldFront(bounds, k))
   // Els fronts només es fan amb el compartiment aguantat pels quatre costats (`frontHeld`): els altres no surten, el triat
@@ -662,7 +700,7 @@ export function ZoneFrontSection({ root, zone, onChange, openRatio, kinds, title
     else onChange(next)
   }
   return (
-          <FoldItem id={id ?? (kinds ? "zone-parent-front" : "zone-front")} title={title} badge={FRONT_LABELS[zone.front?.kind ?? "none"]} icon={FRONT_ICONS[zone.front?.kind ?? "none"]}>
+          <FoldItem id="zone-front" title="Front" badge={FRONT_LABELS[zone.front?.kind ?? "none"]} icon={FRONT_ICONS[zone.front?.kind ?? "none"]}>
             {/* Tipus de front: un botó amb la icona de cada tipus (el nom, al tooltip, a sota i a la insígnia). */}
             <FormRow label="Contingut" help={limits}>
               <IconChoice

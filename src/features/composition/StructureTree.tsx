@@ -596,8 +596,9 @@ function ZoneRows({
   onSelect: (s: Selection) => void
   root?: boolean
 }) {
-  // L'arrel és l'«Interior» del mòdul (dividida o no): seleccionar-la dona el seu Front (el de tot el mòdul, p. ex. les
-  // portes d'un armari amb penjador i maleter). Els compartiments hi pengen a sota.
+  // L'arrel és l'«Interior» del mòdul (dividida o no): sense dividir, seleccionar-la dona el seu Front; dividida, la
+  // Divisió (les portes de tot el mòdul, p. ex. d'un armari amb penjador i maleter, són a Mòdul › Portes; l'etiqueta ho
+  // diu: «Interior · 2 portes»). Els compartiments hi pengen a sota.
   const selected = selection.kind === "zone" && selection.zoneId === zone.id
   // Icona segons el contingut (la mateixa que a les propietats).
   const icon = createElement(zoneIcon(zone, { root }))
