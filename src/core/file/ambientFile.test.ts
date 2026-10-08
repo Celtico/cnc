@@ -159,8 +159,8 @@ describe("fitxer .ambient", () => {
   })
 
   it("nom del fitxer i tipus de fitxer", () => {
-    expect(ambientFileName("Saló: casa/pis")).toBe("Saló- casa-pis.ambient")
-    expect(ambientFileName("  ")).toBe("ambient.ambient")
+    expect(ambientFileName("Saló: casa/pis")).toBe("Saló- casa-pis.moble")
+    expect(ambientFileName("  ")).toBe("ambient.moble")
     expect(fileKind(file)).toBe("ambient")
     expect(fileKind(furniture.get(12))).toBe("moble")
     expect(fileKind({ format: "x" })).toBeNull()
