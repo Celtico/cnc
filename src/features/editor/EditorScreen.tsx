@@ -1076,6 +1076,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             openRatio={moduleBuild?.openRatios[zone.id]}
             kits={moduleBuild?.hardwareKits.filter((k) => k.zoneId === zone.id)}
             onChange={(root) => updateModule({ ...module, root })}
+            onSelect={selectZone}
             // La filera System 32 del mòdul: als Prestatges o al Front d'aquest compartiment, si li toca (`system32RowPlace`).
             system32={(() => {
               const place = system32RowPlace(module)
