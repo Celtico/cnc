@@ -24,7 +24,7 @@ import {
   Text,
 } from "@chakra-ui/react"
 import { Children, Fragment, isValidElement, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { LuFactory, LuArrowDown, LuColumns2, LuDrill, LuArrowUp, LuCheck, LuScanEye, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff, LuLampFloor, LuLayoutGrid, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRotateCw, LuRoute, LuRows3, LuRuler, LuScan, LuSparkles, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload, LuWrench } from "react-icons/lu"
+import { LuFactory, LuArrowDown, LuColumns2, LuDrill, LuArrowUp, LuCheck, LuScanEye, LuChevronLeft, LuChevronRight, LuCopy, LuDoorClosed, LuDownload, LuEye, LuEyeOff, LuLampFloor, LuLayoutGrid, LuMessageSquare, LuMonitor, LuMoon, LuPalette, LuPlus, LuRotateCcw, LuRotateCw, LuRoute, LuRows3, LuRuler, LuScan, LuSparkles, LuSun, LuSunMoon, LuTag, LuTrash2, LuUpload, LuWrench } from "react-icons/lu"
 import type { IconType } from "react-icons"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { MasterDetail } from "../../components/MasterDetail"
@@ -64,6 +64,7 @@ import { MachineRulesGroup } from "./MachineRules"
 import { DeleteMaterialDialog } from "./DeleteMaterialDialog"
 import { DeleteHardwareDialog } from "./DeleteHardwareDialog"
 import { HardwareList } from "./HardwarePane"
+import { AssistantPane } from "./AssistantPane"
 import { replaceHardwareEverywhere } from "../../db/hardwareRefs"
 import { renameMaterialEverywhere, type RenameCount } from "../../db/materialRefs"
 
@@ -377,6 +378,10 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             </SettingsGroup>
           </Pane>
 
+          <Pane id="assistant" title="Assistent IA" icon={LuMessageSquare} desc="La clau de l'API de Claude i el model del xat de l'Editor, que fa i edita mobles.">
+            <AssistantPane value={draft.assistant} onChange={(assistant) => set("assistant", assistant)} />
+          </Pane>
+
           <Pane id="theme" title="Tema" icon={LuSunMoon} desc="Dia o nit i el color principal de l'app.">
             <SettingsGroup icon={<LuSunMoon />} title="Aparença" summary="Es guarda en aquest dispositiu">
               <ThemeField />
@@ -431,7 +436,7 @@ const DETAIL_KEYS = { references: "mobles:settings-ref", machines: "mobles:setti
 const SETTINGS_GROUPS: { label: string; ids: string[] }[] = [
   { label: "Fabricació", ids: ["machines", "rules", "hardware", "gaps", "materials", "boards", "label"] },
   { label: "Foto i visor 3D", ids: ["references", "viewer3d"] },
-  { label: "App", ids: ["display", "theme"] },
+  { label: "App", ids: ["display", "theme", "assistant"] },
 ]
 
 interface PaneProps {
