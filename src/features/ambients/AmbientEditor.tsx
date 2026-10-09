@@ -1,7 +1,7 @@
 import { Alert, Badge, Box, Button, Dialog, Editable, Flex, HStack, IconButton, Menu, Portal, SegmentGroup, Slider, Stack, Switch, Text } from "@chakra-ui/react"
 import { shrinkImage } from "../imageShrink"
 import { blobToBase64 } from "../file/mobleIo"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   LuBox,
   LuMove,
@@ -43,6 +43,7 @@ import {
   LuLockOpen,
   LuUndoDot,
   LuTriangleAlert,
+  LuMessageSquare,
 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { RenderDialog, type SceneGetter } from "../../components/viewer/render/RenderDialog"
@@ -108,6 +109,19 @@ import { useDebouncedSave } from "../useDebouncedSave"
 import { useHistory, useUndoKeys } from "../history/useHistory"
 import { UndoRedo } from "../../components/UndoRedo"
 import { TreeRow, TreeRowMenu, TreeSection } from "../../components/TreeRow"
+import { ambientToolSet } from "../../core/assistant/ambientTools"
+import type { ChatTarget } from "../assistant/chatTarget"
+import { ambientToolContext } from "../assistant/ambientLibrary"
+
+/** Xat de l'assistent IA (docs/xat-ia.md): a demanda, el primer cop que s'obre la pestanya «Assistent». */
+const ChatPanel = lazy(() => import("../assistant/ChatPanel"))
+
+const AMBIENT_SUGGESTIONS = [
+  "Fes-me una habitació de 4 × 3 m (per dins) amb una finestra de 1200 a la paret de dalt i una porta de 800 a la de la dreta.",
+  "Posa el moble de TV arrambat a la paret de dalt, centrat.",
+  "Afegeix un sofà de 3 places del catàleg davant de la TV, a 2,5 m, mirant-la.",
+  "Llegeix aquest plànol i fes-ne les parets, les finestres i les portes.",
+]
 
 const TOOLS: { id: Tool; label: string; key: string; icon: typeof LuPenTool }[] = [
   { id: "select", label: "Seleccionar i moure", key: "V", icon: LuMousePointer2 },
@@ -232,6 +246,25 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
 
   // Canvi de l'ambient: `commit` = un pas de desfer (en deixar anar); si no, en viu (arrossegant).
   const change = useCallback((next: Ambient, commit: boolean) => setAmb(next, { commit }), [setAmb])
+  // Assistent IA: llegeix l'ambient d'ara i hi aplica els canvis en viu; en acabar el torn, un sol pas de desfer.
+  const ambRef = useRef(amb)
+  useEffect(() => {
+    ambRef.current = amb
+  })
+  const getAmb = useCallback(() => ambRef.current, [])
+  const applyLive = useCallback((next: Ambient) => setAmb(next, { commit: false }), [setAmb])
+  const commitLive = history.commit
+  const assistantTarget = useMemo(() => {
+    const target: ChatTarget<Ambient> = {
+      getDoc: getAmb,
+      apply: applyLive,
+      commit: commitLive,
+      toolset: ambientToolSet(ambientToolContext(settings)),
+      intro: "Demana-li que faci o canviï l'ambient obert: parets, finestres i portes, col·locar mobles i objectes (els teus o del catàleg), grups i materials (mides en mm). Pots adjuntar un plànol o una foto: llegirà les cotes i demanarà les que no es vegin.",
+      suggestions: AMBIENT_SUGGESTIONS,
+    }
+    return target as unknown as ChatTarget<unknown>
+  }, [settings, getAmb, applyLive, commitLive])
   // Dreceres de desfer/refer, les mateixes que a l'editor (`undoKeyAction`: no amb un diàleg modal obert).
   useUndoKeys(undo, redo)
 
@@ -661,6 +694,15 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
             )}
           </Stack>
         }
+        extra={{
+          label: "Assistent",
+          icon: <LuMessageSquare />,
+          content: (
+            <Suspense fallback={null}>
+              <ChatPanel settings={settings} target={assistantTarget} />
+            </Suspense>
+          ),
+        }}
         center={(chrome) => (
           // Centre: plànol o 3D, amb la barra d'eines flotant (com Figma) i els botons de plegar.
           <Box order={{ base: 0, md: 2 }} flex={{ md: 1 }} minW={0} minH={{ base: "56vh", md: 0 }} h={{ base: "56vh", md: "full" }} position="relative">
