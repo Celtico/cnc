@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages"
 import { DEFAULT_SETTINGS, type Composition } from "../../core/model"
+import { mobleToolSet } from "../../core/assistant/tools"
 import { runTurn, type StreamClient } from "./chatTurn"
 import { assistantError, maskKey } from "./errors"
 
@@ -56,12 +57,12 @@ describe("assistent IA: un torn amb eines (client fals, sense xarxa)", () => {
       client,
       model: "claude-sonnet-5-5",
       history,
-      getComp: () => comp,
-      apply: (c) => {
+      getDoc: () => comp,
+      apply: (c: Composition) => {
         comp = c
         applied.push(c)
       },
-      ctx: { settings: DEFAULT_SETTINGS },
+      toolset: mobleToolSet({ settings: DEFAULT_SETTINGS }),
       onText: (t) => texts.push(t),
       onTool: (t) => tools.push(t),
     })
@@ -99,9 +100,9 @@ describe("assistent IA: un torn amb eines (client fals, sense xarxa)", () => {
       model: "claude-sonnet-5-5",
       history: [{ role: "user", content: "Un mòdul A de 900" }],
       // Sempre la d'abans (com el ref de l'Editor abans de pintar).
-      getComp: () => start,
-      apply: (c) => (last = c),
-      ctx: { settings: DEFAULT_SETTINGS },
+      getDoc: () => start,
+      apply: (c: Composition) => (last = c),
+      toolset: mobleToolSet({ settings: DEFAULT_SETTINGS }),
       onText: () => {},
       onTool: () => {},
     })
@@ -116,9 +117,9 @@ describe("assistent IA: un torn amb eines (client fals, sense xarxa)", () => {
       client: fakeClient([{ stop_reason: "end_turn", content: [] }]),
       model: "claude-sonnet-5-5",
       history,
-      getComp: () => ({ modules: [], references: [] }),
+      getDoc: (): Composition => ({ modules: [], references: [] }),
       apply: () => {},
-      ctx: { settings: DEFAULT_SETTINGS },
+      toolset: mobleToolSet({ settings: DEFAULT_SETTINGS }),
       onText: () => {},
       onTool: () => {},
       signal: ctl.signal,

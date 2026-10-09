@@ -35,7 +35,9 @@ import {
   type Settings,
   type Zone,
 } from "../model"
+import { ASSISTANT_SYSTEM_PROMPT } from "./prompt"
 import { allWarnings, summarizeCatalog, summarizeMoble, warningKey, type CatalogSummary, type MobleSummary, type WarningSummary } from "./summary"
+import { fail, parseToolInput, toolDefs, toolFailure, type AssistantToolSet, type ToolDef } from "./toolset"
 
 /**
  * Eines de l'assistent IA (docs/xat-ia.md): les operacions de l'editor sobre la composició oberta, **pures** (composició
@@ -151,14 +153,8 @@ export type ToolName = keyof typeof TOOL_INPUTS
 export const TOOL_NAMES = Object.keys(TOOL_INPUTS) as ToolName[]
 
 /** Definicions per a l'API (`tools`): nom, descripció i `input_schema` (JSON Schema de l'esquema zod). */
-export function assistantTools(): { name: ToolName; description: string; input_schema: { type: "object"; [k: string]: unknown } }[] {
-  return TOOL_NAMES.map((name) => {
-    const schema = TOOL_INPUTS[name]
-    const { $schema: _s, description: _d, ...json } = z.toJSONSchema(schema, { io: "input" }) as Record<string, unknown>
-    void _s
-    void _d
-    return { name, description: schema.description ?? name, input_schema: { ...json, type: "object" as const } }
-  })
+export function assistantTools(): (ToolDef & { name: ToolName })[] {
+  return toolDefs(TOOL_INPUTS) as (ToolDef & { name: ToolName })[]
 }
 
 export interface ToolContext {
@@ -168,11 +164,6 @@ export interface ToolContext {
 export type ToolOutcome =
   | { ok: true; comp: Composition; result: Record<string, unknown> }
   | { ok: false; error: string }
-
-class ToolError extends Error {}
-function fail(msg: string): never {
-  throw new ToolError(msg)
-}
 
 function findModule(comp: Composition, ref: string): Module {
   const m = comp.modules.find((x) => x.id === ref) ?? comp.modules.find((x) => x.name === ref) ?? comp.modules.find((x) => x.name.toLowerCase() === ref.toLowerCase())
@@ -215,9 +206,8 @@ const nearest = (list: number[], v: number) => list.reduce((a, b) => (Math.abs(b
 
 /** Aplica una eina. Mai llança: un error de validació o de regla torna `{ ok: false, error }`. */
 export function runAssistantTool(comp: Composition, name: string, rawInput: unknown, ctx: ToolContext): ToolOutcome {
-  if (!(name in TOOL_INPUTS)) return { ok: false, error: `Eina desconeguda «${name}». Eines: ${TOOL_NAMES.join(", ")}.` }
-  const parsed = TOOL_INPUTS[name as ToolName].safeParse(rawInput ?? {})
-  if (!parsed.success) return { ok: false, error: `Entrada no vàlida per a ${name}: ${parsed.error.issues.map((i) => `${i.path.join(".") || "entrada"}: ${i.message}`).join("; ")}.` }
+  const parsed = parseToolInput(TOOL_INPUTS, name, rawInput)
+  if (!parsed.ok) return parsed
   try {
     const out = apply(comp, name as ToolName, parsed.data as never, ctx)
     if (out.comp !== comp) {
@@ -226,8 +216,7 @@ export function runAssistantTool(comp: Composition, name: string, rawInput: unkn
     }
     return { ok: true, comp: out.comp, result: out.result }
   } catch (e) {
-    if (e instanceof ToolError) return { ok: false, error: e.message }
-    return { ok: false, error: `Error intern a ${name}: ${e instanceof Error ? e.message : String(e)}` }
+    return toolFailure(name, e)
   }
 }
 
@@ -493,4 +482,59 @@ export function toolResultPayload(name: string, before: Composition, outcome: Ex
   const now = allWarnings(outcome.comp, build, ctx.settings)
   const fresh = moble.warnings.filter((_, k) => !old.has(warningKey(now[k]!)))
   return { done: outcome.result, new_warnings: fresh, moble }
+}
+
+/** Què ha fet una eina del moble, en una frase curta (UI del xat). */
+export function describeMobleTool(name: string, result: Record<string, unknown>): string {
+  switch (name) {
+    case "get_moble":
+      return "Ha mirat el moble"
+    case "add_module":
+      return `Mòdul afegit: ${String(result.name ?? "")}`
+    case "remove_module":
+      return `Mòdul eliminat: ${String(result.removed ?? "")}`
+    case "rename_module":
+      return `Nom: ${String(result.name ?? "")}`
+    case "set_module_size":
+      return `Mides: ${String(result.width)} × ${String(result.height)} × ${String(result.depth)} mm`
+    case "set_module_position":
+      return "Posició del mòdul"
+    case "set_carcass":
+      return "Caixa del mòdul"
+    case "split_zone":
+      return `Dividit en ${Array.isArray(result.children) ? result.children.length : "?"} zones`
+    case "unsplit_zone":
+      return "Divisió treta"
+    case "set_zone_size":
+      return `Mida de zona: ${String(result.size)}${typeof result.size === "number" ? " mm" : ""}`
+    case "set_front":
+      return `Front: ${FRONT_NAMES[String(result.front)] ?? String(result.front)}`
+    case "set_shelves": {
+      const s = result.shelves as { n?: number } | undefined
+      return `Prestatges: ${s?.n ?? "?"}`
+    }
+    case "set_material":
+      return "Materials"
+    default:
+      return name
+  }
+}
+
+const FRONT_NAMES: Record<string, string> = { none: "obert", door: "porta", drawers: "calaixos", flap: "abatible", grille: "reixeta", panel: "front fix" }
+
+/** El joc d'eines del moble per al xat (`chatTurn.ts`). */
+export function mobleToolSet(ctx: ToolContext): AssistantToolSet<Composition> {
+  return {
+    system: ASSISTANT_SYSTEM_PROMPT,
+    tools: assistantTools(),
+    run: (doc, name, input) => {
+      const r = runAssistantTool(doc, name, input, ctx)
+      return r.ok ? { ok: true, doc: r.comp, result: r.result } : r
+    },
+    payload: (name, before, outcome) => toolResultPayload(name, before, { ok: true, comp: outcome.doc, result: outcome.result }, ctx),
+    describe: (name, result, payload) => {
+      const fresh = (payload as ToolPayload).new_warnings?.length ?? 0
+      return `${describeMobleTool(name, result)}${fresh ? ` · ${fresh} avís${fresh === 1 ? "" : "os"} nou${fresh === 1 ? "" : "s"}` : ""}`
+    },
+  }
 }

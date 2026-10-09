@@ -86,9 +86,24 @@ import { useHistory, useUndoKeys } from "../history/useHistory"
 import { UndoRedo } from "../../components/UndoRedo"
 import { useDebouncedSave } from "../useDebouncedSave"
 import { MaterialSelect } from "../settings/MaterialSelect"
+import { mobleToolSet } from "../../core/assistant/tools"
+import { objectToolSet } from "../../core/assistant/objectTools"
+import { chatTarget } from "../assistant/chatTarget"
 
 /** Xat de l'assistent IA (docs/xat-ia.md): a demanda, el primer cop que s'obre la pestanya «Assistent». */
 const ChatPanel = lazy(() => import("../assistant/ChatPanel"))
+
+const MOBLE_SUGGESTIONS = [
+  "Fes-me un moble de TV de 1800 × 450 × 400 amb dos calaixos a baix i un forat obert al mig.",
+  "Divideix aquest mòdul en tres columnes iguals i posa prestatges regulables a les dels costats.",
+  "Canvia els fronts a lacat negre brillant.",
+  "Revisa els avisos de fusteria i corregeix-los.",
+]
+const OBJECT_SUGGESTIONS = [
+  "Fes-me una tauleta rodona de Ø 500 i 450 d'alt, sobre de marbre i peu de ferro negre.",
+  "Afegeix un coixí de 450 × 450 × 120 de vellut verd sobre el seient.",
+  "Agrupa les potes i baixa-les 20 mm.",
+]
 
 type ViewTab = "3d" | "elevation" | "photo"
 const TAB_KEY = "mobles:editor-view-tab"
@@ -294,6 +309,14 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   }, [])
 
   const kind = compositionKind(comp)
+  // Assistent IA: les eines del moble o de l'objecte (docs/xat-ia.md); un torn = un pas de desfer.
+  const assistantTarget = useMemo(() => {
+    const live = { getDoc: getComp, apply: applyLive, commit: commitHistory }
+    if (kind === "objecte")
+      return chatTarget({ ...live, toolset: objectToolSet({ settings }), intro: "Demana-li que faci o canviï l'objecte obert (mides en mm; és decoratiu, no es fabrica). Pots adjuntar-ne una foto: les mides que en tregui són estimades.", suggestions: OBJECT_SUGGESTIONS })
+    if (partsOnlyKind(kind)) return undefined
+    return chatTarget({ ...live, toolset: mobleToolSet({ settings }), intro: "Demana-li que faci o canviï el moble obert (mides en mm). Pots adjuntar una foto o un plànol: les mides que en tregui són estimades.", suggestions: MOBLE_SUGGESTIONS })
+  }, [kind, settings, getComp, applyLive, commitHistory])
   // El mòdul de treball (alçat, inspector, veïns): el seleccionat o el primer. Un moble nou no en té cap (0 mòduls).
   const module: Module | undefined = comp.modules.find((m) => m.id === selectedModule) ?? comp.modules[0]
   const moduleIndex = module ? comp.modules.indexOf(module) : -1
@@ -1275,16 +1298,17 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         />
         }
         right={inspector}
-        // Només als mobles: les eines són de mòduls (un objecte només té peces lliures).
-        extra={partsOnlyKind(kind) ? undefined : {
+        // Mobles i objectes: el mateix xat amb les eines de cada tipus (un objecte només té peces lliures). Els `lliure`
+        // d'abans (flat-pack que es fabrica) no en tenen.
+        extra={assistantTarget ? {
           label: "Assistent",
           icon: <LuMessageSquare />,
           content: (
             <Suspense fallback={null}>
-              <ChatPanel settings={settings} getComp={getComp} apply={applyLive} commit={commitHistory} />
+              <ChatPanel settings={settings} target={assistantTarget} />
             </Suspense>
           ),
-        }}
+        } : undefined}
         center={(chrome) => (
       <Box
         ref={viewerBox}

@@ -3,12 +3,13 @@ import { useEffect, useRef, useState } from "react"
 import { LuCheck, LuCircleStop, LuImagePlus, LuMessageSquarePlus, LuSendHorizontal, LuTriangleAlert, LuWifiOff, LuWrench, LuX } from "react-icons/lu"
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages"
 import { Tooltip } from "../../components/ui/tooltip"
-import { ASSISTANT_MODELS, type Composition, type Settings } from "../../core/model"
+import { ASSISTANT_MODELS, type Settings } from "../../core/model"
 import { blobToBase64 } from "../file/mobleIo"
 import { shrinkImage } from "../imageShrink"
 import { openSettings } from "../settings/openSettings"
 import { describeFailure, loadSdk, makeClient } from "./claudeClient"
 import { runTurn } from "./chatTurn"
+import type { ChatTarget } from "./chatTarget"
 import { NO_KEY_ERROR, OFFLINE_ERROR, type AssistantError } from "./errors"
 
 /** Costat llarg màxim de les fotos i plànols que s'envien (docs/xat-ia.md). */
@@ -25,19 +26,14 @@ interface Attached {
   name: string
 }
 
-const SUGGESTIONS = [
-  "Fes-me un moble de TV de 1800 × 450 × 400 amb dos calaixos a baix i un forat obert al mig.",
-  "Divideix aquest mòdul en tres columnes iguals i posa prestatges regulables a les dels costats.",
-  "Canvia els fronts a lacat negre brillant.",
-  "Revisa els avisos de fusteria i corregeix-los.",
-]
-
 /**
- * Xat de l'assistent IA a l'Editor del moble (docs/xat-ia.md): la conversa, el text en directe, les eines que fa servir i
- * els errors, amb el camp de text, adjuntar una foto o un plànol (≤ 1568 px JPEG) i aturar. Cada torn és **un sol pas de
- * desfer** (`apply` en viu i `commit` en acabar). La conversa es queda mentre l'Editor és obert.
+ * Xat de l'assistent IA (docs/xat-ia.md), el mateix a l'Editor (moble i objecte) i als Ambients: la conversa, el text en
+ * directe, les eines que fa servir i els errors, amb el camp de text, adjuntar una foto o un plànol (≤ 1568 px JPEG) i
+ * aturar. Les eines i les instruccions són les del document (`target.toolset`). Cada torn és **un sol pas de desfer**
+ * (`apply` en viu i `commit` en acabar). La conversa es queda mentre l'editor és obert.
  */
-export default function ChatPanel({ settings, getComp, apply, commit }: { settings: Settings; getComp: () => Composition; apply: (next: Composition) => void; commit: () => void }) {
+export default function ChatPanel({ settings, target }: { settings: Settings; target: ChatTarget<unknown> }) {
+  const { toolset, getDoc, apply, commit } = target
   const apiKey = settings.assistant.apiKey
   const model = ASSISTANT_MODELS.find((m) => m.id === settings.assistant.model) ?? ASSISTANT_MODELS[0]
   const [items, setItems] = useState<Item[]>([])
@@ -131,9 +127,9 @@ export default function ChatPanel({ settings, getComp, apply, commit }: { settin
         client,
         model: model.id,
         history: history.current,
-        getComp,
+        toolset,
+        getDoc,
         apply,
-        ctx: { settings },
         signal: ctl.signal,
         onText: (delta) =>
           updateLast((it) => {
@@ -206,10 +202,9 @@ export default function ChatPanel({ settings, getComp, apply, commit }: { settin
         {items.length === 0 ? (
           <Stack gap={2} py={2}>
             <Text fontSize="sm" color="fg.muted">
-              Demana-li que faci o canviï el moble obert (mides en mm). Pots adjuntar una foto o un plànol: les mides que en
-              tregui són estimades. Cada resposta és un sol pas de desfer (⌘Z).
+              {target.intro} Cada resposta és un sol pas de desfer (⌘Z).
             </Text>
-            {SUGGESTIONS.map((s) => (
+            {target.suggestions.map((s) => (
               <Button key={s} size="xs" variant="outline" h="auto" py={1.5} whiteSpace="normal" textAlign="left" justifyContent="flex-start" fontWeight="normal" onClick={() => setInput(s)}>
                 {s}
               </Button>
