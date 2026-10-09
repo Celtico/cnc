@@ -86,8 +86,6 @@ import { useHistory, useUndoKeys } from "../history/useHistory"
 import { UndoRedo } from "../../components/UndoRedo"
 import { useDebouncedSave } from "../useDebouncedSave"
 import { MaterialSelect } from "../settings/MaterialSelect"
-import { mobleToolSet } from "../../core/assistant/tools"
-import { objectToolSet } from "../../core/assistant/objectTools"
 import { chatTarget } from "../assistant/chatTarget"
 
 /** Xat de l'assistent IA (docs/xat-ia.md): a demanda, el primer cop que s'obre la pestanya «Assistent». */
@@ -313,9 +311,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   const assistantTarget = useMemo(() => {
     const live = { getDoc: getComp, apply: applyLive, commit: commitHistory }
     if (kind === "objecte")
-      return chatTarget({ ...live, toolset: objectToolSet({ settings }), intro: "Demana-li que faci o canviï l'objecte obert (mides en mm; és decoratiu, no es fabrica). Pots adjuntar-ne una foto: les mides que en tregui són estimades.", suggestions: OBJECT_SUGGESTIONS })
+      return chatTarget({ ...live, toolset: () => import("../../core/assistant/objectTools").then((m) => m.objectToolSet({ settings })), intro: "Demana-li que faci o canviï l'objecte obert (mides en mm; és decoratiu, no es fabrica). Pots adjuntar-ne una foto: les mides que en tregui són estimades.", suggestions: OBJECT_SUGGESTIONS })
     if (partsOnlyKind(kind)) return undefined
-    return chatTarget({ ...live, toolset: mobleToolSet({ settings }), intro: "Demana-li que faci o canviï el moble obert (mides en mm). Pots adjuntar una foto o un plànol: les mides que en tregui són estimades.", suggestions: MOBLE_SUGGESTIONS })
+    return chatTarget({ ...live, toolset: () => import("../../core/assistant/tools").then((m) => m.mobleToolSet({ settings })), intro: "Demana-li que faci o canviï el moble obert (mides en mm). Pots adjuntar una foto o un plànol: les mides que en tregui són estimades.", suggestions: MOBLE_SUGGESTIONS })
   }, [kind, settings, getComp, applyLive, commitHistory])
   // El mòdul de treball (alçat, inspector, veïns): el seleccionat o el primer. Un moble nou no en té cap (0 mòduls).
   const module: Module | undefined = comp.modules.find((m) => m.id === selectedModule) ?? comp.modules[0]

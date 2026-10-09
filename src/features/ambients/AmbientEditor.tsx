@@ -109,9 +109,7 @@ import { useDebouncedSave } from "../useDebouncedSave"
 import { useHistory, useUndoKeys } from "../history/useHistory"
 import { UndoRedo } from "../../components/UndoRedo"
 import { TreeRow, TreeRowMenu, TreeSection } from "../../components/TreeRow"
-import { ambientToolSet } from "../../core/assistant/ambientTools"
 import type { ChatTarget } from "../assistant/chatTarget"
-import { ambientToolContext } from "../assistant/ambientLibrary"
 
 /** Xat de l'assistent IA (docs/xat-ia.md): a demanda, el primer cop que s'obre la pestanya «Assistent». */
 const ChatPanel = lazy(() => import("../assistant/ChatPanel"))
@@ -259,7 +257,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
       getDoc: getAmb,
       apply: applyLive,
       commit: commitLive,
-      toolset: ambientToolSet(ambientToolContext(settings)),
+      toolset: () => import("../assistant/ambientLibrary").then((m) => m.ambientAssistantToolSet(settings)),
       intro: "Demana-li que faci o canviï l'ambient obert: parets, finestres i portes, col·locar mobles i objectes (els teus o del catàleg), grups i materials (mides en mm). Pots adjuntar un plànol o una foto: llegirà les cotes i demanarà les que no es vegin.",
       suggestions: AMBIENT_SUGGESTIONS,
     }
