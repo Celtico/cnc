@@ -1,6 +1,7 @@
 # Assistent IA (xat dins de l'app)
 
-Un xat a l'Editor del moble que construeix i edita el moble obert amb les mateixes operacions que la UI. Per decisió de
+Un xat que construeix i edita el document obert amb les mateixes operacions que la UI: el moble i l'objecte a l'Editor i
+l'ambient al seu editor (fase 1b). Per decisió de
 l'usuari (2026-10-09): **la clau de l'API es desa a Preferències** i el navegador crida l'API de Claude directament
 (app personal, sense backend). SDK aprovat: `@anthropic-ai/sdk`.
 
@@ -68,6 +69,38 @@ l'usuari (2026-10-09): **la clau de l'API es desa a Preferències** i el navegad
   dues eines (mòdul i calaixos) i el text en directe, la capçalera `anthropic-dangerous-direct-browser-access`, un sol
   pas de desfer/refer, i la tercera pestanya al mòbil.
 
+## Fase 1b (feta, 2026-10-09): Objectes i Ambients
+
+Per decisió de l'usuari («i a Objectes i Ambients?»): el mateix assistent a l'Editor dels **objectes** i al dels
+**ambients**. **Un sol xat** (no còpies): `ChatPanel` i `chatTurn` reben el **joc d'eines** del document
+(`core/assistant/toolset.ts`, `AssistantToolSet<D>`: instruccions de sistema, eines amb el JSON Schema de zod, `run`
+—asíncrona si cal—, el resultat per al model i la frase per al xat) dins d'un `ChatTarget` (`features/assistant/chatTarget.ts`).
+Les eines es carreguen amb el primer missatge (`import()`): no són al bloc de l'editor.
+
+- **Objectes** (`objectTools.ts`, tipus `objecte`, només peces lliures; decoratiu, no es fabrica): `get_object`,
+  `add_part`, `update_part`, `remove_part`, `duplicate_part`, `set_group`, `move_group`, `duplicate_group`. Les operacions de
+  sempre (`reorientPart`, `insertPartCopy`, `moveGroupBy`, `duplicateGroup`) i les formes senzilles d'`objectShapes.ts`
+  (rectangle, arrodonit amb radi, el·lipse, cercle). Materials de Preferències (també els de Simulació); mides en mm, Y amunt,
+  terra y = 0, posició = cantonada mínima (el resum dona també la caixa de cada peça).
+- **Ambients** (`ambientTools.ts`, sobre el model `Ambient`): `get_ambient`, `add_room`, `add_wall`, `update_wall`,
+  `remove_wall`, `add_opening`, `update_opening`, `remove_opening` (respecten `clampOpening` i no es trepitgen),
+  `list_library` (els mobles i objectes de l'usuari amb les mides i les plantilles del catàleg, amb `query`), `place_item`
+  (de l'usuari o d'una plantilla, creada pel camí de les galeries; «contra la paret N» arramba el darrere a la cara de dins i
+  el gira, i `snapToWalls`), `move_item`, `rotate_item`, `remove_item`, `set_item_group`, `set_materials`. Coordenades del
+  plànol: x a la dreta, y avall; elements pel centre; gir en graus horari vist des de dalt. El que és de fora de l'ambient
+  (Dexie) arriba pel context (`features/assistant/ambientLibrary.ts`): les eines es proven sense base de dades.
+- **Un plànol adjunt** a l'ambient (foto o captura): el model llegeix les cotes i en fa les parets i les obertures; les
+  instruccions li diuen que demani les mides reals quan no es llegeixen (cobreix el que era la fase 3).
+- **Desfer**: igual que al moble, cada torn és un sol pas (al `useHistory` de l'ambient i al de l'Editor). Un moble o
+  objecte creat d'una plantilla per `place_item` es queda a la llista de l'usuari (com «Afegir» de la galeria); el desfer
+  només el treu de l'ambient.
+- **No fa** (límits): canviar les mides o l'interior d'un moble des de l'ambient (es fa a l'Editor), el plànol de fons i
+  la seva calibració, la càmera, el render; ni girar o canviar les mides dels models 3D d'un objecte.
+- **Comprovat** amb Playwright contra una API falsa (`page.route`): un torn a un objecte (dues peces rodones, el xat les
+  diu, un sol pas de desfer/refer) i un a un ambient (habitació per dins, finestra, porta, cerca al catàleg i una nevera
+  creada i arrambada a la paret de baix girada 180°; un sol pas de desfer: no queda cap altre pas), la capçalera del
+  navegador i la tercera pestanya al mòbil.
+
 ## Què ha de fer l'usuari
 
 1. Fer una clau a la Claude Console (console.anthropic.com › API keys) amb saldo.
@@ -78,7 +111,7 @@ l'usuari (2026-10-09): **la clau de l'API es desa a Preferències** i el navegad
 
 - **Fase 2 — foto o plànol → moble nou**: a partir d'una foto o d'un plànol acotat, proposar un moble nou (mòduls,
   divisions, fronts) i demanar les mides reals que falten (les de la foto són estimades: vegeu `docs/foto-mesures.md`).
-- **Fase 3 — plànol → ambient**: llegir un plànol de la casa i fer-ne les parets, finestres i portes d'un ambient.
+- ~~Fase 3 — plànol → ambient~~: feta amb la fase 1b (adjuntar el plànol al xat de l'ambient).
 - **Fase 4 — pàgina de catàleg → joc de ferratges**: llegir una pàgina d'un catàleg en PDF o foto i proposar un
   `HardwareKit` (vegeu `docs/ferratges-jocs.md`), **sempre sense confirmar** fins que es revisi amb el taller: mai un
   mecanitzat inventat.
