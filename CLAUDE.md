@@ -55,6 +55,8 @@ plantes, models 3D i renders són **decoratius**: no s'hi dedica temps mentre el
 - [`docs/millores-v1/coherencia-editor.md`](docs/millores-v1/coherencia-editor.md): **auditoria de coherència** de l'editor
   i del sistema de ferratges (avisos i estat amagat, accessoris com a ferratges, un sol lloc per a cada dada, glossari,
   estructura dels inspectors) i l'estat de cada punt.
+- [`docs/xat-ia.md`](docs/xat-ia.md): **assistent IA** (xat de l'Editor amb l'API de Claude): fets de l'API comprovats a
+  la documentació (models, navegador, eines, imatges, streaming), la fase 1 feta i les fases 2–4 pendents.
 - [`docs/ferratges-jocs.md`](docs/ferratges-jocs.md): **jocs de ferratges paramètrics** llegits del catàleg en PDF (el camí
   principal a partir d'ara): el model `HardwareKit`, el calaix de doble paret DTC MAGIC-PRO, com es construeix, com s'afegeix
   un joc nou i les hipòtesis de lectura pendents del taller.
@@ -77,6 +79,9 @@ el codi només porta els valors inicials.
   ambients, models i preferències. **zod** per validar els models. **Vitest** per als tests del nucli.
 - **occt-import-js** (OpenCascade en WASM, ~7,6 MB; aprovat per l'usuari el 2026-10-06): només per fer el 3D dels STEP
   dels ferratges importats, **a demanda** (`import()` en un worker, `viewer/occtWorker.ts`); el WASM no es precacheja.
+- **`@anthropic-ai/sdk`** (aprovat per l'usuari el 2026-10-09 per a l'assistent IA, `docs/xat-ia.md`): el navegador crida
+  l'API de Claude amb la clau de l'usuari (Preferències › Assistent IA, `dangerouslyAllowBrowser`). **A demanda**
+  (`import()` a `features/assistant/claudeClient.ts`, en obrir el xat o provar la clau): no és al bloc d'entrada.
 - Lint: `oxlint`. **Mai prettier.**
 
 ## Arquitectura
@@ -94,6 +99,7 @@ src/
     file/          # fitxers .moble i .ambient, zip
     import/        # ferratges del fabricant: lector STEP (cilindres) i DXF (vistes 2D), Hettich, proposta de forats
     photo/         # homografia, calibració amb referència, EXIF
+    assistant/     # assistent IA: eines (operacions de l'editor, zod), resum del moble, instruccions de sistema
   features/        # pantalles: projects (Mobles), editor, composition (arbre i inspectors), cutlist (Peces), nesting,
                    #   export, photo, ambients, objects, settings, file
   components/      # mòduls compartits (Workspace, TopBar, FormRow, MasterDetail, Fold…)
@@ -995,6 +1001,27 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   un pas per arrossegada, per node de la ploma (⌘Z treu l'últim; sense cap, cancel·la la ploma i torna la forma d'abans) i
   per acció; escriure a X/Y o les fletxes seguides, un pas (`group`). Es reinicia en obrir-lo. (Què fan Maj/Alt a la
   ploma: pendent de decidir, `docs/millores-v1/editor-formes.md` §2.)
+- **Assistent IA** (`docs/xat-ia.md`; per decisió de l'usuari, la clau a Preferències i el navegador crida l'API
+  directament): pestanya **«Assistent»** (`LuMessageSquare`) a la columna de la dreta, al costat de Propietats
+  (`Workspace extra`; al mòbil, una tercera pestanya després d'Estructura · Propietats); només als mobles (no als
+  objectes). `features/assistant/ChatPanel.tsx` (a demanda, `React.lazy`; es munta el primer cop que s'obre i es queda
+  muntat, la conversa dura mentre l'Editor és obert): missatges, text en directe, cada eina en una línia, aturar
+  (`AbortController`), «Nova conversa», adjuntar una foto o un plànol (`shrinkImage` a ≤ 1568 px JPEG, la imatge abans
+  del text). Sense clau: avís amb l'enllaç a Preferències › Assistent IA (`openSettings`, esdeveniment
+  `mobles:open-settings`); sense connexió, ho diu (`errors.ts`, errors del SDK en català). El torn
+  (`features/assistant/chatTurn.ts`, sense React): `messages.stream`, `tool_use` → `runAssistantTool` → `tool_result`
+  (tots junts, `is_error` si falla) fins a `end_turn`; reenvia el `content` sencer de l'assistent (blocs de pensament
+  amb la signatura); instruccions i eines a la memòria cau (`cache_control`). **Eines** = `core/assistant/tools.ts`,
+  pures, entrada validada amb zod (el mateix esquema fa el JSON Schema, `z.toJSONSchema`): `get_moble`, `add_module`,
+  `remove_module`, `rename_module`, `set_module_size`, `set_module_position` (`setModuleMount`, el mateix camí que la
+  «Fila» de Mòdul › Posició), `set_carcass`, `split_zone`, `unsplit_zone`, `set_zone_size` (`setSplitSize`: l'última
+  zona és el que sobra), `set_front` (`switchFront`/`setFront`; portes de tot el mòdul només a l'Interior dividit; un
+  compartiment tapat no en porta), `set_shelves`, `set_material` (només els de Preferències). Les mateixes regles que la
+  UI (`zoneSupport.ts`: què aguanta cada compartiment); el resultat porta el resum del moble (`summary.ts`: mòduls,
+  caixa, zones amb ids, llums i què hi pot anar) i els **avisos de fusteria nous** perquè el model es corregeixi.
+  **Desfer**: cada torn és **un sol pas** (`set(…, { commit: false })` per eina i `commit()` en acabar o aturar; dins
+  d'una tanda, cada eina parteix de la de l'anterior). Res de la clau a la consola (`logLevel: "off"`), cap telemetria.
+  Tests `core/assistant/tools.test.ts` i `features/assistant/chatTurn.test.ts` (client fals, sense xarxa).
 - L'Editor espera `useSettings().loading` abans de llegir la composició (vegeu Materials, àlies) i només desa composicions
   que passen `CompositionSchema`.
 
@@ -1514,7 +1541,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   tots els divisors i prestatges fixos d'un mòdul dividit), Materials, **Taulers** (camp de treball de la màquina per
   defecte o «importa-la a Màquines CNC»; «Mides de tauler de fàbrica» per material; «Distribució»: girar les peces amb veta;
   sense «Tall»: separació i marge són de la màquina; sense avís si el tauler passa del camp: 2800 × 2070 sobre 5020 × 1905 va
-  bé), Etiquetes —, **Foto i visor 3D** — Objectes de referència, Visor 3D — i **App** — Visualització, Tema. A la dreta la
+  bé), Etiquetes —, **Foto i visor 3D** — Objectes de referència, Visor 3D — i **App** — Visualització, Tema, **Assistent
+  IA** (`settings/AssistantPane.tsx`, `LuMessageSquare`: la clau de l'API de Claude —camp de contrasenya; després només
+  se'n veuen els 4 últims caràcters, `maskKey`—, «Provar la clau» (`models.retrieve`, sense tokens) i el model amb
+  `ChoiceChips`: Sonnet 5.5 per defecte, Opus 5.5; l'explicació del cost i de la connexió) —. A la dreta la
   pàgina triada (icona, títol, explicació i «Restaurar valors inicials»): **una sola columna de 760 px** (`FoldGrid` = pila)
   de **grups sempre oberts** (`components/SettingsGroup`: targeta amb capçalera, res no es plega). Al mòbil, navegació en
   profunditat: apartats › pàgina › element, amb «‹ Tornar»; l'apartat i l'element es recorden durant la sessió
@@ -1670,7 +1700,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Visor 3D**: qualitat, escena de Presentació (terra i paret: materials de la biblioteca, `PresentationScene.floorMaterial`
   / `wallMaterial`, o les mostres ràpides; terra per defecte «Parquet de roure»), llum i «Cel del render». **Tema**:
   dia/nit/sistema i color principal (`theme/accent.ts` redirigeix les variables CSS de `wood`).
-- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 25 (`gaps.innerClearance`, 1 mm, additiu); 24: jocs inicials amb les dades d'ara; 23: jocs paramètrics de calaix (DTC MAGIC-PRO); 22: generador de mecanitzats; 21: tiradors, potes i «només 3D» importats; 20: ferratges importats; 19: biblioteca de ferratges; sense versió, additius en llegir: els accessoris de la biblioteca (`fixHardwareDefaults` afegeix l'item d'inici de cada lloc que falta) i la regla `kitPilot`): les migracions depenen només de la versió
+- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 26 (`assistant`: clau de l'API i model,
+  additiu; **la clau no surt mai** a l'export, `settingsToJson`, ni al `.moble`, i importar unes preferències no la toca,
+  `importSettingsJson`); 25: `gaps.innerClearance`, 1 mm, additiu; 24: jocs inicials amb les dades d'ara; 23: jocs paramètrics de calaix (DTC MAGIC-PRO); 22: generador de mecanitzats; 21: tiradors, potes i «només 3D» importats; 20: ferratges importats; 19: biblioteca de ferratges; sense versió, additius en llegir: els accessoris de la biblioteca (`fixHardwareDefaults` afegeix l'item d'inici de cada lloc que falta) i la regla `kitPilot`): les migracions depenen només de la versió
   desada, que **mai baixa** (`saveSettings` desa la més alta). **Desades per una versió més nova**: només lectura
   (`saveSettings` torna `false` amb `console.warn`; `loadSettings` avisa). **Lectura camp a camp** (`repairValue`,
   `core/model/repair.ts`): un valor dolent d'una secció només torna aquell valor a l'inicial (un tauler o una llargada de guia
@@ -1723,6 +1755,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat nova d'un editor es fa al mòdul compartit:
 - **`Workspace`** + `useWorkspace(id)` (`components/`): estructura · visor · propietats, vores arrossegables, plegar amb els
   botons de les cantonades, pestanyes Estructura · Propietats al mòbil, amplades recordades; a l'Editor i als Ambients.
+  `extra` (l'Assistent de l'Editor): un segon panell a la columna de la dreta, pestanyes Propietats · <extra> a dalt
+  a l'ordinador i una tercera pestanya al mòbil; es munta el primer cop i es queda muntat.
+- **`shrinkImage`** (`features/imageShrink.ts`): l'única funció per reduir imatges (foto del lloc, plànol de fons dels
+  ambients, fotos per a l'assistent; `jpeg` = sempre JPEG sobre blanc).
 - **`SceneHelpers`** (`StudioEnvironment`, `SceneAccess`) als visors 3D; **`RenderDialog`** a l'editor i als ambients;
   **`MoveGizmo`**, **`BoxFrame`**; **`ViewOptions`** / **`ViewTile`**.
 - **`TreeRow`** · `TreeRowMenu` · `TreeSection` (`components/TreeRow.tsx`): fila d'arbre (sagnat, triada `wood.muted`,
@@ -1881,7 +1917,7 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   `launchQueue` i fa el mateix que «Obrir fitxer» (`openAnyFile`; espera les preferències). Safari/iOS no ho suporta.
 
 ## PWA
-- **Càrrega a demanda** (`App.tsx`, `React.lazy` + `Suspense`): Editor, Peces, Nesting, Exportar, Foto, Preferències i l'editor d'ambients es carreguen quan s'obren (la barra de l'ambient és a part, `ambients/AmbientTopBar.tsx`). `advancedChunks` només posa al bloc de three el nucli (`three/build`, `@react-three`, `three-stdlib`): els carregadors i exportadors de `three/examples` van amb qui els fa servir. React va al seu bloc (`react`, prioritat més alta): si no, entrava al de three i tota l'app carregava three d'entrada. **Res d'entrada importa three**: les galeries carreguen el dibuix de les miniatures amb `import()` (`projects/thumbJobs.ts`, `ambients/ambientRender.ts`; `THUMB_VERSION` és a `viewer/thumbVersion.ts`), `measureGlb` l'importa en pujar un model i `mobleIo` fa `forgetModel` amb `import()`. JS d'entrada ~1,5 MB (430 KB gz), abans 2,5 MB. Els fallbacks JS de Draco/Basis no es precachegen. Les textures procedurals que es llegeixen (`getImageData`) fan servir `willReadFrequently`.
+- **Càrrega a demanda** (`App.tsx`, `React.lazy` + `Suspense`): Editor, Peces, Nesting, Exportar, Foto, Preferències i l'editor d'ambients es carreguen quan s'obren; el xat de l'assistent (`ChatPanel`) i el SDK de l'API de Claude (bloc `sdk`, ~220 KB) també, en obrir-lo (la barra de l'ambient és a part, `ambients/AmbientTopBar.tsx`). `advancedChunks` només posa al bloc de three el nucli (`three/build`, `@react-three`, `three-stdlib`): els carregadors i exportadors de `three/examples` van amb qui els fa servir. React va al seu bloc (`react`, prioritat més alta): si no, entrava al de three i tota l'app carregava three d'entrada. **Res d'entrada importa three**: les galeries carreguen el dibuix de les miniatures amb `import()` (`projects/thumbJobs.ts`, `ambients/ambientRender.ts`; `THUMB_VERSION` és a `viewer/thumbVersion.ts`), `measureGlb` l'importa en pujar un model i `mobleIo` fa `forgetModel` amb `import()`. JS d'entrada ~1,5 MB (430 KB gz), abans 2,5 MB. Els fallbacks JS de Draco/Basis no es precachegen. Les textures procedurals que es llegeixen (`getImageData`) fan servir `willReadFrequently`.
 - **Icones a sang**: quadrat sencer amb el fons `#1a202c`, **sense cantonades rodones ni transparència** (iOS i Android hi
   posen la màscara; si ja és arrodonida, les puntes surten blanques). Font `public/icon.svg` → `pwa-192/512.png`,
   `apple-touch-icon.png` (180); `pwa-maskable-512.png` (`icon-maskable.svg`, la marca al 78 %). El `favicon.svg` sí que és
@@ -1943,6 +1979,8 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Fitxer | Desar com a fitxer (`.moble`, també els ambients) · Obrir fitxer (Mobles, Objectes, Ambients) · Pujar un fitxer (preferències) | `LuSave` · `LuFolderOpen` · `LuUpload` |
 | Models 3D | Triar fitxers… · Triar carpeta… (importar un model) · Afegir les textures a Materials | `LuFileUp` · `LuFolderOpen` · `LuPalette` |
 | Editor | Estructura · Propietats · Opcions de vista | `LuListTree` · `LuSlidersHorizontal` · `LuSlidersVertical` |
+| Assistent IA | Assistent (pestanya de l'Editor i pàgina de Preferències) · Clau de l'API · Provar la clau | `LuMessageSquare` · `LuKeyRound` · `LuPlugZap` |
+| Assistent IA | Enviar · Aturar · Adjuntar una foto o un plànol · Nova conversa · Eina feta · Sense connexió | `LuSendHorizontal` · `LuCircleStop` · `LuImagePlus` · `LuMessageSquarePlus` · `LuWrench` · `LuWifiOff` |
 | Editor | Pestanyes 3D · Alçat · Foto | `LuBox` · `LuLayoutPanelLeft` · `LuCamera` |
 | Estat | Avisos de fusteria · Desfer · Refer | `LuTriangleAlert` · `LuUndo2` · `LuRedo2` |
 | Foto | Foto · Referència · Distància · Rectangle | `LuCamera` · `LuCrosshair` · `LuMoveHorizontal` · `LuRectangleHorizontal` |

@@ -59,7 +59,20 @@ l'usuari (2026-10-09): **la clau de l'API es desa a Preferències** i el navegad
 - **Desfer**: cada torn de l'assistent és **un sol pas** de desfer (`useHistory`: canvis en viu `commit: false` i un
   `commit()` en acabar o aturar). ⌘Z desfà tot el que ha fet en aquell torn.
 - **Privadesa**: la clau no va als registres (`logLevel: "off"`), cap telemetria; l'SDK es carrega amb `import()` només
-  en obrir el xat (no és al bloc d'entrada).
+  en obrir el xat (no és al bloc d'entrada: bloc propi `sdk`, ~220 KB / 56 KB gz).
+- **On és el codi**: `core/assistant/` (eines, resum, instruccions; pur, tests), `features/assistant/` (`chatTurn.ts` el
+  bucle d'eines amb streaming, `ChatPanel.tsx` la UI, `claudeClient.ts` el client a demanda, `errors.ts` els errors en
+  català), `features/settings/AssistantPane.tsx` (Preferències), `components/Workspace.tsx` (`extra`).
+- **Comprovat** amb Playwright contra una API falsa (`page.route` a `api.anthropic.com`, cap crida de debò): sense clau
+  l'avís i l'enllaç a Preferències, la clau només es veu emmascarada i no surt a l'export, «Provar la clau», un torn amb
+  dues eines (mòdul i calaixos) i el text en directe, la capçalera `anthropic-dangerous-direct-browser-access`, un sol
+  pas de desfer/refer, i la tercera pestanya al mòbil.
+
+## Què ha de fer l'usuari
+
+1. Fer una clau a la Claude Console (console.anthropic.com › API keys) amb saldo.
+2. Enganxar-la a Preferències › Assistent IA, «Desar» i «Provar la clau».
+3. Triar el model (Sonnet 5.5 per defecte; Opus 5.5 per a encàrrecs difícils, el doble de car).
 
 ## Pendent
 
