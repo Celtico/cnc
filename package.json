@@ -14,6 +14,7 @@
     "audit": "pnpm audit --audit-level high"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.1",
     "@chakra-ui/react": "^3.37.0",
     "@emotion/react": "^11.14.0",
     "@google/model-viewer": "^4.3.1",
