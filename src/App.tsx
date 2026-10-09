@@ -224,6 +224,12 @@ export function App() {
     window.addEventListener("mobles:open-ambient", on)
     return () => window.removeEventListener("mobles:open-ambient", on)
   }, [])
+  // Enllaços a Preferències des d'altres pàgines (el xat de l'Editor sense clau: `openSettings`).
+  useEffect(() => {
+    const on = () => setScreen("settings")
+    window.addEventListener("mobles:open-settings", on)
+    return () => window.removeEventListener("mobles:open-settings", on)
+  }, [])
   const goAmbients = () => {
     setProjectId(null)
     setScreen(ambientId !== null ? "ambient" : "ambients")
