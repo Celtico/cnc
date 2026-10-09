@@ -46,7 +46,7 @@ export function AssistantPane({ value, onChange }: { value: AssistantPref; onCha
     <Stack className="settings-stack" gap={6}>
       <SettingsGroup icon={<LuKeyRound />} title="Clau de l'API" summary={value.apiKey ? `Desada en aquest dispositiu (${maskKey(value.apiKey)})` : "Sense clau"}>
         <Text fontSize="sm" color="fg.muted">
-          L'assistent del xat de l'Editor fa servir l'API de Claude amb la teva clau. Se'n fa una a la Claude Console
+          L'assistent (el xat de l'Editor i dels Ambients) fa servir l'API de Claude amb la teva clau. Se'n fa una a la Claude Console
           (console.anthropic.com › API keys). Es desa només en aquest dispositiu: no surt a «Exportar» ni als fitxers .moble.
         </Text>
         {editing || !value.apiKey ? (

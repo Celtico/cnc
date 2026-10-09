@@ -378,7 +378,7 @@ function SettingsEditor({ initial, save, previewComposition }: { initial: Settin
             </SettingsGroup>
           </Pane>
 
-          <Pane id="assistant" title="Assistent IA" icon={LuMessageSquare} desc="La clau de l'API de Claude i el model del xat de l'Editor, que fa i edita mobles.">
+          <Pane id="assistant" title="Assistent IA" icon={LuMessageSquare} desc="La clau de l'API de Claude i el model de l'assistent: el xat de l'Editor (mobles i objectes) i dels Ambients.">
             <AssistantPane value={draft.assistant} onChange={(assistant) => set("assistant", assistant)} />
           </Pane>
 
