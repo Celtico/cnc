@@ -12,6 +12,7 @@ import {
   type Composition,
   type ModelObject,
   type Module,
+  type ModuleMount,
   type RefObject,
   type Run,
   type Zone,
@@ -70,6 +71,22 @@ export function insertRefCopy(comp: Composition, src: RefObject): { comp: Compos
 /** Enganxa el contingut d'una zona copiada a la zona `targetId` (conserva la seva mida). */
 export function pasteZone(root: Zone, targetId: string, src: Zone): Zone {
   return updateZone(root, targetId, () => ({ ...cloneZone(src), id: targetId }))
+}
+
+/**
+ * Canvia on va un mòdul (Mòdul › Posició › «Fila», i l'assistent IA): **arrambat** a la paret (a terra, a la fila),
+ * **penjat** (base `wall` a `floorHeight`, a la fila dels penjats) o **lliure al terra** (surt de la fila i es queda on
+ * és: X pròpia `here`, a 0 de la paret). D'un penjat a terra, la base passa a «directe a terra».
+ */
+export function setModuleMount(m: Module, mount: ModuleMount, here: number, floorHeight = 1450): Module {
+  const c = m.carcass
+  const wasHung = c.base.kind === "wall"
+  const { wallGap: _old, x: _x, ...rest } = m
+  void _old
+  void _x
+  if (mount === "hung") return { ...rest, gapBefore: 0, carcass: { ...c, base: { kind: "wall", height: floorHeight } } }
+  const base = wasHung ? ({ kind: "none" } as const) : c.base
+  return { ...rest, ...(mount === "floor" ? { wallGap: 0, x: here } : {}), gapBefore: wasHung ? 0 : m.gapBefore, carcass: { ...c, base } }
 }
 
 /** Treu una zona: si és dins d'una divisió, la divisió es refà; si és l'arrel, es buida. */

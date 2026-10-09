@@ -52,7 +52,7 @@ import { movingGroups, openingCollisions } from "../../components/viewer/opening
 import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
 import { materialIssues } from "../../core/build/materialIssues"
 import { splitChildSizes } from "../../core/build/layout"
-import { applySettingsToModule, moduleHasInnerPieces, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, moduleRows, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule, moduleHasInnerPieces, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, moduleRows, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, setModuleMount, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, InnerClearanceRow, JointForm, MaterialsForm } from "../composition/CarcassForm"
@@ -1094,18 +1094,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                     { value: "hung", label: "Penjat", icon: LuPanelTop, hint: "Penjat a la paret: es mou de costat i amunt/avall" },
                     { value: "floor", label: "Lliure al terra", icon: LuArrowDownToLine, hint: "Lliure al terra: es mou pel terra, també separat de la paret" },
                   ]}
-                  onChange={(v) => {
-                    const c = module.carcass
-                    const wasHung = c.base.kind === "wall"
-                    const { wallGap: _old, x: _x, ...rest } = module
-                    // Al terra: surt de la fila i es queda on és (X pròpia).
-                    const here = Math.round(build?.modules[moduleIndex]?.x ?? 0)
-                    if (v === "hung") updateModule({ ...rest, gapBefore: 0, carcass: { ...c, base: { kind: "wall", height: 1450 } } })
-                    else {
-                      const base = wasHung ? ({ kind: "none" } as const) : c.base
-                      updateModule({ ...rest, ...(v === "floor" ? { wallGap: 0, x: here } : {}), gapBefore: wasHung ? 0 : module.gapBefore, carcass: { ...c, base } })
-                    }
-                  }}
+                  // Al terra: surt de la fila i es queda on és (X pròpia). El mateix camí que l'assistent (`setModuleMount`).
+                  onChange={(v) => updateModule(setModuleMount(module, v, Math.round(build?.modules[moduleIndex]?.x ?? 0)))}
                 />
               </FormRow>
               {module.carcass.base.kind === "wall" && (
