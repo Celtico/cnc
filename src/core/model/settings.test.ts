@@ -284,7 +284,7 @@ describe("v12: duplicats fora i noms únics", () => {
     expect(names).not.toContain("DM 10")
     expect(names).not.toContain("Pi")
     expect(names).toContain("Fulles de pi")
-    expect(SETTINGS_VERSION).toBe(25)
+    expect(SETTINGS_VERSION).toBe(26)
   })
 
   it("«Melamina 19» i «DM 10» inicials passen als de sempre (amb les referències de les preferències) i «Pi» a «Fulles de pi»", () => {
@@ -387,5 +387,34 @@ describe("v23: jocs de calaix de doble paret", () => {
     // Una sola font: canviar la regla posa els números a tots els jocs.
     const off = setKitPilot(res.settings.hardwareLibrary, { enabled: false, diameter: 3, depth: 12 })
     expect(off.filter((x) => x.engine === "drawerKit").every((x) => x.params.pilotDiameter === 0)).toBe(true)
+  })
+})
+
+describe("v26: assistent IA", () => {
+  const key = "sk-ant-api03-secret-abcd"
+  const withKey: Settings = { ...DEFAULT_SETTINGS, assistant: { apiKey: key, model: "claude-opus-5-5" } }
+
+  it("les preferències d'abans reben l'assistent sense clau i amb Sonnet; un model desconegut torna al per defecte", () => {
+    const { assistant: _a, ...old } = DEFAULT_SETTINGS
+    void _a
+    const res = parseSettings({ ...old, version: 25 })
+    expect(res.settings.assistant).toEqual({ model: "claude-sonnet-5-5" })
+    expect(res.problems).toEqual([])
+    const odd = parseSettings({ ...DEFAULT_SETTINGS, assistant: { apiKey: key, model: "claude-x-9" } })
+    expect(odd.settings.assistant.model).toBe("claude-sonnet-5-5")
+    expect(odd.settings.assistant.apiKey).toBe(key)
+    expect(SettingsSchema.safeParse(res.settings).success).toBe(true)
+  })
+
+  it("la clau no surt mai a l'export i importar-ne unes no la canvia ni la treu", () => {
+    const json = settingsToJson(withKey)
+    expect(json).not.toContain(key)
+    expect(JSON.parse(json).assistant).toEqual({ model: "claude-opus-5-5" })
+    // Importar el mateix fitxer (sense clau) conserva la clau d'aquest dispositiu.
+    expect(importSettingsJson(withKey, json).settings.assistant).toEqual({ apiKey: key, model: "claude-opus-5-5" })
+    // Un fitxer que en porti una (fet a mà) no la posa.
+    const foreign = JSON.stringify({ ...DEFAULT_SETTINGS, assistant: { apiKey: "sk-ant-other", model: "claude-sonnet-5-5" } })
+    expect(importSettingsJson(withKey, foreign).settings.assistant).toEqual({ apiKey: key, model: "claude-sonnet-5-5" })
+    expect(importSettingsJson(DEFAULT_SETTINGS, foreign).settings.assistant.apiKey).toBeUndefined()
   })
 })

@@ -35,8 +35,10 @@ const mm = z.number().finite()
  * toquen.
  * v25: folgança de les peces de dins (`gaps.innerClearance`, 1 mm): additiu; les preferències d'abans la reben amb el
  * valor inicial (si ja n'hi ha una, es queda). Els mobles desats no canvien (sense el camp, 0).
+ * v26: assistent IA (`assistant`: clau de l'API de Claude i model): additiu; sense, sense clau i el model per defecte.
+ * La clau no surt mai a l'export (`settingsToJson`) i importar-ne unes no la toca (`importSettingsJson`).
  */
-export const SETTINGS_VERSION = 25
+export const SETTINGS_VERSION = 26
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -308,6 +310,27 @@ export const LabelPrefSchema = z.object({ w: mm.min(10).max(300), h: mm.min(10).
 
 export const DisplayPrefSchema = z.object({ unit: z.enum(["mm", "cm"]) })
 
+/**
+ * Models de l'assistent IA (docs/xat-ia.md, comprovats a la documentació de l'API el 2026-10-09): Sonnet per defecte
+ * (més barat i ràpid), Opus per a les feines més difícils. Preus en $ per milió de tokens d'entrada / sortida.
+ */
+export const ASSISTANT_MODELS = [
+  { id: "claude-sonnet-5-5", label: "Sonnet 5.5", price: "2 $ / 10 $", hint: "ràpid i més barat" },
+  { id: "claude-opus-5-5", label: "Opus 5.5", price: "4 $ / 20 $", hint: "el més capaç, el doble de car" },
+] as const
+export type AssistantModel = (typeof ASSISTANT_MODELS)[number]["id"]
+export const DEFAULT_ASSISTANT_MODEL: AssistantModel = "claude-sonnet-5-5"
+
+/**
+ * Assistent IA (v26): la clau de l'API de Claude de l'usuari (el navegador crida l'API directament; només es desa en
+ * aquest dispositiu, mai a l'export ni al `.moble`) i el model.
+ */
+export const AssistantPrefSchema = z.object({
+  apiKey: z.string().optional(),
+  model: z.enum(ASSISTANT_MODELS.map((m) => m.id) as [AssistantModel, ...AssistantModel[]]),
+})
+export type AssistantPref = z.infer<typeof AssistantPrefSchema>
+
 export const SettingsSchema = z.object({
   version: z.literal(SETTINGS_VERSION),
   references: z.array(RefPresetSchema),
@@ -335,6 +358,8 @@ export const SettingsSchema = z.object({
    * Abans eren per màquina (`Machine.rules`): la migració agafa les de la màquina per defecte.
    */
   machiningRules: MachineRulesSchema,
+  /** Assistent IA (v26): clau de l'API i model. La clau no s'exporta (`settingsToJson`). */
+  assistant: AssistantPrefSchema,
 })
 export type Settings = z.infer<typeof SettingsSchema>
 
@@ -590,6 +615,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaults: { material: "Melamina blanca", thickness: 19, backMaterial: "DM (fons)", backThickness: 10 },
   machines: [],
   machiningRules: defaultMachineRules(),
+  assistant: { model: DEFAULT_ASSISTANT_MODEL },
 }
 
 // --- Migració i importació ------------------------------------------------------------
@@ -765,6 +791,8 @@ export function parseSettings(raw: unknown): SettingsParse {
     // v11: les regles ja no són de la màquina (`machiningRules`); les `rules` desades es treuen.
     machines: machines.map(stripRules),
     machiningRules,
+    // v26: additiu (sense, sense clau i el model per defecte); un model que ja no hi és torna al per defecte.
+    assistant: section("assistant", AssistantPrefSchema, DEFAULT_SETTINGS.assistant, "Assistent IA"),
   }
   return { settings, problems, migrated: migrated || problems.length > 0, renames: v12.renames }
 }
@@ -886,9 +914,14 @@ function withBuiltins(refs: RefPreset[], builtins: RefPreset[]): RefPreset[] {
   return [...refs, ...builtins.filter((b) => !ids.has(b.id))]
 }
 
-/** Text JSON per exportar (còpia o passar-les a un altre dispositiu). */
+/**
+ * Text JSON per exportar (còpia o passar-les a un altre dispositiu). **Sense la clau de l'assistent**: és secreta i
+ * només es desa en aquest dispositiu (el fitxer es pot passar a algú altre).
+ */
 export function settingsToJson(s: Settings): string {
-  return JSON.stringify(s, null, 2)
+  const { apiKey: _key, ...assistant } = s.assistant
+  void _key
+  return JSON.stringify({ ...s, assistant }, null, 2)
 }
 
 /** Importa un JSON: mai llança. */
@@ -930,6 +963,9 @@ export function importSettingsJson(current: Settings, text: string): SettingsPar
   const hw = fixHardwareDefaults(merged.hardwareLibrary, wantDefaults)
   if (hw.changed) merged.hardwareLibrary = hw.library
   merged.hardwareDefaults = hw.defaults
+  // La clau de l'assistent és d'aquest dispositiu: un fitxer (que no n'hauria de portar cap) no la canvia ni la treu.
+  merged.assistant = { ...merged.assistant, ...(current.assistant.apiKey ? { apiKey: current.assistant.apiKey } : {}) }
+  if (!current.assistant.apiKey) delete merged.assistant.apiKey
   // Un fitxer d'abans de la v11 porta les regles a les màquines: es fan servir (`rulesFromMachines`).
   if (!("machiningRules" in raw) && Array.isArray(raw.machines) && raw.machines.some((m) => isRecord(m) && m.rules !== undefined)) {
     merged.machiningRules = res.settings.machiningRules
