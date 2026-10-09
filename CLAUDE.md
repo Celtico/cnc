@@ -55,8 +55,9 @@ plantes, models 3D i renders són **decoratius**: no s'hi dedica temps mentre el
 - [`docs/millores-v1/coherencia-editor.md`](docs/millores-v1/coherencia-editor.md): **auditoria de coherència** de l'editor
   i del sistema de ferratges (avisos i estat amagat, accessoris com a ferratges, un sol lloc per a cada dada, glossari,
   estructura dels inspectors) i l'estat de cada punt.
-- [`docs/xat-ia.md`](docs/xat-ia.md): **assistent IA** (xat de l'Editor amb l'API de Claude): fets de l'API comprovats a
-  la documentació (models, navegador, eines, imatges, streaming), la fase 1 feta i les fases 2–4 pendents.
+- [`docs/xat-ia.md`](docs/xat-ia.md): **assistent IA** (xat de l'Editor —mobles i objectes— i dels Ambients amb l'API de
+  Claude): fets de l'API comprovats a la documentació (models, navegador, eines, imatges, streaming), les fases 1 i 1b fetes
+  i les fases 2 i 4 pendents.
 - [`docs/ferratges-jocs.md`](docs/ferratges-jocs.md): **jocs de ferratges paramètrics** llegits del catàleg en PDF (el camí
   principal a partir d'ara): el model `HardwareKit`, el calaix de doble paret DTC MAGIC-PRO, com es construeix, com s'afegeix
   un joc nou i les hipòtesis de lectura pendents del taller.
@@ -99,7 +100,7 @@ src/
     file/          # fitxers .moble i .ambient, zip
     import/        # ferratges del fabricant: lector STEP (cilindres) i DXF (vistes 2D), Hettich, proposta de forats
     photo/         # homografia, calibració amb referència, EXIF
-    assistant/     # assistent IA: eines (operacions de l'editor, zod), resum del moble, instruccions de sistema
+    assistant/     # assistent IA: un joc d'eines per document (moble, objecte, ambient; zod), resums, instruccions
   features/        # pantalles: projects (Mobles), editor, composition (arbre i inspectors), cutlist (Peces), nesting,
                    #   export, photo, ambients, objects, settings, file
   components/      # mòduls compartits (Workspace, TopBar, FormRow, MasterDetail, Fold…)
@@ -1003,13 +1004,19 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   ploma: pendent de decidir, `docs/millores-v1/editor-formes.md` §2.)
 - **Assistent IA** (`docs/xat-ia.md`; per decisió de l'usuari, la clau a Preferències i el navegador crida l'API
   directament): pestanya **«Assistent»** (`LuMessageSquare`) a la columna de la dreta, al costat de Propietats
-  (`Workspace extra`; al mòbil, una tercera pestanya després d'Estructura · Propietats); només als mobles (no als
-  objectes). `features/assistant/ChatPanel.tsx` (a demanda, `React.lazy`; es munta el primer cop que s'obre i es queda
+  (`Workspace extra`; al mòbil, una tercera pestanya després d'Estructura · Propietats); als mobles i als **objectes**
+  (no als `lliure` d'abans) i als **Ambients** (vegeu Ambients › Assistent IA). **Un sol xat per a tots els documents**
+  (per decisió de l'usuari: «i a Objectes i Ambients?»): el document diu el seu **joc d'eines**
+  (`core/assistant/toolset.ts`, `AssistantToolSet<D>`: instruccions, eines, `run` —pot ser asíncrona—, `payload` i
+  `describe`) i el xat rep un `ChatTarget` (`features/assistant/chatTarget.ts`: `toolset` a demanda amb `import()`,
+  `getDoc`, `apply`, `commit`, el text del xat buit i les propostes). `mobleToolSet` (`tools.ts`), `objectToolSet`
+  (`objectTools.ts`) i `ambientToolSet` (`ambientTools.ts`); les eines no són al bloc de l'editor (es carreguen amb el
+  primer missatge). `features/assistant/ChatPanel.tsx` (a demanda, `React.lazy`; es munta el primer cop que s'obre i es queda
   muntat, la conversa dura mentre l'Editor és obert): missatges, text en directe, cada eina en una línia, aturar
   (`AbortController`), «Nova conversa», adjuntar una foto o un plànol (`shrinkImage` a ≤ 1568 px JPEG, la imatge abans
   del text). Sense clau: avís amb l'enllaç a Preferències › Assistent IA (`openSettings`, esdeveniment
   `mobles:open-settings`); sense connexió, ho diu (`errors.ts`, errors del SDK en català). El torn
-  (`features/assistant/chatTurn.ts`, sense React): `messages.stream`, `tool_use` → `runAssistantTool` → `tool_result`
+  (`features/assistant/chatTurn.ts`, sense React, genèric): `messages.stream`, `tool_use` → `toolset.run` → `tool_result`
   (tots junts, `is_error` si falla) fins a `end_turn`; reenvia el `content` sencer de l'assistent (blocs de pensament
   amb la signatura); instruccions i eines a la memòria cau (`cache_control`). **Eines** = `core/assistant/tools.ts`,
   pures, entrada validada amb zod (el mateix esquema fa el JSON Schema, `z.toJSONSchema`): `get_moble`, `add_module`,
@@ -1019,9 +1026,18 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   compartiment tapat no en porta), `set_shelves`, `set_material` (només els de Preferències). Les mateixes regles que la
   UI (`zoneSupport.ts`: què aguanta cada compartiment); el resultat porta el resum del moble (`summary.ts`: mòduls,
   caixa, zones amb ids, llums i què hi pot anar) i els **avisos de fusteria nous** perquè el model es corregeixi.
+  **Objectes** (`core/assistant/objectTools.ts`, instruccions `OBJECT_SYSTEM_PROMPT`: decoratiu, no es fabrica; mm; Y amunt,
+  terra y = 0; Z endavant): `get_object` (peces amb id, nom, orientació, w × h, gruix, cantonada x/y/z i caixa, material,
+  forma, grup; models 3D; materials de `partChoices` per categoria), `add_part` (orientació front/side/flat, mides,
+  posició, material de Preferències —també Simulació—, forma rectangle · arrodonit amb radi · el·lipse · cercle amb
+  `roundRect`/`ellipse` d'`objectShapes.ts`, grup), `update_part` (qualsevol d'aquests; `reorientPart` conserva el centre;
+  una forma arrodonida o el·líptica es refà a la mida nova, `partShapeKind`), `remove_part`, `duplicate_part`
+  (`insertPartCopy`, o a dx/dy/dz), `set_group`, `move_group` (`moveGroupBy`: no baixa de terra) i `duplicate_group`
+  (`duplicateGroup`); sempre `nest: false`.
   **Desfer**: cada torn és **un sol pas** (`set(…, { commit: false })` per eina i `commit()` en acabar o aturar; dins
   d'una tanda, cada eina parteix de la de l'anterior). Res de la clau a la consola (`logLevel: "off"`), cap telemetria.
-  Tests `core/assistant/tools.test.ts` i `features/assistant/chatTurn.test.ts` (client fals, sense xarxa).
+  Tests `core/assistant/tools.test.ts`, `objectTools.test.ts`, `ambientTools.test.ts` i `features/assistant/chatTurn.test.ts`
+  (client fals, sense xarxa).
 - L'Editor espera `useSettings().loading` abans de llegir la composició (vegeu Materials, àlies) i només desa composicions
   que passen `CompositionSchema`.
 
@@ -1429,6 +1445,26 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   mobles i objectes enllaçats i ho posa tot al grup del client: dos clients no comparteixen cap moble (`remapMobleItems`,
   el mateix que en obrir un `.ambient`).
 - **Desar com a fitxer** (`.moble`, vegeu Desar i fitxers › Fitxer d'ambient): menú ⋯ de la targeta i ⋯ de la barra de l'ambient obert.
+- **Assistent IA** (`docs/xat-ia.md`; el mateix xat que l'Editor, vegeu Editor › Assistent IA): pestanya «Assistent» a la
+  columna de la dreta (`Workspace extra`; al mòbil, la tercera pestanya). Eines (`core/assistant/ambientTools.ts`, pures
+  i asíncrones; instruccions `AMBIENT_SYSTEM_PROMPT`: mm, plànol x a la dreta i y avall, elements pel centre, gir en graus
+  horari vist des de dalt, rot 0 = el darrere mira amunt): `get_ambient` (parets «Paret N» amb id, extrems, llargada,
+  gruix, alçada i obertures per índex; elements amb tipus, nom, `project_id`, w × h × d, centre, gir, alçada, grup i
+  caixa; materials; m² i habitacions tancades), `add_room` (`roomWalls`; `inner` = mides per dins), `add_wall`,
+  `update_wall` (`setWallEnds`: les obertures es queden al seu lloc), `remove_wall`, `add_opening` / `update_opening`
+  (finestra · porta · vidriera, `OPENING_DEFAULTS`, `clampOpening`; no trepitja les altres i diu els trams lliures) /
+  `remove_opening`, `list_library` (els mobles i objectes de l'usuari amb les mides i les plantilles del catàleg
+  —`catalogueEntries`: botiga, col·leccions, objectes, revista, app; referències de `resolveTemplateRef`—, cerca sense
+  accents, compacte), `place_item` (un moble o objecte de l'usuari, o una plantilla que es crea pel camí de les galeries:
+  `withInnerClearance` als mobles, `uniqueName`, `createProject`, a l'Historial; `against_wall` = el darrere contra la
+  cara de dins de la paret i girat, `againstWall`, i `snapToWalls`), `move_item` (també arrambat a una paret; un grup,
+  dx/dy), `rotate_item` (`rotateItems` per als grups), `remove_item`, `set_item_group` i `set_materials` (terra, parets,
+  sostre, terra de fora; noms de Preferències). El de fora de l'ambient (la llista de Dexie amb la caixa de cada moble,
+  memoritzada per `id:updatedAt`, i crear de plantilla) és `features/assistant/ambientLibrary.ts`. **Desfer**: el
+  `useHistory` de l'ambient, canvis en viu (`commit: false`) i un `commit()` en acabar el torn: ⌘Z ho desfà tot (les
+  parets, les obertures i els elements). Un moble o objecte creat d'una plantilla **es queda a la llista** (com
+  «Afegir» de la galeria): el desfer només el treu de l'ambient. Un plànol o foto adjunts: llegeix les cotes i demana
+  les que no es veuen.
 
 ## Objectes
 - Un objecte (sofà, làmpada, planta…) és un moble del tipus **`objecte`** (`partsOnlyKind`: només peces lliures, com el
@@ -1447,6 +1483,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`core/model/objectCategories.ts`).
 - **Mides al mm**: `tidyMm`/`tidyPart` (`freePart.ts`) arrodoneixen al mm els valors amb més d'un decimal (els de l'usuari,
   com 22,5, es queden) en crear l'objecte i en carregar-lo (`normalizeComposition`).
+- **Assistent IA**: la pestanya «Assistent» de l'Editor també als objectes, amb les eines de peces lliures, formes
+  senzilles i grups (`objectToolSet`; vegeu Editor › Assistent IA).
 
 ## Galeries (Mobles · Ambients · Objectes)
 - **Les tres pàgines fan igual**: capçalera `PageHeader` (títol gran i l'explicació), **cercador amb el botó principal al
@@ -1755,7 +1793,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat nova d'un editor es fa al mòdul compartit:
 - **`Workspace`** + `useWorkspace(id)` (`components/`): estructura · visor · propietats, vores arrossegables, plegar amb els
   botons de les cantonades, pestanyes Estructura · Propietats al mòbil, amplades recordades; a l'Editor i als Ambients.
-  `extra` (l'Assistent de l'Editor): un segon panell a la columna de la dreta, pestanyes Propietats · <extra> a dalt
+  `extra` (l'Assistent de l'Editor i dels Ambients): un segon panell a la columna de la dreta, pestanyes Propietats · <extra> a dalt
   a l'ordinador i una tercera pestanya al mòbil; es munta el primer cop i es queda muntat.
 - **`shrinkImage`** (`features/imageShrink.ts`): l'única funció per reduir imatges (foto del lloc, plànol de fons dels
   ambients, fotos per a l'assistent; `jpeg` = sempre JPEG sobre blanc).
