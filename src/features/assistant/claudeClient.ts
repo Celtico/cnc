@@ -1,4 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk"
+import { assistantError, type AssistantError } from "./errors"
 
 /**
  * Client de l'API de Claude per a l'assistent (docs/xat-ia.md). El SDK es carrega **a demanda** (`import()`): no és al
@@ -23,4 +24,15 @@ export async function testKey(apiKey: string, model: string): Promise<string> {
   const client = await makeClient(apiKey)
   const info = await client.models.retrieve(model)
   return info.display_name || info.id
+}
+
+/** L'error en català (`assistantError`) amb les classes del SDK carregat. */
+export async function describeFailure(e: unknown): Promise<AssistantError> {
+  const online = typeof navigator === "undefined" ? true : navigator.onLine
+  try {
+    const sdk = await loadSdk()
+    return assistantError(e, online, sdk)
+  } catch {
+    return assistantError(e, online)
+  }
 }

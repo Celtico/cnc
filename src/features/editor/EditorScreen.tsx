@@ -1,5 +1,5 @@
 import { Alert, Badge, Box, Button, Editable, HStack, IconButton, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
-import { createElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { createElement, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   LuArrowDownToLine,
   LuBox,
@@ -23,6 +23,7 @@ import {
   LuBolt,
   LuLayoutPanelLeft,
   LuMaximize2,
+  LuMessageSquare,
   LuMinimize2,
   LuMoveDiagonal,
   LuScan,
@@ -85,6 +86,9 @@ import { useHistory, useUndoKeys } from "../history/useHistory"
 import { UndoRedo } from "../../components/UndoRedo"
 import { useDebouncedSave } from "../useDebouncedSave"
 import { MaterialSelect } from "../settings/MaterialSelect"
+
+/** Xat de l'assistent IA (docs/xat-ia.md): a demanda, el primer cop que s'obre la pestanya «Assistent». */
+const ChatPanel = lazy(() => import("../assistant/ChatPanel"))
 
 type ViewTab = "3d" | "elevation" | "photo"
 const TAB_KEY = "mobles:editor-view-tab"
@@ -150,7 +154,12 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   // Composició amb desfer/refer (`useHistory`, fins a 50 passos). Canvis seguits (menys de 500 ms entre ells, p. ex.
   // escriure "1180" o arrossegar) compten com un sol pas. La càmera i la miniatura es desen a part (fora del desfer).
   const history = useHistory<Composition>(initial, { limit: 50, coalesceMs: 500 })
-  const { value: comp, set: setComp, undo, redo } = history
+  const { value: comp, set: setComp, undo, redo, commit: commitHistory } = history
+  // L'assistent IA llegeix la composició d'ara i hi aplica els canvis en viu; en acabar el torn, un sol pas de desfer.
+  const compRef = useRef(comp)
+  compRef.current = comp
+  const getComp = useCallback(() => compRef.current, [])
+  const applyLive = useCallback((next: Composition) => setComp(next, { commit: false }), [setComp])
   // Dreceres de desfer/refer (`undoKeyAction`): no als camps de text lliure ni amb un diàleg modal obert (l'editor de
   // perfils té el seu desfer: ⌘Z hi desfeia el moble del darrere).
   useUndoKeys(undo, redo)
@@ -1266,6 +1275,16 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         />
         }
         right={inspector}
+        // Només als mobles: les eines són de mòduls (un objecte només té peces lliures).
+        extra={partsOnlyKind(kind) ? undefined : {
+          label: "Assistent",
+          icon: <LuMessageSquare />,
+          content: (
+            <Suspense fallback={null}>
+              <ChatPanel settings={settings} getComp={getComp} apply={applyLive} commit={commitHistory} />
+            </Suspense>
+          ),
+        }}
         center={(chrome) => (
       <Box
         ref={viewerBox}

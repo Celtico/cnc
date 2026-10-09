@@ -25,12 +25,25 @@ export const OFFLINE_ERROR: AssistantError = {
   description: "L'assistent necessita internet (crida l'API de Claude). La resta de l'app funciona igual sense connexió.",
 }
 
+/** Les classes d'error del SDK carregat (el codi minificat no conserva els noms de les classes). */
+export interface SdkErrorClasses {
+  APIUserAbortError: abstract new (...args: never[]) => unknown
+  APIConnectionError: abstract new (...args: never[]) => unknown
+}
+
 /** Text d'un error del SDK (o de qualsevol cosa llançada). `online`: `navigator.onLine`. */
-export function assistantError(e: unknown, online = true): AssistantError {
+export function assistantError(e: unknown, online = true, sdk?: SdkErrorClasses): AssistantError {
   if (!online) return OFFLINE_ERROR
   const err = (e ?? {}) as { status?: unknown; name?: unknown; constructor?: { name?: unknown }; message?: unknown; error?: { error?: { type?: unknown; message?: unknown } } }
   const status = typeof err.status === "number" ? err.status : undefined
-  const name = String(err.constructor?.name ?? err.name ?? "")
+  const name =
+    sdk && e instanceof sdk.APIUserAbortError
+      ? "APIUserAbortError"
+      : sdk && e instanceof sdk.APIConnectionError
+        ? "APIConnectionError"
+        : typeof err.name === "string" && err.name !== "Error"
+          ? err.name
+          : String(err.constructor?.name ?? "")
   const apiType = typeof err.error?.error?.type === "string" ? err.error.error.type : undefined
   const apiMessage = typeof err.error?.error?.message === "string" ? err.error.error.message : undefined
   if (name === "APIUserAbortError" || name === "AbortError") return { kind: "aborted", title: "Aturat", description: "Has aturat la resposta." }

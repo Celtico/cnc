@@ -4,8 +4,8 @@ import { LuCheck, LuKeyRound, LuMessageSquare, LuPlugZap, LuTrash2, LuTriangleAl
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { SettingsGroup } from "../../components/SettingsGroup"
 import { ASSISTANT_MODELS, type AssistantPref } from "../../core/model"
-import { assistantError, maskKey } from "../assistant/errors"
-import { testKey } from "../assistant/claudeClient"
+import { maskKey } from "../assistant/errors"
+import { describeFailure, testKey } from "../assistant/claudeClient"
 
 /**
  * Preferències › Assistent IA (docs/xat-ia.md): la clau de l'API de Claude (només se'n veuen els 4 últims caràcters; no
@@ -38,7 +38,7 @@ export function AssistantPane({ value, onChange }: { value: AssistantPref; onCha
       const name = await testKey(value.apiKey, value.model)
       setTest({ state: "ok", text: `Funciona: la clau té accés a ${name}.` })
     } catch (e) {
-      const err = assistantError(e, typeof navigator === "undefined" ? true : navigator.onLine)
+      const err = await describeFailure(e)
       setTest({ state: "error", title: err.title, text: err.description })
     }
   }
