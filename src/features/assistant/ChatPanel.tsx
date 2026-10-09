@@ -33,7 +33,7 @@ interface Attached {
  * (`apply` en viu i `commit` en acabar). La conversa es queda mentre l'editor és obert.
  */
 export default function ChatPanel({ settings, target }: { settings: Settings; target: ChatTarget<unknown> }) {
-  const { toolset, getDoc, apply, commit } = target
+  const { getDoc, apply, commit } = target
   const apiKey = settings.assistant.apiKey
   const model = ASSISTANT_MODELS.find((m) => m.id === settings.assistant.model) ?? ASSISTANT_MODELS[0]
   const [items, setItems] = useState<Item[]>([])
@@ -122,7 +122,7 @@ export default function ChatPanel({ settings, target }: { settings: Settings; ta
       }
       content.push({ type: "text", text: text || "Mira aquesta imatge." })
       history.current.push({ role: "user", content })
-      const client = await makeClient(apiKey)
+      const [client, toolset] = await Promise.all([makeClient(apiKey), target.toolset()])
       const res = await runTurn({
         client,
         model: model.id,

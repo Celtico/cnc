@@ -1,7 +1,8 @@
 import { buildBounds, buildComposition } from "../../core/build/buildComposition"
-import type { AmbientToolContext, LibraryEntry } from "../../core/assistant/ambientTools"
+import { ambientToolSet, type AmbientToolContext, type LibraryEntry } from "../../core/assistant/ambientTools"
+import type { AssistantToolSet } from "../../core/assistant/toolset"
 import { uniqueName } from "../../core/file/mobleFile"
-import { compositionKind, resolveTemplateRef, withInnerClearance, type Settings } from "../../core/model"
+import { compositionKind, resolveTemplateRef, withInnerClearance, type Ambient, type Settings } from "../../core/model"
 import { compositionOf } from "../../db/compositionStore"
 import { createProject, db, type Project } from "../../db/db"
 
@@ -48,3 +49,6 @@ export async function createFromTemplate(ref: string, settings: Pick<Settings, "
 export function ambientToolContext(settings: Settings): AmbientToolContext {
   return { settings, library: readLibrary, createFromTemplate: (ref) => createFromTemplate(ref, settings) }
 }
+
+/** Les eines dels ambients amb aquest context (el xat les carrega a demanda). */
+export const ambientAssistantToolSet = (settings: Settings): AssistantToolSet<Ambient> => ambientToolSet(ambientToolContext(settings))

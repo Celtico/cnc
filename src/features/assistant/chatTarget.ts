@@ -5,7 +5,8 @@ import type { AssistantToolSet } from "../../core/assistant/toolset"
  * o ambient), llegir-lo, aplicar-hi un canvi en viu i fer el pas de desfer en acabar el torn; i què diu el xat buit.
  */
 export interface ChatTarget<D> {
-  toolset: AssistantToolSet<D>
+  /** Les eines i les instruccions, a demanda (`import()`: no van al bloc de l'editor; el primer missatge les carrega). */
+  toolset: () => Promise<AssistantToolSet<D>>
   getDoc: () => D
   apply: (next: D) => void
   commit: () => void
