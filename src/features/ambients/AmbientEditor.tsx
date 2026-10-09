@@ -1,4 +1,6 @@
 import { Alert, Badge, Box, Button, Dialog, Editable, Flex, HStack, IconButton, Menu, Portal, SegmentGroup, Slider, Stack, Switch, Text } from "@chakra-ui/react"
+import { shrinkImage } from "../imageShrink"
+import { blobToBase64 } from "../file/mobleIo"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   LuBox,
@@ -1228,7 +1230,7 @@ function CalibrateDialog({ open, measured, onClose, onApply }: { open: boolean; 
   )
 }
 
-/** Tria una imatge de plànol i la redueix (2400 px de costat llarg, JPEG). */
+/** Tria una imatge de plànol i la redueix (2400 px de costat llarg, JPEG; `shrinkImage`, la de tota l'app). */
 function pickPlanImage(): Promise<{ src: string; w: number; h: number } | null> {
   return new Promise((resolve) => {
     const input = document.createElement("input")
@@ -1237,25 +1239,9 @@ function pickPlanImage(): Promise<{ src: string; w: number; h: number } | null> 
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file) return resolve(null)
-      const img = new Image()
-      const url = URL.createObjectURL(file)
-      img.onload = () => {
-        const k = Math.min(1, 2400 / Math.max(img.width, img.height))
-        const c = document.createElement("canvas")
-        c.width = Math.round(img.width * k)
-        c.height = Math.round(img.height * k)
-        const g = c.getContext("2d")!
-        g.fillStyle = "#ffffff"
-        g.fillRect(0, 0, c.width, c.height)
-        g.drawImage(img, 0, 0, c.width, c.height)
-        URL.revokeObjectURL(url)
-        resolve({ src: c.toDataURL("image/jpeg", 0.85), w: c.width, h: c.height })
-      }
-      img.onerror = () => {
-        URL.revokeObjectURL(url)
-        resolve(null)
-      }
-      img.src = url
+      shrinkImage(file, 2400, { jpeg: true, quality: 0.85 })
+        .then(async ({ blob, width, height }) => resolve({ src: `data:image/jpeg;base64,${await blobToBase64(blob)}`, w: width, h: height }))
+        .catch(() => resolve(null))
     }
     input.click()
   })

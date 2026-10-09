@@ -1,3 +1,4 @@
+import { shrinkImage } from "../imageShrink"
 import {
   Alert,
   Box,
@@ -278,26 +279,6 @@ function totalDepthOf(panels: Panel[]): number {
         for (const cz of [0, p.thickness]) max = Math.max(max, origin[2] + cx * xAxis[2] + cy * yAxis[2] + cz * zAxis[2])
   }
   return max
-}
-
-/** Redueix la imatge a un màxim de `maxSide` px pel costat llarg (JPEG), per no omplir la base de dades. */
-async function shrinkImage(file: Blob, maxSide: number): Promise<{ blob: Blob; width: number; height: number }> {
-  const bitmap = await createImageBitmap(file)
-  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height))
-  if (scale >= 1) {
-    const out = { blob: file, width: bitmap.width, height: bitmap.height }
-    bitmap.close()
-    return out
-  }
-  const width = Math.round(bitmap.width * scale)
-  const height = Math.round(bitmap.height * scale)
-  const canvas = document.createElement("canvas")
-  canvas.width = width
-  canvas.height = height
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, width, height)
-  bitmap.close()
-  const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("No s'ha pogut reduir la imatge"))), "image/jpeg", 0.9))
-  return { blob, width, height }
 }
 
 let measureCounter = 0
