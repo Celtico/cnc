@@ -1,4 +1,4 @@
-import { Drawer, Portal } from "@chakra-ui/react"
+import { Box, Drawer, Portal, useBreakpointValue } from "@chakra-ui/react"
 import { lazy, Suspense, useMemo, useRef } from "react"
 import type { Settings } from "../../core/model"
 import { allToolSet, contextLine, setAppSettings } from "./appTools"
@@ -19,7 +19,7 @@ const APP_SUGGESTIONS = [
  * obre aquest calaix amb el xat de sempre (`ChatPanel`). Les eines són les de l'app (`appTools.ts`: on ets, buscar,
  * obrir, crear, anar a una pàgina) més les del document obert (`assistantHub.ts`), que es tornen a llegir a cada volta.
  * Cada missatge porta davant on és l'usuari i què té seleccionat. La conversa dura mentre l'app és oberta (sense
- * historial desat); el calaix es munta el primer cop que s'obre i es queda muntat.
+ * historial desat); el calaix es munta el primer cop que s'obre. Tancar-lo (només la ✕) acaba la conversa.
  */
 export default function GlobalAssistant({ open, onClose, settings }: { open: boolean; onClose: () => void; settings: Settings }) {
   const doc = useHubDoc()
@@ -49,16 +49,29 @@ export default function GlobalAssistant({ open, onClose, settings }: { open: boo
       suggestions: doc ? doc.target.suggestions : APP_SUGGESTIONS,
     }
   }, [doc])
+  // A l'ordinador, una columna a la dreta de l'app (per decisió de l'usuari: «encara que estigui obert, s'ha de poder
+  // navegar»): l'app s'estreny i tot continua a la vista i es pot fer servir. Al mòbil, el calaix a pantalla completa.
+  const docked = useBreakpointValue({ base: false, md: true }) ?? true
+  const panel = (
+    <Suspense fallback={null}>
+      <ChatPanel settings={settings} target={target} onClose={onClose} />
+    </Suspense>
+  )
+  if (docked)
+    return (
+      <Box as="aside" aria-label="Assistent" display={open ? "flex" : "none"} flexDirection="column" w="400px" flexShrink={0} h="100dvh" position="sticky" top={0} borderLeftWidth="1px" bg="bg.panel" px={4} py={3}>
+        {panel}
+      </Box>
+    )
   return (
-    <Drawer.Root open={open} onOpenChange={(e) => !e.open && onClose()} placement={{ base: "bottom", md: "end" }} size={{ base: "full", md: "md" }} lazyMount>
+    // Per decisió de l'usuari: no es tanca sol (ni clicant fora ni amb Esc) i no bloqueja l'app (es pot seguir treballant
+    // amb el calaix obert); només la ✕, que avisa que es perd la conversa (`ChatPanel` `onClose`).
+    <Drawer.Root open={open} modal={false} closeOnInteractOutside={false} closeOnEscape={false} trapFocus={false} preventScroll={false} placement="bottom" size="full" lazyMount>
       <Portal>
-        <Drawer.Backdrop />
-        <Drawer.Positioner>
-          <Drawer.Content pt="env(safe-area-inset-top)" pb="env(safe-area-inset-bottom)">
+        <Drawer.Positioner pointerEvents="none">
+          <Drawer.Content pointerEvents="auto" pt="env(safe-area-inset-top)" pb="env(safe-area-inset-bottom)">
             <Drawer.Body py={3} display="flex" flexDirection="column" minH={0}>
-              <Suspense fallback={null}>
-                <ChatPanel settings={settings} target={target} onClose={onClose} />
-              </Suspense>
+              {panel}
             </Drawer.Body>
           </Drawer.Content>
         </Drawer.Positioner>

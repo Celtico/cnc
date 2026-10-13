@@ -1064,7 +1064,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   l'assistent personal al menú principal… amb tot el context de l'app, que pugui fer tot el que pot fer una persona i
   que sàpiga si tinc alguna cosa seleccionada»): botó **«Assistent»** (`LuMessageSquare`) al menú principal, sota Mobles ·
   Ambients · Objectes (i a la barra de baix del mòbil), que obre un calaix (`features/assistant/GlobalAssistant.tsx`, a
-  demanda; es munta el primer cop i es queda muntat; sense historial desat). **Ja no hi ha pestanya «Assistent» a
+  demanda; es munta el primer cop i es queda muntat; sense historial desat). **A l'ordinador és una columna a la dreta** (per decisió de l'usuari: «encara que estigui obert, s'ha de poder navegar»): l'app s'estreny i es pot seguir treballant i navegant; al mòbil, el calaix a pantalla completa. **No es tanca sol** (ni clicant fora ni amb Esc); només la ✕, que, si hi ha conversa, pregunta «Tancar l'assistent?» (es perd la conversa) i en tancar-lo la buida. Si l'usuari puja a llegir, el xat no el torna avall mentre arriba text (només si ja era al final). **Ja no hi ha pestanya «Assistent» a
   l'Editor ni als Ambients** (`Workspace extra` sense ús). El document obert s'hi registra (`assistantHub.ts`:
   `registerDoc` amb el `ChatTarget` i una funció que diu la selecció amb els ids de les eines —mòdul, compartiment,
   peça, objecte de referència, element o paret de l'ambient—) i l'app hi posa la navegació (`registerNav`). Eines de

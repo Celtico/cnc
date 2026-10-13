@@ -1,4 +1,4 @@
-import { Alert, Badge, Box, Button, HStack, IconButton, Image, Stack, Text, Textarea } from "@chakra-ui/react"
+import { Alert, Badge, Box, Button, Dialog, HStack, IconButton, Image, Portal, Stack, Text, Textarea } from "@chakra-ui/react"
 import { useEffect, useRef, useState } from "react"
 import { LuCheck, LuCircleStop, LuImagePlus, LuMessageSquarePlus, LuSendHorizontal, LuTriangleAlert, LuWifiOff, LuWrench, LuX } from "react-icons/lu"
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages"
@@ -40,6 +40,7 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
   const [input, setInput] = useState("")
   const [attached, setAttached] = useState<Attached | null>(null)
   const [running, setRunning] = useState(false)
+  const [confirmClose, setConfirmClose] = useState(false)
   const [online, setOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine))
   const history = useRef<MessageParam[]>([])
   const abort = useRef<AbortController | null>(null)
@@ -69,11 +70,17 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
       own.forEach((u) => URL.revokeObjectURL(u))
     }
   }, [])
-  // Baixa fins al final quan arriba text nou.
+  // Baixa fins al final quan arriba text nou, però només si ja s'hi era: si l'usuari ha pujat a llegir (també mentre
+  // escriu la resposta), no se l'estira avall.
+  const atBottom = useRef(true)
   useEffect(() => {
     const el = list.current
-    if (el) el.scrollTop = el.scrollHeight
+    if (el && atBottom.current) el.scrollTop = el.scrollHeight
   }, [items])
+  const onListScroll = () => {
+    const el = list.current
+    if (el) atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40
+  }
 
   const updateLast = (fn: (it: Extract<Item, { role: "assistant" }>) => Extract<Item, { role: "assistant" }>) =>
     setItems((xs) => {
@@ -94,10 +101,24 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
     history.current = []
     setItems([])
   }
+  // Tancar el calaix acaba la conversa (no se'n desa l'historial): si n'hi ha, primer ho pregunta.
+  const close = () => {
+    if (items.length || running) setConfirmClose(true)
+    else onClose?.()
+  }
+  const closeAndForget = () => {
+    setConfirmClose(false)
+    newChat()
+    setInput("")
+    setAttached(null)
+    onClose?.()
+  }
 
   const send = async () => {
     const text = input.trim()
     if ((!text && !attached) || running) return
+    // El missatge nou es veu sempre: torna a seguir el final.
+    atBottom.current = true
     if (!apiKey) {
       setItems((xs) => [...xs, { id: nextId.current++, role: "assistant", parts: [], error: NO_KEY_ERROR }])
       return
@@ -186,12 +207,37 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
         </Tooltip>
         {onClose && (
           <Tooltip content="Tancar">
-            <IconButton size="xs" variant="ghost" aria-label="Tancar l'assistent" onClick={onClose}>
+            <IconButton size="xs" variant="ghost" aria-label="Tancar l'assistent" onClick={close}>
               <LuX />
             </IconButton>
           </Tooltip>
         )}
       </HStack>
+      <Dialog.Root role="alertdialog" open={confirmClose} onOpenChange={(e) => !e.open && setConfirmClose(false)}>
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Tancar l'assistent?</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <Text>
+                  Perdràs la conversa: no es desa.{running ? " La resposta que està escrivint s'aturarà." : ""} Els canvis que ha fet als mobles i ambients es queden (es poden desfer amb ⌘Z).
+                </Text>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Button variant="outline" onClick={() => setConfirmClose(false)}>
+                  Cancel·lar
+                </Button>
+                <Button colorPalette="red" onClick={closeAndForget}>
+                  <LuX /> Tancar i perdre la conversa
+                </Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
 
       {!apiKey && (
         <Alert.Root status="info" size="sm" flexShrink={0}>
@@ -213,7 +259,7 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
         </HStack>
       )}
 
-      <Box ref={list} flex={1} minH={0} overflowY="auto" css={{ scrollbarWidth: "thin" }} pr={1}>
+      <Box ref={list} onScroll={onListScroll} flex={1} minH={0} overflowY="auto" css={{ scrollbarWidth: "thin" }} pr={1}>
         {items.length === 0 ? (
           <Stack gap={2} py={2}>
             <Text fontSize="sm" color="fg.muted">

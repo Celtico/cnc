@@ -124,6 +124,9 @@ guardar historial».
 - **Sempre les mateixes eines i instruccions** (`allToolSet`): amb el pensament activat, l'API lliga cada bloc de
   pensament a les instruccions i a les eines; canviar-les en obrir un document a mitja conversa donava «Invalid
   signature in thinking block». Ara hi són totes des del principi i cada eina de document diu, si cal, que n'obri un.
+- **Columna a la dreta a l'ordinador** (el mateix dia): l'app s'estreny i es pot navegar amb l'assistent obert (al mòbil,
+  calaix a pantalla completa). No es tanca sol; la ✕ pregunta si es vol perdre la conversa i, si sí, la buida. Pujar a
+  llegir mentre arriba la resposta ja no et torna avall.
 - **Peces lliures, ferratges i materials** (el mateix dia: «i fer peces lliures?», «i ferratges?», «pot fer material?»):
   - amb un moble obert, les peces lliures amb les eines dels objectes (es fabriquen: `nest` segons el material) i una
     forma a mida (`polygon`: punts amb arcs, com l'editor de perfils);
