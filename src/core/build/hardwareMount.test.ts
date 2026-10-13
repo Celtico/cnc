@@ -102,7 +102,7 @@ describe("ferratge muntat", () => {
     for (const item of DEFAULT_HARDWARE_LIBRARY) {
       const m = hardwareMount(item)
       expect(m.error, item.engine).toBeUndefined()
-      // Els push latch DTC són «només 3D» amb mecanitzats a mà (`pushLatch.ts`): cap peça ni forat al muntatge.
+      // Un «només 3D» (cap a la biblioteca inicial des de la v29): cap peça ni forat al muntatge.
       if (item.engine === "model") {
         expect(m.model, item.id).toBeDefined()
         expect(m.panels, item.id).toEqual([])

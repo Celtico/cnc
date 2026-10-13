@@ -4,7 +4,7 @@ import {
   CompositionSchema,
   DEFAULT_HARDWARE_DEFAULTS,
   DEFAULT_MODULE_HARDWARE,
-  DEFAULT_HARDWARE_KITS, DTC_CATALOGUE_ITEMS, DTC_PUSH_LATCHES,
+  DEFAULT_HARDWARE_KITS, DTC_CATALOGUE_ITEMS,
   ACCESSORY_ITEMS,
   DEFAULT_HARDWARE_LIBRARY,
   DEFAULT_LEGACY_HARDWARE,
@@ -120,7 +120,7 @@ describe("ferratges per front (porta, calaix, abatible)", () => {
 
 describe("migració dels ferratges (v19)", () => {
   it("els items inicials surten dels números d'abans, i el kit d'un mòdul d'abans és el mateix que el d'un de nou", () => {
-    expect([...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_PUSH_LATCHES, ...DTC_CATALOGUE_ITEMS, ...ACCESSORY_ITEMS]).toEqual(DEFAULT_HARDWARE_LIBRARY)
+    expect([...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_CATALOGUE_ITEMS, ...ACCESSORY_ITEMS]).toEqual(DEFAULT_HARDWARE_LIBRARY)
     expect(kitFromLegacy(DEFAULT_LEGACY_HARDWARE)).toEqual(DEFAULT_MODULE_HARDWARE)
     expect(defaultModule("m", "x").hardware).toEqual(DEFAULT_MODULE_HARDWARE)
     for (const it of DEFAULT_HARDWARE_LIBRARY) expect(HardwareItemSchema.safeParse(it).success).toBe(true)

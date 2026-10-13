@@ -41,8 +41,12 @@ const mm = z.number().finite()
  * s'afegeixen a la biblioteca si no hi són (per id, com la v23); l'acabat negre mat dels laterals. Additiu.
  * v28: la resta del catàleg DTC 2026 (`V28_ITEMS`, `core/model/dtc/`): frontisses i plaques, guies, elevables, portes
  * corredisses, unions, suports, frontissa D, door opener i els jocs PURE-BOX HL i PURE-PRO HQ. Additiu, per id.
+ * v29: **fora els «només 3D»** (per decisió de l'usuari, 2026-10-13: «si no tenen mecanitzats, borra'ls»; «els que
+ * posa només 3D i estan buits, treu-los»): tots els inicials del motor `model` (push latch, door opener, frontissa D,
+ * elevable DQ, unions d'una v27/v28 anterior), els importats `model` sense `machining` i els inicials DTC que ja no són
+ * a la biblioteca de l'app. Els llocs que hi apuntaven tornen a l'item de l'app (`fixHardwareDefaults`).
  */
-export const SETTINGS_VERSION = 28
+export const SETTINGS_VERSION = 29
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -787,7 +791,10 @@ export function parseSettings(raw: unknown): SettingsParse {
   // v28: la resta del catàleg DTC 2026, si no hi és (per id).
   const withV28 = version < 28 ? [...withV27, ...V28_ITEMS.filter((k) => !withV27.some((x) => x.id === k.id)).map((k) => structuredClone(k))] : withV27
   if (withV28.length !== withV27.length) migrated = true
-  const hardware = fixHardwareDefaults(withV28, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
+  // v29: fora els «només 3D» sense mecanitzat i els inicials DTC que ja no són a la biblioteca de l'app.
+  const withV29 = version < 29 ? withV28.filter((x) => !(x.engine === "model" && (x.builtin || !x.machining?.length)) && !(x.builtin && x.maker === "DTC" && !DEFAULT_HARDWARE_LIBRARY.some((d) => d.id === x.id))) : withV28
+  if (withV29.length !== withV28.length) migrated = true
+  const hardware = fixHardwareDefaults(withV29, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
   if (hardware.changed) migrated = true
   // Prebroca dels cargols, una sola font: la regla desada o, a les preferències d'abans, la del primer joc de la
   // biblioteca (el que es feia servir); els jocs de la biblioteca en copien els números.

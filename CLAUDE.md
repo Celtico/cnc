@@ -61,9 +61,9 @@ plantes, models 3D i renders són **decoratius**: no s'hi dedica temps mentre el
 - [`docs/ferratges-jocs.md`](docs/ferratges-jocs.md): **jocs de ferratges paramètrics** llegits del catàleg en PDF (el camí
   principal a partir d'ara): el model `HardwareKit`, els calaixos de doble paret DTC (MAGIC-PRO, MAGIC-STAR ULTRA,
   DRAGON-PRO, PURE-PRO HK i HQ, PURE-BOX HL; catàleg 2026 a `docs/2026 DTC Home and Furniture Fittings Catalogue.pdf`),
-  els push latch DTC MS, **la resta del catàleg DTC** (frontisses i plaques, guies, elevables, portes corredisses,
-  unions, suports, frontissa D, door opener: què és cada item a l'app i què queda per col·locar), com es construeix, com
-  s'afegeix un joc nou i les hipòtesis de lectura pendents del taller.
+  **la resta del catàleg DTC** (frontisses i plaques, guies, suports de prestatge: què és cada item a l'app; el que es
+  va deixar fora i per què; les cotes del push latch per al taller), com es construeix, com s'afegeix un joc nou i les
+  hipòtesis de lectura pendents del taller.
 
 ## Principi de disseny
 L'usuari dissenya els mobles **des de la UI**, sense tocar codi. El codi defineix **capacitats genèriques** (carcassa,
@@ -411,16 +411,17 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   `dtcDoubleWall.ts` i una dada per sèrie: `dtcMagicPro.ts`, `dtcMagicStarUltra.ts`, `dtcDragonPro.ts`, `dtcPurePro.ts`—,
   constructor `core/build/drawerKit.ts` + `buildKitDrawers`, comanda `core/build/kitOrders.ts`; preferències **v23**,
   additiu: els jocs inicials s'afegeixen si no hi són; **v27**: els del catàleg DTC 2026 —MAGIC-STAR ULTRA, DRAGON-PRO,
-  PURE-PRO HK— i els **push latch DTC MS** (`core/model/pushLatch.ts`: motor `model` amb els mecanitzats del generador,
-  categoria «push»; el mòdul no els col·loca sol) s'afegeixen si no hi són, `V27_ITEMS`; test `build/dtcKits.test.ts`;
+  PURE-PRO HK— s'afegeixen si no hi són, `V27_ITEMS` (els push latch DTC MS d'aquella versió es van treure a la v29);
+  test `build/dtcKits.test.ts`;
   **v28**: la resta del catàleg DTC 2026 (`V28_ITEMS`, `DTC_CATALOGUE_ITEMS`, `core/model/dtc/`: **frontisses** de
   cassoleta C80/C81/C82/B80/B85 amb la placa de dos forats euro a la filera (`dtcHinges.ts`, motor `cup`), **plaques**
   (`dtcPlates.ts`, motor `plate`), **guies** ocultes, de boles i de rodets (`dtcSlides.ts`, motor `slide`: només els dos
-  forats del motor; les columnes del catàleg a `tags`), l'elevable DQ, unions amb els mecanitzats del generador, suports
-  de prestatge (`system32`), la frontissa D i el door opener (`dtcMisc.ts`), i els jocs PURE-BOX HL
-  (`kits/dtcPureBox.ts`) i PURE-PRO HQ de vidre; test `build/dtcCatalogue.test.ts`). **Només items amb mecanitzat**
-  (per decisió de l'usuari, 2026-10-13: «els que no pots ficar els mecanitzats, els treus»): els elevables SQ/SF/ST/SK/SE,
-  les portes corredisses, els suports DM, els calaixos de paret simple, els perns sols i els suports de barra no hi són. **El per defecte de cada lloc és sempre l'item de l'app** (`appItemOfEngine`: sense
+  forats del motor; les columnes del catàleg a `tags`), suports de prestatge (`system32`, `dtcMisc.ts`) i els jocs
+  PURE-BOX HL (`kits/dtcPureBox.ts`) i PURE-PRO HQ de vidre; test `build/dtcCatalogue.test.ts`). **Cap «només 3D»** (per
+  decisió de l'usuari, 2026-10-13: «els que no pots ficar els mecanitzats, els treus»; «els que posa només 3D i estan
+  buits, treu-los»): a la biblioteca només hi ha ferratges que un motor de l'app col·loca; elevables, portes corredisses,
+  suports DM, calaixos de paret simple, unions, frontissa D, door opener i push latch no hi són (la v29 els treu de les
+  preferències desades; les cotes del push latch i de les unions, a `docs/ferratges-jocs.md`). **El per defecte de cada lloc és sempre l'item de l'app** (`appItemOfEngine`: sense
   fabricant), mai el primer del catàleg del mateix motor (`kitFrom`, `fixHardwareDefaults`, `HardwarePane`)):
   vegeu Model del moble › Calaixos amb joc paramètric i `docs/ferratges-jocs.md`.
   Preferències **v24**: els jocs inicials (`builtin`) reben les dades del joc d'ara (guia de dos cossos, acabats); nom i
@@ -1782,7 +1783,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Visor 3D**: qualitat, escena de Presentació (terra i paret: materials de la biblioteca, `PresentationScene.floorMaterial`
   / `wallMaterial`, o les mostres ràpides; terra per defecte «Parquet de roure»), llum i «Cel del render». **Tema**:
   dia/nit/sistema i color principal (`theme/accent.ts` redirigeix les variables CSS de `wood`).
-- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 29 (fora els ferratges sense mecanitzat: els «només 3D» sense `machining` i els inicials DTC que ja no són a la biblioteca); 28 (la resta del catàleg DTC 2026, additiu); 27 (catàleg DTC 2026: jocs i push latch, additiu); 26 (`assistant`: clau de l'API i model,
+- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 29 (fora els «només 3D»: tots els inicials del motor `model`, els importats sense `machining` i els inicials DTC que ja no són a la biblioteca); 28 (la resta del catàleg DTC 2026, additiu); 27 (catàleg DTC 2026: jocs i push latch, additiu); 26 (`assistant`: clau de l'API i model,
   additiu; **la clau no surt mai** a l'export, `settingsToJson`, ni al `.moble`, i importar unes preferències no la toca,
   `importSettingsJson`); 25: `gaps.innerClearance`, 1 mm, additiu; 24: jocs inicials amb les dades d'ara; 23: jocs paramètrics de calaix (DTC MAGIC-PRO); 22: generador de mecanitzats; 21: tiradors, potes i «només 3D» importats; 20: ferratges importats; 19: biblioteca de ferratges; sense versió, additius en llegir: els accessoris de la biblioteca (`fixHardwareDefaults` afegeix l'item d'inici de cada lloc que falta) i la regla `kitPilot`): les migracions depenen només de la versió
   desada, que **mai baixa** (`saveSettings` desa la més alta). **Desades per una versió més nova**: només lectura

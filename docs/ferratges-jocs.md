@@ -187,28 +187,27 @@ l'item de l'app** (`appItemOfEngine`, sense fabricant): el catàleg no canvia ca
 | Plaques (pp. 69–70, 113–114, 147–148, 179–182, 197–198) | `dtcPlates.ts`: 13 items del motor `plate` (dos forats, quatre forats, en línia; les H i els cargols al número) | Dos forats a 32 a la filera; quatre: + 2 de fusta a 11 del davant; en línia: a 20 i 52 del davant. Com les importades: es llegeixen des d'una frontissa |
 | Guies ocultes MAGIC-MOVE TS, D-MOTION DS/SS/GG (pp. 505–592) | `dtcSlides.ts`: 14 items del motor `slide` (SKW = LW − 42 o − 49, SKL = NL − 10) | **Només els dos forats del motor** (37 i 37 + 224 al lateral; a la caixa, la prebroca del bloqueig); les columnes per NL i els forats Ø6 del darrere del calaix a `tags`: a confirmar amb la guia |
 | Guies de boles SUPER-RAIL i estàndard 45/36 (pp. 601–608), de rodets A/L (501–502) | 6 items `slide` (folgança 12,7 / 12,5) | Dos forats al lateral i a la caixa (prebroca Ø2) |
-| Elevable TOP-STAYS DQ (pp. 673–678) | `dtcMisc.ts`: item «només 3D» amb els 4 cargols euro del lateral i el suport del front al generador | Es col·loca a mà |
-| Unions (pp. 737–743): excèntriques Ø10/12/15/35, VB35/VB36, unió 25, fixació del fons | 8 items «només 3D» amb **mecanitzats del generador** (excèntrica a la cara, pern al cantell, forat a la peça que continua) | Es col·loquen a mà (sense UI des del 2026-10-08): les cotes hi són per al taller |
 | Suports de prestatge AC02 / AG02 (p. 743) | 2 items `system32` (piu Ø5 a la filera) | La filera de sempre |
-| Frontissa D (pp. 211–220) · door opener MS (207–210) | «només 3D» amb caixeres (tapa/base i porta) · amb 2 prebroques a la tapa | Es col·loquen a mà |
 
-**Fora, per decisió de l'usuari (2026-10-13: «els que no pots ficar els mecanitzats, els treus»)**: els elevables SQ/SF/ST/SK/SE
-(el catàleg no en dona les cotes de muntatge en una fitxa llegible), les portes corredisses TRACK-PRO CS/GT/R01/CF i els
-suports de suspensió DM, els calaixos de paret simple F11D–F15J, els perns M4 sols i els suports de barra BE02/BF02: cap
-item del catàleg sense mecanitzat (`dtcCatalogue.test.ts` ho comprova).
+**Fora, per decisió de l'usuari (2026-10-13: «els que no pots ficar els mecanitzats, els treus»; «els que posa només 3D
+i estan buits, treu-los»)**: tot el que seria «només 3D» (motor `model`, el muntatge surt buit i cap regla el col·loca):
+els elevables (també el DQ), les portes corredisses TRACK-PRO i els suports DM, els calaixos de paret simple, les unions
+(excèntriques, VB35/VB36, fixacions del fons), la frontissa D, el door opener, els push latch MS, els perns sols i els
+suports de barra. A la biblioteca només hi ha items que un motor de l'app col·loca (`dtcCatalogue.test.ts` ho comprova).
+Les preferències **v29** treuen els que una v27/v28 anterior ja havia desat i, en general, tot `model` inicial o importat
+sense `machining`. Les cotes que el catàleg dona d'aquests (unions, push latch) es queden aquí per al taller.
 
 Hipòtesis de lectura (a confirmar amb la peça a la mà, com les dels jocs): cargols de la cassoleta del tipus «5» a 45 /
 9,5 (el catàleg en dibuixa dos tipus); forats de les guies ocultes al lateral a 5 mm sobre la vora de baix de la caixa i
 segona columna a 224; fons dels calaixos amb guia oculta retirat 12; posicions de les plaques de quatre forats i en línia
 respecte de la filera.
 
-## Push latch DTC MS (obertura per pressió, pp. 205–206)
+## Push latch DTC MS (obertura per pressió, pp. 205–206): cotes per al taller
 
-Els «Tip-On» del taller (per decisió de l'usuari, per no haver de preguntar al germà): `core/model/pushLatch.ts`,
-`DTC_PUSH_LATCHES`, sis items a Preferències › Ferratges › «Obertura per pressió i imants», motor `model` («només 3D») amb
-els **mecanitzats del generador** (`machining`, cotes del catàleg), que es llegeixen a la secció Mecanitzats de l'editor
-del ferratge. **El mòdul no els col·loca sol**: l'avís `push` dels fronts sense tirador continua (és el pas que falta: un
-lloc «push» al mòdul que posi el latch al lateral o a la tapa a la vora que obre, i la contraplaca a la porta).
+Els «Tip-On» del taller. **No són a la biblioteca** (eren items «només 3D» amb els mecanitzats del generador, `pushLatch.ts`,
+trets a la v29 per decisió de l'usuari: el mòdul no els col·loca sol i el muntatge sortia buit); l'avís `push` dels fronts
+sense tirador continua, i les cotes són aquestes (el pas que falta: un lloc «push» al mòdul que posi el latch al lateral
+o a la tapa a la vora que obre, i la contraplaca a la porta):
 
 | Muntatge | Mecanitzat (cos del moble) | Contraplaca (porta) | Imant (frontissa sense molla) | Topall (frontissa amb tancament suau) |
 |---|---|---|---|---|

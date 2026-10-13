@@ -1,20 +1,17 @@
 import { describe, expect, it } from "vitest"
 import {
   DEFAULT_HARDWARE_KITS,
-  DEFAULT_HARDWARE_LIBRARY,
   DEFAULT_SETTINGS,
   DTC_DRAGON_PRO_HB01,
   DTC_DRAGON_PRO_HB0C,
   DTC_MAGIC_PRO_HT11,
   DTC_MAGIC_STAR_HD11,
   DTC_PURE_PRO_HK11,
-  DTC_PUSH_LATCHES,
   HardwareItemSchema,
   V27_ITEMS,
   chooseVariant,
   defaultModule,
   kitOptionsOf,
-  machiningProblems,
   parseSettings,
   widthRule,
   type Module,
@@ -139,35 +136,16 @@ describe("tots els jocs DTC", () => {
   })
 })
 
-describe("push latch DTC MS (pp. 205–206)", () => {
-  it("sis items «només 3D» amb els mecanitzats del generador vàlids, a la categoria push de la biblioteca", () => {
-    expect(DTC_PUSH_LATCHES).toHaveLength(6)
-    for (const it of DTC_PUSH_LATCHES) {
-      expect(HardwareItemSchema.safeParse(it).success, it.id).toBe(true)
-      expect(it.category).toBe("push")
-      expect(machiningProblems(it.machining!), it.id).toEqual([])
-      expect(DEFAULT_HARDWARE_LIBRARY.some((x) => x.id === it.id), it.id).toBe(true)
-    }
-    const inline = DTC_PUSH_LATCHES.find((x) => x.id === "push-dtc-ms-inline-magnet")!
-    expect(inline.ref).toBe("MSB01A01 (mitjà) · MSC01A01 (fort)")
-    expect(inline.machining!.filter((o) => o.part === "side").map((o) => o.p.at)).toEqual([-20, -52])
-    const builtIn = DTC_PUSH_LATCHES.find((x) => x.id === "push-dtc-ms-builtin-bumper")!
-    expect(builtIn.machining![0]).toMatchObject({ face: "edge", edge: "pmax", d: 10, depth: 72 })
-    expect(builtIn.params.stroke).toBe(40)
-  })
-})
-
 describe("v27: catàleg DTC 2026", () => {
-  it("unes preferències v26 reben els jocs nous i els push latch; unes v27 sense un d'ells no el tornen a rebre", () => {
+  it("unes preferències v26 reben els jocs nous; unes v27 sense un d'ells no el tornen a rebre", () => {
     const v26 = { ...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), version: 26, hardwareLibrary: DEFAULT_SETTINGS.hardwareLibrary.filter((x) => !V27_ITEMS.some((k) => k.id === x.id)) }
     const res = parseSettings(v26)
     expect(res.migrated).toBe(true)
     for (const k of V27_ITEMS) expect(res.settings.hardwareLibrary.some((x) => x.id === k.id), k.id).toBe(true)
     // El MAGIC-PRO d'abans es queda (amb l'acabat negre al joc de la biblioteca, no es toca: les còpies manen).
     expect(res.settings.hardwareLibrary.filter((x) => x.engine === "drawerKit")).toHaveLength(DEFAULT_HARDWARE_KITS.length)
-    const v27 = { ...JSON.parse(JSON.stringify(res.settings)), hardwareLibrary: res.settings.hardwareLibrary.filter((x) => x.id !== "kit-dtc-hb01" && x.id !== "push-dtc-ms-cross-magnet") }
+    const v27 = { ...JSON.parse(JSON.stringify(res.settings)), hardwareLibrary: res.settings.hardwareLibrary.filter((x) => x.id !== "kit-dtc-hb01") }
     const r2 = parseSettings(v27)
     expect(r2.settings.hardwareLibrary.some((x) => x.id === "kit-dtc-hb01")).toBe(false)
-    expect(r2.settings.hardwareLibrary.some((x) => x.id === "push-dtc-ms-cross-magnet")).toBe(false)
   })
 })

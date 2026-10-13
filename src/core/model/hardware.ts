@@ -6,7 +6,7 @@ import { repairAtomically, repairValue } from "./repair"
 import { MachiningListSchema, migratePlacePos, PlacementTargetSchema, PlacePosSchema, RepeatSchema, stepValue, StepRuleSchema, type StepRule } from "./hardwareOps"
 import { HardwareKitSchema, KIT_PILOT_PARAMS, kitSummary, type HardwareKit, type KitPilot } from "./hardwareKit"
 import { DTC_HINGES } from "./dtc/dtcHinges"
-import { DTC_D_HINGE, DTC_FITTINGS, DTC_LIFTS, DTC_SUPPORTS } from "./dtc/dtcMisc"
+import { DTC_SUPPORTS } from "./dtc/dtcMisc"
 import { DTC_PLATES } from "./dtc/dtcPlates"
 import { DTC_SLIDES } from "./dtc/dtcSlides"
 import { DTC_DRAGON_PRO_KITS } from "./kits/dtcDragonPro"
@@ -14,7 +14,6 @@ import { DTC_MAGIC_PRO_KITS } from "./kits/dtcMagicPro"
 import { DTC_MAGIC_STAR_KITS } from "./kits/dtcMagicStarUltra"
 import { DTC_PURE_BOX_KITS } from "./kits/dtcPureBox"
 import { DTC_PURE_PRO_GLASS_KITS, DTC_PURE_PRO_KITS } from "./kits/dtcPurePro"
-import { DTC_PUSH_LATCHES } from "./pushLatch"
 
 /**
  * Biblioteca de ferratges (millores v1, `docs/millores-v1/ferratges.md` §4): cada ferratge és **dades** (`HardwareItem`:
@@ -623,15 +622,15 @@ export function kitItem(id: string, name: string, kit: HardwareKit, pilot: { pil
 export const DEFAULT_HARDWARE_KITS: HardwareItem[] = [...DTC_MAGIC_PRO_KITS, ...DTC_MAGIC_STAR_KITS, ...DTC_DRAGON_PRO_KITS, ...DTC_PURE_PRO_KITS, ...DTC_PURE_PRO_GLASS_KITS, ...DTC_PURE_BOX_KITS].map((k) => kitItem(k.id, k.name, k.kit))
 
 const V27_KIT_IDS = new Set([...DTC_MAGIC_STAR_KITS, ...DTC_DRAGON_PRO_KITS, ...DTC_PURE_PRO_KITS].map((k) => k.id))
-/** Els items inicials que la v27 afegeix si no hi són: els jocs nous i els push latch DTC (`pushLatch.ts`). */
-export const V27_ITEMS: HardwareItem[] = [...DEFAULT_HARDWARE_KITS.filter((k) => V27_KIT_IDS.has(k.id)), ...DTC_PUSH_LATCHES]
+/** Els items inicials que la v27 afegeix si no hi són: els jocs nous (els push latch d'aquella versió es van treure a la v29). */
+export const V27_ITEMS: HardwareItem[] = DEFAULT_HARDWARE_KITS.filter((k) => V27_KIT_IDS.has(k.id))
 
 /**
  * La resta del catàleg DTC 2026 (v28, `core/model/dtc/`): frontisses de cassoleta i plaques, guies (ocultes, de boles,
- * de rodets), l'elevable DQ, unions i suports de prestatge, la frontissa D i el door opener, i els jocs PURE-BOX HL i
- * PURE-PRO HQ (vidre). Només els que mecanitzen la fusta (per decisió de l'usuari).
+ * de rodets), suports de prestatge i els jocs PURE-BOX HL i PURE-PRO HQ (vidre). Només els que un motor de l'app
+ * col·loca i mecanitza (per decisió de l'usuari: cap «només 3D»).
  */
-export const DTC_CATALOGUE_ITEMS: HardwareItem[] = [...DTC_HINGES, ...DTC_PLATES, ...DTC_SLIDES, ...DTC_LIFTS, ...DTC_FITTINGS, ...DTC_SUPPORTS, ...DTC_D_HINGE]
+export const DTC_CATALOGUE_ITEMS: HardwareItem[] = [...DTC_HINGES, ...DTC_PLATES, ...DTC_SLIDES, ...DTC_SUPPORTS]
 const V28_KIT_IDS = new Set([...DTC_PURE_PRO_GLASS_KITS, ...DTC_PURE_BOX_KITS].map((k) => k.id))
 /** Els items inicials que la v28 afegeix si no hi són. */
 export const V28_ITEMS: HardwareItem[] = [...DEFAULT_HARDWARE_KITS.filter((k) => V28_KIT_IDS.has(k.id)), ...DTC_CATALOGUE_ITEMS]
@@ -675,7 +674,7 @@ export const ACCESSORY_ITEMS: HardwareItem[] = [
 ]
 
 // En l'ordre en què les migracions els afegeixen (v23 jocs, v27 push, v28 catàleg i, al final, els accessoris que falten).
-export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_PUSH_LATCHES, ...DTC_CATALOGUE_ITEMS, ...ACCESSORY_ITEMS]
+export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_CATALOGUE_ITEMS, ...ACCESSORY_ITEMS]
 
 /** Un item és un joc paramètric que es pot fer servir (motor `drawerKit` amb el joc). */
 export const isDrawerKit = (item: HardwareItem): item is HardwareItem & { kit: HardwareKit } => item.engine === "drawerKit" && !!item.kit

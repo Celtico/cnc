@@ -3,9 +3,7 @@ import {
   DEFAULT_HARDWARE_LIBRARY,
   DEFAULT_SETTINGS,
   DTC_CATALOGUE_ITEMS,
-  DTC_FITTINGS,
   DTC_HINGES,
-  DTC_LIFTS,
   DTC_PLATES,
   DTC_PURE_BOX_HL12,
   DTC_PURE_PRO_HQ11,
@@ -47,9 +45,13 @@ describe("catàleg DTC 2026: items", () => {
     expect(DTC_HINGES.length).toBe(25)
     expect(DTC_PLATES.length).toBe(13)
     expect(DTC_SLIDES.length).toBe(20)
-    expect(DTC_LIFTS.length + DTC_FITTINGS.length + DTC_SUPPORTS.length).toBe(12)
-    // Per decisió de l'usuari: tot item del catàleg mecanitza alguna cosa (forats del motor o mecanitzats del generador).
-    for (const it of DTC_CATALOGUE_ITEMS) expect(it.targets.some((t) => t.ops.length > 0) || (it.machining?.length ?? 0) > 0, it.id).toBe(true)
+    expect(DTC_SUPPORTS.length).toBe(2)
+    // Per decisió de l'usuari: cap «només 3D»; tot item del catàleg el col·loca un motor de l'app i fa forats.
+    for (const it of DTC_CATALOGUE_ITEMS) {
+      expect(it.engine, it.id).not.toBe("model")
+      expect(it.targets.some((t) => t.ops.length > 0), it.id).toBe(true)
+    }
+    expect(DEFAULT_HARDWARE_LIBRARY.some((x) => x.engine === "model")).toBe(false)
   })
   it("frontissa C81 110°: cassoleta Ø35 × 11,5 a 22,5 (K 5), dos cargols a 45 i la placa de dos forats euro a la filera", () => {
     const h = cupSpec(byId("hinge-dtc-c81-110"))
@@ -93,11 +95,9 @@ describe("catàleg DTC 2026: items", () => {
     expect(b.panels.filter((p) => p.role === "drawerSide")[0]!.length).toBeLessThanOrEqual(490)
     expect(b.warnings.filter((w) => w.code === "hardware")).toEqual([])
   })
-  it("unions: l'excèntrica Ø15 porta la caixera a la cara, el pern al cantell i el forat a la peça que continua", () => {
-    const cam = byId("cam-dtc-15")
-    expect(cam.machining!.map((o) => [o.part, o.face, o.d, o.depth])).toEqual([["shelf", "A", 15, 12.5], ["shelf", "edge", 8, 36], ["side", "A", 5, 12]])
+  it("suports de prestatge: pius Ø5 a la filera (motor System 32)", () => {
     expect(byId("shelf-dtc-ac02").engine).toBe("system32")
-    expect(byId("hinge-dtc-d").machining!.every((o) => o.kind === "pocket")).toBe(true)
+    expect(byId("shelf-dtc-ag02").engine).toBe("system32")
   })
   it("els per defecte dels llocs continuen sent els items de l'app, encara que el catàleg en tingui del mateix motor", () => {
     const hw = kitFrom(DEFAULT_HARDWARE_LIBRARY, DEFAULT_SETTINGS.hardwareDefaults)
@@ -141,5 +141,25 @@ describe("v28: la resta del catàleg DTC 2026", () => {
     expect(res.settings.hardwareDefaults).toEqual(DEFAULT_SETTINGS.hardwareDefaults)
     const v28 = { ...JSON.parse(JSON.stringify(res.settings)), hardwareLibrary: res.settings.hardwareLibrary.filter((x) => x.id !== "hinge-dtc-c81-110") }
     expect(parseSettings(v28).settings.hardwareLibrary.some((x) => x.id === "hinge-dtc-c81-110")).toBe(false)
+  })
+})
+
+describe("v29: fora els ferratges sense mecanitzat", () => {
+  it("unes preferències v28 amb «només 3D» (inicials, o importats sense mecanitzat) i inicials DTC que ja no hi són els perden; els de l'app es queden", () => {
+    const stale = [
+      { ...DTC_HINGES[0]!, id: "push-dtc-ms-inline-magnet", name: "Push DTC", engine: "model" as const, params: {}, targets: [{ key: "model", label: "x", ops: [] }], machining: [{ id: "s1", part: "side" as const, kind: "drill" as const, face: "A" as const, p: { from: "ref" as const, at: -20 }, q: { from: "ref" as const, at: 0 }, d: 2, depth: 10 }], count: undefined, plate: undefined },
+      { ...DTC_HINGES[0]!, id: "lift-dtc-sq", name: "Elevable SQ", engine: "model" as const, params: {}, targets: [{ key: "model", label: "x", ops: [] }], count: undefined, plate: undefined },
+      { ...DTC_HINGES[0]!, id: "hw-user-only3d", name: "Importat només 3D", maker: "Hettich", builtin: false, engine: "model" as const, params: {}, targets: [{ key: "model", label: "x", ops: [] }], count: undefined, plate: undefined },
+    ]
+    const v28 = { ...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), version: 28, hardwareLibrary: [...DEFAULT_SETTINGS.hardwareLibrary, ...stale] }
+    const res = parseSettings(v28)
+    expect(res.migrated).toBe(true)
+    const ids = res.settings.hardwareLibrary.map((x) => x.id)
+    expect(ids).not.toContain("lift-dtc-sq")
+    expect(ids).not.toContain("hw-user-only3d")
+    expect(ids).not.toContain("push-dtc-ms-inline-magnet")
+    expect(ids).toContain("hinge-dtc-c81-110")
+    expect(res.settings.hardwareLibrary.length).toBe(DEFAULT_SETTINGS.hardwareLibrary.length)
+    expect(res.settings.hardwareLibrary.some((x) => x.engine === "model")).toBe(false)
   })
 })
