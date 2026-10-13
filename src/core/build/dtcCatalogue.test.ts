@@ -144,7 +144,7 @@ describe("v28: la resta del catàleg DTC 2026", () => {
   })
 })
 
-describe("v29: fora els ferratges sense mecanitzat", () => {
+describe("v29 / v30: fora els ferratges «només 3D»", () => {
   it("unes preferències v28 amb «només 3D» (inicials, o importats sense mecanitzat) i inicials DTC que ja no hi són els perden; els de l'app es queden", () => {
     const stale = [
       { ...DTC_HINGES[0]!, id: "push-dtc-ms-inline-magnet", name: "Push DTC", engine: "model" as const, params: {}, targets: [{ key: "model", label: "x", ops: [] }], machining: [{ id: "s1", part: "side" as const, kind: "drill" as const, face: "A" as const, p: { from: "ref" as const, at: -20 }, q: { from: "ref" as const, at: 0 }, d: 2, depth: 10 }], count: undefined, plate: undefined },
@@ -161,5 +161,11 @@ describe("v29: fora els ferratges sense mecanitzat", () => {
     expect(ids).toContain("hinge-dtc-c81-110")
     expect(res.settings.hardwareLibrary.length).toBe(DEFAULT_SETTINGS.hardwareLibrary.length)
     expect(res.settings.hardwareLibrary.some((x) => x.engine === "model")).toBe(false)
+    // Unes preferències que ja eren a la v29 (la primera, que no treia els `model` amb mecanitzat) també els perden a la v30.
+    const v29 = { ...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), version: 29, hardwareLibrary: [...DEFAULT_SETTINGS.hardwareLibrary, stale[0]] }
+    const r29 = parseSettings(v29)
+    expect(r29.migrated).toBe(true)
+    expect(r29.settings.hardwareLibrary.some((x) => x.id === "push-dtc-ms-inline-magnet")).toBe(false)
+    expect(r29.settings.version).toBe(30)
   })
 })
