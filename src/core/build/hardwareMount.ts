@@ -2,7 +2,7 @@ import { pairPlate, setConfirmed } from "../import/importItem"
 import { DEFAULT_GRILLE, DEFAULT_MODULE_HARDWARE, defaultModule, isPendingImport, slotForEngine, type Front, type HardwareItem, type Hole, type Module, type Panel, type PanelFitting, type Vec3 } from "../model"
 import { buildModule } from "./buildModule"
 import { kitHeight } from "./drawerKit"
-import { builtinSolids, shelfPins, solidBox } from "./hardwareSolids"
+import { builtinSolids, fixedSolids, shelfPins, solidBox } from "./hardwareSolids"
 import { r, toWorld } from "./geometry"
 import { HardwareError } from "./hardware"
 
@@ -412,7 +412,8 @@ function mountRegion(engine: HardwareItem["engine"], panels: Panel[], tags: stri
   if (boxHas(region)) {
     const base: Box = { min: [...region.min], max: [...region.max] }
     const pins = shelfPins(panels)
-    for (const p of panels) for (const s of builtinSolids(p, pins.get(p.id))) {
+    const fixed = fixedSolids(panels)
+    for (const p of panels) for (const s of builtinSolids(p, pins.get(p.id), fixed.get(p.id))) {
       const b = solidBox(p, s)
       if (boxGap(b, base) <= 30) addBox(region, b)
     }

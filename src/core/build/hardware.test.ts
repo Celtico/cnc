@@ -4,7 +4,7 @@ import {
   CompositionSchema,
   DEFAULT_HARDWARE_DEFAULTS,
   DEFAULT_MODULE_HARDWARE,
-  DEFAULT_HARDWARE_KITS,
+  DEFAULT_HARDWARE_KITS, DTC_CATALOGUE_ITEMS, DTC_PUSH_LATCHES,
   ACCESSORY_ITEMS,
   DEFAULT_HARDWARE_LIBRARY,
   DEFAULT_LEGACY_HARDWARE,
@@ -120,7 +120,7 @@ describe("ferratges per front (porta, calaix, abatible)", () => {
 
 describe("migració dels ferratges (v19)", () => {
   it("els items inicials surten dels números d'abans, i el kit d'un mòdul d'abans és el mateix que el d'un de nou", () => {
-    expect([...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...ACCESSORY_ITEMS]).toEqual(DEFAULT_HARDWARE_LIBRARY)
+    expect([...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_PUSH_LATCHES, ...DTC_CATALOGUE_ITEMS, ...ACCESSORY_ITEMS]).toEqual(DEFAULT_HARDWARE_LIBRARY)
     expect(kitFromLegacy(DEFAULT_LEGACY_HARDWARE)).toEqual(DEFAULT_MODULE_HARDWARE)
     expect(defaultModule("m", "x").hardware).toEqual(DEFAULT_MODULE_HARDWARE)
     for (const it of DEFAULT_HARDWARE_LIBRARY) expect(HardwareItemSchema.safeParse(it).success).toBe(true)
@@ -221,7 +221,9 @@ describe("referències als mobles desats (eliminar amb substitut)", () => {
     const doors = { ...c, modules: c.modules.map((m, i) => (i === 0 ? withRoot(m, { id: "r", split: { dir: "v" as const, sizes: ["auto", "auto"] as ("auto" | number)[], children: [{ id: "a", front: { kind: "door" as const, mode: "single" as const, hinge: "left" as const, hardware: mine } }, { id: "b" }] } }) : m)) }
     expect(hardwareRefIds(doors)).toEqual(expect.arrayContaining(["hinge-cup", "hw-1", "slide-ball"]))
     // Els jocs de calaix no tenen lloc al mòdul: només hi són si es trien a un calaix.
-    expect(hardwareRefIds(legacy(c))).toEqual(expect.arrayContaining(DEFAULT_HARDWARE_LIBRARY.filter((x) => x.engine !== "drawerKit").map((x) => x.id)))
+    // Els jocs de calaix i els push latch («només 3D») no tenen lloc al mòdul: només hi són si es trien.
+    // (El catàleg DTC tampoc: només els items de l'app són el per defecte de cada lloc.)
+    expect(hardwareRefIds(legacy(c))).toEqual(expect.arrayContaining(libraryFromLegacy(DEFAULT_LEGACY_HARDWARE).map((x) => x.id)))
     const other = copyHardwareItem(item("hinge-cup"), "hw-2", "Altra")
     const out = replaceHardwareRefs(doors, mine, other)
     expect(hardwareRefIds(out)).not.toContain("hw-1")
@@ -312,7 +314,7 @@ describe("dibuix del patró (Preferències › Ferratges)", () => {
       const p = hardwarePreview(it)
       expect(p.error, it.id).toBeUndefined()
       // Els accessoris no mecanitzen res (pendent del taller): cap peça d'exemple.
-      if (ACCESSORY_ITEMS.includes(it)) {
+      if (ACCESSORY_ITEMS.includes(it) || it.engine === "model" || it.targets.every((t) => !t.ops.length)) {
         expect(p.panels).toEqual([])
         continue
       }

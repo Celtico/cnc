@@ -3,7 +3,7 @@ import { Canvas, useThree } from "@react-three/fiber"
 import { useEffect, useMemo } from "react"
 import { NeutralToneMapping, Vector3, type WebGLRenderer } from "three"
 import { mountCamera, type HardwareMount } from "../../core/build/hardwareMount"
-import { shelfPins } from "../../core/build/hardwareSolids"
+import { fixedSolids, shelfPins } from "../../core/build/hardwareSolids"
 import type { MaterialPref, Panel } from "../../core/model"
 import { MovingPanel, PanelMesh } from "../../components/viewer/CabinetViewer"
 import { LOW_MEMORY } from "../../components/viewer/deviceLimits"
@@ -76,6 +76,7 @@ function MountScene({ mount, materials, open }: { mount: HardwareMount; material
   // Fusta translúcida i el ferratge opac (el protagonista); els suports de prestatge als forats de sota el prestatge.
   const solid = useMemo(() => new Set(mount.solid), [mount.solid])
   const pins = useMemo(() => shelfPins(mount.panels), [mount.panels])
+  const fixed = useMemo(() => fixedSolids(mount.panels), [mount.panels])
   return (
     <>
       <group position={center}>
@@ -84,7 +85,7 @@ function MountScene({ mount, materials, open }: { mount: HardwareMount; material
           const g = groupOf.get(p.id)
           return (
             <MovingPanel key={p.id} transform={g ? transformAt(g.motion, open) : null}>
-              <PanelMesh panel={p} exploded={false} showHoles edges materialMode="role" materials={materials} hardware pins={pins.get(p.id)} seeThrough={!solid.has(p.id)} proposedTags={tags} />
+              <PanelMesh panel={p} exploded={false} showHoles edges materialMode="role" materials={materials} hardware pins={pins.get(p.id)} fixed={fixed.get(p.id)} seeThrough={!solid.has(p.id)} proposedTags={tags} />
             </MovingPanel>
           )
         })}

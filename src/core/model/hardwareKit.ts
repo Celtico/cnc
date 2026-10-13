@@ -42,12 +42,13 @@ const BACK_IDS = KIT_BACKS.map((b) => b.id) as [KitBack, ...KitBack[]]
 
 /**
  * Acabats (color) dels laterals de doble paret que es venen: el nom és el d'un material del 3D (`resolveFinish`: si no
- * és a Materials, el color surt de la paraula clau «blanc» / «gris»). Només canvia el color al visor; els números
+ * és a Materials, el color surt de la paraula clau «blanc» / «gris» / «negre»). Només canvia el color al visor; els números
  * d'article del catàleg són els mateixos.
  */
 export const KIT_FINISHES = [
   { id: "white", label: "Blanc seda", short: "Blanc", material: "Blanc seda" },
   { id: "grey", label: "Gris mat", short: "Gris", material: "Gris mat" },
+  { id: "black", label: "Negre mat", short: "Negre", material: "Negre mat" },
 ] as const
 export type KitFinish = (typeof KIT_FINISHES)[number]["id"]
 const FINISH_IDS = KIT_FINISHES.map((f) => f.id) as [KitFinish, ...KitFinish[]]

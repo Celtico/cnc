@@ -15,7 +15,7 @@ import { MoveGizmo } from "./MoveGizmo"
 import { useViewerCursor } from "./cursor"
 import { usePixelScale, type Axis } from "./pixelScale"
 import { CircleGeometry, NeutralToneMapping, DoubleSide, Group, InstancedMesh, Matrix4, MeshBasicMaterial, Object3D, Plane, Vector3, type Material } from "three"
-import { shelfPins } from "../../core/build/hardwareSolids"
+import { fixedSolids, shelfPins, type HwSolid } from "../../core/build/hardwareSolids"
 import { type ViewName } from "./viewNames"
 export type { ViewName } from "./viewNames"
 
@@ -232,6 +232,23 @@ export function CabinetViewer({
     pinCache.current = next
     return out
   }, [panels, hardware])
+  // Les parts fixes dels ferratges dels fronts (placa de la frontissa, cos del push) per la peça que les porta, amb la
+  // mateixa memòria per referència.
+  const fixedCache = useRef(new Map<string, { key: string; solids: HwSolid[] }>())
+  const fixedOf = useMemo(() => {
+    const out = new Map<string, HwSolid[]>()
+    if (!hardware) return out
+    const next = new Map<string, { key: string; solids: HwSolid[] }>()
+    for (const [id, solids] of fixedSolids(panels)) {
+      const key = JSON.stringify(solids)
+      const prev = fixedCache.current.get(id)
+      const keep = prev && prev.key === key ? prev : { key, solids }
+      next.set(id, keep)
+      out.set(id, keep.solids)
+    }
+    fixedCache.current = next
+    return out
+  }, [panels, hardware])
   // Callbacks estables per a totes les peces (la peça arriba com a dada): el que fan llegeix les props d'ara.
   const live = useRef({ onSelectModule, onSelectPart, onSelectHardware, modules, size })
   useEffect(() => {
@@ -359,6 +376,7 @@ export function CabinetViewer({
                 materials={materials}
                 hardware={hardware}
                 pins={pinsOf.get(p.id)}
+                fixed={fixedOf.get(p.id)}
                 onHover={onSelectModule && !isPart ? onPanelHover : undefined}
                 onClick={(isPart ? onSelectPart : onSelectModule) ? onPanelClick : undefined}
                 selectedFitting={selectedHardwareId && p.fittings?.some((f) => f.placement === selectedHardwareId) ? selectedHardwareId : null}
@@ -1379,6 +1397,7 @@ interface PanelMeshProps {
   hardware?: boolean
   /** Forats de la filera System 32 de la peça amb un suport de prestatge (`shelfPins`), per al dibuix dels ferratges. */
   pins?: readonly Hole[]
+  fixed?: readonly HwSolid[]
   /**
    * Fusta translúcida («Com va muntat» de Preferències › Ferratges): la peça es veu a través (opacitat 0,4, sense
    * escriure la profunditat) i el ferratge, opac, és el protagonista. Els forats es continuen veient.
@@ -1438,6 +1457,7 @@ export const PanelMesh = memo(function PanelMesh({
   edges = true,
   hardware = false,
   pins,
+  fixed,
   seeThrough = false,
   proposedTags,
   selectedFitting,
@@ -1526,7 +1546,7 @@ export const PanelMesh = memo(function PanelMesh({
         ) : (
           <HoleMarks holes={vpanel.holes} thickness={T} />
         ))}
-        {hardware && <PanelHardware panel={vpanel} pins={pins} />}
+        {hardware && <PanelHardware panel={vpanel} pins={pins} fixed={fixed} />}
         {(hardware || selectedFitting) && <PanelFittings panel={vpanel} models={hardware} selected={selectedFitting} onSelect={onSelectFitting} />}
         {vpanel.grooves.map((g, i) => (
           <mesh key={`g${i}`} position={[(g.x + g.w / 2) * S, (g.y + g.h / 2) * S, g.face === "A" ? T - (g.depth * S) / 2 + 0.0002 : (g.depth * S) / 2 - 0.0002]}>

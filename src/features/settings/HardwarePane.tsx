@@ -26,6 +26,7 @@ import { hardwareMount, mountPlan, type HardwareMount } from "../../core/build/h
 import { movingGroups } from "../../components/viewer/opening"
 import {
   DEFAULT_MODULE_HARDWARE,
+  appItemOfEngine,
   HARDWARE_CATEGORIES,
   HARDWARE_PARAMS,
   HARDWARE_ROLES,
@@ -136,7 +137,7 @@ export function HardwareList({
     // Un de nou parteix del per defecte d'aquell lloc (els mateixos mecanitzats i números), amb id i nom nous.
     const slot = slotForEngine(engine)
     // (El per defecte de «Guia de calaix» pot ser un joc: una guia nova parteix sempre d'una guia.)
-    const base = items.find((x) => x.id === defaults[slot.slot] && x.engine === engine) ?? items.find((x) => x.engine === engine)
+    const base = items.find((x) => x.id === defaults[slot.slot] && x.engine === engine) ?? appItemOfEngine(items, engine)
     if (!base) return
     const item = copyHardwareItem(base, newId("hw"), uniqueName(`${slot.label} nova`))
     onChange([item, ...items])

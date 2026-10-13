@@ -1,5 +1,5 @@
 import type { Hole, Panel, Vec3 } from "../model"
-import { toWorld } from "./geometry"
+import { toLocal, toWorld } from "./geometry"
 
 /**
  * **Dibuix 3D dels ferratges de l'app** (els de sèrie, sense model importat): caixes i cilindres senzills però
@@ -10,14 +10,16 @@ import { toWorld } from "./geometry"
  *
  * Coordenades locals de la peça (mm): x al llarg (`length`), y a l'ample (`width`), z al gruix (cara A a z = gruix).
  *
- * - **Frontissa** (cassoleta `hinge`): la cassoleta dins del forat amb l'ala de cargols, el braç que va al lateral i la
- *   placa a la cara de dins del lateral (tot amb el front: s'obre amb ell).
+ * - **Frontissa** (cassoleta `hinge`): la cassoleta dins del forat amb l'ala de cargols i el braç (amb el front: s'obren
+ *   amb ell); la **placa**, fixa a la cara de dins del lateral (`fixedSolids`: es calcula des del front i es pinta amb
+ *   la peça que la porta, així no es mou en obrir la porta).
  * - **System 32**: un suport de prestatge (`pins`, els forats de la filera just sota un prestatge, `shelfPins`).
  * - **Espiga** (`dowel`, al forat de cara): el cilindre de faig sencer, la resta fora de la cara (dins de la unió).
  * - **Guia de calaix** (`slide`): el cos de la guia al lateral del moble i la corredora al lateral de la caixa.
  * - **Braç d'abatible** (`flap`): la placa al front i el braç cap a dins.
  * - **Imant** (`magnet`): el catxet al cantell i la placa d'acer a la cara.
- * - **Push** (`Panel.push`): el cos del Tip-On darrere del front, a la vora que obre, amb l'empenyedor.
+ * - **Push** (`Panel.push`): el cos del Tip-On amb l'empenyedor, **fix al moble** (`fixedSolids`: al lateral de la vora
+ *   que obre, o a la peça que hi ha darrere del front), no al front.
  * - **Barra de penjar** (`rail-…`): els dos suports dels extrems. **Tira LED** (`led-…`): el perfil d'alumini al voltant.
  */
 export type HwMaterial = "nickel" | "steel" | "dark" | "plastic" | "beech" | "alu"
@@ -96,33 +98,42 @@ function nearestEdge(p: Panel, x: number, y: number): { e: Vec3; d: number } {
 /** El front porta el model d'una frontissa importada (llevat del tirador, la pota i els col·locats a mà). */
 const hasImportedHinge = (p: Panel) => (p.fittings ?? []).some((f) => f.kind !== "handle" && f.kind !== "leg" && f.kind !== "item")
 
-/** Frontissa de cassoleta de l'app: cassoleta i ala a la porta, braç i placa contra la cara de dins del lateral. */
-function hingeSolids(p: Panel): HwSolid[] {
+/** Les cassoletes d'un front de l'app amb el marc de cada una (e cap al cantell de les frontisses, n fora de la cara). */
+function hingeFrames(p: Panel): { f: ReturnType<typeof frame>; R: number; depth: number; sf: number }[] {
   if (!FRONTS.has(p.role) || hasImportedHinge(p)) return []
   const T = p.thickness
-  const out: HwSolid[] = []
+  const out: { f: ReturnType<typeof frame>; R: number; depth: number; sf: number }[] = []
   for (const h of p.holes) {
     if (h.tag !== "hinge" || (h.face !== "A" && h.face !== "B")) continue
     const n: Vec3 = h.face === "A" ? [0, 0, 1] : [0, 0, -1]
     const { e, d } = nearestEdge(p, h.x, h.y)
     const a = cross(n, e)
-    const f = frame([h.x, h.y, h.face === "A" ? T : 0], e, a, n)
-    const R = h.diameter / 2
     // La cara de dins del lateral: un gruix (el del front, el del cos sol ser el mateix) cap a dins des del cantell.
-    const sf = d - T
+    out.push({ f: frame([h.x, h.y, h.face === "A" ? T : 0], e, a, n), R: h.diameter / 2, depth: h.depth, sf: d - T })
+  }
+  return out
+}
+
+/** Frontissa de cassoleta de l'app, el que va amb el front: cassoleta, ala i braç (la placa és a `hingeFixed`). */
+function hingeSolids(p: Panel): HwSolid[] {
+  const out: HwSolid[] = []
+  for (const { f, R, depth, sf } of hingeFrames(p)) {
     out.push(
       // Cassoleta (dins del forat: es veu a través de la fusta translúcida) i la seva ala amb els dos cargols.
-      f.cyl(0, 0, [-h.depth, 1.5], R - 0.3, "nickel"),
+      f.cyl(0, 0, [-depth, 1.5], R - 0.3, "nickel"),
       f.box([-7, 7], [-(R + 11), R + 11], [0, 1.5], "nickel"),
       // Coll: de la cassoleta cap al lateral, una mica per sobre de la cara.
       f.box([sf - 20, Math.min(8, sf + 4)], [-9, 9], [0, 12], "nickel"),
       // Braç al llarg de la cara de dins del lateral, cap a dins del moble.
       f.box([sf - 20, sf - 10], [-9, 9], [2, 66], "nickel"),
-      // Placa de muntatge, cargolada al lateral (a la filera de 37 mm des del davant).
-      f.box([sf - 10, sf], [-21, 21], [17, 61], "dark"),
     )
   }
   return out
+}
+
+/** La placa de muntatge de cada frontissa (coordenades del front): cargolada al lateral, a la filera de 37 del davant. */
+function hingeFixed(p: Panel): HwSolid[] {
+  return hingeFrames(p).map(({ f, sf }) => f.box([sf - 10, sf], [-21, 21], [17, 61], "dark"))
 }
 
 /** Guia de calaix: cos al lateral del moble (12 × 45) i corredora a la caixa (10 × 35), al llarg de la filera de forats. */
@@ -228,8 +239,11 @@ function magnetSolids(p: Panel): HwSolid[] {
   return out
 }
 
-/** Push (Tip-On): el cos darrere del front, a la vora que obre (la contrària de les frontisses) o al mig, i l'empenyedor. */
-function pushSolids(p: Panel): HwSolid[] {
+/**
+ * Push (Tip-On), en coordenades del front: el cos a la vora que obre (la contrària de les frontisses) o al mig, darrere
+ * del front, i l'empenyedor. És **fix al moble** (`fixedSolids` el passa a la peça que el porta).
+ */
+function pushFixed(p: Panel): HwSolid[] {
   if (!p.push || !FRONTS.has(p.role)) return []
   const T = p.thickness
   const cups = p.holes.filter((h) => h.tag === "hinge" && (h.face === "A" || h.face === "B"))
@@ -282,8 +296,56 @@ function ledSolids(p: Panel): HwSolid[] {
  * Els ferratges de sèrie d'una peça, en coordenades locals (mm). `pins`: els forats de la filera System 32 on hi ha un
  * suport de prestatge (`shelfPins`).
  */
-export function builtinSolids(p: Panel, pins: readonly Hole[] = []): HwSolid[] {
-  return [...hingeSolids(p), ...slideSolids(p), ...dowelSolids(p), ...pinSolids(p, pins), ...flapSolids(p), ...magnetSolids(p), ...pushSolids(p), ...railSolids(p), ...ledSolids(p)]
+export function builtinSolids(p: Panel, pins: readonly Hole[] = [], fixed: readonly HwSolid[] = []): HwSolid[] {
+  return [...hingeSolids(p), ...slideSolids(p), ...dowelSolids(p), ...pinSolids(p, pins), ...flapSolids(p), ...magnetSolids(p), ...railSolids(p), ...ledSolids(p), ...fixed]
+}
+
+const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+const dirToWorld = (p: Panel, d: Vec3): Vec3 => {
+  const { xAxis, yAxis, zAxis } = p.placement
+  return add(add(scale(xAxis, d[0]), scale(yAxis, d[1])), scale(zAxis, d[2]))
+}
+const dirToLocal = (p: Panel, d: Vec3): Vec3 => [dot(d, p.placement.xAxis), dot(d, p.placement.yAxis), dot(d, p.placement.zAxis)]
+
+/** El mateix sòlid, expressat en les coordenades d'una altra peça. */
+function rehost(src: Panel, s: HwSolid, dst: Panel): HwSolid {
+  const c = toLocal(dst, toWorld(src, s.c))
+  const re = (d: Vec3) => dirToLocal(dst, dirToWorld(src, d))
+  return s.kind === "box" ? { ...s, c, axes: [re(s.axes[0]), re(s.axes[1]), re(s.axes[2])] } : { ...s, c, axis: re(s.axis) }
+}
+
+/** La peça del moble (no un front) a la cara de la qual toca aquest punt (món): a menys de `tol` d'una cara i dins de la peça. */
+function hostAt(panels: readonly Panel[], w: Vec3, tol: number): Panel | undefined {
+  let best: { p: Panel; gap: number } | undefined
+  for (const p of panels) {
+    if (FRONTS.has(p.role) || p.role === "hardware") continue
+    const l = toLocal(p, w)
+    if (l[0] < -2 || l[0] > p.length + 2 || l[1] < -2 || l[1] > p.width + 2) continue
+    const gap = Math.min(Math.abs(l[2]), Math.abs(l[2] - p.thickness))
+    if (gap <= tol && (!best || gap < best.gap)) best = { p, gap }
+  }
+  return best?.p
+}
+
+/**
+ * **Les parts fixes al moble** dels ferratges dels fronts (per decisió de l'usuari: en obrir, només es mou el que va
+ * collat a la part mòbil): la placa de cada frontissa i el cos del push (Tip-On). Es calculen des del front (saben on és
+ * la cassoleta o la vora que obre) i es tornen per la peça que les porta —el lateral, divisor, tapa o base a la cara del
+ * qual toquen—, en les seves coordenades, perquè es pintin amb ella i no es moguin amb el front. Si cap peça hi toca
+ * (un front sol, el muntatge de Preferències sense lateral), es queden amb el front.
+ */
+export function fixedSolids(panels: readonly Panel[]): Map<string, HwSolid[]> {
+  const out = new Map<string, HwSolid[]>()
+  const put = (id: string, s: HwSolid) => out.set(id, [...(out.get(id) ?? []), s])
+  for (const p of panels) {
+    if (!FRONTS.has(p.role)) continue
+    for (const s of [...hingeFixed(p), ...pushFixed(p)]) {
+      const host = hostAt(panels, toWorld(p, s.c), 14)
+      if (host) put(host.id, rehost(p, s, host))
+      else put(p.id, s)
+    }
+  }
+  return out
 }
 
 /** Els vuit vèrtexs (o la caixa que conté el cilindre) d'un sòlid, en coordenades locals. */

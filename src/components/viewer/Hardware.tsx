@@ -4,6 +4,7 @@ import { Box3, MeshStandardMaterial, Vector3 } from "three"
 import { BoxFrame } from "./BoxFrame"
 import { useViewerCursor } from "./cursor"
 import type { Hole, Panel, PanelFitting } from "../../core/model"
+import type { HwSolid } from "../../core/build/hardwareSolids"
 import { builtinHardwareGroup, fittingMatrix } from "./hardwareShapes"
 import { loadedModel, loadModel, onModelsLoaded } from "./models3d"
 
@@ -45,8 +46,8 @@ function BarHandle({ cx, cy, z, dir, len, vertical }: { cx: number; cy: number; 
  * suports de prestatge —`pins`—, braços, imants, push, suports de la barra, perfil LED; només visuals, fora del render)
  * i, als fronts, el tirador de barra genèric.
  */
-export function PanelHardware({ panel, pins }: { panel: Panel; pins?: readonly Hole[] }) {
-  const builtin = useMemo(() => builtinHardwareGroup(panel, pins), [panel, pins])
+export function PanelHardware({ panel, pins, fixed }: { panel: Panel; pins?: readonly Hole[]; fixed?: readonly HwSolid[] }) {
+  const builtin = useMemo(() => builtinHardwareGroup(panel, pins, fixed), [panel, pins, fixed])
   return (
     <>
       {/* Geometries i materials compartits: r3f no els ha d'alliberar en desmuntar-se. */}

@@ -1,6 +1,6 @@
 import { Box3, BoxGeometry, CircleGeometry, Group, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial, PerspectiveCamera, Vector3, type Object3D } from "three"
 import { mountCamera, type HardwareMount } from "../../core/build/hardwareMount"
-import { shelfPins } from "../../core/build/hardwareSolids"
+import { fixedSolids, shelfPins } from "../../core/build/hardwareSolids"
 import type { MaterialPref, Panel, PanelFitting } from "../../core/model"
 import { buildScene } from "./exportGlb"
 import { exportablePanel } from "./exportablePanel"
@@ -52,6 +52,7 @@ export function renderHardwareThumb(mount: HardwareMount, materials: MaterialPre
   // fusta, translúcida i sense fer ombra (com a «Com va muntat»): el ferratge, opac, és el protagonista.
   const solid = new Set(mount.solid)
   const pins = shelfPins(mount.panels)
+  const fixed = fixedSolids(mount.panels)
   mount.panels.forEach((p: Panel, i) => {
     const holder = root.children[i]
     if (!holder) return
@@ -77,7 +78,7 @@ export function renderHardwareThumb(mount: HardwareMount, materials: MaterialPre
       im.computeBoundingSphere()
       holder.add(im)
     }
-    const builtin = builtinHardwareGroup(p, pins.get(p.id))
+    const builtin = builtinHardwareGroup(p, pins.get(p.id), fixed.get(p.id))
     if (builtin) holder.add(builtin)
     for (const f of p.fittings ?? []) {
       const o = fitting(f, p.thickness)

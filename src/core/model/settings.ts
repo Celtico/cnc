@@ -2,7 +2,7 @@ import { z } from "zod"
 import { DEFAULT_CABINET } from "./cabinet"
 import { type Module } from "./composition"
 import { migrateImportedNames } from "../import/hettichNames"
-import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, fixHardwareDefaults, kitFrom, kitPilotFromLibrary, libraryFromLegacy, setKitPilot } from "./hardware"
+import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, V27_ITEMS, V28_ITEMS, fixHardwareDefaults, kitFrom, kitPilotFromLibrary, libraryFromLegacy, setKitPilot } from "./hardware"
 import { DEFAULT_KIT_PILOT, KitPilotSchema } from "./hardwareKit"
 import { PHOTO_MATERIALS } from "./textureSets"
 import { deepEqual, MATERIAL_MERGES, rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
@@ -37,8 +37,12 @@ const mm = z.number().finite()
  * valor inicial (si ja n'hi ha una, es queda). Els mobles desats no canvien (sense el camp, 0).
  * v26: assistent IA (`assistant`: clau de l'API de Claude i model): additiu; sense, sense clau i el model per defecte.
  * La clau no surt mai a l'export (`settingsToJson`) i importar-ne unes no la toca (`importSettingsJson`).
+ * v27: catàleg DTC 2026: els jocs MAGIC-STAR ULTRA, DRAGON-PRO i PURE-PRO HK i els push latch MS (`V27_ITEMS`)
+ * s'afegeixen a la biblioteca si no hi són (per id, com la v23); l'acabat negre mat dels laterals. Additiu.
+ * v28: la resta del catàleg DTC 2026 (`V28_ITEMS`, `core/model/dtc/`): frontisses i plaques, guies, elevables, portes
+ * corredisses, unions, suports, frontissa D, door opener i els jocs PURE-BOX HL i PURE-PRO HQ. Additiu, per id.
  */
-export const SETTINGS_VERSION = 26
+export const SETTINGS_VERSION = 28
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -777,7 +781,13 @@ export function parseSettings(raw: unknown): SettingsParse {
       })
     : withKits
   if (freshKits.some((x, i) => x !== withKits[i])) migrated = true
-  const hardware = fixHardwareDefaults(freshKits, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
+  // v27: els jocs i els push latch del catàleg DTC 2026, si no hi són (per id; un d'esborrat a propòsit torna un sol cop).
+  const withV27 = version < 27 ? [...freshKits, ...V27_ITEMS.filter((k) => !freshKits.some((x) => x.id === k.id)).map((k) => structuredClone(k))] : freshKits
+  if (withV27.length !== freshKits.length) migrated = true
+  // v28: la resta del catàleg DTC 2026, si no hi és (per id).
+  const withV28 = version < 28 ? [...withV27, ...V28_ITEMS.filter((k) => !withV27.some((x) => x.id === k.id)).map((k) => structuredClone(k))] : withV27
+  if (withV28.length !== withV27.length) migrated = true
+  const hardware = fixHardwareDefaults(withV28, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
   if (hardware.changed) migrated = true
   // Prebroca dels cargols, una sola font: la regla desada o, a les preferències d'abans, la del primer joc de la
   // biblioteca (el que es feia servir); els jocs de la biblioteca en copien els números.

@@ -11,7 +11,13 @@ del catàleg; **no hi ha laterals de fusta** en un calaix de doble paret).
 
 El primer joc (la prova) és el calaix de doble paret **DTC MAGIC-PRO HT11**, alçada **M** (lateral de 88); hi són també
 l'HT10 N (62,5), l'HT12 K (126), l'HT13 C (174) i l'HT14 F (238), que tenen la mateixa estructura al catàleg
-(`core/model/kits/dtcMagicPro.ts`, amb les pàgines citades al comentari de dalt).
+(`core/model/kits/dtcMagicPro.ts`, amb les pàgines citades al comentari de dalt). Del **catàleg DTC 2026**
+(`docs/2026 DTC Home and Furniture Fittings Catalogue.pdf`, 374 pàgines dobles; el MAGIC-PRO hi és a les mateixes pàgines i
+amb els mateixos números que al 2024) hi ha també les altres sèries de calaix de doble paret amb front de fusta, vegeu
+«Les sèries DTC (catàleg 2026)»: **MAGIC-STAR ULTRA** (HD11–HD14), **DRAGON-PRO** (HB01, HB02, HB03, HB0C, HB04) i
+**PURE-PRO HK** (HK11–HK13). Totes surten del mateix constructor de dades, `core/model/kits/dtcDoubleWall.ts`
+(`doubleWallKit`): cada sèrie només dona els números, les alçades i les cotes (`DoubleWallSpec`); els components, les
+formes 3D i l'ordre són els mateixos per a totes.
 
 ## On viu
 
@@ -20,8 +26,8 @@ l'HT10 N (62,5), l'HT12 K (126), l'HT13 C (174) i l'HT14 F (238), que tenen la m
   mobles (`front.hardware`) i al `.moble` sense cap camí nou. Preferències **v23** (additiu): els jocs inicials s'afegeixen
   a la biblioteca si no hi són (per id).
 - Es tria al **calaix**: Front › **Guia** llista les guies i els jocs. Amb un joc, surten **Tancament** (suau · push-open ·
-  push + suau), **Darrere** (fusta · metàl·lic) i **Acabat** dels laterals (blanc seda · gris mat; només el color del 3D,
-  `KIT_FINISHES`, el número és el mateix) (`Front.kit`, `KitOptions`; res amagat compta: amb una guia normal no es
+  push + suau), **Darrere** (fusta · metàl·lic) i **Acabat** dels laterals (blanc seda · gris mat · negre mat, els que ven
+  cada joc; només el color del 3D, `KIT_FINISHES`, el número és el mateix) (`Front.kit`, `KitOptions`; res amagat compta: amb una guia normal no es
   llegeixen), la fila **Fons** (el gruix que demana el joc, 16: fix, «el joc demana 16 mm») i la fitxa **Joc**: NL triada,
   primeres línies de la comanda i les mides del fons A i del darrere B.
 - O al **mòdul**: Mòdul › Acabats › **Guia de calaix** accepta un joc (`slotAccepts`; `slotSpec("slide", joc)` el deixa
@@ -90,10 +96,13 @@ opcions del joc amb una guia normal no compten).
    suports); instal·lació (LT = NL + ?, retirada de la guia); taula d'amplades; fórmules de la fusta (fons, darrere) i el
    gruix que suposa el catàleg; forats del front (Ø, separació, mínim de baix); columnes de cargols de la guia per NL (si
    el dibuix no és a escala, llegeix les cotes i quines guies les porten); alçades (lateral, darrere).
-2. Escriu `core/model/kits/<fabricant>.ts` amb un `HardwareKit` per classe d'alçada (una funció que faci les variants pels
-   patrons dels números, com `dtcKit`). Cita les pàgines al comentari i posa a `hypotheses` tot el que no estigui acotat.
-3. Afegeix-lo a `DEFAULT_HARDWARE_KITS` (`core/model/hardware.ts`, `kitItem(id, nom, kit)`); les preferències el reben a
-   la propera lectura si puges `SETTINGS_VERSION` (o el que hi ha ja hi és). Retalla la foto del producte a
+2. Escriu `core/model/kits/<fabricant><sèrie>.ts` amb un `HardwareKit` per classe d'alçada: una funció que faci les
+   variants pels patrons dels números i, si és un calaix de doble paret de DTC (o un de la mateixa estructura), un
+   `DoubleWallSpec` per a `doubleWallKit` (`dtcDoubleWall.ts`), com `hdKit` a `dtcMagicStarUltra.ts`. Cita les pàgines al
+   comentari i posa a `hypotheses` tot el que no estigui acotat.
+3. Afegeix-lo a `DEFAULT_HARDWARE_KITS` (`core/model/hardware.ts`, `kitItem(id, nom, kit)`) i exporta'l a
+   `core/model/index.ts`; les preferències el reben a la propera lectura si puges `SETTINGS_VERSION` amb una migració
+   additiva per id (com `V27_ITEMS` a la v27). Retalla la foto del producte a
    `public/hardware/*.webp` (només el producte, mai la pàgina).
 4. Afegeix un test com els de `drawerKit.test.ts` (NL per fondària, números, fusta, prebroques) i comprova-ho a l'app:
    Front › Guia → el joc, Peces, DXF (capa `DRILL_D2_P10`), 3D obert i tancat.
@@ -118,3 +127,94 @@ Vegeu `hypotheses` a `dtcMagicPro.ts` i la secció «Hipòtesis de lectura» de 
 - L'estabilitzador (tancament suau, ≥ 800 d'amplada) no té número al catàleg.
 - Amb fronts encastats, el joc es mesura des de la cara de darrere del front (la guia queda un gruix més endins que el
   cantell del lateral).
+
+## Les sèries DTC (catàleg 2026)
+
+Totes de la secció «Double-wall drawer systems» (pp. 225–438). Les que **hi són** comparteixen el constructor
+`doubleWallKit`; el que diu cada pàgina (números, alçades, fórmules) és al comentari de dalt de cada fitxer i les lectures
+no acotades a `hypotheses`.
+
+| Sèrie | Jocs (id) | Lateral / darrere | NL | Tancaments | Darrere metàl·lic | Fons × fondària | Pàgines |
+|---|---|---|---|---|---|---|---|
+| MAGIC-PRO HT (`dtcMagicPro.ts`) | ht10 N · ht11 M · ht12 K · ht13 C · ht14 F | 62,5/39 · 88/63 · 126/101 · 174/148 · 238/212 | 270–600 | suau · push · push + suau (≥ 350) | HT1s034 | LW − 19 × NL − 29 (fusta) / NL − 27 (metall) | 231–250, 259 |
+| MAGIC-STAR ULTRA HD (`dtcMagicStarUltra.ts`) | hd11 M · hd12 K · hd13 C · hd14 F | 88/58 · 126/96 · 174/144 · 238/208 | 270–600 | els tres | HD1s034 | LW − 19 × NL − 13 | 273–310, 327 |
+| DRAGON-PRO HB (`dtcDragonPro.ts`) | hb01 M · hb02 B · hb03 D · hb0c C · hb04 F | 95/84 · 127/116 · 178/167 · 209/198 · 238/228 | 250–650 | suau · push | TB0134 (M) · TB0234 (B) · TB0334 (D); C i F, cap | LW − 75 × NL − 24 (fusta) / NL − 22 (metall) | 341–374, 383 |
+| PURE-PRO HK (`dtcPurePro.ts`) | hk11 M · hk12 K · hk13 C | 90/64 · 128/102 · 167/137 | 270–550 | suau · push | HK1s034 | LW − 16 × NL − 27 | 407–414, 421 |
+
+Diferències de cada sèrie respecte del MAGIC-PRO:
+
+- **MAGIC-STAR ULTRA**: guia més baixa (28,5); **sense suports de darrere** (el lateral porta el ganxo: cargols del darrere
+  a 9 del cantell i 14 / 46 d'alçada a la M); suports de davant HE1s011X (cargolat), HE1s016X (a pressió) i HD1s019
+  (espiga ràpida), l'F amb un de més (HE14017); taula d'amplades només de la barra (300–600 ○, 800–1200 ●), sense
+  estabilitzador; el darrere de fusta fa LW − 40 i el fons NL − 13 amb els dos darreres. Guies `HD10<NL>H` (suau),
+  `HD10<NL/10>04GX` (push) i `HD10<NL/10>04K` (push + suau).
+- **DRAGON-PRO**: NL de 250 a 650; **només suau i push-open**; fons LW − 75 (el lateral és més cap a dins: cotes 15,5 ·
+  22,8 · 37,5) i darrere LW − 87; suports de darrere TB0s031; barra tallada a LW − 106; guia a «min 33» del cantell de
+  baix del front; les classes C (209) i F (238) **no tenen darrere metàl·lic** (només fusta); l'F amb un suport de davant de
+  més (HE14017). Guies `HB01<NL/10>04H-1` / `HB01<NL/10>04GX` per a totes les alçades. L'**HB00** (calaix interior
+  baix, amb perfil de front metàl·lic) i els calaixos interiors no s'hi fan: el model dels jocs és el calaix amb front.
+- **PURE-PRO HK**: lateral ultraprim de 13; el fons i el darrere entren dins del lateral (LW − 16); **el front va amb pius
+  de posició** Ø10 (o forats Ø2) a 20 de cada lateral i a 61 / 77 del cantell de baix (M; K i C a pas de 32), amb els
+  suports de fixació HT10082 (sense suports de davant cargolats); sense suports de darrere; acabats només blanc seda i
+  gris mat; guies les del MAGIC-STAR ULTRA (HD10). La sèrie **HQ** (lateral de vidre de 6, mateixa guia) no s'hi fa:
+  caldria un component de vidre al joc.
+
+Acabat **negre mat (E36)** nou al catàleg 2026 (MAGIC-PRO, MAGIC-STAR ULTRA, DRAGON-PRO): `KIT_FINISHES` `black`, material
+del 3D «Negre mat» (paraula clau «negre» de `resolveFinish`).
+
+També hi són (v28): **PURE-BOX HL** (`dtcPureBox.ts`: HL11 84 · HL12 122 · HL13 159; lateral prim sobre guies de sota
+GG10<NL>H, només suau; sense joc complet (el `kit` de la variant és el número de les guies), laterals HLG (250/270) / HL;
+fons LW − 16 × NL − 21, darrere LW − 16 × (75 / 113 / 148 − T); front amb forats a 27 de cada lateral; la geometria de
+muntatge és una hipòtesi: guia de 25 a «min 34» del front, lateral a 12 i fons a 21) i **PURE-PRO HQ** (HQ11 M i HQ13 C,
+`DTC_PURE_PRO_GLASS_KITS` a `dtcPurePro.ts`: l'HK amb el **lateral de vidre** de 6 com a component de més,
+`extraComponents` del `DoubleWallSpec`, material «Vidre», número HK1s062<NL>; joc HQ1s<NL>A12 / HQ6s<NL/10>04A12,
+laterals HQ1s<NL/10>2).
+
+**No s'hi han afegit**: **DRAGON-BOX EE01** (calaixos interiors M/B/D), els calaixos interiors (HB00, HT/HD/HB «inner
+drawer» amb perfil de front metàl·lic) i amb lateral de vidre de MAGIC-STAR ULTRA, les baranes («Dividing and storage
+systems», pp. 439–460) i les frontisses angulars, de marc d'alumini i de mirall. El model dels jocs és el calaix amb front
+de fusta; la resta del catàleg és a la secció següent.
+
+## La resta del catàleg DTC 2026 (v28)
+
+`core/model/dtc/` i `DTC_CATALOGUE_ITEMS` (`hardware.ts`): cada item porta el fabricant, els números i les pàgines a
+`tags`; les preferències els reben a la v28 si no hi són (`V28_ITEMS`, per id). **El per defecte de cada lloc és sempre
+l'item de l'app** (`appItemOfEngine`, sense fabricant): el catàleg no canvia cap moble si no es tria.
+
+| Secció del catàleg | A l'app | Què fa a la fusta |
+|---|---|---|
+| Frontisses C81 (pp. 41–68), C82 Anyway (87–112) i slide-on (121–146), C80 (159–176), B80/B85 (187–196) | `dtcHinges.ts`: 25 items del motor `cup` (una geometria de cassoleta per angle i sèrie; recobrent / mig / encastat i amb o sense molla només al número) | Cassoleta a K + Ø/2 (K 5), 2 cargols a 45 (tipus 5, prebroca Ø2 × 10) i la **placa de dos forats euro** a la filera System 32 (target `side`, `plateSetback` 37): les regles de sempre de `addCups` |
+| Plaques (pp. 69–70, 113–114, 147–148, 179–182, 197–198) | `dtcPlates.ts`: 13 items del motor `plate` (dos forats, quatre forats, en línia; les H i els cargols al número) | Dos forats a 32 a la filera; quatre: + 2 de fusta a 11 del davant; en línia: a 20 i 52 del davant. Com les importades: es llegeixen des d'una frontissa |
+| Guies ocultes MAGIC-MOVE TS, D-MOTION DS/SS/GG (pp. 505–592) | `dtcSlides.ts`: 14 items del motor `slide` (SKW = LW − 42 o − 49, SKL = NL − 10) | **Només els dos forats del motor** (37 i 37 + 224 al lateral; a la caixa, la prebroca del bloqueig); les columnes per NL i els forats Ø6 del darrere del calaix a `tags`: a confirmar amb la guia |
+| Guies de boles SUPER-RAIL i estàndard 45/36 (pp. 601–608), de rodets A/L (501–502) | 6 items `slide` (folgança 12,7 / 12,5) | Dos forats al lateral i a la caixa (prebroca Ø2) |
+| Elevable TOP-STAYS DQ (pp. 673–678) | `dtcMisc.ts`: item «només 3D» amb els 4 cargols euro del lateral i el suport del front al generador | Es col·loca a mà |
+| Unions (pp. 737–743): excèntriques Ø10/12/15/35, VB35/VB36, unió 25, fixació del fons | 8 items «només 3D» amb **mecanitzats del generador** (excèntrica a la cara, pern al cantell, forat a la peça que continua) | Es col·loquen a mà (sense UI des del 2026-10-08): les cotes hi són per al taller |
+| Suports de prestatge AC02 / AG02 (p. 743) | 2 items `system32` (piu Ø5 a la filera) | La filera de sempre |
+| Frontissa D (pp. 211–220) · door opener MS (207–210) | «només 3D» amb caixeres (tapa/base i porta) · amb 2 prebroques a la tapa | Es col·loquen a mà |
+
+**Fora, per decisió de l'usuari (2026-10-13: «els que no pots ficar els mecanitzats, els treus»)**: els elevables SQ/SF/ST/SK/SE
+(el catàleg no en dona les cotes de muntatge en una fitxa llegible), les portes corredisses TRACK-PRO CS/GT/R01/CF i els
+suports de suspensió DM, els calaixos de paret simple F11D–F15J, els perns M4 sols i els suports de barra BE02/BF02: cap
+item del catàleg sense mecanitzat (`dtcCatalogue.test.ts` ho comprova).
+
+Hipòtesis de lectura (a confirmar amb la peça a la mà, com les dels jocs): cargols de la cassoleta del tipus «5» a 45 /
+9,5 (el catàleg en dibuixa dos tipus); forats de les guies ocultes al lateral a 5 mm sobre la vora de baix de la caixa i
+segona columna a 224; fons dels calaixos amb guia oculta retirat 12; posicions de les plaques de quatre forats i en línia
+respecte de la filera.
+
+## Push latch DTC MS (obertura per pressió, pp. 205–206)
+
+Els «Tip-On» del taller (per decisió de l'usuari, per no haver de preguntar al germà): `core/model/pushLatch.ts`,
+`DTC_PUSH_LATCHES`, sis items a Preferències › Ferratges › «Obertura per pressió i imants», motor `model` («només 3D») amb
+els **mecanitzats del generador** (`machining`, cotes del catàleg), que es llegeixen a la secció Mecanitzats de l'editor
+del ferratge. **El mòdul no els col·loca sol**: l'avís `push` dels fronts sense tirador continua (és el pas que falta: un
+lloc «push» al mòdul que posi el latch al lateral o a la tapa a la vora que obre, i la contraplaca a la porta).
+
+| Muntatge | Mecanitzat (cos del moble) | Contraplaca (porta) | Imant (frontissa sense molla) | Topall (frontissa amb tancament suau) |
+|---|---|---|---|---|
+| Encastat | forat **Ø10 × 72 (mín.)** al cantell de davant (tapa, base, prestatge o lateral), 3 de retirada | disc, 1 cargol, a 12,5 de la cara de dins | MSB01A00 (mitjà) · MSC01A00 (fort), èmbol 39 | MSB01F00 · MSC01F00, èmbol 40 |
+| Placa en línia (79 × 14, 15 d'alt) | 2 cargols a **32** de pas, el primer a **20** del cantell de davant, a la cara de dins | ídem | MSB01A01 · MSC01A01 | MSB01F01 · MSC01F01 |
+| Placa en creu (79 × 48) | 2 cargols a **32** a través (±16 de l'eix) a **37** del cantell de davant | ídem | MSB01A02 · MSC01A02 | MSB01F02 · MSC01F02 |
+
+Regulació de l'èmbol −0 / +5; colors gris clar H10 i gris fosc H11. Els cargols es dibuixen amb la prebroca Ø2 × 10 del
+taller. El **door opener MS00AL/AM/AH** (pp. 207–210, obre la porta des del costat de les frontisses) no s'hi ha posat.

@@ -5,7 +5,16 @@ import { deepEqual } from "./photoUpgrade"
 import { repairAtomically, repairValue } from "./repair"
 import { MachiningListSchema, migratePlacePos, PlacementTargetSchema, PlacePosSchema, RepeatSchema, stepValue, StepRuleSchema, type StepRule } from "./hardwareOps"
 import { HardwareKitSchema, KIT_PILOT_PARAMS, kitSummary, type HardwareKit, type KitPilot } from "./hardwareKit"
+import { DTC_HINGES } from "./dtc/dtcHinges"
+import { DTC_D_HINGE, DTC_FITTINGS, DTC_LIFTS, DTC_SUPPORTS } from "./dtc/dtcMisc"
+import { DTC_PLATES } from "./dtc/dtcPlates"
+import { DTC_SLIDES } from "./dtc/dtcSlides"
+import { DTC_DRAGON_PRO_KITS } from "./kits/dtcDragonPro"
 import { DTC_MAGIC_PRO_KITS } from "./kits/dtcMagicPro"
+import { DTC_MAGIC_STAR_KITS } from "./kits/dtcMagicStarUltra"
+import { DTC_PURE_BOX_KITS } from "./kits/dtcPureBox"
+import { DTC_PURE_PRO_GLASS_KITS, DTC_PURE_PRO_KITS } from "./kits/dtcPurePro"
+import { DTC_PUSH_LATCHES } from "./pushLatch"
 
 /**
  * Biblioteca de ferratges (millores v1, `docs/millores-v1/ferratges.md` §4): cada ferratge és **dades** (`HardwareItem`:
@@ -607,8 +616,25 @@ export function kitItem(id: string, name: string, kit: HardwareKit, pilot: { pil
   }
 }
 
-/** Els jocs inicials de l'app (DTC MAGIC-PRO, de la N a la F). */
-export const DEFAULT_HARDWARE_KITS: HardwareItem[] = DTC_MAGIC_PRO_KITS.map((k) => kitItem(k.id, k.name, k.kit))
+/**
+ * Els jocs inicials de l'app, llegits del catàleg DTC 2026 (`docs/ferratges-jocs.md`): MAGIC-PRO (HT10–HT14, de la N a
+ * la F; el primer, v23), MAGIC-STAR ULTRA (HD11–HD14), DRAGON-PRO (HB01–HB04 i HB0C) i PURE-PRO HK (HK11–HK13) (v27).
+ */
+export const DEFAULT_HARDWARE_KITS: HardwareItem[] = [...DTC_MAGIC_PRO_KITS, ...DTC_MAGIC_STAR_KITS, ...DTC_DRAGON_PRO_KITS, ...DTC_PURE_PRO_KITS, ...DTC_PURE_PRO_GLASS_KITS, ...DTC_PURE_BOX_KITS].map((k) => kitItem(k.id, k.name, k.kit))
+
+const V27_KIT_IDS = new Set([...DTC_MAGIC_STAR_KITS, ...DTC_DRAGON_PRO_KITS, ...DTC_PURE_PRO_KITS].map((k) => k.id))
+/** Els items inicials que la v27 afegeix si no hi són: els jocs nous i els push latch DTC (`pushLatch.ts`). */
+export const V27_ITEMS: HardwareItem[] = [...DEFAULT_HARDWARE_KITS.filter((k) => V27_KIT_IDS.has(k.id)), ...DTC_PUSH_LATCHES]
+
+/**
+ * La resta del catàleg DTC 2026 (v28, `core/model/dtc/`): frontisses de cassoleta i plaques, guies (ocultes, de boles,
+ * de rodets), l'elevable DQ, unions i suports de prestatge, la frontissa D i el door opener, i els jocs PURE-BOX HL i
+ * PURE-PRO HQ (vidre). Només els que mecanitzen la fusta (per decisió de l'usuari).
+ */
+export const DTC_CATALOGUE_ITEMS: HardwareItem[] = [...DTC_HINGES, ...DTC_PLATES, ...DTC_SLIDES, ...DTC_LIFTS, ...DTC_FITTINGS, ...DTC_SUPPORTS, ...DTC_D_HINGE]
+const V28_KIT_IDS = new Set([...DTC_PURE_PRO_GLASS_KITS, ...DTC_PURE_BOX_KITS].map((k) => k.id))
+/** Els items inicials que la v28 afegeix si no hi són. */
+export const V28_ITEMS: HardwareItem[] = [...DEFAULT_HARDWARE_KITS.filter((k) => V28_KIT_IDS.has(k.id)), ...DTC_CATALOGUE_ITEMS]
 
 /**
  * Accessoris inicials (abans eren interruptors de fusta a Prestatges i a la porta; auditoria B): la geometria d'ara, tal
@@ -648,7 +674,8 @@ export const ACCESSORY_ITEMS: HardwareItem[] = [
   },
 ]
 
-export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...ACCESSORY_ITEMS]
+// En l'ordre en què les migracions els afegeixen (v23 jocs, v27 push, v28 catàleg i, al final, els accessoris que falten).
+export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_PUSH_LATCHES, ...DTC_CATALOGUE_ITEMS, ...ACCESSORY_ITEMS]
 
 /** Un item és un joc paramètric que es pot fer servir (motor `drawerKit` amb el joc). */
 export const isDrawerKit = (item: HardwareItem): item is HardwareItem & { kit: HardwareKit } => item.engine === "drawerKit" && !!item.kit
@@ -673,10 +700,13 @@ export function kitFromLegacy(h: LegacyHardware): FullModuleHardware {
 }
 
 /** Un kit (còpia) amb els items per defecte de cada lloc (`fixHardwareDefaults` ja garanteix que hi són). */
+/** El primer item d'un motor, preferint els de l'app (sense fabricant) als del catàleg DTC (el per defecte d'un lloc). */
+export const appItemOfEngine = (list: readonly HardwareItem[], engine: HardwareEngine): HardwareItem | undefined => list.find((x) => x.engine === engine && !x.maker) ?? list.find((x) => x.engine === engine)
+
 export function kitFrom(library: readonly HardwareItem[], defaults: HardwareDefaults): FullModuleHardware {
   const pick = (slot: HardwareSlot): HardwareItem => {
     const engine = slotOf(slot).engine
-    const hit = library.find((x) => x.id === defaults[slot] && slotAccepts(slot, x)) ?? library.find((x) => x.engine === engine) ?? DEFAULT_HARDWARE_LIBRARY.find((x) => x.engine === engine)!
+    const hit = library.find((x) => x.id === defaults[slot] && slotAccepts(slot, x)) ?? appItemOfEngine(library, engine) ?? appItemOfEngine(DEFAULT_HARDWARE_LIBRARY, engine)!
     return structuredClone(hit)
   }
   const out = {} as FullModuleHardware
@@ -710,8 +740,9 @@ export function migrateModuleHardware(v: unknown): unknown {
 }
 
 /**
- * Les preferències de ferratges coherents: cada lloc apunta a un item de la biblioteca amb el motor que toca (si no, el
- * primer que en té i, si no n'hi ha cap, el d'inici, que s'hi torna a afegir). Ids únics (els repetits fora).
+ * Les preferències de ferratges coherents: cada lloc apunta a un item de la biblioteca amb el motor que toca (si no,
+ * l'item de l'app que en té —no un del catàleg DTC— i, si no n'hi ha cap, el d'inici, que s'hi torna a afegir). Ids
+ * únics (els repetits fora).
  */
 export function fixHardwareDefaults(library: readonly HardwareItem[], defaults: Partial<HardwareDefaults>): { library: HardwareItem[]; defaults: HardwareDefaults; changed: boolean } {
   let changed = false
@@ -728,13 +759,15 @@ export function fixHardwareDefaults(library: readonly HardwareItem[], defaults: 
   const out: Required<HardwareDefaults> = { ...DEFAULT_HARDWARE_DEFAULTS }
   for (const { slot, engine } of HARDWARE_SLOTS) {
     const want = defaults[slot]
-    const hit = lib.find((x) => x.id === want && slotAccepts(slot, x)) ?? lib.find((x) => x.engine === engine)
+    // Sense el triat: l'item de l'app d'aquell motor (sense fabricant), mai un del catàleg DTC; si tampoc hi és,
+    // torna el d'inici de l'app.
+    const hit = lib.find((x) => x.id === want && slotAccepts(slot, x)) ?? lib.find((x) => x.engine === engine && !x.maker)
     if (hit) {
       out[slot] = hit.id
       if (hit.id !== want) changed = true
       continue
     }
-    const builtin = structuredClone(DEFAULT_HARDWARE_LIBRARY.find((x) => x.engine === engine)!)
+    const builtin = structuredClone(appItemOfEngine(DEFAULT_HARDWARE_LIBRARY, engine)!)
     lib.push(builtin)
     out[slot] = builtin.id
     changed = true

@@ -1,5 +1,5 @@
 import { BoxGeometry, CylinderGeometry, Group, Matrix4, Mesh, MeshStandardMaterial, Object3D, Vector3 } from "three"
-import { basisFor, builtinSolids, type HwMaterial } from "../../core/build/hardwareSolids"
+import { basisFor, builtinSolids, type HwMaterial, type HwSolid } from "../../core/build/hardwareSolids"
 import type { Hole, Panel, PanelFitting } from "../../core/model"
 
 /**
@@ -44,8 +44,8 @@ const UNIT_CYL = new CylinderGeometry(1, 1, 1, 20)
  * ni a l'AR ni a les exportacions (aquests fan l'escena amb `buildScene`, sense ells). Les malles no s'han d'alliberar
  * (geometries i materials compartits: `userData.sharedModel` perquè `disposeTree` se les salti).
  */
-export function builtinHardwareGroup(panel: Panel, pins?: readonly Hole[]): Group | null {
-  const solids = builtinSolids(panel, pins)
+export function builtinHardwareGroup(panel: Panel, pins?: readonly Hole[], fixed?: readonly HwSolid[]): Group | null {
+  const solids = builtinSolids(panel, pins, fixed)
   if (!solids.length) return null
   const g = new Group()
   g.name = "ferratges"

@@ -102,8 +102,14 @@ describe("ferratge muntat", () => {
     for (const item of DEFAULT_HARDWARE_LIBRARY) {
       const m = hardwareMount(item)
       expect(m.error, item.engine).toBeUndefined()
+      // Els push latch DTC són «només 3D» amb mecanitzats a mà (`pushLatch.ts`): cap peça ni forat al muntatge.
+      if (item.engine === "model") {
+        expect(m.model, item.id).toBeDefined()
+        expect(m.panels, item.id).toEqual([])
+        continue
+      }
       // Els accessoris (barra, perfil LED, marc de vitrina) encara no fan cap forat: es miren pel mig del que es veu (`aim`).
-      if (ACCESSORY_ITEMS.includes(item)) {
+      if (ACCESSORY_ITEMS.includes(item) || item.targets.every((t) => !t.ops.length)) {
         expect(m.aim, item.engine).toBeDefined()
         expect(m.panels.some((p) => p.role === "part"), item.engine).toBe(true)
       } else expect(m.focus, item.engine).not.toBeNull()

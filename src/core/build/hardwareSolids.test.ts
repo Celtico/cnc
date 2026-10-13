@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { DEFAULT_HARDWARE_LIBRARY, type HardwareEngine, type Panel, type Vec3 } from "../model"
+import { DEFAULT_HARDWARE_LIBRARY, defaultModule, type HardwareEngine, type Panel, type Vec3, type Zone } from "../model"
+import { buildModule } from "./buildModule"
 import { toWorld } from "./geometry"
 import { hardwareMount } from "./hardwareMount"
-import { builtinSolids, shelfPins, solidBox, type HwSolid } from "./hardwareSolids"
+import { builtinSolids, fixedSolids, shelfPins, solidBox, type HwSolid } from "./hardwareSolids"
 
 /**
  * El dibuix 3D dels ferratges de sèrie (`builtinSolids`) a «Com va muntat»: cada ferratge de l'app hi dibuixa alguna
@@ -14,7 +15,8 @@ const item = (engine: HardwareEngine) => DEFAULT_HARDWARE_LIBRARY.find((x) => x.
 function solidsOf(engine: HardwareEngine): { p: Panel; s: HwSolid; b: Box }[] {
   const m = hardwareMount(item(engine))
   const pins = shelfPins(m.panels)
-  return m.panels.flatMap((p) => builtinSolids(p, pins.get(p.id)).map((s) => ({ p, s, b: solidBox(p, s) })))
+  const fixed = fixedSolids(m.panels)
+  return m.panels.flatMap((p) => builtinSolids(p, pins.get(p.id), fixed.get(p.id)).map((s) => ({ p, s, b: solidBox(p, s) })))
 }
 
 /** La caixa d'una peça al mòdul (mm). */
@@ -30,23 +32,37 @@ describe("ferratges de sèrie en 3D", () => {
     for (const e of ["cup", "system32", "dowel", "slide", "flapArm", "magnet", "rail", "ledProfile"] as const) expect(solidsOf(e).length, e).toBeGreaterThan(0)
   })
 
-  it("frontissa: cassoleta al forat, braç i placa cap a dins del moble, metàl·lics", () => {
+  it("frontissa: cassoleta, ala i braç amb la porta; la placa, fixa al lateral (`fixedSolids`), cap a dins del moble", () => {
     const m = hardwareMount(item("cup"))
     const door = m.panels.find((p) => p.role === "door")!
+    const side = m.panels.find((p) => p.id === "side-left")!
     const ss = builtinSolids(door)
     const cups = door.holes.filter((h) => h.tag === "hinge")
-    expect(ss.length).toBe(cups.length * 5)
+    expect(ss.length).toBe(cups.length * 4)
     const cup = ss[0]!
     expect(cup.kind).toBe("cyl")
     expect(Math.hypot(cup.c[0] - cups[0]!.x, cup.c[1] - cups[0]!.y)).toBeLessThan(0.01)
-    expect(ss.every((s) => s.mat === "nickel" || s.mat === "dark")).toBe(true)
-    // La placa, cap a dins del moble (Z més petita que la cara de dins de la porta) i tocant el lateral.
-    const plate = solidBox(door, ss[4]!)
+    expect(ss.every((s) => s.mat === "nickel")).toBe(true)
+    // Les plaques van amb el lateral (no amb la porta): una per cassoleta, en coordenades del lateral.
+    const fixed = fixedSolids(m.panels)
+    expect(fixed.get(door.id)).toBeUndefined()
+    const plates = fixed.get(side.id)!
+    expect(plates.length).toBe(cups.length)
+    expect(plates.every((s) => s.mat === "dark")).toBe(true)
+    // Cap a dins del moble (Z més petita que la cara de dins de la porta) i tocant la cara de dins del lateral.
+    const plate = solidBox(side, plates[0]!)
     const back = panelBox(door).min[2]
     expect(plate.min[2]).toBeLessThan(back - 40)
-    const side = panelBox(m.panels.find((p) => p.id === "side-left")!)
-    // (Aproximat: el lateral es pren del gruix de la porta, sense el joc del cantell.)
-    expect(Math.abs(plate.min[0] - side.max[0])).toBeLessThan(3)
+    const sideBox = panelBox(side)
+    expect(Math.abs(plate.min[0] - sideBox.max[0])).toBeLessThan(3)
+    // La mateixa placa, mesurada des del lateral, cau on la posava la porta (mateixa caixa al món).
+    expect(plates[0]!.kind).toBe("box")
+  })
+
+  it("una porta sola (sense lateral que la porti): la placa es queda amb la porta", () => {
+    const door = hardwareMount(item("cup")).panels.find((p) => p.role === "door")!
+    const fixed = fixedSolids([door])
+    expect(fixed.get(door.id)!.length).toBe(door.holes.filter((h) => h.tag === "hinge").length)
   })
 
   it("System 32: un suport just sota el prestatge, a cada filera", () => {
@@ -102,8 +118,19 @@ describe("ferratges de sèrie en 3D", () => {
     expect(builtinSolids(m.panels.find((p) => p.role === "shelf")!)).toEqual([])
   })
 
-  it("push: el Tip-On darrere d'un front sense tirador", () => {
-    const door = hardwareMount(item("cup")).panels.find((p) => p.role === "door")!
-    expect(builtinSolids({ ...door, push: true }).filter((s) => s.mat === "plastic").length).toBe(1)
+  it("push: el Tip-On, fix al lateral de la vora que obre (no amb la porta)", () => {
+    // Un mòdul sencer (el muntatge de Preferències només té el lateral de les frontisses): el push va a l'altre lateral.
+    const base = defaultModule("m", "Porta", { width: 600, height: 720, depth: 500, thickness: 16 })
+    const root: Zone = { id: "root", front: { kind: "door", mode: "single", hinge: "left" } }
+    const panels = buildModule({ ...base, root }).panels.map((p) => (p.role === "door" ? { ...p, push: true } : p))
+    const door = panels.find((p) => p.role === "door")!
+    expect(builtinSolids(door).some((s) => s.mat === "plastic")).toBe(false)
+    const fixed = fixedSolids(panels)
+    const host = [...fixed.entries()].find(([, ss]) => ss.some((s) => s.mat === "plastic"))
+    expect(host).toBeDefined()
+    expect(panels.find((p) => p.id === host![0])!.role).toBe("side")
+    expect(host![0]).not.toBe(door.id)
+    // Sense cap lateral, es queda amb el front.
+    expect(fixedSolids([door]).get(door.id)!.some((s) => s.mat === "plastic")).toBe(true)
   })
 })
