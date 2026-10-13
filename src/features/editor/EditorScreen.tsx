@@ -16,7 +16,6 @@ import {
   LuWrench,
   LuGroup,
   LuPanelTop,
-  LuAlignHorizontalJustifyCenter,
   LuCamera,
   LuCircleDot,
   LuDoorOpen,
@@ -67,7 +66,6 @@ import { ORIENT_ICON } from "../composition/partOrient"
 import { StructureTree, type Selection } from "../composition/StructureTree"
 import { Tooltip } from "../../components/ui/tooltip"
 import { ModuleDoorsSection, ZoneActions, ZonePanel } from "../composition/ZonePanel"
-import { IslandsForm } from "../composition/IslandsForm"
 import { HardwarePlacements, PlacementButtons, PlacementInspector, type PlacementActions } from "../composition/HardwarePlacements"
 import { duplicatePlacement, placementScope, removePlacement, scopePlacements } from "../composition/placements"
 import { zoneLabel } from "../composition/zoneLabel"
@@ -1011,12 +1009,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           ) : null}
           {/* Sense «Taulell i sòcol» (per decisió de l'usuari, 2026-10-13: «que no aparegui»). Treure ≠ esborrar: les peces
               corregudes que ja hi són (`comp.runs`) es conserven i es fabriquen igual; `RunsForm` es queda sense ús. */}
-          {/* Illes (dos mòduls d'esquena amb panells de remat): amb almenys dos mòduls. */}
-          {!partsOnlyKind(kind) && comp.modules.length >= 2 && (
-            <FoldItem id="moble-islands" title="Illes" icon={LuAlignHorizontalJustifyCenter} badge={comp.islands?.length || undefined}>
-              <IslandsForm comp={comp} onChange={setComp} />
-            </FoldItem>
-          )}
+          {/* Sense «Illes» (per decisió de l'usuari, 2026-10-13: «treu l'opció illa, això és més fàcil amb peces lliures»).
+              Treure ≠ esborrar: les illes que ja hi són es conserven i es fabriquen igual; `IslandsForm` es queda sense ús. */}
           {(comp.parts ?? []).some((p) => partJoinery(comp, p)) && (
             <FoldItem id="moble-joinery" title="Encaixos" icon={LuPuzzle} badge={build?.joints.length || undefined}>
               <PartJoineryForm comp={comp} onChange={setComp} />
