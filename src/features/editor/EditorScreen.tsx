@@ -66,7 +66,6 @@ import { ORIENT_ICON } from "../composition/partOrient"
 import { StructureTree, type Selection } from "../composition/StructureTree"
 import { Tooltip } from "../../components/ui/tooltip"
 import { ModuleDoorsSection, ZoneActions, ZonePanel } from "../composition/ZonePanel"
-import { RunsForm } from "../composition/RunsForm"
 import { HardwarePlacements, PlacementButtons, PlacementInspector, type PlacementActions } from "../composition/HardwarePlacements"
 import { duplicatePlacement, placementScope, removePlacement, scopePlacements } from "../composition/placements"
 import { zoneLabel } from "../composition/zoneLabel"
@@ -1001,11 +1000,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
               Moble només de peces lliures (sense mòduls). Les que tenen «Encaixos» activat fan l'encaix sol on es toquen o s'encreuen: pestanyes, mitja fusta, dits o espigues. Les de ferro, pedra o vidre no van al nesting.
             </Text>
           ) : null}
-          {!partsOnlyKind(kind) && comp.modules.length > 0 && (
-            <FoldItem id="moble-runs" title="Taulell i sòcol" icon={LuPanelTop} badge={comp.runs?.length || undefined}>
-              <RunsForm comp={comp} onChange={setComp} />
-            </FoldItem>
-          )}
+          {/* Sense «Taulell i sòcol» (per decisió de l'usuari, 2026-10-13: «que no aparegui»). Treure ≠ esborrar: les peces
+              corregudes que ja hi són (`comp.runs`) es conserven i es fabriquen igual; `RunsForm` es queda sense ús. */}
           {(comp.parts ?? []).some((p) => partJoinery(comp, p)) && (
             <FoldItem id="moble-joinery" title="Encaixos" icon={LuPuzzle} badge={build?.joints.length || undefined}>
               <PartJoineryForm comp={comp} onChange={setComp} />
@@ -1096,10 +1092,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       ) : module ? (
         // Seccions plegables independents (com Figma o Fusion): es poden tenir diverses
         // obertes i cada una recorda el seu estat.
+        // Ordre (per decisió de l'usuari, 2026-10-13): Posició · Mides · Caixa · Portes · Unió · Materials.
         <Stack gap={0}>
-          <FoldItem id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
-            <CarcassForm module={module} onChange={updateModule} section="dims" />
-          </FoldItem>
             <FoldItem id="mod-position" title="Posició" icon={LuMove} badge={module.carcass.base.kind === "wall" ? `Penjat a ${module.carcass.base.height}` : mountOf(module) === "floor" ? `Lliure al terra · ${module.wallGap ?? 0} de la paret` : "Arrambat a la paret"}>
               {/* Dues files, com les cuines: a terra (baixos) i penjats (alts). Dins de cada
                   fila, l'ordre és el de l'arbre (d'esquerra a dreta) i cada mòdul va al costat
@@ -1172,6 +1166,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                 />
               )}
             </FoldItem>
+          <FoldItem id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
+            <CarcassForm module={module} onChange={updateModule} section="dims" />
+          </FoldItem>
           {/* Per decisió de l'usuari (2026-10-08) no hi ha secció «Acabats»: cada fila és a la secció del que toca, un sol
               lloc per decisió i només el que la construcció llegeix (`moduleRows`): el fons, l'estil, les folgances i el
               retranqueig a la Caixa; el material dels fronts a Materials; l'espiga a Unió. Els ferratges per defecte del
@@ -1200,14 +1197,14 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                     })()}
                   />
                 )}
-                <FoldItem id="mod-materials" title="Materials" icon={LuPalette}>
-                  <MaterialsForm carcass={module.carcass} hasDrawers={hasDrawers(visibleModule(module).root)} hasFronts={rows.frontMaterial} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
-                </FoldItem>
                 {rows.dowel && (
                   <FoldItem id="mod-joint" title="Unió" icon={LuBolt}>
                     <JointForm module={module} onChange={updateModule} />
                   </FoldItem>
                 )}
+                <FoldItem id="mod-materials" title="Materials" icon={LuPalette}>
+                  <MaterialsForm carcass={module.carcass} hasDrawers={hasDrawers(visibleModule(module).root)} hasFronts={rows.frontMaterial} onPatch={(patch) => updateModule({ ...module, carcass: { ...module.carcass, ...patch } })} />
+                </FoldItem>
               </>
             )
           })()}

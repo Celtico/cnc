@@ -82,7 +82,6 @@
    "inset",
    "overlap",
    "overlap",
-   "same-size",
    "shelves",
    "table"
   ],
@@ -148,8 +147,7 @@
   "warnings": [
    "drawer-bottom",
    "drawer-box",
-   "drawer-box",
-   "same-size"
+   "drawer-box"
   ],
   "p": [
    "back|trassera|982x331x16|MDF lacat|none|e0000|h9:733fde40|g0|c0|o-|@8a206688",
@@ -208,7 +206,6 @@
    "overlap",
    "rail",
    "rail",
-   "same-size",
    "shelf-span",
    "shelves"
   ],
@@ -271,8 +268,7 @@
   "warnings": [
    "drawer-box",
    "handle",
-   "handle",
-   "same-size"
+   "handle"
   ],
   "p": [
    "back|trassera|690x460x10|MDF lacat|none|e0000|h0|g0|c0|o-|@744da8f6",
@@ -305,8 +301,7 @@
    "layout",
    "mitre",
    "mitre",
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "back|trassera|1652x622x3|Melamina blanca|x|e0100|h0|g0|c0|o-|@23f069a7",
@@ -383,8 +378,7 @@
    "mitre",
    "mitre",
    "push",
-   "rail",
-   "same-size"
+   "rail"
   ],
   "p": [
    "back|trassera|1250x460x10|Roure massís / xapat|none|e1111|h0|g0|c0|o-|@2fc5a475",
@@ -507,7 +501,6 @@
    "inset",
    "mitre",
    "push",
-   "same-size",
    "shelf-span"
   ],
   "p": [
@@ -582,8 +575,7 @@
    "mitre",
    "mitre",
    "mitre",
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|1520x590x19|Roure massís / xapat|none|e0000|h0|g0|c0|o-|@df11e2f5",
@@ -645,8 +637,7 @@
   "warnings": [
    "grille-open-ratio",
    "mitre",
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "bottom|baix|1130x350x19|MDF lacat|x|e0010|h0|g0|c0|o-|@c7c5502d|m:right",
@@ -683,8 +674,7 @@
    "material-heat",
    "mitre",
    "mitre",
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|1322x312x16|Contraxapat 4mm|none|e0000|h12:34eff479|g0|c0|o-|@d87fe3c6",
@@ -747,8 +737,7 @@
    "material-heat",
    "mitre",
    "mitre",
-   "overlap",
-   "same-size"
+   "overlap"
   ],
   "p": [
    "back|trassera|1690x1120x19|Melamina blanca|none|e0000|h0|g0|c0|o-|@bc96c0c7",
@@ -792,8 +781,7 @@
    "drawer-bottom",
    "mitre",
    "mitre",
-   "rail",
-   "same-size"
+   "rail"
   ],
   "p": [
    "back|trassera|1051x501x8|DM 10|none|e0000|h0|g0|c0|o-|@c46449f9",
@@ -833,8 +821,7 @@
   "extras": 0,
   "warnings": [
    "drawer-box",
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|2000x500x8|Melamina blanca|none|e0000|h0|g0|c0|o-|@e74f0c1e",
@@ -882,8 +869,7 @@
    "grille-open-ratio",
    "grille-open-ratio",
    "hollow",
-   "rail",
-   "same-size"
+   "rail"
   ],
   "p": [
    "back|trassera|890x720x16|Melamina 19|none|e0000|h12:4ec21245|g0|c0|o-|@1dd20f99",
@@ -911,8 +897,7 @@
    "hollow",
    "inset",
    "layout",
-   "material-heat",
-   "same-size"
+   "material-heat"
   ],
   "p": [
    "back|trassera|1048.5x498.5x10|Contraxapat 4mm|none|e0000|h0|g0|c0|o-|@398835ab",
@@ -996,8 +981,7 @@
   "extras": 0,
   "warnings": [
    "drawer-bottom",
-   "grille-open-ratio",
-   "same-size"
+   "grille-open-ratio"
   ],
   "p": [
    "back|trassera|1340x660x16|DM (fons)|none|e0000|h0|g0|c0|o-|@34105efc",
@@ -1027,8 +1011,7 @@
   "extras": 0,
   "warnings": [
    "hollow",
-   "inset",
-   "same-size"
+   "inset"
   ],
   "p": [
    "back|trassera|1525x577.5x10|Melamina 19|none|e0000|h0|g0|c0|o-|@12a8ff86",
@@ -1104,8 +1087,7 @@
    "handle",
    "hollow",
    "mitre",
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "back|trassera|1417.5x585x16|Contraxapat 4mm|none|e0000|h0|g0|c0|o-|@afb37ef9",
@@ -1138,8 +1120,7 @@
   "extras": 0,
   "warnings": [
    "drawer-bottom",
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "bottom|baix|590x570x30|Melamina blanca|x|e0010|h12:c0845c38|g0|c0|o-|@356a7ff6",
@@ -1168,8 +1149,7 @@
   "extras": 0,
   "warnings": [
    "grille-open-ratio",
-   "hanging",
-   "same-size"
+   "hanging"
   ],
   "p": [
    "bottom|baix|802x580x19|Noguera xapada|x|e0010|h6:6d8c892b|g0|c0|o-|@5cb9f432",
@@ -1187,8 +1167,7 @@
    "inset",
    "inset",
    "push",
-   "rail",
-   "same-size"
+   "rail"
   ],
   "p": [
    "back|trassera|1240x620x10|DM (fons)|none|e0000|h0|g0|c0|o-|@5088d243",
@@ -1211,8 +1190,7 @@
   "extras": 0,
   "warnings": [
    "hanging",
-   "hollow",
-   "same-size"
+   "hollow"
   ],
   "p": [
    "bottom|baix int|421x250x19|Noguera xapada|y|e0000|h0|g0|c0|o-|@2beefaf9|glue",
@@ -1278,7 +1256,6 @@
    "mitre",
    "overlap",
    "push",
-   "same-size",
    "table"
   ],
   "p": [
@@ -1332,8 +1309,7 @@
   "warnings": [
    "back-inset",
    "drawer-bottom",
-   "inset",
-   "same-size"
+   "inset"
   ],
   "p": [
    "back|trassera|1711x362x8|Melamina 19|none|e0000|h0|g0|c0|o-|@812f8850",
@@ -1370,8 +1346,7 @@
   "warnings": [
    "grille-open-ratio",
    "grille-open-ratio",
-   "material-heat",
-   "same-size"
+   "material-heat"
   ],
   "p": [
    "bottom|baix|550x282x19|Noguera xapada|y|e0001|h6:b24f9420|g0|c0|o-|@771aa646",
@@ -1401,7 +1376,6 @@
    "hinge",
    "material-heat",
    "rail",
-   "same-size",
    "shelves",
    "shelves"
   ],
@@ -1522,8 +1496,7 @@
   "warnings": [
    "hollow",
    "inset",
-   "inset",
-   "same-size"
+   "inset"
   ],
   "p": [
    "back|trassera|1000x580x19|MDF lacat|none|e0000|h0|g0|c0|o-|@4063c4a9",
@@ -1631,8 +1604,7 @@
   "extras": 0,
   "warnings": [
    "mitre",
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "back|trassera|1581.5x753x10|MDF lacat|none|e0000|h0|g0|c0|o-|@a382e803",
@@ -1693,7 +1665,6 @@
    "hinge",
    "mitre",
    "mitre",
-   "same-size",
    "shelves"
   ],
   "p": [

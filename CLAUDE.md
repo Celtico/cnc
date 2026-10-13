@@ -139,8 +139,8 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   **Mobles amb 0 mòduls** (per decisió de l'usuari: «a Moble nou que no fiqui res»): un moble nou (tots els tipus), un
   objecte nou i el moble del qual s'ha eliminat l'últim mòdul no en tenen cap. L'Editor hi treballa igual: el mòdul de
   treball és opcional (sense, la selecció és el moble i el seu inspector), el visor enquadra una escena buida de
-  1200 × 900 × 600 (`EMPTY_STAGE`, `isEmptyComposition`) i s'hi pot orbitar, l'Alçat diu com començar, «Taulell i sòcol» i
-  «Materials de tot el moble» només surten amb mòduls, la targeta diu «Buit» i una miniatura d'abans es treu.
+  1200 × 900 × 600 (`EMPTY_STAGE`, `isEmptyComposition`) i s'hi pot orbitar, l'Alçat diu com començar, «Materials de tot el moble»
+  només surt amb mòduls, la targeta diu «Buit» i una miniatura d'abans es treu.
   `readComposition` ja no hi posa el mòdul de caixa antic. Construcció, llistat, nesting, exports i `.moble` amb 0 mòduls:
   `build/emptyComposition.test.ts`. Pendent (fase 2 de `docs/millores-v1/mobles-peces.md` §3): convertir els `lliure` d'abans
   en `moble` sense mòduls.
@@ -301,8 +301,9 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     catàleg a `build.hardwareKits` (Peces › «Ferratges dels jocs», LLEGEIX-ME de Maestro, fitxa «Joc» de l'inspector).
     Tot o res per calaix (sense NL, sense lateral o sense alçada: només el front i avís `hardware`). Les alçades de les
     fileres de cargols i la posició vertical del joc són **hipòtesis** del catàleg (`hypotheses`, a l'editor del joc).
-- **Peces corregudes** (`comp.runs`, `core/build/runs.ts`, secció «Taulell i sòcol» de **qualsevol moble** amb mòduls,
-  `activeRuns`; per decisió de l'usuari no es converteixen en peces lliures: es perdria el llarg, el voladís i els forats
+- **Peces corregudes** (`comp.runs`, `core/build/runs.ts`, `activeRuns`; **sense UI des del 2026-10-13**, per decisió de
+  l'usuari: la secció «Taulell i sòcol» del moble ja no surt; treure ≠ esborrar: les que hi ha es conserven i es fabriquen
+  igual, i `RunsForm` es queda sense ús; per decisió de l'usuari no es converteixen en peces lliures: es perdria el llarg, el voladís i els forats
   automàtics). Interruptor «Es fa» (`Run.off`): els d'un moble que no era cuina (abans es guardaven sense fer-se) es migren
   apagats en llegir (`migrateRuns`, a `normalizeComposition` i al `.moble`; els nous porten `off: false`); `RunsForm`: cada peça és un
   plegable (`FoldItem` variant `card`) amb un resum —de → fins a · gruix · forats—, dins del taulell cada forat també; una oberta alhora, la nova
@@ -552,8 +553,9 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   ≥ 10 mm entre ells; els que no hi caben no es fan (`shelves`). **Mòduls que es trepitgen** (> 0,5 mm en les tres
   direccions): avís `overlap` amb els dos noms. Les plantilles del catàleg no poden fer cap d'aquests avisos
   (`storeCatalog.test.ts`).
-- **Peces iguals**: dues peces de la mateixa mida i material amb mecanitzats diferents (no mirall) es poden intercanviar al
-  taller (que lliga peça ↔ sòlid per mida): avís `same-size` (`build/sameSize.ts`, a `buildComposition`).
+- **Peces iguals**: **sense avís** (per decisió de l'usuari, 2026-10-13: «el taller les identifica per l'etiqueta»,
+  A.1.L.1 ≠ A.1.L.2). L'avís `same-size` d'abans (dues peces de la mateixa mida i material amb mecanitzats diferents) es
+  va treure de `buildComposition`; `build/sameSize.ts` (`sameMachining`, `sameSizeConflicts`) es queda amb els tests.
 - **Res amagat compta** (regla): el que s'amaga a la UI es conserva (tornar a encendre l'opció recupera els valors), però
   `buildModule` construeix des de `visibleModule` (`model/composition.ts`), que posa a un valor fix els camps de les opcions
   apagades: fons (material i gruix sense fons; ranura sense ranura; retirada si no és encastat), inglet si Cantonades no
@@ -780,8 +782,7 @@ Configurador ──► <moble>.step       (STEP AP214 · sòlids del moble)
 - **Coherència (ronda 5)**: les eines surten igual a tot arreu, «codi · nom · Ø» (`toolLabel`, `core/model/machine.ts`: Màquines,
   Regles i Nesting); els fronts de calaix «auto» es fan a mig mil·límetre cap avall (`snapAutoHeights`: fronts iguals,
   mateixa mida i mateixos mecanitzats; el que sobra queda al joc de dalt); la separació del nesting només compta les peces que
-  caben en algun tauler (`cncNestOptions`: un taulell de 3500 mm no fa més ampla la separació); l'avís `same-size` diu la ref
-  del taller i el mòdul de cada peça.
+  caben en algun tauler (`cncNestOptions`: un taulell de 3500 mm no fa més ampla la separació).
   A Peces, el detall de la fila diu els cantells i inglets **reals** de cada peça (ref), com el LLEGEIX-ME d'Exportar (la fila
   els dona normalitzats per agrupar les mirall). A Exportar, els avisos del STEP es calculen quan el navegador és lliure.
 
@@ -833,10 +834,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   peça lliure sobre la fila d'un grup la hi posa; al costat d'una peça n'agafa el grup; la zona «Treure del grup» surt
   mentre s'arrossega una d'un grup.
 - **Propietats** del que hi ha seleccionat i **només d'això**, en seccions plegables independents (`FoldItem`, vegeu UI):
-  - Moble: Resum (i avisos de fusteria), Taulell i sòcol (no als de només peces), Encaixos (si alguna peça en fa),
+  - Moble: Resum (i avisos de fusteria), Encaixos (si alguna peça en fa),
     Materials de tot el moble (aplica a tots els mòduls), Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
     Preferències»; `CabinetViewer sceneFinish`, `renderThumb(…, finish)`).
-  - Mòdul: Mides · Posició · **Caixa** · **Portes** (només amb l'Interior dividit) · **Materials** · **Unió**. **Sense «Acabats»** (per decisió de l'usuari,
+  - Mòdul: Posició · Mides · **Caixa** · **Portes** (només amb l'Interior dividit) · **Unió** (si la caixa en fa) ·
+    **Materials** (en aquest ordre per decisió de l'usuari, 2026-10-13). **Sense «Acabats»** (per decisió de l'usuari,
     2026-10-08: «això dels acabats no està bé»; abans una secció `mod-joinery`, `LuHammer`): cada fila és a la secció del
     que toca, **un sol lloc per decisió i només el que la construcció llegeix** (`moduleRows` a
     `core/model/usedHardware.ts`, `frontsInspector.test.ts`), en cascada:

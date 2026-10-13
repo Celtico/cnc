@@ -86,7 +86,6 @@ export interface BuildWarning {
     | "hinge"
     | "drawer-bottom"
     | "invalid-part"
-    | "same-size"
     | "edge-notch"
     | "drawer-box"
     | "handle"

@@ -36,7 +36,8 @@ describe("peces de la mateixa mida amb mecanitzats diferents (el taller casa per
     expect(sameSizeConflicts([a, { ...b, material: "Noguera" }])).toEqual([])
     expect(sameSizeConflicts([a, { ...b, length: 601 }])).toEqual([])
   })
-  it("avís a buildComposition", () => {
+  // Per decisió de l'usuari (2026-10-13) el moble no en fa cap avís: el taller identifica les peces per l'etiqueta.
+  it("buildComposition no avisa de peces de la mateixa mida amb mecanitzats diferents", () => {
     const part = (p: Partial<FreePart> & Pick<FreePart, "id" | "w" | "h" | "x">): FreePart => ({ name: p.id, orient: "front", thickness: 19, material: "Roure", y: 0, z: 0, ...p })
     const comp: Composition = {
       kind: "lliure",
@@ -44,14 +45,13 @@ describe("peces de la mateixa mida amb mecanitzats diferents (el taller casa per
       references: [],
       parts: [part({ id: "a", w: 600, h: 400, x: 0 }), part({ id: "b", w: 600, h: 400, x: 1000 }), { ...part({ id: "c", w: 100, h: 100, x: 1200 }), effect: "cut" as const, y: 150, z: -10, thickness: 40 }],
     }
-    const w = buildComposition(comp).warnings.filter((x) => x.code === "same-size")
-    expect(w).toHaveLength(1)
-    expect(w[0]!.message).toMatch(/només per la mida/)
+    const b = buildComposition(comp)
+    expect(b.panels.filter((p) => p.role === "part")).toHaveLength(2)
+    expect(b.warnings.filter((x) => /només per la mida/.test(x.message))).toEqual([])
   })
   it("la cadira Línia: seient i laterals ja no fan la mateixa mida", () => {
     const t = COLLECTION_PIECES.find((p) => p.id === "col-comercial-linea-chair")!
     const b = buildComposition(t.make())
-    expect(b.warnings.filter((w) => w.code === "same-size")).toEqual([])
     const seat = b.panels.find((p) => p.label === "Seient")!
     const side = b.panels.find((p) => p.label === "Lateral")!
     expect([seat.length, seat.width]).not.toEqual([side.length, side.width])

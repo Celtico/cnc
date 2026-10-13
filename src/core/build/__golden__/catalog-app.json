@@ -5,8 +5,7 @@
   "warnings": [
    "inset",
    "mitre",
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "back|trassera|1800x700x10|Contraxapat (fons)|none|e0000|h0|g0|c1:3b76db09|o-|@b2c626a6",
@@ -53,8 +52,7 @@
   "extras": 0,
   "warnings": [
    "hollow",
-   "material-heat",
-   "same-size"
+   "material-heat"
   ],
   "p": [
    "back|trassera|2000x450x10|DM (fons)|none|e0000|h0|g0|c1:c794158f|o-|@c7beaac0",
@@ -137,9 +135,7 @@
  "kitchen-island": {
   "panels": 141,
   "extras": 1,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|1777x747x10|DM (fons)|none|e0000|h0|g0|c0|o-|@69e3d09c",
    "back|trassera|720x400x10|DM (fons)|none|e0000|h0|g0|c0|o-|@fbc2ed86",
@@ -287,9 +283,7 @@
  "walk-in-wardrobe": {
   "panels": 47,
   "extras": 3,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2177x777x10|DM (fons)|none|e0000|h0|g0|c0|o-|@991e1a2c",
    "back|trassera|2177x977x10|DM (fons)|none|e0000|h0|g0|c0|o-|@0d0c9765",
@@ -355,9 +349,7 @@
  "tv-long": {
   "panels": 28,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2800x480x10|DM (fons)|none|e0000|h0|g0|c1:598a1b7b|o-|@6a3bd778",
    "bottom|baix|2762x440x19|MDF lacat|x|e0010|h18:8c7d7384|g0|c0|o-|@51c2c022",
@@ -622,9 +614,7 @@
  "oak-kitchen": {
   "panels": 130,
   "extras": 2,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2177x577x10|DM (fons)|none|e0000|h0|g0|c0|o-|@2a905efe",
    "back|trassera|2377x747x10|DM (fons)|none|e0000|h0|g0|c0|o-|@7b584bc4",
@@ -761,9 +751,7 @@
  "flatpack-shelf": {
   "panels": 7,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "part|Lateral dret|900x300x19|Roure massís / xapat|y|e0000|h0|g0|c10:c7870d8c|od9182e4e|@cd2321e1",
    "part|Lateral esquerre|900x300x19|Roure massís / xapat|y|e0000|h0|g0|c10:c7870d8c|od9182e4e|@04584621",
@@ -777,9 +765,7 @@
  "flatpack-stool": {
   "panels": 3,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "part|Pota costat|468x400x19|Roure massís / xapat|y|e0000|h0|g0|c0|oec87f5ec|@abfb1df8",
    "part|Pota davant|468x400x19|Roure massís / xapat|y|e0000|h0|g0|c0|o48827c98|@adc1b098",
@@ -813,9 +799,7 @@
  "modern-kitchen": {
   "panels": 89,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|720x400x10|DM (fons)|none|e0000|h0|g0|c0|o-|@fbc2ed86",
    "back|trassera|720x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@1cfa9809",
@@ -1060,8 +1044,7 @@
   "panels": 42,
   "extras": 0,
   "warnings": [
-   "inset",
-   "same-size"
+   "inset"
   ],
   "p": [
    "back|trassera|1177x777x10|DM (fons)|none|e0000|h0|g0|c0|o-|@9bbe88bc",

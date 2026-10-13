@@ -30,9 +30,7 @@
  "store-juvenil-c-moda-3": {
   "panels": 25,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|1000x850x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
    "bottom|baix|962x440x19|Melamina blanca|x|e0010|h9:9fea46af|g0|c0|o-|@339b08ee",
@@ -64,9 +62,7 @@
  "store-juvenil-prestatgeria-1": {
   "panels": 13,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|1150x1150x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
    "bottom|baix|1112x340x19|Melamina blanca|x|e0010|h12:e2dfdfe1|g0|c0|o-|@5b08a1fd",
@@ -777,9 +773,7 @@
  "store-despatx-moble-auxiliar-1": {
   "panels": 21,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|900x700x10|DM (fons)|none|e0000|h0|g0|c0|o-|@00f6ae24",
    "bottom|baix|862x490x19|Melamina gris|x|e0010|h9:1df9a321|g0|c0|o-|@36293ffc",
@@ -973,9 +967,7 @@
  "store-entrada-penjador-3": {
   "panels": 19,
   "extras": 1,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|1900x500x10|DM (fons)|none|e0000|h0|g0|c0|o-|@bdc74a3f",
    "back|trassera|1900x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c8ee1d05",
@@ -1050,9 +1042,7 @@
  "store-entrada-moble-d-entrada-1": {
   "panels": 25,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|1200x900x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
    "bottom|baix|1162x390x19|Melamina roure|x|e0010|h9:63b3b13d|g0|c0|o-|@9d77d315",

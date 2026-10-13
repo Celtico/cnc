@@ -42,8 +42,7 @@
    "layout",
    "material-heat",
    "mitre",
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "back|trassera|1750x910x19|Melamina 19|x|e0000|h12:f40a9694|g0|c0|o-|@37d0dfc1",
@@ -197,8 +196,7 @@
   "extras": 1,
   "warnings": [
    "push",
-   "rail",
-   "same-size"
+   "rail"
   ],
   "p": [
    "back|trassera|900x850x3|Contraxapat 4mm|none|e0000|h0|g0|c0|o-|@6af44e2b",
@@ -245,8 +243,7 @@
   "warnings": [
    "grille-open-ratio",
    "mitre",
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "bottom|baix|930x340x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@0a9bc8fb|m:left,right",
@@ -265,8 +262,7 @@
    "grille-open-ratio",
    "handle",
    "handle",
-   "handle",
-   "same-size"
+   "handle"
   ],
   "p": [
    "back|trassera|632x282x3|Roure massís / xapat|none|e0000|h0|g0|c0|o-|@3c155adc",
@@ -364,7 +360,6 @@
    "inset",
    "inset",
    "material-heat",
-   "same-size",
    "shelf-span"
   ],
   "p": [
@@ -474,8 +469,7 @@
    "grille-open-ratio",
    "inset",
    "material-heat",
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|1037x408.5x16|DM (fons)|none|e0000|h0|g0|c0|o-|@45e951dd",
@@ -511,8 +505,7 @@
   "panels": 5,
   "extras": 0,
   "warnings": [
-   "material-heat",
-   "same-size"
+   "material-heat"
   ],
   "p": [
    "back|trassera|2000x790x8|Melamina blanca|none|e1111|h0|g0|c0|o-|@66c48cec",
@@ -581,8 +574,7 @@
   "warnings": [
    "grille-open-ratio",
    "material-heat",
-   "rail",
-   "same-size"
+   "rail"
   ],
   "p": [
    "back|trassera|1330x300x10|Noguera xapada|none|e0000|h0|g0|c0|o-|@a4dc3926",
@@ -605,8 +597,7 @@
    "grille-open-ratio",
    "grille-open-ratio",
    "inset",
-   "material-heat",
-   "same-size"
+   "material-heat"
   ],
   "p": [
    "back|trassera|752x412x10|Roure massís / xapat|none|e0000|h0|g0|c0|o-|@6189c773",
@@ -625,8 +616,7 @@
   "warnings": [
    "back-inset",
    "hollow",
-   "rail",
-   "same-size"
+   "rail"
   ],
   "p": [
    "back|trassera|610x300x8|MDF lacat|none|e0000|h0|g0|c0|o-|@fed6906f",
@@ -662,8 +652,7 @@
    "hollow",
    "inset",
    "mitre",
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "back|trassera|1470x350x19|Noguera xapada|none|e0000|h12:99b138a9|g0|c0|o-|@3de38de6",
@@ -733,8 +722,7 @@
    "inset",
    "material-heat",
    "mitre",
-   "rail",
-   "same-size"
+   "rail"
   ],
   "p": [
    "back|trassera|1042x652x16|MDF lacat|none|e0000|h9:3b64256b|g0|c0|o-|@4770618c",
@@ -770,8 +758,7 @@
   "warnings": [
    "hollow",
    "inset",
-   "inset",
-   "same-size"
+   "inset"
   ],
   "p": [
    "back|trassera|2130x890x3|Contraxapat 4mm|none|e0000|h0|g0|c0|o-|@8ee3017b",
@@ -802,8 +789,7 @@
    "drawer-box",
    "grille-open-ratio",
    "hole-clash",
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|1060x470x19|Melamina blanca|none|e0000|h0|g0|c0|o-|@d3864258",
@@ -850,8 +836,7 @@
   "extras": 0,
   "warnings": [
    "drawer-bottom",
-   "grille-open-ratio",
-   "same-size"
+   "grille-open-ratio"
   ],
   "p": [
    "back|trassera|1760x830x8|Noguera xapada|none|e0000|h0|g0|c0|o-|@939d39d4",
@@ -894,7 +879,6 @@
    "drawer-bottom",
    "grille-open-ratio",
    "hanging",
-   "same-size",
    "shelf-span"
   ],
   "p": [
@@ -959,7 +943,6 @@
    "mitre",
    "push",
    "rail",
-   "same-size",
    "shelf-span",
    "shelves"
   ],
@@ -1008,8 +991,7 @@
    "grille-open-ratio",
    "handle",
    "handle",
-   "material-heat",
-   "same-size"
+   "material-heat"
   ],
   "p": [
    "bottom|baix|1062x410x19|Noguera xapada|x|e0010|h18:c7f6b19c|g0|c0|o-|@520b290b",
@@ -1139,8 +1121,7 @@
    "handle",
    "hinge",
    "material-heat",
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "back|trassera|1841x292x8|Melamina 19|none|e0000|h0|g0|c0|o-|@2673079b",
@@ -1185,7 +1166,6 @@
    "mitre",
    "overlap",
    "push",
-   "same-size",
    "table"
   ],
   "p": [
@@ -1338,8 +1318,7 @@
    "invalid-part",
    "invalid-part",
    "invalid-part",
-   "layout",
-   "same-size"
+   "layout"
   ],
   "p": [
    "back|trassera|1187.5x1015x8|DM 10|none|e0000|h0|g0|c0|o-|@d24508f6",
@@ -1426,8 +1405,7 @@
    "material-heat",
    "mitre",
    "push",
-   "rail",
-   "same-size"
+   "rail"
   ],
   "p": [
    "back|trassera|1810x1140x3|MDF lacat|none|e1111|h0|g0|c0|o-|@6fc40cec",
@@ -1495,7 +1473,6 @@
    "inset",
    "overlap",
    "rail",
-   "same-size",
    "shelf-span"
   ],
   "p": [
@@ -1527,8 +1504,7 @@
   "panels": 7,
   "extras": 0,
   "warnings": [
-   "grille-open-ratio",
-   "same-size"
+   "grille-open-ratio"
   ],
   "p": [
    "back|trassera|2030x550x19|DM 10|none|e0000|h0|g0|c0|o-|@663a8fc7",

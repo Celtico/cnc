@@ -28,8 +28,7 @@
   "extras": 0,
   "warnings": [
    "mitre",
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "bottom|baix|450x450x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@0c4a0372|m:left,right",
@@ -77,8 +76,7 @@
   "warnings": [
    "hollow",
    "inset",
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|2400x720x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
@@ -136,8 +134,7 @@
   "warnings": [
    "hollow",
    "inset",
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|2700x420x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
@@ -403,8 +400,7 @@
    "inset",
    "inset",
    "inset",
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|2300x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@16e30949",
@@ -528,8 +524,7 @@
   "panels": 27,
   "extras": 0,
   "warnings": [
-   "hollow",
-   "same-size"
+   "hollow"
   ],
   "p": [
    "back|trassera|2400x450x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
@@ -658,8 +653,7 @@
   "warnings": [
    "hollow",
    "inset",
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|2400x900x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
@@ -757,8 +751,7 @@
    "inset",
    "inset",
    "inset",
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|2300x1000x10|DM (fons)|none|e0000|h0|g0|c0|o-|@54698c03",
@@ -823,8 +816,7 @@
   "panels": 90,
   "extras": 0,
   "warnings": [
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|2010x660x10|DM (fons)|none|e0000|h0|g0|c0|o-|@595f383d",
@@ -923,8 +915,7 @@
   "panels": 28,
   "extras": 0,
   "warnings": [
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|990x390x10|DM (fons)|none|e0000|h0|g0|c0|o-|@85760f18",
@@ -1051,8 +1042,7 @@
   "panels": 35,
   "extras": 7,
   "warnings": [
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|2480x974x10|DM (fons)|none|e0000|h0|g0|c0|o-|@876af0d2",
@@ -1148,8 +1138,7 @@
    "mitre",
    "mitre",
    "mitre",
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|1220x495x10|DM (fons)|none|e0000|h0|g0|c0|o-|@7dfbc10e",
@@ -1340,9 +1329,7 @@
  "col:col-comercial-linea-wardrobe": {
   "panels": 58,
   "extras": 3,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2280x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@16e30949",
    "back|trassera|2280x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@666f1718",
@@ -1511,8 +1498,7 @@
   "extras": 6,
   "warnings": [
    "material-heat",
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|1800x750x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c2cddd06",

@@ -291,9 +291,7 @@
  "store-emmagatzematge-c-moda-3": {
   "panels": 25,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|1200x850x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
    "bottom|baix|1162x440x19|MDF lacat verd oliva|x|e0010|h9:fc9f3a87|g0|c0|o-|@339b08ee",
@@ -464,9 +462,7 @@
  "store-emmagatzematge-moble-modular-1": {
   "panels": 51,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|800x400x10|DM (fons)|none|e0000|h0|g0|c0|o-|@020a62d7",
    "back|trassera|800x400x10|DM (fons)|none|e0000|h0|g0|c0|o-|@3b9fe838",
@@ -587,8 +583,7 @@
    "mitre",
    "mitre",
    "mitre",
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "back|trassera|400x400x10|DM (fons)|none|e0000|h0|g0|c0|o-|@8eb613ac",
@@ -883,9 +878,7 @@
  "store-bany-columna-3": {
   "panels": 11,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|1600x400x10|DM (fons)|none|e0000|h0|g0|c0|o-|@7e35d27a",
    "bottom|baix|362x310x19|Noguera xapada|x|e0010|h6:071516b8|g0|c0|o-|@f9cedb87",
@@ -1057,9 +1050,7 @@
  "store-exterior-moble-auxiliar-exterior-1": {
   "panels": 24,
   "extras": 1,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|1400x880x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
    "bottom|baix|1362x590x19|Roure massís / xapat|x|e0010|h9:ec2ba216|g0|c0|o-|@11a485b9",
@@ -1103,8 +1094,7 @@
   "panels": 4,
   "extras": 0,
   "warnings": [
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "back|trassera|500x500x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",

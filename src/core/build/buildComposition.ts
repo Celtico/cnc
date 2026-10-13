@@ -6,8 +6,6 @@ import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
 import { buildFreeParts, type PartJoint } from "./freeParts"
 import { resolveHoleClashes } from "./holeClash"
 import { applyHardwarePlacements } from "./hardwarePlace"
-import { sameSizeConflicts } from "./sameSize"
-import { pieceRefs } from "../export/refs"
 
 export interface CompositionWarning extends BuildWarning {
   moduleId?: string
@@ -195,27 +193,8 @@ export function buildComposition(input: Composition): CompositionBuild {
     }
   }
 
-  // El taller casa peça i sòlid només per la mida: dues peces iguals amb mecanitzats diferents es poden canviar.
-  // Un sol avís per moble (en una cuina n'hi pot haver molts), amb la primera parella i quantes n'hi ha.
-  const clash = sameSizeConflicts(panels)
-  if (clash.length) {
-    const [a, b] = clash[0]!
-    const moduleId = modules.find((m) => m.index === a.module)?.id
-    // Amb la ref del taller i el mòdul: «Lateral esquerre (A.2.L.1, Calaixos)» i no dues vegades el mateix nom.
-    const refs = pieceRefs(panels)
-    const who = (p: Panel) => {
-      const mod = input.modules.find((m) => m.id === modules.find((x) => x.index === p.module)?.id)?.name
-      const extra = [refs.get(p.id), mod].filter(Boolean).join(", ")
-      return extra ? `${p.label} (${extra})` : p.label
-    }
-    const more = clash.length > 1 ? ` (i ${clash.length - 1} ${clash.length === 2 ? "parella més" : "parelles més"})` : ""
-    warnings.push({
-      code: "same-size",
-      message: `${who(a)} i ${who(b)} fan ${a.length} × ${a.width} × ${a.thickness} mm de ${a.material} però tenen mecanitzats diferents${more}: el taller casa cada peça amb el seu sòlid només per la mida i els pot intercanviar. Canvia una mica la mida d'una de les dues o avisa el taller.`,
-      panelId: a.id,
-      ...(moduleId ? { moduleId } : {}),
-    })
-  }
+  // Sense l'avís de peces de la mateixa mida amb mecanitzats diferents (per decisió de l'usuari, 2026-10-13: el taller
+  // identifica cada peça per l'etiqueta, A.1.L.1 ≠ A.1.L.2, no per la mida). `sameSizeConflicts` es queda sense ús.
 
   return { panels, warnings, modules, joints: free.joints, extras: [...moduleExtras, ...free.extras], models: input.models ?? [], hardwareKits }
 }

@@ -2,9 +2,7 @@
  "mag:show-vitrine": {
   "panels": 35,
   "extras": 28,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2100x1600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@86c1c91a",
    "bottom|baix|1562x410x19|Roure de fil|x|e0010|h9:3d22b050|g0|c0|o-|@33f2f767",
@@ -99,9 +97,7 @@
  "mag:green-kitchen": {
   "panels": 88,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@b2b39d72",
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@ceccccf8",
@@ -303,9 +299,7 @@
  "mag:oak-run": {
   "panels": 68,
   "extras": 1,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|1000x770x10|DM (fons)|none|e0000|h0|g0|c0|o-|@6bb76fe5",
    "back|trassera|770x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@29444dca",
@@ -380,9 +374,7 @@
  "mag:black-talls": {
   "panels": 52,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@0f2426a8",
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@29444dca",
@@ -441,9 +433,7 @@
  "mag:greige-kitchen": {
   "panels": 186,
   "extras": 2,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@29444dca",
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@5d580eef",
@@ -705,9 +695,7 @@
  "mag:grey-wardrobe": {
   "panels": 58,
   "extras": 3,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2200x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@16e30949",
    "back|trassera|2200x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@666f1718",
@@ -772,9 +760,7 @@
  "mag:outdoor-kitchen": {
   "panels": 57,
   "extras": 1,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|770x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@8e4eaa47",
    "back|trassera|800x770x10|DM (fons)|none|e0000|h0|g0|c0|o-|@6af44e2b",

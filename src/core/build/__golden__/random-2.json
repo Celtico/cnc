@@ -78,8 +78,7 @@
   "panels": 14,
   "extras": 0,
   "warnings": [
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "back|trassera|1247.5x555x10|MDF lacat|none|e0000|h0|g0|c0|o-|@100ff9ac",
@@ -102,8 +101,7 @@
   "panels": 13,
   "extras": 0,
   "warnings": [
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "back|trassera|1692x652x19|Noguera xapada|x|e0100|h9:354eba77|g0|c0|o-|@eab76b37",
@@ -130,7 +128,6 @@
    "grille-open-ratio",
    "hinge",
    "hinge",
-   "same-size",
    "shelves"
   ],
   "p": [
@@ -187,7 +184,6 @@
    "hinge",
    "material-heat",
    "mitre",
-   "same-size",
    "shelf-span"
   ],
   "p": [
@@ -292,8 +288,7 @@
   "extras": 0,
   "warnings": [
    "drawer-bottom",
-   "grille-open-ratio",
-   "same-size"
+   "grille-open-ratio"
   ],
   "p": [
    "divider|divisor|1874x560x16|Melamina 19|x|e1000|h11:a71b171a|g0|c0|o-|@8c56e803",
@@ -414,8 +409,7 @@
    "layout",
    "layout",
    "layout",
-   "material-heat",
-   "same-size"
+   "material-heat"
   ],
   "p": [
    "back|trassera|508x494x19|DM 10|none|e0000|h9:41fd87cb|g0|c0|o-|@60b1b3b8",
@@ -509,8 +503,7 @@
    "hanging",
    "mitre",
    "mitre",
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|580x490x19|Melamina blanca|none|e1111|h0|g0|c0|o-|@269f7cfe",
@@ -559,8 +552,7 @@
   "warnings": [
    "back-groove",
    "drawer-bottom",
-   "grille-open-ratio",
-   "same-size"
+   "grille-open-ratio"
   ],
   "p": [
    "back|trassera|1368.5x1058.5x19|Noguera xapada|none|e0000|h0|g0|c0|o-|@adfc6153",
@@ -610,8 +602,7 @@
    "drawer-bottom",
    "grille-open-ratio",
    "hollow",
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "back|trassera|1840x990x10|Melamina 19|none|e0000|h0|g0|c0|o-|@433c5ded",
@@ -717,7 +708,6 @@
   "warnings": [
    "back-groove",
    "door-too-wide",
-   "same-size",
    "shelf-span"
   ],
   "p": [
@@ -762,8 +752,7 @@
    "drawer-bottom",
    "drawer-bottom",
    "hanging",
-   "inset",
-   "same-size"
+   "inset"
   ],
   "p": [
    "back|trassera|1097x547x16|DM (fons)|none|e0000|h0|g0|c0|o-|@965bcc0b",
@@ -926,8 +915,7 @@
   "warnings": [
    "drawer-bottom",
    "drawer-box",
-   "drawer-box",
-   "same-size"
+   "drawer-box"
   ],
   "p": [
    "back|trassera|1108x368x19|Noguera xapada|none|e0000|h12:0b502bcc|g0|c0|o-|@d699ef16",
@@ -1061,8 +1049,7 @@
    "drawer-bottom",
    "grille-open-ratio",
    "grille-open-ratio",
-   "material-heat",
-   "same-size"
+   "material-heat"
   ],
   "p": [
    "back|trassera|1439.5x387x3|DM (fons)|none|e0000|h0|g0|c0|o-|@f75e7cf1",
@@ -1124,7 +1111,6 @@
    "mitre",
    "overlap",
    "push",
-   "same-size",
    "table"
   ],
   "p": [
@@ -1192,8 +1178,7 @@
    "material-heat",
    "mitre",
    "mitre",
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "back|trassera|1100x670x8|DM (fons)|none|e0000|h0|g0|c0|o-|@6acd2867",
@@ -1287,8 +1272,7 @@
    "inset",
    "inset",
    "mitre",
-   "overlap",
-   "same-size"
+   "overlap"
   ],
   "p": [
    "back|trassera|2018.5x397x8|DM 10|none|e0000|h0|g0|c0|o-|@aa7fd909",
@@ -1318,8 +1302,7 @@
   "panels": 3,
   "extras": 0,
   "warnings": [
-   "grille-open-ratio",
-   "same-size"
+   "grille-open-ratio"
   ],
   "p": [
    "back|trassera|1537x560x10|DM (fons)|none|e0000|h0|g0|c0|o-|@de3578c1",
@@ -1336,8 +1319,7 @@
    "grille-open-ratio",
    "grille-open-ratio",
    "layout",
-   "material-heat",
-   "same-size"
+   "material-heat"
   ],
   "p": [
    "back|trassera|1500x360x8|Contraxapat 4mm|none|e0000|h0|g0|c0|o-|@835488d4",
@@ -1413,7 +1395,6 @@
    "overlap",
    "rail",
    "rail",
-   "same-size",
    "table"
   ],
   "p": [
@@ -1467,7 +1448,6 @@
    "overlap",
    "push",
    "rail",
-   "same-size",
    "table"
   ],
   "p": [
@@ -1554,8 +1534,7 @@
    "back-inset",
    "door-too-wide",
    "grille-open-ratio",
-   "inset",
-   "same-size"
+   "inset"
   ],
   "p": [
    "back|trassera|1962x1152x8|Melamina 19|none|e0000|h0|g0|c0|o-|@31a18bd7",
@@ -1602,8 +1581,7 @@
   "warnings": [
    "drawer-bottom",
    "grille-open-ratio",
-   "hanging",
-   "same-size"
+   "hanging"
   ],
   "p": [
    "bottom|baix|878x390x16|Melamina 19|x|e0010|h9:e83b83c7|g0|c0|o-|@eb4c8e0a",

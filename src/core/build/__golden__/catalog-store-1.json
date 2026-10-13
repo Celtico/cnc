@@ -51,9 +51,7 @@
  "store-salo-moble-tv-1": {
   "panels": 23,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2400x420x10|DM (fons)|none|e0000|h0|g0|c0|o-|@78683c67",
    "bottom|baix|2362x410x19|MDF lacat|x|e0010|h15:e4b715ae|g0|c0|o-|@a4f71232",
@@ -194,8 +192,7 @@
   "extras": 4,
   "warnings": [
    "mitre",
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "back|trassera|1600x650x10|DM (fons)|none|e0000|h0|g0|c0|o-|@78683c67",
@@ -603,8 +600,7 @@
   "extras": 0,
   "warnings": [
    "mitre",
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "back|trassera|450x450x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
@@ -758,9 +754,7 @@
  "store-menjador-aparador-2": {
   "panels": 21,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|1600x450x10|DM (fons)|none|e0000|h0|g0|c0|o-|@6855f51c",
    "bottom|baix|1562x410x19|Roure massís / xapat|x|e0010|h12:0bd0e4cd|g0|c0|o-|@416cb6bf",
@@ -789,8 +783,7 @@
   "panels": 24,
   "extras": 4,
   "warnings": [
-   "inset",
-   "same-size"
+   "inset"
   ],
   "p": [
    "back|trassera|1600x700x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c2cddd06",
@@ -893,9 +886,7 @@
  "store-menjador-moble-auxiliar-1": {
   "panels": 24,
   "extras": 1,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|1200x880x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
    "bottom|baix|1162x490x19|MDF lacat antracita|x|e0010|h9:71f389e1|g0|c0|o-|@5fd3667a",
@@ -981,9 +972,7 @@
  "store-cuina-cuina-lineal-1": {
   "panels": 95,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|720x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@345ce7ea",
    "back|trassera|720x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@49ddf179",
@@ -1085,9 +1074,7 @@
  "store-cuina-cuina-lineal-2": {
   "panels": 79,
   "extras": 1,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@01461fea",
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@9b4cbc37",
@@ -1173,9 +1160,7 @@
  "store-cuina-cuina-lineal-3": {
   "panels": 80,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|720x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@3328a380",
    "back|trassera|720x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@49ddf179",
@@ -1262,9 +1247,7 @@
  "store-cuina-cuina-amb-illa-1": {
   "panels": 191,
   "extras": 2,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@29444dca",
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@5d580eef",
@@ -1462,9 +1445,7 @@
  "store-cuina-cuina-amb-illa-2": {
   "panels": 102,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|1800x770x10|DM (fons)|none|e0000|h0|g0|c0|o-|@04aff6bb",
    "back|trassera|770x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@29444dca",
@@ -1573,9 +1554,7 @@
  "store-cuina-cuina-amb-illa-3": {
   "panels": 121,
   "extras": 2,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2000x770x10|DM (fons)|none|e0000|h0|g0|c0|o-|@3d90766c",
    "back|trassera|720x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@345ce7ea",
@@ -1703,9 +1682,7 @@
  "store-cuina-kitchenette-1": {
   "panels": 55,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|720x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@49ddf179",
    "back|trassera|720x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@e16d872c",
@@ -1767,9 +1744,7 @@
  "store-cuina-kitchenette-2": {
   "panels": 53,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@f632591a",
    "back|trassera|770x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@ac55296c",
@@ -1829,9 +1804,7 @@
  "store-cuina-kitchenette-3": {
   "panels": 55,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|720x400x10|DM (fons)|none|e0000|h0|g0|c0|o-|@7a8c888e",
    "back|trassera|720x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@345ce7ea",

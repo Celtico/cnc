@@ -22,8 +22,7 @@ describe("peces corregudes (taulell i sòcol)", () => {
     const hob = t.cutouts!.find((x) => x.tag === "hob")!
     expect(hob.kind).toBe("rect")
     if (hob.kind === "rect") expect(hob.x + hob.w / 2).toBeCloseTo(1700)
-    // «same-size» és informatiu (el taller casa per mida): es revisa a part.
-    expect(b.warnings.filter((w) => w.code !== "same-size")).toEqual([])
+    expect(b.warnings).toEqual([])
   })
 
   it("el sòcol corregut va de punta a punta, amb l'alçada de les potes i retranquejat", () => {

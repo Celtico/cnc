@@ -83,7 +83,6 @@ describe("calaixos baixos", () => {
     const sides = b.panels.filter((p) => p.role === "drawerSide")
     for (const f of fronts.slice(1)) expect(sameMachining(fronts[0]!, f), f.id).toBe(true)
     expect(new Set(sides.map((s) => s.width)).size).toBe(1)
-    expect(b.warnings.filter((w) => w.code === "same-size")).toEqual([])
   })
 })
 

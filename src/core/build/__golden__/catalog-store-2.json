@@ -2,9 +2,7 @@
  "store-cuina-illa-de-cuina-3": {
   "panels": 45,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2400x770x10|DM (fons)|none|e0000|h0|g0|c0|o-|@6af44e2b",
    "bottom|baix|2362x990x19|Melamina blanca|x|e0010|h15:1e082117|g0|c0|o-|@a0de3d2f",
@@ -56,9 +54,7 @@
  "store-cuina-columnes-de-cuina-1": {
   "panels": 43,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@29444dca",
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@5d580eef",
@@ -108,9 +104,7 @@
  "store-cuina-columnes-de-cuina-2": {
   "panels": 41,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@29444dca",
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@5d580eef",
@@ -188,9 +182,7 @@
  "store-cuina-rac-de-caf--1": {
   "panels": 30,
   "extras": 1,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|770x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@29444dca",
    "back|trassera|770x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@5d580eef",
@@ -227,9 +219,7 @@
  "store-cuina-rac-de-caf--2": {
   "panels": 41,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@ac55296c",
    "back|trassera|770x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@f50d55c9",
@@ -277,9 +267,7 @@
  "store-cuina-rac-de-caf--3": {
   "panels": 41,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|720x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@345ce7ea",
    "back|trassera|720x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@49ddf179",
@@ -464,8 +452,7 @@
   "warnings": [
    "mitre",
    "mitre",
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "back|trassera|500x500x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
@@ -704,9 +691,7 @@
  "store-dormitori-armari-1": {
   "panels": 36,
   "extras": 1,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2200x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@86c1c91a",
    "back|trassera|2200x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c8ee1d05",
@@ -749,9 +734,7 @@
  "store-dormitori-armari-2": {
   "panels": 45,
   "extras": 3,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2200x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@16e30949",
    "back|trassera|2200x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@86c1c91a",
@@ -806,8 +789,7 @@
   "warnings": [
    "inset",
    "inset",
-   "inset",
-   "same-size"
+   "inset"
   ],
   "p": [
    "back|trassera|2200x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@16e30949",
@@ -938,9 +920,7 @@
  "store-dormitori-tocador-1": {
   "panels": 23,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|720x350x10|DM (fons)|none|e0000|h0|g0|c0|o-|@159c6b95",
    "back|trassera|720x350x10|DM (fons)|none|e0000|h0|g0|c0|o-|@b8a56c05",
@@ -1168,9 +1148,7 @@
  "store-juvenil-lliteres-2": {
   "panels": 56,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2300x2100x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d6f614ec",
    "back|trassera|2300x500x10|DM (fons)|none|e0000|h0|g0|c0|o-|@3720a3b3",
@@ -1365,9 +1343,7 @@
  "store-juvenil-escriptori-2": {
   "panels": 28,
   "extras": 0,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|720x420x10|DM (fons)|none|e0000|h0|g0|c0|o-|@86c1c91a",
    "back|trassera|720x420x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c849472b",
@@ -1430,9 +1406,7 @@
  "store-juvenil-armari-1": {
   "panels": 36,
   "extras": 1,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2000x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@86c1c91a",
    "back|trassera|2000x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c8ee1d05",
@@ -1500,9 +1474,7 @@
  "store-juvenil-armari-3": {
   "panels": 22,
   "extras": 2,
-  "warnings": [
-   "same-size"
-  ],
+  "warnings": [],
   "p": [
    "back|trassera|2000x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@86c1c91a",
    "back|trassera|2000x800x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c8ee1d05",

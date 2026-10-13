@@ -27,7 +27,6 @@
    "rail",
    "rail",
    "rail",
-   "same-size",
    "shelves"
   ],
   "p": [
@@ -78,7 +77,6 @@
   "warnings": [
    "back-groove",
    "overlap",
-   "same-size",
    "table"
   ],
   "p": [
@@ -163,8 +161,7 @@
    "inset",
    "invalid-part",
    "invalid-part",
-   "layout",
-   "same-size"
+   "layout"
   ],
   "p": [
    "back|trassera|1350x510x10|Roure massís / xapat|none|e0000|h0|g0|c0|o-|@203f285b",
@@ -205,8 +202,7 @@
    "material-heat",
    "mitre",
    "rail",
-   "rail",
-   "same-size"
+   "rail"
   ],
   "p": [
    "back|trassera|1260x510x19|Melamina blanca|none|e0000|h0|g0|c0|o-|@203f285b",
@@ -260,8 +256,7 @@
    "material-heat",
    "mitre",
    "mitre",
-   "rail",
-   "same-size"
+   "rail"
   ],
   "p": [
    "back|trassera|1070x480x8|DM (fons)|none|e0000|h0|g0|c0|o-|@6d2bc818",
@@ -297,8 +292,7 @@
    "invalid-part",
    "layout",
    "push",
-   "rail",
-   "same-size"
+   "rail"
   ],
   "p": [
    "back|trassera|370x360x8|Contraxapat 4mm|none|e0000|h0|g0|c0|o-|@744da8f6",
@@ -327,8 +321,7 @@
   "extras": 0,
   "warnings": [
    "back-inset",
-   "drawer-bottom",
-   "same-size"
+   "drawer-bottom"
   ],
   "p": [
    "back|trassera|1441x742x3|Noguera xapada|x|e0100|h0|g0|c0|o-|@5bb5435a",
@@ -426,8 +419,7 @@
   "extras": 0,
   "warnings": [
    "back-groove",
-   "material-heat",
-   "same-size"
+   "material-heat"
   ],
   "p": [
    "back|trassera|743x553x19|Noguera xapada|none|e0000|h0|g0|c0|o-|@2bc1ee33",
@@ -495,7 +487,6 @@
    "grille-open-ratio",
    "overlap",
    "push",
-   "same-size",
    "table"
   ],
   "p": [
@@ -540,8 +531,7 @@
   "panels": 21,
   "extras": 0,
   "warnings": [
-   "hollow",
-   "same-size"
+   "hollow"
   ],
   "p": [
    "bottom|baix int|541x450x19|Melamina 19|y|e0000|h0|g0|c0|o-|@d26dac48|glue",
@@ -664,8 +654,7 @@
   "panels": 34,
   "extras": 0,
   "warnings": [
-   "drawer-bottom",
-   "same-size"
+   "drawer-bottom"
   ],
   "p": [
    "back|trassera|1191.5x363x8|Noguera xapada|none|e0000|h0|g0|c0|o-|@55cb8959",
@@ -708,8 +697,7 @@
   "panels": 13,
   "extras": 0,
   "warnings": [
-   "mitre",
-   "same-size"
+   "mitre"
   ],
   "p": [
    "back|trassera|2140x370x10|Contraxapat 4mm|none|e0000|h0|g0|c0|o-|@34d3fe37",
@@ -733,8 +721,7 @@
   "warnings": [
    "grille-open-ratio",
    "material-heat",
-   "rail",
-   "same-size"
+   "rail"
   ],
   "p": [
    "back|trassera|770x590x8|DM (fons)|none|e0000|h0|g0|c0|o-|@43e57b33",
@@ -772,8 +759,7 @@
    "mitre",
    "mitre",
    "push",
-   "rail",
-   "same-size"
+   "rail"
   ],
   "p": [
    "back|trassera|2180x710x10|MDF lacat|none|e0000|h0|g0|c0|o-|@7bf0da75",
@@ -841,8 +827,7 @@
   "extras": 0,
   "warnings": [
    "grille-open-ratio",
-   "material-heat",
-   "same-size"
+   "material-heat"
   ],
   "p": [
    "back|trassera|1850x1140x3|Roure massís / xapat|none|e0000|h0|g0|c0|o-|@9fdf35e9",
@@ -1120,7 +1105,6 @@
    "back-inset",
    "drawer-bottom",
    "grille-open-ratio",
-   "same-size",
    "table"
   ],
   "p": [
@@ -1171,7 +1155,6 @@
   "extras": 1,
   "warnings": [
    "grille-open-ratio",
-   "same-size",
    "shelf-span"
   ],
   "p": [
@@ -1210,8 +1193,7 @@
    "drawer-bottom",
    "grille-open-ratio",
    "inset",
-   "material-heat",
-   "same-size"
+   "material-heat"
   ],
   "p": [
    "back|trassera|1724x850x8|Melamina blanca|none|e0000|h0|g0|c0|o-|@6f0674d5",
@@ -1265,8 +1247,7 @@
    "hole-clash",
    "hole-clash",
    "hollow",
-   "material-heat",
-   "same-size"
+   "material-heat"
   ],
   "p": [
    "back|trassera|1380x960x3|DM (fons)|none|e0000|h0|g0|c0|o-|@adc99b16",
@@ -1356,8 +1337,7 @@
    "handle",
    "handle",
    "hinge",
-   "material-heat",
-   "same-size"
+   "material-heat"
   ],
   "p": [
    "back|trassera|1760x300x16|Noguera xapada|none|e0000|h0|g0|c0|o-|@a4dc3926",
@@ -1419,7 +1399,6 @@
    "hollow",
    "mitre",
    "mitre",
-   "same-size",
    "shelf-span"
   ],
   "p": [
@@ -1505,7 +1484,6 @@
    "material-heat",
    "mitre",
    "mitre",
-   "same-size",
    "shelves",
    "shelves"
   ],
@@ -1542,8 +1520,7 @@
   "extras": 0,
   "warnings": [
    "hollow",
-   "push",
-   "same-size"
+   "push"
   ],
   "p": [
    "bottom|baix int|370x314x16|Melamina 19|x|e0000|h3:daaf5af0|g0|c0|o-|@e134896b|glue",
