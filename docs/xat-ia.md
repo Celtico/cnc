@@ -117,8 +117,23 @@ guardar historial».
   les del document obert. El joc d'eines es torna a llegir a cada volta del torn (`runTurn` `refresh`).
 - **Desfer**: un pas per document tocat en acabar el torn. **Sense historial** desat: la conversa dura mentre l'app és
   oberta.
-- Encara no: Preferències, Peces, Nesting i Exportar només s'hi pot anar (no hi ha eines per canviar-les ni per baixar
-  fitxers).
+- **Que pugui fer-ho tot** (el mateix dia): gestionar documents (canviar el nom, duplicar, moure a un grup, esborrar amb
+  confirmació), llegir les peces i el nesting i canviar-ne el tauler, baixar els fitxers del taller (xcs, STEP, CSV,
+  DXF, llista de tall, GLB), els ferratges (buscar a la biblioteca, el per defecte de cada lloc i el de cada compartiment del moble obert) i llegir i canviar les preferències (materials, per defecte, folgances, màquina per defecte;
+  mai la clau de l'API).
+- **Sempre les mateixes eines i instruccions** (`allToolSet`): amb el pensament activat, l'API lliga cada bloc de
+  pensament a les instruccions i a les eines; canviar-les en obrir un document a mitja conversa donava «Invalid
+  signature in thinking block». Ara hi són totes des del principi i cada eina de document diu, si cal, que n'obri un.
+- **Peces lliures, ferratges i materials** (el mateix dia: «i fer peces lliures?», «i ferratges?», «pot fer material?»):
+  - amb un moble obert, les peces lliures amb les eines dels objectes (es fabriquen: `nest` segons el material) i una
+    forma a mida (`polygon`: punts amb arcs, com l'editor de perfils);
+  - `get_hardware` (els números d'un ferratge amb els límits) i `edit_hardware` (nom, fabricant, número i paràmetres; els
+    de l'app, només duplicant-los; un importat editat es desconfirma);
+  - `set_pref_material` també canvia el color, la rugositat, l'acabat (o torna a un d'abans), el reflex, el vellut, la
+    llum que passa i la que fa, i el nom (els mobles i ambients desats i el document obert el segueixen). Les fotos de
+    textura es continuen posant a Preferències.
+  - Provat de debò: un trapezi de 600 × 400 al «Moble illa» (desfet amb ⌘Z), un lacat verd brillant amb reflex 0,8 i
+    una còpia de la frontissa per defecte amb els seus números (tots dos esborrats després).
 
 ## Què ha de fer l'usuari
 

@@ -1068,9 +1068,15 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   l'Editor ni als Ambients** (`Workspace extra` sense ús). El document obert s'hi registra (`assistantHub.ts`:
   `registerDoc` amb el `ChatTarget` i una funció que diu la selecció amb els ids de les eines —mòdul, compartiment,
   peça, objecte de referència, element o paret de l'ambient—) i l'app hi posa la navegació (`registerNav`). Eines de
-  l'app (`appTools.ts`: `get_app`, `list_documents`, `open_document`, `create_document`, `go_to`) més les del document
-  obert (`withAppTools`), que es tornen a llegir a cada volta (`runTurn` `refresh`: obrir un document a mitja conversa
-  ja en dona les eines); cada missatge porta davant «[Context de l'app: …]» (`contextLine`); en acabar el torn, un pas
+  l'app (`appTools.ts`): on ets (`get_app`), documents (`list_documents`, `open_document`, `create_document`,
+  `rename_document`, `duplicate_document`, `move_to_group`, `delete_document` —només amb `confirmed` després d'un sí al
+  xat; un moble que és en un ambient no s'esborra—), Peces i Nesting del moble obert (`get_cutlist`, `get_nesting`,
+  `set_sheet`), Exportar (`export_files`: xcs, step, csv_topsolid, dxf, cutlist_csv, glb, amb els avisos; baixa el
+  fitxer i el treu d'esborrany), ferratges (`list_hardware`, `get_hardware` —paràmetres amb els límits de `hardwareParams`—, `edit_hardware` —nom, fabricant, número i paràmetres amb `setHardwareParam`; els de l'app (`builtin`) només duplicant-los—, `set_hardware_default`, `set_front_hardware`: frontissa, guia o joc, braç, imant, tirador —«none» = push—, barra, LED i marc d'un compartiment del moble obert, amb `slotAccepts`; còpia de l'item), Preferències (`get_settings`, `set_pref_material` —també color, rugositat, acabat sencer o tornar a un d'abans amb `switchFinish`/`restoredFinish` (la foto no), reflex, vellut, llum que passa i que fa, i el nom amb `renameMaterialEverywhere` com Preferències, també al document obert—, `set_pref_defaults`, `set_pref_gaps`,
+  `set_default_machine`; validat amb `SettingsSchema`; la clau de l'API mai) i `go_to`. Amb un moble obert, també les **peces lliures** amb les eines dels objectes (`objectToolSet({ fabricated: true })`: `nest` segons el material, `nestFor`; forma `polygon` = punts amb bulge opcional → `PNode`, la forma a mida de l'editor de perfils). **Sempre el mateix joc
+  d'eines** (`allToolSet`: les de l'app i les dels tres tipus de document; cada eina de document només serveix amb un
+  document del seu tipus obert): l'API lliga els blocs de pensament a les instruccions i a les eines, i canviar-les a
+  mitja conversa (en obrir un document) trencava el torn (`runTurn` `refresh` queda per a qui el necessiti); cada missatge porta davant «[Context de l'app: …]» (`contextLine`); en acabar el torn, un pas
   de desfer a cada document tocat. Tests `features/assistant/appTools.test.ts` i `chatTurn.test.ts`. Abans era una
   pestanya a cada document; el que segueix és el xat comú i les eines de cada document: als mobles i als **objectes**
   (no als `lliure` d'abans) i als **Ambients** (vegeu Ambients › Assistent IA). **Un sol xat per a tots els documents**

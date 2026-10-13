@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { AssistantToolSet } from "../../core/assistant/toolset"
-import { appToolSet, contextLine, withAppTools } from "./appTools"
+import { DEFAULT_SETTINGS } from "../../core/model"
+import { appToolSet, contextLine, setAppSettings, withAppTools } from "./appTools"
 import { registerDoc, registerNav } from "./assistantHub"
 
 const docSet: AssistantToolSet<unknown> = {
@@ -38,5 +39,46 @@ describe("assistent personal: eines de l'app", () => {
     offDoc()
     expect(contextLine()).toContain("cap document obert")
     offNav()
+  })
+})
+
+describe("assistent personal: totes les eines de l'app", () => {
+  it("hi són les de documents, peces, nesting, exportar i preferències", () => {
+    const names = appToolSet.tools.map((t) => t.name)
+    for (const n of ["rename_document", "duplicate_document", "move_to_group", "delete_document", "get_cutlist", "get_nesting", "set_sheet", "export_files", "get_settings", "set_pref_material", "set_pref_defaults", "set_pref_gaps", "set_default_machine", "list_hardware", "set_hardware_default", "set_front_hardware", "get_hardware", "edit_hardware"]) expect(names).toContain(n)
+  })
+  it("esborrar demana confirmació; sense document obert, peces i nesting ho diuen", async () => {
+    const del = await appToolSet.run(null, "delete_document", { kind: "moble", id: 1, confirmed: false })
+    expect(del.ok).toBe(false)
+    const cut = await appToolSet.run(null, "get_cutlist", {})
+    expect(cut.ok === false && cut.error).toMatch(/moble obert/)
+  })
+})
+
+describe("assistent personal: ferratges i materials", () => {
+  it("llegeix els números d'un ferratge i no deixa editar els de l'app sense duplicar-los ni fora dels límits", async () => {
+    setAppSettings(DEFAULT_SETTINGS)
+    const hinge = DEFAULT_SETTINGS.hardwareLibrary.find((h) => h.engine === "cup" && h.builtin)!
+    const got = await appToolSet.run(null, "get_hardware", { hardware: hinge.id })
+    expect(got.ok).toBe(true)
+    const params = (got.ok ? got.result.params : []) as { key: string; min: number; max: number }[]
+    expect(params.length).toBeGreaterThan(0)
+    const edit = await appToolSet.run(null, "edit_hardware", { hardware: hinge.id, params: { [params[0]!.key]: params[0]!.min } })
+    expect(edit.ok === false && edit.error).toMatch(/duplicate/)
+    const out = await appToolSet.run(null, "edit_hardware", { hardware: hinge.id, duplicate: true, params: { [params[0]!.key]: params[0]!.max + 1000 } })
+    expect(out.ok).toBe(false)
+    const bad = await appToolSet.run(null, "edit_hardware", { hardware: hinge.id, duplicate: true, params: { inventat: 3 } })
+    expect(bad.ok === false && bad.error).toMatch(/no és un paràmetre/)
+  })
+  it("el color no es canvia a la fusta ni la rugositat a la pedra; una foto no es posa des del xat", async () => {
+    setAppSettings(DEFAULT_SETTINGS)
+    const wood = DEFAULT_SETTINGS.materials.find((m) => m.finish.kind === "wood")!
+    const r = await appToolSet.run(null, "set_pref_material", { name: wood.name, color: "#112233" })
+    expect(r.ok === false && r.error).toMatch(/fusta/)
+    const stone = DEFAULT_SETTINGS.materials.find((m) => m.finish.kind === "stone")!
+    const s2 = await appToolSet.run(null, "set_pref_material", { name: stone.name, roughness: 0.2 })
+    expect(s2.ok === false && s2.error).toMatch(/rugositat/)
+    const dup = await appToolSet.run(null, "set_pref_material", { name: wood.name, rename: DEFAULT_SETTINGS.materials.find((m) => m !== wood)!.name })
+    expect(dup.ok === false && dup.error).toMatch(/Ja hi ha/)
   })
 })

@@ -18,7 +18,7 @@ const MAX_IMAGE_PX = 1568
 type Part = { kind: "text"; text: string } | { kind: "tool"; name: string; ok: boolean; note: string }
 type Item =
   | { id: number; role: "user"; text: string; image?: string }
-  | { id: number; role: "assistant"; parts: Part[]; error?: AssistantError; note?: string; running?: boolean }
+  | { id: number; role: "assistant"; parts: Part[]; error?: AssistantError; note?: string; running?: boolean; changed?: boolean }
 
 interface Attached {
   url: string
@@ -113,6 +113,8 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
     setRunning(true)
     const ctl = new AbortController()
     abort.current = ctl
+    // Només si ha canviat el document surt «Desfer-ho tot» (llegir o navegar no es desfà).
+    let changed = false
     try {
       // La imatge abans del text (recomanació de l'API), reduïda a 1568 px JPEG.
       const content: Exclude<MessageParam["content"], string> = []
@@ -131,7 +133,10 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
         history: history.current,
         toolset,
         getDoc,
-        apply,
+        apply: (d) => {
+          changed = true
+          apply(d)
+        },
         ...(target.refresh ? { refresh: target.refresh } : {}),
         signal: ctl.signal,
         onText: (delta) =>
@@ -151,7 +156,7 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
               : res.stop === "refusal"
                 ? "L'assistent no ha volgut respondre aquesta petició."
                 : undefined
-      updateLast((it) => ({ ...it, running: false, ...(note ? { note } : {}) }))
+      updateLast((it) => ({ ...it, running: false, changed, ...(note ? { note } : {}) }))
     } catch (e) {
       const error = await describeFailure(e)
       // L'historial ha d'acabar amb l'assistent: el missatge següent no pot anar enganxat a aquest.
@@ -253,7 +258,7 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
                       {it.parts.length ? "…" : "Pensant…"}
                     </Text>
                   )}
-                  {!it.running && !it.error && it.parts.some((p) => p.kind === "tool" && p.ok) && (
+                  {!it.running && !it.error && it.changed && (
                     <HStack gap={1.5} fontSize="xs" color="fg.muted">
                       <LuCheck /> <Text>Desfer-ho tot: ⌘Z (un sol pas).</Text>
                     </HStack>

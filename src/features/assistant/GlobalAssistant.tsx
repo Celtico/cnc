@@ -1,7 +1,7 @@
 import { Drawer, Portal } from "@chakra-ui/react"
 import { lazy, Suspense, useMemo, useRef } from "react"
 import type { Settings } from "../../core/model"
-import { contextLine, withAppTools } from "./appTools"
+import { allToolSet, contextLine, setAppSettings } from "./appTools"
 import { currentDoc, useHubDoc, type HubDoc } from "./assistantHub"
 import type { ChatTarget } from "./chatTarget"
 
@@ -23,16 +23,16 @@ const APP_SUGGESTIONS = [
  */
 export default function GlobalAssistant({ open, onClose, settings }: { open: boolean; onClose: () => void; settings: Settings }) {
   const doc = useHubDoc()
+  // Les eines de l'app llegeixen les preferències d'ara (màquina, materials…).
+  setAppSettings(settings)
+  const settingsRef = useRef(settings)
+  settingsRef.current = settings
   // Els documents que l'assistent ha canviat en aquest torn: en acabar, un pas de desfer a cadascun.
   const touched = useRef(new Set<HubDoc>())
   const target = useMemo<ChatTarget<unknown>>(() => {
-    const tools = async () => {
-      const d = currentDoc()
-      return withAppTools(d ? await d.target.toolset() : undefined)
-    }
+    // Sempre el mateix joc (totes les eines): un document obert a mitja conversa no canvia res de la petició.
     return {
-      toolset: tools,
-      refresh: tools,
+      toolset: () => allToolSet(settingsRef.current),
       getDoc: () => currentDoc()?.target.getDoc() ?? null,
       apply: (next) => {
         const d = currentDoc()

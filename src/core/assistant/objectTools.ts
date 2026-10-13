@@ -39,6 +39,14 @@ const shape = z
     z.object({ kind: z.literal("rounded"), radius: mm.positive().max(5000).describe("Radi de les cantonades (mm).") }),
     z.object({ kind: z.literal("ellipse") }),
     z.object({ kind: z.literal("circle").describe("Cercle: h passa a ser igual que w.") }),
+    z.object({
+      kind: z.literal("polygon"),
+      points: z
+        .array(z.object({ x: mm, y: mm, bulge: z.number().min(-1).max(1).optional().describe("Arc fins al punt següent (0 = recta; 1 = mig cercle)") }))
+        .min(3)
+        .max(200)
+        .describe("Contorn tancat en mm al pla de la peça (0…w, 0…h), en ordre."),
+    }),
   ])
   .describe("Forma de la peça al seu pla (w × h): rectangle, rectangle amb les cantonades arrodonides, el·lipse o cercle.")
 
@@ -92,7 +100,15 @@ export type ObjectToolName = keyof typeof OBJECT_TOOL_INPUTS
 
 export interface ObjectToolContext {
   settings: Pick<Settings, "materials">
+  /**
+   * Peces lliures d'un **moble** (es fabriquen): van al nesting si el material és de CNC (com en triar-lo a la UI). Sense,
+   * les d'un objecte (decoratiu): mai al nesting.
+   */
+  fabricated?: boolean
 }
+
+/** Al nesting o no: un objecte mai; un moble, si el material es talla a la CNC. */
+const nestFor = (ctx: ObjectToolContext, material: string): boolean | undefined => (!ctx.fabricated ? false : ctx.settings.materials.find((m) => m.name === material)?.cnc === false ? false : undefined)
 
 type In<N extends ObjectToolName> = z.output<(typeof OBJECT_TOOL_INPUTS)[N]>
 type Done = { doc: Composition; result: Record<string, unknown> }
@@ -135,6 +151,7 @@ function pickMaterial(ctx: ObjectToolContext, name: string): string {
 /** Contorn de la forma triada a w × h (sense: rectangle). */
 function shapeNodes(kind: In<"add_part">["shape"], w: number, h: number): PNode[] | undefined {
   if (!kind || kind.kind === "rectangle") return undefined
+  if (kind.kind === "polygon") return kind.points.map((q) => ({ x: q.x, y: q.y, ...(q.bulge ? { b: q.bulge } : {}) }))
   if (kind.kind === "rounded") {
     if (kind.radius * 2 > Math.min(w, h)) fail(`El radi (${kind.radius} mm) no hi cap: com a molt la meitat del costat curt (${Math.floor(Math.min(w, h) / 2)} mm).`)
     return roundRect(w, h, kind.radius)
@@ -191,7 +208,7 @@ function apply(comp: Composition, name: ObjectToolName, input: never, ctx: Objec
         x: i.x,
         y: i.y,
         z: i.z,
-        nest: false,
+        ...(nestFor(ctx, pickMaterial(ctx, i.material)) === false ? { nest: false } : {}),
         ...(shapeNow ? { shape: shapeNow } : {}),
         ...(i.group ? { group: i.group.trim() } : {}),
       })
@@ -227,8 +244,9 @@ function apply(comp: Composition, name: ObjectToolName, input: never, ctx: Objec
         if (nodes) p.shape = nodes
         else delete p.shape
       }
-      // La resta de materials: com la UI, sempre sense nesting (és un objecte).
-      p.nest = false
+      // Com la UI: un objecte, sempre sense nesting; un moble, segons el material.
+      if (nestFor(ctx, p.material) === false) p.nest = false
+      else delete p.nest
       p = tidyPart(p)
       return { doc: replacePart(comp, p), result: { part_id: p.id, name: p.name } }
     }
