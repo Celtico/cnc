@@ -6,6 +6,7 @@ import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
 import { buildFreeParts, type PartJoint } from "./freeParts"
 import { resolveHoleClashes } from "./holeClash"
 import { applyHardwarePlacements } from "./hardwarePlace"
+import { activeIslands, islandEndPanels } from "./islands"
 
 export interface CompositionWarning extends BuildWarning {
   moduleId?: string
@@ -30,6 +31,21 @@ export interface CompositionBuild {
   models: ModelObject[]
   /** Calaixos amb joc paramètric de tots els mòduls: la comanda per al taller (amb el número de mòdul). */
   hardwareKits: (KitOrder & { module: number; moduleId: string })[]
+}
+
+/** Caixa de les peces (coordenades on són). */
+function localBox(panels: Panel[]): { min: [number, number, number]; max: [number, number, number] } {
+  const min: [number, number, number] = [Infinity, Infinity, Infinity]
+  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
+  for (const p of panels) {
+    const b = panelBox(p)
+    for (let k = 0; k < 3; k++) {
+      min[k] = Math.min(min[k]!, b.min[k]!)
+      max[k] = Math.max(max[k]!, b.max[k]!)
+    }
+  }
+  for (let k = 0; k < 3; k++) if (!Number.isFinite(min[k]!)) min[k] = max[k] = 0
+  return { min, max }
 }
 
 /** Centre (×2) en X i Z de la caixa de les peces d'un mòdul, en coordenades del mòdul: l'eix del gir de 180°. */
@@ -73,7 +89,8 @@ export function buildComposition(input: Composition): CompositionBuild {
   const migrated = migrateCableHoles(input, panelBox)
   // Objecte: les peces només es veuen (mai van al nesting ni fan encaixos).
   const comp = compositionKind(migrated) === "objecte" ? { ...migrated, parts: migrated.parts?.map((p) => ({ ...p, nest: false, joinery: false })) } : migrated
-  const places = modulePlacements(comp)
+  // Còpia: el mòdul de darrere de cada illa es recol·loca (`islands.ts`).
+  const places = modulePlacements(comp).map((p) => ({ ...p }))
   const panels: Panel[] = []
   const warnings: CompositionWarning[] = []
   const modules: CompositionBuild["modules"] = []
@@ -82,13 +99,29 @@ export function buildComposition(input: Composition): CompositionBuild {
 
   // Tipus «Lliure» (flat-pack): només peces lliures; els mòduls es guarden però no es fan.
   const onlyParts = partsOnlyKind(compositionKind(comp))
+  const builds = onlyParts ? [] : comp.modules.map((m) => buildModule(m))
+  // Illes: el mòdul de darrere es gira 180° i es posa enganxat al darrere del de davant (mateixa X, a `gap` mm), sigui
+  // quina sigui la seva posició pròpia.
+  const islands = onlyParts ? [] : activeIslands(comp)
+  const backOf = new Map(islands.map((isl) => [isl.back, isl]))
+  for (const isl of islands) {
+    const fi = comp.modules.findIndex((m) => m.id === isl.front)
+    const bi = comp.modules.findIndex((m) => m.id === isl.back)
+    const fz0 = localBox(builds[fi]!.panels).min[2]
+    const bz1 = localBox(builds[bi]!.panels).max[2]
+    // Girat, el darrere de la caixa del de darrere (Z local petita) queda a `z + bz1`: el posem al darrere del de davant
+    // (`z + fz0`) menys el pas de cables.
+    places[bi] = { ...places[bi]!, x: places[fi]!.x, z: (places[fi]!.z ?? 0) + fz0 - isl.gap - bz1 }
+    if ((places[bi]!.z ?? 0) < -0.5)
+      warnings.push({ code: "layout", moduleId: isl.back, message: `Illa: «${comp.modules[bi]!.name}» passa per darrere de la paret. Augmenta la «Separació de la paret» de «${comp.modules[fi]!.name}».` })
+  }
   ;(onlyParts ? [] : comp.modules).forEach((m, i) => {
     const { x, y } = places[i]!
     const z = places[i]!.z ?? 0
-    const build = buildModule(m)
+    const build = builds[i]!
     // Girat 180° al voltant del vertical pel centre de la caixa de les peces (ocupa el mateix lloc): x → 2·cx − x,
     // z → 2·cz − z i els eixos de cada peça amb la X i la Z canviades de signe (gir, no mirall: les peces són les mateixes).
-    const turn = isTurned(m) ? turnFrame(build.panels) : undefined
+    const turn = isTurned(m) || backOf.has(m.id) ? turnFrame(build.panels) : undefined
     const place = (pl: Panel["placement"]): Panel["placement"] => {
       const o = pl.origin
       if (!turn) return { ...pl, origin: [o[0] + x, o[1] + y, o[2] + z] }
@@ -158,8 +191,17 @@ export function buildComposition(input: Composition): CompositionBuild {
   }
   for (const w of runWarnings) warnings.push({ code: "layout", message: w.message })
 
+  // Panells de remat de les illes: un «mòdul» més per a les refs del taller (després del taulell i el sòcol).
+  const islandN = comp.modules.length + (runs.length ? 1 : 0) + 1
+  for (const isl of islands) {
+    const own = panels.filter((p) => p.module === comp.modules.findIndex((m) => m.id === isl.front) + 1 || p.module === comp.modules.findIndex((m) => m.id === isl.back) + 1)
+    for (const p of islandEndPanels(isl, comp, localBox(own), islandN)) panels.push(normalizePanel(p))
+  }
+  if (islands.length && !warnings.some((w) => w.code === "island"))
+    warnings.push({ code: "island", message: "Illa: les dues files de mòduls es cargolen entre elles pel darrere (sense forats automàtics), amb els fronts enrasats; els panells de remat es fixen als laterals." })
+
   // Peces lliures, amb els encaixos entre elles: un «mòdul» més per a les refs del taller.
-  const free = buildFreeParts(comp, onlyParts ? 1 : comp.modules.length + (runs.length ? 1 : 0) + 1)
+  const free = buildFreeParts(comp, onlyParts ? 1 : comp.modules.length + (runs.length ? 1 : 0) + (islands.some((i) => i.left || i.right) ? 1 : 0) + 1)
   panels.push(...free.panels)
   for (const w of free.warnings) warnings.push({ code: w.code ?? "layout", message: w.message, partId: w.partId })
 

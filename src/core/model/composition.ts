@@ -530,6 +530,26 @@ export const ModelObjectSchema = z.object({
 })
 export type ModelObject = z.infer<typeof ModelObjectSchema>
 
+/**
+ * **Illa** (per decisió de l'usuari, 2026-10-13: «fiquem les opcions que diuen els professionals»): dos mòduls d'esquena,
+ * com es fan les illes de cuina (dues files de mòduls cargolades, fronts enrasats). El de darrere (`back`) es gira 180° i
+ * es posa sol, enganxat al darrere del de davant (`front`), amb la mateixa X i a `gap` mm (pas de cables); la seva
+ * posició pròpia no es llegeix. `left`/`right`: **panells de remat** d'una sola peça que cobreixen les dues files de dalt
+ * a baix (`thickness`, `material`; sense: 19 mm i el material dels fronts del de davant). Tots dos «Lliure al terra».
+ * Construcció a `core/build/islands.ts`.
+ */
+export const IslandSchema = z.object({
+  id: z.string(),
+  front: z.string(),
+  back: z.string(),
+  gap: mm.min(0).default(0),
+  left: z.boolean().default(true),
+  right: z.boolean().default(true),
+  thickness: z.number().positive().max(60).optional(),
+  material: z.string().optional(),
+})
+export type Island = z.infer<typeof IslandSchema>
+
 export const CompositionSchema = z.object({
   kind: CompositionKindSchema.optional(),
   modules: z.array(ModuleSchema),
@@ -554,6 +574,8 @@ export const CompositionSchema = z.object({
    * es llegeix sencer o es treu (`repairAtomically`): mai mig ferratge. Un `.moble` que en porta és v3.
    */
   hardwarePlacements: z.array(HardwarePlacementSchema).optional(),
+  /** Illes: mòduls d'esquena amb panells de remat (`IslandSchema`). Opcional. */
+  islands: z.array(IslandSchema).optional(),
 })
 export type Composition = z.infer<typeof CompositionSchema>
 

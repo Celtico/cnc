@@ -306,6 +306,16 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     catàleg a `build.hardwareKits` (Peces › «Ferratges dels jocs», LLEGEIX-ME de Maestro, fitxa «Joc» de l'inspector).
     Tot o res per calaix (sense NL, sense lateral o sense alçada: només el front i avís `hardware`). Les alçades de les
     fileres de cargols i la posició vertical del joc són **hipòtesis** del catàleg (`hypotheses`, a l'editor del joc).
+- **Illes** (`Composition.islands`, `IslandSchema`, `core/build/islands.ts`; per decisió de l'usuari, 2026-10-13: «les
+  opcions que diuen els professionals»: dues files de mòduls d'esquena cargolades, fronts enrasats, remats als costats):
+  secció «Illes» del moble (`IslandsForm`, `LuAlignHorizontalJustifyCenter`, amb ≥ 2 mòduls). Davant · Darrere (tots dos
+  «Lliure al terra»; «Afegir illa» els hi posa), «Pas de cables» (`gap`), Remat esquerre / dret, gruix (19) i material
+  («Com els fronts»). El de darrere es gira 180° i es posa sol a la mateixa X, enganxat al darrere del de davant
+  (`buildComposition`; la seva Posició no compta i ho diu); avís `layout` si passaria per darrere de la paret. Els
+  **panells de remat** (`islandEndPanels`, rol `side`, «remat e/d») són d'una sola peça de dalt a baix i del darrere al
+  davant de les dues files, amb cantell als tres costats vistos; un «mòdul» més per a les refs (després de taulell i
+  sòcol). Avís informatiu `island` (es cargolen entre elles, sense forats automàtics). Una illa amb un mòdul que no hi és
+  o que no és lliure al terra no es fa. Pendent (part 2): un sol taulell i la base comuna. Test `build/islands.test.ts`.
 - **Peces corregudes** (`comp.runs`, `core/build/runs.ts`, `activeRuns`; **sense UI des del 2026-10-13**, per decisió de
   l'usuari: la secció «Taulell i sòcol» del moble ja no surt; treure ≠ esborrar: les que hi ha es conserven i es fabriquen
   igual, i `RunsForm` es queda sense ús; per decisió de l'usuari no es converteixen en peces lliures: es perdria el llarg, el voladís i els forats
@@ -858,7 +868,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   ordenar** (`reorderModule`, `reorderRef`): mòduls dins de la seva fila i objectes; una línia marca on cau. Arrossegar una
   peça lliure sobre la fila d'un grup la hi posa; al costat d'una peça n'agafa el grup; la zona «Treure del grup» surt
   mentre s'arrossega una d'un grup.
-- **Propietats** del que hi ha seleccionat i **només d'això**, en seccions plegables independents (`FoldItem`, vegeu UI):
+- **Propietats** del que hi ha seleccionat i **només d'això**, en seccions plegables amb **una sola oberta alhora** (per decisió de l'usuari, 2026-10-13: `FoldGroup multiple={false}` a l'inspector, recordada a la sessió `mobles:inspector-open`; les subseccions `size="sm"` de dins continuen independents; vegeu UI):
   - Moble: Resum (i avisos de fusteria), Encaixos (si alguna peça en fa),
     Materials de tot el moble (aplica a tots els mòduls), Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
     Preferències»; `CabinetViewer sceneFinish`, `renderThumb(…, finish)`).

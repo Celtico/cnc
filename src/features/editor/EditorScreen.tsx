@@ -16,6 +16,7 @@ import {
   LuWrench,
   LuGroup,
   LuPanelTop,
+  LuAlignHorizontalJustifyCenter,
   LuCamera,
   LuCircleDot,
   LuDoorOpen,
@@ -36,9 +37,8 @@ import {
   LuTriangleAlert,
   LuView,
 } from "react-icons/lu"
-import { FoldItem } from "../../components/Fold"
-import { sectionKey } from "../../components/foldContext"
-import { writeSessionFlag } from "../../components/sessionState"
+import { FoldGroup, FoldItem } from "../../components/Fold"
+import { useSessionList } from "../../components/sessionState"
 import { Workspace } from "../../components/Workspace"
 import { ViewOptions, ViewTile } from "../../components/ViewOptions"
 import { useWorkspace } from "../../components/useWorkspace"
@@ -51,6 +51,7 @@ import { RenderDialog, type SceneGetter } from "../../components/viewer/render/R
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { moduleWorldX, panelBox, type CompositionWarning } from "../../core/build/buildComposition"
+import { activeIslands } from "../../core/build/islands"
 import { materialIssues } from "../../core/build/materialIssues"
 import { splitChildSizes } from "../../core/build/layout"
 import { applySettingsToModule, moduleHasInnerPieces, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, moduleRows, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, setModuleMount, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
@@ -66,6 +67,7 @@ import { ORIENT_ICON } from "../composition/partOrient"
 import { StructureTree, type Selection } from "../composition/StructureTree"
 import { Tooltip } from "../../components/ui/tooltip"
 import { ModuleDoorsSection, ZoneActions, ZonePanel } from "../composition/ZonePanel"
+import { IslandsForm } from "../composition/IslandsForm"
 import { HardwarePlacements, PlacementButtons, PlacementInspector, type PlacementActions } from "../composition/HardwarePlacements"
 import { duplicatePlacement, placementScope, removePlacement, scopePlacements } from "../composition/placements"
 import { zoneLabel } from "../composition/zoneLabel"
@@ -161,6 +163,8 @@ function readClip(): Clip | null {
 
 
 function Editor({ projectId, name, initial, read: readNow, project }: { projectId: number; name: string; initial: Composition; read: CompositionRead; project: Project }) {
+  // La secció oberta de l'inspector (una sola alhora).
+  const [inspectorOpen, setInspectorOpen] = useSessionList("mobles:inspector-open")
   // La lectura en obrir-lo (la de després de cada desada ja no cal: és la que hem desat).
   const [read] = useState(readNow)
   // Composició amb desfer/refer (`useHistory`, fins a 50 passos). Canvis seguits (menys de 500 ms entre ells, p. ex.
@@ -322,6 +326,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   const rowIndex = module ? rowMates.indexOf(module) : -1
   const rowPrev = rowIndex > 0 ? rowMates[rowIndex - 1] : undefined
   const moduleBuild = build?.modules[moduleIndex]?.build
+  // El mòdul triat és el de darrere d'una illa (es col·loca sol): la Posició ho diu i no en mostra els camps.
+  const islandBack = module ? activeIslands(comp).find((i) => i.back === module.id) : undefined
   const zone = selectedZone && module ? findZone(module.root, selectedZone) : undefined
 
   const size = useMemo(() => viewerSize(comp), [comp])
@@ -425,7 +431,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     select({ kind: "hardware", id: r.id })
   }
   const editHardware = (id: string) => {
-    writeSessionFlag(sectionKey("hw-place"), true)
+    setInspectorOpen(["hw-place"])
     ws.setPropsHidden(false)
     select({ kind: "hardware", id }, true)
   }
@@ -892,6 +898,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   // mateixa alçada de capçalera); els elements que no són secció porten el seu marge.
   const inspector = (
     <Stack gap={0}>
+      {/* Una secció oberta alhora (per decisió de l'usuari, 2026-10-13): obrir-ne una tanca l'altra; es recorda a la
+          sessió. Les subseccions de dins (`size="sm"`) continuen independents. */}
+      <FoldGroup multiple={false} value={inspectorOpen} onValueChange={setInspectorOpen}>
       {/* Capçalera: on és i què és (dues línies), anterior/següent i ⋯ amb les accions. */}
       <HStack gap={2} color="wood.fg" pb={2} mb={2} borderBottomWidth="1px">
         <Stack gap={0} flex={1} minW={0}>
@@ -1002,6 +1011,12 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           ) : null}
           {/* Sense «Taulell i sòcol» (per decisió de l'usuari, 2026-10-13: «que no aparegui»). Treure ≠ esborrar: les peces
               corregudes que ja hi són (`comp.runs`) es conserven i es fabriquen igual; `RunsForm` es queda sense ús. */}
+          {/* Illes (dos mòduls d'esquena amb panells de remat): amb almenys dos mòduls. */}
+          {!partsOnlyKind(kind) && comp.modules.length >= 2 && (
+            <FoldItem id="moble-islands" title="Illes" icon={LuAlignHorizontalJustifyCenter} badge={comp.islands?.length || undefined}>
+              <IslandsForm comp={comp} onChange={setComp} />
+            </FoldItem>
+          )}
           {(comp.parts ?? []).some((p) => partJoinery(comp, p)) && (
             <FoldItem id="moble-joinery" title="Encaixos" icon={LuPuzzle} badge={build?.joints.length || undefined}>
               <PartJoineryForm comp={comp} onChange={setComp} />
@@ -1095,6 +1110,14 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         // obertes i cada una recorda el seu estat.
         // Ordre (per decisió de l'usuari, 2026-10-13): Posició · Mides · Caixa · Portes · Unió · Materials.
         <Stack gap={0}>
+            {islandBack ? (
+              // El de darrere d'una illa es col·loca sol (girat i enganxat al de davant): la seva posició no compta.
+              <FoldItem id="mod-position" title="Posició" icon={LuMove} badge="Illa · darrere">
+                <Text fontSize="sm" color="fg.muted">
+                  És el mòdul de darrere de l'illa amb «{comp.modules.find((m) => m.id === islandBack.front)?.name}»: es gira 180° i es col·loca sol, enganxat al seu darrere. Es canvia al moble, a «Illes».
+                </Text>
+              </FoldItem>
+            ) : (
             <FoldItem id="mod-position" title="Posició" icon={LuMove} badge={module.carcass.base.kind === "wall" ? `Penjat a ${module.carcass.base.height}` : mountOf(module) === "floor" ? `Lliure al terra · ${module.wallGap ?? 0} de la paret` : "Arrambat a la paret"}>
               {/* Dues files, com les cuines: a terra (baixos) i penjats (alts). Dins de cada
                   fila, l'ordre és el de l'arbre (d'esquerra a dreta) i cada mòdul va al costat
@@ -1177,6 +1200,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                 />
               )}
             </FoldItem>
+            )}
           <FoldItem id="mod-dims" title="Mides" icon={LuMoveDiagonal} badge={`${module.carcass.width} × ${module.carcass.height}`}>
             <CarcassForm module={module} onChange={updateModule} section="dims" />
           </FoldItem>
@@ -1280,6 +1304,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             ))}
           </FoldItem>
         )}
+      </FoldGroup>
     </Stack>
   )
 

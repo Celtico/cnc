@@ -84,6 +84,7 @@ export interface BuildWarning {
     | "rail"
     | "hanging"
     | "hole-clash"
+    | "island"
     | "hinge"
     | "drawer-bottom"
     | "invalid-part"
