@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, SETTINGS_VERSION, parseSettings, type Settings } from "../core/model"
+import { DEFAULT_SETTINGS, SETTINGS_VERSION, parseSettings, setSolidMaterials, type Settings } from "../core/model"
 import { setKnownMaterialNames } from "../core/model/photoUpgrade"
 import { setKitPilotRule } from "../core/model/hardwareKit"
 import { db } from "./db"
@@ -35,6 +35,7 @@ export async function loadSettings(): Promise<{ settings: Settings; problems: st
 function remember<T extends { settings: Settings }>(r: T): T {
   setKnownMaterialNames(r.settings.materials.map((m) => m.name))
   setKitPilotRule(r.settings.kitPilot)
+  setSolidMaterials(r.settings.materials)
   return r
 }
 
@@ -60,6 +61,7 @@ export async function saveSettings(settings: Settings): Promise<boolean> {
     const version = Math.max(settings.version, storedVersion(prev?.data))
     await db.settings.put({ id: ROW_ID, data: version === settings.version ? settings : { ...settings, version }, updatedAt: Date.now() })
     setKitPilotRule(settings.kitPilot)
+    setSolidMaterials(settings.materials)
     return true
   })
 }

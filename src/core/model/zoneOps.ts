@@ -154,6 +154,24 @@ export function setSplitSize(root: Zone, parentId: string, index: number, size: 
   })
 }
 
+/**
+ * L'alçada d'un front d'una pila de calaixos, com `setSplitSize` (per decisió de l'usuari, 2026-10-13: «semblant a com
+ * es fica la mida a les divisions»): s'editen les n−1 primeres i l'última és el que sobra («auto»). Dades d'abans amb
+ * l'última fixa: primer les «auto» passen als mm que feien (`current`, les reals de la construcció) i l'última a «auto».
+ */
+export function setDrawerHeight<F extends { n: number; heights: (number | "auto")[] }>(front: F, index: number, size: number | "auto", current?: readonly number[]): F {
+  const n = front.n
+  if (index < 0 || index >= n - 1) return front
+  const heights = front.heights.slice(0, n)
+  while (heights.length < n) heights.push("auto")
+  if (heights[n - 1] !== "auto") {
+    if (current && current.length === n) for (let i = 0; i < n - 1; i++) if (heights[i] === "auto") heights[i] = current[i]!
+    heights[n - 1] = "auto"
+  }
+  heights[index] = size
+  return { ...front, heights }
+}
+
 export function setShelves(root: Zone, id: string, shelves: Zone["shelves"] | null): Zone {
   return updateZone(root, id, (z) => {
     const { shelves: _old, ...rest } = z

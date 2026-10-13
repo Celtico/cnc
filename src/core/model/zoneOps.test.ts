@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { buildComposition } from "../build/buildComposition"
 import { BUILTIN_TEMPLATES, TV_LIVING_ROOM, type Zone } from "./index"
-import { addChild, countLeaves, duplicateZone, parentOf, removeZone, setChildSize, setFront, setShelves, splitZone, unsplitZone } from "./zoneOps"
+import { addChild, countLeaves, duplicateZone, parentOf, removeZone, setChildSize, setDrawerHeight, setFront, setShelves, splitZone, unsplitZone } from "./zoneOps"
 
 describe("zoneOps", () => {
   const leaf: Zone = { id: "root", shelves: { n: 2, adjustable: true }, front: { kind: "door", mode: "single", hinge: "left" } }
@@ -125,5 +125,16 @@ describe("zoneOps: barra de penjar", () => {
     const z = splitZone({ id: "a", rail: {}, shelves: { n: 1, adjustable: true } }, "a", "h")
     expect(z.split!.children[0]!.rail).toEqual({})
     expect(unsplitZone(z, "a").rail).toEqual({})
+  })
+})
+
+describe("setDrawerHeight (alçades dels calaixos com la Divisió)", () => {
+  const drawers = (heights: (number | "auto")[]) => ({ kind: "drawers" as const, n: heights.length, heights })
+  it("s'editen les n−1 primeres; l'última és el que sobra", () => {
+    expect(setDrawerHeight(drawers(["auto", "auto", "auto"]), 0, 140).heights).toEqual([140, "auto", "auto"])
+    expect(setDrawerHeight(drawers(["auto", "auto", "auto"]), 2, 140).heights).toEqual(["auto", "auto", "auto"])
+  })
+  it("dades d'abans amb l'última fixa: les «auto» passen als mm reals i l'última a «auto»", () => {
+    expect(setDrawerHeight(drawers(["auto", "auto", 300]), 0, 150, [200, 200, 300]).heights).toEqual([150, 200, "auto"])
   })
 })

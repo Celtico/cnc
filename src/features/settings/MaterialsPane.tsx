@@ -499,9 +499,19 @@ function MaterialCard({ m, dirty, footer, onChange, onRename, nameError, onDupli
         <FormRow label="Gruixos" help="Els que es poden triar a les peces d'aquest material.">
           <ThicknessChips value={m.thicknesses} onChange={(thicknesses) => onChange({ thicknesses })} label={false} />
         </FormRow>
-        <FormRow label="Cantell">
-          <Input size="sm" maxW="280px" value={m.edge} onChange={(e) => onChange({ edge: e.target.value })} placeholder="PVC blanc 1 mm" />
+        {/* Massís: no es canteja (el Cantell no compta i no surt; es conserva per si es torna a apagar). */}
+        <FormRow label="Massís" help={m.solid ? "Fusta massissa: les peces d'aquest material no es cantegen (ni al llistat ni als fitxers del taller)." : undefined}>
+          <Switch.Root size="sm" pt={1.5} checked={!!m.solid} onCheckedChange={(e) => onChange({ solid: e.checked ? true : undefined })}>
+            <Switch.HiddenInput />
+            <Switch.Control />
+            <Switch.Label fontSize="sm">No es canteja</Switch.Label>
+          </Switch.Root>
         </FormRow>
+        {!m.solid && (
+          <FormRow label="Cantell">
+            <Input size="sm" maxW="280px" value={m.edge} onChange={(e) => onChange({ edge: e.target.value })} placeholder="PVC blanc 1 mm" />
+          </FormRow>
+        )}
         <FormRow label="Veta" help="Té una direcció (fusta, xapa) que cal respectar en tallar.">
           <Switch.Root size="sm" pt={1.5} checked={m.hasGrain} onCheckedChange={(e) => onChange({ hasGrain: e.checked })}>
             <Switch.HiddenInput />

@@ -1,4 +1,4 @@
-import { activeRuns, compositionKind, modelFootprint, modulePlacements, partsOnlyKind, partCutters, type Composition, type ModelObject, type Panel, type Vec3 } from "../model"
+import { activeRuns, compositionKind, isSolidMaterial, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, type Composition, type ModelObject, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { buildModule, type BuildWarning, type KitOrder, type ModuleBuild } from "./buildModule"
 import { normalizePanel } from "./buildCabinet"
@@ -195,6 +195,10 @@ export function buildComposition(input: Composition): CompositionBuild {
 
   // Sense l'avís de peces de la mateixa mida amb mecanitzats diferents (per decisió de l'usuari, 2026-10-13: el taller
   // identifica cada peça per l'etiqueta, A.1.L.1 ≠ A.1.L.2, no per la mida). `sameSizeConflicts` es queda sense ús.
+
+  // Materials massissos (`MaterialPref.solid`): cap cantell. Es fa al final, per a totes les peces (mòduls, taulell i
+  // sòcol, peces lliures), així el llistat, el CSV, el LLEGEIX-ME i el 3D en diuen el mateix.
+  for (const [i, p] of panels.entries()) if (isSolidMaterial(p.material)) panels[i] = { ...p, edges: { ...NO_EDGES } }
 
   return { panels, warnings, modules, joints: free.joints, extras: [...moduleExtras, ...free.extras], models: input.models ?? [], hardwareKits }
 }

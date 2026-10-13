@@ -553,6 +553,13 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   ≥ 10 mm entre ells; els que no hi caben no es fan (`shelves`). **Mòduls que es trepitgen** (> 0,5 mm en les tres
   direccions): avís `overlap` amb els dos noms. Les plantilles del catàleg no poden fer cap d'aquests avisos
   (`storeCatalog.test.ts`).
+- **Cantells de la caixa** (`edges` a `buildModule`): laterals, base, tapa, divisors i prestatges, el de davant; **sense
+  fons** (`Carcass.back = "none"`) i **lliure al terra separat de la paret** (`mountOf` = `floor`, `wallGap > 0`), també
+  el de darrere, que queda a la vista (`rearEdge`; per decisió de l'usuari, 2026-10-13: arrambat o penjat, no es veu;
+  proves d'or idèntiques). Un material **massís** (`MaterialPref.solid`, Preferències › Materials › Fabricació «Massís · No es
+  canteja»; amaga el Cantell) no es canteja: `buildComposition` treu tots els cantells de les seves peces al final
+  (`isSolidMaterial`, que posen les preferències amb `setSolidMaterials` a `db/settingsStore.ts`, com la prebroca; sense,
+  tot es canteja) i al 3D el cantell és la mateixa fusta. Test `build/edgeRules.test.ts`.
 - **Peces iguals**: **sense avís** (per decisió de l'usuari, 2026-10-13: «el taller les identifica per l'etiqueta»,
   A.1.L.1 ≠ A.1.L.2). L'avís `same-size` d'abans (dues peces de la mateixa mida i material amb mecanitzats diferents) es
   va treure de `buildComposition`; `build/sameSize.ts` (`sameMachining`, `sameSizeConflicts`) es queda amb els tests.
@@ -890,7 +897,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     **Prestatges i accessoris** (`LuRows3`, una sola secció per decisió de l'usuari, 2026-10-13; insígnia «3 · Barra · LED»:
     primer els prestatges —Quantitat · Regulables · Filera System 32 si li toca, vegeu Mòdul · A ras · Gruixuts— i a sota
     els accessoris —Penjar (Barra de penjar) i Llum (Tira LED), interruptor + `HardwarePick` «Com el mòdul»—) · Dividir (Prestatges, Accessoris, Dividir i els tipus
-    de Contingut, només si el compartiment els pot aguantar: Model del moble › Zones › Què aguanta cada compartiment; Prestatges i Accessoris tampoc amb calaixos o un front fix propi; Dividir tampoc darrere d'un front fix, per decisió de l'usuari). Al Front: el ferratge del tipus (frontissa,
+    de Contingut, només si el compartiment els pot aguantar: Model del moble › Zones › Què aguanta cada compartiment; Prestatges i Accessoris tampoc amb calaixos o un front fix propi; Dividir tampoc darrere d'un front fix, per decisió de l'usuari). Als **Calaixos**, sota la quantitat, «Alçada 1»… de cada front com les mides de la Divisió (`DrawerHeights`, `setDrawerHeight`: n−1 editables, «Auto» amb els mm reals de `ModuleBuild.drawerHeights`, l'última el que sobra; per decisió de l'usuari, 2026-10-13). Als calaixos, després del Tirador (si n'hi ha), **«Posició del tirador»** Centrat · A dalt (`Front.handleTop`: mm del cantell de dalt a l'eix, 40 en triar-lo, com a molt el mig; per decisió de l'usuari, 2026-10-13; test `build/drawerHandle.test.ts`). Al Front: el ferratge del tipus (frontissa,
     guia o joc, braç; a la reixeta, l'**imant** després de «Muntatge» i «Trapa»; a la vitrina, el **marc**) i el «Tirador» (amb «Cap
     (push)»). **Sense «Mida»** (per decisió de l'usuari, 2026-10-08: «a les obertures no té sentit l'amplada; ha
     d'anar a la divisió»): l'amplada o l'alçada de cada compartiment és a la **Divisió** del pare (`SplitSizes` a

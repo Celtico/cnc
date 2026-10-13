@@ -161,7 +161,19 @@ export const FrontSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("door"), mode: z.enum(["single", "double"]), hinge: z.enum(["left", "right"]), glass: z.boolean().optional(), frame: FrontHardwareSchema.optional(), hardware: FrontHardwareSchema.optional(), handle: FrontHandleSchema.optional() }),
   // `kit`: les opcions del joc paramètric (tancament, darrere) si `hardware` és un joc de calaix (`drawerKit`); sense, les
   // primeres del joc. Res amagat compta: amb una guia normal no es llegeix (`visibleZone`).
-  z.object({ kind: z.literal("drawers"), n: z.number().int().min(1).max(10), heights: z.array(sizeOrAuto), hardware: FrontHardwareSchema.optional(), handle: FrontHandleSchema.optional(), kit: KitOptionsSchema.partial().optional() }),
+  z.object({
+    kind: z.literal("drawers"),
+    n: z.number().int().min(1).max(10),
+    heights: z.array(sizeOrAuto),
+    hardware: FrontHardwareSchema.optional(),
+    handle: FrontHandleSchema.optional(),
+    kit: KitOptionsSchema.partial().optional(),
+    /**
+     * Tirador a la part de dalt del front: mm del cantell de dalt a l'eix del tirador (per decisió de l'usuari,
+     * 2026-10-13). Sense: centrat. Com a molt, el mig del front.
+     */
+    handleTop: z.number().min(0).max(1000).optional(),
+  }),
   z.object({ kind: z.literal("flap"), dir: z.enum(["down", "up"]), hardware: FrontHardwareSchema.optional(), handle: FrontHandleSchema.optional() }),
   z.object({
     kind: z.literal("grille"),

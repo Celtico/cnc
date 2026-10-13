@@ -103,7 +103,8 @@ export function panelMaterials(p: Panel, mode: "material" | "role", materials: M
   // dels jocs de ferratges (rol `hardware`: guies, laterals de doble paret) també, sigui quin sigui el nom del material
   // (el 3D els pinta pel nom, `resolveFinish`): si no, les cares llargues sortirien del color del tauler vist.
   const mat = materials.find((m) => m.name === p.material)
-  const solid = p.role === "hardware" || (!!mat && (materialCategory(mat) === "sim" || mat.cnc === false))
+  // Fusta massissa (`MaterialPref.solid`): no es canteja i el cantell és la mateixa fusta, no el tauler vist.
+  const solid = p.role === "hardware" || (!!mat && (materialCategory(mat) === "sim" || mat.cnc === false || !!mat.solid))
   const raw = (face: string) => (solid ? makeMaterial(finish, L, T, false, opts, off(face)) : new MeshStandardMaterial({ color: RAW_EDGE_COLOR, roughness: 0.95, metalness: 0, ...opts }))
   // +x / −x: cara T × W (u = gruix, v = amplada): la veta ha d'anar en v.
   const edgeX = (banded: boolean, face: string) => (banded ? makeMaterial(edgeFinish, T, W, true, opts, off(face)) : raw(face))

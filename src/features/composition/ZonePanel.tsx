@@ -8,6 +8,7 @@ import {
   parentOf,
   removeZone,
   setSplitSize,
+  setDrawerHeight,
   setFront,
   setShelves,
   splitZone,
@@ -113,6 +114,7 @@ export function ZonePanel({
   root,
   zone,
   openRatio,
+  drawerHeights,
   onChange,
   hardware,
   noHandles = false,
@@ -135,6 +137,8 @@ export function ZonePanel({
   bounds: ZoneBounds
   /** % d'àrea oberta si la zona té reixeta. */
   openRatio?: number
+  /** Alçades reals dels fronts dels calaixos (mm), de la construcció: les de les «Auto» i el que sobra. */
+  drawerHeights?: number[]
   onChange: (root: Zone) => void
   /** Ferratges del mòdul (els fronts en poden triar un altre). */
   hardware: ModuleHardware
@@ -188,7 +192,7 @@ export function ZonePanel({
         </>
       ) : (
         <>
-          {coveredBy ? <CoveredFront id="zone-front" title="Front" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} />}
+          {coveredBy ? <CoveredFront id="zone-front" title="Front" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} drawerHeights={drawerHeights} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} />}
 
           {/* Tapat: el seu front (es conserva) no es fa i el compartiment és com obert (`visibleZone`). Sense una peça a
               cada costat (lateral o divisor), cap prestatge: no surt (es conserva i torna amb els laterals). Amb calaixos
@@ -356,6 +360,52 @@ function CoveredFront({ id, title, coveredBy }: { id: string; title: string; cov
   )
 }
 
+/**
+ * Alçada del front de cada calaix, de baix a dalt, com les mides de la Divisió (`SplitSizes`): «Alçada 1»… amb «Auto» o
+ * els mm, l'última no s'edita (el que sobra) i al costat de les «Auto» els mm reals (`real`, de la construcció).
+ */
+function DrawerHeights({ front, real, onChange }: { front: Extract<Front, { kind: "drawers" }>; real?: number[]; onChange: (f: Front) => void }) {
+  const set = (i: number, size: number | "auto") => onChange(setDrawerHeight(front, i, size, real))
+  return (
+    <Stack gap={2}>
+      <Text textStyle="xs" color="fg.muted">
+        Alçada de cada front, de baix a dalt. Les «Auto» es reparteixen el que queda; l'última és el que sobra.
+      </Text>
+      {Array.from({ length: front.n }, (_, i) => {
+        const mm = real?.[i]
+        const size = front.heights[i] ?? "auto"
+        const label = `Alçada ${i + 1}`
+        return (
+          <FormRow key={i} label={label}>
+            {i === front.n - 1 ? (
+              <Text fontSize="sm" color="fg.muted">
+                {mm !== undefined ? `${fmtMm(mm)} mm` : "—"} (el que sobra)
+              </Text>
+            ) : (
+              <HStack gap={3}>
+                <Switch.Root size="sm" flexShrink={0} checked={size === "auto"} onCheckedChange={(e) => set(i, e.checked ? "auto" : mm !== undefined && mm > 0 ? Math.round(mm) : 150)}>
+                  <Switch.HiddenInput />
+                  <Switch.Control />
+                  <Switch.Label fontSize="sm">Auto</Switch.Label>
+                </Switch.Root>
+                {size !== "auto" ? (
+                  <Box flex="1" minW={0} maxW="160px">
+                    <NumberField label="" ariaLabel={`${label} del front del calaix`} value={size} min={30} max={2000} step={5} onChange={(v) => set(i, v)} />
+                  </Box>
+                ) : mm !== undefined ? (
+                  <Text fontSize="sm" color="fg.muted">
+                    {fmtMm(mm)} mm
+                  </Text>
+                ) : null}
+              </HStack>
+            )}
+          </FormRow>
+        )
+      })}
+    </Stack>
+  )
+}
+
 /** Resum d'un accessori per a la insígnia. */
 const ACCESSORY_LABELS = { rail: "Barra", led: "LED" } as const
 
@@ -480,7 +530,7 @@ function kitClosingFor(kit: HardwareItem & { kit: NonNullable<HardwareItem["kit"
   return isPushClosing(current.closing) ? { ...current, closing: opts.includes("soft") ? "soft" : current.closing } : current
 }
 
-function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bounds, afterHinge, noMode = false }: { front: Front; openRatio?: number; onChange: (f: Front) => void; hardware: ModuleHardware; noHandles: boolean; kits?: KitOrder[]; bounds: ZoneBounds; /** La filera System 32 del mòdul (placa de la frontissa), si surt aquí. */ afterHinge?: ReactNode; /** Una o dues portes ja es tria a dalt (Mòdul › Portes): la fila «Portes» no surt. */ noMode?: boolean }) {
+function FrontFields({ front, openRatio, drawerHeights, onChange, hardware, noHandles, kits, bounds, afterHinge, noMode = false }: { front: Front; openRatio?: number; drawerHeights?: number[]; onChange: (f: Front) => void; hardware: ModuleHardware; noHandles: boolean; kits?: KitOrder[]; bounds: ZoneBounds; /** La filera System 32 del mòdul (placa de la frontissa), si surt aquí. */ afterHinge?: ReactNode; /** Una o dues portes ja es tria a dalt (Mòdul › Portes): la fila «Portes» no surt. */ noMode?: boolean }) {
   // «Tirador»: el del mòdul («Com el mòdul»), un altre de la biblioteca (un d'importat i confirmat fa els
   // forats a la seva distància) o «Cap (push)». Als calaixos amb joc, el tancament del joc mana (`kitClosingFor`).
   const handlePick = (f: Extract<Front, { kind: "door" | "drawers" | "flap" }>, kit?: HardwareItem & { kit: NonNullable<HardwareItem["kit"]> }) => {
@@ -556,11 +606,13 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bo
     case "drawers":
       return (
         <Stack gap={3}>
-          <NumRow label="Calaixos" help={isDrawerKit(front.hardware ?? hardware.slide) ? "Alçades de front: auto (iguals). Calaixos del joc de doble paret (sense laterals de fusta), amb la llargada nominal més gran que hi cap." : "Alçades de front: auto (iguals). Caixa de fusta amb la guia de la llargada més gran que hi cap."} suffix="u" value={front.n} min={1} max={10} step={1} onChange={(n) => {
+          <NumRow label="Calaixos" help={isDrawerKit(front.hardware ?? hardware.slide) ? "Calaixos del joc de doble paret (sense laterals de fusta), amb la llargada nominal més gran que hi cap." : "Caixa de fusta amb la guia de la llargada més gran que hi cap."} suffix="u" value={front.n} min={1} max={10} step={1} onChange={(n) => {
             if (!Number.isFinite(n)) return
             const k = Math.max(1, Math.min(10, Math.round(n)))
-            onChange({ ...front, n: k, heights: Array.from({ length: k }, (_, i) => front.heights[i] ?? "auto") })
+            // L'última sempre és el que sobra («auto»), com a la Divisió.
+            onChange({ ...front, n: k, heights: Array.from({ length: k }, (_, i) => (i === k - 1 ? "auto" : (front.heights[i] ?? "auto"))) })
           }} />
+          {front.n > 1 && <DrawerHeights front={front} real={drawerHeights} onChange={onChange} />}
           <HardwarePick slot="slide" current={front.hardware ?? hardware.slide} inherited={hardware.slide} onPick={(h) => onChange(withHardware(front, h))} />
           {/* Un joc de calaix, triat aquí o com a guia del mòdul: les opcions del joc. */}
           {(() => {
@@ -570,6 +622,25 @@ function FrontFields({ front, openRatio, onChange, hardware, noHandles, kits, bo
               <>
                 {kit && <KitFields front={front} kit={kit} kits={kits} onChange={onChange} />}
                 {handlePick(front, kit)}
+                {/* On va el tirador: només si n'hi ha (push: cap forat, no surt). */}
+                {!((kit && isPushClosing(kitOptionsOf(kit.kit, front.kit).closing)) || front.handle === "none" || (!front.handle && noHandles)) && (
+                  <>
+                    <FormRow label="Posició del tirador">
+                      <ChoiceChips
+                        label="Posició del tirador"
+                        value={front.handleTop !== undefined ? "top" : "center"}
+                        options={[
+                          { id: "center", label: "Centrat" },
+                          { id: "top", label: "A dalt" },
+                        ]}
+                        onChange={(v) => onChange(v === "top" ? { ...front, handleTop: 40 } : (({ handleTop: _t, ...rest }) => rest)(front))}
+                      />
+                    </FormRow>
+                    {front.handleTop !== undefined && (
+                      <NumRow label="Des de dalt" value={front.handleTop} min={0} max={1000} step={5} onChange={(handleTop) => Number.isFinite(handleTop) && onChange({ ...front, handleTop })} help="Del cantell de dalt del front a l'eix del tirador. Com a molt, el mig del front." />
+                    )}
+                  </>
+                )}
               </>
             )
           })()}
@@ -715,7 +786,7 @@ export function ModuleDoorsSection({ root, onChange, hardware, noHandles, bounds
 }
 
 /** Tipus de front d'un compartiment (botons d'icona) i els seus camps. */
-function ZoneFrontSection({ root, zone, onChange, openRatio, hardware, noHandles = false, kits, bounds, afterHinge }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; hardware: ModuleHardware; noHandles?: boolean; kits?: KitOrder[]; /** Què aguanta el compartiment: els fronts que no s'hi poden fixar no surten (el triat, sí). */ bounds: ZoneBounds; /** Després de la «Frontissa» (la filera System 32 del mòdul). */ afterHinge?: ReactNode }) {
+function ZoneFrontSection({ root, zone, onChange, openRatio, drawerHeights, hardware, noHandles = false, kits, bounds, afterHinge }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; openRatio?: number; drawerHeights?: number[]; hardware: ModuleHardware; noHandles?: boolean; kits?: KitOrder[]; /** Què aguanta el compartiment: els fronts que no s'hi poden fixar no surten (el triat, sí). */ bounds: ZoneBounds; /** Després de la «Frontissa» (la filera System 32 del mòdul). */ afterHinge?: ReactNode }) {
   const all = Object.keys(FRONT_LABELS) as (Front["kind"] | "none")[]
   const current = zone.front?.kind ?? "none"
   const options = all.filter((k) => k === current || canHoldFront(bounds, k))
@@ -741,7 +812,7 @@ function ZoneFrontSection({ root, zone, onChange, openRatio, hardware, noHandles
                 onChange={choose}
               />
             </FormRow>
-            {zone.front && <FrontFields front={zone.front} openRatio={openRatio} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} afterHinge={afterHinge} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
+            {zone.front && <FrontFields front={zone.front} openRatio={openRatio} drawerHeights={drawerHeights} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} afterHinge={afterHinge} onChange={(f) => onChange(setFront(root, zone.id, f))} />}
           </FoldItem>
   )
 }

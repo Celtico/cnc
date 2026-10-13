@@ -1,4 +1,5 @@
 import {
+  mountOf,
   type BPt,
   type CableHole,
   NO_EDGES,
@@ -125,6 +126,8 @@ export interface ModuleBuild {
   layout: Layout
   /** % d'àrea oberta de cada reixeta, per id de zona (o "top" per a la tapa). */
   openRatios: Record<string, number>
+  /** Alçades reals dels fronts de cada pila de calaixos (mm, de baix a dalt), per id de zona: les de les «Auto» a l'inspector. */
+  drawerHeights: Record<string, number[]>
 }
 
 /** Mides derivades de la carcassa. */
@@ -297,6 +300,7 @@ class Builder {
   readonly panels: Panel[] = []
   readonly warnings: BuildWarning[] = []
   readonly openRatios: Record<string, number> = {}
+  readonly drawerHeights: Record<string, number[]> = {}
   readonly extras: Panel[] = []
   readonly hardwareKits: KitOrder[] = []
   /** Zones que queden darrere del front d'una zona pare. */
@@ -453,7 +457,9 @@ class Builder {
         t,
         c.material,
         "x",
-        d.mitreTop ? edges(...(ext ? [] : [isLeft ? ("top" as const) : ("bottom" as const)])) : edges(...(ext ? [] : [isLeft ? ("top" as const) : ("bottom" as const)]), "right"),
+        d.mitreTop
+          ? edges(...(ext ? [] : [isLeft ? ("top" as const) : ("bottom" as const)]), ...this.rearEdge(isLeft ? "bottom" : "top"))
+          : edges(...(ext ? [] : [isLeft ? ("top" as const) : ("bottom" as const)]), "right", ...this.rearEdge(isLeft ? "bottom" : "top")),
         pl,
       ),
       grooves,
@@ -647,7 +653,7 @@ class Builder {
         t,
         c.material,
         "x",
-        onTop ? edges("top", "bottom", "left", "right") : ext ? edges() : edges(isBottom ? "bottom" : "top"),
+        onTop ? edges("top", "bottom", "left", "right") : edges(...(ext ? [] : [isBottom ? ("bottom" as const) : ("top" as const)]), ...this.rearEdge(isBottom ? "top" : "bottom")),
         pl,
       ),
       grooves,
@@ -872,6 +878,16 @@ class Builder {
    * dividida, tots (de qualsevol nivell, també els de l'arrel; `hasInnerPieces`); sense dividir, cap (els prestatges
    * fixos van sencers entre la caixa).
    */
+  /**
+   * Cantell del darrere d'una peça de la caixa (laterals, base, tapa, divisors i prestatges): només sense fons i amb el
+   * mòdul lliure al terra separat de la paret, que el deixen a la vista (per decisió de l'usuari, 2026-10-13: arrambat o
+   * penjat a la paret, el darrere no es veu). `side` = el cantell local del darrere de la peça.
+   */
+  private rearEdge(side: EdgeSide): EdgeSide[] {
+    const m = this.m
+    return m.carcass.back === "none" && mountOf(m) === "floor" && (m.wallGap ?? 0) > 0 ? [side] : []
+  }
+
   private innerGap(): number {
     const g = this.m.carcass.innerClearance ?? 0
     return g > 0 && hasInnerPieces(this.m.root) ? g : 0
@@ -882,7 +898,7 @@ class Builder {
     const t = d.t
     const e = gap / 2
     const panel = this.add(
-      this.basePanel(id, "divisor", "Divisor", "divider", yTo - yFrom - gap, d.availDepth - cut, t, m.carcass.material, "x", edges("top"), placement([x, yFrom + e, d.backInnerZ], Y, Z, X, Z)),
+      this.basePanel(id, "divisor", "Divisor", "divider", yTo - yFrom - gap, d.availDepth - cut, t, m.carcass.material, "x", edges("top", ...this.rearEdge("bottom")), placement([x, yFrom + e, d.backInnerZ], Y, Z, X, Z)),
     )
     this.verticals.push({ panel, xL: x, xR: x + t, yB: yFrom, yT: yTo, zRear: d.backInnerZ, zFront: d.D - cut, outer: false, ...(e ? { endGap: e } : {}) })
   }
@@ -893,7 +909,7 @@ class Builder {
     const e = gap / 2
     const zFront = d.D - cut
     const panel = this.add(
-      this.basePanel(id, "estanter fixe", "Prestatge fix", "fixedShelf", xTo - xFrom - gap, d.availDepth - cut, t, m.carcass.material, "x", edges("bottom"), placement([xFrom + e, y, zFront], X, neg(Z), Y, Z)),
+      this.basePanel(id, "estanter fixe", "Prestatge fix", "fixedShelf", xTo - xFrom - gap, d.availDepth - cut, t, m.carcass.material, "x", edges("bottom", ...this.rearEdge("top")), placement([xFrom + e, y, zFront], X, neg(Z), Y, Z)),
     )
     this.horizontals.push({ panel, yBottom: y, yTop: y + t, xL: xFrom, xR: xTo, outer: false, zRear: d.backInnerZ, zFront, ...(e ? { endGap: e } : {}) })
   }
@@ -1186,7 +1202,7 @@ class Builder {
       const nm = this.shelfCount === 1 && n === 1 ? "Prestatge" : `Prestatge ${idx}`
       const code = this.shelfCount === 1 && n === 1 ? "estanter" : `estanter ${idx}`
       if (!hollow) {
-        this.add(this.basePanel(`shelf-${idx}`, code, nm, "shelf", length, depth, t, c.material, "x", edges("bottom"), placement([x0, y, zF], X, neg(Z), Y, Z)))
+        this.add(this.basePanel(`shelf-${idx}`, code, nm, "shelf", length, depth, t, c.material, "x", edges("bottom", ...this.rearEdge("top")), placement([x0, y, zF], X, neg(Z), Y, Z)))
         continue
       }
       // Prestatge buit: pell de baix i de dalt, tira al davant i llistons (darrere i extrems).
@@ -1649,6 +1665,7 @@ class Builder {
     if (fit.mismatch !== null)
       this.warnings.push({ code: "layout", message: mismatchMessage("Les alçades dels fronts dels calaixos", fit.mismatch, r(ter.y1 - ter.y0), heights.at(-1)!), zoneId: zone.id })
     if (heights.some((h) => h <= 0)) this.warnings.push({ code: "layout", message: `Els ${n} calaixos no hi caben: algun front no té alçada.`, zoneId: zone.id })
+    this.drawerHeights[zone.id] = heights
     const ys: number[] = []
     for (let i = 0, yy = ter.y0; i < n; i++) {
       ys.push(yy)
@@ -1657,7 +1674,7 @@ class Builder {
     return { heights, ys }
   }
 
-  /** El front d'un calaix (cara A cap a dins, x local = amplada) amb el tirador centrat i, si toca, els inglets. */
+  /** El front d'un calaix (cara A cap a dins, x local = amplada) amb el tirador (centrat o a dalt) i, si toca, els inglets. */
   private addDrawerFront(k: number, ter: ZoneRect, y: number, fh: number, handleHw: HandleChoice, zone: Zone): Panel {
     const { d } = this
     const c = this.m.carcass
@@ -1674,7 +1691,9 @@ class Builder {
       ...(mL || mR || mT || mB ? { mitres: [...(mL ? (["left"] as const) : []), ...(mR ? (["right"] as const) : []), ...(mT ? (["bottom"] as const) : []), ...(mB ? (["top"] as const) : [])] } : {}),
     })
     // Tirador centrat (x local = amplada, y local = cap avall).
-    this.handle(frontPanel, fw / 2, fh / 2, "x", handleHw, zone.id)
+    // Centrat o a `handleTop` mm del cantell de dalt (y local cap avall), mai per sota del mig.
+    const top = zone.front?.kind === "drawers" ? zone.front.handleTop : undefined
+    this.handle(frontPanel, fw / 2, top !== undefined ? Math.min(top, fh / 2) : fh / 2, "x", handleHw, zone.id)
     return frontPanel
   }
 
@@ -2033,7 +2052,7 @@ export function buildModule(input: Module): ModuleBuild {
   const layout = b.buildZones()
   b.buildLegs()
   const panels = b.panels.map((p) => normalizePanel(p.cutouts && p.cutouts.length === 0 ? { ...p, cutouts: undefined } : p))
-  return { panels, extras: b.extras, hardwareKits: b.hardwareKits, warnings: b.warnings, layout, openRatios: b.openRatios }
+  return { panels, extras: b.extras, hardwareKits: b.hardwareKits, warnings: b.warnings, layout, openRatios: b.openRatios, drawerHeights: b.drawerHeights }
 }
 
 /** Material dels fronts (portes, calaixos, abatibles, reixetes, fixos): el propi o, si no n'hi ha, el del cos. */

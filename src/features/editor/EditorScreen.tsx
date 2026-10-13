@@ -1074,6 +1074,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             hardware={module.hardware}
             noHandles={module.fronts.handles === "none"}
             openRatio={moduleBuild?.openRatios[zone.id]}
+            drawerHeights={moduleBuild?.drawerHeights[zone.id]}
             kits={moduleBuild?.hardwareKits.filter((k) => k.zoneId === zone.id)}
             onChange={(root) => updateModule({ ...module, root })}
             onSelect={selectZone}

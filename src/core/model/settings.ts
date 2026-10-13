@@ -213,6 +213,11 @@ export const MaterialPrefSchema = z.object({
    */
   cnc: z.boolean().optional(),
   /**
+   * Massís (fusta massissa): les peces d'aquest material **no es cantegen** (cap cantell al llistat, al CSV ni al
+   * LLEGEIX-ME; al 3D, el cantell és el mateix material). Per decisió de l'usuari (2026-10-13). Sense: es canteja.
+   */
+  solid: z.boolean().optional(),
+  /**
    * Categoria (Preferències › Materials i selectors). Sense: es dedueix (`materialCategory`).
    * `sim` = de simulació: només es veu (blocs i parets dels ambients, coixins…), no es fabrica.
    */
@@ -238,6 +243,17 @@ export type MaterialPref = z.infer<typeof MaterialPrefSchema>
 export function materialNameKey(name: string): string {
   return name.trim().replace(/\s+/g, " ").toLocaleLowerCase("ca")
 }
+
+/**
+ * Materials massissos de l'usuari (`MaterialPref.solid`): el constructor no llegeix preferències, així que els posen
+ * les preferències en carregar-se i en desar-se (`setSolidMaterials`, `db/settingsStore.ts`), com la prebroca dels
+ * jocs. Sense (tests, Node), cap: tot es canteja com sempre.
+ */
+let SOLID_MATERIALS = new Set<string>()
+export function setSolidMaterials(materials: readonly Pick<MaterialPref, "name" | "solid">[]): void {
+  SOLID_MATERIALS = new Set(materials.filter((m) => m.solid).map((m) => materialNameKey(m.name)))
+}
+export const isSolidMaterial = (name: string): boolean => SOLID_MATERIALS.has(materialNameKey(name))
 
 /** Llista de materials amb noms únics (`materialNameKey`): el Zod de les preferències la rebutja si no. */
 const MaterialListSchema = z.array(MaterialPrefSchema).min(1).superRefine((list, ctx) => {
