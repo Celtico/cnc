@@ -313,6 +313,13 @@ export const ModuleSchema = z.object({
    */
   wallGap: mm.min(0).optional(),
   /**
+   * Només «Lliure al terra»: girat 180° al voltant del vertical (els fronts miren enrere), per fer una illa amb dos mòduls
+   * d'esquena (per decisió de l'usuari, 2026-10-13). El mòdul es construeix igual; només canvia com es col·loca
+   * (`buildComposition`, al voltant del centre de la caixa de les seves peces: ocupa el mateix lloc). Res amagat compta:
+   * en un altre muntatge no es llegeix (`isTurned`).
+   */
+  turned: z.boolean().optional(),
+  /**
    * Només «Al terra» (lliure): posició X pròpia (mm des de l'origen). No segueix la fila ni
    * n'empeny els altres: així es pot posar una illa davant de la cuina. Sense: segueix la fila.
    */
@@ -589,6 +596,9 @@ export interface ModulePlacement {
 export type ModuleMount = "wall" | "hung" | "floor"
 /** Mòdul al terra lliure amb posició X pròpia (fora de la fila). */
 export const freeX = (m: Module): boolean => m.x !== undefined && m.carcass.base.kind !== "wall" && m.wallGap !== undefined
+
+/** Girat 180° (`Module.turned`): només amb el mòdul lliure al terra. */
+export const isTurned = (m: Module): boolean => !!m.turned && m.carcass.base.kind !== "wall" && m.wallGap !== undefined
 
 export const mountOf = (m: Module): ModuleMount => (m.carcass.base.kind === "wall" ? "hung" : m.wallGap !== undefined ? "floor" : "wall")
 

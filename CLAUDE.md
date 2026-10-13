@@ -153,7 +153,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   sempre amb `modulePlacements()` / `compositionWidth/Height`, mai a mà. Els `anchor` antics es converteixen en carregar
   (`normalizeComposition`). Tres muntatges (`mountOf`): **Arrambat a la paret**, **Penjat** i **Lliure al terra** (`Module.wallGap`
   = separació de la paret, i **X pròpia** `Module.x`/`freeX`: surt de la fila i no empeny els altres, p. ex. una illa; camp
-  «De costat (X)»). Els antics «Al terra» sense `x` continuen a la fila. Taulell i sòcol correguts no tenen en compte `wallGap`.
+  «De costat (X)»). Els antics «Al terra» sense `x` continuen a la fila. **Girat 180°** (`Module.turned`, `isTurned`; només lliure al terra; Mòdul › Posició «Girat»; per decisió de l'usuari, 2026-10-13, per fer una illa amb dos mòduls d'esquena): el mòdul es construeix igual i `buildComposition` el gira al voltant del centre de la caixa de les seves peces (ocupa el mateix lloc; `CompositionBuild.modules[].mirrorX`, `moduleWorldX` per al clic i el ressaltat dels compartiments); l'obertura del 3D surt enrere (`opening.ts`, per l'`explodeDir`). Tests `build/turnedModule.test.ts`, `viewer/openingTurned.test.ts`. Taulell i sòcol correguts no tenen en compte `wallGap`.
 - **Carcassa** (inspector del mòdul, secció Caixa):
   - **Base**: a terra · sòcol · potes · sense base. Avís `hanging` si un penjat té el fons prim. Amb potes, «Pota»:
     les genèriques (només es veuen) o una pota importada de la biblioteca (`Base.hardware`, còpia): confirmada, forats de

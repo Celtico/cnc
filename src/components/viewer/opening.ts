@@ -38,6 +38,9 @@ const box = (p: Panel): { min: Vec3; max: Vec3 } => {
   return { min, max }
 }
 
+/** Cap on obre un front: +1 endavant (+Z), −1 enrere (mòdul girat 180°), per l'`explodeDir` de la peça. */
+const outSign = (p: Panel): 1 | -1 => (p.placement.explodeDir[2] < 0 ? -1 : 1)
+
 /** Peces mòbils de la composició, agrupades. */
 export function movingGroups(panels: Panel[]): MovingGroup[] {
   const groups: MovingGroup[] = []
@@ -56,9 +59,11 @@ export function movingGroups(panels: Panel[]): MovingGroup[] {
       const cups = p.holes.filter((h) => h.tag === "hinge")
       if (!cups.length) continue
       const b = box(p)
-      // Cassoletes a y local petita → frontissa al costat de y = 0 (esquerra en X del moble).
+      // Cassoletes a y local petita → frontissa al costat de y = 0 (esquerra en X del mòdul). Un mòdul girat 180°
+      // (`explodeDir` cap enrere) obre cap a −Z: la frontissa queda a l'altre costat en X i el pivot, al darrere.
+      const out = outSign(p)
       const left = cups.every((h) => h.y < p.width / 2)
-      const pivot: Vec3 = [left ? b.min[0] : b.max[0], b.min[1], b.min[2]]
+      const pivot: Vec3 = [left === out > 0 ? b.min[0] : b.max[0], b.min[1], out > 0 ? b.min[2] : b.max[2]]
       groups.push({ id: p.id, label: p.label, panelIds: [p.id], motion: { kind: "hinge", pivot, axis: "y", sign: left ? -1 : 1, maxAngle: MAX_DOOR_ANGLE } })
       continue
     }
@@ -67,8 +72,9 @@ export function movingGroups(panels: Panel[]): MovingGroup[] {
       const holes = p.holes.filter((h) => h.tag === "flap")
       // Forats a x local petita (baix) → gira cap avall sobre el cantell inferior.
       const down = holes.length ? holes.every((h) => h.x < p.length / 2) : true
-      const pivot: Vec3 = [b.min[0], down ? b.min[1] : b.max[1], b.min[2]]
-      groups.push({ id: p.id, label: p.label, panelIds: [p.id], motion: { kind: "hinge", pivot, axis: "x", sign: down ? 1 : -1, maxAngle: Math.PI / 2 } })
+      const out = outSign(p)
+      const pivot: Vec3 = [b.min[0], down ? b.min[1] : b.max[1], out > 0 ? b.min[2] : b.max[2]]
+      groups.push({ id: p.id, label: p.label, panelIds: [p.id], motion: { kind: "hinge", pivot, axis: "x", sign: down === out > 0 ? 1 : -1, maxAngle: Math.PI / 2 } })
     }
   }
 
@@ -79,7 +85,7 @@ export function movingGroups(panels: Panel[]): MovingGroup[] {
     const slide = panels.find((p) => p.role === "hardware" && p.id.includes(`kitfix-${k}-kit-slide-`))
     const front = parts.find((p) => p.role === "drawerFront")
     const distance = side ? side.length : slide ? slide.thickness : front ? Math.min(front.length, 400) : 400
-    groups.push({ id: key, label: front?.label ?? key, panelIds: parts.map((p) => p.id), motion: { kind: "slide", dir: [0, 0, 1], distance } })
+    groups.push({ id: key, label: front?.label ?? key, panelIds: parts.map((p) => p.id), motion: { kind: "slide", dir: [0, 0, front ? outSign(front) : 1], distance } })
   }
   return groups
 }

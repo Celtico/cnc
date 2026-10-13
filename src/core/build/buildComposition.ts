@@ -1,4 +1,4 @@
-import { activeRuns, compositionKind, isSolidMaterial, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, type Composition, type ModelObject, type Panel, type Vec3 } from "../model"
+import { activeRuns, compositionKind, isSolidMaterial, isTurned, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, type Composition, type ModelObject, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { buildModule, type BuildWarning, type KitOrder, type ModuleBuild } from "./buildModule"
 import { normalizePanel } from "./buildCabinet"
@@ -18,7 +18,10 @@ export interface CompositionWarning extends BuildWarning {
 export interface CompositionBuild {
   panels: Panel[]
   warnings: CompositionWarning[]
-  modules: { id: string; index: number; x: number; y: number; z: number; build: ModuleBuild }[]
+  /**
+   * `mirrorX`: mòdul girat 180° (`isTurned`): la X local `xl` va a `x + mirrorX − xl` (`moduleWorldX`). Sense: `x + xl`.
+   */
+  modules: { id: string; index: number; x: number; y: number; z: number; build: ModuleBuild; mirrorX?: number }[]
   /** Encaixos entre peces lliures. */
   joints: PartJoint[]
   /** Elements sense nesting (peces lliures de ferro, pedra, vidre…): 3D i llista, no taller. */
@@ -27,6 +30,21 @@ export interface CompositionBuild {
   models: ModelObject[]
   /** Calaixos amb joc paramètric de tots els mòduls: la comanda per al taller (amb el número de mòdul). */
   hardwareKits: (KitOrder & { module: number; moduleId: string })[]
+}
+
+/** Centre (×2) en X i Z de la caixa de les peces d'un mòdul, en coordenades del mòdul: l'eix del gir de 180°. */
+function turnFrame(panels: Panel[]): { mx: number; mz: number } {
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity
+  for (const p of panels) {
+    const b = panelBox(p)
+    x0 = Math.min(x0, b.min[0]); x1 = Math.max(x1, b.max[0]); z0 = Math.min(z0, b.min[2]); z1 = Math.max(z1, b.max[2])
+  }
+  return Number.isFinite(x0) ? { mx: x0 + x1, mz: z0 + z1 } : { mx: 0, mz: 0 }
+}
+
+/** X de la composició d'una X del mòdul (`xl`), també si està girat 180° (`mirrorX`). */
+export function moduleWorldX(mb: { x: number; mirrorX?: number }, xl: number): number {
+  return mb.mirrorX !== undefined ? mb.x + mb.mirrorX - xl : mb.x + xl
 }
 
 /** Caixa englobant d'una peça (coordenades de la composició). */
@@ -68,19 +86,17 @@ export function buildComposition(input: Composition): CompositionBuild {
     const { x, y } = places[i]!
     const z = places[i]!.z ?? 0
     const build = buildModule(m)
-    for (const p of build.panels) {
-      const o = p.placement.origin
-      panels.push({
-        ...p,
-        id: `${m.id}:${p.id}`,
-        module: i + 1,
-        placement: { ...p.placement, origin: [o[0] + x, o[1] + y, o[2] + z] },
-      })
+    // Girat 180° al voltant del vertical pel centre de la caixa de les peces (ocupa el mateix lloc): x → 2·cx − x,
+    // z → 2·cz − z i els eixos de cada peça amb la X i la Z canviades de signe (gir, no mirall: les peces són les mateixes).
+    const turn = isTurned(m) ? turnFrame(build.panels) : undefined
+    const place = (pl: Panel["placement"]): Panel["placement"] => {
+      const o = pl.origin
+      if (!turn) return { ...pl, origin: [o[0] + x, o[1] + y, o[2] + z] }
+      const v = (a: Vec3): Vec3 => [-a[0], a[1], -a[2]]
+      return { origin: [turn.mx - o[0] + x, o[1] + y, turn.mz - o[2] + z], xAxis: v(pl.xAxis), yAxis: v(pl.yAxis), zAxis: v(pl.zAxis), explodeDir: v(pl.explodeDir) }
     }
-    for (const p of build.extras) {
-      const o = p.placement.origin
-      moduleExtras.push({ ...p, id: `${m.id}:${p.id}`, module: i + 1, placement: { ...p.placement, origin: [o[0] + x, o[1] + y, o[2] + z] } })
-    }
+    for (const p of build.panels) panels.push({ ...p, id: `${m.id}:${p.id}`, module: i + 1, placement: place(p.placement) })
+    for (const p of build.extras) moduleExtras.push({ ...p, id: `${m.id}:${p.id}`, module: i + 1, placement: place(p.placement) })
     for (const k of build.hardwareKits) hardwareKits.push({ ...k, module: i + 1, moduleId: m.id })
     // L'avís del push és de tot el moble: una sola vegada, no un per mòdul.
     for (const w of build.warnings) if (w.code !== "push" || !warnings.some((x) => x.code === "push")) warnings.push({ ...w, moduleId: m.id })
@@ -92,7 +108,7 @@ export function buildComposition(input: Composition): CompositionBuild {
         moduleId: m.id,
         message: "Mòdul penjat: posa-hi penjadors de moble (regulables) i un fons d'almenys 8 mm o un travesser de penjar al darrere.",
       })
-    modules.push({ id: m.id, index: i + 1, x, y, z, build })
+    modules.push({ id: m.id, index: i + 1, x, y, z, build, ...(turn ? { mirrorX: turn.mx } : {}) })
   })
 
   // Mòduls que es trepitgen (una columna i un penjat a la mateixa X, una illa sobre la fila, el voladís d'un tauler de

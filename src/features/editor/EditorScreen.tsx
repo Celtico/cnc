@@ -1,4 +1,4 @@
-import { Alert, Badge, Box, Button, Editable, HStack, IconButton, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Alert, Badge, Box, Button, Editable, HStack, IconButton, SegmentGroup, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
 import { createElement, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   LuArrowDownToLine,
@@ -50,7 +50,7 @@ import { ArDialog } from "../../components/viewer/ArDialog"
 import { RenderDialog, type SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
-import { panelBox, type CompositionWarning } from "../../core/build/buildComposition"
+import { moduleWorldX, panelBox, type CompositionWarning } from "../../core/build/buildComposition"
 import { materialIssues } from "../../core/build/materialIssues"
 import { splitChildSizes } from "../../core/build/layout"
 import { applySettingsToModule, moduleHasInnerPieces, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, moduleRows, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, setModuleMount, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
@@ -694,7 +694,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     const mb = build?.modules[idx]
     const mod = comp.modules[idx]
     if (!inside || !at || !mb || !mod) return selectModule(id)
-    const lx = at[0] - mb.x
+    const lx = mb.mirrorX !== undefined ? mb.mirrorX - (at[0] - mb.x) : at[0] - mb.x
     const ly = at[1] - mb.y
     const inner = mb.build.layout.rects.get(mod.root.id)
     if (inner && (lx < inner.x0 || lx > inner.x1 || ly < inner.y0 || ly > inner.y1)) return selectModule(id)
@@ -789,14 +789,14 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     if (selection.kind === "module")
       return { x0: mod.x, x1: mod.x + c.width, y0: mod.y, y1: mod.y + c.height, z0: mod.z, z1: mod.z + c.depth + c.thickness, veil: false }
     if (selection.kind !== "zone" || !zoneRect) return null
-    return { x0: mod.x + zoneRect.x0, x1: mod.x + zoneRect.x1, y0: mod.y + zoneRect.y0, y1: mod.y + zoneRect.y1, z0: mod.z, z1: mod.z + c.depth + c.thickness }
+    const [x0, x1] = [moduleWorldX(mod, zoneRect.x0), moduleWorldX(mod, zoneRect.x1)].sort((a, b) => a - b) as [number, number]
+    return { x0, x1, y0: mod.y + zoneRect.y0, y1: mod.y + zoneRect.y1, z0: mod.z, z1: mod.z + c.depth + c.thickness }
   }, [selection.kind, zoneRect, build, moduleIndex, module])
   const openOnly = useMemo(() => {
     if (!viewer.openOnlySelected || !zoneRect || !build) return null
     const mod = build.modules[moduleIndex]
     if (!mod) return null
-    const x0 = mod.x + zoneRect.x0
-    const x1 = mod.x + zoneRect.x1
+    const [x0, x1] = [moduleWorldX(mod, zoneRect.x0), moduleWorldX(mod, zoneRect.x1)].sort((a, b) => a - b) as [number, number]
     const y0 = mod.y + zoneRect.y0
     const y1 = mod.y + zoneRect.y1
     const ids = new Set<string>()
@@ -1144,6 +1144,16 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
                   onChange={(wallGap) => updateModule({ ...module, wallGap })}
                   help="Del darrere del mòdul a la paret."
                 />
+              )}
+              {/* Girat 180° (una illa amb dos mòduls d'esquena, calaixos pels dos costats): només lliure al terra. */}
+              {mountOf(module) === "floor" && (
+                <FormRow label="Girat" help={module.turned ? "Els fronts miren enrere: posa'l d'esquena amb un altre mòdul per fer una illa amb calaixos pels dos costats." : undefined}>
+                  <Switch.Root size="sm" pt="6px" checked={!!module.turned} onCheckedChange={(e) => updateModule(e.checked ? { ...module, turned: true } : (({ turned: _t, ...rest }) => rest)(module))}>
+                    <Switch.HiddenInput />
+                    <Switch.Control />
+                    <Switch.Label fontSize="sm">180° (fronts enrere)</Switch.Label>
+                  </Switch.Root>
+                </FormRow>
               )}
               {freeX(module) ? (
                 <NumRow
