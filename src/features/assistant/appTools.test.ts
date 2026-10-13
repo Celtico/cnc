@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { AssistantToolSet } from "../../core/assistant/toolset"
 import { DEFAULT_SETTINGS } from "../../core/model"
-import { appToolSet, contextLine, setAppSettings, withAppTools } from "./appTools"
+import { appToolSet, contextLine, dbSafe, getAt, setAppSettings, setAt, withAppTools } from "./appTools"
 import { registerDoc, registerNav } from "./assistantHub"
 
 const docSet: AssistantToolSet<unknown> = {
@@ -45,7 +45,7 @@ describe("assistent personal: eines de l'app", () => {
 describe("assistent personal: totes les eines de l'app", () => {
   it("hi són les de documents, peces, nesting, exportar i preferències", () => {
     const names = appToolSet.tools.map((t) => t.name)
-    for (const n of ["rename_document", "duplicate_document", "move_to_group", "delete_document", "get_cutlist", "get_nesting", "set_sheet", "export_files", "get_settings", "set_pref_material", "set_pref_defaults", "set_pref_gaps", "set_default_machine", "list_hardware", "set_hardware_default", "set_front_hardware", "get_hardware", "edit_hardware"]) expect(names).toContain(n)
+    for (const n of ["rename_document", "duplicate_document", "move_to_group", "delete_document", "get_cutlist", "get_nesting", "set_sheet", "export_files", "get_settings", "set_pref_material", "set_pref_defaults", "set_pref_gaps", "set_default_machine", "list_hardware", "set_hardware_default", "set_front_hardware", "get_hardware", "edit_hardware", "db_tables", "db_read", "db_write"]) expect(names).toContain(n)
   })
   it("esborrar demana confirmació; sense document obert, peces i nesting ho diuen", async () => {
     const del = await appToolSet.run(null, "delete_document", { kind: "moble", id: 1, confirmed: false })
@@ -80,5 +80,25 @@ describe("assistent personal: ferratges i materials", () => {
     expect(s2.ok === false && s2.error).toMatch(/rugositat/)
     const dup = await appToolSet.run(null, "set_pref_material", { name: wood.name, rename: DEFAULT_SETTINGS.materials.find((m) => m !== wood)!.name })
     expect(dup.ok === false && dup.error).toMatch(/Ja hi ha/)
+  })
+})
+
+describe("assistent personal: base de dades", () => {
+  it("no ensenya imatges, fitxers ni la clau de l'API", () => {
+    const out = dbSafe({ assistant: { apiKey: "sk-secret", model: "x" }, photo: `data:image/jpeg;base64,${"A".repeat(5000)}`, blob: new Blob(["abc"]) }) as Record<string, any>
+    expect(out.assistant).toEqual({ model: "x" })
+    expect(out.photo).toMatch(/^\[binari/)
+    expect(out.blob).toMatch(/^\[binari/)
+  })
+  it("camins amb punts i «#id» per llegir i canviar sense tocar l'original", () => {
+    const row = { composition: { modules: [{ id: "m1", name: "A" }, { id: "m2", name: "B" }] } }
+    const got = getAt(row, ["composition", "modules", "#m2", "name"])
+    expect(got.ok && got.value).toBe("B")
+    const next = setAt(row, ["composition", "modules", "#m2", "name"], "C") as typeof row
+    expect(next.composition.modules[1]!.name).toBe("C")
+    expect(row.composition.modules[1]!.name).toBe("B")
+    const gone = setAt(row, ["composition", "modules", "0"], null) as typeof row
+    expect(gone.composition.modules.map((m) => m.id)).toEqual(["m2"])
+    expect(getAt(row, ["composition", "nope"]).ok).toBe(false)
   })
 })

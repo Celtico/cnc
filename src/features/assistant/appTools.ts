@@ -15,12 +15,13 @@ import { keepProject } from "../../db/db"
 import { downloadBlob, slugify } from "../download"
 import { saveSettings } from "../../db/settingsStore"
 import { setHardwareParam } from "../../core/import/importItem"
-import { FinishSchema, hardwareParams, HardwareItemSchema, renameMaterialInSettings, renameMaterialRefs, restoredFinish, switchFinish } from "../../core/model"
+import { AmbientSchema, CompositionSchema, FinishSchema, hardwareParams, HardwareItemSchema, renameMaterialInSettings, renameMaterialRefs, restoredFinish, switchFinish } from "../../core/model"
 import { renameMaterialEverywhere } from "../../db/materialRefs"
 import { renamePresentationMaterial } from "../../components/viewer/presentationScene"
 import { uniqueName } from "../../core/file/mobleFile"
 import { parseToolInput, toolDefs, toolFailure, type AssistantToolSet, type ToolInputs, type ToolRun } from "../../core/assistant/toolset"
-import { createAmbient, createProject, db, safeNestOptions, updateProjectNesting, deleteAmbient, deleteProject, duplicateAmbient, duplicateProject, renameAmbient, renameProject, setAmbientsFolder, setProjectsFolder } from "../../db/db"
+import { createAmbient, createProject, db, safeNestOptions, updateProjectNesting, deleteAmbient, deleteProject, duplicateAmbient, duplicateProject, renameAmbient, renameProject, setAmbientsFolder, setProjectsFolder, updateAmbient } from "../../db/db"
+import { updateProjectComposition } from "../../db/compositionStore"
 import { isObject } from "../objects/isObject"
 import { blankMoble, blankObject } from "../projects/blank"
 import { currentDoc, currentNav, waitForDoc } from "./assistantHub"
@@ -32,6 +33,70 @@ import { currentDoc, currentNav, waitForDoc } from "./assistantHub"
  */
 
 const KIND = z.enum(["moble", "objecte", "ambient"]).describe("moble = moble per fabricar; objecte = decoratiu per als ambients; ambient = habitació")
+
+const DB_TABLES = ["projects", "ambients", "settings", "photos", "models", "hardwareAssets"] as const
+type DbTable = (typeof DB_TABLES)[number]
+
+/** Treu les imatges, els fitxers i la clau de l'API d'un valor llegit de la base de dades (el model només veu dades). */
+export function dbSafe(v: unknown, depth = 0): unknown {
+  if (typeof v === "string") return v.startsWith("data:") && v.length > 200 ? `[binari ${Math.round(v.length / 1365)} KB]` : v.length > 2000 ? `${v.slice(0, 2000)}… [${v.length} caràcters]` : v
+  if (v instanceof Blob) return `[binari ${Math.round(v.size / 1024)} KB]`
+  if (v instanceof ArrayBuffer || ArrayBuffer.isView(v)) return `[binari ${Math.round((v as ArrayBuffer).byteLength / 1024)} KB]`
+  if (!v || typeof v !== "object") return v
+  if (depth > 40) return "[…]"
+  if (Array.isArray(v)) return v.map((x) => dbSafe(x, depth + 1))
+  const out: Record<string, unknown> = {}
+  for (const [k, x] of Object.entries(v)) if (k !== "apiKey") out[k] = dbSafe(x, depth + 1)
+  return out
+}
+
+/** Una fila per id: «208» i 208 són la mateixa (els mobles i ambients tenen ids numèrics; les preferències, de text). */
+async function dbRow(table: DbTable, id: number | string): Promise<Record<string, unknown> | undefined> {
+  const t = db.table(table)
+  const asNum = typeof id === "string" && /^\d+$/.test(id.trim()) ? Number(id) : id
+  return ((await t.get(asNum)) ?? (asNum !== id ? undefined : await t.get(String(id)))) as Record<string, unknown> | undefined
+}
+
+/** Segments d'un camí «a.b.0.#id». */
+const pathParts = (path: string) => path.split(".").filter(Boolean)
+
+export function getAt(root: unknown, parts: string[]): { ok: true; value: unknown } | { ok: false; error: string } {
+  let cur = root
+  for (const [i, seg] of parts.entries()) {
+    if (cur == null || typeof cur !== "object") return { ok: false, error: `«${parts.slice(0, i).join(".")}» no té «${seg}».` }
+    if (seg.startsWith("#") && Array.isArray(cur)) cur = cur.find((x) => (x as { id?: unknown })?.id === seg.slice(1))
+    else cur = (cur as Record<string, unknown>)[seg]
+    if (cur === undefined) return { ok: false, error: `No hi ha «${parts.slice(0, i + 1).join(".")}».` }
+  }
+  return { ok: true, value: cur }
+}
+
+/** Còpia de `root` amb `value` a `parts` (null treu el camp; d'una llista, l'element). */
+export function setAt(root: unknown, parts: string[], value: unknown): unknown {
+  if (!parts.length) return value
+  const [seg, ...rest] = parts as [string, ...string[]]
+  if (Array.isArray(root)) {
+    const i = seg.startsWith("#") ? root.findIndex((x) => (x as { id?: unknown })?.id === seg.slice(1)) : Number(seg)
+    if (!Number.isInteger(i) || i < 0 || i > root.length) throw new Error(`«${seg}» no és un element de la llista.`)
+    const next = [...root]
+    if (!rest.length && value === null) next.splice(i, 1)
+    else next[i] = setAt(root[i], rest, value)
+    return next
+  }
+  const obj: Record<string, unknown> = root && typeof root === "object" ? { ...(root as Record<string, unknown>) } : {}
+  if (!rest.length && value === null) delete obj[seg]
+  else obj[seg] = setAt(obj[seg], rest, value)
+  return obj
+}
+
+/** Un resultat que cap a la conversa (no més de ~40.000 caràcters). */
+function fitResult(v: unknown): unknown {
+  const text = JSON.stringify(v)
+  if (text.length <= 40000) return v
+  if (v && typeof v === "object" && !Array.isArray(v)) return { truncated: true, keys: Object.keys(v), note: "Massa gran: demana un camí més concret (path)." }
+  if (Array.isArray(v)) return { truncated: true, length: v.length, note: "Massa gran: demana un camí més concret (path), o offset/limit." }
+  return `${text.slice(0, 40000)}…`
+}
 
 const INPUTS = {
   get_app: z.object({}).describe("On és l'usuari: l'apartat, la pàgina, el document obert (tipus, id i nom) i què hi té seleccionat. Crida-la al començament si no ho saps."),
@@ -116,6 +181,25 @@ const INPUTS = {
       params: z.record(z.string(), z.number()).optional().describe("Paràmetres a canviar (claus de get_hardware)"),
     })
     .describe("Edita (o duplica i edita) un ferratge de la biblioteca: nom, fabricant, número i paràmetres (Preferències › Ferratges). Els mobles fets es queden la seva còpia."),
+  db_tables: z.object({}).describe("La base de dades de l'app (IndexedDB, Dexie): cada taula amb quantes files té i els camps. projects = mobles i objectes; ambients; settings = preferències; photos, models i hardwareAssets = fitxers (només lectura)."),
+  db_read: z
+    .object({
+      table: z.enum(DB_TABLES),
+      id: z.union([z.number(), z.string()]).optional().describe("Id de la fila (sense: una llista de files resumides)"),
+      path: z.string().optional().describe("Camí dins de la fila, amb punts: «composition.modules.0.carcass», «data.walls». Un segment «#id» tria l'element d'una llista pel seu id"),
+      offset: z.number().int().min(0).optional(),
+      limit: z.number().int().min(1).max(100).optional(),
+    })
+    .describe("Llegeix files de la base de dades tal com estan desades (sense les imatges ni els fitxers, que surten com a «[binari …]», i sense la clau de l'API). Per a coses que les altres eines no diuen."),
+  db_write: z
+    .object({
+      table: z.enum(["projects", "ambients", "settings"]),
+      id: z.union([z.number(), z.string()]).describe("Id de la fila (settings: «app»)"),
+      path: z.string().min(1).describe("Camí del valor a canviar, com a db_read: projects → «name» o «composition…»; ambients → «name» o «data…»; settings → «data…»"),
+      value: z.unknown().describe("El valor nou (JSON); null per treure un camp opcional"),
+      confirmed: z.boolean().describe("true només després que l'usuari ho hagi acceptat al xat (sense, torna com quedaria)"),
+    })
+    .describe("Canvia un valor de la base de dades. Es valida amb el mateix esquema que l'app (un valor dolent no es desa). Al document obert va com un canvi de l'editor (es desfà amb ⌘Z); als altres i a les preferències, no es pot desfer: ensenya-ho i demana-ho abans. Fes servir les eines específiques sempre que n'hi hagi una."),
   go_to: z
     .object({ place: z.enum(["mobles", "ambients", "objectes", "preferencies", "editor", "peces", "nesting", "exportar"]) })
     .describe("Va a un apartat (mobles, ambients, objectes, preferencies) o a una pàgina del moble obert (editor, peces, nesting, exportar)."),
@@ -518,6 +602,81 @@ async function run(doc: unknown, name: string, raw: unknown): Promise<ToolRun<un
         }
         return { ok: true, doc: { ...comp, modules: comp.modules.map((x) => (x.id === m.id ? { ...m, root } : x)) }, result: { module: m.name, zone: z0.id, part: i.part, hardware: item?.name ?? (pushNone ? "cap (push)" : "com el mòdul") } }
       }
+      case "db_tables": {
+        const tables = await Promise.all(
+          DB_TABLES.map(async (t) => {
+            const table = db.table(t)
+            const first = await table.limit(1).first()
+            return { table: t, rows: await table.count(), fields: first ? Object.keys(first) : [], writable: t === "projects" || t === "ambients" || t === "settings" }
+          }),
+        )
+        return { ok: true, doc, result: { tables } }
+      }
+      case "db_read": {
+        const i = p.data as z.infer<typeof INPUTS.db_read>
+        const table = db.table(i.table as DbTable)
+        if (i.id === undefined) {
+          const rows = await table.offset(i.offset ?? 0).limit(i.limit ?? 30).toArray()
+          const brief = rows.map((r: Record<string, unknown>) => {
+            const out: Record<string, unknown> = {}
+            for (const [k, v] of Object.entries(r)) out[k] = v && typeof v === "object" ? (Array.isArray(v) ? `[llista de ${v.length}]` : "{…}") : dbSafe(v)
+            return out
+          })
+          return { ok: true, doc, result: { table: i.table, total: await table.count(), rows: brief } }
+        }
+        const row = await dbRow(i.table as DbTable, i.id)
+        if (!row) return { ok: false, error: `A «${i.table}» no hi ha la fila ${String(i.id)}.` }
+        const got = getAt(row, pathParts(i.path ?? ""))
+        if (!got.ok) return { ok: false, error: got.error }
+        return { ok: true, doc, result: { table: i.table, id: i.id, path: i.path ?? "", value: fitResult(dbSafe(got.value)) } }
+      }
+      case "db_write": {
+        const i = p.data as z.infer<typeof INPUTS.db_write>
+        const parts = pathParts(i.path)
+        const root = parts[0]
+        const allowed = i.table === "projects" ? ["name", "composition"] : i.table === "ambients" ? ["name", "data"] : ["data"]
+        if (!root || !allowed.includes(root)) return { ok: false, error: `A «${i.table}» només es pot canviar ${allowed.map((a) => `«${a}…»`).join(" o ")}.` }
+        if (parts.includes("apiKey")) return { ok: false, error: "La clau de l'API només es canvia a Preferències › Assistent IA." }
+        const row = await dbRow(i.table, i.id)
+        if (!row) return { ok: false, error: `A «${i.table}» no hi ha la fila ${String(i.id)}.` }
+        const before = getAt(row, parts)
+        let next: Record<string, unknown>
+        try {
+          next = setAt(row, parts, i.value) as Record<string, unknown>
+        } catch (e) {
+          return { ok: false, error: e instanceof Error ? e.message : String(e) }
+        }
+        const open = currentDoc()
+        const rowId = row.id as number | string
+        const isOpen = !!open && ((i.table === "projects" && open.kind !== "ambient" && open.id === rowId) || (i.table === "ambients" && open.kind === "ambient" && open.id === rowId))
+        // Validat amb l'esquema de l'app abans de res.
+        if (root === "composition") {
+          const ok = CompositionSchema.safeParse(next.composition)
+          if (!ok.success) return { ok: false, error: `No és vàlid: ${ok.error.issues.slice(0, 3).map((x) => `${x.path.join(".")}: ${x.message}`).join("; ")}` }
+          next.composition = ok.data
+        } else if (root === "data" && i.table === "ambients") {
+          const ok = AmbientSchema.safeParse(next.data)
+          if (!ok.success) return { ok: false, error: `No és vàlid: ${ok.error.issues.slice(0, 3).map((x) => `${x.path.join(".")}: ${x.message}`).join("; ")}` }
+          next.data = ok.data
+        } else if (root === "data") {
+          const ok = SettingsSchema.safeParse(next.data)
+          if (!ok.success) return { ok: false, error: `No és vàlid: ${ok.error.issues.slice(0, 3).map((x) => `${x.path.join(".")}: ${x.message}`).join("; ")}` }
+          next.data = ok.data
+        } else if (typeof i.value !== "string" || !i.value.trim()) return { ok: false, error: "El nom ha de ser un text." }
+        const preview = { table: i.table, id: i.id, path: i.path, before: before.ok ? fitResult(dbSafe(before.value)) : "(no hi era)", after: fitResult(dbSafe(i.value)), undoable: isOpen && root !== "name" }
+        // Al document obert, com un canvi de l'editor (es desfà amb ⌘Z): no cal confirmació.
+        if (isOpen && root !== "name") return { ok: true, doc: (root === "composition" ? next.composition : next.data) as never, result: { ...preview, written: true } }
+        if (!i.confirmed) return { ok: false, error: `Encara no s'ha desat: no es pot desfer. Ensenya-ho a l'usuari i torna-ho a cridar amb confirmed: true quan ho accepti. ${JSON.stringify(preview).slice(0, 4000)}` }
+        if (root === "name") await (i.table === "projects" ? renameProject(Number(rowId), String(i.value)) : renameAmbient(Number(rowId), String(i.value)))
+        else if (root === "composition") {
+          if (!(await updateProjectComposition(Number(rowId), next.composition as Composition))) return { ok: false, error: "No s'ha pogut desar." }
+        } else if (i.table === "ambients") await updateAmbient(Number(rowId), { data: next.data as Ambient })
+        else {
+          if (!(await saveSettings(next.data as Settings))) return { ok: false, error: "Les preferències són d'una versió més nova de l'app: només es poden llegir." }
+          SETTINGS = next.data as Settings
+        }
+        return { ok: true, doc, result: { ...preview, written: true } }
+      }
       case "get_hardware": {
         const h = findHardware((p.data as { hardware: string }).hardware)
         if (!h) return { ok: false, error: "No hi ha aquest ferratge (list_hardware)." }
@@ -578,7 +737,7 @@ async function run(doc: unknown, name: string, raw: unknown): Promise<ToolRun<un
 }
 
 export const APP_SYSTEM = `Ets l'assistent personal de Mobles CNC, una app per dissenyar mobles paramètrics i fabricar-los a la CNC del taller (també objectes decoratius i ambients). Respon sempre en català, curt i clar.
-Pots fer el que faria l'usuari amb la UI: saber on és i què té seleccionat (get_app; cada missatge també porta una línia «[Context de l'app: …]»), buscar, obrir i crear mobles, objectes i ambients (list_documents, open_document, create_document) anar a una pàgina (go_to), gestionar documents (rename_document, duplicate_document, move_to_group, delete_document), llegir les peces i el nesting del moble obert i canviar-ne el tauler (get_cutlist, get_nesting, set_sheet), baixar els fitxers del taller (export_files) i els ferratges (list_hardware, get_hardware, edit_hardware, set_hardware_default, set_front_hardware: frontissa, guia o joc de calaix, braç, imant, tirador, barra, LED i marc d'un compartiment del moble obert), llegir i canviar les preferències (get_settings, set_pref_material, set_pref_defaults, set_pref_gaps, set_default_machine). També tens les eines de cada tipus de document (moble, objecte, ambient), però només serveixen amb un document d'aquell tipus obert: si cal, obre'l primer amb open_document.
+Pots fer el que faria l'usuari amb la UI: saber on és i què té seleccionat (get_app; cada missatge també porta una línia «[Context de l'app: …]»), buscar, obrir i crear mobles, objectes i ambients (list_documents, open_document, create_document) anar a una pàgina (go_to), gestionar documents (rename_document, duplicate_document, move_to_group, delete_document), llegir les peces i el nesting del moble obert i canviar-ne el tauler (get_cutlist, get_nesting, set_sheet), baixar els fitxers del taller (export_files) i els ferratges (list_hardware, get_hardware, edit_hardware, set_hardware_default, set_front_hardware: frontissa, guia o joc de calaix, braç, imant, tirador, barra, LED i marc d'un compartiment del moble obert), llegir i canviar les preferències (get_settings, set_pref_material, set_pref_defaults, set_pref_gaps, set_default_machine) i, per al que cap altra eina no fa, la base de dades directament (db_tables, db_read, db_write: validat amb els esquemes de l'app; fora del document obert no es pot desfer, així que ensenya el canvi i demana-ho abans de confirmed: true). També tens les eines de cada tipus de document (moble, objecte, ambient), però només serveixen amb un document d'aquell tipus obert: si cal, obre'l primer amb open_document.
 Per esborrar un document, pregunta-ho sempre abans i espera un sí explícit (delete_document amb confirmed: true només llavors).
 Quan l'usuari parli de «això», «el seleccionat» o similar, fes servir la selecció del context. No inventis ids: busca'ls amb les eines. Abans d'esborrar o canviar molt, explica què faràs. Els canvis d'un torn es desfan amb un sol «Desfer» de l'editor.`
 
@@ -603,6 +762,9 @@ export const appToolSet: AssistantToolSet<unknown> = {
     if (n === "list_hardware") return `${String(result.count)} ferratges`
     if (n === "set_hardware_default") return `Per defecte: ${String(result.hardware)}`
     if (n === "set_front_hardware") return `${String(result.hardware)} a «${String(result.module)}»`
+    if (n === "db_tables") return "Base de dades"
+    if (n === "db_read") return `Llegit: ${String(result.table)}${result.id !== undefined ? ` ${String(result.id)}` : ""}${result.path ? ` · ${String(result.path)}` : ""}`
+    if (n === "db_write") return `Desat: ${String(result.table)} ${String(result.id)} · ${String(result.path)}`
     if (n === "get_hardware") return `Ferratge: ${String(result.name)}`
     if (n === "edit_hardware") return `${result.duplicated ? "Duplicat" : "Editat"}: ${String(result.hardware)}`
     if (n === "export_files") return `Baixat: ${String(result.file)}`

@@ -124,6 +124,10 @@ guardar historial».
 - **Sempre les mateixes eines i instruccions** (`allToolSet`): amb el pensament activat, l'API lliga cada bloc de
   pensament a les instruccions i a les eines; canviar-les en obrir un document a mitja conversa donava «Invalid
   signature in thinking block». Ara hi són totes des del principi i cada eina de document diu, si cal, que n'obri un.
+- **Accés a la base de dades** (el mateix dia: «li pots donar accés a l'IndexedDB?»): `db_tables`, `db_read` (tot, sense
+  imatges, fitxers ni la clau) i `db_write` (mobles, ambients i preferències, validat; fora del document obert, només
+  després que l'usuari ho accepti). Si l'API rebutja els blocs de pensament d'abans (l'app ha canviat), es treuen i es
+  torna a provar.
 - **Columna a la dreta a l'ordinador** (el mateix dia): l'app s'estreny i es pot navegar amb l'assistent obert (al mòbil,
   calaix a pantalla completa). No es tanca sol; la ✕ pregunta si es vol perdre la conversa i, si sí, la buida. Pujar a
   llegir mentre arriba la resposta ja no et torna avall.

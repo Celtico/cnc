@@ -32,8 +32,9 @@ export interface ZoneSummary {
   split?: { dir: "v" | "h"; sizes: (number | "auto")[]; children: ZoneSummary[] }
   front?: Record<string, unknown>
   shelves?: { n: number; adjustable: boolean }
-  rail?: true
-  led?: true
+  /** Barra i llum: el nom del ferratge (el del compartiment o, «Com el mòdul», el del mòdul). */
+  rail?: string
+  led?: string
   /** Tapat per les portes de tot el mòdul: el seu front no es fa. */
   covered?: true
   /** Què hi pot anar (les mateixes regles que la UI, `zoneSupport.ts`). */
@@ -135,8 +136,9 @@ function zoneSummary(m: Module, z: Zone, rects: Map<string, { x0: number; x1: nu
     }
     if (zone.front) out.front = frontSummary(zone.front)
     if (zone.shelves && zone.shelves.n > 0) out.shelves = { n: zone.shelves.n, adjustable: zone.shelves.adjustable }
-    if (zone.rail) out.rail = true
-    if (zone.led) out.led = true
+    const acc = (own: { hardware?: { name: string } } | undefined, inherited: { name: string } | undefined) => (own?.hardware ? own.hardware.name : `com el mòdul${inherited ? `: ${inherited.name}` : ""}`)
+    if (zone.rail) out.rail = acc(zone.rail, m.hardware?.rail)
+    if (zone.led) out.led = acc(zone.led, m.hardware?.led)
     if (!root && coveringZone(visibleRoot, zone.id)) out.covered = true
     if (b) {
       const fills = zone.front?.kind === "drawers" || zone.front?.kind === "panel"

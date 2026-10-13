@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages"
 import { DEFAULT_SETTINGS, type Composition } from "../../core/model"
 import { mobleToolSet } from "../../core/assistant/tools"
-import { runTurn, type StreamClient } from "./chatTurn"
+import { runTurn, stripThinking, type StreamClient } from "./chatTurn"
 import { assistantError, maskKey } from "./errors"
 
 /** Client fals (sense xarxa): cada crida a `stream` torna la resposta següent de la llista. */
@@ -163,5 +163,37 @@ describe("assistent personal: les eines de cada volta", () => {
     await runTurn({ client, model: "m", history: [{ role: "user", content: "hola" }], getDoc: () => null, apply: () => {}, toolset: set("primer"), refresh: async () => set(`nou ${++n}`), onText: () => {}, onTool: () => {} })
     const systems = seen.map((p) => (p as { system: { text: string }[] }).system[0]!.text)
     expect(systems).toEqual(["primer", "nou 1"])
+  })
+})
+
+describe("assistent IA: blocs de pensament d'una altra versió de l'app", () => {
+  it("si l'API els rebutja per la signatura, es treuen i es torna a provar un cop", async () => {
+    const history: MessageParam[] = [
+      { role: "user", content: "hola" },
+      { role: "assistant", content: [{ type: "thinking", thinking: "", signature: "vella" }, { type: "text", text: "Hola!" }] },
+      { role: "user", content: "i ara?" },
+    ]
+    const seen: unknown[] = []
+    let calls = 0
+    const ok = fakeClient([{ stop_reason: "end_turn", content: [{ type: "text", text: "Fet." }] }], seen)
+    const client = {
+      messages: {
+        stream(params: unknown, opts?: { signal?: AbortSignal }) {
+          if (calls++ === 0) return { on() { return this }, async finalMessage() { throw new Error("messages.1.content.0: Invalid `signature` in `thinking` block") } }
+          return ok.messages.stream(params as never, opts)
+        },
+      },
+    } as unknown as StreamClient
+    const toolset = mobleToolSet({ settings: DEFAULT_SETTINGS })
+    const r = await runTurn({ client, model: "m", toolset, history, getDoc: () => ({ kind: "moble", modules: [], references: [] }) as Composition, apply: () => {}, onText: () => {}, onTool: () => {} } as never)
+    expect(r.stop).toBe("end")
+    expect(calls).toBe(2)
+    expect(JSON.stringify(seen[0])).not.toContain("thinking")
+  })
+  it("stripThinking deixa un text si el missatge només tenia pensament", () => {
+    const h: MessageParam[] = [{ role: "assistant", content: [{ type: "thinking", thinking: "", signature: "x" }] }]
+    expect(stripThinking(h)).toBe(true)
+    expect(h[0]!.content).toEqual([{ type: "text", text: "(…)" }])
+    expect(stripThinking(h)).toBe(false)
   })
 })

@@ -53,6 +53,7 @@ export const MAX_TOKENS = 16000
 export async function runTurn<D>(o: TurnOptions<D>): Promise<TurnResult> {
   let toolset = o.toolset
   let used = 0
+  let stripped = false
   const maxRounds = o.maxRounds ?? 24
   for (let round = 0; round < maxRounds; round++) {
     if (o.signal?.aborted) return closeAborted(o.history, used)
@@ -75,6 +76,13 @@ export async function runTurn<D>(o: TurnOptions<D>): Promise<TurnResult> {
       final = await stream.finalMessage()
     } catch (e) {
       if (o.signal?.aborted) return closeAborted(o.history, used)
+      // Els blocs de pensament van lligats a les instruccions i a les eines d'aquell moment: si l'app ha canviat (una
+      // versió nova, eines noves), l'API els rebutja. Es treuen de la conversa i es torna a provar un cop.
+      if (!stripped && /signature/i.test(e instanceof Error ? e.message : String(e)) && stripThinking(o.history)) {
+        stripped = true
+        round--
+        continue
+      }
       throw e
     }
     o.history.push({ role: "assistant", content: final.content as ContentBlockParam[] })
@@ -116,6 +124,19 @@ export async function runTurn<D>(o: TurnOptions<D>): Promise<TurnResult> {
  * Aturat: l'historial ha d'acabar amb una resposta de l'assistent (si no, el missatge següent de l'usuari quedaria
  * enganxat a un `tool_result` o a una pregunta sense resposta).
  */
+/** Treu els blocs de pensament de la conversa (en lloc). Torna si n'hi havia. */
+export function stripThinking(history: MessageParam[]): boolean {
+  let any = false
+  for (const m of history) {
+    if (m.role !== "assistant" || typeof m.content === "string") continue
+    const kept = m.content.filter((b) => b.type !== "thinking" && b.type !== "redacted_thinking")
+    if (kept.length === m.content.length) continue
+    any = true
+    m.content = kept.length ? kept : [{ type: "text", text: "(…)" }]
+  }
+  return any
+}
+
 function closeAborted(history: MessageParam[], tools: number): TurnResult {
   const last = history.at(-1)
   if (last?.role === "user") history.push({ role: "assistant", content: [{ type: "text", text: "(Aturat per l'usuari.)" }] })
