@@ -28,7 +28,7 @@ import {
   DEFAULT_MODULE_HARDWARE,
   appItemOfEngine,
   HARDWARE_CATEGORIES,
-  HARDWARE_PARAMS,
+  hardwareParams,
   HARDWARE_ROLES,
   HARDWARE_SLOTS,
   HINGE_PLATE_PARAMS,
@@ -820,7 +820,7 @@ function HardwareCard({
     item.engine === "model" && !item.machining?.length ? { label: only2d ? "Només 2D" : "Només 3D", palette: "gray" }
     : item.imported?.confirmed ? { label: "Confirmat", palette: "green" }
     : { label: "Sense confirmar", palette: "orange" }
-  const dimsBadge = HARDWARE_PARAMS[item.engine].slice(0, 2).map((p) => `${p.label.replace(/ \(.*\)$/, "")} ${fmt(item.params[p.key] ?? 0)}`).join(" · ") || (item.lengths ? `${item.lengths.length} llargades` : undefined)
+  const dimsBadge = hardwareParams(item).slice(0, 2).map((p) => `${p.label.replace(/ \(.*\)$/, "")} ${fmt(item.params[p.key] ?? 0)}`).join(" · ") || (item.lengths ? `${item.lengths.length} llargades` : undefined)
   const nOps = item.targets.reduce((a, t) => a + t.ops.length, 0)
   const opsBadge = nOps ? `${nOps} ${nOps === 1 ? "forat" : "forats"}` : undefined
   return (
@@ -1017,9 +1017,9 @@ function HardwareCard({
           </FoldItem>
         )}
 
-        {(HARDWARE_PARAMS[item.engine].length > 0 || item.lengths) && (
+        {(hardwareParams(item).length > 0 || item.lengths) && (
         <FoldItem id="hw-dims" icon={LuMoveDiagonal} title="Mides" badge={dimsBadge}>
-          {HARDWARE_PARAMS[item.engine].map((p) => (
+          {hardwareParams(item).map((p) => (
             <NumRow key={p.key} label={p.label} help={p.help} value={item.params[p.key] ?? 0} min={p.min} max={p.max} step={p.step} onChange={(v) => setParam(p.key, v)} />
           ))}
           {item.lengths && (

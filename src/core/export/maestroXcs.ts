@@ -544,10 +544,9 @@ export function rampLines(tool: MachineTool, length: number): { on: string[]; of
  * Table 37; exemples p55 i p57; l'eina ha de ser més petita que la caixera, p56). Solapament del 50 % (el per
  * defecte, com la «ClosedPocket» del .pgmx del taller: Overlap 0,5).
  */
-export const pocketLines = (name: string, pts: BPt[], depth: number, tool: MachineTool): string[] => [
-  ...closedPolyline(`${name}_G`, pts),
-  `CreateContourPocket(${cs(name)}, ${num(depth)}, ${cs("caixera")}, TypeOfProcess.ConcentricalPocket, ${toolArg(tool)}, ${HEAD}, -1, -1, -1, 50);`,
-]
+export const pocketLines = (name: string, pts: BPt[], depth: number, tool: MachineTool): string[] => [...closedPolyline(`${name}_G`, pts), pocketLine(name, depth, tool)]
+/** La caixera d'una geometria `<name>_G` que ja hi és (polilínia tancada o cercle). */
+export const pocketLine = (name: string, depth: number, tool: MachineTool): string => `CreateContourPocket(${cs(name)}, ${num(depth)}, ${cs("caixera")}, TypeOfProcess.ConcentricalPocket, ${toolArg(tool)}, ${HEAD}, -1, -1, -1, 50);`
 
 /** Resum de les regles per als comentaris de la capçalera (ASCII). */
 export function rulesComment(r: MachineRules, nesting: boolean): string[] {

@@ -14,6 +14,8 @@ import { DTC_MAGIC_PRO_KITS } from "./kits/dtcMagicPro"
 import { DTC_MAGIC_STAR_KITS } from "./kits/dtcMagicStarUltra"
 import { DTC_PURE_BOX_KITS } from "./kits/dtcPureBox"
 import { DTC_PURE_PRO_GLASS_KITS, DTC_PURE_PRO_KITS } from "./kits/dtcPurePro"
+import { HAFELE_LOOX_ITEMS } from "./lights/hafeleLoox"
+import { LightKitSchema, type LightKit } from "./lightKit"
 
 /**
  * Biblioteca de ferratges (millores v1, `docs/millores-v1/ferratges.md` §4): cada ferratge és **dades** (`HardwareItem`:
@@ -89,6 +91,7 @@ export const HARDWARE_CATEGORIES = [
   { id: "handle", label: "Tiradors", hint: "Forats dels tiradors de portes, calaixos i abatibles." },
   { id: "push", label: "Obertura per pressió i imants", hint: "Imants de les reixetes i trapes, push." },
   { id: "profile", label: "Perfils i marcs", hint: "Perfils d'alumini i de LED, marcs d'alumini per a portes de vidre (Cadro)." },
+  { id: "light", label: "Llums", hint: "Làmpades LED de 24 V per encastar al prestatge o a la tapa (forat o rebaix, forat del cable) amb l'alimentador, l'interruptor i els cables per connectar-les a la xarxa." },
   { id: "wall", label: "Penjar", hint: "Penjadors i regletes." },
   { id: "misc", label: "Altres", hint: "Accessoris, electrònica, passacables, ventilació…" },
 ] as const
@@ -237,6 +240,11 @@ export const HardwareItemObjectSchema = z.object({
    * sense) i els `targets` descriuen el forat de prebroca de cada peça (lateral, front, darrere).
    */
   kit: HardwareKitSchema.optional(),
+  /**
+   * Joc de llum (v31, motor `ledProfile`, `lightKit.ts`): una làmpada del catàleg amb el mecanitzat per encastar-la a la
+   * peça de sobre del compartiment i el sistema elèctric (alimentador, distribuïdor, interruptor, cables) a la comanda.
+   */
+  light: LightKitSchema.optional(),
 })
 export type HardwareItem = z.infer<typeof HardwareItemObjectSchema>
 
@@ -359,8 +367,13 @@ export interface HardwareParamSpec {
   max: number
   step: number
   help?: string
+  /** Només als items amb joc de llum (`HardwareItem.light`). */
+  light?: boolean
 }
 const P = (key: string, label: string, min: number, max: number, step = 0.5, help?: string): HardwareParamSpec => ({ key, label, min, max, step, ...(help ? { help } : {}) })
+/** Els paràmetres que s'editen d'un item: els del motor, menys els d'un joc de llum si no en porta. */
+export const hardwareParams = (item: Pick<HardwareItem, "engine" | "light">): HardwareParamSpec[] => HARDWARE_PARAMS[item.engine].filter((p) => !p.light || item.light)
+
 export const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
   cup: [
     P("cupDiameter", "Cassoleta (Ø)", 10, 60, 0.5),
@@ -423,9 +436,11 @@ export const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
     P("drop", "Del sostre", 20, 200, 5, "Del sostre del compartiment a l'eix de la barra."),
   ],
   ledProfile: [
-    P("width", "Amplada", 6, 40, 1, "Del perfil (de costat a costat)."),
-    P("height", "Alçada", 4, 30, 1, "Del perfil (el que baixa del prestatge)."),
-    P("setback", "Del davant", 0, 100, 5, "Del cantell de davant del prestatge al perfil."),
+    P("width", "Amplada", 6, 250, 1, "Del perfil (de costat a costat); d'una làmpada, el Ø o el costat del cos."),
+    P("height", "Alçada", 4, 30, 1, "Del perfil (el que baixa del prestatge); d'una làmpada, la seva alçada."),
+    P("setback", "Del davant", 0, 400, 5, "Del cantell de davant del prestatge al perfil (o al centre de la làmpada)."),
+    { ...P("spacing", "Entre llums", 150, 1500, 50, "Cada quants mm una làmpada al llarg del compartiment (com a mínim una)."), light: true },
+    { ...P("depth", "Rebaix", 3, 30, 0.5, "Fondària del forat o del rebaix de la làmpada a la peça de sobre (cal deixar-hi 5 mm de tauler)."), light: true },
   ],
   glassFrame: [
     P("frame", "Perfil", 10, 60, 1, "Amplada vista del perfil d'alumini del marc."),
@@ -673,8 +688,11 @@ export const ACCESSORY_ITEMS: HardwareItem[] = [
   },
 ]
 
-// En l'ordre en què les migracions els afegeixen (v23 jocs, v27 push, v28 catàleg i, al final, els accessoris que falten).
-export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_CATALOGUE_ITEMS, ...ACCESSORY_ITEMS]
+/** v31: els jocs de llum Häfele Loox (additiu: s'afegeixen si no hi són). */
+export const V31_ITEMS: HardwareItem[] = HAFELE_LOOX_ITEMS
+
+// En l'ordre en què les migracions els afegeixen (v23 jocs, v27 push, v28 catàleg, v31 llums i, al final, els accessoris que falten).
+export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_CATALOGUE_ITEMS, ...V31_ITEMS, ...ACCESSORY_ITEMS]
 
 /** Un item és un joc paramètric que es pot fer servir (motor `drawerKit` amb el joc). */
 export const isDrawerKit = (item: HardwareItem): item is HardwareItem & { kit: HardwareKit } => item.engine === "drawerKit" && !!item.kit
@@ -780,6 +798,14 @@ export function hardwareVars(item: HardwareItem, extra: Record<string, number> =
 }
 
 /** Resum d'una línia (targeta i capçalera de l'editor): els forats que fa i on. */
+/** «Ø55 × 12 · 3 W · 3000 K · cada 400 mm» (un joc de llum). */
+function lightSummary(k: LightKit, p: Record<string, number>): string {
+  const n = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",")
+  const recess = k.recess.shape === "round" ? `Ø${n(k.recess.size)} × ${n(p.depth ?? k.recess.depth)}` : k.recess.shape === "square" ? `${n(k.recess.size)} × ${n(k.recess.size)} × ${n(p.depth ?? k.recess.depth)}` : `ranura ${n(k.recess.size)} × ${n(p.depth ?? k.recess.depth)}`
+  const watts = k.bars ? `${n(k.bars[0]!.watts)} W/m` : `${n(k.watts)} W`
+  return [recess, watts, k.colour, k.kind === "bar" ? "tallada a mida" : `cada ${n(p.spacing ?? 400)} mm`].join(" · ")
+}
+
 export function hardwareSummary(item: HardwareItem): string {
   const v = hardwareVars(item, { pitch: item.pitch ? stepValue(item.pitch, Infinity) : 0 })
   const n = (x: number) => (Number.isFinite(x) ? String(Math.round(x * 100) / 100).replace(".", ",") : "?")
@@ -797,6 +823,7 @@ export function hardwareSummary(item: HardwareItem): string {
     : item.engine === "model" ? modelSummary(item, n)
     : item.engine === "drawerKit" && item.kit ? kitSummary(item.kit)
     : item.engine === "rail" ? `Ø${n(p.diameter ?? NaN)} a ${n(p.drop ?? NaN)} mm del sostre`
+    : item.engine === "ledProfile" && item.light ? lightSummary(item.light, p)
     : item.engine === "ledProfile" ? `${n(p.width ?? NaN)} × ${n(p.height ?? NaN)} a ${n(p.setback ?? NaN)} mm del davant`
     : item.engine === "glassFrame" ? `perfil de ${n(p.frame ?? NaN)} mm, vidre de ${n(p.glass ?? NaN)} mm`
     : ""

@@ -29,6 +29,7 @@ const RULE_ICONS: Record<RuleHardwareCount["id"], IconType> = {
   handle: HARDWARE_ICONS.handle,
   slide: HARDWARE_ICONS.slide,
   kit: HARDWARE_ICONS["drawer-system"],
+  light: HARDWARE_ICONS.light,
   flap: HARDWARE_ICONS.lift,
   leg: HARDWARE_ICONS.leg,
   push: HARDWARE_ICONS.push,

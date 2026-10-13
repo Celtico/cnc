@@ -33,10 +33,14 @@ import {
   visibleModule,
   frontOptionsUse,
   hasInnerPieces,
+  lightSystemOf,
+  walkZones,
 } from "../model"
 import { normalizePanel } from "./buildCabinet"
 import { applyHardware, legSpec, resolveKit, slotSpec, type ResolvedKit, type SlotSpec } from "./hardware"
 import { kitBottomThickness, kitHeight, kitSolidPanels, planKit, type KitOrderLine, type KitWoodSize } from "./drawerKit"
+import { discOutline, planLights } from "./lightKit"
+import type { LightOrder } from "./lightOrders"
 import {
   X,
   Y,
@@ -82,6 +86,7 @@ export interface BuildWarning {
     | "collision"
     | "overlap"
     | "rail"
+    | "light"
     | "hanging"
     | "hole-clash"
     | "island"
@@ -123,6 +128,8 @@ export interface ModuleBuild {
   extras: Panel[]
   /** Calaixos amb joc paramètric: la comanda per al taller (Peces › «Ferratges dels jocs», LLEGEIX-ME). */
   hardwareKits: KitOrder[]
+  /** Compartiments amb un joc de llum: les làmpades i el sistema elèctric (Peces › «Llums», LLEGEIX-ME; `lightOrders.ts`). */
+  lightKits: LightOrder[]
   warnings: BuildWarning[]
   layout: Layout
   /** % d'àrea oberta de cada reixeta, per id de zona (o "top" per a la tapa). */
@@ -304,6 +311,10 @@ class Builder {
   readonly drawerHeights: Record<string, number[]> = {}
   readonly extras: Panel[] = []
   readonly hardwareKits: KitOrder[] = []
+  readonly lightKits: LightOrder[] = []
+  /** L'interruptor dels llums del mòdul (un per mòdul, amb el primer compartiment amb llum). */
+  private lightSwitch?: LightOrder["switch"]
+  private lightMaker?: string
   /** Zones que queden darrere del front d'una zona pare. */
   readonly covered = new Set<string>()
   /** Totes les zones per id. */
@@ -1122,7 +1133,12 @@ class Builder {
   private buildLed(zone: Zone, rect: ZoneRect, shelfYs: number[]): void {
     const { m, d } = this
     // Els números són de l'item (el perfil triat al compartiment o el del mòdul; d'inici 16 × 8 a 20 del davant).
-    const spec = this.frontHardware("led", zone.led?.hardware, zone.id).spec
+    const led = this.frontHardware("led", zone.led?.hardware, zone.id)
+    const spec = led.spec
+    if (spec.light) {
+      this.buildLights(zone, rect, shelfYs, led.item, spec)
+      return
+    }
     const W = spec.width, H = spec.height
     const len = r(rect.x1 - rect.x0 - 20)
     if (len < 50) return
@@ -1145,6 +1161,129 @@ class Builder {
         placement: placement([r(rect.x0 + 10), y, zFront], X, neg(Z), Y, Z),
       })
     })
+  }
+
+  /**
+   * **Joc de llum** (`HardwareItem.light`, `lightKit.ts`): a la peça de sobre del compartiment (la tapa, el travesser o
+   * el prestatge) i a la cara de sota de cada prestatge, les làmpades del catàleg amb el seu **mecanitzat per encastar**
+   * (forat rodó, rebaix quadrat o ranura de la barra, tag `light`) i el **forat passant del cable** (tag `cable`); si la
+   * peça és massa prima o no hi cap, la caixa o la versió de sobreposar (només el forat del cable) i avís `light`. El
+   * cos de la làmpada es veu (material «Tira LED», fa llum al render) a `extras`. L'**interruptor**, un per mòdul: el
+   * sensor de porta amb un forat Ø12 al cantell de davant del lateral esquerre si el mòdul té portes recobrents (o
+   * abatibles), si no el de proximitat per cargolar. La comanda (làmpades, alimentador, distribuïdor, interruptor i
+   * cables) va a `lightKits` (`lightOrders.ts`).
+   */
+  private buildLights(zone: Zone, rect: ZoneRect, shelfYs: number[], item: HardwareItem, spec: SlotSpec<"led">): void {
+    const { m, d } = this
+    const k = spec.light!
+    this.lightMaker ??= k.maker
+    const front = d.D - m.carcass.shelfSetback
+    const len = rect.x1 - rect.x0
+    const hosts: Panel["role"][] = ["top", "fixedShelf", "shelf"]
+    const lines: KitOrderLine[] = []
+    let lamps = 0, watts = 0, peak = 0
+    const warn = (message: string) => {
+      if (!this.warnings.some((w) => w.code === "light" && w.message === message && w.zoneId === zone.id)) this.warnings.push({ code: "light", message, zoneId: zone.id })
+    }
+    for (const [i, y] of [rect.y1, ...shelfYs].entries()) {
+      const probe: Vec3 = [(rect.x0 + rect.x1) / 2, y, front - 30]
+      const host = this.panels.find((p) => hosts.includes(p.role) && faceAt(p, toLocal(p, probe)) !== null)
+      const depth = host ? Math.min(host.width, front - (d.D - host.width)) : front
+      const plan = planLights(k, spec, { length: len, depth: host ? Math.min(host.width, depth) : depth }, host?.thickness ?? 0)
+      for (const w of plan.warnings) warn(w)
+      if (!host && plan.xs.length) warn(`${k.series}: el compartiment no té res a sobre on posar la llum (sense tapa): no es fa.`)
+      if (!host || !plan.xs.length) continue
+      const zc = front - plan.z
+      const n = plan.xs.length
+      lamps += n
+      watts += plan.watts
+      peak += plan.peakWatts
+      lines.push(...plan.lines)
+      const yTop = plan.recessed ? y + plan.depth : y
+      const bodyH = plan.recessed ? k.body.height : (k.surface?.height ?? k.body.height)
+      for (const [j, dx] of plan.xs.entries()) {
+        const x = rect.x0 + dx
+        if (plan.bar) {
+          // Ranura de la barra al llarg del compartiment; el cable surt per l'extrem esquerre.
+          const x0 = x - plan.bar.cut / 2, x1 = x + plan.bar.cut / 2
+          if (plan.recessed) this.pocket(host, [x0, y, zc - k.recess.size / 2], [x1, y, zc + k.recess.size / 2], plan.depth, "light")
+          this.throughHole(host, [x0 + 20, y, zc], k.cableHole, "cable")
+          this.extras.push({
+            id: `light-${zone.id}-${i}-${j}`,
+            name: "barra LED",
+            label: `Llum ${k.series}`,
+            role: "part",
+            length: plan.bar.cut,
+            width: k.body.size,
+            thickness: bodyH,
+            material: "Tira LED",
+            grain: "none",
+            edges: { ...NO_EDGES },
+            holes: [],
+            grooves: [],
+            placement: placement([r(x0), r(yTop - bodyH), r(zc + k.body.size / 2)], X, neg(Z), Y, Z),
+          })
+          continue
+        }
+        if (plan.recessed) {
+          if (k.recess.shape === "round") {
+            if (!addFaceHole(host, [x, y, zc], { diameter: k.recess.size, depth: plan.depth, tag: "light" })) warn(`${k.series}: el forat de la làmpada cau fora de «${host.label}».`)
+          } else this.pocket(host, [x - k.recess.size / 2, y, zc - k.recess.size / 2], [x + k.recess.size / 2, y, zc + k.recess.size / 2], plan.depth, "light")
+        }
+        this.throughHole(host, [x, y, zc], k.cableHole, "cable")
+        const sz = k.body.size
+        this.extras.push({
+          id: `light-${zone.id}-${i}-${j}`,
+          name: "llum LED",
+          label: `Llum ${k.series}`,
+          role: "part",
+          length: sz,
+          width: sz,
+          thickness: bodyH,
+          material: "Tira LED",
+          grain: "none",
+          edges: { ...NO_EDGES },
+          holes: [],
+          grooves: [],
+          ...(k.recess.shape === "square" ? {} : { outline: discOutline(sz) }),
+          placement: placement([r(x - sz / 2), r(yTop - bodyH), r(zc + sz / 2)], X, neg(Z), Y, Z),
+        })
+      }
+    }
+    if (!lamps) return
+    if (!this.lightSwitch) this.lightSwitch = this.lightSwitchFor(rect)
+    this.lightKits.push({ zoneId: zone.id, item: item.name, kit: `${k.maker} ${k.series}`, maker: k.maker, lamps, watts: r(watts), peakWatts: r(peak), switch: this.lightSwitch, lines })
+  }
+
+  /** L'interruptor del mòdul: sensor de porta al cantell de davant del lateral esquerre si hi ha portes recobrents; si no, de proximitat. */
+  private lightSwitchFor(rect: ZoneRect): LightOrder["switch"] {
+    const { m, d } = this
+    let doors = false
+    walkZones(m.root, (z) => {
+      if (z.front?.kind === "door" || z.front?.kind === "flap") doors = true
+    })
+    const side = this.panels.find((p) => p.id === "side-left")
+    const sys = lightSystemOf(this.lightMaker ?? "")
+    if (doors && !d.inset && side && sys && addEdgeHole(side, [d.t / 2, (rect.y0 + rect.y1) / 2, d.D], { diameter: sys.doorSwitch.bore, depth: sys.doorSwitch.depth, tag: "light-switch" })) return "door"
+    return sys ? "touch" : "none"
+  }
+
+  /** Rebaix rectangular (caixera) a la cara d'una peça, entre dos punts del moble sobre aquella cara. */
+  private pocket(host: Panel, a: Vec3, b: Vec3, depth: number, tag: string): void {
+    const la = toLocal(host, a), lb = toLocal(host, b)
+    const face = faceAt(host, la)
+    if (!face || face === "edge") return
+    const x0 = Math.min(la[0], lb[0]), x1 = Math.max(la[0], lb[0])
+    const y0 = Math.min(la[1], lb[1]), y1 = Math.max(la[1], lb[1])
+    if (x0 < 0 || y0 < 0 || x1 > host.length || y1 > host.width) return
+    host.grooves.push({ x: r(x0), y: r(y0), w: r(x1 - x0), h: r(y1 - y0), depth: r(depth), face, tag })
+  }
+
+  /** Forat passant rodó en un punt del moble sobre una cara de la peça. */
+  private throughHole(host: Panel, w: Vec3, diameter: number, tag: string): void {
+    const l = toLocal(host, w)
+    if (l[0] < diameter / 2 || l[1] < diameter / 2 || l[0] > host.length - diameter / 2 || l[1] > host.width - diameter / 2) return
+    ;(host.cutouts ??= []).push({ kind: "circle", x: r(l[0]), y: r(l[1]), diameter, tag })
   }
 
   /** Posa els prestatges i torna on és la cara de sota de cadascun (per a la llum LED). */
@@ -2056,7 +2195,7 @@ export function buildModule(input: Module): ModuleBuild {
   const layout = b.buildZones()
   b.buildLegs()
   const panels = b.panels.map((p) => normalizePanel(p.cutouts && p.cutouts.length === 0 ? { ...p, cutouts: undefined } : p))
-  return { panels, extras: b.extras, hardwareKits: b.hardwareKits, warnings: b.warnings, layout, openRatios: b.openRatios, drawerHeights: b.drawerHeights }
+  return { panels, extras: b.extras, hardwareKits: b.hardwareKits, lightKits: b.lightKits, warnings: b.warnings, layout, openRatios: b.openRatios, drawerHeights: b.drawerHeights }
 }
 
 /** Material dels fronts (portes, calaixos, abatibles, reixetes, fixos): el propi o, si no n'hi ha, el del cos. */

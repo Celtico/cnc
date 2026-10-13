@@ -62,8 +62,9 @@ plantes, models 3D i renders són **decoratius**: no s'hi dedica temps mentre el
   principal a partir d'ara): el model `HardwareKit`, els calaixos de doble paret DTC (MAGIC-PRO, MAGIC-STAR ULTRA,
   DRAGON-PRO, PURE-PRO HK i HQ, PURE-BOX HL; catàleg 2026 a `docs/2026 DTC Home and Furniture Fittings Catalogue.pdf`),
   **la resta del catàleg DTC** (frontisses i plaques, guies, suports de prestatge: què és cada item a l'app; el que es
-  va deixar fora i per què; les cotes del push latch per al taller), com es construeix, com s'afegeix un joc nou i les
-  hipòtesis de lectura pendents del taller.
+  va deixar fora i per què; les cotes del push latch per al taller), com es construeix, com s'afegeix un joc nou, les
+  hipòtesis de lectura pendents del taller i, §Llums, els **jocs de llum Häfele Loox 24 V** (catàleg general Häfele
+  `docs/blaetterkatalog.pdf`, no es puja al repo): làmpades encastades amb el mecanitzat i la comanda elèctrica.
 
 ## Principi de disseny
 L'usuari dissenya els mobles **des de la UI**, sense tocar codi. El codi defineix **capacitats genèriques** (carcassa,
@@ -266,6 +267,20 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
       tallar el perfil), material «Tira LED» (`LED_MATERIALS`, `glow` 60, càlid; v14 de les preferències). Res amagat
       compta: amb calaixos, front fix o dividit, cap tira (`visibleZone`). Encara sense mecanitzat (ranura per al perfil: pendent
       del taller). La vitrina «Galeria» del catàleg (Saló) en porta (`led.test.ts`).
+    - **Jocs de llum** (`HardwareItem.light`, `core/model/lightKit.ts`, items Häfele Loox a `core/model/lights/hafeleLoox.ts`,
+      categoria «Llums»; per decisió de l'usuari, 2026-10-13: «munta tot lo que es pugui mecanitzar i els seus
+      accessoris per connectar a la xarxa elèctrica»; `docs/ferratges-jocs.md` §Llums): al mateix lloc «Llum», una
+      làmpada del catàleg en lloc del perfil: `buildLights` fa a la peça de sobre (tapa, travesser o prestatge, cara de
+      sota) el **forat Ø55/Ø60 × 12** (`Hole`, tag `light`; al Maestro, sense broca del Ø, caixera rodona amb la fresa),
+      el **rebaix de 205 × 205** o la **ranura 16 × 11 de la barra** (`Groove`) i el **passant Ø8 del cable**
+      (`Cutout`, tag `cable`), una cada «Entre llums» (`spacing`) a «Del davant»; tauler massa prim o sense lloc → la
+      caixa de sobreposar i avís `light`; el cos a `extras` (`light-…`, «Tira LED»). **Interruptor** un per mòdul: sensor
+      de porta amb forat Ø12 × 47 al cantell de davant del lateral esquerre (`light-switch`) si hi ha portes recobrents,
+      si no de proximitat. **Comanda per mòdul** (`ModuleBuild.lightKits`, `core/build/lightOrders.ts`,
+      `electricalLines`: alimentador 20/40/90 W amb cable EU per la potència amb el pic en encendre, distribuïdor de 6
+      vies passades les 6 ranures, interruptor + cable, nota dels cables d'extensió) a Peces › «Llums i instal·lació
+      elèctrica» i al LLEGEIX-ME de Maestro. Preferències **v31** (additiu, `V31_ITEMS`); `hardwareParams` amaga «Entre
+      llums» i «Rebaix» al perfil de l'app. Tests `build/lightKit.test.ts`.
   - **Porta de vidre** (`front.glass` d'una porta, «Vitrina» › «Porta de vidre amb marc»; per decisió de l'usuari, com les
     vitrines de catàleg): el **marc** és un ferratge (motor `glassFrame`, item `glass-frame-20`: perfil de 20, vidre de
     5; `front.frame` còpia pròpia o el del mòdul, fila «Marc» sota «Vitrina»): `glassDoor` posa a `extras` els 4
@@ -1794,7 +1809,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Visor 3D**: qualitat, escena de Presentació (terra i paret: materials de la biblioteca, `PresentationScene.floorMaterial`
   / `wallMaterial`, o les mostres ràpides; terra per defecte «Parquet de roure»), llum i «Cel del render». **Tema**:
   dia/nit/sistema i color principal (`theme/accent.ts` redirigeix les variables CSS de `wood`).
-- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 30 (la neteja de la 29 amb la regla sencera); 29 (fora els «només 3D»: tots els inicials del motor `model`, els importats sense `machining` i els inicials DTC que ja no són a la biblioteca); 28 (la resta del catàleg DTC 2026, additiu); 27 (catàleg DTC 2026: jocs i push latch, additiu); 26 (`assistant`: clau de l'API i model,
+- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 31 (jocs de llum Häfele Loox, additiu); 30 (la neteja de la 29 amb la regla sencera); 29 (fora els «només 3D»: tots els inicials del motor `model`, els importats sense `machining` i els inicials DTC que ja no són a la biblioteca); 28 (la resta del catàleg DTC 2026, additiu); 27 (catàleg DTC 2026: jocs i push latch, additiu); 26 (`assistant`: clau de l'API i model,
   additiu; **la clau no surt mai** a l'export, `settingsToJson`, ni al `.moble`, i importar unes preferències no la toca,
   `importSettingsJson`); 25: `gaps.innerClearance`, 1 mm, additiu; 24: jocs inicials amb les dades d'ara; 23: jocs paramètrics de calaix (DTC MAGIC-PRO); 22: generador de mecanitzats; 21: tiradors, potes i «només 3D» importats; 20: ferratges importats; 19: biblioteca de ferratges; sense versió, additius en llegir: els accessoris de la biblioteca (`fixHardwareDefaults` afegeix l'item d'inici de cada lloc que falta) i la regla `kitPilot`): les migracions depenen només de la versió
   desada, que **mai baixa** (`saveSettings` desa la més alta). **Desades per una versió més nova**: només lectura
@@ -2063,7 +2078,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Ferratges | Confirmar (importat) · Tornar a la proposta · Afegir forat | `LuCheck` · `LuUndo2` · `LuPlus` |
 | Ferratges | «Com va muntat»: 3D · Pla (com Plànol · 3D dels ambients) | `LuRotate3D` · `LuMap` |
 | Preferències | Visualització · Ferratges · Calaixos (contingut) · Guies (categoria) · System 32 · Cassoleta · Imants | `LuScanEye` · `LuWrench` · `LuArchive` · `LuRailSymbol` · `LuCircleDot` · `LuCircleDashed` · `LuMagnet` |
-| Ferratges (categories) | Frontisses · Plaques · Guies · Calaixos de doble paret (jocs) · Elevables i abatibles · Unions · Suports de prestatge · Potes · Taules · Portes corredisses i plegables · Tiradors · Pressió i imants · Perfils i marcs · Penjar · Altres | `LuCircleDashed` · `LuSquareDot` · `LuRailSymbol` · `LuPackageOpen` · `LuPanelBottom` · `LuBolt` · `LuCircleDot` · `LuFootprints` · `LuTable` · `LuDoorOpen` · `LuGripHorizontal` · `LuMagnet` · `LuMinus` · `LuAnchor` · `LuPackage` |
+| Ferratges (categories) | Frontisses · Plaques · Guies · Calaixos de doble paret (jocs) · Elevables i abatibles · Unions · Suports de prestatge · Potes · Taules · Portes corredisses i plegables · Tiradors · Pressió i imants · Perfils i marcs · Llums (jocs de llum) · Penjar · Altres | `LuCircleDashed` · `LuSquareDot` · `LuRailSymbol` · `LuPackageOpen` · `LuPanelBottom` · `LuBolt` · `LuCircleDot` · `LuFootprints` · `LuTable` · `LuDoorOpen` · `LuGripHorizontal` · `LuMagnet` · `LuMinus` · `LuLightbulb` · `LuAnchor` · `LuPackage` |
 | Ferratges (joc) | Seccions de l'editor del joc: Del catàleg · Llargades i números · Regles de tria · Components · Peces de fusta · Mecanitzats del joc · Hipòtesis · Prebroca dels cargols (Preferències › Regles de mecanitzat) | `LuBookOpen` · `LuListOrdered` · `LuRoute` · `LuPackageOpen` · `LuLayers2` · `LuCircleDot` · `LuBookOpen` · `LuDrill` |
 | Ferratges | Baixar el model 3D (.glb) d'un importat · Baixar un plànol de muntatge | `LuBoxes` · `LuFileDown` |
 | Ferratges | Ferratges col·locats a mà (inspector de la peça lliure; el del mòdul no la té; la de «Ferratges» del visor) | `LuWrench` |

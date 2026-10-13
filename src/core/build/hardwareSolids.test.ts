@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { DEFAULT_HARDWARE_LIBRARY, defaultModule, type HardwareEngine, type Panel, type Vec3, type Zone } from "../model"
+import { DEFAULT_HARDWARE_LIBRARY, appItemOfEngine, defaultModule, type HardwareEngine, type Panel, type Vec3, type Zone } from "../model"
 import { buildModule } from "./buildModule"
 import { toWorld } from "./geometry"
 import { hardwareMount } from "./hardwareMount"
@@ -10,7 +10,8 @@ import { builtinSolids, fixedSolids, shelfPins, solidBox, type HwSolid } from ".
  * cosa, al seu lloc (als seus forats o al seu accessori) i dins de la regió que enquadra la càmera.
  */
 type Box = { min: Vec3; max: Vec3 }
-const item = (engine: HardwareEngine) => DEFAULT_HARDWARE_LIBRARY.find((x) => x.engine === engine)!
+// L'item de l'app de cada motor (sense fabricant: la llum «ledProfile» de l'app és el perfil, no una làmpada Loox).
+const item = (engine: HardwareEngine) => appItemOfEngine(DEFAULT_HARDWARE_LIBRARY, engine)!
 
 function solidsOf(engine: HardwareEngine): { p: Panel; s: HwSolid; b: Box }[] {
   const m = hardwareMount(item(engine))

@@ -1,6 +1,7 @@
 import { NO_EDGES, type HardwareItem, type Hole, type Panel, type PanelRole } from "../model"
 import { r, system32Ys, threeAlong } from "./geometry"
 import { planKit } from "./drawerKit"
+import { planLights } from "./lightKit"
 import { applyHardware, cupSpec, dowelSpec, flapSpec, glassFrameSpec, handleSpec, ledSpec, legSpec, magnetSpec, plateSpec, railSpec, slideSpec, system32Spec, HardwareError } from "./hardware"
 
 /**
@@ -139,12 +140,38 @@ function previewPanels(item: HardwareItem): Panel[] {
     case "model":
       // Només 3D: cap peça ni forat.
       return []
+    case "ledProfile": {
+      if (!item.light) {
+        ledSpec(item)
+        return []
+      }
+      // Joc de llum: un prestatge de 600 × 350 per la cara de sota, amb els forats de les làmpades i del cable.
+      const spec = ledSpec(item)
+      const shelf = sample("shelf", "Prestatge (cara de sota)", "shelf", 600, 350)
+      const plan = planLights(item.light, spec, { length: shelf.length, depth: shelf.width }, shelf.thickness)
+      if (!plan.xs.length) throw new HardwareError(plan.warnings[0] ?? `«${item.name}»: cap làmpada hi cap`)
+      const k = item.light
+      const y = shelf.width - plan.z
+      for (const x of plan.xs) {
+        if (plan.bar) {
+          const x0 = x - plan.bar.cut / 2
+          if (plan.recessed) shelf.grooves.push({ x: r(x0), y: r(y - k.recess.size / 2), w: plan.bar.cut, h: k.recess.size, depth: plan.depth, face: "B", tag: "light" })
+          ;(shelf.cutouts ??= []).push({ kind: "circle", x: r(x0 + 20), y: r(y), diameter: k.cableHole, tag: "cable" })
+          continue
+        }
+        if (plan.recessed) {
+          if (k.recess.shape === "round") shelf.holes.push(hole(x, y, { diameter: k.recess.size, depth: plan.depth, tag: "light" }, "B"))
+          else shelf.grooves.push({ x: r(x - k.recess.size / 2), y: r(y - k.recess.size / 2), w: k.recess.size, h: k.recess.size, depth: plan.depth, face: "B", tag: "light" })
+        }
+        ;(shelf.cutouts ??= []).push({ kind: "circle", x: r(x), y: r(y), diameter: k.cableHole, tag: "cable" })
+      }
+      return [shelf]
+    }
     case "rail":
-    case "ledProfile":
     case "glassFrame":
       // Accessoris: sense mecanitzat de moment (suports de la barra, ranura del perfil i frontisses del marc: pendents del
       // taller). Es comprova que els números hi siguin; el muntatge («Com va muntat») els ensenya.
-      (item.engine === "rail" ? railSpec : item.engine === "ledProfile" ? ledSpec : glassFrameSpec)(item)
+      (item.engine === "rail" ? railSpec : glassFrameSpec)(item)
       return []
     case "drawerKit": {
       // Lateral del moble (x = fondària des del darrere; el front a la dreta) amb les prebroques de la guia més llarga que hi cap.

@@ -2,7 +2,7 @@ import { z } from "zod"
 import { DEFAULT_CABINET } from "./cabinet"
 import { type Module } from "./composition"
 import { migrateImportedNames } from "../import/hettichNames"
-import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, V27_ITEMS, V28_ITEMS, fixHardwareDefaults, kitFrom, kitPilotFromLibrary, libraryFromLegacy, setKitPilot } from "./hardware"
+import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, V27_ITEMS, V28_ITEMS, V31_ITEMS, fixHardwareDefaults, kitFrom, kitPilotFromLibrary, libraryFromLegacy, setKitPilot } from "./hardware"
 import { DEFAULT_KIT_PILOT, KitPilotSchema } from "./hardwareKit"
 import { PHOTO_MATERIALS } from "./textureSets"
 import { deepEqual, MATERIAL_MERGES, rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
@@ -48,7 +48,7 @@ const mm = z.number().finite()
  * v30: la mateixa neteja que la v29 amb la regla sencera (la primera v29 només treia els `model` sense `machining`; les
  * preferències que ja eren a la 29 amb els push latch, unions, frontissa D i DQ desats no els perdien).
  */
-export const SETTINGS_VERSION = 30
+export const SETTINGS_VERSION = 31
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -798,7 +798,10 @@ export function parseSettings(raw: unknown): SettingsParse {
   // hi passa a la v30 amb la regla d'ara, idempotent.)
   const withV29 = version < 30 ? withV28.filter((x) => !(x.engine === "model" && (x.builtin || !x.machining?.length)) && !(x.builtin && x.maker === "DTC" && !DEFAULT_HARDWARE_LIBRARY.some((d) => d.id === x.id))) : withV28
   if (withV29.length !== withV28.length) migrated = true
-  const hardware = fixHardwareDefaults(withV29, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
+  // v31: els jocs de llum Häfele Loox (`V31_ITEMS`), si no hi són (per id).
+  const withV31 = version < 31 ? [...withV29, ...V31_ITEMS.filter((k) => !withV29.some((x) => x.id === k.id)).map((k) => structuredClone(k))] : withV29
+  if (withV31.length !== withV29.length) migrated = true
+  const hardware = fixHardwareDefaults(withV31, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
   if (hardware.changed) migrated = true
   // Prebroca dels cargols, una sola font: la regla desada o, a les preferències d'abans, la del primer joc de la
   // biblioteca (el que es feia servir); els jocs de la biblioteca en copien els números.

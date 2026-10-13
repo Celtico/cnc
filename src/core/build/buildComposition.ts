@@ -1,6 +1,7 @@
 import { activeRuns, compositionKind, isSolidMaterial, isTurned, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, type Composition, type ModelObject, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { buildModule, type BuildWarning, type KitOrder, type ModuleBuild } from "./buildModule"
+import type { LightOrder } from "./lightOrders"
 import { normalizePanel } from "./buildCabinet"
 import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
 import { buildFreeParts, type PartJoint } from "./freeParts"
@@ -31,6 +32,8 @@ export interface CompositionBuild {
   models: ModelObject[]
   /** Calaixos amb joc paramètric de tots els mòduls: la comanda per al taller (amb el número de mòdul). */
   hardwareKits: (KitOrder & { module: number; moduleId: string })[]
+  /** Compartiments amb joc de llum de tots els mòduls: làmpades i sistema elèctric (amb el número de mòdul). */
+  lightKits: (LightOrder & { module: number; moduleId: string })[]
 }
 
 /** Caixa de les peces (coordenades on són). */
@@ -96,6 +99,7 @@ export function buildComposition(input: Composition): CompositionBuild {
   const modules: CompositionBuild["modules"] = []
   const moduleExtras: Panel[] = []
   const hardwareKits: CompositionBuild["hardwareKits"] = []
+  const lightKits: CompositionBuild["lightKits"] = []
 
   // Tipus «Lliure» (flat-pack): només peces lliures; els mòduls es guarden però no es fan.
   const onlyParts = partsOnlyKind(compositionKind(comp))
@@ -131,6 +135,7 @@ export function buildComposition(input: Composition): CompositionBuild {
     for (const p of build.panels) panels.push({ ...p, id: `${m.id}:${p.id}`, module: i + 1, placement: place(p.placement) })
     for (const p of build.extras) moduleExtras.push({ ...p, id: `${m.id}:${p.id}`, module: i + 1, placement: place(p.placement) })
     for (const k of build.hardwareKits) hardwareKits.push({ ...k, module: i + 1, moduleId: m.id })
+    for (const k of build.lightKits) lightKits.push({ ...k, module: i + 1, moduleId: m.id })
     // L'avís del push és de tot el moble: una sola vegada, no un per mòdul.
     for (const w of build.warnings) if (w.code !== "push" || !warnings.some((x) => x.code === "push")) warnings.push({ ...w, moduleId: m.id })
     // Mòdul penjat: el pes el porta el darrere. Cal fons cargolat o en ranura prou gruixut
@@ -258,7 +263,7 @@ export function buildComposition(input: Composition): CompositionBuild {
   // sòcol, peces lliures), així el llistat, el CSV, el LLEGEIX-ME i el 3D en diuen el mateix.
   for (const [i, p] of panels.entries()) if (isSolidMaterial(p.material)) panels[i] = { ...p, edges: { ...NO_EDGES } }
 
-  return { panels, warnings, modules, joints: free.joints, extras: [...moduleExtras, ...free.extras], models: input.models ?? [], hardwareKits }
+  return { panels, warnings, modules, joints: free.joints, extras: [...moduleExtras, ...free.extras], models: input.models ?? [], hardwareKits, lightKits }
 }
 
 /** Caixa de tot el moble (peces i elements sense nesting), en mm de la composició. */

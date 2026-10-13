@@ -100,3 +100,11 @@ export function useCompositionKits(project: Pick<Project, "params" | "compositio
 
 const EMPTY: Panel[] = []
 const EMPTY_KITS: CompositionBuild["hardwareKits"] = []
+
+/** Compartiments amb joc de llum de tota la composició: làmpades i sistema elèctric (Peces › «Llums i instal·lació elèctrica»). */
+export function useCompositionLights(project: Pick<Project, "params" | "composition" | "name"> | undefined): CompositionBuild["lightKits"] {
+  const comp = useComposition(project)
+  const build = useCompositionBuild(comp)
+  return build?.lightKits ?? EMPTY_LIGHTS
+}
+const EMPTY_LIGHTS: CompositionBuild["lightKits"] = []

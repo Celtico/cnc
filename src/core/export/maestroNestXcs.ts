@@ -38,6 +38,7 @@ import {
   maxToolDiameter,
   num,
   passDepths,
+  pocketLine,
   pocketLines,
   postProcessesOf,
   rampLines,
@@ -55,6 +56,7 @@ import {
 import { pieceRefs } from "./refs"
 import type { KitOrder } from "../build/buildModule"
 import { kitReadmeLines } from "../build/kitOrders"
+import { lightReadmeLines, type LightOrder } from "../build/lightOrders"
 import { boardName } from "./topsolidCsv"
 import { asciiFold } from "./text"
 
@@ -157,6 +159,9 @@ export function cncNestOptions(panels: Panel[], m: Machine, base: NestOptions): 
   const margin = boardMargin(n, tool)
   return { options: { ...base, kerf: spacing, margin }, ...(tool ? { tool } : {}), spacing, margin }
 }
+
+/** Un forat de cara més gros que això sense broca del Ø es fa de caixera rodona amb la fresa (làmpades encastades). */
+const BIG_HOLE = 20
 
 export type NestStage = "drill" | "groove" | "inner" | "outer"
 const STAGES: NestStage[] = ["drill", "groove", "inner", "outer"]
@@ -336,7 +341,7 @@ export const LOAD_MACRO = loadMacroLine()
 export const toolComment = (t: { kind: "BROCA" | "FRESA"; name: string }): string => `//${t.kind} PLANA ${comment(t.name).slice(3)}`
 
 /** Programes per tauler d'un nesting fet amb `cncNestOptions`. */
-export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, opts: { project: string; date?: Date; /** Jocs de calaix (comanda) per al LLEGEIX-ME. */ kits?: readonly (KitOrder & { module?: number })[] }): XcsNestExport {
+export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, opts: { project: string; date?: Date; /** Jocs de calaix (comanda) per al LLEGEIX-ME. */ kits?: readonly (KitOrder & { module?: number })[]; /** Llums amb joc (làmpades i sistema elèctric) per al LLEGEIX-ME. */ lights?: readonly (LightOrder & { module?: number })[] }): XcsNestExport {
   const nopt = machineNesting(m)
   const refs = pieceRefs(panels)
   const byId = new Map(panels.map((p) => [p.id, p]))
@@ -419,7 +424,24 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
         const t = pickDrill(m, h.diameter, depth, "vertical")
         if (!t) {
           const same = drillsOfDiameter(m, h.diameter, "vertical")
-          warn(holeWhat(h), same.length ? `la broca ${same.map((x) => x.code).join("/")} no arriba a ${num(depth)} mm` : `cap broca vertical de Ø${num(h.diameter)} muntada`, true)
+          // Forat gros sense broca (el d'una làmpada encastada, Ø55/Ø60): caixera rodona amb la fresa de les caixeres.
+          const pt = !same.length && h.diameter > BIG_HOLE ? (rp.tool("pocket", rules.pockets.tool, h.diameter - 0.5, depth) ?? pickRouter(m, h.diameter - 0.5, depth)) : undefined
+          if (pt) {
+            const [x, y] = tr(h.x, h.y)
+            const n = name("Caixera")
+            feats.push({
+              stage: "groove",
+              key: `pocket:${pt.code}`,
+              start: [x, y],
+              end: [x, y],
+              area: 0,
+              tool: { kind: "FRESA", name: toolMslName(pt) },
+              lines: [`CreateCircleCenterRadius(${cs(`${n}_G`)}, ${num(x)}, ${num(y)}, ${num(h.diameter / 2)}, ${insideCircleClockwise(cutMode)});`, pocketLine(n, depth, pt)],
+              op: { program: "A", plane: "Top", kind: "pocket", tool: pt.code, depth, points: flatten([[x + h.diameter / 2, y, 1], [x - h.diameter / 2, y, 1]]), what: holeWhat(h), ref, stage: "groove" },
+            })
+            continue
+          }
+          warn(holeWhat(h), same.length ? `la broca ${same.map((x) => x.code).join("/")} no arriba a ${num(depth)} mm` : `cap broca vertical de Ø${num(h.diameter)} muntada${h.diameter > BIG_HOLE ? " ni fresa per fer-lo de caixera" : ""}`, true)
           continue
         }
         const [x, y] = tr(h.x, h.y)
@@ -695,7 +717,7 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
   const files = sheets.map((s) => ({ name: s.file, text: s.text }))
   const enc = encodingWarning(m, files)
   if (enc) warnings.unshift(enc)
-  files.push({ name: "LLEGEIX-ME.txt", text: nestReadme(opts.project, m, sheets, infos, unplaced, warnings, spacing, spacingTool, margin, opts.date ?? new Date(), opts.kits ?? []) })
+  files.push({ name: "LLEGEIX-ME.txt", text: nestReadme(opts.project, m, sheets, infos, unplaced, warnings, spacing, spacingTool, margin, opts.date ?? new Date(), opts.kits ?? [], opts.lights ?? []) })
   return {
     files,
     encoding: xcsEncodingOf(m),
@@ -711,7 +733,7 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
   }
 }
 
-function nestReadme(project: string, m: Machine, sheets: NestSheetXcs[], infos: NestPanelInfo[], unplaced: string[], warnings: string[], spacing: number, tool: MachineTool | undefined, margin: number, date: Date, kits: readonly (KitOrder & { module?: number })[]): string {
+function nestReadme(project: string, m: Machine, sheets: NestSheetXcs[], infos: NestPanelInfo[], unplaced: string[], warnings: string[], spacing: number, tool: MachineTool | undefined, margin: number, date: Date, kits: readonly (KitOrder & { module?: number })[], lights: readonly (LightOrder & { module?: number })[] = []): string {
   const n = machineNesting(m)
   const prog = nestProgram(m)
   const lines = [
@@ -762,6 +784,8 @@ function nestReadme(project: string, m: Machine, sheets: NestSheetXcs[], infos: 
   if (!withPost.length) lines.push("", "Cap peça té res a fer després de la CNC.")
   // Calaixos de doble paret: el que cal comprar (números del catàleg) i la fusta que demana cada calaix.
   if (kits.length) lines.push("", "Ferratges dels jocs de calaix (comanda)", ...kitReadmeLines(kits))
+  // Llums amb joc: les làmpades (el forat o el rebaix ja és als programes) i el sistema elèctric de cada mòdul.
+  if (lights.length) lines.push("", "Llums i instal·lació elèctrica (comanda)", ...lightReadmeLines(lights))
   if (warnings.length) {
     lines.push("", `Avisos (${warnings.length}): el que no surt als programes o s'ha canviat`)
     for (const w of warnings) lines.push(`- ${w}`)

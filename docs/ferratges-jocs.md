@@ -217,3 +217,57 @@ o a la tapa a la vora que obre, i la contraplaca a la porta):
 
 Regulació de l'èmbol −0 / +5; colors gris clar H10 i gris fosc H11. Els cargols es dibuixen amb la prebroca Ø2 × 10 del
 taller. El **door opener MS00AL/AM/AH** (pp. 207–210, obre la porta des del costat de les frontisses) no s'hi ha posat.
+
+## Llums: jocs de llum Häfele Loox 24 V (v31)
+
+Per decisió de l'usuari (2026-10-13: «munta tot lo que es pugui mecanitzar i els seus accessoris per connectar a la
+xarxa elèctrica»): del catàleg general Häfele (`docs/blaetterkatalog.pdf`, capítol 2, pàgines «FF 2.x»; el PDF no es
+puja al repo) entren les làmpades LED de 24 V que **s'encasten amb un mecanitzat** i el sistema per connectar-les.
+
+**Model** (`core/model/lightKit.ts`, `LightKit`, dins d'un `HardwareItem` del motor `ledProfile` com a `item.light`;
+categoria «Llums», `LuLightbulb`): la làmpada (sèrie, article, color de llum, W i el pic en encendre), el **rebaix**
+(`recess`: rodó Ø × fondària, quadrat costat × fondària o ranura amplada × fondària), el cos que es veu, el forat del
+cable, la versió de sobreposar (`surface`: caixa o la mateixa làmpada per cargolar) i, a la barra, les llargades que es
+venen i el pas de tall. El **sistema** (`LightSystem`, `HAFELE_LOOX_SYSTEM` a `core/model/lights/hafeleLoox.ts`):
+alimentadors per potència amb el cable de xarxa EU, distribuïdor de 6 vies, interruptor sensor de porta (Ø12 × 46),
+interruptor de proximitat (per cargolar), el cable de l'interruptor, els cables d'extensió i el màxim de 6 m.
+Es tria a **Prestatges i accessoris › Llum** del compartiment (el mateix `HardwarePick` que el perfil de tira LED;
+«Com el mòdul» continua sent el perfil de l'app) i surt a Preferències › Ferratges › Llums amb la peça d'exemple i «Com va
+muntat» (els forats a la cara de sota del prestatge). Els paràmetres editables: «Del davant», «Entre llums» i «Rebaix»
+(`hardwareParams`: els dos últims només als items amb joc de llum).
+
+| Làmpada (pàgina) | Mecanitzat a la peça de sobre (tapa, travesser o prestatge, cara de sota) | W | Articles (3000 / 4000 K) |
+|---|---|---|---|
+| Loox LED 3038, focus d'acer Ø65 × 12 (2.69) | forat **Ø55 × 12** + passant Ø8 (cable); caixa 833.72.803 si no s'hi pot encastar | 3 | 833.75.120 / .121 (plata) |
+| Loox LED 3010, focus d'alumini amb vidre mat (2.65) | forat **Ø60 × 13** + Ø8; caixa 833.77.730 | 3,25 (**5 en encendre**) | 833.75.040 / .041 |
+| Loox LED 3001, focus IP20 (2.68) | forat **Ø55 × 12** + Ø8; caixa 833.77.710 | 1,7 | 833.75.016 |
+| Loox LED 3022, plana rodona Ø185 × 6,2 (2.66) | forat **Ø180 × 6,5** + Ø8; si no, la 3023 per cargolar (833.77.130 / .131) | 4,8 | 833.75.100 / .101 |
+| Loox LED 3024, plana quadrada 210 × 210 × 6,2 (2.67) | rebaix **205 × 205 × 6,5** (caixera) + Ø8; si no, la 3025 (833.77.120 / .121) | 5,8 | 833.75.090 / .091 |
+| LED 1088, barra per encastar 1000 / 1500 / 2000 (2.70) | **ranura 16 × 11** al llarg del compartiment (perfil tallat a la llum − 20, tira al múltiple de 50 dins de perfil − 5) + Ø8 a un extrem | 18,3 / 27,9 / 37,4 | 833.03.100 / .101 / .102 (3200 K), .111 / .112 / .113 (4200 K) |
+
+**Construcció** (`buildLights` a `buildModule.ts`, pla pur a `core/build/lightKit.ts` `planLights`): a la peça de sobre
+del compartiment i a la cara de sota de cada prestatge, una làmpada cada «Entre llums» (com a mínim una), centrades, el
+centre a «Del davant» del cantell; el forat rodó és un `Hole` (tag `light`; al Maestro, **sense broca del Ø, caixera
+rodona** `CreateCircleCenterRadius` + `CreateContourPocket` amb la fresa de les caixeres, `BIG_HOLE` 20), el quadrat i
+la ranura són `Groove` (tag `light`) i el cable un `Cutout` rodó (tag `cable`). Si la peça no té 5 mm de tauler sota el
+rebaix o la làmpada no hi cap, **la versió de sobreposar** i només el forat del cable, amb avís `light`; sense peça a
+sobre (sense tapa), avís. El cos de la làmpada es veu a `extras` (`light-<zona>-<peça>-<n>`, material «Tira LED»: fa
+llum al render; sense nesting). L'**interruptor**, un per mòdul: el sensor de porta amb un forat **Ø12 × 47 al cantell
+de davant del lateral esquerre** (`light-switch`, a mitja alçada del primer compartiment amb llum) si el mòdul té portes
+o abatibles recobrents; si no, el de proximitat. Res amagat compta: amb calaixos, front fix o dividit, cap llum
+(`visibleZone`, com la tira LED).
+
+**Comanda** (`core/build/lightOrders.ts`, `LightOrder` a `ModuleBuild.lightKits` → `CompositionBuild.lightKits`;
+Peces › «Llums i instal·lació elèctrica» i el LLEGEIX-ME de Maestro): **un grup per mòdul** (cada mòdul té el seu
+circuit): les làmpades (iguals sumades; barres amb la llargada de tall), les caixes, i `electricalLines`: l'alimentador
+més petit que arriba a la potència **amb el pic en encendre** (20 / 40 / 90 W amb cable EU 833.77.951 / .952 / .953;
+més d'un de 90 si cal), un distribuïdor 833.77.724 per cada 5 làmpades passades les 6 ranures, l'interruptor
+(833.89.128 o 833.89.136) amb el cable 833.89.142 i la nota dels cables d'extensió (833.77.712 / .713 / .714; màx. 6 m).
+El de 15 W (833.77.936) no s'hi posa: no té ranura d'interruptor.
+
+**Hipòtesis** (`light.hypotheses`, a confirmar amb la làmpada a la mà): les fondàries dels rebaixos (el catàleg dona el Ø
+del forat i l'alçada de la làmpada: 12 / 13 / 6,5), el forat del cable Ø8 al mig (del dibuix de la 3038 i la 3010), la
+secció de la ranura de la 1088 (16 × 11, la del perfil de muntatge Loox d'11 mm, p. 2.127) i la potència proporcional
+d'una barra tallada. Fora: les làmpades de 12 V i les tires LED (altres alimentadors), la LED 1150 de sostre (cos per
+sobre de la peça, per a sostres buits), els perfils de muntatge sols i els controls remots.
+Tests `core/build/lightKit.test.ts`.

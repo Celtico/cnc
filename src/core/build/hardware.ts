@@ -238,10 +238,14 @@ export function railSpec(item: HardwareItem) {
   return { diameter: param(item, "diameter"), drop: param(item, "drop") }
 }
 
-/** Perfil de tira LED (accessori d'un compartiment): secció i retirada del davant del prestatge. Sense mecanitzat (ranura: pendent). */
+/**
+ * Perfil de tira LED (accessori d'un compartiment): secció i retirada del davant del prestatge; sense mecanitzat. Amb un
+ * **joc de llum** (`HardwareItem.light`): la làmpada del catàleg, cada quant va i la fondària del rebaix (`lightKit.ts`).
+ */
 export function ledSpec(item: HardwareItem) {
   expectEngine(item, "ledProfile")
-  return { width: param(item, "width"), height: param(item, "height"), setback: param(item, "setback") }
+  const opt = (key: string, fallback: number) => (Number.isFinite(item.params[key]) ? item.params[key]! : fallback)
+  return { width: param(item, "width"), height: param(item, "height"), setback: param(item, "setback"), spacing: opt("spacing", 400), depth: opt("depth", 0), light: item.light }
 }
 
 /** Marc d'alumini d'una porta de vidre (vitrina): amplada del perfil i gruix del vidre. Sense mecanitzat (frontisses de perfil: pendent). */
