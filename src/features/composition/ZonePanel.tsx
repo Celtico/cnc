@@ -1,5 +1,5 @@
 import { Box, Button, HStack, IconButton, Menu, Portal, Stack, Switch, Text } from "@chakra-ui/react"
-import { LuArrowUp, LuCopy, LuEllipsis, LuColumns2, LuRows2, LuPlus, LuRows3, LuShirt, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
+import { LuArrowUp, LuCopy, LuEllipsis, LuColumns2, LuRows2, LuPlus, LuRows3, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
 import type { ReactNode } from "react"
 import { FoldItem } from "../../components/Fold"
 import {
@@ -193,8 +193,9 @@ export function ZonePanel({
           {/* Tapat: el seu front (es conserva) no es fa i el compartiment és com obert (`visibleZone`). Sense una peça a
               cada costat (lateral o divisor), cap prestatge: no surt (es conserva i torna amb els laterals). Amb calaixos
               o un front fix (darrere no hi ha res a fer servir), tampoc; ni tapat per un front fix de tota la zona. */}
-          {shelvesBehind && canHoldShelves(bounds) && (
-            <FoldItem id="zone-shelves" title="Prestatges" badge={zone.shelves?.n || undefined} icon={LuRows3}>
+          {shelvesBehind && (canHoldShelves(bounds) || canHoldAccessories(bounds)) && (
+            <FoldItem id="zone-shelves" title="Prestatges i accessoris" badge={shelvesBadge(zone)} icon={LuRows3}>
+              {canHoldShelves(bounds) && <>
               <NumRow
                 label="Quantitat"
                 suffix="u"
@@ -249,11 +250,12 @@ export function ZonePanel({
                 />
               )}
               </>}
+              </>}
+              {/* Accessoris del compartiment: ferratges (barra de penjar, tira LED), no fusta; a sota dels prestatges (la tira
+                  LED va sota cada prestatge). */}
+              {canHoldAccessories(bounds) && <AccessoryRows root={root} zone={zone} hardware={hardware} onChange={onChange} />}
             </FoldItem>
           )}
-
-          {/* Accessoris del compartiment: ferratges (barra de penjar, tira LED), no fusta. Amb calaixos o un front fix, no. */}
-          {shelvesBehind && canHoldAccessories(bounds) && <AccessoriesSection root={root} zone={zone} hardware={hardware} onChange={onChange} />}
 
           {/* Només les direccions on el divisor té on unir-se (`splitDirsFor`): el vertical, a sota i a sobre; el
               travesser, als dos costats. Sense cap, o darrere d'un front fix, la secció no surt. */}
@@ -357,13 +359,19 @@ function CoveredFront({ id, title, coveredBy }: { id: string; title: string; cov
 /** Resum d'un accessori per a la insígnia. */
 const ACCESSORY_LABELS = { rail: "Barra", led: "LED" } as const
 
+/** Insígnia de «Prestatges i accessoris»: el nombre de prestatges i els accessoris que hi ha («3 · Barra · LED»). */
+function shelvesBadge(zone: Zone): string | undefined {
+  const parts = [...(zone.shelves?.n ? [String(zone.shelves.n)] : []), ...(["rail", "led"] as const).filter((k) => zone[k]).map((k) => ACCESSORY_LABELS[k])]
+  return parts.length ? parts.join(" · ") : undefined
+}
+
 /**
  * **Accessoris** d'un compartiment (auditoria B): barra de penjar i tira LED, ferratges de la biblioteca (motors `rail` i
  * `ledProfile`) triats amb el mateix `HardwarePick` que la frontissa; sense còpia pròpia, el del mòdul («Com el mòdul»).
- * Abans eren dos interruptors a Prestatges. No són de CNC: surten a Peces, a «Elements sense nesting».
+ * Van a la secció «Prestatges i accessoris», a sota dels prestatges (per decisió de l'usuari, 2026-10-13). No són de CNC:
+ * surten a Peces, a «Elements sense nesting».
  */
-function AccessoriesSection({ root, zone, hardware, onChange }: { root: Zone; zone: Zone; hardware: ModuleHardware; onChange: (root: Zone) => void }) {
-  const on = (["rail", "led"] as const).filter((k) => zone[k]).map((k) => ACCESSORY_LABELS[k])
+function AccessoryRows({ root, zone, hardware, onChange }: { root: Zone; zone: Zone; hardware: ModuleHardware; onChange: (root: Zone) => void }) {
   const setAcc = (key: "rail" | "led", value: ZoneAccessory | undefined) =>
     onChange(updateZone(root, zone.id, (z) => {
       const { [key]: _old, ...rest } = z
@@ -382,10 +390,10 @@ function AccessoriesSection({ root, zone, hardware, onChange }: { root: Zone; zo
     </>
   )
   return (
-    <FoldItem id="zone-accessories" title="Accessoris" badge={on.length ? on.join(" · ") : undefined} icon={LuShirt}>
+    <>
       {row("rail", "rail", "Penjar", "Tub de lateral a lateral sota el sostre del compartiment. Surt a Peces, a «Elements sense nesting».")}
       {row("led", "led", "Llum", "Perfil amb tira LED càlida sota el sostre i sota cada prestatge, a prop del davant. Fa llum al render i surt a Peces, a «Elements sense nesting», amb el llarg per tallar el perfil.")}
-    </FoldItem>
+    </>
   )
 }
 

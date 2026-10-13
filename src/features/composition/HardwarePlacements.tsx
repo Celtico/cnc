@@ -129,7 +129,7 @@ export function HardwarePlacements({
                 )
               })}
               <Text fontSize="xs" color="fg.muted">
-                Els posa el mòdul. Quins són: al Front (frontissa, guia o joc, braç, imant, tirador), als Prestatges (filera System 32) o als Accessoris de cada compartiment, a {UI_PATHS.joint} (espiga) i a la base «Potes».
+                Els posa el mòdul. Quins són: al Front (frontissa, guia o joc, braç, imant, tirador), a «Prestatges i accessoris» de cada compartiment (filera System 32, barra, llum), a {UI_PATHS.joint} (espiga) i a la base «Potes».
               </Text>
             </Stack>
           ) : (

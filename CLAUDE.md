@@ -247,7 +247,8 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     Portes surt «Cap»). Cap plantilla del catàleg no en tenia (proves d'or del catàleg idèntiques); al corpus aleatori, 11
     llavors amb portes en una divisió de dins canvien (`UPDATE_GOLDEN=1` revisat: sense aquella porta, es fan els fronts de
     dins). Tests `build/hiddenState.test.ts`, `composition/zoneLabel.test.ts`.
-  - **Accessoris del compartiment** (secció «Accessoris» del compartiment, `LuShirt`; auditoria de coherència B,
+  - **Accessoris del compartiment** (a la secció «Prestatges i accessoris» del compartiment, a sota dels prestatges: per
+    decisió de l'usuari, 2026-10-13, abans una secció pròpia «Accessoris» amb `LuShirt`; auditoria de coherència B,
     `docs/millores-v1/coherencia-editor.md`): la barra i la llum són **ferratges** de la biblioteca (motors `rail` i
     `ledProfile`, categories «Penjar» i «Perfils i marcs»), no interruptors de fusta. `Zone.rail` / `Zone.led` =
     `{ hardware?: HardwareItem }` (`ZoneAccessory`: hi és amb el del mòdul, «Com el mòdul», o amb una còpia pròpia; els
@@ -884,8 +885,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     El Front de cada compartiment és al compartiment; les portes de tot el mòdul (Interior dividit), a **Portes**.
   - Compartiment (`ZonePanel`): accions com a icones a la capçalera (Pare · Duplicar · Eliminar; a l'«Interior», l'arrel,
     cap: no es duplica, no es retalla ni s'elimina, i ⌘D, ⌘X i Suprimir avisen sense tocar el porta-retalls) i Front ·
-    Prestatges (només fusta: Quantitat · Regulables · Filera System 32 si li toca, vegeu Mòdul · A ras · Gruixuts) · **Accessoris** (`LuShirt`: Barra de penjar i
-    Tira LED, interruptor + `HardwarePick` «Com el mòdul») · Dividir (Prestatges, Accessoris, Dividir i els tipus
+    **Prestatges i accessoris** (`LuRows3`, una sola secció per decisió de l'usuari, 2026-10-13; insígnia «3 · Barra · LED»:
+    primer els prestatges —Quantitat · Regulables · Filera System 32 si li toca, vegeu Mòdul · A ras · Gruixuts— i a sota
+    els accessoris —Penjar (Barra de penjar) i Llum (Tira LED), interruptor + `HardwarePick` «Com el mòdul»—) · Dividir (Prestatges, Accessoris, Dividir i els tipus
     de Contingut, només si el compartiment els pot aguantar: Model del moble › Zones › Què aguanta cada compartiment; Prestatges i Accessoris tampoc amb calaixos o un front fix propi; Dividir tampoc darrere d'un front fix, per decisió de l'usuari). Al Front: el ferratge del tipus (frontissa,
     guia o joc, braç; a la reixeta, l'**imant** després de «Muntatge» i «Trapa»; a la vitrina, el **marc**) i el «Tirador» (amb «Cap
     (push)»). **Sense «Mida»** (per decisió de l'usuari, 2026-10-08: «a les obertures no té sentit l'amplada; ha
@@ -1986,7 +1988,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Zones | Dividir en horitzontal (travesser, zones dalt/baix) | `LuSquareSplitVertical` |
 | Zones | Divisió vertical · horitzontal (un compartiment porta la icona del seu contingut, igual a l'arbre, a la capçalera i a «Front»: `composition/zoneIcons.ts`) | `LuColumns2` · `LuRows2` |
 | Zones | Eliminar divisió (la mida de cada zona és a la Divisió, sense icona pròpia) | `LuUngroup` |
-| Contingut | Obert · Prestatges · Porta · Calaixos · Barra de penjar (i la secció Accessoris del compartiment) | `LuSquareDashed` · `LuRows3` · `LuDoorClosed` · `LuArchive` · `LuShirt` |
+| Contingut | Obert · Prestatges (i la secció «Prestatges i accessoris» del compartiment) · Porta · Calaixos · Barra de penjar | `LuSquareDashed` · `LuRows3` · `LuDoorClosed` · `LuArchive` · `LuShirt` |
 | Contingut | Abatible · Reixeta · Front fix | `LuPanelBottom` · `LuGrid3X3` · `LuSquare` |
 | Composició | Afegir · Duplicar · Eliminar | `LuPlus` · `LuCopy` · `LuTrash2` |
 | Composició | Objecte de referència · Model 3D (`.glb`) · Menú del document | `LuScan` · `LuSprout` · `LuEllipsis` |
@@ -2061,7 +2063,7 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
 | **Acabats de l'escena** | terra i paret de la presentació (moble); als ambients, «Acabats» = terra, parets i sostre. **No hi ha secció «Acabats» al mòdul** (des del 2026-10-08: el que hi havia és a Caixa, Materials i Unió) |
 | **Unió** | la secció del mòdul amb l'espiga de les unions de la caixa (`LuBolt`) |
 | **Com el mòdul** / **Com el cos** / **Com a Preferències** | heretat; **Còpia pròpia**, la còpia d'un ferratge que ja no és a la biblioteca tal qual |
-| **Accessoris** | barra de penjar, tira LED (ferratges del compartiment); el marc de vitrina va amb la porta de vidre |
+| **Accessoris** | barra de penjar, tira LED (ferratges del compartiment, a la secció «Prestatges i accessoris»); el marc de vitrina va amb la porta de vidre |
 | **Cap (push)** | el tirador que no hi és: obertura per pressió |
 
 ## Com treballar

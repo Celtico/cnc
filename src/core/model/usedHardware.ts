@@ -160,7 +160,7 @@ function frontHasHandle(m: Module, f: Extract<Front, { kind: "door" | "drawers" 
  * - **Materials**: «Fronts» (`frontMaterial`) amb algun front que es fa (com l'Estil);
  * - **Unió**: l'Espiga si la caixa en fa (`usedHardwareSlots`, `carcassDowels`); sense, la secció no surt.
  * Els ferratges per defecte del mòdul (`module.hardware`, `module.fronts.handles`) no surten enlloc: cada compartiment
- * tria el seu al Front o als Accessoris i els que diuen «Com el mòdul» els hereten (res amagat compta).
+ * tria el seu al Front o a «Prestatges i accessoris» i els que diuen «Com el mòdul» els hereten (res amagat compta).
  */
 export interface ModuleRows extends FrontOptionsUse {
   /** Caixa: «Ranura del fons» (fons en ranura) o «Retirada del fons» (fons encastat). */
@@ -179,7 +179,7 @@ export function moduleRows(module: Module): ModuleRows {
 
 /** On surt la «Filera System 32» del mòdul a l'inspector del compartiment (`system32RowPlace`). */
 export interface System32RowPlace {
-  /** «Prestatges» (al costat de «Regulables») o «Front» (després de la «Frontissa»). */
+  /** «Prestatges i accessoris» (al costat de «Regulables») o «Front» (després de la «Frontissa»). */
   at: "shelves" | "front"
   /** Els compartiments que l'ensenyen (cada un a la seva pantalla: mai dos llocs a la mateixa). */
   zones: ReadonlySet<string>
