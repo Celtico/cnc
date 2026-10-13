@@ -14,6 +14,10 @@ export interface ChatTarget<D> {
   intro: string
   /** Propostes per començar (tocar-ne una l'escriu al camp). */
   suggestions: string[]
+  /** El joc d'eines de cada volta del torn (l'assistent personal: el document obert pot canviar a mitja conversa). */
+  refresh?: () => Promise<AssistantToolSet<D>>
+  /** Una línia de context que va davant de cada missatge de l'usuari (on és i què té seleccionat). */
+  context?: () => string
 }
 
 /** El mateix objecte sense el tipus del document (el xat no el mira: el passa al torn). */

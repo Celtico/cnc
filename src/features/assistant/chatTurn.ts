@@ -34,6 +34,11 @@ export interface TurnOptions<D> extends TurnCallbacks {
   signal?: AbortSignal
   /** Voltes d'eines com a molt (un encàrrec gran en fa unes quantes). */
   maxRounds?: number
+  /**
+   * El joc d'eines de cada volta (l'assistent personal: si a mitja conversa obre un altre document, la volta següent en
+   * té les eines). Sense, `toolset` a totes.
+   */
+  refresh?: () => Promise<AssistantToolSet<D>>
 }
 
 export interface TurnResult {
@@ -46,11 +51,13 @@ export interface TurnResult {
 export const MAX_TOKENS = 16000
 
 export async function runTurn<D>(o: TurnOptions<D>): Promise<TurnResult> {
-  const tools = o.toolset.tools
+  let toolset = o.toolset
   let used = 0
   const maxRounds = o.maxRounds ?? 24
   for (let round = 0; round < maxRounds; round++) {
     if (o.signal?.aborted) return closeAborted(o.history, used)
+    if (o.refresh && round > 0) toolset = await o.refresh()
+    const tools = toolset.tools
     let final: Message
     try {
       const stream = o.client.messages.stream(
@@ -58,7 +65,7 @@ export async function runTurn<D>(o: TurnOptions<D>): Promise<TurnResult> {
           model: o.model,
           max_tokens: MAX_TOKENS,
           // Les eines i les instruccions són iguals a cada volta: a la memòria cau de l'API (més barat).
-          system: [{ type: "text", text: o.toolset.system, cache_control: { type: "ephemeral" } }],
+          system: [{ type: "text", text: toolset.system, cache_control: { type: "ephemeral" } }],
           tools,
           messages: o.history,
         },
@@ -85,16 +92,16 @@ export async function runTurn<D>(o: TurnOptions<D>): Promise<TurnResult> {
       const before = working
       let outcome: Awaited<ReturnType<AssistantToolSet<D>["run"]>>
       try {
-        outcome = await o.toolset.run(before, block.name, block.input)
+        outcome = await toolset.run(before, block.name, block.input)
       } catch (e) {
         outcome = { ok: false, error: `Error intern a ${block.name}: ${e instanceof Error ? e.message : String(e)}` }
       }
       if (outcome.ok) {
         working = outcome.doc
         if (outcome.doc !== before) o.apply(outcome.doc)
-        const payload = await o.toolset.payload(block.name, before, outcome)
+        const payload = await toolset.payload(block.name, before, outcome)
         results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(payload) })
-        o.onTool({ name: block.name, ok: true, note: o.toolset.describe(block.name, outcome.result, payload) })
+        o.onTool({ name: block.name, ok: true, note: toolset.describe(block.name, outcome.result, payload) })
       } else {
         results.push({ type: "tool_result", tool_use_id: block.id, content: outcome.error, is_error: true })
         o.onTool({ name: block.name, ok: false, note: outcome.error })

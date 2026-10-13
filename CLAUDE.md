@@ -1045,8 +1045,19 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   per acció; escriure a X/Y o les fletxes seguides, un pas (`group`). Es reinicia en obrir-lo. (Què fan Maj/Alt a la
   ploma: pendent de decidir, `docs/millores-v1/editor-formes.md` §2.)
 - **Assistent IA** (`docs/xat-ia.md`; per decisió de l'usuari, la clau a Preferències i el navegador crida l'API
-  directament): pestanya **«Assistent»** (`LuMessageSquare`) a la columna de la dreta, al costat de Propietats
-  (`Workspace extra`; al mòbil, una tercera pestanya després d'Estructura · Propietats); als mobles i als **objectes**
+  directament). **Un sol assistent personal per a tota l'app** (per decisió de l'usuari, 2026-10-13: «un botó de
+  l'assistent personal al menú principal… amb tot el context de l'app, que pugui fer tot el que pot fer una persona i
+  que sàpiga si tinc alguna cosa seleccionada»): botó **«Assistent»** (`LuMessageSquare`) al menú principal, sota Mobles ·
+  Ambients · Objectes (i a la barra de baix del mòbil), que obre un calaix (`features/assistant/GlobalAssistant.tsx`, a
+  demanda; es munta el primer cop i es queda muntat; sense historial desat). **Ja no hi ha pestanya «Assistent» a
+  l'Editor ni als Ambients** (`Workspace extra` sense ús). El document obert s'hi registra (`assistantHub.ts`:
+  `registerDoc` amb el `ChatTarget` i una funció que diu la selecció amb els ids de les eines —mòdul, compartiment,
+  peça, objecte de referència, element o paret de l'ambient—) i l'app hi posa la navegació (`registerNav`). Eines de
+  l'app (`appTools.ts`: `get_app`, `list_documents`, `open_document`, `create_document`, `go_to`) més les del document
+  obert (`withAppTools`), que es tornen a llegir a cada volta (`runTurn` `refresh`: obrir un document a mitja conversa
+  ja en dona les eines); cada missatge porta davant «[Context de l'app: …]» (`contextLine`); en acabar el torn, un pas
+  de desfer a cada document tocat. Tests `features/assistant/appTools.test.ts` i `chatTurn.test.ts`. Abans era una
+  pestanya a cada document; el que segueix és el xat comú i les eines de cada document: als mobles i als **objectes**
   (no als `lliure` d'abans) i als **Ambients** (vegeu Ambients › Assistent IA). **Un sol xat per a tots els documents**
   (per decisió de l'usuari: «i a Objectes i Ambients?»): el document diu el seu **joc d'eines**
   (`core/assistant/toolset.ts`, `AssistantToolSet<D>`: instruccions, eines, `run` —pot ser asíncrona—, `payload` i

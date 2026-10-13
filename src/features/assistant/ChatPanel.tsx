@@ -32,7 +32,7 @@ interface Attached {
  * aturar. Les eines i les instruccions són les del document (`target.toolset`). Cada torn és **un sol pas de desfer**
  * (`apply` en viu i `commit` en acabar). La conversa es queda mentre l'editor és obert.
  */
-export default function ChatPanel({ settings, target }: { settings: Settings; target: ChatTarget<unknown> }) {
+export default function ChatPanel({ settings, target, onClose }: { settings: Settings; target: ChatTarget<unknown>; /** Tancar (al calaix de l'assistent personal): una ✕ a la capçalera. */ onClose?: () => void }) {
   const { getDoc, apply, commit } = target
   const apiKey = settings.assistant.apiKey
   const model = ASSISTANT_MODELS.find((m) => m.id === settings.assistant.model) ?? ASSISTANT_MODELS[0]
@@ -120,7 +120,9 @@ export default function ChatPanel({ settings, target }: { settings: Settings; ta
         const small = await shrinkImage(image.blob, MAX_IMAGE_PX, { jpeg: true, quality: 0.85 })
         content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: await blobToBase64(small.blob) } })
       }
-      content.push({ type: "text", text: text || "Mira aquesta imatge." })
+      // L'assistent personal hi posa davant on és l'usuari i què té seleccionat.
+      const ctx = target.context?.()
+      content.push({ type: "text", text: `${ctx ? `${ctx}\n\n` : ""}${text || "Mira aquesta imatge."}` })
       history.current.push({ role: "user", content })
       const [client, toolset] = await Promise.all([makeClient(apiKey), target.toolset()])
       const res = await runTurn({
@@ -130,6 +132,7 @@ export default function ChatPanel({ settings, target }: { settings: Settings; ta
         toolset,
         getDoc,
         apply,
+        ...(target.refresh ? { refresh: target.refresh } : {}),
         signal: ctl.signal,
         onText: (delta) =>
           updateLast((it) => {
@@ -176,6 +179,13 @@ export default function ChatPanel({ settings, target }: { settings: Settings; ta
             <LuMessageSquarePlus />
           </IconButton>
         </Tooltip>
+        {onClose && (
+          <Tooltip content="Tancar">
+            <IconButton size="xs" variant="ghost" aria-label="Tancar l'assistent" onClick={onClose}>
+              <LuX />
+            </IconButton>
+          </Tooltip>
+        )}
       </HStack>
 
       {!apiKey && (

@@ -1,7 +1,7 @@
 import { Alert, Badge, Box, Button, Dialog, Editable, Flex, HStack, IconButton, Menu, Portal, SegmentGroup, Slider, Stack, Switch, Text } from "@chakra-ui/react"
 import { shrinkImage } from "../imageShrink"
 import { blobToBase64 } from "../file/mobleIo"
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   LuBox,
   LuMove,
@@ -43,7 +43,6 @@ import {
   LuLockOpen,
   LuUndoDot,
   LuTriangleAlert,
-  LuMessageSquare,
 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { RenderDialog, type SceneGetter } from "../../components/viewer/render/RenderDialog"
@@ -110,9 +109,9 @@ import { useHistory, useUndoKeys } from "../history/useHistory"
 import { UndoRedo } from "../../components/UndoRedo"
 import { TreeRow, TreeRowMenu, TreeSection } from "../../components/TreeRow"
 import type { ChatTarget } from "../assistant/chatTarget"
+import { registerDoc } from "../assistant/assistantHub"
 
 /** Xat de l'assistent IA (docs/xat-ia.md): a demanda, el primer cop que s'obre la pestanya «Assistent». */
-const ChatPanel = lazy(() => import("../assistant/ChatPanel"))
 
 const AMBIENT_SUGGESTIONS = [
   "Fes-me una habitació de 4 × 3 m (per dins) amb una finestra de 1200 a la paret de dalt i una porta de 800 a la de la dreta.",
@@ -269,6 +268,21 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const geos = useItemGeometries(amb.items, projects)
   const names = useMemo(() => new Map(amb.items.map((it) => [it.id, itemName(it, projects)])), [amb.items, projects])
   const isObjItem = (it: AmbientItem) => it.kind === "block" || !!projects?.some((p) => p.id === it.projectId && isObject(p))
+  // Assistent personal: aquest ambient s'hi registra amb les seves eines i què hi ha seleccionat (llegit en el moment).
+  const describeSel = useRef<() => string | undefined>(() => undefined)
+  describeSel.current = () => {
+    if (sel?.kind === "item") {
+      const it = amb.items.find((i) => i.id === sel.id)
+      return it ? `element ${it.kind === "moble" ? `(moble enllaçat, project_id ${it.projectId})` : "(bloc)"} (id ${it.id})` : undefined
+    }
+    if (sel?.kind === "group") return `grup «${sel.id}»`
+    if (sel?.kind === "wall") {
+      const n = amb.walls.findIndex((w) => w.id === sel.id)
+      return n >= 0 ? `Paret ${n + 1} (id ${sel.id})` : undefined
+    }
+    return undefined
+  }
+  useEffect(() => registerDoc({ key: `ambient:${ambientId}`, kind: "ambient", id: ambientId, name, target: assistantTarget, selection: () => describeSel.current() }), [assistantTarget, ambientId, name])
   const item = sel?.kind === "item" ? amb.items.find((i) => i.id === sel.id) : undefined
   const wall = sel?.kind === "wall" ? amb.walls.find((w) => w.id === sel.id) : undefined
   // Un moble enllaçat que ja no és a la llista surt com a absent (mentre la llista es llegeix, encara no).
@@ -692,15 +706,8 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
             )}
           </Stack>
         }
-        extra={{
-          label: "Assistent",
-          icon: <LuMessageSquare />,
-          content: (
-            <Suspense fallback={null}>
-              <ChatPanel settings={settings} target={assistantTarget} />
-            </Suspense>
-          ),
-        }}
+        // Sense pestanya «Assistent» (per decisió de l'usuari, 2026-10-13): l'assistent personal és al menú principal
+        // i fa servir aquest ambient pel `assistantHub`.
         center={(chrome) => (
           // Centre: plànol o 3D, amb la barra d'eines flotant (com Figma) i els botons de plegar.
           <Box order={{ base: 0, md: 2 }} flex={{ md: 1 }} minW={0} minH={{ base: "56vh", md: 0 }} h={{ base: "56vh", md: "full" }} position="relative">

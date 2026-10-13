@@ -1,5 +1,5 @@
 import { Alert, Badge, Box, Button, Editable, HStack, IconButton, SegmentGroup, SimpleGrid, Stack, Switch, Text } from "@chakra-ui/react"
-import { createElement, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { createElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   LuArrowDownToLine,
   LuBox,
@@ -23,7 +23,6 @@ import {
   LuBolt,
   LuLayoutPanelLeft,
   LuMaximize2,
-  LuMessageSquare,
   LuMinimize2,
   LuMoveDiagonal,
   LuScan,
@@ -86,9 +85,9 @@ import { UndoRedo } from "../../components/UndoRedo"
 import { useDebouncedSave } from "../useDebouncedSave"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { chatTarget } from "../assistant/chatTarget"
+import { registerDoc } from "../assistant/assistantHub"
 
 /** Xat de l'assistent IA (docs/xat-ia.md): a demanda, el primer cop que s'obre la pestanya «Assistent». */
-const ChatPanel = lazy(() => import("../assistant/ChatPanel"))
 
 const MOBLE_SUGGESTIONS = [
   "Fes-me un moble de TV de 1800 × 450 × 400 amb dos calaixos a baix i un forat obert al mig.",
@@ -369,6 +368,38 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   const selectionKey = JSON.stringify(selectionNow)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const selection = useMemo(() => selectionNow, [selectionKey])
+  // Assistent personal (`assistantHub.ts`): aquest document s'hi registra amb les seves eines i què hi ha seleccionat
+  // (amb els ids que fan servir les eines). La selecció es llegeix en el moment (ref), no en registrar-se.
+  const describeSelection = useRef<() => string | undefined>(() => undefined)
+  describeSelection.current = () => {
+    const name = (id: string) => comp.modules.find((m) => m.id === id)?.name ?? id
+    switch (selection.kind) {
+      case "module":
+        return `mòdul «${name(selection.id)}» (module: ${selection.id})`
+      case "zone": {
+        const m = comp.modules.find((x) => x.id === selection.moduleId)
+        const z = m ? findZone(m.root, selection.zoneId) : undefined
+        return `compartiment «${z ? zoneLabel(z, { root: z.id === m?.root.id }) : selection.zoneId}» (zone: ${selection.zoneId}) del mòdul «${name(selection.moduleId)}» (module: ${selection.moduleId})`
+      }
+      case "ref":
+        return `objecte de referència «${comp.references.find((r) => r.id === selection.id)?.name ?? selection.id}» (id ${selection.id})`
+      case "part":
+        return `peça lliure «${comp.parts?.find((p) => p.id === selection.id)?.name ?? selection.id}» (part_id ${selection.id})`
+      case "group":
+        return `grup de peces «${selection.id}»`
+      case "model":
+        return `model 3D (id ${selection.id})`
+      case "hardware":
+        return `ferratge col·locat (id ${selection.id})`
+      default:
+        return undefined
+    }
+  }
+  useEffect(() => {
+    if (!assistantTarget) return
+    const docKind = kind === "objecte" ? "objecte" : "moble"
+    return registerDoc({ key: `${docKind}:${projectId}`, kind: docKind, id: projectId, name, target: assistantTarget, selection: () => describeSelection.current() })
+  }, [assistantTarget, kind, projectId, name])
   const select = (s: Selection, fromPanel = false) => {
     if (s.kind === "moble") setSelKind("moble")
     else if (s.kind === "ref") {
@@ -1325,15 +1356,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         right={inspector}
         // Mobles i objectes: el mateix xat amb les eines de cada tipus (un objecte només té peces lliures). Els `lliure`
         // d'abans (flat-pack que es fabrica) no en tenen.
-        extra={assistantTarget ? {
-          label: "Assistent",
-          icon: <LuMessageSquare />,
-          content: (
-            <Suspense fallback={null}>
-              <ChatPanel settings={settings} target={assistantTarget} />
-            </Suspense>
-          ),
-        } : undefined}
+        // Sense pestanya «Assistent» (per decisió de l'usuari, 2026-10-13): l'assistent personal és al menú principal
+        // i fa servir aquest document pel `assistantHub`.
         center={(chrome) => (
       <Box
         ref={viewerBox}

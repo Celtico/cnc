@@ -1,7 +1,7 @@
 import { Box, Button, Container, Flex, HStack, Heading, IconButton, Menu, Portal, SegmentGroup, Spinner, Stack, Text } from "@chakra-ui/react"
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { IconType } from "react-icons"
-import { LuChevronLeft, LuBox, LuDownload, LuDraftingCompass, LuEllipsis, LuHouse, LuLayoutGrid, LuList, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings, LuSofa } from "react-icons/lu"
+import { LuChevronLeft, LuBox, LuDownload, LuDraftingCompass, LuEllipsis, LuHouse, LuLayoutGrid, LuList, LuMessageSquare, LuPanelLeftClose, LuPanelLeftOpen, LuSave, LuSettings, LuSofa } from "react-icons/lu"
 import { Toaster, toaster } from "./components/ui/toaster"
 import { migrateUserTemplates } from "./db/compositionStore"
 import { Tooltip } from "./components/ui/tooltip"
@@ -23,6 +23,7 @@ import { usePersistentNumber } from "./features/usePersistentNumber"
 import { isObject as projectIsObject } from "./features/objects/isObject"
 import { usePersistentFlag } from "./features/usePersistentFlag"
 import { useProject } from "./features/useProject"
+import { registerNav, type HubNav } from "./features/assistant/assistantHub"
 
 // Les pàgines pesades (3D, export, preferències) es carreguen a demanda: la primera pantalla (galeries) arrenca abans.
 const EditorScreen = lazy(() => import("./features/editor/EditorScreen").then((m) => ({ default: m.EditorScreen })))
@@ -50,8 +51,13 @@ const AMBIENTS_ENTRY: NavEntry = { id: "ambients", label: "Ambients", icon: LuHo
 const SETTINGS_ENTRY: NavEntry = { id: "settings", label: "Preferències", icon: LuSettings }
 /** Apartats del menú global (barra lateral); Preferències va a baix de tot. */
 const GLOBAL_NAV: NavEntry[] = [PROJECTS_ENTRY, AMBIENTS_ENTRY, OBJECTS_ENTRY]
-/** Mòbil: la barra de baix amb els apartats i Preferències. */
-const GLOBAL_NAV_MOBILE: NavEntry[] = [...GLOBAL_NAV, SETTINGS_ENTRY]
+
+/** L'assistent personal (per decisió de l'usuari, 2026-10-13): sota els apartats, obre el calaix amb el xat. */
+const ASSISTANT_ENTRY = { id: "assistant", label: "Assistent", icon: LuMessageSquare } as const
+/** Mòbil: la barra de baix amb els apartats, l'Assistent i Preferències. */
+const MOBILE_BAR: { id: string; label: string; icon: IconType }[] = [...GLOBAL_NAV, ASSISTANT_ENTRY, SETTINGS_ENTRY]
+// El calaix i el xat, a demanda (el SDK de l'API de Claude no va al bloc d'entrada).
+const GlobalAssistant = lazy(() => import("./features/assistant/GlobalAssistant"))
 
 const STORAGE_KEY = "mobles:current-project"
 const AMBIENT_KEY = "mobles:current-ambient"
@@ -235,6 +241,54 @@ export function App() {
     setScreen(ambientId !== null ? "ambient" : "ambients")
   }
 
+  // Assistent personal: el calaix (muntat el primer cop que s'obre) i la navegació que fa servir (`assistantHub.ts`).
+  const [assistantOpen, setAssistantOpen] = useState(false)
+  const [assistantMounted, setAssistantMounted] = useState(false)
+  const openAssistant = () => {
+    setAssistantMounted(true)
+    setAssistantOpen(true)
+  }
+  const navNow = useRef<HubNav | null>(null)
+  navNow.current = {
+    where: () => ({ section: { projects: "mobles", objects: "objectes", ambients: "ambients", settings: "preferencies" }[section], page: screen === "photo" ? "editor (foto)" : { cutlist: "peces", export: "exportar", projects: "llista de mobles", objects: "llista d'objectes", ambients: "llista d'ambients", ambient: "editor de l'ambient", settings: "preferencies" }[screen as string] ?? screen }),
+    openMoble: (id) => openProject(id),
+    openAmbient: (id) => {
+      setProjectId(null)
+      openAmbient(id)
+    },
+    goTo: (place) => {
+      if (place === "mobles" || place === "objectes") {
+        setProjectId(null)
+        setScreen(place === "mobles" ? "projects" : "objects")
+        return true
+      }
+      if (place === "ambients") {
+        setProjectId(null)
+        setAmbientId(null)
+        setScreen("ambients")
+        return true
+      }
+      if (place === "preferencies") {
+        setScreen("settings")
+        return true
+      }
+      const page = ({ editor: "editor", peces: "cutlist", nesting: "nesting", exportar: "export" } as Record<string, Screen>)[place]
+      if (!page || projectId === null || (isObject && page !== "editor")) return false
+      setScreen(page)
+      return true
+    },
+  }
+  useEffect(
+    () =>
+      registerNav({
+        where: () => navNow.current!.where(),
+        openMoble: (id) => navNow.current!.openMoble(id),
+        openAmbient: (id) => navNow.current!.openAmbient(id),
+        goTo: (p) => navNow.current!.goTo(p),
+      }),
+    [],
+  )
+
   const content =
     screen === "objects" ? (
       <ObjectsScreen onOpen={openProject} />
@@ -362,6 +416,10 @@ export function App() {
           {GLOBAL_NAV.map((n) => (
             <NavItem key={n.id} icon={n.icon} label={n.label} collapsed={navCollapsed} active={section === n.id} disabled={false} onClick={() => goSection(n.id)} />
           ))}
+          {/* L'assistent personal, sota els apartats: obre el calaix amb el xat (no és una pàgina). */}
+          <Box pt={2} mt={1} borderTopWidth="1px">
+            <NavItem icon={ASSISTANT_ENTRY.icon} label={ASSISTANT_ENTRY.label} collapsed={navCollapsed} active={assistantOpen} disabled={false} onClick={openAssistant} />
+          </Box>
         </Stack>
         {/* Preferències, a baix de tot (com a les apps d'escriptori). */}
         <Stack gap={1} mt="auto" pt={2} borderTopWidth="1px" align={navCollapsed ? "center" : "stretch"}>
@@ -473,9 +531,9 @@ export function App() {
         justify="space-around"
       >
         {/* Sempre el menú general (com les apps de l'iPhone): les pàgines del moble són a dalt. */}
-        {GLOBAL_NAV_MOBILE.map((n) => {
+        {MOBILE_BAR.map((n) => {
           const disabled = false
-          const active = section === n.id
+          const active = n.id === "assistant" ? assistantOpen : section === n.id
           return (
             <Box
               key={n.id}
@@ -485,7 +543,7 @@ export function App() {
               color={active ? "wood.fg" : disabled ? "fg.subtle" : "fg.muted"}
               opacity={disabled ? 0.5 : 1}
             >
-              <button disabled={disabled} onClick={() => goSection(n.id)} aria-current={active ? "page" : undefined}>
+              <button disabled={disabled} onClick={() => (n.id === "assistant" ? openAssistant() : goSection(n.id))} aria-current={active && n.id !== "assistant" ? "page" : undefined}>
                 <Stack align="center" gap={0.5}>
                   {/* Com la barra de pestanyes d'iOS: icona de ~25 i nom petit (10–11). */}
                   <Box fontSize="2xl">
@@ -501,6 +559,11 @@ export function App() {
         })}
       </HStack>
 
+      {assistantMounted && (
+        <Suspense fallback={null}>
+          <GlobalAssistant open={assistantOpen} onClose={() => setAssistantOpen(false)} settings={settings} />
+        </Suspense>
+      )}
       <Toaster />
     </Flex>
     </UnitContext.Provider>

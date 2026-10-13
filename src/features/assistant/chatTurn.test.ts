@@ -147,3 +147,21 @@ describe("assistent IA: errors i clau", () => {
     expect(maskKey(undefined)).toBe("")
   })
 })
+
+describe("assistent personal: les eines de cada volta", () => {
+  it("amb `refresh`, la volta següent fa servir el joc d'eines nou (un document obert a mitja conversa)", async () => {
+    const seen: unknown[] = []
+    const client = fakeClient(
+      [
+        { stop_reason: "tool_use", content: [{ type: "tool_use", id: "t1", name: "noop", input: {} }] },
+        { stop_reason: "end_turn", content: [{ type: "text", text: "Fet." }] },
+      ],
+      seen,
+    )
+    const set = (system: string) => ({ system, tools: [{ name: "noop", description: system, input_schema: { type: "object" as const } }], run: (doc: unknown) => ({ ok: true as const, doc, result: {} }), payload: () => ({}), describe: () => "" })
+    let n = 0
+    await runTurn({ client, model: "m", history: [{ role: "user", content: "hola" }], getDoc: () => null, apply: () => {}, toolset: set("primer"), refresh: async () => set(`nou ${++n}`), onText: () => {}, onTool: () => {} })
+    const systems = seen.map((p) => (p as { system: { text: string }[] }).system[0]!.text)
+    expect(systems).toEqual(["primer", "nou 1"])
+  })
+})

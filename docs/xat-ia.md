@@ -101,6 +101,25 @@ Les eines es carreguen amb el primer missatge (`import()`): no són al bloc de l
   creada i arrambada a la paret de baix girada 180°; un sol pas de desfer: no queda cap altre pas), la capçalera del
   navegador i la tercera pestanya al mòbil.
 
+## Fase 1c (feta, 2026-10-13): assistent personal de tota l'app
+
+Per decisió de l'usuari: «un botó de l'assistent personal al menú principal, que s'obri amb un drawer, que tingui tot el
+context de l'app i que pugui fer tot el que pot fer una persona, i que sàpiga si tinc alguna cosa seleccionada; no cal
+guardar historial».
+
+- **Un sol xat**: botó «Assistent» al menú principal (sota Mobles · Ambients · Objectes; al mòbil, a la barra de baix)
+  que obre un calaix (`features/assistant/GlobalAssistant.tsx`). Les pestanyes «Assistent» de l'Editor i dels Ambients
+  s'han tret.
+- **Context**: el document obert (moble, objecte o ambient) es registra a `assistantHub.ts` amb les seves eines i què hi
+  ha seleccionat; l'app hi posa la navegació. Cada missatge porta «[Context de l'app: apartat, pàgina, document obert,
+  selecció]».
+- **Eines de l'app** (`appTools.ts`): `get_app`, `list_documents`, `open_document`, `create_document` i `go_to`, a més de
+  les del document obert. El joc d'eines es torna a llegir a cada volta del torn (`runTurn` `refresh`).
+- **Desfer**: un pas per document tocat en acabar el torn. **Sense historial** desat: la conversa dura mentre l'app és
+  oberta.
+- Encara no: Preferències, Peces, Nesting i Exportar només s'hi pot anar (no hi ha eines per canviar-les ni per baixar
+  fitxers).
+
 ## Què ha de fer l'usuari
 
 1. Fer una clau a la Claude Console (console.anthropic.com › API keys) amb saldo.
