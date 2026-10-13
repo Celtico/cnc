@@ -1,5 +1,5 @@
 import { Box, Button, HStack, IconButton, Menu, Portal, Stack, Switch, Text } from "@chakra-ui/react"
-import { LuArrowUp, LuCopy, LuEllipsis, LuColumns2, LuRows2, LuPlus, LuRows3, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
+import { LuArrowUp, LuCopy, LuSettings2, LuEllipsis, LuColumns2, LuRows2, LuPlus, LuRows3, LuSquareSplitHorizontal, LuSquareSplitVertical, LuTrash2, LuUngroup } from "react-icons/lu"
 import type { ReactNode } from "react"
 import { FoldItem } from "../../components/Fold"
 import {
@@ -41,6 +41,7 @@ import {
   type ZoneBounds,
 } from "../../core/model"
 import type { KitOrder } from "../../core/build/buildModule"
+import { handleSpec } from "../../core/build/hardware"
 import { kitBottomThickness, kitLineText, kitWoodText } from "../../core/build/drawerKit"
 import { NumberField, NumRow } from "../../components/NumRow"
 import { splitRows } from "./zoneLabel"
@@ -458,6 +459,7 @@ function KitFields({ front, kit, kits, onChange }: { front: Extract<Front, { kin
   const first = kits?.[0]
   const finishes = kit.kit.options.finish ?? []
   const TB = kitBottomThickness(kit)
+  // Van plegades a «Opcions de la guia de calaix» (`FrontFields`).
   return (
     <>
       <FormRow label="Tancament" help="Com tanca el calaix: suau (amortit), push-open (sense tirador, amb barra de sincronització) o les dues coses. Canvia els números d'article i si cal la barra.">
@@ -544,7 +546,7 @@ function FrontFields({ front, openRatio, drawerHeights, onChange, hardware, noHa
       if (kit && kitOpts && next.kind === "drawers") onChange({ ...withHandle(next, h === "none" ? undefined : h), kit: kitClosingFor(kit, kitOpts, h === "none") })
       else onChange(next)
     }
-    const help = kitPush ? "El joc obre per pressió (push-open): cap tirador ni forats. Canvia el Tancament del joc per posar-n'hi." : inheritedNone ? "El mòdul és push: cap forat; tria'n un aquí si aquest front n'ha de portar." : "Obertura per pressió: cap forat. Cal el ferratge push (Tip-On) a aquest front."
+    const help = kitPush ? "La guia de calaix ja porta el sistema push (push-open): no cal cap Tip-On, ni tirador ni forats. Per posar-hi un tirador, canvia el Tancament a les Opcions de la guia de calaix." : inheritedNone ? "El mòdul és push: cap forat; tria'n un aquí si aquest front n'ha de portar." : "Obertura per pressió: cap forat. Cal el ferratge push (Tip-On) a aquest front."
     return (
       <HardwarePick
         slot="handle"
@@ -612,19 +614,30 @@ function FrontFields({ front, openRatio, drawerHeights, onChange, hardware, noHa
             // L'última sempre és el que sobra («auto»), com a la Divisió.
             onChange({ ...front, n: k, heights: Array.from({ length: k }, (_, i) => (i === k - 1 ? "auto" : (front.heights[i] ?? "auto"))) })
           }} />
-          {front.n > 1 && <DrawerHeights front={front} real={drawerHeights} onChange={onChange} />}
+          {/* Cada tria amb les seves opcions plegades a sota (per decisió de l'usuari, 2026-10-13: «cada un té les seves
+              opcions, no les ajuntis»): Calaixos › alçades, Guia › joc, Tirador › posició. */}
+          {front.n > 1 && (
+            <FoldItem id="zone-drawer-heights" title="Opcions dels calaixos" icon={LuSettings2} size="sm" badge={front.heights.slice(0, front.n - 1).some((h) => h !== "auto") ? "Alçades a mida" : "Alçades iguals"}>
+              <DrawerHeights front={front} real={drawerHeights} onChange={onChange} />
+            </FoldItem>
+          )}
           <HardwarePick slot="slide" current={front.hardware ?? hardware.slide} inherited={hardware.slide} onPick={(h) => onChange(withHardware(front, h))} />
           {/* Un joc de calaix, triat aquí o com a guia del mòdul: les opcions del joc. */}
           {(() => {
             const slide = front.hardware ?? hardware.slide
             const kit = isDrawerKit(slide) ? slide : undefined
+            // On va el tirador: només si n'hi ha (push: cap forat, no surt).
+            const hasHandle = !((kit && isPushClosing(kitOptionsOf(kit.kit, front.kit).closing)) || front.handle === "none" || (!front.handle && noHandles))
             return (
               <>
-                {kit && <KitFields front={front} kit={kit} kits={kits} onChange={onChange} />}
+                {kit && (
+                  <FoldItem id="zone-kit" title="Opcions de la guia de calaix" icon={LuSettings2} size="sm" badge={KIT_CLOSINGS.find((x) => x.id === kitOptionsOf(kit.kit, front.kit).closing)?.short}>
+                    <KitFields front={front} kit={kit} kits={kits} onChange={onChange} />
+                  </FoldItem>
+                )}
                 {handlePick(front, kit)}
-                {/* On va el tirador: només si n'hi ha (push: cap forat, no surt). */}
-                {!((kit && isPushClosing(kitOptionsOf(kit.kit, front.kit).closing)) || front.handle === "none" || (!front.handle && noHandles)) && (
-                  <>
+                {hasHandle && (
+                  <FoldItem id="zone-handle" title="Opcions del tirador" icon={LuSettings2} size="sm" badge={front.handleTop !== undefined ? `A dalt · ${front.handleTop} mm` : "Centrat"}>
                     <FormRow label="Posició del tirador">
                       <ChoiceChips
                         label="Posició del tirador"
@@ -639,7 +652,7 @@ function FrontFields({ front, openRatio, drawerHeights, onChange, hardware, noHa
                     {front.handleTop !== undefined && (
                       <NumRow label="Des de dalt" value={front.handleTop} min={0} max={1000} step={5} onChange={(handleTop) => Number.isFinite(handleTop) && onChange({ ...front, handleTop })} help="Del cantell de dalt del front a l'eix del tirador. Com a molt, el mig del front." />
                     )}
-                  </>
+                  </FoldItem>
                 )}
               </>
             )
@@ -662,6 +675,31 @@ function FrontFields({ front, openRatio, drawerHeights, onChange, hardware, noHa
           </FormRow>
           <HardwarePick slot="flap" current={front.hardware ?? hardware.flap} inherited={hardware.flap} onPick={(h) => onChange(withHardware(front, h))} />
           {handlePick(front)}
+          {/* Només la distància al cantell que obre (el tirador va centrat de costat a costat). Push: no surt. */}
+          {!(front.handle === "none" || (!front.handle && noHandles)) && (() => {
+            const item = typeof front.handle === "object" ? front.handle : moduleSlotItem(hardware, "handle")
+            const own = (() => {
+              try {
+                return handleSpec(item).inset
+              } catch {
+                return undefined
+              }
+            })()
+            const value = front.handleInset ?? own ?? 0
+            return (
+              <FoldItem id="zone-flap-handle" title="Opcions del tirador" icon={LuSettings2} size="sm" badge={`${fmtMm(value)} mm del cantell`}>
+                <NumRow
+                  label="Des del cantell"
+                  value={value}
+                  min={0}
+                  max={1000}
+                  step={5}
+                  onChange={(v) => Number.isFinite(v) && onChange(v === own ? (({ handleInset: _i, ...rest }) => rest)(front) : { ...front, handleInset: v })}
+                  help={`Del cantell que obre a l'eix del tirador. ${own !== undefined ? `La del tirador: ${fmtMm(own)} mm.` : ""} Com a molt, el mig de l'abatible.`}
+                />
+              </FoldItem>
+            )
+          })()}
         </Stack>
       )
     case "grille": {

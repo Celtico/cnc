@@ -100,7 +100,8 @@ describe("push: una sola font", () => {
     const m = mod({}, {})
     const push = { ...m, root: setFront(m.root, m.root.id, { kind: "drawers", n: 2, heights: ["auto", "auto"], hardware: structuredClone(kit14), kit: { closing: "push", back: "metal" } }) }
     expect(holes(push)).toEqual([0, 0])
-    expect(fronts(push).every((p) => p.push)).toBe(true)
+    // La guia ja porta el push: cap Tip-On al front (ni post-procés «Push (Tip-On)» ni 3D).
+    expect(fronts(push).some((p) => p.push)).toBe(false)
     expect(buildModule(push).warnings.some((w) => w.code === "push")).toBe(false)
     expect(usedHardwareSlots(push).has("handle")).toBe(false)
     const soft = { ...m, root: setFront(m.root, m.root.id, { kind: "drawers", n: 2, heights: ["auto", "auto"], hardware: structuredClone(kit14), kit: { closing: "soft", back: "metal" } }) }

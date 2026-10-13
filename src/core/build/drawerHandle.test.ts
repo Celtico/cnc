@@ -20,3 +20,24 @@ describe("posició del tirador dels calaixos", () => {
     for (const f of handleYs(withDrawers({ ...base, handleTop: 1000 }))) expect(f.ys).toEqual([f.fh / 2])
   })
 })
+
+describe("distància del tirador de l'abatible", () => {
+  const withFlap = (handleInset?: number): Composition => {
+    const m: Module = defaultModule("m1", "M")
+    const front: Extract<Front, { kind: "flap" }> = { kind: "flap", dir: "down", ...(handleInset !== undefined ? { handleInset } : {}) }
+    return { kind: "moble", modules: [{ ...m, root: { ...m.root, front } }], references: [] }
+  }
+  // X local de l'abatible = alçada; avall, el cantell que obre és el de dalt (x = llarg): el tirador a llarg − distància.
+  const handleX = (c: Composition) => {
+    const flap = buildComposition(c).panels.find((p) => p.role === "flap")!
+    const xs = [...new Set((flap.cutouts ?? []).filter((x) => x.kind === "circle" && x.tag === "handle").map((x) => (x.kind === "circle" ? x.x : 0)))]
+    return { L: flap.length, xs }
+  }
+  it("amb `handleInset`, el tirador a aquella distància del cantell que obre", () => {
+    const def = handleX(withFlap())
+    expect(def.xs).toHaveLength(1)
+    const own = handleX(withFlap(80))
+    expect(own.xs).toEqual([own.L - 80])
+    expect(own.xs).not.toEqual(def.xs)
+  })
+})

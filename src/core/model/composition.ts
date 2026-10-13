@@ -174,7 +174,14 @@ export const FrontSchema = z.discriminatedUnion("kind", [
      */
     handleTop: z.number().min(0).max(1000).optional(),
   }),
-  z.object({ kind: z.literal("flap"), dir: z.enum(["down", "up"]), hardware: FrontHardwareSchema.optional(), handle: FrontHandleSchema.optional() }),
+  z.object({
+    kind: z.literal("flap"),
+    dir: z.enum(["down", "up"]),
+    hardware: FrontHardwareSchema.optional(),
+    handle: FrontHandleSchema.optional(),
+    /** Tirador: mm del cantell que obre a l'eix (per decisió de l'usuari, 2026-10-13). Sense: el `inset` del tirador. */
+    handleInset: z.number().min(0).max(1000).optional(),
+  }),
   z.object({
     kind: z.literal("grille"),
     pattern: GrillePatternSchema,

@@ -1299,8 +1299,10 @@ class Builder {
       }
       return
     }
+    // La guia del joc ja porta el push (push-open): el front no necessita cap Tip-On (ni post-procés ni 3D ni avís).
+    if (hs.kitPush) return
     p.push = true
-    if (!hs.kitPush && !this.warnings.some((w) => w.code === "push"))
+    if (!this.warnings.some((w) => w.code === "push"))
       this.warnings.push({ code: "push", message: "Fronts sense tirador: cada porta, calaix o abatible necessita un ferratge d'obertura per pressió (push, p. ex. Tip-On o Push-to-open); als calaixos, guies amb push; a les portes, frontisses sense molla (sense retenció), perquè el push les pugui obrir." })
   }
 
@@ -1558,7 +1560,8 @@ class Builder {
     // Tirador al cantell que obre (el contrari del gir), horitzontal i centrat.
     const handleHw = this.frontHandle(front.handle, zone.id)
     // Sense tiradors no es llegeix el lloc (`handle` només marca el push).
-    const inset = handleHw.push ? 0 : handleHw.spec.inset
+    // La distància del front (`handleInset`) o la del tirador; com a molt, el mig de l'abatible.
+    const inset = handleHw.push ? 0 : Math.min(front.handleInset ?? handleHw.spec.inset, along / 2)
     this.handle(flap, front.dir === "down" ? along - inset : inset, across / 2, "y", handleHw, zone.id)
   }
 
