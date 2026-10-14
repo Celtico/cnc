@@ -13,7 +13,7 @@ import { SceneAccess, StudioEnvironment, TextureRefresh } from "../../components
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
 import { disposeTree } from "../../components/viewer/textures"
-import { footprintBox, rad, sameCameraPose, snapToWalls, wallLength, wallOpenings, wallSegments, type Ambient, type CameraPose, type MaterialPref, type Opening } from "../../core/model"
+import { expandWalls, footprintBox, rad, sameCameraPose, snapToWalls, wallLength, wallOpenings, wallSegments, type Ambient, type CameraPose, type MaterialPref, type Opening } from "../../core/model"
 import type { ItemGeometry } from "./ambientData"
 import { ambientBox, eyePose, snapGrid } from "./planGeom"
 
@@ -386,7 +386,8 @@ function Room({
 
   const walls = useMemo(() => {
     const g = new Group()
-    for (const w of ambient.walls) {
+    // Les corbes, en trams rectes (`expandWalls`).
+    for (const w of expandWalls(ambient.walls)) {
       const L = wallLength(w)
       if (L < 1) continue
       const wg = new Group()
@@ -617,7 +618,7 @@ function Room({
       const it = ambient.items.find((x) => x.id === id)
       const geo = geos.get(id)
       if (it && geo) {
-        const sn = snapToWalls(f[0] + ox, f[1] + oy, geo.w, geo.d, it.rot, ambient.walls, 60)
+        const sn = snapToWalls(f[0] + ox, f[1] + oy, geo.w, geo.d, it.rot, expandWalls(ambient.walls), 60)
         // Només en la direcció de la fletxa: l'altra no es mou.
         if (st.axis === "x") ox = Math.round(sn.x - f[0])
         else oy = Math.round(sn.y - f[1])

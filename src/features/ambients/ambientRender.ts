@@ -4,7 +4,7 @@ import { buildScene } from "../../components/viewer/exportGlb"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
 import { aimSaved, snapshot, THUMB_ASPECT, thumbLights } from "../../components/viewer/thumbRenderer"
 import { preloadModels } from "../../components/viewer/models3d"
-import { blockComposition, layoutTemplate, parseAmbient, parseCameraPose, rad, resolveTemplateRef, templateWalls, wallLength, wallSegments, type Ambient, type AmbientTemplate, type Composition, type MaterialPref } from "../../core/model"
+import { blockComposition, expandWalls, layoutTemplate, parseAmbient, parseCameraPose, rad, resolveTemplateRef, templateWalls, wallLength, wallSegments, type Ambient, type AmbientTemplate, type Composition, type MaterialPref } from "../../core/model"
 import { compositionOf } from "../../db/compositionStore"
 import { db, type AmbientRow } from "../../db/db"
 import { drawWhenReady } from "../projects/thumbJobs"
@@ -38,7 +38,8 @@ function renderAmbient(a: Ambient, geoOf: (i: number) => ItemGeometry | null, ma
   const saved = parseCameraPose(pose)
   const camPos = saved ? new Vector3(...saved.position) : new Vector3(cx, 0.9, cz).addScaledVector(dir, span * 1.55 + 1)
 
-  for (const w of a.walls) {
+  // Les corbes, en trams rectes (`expandWalls`).
+  for (const w of expandWalls(a.walls)) {
     const L = wallLength(w)
     if (L < 1) continue
     // Les parets entre la càmera i l'habitació no es posen (com la casa de nines del visor).

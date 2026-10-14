@@ -1477,7 +1477,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   Acabats, Plànol de fons.
 - **Plànol** (`PlanCanvas`, com Figma): roda o dos dits per desplaçar, Ctrl/⌘ + roda o pessigar per fer zoom al punt, espai
   + arrossegar; − / + i l'escala (1:50…) a baix a la dreta; la barra d'eines flota a dalt. Eines en columna a l'esquerra: **Seleccionar** (V), **Paret** (P,
-  ploma: angle a 15°, imant als extrems, clicar el primer punt tanca, Retorn/Esc/doble clic acaben), **Habitació** (H, rectangle → 4 parets),
+  ploma: angle a 15°, imant als extrems, clicar el primer punt tanca, Retorn/Esc/doble clic acaben; **clic i arrossegar fa
+  la nansa del punt, com Figma: parets corbes**, Bézier cúbica, `Wall.curve` `{ c1, c2 }`, per decisió de l'usuari, 2026-10-14;
+  triada, els dos punts de control són rombes que s'arrosseguen; a l'inspector «Forma» Recta · Corba; una corba no porta
+  obertures; el 3D, el render, les miniatures i l'imant la fan de trams rectes, `expandWalls`/`wallPoints`; `wallLength`, la
+  de la corba), **Habitació** (H, rectangle → 4 parets),
   **Finestra** (F), **Porta** (D), **Calibrar** (dos punts del plànol de fons i la mida real). Maj: sense angles (a la quadrícula); **Alt: del tot lliure**
   (al mm: sense angle, quadrícula, extrems ni parets; també en moure parets, extrems, elements i obertures). Arrossegar una paret mou les enganxades; els extrems de la seleccionada s'arrosseguen (només mouen les parets
   enganxades en començar). Elements arrambats a les cares de les parets (`snapToWalls`), R gira 90°, fletxes (Maj ×10), Supr,

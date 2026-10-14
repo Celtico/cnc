@@ -54,6 +54,11 @@ export const WallSchema = z.object({
   /** Material propi (sense, el de les parets de l'ambient). */
   material: z.string().optional(),
   openings: z.array(OpeningSchema).optional(),
+  /**
+   * Paret corba (per decisió de l'usuari, 2026-10-14; la ploma, clic i arrossegar, com Figma): Bézier cúbica de `a` a `b`
+   * amb els dos punts de control (mm del plànol). Sense, recta. Una paret corba no porta obertures.
+   */
+  curve: z.object({ c1: Pt, c2: Pt }).optional(),
 })
 export type Wall = z.infer<typeof WallSchema>
 
@@ -355,7 +360,42 @@ export function footprintBox(x: number, y: number, w: number, d: number, rot: nu
   return { x0: Math.min(...pts.map((p) => p[0])), y0: Math.min(...pts.map((p) => p[1])), x1: Math.max(...pts.map((p) => p[0])), y1: Math.max(...pts.map((p) => p[1])) }
 }
 
-export const wallLength = (w: Wall) => Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1])
+/** Punts de la paret al llarg de l'eix: els dos extrems o, corba, `n` trams de la Bézier. */
+export function wallPoints(w: Pick<Wall, "a" | "b" | "curve">, n = 24): PlanPt[] {
+  if (!w.curve) return [w.a, w.b]
+  const { c1, c2 } = w.curve
+  const out: PlanPt[] = []
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, u = 1 - t
+    const k0 = u * u * u, k1 = 3 * u * u * t, k2 = 3 * u * t * t, k3 = t * t * t
+    out.push([k0 * w.a[0] + k1 * c1[0] + k2 * c2[0] + k3 * w.b[0], k0 * w.a[1] + k1 * c1[1] + k2 * c2[1] + k3 * w.b[1]])
+  }
+  return out
+}
+
+/** Llargada de la paret (corba: al llarg de la corba). */
+export function wallLength(w: Wall): number {
+  if (!w.curve) return Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1])
+  const pts = wallPoints(w, 48)
+  let L = 0
+  for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i]![0] - pts[i - 1]![0], pts[i]![1] - pts[i - 1]![1])
+  return L
+}
+
+/**
+ * Les parets per dibuixar-les (3D, render, miniatures) i per arrambar-hi els elements: una corba es fa de trams rectes
+ * (`wallPoints`), cadascun una paret com les altres, sense obertures, amb l'id `<paret>~<n>`.
+ */
+export function expandWalls(walls: readonly Wall[], n = 24): Wall[] {
+  return walls.flatMap((w) => {
+    if (!w.curve) return [w]
+    const pts = wallPoints(w, n)
+    const { curve: _c, openings: _o, ...rest } = w
+    void _c
+    void _o
+    return pts.slice(1).map((b, i) => ({ ...rest, id: `${w.id}~${i}`, a: pts[i]!, b }))
+  })
+}
 
 /** Quatre cantonades del rectangle d'una paret (per dibuixar-la i per l'imant). */
 export function wallCorners(w: Wall): PlanPt[] {
@@ -444,7 +484,9 @@ export function addOpening(w: Wall, kind: Opening["kind"], at: number): Wall | n
  * i després s'ajusta perquè hi càpiga (`clampOpening`): en moure l'extrem `a` no llisquen i en escurçar-la no en surten.
  */
 export function setWallEnds(w: Wall, a: PlanPt, b: PlanPt): Wall {
-  const next: Wall = { ...w, a, b }
+  // Corba: cada punt de control segueix el seu extrem.
+  const curve = w.curve ? { c1: [w.curve.c1[0] + a[0] - w.a[0], w.curve.c1[1] + a[1] - w.a[1]] as PlanPt, c2: [w.curve.c2[0] + b[0] - w.b[0], w.curve.c2[1] + b[1] - w.b[1]] as PlanPt } : undefined
+  const next: Wall = { ...w, a, b, ...(curve ? { curve } : {}) }
   if (!w.openings?.length) return next
   const L0 = wallLength(w), L1 = wallLength(next)
   if (L0 < 1e-9 || L1 < 1e-9) return { ...next, openings: w.openings.map((o) => clampOpening(next, o)) }

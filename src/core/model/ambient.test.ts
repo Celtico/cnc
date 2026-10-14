@@ -221,3 +221,23 @@ describe("alinear i repartir als ambients", async () => {
     expect(m.distributeItems(a, ["a", "b"], box, "x", 20).items.map((i) => i.x)).toEqual([0, 120, 1000])
   })
 })
+
+describe("parets corbes", async () => {
+  const m = await import("./ambient")
+  const w = { id: "w", a: [0, 0] as [number, number], b: [1000, 0] as [number, number], thickness: 100, height: 2500, curve: { c1: [0, 500] as [number, number], c2: [1000, 500] as [number, number] } }
+  it("la corba passa pels extrems, és més llarga que la recta i es fa de trams rectes", () => {
+    const pts = m.wallPoints(w, 4)
+    expect(pts[0]).toEqual([0, 0])
+    expect(pts[4]).toEqual([1000, 0])
+    expect(pts[2]![1]).toBeCloseTo(375)
+    expect(m.wallLength(w)).toBeGreaterThan(1000)
+    const parts = m.expandWalls([w], 8)
+    expect(parts).toHaveLength(8)
+    expect(parts.every((p) => !p.curve && p.id.startsWith("w~"))).toBe(true)
+  })
+  it("moure un extrem mou el seu punt de control", () => {
+    const moved = m.setWallEnds(w, [100, 0], w.b)
+    expect(moved.curve!.c1).toEqual([100, 500])
+    expect(moved.curve!.c2).toEqual([1000, 500])
+  })
+})
