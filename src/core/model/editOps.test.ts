@@ -282,3 +282,12 @@ describe("treure del grup la selecció múltiple", async () => {
     expect(groupMulti(comp, [{ kind: "model", id: "b" }], "H").models!.map((x) => x.group)).toEqual(["G", "H"])
   })
 })
+
+describe("repartir amb un espai", async () => {
+  const { spaceMulti } = await import("./editOps")
+  const r = (id: string, x: number, w: number) => ({ id, name: id, w, h: 50, d: 50, x, y: 0, z: 0 })
+  const comp = { modules: [], references: [r("a", 0, 100), r("b", 500, 50)] }
+  it("el primer es queda i l'altre, a 20 mm", () => {
+    expect(spaceMulti(comp, [{ kind: "ref", id: "b" }, { kind: "ref", id: "a" }], 0, 20).references.map((q) => q.x)).toEqual([0, 120])
+  })
+})

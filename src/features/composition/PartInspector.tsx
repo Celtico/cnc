@@ -32,6 +32,8 @@ import {
   LuAlignStartHorizontal,
   LuAlignStartVertical,
   LuAlignVerticalDistributeCenter,
+  LuAlignHorizontalSpaceAround,
+  LuAlignVerticalSpaceAround,
 } from "react-icons/lu"
 import { Tooltip } from "../../components/ui/tooltip"
 import { IconChoice, type IconOption } from "../../components/IconChoice"
@@ -56,6 +58,7 @@ import {
   ungroupMulti,
   alignMulti,
   distributeMulti,
+  spaceMulti,
   setMultiMaterial,
   setMultiRot,
   setMultiSize,
@@ -450,6 +453,8 @@ export function GroupInspector({ comp, group, onChange, onSelectPart, onSelectMo
  */
 export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGroup, onRemove }: { comp: Composition; items: MultiItem[]; onChange: (c: Composition) => void; onSelect: (item: MultiItem) => void; onMove: (dx: number, dy: number, dz: number) => void; onGroup: () => void; onRemove: () => void }) {
   const { settings } = useSettings()
+  // L'espai de «Repartir amb aquest espai» (es recorda mentre l'inspector és obert).
+  const [gap, setGap] = useState(0)
   const b = multiBox(comp, items)
   if (!b) return null
   // Propietats comunes (per decisió de l'usuari): el valor si tots el tenen igual; si no, «Diversos» i el que triïs va a tots.
@@ -484,6 +489,7 @@ export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGrou
       </FoldItem>
       {/* Alinear i repartir (com Figma): respecte de la caixa de tots els triats. */}
       <FoldItem id="multi-align" title="Alineació" icon={LuAlignCenterVertical}>
+        <NumRow label="Espai entre ells" value={gap} min={-5000} max={20000} step={5} help="Per al darrer botó de cada fila: el primer es queda i els altres es posen a aquest espai de l'anterior (0 = tocant-se)." onChange={(n) => Number.isFinite(n) && setGap(n)} />
         {([
           { axis: 0, label: "De costat (X)", opts: [["min", "A l'esquerra", LuAlignStartVertical], ["mid", "Al centre", LuAlignCenterVertical], ["max", "A la dreta", LuAlignEndVertical]] },
           { axis: 1, label: "Alçada (Y)", opts: [["min", "A baix", LuAlignEndHorizontal], ["mid", "Al mig", LuAlignCenterHorizontal], ["max", "A dalt", LuAlignStartHorizontal]] },
@@ -505,6 +511,11 @@ export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGrou
                   </IconButton>
                 </Tooltip>
               )}
+              <Tooltip content={`Repartir amb ${gap} mm entre ells`}>
+                <IconButton aria-label={`${label}: repartir amb ${gap} mm`} size="xs" variant="outline" onClick={() => onChange(spaceMulti(comp, items, axis, gap))}>
+                  {axis === 1 ? <LuAlignVerticalSpaceAround /> : <LuAlignHorizontalSpaceAround />}
+                </IconButton>
+              </Tooltip>
             </HStack>
           </FormRow>
         ))}

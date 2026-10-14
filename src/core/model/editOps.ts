@@ -546,3 +546,20 @@ export function ungroupMulti(comp: Composition, items: readonly MultiItem[]): Co
   }
   return { ...comp, parts: (comp.parts ?? []).map(out("part")), ...(comp.models ? { models: comp.models.map(out("model")) } : {}) }
 }
+
+/**
+ * Repartir amb un espai donat (mm) en un eix: el primer (el de més a l'inici) es queda i cada un dels altres es posa a
+ * `gap` de l'anterior. Amb dos o més.
+ */
+export function spaceMulti(comp: Composition, items: readonly MultiItem[], axis: 0 | 1 | 2, gap: number): Composition {
+  const bs = itemBoxes(comp, items).sort((a, b) => a.min[axis] - b.min[axis])
+  if (bs.length < 2 || !Number.isFinite(gap)) return comp
+  let out = comp
+  let at = bs[0]!.min[axis]
+  for (const b of bs) {
+    const d = at - b.min[axis]
+    if (Math.abs(d) > 1e-9) out = moveMultiBy(out, [b.item], axis === 0 ? d : 0, axis === 1 ? d : 0, axis === 2 ? d : 0)
+    at += b.max[axis] - b.min[axis] + gap
+  }
+  return out
+}
