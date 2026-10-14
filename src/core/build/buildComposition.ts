@@ -1,5 +1,6 @@
 import { activeRuns, compositionKind, isSolidMaterial, isTurned, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, type Composition, type ModelObject, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
+import { columnWalls } from "./columnWalls"
 import { buildModule, type BuildWarning, type KitOrder, type ModuleBuild } from "./buildModule"
 import type { LightOrder } from "./lightOrders"
 import { normalizePanel } from "./buildCabinet"
@@ -236,6 +237,18 @@ export function buildComposition(input: Composition): CompositionBuild {
     const moduleId = modules.find((m) => m.index === pr.panel.module)?.id
     const owner = pr.refId.startsWith("part:") ? { partId: pr.refId.slice(5) } : { refId: pr.refId }
     warnings.push({ code: "ref-cut", message: pr.message, panelId: pr.panel.id, ...owner, ...(moduleId ? { moduleId } : {}) })
+  }
+  // Columnes de la casa que entren pel darrere: els fons que falten a les seves cares, amb les ranures (`columnWalls`).
+  if (comp.references.some((o) => o.effect === "cut")) {
+    const cw = columnWalls(panels, comp.references, modules.flatMap((m) => {
+      const module = comp.modules.find((x) => x.id === m.id)
+      return module ? [{ id: m.id, index: m.index, module }] : []
+    }), panelBox)
+    panels.push(...cw.added)
+    for (const pr of cw.problems) {
+      const moduleId = modules.find((m) => m.index === pr.panel.module)?.id
+      warnings.push({ code: "ref-cut", message: pr.message, panelId: pr.panel.id, refId: pr.refId, ...(moduleId ? { moduleId } : {}) })
+    }
   }
 
   // Forats que es troben per dins (System 32 a banda i banda d'un divisor, espiga contra guia):

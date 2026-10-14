@@ -60,7 +60,7 @@ export interface ViewerModule {
   free?: boolean
   /** Potes regulables: alçada (mm) i fondària de la caixa, per dibuixar-les. */
   /** Potes (base «Potes»): `inset` de les vores; `fitted` = la pota importada i confirmada ja es dibuixa amb el seu model (`Panel.fittings`). */
-  legs?: { height: number; depth: number; inset?: number; fitted?: boolean }
+  legs?: { height: number; depth: number; inset?: number; fitted?: boolean; points?: [number, number][] }
 }
 
 export interface CabinetViewerProps {
@@ -460,7 +460,7 @@ export function CabinetViewer({
         {/* Les potes de l'app van amb la base (que a l'explosió baixa). */}
         {hardware && modules?.map((m) => m.legs && !m.legs.fitted && !(moduleDrag && (moduleDrag.all || moduleDrag.index === m.index)) && (
           <ExplodeWith key={`legs-${m.id}`} exploded={exploded} dir={DOWN}>
-            <ModuleLegs x={m.x} z={m.z ?? 0} width={m.width} depth={m.legs.depth} height={m.legs.height} inset={m.legs.inset} />
+            <ModuleLegs x={m.x} z={m.z ?? 0} width={m.width} depth={m.legs.depth} height={m.legs.height} inset={m.legs.inset} points={m.legs.points} />
           </ExplodeWith>
         ))}
         {highlightZone && <ZoneHighlight box={highlightZone} />}

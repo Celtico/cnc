@@ -203,8 +203,8 @@ export function PanelFittings({ panel, models = true, selected, onSelect }: { pa
 }
 
 /** Potes regulables sota un mòdul (coordenades de la composició, mm). */
-export function ModuleLegs({ x, z, width, depth, height, inset = 50 }: { x: number; z: number; width: number; depth: number; height: number; inset?: number }) {
-  const pts: [number, number][] = [
+export function ModuleLegs({ x, z, width, depth, height, inset = 50, points }: { x: number; z: number; width: number; depth: number; height: number; inset?: number; /** On van (x·z del moble), si la base és retallada (una columna): `legPoints`. */ points?: [number, number][] }) {
+  const pts: [number, number][] = points ?? [
     [x + inset, z + inset],
     [x + width - inset, z + inset],
     [x + inset, z + depth - inset],

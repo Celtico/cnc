@@ -253,3 +253,20 @@ describe("moble del catàleg", () => {
     expect(edgeRoutes).toBeGreaterThan(0)
   })
 })
+
+describe("moble adaptat a una columna (objecte que talla a la cantonada)", () => {
+  it("les peces retallades surten als programes amb el contorn de l'osca i sense avisos de forats fora", async () => {
+    const { defaultModule } = await import("../model")
+    const { toDxf } = await import("./dxf")
+    const m = { ...defaultModule("m", "x", { width: 800, height: 700, depth: 400, back: "groove" }), gapBefore: 0 }
+    const b = buildComposition({ modules: [m], references: [{ id: "c", name: "Columna", w: 200, h: 2500, d: 200, x: -50, y: 0, z: -50, effect: "cut", axis: "y" }] })
+    const cut = b.panels.filter((p) => p.outline)
+    expect(cut.length).toBeGreaterThanOrEqual(3)
+    const { options } = cncNestOptions(b.panels, M, DEFAULT_NEST_OPTIONS)
+    const n = nest(b.panels, options)
+    const x = toMaestroNestXcs(b.panels, n, M, { project: "c" })
+    expect(x.warnings.filter((w) => /fora|outside/i.test(w))).toEqual([])
+    expect(x.sheets.some((s) => s.text.includes("CreateContour"))).toBe(true)
+    expect(toDxf(cut)).toContain("CONTOUR")
+  })
+})

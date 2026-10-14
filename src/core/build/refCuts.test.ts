@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { defaultModule, type Composition, type RefObject } from "../model"
+import { defaultModule, pointInPolygon, type Composition, type RefObject } from "../model"
 import { buildModule } from "./buildModule"
 import { buildComposition, panelBox } from "./buildComposition"
 import { migrateCableHoles } from "./refCuts"
@@ -32,13 +32,50 @@ describe("objectes que tallen", () => {
     for (const s of stepSolids(step.text)) expect(s.badEdges).toBe(0)
   })
 
-  it("una caixa fa un forat rectangular; si toca la vora, avisa i no el fa", () => {
+  it("una caixa fa un forat rectangular; si toca la vora, la peça es retalla (osca), sense avís", () => {
     const ok = back(comp({ id: "e", name: "Endoll", w: 80, h: 80, d: 40, x: 300, y: 300, z: -10, effect: "cut" }))
     expect(ok.cutouts?.[0]?.kind).toBe("rect")
     const edge = comp({ id: "e", name: "Endoll", w: 80, h: 80, d: 40, x: -20, y: 300, z: -10, effect: "cut" })
     const b = buildComposition(edge)
-    expect(b.warnings.some((w) => w.code === "ref-cut" && w.refId === "e")).toBe(true)
-    expect(b.panels.find((p) => p.role === "back")!.cutouts ?? []).toHaveLength(0)
+    expect(b.warnings.some((w) => w.code === "ref-cut" && w.refId === "e")).toBe(false)
+    const bk = b.panels.find((p) => p.role === "back")!
+    expect(bk.cutouts ?? []).toHaveLength(0)
+    expect(bk.outline!.length).toBeGreaterThan(4)
+  })
+
+  it("una columna quadrada a la cantonada de darrere: base, tapa, fons i lateral es retallen al seu voltant", () => {
+    // Columna de 200 × 200 de terra a sostre que entra 150 mm a la cantonada de darrere a l'esquerra.
+    const col: RefObject = { id: "c", name: "Columna", w: 200, h: 2500, d: 200, x: -50, y: 0, z: -50, effect: "cut", axis: "y" }
+    const b = buildComposition(comp(col))
+    expect(b.warnings.filter((w) => w.code === "ref-cut")).toEqual([])
+    for (const id of ["bottom", "top"]) {
+      const p = b.panels.find((q) => q.role === id)!
+      expect(p.outline, id).toBeDefined()
+      expect(p.outline!.length, id).toBeGreaterThan(4)
+    }
+    // El fons, de dalt a baix: la columna se'n menja la franja de l'esquerra (queda un rectangle més estret).
+    const bk = b.panels.find((q) => q.role === "back")!
+    expect(bk.outline).toBeDefined()
+    expect(Math.min(...bk.outline!.map((q) => q[0]))).toBeGreaterThan(100)
+    const left = b.panels.find((q) => q.id.endsWith("side-left"))!
+    expect(left.outline).toBeDefined()
+    // Res surt de les peces: cap forat ni ranura a la part que s'ha tret.
+    const ring = (q: (typeof b.panels)[number]) => q.outline!.map((v) => [v[0], v[1]] as [number, number])
+    for (const q of b.panels.filter((x) => x.outline)) {
+      for (const h of q.holes.filter((h) => h.face !== "edge")) expect(pointInPolygon([h.x, h.y], ring(q)), `${q.label} ${h.tag}`).toBe(true)
+      for (const g of q.grooves) expect(pointInPolygon([g.x + g.w / 2, g.y + g.h / 2], ring(q)), `${q.label} ranura`).toBe(true)
+    }
+    // El STEP surt net amb les peces retallades.
+    const step = toStep(b.panels, { name: "c" })
+    for (const sol of stepSolids(step.text)) expect(sol.badEdges).toBe(0)
+  })
+
+  it("una columna rodona a la vora: la base i la tapa segueixen el cercle", () => {
+    const col: RefObject = { id: "c", name: "Pilar", w: 300, h: 2500, d: 300, x: -150, y: 0, z: 100, effect: "cut", shape: "cylinder", axis: "y" }
+    const b = buildComposition(comp(col))
+    const base = b.panels.find((q) => q.role === "bottom")!
+    expect(base.outline!.length).toBeGreaterThan(20)
+    expect(b.warnings.filter((w) => w.code === "ref-cut")).toEqual([])
   })
 
   it("un obstacle rodó no xoca per la cantonada de la seva caixa", () => {

@@ -48,6 +48,7 @@ import { ArDialog } from "../../components/viewer/ArDialog"
 import { RenderDialog, type SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
+import { legPoints } from "../../core/build/columnWalls"
 import { moduleWorldX, panelBox, type CompositionWarning } from "../../core/build/buildComposition"
 import { activeIslands } from "../../core/build/islands"
 import { materialIssues } from "../../core/build/materialIssues"
@@ -338,7 +339,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       (build?.modules ?? []).map((m) => {
         const c = comp.modules[m.index - 1]!.carcass
         const mod = comp.modules[m.index - 1]!
-        return { id: m.id, index: m.index, x: m.x, y: m.y, z: m.z, width: c.width, height: c.height, depth: c.depth + c.thickness, wall: c.base.kind === "wall", free: mountOf(mod) === "floor", ...(c.base.kind === "legs" ? { legs: legsView(c.base, c.depth, m.build.panels) } : {}) }
+        return { id: m.id, index: m.index, x: m.x, y: m.y, z: m.z, width: c.width, height: c.height, depth: c.depth + c.thickness, wall: c.base.kind === "wall", free: mountOf(mod) === "floor", ...(c.base.kind === "legs" ? { legs: legsView(c.base, c.depth, m.build.panels, build?.panels.find((p) => p.id === `${m.id}:bottom`)) } : {}) }
       }),
     [build, comp],
   )
@@ -1550,9 +1551,11 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
  * Les potes d'un mòdul al visor: on van (`inset` de la pota triada, si n'hi ha) i si ja es dibuixen amb el model de la
  * pota importada (la base en porta els `fittings`): aleshores no es dibuixen les genèriques.
  */
-function legsView(base: { height: number; hardware?: HardwareItem }, depth: number, panels: Panel[]): { height: number; depth: number; inset?: number; fitted?: boolean } {
+function legsView(base: { height: number; hardware?: HardwareItem }, depth: number, panels: Panel[], bottom?: Panel): { height: number; depth: number; inset?: number; fitted?: boolean; points?: [number, number][] } {
   const inset = base.hardware?.engine === "leg" ? base.hardware.params.inset : undefined
   const fitted = panels.some((p) => p.fittings?.some((f) => f.kind === "leg"))
-  return { height: base.height, depth, ...(inset !== undefined ? { inset } : {}), ...(fitted ? { fitted } : {}) }
+  // Base retallada per una columna: les potes a les cantonades que queden (no a l'osca).
+  const points = bottom ? legPoints(bottom, inset ?? 50) : undefined
+  return { height: base.height, depth, ...(inset !== undefined ? { inset } : {}), ...(fitted ? { fitted } : {}), ...(points ? { points } : {}) }
 }
 
