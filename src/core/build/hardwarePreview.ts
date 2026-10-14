@@ -157,18 +157,24 @@ function previewPanels(item: HardwareItem): Panel[] {
       if (!plan.xs.length) throw new HardwareError(plan.warnings[0] ?? `«${item.name}»: cap làmpada hi cap`)
       const k = item.light
       const y = shelf.width - plan.z
+      // El cable, com al moble (`buildWiring`): per dins del tauler, un forat de cantell des del darrere (y = 0) fins a la
+      // làmpada; en un tauler massa prim, el passant de sempre.
+      const cable = (cx: number) => {
+        if (shelf.thickness >= k.cableHole + 8) shelf.holes.push({ x: r(cx), y: 0, diameter: k.cableHole, depth: r(y), face: "edge", edge: "bottom", tag: "cable-run" })
+        else (shelf.cutouts ??= []).push({ kind: "circle", x: r(cx), y: r(y), diameter: k.cableHole, tag: "cable" })
+      }
       for (const x of plan.xs) {
         if (plan.bar) {
           const x0 = x - plan.bar.cut / 2
           if (plan.recessed) shelf.grooves.push({ x: r(x0), y: r(y - k.recess.size / 2), w: plan.bar.cut, h: k.recess.size, depth: plan.depth, face: "B", tag: "light" })
-          ;(shelf.cutouts ??= []).push({ kind: "circle", x: r(x0 + 20), y: r(y), diameter: k.cableHole, tag: "cable" })
+          cable(x0 + 20)
           continue
         }
         if (plan.recessed) {
           if (k.recess.shape === "round") shelf.holes.push(hole(x, y, { diameter: k.recess.size, depth: plan.depth, tag: "light" }, "B"))
           else shelf.grooves.push({ x: r(x - k.recess.size / 2), y: r(y - k.recess.size / 2), w: k.recess.size, h: k.recess.size, depth: plan.depth, face: "B", tag: "light" })
         }
-        ;(shelf.cutouts ??= []).push({ kind: "circle", x: r(x), y: r(y), diameter: k.cableHole, tag: "cable" })
+        cable(x)
       }
       return [shelf]
     }
