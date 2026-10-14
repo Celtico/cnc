@@ -492,3 +492,46 @@ export function setMultiRot(comp: Composition, items: readonly MultiItem[], rot:
   if (!comp.models) return comp
   return { ...comp, models: comp.models.map((g) => (inMulti(items, "model", g.id) ? { ...g, rot } : g)) }
 }
+
+/** Caixa de cada triat (en coordenades de la composició), en l'ordre de `items`; els que no hi són, fora. */
+function itemBoxes(comp: Composition, items: readonly MultiItem[]): { item: MultiItem; min: [number, number, number]; max: [number, number, number] }[] {
+  return items.flatMap((item) => {
+    const b = multiBox(comp, [item])
+    return b ? [{ item, ...b }] : []
+  })
+}
+
+/**
+ * Alinear els triats (com Figma; per decisió de l'usuari, 2026-10-14) en un eix (0 X · 1 Y · 2 Z): a l'inici (`min`:
+ * esquerra, a baix, darrere), al mig o al final (`max`) de la caixa de tots. Cadascú es mou sencer (les peces d'un grup,
+ * no: només el triat).
+ */
+export function alignMulti(comp: Composition, items: readonly MultiItem[], axis: 0 | 1 | 2, mode: "min" | "mid" | "max"): Composition {
+  const all = multiBox(comp, items)
+  if (!all) return comp
+  let out = comp
+  for (const b of itemBoxes(comp, items)) {
+    const target = mode === "min" ? all.min[axis] : mode === "max" ? all.max[axis] - (b.max[axis] - b.min[axis]) : (all.min[axis] + all.max[axis]) / 2 - (b.max[axis] - b.min[axis]) / 2
+    const d = target - b.min[axis]
+    if (Math.abs(d) < 1e-9) continue
+    out = moveMultiBy(out, [b.item], axis === 0 ? d : 0, axis === 1 ? d : 0, axis === 2 ? d : 0)
+  }
+  return out
+}
+
+/** Repartir els triats en un eix amb el mateix espai entre ells (el primer i l'últim no es mouen). Calen 3 o més. */
+export function distributeMulti(comp: Composition, items: readonly MultiItem[], axis: 0 | 1 | 2): Composition {
+  const bs = itemBoxes(comp, items).sort((a, b) => a.min[axis] - b.min[axis])
+  if (bs.length < 3) return comp
+  const span = bs.at(-1)!.max[axis] - bs[0]!.min[axis]
+  const sizes = bs.reduce((s, b) => s + (b.max[axis] - b.min[axis]), 0)
+  const gap = (span - sizes) / (bs.length - 1)
+  let out = comp
+  let at = bs[0]!.min[axis]
+  for (const b of bs) {
+    const d = at - b.min[axis]
+    if (Math.abs(d) > 1e-9) out = moveMultiBy(out, [b.item], axis === 0 ? d : 0, axis === 1 ? d : 0, axis === 2 ? d : 0)
+    at += b.max[axis] - b.min[axis] + gap
+  }
+  return out
+}

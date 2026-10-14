@@ -24,7 +24,16 @@ import {
   LuTrash2,
   LuUngroup,
   LuSprout,
+  LuAlignCenterHorizontal,
+  LuAlignCenterVertical,
+  LuAlignEndHorizontal,
+  LuAlignEndVertical,
+  LuAlignHorizontalDistributeCenter,
+  LuAlignStartHorizontal,
+  LuAlignStartVertical,
+  LuAlignVerticalDistributeCenter,
 } from "react-icons/lu"
+import { Tooltip } from "../../components/ui/tooltip"
 import { IconChoice, type IconOption } from "../../components/IconChoice"
 import { FoldItem } from "../../components/Fold"
 import {
@@ -43,6 +52,8 @@ import {
   newGroupName,
   partSize,
   multiBox,
+  alignMulti,
+  distributeMulti,
   setMultiMaterial,
   setMultiRot,
   setMultiSize,
@@ -466,6 +477,36 @@ export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGrou
         <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fondària" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fondària (Z)" value={b.min[2]} min={-30000} max={30000} step={10} onChange={(z) => Number.isFinite(z) && onMove(0, 0, z - b.min[2])} />
         <Text fontSize="xs" color="fg.muted">
           Es mouen tots junts: amb les fletxes del 3D, del teclat o aquí. Maj + clic (a l'arbre o al 3D) n'afegeix o en treu.
+        </Text>
+      </FoldItem>
+      {/* Alinear i repartir (com Figma): respecte de la caixa de tots els triats. */}
+      <FoldItem id="multi-align" title="Alineació" icon={LuAlignCenterVertical}>
+        {([
+          { axis: 0, label: "De costat (X)", opts: [["min", "A l'esquerra", LuAlignStartVertical], ["mid", "Al centre", LuAlignCenterVertical], ["max", "A la dreta", LuAlignEndVertical]] },
+          { axis: 1, label: "Alçada (Y)", opts: [["min", "A baix", LuAlignEndHorizontal], ["mid", "Al mig", LuAlignCenterHorizontal], ["max", "A dalt", LuAlignStartHorizontal]] },
+          { axis: 2, label: "Fondària (Z)", opts: [["min", "Al darrere", LuAlignStartVertical], ["mid", "Al mig", LuAlignCenterVertical], ["max", "Al davant", LuAlignEndVertical]] },
+        ] as const).map(({ axis, label, opts }) => (
+          <FormRow key={axis} label={label}>
+            <HStack gap={1}>
+              {opts.map(([mode, name, Icon]) => (
+                <Tooltip key={mode} content={name}>
+                  <IconButton aria-label={`${label}: ${name}`} size="xs" variant="outline" onClick={() => onChange(alignMulti(comp, items, axis, mode))}>
+                    <Icon />
+                  </IconButton>
+                </Tooltip>
+              ))}
+              {items.length > 2 && (
+                <Tooltip content="Repartir (el mateix espai entre ells)">
+                  <IconButton aria-label={`${label}: repartir`} size="xs" variant="outline" onClick={() => onChange(distributeMulti(comp, items, axis))}>
+                    {axis === 1 ? <LuAlignVerticalDistributeCenter /> : <LuAlignHorizontalDistributeCenter />}
+                  </IconButton>
+                </Tooltip>
+              )}
+            </HStack>
+          </FormRow>
+        ))}
+        <Text fontSize="xs" color="fg.muted">
+          Respecte de la caixa de tots els triats. «Repartir», amb tres o més: el primer i l'últim es queden i els del mig es posen amb el mateix espai entre ells.
         </Text>
       </FoldItem>
       <FoldItem id="multi-material" title="Material" icon={LuPalette} badge={material === undefined ? "Diversos" : material || "Cap"}>

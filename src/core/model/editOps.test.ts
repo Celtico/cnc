@@ -255,3 +255,20 @@ describe("propietats comunes de la selecció múltiple", async () => {
     expect(setMultiRot(comp, items, 90).models![0]!.rot).toBe(90)
   })
 })
+
+describe("alinear i repartir la selecció múltiple", async () => {
+  const { alignMulti, distributeMulti } = await import("./editOps")
+  const r = (id: string, x: number, w: number) => ({ id, name: id, w, h: 50, d: 50, x, y: 0, z: 0 })
+  const comp = { modules: [], references: [r("a", 0, 100), r("b", 500, 50), r("c", 1000, 200)] }
+  const items = ["a", "b", "c"].map((id) => ({ kind: "ref" as const, id }))
+  const xs = (c: { references: { x: number }[] }) => c.references.map((q) => q.x)
+  it("a l'esquerra, al mig i a la dreta de la caixa de tots", () => {
+    expect(xs(alignMulti(comp, items, 0, "min"))).toEqual([0, 0, 0])
+    expect(xs(alignMulti(comp, items, 0, "max"))).toEqual([1100, 1150, 1000])
+    expect(xs(alignMulti(comp, items, 0, "mid"))).toEqual([550, 575, 500])
+  })
+  it("repartir: el mateix espai entre ells", () => {
+    // De 0 a 1200, mides 100 + 50 + 200 = 350, espai (1200 − 350) / 2 = 425.
+    expect(xs(distributeMulti(comp, items, 0))).toEqual([0, 525, 1000])
+  })
+})
