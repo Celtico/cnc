@@ -151,3 +151,23 @@ describe("calaixos davant d'una columna", () => {
     expect(box.some((p) => p.outline)).toBe(false)
   })
 })
+
+describe("potes AXILO 78 en una base retallada per una columna", () => {
+  it("una a cada cantonada que queda, la placa sencera dins de la base, cap a la columna", async () => {
+    const { HAFELE_LEGS } = await import("../model/hafele/hafeleLegs")
+    const axilo = structuredClone(HAFELE_LEGS[0]!)
+    const m = mod()
+    const legs = { ...m, carcass: { ...m.carcass, base: { kind: "legs" as const, height: 100, hardware: axilo } } }
+    const b = buildComposition({ modules: [legs], references: [col(-60, -60)] })
+    const base = b.panels.find((q) => q.id === "m:bottom")!
+    const fit = base.fittings!.filter((f) => f.kind === "leg" && f.leg)
+    expect(fit.length).toBeGreaterThanOrEqual(4)
+    // Cap pota dins de la columna (fins a 190 en x i z).
+    for (const f of fit) {
+      const w = [base.placement.origin[0] + f.x * base.placement.xAxis[0] + f.y * base.placement.yAxis[0], base.placement.origin[2] + f.x * base.placement.xAxis[2] + f.y * base.placement.yAxis[2]]
+      expect(w[0]! < 190 && w[1]! < 190).toBe(false)
+    }
+    // 4 forats per pota que es fa.
+    expect(base.holes.filter((h) => h.tag === "leg")).toHaveLength(fit.length * 4)
+  })
+})

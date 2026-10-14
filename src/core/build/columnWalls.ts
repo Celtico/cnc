@@ -1,6 +1,6 @@
 import type { Module, Panel, RefObject, Vec3 } from "../model"
 import { normalizePanel } from "./buildCabinet"
-import { X, Y, Z, dowelJoint, placement, r, threeAlong, toLocal } from "./geometry"
+import { X, Y, Z, dowelJoint, placement, r, threeAlong, toLocal, toWorld } from "./geometry"
 import { dowelSpec } from "./hardware"
 import { applyRefCuts } from "./refCuts"
 
@@ -235,4 +235,67 @@ export function columnRearLimits(module: Module, refs: RefObject[], place: { x: 
     out.push({ x0, x1, z: front + s + tb })
   }
   return out
+}
+
+/**
+ * Les potes dibuixades per l'app (la AXILO 78: `Panel.fittings` amb `leg`) en una base **retallada** per una columna (amb
+ * `outline`): com les genèriques (`legPoints`), una a cada cantonada que sobresurt del contorn, també a les de l'osca, amb
+ * la placa sencera dins de la base (si no, aquella pota no es fa i es diu). Els forats i el dibuix es tornen a posar a
+ * cada punt, amb el mirall de la dreta. Torna els avisos.
+ */
+export function relayLegs(panels: Panel[], modules: { index: number; module: Module }[]): { panel: Panel; message: string }[] {
+  const problems: { panel: Panel; message: string }[] = []
+  for (const { index, module } of modules) {
+    const base = module.carcass.base
+    const item = base.kind === "legs" ? base.hardware : undefined
+    if (!item || item.engine !== "leg" || item.imported) continue
+    const bottom = panels.find((p) => p.module === index && p.role === "bottom" && p.outline && p.fittings?.some((f) => f.kind === "leg" && f.leg))
+    if (!bottom) continue
+    const old = bottom.fittings!.filter((f) => f.kind === "leg" && f.leg)
+    const f0 = old[0]!
+    const faceZ = f0.face === "A" ? bottom.thickness : 0
+    const yFace = toWorld(bottom, [f0.x, f0.y, faceZ])[1]
+    const xs = bottom.outline!.map((q) => toWorld(bottom, [q[0], q[1], 0])[0])
+    const mid = (Math.min(...xs) + Math.max(...xs)) / 2
+    // Les plantilles del dibuix de cada costat (esquerra / dreta: el mirall ja hi és).
+    const sideOf = (f: (typeof old)[number]) => (toWorld(bottom, [f.x, f.y, faceZ])[0] < mid ? "left" : "right")
+    const tpl = { left: old.find((f) => sideOf(f) === "left") ?? f0, right: old.find((f) => sideOf(f) === "right") ?? f0 }
+    const pts = legPoints(bottom, item.params.inset ?? 50)
+    if (!pts) continue
+    const ops = item.targets.find((t) => t.key === "base")?.ops ?? []
+    const inside = (x: number, y: number) => {
+      const o = bottom.outline!
+      let c = false
+      for (let i = 0, j = o.length - 1; i < o.length; j = i++) {
+        const a = o[i]!, b = o[j]!
+        if (a[1] > y !== b[1] > y && x < ((b[0] - a[0]) * (y - a[1])) / (b[1] - a[1]) + a[0]) c = !c
+      }
+      return c
+    }
+    const fittings = bottom.fittings!.filter((f) => !(f.kind === "leg" && f.leg))
+    const holes = bottom.holes.filter((h) => h.tag !== "leg")
+    let skipped = 0
+    for (const [px, pz] of pts) {
+      const side = px < mid ? "left" : "right"
+      const s = item.params.mirror === 1 && side === "right" ? -1 : 1
+      const legHoles = ops.flatMap((op) => {
+        if (op.kind !== "drill" || typeof op.u !== "number" || typeof op.v !== "number" || typeof op.d !== "number" || typeof op.depth !== "number") return []
+        const l = toLocal(bottom, [px + s * op.u, yFace, pz + op.v])
+        return [{ x: r(l[0]), y: r(l[1]), diameter: op.d, depth: Math.min(op.depth, bottom.thickness - 1), face: f0.face, tag: "leg" }]
+      })
+      // La placa sencera dins de la base: tots els forats i la pota (amb un marge) dins del contorn.
+      const at = toLocal(bottom, [px, yFace, pz])
+      const fits = legHoles.every((h) => [[-1, 0], [1, 0], [0, -1], [0, 1]].every(([dx, dy]) => inside(h.x + dx! * (h.diameter / 2 + 1), h.y + dy! * (h.diameter / 2 + 1)))) && inside(at[0], at[1])
+      if (!fits) {
+        skipped++
+        continue
+      }
+      holes.push(...legHoles)
+      fittings.push({ ...tpl[side], x: r(at[0]), y: r(at[1]) })
+    }
+    bottom.holes = holes
+    bottom.fittings = fittings
+    if (skipped) problems.push({ panel: bottom, message: `${bottom.label}: la base retallada per la columna no té lloc per a ${skipped === 1 ? "una pota" : `${skipped} potes`} de «${item.name}» (la placa no hi cap sencera): no es fa${skipped === 1 ? "" : "n"}. Afegeix-ne a mà o canvia la mida de la columna.` })
+  }
+  return problems
 }

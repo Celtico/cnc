@@ -1,6 +1,6 @@
 import { activeRuns, compositionKind, isSolidMaterial, isTurned, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, type Composition, type ModelObject, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
-import { columnRearLimits, columnWalls } from "./columnWalls"
+import { columnRearLimits, columnWalls, relayLegs } from "./columnWalls"
 import { buildModule, type BuildWarning, type KitOrder, type ModuleBuild } from "./buildModule"
 import type { LightOrder } from "./lightOrders"
 import { normalizePanel } from "./buildCabinet"
@@ -258,6 +258,14 @@ export function buildComposition(input: Composition): CompositionBuild {
     for (const pr of cw.problems) {
       const moduleId = modules.find((m) => m.index === pr.panel.module)?.id
       warnings.push({ code: "ref-cut", message: pr.message, panelId: pr.panel.id, refId: pr.refId, ...(moduleId ? { moduleId } : {}) })
+    }    // Les potes de l'app (AXILO 78) a les cantonades de la base retallada, com les genèriques.
+    const legModules = modules.flatMap((m) => {
+      const module = comp.modules.find((x) => x.id === m.id)
+      return module && !isTurned(module) ? [{ index: m.index, module }] : []
+    })
+    for (const pr of relayLegs(panels, legModules)) {
+      const moduleId = modules.find((m) => m.index === pr.panel.module)?.id
+      warnings.push({ code: "hardware", message: pr.message, panelId: pr.panel.id, ...(moduleId ? { moduleId } : {}) })
     }
   }
 
