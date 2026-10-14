@@ -1580,6 +1580,8 @@ function veil<T extends Material>(mats: T[], opacity: number | undefined): T[] {
       if (m.userData.shared) continue
       m.transparent = true
       m.opacity = Math.min(m.opacity, opacity)
+      // El render la conserva (`sceneData`: no és un fantasma, és fusta translúcida).
+      m.userData.seeThrough = true
       m.depthWrite = false
     }
   return mats

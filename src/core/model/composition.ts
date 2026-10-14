@@ -128,6 +128,12 @@ export const CarcassSchema = z.object({
   /** Fons encastat: distància del cantell posterior dels laterals al fons (0 = enrasat). */
   backInsetSetback: mm.min(0).max(60).optional(),
   grooveDepth: mm.min(3).max(15),
+  /**
+   * Joc de l'ample de la ranura del fons (Preferències › Folgances per defecte; per decisió de l'usuari, 2026-10-14:
+   * «gruix + 0,8»): la ranura fa el gruix del fons + aquests mm, cap al davant (el cantell de darrere es queda a
+   * `backSetback`). Sense (mòduls d'abans), 0: la fabricació no canvia.
+   */
+  grooveClearance: mm.min(0).max(2).optional(),
   backClearance: mm.min(0).max(4),
   shelfSetback: mm.min(0).max(100),
   shelfClearance: mm.min(0).max(5),
@@ -885,6 +891,8 @@ export function visibleModule(m: Module): Module {
     carcass.backSetback = DEFAULT_CABINET.backSetback
     carcass.backClearance = DEFAULT_CABINET.backClearance
   }
+  // Joc de la ranura: només en ranura; 0 és l'absència.
+  if (c.back !== "groove" || !c.grooveClearance) delete carcass.grooveClearance
   if (c.back !== "inset") delete carcass.backInsetSetback
   // Cantonades: només si el control surt (`jointApplies`); «Normals» és l'absència.
   if (c.joint !== "mitre" || !jointApplies(c)) delete carcass.joint

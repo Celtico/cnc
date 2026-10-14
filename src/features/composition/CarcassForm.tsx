@@ -95,6 +95,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
         </FormRow>
         {/* Just sota el Fons: la ranura (en ranura) o la retirada (encastat); sense, no surten (res amagat compta). */}
         {rows.back === "groove" && <NumRow label="Ranura del fons" value={c.backSetback} min={0} max={60} step={1} onChange={(backSetback) => set({ backSetback })} help="Distància al cantell posterior" />}
+        {rows.back === "groove" && <NumRow label="Joc de la ranura" value={c.grooveClearance ?? 0} min={0} max={2} step={0.1} onChange={(grooveClearance) => set({ grooveClearance })} help={`La ranura fa ${String(c.backThickness + (c.grooveClearance ?? 0)).replace(".", ",")} mm d'ample: el gruix del fons + el joc (cap al davant)`} />}
         {rows.back === "inset" && <NumRow label="Retirada del fons" value={c.backInsetSetback ?? 0} min={0} max={60} step={1} onChange={(backInsetSetback) => set({ backInsetSetback })} help="Distància del fons encastat al cantell posterior (0 = enrasat)" />}
         <FormRow label="Tapa">
           <IconChoice

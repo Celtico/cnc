@@ -442,11 +442,14 @@ class Builder {
       // Dins de la peça: amb tauler de taula el lateral s'acaba a sota de la tapa (la ranura hi surt).
       const gy0 = Math.max(0, d.hasBase ? d.interior.y0 - g : d.interior.y0)
       const gy1 = Math.min(H, this.backGrooveTop())
+      // Ample = gruix del fons + el joc (`grooveClearance`): el cantell de darrere es queda a `backSetback`, el joc va cap
+      // al davant.
+      const gw = this.backGrooveWidth()
       grooves.push({
         x: r(gy0),
-        y: isLeft ? r(c.backSetback) : r(sideDepth - c.backSetback - d.tb),
+        y: isLeft ? r(c.backSetback) : r(sideDepth - c.backSetback - gw),
         w: r(gy1 - gy0),
-        h: d.tb,
+        h: gw,
         depth: g,
         face: "A",
         tag: "back",
@@ -536,7 +539,8 @@ class Builder {
       const g = c.grooveDepth
       const gy0 = Math.max(yi0, d.hasBase ? d.interior.y0 - g : d.interior.y0)
       const gy1 = Math.min(yi1, this.backGrooveTop())
-      grooves.push({ x: r(gy0 - yi0), y: isLeft ? r(c.backSetback) : r(skinDepth - c.backSetback - d.tb), w: r(gy1 - gy0), h: d.tb, depth: g, face: "A", tag: "back" })
+      const gw = this.backGrooveWidth()
+      grooves.push({ x: r(gy0 - yi0), y: isLeft ? r(c.backSetback) : r(skinDepth - c.backSetback - gw), w: r(gy1 - gy0), h: gw, depth: g, face: "A", tag: "back" })
     }
     // Pells: la de fora a x = 0 / W, la de dins a la cara interior (x = ws / W − ws), cara A cap a dins.
     const outer = isLeft
@@ -587,7 +591,7 @@ class Builder {
     const olen = (mR ? d.W : interior.x1) - ox0
     const grooves: Panel["grooves"] = []
     if (c.back === "groove")
-      grooves.push({ x: 0, y: isBottom ? r(skinDepth - c.backSetback - d.tb) : r(c.backSetback), w: r(len), h: d.tb, depth: c.grooveDepth, face: "A", tag: "back" })
+      grooves.push({ x: 0, y: isBottom ? r(skinDepth - c.backSetback - this.backGrooveWidth()) : r(c.backSetback), w: r(len), h: this.backGrooveWidth(), depth: c.grooveDepth, face: "A", tag: "back" })
     // Pells: la de fora (a baix a la base, a dalt al sostre) i la de dins, cara A cap a l'interior.
     const outerPl = isBottom ? placement([ox0, y0, D - t], X, neg(Z), Y, neg(Y)) : placement([ox0, d.H, sideZ0], X, Z, neg(Y), Y)
     const innerPl = isBottom ? placement([x0, y0 + w - t, D - t], X, neg(Z), Y, neg(Y)) : placement([x0, d.H - w + t, sideZ0], X, Z, neg(Y), Y)
@@ -640,11 +644,12 @@ class Builder {
       const g = c.grooveDepth
       const gx0 = interior.x0 - (c.sides.left && px0 < interior.x0 - 0.01 ? g : 0)
       const gx1 = interior.x1 + (c.sides.right && px0 + length > interior.x1 + 0.01 ? g : 0)
+      const gw = this.backGrooveWidth()
       grooves.push({
         x: r(gx0 - px0),
-        y: isBottom ? r(d.sideDepth + ext - c.backSetback - d.tb) : r(c.backSetback + ov),
+        y: isBottom ? r(d.sideDepth + ext - c.backSetback - gw) : r(c.backSetback + ov),
         w: r(gx1 - gx0),
-        h: d.tb,
+        h: gw,
         depth: c.grooveDepth,
         face: "A",
         tag: "back",
@@ -811,6 +816,11 @@ class Builder {
       if (yFace === null) continue
       join(h.panel, threeAlong(interior.x0, interior.x1, dw.endOffset).map((x): Vec3 => [x, yFace, zMid]))
     }
+  }
+
+  /** Ample de la ranura del fons: el gruix del fons + el joc de Folgances (`Carcass.grooveClearance`; sense, 0). */
+  private backGrooveWidth(): number {
+    return this.d.tb + (this.m.carcass.grooveClearance ?? 0)
   }
 
   /** Y de dalt de la ranura del fons: dins de la tapa (g), si la tapa porta ranura. */

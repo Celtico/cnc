@@ -47,8 +47,10 @@ const mm = z.number().finite()
  * a la biblioteca de l'app. Els llocs que hi apuntaven tornen a l'item de l'app (`fixHardwareDefaults`).
  * v30: la mateixa neteja que la v29 amb la regla sencera (la primera v29 només treia els `model` sense `machining`; les
  * preferències que ja eren a la 29 amb els push latch, unions, frontissa D i DQ desats no els perdien).
+ * v31: jocs de llum Häfele Loox (`V31_ITEMS`), additiu.
+ * v32: joc de l'ample de la ranura del fons (`gaps.grooveClearance`, 0): additiu; els mobles desats no canvien.
  */
-export const SETTINGS_VERSION = 31
+export const SETTINGS_VERSION = 32
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -325,6 +327,8 @@ export const GapsPrefSchema = z.object({
   backClearance: mm.min(0).max(4),
   backSetback: mm.min(0).max(60),
   grooveDepth: mm.min(3).max(15),
+  /** Joc de l'ample de la ranura del fons (v32): la ranura = gruix del fons + aquest joc. Es copia a cada mòdul nou. */
+  grooveClearance: mm.min(0).max(2),
   /**
    * Peces de dins (v25): divisors i prestatges fixos d'un mòdul dividit (de qualsevol nivell), tants mm menys de llarg
    * (la meitat a cada cap). Es copia a cada mòdul nou (`Carcass.innerClearance`).
@@ -634,6 +638,7 @@ export const DEFAULT_SETTINGS: Settings = {
     backClearance: DEFAULT_CABINET.backClearance,
     backSetback: DEFAULT_CABINET.backSetback,
     grooveDepth: DEFAULT_CABINET.grooveDepth,
+    grooveClearance: 0,
     innerClearance: DEFAULT_INNER_CLEARANCE,
   },
   label: { w: 99, h: 68 },
@@ -689,6 +694,8 @@ export function parseSettings(raw: unknown): SettingsParse {
   if (version > SETTINGS_VERSION) problems.push(`Preferències d'una versió més nova (${version}); s'ha llegit el que s'ha pogut.`)
   // v25: la folgança de les peces de dins, amb el valor inicial (additiu: si ja n'hi ha una, es queda).
   if (version < 25 && isRecord(obj.gaps) && !("innerClearance" in obj.gaps)) obj = { ...obj, gaps: { ...obj.gaps, innerClearance: DEFAULT_INNER_CLEARANCE } }
+  // v32: el joc de l'ample de la ranura del fons, 0 (additiu: la fabricació no canvia fins que l'usuari el posa).
+  if (version < 32 && isRecord(obj.gaps) && !("grooveClearance" in obj.gaps)) obj = { ...obj, gaps: { ...obj.gaps, grooveClearance: 0 } }
 
   // Camp a camp (`repairValue`): un valor dolent només torna aquell valor a l'inicial (un tauler o una llargada de
   // guia dolents només es treuen), no tota la secció.
@@ -1059,6 +1066,7 @@ export function applySettingsToModule(s: Settings, m: Module): Module {
       backClearance: s.gaps.backClearance,
       backSetback: s.gaps.backSetback,
       grooveDepth: s.gaps.grooveDepth,
+      ...(s.gaps.grooveClearance ? { grooveClearance: s.gaps.grooveClearance } : {}),
       innerClearance: s.gaps.innerClearance,
     },
     fronts: { ...m.fronts, outerGap: s.gaps.outerGap, betweenGap: s.gaps.betweenGap },

@@ -247,7 +247,8 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
       uv,
       roughness: m.roughness,
       metalness: m.metalness,
-      opacity: m.userData.glass ? m.opacity : 1,
+      // Vidre i fusta translúcida (Opcions de vista › Opacitat): la llum hi passa.
+      opacity: m.userData.glass || m.userData.seeThrough ? m.opacity : 1,
       alphaCut,
       bump: map >= 0 && m.userData.grain && normalMap < 0 ? 1 : 0,
       emission: glow > 0 ? [LAMP_COLOR[0] * glow, LAMP_COLOR[1] * glow, LAMP_COLOR[2] * glow] : [0, 0, 0],
@@ -284,7 +285,7 @@ export function extractScene(scene: Scene, camera: Camera, aspect: number, room:
     if (!list.every((m) => (m as MeshStandardMaterial).isMeshStandardMaterial)) return
     // Fantasmes i ressaltats (transparents sense profunditat): fora. El mòdul seleccionat
     // (translúcid al visor) es renderitza sòlid; el vidre, transparent.
-    const ghost = (m: MeshStandardMaterial) => m.transparent && !m.depthWrite && !m.userData.glass
+    const ghost = (m: MeshStandardMaterial) => m.transparent && !m.depthWrite && !m.userData.glass && !m.userData.seeThrough
     if (list.every((m) => ghost(m as MeshStandardMaterial))) return
     const geo = mesh.geometry as BufferGeometry
     const p = geo.getAttribute("position")

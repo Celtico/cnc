@@ -151,7 +151,7 @@ const INPUTS = {
   set_pref_defaults: z
     .object({ material: z.string().optional(), thickness: z.number().optional(), back_material: z.string().optional(), back_thickness: z.number().optional() })
     .describe("Tauler i fons per defecte dels mòduls nous (materials de Preferències)."),
-  set_pref_gaps: GapsPrefSchema.partial().describe("Folgances per defecte (mm): outerGap front–cos, betweenGap entre fronts, shelfClearance, shelfSetback, backClearance, backSetback, grooveDepth, innerClearance (peces de dins)."),
+  set_pref_gaps: GapsPrefSchema.partial().describe("Folgances per defecte (mm): outerGap front–cos, betweenGap entre fronts, shelfClearance, shelfSetback, backClearance, backSetback, grooveDepth, grooveClearance (joc de l'ample de la ranura del fons: ranura = gruix del fons + aquest joc), innerClearance (peces de dins)."),
   set_default_machine: z.object({ name: z.string() }).describe("Tria la màquina CNC per defecte (la dels programes .xcs i la separació del nesting)."),
   list_hardware: z
     .object({
