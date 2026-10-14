@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { DEFAULT_SETTINGS, HardwareItemSchema, defaultModule, parseSettings, type HardwareItem, type Zone } from "../model"
-import { HAFELE_CATALOGUE_ITEMS, HAFELE_GLASS_FRAMES, HAFELE_HANDLES } from "../model/hafele/hafeleCatalog"
+import { HAFELE_CATALOGUE_ITEMS, HAFELE_GLASS_FRAMES, HAFELE_HANDLES, HAFELE_PROFILE_HINGES } from "../model/hafele/hafeleCatalog"
 import { HAFELE_LOOX_PROFILES } from "../model/lights/hafeleLoox"
 import { V35_ITEMS } from "../model/hardware"
 import { buildModule } from "./buildModule"
@@ -18,43 +18,33 @@ describe("catàleg Häfele (v35)", () => {
     for (const it of V35_ITEMS) {
       expect(HardwareItemSchema.safeParse(it).success, it.id).toBe(true)
       expect(DEFAULT_SETTINGS.hardwareLibrary.some((x) => x.id === it.id), it.id).toBe(true)
-      expect(it.targets.some((t) => t.ops.length > 0), it.id).toBe(true)
+      // Tots amb mecanitzat, llevat dels marcs de vitrina (el perfil no es mecanitza, com el marc de l'app).
+      if (it.engine !== "glassFrame") expect(it.targets.some((t) => t.ops.length > 0), it.id).toBe(true)
     }
     expect(HAFELE_CATALOGUE_ITEMS.every((x) => x.maker === "Häfele" && x.builtin)).toBe(true)
   })
 
-  it("porta de vidre amb un marc Häfele: la placa de la Metallamat A al lateral de les frontisses, a la filera; el marc de l'app, res", () => {
+  it("porta de vidre: la frontissa es tria com a les de fusta; la Metallamat A fa la placa al lateral, el marc sol no", () => {
     const frame = HAFELE_GLASS_FRAMES[0]!
+    const hinge = structuredClone(HAFELE_PROFILE_HINGES[0]!)
     const door = { kind: "door" as const, mode: "single" as const, hinge: "left" as const, glass: true }
-    // Amb la placa de l'item (Ø5 × 12), els forats cauen a la filera System 32 (els mateixos forats): res de nou, cap avís.
-    const b = buildModule(mod({ front: { ...door, frame: structuredClone(frame) } }))
-    const left = b.panels.find((p) => p.id === "side-left")!
-    const plainLeft = buildModule(mod({ front: door })).panels.find((p) => p.id === "side-left")!
-    const geo = (hs: typeof left.holes) => hs.map(({ tag: _t, ...h }) => h)
-    expect(geo(left.holes)).toEqual(geo(plainLeft.holes))
-    // …però els quatre forats de les dues plaques ja són de la placa (hi va el seu cargol).
-    expect(left.holes.filter((h) => h.tag === "plate")).toHaveLength(4)
-    expect(b.warnings.filter((w) => w.code === "hinge")).toEqual([])
-    // Una placa més fonda que la filera (13): es veu on va, dos forats per frontissa (±16, 32 entre ells), només al lateral esquerre.
-    const deep = structuredClone(frame)
-    for (const op of deep.targets.find((t) => t.key === "side")!.ops) if (op.kind === "drill") op.depth = 13
-    const d = buildModule(mod({ front: { ...door, frame: deep } }))
-    const plate = d.panels.find((p) => p.id === "side-left")!.holes.filter((h) => h.tag === "plate")
-    // Porta de ~720: dues frontisses.
-    expect(plate).toHaveLength(4)
-    const ys = plate.map((h) => h.x).sort((a, c) => a - c)
-    expect(ys[1]! - ys[0]!).toBeCloseTo(32, 6)
-    expect(d.panels.find((p) => p.id === "side-right")!.holes.filter((h) => h.tag === "plate")).toHaveLength(0)
-    expect(d.extras.some((p) => p.name === "vidre vitrina")).toBe(true)
-    // El marc de l'app (sense placa): cap forat de placa, com abans.
-    const plain = buildModule(mod({ front: door }))
+    // Només el marc (la frontissa de l'app, sense placa): cap forat de placa.
+    const plain = buildModule(mod({ front: { ...door, frame: structuredClone(frame) } }))
     expect(plain.panels.flatMap((p) => p.holes).filter((h) => h.tag === "plate")).toHaveLength(0)
-    // El perfil fa l'amplada del marc i és de plata anoditzat (el de l'app, negre).
+    expect(plain.panels.some((p) => p.role === "door")).toBe(false)
+    // Amb la Metallamat A: la placa (Ø5 × 12) a la filera del lateral esquerre, dues frontisses en una porta de ~720.
+    const b = buildModule(mod({ front: { ...door, frame: structuredClone(frame), hardware: hinge } }))
+    const left = b.panels.find((p) => p.id === "side-left")!
+    expect(left.holes.filter((h) => h.tag === "plate")).toHaveLength(4)
+    expect(b.panels.find((p) => p.id === "side-right")!.holes.filter((h) => h.tag === "plate")).toHaveLength(0)
+    expect(b.warnings.filter((w) => w.code === "hinge")).toEqual([])
+    // Cap cassoleta enlloc (el perfil no es mecanitza) i el perfil, de plata.
+    expect(b.panels.flatMap((p) => p.holes).some((h) => h.tag === "hinge")).toBe(false)
     const bar = b.extras.find((p) => p.id.endsWith("-left") && p.name === "perfil vitrina")!
     expect(bar.width).toBe(frame.params.frame)
     expect(bar.material).toBe("Alumini anoditzat plata")
     expect(DEFAULT_SETTINGS.materials.some((m) => m.name === "Alumini anoditzat plata")).toBe(true)
-    expect(plain.extras.find((p) => p.name === "perfil vitrina")!.material).toBe("Alumini negre")
+    expect(buildModule(mod({ front: door })).extras.find((p) => p.name === "perfil vitrina")!.material).toBe("Alumini negre")
   })
 
   it("tiradors: la distància entre centres més gran que hi cap al front", () => {

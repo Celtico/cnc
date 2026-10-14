@@ -1118,27 +1118,21 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
     const door = { ...f }
     // Sense vidre, el marc triat no compta; de vidre: frontisses del perfil, cap cassoleta ni tirador (la frontissa i el
     // tirador triats no compten).
+    // Sense vidre, el marc triat no compta (de vidre, la frontissa i el tirador es trien com a les de fusta).
     if (!door.glass) {
       delete door.glass
       delete door.frame
-    } else {
-      delete door.hardware
-      delete door.handle
     }
     if (door.mode === "double") door.hinge = "left"
     out.front = door
   }
   else if (f?.kind === "flap") {
-    // Com la porta: sense vidre, el marc no compta; de vidre, el braç va al perfil (cap forat al tauler) i no hi ha tirador.
+    // Com la porta: sense vidre, el marc no compta (de vidre, el braç i el tirador es trien igual; cap forat al tauler).
     const flap = { ...f }
     if (!flap.glass) {
       delete flap.glass
       delete flap.frame
-    } else {
-      delete flap.hardware
-      delete flap.handle
-      delete flap.handleInset
-    }
+    } else delete flap.handleInset
     out.front = flap
   }
   else if (f?.kind === "grille") {

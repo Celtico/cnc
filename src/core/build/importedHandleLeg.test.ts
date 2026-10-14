@@ -142,9 +142,10 @@ describe("tirador importat", () => {
     expect(pb.warnings.some((w) => /malmès/.test(w.message))).toBe(true)
   })
 
-  it("porta de vidre: el tirador triat no surt ni compta; mòdul push: el per defecte és cap, el tirador del front mana", () => {
+  it("porta de vidre: el tirador es tria (es clava al perfil) però no fa cap forat; mòdul push: el per defecte és cap, el tirador del front mana", () => {
     const glass = withFront({ kind: "door", mode: "single", hinge: "left", glass: true, handle: h160 })
-    expect(visibleModule(glass).root.front).not.toHaveProperty("handle")
+    expect(visibleModule(glass).root.front).toHaveProperty("handle")
+    expect(buildModule(glass).panels.flatMap((p) => p.cutouts ?? []).some((c) => c.tag === "handle")).toBe(false)
     // El mòdul és push (per defecte dels fronts): un calaix sense dir res és push; un amb tirador propi el porta.
     const push: Module = { ...withFront({ kind: "drawers", n: 1, heights: ["auto"] }), fronts: { ...base.fronts, handles: "none" } }
     expect(front(buildModule(push), "drawerFront").push).toBe(true)

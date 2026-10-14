@@ -14,18 +14,10 @@ const SRC = (page: string) => `Catàleg general Häfele, p. FF ${page}`
 /** Quantitat de frontisses per alçada (la de les frontisses de cassoleta de l'app). */
 const HINGES_BY_HEIGHT: StepRule = { steps: [{ upTo: 900, n: 2 }, { upTo: 1600, n: 3 }, { upTo: 2100, n: 4 }], else: 5 }
 
-/**
- * La placa en creu Metallamat A amb cargols Euro premuntats (316.51.526, D = 6, la que diu la p. 4.272 per a aquests
- * marcs): dos forats a la filera System 32 (a 37 del davant), un a 16 per sobre i l'altre a 16 per sota de la frontissa.
- */
-const METALLAMAT_PLATE = [
-  { kind: "drill" as const, face: "A" as const, u: -16, v: 0, d: 5, depth: 12, tag: "plate" },
-  { kind: "drill" as const, face: "A" as const, u: 16, v: 0, d: 5, depth: 12, tag: "plate" },
-]
-
 /** Els perfils de les referències de la biblioteca (.902 / .922) són de plata anoditzat (el «color inox», .002, també es ven). */
 export const FRAME_MATERIAL = "Alumini anoditzat plata"
 
+/** Marc d'alumini per a portes i abatibles de vidre: només el perfil (la frontissa i el tirador es trien a part). */
 const glassFrame = (id: string, name: string, ref: string, frame: number, glass: number, page: string, notes: string[]): HardwareItem => ({
   id,
   name,
@@ -34,39 +26,66 @@ const glassFrame = (id: string, name: string, ref: string, frame: number, glass:
   maker: "Häfele",
   ref,
   tags: [...notes, SRC(page)],
-  params: { frame, glass, plateSetback: 37, plateOffset: 0, endOffset: 100 },
+  params: { frame, glass },
   material: FRAME_MATERIAL,
-  count: structuredClone(HINGES_BY_HEIGHT),
-  targets: [
-    { key: "frame", label: "Marc d'alumini (no es mecanitza: la frontissa Metallamat A s'hi clava)", ops: [] },
-    { key: "side", label: "Lateral de les frontisses: placa en creu Metallamat A (316.51.526), a la filera System 32", ops: structuredClone(METALLAMAT_PLATE) },
-  ],
-  version: 1,
+  targets: [{ key: "frame", label: "Marc d'alumini (no es mecanitza: la frontissa de perfil i el tirador s'hi claven)", ops: [] }],
+  version: 2,
   builtin: true,
 })
 
-const METALLAMAT = "Frontissa Metallamat A 110° per al perfil (563.25.940 angular · .941 intermèdia · .942 enrasada) i placa en creu 316.51.526 (D = 6, cargols Euro): la placa al lateral, a la filera System 32."
-const HYP_PLATE = "Hipòtesi: la placa es cargola als dos forats Ø5 × 12 de la filera System 32, a 16 per sobre i per sota de la frontissa (el catàleg dona el patró 37/32, no el Ø)."
+const METALLAMAT = "Frontissa: la Metallamat A 110° per a perfil (563.25.940; Preferències › Ferratges › Frontisses), amb la placa en creu al lateral."
+
+/**
+ * Frontissa **Metallamat A 110°** per a perfil d'alumini de marc de vidre 23 / 26 / 38 (p. FF 4.272) amb la **placa en
+ * creu** Metallamat A amb cargols Euro premuntats (316.51.526, D = 6, p. 4.273). Es tria a la porta de vidre com
+ * qualsevol frontissa: el perfil no es mecanitza (la frontissa s'hi clava) i al lateral es fan els dos forats de la placa
+ * a la filera System 32 (a 16 per sobre i per sota de cada frontissa, a 37 del davant). La cassoleta (target `door`) només
+ * compta si es posés en una porta de fusta.
+ */
+export const HAFELE_PROFILE_HINGES: HardwareItem[] = [
+  {
+    id: "hinge-hafele-metallamat-a",
+    name: "Frontissa Häfele Metallamat A 110° per a perfil d'alumini",
+    category: "hinge",
+    engine: "cup",
+    maker: "Häfele",
+    ref: "563.25.940",
+    tags: [
+      "Per a perfil d'alumini de marc de vidre 23 / 26 / 38 × 14: angular 563.25.940 (clema) · intermèdia 563.25.941 · enrasada 563.25.942. Cassoleta de zamac niquelada, autotancament.",
+      "Placa en creu Metallamat A amb cargols Euro premuntats, D = 6: 316.51.526 (p. 4.273); a la filera System 32 (37 / 32).",
+      "Hipòtesi: la placa es cargola als dos forats Ø5 × 12 de la filera System 32, a 16 per sobre i per sota de la frontissa.",
+      SRC("4.272"),
+    ],
+    params: { cupDiameter: 35, cupDepth: 13, cupOffset: 22.5, endOffset: 100, gap: 10, margin: 3, plateSetback: 37, plateOffset: 0 },
+    count: structuredClone(HINGES_BY_HEIGHT),
+    targets: [
+      { key: "door", label: "Porta (només en una de fusta: al perfil d'alumini no es mecanitza)", ops: [{ kind: "drill", face: "A", u: 0, v: "cupOffset", d: "cupDiameter", depth: "cupDepth", tag: "hinge" }] },
+      { key: "side", label: "Lateral: placa en creu Metallamat A (316.51.526), a la filera System 32", ops: [
+        { kind: "drill", face: "A", u: -16, v: 0, d: 5, depth: 12, tag: "plate" },
+        { kind: "drill", face: "A", u: 16, v: 0, d: 5, depth: 12, tag: "plate" },
+      ] },
+    ],
+    version: 1,
+    builtin: true,
+  },
+]
 
 export const HAFELE_GLASS_FRAMES: HardwareItem[] = [
   glassFrame("frame-hafele-23x14", "Marc d'alumini Häfele 23 × 14 recte", "563.25.902", 23, 4, "4.270", [
     "Perfil d'alumini per a marc de vidre 23 × 14, recte, vidre de 4: plata anoditzat 563.25.902 · color inox 563.25.002 (2.500 mm). Tall a inglet de 45° i escaires d'unió 563.25.910 (marc fins a 1.200) / .911 (1.200–2.000).",
     METALLAMAT,
-    HYP_PLATE,
   ]),
   glassFrame("frame-hafele-38x14", "Marc d'alumini Häfele 38 × 14 recte", "563.26.902", 38, 4, "4.270", [
     "Perfil d'alumini per a marc de vidre 38 × 14, recte, vidre de 4: plata anoditzat 563.26.902 · color inox 563.26.002 (2.500 mm). Tall a inglet de 45° i escaires d'unió 563.25.910 / .911.",
     METALLAMAT,
-    HYP_PLATE,
   ]),
   glassFrame("frame-hafele-26x14", "Marc d'alumini Häfele 26 × 14 de marc reduït", "563.26.922", 26, 4, "4.270", [
     "Perfil d'alumini per a marc de vidre 26 × 14 amb marc reduït, plata anoditzat 563.26.922 (2.500 mm): el vidre s'enganxa al davant (vidre lacat o amb passepartout).",
     METALLAMAT,
-    HYP_PLATE,
   ]),
   glassFrame("frame-hafele-20x19", "Marc d'alumini Häfele 20,6 × 19", "563.32.902", 19, 5, "4.269", [
     "Perfil d'alumini per a marc de vidre 20,6 × 19, vidre de 5 (de 4 amb el perfil de seguretat): plata anoditzat 563.32.902 · color inox 563.32.002 (2.500 mm). Marc com a molt de 600 × 1.600; vidre = marc − 31 per costat. Joc de muntatge 563.32.999.",
-    "Hipòtesi: frontissa de cassoleta Duomatic (p. 4.16 / 4.34) amb la placa en creu a la filera System 32 com la Metallamat A; els forats del perfil (unió angular) no són de la CNC de fusta.",
+    "Frontissa: la Duomatic de cassoleta per a aquest perfil (p. 4.16 / 4.34) o la Metallamat A; els forats del perfil (unió angular) no són de la CNC de fusta.",
   ]),
 ]
 

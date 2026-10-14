@@ -52,7 +52,10 @@ export function usedHardwareSlots(module: Module): SlotUse {
 /** Els llocs de ferratge de cada front (el seu o, «Com el mòdul», el del mòdul: tots dos compten). */
 function frontSlots(m: Module, f: Front, add: (slot: HardwareSlot, n: number, what: string) => void): void {
   if (f.kind === "door" && f.glass) {
-    add("glassFrame", f.mode === "double" ? 2 : 1, "vitrines")
+    const doors = f.mode === "double" ? 2 : 1
+    add("glassFrame", doors, "vitrines")
+    add("hinge", doors, "vitrines")
+    if (frontHasHandle(m, f)) add("handle", doors, "vitrines")
   } else if (f.kind === "door") {
     const doors = f.mode === "double" ? 2 : 1
     add("hinge", doors, "portes")
@@ -66,6 +69,8 @@ function frontSlots(m: Module, f: Front, add: (slot: HardwareSlot, n: number, wh
     if (frontHasHandle(m, f) && !(kit && isPushClosing(kitOptionsOf(kit.kit, f.kit).closing))) add("handle", f.n, "calaixos")
   } else if (f.kind === "flap" && f.glass) {
     add("glassFrame", 1, "vitrines")
+    add("flap", 1, "vitrines")
+    if (frontHasHandle(m, f)) add("handle", 1, "vitrines")
   } else if (f.kind === "flap") {
     add("flap", 1, "abatibles")
     if (frontHasHandle(m, f)) add("handle", 1, "abatibles")

@@ -2,7 +2,7 @@ import { z } from "zod"
 import { DEFAULT_CABINET } from "./cabinet"
 import { type Module } from "./composition"
 import { migrateImportedNames } from "../import/hettichNames"
-import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, V27_ITEMS, V28_ITEMS, V31_ITEMS, V34_ITEMS, V35_ITEMS, V39_ITEMS, fixHardwareDefaults, kitFrom, kitPilotFromLibrary, libraryFromLegacy, setKitPilot } from "./hardware"
+import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, V27_ITEMS, V28_ITEMS, V31_ITEMS, V34_ITEMS, V35_ITEMS, V39_ITEMS, V41_ITEMS, fixHardwareDefaults, kitFrom, kitPilotFromLibrary, libraryFromLegacy, setKitPilot } from "./hardware"
 import { DEFAULT_KIT_PILOT, KitPilotSchema } from "./hardwareKit"
 import { PHOTO_MATERIALS } from "./textureSets"
 import { deepEqual, MATERIAL_MERGES, rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
@@ -61,8 +61,10 @@ const mm = z.number().finite()
  * v38: la mateixa pota amb la placa per dibuixar-la al 3D (`plateU0`…): es refà si és d'una versió anterior de l'item.
  * v39: la pota AXILO 78 per cargolar per a mobles (`V39_ITEMS`; la de la v34 és la de cuina), additiu.
  * v40: els perfils de LED (motor `ledProfile`) passen de «Perfils i marcs» a «Llums» (per decisió de l'usuari).
+ * v41: a les vitrines, la frontissa i el tirador es trien com a les portes de fusta (per decisió de l'usuari): la
+ * frontissa Metallamat A (`V41_ITEMS`) porta la placa que abans era dins dels marcs Häfele (els marcs es refan, `version` 2).
  */
-export const SETTINGS_VERSION = 40
+export const SETTINGS_VERSION = 41
 
 /** Joc de l'ample de la ranura del fons per defecte (v33; per decisió de l'usuari, 2026-10-14: «per defecte 0,8»). */
 export const DEFAULT_GROOVE_CLEARANCE = 0.8
@@ -845,14 +847,16 @@ export function parseSettings(raw: unknown): SettingsParse {
     return fresh ? { ...x, material: fresh.material } : x
   }) : withV35
   if (withV36.some((x, i) => x !== withV35[i])) migrated = true
-  // v39: la pota AXILO 78 de mobles, si no hi és (per id).
-  const withV39 = version < 39 ? [...withV36, ...V39_ITEMS.filter((k) => !withV36.some((x) => x.id === k.id)).map((k) => structuredClone(k))] : withV36
+  // v39: la pota AXILO 78 de mobles, si no hi és (per id); v41: la frontissa Metallamat A.
+  const v39add = version < 39 ? V39_ITEMS : []
+  const v41add = version < 41 ? V41_ITEMS : []
+  const withV39 = [...withV36, ...[...v39add, ...v41add].filter((k) => !withV36.some((x) => x.id === k.id)).map((k) => structuredClone(k))]
   if (withV39.length !== withV36.length) migrated = true
   // La pota AXILO 78 (v34) d'una versió anterior de l'item passa a la d'ara (com la munta el taller, la placa per
   // dibuixar-la, a 50 dels cantells): sempre, no només en pujar de versió de les preferències (l'item canvia de `version`
   // sense que en canviï la de les preferències). Idempotent.
   const withV37 = withV39.map((x) => {
-    const fresh = x.builtin ? [...V34_ITEMS, ...V39_ITEMS].find((k) => k.id === x.id && k.version > x.version) : undefined
+    const fresh = x.builtin ? [...V34_ITEMS, ...V39_ITEMS, ...V35_ITEMS].find((k) => k.id === x.id && k.version > x.version) : undefined
     return fresh ? structuredClone(fresh) : x
   })
   if (withV37.some((x, i) => x !== withV39[i])) migrated = true

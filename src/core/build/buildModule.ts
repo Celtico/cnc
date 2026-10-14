@@ -1652,12 +1652,13 @@ class Builder {
 
     // La frontissa triada a la porta (si no, la del mòdul); la de vidre no en porta.
     // (Els llocs es llegeixen a demanda: la porta de vidre no toca ni la frontissa ni el tirador.)
-    const hingeHw = front.glass ? undefined : this.frontHardware("hinge", front.hardware, zone.id)
+    // (Una de vidre també: la frontissa de perfil en fa la placa al lateral; el tirador s'hi clava, cap forat.)
+    const hingeHw = this.frontHardware("hinge", front.hardware, zone.id)
     // El tirador triat a la porta (si no, el del mòdul).
-    const handleHw = this.frontHandle(front.glass ? undefined : front.handle, zone.id)
+    const handleHw = this.frontHandle(front.handle, zone.id)
     const make = (id: string, name: string, label: string, x0: number, w: number, hinge: "left" | "right") => {
       if (w > 600) this.warnings.push({ code: "door-too-wide", message: `Porta de ${num(w)} mm d'amplada (màxim recomanat 600).`, zoneId: zone.id })
-      if (front.glass || !hingeHw) return this.glassDoor(id, label, x0, ter.y0, w, doorH, this.frontHardware("glassFrame", front.frame, zone.id), { side: hinge, panel: hinge === "left" ? left : right, rowYs, zoneId: zone.id })
+      if (front.glass) return this.glassDoor(id, label, x0, ter.y0, w, doorH, this.frontHardware("glassFrame", front.frame, zone.id), { hinge: hingeHw, side: hinge, panel: hinge === "left" ? left : right, rowYs, zoneId: zone.id })
       const door = this.frontPanel(id, name, label, "door", x0, ter.y0, w, doorH)
       this.addCups(door, doorH, hinge, w, rowYs, ter.y0, zone.id, hingeHw, hinge === "left" ? left : right)
       // Sense tirador (push): cap forat ni cap lectura del lloc «tirador».
@@ -1684,11 +1685,11 @@ class Builder {
    * CNC: tot va a `extras` («Elements sense nesting», amb les mides per demanar-ho). Les frontisses són les del perfil
    * (no porta cassoletes al tauler); els laterals mantenen les fileres.
    */
-  private glassDoor(id: string, label: string, x0: number, y0: number, w: number, h: number, frameHw: { spec: SlotSpec<"glassFrame">; item: HardwareItem }, hinge?: { side: "left" | "right"; panel?: VerticalRef; rowYs: number[]; zoneId?: string }): void {
+  private glassDoor(id: string, label: string, x0: number, y0: number, w: number, h: number, frameHw: { spec: SlotSpec<"glassFrame">; item: HardwareItem }, hinge?: GlassHinge): void {
     const { d } = this
     const frame = frameHw.spec
-    // Les plaques de les frontisses de perfil, només a les portes (un abatible de vidre va amb el braç al perfil).
-    if (hinge) this.glassHinges(label, y0, h, frameHw, hinge)
+    // Les plaques de les frontisses de perfil (la frontissa triada), només a les portes.
+    if (hinge) this.glassHinges(label, y0, h, hinge)
     const F = frame.frame, G = frame.glass, t = d.t
     const z = d.frontZ
     const bar = (sid: string, lbl: string, bx: number, by: number, len: number, wid: number) =>
@@ -1730,49 +1731,49 @@ class Builder {
   }
 
   /**
-   * Frontisses de perfil d'una porta de vidre (Metallamat A dels marcs Häfele): el perfil no es mecanitza (la frontissa
-   * s'hi clava), però cada frontissa porta la **placa** al lateral de les frontisses, com una frontissa de cassoleta: la
-   * quantitat per alçada del marc, repartides a `endOffset` dels extrems i, si hi ha filera System 32, al mig de dos
-   * forats seguits (la placa en creu cargola a la filera). Tota la placa o res d'aquella frontissa (`plateHoles`).
+   * Frontisses de perfil d'una porta de vidre (la frontissa triada, com a les portes de fusta): el perfil no es mecanitza
+   * (la frontissa s'hi clava), però si la frontissa porta **placa** (target `side`, la Metallamat A), es fa al lateral de
+   * les frontisses com a les de cassoleta: la quantitat per alçada, a `endOffset` dels extrems i, si hi ha filera System
+   * 32, al mig de dos forats seguits. Tota la placa o res d'aquella frontissa (`plateHoles`). Sense placa, res.
    */
-  private glassHinges(label: string, y0: number, h: number, frameHw: { spec: SlotSpec<"glassFrame">; item: HardwareItem }, hinge: { side: "left" | "right"; panel?: VerticalRef; rowYs: number[]; zoneId?: string }): void {
-    const spec = frameHw.spec.hinges
-    if (!spec) return
-    const item = frameHw.item
-    if (!hinge.panel) {
-      this.warnings.push({ code: "hinge", message: `${label} de vidre: la placa de les frontisses de «${item.name}» va al lateral de les frontisses i aquest mòdul no en té. Els forats de la placa no es fan: fes-los on vagi muntada.`, zoneId: hinge.zoneId })
+  private glassHinges(label: string, y0: number, h: number, g: GlassHinge): void {
+    const spec = g.hinge.spec
+    const plate = spec.plate
+    if (!plate || spec.pending) return
+    const item = g.hinge.item
+    if (!g.panel) {
+      this.warnings.push({ code: "hinge", message: `${label} de vidre: la placa de «${item.name}» va al lateral de les frontisses i aquest mòdul no en té. Els forats de la placa no es fan: fes-los on vagi muntada.`, zoneId: g.zoneId })
       return
     }
     const count = spec.count(h)
     const span = h - 2 * spec.endOffset
     const targets = count === 1 ? [h / 2] : Array.from({ length: count }, (_, i) => spec.endOffset + (span * i) / (count - 1))
     const pitch = this.hw.system32.pitch
-    const mids = hinge.rowYs.filter((y) => hinge.rowYs.some((z) => Math.abs(z - y - pitch) < 0.01)).map((y) => r(y + pitch / 2))
+    const mids = g.rowYs.filter((y) => g.rowYs.some((z) => Math.abs(z - y - pitch) < 0.01)).map((y) => r(y + pitch / 2))
     const placed: number[] = []
     const why = new Set<string>()
     for (const t of targets) {
       const want = y0 + t
       const pool = (mids.length ? mids : [r(want)]).filter((y) => y >= y0 + 40 && y <= y0 + h - 40 && placed.every((p) => Math.abs(p - y) >= 64))
-      // De les que hi caben, la més propera a l'alçada que toca; la placa sencera o cap.
       const sorted = [...pool].sort((a, b) => Math.abs(a - want) - Math.abs(b - want))
       for (const y of sorted) {
-        const res = this.plateHoles(hinge.panel, hinge.side, y, spec.plate, item)
+        const res = this.plateHoles(g.panel, g.side, y, plate, item)
         if ("error" in res) {
           why.add(res.error)
           continue
         }
-        this.addPlate(hinge.panel, res, item, hinge.zoneId)
+        this.addPlate(g.panel, res, item, g.zoneId)
         // Un forat de la placa que cau en un de la filera (el mateix forat) és el de la placa: hi va el seu cargol.
-        for (const h of res.holes) {
-          const e = hinge.panel.panel.holes.find((x) => x.face === h.face && Math.abs(x.x - h.x) < 0.05 && Math.abs(x.y - h.y) < 0.05)
-          if (e && e.tag === "system32") e.tag = h.tag
+        for (const hl of res.holes) {
+          const e = g.panel.panel.holes.find((x) => x.face === hl.face && Math.abs(x.x - hl.x) < 0.05 && Math.abs(x.y - hl.y) < 0.05)
+          if (e && e.tag === "system32") e.tag = hl.tag
         }
         placed.push(y)
         break
       }
     }
     if (placed.length < count)
-      this.warnings.push({ code: "hinge", message: `${label} de vidre de ${num(h)} mm: només hi caben ${placed.length} de ${count} plaques de frontissa al lateral${why.size ? ` (${[...why].join(" ")})` : ""}.`, zoneId: hinge.zoneId })
+      this.warnings.push({ code: "hinge", message: `${label} de vidre de ${num(h)} mm: només hi caben ${placed.length} de ${count} plaques de frontissa al lateral${why.size ? ` (${[...why].join(" ")})` : ""}.`, zoneId: g.zoneId })
   }
 
   private buildFlap(zone: Zone, front: Extract<Front, { kind: "flap" }>, ter: ZoneRect): void {
@@ -2358,6 +2359,9 @@ export interface RearLimit {
   x1: number
   z: number
 }
+
+/** La frontissa d'una porta de vidre: la triada (la seva placa al lateral) i on va. */
+type GlassHinge = { hinge: { spec: SlotSpec<"hinge">; item: HardwareItem }; side: "left" | "right"; panel?: VerticalRef; rowYs: number[]; zoneId?: string }
 
 export function buildModule(input: Module, opts: { rearLimits?: RearLimit[] } = {}): ModuleBuild {
   // Res amagat compta: només el que es veu a l'inspector (els camps de les opcions apagades no hi entren).

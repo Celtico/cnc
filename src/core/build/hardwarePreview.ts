@@ -170,16 +170,11 @@ function previewPanels(item: HardwareItem): Panel[] {
       }
       return [shelf]
     }
-    case "glassFrame": {
-      // Un marc amb frontisses de perfil (Metallamat A): la placa al lateral (x = fondària des del darrere; el davant a la
-      // dreta), a `plateSetback` del davant; sense, cap mecanitzat (el marc de l'app).
-      const spec = glassFrameSpec(item)
-      if (!spec.hinges) return []
-      const side = sample("side", "Lateral (placa de la frontissa)", "side", 400, 200)
-      const x = side.length - spec.hinges.plate.setback
-      for (const h of spec.hinges.plate.holes) side.holes.push(hole(x - h.v, 100 + h.u, { diameter: h.d, depth: h.depth, tag: h.tag ?? "plate" }))
-      return [side]
-    }
+    case "glassFrame":
+      // Marc de vitrina: el perfil no es mecanitza (la frontissa i el tirador es trien a part). Es comprova que els
+      // números hi siguin; el muntatge («Com va muntat») l'ensenya.
+      glassFrameSpec(item)
+      return []
     case "rail":
       // Accessori: sense mecanitzat de moment (suports de la barra: pendents del taller). Es comprova que els números hi
       // siguin; el muntatge («Com va muntat») l'ensenya.
