@@ -663,6 +663,20 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
         paste()
         return
       }
+      // ⌘G / Ctrl+G: els triats en un grup nou; ⇧⌘G: fora del grup (com a l'editor i Figma).
+      if (mod && e.key.toLowerCase() === "g") {
+        if (!selIds.length) return
+        e.preventDefault()
+        if (e.shiftKey) {
+          change(setItemGroup(amb, selIds, undefined), true)
+          if (sel?.kind === "group") select(selIds.length > 1 ? { kind: "multi", ids: selIds } : { kind: "item", id: selIds[0]! })
+        } else if (sel?.kind !== "group") {
+          const name = newItemGroupName(amb)
+          change(setItemGroup(amb, selIds, name), true)
+          groupSel(name)
+        }
+        return
+      }
       if (mod) return
       const k = e.key.toLowerCase()
       if (k === "v") setTool("select")
