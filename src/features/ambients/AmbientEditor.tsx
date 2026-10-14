@@ -56,7 +56,8 @@ import {
   LuAlignVerticalSpaceAround,
 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
-import { RenderDialog, type SceneGetter } from "../../components/viewer/render/RenderDialog"
+import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
+import { openRender } from "../../components/viewer/render/renderStore"
 import { Tooltip } from "../../components/ui/tooltip"
 import {
   BlockShapeSchema,
@@ -249,7 +250,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   }
   const [objPicker, setObjPicker] = useState(false)
   // Render (path tracing per GPU o CPU), el mateix de l'editor.
-  const [renderOpen, setRenderOpen] = useState(false)
+  const startRender = () => openRender({ getScene: () => sceneGetter.current?.() ?? null, name, saveKey: `ambient:${ambientId}` })
   // «Opcions de vista» obert: es tanca en obrir el Render (si no, el popover o el calaix quedaven a sobre).
   const [viewOptsOpen, setViewOptsOpen] = useState(false)
   const sceneGetter = useRef<SceneGetter | null>(null)
@@ -1135,7 +1136,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                     <ViewTile label="Peces" icon={<LuLayers />} on={showDetail} onClick={() => setShowDetail((v) => !v)} tip="Les peces dels mobles vistes des de dalt" />
                     <ViewTile label="Imant" icon={<LuMagnet />} on={snapOn} onClick={() => setSnapOn((v) => !v)} tip="Imant a les parets i als extrems (Alt: sense, puntualment)" />
                     {amb.plan && <ViewTile label="Plànol de fons" icon={<LuImage />} on={showPlan} onClick={() => setShowPlan((v) => !v)} />}
-                    <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => (setViewOptsOpen(false), setTab("3d"), setRenderOpen(true))} tip="Render fotorealista (des del 3D)" />
+                    <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => (setViewOptsOpen(false), setTab("3d"), startRender())} tip="Render fotorealista (des del 3D)" />
                   </>
                 ) : (
                   <>
@@ -1145,7 +1146,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                     <ViewTile label="Ombres" icon={<LuSun />} on={shadows} onClick={() => setShadows((v) => !v)} />
                     <ViewTile label="Sostre" icon={<LuPanelTop />} on={ceiling} onClick={() => setCeiling((v) => !v)} tip="Sostre a les habitacions tancades: es veu des de dins («Interior») i al render la llum entra per les finestres" />
                     {amb.roof && <ViewTile label="Teulada" icon={<LuWarehouse />} on={roofOn} onClick={() => setRoofOn((v) => !v)} tip="La teulada de l'ambient (Propietats › Teulada). Amb la casa de nines, des de fora es fa transparent" />}
-                    <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => (setViewOptsOpen(false), setRenderOpen(true))} tip="Render fotorealista (GPU o CPU, com Cinema 4D): es va afinant i es desa en PNG" />
+                    <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => (setViewOptsOpen(false), startRender())} tip="Render fotorealista (GPU o CPU, com Cinema 4D): es va afinant i es desa en PNG" />
                   </>
                 )
               }
@@ -1164,7 +1165,6 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
       <AmbientPicker what="moble" open={picker} onClose={() => setPicker(false)} ambientId={ambientId} ambientName={name} projects={projects} onAdd={(p) => (addMoble(p), setPicker(false))} onCreate={(c, n) => createAndAdd(c, n, "moble")} />
       <AmbientPicker what="object" open={objPicker} onClose={() => setObjPicker(false)} ambientId={ambientId} ambientName={name} projects={projects} onAdd={(p) => (addMoble(p), setObjPicker(false))} onCreate={(c, n) => createAndAdd(c, n, "object")} />
 
-      <RenderDialog open={renderOpen} onClose={() => setRenderOpen(false)} getScene={() => sceneGetter.current?.() ?? null} name={name} saveKey={`ambient:${ambientId}`} />
 
       <CalibrateDialog open={calib !== null} measured={calib ? Math.hypot(calib.b[0] - calib.a[0], calib.b[1] - calib.a[1]) : 0} onClose={() => (setCalib(null), setTool("select"))} onApply={applyCalibration} />
     </Flex>

@@ -45,7 +45,8 @@ import { toaster } from "../../components/ui/toaster"
 import { CabinetViewer, type ViewerModule } from "../../components/viewer/CabinetViewer"
 import type { ViewName } from "../../components/viewer/viewNames"
 import { ArDialog } from "../../components/viewer/ArDialog"
-import { RenderDialog, type SceneGetter } from "../../components/viewer/render/RenderDialog"
+import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
+import { openRender } from "../../components/viewer/render/renderStore"
 import { useRenderQuality } from "../../components/viewer/renderQuality"
 import { movingGroups, openingCollisions } from "../../components/viewer/opening"
 import { legPoints } from "../../core/build/columnWalls"
@@ -262,7 +263,6 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   const registerScene = useCallback((g: SceneGetter) => {
     sceneGetter.current = g
   }, [])
-  const [renderOpen, setRenderOpen] = useState(false)
   // «Opcions de vista» obert: es tanca en obrir el Render (si no, el popover o el calaix quedaven a sobre).
   const [viewOptsOpen, setViewOptsOpen] = useState(false)
   const registerCapture = useCallback((fn: () => Promise<Blob>) => {
@@ -1061,7 +1061,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       {tile("holes", "Forats", <LuCircleDot />, showHoles || exploded || viewer.opacity < 1, () => setShowHoles((v) => !v), exploded ? "A la vista explosionada els forats sempre es veuen" : viewer.opacity < 1 ? "Amb les peces translúcides (Opacitat) els forats sempre es veuen" : showHoles ? "Amagar forats" : "Mostrar forats")}
       {tile("explode", "Explosió", exploded ? <LuShrink /> : <LuExpand />, exploded, () => setExploded((v) => !v), exploded ? "Vista muntada" : "Vista explosionada")}
       {tile("hardware", "Ferratges", <LuWrench />, hardware, () => setHardware((v) => !v), hardware ? "Amagar frontisses, tiradors i potes" : "Mostrar frontisses, tiradors i potes")}
-      {tile("render", "Render", <LuAperture />, false, () => (setViewOptsOpen(false), quality === "fast" && roleColors && setRoleColors(false), !hardware && setHardware(true), setRenderOpen(true)), "Render fotorealista (GPU o CPU, com Cinema 4D): es va afinant i es desa en PNG")}
+      {tile("render", "Render", <LuAperture />, false, () => (setViewOptsOpen(false), quality === "fast" && roleColors && setRoleColors(false), !hardware && setHardware(true), openRender({ getScene: () => sceneGetter.current?.() ?? null, name, saveKey: `moble:${projectId}` })), "Render fotorealista (GPU o CPU, com Cinema 4D): es va afinant i es desa en PNG")}
       {tile("ar", "A casa (AR)", <LuView />, false, () => setArOpen(true), "Veure a casa (realitat augmentada)")}
     </>
   )
@@ -1721,7 +1721,6 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           direction="row"
           display={viewTab === "3d" ? "flex" : "none"}
         >
-          <RenderDialog open={renderOpen} onClose={() => setRenderOpen(false)} getScene={() => sceneGetter.current?.() ?? null} name={name} saveKey={`moble:${projectId}`} />
           <ArDialog open={arOpen} onClose={() => setArOpen(false)} panels={viewerPanels} name={name} models={build?.models} />
           {/* Al mòbil, un calaix de baix amb el seu propi desplaçament; a l'ordinador, un popover. */}
           <ViewOptions lead={viewModes} tiles={viewTiles} open={viewOptsOpen} onOpenChange={setViewOptsOpen}>

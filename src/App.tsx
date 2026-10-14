@@ -57,7 +57,10 @@ const ASSISTANT_ENTRY = { id: "assistant", label: "Assistent", icon: LuMessageSq
 /** Mòbil: la barra de baix amb els apartats, l'Assistent i Preferències. */
 const MOBILE_BAR: { id: string; label: string; icon: IconType }[] = [...GLOBAL_NAV, ASSISTANT_ENTRY, SETTINGS_ENTRY]
 // El calaix i el xat, a demanda (el SDK de l'API de Claude no va al bloc d'entrada).
+import { useRenderHost } from "./components/viewer/render/renderStore"
 const GlobalAssistant = lazy(() => import("./features/assistant/GlobalAssistant"))
+// El Render de tota l'app (`renderHost.ts`): es carrega el primer cop que s'obre i es queda muntat.
+const RenderHost = lazy(() => import("./components/viewer/render/RenderHost").then((m) => ({ default: m.RenderHost })))
 
 const STORAGE_KEY = "mobles:current-project"
 const AMBIENT_KEY = "mobles:current-ambient"
@@ -81,6 +84,7 @@ function readStoredId(): number | null {
 }
 
 export function App() {
+  const renderHost = useRenderHost()
   // Les antigues «teves plantilles» passen a mobles del grup «Les meves plantilles» (un sol cop).
   useEffect(() => {
     void migrateUserTemplates().then((n) => {
@@ -562,6 +566,11 @@ export function App() {
       {assistantMounted && (
         <Suspense fallback={null}>
           <GlobalAssistant open={assistantOpen} onClose={() => setAssistantOpen(false)} settings={settings} />
+        </Suspense>
+      )}
+      {renderHost.req && (
+        <Suspense fallback={null}>
+          <RenderHost />
         </Suspense>
       )}
       <Toaster />

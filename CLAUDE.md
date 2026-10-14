@@ -1304,8 +1304,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   - **Comença aturat**: obrir el diàleg mostra la imatge del visor (`SceneGetter.snapshot`) i «Començar»; després, les
     opcions de qualitat, motor, escena i llum tornen a començar; aturar/continuar, límit de passades, passades per segon.
     **Tancar-lo no el perd** (per decisió de l'usuari, 2026-10-14): un render començat continua calculant amb el diàleg tancat
-    (l'escena és la de quan es va començar: es pot seguir treballant) i, en tornar-lo a obrir, hi és, amb «De nou» (torna a llegir l'escena: el moble pot haver canviat); el motor
-    només s'allibera en sortir de la pàgina.
+    (l'escena és la de quan es va començar: es pot seguir treballant) i, en tornar-lo a obrir, hi és, amb «De nou» (torna a llegir l'escena: el moble pot haver canviat); **el Render és de tota l'app** (per decisió
+    de l'usuari, «si canvio d'apartat, que no s'aturi»; `renderStore.ts` `openRender`, `RenderHost.tsx` a `App`, un
+    `RenderDialog` per document, `key` = `saveKey`): canviar d'apartat no l'atura i, en tornar al mateix moble o ambient i
+    obrir el Render, hi és; des d'un altre document se'n fa un de nou.
   - `extractScene` passa l'escena a triangles + materials + textures; tots dos motors fan servir el **mateix BVH** (`bvh.ts`,
     SAH per calaixos, 8 paraules per node), llums (`lights.ts`) i constants (`shading.ts`). Contracte (`engine.ts`): sumes RGBA
     + AOV (albedo i normal) i nombre de mostres; el diàleg divideix, filtra el soroll, fa el to i desa el PNG.
