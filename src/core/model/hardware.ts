@@ -15,7 +15,7 @@ import { DTC_MAGIC_STAR_KITS } from "./kits/dtcMagicStarUltra"
 import { DTC_PURE_BOX_KITS } from "./kits/dtcPureBox"
 import { DTC_PURE_PRO_GLASS_KITS, DTC_PURE_PRO_KITS } from "./kits/dtcPurePro"
 import { HAFELE_LOOX_ITEMS, HAFELE_LOOX_PROFILES } from "./lights/hafeleLoox"
-import { HAFELE_CATALOGUE_ITEMS, HAFELE_DUOMATIC_ALU, HAFELE_DUOMATIC_ALU_NARROW, HAFELE_GLASS_PULLS, HAFELE_PROFILE_HINGES } from "./hafele/hafeleCatalog"
+import { HAFELE_CATALOGUE_ITEMS, HAFELE_DUOMATIC_ALU, HAFELE_DUOMATIC_ALU_NARROW, HAFELE_GAS_STRUTS, HAFELE_GLASS_PULLS, HAFELE_PROFILE_HINGES } from "./hafele/hafeleCatalog"
 import { HAFELE_LEGS } from "./hafele/hafeleLegs"
 import { LightKitSchema, type LightKit } from "./lightKit"
 
@@ -427,6 +427,9 @@ export const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
     P("diameter", "Diàmetre", 3, 20, 0.5),
     P("depth", "Fondària", 3, 20, 0.5),
     P("endOffset", "Als costats", 20, 300, 5, "Dels costats de l'abatible (si és estret, a ¼ i ¾)."),
+    { ...P("strutG", "Bracket al lateral", 50, 600, 1, "Pistó de gas: del cantell de gir al bracket d'armari (G)."), optional: true },
+    { ...P("strutLength", "Llarg del pistó", 100, 600, 1), optional: true },
+    { ...P("sideSetback", "Del davant", 20, 100, 0.5, "Pistó de gas: del davant del lateral als forats del bracket."), optional: true },
   ],
   magnet: [
     P("diameter", "Diàmetre", 3, 30, 0.5),
@@ -723,7 +726,7 @@ export const V42_ITEMS: HardwareItem[] = HAFELE_GLASS_PULLS
 /** v43: la frontissa Häfele Duomatic Premium 105° per a marc d'alumini (additiu). */
 export const V43_ITEMS: HardwareItem[] = HAFELE_DUOMATIC_ALU
 /** v44: la frontissa Häfele Duomatic 105° per a marc d'alumini estret (additiu). */
-export const V44_ITEMS: HardwareItem[] = HAFELE_DUOMATIC_ALU_NARROW
+export const V44_ITEMS: HardwareItem[] = [...HAFELE_DUOMATIC_ALU_NARROW, ...HAFELE_GAS_STRUTS]
 /** v39: la mateixa pota per a mobles (el davant per confirmar), additiu. */
 export const V39_ITEMS: HardwareItem[] = HAFELE_LEGS.filter((x) => x.id !== "leg-hafele-axilo78-screw")
 

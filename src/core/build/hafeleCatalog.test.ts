@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { DEFAULT_SETTINGS, HardwareItemSchema, defaultModule, parseSettings, type HardwareItem, type Zone } from "../model"
-import { HAFELE_CATALOGUE_ITEMS, HAFELE_DUOMATIC_ALU, HAFELE_GLASS_FRAMES, HAFELE_HANDLES, HAFELE_PROFILE_HINGES } from "../model/hafele/hafeleCatalog"
+import { HAFELE_CATALOGUE_ITEMS, HAFELE_DUOMATIC_ALU, HAFELE_GAS_STRUTS, HAFELE_GLASS_FRAMES, HAFELE_HANDLES, HAFELE_PROFILE_HINGES } from "../model/hafele/hafeleCatalog"
 import { HAFELE_LOOX_PROFILES } from "../model/lights/hafeleLoox"
 import { V35_ITEMS } from "../model/hardware"
 import { buildModule } from "./buildModule"
@@ -70,6 +70,20 @@ describe("catàleg Häfele (v35)", () => {
     expect(tapa.holes.filter((h) => h.tag === "plate")).toHaveLength(4)
     expect(fixedSolids([...b.panels, ...b.extras]).get(tapa.id)).toHaveLength(2)
     expect(b.warnings.filter((w) => w.code === "hinge")).toEqual([])
+  })
+
+  it("pistó de gas (FF 4.224): el bracket al lateral, dos forats Ø5 a 32, a G del cantell de gir i a 37 del davant; es dibuixa", () => {
+    const gas = structuredClone(HAFELE_GAS_STRUTS[0]!)
+    const b = buildModule(mod({ front: { kind: "flap", dir: "up", glass: true, frame: structuredClone(HAFELE_GLASS_FRAMES[0]!), hardware: gas } }, { width: 600, height: 400, depth: 330 }))
+    for (const id of ["side-left", "side-right"]) {
+      const hs = b.panels.find((p) => p.id === id)!.holes.filter((h) => h.tag === "flap")
+      expect(hs, id).toHaveLength(2)
+      expect(Math.abs(hs[0]!.x - hs[1]!.x) + Math.abs(hs[0]!.y - hs[1]!.y)).toBeCloseTo(32)
+    }
+    expect(b.extras.filter((p) => p.label.endsWith(": pistó"))).toHaveLength(2)
+    // Una porta de vidre no porta la filera System 32: només els forats de la placa.
+    const door = buildModule(mod({ front: { kind: "door", mode: "single", hinge: "left", glass: true, frame: structuredClone(HAFELE_GLASS_FRAMES[0]!), hardware: structuredClone(HAFELE_PROFILE_HINGES[0]!) } }))
+    expect(door.panels.flatMap((p) => p.holes).filter((h) => h.tag === "system32")).toHaveLength(0)
   })
 
   it("tiradors: la distància entre centres més gran que hi cap al front", () => {

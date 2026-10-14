@@ -1044,13 +1044,16 @@ class Builder {
     const left = this.findLeft(rect)
     const right = this.findRight(rect)
     const front = zone.front
-    const hingeSide = front?.kind === "door" ? front.hinge : front?.kind === "grille" && front.mount === "hinged" ? front.hinge : null
+    // Una porta de vidre no porta filera (per decisió de l'usuari, 2026-10-14: «res de sistemes, només els forats dels
+    // ferratges»): la placa de la frontissa fa els seus forats sola.
+    const woodDoor = front?.kind === "door" && !front.glass
+    const hingeSide = woodDoor ? front.hinge : front?.kind === "grille" && front.mount === "hinged" ? front.hinge : null
 
     // Fileres: per prestatges regulables (als dos costats) i per frontisses (al seu costat).
     let ysLeft: number[] = []
     let ysRight: number[] = []
-    const wantsLeft = (zone.shelves?.adjustable ?? false) || hingeSide === "left" || (front?.kind === "door" && front.mode === "double")
-    const wantsRight = (zone.shelves?.adjustable ?? false) || hingeSide === "right" || (front?.kind === "door" && front.mode === "double")
+    const wantsLeft = (zone.shelves?.adjustable ?? false) || hingeSide === "left" || (woodDoor && front.mode === "double")
+    const wantsRight = (zone.shelves?.adjustable ?? false) || hingeSide === "right" || (woodDoor && front.mode === "double")
     if (wantsLeft) {
       if (left) ysLeft = this.rows(left, rect, "left")
       else this.warnings.push({ code: "no-side", message: `La zona no té panell a l'esquerra per a la filera System 32.`, zoneId: zone.id })
@@ -1061,7 +1064,7 @@ class Builder {
     }
     // Només qui llegeix la filera (portes, reixetes, prestatges regulables) la necessita: als calaixos i als compartiments
     // oberts no es toca el System 32 (res amagat compta: un item dolent al lloc no avisa si no es fa servir).
-    const needsRows = (zone.shelves?.adjustable ?? false) || front?.kind === "door" || (front?.kind === "grille" && front.mount === "hinged")
+    const needsRows = (zone.shelves?.adjustable ?? false) || woodDoor || (front?.kind === "grille" && front.mount === "hinged")
     const rowYs = ysLeft.length ? ysLeft : ysRight.length ? ysRight : needsRows ? system32Ys(rect.y0, rect.y1, this.hw.system32.edgeOffset, this.hw.system32.pitch) : []
 
     // Prestatges.
@@ -1086,8 +1089,10 @@ class Builder {
     // Com a les fulles: filera System 32 al costat de les frontisses (hi va la placa), però
     // només als trams lliures entre els prestatges fixos que hi toquen (els mateixos trams que
     // les fulles: els forats coincideixen i no en trepitgen cap altre).
-    const hingeSide = front.kind === "door" ? front.hinge : front.kind === "grille" && front.mount === "hinged" ? front.hinge : null
-    const double = front.kind === "door" && front.mode === "double"
+    // Les portes de vidre, sense filera (només els forats de la placa, `glassHinges`).
+    const woodDoor = front.kind === "door" && !front.glass
+    const hingeSide = woodDoor ? front.hinge : front.kind === "grille" && front.mount === "hinged" ? front.hinge : null
+    const double = woodDoor && front.mode === "double"
     let ys: number[] = []
     for (const side of ["left", "right"] as const) {
       if (hingeSide !== side && !double) continue
@@ -1106,7 +1111,7 @@ class Builder {
         if (!ys.length) ys = got
       } else this.warnings.push({ code: "no-side", message: `La zona no té panell a la ${side === "left" ? "esquerra" : "dreta"} per a la filera System 32.`, zoneId: zone.id })
     }
-    const needsRows = front.kind === "door" || (front.kind === "grille" && front.mount === "hinged")
+    const needsRows = woodDoor || (front.kind === "grille" && front.mount === "hinged")
     this.buildFront(zone, front, rect, left, right, ys.length ? ys : needsRows ? system32Ys(rect.y0, rect.y1, this.hw.system32.edgeOffset, this.hw.system32.pitch) : [])
   }
 
@@ -1850,6 +1855,57 @@ class Builder {
     }
   }
 
+  /**
+   * Pistó de gas (un item del braç d'abatible amb `strutG`: els Häfele 373.78.90x, p. FF 4.224; per decisió de l'usuari
+   * «res de sistemes»: només els forats del ferratge): el bracket d'armari a la cara de dins del lateral, a G per sota del
+   * cantell de gir i a `sideSetback` del darrere del front, amb els forats del target `side` (els dos Ø5 a 32, tot o res), i
+   * el dibuix: el pistó (Ø15,6, del llarg del joc) amunt des del bracket, a 16 de la cara del lateral, i el bracket. Només
+   * per als que obren amunt; si no, avís. Torna `false` si l'item no és un pistó (el braç de sempre).
+   */
+  private gasStrut(id: string, side: VerticalRef, which: "left" | "right", pivotY: number, dir: "up" | "down", item: HardwareItem, zoneId: string): boolean {
+    const G = item.params.strutG
+    if (G === undefined) return false
+    if (dir !== "up") {
+      if (which === "left") this.warnings.push({ code: "hardware", message: `«${item.name}» és per a portes que obren amunt: en un abatible que obre avall no es fa ni es dibuixa.`, zoneId })
+      return true
+    }
+    const { d } = this
+    const xFace = which === "left" ? side.xR : side.xL
+    const out = which === "left" ? 1 : -1
+    const yB = pivotY - G
+    const zB = d.frontZ - d.t - (item.params.sideSetback ?? 37)
+    const p = side.panel
+    const ops = item.targets.find((t) => t.key === "side")?.ops ?? []
+    const holes: Hole[] = []
+    for (const op of ops) {
+      if (op.kind !== "drill") continue
+      const u = typeof op.u === "number" ? op.u : 0
+      const dd = item.params.diameter ?? 5
+      const l = toLocal(p, [xFace, yB + u, zB])
+      const face = faceAt(p, l)
+      if (!face || face === "edge" || l[0] - dd / 2 < 0 || l[0] + dd / 2 > p.length || l[1] - dd / 2 < 0 || l[1] + dd / 2 > p.width) {
+        this.warnings.push({ code: "hardware", message: `«${item.name}»: el bracket d'armari no cap al ${p.label.toLowerCase()} (a ${num(G)} mm del cantell de gir); no es fa.`, zoneId })
+        return true
+      }
+      holes.push({ x: l[0], y: l[1], diameter: dd, depth: Math.min(item.params.depth ?? 12, p.thickness - 1), face, tag: "flap" })
+    }
+    p.holes.push(...holes)
+    // El dibuix: el bracket (placa de 26 × 14 × 3 amb el pern) i el pistó, un cilindre Ø15,6 del llarg del joc, amunt.
+    const len = item.params.strutLength ?? 230
+    const R = 7.8
+    const cx = xFace + out * 16
+    this.hwBox(`${id}-bracket`, `${item.name}: bracket d'armari`, "Acer inox", [which === "left" ? xFace : xFace - 3, yB - 13, zB - 7], [3, 26, 14])
+    const top = Math.min(pivotY - 5, yB + len)
+    const k = 0.41421356
+    this.extras.push({
+      id: `${id}-body`, name: "ferratge", label: `${item.name}: pistó`, role: "hardware",
+      length: 2 * R, width: 2 * R, thickness: r(top - yB), material: "Acer fosc", grain: "none", edges: { ...NO_EDGES }, holes: [], grooves: [],
+      outline: [[R, 0, k], [2 * R, R, k], [R, 2 * R, k], [0, R, k]],
+      placement: placement([r(cx - R), r(yB), r(zB + R)], X, neg(Z), Y, Y),
+    })
+    return true
+  }
+
   /** El braç d'un abatible de vidre (es veu): el cos cargolat a la cara de dins del lateral, a dalt. */
   private glassArm(id: string, side: VerticalRef, which: "left" | "right", y0: number, h: number, dir: "down" | "up"): void {
     const { d } = this
@@ -1870,7 +1926,13 @@ class Builder {
       // Es veu (per decisió de l'usuari: «s'ha de veure tot»): el tirador al perfil del cantell que obre i els braços als laterals.
       const handle = this.frontHandle(front.handle, zone.id)
       if (!handle.push) this.glassPull(`${id}-pull`, "Abatible", x0 + w / 2, front.dir === "down" ? y0 + h - F / 2 : y0 + F / 2, "x", handle.item)
-      for (const ref of [left, right]) if (ref) this.glassArm(`${id}-arm-${ref === left ? "l" : "r"}`, ref, ref === left ? "left" : "right", y0, h, front.dir)
+      const arm = this.frontHardware("flap", front.hardware, zone.id)
+      for (const ref of [left, right]) {
+        if (!ref) continue
+        const which = ref === left ? "left" : "right"
+        if (!this.gasStrut(`${id}-strut-${which[0]}`, ref, which, front.dir === "up" ? y0 + h : y0, front.dir, arm.item, zone.id))
+          this.glassArm(`${id}-arm-${which[0]}`, ref, which, y0, h, front.dir)
+      }
       this.glassFlapHinges(id, x0, y0, w, h, F, front.dir, zone.id)
       return
     }
@@ -1889,6 +1951,8 @@ class Builder {
       // Ancoratge al cantell de gir (x local = alçada): avall, el de baix; amunt, el de dalt.
       flap.holes.push(...applyHardware(arm.item, "flap", {}, { at: { x: 0, y }, ...(front.dir === "down" ? {} : { mirrorX: along }) }).holes)
     }
+    // Un pistó de gas també es cargola al lateral (bracket d'armari) i es dibuixa.
+    for (const ref of [left, right]) if (ref) this.gasStrut(`${flap.id}-strut-${ref === left ? "l" : "r"}`, ref, ref === left ? "left" : "right", front.dir === "up" ? ter.y1 : ter.y0, front.dir, arm.item, zone.id)
     // Tirador al cantell que obre (el contrari del gir), horitzontal i centrat.
     const handleHw = this.frontHandle(front.handle, zone.id)
     // Sense tiradors no es llegeix el lloc (`handle` només marca el push).

@@ -135,6 +135,50 @@ export const HAFELE_DUOMATIC_ALU_NARROW: HardwareItem[] = [
   },
 ]
 
+/**
+ * **Pistons de gas Häfele** per a portes elevables de fusta o de marc d'alumini (p. FF 4.224, 373.78.90x): el joc porta 2
+ * pistons, 2 brackets d'armari i 2 de porta. Com a la vitrina de la cuina de l'usuari: el bracket d'armari es cargola al
+ * lateral (dos forats Ø5 a 32, a 37 del davant: «en cremallera de 32 mm»), a G per sota del cantell de gir; el de porta, al
+ * perfil del marc (no es mecanitza) o a la porta de fusta, a F del cantell de gir. La força es tria pel pes i l'alçada de
+ * la porta (taula del catàleg, a les notes).
+ */
+function gasStrut(len: 230 | 300 | 360, G: number, F: number, stroke: number, refs: string): HardwareItem {
+  return {
+    id: `flap-hafele-gas-${len}`,
+    name: `Pistó de gas Häfele ${len} per a porta elevable`,
+    category: "lift",
+    engine: "flapArm",
+    maker: "Häfele",
+    ref: refs.split(" ")[0]!,
+    tags: [
+      `Joc de 2 pistons de gas de ${len} mm (recorregut ${stroke}), 2 brackets d'armari, 2 de porta i 4 tapes, gris plata: ${refs}. Sempre dos pistons. Porta de fins a 11 kg i 600 mm d'alt, obre uns 90° sola a partir de 10°.`,
+      "Força per pes i alçada de la porta (2 pistons): 2–3 kg 60–80 N · 4–5 kg 80–120 N · 6–8 kg 100–150 N · 9–11 kg 120–175 N (taula FF 4.224; en un nivell intermedi, la força de més).",
+      `Bracket d'armari al lateral: dos forats Ø5 × 12 a 32 (cargol euro), a 37 del davant i a G = ${G} per sota del cantell de gir. Bracket de porta a F = ${F} del cantell de gir (al marc d'alumini no es mecanitza; bracket per a marcs petits 373.78.923).`,
+      "Hipòtesis: G i F mesurats des del cantell de gir de la porta; a la porta de fusta, el bracket als mateixos dos forats Ø5 a 32, a 35 del costat.",
+      SRC("4.224"),
+    ],
+    params: { offset: F, diameter: 5, depth: 12, endOffset: 35, strutG: G, strutLength: len, strutStroke: stroke, sideSetback: 37 },
+    targets: [
+      { key: "flap", label: "Porta (bracket de porta, només a les de fusta)", ops: [
+        { kind: "drill", face: "A", u: "offset", v: -16, d: "diameter", depth: "depth", tag: "flap" },
+        { kind: "drill", face: "A", u: "offset", v: 16, d: "diameter", depth: "depth", tag: "flap" },
+      ] },
+      { key: "side", label: "Lateral (bracket d'armari)", ops: [
+        { kind: "drill", face: "A", u: -16, v: 0, d: "diameter", depth: "depth", tag: "flap" },
+        { kind: "drill", face: "A", u: 16, v: 0, d: "diameter", depth: "depth", tag: "flap" },
+      ] },
+    ],
+    version: 1,
+    builtin: true,
+  }
+}
+
+export const HAFELE_GAS_STRUTS: HardwareItem[] = [
+  gasStrut(230, 231, 68, 76, "373.78.901 (60 N) · 373.78.902 (80 N) · 373.78.903 (100 N)"),
+  gasStrut(300, 295, 96, 110, "373.78.904 (100 N) · 373.78.905 (120 N) · 373.78.906 (140 N)"),
+  gasStrut(360, 359, 120, 140, "373.78.907 (125 N) · 373.78.908 (150 N) · 373.78.909 (175 N)"),
+]
+
 export const HAFELE_GLASS_FRAMES: HardwareItem[] = [
   glassFrame("frame-hafele-23x14", "Marc d'alumini Häfele 23 × 14 recte", "563.25.902", 23, 4, "4.270", [
     "Perfil d'alumini per a marc de vidre 23 × 14, recte, vidre de 4: plata anoditzat 563.25.902 · color inox 563.25.002 (2.500 mm). Tall a inglet de 45° i escaires d'unió 563.25.910 (marc fins a 1.200) / .911 (1.200–2.000).",
