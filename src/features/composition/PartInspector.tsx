@@ -22,6 +22,7 @@ import {
   LuSquare,
   LuTrash2,
   LuUngroup,
+  LuSprout,
 } from "react-icons/lu"
 import { IconChoice, type IconOption } from "../../components/IconChoice"
 import { FoldItem } from "../../components/Fold"
@@ -32,12 +33,12 @@ import {
   partChoices,
   reorientPart,
   PART_AXES,
-  partsBox,
+  groupBox,
   materialCategory,
   compositionKind, partJoinery, partsOnlyKind,
   partOffset,
-  resolveParts,
-  partGroups,
+  renameGroup,
+  groupNames,
   newGroupName,
   partSize,
   type Composition,
@@ -264,7 +265,7 @@ export function PartInspector({ comp, id, joints, onChange }: { comp: Compositio
         <FormRow label="Grup">
           <ChoiceChips
             label="Grup"
-            options={[{ id: "", label: "Sense grup" }, ...partGroups(comp.parts ?? []).map((g) => ({ id: g, label: g })), { id: NEW_GROUP, label: "+ Grup nou" }]}
+            options={[{ id: "", label: "Sense grup" }, ...groupNames(comp).map((g) => ({ id: g, label: g })), { id: NEW_GROUP, label: "+ Grup nou" }]}
             value={p.group ?? ""}
             onChange={(v) => update({ group: v === NEW_GROUP ? newGroupName(comp) : v || undefined })}
           />
@@ -374,12 +375,13 @@ export function PartActions({ comp, id, onChange, onRemoved, onSelected }: { com
   )
 }
 
-/** Grup de peces lliures: posició de tot el grup (es mouen juntes), peces i accions. */
-export function GroupInspector({ comp, group, onChange, onSelectPart, onMove }: { comp: Composition; group: string; onChange: (c: Composition) => void; onSelectPart: (id: string) => void; onMove: (dx: number, dy: number, dz: number) => void }) {
+/** Grup (peces lliures i models 3D): posició de tot el grup (es mouen junts), el que hi ha i accions. */
+export function GroupInspector({ comp, group, onChange, onSelectPart, onSelectModel, onMove }: { comp: Composition; group: string; onChange: (c: Composition) => void; onSelectPart: (id: string) => void; onSelectModel?: (id: string) => void; onMove: (dx: number, dy: number, dz: number) => void }) {
   const members = (comp.parts ?? []).filter((p) => p.group === group)
-  if (!members.length) return null
+  const models = (comp.models ?? []).filter((m) => m.group === group)
   // Posició a la composició (les enganxades a un mòdul, sumant-hi la seva).
-  const b = partsBox(resolveParts(comp).filter((p) => p.group === group))
+  const b = groupBox(comp, group)
+  if (!b) return null
   const size = [0, 1, 2].map((a) => Math.round(b.max[a]! - b.min[a]!))
   return (
     <Stack gap={0}>
@@ -391,7 +393,7 @@ export function GroupInspector({ comp, group, onChange, onSelectPart, onMove }: 
           Tot el grup es mou junt: amb les fletxes del 3D, del teclat o aquí. Al 3D, el primer clic selecciona el grup i el segon, la peça.
         </Text>
       </FoldItem>
-      <FoldItem id="group-parts" title="Peces" icon={LuPuzzle} badge={members.length}>
+      <FoldItem id="group-parts" title={models.length ? "Peces i models" : "Peces"} icon={LuPuzzle} badge={members.length + models.length}>
         <Stack gap={0.5}>
           {members.map((p) => {
             const Icon = ORIENT_ICON[p.orient]
@@ -404,9 +406,17 @@ export function GroupInspector({ comp, group, onChange, onSelectPart, onMove }: 
               </Button>
             )
           })}
+          {models.map((m) => (
+            <Button key={m.id} size="xs" variant="ghost" justifyContent="flex-start" onClick={() => onSelectModel?.(m.id)}>
+              <LuSprout /> {m.name}
+              <Text as="span" color="fg.muted" ms="auto">
+                {Math.round(m.w)} × {Math.round(m.h)}
+              </Text>
+            </Button>
+          ))}
         </Stack>
         <HStack gap={2}>
-          <Button size="xs" variant="outline" onClick={() => onChange({ ...comp, parts: (comp.parts ?? []).map((q) => (q.group === group ? { ...q, group: undefined } : q)) })}>
+          <Button size="xs" variant="outline" onClick={() => onChange(renameGroup(comp, group, undefined))}>
             <LuUngroup /> Desagrupar
           </Button>
         </HStack>

@@ -83,6 +83,8 @@ import {
   type Wall,
   keepLocked,
   mergeHidden,
+  moveItemToGroup,
+  reorderItems,
   withFlag,
   type ViewFlags,
 } from "../../core/model"
@@ -111,7 +113,7 @@ import { AMBIENT_TAB_KEY, ambientBox, type Selection, type Tool } from "./planGe
 import { useDebouncedSave } from "../useDebouncedSave"
 import { useHistory, useUndoKeys } from "../history/useHistory"
 import { UndoRedo } from "../../components/UndoRedo"
-import { TreeRow, TreeRowMenu, TreeSection, type TreeRowFlags } from "../../components/TreeRow"
+import { TreeRow, TreeRowMenu, TreeSection, type TreeRowDnd, type TreeRowFlags } from "../../components/TreeRow"
 import type { ChatTarget } from "../assistant/chatTarget"
 import { registerDoc } from "../assistant/assistantHub"
 
@@ -429,6 +431,50 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const objectItems = amb.items.filter((it) => kindOf(it) === "object")
   const mobleItems = amb.items.filter((it) => kindOf(it) !== "object")
   const groups = [...new Set(amb.items.map((i) => i.group).filter((g): g is string => !!g))]
+  // Arrossegar per ordenar i per posar dins d'un grup (com les peces lliures de l'editor): una fila d'element o un grup
+  // sencer; deixat al costat d'un element, n'agafa el grup; sobre la fila d'un grup, hi entra.
+  const [drag, setDrag] = useState<{ ids: string[]; key: string } | null>(null)
+  const [over, setOver] = useState<{ id: string; after: boolean } | null>(null)
+  const endDrag = () => (setDrag(null), setOver(null))
+  const itemDnd = (it: AmbientItem): TreeRowDnd => {
+    const ok = () => !!drag && !drag.ids.includes(it.id)
+    return {
+      dragging: !!drag?.ids.includes(it.id),
+      indicator: over?.id === it.id && ok() ? (over.after ? "after" : "before") : null,
+      onStart: () => setDrag({ ids: [it.id], key: it.id }),
+      onOver: (after) => {
+        if (!ok()) return false
+        if (over?.id !== it.id || over.after !== after) setOver({ id: it.id, after })
+        return true
+      },
+      onDrop: (after) => {
+        if (drag && ok()) change(reorderItems(amb, drag.ids, it.id, after), true)
+        endDrag()
+      },
+      onEnd: endDrag,
+    }
+  }
+  const groupDnd = (name: string): TreeRowDnd => {
+    const key = `g:${name}`
+    // Un element d'un altre grup (o solt) hi entra; el grup sencer s'arrossega des de la seva fila.
+    const ok = () => !!drag && drag.ids.length === 1 && amb.items.find((i) => i.id === drag.ids[0])?.group !== name
+    return {
+      dragging: drag?.key === key,
+      indicator: over?.id === key && ok() ? "inside" : null,
+      onStart: () => setDrag({ ids: groupIds(amb, name), key }),
+      onOver: () => {
+        if (!ok()) return false
+        if (over?.id !== key) setOver({ id: key, after: false })
+        return true
+      },
+      onDrop: () => {
+        if (drag && ok()) change(moveItemToGroup(amb, drag.ids[0]!, name), true)
+        endDrag()
+      },
+      onEnd: endDrag,
+    }
+  }
+  const dragOutOfGroup = drag && drag.ids.length === 1 ? amb.items.find((i) => i.id === drag.ids[0])?.group : undefined
   const itemRow = (it: AmbientItem, depth: number) => {
     const g = geos.get(it.id)
     const missing = kindOf(it) === "missing"
@@ -445,6 +491,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
         highlighted={sel?.kind === "group" && sel.id === it.group}
         onClick={() => (select({ kind: "item", id: it.id }), setTool("select"))}
         flags={itemFlags(it)}
+        dnd={itemDnd(it)}
         menu={
           <TreeRowMenu label={`Accions de «${label}»`}>
             <Menu.Item value="dup" onClick={() => {
@@ -506,6 +553,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
           selected={sel?.kind === "group" && sel.id === r.name}
           onClick={() => (groupSel(r.name), setTool("select"))}
           flags={groupFlagsOf(r.name)}
+          dnd={groupDnd(r.name)}
           menu={
             <TreeRowMenu label={`Accions de «${r.name}»`}>
               <Menu.Item value="dup" onClick={() => {
@@ -684,6 +732,36 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
               Objectes
             </TreeSection>
             {rowsOf(objectItems).map((r) => listRow(r, "object"))}
+            {/* Arrossegant un element d'un grup: zona per treure'l (queda solt), com a l'editor. */}
+            {dragOutOfGroup && (
+              <HStack
+                mt={1}
+                mx={1}
+                px={2}
+                py={1.5}
+                gap={2}
+                rounded="md"
+                fontSize="xs"
+                borderWidth="1px"
+                borderStyle="dashed"
+                borderColor={over?.id === "ungroup" ? "wood.solid" : "border.emphasized"}
+                bg={over?.id === "ungroup" ? "wood.muted" : undefined}
+                color={over?.id === "ungroup" ? "wood.fg" : "fg.muted"}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  e.dataTransfer.dropEffect = "move"
+                  if (over?.id !== "ungroup") setOver({ id: "ungroup", after: false })
+                }}
+                onDragLeave={() => over?.id === "ungroup" && setOver(null)}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  if (drag) change(setItemGroup(amb, drag.ids, undefined), true)
+                  endDrag()
+                }}
+              >
+                <LuUngroup /> Deixa'l aquí per treure'l del grup
+              </HStack>
+            )}
           </Stack>
         }
         right={

@@ -95,6 +95,29 @@ describe("grups de peces lliures", async () => {
   })
 })
 
+describe("grups amb models 3D", async () => {
+  const { moveGroupBy, duplicateGroup, newGroupName, removeGroup, renameGroup, reorderModel, setModelGroup, groupNames } = await import("./editOps")
+  const p = { id: "a", name: "a", orient: "front" as const, w: 100, h: 100, thickness: 19, material: "M", x: 0, y: 10, z: 0, group: "G" }
+  const m = (id: string, x: number, group?: string) => ({ id, name: id, src: "fern", x, y: 0, z: 0, w: 200, h: 300, d: 200, rot: 0, ...(group ? { group } : {}) })
+  const comp = { modules: [], references: [], parts: [p], models: [m("m1", 300, "G"), m("m2", 900)] }
+  it("el grup mou i duplica les peces i els models", () => {
+    const c = moveGroupBy(comp, "G", 10, 0, 0)
+    expect(c.models!.map((q) => q.x)).toEqual([310, 900])
+    const d = duplicateGroup(comp, "G")
+    expect(d.comp.models!.filter((q) => q.group === d.group)).toHaveLength(1)
+    expect(d.comp.parts!.filter((q) => q.group === d.group)).toHaveLength(1)
+    expect(groupNames(comp)).toEqual(["G"])
+    expect(newGroupName({ ...comp, parts: [] })).toBe("Grup 1")
+  })
+  it("un model entra i surt d'un grup, s'ordena, i el grup es desagrupa o s'esborra sencer", () => {
+    expect(setModelGroup(comp, "m2", "G").models!.map((q) => [q.id, q.group])).toEqual([["m1", "G"], ["m2", "G"]])
+    expect(reorderModel(comp, "m2", "m1", false).models!.map((q) => [q.id, q.group])).toEqual([["m2", "G"], ["m1", "G"]])
+    expect(renameGroup(comp, "G", undefined).models!.every((q) => !q.group)).toBe(true)
+    const r = removeGroup(comp, "G")
+    expect([r.parts!.length, r.models!.map((q) => q.id)]).toEqual([0, ["m2"]])
+  })
+})
+
 describe("arrossegar peces lliures i grups", () => {
   const p = (id: string, group?: string) => ({ id, name: id, orient: "front" as const, w: 100, h: 100, thickness: 18, material: "Blanc", x: 0, y: 0, z: 0, ...(group ? { group } : {}) })
   const c = { modules: [], references: [], parts: [p("a", "G"), p("b", "G"), p("c")] }

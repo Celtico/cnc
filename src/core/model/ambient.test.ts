@@ -87,6 +87,20 @@ describe("grups d'elements", async () => {
     expect(d.ambient.items).toHaveLength(4)
     expect(m.removeItems(d.ambient, d.ids).items).toHaveLength(2)
   })
+  it("arrossegar a l'arbre: ordre, entrar i sortir d'un grup, i el grup sencer", () => {
+    const c = { ...base, items: [...base.items, { ...base.items[0]!, id: "c", name: "C" }] }
+    const g = m.setItemGroup(c, ["b", "c"], "Grup 1")
+    // «a» deixada després de «c»: entra al grup.
+    const r = m.reorderItems(g, ["a"], "c", true)
+    expect(r.items.map((i) => [i.id, i.group])).toEqual([["b", "Grup 1"], ["c", "Grup 1"], ["a", "Grup 1"]])
+    // «b» deixada abans d'«a» (solta): en surt.
+    const out = m.reorderItems(g, ["b"], "a", false)
+    expect(out.items.map((i) => [i.id, i.group])).toEqual([["b", undefined], ["a", undefined], ["c", "Grup 1"]])
+    // El grup sencer, abans d'«a»: es queda el seu grup.
+    const whole = m.reorderItems(g, ["b", "c"], "a", false)
+    expect(whole.items.map((i) => [i.id, i.group])).toEqual([["b", "Grup 1"], ["c", "Grup 1"], ["a", undefined]])
+    expect(m.moveItemToGroup(g, "a", "Grup 1").items.map((i) => [i.id, i.group])).toEqual([["b", "Grup 1"], ["c", "Grup 1"], ["a", "Grup 1"]])
+  })
   it("duplicar un element d'un grup: la còpia es queda al grup", () => {
     const g = m.setItemGroup(base, ["a", "b"], "Grup 1")
     const d = m.duplicateItems(g, ["a"])

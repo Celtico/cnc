@@ -19,6 +19,7 @@ import {
 } from "./composition"
 import { cloneZone, removeZone, updateZone } from "./zoneOps"
 import { FreePartSchema, partSize, partsBox, type FreePart } from "./freePart"
+import { modelFootprint } from "./models"
 
 /** Porta-retalls de l'editor (mòdul, objecte, compartiment, peça lliure o model 3D). */
 export type EditClip =
@@ -227,34 +228,110 @@ export function movePartToGroup(comp: Composition, id: string, group: string): C
   return { ...comp, parts: [...rest.slice(0, at), { ...r, group }, ...rest.slice(at)] }
 }
 
-/** Mou totes les peces d'un grup (mm). No deixa que cap quedi sota terra. */
-export function moveGroupBy(comp: Composition, group: string, dx: number, dy: number, dz: number): Composition {
-  const members = (comp.parts ?? []).filter((p) => p.group === group)
-  if (!members.length) return comp
-  const minY = partsBox(resolveParts(comp).filter((p) => p.group === group)).min[1]
-  const ddy = Math.max(dy, -minY)
-  return { ...comp, parts: (comp.parts ?? []).map((p) => (p.group === group ? { ...p, x: p.x + dx, y: p.y + ddy, z: p.z + dz } : p)) }
+/**
+ * Caixa d'un grup: les seves peces lliures i els seus models 3D (el mateix nom de grup; per decisió de l'usuari,
+ * 2026-10-14), en coordenades de la composició. Sense res, `null`.
+ */
+export function groupBox(comp: Composition, group: string): { min: [number, number, number]; max: [number, number, number] } | null {
+  const ps = resolveParts(comp).filter((p) => p.group === group)
+  const ms = (comp.models ?? []).filter((m) => m.group === group)
+  if (!ps.length && !ms.length) return null
+  const min: [number, number, number] = [Infinity, Infinity, Infinity]
+  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
+  if (ps.length) {
+    const b = partsBox(ps)
+    for (let k = 0; k < 3; k++) (min[k] = Math.min(min[k]!, b.min[k]!), (max[k] = Math.max(max[k]!, b.max[k]!)))
+  }
+  for (const m of ms) {
+    const f = modelFootprint(m)
+    const lo: [number, number, number] = [f.x, m.y, f.z]
+    const hi: [number, number, number] = [f.x + f.w, m.y + m.h, f.z + f.d]
+    for (let k = 0; k < 3; k++) (min[k] = Math.min(min[k]!, lo[k]!), (max[k] = Math.max(max[k]!, hi[k]!)))
+  }
+  return { min, max }
 }
 
-/** Duplica un grup sencer al costat (nom nou). */
+/** Els grups del document (peces lliures i models 3D), en l'ordre en què surten. */
+export function groupNames(comp: Composition): string[] {
+  const out: string[] = []
+  for (const x of [...(comp.parts ?? []), ...(comp.models ?? [])]) if (x.group && !out.includes(x.group)) out.push(x.group)
+  return out
+}
+
+/** Mou tot un grup (peces i models, mm). No deixa que res quedi sota terra. */
+export function moveGroupBy(comp: Composition, group: string, dx: number, dy: number, dz: number): Composition {
+  const b = groupBox(comp, group)
+  if (!b) return comp
+  const ddy = Math.max(dy, -b.min[1])
+  return {
+    ...comp,
+    parts: (comp.parts ?? []).map((p) => (p.group === group ? { ...p, x: p.x + dx, y: p.y + ddy, z: p.z + dz } : p)),
+    ...(comp.models ? { models: comp.models.map((m) => (m.group === group ? { ...m, x: m.x + dx, y: m.y + ddy, z: m.z + dz } : m)) } : {}),
+  }
+}
+
+/** Duplica un grup sencer al costat (nom nou), amb les seves peces i els seus models. */
 export function duplicateGroup(comp: Composition, group: string): { comp: Composition; group: string } {
-  const members = (comp.parts ?? []).filter((p) => p.group === group)
-  // La caixa en coordenades de la composició (les enganxades a un mòdul són relatives a ell).
-  const b = partsBox(resolveParts(comp).filter((p) => p.group === group))
-  const taken = new Set((comp.parts ?? []).map((p) => p.group))
+  const b = groupBox(comp, group)
+  const taken = new Set(groupNames(comp))
   let name = `${group} (còpia)`
   for (let n = 2; taken.has(name); n++) name = `${group} (còpia ${n})`
-  const dx = b.max[0] - b.min[0] + 50
-  const copies = members.map((p) => ({ ...structuredClone(p), id: newId("p"), group: name, x: p.x + dx }))
-  return { comp: { ...comp, parts: [...(comp.parts ?? []), ...copies] }, group: name }
+  const dx = b ? b.max[0] - b.min[0] + 50 : 50
+  const parts = (comp.parts ?? []).filter((p) => p.group === group).map((p) => ({ ...structuredClone(p), id: newId("p"), group: name, x: p.x + dx }))
+  const models = (comp.models ?? []).filter((m) => m.group === group).map((m) => ({ ...structuredClone(m), id: newId("g"), group: name, x: m.x + dx }))
+  return { comp: { ...comp, parts: [...(comp.parts ?? []), ...parts], ...(models.length ? { models: [...(comp.models ?? []), ...models] } : {}) }, group: name }
 }
 
 /** Nom lliure per a un grup nou («Grup 1», «Grup 2»…). */
 export function newGroupName(comp: Composition): string {
-  const taken = new Set((comp.parts ?? []).map((p) => p.group))
+  const taken = new Set(groupNames(comp))
   let n = 1
   while (taken.has(`Grup ${n}`)) n++
   return `Grup ${n}`
+}
+
+/** Canvia el nom d'un grup (peces i models); `next` buit = desagrupar; sense res: el grup sencer fora. */
+export function renameGroup(comp: Composition, group: string, next: string | undefined): Composition {
+  const re = <T extends { group?: string }>(x: T): T => {
+    if (x.group !== group) return x
+    const { group: _g, ...rest } = x
+    void _g
+    return (next ? { ...rest, group: next } : rest) as T
+  }
+  return { ...comp, parts: (comp.parts ?? []).map(re), ...(comp.models ? { models: comp.models.map(re) } : {}) }
+}
+
+/** Treu tot un grup (peces i models). */
+export function removeGroup(comp: Composition, group: string): Composition {
+  return { ...comp, parts: (comp.parts ?? []).filter((p) => p.group !== group), ...(comp.models ? { models: comp.models.filter((m) => m.group !== group) } : {}) }
+}
+
+/** Arrossegar un model 3D a l'arbre: va abans o després d'un altre model i n'agafa el grup (com `reorderPart`). */
+export function reorderModel(comp: Composition, id: string, targetId: string, after: boolean): Composition {
+  const list = comp.models ?? []
+  const r = list.find((x) => x.id === id)
+  const t = list.find((x) => x.id === targetId)
+  if (!r || !t || id === targetId) return comp
+  const rest = list.filter((x) => x.id !== id)
+  const at = rest.indexOf(t) + (after ? 1 : 0)
+  const { group: _g, ...plain } = r
+  void _g
+  const moved = t.group ? { ...plain, group: t.group } : plain
+  return { ...comp, models: [...rest.slice(0, at), moved, ...rest.slice(at)] }
+}
+
+/** Posa (o treu, `group` buit) un model 3D en un grup: va darrere de l'últim model del grup. */
+export function setModelGroup(comp: Composition, id: string, group: string | undefined): Composition {
+  const list = comp.models ?? []
+  const r = list.find((x) => x.id === id)
+  if (!r) return comp
+  const rest = list.filter((x) => x.id !== id)
+  const { group: _g, ...plain } = r
+  void _g
+  if (!group) return { ...comp, models: [...rest, plain] }
+  let at = rest.length
+  for (let i = rest.length - 1; i >= 0; i--) if (rest[i]!.group === group) { at = i + 1; break }
+  return { ...comp, models: [...rest.slice(0, at), { ...plain, group }, ...rest.slice(at)] }
 }
 
 /**

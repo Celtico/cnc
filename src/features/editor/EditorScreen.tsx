@@ -53,7 +53,7 @@ import { moduleWorldX, panelBox, type CompositionWarning } from "../../core/buil
 import { activeIslands } from "../../core/build/islands"
 import { materialIssues } from "../../core/build/materialIssues"
 import { splitChildSizes } from "../../core/build/layout"
-import { applySettingsToModule, moduleHasInnerPieces, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, moduleRows, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, setModuleMount, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, insertPartCopy, insertModelCopy, moveGroupBy, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule, moduleHasInnerPieces, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, moduleRows, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, setModuleMount, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, insertPartCopy, insertModelCopy, moveGroupBy, removeGroup, renameGroup, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, InnerClearanceRow, JointForm, MaterialsForm } from "../composition/CarcassForm"
@@ -517,7 +517,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     : selection.kind === "ref" ? !!comp.references.find((r) => r.id === selection.id)?.locked
     : selection.kind === "part" ? !!comp.parts?.find((q) => q.id === selection.id)?.locked
     : selection.kind === "model" ? !!comp.models?.find((g) => g.id === selection.id)?.locked
-    : selection.kind === "group" ? (comp.parts ?? []).filter((q) => q.group === selection.id).every((q) => q.locked)
+    : selection.kind === "group" ? [...(comp.parts ?? []), ...(comp.models ?? [])].filter((q) => q.group === selection.id).every((q) => q.locked)
     : false
   /** Mou un model 3D (gizmo al 3D o fletxes): no s'enfonsa al terra. */
   const moveModel = (id: string, pos: { x: number; y: number; z: number }) =>
@@ -671,7 +671,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         setComp({ ...comp, parts: (comp.parts ?? []).filter((r) => r.id !== selection.id) })
         select({ kind: "moble" })
       } else if (selection.kind === "group") {
-        setComp({ ...comp, parts: (comp.parts ?? []).filter((r) => r.group !== selection.id) })
+        setComp(removeGroup(comp, selection.id))
         select({ kind: "moble" })
       } else if (selection.kind === "model") {
         setComp({ ...comp, models: (comp.models ?? []).filter((g) => g.id !== selection.id) })
@@ -907,7 +907,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       : selection.kind === "group"
         ? { icon: <LuGroup />, text: selection.id, parent: "Grup de peces", onRename: (v) => {
             const old = selection.id
-            setComp((c) => ({ ...c, parts: (c.parts ?? []).map((q) => (q.group === old ? { ...q, group: v } : q)) }))
+            setComp((c) => renameGroup(c, old, v))
             select({ kind: "group", id: v })
           } }
       : selection.kind === "part" && selPart
@@ -1110,7 +1110,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       ) : selection.kind === "ref" ? (
         <RefInspector comp={comp} id={selection.id} onChange={setComp} />
       ) : selection.kind === "group" ? (
-        <GroupInspector comp={comp} group={selection.id} onChange={setComp} onSelectPart={(id) => select({ kind: "part", id })} onMove={(dx, dy, dz) => moveGroup(selection.id, dx, dy, dz)} />
+        <GroupInspector comp={comp} group={selection.id} onChange={setComp} onSelectPart={(id) => select({ kind: "part", id })} onSelectModel={(id) => select({ kind: "model", id })} onMove={(dx, dy, dz) => moveGroup(selection.id, dx, dy, dz)} />
       ) : selection.kind === "part" ? (
         <Stack gap={0}>
           <PartInspector comp={comp} id={selection.id} joints={build?.joints ?? []} onChange={setComp} />
@@ -1489,7 +1489,12 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             onMovePart={selectionLocked ? undefined : movePart}
             models={comp.models?.filter((g) => !g.hidden)}
             selectedModelId={selection.kind === "model" ? selection.id : null}
-            onSelectModel={(id) => select({ kind: "model", id })}
+            onSelectModel={(id) => {
+              // Com les peces: el primer clic a un model d'un grup tria el grup; el segon, el model.
+              const g = comp.models?.find((m) => m.id === id)?.group
+              const inside = g && ((selection.kind === "group" && selection.id === g) || (selection.kind === "model" && comp.models?.find((m) => m.id === selection.id)?.group === g))
+              select(g && !inside ? { kind: "group", id: g } : { kind: "model", id })
+            }}
             selectedHardwareId={selection.kind === "hardware" ? selection.id : null}
             onSelectHardware={(id) => select({ kind: "hardware", id })}
             onMoveModel={selectionLocked ? undefined : moveModel}

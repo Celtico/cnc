@@ -534,6 +534,8 @@ export const ModelObjectSchema = z.object({
   id: z.string(),
   name: z.string(),
   ...VIEW_FLAGS,
+  /** Grup (nom), el mateix que el de les peces lliures: un grup pot tenir peces i models (es mouen junts). */
+  group: z.string().optional(),
   src: z.string(),
   x: z.number(),
   y: z.number(),

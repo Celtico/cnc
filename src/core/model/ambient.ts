@@ -582,6 +582,36 @@ export function setItemGroup(a: Ambient, ids: string[], group: string | undefine
   return { ...a, items: a.items.map((i) => (ids.includes(i.id) ? { ...i, group } : i)) }
 }
 
+/**
+ * Arrossegar a l'arbre (com les peces lliures de l'editor): l'element `id` va abans o després de `targetId` i n'agafa el
+ * grup (entra al grup, en surt o canvia de grup). Un grup sencer (`ids` de més d'un) es mou junt i es queda el seu grup.
+ */
+export function reorderItems(a: Ambient, ids: string[], targetId: string, after: boolean): Ambient {
+  const moving = a.items.filter((i) => ids.includes(i.id))
+  const t = a.items.find((i) => i.id === targetId)
+  if (!moving.length || !t || ids.includes(targetId)) return a
+  const rest = a.items.filter((i) => !ids.includes(i.id))
+  const at = rest.indexOf(t) + (after ? 1 : 0)
+  const whole = moving.length > 1
+  const moved = moving.map((i) => {
+    if (whole) return i
+    const { group: _g, ...plain } = i
+    void _g
+    return (t.group ? { ...plain, group: t.group } : plain) as AmbientItem
+  })
+  return { ...a, items: [...rest.slice(0, at), ...moved, ...rest.slice(at)] }
+}
+
+/** Posa un element dins d'un grup (arrossegat sobre la fila del grup): darrere de l'últim del grup. */
+export function moveItemToGroup(a: Ambient, id: string, group: string): Ambient {
+  const it = a.items.find((i) => i.id === id)
+  if (!it) return a
+  const rest = a.items.filter((i) => i.id !== id)
+  let at = rest.length
+  for (let i = rest.length - 1; i >= 0; i--) if (rest[i]!.group === group) { at = i + 1; break }
+  return { ...a, items: [...rest.slice(0, at), { ...it, group }, ...rest.slice(at)] }
+}
+
 export function moveItems(a: Ambient, ids: string[], dx: number, dy: number): Ambient {
   return { ...a, items: a.items.map((i) => (ids.includes(i.id) ? { ...i, x: i.x + dx, y: i.y + dy } : i)) }
 }

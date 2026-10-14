@@ -18,7 +18,7 @@ import {
   LuFolderOpen,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcons"
-import { compositionKind, partsOnlyKind, duplicateGroup, removeModule, newGroupName, partGroups, insertModelCopy, insertPartCopy, insertRefCopy, newModelObject, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, withFlag, type Composition, type ViewFlags, type Module, type Zone } from "../../core/model"
+import { compositionKind, partsOnlyKind, duplicateGroup, removeModule, newGroupName, groupNames, renameGroup, removeGroup, reorderModel, setModelGroup, insertModelCopy, insertPartCopy, insertRefCopy, newModelObject, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, withFlag, type Composition, type ViewFlags, type Module, type Zone } from "../../core/model"
 import { NameDialog } from "../../components/NameDialog"
 import { toaster } from "../../components/ui/toaster"
 import { MODEL_FORMAT_HELP, defaultElementName, freePartFor, refFor, refFromPreset, type AddKind } from "./addElements"
@@ -29,7 +29,7 @@ import { TreeRow, TreeRowMenu, TreeSection, type TreeRowDnd, type TreeRowFlags }
 import { ModelImportDialog, type ModelImportHandle } from "./ModelImportDialog"
 import type { ModelChoice } from "./useModelAssets"
 
-type DragKind = "module" | "ref" | "part"
+type DragKind = "module" | "ref" | "part" | "model"
 
 export type Selection =
   | { kind: "moble" }
@@ -132,7 +132,7 @@ export function StructureTree({
       return true
     },
     onDrop: (after) => {
-      if (drag && canDrop(kind, id)) onChange(kind === "module" ? reorderModule(comp, drag.id, id, after) : kind === "part" ? reorderPart(comp, drag.id, id, after) : reorderRef(comp, drag.id, id, after))
+      if (drag && canDrop(kind, id)) onChange(kind === "module" ? reorderModule(comp, drag.id, id, after) : kind === "part" ? reorderPart(comp, drag.id, id, after) : kind === "model" ? reorderModel(comp, drag.id, id, after) : reorderRef(comp, drag.id, id, after))
       setDrag(null)
       setOver(null)
     },
@@ -143,7 +143,7 @@ export function StructureTree({
   })
   // La fila d'un grup: s'hi pot deixar una peça (entra al grup).
   const groupDnd = (g: string): TreeRowDnd => {
-    const ok = () => drag?.kind === "part" && (comp.parts ?? []).find((q) => q.id === drag.id)?.group !== g
+    const ok = () => (drag?.kind === "part" && (comp.parts ?? []).find((q) => q.id === drag.id)?.group !== g) || (drag?.kind === "model" && (comp.models ?? []).find((q) => q.id === drag.id)?.group !== g)
     return {
       noDrag: true,
       dragging: false,
@@ -156,7 +156,7 @@ export function StructureTree({
       },
       onDrop: () => {
         if (drag && ok()) {
-          onChange(movePartToGroup(comp, drag.id, g))
+          onChange(drag.kind === "model" ? setModelGroup(comp, drag.id, g) : movePartToGroup(comp, drag.id, g))
           setOpenGroups((o) => new Set([...o, g]))
         }
         setDrag(null)
@@ -191,7 +191,7 @@ export function StructureTree({
   const parts = comp.parts ?? []
   // Grups de peces: plegats; s'obre sol el de la peça seleccionada.
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
-  const selGroup = selection.kind === "part" ? parts.find((q) => q.id === selection.id)?.group : undefined
+  const selGroup = selection.kind === "part" ? parts.find((q) => q.id === selection.id)?.group : selection.kind === "model" ? models.find((q) => q.id === selection.id)?.group : undefined
   if (selGroup && !openGroups.has(selGroup)) setOpenGroups(new Set([...openGroups, selGroup]))
   const toggleGroup = (g: string) => setOpenGroups((o) => {
     const n = new Set(o)
@@ -234,11 +234,60 @@ export function StructureTree({
     onLock: () => flip(list, (y) => y.id === x.id, "locked", !x.locked),
   })
   const groupFlags = (g: string): TreeRowFlags => {
-    const members = parts.filter((q) => q.group === g)
+    const members = [...parts, ...models].filter((q) => q.group === g)
     const hidden = members.every((q) => q.hidden)
     const locked = members.every((q) => q.locked)
-    return { hidden, locked, onHide: () => flip("parts", (y) => y.group === g, "hidden", !hidden), onLock: () => flip("parts", (y) => y.group === g, "locked", !locked) }
+    // Peces i models del grup alhora.
+    const both = (flag: keyof ViewFlags, on: boolean) => {
+      const set = <T extends { group?: string } & ViewFlags>(x: T): T => (x.group === g ? withFlag(x, flag, on) : x)
+      onChange({ ...comp, parts: parts.map(set), ...(comp.models ? { models: comp.models.map(set) } : {}) })
+    }
+    return { hidden, locked, onHide: () => both("hidden", !hidden), onLock: () => both("locked", !locked) }
   }
+
+  // La fila d'un grup (el mateix grup a Peces lliures i a Models 3D: es mou, es duplica i s'esborra sencer).
+  const groupRow = (g: string, open: boolean, hint: string) => (
+  <TreeRow
+    depth={1}
+    icon={open ? <LuChevronDown /> : <LuChevronRight />}
+    onToggle={() => toggleGroup(g)}
+    toggleLabel={open ? `Plegar «${g}»` : `Desplegar «${g}»`}
+    label={g}
+    hint={hint}
+    dnd={groupDnd(g)}
+    flags={groupFlags(g)}
+    selected={selection.kind === "group" && selection.id === g}
+    onClick={() => onSelect({ kind: "group", id: g })}
+    menu={
+      <TreeRowMenu label={`Opcions de «${g}»`}>
+        <Menu.Item
+          value="dup"
+          onClick={() => {
+            const res = duplicateGroup(comp, g)
+            onChange(res.comp)
+            onSelect({ kind: "group", id: res.group })
+          }}
+        >
+          <LuCopy /> Duplicar el grup
+        </Menu.Item>
+        <Menu.Item value="ungroup" onClick={() => onChange(renameGroup(comp, g, undefined))}>
+          <LuUngroup /> Desagrupar
+        </Menu.Item>
+        <Menu.Separator />
+        <Menu.Item
+          value="del"
+          color="fg.error"
+          onClick={() => {
+            onChange(removeGroup(comp, g))
+            onSelect({ kind: "moble" })
+          }}
+        >
+          <LuTrash2 /> Eliminar el grup
+        </Menu.Item>
+      </TreeRowMenu>
+    }
+  />
+  )
 
   return (
     <Stack gap={0.5} role="tree" aria-label={compositionKind(comp) === "objecte" ? "Estructura de l'objecte" : "Estructura del moble"} fontSize="sm">
@@ -326,7 +375,7 @@ export function StructureTree({
         const seen = new Set<string>()
         const partRow = (r: (typeof parts)[number], depth: number) => {
           const Icon = r.effect === "cut" ? LuScissors : ORIENT_ICON[r.orient]
-          const groups = partGroups(parts).filter((g) => g !== r.group)
+          const groups = groupNames(comp).filter((g) => g !== r.group)
           return (
             <TreeRow
               key={r.id}
@@ -382,46 +431,7 @@ export function StructureTree({
           const open = openGroups.has(g)
           return (
             <Box key={`g:${g}`}>
-              <TreeRow
-                depth={1}
-                icon={open ? <LuChevronDown /> : <LuChevronRight />}
-                onToggle={() => toggleGroup(g)}
-                toggleLabel={open ? `Plegar «${g}»` : `Desplegar «${g}»`}
-                label={g}
-                hint={`${members.length} peces`}
-                dnd={groupDnd(g)}
-                flags={groupFlags(g)}
-                selected={selection.kind === "group" && selection.id === g}
-                onClick={() => onSelect({ kind: "group", id: g })}
-                menu={
-                  <TreeRowMenu label={`Opcions de «${g}»`}>
-                    <Menu.Item
-                      value="dup"
-                      onClick={() => {
-                        const res = duplicateGroup(comp, g)
-                        onChange(res.comp)
-                        onSelect({ kind: "group", id: res.group })
-                      }}
-                    >
-                      <LuCopy /> Duplicar el grup
-                    </Menu.Item>
-                    <Menu.Item value="ungroup" onClick={() => onChange({ ...comp, parts: parts.map((q) => (q.group === g ? { ...q, group: undefined } : q)) })}>
-                      <LuUngroup /> Desagrupar
-                    </Menu.Item>
-                    <Menu.Separator />
-                    <Menu.Item
-                      value="del"
-                      color="fg.error"
-                      onClick={() => {
-                        onChange({ ...comp, parts: parts.filter((q) => q.group !== g) })
-                        onSelect({ kind: "moble" })
-                      }}
-                    >
-                      <LuTrash2 /> Eliminar el grup
-                    </Menu.Item>
-                  </TreeRowMenu>
-                }
-              />
+              {groupRow(g, open, `${members.length} ${members.length === 1 ? "peça" : "peces"}`)}
               {open && members.map((q) => partRow(q, 2))}
             </Box>
           )
@@ -568,37 +578,105 @@ export function StructureTree({
         Models 3D
       </TreeSection>
       )}
-      {showModels && models.map((g) => (
-        <TreeRow
-          key={g.id}
-          depth={1}
-          icon={<LuSprout />}
-          label={g.name.trim() || "Model"}
-          hint={`${Math.round(g.w)} × ${Math.round(g.h)}`}
-          selected={selection.kind === "model" && selection.id === g.id}
-          onClick={() => onSelect({ kind: "model", id: g.id })}
-          flags={flagsOf("models", g)}
-          menu={
-            <TreeRowMenu label={`Opcions de «${g.name}»`}>
-              {isObject && (
-                <Menu.Item
-                  value="dup"
-                  onClick={() => {
-                    const res = insertModelCopy(comp, g)
-                    onChange(res.comp)
-                    onSelect({ kind: "model", id: res.id })
-                  }}
-                >
-                  <LuCopy /> Duplicar
+      {showModels && (() => {
+        const seen = new Set<string>()
+        const modelRow = (g: (typeof models)[number], depth: number) => (
+          <TreeRow
+            key={g.id}
+            depth={depth}
+            icon={<LuSprout />}
+            label={g.name.trim() || "Model"}
+            hint={`${Math.round(g.w)} × ${Math.round(g.h)}`}
+            selected={selection.kind === "model" && selection.id === g.id}
+            onClick={() => onSelect({ kind: "model", id: g.id })}
+            flags={flagsOf("models", g)}
+            dnd={dnd("model", g.id)}
+            menu={
+              <TreeRowMenu label={`Opcions de «${g.name}»`}>
+                {isObject && (
+                  <Menu.Item
+                    value="dup"
+                    onClick={() => {
+                      const res = insertModelCopy(comp, g)
+                      onChange(res.comp)
+                      onSelect({ kind: "model", id: res.id })
+                    }}
+                  >
+                    <LuCopy /> Duplicar
+                  </Menu.Item>
+                )}
+                <Menu.Separator />
+                <Menu.Item value="group-new" onClick={() => {
+                  const name = newGroupName(comp)
+                  onChange(setModelGroup(comp, g.id, name))
+                  setOpenGroups((o) => new Set([...o, name]))
+                }}>
+                  <LuGroup /> Agrupar en un grup nou
                 </Menu.Item>
-              )}
-              <Menu.Item value="del" color="fg.error" onClick={() => removeModel(g.id)}>
-                <LuTrash2 /> Eliminar
-              </Menu.Item>
-            </TreeRowMenu>
-          }
-        />
-      ))}
+                {groupNames(comp).filter((n) => n !== g.group).map((n) => (
+                  <Menu.Item key={n} value={`group-${n}`} onClick={() => onChange(setModelGroup(comp, g.id, n))}>
+                    <LuGroup /> Posar a «{n}»
+                  </Menu.Item>
+                ))}
+                {g.group && (
+                  <Menu.Item value="ungroup" onClick={() => onChange(setModelGroup(comp, g.id, undefined))}>
+                    <LuUngroup /> Treure del grup
+                  </Menu.Item>
+                )}
+                <Menu.Separator />
+                <Menu.Item value="del" color="fg.error" onClick={() => removeModel(g.id)}>
+                  <LuTrash2 /> Eliminar
+                </Menu.Item>
+              </TreeRowMenu>
+            }
+          />
+        )
+        return models.map((m) => {
+          if (!m.group) return modelRow(m, 1)
+          if (seen.has(m.group)) return null
+          const g = m.group
+          seen.add(g)
+          const members = models.filter((q) => q.group === g)
+          const open = openGroups.has(g)
+          return (
+            <Box key={`mg:${g}`}>
+              {groupRow(g, open, `${members.length} ${members.length === 1 ? "model" : "models"}`)}
+              {open && members.map((q) => modelRow(q, 2))}
+            </Box>
+          )
+        })
+      })()}
+      {/* Arrossegant un model d'un grup: zona per treure'l (queda solt). */}
+      {drag?.kind === "model" && models.find((q) => q.id === drag.id)?.group && (
+        <HStack
+          mt={1}
+          mx={1}
+          px={2}
+          py={1.5}
+          gap={2}
+          rounded="md"
+          fontSize="xs"
+          borderWidth="1px"
+          borderStyle="dashed"
+          borderColor={over?.id === "ungroup" ? "wood.solid" : "border.emphasized"}
+          bg={over?.id === "ungroup" ? "wood.muted" : undefined}
+          color={over?.id === "ungroup" ? "wood.fg" : "fg.muted"}
+          onDragOver={(e) => {
+            e.preventDefault()
+            e.dataTransfer.dropEffect = "move"
+            if (over?.id !== "ungroup") setOver({ id: "ungroup", after: false })
+          }}
+          onDragLeave={() => over?.id === "ungroup" && setOver(null)}
+          onDrop={(e) => {
+            e.preventDefault()
+            onChange(setModelGroup(comp, drag.id, undefined))
+            setDrag(null)
+            setOver(null)
+          }}
+        >
+          <LuUngroup /> Deixa'l aquí per treure'l del grup
+        </HStack>
+      )}
     </Stack>
   )
 }

@@ -382,7 +382,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   o `user-…`, cantonada x/y/z i caixa w/h/d en mm, `rot` en graus al voltant del vertical): malles `.glb` que **només es
   veuen** (vegeu Visor 3D). El gir compta a les caixes (`modelFootprint`: enquadrar, plànol dels ambients, contorn i imant).
   Només als **Objectes** (per decisió de l'usuari; un moble que ja en tenia els conserva: es veuen i es poden triar i
-  eliminar, però sense + ni Duplicar ni enganxar). A l'editor: grup «Models 3D» a l'arbre (⋯ Duplicar · Eliminar, `insertModelCopy`), clic al 3D per triar-lo (`ModelMesh` a
+  eliminar, però sense + ni Duplicar ni enganxar). A l'editor: grup «Models 3D» a l'arbre (⋯ Duplicar · Eliminar, `insertModelCopy`; **grups i arrossegar**, per decisió de l'usuari, 2026-10-14: `ModelObject.group`, el mateix nom de grup que les peces lliures —un grup pot tenir peces i models, es mou, es duplica, es desagrupa i s'esborra sencer: `groupBox`, `groupNames`, `moveGroupBy`, `duplicateGroup`, `renameGroup`, `removeGroup`, `reorderModel`, `setModelGroup` a `editOps.ts`—; al 3D el primer clic tria el grup), clic al 3D per triar-lo (`ModelMesh` a
   `CabinetViewer`), contorn i gizmo (`RefGhost outline`, es mou en viu), fletxes, Supr, Ctrl/⌘ C · V · D, i `ModelInspector`
   (Model · Mides amb «Mida original» · Posició amb el Gir a passos de 15°). Compten per enquadrar la càmera.
 
@@ -1465,7 +1465,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   `TreeSection onAdd`, el + obre la galeria de Mobles o d'Objectes), cadascun amb els seus elements i grups (els blocs
   d'abans, a Objectes; un moble que ja no hi és, a Mobles, amb `LuTriangleAlert`). **Un grup amb mobles i objectes surt
   als dos apartats**, a cadascun amb els seus (plegat per apartat); triar-lo des de qualsevol tria tot el grup (les dues
-  files queden marcades). Un moble buit (sense mòduls ni peces, `isEmptyGeometry`) diu «Buit» a l'arbre, al plànol és el
+  files queden marcades). **Arrossegar per ordenar** (per decisió de l'usuari, 2026-10-14, com les peces lliures de
+  l'editor; `reorderItems`, `moveItemToGroup` a `core/model/ambient.ts`): un element deixat al costat d'un altre n'agafa
+  el grup, sobre la fila d'un grup hi entra, la fila del grup arrossega el grup sencer i, mentre s'arrossega un element d'un
+  grup, surt la zona «Treure del grup». Un moble buit (sense mòduls ni peces, `isEmptyGeometry`) diu «Buit» a l'arbre, al plànol és el
   requadre discontinu de 600 × 600 (com un esborrat) i l'inspector diu que s'ha de fer a l'editor (sense Mides generals). Inspector (element, bloc,
   paret, grup, ambient) en `FoldItem`; el de l'ambient comença amb **Resum** (com el del moble: parets, m² de terra de
   les habitacions tancades —`floorArea`, als eixos—, caixa, mobles, objectes, finestres, portes, vidrieres, grups i un

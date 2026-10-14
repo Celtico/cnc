@@ -308,12 +308,23 @@ export function CabinetViewer({
   useEffect(() => () => releaseModelGpu(), [quality])
   // Model que s'arrossega amb el gizmo: es mou en viu (posició en mm).
   const [modelDrag, setModelDrag] = useState<{ id: string; x: number; y: number; z: number } | null>(null)
+  // La caixa del grup triat: les seves peces lliures i els seus models 3D.
   const groupBox = useMemo((): RefObject | null => {
     const members = (parts ?? []).filter((p) => p.group && p.group === selectedGroup)
-    if (!members.length) return null
-    const b = partsBox(members)
-    return { id: `group:${selectedGroup}`, name: selectedGroup!, x: b.min[0], y: b.min[1], z: b.min[2], w: b.max[0] - b.min[0], h: b.max[1] - b.min[1], d: b.max[2] - b.min[2] }
-  }, [parts, selectedGroup])
+    const ms = (models ?? []).filter((m) => m.group && m.group === selectedGroup)
+    if (!members.length && !ms.length) return null
+    const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity]
+    if (members.length) {
+      const b = partsBox(members)
+      for (let k = 0; k < 3; k++) (min[k] = Math.min(min[k]!, b.min[k]!), (max[k] = Math.max(max[k]!, b.max[k]!)))
+    }
+    for (const m of ms) {
+      const f = modelFootprint(m)
+      const lo = [f.x, m.y, f.z], hi = [f.x + f.w, m.y + m.h, f.z + f.d]
+      for (let k = 0; k < 3; k++) (min[k] = Math.min(min[k]!, lo[k]!), (max[k] = Math.max(max[k]!, hi[k]!)))
+    }
+    return { id: `group:${selectedGroup}`, name: selectedGroup!, x: min[0]!, y: min[1]!, z: min[2]!, w: max[0]! - min[0]!, h: max[1]! - min[1]!, d: max[2]! - min[2]! }
+  }, [parts, models, selectedGroup])
 
   return (
     // Canviar la qualitat recrea el renderitzador: les ombres no es poden activar en calent.
