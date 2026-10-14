@@ -58,6 +58,16 @@ describe("pota AXILO 78 (placa rectangular per cargolar)", () => {
     }
   })
 
+  it("una d'una versió anterior de l'item passa a la d'ara, també amb les preferències ja a la versió d'ara", () => {
+    const old = JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+    const i = old.hardwareLibrary.findIndex((x: { id: string }) => x.id === axilo.id)
+    old.hardwareLibrary[i] = { ...old.hardwareLibrary[i], version: axilo.version - 1, params: { ...old.hardwareLibrary[i].params, inset: 45 } }
+    const res = parseSettings(old)
+    expect(res.migrated).toBe(true)
+    expect(res.settings.hardwareLibrary.find((x) => x.id === axilo.id)).toEqual(axilo)
+    expect(parseSettings(JSON.parse(JSON.stringify(res.settings))).migrated).toBe(false)
+  })
+
   it("v37: la de la v34 desada (version 1) passa a la d'ara", () => {
     const old = JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
     old.version = 36

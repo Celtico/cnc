@@ -843,12 +843,13 @@ export function parseSettings(raw: unknown): SettingsParse {
     return fresh ? { ...x, material: fresh.material } : x
   }) : withV35
   if (withV36.some((x, i) => x !== withV35[i])) migrated = true
-  // v37–v38: la pota AXILO 78 d'una versió anterior de l'item passa a la d'ara (com la munta el taller; amb la placa
-  // per dibuixar-la al 3D).
-  const withV37 = version < 38 ? withV36.map((x) => {
+  // La pota AXILO 78 (v34) d'una versió anterior de l'item passa a la d'ara (com la munta el taller, la placa per
+  // dibuixar-la, a 50 dels cantells): sempre, no només en pujar de versió de les preferències (l'item canvia de `version`
+  // sense que en canviï la de les preferències). Idempotent.
+  const withV37 = withV36.map((x) => {
     const fresh = x.builtin ? V34_ITEMS.find((k) => k.id === x.id && k.version > x.version) : undefined
     return fresh ? structuredClone(fresh) : x
-  }) : withV36
+  })
   if (withV37.some((x, i) => x !== withV36[i])) migrated = true
   const hardware = fixHardwareDefaults(withV37, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
   if (hardware.changed) migrated = true
