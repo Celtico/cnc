@@ -49,6 +49,7 @@ import {
   type Panel,
   type Settings,
   type StepRule,
+  hardwareParamLabel,
 } from "../../core/model"
 import { GalleryCard } from "../projects/GalleryCard"
 import { GALLERY_COLS, fold } from "../projects/galleryGrid"
@@ -825,7 +826,7 @@ function HardwareCard({
     item.engine === "model" && !item.machining?.length ? { label: only2d ? "Només 2D" : "Només 3D", palette: "gray" }
     : item.imported?.confirmed ? { label: "Confirmat", palette: "green" }
     : { label: "Sense confirmar", palette: "orange" }
-  const dimsBadge = hardwareParams(item).slice(0, 2).map((p) => `${p.label.replace(/ \(.*\)$/, "")} ${fmt(item.params[p.key] ?? 0)}`).join(" · ") || (item.lengths ? `${item.lengths.length} llargades` : undefined)
+  const dimsBadge = hardwareParams(item).slice(0, 2).map((p) => `${hardwareParamLabel(item, p).replace(/ \(.*\)$/, "")} ${fmt(item.params[p.key] ?? 0)}`).join(" · ") || (item.lengths ? `${item.lengths.length} llargades` : undefined)
   const nOps = item.targets.reduce((a, t) => a + t.ops.length, 0)
   const opsBadge = nOps ? `${nOps} ${nOps === 1 ? "forat" : "forats"}` : undefined
   return (
@@ -1025,7 +1026,7 @@ function HardwareCard({
         {(hardwareParams(item).length > 0 || item.lengths) && (
         <FoldItem id="hw-dims" icon={LuMoveDiagonal} title="Mides" badge={dimsBadge}>
           {hardwareParams(item).map((p) => (
-            <NumRow key={p.key} label={p.label} help={p.help} value={item.params[p.key] ?? 0} min={p.min} max={p.max} step={p.step} onChange={(v) => setParam(p.key, v)} />
+            <NumRow key={p.key} label={hardwareParamLabel(item, p)} help={hardwareParamLabel(item, p) === p.label ? p.help : "De la vora de fora del lateral a l'eix de cada pota."} value={item.params[p.key] ?? 0} min={p.min} max={p.max} step={p.step} onChange={(v) => setParam(p.key, v)} />
           ))}
           {item.lengths && (
             <FormRow label="Llargades" help="Les guies que es poden comprar: el calaix agafa la més llarga que hi cap.">
