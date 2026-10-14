@@ -27,7 +27,9 @@ import {
   KIT_FINISHES,
   KIT_LEVEL_LABEL,
   fmtMm,
+  hardwareSummary,
   isDrawerKit,
+  perDrawerSlides,
   isPushClosing,
   kitOptionsOf,
   moduleSlotItem,
@@ -40,6 +42,8 @@ import {
   type ZoneAccessory,
   type ZoneBounds,
 } from "../../core/model"
+import { HardwareSelect } from "../settings/HardwareSelect"
+import { useSettings } from "../settings/SettingsContext"
 import type { KitOrder } from "../../core/build/buildModule"
 import { handleSpec } from "../../core/build/hardware"
 import { kitBottomThickness, kitLineText, kitWoodText } from "../../core/build/drawerKit"
@@ -453,6 +457,39 @@ function AccessoryRows({ root, zone, hardware, onChange }: { root: Zone; zone: Z
  * darrere i acabat) i el que el constructor n'ha tret per a aquest compartiment (`kits`): la NL triada, els números
  * d'article i les mides del fons A i del darrere B. Cap lateral de fusta; el gruix del fons el demana el joc (16).
  */
+/**
+ * La guia de cada calaix de baix a dalt (per decisió de l'usuari, 2026-10-14: «un selector de guia a cada calaix; si en
+ * canvies un, el següent igual que l'anterior»): el primer és la «Guia de calaix»; cada un dels altres, «Com el calaix n»
+ * (el de sota) o un joc propi (`front.drawerSlides`). Al costat, el joc que s'ha fet (el més alt de la sèrie que hi cap).
+ */
+function DrawerSlides({ front, kits, onChange }: { front: Extract<Front, { kind: "drawers" }>; kits?: KitOrder[]; onChange: (f: Front) => void }) {
+  const { settings } = useSettings()
+  const items = settings.hardwareLibrary.filter((x) => isDrawerKit(x))
+  // El que ha fet la construcció, calaix a calaix (només si tots en porten: si no, no se sap quin és quin).
+  const built = kits?.length === front.n ? kits : undefined
+  const set = (i: number, h: HardwareItem | undefined) => {
+    const own = Array.from({ length: front.n }, (_, j) => (j === i ? (h ?? null) : (front.drawerSlides?.[j] ?? null)))
+    const { drawerSlides: _old, ...rest } = front
+    void _old
+    onChange(own.some((x) => x) ? { ...rest, drawerSlides: own } : rest)
+  }
+  return (
+    <>
+      {Array.from({ length: front.n - 1 }, (_, j) => {
+        const i = j + 1
+        const own = front.drawerSlides?.[i] ?? undefined
+        const label = `Guia del calaix ${i + 1}`
+        const made = built?.[i]
+        return (
+          <FormRow key={i} label={label} help={`${own ? hardwareSummary(own) : `La mateixa que el calaix ${i}.`}${made ? ` Es fa amb ${made.kit}.` : ""}`}>
+            <HardwareSelect label={label} items={items} current={own} emptyLabel={`Com el calaix ${i}`} onPick={(h) => set(i, h)} />
+          </FormRow>
+        )
+      })}
+    </>
+  )
+}
+
 function KitFields({ front, kit, kits, onChange }: { front: Extract<Front, { kind: "drawers" }>; kit: HardwareItem & { kit: NonNullable<HardwareItem["kit"]> }; kits?: KitOrder[]; onChange: (f: Front) => void }) {
   const o = kitOptionsOf(kit.kit, front.kit)
   const setKit = (patch: Partial<typeof o>) => onChange({ ...front, kit: { ...o, ...patch } })
@@ -617,11 +654,13 @@ function FrontFields({ front, openRatio, drawerHeights, onChange, hardware, noHa
           {/* Cada tria amb les seves opcions plegades a sota (per decisió de l'usuari, 2026-10-13: «cada un té les seves
               opcions, no les ajuntis»): Calaixos › alçades, Guia › joc, Tirador › posició. */}
           {front.n > 1 && (
-            <FoldItem id="zone-drawer-heights" title="Opcions dels calaixos" icon={LuSettings2} size="sm" badge={front.heights.slice(0, front.n - 1).some((h) => h !== "auto") ? "Alçades a mida" : "Alçades iguals"}>
+            <FoldItem id="zone-drawer-heights" title="Alçada dels calaixos" icon={LuSettings2} size="sm" badge={front.heights.slice(0, front.n - 1).some((h) => h !== "auto") ? "Alçades a mida" : "Alçades iguals"}>
               <DrawerHeights front={front} real={drawerHeights} onChange={onChange} />
             </FoldItem>
           )}
-          <HardwarePick slot="slide" current={front.hardware ?? hardware.slide} inherited={hardware.slide} onPick={(h) => onChange(withHardware(front, h))} />
+          <HardwarePick slot="slide" label={perDrawerSlides(front, front.hardware ?? hardware.slide) ? "Guia del calaix 1" : undefined} current={front.hardware ?? hardware.slide} inherited={hardware.slide} onPick={(h) => onChange(withHardware(front, h))} />
+          {/* Amb un joc de calaix, la guia de cada un dels altres calaixos (els de sobre segueixen el de sota). */}
+          {perDrawerSlides(front, front.hardware ?? hardware.slide) && <DrawerSlides front={front} kits={kits} onChange={onChange} />}
           {/* Un joc de calaix, triat aquí o com a guia del mòdul: les opcions del joc. */}
           {(() => {
             const slide = front.hardware ?? hardware.slide

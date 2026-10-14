@@ -179,6 +179,11 @@ export const FrontSchema = z.discriminatedUnion("kind", [
      * 2026-10-13). Sense: centrat. Com a molt, el mig del front.
      */
     handleTop: z.number().min(0).max(1000).optional(),
+    /**
+     * La guia de cada calaix de baix a dalt (per decisió de l'usuari, 2026-10-14), amb un joc de calaix: la del primer és
+     * `hardware` (la «Guia de calaix»); `drawerSlides[i]` (i ≥ 1) és la del calaix i o, `null`, la del de sota.
+     */
+    drawerSlides: z.array(FrontHardwareSchema.nullable()).max(10).optional(),
   }),
   z.object({
     kind: z.literal("flap"),
@@ -878,6 +883,14 @@ export function jointApplies(c: Pick<Carcass, "sides" | "hollow" | "top" | "base
  * fan les mateixes peces i els mateixos avisos, vingui d'on vingui l'estat (regla «res amagat compta»,
  * `build/hiddenState.test.ts`). Si una opció nova amaga camps, s'han d'afegir aquí.
  */
+/**
+ * Si surt la guia de cada calaix (`Front.drawerSlides`, per decisió de l'usuari, 2026-10-14): amb un joc de calaix, més
+ * d'un calaix i alguna alçada a mida; amb totes les alçades «Auto», una sola guia per a tots.
+ */
+export function perDrawerSlides(front: { n: number; heights: readonly (number | "auto")[] }, slide: { engine: string } | undefined): boolean {
+  return !!slide && slide.engine === "drawerKit" && front.n > 1 && front.heights.slice(0, front.n - 1).some((h) => h !== "auto")
+}
+
 export function visibleModule(m: Module): Module {
   const c = m.carcass
   const carcass: Carcass = { ...c }
@@ -1069,6 +1082,11 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
     // amb la guia normal, el camp no es veu.
     const kit = f.hardware ? f.hardware.engine === "drawerKit" : kitDefault
     if (!kit || !f.kit || !Object.keys(f.kit).length) delete drawers.kit
+    // La guia de cada calaix: només amb un joc, alçades a mida i dels calaixos que hi ha (el primer és la «Guia de
+    // calaix»); cap = cap.
+    const own = (f.drawerSlides ?? []).slice(0, f.n).map((h, i) => (i > 0 && h && h.engine === "drawerKit" ? h : null))
+    if (!kit || !perDrawerSlides(f, kit ? { engine: "drawerKit" } : undefined) || !own.some((h) => h)) delete drawers.drawerSlides
+    else drawers.drawerSlides = own
     out.front = drawers
   } else if (f?.kind === "door") {
     const door = { ...f }

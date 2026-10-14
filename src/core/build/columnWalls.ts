@@ -214,3 +214,25 @@ function toWorldXZ(p: Panel, u: number, v: number): [number, number] {
   const { origin: o, xAxis, yAxis } = p.placement
   return [o[0] + u * xAxis[0] + v * yAxis[0], o[2] + u * xAxis[2] + v * yAxis[2]]
 }
+
+/**
+ * Les columnes que entren pel darrere d'un mòdul (les mateixes de `columnWalls`: caixa vertical que puja de terra i toca
+ * el darrere), en coordenades del mòdul: de quina x a quina i fins on arriben (la cara del davant més el fons nou que s'hi
+ * posa davant), perquè els calaixos d'aquell tram es facin més curts (`buildModule` `rearLimits`). Un mòdul girat, cap.
+ */
+export function columnRearLimits(module: Module, refs: RefObject[], place: { x: number; z?: number }): { x0: number; x1: number; z: number }[] {
+  const c = module.carcass
+  const tb = c.back === "none" ? 0 : c.backThickness
+  const s = c.back === "groove" ? c.backSetback : c.back === "inset" ? (c.backInsetSetback ?? 0) : 0
+  const mz = place.z ?? 0
+  const out: { x0: number; x1: number; z: number }[] = []
+  for (const o of refs) {
+    if (o.effect !== "cut" || o.shape === "cylinder" || o.shape === "profile" || (o.axis ?? "z") !== "y" || o.y > 1) continue
+    if (o.z > mz + 1) continue
+    const x0 = o.x - place.x, x1 = o.x + o.w - place.x
+    const front = o.z + o.d - mz
+    if (x1 <= 0 || x0 >= c.width || front <= 0) continue
+    out.push({ x0, x1, z: front + s + tb })
+  }
+  return out
+}

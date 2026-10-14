@@ -1,4 +1,5 @@
 import {
+  DEFAULT_HARDWARE_KITS,
   KIT_BACKS,
   KIT_CLOSINGS,
   KIT_FINISHES,
@@ -186,6 +187,24 @@ function solidOf(s: KitShape, vars: Record<string, number>): KitSolid["shape"] {
 
 /** Alçada total del joc des de la vora inferior de la guia fins a dalt del lateral del calaix. */
 export const kitHeight = (kit: HardwareKit): number => kit.geometry.sideBase + kit.heightClass.boxSideHeight
+
+/** La sèrie d'un joc sense la classe d'alçada: «MAGIC-PRO HT12» → «MAGIC-PRO HT», «PURE-PRO HK11» → «PURE-PRO HK». */
+const familyKey = (kit: HardwareKit): string => `${kit.maker}|${kit.series.replace(/\d\w*$/, "")}`
+
+/**
+ * Tots els jocs de la mateixa sèrie que `item`, del més alt al més baix: els del catàleg de l'app (`DEFAULT_HARDWARE_KITS`)
+ * amb els `params` de l'item (la prebroca) i, a la seva classe d'alçada, el mateix item. Per triar el joc de cada calaix.
+ */
+export function kitSeries(item: HardwareItem): HardwareItem[] {
+  if (!isDrawerKit(item)) return []
+  const key = familyKey(item.kit)
+  const code = item.kit.heightClass.code
+  const others = DEFAULT_HARDWARE_KITS.filter((k) => isDrawerKit(k) && familyKey(k.kit) === key && k.kit.heightClass.code !== code).map((k) => ({ ...k, params: { ...item.params } }))
+  return [item, ...others].sort((a, b) => kitHeight(b.kit!) - kitHeight(a.kit!))
+}
+
+/** Els jocs més baixos de la mateixa sèrie que `item` (`kitSeries`): els que fa servir sol un calaix massa baix per al triat. */
+export const kitFamily = (item: HardwareItem): HardwareItem[] => (isDrawerKit(item) ? kitSeries(item).filter((k) => kitHeight(k.kit!) < kitHeight(item.kit)) : [])
 
 /**
  * Les formes dels components com a peces de només veure (`Panel`, rol `hardware`, sense nesting) col·locades al moble:

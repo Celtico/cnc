@@ -132,3 +132,22 @@ describe("trams del tall (sense cantell al 3D)", () => {
     expect(base.rawSides).toHaveLength(2)
   })
 })
+
+describe("calaixos davant d'una columna", () => {
+  it("la guia i la caixa del calaix es fan més curtes, fins al fons nou de davant de la columna", async () => {
+    const { defaultFront } = await import("../model")
+    const m0 = mod()
+    const m = { ...m0, root: { ...m0.root, front: { ...defaultFront("drawers"), n: 2 } } }
+    const sides = (c: Composition) => buildComposition(c).panels.filter((p) => p.role === "drawerSide")
+    const free = sides({ modules: [m], references: [] })
+    const withCol = buildComposition({ modules: [m], references: [col(400, -60)] })
+    const box = withCol.panels.filter((p) => p.role === "drawerSide")
+    expect(free.length).toBeGreaterThan(0)
+    expect(box.length).toBe(free.length)
+    // La columna arriba a z = 190 i el fons nou de davant a 210: la caixa del calaix no hi passa.
+    for (const p of box) expect(panelBox(p).min[2], p.label).toBeGreaterThanOrEqual(210 - 0.5)
+    expect(Math.max(...box.map((p) => p.length))).toBeLessThan(Math.max(...free.map((p) => p.length)))
+    // Cap calaix retallat per la columna.
+    expect(box.some((p) => p.outline)).toBe(false)
+  })
+})

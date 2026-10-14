@@ -12,6 +12,7 @@ import {
   type Front,
   type FrontHandle,
   type HardwareItem,
+  type HardwareKit,
   type KitLevel,
   type KitOptions,
   type ModuleHardware,
@@ -38,7 +39,7 @@ import {
 } from "../model"
 import { normalizePanel } from "./buildCabinet"
 import { applyHardware, legSpec, resolveKit, slotSpec, type ResolvedKit, type SlotSpec } from "./hardware"
-import { kitBottomThickness, kitHeight, kitSolidPanels, planKit, type KitOrderLine, type KitWoodSize } from "./drawerKit"
+import { kitBottomThickness, kitFamily, kitHeight, kitSolidPanels, planKit, type KitOrderLine, type KitPlan, type KitWoodSize } from "./drawerKit"
 import { discOutline, planLights } from "./lightKit"
 import type { LightOrder } from "./lightOrders"
 import {
@@ -305,6 +306,14 @@ interface HandleChoice {
 class Builder {
   readonly m: Module
   readonly d: Derived
+  /** Obstacles pel darrere (columnes): els calaixos del seu tram, més curts. */
+  rearLimits: RearLimit[] = []
+  /** On comença l'interior pel darrere en el tram x0–x1 (el fons, o la columna amb el seu fons si hi és). */
+  rearAt(x0: number, x1: number): number {
+    let z = this.d.backInnerZ
+    for (const l of this.rearLimits) if (Math.min(x1, l.x1) - Math.max(x0, l.x0) > 1) z = Math.max(z, l.z)
+    return z
+  }
   readonly panels: Panel[] = []
   readonly warnings: BuildWarning[] = []
   readonly openRatios: Record<string, number> = {}
@@ -1885,7 +1894,8 @@ class Builder {
 
     const boxW = r(rect.x1 - rect.x0 - 2 * hw.sideClearance)
     // Amb el front encastat, la caixa del calaix comença un gruix més endins.
-    const maxLen = d.availDepth - hw.backClearance - (d.inset ? d.t : 0)
+    // Una columna pel darrere: la fondària que queda davant del seu fons.
+    const maxLen = d.availDepth - (this.rearAt(rect.x0, rect.x1) - d.backInnerZ) - hw.backClearance - (d.inset ? d.t : 0)
     const slide = [...hw.slideLengths].sort((a, b) => b - a).find((l) => l <= maxLen)
     if (slide === undefined) {
       this.warnings.push({ code: "drawer-no-slide", message: `Cap guia de calaix (${hw.slideLengths.join(", ")}) cap en ${r(maxLen)} mm de fondària útil.`, zoneId: zone.id })
@@ -2028,7 +2038,7 @@ class Builder {
     const LW = r(rect.x1 - rect.x0)
     const zFront = d.frontZ - d.t // cara posterior del front
     // Fondària darrere del front fins al fons del moble (encastat: el front ja és dins de la llum).
-    const depth = r(zFront - d.backInnerZ)
+    const depth = r(zFront - this.rearAt(rect.x0, rect.x1))
     const TB = kitBottomThickness(item)
     const res = planKit(item, { LW, depth, G: c.thickness, TB, options: front.kit })
     for (const w of res.warnings) this.hardwareWarning(w, zone.id)
@@ -2039,52 +2049,90 @@ class Builder {
     if (plan && front.n > 0 && bottomMat.warn && !this.warnings.some((w) => w.code === "drawer-bottom"))
       this.warnings.push({ code: "drawer-bottom", message: `Fons del calaix de ${TB} mm en «${bottomMat.name}» (el joc «${item.name}» demana un fons del calaix de ${TB} mm; ${c.back === "none" ? `sense fons al mòdul, surt del material del cos, de ${c.thickness} mm` : `surt del fons del mòdul, de ${c.backThickness} mm`}): comprova que aquest material es ven en ${TB} mm, o tria'n un a Materials › «Fons del calaix».`, zoneId: zone.id })
     if (plan && (!left || !right)) this.hardwareWarning(`«${item.name}»: el compartiment no té lateral a ${!left ? "l'esquerra" : "la dreta"} on cargolar la guia. Els calaixos es queden només amb el front.`, zone.id)
-    const kit = plan?.kit
-    const totalH = kit ? kitHeight(kit) : 0
+    // Vora inferior de la guia de cada calaix: a `baseAboveFront` del cantell de baix del front, dins de la llum (1 mm).
+    const slideBase = (i: number, kit: HardwareKit) => r(Math.max(ys[i]! + kit.rules.baseAboveFront, rect.y0 + 1))
+    // Fins on pot arribar el joc: l'últim, sota la tapa (1 mm); els altres, fins a la guia del de sobre.
+    const kitTop = (i: number, kit: HardwareKit) => (i === front.n - 1 ? rect.y1 - 1 : slideBase(i + 1, kit))
+    const fits = (i: number, kit: HardwareKit) => slideBase(i, kit) + kitHeight(kit) <= kitTop(i, kit) + 0.01
+    // L'alçada del calaix mana (per decisió de l'usuari): si el joc triat no hi cap, el més alt de la mateixa sèrie que
+    // sí que hi cap (MAGIC-PRO K → M → N), amb els mateixos números de l'item (prebroca) i les mateixes opcions.
+    // La guia de cada calaix (per decisió de l'usuari, 2026-10-14): el primer, la «Guia de calaix»; cada un dels altres, la
+    // seva (`front.drawerSlides[i]`, un joc) o, sense, la del calaix de sota. Triar-ne una canvia aquell i els de sobre.
+    const slideOf: HardwareItem[] = []
+    for (let i = 0, prev = item; i < front.n; i++) {
+      const own = i > 0 ? front.drawerSlides?.[i] : undefined
+      if (own && isDrawerKit(own)) prev = own
+      slideOf.push(prev)
+    }
+    // Pla de cada joc (un cop per item) i els de la seva sèrie més baixos.
+    const plans = new Map<HardwareItem, { plan: KitPlan | null; lower: { sib: HardwareItem; plan: KitPlan }[] }>()
+    const planOf = (it: HardwareItem) => {
+      let got = plans.get(it)
+      if (!got) {
+        const tb = kitBottomThickness(it)
+        const own = it === item ? res : planKit(it, { LW, depth, G: c.thickness, TB: tb, options: front.kit })
+        if (it !== item) for (const w of own.warnings) this.hardwareWarning(w, zone.id)
+        // L'alçada del calaix mana (per decisió de l'usuari): si el joc no hi cap, el més alt de la mateixa sèrie que
+        // sí que hi cap (MAGIC-PRO K → M → N), amb els mateixos números de l'item (prebroca) i les mateixes opcions.
+        const lower = own.plan ? kitFamily(it).flatMap((sib) => {
+          const sp = planKit(sib, { LW, depth, G: c.thickness, TB: kitBottomThickness(sib), options: front.kit }).plan
+          return sp ? [{ sib, plan: sp }] : []
+        }) : []
+        got = { plan: own.plan, lower }
+        plans.set(it, got)
+      }
+      return got
+    }
     for (let i = 0; i < front.n; i++) {
       this.drawerCount += 1
       const k = this.drawerCount
       const fh = heights[i]!
       const y = ys[i]!
       const frontPanel = this.addDrawerFront(k, ter, y, fh, handleHw, zone)
-      if (!plan || !kit || !left || !right) continue
-      // Vora inferior de la guia: a `baseAboveFront` del cantell de baix del front, dins de la llum (1 mm de marge).
-      const y0 = r(Math.max(y + kit.rules.baseAboveFront, rect.y0 + 1))
-      if (y0 + totalH > rect.y1 - 1) {
-        this.hardwareWarning(`«${item.name}» (${kit.heightClass.code}, ${num(totalH)} mm d'alçada) no cap al calaix ${k}: en queden ${num(rect.y1 - 1 - y0)} per sobre de la guia. Només es fa el front: posa menys calaixos o un joc més baix.`, zone.id)
+      const chosen = slideOf[i]!
+      const { plan: own, lower } = planOf(chosen)
+      if (!own || !left || !right) continue
+      const pick = fits(i, own.kit) ? { sib: chosen, plan: own } : lower.find((x) => fits(i, x.plan.kit))
+      if (!pick) {
+        const least = lower.at(-1)
+        this.hardwareWarning(`«${chosen.name}» no cap al calaix ${k} (front de ${num(fh)} mm)${least ? `, ni tampoc el joc més baix de la sèrie («${least.sib.name}», ${num(kitHeight(least.plan.kit))} mm d'alçada)` : ""}: només es fa el front. Fes més alt el front, posa menys calaixos o tria una guia més baixa per a aquest calaix.`, zone.id)
         continue
       }
+      const kitItemUsed = pick.sib
+      const kitPlan = pick.plan
+      const kit = kitPlan.kit
+      const y0 = slideBase(i, kit)
       const at = { x0: rect.x0, y0, zFront }
-      const pilot = plan.pilot
+      const pilot = kitPlan.pilot
       // Prebroques dels cargols de la guia als dos laterals del moble (el dret, mirall): z des del cantell de davant del
       // lateral (= la cara de darrere del front, amb els fronts recobrents).
       if (pilot) {
         const spec = { ...pilot, tag: "kit-slide" }
         for (const ref of [left, right])
-          for (const h of plan.sidePilots) addFaceHole(ref.panel, [ref === left ? ref.xR : ref.xL, r(y0 + h.y), r(zFront - h.z)], spec)
+          for (const h of kitPlan.sidePilots) addFaceHole(ref.panel, [ref === left ? ref.xR : ref.xL, r(y0 + h.y), r(zFront - h.z)], spec)
         // Suports de davant: al darrere del front (cara A), a `x` de cada lateral.
-        for (const h of plan.frontPilots) for (const x of [rect.x0 + h.x, rect.x1 - h.x]) addFaceHole(frontPanel, [r(x), r(y0 + h.y), zFront], { ...pilot, tag: "kit-front" })
+        for (const h of kitPlan.frontPilots) for (const x of [rect.x0 + h.x, rect.x1 - h.x]) addFaceHole(frontPanel, [r(x), r(y0 + h.y), zFront], { ...pilot, tag: "kit-front" })
       }
       // Fusta: fons A (sobre la guia del lateral) i darrere B (sobre el fons, al final).
-      const bottom = plan.wood.find((w) => w.key === "bottom")
-      const back = plan.wood.find((w) => w.key === "back")
+      const bottom = kitPlan.wood.find((w) => w.key === "bottom")
+      const back = kitPlan.wood.find((w) => w.key === "back")
       const zSlide = zFront - kit.rules.slideSetback
       if (bottom && bottom.depth !== undefined) {
         const bx0 = r(rect.x0 + (LW - bottom.width) / 2)
         this.add(
-          this.basePanel(`drawer-${k}-bottom`, "fons calaix", `Fons calaix ${k}`, "drawerBottom", bottom.width, bottom.depth, TB, bottomMat.name, "none", { ...NO_EDGES }, placement([bx0, y0 + kit.geometry.bottomBase, zSlide], X, neg(Z), Y, neg(Y))),
+          this.basePanel(`drawer-${k}-bottom`, "fons calaix", `Fons calaix ${k}`, "drawerBottom", bottom.width, bottom.depth, kitBottomThickness(kitItemUsed), bottomMat.name, "none", { ...NO_EDGES }, placement([bx0, y0 + kit.geometry.bottomBase, zSlide], X, neg(Z), Y, neg(Y))),
         )
       }
       if (back && back.height !== undefined && bottom && bottom.depth !== undefined) {
         const bx0 = r(rect.x0 + (LW - back.width) / 2)
-        const yB = r(y0 + kit.geometry.bottomBase + TB)
+        const yB = r(y0 + kit.geometry.bottomBase + kitBottomThickness(kitItemUsed))
         const zB = r(zSlide - bottom.depth)
         // Cara A cap al darrere del moble (on van els suports): x local = amplada, y local amunt.
         const backPanel = this.add(this.basePanel(`drawer-${k}-back`, "darrere calaix", `Darrere calaix ${k}`, "drawerBack", back.width, back.height, c.thickness, c.material, "x", edges("top"), placement([bx0, yB, zB + c.thickness], X, Y, neg(Z), neg(Z))))
-        if (pilot) for (const h of plan.backPilots) for (const x of [bx0 + h.x, bx0 + back.width - h.x]) addFaceHole(backPanel, [r(x), r(yB + h.y), zB], { ...pilot, tag: "kit-back" })
+        if (pilot) for (const h of kitPlan.backPilots) for (const x of [bx0 + h.x, bx0 + back.width - h.x]) addFaceHole(backPanel, [r(x), r(yB + h.y), zB], { ...pilot, tag: "kit-back" })
       }
-      this.extras.push(...kitSolidPanels(plan, k, at, LW))
-      this.hardwareKits.push({ zoneId: zone.id, drawer: k, item: item.name, kit: `${kit.maker} ${kit.series} ${kit.heightClass.code}`, nl: plan.nl, options: plan.options, lines: plan.lines, wood: plan.wood, ...(plan.rule ? { rule: plan.rule } : {}), ...(plan.syncRod !== undefined ? { syncRod: plan.syncRod } : {}) })
+      this.extras.push(...kitSolidPanels(kitPlan, k, at, LW))
+      this.hardwareKits.push({ zoneId: zone.id, drawer: k, item: kitItemUsed.name, kit: `${kit.maker} ${kit.series} ${kit.heightClass.code}`, nl: kitPlan.nl, options: kitPlan.options, lines: kitPlan.lines, wood: kitPlan.wood, ...(kitPlan.rule ? { rule: kitPlan.rule } : {}), ...(kitPlan.syncRod !== undefined ? { syncRod: kitPlan.syncRod } : {}) })
     }
   }
 
@@ -2205,9 +2253,21 @@ class Builder {
 }
 
 /** Construeix totes les peces d'un mòdul en coordenades del mòdul (base a Y = 0). */
-export function buildModule(input: Module): ModuleBuild {
+/**
+ * Un obstacle que entra pel darrere del mòdul (una columna de la casa, `buildComposition`): en coordenades del mòdul, de
+ * `x0` a `x1`, i fins a `z` (des del darrere, ja amb el fons nou que s'hi posa davant). Els calaixos d'aquell tram es
+ * fan més curts (guia i caixa, o la NL del joc) perquè hi càpiguen.
+ */
+export interface RearLimit {
+  x0: number
+  x1: number
+  z: number
+}
+
+export function buildModule(input: Module, opts: { rearLimits?: RearLimit[] } = {}): ModuleBuild {
   // Res amagat compta: només el que es veu a l'inspector (els camps de les opcions apagades no hi entren).
   const b = new Builder(visibleModule(input))
+  b.rearLimits = opts.rearLimits ?? []
   b.buildCarcass()
   const layout = b.buildZones()
   b.buildLegs()

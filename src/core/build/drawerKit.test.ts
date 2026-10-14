@@ -241,3 +241,49 @@ describe("joc paramètric: construcció", () => {
     expect(pv.panels[0]!.holes.filter((h) => h.tag === "kit-slide")).toHaveLength(8)
   })
 })
+
+describe("joc paramètric: alçades dels fronts a mà", () => {
+  const HT12 = DEFAULT_HARDWARE_KITS.find((k) => k.id === "kit-dtc-ht12")!
+  const withHeights = (heights: (number | "auto")[]): Module => {
+    const m = kitModule(3, {}, HT12)
+    return { ...m, root: { ...m.root, front: { ...(m.root.front as Extract<Zone["front"], { kind: "drawers" }>), heights } } }
+  }
+
+  it("l'alçada del calaix mana: un calaix massa baix per al K porta el joc més alt de la sèrie que hi cap (M)", () => {
+    const b = buildModule(withHeights([270, 270, "auto"]))
+    expect(b.drawerHeights.root![2]).toBeLessThan(180)
+    expect(b.hardwareKits.map((k) => k.kit)).toEqual(["DTC MAGIC-PRO HT12 K", "DTC MAGIC-PRO HT12 K", "DTC MAGIC-PRO HT11 M"])
+    expect(b.hardwareKits[2]!.item).toBe("DTC MAGIC-PRO HT11 M (88)")
+    expect(b.warnings.filter((w) => w.code === "hardware")).toEqual([])
+    // El calaix 3 té els seus forats de guia als laterals, i el joc M no passa de la tapa.
+    const top = Math.max(...b.extras.filter((p) => p.id.startsWith("drawer-3-") || p.id.startsWith("kitfix-3-")).map((p) => p.placement.origin[1]))
+    expect(top).toBeLessThan(720)
+  })
+
+  it("si ni el joc més baix de la sèrie hi cap, només el front i un avís que ho diu", () => {
+    const b = buildModule(withHeights([340, 300, "auto"]))
+    expect(b.hardwareKits.map((k) => k.drawer)).toEqual([1, 2])
+    expect(b.warnings.some((w) => w.code === "hardware" && w.message.includes("ni tampoc el joc més baix de la sèrie"))).toBe(true)
+  })
+
+  it("cada calaix pot tenir la seva guia: els de sobre segueixen el de sota", () => {
+    const m = withHeights([270, 270, "auto"])
+    const f = m.root.front as Extract<Zone["front"], { kind: "drawers" }>
+    const HT10 = DEFAULT_HARDWARE_KITS.find((k) => k.id === "kit-dtc-ht10")!
+    const DP = DEFAULT_HARDWARE_KITS.find((k) => k.id === "kit-dtc-hb01")!
+    const own = (drawerSlides: (typeof HT10 | null)[]) => buildModule({ ...m, root: { ...m.root, front: { ...f, drawerSlides } } })
+    // El calaix 2 amb el N: el 3, sense guia pròpia, també.
+    expect(own([null, HT10, null]).hardwareKits.map((k) => k.kit)).toEqual(["DTC MAGIC-PRO HT12 K", "DTC MAGIC-PRO HT10 N", "DTC MAGIC-PRO HT10 N"])
+    // Una altra sèrie al calaix 3, amb els seus components al 3D (no els del joc del calaix 1).
+    const b = own([null, null, DP])
+    expect(b.hardwareKits.map((k) => k.kit)).toEqual(["DTC MAGIC-PRO HT12 K", "DTC MAGIC-PRO HT12 K", "DTC DRAGON-PRO HB01 M"])
+    const side = (k: number) => b.extras.find((p) => p.id.startsWith(`drawer-${k}-kit-boxSide`))!
+    expect(side(3).width).not.toBe(side(1).width)
+    // Amb una guia normal, el camp no compta.
+    const plain = { ...m, root: { ...m.root, front: { ...f, hardware: undefined, drawerSlides: [null, HT10] } } }
+    expect(visibleModule(plain).root.front).not.toHaveProperty("drawerSlides")
+    // Amb totes les alçades «Auto», una sola guia: la de cada calaix no surt ni compta.
+    const auto = { ...m, root: { ...m.root, front: { ...f, heights: ["auto", "auto", "auto"] as ("auto" | number)[], drawerSlides: [null, HT10] } } }
+    expect(visibleModule(auto).root.front).not.toHaveProperty("drawerSlides")
+  })
+})

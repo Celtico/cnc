@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { DEFAULT_GRILLE, DEFAULT_MODULE_HARDWARE, HARDWARE_SLOTS, defaultModule, isLegacyHardware, setFront, setShelves, usedHardwareSlots, type Carcass, type Composition, type Front, type Module, type ModuleHardware, type Zone } from "../model"
+import { DEFAULT_GRILLE, DEFAULT_HARDWARE_KITS, DEFAULT_MODULE_HARDWARE, HARDWARE_SLOTS, defaultModule, isLegacyHardware, setFront, setShelves, usedHardwareSlots, type Carcass, type Composition, type Front, type Module, type ModuleHardware, type Zone } from "../model"
 import { buildComposition } from "./buildComposition"
 import { catalogCorpus, int, MATERIALS, pick, randomComposition, rng, type Rnd } from "./testCorpus"
 
@@ -226,6 +226,8 @@ function scrambleFront(f: Front, r: Rnd, _noHandles: boolean): Front {
         ...f,
         heights: [...f.heights.slice(0, f.n), ...Array.from({ length: int(r, 0, 3) }, () => pick(r, ["auto", 120, 300] as const))],
         ...(f.hardware?.engine !== "drawerKit" && r() < 0.5 ? { kit: { closing: pick(r, ["push", "pushSoft"] as const), back: "metal" as const } } : {}),
+        // El joc de cada calaix: amb la guia normal no compta (ni els dels calaixos de més).
+        ...(f.hardware?.engine !== "drawerKit" && r() < 0.5 ? { drawerSlides: [null, structuredClone(DEFAULT_HARDWARE_KITS[0]!)] } : {}),
       }
     case "door":
       // Dues portes: no surten les frontisses.
