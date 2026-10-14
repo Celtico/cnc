@@ -18,7 +18,7 @@ import {
   LuFolderOpen,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcons"
-import { compositionKind, partsOnlyKind, duplicateGroup, removeModule, newGroupName, groupNames, renameGroup, removeGroup, reorderModel, setModelGroup, insertModelCopy, insertPartCopy, insertRefCopy, newModelObject, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, withFlag, type Composition, type MultiItem, type ViewFlags, type Module, type Zone } from "../../core/model"
+import { compositionKind, partsOnlyKind, duplicateGroup, removeModule, newGroupName, groupNames, renameGroup, removeGroup, reorderModel, setModelGroup, groupMulti, ungroupMulti, insertModelCopy, insertPartCopy, insertRefCopy, newModelObject, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, withFlag, type Composition, type MultiItem, type ViewFlags, type Module, type Zone } from "../../core/model"
 import { NameDialog } from "../../components/NameDialog"
 import { toaster } from "../../components/ui/toaster"
 import { MODEL_FORMAT_HELP, defaultElementName, freePartFor, refFor, refFromPreset, type AddKind } from "./addElements"
@@ -115,26 +115,43 @@ export function StructureTree({
     onChange({ ...comp, modules })
   }
   // Arrossegar per ordenar (mòduls dins de la seva fila, i objectes).
-  const [drag, setDrag] = useState<{ kind: DragKind; id: string } | null>(null)
+  // Arrossegar una fila de la selecció múltiple arrossega tots els triats (`multi`).
+  const [drag, setDrag] = useState<{ kind: DragKind; id: string; multi?: MultiItem[] } | null>(null)
   const [over, setOver] = useState<{ id: string; after: boolean } | null>(null)
+  const inDrag = (kind: DragKind, id: string) => (drag?.multi ? drag.multi.some((x) => x.kind === kind && x.id === id) : drag?.id === id)
   const canDrop = (kind: DragKind, id: string) => {
+    if (drag?.multi) return kind !== "module" && !inDrag(kind, id)
     if (!drag || drag.kind !== kind || drag.id === id) return false
     if (kind !== "module") return true
     const a = comp.modules.find((m) => m.id === drag.id)
     const b = comp.modules.find((m) => m.id === id)
     return !!a && !!b && rowOf(a) === rowOf(b)
   }
+  // Deixar els triats al costat d'un element: els del seu tipus s'hi posen en ordre i tots n'agafen el grup (com un sol).
+  const dropMulti = (items: MultiItem[], kind: DragKind, id: string, after: boolean): Composition => {
+    let c = comp
+    const same = items.filter((x) => x.kind === kind)
+    for (const x of after ? [...same].reverse() : same) c = kind === "part" ? reorderPart(c, x.id, id, after) : kind === "model" ? reorderModel(c, x.id, id, after) : reorderRef(c, x.id, id, after)
+    const target = kind === "part" ? parts.find((q) => q.id === id) : kind === "model" ? models.find((q) => q.id === id) : undefined
+    const others = items.filter((x) => x.kind !== kind && x.kind !== "ref")
+    if (others.length) c = target?.group ? groupMulti(c, others, target.group) : ungroupMulti(c, others)
+    return c
+  }
   const dnd = (kind: DragKind, id: string): TreeRowDnd => ({
-    dragging: drag?.id === id,
+    dragging: inDrag(kind, id),
     indicator: over?.id === id && canDrop(kind, id) ? (over.after ? "after" : "before") : null,
-    onStart: () => setDrag({ kind, id }),
+    onStart: () => {
+      const multi = selection.kind === "multi" && selection.items.some((x) => x.kind === kind && x.id === id) ? selection.items : undefined
+      setDrag({ kind, id, ...(multi ? { multi } : {}) })
+    },
     onOver: (after) => {
       if (!canDrop(kind, id)) return false
       if (over?.id !== id || over.after !== after) setOver({ id, after })
       return true
     },
     onDrop: (after) => {
-      if (drag && canDrop(kind, id)) onChange(kind === "module" ? reorderModule(comp, drag.id, id, after) : kind === "part" ? reorderPart(comp, drag.id, id, after) : kind === "model" ? reorderModel(comp, drag.id, id, after) : reorderRef(comp, drag.id, id, after))
+      if (drag?.multi && canDrop(kind, id)) onChange(dropMulti(drag.multi, kind, id, after))
+      else if (drag && canDrop(kind, id)) onChange(kind === "module" ? reorderModule(comp, drag.id, id, after) : kind === "part" ? reorderPart(comp, drag.id, id, after) : kind === "model" ? reorderModel(comp, drag.id, id, after) : reorderRef(comp, drag.id, id, after))
       setDrag(null)
       setOver(null)
     },
@@ -145,7 +162,8 @@ export function StructureTree({
   })
   // La fila d'un grup: s'hi pot deixar una peça (entra al grup).
   const groupDnd = (g: string): TreeRowDnd => {
-    const ok = () => (drag?.kind === "part" && (comp.parts ?? []).find((q) => q.id === drag.id)?.group !== g) || (drag?.kind === "model" && (comp.models ?? []).find((q) => q.id === drag.id)?.group !== g)
+    const grouped = (x: MultiItem) => (x.kind === "part" ? parts.find((q) => q.id === x.id)?.group : x.kind === "model" ? models.find((q) => q.id === x.id)?.group : g)
+    const ok = () => (drag?.multi ? drag.multi.some((x) => x.kind !== "ref" && grouped(x) !== g) : (drag?.kind === "part" && (comp.parts ?? []).find((q) => q.id === drag.id)?.group !== g) || (drag?.kind === "model" && (comp.models ?? []).find((q) => q.id === drag.id)?.group !== g))
     return {
       noDrag: true,
       dragging: false,
@@ -158,7 +176,7 @@ export function StructureTree({
       },
       onDrop: () => {
         if (drag && ok()) {
-          onChange(drag.kind === "model" ? setModelGroup(comp, drag.id, g) : movePartToGroup(comp, drag.id, g))
+          onChange(drag.multi ? groupMulti(comp, drag.multi, g) : drag.kind === "model" ? setModelGroup(comp, drag.id, g) : movePartToGroup(comp, drag.id, g))
           setOpenGroups((o) => new Set([...o, g]))
         }
         setDrag(null)
@@ -463,7 +481,7 @@ export function StructureTree({
           onDragLeave={() => over?.id === "ungroup" && setOver(null)}
           onDrop={(e) => {
             e.preventDefault()
-            onChange(removePartFromGroup(comp, drag.id))
+            onChange(drag.multi ? ungroupMulti(comp, drag.multi) : removePartFromGroup(comp, drag.id))
             setDrag(null)
             setOver(null)
           }}
@@ -672,7 +690,7 @@ export function StructureTree({
           onDragLeave={() => over?.id === "ungroup" && setOver(null)}
           onDrop={(e) => {
             e.preventDefault()
-            onChange(setModelGroup(comp, drag.id, undefined))
+            onChange(drag.multi ? ungroupMulti(comp, drag.multi) : setModelGroup(comp, drag.id, undefined))
             setDrag(null)
             setOver(null)
           }}
