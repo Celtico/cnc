@@ -24,12 +24,12 @@ describe("pota AXILO 78 (placa rectangular per cargolar)", () => {
     const legs = bottom.holes.filter((h) => h.tag === "leg")
     expect(legs).toHaveLength(16)
     expect(legs.every((h) => h.diameter === 3 && h.depth === 10)).toBe(true)
-    // Eix a 48 mm dels laterals, 60 del darrere i 83 del davant (el sòcol); a l'esquerra, cargols a −19 / +45 en X (el clip cap al lateral) i ±32 cap al davant; a la
+    // La de cuina: eix a 52 mm dels laterals, 53 del darrere i 83 del davant (el sòcol); a l'esquerra, cargols a −19 / +45 en X (el clip cap al lateral) i ±32 cap al davant; a la
     // dreta, en mirall.
     const W = m.carcass.width, D = m.carcass.depth
     const world = legs.map((h) => toWorld(bottom, [h.x, h.y, 0]))
     const near = (x: number, z: number) => world.some((p) => Math.abs(p[0] - x) < 0.01 && Math.abs(p[2] - z) < 0.01)
-    for (const [cx, cz, s] of [[48, 60, 1], [W - 48, 60, -1], [48, D - 83, 1], [W - 48, D - 83, -1]] as const)
+    for (const [cx, cz, s] of [[52, 53, 1], [W - 52, 53, -1], [52, D - 83, 1], [W - 52, D - 83, -1]] as const)
       for (const [du, dv] of [[-19, -32], [45, -32], [-19, 32], [45, 32]] as const) expect(near(cx + s * du, cz + dv), `${cx},${cz} ${du},${dv}`).toBe(true)
     expect(b.warnings.filter((w) => w.code === "hardware")).toEqual([])
   })
@@ -49,11 +49,21 @@ describe("pota AXILO 78 (placa rectangular per cargolar)", () => {
     expect(near(W - 60 + 19, D - 120 + 32)).toBe(true)
   })
 
+  it("la de mobles: la mateixa placa, a la biblioteca, amb el davant per confirmar (com el darrere)", () => {
+    const moble = HAFELE_LEGS.find((x) => x.id === "leg-hafele-axilo78-screw-moble")!
+    expect(HardwareItemSchema.safeParse(moble).success).toBe(true)
+    expect(DEFAULT_SETTINGS.hardwareLibrary.some((x) => x.id === moble.id)).toBe(true)
+    expect(moble.name).toMatch(/moble$/)
+    expect(axilo.name).toMatch(/cuina$/)
+    expect(moble.params.insetFront).toBe(moble.params.insetBack)
+    expect(moble.targets).toEqual(axilo.targets)
+  })
+
   it("el dibuix de Preferències (peça d'exemple) posa els forats com el moble: davant, darrere i mirall", () => {
     const [base] = hardwarePreview(axilo).panels
     const at = (x: number, y: number) => base!.holes.some((h) => Math.abs(h.x - x) < 0.01 && Math.abs(h.y - y) < 0.01)
     const L = base!.length, Wd = base!.width
-    for (const [cx, cy, s] of [[48, 60, 1], [L - 48, 60, -1], [48, Wd - 83, 1], [L - 48, Wd - 83, -1]] as const)
+    for (const [cx, cy, s] of [[52, 53, 1], [L - 52, 53, -1], [52, Wd - 83, 1], [L - 52, Wd - 83, -1]] as const)
       for (const [du, dv] of [[-19, -32], [45, -32], [-19, 32], [45, 32]] as const) expect(at(cx + s * du, cy + dv), `${cx},${cy}`).toBe(true)
   })
 

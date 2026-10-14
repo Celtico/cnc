@@ -25,20 +25,20 @@ const AXILO_SOURCE = "Catàleg general Häfele, p. FF 11.79 (AXILO 78)"
 export const HAFELE_LEGS: HardwareItem[] = [
   {
     id: "leg-hafele-axilo78-screw",
-    name: "Pota de sòcol AXILO 78 Rectangular per cargolar",
+    name: "Pota de sòcol AXILO 78 Rectangular per cargolar · cuina",
     category: "leg",
     engine: "leg",
     maker: "Häfele",
     ref: "637.76.333",
     tags: [
-      "Placa de fixació rectangular per cargolar (637.76.333, plàstic negre, 92 × 79 × 25): 4 cargols en quadre de 64 × 64, tub al forat Ø30; com la munta el taller, el costat llarg al llarg de l'amplada i el clip cap al lateral (les de la dreta, en mirall), l'eix a 48 dels laterals (el clip a 3,5), a 60 del darrere (la placa a 20,5) i a 83 del davant, on va el sòcol (a cada mòdul es pot canviar; docs/pota-axilo-planta.svg).",
+      "Placa de fixació rectangular per cargolar (637.76.333, plàstic negre, 92 × 79 × 25): 4 cargols en quadre de 64 × 64, tub al forat Ø30; com la munta el taller, el costat llarg al llarg de l'amplada i el clip cap al lateral (les de la dreta, en mirall), per a cuines (per decisió de l'usuari: la del plànol docs/pota-axilo-planta.svg, mesurada al 3D del taller): l'eix a 52 dels laterals, a 53 del darrere i a 83 del davant, on va el sòcol (a cada mòdul es pot canviar).",
       "Tub amb peu regulable a part (Ø78, 150 kg per pota), per l'alçada de la base «Potes»: 60 → 637.76.351 (53–80) · 80 → .352 (70–100) · 100 → .353 (90–120) · 125 → .354 (115–145) · 150 → .355 (140–170) · 180 → .356 (170–200) · 200 → .357 (190–220).",
       "Hipòtesi: prebroca dels cargols Ø3 × 10 (el catàleg no la dona).",
       AXILO_SOURCE,
     ],
     // La placa per dibuixar-la (al marc de la pota, l'esquerra): del clip (−39,5 −5) a l'altra vora (+52,5), ±39,5, 25 de
     // gruix; el peu Ø78.
-    params: { inset: 48, insetLeft: 48, insetRight: 48, insetBack: 60, insetFront: 83, mirror: 1, plateU0: -44.5, plateU1: 52.5, plateV: 39.5, plateH: 25, foot: 78 },
+    params: { inset: 52, insetLeft: 52, insetRight: 52, insetBack: 53, insetFront: 83, mirror: 1, plateU0: -44.5, plateU1: 52.5, plateV: 39.5, plateH: 25, foot: 78 },
     targets: [
       {
         key: "base",
@@ -51,7 +51,38 @@ export const HAFELE_LEGS: HardwareItem[] = [
         ],
       },
     ],
-    version: 12,
+    version: 13,
+    builtin: true,
+  },
+  {
+    id: "leg-hafele-axilo78-screw-moble",
+    name: "Pota de sòcol AXILO 78 Rectangular per cargolar · moble",
+    category: "leg",
+    engine: "leg",
+    maker: "Häfele",
+    ref: "637.76.333",
+    tags: [
+      "Placa de fixació rectangular per cargolar (637.76.333, plàstic negre, 92 × 79 × 25): 4 cargols en quadre de 64 × 64, tub al forat Ø30; com la munta el taller, el costat llarg al llarg de l'amplada i el clip cap al lateral (les de la dreta, en mirall), per a mobles: la mateixa placa que la de cuina, amb el davant **per confirmar amb el taller** (de moment, l'eix a 53 del davant, com al darrere; 52 dels laterals).",
+      "Tub amb peu regulable a part (Ø78, 150 kg per pota), per l'alçada de la base «Potes»: 60 → 637.76.351 (53–80) · 80 → .352 (70–100) · 100 → .353 (90–120) · 125 → .354 (115–145) · 150 → .355 (140–170) · 180 → .356 (170–200) · 200 → .357 (190–220).",
+      "Hipòtesi: prebroca dels cargols Ø3 × 10 (el catàleg no la dona).",
+      AXILO_SOURCE,
+    ],
+    // (La de mobles: el davant per confirmar.) La placa per dibuixar-la (al marc de la pota, l'esquerra): del clip (−39,5 −5) a l'altra vora (+52,5), ±39,5, 25 de
+    // gruix; el peu Ø78.
+    params: { inset: 52, insetLeft: 52, insetRight: 52, insetBack: 53, insetFront: 53, mirror: 1, plateU0: -44.5, plateU1: 52.5, plateV: 39.5, plateH: 25, foot: 78 },
+    targets: [
+      {
+        key: "base",
+        label: "Base (cara de sota): els 4 cargols de la placa (a l'esquerra; a la dreta, en mirall)",
+        ops: [
+          { kind: "drill", face: "A", u: -19, v: -32, d: 3, depth: 10, tag: "leg" },
+          { kind: "drill", face: "A", u: 45, v: -32, d: 3, depth: 10, tag: "leg" },
+          { kind: "drill", face: "A", u: -19, v: 32, d: 3, depth: 10, tag: "leg" },
+          { kind: "drill", face: "A", u: 45, v: 32, d: 3, depth: 10, tag: "leg" },
+        ],
+      },
+    ],
+    version: 1,
     builtin: true,
   },
 ]

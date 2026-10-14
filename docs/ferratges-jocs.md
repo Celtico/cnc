@@ -288,11 +288,15 @@ Base «Potes» › «Pota» i `buildLegs` en fa els forats a la cara de sota de 
 
 **Com la munta el taller** (el model de TopSolid del germà, 2026-10-14): el costat llarg (92) al llarg de l'amplada del
 moble i el **clip cap al lateral**, una a cada cantonada amb la placa gairebé enrasada amb la vora; les de la dreta, en
-mirall (`params.mirror` = 1). A l'app: l'eix del tub a **48** dels laterals (`inset`: el clip a 3,5 del cantell), a **60** del darrere (`insetBack`: la placa a
-20,5) i a **83** del davant, on va el sòcol (`insetFront`; bé per a les cuines, i en un moble es canvia a Mòdul › Caixa › «Potes al davant»). Una distància per a cada costat (`insetLeft`, `insetRight`, `insetBack`, `insetFront`). Per decisió de l'usuari (2026-10-14): «al fons 20 mm com a mínim,
-als costats 3 mm»; el davant, mesurat al model del taller (vista axonomètrica redreçada amb la placa de 92 com a regle: base
-de 600 × 577, ±3 mm; als laterals i al darrere hi donava ~52). Plànol a escala: [`pota-axilo-planta.svg`](pota-axilo-planta.svg).
-Preferències v37 (la de la v34, amb el clip
+mirall (`params.mirror` = 1). A l'app: Dues potes a la biblioteca, la mateixa placa:
+- **«· cuina»** (`leg-hafele-axilo78-screw`): l'eix del tub a **52** dels laterals, a **53** del darrere i a **83** del davant, on
+  va el sòcol; per decisió de l'usuari, la del plànol a escala [`pota-axilo-planta.svg`](pota-axilo-planta.svg), mesurada al
+  model del taller (vista axonomètrica redreçada amb la placa de 92 com a regle, ±3 mm).
+- **«· moble»** (`leg-hafele-axilo78-screw-moble`, v39): igual, amb el davant **per confirmar amb el taller** (de moment 53,
+  com el darrere).
+
+Una distància per a cada costat (`insetLeft`, `insetRight`, `insetBack`, `insetFront`), editables a Preferències; el
+davant, també a cada mòdul (Mòdul › Caixa › «Potes al davant»). Preferències v37 (la de la v34, amb el clip
 cap al davant i a 60, es refà).
 
 El **tub amb el peu regulable** (Ø78, 150 kg per pota) es demana a part per l'alçada H de la base «Potes»: 60 → 637.76.351

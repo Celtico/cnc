@@ -715,13 +715,15 @@ export const ACCESSORY_ITEMS: HardwareItem[] = [
 export const V31_ITEMS: HardwareItem[] = HAFELE_LOOX_ITEMS
 
 /** v34: les potes de sòcol Häfele AXILO 78 (additiu: s'afegeixen si no hi són). */
-export const V34_ITEMS: HardwareItem[] = HAFELE_LEGS
+export const V34_ITEMS: HardwareItem[] = HAFELE_LEGS.filter((x) => x.id === "leg-hafele-axilo78-screw")
+/** v39: la mateixa pota per a mobles (el davant per confirmar), additiu. */
+export const V39_ITEMS: HardwareItem[] = HAFELE_LEGS.filter((x) => x.id !== "leg-hafele-axilo78-screw")
 
 /** v35: perfils d'alumini per a portes de vidre, tiradors, suports de prestatge i el perfil Loox per encastar (Häfele, additiu). */
 export const V35_ITEMS: HardwareItem[] = [...HAFELE_CATALOGUE_ITEMS, ...HAFELE_LOOX_PROFILES]
 
 // En l'ordre en què les migracions els afegeixen (v23 jocs, v27 push, v28 catàleg, v31 llums, v34 potes, v35 catàleg Häfele i, al final, els accessoris que falten).
-export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_CATALOGUE_ITEMS, ...V31_ITEMS, ...V34_ITEMS, ...V35_ITEMS, ...ACCESSORY_ITEMS]
+export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_CATALOGUE_ITEMS, ...V31_ITEMS, ...V34_ITEMS, ...V35_ITEMS, ...V39_ITEMS, ...ACCESSORY_ITEMS]
 
 /** Un item és un joc paramètric que es pot fer servir (motor `drawerKit` amb el joc). */
 export const isDrawerKit = (item: HardwareItem): item is HardwareItem & { kit: HardwareKit } => item.engine === "drawerKit" && !!item.kit

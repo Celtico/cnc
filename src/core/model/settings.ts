@@ -2,7 +2,7 @@ import { z } from "zod"
 import { DEFAULT_CABINET } from "./cabinet"
 import { type Module } from "./composition"
 import { migrateImportedNames } from "../import/hettichNames"
-import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, V27_ITEMS, V28_ITEMS, V31_ITEMS, V34_ITEMS, V35_ITEMS, fixHardwareDefaults, kitFrom, kitPilotFromLibrary, libraryFromLegacy, setKitPilot } from "./hardware"
+import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, V27_ITEMS, V28_ITEMS, V31_ITEMS, V34_ITEMS, V35_ITEMS, V39_ITEMS, fixHardwareDefaults, kitFrom, kitPilotFromLibrary, libraryFromLegacy, setKitPilot } from "./hardware"
 import { DEFAULT_KIT_PILOT, KitPilotSchema } from "./hardwareKit"
 import { PHOTO_MATERIALS } from "./textureSets"
 import { deepEqual, MATERIAL_MERGES, rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
@@ -59,8 +59,9 @@ const mm = z.number().finite()
  * v37: la pota AXILO 78 (v34) com la munta el taller (clip cap al lateral, en mirall a la dreta, a 45 dels cantells):
  * la de la biblioteca es refà si encara és la de la v34 (`version` 1).
  * v38: la mateixa pota amb la placa per dibuixar-la al 3D (`plateU0`…): es refà si és d'una versió anterior de l'item.
+ * v39: la pota AXILO 78 per cargolar per a mobles (`V39_ITEMS`; la de la v34 és la de cuina), additiu.
  */
-export const SETTINGS_VERSION = 38
+export const SETTINGS_VERSION = 39
 
 /** Joc de l'ample de la ranura del fons per defecte (v33; per decisió de l'usuari, 2026-10-14: «per defecte 0,8»). */
 export const DEFAULT_GROOVE_CLEARANCE = 0.8
@@ -843,14 +844,17 @@ export function parseSettings(raw: unknown): SettingsParse {
     return fresh ? { ...x, material: fresh.material } : x
   }) : withV35
   if (withV36.some((x, i) => x !== withV35[i])) migrated = true
+  // v39: la pota AXILO 78 de mobles, si no hi és (per id).
+  const withV39 = version < 39 ? [...withV36, ...V39_ITEMS.filter((k) => !withV36.some((x) => x.id === k.id)).map((k) => structuredClone(k))] : withV36
+  if (withV39.length !== withV36.length) migrated = true
   // La pota AXILO 78 (v34) d'una versió anterior de l'item passa a la d'ara (com la munta el taller, la placa per
   // dibuixar-la, a 50 dels cantells): sempre, no només en pujar de versió de les preferències (l'item canvia de `version`
   // sense que en canviï la de les preferències). Idempotent.
-  const withV37 = withV36.map((x) => {
-    const fresh = x.builtin ? V34_ITEMS.find((k) => k.id === x.id && k.version > x.version) : undefined
+  const withV37 = withV39.map((x) => {
+    const fresh = x.builtin ? [...V34_ITEMS, ...V39_ITEMS].find((k) => k.id === x.id && k.version > x.version) : undefined
     return fresh ? structuredClone(fresh) : x
   })
-  if (withV37.some((x, i) => x !== withV36[i])) migrated = true
+  if (withV37.some((x, i) => x !== withV39[i])) migrated = true
   const hardware = fixHardwareDefaults(withV37, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
   if (hardware.changed) migrated = true
   // Prebroca dels cargols, una sola font: la regla desada o, a les preferències d'abans, la del primer joc de la
