@@ -14,7 +14,8 @@ import { DTC_MAGIC_PRO_KITS } from "./kits/dtcMagicPro"
 import { DTC_MAGIC_STAR_KITS } from "./kits/dtcMagicStarUltra"
 import { DTC_PURE_BOX_KITS } from "./kits/dtcPureBox"
 import { DTC_PURE_PRO_GLASS_KITS, DTC_PURE_PRO_KITS } from "./kits/dtcPurePro"
-import { HAFELE_LOOX_ITEMS } from "./lights/hafeleLoox"
+import { HAFELE_LOOX_ITEMS, HAFELE_LOOX_PROFILES } from "./lights/hafeleLoox"
+import { HAFELE_CATALOGUE_ITEMS } from "./hafele/hafeleCatalog"
 import { HAFELE_LEGS } from "./hafele/hafeleLegs"
 import { LightKitSchema, type LightKit } from "./lightKit"
 
@@ -695,8 +696,11 @@ export const V31_ITEMS: HardwareItem[] = HAFELE_LOOX_ITEMS
 /** v34: les potes de sòcol Häfele AXILO 78 (additiu: s'afegeixen si no hi són). */
 export const V34_ITEMS: HardwareItem[] = HAFELE_LEGS
 
-// En l'ordre en què les migracions els afegeixen (v23 jocs, v27 push, v28 catàleg, v31 llums, v34 potes i, al final, els accessoris que falten).
-export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_CATALOGUE_ITEMS, ...V31_ITEMS, ...V34_ITEMS, ...ACCESSORY_ITEMS]
+/** v35: perfils d'alumini per a portes de vidre, tiradors, suports de prestatge i el perfil Loox per encastar (Häfele, additiu). */
+export const V35_ITEMS: HardwareItem[] = [...HAFELE_CATALOGUE_ITEMS, ...HAFELE_LOOX_PROFILES]
+
+// En l'ordre en què les migracions els afegeixen (v23 jocs, v27 push, v28 catàleg, v31 llums, v34 potes, v35 catàleg Häfele i, al final, els accessoris que falten).
+export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_CATALOGUE_ITEMS, ...V31_ITEMS, ...V34_ITEMS, ...V35_ITEMS, ...ACCESSORY_ITEMS]
 
 /** Un item és un joc paramètric que es pot fer servir (motor `drawerKit` amb el joc). */
 export const isDrawerKit = (item: HardwareItem): item is HardwareItem & { kit: HardwareKit } => item.engine === "drawerKit" && !!item.kit

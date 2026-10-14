@@ -248,10 +248,23 @@ export function ledSpec(item: HardwareItem) {
   return { width: param(item, "width"), height: param(item, "height"), setback: param(item, "setback"), spacing: opt("spacing", 400), depth: opt("depth", 0), light: item.light }
 }
 
-/** Marc d'alumini d'una porta de vidre (vitrina): amplada del perfil i gruix del vidre. Sense mecanitzat (frontisses de perfil: pendent). */
+/**
+ * Marc d'alumini d'una porta de vidre (vitrina): amplada del perfil i gruix del vidre. Un marc amb frontisses de perfil
+ * (els Häfele amb la Metallamat A) porta la seva **placa** (target `side`: els forats al lateral de les frontisses, a
+ * `plateSetback` del davant i `plateOffset` per sobre de cada frontissa) i la quantitat per alçada (`count`); sense, cap
+ * mecanitzat (el marc de l'app).
+ */
 export function glassFrameSpec(item: HardwareItem) {
   expectEngine(item, "glassFrame")
-  return { frame: param(item, "frame"), glass: param(item, "glass") }
+  const count = item.count
+  const plate = count && item.targets.some((t) => t.key === "side")
+    ? { setback: item.params.plateSetback ?? 37, offset: item.params.plateOffset ?? 0, holes: plateHoles(item) }
+    : undefined
+  return {
+    frame: param(item, "frame"),
+    glass: param(item, "glass"),
+    ...(plate && count ? { hinges: { plate, endOffset: item.params.endOffset ?? 100, count: (height: number) => Math.max(1, Math.round(stepValue(count, height))) } } : {}),
+  }
 }
 
 const SPECS = { hinge: cupSpec, system32: system32Spec, dowel: dowelSpec, slide: slideSpec, flap: flapSpec, magnet: magnetSpec, handle: handleSpec, rail: railSpec, led: ledSpec, glassFrame: glassFrameSpec } as const

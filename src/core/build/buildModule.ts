@@ -1638,7 +1638,7 @@ class Builder {
     const handleHw = this.frontHandle(front.glass ? undefined : front.handle, zone.id)
     const make = (id: string, name: string, label: string, x0: number, w: number, hinge: "left" | "right") => {
       if (w > 600) this.warnings.push({ code: "door-too-wide", message: `Porta de ${num(w)} mm d'amplada (màxim recomanat 600).`, zoneId: zone.id })
-      if (front.glass || !hingeHw) return this.glassDoor(id, label, x0, ter.y0, w, doorH, this.frontHardware("glassFrame", front.frame, zone.id).spec)
+      if (front.glass || !hingeHw) return this.glassDoor(id, label, x0, ter.y0, w, doorH, this.frontHardware("glassFrame", front.frame, zone.id), { side: hinge, panel: hinge === "left" ? left : right, rowYs, zoneId: zone.id })
       const door = this.frontPanel(id, name, label, "door", x0, ter.y0, w, doorH)
       this.addCups(door, doorH, hinge, w, rowYs, ter.y0, zone.id, hingeHw, hinge === "left" ? left : right)
       // Sense tirador (push): cap forat ni cap lectura del lloc «tirador».
@@ -1665,8 +1665,10 @@ class Builder {
    * CNC: tot va a `extras` («Elements sense nesting», amb les mides per demanar-ho). Les frontisses són les del perfil
    * (no porta cassoletes al tauler); els laterals mantenen les fileres.
    */
-  private glassDoor(id: string, label: string, x0: number, y0: number, w: number, h: number, frame: SlotSpec<"glassFrame">): void {
+  private glassDoor(id: string, label: string, x0: number, y0: number, w: number, h: number, frameHw: { spec: SlotSpec<"glassFrame">; item: HardwareItem }, hinge: { side: "left" | "right"; panel?: VerticalRef; rowYs: number[]; zoneId?: string }): void {
     const { d } = this
+    const frame = frameHw.spec
+    this.glassHinges(label, y0, h, frameHw, hinge)
     const F = frame.frame, G = frame.glass, t = d.t
     const z = d.frontZ
     const bar = (sid: string, lbl: string, bx: number, by: number, len: number, wid: number) =>
@@ -1705,6 +1707,52 @@ class Builder {
       // El vidre entra 5 mm a la ranura del perfil per cada costat, centrat en el gruix.
       placement: placement([r(x0 + F - 5), r(y0 + F - 5), r(z - (t - G) / 2)], Y, X, neg(Z), Z),
     })
+  }
+
+  /**
+   * Frontisses de perfil d'una porta de vidre (Metallamat A dels marcs Häfele): el perfil no es mecanitza (la frontissa
+   * s'hi clava), però cada frontissa porta la **placa** al lateral de les frontisses, com una frontissa de cassoleta: la
+   * quantitat per alçada del marc, repartides a `endOffset` dels extrems i, si hi ha filera System 32, al mig de dos
+   * forats seguits (la placa en creu cargola a la filera). Tota la placa o res d'aquella frontissa (`plateHoles`).
+   */
+  private glassHinges(label: string, y0: number, h: number, frameHw: { spec: SlotSpec<"glassFrame">; item: HardwareItem }, hinge: { side: "left" | "right"; panel?: VerticalRef; rowYs: number[]; zoneId?: string }): void {
+    const spec = frameHw.spec.hinges
+    if (!spec) return
+    const item = frameHw.item
+    if (!hinge.panel) {
+      this.warnings.push({ code: "hinge", message: `${label} de vidre: la placa de les frontisses de «${item.name}» va al lateral de les frontisses i aquest mòdul no en té. Els forats de la placa no es fan: fes-los on vagi muntada.`, zoneId: hinge.zoneId })
+      return
+    }
+    const count = spec.count(h)
+    const span = h - 2 * spec.endOffset
+    const targets = count === 1 ? [h / 2] : Array.from({ length: count }, (_, i) => spec.endOffset + (span * i) / (count - 1))
+    const pitch = this.hw.system32.pitch
+    const mids = hinge.rowYs.filter((y) => hinge.rowYs.some((z) => Math.abs(z - y - pitch) < 0.01)).map((y) => r(y + pitch / 2))
+    const placed: number[] = []
+    const why = new Set<string>()
+    for (const t of targets) {
+      const want = y0 + t
+      const pool = (mids.length ? mids : [r(want)]).filter((y) => y >= y0 + 40 && y <= y0 + h - 40 && placed.every((p) => Math.abs(p - y) >= 64))
+      // De les que hi caben, la més propera a l'alçada que toca; la placa sencera o cap.
+      const sorted = [...pool].sort((a, b) => Math.abs(a - want) - Math.abs(b - want))
+      for (const y of sorted) {
+        const res = this.plateHoles(hinge.panel, hinge.side, y, spec.plate, item)
+        if ("error" in res) {
+          why.add(res.error)
+          continue
+        }
+        this.addPlate(hinge.panel, res, item, hinge.zoneId)
+        // Un forat de la placa que cau en un de la filera (el mateix forat) és el de la placa: hi va el seu cargol.
+        for (const h of res.holes) {
+          const e = hinge.panel.panel.holes.find((x) => x.face === h.face && Math.abs(x.x - h.x) < 0.05 && Math.abs(x.y - h.y) < 0.05)
+          if (e && e.tag === "system32") e.tag = h.tag
+        }
+        placed.push(y)
+        break
+      }
+    }
+    if (placed.length < count)
+      this.warnings.push({ code: "hinge", message: `${label} de vidre de ${num(h)} mm: només hi caben ${placed.length} de ${count} plaques de frontissa al lateral${why.size ? ` (${[...why].join(" ")})` : ""}.`, zoneId: hinge.zoneId })
   }
 
   private buildFlap(zone: Zone, front: Extract<Front, { kind: "flap" }>, ter: ZoneRect): void {

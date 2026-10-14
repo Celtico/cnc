@@ -209,6 +209,33 @@ const LOOX_1088 = (colour: string, articles: [string, string, string]): LightKit
   ],
 })
 
+/**
+ * Perfil de muntatge Loox de 11 mm per encastar (p. 2.127, 833.72.846 difusor lletós · .847 de dispersió mat; 2.500 mm,
+ * 18 d'ample amb l'ala de 23) amb la tira LED 3015 de 24 V (p. 2.79: 15 W/m, es talla cada 50 mm; demana un perfil de
+ * més de 12 d'alt). Es fa com una barra: la ranura de 18 × 11 al llarg del compartiment.
+ */
+const LOOX_PROFILE_11 = (colour: string, strip: string): LightKit => ({
+  maker: "Häfele",
+  series: "Perfil Loox 11 mm + LED 3015",
+  kind: "bar",
+  article: strip,
+  colour,
+  finish: "Color plata",
+  watts: 37.5,
+  recess: { shape: "groove", size: 18, depth: 11 },
+  body: { size: 18, height: 11 },
+  cableHole: 8,
+  bars: [{ length: 2500, article: "833.72.846", watts: 37.5 }],
+  barStep: 50,
+  cableLength: 2000,
+  source: "Catàleg Häfele, p. 2.127 (perfil de muntatge d'11 mm) i 2.79 (tira LED 3015)",
+  hypotheses: [
+    "Ranura de 18 d'ample (el cos del perfil) × 11 de fondària (la «profunditat» del perfil): l'ala de 23 queda a sobre de la cara.",
+    `Tira LED 3015 (${strip}) en rotllo de 5 m: 15 W per metre, tallada al múltiple de 50 dins del perfil.`,
+    "Forat del cable Ø8 a un extrem de la ranura; tapes finals 833.72.854 (amb pas de cables).",
+  ],
+})
+
 /** Els jocs de llum Häfele Loox de la biblioteca (preferències v31). */
 export const HAFELE_LOOX_ITEMS: HardwareItem[] = [
   lamp({ id: "light-loox-3038-ww", name: "Focus Loox LED 3038 Ø55, 3000 K", kit: LOOX_3038("Blanc càlid 3000 K", "833.75.120"), setback: 60, spacing: 400 }),
@@ -222,6 +249,12 @@ export const HAFELE_LOOX_ITEMS: HardwareItem[] = [
   lamp({ id: "light-loox-3024-cw", name: "Làmpada plana Loox LED 3024 205 × 205, 4000 K", kit: LOOX_3024("Blanc fred 4000 K", "833.75.091", "833.77.121"), setback: 150, spacing: 600 }),
   lamp({ id: "light-loox-1088-ww", name: "Barra Loox LED 1088 per encastar, 3200 K", kit: LOOX_1088("Blanc càlid 3200 K", ["833.03.100", "833.03.101", "833.03.102"]), setback: 30, spacing: 0 }),
   lamp({ id: "light-loox-1088-cw", name: "Barra Loox LED 1088 per encastar, 4200 K", kit: LOOX_1088("Blanc fred 4200 K", ["833.03.111", "833.03.112", "833.03.113"]), setback: 30, spacing: 0 }),
+]
+
+/** v35: el perfil d'alumini Loox d'11 mm per encastar amb la tira LED 3015 (additiu). */
+export const HAFELE_LOOX_PROFILES: HardwareItem[] = [
+  lamp({ id: "light-loox-profile11-ww", name: "Perfil d'alumini Loox 11 mm per encastar + LED 3015, 3000 K", kit: LOOX_PROFILE_11("Blanc càlid 3000 K", "833.76.240"), setback: 30, spacing: 0 }),
+  lamp({ id: "light-loox-profile11-cw", name: "Perfil d'alumini Loox 11 mm per encastar + LED 3015, 4000 K", kit: LOOX_PROFILE_11("Blanc fred 4000 K", "833.76.241"), setback: 30, spacing: 0 }),
 ]
 
 /** Els sistemes elèctrics que coneix l'app, pel fabricant del joc de llum. */

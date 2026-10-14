@@ -294,3 +294,26 @@ El **tub amb el peu regulable** (Ø78, 150 kg per pota) es demana a part per l'a
 
 **Hipòtesis pendents del taller**: la prebroca dels cargols, **Ø3 × 12** (la de les potes de l'app; el catàleg no dona ni
 el cargol ni la prebroca), i que totes quatre plaques van amb el clip cap al davant (les del darrere no porten sòcol).
+
+## Catàleg general Häfele (v35)
+
+Per decisió de l'usuari (2026-10-14: «els marcs i perfils d'alumini a partir de la p. 4.269… i les peces que falten,
+només les que es puguin mecanitzar, les més modernes i fàcils, com a molt 20; les categories que ja en tenen més de 20, no»):
+17 items a `core/model/hafele/hafeleCatalog.ts` i `core/model/lights/hafeleLoox.ts` (`V35_ITEMS`). Frontisses (26),
+guies (21) i calaixos de doble paret (22) no s'hi toquen.
+
+| Categoria | Items (pàgina) | Mecanitzat |
+|---|---|---|
+| Perfils i marcs | Marcs d'alumini per a vidre 23 × 14 (563.25.902), 38 × 14 (563.26.902), 26 × 14 de marc reduït (563.26.922) (4.270) i 20,6 × 19 (563.32.902) (4.269) | Frontissa Metallamat A 110° (4.272): placa en creu 316.51.526 (D = 6) al lateral de les frontisses, dos forats Ø5 × 12 a ±16 a 37 del davant (la filera System 32), la quantitat per alçada de les frontisses (2/3/4/5) |
+| Llums | Perfil Loox d'11 mm per encastar (833.72.846) + tira LED 3015 de 24 V, 3000 K (833.76.240) / 4000 K (.241) (2.127, 2.79) | Ranura 18 × 11 al llarg del compartiment + Ø8 del cable (com la barra 1088) |
+| Tiradors | H1935 en D d'alumini (1.29), H1535 de perfil (1.70), H1540 i H1545 (1.72), corbat d'alumini Ø12 i el de fins a 224 (1.92), en D d'inox Ø8 / Ø10 (1.102) i Ø12 (1.103) | Dos forats passants Ø5 (cargols M4) a la distància entre centres més gran que hi cap (llargada + 40 ≤ el front) |
+| Suports de prestatge | Ixconnect de zamac 282.24.717 (3.103) i d'acer amb llengüeta 282.04.712 (3.104) | Filera System 32 (Ø5 × 12) |
+
+**Hipòtesis pendents del taller**: la placa de la Metallamat A es cargola als forats Ø5 × 12 de la filera (el catàleg dona
+el patró 37/32, no el Ø); el 20,6 × 19 porta la Duomatic de cassoleta amb la mateixa placa (els forats del perfil, de la
+unió angular, no són de la CNC de fusta); la ranura del perfil Loox, 18 × 11 (l'ala de 23 queda a sobre).
+
+Fora (no es poden mecanitzar amb un motor de l'app o són complexos): la Metallamat A a la porta (el perfil no es
+mecanitza), el perfil decoratiu i la jaladera de clip del marc, els perfils Loox de 6,5 (la tira 3015 demana més de 12 d'alt)
+i de 24 mm (no hi cap en un tauler de 19), el perfil acodat, els tiradors embotits (caixera), el vaivé push (es cargola) i
+la placa triangular de l'AXILO 78 (cada cantonada en mirall).
