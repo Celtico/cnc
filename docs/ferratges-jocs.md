@@ -271,3 +271,26 @@ secció de la ranura de la 1088 (16 × 11, la del perfil de muntatge Loox d'11 m
 d'una barra tallada. Fora: les làmpades de 12 V i les tires LED (altres alimentadors), la LED 1150 de sostre (cos per
 sobre de la peça, per a sostres buits), els perfils de muntatge sols i els controls remots.
 Tests `core/build/lightKit.test.ts`.
+
+## Potes: Häfele AXILO 78 (v34)
+
+Per decisió de l'usuari (2026-10-14: «afegir un ferratge nou mecanitzat del PDF… la pota Rectangular para atornillar»):
+del catàleg general Häfele (`docs/blaetterkatalog.pdf`, p. **FF 11.79**, pàgina 1889 del PDF), el sistema d'ajust per a
+sòcols **AXILO™ 78** amb la **placa de fixació rectangular per cargolar 637.76.333** (plàstic negre). Item
+`leg-hafele-axilo78-screw` (`core/model/hafele/hafeleLegs.ts`, motor `leg`, categoria Potes): es tria a Mòdul › Caixa ›
+Base «Potes» › «Pota» i `buildLegs` en fa els forats a la cara de sota de la base, a cada cantonada.
+
+| Cota del dibuix | Valor |
+|---|---|
+| Placa | 92 × 79 × 25 (+5 del clip del sòcol) |
+| Cargols | 4, en quadre de 64 × 64, centrats a 39,5 de la vora contrària al clip |
+| Tub | forat Ø30, eix a 39,5 de la vora del clip |
+| Al marc de la pota (u = X del mòdul, v = cap al davant, origen a l'eix) | cargols a u = ±32, v = −45 i +19 (clip cap al davant) |
+| Als cantells (`inset`) | 60 (la placa fa 52,5 cap enrere des de l'eix) |
+
+El **tub amb el peu regulable** (Ø78, 150 kg per pota) es demana a part per l'alçada H de la base «Potes»: 60 → 637.76.351
+(53–80) · 80 → .352 (70–100) · 100 → .353 (90–120) · 125 → .354 (115–145) · 150 → .355 (140–170) · 180 → .356 (170–200)
+· 200 → .357 (190–220). Ara surt a les notes de l'item (encara no a una comanda per mòdul, com els jocs).
+
+**Hipòtesis pendents del taller**: la prebroca dels cargols, **Ø3 × 12** (la de les potes de l'app; el catàleg no dona ni
+el cargol ni la prebroca), i que totes quatre plaques van amb el clip cap al davant (les del darrere no porten sòcol).

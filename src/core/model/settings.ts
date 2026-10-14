@@ -2,7 +2,7 @@ import { z } from "zod"
 import { DEFAULT_CABINET } from "./cabinet"
 import { type Module } from "./composition"
 import { migrateImportedNames } from "../import/hettichNames"
-import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, V27_ITEMS, V28_ITEMS, V31_ITEMS, fixHardwareDefaults, kitFrom, kitPilotFromLibrary, libraryFromLegacy, setKitPilot } from "./hardware"
+import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, V27_ITEMS, V28_ITEMS, V31_ITEMS, V34_ITEMS, fixHardwareDefaults, kitFrom, kitPilotFromLibrary, libraryFromLegacy, setKitPilot } from "./hardware"
 import { DEFAULT_KIT_PILOT, KitPilotSchema } from "./hardwareKit"
 import { PHOTO_MATERIALS } from "./textureSets"
 import { deepEqual, MATERIAL_MERGES, rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
@@ -51,8 +51,9 @@ const mm = z.number().finite()
  * v32: joc de l'ample de la ranura del fons (`gaps.grooveClearance`, 0): additiu; els mobles desats no canvien.
  * v33: el joc de la ranura per defecte passa a 0,8 (`DEFAULT_GROOVE_CLEARANCE`): unes preferències que el tenien a 0 (el
  * de la v32) o sense, el reben; un altre valor de l'usuari es queda. Els mobles desats no canvien (el porten al mòdul).
+ * v34: potes de sòcol Häfele AXILO 78 (`V34_ITEMS`), additiu.
  */
-export const SETTINGS_VERSION = 33
+export const SETTINGS_VERSION = 34
 
 /** Joc de l'ample de la ranura del fons per defecte (v33; per decisió de l'usuari, 2026-10-14: «per defecte 0,8»). */
 export const DEFAULT_GROOVE_CLEARANCE = 0.8
@@ -815,7 +816,10 @@ export function parseSettings(raw: unknown): SettingsParse {
   // v31: els jocs de llum Häfele Loox (`V31_ITEMS`), si no hi són (per id).
   const withV31 = version < 31 ? [...withV29, ...V31_ITEMS.filter((k) => !withV29.some((x) => x.id === k.id)).map((k) => structuredClone(k))] : withV29
   if (withV31.length !== withV29.length) migrated = true
-  const hardware = fixHardwareDefaults(withV31, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
+  // v34: les potes de sòcol Häfele AXILO 78 (`V34_ITEMS`), si no hi són (per id).
+  const withV34 = version < 34 ? [...withV31, ...V34_ITEMS.filter((k) => !withV31.some((x) => x.id === k.id)).map((k) => structuredClone(k))] : withV31
+  if (withV34.length !== withV31.length) migrated = true
+  const hardware = fixHardwareDefaults(withV34, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
   if (hardware.changed) migrated = true
   // Prebroca dels cargols, una sola font: la regla desada o, a les preferències d'abans, la del primer joc de la
   // biblioteca (el que es feia servir); els jocs de la biblioteca en copien els números.

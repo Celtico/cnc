@@ -160,8 +160,11 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   «De costat (X)»). Els antics «Al terra» sense `x` continuen a la fila. **Girat 180°** (`Module.turned`, `isTurned`; només lliure al terra; Mòdul › Posició «Girat»; per decisió de l'usuari, 2026-10-13, per fer una illa amb dos mòduls d'esquena): el mòdul es construeix igual i `buildComposition` el gira al voltant del centre de la caixa de les seves peces (ocupa el mateix lloc; `CompositionBuild.modules[].mirrorX`, `moduleWorldX` per al clic i el ressaltat dels compartiments); l'obertura del 3D surt enrere (`opening.ts`, per l'`explodeDir`). Tests `build/turnedModule.test.ts`, `viewer/openingTurned.test.ts`. Taulell i sòcol correguts no tenen en compte `wallGap`.
 - **Carcassa** (inspector del mòdul, secció Caixa):
   - **Base**: a terra · sòcol · potes · sense base. Avís `hanging` si un penjat té el fons prim. Amb potes, «Pota»:
-    les genèriques (només es veuen) o una pota importada de la biblioteca (`Base.hardware`, còpia): confirmada, forats de
-    la placa a la cara de sota de la base a cada pota (`buildLegs`).
+    les genèriques (només es veuen) o una pota de la biblioteca (`Base.hardware`, còpia): forats de la placa a la cara de
+    sota de la base a cada pota (`buildLegs`; una d'importada, només confirmada). Del catàleg: **Häfele AXILO 78 amb la
+    placa rectangular per cargolar** (`core/model/hafele/hafeleLegs.ts`, 637.76.333, p. FF 11.79; preferències v34): 4
+    prebroques Ø3 × 12 (hipòtesi) a u = ±32, v = −45 / +19 de l'eix del tub, clip cap al davant, a 60 mm dels cantells;
+    el tub per l'alçada, a les notes de l'item. Test `build/hafeleLegs.test.ts`.
   - **Fons** (`Carcass.back`): en ranura · cargolat darrere · **encastat** · sense. Encastat (`buildInsetBack`): ocupa la
     llum interior (on falta una peça, fins a fora; parets buides: entre les pells de dins), enrasat o retirat
     `backInsetSetback` (Caixa, «Retirada del fons»); pot ser del tauler del cos (veta vertical, cantell només on no toca
@@ -1765,7 +1768,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   jocs, importats de mostra i, amb `HETTICH_DIR` / `BLUM_DIR`, els de debò. Els GLB es llegeixen **fora de la memòria compartida de models**
   (`readHardwareModel`: n'hi pot haver centenars i cadascun serveix un sol cop) i s'alliberen sencers (`disposeTree`) en
   acabar; el renderitzador s'allibera com sempre (`releaseThumbRenderer` → `releaseModelGpu`). Si canvia com es fan, s'apuja
-  `HARDWARE_THUMB_VERSION` (ara 7: ferratges de sèrie en 3D, fusta translúcida i sense les espigues de la caixa fora del muntatge de l’espiga). Un **«només 3D»** s'enquadra a la seva caixa
+  `HARDWARE_THUMB_VERSION` (ara 8: ferratges de sèrie en 3D, fusta translúcida, sense les espigues de la caixa fora del muntatge de l’espiga i les potes mirades des de la del davant). Un **«només 3D»** s'enquadra a la seva caixa
   (`modelCamera`, a `mountCamera(m, aspect)`, la mateixa al 3D de l'editor i a la miniatura): la càmera més a prop que la
   veu sencera i, si és llarg i prim (perfil de porta corredissa de 1560 × 12,5 × 6,5), mirat al llarg des d'un extrem perquè
   se'n vegi la secció (abans sortia una ratlla). **Al 3D, cap cota** (per decisió de l'usuari: «a les vistes posar les mides
@@ -1846,7 +1849,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Visor 3D**: qualitat, escena de Presentació (terra i paret: materials de la biblioteca, `PresentationScene.floorMaterial`
   / `wallMaterial`, o les mostres ràpides; terra per defecte «Parquet de roure»), llum i «Cel del render». **Tema**:
   dia/nit/sistema i color principal (`theme/accent.ts` redirigeix les variables CSS de `wood`).
-- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 33 (el joc de la ranura per defecte a 0,8, `DEFAULT_GROOVE_CLEARANCE`); 32 (joc de l'ample de la ranura del fons, `gaps.grooveClearance` 0, additiu); 31 (jocs de llum Häfele Loox, additiu); 30 (la neteja de la 29 amb la regla sencera); 29 (fora els «només 3D»: tots els inicials del motor `model`, els importats sense `machining` i els inicials DTC que ja no són a la biblioteca); 28 (la resta del catàleg DTC 2026, additiu); 27 (catàleg DTC 2026: jocs i push latch, additiu); 26 (`assistant`: clau de l'API i model,
+- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 34 (potes de sòcol Häfele AXILO 78, `V34_ITEMS`, additiu); 33 (el joc de la ranura per defecte a 0,8, `DEFAULT_GROOVE_CLEARANCE`); 32 (joc de l'ample de la ranura del fons, `gaps.grooveClearance` 0, additiu); 31 (jocs de llum Häfele Loox, additiu); 30 (la neteja de la 29 amb la regla sencera); 29 (fora els «només 3D»: tots els inicials del motor `model`, els importats sense `machining` i els inicials DTC que ja no són a la biblioteca); 28 (la resta del catàleg DTC 2026, additiu); 27 (catàleg DTC 2026: jocs i push latch, additiu); 26 (`assistant`: clau de l'API i model,
   additiu; **la clau no surt mai** a l'export, `settingsToJson`, ni al `.moble`, i importar unes preferències no la toca,
   `importSettingsJson`); 25: `gaps.innerClearance`, 1 mm, additiu; 24: jocs inicials amb les dades d'ara; 23: jocs paramètrics de calaix (DTC MAGIC-PRO); 22: generador de mecanitzats; 21: tiradors, potes i «només 3D» importats; 20: ferratges importats; 19: biblioteca de ferratges; sense versió, additius en llegir: els accessoris de la biblioteca (`fixHardwareDefaults` afegeix l'item d'inici de cada lloc que falta) i la regla `kitPilot`): les migracions depenen només de la versió
   desada, que **mai baixa** (`saveSettings` desa la més alta). **Desades per una versió més nova**: només lectura

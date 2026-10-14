@@ -327,7 +327,8 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
       const e = holeEntry(p, h)
       const at = toWorld(p, e.at)
       if (at[0] > rc.size.width / 2 + 0.5) continue
-      const score = item.engine === "cup" || item.engine === "plate" ? (h.tag === "hinge" ? at[1] : Infinity) : Math.abs(at[1] - rc.size.height / 2) + (p.role === "side" ? 0 : 0.1)
+      // Una pota es mira de davant: la del davant (el forat més endavant), no la del darrere (la càmera quedaria dins la base).
+      const score = item.engine === "cup" || item.engine === "plate" ? (h.tag === "hinge" ? at[1] : Infinity) : item.engine === "leg" ? -at[2] : Math.abs(at[1] - rc.size.height / 2) + (p.role === "side" ? 0 : 0.1)
       if (score < best) {
         best = score
         // Un tirador es mira des de fora del front (on va el tirador), no des de la cara A; una pota, de davant i just
