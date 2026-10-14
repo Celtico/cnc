@@ -49,8 +49,13 @@ const mm = z.number().finite()
  * preferències que ja eren a la 29 amb els push latch, unions, frontissa D i DQ desats no els perdien).
  * v31: jocs de llum Häfele Loox (`V31_ITEMS`), additiu.
  * v32: joc de l'ample de la ranura del fons (`gaps.grooveClearance`, 0): additiu; els mobles desats no canvien.
+ * v33: el joc de la ranura per defecte passa a 0,8 (`DEFAULT_GROOVE_CLEARANCE`): unes preferències que el tenien a 0 (el
+ * de la v32) o sense, el reben; un altre valor de l'usuari es queda. Els mobles desats no canvien (el porten al mòdul).
  */
-export const SETTINGS_VERSION = 32
+export const SETTINGS_VERSION = 33
+
+/** Joc de l'ample de la ranura del fons per defecte (v33; per decisió de l'usuari, 2026-10-14: «per defecte 0,8»). */
+export const DEFAULT_GROOVE_CLEARANCE = 0.8
 
 // --- Objectes de referència (foto i editor) ------------------------------------------
 
@@ -638,7 +643,7 @@ export const DEFAULT_SETTINGS: Settings = {
     backClearance: DEFAULT_CABINET.backClearance,
     backSetback: DEFAULT_CABINET.backSetback,
     grooveDepth: DEFAULT_CABINET.grooveDepth,
-    grooveClearance: 0,
+    grooveClearance: DEFAULT_GROOVE_CLEARANCE,
     innerClearance: DEFAULT_INNER_CLEARANCE,
   },
   label: { w: 99, h: 68 },
@@ -696,6 +701,8 @@ export function parseSettings(raw: unknown): SettingsParse {
   if (version < 25 && isRecord(obj.gaps) && !("innerClearance" in obj.gaps)) obj = { ...obj, gaps: { ...obj.gaps, innerClearance: DEFAULT_INNER_CLEARANCE } }
   // v32: el joc de l'ample de la ranura del fons, 0 (additiu: la fabricació no canvia fins que l'usuari el posa).
   if (version < 32 && isRecord(obj.gaps) && !("grooveClearance" in obj.gaps)) obj = { ...obj, gaps: { ...obj.gaps, grooveClearance: 0 } }
+  // v33: el per defecte és 0,8; el 0 de la v32 (o sense) hi passa, un altre valor de l'usuari es queda.
+  if (version < 33 && isRecord(obj.gaps) && !obj.gaps.grooveClearance) obj = { ...obj, gaps: { ...obj.gaps, grooveClearance: DEFAULT_GROOVE_CLEARANCE } }
 
   // Camp a camp (`repairValue`): un valor dolent només torna aquell valor a l'inicial (un tauler o una llargada de
   // guia dolents només es treuen), no tota la secció.

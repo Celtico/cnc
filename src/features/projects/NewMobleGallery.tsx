@@ -95,7 +95,7 @@ export function NewMobleGallery({
   const found = [...(hist.projects?.count ? ["projects"] : []), ...(hist.count ? ["history"] : []), ...(storeCount ? ["store"] : []), ...(collectionsCount ? ["collections"] : [])]
   // Una plantilla instanciada a partir d'ara pren la folgança de les peces de dins de Preferències (com un mòdul nou).
   const { settings } = useSettings()
-  const pick = (t: Template) => onCreate(withInnerClearance({ ...t.make(), kind: t.kind }, settings.gaps.innerClearance), t.name)
+  const pick = (t: Template) => onCreate(withInnerClearance({ ...t.make(), kind: t.kind }, settings.gaps.innerClearance, settings.gaps.grooveClearance), t.name)
 
 
   return (

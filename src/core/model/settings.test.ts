@@ -284,7 +284,7 @@ describe("v12: duplicats fora i noms únics", () => {
     expect(names).not.toContain("DM 10")
     expect(names).not.toContain("Pi")
     expect(names).toContain("Fulles de pi")
-    expect(SETTINGS_VERSION).toBe(32)
+    expect(SETTINGS_VERSION).toBe(33)
   })
 
   it("«Melamina 19» i «DM 10» inicials passen als de sempre (amb les referències de les preferències) i «Pi» a «Fulles de pi»", () => {
@@ -419,14 +419,20 @@ describe("v26: assistent IA", () => {
   })
 })
 
-describe("preferències v32: joc de l'ample de la ranura", () => {
-  it("unes d'abans el reben a 0 i els mòduls nous el copien si no és 0", async () => {
+describe("preferències v32–v33: joc de l'ample de la ranura", () => {
+  it("per defecte 0,8: unes d'abans el reben (també el 0 de la v32), un altre valor es queda, i els mòduls nous el copien", async () => {
     const { parseSettings, DEFAULT_SETTINGS: D, applySettingsToModule, defaultModule } = await import("./index")
     const old = structuredClone(D) as unknown as { version: number; gaps: Record<string, unknown> }
     old.version = 31
     delete old.gaps.grooveClearance
-    expect(parseSettings(old).settings.gaps.grooveClearance).toBe(0)
-    expect(applySettingsToModule(D, defaultModule("m", "x")).carcass.grooveClearance).toBeUndefined()
-    expect(applySettingsToModule({ ...D, gaps: { ...D.gaps, grooveClearance: 0.8 } }, defaultModule("m", "x")).carcass.grooveClearance).toBe(0.8)
+    expect(parseSettings(old).settings.gaps.grooveClearance).toBe(0.8)
+    const v32 = structuredClone(D) as unknown as { version: number; gaps: Record<string, unknown> }
+    v32.version = 32
+    v32.gaps.grooveClearance = 0
+    expect(parseSettings(v32).settings.gaps.grooveClearance).toBe(0.8)
+    v32.gaps.grooveClearance = 0.5
+    expect(parseSettings(v32).settings.gaps.grooveClearance).toBe(0.5)
+    expect(applySettingsToModule(D, defaultModule("m", "x")).carcass.grooveClearance).toBe(0.8)
+    expect(applySettingsToModule({ ...D, gaps: { ...D.gaps, grooveClearance: 0 } }, defaultModule("m", "x")).carcass.grooveClearance).toBeUndefined()
   })
 })

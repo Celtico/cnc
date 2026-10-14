@@ -932,11 +932,20 @@ export const moduleHasInnerPieces = (m: Module): boolean => hasInnerPieces(visib
 /**
  * Plantilla instanciada a partir d'ara (catàleg, col·leccions, escenes): els mòduls que no diuen res de la folgança de
  * les peces de dins prenen la de Preferències (com un mòdul nou, `applySettingsToModule`). Els que ja en diuen alguna
- * cosa no es toquen.
+ * cosa no es toquen. El mateix amb el joc de l'ample de la ranura del fons (`grooveClearance`, si se'n dona un).
  */
-export function withInnerClearance<T extends { modules: Module[] }>(comp: T, innerClearance: number): T {
-  if (!comp.modules.some((m) => m.carcass.innerClearance === undefined)) return comp
-  return { ...comp, modules: comp.modules.map((m) => (m.carcass.innerClearance === undefined ? { ...m, carcass: { ...m.carcass, innerClearance } } : m)) }
+export function withInnerClearance<T extends { modules: Module[] }>(comp: T, innerClearance: number, grooveClearance?: number): T {
+  const groove = grooveClearance ? grooveClearance : undefined
+  if (!comp.modules.some((m) => m.carcass.innerClearance === undefined || (groove !== undefined && m.carcass.grooveClearance === undefined))) return comp
+  return {
+    ...comp,
+    modules: comp.modules.map((m) => {
+      const carcass = { ...m.carcass }
+      if (carcass.innerClearance === undefined) carcass.innerClearance = innerClearance
+      if (groove !== undefined && carcass.grooveClearance === undefined) carcass.grooveClearance = groove
+      return { ...m, carcass }
+    }),
+  }
 }
 
 /** El mòdul té algun compartiment de calaixos (la fila «Fons del calaix» de Materials). */

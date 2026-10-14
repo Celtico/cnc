@@ -166,6 +166,6 @@ describe("v29 / v30: fora els ferratges «només 3D»", () => {
     const r29 = parseSettings(v29)
     expect(r29.migrated).toBe(true)
     expect(r29.settings.hardwareLibrary.some((x) => x.id === "push-dtc-ms-inline-magnet")).toBe(false)
-    expect(r29.settings.version).toBe(32)
+    expect(r29.settings.version).toBe(33)
   })
 })

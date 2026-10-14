@@ -25,7 +25,7 @@ export async function createAmbientFromTemplate(t: AmbientTemplate, client?: str
   for (const ref of [...new Set(t.items.map((i) => i.ref))]) {
     const tpl = resolveTemplateRef(ref)
     if (!tpl) continue
-    const comp = withInnerClearance({ ...tpl.make(), kind: tpl.kind }, gaps.innerClearance)
+    const comp = withInnerClearance({ ...tpl.make(), kind: tpl.kind }, gaps.innerClearance, gaps.grooveClearance)
     const name = uniqueName(tpl.name, names)
     names.push(name)
     const id = await createProject(name, undefined, { composition: comp, ...(folder ? { folder } : {}) })

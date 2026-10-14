@@ -37,7 +37,7 @@ export async function createFromTemplate(ref: string, settings: Pick<Settings, "
   const t = resolveTemplateRef(ref)
   if (!t) throw new Error(`No hi ha cap plantilla «${ref}».`)
   // Com les galeries: els objectes tal qual; els mobles amb la folgança de les peces de dins de Preferències.
-  const comp = t.kind === "objecte" ? { ...t.make(), kind: "objecte" as const } : withInnerClearance({ ...t.make(), kind: t.kind }, settings.gaps.innerClearance)
+  const comp = t.kind === "objecte" ? { ...t.make(), kind: "objecte" as const } : withInnerClearance({ ...t.make(), kind: t.kind }, settings.gaps.innerClearance, settings.gaps.grooveClearance)
   const existing = (await db.projects.toArray()).map((p) => p.name)
   const id = await createProject(uniqueName(t.name, existing), undefined, { composition: comp })
   const p = await db.projects.get(id)
