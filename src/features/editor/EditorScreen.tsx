@@ -512,7 +512,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     const set = (next: MultiItem[]) => select(next.length > 1 ? { kind: "multi", items: next } : next.length === 1 ? { kind: next[0]!.kind, id: next[0]!.id } : { kind: "moble" }, fromPanel)
     // Maj + clic a l'arbre: del primer (l'últim triat) a aquest, si són del mateix tipus.
     const anchor = rangeAnchor.current
-    if (fromPanel && rangeRef.current && anchor && anchor.kind === kind) {
+    // Un que ja és a la selecció múltiple: Maj + clic el treu (només aquest), també a l'arbre.
+    const inSel = selection.kind === "multi" && selection.items.some((x) => x.kind === kind && x.id === s.id)
+    if (fromPanel && rangeRef.current && anchor && anchor.kind === kind && !inSel) {
       const order = treeOrder(kind)
       const i = order.indexOf(anchor.id), j = order.indexOf(s.id)
       if (i >= 0 && j >= 0) return set(order.slice(Math.min(i, j), Math.max(i, j) + 1).map((id) => ({ kind, id })))

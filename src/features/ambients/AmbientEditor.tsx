@@ -431,7 +431,8 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   // Clic a una fila de l'arbre: Maj = del darrer triat a aquest (en l'ordre del seu apartat); ⌘/Ctrl = afegir o treure.
   const treeClick = (id: string, order: string[]) => {
     const a = rangeAnchor.current
-    if (rangeRef.current && a && order.includes(a) && a !== id) {
+    // Un que ja és a la selecció múltiple: Maj + clic el treu (només aquest).
+    if (rangeRef.current && a && order.includes(a) && a !== id && !(sel?.kind === "multi" && selIds.includes(id))) {
       const i = order.indexOf(a), j = order.indexOf(id)
       const ids = order.slice(Math.min(i, j), Math.max(i, j) + 1)
       select({ kind: "multi", ids })
