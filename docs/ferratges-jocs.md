@@ -288,8 +288,11 @@ Base «Potes» › «Pota» i `buildLegs` en fa els forats a la cara de sota de 
 
 **Com la munta el taller** (el model de TopSolid del germà, 2026-10-14): el costat llarg (92) al llarg de l'amplada del
 moble i el **clip cap al lateral**, una a cada cantonada amb la placa gairebé enrasada amb la vora; les de la dreta, en
-mirall (`params.mirror` = 1). A l'app: l'eix del tub a **52** dels laterals i del darrere (`inset`) i a **83** del davant, on va el sòcol (`insetFront`); mesurat al model del taller (vista axonomètrica de davant i de sota, el fons al darrere): les rectes de la base són paral·leles, així que la base es redreça amb una transformació afí, i la placa de 92 fa de regle (base de 600 × 577, ±3 mm). Plànol a escala: [`pota-axilo-planta.svg`](pota-axilo-planta.svg). El clip queda a ~7 del cantell del lateral i la placa a ~43 del davant i, al marc de la pota (u = X cap a
-dins a l'esquerra, v = cap al davant), els cargols a **u = −19 / +45, v = ±32**. Preferències v37 (la de la v34, amb el clip
+mirall (`params.mirror` = 1). A l'app: l'eix del tub a **48** dels laterals (`inset`: el clip a 3,5 del cantell), a **60** del darrere (`insetBack`: la placa a
+20,5) i a **83** del davant, on va el sòcol (`insetFront`). Per decisió de l'usuari (2026-10-14): «al fons 20 mm com a mínim,
+als costats 3 mm»; el davant, mesurat al model del taller (vista axonomètrica redreçada amb la placa de 92 com a regle: base
+de 600 × 577, ±3 mm; als laterals i al darrere hi donava ~52). Plànol a escala: [`pota-axilo-planta.svg`](pota-axilo-planta.svg).
+Preferències v37 (la de la v34, amb el clip
 cap al davant i a 60, es refà).
 
 El **tub amb el peu regulable** (Ø78, 150 kg per pota) es demana a part per l'alçada H de la base «Potes»: 60 → 637.76.351
@@ -297,8 +300,7 @@ El **tub amb el peu regulable** (Ø78, 150 kg per pota) es demana a part per l'a
 · 200 → .357 (190–220). Ara surt a les notes de l'item (encara no a una comanda per mòdul, com els jocs).
 
 **Hipòtesis pendents del taller**: la prebroca dels cargols, **Ø3 × 10** (el catàleg no dona ni el cargol ni la
-prebroca; els cargols del darrere cauen sota la ranura del fons de la base: 10 + 8 de la ranura deixen 1 mm en un tauler de
-19) i l'eix a 52 / 83 del davant (mesurat a la imatge del taller, sense cotes, ±3 mm).
+prebroca) i els 83 del davant (mesurats a la imatge del taller, sense cotes, ±3 mm).
 
 ## Catàleg general Häfele (v35)
 

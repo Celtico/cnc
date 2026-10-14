@@ -9,15 +9,15 @@ import type { HardwareItem } from "../hardware"
  * tub al forat de Ø30. El tub és a 39,5 mm de la vora del clip i els cargols, centrats a 39,5 mm de la vora contrària.
  * **Com la munta el taller** (el model de TopSolid del germà, 2026-10-14): el costat llarg al llarg de l'amplada del moble i
  * el clip cap al lateral, a les quatre cantonades (les de la dreta, en mirall: `params.mirror`); la placa **separada** de
- * les vores de la fusta (`inset` 52: l'eix del tub a 52 dels laterals i del darrere, i `insetFront` 83 del davant, on va el sòcol; mesurat al
- * model del taller —vista axonomètrica de davant i de sota, el fons al darrere— redreçant la base amb la placa de 92 com a
- * regle: base de 600 × 577, ±3 mm; plànol a escala a `docs/pota-axilo-planta.svg`; el clip queda a ~5 del cantell del
+ * les vores de la fusta (per decisió de l'usuari, 2026-10-14: «al fons 20 mm com a mínim, als costats 3 mm»: `inset` 48 —el clip a 3,5 del
+ * cantell del lateral—, `insetBack` 60 —la placa a 20,5 del darrere— i `insetFront` 83 del davant, on va el sòcol, mesurat al
+ * model del taller; plànol a escala a `docs/pota-axilo-planta.svg`; el clip queda a ~5 del cantell del
  * lateral i la placa a ~10 del darrere i a ~45 del davant). Al marc de la pota (u = X del mòdul cap a dins a
  * l'esquerra, v = cap al davant, origen a l'eix del tub) els cargols són a u = −19 / +45 i v = ±32. El tub amb el peu
  * regulable es demana a part per l'alçada.
  *
- * **Hipòtesi** (el catàleg no ho diu): la prebroca dels cargols, Ø3 × 10 (els del darrere cauen sobre la ranura del fons
- * de la base: amb 10 de fondària i la ranura de 8, queda 1 mm en un tauler de 19).
+ * **Hipòtesi** (el catàleg no ho diu): la prebroca dels cargols, Ø3 × 10 (els del darrere, a 28 del cantell, ja no
+ * toquen la ranura del fons).
  */
 const AXILO_SOURCE = "Catàleg general Häfele, p. FF 11.79 (AXILO 78)"
 
@@ -30,14 +30,14 @@ export const HAFELE_LEGS: HardwareItem[] = [
     maker: "Häfele",
     ref: "637.76.333",
     tags: [
-      "Placa de fixació rectangular per cargolar (637.76.333, plàstic negre, 92 × 79 × 25): 4 cargols en quadre de 64 × 64, tub al forat Ø30; com la munta el taller, el costat llarg al llarg de l'amplada i el clip cap al lateral (les de la dreta, en mirall), l'eix a 52 dels laterals i del darrere i a 83 del davant, on va el sòcol (mesurat al model del taller, docs/pota-axilo-planta.svg).",
+      "Placa de fixació rectangular per cargolar (637.76.333, plàstic negre, 92 × 79 × 25): 4 cargols en quadre de 64 × 64, tub al forat Ø30; com la munta el taller, el costat llarg al llarg de l'amplada i el clip cap al lateral (les de la dreta, en mirall), l'eix a 48 dels laterals (el clip a 3,5), a 60 del darrere (la placa a 20,5) i a 83 del davant, on va el sòcol (docs/pota-axilo-planta.svg).",
       "Tub amb peu regulable a part (Ø78, 150 kg per pota), per l'alçada de la base «Potes»: 60 → 637.76.351 (53–80) · 80 → .352 (70–100) · 100 → .353 (90–120) · 125 → .354 (115–145) · 150 → .355 (140–170) · 180 → .356 (170–200) · 200 → .357 (190–220).",
-      "Hipòtesi: prebroca dels cargols Ø3 × 10 (el catàleg no la dona; els del darrere cauen sota la ranura del fons).",
+      "Hipòtesi: prebroca dels cargols Ø3 × 10 (el catàleg no la dona).",
       AXILO_SOURCE,
     ],
     // La placa per dibuixar-la (al marc de la pota, l'esquerra): del clip (−39,5 −5) a l'altra vora (+52,5), ±39,5, 25 de
     // gruix; el peu Ø78.
-    params: { inset: 52, insetFront: 83, mirror: 1, plateU0: -44.5, plateU1: 52.5, plateV: 39.5, plateH: 25, foot: 78 },
+    params: { inset: 48, insetBack: 60, insetFront: 83, mirror: 1, plateU0: -44.5, plateU1: 52.5, plateV: 39.5, plateH: 25, foot: 78 },
     targets: [
       {
         key: "base",
@@ -50,7 +50,7 @@ export const HAFELE_LEGS: HardwareItem[] = [
         ],
       },
     ],
-    version: 7,
+    version: 8,
     builtin: true,
   },
 ]

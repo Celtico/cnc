@@ -163,9 +163,9 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     les genèriques (només es veuen) o una pota de la biblioteca (`Base.hardware`, còpia): forats de la placa a la cara de
     sota de la base a cada pota (`buildLegs`; una d'importada, només confirmada). Del catàleg: **Häfele AXILO 78 amb la
     placa rectangular per cargolar** (`core/model/hafele/hafeleLegs.ts`, 637.76.333, p. FF 11.79; preferències v34, i v37
-    com la munta el taller al TopSolid del germà): el costat llarg al llarg de l'amplada i el clip cap al lateral, l'eix a 52
-    dels laterals i del darrere i a 83 del davant, on va el sòcol (`insetFront`, `legSpec().insetFront`; mesurat al model del
-    taller redreçant la base, plànol a escala a `docs/pota-axilo-planta.svg`); 4 prebroques Ø3 × 10 (hipòtesi) a u = −19 / +45, v = ±32 de l'eix; les potes de la dreta en mirall
+    com la munta el taller al TopSolid del germà): el costat llarg al llarg de l'amplada i el clip cap al lateral, l'eix a 48
+    dels laterals (el clip a 3,5 del cantell), a 60 del darrere (la placa a 20,5: «al fons 20 com a mínim, als costats 3») i
+    a 83 del davant, on va el sòcol (`insetBack`, `insetFront`, `legSpec()`; plànol a escala a `docs/pota-axilo-planta.svg`); 4 prebroques Ø3 × 10 (hipòtesi) a u = −19 / +45, v = ±32 de l'eix; les potes de la dreta en mirall
     (`params.mirror` = 1, `legSpec().mirror`, `buildLegs`). El tub per l'alçada, a les notes de l'item. **Al 3D** (v38):
     sense model importat, `buildLegs` posa a la base un `Panel.fittings` `kind: "leg"` amb `leg` (la placa de l'item,
     `plateU0`/`plateU1`/`plateV`/`plateH`, en mirall a la dreta; l'alçada de la base «Potes»; el peu) i `legSolids`
