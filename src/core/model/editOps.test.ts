@@ -220,3 +220,22 @@ describe("duplicar un grup amb peces enganxades", () => {
     expect(copy.map((x, i) => x - abs[i]!)).toEqual([w + 50, w + 50])
   })
 })
+
+describe("selecció múltiple", async () => {
+  const { moveMultiBy, removeMulti, groupMulti, toggleMulti, multiBox } = await import("./editOps")
+  const p = { id: "a", name: "a", orient: "front" as const, w: 100, h: 100, thickness: 19, material: "M", x: 0, y: 10, z: 0 }
+  const m = { id: "m1", name: "m1", src: "fern", x: 300, y: 0, z: 0, w: 200, h: 300, d: 200, rot: 0 }
+  const r = { id: "r", name: "r", w: 50, h: 50, d: 50, x: 1000, y: 100, z: 0 }
+  const comp = { modules: [], references: [r], parts: [p], models: [m] }
+  const items = [{ kind: "part" as const, id: "a" }, { kind: "model" as const, id: "m1" }, { kind: "ref" as const, id: "r" }]
+  it("mou, agrupa, treu i calcula la caixa de tots els triats", () => {
+    const c = moveMultiBy(comp, items, 10, -5, 0)
+    expect([c.parts![0]!.x, c.models![0]!.x, c.references[0]!.x]).toEqual([10, 310, 1010])
+    expect(c.models![0]!.y).toBe(0) // no baixa de terra (el model ja hi era)
+    expect(groupMulti(comp, items, "G").parts![0]!.group).toBe("G")
+    const rm = removeMulti(comp, items)
+    expect([rm.parts!.length, rm.models!.length, rm.references.length]).toEqual([0, 0, 0])
+    expect(multiBox(comp, items)!.max[0]).toBe(1050)
+    expect(toggleMulti(items, { kind: "ref", id: "r" })).toHaveLength(2)
+  })
+})

@@ -1,5 +1,6 @@
 import { z } from "zod"
 import {
+  anchorRef,
   freeX,
   ModelObjectSchema,
   ModuleSchema,
@@ -383,4 +384,70 @@ export function removeModule(comp: Composition, id: string): { comp: Composition
     comp: { ...comp, modules, ...(parts ? { parts } : {}), ...(comp.runs ? { runs } : {}) },
     notes,
   }
+}
+
+/** Un element de la selecció múltiple (Maj + clic; per decisió de l'usuari, 2026-10-14). */
+export interface MultiItem {
+  kind: "part" | "model" | "ref"
+  id: string
+}
+
+const inMulti = (items: readonly MultiItem[], kind: MultiItem["kind"], id: string) => items.some((x) => x.kind === kind && x.id === id)
+
+/** Caixa de la selecció múltiple (peces, models i objectes de referència), en coordenades de la composició. */
+export function multiBox(comp: Composition, items: readonly MultiItem[]): { min: [number, number, number]; max: [number, number, number] } | null {
+  const min: [number, number, number] = [Infinity, Infinity, Infinity]
+  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
+  const add = (lo: readonly number[], hi: readonly number[]) => {
+    for (let k = 0; k < 3; k++) (min[k] = Math.min(min[k]!, lo[k]!), (max[k] = Math.max(max[k]!, hi[k]!)))
+  }
+  const ps = resolveParts(comp).filter((p) => inMulti(items, "part", p.id))
+  if (ps.length) {
+    const b = partsBox(ps)
+    add(b.min, b.max)
+  }
+  for (const m of (comp.models ?? []).filter((m) => inMulti(items, "model", m.id))) {
+    const f = modelFootprint(m)
+    add([f.x, m.y, f.z], [f.x + f.w, m.y + m.h, f.z + f.d])
+  }
+  for (const r of comp.references.filter((r) => inMulti(items, "ref", r.id))) add([r.x, r.y, r.z], [r.x + r.w, r.y + r.h, r.z + r.d])
+  return Number.isFinite(min[0]) ? { min, max } : null
+}
+
+/** Mou tots els elements triats (mm). Res no baixa de terra. */
+export function moveMultiBy(comp: Composition, items: readonly MultiItem[], dx: number, dy: number, dz: number): Composition {
+  const b = multiBox(comp, items)
+  if (!b) return comp
+  const ddy = Math.max(dy, -b.min[1])
+  return {
+    ...comp,
+    parts: (comp.parts ?? []).map((p) => (inMulti(items, "part", p.id) ? { ...p, x: p.x + dx, y: p.y + ddy, z: p.z + dz } : p)),
+    // Els objectes al terra o a la paret s'hi queden (`anchorRef`).
+    references: comp.references.map((r) => (inMulti(items, "ref", r.id) ? anchorRef({ ...r, x: r.x + dx, y: r.y + ddy, z: r.z + dz }) : r)),
+    ...(comp.models ? { models: comp.models.map((m) => (inMulti(items, "model", m.id) ? { ...m, x: m.x + dx, y: m.y + ddy, z: m.z + dz } : m)) } : {}),
+  }
+}
+
+/** Treu tots els elements triats. */
+export function removeMulti(comp: Composition, items: readonly MultiItem[]): Composition {
+  return {
+    ...comp,
+    parts: (comp.parts ?? []).filter((p) => !inMulti(items, "part", p.id)),
+    references: comp.references.filter((r) => !inMulti(items, "ref", r.id)),
+    ...(comp.models ? { models: comp.models.filter((m) => !inMulti(items, "model", m.id)) } : {}),
+  }
+}
+
+/** Posa les peces i els models triats en un grup (els objectes de referència no en fan). */
+export function groupMulti(comp: Composition, items: readonly MultiItem[], group: string): Composition {
+  return {
+    ...comp,
+    parts: (comp.parts ?? []).map((p) => (inMulti(items, "part", p.id) ? { ...p, group } : p)),
+    ...(comp.models ? { models: comp.models.map((m) => (inMulti(items, "model", m.id) ? { ...m, group } : m)) } : {}),
+  }
+}
+
+/** Afegeix o treu un element de la selecció múltiple. */
+export function toggleMulti(items: readonly MultiItem[], item: MultiItem): MultiItem[] {
+  return inMulti(items, item.kind, item.id) ? items.filter((x) => !(x.kind === item.kind && x.id === item.id)) : [...items, item]
 }

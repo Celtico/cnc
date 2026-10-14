@@ -53,7 +53,7 @@ import { moduleWorldX, panelBox, type CompositionWarning } from "../../core/buil
 import { activeIslands } from "../../core/build/islands"
 import { materialIssues } from "../../core/build/materialIssues"
 import { splitChildSizes } from "../../core/build/layout"
-import { applySettingsToModule, moduleHasInnerPieces, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, moduleRows, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, setModuleMount, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, insertPartCopy, insertModelCopy, moveGroupBy, removeGroup, renameGroup, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule, moduleHasInnerPieces, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, moduleRows, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, setModuleMount, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, insertPartCopy, insertModelCopy, moveGroupBy, removeGroup, renameGroup, moveMultiBy, removeMulti, toggleMulti, groupMulti, newGroupName, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type MultiItem, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, InnerClearanceRow, JointForm, MaterialsForm } from "../composition/CarcassForm"
@@ -61,7 +61,7 @@ import { System32Pick } from "../composition/HardwarePick"
 import { ElevationEditor } from "../composition/ElevationEditor"
 import { RefActions, RefInspector } from "../composition/RefInspector"
 import { ModelActions, ModelInspector } from "../composition/ModelInspector"
-import { GroupInspector, PartActions, PartInspector, PartJoineryForm } from "../composition/PartInspector"
+import { GroupInspector, MultiInspector, PartActions, PartInspector, PartJoineryForm } from "../composition/PartInspector"
 import { ORIENT_ICON } from "../composition/partOrient"
 import { StructureTree, type Selection } from "../composition/StructureTree"
 import { Tooltip } from "../../components/ui/tooltip"
@@ -188,12 +188,14 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   // Selecció única (arbre, 3D i alçat van sincronitzats): moble, mòdul, compartiment o objecte.
   const [selectedModule, setSelectedModule] = useState<string>(initial.modules[0]?.id ?? "")
   const [selectedZone, setSelectedZone] = useState<string | null>(null)
-  const [selKind, setSelKind] = useState<"moble" | "module" | "zone" | "ref" | "part" | "group" | "model" | "hardware">(partsOnlyKind(compositionKind(initial)) || !initial.modules.length ? "moble" : "module")
+  const [selKind, setSelKind] = useState<"moble" | "module" | "zone" | "ref" | "part" | "group" | "model" | "hardware" | "multi">(partsOnlyKind(compositionKind(initial)) || !initial.modules.length ? "moble" : "module")
   const [selectedRef, setSelectedRef] = useState<string | null>(null)
   const [selectedPart, setSelectedPart] = useState<string | null>(null)
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [selectedModel, setSelectedModel] = useState<string | null>(null)
   const [selectedHardware, setSelectedHardware] = useState<string | null>(null)
+  // Selecció múltiple (Maj + clic a l'arbre o al 3D; per decisió de l'usuari, 2026-10-14).
+  const [selectedMulti, setSelectedMulti] = useState<MultiItem[]>([])
   // Espai de treball compartit (Workspace): panells, amplades i pestanya del mòbil.
   const ws = useWorkspace("editor", { tree: 280, form: 340 })
   const { setMobilePane } = ws
@@ -364,9 +366,15 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
 
   const updateModule = (m: Module) => setComp((c) => ({ ...c, modules: c.modules.map((x) => (x.id === m.id ? m : x)) }))
 
+  // Els triats que encara hi són (desfer o eliminar en pot treure).
+  const multiNow = selKind === "multi" ? selectedMulti.filter((x) => (x.kind === "part" ? comp.parts?.some((p) => p.id === x.id) : x.kind === "model" ? comp.models?.some((m) => m.id === x.id) : comp.references.some((r) => r.id === x.id))) : []
   const selectionNow: Selection =
     selKind === "moble"
       ? { kind: "moble" }
+      : selKind === "multi" && multiNow.length > 1
+        ? { kind: "multi", items: multiNow }
+      : selKind === "multi" && multiNow.length === 1
+        ? { kind: multiNow[0]!.kind, id: multiNow[0]!.id }
       : selKind === "ref" && selectedRef && comp.references.some((r) => r.id === selectedRef)
         ? { kind: "ref", id: selectedRef }
         : selKind === "part" && selectedPart && comp.parts?.some((r) => r.id === selectedPart)
@@ -377,7 +385,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             ? { kind: "model", id: selectedModel }
           : selKind === "hardware" && selectedHardware && comp.hardwarePlacements?.some((h) => h.id === selectedHardware)
             ? { kind: "hardware", id: selectedHardware }
-          : partsOnlyKind(kind) || !module || selKind === "ref" || selKind === "part" || selKind === "group" || selKind === "model"
+          : partsOnlyKind(kind) || !module || selKind === "ref" || selKind === "part" || selKind === "group" || selKind === "model" || selKind === "multi"
             ? { kind: "moble" }
             : selectedZone && zone
           ? { kind: "zone", moduleId: module.id, zoneId: selectedZone }
@@ -410,6 +418,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         return `model 3D (id ${selection.id})`
       case "hardware":
         return `ferratge col·locat (id ${selection.id})`
+      case "multi":
+        return `${selection.items.length} elements: ${selection.items.map((x) => `${x.kind} ${x.id}`).join(", ")}`
       default:
         return undefined
     }
@@ -446,6 +456,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       setSelectedModule(s.id)
       setSelectedZone(null)
       setSelKind("module")
+    } else if (s.kind === "multi") {
+      setSelectedMulti(s.items)
+      setSelKind("multi")
     } else {
       setSelectedModule(s.moduleId)
       setSelectedZone(s.zoneId)
@@ -455,6 +468,20 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     if (fromPanel) setMobilePane("props")
   }
   const selectModule = (id: string) => select({ kind: "module", id })
+  // Maj + clic (a l'arbre o al 3D): afegeix o treu la peça, el model o l'objecte de la selecció, com Figma. Es llegeix la
+  // tecla del clic (`pointerdown`), no de cap estat desat.
+  const shiftRef = useRef(false)
+  useEffect(() => {
+    const down = (e: PointerEvent) => void (shiftRef.current = e.shiftKey)
+    window.addEventListener("pointerdown", down, true)
+    return () => window.removeEventListener("pointerdown", down, true)
+  }, [])
+  const pick = (s: Selection, fromPanel = false) => {
+    if (!shiftRef.current || (s.kind !== "part" && s.kind !== "model" && s.kind !== "ref")) return select(s, fromPanel)
+    const cur: MultiItem[] = selection.kind === "multi" ? selection.items : selection.kind === "part" || selection.kind === "model" || selection.kind === "ref" ? [{ kind: selection.kind, id: selection.id }] : []
+    const next = toggleMulti(cur, { kind: s.kind, id: s.id })
+    select(next.length > 1 ? { kind: "multi", items: next } : next.length === 1 ? { kind: next[0]!.kind, id: next[0]!.id } : { kind: "moble" }, fromPanel)
+  }
   // Esc: treure la selecció (queda el moble sencer), si no s'està escrivint en un camp.
   const deselectRef = useRef(() => select({ kind: "moble" }))
   deselectRef.current = () => select({ kind: "moble" })
@@ -504,6 +531,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
    * seleccionat, selecciona el grup; si el grup (o una peça seva) ja ho està, la peça.
    */
   const selectPartFrom3D = (id: string) => {
+    // Maj + clic: la peça sola, a la selecció múltiple.
+    if (shiftRef.current) return pick({ kind: "part", id })
     const g = comp.parts?.find((p) => p.id === id)?.group
     const inside = g && ((selection.kind === "group" && selection.id === g) || (selection.kind === "part" && comp.parts?.find((p) => p.id === selection.id)?.group === g))
     select(g && !inside ? { kind: "group", id: g } : { kind: "part", id })
@@ -536,6 +565,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     : selection.kind === "part" ? !!comp.parts?.find((q) => q.id === selection.id)?.locked
     : selection.kind === "model" ? !!comp.models?.find((g) => g.id === selection.id)?.locked
     : selection.kind === "group" ? [...(comp.parts ?? []), ...(comp.models ?? [])].filter((q) => q.group === selection.id).every((q) => q.locked)
+    : selection.kind === "multi" ? selection.items.some((x) => (x.kind === "part" ? comp.parts?.find((q) => q.id === x.id) : x.kind === "model" ? comp.models?.find((q) => q.id === x.id) : comp.references.find((q) => q.id === x.id))?.locked)
     : false
   /** Mou un model 3D (gizmo al 3D o fletxes): no s'enfonsa al terra. */
   const moveModel = (id: string, pos: { x: number; y: number; z: number }) =>
@@ -696,6 +726,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         select({ kind: "moble" })
       } else if (selection.kind === "hardware") {
         removeHardware(selection.id)
+      } else if (selection.kind === "multi") {
+        setComp(removeMulti(comp, selection.items))
+        select({ kind: "moble" })
       } else if (selection.kind === "zone") {
         // L'«Interior» (l'arrel) no s'elimina: `deleteZone` buidaria tot el mòdul (divisions, fronts i les portes de tot el
         // mòdul). Es buida treient-ne la divisió, el front o les portes (Mòdul › Portes).
@@ -719,9 +752,17 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
 
   const nudgeRef = useRef<(e: KeyboardEvent) => void>(() => {})
   nudgeRef.current = (e: KeyboardEvent) => {
-    if ((selection.kind !== "ref" && selection.kind !== "part" && selection.kind !== "group" && selection.kind !== "model") || selectionLocked || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return
+    if ((selection.kind !== "ref" && selection.kind !== "part" && selection.kind !== "group" && selection.kind !== "model" && selection.kind !== "multi") || selectionLocked || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return
     const t = e.target as HTMLElement | null
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return
+    if (selection.kind === "multi") {
+      const k = e.shiftKey ? 10 : 1
+      const d = { ArrowLeft: [-k, 0, 0], ArrowRight: [k, 0, 0], ArrowUp: [0, k, 0], ArrowDown: [0, -k, 0], PageUp: [0, 0, k], PageDown: [0, 0, -k] }[e.key]
+      if (!d) return
+      e.preventDefault()
+      setComp((c) => moveMultiBy(c, selection.items, d[0]!, d[1]!, d[2]!))
+      return
+    }
     if (selection.kind === "group") {
       const k = e.shiftKey ? 10 : 1
       const d = { ArrowLeft: [-k, 0, 0], ArrowRight: [k, 0, 0], ArrowUp: [0, k, 0], ArrowDown: [0, -k, 0], PageUp: [0, 0, k], PageDown: [0, 0, -k] }[e.key]
@@ -922,6 +963,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     ? { icon: <LuCamera />, text: "Foto del lloc" }
     : selection.kind === "moble"
       ? { icon: <LuBox />, text: name || "Moble" }
+      : selection.kind === "multi"
+        ? { icon: <LuGroup />, text: `${selection.items.length} elements`, parent: "Selecció" }
       : selection.kind === "group"
         ? { icon: <LuGroup />, text: selection.id, parent: "Grup", onRename: (v) => {
             const old = selection.id
@@ -1127,6 +1170,22 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         <PlacementInspector comp={comp} id={selection.id} panels={panels} library={settings.hardwareLibrary} warnings={warnings} onChange={setComp} />
       ) : selection.kind === "ref" ? (
         <RefInspector comp={comp} id={selection.id} onChange={setComp} />
+      ) : selection.kind === "multi" ? (
+        <MultiInspector
+          comp={comp}
+          items={selection.items}
+          onSelect={(x) => select({ kind: x.kind, id: x.id })}
+          onMove={(dx, dy, dz) => setComp((c) => moveMultiBy(c, selection.items, dx, dy, dz))}
+          onGroup={() => {
+            const g = newGroupName(comp)
+            setComp(groupMulti(comp, selection.items, g))
+            select({ kind: "group", id: g })
+          }}
+          onRemove={() => {
+            setComp(removeMulti(comp, selection.items))
+            select({ kind: "moble" })
+          }}
+        />
       ) : selection.kind === "group" ? (
         <GroupInspector comp={comp} group={selection.id} onChange={setComp} onSelectPart={(id) => select({ kind: "part", id })} onSelectModel={(id) => select({ kind: "model", id })} onMove={(dx, dy, dz) => moveGroup(selection.id, dx, dy, dz)} />
       ) : selection.kind === "part" ? (
@@ -1386,7 +1445,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           name={name}
           comp={comp}
           selection={selection}
-          onSelect={(s) => select(s, true)}
+          onSelect={(s) => pick(s, true)}
           onChange={setComp}
           newModule={(id, n) => applySettingsToModule(settings, kind === "taula" ? tableModule(id, n) : emptyModule(id, n))}
           partCenter={{ x: Math.round(size.width / 2), y: partsOnlyKind(kind) ? 0 : Math.round(size.height / 2), z: partsOnlyKind(kind) ? 0 : Math.round(size.depth + 50) }}
@@ -1491,7 +1550,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             collidingRefIds={collidingRefs}
             cuttingRefIds={cuttingRefs}
             highlightZone={highlightZone}
-            onSelectRef={(id) => select(id.startsWith("part:") ? { kind: "part", id: id.slice(5) } : { kind: "ref", id })}
+            onSelectRef={(id) => pick(id.startsWith("part:") ? { kind: "part", id: id.slice(5) } : { kind: "ref", id })}
             fitKey={fitKey}
             onFramedChange={setFramed}
             initialCamera={cameraRef.current}
@@ -1505,10 +1564,13 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             onSelectPart={selectPartFrom3D}
             selectedGroup={selection.kind === "group" ? selection.id : null}
             onMoveGroup={selectionLocked ? undefined : (g, dx, dy, dz) => moveGroup(g, dx, dy, dz)}
+            selectedSet={selection.kind === "multi" ? selection.items : undefined}
+            onMoveSet={selectionLocked || selection.kind !== "multi" ? undefined : (dx, dy, dz) => setComp((c) => moveMultiBy(c, selection.items, dx, dy, dz))}
             onMovePart={selectionLocked ? undefined : movePart}
             models={comp.models?.filter((g) => !g.hidden)}
             selectedModelId={selection.kind === "model" ? selection.id : null}
             onSelectModel={(id) => {
+              if (shiftRef.current) return pick({ kind: "model", id })
               // Com les peces: el primer clic a un model d'un grup tria el grup; el segon, el model.
               const g = comp.models?.find((m) => m.id === id)?.group
               const inside = g && ((selection.kind === "group" && selection.id === g) || (selection.kind === "model" && comp.models?.find((m) => m.id === selection.id)?.group === g))

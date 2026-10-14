@@ -16,6 +16,7 @@ import {
   LuPalette,
   LuPencilRuler,
   LuPuzzle,
+  LuScan,
   LuRectangleHorizontal,
   LuSpline,
   LuScissors,
@@ -41,7 +42,9 @@ import {
   groupNames,
   newGroupName,
   partSize,
+  multiBox,
   type Composition,
+  type MultiItem,
   type FreePart,
   type Joinery,
   type PartOrient,
@@ -418,6 +421,49 @@ export function GroupInspector({ comp, group, onChange, onSelectPart, onSelectMo
         <HStack gap={2}>
           <Button size="xs" variant="outline" onClick={() => onChange(renameGroup(comp, group, undefined))}>
             <LuUngroup /> Desagrupar
+          </Button>
+        </HStack>
+      </FoldItem>
+    </Stack>
+  )
+}
+
+/**
+ * Selecció múltiple (Maj + clic; per decisió de l'usuari, 2026-10-14): la posició de tots junts, el que hi ha (tocar-ne un
+ * el tria sol) i les accions: agrupar les peces i els models, eliminar-ho tot.
+ */
+export function MultiInspector({ comp, items, onSelect, onMove, onGroup, onRemove }: { comp: Composition; items: MultiItem[]; onSelect: (item: MultiItem) => void; onMove: (dx: number, dy: number, dz: number) => void; onGroup: () => void; onRemove: () => void }) {
+  const b = multiBox(comp, items)
+  if (!b) return null
+  const size = [0, 1, 2].map((a) => Math.round(b.max[a]! - b.min[a]!))
+  const nameOf = (x: MultiItem) => (x.kind === "part" ? comp.parts?.find((p) => p.id === x.id)?.name : x.kind === "model" ? comp.models?.find((m) => m.id === x.id)?.name : comp.references.find((r) => r.id === x.id)?.name) ?? "?"
+  const groupable = items.some((x) => x.kind !== "ref")
+  return (
+    <Stack gap={0}>
+      <FoldItem id="multi-position" title="Posició" icon={LuMove} badge={size.join(" × ")}>
+        <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra" />} ariaLabel="De costat (X)" value={b.min[0]} min={-30000} max={30000} step={10} onChange={(x) => Number.isFinite(x) && onMove(x - b.min[0], 0, 0)} />
+        <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={b.min[1]} min={0} max={30000} step={10} onChange={(y) => Number.isFinite(y) && onMove(0, y - b.min[1], 0)} />
+        <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fondària" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fondària (Z)" value={b.min[2]} min={-30000} max={30000} step={10} onChange={(z) => Number.isFinite(z) && onMove(0, 0, z - b.min[2])} />
+        <Text fontSize="xs" color="fg.muted">
+          Es mouen tots junts: amb les fletxes del 3D, del teclat o aquí. Maj + clic (a l'arbre o al 3D) n'afegeix o en treu.
+        </Text>
+      </FoldItem>
+      <FoldItem id="multi-items" title="Triats" icon={LuGroup} badge={items.length}>
+        <Stack gap={0.5}>
+          {items.map((x) => (
+            <Button key={`${x.kind}:${x.id}`} size="xs" variant="ghost" justifyContent="flex-start" onClick={() => onSelect(x)}>
+              {x.kind === "part" ? <LuPuzzle /> : x.kind === "model" ? <LuSprout /> : <LuScan />} {nameOf(x)}
+            </Button>
+          ))}
+        </Stack>
+        <HStack gap={2}>
+          {groupable && (
+            <Button size="xs" variant="outline" onClick={onGroup}>
+              <LuGroup /> Agrupar
+            </Button>
+          )}
+          <Button size="xs" variant="outline" colorPalette="red" onClick={onRemove}>
+            <LuTrash2 /> Eliminar
           </Button>
         </HStack>
       </FoldItem>

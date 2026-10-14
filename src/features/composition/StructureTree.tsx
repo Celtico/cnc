@@ -18,7 +18,7 @@ import {
   LuFolderOpen,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcons"
-import { compositionKind, partsOnlyKind, duplicateGroup, removeModule, newGroupName, groupNames, renameGroup, removeGroup, reorderModel, setModelGroup, insertModelCopy, insertPartCopy, insertRefCopy, newModelObject, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, withFlag, type Composition, type ViewFlags, type Module, type Zone } from "../../core/model"
+import { compositionKind, partsOnlyKind, duplicateGroup, removeModule, newGroupName, groupNames, renameGroup, removeGroup, reorderModel, setModelGroup, insertModelCopy, insertPartCopy, insertRefCopy, newModelObject, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, withFlag, type Composition, type MultiItem, type ViewFlags, type Module, type Zone } from "../../core/model"
 import { NameDialog } from "../../components/NameDialog"
 import { toaster } from "../../components/ui/toaster"
 import { MODEL_FORMAT_HELP, defaultElementName, freePartFor, refFor, refFromPreset, type AddKind } from "./addElements"
@@ -43,6 +43,8 @@ export type Selection =
   | { kind: "model"; id: string }
   /** Ferratge col·locat a mà (`Composition.hardwarePlacements`, id del col·locat): es tria al 3D (o a «Ferratges» de la peça lliure). */
   | { kind: "hardware"; id: string }
+  /** Selecció múltiple (Maj + clic): peces lliures, models 3D i objectes de referència. */
+  | { kind: "multi"; items: MultiItem[] }
 
 /**
  * Arbre d'estructura (com l'outliner de Figma o Fusion): el moble, els seus mòduls amb
@@ -223,6 +225,7 @@ export function StructureTree({
     if (selection.kind === "ref" && selection.id === id) onSelect({ kind: "moble" })
   }
 
+  const inMultiSel = (kind: MultiItem["kind"], id: string) => selection.kind === "multi" && selection.items.some((x) => x.kind === kind && x.id === id)
   // L'ull i el cadenat (com Figma): de cada element i, als grups de peces, de tots els seus.
   type Listed = "modules" | "parts" | "references" | "models"
   const flip = (list: Listed, match: (x: { id: string; group?: string }) => boolean, flag: keyof ViewFlags, on: boolean) =>
@@ -383,7 +386,7 @@ export function StructureTree({
               icon={<Icon />}
               label={r.name.trim() || "Peça"}
               hint={`${Math.round(r.w)} × ${Math.round(r.h)}`}
-              selected={selection.kind === "part" && selection.id === r.id}
+              selected={(selection.kind === "part" && selection.id === r.id) || inMultiSel("part", r.id)}
               onClick={() => onSelect({ kind: "part", id: r.id })}
               dnd={dnd("part", r.id)}
               flags={flagsOf("parts", r)}
@@ -517,7 +520,7 @@ export function StructureTree({
           icon={<LuScan />}
           label={r.name}
           hint={`${Math.round(r.w)} × ${Math.round(r.h)}`}
-          selected={selection.kind === "ref" && selection.id === r.id}
+          selected={(selection.kind === "ref" && selection.id === r.id) || inMultiSel("ref", r.id)}
           onClick={() => onSelect({ kind: "ref", id: r.id })}
           dnd={dnd("ref", r.id)}
           flags={flagsOf("references", r)}
@@ -587,7 +590,7 @@ export function StructureTree({
             icon={<LuSprout />}
             label={g.name.trim() || "Model"}
             hint={`${Math.round(g.w)} × ${Math.round(g.h)}`}
-            selected={selection.kind === "model" && selection.id === g.id}
+            selected={(selection.kind === "model" && selection.id === g.id) || inMultiSel("model", g.id)}
             onClick={() => onSelect({ kind: "model", id: g.id })}
             flags={flagsOf("models", g)}
             dnd={dnd("model", g.id)}
