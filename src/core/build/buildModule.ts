@@ -1120,7 +1120,7 @@ class Builder {
         this.buildDrawers(zone, front, rect, territory, left, right)
         break
       case "flap":
-        this.buildFlap(zone, front, territory)
+        this.buildFlap(zone, front, territory, left, right)
         break
       case "grille":
         this.buildGrille(zone, front, rect, territory, left, right, rowYs)
@@ -1658,7 +1658,7 @@ class Builder {
     const handleHw = this.frontHandle(front.handle, zone.id)
     const make = (id: string, name: string, label: string, x0: number, w: number, hinge: "left" | "right") => {
       if (w > 600) this.warnings.push({ code: "door-too-wide", message: `Porta de ${num(w)} mm d'amplada (màxim recomanat 600).`, zoneId: zone.id })
-      if (front.glass) return this.glassDoor(id, label, x0, ter.y0, w, doorH, this.frontHardware("glassFrame", front.frame, zone.id), { hinge: hingeHw, side: hinge, panel: hinge === "left" ? left : right, rowYs, zoneId: zone.id })
+      if (front.glass) return this.glassDoor(id, label, x0, ter.y0, w, doorH, this.frontHardware("glassFrame", front.frame, zone.id), { hinge: hingeHw, side: hinge, panel: hinge === "left" ? left : right, rowYs, zoneId: zone.id }, handleHw.push ? undefined : handleHw.item)
       const door = this.frontPanel(id, name, label, "door", x0, ter.y0, w, doorH)
       this.addCups(door, doorH, hinge, w, rowYs, ter.y0, zone.id, hingeHw, hinge === "left" ? left : right)
       // Sense tirador (push): cap forat ni cap lectura del lloc «tirador».
@@ -1685,11 +1685,16 @@ class Builder {
    * CNC: tot va a `extras` («Elements sense nesting», amb les mides per demanar-ho). Les frontisses són les del perfil
    * (no porta cassoletes al tauler); els laterals mantenen les fileres.
    */
-  private glassDoor(id: string, label: string, x0: number, y0: number, w: number, h: number, frameHw: { spec: SlotSpec<"glassFrame">; item: HardwareItem }, hinge?: GlassHinge): void {
+  private glassDoor(id: string, label: string, x0: number, y0: number, w: number, h: number, frameHw: { spec: SlotSpec<"glassFrame">; item: HardwareItem }, hinge?: GlassHinge, handle?: HardwareItem): void {
     const { d } = this
     const frame = frameHw.spec
-    // Les plaques de les frontisses de perfil (la frontissa triada), només a les portes.
-    if (hinge) this.glassHinges(label, y0, h, hinge)
+    // Les plaques de les frontisses de perfil (la frontissa triada), només a les portes; es dibuixen (frontissa i placa).
+    if (hinge) {
+      const ys = this.glassHinges(label, y0, h, hinge)
+      ys.forEach((y, i) => this.glassHingeBody(`${id}-hinge-${i + 1}`, hinge, y, hinge.side === "left" ? x0 : x0 + w - frame.frame, frame.frame))
+    }
+    // El tirador (es clava al perfil del costat que obre, a mitja alçada): es veu.
+    if (handle && hinge) this.glassPull(`${id}-pull`, label, hinge.side === "left" ? x0 + w - frame.frame / 2 : x0 + frame.frame / 2, y0 + h / 2, "y", handle)
     const F = frame.frame, G = frame.glass, t = d.t
     const z = d.frontZ
     const bar = (sid: string, lbl: string, bx: number, by: number, len: number, wid: number) =>
@@ -1736,18 +1741,19 @@ class Builder {
    * les frontisses com a les de cassoleta: la quantitat per alçada, a `endOffset` dels extrems i, si hi ha filera System
    * 32, al mig de dos forats seguits. Tota la placa o res d'aquella frontissa (`plateHoles`). Sense placa, res.
    */
-  private glassHinges(label: string, y0: number, h: number, g: GlassHinge): void {
+  private glassHinges(label: string, y0: number, h: number, g: GlassHinge): number[] {
     const spec = g.hinge.spec
     const plate = spec.plate
-    if (!plate || spec.pending) return
-    const item = g.hinge.item
-    if (!g.panel) {
-      this.warnings.push({ code: "hinge", message: `${label} de vidre: la placa de «${item.name}» va al lateral de les frontisses i aquest mòdul no en té. Els forats de la placa no es fan: fes-los on vagi muntada.`, zoneId: g.zoneId })
-      return
-    }
     const count = spec.count(h)
     const span = h - 2 * spec.endOffset
     const targets = count === 1 ? [h / 2] : Array.from({ length: count }, (_, i) => spec.endOffset + (span * i) / (count - 1))
+    // Sense placa (una frontissa sense mecanitzat al lateral): es dibuixa a les alçades de la regla, cap forat.
+    if (!plate || spec.pending) return targets.map((t) => r(y0 + t))
+    const item = g.hinge.item
+    if (!g.panel) {
+      this.warnings.push({ code: "hinge", message: `${label} de vidre: la placa de «${item.name}» va al lateral de les frontisses i aquest mòdul no en té. Els forats de la placa no es fan: fes-los on vagi muntada.`, zoneId: g.zoneId })
+      return targets.map((t) => r(y0 + t))
+    }
     const pitch = this.hw.system32.pitch
     const mids = g.rowYs.filter((y) => g.rowYs.some((z) => Math.abs(z - y - pitch) < 0.01)).map((y) => r(y + pitch / 2))
     const placed: number[] = []
@@ -1774,13 +1780,58 @@ class Builder {
     }
     if (placed.length < count)
       this.warnings.push({ code: "hinge", message: `${label} de vidre de ${num(h)} mm: només hi caben ${placed.length} de ${count} plaques de frontissa al lateral${why.size ? ` (${[...why].join(" ")})` : ""}.`, zoneId: g.zoneId })
+    return placed
   }
 
-  private buildFlap(zone: Zone, front: Extract<Front, { kind: "flap" }>, ter: ZoneRect): void {
+  /** Una peça de només veure (rol `hardware`, sense nesting): una caixa de `min` (mòdul, mm) a `min + size`. */
+  private hwBox(id: string, label: string, material: string, min: Vec3, size: Vec3): void {
+    this.extras.push({ id, name: "ferratge", label, role: "hardware", length: r(size[0]), width: r(size[1]), thickness: r(size[2]), material, grain: "none", edges: { ...NO_EDGES }, holes: [], grooves: [], placement: placement([r(min[0]), r(min[1]), r(min[2])], X, Y, Z, Z) })
+  }
+
+  /** El tirador d'una vitrina (es clava al perfil): la barra del tirador triat (de llarg la distància + 25, o 80), sortint 14. */
+  private glassPull(id: string, label: string, cx: number, cy: number, along: "x" | "y", item: HardwareItem): void {
+    const { d } = this
+    const pitch = item.pitch ? item.pitch.else : 0
+    const L = pitch > 0 ? pitch + 25 : 80
+    const [w, hh] = along === "y" ? [16, L] : [L, 16]
+    this.hwBox(id, `${label}: tirador`, "Acer inox", [cx - w / 2, cy - hh / 2, d.frontZ], [w, hh, 14])
+  }
+
+  /** Una frontissa de perfil d'una vitrina (es veu): el cos al perfil i, si en porta, la placa al lateral. */
+  private glassHingeBody(id: string, g: GlassHinge, y: number, profileX0: number, F: number): void {
+    const { d } = this
+    const zBack = d.frontZ - d.t
+    // El cos de la frontissa, de la cara de dins del perfil cap al lateral (40 de llarg, 22 d'alt).
+    this.hwBox(`${id}-body`, "Frontissa de vitrina", "Acer inox", [profileX0 + (g.side === "left" ? 0 : F - 30), y - 11, zBack - 30], [30, 22, 30])
+    const side = g.panel
+    if (!side) return
+    const xFace = g.side === "left" ? side.xR : side.xL
+    const plateSetback = g.hinge.spec.plate?.setback ?? 37
+    this.hwBox(`${id}-plate`, "Placa de frontissa de vitrina", "Acer inox", [g.side === "left" ? xFace : xFace - 8, y - 18, zBack - plateSetback - 20], [8, 36, 40])
+  }
+
+  /** El braç d'un abatible de vidre (es veu): el cos cargolat a la cara de dins del lateral, a dalt. */
+  private glassArm(id: string, side: VerticalRef, which: "left" | "right", y0: number, h: number, dir: "down" | "up"): void {
+    const { d } = this
+    const zBack = d.frontZ - d.t
+    const xFace = which === "left" ? side.xR : side.xL
+    const yTop = dir === "up" ? y0 + h - 30 : y0 + 140
+    this.hwBox(id, "Braç d'abatible", "Acer inox", [which === "left" ? xFace : xFace - 18, yTop - 110, zBack - 260], [18, 110, 230])
+  }
+
+  private buildFlap(zone: Zone, front: Extract<Front, { kind: "flap" }>, ter: ZoneRect, left?: VerticalRef, right?: VerticalRef): void {
     // Abatible de vidre (vitrina): el marc d'alumini i el vidre, com la porta de vidre; el braç va al perfil.
     if (front.glass) {
       this.frontCount += 1
-      return this.glassDoor(`flap-${this.frontCount}`, "Abatible", ter.x0, ter.y0, r(ter.x1 - ter.x0), r(ter.y1 - ter.y0), this.frontHardware("glassFrame", front.frame, zone.id))
+      const id = `flap-${this.frontCount}`
+      const x0 = ter.x0, y0 = ter.y0, w = r(ter.x1 - ter.x0), h = r(ter.y1 - ter.y0)
+      this.glassDoor(id, "Abatible", x0, y0, w, h, this.frontHardware("glassFrame", front.frame, zone.id))
+      const F = this.frontHardware("glassFrame", front.frame, zone.id).spec.frame
+      // Es veu (per decisió de l'usuari: «s'ha de veure tot»): el tirador al perfil del cantell que obre i els braços als laterals.
+      const handle = this.frontHandle(front.handle, zone.id)
+      if (!handle.push) this.glassPull(`${id}-pull`, "Abatible", x0 + w / 2, front.dir === "down" ? y0 + h - F / 2 : y0 + F / 2, "x", handle.item)
+      for (const ref of [left, right]) if (ref) this.glassArm(`${id}-arm-${ref === left ? "l" : "r"}`, ref, ref === left ? "left" : "right", y0, h, front.dir)
+      return
     }
     const flap = this.buildFrontPanel(zone, ter, "flap", "abatible", "Abatible")
     // El braç triat a l'abatible (si no, el del mòdul): dos forats a `offset` del cantell de gir (22,5).

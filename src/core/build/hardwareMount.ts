@@ -347,7 +347,12 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
   // Un accessori no fa cap forat: el pla es talla al mig del primer que es veu (la barra; el perfil de sota el sostre;
   // el perfil de dalt del marc).
   let aim: HardwareMount["aim"]
-  if (!focus && rc.extras) {
+  // Un tirador sense forats (el de marc de vitrina): es mira pel mig del front.
+  if (!focus && item.engine === "barHandle") {
+    const fr = panels.find((p) => p.role === "drawerFront")
+    if (fr) aim = { at: toWorld(fr, [fr.length / 2, fr.width / 2, fr.thickness]), view: [0, 0, 1] }
+  }
+  if (!focus && !aim && rc.extras) {
     const first = panels.find(rc.extras)
     // La barra i el perfil LED van sota la tapa: de davant i una mica de sota (des de dalt, la tapa els tapa).
     const view: Vec3 | undefined = item.engine === "rail" || item.engine === "ledProfile" ? unit3([0.45, -0.35, 1]) : undefined
@@ -746,6 +751,8 @@ export function mountPlan(m: HardwareMount): MountPlan | null {
   } else if (!m.focus) {
     // Accessori sense forats: la mida de la peça que es veu (la barra, el perfil, el marc) i on és respecte del lateral.
     const own = rects.filter((x) => x.role === "part")
+    // El tirador de vitrina (sense forats): el front on es mira.
+    if (!own.length) own.push(...rects.filter((x) => x.role === "drawerFront"))
     const first = own[0]
     const side = rects.find((x) => x.role === "side")
     if (first) dims.push({ a: [first.x0, first.z0], b: [first.x1, first.z0], offset: -16, label: fmt(first.x1 - first.x0), title: `${first.label}: llarg` })

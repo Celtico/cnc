@@ -235,7 +235,8 @@ function scrambleFront(f: Front, r: Rnd, _noHandles: boolean): Front {
       const d = f.mode === "double" ? { ...f, hinge: pick(r, ["left", "right"] as const) } : f
       // Porta de vidre: frontisses del perfil; la frontissa triada (cassoletes) no surt ni compta. Ni el tirador triat.
       // Sense vidre, el marc de vitrina triat no compta.
-      if (f.glass) return r() < 0.7 ? { ...d, hardware: { ...DEFAULT_MODULE_HARDWARE.hinge, id: "hw-amagat", params: { ...DEFAULT_MODULE_HARDWARE.hinge.params, cupDiameter: 26, cupOffset: 30 } }, ...(r() < 0.5 ? { handle: OTHER_HANDLE } : {}) } : d
+      // De vidre, la frontissa i el tirador es trien i compten (per decisió de l'usuari, v41): res amagat.
+      if (f.glass) return d
       return r() < 0.5 ? { ...d, frame: { ...DEFAULT_MODULE_HARDWARE.glassFrame, params: { frame: 30, glass: 6 } } } : d
     }
     case "grille": {

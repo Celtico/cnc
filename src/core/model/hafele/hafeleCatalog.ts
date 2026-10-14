@@ -175,5 +175,30 @@ export const HAFELE_SUPPORTS: HardwareItem[] = [
   support("shelf-hafele-282-04-712", "Suport de prestatge Häfele Ixconnect d'acer amb llengüeta (piu Ø5)", "282.04.712", "3.104", "Acer niquelat amb llengüeta de fixació contra el lliscament; sense llengüeta, 282.04.711 (niquelat) / 282.04.515 (llautonat)."),
 ]
 
+/**
+ * Tiradors per a **marc d'alumini de vitrina** (jaladera Häfele per a perfil 23 / 26 / 38 × 14, p. FF 4.271): 80 mm, s'hi
+ * clava amb un adaptador i dos cargols al perfil: **cap forat al tauler** (motor `barHandle` sense operacions). Es trien
+ * al «Tirador» d'una porta o d'un abatible de vidre (en una de fusta no farien res).
+ */
+const glassPull = (id: string, name: string, ref: string, finish: string): HardwareItem => ({
+  id,
+  name,
+  category: "handle",
+  engine: "barHandle",
+  maker: "Häfele",
+  ref,
+  tags: [`Jaladera per a perfil d'alumini de marc de vidre 23 / 26 / 38 × 14, 80 mm, ${finish}: amb l'adaptador i 2 cargols al perfil (inclosos). Cap forat al tauler: per a portes i abatibles de vidre.`, SRC("4.271")],
+  params: { diameter: 5, margin: 3, inset: 40 },
+  pitch: { steps: [], else: 0 },
+  targets: [{ key: "front", label: "Perfil d'alumini (es clava: cap forat al tauler)", ops: [] }],
+  version: 1,
+  builtin: true,
+})
+
+export const HAFELE_GLASS_PULLS: HardwareItem[] = [
+  glassPull("handle-hafele-glass-silver", "Tirador Häfele per a marc de vitrina, plata anoditzat", "563.25.995", "plata anoditzat"),
+  glassPull("handle-hafele-glass-inox", "Tirador Häfele per a marc de vitrina, color inox", "563.25.095", "color inox"),
+]
+
 /** v35: els ferratges del catàleg general Häfele (additiu: s'afegeixen si no hi són, per id). */
 export const HAFELE_CATALOGUE_ITEMS: HardwareItem[] = [...HAFELE_GLASS_FRAMES, ...HAFELE_HANDLES, ...HAFELE_SUPPORTS]

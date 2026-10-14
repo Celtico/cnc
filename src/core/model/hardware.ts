@@ -15,7 +15,7 @@ import { DTC_MAGIC_STAR_KITS } from "./kits/dtcMagicStarUltra"
 import { DTC_PURE_BOX_KITS } from "./kits/dtcPureBox"
 import { DTC_PURE_PRO_GLASS_KITS, DTC_PURE_PRO_KITS } from "./kits/dtcPurePro"
 import { HAFELE_LOOX_ITEMS, HAFELE_LOOX_PROFILES } from "./lights/hafeleLoox"
-import { HAFELE_CATALOGUE_ITEMS, HAFELE_PROFILE_HINGES } from "./hafele/hafeleCatalog"
+import { HAFELE_CATALOGUE_ITEMS, HAFELE_GLASS_PULLS, HAFELE_PROFILE_HINGES } from "./hafele/hafeleCatalog"
 import { HAFELE_LEGS } from "./hafele/hafeleLegs"
 import { LightKitSchema, type LightKit } from "./lightKit"
 
@@ -718,6 +718,8 @@ export const V31_ITEMS: HardwareItem[] = HAFELE_LOOX_ITEMS
 export const V34_ITEMS: HardwareItem[] = HAFELE_LEGS.filter((x) => x.id === "leg-hafele-axilo78-screw")
 /** v41: la frontissa Metallamat A per a perfil d'alumini (la placa de les vitrines, abans dins del marc), additiu. */
 export const V41_ITEMS: HardwareItem[] = HAFELE_PROFILE_HINGES
+/** v42: els tiradors per a marc de vitrina (es claven al perfil, cap forat), additiu. */
+export const V42_ITEMS: HardwareItem[] = HAFELE_GLASS_PULLS
 /** v39: la mateixa pota per a mobles (el davant per confirmar), additiu. */
 export const V39_ITEMS: HardwareItem[] = HAFELE_LEGS.filter((x) => x.id !== "leg-hafele-axilo78-screw")
 
@@ -725,7 +727,7 @@ export const V39_ITEMS: HardwareItem[] = HAFELE_LEGS.filter((x) => x.id !== "leg
 export const V35_ITEMS: HardwareItem[] = [...HAFELE_CATALOGUE_ITEMS, ...HAFELE_LOOX_PROFILES]
 
 // En l'ordre en què les migracions els afegeixen (v23 jocs, v27 push, v28 catàleg, v31 llums, v34 potes, v35 catàleg Häfele i, al final, els accessoris que falten).
-export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_CATALOGUE_ITEMS, ...V31_ITEMS, ...V34_ITEMS, ...V35_ITEMS, ...V39_ITEMS, ...V41_ITEMS, ...ACCESSORY_ITEMS]
+export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_CATALOGUE_ITEMS, ...V31_ITEMS, ...V34_ITEMS, ...V35_ITEMS, ...V39_ITEMS, ...V41_ITEMS, ...V42_ITEMS, ...ACCESSORY_ITEMS]
 
 /** Un item és un joc paramètric que es pot fer servir (motor `drawerKit` amb el joc). */
 export const isDrawerKit = (item: HardwareItem): item is HardwareItem & { kit: HardwareKit } => item.engine === "drawerKit" && !!item.kit

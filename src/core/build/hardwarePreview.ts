@@ -124,6 +124,8 @@ function previewPanels(item: HardwareItem): Panel[] {
     case "barHandle": {
       // Un calaix ample i un d'estret: la distància entre forats canvia amb l'espai.
       const s = handleSpec(item)
+      // Un tirador sense forats (el de marc de vitrina, que es clava al perfil): cap peça d'exemple.
+      if (item.targets.every((t) => !t.ops.length)) return []
       return [600, 230].map((w, i) => {
         const p = sample(`front-${i}`, `Front de ${w}`, "drawerFront", w, 180)
         p.cutouts = applyHardware(item, "front", { pitch: s.pitch(w) }, { at: { x: w / 2, y: 90 }, round: true }).cutouts
