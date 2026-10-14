@@ -5,7 +5,8 @@ import { modelAsset, type ModelObject } from "../../core/model"
 import { getHardwareAsset, isHardwareAssetSrc } from "../../db/hardwareAssets"
 import { getUserModel, isUserModelSrc } from "../../db/userModels"
 import { disposeMaterial } from "./textures"
-import { surfaceMaterial } from "./surfaceMaterial"
+import { finishMaterial } from "./exportablePanel"
+import { resolveFinish } from "./textures"
 import type { MaterialPref } from "../../core/model"
 
 /**
@@ -188,7 +189,9 @@ export function modelInstance(m: ModelObject, materials?: MaterialPref[]): Group
   // Un material de Preferències per a tot el model (`ModelObject.material`): el mateix a totes les malles, propi de la
   // instància (`userData.ownMaterial`: `disposeTree` i `disposeModelInstance` l'alliberen; la geometria és compartida).
   if (m.material && materials) {
-    const own = surfaceMaterial(materials, m.material, Math.max(m.w, m.d), m.h)
+    // El mateix camí que les peces (`finishMaterial`): el vidre és translúcid, els metalls i la llum que fa, com al moble.
+    const own = finishMaterial(resolveFinish(materials, m.material), Math.max(m.w, m.d), m.h)
+    if (own.transparent) own.side = DoubleSide
     inner.traverse((o) => {
       const mesh = o as Mesh
       if (!mesh.isMesh) return
