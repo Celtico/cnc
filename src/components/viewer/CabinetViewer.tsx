@@ -71,6 +71,8 @@ export interface CabinetViewerProps {
   size: { width: number; height: number; depth: number }
   exploded: boolean
   showHoles?: boolean
+  /** Opacitat de les peces (Opcions de vista › Opacitat): translúcides per veure tots els mecanitzats. Sense, opaques. */
+  seeThrough?: number
   /** Mòduls de la composició: el seleccionat es ressalta i té botons + als costats. */
   modules?: ViewerModule[]
   selectedModuleId?: string | null
@@ -142,6 +144,7 @@ export function CabinetViewer({
   size,
   exploded,
   showHoles = true,
+  seeThrough: seeThroughAll,
   modules,
   selectedModuleId,
   onSelectModule,
@@ -369,6 +372,7 @@ export function CabinetViewer({
                 place={k?.place}
                 exploded={exploded}
                 showHoles={showHoles}
+                seeThrough={seeThroughAll}
                 // Mòdul triat: sòlid amb el contorn taronja. Translúcid només amb un compartiment triat (per veure'l a dins).
                 dimmed={q.guides && !!highlightZone && highlightZone.veil !== false && selectedIndex !== undefined && p.module === selectedIndex}
                 edges={q.guides}
@@ -1399,10 +1403,11 @@ interface PanelMeshProps {
   pins?: readonly Hole[]
   fixed?: readonly HwSolid[]
   /**
-   * Fusta translúcida («Com va muntat» de Preferències › Ferratges): la peça es veu a través (opacitat 0,4, sense
-   * escriure la profunditat) i el ferratge, opac, és el protagonista. Els forats es continuen veient.
+   * Fusta translúcida («Com va muntat» de Preferències › Ferratges, i Opcions de vista › Opacitat del visor): la peça es
+   * veu a través (opacitat 0,4 amb `true` o la que es doni, sense escriure la profunditat) i el ferratge, opac, és el
+   * protagonista. Els forats es continuen veient.
    */
-  seeThrough?: boolean
+  seeThrough?: boolean | number
   /**
    * Forats amb aquestes etiquetes d'un altre color: els proposats d'un ferratge importat sense confirmar (Preferències ›
    * Ferratges, el muntatge), que el moble encara no fa.
@@ -1477,7 +1482,8 @@ export const PanelMesh = memo(function PanelMesh({
     return { matrix: m, explode: new Vector3(...explodeDir).multiplyScalar(EXPLODE_MM * S) }
   }, [panel.placement])
 
-  const mats = useMemo(() => veil(panelMaterials(vpanel, materialMode, materials, dimmed || seeThrough), seeThrough), [vpanel, materialMode, materials, dimmed, seeThrough])
+  const see = seeThrough === true ? SEE_THROUGH_OPACITY : typeof seeThrough === "number" && seeThrough < 1 ? seeThrough : undefined
+  const mats = useMemo(() => veil(panelMaterials(vpanel, materialMode, materials, dimmed || see !== undefined), see), [vpanel, materialMode, materials, dimmed, see])
   // Peces amb talls passants (reixetes, taulell amb pica i vitro, passacables): geometria
   // extruïda amb els forats de debò, perquè es vegi a través.
   // Peces a inglet (sense talls): secció en trapezi, perquè la cantonada es vegi a 45°.
@@ -1487,10 +1493,10 @@ export const PanelMesh = memo(function PanelMesh({
   const cut = useMemo(() => (isShaped(vis) ? shapedGeometry(vis) : vis.mitres?.length ? mitreGeometry(vis) : null), [vis])
   const cutMats = useMemo(() => {
     if (!cut) return null
-    const m = veil(cutoutMaterials(vpanel, materialMode, materials, dimmed || seeThrough), seeThrough)
+    const m = veil(cutoutMaterials(vpanel, materialMode, materials, dimmed || see !== undefined), see)
     // A la geometria d'inglet els grups van al revés: [0] puntes (cantell), [1] cares.
     return isShaped(vis) ? m : [m[1]!, m[0]!]
-  }, [cut, vpanel, vis, materialMode, materials, dimmed, seeThrough])
+  }, [cut, vpanel, vis, materialMode, materials, dimmed, see])
   useEffect(
     () => () => {
       cut?.dispose()
@@ -1536,7 +1542,7 @@ export const PanelMesh = memo(function PanelMesh({
           onPointerOut={onHover ? () => onHover(panel, false) : undefined}
         >
           {!cut && <boxGeometry args={[L, W, T]} />}
-          {edges && <Edges color={dimmed || seeThrough ? "#a08a6a" : "#6b5a3e"} threshold={15} />}
+          {edges && <Edges color={dimmed || see !== undefined ? "#a08a6a" : "#6b5a3e"} threshold={15} />}
         </mesh>
         {showHoles && vpanel.holes.length > 0 && (proposedTags?.length ? (
           <>
@@ -1568,12 +1574,12 @@ const SEE_THROUGH_OPACITY = 0.4
  * `SEE_THROUGH_OPACITY` i sense escriure la profunditat, perquè el ferratge (opac) es vegi sencer a través. Els
  * materials són propis de la peça (es fan per a ella), així que es poden tocar.
  */
-function veil<T extends Material>(mats: T[], on: boolean): T[] {
-  if (on)
+function veil<T extends Material>(mats: T[], opacity: number | undefined): T[] {
+  if (opacity !== undefined)
     for (const m of mats) {
       if (m.userData.shared) continue
       m.transparent = true
-      m.opacity = Math.min(m.opacity, SEE_THROUGH_OPACITY)
+      m.opacity = Math.min(m.opacity, opacity)
       m.depthWrite = false
     }
   return mats

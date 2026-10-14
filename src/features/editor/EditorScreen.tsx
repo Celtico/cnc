@@ -213,7 +213,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   // els colors per peça (tenen la seva pròpia preferència).
   const [roleColors, setRoleColors] = usePersistentFlag(compositionKind(initial) === "objecte" ? "mobles:viewer-role-colors-object" : "mobles:viewer-role-colors-fast", compositionKind(initial) !== "objecte")
   const [quality, setQuality] = useRenderQuality()
-  const [viewer, setViewerState] = useState<Omit<ViewerState, "materialMode">>({ opening: 0, openOnlySelected: false })
+  const [viewer, setViewerState] = useState<Omit<ViewerState, "materialMode">>({ opening: 0, opacity: 1, openOnlySelected: false })
   // Costat des d'on enquadra la càmera (null = el 3/4 d'«Enquadrar»). Triar una vista compta com «Enquadrar»: la càmera
   // hi va (perspectiva, es pot girar després) i es desa com qualsevol altra.
   const [viewDir, setViewDir] = useState<ViewName | null>(null)
@@ -915,10 +915,10 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   const viewTiles = (
     <>
       {tile("fit", "Enquadrar", <LuVideo />, framed, () => frameFrom(null), framed ? "Càmera enquadrada (no es mou sola en editar)" : "Enquadrar el moble")}
-      {tile("holes", "Forats", <LuCircleDot />, showHoles || exploded, () => setShowHoles((v) => !v), exploded ? "A la vista explosionada els forats sempre es veuen" : showHoles ? "Amagar forats" : "Mostrar forats")}
+      {tile("holes", "Forats", <LuCircleDot />, showHoles || exploded || viewer.opacity < 1, () => setShowHoles((v) => !v), exploded ? "A la vista explosionada els forats sempre es veuen" : viewer.opacity < 1 ? "Amb les peces translúcides (Opacitat) els forats sempre es veuen" : showHoles ? "Amagar forats" : "Mostrar forats")}
       {tile("explode", "Explosió", exploded ? <LuShrink /> : <LuExpand />, exploded, () => setExploded((v) => !v), exploded ? "Vista muntada" : "Vista explosionada")}
       {tile("hardware", "Ferratges", <LuWrench />, hardware, () => setHardware((v) => !v), hardware ? "Amagar frontisses, tiradors i potes" : "Mostrar frontisses, tiradors i potes")}
-      {tile("render", "Render", <LuAperture />, false, () => (setViewOptsOpen(false), quality === "fast" && roleColors && setRoleColors(false), setRenderOpen(true)), "Render fotorealista (GPU o CPU, com Cinema 4D): es va afinant i es desa en PNG")}
+      {tile("render", "Render", <LuAperture />, false, () => (setViewOptsOpen(false), quality === "fast" && roleColors && setRoleColors(false), viewer.opacity < 1 && setViewerState((v) => ({ ...v, opacity: 1 })), setRenderOpen(true)), "Render fotorealista (GPU o CPU, com Cinema 4D): es va afinant i es desa en PNG")}
       {tile("ar", "A casa (AR)", <LuView />, false, () => setArOpen(true), "Veure a casa (realitat augmentada)")}
     </>
   )
@@ -1433,8 +1433,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             panels={viewerPanels}
             size={frameSize}
             exploded={exploded}
-            // A la vista explosionada els forats i les ranures sempre es veuen (per això se separen les peces).
-            showHoles={showHoles || exploded}
+            // A la vista explosionada i amb les peces translúcides els forats i les ranures sempre es veuen.
+            showHoles={showHoles || exploded || viewer.opacity < 1}
+            seeThrough={viewer.opacity < 1 ? viewer.opacity : undefined}
             modules={viewerModules}
             selectedModuleId={(selection.kind === "module" || selection.kind === "zone") && module ? module.id : null}
             onSelectModule={selectFrom3D}

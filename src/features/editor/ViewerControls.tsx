@@ -1,5 +1,5 @@
 import { Button, HStack, Slider, Stack, Switch } from "@chakra-ui/react"
-import { LuDoorOpen, LuImageDown } from "react-icons/lu"
+import { LuBlend, LuDoorOpen, LuImageDown } from "react-icons/lu"
 import { FormRow } from "../../components/FormRow"
 import { segGroup, segItem } from "../../components/segmented"
 import { VIEWS, VIEW_LABELS, type ViewName } from "../../components/viewer/viewNames"
@@ -22,6 +22,8 @@ export function CameraViews({ onView }: { onView: (v: ViewName) => void }) {
 
 export interface ViewerState {
   opening: number
+  /** Opacitat de les peces (0,1–1): per sota d'1, la fusta es veu a través i es veuen tots els mecanitzats. */
+  opacity: number
   openOnlySelected: boolean
   materialMode: "material" | "role"
 }
@@ -66,6 +68,35 @@ export function ViewerControls({
           step={5}
           disabled={!hasMoving}
           onValueChange={(e) => onChange({ opening: (e.value[0] ?? 0) / 100 })}
+        >
+          <HStack gap={3}>
+            <Slider.Control flex={1}>
+              <Slider.Track>
+                <Slider.Range />
+              </Slider.Track>
+              <Slider.Thumbs />
+            </Slider.Control>
+            <Slider.ValueText minW="8" textAlign="end" fontSize="sm" />
+          </HStack>
+        </Slider.Root>
+      </FormRow>
+      <FormRow
+        label={
+          <HStack gap={1.5}>
+            <LuBlend /> Opacitat
+          </HStack>
+        }
+        help={state.opacity < 1 ? "Les peces es veuen a través, amb tots els forats, ranures i talls (com a l'explosió)." : "Abaixa-la per veure a través de les peces tots els mecanitzats."}
+      >
+        <Slider.Root
+          size="sm"
+          pt="6px"
+          aria-label={["Opacitat"]}
+          value={[Math.round(state.opacity * 100)]}
+          min={10}
+          max={100}
+          step={5}
+          onValueChange={(e) => onChange({ opacity: (e.value[0] ?? 100) / 100 })}
         >
           <HStack gap={3}>
             <Slider.Control flex={1}>

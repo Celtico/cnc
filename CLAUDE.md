@@ -981,7 +981,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Barra del visor**: fora només «Opcions de vista» (i amagar propietats). Opcions de vista (`components/ViewOptions`:
   `ViewOptions` + `ViewTile`, popover a l'ordinador, calaix de baix al mòbil; es tanca en obrir el Render): a dalt els tres
   modes i les accions ràpides només amb icona i el nom al tooltip (`tile`/`viewTiles` a `EditorScreen`): Enquadrar, Forats,
-  Explosió, Ferratges, Render i Veure a casa (AR); a sota, les vistes (l'únic lloc on es trien), l'obertura i la imatge.
+  Explosió, Ferratges, Render i Veure a casa (AR); a sota, les vistes (l'únic lloc on es trien), l'obertura, l'**opacitat** i la imatge. **Opacitat** (`ViewerState.opacity`, `LuBlend`, 10–100 %; per decisió de l'usuari, 2026-10-14: «per veure tot el mecanitzat de les peces»): per sota del 100 % totes les peces es fan translúcides amb aquella opacitat (`CabinetViewer seeThrough` → `PanelMesh seeThrough` numèric, la mateixa `veil` de «Com va muntat»: sense escriure la profunditat) i els forats, les ranures i els talls es veuen sempre (com a l'Explosió; «Forats» surt marcat); els ferratges continuen opacs. Només el visor (obrir el Render la torna al 100 %, com treu els colors per peça; l'AR i la miniatura no la fan servir); no es desa.
   **Explosió**: cada peça se separa 160 mm (`EXPLODE_MM`) per la seva `explodeDir` i hi van **els forats i les ranures
   sempre** (Forats surt marcat mentre dura) i tot el que hi va muntat: frontisses, tiradors, plaques, potes importades i
   col·locats a mà (`Panel.fittings`, dins del grup de la peça) i les potes de l'app amb la base (`ExplodeWith`, la mateixa
@@ -2103,7 +2103,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Foto | Mida estimada · Mida real (cinta) · Línia del terra · Fondària | `LuEye` · `LuCircleCheck` · `LuArrowDownToLine` · `LuArrowUpFromLine` |
 | Visor | Modes Per peça · Textura · Presentació | `LuShapes` · `LuTrees` · `LuSparkles` |
 | Visor | Enquadrar · Forats · Explosionat / muntat · Ferratges · Render · Veure a casa (AR) | `LuVideo` · `LuCircleDot` · `LuExpand` / `LuShrink` · `LuWrench` · `LuAperture` · `LuView` |
-| Visor | Ampliar / reduir 3D · Obertura portes · Imatge | `LuMaximize2` / `LuMinimize2` · `LuDoorOpen` · `LuImageDown` |
+| Visor | Ampliar / reduir 3D · Obertura portes · Opacitat de les peces · Imatge | `LuMaximize2` / `LuMinimize2` · `LuDoorOpen` · `LuBlend` · `LuImageDown` |
 | Ambients | Seleccionar · Paret (ploma) · Habitació · Calibrar · Plànol de fons | `LuMousePointer2` · `LuPenTool` · `LuBrickWall` · `LuPencilRuler` · `LuImageUp` |
 | Ambients | Finestra · Porta · Moure a un grup · Grup (carpeta) · Projectes | `LuAppWindow` · `LuDoorOpen` · `LuFolderInput` · `LuFolder` · `LuFolders` |
 | Ambients | Moble · Objecte / bloc · Pestanyes Plànol · 3D · Girar · Peces (plànol) · Interior | `LuBox` · `LuSofa` · `LuMap` · `LuRotate3D` · `LuRotateCw` / `LuRotateCcw` · `LuLayers` · `LuEye` |
