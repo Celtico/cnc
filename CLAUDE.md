@@ -299,6 +299,11 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
       vies passades les 6 ranures, interruptor + cable, nota dels cables d'extensió) a Peces › «Llums i instal·lació
       elèctrica» i al LLEGEIX-ME de Maestro. Preferències **v31** (additiu, `V31_ITEMS`); `hardwareParams` amaga «Entre
       llums» i «Rebaix» al perfil de l'app. Tests `build/lightKit.test.ts`.
+    - **Llum a sota del moble** (`Carcass.underLight`, Mòdul › Caixa «Llum a sota», després de la base; per decisió de
+      l'usuari, 2026-10-14, com la cuina de casa: «a sota dels mobles hi posen leds»; només penjat o amb potes,
+      `visibleModule`): la mateixa «Llum» (el perfil de l'app o un joc de llum, «Com el mòdul» o còpia pròpia) a la cara
+      de sota de la base, que il·lumina el taulell: `buildUnderLight` → `buildLights(…, { y })` (forat o rebaix i passant
+      del cable a la base, des del davant del mòdul) o la tira `led-under`.
   - **Porta de vidre** (`front.glass` d'una porta, «Vitrina» › «Porta de vidre amb marc»; per decisió de l'usuari, com les
     vitrines de catàleg): el **marc** és un ferratge (motor `glassFrame`, item `glass-frame-20`: perfil de 20, vidre de
     5; `front.frame` còpia pròpia o el del mòdul, fila «Marc» sota «Vitrina»): `glassDoor` posa a `extras` els 4

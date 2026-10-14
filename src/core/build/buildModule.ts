@@ -58,6 +58,7 @@ import {
   system32Ys,
   threeAlong,
   toLocal,
+  toWorld,
 } from "./geometry"
 import { MIN_OPEN_RATIO, grilleCutouts, type Rect } from "./grille"
 import { fitSizes, layoutZones, mismatchMessage, type Layout, type ZoneRect } from "./layout"
@@ -1225,6 +1226,31 @@ class Builder {
   }
 
   /**
+   * La **llum a sota del moble** (`Carcass.underLight`): un joc de llum a la cara de sota de la base (el mateix camí que
+   * dins, `buildLights` amb `under`: el forat o el rebaix de la làmpada i el passant del cable a la base) o el perfil LED
+   * de l'app, enganxat a sota de la base, a la seva distància del davant. Il·lumina el taulell.
+   */
+  buildUnderLight(): void {
+    const { m, d } = this
+    const ul = m.carcass.underLight
+    if (!ul) return
+    const base = this.panels.find((p) => p.role === "bottom")
+    if (!base) {
+      this.warnings.push({ code: "light", message: "Llum a sota: el mòdul no té base on posar-la. No es fa." })
+      return
+    }
+    const cs = [0, base.length].flatMap((u) => [0, base.width].flatMap((v) => [0, base.thickness].map((w) => toWorld(base, [u, v, w]))))
+    const box = { min: [0, 1, 2].map((k) => Math.min(...cs.map((c) => c[k]!))), max: [0, 1, 2].map((k) => Math.max(...cs.map((c) => c[k]!))) } as { min: Vec3; max: Vec3 }
+    const led = this.frontHardware("led", ul.hardware)
+    const rect = { x0: box.min[0], x1: box.max[0], y0: box.min[1], y1: box.min[1] } as ZoneRect
+    if (led.spec.light) return this.buildLights({ id: "under" }, rect, [], led.item, led.spec, { y: box.min[1] })
+    const W = led.spec.width, H = led.spec.height
+    const len = r(box.max[0] - box.min[0] - 20)
+    if (len < 50) return
+    this.extras.push({ id: "led-under", name: "tira LED", label: "Tira LED a sota", role: "part", length: len, width: W, thickness: H, material: "Tira LED", grain: "none", edges: { ...NO_EDGES }, holes: [], grooves: [], placement: placement([r(box.min[0] + 10), r(box.min[1] - H), r(d.D - led.spec.setback)], X, neg(Z), Y, Z) })
+  }
+
+  /**
    * **Joc de llum** (`HardwareItem.light`, `lightKit.ts`): a la peça de sobre del compartiment (la tapa, el travesser o
    * el prestatge) i a la cara de sota de cada prestatge, les làmpades del catàleg amb el seu **mecanitzat per encastar**
    * (forat rodó, rebaix quadrat o ranura de la barra, tag `light`) i el **forat passant del cable** (tag `cable`); si la
@@ -1234,25 +1260,26 @@ class Builder {
    * abatibles), si no el de proximitat per cargolar. La comanda (làmpades, alimentador, distribuïdor, interruptor i
    * cables) va a `lightKits` (`lightOrders.ts`).
    */
-  private buildLights(zone: Zone, rect: ZoneRect, shelfYs: number[], item: HardwareItem, spec: SlotSpec<"led">): void {
+  private buildLights(zone: Pick<Zone, "id">, rect: ZoneRect, shelfYs: number[], item: HardwareItem, spec: SlotSpec<"led">, under?: { y: number }): void {
     const { m, d } = this
     const k = spec.light!
     this.lightMaker ??= k.maker
-    const front = d.D - m.carcass.shelfSetback
+    // A sota del moble (`under`): la cara de sota de la base, des del davant del mòdul.
+    const front = under ? d.D : d.D - m.carcass.shelfSetback
     const len = rect.x1 - rect.x0
-    const hosts: Panel["role"][] = ["top", "fixedShelf", "shelf"]
+    const hosts: Panel["role"][] = under ? ["bottom"] : ["top", "fixedShelf", "shelf"]
     const lines: KitOrderLine[] = []
     let lamps = 0, watts = 0, peak = 0
     const warn = (message: string) => {
       if (!this.warnings.some((w) => w.code === "light" && w.message === message && w.zoneId === zone.id)) this.warnings.push({ code: "light", message, zoneId: zone.id })
     }
-    for (const [i, y] of [rect.y1, ...shelfYs].entries()) {
+    for (const [i, y] of (under ? [under.y] : [rect.y1, ...shelfYs]).entries()) {
       const probe: Vec3 = [(rect.x0 + rect.x1) / 2, y, front - 30]
       const host = this.panels.find((p) => hosts.includes(p.role) && faceAt(p, toLocal(p, probe)) !== null)
       const depth = host ? Math.min(host.width, front - (d.D - host.width)) : front
       const plan = planLights(k, spec, { length: len, depth: host ? Math.min(host.width, depth) : depth }, host?.thickness ?? 0)
       for (const w of plan.warnings) warn(w)
-      if (!host && plan.xs.length) warn(`${k.series}: el compartiment no té res a sobre on posar la llum (sense tapa): no es fa.`)
+      if (!host && plan.xs.length) warn(under ? `${k.series}: el mòdul no té base on posar la llum a sota: no es fa.` : `${k.series}: el compartiment no té res a sobre on posar la llum (sense tapa): no es fa.`)
       if (!host || !plan.xs.length) continue
       const zc = front - plan.z
       const n = plan.xs.length
@@ -2570,6 +2597,7 @@ export function buildModule(input: Module, opts: { rearLimits?: RearLimit[] } = 
   b.buildCarcass()
   const layout = b.buildZones()
   b.buildLegs()
+  b.buildUnderLight()
   const panels = b.panels.map((p) => normalizePanel(p.cutouts && p.cutouts.length === 0 ? { ...p, cutouts: undefined } : p))
   return { panels, extras: b.extras, hardwareKits: b.hardwareKits, lightKits: b.lightKits, fittingOrders: b.fittingOrders, warnings: b.warnings, layout, openRatios: b.openRatios, drawerHeights: b.drawerHeights }
 }

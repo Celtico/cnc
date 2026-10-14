@@ -156,6 +156,12 @@ export const CarcassSchema = z.object({
    * (`hasInnerPieces`).
    */
   innerClearance: mm.min(0).max(3).optional(),
+  /**
+   * **Llum a sota del moble** (per decisió de l'usuari, 2026-10-14: «a sota dels mobles hi posen leds»; com la cuina de
+   * casa): la llum de sempre (el perfil LED o un joc de llum del catàleg, `hardware` = còpia pròpia, sense = la del mòdul)
+   * a la **cara de sota de la base**, que il·lumina el taulell. Només als penjats i amb potes (`visibleModule`).
+   */
+  underLight: z.object({ hardware: FrontHardwareSchema.optional() }).optional(),
 })
 export type Carcass = z.infer<typeof CarcassSchema>
 
@@ -933,6 +939,8 @@ export function visibleModule(m: Module): Module {
   // Joc de la ranura: només en ranura; 0 és l'absència.
   if (c.back !== "groove" || !c.grooveClearance) delete carcass.grooveClearance
   if (c.back !== "inset") delete carcass.backInsetSetback
+  // La llum a sota només amb la base a l'aire (penjat o amb potes).
+  if (c.base.kind !== "wall" && c.base.kind !== "legs") delete carcass.underLight
   // Cantonades: només si el control surt (`jointApplies`); «Normals» és l'absència.
   if (c.joint !== "mitre" || !jointApplies(c)) delete carcass.joint
   // Tauler de taula: només amb la tapa sencera.

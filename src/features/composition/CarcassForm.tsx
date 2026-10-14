@@ -97,6 +97,24 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
           </>
         )}
 
+        {/* Llum a sota del moble: només amb la base a l'aire (penjat o amb potes). */}
+        {(c.base.kind === "wall" || c.base.kind === "legs") && (
+          <>
+            <FormRow label="Llum a sota" help="A la cara de sota de la base: il·lumina el taulell (com les cuines). Un joc de llum fa el forat o el rebaix de la làmpada i el del cable a la base.">
+              <Switch.Root size="sm" pt="6px" checked={!!c.underLight} onCheckedChange={(e) => {
+                if (e.checked) return set({ underLight: {} })
+                const { underLight: _u, ...rest } = c
+                onChange({ ...module, carcass: rest })
+              }}>
+                <Switch.HiddenInput />
+                <Switch.Control />
+                <Switch.Label fontSize="sm">Sota la base</Switch.Label>
+              </Switch.Root>
+            </FormRow>
+            {c.underLight && <HardwarePick slot="led" label="Llum" current={c.underLight.hardware ?? moduleSlotItem(module.hardware, "led")} inherited={moduleSlotItem(module.hardware, "led")} onPick={(h) => set({ underLight: h ? { hardware: h } : {} })} />}
+          </>
+        )}
+
         <FormRow label="Fons">
           <IconChoice
             hideLabel

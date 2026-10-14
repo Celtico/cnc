@@ -38,6 +38,7 @@ export function usedHardwareSlots(module: Module): SlotUse {
   for (const what of carcassDowels(m)) add("dowel", 1, what)
   // El fons encastat comprova que davant seu hi càpiguen les dues fileres System 32 (`buildInsetBack`): llegeix els números del lloc.
   if (m.carcass.back === "inset") add("system32", 1, "fons encastat")
+  if (m.carcass.underLight) add("led", 1, "llum a sota")
   walkBuiltZones(m.root, (z, { covered }) => {
     // «Regulables» compta també sense cap prestatge (les fileres es fan per posar-n'hi després).
     if (z.shelves?.adjustable) add("system32", 1, "prestatges regulables")

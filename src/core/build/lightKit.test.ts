@@ -200,3 +200,21 @@ describe("Maestro: forat gros sense broca → caixera rodona amb la fresa", () =
     expect(x.warnings.filter((w) => /Ø55/.test(w))).toEqual([])
   })
 })
+
+describe("llum a sota del moble", () => {
+  it("un penjat amb un joc de llum a sota: el forat de la làmpada i el del cable a la cara de sota de la base, i la comanda", () => {
+    const item = structuredClone(HAFELE_LOOX_ITEMS.find((x) => x.light && x.light.recess.shape === "round")!)
+    const m = { ...defaultModule("m", "Alt", { width: 800, height: 600, depth: 330 }) }
+    m.carcass = { ...m.carcass, base: { kind: "wall", height: 1400 }, underLight: { hardware: item } }
+    const b = buildModule(m)
+    const base = b.panels.find((p) => p.role === "bottom")!
+    expect(base.holes.some((h) => h.tag === "light")).toBe(true)
+    expect(b.lightKits.length).toBe(1)
+    // Amb la base a terra (sense aire a sota), no es fa (es conserva).
+    const floor = buildModule({ ...m, carcass: { ...m.carcass, base: { kind: "none" } } })
+    expect(floor.panels.find((p) => p.role === "bottom")!.holes.some((h) => h.tag === "light")).toBe(false)
+    // El perfil LED de l'app: la tira a sota de la base.
+    const strip = buildModule({ ...m, carcass: { ...m.carcass, underLight: {} } })
+    expect(strip.extras.some((p) => p.id === "led-under")).toBe(true)
+  })
+})

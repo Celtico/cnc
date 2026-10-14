@@ -30,6 +30,8 @@ function scrambleHidden(m: Module, r: Rnd): Module {
     if (r() < 0.5) delete c.backInsetSetback
     else c.backInsetSetback = int(r, 0, 60)
   }
+  // Llum a sota: només amb la base a l'aire (penjat o amb potes).
+  if (c.base.kind !== "wall" && c.base.kind !== "legs" && r() < 0.5) c.underLight = {}
   // Cantonades: si el control no surt, qualsevol valor; si surt, «Normals» = buit = "butt".
   if (!jointShown(c)) {
     const j = pick(r, [undefined, "butt", "mitre"] as const)
