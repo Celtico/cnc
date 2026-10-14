@@ -214,16 +214,17 @@ export function handleSpec(item: HardwareItem) {
 }
 
 /**
- * Pota importada (`Base.hardware` de la base «Potes»): a `inset` de les vores de fora del mòdul, una a cada cantonada;
- * els forats de la placa (target `base`, al marc de la pota: u = X del mòdul, v = cap al davant) a la cara de sota de la
- * base. Sense confirmar, `pending`: cap forat.
+ * Pota de la biblioteca (`Base.hardware` de la base «Potes»): a `inset` de les vores de fora del mòdul, una a cada
+ * cantonada; els forats de la placa (target `base`, al marc de la pota: u = X del mòdul, v = cap al davant) a la cara de
+ * sota de la base; amb `params.mirror` = 1, les de la dreta en mirall (u → −u). Importada sense confirmar, `pending`: cap forat.
  */
 export function legSpec(item: HardwareItem) {
   expectEngine(item, "leg")
   if (isDamagedImport(item)) throw new HardwareError(damagedImportMessage(item))
   const holes = resolveOps(item, "base").flatMap((o) => (o.kind === "drill" ? [{ u: o.u, v: o.v, d: o.d, depth: o.depth, tag: o.tag ?? "leg" }] : []))
   if (!holes.length) throw new HardwareError(`«${item.name}»: no té cap forat`)
-  return { pending: isPendingImport(item), inset: param(item, "inset"), holes }
+  // `mirror` 1: les potes de la dreta, amb la placa en mirall (u cap a dins): una placa que no és simètrica (el clip cap al lateral).
+  return { pending: isPendingImport(item), inset: param(item, "inset"), mirror: item.params.mirror === 1, holes }
 }
 
 /** Placa de muntatge importada (no té lloc: la frontissa que s'hi aparella en copia els forats). */

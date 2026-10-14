@@ -21,19 +21,29 @@ describe("pota AXILO 78 (placa rectangular per cargolar)", () => {
     const bottom = b.panels.find((p) => p.role === "bottom")!
     const legs = bottom.holes.filter((h) => h.tag === "leg")
     expect(legs).toHaveLength(16)
-    expect(legs.every((h) => h.diameter === 3 && h.depth === 12)).toBe(true)
-    // La pota del davant a l'esquerra: eix a 60 mm dels cantells, cargols a ±32 en X i a −45 / +19 cap al davant.
+    expect(legs.every((h) => h.diameter === 3 && h.depth === 10)).toBe(true)
+    // Eix a 45 mm dels cantells; a l'esquerra, cargols a −19 / +45 en X (el clip cap al lateral) i ±32 cap al davant; a la
+    // dreta, en mirall.
     const W = m.carcass.width, D = m.carcass.depth
     const world = legs.map((h) => toWorld(bottom, [h.x, h.y, 0]))
     const near = (x: number, z: number) => world.some((p) => Math.abs(p[0] - x) < 0.01 && Math.abs(p[2] - z) < 0.01)
-    for (const [cx, cz] of [[60, 60], [W - 60, 60], [60, D - 60], [W - 60, D - 60]] as const)
-      for (const [du, dv] of [[-32, -45], [32, -45], [-32, 19], [32, 19]] as const) expect(near(cx + du, cz + dv)).toBe(true)
+    for (const [cx, cz, s] of [[45, 45, 1], [W - 45, 45, -1], [45, D - 45, 1], [W - 45, D - 45, -1]] as const)
+      for (const [du, dv] of [[-19, -32], [45, -32], [-19, 32], [45, 32]] as const) expect(near(cx + s * du, cz + dv), `${cx},${cz} ${du},${dv}`).toBe(true)
     expect(b.warnings.filter((w) => w.code === "hardware")).toEqual([])
   })
 
   it("es munta a «Com va muntat» (la base amb les plaques)", () => {
     const mount = hardwareMount(axilo, defaultModule("m", "x"))
     expect(mount.panels.some((p) => p.holes.some((h) => h.tag === "leg"))).toBe(true)
+  })
+
+  it("v37: la de la v34 desada (version 1) passa a la d'ara", () => {
+    const old = JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+    old.version = 36
+    const i = old.hardwareLibrary.findIndex((x: { id: string }) => x.id === axilo.id)
+    old.hardwareLibrary[i] = { ...old.hardwareLibrary[i], version: 1, params: { inset: 60 } }
+    const res = parseSettings(old)
+    expect(res.settings.hardwareLibrary.find((x) => x.id === axilo.id)).toEqual(axilo)
   })
 
   it("v34: s'afegeix a unes preferències d'abans (per id)", () => {

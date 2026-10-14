@@ -56,8 +56,10 @@ const mm = z.number().finite()
  * tiradors, suports de prestatge i el perfil Loox d'11 mm per encastar), additiu.
  * v36: el material del que es veu d'un ferratge (`HardwareItem.material`): els marcs Häfele, «Alumini anoditzat plata»
  * (material nou, `FRAME_MATERIALS`, i els marcs de la v35 desats el reben si no en tenen); el de l'app es queda negre.
+ * v37: la pota AXILO 78 (v34) com la munta el taller (clip cap al lateral, en mirall a la dreta, a 45 dels cantells):
+ * la de la biblioteca es refà si encara és la de la v34 (`version` 1).
  */
-export const SETTINGS_VERSION = 36
+export const SETTINGS_VERSION = 37
 
 /** Joc de l'ample de la ranura del fons per defecte (v33; per decisió de l'usuari, 2026-10-14: «per defecte 0,8»). */
 export const DEFAULT_GROOVE_CLEARANCE = 0.8
@@ -840,7 +842,13 @@ export function parseSettings(raw: unknown): SettingsParse {
     return fresh ? { ...x, material: fresh.material } : x
   }) : withV35
   if (withV36.some((x, i) => x !== withV35[i])) migrated = true
-  const hardware = fixHardwareDefaults(withV36, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
+  // v37: la pota AXILO 78 de la v34 (version 1) passa a la d'ara (com la munta el taller).
+  const withV37 = version < 37 ? withV36.map((x) => {
+    const fresh = x.builtin && x.version === 1 ? V34_ITEMS.find((k) => k.id === x.id && k.version > 1) : undefined
+    return fresh ? structuredClone(fresh) : x
+  }) : withV36
+  if (withV37.some((x, i) => x !== withV36[i])) migrated = true
+  const hardware = fixHardwareDefaults(withV37, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
   if (hardware.changed) migrated = true
   // Prebroca dels cargols, una sola font: la regla desada o, a les preferències d'abans, la del primer joc de la
   // biblioteca (el que es feia servir); els jocs de la biblioteca en copien els números.

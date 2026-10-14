@@ -285,15 +285,20 @@ Base «Potes» › «Pota» i `buildLegs` en fa els forats a la cara de sota de 
 | Placa | 92 × 79 × 25 (+5 del clip del sòcol) |
 | Cargols | 4, en quadre de 64 × 64, centrats a 39,5 de la vora contrària al clip |
 | Tub | forat Ø30, eix a 39,5 de la vora del clip |
-| Al marc de la pota (u = X del mòdul, v = cap al davant, origen a l'eix) | cargols a u = ±32, v = −45 i +19 (clip cap al davant) |
-| Als cantells (`inset`) | 60 (la placa fa 52,5 cap enrere des de l'eix) |
+
+**Com la munta el taller** (el model de TopSolid del germà, 2026-10-14): el costat llarg (92) al llarg de l'amplada del
+moble i el **clip cap al lateral**, una a cada cantonada amb la placa gairebé enrasada amb la vora; les de la dreta, en
+mirall (`params.mirror` = 1). A l'app: l'eix del tub a **45** de cada cantell (`inset`) i, al marc de la pota (u = X cap a
+dins a l'esquerra, v = cap al davant), els cargols a **u = −19 / +45, v = ±32**. Preferències v37 (la de la v34, amb el clip
+cap al davant i a 60, es refà).
 
 El **tub amb el peu regulable** (Ø78, 150 kg per pota) es demana a part per l'alçada H de la base «Potes»: 60 → 637.76.351
 (53–80) · 80 → .352 (70–100) · 100 → .353 (90–120) · 125 → .354 (115–145) · 150 → .355 (140–170) · 180 → .356 (170–200)
 · 200 → .357 (190–220). Ara surt a les notes de l'item (encara no a una comanda per mòdul, com els jocs).
 
-**Hipòtesis pendents del taller**: la prebroca dels cargols, **Ø3 × 12** (la de les potes de l'app; el catàleg no dona ni
-el cargol ni la prebroca), i que totes quatre plaques van amb el clip cap al davant (les del darrere no porten sòcol).
+**Hipòtesis pendents del taller**: la prebroca dels cargols, **Ø3 × 10** (el catàleg no dona ni el cargol ni la
+prebroca; els cargols del darrere cauen sota la ranura del fons de la base: 10 + 8 de la ranura deixen 1 mm en un tauler de
+19) i l'eix a 45 dels cantells (llegit de la imatge, sense cotes).
 
 ## Catàleg general Häfele (v35)
 

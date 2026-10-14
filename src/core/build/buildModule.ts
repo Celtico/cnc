@@ -2229,7 +2229,8 @@ class Builder {
     let deep = false
     for (const [lx, lz] of legs)
       for (const h of spec.holes) {
-        const l = toLocal(bottom, [r(lx + h.u), d.baseY, r(lz + h.v)])
+        const u = spec.mirror && lx > d.W / 2 ? -h.u : h.u
+        const l = toLocal(bottom, [r(lx + u), d.baseY, r(lz + h.v)])
         const face = faceAt(bottom, l)
         const R = h.d / 2
         const fits =
