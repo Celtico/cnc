@@ -18,6 +18,7 @@ import type { ItemGeometry } from "./ambientData"
 import { ambientBox, eyePose, snapGrid } from "./planGeom"
 import { curvedWallPieces } from "./curvedWall"
 import { roofGroup } from "./roof3d"
+import { genericLegsGroup } from "../../components/viewer/genericLegs"
 
 /**
  * Vista 3D de l'ambient (m): terra i parets amb els materials de simulació i cada moble o bloc
@@ -533,7 +534,9 @@ function Room({
       let entry = prev.get(it.id)
       const ver = g.build.models.length ? modelsVer : 0
       if (!entry || entry.geo !== g || entry.materials !== materials || entry.ver !== ver) {
-        const inner = buildScene([...g.build.panels, ...g.build.extras], it.id, { materials, make: exportablePanel }, g.build.models)
+        const inner = buildScene([...g.build.panels, ...g.build.extras], it.id, { materials, make: exportablePanel, hardware: true }, g.build.models)
+        const legs = genericLegsGroup(g.comp, g.build)
+        if (legs) inner.add(legs)
         inner.position.set(-(g.min[0] + g.max[0]) / 2000, 0, -(g.min[2] + g.max[2]) / 2000)
         shadowsOn(inner)
         const outer = new Group()

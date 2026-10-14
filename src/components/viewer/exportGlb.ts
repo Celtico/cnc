@@ -1,3 +1,5 @@
+import { builtinHardwareGroup } from "./hardwareShapes"
+import { fixedSolids, shelfPins } from "../../core/build/hardwareSolids"
 import {
   BoxGeometry,
   CylinderGeometry,
@@ -48,8 +50,10 @@ const ROLE_COLOR: Record<PanelRole, number> = {
  * colors per tipus de peça. `fitted`: qui la demana hi posa els ferratges importats (miniatures de Ferratges): els
  * fronts amb un tirador importat no porten la barra genèrica (com al visor).
  */
-export function buildScene(panels: Panel[], name: string, real?: { materials: MaterialPref[]; make: (p: Panel, m: MaterialPref[]) => { geometry: BufferGeometry; material: MeshStandardMaterial[] }; fitted?: boolean }, models: ModelObject[] = []): Scene {
+export function buildScene(panels: Panel[], name: string, real?: { materials: MaterialPref[]; make: (p: Panel, m: MaterialPref[]) => { geometry: BufferGeometry; material: MeshStandardMaterial[] }; fitted?: boolean; /** El dibuix 3D dels ferratges de sèrie i de les potes (`builtinHardwareGroup`): els ambients, perquè el render ho ensenyi tot. */ hardware?: boolean }, models: ModelObject[] = []): Scene {
   const scene = new Scene()
+  const pins = real?.hardware ? shelfPins(panels) : undefined
+  const fixed = real?.hardware ? fixedSolids(panels) : undefined
   scene.name = name
   const root = new Group()
   root.name = name
@@ -73,6 +77,10 @@ export function buildScene(panels: Panel[], name: string, real?: { materials: Ma
       mesh.userData.bevel = true
       holder.add(mesh)
       if (!(real.fitted && p.fittings?.some((f) => f.kind === "handle"))) for (const h of handleMeshes(p)) holder.add(h)
+      if (real.hardware) {
+        const hw = builtinHardwareGroup(p, pins?.get(p.id), fixed?.get(p.id))
+        if (hw) holder.add(hw)
+      }
       root.add(holder)
       continue
     }

@@ -10,6 +10,7 @@ import { db, type AmbientRow } from "../../db/db"
 import { drawWhenReady } from "../projects/thumbJobs"
 import { curvedWallPieces } from "./curvedWall"
 import { itemGeometry, type ItemGeometry } from "./ambientData"
+import { genericLegsGroup } from "../../components/viewer/genericLegs"
 
 /** El dibuix de les miniatures dels ambients (three.js): `ambientThumbs` el carrega amb `import()`. */
 function renderAmbient(a: Ambient, geoOf: (i: number) => ItemGeometry | null, materials: MaterialPref[], pose?: unknown): string | null {
@@ -75,7 +76,9 @@ function renderAmbient(a: Ambient, geoOf: (i: number) => ItemGeometry | null, ma
   a.items.forEach((it, i) => {
     const geo = geoOf(i)
     if (!geo) return
-    const inner = buildScene([...geo.build.panels, ...geo.build.extras], it.id, { materials, make: exportablePanel }, geo.build.models)
+    const inner = buildScene([...geo.build.panels, ...geo.build.extras], it.id, { materials, make: exportablePanel, hardware: true }, geo.build.models)
+    const legs = genericLegsGroup(geo.comp, geo.build)
+    if (legs) inner.add(legs)
     inner.position.set(-(geo.min[0] + geo.max[0]) / 2000, 0, -(geo.min[2] + geo.max[2]) / 2000)
     inner.traverse((o) => {
       if ((o as Mesh).isMesh) o.castShadow = o.receiveShadow = true

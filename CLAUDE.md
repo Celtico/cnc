@@ -1185,9 +1185,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   **suport de prestatge** als forats System 32 just sota un prestatge (`shelfPins`), **espiga** de faig des del forat de
   cara (un cop per espiga), **guia** (cos al lateral des de 34 mm davant del primer forat, corredora a la caixa),
   **braç d'abatible** (placa i braç), **imant** (catxet al cantell, placa d'acer a la cara), **push** (cos del Tip-On a la
-  vora que obre, **fix al moble** com la placa: al lateral de la vora que obre o a la peça de darrere del front), **barra** (suports dels extrems) i **tira LED** (perfil d'alumini). El grup porta `userData.editorOnly`
-  i el render el salta (`sceneData`, `visibleChain`): **no surten al render, l'AR ni les exportacions** (que fan l'escena
-  amb `buildScene`). Només es dibuixen. Els **importats** (`PanelFittings`, `Panel.fittings`, `kind`
+  vora que obre, **fix al moble** com la placa: al lateral de la vora que obre o a la peça de darrere del front), **barra** (suports dels extrems) i **tira LED** (perfil d'alumini). **Surten al render** (per decisió de l'usuari,
+  2026-10-14: «la foto ha de ser hiperrealista, ha de sortir tot»; abans eren `editorOnly`) i, en obrir el Render,
+  «Ferratges» s'encén; als ambients també (`buildScene` amb `hardware`, i les potes genèriques amb `genericLegsGroup`); a
+  l'AR i a les exportacions GLB/USDZ, no. Només es dibuixen. Els **importats** (`PanelFittings`, `Panel.fittings`, `kind`
   hinge/plate/handle/leg): el GLB de la frontissa a cada cassoleta, el de la placa al lateral, el del tirador a la cara de
   fora del front (sense la barra genèrica) i el de la pota a cada cantonada de la base (sense les genèriques,
   `ViewerModule.legs.fitted`) (`loadModel` dels `hwa-…`, taula Dexie `hardwareAssets`,

@@ -33,8 +33,6 @@ export interface HwBox {
   mat: HwMaterial
   /** Cantonades arrodonides (mm) al pla dels dos primers eixos i les arestes una mica arrodonides (la AXILO 78). */
   round?: number
-  /** Es veu també al render (les potes: són part del moble que es veu), no només a l'editor. */
-  render?: boolean
 }
 /** Un cilindre: centre, eix (unitari), radi i llarg (mm). */
 export interface HwCylinder {
@@ -46,8 +44,6 @@ export interface HwCylinder {
   mat: HwMaterial
   /** Arestes arrodonides (mm) a les dues tapes (el peu i el tub de la AXILO 78). */
   fillet?: number
-  /** Es veu també al render (les potes). */
-  render?: boolean
 }
 export type HwSolid = HwBox | HwCylinder
 
@@ -340,8 +336,7 @@ function legSolids(p: Panel): HwSolid[] {
     out.push(fr.cyl(0, 0, [g.height - footH - 4, g.height - footH + 1], 24, "dark", 1.5))
     out.push(fr.cyl(0, 0, [g.height - footH, g.height], g.foot / 2, "dark", 4))
   }
-  // Les potes es veuen al render (com les genèriques): són part del moble, no un ferratge de dins.
-  return out.map((x) => ({ ...x, render: true }))
+  return out
 }
 
 /**

@@ -1061,7 +1061,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       {tile("holes", "Forats", <LuCircleDot />, showHoles || exploded || viewer.opacity < 1, () => setShowHoles((v) => !v), exploded ? "A la vista explosionada els forats sempre es veuen" : viewer.opacity < 1 ? "Amb les peces translúcides (Opacitat) els forats sempre es veuen" : showHoles ? "Amagar forats" : "Mostrar forats")}
       {tile("explode", "Explosió", exploded ? <LuShrink /> : <LuExpand />, exploded, () => setExploded((v) => !v), exploded ? "Vista muntada" : "Vista explosionada")}
       {tile("hardware", "Ferratges", <LuWrench />, hardware, () => setHardware((v) => !v), hardware ? "Amagar frontisses, tiradors i potes" : "Mostrar frontisses, tiradors i potes")}
-      {tile("render", "Render", <LuAperture />, false, () => (setViewOptsOpen(false), quality === "fast" && roleColors && setRoleColors(false), setRenderOpen(true)), "Render fotorealista (GPU o CPU, com Cinema 4D): es va afinant i es desa en PNG")}
+      {tile("render", "Render", <LuAperture />, false, () => (setViewOptsOpen(false), quality === "fast" && roleColors && setRoleColors(false), !hardware && setHardware(true), setRenderOpen(true)), "Render fotorealista (GPU o CPU, com Cinema 4D): es va afinant i es desa en PNG")}
       {tile("ar", "A casa (AR)", <LuView />, false, () => setArOpen(true), "Veure a casa (realitat augmentada)")}
     </>
   )

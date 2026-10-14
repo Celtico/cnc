@@ -91,20 +91,17 @@ function filletCylinder(r: number, h: number, fillet: number): BufferGeometry {
 /**
  * Els ferratges de sèrie d'una peça (`builtinSolids`: frontisses, suports de prestatge, espigues, guies, braços,
  * imants, push, suports de la barra i perfil LED) com a malles three, en coordenades locals de la peça (m). El mateix al
- * visor (`PanelHardware`), al 3D de «Com va muntat» i a les miniatures de Ferratges. El grup porta
- * `userData.editorOnly` (llevat de les potes, `render`): **només es veuen**, no surten al render (`sceneData`), ni a la imatge del visor per al Render,
- * ni a l'AR ni a les exportacions (aquests fan l'escena amb `buildScene`, sense ells). Les malles no s'han d'alliberar
+ * visor (`PanelHardware`), al 3D de «Com va muntat», a les miniatures de Ferratges i als ambients (`buildScene` amb
+ * `hardware`). **Surten al render** (per decisió de l'usuari, 2026-10-14: «la foto ha de ser hiperrealista, ha de sortir
+ * tot»; abans eren `editorOnly`); a l'AR i a les exportacions GLB/USDZ, no. Les malles no s'han d'alliberar
  * (geometries i materials compartits: `userData.sharedModel` perquè `disposeTree` se les salti).
  */
 export function builtinHardwareGroup(panel: Panel, pins?: readonly Hole[], fixed?: readonly HwSolid[]): Group | null {
   const solids = builtinSolids(panel, pins, fixed)
   if (!solids.length) return null
-  // Els ferratges, només a l'editor (`editorOnly`); les potes dibuixades (`render`), també al render.
+  // Tots surten al render (per decisió de l'usuari: «la foto ha de ser hiperrealista, ha de sortir tot»).
   const g = new Group()
   g.name = "ferratges"
-  const editor = new Group()
-  editor.userData.editorOnly = true
-  g.add(editor)
   for (const s of solids) {
     const curved = s.kind === "box" ? (s.round ? roundedBox(s.size, s.round) : null) : s.fillet ? filletCylinder(s.r, s.h, s.fillet) : null
     const mesh = new Mesh(curved ?? (s.kind === "box" ? UNIT_BOX : UNIT_CYL), HW_MATERIALS[s.mat])
@@ -126,7 +123,7 @@ export function builtinHardwareGroup(panel: Panel, pins?: readonly Hole[], fixed
       mesh.matrix.makeBasis(new Vector3(...u).multiplyScalar(s.r * S), new Vector3(...w).multiplyScalar(s.h * S), new Vector3(...v).multiplyScalar(-s.r * S))
     }
     mesh.matrix.setPosition(s.c[0] * S, s.c[1] * S, s.c[2] * S)
-    ;(s.render ? g : editor).add(mesh)
+    g.add(mesh)
   }
   return g
 }
