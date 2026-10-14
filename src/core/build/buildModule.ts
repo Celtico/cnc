@@ -2053,6 +2053,13 @@ class Builder {
       this.throughHole(p, w, d, "cable-run")
       if ((p.cutouts?.length ?? 0) > before) holes.push({ x: r(w[0]), y: r(w[1]), label })
     }
+    // El cable va per dins del tauler (el forat de cantell arriba al forat de la làmpada): el passant del cable cap a la cara
+    // de l'altre costat ja no cal (per decisió de l'usuari: es veia des de sobre, «punts de llum per sobre del moble»).
+    const dropCableThrough = (l: (typeof this.lampSpots)[number]) => {
+      const lc = toLocal(l.host, [l.x, l.y, l.z])
+      const k = (l.host.cutouts ?? []).findIndex((c) => c.kind === "circle" && c.tag === "cable" && Math.hypot(c.x - lc[0], c.y - lc[1]) < 1)
+      if (k >= 0) l.host.cutouts!.splice(k, 1)
+    }
     const runs: Wiring["runs"] = []
     const covers: { x: number; y0: number; y1: number; z: number }[] = []
     const draw: Vec3[][] = []
@@ -2072,7 +2079,11 @@ class Builder {
         // Per dins del tauler fins al darrere i, per la cambra de darrere del fons, fins a la cara amagada.
         const ym = (hb.min[1] + hb.max[1]) / 2
         const depth = r(l.z - hb.min[2])
-        if (depth > l.d && addEdgeHole(l.host, [l.x, ym, hb.min[2]], { diameter: l.d, depth, tag: "cable-run" })) longBores += 1
+        // Un tauler massa prim per al forat (menys de 4 mm de pell a cada cara): el cable va per sota, arran de la làmpada.
+        if (l.host.thickness >= l.d + 8 && depth > l.d && addEdgeHole(l.host, [l.x, ym, hb.min[2]], { diameter: l.d, depth, tag: "cable-run" })) {
+          longBores += 1
+          dropCableThrough(l)
+        }
         if (hb.min[2] > zCav + 1) drill(back!, [l.x, ym, backRear], l.d, "pas del cable al fons")
         else drill(l.host, [l.x, ym, zCav], l.d, "pas del cable a la cambra")
         const yEnd = hy + (up ? 3 : -3)
@@ -2085,7 +2096,11 @@ class Builder {
         // Per dins del tauler: forat de cantell des del darrere fins a la làmpada, pel mig del gruix.
         const ym = (hb.min[1] + hb.max[1]) / 2
         const depth = r(l.z - hb.min[2])
-        if (depth > l.d && addEdgeHole(l.host, [l.x, ym, hb.min[2]], { diameter: l.d, depth, tag: "cable-run" })) longBores += 1
+        // Un tauler massa prim per al forat (menys de 4 mm de pell a cada cara): el cable va per sota, arran de la làmpada.
+        if (l.host.thickness >= l.d + 8 && depth > l.d && addEdgeHole(l.host, [l.x, ym, hb.min[2]], { diameter: l.d, depth, tag: "cable-run" })) {
+          longBores += 1
+          dropCableThrough(l)
+        }
         path.push([l.x, ym, l.z], [l.x, ym, zc])
         // Vertical per darrere fins a la cara amagada, amb un passant a cada peça fixa que travessa (la tapa o la base també).
         const lo = up ? hb.max[1] : hy, hi = up ? hy : hb.min[1]
@@ -2796,7 +2811,7 @@ function worldBoxOf(p: Panel): { min: Vec3; max: Vec3 } {
 /** La frontissa d'una porta de vidre: la triada (la seva placa al lateral) i on va. */
 type GlassHinge = { hinge: { spec: SlotSpec<"hinge">; item: HardwareItem }; side: "left" | "right"; panel?: VerticalRef; rowYs: number[]; zoneId?: string }
 
-export function buildModule(input: Module, opts: { rearLimits?: RearLimit[] } = {}): ModuleBuild {
+export function buildModule(input: Module, opts: { rearLimits?: RearLimit[]; /** Sense el recorregut dels cables dels llums (el muntatge de Preferències ensenya només el ferratge). */ wiring?: boolean } = {}): ModuleBuild {
   // Res amagat compta: només el que es veu a l'inspector (els camps de les opcions apagades no hi entren).
   const b = new Builder(visibleModule(input))
   b.rearLimits = opts.rearLimits ?? []
@@ -2805,7 +2820,7 @@ export function buildModule(input: Module, opts: { rearLimits?: RearLimit[] } = 
   const layout = b.buildZones()
   b.buildLegs()
   b.buildUnderLight()
-  b.buildWiring()
+  if (opts.wiring !== false) b.buildWiring()
   const panels = b.panels.map((p) => normalizePanel(p.cutouts && p.cutouts.length === 0 ? { ...p, cutouts: undefined } : p))
   return { panels, extras: b.extras, hardwareKits: b.hardwareKits, lightKits: b.lightKits, fittingOrders: b.fittingOrders, ...(b.wiring ? { wiring: b.wiring } : {}), warnings: b.warnings, layout, openRatios: b.openRatios, drawerHeights: b.drawerHeights }
 }

@@ -89,7 +89,8 @@ describe("jocs de llum Häfele Loox (v31)", () => {
       const lights = p.holes.filter((h) => h.tag === "light")
       expect(lights, p.id).toHaveLength(2)
       expect(lights.every((h) => h.diameter === 55 && h.depth === 12)).toBe(true)
-      expect((p.cutouts ?? []).filter((c) => c.tag === "cable" && c.kind === "circle" && c.diameter === 8), p.id).toHaveLength(2)
+      // El cable de cada làmpada: el passant Ø8 o, si va per dins del tauler, el forat de cantell Ø8 des del darrere.
+      expect((p.cutouts ?? []).filter((c) => c.tag === "cable" && c.kind === "circle" && c.diameter === 8).length + p.holes.filter((h) => h.tag === "cable-run" && h.diameter === 8).length, p.id).toBe(2)
     }
     // Al prestatge (cara A a dalt), els forats van a la cara B; a 60 del davant.
     expect(shelf.holes.filter((h) => h.tag === "light").every((h) => h.face === "B" && Math.abs(h.y - 60) < 0.01)).toBe(true)
@@ -116,7 +117,7 @@ describe("jocs de llum Häfele Loox (v31)", () => {
     expect(g).toHaveLength(1)
     expect(g[0]).toMatchObject({ w: 205, h: 205, depth: 6.5 })
     expect(g[0]!.x + 102.5).toBeCloseTo(762 / 2, 1)
-    expect((top.cutouts ?? []).filter((c) => c.tag === "cable")).toHaveLength(1)
+    expect((top.cutouts ?? []).filter((c) => c.tag === "cable").length + top.holes.filter((h) => h.tag === "cable-run").length).toBe(1)
     const bar = buildModule(mod({ led: { hardware: item("light-loox-1088-ww") } }, { width: 800, height: 600, depth: 450 }))
     const bg = bar.panels.find((p) => p.role === "top")!.grooves.filter((x) => x.tag === "light")
     expect(bg).toHaveLength(1)

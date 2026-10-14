@@ -283,7 +283,7 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
   }
   let build: ReturnType<typeof buildModule>
   try {
-    build = buildModule(module)
+    build = buildModule(module, { wiring: false })
   } catch (err) {
     return { ...empty, error: err instanceof HardwareError ? err.message : String(err) }
   }

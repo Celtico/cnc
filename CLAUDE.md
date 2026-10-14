@@ -306,7 +306,8 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
       potes o sòcol, al mig de l'amplada —o al primer lloc sense columna— i el cable arran del darrere, lluny de les plaques de les potes, o
       per davant d'una columna si n'hi ha pel camí; a terra sense aire, a dins sobre la base amb la sortida pel fons, ranura de 40 × 16 `cable-mains` per a
       l'endoll pla europeu); de cada làmpada al darrere **per dins del tauler** (forat de cantell des del cantell de
-      darrere fins a la làmpada, pel mig del gruix, tag `cable-run`: post-procés «Forats de cantell», broca llarga; a la
+      darrere fins a la làmpada, pel mig del gruix, tag `cable-run`: post-procés «Forats de cantell», broca llarga; llavors el
+      passant Ø8 de la làmpada cap a l'altra cara es treu —es veia des de sobre— i, amb menys de 4 mm de pell, no es fa; a la
       tapa d'un penjat o a la base d'un de potes no cal, surt per la cara amagada); **vertical per la cambra de darrere del fons** (per decisió de l'usuari, «per la trasera del moble»: fons en ranura o
       encastat retirat ≥ 8 mm; un passant al fons on surt del prestatge i un a la tapa o la base per sortir a la cara amagada;
       sense regletes a la vista) o, sense cambra, per dins a 25 del fons o de la columna (`rearLimits`) amb un passant a
