@@ -178,7 +178,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     sense model importat, `buildLegs` posa a la base un `Panel.fittings` `kind: "leg"` amb `leg` (la placa de l'item,
     `plateU0`/`plateU1`/`plateV`/`plateH`, en mirall a la dreta; l'alçada de la base «Potes»; el peu) i `legSolids`
     (`hardwareSolids.ts`) en dibuixa, com al TopSolid del taller, la part fixa (els dos blocs dels extrems contra la base, el pont del mig, la llosa amb els caps dels 4 cargols i la pestanya del clip) i la mòbil (tub Ø36, cargol del regulador Ø24, plat Ø48 i peu Ø78), amb corbes: cantonades arrodonides (`HwBox.round`) i arestes dels cilindres (`HwCylinder.fillet`; geometries a mida, `roundedBox` / `filletCylinder` a `hardwareShapes.ts`) (visor amb «Ferratges», «Com va muntat» i
-    miniatures; sense les genèriques; tot de plàstic negre). A «Com va muntat», el lliscador «Regulació» fa sortir la part
+    miniatures; sense les genèriques; tot de plàstic negre; com les genèriques, **també al render**: `HwSolid.render`, fora del grup `editorOnly`). A «Com va muntat», el lliscador «Regulació» fa sortir la part
     mòbil fins a +20 (`LEG_ADJUST`, `HardwareMount3D`). Test `build/hafeleLegs.test.ts`.
   - **Fons** (`Carcass.back`): en ranura · cargolat darrere · **encastat** · sense. Encastat (`buildInsetBack`): ocupa la
     llum interior (on falta una peça, fins a fora; parets buides: entre les pells de dins), enrasat o retirat

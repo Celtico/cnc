@@ -92,16 +92,19 @@ function filletCylinder(r: number, h: number, fillet: number): BufferGeometry {
  * Els ferratges de sèrie d'una peça (`builtinSolids`: frontisses, suports de prestatge, espigues, guies, braços,
  * imants, push, suports de la barra i perfil LED) com a malles three, en coordenades locals de la peça (m). El mateix al
  * visor (`PanelHardware`), al 3D de «Com va muntat» i a les miniatures de Ferratges. El grup porta
- * `userData.editorOnly`: **només es veuen**, no surten al render (`sceneData`), ni a la imatge del visor per al Render,
+ * `userData.editorOnly` (llevat de les potes, `render`): **només es veuen**, no surten al render (`sceneData`), ni a la imatge del visor per al Render,
  * ni a l'AR ni a les exportacions (aquests fan l'escena amb `buildScene`, sense ells). Les malles no s'han d'alliberar
  * (geometries i materials compartits: `userData.sharedModel` perquè `disposeTree` se les salti).
  */
 export function builtinHardwareGroup(panel: Panel, pins?: readonly Hole[], fixed?: readonly HwSolid[]): Group | null {
   const solids = builtinSolids(panel, pins, fixed)
   if (!solids.length) return null
+  // Els ferratges, només a l'editor (`editorOnly`); les potes dibuixades (`render`), també al render.
   const g = new Group()
   g.name = "ferratges"
-  g.userData.editorOnly = true
+  const editor = new Group()
+  editor.userData.editorOnly = true
+  g.add(editor)
   for (const s of solids) {
     const curved = s.kind === "box" ? (s.round ? roundedBox(s.size, s.round) : null) : s.fillet ? filletCylinder(s.r, s.h, s.fillet) : null
     const mesh = new Mesh(curved ?? (s.kind === "box" ? UNIT_BOX : UNIT_CYL), HW_MATERIALS[s.mat])
@@ -123,7 +126,7 @@ export function builtinHardwareGroup(panel: Panel, pins?: readonly Hole[], fixed
       mesh.matrix.makeBasis(new Vector3(...u).multiplyScalar(s.r * S), new Vector3(...w).multiplyScalar(s.h * S), new Vector3(...v).multiplyScalar(-s.r * S))
     }
     mesh.matrix.setPosition(s.c[0] * S, s.c[1] * S, s.c[2] * S)
-    g.add(mesh)
+    ;(s.render ? g : editor).add(mesh)
   }
   return g
 }
