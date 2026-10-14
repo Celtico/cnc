@@ -1045,6 +1045,18 @@ export function hardwareChoices(library: readonly HardwareItem[], current: Hardw
   return { options, value, ...(inheritedKey ? { inheritedKey } : {}) }
 }
 
+/**
+ * Ferratges de **marc d'alumini** (vitrines): les frontisses de perfil (Metallamat A, Duomatic per a marc) i els tiradors
+ * que es claven al perfil (motor `barHandle` sense cap forat). Per decisió de l'usuari («les opcions no compatibles no han
+ * de sortir»): a una porta o abatible de vidre només surten aquests, i a un front de fusta, mai.
+ */
+export const FRAME_HINGE_IDS: ReadonlySet<string> = new Set(["hinge-hafele-metallamat-a", "hinge-hafele-duomatic-premium-alu", "hinge-hafele-duomatic-alu-narrow"])
+export function isFrameHardware(item: Pick<HardwareItem, "id" | "engine" | "targets">): boolean {
+  if (item.engine === "cup") return FRAME_HINGE_IDS.has(item.id)
+  if (item.engine === "barHandle") return item.targets.every((t) => !t.ops.length)
+  return false
+}
+
 /** Ids dels ferratges que fa servir una composició desada (els dels mòduls i els triats a les portes, calaixos…). */
 export function hardwareRefIds(comp: unknown): string[] {
   const ids = new Set<string>()

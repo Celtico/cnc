@@ -78,6 +78,36 @@ export function movingGroups(panels: Panel[]): MovingGroup[] {
     }
   }
 
+  // Portes i abatibles de vidre (vitrina): el marc, el vidre i el tirador són a `extras` (no són de CNC) amb l'id del front
+  // davant (`door-2-left`, `flap-1-glass`…); giren junts sobre el perfil que porta les cassoletes (els pistons de gas,
+  // `-strut-`, es queden al moble).
+  const glass = new Map<string, Panel[]>()
+  for (const p of panels) {
+    if (p.name !== "perfil vitrina") continue
+    const base = p.id.replace(/-(left|right|top|bottom)$/, "")
+    if (base === p.id || glass.has(base)) continue
+    const own = /^-(left|right|top|bottom|glass|pull|pull-base)$/
+    glass.set(base, panels.filter((q) => q.id.startsWith(base) && own.test(q.id.slice(base.length))))
+  }
+  for (const [base, parts] of glass) {
+    const bars = parts.filter((q) => q.name === "perfil vitrina")
+    const hinged = bars.find((q) => q.holes.some((h) => h.tag === "hinge"))
+    const where = hinged ? /-(left|right|top|bottom)$/.exec(hinged.id)?.[1] : undefined
+    const bs = parts.map(box)
+    const b = { min: [0, 1, 2].map((k) => Math.min(...bs.map((x) => x.min[k]!))) as Vec3, max: [0, 1, 2].map((k) => Math.max(...bs.map((x) => x.max[k]!))) as Vec3 }
+    const out = outSign(bars[0]!)
+    const label = bars[0]!.label.replace(/ \(.*\)$/, "")
+    if (/(^|[-:])flap-\d+$/.test(base)) {
+      const down = where === "bottom"
+      const pivot: Vec3 = [b.min[0], down ? b.min[1] : b.max[1], out > 0 ? b.min[2] : b.max[2]]
+      groups.push({ id: base, label, panelIds: parts.map((q) => q.id), motion: { kind: "hinge", pivot, axis: "x", sign: down === out > 0 ? 1 : -1, maxAngle: Math.PI / 2 } })
+    } else {
+      const left = where !== "right"
+      const pivot: Vec3 = [left === out > 0 ? b.min[0] : b.max[0], b.min[1], out > 0 ? b.min[2] : b.max[2]]
+      groups.push({ id: base, label, panelIds: parts.map((q) => q.id), motion: { kind: "hinge", pivot, axis: "y", sign: left ? -1 : 1, maxAngle: MAX_DOOR_ANGLE } })
+    }
+  }
+
   for (const [key, parts] of drawers) {
     const side = parts.find((p) => p.role === "drawerSide")
     // Calaix amb joc paramètric: la guia (fixa al moble, id `kitfix-<k>-kit-slide-…`) diu la llargada.

@@ -55,3 +55,22 @@ describe("obertura de portes i calaixos", () => {
     expect(only.every((c) => c.groupId === first.id)).toBe(true)
   })
 })
+
+describe("vitrines", () => {
+  it("la porta i l'abatible de vidre giren amb el marc, el vidre i el tirador; el pistó es queda", async () => {
+    const { buildModule } = await import("../../core/build/buildModule")
+    const { defaultModule } = await import("../../core/model")
+    const { HAFELE_GAS_STRUTS } = await import("../../core/model/hafele/hafeleCatalog")
+    const mk = (front: object) => buildModule({ ...defaultModule("m", "x", { width: 600, height: 400, depth: 330 }), root: { id: "z", front } } as never)
+    const d = mk({ kind: "door", mode: "single", hinge: "right", glass: true })
+    const gd = movingGroups([...d.panels, ...d.extras])
+    expect(gd).toHaveLength(1)
+    expect(gd[0]!.panelIds.length).toBeGreaterThanOrEqual(5)
+    expect(gd[0]!.motion).toMatchObject({ kind: "hinge", axis: "y", sign: 1 })
+    const f = mk({ kind: "flap", dir: "up", glass: true, hardware: structuredClone(HAFELE_GAS_STRUTS[0]!) })
+    const gf = movingGroups([...f.panels, ...f.extras])
+    expect(gf).toHaveLength(1)
+    expect(gf[0]!.motion).toMatchObject({ kind: "hinge", axis: "x" })
+    expect(gf[0]!.panelIds.some((id) => id.includes("strut"))).toBe(false)
+  })
+})

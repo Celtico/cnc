@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { DEFAULT_SETTINGS, HardwareItemSchema, defaultModule, parseSettings, type HardwareItem, type Zone } from "../model"
 import { HAFELE_CATALOGUE_ITEMS, HAFELE_DUOMATIC_ALU, HAFELE_GAS_STRUTS, HAFELE_GLASS_FRAMES, HAFELE_GLASS_PULLS, HAFELE_HANDLES, HAFELE_PROFILE_HINGES } from "../model/hafele/hafeleCatalog"
 import { HAFELE_LOOX_PROFILES } from "../model/lights/hafeleLoox"
-import { V35_ITEMS } from "../model/hardware"
+import { DEFAULT_HARDWARE_LIBRARY, V35_ITEMS, isFrameHardware } from "../model/hardware"
 import { buildModule } from "./buildModule"
 import { handleSpec } from "./hardware"
 import { hardwareMount } from "./hardwareMount"
@@ -94,6 +94,12 @@ describe("catàleg Häfele (v35)", () => {
     const flap = buildModule(mod({ front: { kind: "flap", dir: "up", glass: true, frame: structuredClone(HAFELE_GLASS_FRAMES[0]!), hardware: structuredClone(HAFELE_GAS_STRUTS[0]!) } }, { width: 600, height: 400, depth: 330 }))
     expect(flap.fittingOrders.filter((l) => l.component === HAFELE_GAS_STRUTS[0]!.id).map((l) => l.qty)).toEqual([1])
     expect(flap.fittingOrders.find((l) => l.component === "hinge-cup")?.qty).toBe(2)
+  })
+
+  it("ferratges de marc d'alumini: les frontisses de perfil i els tiradors de clavar; la resta, de fusta", () => {
+    const frame = DEFAULT_HARDWARE_LIBRARY.filter(isFrameHardware).map((x) => x.id).sort()
+    expect(frame).toEqual([...HAFELE_PROFILE_HINGES, ...HAFELE_DUOMATIC_ALU, ...HAFELE_GLASS_PULLS, ...DEFAULT_HARDWARE_LIBRARY.filter((x) => x.id === "hinge-hafele-duomatic-alu-narrow")].map((x) => x.id).sort())
+    expect(isFrameHardware(DEFAULT_HARDWARE_LIBRARY.find((x) => x.id === "hinge-cup")!)).toBe(false)
   })
 
   it("tiradors: la distància entre centres més gran que hi cap al front", () => {

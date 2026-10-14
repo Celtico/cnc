@@ -588,6 +588,7 @@ function FrontFields({ front, openRatio, drawerHeights, onChange, hardware, noHa
       <HardwarePick
         slot="handle"
         label="Tirador"
+        glass={(f.kind === "door" || f.kind === "flap") && !!f.glass}
         current={f.handle && f.handle !== "none" ? f.handle : push ? undefined : moduleSlotItem(hardware, "handle")}
         inherited={noHandles ? undefined : moduleSlotItem(hardware, "handle")}
         emptyLabel={noHandles ? "Com el mòdul (cap, push)" : undefined}
@@ -638,7 +639,7 @@ function FrontFields({ front, openRatio, drawerHeights, onChange, hardware, noHa
           {/* La de vidre porta el marc d'alumini (ferratge `glassFrame`); la frontissa i el tirador es trien igual que a les
               de fusta (per decisió de l'usuari): al perfil no es mecanitza res, la placa de la frontissa sí, al lateral. */}
           {front.glass && <HardwarePick slot="glassFrame" label="Marc" current={front.frame ?? moduleSlotItem(hardware, "glassFrame")} inherited={moduleSlotItem(hardware, "glassFrame")} onPick={(h) => onChange(h ? { ...front, frame: h } : (({ frame: _f, ...rest }) => rest)(front))} />}
-          <HardwarePick slot="hinge" current={front.hardware ?? hardware.hinge} inherited={hardware.hinge} help={front.glass ? "A la porta de vidre, la frontissa de perfil (com la Metallamat A) es clava al marc: només es mecanitza la seva placa al lateral, a la filera System 32." : undefined} onPick={(h) => onChange(withHardware(front, h))} />
+          <HardwarePick slot="hinge" glass={!!front.glass} current={front.hardware ?? (front.glass ? undefined : hardware.hinge)} inherited={hardware.hinge} help={front.glass ? "A la porta de vidre, les frontisses per a marc d'alumini (Metallamat A, Duomatic): es claven al perfil i només es mecanitzen els forats de la placa al lateral." : undefined} onPick={(h) => onChange(withHardware(front, h))} />
           {!front.glass && afterHinge}
           {handlePick(front)}
         </Stack>

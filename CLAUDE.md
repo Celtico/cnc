@@ -311,6 +311,11 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     alçada, a `endOffset` dels extrems i al mig de dos forats seguits de la filera; dos forats Ø5 × 12 a ±16 a 37 del
     davant, `plateHoles`/`addPlate`, tota o res; els que cauen a la filera passen a ser de la placa, tag `plate`). **Tot es veu** (per decisió de l'usuari, 2026-10-14: «aquí igual s'ha de veure tot», «això s'ha de veure»): a cada frontissa col·locada, la cassoleta de la frontissa triada al darrere del perfil del costat de les frontisses (`Hole` tag `hinge` amb `edge` = el cantell de les frontisses al perfil, que és a `extras`: no va a la CNC; el STEP de CAD els treu) i `hardwareSolids` en dibuixa la cassoleta, el braç (s'obren amb la porta) i la placa al lateral (`fixedSolids`), com a les portes de fusta; el tirador (`glassPull`, el llarg del `pitch` + 25) i, a l'abatible de vidre, un braç a cada lateral (`glassHingeBody`, `glassArm`, `hwBox`: `extras` rol `hardware`, al 3D i al render; no són de CNC). **Tiradors de vitrina Häfele** (v42, `HAFELE_GLASS_PULLS`: 563.25.995 plata i 563.25.095 inox; motor `barHandle` sense forats, es claven al perfil) es trien al «Tirador». Test
     `build/hafeleCatalog.test.ts`.
+  - **Ferratges de marc d'alumini** (`isFrameHardware`, `FRAME_HINGE_IDS`; per decisió de l'usuari, 2026-10-14: «les
+    opcions no compatibles no han de sortir»): a una porta o abatible de vidre, a «Frontissa» i «Tirador» només surten les
+    frontisses de perfil (Metallamat A, Duomatic per a marc) i els tiradors que es claven al perfil; a un front de fusta,
+    mai (`HardwarePick glass`). **S'obren** (`movingGroups`, `opening.ts`): el marc, el vidre i el tirador giren junts
+    sobre el perfil de les cassoletes (els pistons es queden al moble).
   - **Abatible de vidre** (`front.glass` d'un abatible, «Vitrina» › «Abatible de vidre amb marc»; per decisió de l'usuari,
     2026-10-14, com la porta de vidre): el marc triat (`front.frame`, fila «Marc») i el vidre a `extras` (`glassDoor` sense
     plaques de frontissa); el braç i el tirador es trien igual, però van al perfil (el braç amb l'adaptador Häfele
