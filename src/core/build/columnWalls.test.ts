@@ -177,18 +177,32 @@ describe("potes AXILO 78 en una base retallada per una columna", () => {
 })
 
 describe("llums amb una columna a la cantonada", () => {
-  it("el cable i l'alimentador passen per davant de la columna (cap passant dins de la columna) i no hi ha sortida pel fons", async () => {
+  it("el cable i l'alimentador no entren a la columna (cap passant ni tros de cable dins)", async () => {
     const { HAFELE_LOOX_ITEMS } = await import("../model")
     const item = structuredClone(HAFELE_LOOX_ITEMS.find((x) => x.light && x.light.recess.shape === "round")!)
     const m = { ...mod(), root: { id: "z", shelves: { n: 1, adjustable: false }, led: { hardware: item } } }
     const b = buildComposition({ modules: [m], references: [col(-60, -60)] } as never)
-    const w = b.wirings[0]!.wiring
-    expect(w.notes.some((n) => n.includes("columna"))).toBe(true)
-    const driver = b.extras.find((p) => p.id.endsWith("wiring-driver"))!
-    expect(panelBox(driver).min[2]).toBeGreaterThanOrEqual(200)
+    // L'alimentador se'n va a un lloc sense columna (i el cable de xarxa hi pot sortir pel fons).
+    const driver = panelBox(b.extras.find((p) => p.id.endsWith("wiring-driver"))!)
+    expect(driver.min[0] >= 190 || driver.min[2] >= 190).toBe(true)
     for (const p of b.extras.filter((q) => q.id.includes(":wiring-"))) {
       const bx = panelBox(p)
       const inColumn = bx.max[0] > -60 + 0.5 && bx.min[0] < 190 - 0.5 && bx.min[2] < 190 - 0.5 && bx.max[2] > -60
+      expect(inColumn, p.id).toBe(false)
+    }
+  })
+})
+
+describe("llums sota la base amb una columna al mig", () => {
+  it("l'alimentador i els cables de sota la base no passen per l'osca de la columna", async () => {
+    const { HAFELE_LOOX_ITEMS } = await import("../model")
+    const item = structuredClone(HAFELE_LOOX_ITEMS.find((x) => x.light && x.light.recess.shape === "round")!)
+    const base = mod()
+    const m = { ...base, carcass: { ...base.carcass, base: { kind: "legs", height: 100 } }, root: { id: "z", led: { hardware: item } } }
+    const b = buildComposition({ modules: [m], references: [col(400, -60, 200, 250)] } as never)
+    for (const p of b.extras.filter((q) => q.id.includes(":wiring-"))) {
+      const bx = panelBox(p)
+      const inColumn = bx.max[0] > 400 + 0.5 && bx.min[0] < 600 - 0.5 && bx.min[2] < 190 - 0.5
       expect(inColumn, p.id).toBe(false)
     }
   })

@@ -303,7 +303,8 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     - **Recorregut dels cables** (per decisió de l'usuari, 2026-10-14: «fes el mecanitzat de tots els cables, i el que no
       és mecanitzat, un plànol»; «per dins de la fusta, no poden quedar per sobre»; `buildWiring`, `ModuleBuild.wiring`,
       `CompositionBuild.wirings`): l'**alimentador on no es veu** (a sobre de la tapa als penjats, a sota de la base amb
-      potes o sòcol, al mig de l'amplada i el cable arran del darrere, lluny de les plaques de les potes; a terra sense aire, a dins sobre la base amb la sortida pel fons, ranura de 40 × 16 `cable-mains` per a
+      potes o sòcol, al mig de l'amplada —o al primer lloc sense columna— i el cable arran del darrere, lluny de les plaques de les potes, o
+      per davant d'una columna si n'hi ha pel camí; a terra sense aire, a dins sobre la base amb la sortida pel fons, ranura de 40 × 16 `cable-mains` per a
       l'endoll pla europeu); de cada làmpada al darrere **per dins del tauler** (forat de cantell des del cantell de
       darrere fins a la làmpada, pel mig del gruix, tag `cable-run`: post-procés «Forats de cantell», broca llarga; a la
       tapa d'un penjat o a la base d'un de potes no cal, surt per la cara amagada); **vertical per la cambra de darrere del fons** (per decisió de l'usuari, «per la trasera del moble»: fons en ranura o

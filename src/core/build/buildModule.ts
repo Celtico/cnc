@@ -2025,7 +2025,11 @@ class Builder {
     const [len] = drv.size.split("×").map((v) => Number(v.trim().replace(",", ".")))
     // A sota de la base, al mig de l'amplada (les potes van a les cantonades: ni l'alimentador ni el cable hi passen per sobre).
     const dLen = len ?? 140
-    const dx0 = below ? (rb.min[0] + rb.max[0]) / 2 - dLen / 2 : rb.min[0] + 50
+    // Fora de les columnes de la casa (l'osca de la base): el primer lloc lliure entre el mig, a l'esquerra i a la dreta.
+    const free = (x: number) => !(this.rearAt(x - 10, x + dLen + 10) > this.d.backInnerZ + 1)
+    const mid = (rb.min[0] + rb.max[0]) / 2 - dLen / 2
+    const cands = below ? [mid, rb.min[0] + 150, rb.max[0] - 150 - dLen, mid - dLen, mid + dLen] : [rb.min[0] + 50, mid, rb.max[0] - 50 - dLen]
+    const dx0 = cands.find((x) => x >= rb.min[0] + 20 && x + dLen <= rb.max[0] - 20 && free(x)) ?? cands[0]!
     const dx1 = dx0 + dLen
     // La cara on va l'alimentador (i per on corren els cables fins a ell): la de sobre de la tapa, la de sota de la base o, a dins, la de sobre de la base.
     const hy = up ? rb.max[1] : below ? rb.min[1] : rb.max[1]
@@ -2102,7 +2106,9 @@ class Builder {
       const last = path[path.length - 1]!
       // Davant de les columnes que hi hagi pel camí fins a l'alimentador; a sota de la base, arran del darrere (per darrere de
       // les plaques de les potes, que comencen uns 13 mm endavant).
-      const zRun = below ? (cavity ? zCav : 6) : Math.max(last[2], zAlong(last[0], dx0) + 25)
+      // Amb una columna pel mig, per davant de la columna.
+      const crossesColumn = this.rearAt(Math.min(last[0], dx0) - 5, Math.max(last[0], dx0) + 5) > this.d.backInnerZ + 1
+      const zRun = below && !crossesColumn ? (cavity ? zCav : 6) : Math.max(last[2], zAlong(last[0], dx0) + 25)
       if (Math.abs(zRun - last[2]) > 0.5) path.push([last[0], last[1], zRun])
       path.push([dx0, last[1], zRun], [dx0, last[1], zDrv + 5])
       length += Math.abs(last[0] - dx0) + Math.abs(last[2] - zDrv) + 50
