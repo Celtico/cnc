@@ -536,9 +536,9 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
     restart(opts, res, effectiveKind)
   }
 
-  // Tancar-lo no el perd (per decisió de l'usuari, 2026-10-14: «la finestra del render no pot continuar quan la tanques i
-  // la tornes a obrir?»): el motor s'atura amb les passades fetes i, en tornar-lo a obrir, hi és amb «Continuar» (i «De nou»
-  // per tornar a començar amb el moble d'ara). Només s'allibera en sortir de la pàgina.
+  // Tancar-lo no el perd (per decisió de l'usuari, 2026-10-14: «fas un render, continues treballant, obres el render i el
+  // desas, i fas un render nou»): el motor continua calculant amb el diàleg tancat (si estava aturat, es queda aturat) i,
+  // en tornar-lo a obrir, hi és; «De nou» torna a començar amb el moble d'ara. Només s'allibera en sortir de la pàgina.
   const kept = useRef(false)
   useEffect(
     () => () => {
@@ -556,11 +556,7 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
       // El llenç és nou (el diàleg s'ha tornat a muntar): s'hi torna a pintar el que hi havia.
       window.setTimeout(() => draw(), 0)
       return () => {
-        if (engine.current) {
-          engine.current.pause()
-          setRunning(false)
-          kept.current = true
-        }
+        if (engine.current) kept.current = true
       }
     }
     kept.current = false
@@ -616,10 +612,9 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
     }
     return () => {
       alive = false
-      // Començat: s'atura i es queda (en tornar-lo a obrir, «Continuar»). Sense començar, es buida.
+      // Començat: continua calculant amb el diàleg tancat (l'escena és la que es va llegir en començar: es pot continuar
+      // treballant al moble) i, en tornar-lo a obrir, hi és. Sense començar, es buida.
       if (engine.current) {
-        engine.current.pause()
-        setRunning(false)
         kept.current = true
         return
       }
