@@ -964,7 +964,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   ordenar** (`reorderModule`, `reorderRef`): mòduls dins de la seva fila i objectes; una línia marca on cau. Arrossegar una
   peça lliure sobre la fila d'un grup la hi posa; al costat d'una peça n'agafa el grup; la zona «Treure del grup» surt
   mentre s'arrossega una d'un grup.
-- **Propietats** del que hi ha seleccionat i **només d'això**, en seccions plegables amb **una sola oberta alhora** (per decisió de l'usuari, 2026-10-13: `FoldGroup multiple={false}` a l'inspector, recordada a la sessió `mobles:inspector-open`; les subseccions `size="sm"` de dins continuen independents; vegeu UI):
+- **Propietats** del que hi ha seleccionat i **només d'això**, en seccions plegables amb **una sola oberta alhora** (per decisió de l'usuari, 2026-10-13, i a tota l'app des del 2026-10-14: `FoldGroup` a l'inspector, recordada a la sessió `mobles:inspector-open`; les subseccions `size="sm"` de dins, una oberta entre elles; vegeu UI):
   - Moble: Resum (i avisos de fusteria), Encaixos (si alguna peça en fa),
     Materials de tot el moble (aplica a tots els mòduls), Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
     Preferències»; `CabinetViewer sceneFinish`, `renderThumb(…, finish)`).
@@ -2028,10 +2028,12 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   Variants: `section` (inspectors i Render: icona + títol + insígnia + fletxa, sense fons; `size="sm"` per a subseccions),
   `gallery` (`.gallery-accordion`), `nested` (`.inner-accordion`, categories), `card` (vora i resum: taulells, forats) i
   `row` (fila de taula desplegable: eines).
-  - **Sol** (sense `FoldGroup`): **independent** (se'n poden tenir diverses obertes), **comença tancat** (llevat de
-    `defaultOpen`, p. ex. els xocs amb l'obertura actual) i es recorda durant la sessió (`mobles:section:<id>`).
-  - **`FoldGroup`**: un acordió compartit; `multiple={false}` = un obert alhora (taulells, forats, eines); estat controlat
-    (`value`), de la sessió (`storageKey`, una llista: galeries) o intern; `forceOpen` = la cerca de les galeries.
+  - **Una sola oberta alhora a tota l'app** (per decisió de l'usuari, 2026-10-14: «a tots els acordions el mateix»).
+  - **Sol** (sense `FoldGroup`): **comença tancat** (llevat de `defaultOpen`, p. ex. els xocs amb l'obertura actual), es
+    recorda durant la sessió (`mobles:section:<id>`) i, en obrir-lo, tanca els sols germans del mateix nivell (`SoloScope`:
+    l'arrel o el contingut d'una mateixa secció; les subseccions no tanquen la seva secció).
+  - **`FoldGroup`**: un acordió compartit; per defecte un obert alhora (`multiple` per a diversos); estat controlat
+    (`value`), de la sessió (`storageKey`) o intern; `forceOpen` = la cerca de les galeries (n'obre les que calgui).
   - **Totes les variants s'obren i es tanquen amb animació** (200 ms `ease`, com les galeries; res amb
     `prefers-reduced-motion`) amb el contingut propi `FoldContent` (no l'`ItemContent` de Chakra): una graella d'una fila
     que passa de `grid-template-rows: 0fr` a `1fr` (+ opacitat), **sense mesurar l'alçada**, així el contingut que arriba

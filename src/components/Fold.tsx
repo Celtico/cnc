@@ -1,5 +1,5 @@
 import { Accordion, Badge, Box, HStack, Heading, Stack, Text, chakra, useAccordionContext, useAccordionItemContext, useAccordionStyles, type AccordionRootProps } from "@chakra-ui/react"
-import { useContext, useEffect, useRef, useState, type ReactNode, type TransitionEvent } from "react"
+import { createContext, useContext, useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode, type TransitionEvent } from "react"
 import type { IconType } from "react-icons"
 import { LuChevronRight } from "react-icons/lu"
 import { readSessionFlag, readSessionList, writeSessionFlag } from "./sessionState"
@@ -9,9 +9,12 @@ import { FoldContext, STATIC_VARIANTS, sectionKey, type FoldGroupState, type Fol
  * L'acordió de tota l'app (sobre `Accordion` de Chakra): un sol component per a les seccions dels inspectors, el
  * Render, la Foto, Exportar, les galeries, el calaix de materials, els taulells i les eines de la màquina.
  *
- * - **`FoldItem` sol** (sense `FoldGroup`): secció independent (se'n poden tenir diverses obertes), que comença tancada
- *   (llevat de `defaultOpen`) i es recorda durant la sessió amb la clau `mobles:section:<id>`.
- * - **`FoldGroup`**: un `Accordion.Root` compartit; `multiple={false}` = només una oberta. L'estat és controlat
+ * **Una sola oberta alhora, a tota l'app** (per decisió de l'usuari, 2026-10-14: «a tots els acordions el mateix»):
+ * - **`FoldItem` sol** (sense `FoldGroup`): comença tancat (llevat de `defaultOpen`) i es recorda durant la sessió amb la
+ *   clau `mobles:section:<id>`; en obrir-lo, es tanquen els altres sols del mateix nivell (els germans: els de l'arrel de
+ *   la pantalla, o els de dins d'una mateixa secció, `SoloScope`). Les subseccions de dins d'una secció no la tanquen.
+ * - **`FoldGroup`**: un `Accordion.Root` compartit; per defecte només una oberta (`multiple` per obrir-ne diverses; la
+ *   cerca, `forceOpen`, n'obre les que calgui). L'estat és controlat
  *   (`value`/`onValueChange`), de la sessió (`storageKey`: una llista) o intern (`defaultValue`). `forceOpen` (p. ex. la
  *   cerca de les galeries) obre aquests i no deixa canviar res.
  *
@@ -24,7 +27,7 @@ import { FoldContext, STATIC_VARIANTS, sectionKey, type FoldGroupState, type Fol
 export function FoldGroup({
   variant = "section",
   size = "md",
-  multiple = true,
+  multiple = false,
   value,
   onValueChange,
   storageKey,
@@ -57,7 +60,9 @@ export function FoldGroup({
       /* sense sessionStorage: només en memòria */
     }
   }, [storageKey, own])
-  const current = forceOpen ?? value ?? own
+  // Només una oberta (llevat de la cerca): d'una llista desada o donada de diverses, la primera.
+  const raw = forceOpen ?? value ?? own
+  const current = multiple || forceOpen ? raw : raw.slice(0, 1)
   const change = (next: string[]) => {
     if (forceOpen) return
     if (value === undefined) setOwn(next)
@@ -65,7 +70,7 @@ export function FoldGroup({
   }
   return (
     <FoldContext.Provider value={{ variant, size }}>
-      <Accordion.Root {...rootProps(variant, className)} multiple={multiple} value={current} onValueChange={(e) => change(e.value)}>
+      <Accordion.Root {...rootProps(variant, className)} multiple={multiple || !!forceOpen} value={current} onValueChange={(e) => change(e.value)}>
         {children}
       </Accordion.Root>
     </FoldContext.Provider>
@@ -110,10 +115,50 @@ export function FoldItem(props: FoldItemProps) {
   return <FoldItemBody {...props} group={group} />
 }
 
+/**
+ * Els `FoldItem` sols germans (el mateix `SoloScope`): quin és obert a cada nivell. Una botiga petita de mòdul (sense
+ * React): obrir-ne un tanca els altres del mateix nivell, també si són de components diferents.
+ */
+const soloOpen = new Map<string, string | null>()
+const soloListeners = new Set<() => void>()
+const setSolo = (scope: string, id: string | null) => {
+  soloOpen.set(scope, id)
+  for (const l of soloListeners) l()
+}
+const subscribeSolo = (l: () => void) => {
+  soloListeners.add(l)
+  return () => soloListeners.delete(l)
+}
+/** El nivell dels `FoldItem` sols: l'arrel o el contingut d'una secció. */
+const SoloScope = createContext("root")
+
 function SoloFold(props: FoldItemProps) {
   const { id, defaultOpen = false, persist = true, variant = "section", size = "md" } = props
   const key = sectionKey(id)
-  const [open, setOpen] = useState(() => (persist ? readSessionFlag(key) : null) ?? defaultOpen)
+  const scope = useContext(SoloScope)
+  // D'entrada, l'obert desat (o `defaultOpen`) si cap germà ja ho és.
+  const [init] = useState(() => {
+    const want = (persist ? readSessionFlag(key) : null) ?? defaultOpen
+    if (want && !soloOpen.get(scope)) soloOpen.set(scope, id)
+    return true
+  })
+  void init
+  // En desmuntar-se l'obert (una altra pantalla), el nivell queda lliure.
+  useEffect(
+    () => () => {
+      if (soloOpen.get(scope) === id) soloOpen.delete(scope)
+    },
+    [scope, id],
+  )
+  const openId = useSyncExternalStore(subscribeSolo, () => soloOpen.get(scope) ?? null)
+  const open = openId === id
+  const setOpen = (next: boolean) => {
+    if (next) {
+      const prev = soloOpen.get(scope)
+      if (prev && prev !== id && persist) writeSessionFlag(sectionKey(prev), false)
+      setSolo(scope, id)
+    } else if (open) setSolo(scope, null)
+  }
   const group: FoldGroupState = { variant, size }
   return (
     <FoldContext.Provider value={group}>
@@ -152,11 +197,19 @@ function FoldItemBody({ id, children, group, ...p }: FoldItemProps & { group: Fo
       <FoldContent id={id} form={stat}>
         {/* Dins del contingut, un FoldItem sol torna a ser independent (no és del grup de fora). */}
         <FoldContext.Provider value={null}>
-          <Accordion.ItemBody {...bodyStyle(variant)}>{wrapContent(variant, size, children)}</Accordion.ItemBody>
+          <ScopeFor id={id}>
+            <Accordion.ItemBody {...bodyStyle(variant)}>{wrapContent(variant, size, children)}</Accordion.ItemBody>
+          </ScopeFor>
         </FoldContext.Provider>
       </FoldContent>
     </Accordion.Item>
   )
+}
+
+/** Les seccions soles de dins d'una secció són germanes entre elles (no de les de fora). */
+function ScopeFor({ id, children }: { id: string; children: ReactNode }) {
+  const uid = useId()
+  return <SoloScope.Provider value={`${id}:${uid}`}>{children}</SoloScope.Provider>
 }
 
 /** Durada de l'animació d'obrir i tancar (la de les galeries de Chakra, `moderate`). */
