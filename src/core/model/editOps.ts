@@ -2,6 +2,7 @@ import { z } from "zod"
 import {
   anchorRef,
   freeX,
+  modulePlacements,
   ModelObjectSchema,
   ModuleSchema,
   newId,
@@ -389,7 +390,7 @@ export function removeModule(comp: Composition, id: string): { comp: Composition
 
 /** Un element de la selecció múltiple (Maj + clic; per decisió de l'usuari, 2026-10-14). */
 export interface MultiItem {
-  kind: "part" | "model" | "ref"
+  kind: "part" | "model" | "ref" | "module"
   id: string
 }
 
@@ -412,6 +413,16 @@ export function multiBox(comp: Composition, items: readonly MultiItem[]): { min:
     add([f.x, m.y, f.z], [f.x + f.w, m.y + m.h, f.z + f.d])
   }
   for (const r of comp.references.filter((r) => inMulti(items, "ref", r.id))) add([r.x, r.y, r.z], [r.x + r.w, r.y + r.h, r.z + r.d])
+  // Els mòduls, a la seva posició (`modulePlacements`).
+  if (items.some((x) => x.kind === "module")) {
+    const places = modulePlacements(comp)
+    comp.modules.forEach((m, i) => {
+      if (!inMulti(items, "module", m.id)) return
+      const p = places[i]!
+      const c = m.carcass
+      add([p.x, p.y, p.z ?? 0], [p.x + c.width, p.y + c.height, (p.z ?? 0) + c.depth])
+    })
+  }
   return Number.isFinite(min[0]) ? { min, max } : null
 }
 
@@ -420,6 +431,10 @@ export function moveMultiBy(comp: Composition, items: readonly MultiItem[], dx: 
   const b = multiBox(comp, items)
   if (!b) return comp
   const ddy = Math.max(dy, -b.min[1])
+  // Els mòduls, pel camí de la nansa (`moveModuleBy`: a la seva fila; amunt i avall, només els penjats).
+  let base = comp
+  for (const x of items) if (x.kind === "module") base = moveModuleBy(base, x.id, dx, ddy, dz)
+  comp = base
   return {
     ...comp,
     parts: (comp.parts ?? []).map((p) => (inMulti(items, "part", p.id) ? { ...p, x: p.x + dx, y: p.y + ddy, z: p.z + dz } : p)),
@@ -431,6 +446,7 @@ export function moveMultiBy(comp: Composition, items: readonly MultiItem[], dx: 
 
 /** Treu tots els elements triats. */
 export function removeMulti(comp: Composition, items: readonly MultiItem[]): Composition {
+  for (const x of items) if (x.kind === "module") comp = removeModule(comp, x.id).comp
   return {
     ...comp,
     parts: (comp.parts ?? []).filter((p) => !inMulti(items, "part", p.id)),
@@ -468,8 +484,11 @@ export function setMultiMaterial(comp: Composition, items: readonly MultiItem[],
     const out: FreePart = { ...rest, material: name, thickness: object ? p.thickness : t }
     return (m && materialCategory(m) === "sim") || object ? { ...out, nest: false } : out
   }
+  // Als mòduls, el material del cos (només els taulers de la CNC).
+  const board = !!m && materialCategory(m) === "board"
   return {
     ...comp,
+    modules: comp.modules.map((x) => (board && inMulti(items, "module", x.id) ? { ...x, carcass: { ...x.carcass, material: name } } : x)),
     parts: (comp.parts ?? []).map((p) => (inMulti(items, "part", p.id) ? part(p) : p)),
     references: comp.references.map((r) => (inMulti(items, "ref", r.id) ? { ...r, material: name } : r)),
     ...(comp.models ? { models: comp.models.map((g) => (inMulti(items, "model", g.id) ? { ...g, material: name } : g)) } : {}),
@@ -479,8 +498,10 @@ export function setMultiMaterial(comp: Composition, items: readonly MultiItem[],
 /** Les mides comunes dels triats (`w`, `h`, `d` dels models i objectes; `w`, `h` i el gruix de les peces): a tots, el valor. */
 export function setMultiSize(comp: Composition, items: readonly MultiItem[], key: "w" | "h" | "d", v: number): Composition {
   if (!(v > 0)) return comp
+  const dim = key === "w" ? "width" : key === "h" ? "height" : "depth"
   return {
     ...comp,
+    modules: comp.modules.map((x) => (inMulti(items, "module", x.id) ? { ...x, carcass: { ...x.carcass, [dim]: v } } : x)),
     parts: (comp.parts ?? []).map((p) => (inMulti(items, "part", p.id) ? (key === "d" ? { ...p, thickness: v } : { ...p, [key]: v }) : p)),
     references: comp.references.map((r) => (inMulti(items, "ref", r.id) ? { ...r, [key]: v } : r)),
     ...(comp.models ? { models: comp.models.map((g) => (inMulti(items, "model", g.id) ? { ...g, [key]: v } : g)) } : {}),

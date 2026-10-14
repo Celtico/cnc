@@ -486,7 +486,7 @@ export function PlanCanvas({
           })}
 
           {/* Caixa del grup seleccionat (discontínua), com a l'editor. */}
-          {selection?.kind === "group" &&
+          {(selection?.kind === "group" || selection?.kind === "multi") &&
             (() => {
               const bs = ambient.items.filter((i) => selectedIds.includes(i.id)).flatMap((i) => {
                 const g = geos.get(i.id)

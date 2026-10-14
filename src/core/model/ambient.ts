@@ -807,3 +807,42 @@ export function ambientSummary(a: Ambient, kindOf: (it: AmbientItem) => AmbientI
     area: floorArea(a.walls),
   }
 }
+
+/** Caixa d'un element al plànol (x0, y0, x1, y1), la de la seva petjada girada. */
+export type ItemBoxOf = (it: AmbientItem) => { x0: number; y0: number; x1: number; y1: number } | null
+
+/**
+ * Alinear els elements triats (selecció múltiple dels Ambients, com a l'editor; per decisió de l'usuari, 2026-10-14) al
+ * plànol, en X (`x`) o en Y (`y`, cap avall al plànol), a l'inici, al mig o al final de la caixa de tots.
+ */
+export function alignItems(a: Ambient, ids: readonly string[], boxOf: ItemBoxOf, axis: "x" | "y", mode: "min" | "mid" | "max"): Ambient {
+  const bs = a.items.filter((i) => ids.includes(i.id)).flatMap((i) => {
+    const b = boxOf(i)
+    return b ? [{ i, lo: axis === "x" ? b.x0 : b.y0, hi: axis === "x" ? b.x1 : b.y1 }] : []
+  })
+  if (bs.length < 2) return a
+  const lo = Math.min(...bs.map((b) => b.lo)), hi = Math.max(...bs.map((b) => b.hi))
+  const d = new Map(bs.map((b) => [b.i.id, mode === "min" ? lo - b.lo : mode === "max" ? hi - b.hi : (lo + hi) / 2 - (b.lo + b.hi) / 2]))
+  return { ...a, items: a.items.map((i) => (d.has(i.id) ? { ...i, [axis]: i[axis] + d.get(i.id)! } : i)) }
+}
+
+/**
+ * Repartir els triats en X o en Y: sense `gap`, el primer i l'últim es queden i els del mig amb el mateix espai (calen 3);
+ * amb `gap` (mm), el primer es queda i cada altre a aquest espai de l'anterior (calen 2).
+ */
+export function distributeItems(a: Ambient, ids: readonly string[], boxOf: ItemBoxOf, axis: "x" | "y", gap?: number): Ambient {
+  const bs = a.items.filter((i) => ids.includes(i.id)).flatMap((i) => {
+    const b = boxOf(i)
+    return b ? [{ i, lo: axis === "x" ? b.x0 : b.y0, hi: axis === "x" ? b.x1 : b.y1 }] : []
+  }).sort((p, q) => p.lo - q.lo)
+  if (bs.length < (gap === undefined ? 3 : 2)) return a
+  const sizes = bs.reduce((s, b) => s + (b.hi - b.lo), 0)
+  const g = gap ?? (bs.at(-1)!.hi - bs[0]!.lo - sizes) / (bs.length - 1)
+  const d = new Map<string, number>()
+  let at = bs[0]!.lo
+  for (const b of bs) {
+    d.set(b.i.id, at - b.lo)
+    at += b.hi - b.lo + g
+  }
+  return { ...a, items: a.items.map((i) => (d.has(i.id) ? { ...i, [axis]: i[axis] + d.get(i.id)! } : i)) }
+}

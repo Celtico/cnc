@@ -115,7 +115,7 @@ export interface CabinetViewerProps {
   selectedGroup?: string | null
   onMoveGroup?: (group: string, dx: number, dy: number, dz: number) => void
   /** Selecció múltiple (Maj + clic): una caixa amb el gizmo que els mou tots junts. */
-  selectedSet?: { kind: "part" | "model" | "ref"; id: string }[]
+  selectedSet?: { kind: "part" | "model" | "ref" | "module"; id: string }[]
   onMoveSet?: (dx: number, dy: number, dz: number) => void
   /** Models 3D (`.glb`): clic per seleccionar-los; el seleccionat porta el gizmo per moure'l. */
   models?: ModelObject[]
@@ -311,6 +311,10 @@ export function CabinetViewer({
   const setBox = useMemo((): RefObject | null => {
     if (!selectedSet?.length) return null
     const boxes = selectedSet.flatMap((x) => {
+      if (x.kind === "module") {
+        const m = modules?.find((q) => q.id === x.id)
+        return m ? [{ x: m.x, y: m.y, z: m.z ?? 0, w: m.width, h: m.height, d: m.depth }] : []
+      }
       const b = x.kind === "part" ? partBoxes.find((q) => q.id === x.id) : x.kind === "model" ? modelBoxes.find((q) => q.id === x.id) : ghosts?.find((q) => q.id === x.id)
       return b ? [b] : []
     })
@@ -318,7 +322,7 @@ export function CabinetViewer({
     const x0 = Math.min(...boxes.map((b) => b.x)), y0 = Math.min(...boxes.map((b) => b.y)), z0 = Math.min(...boxes.map((b) => b.z))
     const x1 = Math.max(...boxes.map((b) => b.x + b.w)), y1 = Math.max(...boxes.map((b) => b.y + b.h)), z1 = Math.max(...boxes.map((b) => b.z + b.d))
     return { id: "multi", name: `${boxes.length} elements`, x: x0, y: y0, z: z0, w: x1 - x0, h: y1 - y0, d: z1 - z0 }
-  }, [selectedSet, partBoxes, modelBoxes, ghosts])
+  }, [selectedSet, partBoxes, modelBoxes, ghosts, modules])
   const selectedModel = models?.find((m) => m.id === selectedModelId)
   // De la caixa girada a la cantonada del model (el gizmo mou la caixa).
   const toModelPos = (pos: { x: number; y: number; z: number }) => (selectedModel && selectedModelBox ? { x: pos.x - selectedModelBox.x + selectedModel.x, y: pos.y, z: pos.z - selectedModelBox.z + selectedModel.z } : pos)

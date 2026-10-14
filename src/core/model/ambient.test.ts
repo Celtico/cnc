@@ -209,3 +209,15 @@ describe("copiar i enganxar elements dels ambients", () => {
     expect(pasteItems(amb([]), a.items, 0).group).toBe("Grup 1")
   })
 })
+
+describe("alinear i repartir als ambients", async () => {
+  const m = await import("./ambient")
+  const blk = (id: string, x: number) => ({ id, kind: "block" as const, name: id, shape: "box" as const, w: 100, h: 100, d: 100, material: "x", x, y: 0, rot: 0 })
+  const a = { ...m.EMPTY_AMBIENT, items: [blk("a", 0), blk("b", 300), blk("c", 1000)] }
+  const box = (i: { x: number; y: number; rot: number }) => m.footprintBox(i.x, i.y, 100, 100, i.rot)
+  it("alinear a l'esquerra i repartir amb el mateix espai o amb un espai donat", () => {
+    expect(m.alignItems(a, ["a", "b", "c"], box, "x", "min").items.map((i) => i.x)).toEqual([0, 0, 0])
+    expect(m.distributeItems(a, ["a", "b", "c"], box, "x").items.map((i) => i.x)).toEqual([0, 500, 1000])
+    expect(m.distributeItems(a, ["a", "b"], box, "x", 20).items.map((i) => i.x)).toEqual([0, 120, 1000])
+  })
+})

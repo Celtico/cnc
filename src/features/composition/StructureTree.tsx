@@ -361,7 +361,7 @@ export function StructureTree({
               toggleLabel={open ? `Plegar «${m.name}»` : `Desplegar «${m.name}»`}
               label={`${k + 1}. ${m.name}`}
               hint={`${Math.round(m.carcass.width)} × ${Math.round(m.carcass.height)}`}
-              selected={selection.kind === "module" && selection.id === m.id}
+              selected={(selection.kind === "module" && selection.id === m.id) || inMultiSel("module", m.id)}
               onClick={() => onSelect({ kind: "module", id: m.id })}
               dnd={dnd("module", m.id)}
               flags={flagsOf("modules", m)}

@@ -291,3 +291,18 @@ describe("repartir amb un espai", async () => {
     expect(spaceMulti(comp, [{ kind: "ref", id: "b" }, { kind: "ref", id: "a" }], 0, 20).references.map((q) => q.x)).toEqual([0, 120])
   })
 })
+
+describe("mòduls a la selecció múltiple", async () => {
+  const { moveMultiBy, removeMulti, multiBox, setMultiSize } = await import("./editOps")
+  const { defaultModule } = await import("./composition")
+  const a = { ...defaultModule("a", "A", { width: 600, height: 700, depth: 500 }), gapBefore: 0 }
+  const b = { ...defaultModule("b", "B", { width: 400, height: 700, depth: 500 }), gapBefore: 0 }
+  const comp = { modules: [a, b], references: [] }
+  const items = [{ kind: "module" as const, id: "a" }, { kind: "module" as const, id: "b" }]
+  it("caixa, moure, mides i eliminar els mòduls triats", () => {
+    expect(multiBox(comp, items)!.max[0]).toBe(1000)
+    expect(moveMultiBy(comp, items, 100, 0, 0).modules[0]!.gapBefore).toBe(100)
+    expect(setMultiSize(comp, items, "h", 800).modules.map((m) => m.carcass.height)).toEqual([800, 800])
+    expect(removeMulti(comp, items).modules).toHaveLength(0)
+  })
+})

@@ -16,6 +16,7 @@ import {
   LuPalette,
   LuPencilRuler,
   LuPuzzle,
+  LuBox,
   LuScan,
   LuRectangleHorizontal,
   LuSpline,
@@ -459,7 +460,9 @@ export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGrou
   if (!b) return null
   // Propietats comunes (per decisió de l'usuari): el valor si tots el tenen igual; si no, «Diversos» i el que triïs va a tots.
   const objs = items.flatMap((x) => {
-    const o = x.kind === "part" ? comp.parts?.find((p) => p.id === x.id) : x.kind === "model" ? comp.models?.find((m) => m.id === x.id) : comp.references.find((r) => r.id === x.id)
+    // Un mòdul, amb el material i les mides del cos.
+    const mod = x.kind === "module" ? comp.modules.find((m) => m.id === x.id) : undefined
+    const o = mod ? { material: mod.carcass.material, w: mod.carcass.width, h: mod.carcass.height, d: mod.carcass.depth } : x.kind === "part" ? comp.parts?.find((p) => p.id === x.id) : x.kind === "model" ? comp.models?.find((m) => m.id === x.id) : comp.references.find((r) => r.id === x.id)
     return o ? [{ kind: x.kind, o }] : []
   })
   const common = <T,>(vals: T[]): T | undefined => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] : undefined)
@@ -474,9 +477,9 @@ export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGrou
     return <NumRow label={label} value={v ?? 0} min={1} max={20000} step={10} help={v === undefined ? "Diversos: el valor que hi posis va a tots." : undefined} onChange={(n) => n > 0 && onChange(setMultiSize(comp, items, key, n))} />
   }
   const size = [0, 1, 2].map((a) => Math.round(b.max[a]! - b.min[a]!))
-  const nameOf = (x: MultiItem) => (x.kind === "part" ? comp.parts?.find((p) => p.id === x.id)?.name : x.kind === "model" ? comp.models?.find((m) => m.id === x.id)?.name : comp.references.find((r) => r.id === x.id)?.name) ?? "?"
-  const groupable = items.some((x) => x.kind !== "ref")
-  const group = common(objs.filter((x) => x.kind !== "ref").map(({ o }) => (o as { group?: string }).group ?? ""))
+  const nameOf = (x: MultiItem) => (x.kind === "part" ? comp.parts?.find((p) => p.id === x.id)?.name : x.kind === "model" ? comp.models?.find((m) => m.id === x.id)?.name : x.kind === "module" ? comp.modules.find((m) => m.id === x.id)?.name : comp.references.find((r) => r.id === x.id)?.name) ?? "?"
+  const groupable = items.some((x) => x.kind === "part" || x.kind === "model")
+  const group = common(objs.filter((x) => x.kind === "part" || x.kind === "model").map(({ o }) => (o as { group?: string }).group ?? ""))
   return (
     <Stack gap={0}>
       <FoldItem id="multi-position" title="Posició" icon={LuMove} badge={size.join(" × ")}>
@@ -553,7 +556,7 @@ export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGrou
         <Stack gap={0.5}>
           {items.map((x) => (
             <Button key={`${x.kind}:${x.id}`} size="xs" variant="ghost" justifyContent="flex-start" onClick={() => onSelect(x)}>
-              {x.kind === "part" ? <LuPuzzle /> : x.kind === "model" ? <LuSprout /> : <LuScan />} {nameOf(x)}
+              {x.kind === "part" ? <LuPuzzle /> : x.kind === "model" ? <LuSprout /> : x.kind === "module" ? <LuBox /> : <LuScan />} {nameOf(x)}
             </Button>
           ))}
         </Stack>

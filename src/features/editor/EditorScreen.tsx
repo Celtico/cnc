@@ -367,7 +367,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   const updateModule = (m: Module) => setComp((c) => ({ ...c, modules: c.modules.map((x) => (x.id === m.id ? m : x)) }))
 
   // Els triats que encara hi són (desfer o eliminar en pot treure).
-  const multiNow = selKind === "multi" ? selectedMulti.filter((x) => (x.kind === "part" ? comp.parts?.some((p) => p.id === x.id) : x.kind === "model" ? comp.models?.some((m) => m.id === x.id) : comp.references.some((r) => r.id === x.id))) : []
+  const multiNow = selKind === "multi" ? selectedMulti.filter((x) => (x.kind === "part" ? comp.parts?.some((p) => p.id === x.id) : x.kind === "model" ? comp.models?.some((m) => m.id === x.id) : x.kind === "module" ? comp.modules.some((m) => m.id === x.id) : comp.references.some((r) => r.id === x.id))) : []
   const selectionNow: Selection =
     selKind === "moble"
       ? { kind: "moble" }
@@ -477,8 +477,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     return () => window.removeEventListener("pointerdown", down, true)
   }, [])
   const pick = (s: Selection, fromPanel = false) => {
-    if (!shiftRef.current || (s.kind !== "part" && s.kind !== "model" && s.kind !== "ref")) return select(s, fromPanel)
-    const cur: MultiItem[] = selection.kind === "multi" ? selection.items : selection.kind === "part" || selection.kind === "model" || selection.kind === "ref" ? [{ kind: selection.kind, id: selection.id }] : []
+    if (!shiftRef.current || (s.kind !== "part" && s.kind !== "model" && s.kind !== "ref" && s.kind !== "module")) return select(s, fromPanel)
+    const cur: MultiItem[] = selection.kind === "multi" ? selection.items : selection.kind === "part" || selection.kind === "model" || selection.kind === "ref" || selection.kind === "module" ? [{ kind: selection.kind, id: selection.id }] : []
     const next = toggleMulti(cur, { kind: s.kind, id: s.id })
     select(next.length > 1 ? { kind: "multi", items: next } : next.length === 1 ? { kind: next[0]!.kind, id: next[0]!.id } : { kind: "moble" }, fromPanel)
   }
@@ -565,7 +565,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     : selection.kind === "part" ? !!comp.parts?.find((q) => q.id === selection.id)?.locked
     : selection.kind === "model" ? !!comp.models?.find((g) => g.id === selection.id)?.locked
     : selection.kind === "group" ? [...(comp.parts ?? []), ...(comp.models ?? [])].filter((q) => q.group === selection.id).every((q) => q.locked)
-    : selection.kind === "multi" ? selection.items.some((x) => (x.kind === "part" ? comp.parts?.find((q) => q.id === x.id) : x.kind === "model" ? comp.models?.find((q) => q.id === x.id) : comp.references.find((q) => q.id === x.id))?.locked)
+    : selection.kind === "multi" ? selection.items.some((x) => (x.kind === "part" ? comp.parts?.find((q) => q.id === x.id) : x.kind === "model" ? comp.models?.find((q) => q.id === x.id) : x.kind === "module" ? comp.modules.find((q) => q.id === x.id) : comp.references.find((q) => q.id === x.id))?.locked)
     : false
   /** Mou un model 3D (gizmo al 3D o fletxes): no s'enfonsa al terra. */
   const moveModel = (id: string, pos: { x: number; y: number; z: number }) =>
@@ -809,6 +809,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
    * a clicar el compartiment ja seleccionat → puja al pare (fins al mòdul).
    */
   const selectFrom3D = (id: string, at?: [number, number, number]) => {
+    // Maj + clic a un mòdul: el mòdul sencer a la selecció múltiple.
+    if (shiftRef.current) return pick({ kind: "module", id })
     const inside = (selection.kind === "module" && selection.id === id) || (selection.kind === "zone" && selection.moduleId === id)
     const idx = comp.modules.findIndex((m) => m.id === id)
     const mb = build?.modules[idx]

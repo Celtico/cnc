@@ -43,6 +43,16 @@ import {
   LuLockOpen,
   LuUndoDot,
   LuTriangleAlert,
+  LuAlignCenterHorizontal,
+  LuAlignCenterVertical,
+  LuAlignEndHorizontal,
+  LuAlignEndVertical,
+  LuAlignHorizontalDistributeCenter,
+  LuAlignHorizontalSpaceAround,
+  LuAlignStartHorizontal,
+  LuAlignStartVertical,
+  LuAlignVerticalDistributeCenter,
+  LuAlignVerticalSpaceAround,
 } from "react-icons/lu"
 import { toaster } from "../../components/ui/toaster"
 import { RenderDialog, type SceneGetter } from "../../components/viewer/render/RenderDialog"
@@ -81,6 +91,9 @@ import {
   type MaterialPref,
   type PlanPt,
   type Wall,
+  alignItems,
+  distributeItems,
+  footprintBox,
   keepLocked,
   mergeHidden,
   moveItemToGroup,
@@ -289,6 +302,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
       return it ? `element ${it.kind === "moble" ? `(moble enllaçat, project_id ${it.projectId})` : "(bloc)"} (id ${it.id})` : undefined
     }
     if (sel?.kind === "group") return `grup «${sel.id}»`
+    if (sel?.kind === "multi") return `${sel.ids.length} elements (ids ${sel.ids.join(", ")})`
     if (sel?.kind === "wall") {
       const n = amb.walls.findIndex((w) => w.id === sel.id)
       return n >= 0 ? `Paret ${n + 1} (id ${sel.id})` : undefined
@@ -332,10 +346,10 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   // Elements seleccionats: un, o tots els del grup (les accions valen per a tots dos casos).
   // Després de desfer, la selecció pot apuntar a un element que ja no hi és: llavors no es fa res (si no,
   // una fletxa o Supr afegien un pas buit de desfer i es perdia el refer).
-  const selIds = sel?.kind === "item" ? (amb.items.some((i) => i.id === sel.id) ? [sel.id] : []) : sel?.kind === "group" ? groupIds(amb, sel.id) : []
+  const selIds = sel?.kind === "item" ? (amb.items.some((i) => i.id === sel.id) ? [sel.id] : []) : sel?.kind === "group" ? groupIds(amb, sel.id) : sel?.kind === "multi" ? sel.ids.filter((id) => amb.items.some((i) => i.id === id)) : []
   // L'ambient és el seleccionat quan no n'hi ha cap altre (clic al buit, Esc, la fila de dalt de l'arbre): com el moble a
   // l'editor. Una selecció que ja no hi és (després de desfer) també torna a l'ambient.
-  const ambientSel = !item && !(sel?.kind === "group" && selIds.length) && !wall
+  const ambientSel = !item && !((sel?.kind === "group" || sel?.kind === "multi") && selIds.length) && !wall
   const remove = () => {
     if (!sel) return
     if (sel.kind === "wall" ? !amb.walls.some((w) => w.id === sel.id) : !selIds.length) return setSel(null)
@@ -384,6 +398,8 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const nudge = (dx: number, dy: number) => selIds.length && change(moveItems(amb, selIds, dx, dy), true)
   /** Clic a un element (plànol o 3D), com Figma: si és d'un grup, el primer clic tria el grup i el segon, l'element. */
   const pickItem = (id: string): string[] => {
+    // Maj + clic: afegeix o treu l'element de la selecció (com a l'editor).
+    if (shiftRef.current) return toggleSel(id)
     const it = amb.items.find((i) => i.id === id)
     if (it?.group && !(sel?.kind === "group" && sel.id === it.group) && !(sel?.kind === "item" && sel.id === id)) {
       select({ kind: "group", id: it.group })
@@ -393,6 +409,25 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
     return [id]
   }
   const groupSel = (name: string) => select({ kind: "group", id: name })
+  // La petjada de cada element al plànol (alinear i repartir la selecció múltiple): la del moble buit, 600 × 600.
+  const boxOf = (i: AmbientItem) => {
+    const g = geos.get(i.id)
+    return g ? (isEmptyGeometry(g) ? footprintBox(i.x, i.y, 600, 600, i.rot) : footprintBox(i.x, i.y, g.w, g.d, i.rot)) : null
+  }
+  // Maj + clic (arbre, plànol o 3D): la tecla del clic (`pointerdown`), no cap estat desat.
+  const shiftRef = useRef(false)
+  useEffect(() => {
+    const down = (e: PointerEvent) => void (shiftRef.current = e.shiftKey)
+    window.addEventListener("pointerdown", down, true)
+    return () => window.removeEventListener("pointerdown", down, true)
+  }, [])
+  const toggleSel = (id: string): string[] => {
+    const next = selIds.includes(id) ? selIds.filter((x) => x !== id) : [...selIds, id]
+    if (next.length > 1) select({ kind: "multi", ids: next })
+    else if (next.length === 1) select({ kind: "item", id: next[0]! })
+    else select(null)
+    return next
+  }
 
   // Arbre: dos apartats, **Mobles** i **Objectes** (com «Peces lliures» i «Models 3D» de l'editor), cadascun amb els seus
   // elements i els grups (en l'ordre del primer element) amb els seus a dins. Un grup amb mobles i objectes surt als dos
@@ -487,9 +522,9 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
         iconColor={missing ? "fg.error" : isObjItem(it) ? "fg.muted" : "wood.fg"}
         label={label}
         hint={isEmptyGeometry(g) ? "Buit" : g ? `${Math.round(g.w)} × ${Math.round(g.d)}` : undefined}
-        selected={sel?.kind === "item" && sel.id === it.id}
+        selected={(sel?.kind === "item" && sel.id === it.id) || (sel?.kind === "multi" && sel.ids.includes(it.id))}
         highlighted={sel?.kind === "group" && sel.id === it.group}
-        onClick={() => (select({ kind: "item", id: it.id }), setTool("select"))}
+        onClick={() => (shiftRef.current ? toggleSel(it.id) : select({ kind: "item", id: it.id }), setTool("select"))}
         flags={itemFlags(it)}
         dnd={itemDnd(it)}
         menu={
@@ -778,6 +813,25 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                 onOpen={() => item.kind === "moble" && onOpenProject(item.projectId)}
                 onDuplicate={duplicate}
                 onDelete={remove}
+              />
+            ) : sel?.kind === "multi" && selIds.length > 1 ? (
+              <MultiInspector
+                items={amb.items.filter((i) => selIds.includes(i.id))}
+                names={names}
+                groups={groups}
+                onMove={(dx, dy) => nudge(dx, dy)}
+                onRotate={rotate}
+                onAlign={(axis, mode) => change(alignItems(amb, selIds, boxOf, axis, mode), true)}
+                onDistribute={(axis, gap) => change(distributeItems(amb, selIds, boxOf, axis, gap), true)}
+                onGroup={(g) => {
+                  const name = g ?? newItemGroupName(amb)
+                  change(setItemGroup(amb, selIds, name), true)
+                  groupSel(name)
+                }}
+                onUngroup={() => change(setItemGroup(amb, selIds, undefined), true)}
+                onDuplicate={duplicate}
+                onDelete={remove}
+                onPick={(id) => select({ kind: "item", id })}
               />
             ) : sel?.kind === "group" && selIds.length ? (
               <GroupInspector
@@ -1480,6 +1534,133 @@ function GroupInspector({
         <Text fontSize="xs" color="fg.muted">
           Com a l'editor: el primer clic a un element agrupat tria el grup; el segon, l'element.
         </Text>
+        </Stack>
+      </FoldItem>
+    </Stack>
+  )
+}
+
+/**
+ * Selecció múltiple (Maj + clic, com a l'editor): moure i girar tots junts, alinear i repartir al plànol, el grup de tots,
+ * la llista (tocar-ne un el tria sol), duplicar i eliminar.
+ */
+function MultiInspector({
+  items,
+  names,
+  groups,
+  onMove,
+  onRotate,
+  onAlign,
+  onDistribute,
+  onGroup,
+  onUngroup,
+  onDuplicate,
+  onDelete,
+  onPick,
+}: {
+  items: AmbientItem[]
+  names: Map<string, string>
+  groups: string[]
+  onMove: (dx: number, dy: number) => void
+  onRotate: (deg: number) => void
+  onAlign: (axis: "x" | "y", mode: "min" | "mid" | "max") => void
+  onDistribute: (axis: "x" | "y", gap?: number) => void
+  onGroup: (g?: string) => void
+  onUngroup: () => void
+  onDuplicate: () => void
+  onDelete: () => void
+  onPick: (id: string) => void
+}) {
+  const [gap, setGap] = useState(0)
+  const cx = Math.round((Math.min(...items.map((i) => i.x)) + Math.max(...items.map((i) => i.x))) / 2)
+  const cy = Math.round((Math.min(...items.map((i) => i.y)) + Math.max(...items.map((i) => i.y))) / 2)
+  const group = items.every((i) => i.group === items[0]!.group) ? (items[0]!.group ?? "") : undefined
+  return (
+    <Stack gap={0}>
+      <HStack gap={2} pb={2}>
+        <Box color="wood.fg">
+          <LuGroup />
+        </Box>
+        <Text fontWeight="semibold" flex={1} minW={0} truncate>
+          {items.length} elements
+        </Text>
+        <Tooltip content="Duplicar (Ctrl/⌘ D)">
+          <IconButton aria-label="Duplicar els triats" size="xs" variant="ghost" onClick={onDuplicate}>
+            <LuCopy />
+          </IconButton>
+        </Tooltip>
+        <Tooltip content="Eliminar (Supr)">
+          <IconButton aria-label="Eliminar els triats" size="xs" variant="ghost" colorPalette="red" onClick={onDelete}>
+            <LuTrash2 />
+          </IconButton>
+        </Tooltip>
+      </HStack>
+      <FoldItem id="amb-multi-place" title="Posició" icon={LuMove}>
+        <NumRow label="X (centre)" value={cx} step={10} onChange={(x) => Number.isFinite(x) && onMove(x - cx, 0)} />
+        <NumRow label="Y (centre)" value={cy} step={10} onChange={(y) => Number.isFinite(y) && onMove(0, y - cy)} />
+        <HStack gap={2}>
+          <Button size="xs" variant="outline" onClick={() => onRotate(-90)}>
+            <LuRotateCcw /> −90°
+          </Button>
+          <Button size="xs" variant="outline" onClick={() => onRotate(90)}>
+            <LuRotateCw /> +90° (R)
+          </Button>
+        </HStack>
+        <Text fontSize="xs" color="fg.muted">
+          Es mouen tots junts: arrossegant-los al plànol, amb les fletxes del 3D o del teclat, o aquí. Maj + clic n'afegeix o en treu.
+        </Text>
+      </FoldItem>
+      <FoldItem id="amb-multi-align" title="Alineació" icon={LuAlignCenterVertical}>
+        <NumRow label="Espai entre ells" value={gap} min={-5000} max={20000} step={5} help="Per al darrer botó de cada fila: el primer es queda i els altres es posen a aquest espai de l'anterior (0 = tocant-se)." onChange={(n) => Number.isFinite(n) && setGap(n)} />
+        {([
+          { axis: "x", label: "De costat (X)", opts: [["min", "A l'esquerra", LuAlignStartVertical], ["mid", "Al centre", LuAlignCenterVertical], ["max", "A la dreta", LuAlignEndVertical]] },
+          { axis: "y", label: "Fondària (Y del plànol)", opts: [["min", "A dalt del plànol", LuAlignStartHorizontal], ["mid", "Al mig", LuAlignCenterHorizontal], ["max", "A baix del plànol", LuAlignEndHorizontal]] },
+        ] as const).map(({ axis, label, opts }) => (
+          <FormRow key={axis} label={label}>
+            <HStack gap={1}>
+              {opts.map(([mode, name, Icon]) => (
+                <Tooltip key={mode} content={name}>
+                  <IconButton aria-label={`${label}: ${name}`} size="xs" variant="outline" onClick={() => onAlign(axis, mode)}>
+                    <Icon />
+                  </IconButton>
+                </Tooltip>
+              ))}
+              {items.length > 2 && (
+                <Tooltip content="Repartir (el mateix espai entre ells)">
+                  <IconButton aria-label={`${label}: repartir`} size="xs" variant="outline" onClick={() => onDistribute(axis)}>
+                    {axis === "y" ? <LuAlignVerticalDistributeCenter /> : <LuAlignHorizontalDistributeCenter />}
+                  </IconButton>
+                </Tooltip>
+              )}
+              <Tooltip content={`Repartir amb ${gap} mm entre ells`}>
+                <IconButton aria-label={`${label}: repartir amb ${gap} mm`} size="xs" variant="outline" onClick={() => onDistribute(axis, gap)}>
+                  {axis === "y" ? <LuAlignVerticalSpaceAround /> : <LuAlignHorizontalSpaceAround />}
+                </IconButton>
+              </Tooltip>
+            </HStack>
+          </FormRow>
+        ))}
+        <Text fontSize="xs" color="fg.muted">
+          Respecte de la caixa de tots els triats al plànol. «Repartir», amb tres o més: el primer i l'últim es queden i els del mig es posen amb el mateix espai entre ells.
+        </Text>
+      </FoldItem>
+      <FoldItem id="amb-multi-group" title="Grup" icon={LuGroup} badge={group === undefined ? "Diversos" : group || "Sense grup"} badgePalette={group ? "wood" : "gray"}>
+        <FormRow label="Grup" help={group === undefined ? "Diversos: el grup que triïs va a tots." : "El grup de tots els triats."}>
+          <ChoiceChips
+            label="Grup"
+            options={[{ id: "", label: "Sense grup" }, ...groups.map((g) => ({ id: g, label: g })), { id: "__new__", label: "+ Grup nou" }]}
+            value={group ?? "__diversos__"}
+            onChange={(v) => (v === "__new__" ? onGroup() : v ? onGroup(v) : onUngroup())}
+          />
+        </FormRow>
+      </FoldItem>
+      <FoldItem id="amb-multi-items" title="Triats" icon={LuGroup} badge={items.length}>
+        <Stack gap={1}>
+          {items.map((i) => (
+            <Button key={i.id} size="xs" variant="ghost" justifyContent="flex-start" onClick={() => onPick(i.id)}>
+              {names.get(i.id)}
+            </Button>
+          ))}
         </Stack>
       </FoldItem>
     </Stack>

@@ -10,7 +10,8 @@ export interface View {
 
 export type Tool = "select" | "wall" | "room" | "window" | "door" | "calibrate"
 /** Selecció: un element, una paret o un grup d'elements (`id` = nom del grup). */
-export type Selection = { kind: "item" | "wall" | "group"; id: string } | null
+/** Un element, una paret, un grup o, amb Maj + clic, diversos elements (`multi`). */
+export type Selection = { kind: "item" | "wall" | "group"; id: string } | { kind: "multi"; ids: string[] } | null
 
 export const GRID = 10
 
