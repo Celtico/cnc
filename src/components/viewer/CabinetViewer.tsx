@@ -139,6 +139,8 @@ export interface CabinetViewerProps {
   initialCamera?: CameraPose
   /** La càmera de la vista 3D s'ha quedat quieta (1 s després de moure-la o d'enquadrar): per desar-la. */
   onCameraChange?: (camera: CameraPose) => void
+  /** Posa la càmera en aquesta posició (desfer/refer d'una càmera): cada `n` nou hi va, sense animació ni desar-la. */
+  cameraGoto?: { pose: CameraPose; n: number } | null
 }
 
 export function CabinetViewer({
@@ -185,6 +187,7 @@ export function CabinetViewer({
   onFramedChange,
   initialCamera,
   onCameraChange,
+  cameraGoto,
   sceneFinish,
 }: CabinetViewerProps) {
   // Per distingir un clic a l'espai buit d'un gir de càmera (arrossegar).
@@ -529,7 +532,7 @@ export function CabinetViewer({
           resolution={q.contactResolution}
         />
       )}
-      <CameraRig size={size} viewDir={viewDir} fitKey={fitKey} onFramedChange={onFramedChange} initialCamera={initialCamera} onCameraChange={onCameraChange} />
+      <CameraRig size={size} viewDir={viewDir} fitKey={fitKey} onFramedChange={onFramedChange} initialCamera={initialCamera} onCameraChange={onCameraChange} cameraGoto={cameraGoto} />
       {onCapture && <Capture onCapture={onCapture} gridRef={gridRef} />}
       {onSceneAccess && <SceneAccess onAccess={onSceneAccess} />}
     </Canvas>
@@ -598,7 +601,8 @@ export function MovingPanel({ transform, children }: { transform: ReturnType<typ
 }
 
 /** Distància màxima de la càmera de l'editor (m). */
-const MAX_DISTANCE = 12
+// Zoom amb més marge (per decisió de l'usuari, 2026-10-14): de 2 cm fins a 60 m.
+const MAX_DISTANCE = 60
 
 /** Direcció de la càmera d'«Enquadrar» (3/4) i de cada vista. */
 const FIT_DIR: [number, number, number] = [0.72, 0.45, 0.95]
@@ -615,7 +619,7 @@ const VIEW_DIR: Record<ViewName, [number, number, number]> = {
  * des del 3/4 («Enquadrar») o del costat de la vista triada (`viewDir`), amb transició suau. Editar el moble (mides,
  * mòduls, objectes) no la mou: es queda on l'has deixat.
  */
-function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCameraChange }: { size: CabinetViewerProps["size"]; viewDir: ViewName | null; fitKey: number; onFramedChange?: (framed: boolean) => void; initialCamera?: CameraPose; onCameraChange?: (camera: CameraPose) => void }) {
+function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCameraChange, cameraGoto }: { size: CabinetViewerProps["size"]; viewDir: ViewName | null; fitKey: number; onFramedChange?: (framed: boolean) => void; initialCamera?: CameraPose; onCameraChange?: (camera: CameraPose) => void; cameraGoto?: { pose: CameraPose; n: number } | null }) {
   const controls = useRef<OrbitControlsImpl>(null)
   const { camera, size: viewport, invalidate } = useThree()
   const w = size.width * S
@@ -744,6 +748,22 @@ function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCam
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [camera, viewDir, viewport.width, viewport.height, fitKey])
 
+  // Desfer/refer d'una càmera: hi va de seguida (sense animació) i es queda com la restaurada (redimensionar no la treu).
+  useEffect(() => {
+    if (!cameraGoto || viewDir) return
+    const p = cameraGoto.pose
+    goal.current = null
+    clearTimeout(reportTimer.current)
+    pendingReport.current = null
+    restored.current = p
+    camera.position.set(...p.position)
+    controls.current?.target.set(...p.target)
+    controls.current?.update()
+    setFramed(false)
+    invalidate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cameraGoto?.n])
+
   useFrame((st, dt) => {
     const g = goal.current
     if (!g) {
@@ -771,7 +791,7 @@ function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCam
   return (
     <>
       {viewDir ? <OrthographicCamera makeDefault near={0.01} far={100} position={[0, 1, 20]} zoom={300} /> : <PerspectiveCamera makeDefault fov={38} near={0.01} far={100} position={[1.4, 1.1, 1.9]} />}
-      <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={viewDir ? 40 : MAX_DISTANCE} maxPolarAngle={viewDir ? Math.PI : Math.PI * 0.55} onStart={() => {
+      <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={0.12} minDistance={0.02} maxDistance={viewDir ? 80 : MAX_DISTANCE} minZoom={20} maxZoom={20000} maxPolarAngle={viewDir ? Math.PI : Math.PI * 0.55} onStart={() => {
           goal.current = null
           restored.current = null
           setFramed(false)

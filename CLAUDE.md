@@ -1036,7 +1036,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   l'usuari, 2026-10-14): en **verd** si toquen alguna peça (`CompositionBuild.cutting`, de `applyRefCuts`) i en **vermell** si no
   en toquen cap (mal col·locats) o tenen un avís; seleccionats, en taronja. Els forats del mòdul seleccionat es marquen en taronja a través de les portes (`CableMarks`).
 - **Desfer/refer** (⌘Z, ⇧⌘Z, Ctrl Y; vegeu «Desfer/refer comú» a Mòduls compartits): 50 passos, canvis a menys de
-  500 ms = un pas (escriure «1180», arrossegar el gizmo); la càmera i la miniatura en queden fora. No als camps de text
+  500 ms = un pas (escriure «1180», arrossegar el gizmo); cada càmera desada també és un pas; la miniatura en queda fora. No als camps de text
   lliure ni dins d'un diàleg ni amb un diàleg modal obert (amb l'editor de perfils obert, ⌘Z desfeia el moble del darrere).
 - **Teclat**: Ctrl/⌘ C · X · V · D i Supr per al mòdul, l'objecte, el model o el compartiment (`core/model/editOps.ts`);
   per a un ferratge col·locat, Ctrl/⌘ D (duplicar) i Supr (sense porta-retalls). El
@@ -1055,8 +1055,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Càmera**: s'enquadra en obrir, triar una vista, redimensionar o amb «Enquadrar» (`LuVideo`); editar no la mou. El botó
   surt **marcat** mentre la càmera és a l'enquadrament (`onFramedChange`). **Es recorda per moble** (`Composition.camera`,
   `CameraPose` a `core/model/camera.ts`: posició, punt mirat i fov; una de no vàlida es descarta): 1 s després d'orbitar,
-  d'«Enquadrar» o de triar una vista es desa amb `saveProjectCamera`, **sense tocar `updatedAt` ni `edited`** i fora del
-  desfer; `updateProjectComposition` conserva la desada. En obrir-lo `CabinetViewer initialCamera` hi torna; redimensionar no
+  d'«Enquadrar» o de triar una vista es desa amb `saveProjectCamera`, **sense tocar `updatedAt` ni `edited`**; és **un pas
+  del desfer** (per decisió de l'usuari, 2026-10-14: l'historial de l'editor és `{ comp, cam }`; ⌘Z / ⇧⌘Z hi tornen, el
+  visor hi va amb `CabinetViewer cameraGoto` i es desa); el **zoom** va de 2 cm a 60 m (`MAX_DISTANCE`); `updateProjectComposition` conserva la desada. En obrir-lo `CabinetViewer initialCamera` hi torna; redimensionar no
   la treu fins que s'orbita, s'enquadra o es tria una vista. Va al `.moble`.
 - **Editor de perfils** (`composition/ProfileEditor.tsx`, com el mode vector de Figma): **Moure** (nodes i manegadors en
   rombe; Alt trenca el reflex; doble clic node ↔ corba), **Ploma** (clic = cantonada, clic i arrossegar = manegadors

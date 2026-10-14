@@ -166,9 +166,16 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   // La lectura en obrir-lo (la de després de cada desada ja no cal: és la que hem desat).
   const [read] = useState(readNow)
   // Composició amb desfer/refer (`useHistory`, fins a 50 passos). Canvis seguits (menys de 500 ms entre ells, p. ex.
-  // escriure "1180" o arrossegar) compten com un sol pas. La càmera i la miniatura es desen a part (fora del desfer).
-  const history = useHistory<Composition>(initial, { limit: 50, coalesceMs: 500 })
-  const { value: comp, set: setComp, undo, redo, commit: commitHistory } = history
+  // escriure "1180" o arrossegar) compten com un sol pas. La càmera del 3D també és un pas (per decisió de l'usuari,
+  // 2026-10-14: ⌘Z la torna on era), però es desa a part (sense «Modificat»); la miniatura, fora del desfer.
+  const history = useHistory<{ comp: Composition; cam?: CameraPose }>({ comp: initial, ...(initial.camera ? { cam: initial.camera } : {}) }, { limit: 50, coalesceMs: 500 })
+  const { set: setDoc, undo, redo, commit: commitHistory } = history
+  const comp = history.value.comp
+  const setComp = useCallback(
+    (next: Composition | ((cur: Composition) => Composition), opts?: { commit?: boolean; group?: string }) =>
+      setDoc((h) => ({ ...h, comp: typeof next === "function" ? next(h.comp) : next }), opts),
+    [setDoc],
+  )
   // L'assistent IA llegeix la composició d'ara i hi aplica els canvis en viu; en acabar el torn, un sol pas de desfer.
   const compRef = useRef(comp)
   compRef.current = comp
@@ -199,9 +206,20 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     (c: CameraPose) => {
       cameraRef.current = c
       void saveProjectCamera(projectId, c)
+      // Un pas de desfer (sense ajuntar-lo amb un canvi del moble).
+      setDoc((h) => ({ ...h, cam: c }), { group: `cam-${Date.now()}` })
     },
-    [projectId],
+    [projectId, setDoc],
   )
+  // Desfer/refer que torna una càmera d'abans: el visor hi va i es desa.
+  const [cameraGoto, setCameraGoto] = useState<{ pose: CameraPose; n: number } | null>(null)
+  const histCam = history.value.cam
+  useEffect(() => {
+    if (!histCam || histCam === cameraRef.current) return
+    cameraRef.current = histCam
+    void saveProjectCamera(projectId, histCam)
+    setCameraGoto((g) => ({ pose: histCam, n: (g?.n ?? 0) + 1 }))
+  }, [histCam, projectId])
   // El botó d'enquadrar surt marcat mentre la càmera és a l'enquadrament.
   const [framed, setFramed] = useState(true)
   const [showHoles, setShowHoles] = useState(false)
@@ -1478,6 +1496,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             onFramedChange={setFramed}
             initialCamera={cameraRef.current}
             onCameraChange={saveCamera}
+            cameraGoto={cameraGoto}
             onMoveRef={selectionLocked ? undefined : (id, pos) => (id.startsWith("part:") ? movePart(id.slice(5), pos) : moveRef(id, pos))}
             hardware={hardware}
             onSceneAccess={registerScene}
