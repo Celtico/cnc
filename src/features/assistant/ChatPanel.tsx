@@ -290,7 +290,7 @@ export default function ChatPanel({ settings, target, onClose, closeRequest = 0 
               </Dialog.Header>
               <Dialog.Body>
                 <Text>
-                  La conversa d'ara s'esborra: no es desa.{running ? " La resposta que està escrivint s'aturarà." : ""} Els canvis que ha fet als mobles i ambients es queden (es poden desfer amb ⌘Z).
+                  Perdràs el context que teníeu: la conversa d'ara s'esborra i l'assistent no recordarà res del que heu parlat.{running ? " La resposta que està escrivint s'aturarà." : ""} Els canvis que ha fet als mobles i ambients es queden (es poden desfer amb ⌘Z).
                 </Text>
               </Dialog.Body>
               <Dialog.Footer>
