@@ -1466,7 +1466,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   `TreeSection onAdd`, el + obre la galeria de Mobles o d'Objectes), cadascun amb els seus elements i grups (els blocs
   d'abans, a Objectes; un moble que ja no hi és, a Mobles, amb `LuTriangleAlert`). **Un grup amb mobles i objectes surt
   als dos apartats**, a cadascun amb els seus (plegat per apartat); triar-lo des de qualsevol tria tot el grup (les dues
-  files queden marcades). **Selecció múltiple** (Maj + clic a l'arbre, al plànol o al 3D, com a l'editor; `Selection` `{ kind: "multi", ids }`, `selIds`): moure (arrossegar, fletxes, X/Y del centre), girar, duplicar, eliminar, **Alineació** al plànol (X i Y: inici, mig, final; «Repartir» amb tres o més i amb un «Espai entre ells»; `alignItems`, `distributeItems` amb la petjada de cada element) i el **Grup** de tots (`MultiInspector` dels Ambients; ⌘G grup nou, ⇧⌘G fora del grup, com a l'editor). **Arrossegar per ordenar** (per decisió de l'usuari, 2026-10-14, com les peces lliures de
+  files queden marcades). **Selecció múltiple** (Maj + clic a l'arbre, al plànol o al 3D, com a l'editor; `Selection` `{ kind: "multi", ids }`, `selIds`; **també les parets**, `selWallIds`: a l'arbre i al plànol, es mouen —arrossegant-ne una de triada, fletxes, X/Y—, s'agrupen i s'eliminen amb els elements; `moveWalls`; les parets poden ser de grups, `Wall.group`, el mateix espai de noms que els elements, `groupWallIds`, `setWallGroup`, plegables dins de «Parets»): moure (arrossegar, fletxes, X/Y del centre), girar, duplicar, eliminar, **Alineació** al plànol (X i Y: inici, mig, final; «Repartir» amb tres o més i amb un «Espai entre ells»; `alignItems`, `distributeItems` amb la petjada de cada element) i el **Grup** de tots (`MultiInspector` dels Ambients; ⌘G grup nou, ⇧⌘G fora del grup, com a l'editor). **Arrossegar per ordenar** (per decisió de l'usuari, 2026-10-14, com les peces lliures de
   l'editor; `reorderItems`, `moveItemToGroup` a `core/model/ambient.ts`): un element deixat al costat d'un altre n'agafa
   el grup, sobre la fila d'un grup hi entra, la fila del grup arrossega el grup sencer i, mentre s'arrossega un element d'un
   grup, surt la zona «Treure del grup». Un moble buit (sense mòduls ni peces, `isEmptyGeometry`) diu «Buit» a l'arbre, al plànol és el
@@ -1478,7 +1478,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Plànol** (`PlanCanvas`, com Figma): roda o dos dits per desplaçar, Ctrl/⌘ + roda o pessigar per fer zoom al punt, espai
   + arrossegar; − / + i l'escala (1:50…) a baix a la dreta; la barra d'eines flota a dalt. Eines en columna a l'esquerra: **Seleccionar** (V), **Paret** (P,
   ploma: angle a 15°, imant als extrems, clicar el primer punt tanca, Retorn/Esc/doble clic acaben; **clic i arrossegar fa
-  la nansa del punt, com Figma: parets corbes**, Bézier cúbica, `Wall.curve` `{ c1, c2 }`, per decisió de l'usuari, 2026-10-14;
+  la nansa del punt, com Figma: parets corbes** (la nansa i el tram corb es veuen mentre es dibuixa; **Maj = el tram recte**,
+  sense nansa; Alt, del tot lliure), Bézier cúbica, `Wall.curve` `{ c1, c2 }`, per decisió de l'usuari, 2026-10-14;
   triada, els dos punts de control són rombes que s'arrosseguen; a l'inspector «Forma» Recta · Corba; una corba no porta
   obertures; al 3D, al render i a les miniatures és una làmina llisa que segueix la corba, en 16 trossos per a la casa de nines (`curvedWallPieces`, 128 mostres i normals de tota la corba); l'imant la fa de trams rectes, `expandWalls`/`wallPoints`; `wallLength`, la
   de la corba), **Habitació** (H, rectangle → 4 parets),

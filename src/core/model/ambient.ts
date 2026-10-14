@@ -59,6 +59,8 @@ export const WallSchema = z.object({
    * amb els dos punts de control (mm del plànol). Sense, recta. Una paret corba no porta obertures.
    */
   curve: z.object({ c1: Pt, c2: Pt }).optional(),
+  /** Grup (nom), el mateix espai de noms que els dels elements: un grup pot tenir parets, mobles i objectes. */
+  group: z.string().optional(),
 })
 export type Wall = z.infer<typeof WallSchema>
 
@@ -621,7 +623,7 @@ export const groupIds = (a: Ambient, group: string) => a.items.filter((i) => i.g
 
 /** Nom de grup nou que no existeixi («Grup 1», «Grup 2»…). */
 export function newItemGroupName(a: Ambient): string {
-  const used = new Set(a.items.map((i) => i.group).filter(Boolean))
+  const used = new Set([...a.items.map((i) => i.group), ...a.walls.map((w) => w.group)].filter(Boolean))
   let n = 1
   while (used.has(`Grup ${n}`)) n++
   return `Grup ${n}`
@@ -894,4 +896,30 @@ export function distributeItems(a: Ambient, ids: readonly string[], boxOf: ItemB
     at += b.hi - b.lo + g
   }
   return { ...a, items: a.items.map((i) => (d.has(i.id) ? { ...i, [axis]: i[axis] + d.get(i.id)! } : i)) }
+}
+
+
+// --- Parets a la selecció múltiple i als grups (com els elements; per decisió de l'usuari, 2026-10-14) ----------------
+
+/** Ids de les parets d'un grup. */
+export const groupWallIds = (a: Ambient, group: string) => a.walls.filter((w) => w.group === group).map((w) => w.id)
+
+/** Mou les parets (mm): els extrems i, corbes, els punts de control. Les obertures es queden al seu lloc de la paret. */
+export function moveWalls(a: Ambient, ids: readonly string[], dx: number, dy: number): Ambient {
+  if (!ids.length || (!dx && !dy)) return a
+  const t = (p: PlanPt): PlanPt => [p[0] + dx, p[1] + dy]
+  return { ...a, walls: a.walls.map((w) => (ids.includes(w.id) ? { ...w, a: t(w.a), b: t(w.b), ...(w.curve ? { curve: { c1: t(w.curve.c1), c2: t(w.curve.c2) } } : {}) } : w)) }
+}
+
+/** Posa o treu (`group` buit) les parets en un grup. */
+export function setWallGroup(a: Ambient, ids: readonly string[], group: string | undefined): Ambient {
+  return {
+    ...a,
+    walls: a.walls.map((w) => {
+      if (!ids.includes(w.id)) return w
+      const { group: _g, ...rest } = w
+      void _g
+      return group ? { ...rest, group } : rest
+    }),
+  }
 }

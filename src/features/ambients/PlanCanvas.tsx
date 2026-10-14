@@ -1,7 +1,7 @@
 import { Box, HStack, IconButton, Text } from "@chakra-ui/react"
 import { LuMinus, LuPlus } from "react-icons/lu"
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as RPointerEvent } from "react"
-import { expandWalls, footprintBox, newId, wallPoints, roomWalls, snapToWalls, wallCorners, wallLength, addOpening, clampOpening, nearestWall, setWallEnds, type Ambient, type AmbientItem, type PlanPt, type Wall } from "../../core/model"
+import { expandWalls, footprintBox, moveWalls, newId, wallPoints, roomWalls, snapToWalls, wallCorners, wallLength, addOpening, clampOpening, nearestWall, setWallEnds, type Ambient, type AmbientItem, type PlanPt, type Wall } from "../../core/model"
 import { toaster } from "../../components/ui/toaster"
 import { formatLength, useUnit } from "../units"
 import { isEmptyGeometry, type ItemGeometry } from "./ambientData"
@@ -33,7 +33,7 @@ type Joined = { id: string; end: "a" | "b" }
 
 type Drag =
   | { kind: "pan"; x: number; y: number; view: View }
-  | { kind: "item"; ids: string[]; start: PlanPt; from: Map<string, PlanPt>; moved: boolean }
+  | { kind: "item"; ids: string[]; start: PlanPt; from: Map<string, PlanPt>; moved: boolean; walls?: Wall[] }
   | { kind: "wall"; id: string; start: PlanPt; a: PlanPt; b: PlanPt; moved: boolean; walls: Map<string, Wall>; joinedA: Joined[]; joinedB: Joined[] }
   | { kind: "end"; id: string; end: "a" | "b"; start: PlanPt; orig: PlanPt; moved: boolean; walls: Map<string, Wall>; joined: Joined[] }
   | { kind: "room"; start: PlanPt; cur: PlanPt }
@@ -59,6 +59,8 @@ export function PlanCanvas({
   selectedIds,
   onSelect,
   onPickItem,
+  onPickWall,
+  selectedWallIds = [],
   tool,
   onToolDone,
   onChange,
@@ -81,6 +83,10 @@ export function PlanCanvas({
   onSelect: (s: Selection) => void
   /** Clic a un element: tria què se selecciona (el grup o l'element, com Figma) i torna els ids a moure. */
   onPickItem: (id: string) => string[]
+  /** Clic a una paret: tria què se selecciona (la paret, el seu grup o, amb Maj, la selecció múltiple) i torna els ids a moure. */
+  onPickWall?: (id: string) => string[]
+  /** Parets triades a la selecció múltiple o d'un grup (es marquen com la triada). */
+  selectedWallIds?: string[]
   tool: Tool
   onToolDone: () => void
   /** `commit`: afegir un pas de desfer (en deixar anar); si no, és un canvi en viu. */
@@ -99,6 +105,8 @@ export function PlanCanvas({
   const [chain, setChain] = useState<PlanPt[]>([])
   // La nansa de sortida de l'últim punt de la ploma (clic i arrossegar): la paret següent en surt corba.
   const [penOut, setPenOut] = useState<PlanPt | null>(null)
+  // Maj apretada a la ploma: el tram surt recte (sense la nansa).
+  const [penStraight, setPenStraight] = useState(false)
   const [cursor, setCursor] = useState<PlanPt | null>(null)
   const [calib, setCalib] = useState<PlanPt[]>([])
   const pointers = useRef(new Map<number, { x: number; y: number }>())
@@ -183,7 +191,7 @@ export function PlanCanvas({
 
   const tolMm = 12 / view.s
 
-  /** Punt de la ploma: imant als extrems i angle a 15° (Maj: sense angle, a la quadrícula; Alt: del tot lliure, al mm). */
+  /** Punt de la ploma: imant als extrems i angle a 15° (Maj: el tram recte, sense nansa; Alt: del tot lliure, al mm). */
   const penPoint = (raw: PlanPt, e: { shiftKey: boolean; altKey: boolean }): PlanPt => {
     if (!e.altKey && show.snap) {
       const first = chain[0]
@@ -193,7 +201,7 @@ export function PlanCanvas({
     }
     if (e.altKey) return [Math.round(raw[0]), Math.round(raw[1])]
     const last = chain.at(-1)
-    if (last && !e.shiftKey) return snapAngle(last, raw)
+    if (last) return snapAngle(last, raw)
     return [snapGrid(raw[0]), snapGrid(raw[1])]
   }
 
@@ -219,7 +227,7 @@ export function PlanCanvas({
       let wallId: string | undefined
       if (last) {
         // La nansa del punt d'abans (clic i arrossegar) fa la paret corba: surt amb aquella direcció.
-        const w: Wall = { id: newId("w"), a: last, b: q, thickness: wallDefaults.thickness, height: wallDefaults.height, ...(penOut ? { curve: { c1: [last[0] + penOut[0], last[1] + penOut[1]] as PlanPt, c2: q } } : {}) }
+        const w: Wall = { id: newId("w"), a: last, b: q, thickness: wallDefaults.thickness, height: wallDefaults.height, ...(penOut && !e.shiftKey ? { curve: { c1: [last[0] + penOut[0], last[1] + penOut[1]] as PlanPt, c2: q } } : {}) }
         wallId = w.id
         onChange({ ...ambient, walls: [...ambient.walls, w] }, true)
       }
@@ -285,7 +293,10 @@ export function PlanCanvas({
     }
     const p = toWorld(e.clientX, e.clientY)
     const g = drag.current
-    if (tool === "wall") setCursor(penPoint(p, e))
+    if (tool === "wall") {
+      setCursor(penPoint(p, e))
+      if (penStraight !== e.shiftKey) setPenStraight(e.shiftKey)
+    }
     else if (tool === "calibrate") setCursor(p)
     if (!g) return
     if (g.kind === "pan") {
@@ -313,7 +324,9 @@ export function PlanCanvas({
           oy = Math.round(sn.y - f[1])
         }
       }
-      onChange({ ...ambient, items: ambient.items.map((it) => {
+      // Les parets de la selecció, des d'on eren en començar.
+      const walls = g.walls?.length ? ambient.walls.map((w) => moveWalls({ ...ambient, walls: g.walls! }, g.walls!.map((q) => q.id), ox, oy).walls.find((q) => q.id === w.id) ?? w) : ambient.walls
+      onChange({ ...ambient, walls, items: ambient.items.map((it) => {
         const f = g.from.get(it.id)
         return f ? { ...it, x: f[0] + ox, y: f[1] + oy } : it
       }) }, false)
@@ -332,8 +345,17 @@ export function PlanCanvas({
       const q: PlanPt = e.altKey ? [Math.round(p[0]), Math.round(p[1])] : [snapGrid(p[0]), snapGrid(p[1])]
       onChange({ ...ambient, walls: ambient.walls.map((x) => (x.id === g.id && x.curve ? { ...x, curve: { ...x.curve, [g.c]: q } } : x)) }, false)
     } else if (g.kind === "pen") {
-      // Ploma: clic i arrossegar = la nansa del punt (la paret que hi acaba es corba; la següent en sortirà corba).
+      // Ploma: clic i arrossegar = la nansa del punt (la paret que hi acaba es corba; la següent en sortirà corba). Amb Maj,
+      // recta: sense nansa.
       const h: PlanPt = [Math.round(p[0] - g.at[0]), Math.round(p[1] - g.at[1])]
+      if (e.shiftKey) {
+        setPenOut(null)
+        if (g.wallId) {
+          const id = g.wallId
+          onChange({ ...ambient, walls: ambient.walls.map((x) => (x.id === id && x.curve ? { ...x, curve: x.curve.c1[0] === x.a[0] && x.curve.c1[1] === x.a[1] ? undefined : { ...x.curve, c2: x.b } } : x)) }, false)
+        }
+        return
+      }
       if (Math.hypot(h[0], h[1]) * view.s < 4) return
       g.moved = true
       setPenOut(h)
@@ -398,14 +420,22 @@ export function PlanCanvas({
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     const ids = onPickItem(it.id)
     const from = new Map(ambient.items.filter((x) => ids.includes(x.id)).map((x) => [x.id, [x.x, x.y] as PlanPt]))
-    drag.current = { kind: "item", ids, start: toWorld(e.clientX, e.clientY), from, moved: false }
+    // Les parets de la selecció (múltiple o d'un grup) es mouen amb els elements.
+    const walls = ambient.walls.filter((w) => ids.includes(w.id))
+    drag.current = { kind: "item", ids: ids.filter((id) => from.has(id)), start: toWorld(e.clientX, e.clientY), from, moved: false, ...(walls.length ? { walls } : {}) }
   }
   const startWall = (e: RPointerEvent, w: Wall) => {
     if (tool !== "select" || e.button === 1 || space.current) return
     e.stopPropagation()
     ;(host.current as Element).setPointerCapture?.(e.pointerId)
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
-    onSelect({ kind: "wall", id: w.id })
+    const ids = onPickWall ? onPickWall(w.id) : (onSelect({ kind: "wall", id: w.id }), [w.id])
+    // Més d'una (selecció múltiple o grup): es mouen totes les triades, i els elements, juntes.
+    if (ids.length > 1 || !ids.includes(w.id)) {
+      const from = new Map(ambient.items.filter((x) => ids.includes(x.id)).map((x) => [x.id, [x.x, x.y] as PlanPt]))
+      drag.current = { kind: "item", ids: [...from.keys()], start: toWorld(e.clientX, e.clientY), from, moved: false, walls: ambient.walls.filter((q) => ids.includes(q.id)) }
+      return
+    }
     drag.current = { kind: "wall", id: w.id, start: toWorld(e.clientX, e.clientY), a: w.a, b: w.b, moved: false, walls: wallMap(ambient.walls), joinedA: joinedAt(ambient.walls, w.a, w.id), joinedB: joinedAt(ambient.walls, w.b, w.id) }
   }
   const startOpening = (e: RPointerEvent, w: Wall, index: number) => {
@@ -533,7 +563,7 @@ export function PlanCanvas({
               return <rect x={x0 - px(6)} y={y0 - px(6)} width={x1 - x0 + px(12)} height={y1 - y0 + px(12)} fill="none" stroke={C.accent} strokeWidth={px(1.5)} strokeDasharray={`${px(6)} ${px(4)}`} style={{ pointerEvents: "none" }} />
             })()}
           {ambient.walls.map((w) => {
-            const sel = selWall?.id === w.id
+            const sel = selWall?.id === w.id || selectedWallIds.includes(w.id)
             // Paret corba: la Bézier amb el gruix de la paret.
             if (w.curve)
               return (
@@ -624,7 +654,27 @@ export function PlanCanvas({
           {/* Ploma: punts posats i tram de previsualització amb la mida. */}
           {tool === "wall" && chain.length > 0 && (
             <g style={{ pointerEvents: "none" }}>
-              <polyline points={[...chain, ...(cursor ? [cursor] : [])].map((p) => p.join(",")).join(" ")} fill="none" stroke={C.accent} strokeWidth={wallDefaults.thickness} strokeOpacity={0.35} strokeLinejoin="miter" />
+              {/* El tram que es dibuixa ara (els d'abans ja són parets): corb amb la nansa del darrer punt, recte amb Maj. */}
+              {cursor && (() => {
+                const last = chain.at(-1)!
+                const h = penStraight ? null : penOut
+                const d = h ? `M ${last[0]} ${last[1]} C ${last[0] + h[0]} ${last[1] + h[1]} ${cursor[0]} ${cursor[1]} ${cursor[0]} ${cursor[1]}` : `M ${last[0]} ${last[1]} L ${cursor[0]} ${cursor[1]}`
+                return <path d={d} fill="none" stroke={C.accent} strokeWidth={wallDefaults.thickness} strokeOpacity={0.35} />
+              })()}
+              {/* La nansa del darrer punt (clic i arrossegar, com Figma): la línia i els dos rombes. */}
+              {penOut && !penStraight && (() => {
+                const last = chain.at(-1)!
+                const ends: PlanPt[] = [[last[0] - penOut[0], last[1] - penOut[1]], [last[0] + penOut[0], last[1] + penOut[1]]]
+                const r = px(4)
+                return (
+                  <g>
+                    <line x1={ends[0]![0]} y1={ends[0]![1]} x2={ends[1]![0]} y2={ends[1]![1]} stroke={C.accent} strokeWidth={px(1)} />
+                    {ends.map((q, i) => (
+                      <rect key={i} x={q[0] - r} y={q[1] - r} width={2 * r} height={2 * r} transform={`rotate(45 ${q[0]} ${q[1]})`} fill="white" stroke={C.accent} strokeWidth={px(1.5)} />
+                    ))}
+                  </g>
+                )
+              })()}
               {chain.map((p, i) => (
                 <circle key={i} cx={p[0]} cy={p[1]} r={px(4)} fill={i === 0 ? C.accent : "white"} stroke={C.accent} strokeWidth={px(1.5)} />
               ))}

@@ -250,3 +250,19 @@ describe("mides generals d'un objecte amb models girats", async () => {
     expect([next.models![0]!.w, next.models![0]!.d]).toEqual([200, 200])
   })
 })
+
+describe("parets a la selecció múltiple i als grups", async () => {
+  const m = await import("./ambient")
+  const w = (id: string) => ({ id, a: [0, 0] as [number, number], b: [1000, 0] as [number, number], thickness: 100, height: 2500 })
+  const a = { ...m.EMPTY_AMBIENT, walls: [w("a"), { ...w("b"), curve: { c1: [0, 500] as [number, number], c2: [1000, 500] as [number, number] } }] }
+  it("moure i agrupar parets", () => {
+    const moved = m.moveWalls(a, ["b"], 10, 20)
+    expect(moved.walls[1]!.a).toEqual([10, 20])
+    expect(moved.walls[1]!.curve!.c1).toEqual([10, 520])
+    expect(moved.walls[0]!.a).toEqual([0, 0])
+    const g = m.setWallGroup(a, ["a", "b"], "G")
+    expect(m.groupWallIds(g, "G")).toEqual(["a", "b"])
+    expect(m.newItemGroupName(g)).toBe("Grup 1")
+    expect(m.setWallGroup(g, ["a"], undefined).walls[0]!.group).toBeUndefined()
+  })
+})

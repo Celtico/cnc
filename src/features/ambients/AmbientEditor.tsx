@@ -94,7 +94,10 @@ import {
   alignItems,
   distributeItems,
   footprintBox,
+  groupWallIds,
   keepLocked,
+  moveWalls,
+  setWallGroup,
   mergeHidden,
   moveItemToGroup,
   reorderItems,
@@ -368,14 +371,16 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   // Després de desfer, la selecció pot apuntar a un element que ja no hi és: llavors no es fa res (si no,
   // una fletxa o Supr afegien un pas buit de desfer i es perdia el refer).
   const selIds = sel?.kind === "item" ? (amb.items.some((i) => i.id === sel.id) ? [sel.id] : []) : sel?.kind === "group" ? groupIds(amb, sel.id) : sel?.kind === "multi" ? sel.ids.filter((id) => amb.items.some((i) => i.id === id)) : []
+  // Les parets de la selecció múltiple o del grup (una paret sola és `wall`).
+  const selWallIds = sel?.kind === "group" ? groupWallIds(amb, sel.id) : sel?.kind === "multi" ? sel.ids.filter((id) => amb.walls.some((w) => w.id === id)) : []
   // L'ambient és el seleccionat quan no n'hi ha cap altre (clic al buit, Esc, la fila de dalt de l'arbre): com el moble a
   // l'editor. Una selecció que ja no hi és (després de desfer) també torna a l'ambient.
-  const ambientSel = !item && !((sel?.kind === "group" || sel?.kind === "multi") && selIds.length) && !wall
+  const ambientSel = !item && !((sel?.kind === "group" || sel?.kind === "multi") && selIds.length + selWallIds.length) && !wall
   const remove = () => {
     if (!sel) return
-    if (sel.kind === "wall" ? !amb.walls.some((w) => w.id === sel.id) : !selIds.length) return setSel(null)
+    if (sel.kind === "wall" ? !amb.walls.some((w) => w.id === sel.id) : !selIds.length && !selWallIds.length) return setSel(null)
     if (sel.kind === "wall") change({ ...amb, walls: amb.walls.filter((w) => w.id !== sel.id) }, true)
-    else change(removeItems(amb, selIds), true)
+    else change({ ...removeItems(amb, selIds), walls: amb.walls.filter((w) => !selWallIds.includes(w.id)) }, true)
     setSel(null)
   }
   const duplicate = () => {
@@ -416,7 +421,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
     setSel(r.group ? { kind: "group", id: r.group } : { kind: "item", id: r.ids[0]! })
   }
   const rotate = (deg: number) => selIds.length && change(rotateItems(amb, selIds, deg), true)
-  const nudge = (dx: number, dy: number) => selIds.length && change(moveItems(amb, selIds, dx, dy), true)
+  const nudge = (dx: number, dy: number) => (selIds.length || selWallIds.length) && change(moveWalls(moveItems(amb, selIds, dx, dy), selWallIds, dx, dy), true)
   /** Clic a un element (plànol o 3D), com Figma: si és d'un grup, el primer clic tria el grup i el segon, l'element. */
   const pickItem = (id: string): string[] => {
     // Maj + clic: afegeix o treu l'element de la selecció (com a l'editor).
@@ -424,8 +429,10 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
     const it = amb.items.find((i) => i.id === id)
     if (it?.group && !(sel?.kind === "group" && sel.id === it.group) && !(sel?.kind === "item" && sel.id === id)) {
       select({ kind: "group", id: it.group })
-      return groupIds(amb, it.group)
+      return [...groupIds(amb, it.group), ...groupWallIds(amb, it.group)]
     }
+    // Ja és a la selecció múltiple: s'arrosseguen tots els triats (també les parets).
+    if (sel?.kind === "multi" && selIds.includes(id)) return [...selIds, ...selWallIds]
     rangeAnchor.current = id
     select({ kind: "item", id })
     return [id]
@@ -464,11 +471,27 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
     else select({ kind: "item", id })
   }
   const toggleSel = (id: string): string[] => {
-    const next = selIds.includes(id) ? selIds.filter((x) => x !== id) : [...selIds, id]
+    // Elements i parets alhora (una paret sola triada també compta).
+    const cur = sel?.kind === "wall" ? [sel.id] : [...selIds, ...selWallIds]
+    const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]
+    const isWall = (x: string) => amb.walls.some((w) => w.id === x)
     if (next.length > 1) select({ kind: "multi", ids: next })
-    else if (next.length === 1) select({ kind: "item", id: next[0]! })
+    else if (next.length === 1) select({ kind: isWall(next[0]!) ? "wall" : "item", id: next[0]! })
     else select(null)
     return next
+  }
+  // Clic a una paret (plànol): Maj o ⌘ = afegir o treure; d'un grup, el primer clic tria el grup (com els elements).
+  const pickWall = (id: string): string[] => {
+    if (shiftRef.current) return toggleSel(id)
+    const w = amb.walls.find((x) => x.id === id)
+    if (w?.group && !(sel?.kind === "group" && sel.id === w.group) && !(sel?.kind === "wall" && sel.id === id)) {
+      select({ kind: "group", id: w.group })
+      return [...groupIds(amb, w.group), ...groupWallIds(amb, w.group)]
+    }
+    if ((sel?.kind === "multi" || sel?.kind === "group") && selWallIds.includes(id)) return [...selIds, ...selWallIds]
+    rangeAnchor.current = id
+    select({ kind: "wall", id })
+    return [id]
   }
 
   // Arbre: dos apartats, **Mobles** i **Objectes** (com «Peces lliures» i «Models 3D» de l'editor), cadascun amb els seus
@@ -488,12 +511,16 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   // L'ull i el cadenat (com Figma): de cada element, de cada paret i, als grups, de tots els seus.
   const flipItems = (ids: string[], flag: keyof ViewFlags, on: boolean) => change({ ...amb, items: amb.items.map((it) => (ids.includes(it.id) ? withFlag(it, flag, on) : it)) }, true)
   const itemFlags = (it: AmbientItem): TreeRowFlags => ({ hidden: it.hidden, locked: it.locked, onHide: () => flipItems([it.id], "hidden", !it.hidden), onLock: () => flipItems([it.id], "locked", !it.locked) })
+  // Un grup: els seus elements i les seves parets.
   const groupFlagsOf = (name: string): TreeRowFlags => {
     const ids = groupIds(amb, name)
-    const its = amb.items.filter((it) => ids.includes(it.id))
-    const hidden = its.every((it) => it.hidden)
-    const locked = its.every((it) => it.locked)
-    return { hidden, locked, onHide: () => flipItems(ids, "hidden", !hidden), onLock: () => flipItems(ids, "locked", !locked) }
+    const wids = groupWallIds(amb, name)
+    const all = [...amb.items.filter((it) => ids.includes(it.id)), ...amb.walls.filter((w) => wids.includes(w.id))]
+    const hidden = all.every((x) => x.hidden)
+    const locked = all.every((x) => x.locked)
+    const flip = (flag: keyof ViewFlags, on: boolean) =>
+      change({ ...amb, items: amb.items.map((it) => (ids.includes(it.id) ? withFlag(it, flag, on) : it)), walls: amb.walls.map((w) => (wids.includes(w.id) ? withFlag(w, flag, on) : w)) }, true)
+    return { hidden, locked, onHide: () => flip("hidden", !hidden), onLock: () => flip("locked", !locked) }
   }
   const flipWall = (id: string, flag: keyof ViewFlags, on: boolean) => change({ ...amb, walls: amb.walls.map((w) => (w.id === id ? withFlag(w, flag, on) : w)) }, true)
   // L'ull: el plànol i el 3D només veuen el que no està amagat; el que hi canvien es torna a ajuntar amb els amagats.
@@ -512,7 +539,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   }
   const objectItems = amb.items.filter((it) => kindOf(it) === "object")
   const mobleItems = amb.items.filter((it) => kindOf(it) !== "object")
-  const groups = [...new Set(amb.items.map((i) => i.group).filter((g): g is string => !!g))]
+  const groups = [...new Set([...amb.items.map((i) => i.group), ...amb.walls.map((w) => w.group)].filter((g): g is string => !!g))]
   // Arrossegar per ordenar i per posar dins d'un grup (com les peces lliures de l'editor): una fila d'element o un grup
   // sencer; deixat al costat d'un element, n'agafa el grup; sobre la fila d'un grup, hi entra.
   const [drag, setDrag] = useState<{ ids: string[]; key: string } | null>(null)
@@ -686,14 +713,16 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
       }
       // ⌘G / Ctrl+G: els triats en un grup nou; ⇧⌘G: fora del grup (com a l'editor i Figma).
       if (mod && e.key.toLowerCase() === "g") {
-        if (!selIds.length) return
+        const wallIds = sel?.kind === "wall" ? [sel.id] : selWallIds
+        if (!selIds.length && !wallIds.length) return
         e.preventDefault()
+        const all = [...selIds, ...wallIds]
         if (e.shiftKey) {
-          change(setItemGroup(amb, selIds, undefined), true)
-          if (sel?.kind === "group") select(selIds.length > 1 ? { kind: "multi", ids: selIds } : { kind: "item", id: selIds[0]! })
+          change(setWallGroup(setItemGroup(amb, selIds, undefined), wallIds, undefined), true)
+          if (sel?.kind === "group") select(all.length > 1 ? { kind: "multi", ids: all } : selIds.length ? { kind: "item", id: selIds[0]! } : { kind: "wall", id: wallIds[0]! })
         } else if (sel?.kind !== "group") {
           const name = newItemGroupName(amb)
-          change(setItemGroup(amb, selIds, name), true)
+          change(setWallGroup(setItemGroup(amb, selIds, name), wallIds, name), true)
           groupSel(name)
         }
         return
@@ -790,33 +819,92 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                   highlighted={!!wall}
                   onClick={() => setWallsOpen((o) => !o)}
                 />
-                {wallsOpen &&
-                  amb.walls.map((w, i) => (
-                    <TreeRow
-                      key={w.id}
-                      depth={2}
-                      icon={<LuBrickWall />}
-                      label={`Paret ${i + 1}`}
-                      hint={`${formatLength(Math.round(wallLength(w)), unit)}${w.openings?.length ? ` · ${w.openings.length} ${w.openings.length === 1 ? "obertura" : "obertures"}` : ""}`}
-                      selected={sel?.kind === "wall" && sel.id === w.id}
-                      onClick={() => (select({ kind: "wall", id: w.id }), setTool("select"))}
-                      flags={{ hidden: w.hidden, locked: w.locked, onHide: () => flipWall(w.id, "hidden", !w.hidden), onLock: () => flipWall(w.id, "locked", !w.locked) }}
-                      menu={
-                        <TreeRowMenu label={`Accions de «Paret ${i + 1}»`}>
-                          <Menu.Item
-                            value="del"
-                            color="fg.error"
-                            onClick={() => {
-                              change({ ...amb, walls: amb.walls.filter((x) => x.id !== w.id) }, true)
-                              if (sel?.kind === "wall" && sel.id === w.id) setSel(null)
-                            }}
-                          >
-                            <LuTrash2 /> Eliminar la paret
-                          </Menu.Item>
-                        </TreeRowMenu>
-                      }
-                    />
-                  ))}
+                {wallsOpen && (() => {
+                  // Les parets, en l'ordre de la llista; les d'un grup, plegables on surt la primera (com els elements).
+                  const order = amb.walls.map((w) => w.id)
+                  const wallRow = (w: Wall, depth: number) => {
+                    const i = amb.walls.indexOf(w)
+                    return (
+                      <TreeRow
+                        key={w.id}
+                        depth={depth}
+                        icon={<LuBrickWall />}
+                        label={`Paret ${i + 1}`}
+                        hint={`${formatLength(Math.round(wallLength(w)), unit)}${w.openings?.length ? ` · ${w.openings.length} ${w.openings.length === 1 ? "obertura" : "obertures"}` : ""}`}
+                        selected={(sel?.kind === "wall" && sel.id === w.id) || (sel?.kind === "multi" && sel.ids.includes(w.id))}
+                        highlighted={sel?.kind === "group" && sel.id === w.group}
+                        onClick={() => {
+                          // Maj = el tram, ⌘ = afegir o treure (com els elements); si no, la paret sola.
+                          if (shiftRef.current) treeClick(w.id, order)
+                          else {
+                            rangeAnchor.current = w.id
+                            select({ kind: "wall", id: w.id })
+                          }
+                          setTool("select")
+                        }}
+                        flags={{ hidden: w.hidden, locked: w.locked, onHide: () => flipWall(w.id, "hidden", !w.hidden), onLock: () => flipWall(w.id, "locked", !w.locked) }}
+                        menu={
+                          <TreeRowMenu label={`Accions de «Paret ${i + 1}»`}>
+                            <Menu.Item value="new-group" onClick={() => {
+                              const name = newItemGroupName(amb)
+                              change(setWallGroup(amb, [w.id], name), true)
+                              groupSel(name)
+                            }}>
+                              <LuGroup /> Grup nou
+                            </Menu.Item>
+                            {groups.filter((g) => g !== w.group).map((g) => (
+                              <Menu.Item key={g} value={`to:${g}`} onClick={() => change(setWallGroup(amb, [w.id], g), true)}>
+                                <LuGroup /> Posar a «{g}»
+                              </Menu.Item>
+                            ))}
+                            {w.group && (
+                              <Menu.Item value="out" onClick={() => change(setWallGroup(amb, [w.id], undefined), true)}>
+                                <LuUngroup /> Treure del grup
+                              </Menu.Item>
+                            )}
+                            <Menu.Separator />
+                            <Menu.Item
+                              value="del"
+                              color="fg.error"
+                              onClick={() => {
+                                change({ ...amb, walls: amb.walls.filter((x) => x.id !== w.id) }, true)
+                                if (sel?.kind === "wall" && sel.id === w.id) setSel(null)
+                              }}
+                            >
+                              <LuTrash2 /> Eliminar la paret
+                            </Menu.Item>
+                          </TreeRowMenu>
+                        }
+                      />
+                    )
+                  }
+                  const seen = new Set<string>()
+                  return amb.walls.map((w) => {
+                    if (!w.group) return wallRow(w, 2)
+                    if (seen.has(w.group)) return null
+                    const g = w.group
+                    seen.add(g)
+                    const members = amb.walls.filter((x) => x.group === g)
+                    const fold = `walls:${g}`
+                    const open = !folded.includes(fold)
+                    return (
+                      <Box key={`wg:${g}`}>
+                        <TreeRow
+                          depth={2}
+                          icon={open ? <LuChevronDown /> : <LuChevronRight />}
+                          onToggle={() => setFolded(open ? [...folded, fold] : folded.filter((f) => f !== fold))}
+                          toggleLabel={open ? `Plegar «${g}»` : `Desplegar «${g}»`}
+                          label={g}
+                          hint={`${members.length} ${members.length === 1 ? "paret" : "parets"}`}
+                          selected={sel?.kind === "group" && sel.id === g}
+                          onClick={() => (groupSel(g), setTool("select"))}
+                          flags={groupFlagsOf(g)}
+                        />
+                        {open && members.map((x) => wallRow(x, 3))}
+                      </Box>
+                    )
+                  })
+                })()}
               </Box>
             )}
             {/* Com els grups de l'arbre de l'editor (Peces lliures +, Models 3D +): títol i el + que obre la galeria. */}
@@ -876,9 +964,11 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                 onDelete={remove}
                 onResize={resizeLinked}
               />
-            ) : sel?.kind === "multi" && selIds.length > 1 ? (
+            ) : sel?.kind === "multi" && selIds.length + selWallIds.length > 1 ? (
               <MultiInspector
                 items={amb.items.filter((i) => selIds.includes(i.id))}
+                walls={amb.walls.filter((w) => selWallIds.includes(w.id))}
+                wallNames={new Map(amb.walls.map((w, i) => [w.id, `Paret ${i + 1}`]))}
                 names={names}
                 groups={groups}
                 onMove={(dx, dy) => nudge(dx, dy)}
@@ -887,24 +977,26 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                 onDistribute={(axis, gap) => change(distributeItems(amb, selIds, boxOf, axis, gap), true)}
                 onGroup={(g) => {
                   const name = g ?? newItemGroupName(amb)
-                  change(setItemGroup(amb, selIds, name), true)
+                  change(setWallGroup(setItemGroup(amb, selIds, name), selWallIds, name), true)
                   groupSel(name)
                 }}
-                onUngroup={() => change(setItemGroup(amb, selIds, undefined), true)}
+                onUngroup={() => change(setWallGroup(setItemGroup(amb, selIds, undefined), selWallIds, undefined), true)}
                 onDuplicate={duplicate}
                 onDelete={remove}
                 onPick={(id) => select({ kind: "item", id })}
               />
-            ) : sel?.kind === "group" && selIds.length ? (
+            ) : sel?.kind === "group" && selIds.length + selWallIds.length ? (
               // Un grup té les mateixes propietats que una selecció múltiple (per decisió de l'usuari), amb el nom.
               <MultiInspector
                 key={sel.id}
                 name={sel.id}
                 onRename={(n) => {
-                  change(setItemGroup(amb, selIds, n), true)
+                  change(setWallGroup(setItemGroup(amb, selIds, n), selWallIds, n), true)
                   setSel({ kind: "group", id: n })
                 }}
                 items={amb.items.filter((i) => selIds.includes(i.id))}
+                walls={amb.walls.filter((w) => selWallIds.includes(w.id))}
+                wallNames={new Map(amb.walls.map((w, i) => [w.id, `Paret ${i + 1}`]))}
                 names={names}
                 groups={groups}
                 onMove={(dx, dy) => nudge(dx, dy)}
@@ -913,10 +1005,10 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                 onDistribute={(axis, gap) => change(distributeItems(amb, selIds, boxOf, axis, gap), true)}
                 onGroup={(g) => {
                   const name = g ?? newItemGroupName(amb)
-                  change(setItemGroup(amb, selIds, name), true)
+                  change(setWallGroup(setItemGroup(amb, selIds, name), selWallIds, name), true)
                   groupSel(name)
                 }}
-                onUngroup={() => (change(setItemGroup(amb, selIds, undefined), true), setSel(null))}
+                onUngroup={() => (change(setWallGroup(setItemGroup(amb, selIds, undefined), selWallIds, undefined), true), setSel(null))}
                 onDuplicate={duplicate}
                 onDelete={remove}
                 onPick={(id) => select({ kind: "item", id })}
@@ -956,6 +1048,8 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
               selection={sel}
               selectedIds={selIds}
               onPickItem={pickItem}
+              onPickWall={pickWall}
+              selectedWallIds={selWallIds}
               onSelect={select}
               tool={tool}
               onToolDone={toolDone}
@@ -1570,6 +1664,8 @@ function MultiInspector({
   name,
   onRename,
   items,
+  walls = [],
+  wallNames = new Map(),
   names,
   groups,
   onMove,
@@ -1586,6 +1682,9 @@ function MultiInspector({
   name?: string
   onRename?: (n: string) => void
   items: AmbientItem[]
+  /** Les parets triades (o del grup): es mouen, s'agrupen i s'eliminen amb els elements. */
+  walls?: Wall[]
+  wallNames?: Map<string, string>
   names: Map<string, string>
   groups: string[]
   onMove: (dx: number, dy: number) => void
@@ -1599,9 +1698,12 @@ function MultiInspector({
   onPick: (id: string) => void
 }) {
   const [gap, setGap] = useState(0)
-  const cx = Math.round((Math.min(...items.map((i) => i.x)) + Math.max(...items.map((i) => i.x))) / 2)
-  const cy = Math.round((Math.min(...items.map((i) => i.y)) + Math.max(...items.map((i) => i.y))) / 2)
-  const group = items.every((i) => i.group === items[0]!.group) ? (items[0]!.group ?? "") : undefined
+  // El centre de tots (els elements pel seu centre, les parets pels extrems).
+  const xs = [...items.map((i) => i.x), ...walls.flatMap((w) => [w.a[0], w.b[0]])], ys = [...items.map((i) => i.y), ...walls.flatMap((w) => [w.a[1], w.b[1]])]
+  const cx = Math.round((Math.min(...xs) + Math.max(...xs)) / 2)
+  const cy = Math.round((Math.min(...ys) + Math.max(...ys)) / 2)
+  const all = [...items.map((i) => i.group), ...walls.map((w) => w.group)]
+  const group = all.every((g) => g === all[0]) ? (all[0] ?? "") : undefined
   return (
     <Stack gap={0}>
       <HStack gap={2} pb={2}>
@@ -1615,7 +1717,7 @@ function MultiInspector({
           </Editable.Root>
         ) : (
           <Text fontWeight="semibold" flex={1} minW={0} truncate>
-            {items.length} elements
+            {items.length + walls.length} {walls.length && !items.length ? "parets" : "elements"}
           </Text>
         )}
         <Tooltip content="Duplicar (Ctrl/⌘ D)">
@@ -1688,12 +1790,17 @@ function MultiInspector({
           />
         </FormRow>
       </FoldItem>
-      <FoldItem id="amb-multi-items" title="Triats" icon={LuGroup} badge={items.length}>
+      <FoldItem id="amb-multi-items" title="Triats" icon={LuGroup} badge={items.length + walls.length}>
         <Stack gap={1}>
           {items.map((i) => (
             <Button key={i.id} size="xs" variant="ghost" justifyContent="flex-start" onClick={() => onPick(i.id)}>
               {names.get(i.id)}
             </Button>
+          ))}
+          {walls.map((w) => (
+            <Text key={w.id} fontSize="xs" color="fg.muted" px={2}>
+              {wallNames.get(w.id) ?? "Paret"}
+            </Text>
           ))}
         </Stack>
       </FoldItem>
