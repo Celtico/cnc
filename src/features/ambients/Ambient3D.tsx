@@ -430,16 +430,19 @@ function Room({
 
   // Sostre de les habitacions tancades: només quan la càmera és a dins (al visor i al render; des de
   // dalt no es veu). Al render tanca la llum: entra per les finestres, com a les fotos.
-  // La teulada: amb la teulada a la vista, el sostre pla no hi és (la teulada ja tanca l'habitació).
+  // La teulada (el sostre de dins es queda, amb el seu material, just sota la teulada).
   const roof = useMemo(() => (showRoof ? roofGroup(ambient, materials) : null), [showRoof, ambient.roof, ambient.walls, ambient.wallMaterial, materials]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => (roof ? disposeTree(roof) : undefined), [roof])
   const ceiling = useMemo(() => {
-    if (!showCeiling || (showRoof && ambient.roof) || !closedRoom(ambient.walls)) return null
+    if (!showCeiling || !closedRoom(ambient.walls)) return null
     const xs = ambient.walls.flatMap((w) => [w.a[0], w.b[0]]), ys = ambient.walls.flatMap((w) => [w.a[1], w.b[1]])
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys)
     const H = Math.min(...ambient.walls.map((w) => w.height))
     const mesh = new Mesh(new BoxGeometry((x1 - x0) / 1000, 0.05, (y1 - y0) / 1000), surfaceMaterial(materials, ambient.ceilingMaterial ?? "Pintura blanca", x1 - x0, y1 - y0))
-    mesh.position.set((x0 + x1) / 2000, H / 1000 + 0.025, (y0 + y1) / 2000)
+    // Amb teulada, el sostre queda just sota la paret més baixa (la cara de sota de la teulada plana és a l'alçada de les
+    // parets: sense, es trepitjarien); sense, just a sobre, com sempre.
+    const under = showRoof && !!ambient.roof
+    mesh.position.set((x0 + x1) / 2000, H / 1000 + (under ? -0.026 : 0.025), (y0 + y1) / 2000)
     // Al visor la llum ve de dalt i la cara de sota quedaria fosca: una mica de llum pròpia (el
     // render per CPU no la fa servir, hi arriba la de les finestres).
     const mat = mesh.material as MeshStandardMaterial

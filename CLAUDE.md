@@ -1551,7 +1551,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   i fondària en Y; les que no caben a un pla, a 50 mm de les vores, no es fan). Cobreix la caixa de les parets amb el
   voladís; a dues aigües i a una aigua, les puntes (i a una aigua la paret alta) es tanquen fins a la teulada amb el
   material de les parets. Al 3D: les peces compten com a parets al render (`userData.room = "wall"`) i cada claraboia
-  porta un vidre que fa de portal; amb la teulada a la vista no es fa el sostre pla; amb la casa de nines, des de fora es
+  porta un vidre que fa de portal; el sostre de dins (amb el seu material) es queda, just sota la paret més baixa; amb la casa de nines, des de fora es
   fa transparent (des de dins, sòlida). Opció de vista «Teulada» (`mobles:ambient-roof`, només si n'hi ha). Al plànol, el
   contorn discontinu, el carener (a una aigua, la vora alta gruixuda) i les claraboies. **No surt a les miniatures** (de
   dalt taparia l'habitació). Una teulada dolenta es treu en llegir sense perdre l'ambient. Tests a `ambient.test.ts`.
