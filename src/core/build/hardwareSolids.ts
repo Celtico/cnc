@@ -293,8 +293,9 @@ function ledSolids(p: Panel): HwSolid[] {
 }
 
 /**
- * Pota de la biblioteca sense model (`Panel.fittings` amb `leg`, la AXILO 78): la placa de plàstic a la cara de sota de la
- * base, el tub (Ø36) fins a 8 mm de terra i el peu (Ø`foot` × 8) a terra. Al marc del ferratge: u = v × n, n cap a terra.
+ * Pota de la biblioteca sense model (`Panel.fittings` amb `leg`, la AXILO 78), més o menys com és: la **part fixa** (la
+ * placa de plàstic cargolada a la cara de sota de la base) i la **part mòbil** que s'hi clava i surt per sota (el tub
+ * Ø36, el cargol del regulador Ø24 —els últims 30 mm— i el peu Ø`foot` × 8 a terra). Al marc del ferratge: u = v × n, n cap a terra.
  */
 function legSolids(p: Panel): HwSolid[] {
   const out: HwSolid[] = []
@@ -305,8 +306,13 @@ function legSolids(p: Panel): HwSolid[] {
     const v: Vec3 = [f.v[0], f.v[1], 0]
     const u = cross(v, n)
     const fr = frame([f.x, f.y, f.face === "A" ? p.thickness : 0], u, v, n)
+    // La part fixa, cargolada a la base: la placa.
     out.push(fr.box([g.u0, g.u1], [-g.halfV, g.halfV], [0, g.plateH], "dark"))
-    if (g.height > g.plateH + 8) out.push(fr.cyl(0, 0, [g.plateH, g.height - 8], 18, "dark"))
+    // La part mòbil, que es clava a la placa i surt per sota: el tub (Ø36), el cargol del regulador (Ø24) i el peu.
+    const thread = Math.min(30, Math.max(0, g.height - g.plateH - 16))
+    const tubeEnd = g.height - 8 - thread
+    if (tubeEnd > 4) out.push(fr.cyl(0, 0, [4, tubeEnd], 18, "plastic"))
+    if (thread > 0) out.push(fr.cyl(0, 0, [tubeEnd, g.height - 8], 12, "steel"))
     out.push(fr.cyl(0, 0, [g.height - 8, g.height], g.foot / 2, "dark"))
   }
   return out
