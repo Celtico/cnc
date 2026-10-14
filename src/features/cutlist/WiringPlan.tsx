@@ -45,14 +45,14 @@ export function WiringPlan({ item }: { item: CompositionBuild["wirings"][number]
       </svg>
       <Stack gap={0.5} fontSize="xs" color="fg.muted">
         <Text>
-          <b>Alimentador</b> {w.driver.name} ({w.driver.article}), ajagut sobre la base, a darrere a l'esquerra, amb 50 mm lliures al voltant.
+          <b>Alimentador</b> {w.driver.name} ({w.driver.article}), {w.driver.where}, a darrere a l'esquerra, amb 50 mm lliures al voltant.
         </Text>
         {w.runs.map((r, i) => (
           <Text key={i}>
             <b>{r.from}</b>: {fmt(r.length)} mm de cable fins a l'alimentador (línia taronja); si no hi arriba, un cable d'extensió.
           </Text>
         ))}
-        {w.holes.length > 0 && <Text>Cercles blaus: passants del cable a les peces (ja als programes, del Ø del cable de la làmpada).</Text>}
+        {w.holes.length > 0 && <Text>Cercles blaus: passants del cable a les peces (ja als programes, del Ø del cable de la làmpada). Els trams verticals van per darrere, tapats amb la tapa passacables.</Text>}
         {w.switch && <Text>Quadrat blau: l'interruptor ({w.switch.kind === "door" ? "sensor de porta al cantell del lateral esquerre, ja als programes" : "de proximitat, per cargolar on es vulgui"}).</Text>}
         {w.mains ? <Text>Requadre vermell: la sortida del cable de xarxa pel fons (40 × 16, hi passa l'endoll pla europeu), fins a l'endoll de la paret.</Text> : null}
         {w.notes.map((n, i) => (

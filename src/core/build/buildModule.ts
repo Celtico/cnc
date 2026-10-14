@@ -1989,137 +1989,142 @@ class Builder {
 
   /**
    * **El recorregut dels cables dels llums** (per decisió de l'usuari, 2026-10-14: «fes el mecanitzat de tots els cables,
-   * i el que no és mecanitzat, un plànol»): l'alimentador va dins del mòdul, ajagut sobre la base, a darrere a l'esquerra
-   * (50 mm lliures, com demana el catàleg). Cada cable de làmpada surt pel seu forat (ja fet), va fins a la cantonada de
-   * darrere a l'esquerra del seu compartiment (a 40 del lateral i 25 del fons) i baixa: un passant del Ø del cable a cada peça horitzontal
-   * que travessa (la mateixa peça de la làmpada, travessers i prestatges fixos; la base no) i, sobre la base, un passant a
-   * cada divisor fins a l'alimentador. El cable de xarxa surt pel fons, darrere de l'alimentador, per una ranura de
-   * 40 × 16 (hi passa l'endoll pla europeu, 35,3 × 13,7). Els prestatges regulables no es foraden (el cable passa pel
-   * costat). Tot el que no és mecanitzat (on va cada cosa i les llargades) va al plànol (`wiring`).
+   * i el que no és mecanitzat, un plànol»; «per dins de la fusta, no poden quedar per sobre»). Cap cable per sobre d'una
+   * cara que es veu:
+   * - **Alimentador** on no es veu: a sobre de la tapa als penjats, a sota de la base amb potes o sòcol; un mòdul a terra
+   *   sense aire a sota, a dins sobre la base (avís al plànol).
+   * - **De la làmpada al darrere, per dins del tauler**: un forat de cantell des del cantell de darrere fins a la làmpada,
+   *   pel mig del gruix (Ø del cable; es fa després de la CNC amb una broca llarga, post-procés «Forats de cantell»). A la
+   *   tapa d'un penjat (i a la base d'un de potes) no cal: el cable surt per la cara que no es veu pel forat de la làmpada.
+   * - **Vertical per darrere**, a la x de la làmpada i just davant del fons (o de la columna): un passant a cada peça
+   *   horitzontal fixa que travessa fins a la cara amagada (la tapa o la base), tapat per la tapa passacables.
+   * - Per la cara amagada, fins a l'alimentador, i el cable de xarxa per darrere fins a l'endoll (sense forat).
    */
   buildWiring(): void {
     if (!this.lampSpots.length) return
     const sys = lightSystemOf(this.lightMaker ?? "")
     if (!sys) return
+    const { m } = this
     const notes: string[] = []
     const base = this.panels.find((p) => p.role === "bottom")
-    if (!base) return
-    const bb = worldBoxOf(base)
-    const baseTop = bb.max[1]
+    const topP = this.panels.find((p) => p.role === "top")
     const back = this.panels.find((p) => p.role === "back")
-    const zBack = back ? worldBoxOf(back).max[2] : bb.min[2]
-    // Davant de les columnes de la casa (el fons nou que les tanca, `rearLimits`): el cable i l'alimentador hi passen per davant.
-    const zAlong = (xa: number, xb: number) => Math.max(zBack, this.rearAt(Math.min(xa, xb) - 15, Math.max(xa, xb) + 15)) + 25
-    // L'alimentador: el més petit que arriba a la potència (amb el pic), com a la comanda.
+    const bk = m.carcass.base.kind
+    const up = bk === "wall" && !!topP
+    const below = (bk === "legs" || bk === "plinth") && !!base
+    const inside = !up && !below
+    if (inside && !base) return
+    const ref = (up ? topP : base)!
+    const rb = worldBoxOf(ref)
+    const zBack = back ? worldBoxOf(back).max[2] : rb.min[2]
+    const zAlong = (xa: number, xb: number) => Math.max(zBack, this.rearAt(Math.min(xa, xb) - 15, Math.max(xa, xb) + 15))
     const kits = this.lightKits
     const peak = kits.reduce((a, k) => a + k.peakWatts, 0)
     const ds = sys.drivers.slice().sort((a, b) => a.watts - b.watts)
     const drv = ds.find((x) => (x.perSlot ?? x.watts) >= peak) ?? ds[ds.length - 1]!
     const [len] = drv.size.split("×").map((v) => Number(v.trim().replace(",", ".")))
-    const dx0 = bb.min[0] + 50
+    const dx0 = rb.min[0] + 50
     const dx1 = dx0 + (len ?? 140)
-    const driverIn: [number, number] = [dx0, baseTop + 8]
+    // La cara on va l'alimentador (i per on corren els cables fins a ell): la de sobre de la tapa, la de sota de la base o, a dins, la de sobre de la base.
+    const hy = up ? rb.max[1] : below ? rb.min[1] : rb.max[1]
+    const dy0 = up || inside ? hy : hy - 16
     const zDrv = Math.max(zBack, this.rearAt(dx0, dx1)) + 20
-    const behindColumn = this.rearAt(dx0, dx1) > this.d.backInnerZ + 1
+    if (inside) notes.push("El mòdul no té aire a sota ni va penjat: l'alimentador va a dins, sobre la base, i el tros fins a ell va per sobre de la base (tapa'l amb la tapa passacables).")
     const holes: Wiring["holes"] = []
     const seen = new Set<string>()
     const drill = (p: Panel, w: Vec3, d: number, label: string) => {
-      const key = `${p.id}:${Math.round(w[0])}:${Math.round(w[1])}:${Math.round(w[2])}`
+      const key = `${p.id}:${Math.round(w[0])}:${Math.round(w[2])}`
       if (seen.has(key)) return
       seen.add(key)
       const before = p.cutouts?.length ?? 0
       this.throughHole(p, w, d, "cable-run")
       if ((p.cutouts?.length ?? 0) > before) holes.push({ x: r(w[0]), y: r(w[1]), label })
     }
-    // Sobre la base, de x fins a l'alimentador: un passant a cada divisor que hi ha pel mig.
-    const alongBase = (x: number, d: number) => {
-      const zc = zAlong(x, dx0)
-      for (const v of this.verticals) {
-        if (v.outer) continue
-        const mid = (v.xL + v.xR) / 2
-        if (mid > Math.min(x, dx0) && mid < Math.max(x, dx0) && v.yB <= baseTop + 1 && v.yT > baseTop + 20) drill(v.panel, [mid, baseTop + 20, zc], d, "pas del cable (divisor)")
-      }
-    }
     const runs: Wiring["runs"] = []
+    const covers: { x: number; y0: number; y1: number; z: number }[] = []
+    const draw: Vec3[][] = []
+    let longBores = 0
     for (const l of this.lampSpots) {
       const hb = worldBoxOf(l.host)
+      const hidden = (up && l.host === topP) || (below && l.host === base)
       const pts: [number, number][] = [[l.x, l.y]]
+      const path: Vec3[] = [[l.x, l.y, l.z]]
       let length = 0
-      if (l.host === base) {
-        // Llum a sota: el cable puja per la base i va per sobre fins a l'alimentador.
-        alongBase(l.x, l.d)
-        length = Math.abs(l.x - dx0) + Math.abs(l.z - zAlong(l.x, dx0)) + 50
-        pts.push([l.x, baseTop + 8], driverIn)
+      // Els passants verticals a 25 del fons (dins de les peces, que comencen al fons); el forat de cantell hi arriba.
+      const zc = zAlong(l.x, l.x) + 25
+      if (hidden) {
+        // Surt per la cara amagada pel forat de la làmpada i hi corre fins a l'alimentador.
+        path.push([l.x, hy + (up ? 3 : -3), l.z])
       } else {
-        // A 40 del lateral (fora de les espigues de cantell dels prestatges, que hi entren uns 20) i a 25 del fons.
-        const cx = l.x0 + 40
-        const zc = zAlong(cx, cx)
-        const top = hb.max[1]
-        // Per sobre de la peça de la làmpada fins a la cantonada, i avall per la cantonada.
-        drill(l.host, [cx, (hb.min[1] + hb.max[1]) / 2, zc], l.d, "pas del cable")
-        // Les peces horitzontals fixes de sota (travessers, prestatges fixos: els que porten espigues); els regulables, no.
+        // Per dins del tauler: forat de cantell des del darrere fins a la làmpada, pel mig del gruix.
+        const ym = (hb.min[1] + hb.max[1]) / 2
+        const depth = r(l.z - hb.min[2])
+        if (depth > l.d && addEdgeHole(l.host, [l.x, ym, hb.min[2]], { diameter: l.d, depth, tag: "cable-run" })) longBores += 1
+        path.push([l.x, ym, l.z], [l.x, ym, zc])
+        // Vertical per darrere fins a la cara amagada, amb un passant a cada peça fixa que travessa (la tapa o la base també).
+        const lo = up ? hb.max[1] : hy, hi = up ? hy : hb.min[1]
         for (const p of this.panels) {
-          if (p === base || p === l.host) continue
-          const fixed = p.role === "fixedShelf" || (p.role === "shelf" && p.holes.some((h) => h.tag === "dowel"))
-          if (!fixed) continue
+          if (p === l.host) continue
+          // Totes les peces horitzontals que travessa (també els prestatges regulables: el cable hi passa pel forat).
+          if (!(p.role === "fixedShelf" || p.role === "shelf" || p === topP || p === base)) continue
           const pb = worldBoxOf(p)
-          if (cx > pb.min[0] && cx < pb.max[0] && zc > pb.min[2] && zc < pb.max[2] && pb.max[1] <= hb.min[1] + 0.5 && pb.min[1] >= baseTop - 0.5) drill(p, [cx, (pb.min[1] + pb.max[1]) / 2, zc], l.d, "pas del cable")
+          if (l.x > pb.min[0] && l.x < pb.max[0] && zc > pb.min[2] && zc < pb.max[2] && pb.min[1] >= lo - 0.5 && pb.max[1] <= hi + 0.5 && !(inside && p === base)) drill(p, [l.x, (pb.min[1] + pb.max[1]) / 2, zc], l.d, "pas del cable")
         }
-        alongBase(cx, l.d)
-        length = Math.abs(l.x - cx) + Math.abs(l.z - zc) + (top - baseTop) + Math.abs(cx - dx0) + 50
-        pts.push([l.x, top + 8], [cx, top + 8], [cx, baseTop + 8], driverIn)
+        const yEnd = inside ? hy + 8 : hy + (up ? 3 : -3)
+        path.push([l.x, yEnd, zc])
+        covers.push({ x: l.x, y0: Math.min(ym, yEnd), y1: Math.max(ym, yEnd), z: zc })
+        pts.push([l.x, yEnd])
+        length += Math.abs(l.z - zc) + Math.abs(ym - yEnd)
       }
+      // Per la cara amagada fins a l'alimentador.
+      const last = path[path.length - 1]!
+      // Davant de les columnes que hi hagi pel camí fins a l'alimentador.
+      const zRun = Math.max(last[2], zAlong(last[0], dx0) + 25)
+      if (zRun > last[2] + 0.5) path.push([last[0], last[1], zRun])
+      path.push([dx0, last[1], zRun], [dx0, last[1], zDrv + 5])
+      length += Math.abs(last[0] - dx0) + Math.abs(last[2] - zDrv) + 50
+      pts.push([dx0, last[1]])
+      draw.push(path)
       runs.push({ from: l.label, points: pts.map(([x, y]) => [r(x), r(y)]), length: Math.round(length) })
       if (length > sys.maxCable) notes.push(`${l.label}: ${Math.round(length)} mm de cable fins a l'alimentador (el catàleg en diu ${sys.maxCable} com a molt): cal un altre alimentador més a prop.`)
     }
-    // El cable de xarxa: pel fons, darrere de l'alimentador (l'endoll pla europeu, 35,3 × 13,7, passa per 40 × 16).
+    if (longBores) notes.push(`${longBores === 1 ? "Un forat" : `${longBores} forats`} de cable per dins del tauler (des del cantell de darrere fins a la làmpada, pel mig del gruix): es fan després de la CNC amb una broca llarga.`)
+    // Inside: la sortida del cable de xarxa pel fons, darrere de l'alimentador.
     let mains: Wiring["mains"]
-    if (behindColumn) notes.push("Hi ha una columna darrere de l'alimentador: el cable de xarxa no surt pel fons, passa'l per l'osca de la columna fins a l'endoll.")
-    else if (back) {
-      const mx = (dx0 + dx1) / 2, my = baseTop + 40
-      const l = toLocal(back, [mx, my, worldBoxOf(back).min[2]])
-      if (l[0] > 25 && l[1] > 12 && l[0] < back.length - 25 && l[1] < back.width - 12) {
-        ;(back.cutouts ??= []).push({ kind: "slot", x: r(l[0] - 20), y: r(l[1] - 8), w: 40, h: 16, tag: "cable-mains" })
+    if (inside && back && !(this.rearAt(dx0, dx1) > this.d.backInnerZ + 1)) {
+      const mx = (dx0 + dx1) / 2, my = hy + 40
+      const lb = toLocal(back, [mx, my, worldBoxOf(back).min[2]])
+      if (lb[0] > 25 && lb[1] > 12 && lb[0] < back.length - 25 && lb[1] < back.width - 12) {
+        ;(back.cutouts ??= []).push({ kind: "slot", x: r(lb[0] - 20), y: r(lb[1] - 8), w: 40, h: 16, tag: "cable-mains" })
         mains = { x: r(mx), y: r(my) }
       }
-    }
-    if (!mains) notes.push("Sense fons on fer la sortida del cable de xarxa: passa'l per darrere del mòdul fins a l'endoll.")
-    if (this.lampSpots.some((l) => l.host.role === "shelf")) notes.push("Les làmpades sota prestatges regulables: el cable passa pel costat del prestatge (no es forada) fins a la cantonada.")
-    // Al 3D (per decisió de l'usuari: «es veuen els cables?»): l'alimentador, cada cable pel seu recorregut (Ø4) i la tapa
-    // passacables del catàleg a la cantonada per on baixa (de només veure, rol `hardware`).
-    this.hwBox("wiring-driver", drv.name, "Gris mat", [dx0, baseTop, zDrv], [dx1 - dx0, 16, 50])
+    } else if (inside && back) notes.push("Hi ha una columna darrere de l'alimentador: el cable de xarxa no surt pel fons, passa'l per l'osca de la columna fins a l'endoll.")
+    else if (!inside) notes.push(`L'alimentador va ${up ? "a sobre de la tapa" : "a sota de la base"}, on no es veu: el cable de xarxa hi arriba per darrere del moble, sense cap forat.`)
+    // Al 3D: l'alimentador, cada cable (Ø4) pel seu recorregut i la tapa passacables als trams verticals.
+    this.hwBox("wiring-driver", drv.name, "Gris mat", [dx0, dy0, zDrv], [dx1 - dx0, 16, 50])
     const cable = (id: string, a: Vec3, b: Vec3) => {
       if (Math.abs(a[0] - b[0]) > 0.5) this.hwRod(id, "Cable de llum", "Gris mat", a[0], b[0], a[1], a[2], 2, "x")
       else if (Math.abs(a[1] - b[1]) > 0.5) this.hwRod(id, "Cable de llum", "Gris mat", a[0], a[0], Math.min(a[1], b[1]), a[2], 2, "y", Math.max(a[1], b[1]))
       else if (Math.abs(a[2] - b[2]) > 0.5) this.hwRod(id, "Cable de llum", "Gris mat", a[0], a[0], a[1], a[2], 2, "z", a[1], b[2])
     }
-    const covers = new Set<string>()
-    this.lampSpots.forEach((l, i) => {
-      const path: Vec3[] = []
-      if (l.host === base) {
-        const zc = zAlong(l.x, dx0)
-        path.push([l.x, l.y, l.z], [l.x, baseTop + 8, l.z], [l.x, baseTop + 8, zc], [dx0, baseTop + 8, zc], [dx0, baseTop + 8, zDrv + 5])
-      } else {
-        const top = worldBoxOf(l.host).max[1] + 3
-        const cx = l.x0 + 40
-        const zc = zAlong(cx, cx)
-        const zb = zAlong(cx, dx0)
-        const dz: Vec3 = [dx0, baseTop + 8, zb]
-        path.push([l.x, l.y, l.z], [l.x, top, l.z], [l.x, top, zc], [cx, top, zc], [cx, baseTop + 8, zc], [cx, baseTop + 8, zb], dz, [dx0, baseTop + 8, zDrv + 5])
-        const key = `${Math.round(cx)}`
-        if (!covers.has(key)) {
-          covers.add(key)
-          if (top - baseTop > 60) this.hwBox(`wiring-cover-${i}`, sys.cableCover?.name ?? "Tapa passacables", "Blanc seda", [cx - 10, baseTop + 16, zc - 8], [20, top - baseTop - 16, 16])
-        }
-      }
-      for (let j = 0; j + 1 < path.length; j++) cable(`wiring-${i}-${j}`, path[j]!, path[j + 1]!)
+    draw.forEach((path, i) => {
+      for (let k = 0; k + 1 < path.length; k++) cable(`wiring-${i}-${k}`, path[k]!, path[k + 1]!)
+    })
+    // A dins (sense aire a sota): el tram per sobre de la base, tapat també amb la tapa passacables, arran del fons.
+    if (inside && this.lampSpots.length) {
+      const xs = this.lampSpots.map((l) => l.x)
+      const x1 = Math.max(...xs)
+      if (x1 - dx1 > 40) this.hwBox("wiring-cover-base", sys.cableCover?.name ?? "Tapa passacables", "Blanc seda", [dx1, hy, zAlong(dx1, x1) + 25 - 8], [x1 - dx1 + 10, 16, 16])
+    }
+    covers.forEach((c, i) => {
+      if (c.y1 - c.y0 > 60) this.hwBox(`wiring-cover-${i}`, sys.cableCover?.name ?? "Tapa passacables", "Blanc seda", [c.x - 10, c.y0, c.z - 8], [20, c.y1 - c.y0, 16])
     })
     const sw = this.lightKits[0]?.switch
     this.wiring = {
-      driver: { x0: r(dx0), x1: r(dx1), y0: r(baseTop), y1: r(baseTop + 16), name: drv.name, article: drv.article },
+      driver: { x0: r(dx0), x1: r(dx1), y0: r(dy0), y1: r(dy0 + 16), name: drv.name, article: drv.article, where: up ? "a sobre de la tapa" : below ? "a sota de la base" : "a dins, sobre la base" },
       lamps: this.lampSpots.map((l) => ({ x: r(l.x), y: r(l.y), label: l.label })),
       runs,
-      ...(sw === "door" && this.switchSpot ? { switch: { ...this.switchSpot, kind: "door" as const } } : sw === "touch" ? { switch: { x: r(bb.min[0] + 30), y: r(baseTop + 60), kind: "touch" as const } } : {}),
+      ...(sw === "door" && this.switchSpot ? { switch: { ...this.switchSpot, kind: "door" as const } } : sw === "touch" ? { switch: { x: r(rb.min[0] + 30), y: r(hy + (up ? -60 : 60)), kind: "touch" as const } } : {}),
       ...(mains ? { mains } : {}),
       holes,
       notes,
@@ -2742,7 +2747,7 @@ export interface RearLimit {
  * recorregut del seu cable fins a l'alimentador (amb la llargada), l'interruptor i la sortida del cable de xarxa.
  */
 export interface Wiring {
-  driver: { x0: number; x1: number; y0: number; y1: number; name: string; article: string }
+  driver: { x0: number; x1: number; y0: number; y1: number; name: string; article: string; where: string }
   lamps: { x: number; y: number; label: string }[]
   runs: { from: string; points: [number, number][]; length: number }[]
   switch?: { x: number; y: number; kind: "door" | "touch" }
