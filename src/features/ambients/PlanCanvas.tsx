@@ -178,7 +178,7 @@ export function PlanCanvas({
 
   const tolMm = 12 / view.s
 
-  /** Punt de la ploma: imant als extrems i angle a 15° (Maj: lliure; Alt: sense imant). */
+  /** Punt de la ploma: imant als extrems i angle a 15° (Maj: sense angle, a la quadrícula; Alt: del tot lliure, al mm). */
   const penPoint = (raw: PlanPt, e: { shiftKey: boolean; altKey: boolean }): PlanPt => {
     if (!e.altKey && show.snap) {
       const first = chain[0]
@@ -186,6 +186,7 @@ export function PlanCanvas({
       const near = nearestEndpoint(ambient.walls, raw, tolMm)
       if (near) return near
     }
+    if (e.altKey) return [Math.round(raw[0]), Math.round(raw[1])]
     const last = chain.at(-1)
     if (last && !e.shiftKey) return snapAngle(last, raw)
     return [snapGrid(raw[0]), snapGrid(raw[1])]
@@ -287,7 +288,8 @@ export function PlanCanvas({
     } else if (g.kind === "item") {
       g.moved = g.moved || Math.hypot(dx, dy) * view.s > 3
       if (!g.moved) return
-      let ox = snapGrid(dx), oy = snapGrid(dy)
+      // Alt: del tot lliure (al mm, sense quadrícula ni parets).
+      let ox = e.altKey ? Math.round(dx) : snapGrid(dx), oy = e.altKey ? Math.round(dy) : snapGrid(dy)
       // Un sol element: s'arramba a les parets (Alt: sense imant). Un grup es mou sencer.
       if (g.ids.length === 1 && !e.altKey && show.snap) {
         const it = ambient.items.find((x) => x.id === g.ids[0])
@@ -306,7 +308,7 @@ export function PlanCanvas({
     } else if (g.kind === "wall") {
       g.moved = g.moved || Math.hypot(dx, dy) * view.s > 3
       if (!g.moved) return
-      const ox = snapGrid(dx), oy = snapGrid(dy)
+      const ox = e.altKey ? Math.round(dx) : snapGrid(dx), oy = e.altKey ? Math.round(dy) : snapGrid(dy)
       const na: PlanPt = [g.a[0] + ox, g.a[1] + oy], nb: PlanPt = [g.b[0] + ox, g.b[1] + oy]
       // Les parets enganxades als extrems en començar el segueixen (les cantonades no s'obren); les que toca pel camí, no.
       const ends = new Map<string, Partial<Record<"a" | "b", PlanPt>>>()
@@ -318,7 +320,8 @@ export function PlanCanvas({
       const w = ambient.walls.find((x) => x.id === g.id)
       if (!w) return
       const other = g.end === "a" ? w.b : w.a
-      let q: PlanPt = e.shiftKey ? [snapGrid(p[0]), snapGrid(p[1])] : snapAngle(other, p)
+      // Alt: del tot lliure (al mm, sense angle, quadrícula ni extrems); Maj: sense angle, a la quadrícula.
+      let q: PlanPt = e.altKey ? [Math.round(p[0]), Math.round(p[1])] : e.shiftKey ? [snapGrid(p[0]), snapGrid(p[1])] : snapAngle(other, p)
       if (!e.altKey) {
         const near = nearestEndpoint(ambient.walls, p, tolMm, (x, end) => x.id === g.id || g.joined.some((j) => j.id === x.id && j.end === end))
         if (near) q = near
@@ -337,7 +340,7 @@ export function PlanCanvas({
       // Es mou al llarg de la paret (projecció del desplaçament).
       const L = wallLength(w) || 1
       const along = (dx * (w.b[0] - w.a[0]) + dy * (w.b[1] - w.a[1])) / L
-      const next = clampOpening(w, { ...o, at: snapGrid(g.at + along) })
+      const next = clampOpening(w, { ...o, at: e.altKey ? Math.round(g.at + along) : snapGrid(g.at + along) })
       onChange({ ...ambient, walls: ambient.walls.map((x) => (x.id === w.id ? { ...x, openings: x.openings!.map((q, i) => (i === g.index ? next : q)) } : x)) }, false)
     } else if (g.kind === "plan" && ambient.plan) {
       onChange({ ...ambient, plan: { ...ambient.plan, x: Math.round(g.x + dx), y: Math.round(g.y + dy) } }, false)
