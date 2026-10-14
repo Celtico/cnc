@@ -2030,6 +2030,13 @@ class Builder {
     const dy0 = up || inside ? hy : hy - 16
     const zDrv = Math.max(zBack, this.rearAt(dx0, dx1)) + 20
     if (inside) notes.push("El mòdul no té aire a sota ni va penjat: l'alimentador va a dins, sobre la base, i el tros fins a ell va per sobre de la base (tapa'l amb la tapa passacables).")
+    // La cambra del darrere (per decisió de l'usuari: «per la trasera del moble»): amb el fons en ranura o encastat i
+    // retirat ≥ 8 mm, entre el fons i el cantell de darrere dels laterals hi ha lloc per al cable (Ø4): hi va vertical,
+    // sense res a la vista. Sense (fons cargolat o enrasat), per dins, tapat amb la tapa passacables.
+    const backRear = back ? worldBoxOf(back).min[2] : 0
+    const cavity = !!back && backRear >= 8 && (m.carcass.back === "groove" || m.carcass.back === "inset")
+    const zCav = backRear / 2
+    const columnAt = (x: number) => this.rearAt(x - 15, x + 15) > this.d.backInnerZ + 1
     const holes: Wiring["holes"] = []
     const seen = new Set<string>()
     const drill = (p: Panel, w: Vec3, d: number, label: string) => {
@@ -2055,6 +2062,19 @@ class Builder {
       if (hidden) {
         // Surt per la cara amagada pel forat de la làmpada i hi corre fins a l'alimentador.
         path.push([l.x, hy + (up ? 3 : -3), l.z])
+      } else if (cavity && !columnAt(l.x) && !inside) {
+        // Per dins del tauler fins al darrere i, per la cambra de darrere del fons, fins a la cara amagada.
+        const ym = (hb.min[1] + hb.max[1]) / 2
+        const depth = r(l.z - hb.min[2])
+        if (depth > l.d && addEdgeHole(l.host, [l.x, ym, hb.min[2]], { diameter: l.d, depth, tag: "cable-run" })) longBores += 1
+        if (hb.min[2] > zCav + 1) drill(back!, [l.x, ym, backRear], l.d, "pas del cable al fons")
+        else drill(l.host, [l.x, ym, zCav], l.d, "pas del cable a la cambra")
+        const yEnd = hy + (up ? 3 : -3)
+        // La tapa o la base per on surt a la cara amagada: un passant a la cambra.
+        drill(ref, [l.x, (rb.min[1] + rb.max[1]) / 2, zCav], l.d, "pas del cable a la cambra")
+        path.push([l.x, ym, l.z], [l.x, ym, zCav], [l.x, yEnd, zCav])
+        pts.push([l.x, yEnd])
+        length += Math.abs(l.z - zCav) + Math.abs(ym - yEnd)
       } else {
         // Per dins del tauler: forat de cantell des del darrere fins a la làmpada, pel mig del gruix.
         const ym = (hb.min[1] + hb.max[1]) / 2
@@ -2088,6 +2108,7 @@ class Builder {
       runs.push({ from: l.label, points: pts.map(([x, y]) => [r(x), r(y)]), length: Math.round(length) })
       if (length > sys.maxCable) notes.push(`${l.label}: ${Math.round(length)} mm de cable fins a l'alimentador (el catàleg en diu ${sys.maxCable} com a molt): cal un altre alimentador més a prop.`)
     }
+    if (cavity && !inside) notes.push(`Els cables baixen per la cambra de darrere del fons (${num(backRear)} mm entre el fons i el darrere del moble): no es veuen.`)
     if (longBores) notes.push(`${longBores === 1 ? "Un forat" : `${longBores} forats`} de cable per dins del tauler (des del cantell de darrere fins a la làmpada, pel mig del gruix): es fan després de la CNC amb una broca llarga.`)
     // Inside: la sortida del cable de xarxa pel fons, darrere de l'alimentador.
     let mains: Wiring["mains"]

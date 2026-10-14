@@ -306,9 +306,10 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
       potes o sòcol; a terra sense aire, a dins sobre la base amb la sortida pel fons, ranura de 40 × 16 `cable-mains` per a
       l'endoll pla europeu); de cada làmpada al darrere **per dins del tauler** (forat de cantell des del cantell de
       darrere fins a la làmpada, pel mig del gruix, tag `cable-run`: post-procés «Forats de cantell», broca llarga; a la
-      tapa d'un penjat o a la base d'un de potes no cal, surt per la cara amagada); **vertical per darrere** a la x de la
-      làmpada, a 25 del fons o de la columna (`rearLimits`), amb un passant a cada peça horitzontal que travessa fins a la
-      cara amagada, i per la cara amagada fins a l'alimentador (davant de les columnes). Llargada de cada cable (avís si
+      tapa d'un penjat o a la base d'un de potes no cal, surt per la cara amagada); **vertical per la cambra de darrere del fons** (per decisió de l'usuari, «per la trasera del moble»: fons en ranura o
+      encastat retirat ≥ 8 mm; un passant al fons on surt del prestatge i un a la tapa o la base per sortir a la cara amagada;
+      sense regletes a la vista) o, sense cambra, per dins a 25 del fons o de la columna (`rearLimits`) amb un passant a
+      cada peça horitzontal i la tapa passacables, fins a la cara amagada, i per la cara amagada fins a l'alimentador (davant de les columnes). Llargada de cada cable (avís si
       passa del màxim del catàleg). **Plànol** a Peces › «Llums i instal·lació elèctrica» (`features/cutlist/WiringPlan.tsx`).
       **Al 3D i al render** (de només veure, rol `hardware`): l'alimentador, cada cable (Ø4, `hwRod`) i la tapa
       passacables als trams verticals (i, a dins, al de sobre la base). Tests a `build/lightKit.test.ts` i

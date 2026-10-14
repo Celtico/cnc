@@ -237,3 +237,17 @@ describe("recorregut dels cables dels llums", () => {
     expect((b.panels.find((p) => p.role === "bottom")!.cutouts ?? []).some((c) => c.tag === "cable-run")).toBe(false)
   })
 })
+
+describe("cables per la cambra de darrere del fons", () => {
+  it("penjat amb el fons en ranura: el cable passa del prestatge al fons i puja per la cambra fins a sobre de la tapa, sense tapa passacables", () => {
+    const item = structuredClone(HAFELE_LOOX_ITEMS.find((x) => x.light && x.light.recess.shape === "round")!)
+    const m = { ...defaultModule("m", "Alt", { width: 800, height: 720, depth: 330 }), root: { id: "z", shelves: { n: 1, adjustable: false }, led: { hardware: item } } } as never as ReturnType<typeof defaultModule>
+    m.carcass = { ...m.carcass, base: { kind: "wall", height: 1400 }, back: "groove", backSetback: 16 }
+    const b = buildModule(m)
+    const back = b.panels.find((p) => p.role === "back")!
+    expect((back.cutouts ?? []).some((c) => c.tag === "cable-run")).toBe(true)
+    expect(b.extras.some((p) => p.id.startsWith("wiring-cover"))).toBe(false)
+    expect(b.wiring!.driver.where).toBe("a sobre de la tapa")
+    expect(b.wiring!.notes.some((n) => n.includes("cambra"))).toBe(true)
+  })
+})
