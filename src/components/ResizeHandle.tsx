@@ -14,13 +14,15 @@ interface ResizeHandleProps {
   label: string
   /** Breakpoint a partir del qual els panells van en fila i la vora es mostra. */
   from?: "md" | "lg"
+  /** Sense nansa a la vista: només surt amb el ratolí a sobre (o amb el focus). */
+  quiet?: boolean
 }
 
 /**
  * Vora arrossegable entre dos panells (només escriptori). Accessible: és un
  * `separator` amb focus, i les fletxes l'ajusten de 16 en 16 px.
  */
-export function ResizeHandle({ width, onWidth, min, max, defaultWidth, panelSide, label, from = "md" }: ResizeHandleProps) {
+export function ResizeHandle({ width, onWidth, min, max, defaultWidth, panelSide, label, from = "md", quiet = false }: ResizeHandleProps) {
   const start = useRef<{ x: number; w: number } | null>(null)
   const clamp = (w: number) => Math.min(max, Math.max(min, w))
   const sign = panelSide === "left" ? 1 : -1
@@ -84,7 +86,7 @@ export function ResizeHandle({ width, onWidth, min, max, defaultWidth, panelSide
       _focusVisible={{ outline: "none" }}
     >
       <Box className="rh-line" position="absolute" top={0} bottom={0} left="50%" w="2px" ml="-1px" rounded="full" />
-      <Box className="rh-grip" w="4px" h="36px" rounded="full" bg="border.emphasized" />
+      <Box className="rh-grip" w="4px" h="36px" rounded="full" bg={quiet ? "transparent" : "border.emphasized"} />
     </Box>
   )
 }

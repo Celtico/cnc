@@ -1,6 +1,8 @@
 import { Box, Drawer, Portal, useBreakpointValue } from "@chakra-ui/react"
 import { lazy, Suspense, useMemo, useRef } from "react"
+import { ResizeHandle } from "../../components/ResizeHandle"
 import type { Settings } from "../../core/model"
+import { usePersistentNumber } from "../usePersistentNumber"
 import { allToolSet, contextLine, setAppSettings } from "./appTools"
 import { currentDoc, useHubDoc, type HubDoc } from "./assistantHub"
 import type { ChatTarget } from "./chatTarget"
@@ -52,6 +54,8 @@ export default function GlobalAssistant({ open, onClose, settings }: { open: boo
   // A l'ordinador, una columna a la dreta de l'app (per decisió de l'usuari: «encara que estigui obert, s'ha de poder
   // navegar»): l'app s'estreny i tot continua a la vista i es pot fer servir. Al mòbil, el calaix a pantalla completa.
   const docked = useBreakpointValue({ base: false, md: true }) ?? true
+  // L'amplada es canvia arrossegant la vora esquerra, sense cap barra a la vista (per decisió de l'usuari, 2026-10-14).
+  const [width, setWidth] = usePersistentNumber("mobles:assistant-width", 400)
   const panel = (
     <Suspense fallback={null}>
       <ChatPanel settings={settings} target={target} onClose={onClose} />
@@ -59,8 +63,14 @@ export default function GlobalAssistant({ open, onClose, settings }: { open: boo
   )
   if (docked)
     return (
-      <Box as="aside" aria-label="Assistent" display={open ? "flex" : "none"} flexDirection="column" w="400px" flexShrink={0} h="100dvh" position="sticky" top={0} borderLeftWidth="1px" bg="bg.panel" px={4} py={3}>
-        {panel}
+      <Box as="aside" aria-label="Assistent" display={open ? "flex" : "none"} flexDirection="column" w={`${width}px`} flexShrink={0} h="100dvh" position="sticky" top={0} borderLeftWidth="1px" bg="bg.panel" px={4} py={3}>
+        <Box position="absolute" left={0} top={0} bottom={0} w={0} display="flex" zIndex={3}>
+          <ResizeHandle quiet width={width} onWidth={setWidth} min={48} max={900} defaultWidth={400} panelSide="right" label="Amplada de l'assistent" />
+        </Box>
+        {/* Molt estreta (fins a 48 px, com les Propietats): es retalla, no desborda. */}
+        <Box flex={1} minH={0} minW={0} overflowX="clip" display="flex" flexDirection="column">
+          {panel}
+        </Box>
       </Box>
     )
   return (

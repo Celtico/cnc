@@ -1,14 +1,14 @@
 import { Alert, Badge, Box, Button, Dialog, HStack, IconButton, Image, Portal, Stack, Text, Textarea } from "@chakra-ui/react"
-import { useEffect, useRef, useState } from "react"
-import { LuCheck, LuCircleStop, LuImagePlus, LuMessageSquarePlus, LuSendHorizontal, LuTriangleAlert, LuWifiOff, LuWrench, LuX } from "react-icons/lu"
+import { useEffect, useRef, useState, type DragEvent } from "react"
+import { LuCheck, LuCircleStop, LuFileText, LuFileUp, LuMessageSquarePlus, LuPaperclip, LuSendHorizontal, LuTriangleAlert, LuWifiOff, LuWrench, LuX } from "react-icons/lu"
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages"
 import { Tooltip } from "../../components/ui/tooltip"
 import { ASSISTANT_MODELS, type Settings } from "../../core/model"
 import { blobToBase64 } from "../file/mobleIo"
 import { shrinkImage } from "../imageShrink"
 import { openSettings } from "../settings/openSettings"
+import { ATTACH_ACCEPT, attachKind, MAX_PDF_BYTES, textAttachment, type AttachKind } from "./attachments"
 import { describeFailure, loadSdk, makeClient } from "./claudeClient"
-import { HOVER_SCROLLBARS, useDragPan } from "./dragPan"
 import { runTurn } from "./chatTurn"
 import type { ChatTarget } from "./chatTarget"
 import { NO_KEY_ERROR, OFFLINE_ERROR, type AssistantError } from "./errors"
@@ -18,19 +18,21 @@ const MAX_IMAGE_PX = 1568
 
 type Part = { kind: "text"; text: string } | { kind: "tool"; name: string; ok: boolean; note: string }
 type Item =
-  | { id: number; role: "user"; text: string; image?: string }
+  | { id: number; role: "user"; text: string; files?: { kind: AttachKind; name: string; url?: string }[] }
   | { id: number; role: "assistant"; parts: Part[]; error?: AssistantError; note?: string; running?: boolean; changed?: boolean }
 
 interface Attached {
-  url: string
+  kind: AttachKind
+  /** Només les imatges (miniatura). */
+  url?: string
   blob: Blob
   name: string
 }
 
 /**
  * Xat de l'assistent IA (docs/xat-ia.md), el mateix a l'Editor (moble i objecte) i als Ambients: la conversa, el text en
- * directe, les eines que fa servir i els errors, amb el camp de text, adjuntar una foto o un plànol (≤ 1568 px JPEG) i
- * aturar. Les eines i les instruccions són les del document (`target.toolset`). Cada torn és **un sol pas de desfer**
+ * directe, les eines que fa servir i els errors, amb el camp de text, adjuntar fotos, plànols (≤ 1568 px JPEG), PDF i
+ * fitxers de text (amb el clip o deixant-los anar a sobre del panell, `attachments.ts`) i aturar. Les eines i les instruccions són les del document (`target.toolset`). Cada torn és **un sol pas de desfer**
  * (`apply` en viu i `commit` en acabar). La conversa es queda mentre l'editor és obert.
  */
 export default function ChatPanel({ settings, target, onClose }: { settings: Settings; target: ChatTarget<unknown>; /** Tancar (al calaix de l'assistent personal): una ✕ a la capçalera. */ onClose?: () => void }) {
@@ -39,7 +41,11 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
   const model = ASSISTANT_MODELS.find((m) => m.id === settings.assistant.model) ?? ASSISTANT_MODELS[0]
   const [items, setItems] = useState<Item[]>([])
   const [input, setInput] = useState("")
-  const [attached, setAttached] = useState<Attached | null>(null)
+  const [attached, setAttached] = useState<Attached[]>([])
+  const [attachNote, setAttachNote] = useState<string | null>(null)
+  // Arrossegant fitxers a sobre del panell (comptador: dragenter/dragleave salten a cada fill).
+  const [dragOver, setDragOver] = useState(false)
+  const dragDepth = useRef(0)
   const [running, setRunning] = useState(false)
   const [confirmClose, setConfirmClose] = useState(false)
   const [online, setOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine))
@@ -47,7 +53,6 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
   const abort = useRef<AbortController | null>(null)
   const nextId = useRef(1)
   const list = useRef<HTMLDivElement>(null)
-  useDragPan(list)
   const fileInput = useRef<HTMLInputElement>(null)
   // Les fotos de la conversa (URL de blob) s'alliberen en sortir de l'Editor.
   const urls = useRef<string[]>([])
@@ -90,12 +95,53 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
       return last?.role === "assistant" ? [...xs.slice(0, -1), fn(last)] : xs
     })
 
-  const attach = (file: File | undefined) => {
-    if (!file) return
-    const url = URL.createObjectURL(file)
-    urls.current.push(url)
-    setAttached({ url, blob: file, name: file.name })
+  const attach = (files: Iterable<File>) => {
+    const ok: Attached[] = []
+    const skipped: string[] = []
+    for (const file of files) {
+      const kind = attachKind(file)
+      if (!kind || (kind === "pdf" && file.size > MAX_PDF_BYTES)) {
+        skipped.push(kind ? `${file.name} (més de 30 MB)` : file.name)
+        continue
+      }
+      let url: string | undefined
+      if (kind === "image") {
+        url = URL.createObjectURL(file)
+        urls.current.push(url)
+      }
+      ok.push({ kind, ...(url ? { url } : {}), blob: file, name: file.name })
+    }
+    if (ok.length) setAttached((xs) => [...xs, ...ok])
+    setAttachNote(skipped.length ? `No es pot adjuntar: ${skipped.join(", ")}. Només fotos, PDF i fitxers de text.` : null)
     if (fileInput.current) fileInput.current.value = ""
+  }
+  const hasFiles = (e: DragEvent) => e.dataTransfer.types.includes("Files")
+  const dropProps = {
+    onDragEnter: (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      dragDepth.current++
+      setDragOver(true)
+    },
+    onDragOver: (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      e.dataTransfer.dropEffect = "copy"
+    },
+    onDragLeave: (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      if (--dragDepth.current <= 0) {
+        dragDepth.current = 0
+        setDragOver(false)
+      }
+    },
+    onDrop: (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      dragDepth.current = 0
+      setDragOver(false)
+      attach(Array.from(e.dataTransfer.files))
+    },
   }
 
   const newChat = () => {
@@ -112,13 +158,14 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
     setConfirmClose(false)
     newChat()
     setInput("")
-    setAttached(null)
+    setAttached([])
+    setAttachNote(null)
     onClose?.()
   }
 
   const send = async () => {
     const text = input.trim()
-    if ((!text && !attached) || running) return
+    if ((!text && !attached.length) || running) return
     // El missatge nou es veu sempre: torna a seguir el final.
     atBottom.current = true
     if (!apiKey) {
@@ -129,25 +176,30 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
       setItems((xs) => [...xs, { id: nextId.current++, role: "assistant", parts: [], error: OFFLINE_ERROR }])
       return
     }
-    const image = attached
+    const files = attached
     setInput("")
-    setAttached(null)
-    setItems((xs) => [...xs, { id: nextId.current++, role: "user", text, ...(image ? { image: image.url } : {}) }, { id: nextId.current++, role: "assistant", parts: [], running: true }])
+    setAttached([])
+    setAttachNote(null)
+    setItems((xs) => [...xs, { id: nextId.current++, role: "user", text, ...(files.length ? { files: files.map(({ kind, name, url }) => ({ kind, name, ...(url ? { url } : {}) })) } : {}) }, { id: nextId.current++, role: "assistant", parts: [], running: true }])
     setRunning(true)
     const ctl = new AbortController()
     abort.current = ctl
     // Només si ha canviat el document surt «Desfer-ho tot» (llegir o navegar no es desfà).
     let changed = false
     try {
-      // La imatge abans del text (recomanació de l'API), reduïda a 1568 px JPEG.
+      // Els adjunts abans del text (recomanació de l'API): les imatges reduïdes a 1568 px JPEG, els PDF tal qual i els
+      // fitxers de text com a text.
       const content: Exclude<MessageParam["content"], string> = []
-      if (image) {
-        const small = await shrinkImage(image.blob, MAX_IMAGE_PX, { jpeg: true, quality: 0.85 })
-        content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: await blobToBase64(small.blob) } })
+      for (const f of files) {
+        if (f.kind === "image") {
+          const small = await shrinkImage(f.blob, MAX_IMAGE_PX, { jpeg: true, quality: 0.85 })
+          content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: await blobToBase64(small.blob) } })
+        } else if (f.kind === "pdf") content.push({ type: "document", title: f.name, source: { type: "base64", media_type: "application/pdf", data: await blobToBase64(f.blob) } })
+        else content.push({ type: "text", text: textAttachment(f.name, await f.blob.text()) })
       }
       // L'assistent personal hi posa davant on és l'usuari i què té seleccionat.
       const ctx = target.context?.()
-      content.push({ type: "text", text: `${ctx ? `${ctx}\n\n` : ""}${text || "Mira aquesta imatge."}` })
+      content.push({ type: "text", text: `${ctx ? `${ctx}\n\n` : ""}${text || (files.every((f) => f.kind === "image") ? "Mira aquesta imatge." : "Mira aquest fitxer.")}` })
       history.current.push({ role: "user", content })
       const [client, toolset] = await Promise.all([makeClient(apiKey), target.toolset()])
       const res = await runTurn({
@@ -194,7 +246,13 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
   }
 
   return (
-    <Stack gap={2} h="full" minH={0} data-testid="assistant-panel">
+    <Stack gap={2} h="full" minH={0} position="relative" data-testid="assistant-panel" {...dropProps}>
+      {dragOver && (
+        <Stack position="absolute" inset={0} zIndex={2} pointerEvents="none" align="center" justify="center" gap={2} rounded="md" borderWidth="2px" borderStyle="dashed" borderColor="wood.solid" bg="bg.panel/90" color="fg.muted" data-testid="assistant-drop">
+          <LuFileUp size={28} />
+          <Text fontSize="sm">Deixa anar fotos, PDF o fitxers de text</Text>
+        </Stack>
+      )}
       <HStack gap={2} flexShrink={0}>
         <Text fontSize="sm" fontWeight="semibold" flex={1} minW={0} truncate>
           Assistent
@@ -261,7 +319,7 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
         </HStack>
       )}
 
-      <Box ref={list} onScroll={onListScroll} flex={1} minH={0} overflowY="auto" overflowX="auto" overscrollBehaviorX="contain" css={HOVER_SCROLLBARS} pr={1}>
+      <Box ref={list} onScroll={onListScroll} flex={1} minH={0} overflowY="auto" css={{ scrollbarWidth: "thin" }} pr={1}>
         {items.length === 0 ? (
           <Stack gap={2} py={2}>
             <Text fontSize="sm" color="fg.muted">
@@ -278,7 +336,15 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
             {items.map((it) =>
               it.role === "user" ? (
                 <Stack key={it.id} alignSelf="flex-end" maxW="88%" bg="wood.subtle" rounded="lg" px={3} py={2} gap={2}>
-                  {it.image && <Image src={it.image} alt="Imatge adjunta" maxH="160px" rounded="md" objectFit="contain" />}
+                  {it.files?.map((f, k) =>
+                    f.url ? (
+                      <Image key={k} src={f.url} alt={f.name} maxH="160px" rounded="md" objectFit="contain" />
+                    ) : (
+                      <HStack key={k} gap={1.5} fontSize="xs" color="fg.muted" minW={0}>
+                        <LuFileText /> <Text truncate>{f.name}</Text>
+                      </HStack>
+                    ),
+                  )}
                   {it.text && (
                     <Text fontSize="sm" whiteSpace="pre-wrap">
                       {it.text}
@@ -340,16 +406,27 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
       </Box>
 
       <Stack gap={1.5} flexShrink={0} borderTopWidth="1px" pt={2}>
-        {attached && (
-          <HStack gap={2}>
-            <Image src={attached.url} alt={attached.name} h="48px" maxW="80px" objectFit="cover" rounded="md" />
+        {attached.map((f, k) => (
+          <HStack key={k} gap={2}>
+            {f.url ? (
+              <Image src={f.url} alt={f.name} h="48px" maxW="80px" objectFit="cover" rounded="md" />
+            ) : (
+              <Box color="fg.muted" flexShrink={0}>
+                <LuFileText />
+              </Box>
+            )}
             <Text fontSize="xs" color="fg.muted" flex={1} minW={0} truncate>
-              {attached.name}
+              {f.name}
             </Text>
-            <IconButton size="xs" variant="ghost" aria-label="Treure la imatge" onClick={() => setAttached(null)}>
+            <IconButton size="xs" variant="ghost" aria-label={`Treure ${f.name}`} onClick={() => setAttached((xs) => xs.filter((_, i) => i !== k))}>
               <LuX />
             </IconButton>
           </HStack>
+        ))}
+        {attachNote && (
+          <Text fontSize="xs" color="orange.fg">
+            {attachNote}
+          </Text>
         )}
         <Textarea
           size="sm"
@@ -367,10 +444,10 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
           }}
         />
         <HStack gap={2}>
-          <input ref={fileInput} type="file" accept="image/*" hidden onChange={(e) => attach(e.target.files?.[0])} />
-          <Tooltip content="Adjuntar una foto o un plànol">
-            <IconButton size="sm" variant="ghost" aria-label="Adjuntar una foto o un plànol" disabled={running} onClick={() => fileInput.current?.click()}>
-              <LuImagePlus />
+          <input ref={fileInput} type="file" accept={ATTACH_ACCEPT} multiple hidden onChange={(e) => attach(Array.from(e.target.files ?? []))} />
+          <Tooltip content="Adjuntar fotos, plànols, PDF o fitxers de text (també deixant-los anar a sobre)">
+            <IconButton size="sm" variant="ghost" aria-label="Adjuntar fitxers" disabled={running} onClick={() => fileInput.current?.click()}>
+              <LuPaperclip />
             </IconButton>
           </Tooltip>
           <Box flex={1} />
@@ -379,7 +456,7 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
               <LuCircleStop /> Aturar
             </Button>
           ) : (
-            <Button size="sm" colorPalette="wood" disabled={!input.trim() && !attached} onClick={() => void send()}>
+            <Button size="sm" colorPalette="wood" disabled={!input.trim() && !attached.length} onClick={() => void send()}>
               <LuSendHorizontal /> Enviar
             </Button>
           )}
