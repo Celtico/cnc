@@ -50,8 +50,10 @@ export const HAFELE_LOOX_SYSTEM: LightSystem = {
     { length: 1000, article: "833.77.713" },
     { length: 2000, article: "833.77.714" },
   ],
+  // «Pantalla para paso de cables» (p. 2.110): per amagar el cablejat visible en mobles i armaris, de plàstic, per encaixar.
+  cableCover: { article: "833.74.795", name: "Tapa passacables Häfele (2.500 mm, blanc; beix .796, negre .797)", length: 2500 },
   maxCable: 6000,
-  source: "Catàleg Häfele, pp. 2.103 (alimentadors), 2.109–2.110 (cables i distribuïdors), 2.120–2.123 (interruptors)",
+  source: "Catàleg Häfele, pp. 2.103 (alimentadors), 2.109–2.110 (cables, distribuïdors i tapa passacables), 2.120–2.123 (interruptors)",
   notes: [
     "Abans de connectar a la xarxa, tots els components han d'estar connectats a l'alimentador.",
     "Màxim 6 m de cable entre l'alimentador i una làmpada o l'interruptor; 50 mm lliures al voltant de l'alimentador i un registre per arribar-hi.",

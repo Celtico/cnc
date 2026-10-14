@@ -78,6 +78,8 @@ export interface LightSystem {
   switchCable: { article: string; name: string }
   /** Cables d'extensió de 24 V, per si l'alimentador és lluny. */
   extensions: { length: number; article: string }[]
+  /** Per amagar el cable que queda a la vista dins del moble (es tallen a mida, sense mecanitzat). */
+  cableCover?: { article: string; name: string; length: number }
   /** Màxim de cable entre l'alimentador i una làmpada o l'interruptor (mm). */
   maxCable: number
   source: string

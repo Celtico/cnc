@@ -296,7 +296,8 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
       de porta amb forat Ø12 × 47 al cantell de davant del lateral esquerre (`light-switch`) si hi ha portes recobrents,
       si no de proximitat. **Comanda per mòdul** (`ModuleBuild.lightKits`, `core/build/lightOrders.ts`,
       `electricalLines`: alimentador 20/40/90 W amb cable EU per la potència amb el pic en encendre, distribuïdor de 6
-      vies passades les 6 ranures, interruptor + cable, nota dels cables d'extensió) a Peces › «Llums i instal·lació
+      vies passades les 6 ranures, interruptor + cable, la **tapa passacables** 833.74.795 per amagar el cable dins del
+      moble —el catàleg no dona cap forat al fons— i la nota dels cables d'extensió) a Peces › «Llums i instal·lació
       elèctrica» i al LLEGEIX-ME de Maestro. Preferències **v31** (additiu, `V31_ITEMS`); `hardwareParams` amaga «Entre
       llums» i «Rebaix» al perfil de l'app. Tests `build/lightKit.test.ts`.
     - **Llum a sota del moble** (`Carcass.underLight`, Mòdul › Caixa «Llum a sota», després de la base; per decisió de

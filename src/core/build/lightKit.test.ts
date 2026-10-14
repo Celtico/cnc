@@ -145,7 +145,7 @@ describe("jocs de llum Häfele Loox (v31)", () => {
   it("el sistema elèctric: alimentador per la potència (amb el pic), distribuïdor passades les 6 ranures, interruptor i cable", () => {
     const sys = HAFELE_LOOX_SYSTEM
     const small = electricalLines(sys, 4, 12, "door")
-    expect(small.map((l) => l.item)).toEqual(["833.77.951", "833.89.128", "833.89.142"])
+    expect(small.map((l) => l.item)).toEqual(["833.77.951", "833.74.795", "833.89.128", "833.89.142"])
     const mid = electricalLines(sys, 8, 26, "touch")
     expect(mid.map((l) => [l.item, l.qty])).toEqual([["833.77.952", 1], ["833.77.724", 1], ["833.89.136", 1], ["833.89.142", 1]])
     // 100 W: dos alimentadors de 90.

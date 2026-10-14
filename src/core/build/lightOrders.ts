@@ -41,6 +41,8 @@ export function electricalLines(sys: LightSystem, lamps: number, peakWatts: numb
   const extra = perDriver - driver.slots
   const dist = extra > 0 ? Math.ceil(extra / (sys.distributor.ways - 1)) : 0
   if (dist > 0) out.push({ component: `distributor:${sys.distributor.article}`, name: sys.distributor.name, qty: dist * n, item: sys.distributor.article, note: `${perDriver} làmpades i ${driver.slots} ranures per alimentador` })
+  // El cable de dins del moble (de les làmpades i de l'interruptor a l'alimentador), amagat: la tapa del catàleg, tallada a mida.
+  if (sys.cableCover) out.push({ component: `cable-cover:${sys.cableCover.article}`, name: sys.cableCover.name, qty: n, item: sys.cableCover.article, note: "per amagar els cables dins del moble (s'encaixa, es talla a mida); el catàleg no dona cap forat al fons: el cable de xarxa de l'alimentador surt per darrere fins a l'endoll" })
   if (sw === "door") {
     out.push({ component: `switch:${sys.doorSwitch.article}`, name: sys.doorSwitch.name, qty: n, item: sys.doorSwitch.article, note: `forat Ø${fmt(sys.doorSwitch.bore)} × ${fmt(sys.doorSwitch.depth)} al cantell de davant del lateral; porta oberta = llum encesa` })
     out.push({ component: `switch-cable:${sys.switchCable.article}`, name: sys.switchCable.name, qty: n, item: sys.switchCable.article })
