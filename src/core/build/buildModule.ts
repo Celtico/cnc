@@ -2008,7 +2008,8 @@ class Builder {
     const baseTop = bb.max[1]
     const back = this.panels.find((p) => p.role === "back")
     const zBack = back ? worldBoxOf(back).max[2] : bb.min[2]
-    const zc = zBack + 25
+    // Davant de les columnes de la casa (el fons nou que les tanca, `rearLimits`): el cable i l'alimentador hi passen per davant.
+    const zAlong = (xa: number, xb: number) => Math.max(zBack, this.rearAt(Math.min(xa, xb) - 15, Math.max(xa, xb) + 15)) + 25
     // L'alimentador: el més petit que arriba a la potència (amb el pic), com a la comanda.
     const kits = this.lightKits
     const peak = kits.reduce((a, k) => a + k.peakWatts, 0)
@@ -2018,6 +2019,8 @@ class Builder {
     const dx0 = bb.min[0] + 50
     const dx1 = dx0 + (len ?? 140)
     const driverIn: [number, number] = [dx0, baseTop + 8]
+    const zDrv = Math.max(zBack, this.rearAt(dx0, dx1)) + 20
+    const behindColumn = this.rearAt(dx0, dx1) > this.d.backInnerZ + 1
     const holes: Wiring["holes"] = []
     const seen = new Set<string>()
     const drill = (p: Panel, w: Vec3, d: number, label: string) => {
@@ -2030,6 +2033,7 @@ class Builder {
     }
     // Sobre la base, de x fins a l'alimentador: un passant a cada divisor que hi ha pel mig.
     const alongBase = (x: number, d: number) => {
+      const zc = zAlong(x, dx0)
       for (const v of this.verticals) {
         if (v.outer) continue
         const mid = (v.xL + v.xR) / 2
@@ -2044,11 +2048,12 @@ class Builder {
       if (l.host === base) {
         // Llum a sota: el cable puja per la base i va per sobre fins a l'alimentador.
         alongBase(l.x, l.d)
-        length = Math.abs(l.x - dx0) + Math.abs(l.z - zc) + 50
+        length = Math.abs(l.x - dx0) + Math.abs(l.z - zAlong(l.x, dx0)) + 50
         pts.push([l.x, baseTop + 8], driverIn)
       } else {
         // A 40 del lateral (fora de les espigues de cantell dels prestatges, que hi entren uns 20) i a 25 del fons.
         const cx = l.x0 + 40
+        const zc = zAlong(cx, cx)
         const top = hb.max[1]
         // Per sobre de la peça de la làmpada fins a la cantonada, i avall per la cantonada.
         drill(l.host, [cx, (hb.min[1] + hb.max[1]) / 2, zc], l.d, "pas del cable")
@@ -2069,7 +2074,8 @@ class Builder {
     }
     // El cable de xarxa: pel fons, darrere de l'alimentador (l'endoll pla europeu, 35,3 × 13,7, passa per 40 × 16).
     let mains: Wiring["mains"]
-    if (back) {
+    if (behindColumn) notes.push("Hi ha una columna darrere de l'alimentador: el cable de xarxa no surt pel fons, passa'l per l'osca de la columna fins a l'endoll.")
+    else if (back) {
       const mx = (dx0 + dx1) / 2, my = baseTop + 40
       const l = toLocal(back, [mx, my, worldBoxOf(back).min[2]])
       if (l[0] > 25 && l[1] > 12 && l[0] < back.length - 25 && l[1] < back.width - 12) {
@@ -2081,7 +2087,7 @@ class Builder {
     if (this.lampSpots.some((l) => l.host.role === "shelf")) notes.push("Les làmpades sota prestatges regulables: el cable passa pel costat del prestatge (no es forada) fins a la cantonada.")
     // Al 3D (per decisió de l'usuari: «es veuen els cables?»): l'alimentador, cada cable pel seu recorregut (Ø4) i la tapa
     // passacables del catàleg a la cantonada per on baixa (de només veure, rol `hardware`).
-    this.hwBox("wiring-driver", drv.name, "Gris mat", [dx0, baseTop, zBack + 20], [dx1 - dx0, 16, 50])
+    this.hwBox("wiring-driver", drv.name, "Gris mat", [dx0, baseTop, zDrv], [dx1 - dx0, 16, 50])
     const cable = (id: string, a: Vec3, b: Vec3) => {
       if (Math.abs(a[0] - b[0]) > 0.5) this.hwRod(id, "Cable de llum", "Gris mat", a[0], b[0], a[1], a[2], 2, "x")
       else if (Math.abs(a[1] - b[1]) > 0.5) this.hwRod(id, "Cable de llum", "Gris mat", a[0], a[0], Math.min(a[1], b[1]), a[2], 2, "y", Math.max(a[1], b[1]))
@@ -2089,13 +2095,17 @@ class Builder {
     }
     const covers = new Set<string>()
     this.lampSpots.forEach((l, i) => {
-      const dz: Vec3 = [dx0, baseTop + 8, zc]
       const path: Vec3[] = []
-      if (l.host === base) path.push([l.x, l.y, l.z], [l.x, baseTop + 8, l.z], [l.x, baseTop + 8, zc], dz)
-      else {
+      if (l.host === base) {
+        const zc = zAlong(l.x, dx0)
+        path.push([l.x, l.y, l.z], [l.x, baseTop + 8, l.z], [l.x, baseTop + 8, zc], [dx0, baseTop + 8, zc], [dx0, baseTop + 8, zDrv + 5])
+      } else {
         const top = worldBoxOf(l.host).max[1] + 3
         const cx = l.x0 + 40
-        path.push([l.x, l.y, l.z], [l.x, top, l.z], [l.x, top, zc], [cx, top, zc], [cx, baseTop + 8, zc], dz)
+        const zc = zAlong(cx, cx)
+        const zb = zAlong(cx, dx0)
+        const dz: Vec3 = [dx0, baseTop + 8, zb]
+        path.push([l.x, l.y, l.z], [l.x, top, l.z], [l.x, top, zc], [cx, top, zc], [cx, baseTop + 8, zc], [cx, baseTop + 8, zb], dz, [dx0, baseTop + 8, zDrv + 5])
         const key = `${Math.round(cx)}`
         if (!covers.has(key)) {
           covers.add(key)

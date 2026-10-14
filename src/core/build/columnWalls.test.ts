@@ -171,3 +171,21 @@ describe("potes AXILO 78 en una base retallada per una columna", () => {
     expect(base.holes.filter((h) => h.tag === "leg")).toHaveLength(fit.length * 4)
   })
 })
+
+describe("llums amb una columna a la cantonada", () => {
+  it("el cable i l'alimentador passen per davant de la columna (cap passant dins de la columna) i no hi ha sortida pel fons", async () => {
+    const { HAFELE_LOOX_ITEMS } = await import("../model")
+    const item = structuredClone(HAFELE_LOOX_ITEMS.find((x) => x.light && x.light.recess.shape === "round")!)
+    const m = { ...mod(), root: { id: "z", shelves: { n: 1, adjustable: false }, led: { hardware: item } } }
+    const b = buildComposition({ modules: [m], references: [col(-60, -60)] } as never)
+    const w = b.wirings[0]!.wiring
+    expect(w.notes.some((n) => n.includes("columna"))).toBe(true)
+    const driver = b.extras.find((p) => p.id.endsWith("wiring-driver"))!
+    expect(panelBox(driver).min[2]).toBeGreaterThanOrEqual(200)
+    for (const p of b.extras.filter((q) => q.id.includes(":wiring-"))) {
+      const bx = panelBox(p)
+      const inColumn = bx.max[0] > -60 + 0.5 && bx.min[0] < 190 - 0.5 && bx.min[2] < 190 - 0.5 && bx.max[2] > -60
+      expect(inColumn, p.id).toBe(false)
+    }
+  })
+})
