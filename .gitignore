@@ -25,3 +25,6 @@ dist-ssr
 
 # Manual de SCM (Maestro Scripting Language): només local, no es puja
 docs/maestro/*.pdf
+
+# Catàlegs en PDF dels fabricants (massa grans; no es pugen al repo)
+docs/*.pdf
