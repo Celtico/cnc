@@ -34,6 +34,19 @@ describe("pota AXILO 78 (placa rectangular per cargolar)", () => {
     expect(b.warnings.filter((w) => w.code === "hardware")).toEqual([])
   })
 
+  it("a les cuines, les del davant a 83 (el sòcol); als altres mobles, a 60 (més endavant, per decisió del taller)", () => {
+    const m = onLegs()
+    const D = m.carcass.depth
+    const frontZ = (kitchen?: boolean) => {
+      const b = buildModule(m, kitchen === undefined ? {} : { kitchen })
+      const bottom = b.panels.find((p) => p.role === "bottom")!
+      return Math.max(...bottom.holes.filter((h) => h.tag === "leg").map((h) => toWorld(bottom, [h.x, h.y, 0])[2]))
+    }
+    expect(frontZ(true)).toBeCloseTo(D - 83 + 32, 1)
+    expect(frontZ(false)).toBeCloseTo(D - 60 + 32, 1)
+    expect(frontZ()).toBeCloseTo(D - 83 + 32, 1)
+  })
+
   it("el dibuix de Preferències (peça d'exemple) posa els forats com el moble: davant, darrere i mirall", () => {
     const [base] = hardwarePreview(axilo).panels
     const at = (x: number, y: number) => base!.holes.some((h) => Math.abs(h.x - x) < 0.01 && Math.abs(h.y - y) < 0.01)

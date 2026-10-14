@@ -5,7 +5,7 @@
 <rect x="70" y="70" width="600" height="577" fill="#f3efe7" stroke="#333" stroke-width="1.5"/>
 <rect x="70" y="70" width="19" height="577" fill="#e2d9c8" stroke="#999"/><rect x="651" y="70" width="19" height="577" fill="#e2d9c8" stroke="#999"/>
 <rect x="89" y="80" width="562" height="10.8" fill="#d6cbb4" stroke="#aaa" stroke-width="0.5"/>
-<text x="370.0" y="62" text-anchor="middle" fill="#555">DARRERE (fons, ranura de 10,8 a 10 del cantell)</text><text x="370.0" y="665" text-anchor="middle" fill="#555">DAVANT (sòcol)</text>
+<text x="370.0" y="62" text-anchor="middle" fill="#555">DARRERE (fons, ranura de 10,8 a 10 del cantell)</text><text x="370.0" y="665" text-anchor="middle" fill="#555">DAVANT (sòcol) · cuina: 83 · mobles: 60</text>
 <rect x="78.5" y="90.5" width="92.0" height="79" rx="6" fill="#2b2d31" opacity="0.9"/>
 <rect x="73.5" y="116" width="5" height="28" fill="#2b2d31"/>
 <circle cx="118" cy="130" r="18" fill="none" stroke="#e8590c" stroke-width="1.5"/><circle cx="118" cy="130" r="39" fill="none" stroke="#e8590c" stroke-dasharray="4 3"/>
@@ -50,5 +50,5 @@
 <text x="716" y="362.5" text-anchor="start" fill="#1c7ed6">577</text>
 <line x1="70" y1="690" x2="670" y2="690" stroke="#1c7ed6"/><line x1="70" y1="686" x2="70" y2="694" stroke="#1c7ed6"/><line x1="670" y1="686" x2="670" y2="694" stroke="#1c7ed6"/><text x="370.0" y="684" text-anchor="middle" fill="#1c7ed6">600</text>
 <text x="70" y="722" fill="#555">Eix del tub (creu taronja) · placa 92 × 79, el clip cap al lateral a 3,5 del cantell · placa a 20,5 del darrere · cargols a −19 / +45 i ±32 de l'eix</text>
-<text x="70" y="738" fill="#555">Peu Ø78 (discontinu) · el davant (83) mesurat al 3D del taller, ±3 mm · base d'exemple de 600 × 577</text>
+<text x="70" y="738" fill="#555">Peu Ø78 (discontinu) · al davant, 83 a les cuines (el sòcol, mesurat al 3D del taller) i 60 als altres mobles</text>
 </svg>

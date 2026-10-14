@@ -10,8 +10,9 @@ import type { HardwareItem } from "../hardware"
  * **Com la munta el taller** (el model de TopSolid del germà, 2026-10-14): el costat llarg al llarg de l'amplada del moble i
  * el clip cap al lateral, a les quatre cantonades (les de la dreta, en mirall: `params.mirror`); la placa **separada** de
  * les vores de la fusta (per decisió de l'usuari, 2026-10-14: «al fons 20 mm com a mínim, als costats 3 mm»: `inset` 48 —el clip a 3,5 del
- * cantell del lateral—, `insetBack` 60 —la placa a 20,5 del darrere— i `insetFront` 83 del davant, on va el sòcol, mesurat al
- * model del taller; plànol a escala a `docs/pota-axilo-planta.svg`; el clip queda a ~5 del cantell del
+ * cantell del lateral—, `insetBack` 60 —la placa a 20,5 del darrere— i `insetFront` 83 del davant a les cuines, on va el sòcol, mesurat al
+ * model del taller (el taller: «està bé per a les cuines; als mobles, més endavant»: `insetFrontFurniture` 60, que la
+ * còpia del mòdul agafa en triar-la fora d'una cuina, `LegPick`); plànol a escala a `docs/pota-axilo-planta.svg`; el clip queda a ~5 del cantell del
  * lateral i la placa a ~10 del darrere i a ~45 del davant). Al marc de la pota (u = X del mòdul cap a dins a
  * l'esquerra, v = cap al davant, origen a l'eix del tub) els cargols són a u = −19 / +45 i v = ±32. El tub amb el peu
  * regulable es demana a part per l'alçada.
@@ -30,14 +31,14 @@ export const HAFELE_LEGS: HardwareItem[] = [
     maker: "Häfele",
     ref: "637.76.333",
     tags: [
-      "Placa de fixació rectangular per cargolar (637.76.333, plàstic negre, 92 × 79 × 25): 4 cargols en quadre de 64 × 64, tub al forat Ø30; com la munta el taller, el costat llarg al llarg de l'amplada i el clip cap al lateral (les de la dreta, en mirall), l'eix a 48 dels laterals (el clip a 3,5), a 60 del darrere (la placa a 20,5) i a 83 del davant, on va el sòcol (docs/pota-axilo-planta.svg).",
+      "Placa de fixació rectangular per cargolar (637.76.333, plàstic negre, 92 × 79 × 25): 4 cargols en quadre de 64 × 64, tub al forat Ø30; com la munta el taller, el costat llarg al llarg de l'amplada i el clip cap al lateral (les de la dreta, en mirall), l'eix a 48 dels laterals (el clip a 3,5), a 60 del darrere (la placa a 20,5) i al davant a 83 a les cuines (el sòcol) i a 60 als altres mobles (docs/pota-axilo-planta.svg).",
       "Tub amb peu regulable a part (Ø78, 150 kg per pota), per l'alçada de la base «Potes»: 60 → 637.76.351 (53–80) · 80 → .352 (70–100) · 100 → .353 (90–120) · 125 → .354 (115–145) · 150 → .355 (140–170) · 180 → .356 (170–200) · 200 → .357 (190–220).",
       "Hipòtesi: prebroca dels cargols Ø3 × 10 (el catàleg no la dona).",
       AXILO_SOURCE,
     ],
     // La placa per dibuixar-la (al marc de la pota, l'esquerra): del clip (−39,5 −5) a l'altra vora (+52,5), ±39,5, 25 de
     // gruix; el peu Ø78.
-    params: { inset: 48, insetBack: 60, insetFront: 83, mirror: 1, plateU0: -44.5, plateU1: 52.5, plateV: 39.5, plateH: 25, foot: 78 },
+    params: { inset: 48, insetBack: 60, insetFront: 83, insetFrontFurniture: 60, mirror: 1, plateU0: -44.5, plateU1: 52.5, plateV: 39.5, plateH: 25, foot: 78 },
     targets: [
       {
         key: "base",
@@ -50,7 +51,7 @@ export const HAFELE_LEGS: HardwareItem[] = [
         ],
       },
     ],
-    version: 8,
+    version: 9,
     builtin: true,
   },
 ]

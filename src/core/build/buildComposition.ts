@@ -110,7 +110,7 @@ export function buildComposition(input: Composition): CompositionBuild {
   // Tipus «Lliure» (flat-pack): només peces lliures; els mòduls es guarden però no es fan.
   const onlyParts = partsOnlyKind(compositionKind(comp))
   // Columnes de la casa que entren pel darrere: els calaixos del seu tram, més curts (`columnRearLimits`).
-  const builds = onlyParts ? [] : comp.modules.map((m, i) => buildModule(m, isTurned(m) ? {} : { rearLimits: columnRearLimits(m, comp.references, places[i]!) }))
+  const builds = onlyParts ? [] : comp.modules.map((m, i) => buildModule(m, { ...(isTurned(m) ? {} : { rearLimits: columnRearLimits(m, comp.references, places[i]!) }), kitchen: compositionKind(comp) === "cuina" }))
   // Illes: el mòdul de darrere es gira 180° i es posa enganxat al darrere del de davant (mateixa X, a `gap` mm), sigui
   // quina sigui la seva posició pròpia.
   const islands = onlyParts ? [] : activeIslands(comp)

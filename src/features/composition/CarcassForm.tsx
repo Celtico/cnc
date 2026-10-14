@@ -21,7 +21,7 @@ export type CarcassSection = "dims" | "structure"
  * decisió de l'usuari, 2026-10-08: «l'Estil també a la Caixa»; abans eren a «Acabats»). Només el que la construcció
  * llegeix (`moduleRows`, `core/model/usedHardware.ts`). Els passacables són a `CableHolesForm`.
  */
-export function CarcassForm({ module, onChange, section, rows = moduleRows(module) }: { module: Module; onChange: (m: Module) => void; section: CarcassSection; rows?: ModuleRows }) {
+export function CarcassForm({ module, onChange, section, rows = moduleRows(module), kitchen = false }: { module: Module; onChange: (m: Module) => void; section: CarcassSection; rows?: ModuleRows; /** El moble és una cuina (la pota AXILO 78 hi va més enrere, pel sòcol). */ kitchen?: boolean }) {
   const c = module.carcass
   const { gaps } = useSettings().settings
   const set = (patch: Partial<Carcass>) => onChange({ ...module, carcass: { ...c, ...patch } })
@@ -74,7 +74,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
         {c.base.kind === "legs" && (
           <>
             <NumRow label="Alçada potes" value={c.base.height} min={20} max={400} step={5} onChange={(height) => set({ base: { ...(c.base as Extract<Base, { kind: "legs" }>), height } })} />
-            <LegPick base={c.base} onChange={(base) => set({ base })} />
+            <LegPick base={c.base} kitchen={kitchen} onChange={(base) => set({ base })} />
           </>
         )}
 
@@ -429,7 +429,7 @@ function thicknessOptions(list: number[], current: number): { id: string; label:
  * biblioteca (Preferències › Ferratges, una **còpia**): un cop confirmada, els forats de la placa a la cara de sota de la
  * base, a cada pota. El mateix `HardwarePick` que la resta de ferratges del moble (motor `leg`, sense lloc al mòdul).
  */
-function LegPick({ base, onChange }: { base: Extract<Base, { kind: "legs" }>; onChange: (b: Base) => void }) {
+function LegPick({ base, kitchen, onChange }: { base: Extract<Base, { kind: "legs" }>; kitchen: boolean; onChange: (b: Base) => void }) {
   const { settings } = useSettings()
   const legs = settings.hardwareLibrary.filter((x) => x.engine === "leg")
   const cur = base.hardware
@@ -443,7 +443,9 @@ function LegPick({ base, onChange }: { base: Extract<Base, { kind: "legs" }>; on
   }
   // Una pota amb distància pròpia al davant (la AXILO 78): es pot canviar per a aquest mòdul (on va el sòcol); la còpia del
   // mòdul passa a ser pròpia.
-  const front = cur?.engine === "leg" && "insetFront" in cur.params ? cur.params.insetFront : undefined
+  // Fora d'una cuina, la del davant dels mobles (`insetFrontFurniture`), si la pota en té (la AXILO 78).
+  const frontKey = !kitchen && cur && "insetFrontFurniture" in cur.params ? "insetFrontFurniture" : "insetFront"
+  const front = cur?.engine === "leg" && frontKey in cur.params ? cur.params[frontKey] : undefined
   return (
     <>
       <HardwarePick engine="leg" label="Pota" current={cur} emptyLabel="Genèriques" help={cur ? undefined : "Genèriques: només es veuen al 3D (cap forat). Les potes importades (Preferències › Ferratges) fan els forats de la placa a la cara de sota de la base."} onPick={pick} />
@@ -455,7 +457,7 @@ function LegPick({ base, onChange }: { base: Extract<Base, { kind: "legs" }>; on
           min={20}
           max={300}
           step={1}
-          onChange={(v) => v >= 20 && v <= 300 && onChange({ ...base, hardware: { ...cur, params: { ...cur.params, insetFront: v } } })}
+          onChange={(v) => v >= 20 && v <= 300 && onChange({ ...base, hardware: { ...cur, params: { ...cur.params, [frontKey]: v } } })}
         />
       )}
     </>

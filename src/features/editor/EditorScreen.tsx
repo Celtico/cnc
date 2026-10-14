@@ -1419,7 +1419,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             return (
               <>
                 <FoldItem id="mod-structure" title="Caixa" icon={LuFrame} badge={rows.style ? (module.fronts.style === "inset" ? "Encastats" : "Recobrents") : undefined}>
-                  <CarcassForm module={module} onChange={updateModule} section="structure" rows={rows} />
+                  <CarcassForm module={module} onChange={updateModule} section="structure" rows={rows} kitchen={compositionKind(comp) === "cuina"} />
                 </FoldItem>
                 {/* Portes de dalt a baix de tot el mòdul (armari), només amb l'Interior dividit: sense dividir, el Front és el
                     del compartiment. Després de la Caixa (els laterals diuen on hi caben) i abans dels Materials (Fronts). */}

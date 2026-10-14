@@ -308,6 +308,8 @@ class Builder {
   readonly d: Derived
   /** Obstacles pel darrere (columnes): els calaixos del seu tram, més curts. */
   rearLimits: RearLimit[] = []
+  /** Cuina o no (de la composició); sense, la distància al davant de les potes per a cuines. */
+  kitchen: boolean | undefined = undefined
   /** On comença l'interior pel darrere en el tram x0–x1 (el fons, o la columna amb el seu fons si hi és). */
   rearAt(x0: number, x1: number): number {
     let z = this.d.backInnerZ
@@ -2218,7 +2220,9 @@ class Builder {
     }
     const inset = spec.inset
     // Les del davant, a `insetFront` del cantell de davant, i les del darrere a `insetBack` (si no en té, `inset`).
-    const front = spec.insetFront
+    // Fora d'una cuina, la del davant dels mobles (`insetFrontFurniture`, la AXILO 78: el taller la vol més endavant).
+    const furniture = item.params.insetFrontFurniture
+    const front = this.kitchen === false && Number.isFinite(furniture) && furniture! > 0 ? furniture! : spec.insetFront
     const back = spec.insetBack
     const legs: [number, number][] = [
       [inset, back],
@@ -2335,10 +2339,11 @@ export interface RearLimit {
   z: number
 }
 
-export function buildModule(input: Module, opts: { rearLimits?: RearLimit[] } = {}): ModuleBuild {
+export function buildModule(input: Module, opts: { rearLimits?: RearLimit[]; /** El moble és una cuina (o no): la pota AXILO 78 fa servir la distància al davant de cada cas (sense, la de cuines). */ kitchen?: boolean } = {}): ModuleBuild {
   // Res amagat compta: només el que es veu a l'inspector (els camps de les opcions apagades no hi entren).
   const b = new Builder(visibleModule(input))
   b.rearLimits = opts.rearLimits ?? []
+  b.kitchen = opts.kitchen
   b.buildCarcass()
   const layout = b.buildZones()
   b.buildLegs()

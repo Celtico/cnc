@@ -165,7 +165,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     placa rectangular per cargolar** (`core/model/hafele/hafeleLegs.ts`, 637.76.333, p. FF 11.79; preferències v34, i v37
     com la munta el taller al TopSolid del germà): el costat llarg al llarg de l'amplada i el clip cap al lateral, l'eix a 48
     dels laterals (el clip a 3,5 del cantell), a 60 del darrere (la placa a 20,5: «al fons 20 com a mínim, als costats 3») i
-    a 83 del davant, on va el sòcol (`insetBack`, `insetFront`, `legSpec()`; plànol a escala a `docs/pota-axilo-planta.svg`); el del davant es pot canviar per mòdul a Mòdul › Caixa, «Potes al davant», sota la «Pota» (la còpia del mòdul; per petició del taller); 4 prebroques Ø3 × 10 (hipòtesi) a u = −19 / +45, v = ±32 de l'eix; les potes de la dreta en mirall
+    al davant a 83 a les cuines, on va el sòcol, i a 60 als altres mobles (per decisió del taller: `insetFront` / `insetFrontFurniture`; `buildModule(m, { kitchen })`, que `buildComposition` passa amb `compositionKind` = cuina; sense, la de cuines) (`insetBack`, `legSpec()`; plànol a escala a `docs/pota-axilo-planta.svg`); el del davant es pot canviar per mòdul a Mòdul › Caixa, «Potes al davant», sota la «Pota» (la còpia del mòdul, la clau del cas que toca; per petició del taller); 4 prebroques Ø3 × 10 (hipòtesi) a u = −19 / +45, v = ±32 de l'eix; les potes de la dreta en mirall
     (`params.mirror` = 1, `legSpec().mirror`, `buildLegs`). El tub per l'alçada, a les notes de l'item. **Al 3D** (v38):
     sense model importat, `buildLegs` posa a la base un `Panel.fittings` `kind: "leg"` amb `leg` (la placa de l'item,
     `plateU0`/`plateU1`/`plateV`/`plateH`, en mirall a la dreta; l'alçada de la base «Potes»; el peu) i `legSolids`
