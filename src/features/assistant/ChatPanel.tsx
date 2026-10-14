@@ -8,6 +8,7 @@ import { blobToBase64 } from "../file/mobleIo"
 import { shrinkImage } from "../imageShrink"
 import { openSettings } from "../settings/openSettings"
 import { describeFailure, loadSdk, makeClient } from "./claudeClient"
+import { HOVER_SCROLLBARS, useDragPan } from "./dragPan"
 import { runTurn } from "./chatTurn"
 import type { ChatTarget } from "./chatTarget"
 import { NO_KEY_ERROR, OFFLINE_ERROR, type AssistantError } from "./errors"
@@ -46,6 +47,7 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
   const abort = useRef<AbortController | null>(null)
   const nextId = useRef(1)
   const list = useRef<HTMLDivElement>(null)
+  useDragPan(list)
   const fileInput = useRef<HTMLInputElement>(null)
   // Les fotos de la conversa (URL de blob) s'alliberen en sortir de l'Editor.
   const urls = useRef<string[]>([])
@@ -259,7 +261,7 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
         </HStack>
       )}
 
-      <Box ref={list} onScroll={onListScroll} flex={1} minH={0} overflowY="auto" css={{ scrollbarWidth: "thin" }} pr={1}>
+      <Box ref={list} onScroll={onListScroll} flex={1} minH={0} overflowY="auto" overflowX="auto" overscrollBehaviorX="contain" css={HOVER_SCROLLBARS} pr={1}>
         {items.length === 0 ? (
           <Stack gap={2} py={2}>
             <Text fontSize="sm" color="fg.muted">
