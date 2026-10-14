@@ -39,6 +39,7 @@ import {
   LuAppWindow,
   LuDoorOpen,
   LuPanelTop,
+  LuWarehouse,
   LuLock,
   LuLockOpen,
   LuUndoDot,
@@ -103,6 +104,9 @@ import {
   reorderItems,
   withFlag,
   type ViewFlags,
+  roofBox,
+  type Roof,
+  type Skylight,
 } from "../../core/model"
 import { compositionOf, updateProjectComposition } from "../../db/compositionStore"
 import { createProject, db, saveAmbientCamera, updateAmbient, type Project } from "../../db/db"
@@ -237,6 +241,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const [dollhouse, setDollhouse] = usePersistentFlag("mobles:ambient-dollhouse", true)
   const [shadows, setShadows] = usePersistentFlag("mobles:ambient-shadows", true)
   const [ceiling, setCeiling] = usePersistentFlag("mobles:ambient-ceiling", true)
+  const [roofOn, setRoofOn] = usePersistentFlag("mobles:ambient-roof", true)
   // Seleccionar porta a Propietats al mòbil (com a l'editor).
   const select = (x: Selection) => {
     setSel(x)
@@ -1063,7 +1068,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
           ) : (
             // Fons del 3D (el visor és transparent): el mateix gris que el plànol.
             <Box position="absolute" inset={0} rounded="md" overflow="hidden" borderWidth="1px" bg="bg.subtle">
-              <Ambient3D ambient={shownAmb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} onPick={pickItem} onChange={changeShown} snap={snapOn} dollhouse={dollhouse} shadows={shadows} ceiling={ceiling} onPoseChange={setPose} initialCamera={cameraRef.current} onCameraChange={saveCamera} cameraLocked={camLocked} cameraGoto={camGoto} />
+              <Ambient3D ambient={shownAmb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} onPick={pickItem} onChange={changeShown} snap={snapOn} dollhouse={dollhouse} shadows={shadows} ceiling={ceiling} roof={roofOn} onPoseChange={setPose} initialCamera={cameraRef.current} onCameraChange={saveCamera} cameraLocked={camLocked} cameraGoto={camGoto} />
             </Box>
           )}
             {chrome}
@@ -1139,6 +1144,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                     <ViewTile label="Casa de nines" icon={<LuHouse />} on={dollhouse} onClick={() => setDollhouse((v) => !v)} tip="Parets de davant transparents" />
                     <ViewTile label="Ombres" icon={<LuSun />} on={shadows} onClick={() => setShadows((v) => !v)} />
                     <ViewTile label="Sostre" icon={<LuPanelTop />} on={ceiling} onClick={() => setCeiling((v) => !v)} tip="Sostre a les habitacions tancades: es veu des de dins («Interior») i al render la llum entra per les finestres" />
+                    {amb.roof && <ViewTile label="Teulada" icon={<LuWarehouse />} on={roofOn} onClick={() => setRoofOn((v) => !v)} tip="La teulada de l'ambient (Propietats › Teulada). Amb la casa de nines, des de fora es fa transparent" />}
                     <ViewTile label="Render" icon={<LuAperture />} on={false} onClick={() => (setViewOptsOpen(false), setRenderOpen(true))} tip="Render fotorealista (GPU o CPU, com Cinema 4D): es va afinant i es desa en PNG" />
                   </>
                 )
@@ -1169,6 +1175,79 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
 
 
 /** Material de les preferències, agrupat per categories (el mateix selector que a Preferències). */
+const ROOF_KINDS = [
+  { value: "none", label: "Cap" },
+  { value: "flat", label: "Plana" },
+  { value: "shed", label: "Una aigua" },
+  { value: "gable", label: "Dues aigües" },
+] as const
+
+/** La teulada de l'ambient (`Ambient.roof`): tipus, pendent, carener, voladís, gruix, alçada, material i claraboies. */
+function RoofSection({ amb, materials, onChange }: { amb: Ambient; materials: MaterialPref[]; onChange: (a: Ambient) => void }) {
+  const roof = amb.roof
+  const set = (r: Partial<Roof>) => roof && onChange({ ...amb, roof: { ...roof, ...r } })
+  const box = roofBox(amb)
+  const wallTop = amb.walls.length ? Math.max(...amb.walls.map((w) => w.height)) : 2500
+  const sky = roof?.skylights ?? []
+  const setSky = (i: number, p: Partial<Skylight>) => set({ skylights: sky.map((k, j) => (j === i ? { ...k, ...p } : k)) })
+  const label = ROOF_KINDS.find((k) => k.value === (roof?.kind ?? "none"))!.label
+  return (
+    <FoldItem id="amb-roof" title="Teulada" icon={LuWarehouse} badge={roof ? label : undefined}>
+      <FormRow label="Tipus" help={!amb.walls.length ? "Dibuixa primer les parets: la teulada les cobreix amb el voladís." : roof?.kind === "gable" ? "Dues aigües: la «V» de casa, amb el carener al mig i les puntes tancades." : roof?.kind === "shed" ? "Una aigua: puja d'un costat a l'altre; la paret alta i les puntes s'hi tanquen." : undefined}>
+        <ChoiceChips
+          label="Tipus de teulada"
+          value={roof?.kind ?? "none"}
+          options={ROOF_KINDS.map((k) => ({ id: k.value, label: k.label }))}
+          onChange={(v) => onChange({ ...amb, roof: v === "none" ? undefined : { pitch: 30, ridge: "x", overhang: 300, thickness: 200, ...roof, kind: v as Roof["kind"] } })}
+        />
+      </FormRow>
+      {roof && (
+        <>
+          {roof.kind !== "flat" && <NumRow label="Pendent" value={roof.pitch} min={1} max={70} step={1} suffix="°" onChange={(pitch) => pitch >= 1 && pitch <= 70 && set({ pitch })} />}
+          {roof.kind !== "flat" && (
+            <FormRow label="Carener" help={roof.kind === "shed" ? "La direcció de la vora alta." : "La direcció de la línia de dalt (on es troben les dues aigües)."}>
+              <ChoiceChips label="Carener" value={roof.ridge} options={[{ id: "x", label: "Al llarg de X" }, { id: "y", label: "Al llarg de Y" }]} onChange={(ridge) => set({ ridge: ridge as Roof["ridge"] })} />
+            </FormRow>
+          )}
+          <NumRow label="Voladís" value={roof.overhang} min={0} max={3000} step={10} onChange={(overhang) => overhang >= 0 && set({ overhang })} />
+          <NumRow label="Gruix" value={roof.thickness} min={20} max={1000} step={10} onChange={(thickness) => thickness >= 20 && set({ thickness })} />
+          <NumRow label="Alçada" value={roof.height ?? wallTop} min={200} max={20000} step={10} help={roof.height === undefined ? "Com la paret més alta." : undefined} onChange={(height) => height >= 200 && set({ height: height === wallTop ? undefined : height })} />
+          <MaterialPick label="Material" value={roof.material ?? "Formigó"} materials={materials} onChange={(material) => set({ material })} />
+          <FormRow label="Claraboies" help="Finestres a la teulada: al render la llum del cel hi entra. X i Y són el centre al plànol.">
+            <Button
+              size="xs"
+              variant="outline"
+              alignSelf="flex-start"
+              disabled={!box}
+              onClick={() => box && set({ skylights: [...sky, { x: Math.round((box.x0 + box.x1) / 2), y: Math.round((box.y0 + box.y1) / 2), w: 800, d: 1000 }] })}
+            >
+              <LuPlus /> Afegir claraboia
+            </Button>
+          </FormRow>
+          {sky.map((k, i) => (
+            <Stack key={i} gap={2}>
+              <HStack gap={2}>
+                <Text fontSize="xs" fontWeight="semibold" color="fg.muted" flex={1}>
+                  Claraboia {i + 1}
+                </Text>
+                <Tooltip content="Treure la claraboia">
+                  <IconButton size="2xs" variant="ghost" aria-label="Treure la claraboia" onClick={() => set({ skylights: sky.filter((_, j) => j !== i) })}>
+                    <LuTrash2 />
+                  </IconButton>
+                </Tooltip>
+              </HStack>
+              <NumRow label="X (centre)" value={k.x} step={10} onChange={(x) => Number.isFinite(x) && setSky(i, { x })} />
+              <NumRow label="Y (centre)" value={k.y} step={10} onChange={(y) => Number.isFinite(y) && setSky(i, { y })} />
+              <NumRow label="Ample" value={k.w} min={100} max={5000} step={10} onChange={(w) => w >= 100 && setSky(i, { w })} />
+              <NumRow label="Fondària" value={k.d} min={100} max={5000} step={10} onChange={(d) => d >= 100 && setSky(i, { d })} />
+            </Stack>
+          ))}
+        </>
+      )}
+    </FoldItem>
+  )
+}
+
 function MaterialPick({ label, value, materials, onChange, emptyLabel }: { label: string; value: string; materials: MaterialPref[]; onChange: (v: string) => void; onlySim?: boolean; emptyLabel?: string }) {
   return (
     <FormRow label={label} maxW="280px">
@@ -1547,6 +1626,8 @@ function AmbientInspector({
         <MaterialPick label="Parets" value={amb.wallMaterial ?? "Pintura blanca"} materials={materials} onChange={(wallMaterial) => onChange({ ...amb, wallMaterial })} onlySim />
         <MaterialPick label="Sostre" value={amb.ceilingMaterial ?? "Pintura blanca"} materials={materials} onChange={(ceilingMaterial) => onChange({ ...amb, ceilingMaterial })} onlySim />
       </FoldItem>
+
+      <RoofSection amb={amb} materials={materials} onChange={onChange} />
 
       <FoldItem id="amb-plan" title="Plànol de fons" icon={LuImageUp} badge={plan ? "Sí" : undefined}>
         {plan ? (

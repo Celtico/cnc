@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildBounds, buildComposition } from "../build/buildComposition"
-import { addOpening, nearestWall, BLOCK_PRESETS, blockComposition, footprintBox, parseAmbient, resizeComposition, roomWalls, setWallEnds, snapToWalls } from "./ambient"
+import { addOpening, nearestWall, BLOCK_PRESETS, blockComposition, footprintBox, parseAmbient, resizeComposition, roofBox, roomWalls, setWallEnds, snapToWalls } from "./ambient"
 import { defaultModule, newId, type Composition } from "./composition"
 import { BUILTIN_TEMPLATES } from "./templates"
 import { STORE_TEMPLATES } from "./storeCatalog"
@@ -264,5 +264,24 @@ describe("parets a la selecció múltiple i als grups", async () => {
     expect(m.groupWallIds(g, "G")).toEqual(["a", "b"])
     expect(m.newItemGroupName(g)).toBe("Grup 1")
     expect(m.setWallGroup(g, ["a"], undefined).walls[0]!.group).toBeUndefined()
+  })
+})
+
+describe("teulada", () => {
+  const walls = roomWalls(0, 0, 4000, 3000, 100, 2600)
+  it("la caixa de la teulada: les parets amb el voladís, a l'alçada de la paret més alta o la triada", () => {
+    const a = parseAmbient({ walls, items: [], roof: { kind: "gable", overhang: 300 } })
+    expect(a.roof).toMatchObject({ kind: "gable", pitch: 30, ridge: "x", thickness: 200 })
+    expect(roofBox(a)).toEqual({ x0: -300, y0: -300, x1: 4300, y1: 3300, base: 2600 })
+    expect(roofBox({ ...a, roof: { ...a.roof!, height: 3000 } })?.base).toBe(3000)
+    expect(roofBox({ ...a, walls: [] })).toBeNull()
+    expect(roofBox({ ...a, roof: undefined })).toBeNull()
+  })
+  it("una teulada dolenta es treu sense perdre l'ambient; les claraboies es conserven", () => {
+    const bad = parseAmbient({ walls, items: [], roof: { kind: "cúpula" } })
+    expect(bad.roof).toBeUndefined()
+    expect(bad.walls).toHaveLength(4)
+    const ok = parseAmbient({ walls, items: [], roof: { kind: "flat", skylights: [{ x: 2000, y: 1500, w: 800, d: 1000 }] } })
+    expect(ok.roof?.skylights).toHaveLength(1)
   })
 })

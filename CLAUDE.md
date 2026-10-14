@@ -1521,6 +1521,17 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   és el desfer de l'ambient). **Sostre**: opció
   de vista (`mobles:ambient-ceiling`) i material a Acabats (`Ambient.ceilingMaterial`), amb una mica de llum pròpia. Fons del
   3D transparent sobre el gris del plànol (`bg.subtle`); el render fa servir el clar (`scene.userData.renderBackground`).
+- **Teulada** (`Ambient.roof`, `RoofSchema`, `roofBox`; `features/ambients/roof3d.ts`, `roofGroup`; per decisió de l'usuari,
+  2026-10-14: «la teulada, recta o amb forma de casa en V, o amb claraboies»): Propietats de l'ambient › **Teulada**
+  (`LuWarehouse`): Tipus Cap · Plana · Una aigua · Dues aigües, Pendent (°), Carener (al llarg de X / Y), Voladís, Gruix,
+  Alçada (sense valor, la paret més alta), Material («Formigó» per defecte) i **Claraboies** (centre X/Y al plànol, ample en X
+  i fondària en Y; les que no caben a un pla, a 50 mm de les vores, no es fan). Cobreix la caixa de les parets amb el
+  voladís; a dues aigües i a una aigua, les puntes (i a una aigua la paret alta) es tanquen fins a la teulada amb el
+  material de les parets. Al 3D: les peces compten com a parets al render (`userData.room = "wall"`) i cada claraboia
+  porta un vidre que fa de portal; amb la teulada a la vista no es fa el sostre pla; amb la casa de nines, des de fora es
+  fa transparent (des de dins, sòlida). Opció de vista «Teulada» (`mobles:ambient-roof`, només si n'hi ha). Al plànol, el
+  contorn discontinu, el carener (a una aigua, la vora alta gruixuda) i les claraboies. **No surt a les miniatures** (de
+  dalt taparia l'habitació). Una teulada dolenta es treu en llegir sense perdre l'ambient. Tests a `ambient.test.ts`.
 - **Catàleg d'ambients** (`core/model/ambientTemplates.ts`, `AMBIENT_TEMPLATES`, per categories `AMBIENT_CATEGORIES`):
   habitacions «de revista» per a renders; referències `store:<cat>:<nom>`, `app:<id>`, `object:<id>`, `mag:<id>`, `col:<id>`,
   arrambades a una paret (N/S/E/O, `placeTemplateItem`) o lliures. **Escenes amb plantes de debò** (`PLANT_SCENES`, les

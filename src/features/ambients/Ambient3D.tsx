@@ -13,10 +13,11 @@ import { SceneAccess, StudioEnvironment, TextureRefresh } from "../../components
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
 import { disposeTree } from "../../components/viewer/textures"
-import { expandWalls, footprintBox, rad, sameCameraPose, snapToWalls, wallLength, wallOpenings, wallSegments, type Ambient, type CameraPose, type MaterialPref, type Opening } from "../../core/model"
+import { expandWalls, footprintBox, rad, roofBox, sameCameraPose, snapToWalls, wallLength, wallOpenings, wallSegments, type Ambient, type CameraPose, type MaterialPref, type Opening } from "../../core/model"
 import type { ItemGeometry } from "./ambientData"
 import { ambientBox, eyePose, snapGrid } from "./planGeom"
 import { curvedWallPieces } from "./curvedWall"
+import { roofGroup } from "./roof3d"
 
 /**
  * Vista 3D de l'ambient (m): terra i parets amb els materials de simulació i cada moble o bloc
@@ -40,6 +41,7 @@ export function Ambient3D({
   dollhouse = true,
   shadows = true,
   ceiling: showCeiling = true,
+  roof: showRoof = true,
   onPoseChange,
   initialCamera,
   onCameraChange,
@@ -59,6 +61,8 @@ export function Ambient3D({
   onPoseChange?: (pose: "home" | "eye" | null) => void
   /** Sostre a les habitacions tancades (es veu quan la càmera és a dins). */
   ceiling?: boolean
+  /** La teulada (`Ambient.roof`), si n'hi ha. */
+  roof?: boolean
   /** Parets de davant transparents (casa de nines) i ombres. */
   dollhouse?: boolean
   shadows?: boolean
@@ -110,7 +114,7 @@ export function Ambient3D({
       <TextureRefresh />
       <hemisphereLight args={["#ffffff", "#b9ad9c", 0.35]} />
       <directionalLight position={[cx + 4, 7, cz + 3]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-span} shadow-camera-right={span} shadow-camera-top={span} shadow-camera-bottom={-span} shadow-bias={-0.0004} />
-      <Room ambient={ambient} geos={geos} materials={materials} box={box} selectedIds={selectedIds} onSelect={onSelect} onPick={onPick} onChange={onChange} snap={snap} dollhouse={dollhouse} showCeiling={showCeiling} cameraLocked={cameraLocked} />
+      <Room ambient={ambient} geos={geos} materials={materials} box={box} selectedIds={selectedIds} onSelect={onSelect} onPick={onPick} onChange={onChange} snap={snap} dollhouse={dollhouse} showCeiling={showCeiling} showRoof={showRoof} cameraLocked={cameraLocked} />
       {/* Com al visor de l'editor: esmorteïment, botó dret o dos dits per desplaçar, roda per apropar. */}
       <Controls target={[cx, 0.9, cz]} home={[cx + span * 0.5, span * 1.1 + 2, cz + span * 1.4 + 2]} fitSignal={fitSignal} eye={eyePose(ambient)} eyeSignal={eyeSignal} maxDistance={span * 4 + 10} onPoseChange={onPoseChange} initialCamera={initialCamera} onCameraChange={onCameraChange} locked={cameraLocked} goto={cameraGoto} />
       {onSceneAccess && <SceneAccess onAccess={onSceneAccess} />}
@@ -329,6 +333,7 @@ function Room({
   cameraLocked,
   dollhouse,
   showCeiling,
+  showRoof,
 }: {
   onPick?: (id: string) => string[]
   onChange?: (a: Ambient, commit: boolean) => void
@@ -336,6 +341,7 @@ function Room({
   cameraLocked: boolean
   dollhouse: boolean
   showCeiling: boolean
+  showRoof: boolean
   ambient: Ambient
   geos: Map<string, ItemGeometry | null>
   materials: MaterialPref[]
@@ -424,8 +430,11 @@ function Room({
 
   // Sostre de les habitacions tancades: només quan la càmera és a dins (al visor i al render; des de
   // dalt no es veu). Al render tanca la llum: entra per les finestres, com a les fotos.
+  // La teulada: amb la teulada a la vista, el sostre pla no hi és (la teulada ja tanca l'habitació).
+  const roof = useMemo(() => (showRoof ? roofGroup(ambient, materials) : null), [showRoof, ambient.roof, ambient.walls, ambient.wallMaterial, materials]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => (roof ? disposeTree(roof) : undefined), [roof])
   const ceiling = useMemo(() => {
-    if (!showCeiling || !closedRoom(ambient.walls)) return null
+    if (!showCeiling || (showRoof && ambient.roof) || !closedRoom(ambient.walls)) return null
     const xs = ambient.walls.flatMap((w) => [w.a[0], w.b[0]]), ys = ambient.walls.flatMap((w) => [w.a[1], w.b[1]])
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys)
     const H = Math.min(...ambient.walls.map((w) => w.height))
@@ -440,7 +449,7 @@ function Room({
     mesh.visible = false
     mesh.userData.renderOnly = "ceiling"
     return mesh
-  }, [ambient.walls, ambient.ceilingMaterial, materials, showCeiling])
+  }, [ambient.walls, ambient.ceilingMaterial, ambient.roof, materials, showCeiling, showRoof])
   useEffect(() => () => disposeTree(walls), [walls])
   useEffect(() => () => (ceiling ? disposeTree(ceiling) : undefined), [ceiling])
   const scene = useThree((s) => s.scene)
@@ -462,6 +471,25 @@ function Room({
       const { width, depth } = b.parameters
       const p = ceiling.position
       ceiling.visible = camera.position.y < p.y - 0.05 && Math.abs(camera.position.x - p.x) < width / 2 && Math.abs(camera.position.z - p.z) < depth / 2
+    }
+    // La teulada, a la casa de nines: des de fora es fa gairebé transparent (es veu l'interior); des de dins, sòlida.
+    if (roof) {
+      const rb = roofBox(ambient)
+      const inside = !!rb && camera.position.x * 1000 > rb.x0 && camera.position.x * 1000 < rb.x1 && camera.position.z * 1000 > rb.y0 && camera.position.z * 1000 < rb.y1 && camera.position.y * 1000 < rb.base
+      roof.traverse((o) => {
+        const m = o as Mesh
+        if (!m.isMesh) return
+        const mat = m.material as MeshStandardMaterial
+        const base = (mat.userData.baseOpacity as number | undefined) ?? 1
+        const target = dollhouse && !inside ? Math.min(base, 0.12) : base
+        if (mat.opacity !== target) {
+          mat.transparent = target < 1
+          mat.opacity = target
+          mat.depthWrite = target === 1
+          m.castShadow = target === 1
+          mat.needsUpdate = true
+        }
+      })
     }
     for (const wg of walls.children) {
       const n = wg.userData.normal as Vector3 | undefined
@@ -650,6 +678,7 @@ function Room({
       <primitive object={floor} />
       <primitive object={walls} />
       {ceiling && <primitive object={ceiling} />}
+      {roof && <primitive object={roof} />}
       {scenes.map((s) => (
         <primitive
           key={s.id}

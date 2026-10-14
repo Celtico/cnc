@@ -125,6 +125,27 @@ export const AmbientRenderSchema = z
   .catch(undefined)
 export type AmbientRender = z.infer<typeof AmbientRenderSchema>
 
+/** Claraboia (finestra a la teulada): el centre i la mida al plànol, mm. */
+export const SkylightSchema = z.object({ x: mm, y: mm, w: mm.positive(), d: mm.positive() })
+export type Skylight = z.infer<typeof SkylightSchema>
+
+/**
+ * Teulada de l'ambient (per decisió de l'usuari, 2026-10-14): plana, a una aigua o a dues aigües (la «V» de casa), sobre
+ * la caixa de les parets amb el voladís, a l'alçada de la paret més alta (o `height`). `ridge` = la direcció del carener
+ * (X o Y del plànol): l'aigua baixa cap als dos costats de l'altre eix (a una aigua, puja cap al final de l'altre eix).
+ */
+export const RoofSchema = z.object({
+  kind: z.enum(["flat", "shed", "gable"]),
+  pitch: z.number().min(0).max(70).default(30),
+  ridge: z.enum(["x", "y"]).default("x"),
+  overhang: mm.min(0).max(3000).default(300),
+  thickness: mm.min(20).max(1000).default(200),
+  height: mm.positive().optional(),
+  material: z.string().optional(),
+  skylights: z.array(SkylightSchema).optional(),
+})
+export type Roof = z.infer<typeof RoofSchema>
+
 export const AmbientSchema = z.object({
   walls: z.array(WallSchema),
   items: z.array(AmbientItemSchema),
@@ -140,6 +161,8 @@ export const AmbientSchema = z.object({
   camera: CameraPoseSchema,
   /** Com s'obre el Render (`AmbientRenderSchema`). Opcional. */
   render: AmbientRenderSchema,
+  /** Teulada (`RoofSchema`). Sense, cap. */
+  roof: RoofSchema.optional(),
 })
 export type Ambient = z.infer<typeof AmbientSchema>
 
@@ -170,6 +193,7 @@ function parseAmbientData(raw: unknown): Ambient {
     ...(typeof o.outsideFloorMaterial === "string" ? { outsideFloorMaterial: o.outsideFloorMaterial } : {}),
     ...(parseCameraPose(o.camera) ? { camera: parseCameraPose(o.camera) } : {}),
     ...(AmbientRenderSchema.parse(o.render) ? { render: AmbientRenderSchema.parse(o.render) } : {}),
+    ...(RoofSchema.safeParse(o.roof).success ? { roof: RoofSchema.parse(o.roof) } : {}),
   }
 }
 
@@ -922,4 +946,16 @@ export function setWallGroup(a: Ambient, ids: readonly string[], group: string |
       return group ? { ...rest, group } : rest
     }),
   }
+}
+
+
+// --- Teulada ---------------------------------------------------------------------------------------------------------
+
+/** La caixa de la teulada al plànol (la de les parets més el voladís) i l'alçada on comença (mm). Sense parets, `null`. */
+export function roofBox(a: Ambient): { x0: number; y0: number; x1: number; y1: number; base: number } | null {
+  if (!a.roof || !a.walls.length) return null
+  const pts = a.walls.flatMap((w) => wallPoints(w, 8))
+  const o = a.roof.overhang
+  const base = a.roof.height ?? Math.max(...a.walls.map((w) => w.height))
+  return { x0: Math.min(...pts.map((p) => p[0])) - o, y0: Math.min(...pts.map((p) => p[1])) - o, x1: Math.max(...pts.map((p) => p[0])) + o, y1: Math.max(...pts.map((p) => p[1])) + o, base }
 }
