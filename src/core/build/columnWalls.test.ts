@@ -200,6 +200,10 @@ describe("llums sota la base amb una columna al mig", () => {
     const base = mod()
     const m = { ...base, carcass: { ...base.carcass, base: { kind: "legs", height: 100 } }, root: { id: "z", led: { hardware: item } } }
     const b = buildComposition({ modules: [m], references: [col(400, -60, 200, 250)] } as never)
+    // L'alimentador, lluny de les potes (les de les cantonades i les del costat de l'osca).
+    const drv = panelBox(b.extras.find((p) => p.id.endsWith("wiring-driver"))!)
+    const legs = legPoints(b.panels.find((q) => q.id === "m:bottom")!, 50) ?? []
+    for (const [x, z] of legs) expect(x > drv.min[0] - 50 && x < drv.max[0] + 50 && z > drv.min[2] - 45 && z < drv.max[2] + 45, `pota a ${x}, ${z}`).toBe(false)
     for (const p of b.extras.filter((q) => q.id.includes(":wiring-"))) {
       const bx = panelBox(p)
       const inColumn = bx.max[0] > 400 + 0.5 && bx.min[0] < 600 - 0.5 && bx.min[2] < 190 - 0.5

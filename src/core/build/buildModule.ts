@@ -2026,10 +2026,17 @@ class Builder {
     // A sota de la base, al mig de l'amplada (les potes van a les cantonades: ni l'alimentador ni el cable hi passen per sobre).
     const dLen = len ?? 140
     // Fora de les columnes de la casa (l'osca de la base): el primer lloc lliure entre el mig, a l'esquerra i a la dreta.
-    const free = (x: number) => !(this.rearAt(x - 10, x + dLen + 10) > this.d.backInnerZ + 1)
+    // A sota de la base, tampoc on hi ha potes (per decisió de l'usuari: «aquí l'has posat a sota d'una pota»): les de les
+    // cantonades i les que es posen al costat de l'osca d'una columna (`legPoints`), 150 mm a cada costat.
+    const busy: [number, number][] = below
+      ? [[rb.min[0], rb.min[0] + 150], [rb.max[0] - 150, rb.max[0]], ...this.rearLimits.map((l): [number, number] => [l.x0 - 150, l.x1 + 150])]
+      : this.rearLimits.map((l): [number, number] => [l.x0 - 10, l.x1 + 10])
+    const free = (x: number) => !(this.rearAt(x - 10, x + dLen + 10) > this.d.backInnerZ + 1) && busy.every(([a, b]) => x + dLen <= a || x >= b)
     const mid = (rb.min[0] + rb.max[0]) / 2 - dLen / 2
-    const cands = below ? [mid, rb.min[0] + 150, rb.max[0] - 150 - dLen, mid - dLen, mid + dLen] : [rb.min[0] + 50, mid, rb.max[0] - 50 - dLen]
-    const dx0 = cands.find((x) => x >= rb.min[0] + 20 && x + dLen <= rb.max[0] - 20 && free(x)) ?? cands[0]!
+    // Del mig cap als costats a passos de 20 mm (als penjats i a dins, primer a l'esquerra, com abans).
+    const steps = Array.from({ length: Math.ceil((rb.max[0] - rb.min[0]) / 20) }, (_, i) => mid + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 20)
+    const cands = below ? steps : [rb.min[0] + 50, ...steps]
+    const dx0 = cands.find((x) => x >= rb.min[0] + 20 && x + dLen <= rb.max[0] - 20 && free(x)) ?? (below ? mid : rb.min[0] + 50)
     const dx1 = dx0 + dLen
     // La cara on va l'alimentador (i per on corren els cables fins a ell): la de sobre de la tapa, la de sota de la base o, a dins, la de sobre de la base.
     const hy = up ? rb.max[1] : below ? rb.min[1] : rb.max[1]
