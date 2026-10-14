@@ -34,17 +34,19 @@ describe("pota AXILO 78 (placa rectangular per cargolar)", () => {
     expect(b.warnings.filter((w) => w.code === "hardware")).toEqual([])
   })
 
-  it("a les cuines, les del davant a 83 (el sòcol); als altres mobles, a 60 (més endavant, per decisió del taller)", () => {
+  it("una distància per a cada costat: esquerra, dreta, darrere i davant", () => {
     const m = onLegs()
-    const D = m.carcass.depth
-    const frontZ = (kitchen?: boolean) => {
-      const b = buildModule(m, kitchen === undefined ? {} : { kitchen })
-      const bottom = b.panels.find((p) => p.role === "bottom")!
-      return Math.max(...bottom.holes.filter((h) => h.tag === "leg").map((h) => toWorld(bottom, [h.x, h.y, 0])[2]))
-    }
-    expect(frontZ(true)).toBeCloseTo(D - 83 + 32, 1)
-    expect(frontZ(false)).toBeCloseTo(D - 60 + 32, 1)
-    expect(frontZ()).toBeCloseTo(D - 83 + 32, 1)
+    const it2 = structuredClone(axilo)
+    Object.assign(it2.params, { insetLeft: 70, insetRight: 60, insetBack: 65, insetFront: 120 })
+    const b = buildModule({ ...m, carcass: { ...m.carcass, base: { kind: "legs", height: 100, hardware: it2 } } })
+    const bottom = b.panels.find((p) => p.role === "bottom")!
+    const world = bottom.holes.filter((h) => h.tag === "leg").map((h) => toWorld(bottom, [h.x, h.y, 0]))
+    const W = m.carcass.width, D = m.carcass.depth
+    const near = (x: number, z: number) => world.some((p) => Math.abs(p[0] - x) < 0.01 && Math.abs(p[2] - z) < 0.01)
+    expect(near(70 - 19, 65 - 32)).toBe(true)
+    expect(near(W - 60 + 19, 65 - 32)).toBe(true)
+    expect(near(70 - 19, D - 120 + 32)).toBe(true)
+    expect(near(W - 60 + 19, D - 120 + 32)).toBe(true)
   })
 
   it("el dibuix de Preferències (peça d'exemple) posa els forats com el moble: davant, darrere i mirall", () => {

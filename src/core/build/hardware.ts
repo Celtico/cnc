@@ -224,13 +224,12 @@ export function legSpec(item: HardwareItem) {
   const holes = resolveOps(item, "base").flatMap((o) => (o.kind === "drill" ? [{ u: o.u, v: o.v, d: o.d, depth: o.depth, tag: o.tag ?? "leg" }] : []))
   if (!holes.length) throw new HardwareError(`«${item.name}»: no té cap forat`)
   // `mirror` 1: les potes de la dreta, amb la placa en mirall (u cap a dins): una placa que no és simètrica (el clip cap al lateral).
-  // `insetFront` / `insetBack`: les del davant i les del darrere a una altra distància del cantell (la AXILO 78: les del
-  // davant deixen lloc al sòcol; les del darrere, 20 de fusta fins a la placa).
+  // Una distància per a cada costat (`insetLeft`, `insetRight`, `insetBack`, `insetFront`; la AXILO 78): la que falta és
+  // `inset`, la de sempre.
   const inset = param(item, "inset")
-  const front = item.params.insetFront
-  const back = item.params.insetBack
   const or = (x: number | undefined) => (Number.isFinite(x) && x! > 0 ? x! : inset)
-  return { pending: isPendingImport(item), inset, insetFront: or(front), insetBack: or(back), mirror: item.params.mirror === 1, holes }
+  const q = item.params
+  return { pending: isPendingImport(item), inset, insetLeft: or(q.insetLeft), insetRight: or(q.insetRight), insetFront: or(q.insetFront), insetBack: or(q.insetBack), mirror: q.mirror === 1, holes }
 }
 
 /** Placa de muntatge importada (no té lloc: la frontissa que s'hi aparella en copia els forats). */

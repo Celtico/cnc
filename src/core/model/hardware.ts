@@ -382,12 +382,13 @@ export interface HardwareParamSpec {
 const P = (key: string, label: string, min: number, max: number, step = 0.5, help?: string): HardwareParamSpec => ({ key, label, min, max, step, ...(help ? { help } : {}) })
 /** Els paràmetres que s'editen d'un item: els del motor, menys els d'un joc de llum si no en porta i els opcionals que no té. */
 export const hardwareParams = (item: Pick<HardwareItem, "engine" | "light"> & { params?: HardwareItem["params"] }): HardwareParamSpec[] =>
-  HARDWARE_PARAMS[item.engine].filter((p) => (!p.light || item.light) && (!p.optional || (item.params && p.key in item.params)))
-/** Una pota amb distàncies pròpies al davant i al darrere: «Als cantells» és només la dels laterals. */
-const legHasOwnFrontBack = (item: Pick<HardwareItem, "engine"> & { params?: HardwareItem["params"] }) => item.engine === "leg" && !!item.params && ("insetFront" in item.params || "insetBack" in item.params)
-/** El nom d'un paràmetre per a aquest item (el de les potes canvia si porta les distàncies de davant i de darrere). */
-export const hardwareParamLabel = (item: Pick<HardwareItem, "engine"> & { params?: HardwareItem["params"] }, p: HardwareParamSpec): string =>
-  p.key === "inset" && legHasOwnFrontBack(item) ? "Als laterals" : p.key === "insetFront" && item.params && "insetFrontFurniture" in item.params ? "Al davant (cuines)" : p.label
+  HARDWARE_PARAMS[item.engine].filter((p) => (!p.light || item.light) && (!p.optional || (item.params && p.key in item.params)) && !(p.key === "inset" && legHasOwnSides(item)))
+/** Una pota amb una distància per a cada costat (la AXILO 78): «Als cantells» no surt (no es fa servir). */
+function legHasOwnSides(item: Pick<HardwareItem, "engine"> & { params?: HardwareItem["params"] }): boolean {
+  return item.engine === "leg" && !!item.params && ["insetLeft", "insetRight", "insetBack", "insetFront"].every((k) => k in item.params!)
+}
+/** El nom d'un paramètre per a aquest item (de moment, el del motor). */
+export const hardwareParamLabel = (_item: Pick<HardwareItem, "engine"> & { params?: HardwareItem["params"] }, p: HardwareParamSpec): string => p.label
 
 export const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
   cup: [
@@ -439,10 +440,12 @@ export const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
   ],
   leg: [
     P("inset", "Als cantells", 20, 300, 1, "De la vora de fora del mòdul a l'eix de cada pota (de costat i de davant/darrere)."),
-    { ...P("insetBack", "Al darrere", 20, 300, 1, "Del cantell de darrere de la base a l'eix de les potes del darrere."), optional: true },
-    { ...P("insetFront", "Al davant", 20, 300, 1, "Del cantell de davant de la base a l'eix de les potes del davant (deixa lloc al sòcol)."), optional: true },
-    { ...P("insetFrontFurniture", "Al davant (mobles)", 20, 300, 1, "La del davant als mobles que no són cuines (en triar la pota en un mòdul)."), optional: true },
+    { ...P("insetLeft", "Lateral esquerre", 20, 300, 1, "Del cantell de fora del lateral esquerre a l'eix de les potes de l'esquerra."), optional: true },
+    { ...P("insetRight", "Lateral dret", 20, 300, 1, "Del cantell de fora del lateral dret a l'eix de les potes de la dreta."), optional: true },
+    { ...P("insetBack", "Darrere", 20, 300, 1, "Del cantell de darrere de la base a l'eix de les potes del darrere."), optional: true },
+    { ...P("insetFront", "Davant", 20, 300, 1, "Del cantell de davant de la base a l'eix de les potes del davant (deixa lloc al sòcol)."), optional: true },
   ],
+
   model: [],
   // La prebroca dels cargols és una regla del taller (Preferències › Regles de mecanitzat › «Prebroca dels cargols», `Settings.kitPilot`),
   // no un número de cada joc: res a editar aquí (els `params` es queden per compatibilitat i els omple `setKitPilot`).

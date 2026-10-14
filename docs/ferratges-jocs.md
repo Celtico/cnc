@@ -289,7 +289,7 @@ Base «Potes» › «Pota» i `buildLegs` en fa els forats a la cara de sota de 
 **Com la munta el taller** (el model de TopSolid del germà, 2026-10-14): el costat llarg (92) al llarg de l'amplada del
 moble i el **clip cap al lateral**, una a cada cantonada amb la placa gairebé enrasada amb la vora; les de la dreta, en
 mirall (`params.mirror` = 1). A l'app: l'eix del tub a **48** dels laterals (`inset`: el clip a 3,5 del cantell), a **60** del darrere (`insetBack`: la placa a
-20,5) i al davant a **83** a les cuines, on va el sòcol (`insetFront`), i a **60** als altres mobles (`insetFrontFurniture`; el taller: «està bé per a les cuines; als mobles, més endavant»). Per decisió de l'usuari (2026-10-14): «al fons 20 mm com a mínim,
+20,5) i a **83** del davant, on va el sòcol (`insetFront`; bé per a les cuines, i en un moble es canvia a Mòdul › Caixa › «Potes al davant»). Una distància per a cada costat (`insetLeft`, `insetRight`, `insetBack`, `insetFront`). Per decisió de l'usuari (2026-10-14): «al fons 20 mm com a mínim,
 als costats 3 mm»; el davant, mesurat al model del taller (vista axonomètrica redreçada amb la placa de 92 com a regle: base
 de 600 × 577, ±3 mm; als laterals i al darrere hi donava ~52). Plànol a escala: [`pota-axilo-planta.svg`](pota-axilo-planta.svg).
 Preferències v37 (la de la v34, amb el clip
