@@ -41,7 +41,7 @@ describe("jocs de llum Häfele Loox (v31)", () => {
     const v30 = { ...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), version: 30, hardwareLibrary: DEFAULT_SETTINGS.hardwareLibrary.filter((x) => !x.light) }
     const res = parseSettings(v30)
     expect(res.migrated).toBe(true)
-    expect(res.settings.version).toBe(42)
+    expect(res.settings.version).toBe(43)
     for (const it of HAFELE_LOOX_ITEMS) expect(res.settings.hardwareLibrary.some((x) => x.id === it.id)).toBe(true)
     expect(res.settings.hardwareDefaults.led).toBe("led-profile-16x8")
     expect(parseSettings(JSON.parse(JSON.stringify(res.settings))).migrated).toBe(false)

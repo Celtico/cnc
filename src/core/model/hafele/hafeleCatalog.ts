@@ -70,6 +70,41 @@ export const HAFELE_PROFILE_HINGES: HardwareItem[] = [
   },
 ]
 
+/**
+ * Frontissa de cassoleta **Häfele Duomatic Premium 105°** per a marcs d'alumini des de 19 mm d'ample (p. FF 4.16): la
+ * cassoleta Ø35,7 (+0,1) × 12,5 entra al perfil del marc (amb dos cargols a 38), amortiguador d'oli integrat,
+ * autotancament; muntatge angular 329.48.500 (recobrent), intermedi 329.48.502, enrasat 329.48.503. Es munta amb les
+ * plaques Duomatic A (p. FF 4.42) al lateral: els dos forats Ø5 × 12 de la filera System 32, com la placa en creu.
+ */
+export const HAFELE_DUOMATIC_ALU: HardwareItem[] = [
+  {
+    id: "hinge-hafele-duomatic-premium-alu",
+    name: "Frontissa Häfele Duomatic Premium 105° per a marc d'alumini",
+    category: "hinge",
+    engine: "cup",
+    maker: "Häfele",
+    ref: "329.48.500",
+    tags: [
+      "Per a marcs d'alumini des de 19 mm d'ample: angular (recobrent) 329.48.500 · intermedi 329.48.502 · enrasat 329.48.503. Cassoleta de zamac, braç d'acer niquelat, amortiguador d'oli integrat, autotancament, tapa decorativa inclosa.",
+      "La cassoleta Ø35,7 × 12,5 i els cargols a 38 van al perfil del marc (el forat del perfil no és de la CNC de fusta).",
+      "Placa Duomatic A o de muntatge ràpid Duomatic SM (p. FF 4.42) a la filera System 32 del lateral.",
+      "Hipòtesis: la vora de la cassoleta a 1,5 del cantell del perfil (el centre a 19,35, com la C de les frontisses de fusta) i la placa als dos forats Ø5 × 12 de la filera, a 16 per sobre i per sota de la frontissa.",
+      SRC("4.16"),
+    ],
+    params: { cupDiameter: 35.7, cupDepth: 12.5, cupOffset: 19.35, endOffset: 100, gap: 10, margin: 3, plateSetback: 37, plateOffset: 0 },
+    count: structuredClone(HINGES_BY_HEIGHT),
+    targets: [
+      { key: "door", label: "Porta (en una de fusta; al perfil d'alumini es veu però no es mecanitza)", ops: [{ kind: "drill", face: "A", u: 0, v: "cupOffset", d: "cupDiameter", depth: "cupDepth", tag: "hinge" }] },
+      { key: "side", label: "Lateral: placa Duomatic A, a la filera System 32", ops: [
+        { kind: "drill", face: "A", u: -16, v: 0, d: 5, depth: 12, tag: "plate" },
+        { kind: "drill", face: "A", u: 16, v: 0, d: 5, depth: 12, tag: "plate" },
+      ] },
+    ],
+    version: 1,
+    builtin: true,
+  },
+]
+
 export const HAFELE_GLASS_FRAMES: HardwareItem[] = [
   glassFrame("frame-hafele-23x14", "Marc d'alumini Häfele 23 × 14 recte", "563.25.902", 23, 4, "4.270", [
     "Perfil d'alumini per a marc de vidre 23 × 14, recte, vidre de 4: plata anoditzat 563.25.902 · color inox 563.25.002 (2.500 mm). Tall a inglet de 45° i escaires d'unió 563.25.910 (marc fins a 1.200) / .911 (1.200–2.000).",
@@ -85,7 +120,7 @@ export const HAFELE_GLASS_FRAMES: HardwareItem[] = [
   ]),
   glassFrame("frame-hafele-20x19", "Marc d'alumini Häfele 20,6 × 19", "563.32.902", 19, 5, "4.269", [
     "Perfil d'alumini per a marc de vidre 20,6 × 19, vidre de 5 (de 4 amb el perfil de seguretat): plata anoditzat 563.32.902 · color inox 563.32.002 (2.500 mm). Marc com a molt de 600 × 1.600; vidre = marc − 31 per costat. Joc de muntatge 563.32.999.",
-    "Frontissa: la Duomatic de cassoleta per a aquest perfil (p. 4.16 / 4.34) o la Metallamat A; els forats del perfil (unió angular) no són de la CNC de fusta.",
+    "Frontissa: la Duomatic Premium 105° per a marc d'alumini (329.48.500, p. 4.16) o la Metallamat A; els forats del perfil (unió angular) no són de la CNC de fusta.",
   ]),
 ]
 

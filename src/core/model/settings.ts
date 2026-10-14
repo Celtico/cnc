@@ -2,7 +2,7 @@ import { z } from "zod"
 import { DEFAULT_CABINET } from "./cabinet"
 import { type Module } from "./composition"
 import { migrateImportedNames } from "../import/hettichNames"
-import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, V27_ITEMS, V28_ITEMS, V31_ITEMS, V34_ITEMS, V35_ITEMS, V39_ITEMS, V41_ITEMS, V42_ITEMS, fixHardwareDefaults, kitFrom, kitPilotFromLibrary, libraryFromLegacy, setKitPilot } from "./hardware"
+import { DEFAULT_HARDWARE_DEFAULTS, DEFAULT_HARDWARE_KITS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_LEGACY_HARDWARE, HardwareDefaultsSchema, HardwareItemSchema, LegacyHardwareSchema, V27_ITEMS, V28_ITEMS, V31_ITEMS, V34_ITEMS, V35_ITEMS, V39_ITEMS, V41_ITEMS, V42_ITEMS, V43_ITEMS, fixHardwareDefaults, kitFrom, kitPilotFromLibrary, libraryFromLegacy, setKitPilot } from "./hardware"
 import { DEFAULT_KIT_PILOT, KitPilotSchema } from "./hardwareKit"
 import { PHOTO_MATERIALS } from "./textureSets"
 import { deepEqual, MATERIAL_MERGES, rescalePhotoTiles, resolveMaterialAlias, restorePhotoThicknesses, upgradeToPhoto } from "./photoUpgrade"
@@ -64,8 +64,9 @@ const mm = z.number().finite()
  * v41: a les vitrines, la frontissa i el tirador es trien com a les portes de fusta (per decisió de l'usuari): la
  * frontissa Metallamat A (`V41_ITEMS`) porta la placa que abans era dins dels marcs Häfele (els marcs es refan, `version` 2).
  * v42: els tiradors Häfele per a marc de vitrina (`V42_ITEMS`, es claven al perfil), additiu.
+ * v43: la frontissa Häfele Duomatic Premium 105° per a marc d'alumini (`V43_ITEMS`), additiu.
  */
-export const SETTINGS_VERSION = 42
+export const SETTINGS_VERSION = 43
 
 /** Joc de l'ample de la ranura del fons per defecte (v33; per decisió de l'usuari, 2026-10-14: «per defecte 0,8»). */
 export const DEFAULT_GROOVE_CLEARANCE = 0.8
@@ -850,7 +851,7 @@ export function parseSettings(raw: unknown): SettingsParse {
   if (withV36.some((x, i) => x !== withV35[i])) migrated = true
   // v39: la pota AXILO 78 de mobles, si no hi és (per id); v41: la frontissa Metallamat A.
   const v39add = version < 39 ? V39_ITEMS : []
-  const v41add = [...(version < 41 ? V41_ITEMS : []), ...(version < 42 ? V42_ITEMS : [])]
+  const v41add = [...(version < 41 ? V41_ITEMS : []), ...(version < 42 ? V42_ITEMS : []), ...(version < 43 ? V43_ITEMS : [])]
   const withV39 = [...withV36, ...[...v39add, ...v41add].filter((k) => !withV36.some((x) => x.id === k.id)).map((k) => structuredClone(k))]
   if (withV39.length !== withV36.length) migrated = true
   // La pota AXILO 78 (v34) d'una versió anterior de l'item passa a la d'ara (com la munta el taller, la placa per

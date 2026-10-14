@@ -1689,10 +1689,7 @@ class Builder {
     const { d } = this
     const frame = frameHw.spec
     // Les plaques de les frontisses de perfil (la frontissa triada), només a les portes; es dibuixen (frontissa i placa).
-    if (hinge) {
-      const ys = this.glassHinges(label, y0, h, hinge)
-      ys.forEach((y, i) => this.glassHingeBody(`${id}-hinge-${i + 1}`, hinge, y, hinge.side === "left" ? x0 : x0 + w - frame.frame, frame.frame))
-    }
+    const hingeYs = hinge ? this.glassHinges(label, y0, h, hinge) : []
     // El tirador (es clava al perfil del costat que obre, a mitja alçada): es veu.
     if (handle && hinge) this.glassPull(`${id}-pull`, label, hinge.side === "left" ? x0 + w - frame.frame / 2 : x0 + frame.frame / 2, y0 + h / 2, "y", handle)
     const F = frame.frame, G = frame.glass, t = d.t
@@ -1715,6 +1712,16 @@ class Builder {
       })
     bar("left", "perfil esquerre", x0, y0, h, F)
     bar("right", "perfil dret", x0 + w - F, y0, h, F)
+    // Les frontisses es veuen com són (per decisió de l'usuari: «això s'ha de veure»): la cassoleta de la frontissa triada
+    // al darrere del perfil del costat de les frontisses (cara A, que mira enrere), a `cupOffset` del cantell de fora
+    // (`edge`: el cantell de les frontisses); el dibuix (cassoleta, braç i placa al lateral) el fa `hardwareSolids`. És
+    // d'alumini: no va a la CNC (el perfil és a `extras`).
+    if (hinge && hingeYs.length) {
+      const bp = this.extras.find((p) => p.id === `${id}-${hinge.side}`)!
+      const cs = hinge.hinge.spec
+      const v = hinge.side === "left" ? cs.cupOffset : F - cs.cupOffset
+      for (const y of hingeYs) bp.holes.push({ x: r(y - y0), y: r(v), diameter: cs.cupDiameter, depth: Math.min(cs.cupDepth, t - 1), face: "A", edge: hinge.side === "left" ? "bottom" : "top", tag: "hinge" })
+    }
     bar("bottom", "perfil de baix", x0 + F, y0, F, w - 2 * F)
     bar("top", "perfil de dalt", x0 + F, y0 + h - F, F, w - 2 * F)
     this.extras.push({
@@ -1795,19 +1802,6 @@ class Builder {
     const L = pitch > 0 ? pitch + 25 : 80
     const [w, hh] = along === "y" ? [16, L] : [L, 16]
     this.hwBox(id, `${label}: tirador`, "Acer inox", [cx - w / 2, cy - hh / 2, d.frontZ], [w, hh, 14])
-  }
-
-  /** Una frontissa de perfil d'una vitrina (es veu): el cos al perfil i, si en porta, la placa al lateral. */
-  private glassHingeBody(id: string, g: GlassHinge, y: number, profileX0: number, F: number): void {
-    const { d } = this
-    const zBack = d.frontZ - d.t
-    // El cos de la frontissa, de la cara de dins del perfil cap al lateral (40 de llarg, 22 d'alt).
-    this.hwBox(`${id}-body`, "Frontissa de vitrina", "Acer inox", [profileX0 + (g.side === "left" ? 0 : F - 30), y - 11, zBack - 30], [30, 22, 30])
-    const side = g.panel
-    if (!side) return
-    const xFace = g.side === "left" ? side.xR : side.xL
-    const plateSetback = g.hinge.spec.plate?.setback ?? 37
-    this.hwBox(`${id}-plate`, "Placa de frontissa de vitrina", "Acer inox", [g.side === "left" ? xFace : xFace - 8, y - 18, zBack - plateSetback - 20], [8, 36, 40])
   }
 
   /** El braç d'un abatible de vidre (es veu): el cos cargolat a la cara de dins del lateral, a dalt. */

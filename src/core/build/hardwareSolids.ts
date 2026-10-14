@@ -47,7 +47,9 @@ export interface HwCylinder {
 }
 export type HwSolid = HwBox | HwCylinder
 
-const FRONTS = new Set(["door", "drawerFront", "flap", "grille", "hatch"])
+const FRONT_ROLES = new Set(["door", "drawerFront", "flap", "grille", "hatch"])
+/** Un front: els de fusta i els perfils del marc d'una vitrina (porten la cassoleta de la frontissa, `glassDoor`). */
+const FRONTS = { has: (role: string, p?: Panel) => FRONT_ROLES.has(role) || p?.name === "perfil vitrina" }
 
 const add = (a: Vec3, b: Vec3, k = 1): Vec3 => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k]
 const scale = (a: Vec3, k: number): Vec3 => [a[0] * k, a[1] * k, a[2] * k]
@@ -99,18 +101,27 @@ function nearestEdge(p: Panel, x: number, y: number): { e: Vec3; d: number } {
   return c.reduce((a, b) => (b.d < a.d ? b : a))
 }
 
+/** La direcció cap a un cantell donat i la distància d'un punt (x, y) fins a ell. */
+function edgeOf(p: Panel, x: number, y: number, edge: NonNullable<Hole["edge"]>): { e: Vec3; d: number } {
+  if (edge === "left") return { e: [-1, 0, 0], d: x }
+  if (edge === "right") return { e: [1, 0, 0], d: p.length - x }
+  if (edge === "bottom") return { e: [0, -1, 0], d: y }
+  return { e: [0, 1, 0], d: p.width - y }
+}
+
 /** El front porta el model d'una frontissa importada (llevat del tirador, la pota i els col·locats a mà). */
 const hasImportedHinge = (p: Panel) => (p.fittings ?? []).some((f) => f.kind !== "handle" && f.kind !== "leg" && f.kind !== "item")
 
 /** Les cassoletes d'un front de l'app amb el marc de cada una (e cap al cantell de les frontisses, n fora de la cara). */
 function hingeFrames(p: Panel): { f: ReturnType<typeof frame>; R: number; depth: number; sf: number }[] {
-  if (!FRONTS.has(p.role) || hasImportedHinge(p)) return []
+  if (!FRONTS.has(p.role, p) || hasImportedHinge(p)) return []
   const T = p.thickness
   const out: { f: ReturnType<typeof frame>; R: number; depth: number; sf: number }[] = []
   for (const h of p.holes) {
     if (h.tag !== "hinge" || (h.face !== "A" && h.face !== "B")) continue
     const n: Vec3 = h.face === "A" ? [0, 0, 1] : [0, 0, -1]
-    const { e, d } = nearestEdge(p, h.x, h.y)
+    // El cantell de les frontisses: el del forat si el diu (el perfil d'una vitrina, més estret que la cassoleta), si no el més proper.
+    const { e, d } = h.edge ? edgeOf(p, h.x, h.y, h.edge) : nearestEdge(p, h.x, h.y)
     const a = cross(n, e)
     // La cara de dins del lateral: un gruix (el del front, el del cos sol ser el mateix) cap a dins des del cantell.
     out.push({ f: frame([h.x, h.y, h.face === "A" ? T : 0], e, a, n), R: h.diameter / 2, depth: h.depth, sf: d - T })
@@ -248,7 +259,7 @@ function magnetSolids(p: Panel): HwSolid[] {
  * del front, i l'empenyedor. És **fix al moble** (`fixedSolids` el passa a la peça que el porta).
  */
 function pushFixed(p: Panel): HwSolid[] {
-  if (!p.push || !FRONTS.has(p.role)) return []
+  if (!p.push || !FRONTS.has(p.role, p)) return []
   const T = p.thickness
   const cups = p.holes.filter((h) => h.tag === "hinge" && (h.face === "A" || h.face === "B"))
   const face = cups[0]?.face ?? "A"
@@ -365,7 +376,7 @@ function rehost(src: Panel, s: HwSolid, dst: Panel): HwSolid {
 function hostAt(panels: readonly Panel[], w: Vec3, tol: number): Panel | undefined {
   let best: { p: Panel; gap: number } | undefined
   for (const p of panels) {
-    if (FRONTS.has(p.role) || p.role === "hardware") continue
+    if (FRONTS.has(p.role, p) || p.role === "hardware") continue
     const l = toLocal(p, w)
     if (l[0] < -2 || l[0] > p.length + 2 || l[1] < -2 || l[1] > p.width + 2) continue
     const gap = Math.min(Math.abs(l[2]), Math.abs(l[2] - p.thickness))
@@ -385,7 +396,7 @@ export function fixedSolids(panels: readonly Panel[]): Map<string, HwSolid[]> {
   const out = new Map<string, HwSolid[]>()
   const put = (id: string, s: HwSolid) => out.set(id, [...(out.get(id) ?? []), s])
   for (const p of panels) {
-    if (!FRONTS.has(p.role)) continue
+    if (!FRONTS.has(p.role, p)) continue
     for (const s of [...hingeFixed(p), ...pushFixed(p)]) {
       const host = hostAt(panels, toWorld(p, s.c), 14)
       if (host) put(host.id, rehost(p, s, host))

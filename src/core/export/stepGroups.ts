@@ -19,7 +19,9 @@ export function stepCadGroups(comp: Composition, build: CompositionBuild, option
   }
   const modulesBuilt = !partsOnlyKind(compositionKind(comp))
   const parts = new Map((comp.parts ?? []).map((q) => [q.id, q]))
-  for (const p of options.extras ? [...build.panels, ...build.extras] : build.panels) {
+  // El perfil d'una vitrina porta la cassoleta de la frontissa per dibuixar-la (més ampla que el perfil): al CAD, sense.
+  const extras = build.extras.map((p) => (p.name === "perfil vitrina" && p.holes.length ? { ...p, holes: [] } : p))
+  for (const p of options.extras ? [...build.panels, ...extras] : build.panels) {
     if (p.id.startsWith("part:")) {
       push(parts.get(p.id.slice(5))?.group ?? "Peces lliures", p)
       continue

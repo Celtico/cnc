@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest"
 import { DEFAULT_SETTINGS, HardwareItemSchema, defaultModule, parseSettings, type HardwareItem, type Zone } from "../model"
-import { HAFELE_CATALOGUE_ITEMS, HAFELE_GLASS_FRAMES, HAFELE_HANDLES, HAFELE_PROFILE_HINGES } from "../model/hafele/hafeleCatalog"
+import { HAFELE_CATALOGUE_ITEMS, HAFELE_DUOMATIC_ALU, HAFELE_GLASS_FRAMES, HAFELE_HANDLES, HAFELE_PROFILE_HINGES } from "../model/hafele/hafeleCatalog"
 import { HAFELE_LOOX_PROFILES } from "../model/lights/hafeleLoox"
 import { V35_ITEMS } from "../model/hardware"
 import { buildModule } from "./buildModule"
 import { handleSpec } from "./hardware"
 import { hardwareMount } from "./hardwareMount"
+import { builtinSolids, fixedSolids } from "./hardwareSolids"
 
 /** Ferratges del catàleg general Häfele (preferències v35): marcs d'alumini, tiradors, suports i el perfil Loox per encastar. */
 const item = (id: string): HardwareItem => structuredClone(V35_ITEMS.find((x) => x.id === id)!)
@@ -45,6 +46,20 @@ describe("catàleg Häfele (v35)", () => {
     expect(bar.material).toBe("Alumini anoditzat plata")
     expect(DEFAULT_SETTINGS.materials.some((m) => m.name === "Alumini anoditzat plata")).toBe(true)
     expect(buildModule(mod({ front: door })).extras.find((p) => p.name === "perfil vitrina")!.material).toBe("Alumini negre")
+  })
+
+  it("porta de vidre: la frontissa es veu com és (cassoleta al perfil, braç i placa al lateral)", () => {
+    const b = buildModule(mod({ front: { kind: "door", mode: "single", hinge: "left", glass: true, frame: structuredClone(HAFELE_GLASS_FRAMES[0]!), hardware: structuredClone(HAFELE_DUOMATIC_ALU[0]!) } }))
+    const bar = b.extras.find((p) => p.name === "perfil vitrina" && p.id.endsWith("-left"))!
+    const cups = bar.holes.filter((h) => h.tag === "hinge")
+    expect(cups).toHaveLength(2)
+    expect(cups[0]).toMatchObject({ diameter: 35.7, face: "A", edge: "bottom", y: 19.35 })
+    // La cassoleta i el braç van amb el perfil (s'obren); la placa, al lateral esquerre.
+    expect(builtinSolids(bar).length).toBeGreaterThanOrEqual(8)
+    const fixed = fixedSolids([...b.panels, ...b.extras])
+    expect(fixed.get("side-left")).toHaveLength(2)
+    // Cap forat del perfil va a la CNC: el perfil és a extras.
+    expect(b.panels.some((p) => p.holes.some((h) => h.tag === "hinge"))).toBe(false)
   })
 
   it("tiradors: la distància entre centres més gran que hi cap al front", () => {
