@@ -64,7 +64,11 @@ export function movingGroups(panels: Panel[]): MovingGroup[] {
       // Cassoletes a y local petita → frontissa al costat de y = 0 (esquerra en X del mòdul). Un mòdul girat 180°
       // (`explodeDir` cap enrere) obre cap a −Z: la frontissa queda a l'altre costat en X i el pivot, al darrere.
       const out = outSign(p)
-      const left = cups.length ? cups.every((h) => h.y < p.width / 2) : !/door(-\d+)?-right$/.test(p.id)
+      // El costat de les cassoletes al món (no a la peça: una porta pot tenir els eixos locals girats), comparat amb el mig.
+      const { origin: o, xAxis: ax, yAxis: ay } = p.placement
+      const cx = (b.min[0] + b.max[0]) / 2
+      const worldX = (h: { x: number; y: number }) => o[0] + h.x * ax[0] + h.y * ay[0]
+      const left = cups.length ? cups.every((h) => (worldX(h) < cx) === out > 0) : !/door(-\d+)?-right$/.test(p.id)
       const pivot: Vec3 = [left === out > 0 ? b.min[0] : b.max[0], b.min[1], out > 0 ? b.min[2] : b.max[2]]
       groups.push({ id: p.id, label: p.label, panelIds: [p.id], motion: { kind: "hinge", pivot, axis: "y", sign: left ? -1 : 1, maxAngle: MAX_DOOR_ANGLE } })
       continue
