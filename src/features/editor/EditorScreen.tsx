@@ -353,7 +353,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         ? { kind: "ref", id: selectedRef }
         : selKind === "part" && selectedPart && comp.parts?.some((r) => r.id === selectedPart)
           ? { kind: "part", id: selectedPart }
-          : selKind === "group" && selectedGroup && comp.parts?.some((r) => r.group === selectedGroup)
+          : selKind === "group" && selectedGroup && [...(comp.parts ?? []), ...(comp.models ?? [])].some((r) => r.group === selectedGroup)
             ? { kind: "group", id: selectedGroup }
           : selKind === "model" && selectedModel && comp.models?.some((g) => g.id === selectedModel)
             ? { kind: "model", id: selectedModel }
@@ -905,7 +905,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     : selection.kind === "moble"
       ? { icon: <LuBox />, text: name || "Moble" }
       : selection.kind === "group"
-        ? { icon: <LuGroup />, text: selection.id, parent: "Grup de peces", onRename: (v) => {
+        ? { icon: <LuGroup />, text: selection.id, parent: "Grup", onRename: (v) => {
             const old = selection.id
             setComp((c) => renameGroup(c, old, v))
             select({ kind: "group", id: v })
