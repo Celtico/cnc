@@ -1,5 +1,5 @@
 import type { KitOrderLine } from "./drawerKit"
-import { activeRuns, compositionKind, isSolidMaterial, isTurned, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, type Composition, type ModelObject, type Panel, type Vec3 } from "../model"
+import { activeRuns, compositionKind, isSolidMaterial, isTurned, modelFootprint, modulePlacements, NO_EDGES, partsOnlyKind, partCutters, type Composition, type ModelObject, type Module, type Panel, type Vec3 } from "../model"
 import { applyRefCuts, migrateCableHoles, refTouchesBox } from "./refCuts"
 import { columnRearLimits, columnWalls, relayLegs } from "./columnWalls"
 import { buildModule, type BuildWarning, type KitOrder, type ModuleBuild, type Wiring } from "./buildModule"
@@ -117,7 +117,21 @@ export function buildComposition(input: Composition): CompositionBuild {
   // Tipus «Lliure» (flat-pack): només peces lliures; els mòduls es guarden però no es fan.
   const onlyParts = partsOnlyKind(compositionKind(comp))
   // Columnes de la casa que entren pel darrere: els calaixos del seu tram, més curts (`columnRearLimits`).
-  const builds = onlyParts ? [] : comp.modules.map((m, i) => buildModule(m, isTurned(m) ? {} : { rearLimits: columnRearLimits(m, comp.references, places[i]!) }))
+  // I les columnes que travessen la base (qualsevol, no només les del darrere; un mòdul girat, en mirall): on no hi va
+  // l'alimentador dels llums ni hi ha potes al costat (`keepOut`).
+  const keepOut = (m: Module, i: number): [number, number][] => {
+    const pl = places[i]!
+    const mz = pl.z ?? 0
+    const out: [number, number][] = []
+    for (const o of comp.references ?? []) {
+      if (o.effect !== "cut" || (o.axis ?? "z") !== "y" || o.y > 1) continue
+      const x0 = o.x - pl.x, x1 = o.x + o.w - pl.x
+      if (x1 <= 0 || x0 >= m.carcass.width || o.z >= mz + m.carcass.depth + m.carcass.thickness || o.z + o.d <= mz) continue
+      out.push(isTurned(m) ? [m.carcass.width - x1, m.carcass.width - x0] : [x0, x1])
+    }
+    return out
+  }
+  const builds = onlyParts ? [] : comp.modules.map((m, i) => buildModule(m, { ...(isTurned(m) ? {} : { rearLimits: columnRearLimits(m, comp.references, places[i]!) }), keepOut: keepOut(m, i) }))
   // Illes: el mòdul de darrere es gira 180° i es posa enganxat al darrere del de davant (mateixa X, a `gap` mm), sigui
   // quina sigui la seva posició pròpia.
   const islands = onlyParts ? [] : activeIslands(comp)

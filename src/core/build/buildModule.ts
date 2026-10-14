@@ -313,6 +313,7 @@ class Builder {
   readonly d: Derived
   /** Obstacles pel darrere (columnes): els calaixos del seu tram, més curts. */
   rearLimits: RearLimit[] = []
+  keepOut: [number, number][] = []
   /** On comença l'interior pel darrere en el tram x0–x1 (el fons, o la columna amb el seu fons si hi és). */
   rearAt(x0: number, x1: number): number {
     let z = this.d.backInnerZ
@@ -2027,10 +2028,10 @@ class Builder {
     const dLen = len ?? 140
     // Fora de les columnes de la casa (l'osca de la base): el primer lloc lliure entre el mig, a l'esquerra i a la dreta.
     // A sota de la base, tampoc on hi ha potes (per decisió de l'usuari: «aquí l'has posat a sota d'una pota»): les de les
-    // cantonades i les que es posen al costat de l'osca d'una columna (`legPoints`), 150 mm a cada costat.
+    // cantonades i les que es posen al costat de l'osca d'una columna (`legPoints`): 110 mm (la placa, a 50 del cantell, en fa 92).
     const busy: [number, number][] = below
-      ? [[rb.min[0], rb.min[0] + 150], [rb.max[0] - 150, rb.max[0]], ...this.rearLimits.map((l): [number, number] => [l.x0 - 150, l.x1 + 150])]
-      : this.rearLimits.map((l): [number, number] => [l.x0 - 10, l.x1 + 10])
+      ? [[rb.min[0], rb.min[0] + 110], [rb.max[0] - 110, rb.max[0]], ...[...this.rearLimits.map((l): [number, number] => [l.x0, l.x1]), ...this.keepOut].map(([a, b]): [number, number] => [a - 110, b + 110])]
+      : [...this.rearLimits.map((l): [number, number] => [l.x0, l.x1]), ...this.keepOut].map(([a, b]): [number, number] => [a - 10, b + 10])
     const free = (x: number) => !(this.rearAt(x - 10, x + dLen + 10) > this.d.backInnerZ + 1) && busy.every(([a, b]) => x + dLen <= a || x >= b)
     const mid = (rb.min[0] + rb.max[0]) / 2 - dLen / 2
     // Del mig cap als costats a passos de 20 mm (als penjats i a dins, primer a l'esquerra, com abans).
@@ -2818,10 +2819,11 @@ function worldBoxOf(p: Panel): { min: Vec3; max: Vec3 } {
 /** La frontissa d'una porta de vidre: la triada (la seva placa al lateral) i on va. */
 type GlassHinge = { hinge: { spec: SlotSpec<"hinge">; item: HardwareItem }; side: "left" | "right"; panel?: VerticalRef; rowYs: number[]; zoneId?: string }
 
-export function buildModule(input: Module, opts: { rearLimits?: RearLimit[]; /** Sense el recorregut dels cables dels llums (el muntatge de Preferències ensenya només el ferratge). */ wiring?: boolean } = {}): ModuleBuild {
+export function buildModule(input: Module, opts: { rearLimits?: RearLimit[]; /** Sense el recorregut dels cables dels llums (el muntatge de Preferències ensenya només el ferratge). */ wiring?: boolean; /** Trams de x (del mòdul) on hi ha una columna que travessa la base: ni l'alimentador ni potes al costat. */ keepOut?: [number, number][] } = {}): ModuleBuild {
   // Res amagat compta: només el que es veu a l'inspector (els camps de les opcions apagades no hi entren).
   const b = new Builder(visibleModule(input))
   b.rearLimits = opts.rearLimits ?? []
+  b.keepOut = opts.keepOut ?? []
 
   b.buildCarcass()
   const layout = b.buildZones()

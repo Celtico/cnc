@@ -211,3 +211,15 @@ describe("llums sota la base amb una columna al mig", () => {
     }
   })
 })
+
+describe("llums sota la base amb una columna que no toca el darrere", () => {
+  it("l'alimentador no va on hi ha la columna (encara que no entri pel darrere)", async () => {
+    const { HAFELE_LOOX_ITEMS } = await import("../model")
+    const item = structuredClone(HAFELE_LOOX_ITEMS.find((x) => x.light && x.light.recess.shape === "round")!)
+    const base = mod()
+    const m = { ...base, carcass: { ...base.carcass, base: { kind: "legs", height: 100 } }, root: { id: "z", led: { hardware: item } } }
+    const b = buildComposition({ modules: [m], references: [col(420, 150, 160, 160)] } as never)
+    const drv = panelBox(b.extras.find((p) => p.id.endsWith("wiring-driver"))!)
+    expect(drv.max[0] <= 420 - 110 || drv.min[0] >= 580 + 110).toBe(true)
+  })
+})
