@@ -116,3 +116,11 @@ export function useCompositionFittings(project: Pick<Project, "params" | "compos
   return build?.fittingOrders ?? EMPTY_FITTINGS
 }
 const EMPTY_FITTINGS: CompositionBuild["fittingOrders"] = []
+
+/** La instal·lació dels llums de cada mòdul (Peces › plànol de la instal·lació elèctrica). */
+export function useCompositionWirings(project: Pick<Project, "params" | "composition" | "name"> | undefined): CompositionBuild["wirings"] {
+  const comp = useComposition(project)
+  const build = useCompositionBuild(comp)
+  return build?.wirings ?? EMPTY_WIRINGS
+}
+const EMPTY_WIRINGS: CompositionBuild["wirings"] = []

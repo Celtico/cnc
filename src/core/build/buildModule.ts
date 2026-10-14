@@ -134,6 +134,8 @@ export interface ModuleBuild {
   lightKits: LightOrder[]
   /** La comanda dels ferratges col·locats (frontisses, tiradors, pistons, potes): una línia per item (Peces › «Ferratges», LLEGEIX-ME). */
   fittingOrders: KitOrderLine[]
+  /** La instal·lació dels llums del mòdul (alimentador, recorreguts dels cables, sortida a l'endoll) per al plànol de Peces. */
+  wiring?: Wiring
   warnings: BuildWarning[]
   layout: Layout
   /** % d'àrea oberta de cada reixeta, per id de zona (o "top" per a la tapa). */
@@ -325,6 +327,10 @@ class Builder {
   readonly hardwareKits: KitOrder[] = []
   readonly lightKits: LightOrder[] = []
   readonly fittingOrders: KitOrderLine[] = []
+  /** On és cada làmpada d'un joc de llum (el punt del forat del cable) i la peça que la porta: el recorregut del cable (`buildWiring`). */
+  private readonly lampSpots: { x: number; y: number; z: number; host: Panel; x0: number; d: number; label: string }[] = []
+  private switchSpot?: { x: number; y: number }
+  wiring?: Wiring
   private readonly strutOrdered = new Set<string>()
   /** Afegeix `qty` unitats d'un ferratge a la comanda del mòdul (els iguals, per id i nota, se sumen). */
   order(item: HardwareItem, qty: number, note?: string): void {
@@ -1296,6 +1302,7 @@ class Builder {
           const x0 = x - plan.bar.cut / 2, x1 = x + plan.bar.cut / 2
           if (plan.recessed) this.pocket(host, [x0, y, zc - k.recess.size / 2], [x1, y, zc + k.recess.size / 2], plan.depth, "light")
           this.throughHole(host, [x0 + 20, y, zc], k.cableHole, "cable")
+          this.lampSpots.push({ x: x0 + 20, y, z: zc, host, x0: rect.x0, d: k.cableHole, label: `Llum ${k.series}` })
           this.extras.push({
             id: `light-${zone.id}-${i}-${j}`,
             name: "barra LED",
@@ -1319,6 +1326,7 @@ class Builder {
           } else this.pocket(host, [x - k.recess.size / 2, y, zc - k.recess.size / 2], [x + k.recess.size / 2, y, zc + k.recess.size / 2], plan.depth, "light")
         }
         this.throughHole(host, [x, y, zc], k.cableHole, "cable")
+        this.lampSpots.push({ x, y, z: zc, host, x0: rect.x0, d: k.cableHole, label: `Llum ${k.series}` })
         const sz = k.body.size
         this.extras.push({
           id: `light-${zone.id}-${i}-${j}`,
@@ -1352,7 +1360,10 @@ class Builder {
     })
     const side = this.panels.find((p) => p.id === "side-left")
     const sys = lightSystemOf(this.lightMaker ?? "")
-    if (doors && !d.inset && side && sys && addEdgeHole(side, [d.t / 2, (rect.y0 + rect.y1) / 2, d.D], { diameter: sys.doorSwitch.bore, depth: sys.doorSwitch.depth, tag: "light-switch" })) return "door"
+    if (doors && !d.inset && side && sys && addEdgeHole(side, [d.t / 2, (rect.y0 + rect.y1) / 2, d.D], { diameter: sys.doorSwitch.bore, depth: sys.doorSwitch.depth, tag: "light-switch" })) {
+      this.switchSpot = { x: d.t / 2, y: (rect.y0 + rect.y1) / 2 }
+      return "door"
+    }
     return sys ? "touch" : "none"
   }
 
@@ -1975,6 +1986,110 @@ class Builder {
     return true
   }
 
+  /**
+   * **El recorregut dels cables dels llums** (per decisió de l'usuari, 2026-10-14: «fes el mecanitzat de tots els cables,
+   * i el que no és mecanitzat, un plànol»): l'alimentador va dins del mòdul, ajagut sobre la base, a darrere a l'esquerra
+   * (50 mm lliures, com demana el catàleg). Cada cable de làmpada surt pel seu forat (ja fet), va fins a la cantonada de
+   * darrere a l'esquerra del seu compartiment (a 40 del lateral i 25 del fons) i baixa: un passant del Ø del cable a cada peça horitzontal
+   * que travessa (la mateixa peça de la làmpada, travessers i prestatges fixos; la base no) i, sobre la base, un passant a
+   * cada divisor fins a l'alimentador. El cable de xarxa surt pel fons, darrere de l'alimentador, per una ranura de
+   * 40 × 16 (hi passa l'endoll pla europeu, 35,3 × 13,7). Els prestatges regulables no es foraden (el cable passa pel
+   * costat). Tot el que no és mecanitzat (on va cada cosa i les llargades) va al plànol (`wiring`).
+   */
+  buildWiring(): void {
+    if (!this.lampSpots.length) return
+    const sys = lightSystemOf(this.lightMaker ?? "")
+    if (!sys) return
+    const notes: string[] = []
+    const base = this.panels.find((p) => p.role === "bottom")
+    if (!base) return
+    const bb = worldBoxOf(base)
+    const baseTop = bb.max[1]
+    const back = this.panels.find((p) => p.role === "back")
+    const zBack = back ? worldBoxOf(back).max[2] : bb.min[2]
+    const zc = zBack + 25
+    // L'alimentador: el més petit que arriba a la potència (amb el pic), com a la comanda.
+    const kits = this.lightKits
+    const peak = kits.reduce((a, k) => a + k.peakWatts, 0)
+    const ds = sys.drivers.slice().sort((a, b) => a.watts - b.watts)
+    const drv = ds.find((x) => (x.perSlot ?? x.watts) >= peak) ?? ds[ds.length - 1]!
+    const [len] = drv.size.split("×").map((v) => Number(v.trim().replace(",", ".")))
+    const dx0 = bb.min[0] + 50
+    const dx1 = dx0 + (len ?? 140)
+    const driverIn: [number, number] = [dx0, baseTop + 8]
+    const holes: Wiring["holes"] = []
+    const seen = new Set<string>()
+    const drill = (p: Panel, w: Vec3, d: number, label: string) => {
+      const key = `${p.id}:${Math.round(w[0])}:${Math.round(w[1])}:${Math.round(w[2])}`
+      if (seen.has(key)) return
+      seen.add(key)
+      const before = p.cutouts?.length ?? 0
+      this.throughHole(p, w, d, "cable-run")
+      if ((p.cutouts?.length ?? 0) > before) holes.push({ x: r(w[0]), y: r(w[1]), label })
+    }
+    // Sobre la base, de x fins a l'alimentador: un passant a cada divisor que hi ha pel mig.
+    const alongBase = (x: number, d: number) => {
+      for (const v of this.verticals) {
+        if (v.outer) continue
+        const mid = (v.xL + v.xR) / 2
+        if (mid > Math.min(x, dx0) && mid < Math.max(x, dx0) && v.yB <= baseTop + 1 && v.yT > baseTop + 20) drill(v.panel, [mid, baseTop + 20, zc], d, "pas del cable (divisor)")
+      }
+    }
+    const runs: Wiring["runs"] = []
+    for (const l of this.lampSpots) {
+      const hb = worldBoxOf(l.host)
+      const pts: [number, number][] = [[l.x, l.y]]
+      let length = 0
+      if (l.host === base) {
+        // Llum a sota: el cable puja per la base i va per sobre fins a l'alimentador.
+        alongBase(l.x, l.d)
+        length = Math.abs(l.x - dx0) + Math.abs(l.z - zc) + 50
+        pts.push([l.x, baseTop + 8], driverIn)
+      } else {
+        // A 40 del lateral (fora de les espigues de cantell dels prestatges, que hi entren uns 20) i a 25 del fons.
+        const cx = l.x0 + 40
+        const top = hb.max[1]
+        // Per sobre de la peça de la làmpada fins a la cantonada, i avall per la cantonada.
+        drill(l.host, [cx, (hb.min[1] + hb.max[1]) / 2, zc], l.d, "pas del cable")
+        // Les peces horitzontals fixes de sota (travessers, prestatges fixos: els que porten espigues); els regulables, no.
+        for (const p of this.panels) {
+          if (p === base || p === l.host) continue
+          const fixed = p.role === "fixedShelf" || (p.role === "shelf" && p.holes.some((h) => h.tag === "dowel"))
+          if (!fixed) continue
+          const pb = worldBoxOf(p)
+          if (cx > pb.min[0] && cx < pb.max[0] && zc > pb.min[2] && zc < pb.max[2] && pb.max[1] <= hb.min[1] + 0.5 && pb.min[1] >= baseTop - 0.5) drill(p, [cx, (pb.min[1] + pb.max[1]) / 2, zc], l.d, "pas del cable")
+        }
+        alongBase(cx, l.d)
+        length = Math.abs(l.x - cx) + Math.abs(l.z - zc) + (top - baseTop) + Math.abs(cx - dx0) + 50
+        pts.push([l.x, top + 8], [cx, top + 8], [cx, baseTop + 8], driverIn)
+      }
+      runs.push({ from: l.label, points: pts.map(([x, y]) => [r(x), r(y)]), length: Math.round(length) })
+      if (length > sys.maxCable) notes.push(`${l.label}: ${Math.round(length)} mm de cable fins a l'alimentador (el catàleg en diu ${sys.maxCable} com a molt): cal un altre alimentador més a prop.`)
+    }
+    // El cable de xarxa: pel fons, darrere de l'alimentador (l'endoll pla europeu, 35,3 × 13,7, passa per 40 × 16).
+    let mains: Wiring["mains"]
+    if (back) {
+      const mx = (dx0 + dx1) / 2, my = baseTop + 40
+      const l = toLocal(back, [mx, my, worldBoxOf(back).min[2]])
+      if (l[0] > 25 && l[1] > 12 && l[0] < back.length - 25 && l[1] < back.width - 12) {
+        ;(back.cutouts ??= []).push({ kind: "slot", x: r(l[0] - 20), y: r(l[1] - 8), w: 40, h: 16, tag: "cable-mains" })
+        mains = { x: r(mx), y: r(my) }
+      }
+    }
+    if (!mains) notes.push("Sense fons on fer la sortida del cable de xarxa: passa'l per darrere del mòdul fins a l'endoll.")
+    if (this.lampSpots.some((l) => l.host.role === "shelf")) notes.push("Les làmpades sota prestatges regulables: el cable passa pel costat del prestatge (no es forada) fins a la cantonada.")
+    const sw = this.lightKits[0]?.switch
+    this.wiring = {
+      driver: { x0: r(dx0), x1: r(dx1), y0: r(baseTop), y1: r(baseTop + 16), name: drv.name, article: drv.article },
+      lamps: this.lampSpots.map((l) => ({ x: r(l.x), y: r(l.y), label: l.label })),
+      runs,
+      ...(sw === "door" && this.switchSpot ? { switch: { ...this.switchSpot, kind: "door" as const } } : sw === "touch" ? { switch: { x: r(bb.min[0] + 30), y: r(baseTop + 60), kind: "touch" as const } } : {}),
+      ...(mains ? { mains } : {}),
+      holes,
+      notes,
+    }
+  }
+
   /** El braç d'un abatible de vidre (es veu): el cos cargolat a la cara de dins del lateral, a dalt. */
   private glassArm(id: string, side: VerticalRef, which: "left" | "right", y0: number, h: number, dir: "down" | "up"): void {
     const { d } = this
@@ -2586,6 +2701,27 @@ export interface RearLimit {
   z: number
 }
 
+/**
+ * La instal·lació elèctrica dels llums d'un mòdul, vista de davant (x, y del mòdul, mm): l'alimentador, cada làmpada i el
+ * recorregut del seu cable fins a l'alimentador (amb la llargada), l'interruptor i la sortida del cable de xarxa.
+ */
+export interface Wiring {
+  driver: { x0: number; x1: number; y0: number; y1: number; name: string; article: string }
+  lamps: { x: number; y: number; label: string }[]
+  runs: { from: string; points: [number, number][]; length: number }[]
+  switch?: { x: number; y: number; kind: "door" | "touch" }
+  mains?: { x: number; y: number }
+  /** Els forats que fa el recorregut (a més dels de les làmpades): per a la llegenda. */
+  holes: { x: number; y: number; label: string }[]
+  notes: string[]
+}
+
+/** La caixa d'una peça al mòdul (mm). */
+function worldBoxOf(p: Panel): { min: Vec3; max: Vec3 } {
+  const cs = [0, p.length].flatMap((u) => [0, p.width].flatMap((v) => [0, p.thickness].map((w) => toWorld(p, [u, v, w]))))
+  return { min: [0, 1, 2].map((k) => Math.min(...cs.map((c) => c[k]!))) as Vec3, max: [0, 1, 2].map((k) => Math.max(...cs.map((c) => c[k]!))) as Vec3 }
+}
+
 /** La frontissa d'una porta de vidre: la triada (la seva placa al lateral) i on va. */
 type GlassHinge = { hinge: { spec: SlotSpec<"hinge">; item: HardwareItem }; side: "left" | "right"; panel?: VerticalRef; rowYs: number[]; zoneId?: string }
 
@@ -2598,8 +2734,9 @@ export function buildModule(input: Module, opts: { rearLimits?: RearLimit[] } = 
   const layout = b.buildZones()
   b.buildLegs()
   b.buildUnderLight()
+  b.buildWiring()
   const panels = b.panels.map((p) => normalizePanel(p.cutouts && p.cutouts.length === 0 ? { ...p, cutouts: undefined } : p))
-  return { panels, extras: b.extras, hardwareKits: b.hardwareKits, lightKits: b.lightKits, fittingOrders: b.fittingOrders, warnings: b.warnings, layout, openRatios: b.openRatios, drawerHeights: b.drawerHeights }
+  return { panels, extras: b.extras, hardwareKits: b.hardwareKits, lightKits: b.lightKits, fittingOrders: b.fittingOrders, ...(b.wiring ? { wiring: b.wiring } : {}), warnings: b.warnings, layout, openRatios: b.openRatios, drawerHeights: b.drawerHeights }
 }
 
 /** Material dels fronts (portes, calaixos, abatibles, reixetes, fixos): el propi o, si no n'hi ha, el del cos. */

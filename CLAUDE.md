@@ -300,6 +300,16 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
       moble —el catàleg no dona cap forat al fons— i la nota dels cables d'extensió) a Peces › «Llums i instal·lació
       elèctrica» i al LLEGEIX-ME de Maestro. Preferències **v31** (additiu, `V31_ITEMS`); `hardwareParams` amaga «Entre
       llums» i «Rebaix» al perfil de l'app. Tests `build/lightKit.test.ts`.
+    - **Recorregut dels cables** (per decisió de l'usuari, 2026-10-14: «fes el mecanitzat de tots els cables, i el que no
+      és mecanitzat, un plànol»; `buildWiring`, `ModuleBuild.wiring`, `CompositionBuild.wirings`): l'alimentador ajagut
+      sobre la base, a darrere a l'esquerra (50 lliures); el cable de cada làmpada va a la cantonada de darrere a
+      l'esquerra del seu compartiment (a 40 del lateral, fora de les espigues, i 25 del fons) i baixa: un passant del Ø
+      del cable (tag `cable-run`) a la peça de la làmpada i a cada travesser o prestatge fix de sota (els regulables no:
+      nota), i sobre la base un passant a cada divisor fins a l'alimentador; la sortida del cable de xarxa pel fons darrere
+      de l'alimentador, ranura de 40 × 16 (tag `cable-mains`; hi passa l'endoll pla europeu, 35,3 × 13,7). Llargada de
+      cada cable (avís si passa del màxim del catàleg). **Plànol** a Peces › «Llums i instal·lació elèctrica»
+      (`features/cutlist/WiringPlan.tsx`): de davant, alimentador, làmpades, recorreguts amb les llargades, passants,
+      interruptor i sortida. Test a `build/lightKit.test.ts`.
     - **Llum a sota del moble** (`Carcass.underLight`, Mòdul › Caixa «Llum a sota», després de la base; per decisió de
       l'usuari, 2026-10-14, com la cuina de casa: «a sota dels mobles hi posen leds»; només penjat o amb potes,
       `visibleModule`): la mateixa «Llum» (el perfil de l'app o un joc de llum, «Com el mòdul» o còpia pròpia) a la cara

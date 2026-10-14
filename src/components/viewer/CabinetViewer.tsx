@@ -1181,7 +1181,7 @@ function CableMarks({ panels }: { panels: Panel[] }) {
       const world = (x: number, y: number) =>
         new Vector3((o[0] + x * xa[0] + y * ya[0] + z * za[0]) * S, (o[1] + x * xa[1] + y * ya[1] + z * za[1]) * S, (o[2] + x * xa[2] + y * ya[2] + z * za[2]) * S)
       for (const c of p.cutouts ?? []) {
-        if (c.tag !== "cable" && c.tag !== "ref") continue
+        if (!c.tag?.startsWith("cable") && c.tag !== "ref") continue
         if (c.kind === "circle") {
           const r = c.diameter / 2
           out.push(Array.from({ length: 33 }, (_, i) => world(c.x + r * Math.cos((i / 32) * Math.PI * 2), c.y + r * Math.sin((i / 32) * Math.PI * 2))))

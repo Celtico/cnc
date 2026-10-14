@@ -5,10 +5,11 @@ import { PanelDrawing } from "../../components/PanelDrawing"
 import { toCutList } from "../../core/cutlist/toCutList"
 import { EDGE_NUMBER, EDGE_SIDES, type Grain, type Panel } from "../../core/model"
 import { pieceRefs } from "../../core/export/refs"
-import { useCompositionExtras, useCompositionFittings, useCompositionKits, useCompositionLights, useCompositionPanels, useCompositionRead, useProject } from "../useProject"
+import { useCompositionExtras, useCompositionFittings, useCompositionKits, useCompositionLights, useCompositionWirings, useCompositionPanels, useCompositionRead, useProject } from "../useProject"
 import { kitGroups, type KitGroup } from "../../core/build/kitOrders"
 import { lightGroups } from "../../core/build/lightOrders"
 import { fittingGroups } from "../../core/build/fittingOrders"
+import { WiringPlan } from "./WiringPlan"
 import { UnreadableAlert } from "../../components/UnreadableAlert"
 import { SectionLabel } from "../../components/SectionLabel"
 
@@ -99,6 +100,7 @@ export function CutListScreen({ projectId }: { projectId: number }) {
   const lightRows = useMemo(() => lightGroups(lights), [lights])
   // Frontisses, tiradors, pistons i potes: la comanda per mòdul, amb el número d'article.
   const fittings = useCompositionFittings(project)
+  const wirings = useCompositionWirings(project)
   const fittingRows = useMemo(() => fittingGroups(fittings), [fittings])
   // Elements iguals (material i mides) agrupats. Els components dels jocs de calaix (rol `hardware`) van a la seva taula.
   const extraRows = useMemo(() => {
@@ -316,6 +318,9 @@ export function CutListScreen({ projectId }: { projectId: number }) {
           <SectionLabel>Llums i instal·lació elèctrica</SectionLabel>
           {lightRows.map((g) => (
             <KitOrderTable key={g.key} group={g} />
+          ))}
+          {wirings.map((w) => (
+            <WiringPlan key={w.moduleId} item={w} />
           ))}
           <Text fontSize="xs" color="fg.muted">
             Per mòdul: les làmpades amb el seu mecanitzat (ja és a les peces: forat o rebaix i forat del cable a la cara de sota) i el que cal per connectar-les a la xarxa (alimentador de 24 V amb cable, distribuïdor si hi ha més de sis làmpades, interruptor i el seu cable).

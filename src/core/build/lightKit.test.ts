@@ -218,3 +218,19 @@ describe("llum a sota del moble", () => {
     expect(strip.extras.some((p) => p.id === "led-under")).toBe(true)
   })
 })
+
+describe("recorregut dels cables dels llums", () => {
+  it("el cable baixa per la cantonada (passants als prestatges fixos), l'alimentador sobre la base i la sortida pel fons", () => {
+    const item = structuredClone(HAFELE_LOOX_ITEMS.find((x) => x.light && x.light.recess.shape === "round")!)
+    const m = { ...defaultModule("m", "Alt", { width: 800, height: 720, depth: 330 }), root: { id: "z", shelves: { n: 1, adjustable: false }, led: { hardware: item } } } as never as ReturnType<typeof defaultModule>
+    const b = buildModule(m)
+    const shelf = b.panels.find((p) => p.role === "shelf" || p.role === "fixedShelf")!
+    expect((shelf.cutouts ?? []).filter((c) => c.tag === "cable-run").length).toBeGreaterThan(0)
+    const back = b.panels.find((p) => p.role === "back")!
+    expect((back.cutouts ?? []).some((c) => c.tag === "cable-mains" && c.kind === "slot")).toBe(true)
+    expect(b.wiring?.runs.length).toBe(b.lightKits.reduce((a, k) => a + k.lamps, 0))
+    expect(b.wiring!.runs.every((r) => r.length > 0)).toBe(true)
+    // La base no es forada pel recorregut (l'alimentador hi va a sobre).
+    expect((b.panels.find((p) => p.role === "bottom")!.cutouts ?? []).some((c) => c.tag === "cable-run")).toBe(false)
+  })
+})
