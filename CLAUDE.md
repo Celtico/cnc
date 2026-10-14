@@ -1447,7 +1447,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   horari vist des de dalt); sense girar, el darrere mira amunt.
 - **Mobles enllaçats** (`item.kind = "moble"`, `projectId`): és el mateix moble de la llista. A l'ambient només se'n toquen
   les **mides generals** (`resizeComposition`: escala amplades, separacions, alçades, fondàries, mides fixes, peces lliures,
-  objectes i models —un model girat de prop de 90° té l'ample i la fondària creuats—; s'apliquen soles un moment després d'escriure, o amb Retorn; els gruixos no; una divisió amb totes les mides fixes deixa l'última «auto») i la posició; «Obrir a
+  objectes i models —un model girat de prop de 90° té l'ample i la fondària creuats—; s'apliquen en sortir dels camps, amb Retorn o amb «Aplicar» —mentre s'escriu, no—; **són un pas del desfer de l'ambient** (l'historial porta `{ amb, linked }`, la composició de cada moble tocat; ⌘Z la torna i la desa); els gruixos no; una divisió amb totes les mides fixes deixa l'última «auto») i la posició; «Obrir a
   l'editor» per a l'interior. Els objectes es col·loquen igual. El + de «Mobles» / «Objectes» obre la galeria a **pantalla
   completa** (`AmbientPicker`: `Drawer` full amb la de Mobles, `NewMobleGallery`, o la d'Objectes) **sense** botó «Nou moble» / «Nou objecte»
   (per decisió de l'usuari: un moble en blanc a l'ambient no servia i despistava), amb les mateixes seccions que la pàgina:

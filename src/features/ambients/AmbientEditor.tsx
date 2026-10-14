@@ -172,8 +172,29 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   const unit = useUnit()
   const projects = useProjects()
   // Ambient amb desfer/refer (`useHistory`, fins a 100 passos; la càmera es desa a part, fora del desfer).
-  const history = useHistory<Ambient>(initial, { limit: 100 })
-  const { value: amb, set: setAmb, undo, redo } = history
+  // Les mides generals d'un moble o objecte enllaçat també són un pas (per decisió de l'usuari: ⌘Z ho ha de desfer tot):
+  // l'historial porta, a més de l'ambient, la composició de cada moble que s'hi ha canviat (`linked`).
+  const history = useHistory<{ amb: Ambient; linked?: Record<number, Composition> }>({ amb: initial }, { limit: 100 })
+  const { set: setDoc, undo, redo } = history
+  const amb = history.value.amb
+  const setAmb = useCallback((next: Ambient, opts?: { commit?: boolean }) => setDoc((h) => ({ ...h, amb: next }), opts), [setDoc])
+  // La composició d'abans del primer canvi de cada moble (desfer fins al principi hi torna) i la que hi ha ara desada.
+  const linkedOrig = useRef(new Map<number, Composition>())
+  const linkedSaved = useRef(new Map<number, Composition>())
+  const resizeLinked = useCallback((id: number, before: Composition, next: Composition) => {
+    if (!linkedOrig.current.has(id)) linkedOrig.current.set(id, before)
+    setDoc((h) => ({ ...h, linked: { ...h.linked, [id]: next } }))
+  }, [setDoc])
+  const linked = history.value.linked
+  useEffect(() => {
+    // Desfer o refer: cada moble tocat, a la composició del pas (o a la d'abans de tocar-lo).
+    for (const [id, orig] of linkedOrig.current) {
+      const want = linked?.[id] ?? orig
+      if (linkedSaved.current.get(id) === want) continue
+      linkedSaved.current.set(id, want)
+      void updateProjectComposition(id, want)
+    }
+  }, [linked])
   const [sel, setSel] = useState<Selection>(null)
   const [tool, setTool] = useState<Tool>("select")
   // La vista (Plànol · 3D) es recorda; els ambients del catàleg s'obren al 3D.
@@ -853,6 +874,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                 onOpen={() => item.kind === "moble" && onOpenProject(item.projectId)}
                 onDuplicate={duplicate}
                 onDelete={remove}
+                onResize={resizeLinked}
               />
             ) : sel?.kind === "multi" && selIds.length > 1 ? (
               <MultiInspector
@@ -1090,7 +1112,10 @@ function ItemInspector({
   onOpen,
   onDuplicate,
   onDelete,
+  onResize,
 }: {
+  /** Les mides generals d'un moble enllaçat, com un pas del desfer de l'ambient. */
+  onResize?: (id: number, before: Composition, next: Composition) => void
   item: AmbientItem
   geo: ItemGeometry | null
   name: string
@@ -1137,7 +1162,7 @@ function ItemInspector({
                 És buit: encara no té mòduls ni peces. Obre'l a l'editor per fer-lo; al plànol surt com un requadre discontinu.
               </Text>
             ) : (
-              <MobleDims project={project} geo={geo} />
+              <MobleDims project={project} geo={geo} onResize={onResize} />
             )}
             <Button size="sm" variant="outline" alignSelf="flex-start" my={3} onClick={onOpen}>
               <LuExternalLink /> Obrir a l'editor
@@ -1174,7 +1199,7 @@ function ItemInspector({
  * Mides generals d'un moble: s'escriuen i s'apliquen amb «Aplicar» (o Retorn); el moble de la
  * llista canvia (l'enllaç és el mateix moble), amb la distribució escalada.
  */
-function MobleDims({ project, geo }: { project: Project; geo: ItemGeometry }) {
+function MobleDims({ project, geo, onResize }: { project: Project; geo: ItemGeometry; onResize?: (id: number, before: Composition, next: Composition) => void }) {
   const cur = { w: Math.round(geo.w), h: Math.round(geo.h), d: Math.round(geo.d) }
   const [draft, setDraft] = useState(cur)
   const key = `${cur.w}|${cur.h}|${cur.d}`
@@ -1184,29 +1209,32 @@ function MobleDims({ project, geo }: { project: Project; geo: ItemGeometry }) {
     setDraft(cur)
   }
   const dirty = draft.w !== cur.w || draft.h !== cur.h || draft.d !== cur.d
-  // S'aplica sol un moment després d'escriure (com els altres camps de l'app); Retorn o «Aplicar» ho fan de seguida.
-  const applyRef = useRef<() => Promise<void>>(async () => {})
-  useEffect(() => {
-    if (!dirty) return
-    const t = setTimeout(() => void applyRef.current(), 900)
-    return () => clearTimeout(t)
-  }, [draft.w, draft.h, draft.d, dirty])
   const apply = async () => {
     if (!dirty || !(draft.w >= 100 && draft.h >= 100 && draft.d >= 100)) return
-    const next = resizeComposition(compositionOf(project), cur, draft)
+    const before = compositionOf(project)
+    const next = resizeComposition(before, cur, draft)
     const ok = CompositionSchema.safeParse(next)
     if (!ok.success) {
       toaster.create({ title: "No s'ha pogut canviar la mida", description: "Amb aquestes mides alguna part del moble queda fora de límits. Prova-ho a l'editor.", type: "error" })
       return
     }
+    // Un pas del desfer de l'ambient: el desa l'efecte de `linked` (i ⌘Z el torna a la d'abans).
+    if (onResize) return onResize(project.id, before, next)
     if (!(await updateProjectComposition(project.id, next))) {
       toaster.create({ title: "No s'ha pogut canviar la mida", description: "Aquest moble no s'ha pogut llegir bé; obre'l a l'editor.", type: "error" })
     }
   }
-  applyRef.current = apply
   return (
     <FoldItem id="amb-dims" title="Mides generals" icon={LuMoveDiagonal} badge={`${cur.w} × ${cur.h} × ${cur.d}`}>
-      <Stack gap={4} onKeyDown={(e) => e.key === "Enter" && void apply()}>
+      {/* S'aplica en sortir dels camps (com els altres de l'app), amb Retorn o amb «Aplicar»; mentre s'escriu, no
+          (escrivint «1200» s'hauria aplicat 120). */}
+      <Stack
+        gap={4}
+        onKeyDown={(e) => e.key === "Enter" && void apply()}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) void apply()
+        }}
+      >
       <NumRow label="Ample" value={draft.w} min={100} step={10} onChange={(w) => setDraft({ ...draft, w })} />
       <NumRow label="Alt" value={draft.h} min={100} step={10} onChange={(h) => setDraft({ ...draft, h })} />
       <NumRow label="Fondària" value={draft.d} min={100} step={10} onChange={(d) => setDraft({ ...draft, d })} />
