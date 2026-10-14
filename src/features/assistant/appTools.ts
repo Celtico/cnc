@@ -409,7 +409,7 @@ async function run(doc: unknown, name: string, raw: unknown): Promise<ToolRun<un
         if (format === "xcs") {
           if (!machine) return { ok: false, error: "No hi ha cap màquina per defecte (Preferències › Màquines CNC): no es poden fer els programes de Maestro." }
           const plan = cncNestOptions(panels, machine, m.nesting)
-          const opts = { project: m.name, kits: b.hardwareKits, lights: (b as { lightKits?: unknown }).lightKits } as Parameters<typeof toMaestroNestXcs>[3]
+          const opts = { project: m.name, kits: b.hardwareKits, lights: (b as { lightKits?: unknown }).lightKits, fittings: (b as { fittingOrders?: unknown }).fittingOrders } as Parameters<typeof toMaestroNestXcs>[3]
           const x = toMaestroNestXcs(panels, nest(panels, plan.options), machine, opts)
           const file = save(new Blob([xcsZip(x) as BlobPart], { type: "application/zip" }), `${base}-maestro.zip`)
           return { ok: true, doc, result: { file, programs: x.programs, machine: machine.name, warnings: x.warnings.slice(0, 20) } }

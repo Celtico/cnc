@@ -5,9 +5,10 @@ import { PanelDrawing } from "../../components/PanelDrawing"
 import { toCutList } from "../../core/cutlist/toCutList"
 import { EDGE_NUMBER, EDGE_SIDES, type Grain, type Panel } from "../../core/model"
 import { pieceRefs } from "../../core/export/refs"
-import { useCompositionExtras, useCompositionKits, useCompositionLights, useCompositionPanels, useCompositionRead, useProject } from "../useProject"
+import { useCompositionExtras, useCompositionFittings, useCompositionKits, useCompositionLights, useCompositionPanels, useCompositionRead, useProject } from "../useProject"
 import { kitGroups, type KitGroup } from "../../core/build/kitOrders"
 import { lightGroups } from "../../core/build/lightOrders"
+import { fittingGroups } from "../../core/build/fittingOrders"
 import { UnreadableAlert } from "../../components/UnreadableAlert"
 import { SectionLabel } from "../../components/SectionLabel"
 
@@ -96,6 +97,9 @@ export function CutListScreen({ projectId }: { projectId: number }) {
   // Llums amb joc: les làmpades de cada mòdul i el seu sistema elèctric (alimentador, distribuïdor, interruptor, cables).
   const lights = useCompositionLights(project)
   const lightRows = useMemo(() => lightGroups(lights), [lights])
+  // Frontisses, tiradors, pistons i potes: la comanda per mòdul, amb el número d'article.
+  const fittings = useCompositionFittings(project)
+  const fittingRows = useMemo(() => fittingGroups(fittings), [fittings])
   // Elements iguals (material i mides) agrupats. Els components dels jocs de calaix (rol `hardware`) van a la seva taula.
   const extraRows = useMemo(() => {
     const rows = new Map<string, { label: string; material: string; l: number; w: number; t: number; qty: number }>()
@@ -293,6 +297,17 @@ export function CutListScreen({ projectId }: { projectId: number }) {
           ))}
           <Text fontSize="xs" color="fg.muted">
             Calaixos de doble paret: el joc del fabricant (números d'article del catàleg) i la fusta que demana (el fons i el darrere ja són a la llista de peces; cap lateral de fusta).
+          </Text>
+        </Stack>
+      )}
+      {fittingRows.length > 0 && (
+        <Stack gap={2} data-testid="fitting-orders">
+          <SectionLabel>Ferratges</SectionLabel>
+          {fittingRows.map((g) => (
+            <KitOrderTable key={g.key} group={g} />
+          ))}
+          <Text fontSize="xs" color="fg.muted">
+            El que cal comprar per mòdul: frontisses, tiradors, pistons de gas i potes, amb el número d'article del catàleg (els forats ja són a les peces).
           </Text>
         </Stack>
       )}

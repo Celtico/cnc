@@ -1,3 +1,5 @@
+import { fittingReadmeLines } from "../build/fittingOrders"
+import type { KitOrderLine } from "../build/drawerKit"
 import { drillsOfDiameter, pickDrill, pickRouter, pickSmallRouter, usableTool } from "../machine/tools"
 import { flatten, polygonArea, type BPt, type Cutout, type Panel } from "../model"
 import {
@@ -341,7 +343,7 @@ export const LOAD_MACRO = loadMacroLine()
 export const toolComment = (t: { kind: "BROCA" | "FRESA"; name: string }): string => `//${t.kind} PLANA ${comment(t.name).slice(3)}`
 
 /** Programes per tauler d'un nesting fet amb `cncNestOptions`. */
-export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, opts: { project: string; date?: Date; /** Jocs de calaix (comanda) per al LLEGEIX-ME. */ kits?: readonly (KitOrder & { module?: number })[]; /** Llums amb joc (làmpades i sistema elèctric) per al LLEGEIX-ME. */ lights?: readonly (LightOrder & { module?: number })[] }): XcsNestExport {
+export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, opts: { project: string; date?: Date; /** Jocs de calaix (comanda) per al LLEGEIX-ME. */ kits?: readonly (KitOrder & { module?: number })[]; /** Llums amb joc (làmpades i sistema elèctric) per al LLEGEIX-ME. */ lights?: readonly (LightOrder & { module?: number })[]; /** Ferratges col·locats (comanda) per al LLEGEIX-ME. */ fittings?: readonly (KitOrderLine & { module?: number })[] }): XcsNestExport {
   const nopt = machineNesting(m)
   const refs = pieceRefs(panels)
   const byId = new Map(panels.map((p) => [p.id, p]))
@@ -717,7 +719,7 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
   const files = sheets.map((s) => ({ name: s.file, text: s.text }))
   const enc = encodingWarning(m, files)
   if (enc) warnings.unshift(enc)
-  files.push({ name: "LLEGEIX-ME.txt", text: nestReadme(opts.project, m, sheets, infos, unplaced, warnings, spacing, spacingTool, margin, opts.date ?? new Date(), opts.kits ?? [], opts.lights ?? []) })
+  files.push({ name: "LLEGEIX-ME.txt", text: nestReadme(opts.project, m, sheets, infos, unplaced, warnings, spacing, spacingTool, margin, opts.date ?? new Date(), opts.kits ?? [], opts.lights ?? [], opts.fittings ?? []) })
   return {
     files,
     encoding: xcsEncodingOf(m),
@@ -733,7 +735,7 @@ export function toMaestroNestXcs(panels: Panel[], nesting: Nesting, m: Machine, 
   }
 }
 
-function nestReadme(project: string, m: Machine, sheets: NestSheetXcs[], infos: NestPanelInfo[], unplaced: string[], warnings: string[], spacing: number, tool: MachineTool | undefined, margin: number, date: Date, kits: readonly (KitOrder & { module?: number })[], lights: readonly (LightOrder & { module?: number })[] = []): string {
+function nestReadme(project: string, m: Machine, sheets: NestSheetXcs[], infos: NestPanelInfo[], unplaced: string[], warnings: string[], spacing: number, tool: MachineTool | undefined, margin: number, date: Date, kits: readonly (KitOrder & { module?: number })[], lights: readonly (LightOrder & { module?: number })[] = [], fittings: readonly (KitOrderLine & { module?: number })[] = []): string {
   const n = machineNesting(m)
   const prog = nestProgram(m)
   const lines = [
@@ -786,6 +788,8 @@ function nestReadme(project: string, m: Machine, sheets: NestSheetXcs[], infos: 
   if (kits.length) lines.push("", "Ferratges dels jocs de calaix (comanda)", ...kitReadmeLines(kits))
   // Llums amb joc: les làmpades (el forat o el rebaix ja és als programes) i el sistema elèctric de cada mòdul.
   if (lights.length) lines.push("", "Llums i instal·lació elèctrica (comanda)", ...lightReadmeLines(lights))
+  // Frontisses, tiradors, pistons i potes: el que cal comprar (els mecanitzats ja són als programes).
+  if (fittings.length) lines.push("", "Ferratges (comanda)", ...fittingReadmeLines(fittings))
   if (warnings.length) {
     lines.push("", `Avisos (${warnings.length}): el que no surt als programes o s'ha canviat`)
     for (const w of warnings) lines.push(`- ${w}`)

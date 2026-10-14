@@ -131,6 +131,8 @@ export interface ModuleBuild {
   hardwareKits: KitOrder[]
   /** Compartiments amb un joc de llum: les làmpades i el sistema elèctric (Peces › «Llums», LLEGEIX-ME; `lightOrders.ts`). */
   lightKits: LightOrder[]
+  /** La comanda dels ferratges col·locats (frontisses, tiradors, pistons, potes): una línia per item (Peces › «Ferratges», LLEGEIX-ME). */
+  fittingOrders: KitOrderLine[]
   warnings: BuildWarning[]
   layout: Layout
   /** % d'àrea oberta de cada reixeta, per id de zona (o "top" per a la tapa). */
@@ -321,6 +323,15 @@ class Builder {
   readonly extras: Panel[] = []
   readonly hardwareKits: KitOrder[] = []
   readonly lightKits: LightOrder[] = []
+  readonly fittingOrders: KitOrderLine[] = []
+  private readonly strutOrdered = new Set<string>()
+  /** Afegeix `qty` unitats d'un ferratge a la comanda del mòdul (els iguals, per id i nota, se sumen). */
+  order(item: HardwareItem, qty: number, note?: string): void {
+    if (qty <= 0) return
+    const hit = this.fittingOrders.find((l) => l.component === item.id && l.note === note && l.name === item.name)
+    if (hit) hit.qty += qty
+    else this.fittingOrders.push({ component: item.id, name: item.name, qty, ...(item.ref ? { item: item.ref } : {}), ...(note ? { note } : {}) })
+  }
   /** L'interruptor dels llums del mòdul (un per mòdul, amb el primer compartiment amb llum). */
   private lightSwitch?: LightOrder["switch"]
   private lightMaker?: string
@@ -1480,6 +1491,7 @@ class Builder {
         this.warnings.push({ code: "handle", message: `${p.label} de ${num(p.width)} × ${num(p.length)} mm: massa petit per als forats del tirador (o toparien amb les cassoletes). No es fan: posa-hi un pom o un tirador de cantell.`, panelId: p.id })
         return
       }
+      this.order(item, 1)
       const imp = item.imported
       if (imp && (imp.asset || imp.bbox)) {
         // Cara de fora del front (la que mira cap al davant del moble) i el marc del tirador: u al llarg dels forats.
@@ -1581,6 +1593,7 @@ class Builder {
     }
     if (placed.length < count)
       this.warnings.push({ code: "hinge", message: `${door.label} de ${r(doorH)} mm: només hi caben ${placed.length} de ${count} frontisses sense que les cassoletes es trepitgin${plateWhy.size ? ` ni que la placa surti del lateral o caigui en una unió (${[...plateWhy].join(" ")})` : ""}.`, zoneId, panelId: door.id })
+    this.order(hinge.item, placed.length)
     return placed.length
   }
 
@@ -1695,6 +1708,7 @@ class Builder {
     const frame = frameHw.spec
     // Les plaques de les frontisses de perfil (la frontissa triada), només a les portes; es dibuixen (frontissa i placa).
     const hingeYs = hinge ? this.glassHinges(label, y0, h, hinge) : []
+    if (hinge) this.order(hinge.hinge.item, hingeYs.length, "per a perfil d'alumini")
     // El tirador (es clava al perfil del costat que obre, a mitja alçada): es veu.
     if (handle && hinge) this.glassPull(`${id}-pull`, label, hinge.side === "left" ? x0 + w - frame.frame / 2 : x0 + frame.frame / 2, y0 + h / 2, "y", handle)
     const F = frame.frame, G = frame.glass, t = d.t
@@ -1806,6 +1820,7 @@ class Builder {
     const pitch = item.pitch ? item.pitch.else : 0
     const L = pitch > 0 ? pitch + 25 : 80
     const [w, hh] = along === "y" ? [16, L] : [L, 16]
+    this.order(item, 1)
     this.hwBox(id, `${label}: tirador`, "Acer inox", [cx - w / 2, cy - hh / 2, d.frontZ], [w, hh, 14])
   }
 
@@ -1825,6 +1840,7 @@ class Builder {
     const xs = (count === 1 || span <= 0 ? [w / 2] : Array.from({ length: count }, (_, i) => cs.endOffset + (span * i) / (count - 1))).map((x) => r(x0 + x))
     const bar = this.extras.find((p) => p.id === `${id}-${dir === "up" ? "top" : "bottom"}`)
     if (!bar) return
+    if (!cs.pending) this.order(hinge.item, xs.length, "per a perfil d'alumini")
     // El perfil de dalt/baix: u al llarg de Y (F), v al llarg de X des de x0 + F; el cantell de gir és u = F (dalt) o u = 0 (baix).
     for (const x of xs) bar.holes.push({ x: r(dir === "up" ? F - cs.cupOffset : cs.cupOffset), y: r(x - (x0 + F)), diameter: cs.cupDiameter, depth: Math.min(cs.cupDepth, d.t - 1), face: "A", edge: dir === "up" ? "right" : "left", tag: "hinge" })
     if (cs.pending) return
@@ -1890,6 +1906,12 @@ class Builder {
       holes.push({ x: l[0], y: l[1], diameter: dd, depth: Math.min(item.params.depth ?? 12, p.thickness - 1), face, tag: "flap" })
     }
     p.holes.push(...holes)
+    // La comanda: un joc (2 pistons i els brackets) per abatible, amb el lateral esquerre (o el dret si no n'hi ha).
+    const flapKey = id.replace(/-strut-[lr]$/, "")
+    if (!this.strutOrdered.has(flapKey)) {
+      this.strutOrdered.add(flapKey)
+      this.order(item, 1, "joc de 2 pistons, brackets i tapes; tria la força pel pes de la porta (notes del ferratge)")
+    }
     // El dibuix: el bracket (placa de 26 × 14 × 3 amb el pern) i el pistó, un cilindre Ø15,6 del llarg del joc, amunt.
     const len = item.params.strutLength ?? 230
     const R = 7.8
@@ -2433,6 +2455,7 @@ class Builder {
         holes.push({ x: l[0], y: l[1], diameter: h.d, depth: r(depth), face, tag: h.tag })
       }
     bottom.holes.push(...holes)
+    this.order(item, legs.length, item.tags?.some((t) => t.startsWith("Tub")) ? "el tub amb el peu es demana a part per l'alçada (notes del ferratge)" : undefined)
     if (deep) this.hardwareWarning(`«${item.name}»: els forats de les potes són més fondos que la base: es fan a ${num(T - 1)} mm (1 mm de pell).`)
     const imp = item.imported
     // Una pota de la biblioteca sense model (la AXILO 78): es dibuixa amb sòlids de l'app (`legSolids`), la placa amb les
@@ -2528,7 +2551,7 @@ export function buildModule(input: Module, opts: { rearLimits?: RearLimit[] } = 
   const layout = b.buildZones()
   b.buildLegs()
   const panels = b.panels.map((p) => normalizePanel(p.cutouts && p.cutouts.length === 0 ? { ...p, cutouts: undefined } : p))
-  return { panels, extras: b.extras, hardwareKits: b.hardwareKits, lightKits: b.lightKits, warnings: b.warnings, layout, openRatios: b.openRatios, drawerHeights: b.drawerHeights }
+  return { panels, extras: b.extras, hardwareKits: b.hardwareKits, lightKits: b.lightKits, fittingOrders: b.fittingOrders, warnings: b.warnings, layout, openRatios: b.openRatios, drawerHeights: b.drawerHeights }
 }
 
 /** Material dels fronts (portes, calaixos, abatibles, reixetes, fixos): el propi o, si no n'hi ha, el del cos. */

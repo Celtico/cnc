@@ -108,3 +108,11 @@ export function useCompositionLights(project: Pick<Project, "params" | "composit
   return build?.lightKits ?? EMPTY_LIGHTS
 }
 const EMPTY_LIGHTS: CompositionBuild["lightKits"] = []
+
+/** Ferratges col·locats de tota la composició: la comanda (Peces › «Ferratges»). */
+export function useCompositionFittings(project: Pick<Project, "params" | "composition" | "name"> | undefined): CompositionBuild["fittingOrders"] {
+  const comp = useComposition(project)
+  const build = useCompositionBuild(comp)
+  return build?.fittingOrders ?? EMPTY_FITTINGS
+}
+const EMPTY_FITTINGS: CompositionBuild["fittingOrders"] = []

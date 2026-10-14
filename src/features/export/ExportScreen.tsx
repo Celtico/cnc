@@ -59,7 +59,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
     if (!machine || !panels.length) return null
     const name = project?.name ?? "moble"
     const plan = cncNestOptions(panels, machine, project?.nesting ?? DEFAULT_NEST_OPTIONS)
-    const x = toMaestroNestXcs(panels, nest(panels, plan.options), machine, { project: name, kits: build?.hardwareKits, lights: build?.lightKits })
+    const x = toMaestroNestXcs(panels, nest(panels, plan.options), machine, { project: name, kits: build?.hardwareKits, lights: build?.lightKits, fittings: build?.fittingOrders })
     // `sheetList`: els programes amb el seu text (el mateix que va al zip) per a la Vista CAM.
     return { ...x, sheets: x.sheets.length, sheetList: x.sheets, rows: x.panels, spacingTool: plan.tool }
   }, [machine, panels, project?.name, project?.nesting, build?.hardwareKits, build?.lightKits])

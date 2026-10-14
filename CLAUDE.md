@@ -886,7 +886,11 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   mirall esquerra/dreta, dalt/baix o girada 180° cauen a la mateixa fila), 2a cara, forats de cantell, encolar, push i, de
   qualsevol rol, contorn i talls (peces lliures: també forats i ranures). CSV de peces: cometes als números si la coma
   decimal és el separador i als textos amb `\r`. Al mòbil, una **targeta per peça** i la triada porta el plànol a dins.
-  «Elements sense nesting» per a `build.extras` (sense els components dels jocs, rol `hardware`) i **«Ferratges dels
+  «Elements sense nesting» per a `build.extras` (sense els components dels jocs, rol `hardware`), **«Ferratges»** (per
+  decisió de l'usuari, 2026-10-14: «han de ser peces reals»; `ModuleBuild.fittingOrders` → `build.fittingOrders`,
+  `Builder.order`, `core/build/fittingOrders.ts` `fittingGroups`: per mòdul, les frontisses que es col·loquen —també
+  les de vitrina i d'abatible de vidre—, els tiradors, el joc de pistons de gas, un per abatible, i les potes, amb el
+  número d'article; també al LLEGEIX-ME de Maestro) i **«Ferratges dels
   jocs»** (`build.hardwareKits`, `kitGroups`: la comanda dels calaixos de doble paret amb els números del catàleg i la
   fusta per calaix).
 - **Nesting**: mides del tauler i, amb màquina, la línia «Separació X mm i marge Y mm de la màquina … (Preferències ›
