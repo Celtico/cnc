@@ -321,7 +321,8 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     a `plateSetback` del darrere del front; sense la peça, avís `hinge`. **Pistons de gas Häfele** (v44, `HAFELE_GAS_STRUTS`,
     373.78.901–909, p. FF 4.224, motor `flapArm` amb `strutG`/`strutLength`/`sideSetback`; es trien al «Braç»; `gasStrut`):
     el bracket d'armari a cada lateral (dos forats Ø5 × 12 a 32, a 37 del darrere del front i a G del cantell de gir, tot o
-    res) i el dibuix del pistó (cilindre Ø15,6 amunt) i del bracket; també a l'abatible de fusta (i els forats del bracket
+    res) i el dibuix com el del catàleg (`hwRod`, cilindres de només veure: bracket amb el pern, ròtules, cos Ø15,6, tija Ø6
+    del recorregut i bracket de porta); també a l'abatible de fusta (i els forats del bracket
     de porta); només els que obren amunt. **Res de sistemes** (per decisió de l'usuari, 2026-10-14): una porta de vidre no
     porta la filera System 32 (`woodDoor` a `buildLeaf`/`buildParentFront`): només els forats de la placa.
     Res amagat compta: sense `glass`, el marc no compta.
@@ -1191,7 +1192,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   que teníem de sèrie fes el dibuix 3D»; `core/build/hardwareSolids.ts`, pur: caixes i cilindres en coordenades de la
   peça, posats amb els forats i els accessoris que fa el motor; `builtinHardwareGroup` a `viewer/hardwareShapes.ts` els
   fa malles amb geometries unitàries i materials niquelat / acer / gris fosc / plàstic / faig / alumini compartits):
-  **frontissa** (cassoleta dins del forat amb l'ala i el braç, amb el front; la **placa**, fixa al lateral: `fixedSolids`
+  **frontissa** (com la de cassoleta de debò, per decisió de l'usuari, 2026-10-14: cassoleta amb la vora, l'ala amb els
+  dos cargols, el coll corbat i el braç arrodonit amb el cargol de regulació, amb el front; la placa en creu, cos i ales; la **placa**, fixa al lateral: `fixedSolids`
   la calcula des del front i la torna per la peça a la cara de la qual toca —lateral, divisor, tapa o base— en les seves
   coordenades, així en obrir només es mou el que va collat a la part mòbil, per decisió de l'usuari, 2026-10-13; el
   visor, «Com va muntat» i les miniatures la passen amb els `pins`),

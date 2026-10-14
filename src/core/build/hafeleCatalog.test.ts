@@ -57,7 +57,7 @@ describe("catàleg Häfele (v35)", () => {
     // La cassoleta i el braç van amb el perfil (s'obren); la placa, al lateral esquerre.
     expect(builtinSolids(bar).length).toBeGreaterThanOrEqual(8)
     const fixed = fixedSolids([...b.panels, ...b.extras])
-    expect(fixed.get("side-left")).toHaveLength(2)
+    expect(fixed.get("side-left")).toHaveLength(4)
     // Cap forat del perfil va a la CNC: el perfil és a extras.
     expect(b.panels.some((p) => p.holes.some((h) => h.tag === "hinge"))).toBe(false)
   })
@@ -68,7 +68,7 @@ describe("catàleg Häfele (v35)", () => {
     expect(top.holes.filter((h) => h.tag === "hinge")).toHaveLength(2)
     const tapa = b.panels.find((p) => p.role === "top")!
     expect(tapa.holes.filter((h) => h.tag === "plate")).toHaveLength(4)
-    expect(fixedSolids([...b.panels, ...b.extras]).get(tapa.id)).toHaveLength(2)
+    expect(fixedSolids([...b.panels, ...b.extras]).get(tapa.id)).toHaveLength(4)
     expect(b.warnings.filter((w) => w.code === "hinge")).toEqual([])
   })
 

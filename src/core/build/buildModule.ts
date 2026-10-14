@@ -1814,6 +1814,20 @@ class Builder {
     this.extras.push({ id, name: "ferratge", label, role: "hardware", length: r(size[0]), width: r(size[1]), thickness: r(size[2]), material, grain: "none", edges: { ...NO_EDGES }, holes: [], grooves: [], placement: placement([r(min[0]), r(min[1]), r(min[2])], X, Y, Z, Z) })
   }
 
+  /**
+   * Un cilindre de només veure (rol `hardware`): radi `R`, al llarg de Y (de `y0` a `y1`, centrat a x = `x0`, z = `z`) o
+   * de X (de `x0` a `x1`, a y = `y0`). Un contorn rodó extrudit, com les peces amb forma.
+   */
+  private hwRod(id: string, label: string, material: string, x0: number, x1: number, y0: number, z: number, R: number, axis: "x" | "y", y1 = y0): void {
+    const k = 0.41421356
+    const len = axis === "y" ? y1 - y0 : Math.abs(x1 - x0)
+    if (len <= 0.5) return
+    const outline: [number, number, number][] = [[R, 0, k], [2 * R, R, k], [R, 2 * R, k], [0, R, k]]
+    const base = { id, name: "ferratge", label, role: "hardware" as const, length: 2 * R, width: 2 * R, thickness: r(len), material, grain: "none" as const, edges: { ...NO_EDGES }, holes: [], grooves: [], outline }
+    if (axis === "y") this.extras.push({ ...base, placement: placement([r(x0 - R), r(y0), r(z + R)], X, neg(Z), Y, Y) })
+    else this.extras.push({ ...base, placement: placement([r(Math.min(x0, x1)), r(y0 - R), r(z + R)], neg(Z), Y, X, X) })
+  }
+
   /** El tirador d'una vitrina (es clava al perfil): la barra del tirador triat (de llarg la distància + 25, o 80), sortint 14. */
   private glassPull(id: string, label: string, cx: number, cy: number, along: "x" | "y", item: HardwareItem): void {
     const { d } = this
@@ -1821,7 +1835,10 @@ class Builder {
     const L = pitch > 0 ? pitch + 25 : 80
     const [w, hh] = along === "y" ? [16, L] : [L, 16]
     this.order(item, 1)
-    this.hwBox(id, `${label}: tirador`, "Acer inox", [cx - w / 2, cy - hh / 2, d.frontZ], [w, hh, 14])
+    // Com els de marc de vitrina (es claven al perfil): la placa prima sobre el perfil i el llavi per agafar-lo.
+    this.hwBox(`${id}-base`, `${label}: tirador`, "Acer inox", [cx - w / 2, cy - hh / 2, d.frontZ], [w, hh, 3])
+    const lip: Vec3 = along === "y" ? [5, hh, 11] : [w, 5, 11]
+    this.hwBox(id, `${label}: tirador`, "Acer inox", [along === "y" ? cx + w / 2 - 5 : cx - w / 2, along === "y" ? cy - hh / 2 : cy - hh / 2, d.frontZ + 3], lip)
   }
 
   /**
@@ -1912,19 +1929,22 @@ class Builder {
       this.strutOrdered.add(flapKey)
       this.order(item, 1, "joc de 2 pistons, brackets i tapes; tria la força pel pes de la porta (notes del ferratge)")
     }
-    // El dibuix: el bracket (placa de 26 × 14 × 3 amb el pern) i el pistó, un cilindre Ø15,6 del llarg del joc, amunt.
+    // El dibuix, com el del catàleg (FF 4.224): el bracket d'armari (placa de 26 × 14 × 3 amb el pern Ø10), el pistó tancat
+    // de pern a pern (`strutLength`): la ròtula de baix, el cos Ø15,6, la tija Ø6 del recorregut i la ròtula de dalt, i el
+    // bracket de porta a dalt. A 16 de la cara del lateral, vertical (la porta tancada).
     const len = item.params.strutLength ?? 230
-    const R = 7.8
+    const stroke = item.params.strutStroke ?? Math.round(len / 3)
     const cx = xFace + out * 16
+    const yTop = Math.min(pivotY - 8, yB + len)
+    const L = yTop - yB
+    const cap = 18
     this.hwBox(`${id}-bracket`, `${item.name}: bracket d'armari`, "Acer inox", [which === "left" ? xFace : xFace - 3, yB - 13, zB - 7], [3, 26, 14])
-    const top = Math.min(pivotY - 5, yB + len)
-    const k = 0.41421356
-    this.extras.push({
-      id: `${id}-body`, name: "ferratge", label: `${item.name}: pistó`, role: "hardware",
-      length: 2 * R, width: 2 * R, thickness: r(top - yB), material: "Acer fosc", grain: "none", edges: { ...NO_EDGES }, holes: [], grooves: [],
-      outline: [[R, 0, k], [2 * R, R, k], [R, 2 * R, k], [0, R, k]],
-      placement: placement([r(cx - R), r(yB), r(zB + R)], X, neg(Z), Y, Y),
-    })
+    this.hwRod(`${id}-pin`, `${item.name}: pern`, "Acer inox", xFace + out * 1.5, xFace + out * 12, yB, zB, 5, "x")
+    this.hwRod(`${id}-cap-b`, `${item.name}: ròtula`, "Gris mat", cx, cx, yB - cap / 2, zB, 6.65, "y", yB + cap / 2)
+    this.hwRod(`${id}-body`, `${item.name}: pistó`, "Alumini anoditzat plata", cx, cx, yB + cap / 2, zB, 7.8, "y", Math.max(yB + cap, yTop - cap / 2 - Math.min(stroke, L - 2 * cap)))
+    this.hwRod(`${id}-rod`, `${item.name}: tija`, "Acer inox", cx, cx, Math.max(yB + cap, yTop - cap / 2 - Math.min(stroke, L - 2 * cap)), zB, 3, "y", yTop - cap / 2)
+    this.hwRod(`${id}-cap-t`, `${item.name}: ròtula`, "Gris mat", cx, cx, yTop - cap / 2, zB, 6.65, "y", yTop + cap / 2)
+    this.hwBox(`${id}-door-bracket`, `${item.name}: bracket de porta`, "Acer inox", [cx - 7, yTop - 13, d.frontZ - d.t - 3], [14, 26, 3])
     return true
   }
 

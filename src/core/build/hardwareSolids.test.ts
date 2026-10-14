@@ -39,17 +39,17 @@ describe("ferratges de sèrie en 3D", () => {
     const side = m.panels.find((p) => p.id === "side-left")!
     const ss = builtinSolids(door)
     const cups = door.holes.filter((h) => h.tag === "hinge")
-    expect(ss.length).toBe(cups.length * 4)
+    expect(ss.length).toBe(cups.length * 9)
     const cup = ss[0]!
     expect(cup.kind).toBe("cyl")
     expect(Math.hypot(cup.c[0] - cups[0]!.x, cup.c[1] - cups[0]!.y)).toBeLessThan(0.01)
-    expect(ss.every((s) => s.mat === "nickel")).toBe(true)
+    expect(ss.every((s) => s.mat === "nickel" || s.mat === "steel")).toBe(true)
     // Les plaques van amb el lateral (no amb la porta): una per cassoleta, en coordenades del lateral.
     const fixed = fixedSolids(m.panels)
     expect(fixed.get(door.id)).toBeUndefined()
     const plates = fixed.get(side.id)!
-    expect(plates.length).toBe(cups.length)
-    expect(plates.every((s) => s.mat === "dark")).toBe(true)
+    expect(plates.length).toBe(cups.length * 2)
+    expect(plates.every((s) => s.mat === "nickel")).toBe(true)
     // Cap a dins del moble (Z més petita que la cara de dins de la porta) i tocant la cara de dins del lateral.
     const plate = solidBox(side, plates[0]!)
     const back = panelBox(door).min[2]
@@ -63,7 +63,7 @@ describe("ferratges de sèrie en 3D", () => {
   it("una porta sola (sense lateral que la porti): la placa es queda amb la porta", () => {
     const door = hardwareMount(item("cup")).panels.find((p) => p.role === "door")!
     const fixed = fixedSolids([door])
-    expect(fixed.get(door.id)!.length).toBe(door.holes.filter((h) => h.tag === "hinge").length)
+    expect(fixed.get(door.id)!.length).toBe(door.holes.filter((h) => h.tag === "hinge").length * 2)
   })
 
   it("System 32: un suport just sota el prestatge, a cada filera", () => {

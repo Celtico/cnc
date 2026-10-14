@@ -133,14 +133,21 @@ function hingeFrames(p: Panel): { f: ReturnType<typeof frame>; R: number; depth:
 function hingeSolids(p: Panel): HwSolid[] {
   const out: HwSolid[] = []
   for (const { f, R, depth, sf } of hingeFrames(p)) {
+    // Com la frontissa de cassoleta de debò (la Duomatic de les fotos del catàleg): la cassoleta amb la vora, l'ala amb
+    // els dos cargols, el coll corbat que surt de la cassoleta i el braç llarg arrodonit amb el cargol de regulació.
+    const wing = Math.min(R + 9, 28)
     out.push(
-      // Cassoleta (dins del forat: es veu a través de la fusta translúcida) i la seva ala amb els dos cargols.
-      f.cyl(0, 0, [-depth, 1.5], R - 0.3, "nickel"),
-      f.box([-7, 7], [-(R + 11), R + 11], [0, 1.5], "nickel"),
-      // Coll: de la cassoleta cap al lateral, una mica per sobre de la cara.
-      f.box([sf - 20, Math.min(8, sf + 4)], [-9, 9], [0, 12], "nickel"),
-      // Braç al llarg de la cara de dins del lateral, cap a dins del moble.
-      f.box([sf - 20, sf - 10], [-9, 9], [2, 66], "nickel"),
+      f.cyl(0, 0, [-depth, 0], R - 0.3, "nickel"),
+      f.cyl(0, 0, [0, 1.2], R + 1.5, "nickel", 0.6),
+      f.box([-6, 6], [-wing, wing], [0, 1.6], "nickel", 3),
+      f.cyl(0, -(wing - 5), [1.6, 3], 3.6, "steel", 0.8),
+      f.cyl(0, wing - 5, [1.6, 3], 3.6, "steel", 0.8),
+      // Coll: de la cassoleta cap al lateral, pujant fins al braç.
+      f.box([Math.min(-2, sf - 22), Math.min(6, sf + 4)], [-8.5, 8.5], [0.5, 11], "nickel", 3),
+      f.box([sf - 22, sf - 8], [-8.5, 8.5], [6, 16], "nickel", 3),
+      // Braç al llarg de la cara de dins del lateral, cap a dins del moble, amb el cargol de regulació.
+      f.box([sf - 20, sf - 11], [-8, 8], [10, 64], "nickel", 3),
+      f.cyl(sf - 20.5, 0, [44, 50], 3.2, "steel", 0.8),
     )
   }
   return out
@@ -148,7 +155,8 @@ function hingeSolids(p: Panel): HwSolid[] {
 
 /** La placa de muntatge de cada frontissa (coordenades del front): cargolada al lateral, a la filera de 37 del davant. */
 function hingeFixed(p: Panel): HwSolid[] {
-  return hingeFrames(p).map(({ f, sf }) => f.box([sf - 10, sf], [-21, 21], [17, 61], "dark"))
+  // La placa en creu: el cos on encaixa el braç i les dues ales amb els cargols euro (a 16 per banda de la frontissa).
+  return hingeFrames(p).flatMap(({ f, sf }) => [f.box([sf - 10, sf], [-10, 10], [14, 62], "nickel", 2), f.box([sf - 2.5, sf], [-24, 24], [28, 46], "nickel", 3)])
 }
 
 /** Guia de calaix: cos al lateral del moble (12 × 45) i corredora a la caixa (10 × 35), al llarg de la filera de forats. */
