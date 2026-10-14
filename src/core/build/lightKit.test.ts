@@ -147,7 +147,7 @@ describe("jocs de llum Häfele Loox (v31)", () => {
     const small = electricalLines(sys, 4, 12, "door")
     expect(small.map((l) => l.item)).toEqual(["833.77.951", "833.74.795", "833.89.128", "833.89.142"])
     const mid = electricalLines(sys, 8, 26, "touch")
-    expect(mid.map((l) => [l.item, l.qty])).toEqual([["833.77.952", 1], ["833.77.724", 1], ["833.89.136", 1], ["833.89.142", 1]])
+    expect(mid.map((l) => [l.item, l.qty])).toEqual([["833.77.952", 1], ["833.77.724", 1], ["833.74.795", 1], ["833.89.136", 1], ["833.89.142", 1]])
     // 100 W: dos alimentadors de 90.
     const big = electricalLines(sys, 30, 100, "none")
     expect(big[0]).toMatchObject({ item: "833.77.953", qty: 2 })
