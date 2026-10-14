@@ -154,7 +154,12 @@ export function disposeMaterial(mat: Material): void {
 export function disposeTree(root: Object3D): void {
   root.traverse((o) => {
     const m = o as Mesh
-    if (!m.isMesh || m.userData.sharedModel) return
+    if (!m.isMesh) return
+    // Model 3D: la geometria i els materials són de la memòria de models; només un material propi (de Preferències) és seu.
+    if (m.userData.sharedModel) {
+      if (m.userData.ownMaterial) disposeMaterial(m.material as Material)
+      return
+    }
     // Les instàncies (marques dels forats de les miniatures de Ferratges) tenen el seu buffer a la GPU.
     if ((m as InstancedMesh).isInstancedMesh) (m as InstancedMesh).dispose()
     m.geometry?.dispose()

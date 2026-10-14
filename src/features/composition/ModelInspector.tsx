@@ -1,5 +1,5 @@
 import { Button, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react"
-import { LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuSprout, LuTrash2 } from "react-icons/lu"
+import { LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuPalette, LuSprout, LuTrash2 } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { NumRow } from "../../components/NumRow"
 import { FormRow } from "../../components/FormRow"
@@ -7,10 +7,13 @@ import { insertModelCopy, type Composition, type ModelObject } from "../../core/
 import { ModelUploadButton } from "./ModelUpload"
 import { useModelAssets } from "./useModelAssets"
 import { AxisLabel } from "./RefInspector"
+import { MaterialSelect } from "../settings/MaterialSelect"
+import { useSettings } from "../settings/SettingsContext"
 
 /** Propietats d'un model 3D (`Composition.models`): quin model, mides de la caixa i posició (com una peça lliure). */
 export function ModelInspector({ comp, id, onChange }: { comp: Composition; id: string; onChange: (c: Composition) => void }) {
   const { resolve } = useModelAssets()
+  const { settings } = useSettings()
   const g = comp.models?.find((m) => m.id === id)
   if (!g) return null
   const update = (patch: Partial<ModelObject>) => onChange({ ...comp, models: (comp.models ?? []).map((m) => (m.id === id ? { ...m, ...patch } : m)) })
@@ -32,6 +35,12 @@ export function ModelInspector({ comp, id, onChange }: { comp: Composition; id: 
         )}
         <FormRow label="Canviar">
           <ModelUploadButton onUploaded={(m) => update({ src: m.id, w: m.size[0], h: m.size[1], d: m.size[2] })} />
+        </FormRow>
+      </FoldItem>
+      {/* Un material de Preferències per a tot el model, en lloc de les textures del fitxer (per decisió de l'usuari). */}
+      <FoldItem id="model-material" title="Material" icon={LuPalette} badge={g.material ?? "Com el fitxer"} badgePalette={g.material ? "wood" : "gray"}>
+        <FormRow label="Material" help={g.material ? "Tot el model amb aquest material (al 3D, la Presentació, el render, les miniatures i els ambients)." : "Les textures que porta el fitxer del model."} maxW="280px">
+          <MaterialSelect label="Material" materials={settings.materials} value={g.material ?? ""} emptyLabel="Com el fitxer" hideLabel onChange={(v) => update({ material: v || undefined })} />
         </FormRow>
       </FoldItem>
       <FoldItem id="model-size" title="Mides" icon={LuMoveDiagonal} badge={`${Math.round(g.w)} × ${Math.round(g.h)}`}>

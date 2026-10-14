@@ -536,6 +536,11 @@ export const ModelObjectSchema = z.object({
   ...VIEW_FLAGS,
   /** Grup (nom), el mateix que el de les peces lliures: un grup pot tenir peces i models (es mouen junts). */
   group: z.string().optional(),
+  /**
+   * Material de Preferències per a tot el model, en lloc de les textures del fitxer (per decisió de l'usuari, 2026-10-14).
+   * Sense, «Com el fitxer».
+   */
+  material: z.string().optional(),
   src: z.string(),
   x: z.number(),
   y: z.number(),

@@ -5,6 +5,8 @@ import { modelAsset, type ModelObject } from "../../core/model"
 import { getHardwareAsset, isHardwareAssetSrc } from "../../db/hardwareAssets"
 import { getUserModel, isUserModelSrc } from "../../db/userModels"
 import { disposeMaterial } from "./textures"
+import { surfaceMaterial } from "./surfaceMaterial"
+import type { MaterialPref } from "../../core/model"
 
 /**
  * Models 3D (`.glb`) dels objectes: es carreguen un cop (memòria compartida) i cada element en fa una còpia que
@@ -175,7 +177,7 @@ export function onModelsLoaded(f: () => void): () => void {
  * Còpia d'un model col·locada a la seva caixa (m, coordenades de la composició): cantonada (x, y, z), mida (w, h, d)
  * i gir al voltant del centre. Si encara no s'ha carregat, comença la càrrega i torna `null`.
  */
-export function modelInstance(m: ModelObject): Group | null {
+export function modelInstance(m: ModelObject, materials?: MaterialPref[]): Group | null {
   const l = cache.get(m.src)
   if (!l) {
     void loadModel(m.src)
@@ -183,6 +185,17 @@ export function modelInstance(m: ModelObject): Group | null {
   }
   const inner = l.root.clone(true)
   inner.position.copy(l.offset)
+  // Un material de Preferències per a tot el model (`ModelObject.material`): el mateix a totes les malles, propi de la
+  // instància (`userData.ownMaterial`: `disposeTree` i `disposeModelInstance` l'alliberen; la geometria és compartida).
+  if (m.material && materials) {
+    const own = surfaceMaterial(materials, m.material, Math.max(m.w, m.d), m.h)
+    inner.traverse((o) => {
+      const mesh = o as Mesh
+      if (!mesh.isMesh) return
+      mesh.material = own
+      mesh.userData.ownMaterial = true
+    })
+  }
   const fit = new Group()
   fit.add(inner)
   // Escalat a la caixa (cada eix pel seu compte: es pot fer més alta o més ampla).
@@ -195,4 +208,17 @@ export function modelInstance(m: ModelObject): Group | null {
   g.rotation.y = -((m.rot ?? 0) * Math.PI) / 180
   g.add(fit)
   return g
+}
+
+/** Allibera el material propi d'una instància d'un model (`modelInstance` amb `material`): la geometria és compartida. */
+export function disposeModelInstance(root: Object3D): void {
+  const seen = new Set<Material>()
+  root.traverse((o) => {
+    const mesh = o as Mesh
+    if (!mesh.isMesh || !mesh.userData.ownMaterial) return
+    const mat = mesh.material as Material
+    if (seen.has(mat)) return
+    seen.add(mat)
+    disposeMaterial(mat)
+  })
 }

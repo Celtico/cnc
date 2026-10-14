@@ -21,7 +21,7 @@ export type { ViewName } from "./viewNames"
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 import { flatten, modelFootprint, partSize, partsBox, type CameraPose, type FreePart, type Hole, type MaterialPref, type ModelObject, type Panel, type RefObject } from "../../core/model"
-import { modelInstance, onModelsLoaded, releaseModelGpu } from "./models3d"
+import { disposeModelInstance, modelInstance, onModelsLoaded, releaseModelGpu } from "./models3d"
 import { useColorModeValue } from "../ui/color-mode"
 import { movingGroups, transformAt, type MovingGroup } from "./opening"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
@@ -445,7 +445,7 @@ export function CabinetViewer({
         )}
         {models?.map((m) => {
           const live = modelDrag?.id === m.id ? modelDrag : null
-          return <ModelMesh key={m.id} m={m} selected={m.id === selectedModelId} shift={live ? [(live.x - m.x) * S, (live.y - m.y) * S, (live.z - m.z) * S] : undefined} onSelect={onSelectModel} />
+          return <ModelMesh key={m.id} m={m} selected={m.id === selectedModelId} shift={live ? [(live.x - m.x) * S, (live.y - m.y) * S, (live.z - m.z) * S] : undefined} onSelect={onSelectModel} materials={materials} />
         })}
         {/* Model seleccionat: contorn taronja amb el gizmo (com una peça lliure). */}
         {selectedModelBox && (
@@ -849,12 +849,14 @@ function HoverCursor({ active }: { active: boolean }) {
   return null
 }
 
-function ModelMesh({ m, selected, shift, onSelect }: { m: ModelObject; selected: boolean; shift?: [number, number, number]; onSelect?: (id: string) => void }) {
+function ModelMesh({ m, selected, shift, onSelect, materials }: { m: ModelObject; selected: boolean; shift?: [number, number, number]; onSelect?: (id: string) => void; materials?: MaterialPref[] }) {
   const [loaded, setLoaded] = useState(0)
   useEffect(() => onModelsLoaded(() => setLoaded((v) => v + 1)), [])
-  const { id, name, src, x, y, z, w, h, d, rot } = m
+  const { id, name, src, x, y, z, w, h, d, rot, material } = m
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const obj = useMemo(() => modelInstance({ id, name, src, x, y, z, w, h, d, rot }), [id, name, src, x, y, z, w, h, d, rot, loaded])
+  const obj = useMemo(() => modelInstance({ id, name, src, x, y, z, w, h, d, rot, ...(material ? { material } : {}) }, materials), [id, name, src, x, y, z, w, h, d, rot, material, materials, loaded])
+  // El material propi (de Preferències) és de la instància: s'allibera quan se'n fa una altra.
+  useEffect(() => () => void (obj && disposeModelInstance(obj)), [obj])
   const [hover, setHover] = useState(false)
   const cursor = useViewerCursor()
   if (!obj) return null

@@ -87,7 +87,7 @@ export function buildScene(panels: Panel[], name: string, real?: { materials: Ma
   }
   // Models 3D (plantes…): els que ja s'han carregat (`preloadModels` abans, si cal que hi siguin segur).
   for (const m of models) {
-    const g = modelInstance(m)
+    const g = modelInstance(m, real?.materials)
     if (g) root.add(g)
   }
   return scene
