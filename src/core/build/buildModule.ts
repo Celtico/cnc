@@ -1684,10 +1684,11 @@ class Builder {
    * CNC: tot va a `extras` («Elements sense nesting», amb les mides per demanar-ho). Les frontisses són les del perfil
    * (no porta cassoletes al tauler); els laterals mantenen les fileres.
    */
-  private glassDoor(id: string, label: string, x0: number, y0: number, w: number, h: number, frameHw: { spec: SlotSpec<"glassFrame">; item: HardwareItem }, hinge: { side: "left" | "right"; panel?: VerticalRef; rowYs: number[]; zoneId?: string }): void {
+  private glassDoor(id: string, label: string, x0: number, y0: number, w: number, h: number, frameHw: { spec: SlotSpec<"glassFrame">; item: HardwareItem }, hinge?: { side: "left" | "right"; panel?: VerticalRef; rowYs: number[]; zoneId?: string }): void {
     const { d } = this
     const frame = frameHw.spec
-    this.glassHinges(label, y0, h, frameHw, hinge)
+    // Les plaques de les frontisses de perfil, només a les portes (un abatible de vidre va amb el braç al perfil).
+    if (hinge) this.glassHinges(label, y0, h, frameHw, hinge)
     const F = frame.frame, G = frame.glass, t = d.t
     const z = d.frontZ
     const bar = (sid: string, lbl: string, bx: number, by: number, len: number, wid: number) =>
@@ -1775,6 +1776,11 @@ class Builder {
   }
 
   private buildFlap(zone: Zone, front: Extract<Front, { kind: "flap" }>, ter: ZoneRect): void {
+    // Abatible de vidre (vitrina): el marc d'alumini i el vidre, com la porta de vidre; el braç va al perfil.
+    if (front.glass) {
+      this.frontCount += 1
+      return this.glassDoor(`flap-${this.frontCount}`, "Abatible", ter.x0, ter.y0, r(ter.x1 - ter.x0), r(ter.y1 - ter.y0), this.frontHardware("glassFrame", front.frame, zone.id))
+    }
     const flap = this.buildFrontPanel(zone, ter, "flap", "abatible", "Abatible")
     // El braç triat a l'abatible (si no, el del mòdul): dos forats a `offset` del cantell de gir (22,5).
     const arm = this.frontHardware("flap", front.hardware, zone.id)

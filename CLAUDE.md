@@ -310,6 +310,11 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     alçada, a `endOffset` dels extrems i al mig de dos forats seguits de la filera; dos forats Ø5 × 12 a ±16 a 37 del
     davant, `plateHoles`/`addPlate`, tota o res; els que cauen a la filera passen a ser de la placa, tag `plate`). Test
     `build/hafeleCatalog.test.ts`.
+  - **Abatible de vidre** (`front.glass` d'un abatible, «Vitrina» › «Abatible de vidre amb marc»; per decisió de l'usuari,
+    2026-10-14, com la porta de vidre): el marc triat (`front.frame`, fila «Marc») i el vidre a `extras` (`glassDoor` sense
+    plaques de frontissa); el braç va al perfil amb l'adaptador (Häfele 563.25.960): cap abatible de tauler ni forats del
+    braç, cap tirador. Res amagat compta: sense `glass`, el marc no compta; amb, el braç i el tirador no (`visibleZone`).
+    Test a `build/led.test.ts`.
   - **Tiradors mecanitzats**: portes (costat contrari de les frontisses, a mitja alçada), calaixos (centrats) i abatibles
     (al cantell que obre): dos forats passants Ø5 a 128 / 96 / 64 com a talls `circle` `tag: "handle"` (el taller els llegeix
     com els passacables); el 3D no els buida (`visualPanel`) i hi col·loca el tirador. **Una sola font** (auditoria C2):

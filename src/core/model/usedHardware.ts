@@ -64,6 +64,8 @@ function frontSlots(m: Module, f: Front, add: (slot: HardwareSlot, n: number, wh
     const kit = f.hardware ? (isDrawerKit(f.hardware) ? f.hardware : undefined) : moduleKit ? (moduleSlotItem(m.hardware, "slide") as HardwareItem & { kit: HardwareKit }) : undefined
     // El tancament del joc mana: push-open ⇒ cap tirador.
     if (frontHasHandle(m, f) && !(kit && isPushClosing(kitOptionsOf(kit.kit, f.kit).closing))) add("handle", f.n, "calaixos")
+  } else if (f.kind === "flap" && f.glass) {
+    add("glassFrame", 1, "vitrines")
   } else if (f.kind === "flap") {
     add("flap", 1, "abatibles")
     if (frontHasHandle(m, f)) add("handle", 1, "abatibles")

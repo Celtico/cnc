@@ -39,3 +39,19 @@ describe("porta de vidre amb marc (`glass`)", () => {
     expect(b.panels.filter((p) => p.role === "door")).toHaveLength(1)
   })
 })
+
+describe("abatible de vidre amb marc (`glass`)", () => {
+  it("cap abatible de tauler ni forats del braç: el marc i el vidre fora del nesting; res amagat compta", () => {
+    const b = buildModule(mod({ front: { kind: "flap", dir: "up", glass: true } }))
+    expect(b.panels.some((p) => p.role === "flap")).toBe(false)
+    expect(b.extras.filter((p) => p.name === "perfil vitrina")).toHaveLength(4)
+    expect(b.extras.some((p) => p.name === "vidre vitrina")).toBe(true)
+    expect(b.panels.flatMap((p) => p.holes).some((h) => h.tag === "flap")).toBe(false)
+    // Sense vidre, el marc triat no compta (el mateix abatible de sempre).
+    const plain = buildModule(mod({ front: { kind: "flap", dir: "up" } }))
+    const withFrame = buildModule(mod({ front: { kind: "flap", dir: "up", frame: { ...DEFAULT_SETTINGS.hardwareLibrary.find((x) => x.engine === "glassFrame")!, params: { frame: 40, glass: 6 } } } }))
+    expect(withFrame.panels).toEqual(plain.panels)
+    expect(plain.panels.some((p) => p.role === "flap")).toBe(true)
+  })
+})
+

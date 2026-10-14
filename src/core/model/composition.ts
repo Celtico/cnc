@@ -199,6 +199,9 @@ export const FrontSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("flap"),
     dir: z.enum(["down", "up"]),
+    /** Abatible de vidre amb marc de perfil d'alumini (vitrina, com la porta de vidre): `frame` = el marc triat. */
+    glass: z.boolean().optional(),
+    frame: FrontHardwareSchema.optional(),
     hardware: FrontHardwareSchema.optional(),
     handle: FrontHandleSchema.optional(),
     /** Tirador: mm del cantell que obre a l'eix (per decisió de l'usuari, 2026-10-13). Sense: el `inset` del tirador. */
@@ -1124,6 +1127,19 @@ function visibleZone(z: Zone, kitDefault: boolean, covered: boolean, bounds: Zon
     }
     if (door.mode === "double") door.hinge = "left"
     out.front = door
+  }
+  else if (f?.kind === "flap") {
+    // Com la porta: sense vidre, el marc no compta; de vidre, el braç va al perfil (cap forat al tauler) i no hi ha tirador.
+    const flap = { ...f }
+    if (!flap.glass) {
+      delete flap.glass
+      delete flap.frame
+    } else {
+      delete flap.hardware
+      delete flap.handle
+      delete flap.handleInset
+    }
+    out.front = flap
   }
   else if (f?.kind === "grille") {
     // Patró: de ranures (amplada i separació) o de forats (Ø i pas); el de l'altre tipus no surt. Amb imants, sense frontisses.

@@ -628,7 +628,7 @@ function FrontFields({ front, openRatio, drawerHeights, onChange, hardware, noHa
               />
             </FormRow>
           )}
-          <FormRow label="Vitrina" help={front.glass ? "Marc de perfil d'alumini negre de 20 mm i vidre de 5 mm, amb frontisses de perfil. No és de CNC: surt a Peces, a «Elements sense nesting», amb les mides per demanar-ho." : undefined}>
+          <FormRow label="Vitrina" help={front.glass ? "Marc de perfil d'alumini (el triat a «Marc») i vidre, amb frontisses de perfil. No és de CNC: surt a Peces, a «Elements sense nesting», amb les mides per demanar-ho." : undefined}>
             <Switch.Root size="sm" pt="6px" checked={!!front.glass} onCheckedChange={(e) => onChange({ ...front, glass: e.checked || undefined })}>
               <Switch.HiddenInput />
               <Switch.Control />
@@ -712,10 +712,18 @@ function FrontFields({ front, openRatio, drawerHeights, onChange, hardware, noHa
               onChange={(dir) => onChange({ ...front, dir })}
             />
           </FormRow>
-          <HardwarePick slot="flap" current={front.hardware ?? hardware.flap} inherited={hardware.flap} onPick={(h) => onChange(withHardware(front, h))} />
-          {handlePick(front)}
+          <FormRow label="Vitrina" help={front.glass ? "Marc de perfil d'alumini i vidre, com la porta de vidre. El braç s'hi fixa amb l'adaptador per a perfil (Häfele 563.25.960): cap forat al tauler. No és de CNC: surt a Peces, a «Elements sense nesting»." : undefined}>
+            <Switch.Root size="sm" pt="6px" checked={!!front.glass} onCheckedChange={(e) => onChange({ ...front, glass: e.checked || undefined })}>
+              <Switch.HiddenInput />
+              <Switch.Control />
+              <Switch.Label fontSize="sm">Abatible de vidre amb marc</Switch.Label>
+            </Switch.Root>
+          </FormRow>
+          {front.glass && <HardwarePick slot="glassFrame" label="Marc" current={front.frame ?? moduleSlotItem(hardware, "glassFrame")} inherited={moduleSlotItem(hardware, "glassFrame")} onPick={(h) => onChange(h ? { ...front, frame: h } : (({ frame: _f, ...rest }) => rest)(front))} />}
+          {!front.glass && <HardwarePick slot="flap" current={front.hardware ?? hardware.flap} inherited={hardware.flap} onPick={(h) => onChange(withHardware(front, h))} />}
+          {!front.glass && handlePick(front)}
           {/* Només la distància al cantell que obre (el tirador va centrat de costat a costat). Push: no surt. */}
-          {!(front.handle === "none" || (!front.handle && noHandles)) && (() => {
+          {!front.glass && !(front.handle === "none" || (!front.handle && noHandles)) && (() => {
             const item = typeof front.handle === "object" ? front.handle : moduleSlotItem(hardware, "handle")
             const own = (() => {
               try {
