@@ -31,6 +31,8 @@ export interface HwBox {
   axes: [Vec3, Vec3, Vec3]
   size: Vec3
   mat: HwMaterial
+  /** Cantonades arrodonides (mm) al pla dels dos primers eixos i les arestes una mica arrodonides (la AXILO 78). */
+  round?: number
 }
 /** Un cilindre: centre, eix (unitari), radi i llarg (mm). */
 export interface HwCylinder {
@@ -40,6 +42,8 @@ export interface HwCylinder {
   r: number
   h: number
   mat: HwMaterial
+  /** Arestes arrodonides (mm) a les dues tapes (el peu i el tub de la AXILO 78). */
+  fillet?: number
 }
 export type HwSolid = HwBox | HwCylinder
 
@@ -57,12 +61,12 @@ function frame(o: Vec3, e: Vec3, a: Vec3, n: Vec3) {
   const at = (pe: number, pa: number, pn: number): Vec3 => add(add(add(o, e, pe), a, pa), n, pn)
   return {
     at,
-    box(re: [number, number], ra: [number, number], rn: [number, number], mat: HwMaterial): HwBox {
-      return { kind: "box", c: at((re[0] + re[1]) / 2, (ra[0] + ra[1]) / 2, (rn[0] + rn[1]) / 2), axes: [e, a, n], size: [Math.abs(re[1] - re[0]), Math.abs(ra[1] - ra[0]), Math.abs(rn[1] - rn[0])], mat }
+    box(re: [number, number], ra: [number, number], rn: [number, number], mat: HwMaterial, round?: number): HwBox {
+      return { kind: "box", c: at((re[0] + re[1]) / 2, (ra[0] + ra[1]) / 2, (rn[0] + rn[1]) / 2), axes: [e, a, n], size: [Math.abs(re[1] - re[0]), Math.abs(ra[1] - ra[0]), Math.abs(rn[1] - rn[0])], mat, ...(round ? { round } : {}) }
     },
     /** Cilindre al llarg de n, del pla n0 al n1. */
-    cyl(pe: number, pa: number, rn: [number, number], r: number, mat: HwMaterial): HwCylinder {
-      return { kind: "cyl", c: at(pe, pa, (rn[0] + rn[1]) / 2), axis: n, r, h: Math.abs(rn[1] - rn[0]), mat }
+    cyl(pe: number, pa: number, rn: [number, number], r: number, mat: HwMaterial, fillet?: number): HwCylinder {
+      return { kind: "cyl", c: at(pe, pa, (rn[0] + rn[1]) / 2), axis: n, r, h: Math.abs(rn[1] - rn[0]), mat, ...(fillet ? { fillet } : {}) }
     },
   }
 }
@@ -313,24 +317,24 @@ function legSolids(p: Panel): HwSolid[] {
     const block = Math.min(24, (b1 - b0) / 4)
     // La part fixa (com al TopSolid del taller): els dos blocs dels extrems contra la base, el pont del mig una mica
     // separat, la llosa de sota amb els cargols i la pestanya del clip del sòcol.
-    out.push(fr.box([b0, b0 + block], [-V, V], [0, H * 0.5], "dark"))
-    out.push(fr.box([b1 - block, b1], [-V, V], [0, H * 0.5], "dark"))
-    out.push(fr.box([b0 + block, b1 - block], [-V * 0.8, V * 0.8], [H * 0.2, H * 0.5], "dark"))
-    out.push(fr.box([b0, b1], [-V, V], [H * 0.5, H], "dark"))
+    out.push(fr.box([b0, b0 + block], [-V, V], [0, H * 0.5], "dark", 4))
+    out.push(fr.box([b1 - block, b1], [-V, V], [0, H * 0.5], "dark", 4))
+    out.push(fr.box([b0 + block - 2, b1 - block + 2], [-V * 0.8, V * 0.8], [H * 0.2, H * 0.5], "dark", 3))
+    out.push(fr.box([b0, b1], [-V, V], [H * 0.5, H], "dark", 8))
     // Els caps dels quatre cargols, a la llosa de sota (on hi ha els forats de la pota, a la base).
     for (const h of p.holes) {
       if (h.tag !== "leg" || h.face !== f.face || Math.hypot(h.x - f.x, h.y - f.y) > Math.max(Math.abs(g.u0), Math.abs(g.u1)) + V) continue
-      out.push({ kind: "cyl", c: add([h.x, h.y, f.face === "A" ? p.thickness : 0], n, H + 0.2), axis: n, r: 4, h: 1.2, mat: "steel" })
+      out.push({ kind: "cyl", c: add([h.x, h.y, f.face === "A" ? p.thickness : 0], n, H + 0.2), axis: n, r: 4, h: 1.2, mat: "steel", fillet: 0.5 })
     }
-    out.push(clipAtU0 ? fr.box([g.u0, b0], [-V * 0.35, V * 0.35], [H * 0.15, H * 0.85], "dark") : fr.box([b1, g.u1], [-V * 0.35, V * 0.35], [H * 0.15, H * 0.85], "dark"))
+    out.push(clipAtU0 ? fr.box([g.u0, b0 + 2], [-V * 0.35, V * 0.35], [H * 0.15, H * 0.85], "dark", 2) : fr.box([b1 - 2, g.u1], [-V * 0.35, V * 0.35], [H * 0.15, H * 0.85], "dark", 2))
     // La part mòbil, que es clava a la placa i surt per sota: el tub, el cargol del regulador, el plat i el peu.
     const footH = 12
     const thread = Math.min(30, Math.max(0, g.height - H - footH - 8))
     const tubeEnd = g.height - footH - 4 - thread
-    if (tubeEnd > H) out.push(fr.cyl(0, 0, [H, tubeEnd], 18, "dark"))
+    if (tubeEnd > H) out.push(fr.cyl(0, 0, [H - 2, tubeEnd], 18, "dark", 2))
     if (thread > 0) out.push(fr.cyl(0, 0, [tubeEnd, tubeEnd + thread], 12, "dark"))
-    out.push(fr.cyl(0, 0, [g.height - footH - 4, g.height - footH], 24, "dark"))
-    out.push(fr.cyl(0, 0, [g.height - footH, g.height], g.foot / 2, "dark"))
+    out.push(fr.cyl(0, 0, [g.height - footH - 4, g.height - footH + 1], 24, "dark", 1.5))
+    out.push(fr.cyl(0, 0, [g.height - footH, g.height], g.foot / 2, "dark", 4))
   }
   return out
 }

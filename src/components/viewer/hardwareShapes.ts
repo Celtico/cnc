@@ -1,6 +1,6 @@
-import { BoxGeometry, CylinderGeometry, Group, Matrix4, Mesh, MeshStandardMaterial, Object3D, Vector3 } from "three"
+import { BoxGeometry, type BufferGeometry, CylinderGeometry, ExtrudeGeometry, Group, LatheGeometry, Matrix4, Mesh, MeshStandardMaterial, Object3D, Shape, Vector2, Vector3 } from "three"
 import { basisFor, builtinSolids, type HwMaterial, type HwSolid } from "../../core/build/hardwareSolids"
-import type { Hole, Panel, PanelFitting } from "../../core/model"
+import type { Hole, Panel, PanelFitting, Vec3 } from "../../core/model"
 
 /**
  * Formes dels ferratges que comparteixen el visor (`Hardware.tsx`), «Com va muntat» i les miniatures de Preferències ›
@@ -37,6 +37,58 @@ const UNIT_BOX = new BoxGeometry(1, 1, 1)
 const UNIT_CYL = new CylinderGeometry(1, 1, 1, 20)
 
 /**
+ * Geometries amb corbes (la AXILO 78, `round` / `fillet`): no es poden escalar com les unitàries (el radi es deformaria),
+ * es fan a mida (m) i es guarden per mides (poques: les mateixes a totes les potes); mai s'alliberen.
+ */
+const CURVED = new Map<string, BufferGeometry>()
+function roundedBox(size: Vec3, round: number): BufferGeometry {
+  const key = `b${size.map((x) => x.toFixed(2)).join(",")}r${round}`
+  const hit = CURVED.get(key)
+  if (hit) return hit
+  const [w, h, d] = size
+  const bev = Math.min(1.5, d / 4, round / 2)
+  const r = Math.max(0, Math.min(round, w / 2 - bev, h / 2 - bev))
+  const x0 = -w / 2 + bev, y0 = -h / 2 + bev, x1 = w / 2 - bev, y1 = h / 2 - bev
+  const shape = new Shape()
+  shape.moveTo(x0 + r, y0)
+  shape.lineTo(x1 - r, y0)
+  shape.quadraticCurveTo(x1, y0, x1, y0 + r)
+  shape.lineTo(x1, y1 - r)
+  shape.quadraticCurveTo(x1, y1, x1 - r, y1)
+  shape.lineTo(x0 + r, y1)
+  shape.quadraticCurveTo(x0, y1, x0, y1 - r)
+  shape.lineTo(x0, y0 + r)
+  shape.quadraticCurveTo(x0, y0, x0 + r, y0)
+  const g = new ExtrudeGeometry(shape, { depth: Math.max(0.1, d - 2 * bev), bevelEnabled: bev > 0, bevelSize: bev, bevelThickness: bev, bevelSegments: 3, curveSegments: 8 })
+  g.translate(0, 0, -d / 2 + bev)
+  g.scale(S, S, S)
+  g.computeVertexNormals()
+  CURVED.set(key, g)
+  return g
+}
+/** Cilindre amb les arestes arrodonides (perfil girat al voltant de y, com el de three). */
+function filletCylinder(r: number, h: number, fillet: number): BufferGeometry {
+  const key = `c${r.toFixed(2)},${h.toFixed(2)}f${fillet}`
+  const hit = CURVED.get(key)
+  if (hit) return hit
+  const f = Math.max(0, Math.min(fillet, r / 2, h / 2))
+  const pts: Vector2[] = [new Vector2(0, -h / 2)]
+  const arc = (cx: number, cy: number, a0: number, a1: number) => {
+    for (let i = 0; i <= 6; i++) {
+      const a = a0 + ((a1 - a0) * i) / 6
+      pts.push(new Vector2(cx + f * Math.cos(a), cy + f * Math.sin(a)))
+    }
+  }
+  arc(r - f, -h / 2 + f, -Math.PI / 2, 0)
+  arc(r - f, h / 2 - f, 0, Math.PI / 2)
+  pts.push(new Vector2(0, h / 2))
+  const g = new LatheGeometry(pts.map((p) => new Vector2(p.x * S, p.y * S)), 48)
+  g.computeVertexNormals()
+  CURVED.set(key, g)
+  return g
+}
+
+/**
  * Els ferratges de sèrie d'una peça (`builtinSolids`: frontisses, suports de prestatge, espigues, guies, braços,
  * imants, push, suports de la barra i perfil LED) com a malles three, en coordenades locals de la peça (m). El mateix al
  * visor (`PanelHardware`), al 3D de «Com va muntat» i a les miniatures de Ferratges. El grup porta
@@ -51,11 +103,18 @@ export function builtinHardwareGroup(panel: Panel, pins?: readonly Hole[], fixed
   g.name = "ferratges"
   g.userData.editorOnly = true
   for (const s of solids) {
-    const mesh = new Mesh(s.kind === "box" ? UNIT_BOX : UNIT_CYL, HW_MATERIALS[s.mat])
+    const curved = s.kind === "box" ? (s.round ? roundedBox(s.size, s.round) : null) : s.fillet ? filletCylinder(s.r, s.h, s.fillet) : null
+    const mesh = new Mesh(curved ?? (s.kind === "box" ? UNIT_BOX : UNIT_CYL), HW_MATERIALS[s.mat])
     mesh.userData.sharedModel = true
     mesh.castShadow = true
     mesh.matrixAutoUpdate = false
-    if (s.kind === "box") {
+    if (curved && s.kind === "box") {
+      const [u, v, w] = s.axes
+      mesh.matrix.makeBasis(new Vector3(...u), new Vector3(...v), new Vector3(...w))
+    } else if (curved && s.kind === "cyl") {
+      const [u, v, w] = basisFor(s.axis)
+      mesh.matrix.makeBasis(new Vector3(...u), new Vector3(...w), new Vector3(...v).negate())
+    } else if (s.kind === "box") {
       const [u, v, w] = s.axes
       mesh.matrix.makeBasis(new Vector3(...u).multiplyScalar(s.size[0] * S), new Vector3(...v).multiplyScalar(s.size[1] * S), new Vector3(...w).multiplyScalar(s.size[2] * S))
     } else {
