@@ -25,11 +25,11 @@ const AXILO_SOURCE = "Catàleg general Häfele, p. FF 11.79 (AXILO 78)"
 export const HAFELE_LEGS: HardwareItem[] = [
   {
     id: "leg-hafele-axilo78-screw",
-    name: "Pota de sòcol AXILO 78 · placa rectangular per cargolar",
+    name: "Pota de sòcol AXILO 78 Rectangular per cargolar",
     category: "leg",
     engine: "leg",
     maker: "Häfele",
-    ref: "637.76.333 (placa) + 637.76.351–357 (tub, per l'alçada)",
+    ref: "637.76.333",
     tags: [
       "Placa de fixació rectangular per cargolar (637.76.333, plàstic negre, 92 × 79 × 25): 4 cargols en quadre de 64 × 64, tub al forat Ø30; com la munta el taller, el costat llarg al llarg de l'amplada i el clip cap al lateral (les de la dreta, en mirall), l'eix a 48 dels laterals (el clip a 3,5), a 60 del darrere (la placa a 20,5) i a 83 del davant, on va el sòcol (a cada mòdul es pot canviar; docs/pota-axilo-planta.svg).",
       "Tub amb peu regulable a part (Ø78, 150 kg per pota), per l'alçada de la base «Potes»: 60 → 637.76.351 (53–80) · 80 → .352 (70–100) · 100 → .353 (90–120) · 125 → .354 (115–145) · 150 → .355 (140–170) · 180 → .356 (170–200) · 200 → .357 (190–220).",
@@ -51,7 +51,7 @@ export const HAFELE_LEGS: HardwareItem[] = [
         ],
       },
     ],
-    version: 11,
+    version: 12,
     builtin: true,
   },
 ]
