@@ -655,7 +655,9 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
   // Vista per les finestres: es carrega la triada (la foto pròpia, si n'hi ha de desada).
   const viewKind = opts.view ?? "garden"
   useEffect(() => {
-    if (!open || viewKind === "sky") return
+    // Ja carregada (en tornar a obrir el diàleg amb un render a mig fer): no es torna a carregar, si no el render tornaria
+    // a començar (una vista nova és un altre objecte).
+    if (!open || viewKind === "sky" || pano?.kind === viewKind) return
     let alive = true
     void loadBackdrop(viewKind).then(
       (p) => alive && setPano(p ? { kind: viewKind, p } : null),
