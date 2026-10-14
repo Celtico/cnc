@@ -405,6 +405,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
       select({ kind: "group", id: it.group })
       return groupIds(amb, it.group)
     }
+    rangeAnchor.current = id
     select({ kind: "item", id })
     return [id]
   }
@@ -415,12 +416,31 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
     return g ? (isEmptyGeometry(g) ? footprintBox(i.x, i.y, 600, 600, i.rot) : footprintBox(i.x, i.y, g.w, g.d, i.rot)) : null
   }
   // Maj + clic (arbre, plànol o 3D): la tecla del clic (`pointerdown`), no cap estat desat.
+  // `shiftRef` = afegir o treure (Maj o ⌘/Ctrl); `rangeRef` = Maj, que a l'arbre tria el tram (com el Finder).
   const shiftRef = useRef(false)
+  const rangeRef = useRef(false)
+  const rangeAnchor = useRef<string | null>(null)
   useEffect(() => {
-    const down = (e: PointerEvent) => void (shiftRef.current = e.shiftKey)
+    const down = (e: PointerEvent) => {
+      shiftRef.current = e.shiftKey || e.metaKey || e.ctrlKey
+      rangeRef.current = e.shiftKey && !e.metaKey && !e.ctrlKey
+    }
     window.addEventListener("pointerdown", down, true)
     return () => window.removeEventListener("pointerdown", down, true)
   }, [])
+  // Clic a una fila de l'arbre: Maj = del darrer triat a aquest (en l'ordre del seu apartat); ⌘/Ctrl = afegir o treure.
+  const treeClick = (id: string, order: string[]) => {
+    const a = rangeAnchor.current
+    if (rangeRef.current && a && order.includes(a) && a !== id) {
+      const i = order.indexOf(a), j = order.indexOf(id)
+      const ids = order.slice(Math.min(i, j), Math.max(i, j) + 1)
+      select({ kind: "multi", ids })
+      return
+    }
+    rangeAnchor.current = id
+    if (shiftRef.current) toggleSel(id)
+    else select({ kind: "item", id })
+  }
   const toggleSel = (id: string): string[] => {
     const next = selIds.includes(id) ? selIds.filter((x) => x !== id) : [...selIds, id]
     if (next.length > 1) select({ kind: "multi", ids: next })
@@ -463,6 +483,11 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
     },
     [change],
   )
+  // L'ordre de l'arbre de l'apartat d'un element (Mobles o Objectes; els grups, on surt el primer dels seus).
+  const sectionOrder = (it: AmbientItem): string[] => {
+    const obj = kindOf(it) === "object"
+    return rowsOf(amb.items.filter((x) => (kindOf(x) === "object") === obj)).flatMap((r) => (r.kind === "item" ? [r.item.id] : r.items.map((x) => x.id)))
+  }
   const objectItems = amb.items.filter((it) => kindOf(it) === "object")
   const mobleItems = amb.items.filter((it) => kindOf(it) !== "object")
   const groups = [...new Set(amb.items.map((i) => i.group).filter((g): g is string => !!g))]
@@ -524,7 +549,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
         hint={isEmptyGeometry(g) ? "Buit" : g ? `${Math.round(g.w)} × ${Math.round(g.d)}` : undefined}
         selected={(sel?.kind === "item" && sel.id === it.id) || (sel?.kind === "multi" && sel.ids.includes(it.id))}
         highlighted={sel?.kind === "group" && sel.id === it.group}
-        onClick={() => (shiftRef.current ? toggleSel(it.id) : select({ kind: "item", id: it.id }), setTool("select"))}
+        onClick={() => (treeClick(it.id, sectionOrder(it)), setTool("select"))}
         flags={itemFlags(it)}
         dnd={itemDnd(it)}
         menu={

@@ -430,6 +430,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     return registerDoc({ key: `${docKind}:${projectId}`, kind: docKind, id: projectId, name, target: assistantTarget, selection: () => describeSelection.current() })
   }, [assistantTarget, kind, projectId, name])
   const select = (s: Selection, fromPanel = false) => {
+    // Un element triat sol és l'inici d'un tram (Maj + clic a l'arbre).
+    if (s.kind === "part" || s.kind === "model" || s.kind === "ref" || s.kind === "module") rangeAnchor.current = { kind: s.kind, id: s.id }
     if (s.kind === "moble") setSelKind("moble")
     else if (s.kind === "ref") {
       setSelectedRef(s.id)
@@ -470,17 +472,55 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   const selectModule = (id: string) => select({ kind: "module", id })
   // Maj + clic (a l'arbre o al 3D): afegeix o treu la peça, el model o l'objecte de la selecció, com Figma. Es llegeix la
   // tecla del clic (`pointerdown`), no de cap estat desat.
+  // Maj (o ⌘/Ctrl) + clic: la tecla del clic (`pointerdown`), no cap estat desat. `shiftRef` = afegir o treure (al 3D,
+  // Maj o ⌘/Ctrl); `rangeRef` = Maj, que a l'arbre tria el tram del primer al darrer (com el Finder).
   const shiftRef = useRef(false)
+  const rangeRef = useRef(false)
   useEffect(() => {
-    const down = (e: PointerEvent) => void (shiftRef.current = e.shiftKey)
+    const down = (e: PointerEvent) => {
+      shiftRef.current = e.shiftKey || e.metaKey || e.ctrlKey
+      rangeRef.current = e.shiftKey && !e.metaKey && !e.ctrlKey
+    }
     window.addEventListener("pointerdown", down, true)
     return () => window.removeEventListener("pointerdown", down, true)
   }, [])
+  // L'últim triat sol o afegit: l'inici del tram.
+  const rangeAnchor = useRef<MultiItem | null>(null)
+  // L'ordre de l'arbre de cada tipus (els grups, on surt el primer dels seus).
+  const treeOrder = (kind: MultiItem["kind"]): string[] => {
+    const grouped = <T extends { id: string; group?: string }>(list: T[]) => {
+      const out: string[] = []
+      const seen = new Set<string>()
+      for (const x of list) {
+        if (!x.group) out.push(x.id)
+        else if (!seen.has(x.group)) {
+          seen.add(x.group)
+          out.push(...list.filter((y) => y.group === x.group).map((y) => y.id))
+        }
+      }
+      return out
+    }
+    if (kind === "module") return [...comp.modules.filter((m) => rowOf(m) === "floor"), ...comp.modules.filter((m) => rowOf(m) === "wall")].map((m) => m.id)
+    if (kind === "part") return grouped(comp.parts ?? [])
+    if (kind === "model") return grouped(comp.models ?? [])
+    return comp.references.map((r) => r.id)
+  }
   const pick = (s: Selection, fromPanel = false) => {
-    if (!shiftRef.current || (s.kind !== "part" && s.kind !== "model" && s.kind !== "ref" && s.kind !== "module")) return select(s, fromPanel)
+    const kind = s.kind === "part" || s.kind === "model" || s.kind === "ref" || s.kind === "module" ? s.kind : null
+    if (!kind || !("id" in s)) return select(s, fromPanel)
+    const item: MultiItem = { kind, id: s.id }
+    const set = (next: MultiItem[]) => select(next.length > 1 ? { kind: "multi", items: next } : next.length === 1 ? { kind: next[0]!.kind, id: next[0]!.id } : { kind: "moble" }, fromPanel)
+    // Maj + clic a l'arbre: del primer (l'últim triat) a aquest, si són del mateix tipus.
+    const anchor = rangeAnchor.current
+    if (fromPanel && rangeRef.current && anchor && anchor.kind === kind) {
+      const order = treeOrder(kind)
+      const i = order.indexOf(anchor.id), j = order.indexOf(s.id)
+      if (i >= 0 && j >= 0) return set(order.slice(Math.min(i, j), Math.max(i, j) + 1).map((id) => ({ kind, id })))
+    }
+    rangeAnchor.current = item
+    if (!shiftRef.current) return select(s, fromPanel)
     const cur: MultiItem[] = selection.kind === "multi" ? selection.items : selection.kind === "part" || selection.kind === "model" || selection.kind === "ref" || selection.kind === "module" ? [{ kind: selection.kind, id: selection.id }] : []
-    const next = toggleMulti(cur, { kind: s.kind, id: s.id })
-    select(next.length > 1 ? { kind: "multi", items: next } : next.length === 1 ? { kind: next[0]!.kind, id: next[0]!.id } : { kind: "moble" }, fromPanel)
+    set(toggleMulti(cur, item))
   }
   // Esc: treure la selecció (queda el moble sencer), si no s'està escrivint en un camp.
   const deselectRef = useRef(() => select({ kind: "moble" }))
