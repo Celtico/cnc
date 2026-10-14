@@ -1868,7 +1868,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   **Quantitat per alçada** (`LuListOrdered`, «2–5») · **Distància entre forats** (`LuRuler`, `StepRule`) ·
   **Mecanitzats** (`LuCircleDot`, «n forats») i, als jocs, les seves seccions (`KitSections`: Del catàleg · Llargades i
   números d'article —la taula es desplaça de costat amb la columna NL fixa, també al mòbil— · Regles de tria ·
-  Components · Peces de fusta · Mecanitzats del joc · Hipòtesis).
+  Components · Peces de fusta · Mecanitzats del joc · Hipòtesis) i, als jocs de llum, les seves (`LightSections`, per
+  decisió de l'usuari, 2026-10-14, com els calaixos: Del catàleg · Mecanitzat —amb com hi passa el cable— · Llargades
+  d'una barra · Sistema elèctric —alimentadors, distribuïdor, interruptors, cables, tapa passacables— · Hipòtesis).
   **Treure ≠ esborrar** (per decisió de l'usuari, 2026-10-08): **sense «Importar del fabricant»** («millor que ho anem
   fent nostres»: els jocs llegits dels PDF del catàleg, [`docs/ferratges-jocs.md`](docs/ferratges-jocs.md), són el camí)
   i **sense «Generador de mecanitzats»** («ara ho fiquem nosaltres a partir del catàleg»). Se'n va treure la UI
@@ -2200,6 +2202,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Ferratges | «Com va muntat»: 3D · Pla (com Plànol · 3D dels ambients) | `LuRotate3D` · `LuMap` |
 | Preferències | Visualització · Ferratges · Calaixos (contingut) · Guies (categoria) · System 32 · Cassoleta · Imants | `LuScanEye` · `LuWrench` · `LuArchive` · `LuRailSymbol` · `LuCircleDot` · `LuCircleDashed` · `LuMagnet` |
 | Ferratges (categories) | Frontisses · Plaques · Guies · Calaixos de doble paret (jocs) · Elevables i abatibles · Unions · Suports de prestatge · Potes · Taules · Portes corredisses i plegables · Tiradors · Pressió i imants · Perfils i marcs · Llums (jocs de llum) · Penjar · Altres | `LuCircleDashed` · `LuSquareDot` · `LuRailSymbol` · `LuPackageOpen` · `LuPanelBottom` · `LuBolt` · `LuCircleDot` · `LuFootprints` · `LuTable` · `LuDoorOpen` · `LuGripHorizontal` · `LuMagnet` · `LuMinus` · `LuLightbulb` · `LuAnchor` · `LuPackage` |
+| Ferratges (joc de llum) | Seccions de l'editor d'un joc de llum (`LightSections`): Del catàleg · Mecanitzat · Llargades (barres) · Sistema elèctric · Hipòtesis | `LuBookOpen` · `LuCircleDot` · `LuListOrdered` · `LuPackageOpen` · `LuBookOpen` |
 | Ferratges (joc) | Seccions de l'editor del joc: Del catàleg · Llargades i números · Regles de tria · Components · Peces de fusta · Mecanitzats del joc · Hipòtesis · Prebroca dels cargols (Preferències › Regles de mecanitzat) | `LuBookOpen` · `LuListOrdered` · `LuRoute` · `LuPackageOpen` · `LuLayers2` · `LuCircleDot` · `LuBookOpen` · `LuDrill` |
 | Ferratges | Baixar el model 3D (.glb) d'un importat · Baixar un plànol de muntatge | `LuBoxes` · `LuFileDown` |
 | Ferratges | Ferratges col·locats a mà (inspector de la peça lliure; el del mòdul no la té; la de «Ferratges» del visor) | `LuWrench` |

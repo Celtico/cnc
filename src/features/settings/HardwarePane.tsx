@@ -56,6 +56,7 @@ import { GALLERY_COLS, fold } from "../projects/galleryGrid"
 import { HARDWARE_ICONS } from "./hardwareIcons"
 import { HardwareMountPlan } from "./HardwareMountPlan"
 import { KitSections } from "./KitSections"
+import { LightSections } from "./LightSections"
 import { useSessionString } from "./useSessionString"
 import { ThicknessChips } from "./MaterialBits"
 import { PaneHeadContext } from "./paneHead"
@@ -931,6 +932,7 @@ function HardwareCard({
         </FoldItem>
 
         {item.kit && <KitSections item={item} kit={item.kit} />}
+        {item.light && <LightSections item={item} kit={item.light} />}
         {item.imported?.update && <UpdateNotice item={item} onChange={onChange} />}
         {item.imported && (
           <FoldItem id="hw-imported" icon={LuUpload} title="Importat del fabricant" badge={importState.label} badgePalette={importState.palette} defaultOpen>
