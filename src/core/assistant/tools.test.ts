@@ -170,3 +170,15 @@ describe("assistent IA: operacions", () => {
     expect(err({ kind: "objecte", modules: [], references: [] }, "add_module", { width: 600, height: 600, depth: 400 })).toMatch(/peces lliures/)
   })
 })
+
+describe("assistent IA: el resum diu quina llum i quina barra porta cada compartiment", () => {
+  it("el nom del ferratge propi o, «Com el mòdul», el del mòdul", () => {
+    const { comp } = wardrobe()
+    const own = DEFAULT_SETTINGS.hardwareLibrary.find((h) => h.engine === "ledProfile")!
+    const m = comp.modules[0]!
+    const withOwn: Composition = { ...comp, modules: [{ ...m, root: { ...m.root, led: { hardware: { ...own, name: "LED de prova" } } } }] }
+    expect(JSON.stringify(summarizeMoble(withOwn, DEFAULT_SETTINGS))).toContain("LED de prova")
+    const inherited: Composition = { ...comp, modules: [{ ...m, root: { ...m.root, led: {} } }] }
+    expect(JSON.stringify(summarizeMoble(inherited, DEFAULT_SETTINGS))).toContain("com el mòdul")
+  })
+})
