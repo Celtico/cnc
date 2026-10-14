@@ -185,6 +185,11 @@ export const PanelSchema = z.object({
    */
   outline: z.array(BPtSchema).min(3).optional(),
   /**
+   * Trams del contorn que són un tall (l'osca d'una columna, `notch`): [x0, y0, x1, y1] locals. Al 3D, sense cantell
+   * (com els costats de la caixa que no es cantegen); la resta del contorn, com sempre.
+   */
+  rawSides: z.array(z.tuple([z.number(), z.number(), z.number(), z.number()])).optional(),
+  /**
    * Talls en 3D que no es poden fer com a forat passant a la CNC (un tub que travessa un bloc
    * de pedra pel cantell, un tall que no arriba de cara a cara): prismes en coordenades locals
    * de la peça, secció (`points`, en un pla) estirada pel vector `dir`. Només el 3D els resta

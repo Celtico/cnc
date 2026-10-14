@@ -233,11 +233,14 @@ export function buildComposition(input: Composition): CompositionBuild {
   // Objectes que tallen: forat a cada peça que travessen.
   // Peces lliures en mode «Talla»: fan forats com els objectes que tallen.
   // També a les peces que no són de CNC (ferro, pedra, vidre): el forat es veu al 3D.
-  for (const pr of applyRefCuts([...panels, ...free.extras], [...comp.references, ...partCutters(comp)], panelBox, (p) => free.extras.includes(p))) {
+  // Una peça partida per un tall (una columna al mig del fons): els altres trossos, peces noves.
+  const pieces: Panel[] = []
+  for (const pr of applyRefCuts([...panels, ...free.extras], [...comp.references, ...partCutters(comp)], panelBox, (p) => free.extras.includes(p), pieces)) {
     const moduleId = modules.find((m) => m.index === pr.panel.module)?.id
     const owner = pr.refId.startsWith("part:") ? { partId: pr.refId.slice(5) } : { refId: pr.refId }
     warnings.push({ code: "ref-cut", message: pr.message, panelId: pr.panel.id, ...owner, ...(moduleId ? { moduleId } : {}) })
   }
+  for (const piece of pieces) (free.extras.some((x) => piece.id.startsWith(`${x.id}-`)) ? free.extras : panels).push(piece)
   // Columnes de la casa que entren pel darrere: els fons que falten a les seves cares, amb les ranures (`columnWalls`).
   if (comp.references.some((o) => o.effect === "cut")) {
     const cw = columnWalls(panels, comp.references, modules.flatMap((m) => {

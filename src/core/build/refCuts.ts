@@ -1,5 +1,6 @@
 import { bounds, bulgeOf, ccw, ccwB, flatten, pointInPolygon, polygonArea, polygonTouchesRect, refSection, signedArea, type BPt, type Composition, type Cutout, type Panel, type RefObject, type Vec3 } from "../model"
 import { buildModule } from "./buildModule"
+import { normalizePanel } from "./buildCabinet"
 import { toLocal } from "./geometry"
 import { modulePlacements, refOnPanel } from "../model"
 import * as pcNs from "polygon-clipping"
@@ -42,7 +43,7 @@ export interface RefCutProblem {
  * o polígon (perfil). Si arribaria a la vora de la peça (seria un rebaix del contorn) no es
  * fa i es retorna com a problema. Modifica les peces (afegeix `cutouts`).
  */
-export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Panel) => Box, isExtra?: (p: Panel) => boolean): RefCutProblem[] {
+export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Panel) => Box, isExtra?: (p: Panel) => boolean, added?: Panel[]): RefCutProblem[] {
   const problems: RefCutProblem[] = []
   const r1 = (v: number) => Math.round(v * 10) / 10
   for (const o of refs) {
@@ -58,7 +59,7 @@ export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Pane
         // d'una columna quadrada): un tub cap a la paret no forada el cantell dels prestatges.
         if (!refTouchesBox(o, b)) continue
         const isPart = o.id.startsWith("part:")
-        const side = sidewaysCut(o, sec, p, b, isExtra?.(p) ?? false, !isPart)
+        const side = sidewaysCut(o, sec, p, b, isExtra?.(p) ?? false, !isPart, added)
         if (side) problems.push({ refId: o.id, panel: p, message: side })
         continue
       }
@@ -109,7 +110,7 @@ export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Pane
           : sec.outline
             ? flatten(cut.kind === "polygon" ? cut.points : [])
             : [[bb.x0, bb.y0], [bb.x1, bb.y0], [bb.x1, bb.y1], [bb.x0, bb.y1]]
-        const msg = notch(p, ring)
+        const msg = notch(p, ring, added)
         if (msg) problems.push({ refId: o.id, panel: p, message: `«${o.name}» ${msg}` })
         continue
       }
@@ -215,7 +216,7 @@ const total = (iv: [number, number][]) => iv.reduce((s, [a, b]) => s + b - a, 0)
  *    és un booleà en 3D: es resta al 3D (`solidCuts`) i, si la peça és de CNC, s'avisa que no es
  *    mecanitza. Retorna el missatge d'avís, si n'hi ha.
  */
-function sidewaysCut(o: RefObject, sec: Section, p: Panel, b: Box, extra: boolean, exactOnly = false): string | undefined {
+function sidewaysCut(o: RefObject, sec: Section, p: Panel, b: Box, extra: boolean, exactOnly = false, added?: Panel[]): string | undefined {
   const n = normalIndex(p)
   const ni: 0 | 1 = n === sec.u ? 0 : 1
   const e = ni === 0 ? sec.v : sec.u
@@ -249,7 +250,7 @@ function sidewaysCut(o: RefObject, sec: Section, p: Panel, b: Box, extra: boolea
         continue
       }
       // Arriba a la vora: osca del contorn (també a les peces dels mòduls: el moble s'adapta a la columna).
-      const msg = notch(p, [[bb.x0, bb.y0], [bb.x1, bb.y0], [bb.x1, bb.y1], [bb.x0, bb.y1]])
+      const msg = notch(p, [[bb.x0, bb.y0], [bb.x1, bb.y0], [bb.x1, bb.y1], [bb.x0, bb.y1]], added)
       if (msg) return `«${o.name}» ${msg}`
     }
     return
@@ -273,31 +274,133 @@ function sidewaysCut(o: RefObject, sec: Section, p: Panel, b: Box, extra: boolea
   return `«${o.name}» travessa ${p.label} pel cantell (no de cara a cara): es veu al 3D, però a la CNC no es pot fer com a forat passant (seria un forat de cantell o un buidat).`
 }
 
-/** Resta un polígon (coordenades locals) del contorn de la peça. Retorna un avís si la parteix o se la menja. */
-function notch(p: Panel, cutter: [number, number][]): string | undefined {
+/** El punt és sobre el contorn del polígon (a 0,05 mm d'algun costat). */
+function onPolygon([x, y]: [number, number], poly: [number, number][]): boolean {
+  for (let i = 0; i < poly.length; i++) {
+    const [ax, ay] = poly[i]!, [bx, by] = poly[(i + 1) % poly.length]!
+    const dx = bx - ax, dy = by - ay
+    const l2 = dx * dx + dy * dy
+    const t = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0
+    if (Math.hypot(x - (ax + t * dx), y - (ay + t * dy)) < 0.05) return true
+  }
+  return false
+}
+
+/** Els cantells d'una peça retallada a `bb`: el costat nou (el del tall, contra la columna) no es canteja. */
+function cutEdges(p: Panel, bb: { x0: number; y0: number; x1: number; y1: number }): Panel["edges"] {
+  return {
+    left: p.edges.left && bb.x0 < 0.01,
+    right: p.edges.right && bb.x1 > p.length - 0.01,
+    bottom: p.edges.bottom && bb.y0 < 0.01,
+    top: p.edges.top && bb.y1 > p.width - 0.01,
+  }
+}
+
+/** La peça retallada al rectangle `bb` (coordenades locals): contorn, mecanitzats i origen des de la seva cantonada. */
+function trimTo(p: Panel, bb: { x0: number; y0: number; x1: number; y1: number }): void {
+  if (bb.x0 < 0.01 && bb.y0 < 0.01 && Math.abs(bb.x1 - p.length) < 0.01 && Math.abs(bb.y1 - p.width) < 0.01) return
+  p.edges = cutEdges(p, bb)
+  const q = (v: number) => Math.round(v * 100) / 100
+  const sh = <T extends { x: number; y: number }>(o: T): T => ({ ...o, x: q(o.x - bb.x0), y: q(o.y - bb.y0) })
+  const { origin: o, xAxis, yAxis } = p.placement
+  p.placement = { ...p.placement, origin: [o[0] + bb.x0 * xAxis[0] + bb.y0 * yAxis[0], o[1] + bb.x0 * xAxis[1] + bb.y0 * yAxis[1], o[2] + bb.x0 * xAxis[2] + bb.y0 * yAxis[2]] }
+  p.length = q(bb.x1 - bb.x0)
+  p.width = q(bb.y1 - bb.y0)
+  if (p.outline) p.outline = p.outline.map((v) => (v.length === 3 ? ([q(v[0] - bb.x0), q(v[1] - bb.y0), v[2]] as [number, number, number]) : ([q(v[0] - bb.x0), q(v[1] - bb.y0)] as [number, number])))
+  p.holes = p.holes.map(sh)
+  p.grooves = p.grooves.map(sh)
+  if (p.rawSides) p.rawSides = p.rawSides.map(([x0, y0, x1, y1]) => [q(x0 - bb.x0), q(y0 - bb.y0), q(x1 - bb.x0), q(y1 - bb.y0)])
+  if (p.cutouts) p.cutouts = p.cutouts.map((c) => (c.kind === "polygon" ? { ...c, points: c.points.map((v) => (v.length === 3 ? ([q(v[0] - bb.x0), q(v[1] - bb.y0), v[2]] as [number, number, number]) : ([q(v[0] - bb.x0), q(v[1] - bb.y0)] as [number, number]))) } : sh(c)))
+}
+
+/**
+ * Resta un polígon (coordenades locals) del contorn de la peça. Si la parteix (una columna al mig del fons), cada tros
+ * és una peça (`extra`, retallada a la seva mida i amb els seus forats i ranures). Retorna un avís si se la menja.
+ */
+function notch(p: Panel, cutter: [number, number][], extra?: Panel[]): string | undefined {
   const base: [number, number][] = p.outline ? flatten(p.outline) : [[0, 0], [p.length, 0], [p.length, p.width], [0, p.width]]
   const res = pc.difference([base], [cutter])
   if (!res.length) return `es menja tota la peça ${p.label}.`
-  const main = res.reduce((best, poly) => (polygonArea(poly[0] as [number, number][]) > polygonArea(best[0] as [number, number][]) ? poly : best))
-  const ring = (main[0] as [number, number][]).map(([x, y]) => [Math.round(x * 100) / 100, Math.round(y * 100) / 100] as [number, number])
-  const last = ring[ring.length - 1]!
-  if (ring.length > 1 && last[0] === ring[0]![0] && last[1] === ring[0]![1]) ring.pop()
-  p.outline = ccw(ring)
+  const area = (poly: (typeof res)[number]) => polygonArea(poly[0] as [number, number][])
+  const sorted = [...res].sort((a, b) => area(b) - area(a))
+  const ringOf = (poly: (typeof res)[number]) => {
+    const ring = (poly[0] as [number, number][]).map(([x, y]) => [Math.round(x * 100) / 100, Math.round(y * 100) / 100] as [number, number])
+    const last = ring[ring.length - 1]!
+    if (ring.length > 1 && last[0] === ring[0]![0] && last[1] === ring[0]![1]) ring.pop()
+    return ccw(ring)
+  }
+  const rings = sorted.map(ringOf)
+  const original: Panel = { ...p, holes: [...p.holes], grooves: [...p.grooves] }
   // Res surt de la peça: els forats que queien a la part que s'ha tret (o hi toquen) fora; les ranures, retallades
-  // (si en queda un rectangle) o fora.
+  // (si en queda un rectangle) o fora. Amb trossos, cada forat va amb el tros on cau.
   const gone = (x: number, y: number) => pointInPolygon([x, y], cutter)
-  p.holes = p.holes.filter((h) => (h.face === "edge" ? !gone(h.x, h.y) : ![[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => gone(h.x + dx! * h.diameter / 2, h.y + dy! * h.diameter / 2))))
-  p.grooves = p.grooves.flatMap((g) => {
-    const rect: [number, number][] = [[g.x, g.y], [g.x + g.w, g.y], [g.x + g.w, g.y + g.h], [g.x, g.y + g.h]]
-    const left = pc.difference([rect], [cutter])
-    if (left.length === 1 && left[0]!.length === 1) {
-      const pts = (left[0]![0] as [number, number][]).slice(0, -1)
-      const bb = bounds(pts)
-      const area = (bb.x1 - bb.x0) * (bb.y1 - bb.y0)
-      if (pts.length === 4 && Math.abs(area - polygonArea(pts)) < 0.5) return [{ ...g, x: bb.x0, y: bb.y0, w: bb.x1 - bb.x0, h: bb.y1 - bb.y0 }]
+  const keepHoles = (holes: Panel["holes"], ring: [number, number][]) =>
+    holes.filter((h) => {
+      if (h.face === "edge") {
+        if (gone(h.x, h.y)) return false
+        // Un punt del cantell, un mil·límetre cap a dins de la peça.
+        const ix = h.x + Math.sign(p.length / 2 - h.x) * (h.x <= 0.5 || h.x >= p.length - 0.5 ? 1 : 0)
+        const iy = h.y + Math.sign(p.width / 2 - h.y) * (h.y <= 0.5 || h.y >= p.width - 0.5 ? 1 : 0)
+        return rings.length === 1 || pointInPolygon([ix, iy], ring)
+      }
+      if ([[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => gone(h.x + dx! * h.diameter / 2, h.y + dy! * h.diameter / 2))) return false
+      return rings.length === 1 || pointInPolygon([h.x, h.y], ring)
+    })
+  const keepGrooves = (grooves: Panel["grooves"], ring: [number, number][]) =>
+    grooves.flatMap((g) => {
+      const rect: [number, number][] = [[g.x, g.y], [g.x + g.w, g.y], [g.x + g.w, g.y + g.h], [g.x, g.y + g.h]]
+      const left = rings.length === 1 ? pc.difference([rect], [cutter]) : pc.intersection([rect], [ring])
+      if (left.length === 1 && left[0]!.length === 1) {
+        const pts = (left[0]![0] as [number, number][]).slice(0, -1)
+        const bb = bounds(pts)
+        const a = (bb.x1 - bb.x0) * (bb.y1 - bb.y0)
+        if (pts.length === 4 && Math.abs(a - polygonArea(pts)) < 0.5) return [{ ...g, x: bb.x0, y: bb.y0, w: bb.x1 - bb.x0, h: bb.y1 - bb.y0 }]
+      }
+      return []
+    })
+  // Els trams nous (sobre la vora del tall, no sobre el contorn d'abans): sense cantell al 3D.
+  const onBase = (a: [number, number], b: [number, number]) => onPolygon(a, base) && onPolygon(b, base) && onPolygon([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], base)
+  const cutSides = (ring: [number, number][]) =>
+    ring.flatMap((a, i) => {
+      const b = ring[(i + 1) % ring.length]!
+      return onBase(a, b) ? [] : [[a[0], a[1], b[0], b[1]] as [number, number, number, number]]
+    })
+  p.rawSides = [...(p.rawSides ?? []), ...cutSides(rings[0]!)]
+  p.outline = rings[0]!
+  p.holes = keepHoles(original.holes, rings[0]!)
+  p.grooves = keepGrooves(original.grooves, rings[0]!)
+  for (const h of sorted[0]!.slice(1)) p.cutouts = [...(p.cutouts ?? []), { kind: "polygon", points: ccw((h as [number, number][]).slice(0, -1)), tag: "ref" }]
+  // Si el que queda ocupa menys que la peça (la columna se n'ha menjat una franja sencera), la peça es fa a la seva mida.
+  if (sorted.length === 1) {
+    trimTo(p, bounds(rings[0]!))
+    return undefined
+  }
+  if (!extra) return `parteix ${p.label} en ${res.length} trossos (al 3D i al nesting només queda el més gran).`
+  // Partida: el tros gran també es retalla a la seva mida (si no, el nesting reservaria tota la peça d'abans).
+  trimTo(p, bounds(rings[0]!))
+  // Els altres trossos: peces noves, a la seva mida (el contorn i els mecanitzats, des de la seva cantonada).
+  sorted.slice(1).forEach((poly, i) => {
+    const ring = rings[i + 1]!
+    const bb = bounds(ring)
+    const sh = <T extends { x: number; y: number }>(o: T): T => ({ ...o, x: Math.round((o.x - bb.x0) * 100) / 100, y: Math.round((o.y - bb.y0) * 100) / 100 })
+    // Des de la peça d'abans (el tros gran ja s'ha retallat a la seva mida, amb un altre origen).
+    const { origin: o, xAxis, yAxis } = original.placement
+    const piece: Panel = {
+      ...original,
+      id: `${p.id}-${i + 2}`,
+      label: `${p.label} (${i + 2})`,
+      length: Math.round((bb.x1 - bb.x0) * 100) / 100,
+      width: Math.round((bb.y1 - bb.y0) * 100) / 100,
+      edges: cutEdges(original, bb),
+      rawSides: cutSides(ring).map(([x0, y0, x1, y1]) => [x0 - bb.x0, y0 - bb.y0, x1 - bb.x0, y1 - bb.y0] as [number, number, number, number]),
+      outline: ring.map(([x, y]) => [Math.round((x - bb.x0) * 100) / 100, Math.round((y - bb.y0) * 100) / 100] as [number, number]),
+      holes: keepHoles(original.holes, ring).map(sh),
+      grooves: keepGrooves(original.grooves, ring).map(sh),
+      placement: { ...p.placement, origin: [o[0] + bb.x0 * xAxis[0] + bb.y0 * yAxis[0], o[1] + bb.x0 * xAxis[1] + bb.y0 * yAxis[1], o[2] + bb.x0 * xAxis[2] + bb.y0 * yAxis[2]] },
     }
-    return []
+    delete piece.cutouts
+    for (const h of poly.slice(1)) piece.cutouts = [...(piece.cutouts ?? []), { kind: "polygon", points: ccw((h as [number, number][]).slice(0, -1).map(([x, y]) => [x - bb.x0, y - bb.y0] as [number, number])), tag: "ref" }]
+    extra.push(normalizePanel(piece))
   })
-  for (const h of main.slice(1)) p.cutouts = [...(p.cutouts ?? []), { kind: "polygon", points: ccw((h as [number, number][]).slice(0, -1)), tag: "ref" }]
-  return res.length > 1 ? `parteix ${p.label} en ${res.length} trossos (al 3D i al nesting només queda el més gran).` : undefined
+  return undefined
 }

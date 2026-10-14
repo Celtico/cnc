@@ -191,9 +191,65 @@ export function isShaped(p: Panel): boolean {
   return !!p.cutouts?.length || !!p.outline || !!p.solidCuts?.length
 }
 
-/** Geometria extruïda de la peça i, si en té, els booleans 3D restats. */
+/**
+ * Geometria extruïda de la peça i, si en té, els booleans 3D restats. Grups: [0] cares, [1] cantells amb cantell (els
+ * trossos del contorn sobre un costat de la peça que es canteja) i [2] cantells sense (els talls: l'osca d'una columna,
+ * les parets dels forats), com els costats de la caixa a `panelMaterials`.
+ */
 export function shapedGeometry(p: Panel): BufferGeometry {
-  return p.solidCuts?.length ? solidCutGeometry(p) : cutoutGeometry(p)
+  return splitEdgeGroups(p.solidCuts?.length ? solidCutGeometry(p) : cutoutGeometry(p), p)
+}
+
+/** Reparteix els triangles dels cantells (grup 1) entre «amb cantell» (1) i «sense» (2) segons `Panel.edges`. */
+function splitEdgeGroups(g0: BufferGeometry, p: Panel): BufferGeometry {
+  const g = g0.index ? g0.toNonIndexed() : g0
+  if (g !== g0) g0.dispose()
+  const pos = g.getAttribute("position")
+  const groups = g.groups.length ? g.groups : [{ start: 0, count: pos.count, materialIndex: 0 }]
+  const L = p.length * S, W = p.width * S, eps = 0.0005
+  const raw = (p.rawSides ?? []).map(([x0, y0, x1, y1]) => [x0 * S, y0 * S, x1 * S, y1 * S] as const)
+  const onSeg = (x: number, y: number, [x0, y0, x1, y1]: readonly [number, number, number, number]) => {
+    const dx = x1 - x0, dy = y1 - y0
+    const l2 = dx * dx + dy * dy
+    const t = l2 ? Math.max(0, Math.min(1, ((x - x0) * dx + (y - y0) * dy) / l2)) : 0
+    return Math.hypot(x - (x0 + t * dx), y - (y0 + t * dy)) < eps
+  }
+  // Com abans: amb cantell, llevat dels costats rectes que no es cantegen (`edges`) i dels trams d'un tall (`rawSides`).
+  const banded = (a: number, b: number, c: number): boolean => {
+    const xs = [pos.getX(a), pos.getX(b), pos.getX(c)], ys = [pos.getY(a), pos.getY(b), pos.getY(c)]
+    if (raw.some((sg) => [0, 1, 2].every((k) => onSeg(xs[k]!, ys[k]!, sg)))) return false
+    const all = (v: number[], t: number) => v.every((x) => Math.abs(x - t) < eps)
+    if (all(xs, 0)) return p.edges.left
+    if (all(xs, L)) return p.edges.right
+    if (all(ys, 0)) return p.edges.bottom
+    if (all(ys, W)) return p.edges.top
+    return true
+  }
+  // Triangles per material: 0 (cares), 1 (amb cantell), 2 (sense).
+  const tris: number[][] = [[], [], []]
+  for (const gr of groups) {
+    const mi = gr.materialIndex ?? 0
+    for (let i = gr.start; i < gr.start + gr.count; i += 3) tris[mi === 0 ? 0 : banded(i, i + 1, i + 2) ? 1 : 2]!.push(i)
+  }
+  const out = new BufferGeometry()
+  for (const name of Object.keys(g.attributes)) {
+    const src = g.getAttribute(name)
+    const arr = new Float32Array(src.count * src.itemSize)
+    let k = 0
+    for (const list of tris)
+      for (const t of list)
+        for (let j = 0; j < 3; j++) {
+          for (let c = 0; c < src.itemSize; c++) arr[k++] = src.getComponent(t + j, c)
+        }
+    out.setAttribute(name, new Float32BufferAttribute(arr, src.itemSize))
+  }
+  let start = 0
+  tris.forEach((list, mi) => {
+    if (list.length) out.addGroup(start, list.length * 3, mi)
+    start += list.length * 3
+  })
+  g.dispose()
+  return out
 }
 
 /** Prisma d'un tall 3D (`Panel.solidCuts`), en m i coordenades locals de la peça. */

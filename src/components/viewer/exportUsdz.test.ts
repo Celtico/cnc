@@ -45,7 +45,8 @@ describe("exportUsdz", () => {
     scene.traverse((o) => {
       if ((o as import("three").Mesh).isMesh) mesh = o as import("three").Mesh
     })
-    expect(mesh!.geometry.type).toBe("ExtrudeGeometry")
+    // Extruïda (amb els cantells repartits en grups, `shapedGeometry`), no una caixa.
+    expect(mesh!.geometry.type).not.toBe("BoxGeometry")
     mesh!.geometry.computeBoundingBox()
     const bb = mesh!.geometry.boundingBox!
     expect(bb.max.x).toBeCloseTo(base.length / 1000, 6)

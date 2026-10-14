@@ -1,6 +1,8 @@
 import type { Module, Panel, RefObject, Vec3 } from "../model"
 import { normalizePanel } from "./buildCabinet"
-import { X, Y, Z, placement, r, toLocal } from "./geometry"
+import { X, Y, Z, dowelJoint, placement, r, threeAlong, toLocal } from "./geometry"
+import { dowelSpec } from "./hardware"
+import { applyRefCuts } from "./refCuts"
 
 type Box = { min: Vec3; max: Vec3 }
 
@@ -15,9 +17,13 @@ export interface ColumnWallProblem {
  * falten»): una columna de la casa (objecte de referència que talla, caixa vertical) que entra pel darrere d'un mòdul
  * ja n'ha retallat la base, la tapa, els prestatges, el fons i els laterals (`applyRefCuts`). Aquí s'hi afegeixen els
  * **fons que falten**, a les cares de la columna que queden dins del mòdul (la del davant i les dels costats), a la
- * mateixa distància de la columna que el fons del darrere (`backSetback`), del mateix tauler i gruix que el fons, i, si
- * el fons va en ranura, les **ranures** a la base i a la tapa (fondària i joc de sempre). Una columna que no és una
- * caixa vertical, que no toca el darrere o que travessa tot el mòdul no s'hi tanca: avís.
+ * mateixa distància de la columna que el fons del darrere, del mateix tauler i gruix que el fons, i units com el fons:
+ *  - **en ranura**: a `backSetback`, amb les **ranures** a la base i a la tapa (fondària i joc de sempre);
+ *  - **encastat**: a `backInsetSetback`, a la llum (de la base a la tapa) i amb **espigues** a la base, la tapa i els
+ *    laterals on hi topa (com el fons encastat; amb menys de 15 mm, sense, com el del darrere);
+ *  - **cargolat**: a la cara de la columna, de l'alçada del fons del darrere, i les peces del mòdul es retallen un gruix
+ *    de fons més perquè els fons nous es cargolin als seus cantells (com el del darrere).
+ * Una columna que no és una caixa vertical, que no toca el darrere o que travessa tot el mòdul no s'hi tanca: avís.
  */
 export function columnWalls(
   panels: Panel[],
@@ -37,22 +43,35 @@ export function columnWalls(
     const top = own("top")
     const left = own("side-left")
     const right = own("side-right")
-    const bb = boxOf(base)
+    // La petjada de la base: la de tots els seus trossos (una columna que la parteix en deixa dos).
+    const bb = panels
+      .filter((p) => p.module === index && (p.id === base.id || p.id.startsWith(`${base.id}-`)))
+      .map(boxOf)
+      .reduce((a, b) => ({ min: [Math.min(a.min[0], b.min[0]), Math.min(a.min[1], b.min[1]), Math.min(a.min[2], b.min[2])], max: [Math.max(a.max[0], b.max[0]), Math.max(a.max[1], b.max[1]), Math.max(a.max[2], b.max[2])] }))
     const kb = boxOf(back)
     const tb = back.thickness
-    const s = c.backSetback
     const groove = c.back === "groove"
+    const inset = c.back === "inset"
+    const screwed = c.back === "screwed"
+    const s = groove ? c.backSetback : inset ? (c.backInsetSetback ?? 0) : 0
     const g = groove ? c.grooveDepth : 0
     const gw = tb + (groove ? (c.grooveClearance ?? 0) : 0)
-    const bc = c.backClearance
+    const bc = groove ? c.backClearance : 0
     // El darrere del mòdul: on és el fons respecte de la base (un mòdul girat 180° el té al davant).
     const rearMin = (kb.min[2] + kb.max[2]) / 2 < (bb.min[2] + bb.max[2]) / 2
     const dir = rearMin ? 1 : -1
-    // Cares de dins dels laterals (la base pot anar a inglet, de fora a fora).
-    const ix0 = left ? boxOf(left).max[0] : bb.min[0]
-    const ix1 = right ? boxOf(right).min[0] : bb.max[0]
-    const yLo = bb.max[1] - g + bc / 2
-    const yHi = (top ? boxOf(top).min[1] + g : Math.max(...panels.filter((p) => p.module === index && p.role === "side").map((p) => boxOf(p).max[1]), bb.max[1])) - bc / 2
+    // Cares de dins dels laterals (la base pot anar a inglet, de fora a fora); cargolat, les de fora (el fons els tapa).
+    const ix0 = left ? (screwed ? boxOf(left).min[0] : boxOf(left).max[0]) : bb.min[0]
+    const ix1 = right ? (screwed ? boxOf(right).max[0] : boxOf(right).min[0]) : bb.max[0]
+    const sidesTop = Math.max(...panels.filter((p) => p.module === index && p.role === "side").map((p) => boxOf(p).max[1]), bb.max[1])
+    const yLo = screwed ? kb.min[1] : bb.max[1] - g + bc / 2
+    const yHi = screwed ? kb.max[1] : (top ? boxOf(top).min[1] + g : sidesTop) - bc / 2
+    let dowel: ReturnType<typeof dowelSpec> | undefined
+    try {
+      dowel = inset && tb >= 15 ? dowelSpec(module.hardware.dowel) : undefined
+    } catch {
+      dowel = undefined
+    }
     let k = 0
     for (const o of refs) {
       if (o.effect !== "cut" || o.id.startsWith("part:")) continue
@@ -64,7 +83,7 @@ export function columnWalls(
       // Només les que pugen de terra (una columna de la casa) i arriben a la base; un tall de més amunt (pica, placa), no.
       if (x1 - x0 < 1 || z1 - z0 < 1 || o.y > 1 || o.y + o.h < bb.min[1]) continue
       // Una columna de terra a sostre: si no arriba a la tapa, el moble no s'hi pot tancar (i ho diu).
-      if (o.y + o.h < yHi) {
+      if (o.y + o.h < (screwed ? yHi : top ? boxOf(top).min[1] : sidesTop)) {
         problems.push({ refId: o.id, panel: base, message: `«${o.name}» no arriba a la tapa del mòdul: si és una columna de terra a sostre, fes-la més alta (Alt) i el moble s'hi tancarà amb els fons que falten.` })
         continue
       }
@@ -74,28 +93,41 @@ export function columnWalls(
         problems.push({ refId: o.id, panel: base, message: `«${o.name}» ${throughFront ? "travessa tot el mòdul de darrere a davant" : "no toca el darrere del mòdul"}: el moble no s'hi tanca sol (els fons que falten s'han de posar a mà).` })
         continue
       }
+      // Cargolat: les peces del mòdul (no els fons) es retallen un gruix de fons més, perquè els fons nous hi cargolin.
+      if (screwed) {
+        const grown: RefObject = { ...o, id: `${o.id}-screwed`, x: o.x - tb, z: o.z - tb, w: o.w + 2 * tb, d: o.d + 2 * tb }
+        applyRefCuts(panels.filter((p) => p.module === index && p.role !== "back"), [grown], boxOf, undefined, added)
+      }
       // La cara del davant de la columna i els fons que hi falten.
       const zFace = rearMin ? z1 : z0
       const zw0 = rearMin ? zFace + s : zFace - s - tb
       const zg0 = rearMin ? zFace + s : zFace - s - gw
-      const hasLeft = x0 > ix0 + 1
-      const hasRight = x1 < ix1 - 1
+      // Hi ha cara de costat si la columna no arriba a la vora del mòdul (cargolat, la de fora dels laterals).
+      const hasLeft = (screwed ? cx0 : x0) > ix0 + 1
+      const hasRight = (screwed ? cx1 : x1) < ix1 - 1
       const wallX0 = hasLeft ? x0 - s - tb : ix0
       const wallX1 = hasRight ? x1 + s + tb : ix1
       const backFront = rearMin ? kb.max[2] : kb.min[2]
-      const walls: { pl: ReturnType<typeof placement>; length: number; groove: [number, number, number, number] }[] = []
-      // Fons del davant de la columna (paral·lel al del darrere).
+      type Wall = { pl: ReturnType<typeof placement>; length: number; groove: [number, number, number, number]; along: "x" | "z"; from: number; to: number; mid: number; ends: Panel[] }
+      const walls: Wall[] = []
+      // Fons del davant de la columna (paral·lel al del darrere). Encastat, espigues als laterals on hi topa.
       walls.push({
-        pl: placement([wallX0 + (hasLeft ? 0 : bc / 2), yLo, zw0], X, Y, Z, [0, 0, -dir]),
+        // A l'explosió, cap al davant (lluny de la columna i del fons de darrere, que va cap a la paret).
+        pl: placement([wallX0 + (hasLeft ? 0 : bc / 2), yLo, zw0], X, Y, Z, [0, 0, dir]),
         length: wallX1 - wallX0 - (hasLeft ? 0 : bc / 2) - (hasRight ? 0 : bc / 2),
         groove: [wallX0, wallX1, zg0, zg0 + gw],
+        along: "x",
+        from: wallX0,
+        to: wallX1,
+        mid: zw0 + tb / 2,
+        ends: [...(!hasLeft && left ? [left] : []), ...(!hasRight && right ? [right] : [])],
       })
       // Fons dels costats de la columna: del fons del darrere al del davant.
       const sideZ0 = rearMin ? backFront : zw0 + tb
       const sideZ1 = rearMin ? zw0 : backFront
       if (sideZ1 - sideZ0 > 1) {
-        if (hasRight) walls.push({ pl: placement([x1 + s, yLo, sideZ0], Z, Y, X, [-1, 0, 0]), length: sideZ1 - sideZ0, groove: [x1 + s, x1 + s + gw, Math.min(sideZ0, sideZ1), Math.max(sideZ0, sideZ1)] })
-        if (hasLeft) walls.push({ pl: placement([x0 - s - tb, yLo, sideZ0], Z, Y, X, [1, 0, 0]), length: sideZ1 - sideZ0, groove: [x0 - s - gw, x0 - s, Math.min(sideZ0, sideZ1), Math.max(sideZ0, sideZ1)] })
+        if (hasRight) walls.push({ pl: placement([x1 + s, yLo, sideZ0], Z, Y, X, [1, 0, 0]), length: sideZ1 - sideZ0, groove: [x1 + s, x1 + s + gw, Math.min(sideZ0, sideZ1), Math.max(sideZ0, sideZ1)], along: "z", from: sideZ0, to: sideZ1, mid: x1 + s + tb / 2, ends: [] })
+        if (hasLeft) walls.push({ pl: placement([x0 - s - tb, yLo, sideZ0], Z, Y, X, [-1, 0, 0]), length: sideZ1 - sideZ0, groove: [x0 - s - gw, x0 - s, Math.min(sideZ0, sideZ1), Math.max(sideZ0, sideZ1)], along: "z", from: sideZ0, to: sideZ1, mid: x0 - s - tb / 2, ends: [] })
       }
       for (const w of walls) {
         k++
@@ -116,8 +148,22 @@ export function columnWalls(
         delete p.outline
         delete p.cutouts
         delete p.mitres
-        added.push(normalizePanel(p))
+        const wall = normalizePanel(p)
+        added.push(wall)
         if (groove) for (const host of [base, top]) if (host) addGroove(host, boxOf(host), w.groove, host === base ? bb.max[1] : boxOf(host).min[1], g)
+        // Encastat: espigues com el fons encastat (tres per costat, a `endOffset` dels extrems).
+        if (dowel) {
+          for (const host of [base, top]) {
+            if (!host) continue
+            const yFace = host === base ? bb.max[1] : boxOf(host).min[1]
+            const pts = threeAlong(Math.min(w.from, w.to), Math.max(w.from, w.to), dowel.endOffset).map((t): Vec3 => (w.along === "x" ? [t, yFace, w.mid] : [w.mid, yFace, t]))
+            dowelJoint(wall, host, pts, dowel, dowel.tag)
+          }
+          for (const side of w.ends) {
+            const xFace = side === left ? boxOf(side).max[0] : boxOf(side).min[0]
+            dowelJoint(wall, side, threeAlong(yLo, yHi, dowel.endOffset).map((y): Vec3 => [xFace, y, w.mid]), dowel, dowel.tag)
+          }
+        }
       }
     }
   }

@@ -13,15 +13,18 @@ const byLabel = (c: Composition, label: string) => buildComposition(c).panels.fi
 describe("cantells de la caixa", () => {
   afterEach(() => setSolidMaterials([]))
 
-  it("sense fons i lliure al terra, el cantell del darrere de laterals, base, tapa i prestatges queda cantejat", () => {
+  it("lliure al terra separat de la paret, el cantell del darrere de laterals, base, tapa i prestatges queda cantejat (amb fons o sense; cargolat, no)", () => {
     const groove = comp(withBack("groove"))
     const none = comp(withBack("none"))
+    const screwed = comp(withBack("screwed"))
     // Lateral esquerre: davant = top, darrere = bottom. Dret: davant = bottom, darrere = top.
-    expect(byLabel(groove, "Lateral esquerre").edges.bottom).toBe(false)
+    expect(byLabel(groove, "Lateral esquerre").edges.bottom).toBe(true)
+    expect(byLabel(screwed, "Lateral esquerre").edges.bottom).toBe(false)
     expect(byLabel(none, "Lateral esquerre").edges).toMatchObject({ top: true, bottom: true })
     expect(byLabel(none, "Lateral dret").edges).toMatchObject({ top: true, bottom: true })
     // Base: davant = bottom, darrere = top. Tapa (Sostre): davant = top, darrere = bottom.
-    expect(byLabel(groove, "Base").edges.top).toBe(false)
+    expect(byLabel(groove, "Base").edges.top).toBe(true)
+    expect(byLabel(screwed, "Base").edges.top).toBe(false)
     expect(byLabel(none, "Base").edges).toMatchObject({ top: true, bottom: true })
     expect(byLabel(none, "Sostre").edges).toMatchObject({ top: true, bottom: true })
     // Prestatges regulables: davant = bottom, darrere = top.
@@ -30,7 +33,8 @@ describe("cantells de la caixa", () => {
     for (const s of shelves) expect(s.edges).toMatchObject({ top: true, bottom: true })
   })
 
-  it("arrambat a la paret o lliure tocant-la, sense fons, el darrere no es canteja", () => {
+  it("arrambat a la paret o lliure tocant-la, el darrere no es canteja", () => {
+    expect(byLabel(comp(withBack("groove", null)), "Lateral esquerre").edges.bottom).toBe(false)
     expect(byLabel(comp(withBack("none", null)), "Lateral esquerre").edges.bottom).toBe(false)
     expect(byLabel(comp(withBack("none", 0)), "Base").edges.top).toBe(false)
   })

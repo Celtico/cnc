@@ -113,17 +113,22 @@ export function panelMaterials(p: Panel, mode: "material" | "role", materials: M
   return [edgeX(p.edges.right, "#r"), edgeX(p.edges.left, "#l"), edgeY(p.edges.top, "#t"), edgeY(p.edges.bottom, "#b"), big(""), big("#B")]
 }
 
-/** Materials per a la geometria extruïda: [0] cares (A/B), [1] cantells i parets dels forats. UV en metres. */
+/** Materials per a la geometria extruïda (`shapedGeometry`): [0] cares (A/B), [1] cantells amb cantell, [2] sense (talls i parets dels forats). UV en metres. */
 export function cutoutMaterials(p: Panel, mode: "material" | "role", materials: MaterialPref[], dimmed: boolean): MeshStandardMaterial[] {
   const opts = { transparent: dimmed, opacity: dimmed ? 0.45 : 1 }
   if (mode === "role") {
     const m = new MeshStandardMaterial({ color: ROLE_COLOR[p.role], roughness: 0.85, metalness: 0, ...opts })
-    return [m, m]
+    return [m, m, m]
   }
   // UV en metres: 1000 mm per unitat de textura.
-  const face = makeMaterial(resolveFinish(materials, p.material), 1000, 1000, p.grain === "y", opts, textureOffset(p.id))
+  const finish = resolveFinish(materials, p.material)
+  const face = makeMaterial(finish, 1000, 1000, p.grain === "y", opts, textureOffset(p.id))
   const edge = makeMaterial(resolveEdgeFinish(materials, p.material), 1000, 1000, false, opts, textureOffset(`${p.id}#e`))
-  return [face, edge]
+  // Sense cantell: el tauler vist (com `panelMaterials`) o, als massissos, el mateix material.
+  const mat = materials.find((m) => m.name === p.material)
+  const solid = p.role === "hardware" || (!!mat && (materialCategory(mat) === "sim" || mat.cnc === false || !!mat.solid))
+  const raw = solid ? makeMaterial(finish, 1000, 1000, false, opts, textureOffset(`${p.id}#r`)) : new MeshStandardMaterial({ color: RAW_EDGE_COLOR, roughness: 0.95, metalness: 0, ...opts })
+  return [face, edge, raw]
 }
 
 /**
@@ -158,5 +163,5 @@ export function visualPanel(p: Panel): Panel {
  * (`holes`: marques dels forats o ferratges, que fan servir les cassoletes).
  */
 export function panelVisualKey(p: Panel, holes: boolean): string {
-  return JSON.stringify([p.id, p.role, p.length, p.width, p.thickness, p.material, p.grain, p.edges, p.outline, p.cutouts, p.mitres, p.solidCuts, p.grooves, p.push, holes ? p.holes : null, holes ? p.fittings ?? null : null])
+  return JSON.stringify([p.id, p.role, p.length, p.width, p.thickness, p.material, p.grain, p.edges, p.outline, p.rawSides, p.cutouts, p.mitres, p.solidCuts, p.grooves, p.push, holes ? p.holes : null, holes ? p.fittings ?? null : null])
 }

@@ -901,13 +901,20 @@ class Builder {
    * fixos van sencers entre la caixa).
    */
   /**
-   * Cantell del darrere d'una peça de la caixa (laterals, base, tapa, divisors i prestatges): només sense fons i amb el
-   * mòdul lliure al terra separat de la paret, que el deixen a la vista (per decisió de l'usuari, 2026-10-13: arrambat o
-   * penjat a la paret, el darrere no es veu). `side` = el cantell local del darrere de la peça.
+   * Cantell del darrere d'una peça de la caixa (laterals, base, tapa, divisors i prestatges): només amb el mòdul lliure
+   * al terra separat de la paret, que el deixa a la vista (per decisió de l'usuari, 2026-10-13: arrambat o penjat a la
+   * paret, el darrere no es veu; 2026-10-14: «el laminat del darrere només si no és moble de paret», també amb fons). Amb
+   * el fons cargolat, no: el fons tapa els cantells de darrere (es cantegen els seus). `side` = el cantell local del
+   * darrere de la peça.
    */
   private rearEdge(side: EdgeSide): EdgeSide[] {
     const m = this.m
-    return m.carcass.back === "none" && mountOf(m) === "floor" && (m.wallGap ?? 0) > 0 ? [side] : []
+    return m.carcass.back !== "screwed" && mountOf(m) === "floor" && (m.wallGap ?? 0) > 0 ? [side] : []
+  }
+
+  /** El mateix per a les peces de dins (divisors i prestatges): amb fons, queden darrere del fons i no es veuen. */
+  private innerRearEdge(side: EdgeSide): EdgeSide[] {
+    return this.m.carcass.back === "none" ? this.rearEdge(side) : []
   }
 
   private innerGap(): number {
@@ -920,7 +927,7 @@ class Builder {
     const t = d.t
     const e = gap / 2
     const panel = this.add(
-      this.basePanel(id, "divisor", "Divisor", "divider", yTo - yFrom - gap, d.availDepth - cut, t, m.carcass.material, "x", edges("top", ...this.rearEdge("bottom")), placement([x, yFrom + e, d.backInnerZ], Y, Z, X, Z)),
+      this.basePanel(id, "divisor", "Divisor", "divider", yTo - yFrom - gap, d.availDepth - cut, t, m.carcass.material, "x", edges("top", ...this.innerRearEdge("bottom")), placement([x, yFrom + e, d.backInnerZ], Y, Z, X, Z)),
     )
     this.verticals.push({ panel, xL: x, xR: x + t, yB: yFrom, yT: yTo, zRear: d.backInnerZ, zFront: d.D - cut, outer: false, ...(e ? { endGap: e } : {}) })
   }
@@ -931,7 +938,7 @@ class Builder {
     const e = gap / 2
     const zFront = d.D - cut
     const panel = this.add(
-      this.basePanel(id, "estanter fixe", "Prestatge fix", "fixedShelf", xTo - xFrom - gap, d.availDepth - cut, t, m.carcass.material, "x", edges("bottom", ...this.rearEdge("top")), placement([xFrom + e, y, zFront], X, neg(Z), Y, Z)),
+      this.basePanel(id, "estanter fixe", "Prestatge fix", "fixedShelf", xTo - xFrom - gap, d.availDepth - cut, t, m.carcass.material, "x", edges("bottom", ...this.innerRearEdge("top")), placement([xFrom + e, y, zFront], X, neg(Z), Y, Z)),
     )
     this.horizontals.push({ panel, yBottom: y, yTop: y + t, xL: xFrom, xR: xTo, outer: false, zRear: d.backInnerZ, zFront, ...(e ? { endGap: e } : {}) })
   }
@@ -1352,7 +1359,7 @@ class Builder {
       const nm = this.shelfCount === 1 && n === 1 ? "Prestatge" : `Prestatge ${idx}`
       const code = this.shelfCount === 1 && n === 1 ? "estanter" : `estanter ${idx}`
       if (!hollow) {
-        this.add(this.basePanel(`shelf-${idx}`, code, nm, "shelf", length, depth, t, c.material, "x", edges("bottom", ...this.rearEdge("top")), placement([x0, y, zF], X, neg(Z), Y, Z)))
+        this.add(this.basePanel(`shelf-${idx}`, code, nm, "shelf", length, depth, t, c.material, "x", edges("bottom", ...this.innerRearEdge("top")), placement([x0, y, zF], X, neg(Z), Y, Z)))
         continue
       }
       // Prestatge buit: pell de baix i de dalt, tira al davant i llistons (darrere i extrems).

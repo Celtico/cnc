@@ -55,8 +55,8 @@ describe("objectes que tallen", () => {
     }
     // El fons, de dalt a baix: la columna se'n menja la franja de l'esquerra (queda un rectangle més estret).
     const bk = b.panels.find((q) => q.role === "back")!
-    expect(bk.outline).toBeDefined()
-    expect(Math.min(...bk.outline!.map((q) => q[0]))).toBeGreaterThan(100)
+    // Es fa a la seva mida (el nesting no reserva la franja que s'ha menjat la columna).
+    expect(panelBox(bk).min[0]).toBeGreaterThan(100)
     const left = b.panels.find((q) => q.id.endsWith("side-left"))!
     expect(left.outline).toBeDefined()
     // Res surt de les peces: cap forat ni ranura a la part que s'ha tret.

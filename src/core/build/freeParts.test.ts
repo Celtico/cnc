@@ -190,9 +190,12 @@ describe("peça que talla travessant de costat", () => {
     expect(b.warnings.filter((w) => w.partId === "rod")).toEqual([])
   })
 
-  it("de dalt a baix: la parteix i avisa", () => {
+  it("de dalt a baix: la parteix en dos trossos, i cadascun és una peça", () => {
     const b = buildComposition(comp([front, rod(-100, 700)]))
-    expect(b.warnings.some((w) => w.partId === "rod" && w.message.includes("trossos"))).toBe(true)
+    expect(b.warnings.some((w) => w.partId === "rod" && w.message.includes("trossos"))).toBe(false)
+    const pieces = [...b.panels, ...b.extras].filter((p) => p.id === "part:front" || p.id.startsWith("part:front-"))
+    expect(pieces).toHaveLength(2)
+    for (const p of pieces) expect(p.outline).toBeDefined()
   })
 
   it("un tub rodó dins d'un bloc: booleà al 3D; a la CNC avisa, a la pedra no", () => {
