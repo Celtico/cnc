@@ -149,11 +149,11 @@ export default function ChatPanel({ settings, target, onClose, closeRequest = 0 
     history.current = []
     setItems([])
   }
-  // Tancar el calaix acaba la conversa (no se'n desa l'historial): si n'hi ha, primer ho pregunta.
-  const close = () => {
-    if (items.length || running) setConfirmClose(true)
-    else onClose?.()
-  }
+  // Tancar el calaix no esborra res (per decisió de l'usuari, 2026-10-14: «encara que es tanqui, no cal esborrar mai el
+  // que hi ha al xat»): en tornar-lo a obrir, la conversa hi és (i una resposta a mig escriure continua). Només «Nova
+  // conversa» la buida, i ho pregunta.
+  const close = () => onClose?.()
+  const askNewChat = () => (items.length || running ? setConfirmClose(true) : newChat())
   // Tornar a tocar el botó «Assistent» del menú el tanca com la ✕ (per decisió de l'usuari, 2026-10-14).
   const lastReq = useRef(closeRequest)
   useEffect(() => {
@@ -162,13 +162,12 @@ export default function ChatPanel({ settings, target, onClose, closeRequest = 0 
     close()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [closeRequest])
-  const closeAndForget = () => {
+  const startFresh = () => {
     setConfirmClose(false)
     newChat()
     setInput("")
     setAttached([])
     setAttachNote(null)
-    onClose?.()
   }
 
   const send = async () => {
@@ -269,7 +268,7 @@ export default function ChatPanel({ settings, target, onClose, closeRequest = 0 
           {model.label}
         </Badge>
         <Tooltip content="Nova conversa">
-          <IconButton size="xs" variant="ghost" aria-label="Nova conversa" disabled={running || !items.length} onClick={newChat}>
+          <IconButton size="xs" variant="ghost" aria-label="Nova conversa" disabled={!items.length && !running} onClick={askNewChat}>
             <LuMessageSquarePlus />
           </IconButton>
         </Tooltip>
@@ -287,19 +286,19 @@ export default function ChatPanel({ settings, target, onClose, closeRequest = 0 
           <Dialog.Positioner>
             <Dialog.Content>
               <Dialog.Header>
-                <Dialog.Title>Tancar l'assistent?</Dialog.Title>
+                <Dialog.Title>Començar una conversa nova?</Dialog.Title>
               </Dialog.Header>
               <Dialog.Body>
                 <Text>
-                  Perdràs la conversa: no es desa.{running ? " La resposta que està escrivint s'aturarà." : ""} Els canvis que ha fet als mobles i ambients es queden (es poden desfer amb ⌘Z).
+                  La conversa d'ara s'esborra: no es desa.{running ? " La resposta que està escrivint s'aturarà." : ""} Els canvis que ha fet als mobles i ambients es queden (es poden desfer amb ⌘Z).
                 </Text>
               </Dialog.Body>
               <Dialog.Footer>
                 <Button variant="outline" onClick={() => setConfirmClose(false)}>
                   Cancel·lar
                 </Button>
-                <Button colorPalette="red" onClick={closeAndForget}>
-                  <LuX /> Tancar i perdre la conversa
+                <Button colorPalette="red" onClick={startFresh}>
+                  <LuMessageSquarePlus /> Esborrar i començar de nou
                 </Button>
               </Dialog.Footer>
             </Dialog.Content>

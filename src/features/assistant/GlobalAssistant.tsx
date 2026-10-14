@@ -75,7 +75,7 @@ export default function GlobalAssistant({ open, onClose, settings, closeRequest 
     )
   return (
     // Per decisió de l'usuari: no es tanca sol (ni clicant fora ni amb Esc) i no bloqueja l'app (es pot seguir treballant
-    // amb el calaix obert); només la ✕, que avisa que es perd la conversa (`ChatPanel` `onClose`).
+    // amb el calaix obert); només la ✕ o el botó del menú. Tancat, la conversa es conserva (el contingut es queda muntat).
     <Drawer.Root open={open} modal={false} closeOnInteractOutside={false} closeOnEscape={false} trapFocus={false} preventScroll={false} placement="bottom" size="full" lazyMount>
       <Portal>
         <Drawer.Positioner pointerEvents="none">
