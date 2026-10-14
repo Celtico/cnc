@@ -53,7 +53,7 @@ import { moduleWorldX, panelBox, type CompositionWarning } from "../../core/buil
 import { activeIslands } from "../../core/build/islands"
 import { materialIssues } from "../../core/build/materialIssues"
 import { splitChildSizes } from "../../core/build/layout"
-import { applySettingsToModule, moduleHasInnerPieces, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, moduleRows, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, setModuleMount, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, insertPartCopy, insertModelCopy, moveGroupBy, removeGroup, renameGroup, moveMultiBy, removeMulti, toggleMulti, groupMulti, ungroupMulti, newGroupName, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type MultiItem, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule, moduleHasInnerPieces, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, moduleRows, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, setModuleMount, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, insertPartCopy, insertModelCopy, moveGroupBy, removeGroup, renameGroup, moveMultiBy, removeMulti, toggleMulti, groupMulti, ungroupMulti, newGroupName, groupItems, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type MultiItem, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, InnerClearanceRow, JointForm, MaterialsForm } from "../composition/CarcassForm"
@@ -379,7 +379,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         ? { kind: "ref", id: selectedRef }
         : selKind === "part" && selectedPart && comp.parts?.some((r) => r.id === selectedPart)
           ? { kind: "part", id: selectedPart }
-          : selKind === "group" && selectedGroup && [...(comp.parts ?? []), ...(comp.models ?? [])].some((r) => r.group === selectedGroup)
+          : selKind === "group" && selectedGroup && [...comp.modules, ...(comp.parts ?? []), ...(comp.models ?? [])].some((r) => r.group === selectedGroup)
             ? { kind: "group", id: selectedGroup }
           : selKind === "model" && selectedModel && comp.models?.some((g) => g.id === selectedModel)
             ? { kind: "model", id: selectedModel }
@@ -606,7 +606,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     : selection.kind === "ref" ? !!comp.references.find((r) => r.id === selection.id)?.locked
     : selection.kind === "part" ? !!comp.parts?.find((q) => q.id === selection.id)?.locked
     : selection.kind === "model" ? !!comp.models?.find((g) => g.id === selection.id)?.locked
-    : selection.kind === "group" ? [...(comp.parts ?? []), ...(comp.models ?? [])].filter((q) => q.group === selection.id).every((q) => q.locked)
+    : selection.kind === "group" ? [...comp.modules, ...(comp.parts ?? []), ...(comp.models ?? [])].filter((q) => q.group === selection.id).every((q) => q.locked)
     : selection.kind === "multi" ? selection.items.some((x) => (x.kind === "part" ? comp.parts?.find((q) => q.id === x.id) : x.kind === "model" ? comp.models?.find((q) => q.id === x.id) : x.kind === "module" ? comp.modules.find((q) => q.id === x.id) : comp.references.find((q) => q.id === x.id))?.locked)
     : false
   /** Mou un model 3D (gizmo al 3D o fletxes): no s'enfonsa al terra. */
@@ -627,9 +627,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     const mod = e.metaKey || e.ctrlKey
     const key = e.key.toLowerCase()
     // ⌘G / Ctrl+G: els triats en un grup nou; ⇧⌘G: fora del grup (com Figma). Peces lliures i models 3D.
-    if (mod && key === "g" && (selection.kind === "multi" || selection.kind === "part" || selection.kind === "model" || selection.kind === "group")) {
+    if (mod && key === "g" && (selection.kind === "multi" || selection.kind === "part" || selection.kind === "model" || selection.kind === "module" || selection.kind === "group")) {
       e.preventDefault()
-      const items: MultiItem[] = selection.kind === "multi" ? selection.items : selection.kind === "group" ? [...(comp.parts ?? []).filter((p) => p.group === selection.id).map((p) => ({ kind: "part" as const, id: p.id })), ...(comp.models ?? []).filter((m) => m.group === selection.id).map((m) => ({ kind: "model" as const, id: m.id }))] : [{ kind: selection.kind, id: selection.id }]
+      const items: MultiItem[] = selection.kind === "multi" ? selection.items : selection.kind === "group" ? groupItems(comp, selection.id) : [{ kind: selection.kind, id: selection.id }]
       if (e.shiftKey) {
         setComp(ungroupMulti(comp, items))
         if (selection.kind === "group") select(items.length > 1 ? { kind: "multi", items } : { kind: "moble" })
@@ -853,6 +853,9 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   const selectFrom3D = (id: string, at?: [number, number, number]) => {
     // Maj + clic a un mòdul: el mòdul sencer a la selecció múltiple.
     if (shiftRef.current) return pick({ kind: "module", id })
+    // D'un grup (com les peces): el primer clic tria el grup; el segon, el mòdul.
+    const grp = comp.modules.find((m) => m.id === id)?.group
+    if (grp && !(selection.kind === "group" && selection.id === grp) && !((selection.kind === "module" && selection.id === id) || (selection.kind === "zone" && selection.moduleId === id))) return select({ kind: "group", id: grp })
     const inside = (selection.kind === "module" && selection.id === id) || (selection.kind === "zone" && selection.moduleId === id)
     const idx = comp.modules.findIndex((m) => m.id === id)
     const mb = build?.modules[idx]
@@ -1248,7 +1251,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
       ) : selection.kind === "group" ? (
         // Un grup té les mateixes propietats que una selecció múltiple (per decisió de l'usuari): els seus elements.
         (() => {
-          const items: MultiItem[] = [...(comp.parts ?? []).filter((p) => p.group === selection.id).map((p) => ({ kind: "part" as const, id: p.id })), ...(comp.models ?? []).filter((m) => m.group === selection.id).map((m) => ({ kind: "model" as const, id: m.id }))]
+          const items: MultiItem[] = groupItems(comp, selection.id)
           return (
             <MultiInspector
               comp={comp}
@@ -1642,10 +1645,10 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             parts={solidParts}
             selectedPartId={selection.kind === "part" ? selection.id : null}
             onSelectPart={selectPartFrom3D}
-            selectedGroup={selection.kind === "group" ? selection.id : null}
+            selectedGroup={null}
             onMoveGroup={selectionLocked ? undefined : (g, dx, dy, dz) => moveGroup(g, dx, dy, dz)}
-            selectedSet={selection.kind === "multi" ? selection.items : undefined}
-            onMoveSet={selectionLocked || selection.kind !== "multi" ? undefined : (dx, dy, dz) => setComp((c) => moveMultiBy(c, selection.items, dx, dy, dz))}
+            selectedSet={selection.kind === "multi" ? selection.items : selection.kind === "group" ? groupItems(comp, selection.id) : undefined}
+            onMoveSet={selectionLocked ? undefined : selection.kind === "multi" ? (dx, dy, dz) => setComp((c) => moveMultiBy(c, selection.items, dx, dy, dz)) : selection.kind === "group" ? (dx, dy, dz) => moveGroup(selection.id, dx, dy, dz) : undefined}
             onMovePart={selectionLocked ? undefined : movePart}
             models={comp.models?.filter((g) => !g.hidden)}
             selectedModelId={selection.kind === "model" ? selection.id : null}

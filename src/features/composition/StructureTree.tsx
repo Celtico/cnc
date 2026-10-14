@@ -162,8 +162,8 @@ export function StructureTree({
   })
   // La fila d'un grup: s'hi pot deixar una peça (entra al grup).
   const groupDnd = (g: string): TreeRowDnd => {
-    const grouped = (x: MultiItem) => (x.kind === "part" ? parts.find((q) => q.id === x.id)?.group : x.kind === "model" ? models.find((q) => q.id === x.id)?.group : g)
-    const ok = () => (drag?.multi ? drag.multi.some((x) => x.kind !== "ref" && grouped(x) !== g) : (drag?.kind === "part" && (comp.parts ?? []).find((q) => q.id === drag.id)?.group !== g) || (drag?.kind === "model" && (comp.models ?? []).find((q) => q.id === drag.id)?.group !== g))
+    const grouped = (x: MultiItem) => (x.kind === "part" ? parts.find((q) => q.id === x.id)?.group : x.kind === "model" ? models.find((q) => q.id === x.id)?.group : x.kind === "module" ? comp.modules.find((q) => q.id === x.id)?.group : g)
+    const ok = () => (drag?.multi ? drag.multi.some((x) => x.kind !== "ref" && grouped(x) !== g) : (drag?.kind === "part" && (comp.parts ?? []).find((q) => q.id === drag.id)?.group !== g) || (drag?.kind === "model" && (comp.models ?? []).find((q) => q.id === drag.id)?.group !== g) || (drag?.kind === "module" && comp.modules.find((q) => q.id === drag.id)?.group !== g))
     return {
       noDrag: true,
       dragging: false,
@@ -176,7 +176,7 @@ export function StructureTree({
       },
       onDrop: () => {
         if (drag && ok()) {
-          onChange(drag.multi ? groupMulti(comp, drag.multi, g) : drag.kind === "model" ? setModelGroup(comp, drag.id, g) : movePartToGroup(comp, drag.id, g))
+          onChange(drag.multi ? groupMulti(comp, drag.multi, g) : drag.kind === "model" ? setModelGroup(comp, drag.id, g) : drag.kind === "module" ? groupMulti(comp, [{ kind: "module", id: drag.id }], g) : movePartToGroup(comp, drag.id, g))
           setOpenGroups((o) => new Set([...o, g]))
         }
         setDrag(null)
@@ -255,13 +255,13 @@ export function StructureTree({
     onLock: () => flip(list, (y) => y.id === x.id, "locked", !x.locked),
   })
   const groupFlags = (g: string): TreeRowFlags => {
-    const members = [...parts, ...models].filter((q) => q.group === g)
+    const members = [...comp.modules, ...parts, ...models].filter((q) => q.group === g)
     const hidden = members.every((q) => q.hidden)
     const locked = members.every((q) => q.locked)
     // Peces i models del grup alhora.
     const both = (flag: keyof ViewFlags, on: boolean) => {
       const set = <T extends { group?: string } & ViewFlags>(x: T): T => (x.group === g ? withFlag(x, flag, on) : x)
-      onChange({ ...comp, parts: parts.map(set), ...(comp.models ? { models: comp.models.map(set) } : {}) })
+      onChange({ ...comp, modules: comp.modules.map(set), parts: parts.map(set), ...(comp.models ? { models: comp.models.map(set) } : {}) })
     }
     return { hidden, locked, onHide: () => both("hidden", !hidden), onLock: () => both("locked", !locked) }
   }
@@ -350,18 +350,22 @@ export function StructureTree({
               {label}
             </Text>
           )}
-      {comp.modules.map((m, i) => ({ m, i })).filter(({ m }) => rowOf(m) === row).map(({ m, i }, k) => {
+      {(() => {
+        // Els mòduls de la fila; els d'un grup, plegables on surt el primer (com les peces lliures).
+        const inRow = comp.modules.map((m, i) => ({ m, i })).filter(({ m }) => rowOf(m) === row)
+        const moduleRow = ({ m, i }: { m: Module; i: number }, k: number, depth: number) => {
         const open = openId === m.id
         return (
           <Box key={m.id}>
             <TreeRow
-              depth={1}
+              depth={depth}
               icon={open ? <LuChevronDown /> : <LuChevronRight />}
               onToggle={() => toggle(m.id)}
               toggleLabel={open ? `Plegar «${m.name}»` : `Desplegar «${m.name}»`}
               label={`${k + 1}. ${m.name}`}
               hint={`${Math.round(m.carcass.width)} × ${Math.round(m.carcass.height)}`}
               selected={(selection.kind === "module" && selection.id === m.id) || inMultiSel("module", m.id)}
+              highlighted={selection.kind === "group" && selection.id === m.group}
               onClick={() => onSelect({ kind: "module", id: m.id })}
               dnd={dnd("module", m.id)}
               flags={flagsOf("modules", m)}
@@ -377,16 +381,50 @@ export function StructureTree({
                     <LuCopy /> Duplicar
                   </Menu.Item>
                   <Menu.Separator />
+                  <Menu.Item value="group-new" onClick={() => {
+                    const g = newGroupName(comp)
+                    onChange(groupMulti(comp, [{ kind: "module", id: m.id }], g))
+                    setOpenGroups((o) => new Set([...o, g]))
+                  }}>
+                    <LuGroup /> Agrupar en un grup nou
+                  </Menu.Item>
+                  {groupNames(comp).filter((g) => g !== m.group).map((g) => (
+                    <Menu.Item key={g} value={`group-${g}`} onClick={() => onChange(groupMulti(comp, [{ kind: "module", id: m.id }], g))}>
+                      <LuGroup /> Posar a «{g}»
+                    </Menu.Item>
+                  ))}
+                  {m.group && (
+                    <Menu.Item value="ungroup" onClick={() => onChange(ungroupMulti(comp, [{ kind: "module", id: m.id }]))}>
+                      <LuUngroup /> Treure del grup
+                    </Menu.Item>
+                  )}
+                  <Menu.Separator />
                   <Menu.Item value="del" color="fg.error" onClick={() => remove(i)}>
                     <LuTrash2 /> Eliminar
                   </Menu.Item>
                 </TreeRowMenu>
               }
             />
-            {open && <ZoneRows zone={m.root} depth={2} moduleId={m.id} selection={selection} onSelect={onSelect} root />}
+            {open && <ZoneRows zone={m.root} depth={depth + 1} moduleId={m.id} selection={selection} onSelect={onSelect} root />}
           </Box>
         )
-      })}
+        }
+        const seen = new Set<string>()
+        return inRow.map((x, k) => {
+          if (!x.m.group) return moduleRow(x, k, 1)
+          if (seen.has(x.m.group)) return null
+          const g = x.m.group
+          seen.add(g)
+          const members = inRow.filter((y) => y.m.group === g)
+          const open = openGroups.has(g)
+          return (
+            <Box key={`mg:${row}:${g}`}>
+              {groupRow(g, open, `${members.length} ${members.length === 1 ? "mòdul" : "mòduls"}`)}
+              {open && members.map((y) => moduleRow(y, inRow.indexOf(y), 2))}
+            </Box>
+          )
+        })
+      })()}
         </Box>
       ))}
 

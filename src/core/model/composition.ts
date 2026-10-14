@@ -318,6 +318,8 @@ export const ModuleSchema = z.object({
   id: z.string(),
   name: z.string(),
   ...VIEW_FLAGS,
+  /** Grup (nom), el mateix espai de noms que el de les peces lliures i els models: es mouen, s'amaguen i es bloquegen junts. */
+  group: z.string().optional(),
   /** Separació respecte al mòdul anterior de la seva fila (o a l'origen si és el primer). */
   gapBefore: mm.min(0),
   /**

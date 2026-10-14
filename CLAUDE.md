@@ -365,7 +365,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     pestanyes + mortalles (passants o ranures cegues `tag: "mortise"`); s'encreuen → mitja fusta; totes dues hi acaben →
     dits; cantell contra cara → espigues. `Composition.joinery` (`DEFAULT_JOINERY`): joc, Ø de fresa dels **dogbones**,
     ample de pestanya. Contorn amb `polygon-clipping`; `build.joints` els llista.
-  - **Grups** (`FreePart.group`, `moveGroupBy`, `duplicateGroup`, `movePartToGroup`, `reorderPart`, `removePartFromGroup`).
+  - **Grups** (`FreePart.group`, `moveGroupBy`, `duplicateGroup`, `movePartToGroup`, `reorderPart`, `removePartFromGroup`). **Els mòduls també en fan** (`Module.group`, per decisió de l'usuari, 2026-10-14; el mateix espai de noms: `groupItems` dona mòduls, peces i models d'un grup): a l'arbre, plegables dins de la seva fila, menú ⋯ «Agrupar en un grup nou» · «Posar a» · «Treure del grup», arrossegar un mòdul sobre un grup, ⌘G; el grup es mou (els mòduls, per la seva fila), s'amaga, es bloqueja i s'esborra sencer; al 3D el primer clic tria el grup.
   - **Enganxada a un mòdul** (`FreePart.module`, `resolveParts`, `partOffset`): x/y/z relatives al mòdul (el taulell de
     pedra de l'illa). Tot el que dibuixa o construeix fa servir `resolveParts`.
   - **Peça que talla** (`FreePart.effect = "cut"`): no és una peça; `partCutters` la converteix en objecte que talla (perfil

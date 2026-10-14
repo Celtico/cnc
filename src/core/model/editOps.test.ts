@@ -306,3 +306,17 @@ describe("mòduls a la selecció múltiple", async () => {
     expect(removeMulti(comp, items).modules).toHaveLength(0)
   })
 })
+
+describe("grups de mòduls", async () => {
+  const { groupMulti, groupItems, moveGroupBy, removeGroup, groupNames } = await import("./editOps")
+  const { defaultModule } = await import("./composition")
+  const a = { ...defaultModule("a", "A", { width: 600, height: 700, depth: 500 }), gapBefore: 0 }
+  const b = { ...defaultModule("b", "B", { width: 400, height: 700, depth: 500 }), gapBefore: 0 }
+  const comp = groupMulti({ modules: [a, b], references: [] }, [{ kind: "module", id: "a" }, { kind: "module", id: "b" }], "G")
+  it("un grup de mòduls es mou i s'esborra sencer", () => {
+    expect(groupNames(comp)).toEqual(["G"])
+    expect(groupItems(comp, "G")).toHaveLength(2)
+    expect(moveGroupBy(comp, "G", 50, 0, 0).modules[0]!.gapBefore).toBe(50)
+    expect(removeGroup(comp, "G").modules).toHaveLength(0)
+  })
+})

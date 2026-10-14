@@ -236,47 +236,28 @@ export function movePartToGroup(comp: Composition, id: string, group: string): C
  * 2026-10-14), en coordenades de la composició. Sense res, `null`.
  */
 export function groupBox(comp: Composition, group: string): { min: [number, number, number]; max: [number, number, number] } | null {
-  const ps = resolveParts(comp).filter((p) => p.group === group)
-  const ms = (comp.models ?? []).filter((m) => m.group === group)
-  if (!ps.length && !ms.length) return null
-  const min: [number, number, number] = [Infinity, Infinity, Infinity]
-  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
-  if (ps.length) {
-    const b = partsBox(ps)
-    for (let k = 0; k < 3; k++) {
-      min[k] = Math.min(min[k]!, b.min[k]!)
-      max[k] = Math.max(max[k]!, b.max[k]!)
-    }
-  }
-  for (const m of ms) {
-    const f = modelFootprint(m)
-    const lo: [number, number, number] = [f.x, m.y, f.z]
-    const hi: [number, number, number] = [f.x + f.w, m.y + m.h, f.z + f.d]
-    for (let k = 0; k < 3; k++) {
-      min[k] = Math.min(min[k]!, lo[k]!)
-      max[k] = Math.max(max[k]!, hi[k]!)
-    }
-  }
-  return { min, max }
+  return multiBox(comp, groupItems(comp, group))
+}
+
+/** Els elements d'un grup: peces lliures, models 3D i mòduls amb aquell nom de grup. */
+export function groupItems(comp: Composition, group: string): MultiItem[] {
+  return [
+    ...comp.modules.filter((m) => m.group === group).map((m) => ({ kind: "module" as const, id: m.id })),
+    ...(comp.parts ?? []).filter((p) => p.group === group).map((p) => ({ kind: "part" as const, id: p.id })),
+    ...(comp.models ?? []).filter((m) => m.group === group).map((m) => ({ kind: "model" as const, id: m.id })),
+  ]
 }
 
 /** Els grups del document (peces lliures i models 3D), en l'ordre en què surten. */
 export function groupNames(comp: Composition): string[] {
   const out: string[] = []
-  for (const x of [...(comp.parts ?? []), ...(comp.models ?? [])]) if (x.group && !out.includes(x.group)) out.push(x.group)
+  for (const x of [...comp.modules, ...(comp.parts ?? []), ...(comp.models ?? [])]) if (x.group && !out.includes(x.group)) out.push(x.group)
   return out
 }
 
 /** Mou tot un grup (peces i models, mm). No deixa que res quedi sota terra. */
 export function moveGroupBy(comp: Composition, group: string, dx: number, dy: number, dz: number): Composition {
-  const b = groupBox(comp, group)
-  if (!b) return comp
-  const ddy = Math.max(dy, -b.min[1])
-  return {
-    ...comp,
-    parts: (comp.parts ?? []).map((p) => (p.group === group ? { ...p, x: p.x + dx, y: p.y + ddy, z: p.z + dz } : p)),
-    ...(comp.models ? { models: comp.models.map((m) => (m.group === group ? { ...m, x: m.x + dx, y: m.y + ddy, z: m.z + dz } : m)) } : {}),
-  }
+  return moveMultiBy(comp, groupItems(comp, group), dx, dy, dz)
 }
 
 /** Duplica un grup sencer al costat (nom nou), amb les seves peces i els seus models. */
@@ -307,12 +288,12 @@ export function renameGroup(comp: Composition, group: string, next: string | und
     void _g
     return (next ? { ...rest, group: next } : rest) as T
   }
-  return { ...comp, parts: (comp.parts ?? []).map(re), ...(comp.models ? { models: comp.models.map(re) } : {}) }
+  return { ...comp, modules: comp.modules.map(re), parts: (comp.parts ?? []).map(re), ...(comp.models ? { models: comp.models.map(re) } : {}) }
 }
 
 /** Treu tot un grup (peces i models). */
 export function removeGroup(comp: Composition, group: string): Composition {
-  return { ...comp, parts: (comp.parts ?? []).filter((p) => p.group !== group), ...(comp.models ? { models: comp.models.filter((m) => m.group !== group) } : {}) }
+  return removeMulti(comp, groupItems(comp, group))
 }
 
 /** Arrossegar un model 3D a l'arbre: va abans o després d'un altre model i n'agafa el grup (com `reorderPart`). */
@@ -468,6 +449,7 @@ export function removeMulti(comp: Composition, items: readonly MultiItem[]): Com
 export function groupMulti(comp: Composition, items: readonly MultiItem[], group: string): Composition {
   return {
     ...comp,
+    modules: comp.modules.map((m) => (inMulti(items, "module", m.id) ? { ...m, group } : m)),
     parts: (comp.parts ?? []).map((p) => (inMulti(items, "part", p.id) ? { ...p, group } : p)),
     ...(comp.models ? { models: comp.models.map((m) => (inMulti(items, "model", m.id) ? { ...m, group } : m)) } : {}),
   }
@@ -574,7 +556,7 @@ export function ungroupMulti(comp: Composition, items: readonly MultiItem[]): Co
     void _g
     return rest as T
   }
-  return { ...comp, parts: (comp.parts ?? []).map(out("part")), ...(comp.models ? { models: comp.models.map(out("model")) } : {}) }
+  return { ...comp, modules: comp.modules.map(out("module")), parts: (comp.parts ?? []).map(out("part")), ...(comp.models ? { models: comp.models.map(out("model")) } : {}) }
 }
 
 /**
