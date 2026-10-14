@@ -164,7 +164,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     sota de la base a cada pota (`buildLegs`; una d'importada, només confirmada). Del catàleg: **Häfele AXILO 78 amb la
     placa rectangular per cargolar** (`core/model/hafele/hafeleLegs.ts`, 637.76.333, p. FF 11.79; preferències v34, i v37
     com la munta el taller al TopSolid del germà): el costat llarg al llarg de l'amplada i el clip cap al lateral, l'eix a 50
-    dels cantells (mesurat al model del taller: la placa separada de les vores); 4 prebroques Ø3 × 10 (hipòtesi) a u = −19 / +45, v = ±32 de l'eix; les potes de la dreta en mirall
+    dels laterals i del darrere i a 85 del davant, on va el sòcol (`insetFront`, `legSpec().insetFront`; mesurat al model del taller); 4 prebroques Ø3 × 10 (hipòtesi) a u = −19 / +45, v = ±32 de l'eix; les potes de la dreta en mirall
     (`params.mirror` = 1, `legSpec().mirror`, `buildLegs`). El tub per l'alçada, a les notes de l'item. **Al 3D** (v38):
     sense model importat, `buildLegs` posa a la base un `Panel.fittings` `kind: "leg"` amb `leg` (la placa de l'item,
     `plateU0`/`plateU1`/`plateV`/`plateH`, en mirall a la dreta; l'alçada de la base «Potes»; el peu) i `legSolids`

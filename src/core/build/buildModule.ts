@@ -2217,11 +2217,13 @@ class Builder {
       return
     }
     const inset = spec.inset
+    // Les del davant, a `insetFront` del cantell de davant (si no en té, `inset`).
+    const front = spec.insetFront
     const legs: [number, number][] = [
       [inset, inset],
       [d.W - inset, inset],
-      [inset, d.D - inset],
-      [d.W - inset, d.D - inset],
+      [inset, d.D - front],
+      [d.W - inset, d.D - front],
     ]
     const T = bottom.thickness
     const margin = 3

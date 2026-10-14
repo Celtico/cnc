@@ -288,7 +288,7 @@ Base «Potes» › «Pota» i `buildLegs` en fa els forats a la cara de sota de 
 
 **Com la munta el taller** (el model de TopSolid del germà, 2026-10-14): el costat llarg (92) al llarg de l'amplada del
 moble i el **clip cap al lateral**, una a cada cantonada amb la placa gairebé enrasada amb la vora; les de la dreta, en
-mirall (`params.mirror` = 1). A l'app: l'eix del tub a **50** de cada cantell (`inset`, mesurat al model del taller amb la placa de 92 com a escala; la placa no toca les vores de la fusta: el clip queda a ~5 del cantell del lateral) i, al marc de la pota (u = X cap a
+mirall (`params.mirror` = 1). A l'app: l'eix del tub a **50** dels laterals i del darrere (`inset`) i a **85** del davant, on va el sòcol (`insetFront`); mesurat al model del taller (vist de davant, el fons al darrere) amb la placa de 92 com a escala. El clip queda a ~5 del cantell del lateral i la placa a ~45 del davant i, al marc de la pota (u = X cap a
 dins a l'esquerra, v = cap al davant), els cargols a **u = −19 / +45, v = ±32**. Preferències v37 (la de la v34, amb el clip
 cap al davant i a 60, es refà).
 
@@ -298,7 +298,7 @@ El **tub amb el peu regulable** (Ø78, 150 kg per pota) es demana a part per l'a
 
 **Hipòtesis pendents del taller**: la prebroca dels cargols, **Ø3 × 10** (el catàleg no dona ni el cargol ni la
 prebroca; els cargols del darrere cauen sota la ranura del fons de la base: 10 + 8 de la ranura deixen 1 mm en un tauler de
-19) i l'eix a 50 dels cantells (mesurat a la imatge del taller, sense cotes).
+19) i l'eix a 50 / 85 del davant (mesurat a la imatge del taller, sense cotes).
 
 ## Catàleg general Häfele (v35)
 

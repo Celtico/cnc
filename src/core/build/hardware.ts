@@ -224,7 +224,10 @@ export function legSpec(item: HardwareItem) {
   const holes = resolveOps(item, "base").flatMap((o) => (o.kind === "drill" ? [{ u: o.u, v: o.v, d: o.d, depth: o.depth, tag: o.tag ?? "leg" }] : []))
   if (!holes.length) throw new HardwareError(`«${item.name}»: no té cap forat`)
   // `mirror` 1: les potes de la dreta, amb la placa en mirall (u cap a dins): una placa que no és simètrica (el clip cap al lateral).
-  return { pending: isPendingImport(item), inset: param(item, "inset"), mirror: item.params.mirror === 1, holes }
+  // `insetFront`: les del davant a una altra distància del cantell (la AXILO 78: més enrere, deixa lloc al sòcol).
+  const inset = param(item, "inset")
+  const front = item.params.insetFront
+  return { pending: isPendingImport(item), inset, insetFront: Number.isFinite(front) && front! > 0 ? front! : inset, mirror: item.params.mirror === 1, holes }
 }
 
 /** Placa de muntatge importada (no té lloc: la frontissa que s'hi aparella en copia els forats). */
