@@ -148,6 +148,8 @@ function itemTags(item: HardwareItem): string[] {
   for (const t of item.targets) for (const op of t.ops) if (op.tag) tags.add(op.tag)
   if (item.engine === "cup" && item.targets.some((t) => t.key === "side")) tags.add("plate")
   if (item.engine === "plate") tags.add("plate")
+  // Un joc de llum: també el recorregut del cable (el forat per dins del tauler, els passants), com al moble.
+  if (item.light) for (const t of ["cable-run", "cable-mains"]) tags.add(t)
   return [...tags]
 }
 
@@ -215,7 +217,7 @@ function recipe(item: HardwareItem): Recipe | null {
       return { size: { width: 600, height: 1000, depth: 500 }, rail: true, keep: (p) => p.role === "side" || p.role === "top", extras: (p) => p.id.startsWith("rail-") }
     case "ledProfile":
       // Prestatge amb la llum a sota: lateral esquerre, tapa, prestatge i els perfils.
-      return { size: { width: 600, height: 600, depth: 350 }, shelves: { n: 1, adjustable: false }, led: true, keep: (p) => isLeftSide(p) || p.role === "shelf" || p.role === "top", extras: (p) => p.id.startsWith("led-") || p.id.startsWith("light-") }
+      return { size: { width: 600, height: 600, depth: 350 }, shelves: { n: 1, adjustable: false }, led: true, keep: (p) => isLeftSide(p) || p.role === "shelf" || p.role === "top", extras: (p) => p.id.startsWith("led-") || p.id.startsWith("light-") || p.id.startsWith("wiring-") }
     case "glassFrame":
       // Porta de vidre: el lateral esquerre i el marc amb el vidre.
       return { size: small, front: { kind: "door", mode: "single", hinge: "left", glass: true }, keep: isLeftSide, extras: (p) => /-(left|right|top|bottom|glass)$/.test(p.id) }
@@ -283,7 +285,8 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
   }
   let build: ReturnType<typeof buildModule>
   try {
-    build = buildModule(module, { wiring: false })
+    // Amb el recorregut dels cables (un joc de llum es veu com al moble: el cable per dins del tauler, no cap amunt).
+    build = buildModule(module)
   } catch (err) {
     return { ...empty, error: err instanceof HardwareError ? err.message : String(err) }
   }
@@ -328,7 +331,8 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
       const at = toWorld(p, e.at)
       if (at[0] > rc.size.width / 2 + 0.5) continue
       // Una pota es mira de davant: la del davant (el forat més endavant), no la del darrere (la càmera quedaria dins la base).
-      const score = item.engine === "cup" || item.engine === "plate" ? (h.tag === "hinge" ? at[1] : Infinity) : item.engine === "leg" ? -at[2] : Math.abs(at[1] - rc.size.height / 2) + (p.role === "side" ? 0 : 0.1)
+      // Un joc de llum es mira per la làmpada (no pel forat del cable).
+      const score = (item.light && h.tag !== "light" ? 1e6 : 0) + (item.engine === "cup" || item.engine === "plate" ? (h.tag === "hinge" ? at[1] : Infinity) : item.engine === "leg" ? -at[2] : Math.abs(at[1] - rc.size.height / 2) + (p.role === "side" ? 0 : 0.1))
       if (score < best) {
         best = score
         // Un tirador es mira des de fora del front (on va el tirador), no des de la cara A; una pota, de davant i just

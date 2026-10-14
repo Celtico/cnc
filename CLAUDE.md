@@ -1847,7 +1847,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   jocs, importats de mostra i, amb `HETTICH_DIR` / `BLUM_DIR`, els de debò. Els GLB es llegeixen **fora de la memòria compartida de models**
   (`readHardwareModel`: n'hi pot haver centenars i cadascun serveix un sol cop) i s'alliberen sencers (`disposeTree`) en
   acabar; el renderitzador s'allibera com sempre (`releaseThumbRenderer` → `releaseModelGpu`). Si canvia com es fan, s'apuja
-  `HARDWARE_THUMB_VERSION` (ara 8: ferratges de sèrie en 3D, fusta translúcida, sense les espigues de la caixa fora del muntatge de l’espiga i les potes mirades des de la del davant). Un **«només 3D»** s'enquadra a la seva caixa
+  `HARDWARE_THUMB_VERSION` (ara 9: el recorregut del cable dels llums; abans 8: ferratges de sèrie en 3D, fusta translúcida, sense les espigues de la caixa fora del muntatge de l’espiga i les potes mirades des de la del davant). Un **«només 3D»** s'enquadra a la seva caixa
   (`modelCamera`, a `mountCamera(m, aspect)`, la mateixa al 3D de l'editor i a la miniatura): la càmera més a prop que la
   veu sencera i, si és llarg i prim (perfil de porta corredissa de 1560 × 12,5 × 6,5), mirat al llarg des d'un extrem perquè
   se'n vegi la secció (abans sortia una ratlla). **Al 3D, cap cota** (per decisió de l'usuari: «a les vistes posar les mides
