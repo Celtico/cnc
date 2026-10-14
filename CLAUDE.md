@@ -1106,7 +1106,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`WIRE_OPACITY`, la `veil`), el perfil fosc i els forats sempre a la vista (`PanelMesh wire`); el gizmo i la selecció
   funcionen igual. Una vista no es desa com a càmera. «Enquadrar» torna al 3/4 en perspectiva i només surt marcat amb el
   3/4. Sense cotes (són a l'Alçat).
-- **Càmera**: s'enquadra en obrir, triar una vista, redimensionar o amb «Enquadrar» (`LuVideo`); editar no la mou. El botó
+- **Càmera**: s'enquadra en obrir, triar una vista o amb «Enquadrar» (`LuVideo`); editar no la mou, i **redimensionar el
+  visor tampoc** (amagar o mostrar les Propietats o l'Estructura; per decisió de l'usuari, 2026-10-14; `CameraRig`: només
+  els primers 1,5 s després de muntar-se, `SETTLE_MS`, mentre la disposició es col·loca). El botó
   surt **marcat** mentre la càmera és a l'enquadrament (`onFramedChange`). **Es recorda per moble** (`Composition.camera`,
   `CameraPose` a `core/model/camera.ts`: posició, punt mirat i fov; una de no vàlida es descarta): 1 s després d'orbitar,
   d'«Enquadrar» o de triar una vista es desa amb `saveProjectCamera`, **sense tocar `updatedAt` ni `edited`**; és **un pas

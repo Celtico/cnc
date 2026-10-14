@@ -62,7 +62,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
     const x = toMaestroNestXcs(panels, nest(panels, plan.options), machine, { project: name, kits: build?.hardwareKits, lights: build?.lightKits, fittings: build?.fittingOrders })
     // `sheetList`: els programes amb el seu text (el mateix que va al zip) per a la Vista CAM.
     return { ...x, sheets: x.sheets.length, sheetList: x.sheets, rows: x.panels, spacingTool: plan.tool }
-  }, [machine, panels, project?.name, project?.nesting, build?.hardwareKits, build?.lightKits])
+  }, [machine, panels, project?.name, project?.nesting, build?.hardwareKits, build?.lightKits, build?.fittingOrders])
   // Materials que no lliguen amb Preferències: al taller sortirien amb un nom o un gruix que no hi ha.
   const matIssues = useMemo(() => (comp && build ? materialIssues(build, comp, settings.materials) : []), [comp, build, settings.materials])
   // Els avisos del STEP demanen fer tot el fitxer (~0,25 s en una cuina gran): es calculen quan el navegador és lliure,

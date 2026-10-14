@@ -660,6 +660,9 @@ const VIEW_DIR: Record<ViewName, [number, number, number]> = {
  * des del 3/4 («Enquadrar») o del costat de la vista triada (`viewDir`), amb transició suau. Editar el moble (mides,
  * mòduls, objectes) no la mou: es queda on l'has deixat.
  */
+/** Temps després de muntar el visor en què un canvi de mida encara torna a enquadrar (la disposició s'hi col·loca). */
+const SETTLE_MS = 1500
+
 function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCameraChange, cameraGoto }: { size: CabinetViewerProps["size"]; viewDir: ViewName | null; fitKey: number; onFramedChange?: (framed: boolean) => void; initialCamera?: CameraPose; onCameraChange?: (camera: CameraPose) => void; cameraGoto?: { pose: CameraPose; n: number } | null }) {
   const controls = useRef<OrbitControlsImpl>(null)
   const { camera, size: viewport, invalidate } = useThree()
@@ -673,6 +676,7 @@ function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCam
   const lastPos = useRef<Vector3 | null>(null)
   // Enquadrat = la càmera és on l'ha deixat l'últim enquadrament i el moble té la mateixa mida.
   const fittedSize = useRef("")
+  const mountedAt = useRef(performance.now())
   // Càmera desada que s'ha restaurat (fins que s'enquadri o es triï una vista) i els disparadors ja vistos
   // (vista | fitKey): un de nou és de l'usuari; els altres reenquadraments són de redimensionar el visor.
   const restored = useRef<CameraPose | null>(null)
@@ -723,8 +727,13 @@ function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCam
 
   // Vista ortogràfica: la càmera al costat triat, a una distància fixa, i el zoom que hi fa cabre el moble (amplada i
   // alçada vistes d'aquell costat). Sense animació ni desar-la (és una vista, no una càmera).
+  const orthoSeen = useRef("")
   useEffect(() => {
     if (!viewDir || !("isOrthographicCamera" in camera)) return
+    // Com a la perspectiva: redimensionar no canvia la vista triada (només els primers instants).
+    const key = `${viewDir}|${fitKey}`
+    if (orthoSeen.current === key && performance.now() - mountedAt.current > SETTLE_MS) return
+    orthoSeen.current = key
     const dir = VIEW_DIR[viewDir]
     const len = Math.hypot(dir[0], dir[1], dir[2])
     const D = 20
@@ -747,6 +756,10 @@ function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCam
 
   useEffect(() => {
     if (viewDir && "isOrthographicCamera" in camera) return
+    // Amagar o mostrar els panells (o girar el mòbil) redimensiona el visor: la càmera es queda on és (per decisió de
+    // l'usuari, 2026-10-14: «quan amago o mostro les propietats em canvia la vista»). Només els primers instants després
+    // de muntar-se (la disposició encara es col·loca) i un «Enquadrar» o una vista nous hi tornen a enquadrar.
+    if (fitTriggered.current.has(`${viewDir ?? "fit"}|${fitKey}`) && performance.now() - mountedAt.current > SETTLE_MS) return
     const radius = 0.5 * Math.sqrt(w * w + h * h + d * d)
     const dir = viewDir ? VIEW_DIR[viewDir] : FIT_DIR
     const len = Math.hypot(dir[0], dir[1], dir[2])
