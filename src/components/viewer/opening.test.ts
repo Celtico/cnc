@@ -74,3 +74,12 @@ describe("vitrines", () => {
     expect(gf[0]!.panelIds.some((id) => id.includes("strut"))).toBe(false)
   })
 })
+
+describe("portes sense cassoletes", () => {
+  it("una porta sense cassoletes (frontissa que no hi cap) també s'obre, pel costat del nom", () => {
+    const door = { id: "m:door-2-right", name: "porta d", label: "Porta dreta", role: "door", length: 700, width: 300, thickness: 19, material: "x", grain: "y", edges: { top: false, right: false, bottom: false, left: false }, holes: [], grooves: [], placement: { origin: [300, 0, 400], xAxis: [0, 1, 0], yAxis: [1, 0, 0], zAxis: [0, 0, -1], explodeDir: [0, 0, 1] } } as never
+    const g = movingGroups([door])
+    expect(g).toHaveLength(1)
+    expect(g[0]!.motion).toMatchObject({ kind: "hinge", sign: 1 })
+  })
+})

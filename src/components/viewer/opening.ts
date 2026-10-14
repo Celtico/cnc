@@ -57,12 +57,14 @@ export function movingGroups(panels: Panel[]): MovingGroup[] {
     }
     if (p.role === "door" || (p.role === "grille" && p.holes.some((h) => h.tag === "hinge"))) {
       const cups = p.holes.filter((h) => h.tag === "hinge")
-      if (!cups.length) continue
+      // Una reixeta sense cassoletes és desmuntable (no s'obre); una porta sí, encara que no en tingui (una frontissa
+      // que no hi cap o sense confirmar): el costat, el del nom de la porta («door-right» a la dreta).
+      if (!cups.length && p.role !== "door") continue
       const b = box(p)
       // Cassoletes a y local petita → frontissa al costat de y = 0 (esquerra en X del mòdul). Un mòdul girat 180°
       // (`explodeDir` cap enrere) obre cap a −Z: la frontissa queda a l'altre costat en X i el pivot, al darrere.
       const out = outSign(p)
-      const left = cups.every((h) => h.y < p.width / 2)
+      const left = cups.length ? cups.every((h) => h.y < p.width / 2) : !/door(-\d+)?-right$/.test(p.id)
       const pivot: Vec3 = [left === out > 0 ? b.min[0] : b.max[0], b.min[1], out > 0 ? b.min[2] : b.max[2]]
       groups.push({ id: p.id, label: p.label, panelIds: [p.id], motion: { kind: "hinge", pivot, axis: "y", sign: left ? -1 : 1, maxAngle: MAX_DOOR_ANGLE } })
       continue
