@@ -4,10 +4,11 @@ import { buildScene } from "../../components/viewer/exportGlb"
 import { surfaceMaterial } from "../../components/viewer/surfaceMaterial"
 import { aimSaved, snapshot, THUMB_ASPECT, thumbLights } from "../../components/viewer/thumbRenderer"
 import { preloadModels } from "../../components/viewer/models3d"
-import { blockComposition, expandWalls, layoutTemplate, parseAmbient, parseCameraPose, rad, resolveTemplateRef, templateWalls, wallLength, wallSegments, type Ambient, type AmbientTemplate, type Composition, type MaterialPref } from "../../core/model"
+import { blockComposition, layoutTemplate, parseAmbient, parseCameraPose, rad, resolveTemplateRef, templateWalls, wallLength, wallSegments, type Ambient, type AmbientTemplate, type Composition, type MaterialPref } from "../../core/model"
 import { compositionOf } from "../../db/compositionStore"
 import { db, type AmbientRow } from "../../db/db"
 import { drawWhenReady } from "../projects/thumbJobs"
+import { curvedWallPieces } from "./curvedWall"
 import { itemGeometry, type ItemGeometry } from "./ambientData"
 
 /** El dibuix de les miniatures dels ambients (three.js): `ambientThumbs` el carrega amb `import()`. */
@@ -38,8 +39,16 @@ function renderAmbient(a: Ambient, geoOf: (i: number) => ItemGeometry | null, ma
   const saved = parseCameraPose(pose)
   const camPos = saved ? new Vector3(...saved.position) : new Vector3(cx, 0.9, cz).addScaledVector(dir, span * 1.55 + 1)
 
-  // Les corbes, en trams rectes (`expandWalls`).
-  for (const w of expandWalls(a.walls)) {
+  for (const w of a.walls) {
+    // Corba: la làmina llisa (`curvedWallPieces`), sense els trossos que tapen la càmera.
+    if (w.curve) {
+      for (const piece of curvedWallPieces(w, w.material ?? a.wallMaterial ?? "Pintura blanca", materials, [cx * 1000, cz * 1000])) {
+        const n = piece.userData.normal as Vector3, c = piece.userData.center as Vector3
+        if (a.walls.length >= 3 && (camPos.x - c.x) * n.x + (camPos.z - c.z) * n.z > 0) continue
+        scene.add(piece)
+      }
+      continue
+    }
     const L = wallLength(w)
     if (L < 1) continue
     // Les parets entre la càmera i l'habitació no es posen (com la casa de nines del visor).

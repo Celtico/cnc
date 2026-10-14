@@ -16,6 +16,7 @@ import { disposeTree } from "../../components/viewer/textures"
 import { expandWalls, footprintBox, rad, sameCameraPose, snapToWalls, wallLength, wallOpenings, wallSegments, type Ambient, type CameraPose, type MaterialPref, type Opening } from "../../core/model"
 import type { ItemGeometry } from "./ambientData"
 import { ambientBox, eyePose, snapGrid } from "./planGeom"
+import { curvedWallPieces } from "./curvedWall"
 
 /**
  * Vista 3D de l'ambient (m): terra i parets amb els materials de simulació i cada moble o bloc
@@ -386,8 +387,12 @@ function Room({
 
   const walls = useMemo(() => {
     const g = new Group()
-    // Les corbes, en trams rectes (`expandWalls`).
-    for (const w of expandWalls(ambient.walls)) {
+    for (const w of ambient.walls) {
+      // Corba: una làmina llisa que segueix la Bézier (`curvedWallPieces`), en trossos per a la casa de nines.
+      if (w.curve) {
+        for (const piece of curvedWallPieces(w, w.material ?? ambient.wallMaterial ?? "Pintura blanca", materials, [rcx, rcy])) g.add(piece)
+        continue
+      }
       const L = wallLength(w)
       if (L < 1) continue
       const wg = new Group()
