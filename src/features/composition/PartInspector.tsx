@@ -539,7 +539,7 @@ export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGrou
       {/* El grup de tots (com el Grup d'una peça): posar-los en un grup, en un de nou o treure'ls del seu. */}
       {groupable && (
         <FoldItem id="multi-group" title="Grup" icon={LuGroup} badge={group === undefined ? "Diversos" : group || "Sense grup"} badgePalette={group ? "wood" : "gray"}>
-          <FormRow label="Grup" help={`${group === undefined ? "Diversos: el grup que triïs va a tots." : "El grup de tots els triats."}${items.some((x) => x.kind === "ref") ? " Els objectes de referència no fan grups." : ""}`}>
+          <FormRow label="Grup" help={`${group === undefined ? "Diversos: el grup que triïs va a tots." : "El grup de tots els triats."} Drecera: ⌘G (Ctrl+G) en fa un de nou; ⇧⌘G els treu del grup.${items.some((x) => x.kind === "ref") ? " Els objectes de referència no fan grups." : ""}`}>
             <ChoiceChips
               label="Grup"
               options={[{ id: "", label: "Sense grup" }, ...groupNames(comp).map((g) => ({ id: g, label: g })), { id: NEW_GROUP, label: "+ Grup nou" }]}

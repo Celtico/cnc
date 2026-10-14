@@ -53,7 +53,7 @@ import { moduleWorldX, panelBox, type CompositionWarning } from "../../core/buil
 import { activeIslands } from "../../core/build/islands"
 import { materialIssues } from "../../core/build/materialIssues"
 import { splitChildSizes } from "../../core/build/layout"
-import { applySettingsToModule, moduleHasInnerPieces, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, moduleRows, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, setModuleMount, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, insertPartCopy, insertModelCopy, moveGroupBy, removeGroup, renameGroup, moveMultiBy, removeMulti, toggleMulti, groupMulti, newGroupName, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type MultiItem, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
+import { applySettingsToModule, moduleHasInnerPieces, system32RowPlace, moduleSlotItem, hasDrawers, coveringZone, moduleRows, deleteZone, duplicateZone, parseClip, removeModule, type EditClip, findZone, insertModuleCopy, moveAllBy, moveModuleBy, setModuleMount, insertRefCopy, anchorRef, mountOf, compositionKind, partsOnlyKind, partJoinery, tableModule, emptyModule, parentOf, pasteZone, rowOf, walkZones, insertPartCopy, insertModelCopy, moveGroupBy, removeGroup, renameGroup, moveMultiBy, removeMulti, toggleMulti, groupMulti, ungroupMulti, newGroupName, freeX, resolveParts, partOffset, partCutters, CompositionSchema, isEmptyComposition, zoneBounds, carcassBounds, visibleModule, viewerSize, type CameraPose, type MultiItem, type Composition, type HardwareItem, type Module, type Panel } from "../../core/model"
 import { readComposition, saveProjectCamera, updateProjectComposition, type CompositionRead } from "../../db/compositionStore"
 import type { Project } from "../../db/db"
 import { CarcassForm, InnerClearanceRow, JointForm, MaterialsForm } from "../composition/CarcassForm"
@@ -584,6 +584,20 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     if (document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]')) return
     const mod = e.metaKey || e.ctrlKey
     const key = e.key.toLowerCase()
+    // ⌘G / Ctrl+G: els triats en un grup nou; ⇧⌘G: fora del grup (com Figma). Peces lliures i models 3D.
+    if (mod && key === "g" && (selection.kind === "multi" || selection.kind === "part" || selection.kind === "model" || selection.kind === "group")) {
+      e.preventDefault()
+      const items: MultiItem[] = selection.kind === "multi" ? selection.items : selection.kind === "group" ? [...(comp.parts ?? []).filter((p) => p.group === selection.id).map((p) => ({ kind: "part" as const, id: p.id })), ...(comp.models ?? []).filter((m) => m.group === selection.id).map((m) => ({ kind: "model" as const, id: m.id }))] : [{ kind: selection.kind, id: selection.id }]
+      if (e.shiftKey) {
+        setComp(ungroupMulti(comp, items))
+        if (selection.kind === "group") select(items.length > 1 ? { kind: "multi", items } : { kind: "moble" })
+      } else if (selection.kind !== "group") {
+        const g = newGroupName(comp)
+        setComp(groupMulti(comp, items, g))
+        select({ kind: "group", id: g })
+      }
+      return
+    }
     const current = (): Clip | null => {
       if (selection.kind === "module") {
         const m = comp.modules.find((x) => x.id === selection.id)
