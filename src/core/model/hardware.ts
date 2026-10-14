@@ -92,7 +92,7 @@ export const HARDWARE_CATEGORIES = [
   { id: "door-system", label: "Portes corredisses i plegables", hint: "Sistemes de portes corredisses i plegables (només 3D)." },
   { id: "handle", label: "Tiradors", hint: "Forats dels tiradors de portes, calaixos i abatibles." },
   { id: "push", label: "Obertura per pressió i imants", hint: "Imants de les reixetes i trapes, push." },
-  { id: "profile", label: "Perfils i marcs", hint: "Perfils d'alumini i de LED, marcs d'alumini per a portes de vidre (Cadro)." },
+  { id: "profile", label: "Perfils i marcs", hint: "Perfils i marcs d'alumini per a portes de vidre (Cadro). Els perfils de LED són a Llums." },
   { id: "light", label: "Llums", hint: "Làmpades LED de 24 V per encastar al prestatge o a la tapa (forat o rebaix, forat del cable) amb l'alimentador, l'interruptor i els cables per connectar-les a la xarxa." },
   { id: "wall", label: "Penjar", hint: "Penjadors i regletes." },
   { id: "misc", label: "Altres", hint: "Accessoris, electrònica, passacables, ventilació…" },
@@ -309,7 +309,7 @@ export const HARDWARE_SLOTS = [
   { slot: "magnet", engine: "magnet", category: "push", label: "Imant", uses: "reixetes desmuntables i trapes" },
   { slot: "handle", engine: "barHandle", category: "handle", label: "Tirador", uses: "portes, calaixos i abatibles amb tirador" },
   { slot: "rail", engine: "rail", category: "wall", label: "Barra de penjar", uses: "compartiments amb barra de penjar" },
-  { slot: "led", engine: "ledProfile", category: "profile", label: "Tira LED", uses: "compartiments amb llum" },
+  { slot: "led", engine: "ledProfile", category: "light", label: "Tira LED", uses: "compartiments amb llum" },
   { slot: "glassFrame", engine: "glassFrame", category: "profile", label: "Marc de vitrina", uses: "portes de vidre" },
 ] as const
 export type HardwareSlot = (typeof HARDWARE_SLOTS)[number]["slot"]
@@ -692,7 +692,7 @@ export const ACCESSORY_ITEMS: HardwareItem[] = [
   {
     id: "led-profile-16x8",
     name: "Perfil LED 16 × 8",
-    category: "profile",
+    category: "light",
     engine: "ledProfile",
     params: { width: 16, height: 8, setback: 20 },
     targets: [{ key: "shelf", label: "Prestatge (ranura del perfil: pendent del taller)", ops: [] }],

@@ -55,7 +55,7 @@ describe("barra i LED com a ferratges", () => {
     expect(counts.find((c) => c.id === "led")!.detail).toMatch(/m de perfil/)
   })
   it("la biblioteca inicial porta els accessoris i unes preferències d'abans els reben (per defecte de cada lloc)", () => {
-    expect(ACCESSORY_ITEMS.map((x) => x.category)).toEqual(["wall", "profile", "profile"])
+    expect(ACCESSORY_ITEMS.map((x) => x.category)).toEqual(["wall", "light", "profile"])
     const fixed = fixHardwareDefaults(libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), {})
     expect(fixed.changed).toBe(true)
     expect(fixed.defaults.rail).toBe("rail-inox-25")

@@ -60,8 +60,9 @@ const mm = z.number().finite()
  * la de la biblioteca es refà si encara és la de la v34 (`version` 1).
  * v38: la mateixa pota amb la placa per dibuixar-la al 3D (`plateU0`…): es refà si és d'una versió anterior de l'item.
  * v39: la pota AXILO 78 per cargolar per a mobles (`V39_ITEMS`; la de la v34 és la de cuina), additiu.
+ * v40: els perfils de LED (motor `ledProfile`) passen de «Perfils i marcs» a «Llums» (per decisió de l'usuari).
  */
-export const SETTINGS_VERSION = 39
+export const SETTINGS_VERSION = 40
 
 /** Joc de l'ample de la ranura del fons per defecte (v33; per decisió de l'usuari, 2026-10-14: «per defecte 0,8»). */
 export const DEFAULT_GROOVE_CLEARANCE = 0.8
@@ -855,7 +856,10 @@ export function parseSettings(raw: unknown): SettingsParse {
     return fresh ? structuredClone(fresh) : x
   })
   if (withV37.some((x, i) => x !== withV39[i])) migrated = true
-  const hardware = fixHardwareDefaults(withV37, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
+  // v40: els perfils de LED (motor `ledProfile`) són a «Llums», no a «Perfils i marcs».
+  const withV40 = version < 40 ? withV37.map((x) => (x.engine === "ledProfile" && x.category === "profile" ? { ...x, category: "light" as const } : x)) : withV37
+  if (withV40.some((x, i) => x !== withV37[i])) migrated = true
+  const hardware = fixHardwareDefaults(withV40, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
   if (hardware.changed) migrated = true
   // Prebroca dels cargols, una sola font: la regla desada o, a les preferències d'abans, la del primer joc de la
   // biblioteca (el que es feia servir); els jocs de la biblioteca en copien els números.
