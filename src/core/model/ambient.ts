@@ -602,7 +602,14 @@ export function resizeComposition(comp: Composition, cur: { w: number; h: number
   })
   const references = comp.references.map((o) => ({ ...o, x: r(o.x * sx), y: r(o.y * sy), z: r(o.z * sz), w: r(o.w * sx), h: r(o.h * sy), d: r(o.d * sz) }))
   // Models 3D (plantes…): com els objectes.
-  const models = comp.models?.map((o) => ({ ...o, x: r(o.x * sx), y: r(o.y * sy), z: r(o.z * sz), w: r(o.w * sx), h: r(o.h * sy), d: r(o.d * sz) }))
+  // Un model girat (gir de prop de 90° o 270°) té l'ample i la fondària creuats respecte del moble: l'Ample del moble li
+  // canvia la fondària (si no, en un objecte de models girats l'Ample no canviava i semblava que no s'aplicava).
+  const models = comp.models?.map((o) => {
+    const th = ((o.rot ?? 0) * Math.PI) / 180
+    const turned = Math.abs(Math.sin(th)) > Math.abs(Math.cos(th))
+    const [kw, kd] = turned ? [sz, sx] : [sx, sz]
+    return { ...o, x: r(o.x * sx), y: r(o.y * sy), z: r(o.z * sz), w: r(o.w * kw), h: r(o.h * sy), d: r(o.d * kd) }
+  })
   const runs = comp.runs?.map((run) => (run.kind === "worktop" ? { ...run, cutouts: run.cutouts.map((c) => ({ ...c, dx: r(c.dx * sx) })) } : run))
   return { ...comp, modules, references, ...(parts ? { parts } : {}), ...(models ? { models } : {}), ...(runs ? { runs } : {}) }
 }

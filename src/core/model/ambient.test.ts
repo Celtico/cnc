@@ -241,3 +241,12 @@ describe("parets corbes", async () => {
     expect(moved.curve!.c2).toEqual([1000, 500])
   })
 })
+
+describe("mides generals d'un objecte amb models girats", async () => {
+  const m = await import("./ambient")
+  it("l'Ample del moble canvia la fondària d'un model girat 90°", () => {
+    const comp = { modules: [], references: [], models: [{ id: "g", name: "g", src: "fern", x: 0, y: 0, z: 0, w: 200, h: 300, d: 100, rot: 90 }] }
+    const next = m.resizeComposition(comp, { w: 100, h: 300, d: 200 }, { w: 200, h: 300, d: 200 })
+    expect([next.models![0]!.w, next.models![0]!.d]).toEqual([200, 200])
+  })
+})

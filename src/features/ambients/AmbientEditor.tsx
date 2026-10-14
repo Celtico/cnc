@@ -1184,6 +1184,13 @@ function MobleDims({ project, geo }: { project: Project; geo: ItemGeometry }) {
     setDraft(cur)
   }
   const dirty = draft.w !== cur.w || draft.h !== cur.h || draft.d !== cur.d
+  // S'aplica sol un moment després d'escriure (com els altres camps de l'app); Retorn o «Aplicar» ho fan de seguida.
+  const applyRef = useRef<() => Promise<void>>(async () => {})
+  useEffect(() => {
+    if (!dirty) return
+    const t = setTimeout(() => void applyRef.current(), 900)
+    return () => clearTimeout(t)
+  }, [draft.w, draft.h, draft.d, dirty])
   const apply = async () => {
     if (!dirty || !(draft.w >= 100 && draft.h >= 100 && draft.d >= 100)) return
     const next = resizeComposition(compositionOf(project), cur, draft)
@@ -1196,6 +1203,7 @@ function MobleDims({ project, geo }: { project: Project; geo: ItemGeometry }) {
       toaster.create({ title: "No s'ha pogut canviar la mida", description: "Aquest moble no s'ha pogut llegir bé; obre'l a l'editor.", type: "error" })
     }
   }
+  applyRef.current = apply
   return (
     <FoldItem id="amb-dims" title="Mides generals" icon={LuMoveDiagonal} badge={`${cur.w} × ${cur.h} × ${cur.d}`}>
       <Stack gap={4} onKeyDown={(e) => e.key === "Enter" && void apply()}>
