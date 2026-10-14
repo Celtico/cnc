@@ -396,6 +396,8 @@ function mountRegion(engine: HardwareItem["engine"], panels: Panel[], tags: stri
   }
   for (const p of panels) {
     // Els components d'un joc i els perfils d'un accessori: sencers.
+    // (El recorregut dels cables dels llums, no: l'alimentador és lluny de la làmpada i la càmera no la veuria.)
+    if (p.id.startsWith("wiring-")) continue
     if (p.role === "hardware" || rc.extras?.(p)) {
       addBox(region, boxOf(p))
       continue
