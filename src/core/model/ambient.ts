@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { VIEW_FLAGS } from "./viewFlags"
 import { CameraPoseSchema, parseCameraPose } from "./camera"
 import { repairValue } from "./repair"
 import { DEFAULT_JOINERY, type FreePart } from "./freePart"
@@ -44,6 +45,7 @@ export type Opening = z.infer<typeof OpeningSchema>
 
 export const WallSchema = z.object({
   id: z.string(),
+  ...VIEW_FLAGS,
   /** Eix de la paret (de a a b); el gruix es reparteix a banda i banda. */
   a: Pt,
   b: Pt,
@@ -65,6 +67,7 @@ const Placement = {
   elevation: mm.min(0).optional(),
   /** Grup (nom): els elements del mateix grup es mouen, giren, dupliquen i esborren junts. */
   group: z.string().optional(),
+  ...VIEW_FLAGS,
 }
 
 export const AmbientItemSchema = z.discriminatedUnion("kind", [

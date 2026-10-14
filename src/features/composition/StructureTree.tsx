@@ -18,14 +18,14 @@ import {
   LuFolderOpen,
 } from "react-icons/lu"
 import { zoneIcon } from "./zoneIcons"
-import { compositionKind, partsOnlyKind, duplicateGroup, removeModule, newGroupName, partGroups, insertModelCopy, insertPartCopy, insertRefCopy, newModelObject, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, type Composition, type Module, type Zone } from "../../core/model"
+import { compositionKind, partsOnlyKind, duplicateGroup, removeModule, newGroupName, partGroups, insertModelCopy, insertPartCopy, insertRefCopy, newModelObject, movePartToGroup, removePartFromGroup, newId, reorderModule, reorderPart, reorderRef, rowOf, withFlag, type Composition, type ViewFlags, type Module, type Zone } from "../../core/model"
 import { NameDialog } from "../../components/NameDialog"
 import { toaster } from "../../components/ui/toaster"
 import { MODEL_FORMAT_HELP, defaultElementName, freePartFor, refFor, refFromPreset, type AddKind } from "./addElements"
 import { useSettings } from "../settings/SettingsContext"
 import { ORIENT_ICON } from "./partOrient"
 import { zoneLabel } from "./zoneLabel"
-import { TreeRow, TreeRowMenu, TreeSection, type TreeRowDnd } from "../../components/TreeRow"
+import { TreeRow, TreeRowMenu, TreeSection, type TreeRowDnd, type TreeRowFlags } from "../../components/TreeRow"
 import { ModelImportDialog, type ModelImportHandle } from "./ModelImportDialog"
 import type { ModelChoice } from "./useModelAssets"
 
@@ -223,6 +223,23 @@ export function StructureTree({
     if (selection.kind === "ref" && selection.id === id) onSelect({ kind: "moble" })
   }
 
+  // L'ull i el cadenat (com Figma): de cada element i, als grups de peces, de tots els seus.
+  type Listed = "modules" | "parts" | "references" | "models"
+  const flip = (list: Listed, match: (x: { id: string; group?: string }) => boolean, flag: keyof ViewFlags, on: boolean) =>
+    onChange({ ...comp, [list]: ((comp[list] ?? []) as ({ id: string; group?: string } & ViewFlags)[]).map((x) => (match(x) ? withFlag(x, flag, on) : x)) })
+  const flagsOf = (list: Listed, x: { id: string } & ViewFlags): TreeRowFlags => ({
+    hidden: x.hidden,
+    locked: x.locked,
+    onHide: () => flip(list, (y) => y.id === x.id, "hidden", !x.hidden),
+    onLock: () => flip(list, (y) => y.id === x.id, "locked", !x.locked),
+  })
+  const groupFlags = (g: string): TreeRowFlags => {
+    const members = parts.filter((q) => q.group === g)
+    const hidden = members.every((q) => q.hidden)
+    const locked = members.every((q) => q.locked)
+    return { hidden, locked, onHide: () => flip("parts", (y) => y.group === g, "hidden", !hidden), onLock: () => flip("parts", (y) => y.group === g, "locked", !locked) }
+  }
+
   return (
     <Stack gap={0.5} role="tree" aria-label={compositionKind(comp) === "objecte" ? "Estructura de l'objecte" : "Estructura del moble"} fontSize="sm">
       <TreeRow icon={<LuBox />} label={name || "Moble"} bold selected={selection.kind === "moble"} onClick={() => onSelect({ kind: "moble" })} depth={0} />
@@ -277,6 +294,7 @@ export function StructureTree({
               selected={selection.kind === "module" && selection.id === m.id}
               onClick={() => onSelect({ kind: "module", id: m.id })}
               dnd={dnd("module", m.id)}
+              flags={flagsOf("modules", m)}
               menu={
                 <TreeRowMenu label={`Opcions de «${m.name}»`}>
                   <Menu.Item value="up" disabled={neighbourIndex(i, -1) < 0} onClick={() => move(i, -1)}>
@@ -319,6 +337,7 @@ export function StructureTree({
               selected={selection.kind === "part" && selection.id === r.id}
               onClick={() => onSelect({ kind: "part", id: r.id })}
               dnd={dnd("part", r.id)}
+              flags={flagsOf("parts", r)}
               menu={
                 <TreeRowMenu label={`Opcions de «${r.name}»`}>
                   <Menu.Item
@@ -371,6 +390,7 @@ export function StructureTree({
                 label={g}
                 hint={`${members.length} peces`}
                 dnd={groupDnd(g)}
+                flags={groupFlags(g)}
                 selected={selection.kind === "group" && selection.id === g}
                 onClick={() => onSelect({ kind: "group", id: g })}
                 menu={
@@ -490,6 +510,7 @@ export function StructureTree({
           selected={selection.kind === "ref" && selection.id === r.id}
           onClick={() => onSelect({ kind: "ref", id: r.id })}
           dnd={dnd("ref", r.id)}
+          flags={flagsOf("references", r)}
           menu={
             <TreeRowMenu label={`Opcions de «${r.name}»`}>
               {!isObject && (
@@ -556,6 +577,7 @@ export function StructureTree({
           hint={`${Math.round(g.w)} × ${Math.round(g.h)}`}
           selected={selection.kind === "model" && selection.id === g.id}
           onClick={() => onSelect({ kind: "model", id: g.id })}
+          flags={flagsOf("models", g)}
           menu={
             <TreeRowMenu label={`Opcions de «${g.name}»`}>
               {isObject && (

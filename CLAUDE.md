@@ -883,6 +883,12 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   de terra, estirat; sense fondària, 5 mm) i «En blanc…»; el de «Models 3D», un menú amb «Quin fitxer?»
   (`MODEL_FORMAT_HELP`: formats, Poly Haven, què no serveix i com passar-ho per Blender, mida, unitats, on trobar-ne),
   «Triar fitxers…» i «Triar carpeta…» (vegeu Visor › Models 3D › De l'usuari). `SectionTitle menu`.
+  **Ull i cadenat** a cada fila (per decisió de l'usuari, 2026-10-14, com Figma; `TreeRow flags`, `core/model/viewFlags.ts`:
+  `hidden`/`locked` a mòduls, peces lliures, objectes de referència, models 3D i, als Ambients, elements i parets; els d'un
+  grup canvien tots els seus): **amagat** = no es dibuixa a l'editor (3D, plànol, Presentació i Render), però es fabrica i surt
+  a Peces, Nesting, Exportar, miniatures i AR; **bloquejat** = no es mou (sense gizmo ni nansa, fletxes no; als Ambients,
+  `keepLocked` torna la posició a qualsevol canvi i `mergeHidden` hi torna els amagats). Surten en passar per sobre, sempre
+  si són actius i a les pantalles tàctils. Test `model/viewFlags.test.ts`.
   Menú ⋯ per afegir/duplicar/moure/eliminar (manté «Moure amunt/avall», «Moure a l'esquerra/dreta»). **Arrossegar per
   ordenar** (`reorderModule`, `reorderRef`): mòduls dins de la seva fila i objectes; una línia marca on cau. Arrossegar una
   peça lliure sobre la fila d'un grup la hi posa; al costat d'una peça n'agafa el grup; la zona «Treure del grup» surt
@@ -1026,8 +1032,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   - Teclat: fletxes 1 mm (Maj 10), Re Pàg / Av Pàg per a Z.
 - **Objectes de referència al 3D**: amb material (`RefObject.material`, secció Material; no als que tallen) es veuen sòlids
   (`surfaceMaterial`, amb ombres) i surten a la Presentació i al render; sense («Cap (fantasma)»), fantasma translúcid que el
-  render no pinta. Els que tallen només es veuen seleccionats (violeta, a través del moble; també les peces que tallen, id
-  `part:<id>`). Els forats del mòdul seleccionat es marquen en taronja a través de les portes (`CableMarks`).
+  render no pinta. Els que tallen (i les peces lliures que tallen, id `part:<id>`) **es veuen sempre**, a través del moble (per decisió de
+  l'usuari, 2026-10-14): en **verd** si toquen alguna peça (`CompositionBuild.cutting`, de `applyRefCuts`) i en **vermell** si no
+  en toquen cap (mal col·locats) o tenen un avís; seleccionats, en taronja. Els forats del mòdul seleccionat es marquen en taronja a través de les portes (`CableMarks`).
 - **Desfer/refer** (⌘Z, ⇧⌘Z, Ctrl Y; vegeu «Desfer/refer comú» a Mòduls compartits): 50 passos, canvis a menys de
   500 ms = un pas (escriure «1180», arrossegar el gizmo); la càmera i la miniatura en queden fora. No als camps de text
   lliure ni dins d'un diàleg ni amb un diàleg modal obert (amb l'editor de perfils obert, ⌘Z desfeia el moble del darrere).
@@ -2112,6 +2119,7 @@ Botons només d'icona: `aria-label` + `Tooltip` en català. Accions principals: 
 | Ambients | Finestra · Porta · Moure a un grup · Grup (carpeta) · Projectes | `LuAppWindow` · `LuDoorOpen` · `LuFolderInput` · `LuFolder` · `LuFolders` |
 | Ambients | Moble · Objecte / bloc · Pestanyes Plànol · 3D · Girar · Peces (plànol) · Interior | `LuBox` · `LuSofa` · `LuMap` · `LuRotate3D` · `LuRotateCw` / `LuRotateCcw` · `LuLayers` · `LuEye` |
 | Ambients | Càmera bloquejada / lliure · Càmera d'abans | `LuLock` / `LuLockOpen` · `LuUndoDot` |
+| Arbre | Element visible / amagat · bloquejat / lliure (l'ull i el cadenat de cada fila) | `LuEye` / `LuEyeOff` · `LuLock` / `LuLockOpen` |
 | Galeries | Historial · Catàleg · Col·leccions de mobles | `LuHistory` · `LuBookOpen` · `LuLibrary` |
 | Exportar | DXF (CNC) · STEP 3D · CSV de nesting · CSV de peces · GLB · Avançat | `LuScissors` · `LuCuboid` · `LuLayoutGrid` · `LuFileDown` · `LuBoxes` · `LuSettings2` |
 | Materials | Categories de la llista: Taulers · Fons · Simulació | `LuLayers3` · `LuLayers2` · `LuSprayCan` |

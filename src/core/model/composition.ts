@@ -3,6 +3,7 @@ import { DEFAULT_CABINET, type CabinetParams } from "./cabinet"
 import { BPtSchema, ProfileNodeSchema } from "./panel"
 import { flatten, profileToOutline, sampleProfile, toNodes, type BPt } from "./polygon"
 import { CameraPoseSchema } from "./camera"
+import { VIEW_FLAGS } from "./viewFlags"
 import { aliasMaterialRefs } from "./photoUpgrade"
 import { FreePartSchema, JoinerySchema, PART_AXES as PART_AXES_C, tidyPart, type FreePart } from "./freePart"
 import { DEFAULT_LEGACY_HARDWARE, HardwareItemObjectSchema, ModuleHardwareKitSchema, HardwarePlacementSchema, sanitizeImportedHardware, isLegacyHardware, kitFromLegacy, migrateModuleHardware, type HardwareItem, type ModuleHardware } from "./hardware"
@@ -316,6 +317,7 @@ export const CarcassExtrasSchema = z.object({
 export const ModuleSchema = z.object({
   id: z.string(),
   name: z.string(),
+  ...VIEW_FLAGS,
   /** Separació respecte al mòdul anterior de la seva fila (o a l'origen si és el primer). */
   gapBefore: mm.min(0),
   /**
@@ -369,6 +371,7 @@ export type Module = z.infer<typeof ModuleSchema>
 export const RefObjectSchema = z.object({
   id: z.string(),
   name: z.string(),
+  ...VIEW_FLAGS,
   w: mm.positive(),
   h: mm.positive(),
   d: mm.positive(),
@@ -530,6 +533,7 @@ export type CompositionKind = z.infer<typeof CompositionKindSchema>
 export const ModelObjectSchema = z.object({
   id: z.string(),
   name: z.string(),
+  ...VIEW_FLAGS,
   src: z.string(),
   x: z.number(),
   y: z.number(),

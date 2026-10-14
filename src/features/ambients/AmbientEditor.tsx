@@ -81,6 +81,10 @@ import {
   type MaterialPref,
   type PlanPt,
   type Wall,
+  keepLocked,
+  mergeHidden,
+  withFlag,
+  type ViewFlags,
 } from "../../core/model"
 import { compositionOf, updateProjectComposition } from "../../db/compositionStore"
 import { createProject, db, saveAmbientCamera, updateAmbient, type Project } from "../../db/db"
@@ -107,7 +111,7 @@ import { AMBIENT_TAB_KEY, ambientBox, type Selection, type Tool } from "./planGe
 import { useDebouncedSave } from "../useDebouncedSave"
 import { useHistory, useUndoKeys } from "../history/useHistory"
 import { UndoRedo } from "../../components/UndoRedo"
-import { TreeRow, TreeRowMenu, TreeSection } from "../../components/TreeRow"
+import { TreeRow, TreeRowMenu, TreeSection, type TreeRowFlags } from "../../components/TreeRow"
 import type { ChatTarget } from "../assistant/chatTarget"
 import { registerDoc } from "../assistant/assistantHub"
 
@@ -242,7 +246,14 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   }
 
   // Canvi de l'ambient: `commit` = un pas de desfer (en deixar anar); si no, en viu (arrossegant).
-  const change = useCallback((next: Ambient, commit: boolean) => setAmb(next, { commit }), [setAmb])
+  // El cadenat de l'arbre: els elements i les parets bloquejats no es mouen, vingui d'on vingui el canvi.
+  const change = useCallback(
+    (next: Ambient, commit: boolean) => {
+      const prev = ambRef.current
+      setAmb({ ...next, items: keepLocked(prev.items, next.items, ["x", "y", "rot", "elevation"]), walls: keepLocked(prev.walls, next.walls, ["a", "b"]) }, { commit })
+    },
+    [setAmb],
+  )
   // Assistent IA: llegeix l'ambient d'ara i hi aplica els canvis en viu; en acabar el torn, un sol pas de desfer.
   const ambRef = useRef(amb)
   useEffect(() => {
@@ -395,6 +406,26 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
     }
     return out
   }
+  // L'ull i el cadenat (com Figma): de cada element, de cada paret i, als grups, de tots els seus.
+  const flipItems = (ids: string[], flag: keyof ViewFlags, on: boolean) => change({ ...amb, items: amb.items.map((it) => (ids.includes(it.id) ? withFlag(it, flag, on) : it)) }, true)
+  const itemFlags = (it: AmbientItem): TreeRowFlags => ({ hidden: it.hidden, locked: it.locked, onHide: () => flipItems([it.id], "hidden", !it.hidden), onLock: () => flipItems([it.id], "locked", !it.locked) })
+  const groupFlagsOf = (name: string): TreeRowFlags => {
+    const ids = groupIds(amb, name)
+    const its = amb.items.filter((it) => ids.includes(it.id))
+    const hidden = its.every((it) => it.hidden)
+    const locked = its.every((it) => it.locked)
+    return { hidden, locked, onHide: () => flipItems(ids, "hidden", !hidden), onLock: () => flipItems(ids, "locked", !locked) }
+  }
+  const flipWall = (id: string, flag: keyof ViewFlags, on: boolean) => change({ ...amb, walls: amb.walls.map((w) => (w.id === id ? withFlag(w, flag, on) : w)) }, true)
+  // L'ull: el plànol i el 3D només veuen el que no està amagat; el que hi canvien es torna a ajuntar amb els amagats.
+  const shownAmb = useMemo(() => (amb.items.some((it) => it.hidden) || amb.walls.some((w) => w.hidden) ? { ...amb, items: amb.items.filter((it) => !it.hidden), walls: amb.walls.filter((w) => !w.hidden) } : amb), [amb])
+  const changeShown = useCallback(
+    (next: Ambient, commit: boolean) => {
+      const all = ambRef.current
+      change({ ...next, items: mergeHidden(all.items, all.items.filter((it) => !it.hidden), next.items), walls: mergeHidden(all.walls, all.walls.filter((w) => !w.hidden), next.walls) }, commit)
+    },
+    [change],
+  )
   const objectItems = amb.items.filter((it) => kindOf(it) === "object")
   const mobleItems = amb.items.filter((it) => kindOf(it) !== "object")
   const groups = [...new Set(amb.items.map((i) => i.group).filter((g): g is string => !!g))]
@@ -413,6 +444,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
         selected={sel?.kind === "item" && sel.id === it.id}
         highlighted={sel?.kind === "group" && sel.id === it.group}
         onClick={() => (select({ kind: "item", id: it.id }), setTool("select"))}
+        flags={itemFlags(it)}
         menu={
           <TreeRowMenu label={`Accions de «${label}»`}>
             <Menu.Item value="dup" onClick={() => {
@@ -473,6 +505,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
           hint={`${r.items.length} ${section === "moble" ? (r.items.length === 1 ? "moble" : "mobles") : r.items.length === 1 ? "objecte" : "objectes"}`}
           selected={sel?.kind === "group" && sel.id === r.name}
           onClick={() => (groupSel(r.name), setTool("select"))}
+          flags={groupFlagsOf(r.name)}
           menu={
             <TreeRowMenu label={`Accions de «${r.name}»`}>
               <Menu.Item value="dup" onClick={() => {
@@ -623,6 +656,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                       hint={`${formatLength(Math.round(wallLength(w)), unit)}${w.openings?.length ? ` · ${w.openings.length} ${w.openings.length === 1 ? "obertura" : "obertures"}` : ""}`}
                       selected={sel?.kind === "wall" && sel.id === w.id}
                       onClick={() => (select({ kind: "wall", id: w.id }), setTool("select"))}
+                      flags={{ hidden: w.hidden, locked: w.locked, onHide: () => flipWall(w.id, "hidden", !w.hidden), onLock: () => flipWall(w.id, "locked", !w.locked) }}
                       menu={
                         <TreeRowMenu label={`Accions de «Paret ${i + 1}»`}>
                           <Menu.Item
@@ -713,7 +747,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
           <Box order={{ base: 0, md: 2 }} flex={{ md: 1 }} minW={0} minH={{ base: "56vh", md: 0 }} h={{ base: "56vh", md: "full" }} position="relative">
           {tab === "plan" ? (
             <PlanCanvas
-              ambient={amb}
+              ambient={shownAmb}
               geos={geos}
               names={names}
               selection={sel}
@@ -722,7 +756,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
               onSelect={select}
               tool={tool}
               onToolDone={toolDone}
-              onChange={change}
+              onChange={changeShown}
               wallDefaults={wallDefaults}
               onCalibrate={(a, b) => setCalib({ a, b })}
               fitSignal={fit}
@@ -732,7 +766,7 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
           ) : (
             // Fons del 3D (el visor és transparent): el mateix gris que el plànol.
             <Box position="absolute" inset={0} rounded="md" overflow="hidden" borderWidth="1px" bg="bg.subtle">
-              <Ambient3D ambient={amb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} onPick={pickItem} onChange={change} snap={snapOn} dollhouse={dollhouse} shadows={shadows} ceiling={ceiling} onPoseChange={setPose} initialCamera={cameraRef.current} onCameraChange={saveCamera} cameraLocked={camLocked} cameraGoto={camGoto} />
+              <Ambient3D ambient={shownAmb} geos={geos} materials={settings.materials} onSceneAccess={onSceneAccess} fitSignal={fit} eyeSignal={eye} selectedIds={selIds} onSelect={(id) => (id ? void pickItem(id) : select(null))} onPick={pickItem} onChange={changeShown} snap={snapOn} dollhouse={dollhouse} shadows={shadows} ceiling={ceiling} onPoseChange={setPose} initialCamera={cameraRef.current} onCameraChange={saveCamera} cameraLocked={camLocked} cameraGoto={camGoto} />
             </Box>
           )}
             {chrome}

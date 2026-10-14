@@ -35,6 +35,11 @@ export interface CompositionBuild {
   hardwareKits: (KitOrder & { module: number; moduleId: string })[]
   /** Compartiments amb joc de llum de tots els mòduls: làmpades i sistema elèctric (amb el número de mòdul). */
   lightKits: (LightOrder & { module: number; moduleId: string })[]
+  /**
+   * Objectes de referència i peces lliures que tallen (`part:<id>`) que toquen alguna peça: el 3D els pinta en verd i els
+   * que no en toquen cap, en vermell (mal col·locats; per decisió de l'usuari, 2026-10-14).
+   */
+  cutting: string[]
 }
 
 /** Caixa de les peces (coordenades on són). */
@@ -236,7 +241,8 @@ export function buildComposition(input: Composition): CompositionBuild {
   // També a les peces que no són de CNC (ferro, pedra, vidre): el forat es veu al 3D.
   // Una peça partida per un tall (una columna al mig del fons): els altres trossos, peces noves.
   const pieces: Panel[] = []
-  for (const pr of applyRefCuts([...panels, ...free.extras], [...comp.references, ...partCutters(comp)], panelBox, (p) => free.extras.includes(p), pieces)) {
+  const cutting = new Set<string>()
+  for (const pr of applyRefCuts([...panels, ...free.extras], [...comp.references, ...partCutters(comp)], panelBox, (p) => free.extras.includes(p), pieces, cutting)) {
     const moduleId = modules.find((m) => m.index === pr.panel.module)?.id
     const owner = pr.refId.startsWith("part:") ? { partId: pr.refId.slice(5) } : { refId: pr.refId }
     warnings.push({ code: "ref-cut", message: pr.message, panelId: pr.panel.id, ...owner, ...(moduleId ? { moduleId } : {}) })
@@ -280,7 +286,7 @@ export function buildComposition(input: Composition): CompositionBuild {
   // sòcol, peces lliures), així el llistat, el CSV, el LLEGEIX-ME i el 3D en diuen el mateix.
   for (const [i, p] of panels.entries()) if (isSolidMaterial(p.material)) panels[i] = { ...p, edges: { ...NO_EDGES } }
 
-  return { panels, warnings, modules, joints: free.joints, extras: [...moduleExtras, ...free.extras], models: input.models ?? [], hardwareKits, lightKits }
+  return { panels, warnings, modules, joints: free.joints, extras: [...moduleExtras, ...free.extras], models: input.models ?? [], hardwareKits, lightKits, cutting: [...cutting] }
 }
 
 /** Caixa de tot el moble (peces i elements sense nesting), en mm de la composició. */

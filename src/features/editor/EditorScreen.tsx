@@ -505,9 +505,20 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
     )
   const absParts = useMemo(() => resolveParts(comp), [comp])
   // Les peces que tallen es veuen com els objectes que tallen (fantasma violeta, amb el gizmo).
-  const solidParts = useMemo(() => absParts.filter((p) => p.effect !== "cut"), [absParts])
+  const solidParts = useMemo(() => absParts.filter((p) => p.effect !== "cut" && !p.hidden), [absParts])
   const cutPartIds = useMemo(() => new Set(absParts.filter((p) => p.effect === "cut").map((p) => p.id)), [absParts])
-  const ghosts = useMemo(() => (cutPartIds.size ? [...comp.references, ...partCutters(comp)] : comp.references), [comp, cutPartIds])
+  const ghosts = useMemo(() => {
+    const hiddenParts = new Set((comp.parts ?? []).filter((q) => q.hidden).map((q) => `part:${q.id}`))
+    return [...comp.references, ...(cutPartIds.size ? partCutters(comp) : [])].filter((g) => !g.hidden && !hiddenParts.has(g.id))
+  }, [comp, cutPartIds])
+  // El cadenat de l'arbre: el triat no es mou (ni el gizmo, ni la nansa, ni les fletxes).
+  const selectionLocked =
+    selection.kind === "module" ? !!comp.modules.find((m) => m.id === selection.id)?.locked
+    : selection.kind === "ref" ? !!comp.references.find((r) => r.id === selection.id)?.locked
+    : selection.kind === "part" ? !!comp.parts?.find((q) => q.id === selection.id)?.locked
+    : selection.kind === "model" ? !!comp.models?.find((g) => g.id === selection.id)?.locked
+    : selection.kind === "group" ? (comp.parts ?? []).filter((q) => q.group === selection.id).every((q) => q.locked)
+    : false
   /** Mou un model 3D (gizmo al 3D o fletxes): no s'enfonsa al terra. */
   const moveModel = (id: string, pos: { x: number; y: number; z: number }) =>
     setComp((c) => ({ ...c, models: (c.models ?? []).map((g) => (g.id === id ? { ...g, x: pos.x, y: Math.max(0, pos.y), z: pos.z } : g)) }))
@@ -690,7 +701,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
 
   const nudgeRef = useRef<(e: KeyboardEvent) => void>(() => {})
   nudgeRef.current = (e: KeyboardEvent) => {
-    if ((selection.kind !== "ref" && selection.kind !== "part" && selection.kind !== "group" && selection.kind !== "model") || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return
+    if ((selection.kind !== "ref" && selection.kind !== "part" && selection.kind !== "group" && selection.kind !== "model") || selectionLocked || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return
     const t = e.target as HTMLElement | null
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return
     if (selection.kind === "group") {
@@ -795,6 +806,13 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
   }, [build, comp, settings.materials])
   // Al 3D també els elements sense nesting (ferro, pedra, vidre…).
   const viewerPanels = useMemo(() => (build?.extras.length ? [...panels, ...build.extras] : panels), [build, panels])
+  // L'ull de l'arbre: el que s'amaga no es dibuixa a l'editor (es fabrica igual i surt a Peces, Nesting i Exportar).
+  const shownPanels = useMemo(() => {
+    const mods = comp.modules.filter((m) => m.hidden).map((m) => `${m.id}:`)
+    const parts = (comp.parts ?? []).filter((q) => q.hidden).map((q) => `part:${q.id}`)
+    if (!mods.length && !parts.length) return viewerPanels
+    return viewerPanels.filter((p) => !mods.some((k) => p.id.startsWith(k)) && !parts.some((k) => p.id === k || p.id.startsWith(`${k}-`)))
+  }, [viewerPanels, comp])
   const totalHoles = panels.reduce((n, p) => n + p.holes.length, 0)
   // Mesures de la foto aplicades al moble que encara són estimades.
   const estimated = useMemo(() => estimatedApplied(project.photo), [project.photo])
@@ -867,6 +885,8 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             ? NO_WARNINGS
             : warnings
   const collidingRefs = useMemo(() => new Set(warnings.flatMap((w) => (w.refId ? [w.refId] : []))), [warnings])
+  // Els que tallen i toquen alguna peça (verd); els altres que tallen, en vermell.
+  const cuttingRefs = useMemo(() => new Set(build?.cutting ?? []), [build])
 
   // --- Inspector: propietats del que hi ha seleccionat ---------------------------
   // A la pestanya Foto, l'inspector mostra el calibratge quan no hi ha res seleccionat (el
@@ -1431,13 +1451,13 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         ) : (
           <CabinetViewer
             sceneFinish={comp.scene}
-            panels={viewerPanels}
+            panels={shownPanels}
             size={frameSize}
             exploded={exploded}
             // A la vista explosionada i amb les peces translúcides els forats i les ranures sempre es veuen.
             showHoles={showHoles || exploded || viewer.opacity < 1}
             seeThrough={viewer.opacity < 1 ? viewer.opacity : undefined}
-            modules={viewerModules}
+            modules={viewerModules.filter((v) => !comp.modules.find((m) => m.id === v.id)?.hidden)}
             selectedModuleId={(selection.kind === "module" || selection.kind === "zone") && module ? module.id : null}
             onSelectModule={selectFrom3D}
             ghosts={ghosts}
@@ -1451,33 +1471,34 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
             onDeselect={() => select({ kind: "moble" })}
             selectedRefId={selection.kind === "ref" ? selection.id : selection.kind === "part" && cutPartIds.has(selection.id) ? `part:${selection.id}` : null}
             collidingRefIds={collidingRefs}
+            cuttingRefIds={cuttingRefs}
             highlightZone={highlightZone}
             onSelectRef={(id) => select(id.startsWith("part:") ? { kind: "part", id: id.slice(5) } : { kind: "ref", id })}
             fitKey={fitKey}
             onFramedChange={setFramed}
             initialCamera={cameraRef.current}
             onCameraChange={saveCamera}
-            onMoveRef={(id, pos) => (id.startsWith("part:") ? movePart(id.slice(5), pos) : moveRef(id, pos))}
+            onMoveRef={selectionLocked ? undefined : (id, pos) => (id.startsWith("part:") ? movePart(id.slice(5), pos) : moveRef(id, pos))}
             hardware={hardware}
             onSceneAccess={registerScene}
             parts={solidParts}
             selectedPartId={selection.kind === "part" ? selection.id : null}
             onSelectPart={selectPartFrom3D}
             selectedGroup={selection.kind === "group" ? selection.id : null}
-            onMoveGroup={(g, dx, dy, dz) => moveGroup(g, dx, dy, dz)}
-            onMovePart={movePart}
-            models={comp.models}
+            onMoveGroup={selectionLocked ? undefined : (g, dx, dy, dz) => moveGroup(g, dx, dy, dz)}
+            onMovePart={selectionLocked ? undefined : movePart}
+            models={comp.models?.filter((g) => !g.hidden)}
             selectedModelId={selection.kind === "model" ? selection.id : null}
             onSelectModel={(id) => select({ kind: "model", id })}
             selectedHardwareId={selection.kind === "hardware" ? selection.id : null}
             onSelectHardware={(id) => select({ kind: "hardware", id })}
-            onMoveModel={moveModel}
-            onMoveModule={(id, dx, dy, all, dz) => setComp((c) => (all ? moveAllBy(c, dx) : moveModuleBy(c, id, dx, dy, dz)))}
+            onMoveModel={selectionLocked ? undefined : moveModel}
+            onMoveModule={selectionLocked ? undefined : (id, dx, dy, all, dz) => setComp((c) => (all ? moveAllBy(c, dx) : moveModuleBy(c, id, dx, dy, dz)))}
           />
         )}
         {viewTab === "3d" && viewerState.materialMode === "role" && (
           <Box position="absolute" bottom={3} left={3} zIndex={2} display={{ base: "none", md: "block" }}>
-            <RoleLegend panels={viewerPanels} />
+            <RoleLegend panels={shownPanels} />
           </Box>
         )}
         {/* La recepta del SegmentGroup força position: relative; el posicionem amb un embolcall. */}

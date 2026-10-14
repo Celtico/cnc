@@ -43,7 +43,7 @@ export interface RefCutProblem {
  * o polígon (perfil). Si arribaria a la vora de la peça (seria un rebaix del contorn) no es
  * fa i es retorna com a problema. Modifica les peces (afegeix `cutouts`).
  */
-export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Panel) => Box, isExtra?: (p: Panel) => boolean, added?: Panel[]): RefCutProblem[] {
+export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Panel) => Box, isExtra?: (p: Panel) => boolean, added?: Panel[], hits?: Set<string>): RefCutProblem[] {
   const problems: RefCutProblem[] = []
   const r1 = (v: number) => Math.round(v * 10) / 10
   for (const o of refs) {
@@ -58,12 +58,14 @@ export function applyRefCuts(panels: Panel[], refs: RefObject[], boxOf: (p: Pane
         // la casa), només si la travessen de cara a cara amb secció recta (el fons i els laterals d'un moble al voltant
         // d'una columna quadrada): un tub cap a la paret no forada el cantell dels prestatges.
         if (!refTouchesBox(o, b)) continue
+        hits?.add(o.id)
         const isPart = o.id.startsWith("part:")
         const side = sidewaysCut(o, sec, p, b, isExtra?.(p) ?? false, !isPart, added)
         if (side) problems.push({ refId: o.id, panel: p, message: side })
         continue
       }
       if (!refTouchesBox(o, b)) continue
+      hits?.add(o.id)
       const mid = (b.min[sec.a]! + b.max[sec.a]!) / 2
       const local = (pu: number, pv: number): [number, number] => {
         const q: [number, number, number] = [0, 0, 0]

@@ -145,4 +145,10 @@ describe("objectes que tallen", () => {
     expect(step.warnings).toEqual([])
     for (const s of stepSolids(step.text)) expect(s.badEdges).toBe(0)
   })
+
+  it("diu quins dels que tallen toquen alguna peça (el 3D: verd) i quins no (vermell)", () => {
+    const hits = { id: "t", name: "Tub", w: 60, h: 60, d: 40, x: 370, y: 320, z: -10, effect: "cut" as const, shape: "cylinder" as const, axis: "z" as const }
+    const far = { ...hits, id: "f", x: 3000 }
+    expect(buildComposition(comp(hits, far)).cutting).toEqual(["t"])
+  })
 })

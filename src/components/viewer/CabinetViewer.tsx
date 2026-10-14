@@ -125,6 +125,8 @@ export interface CabinetViewerProps {
   onMoveModel?: (id: string, pos: { x: number; y: number; z: number }) => void
   /** Objectes que xoquen amb alguna peça: es pinten de vermell. */
   collidingRefIds?: Set<string>
+  /** Els objectes i peces que tallen i toquen alguna peça (verd); els que tallen i no en toquen cap, vermell. */
+  cuttingRefIds?: Set<string>
   /** Compartiment seleccionat (mm, coordenades de la composició): contorn taronja. */
   highlightZone?: { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number; veil?: boolean } | null
   /** Clic a l'espai buit (sense arrossegar): treure la selecció. */
@@ -177,6 +179,7 @@ export function CabinetViewer({
   selectedHardwareId,
   onSelectHardware,
   collidingRefIds,
+  cuttingRefIds,
   highlightZone,
   fitKey = 0,
   onFramedChange,
@@ -396,14 +399,15 @@ export function CabinetViewer({
             </group>
           )
         })}
-        {/* Els que tallen només es veuen seleccionats: el 3D queda net i es veu el forat. */}
-        {ghosts?.filter((g) => g.effect !== "cut" || g.id === selectedRefId).map((g) => (
+        {/* Els que tallen es veuen sempre (per decisió de l'usuari, 2026-10-14): en verd si tallen alguna peça, en vermell si
+            no en tallen cap (mal col·locats). */}
+        {ghosts?.map((g) => (
           <RefGhost
             key={g.id}
             g={g}
             materials={materials}
             selected={g.id === selectedRefId}
-            hit={collidingRefIds?.has(g.id) ?? false}
+            hit={(collidingRefIds?.has(g.id) ?? false) || (g.effect === "cut" && !!cuttingRefIds && !cuttingRefIds.has(g.id))}
             guides={q.guides}
             offset={[-size.width * S * 0.5, 0, -size.depth * S * 0.5]}
             targets={snapTargets}
@@ -944,8 +948,8 @@ function RefGhost({
   // Ratolí a sobre: contorn del color de selecció (més suau), perquè es vegi què es triarà.
   const [hover, setHover] = useState(false)
   const cursor = useViewerCursor()
-  // Obstacle en blau; objecte que talla en violeta; seleccionat en taronja; amb problema en vermell.
-  const tint = hit ? "#dc2626" : selected ? SELECT_COLOR : g.effect === "cut" ? "#7c3aed" : "#3b82f6"
+  // Obstacle en blau; objecte que talla en verd; seleccionat en taronja; amb problema (o que talla i no toca res) en vermell.
+  const tint = hit ? "#dc2626" : selected ? SELECT_COLOR : g.effect === "cut" ? "#16a34a" : "#3b82f6"
   const draggable = selected && !!onMove
   const cyl = g.shape === "cylinder"
   const profileGeo = useMemo(() => (g.shape === "profile" && g.profile && g.profile.length >= 3 ? profileGeometry(g) : null), [g])
@@ -1041,7 +1045,7 @@ function RefGhost({
       {solidMat ? (
         <primitive object={solidMat} attach="material" />
       ) : (
-        <meshStandardMaterial side={DoubleSide} color={hover && !selected && !hit ? SELECT_COLOR : tint} transparent opacity={outline ? 0.08 : selected || hit ? 0.38 : g.effect === "cut" ? 0.45 : hover ? 0.32 : 0.22} depthWrite={false} depthTest={g.effect !== "cut"} />
+        <meshStandardMaterial side={DoubleSide} color={hover && !selected && !hit ? SELECT_COLOR : tint} transparent opacity={outline ? 0.08 : selected || hit ? 0.38 : g.effect === "cut" ? 0.15 : hover ? 0.32 : 0.22} depthWrite={false} depthTest={g.effect !== "cut"} />
       )}
       {((guides && !solidMat) || selected || hit || g.effect === "cut") && <Edges color={selected ? SELECT_COLOR : tint} threshold={cyl ? 30 : 1} depthTest={g.effect !== "cut"} renderOrder={g.effect === "cut" ? 9 : 0} />}
     </mesh>

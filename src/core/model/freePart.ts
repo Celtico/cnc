@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { ProfileNodeSchema, type Vec3 } from "./panel"
+import { VIEW_FLAGS } from "./viewFlags"
 
 /**
  * Peces lliures: taulers solts que es col·loquen i s'editen com els objectes de referència
@@ -23,6 +24,7 @@ export type PartOrient = z.infer<typeof PartOrientSchema>
 export const FreePartSchema = z.object({
   id: z.string(),
   name: z.string(),
+  ...VIEW_FLAGS,
   orient: PartOrientSchema,
   /** Mides dins del seu pla: `w` (u) i `h` (v). front: ample × alt · side: fons × alt · flat: ample × fons. */
   w: mm.positive(),

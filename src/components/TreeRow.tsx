@@ -1,6 +1,6 @@
 import { Box, HStack, IconButton, Menu, Portal, Spinner, Text } from "@chakra-ui/react"
 import type { ReactNode } from "react"
-import { LuEllipsis, LuPlus } from "react-icons/lu"
+import { LuEllipsis, LuEye, LuEyeOff, LuLock, LuLockOpen, LuPlus } from "react-icons/lu"
 import { SectionLabel } from "./SectionLabel"
 
 /**
@@ -20,6 +20,20 @@ export interface TreeRowDnd {
   onEnd: () => void
 }
 
+/**
+ * L'ull i el cadenat de la fila (com Figma): amagar a l'editor i no deixar moure. Surten en passar per sobre i sempre que
+ * estan actius. Per a un grup, l'estat del grup (amagat / bloquejat si ho són tots).
+ */
+export interface TreeRowFlags {
+  hidden?: boolean
+  locked?: boolean
+  onHide: () => void
+  onLock: () => void
+}
+
+/** A les pantalles tàctils (sense «passar per sobre»), l'ull i el cadenat sempre a la vista. */
+const TOUCH_VISIBLE = { "@media (hover: none)": { opacity: 1 } }
+
 /** Indicador de la fila de destí: línia abans/després, o la fila marcada si hi entra (grup). */
 export type DropIndicator = "before" | "after" | "inside" | null
 
@@ -38,7 +52,10 @@ export function TreeRow({
   onToggle,
   toggleLabel,
   dnd,
+  flags,
 }: {
+  /** L'ull (veure / amagar) i el cadenat (no es pot moure). */
+  flags?: TreeRowFlags
   /** Arrossegar per ordenar: la fila es pot agafar i deixar abans/després d'una altra. */
   dnd?: TreeRowDnd
   /** Si hi és, la icona és una fletxa que plega/desplega sense seleccionar la fila. */
@@ -68,7 +85,7 @@ export function TreeRow({
       py={1}
       rounded="md"
       bg={selected ? "wood.muted" : highlighted ? "bg.muted" : undefined}
-      color={selected ? "wood.fg" : muted ? "fg.muted" : "fg"}
+      color={selected ? "wood.fg" : muted || flags?.hidden ? "fg.muted" : "fg"}
       _hover={{ bg: selected ? "wood.muted" : "bg.muted" }}
       onClick={onClick}
       className="group"
@@ -147,6 +164,16 @@ export function TreeRow({
         <Text fontSize="xs" color="fg.subtle" flexShrink={4} minW={0} maxW="45%" truncate>
           {hint}
         </Text>
+      )}
+      {flags && (
+        <HStack gap={0} flexShrink={0} onClick={(e) => e.stopPropagation()}>
+          <IconButton aria-label={flags.locked ? `Desbloquejar «${label}»` : `Bloquejar «${label}»`} title={flags.locked ? "Bloquejat: no es pot moure" : "Bloquejar (que no es pugui moure)"} size="2xs" variant="ghost" opacity={flags.locked ? 1 : 0} _groupHover={{ opacity: 1 }} _focusVisible={{ opacity: 1 }} css={TOUCH_VISIBLE} onClick={flags.onLock}>
+            {flags.locked ? <LuLock /> : <LuLockOpen />}
+          </IconButton>
+          <IconButton aria-label={flags.hidden ? `Mostrar «${label}»` : `Amagar «${label}»`} title={flags.hidden ? "Amagat a l'editor (es fabrica igual)" : "Amagar a l'editor"} size="2xs" variant="ghost" opacity={flags.hidden ? 1 : 0} _groupHover={{ opacity: 1 }} _focusVisible={{ opacity: 1 }} css={TOUCH_VISIBLE} onClick={flags.onHide}>
+            {flags.hidden ? <LuEyeOff /> : <LuEye />}
+          </IconButton>
+        </HStack>
       )}
       {menu && (
         <Box flexShrink={0} opacity={selected ? 1 : 0} _groupHover={{ opacity: 1 }} onClick={(e) => e.stopPropagation()}>
