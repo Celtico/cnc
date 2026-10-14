@@ -59,6 +59,23 @@ describe("pota AXILO 78 (placa rectangular per cargolar)", () => {
     expect(moble.targets).toEqual(axilo.targets)
   })
 
+  it("sòcol davant de les potes: de tota l'amplada, de terra fins a 5 mm sota la base, sense tocar el peu", () => {
+    const m = onLegs()
+    const b = buildModule({ ...m, carcass: { ...m.carcass, base: { kind: "legs", height: 100, hardware: structuredClone(axilo), plinth: { setback: 20 } } } })
+    const plinth = b.panels.find((p) => p.role === "plinth")!
+    expect(plinth).toBeDefined()
+    expect(plinth.length).toBe(m.carcass.width)
+    expect(plinth.width).toBe(95)
+    expect(plinth.placement.origin[1]).toBe(-100)
+    expect(plinth.placement.origin[2]).toBe(m.carcass.depth - 20 - m.carcass.thickness)
+    expect(b.warnings.filter((w) => w.code === "hardware")).toEqual([])
+    // Massa endavant les potes (o massa enrere el sòcol): avís.
+    const near = buildModule({ ...m, carcass: { ...m.carcass, base: { kind: "legs", height: 100, hardware: structuredClone(axilo), plinth: { setback: 60 } } } })
+    expect(near.warnings.some((w) => w.code === "hardware" && /sòcol/.test(w.message))).toBe(true)
+    // Sense sòcol, cap peça de sòcol.
+    expect(buildModule(m).panels.some((p) => p.role === "plinth")).toBe(false)
+  })
+
   it("el dibuix de Preferències (peça d'exemple) posa els forats com el moble: davant, darrere i mirall", () => {
     const [base] = hardwarePreview(axilo).panels
     const at = (x: number, y: number) => base!.holes.some((h) => Math.abs(h.x - x) < 0.01 && Math.abs(h.y - y) < 0.01)

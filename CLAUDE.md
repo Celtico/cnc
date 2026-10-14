@@ -159,7 +159,11 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
   = separació de la paret, i **X pròpia** `Module.x`/`freeX`: surt de la fila i no empeny els altres, p. ex. una illa; camp
   «De costat (X)»). Els antics «Al terra» sense `x` continuen a la fila. **Girat 180°** (`Module.turned`, `isTurned`; només lliure al terra; Mòdul › Posició «Girat»; per decisió de l'usuari, 2026-10-13, per fer una illa amb dos mòduls d'esquena): el mòdul es construeix igual i `buildComposition` el gira al voltant del centre de la caixa de les seves peces (ocupa el mateix lloc; `CompositionBuild.modules[].mirrorX`, `moduleWorldX` per al clic i el ressaltat dels compartiments); l'obertura del 3D surt enrere (`opening.ts`, per l'`explodeDir`). Tests `build/turnedModule.test.ts`, `viewer/openingTurned.test.ts`. Taulell i sòcol correguts no tenen en compte `wallGap`.
 - **Carcassa** (inspector del mòdul, secció Caixa):
-  - **Base**: a terra · sòcol · potes · sense base. Avís `hanging` si un penjat té el fons prim. Amb potes, «Pota»:
+  - **Base**: a terra · sòcol · potes · sense base. Avís `hanging` si un penjat té el fons prim. Amb potes, **«Sòcol ·
+    Davant de les potes»** (`Base.plinth.setback`, per decisió de l'usuari, 2026-10-14; `buildLegPlinth`): un tauler del
+    gruix i material del cos, de tota l'amplada del mòdul, de terra fins a 5 mm sota la base (l'alçada del sòcol AXILO =
+    H − 5), a «Retirada del sòcol» del davant (en encendre'l: el peu de la pota del davant just darrere amb 5 mm de joc);
+    avís `hardware` si toca el peu; es fixa amb els clips de sòcol a mà (sense mecanitzat). Test `build/legPlinth.test.ts`. Amb potes, «Pota»:
     les genèriques (només es veuen) o una pota de la biblioteca (`Base.hardware`, còpia): forats de la placa a la cara de
     sota de la base a cada pota (`buildLegs`; una d'importada, només confirmada). Del catàleg: **Häfele AXILO 78 amb la
     placa rectangular per cargolar** (`core/model/hafele/hafeleLegs.ts`, 637.76.333, p. FF 11.79; preferències v34, i v37

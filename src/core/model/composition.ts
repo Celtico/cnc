@@ -46,7 +46,17 @@ export const BaseSchema = z.discriminatedUnion("kind", [
    * Potes: cap peça; el mòdul s'aixeca al 3D. `hardware`: la pota triada (còpia d'un item `leg` de la biblioteca, una
    * pota importada): forats a la cara de sota de la base a cada pota; sense, les potes només es veuen.
    */
-  z.object({ kind: z.literal("legs"), height: mm.positive(), hardware: FrontHardwareSchema.optional() }),
+  z.object({
+    kind: z.literal("legs"),
+    height: mm.positive(),
+    hardware: FrontHardwareSchema.optional(),
+    /**
+     * Sòcol davant de les potes (per decisió de l'usuari, 2026-10-14): un tauler del gruix del cos, de tota l'amplada del
+     * mòdul, a `setback` del davant, de terra fins a 5 mm sota la base (l'alçada del sòcol AXILO = H − 5); es fixa a les
+     * potes del davant amb els clips (a mà, sense mecanitzat).
+     */
+    plinth: z.object({ setback: mm.min(0).max(200) }).optional(),
+  }),
   /** Sense base: laterals fins a terra i el buit obert (cobreradiador). */
   z.object({ kind: z.literal("open") }),
   /** Penjat a la paret: cap peça de base; `height` = alçada de la base del mòdul des del terra. */

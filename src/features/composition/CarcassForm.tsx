@@ -75,6 +75,25 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
           <>
             <NumRow label="Alçada potes" value={c.base.height} min={20} max={400} step={5} onChange={(height) => set({ base: { ...(c.base as Extract<Base, { kind: "legs" }>), height } })} />
             <LegPick base={c.base} onChange={(base) => set({ base })} />
+            <FormRow label="Sòcol" help="Un tauler davant de les potes, de tota l'amplada, de terra fins a 5 mm sota la base. Es fixa a les potes del davant amb els clips de sòcol (Häfele 637.38.054, per cargolar: a mà).">
+              <Switch.Root size="sm" pt="6px" checked={!!c.base.plinth} onCheckedChange={(e) => {
+                const b = c.base as Extract<Base, { kind: "legs" }>
+                if (!e.checked) {
+                  const { plinth: _p, ...rest } = b
+                  return set({ base: rest })
+                }
+                // Per defecte, el peu de la pota del davant (Ø78) just darrere del sòcol amb 5 mm de joc.
+                const front = b.hardware?.params.insetFront ?? b.hardware?.params.inset ?? 50
+                set({ base: { ...b, plinth: { setback: Math.max(0, Math.round(front - 39 - 5 - c.thickness)) } } })
+              }}>
+                <Switch.HiddenInput />
+                <Switch.Control />
+                <Switch.Label fontSize="sm">Davant de les potes</Switch.Label>
+              </Switch.Root>
+            </FormRow>
+            {c.base.plinth && (
+              <NumRow label="Retirada del sòcol" help="Del davant del mòdul a la cara de davant del sòcol." value={c.base.plinth.setback} min={0} max={200} step={1} onChange={(setback) => setback >= 0 && setback <= 200 && set({ base: { ...(c.base as Extract<Base, { kind: "legs" }>), plinth: { setback } } })} />
+            )}
           </>
         )}
 
