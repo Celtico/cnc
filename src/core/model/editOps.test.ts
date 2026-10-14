@@ -272,3 +272,13 @@ describe("alinear i repartir la selecció múltiple", async () => {
     expect(xs(distributeMulti(comp, items, 0))).toEqual([0, 525, 1000])
   })
 })
+
+describe("treure del grup la selecció múltiple", async () => {
+  const { ungroupMulti, groupMulti } = await import("./editOps")
+  const m = (id: string) => ({ id, name: id, src: "fern", x: 0, y: 0, z: 0, w: 1, h: 1, d: 1, rot: 0, group: "G" })
+  const comp = { modules: [], references: [], parts: [], models: [m("a"), m("b")] }
+  it("treu del grup només els triats; posar-los en un altre grup", () => {
+    expect(ungroupMulti(comp, [{ kind: "model", id: "a" }]).models!.map((x) => x.group)).toEqual([undefined, "G"])
+    expect(groupMulti(comp, [{ kind: "model", id: "b" }], "H").models!.map((x) => x.group)).toEqual(["G", "H"])
+  })
+})

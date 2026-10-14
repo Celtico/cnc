@@ -52,6 +52,8 @@ import {
   newGroupName,
   partSize,
   multiBox,
+  groupMulti,
+  ungroupMulti,
   alignMulti,
   distributeMulti,
   setMultiMaterial,
@@ -469,6 +471,7 @@ export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGrou
   const size = [0, 1, 2].map((a) => Math.round(b.max[a]! - b.min[a]!))
   const nameOf = (x: MultiItem) => (x.kind === "part" ? comp.parts?.find((p) => p.id === x.id)?.name : x.kind === "model" ? comp.models?.find((m) => m.id === x.id)?.name : comp.references.find((r) => r.id === x.id)?.name) ?? "?"
   const groupable = items.some((x) => x.kind !== "ref")
+  const group = common(objs.filter((x) => x.kind !== "ref").map(({ o }) => (o as { group?: string }).group ?? ""))
   return (
     <Stack gap={0}>
       <FoldItem id="multi-position" title="Posició" icon={LuMove} badge={size.join(" × ")}>
@@ -522,6 +525,19 @@ export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGrou
           {one === "model" && <NumRow label="Gir" suffix="°" value={rot ?? 0} min={-360} max={360} step={15} help={rot === undefined ? "Diversos: el gir que hi posis va a tots." : "Al voltant del vertical, pel centre."} onChange={(n) => Number.isFinite(n) && onChange(setMultiRot(comp, items, n))} />}
         </FoldItem>
       )}
+      {/* El grup de tots (com el Grup d'una peça): posar-los en un grup, en un de nou o treure'ls del seu. */}
+      {groupable && (
+        <FoldItem id="multi-group" title="Grup" icon={LuGroup} badge={group === undefined ? "Diversos" : group || "Sense grup"} badgePalette={group ? "wood" : "gray"}>
+          <FormRow label="Grup" help={`${group === undefined ? "Diversos: el grup que triïs va a tots." : "El grup de tots els triats."}${items.some((x) => x.kind === "ref") ? " Els objectes de referència no fan grups." : ""}`}>
+            <ChoiceChips
+              label="Grup"
+              options={[{ id: "", label: "Sense grup" }, ...groupNames(comp).map((g) => ({ id: g, label: g })), { id: NEW_GROUP, label: "+ Grup nou" }]}
+              value={group ?? "__diversos__"}
+              onChange={(v) => (v === NEW_GROUP ? onGroup() : onChange(v ? groupMulti(comp, items, v) : ungroupMulti(comp, items)))}
+            />
+          </FormRow>
+        </FoldItem>
+      )}
       <FoldItem id="multi-items" title="Triats" icon={LuGroup} badge={items.length}>
         <Stack gap={0.5}>
           {items.map((x) => (
@@ -531,11 +547,6 @@ export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGrou
           ))}
         </Stack>
         <HStack gap={2}>
-          {groupable && (
-            <Button size="xs" variant="outline" onClick={onGroup}>
-              <LuGroup /> Agrupar
-            </Button>
-          )}
           <Button size="xs" variant="outline" colorPalette="red" onClick={onRemove}>
             <LuTrash2 /> Eliminar
           </Button>

@@ -535,3 +535,14 @@ export function distributeMulti(comp: Composition, items: readonly MultiItem[], 
   }
   return out
 }
+
+/** Treu del seu grup les peces i els models triats. */
+export function ungroupMulti(comp: Composition, items: readonly MultiItem[]): Composition {
+  const out = <T extends { id: string; group?: string }>(kind: MultiItem["kind"]) => (x: T): T => {
+    if (!inMulti(items, kind, x.id) || !x.group) return x
+    const { group: _g, ...rest } = x
+    void _g
+    return rest as T
+  }
+  return { ...comp, parts: (comp.parts ?? []).map(out("part")), ...(comp.models ? { models: comp.models.map(out("model")) } : {}) }
+}
