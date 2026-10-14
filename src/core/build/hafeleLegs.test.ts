@@ -5,6 +5,7 @@ import { buildModule } from "./buildModule"
 import { toWorld } from "./geometry"
 import { hardwareMount } from "./hardwareMount"
 import { builtinSolids } from "./hardwareSolids"
+import { hardwarePreview } from "./hardwarePreview"
 
 /** Pota de sòcol Häfele AXILO 78 amb la placa rectangular per cargolar (catàleg Häfele, p. FF 11.79). */
 const axilo = HAFELE_LEGS.find((x) => x.id === "leg-hafele-axilo78-screw")!
@@ -31,6 +32,14 @@ describe("pota AXILO 78 (placa rectangular per cargolar)", () => {
     for (const [cx, cz, s] of [[48, 60, 1], [W - 48, 60, -1], [48, D - 83, 1], [W - 48, D - 83, -1]] as const)
       for (const [du, dv] of [[-19, -32], [45, -32], [-19, 32], [45, 32]] as const) expect(near(cx + s * du, cz + dv), `${cx},${cz} ${du},${dv}`).toBe(true)
     expect(b.warnings.filter((w) => w.code === "hardware")).toEqual([])
+  })
+
+  it("el dibuix de Preferències (peça d'exemple) posa els forats com el moble: davant, darrere i mirall", () => {
+    const [base] = hardwarePreview(axilo).panels
+    const at = (x: number, y: number) => base!.holes.some((h) => Math.abs(h.x - x) < 0.01 && Math.abs(h.y - y) < 0.01)
+    const L = base!.length, Wd = base!.width
+    for (const [cx, cy, s] of [[48, 60, 1], [L - 48, 60, -1], [48, Wd - 83, 1], [L - 48, Wd - 83, -1]] as const)
+      for (const [du, dv] of [[-19, -32], [45, -32], [-19, 32], [45, 32]] as const) expect(at(cx + s * du, cy + dv), `${cx},${cy}`).toBe(true)
   })
 
   it("es munta a «Com va muntat» (la base amb les plaques) i es dibuixa: placa, tub i peu a cada pota", () => {

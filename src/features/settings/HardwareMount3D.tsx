@@ -1,6 +1,6 @@
 import { OrbitControls } from "@react-three/drei"
 import { Canvas, useThree } from "@react-three/fiber"
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { NeutralToneMapping, Vector3, type WebGLRenderer } from "three"
 import { mountCamera, type HardwareMount } from "../../core/build/hardwareMount"
 import { fixedSolids, shelfPins } from "../../core/build/hardwareSolids"
@@ -25,7 +25,7 @@ const S = 0.001
  * mides són als plànols 2D de l'editor). Un sol `Canvas` que pinta a demanda; es
  * munta amb l'editor obert (`React.lazy`) i, en tancar-lo, allibera els models.
  */
-export default function HardwareMount3D({ mount, materials, open }: { mount: HardwareMount; materials: MaterialPref[]; open: number }) {
+export default function HardwareMount3D({ mount, materials, open, frameKey }: { mount: HardwareMount; materials: MaterialPref[]; open: number; /** Canvia = es torna a enquadrar (un altre ferratge); editar-ne els números no mou la càmera. */ frameKey?: string }) {
   useEffect(() => () => releaseModelGpu(), [])
   const mb = mount.model?.bbox
   const span = mb ? Math.max(mb.max[0] - mb.min[0], mb.max[1] - mb.min[1], mb.max[2] - mb.min[2]) * S : 0
@@ -47,7 +47,7 @@ export default function HardwareMount3D({ mount, materials, open }: { mount: Har
       <hemisphereLight args={["#ffffff", "#8a7a60", 0.3]} />
       <directionalLight position={[1.5, 3, 2]} intensity={1.6} />
       <directionalLight position={[-2, 1.5, -2]} intensity={0.8} />
-      <MountScene mount={mount} materials={materials} open={open} />
+      <MountScene mount={mount} materials={materials} open={open} frameKey={frameKey} />
       <OrbitControls makeDefault enableDamping dampingFactor={0.12} target={[0, 0, 0]} minDistance={0.02} maxDistance={Math.max(2, span * 4)} />
     </Canvas>
   )
@@ -57,7 +57,7 @@ export default function HardwareMount3D({ mount, materials, open }: { mount: Har
 const LEG_ADJUST = 20
 
 /** Les peces (o el model sol) centrades al punt que mira la càmera i la càmera (`mountCamera` amb l'aspecte del visor). */
-function MountScene({ mount, materials, open }: { mount: HardwareMount; materials: MaterialPref[]; open: number }) {
+function MountScene({ mount, materials, open, frameKey }: { mount: HardwareMount; materials: MaterialPref[]; open: number; frameKey?: string }) {
   const groups = useMemo(() => movingGroups(mount.panels), [mount.panels])
   const groupOf = useMemo(() => new Map(groups.flatMap((g) => g.panelIds.map((id) => [id, g] as const))), [groups])
   const size = useThree((s) => s.size)
@@ -74,7 +74,12 @@ function MountScene({ mount, materials, open }: { mount: HardwareMount; material
   )
   // Centrat al punt que mira la càmera (el forat principal o el model), la mateixa vista que la miniatura.
   const cam = useMemo(() => mountCamera(mount, aspect), [mount, aspect])
-  const center: [number, number, number] = [-cam.target[0] * S, -cam.target[1] * S, -cam.target[2] * S]
+  // El punt del centre es queda el del primer enquadrament d'aquest ferratge (`frameKey`): canviar-ne una mida no fa
+  // lliscar el dibuix.
+  const fresh: [number, number, number] = [-cam.target[0] * S, -cam.target[1] * S, -cam.target[2] * S]
+  const [centerOf, setCenterOf] = useState({ key: frameKey ?? "", c: fresh })
+  if (centerOf.key !== (frameKey ?? "")) setCenterOf({ key: frameKey ?? "", c: fresh })
+  const center = centerOf.key === (frameKey ?? "") ? centerOf.c : fresh
   const tags = mount.proposedTags.length ? mount.proposedTags : undefined
   // Fusta translúcida i el ferratge opac (el protagonista); els suports de prestatge als forats de sota el prestatge.
   const solid = useMemo(() => new Set(mount.solid), [mount.solid])
@@ -95,18 +100,23 @@ function MountScene({ mount, materials, open }: { mount: HardwareMount; material
           )
         })}
       </group>
-      <Framing dir={cam.dir} dist={cam.dist * S} />
+      <Framing dir={cam.dir} dist={cam.dist * S} frameKey={frameKey} />
     </>
   )
 }
 
 /** Càmera de «Com va muntat» (`mountCamera`): es torna a posar quan canvia el ferratge (no quan s'obre la porta). */
-function Framing({ dir, dist }: { dir: [number, number, number]; dist: number }) {
+function Framing({ dir, dist, frameKey }: { dir: [number, number, number]; dist: number; frameKey?: string }) {
   const camera = useThree((s) => s.camera)
   const controls = useThree((s) => s.controls) as unknown as { target: Vector3; update: () => void } | null
   const invalidate = useThree((s) => s.invalidate)
   const [dx, dy, dz] = dir
+  // Només en obrir-lo i en canviar de ferratge (`frameKey`): editar-ne una mida no torna a moure la càmera que l'usuari ha posat.
+  const framed = useRef<string | null>(null)
   useEffect(() => {
+    const key = frameKey ?? ""
+    if (framed.current === key && controls) return
+    if (controls) framed.current = key
     camera.position.set(dx * dist, dy * dist, dz * dist)
     camera.lookAt(0, 0, 0)
     if (controls) {
@@ -114,6 +124,6 @@ function Framing({ dir, dist }: { dir: [number, number, number]; dist: number })
       controls.update()
     }
     invalidate()
-  }, [dx, dy, dz, dist, camera, controls, invalidate])
+  }, [dx, dy, dz, dist, camera, controls, invalidate, frameKey])
   return null
 }

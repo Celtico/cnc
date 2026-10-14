@@ -134,7 +134,11 @@ function previewPanels(item: HardwareItem): Panel[] {
       // Base de 600 × 450 vista des de sota (x = amplada, y = fondària des del darrere): una placa a cada cantonada.
       const s = legSpec(item)
       const base = sample("base", "Base (cara de sota)", "bottom", 600, 450)
-      for (const x of [s.inset, base.length - s.inset]) for (const y of [s.inset, base.width - s.inset]) for (const h of s.holes) base.holes.push(hole(x + h.u, y + h.v, { diameter: h.d, depth: h.depth, tag: h.tag }))
+      // Com al moble (`buildLegs`): les del darrere a `insetBack`, les del davant a `insetFront` i, amb `mirror`, les de la
+      // dreta en mirall. (Aquí y creix cap al davant, com la v del marc de la pota.)
+      for (const x of [s.inset, base.length - s.inset])
+        for (const y of [s.insetBack, base.width - s.insetFront])
+          for (const h of s.holes) base.holes.push(hole(x + (s.mirror && x > base.length / 2 ? -h.u : h.u), y + h.v, { diameter: h.d, depth: h.depth, tag: h.tag }))
       return [base]
     }
     case "model":

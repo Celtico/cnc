@@ -458,7 +458,7 @@ function MountPreview({ item, base, materials, noModel }: { item: HardwareItem; 
         <Stack gap={2}>
           <Box h={{ base: "300px", md: "420px", lg: "min(560px, 55dvh)" }} rounded="md" overflow="hidden" bg="bg.subtle" data-testid="hardware-mount-3d">
             <Suspense fallback={<Spinner size="sm" color="wood.solid" m={3} />}>
-              <HardwareMount3D mount={mount} materials={materials} open={open} />
+              <HardwareMount3D mount={mount} materials={materials} open={open} frameKey={item.id} />
             </Suspense>
           </Box>
           {(opensIn(mount) || adjustsLegs(mount)) && (
