@@ -441,5 +441,23 @@ function LegPick({ base, onChange }: { base: Extract<Base, { kind: "legs" }>; on
     }
     onChange({ ...base, hardware: item })
   }
-  return <HardwarePick engine="leg" label="Pota" current={cur} emptyLabel="Genèriques" help={cur ? undefined : "Genèriques: només es veuen al 3D (cap forat). Les potes importades (Preferències › Ferratges) fan els forats de la placa a la cara de sota de la base."} onPick={pick} />
+  // Una pota amb distància pròpia al davant (la AXILO 78): es pot canviar per a aquest mòdul (on va el sòcol); la còpia del
+  // mòdul passa a ser pròpia.
+  const front = cur?.engine === "leg" && "insetFront" in cur.params ? cur.params.insetFront : undefined
+  return (
+    <>
+      <HardwarePick engine="leg" label="Pota" current={cur} emptyLabel="Genèriques" help={cur ? undefined : "Genèriques: només es veuen al 3D (cap forat). Les potes importades (Preferències › Ferratges) fan els forats de la placa a la cara de sota de la base."} onPick={pick} />
+      {cur && front !== undefined && (
+        <NumRow
+          label="Potes al davant"
+          help="Del cantell de davant de la base a l'eix de les potes del davant: deixa lloc al sòcol. Només en aquest mòdul (el de tots, a Preferències › Ferratges)."
+          value={front}
+          min={20}
+          max={300}
+          step={1}
+          onChange={(v) => v >= 20 && v <= 300 && onChange({ ...base, hardware: { ...cur, params: { ...cur.params, insetFront: v } } })}
+        />
+      )}
+    </>
+  )
 }
