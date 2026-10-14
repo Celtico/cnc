@@ -337,4 +337,14 @@ export const MAG_OBJECTS: Template[] = [
   t("rug-grey", "Catifa gris gran", "3000 × 2400 mm.", () => [flat("Catifa", "Catifa gris", 0, 0, 0, 3000, 2400, 14)]),
   t("rug-round", "Catifa rodona", "Ø 2200 mm.", () => [flat("Catifa", "Catifa beix", 0, 0, 0, 2200, 2200, 12, ellipse(2200, 2200))]),
   t("rug-white", "Catifa blanca", "1600 × 2300 mm.", () => [flat("Catifa", "Bouclé blanc", 0, 0, 0, 1600, 2300, 14, roundRect(1600, 2300, 30))]),
+  // --- Obra: columnes i escales (per decisió de l'usuari, 2026-10-14); de terra al sostre (2600, l'alçada de les parets
+  // noves dels ambients: a l'ambient es canvia amb les mides generals de l'element). ---
+  t("column-square", "Columna quadrada", "300 × 2600 × 300 mm · pintada de blanc.", () => [front("Columna", "Pintura blanca", 0, 0, 0, 300, 2600, 300)]),
+  t("column-round", "Columna rodona", "Ø 300 × 2600 mm · pintada de blanc.", () => [cyl("Columna", "Pintura blanca", 150, 0, 150, 300, 2600)]),
+  t("stair-straight", "Escala recta d'un pis", "900 × 2700 × 3900 mm · 15 graons de roure de 180 × 260, contrapetges blanques; puja cap al fons.", () =>
+    Array.from({ length: 15 }, (_, i) => [
+      front(`Contrapetja ${i + 1}`, "Pintura blanca", 0, i * 180, i * 260, 900, 180, 20),
+      flat(`Graó ${i + 1}`, "Roure massís / xapat", 0, (i + 1) * 180 - 40, i * 260 - 20, 900, 300, 40),
+    ]).flat(),
+  ),
 ]

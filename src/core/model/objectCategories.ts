@@ -10,6 +10,7 @@ export const OBJECT_CATEGORIES = [
   { id: "plantes", label: "Plantes" },
   { id: "textils", label: "Catifes, tèxtils i complements" },
   { id: "cuina", label: "Electrodomèstics" },
+  { id: "obra", label: "Columnes i escales" },
   { id: "blocs", label: "Blocs" },
 ] as const
 
@@ -38,6 +39,7 @@ const BY_ID: Record<string, ObjectCategory> = {
   "model-fern-02-a": "plantes", "model-fern-02-b": "plantes", "model-fern-02-c": "plantes", "model-fern-02-d": "plantes", "model-fern-pot": "plantes", "model-jacaranda": "plantes", "model-fir-01": "plantes", "model-grass-patch": "plantes",
   cushion: "textils", throw: "textils", books: "textils", "rug-jute": "textils", "rug-kilim": "textils", "rug-grey": "textils",
   "rug-round": "textils", "rug-white": "textils",
+  "column-square": "obra", "column-round": "obra", "stair-straight": "obra",
   "books-standing": "textils", "bottles-amber": "textils", "vases-ceramic": "textils", "bowl-wood": "textils", "wine-glasses": "textils",
 }
 

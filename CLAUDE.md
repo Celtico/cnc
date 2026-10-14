@@ -1609,7 +1609,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   de «Lli blanc» (`tube` a `objectShapes.ts`: dues meitats d'anella, perquè una peça no té forats; peça estirada, v = 0
   al davant) i una «Bombeta» a dins amb portalàmpades: la llum surt per dalt i per baix i la tela brilla per la
   translucidesa (Làmpada de peu de llautó, de taula, de sostre de lli i la «Làmpada de peu» d'`OBJECT_TEMPLATES`).
-  «Pantalla de lli» (tela que fa llum sola) es queda per als objectes d'abans. Tot és geometria (perfils extrudits), no física
+  «Pantalla de lli» (tela que fa llum sola) es queda per als objectes d'abans. **Columnes i escales** (categoria «Columnes i escales», per decisió de l'usuari, 2026-10-14): columna
+  quadrada (300 × 300) i rodona (Ø300) de 2600 (l'alçada de les parets noves) i una escala recta d'un pis (15 graons de
+  roure de 180 × 260, contrapetges blanques, 900 d'ample); a l'ambient s'ajusten amb les mides generals. Tot és geometria (perfils extrudits), no física
   ni shaders: el render ho veu igual que el visor. Categories `OBJECT_CATEGORIES` / `objectCategory`
   (`core/model/objectCategories.ts`).
 - **Mides al mm**: `tidyMm`/`tidyPart` (`freePart.ts`) arrodoneixen al mm els valors amb més d'un decimal (els de l'usuari,
