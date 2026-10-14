@@ -186,6 +186,9 @@ function addGroove(host: Panel, hb: Box, [x0, x1, z0, z1]: [number, number, numb
  * (vista de dalt, x·z del moble), a `inset` de cada costat; una base rectangular dona les quatre de sempre. Les
  * cantonades de dins (la de l'osca) no en porten. Sense contorn, cap (es fan les de sempre).
  */
+/** Distància mínima entre dues potes (centre a centre): la placa de la AXILO 78 fa 92 × 79. */
+const LEG_MIN_GAP = 110
+
 export function legPoints(base: Panel, inset: number): [number, number][] | undefined {
   if (!base.outline || base.outline.length < 3) return undefined
   const pts = base.outline.map((q) => {
@@ -205,7 +208,11 @@ export function legPoints(base: Panel, inset: number): [number, number][] | unde
     const cross = (p[0] - a[0]) * (b[1] - p[1]) - (p[1] - a[1]) * (b[0] - p[0])
     if (cross <= 0) continue
     const k = Math.min(inset, lu / 2, lv / 2)
-    out.push([r(p[0] + (u[0]! / lu) * k + (v[0]! / lv) * k), r(p[1] + (u[1]! / lu) * k + (v[1]! / lv) * k)])
+    const q: [number, number] = [r(p[0] + (u[0]! / lu) * k + (v[0]! / lv) * k), r(p[1] + (u[1]! / lu) * k + (v[1]! / lv) * k)]
+    // Dues cantonades massa a prop (una osca estreta): les potes es trepitjarien (per decisió de l'usuari, 2026-10-14: «aquí
+    // es xafen les potes»); n'hi va una sola.
+    if (out.some((o) => Math.hypot(o[0] - q[0], o[1] - q[1]) < LEG_MIN_GAP)) continue
+    out.push(q)
   }
   return out
 }

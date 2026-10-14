@@ -99,6 +99,10 @@ describe("potes d'una base retallada per una columna", () => {
     const pts = legPoints(base, 50)!
     expect(pts).toHaveLength(5)
     for (const [x, z] of pts) expect(x < 190 && z < 190).toBe(false)
+    // Una columna a prop del lateral (una tira estreta de base al costat): cap parell de potes que es trepitgi.
+    const near = buildComposition(comp(col(30, -60, 120, 250))).panels.find((q) => q.id === "m:bottom")!
+    const np = legPoints(near, 50)!
+    for (let i = 0; i < np.length; i++) for (let j = i + 1; j < np.length; j++) expect(Math.hypot(np[i]![0] - np[j]![0], np[i]![1] - np[j]![1])).toBeGreaterThanOrEqual(110)
     const plain = buildComposition({ modules: [mod()], references: [] }).panels.find((q) => q.id === "m:bottom")!
     expect(legPoints(plain, 50)).toBeUndefined()
   })

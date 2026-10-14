@@ -2023,8 +2023,10 @@ class Builder {
     const ds = sys.drivers.slice().sort((a, b) => a.watts - b.watts)
     const drv = ds.find((x) => (x.perSlot ?? x.watts) >= peak) ?? ds[ds.length - 1]!
     const [len] = drv.size.split("×").map((v) => Number(v.trim().replace(",", ".")))
-    const dx0 = rb.min[0] + 50
-    const dx1 = dx0 + (len ?? 140)
+    // A sota de la base, al mig de l'amplada (les potes van a les cantonades: ni l'alimentador ni el cable hi passen per sobre).
+    const dLen = len ?? 140
+    const dx0 = below ? (rb.min[0] + rb.max[0]) / 2 - dLen / 2 : rb.min[0] + 50
+    const dx1 = dx0 + dLen
     // La cara on va l'alimentador (i per on corren els cables fins a ell): la de sobre de la tapa, la de sota de la base o, a dins, la de sobre de la base.
     const hy = up ? rb.max[1] : below ? rb.min[1] : rb.max[1]
     const dy0 = up || inside ? hy : hy - 16
@@ -2098,9 +2100,10 @@ class Builder {
       }
       // Per la cara amagada fins a l'alimentador.
       const last = path[path.length - 1]!
-      // Davant de les columnes que hi hagi pel camí fins a l'alimentador.
-      const zRun = Math.max(last[2], zAlong(last[0], dx0) + 25)
-      if (zRun > last[2] + 0.5) path.push([last[0], last[1], zRun])
+      // Davant de les columnes que hi hagi pel camí fins a l'alimentador; a sota de la base, arran del darrere (per darrere de
+      // les plaques de les potes, que comencen uns 13 mm endavant).
+      const zRun = below ? (cavity ? zCav : 6) : Math.max(last[2], zAlong(last[0], dx0) + 25)
+      if (Math.abs(zRun - last[2]) > 0.5) path.push([last[0], last[1], zRun])
       path.push([dx0, last[1], zRun], [dx0, last[1], zDrv + 5])
       length += Math.abs(last[0] - dx0) + Math.abs(last[2] - zDrv) + 50
       pts.push([dx0, last[1]])
