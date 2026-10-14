@@ -1303,6 +1303,9 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     només agafa els valors del mateix tipus. No es desa en obrir (`skipSave`). El motor ja es desava (`mobles:render-engine`).
   - **Comença aturat**: obrir el diàleg mostra la imatge del visor (`SceneGetter.snapshot`) i «Començar»; després, les
     opcions de qualitat, motor, escena i llum tornen a començar; aturar/continuar, límit de passades, passades per segon.
+    **Tancar-lo no el perd** (per decisió de l'usuari, 2026-10-14): un render començat s'atura amb les passades fetes i, en
+    tornar-lo a obrir, hi és amb «Continuar» i «De nou» (torna a llegir l'escena: el moble pot haver canviat); el motor
+    només s'allibera en sortir de la pàgina.
   - `extractScene` passa l'escena a triangles + materials + textures; tots dos motors fan servir el **mateix BVH** (`bvh.ts`,
     SAH per calaixos, 8 paraules per node), llums (`lights.ts`) i constants (`shading.ts`). Contracte (`engine.ts`): sumes RGBA
     + AOV (albedo i normal) i nombre de mostres; el diàleg divideix, filtra el soroll, fa el to i desa el PNG.

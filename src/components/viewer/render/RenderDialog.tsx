@@ -2,6 +2,7 @@ import { Box, Button, CloseButton, Dialog, HStack, Image, Portal, Stack, Switch,
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import type { IconType } from "react-icons"
 import { LuCamera, LuDownload, LuGauge, LuHouse, LuImage, LuImageUp, LuLamp, LuLightbulb, LuCloudSun, LuPause, LuPlay, LuRotateCcw, LuSun } from "react-icons/lu"
+import { Tooltip } from "../../ui/tooltip"
 import { ChoiceChips, FormRow } from "../../FormRow"
 import { FoldItem } from "../../Fold"
 import type { Camera, Scene } from "three"
@@ -535,8 +536,34 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
     restart(opts, res, effectiveKind)
   }
 
+  // Tancar-lo no el perd (per decisió de l'usuari, 2026-10-14: «la finestra del render no pot continuar quan la tanques i
+  // la tornes a obrir?»): el motor s'atura amb les passades fetes i, en tornar-lo a obrir, hi és amb «Continuar» (i «De nou»
+  // per tornar a començar amb el moble d'ara). Només s'allibera en sortir de la pàgina.
+  const kept = useRef(false)
+  useEffect(
+    () => () => {
+      disposeEngine()
+      dn.current.worker?.terminate()
+      dn.current.worker = null
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
   useEffect(() => {
     if (!open) return
+    if (kept.current && engine.current) {
+      kept.current = false
+      // El llenç és nou (el diàleg s'ha tornat a muntar): s'hi torna a pintar el que hi havia.
+      window.setTimeout(() => draw(), 0)
+      return () => {
+        if (engine.current) {
+          engine.current.pause()
+          setRunning(false)
+          kept.current = true
+        }
+      }
+    }
+    kept.current = false
     // En obrir no es calcula res: només la imatge del visor de fons i si hi ha GPU.
     setError(null)
     setNotice(null)
@@ -589,6 +616,13 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
     }
     return () => {
       alive = false
+      // Començat: s'atura i es queda (en tornar-lo a obrir, «Continuar»). Sense començar, es buida.
+      if (engine.current) {
+        engine.current.pause()
+        setRunning(false)
+        kept.current = true
+        return
+      }
       disposeEngine()
       dn.current.worker?.terminate()
       dn.current.worker = null
@@ -652,6 +686,15 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
       a.click()
       setTimeout(() => URL.revokeObjectURL(a.href), 1000)
     }, "image/png")
+  }
+
+  /** «De nou»: es torna a llegir l'escena (el moble pot haver canviat mentre era tancat) i es comença. */
+  const startOver = () => {
+    disposeEngine()
+    source.current = null
+    job.current = null
+    setPasses(0)
+    begin()
   }
 
   const toggle = () => {
@@ -742,9 +785,18 @@ export function RenderDialog({ open, onClose, getScene, name, saveKey }: { open:
                   </Text>
                   <HStack gap={2}>
                     {begun ? (
-                      <Button size="sm" variant="outline" onClick={toggle} disabled={preparing}>
-                        {running ? <LuPause /> : <LuPlay />} {running ? "Aturar" : "Continuar"}
-                      </Button>
+                      <>
+                        <Button size="sm" variant="outline" onClick={toggle} disabled={preparing}>
+                          {running ? <LuPause /> : <LuPlay />} {running ? "Aturar" : "Continuar"}
+                        </Button>
+                        {!running && (
+                          <Tooltip content="Tornar a començar amb el moble tal com és ara">
+                            <Button size="sm" variant="ghost" onClick={startOver} disabled={preparing}>
+                              <LuRotateCcw /> De nou
+                            </Button>
+                          </Tooltip>
+                        )}
+                      </>
                     ) : (
                       <Button size="sm" variant="outline" onClick={begin}>
                         <LuPlay /> Començar
