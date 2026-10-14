@@ -7,7 +7,7 @@ import { SceneAccess, StudioEnvironment, TextureRefresh } from "./SceneHelpers"
 import { surfaceMaterial } from "./surfaceMaterial"
 import { profileGeometry } from "./refGeometry"
 import { LIGHT_SPEC, usePresentationScene } from "./presentationScene"
-import { Billboard, Edges, Grid, Html, Line, OrbitControls, PerspectiveCamera } from "@react-three/drei"
+import { Billboard, Edges, Grid, Html, Line, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei"
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react"
 import { ContactShadow } from "./ContactShadow"
 import { BoxFrame } from "./BoxFrame"
@@ -211,7 +211,12 @@ export function CabinetViewer({
   // Signatura visual i col·locació de cada peça (es calculen un cop per construcció, no a cada render): `PanelMesh`
   // només es torna a dibuixar si canvien, així passar per sobre, arrossegar o editar un altre mòdul no refà les
   // geometries, els materials ni les textures de totes les peces.
-  const holesDrawn = showHoles || hardware
+  // Vistes Davant · Darrere · Esquerra · Dreta · Dalt (per decisió de l'usuari, 2026-10-14: «sense perspectiva i amb
+  // fils, per poder moure la peça seleccionada»): càmera ortogràfica (`CameraRig`) i el moble en línies, les peces gairebé
+  // transparents amb el perfil i els forats a la vista. «Enquadrar» torna al 3/4 en perspectiva.
+  const wire = viewDir !== null
+  const holesShown = showHoles || wire
+  const holesDrawn = holesShown || hardware
   const panelKeys = useMemo(() => {
     const m = new Map<string, { sig: string; place: string }>()
     // `place` porta també el mòdul: el clic i el ressaltat el llegeixen de la peça (no és visual, però no pot quedar vell).
@@ -371,11 +376,12 @@ export function CabinetViewer({
                 sig={k?.sig}
                 place={k?.place}
                 exploded={exploded}
-                showHoles={showHoles}
-                seeThrough={seeThroughAll}
+                showHoles={holesShown}
+                seeThrough={wire ? WIRE_OPACITY : seeThroughAll}
+                wire={wire}
                 // Mòdul triat: sòlid amb el contorn taronja. Translúcid només amb un compartiment triat (per veure'l a dins).
                 dimmed={q.guides && !!highlightZone && highlightZone.veil !== false && selectedIndex !== undefined && p.module === selectedIndex}
-                edges={q.guides}
+                edges={q.guides || wire}
                 materialMode={materialMode}
                 materials={materials}
                 hardware={hardware}
@@ -655,7 +661,32 @@ function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCam
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [size.width, size.height, size.depth])
 
+  // Vista ortogràfica: la càmera al costat triat, a una distància fixa, i el zoom que hi fa cabre el moble (amplada i
+  // alçada vistes d'aquell costat). Sense animació ni desar-la (és una vista, no una càmera).
   useEffect(() => {
+    if (!viewDir || !("isOrthographicCamera" in camera)) return
+    const dir = VIEW_DIR[viewDir]
+    const len = Math.hypot(dir[0], dir[1], dir[2])
+    const D = 20
+    goal.current = null
+    camera.position.set((dir[0] / len) * D, targetY + (dir[1] / len) * D, (dir[2] / len) * D)
+    const top = viewDir === "top"
+    const side = viewDir === "left" || viewDir === "right"
+    const ew = side ? d : w
+    const eh = top ? d : h
+    const cam = camera as unknown as { zoom: number; updateProjectionMatrix: () => void }
+    cam.zoom = Math.max(1, Math.min(viewport.width / (ew * 1.2), viewport.height / (eh * 1.2)))
+    cam.updateProjectionMatrix()
+    controls.current?.target.set(0, targetY, 0)
+    controls.current?.update()
+    setFramed(false)
+    fittedSize.current = `${size.width}x${size.height}x${size.depth}`
+    invalidate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [camera, viewDir, viewport.width, viewport.height, fitKey])
+
+  useEffect(() => {
+    if (viewDir && "isOrthographicCamera" in camera) return
     const radius = 0.5 * Math.sqrt(w * w + h * h + d * d)
     const dir = viewDir ? VIEW_DIR[viewDir] : FIT_DIR
     const len = Math.hypot(dir[0], dir[1], dir[2])
@@ -724,8 +755,8 @@ function CameraRig({ size, viewDir, fitKey, onFramedChange, initialCamera, onCam
 
   return (
     <>
-      <PerspectiveCamera makeDefault fov={38} near={0.01} far={100} position={[1.4, 1.1, 1.9]} />
-      <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={MAX_DISTANCE} maxPolarAngle={Math.PI * 0.55} onStart={() => {
+      {viewDir ? <OrthographicCamera makeDefault near={0.01} far={100} position={[0, 1, 20]} zoom={300} /> : <PerspectiveCamera makeDefault fov={38} near={0.01} far={100} position={[1.4, 1.1, 1.9]} />}
+      <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={0.12} minDistance={0.3} maxDistance={viewDir ? 40 : MAX_DISTANCE} maxPolarAngle={viewDir ? Math.PI : Math.PI * 0.55} onStart={() => {
           goal.current = null
           restored.current = null
           setFramed(false)
@@ -1408,6 +1439,8 @@ interface PanelMeshProps {
    * protagonista. Els forats es continuen veient.
    */
   seeThrough?: boolean | number
+  /** Vista en línies (les vistes ortogràfiques): el perfil més fosc, perquè es llegeixi sobre les peces gairebé transparents. */
+  wire?: boolean
   /**
    * Forats amb aquestes etiquetes d'un altre color: els proposats d'un ferratge importat sense confirmar (Preferències ›
    * Ferratges, el muntatge), que el moble encara no fa.
@@ -1440,6 +1473,7 @@ const samePanelProps = (a: PanelMeshProps, b: PanelMeshProps) =>
   a.hardware === b.hardware &&
   a.pins === b.pins &&
   a.seeThrough === b.seeThrough &&
+  a.wire === b.wire &&
   a.proposedTags === b.proposedTags &&
   a.materialMode === b.materialMode &&
   a.materials === b.materials &&
@@ -1464,6 +1498,7 @@ export const PanelMesh = memo(function PanelMesh({
   pins,
   fixed,
   seeThrough = false,
+  wire = false,
   proposedTags,
   selectedFitting,
   onSelectFitting,
@@ -1542,7 +1577,7 @@ export const PanelMesh = memo(function PanelMesh({
           onPointerOut={onHover ? () => onHover(panel, false) : undefined}
         >
           {!cut && <boxGeometry args={[L, W, T]} />}
-          {edges && <Edges color={dimmed || see !== undefined ? "#a08a6a" : "#6b5a3e"} threshold={15} />}
+          {edges && <Edges color={wire ? "#2b2418" : dimmed || see !== undefined ? "#a08a6a" : "#6b5a3e"} threshold={15} />}
         </mesh>
         {showHoles && vpanel.holes.length > 0 && (proposedTags?.length ? (
           <>
@@ -1565,6 +1600,9 @@ export const PanelMesh = memo(function PanelMesh({
     </group>
   )
 }, samePanelProps)
+
+/** Opacitat de les peces a la vista en línies (vistes ortogràfiques). */
+const WIRE_OPACITY = 0.12
 
 /** Opacitat de la fusta translúcida (`seeThrough`). */
 const SEE_THROUGH_OPACITY = 0.4

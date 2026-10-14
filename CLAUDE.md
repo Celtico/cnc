@@ -1038,10 +1038,13 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   en un compartiment fa `duplicateZone`. **Eliminar un mòdul** = `removeModule`: peces enganxades soltes al mateix lloc,
   taulell i sòcol al mòdul més proper del tram (o fora) i forats del taulell seus fora.
 - **Vistes** (per decisió de l'usuari): només **Davant · Darrere · Esquerra · Dreta · Dalt**, botons de text sense estat triat
-  (`CameraViews` a `ViewerControls`, `viewNames.ts`) en un sol lloc, Opcions de vista (ordinador i mòbil). Només col·loquen
-  la càmera **perspectiva** d'aquell costat i enquadren (`CabinetViewer viewDir` + `fitKey`); després s'orbita com sempre.
-  Sense cotes (són a l'Alçat), sense mode ortogràfic ni canvi de fons. Triar-ne una compta com «Enquadrar» (es desa a
-  `Composition.camera`); «Enquadrar» torna al 3/4 i només surt marcat amb el 3/4.
+  (`CameraViews` a `ViewerControls`, `viewNames.ts`) en un sol lloc, Opcions de vista (ordinador i mòbil). **Sense perspectiva i
+  amb fils** (per decisió de l'usuari, 2026-10-14: «que siguin de 0 perspectiva, i els renders amb fils, per poder moure
+  la peça seleccionada»): càmera **ortogràfica** d'aquell costat amb el zoom que hi fa cabre el moble (`CameraRig`,
+  `OrthographicCamera`; es pot orbitar i fer zoom) i el moble en **línies**: les peces gairebé transparents
+  (`WIRE_OPACITY`, la `veil`), el perfil fosc i els forats sempre a la vista (`PanelMesh wire`); el gizmo i la selecció
+  funcionen igual. Una vista no es desa com a càmera. «Enquadrar» torna al 3/4 en perspectiva i només surt marcat amb el
+  3/4. Sense cotes (són a l'Alçat).
 - **Càmera**: s'enquadra en obrir, triar una vista, redimensionar o amb «Enquadrar» (`LuVideo`); editar no la mou. El botó
   surt **marcat** mentre la càmera és a l'enquadrament (`onFramedChange`). **Es recorda per moble** (`Composition.camera`,
   `CameraPose` a `core/model/camera.ts`: posició, punt mirat i fov; una de no vàlida es descarta): 1 s després d'orbitar,
