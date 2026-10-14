@@ -23,7 +23,7 @@ const APP_SUGGESTIONS = [
  * Cada missatge porta davant on és l'usuari i què té seleccionat. La conversa dura mentre l'app és oberta (sense
  * historial desat); el calaix es munta el primer cop que s'obre. Tancar-lo (només la ✕) acaba la conversa.
  */
-export default function GlobalAssistant({ open, onClose, settings }: { open: boolean; onClose: () => void; settings: Settings }) {
+export default function GlobalAssistant({ open, onClose, settings, closeRequest }: { open: boolean; onClose: () => void; settings: Settings; closeRequest?: number }) {
   const doc = useHubDoc()
   // Les eines de l'app llegeixen les preferències d'ara (màquina, materials…).
   setAppSettings(settings)
@@ -58,7 +58,7 @@ export default function GlobalAssistant({ open, onClose, settings }: { open: boo
   const [width, setWidth] = usePersistentNumber("mobles:assistant-width", 400)
   const panel = (
     <Suspense fallback={null}>
-      <ChatPanel settings={settings} target={target} onClose={onClose} />
+      <ChatPanel settings={settings} target={target} onClose={onClose} closeRequest={closeRequest} />
     </Suspense>
   )
   if (docked)

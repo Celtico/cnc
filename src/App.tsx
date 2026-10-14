@@ -248,7 +248,10 @@ export function App() {
   // Assistent personal: el calaix (muntat el primer cop que s'obre) i la navegació que fa servir (`assistantHub.ts`).
   const [assistantOpen, setAssistantOpen] = useState(false)
   const [assistantMounted, setAssistantMounted] = useState(false)
+  // El botó «Assistent» l'obre i, si ja és obert, el tanca (com la ✕: si hi ha conversa, ho pregunta).
+  const [assistantCloseReq, setAssistantCloseReq] = useState(0)
   const openAssistant = () => {
+    if (assistantOpen) return setAssistantCloseReq((n) => n + 1)
     setAssistantMounted(true)
     setAssistantOpen(true)
   }
@@ -565,7 +568,7 @@ export function App() {
 
       {assistantMounted && (
         <Suspense fallback={null}>
-          <GlobalAssistant open={assistantOpen} onClose={() => setAssistantOpen(false)} settings={settings} />
+          <GlobalAssistant open={assistantOpen} onClose={() => setAssistantOpen(false)} settings={settings} closeRequest={assistantCloseReq} />
         </Suspense>
       )}
       {renderHost.req && (

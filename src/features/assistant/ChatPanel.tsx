@@ -35,7 +35,7 @@ interface Attached {
  * fitxers de text (amb el clip o deixant-los anar a sobre del panell, `attachments.ts`) i aturar. Les eines i les instruccions són les del document (`target.toolset`). Cada torn és **un sol pas de desfer**
  * (`apply` en viu i `commit` en acabar). La conversa es queda mentre l'editor és obert.
  */
-export default function ChatPanel({ settings, target, onClose }: { settings: Settings; target: ChatTarget<unknown>; /** Tancar (al calaix de l'assistent personal): una ✕ a la capçalera. */ onClose?: () => void }) {
+export default function ChatPanel({ settings, target, onClose, closeRequest = 0 }: { settings: Settings; target: ChatTarget<unknown>; /** Tancar (al calaix de l'assistent personal): una ✕ a la capçalera. */ onClose?: () => void; /** Cada cop que puja, es demana tancar com la ✕ (tornar a tocar el botó «Assistent»). */ closeRequest?: number }) {
   const { getDoc, apply, commit } = target
   const apiKey = settings.assistant.apiKey
   const model = ASSISTANT_MODELS.find((m) => m.id === settings.assistant.model) ?? ASSISTANT_MODELS[0]
@@ -154,6 +154,14 @@ export default function ChatPanel({ settings, target, onClose }: { settings: Set
     if (items.length || running) setConfirmClose(true)
     else onClose?.()
   }
+  // Tornar a tocar el botó «Assistent» del menú el tanca com la ✕ (per decisió de l'usuari, 2026-10-14).
+  const lastReq = useRef(closeRequest)
+  useEffect(() => {
+    if (closeRequest === lastReq.current) return
+    lastReq.current = closeRequest
+    close()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [closeRequest])
   const closeAndForget = () => {
     setConfirmClose(false)
     newChat()
