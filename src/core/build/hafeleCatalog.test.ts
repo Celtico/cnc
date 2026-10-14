@@ -49,8 +49,12 @@ describe("catàleg Häfele (v35)", () => {
     // El marc de l'app (sense placa): cap forat de placa, com abans.
     const plain = buildModule(mod({ front: door }))
     expect(plain.panels.flatMap((p) => p.holes).filter((h) => h.tag === "plate")).toHaveLength(0)
-    // El perfil fa l'amplada del marc.
-    expect(b.extras.find((p) => p.id.endsWith("-left") && p.name === "perfil vitrina")!.width).toBe(frame.params.frame)
+    // El perfil fa l'amplada del marc i és de plata anoditzat (el de l'app, negre).
+    const bar = b.extras.find((p) => p.id.endsWith("-left") && p.name === "perfil vitrina")!
+    expect(bar.width).toBe(frame.params.frame)
+    expect(bar.material).toBe("Alumini anoditzat plata")
+    expect(DEFAULT_SETTINGS.materials.some((m) => m.name === "Alumini anoditzat plata")).toBe(true)
+    expect(plain.extras.find((p) => p.name === "perfil vitrina")!.material).toBe("Alumini negre")
   })
 
   it("tiradors: la distància entre centres més gran que hi cap al front", () => {
@@ -75,6 +79,17 @@ describe("catàleg Häfele (v35)", () => {
 
   it("«Com va muntat» de tots, sense error", () => {
     for (const it of V35_ITEMS) expect(hardwareMount(it).error, it.id).toBeUndefined()
+  })
+
+  it("v36: un marc Häfele desat a la v35 sense material rep la plata, i el material s'afegeix", () => {
+    const old = JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+    old.version = 35
+    old.materials = old.materials.filter((m: { name: string }) => m.name !== "Alumini anoditzat plata")
+    for (const x of old.hardwareLibrary) if (x.engine === "glassFrame") delete x.material
+    const res = parseSettings(old)
+    expect(res.settings.hardwareLibrary.find((x) => x.id === HAFELE_GLASS_FRAMES[0]!.id)!.material).toBe("Alumini anoditzat plata")
+    expect(res.settings.hardwareLibrary.find((x) => x.id === "glass-frame-20")!.material).toBeUndefined()
+    expect(res.settings.materials.some((m) => m.name === "Alumini anoditzat plata")).toBe(true)
   })
 
   it("v35: s'afegeixen a unes preferències d'abans (per id)", () => {

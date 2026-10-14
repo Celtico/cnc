@@ -54,8 +54,10 @@ const mm = z.number().finite()
  * v34: potes de sòcol Häfele AXILO 78 (`V34_ITEMS`), additiu.
  * v35: catàleg general Häfele (`V35_ITEMS`: marcs d'alumini per a portes de vidre amb la placa de la Metallamat A,
  * tiradors, suports de prestatge i el perfil Loox d'11 mm per encastar), additiu.
+ * v36: el material del que es veu d'un ferratge (`HardwareItem.material`): els marcs Häfele, «Alumini anoditzat plata»
+ * (material nou, `FRAME_MATERIALS`, i els marcs de la v35 desats el reben si no en tenen); el de l'app es queda negre.
  */
-export const SETTINGS_VERSION = 35
+export const SETTINGS_VERSION = 36
 
 /** Joc de l'ample de la ranura del fons per defecte (v33; per decisió de l'usuari, 2026-10-14: «per defecte 0,8»). */
 export const DEFAULT_GROOVE_CLEARANCE = 0.8
@@ -491,6 +493,11 @@ export const CLADDING_MATERIALS: MaterialPref[] = [
 /** v17: les pantalles de lli feien massa llum (surtien blanques del tot al render del vespre). */
 export const LAMPSHADE_GLOW = 2.2
 
+/** Alumini dels marcs de vitrina Häfele (plata anoditzat, el de les referències .902 / .922). Afegit a la v36. */
+export const FRAME_MATERIALS: MaterialPref[] = [
+  { id: "sim-frame-silver", name: "Alumini anoditzat plata", thicknesses: [10], hasGrain: false, finish: { kind: "metal", color: "#c9ccd0" }, edge: "", cnc: false, category: "sim" },
+]
+
 /** Llum LED dels mobles (`Zone.led`): fa llum al render (càlida). Afegit a la v14. */
 export const LED_MATERIALS: MaterialPref[] = [
   { id: "led-strip", name: "Tira LED", thicknesses: [8], hasGrain: false, finish: { kind: "color", color: "#ffe2b8", roughness: 0.4 }, edge: "", cnc: false, category: "sim", glow: 60 },
@@ -616,6 +623,7 @@ export const BUILTIN_MATERIALS: MaterialPref[] = upgradeToPhoto([
   ...NON_CNC_MATERIALS,
   ...SIM_MATERIALS,
   ...LED_MATERIALS,
+  ...FRAME_MATERIALS,
   ...GLOSS_MATERIALS,
   ...RIFT_MATERIALS,
   ...CLADDING_MATERIALS,
@@ -771,8 +779,10 @@ export function parseSettings(raw: unknown): SettingsParse {
     : v16m
   // v18: la «Gespa» de foto, si encara tenia la tela de la v17.
   const v18m = version < 18 && v17m !== BUILTIN_MATERIALS ? v17m.map((m) => (m.id === "sim-lawn" && deepEqual(m.finish, OLD_LAWN_FINISH) ? { ...m, finish: LAWN_FINISH } : m)) : v17m
+  // v36: l'alumini plata dels marcs de vitrina Häfele, si no hi és.
+  const v36m = version < 36 && v18m !== BUILTIN_MATERIALS ? [...v18m, ...missing(FRAME_MATERIALS, v18m)] : v18m
   // Noms únics (sempre): un de repetit passa a «X 2» amb un avís (abans no es comprovava).
-  const unique = dedupeMaterialNames(v18m)
+  const unique = dedupeMaterialNames(v36m)
   problems.push(...unique.problems)
   const materials = unique.materials
   const renamed = (n: string) => v12.renames.find(([from]) => from === n)?.[1] ?? n
@@ -824,7 +834,13 @@ export function parseSettings(raw: unknown): SettingsParse {
   // v35: el catàleg general Häfele (`V35_ITEMS`), si no hi és (per id).
   const withV35 = version < 35 ? [...withV34, ...V35_ITEMS.filter((k) => !withV34.some((x) => x.id === k.id)).map((k) => structuredClone(k))] : withV34
   if (withV35.length !== withV34.length) migrated = true
-  const hardware = fixHardwareDefaults(withV35, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
+  // v36: els marcs Häfele de la v35 desats sense material reben el seu (plata); un de canviat a mà es queda.
+  const withV36 = version < 36 ? withV35.map((x) => {
+    const fresh = x.builtin && !x.material ? V35_ITEMS.find((k) => k.id === x.id && k.material) : undefined
+    return fresh ? { ...x, material: fresh.material } : x
+  }) : withV35
+  if (withV36.some((x, i) => x !== withV35[i])) migrated = true
+  const hardware = fixHardwareDefaults(withV36, section("hardwareDefaults", HardwareDefaultsSchema.partial(), DEFAULT_HARDWARE_DEFAULTS, "Ferratges (per defecte)"))
   if (hardware.changed) migrated = true
   // Prebroca dels cargols, una sola font: la regla desada o, a les preferències d'abans, la del primer joc de la
   // biblioteca (el que es feia servir); els jocs de la biblioteca en copien els números.

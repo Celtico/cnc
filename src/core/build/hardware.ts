@@ -263,6 +263,8 @@ export function glassFrameSpec(item: HardwareItem) {
   return {
     frame: param(item, "frame"),
     glass: param(item, "glass"),
+    /** El material dels perfils (`item.material`; sense, el negre de l'app). */
+    material: item.material ?? "Alumini negre",
     ...(plate && count ? { hinges: { plate, endOffset: item.params.endOffset ?? 100, count: (height: number) => Math.max(1, Math.round(stepValue(count, height))) } } : {}),
   }
 }

@@ -23,6 +23,9 @@ const METALLAMAT_PLATE = [
   { kind: "drill" as const, face: "A" as const, u: 16, v: 0, d: 5, depth: 12, tag: "plate" },
 ]
 
+/** Els perfils de les referències de la biblioteca (.902 / .922) són de plata anoditzat (el «color inox», .002, també es ven). */
+export const FRAME_MATERIAL = "Alumini anoditzat plata"
+
 const glassFrame = (id: string, name: string, ref: string, frame: number, glass: number, page: string, notes: string[]): HardwareItem => ({
   id,
   name,
@@ -32,6 +35,7 @@ const glassFrame = (id: string, name: string, ref: string, frame: number, glass:
   ref,
   tags: [...notes, SRC(page)],
   params: { frame, glass, plateSetback: 37, plateOffset: 0, endOffset: 100 },
+  material: FRAME_MATERIAL,
   count: structuredClone(HINGES_BY_HEIGHT),
   targets: [
     { key: "frame", label: "Marc d'alumini (no es mecanitza: la frontissa Metallamat A s'hi clava)", ops: [] },

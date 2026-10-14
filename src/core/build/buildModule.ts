@@ -1661,7 +1661,7 @@ class Builder {
   }
 
   /**
-   * Porta de vidre (vitrina): marc de perfil d'alumini negre de 20 mm i vidre de 5 al mig, al lloc de la porta. No és de
+   * Porta de vidre (vitrina): marc de perfil d'alumini (el material del marc: negre a l'app, plata als Häfele) i vidre al mig, al lloc de la porta. No és de
    * CNC: tot va a `extras` («Elements sense nesting», amb les mides per demanar-ho). Les frontisses són les del perfil
    * (no porta cassoletes al tauler); els laterals mantenen les fileres.
    */
@@ -1680,7 +1680,7 @@ class Builder {
         length: r(len),
         width: r(wid),
         thickness: t,
-        material: "Alumini negre",
+        material: frame.material,
         grain: "none",
         edges: { ...NO_EDGES },
         holes: [],

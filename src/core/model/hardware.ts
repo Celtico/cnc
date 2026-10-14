@@ -219,6 +219,11 @@ export const HardwareItemObjectSchema = z.object({
   /** Distància entre forats segons l'espai (tiradors: 64/96/128). */
   pitch: StepRuleSchema.optional(),
   targets: z.array(HardwareTargetSchema).min(1),
+  /**
+   * El material del que es veu, un nom de Preferències › Materials (v36): el perfil d'un marc de vitrina («Alumini
+   * anoditzat plata» als Häfele). Sense, el de l'app (el marc negre).
+   */
+  material: z.string().min(1).optional(),
   /** Versió de l'item (per saber si una còpia és d'abans). */
   version: z.number().int().min(1),
   /** Inicial de l'app (es pot editar; «Restaurar valors inicials» el torna a deixar com era). */
