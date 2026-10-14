@@ -239,3 +239,19 @@ describe("selecció múltiple", async () => {
     expect(toggleMulti(items, { kind: "ref", id: "r" })).toHaveLength(2)
   })
 })
+
+describe("propietats comunes de la selecció múltiple", async () => {
+  const { setMultiMaterial, setMultiSize, setMultiRot } = await import("./editOps")
+  const p = { id: "a", name: "a", orient: "front" as const, w: 100, h: 100, thickness: 19, material: "M", x: 0, y: 0, z: 0 }
+  const m = { id: "m1", name: "m1", src: "fern", x: 0, y: 0, z: 0, w: 200, h: 300, d: 200, rot: 0 }
+  const comp = { modules: [], references: [], parts: [p], models: [m] }
+  const items = [{ kind: "part" as const, id: "a" }, { kind: "model" as const, id: "m1" }]
+  const mats = [{ id: "v", name: "Vidre", category: "sim", cnc: false, thicknesses: [], finish: { kind: "color", color: "#fff", roughness: 0.1 } }] as never[]
+  it("material, mides i gir a tots", () => {
+    const c = setMultiMaterial(comp, items, "Vidre", mats)
+    expect([c.parts![0]!.material, c.parts![0]!.nest, c.models![0]!.material]).toEqual(["Vidre", false, "Vidre"])
+    expect(setMultiSize(comp, items, "w", 500).models![0]!.w).toBe(500)
+    expect(setMultiSize(comp, items, "d", 30).parts![0]!.thickness).toBe(30)
+    expect(setMultiRot(comp, items, 90).models![0]!.rot).toBe(90)
+  })
+})

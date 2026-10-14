@@ -1174,6 +1174,7 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
         <MultiInspector
           comp={comp}
           items={selection.items}
+          onChange={setComp}
           onSelect={(x) => select({ kind: x.kind, id: x.id })}
           onMove={(dx, dy, dz) => setComp((c) => moveMultiBy(c, selection.items, dx, dy, dz))}
           onGroup={() => {

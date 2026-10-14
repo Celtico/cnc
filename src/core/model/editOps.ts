@@ -21,6 +21,7 @@ import {
 import { cloneZone, removeZone, updateZone } from "./zoneOps"
 import { FreePartSchema, partSize, partsBox, type FreePart } from "./freePart"
 import { modelFootprint } from "./models"
+import { materialCategory, type MaterialPref } from "./settings"
 
 /** Porta-retalls de l'editor (mòdul, objecte, compartiment, peça lliure o model 3D). */
 export type EditClip =
@@ -450,4 +451,44 @@ export function groupMulti(comp: Composition, items: readonly MultiItem[], group
 /** Afegeix o treu un element de la selecció múltiple. */
 export function toggleMulti(items: readonly MultiItem[], item: MultiItem): MultiItem[] {
   return inMulti(items, item.kind, item.id) ? items.filter((x) => !(x.kind === item.kind && x.id === item.id)) : [...items, item]
+}
+
+/**
+ * El mateix material a tots els triats (propietats comunes de la selecció múltiple): a una peça lliure com fa el seu
+ * inspector (gruix més proper del material si es talla a la CNC; fora del nesting si és de simulació o és un objecte),
+ * a un model 3D i a un objecte de referència. `materials`: els de Preferències.
+ */
+export function setMultiMaterial(comp: Composition, items: readonly MultiItem[], name: string, materials: readonly MaterialPref[]): Composition {
+  const m = materials.find((x) => x.name === name)
+  const object = comp.kind === "objecte"
+  const part = (p: FreePart): FreePart => {
+    const t = m && m.cnc !== false && m.thicknesses.length && !m.thicknesses.includes(p.thickness) ? m.thicknesses.reduce((a, b) => (Math.abs(b - p.thickness) < Math.abs(a - p.thickness) ? b : a)) : p.thickness
+    const { nest: _n, ...rest } = p
+    void _n
+    const out: FreePart = { ...rest, material: name, thickness: object ? p.thickness : t }
+    return (m && materialCategory(m) === "sim") || object ? { ...out, nest: false } : out
+  }
+  return {
+    ...comp,
+    parts: (comp.parts ?? []).map((p) => (inMulti(items, "part", p.id) ? part(p) : p)),
+    references: comp.references.map((r) => (inMulti(items, "ref", r.id) ? { ...r, material: name } : r)),
+    ...(comp.models ? { models: comp.models.map((g) => (inMulti(items, "model", g.id) ? { ...g, material: name } : g)) } : {}),
+  }
+}
+
+/** Les mides comunes dels triats (`w`, `h`, `d` dels models i objectes; `w`, `h` i el gruix de les peces): a tots, el valor. */
+export function setMultiSize(comp: Composition, items: readonly MultiItem[], key: "w" | "h" | "d", v: number): Composition {
+  if (!(v > 0)) return comp
+  return {
+    ...comp,
+    parts: (comp.parts ?? []).map((p) => (inMulti(items, "part", p.id) ? (key === "d" ? { ...p, thickness: v } : { ...p, [key]: v }) : p)),
+    references: comp.references.map((r) => (inMulti(items, "ref", r.id) ? { ...r, [key]: v } : r)),
+    ...(comp.models ? { models: comp.models.map((g) => (inMulti(items, "model", g.id) ? { ...g, [key]: v } : g)) } : {}),
+  }
+}
+
+/** El gir de tots els models triats (graus). */
+export function setMultiRot(comp: Composition, items: readonly MultiItem[], rot: number): Composition {
+  if (!comp.models) return comp
+  return { ...comp, models: comp.models.map((g) => (inMulti(items, "model", g.id) ? { ...g, rot } : g)) }
 }

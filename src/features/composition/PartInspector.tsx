@@ -43,6 +43,9 @@ import {
   newGroupName,
   partSize,
   multiBox,
+  setMultiMaterial,
+  setMultiRot,
+  setMultiSize,
   type Composition,
   type MultiItem,
   type FreePart,
@@ -432,9 +435,26 @@ export function GroupInspector({ comp, group, onChange, onSelectPart, onSelectMo
  * Selecció múltiple (Maj + clic; per decisió de l'usuari, 2026-10-14): la posició de tots junts, el que hi ha (tocar-ne un
  * el tria sol) i les accions: agrupar les peces i els models, eliminar-ho tot.
  */
-export function MultiInspector({ comp, items, onSelect, onMove, onGroup, onRemove }: { comp: Composition; items: MultiItem[]; onSelect: (item: MultiItem) => void; onMove: (dx: number, dy: number, dz: number) => void; onGroup: () => void; onRemove: () => void }) {
+export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGroup, onRemove }: { comp: Composition; items: MultiItem[]; onChange: (c: Composition) => void; onSelect: (item: MultiItem) => void; onMove: (dx: number, dy: number, dz: number) => void; onGroup: () => void; onRemove: () => void }) {
+  const { settings } = useSettings()
   const b = multiBox(comp, items)
   if (!b) return null
+  // Propietats comunes (per decisió de l'usuari): el valor si tots el tenen igual; si no, «Diversos» i el que triïs va a tots.
+  const objs = items.flatMap((x) => {
+    const o = x.kind === "part" ? comp.parts?.find((p) => p.id === x.id) : x.kind === "model" ? comp.models?.find((m) => m.id === x.id) : comp.references.find((r) => r.id === x.id)
+    return o ? [{ kind: x.kind, o }] : []
+  })
+  const common = <T,>(vals: T[]): T | undefined => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] : undefined)
+  const material = common(objs.map(({ o }) => o.material ?? ""))
+  const kinds = new Set(objs.map((x) => x.kind))
+  const one = kinds.size === 1 ? [...kinds][0]! : null
+  // Mides: amb un sol tipus (les peces: ample, alt i gruix; els models i els objectes: ample, alt i fondària).
+  const sizeOf = (key: "w" | "h" | "d") => common(objs.map(({ kind, o }) => (kind === "part" && key === "d" ? (o as FreePart).thickness : (o as { w: number; h: number; d: number })[key])))
+  const rot = one === "model" ? common(objs.map(({ o }) => (o as { rot?: number }).rot ?? 0)) : undefined
+  const sizeRow = (key: "w" | "h" | "d", label: string) => {
+    const v = sizeOf(key)
+    return <NumRow label={label} value={v ?? 0} min={1} max={20000} step={10} help={v === undefined ? "Diversos: el valor que hi posis va a tots." : undefined} onChange={(n) => n > 0 && onChange(setMultiSize(comp, items, key, n))} />
+  }
   const size = [0, 1, 2].map((a) => Math.round(b.max[a]! - b.min[a]!))
   const nameOf = (x: MultiItem) => (x.kind === "part" ? comp.parts?.find((p) => p.id === x.id)?.name : x.kind === "model" ? comp.models?.find((m) => m.id === x.id)?.name : comp.references.find((r) => r.id === x.id)?.name) ?? "?"
   const groupable = items.some((x) => x.kind !== "ref")
@@ -448,6 +468,19 @@ export function MultiInspector({ comp, items, onSelect, onMove, onGroup, onRemov
           Es mouen tots junts: amb les fletxes del 3D, del teclat o aquí. Maj + clic (a l'arbre o al 3D) n'afegeix o en treu.
         </Text>
       </FoldItem>
+      <FoldItem id="multi-material" title="Material" icon={LuPalette} badge={material === undefined ? "Diversos" : material || "Cap"}>
+        <FormRow label="Material" help={material === undefined ? "Diversos: el material que triïs va a tots." : "El material de tots els triats."} maxW="280px">
+          <MaterialSelect label="Material" hideLabel materials={partChoices(settings.materials)} value={material ?? ""} emptyLabel={material === undefined ? "Diversos" : "Cap"} onChange={(v) => v && onChange(setMultiMaterial(comp, items, v, settings.materials))} />
+        </FormRow>
+      </FoldItem>
+      {one && (
+        <FoldItem id="multi-size" title="Mides" icon={LuMoveDiagonal}>
+          {sizeRow("w", "Ample")}
+          {sizeRow("h", "Alt")}
+          {sizeRow("d", one === "part" ? "Gruix" : "Fondària")}
+          {one === "model" && <NumRow label="Gir" suffix="°" value={rot ?? 0} min={-360} max={360} step={15} help={rot === undefined ? "Diversos: el gir que hi posis va a tots." : "Al voltant del vertical, pel centre."} onChange={(n) => Number.isFinite(n) && onChange(setMultiRot(comp, items, n))} />}
+        </FoldItem>
+      )}
       <FoldItem id="multi-items" title="Triats" icon={LuGroup} badge={items.length}>
         <Stack gap={0.5}>
           {items.map((x) => (
