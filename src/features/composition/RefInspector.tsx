@@ -35,7 +35,7 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
           label="Efecte"
           help={
             o.effect === "cut"
-              ? "Fa un forat passant a cada peça que travessa (tub, endoll, passacables…). Si el mous, el forat el segueix; surt al nesting, al DXF i al STEP."
+              ? "Fa un forat passant a cada peça que travessa (tub, endoll, passacables…); si arriba a la vora (una columna de la casa), la peça es retalla amb la seva forma i, si és una caixa vertical que entra pel darrere, el moble s'hi tanca amb fons nous i les potes s'hi aparten. Si el mous, el tall el segueix; surt al nesting, al DXF, al STEP i als .xcs."
               : "Obstacle: no forma part del moble, es veu translúcid per comprovar que tot hi cap i avisa si xoca amb alguna peça."
           }
         >

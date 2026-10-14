@@ -61,7 +61,13 @@ export function columnWalls(
       // Ha de tocar la base i anar de la base a la tapa.
       const x0 = Math.max(cx0, bb.min[0]), x1 = Math.min(cx1, bb.max[0])
       const z0 = Math.max(cz0, bb.min[2]), z1 = Math.min(cz1, bb.max[2])
-      if (x1 - x0 < 1 || z1 - z0 < 1 || o.y > bb.min[1] + 1 || o.y + o.h < yHi) continue
+      // Només les que pugen de terra (una columna de la casa) i arriben a la base; un tall de més amunt (pica, placa), no.
+      if (x1 - x0 < 1 || z1 - z0 < 1 || o.y > 1 || o.y + o.h < bb.min[1]) continue
+      // Una columna de terra a sostre: si no arriba a la tapa, el moble no s'hi pot tancar (i ho diu).
+      if (o.y + o.h < yHi) {
+        problems.push({ refId: o.id, panel: base, message: `«${o.name}» no arriba a la tapa del mòdul: si és una columna de terra a sostre, fes-la més alta (Alt) i el moble s'hi tancarà amb els fons que falten.` })
+        continue
+      }
       const touchesRear = rearMin ? cz0 <= bb.min[2] + 1 : cz1 >= bb.max[2] - 1
       const throughFront = rearMin ? cz1 >= bb.max[2] - 1 : cz0 <= bb.min[2] + 1
       if (!touchesRear || throughFront) {

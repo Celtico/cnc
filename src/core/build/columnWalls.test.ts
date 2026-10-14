@@ -63,3 +63,11 @@ describe("potes d'una base retallada per una columna", () => {
     expect(legPoints(plain, 50)).toBeUndefined()
   })
 })
+
+describe("columna que no arriba a la tapa", () => {
+  it("no es tanca i ho diu", () => {
+    const b = buildComposition(comp({ ...col(-60, -60), h: 500 }))
+    expect(b.panels.filter((p) => p.id.includes("colback"))).toHaveLength(0)
+    expect(b.warnings.some((w) => w.code === "ref-cut" && /no arriba a la tapa/.test(w.message))).toBe(true)
+  })
+})
