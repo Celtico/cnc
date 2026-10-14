@@ -306,14 +306,26 @@ function legSolids(p: Panel): HwSolid[] {
     const v: Vec3 = [f.v[0], f.v[1], 0]
     const u = cross(v, n)
     const fr = frame([f.x, f.y, f.face === "A" ? p.thickness : 0], u, v, n)
-    // La part fixa, cargolada a la base: la placa.
-    out.push(fr.box([g.u0, g.u1], [-g.halfV, g.halfV], [0, g.plateH], "dark"))
-    // La part mòbil, que es clava a la placa i surt per sota: el tub (Ø36), el cargol del regulador (Ø24) i el peu.
-    const thread = Math.min(30, Math.max(0, g.height - g.plateH - 16))
-    const tubeEnd = g.height - 8 - thread
-    if (tubeEnd > 4) out.push(fr.cyl(0, 0, [4, tubeEnd], 18, "plastic"))
-    if (thread > 0) out.push(fr.cyl(0, 0, [tubeEnd, g.height - 8], 12, "dark"))
-    out.push(fr.cyl(0, 0, [g.height - 8, g.height], g.foot / 2, "dark"))
+    const V = g.halfV, H = g.plateH
+    // El clip és a la vora més a prop de l'eix (5 mm de pestanya); el cos de la placa, de la pestanya a l'altra vora.
+    const clipAtU0 = Math.abs(g.u0) < Math.abs(g.u1)
+    const b0 = clipAtU0 ? g.u0 + 5 : g.u0, b1 = clipAtU0 ? g.u1 : g.u1 - 5
+    const block = Math.min(24, (b1 - b0) / 4)
+    // La part fixa (com al TopSolid del taller): els dos blocs dels extrems contra la base, el pont del mig una mica
+    // separat, la llosa de sota amb els cargols i la pestanya del clip del sòcol.
+    out.push(fr.box([b0, b0 + block], [-V, V], [0, H * 0.5], "dark"))
+    out.push(fr.box([b1 - block, b1], [-V, V], [0, H * 0.5], "dark"))
+    out.push(fr.box([b0 + block, b1 - block], [-V * 0.8, V * 0.8], [H * 0.2, H * 0.5], "dark"))
+    out.push(fr.box([b0, b1], [-V, V], [H * 0.5, H], "dark"))
+    out.push(clipAtU0 ? fr.box([g.u0, b0], [-V * 0.35, V * 0.35], [H * 0.15, H * 0.85], "dark") : fr.box([b1, g.u1], [-V * 0.35, V * 0.35], [H * 0.15, H * 0.85], "dark"))
+    // La part mòbil, que es clava a la placa i surt per sota: el tub, el cargol del regulador, el plat i el peu.
+    const footH = 12
+    const thread = Math.min(30, Math.max(0, g.height - H - footH - 8))
+    const tubeEnd = g.height - footH - 4 - thread
+    if (tubeEnd > H) out.push(fr.cyl(0, 0, [H, tubeEnd], 18, "dark"))
+    if (thread > 0) out.push(fr.cyl(0, 0, [tubeEnd, tubeEnd + thread], 12, "dark"))
+    out.push(fr.cyl(0, 0, [g.height - footH - 4, g.height - footH], 24, "dark"))
+    out.push(fr.cyl(0, 0, [g.height - footH, g.height], g.foot / 2, "dark"))
   }
   return out
 }

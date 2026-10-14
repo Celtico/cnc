@@ -39,11 +39,12 @@ describe("pota AXILO 78 (placa rectangular per cargolar)", () => {
     expect(bottom).toBeDefined()
     expect(bottom.fittings?.filter((f) => f.kind === "leg" && f.leg)).toHaveLength(4)
     const solids = builtinSolids(bottom)
-    expect(solids.filter((s) => s.kind === "box")).toHaveLength(4)
-    expect(solids.filter((s) => s.kind === "cyl")).toHaveLength(12)
+    expect(solids.filter((s) => s.kind === "box")).toHaveLength(20)
+    expect(solids.filter((s) => s.kind === "cyl")).toHaveLength(16)
     // La placa de cada pota cobreix els seus quatre cargols (a la vista de sota de la base).
     for (const f of bottom.fittings!) {
-      const plate = solids.find((s) => s.kind === "box" && Math.hypot(s.c[0] - f.x, s.c[1] - f.y) < 60)!
+      // La llosa de sota (la caixa més gran de la pota).
+      const plate = solids.filter((s) => s.kind === "box" && Math.hypot(s.c[0] - f.x, s.c[1] - f.y) < 60).sort((a, b) => (b.kind === "box" ? b.size[0] * b.size[1] : 0) - (a.kind === "box" ? a.size[0] * a.size[1] : 0))[0]!
       expect(plate).toBeDefined()
       const mine = bottom.holes.filter((h) => h.tag === "leg" && Math.hypot(h.x - f.x, h.y - f.y) < 60)
       expect(mine).toHaveLength(4)

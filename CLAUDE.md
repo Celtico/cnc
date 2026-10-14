@@ -168,7 +168,7 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     (`params.mirror` = 1, `legSpec().mirror`, `buildLegs`). El tub per l'alçada, a les notes de l'item. **Al 3D** (v38):
     sense model importat, `buildLegs` posa a la base un `Panel.fittings` `kind: "leg"` amb `leg` (la placa de l'item,
     `plateU0`/`plateU1`/`plateV`/`plateH`, en mirall a la dreta; l'alçada de la base «Potes»; el peu) i `legSolids`
-    (`hardwareSolids.ts`) en dibuixa la part fixa (la placa) i la mòbil (tub Ø36, cargol del regulador Ø24 i peu Ø78) (visor amb «Ferratges», «Com va muntat» i
+    (`hardwareSolids.ts`) en dibuixa, com al TopSolid del taller, la part fixa (els dos blocs dels extrems contra la base, el pont del mig, la llosa dels cargols i la pestanya del clip) i la mòbil (tub Ø36, cargol del regulador Ø24, plat Ø48 i peu Ø78) (visor amb «Ferratges», «Com va muntat» i
     miniatures; sense les genèriques; tot de plàstic negre). A «Com va muntat», el lliscador «Regulació» fa sortir la part
     mòbil fins a +20 (`LEG_ADJUST`, `HardwareMount3D`). Test `build/hafeleLegs.test.ts`.
   - **Fons** (`Carcass.back`): en ranura · cargolat darrere · **encastat** · sense. Encastat (`buildInsetBack`): ocupa la
