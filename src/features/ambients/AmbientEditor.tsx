@@ -1,3 +1,4 @@
+import { useSessionList } from "../../components/sessionState"
 import { Alert, Badge, Box, Button, Dialog, Editable, Flex, HStack, IconButton, Menu, Portal, SegmentGroup, Slider, Stack, Switch, Text } from "@chakra-ui/react"
 import { shrinkImage } from "../imageShrink"
 import { blobToBase64 } from "../file/mobleIo"
@@ -504,7 +505,9 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
   // elements i els grups (en l'ordre del primer element) amb els seus a dins. Un grup amb mobles i objectes surt als dos
   // apartats, a cadascun amb els seus; triar-lo tria tot el grup. Els blocs d'abans van amb els objectes; un moble que ja no
   // hi és, amb els mobles.
-  const [folded, setFolded] = useState<string[]>([])
+  // Els grups plegats de l'arbre, recordats per ambient durant la sessió (per decisió de l'usuari: en sortir i tornar
+  // a entrar, es queden com eren).
+  const [folded, setFolded] = useSessionList(`mobles:ambient-folded:${ambientId}`)
   type ListRow = { kind: "group"; name: string; items: AmbientItem[] } | { kind: "item"; item: AmbientItem }
   const rowsOf = (list: AmbientItem[]): ListRow[] => {
     const out: ListRow[] = []
