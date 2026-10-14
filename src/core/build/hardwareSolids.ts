@@ -317,6 +317,11 @@ function legSolids(p: Panel): HwSolid[] {
     out.push(fr.box([b1 - block, b1], [-V, V], [0, H * 0.5], "dark"))
     out.push(fr.box([b0 + block, b1 - block], [-V * 0.8, V * 0.8], [H * 0.2, H * 0.5], "dark"))
     out.push(fr.box([b0, b1], [-V, V], [H * 0.5, H], "dark"))
+    // Els caps dels quatre cargols, a la llosa de sota (on hi ha els forats de la pota, a la base).
+    for (const h of p.holes) {
+      if (h.tag !== "leg" || h.face !== f.face || Math.hypot(h.x - f.x, h.y - f.y) > Math.max(Math.abs(g.u0), Math.abs(g.u1)) + V) continue
+      out.push({ kind: "cyl", c: add([h.x, h.y, f.face === "A" ? p.thickness : 0], n, H + 0.2), axis: n, r: 4, h: 1.2, mat: "steel" })
+    }
     out.push(clipAtU0 ? fr.box([g.u0, b0], [-V * 0.35, V * 0.35], [H * 0.15, H * 0.85], "dark") : fr.box([b1, g.u1], [-V * 0.35, V * 0.35], [H * 0.15, H * 0.85], "dark"))
     // La part mòbil, que es clava a la placa i surt per sota: el tub, el cargol del regulador, el plat i el peu.
     const footH = 12

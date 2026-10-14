@@ -23,12 +23,12 @@ describe("pota AXILO 78 (placa rectangular per cargolar)", () => {
     const legs = bottom.holes.filter((h) => h.tag === "leg")
     expect(legs).toHaveLength(16)
     expect(legs.every((h) => h.diameter === 3 && h.depth === 10)).toBe(true)
-    // Eix a 60 mm dels cantells; a l'esquerra, cargols a −19 / +45 en X (el clip cap al lateral) i ±32 cap al davant; a la
+    // Eix a 50 mm dels cantells; a l'esquerra, cargols a −19 / +45 en X (el clip cap al lateral) i ±32 cap al davant; a la
     // dreta, en mirall.
     const W = m.carcass.width, D = m.carcass.depth
     const world = legs.map((h) => toWorld(bottom, [h.x, h.y, 0]))
     const near = (x: number, z: number) => world.some((p) => Math.abs(p[0] - x) < 0.01 && Math.abs(p[2] - z) < 0.01)
-    for (const [cx, cz, s] of [[60, 60, 1], [W - 60, 60, -1], [60, D - 60, 1], [W - 60, D - 60, -1]] as const)
+    for (const [cx, cz, s] of [[50, 50, 1], [W - 50, 50, -1], [50, D - 50, 1], [W - 50, D - 50, -1]] as const)
       for (const [du, dv] of [[-19, -32], [45, -32], [-19, 32], [45, 32]] as const) expect(near(cx + s * du, cz + dv), `${cx},${cz} ${du},${dv}`).toBe(true)
     expect(b.warnings.filter((w) => w.code === "hardware")).toEqual([])
   })
@@ -40,7 +40,7 @@ describe("pota AXILO 78 (placa rectangular per cargolar)", () => {
     expect(bottom.fittings?.filter((f) => f.kind === "leg" && f.leg)).toHaveLength(4)
     const solids = builtinSolids(bottom)
     expect(solids.filter((s) => s.kind === "box")).toHaveLength(20)
-    expect(solids.filter((s) => s.kind === "cyl")).toHaveLength(16)
+    expect(solids.filter((s) => s.kind === "cyl")).toHaveLength(32)
     // La placa de cada pota cobreix els seus quatre cargols (a la vista de sota de la base).
     for (const f of bottom.fittings!) {
       // La llosa de sota (la caixa més gran de la pota).
