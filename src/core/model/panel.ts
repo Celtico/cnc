@@ -224,6 +224,12 @@ export const PanelSchema = z.object({
     bbox: z.object({ min: Vec3Schema, max: Vec3Schema }).optional(),
     /** El ferratge col·locat a mà (`HardwarePlacement.id`) que el dibuixa: per triar-lo al 3D. */
     placement: z.string().optional(),
+    /**
+     * Pota de la biblioteca sense model (la AXILO 78): es dibuixa amb sòlids de l'app (`legSolids`) al marc del ferratge
+     * (u = v × n, n cap a terra): la placa de `u0` a `u1`, ±`halfV`, `plateH` de gruix; el tub fins a terra (`height`) i el
+     * peu de Ø`foot`.
+     */
+    leg: z.object({ u0: z.number(), u1: z.number(), halfV: z.number(), plateH: z.number(), height: z.number(), foot: z.number() }).optional(),
   })).optional(),
   placement: PlacementSchema,
 })

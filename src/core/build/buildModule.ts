@@ -2251,6 +2251,25 @@ class Builder {
     bottom.holes.push(...holes)
     if (deep) this.hardwareWarning(`«${item.name}»: els forats de les potes són més fondos que la base: es fan a ${num(T - 1)} mm (1 mm de pell).`)
     const imp = item.imported
+    // Una pota de la biblioteca sense model (la AXILO 78): es dibuixa amb sòlids de l'app (`legSolids`), la placa amb les
+    // mides de l'item (`plateU0`…; a la dreta, en mirall) i el tub fins a terra.
+    const pp = item.params
+    if (!imp && [pp.plateU0, pp.plateU1, pp.plateV, pp.plateH].every((x) => Number.isFinite(x))) {
+      const z = bottom.placement
+      const lv: [number, number] = [z.xAxis[2], z.yAxis[2]]
+      for (const [lx, lz] of legs) {
+        const l = toLocal(bottom, [lx, d.baseY, lz])
+        const face = faceAt(bottom, l)
+        if (face !== "A" && face !== "B") continue
+        // El marc del ferratge: u = v × n amb n cap a terra; si u surt cap a −X del mòdul, la placa es gira.
+        const n: Vec3 = face === "A" ? [z.zAxis[0], z.zAxis[1], z.zAxis[2]] : [-z.zAxis[0], -z.zAxis[1], -z.zAxis[2]]
+        const vw: Vec3 = [lv[0] * z.xAxis[0] + lv[1] * z.yAxis[0], lv[0] * z.xAxis[1] + lv[1] * z.yAxis[1], lv[0] * z.xAxis[2] + lv[1] * z.yAxis[2]]
+        const ux = vw[1] * n[2] - vw[2] * n[1]
+        const flip = (spec.mirror && lx > d.W / 2 ? -1 : 1) * (ux < 0 ? -1 : 1)
+        const [u0, u1] = flip > 0 ? [pp.plateU0!, pp.plateU1!] : [-pp.plateU1!, -pp.plateU0!]
+        ;(bottom.fittings ??= []).push({ kind: "leg", x: l[0], y: l[1], face, v: lv, leg: { u0, u1, halfV: pp.plateV!, plateH: pp.plateH!, height: base.height, foot: pp.foot ?? 78 } })
+      }
+    }
     if (imp && (imp.asset || imp.bbox)) {
       const z = bottom.placement
       const lv: [number, number] = [z.xAxis[2], z.yAxis[2]]

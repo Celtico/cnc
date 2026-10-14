@@ -32,7 +32,9 @@ export const HAFELE_LEGS: HardwareItem[] = [
       "Hipòtesi: prebroca dels cargols Ø3 × 10 (el catàleg no la dona; els del darrere cauen sota la ranura del fons).",
       AXILO_SOURCE,
     ],
-    params: { inset: 45, mirror: 1 },
+    // La placa per dibuixar-la (al marc de la pota, l'esquerra): del clip (−39,5 −5) a l'altra vora (+52,5), ±39,5, 25 de
+    // gruix; el peu Ø78.
+    params: { inset: 45, mirror: 1, plateU0: -44.5, plateU1: 52.5, plateV: 39.5, plateH: 25, foot: 78 },
     targets: [
       {
         key: "base",
@@ -45,7 +47,7 @@ export const HAFELE_LEGS: HardwareItem[] = [
         ],
       },
     ],
-    version: 2,
+    version: 3,
     builtin: true,
   },
 ]

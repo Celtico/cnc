@@ -293,11 +293,31 @@ function ledSolids(p: Panel): HwSolid[] {
 }
 
 /**
+ * Pota de la biblioteca sense model (`Panel.fittings` amb `leg`, la AXILO 78): la placa de plàstic a la cara de sota de la
+ * base, el tub (Ø36) fins a 8 mm de terra i el peu (Ø`foot` × 8) a terra. Al marc del ferratge: u = v × n, n cap a terra.
+ */
+function legSolids(p: Panel): HwSolid[] {
+  const out: HwSolid[] = []
+  for (const f of p.fittings ?? []) {
+    const g = f.kind === "leg" && !f.asset ? f.leg : undefined
+    if (!g) continue
+    const n: Vec3 = f.face === "A" ? [0, 0, 1] : [0, 0, -1]
+    const v: Vec3 = [f.v[0], f.v[1], 0]
+    const u = cross(v, n)
+    const fr = frame([f.x, f.y, f.face === "A" ? p.thickness : 0], u, v, n)
+    out.push(fr.box([g.u0, g.u1], [-g.halfV, g.halfV], [0, g.plateH], "dark"))
+    if (g.height > g.plateH + 8) out.push(fr.cyl(0, 0, [g.plateH, g.height - 8], 18, "dark"))
+    out.push(fr.cyl(0, 0, [g.height - 8, g.height], g.foot / 2, "dark"))
+  }
+  return out
+}
+
+/**
  * Els ferratges de sèrie d'una peça, en coordenades locals (mm). `pins`: els forats de la filera System 32 on hi ha un
  * suport de prestatge (`shelfPins`).
  */
 export function builtinSolids(p: Panel, pins: readonly Hole[] = [], fixed: readonly HwSolid[] = []): HwSolid[] {
-  return [...hingeSolids(p), ...slideSolids(p), ...dowelSolids(p), ...pinSolids(p, pins), ...flapSolids(p), ...magnetSolids(p), ...railSolids(p), ...ledSolids(p), ...fixed]
+  return [...hingeSolids(p), ...slideSolids(p), ...dowelSolids(p), ...pinSolids(p, pins), ...flapSolids(p), ...magnetSolids(p), ...railSolids(p), ...ledSolids(p), ...legSolids(p), ...fixed]
 }
 
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]

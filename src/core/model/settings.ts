@@ -58,8 +58,9 @@ const mm = z.number().finite()
  * (material nou, `FRAME_MATERIALS`, i els marcs de la v35 desats el reben si no en tenen); el de l'app es queda negre.
  * v37: la pota AXILO 78 (v34) com la munta el taller (clip cap al lateral, en mirall a la dreta, a 45 dels cantells):
  * la de la biblioteca es refà si encara és la de la v34 (`version` 1).
+ * v38: la mateixa pota amb la placa per dibuixar-la al 3D (`plateU0`…): es refà si és d'una versió anterior de l'item.
  */
-export const SETTINGS_VERSION = 37
+export const SETTINGS_VERSION = 38
 
 /** Joc de l'ample de la ranura del fons per defecte (v33; per decisió de l'usuari, 2026-10-14: «per defecte 0,8»). */
 export const DEFAULT_GROOVE_CLEARANCE = 0.8
@@ -842,9 +843,10 @@ export function parseSettings(raw: unknown): SettingsParse {
     return fresh ? { ...x, material: fresh.material } : x
   }) : withV35
   if (withV36.some((x, i) => x !== withV35[i])) migrated = true
-  // v37: la pota AXILO 78 de la v34 (version 1) passa a la d'ara (com la munta el taller).
-  const withV37 = version < 37 ? withV36.map((x) => {
-    const fresh = x.builtin && x.version === 1 ? V34_ITEMS.find((k) => k.id === x.id && k.version > 1) : undefined
+  // v37–v38: la pota AXILO 78 d'una versió anterior de l'item passa a la d'ara (com la munta el taller; amb la placa
+  // per dibuixar-la al 3D).
+  const withV37 = version < 38 ? withV36.map((x) => {
+    const fresh = x.builtin ? V34_ITEMS.find((k) => k.id === x.id && k.version > x.version) : undefined
     return fresh ? structuredClone(fresh) : x
   }) : withV36
   if (withV37.some((x, i) => x !== withV36[i])) migrated = true
