@@ -169,7 +169,8 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
     sense model importat, `buildLegs` posa a la base un `Panel.fittings` `kind: "leg"` amb `leg` (la placa de l'item,
     `plateU0`/`plateU1`/`plateV`/`plateH`, en mirall a la dreta; l'alçada de la base «Potes»; el peu) i `legSolids`
     (`hardwareSolids.ts`) en dibuixa la part fixa (la placa) i la mòbil (tub Ø36, cargol del regulador Ø24 i peu Ø78) (visor amb «Ferratges», «Com va muntat» i
-    miniatures; sense les genèriques). Test `build/hafeleLegs.test.ts`.
+    miniatures; sense les genèriques; tot de plàstic negre). A «Com va muntat», el lliscador «Regulació» fa sortir la part
+    mòbil fins a +20 (`LEG_ADJUST`, `HardwareMount3D`). Test `build/hafeleLegs.test.ts`.
   - **Fons** (`Carcass.back`): en ranura · cargolat darrere · **encastat** · sense. Encastat (`buildInsetBack`): ocupa la
     llum interior (on falta una peça, fins a fora; parets buides: entre les pells de dins), enrasat o retirat
     `backInsetSetback` (Caixa, «Retirada del fons»); pot ser del tauler del cos (veta vertical, cantell només on no toca

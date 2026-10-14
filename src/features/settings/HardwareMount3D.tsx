@@ -53,6 +53,9 @@ export default function HardwareMount3D({ mount, materials, open }: { mount: Har
   )
 }
 
+/** Regulació de les potes de l'app a «Com va muntat» (mm, la de l'AXILO 78: −10 / +20). */
+const LEG_ADJUST = 20
+
 /** Les peces (o el model sol) centrades al punt que mira la càmera i la càmera (`mountCamera` amb l'aspecte del visor). */
 function MountScene({ mount, materials, open }: { mount: HardwareMount; materials: MaterialPref[]; open: number }) {
   const groups = useMemo(() => movingGroups(mount.panels), [mount.panels])
@@ -77,11 +80,13 @@ function MountScene({ mount, materials, open }: { mount: HardwareMount; material
   const solid = useMemo(() => new Set(mount.solid), [mount.solid])
   const pins = useMemo(() => shelfPins(mount.panels), [mount.panels])
   const fixed = useMemo(() => fixedSolids(mount.panels), [mount.panels])
+  // Una pota dibuixada per l'app (AXILO 78): el lliscador regula l'alçada (la part mòbil surt de la placa fins a +20).
+  const panels = useMemo(() => (groups.length ? mount.panels : mount.panels.map((p) => (p.fittings?.some((f) => f.leg) ? { ...p, fittings: p.fittings.map((f) => (f.leg ? { ...f, leg: { ...f.leg, height: f.leg.height + open * LEG_ADJUST } } : f)) } : p))), [mount.panels, groups, open])
   return (
     <>
       <group position={center}>
         {modelPanel && <PanelFittings panel={modelPanel} />}
-        {mount.panels.map((p) => {
+        {panels.map((p) => {
           const g = groupOf.get(p.id)
           return (
             <MovingPanel key={p.id} transform={g ? transformAt(g.motion, open) : null}>

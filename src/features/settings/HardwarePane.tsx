@@ -394,6 +394,8 @@ function HardwareStage({ item, base, materials }: { item: HardwareItem; base?: M
 
 /** Es pot obrir (porta, abatible, calaix) al 3D del muntatge. */
 const opensIn = (m: HardwareMount) => movingGroups(m.panels).length > 0
+/** Potes dibuixades per l'app (la AXILO 78): el lliscador regula l'alçada (la part mòbil surt per sota, fins a +20). */
+const adjustsLegs = (m: HardwareMount) => m.panels.some((p) => p.fittings?.some((f) => f.kind === "leg" && f.leg))
 
 /**
  * Com va muntat (`hardwareMount`): el ferratge sobre un mòdul petit fet pel motor de sempre (porta i lateral de les
@@ -458,9 +460,12 @@ function MountPreview({ item, base, materials, noModel }: { item: HardwareItem; 
               <HardwareMount3D mount={mount} materials={materials} open={open} />
             </Suspense>
           </Box>
-          {opensIn(mount) && (
-            <FormRow label="Obertura" help="Obre la porta (o l'abatible, o el calaix) per veure'n la cara de dins.">
-              <Slider.Root size="sm" w="full" maxW="280px" pt="10px" aria-label={["Obertura"]} min={0} max={1} step={0.05} value={[open]} onValueChange={(e) => setOpen(e.value[0] ?? 0)}>
+          {(opensIn(mount) || adjustsLegs(mount)) && (
+            <FormRow
+              label={opensIn(mount) ? "Obertura" : "Regulació"}
+              help={opensIn(mount) ? "Obre la porta (o l'abatible, o el calaix) per veure'n la cara de dins." : "La part mòbil de la pota (el tub i el peu) surt de la placa fixa: fins a 20 mm més alta."}
+            >
+              <Slider.Root size="sm" w="full" maxW="280px" pt="10px" aria-label={[opensIn(mount) ? "Obertura" : "Regulació"]} min={0} max={1} step={0.05} value={[open]} onValueChange={(e) => setOpen(e.value[0] ?? 0)}>
                 <Slider.Control>
                   <Slider.Track>
                     <Slider.Range />

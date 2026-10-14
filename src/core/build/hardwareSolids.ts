@@ -295,7 +295,7 @@ function ledSolids(p: Panel): HwSolid[] {
 /**
  * Pota de la biblioteca sense model (`Panel.fittings` amb `leg`, la AXILO 78), més o menys com és: la **part fixa** (la
  * placa de plàstic cargolada a la cara de sota de la base) i la **part mòbil** que s'hi clava i surt per sota (el tub
- * Ø36, el cargol del regulador Ø24 —els últims 30 mm— i el peu Ø`foot` × 8 a terra). Al marc del ferratge: u = v × n, n cap a terra.
+ * Ø36, el cargol del regulador Ø24 —els últims 30 mm— i el peu Ø`foot` × 8 a terra). Tot de plàstic negre, com al catàleg. Al marc del ferratge: u = v × n, n cap a terra.
  */
 function legSolids(p: Panel): HwSolid[] {
   const out: HwSolid[] = []
@@ -312,7 +312,7 @@ function legSolids(p: Panel): HwSolid[] {
     const thread = Math.min(30, Math.max(0, g.height - g.plateH - 16))
     const tubeEnd = g.height - 8 - thread
     if (tubeEnd > 4) out.push(fr.cyl(0, 0, [4, tubeEnd], 18, "plastic"))
-    if (thread > 0) out.push(fr.cyl(0, 0, [tubeEnd, g.height - 8], 12, "steel"))
+    if (thread > 0) out.push(fr.cyl(0, 0, [tubeEnd, g.height - 8], 12, "dark"))
     out.push(fr.cyl(0, 0, [g.height - 8, g.height], g.foot / 2, "dark"))
   }
   return out
