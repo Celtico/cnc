@@ -23,7 +23,6 @@ import {
   LuScissors,
   LuSquare,
   LuTrash2,
-  LuUngroup,
   LuSprout,
   LuAlignCenterHorizontal,
   LuAlignCenterVertical,
@@ -46,11 +45,9 @@ import {
   partChoices,
   reorientPart,
   PART_AXES,
-  groupBox,
   materialCategory,
   compositionKind, partJoinery, partsOnlyKind,
   partOffset,
-  renameGroup,
   groupNames,
   newGroupName,
   partSize,
@@ -395,56 +392,6 @@ export function PartActions({ comp, id, onChange, onRemoved, onSelected }: { com
         </Menu.Positioner>
       </Portal>
     </Menu.Root>
-  )
-}
-
-/** Grup (peces lliures i models 3D): posició de tot el grup (es mouen junts), el que hi ha i accions. */
-export function GroupInspector({ comp, group, onChange, onSelectPart, onSelectModel, onMove }: { comp: Composition; group: string; onChange: (c: Composition) => void; onSelectPart: (id: string) => void; onSelectModel?: (id: string) => void; onMove: (dx: number, dy: number, dz: number) => void }) {
-  const members = (comp.parts ?? []).filter((p) => p.group === group)
-  const models = (comp.models ?? []).filter((m) => m.group === group)
-  // Posició a la composició (les enganxades a un mòdul, sumant-hi la seva).
-  const b = groupBox(comp, group)
-  if (!b) return null
-  const size = [0, 1, 2].map((a) => Math.round(b.max[a]! - b.min[a]!))
-  return (
-    <Stack gap={0}>
-      <FoldItem id="group-position" title="Posició del grup" icon={LuMove} badge={size.join(" × ")}>
-        <NumRow label={<AxisLabel icon={LuMoveHorizontal} name="De costat" axis="X" hint="Des de l'esquerra" />} ariaLabel="De costat (X)" value={b.min[0]} min={-30000} max={30000} step={10} onChange={(x) => Number.isFinite(x) && onMove(x - b.min[0], 0, 0)} />
-        <NumRow label={<AxisLabel icon={LuMoveVertical} name="Alçada" axis="Y" hint="Des del terra" />} ariaLabel="Alçada (Y)" value={b.min[1]} min={0} max={30000} step={10} onChange={(y) => Number.isFinite(y) && onMove(0, y - b.min[1], 0)} />
-        <NumRow label={<AxisLabel icon={LuMoveDiagonal2} name="Fondària" axis="Z" hint="Des de la paret cap endavant" />} ariaLabel="Fondària (Z)" value={b.min[2]} min={-30000} max={30000} step={10} onChange={(z) => Number.isFinite(z) && onMove(0, 0, z - b.min[2])} />
-        <Text fontSize="xs" color="fg.muted">
-          Tot el grup es mou junt: amb les fletxes del 3D, del teclat o aquí. Al 3D, el primer clic selecciona el grup i el segon, la peça.
-        </Text>
-      </FoldItem>
-      <FoldItem id="group-parts" title={models.length ? "Peces i models" : "Peces"} icon={LuPuzzle} badge={members.length + models.length}>
-        <Stack gap={0.5}>
-          {members.map((p) => {
-            const Icon = ORIENT_ICON[p.orient]
-            return (
-              <Button key={p.id} size="xs" variant="ghost" justifyContent="flex-start" onClick={() => onSelectPart(p.id)}>
-                <Icon /> {p.name}
-                <Text as="span" color="fg.muted" ms="auto">
-                  {p.w} × {p.h}
-                </Text>
-              </Button>
-            )
-          })}
-          {models.map((m) => (
-            <Button key={m.id} size="xs" variant="ghost" justifyContent="flex-start" onClick={() => onSelectModel?.(m.id)}>
-              <LuSprout /> {m.name}
-              <Text as="span" color="fg.muted" ms="auto">
-                {Math.round(m.w)} × {Math.round(m.h)}
-              </Text>
-            </Button>
-          ))}
-        </Stack>
-        <HStack gap={2}>
-          <Button size="xs" variant="outline" onClick={() => onChange(renameGroup(comp, group, undefined))}>
-            <LuUngroup /> Desagrupar
-          </Button>
-        </HStack>
-      </FoldItem>
-    </Stack>
   )
 }
 

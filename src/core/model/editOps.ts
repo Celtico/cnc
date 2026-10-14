@@ -243,13 +243,19 @@ export function groupBox(comp: Composition, group: string): { min: [number, numb
   const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
   if (ps.length) {
     const b = partsBox(ps)
-    for (let k = 0; k < 3; k++) (min[k] = Math.min(min[k]!, b.min[k]!), (max[k] = Math.max(max[k]!, b.max[k]!)))
+    for (let k = 0; k < 3; k++) {
+      min[k] = Math.min(min[k]!, b.min[k]!)
+      max[k] = Math.max(max[k]!, b.max[k]!)
+    }
   }
   for (const m of ms) {
     const f = modelFootprint(m)
     const lo: [number, number, number] = [f.x, m.y, f.z]
     const hi: [number, number, number] = [f.x + f.w, m.y + m.h, f.z + f.d]
-    for (let k = 0; k < 3; k++) (min[k] = Math.min(min[k]!, lo[k]!), (max[k] = Math.max(max[k]!, hi[k]!)))
+    for (let k = 0; k < 3; k++) {
+      min[k] = Math.min(min[k]!, lo[k]!)
+      max[k] = Math.max(max[k]!, hi[k]!)
+    }
   }
   return { min, max }
 }
@@ -401,7 +407,10 @@ export function multiBox(comp: Composition, items: readonly MultiItem[]): { min:
   const min: [number, number, number] = [Infinity, Infinity, Infinity]
   const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
   const add = (lo: readonly number[], hi: readonly number[]) => {
-    for (let k = 0; k < 3; k++) (min[k] = Math.min(min[k]!, lo[k]!), (max[k] = Math.max(max[k]!, hi[k]!)))
+    for (let k = 0; k < 3; k++) {
+      min[k] = Math.min(min[k]!, lo[k]!)
+      max[k] = Math.max(max[k]!, hi[k]!)
+    }
   }
   const ps = resolveParts(comp).filter((p) => inMulti(items, "part", p.id))
   if (ps.length) {

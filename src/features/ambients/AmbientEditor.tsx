@@ -834,19 +834,28 @@ function EditorInner({ ambientId, name, initial, onOpenProject }: { ambientId: n
                 onPick={(id) => select({ kind: "item", id })}
               />
             ) : sel?.kind === "group" && selIds.length ? (
-              <GroupInspector
+              // Un grup té les mateixes propietats que una selecció múltiple (per decisió de l'usuari), amb el nom.
+              <MultiInspector
                 key={sel.id}
                 name={sel.id}
-                items={amb.items.filter((i) => selIds.includes(i.id))}
-                names={names}
                 onRename={(n) => {
                   change(setItemGroup(amb, selIds, n), true)
                   setSel({ kind: "group", id: n })
                 }}
+                items={amb.items.filter((i) => selIds.includes(i.id))}
+                names={names}
+                groups={groups}
                 onMove={(dx, dy) => nudge(dx, dy)}
                 onRotate={rotate}
-                onDuplicate={duplicate}
+                onAlign={(axis, mode) => change(alignItems(amb, selIds, boxOf, axis, mode), true)}
+                onDistribute={(axis, gap) => change(distributeItems(amb, selIds, boxOf, axis, gap), true)}
+                onGroup={(g) => {
+                  const name = g ?? newItemGroupName(amb)
+                  change(setItemGroup(amb, selIds, name), true)
+                  groupSel(name)
+                }}
                 onUngroup={() => (change(setItemGroup(amb, selIds, undefined), true), setSel(null))}
+                onDuplicate={duplicate}
                 onDelete={remove}
                 onPick={(id) => select({ kind: "item", id })}
               />
@@ -1460,91 +1469,14 @@ function pickPlanImage(): Promise<{ src: string; w: number; h: number } | null> 
   })
 }
 
-/** Propietats d'un grup: nom, moure i girar el grup sencer, duplicar, desagrupar i eliminar. */
-function GroupInspector({
-  name,
-  items,
-  names,
-  onRename,
-  onMove,
-  onRotate,
-  onDuplicate,
-  onUngroup,
-  onDelete,
-  onPick,
-}: {
-  name: string
-  items: AmbientItem[]
-  names: Map<string, string>
-  onRename: (n: string) => void
-  onMove: (dx: number, dy: number) => void
-  onRotate: (deg: number) => void
-  onDuplicate: () => void
-  onUngroup: () => void
-  onDelete: () => void
-  onPick: (id: string) => void
-}) {
-  const cx = Math.round((Math.min(...items.map((i) => i.x)) + Math.max(...items.map((i) => i.x))) / 2)
-  const cy = Math.round((Math.min(...items.map((i) => i.y)) + Math.max(...items.map((i) => i.y))) / 2)
-  return (
-    <Stack gap={0}>
-      <HStack gap={2} pb={2}>
-        <Box color="wood.fg">
-          <LuGroup />
-        </Box>
-        <Editable.Root key={name} defaultValue={name} onValueCommit={(e) => e.value.trim() && e.value.trim() !== name && onRename(e.value.trim())} fontWeight="semibold" flex={1} minW={0} aria-label="Nom del grup">
-          <Editable.Preview truncate title="Clica per canviar el nom" />
-          <Editable.Input />
-        </Editable.Root>
-        <Tooltip content="Duplicar el grup (Ctrl/⌘ D)">
-          <IconButton aria-label="Duplicar el grup" size="xs" variant="ghost" onClick={onDuplicate}>
-            <LuCopy />
-          </IconButton>
-        </Tooltip>
-        <Tooltip content="Desagrupar">
-          <IconButton aria-label="Desagrupar" size="xs" variant="ghost" onClick={onUngroup}>
-            <LuUngroup />
-          </IconButton>
-        </Tooltip>
-        <Tooltip content="Eliminar el grup (Supr)">
-          <IconButton aria-label="Eliminar el grup" size="xs" variant="ghost" colorPalette="red" onClick={onDelete}>
-            <LuTrash2 />
-          </IconButton>
-        </Tooltip>
-      </HStack>
-      <FoldItem id="amb-group-place" title="Posició del grup" icon={LuMove}>
-        <NumRow label="X (centre)" value={cx} step={10} onChange={(x) => Number.isFinite(x) && onMove(x - cx, 0)} />
-        <NumRow label="Y (centre)" value={cy} step={10} onChange={(y) => Number.isFinite(y) && onMove(0, y - cy)} />
-        <HStack gap={2}>
-          <Button size="xs" variant="outline" onClick={() => onRotate(-90)}>
-            <LuRotateCcw /> −90°
-          </Button>
-          <Button size="xs" variant="outline" onClick={() => onRotate(90)}>
-            <LuRotateCw /> +90° (R)
-          </Button>
-        </HStack>
-      </FoldItem>
-      <FoldItem id="amb-group-items" title="Elements" icon={LuGroup} badge={items.length}>
-        <Stack gap={1}>
-        {items.map((i) => (
-          <Button key={i.id} size="xs" variant="ghost" justifyContent="flex-start" onClick={() => onPick(i.id)}>
-            {names.get(i.id)}
-          </Button>
-        ))}
-        <Text fontSize="xs" color="fg.muted">
-          Com a l'editor: el primer clic a un element agrupat tria el grup; el segon, l'element.
-        </Text>
-        </Stack>
-      </FoldItem>
-    </Stack>
-  )
-}
 
 /**
  * Selecció múltiple (Maj + clic, com a l'editor): moure i girar tots junts, alinear i repartir al plànol, el grup de tots,
  * la llista (tocar-ne un el tria sol), duplicar i eliminar.
  */
 function MultiInspector({
+  name,
+  onRename,
   items,
   names,
   groups,
@@ -1558,6 +1490,9 @@ function MultiInspector({
   onDelete,
   onPick,
 }: {
+  /** Un grup: el nom (es canvia clicant-lo). Sense, una selecció múltiple («N elements»). */
+  name?: string
+  onRename?: (n: string) => void
   items: AmbientItem[]
   names: Map<string, string>
   groups: string[]
@@ -1581,9 +1516,16 @@ function MultiInspector({
         <Box color="wood.fg">
           <LuGroup />
         </Box>
-        <Text fontWeight="semibold" flex={1} minW={0} truncate>
-          {items.length} elements
-        </Text>
+        {name !== undefined && onRename ? (
+          <Editable.Root key={name} defaultValue={name} onValueCommit={(e) => e.value.trim() && e.value.trim() !== name && onRename(e.value.trim())} fontWeight="semibold" flex={1} minW={0} aria-label="Nom del grup">
+            <Editable.Preview truncate title="Clica per canviar el nom" />
+            <Editable.Input />
+          </Editable.Root>
+        ) : (
+          <Text fontWeight="semibold" flex={1} minW={0} truncate>
+            {items.length} elements
+          </Text>
+        )}
         <Tooltip content="Duplicar (Ctrl/⌘ D)">
           <IconButton aria-label="Duplicar els triats" size="xs" variant="ghost" onClick={onDuplicate}>
             <LuCopy />

@@ -340,12 +340,18 @@ export function CabinetViewer({
     const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity]
     if (members.length) {
       const b = partsBox(members)
-      for (let k = 0; k < 3; k++) (min[k] = Math.min(min[k]!, b.min[k]!), (max[k] = Math.max(max[k]!, b.max[k]!)))
+      for (let k = 0; k < 3; k++) {
+      min[k] = Math.min(min[k]!, b.min[k]!)
+      max[k] = Math.max(max[k]!, b.max[k]!)
+    }
     }
     for (const m of ms) {
       const f = modelFootprint(m)
       const lo = [f.x, m.y, f.z], hi = [f.x + f.w, m.y + m.h, f.z + f.d]
-      for (let k = 0; k < 3; k++) (min[k] = Math.min(min[k]!, lo[k]!), (max[k] = Math.max(max[k]!, hi[k]!)))
+      for (let k = 0; k < 3; k++) {
+      min[k] = Math.min(min[k]!, lo[k]!)
+      max[k] = Math.max(max[k]!, hi[k]!)
+    }
     }
     return { id: `group:${selectedGroup}`, name: selectedGroup!, x: min[0]!, y: min[1]!, z: min[2]!, w: max[0]! - min[0]!, h: max[1]! - min[1]!, d: max[2]! - min[2]! }
   }, [parts, models, selectedGroup])

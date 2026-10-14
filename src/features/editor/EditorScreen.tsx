@@ -61,7 +61,7 @@ import { System32Pick } from "../composition/HardwarePick"
 import { ElevationEditor } from "../composition/ElevationEditor"
 import { RefActions, RefInspector } from "../composition/RefInspector"
 import { ModelActions, ModelInspector } from "../composition/ModelInspector"
-import { GroupInspector, MultiInspector, PartActions, PartInspector, PartJoineryForm } from "../composition/PartInspector"
+import { MultiInspector, PartActions, PartInspector, PartJoineryForm } from "../composition/PartInspector"
 import { ORIENT_ICON } from "../composition/partOrient"
 import { StructureTree, type Selection } from "../composition/StructureTree"
 import { Tooltip } from "../../components/ui/tooltip"
@@ -1204,7 +1204,28 @@ function Editor({ projectId, name, initial, read: readNow, project }: { projectI
           }}
         />
       ) : selection.kind === "group" ? (
-        <GroupInspector comp={comp} group={selection.id} onChange={setComp} onSelectPart={(id) => select({ kind: "part", id })} onSelectModel={(id) => select({ kind: "model", id })} onMove={(dx, dy, dz) => moveGroup(selection.id, dx, dy, dz)} />
+        // Un grup té les mateixes propietats que una selecció múltiple (per decisió de l'usuari): els seus elements.
+        (() => {
+          const items: MultiItem[] = [...(comp.parts ?? []).filter((p) => p.group === selection.id).map((p) => ({ kind: "part" as const, id: p.id })), ...(comp.models ?? []).filter((m) => m.group === selection.id).map((m) => ({ kind: "model" as const, id: m.id }))]
+          return (
+            <MultiInspector
+              comp={comp}
+              items={items}
+              onChange={setComp}
+              onSelect={(x) => select({ kind: x.kind, id: x.id })}
+              onMove={(dx, dy, dz) => moveGroup(selection.id, dx, dy, dz)}
+              onGroup={() => {
+                const g = newGroupName(comp)
+                setComp(groupMulti(comp, items, g))
+                select({ kind: "group", id: g })
+              }}
+              onRemove={() => {
+                setComp(removeGroup(comp, selection.id))
+                select({ kind: "moble" })
+              }}
+            />
+          )
+        })()
       ) : selection.kind === "part" ? (
         <Stack gap={0}>
           <PartInspector comp={comp} id={selection.id} joints={build?.joints ?? []} onChange={setComp} />
