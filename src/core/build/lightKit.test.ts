@@ -230,6 +230,9 @@ describe("recorregut dels cables dels llums", () => {
     expect((back.cutouts ?? []).some((c) => c.tag === "cable-mains" && c.kind === "slot")).toBe(true)
     expect(b.wiring?.runs.length).toBe(b.lightKits.reduce((a, k) => a + k.lamps, 0))
     expect(b.wiring!.runs.every((r) => r.length > 0)).toBe(true)
+    // Es veu al 3D: l'alimentador, els cables i la tapa passacables (de només veure).
+    expect(b.extras.some((p) => p.id === "wiring-driver" && p.role === "hardware")).toBe(true)
+    expect(b.extras.filter((p) => p.id.startsWith("wiring-0-")).length).toBeGreaterThan(2)
     // La base no es forada pel recorregut (l'alimentador hi va a sobre).
     expect((b.panels.find((p) => p.role === "bottom")!.cutouts ?? []).some((c) => c.tag === "cable-run")).toBe(false)
   })

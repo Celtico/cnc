@@ -309,7 +309,8 @@ Regla clau: **`core/` no importa mai de React, Chakra ni three**. Tota la geomet
       de l'alimentador, ranura de 40 × 16 (tag `cable-mains`; hi passa l'endoll pla europeu, 35,3 × 13,7). Llargada de
       cada cable (avís si passa del màxim del catàleg). **Plànol** a Peces › «Llums i instal·lació elèctrica»
       (`features/cutlist/WiringPlan.tsx`): de davant, alimentador, làmpades, recorreguts amb les llargades, passants,
-      interruptor i sortida. Test a `build/lightKit.test.ts`.
+      interruptor i sortida. **Al 3D i al render** (de només veure, rol `hardware`): l'alimentador, cada cable pel seu
+      recorregut (Ø4, `hwRod`) i la tapa passacables a la cantonada per on baixa. Test a `build/lightKit.test.ts`.
     - **Llum a sota del moble** (`Carcass.underLight`, Mòdul › Caixa «Llum a sota», després de la base; per decisió de
       l'usuari, 2026-10-14, com la cuina de casa: «a sota dels mobles hi posen leds»; només penjat o amb potes,
       `visibleModule`): la mateixa «Llum» (el perfil de l'app o un joc de llum, «Com el mòdul» o còpia pròpia) a la cara

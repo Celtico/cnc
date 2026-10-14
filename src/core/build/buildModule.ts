@@ -1856,13 +1856,14 @@ class Builder {
    * Un cilindre de només veure (rol `hardware`): radi `R`, al llarg de Y (de `y0` a `y1`, centrat a x = `x0`, z = `z`) o
    * de X (de `x0` a `x1`, a y = `y0`). Un contorn rodó extrudit, com les peces amb forma.
    */
-  private hwRod(id: string, label: string, material: string, x0: number, x1: number, y0: number, z: number, R: number, axis: "x" | "y", y1 = y0): void {
+  private hwRod(id: string, label: string, material: string, x0: number, x1: number, y0: number, z: number, R: number, axis: "x" | "y" | "z", y1 = y0, z1 = z): void {
     const k = 0.41421356
-    const len = axis === "y" ? y1 - y0 : Math.abs(x1 - x0)
+    const len = axis === "y" ? y1 - y0 : axis === "z" ? Math.abs(z1 - z) : Math.abs(x1 - x0)
     if (len <= 0.5) return
     const outline: [number, number, number][] = [[R, 0, k], [2 * R, R, k], [R, 2 * R, k], [0, R, k]]
     const base = { id, name: "ferratge", label, role: "hardware" as const, length: 2 * R, width: 2 * R, thickness: r(len), material, grain: "none" as const, edges: { ...NO_EDGES }, holes: [], grooves: [], outline }
     if (axis === "y") this.extras.push({ ...base, placement: placement([r(x0 - R), r(y0), r(z + R)], X, neg(Z), Y, Y) })
+    else if (axis === "z") this.extras.push({ ...base, placement: placement([r(x0 - R), r(y0 - R), r(Math.min(z, z1))], X, Y, Z, Z) })
     else this.extras.push({ ...base, placement: placement([r(Math.min(x0, x1)), r(y0 - R), r(z + R)], neg(Z), Y, X, X) })
   }
 
@@ -2078,6 +2079,31 @@ class Builder {
     }
     if (!mains) notes.push("Sense fons on fer la sortida del cable de xarxa: passa'l per darrere del mòdul fins a l'endoll.")
     if (this.lampSpots.some((l) => l.host.role === "shelf")) notes.push("Les làmpades sota prestatges regulables: el cable passa pel costat del prestatge (no es forada) fins a la cantonada.")
+    // Al 3D (per decisió de l'usuari: «es veuen els cables?»): l'alimentador, cada cable pel seu recorregut (Ø4) i la tapa
+    // passacables del catàleg a la cantonada per on baixa (de només veure, rol `hardware`).
+    this.hwBox("wiring-driver", drv.name, "Gris mat", [dx0, baseTop, zBack + 20], [dx1 - dx0, 16, 50])
+    const cable = (id: string, a: Vec3, b: Vec3) => {
+      if (Math.abs(a[0] - b[0]) > 0.5) this.hwRod(id, "Cable de llum", "Gris mat", a[0], b[0], a[1], a[2], 2, "x")
+      else if (Math.abs(a[1] - b[1]) > 0.5) this.hwRod(id, "Cable de llum", "Gris mat", a[0], a[0], Math.min(a[1], b[1]), a[2], 2, "y", Math.max(a[1], b[1]))
+      else if (Math.abs(a[2] - b[2]) > 0.5) this.hwRod(id, "Cable de llum", "Gris mat", a[0], a[0], a[1], a[2], 2, "z", a[1], b[2])
+    }
+    const covers = new Set<string>()
+    this.lampSpots.forEach((l, i) => {
+      const dz: Vec3 = [dx0, baseTop + 8, zc]
+      const path: Vec3[] = []
+      if (l.host === base) path.push([l.x, l.y, l.z], [l.x, baseTop + 8, l.z], [l.x, baseTop + 8, zc], dz)
+      else {
+        const top = worldBoxOf(l.host).max[1] + 3
+        const cx = l.x0 + 40
+        path.push([l.x, l.y, l.z], [l.x, top, l.z], [l.x, top, zc], [cx, top, zc], [cx, baseTop + 8, zc], dz)
+        const key = `${Math.round(cx)}`
+        if (!covers.has(key)) {
+          covers.add(key)
+          if (top - baseTop > 60) this.hwBox(`wiring-cover-${i}`, sys.cableCover?.name ?? "Tapa passacables", "Blanc seda", [cx - 10, baseTop + 16, zc - 8], [20, top - baseTop - 16, 16])
+        }
+      }
+      for (let j = 0; j + 1 < path.length; j++) cable(`wiring-${i}-${j}`, path[j]!, path[j + 1]!)
+    })
     const sw = this.lightKits[0]?.switch
     this.wiring = {
       driver: { x0: r(dx0), x1: r(dx1), y0: r(baseTop), y1: r(baseTop + 16), name: drv.name, article: drv.article },
