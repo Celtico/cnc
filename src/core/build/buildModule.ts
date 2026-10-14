@@ -1804,6 +1804,52 @@ class Builder {
     this.hwBox(id, `${label}: tirador`, "Acer inox", [cx - w / 2, cy - hh / 2, d.frontZ], [w, hh, 14])
   }
 
+  /**
+   * Les frontisses d'un abatible de vidre (per decisió de l'usuari, com la vitrina de la cuina de casa: «connectat a la
+   * fusta»): la frontissa del mòdul al perfil del cantell de gir (dalt si obre amunt, baix si obre avall), la quantitat
+   * per l'amplada a `endOffset` dels extrems, i la placa a la tapa (o a la base) a la cara que mira l'abatible, a
+   * `plateSetback` del darrere del front: els forats de la placa al tauler (tota o res per frontissa) i el dibuix
+   * (cassoleta, braç i placa) de `hardwareSolids`. Sense la peça al cantell de gir, només el dibuix i un avís.
+   */
+  private glassFlapHinges(id: string, x0: number, y0: number, w: number, h: number, F: number, dir: "up" | "down", zoneId: string): void {
+    const { d } = this
+    const hinge = this.frontHardware("hinge", undefined, zoneId)
+    const cs = hinge.spec
+    const count = cs.count(w)
+    const span = w - 2 * cs.endOffset
+    const xs = (count === 1 || span <= 0 ? [w / 2] : Array.from({ length: count }, (_, i) => cs.endOffset + (span * i) / (count - 1))).map((x) => r(x0 + x))
+    const bar = this.extras.find((p) => p.id === `${id}-${dir === "up" ? "top" : "bottom"}`)
+    if (!bar) return
+    // El perfil de dalt/baix: u al llarg de Y (F), v al llarg de X des de x0 + F; el cantell de gir és u = F (dalt) o u = 0 (baix).
+    for (const x of xs) bar.holes.push({ x: r(dir === "up" ? F - cs.cupOffset : cs.cupOffset), y: r(x - (x0 + F)), diameter: cs.cupDiameter, depth: Math.min(cs.cupDepth, d.t - 1), face: "A", edge: dir === "up" ? "right" : "left", tag: "hinge" })
+    if (cs.pending) return
+    // La placa de la frontissa; la de l'app (sense placa pròpia) va, com al lateral, a dos forats de la filera System 32
+    // (Ø i fondària de la filera, a mig pas per banda, a `edgeOffset` del davant).
+    const s32 = this.hw.system32
+    const plate = cs.plate ?? { setback: s32.edgeOffset, holes: [-s32.pitch / 2, s32.pitch / 2].map((u) => ({ u, v: 0, d: s32.diameter, depth: s32.depth, tag: "plate" })) }
+    const edgeY = dir === "up" ? y0 + h : y0
+    const host = this.horizontals.find((hz) => (dir === "up" ? hz.yBottom >= edgeY - d.t - 0.5 && hz.yBottom <= edgeY + 0.5 : hz.yTop <= edgeY + d.t + 0.5 && hz.yTop >= edgeY - 0.5) && xs.every((x) => x > hz.xL && x < hz.xR))
+    if (!host) {
+      this.warnings.push({ code: "hinge", message: `Abatible de vidre: la placa de «${hinge.item.name}» va a la ${dir === "up" ? "tapa" : "base"} i aquest mòdul no en té al cantell de gir. Els forats de la placa no es fan: fes-los on vagi muntada.`, zoneId })
+      return
+    }
+    const yFace = dir === "up" ? host.yBottom : host.yTop
+    const z = d.frontZ - d.t - plate.setback
+    for (const x of xs) {
+      const holes: Hole[] = []
+      let bad = false
+      for (const ph of plate.holes) {
+        const l = toLocal(host.panel, [x + ph.u, yFace, z - ph.v])
+        const face = faceAt(host.panel, l)
+        const rad = ph.d / 2
+        if (!face || face === "edge" || l[0] - rad < 0 || l[0] + rad > host.panel.length || l[1] - rad < 0 || l[1] + rad > host.panel.width) { bad = true; break }
+        holes.push({ x: l[0], y: l[1], diameter: ph.d, depth: Math.min(ph.depth, Math.max(0.5, host.panel.thickness - 1)), face, tag: ph.tag ?? "plate" })
+      }
+      if (bad) this.warnings.push({ code: "hinge", message: `Abatible de vidre: la placa de «${hinge.item.name}» no cap a la ${host.panel.label.toLowerCase()}; aquella placa no es fa.`, zoneId })
+      else host.panel.holes.push(...holes)
+    }
+  }
+
   /** El braç d'un abatible de vidre (es veu): el cos cargolat a la cara de dins del lateral, a dalt. */
   private glassArm(id: string, side: VerticalRef, which: "left" | "right", y0: number, h: number, dir: "down" | "up"): void {
     const { d } = this
@@ -1825,6 +1871,7 @@ class Builder {
       const handle = this.frontHandle(front.handle, zone.id)
       if (!handle.push) this.glassPull(`${id}-pull`, "Abatible", x0 + w / 2, front.dir === "down" ? y0 + h - F / 2 : y0 + F / 2, "x", handle.item)
       for (const ref of [left, right]) if (ref) this.glassArm(`${id}-arm-${ref === left ? "l" : "r"}`, ref, ref === left ? "left" : "right", y0, h, front.dir)
+      this.glassFlapHinges(id, x0, y0, w, h, F, front.dir, zone.id)
       return
     }
     const flap = this.buildFrontPanel(zone, ter, "flap", "abatible", "Abatible")

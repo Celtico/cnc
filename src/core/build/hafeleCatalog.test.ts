@@ -62,6 +62,16 @@ describe("catàleg Häfele (v35)", () => {
     expect(b.panels.some((p) => p.holes.some((h) => h.tag === "hinge"))).toBe(false)
   })
 
+  it("abatible de vidre que obre amunt: frontisses al perfil de dalt i la placa a la tapa, com la vitrina de casa", () => {
+    const b = buildModule(mod({ front: { kind: "flap", dir: "up", glass: true, frame: structuredClone(HAFELE_GLASS_FRAMES[0]!) } }, { width: 600, height: 400, depth: 330 }))
+    const top = b.extras.find((p) => p.name === "perfil vitrina" && p.id.endsWith("-top"))!
+    expect(top.holes.filter((h) => h.tag === "hinge")).toHaveLength(2)
+    const tapa = b.panels.find((p) => p.role === "top")!
+    expect(tapa.holes.filter((h) => h.tag === "plate")).toHaveLength(4)
+    expect(fixedSolids([...b.panels, ...b.extras]).get(tapa.id)).toHaveLength(2)
+    expect(b.warnings.filter((w) => w.code === "hinge")).toEqual([])
+  })
+
   it("tiradors: la distància entre centres més gran que hi cap al front", () => {
     const h1935 = handleSpec(HAFELE_HANDLES.find((x) => x.id === "handle-hafele-h1935")!)
     expect(h1935.pitch(150)).toBe(128)
