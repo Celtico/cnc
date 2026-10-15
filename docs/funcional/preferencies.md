@@ -137,8 +137,8 @@
   «Restaurar valors inicials» torna biblioteca i per defecte. **A l'editor, un sol selector** (per decisió de l'usuari: «el
   selector a Mobles que surti amb un drawer com fa la col·locació de materials i objectes als ambients»):
   `settings/HardwareSelect.tsx` (`HardwareSelect` = botó amb la miniatura 3D de la targeta i el nom; `HardwarePicker` = la
-  finestra de tria) sobre la finestra de tria comuna `components/PickerWindow.tsx` (`PickerWindow`, `PickerButton`,
-  `PickerRow`; la mateixa que el `MaterialSelect`; des del 2026-10-15 una finestra flotant, no un calaix): cercador (`hardwareMatches`), categories › sèries (`seriesGroups`, a
+  finestra de tria) sobre el calaix de tria comú `components/PickerDrawer.tsx` (`PickerDrawer`, `PickerButton`,
+  `PickerRow`; el mateix que el `MaterialSelect`): cercador (`hardwareMatches`), categories › sèries (`seriesGroups`, a
   `settings/hardwareGroups.ts`, com Preferències) i `GalleryCard` amb la miniatura (`settings/HardwareThumb.tsx`, mòdul
   d'exemple `useMountBase`: les mateixes miniatures desades). Frontissa, guia, braç, tirador de cada front
   (`HardwarePick`, a dalt «Com el mòdul»), l'Espiga (Mòdul › Unió), la Pota de la base (a dalt

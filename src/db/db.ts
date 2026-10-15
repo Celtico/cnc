@@ -151,6 +151,16 @@ interface SettingsRow {
   updatedAt: number
 }
 
+/** La conversa amb l'assistent (fila única, id = "current"): es recupera en tornar a obrir l'app (`db/chatStore.ts`). */
+interface ChatRow {
+  id: string
+  /** Els missatges tal com es veuen (`assistant/chatPanel/types.ts`). */
+  items: unknown[]
+  /** L'historial per a l'API (`MessageParam[]`). */
+  history: unknown[]
+  updatedAt: number
+}
+
 class MoblesDB extends Dexie {
   projects!: EntityTable<Project, "id">
   photos!: EntityTable<Photo, "id">
@@ -158,6 +168,7 @@ class MoblesDB extends Dexie {
   ambients!: EntityTable<AmbientRow, "id">
   models!: EntityTable<UserModel, "id">
   hardwareAssets!: EntityTable<HardwareAsset, "id">
+  chats!: EntityTable<ChatRow, "id">
 
   constructor() {
     super("mobles-cnc")
@@ -193,6 +204,15 @@ class MoblesDB extends Dexie {
       ambients: "++id, name, updatedAt",
       models: "id, createdAt",
       hardwareAssets: "id, createdAt",
+    })
+    this.version(7).stores({
+      projects: "++id, name, updatedAt",
+      photos: "++id, projectId",
+      settings: "id",
+      ambients: "++id, name, updatedAt",
+      models: "id, createdAt",
+      hardwareAssets: "id, createdAt",
+      chats: "id",
     })
   }
 }

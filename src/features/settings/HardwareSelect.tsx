@@ -1,7 +1,7 @@
 import { Badge, Box, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState, type ReactNode } from "react"
 import { FoldGroup, FoldItem } from "../../components/Fold"
-import { PickerButton, PickerWindow, PickerRow } from "../../components/PickerWindow"
+import { PickerButton, PickerDrawer, PickerRow } from "../../components/PickerDrawer"
 import { HARDWARE_CATEGORIES, INHERITED_LABEL, OWN_COPY_LABEL, hardwareChoices, hardwareSummary, isDrawerKit, isPendingImport, type HardwareChoice, type HardwareItem } from "../../core/model"
 import { GalleryCard } from "../projects/GalleryCard"
 import { fold } from "../projects/galleryGrid"
@@ -10,11 +10,11 @@ import { hardwareMatches, seriesGroups, useMountBase } from "./hardwareGroups"
 import { HardwareThumb } from "./HardwareThumb"
 import { useSettings } from "./SettingsContext"
 
-/** Columnes de les targetes a la finestra de tria (més estreta que una pàgina). */
+/** Columnes de les targetes al calaix (més estret que una pàgina). */
 const COLS = { base: 2, md: 2 }
 
-interface HardwarePickerProps {
-  /** Títol de la finestra (el del camp: «Frontissa», «Tirador», «Afegir ferratge»). */
+interface HardwareDrawerProps {
+  /** Títol del calaix (el del camp: «Frontissa», «Tirador», «Afegir ferratge»). */
   label: string
   /** Els que es poden triar aquí (ja filtrats: del mateix tipus, o que es poden col·locar a aquestes peces). */
   items: readonly HardwareItem[]
@@ -24,7 +24,7 @@ interface HardwarePickerProps {
   inherited?: HardwareItem
   /** Una primera opció sense ferratge («Genèriques»), que dona `undefined`. */
   emptyLabel?: string
-  /** Una nota a dalt de la finestra (què passa en triar-ne un). */
+  /** Una nota a dalt del calaix (què passa en triar-ne un). */
   note?: ReactNode
   /** Una opció més sense cap ferratge («Cap (push)» al tirador): es tria amb el seu `onPick`. */
   none?: HardwareNoneOption
@@ -43,12 +43,12 @@ export interface HardwareNoneOption {
  * **Tria d'un ferratge al moble**, la mateixa a tot l'Editor (per decisió de l'usuari, «com la col·locació de materials i
  * objectes als ambients»): frontissa, guia, braç d'abatible i tirador de cada front, l'espiga del mòdul (Mòdul › Unió),
  * la pota de la base i «Afegir ferratge» (col·locats a mà). Un botó (`PickerButton`: la miniatura 3D de la
- * targeta de Preferències › Ferratges i el nom) que obre la finestra de tria comuna (`PickerWindow`) amb el cercador, les categories
+ * targeta de Preferències › Ferratges i el nom) que obre el calaix comú (`PickerDrawer`) amb el cercador, les categories
  * › sèries i les targetes (`GalleryCard` amb la miniatura 3D). En triar-ne un, se'n desa una **còpia** (`onPick`), com
  * fan els mòduls. Les còpies que no són a la biblioteca tal qual (`hardwareChoices`) surten a part, «Còpia pròpia», i els
  * importats sense confirmar porten la insígnia (es poden triar, però no fan cap forat).
  */
-export function HardwareSelect(props: HardwarePickerProps & { hideLabel?: boolean }) {
+export function HardwareSelect(props: HardwareDrawerProps & { hideLabel?: boolean }) {
   const [open, setOpen] = useState(false)
   const { settings } = useSettings()
   const base = useMountBase(settings)
@@ -69,13 +69,13 @@ export function HardwareSelect(props: HardwarePickerProps & { hideLabel?: boolea
         warn={current && !none?.selected && isPendingImport(current) ? "Sense confirmar: no fa cap forat" : undefined}
         onClick={() => setOpen(true)}
       />
-      <HardwarePicker {...props} open={open} onOpenChange={setOpen} />
+      <HardwareDrawer {...props} open={open} onOpenChange={setOpen} />
     </Stack>
   )
 }
 
-/** La finestra de tria dels ferratges. */
-function HardwarePicker({ open, onOpenChange, label, items, current, inherited, emptyLabel, note, none, onPick }: HardwarePickerProps & { open: boolean; onOpenChange: (open: boolean) => void }) {
+/** El calaix del selector de ferratges (també sol, sense botó: «Afegir ferratge»). */
+function HardwareDrawer({ open, onOpenChange, label, items, current, inherited, emptyLabel, note, none, onPick }: HardwareDrawerProps & { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { settings } = useSettings()
   const base = useMountBase(settings)
   const [query, setQuery] = useState("")
@@ -143,8 +143,7 @@ function HardwarePicker({ open, onOpenChange, label, items, current, inherited, 
     />
   )
   return (
-    <PickerWindow
-      id="hardware"
+    <PickerDrawer
       open={open}
       onOpenChange={onOpenChange}
       title={label}
@@ -236,6 +235,6 @@ function HardwarePicker({ open, onOpenChange, label, items, current, inherited, 
           </FoldItem>
         ))}
       </FoldGroup>
-    </PickerWindow>
+    </PickerDrawer>
   )
 }

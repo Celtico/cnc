@@ -8,6 +8,7 @@ import { describeFailure, loadSdk, makeClient } from "../claudeClient"
 import { runTurn } from "../chatTurn"
 import type { ChatTarget } from "../chatTarget"
 import { NO_KEY_ERROR, OFFLINE_ERROR } from "../errors"
+import { loadChat, saveChat } from "../../../db/chatStore"
 import type { Attached, Item } from "./types"
 
 /** Costat llarg màxim de les fotos i plànols que s'envien (docs/xat-ia.md). */
@@ -44,6 +45,31 @@ export function useChatTurn({
   const history = useRef<MessageParam[]>([])
   const abort = useRef<AbortController | null>(null)
   const nextId = useRef(1)
+
+  // La conversa es desa (IndexedDB) i es recupera en tornar a obrir l'app: refrescar no la perd (per decisió de
+  // l'usuari, 2026-10-15). Només «Nova conversa» la buida.
+  const loaded = useRef(false)
+  useEffect(() => {
+    let alive = true
+    void loadChat().then((c) => {
+      if (!alive) return
+      loaded.current = true
+      if (!c) return
+      const restored = restoreItems(c.items as Item[])
+      setItems((xs) => (xs.length ? xs : restored))
+      // L'historial ha d'acabar amb l'assistent (es desa en acabar cada torn; per si de cas).
+      if (!history.current.length) history.current = (c.history as MessageParam[]).filter((m, i, all) => i < all.length - 1 || m.role === "assistant")
+      nextId.current = restored.reduce((m, it) => Math.max(m, it.id), 0) + 1
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
+  // Es desa quan acaba cada torn (no a cada lletra que arriba).
+  useEffect(() => {
+    if (!loaded.current || running) return
+    void saveChat(storableItems(items), history.current)
+  }, [items, running])
 
   // El SDK es carrega en obrir el xat (no és al bloc d'entrada de l'app).
   useEffect(() => {
@@ -146,4 +172,14 @@ export function useChatTurn({
   }
 
   return { items, running, send, newChat, stop }
+}
+
+/** El que es desa: sense les miniatures dels adjunts (adreces `blob:` que no sobreviuen a refrescar). */
+function storableItems(items: Item[]): Item[] {
+  return items.map((it) => (it.role === "user" && it.files ? { ...it, files: it.files.map(({ kind, name }) => ({ kind, name })) } : it))
+}
+
+/** En recuperar-la: una resposta que s'estava escrivint quan es va tancar l'app queda com a interrompuda. */
+function restoreItems(items: Item[]): Item[] {
+  return items.map((it) => (it.role === "assistant" && it.running ? { ...it, running: false, note: "Interromput en tancar l'app." } : it))
 }

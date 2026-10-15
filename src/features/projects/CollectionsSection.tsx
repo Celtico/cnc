@@ -1,8 +1,7 @@
-import { Badge, Box, Button, HStack, Link, SimpleGrid, Stack, Text } from "@chakra-ui/react"
+import { Badge, Box, Button, CloseButton, Drawer, HStack, Link, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react"
 import { useState } from "react"
 import { LuExternalLink, LuLibrary, LuPlus } from "react-icons/lu"
 import type { CollectionPiece, FurnitureCollection, Grade, PieceStudy } from "../../core/model"
-import { FloatingWindow } from "../../components/FloatingWindow"
 import { FoldGroup, FoldItem } from "../../components/Fold"
 import { GALLERY_COLS } from "./galleryGrid"
 import { TemplateCard } from "./TemplateCard"
@@ -45,54 +44,74 @@ function GradeDots({ value, label }: { value: Grade; label: string }) {
   )
 }
 
-/** Fitxa d'una peça (una finestra de tria, `FloatingWindow`, a la dreta): tots els criteris d'estudi i «Crear el moble». */
+/** Fitxa d'una peça: tots els criteris d'estudi i «Crear el moble». */
 function PieceSheet({ piece, onClose, onCreate }: { piece: CollectionPiece | null; onClose: () => void; onCreate: (p: CollectionPiece) => void }) {
   const s = piece?.study
   return (
-    <FloatingWindow id="collection-piece" kind="picker" width={480} open={!!piece} onClose={onClose} title={piece ? piece.name.replace(`${piece.type} `, "") : ""} subtitle={piece?.type}>
-      {piece && s && (
-        <Stack gap={5}>
-          <Text fontSize="sm" color="fg.muted">
-            {piece.description}
-          </Text>
-          <Button colorPalette="wood" size="sm" alignSelf="start" onClick={() => onCreate(piece)}>
-            <LuPlus /> Crear el moble
-          </Button>
-          <SimpleGrid columns={2} gap={3}>
-            {GRADES.map(([k, label]) => (
-              <Stack key={k} gap={1}>
-                <Text fontSize="xs" color="fg.muted">
-                  {label}
-                </Text>
-                <GradeDots value={s[k] as Grade} label={label} />
-              </Stack>
-            ))}
-          </SimpleGrid>
-          <Stack gap={0} borderTopWidth="1px">
-            {ROWS.filter(([k]) => s[k]).map(([k, label]) => (
-              <Stack key={k} gap={0.5} py={2.5} borderBottomWidth="1px">
-                <Text fontSize="xs" color="fg.muted">
-                  {label}
-                </Text>
-                <Text fontSize="sm">{String(s[k])}</Text>
-              </Stack>
-            ))}
-          </Stack>
-          {!!s.photos?.length && (
-            <Stack gap={1}>
-              <Text fontSize="xs" color="fg.muted">
-                Fotos de referència (carpeta «referencies»)
-              </Text>
-              {s.photos.map((p) => (
-                <Text key={p} fontSize="xs" fontFamily="mono" wordBreak="break-all">
-                  {p}
-                </Text>
-              ))}
-            </Stack>
-          )}
-        </Stack>
-      )}
-    </FloatingWindow>
+    <Drawer.Root open={!!piece} onOpenChange={(e) => !e.open && onClose()} placement={{ base: "bottom", md: "end" }} size={{ base: "full", md: "md" }}>
+      <Portal>
+        <Drawer.Backdrop />
+        <Drawer.Positioner>
+          <Drawer.Content roundedTop={{ base: "l3", md: "none" }} maxH={{ base: "90dvh", md: "none" }} pb="env(safe-area-inset-bottom, 0px)">
+            {piece && s && (
+              <>
+                <Drawer.Header pt={{ base: 4, md: "calc(var(--chakra-spacing-4) + env(safe-area-inset-top, 0px))" }} flexDirection="column" alignItems="start" gap={1}>
+                  <Text fontSize="2xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
+                    {piece.type}
+                  </Text>
+                  <Drawer.Title>{piece.name.replace(`${piece.type} `, "")}</Drawer.Title>
+                  <Text fontSize="sm" color="fg.muted">
+                    {piece.description}
+                  </Text>
+                </Drawer.Header>
+                <Drawer.Body>
+                  <Stack gap={5}>
+                    <Button colorPalette="wood" size="sm" alignSelf="start" onClick={() => onCreate(piece)}>
+                      <LuPlus /> Crear el moble
+                    </Button>
+                    <SimpleGrid columns={2} gap={3}>
+                      {GRADES.map(([k, label]) => (
+                        <Stack key={k} gap={1}>
+                          <Text fontSize="xs" color="fg.muted">
+                            {label}
+                          </Text>
+                          <GradeDots value={s[k] as Grade} label={label} />
+                        </Stack>
+                      ))}
+                    </SimpleGrid>
+                    <Stack gap={0} borderTopWidth="1px">
+                      {ROWS.filter(([k]) => s[k]).map(([k, label]) => (
+                        <Stack key={k} gap={0.5} py={2.5} borderBottomWidth="1px">
+                          <Text fontSize="xs" color="fg.muted">
+                            {label}
+                          </Text>
+                          <Text fontSize="sm">{String(s[k])}</Text>
+                        </Stack>
+                      ))}
+                    </Stack>
+                    {!!s.photos?.length && (
+                      <Stack gap={1}>
+                        <Text fontSize="xs" color="fg.muted">
+                          Fotos de referència (carpeta «referencies»)
+                        </Text>
+                        {s.photos.map((p) => (
+                          <Text key={p} fontSize="xs" fontFamily="mono" wordBreak="break-all">
+                            {p}
+                          </Text>
+                        ))}
+                      </Stack>
+                    )}
+                  </Stack>
+                </Drawer.Body>
+              </>
+            )}
+            <Drawer.CloseTrigger asChild top={{ base: 3, md: "calc(var(--chakra-spacing-3) + env(safe-area-inset-top, 0px))" }}>
+              <CloseButton size="sm" aria-label="Tancar" />
+            </Drawer.CloseTrigger>
+          </Drawer.Content>
+        </Drawer.Positioner>
+      </Portal>
+    </Drawer.Root>
   )
 }
 

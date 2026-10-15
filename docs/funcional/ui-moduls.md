@@ -45,14 +45,16 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   en obrir-se: el primer camp on s'escriu (el cercador d'una tria), un selector (`initialFocus`, el nom d'un material nou) o
   la finestra (`false`: al mòbil no surt el teclat); en tancar-la, torna on era. `footer` (Cancel·lar · Aplicar, sempre a la
   vista), `split` (editors de Preferències: la mostra i el formulari de costat a l'ordinador gran) i `bodyProps`.
-  - **Què és finestra**: Render (`RenderFrame`), les tries de material i de ferratge (`PickerWindow`), la fitxa d'una peça
-    de les col·leccions, «Afegir un moble / objecte» d'un ambient (`AmbientPicker`), els editors de materials i de
+  - **Què és finestra**: Render (`RenderFrame`), els editors de materials i de
     ferratges de Preferències, «Afegir un material» (`MaterialLibrary`), «Editar la textura», «Forma de la secció»
     (`ProfileEditor`), «Importar un model 3D», «Desar … com a fitxer» (moble i ambient), Vista CAM i «Veure a casa» (AR).
   - **Què és `Dialog`** (modal, Chakra): les confirmacions («Esborrar …?», «Eliminar …?» de materials i ferratges, «Ja hi ha
     un render», «Començar una conversa nova?», esborrar l'historial, restaurar valors inicials) i les preguntes d'un sol camp
     que aturen el que s'estava fent (`NameDialog`, «… per a…» d'un ambient del catàleg, «Mida real» del plànol, «Moure a un
     grup»). Res més: un `Dialog` nou per editar o triar és una `FloatingWindow`.
+  - **Calaixos de tria (no són finestra**, per decisió de l'usuari, 2026-10-15: «els drawers no eren finestres»): les tries de
+    material i de ferratge (`PickerDrawer`), la fitxa d'una peça de les col·leccions i «Afegir un moble / objecte» d'un
+    ambient (`AmbientPicker`): calaix lateral de Chakra (`Drawer`), modal.
   - **Altres que no són finestra**: «Opcions de vista» (`ViewOptions`: un popover enganxat al botó; al mòbil, un full de
     baix) i l'Assistent (columna a l'ordinador; al mòbil, un calaix no modal a pantalla completa).
   - **Tries lligades a la selecció**: com que no són modals, l'inspector de l'editor de mobles i el dels ambients es
@@ -61,17 +63,16 @@ Tots els editors fan servir les mateixes peces, no còpies; una funcionalitat no
   - **Teclat**: les dreceres de l'editor de mobles i dels ambients (Supr, fletxes, ⌘C/⌘V, Esc, desfer) no fan res amb el
     focus dins d'una finestra o amb un diàleg modal obert; amb una finestra oberta i el focus a la pàgina, sí
     (`lib/keyTarget.ts`, `undoKeys.ts`). L'editor de perfils només escolta les tecles de dins de la seva finestra.
-- **`PickerWindow`** (`components/PickerWindow.tsx`: `PickerWindow`, `PickerButton`, `PickerRow`): la finestra de tria
-  dels selectors (una `FloatingWindow` `picker`, cercador a dalt amb el focus). El fan servir el `MaterialSelect` i el
-  **`HardwareSelect`** (tria d'un ferratge al moble, vegeu Preferències › Ferratges); la mida es recorda per tipus
-  (`picker:material`, `picker:hardware`).
+- **`PickerDrawer`** (`components/PickerDrawer.tsx`: `PickerDrawer`, `PickerButton`, `PickerRow`): el calaix de tria dels
+  selectors (a la dreta a l'ordinador, des de baix al mòbil; cercador a dalt amb el focus). El fan servir el
+  `MaterialSelect` i el **`HardwareSelect`** (tria d'un ferratge al moble, vegeu Preferències › Ferratges).
 - **Plànols acotats** (`components/dims.ts` + `components/DimLine.tsx`): totes les cotes dels dibuixos 2D (pla del
   muntatge, generador, vistes DXF, peça d'exemple, col·locació). **`StepRuleRows`** (`components/StepRuleRows.tsx`): les
   regles de graons (frontisses per alçada, distància del tirador, còpies d'un col·locat per mida).
 - **`MaterialSelect`** (`settings/MaterialSelect.tsx`) a tot arreu on es tria un material (amb **cercador** a dalt de la finestra de tria,
   pel nom i sense accents, que obre les categories amb resultats): un **botó** (fons suau, a tota
-  l'amplada, sense fletxa ni icona: no ha de semblar un desplegable) amb la mostra i el nom que obre la finestra de tria (`PickerWindow`: a la dreta
-  a l'ordinador, a tota la pantalla al mòbil) amb un acordió per categoria i les mostres (només de la categoria oberta); en tocar-ne una es
+  l'amplada, sense fletxa ni icona: no ha de semblar un desplegable) amb la mostra i el nom que obre la calaix de tria (`PickerDrawer`: a la dreta
+  a l'ordinador, des de baix al mòbil) amb un acordió per categoria i les mostres (només de la categoria oberta); en tocar-ne una es
   tria i es tanca. `emptyLabel` per a «Com el cos», «Com a Preferències», «Tots els altres», «Cap (fantasma)».
 - **`FormRow`** (`components/FormRow`): **tots els camps de l'app són files etiqueta · control** (Preferències, inspectors,
   diàlegs de render, textura, foto i nesting): etiqueta a l'esquerra (min(150 px, 36 %)), control amb `maxW` i l'ajuda a

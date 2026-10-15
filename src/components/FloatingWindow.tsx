@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type Ref,
 import { LuMaximize2, LuMinimize2, LuMinus, LuX } from "react-icons/lu"
 import { MODAL_OPEN } from "../lib/keyTarget"
 import { Tooltip } from "./ui/tooltip"
-import { defaultWindowRect, fitWindowRect, MIN_SIZE, readWindowRect, writeWindowRect, type WindowKind, type WindowRect } from "./windowRect"
+import { defaultWindowRect, fitWindowRect, keepGrabbable, MIN_SIZE, readWindowMaximized, readWindowRect, writeWindowMaximized, writeWindowRect, type WindowKind, type WindowRect } from "./windowRect"
 
 type Stage = "default" | "minimized" | "maximized"
 
@@ -86,14 +86,22 @@ export function FloatingWindow({
   // Oberta des d'un diàleg modal: per sobre seu (si no, quedaria sota el fons del diàleg).
   const [overModal, setOverModal] = useState(false)
   const save = () => stageRef.current === "default" && writeWindowRect(id, rect.current)
+  // En tancar-la, la màquina torna l'estat a «default»: el que es recorda (maximitzada o no) és el d'abans de tancar.
+  const closing = useRef(false)
+  const close = () => {
+    if (!mobile && stageRef.current !== "minimized") writeWindowMaximized(id, stageRef.current === "maximized")
+    closing.current = true
+    onClose()
+  }
   const panel = useFloatingPanel({
     open,
-    onOpenChange: (e) => !e.open && onClose(),
+    onOpenChange: (e) => !e.open && close(),
     defaultSize: { width: first.width, height: first.height },
     defaultPosition: { x: first.x, y: first.y },
     minSize: MIN_SIZE,
-    // Que no surti de la finestra del navegador en moure-la.
-    allowOverflow: false,
+    // Pot sortir en part de la finestra del navegador (una de gran no es podia moure); en deixar-la anar, la barra de
+    // títol sempre queda a l'abast (`keepGrabbable`).
+    allowOverflow: true,
     // Esc el fa `onKeyDownCapture` (amb `dirty` i des d'un diàleg modal).
     closeOnEscape: false,
     draggable: !mobile,
@@ -108,10 +116,19 @@ export function FloatingWindow({
     translations: { minimize: "Minimitzar", maximize: "Maximitzar", restore: "Restaurar" },
     onPositionChange: (e) => (rect.current = { ...rect.current, ...e.position }),
     onSizeChange: (e) => (rect.current = { ...rect.current, ...e.size }),
-    onPositionChangeEnd: save,
+    onPositionChangeEnd: () => {
+      const p = keepGrabbable(rect.current, { width: window.innerWidth, height: window.innerHeight })
+      if (p.x !== rect.current.x || p.y !== rect.current.y) {
+        rect.current = { ...rect.current, ...p }
+        panel.setPosition(p)
+      }
+      save()
+    },
     onSizeChangeEnd: save,
     onStageChange: (e) => {
       stageRef.current = e.stage
+      // Maximitzada es recorda (es torna a obrir així); minimitzar no (en tornar-la a obrir, es vol veure).
+      if (!mobile && !closing.current && e.stage !== "minimized") writeWindowMaximized(id, e.stage === "maximized")
       onStageChange?.(e.stage)
     },
   })
@@ -119,10 +136,18 @@ export function FloatingWindow({
   // En obrir-se (abans que la màquina l'obri, `useEffect`): la mida i el lloc recordats (o els del `kind`), dins de la
   // finestra d'ara, i si va per sobre d'un diàleg.
   const wasOpen = useRef(false)
+  const justOpened = useRef(false)
   useLayoutEffect(() => {
     const opening = open && !wasOpen.current
+    // Tancada des de fora (Aplicar, la selecció ha canviat…): es recorda com era abans que la màquina la torni a «default».
+    if (!open && wasOpen.current && !closing.current) {
+      if (!mobile && stageRef.current !== "minimized") writeWindowMaximized(id, stageRef.current === "maximized")
+      closing.current = true
+    }
     wasOpen.current = open
     if (!opening) return
+    justOpened.current = true
+    closing.current = false
     returnTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setOverModal(!!document.querySelector(MODAL_OPEN))
     const view = { width: window.innerWidth, height: window.innerHeight }
@@ -136,8 +161,24 @@ export function FloatingWindow({
   // Ja oberta (després que la màquina l'obri): al mòbil, a tota la pantalla; si es torna a demanar (`shown`) minimitzada, es restaura.
   useEffect(() => {
     if (!open) return
-    if (mobile) panel.maximize()
-    else if (stageRef.current === "minimized") panel.restore()
+    // L'estat de la màquina pot venir de la vegada anterior (maximitzada o minimitzada) mentre la mida ja és la recordada:
+    // es torna a «default» amb la mida recordada i, si es va deixar a tota la pantalla, es maximitza de nou (si no, es
+    // pensava que era maximitzada sense ser-ho i no es podia moure).
+    if (!justOpened.current) {
+      if (mobile) panel.maximize()
+      else if (stageRef.current === "minimized") panel.restore()
+      return
+    }
+    justOpened.current = false
+    const r = rect.current
+    if (stageRef.current !== "default") panel.restore()
+    panel.setSize({ width: r.width, height: r.height })
+    panel.setPosition({ x: r.x, y: r.y })
+    // Maximitzar, quan la màquina ja és oberta del tot (abans no en fa cas).
+    if (mobile || readWindowMaximized(id)) {
+      const raf = requestAnimationFrame(() => panel.maximize())
+      return () => cancelAnimationFrame(raf)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- en obrir-la, en demanar-la (`shown`) i en passar a mòbil; `panel` és nou a cada render
   }, [open, shown, mobile])
 
@@ -169,7 +210,7 @@ export function FloatingWindow({
             }}
             onKeyDownCapture={(e) => {
               if (e.key !== "Escape" || !closeOnEscape || dirty?.current || !e.currentTarget.hasAttribute("data-topmost")) return
-              onClose()
+              close()
             }}
           >
             <FloatingPanel.Header py={1.5} pe={1.5}>

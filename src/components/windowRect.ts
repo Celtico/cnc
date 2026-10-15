@@ -33,8 +33,9 @@ export function defaultWindowRect(kind: WindowKind, view: { width: number; heigh
     const height = Math.max(MIN_SIZE.height, Math.min(want.height ?? H, H - 2 * EDGE))
     return { x: Math.max(0, W - width - EDGE), y: EDGE, width, height }
   }
-  const width = Math.max(MIN_SIZE.width, Math.min(want.width ?? 1200, W - NAV - 48))
-  const height = Math.max(MIN_SIZE.height, Math.min(want.height ?? 820, H - 96))
+  // Prou gran per treballar-hi però no tant que no es pugui moure (sobra lloc al voltant).
+  const width = Math.max(MIN_SIZE.width, Math.min(want.width ?? 1000, Math.round((W - NAV) * 0.85)))
+  const height = Math.max(MIN_SIZE.height, Math.min(want.height ?? 760, Math.round(H * 0.85)))
   return { x: Math.max(0, NAV + Math.round((W - NAV - width) / 2)), y: Math.max(0, Math.round((H - height) / 2)), width, height }
 }
 
@@ -47,7 +48,37 @@ export function fitWindowRect(r: WindowRect, view: { width: number; height: numb
   return { x, y, width, height }
 }
 
+/**
+ * On pot anar en moure-la: pot sortir en part de la finestra del navegador (si no, una finestra gran no es podia moure),
+ * però la barra de títol sempre es pot agafar: almenys `GRAB` px a la vista i el títol mai per sobre de dalt.
+ */
+const GRAB = 120
+export function keepGrabbable(r: WindowRect, view: { width: number; height: number }): { x: number; y: number } {
+  const x = Math.min(Math.max(r.x, GRAB - r.width), view.width - GRAB)
+  const y = Math.min(Math.max(r.y, 0), view.height - 48)
+  return { x, y }
+}
+
 const key = (id: string) => `mobles:window:${id}`
+const stageKey = (id: string) => `mobles:window-stage:${id}`
+
+/** Si es va deixar maximitzada (es torna a obrir així). */
+export function readWindowMaximized(id: string): boolean {
+  try {
+    return localStorage.getItem(stageKey(id)) === "maximized"
+  } catch {
+    return false
+  }
+}
+
+export function writeWindowMaximized(id: string, maximized: boolean) {
+  try {
+    if (maximized) localStorage.setItem(stageKey(id), "maximized")
+    else localStorage.removeItem(stageKey(id))
+  } catch {
+    /* sense localStorage */
+  }
+}
 
 /** L'última mida i posició d'una finestra (al navegador; `null` si no n'hi ha o no es pot llegir). */
 export function readWindowRect(id: string): WindowRect | null {
