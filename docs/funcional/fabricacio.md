@@ -200,6 +200,11 @@
   de l'inspector); un ferratge triat es dibuixa opac i sencer (caixa sense model també opaca). Tests
   `core/import/slot.test.ts`, `meshFrame.test.ts`, `meshFrame.roundtrip.test.ts` (`HETTICH_DIR`/`BLUM_DIR`, tessel·lat
   amb `occt-import-js` al Node), `features/composition/placements.test.ts`. **Proves d'or idèntiques.**
+- **Com s'aguanta el mòdul** (v45, `build/module/mounting.ts`, capa `MountingBuilder` entre la carcassa i els llums):
+  **penjadors** dels mòduls penjats (4 × Ø10 × 12 a cada lateral, cara de dins, cantonada de dalt i darrere; osca del
+  fons a les cantonades de dalt per al ganxo; regleta de paret darrere del fons; avís `hanging` si el fons no deixa 16 mm)
+  i **sòcol** de la base «Potes» al davant, als laterals i al darrere, de fusta (a tope o a inglet) o d'alumini (ferratge
+  per metres). Detall a [`model.md`](model.md) › Carcassa › Penjadors i Base, i › Ferratges per metres.
 - **Forats que es trobarien per dins** (`build/holeClash.ts`, `resolveHoleClashes`): System 32 a banda i banda d'un divisor
   → tots dos a (T − 1)/2; si un és d'un ferratge (placa, frontissa: `shortenFitting`), primer s'escurça l'altre, sempre amb
   avís `hole-clash` i mai per sota de 8 mm (si no, no es toca i ho diu); espiga de cantell contra un forat de cara →

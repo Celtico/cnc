@@ -11,6 +11,7 @@ import { LuArrowDownToLine, LuDrill, LuFootprints, LuGrid3X3, LuInspectionPanel,
 import { useSettings } from "../settings/SettingsContext"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import { HardwarePick } from "./HardwarePick"
+import { HangerFields, PlinthFields } from "./BaseFields"
 
 type CarcassSection = "dims" | "structure"
 
@@ -40,11 +41,14 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
       <Stack gap={4}>
         {/* «Penjat a la paret» és una posició, no una base: es tria a la secció Posició. */}
         {c.base.kind === "wall" ? (
-          <FormRow label="Base" help="Es canvia a Posició.">
-            <Text fontSize="sm" color="fg.muted" pt="7px">
-              Cap (penjat a la paret, a {c.base.height} mm del terra)
-            </Text>
-          </FormRow>
+          <>
+            <FormRow label="Base" help="Es canvia a Posició.">
+              <Text fontSize="sm" color="fg.muted" pt="7px">
+                Cap (penjat a la paret, a {c.base.height} mm del terra)
+              </Text>
+            </FormRow>
+            <HangerFields module={module} base={c.base} onChange={(base) => set({ base })} />
+          </>
         ) : (
           <FormRow label="Base">
             <IconChoice
@@ -75,7 +79,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
           <>
             <NumRow label="Alçada potes" value={c.base.height} min={20} max={400} step={5} onChange={(height) => set({ base: { ...(c.base as Extract<Base, { kind: "legs" }>), height } })} />
             <LegPick base={c.base} onChange={(base) => set({ base })} />
-            <FormRow label="Sòcol" help="Un tauler davant de les potes, de tota l'amplada, de terra fins a 5 mm sota la base. Es fixa a les potes del davant amb els clips de sòcol (Häfele 637.38.054, per cargolar: a mà).">
+            <FormRow label="Sòcol" help="Davant de les potes, de tota l'amplada (i, si es tria, també als laterals i al darrere): de fusta, un tauler de terra fins a 5 mm sota la base, o d'alumini. Es fixa a les potes amb els clips de sòcol (Häfele 637.38.054, per cargolar: a mà).">
               <Switch.Root size="sm" pt="6px" checked={!!c.base.plinth} onCheckedChange={(e) => {
                 const b = c.base as Extract<Base, { kind: "legs" }>
                 if (!e.checked) {
@@ -92,8 +96,9 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
               </Switch.Root>
             </FormRow>
             {c.base.plinth && (
-              <NumRow label="Retirada del sòcol" help="Del davant del mòdul a la cara de davant del sòcol." value={c.base.plinth.setback} min={0} max={200} step={1} onChange={(setback) => setback >= 0 && setback <= 200 && set({ base: { ...(c.base as Extract<Base, { kind: "legs" }>), plinth: { setback } } })} />
+              <NumRow label="Retirada del sòcol" help="Del davant del mòdul a la cara de davant del sòcol." value={c.base.plinth.setback} min={0} max={200} step={1} onChange={(setback) => setback >= 0 && setback <= 200 && c.base.kind === "legs" && c.base.plinth && set({ base: { ...c.base, plinth: { ...c.base.plinth, setback } } })} />
             )}
+            <PlinthFields base={c.base} onChange={(base) => set({ base })} />
           </>
         )}
 

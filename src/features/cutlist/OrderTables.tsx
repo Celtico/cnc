@@ -46,8 +46,8 @@ function KitOrderTable({ group: g }: { group: KitGroup }) {
   )
 }
 
-/** Les comandes de ferratges: jocs de calaix, ferratges per mòdul i llums (amb el pla de cablejat). */
-export function OrderSections({ kitRows, fittingRows, lightRows, wirings }: { kitRows: KitGroup[]; fittingRows: KitGroup[]; lightRows: KitGroup[]; wirings: CompositionBuild["wirings"] }) {
+/** Les comandes de ferratges: jocs de calaix, ferratges per mòdul, ferratges per metres i llums (amb el pla de cablejat). */
+export function OrderSections({ kitRows, fittingRows, linearRows, lightRows, wirings }: { kitRows: KitGroup[]; fittingRows: KitGroup[]; linearRows: KitGroup[]; lightRows: KitGroup[]; wirings: CompositionBuild["wirings"] }) {
   return (
     <>
     {kitRows.length > 0 && (
@@ -69,6 +69,17 @@ export function OrderSections({ kitRows, fittingRows, lightRows, wirings }: { ki
         ))}
         <Text fontSize="xs" color="fg.muted">
           El que cal comprar per mòdul: frontisses, tiradors, pistons de gas i potes, amb el número d'article del catàleg (els forats ja són a les peces).
+        </Text>
+      </Stack>
+    )}
+    {linearRows.length > 0 && (
+      <Stack gap={2} data-testid="linear-orders">
+        <SectionLabel>Ferratges per metres</SectionLabel>
+        {linearRows.map((g) => (
+          <KitOrderTable key={g.key} group={g} />
+        ))}
+        <Text fontSize="xs" color="fg.muted">
+          Perfils que es compren en barres (o per metres) i es tallen a mida: la regleta de paret dels penjadors (la dels mòduls penjats seguits, d'un sol tros) i els sòcols d'alumini, amb els clips i les cantoneres.
         </Text>
       </Stack>
     )}

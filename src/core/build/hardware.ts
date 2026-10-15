@@ -268,7 +268,50 @@ export function glassFrameSpec(item: HardwareItem) {
   }
 }
 
-const SPECS = { hinge: cupSpec, system32: system32Spec, dowel: dowelSpec, slide: slideSpec, flap: flapSpec, magnet: magnetSpec, handle: handleSpec, rail: railSpec, led: ledSpec, glassFrame: glassFrameSpec } as const
+/**
+ * Un ferratge per metres (`HardwareItem.linear`, v45): la secció, la barra que es compra (0 = per metres) i els clips. El
+ * que no porta, 0 (cap clip).
+ */
+function linearSpec(item: HardwareItem) {
+  const opt = (key: string) => (Number.isFinite(item.params[key]) ? item.params[key]! : 0)
+  return { height: param(item, "height"), depth: param(item, "depth"), stock: opt("stock"), clipSpacing: opt("clipSpacing"), clipEnd: opt("clipEnd"), linear: item.linear ?? {} }
+}
+
+/**
+ * Penjador de moble alt (un a cada lateral del mòdul penjat, a la cantonada de dalt i darrere): els forats del target
+ * `side` (u avall des de `fromTop`, v cap al davant des de `fromBack`, a la cara de dins), l'espai que cal darrere del
+ * fons per a la regleta (`gap`), on va la regleta (`railTop`, de dalt del moble al cantell de dalt de la regleta), l'osca
+ * del fons per on passa el ganxo (`notchWidth` × `notchHeight`, 0 = cap) i el cos per dibuixar-lo.
+ */
+export function hangerSpec(item: HardwareItem) {
+  expectEngine(item, "hanger")
+  const holes = resolveOps(item, "side").flatMap((o) => (o.kind === "drill" ? [{ u: o.u, v: o.v, d: o.d, depth: o.depth, tag: o.tag ?? "hanger" }] : []))
+  const opt = (key: string) => (Number.isFinite(item.params[key]) ? item.params[key]! : 0)
+  return {
+    fromTop: param(item, "fromTop"),
+    fromBack: param(item, "fromBack"),
+    gap: param(item, "gap"),
+    railTop: param(item, "railTop"),
+    notchWidth: opt("notchWidth"),
+    notchHeight: opt("notchHeight"),
+    body: { width: param(item, "bodyWidth"), height: param(item, "bodyHeight"), depth: param(item, "bodyDepth") },
+    holes,
+  }
+}
+
+/** Regleta de paret dels penjadors (ferratge per metres): la secció, la barra i els cargols. */
+export function wallRailSpec(item: HardwareItem) {
+  expectEngine(item, "wallRail")
+  return linearSpec(item)
+}
+
+/** Sòcol d'alumini (ferratge per metres, `Base.plinth.hardware`): l'alçada del perfil, el gruix, la barra, clips i cantonades. */
+export function plinthProfileSpec(item: HardwareItem) {
+  expectEngine(item, "plinthProfile")
+  return { ...linearSpec(item), material: item.material ?? "Alumini anoditzat plata" }
+}
+
+const SPECS = { hinge: cupSpec, system32: system32Spec, dowel: dowelSpec, slide: slideSpec, flap: flapSpec, magnet: magnetSpec, handle: handleSpec, rail: railSpec, led: ledSpec, glassFrame: glassFrameSpec, hanger: hangerSpec, wallRail: wallRailSpec } as const
 export type SlotSpec<S extends HardwareSlot> = ReturnType<(typeof SPECS)[S]>
 
 /**

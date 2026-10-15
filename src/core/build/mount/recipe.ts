@@ -33,6 +33,8 @@ interface Recipe {
   size: { width: number; height: number; depth: number }
   /** Base del mòdul (per defecte, cap: el muntatge només mira les peces del ferratge). */
   base?: Module["carcass"]["base"]
+  /** Altres camps de la caixa (el fons en ranura retirat dels penjadors). */
+  carcass?: Partial<Module["carcass"]>
   front?: Front
   shelves?: { n: number; adjustable: boolean }
   /** Accessoris del compartiment (barra, llum): hi són amb l'item. */
@@ -88,6 +90,16 @@ export function recipe(item: HardwareItem): Recipe | null {
     case "ledProfile":
       // Prestatge amb la llum a sota: lateral esquerre, tapa, prestatge i els perfils.
       return { size: { width: 600, height: 600, depth: 350 }, shelves: { n: 1, adjustable: false }, led: true, keep: (p) => isLeftSide(p) || p.role === "shelf" || p.role === "top", extras: (p) => p.id.startsWith("led-") || p.id.startsWith("light-") || p.id.startsWith("wiring-") }
+    case "hanger":
+    case "wallRail": {
+      // Mòdul penjat amb el fons en ranura retirat (hi cap la regleta): el lateral esquerre (els forats del penjador), el
+      // fons (l'osca), el penjador i la regleta.
+      const hung = { size: { width: 400, height: 400, depth: 330 }, base: { kind: "wall" as const, height: 1450 }, carcass: { back: "groove" as const, backSetback: 20 }, keep: (p: Panel) => isLeftSide(p) || p.role === "back" }
+      return item.engine === "hanger" ? { ...hung, extras: (p) => p.id.startsWith("hanger-") || p.id === "wall-rail" } : { ...hung, extras: (p) => p.id === "wall-rail" }
+    }
+    case "plinthProfile":
+      // Mòdul baix sobre potes amb el sòcol d'alumini al davant i als laterals: la base, el lateral esquerre i el sòcol.
+      return { size: { width: 500, height: 300, depth: 450 }, base: { kind: "legs", height: Math.max(20, item.params.height ?? 100), plinth: { setback: 20, left: true, right: true, sideSetback: 0, hardware: item } }, keep: (p) => p.role === "bottom" || isLeftSide(p), extras: (p) => p.id.startsWith("plinth") }
     case "glassFrame":
       // Porta de vidre: el lateral esquerre i el marc amb el vidre.
       return { size: small, front: { kind: "door", mode: "single", hinge: "left", glass: true }, keep: isLeftSide, extras: (p) => /-(left|right|top|bottom|glass)$/.test(p.id) }

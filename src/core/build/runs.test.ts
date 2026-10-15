@@ -22,7 +22,8 @@ describe("peces corregudes (taulell i sòcol)", () => {
     const hob = t.cutouts!.find((x) => x.tag === "hob")!
     expect(hob.kind).toBe("rect")
     if (hob.kind === "rect") expect(hob.x + hob.w / 2).toBeCloseTo(1700)
-    expect(b.warnings).toEqual([])
+    // Només el dels penjadors dels alts (fons cargolat: la regleta no hi cap darrere, v45).
+    expect(b.warnings.filter((w) => w.code !== "hanging")).toEqual([])
   })
 
   it("el sòcol corregut va de punta a punta, amb l'alçada de les potes i retranquejat", () => {

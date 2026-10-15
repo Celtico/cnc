@@ -92,7 +92,7 @@ export const MAG_FURNITURE: Template[] = [
     id: "greige-kitchen",
     kind: "cuina",
     name: "Cuina greige amb illa",
-    description: "Columnes i alts greige, taulell i illa de pedra.",
+    description: "Columnes i alts greige, taulell i illa de pedra amb sòcol a tot el voltant.",
     make: () =>
       B.kitchen({
         mat: GREIGE,
@@ -102,7 +102,8 @@ export const MAG_FURNITURE: Template[] = [
         talls: ["fridge", "oven"],
         tallsLeft: true,
         top: { kind: "stone" },
-        island: { w: 2200, d: 900, kind: "drawers", top: "stone" },
+        // Sòcol a tot el voltant de l'illa (per petició de l'usuari, 2026-10-15: «poder ficar sòcol als laterals»).
+        island: { w: 2200, d: 900, kind: "drawers", top: "stone", plinth: true },
       }),
   },
   {

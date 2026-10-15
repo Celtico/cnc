@@ -154,7 +154,8 @@ export function mountPlan(m: HardwareMount): MountPlan | null {
     }
   } else if (!m.focus) {
     // Accessori sense forats: la mida de la peça que es veu (la barra, el perfil, el marc) i on és respecte del lateral.
-    const own = rects.filter((x) => x.role === "part")
+    // (Els ferratges per metres —la regleta, el sòcol d'alumini— són peces de només veure: rol `hardware`.)
+    const own = rects.filter((x) => x.role === "part" || (x.role === "hardware" && m.solid.includes(x.id)))
     // El tirador de vitrina (sense forats): el front on es mira.
     if (!own.length) own.push(...rects.filter((x) => x.role === "drawerFront"))
     const first = own[0]

@@ -1,5 +1,7 @@
 import { CUTOUT_PRESETS, freeX, visibleModule, type Composition, type Module, type Panel, type PlinthRun, type WorktopRun } from "../model"
 import type { ModulePlacement } from "../model/composition"
+import type { LinearPiece } from "./linearOrders"
+import { aluPlinth, woodPlinthPanels } from "./plinth"
 
 export interface RunWarning {
   runId: string
@@ -86,34 +88,59 @@ export function buildWorktop(comp: Composition, run: WorktopRun, places: ModuleP
 }
 
 /**
- * Sòcol corregut: una peça davant de les potes, de punta a punta, retranquejada respecte a
- * la cara dels fronts. L'alçada és la de les potes (l'espai entre el terra i els mòduls).
+ * Sòcol corregut: una peça davant de les potes, de punta a punta, retranquejada respecte a la cara dels fronts. L'alçada
+ * és la de les potes (l'espai entre el terra i els mòduls). Opcions (sense UI, com la resta de peces corregudes): els
+ * **retorns** als extrems vistos (`left`, `right`: del davant fins a la paret, a `sideSetback` del lateral), les
+ * cantonades (`corners`) i el sòcol d'alumini (`hardware`, ferratge per metres): `plinthPieces`, com el sòcol de la base
+ * «Potes». Sense cap opció, la peça de sempre.
  */
-export function buildPlinthRun(comp: Composition, run: PlinthRun, places: ModulePlacement[], moduleNumber: number, warnings: RunWarning[]): Panel | null {
+export function buildPlinthRun(comp: Composition, run: PlinthRun, places: ModulePlacement[], moduleNumber: number, warnings: RunWarning[]): { panels: Panel[]; extras: Panel[]; linear: LinearPiece[] } {
+  const none = { panels: [], extras: [], linear: [] }
   const r = runModules(comp, run.from, run.to)
-  if (!r) return null
+  if (!r) return none
   const x0 = Math.min(...r.indices.map((i) => places[i]!.x))
   const x1 = Math.max(...r.indices.map((i) => places[i]!.x + comp.modules[i]!.carcass.width))
   const h = Math.min(...r.indices.map((i) => places[i]!.y))
   if (h <= 0) {
     warnings.push({ runId: run.id, message: "El sòcol corregut necessita mòduls amb potes (ara toquen a terra)." })
-    return null
+    return none
   }
   const face = Math.max(...r.modules.map(frontFace)) - run.setback
-  return {
-    id: `run:${run.id}`,
-    name: "socol",
-    label: "Sòcol corregut",
-    role: "plinth",
-    length: r1(x1 - x0),
-    width: r1(h),
-    thickness: run.thickness,
-    material: run.material,
-    grain: "x",
-    edges: { bottom: false, top: true, left: false, right: false },
-    holes: [],
-    grooves: [],
-    module: moduleNumber,
-    placement: { origin: [x0, 0, face - run.thickness], xAxis: [1, 0, 0], yAxis: [0, 1, 0], zAxis: [0, 0, 1], explodeDir: [0, 0, 1] },
+  const place = (p: Panel): Panel => ({ ...p, id: `run:${run.id}${p.id === "plinth" ? "" : `:${p.id}`}`, label: p.id === "plinth" ? "Sòcol corregut" : `${p.label} corregut`, module: moduleNumber })
+  if (!run.left && !run.right && !run.hardware)
+    return {
+      panels: [
+        {
+          id: `run:${run.id}`,
+          name: "socol",
+          label: "Sòcol corregut",
+          role: "plinth",
+          length: r1(x1 - x0),
+          width: r1(h),
+          thickness: run.thickness,
+          material: run.material,
+          grain: "x",
+          edges: { bottom: false, top: true, left: false, right: false },
+          holes: [],
+          grooves: [],
+          module: moduleNumber,
+          placement: { origin: [x0, 0, face - run.thickness], xAxis: [1, 0, 0], yAxis: [0, 1, 0], zAxis: [0, 0, 1], explodeDir: [0, 0, 1] },
+        },
+      ],
+      extras: [],
+      linear: [],
+    }
+  const ss = run.sideSetback ?? run.setback
+  const sides = { front: true, back: false, left: !!run.left, right: !!run.right }
+  const frame = { x0: run.left ? x0 + ss : x0, x1: run.right ? x1 - ss : x1, zBack: 0, zFront: face, y0: 0, sides }
+  if (run.hardware) {
+    try {
+      const alu = aluPlinth(frame, run.hardware, `run:${run.id}:`, 0)
+      return { panels: [], extras: alu.extras.map((p) => ({ ...p, module: moduleNumber })), linear: alu.pieces }
+    } catch (err) {
+      warnings.push({ runId: run.id, message: `Sòcol corregut: ${err instanceof Error ? err.message : String(err)}. No es fa.` })
+      return none
+    }
   }
+  return { panels: woodPlinthPanels({ ...frame, h: r1(h), t: run.thickness, corners: run.corners ?? "butt" }, run.material).map(place), extras: [], linear: [] }
 }

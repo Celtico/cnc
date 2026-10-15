@@ -6,6 +6,7 @@ import { buildModule, type BuildWarning, type KitOrder, type ModuleBuild, type W
 import type { LightOrder } from "./lightOrders"
 import { normalizePanel } from "./buildCabinet"
 import { buildPlinthRun, buildWorktop, type RunWarning } from "./runs"
+import { buildLinearOrders, type LinearOrder, type LinearPiece } from "./linearOrders"
 import { buildFreeParts, type PartJoint } from "./freeParts"
 import { resolveHoleClashes } from "./holeClash"
 import { applyHardwarePlacements } from "./hardwarePlace"
@@ -38,6 +39,11 @@ export interface CompositionBuild {
   lightKits: (LightOrder & { module: number; moduleId: string })[]
   /** La comanda dels ferratges col·locats per mòdul (`ModuleBuild.fittingOrders`; Peces › «Ferratges»). */
   fittingOrders: (KitOrderLine & { module: number; moduleId: string })[]
+  /**
+   * Ferratges per metres (la regleta dels penjadors, els sòcols d'alumini): un per item, amb els trossos per tallar, les
+   * barres, els clips i les cantonades (Peces › «Ferratges per metres», CSV de la llista de tall; `linearOrders.ts`).
+   */
+  linearOrders: LinearOrder[]
   /** La instal·lació dels llums de cada mòdul que en porta (Peces › plànol de la instal·lació elèctrica). */
   wirings: { module: number; moduleId: string; name: string; width: number; height: number; wiring: Wiring }[]
   /**
@@ -112,6 +118,7 @@ export function buildComposition(input: Composition): CompositionBuild {
   const hardwareKits: CompositionBuild["hardwareKits"] = []
   const lightKits: CompositionBuild["lightKits"] = []
   const fittingOrders: CompositionBuild["fittingOrders"] = []
+  const linear: LinearPiece[] = []
   const wirings: CompositionBuild["wirings"] = []
 
   // Tipus «Lliure» (flat-pack): només peces lliures; els mòduls es guarden però no es fan.
@@ -165,12 +172,14 @@ export function buildComposition(input: Composition): CompositionBuild {
     for (const k of build.hardwareKits) hardwareKits.push({ ...k, module: i + 1, moduleId: m.id })
     for (const k of build.lightKits) lightKits.push({ ...k, module: i + 1, moduleId: m.id })
     for (const k of build.fittingOrders) fittingOrders.push({ ...k, module: i + 1, moduleId: m.id })
+    for (const k of build.linear) linear.push({ ...k, module: i + 1, ...(k.run ? { run: { x0: k.run.x0 + x, x1: k.run.x1 + x, y: k.run.y + y, z: k.run.z + z } } : {}) })
     if (build.wiring) wirings.push({ module: i + 1, moduleId: m.id, name: m.name, width: m.carcass.width, height: m.carcass.height, wiring: build.wiring })
     // L'avís del push és de tot el moble: una sola vegada, no un per mòdul.
     for (const w of build.warnings) if (w.code !== "push" || !warnings.some((x) => x.code === "push")) warnings.push({ ...w, moduleId: m.id })
-    // Mòdul penjat: el pes el porta el darrere. Cal fons cargolat o en ranura prou gruixut
-    // i penjadors de moble; amb un fons prim o sense fons no s'aguanta.
-    if (m.carcass.base.kind === "wall" && (m.carcass.back === "none" || m.carcass.backThickness < 8))
+    // Mòdul penjat sense penjadors («Cap», o sense laterals on posar-los): el pes el porta el darrere. Cal fons cargolat o en ranura prou gruixut
+    // i penjadors de moble; amb un fons prim o sense fons no s'aguanta. Amb els penjadors (v45), el pes va pels laterals.
+    const hangers = build.extras.some((p) => /^hanger-(left|right)$/.test(p.id))
+    if (m.carcass.base.kind === "wall" && !hangers && (m.carcass.back === "none" || m.carcass.backThickness < 8))
       warnings.push({
         code: "hanging",
         moduleId: m.id,
@@ -220,9 +229,16 @@ export function buildComposition(input: Composition): CompositionBuild {
   const runs = activeRuns(comp)
   for (const run of runs) {
     const n = comp.modules.length + 1
-    const p = run.kind === "worktop" ? buildWorktop(comp, run, places, n, runWarnings) : buildPlinthRun(comp, run, places, n, runWarnings)
     // Com totes les peces: llarg ≥ ample (un taulell sobre un sol mòdul estret sortia girat).
-    if (p) panels.push(normalizePanel(p))
+    if (run.kind === "worktop") {
+      const p = buildWorktop(comp, run, places, n, runWarnings)
+      if (p) panels.push(normalizePanel(p))
+      continue
+    }
+    const pr = buildPlinthRun(comp, run, places, n, runWarnings)
+    for (const p of pr.panels) panels.push(normalizePanel(p))
+    moduleExtras.push(...pr.extras)
+    linear.push(...pr.linear)
   }
   for (const w of runWarnings) warnings.push({ code: "layout", message: w.message })
 
@@ -317,7 +333,7 @@ export function buildComposition(input: Composition): CompositionBuild {
   // sòcol, peces lliures), així el llistat, el CSV, el LLEGEIX-ME i el 3D en diuen el mateix.
   for (const [i, p] of panels.entries()) if (isSolidMaterial(p.material)) panels[i] = { ...p, edges: { ...NO_EDGES } }
 
-  return { panels, warnings, modules, joints: free.joints, extras: [...moduleExtras, ...free.extras], models: input.models ?? [], hardwareKits, lightKits, fittingOrders, wirings, cutting: [...cutting] }
+  return { panels, warnings, modules, joints: free.joints, extras: [...moduleExtras, ...free.extras], models: input.models ?? [], hardwareKits, lightKits, fittingOrders, linearOrders: buildLinearOrders(linear), wirings, cutting: [...cutting] }
 }
 
 /** Caixa de tot el moble (peces i elements sense nesting), en mm de la composició. */

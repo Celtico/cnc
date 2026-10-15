@@ -297,8 +297,11 @@ interface KitchenOpts {
   top?: { kind: "wood"; mat: string } | { kind: "stone" }
   /** Prestatges de paret en lloc d'alts: nombre i material. */
   shelves?: { n: number; mat: string }
-  /** Illa al terra, davant dels baixos. */
-  island?: { w: number; d: number; kind: "drawers" | "seats" | "mixed"; top: "stone" | string }
+  /**
+   * Illa al terra, davant dels baixos. `plinth`: sòcol de fusta al voltant (davant, darrere i laterals, a inglet, a 5 mm
+   * de les cares: les potes genèriques queden a dins).
+   */
+  island?: { w: number; d: number; kind: "drawers" | "seats" | "mixed"; top: "stone" | string; plinth?: boolean }
   /** Sense fila de paret: només l'illa (plantilla «Illa de cuina»). */
   islandOnly?: boolean
 }
@@ -394,7 +397,8 @@ function kitchen(o: KitchenOpts): Composition {
     const cols = Math.max(2, Math.round(I.w / 600))
     const root = I.kind === "mixed" ? v(auto(cols), Array.from({ length: cols }, (_, i) => (i % 2 ? doors(1) : drawers(3)))) : v(auto(cols), Array.from({ length: cols }, () => drawers(3)))
     const rowW = Math.max(baseW + x0 + talls.length * (o.tallsLeft ? 0 : 600), I.w)
-    const island: Module = { ...box("Illa", { w: I.w, h: K_H, d: I.d, mat: o.mat, front: o.front, base: legs(K_LEGS) }, root), wallGap: o.islandOnly ? 0 : K_D + 1100, x: o.islandOnly ? 0 : Math.max(0, (rowW - I.w) / 2) }
+    const base: Carcass["base"] = I.plinth ? { ...legs(K_LEGS), plinth: { setback: 5, back: true, left: true, right: true, sideSetback: 5, corners: "mitre" } } : legs(K_LEGS)
+    const island: Module = { ...box("Illa", { w: I.w, h: K_H, d: I.d, mat: o.mat, front: o.front, base }, root), wallGap: o.islandOnly ? 0 : K_D + 1100, x: o.islandOnly ? 0 : Math.max(0, (rowW - I.w) / 2) }
     modules.push(island)
     // Barra: el taulell volat 300 per la banda de darrere per seure-hi.
     const back = I.kind === "seats" ? 320 : 20

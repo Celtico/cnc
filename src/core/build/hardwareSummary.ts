@@ -3,7 +3,7 @@ import type { KitOrder } from "./buildModule"
 
 /** Un tipus de ferratge que posen les regles del mòdul, amb quants n'hi ha (Editor › mòdul › «Ferratges»). */
 export interface RuleHardwareCount {
-  id: "hinge" | "handle" | "slide" | "kit" | "flap" | "leg" | "push" | "magnet" | "dowel" | "rail" | "led" | "light" | "glassFrame"
+  id: "hinge" | "handle" | "slide" | "kit" | "flap" | "leg" | "push" | "magnet" | "dowel" | "rail" | "led" | "light" | "glassFrame" | "hanger" | "wallRail" | "plinth"
   label: string
   count: number
   /** Unitat del nombre si no és «un per ferratge» («parells», «forats»). */
@@ -13,6 +13,7 @@ export interface RuleHardwareCount {
 }
 
 const FRONT_ROLES = new Set(["door", "drawerFront", "flap"])
+const metres = (mm: number) => (mm / 1000).toFixed(2).replace(".", ",")
 
 /**
  * **Ferratges de les regles d'un mòdul** (els que no es col·loquen a mà: frontisses a les portes, tiradors, guies dels
@@ -25,10 +26,17 @@ export function ruleHardwareCounts(panels: readonly Panel[], legs = 0, extras: r
   let hinge = 0, handle = 0, drawerSides = 0, flapArms = 0, push = 0, magnet = 0, dowel = 0, legFittings = 0
   // Accessoris (elements sense nesting): barres de penjar, perfils LED (amb el llarg) i marcs de vitrina.
   let rail = 0, led = 0, ledLen = 0, glass = 0, light = 0
+  // Mòdul penjat i sòcol d'alumini (v45): els penjadors, la regleta i el sòcol, amb els metres.
+  let hanger = 0, wallRail = 0, wallRailLen = 0, aluPlinth = 0
   for (const p of extras) {
     // Els ids d'una composició porten el mòdul al davant (`m1:rail-…`).
     const id = p.id.slice(p.id.indexOf(":") + 1)
-    if (id.startsWith("rail-")) rail++
+    if (/^hanger-(left|right)$/.test(id)) hanger++
+    else if (id === "wall-rail") {
+      wallRail++
+      wallRailLen += p.length
+    } else if (/^plinth.*-alu$/.test(id)) aluPlinth += p.length
+    else if (id.startsWith("rail-")) rail++
     else if (id.startsWith("led-")) {
       led++
       ledLen += p.length
@@ -71,6 +79,9 @@ export function ruleHardwareCounts(panels: readonly Panel[], legs = 0, extras: r
     { id: "led", label: "Perfils LED", count: led, ...(led ? { detail: `${(ledLen / 1000).toFixed(2).replace(".", ",")} m de perfil` } : {}) },
     { id: "light", label: "Llums encastades", count: light },
     { id: "glassFrame", label: "Marcs de vitrina", count: glass },
+    { id: "hanger", label: "Penjadors", count: hanger },
+    { id: "wallRail", label: "Regleta de penjar", count: wallRail, ...(wallRail ? { detail: `${metres(wallRailLen)} m` } : {}) },
+    { id: "plinth", label: "Sòcol d'alumini", count: aluPlinth ? 1 : 0, ...(aluPlinth ? { detail: `${metres(aluPlinth)} m` } : {}) },
   ]
   return out.filter((c) => c.count > 0)
 }

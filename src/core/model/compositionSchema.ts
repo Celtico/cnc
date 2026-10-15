@@ -5,7 +5,7 @@ import { CameraPoseSchema } from "./camera"
 import { VIEW_FLAGS } from "./viewFlags"
 import { FreePartSchema, JoinerySchema } from "./freePart"
 import { HardwarePlacementSchema } from "./hardware"
-import { ModuleSchema } from "./moduleSchema"
+import { ModuleSchema, PlinthSidesSchema } from "./moduleSchema"
 
 /** Model de composició (vegeu `moduleSchema.ts`): objectes, peces corregudes, models 3D, illes i la composició. */
 
@@ -146,6 +146,12 @@ export const RunSchema = z.discriminatedUnion("kind", [
     setback: mm.min(0),
     /** Apagat: es conserva però no es fa (`migrateRuns`). */
     off: z.boolean().optional(),
+    /**
+     * Retorns als extrems vistos de la fila (`left`, `right`, de la cara dels fronts fins a la paret, a `sideSetback` del
+     * lateral), les cantonades i el sòcol d'alumini (`hardware`): les mateixes opcions que el sòcol de la base «Potes»
+     * (`PlinthSidesSchema`; aquí sense darrere: la fila va contra la paret). Sense UI, com la resta de peces corregudes.
+     */
+    ...PlinthSidesSchema.omit({ back: true }).shape,
   }),
 ])
 export type Run = z.infer<typeof RunSchema>

@@ -17,9 +17,9 @@ describe("mòdul penjat a la paret", () => {
     expect(hung.panels.length).toBeLessThanOrEqual(floor.panels.length)
   })
 
-  it("avisa si el fons és massa prim per penjar-lo", () => {
+  it("sense penjadors («Cap»), avisa si el fons és massa prim per penjar-lo", () => {
     const c = comp()
-    c.modules[0]!.carcass.base = { kind: "wall", height: 1200 }
+    c.modules[0]!.carcass.base = { kind: "wall", height: 1200, hanger: "none" }
     c.modules[0]!.carcass.backThickness = 3
     expect(buildComposition(c).warnings.some((w) => w.code === "hanging")).toBe(true)
     c.modules[0]!.carcass.backThickness = 10

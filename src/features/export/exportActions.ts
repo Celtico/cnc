@@ -5,6 +5,7 @@ import { toaster } from "../../components/ui/toaster"
 import type { CompositionBuild } from "../../core/build/buildComposition"
 import { toCutList } from "../../core/cutlist/toCutList"
 import { cutListToCsv } from "../../core/export/csv"
+import { linearCsvRows } from "../../core/build/linearOrders"
 import { toDxf } from "../../core/export/dxf"
 import { xcsZip } from "../../core/export/maestroXcs"
 import { toStepCad } from "../../core/export/step"
@@ -91,7 +92,7 @@ export function exportActions(c: ExportContext) {
       type: xcs.warnings.length ? "warning" : "success",
     })
   }
-  const doCsv = () => downloadText(cutListToCsv(toCutList(panels)), `${base}-peces.csv`, "text/csv")
+  const doCsv = () => downloadText(cutListToCsv(toCutList(panels), {}, linearCsvRows(build?.linearOrders ?? [])), `${base}-peces.csv`, "text/csv")
   const doJson = () =>
     downloadText(
       JSON.stringify(toUnifiedData(panels, { name: project.name, nesting }), null, 2),

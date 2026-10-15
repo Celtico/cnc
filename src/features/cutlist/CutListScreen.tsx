@@ -3,10 +3,11 @@ import { StatBox } from "../../components/StatBox"
 import { useMemo, useState } from "react"
 import { toCutList } from "../../core/cutlist/toCutList"
 import { pieceRefs } from "../../core/export/refs"
-import { useCompositionExtras, useCompositionFittings, useCompositionKits, useCompositionLights, useCompositionWirings, useCompositionPanels, useCompositionRead, useProject } from "../useProject"
+import { useCompositionExtras, useCompositionFittings, useCompositionLinear, useCompositionKits, useCompositionLights, useCompositionWirings, useCompositionPanels, useCompositionRead, useProject } from "../useProject"
 import { kitGroups } from "../../core/build/kitOrders"
 import { lightGroups } from "../../core/build/lightOrders"
 import { fittingGroups } from "../../core/build/fittingOrders"
+import { linearGroups } from "../../core/build/linearOrders"
 import { UnreadableAlert } from "../../components/UnreadableAlert"
 import { ExtraElementsTable, OrderSections, type ExtraRow } from "./OrderTables"
 import { PieceCards, PieceTable } from "./PieceList"
@@ -28,6 +29,9 @@ export function CutListScreen({ projectId }: { projectId: number }) {
   const fittings = useCompositionFittings(project)
   const wirings = useCompositionWirings(project)
   const fittingRows = useMemo(() => fittingGroups(fittings), [fittings])
+  // Regleta dels penjadors i sòcols d'alumini: trossos, barres, clips i cantoneres.
+  const linear = useCompositionLinear(project)
+  const linearRows = useMemo(() => linearGroups(linear), [linear])
   // Elements iguals (material i mides) agrupats. Els components dels jocs de calaix (rol `hardware`) van a la seva taula.
   const extraRows = useMemo(() => {
     const rows = new Map<string, ExtraRow>()
@@ -74,7 +78,7 @@ export function CutListScreen({ projectId }: { projectId: number }) {
       {sel && selPanel && <SelectedPieceCard sel={sel} selPanel={selPanel} panels={panels} refs={refs} />}
       </Stack>
 
-      <OrderSections kitRows={kitRows} fittingRows={fittingRows} lightRows={lightRows} wirings={wirings} />
+      <OrderSections kitRows={kitRows} fittingRows={fittingRows} linearRows={linearRows} lightRows={lightRows} wirings={wirings} />
       {extraRows.length > 0 && <ExtraElementsTable rows={extraRows} />}
     </VStack>
   )

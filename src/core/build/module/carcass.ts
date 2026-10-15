@@ -4,7 +4,7 @@ import { MIN_OPEN_RATIO, grilleCutouts, type Rect } from "../grille"
 import { BuilderBase } from "./base"
 import { num, edges, near, shapeOutline } from "./helpers"
 
-/** La carcassa: laterals, base, tapa, fons, sòcol i parets buides. */
+/** La carcassa: laterals, base, tapa, fons, sòcol (base «Sòcol»; el de les potes, `MountingBuilder`) i parets buides. */
 export class CarcassBuilder extends BuilderBase {
   // --- Carcassa ---------------------------------------------------------------------
 
@@ -17,7 +17,6 @@ export class CarcassBuilder extends BuilderBase {
     if (d.hasTop) this.buildHorizontal("top")
     if (c.back !== "none") this.buildBack()
     if (c.base.kind === "plinth") this.buildPlinth()
-    if (c.base.kind === "legs") this.buildLegPlinth()
     if (d.hollow)
       this.warnings.push({ code: "hollow", message: `Parets buides de ${d.hollow} mm: cada paret són dues pells, llistons a dins i una tira al davant, encolats abans de muntar el moble.` })
     else if (c.hollow)
@@ -438,24 +437,6 @@ export class CarcassBuilder extends BuilderBase {
     // Tapa amb ranura d'aire: no porta ranura del fons i el fons s'atura a sota (no hi entra).
     if (!d.hasTop || c.top.kind === "ventSlot") return d.interior.y1
     return d.interior.y1 + c.grooveDepth
-  }
-
-  /** Sòcol davant de les potes (base «Potes» amb `plinth`): de terra fins a 5 mm sota la base, de tota l'amplada. */
-  protected buildLegPlinth(): void {
-    const { m, d } = this
-    const c = m.carcass
-    if (c.base.kind !== "legs" || !c.base.plinth) return
-    const H = c.base.height
-    const h = r(H - 5)
-    if (h <= 0) return
-    const z0 = d.D - c.base.plinth.setback - d.t
-    this.add(this.basePanel("plinth", "socol", "Sòcol", "plinth", d.W, h, d.t, c.material, "x", edges("top", "bottom"), placement([0, -H, z0], X, Y, Z, Z)))
-    // El peu de les potes del davant (Ø78 de l'AXILO; les genèriques, Ø48) ha de quedar darrere del sòcol.
-    const hw = c.base.hardware
-    const front = hw?.engine === "leg" ? (hw.params.insetFront ?? hw.params.inset ?? 50) : 50
-    const foot = hw?.engine === "leg" ? (hw.params.foot ?? 48) / 2 : 24
-    if (d.D - front + foot > z0 + 0.5)
-      this.warnings.push({ code: "hardware", message: `El sòcol (a ${num(c.base.plinth.setback)} mm del davant) toca el peu de les potes del davant (a ${num(front)} mm, Ø${num(foot * 2)}): retira'l fins a ${num(Math.max(0, front - foot - d.t))} mm com a molt o posa les potes més enrere.` })
   }
 
   protected buildPlinth(): void {

@@ -5,12 +5,12 @@ import type { SlotSpec } from "../hardware"
 import type { ZoneRect } from "../layout"
 import { discOutline, planLights } from "../lightKit"
 import type { LightOrder } from "../lightOrders"
-import { CarcassBuilder } from "./carcass"
+import { MountingBuilder } from "./mounting"
 import { num, worldBoxOf } from "./helpers"
 import type { Wiring } from "./types"
 
 /** Accessoris de dins i llum: barra de penjar, LED, jocs de llum i el recorregut dels cables. */
-export class LightsBuilder extends CarcassBuilder {
+export class LightsBuilder extends MountingBuilder {
   /**
    * Barra de penjar: tub d'inox Ø25 de lateral a lateral, a 50 mm del sostre del compartiment
    * i centrat en la fondària útil. No és de CNC: va a `extras` (3D i llista). Els suports es

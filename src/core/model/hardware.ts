@@ -133,18 +133,28 @@ function eachHardware(comp: unknown, visit: (item: HardwareItem) => HardwareItem
       }
       if (touched) out = { ...out, hardware: next }
     }
-    // La pota triada a la base «Potes» (`Base.hardware`).
+    // La pota triada a la base «Potes» (`Base.hardware`), el sòcol d'alumini (`Base.plinth.hardware`) i els penjadors i la
+    // regleta del mòdul penjat (`Base.hanger`, `Base.rail`).
     const c = m.carcass
-    if (isRecord(c) && isRecord(c.base) && c.base.kind === "legs" && isRecord(c.base.hardware)) {
-      const parsed = HardwareItemSchema.safeParse(c.base.hardware)
-      const next = parsed.success ? visit(parsed.data) : null
-      if (next) out = { ...out, carcass: { ...c, base: { ...c.base, hardware: next } } }
+    if (isRecord(c) && isRecord(c.base)) {
+      const base = visitBase(c.base, visit)
+      if (base !== c.base) out = { ...out, carcass: { ...c, base } }
     }
     const root = zone(m.root)
     if (root !== m.root) out = { ...out, root }
     if (out !== m) changed = true
     return out
   })
+  // El sòcol d'alumini dels sòcols correguts (`PlinthRun.hardware`).
+  let runs = comp.runs
+  if (Array.isArray(runs)) {
+    const before = runs as unknown[]
+    const after = before.map((run) => (isRecord(run) && run.kind === "plinth" ? visitKeys(run, ["hardware"], visit) : run))
+    if (after.some((x, i) => x !== before[i])) {
+      runs = after
+      changed = true
+    }
+  }
   // Ferratges col·locats a mà (`hardwarePlacements`): la còpia de cada un.
   let placements = comp.hardwarePlacements
   if (Array.isArray(placements)) {
@@ -160,7 +170,29 @@ function eachHardware(comp: unknown, visit: (item: HardwareItem) => HardwareItem
       changed = true
     }
   }
-  return changed ? { ...comp, modules, ...(placements !== comp.hardwarePlacements ? { hardwarePlacements: placements } : {}) } : comp
+  return changed ? { ...comp, modules, ...(placements !== comp.hardwarePlacements ? { hardwarePlacements: placements } : {}), ...(runs !== comp.runs ? { runs } : {}) } : comp
+}
+
+/** Els ferratges d'un objecte als camps `keys` (una còpia de la biblioteca; «none» i res, no). */
+function visitKeys(o: Record<string, unknown>, keys: readonly string[], visit: (item: HardwareItem) => HardwareItem | null): Record<string, unknown> {
+  let out = o
+  for (const key of keys) {
+    if (!isRecord(o[key])) continue
+    const parsed = HardwareItemSchema.safeParse(o[key])
+    const next = parsed.success ? visit(parsed.data) : null
+    if (next) out = { ...out, [key]: next }
+  }
+  return out
+}
+
+/** Els ferratges de la base: la pota i el sòcol d'alumini («Potes»), el penjador i la regleta («Penjat a la paret»). */
+function visitBase(base: Record<string, unknown>, visit: (item: HardwareItem) => HardwareItem | null): Record<string, unknown> {
+  if (base.kind === "wall") return visitKeys(base, ["hanger", "rail"], visit)
+  if (base.kind !== "legs") return base
+  const out = visitKeys(base, ["hardware"], visit)
+  if (!isRecord(base.plinth)) return out
+  const plinth = visitKeys(base.plinth, ["hardware"], visit)
+  return plinth === base.plinth ? out : { ...out, plinth }
 }
 
 /**

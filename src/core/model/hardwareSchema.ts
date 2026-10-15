@@ -80,7 +80,7 @@ export const HARDWARE_CATEGORIES = [
   { id: "push", label: "Obertura per pressió i imants", hint: "Imants de les reixetes i trapes, push." },
   { id: "profile", label: "Perfils i marcs", hint: "Perfils i marcs d'alumini per a portes de vidre (Cadro). Els perfils de LED són a Llums." },
   { id: "light", label: "Llums", hint: "Làmpades LED de 24 V per encastar al prestatge o a la tapa (forat o rebaix, forat del cable) amb l'alimentador, l'interruptor i els cables per connectar-les a la xarxa." },
-  { id: "wall", label: "Penjar", hint: "Penjadors i regletes." },
+  { id: "wall", label: "Penjar", hint: "Penjadors dels mòduls penjats, regletes de paret i barres de penjar." },
   { id: "misc", label: "Altres", hint: "Accessoris, electrònica, passacables, ventilació…" },
 ] as const
 export type HardwareCategory = (typeof HARDWARE_CATEGORIES)[number]["id"]
@@ -93,9 +93,11 @@ const CATEGORY_IDS = HARDWARE_CATEGORIES.map((c) => c.id) as [HardwareCategory, 
  * propi: la frontissa que s'hi aparella en copia els forats (`HardwareItem.plate`, target `side`). `leg` (pota importada):
  * tampoc, es tria a la base «Potes» del mòdul (`Base.hardware`): forats a la cara de sota de la base, a cada pota (target
  * `base`). `model` («només 3D»): un ferratge importat sense cap regla de mecanitzat (estructures de taula, portes
- * corredisses…): el model i el volum, **mai cap forat** (target `model` buit).
+ * corredisses…): el model i el volum, **mai cap forat** (target `model` buit). `hanger` (penjador de moble alt) i
+ * `wallRail` (la regleta de paret on s'enganxa): llocs del mòdul penjat (`Base.hanger`, `Base.rail`). `plinthProfile`
+ * (sòcol d'alumini): sense lloc, es tria al sòcol de la base «Potes» (`Base.plinth.hardware`), com la pota.
  */
-export const HARDWARE_ENGINES = ["cup", "system32", "dowel", "slide", "flapArm", "magnet", "barHandle", "plate", "leg", "model", "drawerKit", "rail", "ledProfile", "glassFrame"] as const
+export const HARDWARE_ENGINES = ["cup", "system32", "dowel", "slide", "flapArm", "magnet", "barHandle", "plate", "leg", "model", "drawerKit", "rail", "ledProfile", "glassFrame", "hanger", "wallRail", "plinthProfile"] as const
 export type HardwareEngine = (typeof HARDWARE_ENGINES)[number]
 
 /** Mecanitzat en coordenades de la peça, relatiu al punt d'ancoratge (u al llarg, v a través). */
@@ -185,6 +187,20 @@ const HardwareImportSchema = z.object({
 export const IMPORT_BOX_VERSION = 1
 
 
+/**
+ * **Ferratge per metres** (v45, `docs/funcional/model.md` › Ferratges per metres): es compra en barres de `params.stock`
+ * mm (0 = es ven per metres) i es talla a mida; la secció és `params.height` × `params.depth`. Les regles el posen al
+ * moble (la regleta al llarg dels mòduls penjats, el sòcol d'alumini al voltant de la base) i la comanda en suma els
+ * trossos, les barres, els clips (un cada `params.clipSpacing`, a `params.clipEnd` dels extrems, dos per tros com a mínim)
+ * i les cantonades (`buildLinearOrders`).
+ */
+const LinearSchema = z.object({
+  /** El clip o la fixació que va amb el perfil (clip de sòcol a la pota, cargol i tac de la regleta). */
+  clip: z.object({ name: z.string().min(1), ref: z.string().optional() }).optional(),
+  /** La peça de cantonada (sòcol): una a cada cantonada entre dos trams. */
+  corner: z.object({ name: z.string().min(1), ref: z.string().optional() }).optional(),
+})
+
 /** L'item tal qual (sense la lectura dels importats malmesos, `HardwareItemSchema`). */
 export const HardwareItemObjectSchema = z.object({
   /** `hinge-cup`… (inicials) o `hw-…` (de l'usuari). */
@@ -237,6 +253,8 @@ export const HardwareItemObjectSchema = z.object({
    * peça de sobre del compartiment i el sistema elèctric (alimentador, distribuïdor, interruptor, cables) a la comanda.
    */
   light: LightKitSchema.optional(),
+  /** Ferratge per metres (v45): la regleta de paret, el sòcol d'alumini (`LinearSchema`). */
+  linear: LinearSchema.optional(),
 })
 export type HardwareItem = z.infer<typeof HardwareItemObjectSchema>
 
@@ -281,8 +299,8 @@ export const isDamagedImport = (item: HardwareItem): boolean => !!item.imported?
 
 /**
  * Llocs de cada mòdul que fan servir un ferratge (el motor que hi va i la categoria de la biblioteca). Els set primers són
- * els de sempre (cada mòdul en porta una còpia); els **accessoris** (barra de penjar, tira LED, marc de vitrina;
- * `ACCESSORY_SLOTS`) són opcionals a la còpia del mòdul: sense, l'item d'inici de l'app. Cada compartiment o porta en pot
+ * els de sempre (cada mòdul en porta una còpia); els **accessoris** (barra de penjar, tira LED, marc de vitrina) i els
+ * **del mòdul penjat** (penjador i regleta, v45) són opcionals a la còpia del mòdul: sense, l'item d'inici de l'app. Cada compartiment o porta en pot
  * triar un altre (`Zone.rail.hardware`, `Zone.led.hardware`, `front.frame`).
  */
 export const HARDWARE_SLOTS = [
@@ -296,6 +314,8 @@ export const HARDWARE_SLOTS = [
   { slot: "rail", engine: "rail", category: "wall", label: "Barra de penjar", uses: "compartiments amb barra de penjar" },
   { slot: "led", engine: "ledProfile", category: "light", label: "Tira LED", uses: "compartiments amb llum" },
   { slot: "glassFrame", engine: "glassFrame", category: "profile", label: "Marc de vitrina", uses: "portes de vidre" },
+  { slot: "hanger", engine: "hanger", category: "wall", label: "Penjador", uses: "mòduls penjats a la paret" },
+  { slot: "wallRail", engine: "wallRail", category: "wall", label: "Regleta de penjar", uses: "mòduls penjats a la paret (on s'enganxen els penjadors)" },
 ] as const
 export type HardwareSlot = (typeof HARDWARE_SLOTS)[number]["slot"]
 export const slotOf = (s: HardwareSlot) => HARDWARE_SLOTS.find((x) => x.slot === s)!
@@ -327,6 +347,8 @@ export const ModuleHardwareKitSchema = z.object({
   rail: moduleSlotSchema().optional(),
   led: moduleSlotSchema().optional(),
   glassFrame: moduleSlotSchema().optional(),
+  hanger: moduleSlotSchema().optional(),
+  wallRail: moduleSlotSchema().optional(),
 })
 export type ModuleHardware = z.infer<typeof ModuleHardwareKitSchema>
 
@@ -342,6 +364,8 @@ export const HardwareDefaultsSchema = z.object({
   rail: z.string().optional(),
   led: z.string().optional(),
   glassFrame: z.string().optional(),
+  hanger: z.string().optional(),
+  wallRail: z.string().optional(),
 })
 export type HardwareDefaults = z.infer<typeof HardwareDefaultsSchema>
 

@@ -328,3 +328,19 @@ Fora (no es poden mecanitzar amb un motor de l'app o són complexos): la Metalla
 mecanitza), el perfil decoratiu i la jaladera de clip del marc, els perfils Loox de 6,5 (la tira 3015 demana més de 12 d'alt)
 i de 24 mm (no hi cap en un tauler de 19), el perfil acodat, els tiradors embotits (caixera), el vaivé push (es cargola) i
 la placa triangular de l'AXILO 78 (cada cantonada en mirall).
+
+## Ferratges per metres i penjadors (v45)
+
+No són jocs (cap `kit`): són ferratges normals amb una regla que els posa, però es compren **per metres**. El concepte
+(un item amb `linear` i la secció, la barra i els clips als `params`; la regla en deixa trossos; la comanda en suma
+barres, clips i cantoneres) és a [`funcional/model.md`](funcional/model.md) › Ferratges per metres; els penjadors, a ›
+Carcassa › Penjadors. Valors inicials i fonts a `core/model/hangingHardware.ts`:
+
+| Item | Motor | Dades | Font |
+|---|---|---|---|
+| Penjador ocult regulable (`hanger-concealed`) | `hanger` | 4 × Ø10 × 12 a 37 de dalt i del darrere, a 32; 16 mm darrere el fons; regleta a 30 sota dalt; osca del fons 20 × 110 | Camar 807 (camar.it: 4 forats Ø10 amb espiga, 120 kg, regulació 19/22); Häfele Libra H2 290.41.910 (23T7-222: 4 forats Ø10 a 32, 150 kg/parell, 13/12 mm, 16–20 mm de servei); Häfele 290.03.935/936 (23T7-220: mín. 16 mm darrere el fons) |
+| Regleta de penjar d'acer (`wall-rail-steel`) | `wallRail` | 33,5 × 10, barra de 2000, un cargol cada 300 | Libra B3 F003290 (H33,5, 2 mm, L2000); Häfele, acer galvanitzat 2032 (23T7-231) |
+| Sòcol d'alumini 100 / 150 (`plinth-alu-100`, `-150`) | `plinthProfile` | 16 de gruix, barra de 4000, clip a la pota cada 600 (a 80 dels extrems), cantonera de 90° | sòcols de cuina d'alumini (Emuca i altres) en barres amb clips i cantoneres |
+
+**Hipòtesis per al taller**: la plantilla de forar del penjador (posició, Ø i fondària), si cal l'osca del fons i de
+quina mida, l'alçada de la regleta, el gruix i la barra del sòcol d'alumini i quants clips per tram.

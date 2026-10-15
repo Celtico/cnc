@@ -24,8 +24,11 @@ function cell(value: string | number, o: Required<CsvOptions>): string {
   return quote(typeof value === "number" ? String(value).replace(".", o.decimal) : value, o)
 }
 
-/** CSV de la llista de peces, una fila per grup de peces idèntiques. */
-export function cutListToCsv(list: CutList, options: CsvOptions = {}): string {
+/**
+ * CSV de la llista de peces, una fila per grup de peces idèntiques. Amb `linear` (els ferratges per metres,
+ * `linearCsvRows`), a sota una taula més: ferratge, quantitat, referència i notes (els trossos per tallar).
+ */
+export function cutListToCsv(list: CutList, options: CsvOptions = {}, linear: readonly [string, number, string, string][] = []): string {
   const o: Required<CsvOptions> = {
     separator: options.separator ?? ";",
     decimal: options.decimal ?? ",",
@@ -58,7 +61,8 @@ export function cutListToCsv(list: CutList, options: CsvOptions = {}): string {
     it.area,
     it.processes || "-",
   ])
-  const lines = [header, ...rows].map((r) => r.map((v) => cell(v, o)).join(o.separator))
+  const extra = linear.length ? [[], ["Ferratges per metres", "Quantitat", "Referència", "Notes"], ...linear] : []
+  const lines = [header, ...rows, ...extra].map((r) => r.map((v) => cell(v, o)).join(o.separator))
   // BOM perquè Excel/Numbers reconeguin l'UTF-8 dels accents.
   return "﻿" + lines.join("\r\n") + "\r\n"
 }

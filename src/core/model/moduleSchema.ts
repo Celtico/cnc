@@ -32,6 +32,27 @@ const ModuleHardwareSchema = z.preprocess(migrateModuleHardware, ModuleHardwareK
  */
 const FrontHardwareSchema = repairAtomically(z.preprocess(sanitizeImportedHardware, HardwareItemObjectSchema))
 
+/** Un ferratge triat o «Cap» (`"none"`): sense, el del mòdul («Com el mòdul»). */
+const HardwareOrNoneSchema = z.union([FrontHardwareSchema, z.literal("none")])
+
+/**
+ * Sòcol de la base «Potes» (per decisió de l'usuari, 2026-10-14; els costats i l'alumini, 2026-10-15): sempre al davant,
+ * a `setback` del davant del mòdul; opcionalment també al darrere i als laterals (`back`, `left`, `right`, a
+ * `sideSetback` de cada cara; sense, la mateixa retirada del davant), amb les cantonades a tope (el davant i el darrere
+ * passen per davant) o a inglet. De fusta (un tauler del gruix i material del cos, de terra fins a 5 mm sota la base) o,
+ * amb `hardware`, un **sòcol d'alumini** de la biblioteca (motor `plinthProfile`, ferratge per metres): perfils tallats a
+ * mida, clips a les potes i cantoneres (`core/build/plinth.ts`). Les mateixes opcions al sòcol corregut (`PlinthRun`).
+ */
+export const PlinthSidesSchema = z.object({
+  back: z.boolean().optional(),
+  left: z.boolean().optional(),
+  right: z.boolean().optional(),
+  sideSetback: mm.min(0).max(200).optional(),
+  corners: z.enum(["butt", "mitre"]).optional(),
+  hardware: FrontHardwareSchema.optional(),
+})
+export type PlinthSides = z.infer<typeof PlinthSidesSchema>
+
 export const BaseSchema = z.discriminatedUnion("kind", [
   /** Base a terra (com el mòdul de caixa actual). */
   z.object({ kind: z.literal("none") }),
@@ -50,12 +71,16 @@ export const BaseSchema = z.discriminatedUnion("kind", [
      * mòdul, a `setback` del davant, de terra fins a 5 mm sota la base (l'alçada del sòcol AXILO = H − 5); es fixa a les
      * potes del davant amb els clips (a mà, sense mecanitzat).
      */
-    plinth: z.object({ setback: mm.min(0).max(200) }).optional(),
+    plinth: PlinthSidesSchema.extend({ setback: mm.min(0).max(200) }).optional(),
   }),
   /** Sense base: laterals fins a terra i el buit obert (cobreradiador). */
   z.object({ kind: z.literal("open") }),
-  /** Penjat a la paret: cap peça de base; `height` = alçada de la base del mòdul des del terra. */
-  z.object({ kind: z.literal("wall"), height: mm.min(0) }),
+  /**
+   * Penjat a la paret: cap peça de base; `height` = alçada de la base del mòdul des del terra. **Penjadors** (v45): un a
+   * cada lateral (`hanger`: el triat, «Cap» o, sense, el del mòdul) i la **regleta** de paret on s'enganxen (`rail`:
+   * igual; ferratge per metres, tallada a l'amplada dels penjats seguits). Sense penjadors, tampoc regleta.
+   */
+  z.object({ kind: z.literal("wall"), height: mm.min(0), hanger: HardwareOrNoneSchema.optional(), rail: HardwareOrNoneSchema.optional() }),
 ])
 export type Base = z.infer<typeof BaseSchema>
 

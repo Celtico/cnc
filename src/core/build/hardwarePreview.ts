@@ -2,7 +2,7 @@ import { NO_EDGES, type HardwareItem, type Hole, type Panel, type PanelRole } fr
 import { r, system32Ys, threeAlong } from "./geometry"
 import { planKit } from "./drawerKit"
 import { planLights } from "./lightKit"
-import { applyHardware, cupSpec, dowelSpec, flapSpec, glassFrameSpec, handleSpec, ledSpec, legSpec, magnetSpec, plateSpec, railSpec, slideSpec, system32Spec, HardwareError } from "./hardware"
+import { applyHardware, cupSpec, dowelSpec, flapSpec, glassFrameSpec, handleSpec, hangerSpec, ledSpec, legSpec, magnetSpec, plateSpec, plinthProfileSpec, railSpec, slideSpec, system32Spec, wallRailSpec, HardwareError } from "./hardware"
 
 /**
  * Peces d'exemple amb el patró de mecanitzats d'un ferratge (Preferències › Ferratges: la targeta i l'editor), fetes amb
@@ -187,6 +187,21 @@ function previewPanels(item: HardwareItem): Panel[] {
       // Accessori: sense mecanitzat de moment (suports de la barra: pendents del taller). Es comprova que els números hi
       // siguin; el muntatge («Com va muntat») l'ensenya.
       railSpec(item)
+      return []
+    case "hanger": {
+      // Lateral d'un mòdul penjat de 720 × 330 (x = alçada des de dalt, y = fondària des del darrere), cara de dins: els
+      // forats del penjador a la cantonada de dalt i darrere (com al moble, `buildHangers`).
+      const s = hangerSpec(item)
+      const side = sample("side", "Lateral (cara de dins)", "side", 720, 330)
+      for (const h of s.holes) side.holes.push(hole(s.fromTop + h.u, s.fromBack + h.v, { diameter: h.d, depth: h.depth, tag: h.tag }))
+      return [side]
+    }
+    case "wallRail":
+    case "plinthProfile":
+      // Ferratges per metres: no es mecanitzen (es cargolen a la paret o es claven a les potes). Es comprova que els
+      // números hi siguin; el muntatge («Com va muntat») l'ensenya.
+      if (item.engine === "wallRail") wallRailSpec(item)
+      else plinthProfileSpec(item)
       return []
     case "drawerKit": {
       // Lateral del moble (x = fondària des del darrere; el front a la dreta) amb les prebroques de la guia més llarga que hi cap.

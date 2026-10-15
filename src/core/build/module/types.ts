@@ -1,3 +1,4 @@
+import type { LinearPiece } from "../linearOrders"
 import type { HardwareItem, KitLevel, KitOptions, Panel } from "../../model"
 import type { KitOrderLine, KitWoodSize } from "../drawerKit"
 import type { SlotSpec } from "../hardware"
@@ -74,6 +75,8 @@ export interface ModuleBuild {
   lightKits: LightOrder[]
   /** La comanda dels ferratges col·locats (frontisses, tiradors, pistons, potes): una línia per item (Peces › «Ferratges», LLEGEIX-ME). */
   fittingOrders: KitOrderLine[]
+  /** Ferratges per metres del mòdul (regleta dels penjadors, sòcol d'alumini): els trossos (`buildLinearOrders`). */
+  linear: LinearPiece[]
   /** La instal·lació dels llums del mòdul (alimentador, recorreguts dels cables, sortida a l'endoll) per al plànol de Peces. */
   wiring?: Wiring
   warnings: BuildWarning[]

@@ -45,11 +45,11 @@
    "hash": "115792f2"
   },
   "xcs": {
-   "warnings": 41,
+   "warnings": 42,
    "sheets": [
-    "T01_Melamina_blanca_19.xcs parts:23 drill:drill=52 outer:contour=69 #a0583ed5",
+    "T01_Melamina_blanca_19.xcs parts:23 drill:drill=58 outer:contour=69 #f0c887dd",
     "T02_Melamina_blanca_19.xcs parts:6 outer:contour=18 #23e1b326",
-    "T03_DM_fons_10.xcs parts:3 inner:contour=1 outer:contour=7 #96c2adfd",
+    "T03_DM_fons_10.xcs parts:3 inner:contour=1 outer:contour=7 #22332edd",
     "T04_Melamina_roure_19.xcs parts:3 drill:drill=14 outer:contour=9 #eca375ce",
     "T05_Melamina_blanca_16.xcs parts:6 drill:drill=8 outer:contour=18 #e36d353a"
    ]
@@ -59,8 +59,9 @@
    "CIRCLE@CUT_THROUGH=5",
    "CIRCLE@DRILL_B_D4_P7=8",
    "CIRCLE@DRILL_B_D5_P12=4",
+   "CIRCLE@DRILL_D10_P12=8",
    "CIRCLE@DRILL_D10_P5=2",
-   "CIRCLE@DRILL_D5_P12=40",
+   "CIRCLE@DRILL_D5_P12=38",
    "CIRCLE@DRILL_D8_P10=16",
    "CIRCLE@DRILL_D8_P12=12",
    "CIRCLE@DRILL_H_D10_P5=2",
@@ -75,7 +76,7 @@
    "SEQEND@CUT_THROUGH=32",
    "SEQEND@GROOVE_W10_P8=6",
    "TEXT@LABEL=41",
-   "VERTEX@CONTOUR=164",
+   "VERTEX@CONTOUR=168",
    "VERTEX@CUT_THROUGH=128",
    "VERTEX@GROOVE_W10_P8=24"
   ]
@@ -88,10 +89,10 @@
    "hash": "a1a00483"
   },
   "xcs": {
-   "warnings": 15,
+   "warnings": 16,
    "sheets": [
-    "T01_Melamina_blanca_19.xcs parts:4 drill:drill=21 outer:contour=12 #71e2fde3",
-    "T02_DM_fons_10.xcs parts:5 inner:contour=1 outer:contour=15 #6bfc296d",
+    "T01_Melamina_blanca_19.xcs parts:4 drill:drill=29 outer:contour=12 #04a65175",
+    "T02_DM_fons_10.xcs parts:5 inner:contour=1 outer:contour=15 #9dddb249",
     "T03_Freixe_xapat_19.xcs parts:4 drill:drill=24 outer:contour=12 #8da32d32",
     "T04_Melamina_blanca_16.xcs parts:12 drill:drill=16 outer:contour=36 #b7d03925"
    ]
@@ -101,6 +102,7 @@
    "CIRCLE@CUT_THROUGH=9",
    "CIRCLE@DRILL_B_D4_P7=16",
    "CIRCLE@DRILL_B_D5_P9=4",
+   "CIRCLE@DRILL_D10_P12=8",
    "CIRCLE@DRILL_D5_P12=8",
    "CIRCLE@DRILL_D5_P9=4",
    "CIRCLE@DRILL_D8_P10=32",
@@ -113,7 +115,7 @@
    "SEQEND@CONTOUR=25",
    "SEQEND@GROOVE_W10_P8=12",
    "TEXT@LABEL=25",
-   "VERTEX@CONTOUR=100",
+   "VERTEX@CONTOUR=104",
    "VERTEX@GROOVE_W10_P8=48"
   ]
  },
@@ -125,10 +127,10 @@
    "hash": "11a2ba29"
   },
   "xcs": {
-   "warnings": 12,
+   "warnings": 13,
    "sheets": [
-    "T01_Noguera_xapada_19.xcs parts:15 drill:drill=38 outer:contour=45 #860e5c8e",
-    "T02_Contraxapat_fons_10.xcs parts:4 outer:contour=12 #ebb9b0c0",
+    "T01_Noguera_xapada_19.xcs parts:15 drill:drill=46 outer:contour=45 #09d29000",
+    "T02_Contraxapat_fons_10.xcs parts:4 outer:contour=12 #7f0b8d64",
     "T03_Noguera_xapada_16.xcs parts:9 drill:drill=12 outer:contour=27 #97cd3a75"
    ]
   },
@@ -137,6 +139,7 @@
    "CIRCLE@CUT_THROUGH=6",
    "CIRCLE@DRILL_B_D4_P7=12",
    "CIRCLE@DRILL_B_D5_P9=4",
+   "CIRCLE@DRILL_D10_P12=8",
    "CIRCLE@DRILL_D5_P12=4",
    "CIRCLE@DRILL_D5_P9=4",
    "CIRCLE@DRILL_D8_P10=24",
@@ -151,7 +154,7 @@
    "SEQEND@CONTOUR=28",
    "SEQEND@GROOVE_W10_P8=9",
    "TEXT@LABEL=28",
-   "VERTEX@CONTOUR=112",
+   "VERTEX@CONTOUR=116",
    "VERTEX@GROOVE_W10_P8=36"
   ]
  },
@@ -163,13 +166,13 @@
    "hash": "3c40099e"
   },
   "xcs": {
-   "warnings": 42,
+   "warnings": 46,
    "sheets": [
-    "T01_Melamina_blanca_19.xcs parts:16 drill:drill=248 outer:contour=48 #a5b2496b",
-    "T02_Melamina_blanca_19.xcs parts:17 drill:drill=324 outer:contour=51 #8d99189e",
-    "T03_Melamina_blanca_19.xcs parts:8 drill:drill=46 outer:contour=24 #a80acb5a",
-    "T04_DM_fons_10.xcs parts:12 outer:contour=36 #4ec061e0",
-    "T05_DM_fons_10.xcs parts:3 outer:contour=9 #c22e62ff",
+    "T01_Melamina_blanca_19.xcs parts:16 drill:drill=250 outer:contour=48 #2f539efa",
+    "T02_Melamina_blanca_19.xcs parts:17 drill:drill=336 outer:contour=51 #b14621a4",
+    "T03_Melamina_blanca_19.xcs parts:8 drill:drill=48 outer:contour=24 #206b66fc",
+    "T04_DM_fons_10.xcs parts:12 outer:contour=36 #fc9a5672",
+    "T05_DM_fons_10.xcs parts:3 outer:contour=9 #6fb2d43b",
     "T06_Melamina_roure_19.xcs parts:13 drill:drill=64 outer:contour=39 #e1adbb2b",
     "T07_Melamina_blanca_16.xcs parts:18 drill:drill=24 outer:contour=54 #8d5a7400"
    ]
@@ -178,8 +181,9 @@
    "BLOCK@0=89",
    "CIRCLE@CUT_THROUGH=26",
    "CIRCLE@DRILL_B_D4_P7=24",
+   "CIRCLE@DRILL_D10_P12=32",
    "CIRCLE@DRILL_D35_P13=12",
-   "CIRCLE@DRILL_D5_P12=516",
+   "CIRCLE@DRILL_D5_P12=500",
    "CIRCLE@DRILL_D8_P10=48",
    "CIRCLE@DRILL_D8_P12=104",
    "CIRCLE@DRILL_H_D8_P20=150",
@@ -192,7 +196,7 @@
    "SEQEND@CUT_THROUGH=2",
    "SEQEND@GROOVE_W10_P8=36",
    "TEXT@LABEL=89",
-   "VERTEX@CONTOUR=356",
+   "VERTEX@CONTOUR=372",
    "VERTEX@CUT_THROUGH=8",
    "VERTEX@GROOVE_W10_P8=144"
   ]
@@ -231,10 +235,10 @@
    "hash": "6d82f547"
   },
   "xcs": {
-   "warnings": 10,
+   "warnings": 11,
    "sheets": [
-    "T01_MDF_lacat_19.xcs parts:13 drill:drill=134 outer:contour=35 #68230839",
-    "T02_DM_fons_10.xcs parts:3 outer:contour=7 #fcf29d90",
+    "T01_MDF_lacat_19.xcs parts:13 drill:drill=140 outer:contour=35 #4d6c13f5",
+    "T02_DM_fons_10.xcs parts:3 outer:contour=7 #1ffad464",
     "T03_MDF_lacat_16.xcs parts:6 drill:drill=8 outer:contour=18 #399bef53",
     "T04_MDF_lacat_30.xcs parts:1 outer:contour=3 #cef1de27"
    ]
@@ -245,8 +249,9 @@
    "CIRCLE@DRILL_B_D4_P7=8",
    "CIRCLE@DRILL_B_D5_P12=3",
    "CIRCLE@DRILL_B_D5_P9=41",
+   "CIRCLE@DRILL_D10_P12=8",
    "CIRCLE@DRILL_D35_P13=4",
-   "CIRCLE@DRILL_D5_P12=43",
+   "CIRCLE@DRILL_D5_P12=41",
    "CIRCLE@DRILL_D5_P9=41",
    "CIRCLE@DRILL_D8_P10=16",
    "CIRCLE@DRILL_D8_P12=30",
@@ -259,7 +264,7 @@
    "SEQEND@CONTOUR=23",
    "SEQEND@GROOVE_W10_P8=6",
    "TEXT@LABEL=23",
-   "VERTEX@CONTOUR=92",
+   "VERTEX@CONTOUR=96",
    "VERTEX@GROOVE_W10_P8=24"
   ]
  },
@@ -344,10 +349,10 @@
    "hash": "1c044c4c"
   },
   "xcs": {
-   "warnings": 12,
+   "warnings": 13,
    "sheets": [
-    "T01_Freixe_xapat_19.xcs parts:11 drill:drill=94 outer:contour=33 #66b06235",
-    "T02_DM_fons_10.xcs parts:4 outer:contour=10 #a5070e74",
+    "T01_Freixe_xapat_19.xcs parts:11 drill:drill=100 outer:contour=33 #4691c836",
+    "T02_DM_fons_10.xcs parts:4 outer:contour=10 #bd443038",
     "T03_Freixe_xapat_16.xcs parts:9 drill:drill=12 outer:contour=27 #661cc4a3"
    ]
   },
@@ -356,8 +361,9 @@
    "CIRCLE@CUT_THROUGH=10",
    "CIRCLE@DRILL_B_D4_P7=12",
    "CIRCLE@DRILL_B_D5_P12=38",
+   "CIRCLE@DRILL_D10_P12=8",
    "CIRCLE@DRILL_D35_P13=4",
-   "CIRCLE@DRILL_D5_P12=50",
+   "CIRCLE@DRILL_D5_P12=48",
    "CIRCLE@DRILL_D8_P10=24",
    "CIRCLE@DRILL_D8_P12=18",
    "CIRCLE@DRILL_H_D8_P20=42",
@@ -368,7 +374,7 @@
    "SEQEND@CONTOUR=24",
    "SEQEND@GROOVE_W10_P8=9",
    "TEXT@LABEL=24",
-   "VERTEX@CONTOUR=96",
+   "VERTEX@CONTOUR=100",
    "VERTEX@GROOVE_W10_P8=36"
   ]
  },

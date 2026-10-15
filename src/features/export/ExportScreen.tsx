@@ -149,7 +149,7 @@ export function ExportScreen({ projectId }: { projectId: number }) {
       <ExportCard
         icon={<LuFileDown />}
         title="Llista de tall (CSV)"
-        description="Peces agrupades amb mides, quantitat, material, veta i cantells. Per a una fusteria que talla a mida o per a un full de càlcul."
+        description="Peces agrupades amb mides, quantitat, material, veta i cantells i, a sota, els ferratges per metres (regleta, sòcol d'alumini) amb els trossos. Per a una fusteria que talla a mida o per a un full de càlcul."
         files={`${base}-peces.csv`}
         action={
           <Button variant="outline" onClick={doCsv} disabled={!panels.length}>

@@ -38,6 +38,9 @@ const RULE_ICONS: Record<RuleHardwareCount["id"], IconType> = {
   rail: HARDWARE_ICONS.wall,
   led: HARDWARE_ICONS.profile,
   glassFrame: HARDWARE_ICONS.profile,
+  hanger: HARDWARE_ICONS.wall,
+  wallRail: HARDWARE_ICONS.wall,
+  plinth: HARDWARE_ICONS.leg,
 }
 
 /** Les accions d'un col·locat (llista de l'inspector i barra flotant del 3D): el mateix camí i un pas de desfer. */

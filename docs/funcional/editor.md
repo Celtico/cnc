@@ -76,7 +76,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     que toca, **un sol lloc per decisió i només el que la construcció llegeix** (`moduleRows` a
     `core/model/usedHardware.ts`, `frontsInspector.test.ts`), en cascada:
     - **Caixa** (`mod-structure`, `LuFrame`; abans «Estructura», es confonia amb la pestanya de l'arbre; `CarcassForm`):
-      base —amb la «Pota» pel mateix `HardwarePick`—, fons i, just a sota, **Ranura del fons** (en ranura) o **Retirada
+      base —amb la «Pota» pel mateix `HardwarePick`; amb el sòcol de les potes, «Tipus de sòcol», «Costats», «Retirada
+      dels costats» i «Cantonades»; penjat, «Penjadors» i «Regleta» amb «Com el mòdul» i «Cap» (`BaseFields.tsx`)—, fons i, just a sota, **Ranura del fons** (en ranura) o **Retirada
       del fons** (encastat), tapa, laterals, parets, cantonades i, al final, el que és de tots els fronts del mòdul:
       **Estil dels fronts** (Recobrents / Encastats) i Folgança front–cos si hi ha algun front que es fa (un front fix
       també) · Folgança entre fronts amb dues portes, dos calaixos o un front recobrent al costat d'un divisor ·

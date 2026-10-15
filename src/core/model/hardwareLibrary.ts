@@ -13,6 +13,7 @@ import { DTC_PURE_PRO_GLASS_KITS, DTC_PURE_PRO_KITS } from "./kits/dtcPurePro"
 import { HAFELE_LOOX_ITEMS, HAFELE_LOOX_PROFILES } from "./lights/hafeleLoox"
 import { HAFELE_CATALOGUE_ITEMS, HAFELE_DUOMATIC_ALU, HAFELE_DUOMATIC_ALU_NARROW, HAFELE_GAS_STRUTS, HAFELE_GLASS_PULLS, HAFELE_PROFILE_HINGES } from "./hafele/hafeleCatalog"
 import { HAFELE_LEGS } from "./hafele/hafeleLegs"
+import { HANGER_ITEM, PLINTH_PROFILE_ITEMS, WALL_RAIL_ITEM } from "./hangingHardware"
 import { DEFAULT_LEGACY_HARDWARE, HARDWARE_SLOTS, LegacyHardwareSchema, slotAccepts, slotOf, type HardwareDefaults, type HardwareEngine, type HardwareItem, type HardwareSlot, type LegacyHardware, type ModuleHardware } from "./hardwareSchema"
 
 /** Una còpia amb tots els llocs (la d'un mòdul nou, `kitFrom`). */
@@ -247,6 +248,8 @@ export const V42_ITEMS: HardwareItem[] = HAFELE_GLASS_PULLS
 export const V43_ITEMS: HardwareItem[] = HAFELE_DUOMATIC_ALU
 /** v44: la frontissa Häfele Duomatic 105° per a marc d'alumini estret (additiu). */
 export const V44_ITEMS: HardwareItem[] = [...HAFELE_DUOMATIC_ALU_NARROW, ...HAFELE_GAS_STRUTS]
+/** v45: el penjador ocult dels mòduls penjats, la regleta de paret i els sòcols d'alumini (ferratges per metres), additiu. */
+export const V45_ITEMS: HardwareItem[] = [HANGER_ITEM, WALL_RAIL_ITEM, ...PLINTH_PROFILE_ITEMS]
 /** v39: la mateixa pota per a mobles (el davant per confirmar), additiu. */
 export const V39_ITEMS: HardwareItem[] = HAFELE_LEGS.filter((x) => x.id !== "leg-hafele-axilo78-screw")
 
@@ -254,7 +257,7 @@ export const V39_ITEMS: HardwareItem[] = HAFELE_LEGS.filter((x) => x.id !== "leg
 export const V35_ITEMS: HardwareItem[] = [...HAFELE_CATALOGUE_ITEMS, ...HAFELE_LOOX_PROFILES]
 
 // En l'ordre en què les migracions els afegeixen (v23 jocs, v27 push, v28 catàleg, v31 llums, v34 potes, v35 catàleg Häfele i, al final, els accessoris que falten).
-export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_CATALOGUE_ITEMS, ...V31_ITEMS, ...V34_ITEMS, ...V35_ITEMS, ...V39_ITEMS, ...V41_ITEMS, ...V42_ITEMS, ...V43_ITEMS, ...V44_ITEMS, ...ACCESSORY_ITEMS]
+export const DEFAULT_HARDWARE_LIBRARY: HardwareItem[] = [...libraryFromLegacy(DEFAULT_LEGACY_HARDWARE), ...DEFAULT_HARDWARE_KITS, ...DTC_CATALOGUE_ITEMS, ...V31_ITEMS, ...V34_ITEMS, ...V35_ITEMS, ...V39_ITEMS, ...V41_ITEMS, ...V42_ITEMS, ...V43_ITEMS, ...V44_ITEMS, ...V45_ITEMS, ...ACCESSORY_ITEMS]
 
 /** Un item és un joc paramètric que es pot fer servir (motor `drawerKit` amb el joc). */
 export const isDrawerKit = (item: HardwareItem): item is HardwareItem & { kit: HardwareKit } => item.engine === "drawerKit" && !!item.kit
@@ -270,6 +273,8 @@ export const DEFAULT_HARDWARE_DEFAULTS: Required<HardwareDefaults> = {
   rail: "rail-inox-25",
   led: "led-profile-16x8",
   glassFrame: "glass-frame-20",
+  hanger: HANGER_ITEM.id,
+  wallRail: WALL_RAIL_ITEM.id,
 }
 
 /** Els ferratges inicials d'un mòdul, amb els números d'abans (`Module.hardware` d'un mòdul desat abans de la v19). */

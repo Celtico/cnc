@@ -44,11 +44,11 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
   // Un joc de calaix es tria al front dels calaixos (no té lloc al joc del mòdul).
   const front = rc.front?.kind === "drawers" && made.engine === "drawerKit" ? { ...rc.front, hardware: made } : rc.front
   if (made.engine === "plate") hardware.hinge = setConfirmed(pairPlate(hostHinge(base), made), true)
-  else if (made.engine !== "leg" && made.engine !== "drawerKit" && made.engine !== "model") hardware[slotForEngine(made.engine).slot] = made
-  const legBase = rc.base?.kind === "legs" ? { ...rc.base, hardware: made } : rc.base
+  else if (made.engine !== "leg" && made.engine !== "drawerKit" && made.engine !== "model" && made.engine !== "plinthProfile") hardware[slotForEngine(made.engine).slot] = made
+  const legBase = rc.base?.kind === "legs" && made.engine === "leg" ? { ...rc.base, hardware: made } : rc.base
   const module: Module = {
     ...base,
-    carcass: { ...base.carcass, ...rc.size, sides: { left: true, right: true }, base: legBase ?? { kind: "none" }, top: { kind: "full" }, hollow: undefined, tableTop: undefined, joint: "butt" },
+    carcass: { ...base.carcass, ...rc.carcass, ...rc.size, sides: { left: true, right: true }, base: legBase ?? { kind: "none" }, top: { kind: "full" }, hollow: undefined, tableTop: undefined, joint: "butt" },
     root: { id: "mount-root", ...(rc.shelves ? { shelves: rc.shelves } : {}), ...(front ? { front } : {}), ...(rc.rail ? { rail: {} } : {}), ...(rc.led ? { led: {} } : {}) },
     fronts: { ...base.fronts, style: "overlay", handles: "bar" },
     hardware,
@@ -130,7 +130,8 @@ export function hardwareMount(item: HardwareItem, base: Module = defaultModule("
   if (!focus && !aim && rc.extras) {
     const first = panels.find(rc.extras)
     // La barra i el perfil LED van sota la tapa: de davant i una mica de sota (des de dalt, la tapa els tapa).
-    const view: Vec3 | undefined = item.engine === "rail" || item.engine === "ledProfile" ? unit3([0.45, -0.35, 1]) : undefined
+    // La regleta, des de darrere (va entre la paret i el fons); el sòcol d'alumini, de davant i de costat.
+    const view: Vec3 | undefined = item.engine === "rail" || item.engine === "ledProfile" ? unit3([0.45, -0.35, 1]) : item.engine === "wallRail" ? unit3([0.5, 0.35, -1]) : item.engine === "plinthProfile" ? unit3([0.7, 0.25, 1]) : undefined
     if (first) aim = { at: toWorld(first, [first.length / 2, first.width / 2, first.thickness / 2]), ...(view ? { view } : {}) }
   }
   // Els avisos del ferratge (el mòdul d'exemple de les potes ja té l'alçada de la pota: no avisa de l'alçada).

@@ -26,6 +26,15 @@ function legHasOwnSides(item: Pick<HardwareItem, "engine"> & { params?: Hardware
 /** El nom d'un paramètre per a aquest item (de moment, el del motor). */
 export const hardwareParamLabel = (_item: Pick<HardwareItem, "engine"> & { params?: HardwareItem["params"] }, p: HardwareParamSpec): string => p.label
 
+/** Els ferratges per metres (regleta, sòcol d'alumini): secció, barra i clips. */
+const LINEAR_PARAMS: HardwareParamSpec[] = [
+  P("height", "Alçada", 5, 300, 0.5, "Del perfil (el sòcol d'alumini: l'alçada vista)."),
+  P("depth", "Gruix", 1, 60, 0.5, "Del perfil, de la cara al darrere."),
+  P("stock", "Barra", 0, 6000, 1, "Llargada de la barra que es compra (0 = es ven per metres, tallat a mida)."),
+  P("clipSpacing", "Clips cada", 0, 2000, 10, "Un clip (o un cargol) cada tants mm; dos per tros com a mínim (0 = cap)."),
+  P("clipEnd", "Clips als extrems", 0, 500, 5, "Del primer i l'últim clip als extrems del tros."),
+]
+
 const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
   cup: [
     P("cupDiameter", "Cassoleta (Ø)", 10, 60, 0.5),
@@ -108,6 +117,22 @@ const HARDWARE_PARAMS: Record<HardwareEngine, HardwareParamSpec[]> = {
     P("frame", "Perfil", 10, 60, 1, "Amplada vista del perfil d'alumini del marc."),
     P("glass", "Vidre", 3, 10, 0.5, "Gruix del vidre (entra 5 mm al perfil)."),
   ],
+  hanger: [
+    P("fromTop", "De dalt", 10, 300, 0.5, "Del cantell de dalt del lateral a la primera filera de forats (cara de dins)."),
+    P("fromBack", "Del darrere", 10, 200, 0.5, "Del cantell de darrere del lateral a la primera columna de forats."),
+    P("pitch", "Entre forats", 8, 64, 0.5, "Distància entre els forats (amunt i avall i cap al davant)."),
+    P("holeDiameter", "Diàmetre", 3, 20, 0.5),
+    P("holeDepth", "Fondària", 3, 20, 0.5, "Dels forats al lateral (com a molt, el gruix − 1)."),
+    P("gap", "Espai darrere el fons", 0, 60, 1, "El que cal entre la paret i el fons perquè hi càpiga la regleta (fons en ranura o encastat retirat)."),
+    P("railTop", "Regleta", 0, 300, 1, "De dalt del moble al cantell de dalt de la regleta (on s'enganxa el penjador)."),
+    P("notchWidth", "Osca del fons (ample)", 0, 100, 1, "Tall del fons a les cantonades de dalt perquè hi passi el ganxo, des del lateral (0 = cap)."),
+    P("notchHeight", "Osca del fons (alt)", 0, 400, 1, "Des de dalt del moble (0 = cap)."),
+    P("bodyWidth", "Cos: gruix", 5, 60, 1, "Del penjador, des de la cara del lateral (per dibuixar-lo)."),
+    P("bodyHeight", "Cos: alçada", 20, 200, 1),
+    P("bodyDepth", "Cos: fondària", 20, 200, 1),
+  ],
+  wallRail: LINEAR_PARAMS,
+  plinthProfile: LINEAR_PARAMS,
 }
 
 /** Col·locació de la placa d'una frontissa importada (paràmetres de la frontissa, copiats de la placa en aparellar-la). */

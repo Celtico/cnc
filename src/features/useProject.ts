@@ -117,6 +117,14 @@ export function useCompositionFittings(project: Pick<Project, "params" | "compos
 }
 const EMPTY_FITTINGS: CompositionBuild["fittingOrders"] = []
 
+/** Ferratges per metres de tota la composició: la comanda (Peces › «Ferratges per metres»). */
+export function useCompositionLinear(project: Pick<Project, "params" | "composition" | "name"> | undefined): CompositionBuild["linearOrders"] {
+  const comp = useComposition(project)
+  const build = useCompositionBuild(comp)
+  return build?.linearOrders ?? EMPTY_LINEAR
+}
+const EMPTY_LINEAR: CompositionBuild["linearOrders"] = []
+
 /** La instal·lació dels llums de cada mòdul (Peces › plànol de la instal·lació elèctrica). */
 export function useCompositionWirings(project: Pick<Project, "params" | "composition" | "name"> | undefined): CompositionBuild["wirings"] {
   const comp = useComposition(project)

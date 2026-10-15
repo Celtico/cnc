@@ -28,6 +28,7 @@ function slotCounter(): { out: SlotUse; add: (slot: HardwareSlot, n: number, wha
  * - guia: compartiments de calaixos; braç: abatibles; imant: reixetes desmuntables;
  * - tirador: fronts (portes, calaixos, abatibles) que en porten (el seu o el per defecte del mòdul; un joc push-open, no);
  * - barra i llum: compartiments que en tenen; marc de vitrina: portes de vidre;
+ * - penjador i regleta: el mòdul penjat (llevat de «Cap»);
  * - espiga: les unions a topar de la caixa (`carcassDowels`: a inglet i amb tauler de taula no n'hi ha), els divisors i
  *   prestatges fixos i el fons encastat; System 32 també amb el fons encastat (la fondària que cal davant del fons).
  * Els fronts **tapats** pel front d'un compartiment de més amunt no es fan (`walkBuiltZones`): no compten.
@@ -39,6 +40,13 @@ export function usedHardwareSlots(module: Module): SlotUse {
   // El fons encastat comprova que davant seu hi càpiguen les dues fileres System 32 (`buildInsetBack`): llegeix els números del lloc.
   if (m.carcass.back === "inset") add("system32", 1, "fons encastat")
   if (m.carcass.underLight) add("led", 1, "llum a sota")
+  // Mòdul penjat: un penjador a cada lateral i la regleta (sense penjadors, «Cap», tampoc regleta).
+  const base = m.carcass.base
+  const hangers = (m.carcass.sides.left ? 1 : 0) + (m.carcass.sides.right ? 1 : 0)
+  if (base.kind === "wall" && base.hanger !== "none" && hangers > 0) {
+    add("hanger", hangers, "mòdul penjat")
+    if (base.rail !== "none") add("wallRail", 1, "mòdul penjat")
+  }
   walkBuiltZones(m.root, (z, { covered }) => {
     // «Regulables» compta també sense cap prestatge (les fileres es fan per posar-n'hi després).
     if (z.shelves?.adjustable) add("system32", 1, "prestatges regulables")

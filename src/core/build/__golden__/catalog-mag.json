@@ -431,18 +431,23 @@
   ]
  },
  "mag:greige-kitchen": {
-  "panels": 186,
-  "extras": 2,
-  "warnings": [],
+  "panels": 190,
+  "extras": 17,
+  "warnings": [
+   "hanging",
+   "hanging",
+   "hanging",
+   "mitre"
+  ],
   "p": [
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@29444dca",
    "back|trassera|2100x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@5d580eef",
    "back|trassera|2200x770x10|DM (fons)|none|e0000|h0|g0|c0|o-|@653ba5a3",
-   "back|trassera|720x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@1cfa9809",
+   "back|trassera|720x600x10|DM (fons)|none|e0000|h0|g0|c0|o23719190|@1cfa9809",
    "back|trassera|770x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@a96501d8",
    "back|trassera|770x600x10|DM (fons)|none|e0000|h0|g0|c0|o-|@b1ed1dc5",
-   "back|trassera|800x720x10|DM (fons)|none|e0000|h0|g0|c0|o-|@848b7685",
-   "back|trassera|800x720x10|DM (fons)|none|e0000|h0|g0|c0|o-|@f34ea0e8",
+   "back|trassera|800x720x10|DM (fons)|none|e0000|h0|g0|c0|oab2c576c|@848b7685",
+   "back|trassera|800x720x10|DM (fons)|none|e0000|h0|g0|c0|oab2c576c|@f34ea0e8",
    "back|trassera|800x770x10|DM (fons)|none|e0000|h0|g0|c0|o-|@a7df5bbf",
    "back|trassera|900x770x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3297a88",
    "back|trassera|900x770x10|DM (fons)|none|e0000|h0|g0|c0|o-|@ec7e6f9f",
@@ -585,7 +590,11 @@
    "fixedShelf|estanter fixe|562x550x19|MDF lacat greige|x|e0010|h6:09cea614|g0|c0|o-|@c4490bad",
    "fixedShelf|estanter fixe|562x550x19|MDF lacat greige|x|e0010|h6:09cea614|g0|c0|o-|@dacb25a5",
    "panel|frontal fix|766x596x19|MDF lacat greige|x|e1111|h0|g0|c0|o-|@3279bebc",
+   "plinth|socol|2190x95x19|MDF lacat greige|x|e1010|h0|g0|c0|o-|@1d06b47b|m:left,right",
+   "plinth|socol|2190x95x19|MDF lacat greige|x|e1010|h0|g0|c0|o-|@c8a134f8|m:left,right",
    "plinth|socol|5000x100x19|MDF lacat greige|x|e1000|h0|g0|c0|o-|@c5a4e901",
+   "plinth|socol|890x95x19|MDF lacat greige|x|e1010|h0|g0|c0|o-|@26c4e05b|m:left,right",
+   "plinth|socol|890x95x19|MDF lacat greige|x|e1010|h0|g0|c0|o-|@cc906868|m:left,right",
    "shelf|estanter|561x300x19|MDF lacat greige|x|e0010|h0|g0|c0|o-|@129bf5ab",
    "shelf|estanter|561x530x19|MDF lacat greige|x|e0010|h0|g0|c0|o-|@3f6d94d8",
    "shelf|estanter|561x530x19|MDF lacat greige|x|e0010|h0|g0|c0|o-|@b90f40e0",
@@ -593,9 +602,9 @@
    "shelf|estanter|761x300x19|MDF lacat greige|x|e0010|h0|g0|c0|o-|@efcd5792",
    "side|lat d|2100x550x19|MDF lacat greige|x|e0110|h101:4bb83003|g0|c0|o-|@4107ef97",
    "side|lat d|2100x550x19|MDF lacat greige|x|e0110|h131:cd758c03|g0|c0|o-|@db88b6fc",
-   "side|lat d|720x320x19|MDF lacat greige|x|e0110|h46:aa8aeb6b|g0|c0|o-|@945b577e",
-   "side|lat d|720x320x19|MDF lacat greige|x|e0110|h46:aa8aeb6b|g0|c0|o-|@b4646fb8",
-   "side|lat d|720x320x19|MDF lacat greige|x|e0110|h46:aa8aeb6b|g0|c0|o-|@ea438d91",
+   "side|lat d|720x320x19|MDF lacat greige|x|e0110|h48:13ee384a|g0|c0|o-|@945b577e",
+   "side|lat d|720x320x19|MDF lacat greige|x|e0110|h48:13ee384a|g0|c0|o-|@b4646fb8",
+   "side|lat d|720x320x19|MDF lacat greige|x|e0110|h48:13ee384a|g0|c0|o-|@ea438d91",
    "side|lat d|770x550x19|MDF lacat greige|x|e0110|h12:7df6f464|g0|c0|o-|@a793124d",
    "side|lat d|770x550x19|MDF lacat greige|x|e0110|h12:7df6f464|g0|c0|o-|@bd475229",
    "side|lat d|770x550x19|MDF lacat greige|x|e0110|h3:b0107dec|g0|c0|o-|@e3e38d32",
@@ -604,9 +613,9 @@
    "side|lat d|890x770x19|MDF lacat greige|y|e0011|h12:fa6b108a|g0|c0|o-|@e135edfc",
    "side|lat e|2100x550x19|MDF lacat greige|x|e1100|h101:85017603|g0|c0|o-|@389754d4",
    "side|lat e|2100x550x19|MDF lacat greige|x|e1100|h131:cd758c03|g0|c0|o-|@5ec54cce",
-   "side|lat e|720x320x19|MDF lacat greige|x|e1100|h46:aa8aeb6b|g0|c0|o-|@1187cdbb",
-   "side|lat e|720x320x19|MDF lacat greige|x|e1100|h46:aa8aeb6b|g0|c0|o-|@2755b2cd",
-   "side|lat e|720x320x19|MDF lacat greige|x|e1100|h46:aa8aeb6b|g0|c0|o-|@648876f4",
+   "side|lat e|720x320x19|MDF lacat greige|x|e1100|h48:8fefc3fc|g0|c0|o-|@1187cdbb",
+   "side|lat e|720x320x19|MDF lacat greige|x|e1100|h48:8fefc3fc|g0|c0|o-|@2755b2cd",
+   "side|lat e|720x320x19|MDF lacat greige|x|e1100|h48:8fefc3fc|g0|c0|o-|@648876f4",
    "side|lat e|770x550x19|MDF lacat greige|x|e1100|h12:20aa348f|g0|c0|o-|@a6a35fad",
    "side|lat e|770x550x19|MDF lacat greige|x|e1100|h12:20aa348f|g0|c0|o-|@ad0c828a",
    "side|lat e|770x550x19|MDF lacat greige|x|e1100|h3:b0107dec|g0|c0|o-|@835d71d9",
@@ -671,10 +680,12 @@
  },
  "mag:floating-grey": {
   "panels": 16,
-  "extras": 0,
-  "warnings": [],
+  "extras": 5,
+  "warnings": [
+   "hanging"
+  ],
   "p": [
-   "back|trassera|2400x480x10|DM (fons)|none|e0000|h0|g0|c0|o-|@c7beaac0",
+   "back|trassera|2400x480x10|DM (fons)|none|e0000|h0|g0|c0|o2ed571a2|@c7beaac0",
    "bottom|baix|2362x440x19|MDF lacat gris clar|x|e0010|h12:94b94609|g0|c0|o-|@4c9bcc8a",
    "divider|divisor|442x440x19|MDF lacat gris clar|x|e1000|h54:f7e563c3|g0|c0|o-|@00de946d",
    "divider|divisor|442x440x19|MDF lacat gris clar|x|e1000|h54:f7e563c3|g0|c0|o-|@5674ce59",
@@ -687,8 +698,8 @@
    "shelf|estanter 2|773.7x420x19|MDF lacat gris clar|x|e0010|h0|g0|c0|o-|@633ae621",
    "shelf|estanter 3|773.7x420x19|MDF lacat gris clar|x|e0010|h0|g0|c0|o-|@22b7317a",
    "shelf|estanter|773.7x420x19|MDF lacat gris clar|x|e0010|h0|g0|c0|o-|@945476ba",
-   "side|lat d|480x440x19|MDF lacat gris clar|x|e0110|h30:32762d4a|g0|c0|o-|@094f7e91",
-   "side|lat e|480x440x19|MDF lacat gris clar|x|e1100|h30:32762d4a|g0|c0|o-|@89ff0e43",
+   "side|lat d|480x440x19|MDF lacat gris clar|x|e0110|h32:fc4a1d98|g0|c0|o-|@094f7e91",
+   "side|lat e|480x440x19|MDF lacat gris clar|x|e1100|h32:d1cf888c|g0|c0|o-|@89ff0e43",
    "top|dalt|2362x440x19|MDF lacat gris clar|x|e1000|h12:94b94609|g0|c0|o-|@c17d5601"
   ]
  },
@@ -893,10 +904,12 @@
  },
  "mag:tv-floating": {
   "panels": 17,
-  "extras": 0,
-  "warnings": [],
+  "extras": 5,
+  "warnings": [
+   "hanging"
+  ],
   "p": [
-   "back|trassera|2400x400x10|DM (fons)|none|e0000|h0|g0|c0|o-|@755c9b41",
+   "back|trassera|2400x400x10|DM (fons)|none|e0000|h0|g0|c0|oa74d331c|@755c9b41",
    "bottom|baix|2362x410x19|Roure massís / xapat|x|e0010|h12:2d10278e|g0|c0|o-|@80a7b004",
    "divider|divisor|410x362x19|Roure massís / xapat|y|e0100|h28:8e801cb6|g0|c0|o-|@87e2b524",
    "divider|divisor|410x362x19|Roure massís / xapat|y|e0100|h28:f5e34dac|g0|c0|o-|@92d988e7",
@@ -910,8 +923,8 @@
    "drawerSide|lateral calaix|400x360x16|Roure massís / xapat|x|e1000|h6:5212d518|g1:45309763|c0|o-|@167397d5",
    "drawerSide|lateral calaix|400x360x16|Roure massís / xapat|x|e1000|h6:96b65586|g1:45309763|c0|o-|@ad38d439",
    "drawerSide|lateral calaix|400x360x16|Roure massís / xapat|x|e1000|h6:96b65586|g1:45309763|c0|o-|@d208619d",
-   "side|lat d|410x400x19|Roure massís / xapat|y|e0011|h8:42f4dd13|g0|c0|o-|@6a24f482",
-   "side|lat e|410x400x19|Roure massís / xapat|y|e0110|h8:bd5e246d|g0|c0|o-|@cb4ebf71",
+   "side|lat d|410x400x19|Roure massís / xapat|y|e0011|h12:5f495f43|g0|c0|o-|@6a24f482",
+   "side|lat e|410x400x19|Roure massís / xapat|y|e0110|h12:dbee4655|g0|c0|o-|@cb4ebf71",
    "top|dalt|2362x410x19|Roure massís / xapat|x|e1000|h12:2d10278e|g0|c0|o-|@5071fffb"
   ]
  }

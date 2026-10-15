@@ -9,6 +9,7 @@ export const ENGINE_HELP: Partial<Record<HardwareEngine, { label: string; help: 
   plate: { label: "Placa de muntatge", help: "Placa de muntatge: no va sola; la frontissa importada que s'hi aparella en copia els forats (al lateral, a l'alçada de cada cassoleta)." },
   leg: { label: "Pota", help: "Es tria a la base «Potes» del mòdul (Caixa › Base › Pota): els forats de la placa van a la cara de sota de la base, a cada pota (a «Als cantells» de les vores de fora)." },
   model: { label: "Només 3D", help: "Sense cap regla de mecanitzat: el model i el volum, mai cap forat. No es pot triar a cap lloc del moble; en pots baixar el model (GLB) per posar-lo en un objecte (Models 3D › Triar fitxers)." },
+  plinthProfile: { label: "Sòcol d'alumini", help: "Ferratge per metres: es tria al sòcol de la base «Potes» (Mòdul › Caixa › Tipus de sòcol). Es talla a mida a cada costat, es clipa a les potes (un clip cada «Clips cada», dos per tros com a mínim) i les cantonades porten una cantonera; la comanda surt a Peces › «Ferratges per metres» amb les barres que cal comprar." },
   drawerKit: { label: "Joc de calaix de doble paret", help: "Es tria al calaix en lloc de la guia (Front › Guia): el joc decideix la llargada nominal per la fondària, els números d'article, el fons i el darrere de fusta (sense laterals de fusta) i les prebroques dels cargols. Les dades del joc són les del catàleg (només lectura; duplica'l per canviar-les)." },
 }
 

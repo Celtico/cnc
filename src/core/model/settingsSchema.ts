@@ -60,8 +60,10 @@ const mm = z.number().finite()
  * v42: els tiradors Häfele per a marc de vitrina (`V42_ITEMS`, es claven al perfil), additiu.
  * v43: la frontissa Häfele Duomatic Premium 105° per a marc d'alumini (`V43_ITEMS`), additiu.
  * v44: la Duomatic 105° per a marc d'alumini estret (`V44_ITEMS`), additiu.
+ * v45: els mòduls penjats porten penjadors (el penjador ocult regulable i la regleta de paret, llocs `hanger` i
+ * `wallRail`) i els sòcols d'alumini per metres (`V45_ITEMS`), additiu.
  */
-export const SETTINGS_VERSION = 44
+export const SETTINGS_VERSION = 45
 
 
 // --- Objectes de referència (foto i editor) ------------------------------------------

@@ -19,6 +19,7 @@ import type { KitOrderLine } from "../drawerKit"
 import { X, Y, Z, neg, placement, r } from "../geometry"
 import { resolveKit, slotSpec, type ResolvedKit, type SlotSpec } from "../hardware"
 import type { LightOrder } from "../lightOrders"
+import type { LinearPiece } from "../linearOrders"
 import { type Derived, derive } from "./derive"
 import type { BuildWarning, KitOrder, Wiring, RearLimit, VerticalRef, HorizontalRef } from "./types"
 
@@ -43,6 +44,8 @@ export class BuilderBase {
   readonly hardwareKits: KitOrder[] = []
   readonly lightKits: LightOrder[] = []
   readonly fittingOrders: KitOrderLine[] = []
+  /** Ferratges per metres (la regleta dels penjadors, el sòcol d'alumini): els trossos per a la comanda (`buildLinearOrders`). */
+  readonly linear: LinearPiece[] = []
   /** On és cada làmpada d'un joc de llum (el punt del forat del cable) i la peça que la porta: el recorregut del cable (`buildWiring`). */
   protected readonly lampSpots: { x: number; y: number; z: number; host: Panel; x0: number; d: number; label: string }[] = []
   protected switchSpot?: { x: number; y: number }
@@ -94,6 +97,8 @@ export class BuilderBase {
       get rail() { return k.rail.spec },
       get led() { return k.led.spec },
       get glassFrame() { return k.glassFrame.spec },
+      get hanger() { return k.hanger.spec },
+      get wallRail() { return k.wallRail.spec },
     }
   }
 
