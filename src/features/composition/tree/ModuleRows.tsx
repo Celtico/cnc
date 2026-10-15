@@ -1,7 +1,7 @@
 import { Box, Menu, Text } from "@chakra-ui/react"
 import { createElement } from "react"
-import { LuArrowLeft, LuArrowRight, LuChevronDown, LuChevronRight, LuCopy, LuGroup, LuTrash2, LuUngroup } from "react-icons/lu"
-import { groupMulti, groupNames, newGroupName, newId, removeModule, rowOf, ungroupMulti, type Module, type Zone } from "../../../core/model"
+import { LuArrowLeft, LuArrowRight, LuChevronDown, LuChevronRight, LuCopy, LuGroup, LuRefrigerator, LuTrash2, LuUngroup } from "react-icons/lu"
+import { APPLIANCE_LABELS, groupMulti, nicheAppliance, groupNames, newGroupName, newId, removeModule, rowOf, ungroupMulti, type Module, type Zone } from "../../../core/model"
 import { toaster } from "../../../components/ui/toaster"
 import { TreeRow, TreeRowMenu } from "../../../components/TreeRow"
 import { zoneIcon } from "../zoneIcons"
@@ -67,16 +67,20 @@ export function ModuleRows({ tree, openId, toggle }: { tree: TreeCtx; openId: st
         // Els mòduls de la fila; els d'un grup, plegables on surt el primer (com les peces lliures).
         const inRow = comp.modules.map((m, i) => ({ m, i })).filter(({ m }) => rowOf(m) === row)
         const moduleRow = ({ m, i }: { m: Module; i: number }, k: number, depth: number) => {
-        const open = openId === m.id
+        // El mòdul sense dividir que és un electrodomèstic (l'ocupa sencer, `isApplianceModule`): la fila del mòdul és
+        // l'aparell (la seva icona i el tipus a la pista) i no es desplega: l'«Interior» no surt (un sol lloc per decisió).
+        const appliance = nicheAppliance(m.root)
+        const open = !appliance && openId === m.id
+        const size = `${Math.round(m.carcass.width)} × ${Math.round(m.carcass.height)}`
         return (
           <Box key={m.id}>
             <TreeRow
               depth={depth}
-              icon={open ? <LuChevronDown /> : <LuChevronRight />}
-              onToggle={() => toggle(m.id)}
-              toggleLabel={open ? `Plegar «${m.name}»` : `Desplegar «${m.name}»`}
+              icon={appliance ? <LuRefrigerator /> : open ? <LuChevronDown /> : <LuChevronRight />}
+              onToggle={appliance ? undefined : () => toggle(m.id)}
+              toggleLabel={appliance ? undefined : open ? `Plegar «${m.name}»` : `Desplegar «${m.name}»`}
               label={`${k + 1}. ${m.name}`}
-              hint={`${Math.round(m.carcass.width)} × ${Math.round(m.carcass.height)}`}
+              hint={appliance ? `${APPLIANCE_LABELS[appliance.kind]} · ${size}` : size}
               selected={(selection.kind === "module" && selection.id === m.id) || inMultiSel("module", m.id)}
               highlighted={selection.kind === "group" && selection.id === m.group}
               onClick={() => onSelect({ kind: "module", id: m.id })}
@@ -165,7 +169,8 @@ function ZoneRows({
   onSelect: (s: Selection) => void
   root?: boolean
 }) {
-  // L'arrel és l'«Interior» del mòdul (dividida o no): sense dividir, seleccionar-la dona el seu Front; dividida, la
+  // L'arrel és l'«Interior» del mòdul (dividida o no; si el mòdul és un electrodomèstic que l'ocupa, no surt: la fila del
+  // mòdul és l'aparell): sense dividir, seleccionar-la dona el seu Front; dividida, la
   // Divisió (les portes de tot el mòdul, p. ex. d'un armari amb penjador i maleter, són a Mòdul › Portes; l'etiqueta ho
   // diu: «Interior · 2 portes»). Els compartiments hi pengen a sota.
   const selected = selection.kind === "zone" && selection.zoneId === zone.id

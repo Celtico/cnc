@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { compositionKind, findZone, partsOnlyKind, rowOf, toggleMulti, type Composition, type Module, type MultiItem } from "../../core/model"
+import { compositionKind, findZone, isApplianceModule, partsOnlyKind, rowOf, toggleMulti, type Composition, type Module, type MultiItem } from "../../core/model"
 import type { Selection } from "../composition/StructureTree"
 import { useKeyed } from "../../lib/useKeyed"
 import { useLatest } from "../../lib/useLatest"
@@ -24,7 +24,10 @@ export function useEditorSelection({ comp, initial, kind, setMobilePane }: { com
   // El mòdul de treball (alçat, inspector, veïns): el seleccionat o el primer. Un moble nou no en té cap (0 mòduls).
   const module: Module | undefined = comp.modules.find((m) => m.id === selectedModule) ?? comp.modules[0]
   const moduleIndex = module ? comp.modules.indexOf(module) : -1
-  const zone = selectedZone && module ? findZone(module.root, selectedZone) : undefined
+  // L'«Interior» d'un mòdul que és un electrodomèstic (`isApplianceModule`) no surt a l'arbre: triar-lo (al 3D, a l'alçat,
+  // des d'un avís, pujant al pare) tria el mòdul, on és l'aparell.
+  const zoneFound = selectedZone && module ? findZone(module.root, selectedZone) : undefined
+  const zone = zoneFound && !(zoneFound.id === module!.root.id && isApplianceModule(module!)) ? zoneFound : undefined
 
   // Els triats que encara hi són (desfer o eliminar en pot treure).
   const multiNow = selKind === "multi" ? selectedMulti.filter((x) => (x.kind === "part" ? comp.parts?.some((p) => p.id === x.id) : x.kind === "model" ? comp.models?.some((m) => m.id === x.id) : x.kind === "module" ? comp.modules.some((m) => m.id === x.id) : comp.references.some((r) => r.id === x.id))) : []
@@ -165,7 +168,8 @@ export function useEditorSelection({ comp, initial, kind, setMobilePane }: { com
   }, [deselectRef])
   const selectZone = (id: string) => module && select({ kind: "zone", moduleId: module.id, zoneId: id })
 
-  return { selectedZone, module, moduleIndex, zone, selection, select, selectModule, selectZone, pick, shiftRef }
+  // El compartiment triat que es fa servir (alçat, obertura al 3D): cap si s'ha passat al mòdul (l'electrodomèstic).
+  return { selectedZone: zone ? selectedZone : null, module, moduleIndex, zone, selection, select, selectModule, selectZone, pick, shiftRef }
 }
 
 /** El cadenat de l'arbre: el triat no es mou (ni el gizmo, ni la nansa, ni les fletxes). */

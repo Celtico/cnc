@@ -1,6 +1,6 @@
 import { DEFAULT_CABINET } from "./cabinet"
 import { isAppliance, isLegacyHardware, type ModuleHardware } from "./hardware"
-import { doorLikeFront, fillsNiche, standsOnFloor, takesFront } from "./appliance"
+import { doorLikeFront, fillsNiche, standsOnFloor, takesFront, type Appliance } from "./appliance"
 import { canHoldFront, canHoldShelves, carcassBounds, childBounds, type ZoneBounds } from "./zoneSupport"
 import { DEFAULT_GRILLE, type Carcass, type Module, type Zone, type ZoneAppliance } from "./moduleSchema"
 
@@ -151,6 +151,26 @@ function hasBuiltFronts(root: Zone): boolean {
   })
   return hit
 }
+
+/** L'electrodomèstic que allotja un compartiment sense dividir (`Zone.appliance` amb un item del motor `appliance`). */
+export function zoneAppliance(z: Zone): Appliance | undefined {
+  const za = z.split ? undefined : z.appliance
+  return za && isAppliance(za.hardware) ? za.hardware.appliance : undefined
+}
+
+/** L'electrodomèstic del compartiment l'ocupa sencer (el nínxol: `fillsNiche`; no la placa ni la campana). */
+export function nicheAppliance(z: Zone): Appliance | undefined {
+  const a = zoneAppliance(z)
+  return a && fillsNiche(a) ? a : undefined
+}
+
+/**
+ * El mòdul **és** l'electrodomèstic (**un sol lloc per decisió**; per decisió de l'usuari, 2026-10-15: «els electrodomèstics
+ * no haurien de sortir al mòdul principal i desaparèixer l'Interior, perquè ja és l'electrodomèstic?»): l'electrodomèstic
+ * d'un mòdul **sense dividir** és el de l'arrel (`root.appliance`, sense migració) i es tria a Mòdul › Electrodomèstic; el
+ * d'un compartiment d'un mòdul dividit, al compartiment. Si l'ocupa (`nicheAppliance`), l'arbre no ensenya l'«Interior».
+ */
+export const isApplianceModule = (m: Pick<Module, "root">): boolean => !!nicheAppliance(m.root)
 
 /** L'electrodomèstic d'un compartiment porta front de moble (en porta i no s'ha tret). */
 export const applianceFront = (a: ZoneAppliance): boolean => !!a.hardware.appliance && takesFront(a.hardware.appliance) && a.front !== false

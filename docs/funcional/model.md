@@ -311,6 +311,13 @@
   tots els ferratges). `ZoneAppliance` = `hardware` (l'aparell) · `front` (sense = sí; `false` = sense front de moble) ·
   `hinge` (on obre: frigorífic i rentadora) · `plinth` (del terra al cantell de baix del front, als aparells de terra sense
   peça a sota; sense, 100, `DEFAULT_APPLIANCE_PLINTH`) · `handle` (el tirador del front, com als altres fronts).
+  - **On es tria** (per decisió de l'usuari, 2026-10-15: «els electrodomèstics no haurien de sortir al mòdul principal i
+    desaparèixer l'Interior, perquè ja és l'electrodomèstic?»; un sol lloc per decisió, només UI, la fabricació no canvia):
+    el d'un mòdul **sense dividir** és el de l'arrel (`root.appliance`) i es tria a **Mòdul › Electrodomèstic**; si l'ocupa
+    (`isApplianceModule`, `nicheAppliance`), el mòdul és l'aparell i l'arbre no ensenya l'«Interior». El d'un mòdul
+    **dividit** (columna de forn i microones, frigorífic amb altell, placa sobre els calaixos d'un compartiment, campana al
+    compartiment d'un moble penjat), al compartiment. `splitZone` / `unsplitZone` el passen al primer fill i tornen, com el
+    contingut.
   - **Què ocupa** (`fillsNiche`): rentaplats, frigorífics, rentadores, forns i microones fan del compartiment el **nínxol**:
     no fa el seu Front, ni prestatges, ni accessoris, ni es divideix (res amagat compta: `visibleZone` els treu i es
     conserven). La **placa** (va al taulell: el retall a la peça de sobre) i la **campana** (va al moble penjat: el retall a

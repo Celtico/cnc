@@ -10,6 +10,7 @@ import { carcassBounds, coveringZone, freeX, hasDrawers, moduleHasInnerPieces, m
 import { CarcassForm, InnerClearanceRow, JointForm, MaterialsForm } from "../composition/CarcassForm"
 import { System32Pick } from "../composition/HardwarePick"
 import { ModuleDoorsSection, ZonePanel } from "../composition/ZonePanel"
+import { ApplianceSection } from "../composition/zone/ApplianceSection"
 import { zoneLabel } from "../composition/zoneLabel"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import type { SetComp } from "./useEditorDoc"
@@ -107,7 +108,8 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
 }
 
 /**
- * Les seccions del mòdul que la construcció llegeix (`moduleRows`): Caixa, Portes de tot el mòdul, Unió i Materials.
+ * Les seccions del mòdul que la construcció llegeix (`moduleRows`): Caixa, Portes de tot el mòdul (dividit) o
+ * Electrodomèstic (sense dividir), Unió i Materials.
  * Per decisió de l'usuari (2026-10-08) no hi ha secció «Acabats»: cada fila és a la secció del que toca, un sol
  * lloc per decisió i només el que la construcció llegeix (`moduleRows`): el fons, l'estil, les folgances i el
  * retranqueig a la Caixa; el material dels fronts a Materials; l'espiga a Unió. Els ferratges per defecte del
@@ -135,6 +137,22 @@ export function ModuleSections({ module, updateModule }: { module: Module; updat
             if (place?.at !== "front" || !place.zones.has(module.root.id)) return undefined
             return <System32Pick current={moduleSlotItem(module.hardware, "system32")} what={place.what} onPick={(system32) => updateModule({ ...module, hardware: { ...module.hardware, system32 } })} />
           })()}
+        />
+      )}
+      {/* Electrodomèstic d'un mòdul sense dividir (per decisió de l'usuari, 2026-10-15: «ja és l'electrodomèstic»): el de
+          l'arrel (`root.appliance`), al lloc de les Portes (les dues no surten mai juntes): després de la Caixa (laterals i
+          base diuen on obre i si hi ha sòcol) i abans dels Materials (el del front de moble). Si l'ocupa, l'arbre no
+          ensenya l'«Interior» (`isApplianceModule`); amb la placa o la campana, l'«Interior» conserva el seu contingut. Un
+          mòdul dividit el tria a cada compartiment. */}
+      {!module.root.split && (
+        <ApplianceSection
+          module
+          root={module.root}
+          zone={module.root}
+          bounds={zoneBounds(module, module.root.id) ?? carcassBounds(module.carcass)}
+          hardware={module.hardware}
+          noHandles={module.fronts.handles === "none"}
+          onChange={(root) => updateModule({ ...module, root })}
         />
       )}
       {rows.dowel && (

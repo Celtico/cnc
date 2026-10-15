@@ -167,7 +167,7 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
 | **Acabats de l'escena** | terra i paret de la presentació (moble); als ambients, «Acabats» = terra, parets i sostre. **No hi ha secció «Acabats» al mòdul** (des del 2026-10-08: el que hi havia és a Caixa, Materials i Unió) |
 | **Unió** | la secció del mòdul amb l'espiga de les unions de la caixa (`LuBolt`) |
 | **Com el mòdul** / **Com el cos** / **Com a Preferències** | heretat; **Còpia pròpia**, la còpia d'un ferratge que ja no és a la biblioteca tal qual |
-| **Electrodomèstic** | l'aparell del catàleg del fabricant (ferratge de la categoria «Electrodomèstics», motor `appliance`) que es tria a cada compartiment; el seu front és el **Front de moble** (muntat com diu el fabricant), no el Front del compartiment |
+| **Electrodomèstic** | l'aparell del catàleg del fabricant (ferratge de la categoria «Electrodomèstics», motor `appliance`) que es tria a Mòdul › Electrodomèstic (mòdul sense dividir: si l'ocupa, el mòdul és l'aparell i no hi ha «Interior») o al compartiment d'un mòdul dividit; el seu front és el **Front de moble** (muntat com diu el fabricant), no el Front del compartiment |
 | **Accessoris** | barra de penjar, tira LED (ferratges del compartiment, a la secció «Prestatges i accessoris»); el marc de vitrina va amb la porta de vidre |
 | **Cap (push)** | el tirador que no hi és: obertura per pressió |
 
@@ -192,10 +192,11 @@ Les etiquetes i les ajudes de la UI fan servir sempre aquestes paraules (auditor
     inspector, cada opció depèn només de les de més amunt; canviar-ne una de dalt fa aparèixer o desaparèixer les de
     sota, mai al revés (Laterals abans de Parets i Cantonades; l'imant de la reixeta després de Muntatge i Trapa;
     a Mòdul › Caixa, el fons i després la seva ranura o retirada, i els fronts al final; Mòdul › Portes després de la
-    Caixa i abans dels Materials). El que una opció de dalt fa irrellevant no
+    Caixa i abans dels Materials, i al mateix lloc, sense dividir, Mòdul › Electrodomèstic). El que una opció de dalt fa irrellevant no
     surt (un compartiment tapat no ensenya el seu Front; sense fronts, ni estil ni folgances ni material dels fronts;
     sense laterals ni divisors, ni prestatges ni accessoris ni fronts; sense on unir el divisor, ni Dividir: `zoneSupport.ts`).
-  - **Un sol lloc per decisió**: una tria surt un cop a cada pantalla. Els **per defecte** del mòdul (tirador i ferratges)
+  - **Un sol lloc per decisió**: una tria surt un cop a cada pantalla (l'electrodomèstic d'un mòdul sense dividir, a
+    Mòdul › Electrodomèstic i no al seu Interior; el d'un mòdul dividit, al compartiment). Els **per defecte** del mòdul (tirador i ferratges)
     no surten: es trien a cada compartiment («Com el mòdul» = l'heretat). Res del que la construcció no llegeix no surt, i
     al revés (`usedHardwareSlots`, `moduleRows`; res amagat compta).
   - Quan aparegui un cas nou, s'afegeix aquí.

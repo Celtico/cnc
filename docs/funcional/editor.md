@@ -43,7 +43,13 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   2 portes» si porta les portes de tot el mòdul, Mòdul › Portes; un altre front de l'arrel dividida no es fa i no hi surt) amb els compartiments a sota:
   seleccionar-la dona Divisió (les mides de les zones, «Afegir zona» · «Treure la divisió» i «Peces de dins» si n'hi ha);
   sense dividir, el seu Front. Pujar des d'un compartiment (clic al 3D, eliminar) passa per l'Interior abans del mòdul;
-  Supr / ⌘X a l'Interior no fa res (avís: `deleteZone` buidaria tot el mòdul). **Objectes de referència només als mobles i
+  Supr / ⌘X a l'Interior no fa res (avís: `deleteZone` buidaria tot el mòdul). **Un mòdul que és un electrodomèstic**
+  (per decisió de l'usuari, 2026-10-15: «els electrodomèstics no haurien de sortir al mòdul principal i desaparèixer
+  l'Interior, perquè ja és l'electrodomèstic?»; `isApplianceModule`: sense dividir i amb un aparell que l'ocupa —rentaplats,
+  frigorífic, rentadora, forn, microones—) **no té «Interior»**: la fila del mòdul porta la icona `LuRefrigerator` en lloc
+  de la fletxa, no es desplega i la pista diu el tipus («Rentaplats · 600 × 870»); triar l'arrel per un altre camí (3D,
+  alçat, un avís, pujar al pare) tria el mòdul (`useEditorSelection`). Amb la placa o la campana, l'Interior hi és (conserva
+  els calaixos o la porta). **Objectes de referència només als mobles i
   Models 3D només als objectes** (per decisió de l'usuari; treure ≠ esborrar: si el document ja en té, el grup surt sense +
   ni Duplicar, i enganxar-ne avisa). **Un + a cada grup** (Mòduls · Peces lliures · Objectes de referència · Models 3D; per
   decisió de l'usuari, així es veuen els tipus): demana el nom (`NameDialog`, «Mòdul 3», «Peça 2», «Objecte 1», seleccionat;
@@ -71,7 +77,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   - Moble: Resum (i avisos de fusteria), Encaixos (si alguna peça en fa),
     Materials de tot el moble (aplica a tots els mòduls), Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
     Preferències»; `CabinetViewer sceneFinish`, `renderThumb(…, finish)`).
-  - Mòdul: Posició · Mides · **Caixa** · **Portes** (només amb l'Interior dividit) · **Unió** (si la caixa en fa) ·
+  - Mòdul: Posició · Mides · **Caixa** · **Portes** (només amb l'Interior dividit) o **Electrodomèstic** (només sense
+    dividir) · **Unió** (si la caixa en fa) ·
     **Materials** (en aquest ordre per decisió de l'usuari, 2026-10-13). **Sense «Acabats»** (per decisió de l'usuari,
     2026-10-08: «això dels acabats no està bé»; abans una secció `mod-joinery`, `LuHammer`): cada fila és a la secció del
     que toca, **un sol lloc per decisió i només el que la construcció llegeix** (`moduleRows` a
@@ -89,6 +96,18 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
       l'arrel dividida; les portes de dalt a baix de tot el mòdul (Cap · Una · Dues i les opcions de la porta; vegeu Model
       del moble › Zones › Front d'una zona dividida). Insígnia «Una porta» / «Dues portes». Després de la Caixa (els
       laterals diuen on hi caben) i abans dels Materials (Fronts, que en depèn).
+    - **Electrodomèstic** (`mod-appliance`, `LuRefrigerator`, la mateixa `ApplianceSection` del compartiment amb `module`;
+      per decisió de l'usuari, 2026-10-15): només amb l'arrel **sense dividir**, al lloc de les Portes (mai surten
+      juntes): després de la Caixa (laterals i base diuen on obre i si hi ha sòcol) i abans dels Materials (el del front de
+      moble). Edita `root.appliance` (el model no canvia, sense migració): «Aparell», «Front de moble», «Obre», «Sòcol» i
+      «Tirador» com al compartiment. Si l'aparell ocupa el mòdul, l'arbre no ensenya l'«Interior» (vegeu Estructura) i el
+      Front, els Prestatges i Dividir de l'arrel no compten (es conserven: «Cap» els torna); el mòdul sense dividir no té
+      seccions pròpies de fronts o prestatges que calgui amagar (l'estil i les folgances de la Caixa i el material dels
+      Fronts surten perquè el front de moble compta com a front). Amb la **placa** o la **campana** (no ocupen el mòdul),
+      l'«Interior» es queda amb el seu contingut (els calaixos, la porta) i l'aparell es tria aquí. **Regla: un sol lloc per
+      decisió** — mòdul sense dividir: Mòdul › Electrodomèstic; mòdul dividit (columna de forn i microones, frigorífic amb
+      altell): a cada compartiment. Dividir l'Interior d'un mòdul amb la placa la passa al primer compartiment (com el
+      contingut, `splitZone`; «Treure la divisió» la torna).
     - **Materials** (`mod-materials`, `LuPalette`, `MaterialsForm`): cos, **Fronts** (`frontMaterial`, «Com el cos»;
       només amb algun front que es fa, com l'Estil), fons i, amb calaixos, **«Fons del calaix»**
       (`Carcass.drawerBottomMaterial`).
@@ -122,7 +141,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     El Front de cada compartiment és al compartiment; les portes de tot el mòdul (Interior dividit), a **Portes**.
   - Compartiment (`ZonePanel`): accions com a icones a la capçalera (Pare · Duplicar · Eliminar; a l'«Interior», l'arrel,
     cap: no es duplica, no es retalla ni s'elimina, i ⌘D, ⌘X i Suprimir avisen sense tocar el porta-retalls) i
-    **Electrodomèstic** (`LuRefrigerator`, `zone/ApplianceSection.tsx`, v46; a dalt de tot, plegat si no n'hi ha: «Aparell»
+    **Electrodomèstic** (`LuRefrigerator`, `zone/ApplianceSection.tsx`, v46; **només als compartiments d'un mòdul
+    dividit**: el de l'Interior d'un mòdul sense dividir és a Mòdul › Electrodomèstic; a dalt de tot, plegat si no n'hi ha: «Aparell»
     amb el `HardwarePick` dels Electrodomèstics —«Cap» o un de la biblioteca, amb la foto; l'ajuda diu les dades del
     catàleg— i, en cascada, «Front» (interruptor «Front de moble», si l'aparell en porta; l'ajuda diu com es munta), «Obre»
     Esquerra · Dreta (frigorífic i rentadora), «Sòcol» (aparells de terra sense peça a sota) i «Tirador»; si l'aparell ocupa el

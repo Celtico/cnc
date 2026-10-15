@@ -126,6 +126,14 @@ describe("zoneOps: barra de penjar", () => {
     expect(z.split!.children[0]!.rail).toEqual({})
     expect(unsplitZone(z, "a").rail).toEqual({})
   })
+
+  it("dividir i desfer la divisió conserven l'electrodomèstic (la placa passa al compartiment dels calaixos)", () => {
+    const appliance = { hardware: { id: "hob", name: "Placa", engine: "appliance" } } as unknown as NonNullable<Parameters<typeof splitZone>[0]["appliance"]>
+    const z = splitZone({ id: "a", front: { kind: "drawers", n: 2, heights: ["auto", "auto"] }, appliance }, "a", "h")
+    expect(z.split!.children[0]!.appliance).toBe(appliance)
+    expect(z.split!.children[1]!.appliance).toBeUndefined()
+    expect(unsplitZone(z, "a").appliance).toBe(appliance)
+  })
 })
 
 describe("setDrawerHeight (alçades dels calaixos com la Divisió)", () => {

@@ -1,4 +1,4 @@
-import { APPLIANCE_LABELS, fillsNiche, isAppliance, type Zone } from "../../core/model"
+import { APPLIANCE_LABELS, fillsNiche, zoneAppliance, type Zone } from "../../core/model"
 
 /** Nom del front d'una zona: «2 portes», «3 calaixos», «Obert»… */
 function frontLabel(f: Zone["front"]): string {
@@ -24,7 +24,7 @@ export function zoneLabel(z: Zone, opts?: { root?: boolean }): string {
 function ownLabel(z: Zone): string {
   if (z.split) return `${z.split.dir === "v" ? "Divisió vertical" : "Divisió horitzontal"} (${z.split.children.length})`
   // Un electrodomèstic que ocupa el compartiment és el que s'hi veu; la placa i la campana s'afegeixen al contingut.
-  const ap = z.appliance && isAppliance(z.appliance.hardware) ? z.appliance.hardware.appliance : undefined
+  const ap = zoneAppliance(z)
   if (ap && fillsNiche(ap)) return APPLIANCE_LABELS[ap.kind]
   const parts: string[] = [frontLabel(z.front)]
   if (ap) parts.push(APPLIANCE_LABELS[ap.kind].toLowerCase())

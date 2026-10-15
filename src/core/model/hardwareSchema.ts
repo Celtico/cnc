@@ -82,7 +82,7 @@ export const HARDWARE_CATEGORIES = [
   { id: "profile", label: "Perfils i marcs", hint: "Perfils i marcs d'alumini per a portes de vidre (Cadro). Els perfils de LED són a Llums." },
   { id: "light", label: "Llums", hint: "Làmpades LED de 24 V per encastar al prestatge o a la tapa (forat o rebaix, forat del cable) amb l'alimentador, l'interruptor i els cables per connectar-les a la xarxa." },
   { id: "wall", label: "Penjar", hint: "Penjadors dels mòduls penjats, regletes de paret i barres de penjar." },
-  { id: "appliance", label: "Electrodomèstics", hint: "Rentaplats, frigorífics, rentadores, forns, microones, plaques i campanes integrables del catàleg del fabricant: el nínxol que demanen, com es munta el front de moble (es tria a cada compartiment, «Electrodomèstic») i la foto per al 3D i el render." },
+  { id: "appliance", label: "Electrodomèstics", hint: "Rentaplats, frigorífics, rentadores, forns, microones, plaques i campanes integrables del catàleg del fabricant: el nínxol que demanen, com es munta el front de moble (es tria a Mòdul › Electrodomèstic o, en un mòdul dividit, a cada compartiment) i la foto per al 3D i el render." },
   { id: "misc", label: "Altres", hint: "Accessoris, electrònica, passacables, ventilació…" },
 ] as const
 export type HardwareCategory = (typeof HARDWARE_CATEGORIES)[number]["id"]
@@ -98,7 +98,8 @@ const CATEGORY_IDS = HARDWARE_CATEGORIES.map((c) => c.id) as [HardwareCategory, 
  * corredisses…): el model i el volum, **mai cap forat** (target `model` buit). `hanger` (penjador de moble alt) i
  * `wallRail` (la regleta de paret on s'enganxa): llocs del mòdul penjat (`Base.hanger`, `Base.rail`). `plinthProfile`
  * (sòcol d'alumini): sense lloc, es tria al sòcol de la base «Potes» (`Base.plinth.hardware`), com la pota. `appliance`
- * (electrodomèstic, v46): sense lloc, es tria a cada compartiment («Electrodomèstic», `Zone.appliance`).
+ * (electrodomèstic, v46): sense lloc, es tria a Mòdul › Electrodomèstic (sense dividir) o al compartiment d'un mòdul dividit
+ * («Electrodomèstic», `Zone.appliance`).
  */
 export const HARDWARE_ENGINES = ["cup", "system32", "dowel", "slide", "flapArm", "magnet", "barHandle", "plate", "leg", "model", "drawerKit", "rail", "ledProfile", "glassFrame", "hanger", "wallRail", "plinthProfile", "appliance"] as const
 export type HardwareEngine = (typeof HARDWARE_ENGINES)[number]

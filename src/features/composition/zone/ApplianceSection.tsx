@@ -49,13 +49,15 @@ function dataHelp(a: Appliance): string {
 }
 
 /**
- * **Electrodomèstic** del compartiment (v46; per petició de l'usuari: «un moble sense res ha de poder portar una porta,
- * això és per ficar el rentaplats o la nevera»): un aparell de Preferències › Ferratges › Electrodomèstics (`HardwarePick`,
- * una còpia). És a dalt de tot del compartiment: si l'aparell ocupa el nínxol, el Front, els Prestatges i el Dividir del
+ * **Electrodomèstic** (v46; per petició de l'usuari: «un moble sense res ha de poder portar una porta, això és per ficar
+ * el rentaplats o la nevera»): un aparell de Preferències › Ferratges › Electrodomèstics (`HardwarePick`, una còpia) a
+ * `zone.appliance`. **Un sol lloc per decisió** (per decisió de l'usuari, 2026-10-15): d'un mòdul sense dividir, a
+ * Mòdul › Electrodomèstic (`module`, sobre l'arrel: el mòdul és l'aparell i l'arbre no ensenya l'«Interior»); d'un mòdul
+ * dividit, al compartiment, a dalt de tot. Si l'aparell ocupa el nínxol, el Front, els Prestatges i el Dividir del
  * compartiment no surten (opcions en cascada). A sota, en cascada: el front de moble (si en porta), el costat on obre,
  * el sòcol (aparells de terra sense peça a sota) i el tirador.
  */
-export function ApplianceSection({ root, zone, onChange, hardware, noHandles, bounds }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; noHandles: boolean; bounds: ZoneBounds }) {
+export function ApplianceSection({ root, zone, onChange, hardware, noHandles, bounds, module = false }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; noHandles: boolean; bounds: ZoneBounds; /** A l'inspector del mòdul (l'arrel d'un mòdul sense dividir): els textos parlen del mòdul. */ module?: boolean }) {
   const za = zone.appliance
   const a = za && isAppliance(za.hardware) ? za.hardware.appliance : undefined
   const set = (next: ZoneAppliance | undefined) =>
@@ -66,25 +68,27 @@ export function ApplianceSection({ root, zone, onChange, hardware, noHandles, bo
   const front = !!a && takesFront(a) && za!.front !== false
   const push = za?.handle === "none" || (!za?.handle && noHandles)
   const inheritedNone = !za?.handle && noHandles
+  // On és el contingut que conserven la placa i la campana: el del compartiment o, al mòdul, el de l'«Interior».
+  const keeps = module ? "l'Interior conserva el seu contingut" : "el compartiment conserva el seu contingut"
   const setHandle = (h: FrontHandle | undefined) => {
     if (!za) return
     const { handle: _h, ...rest } = za
     set(h ? { ...rest, handle: h } : rest)
   }
   return (
-    <FoldItem id="zone-appliance" title="Electrodomèstic" icon={LuRefrigerator} badge={a ? APPLIANCE_LABELS[a.kind] : undefined} defaultOpen={!!za}>
+    <FoldItem id={module ? "mod-appliance" : "zone-appliance"} title="Electrodomèstic" icon={LuRefrigerator} badge={a ? APPLIANCE_LABELS[a.kind] : undefined} defaultOpen={!!za}>
       <Stack gap={3}>
         <HardwarePick
           engine="appliance"
           label="Aparell"
           current={za?.hardware}
           emptyLabel="Cap"
-          help={a ? dataHelp(a) : "Rentaplats, frigorífic, rentadora, forn, microones, placa o campana del catàleg: el compartiment en fa el nínxol (es comprova amb les mides del fabricant) i, si en porta, el front de moble."}
+          help={a ? dataHelp(a) : `Rentaplats, frigorífic, rentadora, forn, microones, placa o campana del catàleg: ${module ? "el mòdul" : "el compartiment"} en fa el nínxol (es comprova amb les mides del fabricant) i, si en porta, el front de moble.${module ? " En un mòdul dividit (una columna amb forn i microones), es tria a cada compartiment." : ""}`}
           onPick={(item) => set(item ? { ...(za ?? {}), hardware: item } : undefined)}
         />
         {a && !fillsNiche(a) && (
           <Text fontSize="xs" color="fg.muted">
-            {a.kind === "hob" ? "La placa va al taulell (el retall, a la peça de sobre): el compartiment conserva el seu contingut (els calaixos de sota)." : "La campana va al moble penjat (el retall, a la base): el compartiment conserva el seu contingut (la porta del moble)."}
+            {a.kind === "hob" ? `La placa va al taulell (el retall, a la peça de sobre): ${keeps} (els calaixos de sota).` : `La campana va al moble penjat (el retall, a la base): ${keeps} (la porta del moble).`}
           </Text>
         )}
         {a && takesFront(a) && (

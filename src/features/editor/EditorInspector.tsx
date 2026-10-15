@@ -217,7 +217,8 @@ export function EditorInspector({
       ) : module ? (
         // Seccions plegables independents (com Figma o Fusion): es poden tenir diverses
         // obertes i cada una recorda el seu estat.
-        // Ordre (per decisió de l'usuari, 2026-10-13): Posició · Mides · Caixa · Portes · Unió · Materials.
+        // Ordre (per decisió de l'usuari, 2026-10-13): Posició · Mides · Caixa · Portes (dividit) o Electrodomèstic (sense
+        // dividir, 2026-10-15) · Unió · Materials.
         <Stack gap={0}>
             {islandBack ? (
               // El de darrere d'una illa es col·loca sol (girat i enganxat al de davant): la seva posició no compta.

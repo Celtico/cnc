@@ -17,8 +17,7 @@ import {
   frontLimitsHelp,
   splitDirsFor,
   findZone,
-  fillsNiche,
-  isAppliance,
+  nicheAppliance,
   type Front,
   type ModuleHardware,
   type Zone,
@@ -144,7 +143,7 @@ export function ZonePanel({
   // peces no es veurien ni es farien servir.
   const behindFixed = coveredBy ? !!coveredByFixed : zone.front?.kind === "panel"
   // Un electrodomèstic que ocupa el compartiment (el nínxol): ni Front, ni Prestatges, ni Dividir (es conserven).
-  const niche = !coveredBy && !!zone.appliance && isAppliance(zone.appliance.hardware) && fillsNiche(zone.appliance.hardware.appliance)
+  const niche = !coveredBy && !!nicheAppliance(zone)
   return (
     <Stack gap={0}>
 
@@ -167,8 +166,9 @@ export function ZonePanel({
         </>
       ) : (
         <>
-          {/* L'electrodomèstic, a dalt de tot: si ocupa el compartiment, mana sobre el contingut (opcions en cascada). */}
-          {!coveredBy && <ApplianceSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} bounds={bounds} />}
+          {/* L'electrodomèstic, a dalt de tot: si ocupa el compartiment, mana sobre el contingut (opcions en cascada). Un sol
+              lloc per decisió: el de l'«Interior» d'un mòdul sense dividir (l'arrel) és a Mòdul › Electrodomèstic. */}
+          {!coveredBy && zone.id !== root.id && <ApplianceSection root={root} zone={zone} onChange={onChange} hardware={hardware} noHandles={noHandles} bounds={bounds} />}
           {niche ? null : coveredBy ? <CoveredFront id="zone-front" title="Front" coveredBy={coveredBy} /> : <ZoneFrontSection root={root} zone={zone} openRatio={openRatio} drawerHeights={drawerHeights} onChange={onChange} hardware={hardware} noHandles={noHandles} kits={kits} bounds={bounds} afterHinge={system32?.at === "front" ? system32.row : undefined} />}
 
           {/* Tapat: el seu front (es conserva) no es fa i el compartiment és com obert (`visibleZone`). Sense una peça a

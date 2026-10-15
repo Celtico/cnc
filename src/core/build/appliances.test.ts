@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { APPLIANCE_ITEMS, DEFAULT_HARDWARE_LIBRARY, boardDensity, DEFAULT_SETTINGS, V46_ITEMS, applianceById, defaultModule, dishwasherModule, fridgeColumn, nicheModule, ovenColumn, parseSettings, usedHardwareSlots, visibleModule, type Module, type Zone } from "../model"
+import { APPLIANCE_ITEMS, DEFAULT_HARDWARE_LIBRARY, boardDensity, DEFAULT_SETTINGS, V46_ITEMS, applianceById, defaultModule, dishwasherModule, fridgeColumn, isApplianceModule, nicheAppliance, zoneAppliance, nicheModule, ovenColumn, parseSettings, usedHardwareSlots, visibleModule, type Module, type Zone } from "../model"
 import { buildModule } from "./buildModule"
 import { hardwarePreview } from "./hardwarePreview"
 import { hardwareMount } from "./hardwareMount"
@@ -189,5 +189,20 @@ describe("electrodomèstics (v46)", () => {
     const mount = hardwareMount(applianceById("appliance-bosch-smv6zcx10e"))
     expect(mount.error).toBeUndefined()
     expect(mount.panels.some((p) => p.id.startsWith("appliance-"))).toBe(true)
+  })
+
+  it("un sol lloc per decisió: el mòdul sense dividir que ocupa l'aparell és l'electrodomèstic (sense «Interior»); la placa no", () => {
+    expect(isApplianceModule(dishwasherModule())).toBe(true)
+    // Una columna dividida tria l'aparell a cada compartiment: el mòdul no ho és.
+    const col = ovenColumn()
+    expect(isApplianceModule(col)).toBe(false)
+    expect(col.root.split!.children.filter((c) => nicheAppliance(c)).map((c) => zoneAppliance(c)!.kind)).toEqual(["oven", "microwave"])
+    // La placa sobre els calaixos no ocupa el mòdul: l'«Interior» conserva els calaixos.
+    const hob = withZone(defaultModule("h", "Fogons"), { id: "r", front: { kind: "drawers", n: 2, heights: ["auto", "auto"] }, appliance: { hardware: applianceById("appliance-bosch-pie631hc1e") } })
+    expect(zoneAppliance(hob.root)?.kind).toBe("hob")
+    expect(isApplianceModule(hob)).toBe(false)
+    // Una arrel dividida no allotja cap aparell (el que hi hagués no es fa).
+    const m = dishwasherModule()
+    expect(isApplianceModule({ root: { ...m.root, split: { dir: "v", sizes: ["auto"], children: [{ id: "c" }] } } })).toBe(false)
   })
 })
