@@ -80,10 +80,11 @@ export class FittingsBuilder extends LightsBuilder {
       this.warnings.push({ code: "push", message: "Fronts sense tirador: cada porta, calaix o abatible necessita un ferratge d'obertura per pressió (push, p. ex. Tip-On o Push-to-open); als calaixos, guies amb push; a les portes, frontisses sense molla (sense retenció), perquè el push les pugui obrir." })
   }
 
-  protected frontPanel(id: string, name: string, label: string, role: PanelRole, x0: number, y0: number, w: number, h: number): Panel {
-    const { m, d } = this
+  /** Un front (porta, abatible…) de la llum `w` × `h`; `material`: un altre que el dels fronts del mòdul (el front de moble d'un electrodomèstic). */
+  protected frontPanel(id: string, name: string, label: string, role: PanelRole, x0: number, y0: number, w: number, h: number, material = frontMaterialOf(this.m)): Panel {
+    const { d } = this
     return this.add(
-      this.basePanel(id, name, label, role, h, w, d.t, frontMaterialOf(m), "x", edges("left", "right", "bottom", "top"), placement([x0, y0, d.frontZ], Y, X, neg(Z), Z)),
+      this.basePanel(id, name, label, role, h, w, d.t, material, "x", edges("left", "right", "bottom", "top"), placement([x0, y0, d.frontZ], Y, X, neg(Z), Z)),
     )
   }
 

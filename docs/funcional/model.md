@@ -317,7 +317,11 @@
   **electrodomèstic** de la biblioteca (Preferències › Ferratges › **Electrodomèstics**, motor `appliance`, una còpia com
   tots els ferratges). `ZoneAppliance` = `hardware` (l'aparell) · `front` (sense = sí; `false` = sense front de moble) ·
   `hinge` (on obre: frigorífic i rentadora) · `plinth` (del terra al cantell de baix del front, als aparells de terra sense
-  peça a sota; sense, 100, `DEFAULT_APPLIANCE_PLINTH`) · `handle` (el tirador del front, com als altres fronts).
+  peça a sota; sense, 100, `DEFAULT_APPLIANCE_PLINTH`) · `handle` (el tirador del front, com als altres fronts) ·
+  `panelMaterial` (v47; per petició de l'usuari, 2026-10-15: «si és panelable s'hauria de poder ficar el material que va
+  panelat»: el material del front de moble; sense, el dels fronts del mòdul, com fins ara; només amb front de moble,
+  `visibleAppliance`). L'aspecte de l'aparell (la foto i el material del cos) és de l'item (Preferències › Ferratges ›
+  «Aspecte»).
   - **La caixa que demana** (per decisió de l'usuari, 2026-10-15: «la base i altres parts de fusta si l'electrodomèstic ho
     suporta, si no res; les opcions depenen de l'electrodomèstic seleccionat»; `core/model/applianceCarcass.ts`): un mòdul
     que **és** l'aparell (`isApplianceModule`) fixa parts de la caixa (`applianceCarcass`, de la pràctica estàndard dels
@@ -343,7 +347,8 @@
     Front del compartiment: es fixa a l'aparell); el frigorífic de porta lliscant, que penja de frontisses de moble, sí que
     vol un lateral o un divisor al costat de les frontisses (si no, avís i cap cassoleta).
   - El front de moble compta com un front a Mòdul › Caixa (estil i folgances) i a Materials (el material dels fronts:
-    `hasBuiltFronts`, `frontOptionsUse`); el frigorífic de porta lliscant fa servir la frontissa i la filera System 32 del
+    `hasBuiltFronts`, `frontOptionsUse`; amb el seu «Material del front», no: si no hi ha cap altre front, Materials ›
+    «Fronts» no surt, `moduleRows`); el frigorífic de porta lliscant fa servir la frontissa i la filera System 32 del
     mòdul i tots el tirador (`usedHardwareSlots`). Com es construeix i es munta: [`fabricacio.md`](fabricacio.md) ›
     Electrodomèstics. Tests `build/appliances.test.ts`, `build/hiddenState.test.ts`.
   - Exemples: plantilla **«Cuina amb electrodomèstics»** (columnes del frigorífic combi i del forn amb microones, rentaplats

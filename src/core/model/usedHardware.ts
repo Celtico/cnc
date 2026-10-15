@@ -197,7 +197,8 @@ function frontHasHandle(m: Module, f: Extract<Front, { kind: "door" | "drawers" 
  * que toca):
  * - **Caixa**: Ranura o Retirada del fons (fons en ranura o encastat), l'Estil dels fronts, les folgances i el
  *   Retranqueig dels prestatges (`frontOptionsUse`);
- * - **Materials**: «Fronts» (`frontMaterial`) amb algun front que es fa (com l'Estil);
+ * - **Materials**: «Fronts» (`frontMaterial`) amb algun front que es fa i el fa servir (no un front de moble amb el seu
+ *   material);
  * - **Unió**: l'Espiga si la caixa en fa (`usedHardwareSlots`, `carcassDowels`); sense, la secció no surt.
  * Els ferratges per defecte del mòdul (`module.hardware`, `module.fronts.handles`) no surten enlloc: cada compartiment
  * tria el seu al Front o a «Prestatges i accessoris» i els que diuen «Com el mòdul» els hereten (res amagat compta).
@@ -214,7 +215,20 @@ export interface ModuleRows extends FrontOptionsUse {
 export function moduleRows(module: Module): ModuleRows {
   const use = frontOptionsUse(module)
   const b = module.carcass.back
-  return { ...use, back: b === "groove" || b === "inset" ? b : undefined, frontMaterial: use.style, dowel: usedHardwareSlots(module).has("dowel") }
+  return { ...use, back: b === "groove" || b === "inset" ? b : undefined, frontMaterial: use.style && usesFrontMaterial(module), dowel: usedHardwareSlots(module).has("dowel") }
+}
+
+/**
+ * Algun front fa servir el material dels fronts del mòdul: tots menys els fronts de moble dels electrodomèstics amb el
+ * seu material («Material del front», `ZoneAppliance.panelMaterial`; v47).
+ */
+function usesFrontMaterial(module: Module): boolean {
+  let uses = false
+  walkBuiltZones(visibleModule(module).root, (z, { covered }) => {
+    if (covered) return
+    if (z.front || (z.appliance && applianceFront(z.appliance) && !z.appliance.panelMaterial)) uses = true
+  })
+  return uses
 }
 
 /** On surt la «Filera System 32» del mòdul a l'inspector del compartiment (`system32RowPlace`). */

@@ -1,3 +1,4 @@
+import { applianceBodyMaterial } from "../appliance"
 import { KIT_PILOT_PARAMS } from "../hardwareKit"
 import type { HardwareItem, HardwareTarget } from "../hardwareSchema"
 import { APPLIANCE_ROWS, type ApplianceRow } from "./applianceRows"
@@ -39,6 +40,12 @@ function machining(row: ApplianceRow): { params: Record<string, number>; targets
   return { params: {}, targets: [{ key: "niche", label: "Nínxol (cap mecanitzat al front: es comprova la mida)", ops: [] }] }
 }
 
+/**
+ * Versió dels items del catàleg: 2, els estàndard del fabricant; 3, el material del cos per família. La biblioteca passa
+ * sola a la d'ara (`migrateHardwareLibrary`) i les còpies dels mòduls, pel cos (`upgradeApplianceBodies`).
+ */
+export const APPLIANCE_ITEM_VERSION = 3
+
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "")
 
 /** Un model del catàleg com a item de la biblioteca. */
@@ -55,8 +62,9 @@ function applianceItem(row: ApplianceRow): HardwareItem {
     params,
     targets,
     appliance: structuredClone(row.appliance),
-    material: "Acer inox",
-    version: 2,
+    // v3 (2026-10-15): el cos, el de la família (`applianceBodyMaterial`; abans, «Acer inox» a tots).
+    material: applianceBodyMaterial(row.appliance),
+    version: APPLIANCE_ITEM_VERSION,
     builtin: true,
   }
 }

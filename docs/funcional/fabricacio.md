@@ -219,8 +219,11 @@
     penjat; la campana telescòpica, el mòdul (ample, fons i alçada interior). Si el fabricant no el publica, avís. El
     forn i el microones: **només el nínxol** (es cargolen pel marc als laterals a obra; cap mecanitzat).
   - **L'aparell** es dibuixa (`extras`, rol `hardware`: ni nesting ni «Elements sense nesting») amb la **foto** a la cara
-    vista (`Panel.photo`: la de davant o, a la placa, la de dalt) i va a la **comanda** amb la marca i la referència.
-  - **El front de moble** és un front com els altres (material dels fronts, cantells, tirador), de la mida que dona el
+    vista (`Panel.photo`: la de davant o, a la placa, la de dalt), del material del cos de l'item (sense, el de la família,
+    `applianceBodyMaterial`; només es veu), i va a la **comanda** amb la marca i la referència.
+  - **El front de moble** és un front com els altres (material dels fronts o, si se n'ha triat, el seu «Material del
+    front», `ZoneAppliance.panelMaterial`: es talla, es canteja i va al nesting amb aquest material i el gruix de tots els
+    fronts; cantells, tirador), de la mida que dona el
     compartiment (`frontTerritory`); als aparells de terra sense peça a sota, de `plinth` (100, el sòcol de cuina
     estàndard) cap amunt. Un combi en fa **dos** (el de baix i el de dalt, junta de 4 del catàleg): el de baix tan curt
     com permet el seu rang perquè el de dalt hi entri; les alçades BSH amb A (la base on seu l'aparell) i S (la peça de

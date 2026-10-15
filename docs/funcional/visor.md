@@ -48,10 +48,15 @@
   `PanelMesh proposedTags`: els forats amb aquestes etiquetes, en taronja (els proposats d'un importat sense confirmar al
   muntatge de Preferències › Ferratges); `PanelMesh pins` (suports de prestatge) i `seeThrough` (fusta translúcida a
   0,4 sense escriure la profunditat, al muntatge); `MovingPanel` s'exporta per al mateix muntatge.
-- **Electrodomèstics** (v46): l'aparell és una caixa de la seva mida (`extras`, rol `hardware`, «Acer inox») amb la **foto
-  del catàleg** a la cara vista (`Panel.photo`: `panelMaterials` hi posa la foto estirada, `photoTexture` de `public/` —
-  `appliances/*.webp`, a la memòria del service worker en fer-les servir, `mobles-appliances`— a la cara +z o, a la placa,
-  +y). La mateixa peça al visor, a les miniatures, al render i al GLB/USDZ. Amb front de moble, l'aparell queda darrere
+- **Electrodomèstics** (v46): l'aparell és una caixa de la seva mida (`extras`, rol `hardware`, del material del cos:
+  el de l'item o el de la família, `applianceBodyMaterial`) amb la **foto del catàleg** (o la pròpia, data URL) a la cara
+  vista (`Panel.photo`, a la cara +z o, a la placa, +y). Per petició de l'usuari (2026-10-15: la foto sortia estirada i amb
+  el marc blanc), `panelMaterials` hi posa `photoFaceTexture` (`viewer/photoFace.ts`): una textura de la mida de la cara
+  amb el color del cos i la foto **sencera i centrada** a sobre (`containRect`), amb el fons transparent (les fotos de
+  `public/appliances/*.webp` ja no el porten; a la memòria del service worker en fer-les servir, `mobles-appliances-v2`);
+  fins que la foto arriba (`photoTexture`, la mateixa memòria i `photoTexturesIdle`) o si falla, la cara és del color del
+  cos. Sense front de moble, la cara queda enrasada amb els fronts del mòdul i res al davant (un aparell tapat per les
+  portes del mòdul no es fa: `visibleZone`). La mateixa peça al visor, a les miniatures, al render i al GLB/USDZ. Amb front de moble, l'aparell queda darrere
   (el front del rentaplats s'obre com un abatible, el del frigorífic i la rentadora com una porta: `opening.ts`).
 - **Components dels jocs de calaix** (`extras` amb rol `hardware`, `kitSolidPanels`): peces de caixa normals, **massisses**
   (`panelMaterials`: totes les cares amb l'acabat del material, mai el color del tauler vist als cantells) i pintades pel

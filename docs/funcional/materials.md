@@ -9,7 +9,8 @@
   categoria (camp Categoria en lloc dels interruptors «Per a fons» i «Es talla a la CNC») i el `MaterialSelect` agrupa per
   categoria. Els que no són de CNC (ferro, inox, pedra, vidre) van arribar a la v2 de les preferències. Els de **simulació** (`SIM_MATERIALS`: v3 teixits, vellut, cuir, parquet, rajoles, microciment, pintures,
   electrodomèstics; v4 els de les escenes de revista; v5 els llums; `SIM_MATERIALS_SINCE`: la migració només afegeix els d'una
-  versió posterior a la desada, així els esborrats no tornen) només es veuen: `cnc: false`, no surten als selectors del cos
+  versió posterior a la desada, així els esborrats no tornen; v47 «Electrodomèstic negre», `APPLIANCE_MATERIALS`, el
+  vidre negre del cos dels forns, microones i plaques: un lacat negre brillant, no un vidre, que el de l'app és translúcid) només es veuen: `cnc: false`, no surten als selectors del cos
   ni del taulell. Els que no són de CNC pinten els cantells amb el mateix material. Acabats `metal`, `glass`, `fabric`
   (trama) i `tiles` (rajola amb junta), procedurals (`patternTexture`).
 - **Textures procedurals editables** (`settings/TextureEditor.tsx`, «Editar la textura»): mostra gran a escala real amb zoom;

@@ -7,7 +7,7 @@ import { deepEqual, MATERIAL_MERGES, rescalePhotoTiles, resolveMaterialAlias, re
 import { defaultMachine, defaultMachineRules, MachineRulesSchema, migrateMachine, repairMachine, type Machine, type MachineRules } from "./machine"
 import { repairValue } from "./repair"
 import { AssistantPrefSchema, GapsPrefSchema, MaterialPrefSchema, RefPresetSchema, SETTINGS_VERSION, SettingsSchema, materialNameKey, type MaterialPref, type RefPreset, type Settings } from "./settingsSchema"
-import { BUILTIN_MATERIALS, BUILTIN_REFERENCES, CLADDING_MATERIALS, DEFAULT_GROOVE_CLEARANCE, DEFAULT_INNER_CLEARANCE, DEFAULT_SETTINGS, FRAME_MATERIALS, GLOSS_MATERIALS, LAMPSHADE_GLOW, LAWN_FINISH, LED_MATERIALS, NON_CNC_MATERIALS, OLD_LAWN_FINISH, RETIRED_TEMPLATE_MATERIALS, RIFT_MATERIALS, SIM_MATERIALS, SIM_MATERIALS_SINCE, TEMPLATE_MATERIALS, isRetired } from "./settingsDefaults"
+import { BUILTIN_MATERIALS, BUILTIN_REFERENCES, CLADDING_MATERIALS, DEFAULT_GROOVE_CLEARANCE, DEFAULT_INNER_CLEARANCE, DEFAULT_SETTINGS, APPLIANCE_MATERIALS, FRAME_MATERIALS, GLOSS_MATERIALS, LAMPSHADE_GLOW, LAWN_FINISH, LED_MATERIALS, NON_CNC_MATERIALS, OLD_LAWN_FINISH, RETIRED_TEMPLATE_MATERIALS, RIFT_MATERIALS, SIM_MATERIALS, SIM_MATERIALS_SINCE, TEMPLATE_MATERIALS, isRetired } from "./settingsDefaults"
 
 // --- Migració i importació ------------------------------------------------------------
 
@@ -186,8 +186,10 @@ function migrateMaterials(materialsRaw: MaterialPref[], version: number, problem
   const v18m = version < 18 && v17m !== BUILTIN_MATERIALS ? v17m.map((m) => (m.id === "sim-lawn" && deepEqual(m.finish, OLD_LAWN_FINISH) ? { ...m, finish: LAWN_FINISH } : m)) : v17m
   // v36: l'alumini plata dels marcs de vitrina Häfele, si no hi és.
   const v36m = version < 36 && v18m !== BUILTIN_MATERIALS ? [...v18m, ...missing(FRAME_MATERIALS, v18m)] : v18m
+  // v47: el vidre negre del cos dels electrodomèstics, si no hi és.
+  const v47m = version < 47 && v36m !== BUILTIN_MATERIALS ? [...v36m, ...missing(APPLIANCE_MATERIALS, v36m)] : v36m
   // Noms únics (sempre): un de repetit passa a «X 2» amb un avís (abans no es comprovava).
-  const unique = dedupeMaterialNames(v36m)
+  const unique = dedupeMaterialNames(v47m)
   problems.push(...unique.problems)
   return { materials: unique.materials, renames: v12.renames }
 }

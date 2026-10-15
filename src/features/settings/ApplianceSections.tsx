@@ -1,4 +1,4 @@
-import { Image, Text } from "@chakra-ui/react"
+import { Text } from "@chakra-ui/react"
 import { LuBookOpen } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { FormRow } from "../../components/FormRow"
@@ -16,25 +16,20 @@ function mountText(a: Appliance): string {
 }
 
 /**
- * Seccions de l'editor d'un **electrodomèstic** (Preferències › Ferratges › Electrodomèstics, v46): la foto i les dades del
+ * Seccions de l'editor d'un **electrodomèstic** (Preferències › Ferratges › Electrodomèstics, v46): les dades del
  * catàleg del fabricant, **només lectura** (les dades són a `core/model/appliances/applianceRows.ts`, generades de
- * `docs/electrodomestic/appliances.json`). El que l'app mecanitza al front són els paràmetres de «Mides».
+ * `docs/electrodomestic/appliances.json`; la foto i el material del cos, a «Aspecte»: `ApplianceLook`). El que l'app mecanitza al front són els paràmetres de «Mides».
  */
 export function ApplianceSections({ item, appliance: a }: { item: HardwareItem; appliance: Appliance }) {
   const f = a.front
   return (
     <FoldItem id="appliance-catalog" icon={LuBookOpen} title="Del catàleg" badge={`${item.maker ?? ""} ${item.ref ?? ""}`.trim() || undefined} defaultOpen>
-      {a.image && (
-        <FormRow label="Producte">
-          <Image src={`${import.meta.env.BASE_URL}${a.image}`} alt={item.name} rounded="md" maxW="240px" w="full" borderWidth="1px" bg="white" />
-        </FormRow>
-      )}
       <FormRow label="Tipus">
         <Text fontSize="sm" pt="6px">
           {APPLIANCE_LABELS[a.kind]} ({a.family}) · aparell {a.size.w} × {a.size.h} × {a.size.d} mm
         </Text>
       </FormRow>
-      <FormRow label="Front de moble" help="Es tria a cada compartiment (Electrodomèstic › Front de moble); el material és el dels fronts del mòdul.">
+      <FormRow label="Front de moble" help="Es tria a cada compartiment (Electrodomèstic › Front de moble); el material, per defecte el dels fronts del mòdul, també («Material del front»).">
         <Text fontSize="sm" pt="6px">
           {mountText(a)}
         </Text>

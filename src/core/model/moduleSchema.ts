@@ -273,7 +273,9 @@ const ZoneAccessorySchema = z.preprocess((v) => (v === true ? {} : v === false ?
  * nínxol: no fa el seu Front, prestatges ni accessoris (es conserven). Si porta front de moble (`takesFront`): `front`
  * (sense = sí; `false` = sense front, l'aparell a la vista), `hinge` (el costat on obre: les frontisses de la rentadora i
  * del frigorífic de porta lliscant, o el tirador), `plinth` (del terra al cantell de baix del front, als aparells de terra
- * sense peça a sota; sense, 100) i `handle` (el tirador del front, com als altres fronts).
+ * sense peça a sota; sense, 100), `handle` (el tirador del front, com als altres fronts) i `panelMaterial` (v47; per
+ * petició de l'usuari: «si és panelable s'hauria de poder ficar el material que va panelat»: el material del front de
+ * moble, un nom de Preferències › Materials; sense, el dels fronts del mòdul, com fins ara).
  */
 export interface ZoneAppliance {
   hardware: HardwareItem
@@ -281,9 +283,10 @@ export interface ZoneAppliance {
   hinge?: "left" | "right"
   plinth?: number
   handle?: FrontHandle
+  panelMaterial?: string
 }
 const ZoneApplianceSchema = repairAtomically(
-  z.object({ hardware: FrontHardwareSchema, front: z.boolean().optional(), hinge: z.enum(["left", "right"]).optional(), plinth: mm.min(0).max(400).optional(), handle: FrontHandleSchema.optional() }),
+  z.object({ hardware: FrontHardwareSchema, front: z.boolean().optional(), hinge: z.enum(["left", "right"]).optional(), plinth: mm.min(0).max(400).optional(), handle: FrontHandleSchema.optional(), panelMaterial: z.string().min(1).optional() }),
 )
 
 /** Tipus de front (contingut) d'un compartiment. */

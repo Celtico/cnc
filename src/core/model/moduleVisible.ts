@@ -194,7 +194,8 @@ export const isApplianceModule = (m: Pick<Module, "root">): boolean => !!nicheAp
 export const applianceFront = (a: ZoneAppliance): boolean => !!a.hardware.appliance && takesFront(a.hardware.appliance) && a.front !== false
 
 /**
- * L'electrodomèstic tal com es veu: sense front de moble, ni el costat, ni el sòcol, ni el tirador; el costat, només als
+ * L'electrodomèstic tal com es veu: sense front de moble, ni el costat, ni el sòcol, ni el tirador, ni el material del
+ * front (`panelMaterial`); el costat, només als
  * que obren com una porta (frigorífic, rentadora); el sòcol, només als de terra sense peça a sota del compartiment.
  */
 function visibleAppliance(a: ZoneAppliance, bounds: ZoneBounds): ZoneAppliance {
@@ -206,6 +207,7 @@ function visibleAppliance(a: ZoneAppliance, bounds: ZoneBounds): ZoneAppliance {
     ...(doorLikeFront(ap) && a.hinge ? { hinge: a.hinge } : {}),
     ...(standsOnFloor(ap) && !bounds.bottom && a.plinth !== undefined ? { plinth: a.plinth } : {}),
     ...(a.handle ? { handle: a.handle } : {}),
+    ...(a.panelMaterial ? { panelMaterial: a.panelMaterial } : {}),
   }
 }
 

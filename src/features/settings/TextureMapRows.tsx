@@ -8,15 +8,15 @@ import { classifyTextureFile } from "../../core/photo/pbrMaps"
 import { pickedFromDrop, type PickedFile } from "./machineImport"
 import { encodeMap, pickFiles, srcBlob, textureSetSummary, withTextureSet, type ImageFinish } from "./textureImport"
 import { readPickedTextureSet } from "./textureMaterials"
+import { publicUrl } from "../../lib/publicUrl"
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e))
-const imgUrl = (src: string) => (src.startsWith("data:") ? src : `${import.meta.env.BASE_URL}${src}`)
 
 /** Miniatura d'un mapa o de la foto de color (o el requadre buit). */
 export function MapThumb({ src, label }: { src?: string; label: string }) {
   return (
     <Box w="56px" h="56px" flexShrink={0} rounded="md" borderWidth="1px" overflow="hidden" bg="bg.subtle" data-testid={`map-thumb-${label}`} data-filled={src ? "true" : "false"}>
-      {src && <Image src={imgUrl(src)} alt={label} w="full" h="full" objectFit="cover" />}
+      {src && <Image src={publicUrl(src)} alt={label} w="full" h="full" objectFit="cover" />}
     </Box>
   )
 }

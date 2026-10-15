@@ -105,7 +105,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     - **Electrodomèstic** (`mod-appliance`, `LuRefrigerator`, la mateixa `ApplianceSection` del compartiment amb `module`;
       per decisió de l'usuari, 2026-10-15): només amb l'arrel **sense dividir**, **a dalt de la Caixa** (l'aparell decideix
       la caixa, no al revés: la Caixa només ofereix les parts de fusta que admet; triar-ne un de nou posa la seva caixa
-      estàndard, `applianceDefaults`). Edita `root.appliance` (el model no canvia, sense migració): «Aparell», «Front de moble», «Obre», «Sòcol» i
+      estàndard, `applianceDefaults`). Edita `root.appliance` (el model no canvia, sense migració): «Aparell», «Front de moble», «Material del front», «Obre», «Sòcol» i
       «Tirador» com al compartiment. Si l'aparell ocupa el mòdul, l'arbre no ensenya l'«Interior» (vegeu Estructura) i el
       Front, els Prestatges i Dividir de l'arrel no compten (es conserven: «Cap» els torna); el mòdul sense dividir no té
       seccions pròpies de fronts o prestatges que calgui amagar (l'estil i les folgances de la Caixa i el material dels
@@ -150,7 +150,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     **Electrodomèstic** (`LuRefrigerator`, `zone/ApplianceSection.tsx`, v46; **només als compartiments d'un mòdul
     dividit**: el de l'Interior d'un mòdul sense dividir és a Mòdul › Electrodomèstic; a dalt de tot, plegat si no n'hi ha: «Aparell»
     amb el `HardwarePick` dels Electrodomèstics —«Cap» o un de la biblioteca, amb la foto; l'ajuda diu les dades del
-    catàleg— i, en cascada, «Front» (interruptor «Front de moble», si l'aparell en porta; l'ajuda diu com es munta), «Obre»
+    catàleg— i, en cascada, «Front» (interruptor «Front de moble», si l'aparell en porta; l'ajuda diu com es munta), amb el
+    front, «Material del front» (v47, `MaterialSelect` dels taulers, «Com els fronts» = el de Mòdul › Materials), «Obre»
     Esquerra · Dreta (frigorífic i rentadora), «Sòcol» (aparells de terra sense peça a sota) i «Tirador»; si l'aparell ocupa el
     compartiment —tots menys la placa i la campana— no surten el Front, els Prestatges ni Dividir, i l'arbre diu
     «Rentaplats», «Frigorífic»…; vegeu Model › Zones › Electrodomèstic) · Front ·

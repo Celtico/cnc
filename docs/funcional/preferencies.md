@@ -64,7 +64,14 @@
   l'app i els que no en tenen, a dalt de la categoria; la cerca —també pel número i la sèrie— obre les que hi coincideixen;
   `seriesGroups`; als **Electrodomèstics** —v46—, per família: Rentaplats 60 · Frigorífics de columna · Forns 60…,
   `applianceSeries`; la targeta i el selector hi posen la **foto del catàleg** en lloc del 3D, `SnapshotThumb contain`, i
-  l'editor, la secció «Del catàleg» amb la foto i les dades del fabricant, només lectura, `ApplianceSections`; els
+  l'editor, **«Aspecte»** (v47, `ApplianceLook`; per petició de l'usuari, 2026-10-15: «que es pugui ficar un
+  material/textura o canviar la foto»): la **Foto** (Canviar la foto, `FileUpload` de Chakra: reduïda amb `shrinkImage`, sense
+  el fons blanc —`core/photo/whiteBackground.ts`, el blanc quasi pur connectat amb la vora— i retallada a l'aparell, WebP
+  amb transparència en data URL a l'item, com la foto d'un material: viatja amb les còpies i el `.moble` i va sense
+  connexió · La del catàleg · Treure) i el **Cos** (`MaterialSelect` de tots els materials, `HardwareItem.material`;
+  «Per defecte (…)» = el de la família, `applianceBodyMaterial`: vidre negre forns, microones i plaques, blanc frigorífics i
+  rentadores, inox rentaplats i campanes); només es veu, la fabricació no canvia, i els mobles fets conserven la seva
+  còpia (cal tornar a triar l'aparell per veure-hi el canvi); i la secció «Del catàleg» amb les dades del fabricant, només lectura, `ApplianceSections`; els
   paràmetres de «Mides» són el que l'app mecanitza al front: les cassoletes de la rentadora o, amb «Prebroques» = 1, les
   prebroques de la fixació; per defecte, 0: el front es forada amb la plantilla de l'aparell),
   `GalleryCard` amb la **miniatura 3D com
@@ -175,7 +182,11 @@
 - **Visor 3D**: qualitat, escena de Presentació (terra i paret: materials de la biblioteca, `PresentationScene.floorMaterial`
   / `wallMaterial`, o les mostres ràpides; terra per defecte «Parquet de roure»), llum i «Cel del render». **Tema**:
   dia/nit/sistema i color principal (`theme/accent.ts` redirigeix les variables CSS de `wood`).
-- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 46 (els 36 electrodomèstics del catàleg —Bosch,
+- **Versions i lectura** (`core/model/settings.ts`, `SETTINGS_VERSION`, ara 47 (el material del cos dels electrodomèstics:
+«Electrodomèstic negre», el vidre negre dels forns, microones i plaques, `APPLIANCE_MATERIALS`, additiu; els items del
+catàleg passen a la `version` 3, amb el cos de la família —`applianceBodyMaterial`— en lloc de «Acer inox» a tots: la
+biblioteca es refà sola com a cada versió d'item i les còpies dels mobles desats, només pel cos, `upgradeApplianceBodies` a
+`normalizeComposition`); 46 (els 36 electrodomèstics del catàleg —Bosch,
 Balay, Siemens i Teka—, categoria «Electrodomèstics», motor `appliance`, `V46_ITEMS`, additiu); 45 (el penjador ocult regulable i la regleta de paret dels mòduls penjats —llocs `hanger` i
 `wallRail`, «Per defecte als mòduls nous»— i els sòcols d'alumini de 100 i 150, ferratges per metres, `V45_ITEMS`,
 additiu: s'afegeixen per id i els llocs nous apunten als d'inici, `fixHardwareDefaults`. El 2026-10-15, sense canviar de

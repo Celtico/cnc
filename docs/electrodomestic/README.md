@@ -71,8 +71,10 @@ Unitats: **mm**, **kg**, **cm²** (ventilació). Un valor que el catàleg no don
   B = gruix del front (16/19/22), C = alçada del sòcol. Cel·la absent = combinació no permesa.
   Font: Balay p146 (taules idèntiques a Siemens p115; Bosch p380 només publica la de porta lliscant).
 
-Fotos: `public/appliances/<marca>-<ref>.webp` (≤ 600 px d'ample, fons blanc, 35 fitxers, ~0,4 MB en total), retallades
-de la foto de producte del catàleg. Notes: `bosch-ceg732xb1` és la mateixa foto que el catàleg fa servir per a
+Fotos: `public/appliances/<marca>-<ref>.webp` (≤ 600 px d'ample, 35 fitxers, ~0,4 MB en total), retallades
+de la foto de producte del catàleg i **sense el fons blanc** (2026-10-15, `scripts/appliance-photos.py`: el blanc quasi pur
+connectat amb la vora, transparent; la mateixa regla que l'app aplica a les fotos que puja l'usuari,
+`core/photo/whiteBackground.ts`). Notes: `bosch-ceg732xb1` és la mateixa foto que el catàleg fa servir per a
 `bosch-cbg7341b1`; els frigorífics surten amb la porta oberta (és l'única foto que hi ha); `siemens GI21VAFE0` no en té.
 
 ## Famílies i models

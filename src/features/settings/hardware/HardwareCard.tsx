@@ -8,6 +8,7 @@ import { StepRuleRows } from "../../../components/StepRuleRows"
 import { pairPlate, setHandleDistance, setHardwareParam } from "../../../core/model/hardwareEdit"
 import { HINGE_PLATE_PARAMS, hardwareParamLabel, hardwareParams, hardwareSummary, isPendingImport, type HardwareEngine, type HardwareItem, type HardwareTarget } from "../../../core/model"
 import { useDraft } from "../../../lib/useDraft"
+import { ApplianceLook } from "../ApplianceLook"
 import { ApplianceSections } from "../ApplianceSections"
 import { KitSections } from "../KitSections"
 import { LightSections } from "../LightSections"
@@ -70,6 +71,7 @@ export function HardwareCard({
 
         {item.kit && <KitSections item={item} kit={item.kit} />}
         {item.light && <LightSections item={item} kit={item.light} />}
+        {item.appliance && <ApplianceLook item={item} appliance={item.appliance} onChange={onChange} />}
         {item.appliance && <ApplianceSections item={item} appliance={item.appliance} />}
         {item.imported?.update && <UpdateNotice item={item} onChange={onChange} />}
         {item.imported && <ImportedSection item={item} library={library} only2d={only2d} onChange={onChange} />}

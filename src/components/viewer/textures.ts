@@ -1,4 +1,5 @@
 import { CanvasTexture, MirroredRepeatWrapping, NoColorSpace, RepeatWrapping, SRGBColorSpace, TextureLoader, type InstancedMesh, type Material, type Mesh, type MeshStandardMaterial, type Object3D, type Texture } from "three"
+import { publicUrl } from "../../lib/publicUrl"
 import { TEXTURE_CACHE_MAX } from "./deviceLimits"
 import { WOOD_PRESETS, materialCoat, materialSheen, type Finish, type MaterialPref, type WoodGen } from "../../core/model"
 
@@ -683,7 +684,7 @@ export function photoTexture(src: string, seamless = false, linear = false): Tex
     tex.userData.failed = true
     finish()
   }
-  const tex = new TextureLoader().load(src.startsWith("data:") ? src : `${import.meta.env.BASE_URL}${src}`, finish, undefined, fail)
+  const tex = new TextureLoader().load(publicUrl(src), finish, undefined, fail)
   tex.wrapS = seamless ? RepeatWrapping : MirroredRepeatWrapping
   tex.wrapT = seamless ? RepeatWrapping : MirroredRepeatWrapping
   // Normals i rugositat són dades, no colors: sense la corba sRGB.

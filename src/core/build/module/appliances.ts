@@ -1,6 +1,7 @@
 import {
   DEFAULT_APPLIANCE_PLINTH,
   NO_EDGES,
+  applianceBodyMaterial,
   boardDensity,
   applianceFronts,
   doorLikeFront,
@@ -23,7 +24,7 @@ import { X, Y, Z, placement, r, toLocal } from "../geometry"
 import { applyHardware, resolveOps } from "../hardware"
 import type { ZoneRect } from "../layout"
 import { DrawersBuilder } from "./drawers"
-import { num } from "./helpers"
+import { frontMaterialOf, num } from "./helpers"
 import type { HorizontalRef, VerticalRef } from "./types"
 
 /** Gruix del taulell que es suposa per dibuixar la placa quan el taulell no és del mòdul (només per veure-la). */
@@ -139,7 +140,8 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
       length: r(w),
       width: r(h),
       thickness: r(depth),
-      material: item.material ?? "Acer inox",
+      // El cos (Preferències › Ferratges › «Aspecte»; sense, el de la família: `applianceBodyMaterial`).
+      material: item.material ?? applianceBodyMaterial(a),
       grain: "none",
       edges: { ...NO_EDGES },
       holes: [],
@@ -189,13 +191,16 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
     const doorLike = doorLikeFront(a)
     const handleHw = this.frontHandle(za.handle, zone.id)
     const thick = this.d.t
+    // El material del front de moble (Electrodomèstic › «Material del front»; sense, el dels fronts del mòdul). El gruix,
+    // el de tots els fronts (el del cos).
+    const panelMaterial = za.panelMaterial?.trim() || frontMaterialOf(this.m)
     if (a.front?.thickness && !inRange(thick, a.front.thickness)) warn(`${name}: front de ${num(thick)} mm de gruix i el fabricant el demana de ${rangeText(a.front.thickness)} (${src}).`)
     let kg = 0
     let density = 0
     for (const fr of fronts) {
       const label = `${fr.label} ${kindLabel}`
       const id = doorLike ? `appliance-${n}${fr.key ? `-${fr.key}` : ""}-door-${hinge}` : `appliance-${n}${fr.key ? `-${fr.key}` : ""}-flap`
-      const p = this.frontPanel(id, doorLike ? "porta electrodomèstic" : "front electrodomèstic", label, doorLike ? "door" : "flap", ter.x0, fr.y, W, fr.h)
+      const p = this.frontPanel(id, doorLike ? "porta electrodomèstic" : "front electrodomèstic", label, doorLike ? "door" : "flap", ter.x0, fr.y, W, fr.h, panelMaterial)
       if (fr.range && !inRange(fr.h, fr.range)) warn(`${name}: ${label.toLowerCase()} fa ${num(fr.h)} mm d'alt i el fabricant l'admet de ${rangeText(fr.range)} (${src}). Canvia l'alçada del mòdul o el sòcol.`)
       density = boardDensity(p.material)
       kg = Math.max(kg, (fr.h * W * thick * density) / 1e9)

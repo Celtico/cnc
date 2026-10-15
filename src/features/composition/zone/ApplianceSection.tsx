@@ -4,6 +4,7 @@ import { FoldItem } from "../../../components/Fold"
 import {
   APPLIANCE_LABELS,
   DEFAULT_APPLIANCE_PLINTH,
+  boardChoices,
   DOOR_LABELS,
   doorLikeFront,
   fillsNiche,
@@ -24,6 +25,8 @@ import {
 import { NumRow } from "../../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../../components/FormRow"
 import { HardwarePick } from "../HardwarePick"
+import { MaterialSelect } from "../../settings/MaterialSelect"
+import { useSettings } from "../../settings/SettingsContext"
 
 /** Com es munta el front, per a l'ajuda de «Front de moble». */
 function mountHelp(a: Appliance): string {
@@ -54,10 +57,12 @@ function dataHelp(a: Appliance): string {
  * `zone.appliance`. **Un sol lloc per decisió** (per decisió de l'usuari, 2026-10-15): d'un mòdul sense dividir, a
  * Mòdul › Electrodomèstic (`module`, sobre l'arrel: el mòdul és l'aparell i l'arbre no ensenya l'«Interior»); d'un mòdul
  * dividit, al compartiment, a dalt de tot. Si l'aparell ocupa el nínxol, el Front, els Prestatges i el Dividir del
- * compartiment no surten (opcions en cascada). A sota, en cascada: el front de moble (si en porta), el costat on obre,
- * el sòcol (aparells de terra sense peça a sota) i el tirador.
+ * compartiment no surten (opcions en cascada). A sota, en cascada: el front de moble (si en porta) i, amb el front, el
+ * seu material (v47, «Com els fronts» = el dels fronts del mòdul), el costat on obre, el sòcol (aparells de terra sense
+ * peça a sota) i el tirador.
  */
 export function ApplianceSection({ root, zone, onChange, hardware, noHandles, bounds, module = false }: { root: Zone; zone: Zone; onChange: (root: Zone) => void; hardware: ModuleHardware; noHandles: boolean; bounds: ZoneBounds; /** A l'inspector del mòdul (l'arrel d'un mòdul sense dividir): els textos parlen del mòdul. */ module?: boolean }) {
+  const { settings } = useSettings()
   const za = zone.appliance
   const a = za && isAppliance(za.hardware) ? za.hardware.appliance : undefined
   const set = (next: ZoneAppliance | undefined) =>
@@ -98,6 +103,14 @@ export function ApplianceSection({ root, zone, onChange, hardware, noHandles, bo
               <Switch.Control />
               <Switch.Label fontSize="sm">Front de moble</Switch.Label>
             </Switch.Root>
+          </FormRow>
+        )}
+        {a && front && (
+          <FormRow label="Material del front" help="El tauler del front de moble (el panell que tapa l'aparell): es talla, es canteja i va al nesting com qualsevol front, amb el gruix de tots els fronts. Sense triar-ne cap, el dels fronts del mòdul (Mòdul › Materials)." maxW="280px">
+            <MaterialSelect label="Material del front" hideLabel materials={boardChoices(settings.materials)} value={za!.panelMaterial ?? ""} emptyLabel="Com els fronts" onChange={(v) => {
+              const { panelMaterial: _p, ...rest } = za!
+              set(v ? { ...rest, panelMaterial: v } : rest)
+            }} />
           </FormRow>
         )}
         {a && front && doorLikeFront(a) && (

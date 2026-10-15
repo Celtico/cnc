@@ -179,6 +179,12 @@ export const SIM_MATERIALS: MaterialPref[] = [
 ]
 
 /**
+ * El cos dels electrodomèstics al 3D (v47; `applianceBodyMaterial`): el vidre negre dels forns, els microones i les
+ * plaques. L'inox i el blanc ja hi eren (v3). Lacat negre brillant i no vidre: el vidre de l'app és translúcid.
+ */
+export const APPLIANCE_MATERIALS: MaterialPref[] = [sim("sim-appliance-black", "Electrodomèstic negre", { kind: "lacquer", color: "#0f1012", roughness: 0.12 })]
+
+/**
  * Versió de les preferències que va portar cada material de simulació (v3 els primers, v4 els de les escenes de
  * revista, v5 els llums): la migració només afegeix els d'una versió posterior a la desada.
  */
@@ -232,6 +238,7 @@ export const BUILTIN_MATERIALS: MaterialPref[] = upgradeToPhoto([
   ...SIM_MATERIALS,
   ...LED_MATERIALS,
   ...FRAME_MATERIALS,
+  ...APPLIANCE_MATERIALS,
   ...GLOSS_MATERIALS,
   ...RIFT_MATERIALS,
   ...CLADDING_MATERIALS,

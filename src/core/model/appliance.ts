@@ -74,7 +74,11 @@ export const ApplianceSchema = z.object({
   ventilation: z.object({ inletCm2: mm.positive().optional(), outletCm2: mm.positive().optional() }).optional(),
   /** Retall a la peça de sobre (placa: el taulell) o de sota (grup filtrant: la base del moble penjat). */
   cutout: z.object({ w: RangeSchema, d: RangeSchema, at: z.enum(["top", "bottom"]), fromFront: mm.min(0).optional(), board: RangeSchema.optional() }).optional(),
-  /** Foto de l'aparell (camí a `public/`, `appliances/<marca>-<ref>.webp`): la miniatura i la cara vista al 3D i al render. */
+  /**
+   * Foto de l'aparell (camí a `public/`, `appliances/<marca>-<ref>.webp`, sense el fons blanc; o la que puja l'usuari a
+   * Preferències › Ferratges › «Aspecte», una data URL): la miniatura i la cara vista al 3D i al render, sencera i
+   * centrada sobre el material del cos.
+   */
   image: z.string().optional(),
   /** D'on surt (catàleg i pàgina del PDF). */
   source: z.object({ doc: z.string(), page: z.number().int().positive() }),
@@ -155,6 +159,18 @@ export function boardDensity(material: string): number {
   if (/\b(mdf|dm)\b|lacat/.test(m)) return 750
   if (/massís|massis|massissa/.test(m)) return 675
   return 660
+}
+
+/**
+ * El material del cos de l'aparell al 3D quan l'item no en porta (`HardwareItem.material`, Preferències › Ferratges ›
+ * «Aspecte»; per petició de l'usuari, 2026-10-15): els que van darrere d'un front de moble, neutres (el rentaplats, de
+ * xapa d'inox; el frigorífic i la rentadora, blancs); el forn, el microones i la placa, de vidre negre; la campana, inox.
+ * Només es veu (rol `hardware`): no canvia res de la fabricació.
+ */
+export function applianceBodyMaterial(a: Pick<Appliance, "kind">): string {
+  if (a.kind === "fridge" || a.kind === "washer") return "Electrodomèstic blanc"
+  if (a.kind === "oven" || a.kind === "microwave" || a.kind === "hob") return "Electrodomèstic negre"
+  return "Electrodomèstic inox"
 }
 
 /** Quants fronts de moble porta: dos els combis (el de baix i el de dalt), un la resta. */

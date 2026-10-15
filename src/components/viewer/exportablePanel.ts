@@ -2,6 +2,7 @@ import { BoxGeometry, MeshStandardMaterial, type BufferGeometry, type Texture } 
 import { materialCategory, type MaterialPref, type Panel } from "../../core/model"
 import { ROLE_COLOR } from "./roleColorMap"
 import { isShaped, mitreGeometry, shapedGeometry } from "./cutoutGeometry"
+import { photoFaceTexture } from "./photoFace"
 import { textureOffset, type TextureOffset } from "./textureOffset"
 import { RAW_EDGE_COLOR, TILE_MM, applyFinishFx, disposeMaterial, tileClone, patternTexture, photoTexture, resolveEdgeFinish, resolveFinish, woodGenOf, woodTexture, type FinishSpec } from "./textures"
 
@@ -111,11 +112,13 @@ export function panelMaterials(p: Panel, mode: "material" | "role", materials: M
   // +y / −y: cara L × T (u = llargada): la veta va en u.
   const edgeY = (banded: boolean, face: string) => (banded ? makeMaterial(edgeFinish, L, T, false, opts, off(face)) : raw(face))
   const out = [edgeX(p.edges.right, "#r"), edgeX(p.edges.left, "#l"), edgeY(p.edges.top, "#t"), edgeY(p.edges.bottom, "#b"), big(""), big("#B")]
-  // Electrodomèstic (v46): la foto a la cara vista (+z, la de davant; +y, la de dalt d'una placa), estirada a la cara.
+  // Electrodomèstic (v46): la foto a la cara vista (+z, la de davant, L × W; +y, la de dalt d'una placa, L × T), sencera i
+  // centrada sobre el color del cos (el material de l'aparell: `photoFaceTexture`).
   if (p.photo) {
-    const i = p.photo.face === "top" ? 2 : 4
+    const top = p.photo.face === "top"
+    const i = top ? 2 : 4
     disposeMaterial(out[i]!)
-    out[i] = new MeshStandardMaterial({ map: tileClone(photoTexture(p.photo.src)), roughness: 0.45, metalness: 0, ...opts })
+    out[i] = new MeshStandardMaterial({ map: photoFaceTexture(p.photo.src, L, top ? T : W, finish), roughness: 0.45, metalness: 0, ...opts })
   }
   return out
 }

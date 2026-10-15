@@ -64,8 +64,10 @@ const mm = z.number().finite()
  * `wallRail`) i els sòcols d'alumini per metres (`V45_ITEMS`), additiu.
  * v46: els electrodomèstics del catàleg (Bosch, Balay, Siemens i Teka; categoria «Electrodomèstics», motor `appliance`,
  * `V46_ITEMS`), additiu.
+ * v47: el cos dels electrodomèstics té material (`HardwareItem.material`, per defecte `applianceBodyMaterial`): el vidre
+ * negre dels forns, microones i plaques, «Electrodomèstic negre» (`APPLIANCE_MATERIALS`), additiu.
  */
-export const SETTINGS_VERSION = 46
+export const SETTINGS_VERSION = 47
 
 
 // --- Objectes de referència (foto i editor) ------------------------------------------

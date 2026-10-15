@@ -3,6 +3,7 @@ import { unzip } from "../../core/file/zip"
 import { isJunkPath, polyHavenRefOf, type PolyHavenRef } from "../../core/assets"
 import type { Finish } from "../../core/model"
 import { averageColor, fitSize, flipGreen, isTextureFile, isZipFile, planTextureSet, textureSetKey, toGrayscale, type PbrSlot } from "../../core/photo/pbrMaps"
+import { publicUrl } from "../../lib/publicUrl"
 import { pickedFromList, type PickedFile } from "./machineImport"
 
 /**
@@ -88,7 +89,7 @@ export async function encodeMap(blob: Blob, slot: PbrSlot, opts: { flip?: boolea
 
 /** La imatge d'un `src` d'acabat (data URL o fitxer de l'app). */
 export async function srcBlob(src: string): Promise<Blob> {
-  const r = await fetch(src.startsWith("data:") ? src : `${import.meta.env.BASE_URL}${src}`)
+  const r = await fetch(publicUrl(src))
   if (!r.ok) throw new Error("No s'ha pogut llegir la imatge.")
   return r.blob()
 }

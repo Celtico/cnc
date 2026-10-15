@@ -1,6 +1,7 @@
 import { DEFAULT_CABINET, type CabinetParams } from "./cabinet"
 import { sampleProfile, toNodes } from "./polygon"
 import { aliasMaterialRefs } from "./photoUpgrade"
+import { upgradeApplianceBodies } from "./applianceBody"
 import { PART_AXES as PART_AXES_C, tidyPart, type FreePart } from "./freePart"
 import { DEFAULT_LEGACY_HARDWARE, isLegacyHardware, kitFromLegacy, migrateModuleHardware, type ModuleHardware } from "./hardware"
 import { hungBack } from "./hungBack"
@@ -118,8 +119,9 @@ function legacyPlacements(comp: Composition): ModulePlacement[] {
  * d'esquerra a dreta i les separacions es recalculen perquè tot quedi on era.
  */
 export function normalizeComposition(raw: Composition): Composition {
-  // Noms de material antics («… (foto)», v6 de les preferències): els vigents.
-  const input = aliasMaterialRefs(raw)
+  // Noms de material antics («… (foto)», v6 de les preferències): els vigents. El cos dels electrodomèstics d'abans, el
+  // de la seva família (v3 dels items del catàleg).
+  const input = upgradeApplianceBodies(aliasMaterialRefs(raw))
   // Peces lliures amb decimals llargs (objectes fets abans d'arrodonir): al mm.
   const tidy = input.parts?.map(tidyPart)
   const tidied = tidy && tidy.some((p, i) => p !== input.parts![i]) ? { ...input, parts: tidy } : input

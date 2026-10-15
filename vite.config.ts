@@ -70,10 +70,11 @@ export default defineConfig({
             options: { cacheName: "mobles-textures", expiration: { maxEntries: 120, maxAgeSeconds: 365 * 24 * 3600 }, cacheableResponse: { statuses: [200] } },
           },
           {
-            // Fotos dels electrodomèstics (`appliances/*.webp`, ~0,4 MB en total): la miniatura i la cara vista al 3D.
+            // Fotos dels electrodomèstics (`appliances/*.webp`, ~0,4 MB en total): la miniatura i la cara vista al 3D. «-v2»:
+            // sense el fons blanc (2026-10-15; amb CacheFirst, les d'abans es quedarien a la memòria).
             urlPattern: ({ url }) => url.pathname.startsWith("/appliances/"),
             handler: "CacheFirst",
-            options: { cacheName: "mobles-appliances", expiration: { maxEntries: 60 }, cacheableResponse: { statuses: [200] } },
+            options: { cacheName: "mobles-appliances-v2", expiration: { maxEntries: 60 }, cacheableResponse: { statuses: [200] } },
           },
           {
             // Vistes per les finestres del render (`backdrop/*.jpg`, ~0,5 MB cadascuna).
