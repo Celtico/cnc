@@ -120,16 +120,16 @@ export function ModelSection({ tree, show, isObject, uploading, onPick }: { tree
             <Box key={`mg:${g}`}>
               <GroupRow tree={tree} g={g} open={open} hint={`${members.length} ${members.length === 1 ? "model" : "models"}`} />
               {open && members.map((q) => modelRow(q, 2))}
+              {/* Arrossegant un model d'aquest grup: zona per treure'l (queda solt), just a sota. */}
+              {drag?.kind === "model" && dnd.dragGroup === g && (
+                <UngroupDropZone {...dnd.ungroupZone(() => (drag.multi ? ungroupMulti(comp, drag.multi) : setModelGroup(comp, drag.id, undefined)))}>
+                  <LuUngroup /> Deixa'l aquí per treure'l del grup
+                </UngroupDropZone>
+              )}
             </Box>
           )
         })
       })()}
-      {/* Arrossegant un model d'un grup: zona per treure'l (queda solt). */}
-      {drag?.kind === "model" && models.find((q) => q.id === drag.id)?.group && (
-        <UngroupDropZone {...dnd.ungroupZone(() => (drag.multi ? ungroupMulti(comp, drag.multi) : setModelGroup(comp, drag.id, undefined)))}>
-          <LuUngroup /> Deixa'l aquí per treure'l del grup
-        </UngroupDropZone>
-      )}
     </>
   )
 }

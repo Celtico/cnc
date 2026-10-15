@@ -7,7 +7,7 @@ import { IconChoice, type IconOption } from "../../components/IconChoice"
 import { LuBox, LuCylinder, LuMoveDiagonal2, LuMoveHorizontal, LuMoveVertical, LuScissors, LuShield, LuSpline, LuArrowDownToLine, LuBrickWall, LuBookmark, LuCopy, LuEllipsis, LuMove, LuMoveDiagonal, LuPencilRuler, LuLink, LuPalette, LuTrash2 } from "react-icons/lu"
 import { FoldItem } from "../../components/Fold"
 import { toaster } from "../../components/ui/toaster"
-import { AXIS_INDEX, SECTION_AXES, anchorRef, insertRefCopy, toNodes, newId, type Composition, type RefObject } from "../../core/model"
+import { AXIS_INDEX, SECTION_AXES, anchorRef, insertRefCopy, makeRoomForRef, refBlocksRow, toNodes, newId, type Composition, type RefObject } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { useSettings } from "../settings/SettingsContext"
@@ -164,6 +164,14 @@ export function RefInspector({ comp, id, onChange }: { comp: Composition; id: st
           De costat (X) des de l'esquerra del moble · Alçada (Y) des del terra · Fondària (Z) des de la paret cap endavant.
           {o.onFloor || o.onWall ? " El que és enganxat (Enganxada) no es pot canviar aquí." : ""} Fletxes: 1 mm (Maj: 10 mm); Re Pàg / Av Pàg: fondària.
         </Text>
+        {/* Sobre els mòduls d'una fila (un rentaplats entre dos baixos): fer-li lloc entre ells. */}
+        {refBlocksRow(comp, id) && (
+          <FormRow label="Entre els mòduls" help="Trepitja els mòduls. «Fer-li lloc» el posa entre el mòdul de l'esquerra i el de la dreta (els que tenen el centre a cada costat del seu) i desplaça els de la dreta el que calgui perquè hi càpiga; si ja hi ha prou forat, només s'hi encabeix l'objecte.">
+            <Button size="xs" variant="outline" onClick={() => onChange(makeRoomForRef(comp, id))}>
+              <LuMoveHorizontal /> Fer-li lloc
+            </Button>
+          </FormRow>
+        )}
       </FoldItem>
     </Stack>
   )

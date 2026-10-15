@@ -397,9 +397,9 @@ export function PartActions({ comp, id, onChange, onRemoved, onSelected }: { com
 
 /**
  * Selecció múltiple (Maj + clic; per decisió de l'usuari, 2026-10-14): la posició de tots junts, el que hi ha (tocar-ne un
- * el tria sol) i les accions: agrupar les peces i els models, eliminar-ho tot.
+ * el tria sol) i les accions: agrupar les peces, els models i els mòduls, duplicar-ho (com ⌘D) i eliminar-ho tot.
  */
-export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGroup, onRemove }: { comp: Composition; items: MultiItem[]; onChange: (c: Composition) => void; onSelect: (item: MultiItem) => void; onMove: (dx: number, dy: number, dz: number) => void; onGroup: () => void; onRemove: () => void }) {
+export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGroup, onDuplicate, onRemove }: { comp: Composition; items: MultiItem[]; onChange: (c: Composition) => void; onSelect: (item: MultiItem) => void; onMove: (dx: number, dy: number, dz: number) => void; onGroup: () => void; onDuplicate: () => void; onRemove: () => void }) {
   const { settings } = useSettings()
   // L'espai de «Repartir amb aquest espai» (es recorda mentre l'inspector és obert).
   const [gap, setGap] = useState(0)
@@ -425,8 +425,9 @@ export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGrou
   }
   const size = [0, 1, 2].map((a) => Math.round(b.max[a]! - b.min[a]!))
   const nameOf = (x: MultiItem) => (x.kind === "part" ? comp.parts?.find((p) => p.id === x.id)?.name : x.kind === "model" ? comp.models?.find((m) => m.id === x.id)?.name : x.kind === "module" ? comp.modules.find((m) => m.id === x.id)?.name : comp.references.find((r) => r.id === x.id)?.name) ?? "?"
-  const groupable = items.some((x) => x.kind === "part" || x.kind === "model")
-  const group = common(objs.filter((x) => x.kind === "part" || x.kind === "model").map(({ o }) => (o as { group?: string }).group ?? ""))
+  const groupable = items.some((x) => x.kind !== "ref")
+  // El grup dels mòduls és el del mòdul (no el de l'objecte de mides que se'n fa a `objs`).
+  const group = common(items.filter((x) => x.kind !== "ref").map((x) => (x.kind === "module" ? comp.modules.find((m) => m.id === x.id)?.group : x.kind === "part" ? comp.parts?.find((p) => p.id === x.id)?.group : comp.models?.find((m) => m.id === x.id)?.group) ?? ""))
   return (
     <Stack gap={0}>
       <FoldItem id="multi-position" title="Posició" icon={LuMove} badge={size.join(" × ")}>
@@ -508,6 +509,9 @@ export function MultiInspector({ comp, items, onChange, onSelect, onMove, onGrou
           ))}
         </Stack>
         <HStack gap={2}>
+          <Button size="xs" variant="outline" onClick={onDuplicate}>
+            <LuCopy /> Duplicar
+          </Button>
           <Button size="xs" variant="outline" colorPalette="red" onClick={onRemove}>
             <LuTrash2 /> Eliminar
           </Button>

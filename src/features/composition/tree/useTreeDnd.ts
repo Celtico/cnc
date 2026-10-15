@@ -87,6 +87,8 @@ export function useTreeDnd({ comp, selection, onChange, openGroup }: { comp: Com
       },
     }
   }
+  // El grup de la fila que s'arrossega: a sota dels seus elements surt la zona «Treure del grup» (`UngroupDropZone`).
+  const dragGroup = !drag ? undefined : drag.kind === "part" ? parts.find((q) => q.id === drag.id)?.group : drag.kind === "model" ? models.find((q) => q.id === drag.id)?.group : drag.kind === "module" ? comp.modules.find((q) => q.id === drag.id)?.group : undefined
   // La zona per treure del grup l'element arrossegat (`UngroupDropZone`): `result`, la composició en deixar-l'hi.
   const ungroupZone = (result: () => Composition) => ({
     active: over?.id === "ungroup",
@@ -103,7 +105,7 @@ export function useTreeDnd({ comp, selection, onChange, openGroup }: { comp: Com
       setOver(null)
     },
   })
-  return { drag, dnd, groupDnd, ungroupZone }
+  return { drag, dragGroup, dnd, groupDnd, ungroupZone }
 }
 
 export type TreeDnd = ReturnType<typeof useTreeDnd>

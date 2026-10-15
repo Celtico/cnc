@@ -8,11 +8,12 @@ import { zoneIcon } from "../zoneIcons"
 import { zoneLabel } from "../zoneLabel"
 import type { Selection } from "../StructureTree"
 import { GroupRow } from "./GroupRow"
+import { UngroupDropZone } from "./UngroupDropZone"
 import type { TreeCtx } from "./treeCtx"
 
 /**
  * Les files dels mòduls (a terra i, si n'hi ha, penjats a la paret), amb els compartiments del desplegat (`openId`, un
- * alhora) i els grups de mòduls.
+ * alhora) i els grups de mòduls (arrossegant-ne un d'un grup, a sota hi surt la zona per treure'l).
  */
 export function ModuleRows({ tree, openId, toggle }: { tree: TreeCtx; openId: string | null; toggle: (id: string) => void }) {
   const { comp, selection, onSelect, onChange, dnd, flagsOf, inMultiSel, openGroups, openGroup } = tree
@@ -133,6 +134,12 @@ export function ModuleRows({ tree, openId, toggle }: { tree: TreeCtx; openId: st
             <Box key={`mg:${row}:${g}`}>
               <GroupRow tree={tree} g={g} open={open} hint={`${members.length} ${members.length === 1 ? "mòdul" : "mòduls"}`} />
               {open && members.map((y) => moduleRow(y, inRow.indexOf(y), 2))}
+              {/* Arrossegant un mòdul d'aquest grup: zona per treure'l (queda solt, al mateix lloc), just a sota. */}
+              {dnd.drag?.kind === "module" && dnd.dragGroup === g && (
+                <UngroupDropZone {...dnd.ungroupZone(() => ungroupMulti(comp, dnd.drag?.multi ?? [{ kind: "module", id: dnd.drag!.id }]))}>
+                  <LuUngroup /> Deixa'l aquí per treure'l del grup
+                </UngroupDropZone>
+              )}
             </Box>
           )
         })

@@ -1,16 +1,11 @@
-import { z } from "zod"
 import {
   anchorRef,
   freeX,
   modulePlacements,
-  ModelObjectSchema,
-  ModuleSchema,
   newId,
   partOffset,
-  RefObjectSchema,
   resolveParts,
   rowOf,
-  ZoneSchema,
   type Composition,
   type ModelObject,
   type Module,
@@ -20,34 +15,9 @@ import {
   type Zone,
 } from "./composition"
 import { cloneZone, removeZone, updateZone } from "./zoneOps"
-import { FreePartSchema, partSize, partsBox, type FreePart } from "./freePart"
+import { partSize, partsBox, type FreePart } from "./freePart"
 import { modelFootprint } from "./models"
 import { materialCategory, type MaterialPref } from "./settings"
-
-/** Porta-retalls de l'editor (mòdul, objecte, compartiment, peça lliure o model 3D). */
-export type EditClip =
-  | { kind: "module"; data: Module; label: string }
-  | { kind: "ref"; data: RefObject; label: string }
-  | { kind: "zone"; data: Zone; label: string }
-  | { kind: "part"; data: FreePart; label: string }
-  | { kind: "model"; data: ModelObject; label: string }
-
-const ClipSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("module"), data: ModuleSchema, label: z.string() }),
-  z.object({ kind: z.literal("ref"), data: RefObjectSchema, label: z.string() }),
-  z.object({ kind: z.literal("zone"), data: ZoneSchema, label: z.string() }),
-  z.object({ kind: z.literal("part"), data: FreePartSchema, label: z.string() }),
-  z.object({ kind: z.literal("model"), data: ModelObjectSchema, label: z.string() }),
-])
-
-/**
- * Porta-retalls llegit de localStorage (pot ser d'una altra versió de l'app o estar malmès): validat amb els esquemes
- * del model. `null` si no ho és (no s'enganxa res que després no es podria desar).
- */
-export function parseClip(raw: unknown): EditClip | null {
-  const r = ClipSchema.safeParse(raw)
-  return r.success ? (r.data as EditClip) : null
-}
 
 /**
  * Còpia d'un mòdul just després de `afterId` (o al final). Una illa («Al terra» amb X pròpia) es posa al costat de
@@ -154,7 +124,7 @@ export function moveAllBy(comp: Composition, dx: number): Composition {
 }
 
 /**
- * Arrossegar per ordenar: posa el mòdul `id` just abans (o després) de `targetId`. Només
+ * Arrossegar per ordenar: posa el mòdul `id` just abans (o després) de `targetId` i n'agafa el grup. Només
  * dins de la mateixa fila (a terra / penjats); si són de files diferents no fa res.
  */
 export function reorderModule(comp: Composition, id: string, targetId: string, after: boolean): Composition {
@@ -164,7 +134,11 @@ export function reorderModule(comp: Composition, id: string, targetId: string, a
   if (!m || !t || rowOf(m) !== rowOf(t)) return comp
   const rest = comp.modules.filter((x) => x.id !== id)
   const at = rest.indexOf(t) + (after ? 1 : 0)
-  return { ...comp, modules: [...rest.slice(0, at), m, ...rest.slice(at)] }
+  // Deixat al costat d'un mòdul, n'agafa el grup (com `reorderPart`): així s'entra, se surt o es canvia de grup arrossegant.
+  const { group: _g, ...plain } = m
+  void _g
+  const moved = t.group ? { ...plain, group: t.group } : plain
+  return { ...comp, modules: [...rest.slice(0, at), moved, ...rest.slice(at)] }
 }
 
 /** Arrossegar per ordenar els objectes de referència. */
@@ -231,14 +205,6 @@ export function movePartToGroup(comp: Composition, id: string, group: string): C
   return { ...comp, parts: [...rest.slice(0, at), { ...r, group }, ...rest.slice(at)] }
 }
 
-/**
- * Caixa d'un grup: les seves peces lliures i els seus models 3D (el mateix nom de grup; per decisió de l'usuari,
- * 2026-10-14), en coordenades de la composició. Sense res, `null`.
- */
-function groupBox(comp: Composition, group: string): { min: [number, number, number]; max: [number, number, number] } | null {
-  return multiBox(comp, groupItems(comp, group))
-}
-
 /** Els elements d'un grup: peces lliures, models 3D i mòduls amb aquell nom de grup. */
 export function groupItems(comp: Composition, group: string): MultiItem[] {
   return [
@@ -258,18 +224,6 @@ export function groupNames(comp: Composition): string[] {
 /** Mou tot un grup (peces i models, mm). No deixa que res quedi sota terra. */
 export function moveGroupBy(comp: Composition, group: string, dx: number, dy: number, dz: number): Composition {
   return moveMultiBy(comp, groupItems(comp, group), dx, dy, dz)
-}
-
-/** Duplica un grup sencer al costat (nom nou), amb les seves peces i els seus models. */
-export function duplicateGroup(comp: Composition, group: string): { comp: Composition; group: string } {
-  const b = groupBox(comp, group)
-  const taken = new Set(groupNames(comp))
-  let name = `${group} (còpia)`
-  for (let n = 2; taken.has(name); n++) name = `${group} (còpia ${n})`
-  const dx = b ? b.max[0] - b.min[0] + 50 : 50
-  const parts = (comp.parts ?? []).filter((p) => p.group === group).map((p) => ({ ...structuredClone(p), id: newId("p"), group: name, x: p.x + dx }))
-  const models = (comp.models ?? []).filter((m) => m.group === group).map((m) => ({ ...structuredClone(m), id: newId("g"), group: name, x: m.x + dx }))
-  return { comp: { ...comp, parts: [...(comp.parts ?? []), ...parts], ...(models.length ? { models: [...(comp.models ?? []), ...models] } : {}) }, group: name }
 }
 
 /** Nom lliure per a un grup nou («Grup 1», «Grup 2»…). */

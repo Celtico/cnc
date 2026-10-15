@@ -35,7 +35,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   (`LuPanelLeftClose/Open` · `LuPanelRightClose/Open`). L'app ocupa just la finestra; cada panell té la seva barra de
   desplaçament fina amb lloc reservat (`scrollbarGutter: stable`). **Mòbil**: visor a dalt i pestanyes `Estructura` ·
   `Propietats` (triar a l'arbre porta a Propietats); «Ampliar el visor».
-- **Una sola selecció** (`Selection`), sincronitzada entre arbre, 3D i alçat. **Maj + clic** (per decisió de l'usuari, 2026-10-14, com Figma i el Finder): **a l'arbre, el tram** del darrer triat a aquest, del mateix tipus i en l'ordre de l'arbre (`treeOrder`, `rangeAnchor`; també als Ambients, per apartat, `sectionOrder`); Maj + clic a un que ja és triat el treu, només aquell; **⌘/Ctrl + clic** a l'arbre, i Maj o ⌘/Ctrl + clic al 3D i al plànol, afegeix o treu peces lliures, models 3D, objectes de referència i **mòduls** (els mòduls es mouen pel camí de la nansa, `moveModuleBy`; Material = el del cos, només taulers; Mides = les del cos; s'eliminen amb `removeModule`; no fan grups) a una **selecció múltiple** (`{ kind: "multi", items }`, `MultiItem`, `toggleMulti`; es llegeix la tecla del `pointerdown`): una caixa amb el gizmo els mou tots junts (`CabinetViewer selectedSet`/`onMoveSet`, `moveMultiBy`), també les fletxes del teclat; Supr els elimina (`removeMulti`); l'inspector (`MultiInspector`; **un grup triat fa servir el mateix inspector** amb els seus elements, per decisió de l'usuari, 2026-10-14, també als Ambients amb el nom editable) diu la posició de tots, les **propietats comunes** (el valor si tots el tenen igual, si no «Diversos» i el que hi posis va a tots: Material —`setMultiMaterial`, a les peces com el seu inspector—; amb un sol tipus, Mides —Ample · Alt · Gruix o Fondària, `setMultiSize`— i, als models, el Gir, `setMultiRot`), **Alineació** (com Figma: per X, Y i Z, a l'inici, al mig o al final de la caixa de tots, `alignMulti`; amb tres o més, «Repartir» amb el mateix espai, `distributeMulti`; amb dos o més, «Espai entre ells» (mm, a dalt) i el darrer botó de cada fila els posa a aquest espai l'un de l'altre, `spaceMulti`; icones `LuAlign…`), el **Grup** de tots (Sense grup · els que hi ha · «+ Grup nou», com el d'una peça; `groupMulti`, `ungroupMulti`; dreceres ⌘G grup nou i ⇧⌘G fora del grup, també amb una peça, un model o un grup triats); **arrossegar a l'arbre** una fila triada arrossega tots els triats: sobre un grup hi entren, al costat d'un element s'hi posen i n'agafen el grup, i a «Treure del grup» en surten (`StructureTree` `drag.multi`), la llista (tocar-ne un el tria sol) i «Eliminar». Amb algun bloquejat, no es mouen. Controls nous: decideix a quin nivell pertanyen
+- **Una sola selecció** (`Selection`), sincronitzada entre arbre, 3D i alçat. **Maj + clic** (per decisió de l'usuari, 2026-10-14, com Figma i el Finder): **a l'arbre, el tram** del darrer triat a aquest, del mateix tipus i en l'ordre de l'arbre (`treeOrder`, `rangeAnchor`; també als Ambients, per apartat, `sectionOrder`); Maj + clic a un que ja és triat el treu, només aquell; **⌘/Ctrl + clic** a l'arbre, i Maj o ⌘/Ctrl + clic al 3D i al plànol, afegeix o treu peces lliures, models 3D, objectes de referència i **mòduls** (els mòduls es mouen pel camí de la nansa, `moveModuleBy`; Material = el del cos, només taulers; Mides = les del cos; s'eliminen amb `removeModule`; també entren al Grup de tots) a una **selecció múltiple** (`{ kind: "multi", items }`, `MultiItem`, `toggleMulti`; es llegeix la tecla del `pointerdown`): una caixa amb el gizmo els mou tots junts (`CabinetViewer selectedSet`/`onMoveSet`, `moveMultiBy`), també les fletxes del teclat; Supr els elimina (`removeMulti`); l'inspector (`MultiInspector`; **un grup triat fa servir el mateix inspector** amb els seus elements, per decisió de l'usuari, 2026-10-14, també als Ambients amb el nom editable) diu la posició de tots, les **propietats comunes** (el valor si tots el tenen igual, si no «Diversos» i el que hi posis va a tots: Material —`setMultiMaterial`, a les peces com el seu inspector—; amb un sol tipus, Mides —Ample · Alt · Gruix o Fondària, `setMultiSize`— i, als models, el Gir, `setMultiRot`), **Alineació** (com Figma: per X, Y i Z, a l'inici, al mig o al final de la caixa de tots, `alignMulti`; amb tres o més, «Repartir» amb el mateix espai, `distributeMulti`; amb dos o més, «Espai entre ells» (mm, a dalt) i el darrer botó de cada fila els posa a aquest espai l'un de l'altre, `spaceMulti`; icones `LuAlign…`), el **Grup** de tots (Sense grup · els que hi ha · «+ Grup nou», com el d'una peça; `groupMulti`, `ungroupMulti`; dreceres ⌘G grup nou i ⇧⌘G fora del grup, també amb una peça, un model o un grup triats); **arrossegar a l'arbre** una fila triada arrossega tots els triats: sobre un grup hi entren, al costat d'un element s'hi posen i n'agafen el grup, i a «Treure del grup» en surten (`StructureTree` `drag.multi`), la llista (tocar-ne un el tria sol) i «Eliminar». Amb algun bloquejat, no es mouen. Controls nous: decideix a quin nivell pertanyen
   i posa'ls a l'inspector d'aquell nivell.
 - **Estructura** (`composition/StructureTree.tsx`): moble › mòduls (agrupats per fila) › compartiments, peces lliures,
   objectes de referència i models 3D. L'arrel de cada mòdul surt com a **«Interior · …»** (`zoneLabel(z, { root })`; «Interior ·
@@ -62,8 +62,10 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   si són actius i a les pantalles tàctils. Test `model/viewFlags.test.ts`.
   Menú ⋯ per afegir/duplicar/moure/eliminar (manté «Moure amunt/avall», «Moure a l'esquerra/dreta»). **Arrossegar per
   ordenar** (`reorderModule`, `reorderRef`): mòduls dins de la seva fila i objectes; una línia marca on cau. Arrossegar una
-  peça lliure sobre la fila d'un grup la hi posa; al costat d'una peça n'agafa el grup; la zona «Treure del grup» surt
-  mentre s'arrossega una d'un grup.
+  peça lliure, un model o un **mòdul** sobre la fila d'un grup l'hi posa; al costat d'un altre del seu tipus n'agafa el grup
+  (també els mòduls, `reorderModule`, des del 2026-10-15: abans un mòdul deixat fora del grup s'hi quedava); la zona
+  «Treure del grup» surt **just a sota del grup** mentre se n'arrossega un element (peces, models i mòduls; el mòdul queda
+  solt al mateix lloc). També «Treure del grup» al menú ⋯ de cada element.
 - **Propietats** del que hi ha seleccionat i **només d'això**, en seccions plegables amb **una sola oberta alhora** (per decisió de l'usuari, 2026-10-13, i a tota l'app des del 2026-10-14: `FoldGroup` a l'inspector, recordada a la sessió `mobles:inspector-open`; les subseccions `size="sm"` de dins, una oberta entre elles; vegeu UI):
   - Moble: Resum (i avisos de fusteria), Encaixos (si alguna peça en fa),
     Materials de tot el moble (aplica a tots els mòduls), Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
@@ -189,7 +191,14 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     fixades (al terra: Y; a la paret: Z) i la que mira a la càmera (`useFacingAxis`, |cos| > 0,97: vistes de costat o de dalt). `frontRaycast`: les fletxes es
     poden agafar encara que l'objecte sigui dins d'un altre, i el seu clic no tria el que hi ha davant. Per a objectes de
     referència (`RefGhost`), peces lliures, grups i models 3D. Imant de 15 mm a les vores dels mòduls, altres objectes, terra
-    i paret (Alt: sense); etiqueta amb la posició mentre s'arrossega; es desa en deixar-lo anar (un pas de desfer). Grups de
+    i paret (Alt: sense); etiqueta amb la posició mentre s'arrossega; es desa en deixar-lo anar (un pas de desfer).
+    **Objecte de referència entre mòduls** (un rentaplats entre dos baixos; des del 2026-10-15): un obstacle deixat sobre
+    els mòduls d'una fila (`refBlocksRow`) avisa amb l'acció **«Fer-li lloc»** (i el mateix botó a Objecte › Posició quan
+    els trepitja): `makeRoomForRef` el posa just després del mòdul de l'esquerra (els que tenen el centre a l'esquerra del
+    seu) i desplaça el de la dreta (i amb ell tota la resta de la fila: `gapBefore`) el que calgui perquè hi càpiga; si ja
+    hi ha prou forat, només s'hi encabeix l'objecte. Es fa a cada fila on és (a terra i/o penjats, segons la seva alçada i
+    fondària); les illes i els objectes que tallen no compten. És un pas: després els mòduls i l'objecte van per separat
+    (no és automàtic perquè un obstacle també serveix per veure si xoca). Grups de
     peces: caixa del grup amb el gizmo; el primer clic selecciona el grup i el segon la peça.
   - **Mòduls**: nansa ↔ (`MoveHandle`) uns píxels per sobre de l'aresta de dalt (en un mòdul alt que no hi cap, baixa fins a
     sota de la barra del visor); **sense els + als costats** (per decisió de l'usuari, 2026-10-08: els mòduls s'afegeixen amb el + de l'arbre; `AddButton`/`onAddModule` queden sense ús); arrossegar-la el mou a la
@@ -209,8 +218,18 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
 - **Desfer/refer** (⌘Z, ⇧⌘Z, Ctrl Y; vegeu «Desfer/refer comú» a Mòduls compartits): 50 passos, canvis a menys de
   500 ms = un pas (escriure «1180», arrossegar el gizmo); cada càmera desada també és un pas; la miniatura en queda fora. No als camps de text
   lliure ni dins d'un diàleg ni amb un diàleg modal obert (amb l'editor de perfils obert, ⌘Z desfeia el moble del darrere).
-- **Teclat**: Ctrl/⌘ C · X · V · D i Supr per al mòdul, l'objecte, el model o el compartiment (`core/model/editOps.ts`);
-  per a un ferratge col·locat, Ctrl/⌘ D (duplicar) i Supr (sense porta-retalls). El
+- **Teclat**: Ctrl/⌘ C · X · V · D i Supr per al mòdul, l'objecte, el model, el compartiment, **el grup i la selecció
+  múltiple** (`core/model/editOps.ts`, `clipOps.ts`; `features/editor/pasteClip.ts` `clipOf`/`pasteClip`, el mateix camí
+  per al «Duplicar» de l'inspector del grup i de la selecció múltiple);
+  per a un ferratge col·locat, Ctrl/⌘ D (duplicar) i Supr (sense porta-retalls). **Grups** (des del 2026-10-15; abans un
+  grup triat no es copiava ni es duplicava i «Duplicar el grup» no copiava els mòduls): un grup triat es copia sencer
+  (`copyGroup`, porta-retalls `items`) i s'enganxa o es duplica com un **grup nou** («G (còpia)», `insertItemsCopy`,
+  `duplicateGroup`) amb els seus mòduls **a continuació a la seva fila** (després del mòdul triat, si n'hi ha), les peces
+  enganxades a un mòdul del grup a la còpia del mòdul i la resta al costat. Duplicar un element d'un grup en fa la còpia
+  al mateix grup; **enganxar** va al grup triat o al de l'element triat (mòdul, peça o model), i si no n'hi ha, solt
+  (decisió: així ⌘C fora i ⌘V amb un grup triat el posa dins); la selecció múltiple es duplica amb cada element al seu
+  grup. El que el moble no admet (mòduls a un de només peces, models fora dels objectes, objectes de referència als
+  objectes) es queda fora i s'avisa. El
   porta-retalls és a localStorage (`mobles:clipboard`, entre mobles), validat amb zod (`parseClip`); una peça enganxada a un
   mòdul d'un altre moble queda solta, una illa es duplica al costat i no s'enganxen mòduls a un moble només de peces (`lliure`) o objecte. Ctrl/⌘ D
   en un compartiment fa `duplicateZone`. **Eliminar un mòdul** = `removeModule`: peces enganxades soltes al mateix lloc,

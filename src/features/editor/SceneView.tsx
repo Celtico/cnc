@@ -1,6 +1,7 @@
 import { CabinetViewer } from "../../components/viewer/CabinetViewer"
 import type { SceneGetter } from "../../components/viewer/render/RenderDialog"
-import { groupItems, moveAllBy, moveModuleBy, moveMultiBy, type Composition, type Module, type Settings } from "../../core/model"
+import { anchorRef, groupItems, makeRoomForRef, moveAllBy, moveModuleBy, moveMultiBy, refBlocksRow, type Composition, type Module, type Settings } from "../../core/model"
+import { toaster } from "../../components/ui/toaster"
 import type { Selection } from "../composition/StructureTree"
 import type { CompositionEdits } from "./editorCommands"
 import type { EditorCamera } from "./useEditorCamera"
@@ -48,6 +49,19 @@ export function SceneView({
   const { viewDir, fitKey, setFramed, cameraRef, saveCamera, cameraGoto } = camera
   const { selectFrom3D, selectPartFrom3D, selectModelFrom3D } = picks
   const { moveGroup, movePart, moveModel, moveRef } = edits
+  // Un objecte de referència deixat sobre els mòduls d'una fila: s'avisa i es pot fer-li lloc entre ells (`makeRoomForRef`).
+  const dropRef = (id: string, pos: { x: number; y: number; z: number }) => {
+    moveRef(id, pos)
+    const moved = { ...comp, references: comp.references.map((r) => (r.id === id ? anchorRef({ ...r, ...pos }) : r)) }
+    if (!refBlocksRow(moved, id)) return
+    const name = comp.references.find((r) => r.id === id)?.name ?? "L'objecte"
+    toaster.create({
+      title: `«${name}» trepitja els mòduls`,
+      description: "«Fer-li lloc» el posa entre els mòduls i desplaça els de la dreta perquè hi càpiga.",
+      type: "info",
+      action: { label: "Fer-li lloc", onClick: () => setComp((c) => makeRoomForRef(c, id)) },
+    })
+  }
   return (
     <CabinetViewer
       sceneFinish={comp.scene}
@@ -79,7 +93,7 @@ export function SceneView({
       initialCamera={cameraRef.current}
       onCameraChange={saveCamera}
       cameraGoto={cameraGoto}
-      onMoveRef={selectionLocked ? undefined : (id, pos) => (id.startsWith("part:") ? movePart(id.slice(5), pos) : moveRef(id, pos))}
+      onMoveRef={selectionLocked ? undefined : (id, pos) => (id.startsWith("part:") ? movePart(id.slice(5), pos) : dropRef(id, pos))}
       hardware={hardware}
       onSceneAccess={onSceneAccess}
       parts={solidParts}

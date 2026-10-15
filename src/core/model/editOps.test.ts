@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { defaultModule, modulePlacements, resolveParts, type Composition, type Module, type Run } from "./composition"
+import { duplicateGroup, parseClip } from "./clipOps"
 import {
-  duplicateGroup,
   insertModelCopy,
   insertModuleCopy,
   insertPartCopy,
@@ -9,7 +9,6 @@ import {
   moveAllBy,
   moveModuleBy,
   movePartToGroup,
-  parseClip,
   pasteZone,
   removeModule,
   removePartFromGroup,
@@ -80,7 +79,7 @@ describe("arrossegar per ordenar", () => {
 })
 
 describe("grups de peces lliures", async () => {
-  const { moveGroupBy, duplicateGroup, newGroupName } = await import("./editOps")
+  const { moveGroupBy, newGroupName } = await import("./editOps")
   const p = (id: string, x: number, group?: string) => ({ id, name: id, orient: "front" as const, w: 100, h: 100, thickness: 19, material: "M", x, y: 10, z: 0, ...(group ? { group } : {}) })
   const comp = { modules: [], references: [], parts: [p("a", 0, "G"), p("b", 200, "G"), p("c", 500)] }
   it("es mouen juntes i no baixen de terra", () => {
@@ -96,7 +95,7 @@ describe("grups de peces lliures", async () => {
 })
 
 describe("grups amb models 3D", async () => {
-  const { moveGroupBy, duplicateGroup, newGroupName, removeGroup, renameGroup, reorderModel, setModelGroup, groupNames } = await import("./editOps")
+  const { moveGroupBy, newGroupName, removeGroup, renameGroup, reorderModel, setModelGroup, groupNames } = await import("./editOps")
   const p = { id: "a", name: "a", orient: "front" as const, w: 100, h: 100, thickness: 19, material: "M", x: 0, y: 10, z: 0, group: "G" }
   const m = (id: string, x: number, group?: string) => ({ id, name: id, src: "fern", x, y: 0, z: 0, w: 200, h: 300, d: 200, rot: 0, ...(group ? { group } : {}) })
   const comp = { modules: [], references: [], parts: [p], models: [m("m1", 300, "G"), m("m2", 900)] }

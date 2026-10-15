@@ -18,6 +18,7 @@ import { InspectorAlerts } from "./InspectorAlerts"
 import { InspectorHeader } from "./InspectorHeader"
 import { ModulePositionFields, ModuleSections, SceneFinishFields, ZoneSection } from "./InspectorSections"
 import type { SetComp } from "./useEditorDoc"
+import { clipOf, pasteClip } from "./pasteClip"
 import type { SceneData } from "./useSceneData"
 
 /**
@@ -76,6 +77,11 @@ export function EditorInspector({
   const totalHoles = panels.reduce((n, p) => n + p.holes.length, 0)
   // El mòdul triat és el de darrere d'una illa (es col·loca sol): la Posició ho diu i no en mostra els camps.
   const islandBack = module ? activeIslands(comp).find((i) => i.back === module.id) : undefined
+  // «Duplicar» d'un grup o de la selecció múltiple: el mateix camí que ⌘D.
+  const duplicateSelection = () => {
+    const clip = clipOf(comp, selection, zone)
+    if (clip) pasteClip({ comp, setComp, select, selection, module, updateModule }, clip, true)
+  }
 
   // Sense separació entre blocs: les seccions plegables van enganxades (totes amb la
   // mateixa alçada de capçalera); els elements que no són secció porten el seu marge.
@@ -164,6 +170,7 @@ export function EditorInspector({
             setComp(groupMulti(comp, selection.items, g))
             select({ kind: "group", id: g })
           }}
+          onDuplicate={duplicateSelection}
           onRemove={() => {
             setComp(removeMulti(comp, selection.items))
             select({ kind: "moble" })
@@ -185,6 +192,7 @@ export function EditorInspector({
                 setComp(groupMulti(comp, items, g))
                 select({ kind: "group", id: g })
               }}
+              onDuplicate={duplicateSelection}
               onRemove={() => {
                 setComp(removeGroup(comp, selection.id))
                 select({ kind: "moble" })

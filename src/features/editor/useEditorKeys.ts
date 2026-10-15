@@ -1,10 +1,10 @@
 import { useEffect } from "react"
 import { toaster } from "../../components/ui/toaster"
-import { compositionKind, deleteZone, duplicateZone, groupItems, groupMulti, insertModelCopy, insertModuleCopy, insertPartCopy, insertRefCopy, moveMultiBy, newGroupName, parentOf, partsOnlyKind, pasteZone, removeGroup, removeModule, removeMulti, ungroupMulti, type Composition, type Module, type MultiItem, type Zone } from "../../core/model"
+import { deleteZone, duplicateZone, groupItems, groupMulti, moveMultiBy, newGroupName, parentOf, removeGroup, removeModule, removeMulti, ungroupMulti, type Composition, type Module, type MultiItem, type Zone } from "../../core/model"
 import type { Selection } from "../composition/StructureTree"
-import { zoneLabel } from "../composition/zoneLabel"
 import { useLatest } from "../../lib/useLatest"
 import { readClip, writeClip, type Clip } from "./clipboard"
+import { clipOf, pasteClip } from "./pasteClip"
 import type { CompositionEdits } from "./editorCommands"
 import type { SetComp } from "./useEditorDoc"
 
@@ -39,7 +39,7 @@ export function useEditorKeys({
 }) {
   const { updateModule, moveGroup, movePart, moveModel, moveRef } = edits
   // Fletxes amb un objecte seleccionat: ←→ X, ↑↓ Y, Re Pàg / Av Pàg Z. 1 mm; amb Maj, 10 mm.
-  // Copiar, enganxar, duplicar i esborrar amb el teclat (mòduls, objectes i compartiments).
+  // Copiar, enganxar, duplicar i esborrar amb el teclat (mòduls, objectes, compartiments, grups i la selecció múltiple).
   // El porta-retalls es desa a localStorage: es pot enganxar en un altre moble.
   const editKeysRef = useLatest((e: KeyboardEvent) => {
     if (e.defaultPrevented) return
@@ -62,67 +62,8 @@ export function useEditorKeys({
       }
       return
     }
-    const current = (): Clip | null => {
-      if (selection.kind === "module") {
-        const m = comp.modules.find((x) => x.id === selection.id)
-        return m ? { kind: "module", data: m, label: m.name } : null
-      }
-      if (selection.kind === "ref") {
-        const r = comp.references.find((x) => x.id === selection.id)
-        return r ? { kind: "ref", data: r, label: r.name } : null
-      }
-      if (selection.kind === "part") {
-        const r = comp.parts?.find((x) => x.id === selection.id)
-        return r ? { kind: "part", data: r, label: r.name } : null
-      }
-      if (selection.kind === "model") {
-        const g = comp.models?.find((x) => x.id === selection.id)
-        return g ? { kind: "model", data: g, label: g.name } : null
-      }
-      if (selection.kind === "zone" && zone) return { kind: "zone", data: zone, label: zoneLabel(zone) }
-      return null
-    }
-    const paste = (clip: Clip) => {
-      if (clip.kind === "module") {
-        if (partsOnlyKind(compositionKind(comp))) {
-          toaster.create({ title: "Aquí no es poden enganxar mòduls", description: "Un flat-pack o un objecte només té peces lliures.", type: "info" })
-          return
-        }
-        const res = insertModuleCopy(comp, clip.data, selection.kind === "module" ? selection.id : selection.kind === "zone" ? selection.moduleId : undefined)
-        setComp(res.comp)
-        select({ kind: "module", id: res.id })
-      } else if (clip.kind === "ref") {
-        if (compositionKind(comp) === "objecte") {
-          toaster.create({ title: "Aquí no es poden enganxar objectes de referència", description: "Un objecte es fa amb peces lliures (per tallar, una peça amb l'efecte «Talla»).", type: "info" })
-          return
-        }
-        const res = insertRefCopy(comp, clip.data)
-        setComp(res.comp)
-        select({ kind: "ref", id: res.id })
-      } else if (clip.kind === "part") {
-        const res = insertPartCopy(comp, clip.data)
-        setComp(res.comp)
-        select({ kind: "part", id: res.id })
-      } else if (clip.kind === "model") {
-        if (compositionKind(comp) !== "objecte") {
-          toaster.create({ title: "Aquí no es poden enganxar models 3D", description: "Els models 3D van als objectes (sofàs, plantes…), no als mobles.", type: "info" })
-          return
-        }
-        const res = insertModelCopy(comp, clip.data)
-        setComp(res.comp)
-        select({ kind: "model", id: res.id })
-      } else {
-        // Un compartiment s'enganxa dins del compartiment (o del mòdul) seleccionat.
-        const target = selection.kind === "zone" ? { m: module, zoneId: selection.zoneId } : selection.kind === "module" ? { m: comp.modules.find((x) => x.id === selection.id), zoneId: undefined } : null
-        if (!target?.m) {
-          toaster.create({ title: "Tria on enganxar el compartiment", description: "Selecciona un compartiment o un mòdul.", type: "info" })
-          return
-        }
-        const zid = target.zoneId ?? target.m.root.id
-        updateModule({ ...target.m, root: pasteZone(target.m.root, zid, clip.data) })
-        select({ kind: "zone", moduleId: target.m.id, zoneId: zid })
-      }
-    }
+    const current = () => clipOf(comp, selection, zone)
+    const paste = (clip: Clip, duplicate = false) => pasteClip({ comp, setComp, select, selection, module, updateModule }, clip, duplicate)
     // L'«Interior» (l'arrel del mòdul) no es retalla, no es duplica ni s'elimina (vegeu `remove`).
     const interior = selection.kind === "zone" && module && selection.zoneId === module.root.id
     if (mod && (key === "c" || key === "x")) {
@@ -168,7 +109,7 @@ export function useEditorKeys({
       const clip = current()
       if (!clip) return
       e.preventDefault()
-      paste(clip)
+      paste(clip, true)
       return
     }
     if (!mod && (e.key === "Delete" || e.key === "Backspace")) {

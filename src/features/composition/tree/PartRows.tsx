@@ -7,7 +7,7 @@ import { GroupRow } from "./GroupRow"
 import { UngroupDropZone } from "./UngroupDropZone"
 import type { TreeCtx } from "./treeCtx"
 
-/** Les files de les peces lliures (soltes o en grups plegables) i, arrossegant-ne una d'un grup, la zona per treure-la'n. */
+/** Les files de les peces lliures (soltes o en grups plegables) i, arrossegant-ne una d'un grup, la zona per treure-la'n (a sota del grup). */
 export function PartRows({ tree }: { tree: TreeCtx }) {
   const { comp, selection, onSelect, onChange, dnd, flagsOf, inMultiSel, openGroups, openGroup } = tree
   const { drag } = dnd
@@ -85,16 +85,16 @@ export function PartRows({ tree }: { tree: TreeCtx }) {
             <Box key={`g:${g}`}>
               <GroupRow tree={tree} g={g} open={open} hint={`${members.length} ${members.length === 1 ? "peça" : "peces"}`} />
               {open && members.map((q) => partRow(q, 2))}
+              {/* Arrossegant una peça d'aquest grup: zona per treure-la'n (queda solta), just a sota. */}
+              {drag?.kind === "part" && dnd.dragGroup === g && (
+                <UngroupDropZone {...dnd.ungroupZone(() => (drag.multi ? ungroupMulti(comp, drag.multi) : removePartFromGroup(comp, drag.id)))}>
+                  <LuUngroup /> Deixa-la aquí per treure-la del grup
+                </UngroupDropZone>
+              )}
             </Box>
           )
         })
       })()}
-      {/* Arrossegant una peça d'un grup: zona per treure-la'n (queda solta). */}
-      {drag?.kind === "part" && parts.find((q) => q.id === drag.id)?.group && (
-        <UngroupDropZone {...dnd.ungroupZone(() => (drag.multi ? ungroupMulti(comp, drag.multi) : removePartFromGroup(comp, drag.id)))}>
-          <LuUngroup /> Deixa-la aquí per treure-la del grup
-        </UngroupDropZone>
-      )}
     </>
   )
 }
