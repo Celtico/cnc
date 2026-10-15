@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Switch, Text } from "@chakra-ui/react"
-import { DEFAULT_GRILLE, UI_PATHS, applianceCarcassText, carcassBounds, zoneBounds, type FloorSupport, backChoices, hasBottom, moduleApplianceCarcass, visibleModule, boardChoices, hardwareSummary, jointApplies, materialByName, moduleRows, moduleSlotItem, type Base, type Carcass, type Module, type ModuleRows, type Top } from "../../core/model"
+import { DEFAULT_GRILLE, UI_PATHS, applianceCarcassText, moduleType, carcassBounds, zoneBounds, type FloorSupport, backChoices, hasBottom, moduleApplianceCarcass, visibleModule, boardChoices, hardwareSummary, jointApplies, materialByName, moduleRows, moduleSlotItem, type Base, type Carcass, type Module, type ModuleRows, type Top } from "../../core/model"
 import { NumRow } from "../../components/NumRow"
 import { ChoiceChips, FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
@@ -55,7 +55,7 @@ export function CarcassForm({ module, onChange, section, rows = moduleRows(modul
             {ruleHelp}
           </Text>
         )}
-        {fixed && module.root.appliance && (
+        {moduleType(module) === "appliance" && module.root.appliance && !module.root.split && (
           <ApplianceFields
             module
             root={module.root}

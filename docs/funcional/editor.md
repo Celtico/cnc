@@ -80,8 +80,8 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
     Materials de tot el moble (aplica a tots els mòduls), Acabats de l'escena (`Composition.scene`: `floor`, `wall` per a Presentació i miniatura; buit = «Com a
     Preferències»; `CabinetViewer sceneFinish`, `renderThumb(…, finish)`).
   - Mòdul: **Tipus** (`ModuleTypeSection`: Baix · Penjat · Columna · Electrodomèstic, l'aparell de l'Electrodomèstic i on
-    va: Lloc —arrambat o lliure al terra—, l'alçada del penjat, separacions, girat, X) · Mides · **Electrodomèstic** (la
-    placa del Baix o la campana del Penjat, sense dividir) · **Caixa** · **Portes** (només amb l'Interior dividit) · **Unió** (si la caixa en fa) ·
+    va: Lloc —arrambat o lliure al terra—, l'alçada del penjat, separacions, girat, X; el Baix i el Penjat no porten
+    electrodomèstics: la placa i la campana també es trien amb el tipus Electrodomèstic) · Mides · **Caixa** · **Portes** (només amb l'Interior dividit) · **Unió** (si la caixa en fa) ·
     **Materials** (en aquest ordre per decisió de l'usuari, 2026-10-13). **Sense «Acabats»** (per decisió de l'usuari,
     2026-10-08: «això dels acabats no està bé»; abans una secció `mod-joinery`, `LuHammer`): cada fila és a la secció del
     que toca, **un sol lloc per decisió i només el que la construcció llegeix** (`moduleRows` a

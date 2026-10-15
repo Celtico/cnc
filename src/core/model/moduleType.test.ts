@@ -36,4 +36,13 @@ describe("tipus del mòdul", () => {
     const back = setModuleType(dw, "base", 0)
     expect([moduleType(back), isApplianceModule(back), back.root.appliance]).toEqual(["base", false, undefined])
   })
+
+  it("la placa i la campana també són Electrodomèstic (el Baix i el Penjat no en porten); la campana penja el mòdul", () => {
+    const hob = setModuleAppliance(base(), applianceById("appliance-bosch-pie631hc1e"), 0)
+    expect([moduleType(hob), isApplianceModule(hob)]).toEqual(["appliance", false])
+    expect(setModuleType(hob, "base", 0).root.appliance).toBeUndefined()
+    const hood = setModuleAppliance(base(), applianceById("appliance-bosch-dln57pc60"), 0)
+    expect(hood.carcass.base.kind).toBe("wall")
+    expect(moduleType(hood)).toBe("appliance")
+  })
 })

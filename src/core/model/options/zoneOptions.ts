@@ -205,7 +205,7 @@ const shelves = section("zone.shelves", "Prestatges i accessoris", {
 
 /** Compartiment (l'«Interior» o una zona d'una divisió). */
 export const ZONE = group("zone", "Compartiment", { icon: "zone", code: UI.sections, showIf: "Un compartiment seleccionat (l'«Interior» o una zona)" }, [
-  applianceNodes("zone"),
+  applianceNodes(),
   front,
   shelves,
   field("zone.system32", "Filera System 32", { code: UI.pick, control: "hardware", showIf: S32, defaultText: "La de Preferències › Ferratges" }),

@@ -6,11 +6,10 @@ import { IconChoice } from "../../components/IconChoice"
 import { NumRow } from "../../components/NumRow"
 import type { ModuleBuild } from "../../core/build/buildModule"
 import { splitChildSizes } from "../../core/build/layout"
-import { carcassBounds, coveringZone, moduleApplianceCarcass, freeX, hasDrawers, moduleHasInnerPieces, moduleRows, moduleSlotItem, moduleType, mountOf, rowOf, setModuleMount, system32RowPlace, visibleModule, zoneBounds, type Composition, type FloorSupport, type Module, type Settings, type Zone } from "../../core/model"
+import { carcassBounds, coveringZone, moduleApplianceCarcass, freeX, hasDrawers, moduleHasInnerPieces, moduleRows, moduleSlotItem, mountOf, rowOf, setModuleMount, system32RowPlace, visibleModule, zoneBounds, type Composition, type FloorSupport, type Module, type Settings, type Zone } from "../../core/model"
 import { CarcassForm, InnerClearanceRow, JointForm, MaterialsForm } from "../composition/CarcassForm"
 import { System32Pick } from "../composition/HardwarePick"
 import { ModuleDoorsSection, ZonePanel } from "../composition/ZonePanel"
-import { ApplianceSection } from "../composition/zone/ApplianceSection"
 import { zoneLabel } from "../composition/zoneLabel"
 import { MaterialSelect } from "../settings/MaterialSelect"
 import type { SetComp } from "./useEditorDoc"
@@ -120,24 +119,8 @@ export function ModulePositionFields({ comp, module, moduleX, updateModule }: { 
  */
 export function ModuleSections({ module, updateModule, support }: { module: Module; updateModule: (m: Module) => void; /** El suport dels mòduls de terra (Moble › Sòcol i potes): la Caixa el diu. */ support?: FloorSupport }) {
   const rows = moduleRows(module)
-  const type = moduleType(module)
   return (
     <>
-      {/* La placa (Baix) i la campana (Penjat) van al moble sense ser-ne l'aparell: Electrodomèstic a sobre de la Caixa (el
-          de l'arrel, `root.appliance`; l'«Interior» conserva el contingut). El mòdul que **és** l'aparell (rentaplats,
-          frigorífic…) el tria a Tipus i en porta les opcions a la Caixa. Un mòdul dividit el tria a cada compartiment. */}
-      {!module.root.split && (type === "base" || type === "wall") && (
-        <ApplianceSection
-          module
-          root={module.root}
-          zone={module.root}
-          bounds={zoneBounds(visibleModule(module), module.root.id) ?? carcassBounds(module.carcass)}
-          hardware={module.hardware}
-          noHandles={module.fronts.handles === "none"}
-          only={(a) => (type === "wall" ? a.kind === "hood" : a.kind === "hob")}
-          onChange={(root) => updateModule({ ...module, root })}
-        />
-      )}
       <FoldItem optionId="module.carcass" id="mod-structure" title="Caixa" icon={LuFrame} badge={rows.style && !moduleApplianceCarcass(module)?.rule.niche ? (module.fronts.style === "inset" ? "Encastats" : "Recobrents") : undefined}>
         <CarcassForm module={module} onChange={updateModule} section="structure" rows={rows} support={support} />
       </FoldItem>

@@ -70,16 +70,14 @@ interface ApplianceProps {
   bounds: ZoneBounds
   /** A l'inspector del mòdul (l'arrel d'un mòdul sense dividir): els textos parlen del mòdul. */
   module?: boolean
-  /** Els aparells que es poden triar aquí (al mòdul Baix, la placa; al Penjat, la campana). */
-  only?: (a: Appliance) => boolean
 }
 
-/** La secció plegable «Electrodomèstic» (compartiment, o la placa i la campana d'un mòdul Baix o Penjat). */
+/** La secció plegable «Electrodomèstic» d'un compartiment (d'un mòdul dividit: el del mòdul es tria a Tipus). */
 export function ApplianceSection(props: ApplianceProps) {
   const za = props.zone.appliance
   const a = za && isAppliance(za.hardware) ? za.hardware.appliance : undefined
   return (
-    <FoldItem optionId={props.module ? "module.appliance" : "zone.appliance"} id={props.module ? "mod-appliance" : "zone-appliance"} title="Electrodomèstic" icon={LuRefrigerator} badge={a ? APPLIANCE_LABELS[a.kind] : undefined} defaultOpen={!!za}>
+    <FoldItem optionId="zone.appliance" id="zone-appliance" title="Electrodomèstic" icon={LuRefrigerator} badge={a ? APPLIANCE_LABELS[a.kind] : undefined} defaultOpen={!!za}>
       <ApplianceFields {...props} picker />
     </FoldItem>
   )
@@ -90,7 +88,7 @@ export function ApplianceSection(props: ApplianceProps) {
  * el tirador. Sense `picker`, només les opcions: el mòdul Electrodomèstic tria l'aparell a Tipus i les opcions surten a la
  * Caixa (per decisió de l'usuari, 2026-10-15).
  */
-export function ApplianceFields({ root, zone, onChange, hardware, noHandles, bounds, module = false, only, picker = false }: ApplianceProps & { picker?: boolean }) {
+export function ApplianceFields({ root, zone, onChange, hardware, noHandles, bounds, module = false, picker = false }: ApplianceProps & { picker?: boolean }) {
   const { settings } = useSettings()
   const za = zone.appliance
   const a = za && isAppliance(za.hardware) ? za.hardware.appliance : undefined
@@ -112,13 +110,12 @@ export function ApplianceFields({ root, zone, onChange, hardware, noHandles, bou
   return (
       <Stack gap={3}>
         {picker && <HardwarePick
-          optionId={module ? "module.appliance.hardware" : "zone.appliance.hardware"}
+          optionId="zone.appliance.hardware"
           engine="appliance"
           label="Aparell"
           current={za?.hardware}
           emptyLabel="Cap"
-          help={a ? dataHelp(a) : `Rentaplats, frigorífic, rentadora, forn, microones, placa o campana del catàleg: ${module ? "el mòdul" : "el compartiment"} en fa el nínxol (es comprova amb les mides del fabricant) i, si en porta, el front de moble.${module ? " En un mòdul dividit (una columna amb forn i microones), es tria a cada compartiment." : ""}`}
-          only={only ? (x) => isAppliance(x) && only(x.appliance) : undefined}
+          help={a ? dataHelp(a) : "Rentaplats, frigorífic, rentadora, forn, microones, placa o campana del catàleg: el compartiment en fa el nínxol (es comprova amb les mides del fabricant) i, si en porta, el front de moble."}
           onPick={(item) => set(item ? { ...(za ?? {}), hardware: item } : undefined)}
         />}
         {a && !fillsNiche(a) && (

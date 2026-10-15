@@ -9,10 +9,10 @@ const type = section("module.type", "Tipus", { icon: "type", code: UI.type, hide
     hideable: false,
     why: STRUCTURAL,
     choices: [
-      { value: "base", label: "Baix", reveals: ["module.position.mount", "module.appliance"] },
-      { value: "wall", label: "Penjat", reveals: ["module.position.height", "module.carcass.hanger", "module.carcass.underLight", "module.appliance"], hides: ["module.position.mount"], note: "a 1450 mm del terra, amb el fons retirat per al penjador" },
-      { value: "tall", label: "Columna", reveals: ["module.position.mount"], hides: ["module.appliance"], note: "2100 mm d'alçada si en tenia menys de 1200" },
-      { value: "appliance", label: "Electrodomèstic", reveals: ["module.type.appliance"], hides: ["module.appliance"], note: "no amb l'Interior dividit (es tria a cada compartiment)" },
+      { value: "base", label: "Baix", reveals: ["module.position.mount"] },
+      { value: "wall", label: "Penjat", reveals: ["module.position.height", "module.carcass.hanger", "module.carcass.underLight"], hides: ["module.position.mount"], note: "a 1450 mm del terra, amb el fons retirat per al penjador" },
+      { value: "tall", label: "Columna", reveals: ["module.position.mount"], note: "2100 mm d'alçada si en tenia menys de 1200" },
+      { value: "appliance", label: "Electrodomèstic", reveals: ["module.type.appliance"], note: "no amb l'Interior dividit (es tria a cada compartiment)" },
     ],
   }),
   field("module.type.appliance", "Aparell", {
@@ -20,7 +20,7 @@ const type = section("module.type", "Tipus", { icon: "type", code: UI.type, hide
     control: "hardware",
     showIf: "Tipus = Electrodomèstic",
     defaultText: "Tria l'aparell",
-    note: "Només els que són el mòdul: rentaplats, rentadora, frigorífics, forns i microones. Les opcions del front de moble, a la Caixa.",
+    note: "Per decisió de l'usuari, 2026-10-15: «quan és baix o penjat no poden sortir electrodomèstics»: tots es trien aquí (també la placa i la campana, que conserven l'Interior). Les opcions del front de moble, a la Caixa.",
   }),
   field("module.position.mount", "Lloc", {
     code: UI.sections,
@@ -80,33 +80,30 @@ export function applianceFrontFields(at: "module" | "zone"): OptionNode[] {
   ]
 }
 
-/** L'electrodomèstic del compartiment (dividit) o, al mòdul Baix o Penjat sense dividir, la placa o la campana. */
-export function applianceNodes(at: "module" | "zone"): OptionNode {
-  const id = (k: string) => `${at}.appliance.${k}`
-  const module = at === "module"
-  return section(`${at}.appliance`, "Electrodomèstic", {
+/** L'electrodomèstic del compartiment (d'un mòdul dividit; el del mòdul es tria a Tipus). */
+export function applianceNodes(): OptionNode {
+  const id = (k: string) => `zone.appliance.${k}`
+  return section("zone.appliance", "Electrodomèstic", {
     icon: "appliance",
     code: UI.appliance,
-    showIf: module ? "Tipus = Baix (la placa) o Penjat (la campana), sense dividir" : "Compartiment d'un mòdul dividit, sense dividir i no tapat per les portes del mòdul",
-    note: module ? "L'aparell va al moble sense ser-ne: l'Interior conserva el seu contingut. El mòdul que és l'aparell (rentaplats, frigorífic…) es tria a Tipus." : "Si l'aparell ocupa el compartiment (no placa ni campana), no surten Front, Prestatges i accessoris ni Dividir.",
+    showIf: "Compartiment d'un mòdul dividit, sense dividir i no tapat per les portes del mòdul",
+    note: "Si l'aparell ocupa el compartiment (no placa ni campana), no surten Front, Prestatges i accessoris ni Dividir.",
   }, [
     field(id("hardware"), "Aparell", {
       code: UI.appliance,
       control: "hardware",
       defaultText: "Cap",
-      choices: module
-        ? [{ value: "none", label: "Cap" }, { value: "item", label: "La placa (Baix) o la campana (Penjat) de Preferències › Ferratges › Electrodomèstics" }]
-        : [
-            { value: "none", label: "Cap", hides: [id("front")] },
-            { value: "item", label: "Un aparell de Preferències › Ferratges › Electrodomèstics", reveals: [id("front")] },
-          ],
+      choices: [
+        { value: "none", label: "Cap", hides: [id("front")] },
+        { value: "item", label: "Un aparell de Preferències › Ferratges › Electrodomèstics", reveals: [id("front")] },
+      ],
       why: "Amagada, no es pot posar cap electrodomèstic (els que ja hi són es conserven).",
     }),
-    ...(module ? [] : applianceFrontFields(at)),
+    ...applianceFrontFields("zone"),
   ])
 }
 
-const MODULE_POSITION = [type, dims, applianceNodes("module")]
+const MODULE_POSITION = [type, dims]
 
 /** Mòdul › Portes, Unió i Materials. */
 const MODULE_TAIL: OptionNode[] = [
@@ -159,4 +156,4 @@ export function materialsNodes(at: "module" | "moble"): OptionNode {
 }
 
 export const MODULE_GROUP = (carcass: OptionNode): OptionNode =>
-  group("module", "Mòdul", { icon: "module", code: UI.inspector, showIf: "Un mòdul seleccionat", note: "Ordre: Tipus · Mides · Electrodomèstic (placa o campana) · Caixa · Portes · Unió · Materials." }, [...MODULE_POSITION, carcass, ...MODULE_TAIL])
+  group("module", "Mòdul", { icon: "module", code: UI.inspector, showIf: "Un mòdul seleccionat", note: "Ordre: Tipus · Mides · Caixa · Portes · Unió · Materials." }, [...MODULE_POSITION, carcass, ...MODULE_TAIL])

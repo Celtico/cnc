@@ -28,10 +28,10 @@
   mòdul, **Baix · Penjat · Columna · Electrodomèstic** (`setModuleType`). Penjat és la base `wall`; Baix i Columna, el
   triat o, sense, per l'alçada (≥ 1200, columna; en canviar-ne, 770 o 2100 si la que té no hi escau); Electrodomèstic, el
   mòdul que **és** l'aparell (`isApplianceModule`) o el triat encara sense aparell. L'aparell es tria a Tipus
-  (`setModuleAppliance`: només els que ocupen el nínxol —rentaplats, rentadora, frigorífics, forns, microones—; un de
-  penjat penja el mòdul; el nínxol de terra, sense laterals; l'amplada, la del nínxol si no hi entra) i les opcions del
-  front de moble surten a la Caixa. La placa (Baix) i la campana (Penjat) continuen a Mòdul › Electrodomèstic. Un mòdul
-  dividit no pot ser Electrodomèstic (l'aparell, a cada compartiment). Test `model/moduleType.test.ts`.
+  (`setModuleAppliance`: qualsevol de la biblioteca; per decisió de l'usuari, «quan és baix o penjat no poden sortir
+  electrodomèstics»: la placa i la campana també són Electrodomèstic i conserven l'Interior; un de penjat penja el mòdul;
+  el nínxol de terra, sense laterals; l'amplada, la del nínxol si no hi entra) i les opcions del front de moble surten a
+  la Caixa. Un mòdul dividit no pot ser Electrodomèstic (l'aparell, a cada compartiment). Test `model/moduleType.test.ts`.
 - **On va: dues files, com a les cuines** — *A terra* (baixos) i *Penjats a la paret* (`base.kind = "wall"` amb l'alçada
   des del terra). Dins de cada fila l'ordre és el de l'arbre i cada mòdul va al costat de l'anterior amb `gapBefore`. Posició
   sempre amb `modulePlacements()` / `compositionWidth/Height`, mai a mà. Els `anchor` antics es converteixen en carregar

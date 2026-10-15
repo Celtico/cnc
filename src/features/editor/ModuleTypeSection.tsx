@@ -4,7 +4,7 @@ import type { IconType } from "react-icons"
 import { FoldItem } from "../../components/Fold"
 import { FormRow } from "../../components/FormRow"
 import { IconChoice } from "../../components/IconChoice"
-import { APPLIANCE_LABELS, MODULE_TYPE_LABELS, isAppliance, isModuleAppliance, moduleType, setModuleAppliance, setModuleType, type Composition, type Module, type ModuleType } from "../../core/model"
+import { APPLIANCE_LABELS, MODULE_TYPE_LABELS, isAppliance, moduleType, setModuleAppliance, setModuleType, type Composition, type Module, type ModuleType } from "../../core/model"
 import { HardwarePick } from "../composition/HardwarePick"
 import { ModulePositionFields } from "./InspectorSections"
 
@@ -13,13 +13,13 @@ const TYPE_HINT: Record<ModuleType, string> = {
   base: "Baix: a terra, sobre el suport del moble (sòcol, potes o directe a terra)",
   wall: "Penjat a la paret, amb penjadors",
   tall: "Columna: a terra, de dalt a baix",
-  appliance: "Electrodomèstic: el mòdul és l'aparell (rentaplats, frigorífic, forn…); la Caixa és la que demana",
+  appliance: "Electrodomèstic: rentaplats, frigorífic, forn, placa, campana…; la Caixa és la que demana l'aparell",
 }
 
 /**
  * **Tipus** (per decisió de l'usuari, 2026-10-15: «canviem Posició per tipus de moble, i allà seleccionem electrodomèstic,
  * i a dins la Caixa les opcions de l'electrodomèstic»): el primer del mòdul. Baix · Penjat · Columna · Electrodomèstic
- * (`setModuleType`); l'Electrodomèstic hi tria l'aparell (`setModuleAppliance`: només els que són el mòdul) i la Caixa en
+ * (`setModuleType`); l'Electrodomèstic hi tria l'aparell (`setModuleAppliance`; el Baix i el Penjat no en porten) i la Caixa en
  * porta les opcions. A sota, on va: arrambat o lliure al terra, l'alçada del penjat i les separacions. El de darrere d'una
  * illa es col·loca sol: només el diu.
  */
@@ -48,8 +48,7 @@ export function ModuleTypeSection({ comp, module, moduleX, updateModule, islandF
           label="Aparell"
           current={za?.hardware}
           emptyLabel="Tria l'aparell"
-          only={(x) => isAppliance(x) && isModuleAppliance(x.appliance)}
-          help={a ? "La Caixa és la que demana l'aparell; les opcions del front de moble, a la Caixa." : "Rentaplats, rentadora, frigorífic, forn o microones de Preferències › Ferratges › Electrodomèstics: el mòdul en fa el nínxol (es comprova amb les mides del fabricant)."}
+          help={a ? "La Caixa és la que demana l'aparell; les opcions del front de moble, a la Caixa." : "Rentaplats, rentadora, frigorífic, forn, microones, placa o campana de Preferències › Ferratges › Electrodomèstics: el mòdul en fa el nínxol (es comprova amb les mides del fabricant); la placa va sobre un baix i la campana en un penjat, amb el seu contingut."}
           onPick={(item) => updateModule(setModuleAppliance(module, item, here))}
         />
       )}

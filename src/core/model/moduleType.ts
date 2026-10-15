@@ -1,10 +1,8 @@
-import { fillsNiche, type Appliance } from "./appliance"
 import { applianceDefaults } from "./applianceCarcass"
 import { setModuleMount } from "./editOps"
 import { isAppliance } from "./hardwareLibrary"
 import type { HardwareItem } from "./hardwareSchema"
 import type { Module } from "./moduleSchema"
-import { isApplianceModule } from "./moduleVisible"
 
 /**
  * El **tipus** del mòdul (per decisió de l'usuari, 2026-10-15: «canviem Posició per tipus de moble, i allà seleccionem
@@ -27,24 +25,27 @@ const DEFAULT_HEIGHT = { base: 770, tall: 2100 }
  * Baix o Columna (el triat o, sense, per l'alçada).
  */
 export function moduleType(m: Module): ModuleType {
-  if (m.type === "appliance" || isApplianceModule(m)) return "appliance"
+  if (m.type === "appliance" || moduleAppliance(m)) return "appliance"
   if (m.carcass.base.kind === "wall") return "wall"
   if (m.type === "tall") return "tall"
   if (m.type === "base") return "base"
   return m.carcass.height >= TALL_FROM ? "tall" : "base"
 }
 
-/** Els electrodomèstics que **són** el mòdul (ocupen el nínxol): rentaplats, rentadora, frigorífics, forns i microones. */
-export const isModuleAppliance = (a: Appliance): boolean => fillsNiche(a)
+/**
+ * L'electrodomèstic del mòdul sense dividir (el de l'arrel): el que **és** el mòdul (rentaplats, frigorífic, forn…) o el que
+ * hi va sense ser-ne (la placa del baix, la campana del penjat: l'Interior conserva el seu contingut).
+ */
+const moduleAppliance = (m: Module) => (m.root.split ? undefined : m.root.appliance)
 
 const withType = (m: Module, type: Module["type"]): Module => {
   const { type: _t, ...rest } = m
   return type ? { ...rest, type } : rest
 }
 
-/** Treu l'aparell que és el mòdul (el de l'arrel d'un mòdul sense dividir). */
+/** Treu l'aparell del mòdul (el de l'arrel d'un mòdul sense dividir). */
 function withoutModuleAppliance(m: Module): Module {
-  if (!isApplianceModule(m)) return m
+  if (!moduleAppliance(m)) return m
   const { appliance: _a, ...root } = m.root
   return { ...m, root }
 }
@@ -67,7 +68,9 @@ export function setModuleType(m: Module, type: ModuleType, here: number): Module
 }
 
 /**
- * Tria l'aparell del mòdul Electrodomèstic (o el treu, `undefined`: continua sent Electrodomèstic, sense aparell). El
+ * Tria l'aparell del mòdul Electrodomèstic (o el treu, `undefined`: continua sent Electrodomèstic, sense aparell): qualsevol
+ * de la biblioteca (per decisió de l'usuari, 2026-10-15: «quan és baix o penjat no poden sortir electrodomèstics»; la placa
+ * i la campana també es trien aquí). El
  * nínxol de terra es queda sense laterals (`applianceDefaults`); un aparell penjat (microones) penja el mòdul i un de terra
  * el baixa; l'amplada, la del nínxol si la que té no hi entra.
  */
