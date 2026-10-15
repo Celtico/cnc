@@ -5,14 +5,16 @@ import { Tooltip } from "../../ui/tooltip"
 
 type Stage = "default" | "minimized" | "maximized"
 
-/** On s'obre el panell el primer cop: al mòbil, a tota la pantalla; a l'ordinador, gran i al mig. */
+/** On s'obre el panell el primer cop: al mòbil, a tota la pantalla; a l'ordinador, gran i al mig de la zona de treball (el menú lateral queda lliure). */
 function initialRect(mobile: boolean) {
   const W = window.innerWidth
   const H = window.innerHeight
   if (mobile) return { size: { width: W, height: H }, position: { x: 0, y: 0 } }
-  const width = Math.min(1200, W - 96)
+  // Sense tapar el menú lateral (220 px): s'hi pot anar a una altra secció mentre calcula.
+  const NAV = 236
+  const width = Math.max(360, Math.min(1200, W - NAV - 48))
   const height = Math.min(820, H - 96)
-  return { size: { width, height }, position: { x: Math.round((W - width) / 2), y: Math.round((H - height) / 2) } }
+  return { size: { width, height }, position: { x: Math.max(0, NAV + Math.round((W - NAV - width) / 2)), y: Math.round((H - height) / 2) } }
 }
 
 /**

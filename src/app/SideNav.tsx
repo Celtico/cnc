@@ -45,7 +45,7 @@ export function SideNav({
       <HStack justify={collapsed ? "center" : "space-between"} mb={4} px={collapsed ? 0 : 2} minH="40px">
         {!collapsed && (
           <HStack gap={1.5} align="baseline" minW={0}>
-            <Heading size="md" color="wood.fg">
+            <Heading size="md" color="wood.fg" whiteSpace="nowrap">
               Mobles CNC
             </Heading>
             {/* Quina build és: el nombre de commits, petit, al costat del nom; el commit en passar-hi per sobre. */}
