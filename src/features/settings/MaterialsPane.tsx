@@ -25,6 +25,7 @@ import { encodeMap, pickFiles, textureSetSummary } from "./textureImport"
 import { readPickedTextureSet } from "./textureMaterials"
 import { useDraft } from "../../lib/useDraft"
 import { useLatest } from "../../lib/useLatest"
+import { useCloseWhenGone } from "./useCloseWhenGone"
 
 /** Icones de les categories (com els apartats de les pàgines principals). */
 const CATEGORY_ICONS: Record<MaterialCategory, IconType> = { board: LuLayers3, back: LuLayers2, sim: LuSprayCan }
@@ -114,13 +115,7 @@ export function MaterialsList({ materials, onChange, onRename, onDelete, footer,
   const q = fold(query.trim())
   const i = materials.findIndex((m) => m.id === sel)
   const m = i >= 0 ? materials[i]! : null
-  useEffect(() => {
-    // Eliminat (o restaurat): l'editor es tanca.
-    if (sel !== null && i < 0) {
-      setSel(null)
-      setEditorOpen(false)
-    }
-  }, [sel, i])
+  useCloseWhenGone(sel, i, setSel, setEditorOpen)
   const groups = MATERIAL_CATEGORIES.map((c) => ({ ...c, items: materials.filter((x) => materialCategory(x) === c.id && (!q || fold(x.name).includes(q))) })).filter((g) => g.items.length)
   // La cerca obre les categories amb resultats.
   const shownM = m
