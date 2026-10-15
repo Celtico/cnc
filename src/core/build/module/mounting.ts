@@ -70,11 +70,12 @@ export class MountingBuilder extends CarcassBuilder {
   }
 
   /**
-   * **Penjadors** del mòdul penjat (`Base.hanger`; per decisió de l'usuari, 2026-10-15: «penjador regulable i regleta»):
-   * un a cada lateral, a la cara de dins de la cantonada de dalt i darrere (els forats del target `side`, tot o res per
-   * penjador), l'**osca** del fons a les cantonades de dalt perquè hi passi el ganxo i la **regleta** de paret on
-   * s'enganxa (`Base.rail`, ferratge per metres: de lateral a lateral, darrere del fons; a la comanda, ajuntada amb la dels
-   * penjats del costat). El ganxo i la regleta van entre la paret i el fons: cal que el fons en deixi lloc (`gap`).
+   * **Penjadors** del mòdul penjat (`Base.hanger`; per decisió de l'usuari, 2026-10-15: «penjador regulable i regleta»,
+   * i el més estàndard possible): un a cada lateral, a la cara de dins de la cantonada de dalt i darrere (els forats del
+   * target `side`, tot o res per penjador) i la **regleta** de paret on s'enganxa (`Base.rail`, ferratge per metres: de
+   * lateral a lateral, contra la paret; a la comanda, ajuntada amb la dels penjats del costat). L'estàndard (Libra H2,
+   * `behindBack`) va **darrere del fons** retirat (cal que el fons en deixi lloc: `gap`) i el fons porta la **ranura** per
+   * regular-lo; el d'abans (còpies v1 dels mòduls desats) anava davant del fons, amb l'**osca** del fons per al ganxo.
    */
   buildHangers(): void {
     const { m, d } = this
@@ -89,29 +90,46 @@ export class MountingBuilder extends CarcassBuilder {
     const hanger = this.frontHardware("hanger", c.base.hanger)
     const spec = hanger.spec
     const item = hanger.item
+    // L'espai darrere del fons per a la regleta i el penjador.
+    const room = c.back === "groove" ? c.backSetback : c.back === "inset" ? (c.backInsetSetback ?? 0) : c.back === "screwed" ? 0 : Infinity
+    const std = spec.behindBack !== undefined
+    const topY = spec.underTop ? d.interior.y1 : d.H
+    // La cara de darrere del fons (sense fons, on aniria amb l'espai just).
+    const backRear = c.back === "none" ? d.sideZ0 + spec.gap : d.backInnerZ - d.tb
     const placed: ("left" | "right")[] = []
-    for (const { side, v } of at) {
+    // L'estàndard sense lloc darrere del fons no es pot muntar: només l'avís `hanging` (els forats no es fan).
+    for (const { side, v } of std && room < spec.gap ? [] : at) {
       const xFace = side === "left" ? v.xR : v.xL
       const holes: { w: Vec3; hole: { diameter: number; depth: number; tag: string } }[] = spec.holes.map((h) => ({
-        w: [xFace, r(d.H - spec.fromTop - h.u), r(d.sideZ0 + spec.fromBack + h.v)],
+        w: [xFace, r(topY - spec.fromTop - h.u), r(std ? backRear - spec.behindBack! + h.v : d.sideZ0 + spec.fromBack + h.v)],
         hole: { diameter: h.d, depth: Math.min(h.depth, v.panel.thickness - 1), tag: h.tag },
       }))
-      // Tot o res: sobre la peça i davant del fons (el cos del penjador va entre el fons i el davant).
-      const behind = holes.some((h) => h.w[2] - h.hole.diameter / 2 < d.backInnerZ - 0.5)
+      // Tot o res: sobre la peça; l'estàndard darrere del fons, el d'abans davant (el cos va entre el fons i el davant).
+      const wrongSide = holes.some((h) => (std ? h.w[2] + h.hole.diameter / 2 > backRear + 0.5 : h.w[2] - h.hole.diameter / 2 < d.backInnerZ - 0.5))
       const copy: Panel = { ...v.panel, holes: [...v.panel.holes] }
-      if (behind || !holes.every((h) => addFaceHole(copy, h.w, h.hole))) {
-        this.hardwareWarning(`«${item.name}»: els forats del penjador ${side === "left" ? "esquerre" : "dret"} no hi caben (a ${num(spec.fromTop)} de dalt i ${num(spec.fromBack)} del darrere${behind ? ", darrere del fons" : ""}). No es fan: revisa el penjador a Preferències › Ferratges o la retirada del fons.`)
+      if (wrongSide || !holes.every((h) => addFaceHole(copy, h.w, h.hole))) {
+        const where = std ? `${num(spec.behindBack!)} darrere del fons` : `${num(spec.fromBack)} del darrere${wrongSide ? ", darrere del fons" : ""}`
+        this.hardwareWarning(`«${item.name}»: els forats del penjador ${side === "left" ? "esquerre" : "dret"} no hi caben (a ${num(spec.fromTop)} de dalt i ${where}). No es fan: revisa el penjador a Preferències › Ferratges o la retirada del fons.`)
         continue
       }
       v.panel.holes = copy.holes
       placed.push(side)
-      // El cos (a la cara del lateral, davant del fons) i el ganxo (fins a la regleta, darrere del fons): només es veuen.
       const ys = holes.map((h) => h.w[1])
-      const yc = (Math.min(...ys) + Math.max(...ys)) / 2
       const b = spec.body
       const bx = side === "left" ? xFace : xFace - b.width
+      const label = `${item.name} (${side === "left" ? "esquerre" : "dret"})`
+      if (std) {
+        // El cos, darrere del fons i sota la tapa; el ganxo, fins a la regleta: només es veuen.
+        const z0 = Math.max(d.sideZ0, backRear - b.depth)
+        this.hwBox(`hanger-${side}`, label, "Acer inox", [bx, topY - b.height, z0], [b.width, b.height, Math.max(1, backRear - z0)])
+        const hookY = topY - spec.railTop
+        if (z0 > 1) this.hwBox(`hanger-${side}-hook`, `${item.name}: ganxo`, "Acer inox", [side === "left" ? xFace : xFace - b.width / 2, hookY - 25, 0], [b.width / 2, 35, z0])
+        continue
+      }
+      // El d'abans: el cos a la cara del lateral, davant del fons, i el ganxo fins a la regleta, darrere del fons.
+      const yc = (Math.min(...ys) + Math.max(...ys)) / 2
       const yTop = Math.min(d.interior.y1, yc + b.height / 2)
-      this.hwBox(`hanger-${side}`, `${item.name} (${side === "left" ? "esquerre" : "dret"})`, "Acer inox", [bx, yTop - b.height, d.backInnerZ], [b.width, b.height, b.depth])
+      this.hwBox(`hanger-${side}`, label, "Acer inox", [bx, yTop - b.height, d.backInnerZ], [b.width, b.height, b.depth])
       // La filera System 32 de darrere que queda sota el cos del penjador no es fa (el penjador la tapa).
       const under = (h: Hole) => {
         const w = toWorld(v.panel, [h.x, h.y, 0])
@@ -121,27 +139,46 @@ export class MountingBuilder extends CarcassBuilder {
       const hookY = d.H - spec.railTop
       if (d.backInnerZ > 1) this.hwBox(`hanger-${side}-hook`, `${item.name}: ganxo`, "Acer inox", [side === "left" ? xFace : xFace - b.width / 2, hookY - 25, 0], [b.width / 2, 35, d.backInnerZ])
     }
-    if (!placed.length) return
-    this.order(item, placed.length, placed.length === 2 ? "un a cada lateral (esquerre i dret)" : undefined)
-    this.notchBack(placed, spec.notchWidth, spec.notchHeight)
-    // L'espai darrere del fons per a la regleta i el ganxo.
-    const room = c.back === "groove" ? c.backSetback : c.back === "inset" ? (c.backInsetSetback ?? 0) : c.back === "screwed" ? 0 : Infinity
-    if (room < spec.gap)
+    if (placed.length) {
+      this.order(item, placed.length, placed.length === 2 ? "un a cada lateral (esquerre i dret)" : undefined)
+      if (std) this.slotBack(placed, spec.slot, topY)
+      else this.notchBack(placed, spec.notchWidth, spec.notchHeight)
+    }
+    if (room < spec.gap && (placed.length || std))
       this.warnings.push({
         code: "hanging",
-        message: `Penjadors: la regleta i el ganxo van entre la paret i el fons i hi calen ${num(spec.gap)} mm; ${c.back === "screwed" ? "el fons cargolat darrere no en deixa" : `el fons en deixa ${num(room)}`}. Posa el fons en ranura amb la «Ranura del fons» a ${num(spec.gap)} mm o més (o encastat retirat) a ${"Mòdul › Caixa"}.`,
+        message: `Penjadors: ${std ? "el penjador i la regleta van" : "la regleta i el ganxo van"} entre la paret i el fons i hi calen ${num(spec.gap)} mm; ${c.back === "screwed" ? "el fons cargolat darrere no en deixa" : `el fons en deixa ${num(room)}`}. Posa el fons en ranura amb la «Ranura del fons» a ${num(spec.gap)} mm o més (o encastat retirat) a ${"Mòdul › Caixa"}.`,
       })
-    this.buildWallRail(spec.railTop)
+    if (placed.length) this.buildWallRail(r(topY - spec.railTop))
+  }
+
+  /**
+   * La **ranura** del fons per regular el penjador estàndard des de dins (Libra H2: 12 × 54,5, a 34 sota la tapa i a 19,5
+   * del lateral; s'hi posa la tapeta): un tall passant amb els extrems rodons (`slot`) al fons, davant de cada penjador.
+   */
+  private slotBack(sides: ("left" | "right")[], s: { width: number; length: number; top: number; side: number }, topY: number): void {
+    const { d } = this
+    if (!(s.width > 0) || !(s.length > 0)) return
+    const back = this.panels.find((p) => p.id === "back")
+    if (!back) return
+    const z = back.placement.origin[2]
+    for (const side of sides) {
+      const x = side === "left" ? d.interior.x0 + s.side : d.interior.x1 - s.side
+      const a = toLocal(back, [x - s.width / 2, topY - s.top, z])
+      const b = toLocal(back, [x + s.width / 2, topY - s.top - s.length, z])
+      const x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1])
+      if (x0 < 1 || y0 < 1 || x1 > back.length - 1 || y1 > back.width - 1) continue
+      ;(back.cutouts ??= []).push({ kind: "slot", x: r(x0), y: r(y0), w: r(x1 - x0), h: r(y1 - y0), tag: "hanger" })
+    }
   }
 
   /** La regleta de paret (`Base.rail`; «Cap» = sense: penjadors amb plaques soltes): de lateral a lateral, contra la paret. */
-  private buildWallRail(railTop: number): void {
+  private buildWallRail(yTop: number): void {
     const { m, d } = this
     const c = m.carcass
     if (c.base.kind !== "wall" || c.base.rail === "none") return
     const rail = this.frontHardware("wallRail", c.base.rail)
     const s = rail.spec
-    const yTop = r(d.H - railTop)
     this.hwBox("wall-rail", rail.item.name, rail.item.material ?? "Acer inox", [0, yTop - s.height, 0], [d.W, s.height, s.depth])
     const it = rail.item
     this.linear.push({

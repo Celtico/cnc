@@ -8,7 +8,7 @@
   eines de depuració (JSON `UnifiedData`, `toUnifiedData`) plegades a «Avançat». Els plànols de peça no van a Exportar.
 - **Llista de tall (CSV)** (`cutListToCsv`, `core/export/csv.ts`): una fila per grup de peces iguals i, a sota (v45), els
   **ferratges per metres** (`linearCsvRows`: regleta dels penjadors, sòcols d'alumini; quantitat de barres, referència i
-  els trossos per tallar), com a Peces › «Ferratges per metres».
+  els trossos per tallar; clips, cantoneres i unions lineals), com a Peces › «Ferratges per metres».
 - Tots els textos cap al taller passen per `workshopName` / `csvField` (`export/text.ts`: ASCII, sense `;` ni `:`; el parser
   del taller no admet cometes).
 

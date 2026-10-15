@@ -138,8 +138,24 @@ export const doorLikeFront = (a: Appliance): boolean => a.kind === "fridge" || a
 /** El front penja de frontisses de moble (frigorífic de porta lliscant): cal un lateral o un divisor al costat. */
 export const furnitureHinges = (a: Appliance): boolean => a.kind === "fridge" && a.door === "sliding"
 
-/** Sòcol per defecte (del terra al cantell de baix del front) dels aparells de terra sense peça a sota (`ZoneAppliance.plinth`). */
+/**
+ * Sòcol per defecte (del terra al cantell de baix del front) dels aparells de terra sense peça a sota (`ZoneAppliance.plinth`):
+ * el sòcol de cuina estàndard de 100 (el de les potes de 100 de les cuines de l'app; l'altre habitual és 150).
+ */
 export const DEFAULT_APPLIANCE_PLINTH = 100
+
+/**
+ * Densitat estàndard (kg/m³) del tauler d'un front, pel nom del material (Preferències no en porta), per estimar-ne el pes
+ * i comparar-lo amb el que admet l'aparell: **DM/MDF 750** (Finsa FibraPan Plus EZ, 12–19 mm: 750/725), **fusta massissa
+ * de roure 675** (The Wood Database, roure europeu, 12 % d'humitat) i, la resta (aglomerat melamínic, xapats sobre
+ * aglomerat), **aglomerat 660** (Finsa SuperPan Tech P4 EZ, 16–20 mm). Fonts a `docs/electrodomestic/README.md`.
+ */
+export function boardDensity(material: string): number {
+  const m = material.toLowerCase()
+  if (/\b(mdf|dm)\b|lacat/.test(m)) return 750
+  if (/massís|massis|massissa/.test(m)) return 675
+  return 660
+}
 
 /** Quants fronts de moble porta: dos els combis (el de baix i el de dalt), un la resta. */
 export const applianceFronts = (a: Appliance): number => (a.front?.lower && a.front.upper ? 2 : 1)

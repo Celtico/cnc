@@ -91,9 +91,10 @@ export function woodPlinthPanels(f: PlinthFrame, material: string, idPrefix = ""
 
 /**
  * Un sòcol d'alumini (`plinthProfile`): els trams a tope com a peces de només veure (rol `hardware`, del material de
- * l'item), un tros de la comanda per tram i les cantoneres. L'alçada és la del perfil.
+ * l'item), un tros de la comanda per tram i les cantoneres. L'alçada és la del perfil. Els clips (amb `clipSpacing` 0,
+ * l'estàndard): un a cada pota de cada tram (`legs`: les potes que té al darrere cada costat; dues si no es diu).
  */
-export function aluPlinth(f: Omit<PlinthFrame, "t" | "h" | "corners">, item: HardwareItem, idPrefix = "", module?: number): { extras: Panel[]; pieces: LinearPiece[]; height: number } {
+export function aluPlinth(f: Omit<PlinthFrame, "t" | "h" | "corners">, item: HardwareItem, idPrefix = "", module?: number, legs: Partial<Record<Side, number>> = {}): { extras: Panel[]; pieces: LinearPiece[]; height: number } {
   const s = plinthProfileSpec(item)
   const frame: PlinthFrame = { ...f, t: s.depth, h: s.height, corners: "butt" }
   const parts = plinthPieces(frame)
@@ -119,6 +120,7 @@ export function aluPlinth(f: Omit<PlinthFrame, "t" | "h" | "corners">, item: Har
     stock: s.stock,
     clipSpacing: s.clipSpacing,
     clipEnd: s.clipEnd,
+    ...(s.clipSpacing > 0 ? {} : { clips: legs[p.side] ?? 2 }),
     corners: i === 0 ? corners : 0,
     ...(module !== undefined ? { module } : {}),
   }))

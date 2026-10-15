@@ -178,7 +178,8 @@ export function buildComposition(input: Composition): CompositionBuild {
     for (const w of build.warnings) if (w.code !== "push" || !warnings.some((x) => x.code === "push")) warnings.push({ ...w, moduleId: m.id })
     // Mòdul penjat sense penjadors («Cap», o sense laterals on posar-los): el pes el porta el darrere. Cal fons cargolat o en ranura prou gruixut
     // i penjadors de moble; amb un fons prim o sense fons no s'aguanta. Amb els penjadors (v45), el pes va pels laterals.
-    const hangers = build.extras.some((p) => /^hanger-(left|right)$/.test(p.id))
+    // Si els penjadors no hi caben pel fons, ja ho diu el seu avís (`hanging`, un per mòdul).
+    const hangers = build.extras.some((p) => /^hanger-(left|right)$/.test(p.id)) || build.warnings.some((w) => w.code === "hanging")
     if (m.carcass.base.kind === "wall" && !hangers && (m.carcass.back === "none" || m.carcass.backThickness < 8))
       warnings.push({
         code: "hanging",

@@ -194,14 +194,16 @@ export const IMPORT_BOX_VERSION = 1
  * **Ferratge per metres** (v45, `docs/funcional/model.md` › Ferratges per metres): es compra en barres de `params.stock`
  * mm (0 = es ven per metres) i es talla a mida; la secció és `params.height` × `params.depth`. Les regles el posen al
  * moble (la regleta al llarg dels mòduls penjats, el sòcol d'alumini al voltant de la base) i la comanda en suma els
- * trossos, les barres, els clips (un cada `params.clipSpacing`, a `params.clipEnd` dels extrems, dos per tros com a mínim)
- * i les cantonades (`buildLinearOrders`).
+ * trossos, les barres, els clips (un cada `params.clipSpacing`, a `params.clipEnd` dels extrems, dos per tros com a mínim;
+ * el sòcol amb `clipSpacing` 0, un a cada pota de cada tram), les cantonades i les unions (`buildLinearOrders`).
  */
 const LinearSchema = z.object({
   /** El clip o la fixació que va amb el perfil (clip de sòcol a la pota, cargol i tac de la regleta). */
   clip: z.object({ name: z.string().min(1), ref: z.string().optional() }).optional(),
   /** La peça de cantonada (sòcol): una a cada cantonada entre dos trams. */
   corner: z.object({ name: z.string().min(1), ref: z.string().optional() }).optional(),
+  /** La unió lineal (sòcol): una a cada empalmament d'un tram més llarg que la barra. */
+  joint: z.object({ name: z.string().min(1), ref: z.string().optional() }).optional(),
 })
 
 /** L'item tal qual (sense la lectura dels importats malmesos, `HardwareItemSchema`). */

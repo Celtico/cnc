@@ -15,6 +15,7 @@ import {
   type Zone,
 } from "./composition"
 import { cloneZone, removeZone, updateZone } from "./zoneOps"
+import { hungBack } from "./hungBack"
 import { partSize, partsBox, type FreePart } from "./freePart"
 import { modelFootprint } from "./models"
 import { materialCategory, type MaterialPref } from "./settings"
@@ -58,7 +59,8 @@ export function setModuleMount(m: Module, mount: ModuleMount, here: number, floo
   const { wallGap: _old, x: _x, ...rest } = m
   void _old
   void _x
-  if (mount === "hung") return { ...rest, gapBefore: 0, carcass: { ...c, base: { kind: "wall", height: floorHeight } } }
+  // Penjar-lo: amb el fons estàndard dels penjats (`hungBack`: retirat per al penjador i la regleta).
+  if (mount === "hung") return { ...rest, gapBefore: 0, carcass: wasHung ? { ...c, base: { kind: "wall", height: floorHeight } } : hungBack({ ...c, base: { kind: "wall", height: floorHeight } }) }
   const base = wasHung ? ({ kind: "none" } as const) : c.base
   return { ...rest, ...(mount === "floor" ? { wallGap: 0, x: here } : {}), gapBefore: wasHung ? 0 : m.gapBefore, carcass: { ...c, base } }
 }

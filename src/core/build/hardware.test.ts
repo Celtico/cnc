@@ -323,8 +323,10 @@ describe("dibuix del patró (Preferències › Ferratges)", () => {
     for (const it of DEFAULT_HARDWARE_LIBRARY) {
       const p = hardwarePreview(it)
       expect(p.error, it.id).toBeUndefined()
-      // Els accessoris no mecanitzen res (pendent del taller): cap peça d'exemple.
-      if (ACCESSORY_ITEMS.includes(it) || it.engine === "model" || it.targets.every((t) => !t.ops.length)) {
+      // Els accessoris no mecanitzen res (pendent del taller): cap peça d'exemple. Els fronts d'electrodomèstic que es
+      // foraden amb la plantilla de l'aparell (l'estàndard, sense prebroques), tampoc.
+      const template = it.engine === "appliance" && it.params.pilotHoles === 0
+      if (ACCESSORY_ITEMS.includes(it) || it.engine === "model" || template || it.targets.every((t) => !t.ops.length)) {
         expect(p.panels).toEqual([])
         continue
       }

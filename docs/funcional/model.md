@@ -47,7 +47,8 @@
     trams (`plinth`, `plinth-back`, `plinth-left`, `plinth-right`, rol `plinth`, «Sòcol esquerre»…; la cara de fora a
     z = 0 local per a l'inglet) i l'avís `hardware` es mira a cada costat (el peu de les potes darrere de cada tram).
     D'alumini: cap peça de CNC; els trams (a tope, del gruix i l'alçada del perfil) van a `extras` (rol `hardware`, del
-    material de l'item, «Alumini anoditzat plata»), un tros de la comanda per tram i una cantonera per cantonada; avís
+    material de l'item, «Alumini anoditzat plata»), un tros de la comanda per tram, **un clip a cada pota de cada tram**
+    (l'estàndard: el clip es fixa a la pota), una cantonera per cantonada i una unió lineal on un tram passa de la barra; avís
     `hardware` si el perfil no hi cap sota la base o hi deixa més de 20 mm. Només el davant i de fusta: la peça de sempre
     (proves d'or idèntiques). Tests `build/plinthSides.test.ts`. Amb potes, «Pota»:
     les genèriques (només es veuen) o una pota de la biblioteca (`Base.hardware`, còpia): forats de la placa a la cara de
@@ -67,24 +68,31 @@
     miniatures; sense les genèriques; tot de plàstic negre; com les genèriques, **també al render**: `HwSolid.render`, fora del grup `editorOnly`). A «Com va muntat», el lliscador «Regulació» fa sortir la part
     mòbil fins a +20 (`LEG_ADJUST`, `HardwareMount3D`). Test `build/hafeleLegs.test.ts`.
   - **Penjadors** (mòdul penjat, v45; per decisió de l'usuari, 2026-10-15: «als mobles de paret falten els ferratges per
-    penjar el moble» → **penjador regulable i regleta**; `MountingBuilder.buildHangers`, `build/module/mounting.ts`): a
+    penjar el moble» → **penjador regulable i regleta**, i «fem-ho tot el més estàndard possible per si surt un nou
+    client» → **el de la fitxa del fabricant**; `MountingBuilder.buildHangers`, `build/module/mounting.ts`): a
     Mòdul › Caixa, sota «Base» (penjat), **«Penjadors»** (`Base.hanger`: «Com el mòdul» = el lloc `hanger` del mòdul,
     un altre de la biblioteca o **«Cap»**) i, si n'hi ha, **«Regleta»** (`Base.rail`, lloc `wallRail`, també «Cap»: plaques
     soltes a mà). **Per defecte, tots els mòduls penjats en porten** (també els desats: sense camp = el del mòdul o el
-    d'inici; canvi volgut de la fabricació, proves d'or revisades). Un penjador a cada lateral, a la cara de dins de la
-    cantonada de dalt i darrere: els forats del target `side` (el d'inici, `hanger-concealed`: 4 × Ø10 × 12 a 37 de dalt
-    i del darrere, a 32; tot o res per penjador: fora de la peça o darrere del fons, cap forat i avís `hardware`; la
-    filera System 32 de darrere que queda sota el cos no es fa); l'**osca del fons** a les cantonades de dalt per on passa
-    el ganxo (`notchWidth` × `notchHeight` des de la cara del lateral i de dalt del moble: `Panel.outline`, com les osques
-    de les columnes; el Maestro hi deixa el radi de la fresa); el cos i el ganxo es dibuixen (`extras` `hanger-left/right`,
-    `-hook`, rol `hardware`); a la comanda, un per lateral (`order`). La **regleta** (ferratge per metres, motor
-    `wallRail`) va contra la paret de lateral a lateral, a `railTop` sota la cara de dalt del moble (`extras`
-    `wall-rail`), i la comanda ajunta la dels penjats seguits (vegeu Ferratges per metres). El ganxo i la regleta van
-    entre la paret i el fons: cal que el fons en deixi `gap` (16 mm, Häfele): fons en ranura amb «Ranura del fons» ≥ 16
-    o encastat retirat; si no (cargolat, o en ranura a 10, el valor inicial), avís `hanging`. Amb penjadors, el fons prim
-    ja no avisa (el pes va pels laterals). `usedHardwareSlots`: `hanger` (un per lateral) i `wallRail`. Mides i fonts a
-    `core/model/hangingHardware.ts` (Camar 807, Häfele Libra H2 290.41.910, 290.03.935; regleta Libra B3 / Häfele 2032);
-    **hipòtesis** per confirmar amb el taller: la posició i la fondària dels forats, l'osca i l'alçada de la regleta.
+    d'inici). El d'inici (`hanger-concealed`, v2) és l'estàndard de penjador ocult amb regleta, el **Libra H2** d'Italiana
+    Ferramenta (Häfele 290.41.910), muntat **sota la tapa i darrere del fons**: a cada lateral, cara de dins, **4 × Ø10 × 13
+    en columna a 32**, el primer a **37 sota la tapa** i l'eix a **5 darrere la cara de darrere del fons** (`underTop`,
+    `fromTop`, `behindBack`); al fons, davant de cada penjador, la **ranura per regular-lo** des de dins (`Panel.cutouts`
+    `slot` de **12 × 54,5**, a 34 sota la tapa i a 19,5 de la cara del lateral, tag `hanger`; s'hi posa la tapeta); **sense
+    osca** al fons. Tot o res per penjador (fora de la peça: cap forat i avís `hardware`). El cos (39,4 × 142,2 × 15) i el
+    ganxo es dibuixen (`extras` `hanger-left/right`, `-hook`, rol `hardware`); a la comanda, un per lateral (`order`). La
+    **regleta** (ferratge per metres, motor `wallRail`: Libra B3, 33,5 × 5,6, barra de 2000) va contra la paret de lateral
+    a lateral, a `railTop` (40) sota la tapa (només es dibuixa: a obra), i la comanda ajunta la dels penjats seguits (vegeu
+    Ferratges per metres). El penjador i la regleta van entre la paret i el fons: cal que el fons en deixi `gap` (15 mm,
+    el mínim del Libra H2; Häfele en dona 16–20): **el fons estàndard dels penjats és en ranura retirat 20**
+    (`model/hungBack.ts`, `hungBack`: el fan els mòduls penjats nous —`defaultModule`, i amb ell plantilles, catàleg,
+    col·leccions i mòduls de Preferències—, `applySettingsToModule` i penjar-ne un, `setModuleMount`; els mobles desats no
+    es toquen). Si el fons no en deixa (cargolat, o en ranura a menys de 15), cap forat i un sol avís `hanging`. Amb
+    penjadors, el fons prim ja no avisa (el pes va pels laterals). Les **còpies d'abans** (item v1 desat al mòdul, sense
+    `behindBack`) es fan com abans (4 × Ø10 × 12 en quadre a 37 de dalt i del darrere, davant del fons, l'osca del fons
+    `notchWidth` × `notchHeight`): els mobles desats amb la còpia no canvien. El **Camar 807** (el que se sol anomenar) és
+    el dels **baixos penjats** amb plaques de paret 897 (4 × Ø10 en rectangle de 32 × 64), no el de regleta: no s'ha posat.
+    `usedHardwareSlots`: `hanger` (un per lateral) i `wallRail`. Mides i fonts (amb pàgina) a
+    [`ferratges-jocs.md`](../ferratges-jocs.md) › Ferratges per metres i penjadors i a `core/model/hangingHardware.ts`.
     Test `build/hangers.test.ts`.
   - **Fons** (`Carcass.back`): en ranura · cargolat darrere · **encastat** · sense. Encastat (`buildInsetBack`): ocupa la
     llum interior (on falta una peça, fins a fora; parets buides: entre les pells de dins), enrasat o retirat
@@ -351,15 +359,18 @@
   mobles… gestionar tota l'app amb coherència»): **un sol concepte** per als perfils que es compren en barres (o per
   metres) i es tallen a mida. És un `HardwareItem` com els altres (biblioteca, Preferències › Ferratges, còpia al moble,
   «Com el mòdul» / «Cap», `eachHardware`) que porta `linear` (el clip i la cantonera que s'hi compren) i, als `params`
-  (editables com tots), la secció `height` × `depth`, la barra `stock` (0 = per metres), `clipSpacing` i `clipEnd`. **Una
+  (editables com tots), la secció `height` × `depth`, la barra `stock` (0 = per metres), `clipSpacing` i `clipEnd` (el
+  sòcol, `clipSpacing` 0: un clip a cada pota de cada tram, `LinearPiece.clips`), i `linear.joint` (la unió lineal). **Una
   regla el posa** al moble, com la resta de motors: la regleta de paret (`wallRail`) al llarg de cada mòdul penjat amb
   penjadors; el sòcol d'alumini (`plinthProfile`) als costats triats del sòcol de la base «Potes» o del sòcol corregut.
   Es **dibuixa** (`extras`, rol `hardware`: no surt a «Elements sense nesting») i cada regla en deixa un **tros**
   (`LinearPiece`, `ModuleBuild.linear`). La **comanda** (`buildLinearOrders`, `core/build/linearOrders.ts`,
   `CompositionBuild.linearOrders`): per item, els trossos per tallar (les regletes de penjats seguits —mateix item,
   mateixa alçada, que es toquen— en fan un de sol), els metres, les **barres** que cal comprar (del tros més llarg al
-  més curt, al primer que hi cap, 3 mm de serra; un tros més llarg que la barra, barres empalmades), els **clips** (un
-  cada `clipSpacing` entre els dels extrems a `clipEnd`, dos per tros com a mínim) i les **cantoneres**. Surt a Peces ›
+  més curt, al primer que hi cap, 3 mm de serra; un tros més llarg que la barra, barres empalmades i una **unió lineal**
+  per empalmament), els **clips** (els que diu la regla —el sòcol: dues potes per mòdul al tram de davant i dues a cada
+  retorn— o un cada `clipSpacing` entre els dels extrems a `clipEnd`, dos per tros com a mínim) i les **cantoneres**. Un
+  extrem del sòcol a la vista porta un retorn amb cantonera; contra la paret es talla a tope (cap tapa). Surt a Peces ›
   **«Ferratges per metres»** (`linearGroups`, la mateixa taula que les altres comandes), al **CSV de la llista de tall**
   (a sota, `linearCsvRows`) i a la fitxa «Ferratges» del mòdul (`ruleHardwareCounts`: penjadors, regleta i sòcol
   d'alumini amb els metres). Els **perfils LED** ja es tallen a mida per un altre camí (el perfil de l'app a «Elements

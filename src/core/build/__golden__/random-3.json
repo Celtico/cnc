@@ -29,14 +29,14 @@
  },
  "seed-103": {
   "panels": 30,
-  "extras": 5,
+  "extras": 0,
   "warnings": [
    "hanging",
    "inset",
    "table"
   ],
   "p": [
-   "back|trassera|1665x275x10|Melamina blanca|none|e0000|h0|g0|c0|o2f49b100|@0a9f6416",
+   "back|trassera|1665x275x10|Melamina blanca|none|e0000|h0|g0|c0|o-|@0a9f6416",
    "bottom|baix|310x260x30|Melamina blanca|y|e0001|h6:e04117b4|g1:f38400d3|c0|o-|@0880a973",
    "drawerBack|darrere calaix|274.5x203x16|Melamina blanca|y|e0100|h4:d3d51296|g0|c0|o-|@371edc8c",
    "drawerBack|darrere calaix|274.5x203x16|Melamina blanca|y|e0100|h4:d3d51296|g0|c0|o-|@44121fb7",
@@ -63,8 +63,8 @@
    "drawerSide|lateral calaix|296.5x250x16|Melamina blanca|y|e0100|h5:bd0bbe3b|g1:4b3f0cc0|c0|o-|@6f4c8496",
    "drawerSide|lateral calaix|296.5x250x16|Melamina blanca|y|e0100|h5:bd0bbe3b|g1:4b3f0cc0|c0|o-|@b585c33c",
    "drawerSide|lateral calaix|296.5x250x16|Melamina blanca|y|e0100|h5:bd0bbe3b|g1:4b3f0cc0|c0|o-|@db1e5df7",
-   "side|lat d|1680x310x30|Melamina blanca|x|e0110|h12:c303dcc0|g1:00a21043|c0|o-|@7a05d1f7",
-   "side|lat e|1680x310x30|Melamina blanca|x|e1100|h12:5aadc44a|g1:62da5179|c0|o-|@f146f8f6",
+   "side|lat d|1680x310x30|Melamina blanca|x|e0110|h8:a83f1ff2|g1:00a21043|c0|o-|@7a05d1f7",
+   "side|lat e|1680x310x30|Melamina blanca|x|e1100|h8:889d080a|g1:62da5179|c0|o-|@f146f8f6",
    "top|dalt|360x350x30|Melamina blanca|x|e1111|h0|g1:2e63ca76|c0|o-|@348c986d"
   ]
  },
@@ -193,7 +193,7 @@
  },
  "seed-107": {
   "panels": 50,
-  "extras": 7,
+  "extras": 2,
   "warnings": [
    "back-groove",
    "drawer-bottom",
@@ -212,7 +212,7 @@
    "shelves"
   ],
   "p": [
-   "back|trassera|795x285x19|Contraxapat 4mm|none|e0000|h0|g0|c0|of585ec40|@22be3a91",
+   "back|trassera|795x285x19|Contraxapat 4mm|none|e0000|h0|g0|c0|o-|@22be3a91",
    "bottom|baix int|270x241x19|Roure massís / xapat|x|e0000|h0|g1:1c084115|c0|o-|@f9e66b7a|glue",
    "bottom|baix|430x241x19|Roure massís / xapat|x|e0000|h0|g0|c0|o-|@c2f55320|m:left,right glue",
    "bottom|baix|918x330x16|Roure massís / xapat|x|e0010|h6:5c6d73e3|g0|c0|o-|@790a10c1",
@@ -245,10 +245,10 @@
    "shelf|estanter 5|231x76.3x19|Roure massís / xapat|y|e0001|h0|g0|c0|o-|@b54bbd95",
    "shelf|estanter 6|269x231x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@2bbf5b02",
    "shelf|estanter 7|269x231x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@4957bb5f",
-   "side|lat d int|902x241x19|Roure massís / xapat|x|e0000|h17:c88b9892|g1:752c885a|c0|o-|@883ca96b|glue",
+   "side|lat d int|902x241x19|Roure massís / xapat|x|e0000|h13:bf5b9b1a|g1:752c885a|c0|o-|@883ca96b|glue",
    "side|lat d|1570x330x16|Roure massís / xapat|x|e0110|h6:c894edf2|g0|c0|o-|@30cf1a37",
    "side|lat d|940x241x19|Roure massís / xapat|x|e0000|h0|g0|c0|o-|@ef22a7c6|m:left,right glue",
-   "side|lat e int|902x241x19|Roure massís / xapat|x|e0000|h17:c6b933a2|g1:a7e6708e|c0|o-|@51b8754f|glue",
+   "side|lat e int|902x241x19|Roure massís / xapat|x|e0000|h13:4898c6dc|g1:a7e6708e|c0|o-|@51b8754f|glue",
    "side|lat e|1570x330x16|Roure massís / xapat|x|e1100|h6:c894edf2|g0|c0|o-|@9d06bf6b",
    "side|lat e|940x241x19|Roure massís / xapat|x|e0000|h0|g0|c0|o-|@f146f8f6|m:left,right glue",
    "spacer|llistó|222x42x19|Roure massís / xapat|x|e0000|h0|g0|c0|o-|@0617d1e1|glue",
@@ -266,7 +266,7 @@
  },
  "seed-108": {
   "panels": 17,
-  "extras": 5,
+  "extras": 0,
   "warnings": [
    "drawer-box",
    "handle",
@@ -274,7 +274,7 @@
    "hanging"
   ],
   "p": [
-   "back|trassera|690x460x10|MDF lacat|none|e0000|h0|g0|c0|o50f8d246|@744da8f6",
+   "back|trassera|690x460x10|MDF lacat|none|e0000|h0|g0|c0|o-|@744da8f6",
    "bottom|baix|652x570x19|Noguera xapada|x|e0010|h18:29e16f4b|g0|c0|o-|@5cb9f432",
    "divider|divisor|570x422x19|Noguera xapada|y|e0100|h6:fa18394b|g0|c0|o-|@69c5488f",
    "divider|divisor|570x422x19|Noguera xapada|y|e0100|h6:fa18394b|g0|c0|o-|@724c5bf8",
@@ -288,8 +288,8 @@
    "drawerSide|lateral calaix|550x420x16|Noguera xapada|x|e1000|h6:1d1c8d97|g1:43be8519|c0|o-|@adb9b8a2",
    "drawerSide|lateral calaix|550x420x16|Noguera xapada|x|e1000|h6:2d83a014|g1:43be8519|c0|o-|@581d2689",
    "panel|frontal fix|456x229.7x19|Noguera xapada|x|e1111|h0|g0|c0|o-|@46fea89a",
-   "side|lat d|570x460x19|Noguera xapada|y|e0011|h10:fe3a1c56|g0|c0|o-|@6cc5e7c6",
-   "side|lat e|570x460x19|Noguera xapada|y|e0110|h10:bd29b3c7|g0|c0|o-|@67a20b29",
+   "side|lat d|570x460x19|Noguera xapada|y|e0011|h6:d5c81830|g0|c0|o-|@6cc5e7c6",
+   "side|lat e|570x460x19|Noguera xapada|y|e0110|h6:479b9a35|g0|c0|o-|@67a20b29",
    "top|dalt|652x510x19|Noguera xapada|x|e1000|h18:5e1dfc5f|g0|c0|o-|@87944329"
   ]
  },
@@ -362,7 +362,7 @@
  },
  "seed-111": {
   "panels": 80,
-  "extras": 11,
+  "extras": 1,
   "warnings": [
    "back-inset",
    "drawer-bottom",
@@ -386,9 +386,9 @@
    "rail"
   ],
   "p": [
-   "back|trassera|1250x460x10|Roure massís / xapat|none|e1111|h0|g0|c0|o3fad3cc4|@2fc5a475",
+   "back|trassera|1250x460x10|Roure massís / xapat|none|e1111|h0|g0|c0|o-|@2fc5a475",
    "back|trassera|1350x1020x10|DM 10|none|e0000|h0|g0|c0|o-|@0a681163",
-   "back|trassera|948x434x8|DM (fons)|none|e0000|h0|g0|c0|ob2355a80|@9e467748",
+   "back|trassera|948x434x8|DM (fons)|none|e0000|h0|g0|c0|o-|@9e467748",
    "bottom|baix|1020x600x19|Melamina 19|x|e0010|h6:88d837cf|g0|c0|o-|@e70fecd5|m:left,right",
    "bottom|baix|530x460x16|Roure massís / xapat|y|e0001|h6:9ce75539|g0|c0|o-|@d1ac5693|m:bottom,top",
    "bottom|baix|980x616x16|Melamina 19|x|e0000|h3:9cf273a7|g0|c0|o-|@a03c1d3e|m:bottom,left,right",
@@ -455,12 +455,12 @@
    "shelf|estanter 3|500x131x16|Roure massís / xapat|y|e0001|h0|g0|c0|o-|@62db34c3",
    "shelf|estanter|551x313.7x19|Melamina 19|y|e0000|h0|g0|c0|o-|@87ece71b|glue",
    "shelf|estanter|551x313.7x19|Melamina 19|y|e0000|h0|g0|c0|o-|@fde3ebdb|glue",
-   "side|lat d|1250x530x16|Roure massís / xapat|x|e0010|h11:841c18e6|g0|c0|o-|@ee730b53|m:left,right",
+   "side|lat d|1250x530x16|Roure massís / xapat|x|e0010|h7:e9415e2e|g0|c0|o-|@ee730b53|m:left,right",
    "side|lat d|1350x600x19|Melamina 19|x|e0010|h13:d859e432|g0|c0|o-|@22f15fbd|m:left,right",
-   "side|lat d|616x450x16|Melamina 19|y|e0010|h8:07e10716|g0|c0|o-|@032fc04f|m:left,top",
-   "side|lat e|1250x530x16|Roure massís / xapat|x|e1000|h75:ae5c5f62|g0|c0|o-|@31bd2fd5|m:left,right",
+   "side|lat d|616x450x16|Melamina 19|y|e0010|h4:92793c70|g0|c0|o-|@032fc04f|m:left,top",
+   "side|lat e|1250x530x16|Roure massís / xapat|x|e1000|h72:378c4576|g0|c0|o-|@31bd2fd5|m:left,right",
    "side|lat e|1350x600x19|Melamina 19|x|e1000|h39:ec195860|g0|c0|o-|@5ec54cce|m:left,right",
-   "side|lat e|616x450x16|Melamina 19|y|e0010|h26:21020571|g0|c0|o-|@bd656093|m:right,top",
+   "side|lat e|616x450x16|Melamina 19|y|e0010|h24:3013b2d0|g0|c0|o-|@bd656093|m:right,top",
    "spacer|estanter|313.7x22x19|Melamina 19|x|e0000|h0|g0|c0|o-|@71873629|glue",
    "spacer|estanter|532x22x19|Melamina 19|x|e0000|h0|g0|c0|o-|@0f7835b2|glue",
    "spacer|estanter|532x22x19|Melamina 19|x|e0000|h0|g0|c0|o-|@736d1197|glue",
@@ -568,7 +568,7 @@
  },
  "seed-116": {
   "panels": 51,
-  "extras": 5,
+  "extras": 0,
   "warnings": [
    "drawer-bottom",
    "drawer-bottom",
@@ -585,7 +585,7 @@
   ],
   "p": [
    "back|trassera|1520x590x19|Roure massís / xapat|none|e0000|h0|g0|c0|o-|@df11e2f5",
-   "back|trassera|1522x692x16|Noguera xapada|x|e0000|h10:84049c07|g0|c0|o8b5565d2|@eccae62c",
+   "back|trassera|1522x692x16|Noguera xapada|x|e0000|h12:4c6341e0|g0|c0|o-|@eccae62c",
    "bottom|baix|1170x510x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@01292763|m:left,right",
    "bottom|baix|692x590x19|Noguera xapada|x|e0010|h9:df0d4035|g0|c0|o-|@e160818d",
    "door|porta d|1518x342.5x19|MDF lacat|x|e1111|h3:313bd13c|g0|c0|o-|@df5856ac|push",
@@ -628,10 +628,10 @@
    "shelf|estanter|691x554x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@36aef4b9",
    "side|lat d|1150x510x19|Noguera xapada|x|e0010|h10:433fac9f|g0|c0|o-|@ee1df225|m:left,right",
    "side|lat d|1520x450x19|Melamina blanca|x|e0000|h4:dfdbb494|g0|c0|o-|@3be8c021|m:bottom,right",
-   "side|lat d|1560x590x19|Noguera xapada|x|e0110|h103:5ae10f7c|g0|c0|o-|@4e7246f2",
+   "side|lat d|1560x590x19|Noguera xapada|x|e0110|h101:c644ceb9|g0|c0|o-|@4e7246f2",
    "side|lat e|1150x510x19|Noguera xapada|x|e1000|h10:8b013d0f|g0|c0|o-|@84a01218|m:left,right",
    "side|lat e|1520x450x19|Melamina blanca|x|e0000|h4:0dc81196|g0|c0|o-|@caf467d5|m:right,top",
-   "side|lat e|1560x590x19|Noguera xapada|x|e1100|h103:9cf45ad1|g0|c0|o-|@f146f8f6",
+   "side|lat e|1560x590x19|Noguera xapada|x|e1100|h101:1ef7db3a|g0|c0|o-|@f146f8f6",
    "top|dalt|1170x510x19|Noguera xapada|x|e1000|h0|g0|c24:6d61dbba|o-|@b385503c|m:left,right",
    "top|dalt|590x450x19|Melamina blanca|x|e0000|h0|g0|c0|o-|@a2195e20|m:left,right,top",
    "top|dalt|692x590x19|Noguera xapada|x|e1000|h9:4ab061a4|g0|c0|o-|@bb1baa2f"
@@ -653,7 +653,7 @@
  },
  "seed-118": {
   "panels": 7,
-  "extras": 5,
+  "extras": 0,
   "warnings": [
    "back-groove",
    "hanging",
@@ -661,18 +661,18 @@
    "mitre"
   ],
   "p": [
-   "back|trassera|837x477x16|Roure massís / xapat|none|e0000|h0|g0|c0|of35b2ffa|@3fb93e04",
+   "back|trassera|837x477x16|Roure massís / xapat|none|e0000|h0|g0|c0|o-|@3fb93e04",
    "bottom|baix|500x270x19|Melamina blanca|x|e0010|h0|g1:7d981841|c0|o-|@a6166108|m:left,right",
    "shelf|estanter 1|461x224x19|Melamina blanca|x|e0010|h0|g0|c0|o-|@0f75e096",
    "shelf|estanter 2|461x224x19|Melamina blanca|x|e0010|h0|g0|c0|o-|@e3178766",
-   "side|lat d|860x270x19|Melamina blanca|x|e0010|h50:23328b3f|g1:147b36b1|c0|o-|@74f57a32|m:left,right",
-   "side|lat e|860x270x19|Melamina blanca|x|e1000|h50:de4d3a79|g1:143b769e|c0|o-|@f146f8f6|m:left,right",
+   "side|lat d|860x270x19|Melamina blanca|x|e0010|h48:48dd43ee|g1:147b36b1|c0|o-|@74f57a32|m:left,right",
+   "side|lat e|860x270x19|Melamina blanca|x|e1000|h48:48dd43ee|g1:143b769e|c0|o-|@f146f8f6|m:left,right",
    "top|dalt|500x270x19|Melamina blanca|x|e1000|h0|g1:63e39c2e|c0|o-|@7e83ae4b|m:left,right"
   ]
  },
  "seed-119": {
   "panels": 49,
-  "extras": 5,
+  "extras": 0,
   "warnings": [
    "back-inset",
    "drawer-box",
@@ -686,7 +686,7 @@
   ],
   "p": [
    "back|trassera|1322x312x16|Contraxapat 4mm|none|e0000|h12:34eff479|g0|c0|o-|@d87fe3c6",
-   "back|trassera|1680x400x8|DM 10|none|e0000|h0|g0|c0|o02f1c90c|@06f2d123",
+   "back|trassera|1680x400x8|DM 10|none|e0000|h0|g0|c0|o-|@06f2d123",
    "back|trassera|861x732x10|Roure massís / xapat|none|e0000|h0|g0|c0|o-|@69966f8a",
    "bottom|baix|402x362x19|Melamina blanca|y|e0001|h6:bdcd6281|g0|c0|o-|@4d685521",
    "bottom|baix|650x350x19|Melamina blanca|y|e0001|h3:8a7d666d|g0|c0|o-|@5fad5c95|m:bottom,top",
@@ -727,10 +727,10 @@
    "shelf|estanter 2|402x361x19|Melamina blanca|y|e0001|h0|g0|c0|o-|@bbd43c78",
    "shelf|estanter 3|402x361x19|Melamina blanca|y|e0001|h0|g0|c0|o-|@2931110a",
    "side|lat d|1360x650x19|Melamina blanca|x|e0010|h5:502f7dc5|g0|c0|o-|@2b04c885|m:left,right",
-   "side|lat d|1680x402x19|Melamina blanca|x|e0110|h108:aba9884d|g0|c0|o-|@3ff01d0b",
+   "side|lat d|1680x402x19|Melamina blanca|x|e0110|h106:f99fb49f|g0|c0|o-|@3ff01d0b",
    "side|lat d|960x350x19|MDF lacat|x|e0110|h15:340d8dbb|g0|c0|o-|@81f03656",
    "side|lat e|1360x650x19|Melamina blanca|x|e1000|h5:1211fc6b|g0|c0|o-|@f86cb91a|m:left,right",
-   "side|lat e|1680x402x19|Melamina blanca|x|e1100|h108:ee159c77|g0|c0|o-|@142f97ce",
+   "side|lat e|1680x402x19|Melamina blanca|x|e1100|h106:f99fb49f|g0|c0|o-|@142f97ce",
    "side|lat e|960x350x19|MDF lacat|x|e1100|h3:4df1d2e1|g0|c0|o-|@84a01218",
    "top|dalt|402x362x19|Melamina blanca|y|e0100|h6:bdcd6281|g0|c0|o-|@b5e3cbd3",
    "top|dalt|650x350x19|Melamina blanca|y|e0100|h3:56300b45|g0|c0|o-|@bec9816e|m:bottom,top"
@@ -738,7 +738,7 @@
  },
  "seed-120": {
   "panels": 16,
-  "extras": 5,
+  "extras": 0,
   "warnings": [
    "grille-open-ratio",
    "hanging",
@@ -750,7 +750,7 @@
   ],
   "p": [
    "back|trassera|1690x1120x19|Melamina blanca|none|e0000|h0|g0|c0|o-|@bc96c0c7",
-   "back|trassera|2009.5x1037x10|Roure massís / xapat|none|e0000|h0|g0|c0|off037a46|@2e5c9375",
+   "back|trassera|2009.5x1037x10|Roure massís / xapat|none|e0000|h0|g0|c0|o-|@2e5c9375",
    "bottom|baix|1060x470x19|Melamina blanca|x|e0010|h3:220c772a|g1:b4b3fbcb|c0|o-|@df365a02|m:left,right",
    "bottom|baix|1082x381x19|Roure massís / xapat|x|e0010|h6:57b1e772|g0|c0|o-|@429fb3b1",
    "divider|divisor|2002x450x19|Melamina blanca|x|e1000|h250:d14ab7d5|g0|c0|o-|@53bb5846",
@@ -760,9 +760,9 @@
    "shelf|estanter 1|500.5x430x19|Melamina blanca|x|e0010|h0|g0|c0|o-|@5247e9bc",
    "shelf|estanter 2|500.5x430x19|Melamina blanca|x|e0010|h0|g0|c0|o-|@0227ee7b",
    "side|lat d|1690x381x19|Roure massís / xapat|x|e0110|h106:ca5c5140|g0|c0|o-|@a21b8eaa",
-   "side|lat d|2040x470x19|Melamina blanca|x|e0010|h124:af643361|g1:b2088af2|c0|o-|@e479ff06|m:left,right",
+   "side|lat d|2040x470x19|Melamina blanca|x|e0010|h122:333fafb4|g1:b2088af2|c0|o-|@e479ff06|m:left,right",
    "side|lat e|1690x381x19|Roure massís / xapat|x|e1100|h106:ca5c5140|g0|c0|o-|@3c665548",
-   "side|lat e|2040x470x19|Melamina blanca|x|e1000|h4:130c25d4|g1:b93811ae|c0|o-|@f146f8f6|m:left,right",
+   "side|lat e|2040x470x19|Melamina blanca|x|e1000|h0|g1:b93811ae|c0|o-|@f146f8f6|m:left,right",
    "top|dalt|1060x410x19|Melamina blanca|x|e1000|h3:b101c9f7|g0|c0|o-|@a75aea7f|m:left,right",
    "top|dalt|1082x381x19|Roure massís / xapat|x|e1000|h6:57b1e772|g0|c0|o-|@e7cf5c97"
   ]
@@ -1162,8 +1162,8 @@
   "p": [
    "bottom|baix|802x580x19|Noguera xapada|x|e0010|h6:6d8c892b|g0|c0|o-|@5cb9f432",
    "flap|abatible|836x396x19|MDF lacat|y|e1111|h2:cbc21e07|g0|c2:51e6b51a|o-|@2069944c",
-   "side|lat d|580x400x19|Noguera xapada|y|e0011|h10:f614d1a7|g0|c0|o-|@17da9dd0",
-   "side|lat e|580x400x19|Noguera xapada|y|e0110|h10:79d49cb5|g0|c0|o-|@4066adeb",
+   "side|lat d|580x400x19|Noguera xapada|y|e0011|h10:4bce1915|g0|c0|o-|@17da9dd0",
+   "side|lat e|580x400x19|Noguera xapada|y|e0110|h10:e5c927eb|g0|c0|o-|@4066adeb",
    "top|dalt|802x580x19|Noguera xapada|x|e1000|h6:6d8c892b|g0|c29:e6804ff0|o-|@c100b575"
   ]
  },
@@ -1178,7 +1178,7 @@
    "rail"
   ],
   "p": [
-   "back|trassera|1240x620x10|DM (fons)|none|e0000|h0|g0|c0|o1c5a6ee4|@5088d243",
+   "back|trassera|1240x620x10|DM (fons)|none|e0000|h0|g0|c2:f17cef82|o-|@5088d243",
    "bottom|baix|620x250x30|Noguera xapada|x|e0010|h6:c6b0e9f9|g0|c0|o-|@01e5325b",
    "divider|divisor|393.3x188x30|Noguera xapada|x|e1000|h23:655ca614|g0|c0|o-|@ef6f34c9",
    "divider|divisor|393.3x188x30|Noguera xapada|x|e1000|h3:04dbeb76|g0|c0|o-|@fdb416ea",
@@ -1189,8 +1189,8 @@
    "shelf|estanter 1|220x185.7x30|Noguera xapada|y|e0001|h0|g0|c0|o-|@9f9af5d8",
    "shelf|estanter 2|220x185.7x30|Noguera xapada|y|e0001|h0|g0|c0|o-|@d3f8dfcf",
    "shelf|estanter 3|220x185.7x30|Noguera xapada|y|e0001|h0|g0|c0|o-|@16149fbc",
-   "side|lat d|1270x250x30|Noguera xapada|x|e0110|h71:2accb356|g0|c0|o-|@dd67d57b",
-   "side|lat e|1270x250x30|Noguera xapada|x|e1100|h71:e03f31fe|g0|c0|o-|@f146f8f6"
+   "side|lat d|1270x250x30|Noguera xapada|x|e0110|h73:fb3b5c31|g0|c0|o-|@dd67d57b",
+   "side|lat e|1270x250x30|Noguera xapada|x|e1100|h73:2e317207|g0|c0|o-|@f146f8f6"
   ]
  },
  "seed-134": {
@@ -1207,9 +1207,9 @@
    "facing|tira|2000x80x19|Noguera xapada|x|e1000|h0|g0|c0|o02face0e|@00f7403a|glue",
    "facing|tira|410x80x19|Noguera xapada|x|e0010|h0|g0|c0|o4d9d1007|@4cd2b317|glue",
    "facing|tira|410x80x19|Noguera xapada|x|e1000|h0|g0|c0|obe9857a5|@ff44f60e|glue",
-   "side|lat d int|1962x421x19|Noguera xapada|x|e0000|h114:3f5ee461|g0|c0|o-|@0ebf8d59|glue",
+   "side|lat d int|1962x421x19|Noguera xapada|x|e0000|h116:7d9e9aa8|g0|c0|o-|@0ebf8d59|glue",
    "side|lat d|2000x421x19|Noguera xapada|x|e0000|h0|g0|c0|o-|@eed0242c|m:left,right glue",
-   "side|lat e int|1962x421x19|Noguera xapada|x|e0000|h4:31653d34|g0|c0|o-|@51b8754f|glue",
+   "side|lat e int|1962x421x19|Noguera xapada|x|e0000|h4:361ccc7c|g0|c0|o-|@51b8754f|glue",
    "side|lat e|2000x421x19|Noguera xapada|x|e0000|h0|g0|c0|o-|@f146f8f6|m:left,right glue",
    "spacer|llistó|1962x42x19|Noguera xapada|x|e0000|h0|g0|c0|o-|@138311c0|glue",
    "spacer|llistó|1962x42x19|Noguera xapada|x|e0000|h0|g0|c0|o-|@fac40048|glue",
@@ -1411,14 +1411,14 @@
    "shelf|estanter 7|630x205x16|Melamina 19|y|e0001|h0|g0|c0|o-|@1e1c1b52",
    "shelf|estanter 8|630x205x16|Melamina 19|y|e0001|h0|g0|c0|o-|@a206be3c",
    "shelf|estanter 9|630x205x16|Melamina 19|y|e0001|h0|g0|c0|o-|@47a73fa4",
-   "side|lat d|630x550x16|Melamina 19|y|e0011|h21:7b8a385f|g0|c0|o-|@cbaf333e",
-   "side|lat e|630x550x16|Melamina 19|y|e0110|h33:7e6d4b6a|g0|c0|o-|@86957e2d",
+   "side|lat d|630x550x16|Melamina 19|y|e0011|h22:7bf4b3ae|g0|c0|o-|@cbaf333e",
+   "side|lat e|630x550x16|Melamina 19|y|e0110|h34:2e7d1bc6|g0|c0|o-|@86957e2d",
    "top|dalt|570x428x16|Melamina 19|y|e0100|h9:d7dfd9cc|g0|c0|o-|@3870f1a0"
   ]
  },
  "seed-141": {
   "panels": 51,
-  "extras": 10,
+  "extras": 0,
   "warnings": [
    "drawer-bottom",
    "grille-open-ratio",
@@ -1432,8 +1432,8 @@
    "table"
   ],
   "p": [
-   "back|trassera|1100x970x19|Melamina 19|none|e0000|h0|g0|c0|o1a24aaa0|@5136d0cf",
-   "back|trassera|1732x892x16|Melamina 19|none|e0000|h7:3035eb13|g0|c0|of37ffce6|@3597c606",
+   "back|trassera|1100x970x19|Melamina 19|none|e0000|h0|g0|c0|o-|@5136d0cf",
+   "back|trassera|1732x892x16|Melamina 19|none|e0000|h9:49fa3c84|g0|c0|o-|@3597c606",
    "bottom|baix|930x500x19|Roure massís / xapat|x|e0010|h3:00fd107a|g0|c0|o-|@099fbada|m:left,right",
    "bottom|baix|938x451x16|MDF lacat|x|e0010|h6:cc3b0c55|g0|c0|o-|@b0cb4a5f",
    "drawerBack|darrere calaix|835x236.8x16|Roure massís / xapat|x|e1000|h4:ddb50a30|g0|c0|o-|@47b671f5",
@@ -1477,26 +1477,26 @@
    "shelf|estanter 3|891x464x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@6e4e617f",
    "shelf|estanter 4|891x464x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@4aee939d",
    "shelf|estanter 5|891x464x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@e2141d70",
-   "side|lat d|1100x451x16|MDF lacat|x|e0110|h10:4dd74594|g0|c0|o-|@14ed3985",
-   "side|lat d|1751x500x19|Roure massís / xapat|x|e0110|h60:c338d511|g0|c0|o-|@0dcc0a75|m:left",
-   "side|lat e|1100x451x16|MDF lacat|x|e1100|h10:b98d163e|g0|c0|o-|@b9fc386a",
-   "side|lat e|1751x500x19|Roure massís / xapat|x|e1100|h60:f8b5d930|g0|c0|o-|@f146f8f6|m:left",
+   "side|lat d|1100x451x16|MDF lacat|x|e0110|h6:4a85887a|g0|c0|o-|@14ed3985",
+   "side|lat d|1751x500x19|Roure massís / xapat|x|e0110|h56:4411035d|g0|c0|o-|@0dcc0a75|m:left",
+   "side|lat e|1100x451x16|MDF lacat|x|e1100|h6:4a85887a|g0|c0|o-|@b9fc386a",
+   "side|lat e|1751x500x19|Roure massís / xapat|x|e1100|h56:c0509c8a|g0|c0|o-|@f146f8f6|m:left",
    "top|dalt|938x451x16|MDF lacat|x|e1000|h6:cc3b0c55|g0|c0|o-|@8586fbfe",
    "top|dalt|970x540x19|Roure massís / xapat|x|e1111|h0|g0|c0|o-|@398d5722"
   ]
  },
  "seed-142": {
   "panels": 3,
-  "extras": 3,
+  "extras": 0,
   "warnings": [
    "back-groove",
    "hanging",
    "mitre"
   ],
   "p": [
-   "back|trassera|1688.5x918.5x16|Contraxapat 4mm|none|e0000|h0|g0|c0|o395d8f64|@3962a48b",
+   "back|trassera|1688.5x918.5x16|Contraxapat 4mm|none|e0000|h0|g0|c0|o-|@3962a48b",
    "bottom|baix|930x590x19|Roure massís / xapat|x|e0010|h0|g1:3e050fe0|c0|o-|@3a7213fd|m:left",
-   "side|lat e|1700x590x19|Roure massís / xapat|x|e1100|h4:51c3ab7c|g1:694e081b|c0|o-|@f146f8f6|m:left"
+   "side|lat e|1700x590x19|Roure massís / xapat|x|e1100|h0|g1:694e081b|c0|o-|@f146f8f6|m:left"
   ]
  },
  "seed-143": {
@@ -1581,7 +1581,7 @@
  },
  "seed-146": {
   "panels": 18,
-  "extras": 5,
+  "extras": 0,
   "warnings": [
    "back-inset",
    "hanging",
@@ -1589,16 +1589,16 @@
    "inset"
   ],
   "p": [
-   "back|trassera|1380x390x8|DM (fons)|none|e0000|h0|g0|c0|o6f4ae77c|@1e4b31ff",
+   "back|trassera|1380x390x8|DM (fons)|none|e0000|h0|g0|c0|o-|@1e4b31ff",
    "bottom|baix int|614x390x16|Melamina blanca|y|e0000|h0|g0|c0|o-|@b1871967|glue",
    "bottom|baix|614x550x16|Melamina blanca|y|e0000|h0|g0|c0|o-|@daca8923|m:bottom,top glue",
    "facing|tira|1460x80x16|Melamina blanca|x|e0110|h0|g0|c0|o5d3c03b6|@39577754|glue",
    "facing|tira|1460x80x16|Melamina blanca|x|e1100|h0|g0|c0|ob0e34100|@652334ac|glue",
    "facing|tira|550x80x16|Melamina blanca|x|e0010|h0|g0|c0|o5b151509|@4c09e995|glue",
    "panel|frontal fix|1376x386x16|Melamina 19|x|e1111|h0|g0|c0|o-|@7b7e4aef",
-   "side|lat d int|1444x614x16|Melamina blanca|x|e0100|h4:2f1d04cc|g0|c0|o-|@97b965fa|glue",
+   "side|lat d int|1444x614x16|Melamina blanca|x|e0100|h0|g0|c0|o-|@97b965fa|glue",
    "side|lat d|1460x614x16|Melamina blanca|x|e0100|h0|g0|c0|o-|@7313cee3|m:left glue",
-   "side|lat e int|1444x614x16|Melamina blanca|x|e0100|h4:283495b0|g0|c0|o-|@a3b6474b|glue",
+   "side|lat e int|1444x614x16|Melamina blanca|x|e0100|h0|g0|c0|o-|@a3b6474b|glue",
    "side|lat e|1460x614x16|Melamina blanca|x|e0100|h0|g0|c0|o-|@f146f8f6|m:left glue",
    "spacer|llistó|1444x48x16|Melamina blanca|x|e0000|h0|g0|c0|o-|@9a3b54c4|glue",
    "spacer|llistó|1444x48x16|Melamina blanca|x|e0000|h0|g0|c0|o-|@fd6d1af4|glue",
@@ -1691,8 +1691,8 @@
    "shelf|estanter 1|545.5x451x19|MDF lacat|x|e0000|h0|g0|c0|o-|@b1cdccce|glue",
    "shelf|estanter 2|545.5x451x19|MDF lacat|x|e0000|h0|g0|c0|o-|@2e0c8082|glue",
    "shelf|estanter 2|545.5x451x19|MDF lacat|x|e0000|h0|g0|c0|o-|@ed00d0f2|glue",
-   "side|lat d|590x490x19|MDF lacat|x|e0010|h18:1a53b787|g0|c0|o-|@d631166c|m:left,right",
-   "side|lat e|590x490x19|MDF lacat|x|e1000|h4:f00c8056|g0|c0|o-|@f146f8f6|m:left,right",
+   "side|lat d|590x490x19|MDF lacat|x|e0010|h18:95bce85e|g0|c0|o-|@d631166c|m:left,right",
+   "side|lat e|590x490x19|MDF lacat|x|e1000|h4:d94db477|g0|c0|o-|@f146f8f6|m:left,right",
    "spacer|estanter 1|432x22x19|MDF lacat|x|e0000|h0|g0|c0|o-|@9a9f6c63|glue",
    "spacer|estanter 1|432x22x19|MDF lacat|x|e0000|h0|g0|c0|o-|@dd64b9f8|glue",
    "spacer|estanter 1|545.5x22x19|MDF lacat|x|e0000|h0|g0|c0|o-|@39ab35d7|glue",

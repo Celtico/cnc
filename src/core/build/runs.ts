@@ -135,7 +135,8 @@ export function buildPlinthRun(comp: Composition, run: PlinthRun, places: Module
   const frame = { x0: run.left ? x0 + ss : x0, x1: run.right ? x1 - ss : x1, zBack: 0, zFront: face, y0: 0, sides }
   if (run.hardware) {
     try {
-      const alu = aluPlinth(frame, run.hardware, `run:${run.id}:`, 0)
+      // Un clip a cada pota: les dues del davant de cada mòdul al tram de davant, dues a cada retorn.
+      const alu = aluPlinth(frame, run.hardware, `run:${run.id}:`, 0, { front: 2 * r.modules.length })
       return { panels: [], extras: alu.extras.map((p) => ({ ...p, module: moduleNumber })), linear: alu.pieces }
     } catch (err) {
       warnings.push({ runId: run.id, message: `Sòcol corregut: ${err instanceof Error ? err.message : String(err)}. No es fa.` })

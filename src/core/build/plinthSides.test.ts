@@ -57,19 +57,30 @@ describe("sòcol al voltant (base «Potes»)", () => {
     expect(w.some((x) => x.code === "hardware" && x.message.includes("esquerre"))).toBe(true)
   })
 
-  it("d'alumini: cap peça de CNC, els perfils a extres, i a la comanda les barres, els clips i les cantoneres", () => {
+  it("d'alumini: cap peça de CNC, els perfils a extres, i a la comanda les barres, un clip a cada pota per tram i les cantoneres", () => {
     const item = PLINTH_PROFILE_ITEMS[0]!
     const b = buildModule(island({ setback: 5, back: true, left: true, right: true, sideSetback: 5, hardware: item }))
     expect(b.panels.some((p) => p.role === "plinth")).toBe(false)
     const alu = b.extras.filter((p) => p.id.endsWith("-alu"))
     expect(alu).toHaveLength(4)
-    expect(alu.every((p) => p.role === "hardware" && p.material === "Alumini anoditzat plata" && p.width === 100)).toBe(true)
+    expect(alu.every((p) => p.role === "hardware" && p.material === "Alumini anoditzat plata" && p.width === 100 && p.thickness === 12)).toBe(true)
     const [o] = buildLinearOrders(b.linear)
-    expect(o!.cuts).toEqual([1990, 1990, 858, 858])
+    // Laterals entre el davant i el darrere (perfil de 12): 900 − 5 − 5 − 2 × 12 = 866.
+    expect(o!.cuts).toEqual([1990, 1990, 866, 866])
     expect(o!.corners).toBe(4)
-    // 2 × 1990 + 2 × 836 = 5652 → dues barres de 4000.
+    // 2 × 1990 + 2 × 866 = 5712 → dues barres de 3900.
     expect(o!.bars).toBe(2)
-    expect(o!.clips).toBe(2 * clipCount(1990, 600, 80) + 2 * clipCount(858, 600, 80))
+    // Un clip a cada pota de cada tram: 4 trams × 2 potes.
+    expect(o!.clips).toBe(8)
+    expect(o!.joints).toBe(0)
+  })
+
+  it("un tram més llarg que la barra porta unió lineal", () => {
+    const item = PLINTH_PROFILE_ITEMS[0]!
+    const [o] = buildLinearOrders([{ item, length: 4500, stock: 3900, clipSpacing: 0, clipEnd: 0, clips: 6, corners: 0 }])
+    expect(o!.bars).toBe(2)
+    expect(o!.joints).toBe(1)
+    expect(o!.clips).toBe(6)
   })
 
   it("la «Cuina greige amb illa»: l'illa porta sòcol al voltant, a inglet", () => {

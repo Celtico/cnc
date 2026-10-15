@@ -531,18 +531,15 @@
  "store-emmagatzematge-moble-modular-1": {
   "panels": 51,
   "extras": 10,
-  "warnings": [
-   "hanging",
-   "hanging"
-  ],
+  "warnings": [],
   "p": [
-   "back|trassera|800x400x10|DM (fons)|none|e0000|h0|g0|c0|oe268d47a|@020a62d7",
-   "back|trassera|800x400x10|DM (fons)|none|e0000|h0|g0|c0|oe268d47a|@3b9fe838",
+   "back|trassera|777x377x10|DM (fons)|none|e0000|h0|g0|c2:669acf16|o-|@9743dec2",
+   "back|trassera|777x377x10|DM (fons)|none|e0000|h0|g0|c2:669acf16|o-|@f3e88dad",
    "back|trassera|800x720x10|DM (fons)|none|e0000|h0|g0|c0|o-|@8692d495",
    "back|trassera|800x720x10|DM (fons)|none|e0000|h0|g0|c0|o-|@cf910648",
    "back|trassera|800x720x10|DM (fons)|none|e0000|h0|g0|c0|o-|@d3864258",
-   "bottom|baix|762x290x19|Melamina blanca|x|e0010|h6:edf965e8|g0|c0|o-|@1f32f733",
-   "bottom|baix|762x290x19|Melamina blanca|x|e0010|h6:edf965e8|g0|c0|o-|@2ebe92a8",
+   "bottom|baix|762x300x19|Melamina blanca|x|e0010|h6:2119d97a|g1:0685f6ec|c0|o-|@1f32f733",
+   "bottom|baix|762x300x19|Melamina blanca|x|e0010|h6:2119d97a|g1:0685f6ec|c0|o-|@2ebe92a8",
    "bottom|baix|762x440x19|Melamina blanca|x|e0010|h6:d50f39e6|g0|c0|o-|@25d87877",
    "bottom|baix|762x440x19|Melamina blanca|x|e0010|h6:d50f39e6|g0|c0|o-|@6c213794",
    "bottom|baix|762x440x19|Melamina blanca|x|e0010|h6:d50f39e6|g0|c0|o-|@da81b31e",
@@ -572,18 +569,18 @@
    "plinth|socol|762x80x19|Melamina blanca|x|e1010|h0|g0|c0|o-|@d564c2e1",
    "shelf|estanter|761x420x19|Melamina blanca|x|e0010|h0|g0|c0|o-|@2a4b5365",
    "shelf|estanter|761x420x19|Melamina blanca|x|e0010|h0|g0|c0|o-|@c4f6b9d4",
-   "side|lat d|400x290x19|Melamina blanca|x|e0110|h28:6a739c2c|g0|c0|o-|@67470aba",
-   "side|lat d|400x290x19|Melamina blanca|x|e0110|h28:6a739c2c|g0|c0|o-|@c8e80f5e",
+   "side|lat d|400x300x19|Melamina blanca|x|e0110|h30:d40eab2a|g1:ff8f4c65|c0|o-|@67470aba",
+   "side|lat d|400x300x19|Melamina blanca|x|e0110|h30:d40eab2a|g1:ff8f4c65|c0|o-|@c8e80f5e",
    "side|lat d|720x440x19|Melamina blanca|x|e0110|h12:046be699|g0|c0|o-|@ce96fc38",
    "side|lat d|720x440x19|Melamina blanca|x|e0110|h40:63bd7ab0|g0|c0|o-|@5455a63d",
    "side|lat d|720x440x19|Melamina blanca|x|e0110|h40:63bd7ab0|g0|c0|o-|@fcb0cd81",
-   "side|lat e|400x290x19|Melamina blanca|x|e1100|h28:9cf006a2|g0|c0|o-|@3b052d8b",
-   "side|lat e|400x290x19|Melamina blanca|x|e1100|h28:9cf006a2|g0|c0|o-|@ed6c6e32",
+   "side|lat e|400x300x19|Melamina blanca|x|e1100|h30:799a3a5e|g1:a5cb4592|c0|o-|@2ab02bf8",
+   "side|lat e|400x300x19|Melamina blanca|x|e1100|h30:799a3a5e|g1:a5cb4592|c0|o-|@4247ff77",
    "side|lat e|720x440x19|Melamina blanca|x|e1100|h12:763abe62|g0|c0|o-|@3f1b289b",
    "side|lat e|720x440x19|Melamina blanca|x|e1100|h40:63bd7ab0|g0|c0|o-|@641cff2b",
    "side|lat e|720x440x19|Melamina blanca|x|e1100|h40:63bd7ab0|g0|c0|o-|@c627d0c4",
-   "top|dalt|762x290x19|Melamina blanca|x|e1000|h6:edf965e8|g0|c0|o-|@3cb45610",
-   "top|dalt|762x290x19|Melamina blanca|x|e1000|h6:edf965e8|g0|c0|o-|@954d3331",
+   "top|dalt|762x300x19|Melamina blanca|x|e1000|h6:2119d97a|g1:bce6b3fb|c0|o-|@1f8355b1",
+   "top|dalt|762x300x19|Melamina blanca|x|e1000|h6:2119d97a|g1:bce6b3fb|c0|o-|@3a5d08da",
    "top|dalt|762x440x19|Melamina blanca|x|e1000|h6:d50f39e6|g0|c0|o-|@28d9af7e",
    "top|dalt|762x440x19|Melamina blanca|x|e1000|h6:d50f39e6|g0|c0|o-|@509c8173",
    "top|dalt|762x440x19|Melamina blanca|x|e1000|h6:d50f39e6|g0|c0|o-|@80f54e89"
@@ -839,13 +836,12 @@
   "panels": 25,
   "extras": 6,
   "warnings": [
-   "hanging",
    "inset"
   ],
   "p": [
-   "back|trassera|1000x450x10|DM (fons)|none|e0000|h0|g0|c0|odb4045a4|@6855f51c",
-   "bottom|baix|962x460x19|Freixe xapat|x|e0010|h9:2fdb3204|g0|c0|o-|@9f079ab8",
-   "divider|divisor|460x431x19|Freixe xapat|y|e0100|h11:bf20df95|g0|c0|o-|@83bf4019",
+   "back|trassera|977x438.5x10|DM (fons)|none|e0000|h0|g0|c2:3896ff5a|o-|@36776972",
+   "bottom|baix|962x470x19|Freixe xapat|x|e0010|h9:ca4ce237|g1:9366b373|c0|o-|@9f079ab8",
+   "divider|divisor|440x431x19|Freixe xapat|y|e0100|h11:d4ac7d6a|g0|c0|o-|@d789e923",
    "drawerBack|darrere calaix|414.5x160x16|Freixe xapat|x|e1000|h4:b2c44638|g0|c0|o-|@5b7b9137",
    "drawerBack|darrere calaix|414.5x160x16|Freixe xapat|x|e1000|h4:b2c44638|g0|c0|o-|@9474b671",
    "drawerBack|darrere calaix|414.5x160x16|Freixe xapat|x|e1000|h4:b2c44638|g0|c0|o-|@d731056c",
@@ -866,64 +862,58 @@
    "drawerSide|lateral calaix|400x182x16|Freixe xapat|x|e1000|h6:61d22f54|g1:45309763|c0|o-|@75be23e6",
    "drawerSide|lateral calaix|400x182x16|Freixe xapat|x|e1000|h6:61d22f54|g1:45309763|c0|o-|@77292a54",
    "drawerSide|lateral calaix|400x182x16|Freixe xapat|x|e1000|h6:61d22f54|g1:45309763|c0|o-|@d6cbd2ff",
-   "side|lat d|460x450x19|Freixe xapat|y|e0011|h11:79e48d12|g0|c0|o-|@318c216c",
-   "side|lat e|460x450x19|Freixe xapat|y|e0110|h11:585d4c0c|g0|c0|o-|@b6d05c45"
+   "side|lat d|470x450x19|Freixe xapat|y|e0011|h11:e6b8e8b2|g1:c0e4efb8|c0|o-|@318c216c",
+   "side|lat e|470x450x19|Freixe xapat|y|e0110|h11:94fe2a0c|g1:c233f0fa|c0|o-|@0c38bf1e"
   ]
  },
  "store-bany-moble-susp-s-2": {
   "panels": 9,
   "extras": 6,
-  "warnings": [
-   "hanging"
-  ],
+  "warnings": [],
   "p": [
-   "back|trassera|900x400x10|DM (fons)|none|e0000|h0|g0|c0|od484b08a|@8ad89855",
-   "bottom|baix|862x450x19|MDF lacat antracita|x|e0010|h6:3005dc01|g0|c0|o-|@ac640a5c",
+   "back|trassera|877x388.5x10|DM (fons)|none|e0000|h0|g0|c2:09da3edb|o-|@37e062af",
+   "bottom|baix|862x460x19|MDF lacat antracita|x|e0010|h6:b81d7a45|g1:54ebf0a7|c0|o-|@ac640a5c",
    "drawerBack|darrere calaix|805x341x16|MDF lacat antracita|x|e1000|h4:c68d7ec6|g0|c0|o-|@355ebaf7",
    "drawerBottom|fons calaix|820x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@74216b77",
    "drawerFront|frontal calaix|896x396x19|MDF lacat antracita|x|e1111|h4:171fe1dc|g1:3d51b0d2|c2:9aae184f|o-|@e0e1bfe6",
    "drawerSide|lateral calaix|400x363x16|MDF lacat antracita|x|e1000|h6:02025a9e|g1:45309763|c0|o-|@fb0bc520",
    "drawerSide|lateral calaix|400x363x16|MDF lacat antracita|x|e1000|h6:d664cf5c|g1:45309763|c0|o-|@265bef28",
-   "side|lat d|450x400x19|MDF lacat antracita|y|e0011|h9:d104fd4f|g0|c0|o-|@d556a193",
-   "side|lat e|450x400x19|MDF lacat antracita|y|e0110|h9:e23f1806|g0|c0|o-|@b6d05c45"
+   "side|lat d|460x400x19|MDF lacat antracita|y|e0011|h9:35691cf0|g1:6b6c1331|c0|o-|@d556a193",
+   "side|lat e|460x400x19|MDF lacat antracita|y|e0110|h9:524d0a71|g1:7f18a2dc|c0|o-|@0c38bf1e"
   ]
  },
  "store-bany-moble-susp-s-3": {
   "panels": 10,
   "extras": 6,
-  "warnings": [
-   "hanging"
-  ],
+  "warnings": [],
   "p": [
-   "back|trassera|1000x500x10|DM (fons)|none|e0000|h0|g0|c0|o42b9a07c|@c7beaac0",
-   "bottom|baix|962x450x19|Roure massís / xapat|x|e0010|h6:7f3024d4|g0|c0|o-|@3196a417",
+   "back|trassera|977x488.5x10|DM (fons)|none|e0000|h0|g0|c2:b41643fa|o-|@0fc0e558",
+   "bottom|baix|962x460x19|Roure massís / xapat|x|e0010|h6:ef09d2e4|g1:2adcb344|c0|o-|@3196a417",
    "drawerBack|darrere calaix|905x204x16|Roure massís / xapat|x|e1000|h4:8318dc7c|g0|c0|o-|@61f5a18f",
    "drawerBottom|fons calaix|920x407x10|DM (fons)|none|e0000|h0|g0|c0|o-|@9fd7e7c9",
    "drawerFront|frontal calaix|996x256x19|Roure massís / xapat|x|e1111|h4:dbccb548|g1:5918aac5|c2:792eb7ec|o-|@e0e1bfe6",
    "drawerSide|lateral calaix|400x226x16|Roure massís / xapat|x|e1000|h6:060a954d|g1:45309763|c0|o-|@434cf7b0",
    "drawerSide|lateral calaix|400x226x16|Roure massís / xapat|x|e1000|h6:c6be437d|g1:45309763|c0|o-|@f4328a7b",
-   "fixedShelf|estanter fixe|962x450x19|Roure massís / xapat|x|e0010|h6:7f3024d4|g0|c0|o-|@653bc103",
-   "side|lat d|500x450x19|Roure massís / xapat|x|e0110|h22:79bf865f|g0|c0|o-|@9b8a4b21",
-   "side|lat e|500x450x19|Roure massís / xapat|x|e1100|h22:6e8e6c54|g0|c0|o-|@89ff0e43"
+   "fixedShelf|estanter fixe|962x430x19|Roure massís / xapat|x|e0010|h6:71d60300|g0|c0|o-|@653bc103",
+   "side|lat d|500x460x19|Roure massís / xapat|x|e0110|h22:837093f5|g1:26298136|c0|o-|@9b8a4b21",
+   "side|lat e|500x460x19|Roure massís / xapat|x|e1100|h22:0343b9c8|g1:a48dd01b|c0|o-|@763e7ec0"
   ]
  },
  "store-bany-columna-1": {
   "panels": 10,
   "extras": 5,
-  "warnings": [
-   "hanging"
-  ],
+  "warnings": [],
   "p": [
-   "back|trassera|1500x350x10|DM (fons)|none|e0000|h0|g0|c0|ocd739276|@a212d966",
-   "bottom|baix|312x290x19|MDF lacat|x|e0010|h6:e82c8397|g0|c0|o-|@2f1623b5",
+   "back|trassera|1477x327x10|DM (fons)|none|e0000|h0|g0|c2:05cda0ce|o-|@c45c2470",
+   "bottom|baix|312x300x19|MDF lacat|x|e0010|h6:e742cc25|g1:81289107|c0|o-|@2f1623b5",
    "door|porta|1496x346x19|MDF lacat|x|e1111|h3:d7b3f35e|g0|c2:53496387|o-|@f1bb15a5",
-   "shelf|estanter 1|311x270x19|MDF lacat|x|e0010|h0|g0|c0|o-|@21ca4a53",
-   "shelf|estanter 2|311x270x19|MDF lacat|x|e0010|h0|g0|c0|o-|@52e62aad",
-   "shelf|estanter 3|311x270x19|MDF lacat|x|e0010|h0|g0|c0|o-|@ff6e20de",
-   "shelf|estanter 4|311x270x19|MDF lacat|x|e0010|h0|g0|c0|o-|@4edb3d80",
-   "side|lat d|1500x290x19|MDF lacat|x|e0110|h96:93bc7ca0|g0|c0|o-|@8f977458",
-   "side|lat e|1500x290x19|MDF lacat|x|e1100|h96:9123a950|g0|c0|o-|@c9bb2c48",
-   "top|dalt|312x290x19|MDF lacat|x|e1000|h6:e82c8397|g0|c0|o-|@954d3331"
+   "shelf|estanter 1|311x250x19|MDF lacat|x|e0010|h0|g0|c0|o-|@21ca4a53",
+   "shelf|estanter 2|311x250x19|MDF lacat|x|e0010|h0|g0|c0|o-|@52e62aad",
+   "shelf|estanter 3|311x250x19|MDF lacat|x|e0010|h0|g0|c0|o-|@ff6e20de",
+   "shelf|estanter 4|311x250x19|MDF lacat|x|e0010|h0|g0|c0|o-|@4edb3d80",
+   "side|lat d|1500x300x19|MDF lacat|x|e0110|h98:2e2c0d2e|g1:964e3e0b|c0|o-|@8f977458",
+   "side|lat e|1500x300x19|MDF lacat|x|e1100|h98:e0159828|g1:4419e32e|c0|o-|@047f4fa1",
+   "top|dalt|312x300x19|MDF lacat|x|e1000|h6:e742cc25|g1:308f0530|c0|o-|@3a5d08da"
   ]
  },
  "store-bany-columna-2": {
@@ -957,73 +947,65 @@
  "store-bany-columna-3": {
   "panels": 11,
   "extras": 5,
-  "warnings": [
-   "hanging"
-  ],
+  "warnings": [],
   "p": [
-   "back|trassera|1600x400x10|DM (fons)|none|e0000|h0|g0|c0|oe9bf467c|@7e35d27a",
-   "bottom|baix|362x310x19|Noguera xapada|x|e0010|h6:071516b8|g0|c0|o-|@f9cedb87",
+   "back|trassera|1577x377x10|DM (fons)|none|e0000|h0|g0|c2:224d53c6|o-|@7390b26b",
+   "bottom|baix|362x320x19|Noguera xapada|x|e0010|h6:fe429946|g1:9da24ca6|c0|o-|@f9cedb87",
    "door|porta|637x396x19|Noguera xapada|x|e1111|h2:a81c0d24|g0|c2:aa351364|o-|@5fac3906",
    "door|porta|637x396x19|Noguera xapada|x|e1111|h2:fce5a443|g0|c2:aa351364|o-|@2e907f7f",
-   "fixedShelf|estanter fixe|362x310x19|Noguera xapada|x|e0010|h6:071516b8|g0|c0|o-|@17a08db5",
-   "fixedShelf|estanter fixe|362x310x19|Noguera xapada|x|e0010|h6:071516b8|g0|c0|o-|@7865ffb0",
-   "shelf|estanter 2|361x290x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@81bb34e3",
-   "shelf|estanter|361x290x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@fe9b2702",
-   "side|lat d|1600x310x19|Noguera xapada|x|e0110|h99:70fd58b8|g0|c0|o-|@0f923282",
-   "side|lat e|1600x310x19|Noguera xapada|x|e1100|h99:b2eef1ba|g0|c0|o-|@c9bb2c48",
-   "top|dalt|362x310x19|Noguera xapada|x|e1000|h6:071516b8|g0|c0|o-|@6fa5c8b2"
+   "fixedShelf|estanter fixe|362x290x19|Noguera xapada|x|e0010|h6:1199690c|g0|c0|o-|@17a08db5",
+   "fixedShelf|estanter fixe|362x290x19|Noguera xapada|x|e0010|h6:1199690c|g0|c0|o-|@7865ffb0",
+   "shelf|estanter 2|361x270x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@81bb34e3",
+   "shelf|estanter|361x270x19|Noguera xapada|x|e0010|h0|g0|c0|o-|@fe9b2702",
+   "side|lat d|1600x320x19|Noguera xapada|x|e0110|h100:94288702|g1:4738720a|c0|o-|@0f923282",
+   "side|lat e|1600x320x19|Noguera xapada|x|e1100|h100:b137d254|g1:0e7bbfa5|c0|o-|@047f4fa1",
+   "top|dalt|362x320x19|Noguera xapada|x|e1000|h6:fe429946|g1:ad70bc27|c0|o-|@435476f7"
   ]
  },
  "store-bany-armari-de-bany-1": {
   "panels": 9,
   "extras": 5,
-  "warnings": [
-   "hanging"
-  ],
+  "warnings": [],
   "p": [
-   "back|trassera|800x650x10|DM (fons)|none|e0000|h0|g0|c0|oe8ed1fb8|@e69af120",
-   "bottom|baix|762x150x19|MDF lacat|x|e0010|h6:7973a5d0|g0|c0|o-|@1918c966",
+   "back|trassera|777x627x10|DM (fons)|none|e0000|h0|g0|c2:33baa7aa|o-|@e8279fbe",
+   "bottom|baix|762x160x19|MDF lacat|x|e0010|h6:c35dfe1a|g1:5804a0a9|c0|o-|@1918c966",
    "door|porta d|646x396.5x19|MDF lacat|x|e1111|h2:0d4eb70d|g0|c2:65c91280|o-|@18d14aee",
    "door|porta e|646x396.5x19|MDF lacat|x|e1111|h2:fce5a443|g0|c2:ba147f44|o-|@3a6b411e",
-   "shelf|estanter 1|761x130x19|MDF lacat|x|e0010|h0|g0|c0|o-|@71cde634",
-   "shelf|estanter 2|761x130x19|MDF lacat|x|e0010|h0|g0|c0|o-|@781980a1",
-   "side|lat d|650x150x19|MDF lacat|x|e0110|h43:34aabcfe|g0|c0|o-|@f235c551",
-   "side|lat e|650x150x19|MDF lacat|x|e1100|h43:d4308b87|g0|c0|o-|@d95f3023",
-   "top|dalt|762x150x19|MDF lacat|x|e1000|h6:7973a5d0|g0|c0|o-|@6fa5c8b2"
+   "shelf|estanter 1|761x110x19|MDF lacat|x|e0010|h0|g0|c0|o-|@71cde634",
+   "shelf|estanter 2|761x110x19|MDF lacat|x|e0010|h0|g0|c0|o-|@781980a1",
+   "side|lat d|650x160x19|MDF lacat|x|e0110|h44:0e14082d|g1:a511681e|c0|o-|@f235c551",
+   "side|lat e|650x160x19|MDF lacat|x|e1100|h44:052bb735|g1:037a14f8|c0|o-|@d8798120",
+   "top|dalt|762x160x19|MDF lacat|x|e1000|h6:c35dfe1a|g1:bce6b3fb|c0|o-|@435476f7"
   ]
  },
  "store-bany-armari-de-bany-2": {
   "panels": 9,
   "extras": 5,
-  "warnings": [
-   "hanging"
-  ],
+  "warnings": [],
   "p": [
-   "back|trassera|800x600x10|DM (fons)|none|e0000|h0|g0|c0|oa5b61856|@e69af120",
-   "bottom|baix|762x170x19|Roure massís / xapat|x|e0010|h9:305d2c43|g0|c0|o-|@9886641c",
-   "divider|divisor|562x170x19|Roure massís / xapat|x|e1000|h70:8383da00|g0|c0|o-|@aec3474e",
+   "back|trassera|777x577x10|DM (fons)|none|e0000|h0|g0|c2:0254a7da|o-|@e8279fbe",
+   "bottom|baix|762x180x19|Roure massís / xapat|x|e0010|h9:f3eacc6a|g1:68e560ff|c0|o-|@9886641c",
+   "divider|divisor|562x150x19|Roure massís / xapat|x|e1000|h70:ba517572|g0|c0|o-|@b50b0d10",
    "door|porta|596x396.5x19|Roure massís / xapat|x|e1111|h2:c71bc7d5|g0|c2:5da1231a|o-|@7fd40af4",
-   "shelf|estanter 2|370.5x150x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@edfe2a72",
-   "shelf|estanter|370.5x150x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@d0c1fae2",
-   "side|lat d|600x170x19|Roure massís / xapat|x|e0110|h40:bc5b36e8|g0|c0|o-|@6303cd7b",
-   "side|lat e|600x170x19|Roure massís / xapat|x|e1100|h40:5c65829a|g0|c0|o-|@d95f3023",
-   "top|dalt|762x170x19|Roure massís / xapat|x|e1000|h9:305d2c43|g0|c0|o-|@a364d45c"
+   "shelf|estanter 2|370.5x130x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@edfe2a72",
+   "shelf|estanter|370.5x130x19|Roure massís / xapat|x|e0010|h0|g0|c0|o-|@d0c1fae2",
+   "side|lat d|600x180x19|Roure massís / xapat|x|e0110|h42:8a2dd3d2|g1:c59e2a5c|c0|o-|@6303cd7b",
+   "side|lat e|600x180x19|Roure massís / xapat|x|e1100|h42:14202498|g1:4a5fc340|c0|o-|@d8798120",
+   "top|dalt|762x180x19|Roure massís / xapat|x|e1000|h9:7ed375fa|g1:bce6b3fb|c0|o-|@c100b575"
   ]
  },
  "store-bany-armari-de-bany-3": {
   "panels": 7,
   "extras": 5,
-  "warnings": [
-   "hanging"
-  ],
+  "warnings": [],
   "p": [
-   "back|trassera|800x400x10|DM (fons)|none|e0000|h0|g0|c0|oe268d47a|@020a62d7",
-   "bottom|baix|762x190x19|MDF lacat greige|x|e0010|h6:94b85070|g0|c0|o-|@d1b5e04a",
+   "back|trassera|777x377x10|DM (fons)|none|e0000|h0|g0|c2:669acf16|o-|@f3e88dad",
+   "bottom|baix|762x200x19|MDF lacat greige|x|e0010|h6:a13701c4|g1:e0658745|c0|o-|@d1b5e04a",
    "flap|abatible|796x396x19|MDF lacat greige|y|e1111|h2:65df76e2|g0|c2:5d3e4116|o-|@a644c725",
-   "shelf|estanter|761x170x19|MDF lacat greige|x|e0010|h0|g0|c0|o-|@908c7665",
-   "side|lat d|400x190x19|MDF lacat greige|x|e0110|h28:cf1f3a14|g0|c0|o-|@3039e5c5",
-   "side|lat e|400x190x19|MDF lacat greige|x|e1100|h28:b097ec24|g0|c0|o-|@ed6c6e32",
-   "top|dalt|762x190x19|MDF lacat greige|x|e1000|h6:94b85070|g0|c0|o-|@954d3331"
+   "shelf|estanter|761x150x19|MDF lacat greige|x|e0010|h0|g0|c0|o-|@908c7665",
+   "side|lat d|400x200x19|MDF lacat greige|x|e0110|h30:65b4cba8|g1:295de104|c0|o-|@3039e5c5",
+   "side|lat e|400x200x19|MDF lacat greige|x|e1100|h30:22ea0048|g1:a5cb4592|c0|o-|@4247ff77",
+   "top|dalt|762x200x19|MDF lacat greige|x|e1000|h6:a13701c4|g1:bce6b3fb|c0|o-|@3a5d08da"
   ]
  },
  "store-bany-moble-auxiliar-1": {

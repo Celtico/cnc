@@ -12,14 +12,14 @@ i `applianceCatalog.ts`) i es tria a cada compartiment (Electrodomèstic). Què 
 
 Què fa servir l'app de cada camp: el nínxol (`niche`, `tallH` dels forns en columna, `wallH`/`wallD` del microones
 penjat, `cabinet` de la campana telescòpica), les alçades i el pes del front, el sòcol, la ventilació (la sortida dels
-frigorífics de columna com a retall; l'entrada, avís), els retalls (placa i grup filtrant), les frontisses de la rentadora
-i la foto. **No** en fa servir: `drawingDims` (cotes sense etiqueta), la taula `dishwasherRaisedGap` (rentaplats en alt)
+frigorífics de columna com a retall a la peça de sobre; l'entrada, com a retall per a la reixeta al sòcol), els retalls
+(placa i grup filtrant), les frontisses de la rentadora i la foto. Les rentadores i el Teka RBF 73355 FI, a l'app, porten
+el nínxol de la fitxa del fabricant (el JSON, el del catàleg: `null`). **No** en fa servir: `drawingDims` (cotes sense etiqueta), la taula `dishwasherRaisedGap` (rentaplats en alt)
 ni el pes per alçada de porta de la `weightTable` (només el màxim).
 
-**Hipòtesis de l'app** (per confirmar, paràmetres editables de cada item): les prebroques de la fixació del front a la
-porta de l'aparell (4 per front, Ø2 × 10, a 50 dels costats de l'aparell, 40 de dalt i 60 de baix), la guia lliscant del
-frigorífic de porta lliscant (3 prebroques centrades a 40 del cantell que obre), la segona frontissa de la WKD28490ES (a
-338,6 com la WIW24307ES), el pes del front (tauler de 700 kg/m³) i el sòcol per defecte (100).
+**Cap hipòtesi**: per decisió de l'usuari (2026-10-15: «el germà no té temps per validar; fem-ho tot el més estàndard
+possible per si surt un nou client»), el que el catàleg no dona es resol amb la **pràctica estàndard** documentada pel
+fabricant (fitxes i instruccions de muntatge públiques). Vegeu [Decisions (estàndard)](#decisions-estàndard) al final.
 
 ## Fonts
 
@@ -142,7 +142,9 @@ plaques amb extractor: no s'han extret (no són mòdul de moble estàndard).
   front (taula F/R/X, Bosch p427): 16-19 mm → X 2,5; 22 mm amb aresta viva → X 4.
 - **Porta lliscant** (Bosch p404, Balay p105): el front **penja de frontisses de moble** (cassoleta al front i base al
   lateral del moble) i s'uneix a la porta de l'aparell amb **guies lliscants**. Admet fronts més pesats. Alçades: superior
-  1012+S..1091+S, inferior 677+A..756+A. El catàleg **no diu** quantes frontisses ni on van.
+  1012+S..1091+S, inferior 677+A..756+A. El catàleg **no diu** quantes frontisses ni on van: l'app en posa les del mòdul
+  com a qualsevol porta de la mateixa alçada (la taula estàndard per alçada, `hingeCount`: fins a 900 → 2, fins a 1600 →
+  3, fins a 2100 → 4…) i la guia lliscant es cargola amb la plantilla de l'aparell.
 - Mecanitzat: reixeta o retranqueig al sòcol (≥ 200 cm²), retall superior posterior (≥ 200 cm²), base intermèdia quan
   es combinen 122,5 + 72 (Bosch p427). Porta lliscant: forats de cassoleta al front i plaques al lateral.
 
@@ -207,36 +209,61 @@ plaques amb extractor: no s'han extret (no són mòdul de moble estàndard).
 ### Rentadora integrable (`washer_integrated`)
 
 - Bosch WIW24307ES: aparell 596 x 818 (+12) x 544 (555 amb frontissa, 574 amb frontissa i front). WKD28490ES:
-  820 (+12) x 540. Nínxol **no publicat**. Bosch p301-302.
+  820 (+12) x 540. Nínxol **no publicat** al catàleg (Bosch p301-302); l'app fa servir el de les **fitxes de producte**
+  (vegeu Decisions, 6).
 
 #### Com es munta el front
 
 - El front de moble **penja de frontisses que es cargolen a l'aparell**: forats de **cassoleta ø 35, mín. 12 de fons, a 21
-  del cantell**; primera frontissa a 202 del cantell superior de l'aparell, segona a +338,6; obertura a dreta o esquerra
-  (Bosch p301). WKD: front 19-21 de gruix (Bosch p302).
+  del cantell** del panell frontal de l'aparell (592); primera frontissa a 202 del cantell superior de l'aparell, segona
+  a +338,6; obertura a dreta o esquerra (Bosch p301; fitxa WIW24307ES p. 2). WKD28490ES (fitxa p. 3): **ø 38 a 24,5**,
+  segona a **+420**; front 19-21 de gruix (Bosch p302).
 
-## Preguntes obertes (usuari / taller)
+## Decisions (estàndard)
 
-Estat a l'app (2026-10-15): les 1, 2 i 6 tenen una hipòtesi a l'app (avís a cada moble); la 3 i la 5, un avís sense
-mecanitzat (entrada d'aire i sòcol de davant de l'aparell); la 4 es resol amb el gruix real de les peces del mòdul; la 7
-i la 8, sense fer (Teka RBF sense nínxol: avís; TimeLight fora).
+Abans eren preguntes obertes al taller (2026-10-15). Ara, cadascuna amb la pràctica estàndard i la font. Cap avís per
+defecte: el que és com ha de ser va a la **nota de la comanda** de l'aparell (Peces › Ferratges, LLEGEIX-ME); els avisos
+`appliance` queden per al que no lliga amb el fabricant (nínxol, alçada o gruix del front, sòcol, pes, retall que no
+cap).
 
-1. **Plantilla del rentaplats** (i de tots els fronts cargolats a la porta de l'aparell): la posició dels cargols i dels
-   tacs del front només surt a la plantilla de paper que ve amb l'aparell. Teniu plantilles de BSH i Teka per mesurar-les
-   i posar-les a l'app? (Ara: 4 prebroques d'hipòtesi per front.)
-2. **Frigorífic porta lliscant**: quantes frontisses de moble i a quina alçada? (el catàleg no ho diu). Quina frontissa
-   feu servir (angle, cassoleta 35)?
-3. **Ventilació**: preferiu reixeta vista al sòcol o sòcol retranquejat? I a dalt, retall al fons posterior o reixeta?
-4. **Valors S i A** (frigorífics): quin gruix de tauler superior i inferior feu servir a les columnes (16 o 19)?
-5. Les cotes de rentaplats **53 / 89 / 100** (BSH) i **110 / 48 / 115** (Teka) no estan etiquetades al catàleg:
-   les interpretem com a retranqueig i alçada del sòcol / pas de tubs? Cal confirmar-ho amb el manual d'instal·lació.
-6. Rentadora: quin nínxol feu servir (600 x 820-880?) i quina alçada de front? El catàleg no ho diu. I la segona frontissa
-   de la WKD28490ES (el catàleg només dona la primera, a 202)?
-7. Frigorífics Teka: no tenen nínxol publicat. Assumim el mateix que BSH (177,5 x 56 x 55) o es deixen fora?
-8. Es vol incloure la taula TimeLight (alçada màxima del sòcol, Balay p147) o no es fan servir aquests models?
-9. **Sòcol davant dels aparells de terra**: el fa el mòdul de l'aparell (un tauler com el «Sòcol · Davant de les potes»,
-   i a quina retirada: 53 / 100 dels dibuixos BSH?) o el poseu corregut amb els dels mòduls del costat?
-10. **Densitat dels fronts** per comprovar el pes que admet l'aparell: 700 kg/m³ (aglomerat / DM) us va bé, o voleu la de
-    cada material a Preferències?
-11. **Forns**: la fixació (cargols pel marc als laterals del moble) i la ventilació (BSH: obertura ≥ 20 al darrere de
-    dalt en columna) no es mecanitzen: les voleu a l'app?
+1. **Fixació del front a la porta de l'aparell** (rentaplats, frigorífics de porta fixa, porta sobre porta): BSH i Teka
+   la fan amb la **plantilla de paper que ve amb l'aparell** (no es publica cap cota: el catàleg BSH diu que la plantilla
+   ve amb l'aparell, i és la pràctica del sector: p. ex. les instruccions d'un rentaplats integrable de V-ZUG,
+   media3.bsh-group.com/Documents/9000822716_B.pdf, p. 2, «Frontplatte … gemäss Bohrschablone»). **Decisió**: l'app **no hi fa prebroques** (`pilotHoles` 0 a
+   cada item: «es foraden amb la plantilla de l'aparell»); l'opció hi és (`pilotHoles` 1: 4 per front a `fixInset` /
+   `fixTop` / `fixBottom`, Ø2 × 10) per a qui tingui la plantilla mesurada.
+2. **Frigorífic de porta lliscant**: les **frontisses de moble** de la porta, com qualsevol porta de la mateixa alçada
+   (la taula estàndard per alçada de l'app, `hingeCount`; cassoleta Ø35 del mòdul, plaques al lateral); la **guia
+   lliscant** es cargola amb la plantilla de l'aparell (prebroques només amb `pilotHoles` 1).
+3. **Ventilació dels frigorífics integrables** (BSH: entrada ≥ 200 cm² per sota —reixeta al sòcol o sòcol retirat— i
+   sortida ≥ 200 cm² per dalt al darrere; Bosch p404-405, Balay p105; el mateix a les instruccions BSH dels forns en
+   columna, media3.bosch-home.com/Documents/9001638623_C.pdf, «ventilation opening of at least 200 cm² in the base area… trim the base panel or fit a
+   ventilation grille», p. 38 del PDF). **Decisió**: **reixeta al sòcol** (l'opció que no depèn de com és la cuina): retall al
+   sòcol de fusta del mòdul davant del compartiment (ample del compartiment − 60, prou alt per als 200 cm²) i la
+   «Reixeta de ventilació de sòcol» a la comanda; sense sòcol al mòdul (el corregut), la nota diu la mida. La
+   **sortida**, el retall a la peça de sobre arran del fons (ja es feia).
+4. **Valors S i A** (frigorífics): el gruix real de la peça de sobre i de la de sota del compartiment (ja es feia).
+5. **Cotes 53 / 89 / 100 (BSH) i 110 / 48 / 115 (Teka) dels rentaplats** i **sòcol de davant dels aparells de terra**:
+   l'estàndard és el **sòcol corregut** de la cuina passant per davant de l'aparell (el dels mòduls del costat, tallat a
+   mida); la retirada és la del sòcol corregut. Nota a la comanda, cap avís.
+6. **Rentadores**: el nínxol de les **fitxes de producte BSH** (media3.bsh-group.com/Documents/specsheet/es-ES/):
+   WIW24307ES (p. 2) ample ≥ 600, alt ≥ 818 (aparell 818 + 12 de potes), fons ≥ 555 (544 + frontissa); WKD28490ES (p. 3)
+   ≥ 600 × ≥ 820 × ≥ 551 (540 + frontissa). Frontisses: la segona de la WKD és a **+420** (no a +338,6) i la cassoleta,
+   **ø 38 a 24,5** del panell frontal de l'aparell (la WIW, ø 35 a 21); el front comença a 148–153 de terra al dibuix,
+   però l'app hi posa el sòcol de 100 com a tots els aparells de terra (el front es pot allargar per sota).
+7. **Frigorífics Teka**: el **nínxol de 178 de la indústria** (els nínxols estàndard dels integrables són 178 / 122 / 88
+   cm, ample 56–57, fons 55–56: BSH 1772–1780, Teka 1773–1783). Teka RBF 73355 FI: 1773–1783 × 560–570 × ≥ 560 (fitxa de
+   Teka recollida a cemevisa.com, «combi-teka-rbf73355fi», «1773/1783 x 564/570 x 560»; l'ample mínim, el de 56 de la
+   indústria perquè un mòdul de 600 amb laterals de 19 hi entri).
+8. **TimeLight / rentaplats en alt** (taules `dishwasherRaisedGap`, Balay p146-147): **fora** (no és trivial: depèn del
+   nínxol, l'alçada del front i el retranqueig, i només afecta models amb projecció a terra o instal·lats en alt).
+9. **Sòcol per defecte**: **100** (el sòcol de cuina estàndard, el de les potes de 100 de les cuines de l'app; l'altre
+   habitual és 150). Dins del rang de tots els aparells del catàleg menys els de porta fixa BSH (90–220: 100 hi és) i
+   Teka (90–155: també).
+10. **Densitat dels fronts** (pes que admet l'aparell): Preferències › Materials no porta densitat; l'app fa servir la
+    **densitat estàndard del tipus de tauler** pel nom del material (`boardDensity`): **DM / MDF i lacats 750** (Finsa
+    FibraPan Plus EZ, 12–19 mm: 750/725 kg/m³, files.finsa.com/datasheets/fichasTecnicas/es/ficha-tecnica-fibrapan-plus-ez-es.pdf),
+    **fusta massissa (roure) 675** (The Wood Database, «English Oak», 675 kg/m³ al 12 %), la resta —**aglomerat** melamínic
+    o xapat— **660** (Finsa SuperPan Tech P4 EZ, 16–20 mm: 660 kg/m³, ficha-tecnica-superpan-tech-p4-ez-es.pdf).
+11. **Forns**: **només el nínxol**, cap mecanitzat: es cargolen pel marc als laterals del moble a obra («Screw the
+    appliance into place», instruccions BSH 9001638623 —forn HBG6764—, p. 39 del PDF) i la ventilació és la del nínxol del catàleg.

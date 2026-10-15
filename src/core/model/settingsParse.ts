@@ -245,9 +245,10 @@ function migrateHardwareLibrary(hardwareRaw: HardwareItem[], version: number): {
   if (withV39.length !== withV36.length) migrated = true
   // La pota AXILO 78 (v34) d'una versió anterior de l'item passa a la d'ara (com la munta el taller, la placa per
   // dibuixar-la, a 50 dels cantells): sempre, no només en pujar de versió de les preferències (l'item canvia de `version`
-  // sense que en canviï la de les preferències). Idempotent.
+  // sense que en canviï la de les preferències). El mateix per al penjador, la regleta i els sòcols d'alumini (v45) i els
+  // electrodomèstics (v46), que passen als estàndard del fabricant (2026-10-15). Idempotent.
   const withV37 = withV39.map((x) => {
-    const fresh = x.builtin ? [...V34_ITEMS, ...V39_ITEMS, ...V35_ITEMS].find((k) => k.id === x.id && k.version > x.version) : undefined
+    const fresh = x.builtin ? [...V34_ITEMS, ...V39_ITEMS, ...V35_ITEMS, ...V45_ITEMS, ...V46_ITEMS].find((k) => k.id === x.id && k.version > x.version) : undefined
     return fresh ? structuredClone(fresh) : x
   })
   if (withV37.some((x, i) => x !== withV39[i])) migrated = true

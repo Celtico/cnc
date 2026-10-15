@@ -19,6 +19,8 @@ export interface LinearPiece {
   /** Un clip cada `clipSpacing` mm (0 = cap) a `clipEnd` dels extrems, dos per tros com a mínim. */
   clipSpacing: number
   clipEnd: number
+  /** Clips comptats per la regla (el sòcol: un a cada pota del tram); mana sobre `clipSpacing`. */
+  clips?: number
   /** Cantonades entre trams (sòcol tot el voltant: 4). */
   corners: number
   /** Número de mòdul (1..n; 0 = del moble, com el sòcol corregut). */
@@ -42,6 +44,8 @@ export interface LinearOrder {
   bars: number
   clips: number
   corners: number
+  /** Unions lineals: els empalmaments dels trossos més llargs que la barra. */
+  joints: number
   modules: number[]
 }
 
@@ -90,11 +94,12 @@ export function buildLinearOrders(pieces: readonly LinearPiece[]): LinearOrder[]
   const keyOf = (p: LinearPiece) => `${p.item.id}|${p.item.name}|${p.stock}`
   for (const p of mergeRuns(pieces)) {
     const key = keyOf(p)
-    const o = byItem.get(key) ?? { item: p.item, stock: p.stock, cuts: [], total: 0, bars: 0, clips: 0, corners: 0, modules: [] }
+    const o = byItem.get(key) ?? { item: p.item, stock: p.stock, cuts: [], total: 0, bars: 0, clips: 0, corners: 0, joints: 0, modules: [] }
     o.cuts.push(p.length)
     o.total += p.length
-    o.clips += clipCount(p.length, p.clipSpacing, p.clipEnd)
+    o.clips += p.clips ?? clipCount(p.length, p.clipSpacing, p.clipEnd)
     o.corners += p.corners
+    if (p.stock > 0) o.joints += Math.max(0, Math.ceil(p.length / p.stock - 0.0005) - 1)
     byItem.set(key, o)
   }
   // Els mòduls de cada item (també els dels trossos ajuntats).
@@ -132,6 +137,8 @@ function orderLines(o: LinearOrder): KitOrderLine[] {
   if (clip && o.clips > 0) lines.push({ component: `${o.item.id}:clip`, name: clip.name, qty: o.clips, ...(clip.ref ? { item: clip.ref } : {}) })
   const corner = o.item.linear?.corner
   if (corner && o.corners > 0) lines.push({ component: `${o.item.id}:corner`, name: corner.name, qty: o.corners, ...(corner.ref ? { item: corner.ref } : {}) })
+  const joint = o.item.linear?.joint
+  if (joint && o.joints > 0) lines.push({ component: `${o.item.id}:joint`, name: joint.name, qty: o.joints, ...(joint.ref ? { item: joint.ref } : {}) })
   return lines
 }
 

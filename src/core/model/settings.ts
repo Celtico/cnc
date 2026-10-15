@@ -1,5 +1,6 @@
 import { type Module } from "./composition"
 import { kitFrom } from "./hardware"
+import { hungBack } from "./hungBack"
 import { defaultMachine, withWorkshopRules, type Machine, type MachineRules } from "./machine"
 import type { MaterialPref, RefPreset, Settings } from "./settingsSchema"
 
@@ -46,7 +47,8 @@ export function materialByName(s: Settings, name: string): MaterialPref | undefi
 export function applySettingsToModule(s: Settings, m: Module): Module {
   return {
     ...m,
-    carcass: {
+    // Un penjat, amb el fons estàndard (la retirada de Preferències és la dels altres mòduls).
+    carcass: hungBack({
       ...m.carcass,
       material: s.defaults.material,
       thickness: s.defaults.thickness,
@@ -59,7 +61,7 @@ export function applySettingsToModule(s: Settings, m: Module): Module {
       grooveDepth: s.gaps.grooveDepth,
       ...(s.gaps.grooveClearance ? { grooveClearance: s.gaps.grooveClearance } : {}),
       innerClearance: s.gaps.innerClearance,
-    },
+    }),
     fronts: { ...m.fronts, outerGap: s.gaps.outerGap, betweenGap: s.gaps.betweenGap },
     hardware: kitFrom(s.hardwareLibrary, s.hardwareDefaults),
   }

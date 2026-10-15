@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { APPLIANCE_ITEMS, DEFAULT_HARDWARE_LIBRARY, DEFAULT_SETTINGS, V46_ITEMS, applianceById, defaultModule, dishwasherModule, fridgeColumn, nicheModule, ovenColumn, parseSettings, usedHardwareSlots, visibleModule, type Module, type Zone } from "../model"
+import { APPLIANCE_ITEMS, DEFAULT_HARDWARE_LIBRARY, boardDensity, DEFAULT_SETTINGS, V46_ITEMS, applianceById, defaultModule, dishwasherModule, fridgeColumn, nicheModule, ovenColumn, parseSettings, usedHardwareSlots, visibleModule, type Module, type Zone } from "../model"
 import { buildModule } from "./buildModule"
 import { hardwarePreview } from "./hardwarePreview"
 import { hardwareMount } from "./hardwareMount"
@@ -23,7 +23,7 @@ describe("electrodomèstics (v46)", () => {
     for (const it of V46_ITEMS) expect(res.settings.hardwareLibrary.some((x) => x.id === it.id)).toBe(true)
   })
 
-  it("rentaplats en un mòdul sense res: el nínxol, el front amb el sòcol i les prebroques de la fixació (hipòtesi), sense frontisses", () => {
+  it("rentaplats en un mòdul sense res: el nínxol, el front amb el sòcol, cargolat amb la plantilla de l'aparell (sense prebroques ni frontisses) i cap avís", () => {
     const b = buildModule(dishwasherModule())
     const front = b.panels.find((p) => p.role === "flap")!
     // 600 sense laterals: el front fa l'ample menys la folgança; de 103 (sòcol) a 870 − folgança.
@@ -31,19 +31,27 @@ describe("electrodomèstics (v46)", () => {
     expect(front.length).toBe(765)
     expect(front.placement.origin[1]).toBe(103)
     expect(front.material).toBe("Melamina blanca")
-    expect(front.holes.filter((h) => h.tag === "appliance")).toHaveLength(4)
+    // L'estàndard: els cargols del front es foraden amb la plantilla de l'aparell (cap prebroca de l'app).
+    expect(front.holes.filter((h) => h.tag === "appliance")).toHaveLength(0)
     expect(front.holes.some((h) => h.tag === "hinge")).toBe(false)
     // Cap peça de la caixa: només el front.
     expect(b.panels).toHaveLength(1)
     const body = b.extras.find((p) => p.id === "appliance-1")!
     expect(body.role).toBe("hardware")
     expect(body.photo?.src).toBe("appliances/bosch-smh6ycx02e.webp")
-    expect(b.fittingOrders.find((l) => l.component === "appliance-bosch-smh6ycx02e")).toMatchObject({ qty: 1, item: "SMH6YCX02E" })
-    const w = warns(b)
-    expect(w.some((m) => m.includes("hipòtesi") && m.includes("plantilla"))).toBe(true)
-    // El nínxol i el front són bons: cap avís de mida.
-    expect(w.some((m) => m.includes("no hi cap"))).toBe(false)
-    expect(w.some((m) => m.includes("d'alt i el fabricant"))).toBe(false)
+    const line = b.fittingOrders.find((l) => l.component === "appliance-bosch-smh6ycx02e")!
+    expect(line).toMatchObject({ qty: 1, item: "SMH6YCX02E" })
+    // Com es munta i el sòcol corregut: a la nota de la comanda, no als avisos.
+    expect(line.note).toContain("plantilla de l'aparell")
+    expect(line.note).toContain("sòcol de 103")
+    expect(b.warnings).toEqual([])
+  })
+
+  it("rentaplats amb prebroques (opció de l'item, `pilotHoles` 1): 4 al darrere del front", () => {
+    const m = dishwasherModule()
+    const hw = m.root.appliance!.hardware
+    const b = buildModule({ ...m, root: { ...m.root, appliance: { ...m.root.appliance!, hardware: { ...hw, params: { ...hw.params, pilotHoles: 1 } } } } })
+    expect(b.panels.find((p) => p.role === "flap")!.holes.filter((h) => h.tag === "appliance")).toHaveLength(4)
   })
 
   it("rentaplats: el front massa alt i el sòcol fora del rang avisen; el nínxol estret també", () => {
@@ -65,14 +73,25 @@ describe("electrodomèstics (v46)", () => {
     expect(upper.placement.origin[1] - (lower.placement.origin[1] + lower.length)).toBe(4)
     expect(upper.length).toBeGreaterThanOrEqual(1041 + 19)
     expect(upper.length).toBeLessThanOrEqual(1065 + 19)
-    expect(lower.holes.filter((h) => h.tag === "appliance")).toHaveLength(4)
-    expect(upper.holes.filter((h) => h.tag === "appliance")).toHaveLength(4)
+    expect(lower.holes.filter((h) => h.tag === "appliance")).toHaveLength(0)
+    expect(upper.holes.filter((h) => h.tag === "appliance")).toHaveLength(0)
     // La sortida d'aire: un retall a la peça de sobre (el travesser), arran del fons.
     const shelf = b.panels.find((p) => p.role === "fixedShelf")!
     const vent = shelf.cutouts?.find((c) => c.tag === "vent")
     expect(vent && vent.kind === "rect" ? vent.w * vent.h : 0).toBeGreaterThanOrEqual(20000)
-    expect(warns(b).some((m) => m.includes("no hi cap"))).toBe(false)
-    expect(warns(b).some((m) => m.includes("d'alt i el fabricant"))).toBe(false)
+    // Sense sòcol al mòdul (potes sense sòcol): l'entrada d'aire, a la nota i la reixeta a la comanda; cap avís.
+    expect(b.warnings).toEqual([])
+    expect(b.fittingOrders.find((l) => l.component === "appliance-bosch-kin86add0")!.note).toContain("entrada d'aire")
+    expect(b.fittingOrders.find((l) => l.component === "appliance-bosch-kin86add0:vent")).toMatchObject({ qty: 1, name: "Reixeta de ventilació de sòcol" })
+  })
+
+  it("combi amb el sòcol de fusta del mòdul: l'entrada d'aire és un retall de ≥ 200 cm² al sòcol, davant del frigorífic", () => {
+    const m = fridgeColumn()
+    const b = buildModule({ ...m, carcass: { ...m.carcass, base: { kind: "legs", height: 100, plinth: { setback: 5 } } } })
+    const plinth = b.panels.find((p) => p.id === "plinth")!
+    const vent = plinth.cutouts?.find((c) => c.tag === "vent")
+    expect(vent && vent.kind === "rect" ? vent.w * vent.h : 0).toBeGreaterThanOrEqual(20000)
+    expect(b.warnings.filter((w) => w.code === "appliance")).toEqual([])
   })
 
   it("frigorífic de porta lliscant: frontisses de moble (la filera i les plaques al lateral) i la guia lliscant", () => {
@@ -84,7 +103,8 @@ describe("electrodomèstics (v46)", () => {
     expect(fronts).toHaveLength(2)
     for (const f of fronts) {
       expect(f.holes.filter((h) => h.tag === "hinge").length).toBeGreaterThanOrEqual(2)
-      expect(f.holes.filter((h) => h.tag === "appliance")).toHaveLength(3)
+      // La guia es cargola amb la plantilla de l'aparell: cap prebroca per defecte.
+      expect(f.holes.filter((h) => h.tag === "appliance")).toHaveLength(0)
     }
     expect(usedHardwareSlots(sliding).get("hinge")?.what).toContain("frigorífics")
     expect(b.fittingOrders.some((l) => l.component === "hinge-cup")).toBe(true)
@@ -107,7 +127,7 @@ describe("electrodomèstics (v46)", () => {
     expect(warns(buildModule(low)).some((x) => x.includes("560 mm d'alt") && x.includes("585–595") && x.includes("en columna"))).toBe(true)
   })
 
-  it("placa sobre calaixos: el retall a la tapa del mòdul (a 50 del davant) i l'avís dels 65 mm", () => {
+  it("placa sobre calaixos: el retall a la tapa del mòdul (a 50 del davant) i la nota dels 65 mm", () => {
     const m = defaultModule("hob", "Fogons", { width: 600, height: 770, depth: 600, base: { kind: "legs", height: 100 } })
     const b = buildModule(withZone(m, { id: "r", front: { kind: "drawers", n: 2, heights: ["auto", "auto"] }, appliance: { hardware: applianceById("appliance-bosch-pie631hc1e") } }))
     const top = b.panels.find((p) => p.role === "top")!
@@ -115,27 +135,41 @@ describe("electrodomèstics (v46)", () => {
     expect(cut && cut.kind === "rect" ? [cut.w, cut.h].sort() : []).toEqual([490, 560])
     // Els calaixos es fan igual (la placa no ocupa el compartiment).
     expect(b.panels.filter((p) => p.role === "drawerFront")).toHaveLength(2)
-    expect(warns(b).some((x) => x.includes("65 mm"))).toBe(true)
+    expect(b.fittingOrders.find((l) => l.component === "appliance-bosch-pie631hc1e")!.note).toContain("65 mm")
+    expect(warns(b)).toEqual([])
     expect(b.extras.find((p) => p.name === "electrodomèstic")?.photo?.face).toBe("top")
   })
 
   it("grup filtrant: el retall a la base del moble penjat", () => {
-    const m = defaultModule("hood", "Campana", { width: 600, height: 720, depth: 330, back: "screwed", backThickness: 10, base: { kind: "wall", height: 1450 } })
+    const m = defaultModule("hood", "Campana", { width: 600, height: 720, depth: 330, backThickness: 10, base: { kind: "wall", height: 1450 } })
     const b = buildModule(withZone(m, { id: "r", front: { kind: "door", mode: "single", hinge: "left" }, appliance: { hardware: applianceById("appliance-bosch-dln57pc60") } }))
     const bottom = b.panels.find((p) => p.role === "bottom")!
     expect(bottom.cutouts?.some((c) => c.tag === "appliance" && c.kind === "rect" && [c.w, c.h].sort().join() === "264,496")).toBe(true)
     expect(b.panels.some((p) => p.role === "door")).toBe(true)
   })
 
-  it("rentadora: les cassoletes de les frontisses de l'aparell al front (a 21 del cantell, la primera a 202 de dalt de l'aparell)", () => {
+  it("rentadora: les cassoletes de la fitxa (a 21 del panell de 592 de l'aparell, a 202 i +338,6 de dalt) i el nínxol estàndard", () => {
     const m = nicheModule("Rentadora", "appliance-bosch-wiw24307es", 103)
     const b = buildModule({ ...m, root: { ...m.root, appliance: { ...m.root.appliance!, hinge: "left" } } })
     const front = b.panels.find((p) => p.role === "door")!
     const cups = front.holes.filter((h) => h.tag === "hinge")
     expect(cups).toHaveLength(2)
-    expect(cups.every((h) => h.diameter === 35 && h.y === 21)).toBe(true)
-    // L'aparell (818) seu a terra; el front comença a 103: la primera cassoleta a 818 − 202 − 103.
-    expect(cups.map((h) => h.x).sort((a, z) => z - a)[0]).toBe(818 - 202 - 103)
+    // Front de 596 centrat a l'aparell: el panell de 592 queda a 2 del cantell → 21 + 2.
+    expect(cups.every((h) => h.diameter === 35 && h.y === 23)).toBe(true)
+    // L'aparell (818) seu a terra; el front comença a 103: les cassoletes a 818 − 202 − 103 i 338,6 més avall.
+    expect(cups.map((h) => h.x).sort((a, z) => z - a)).toEqual([513, 174.4])
+    // El nínxol (600 × 870 × 560) és bo: cap avís.
+    expect(b.warnings).toEqual([])
+    // La rentadora-assecadora: Ø38 a 24,5 i +420.
+    const k = nicheModule("Rentadora", "appliance-bosch-wkd28490es", 103)
+    const kb = buildModule({ ...k, root: { ...k.root, appliance: { ...k.root.appliance!, hinge: "right" } } })
+    const kc = kb.panels.find((p) => p.role === "door")!.holes.filter((h) => h.tag === "hinge")
+    expect(kc.map((h) => [h.diameter, h.y])).toEqual([[38, 596 - 26.5], [38, 596 - 26.5]])
+    expect(kc.map((h) => h.x).sort((a, z) => z - a)).toEqual([820 - 202 - 103, 820 - 202 - 420 - 103])
+  })
+
+  it("el pes del front, amb la densitat estàndard del tauler", () => {
+    expect([boardDensity("Melamina blanca"), boardDensity("MDF lacat"), boardDensity("DM (fons)"), boardDensity("Roure massís / xapat")]).toEqual([660, 750, 750, 675])
   })
 
   it("sense front de moble: l'aparell a la vista (amb la foto) i cap peça; res amagat compta", () => {

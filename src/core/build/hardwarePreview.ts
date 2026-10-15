@@ -190,10 +190,13 @@ function previewPanels(item: HardwareItem): Panel[] {
       return []
     case "hanger": {
       // Lateral d'un mòdul penjat de 720 × 330 (x = alçada des de dalt, y = fondària des del darrere), cara de dins: els
-      // forats del penjador a la cantonada de dalt i darrere (com al moble, `buildHangers`).
+      // forats del penjador a la cantonada de dalt i darrere (com al moble, `buildHangers`). L'estàndard, sota una tapa de 19
+      // i darrere d'un fons de 10 retirat l'espai de servei (`gap`).
       const s = hangerSpec(item)
       const side = sample("side", "Lateral (cara de dins)", "side", 720, 330)
-      for (const h of s.holes) side.holes.push(hole(s.fromTop + h.u, s.fromBack + h.v, { diameter: h.d, depth: h.depth, tag: h.tag }))
+      const top = s.underTop ? 19 : 0
+      const z0 = s.behindBack !== undefined ? s.gap - s.behindBack : s.fromBack
+      for (const h of s.holes) side.holes.push(hole(top + s.fromTop + h.u, z0 + h.v, { diameter: h.d, depth: h.depth, tag: h.tag }))
       return [side]
     }
     case "wallRail":
@@ -236,8 +239,13 @@ function appliancePreview(item: HardwareItem): Panel[] {
   if (!op || op.kind !== "drill") throw new HardwareError(`«${item.name}»: «front» no és un forat cec`)
   const s = { diameter: op.d, depth: op.depth, ...(op.tag ? { tag: op.tag } : {}) }
   if (a.door === "hinges") {
-    // La rentadora: l'aparell seu a baix i el cantell de dalt del front és el de l'aparell.
-    for (const x of [L - (P.firstHinge ?? 202), L - (P.firstHinge ?? 202) - (P.hingePitch ?? 338.6)]) if (x > 30) front.holes.push(...applyHardware(item, "front", {}, { at: { x: r(x), y: 0 } }).holes)
+    // La rentadora: l'aparell seu a baix i el cantell de dalt del front és el de l'aparell; la cassoleta, des del cantell
+    // del panell frontal de l'aparell (centrat al front).
+    const cupOffset = (P.cupOffset ?? 21) + (P.panelWidth ? (W - P.panelWidth) / 2 : 0)
+    for (const x of [L - (P.firstHinge ?? 202), L - (P.firstHinge ?? 202) - (P.hingePitch ?? 338.6)]) if (x > 30) front.holes.push(...applyHardware(item, "front", { cupOffset }, { at: { x: r(x), y: 0 } }).holes)
+  } else if (P.pilotHoles !== 1) {
+    // L'estàndard: els cargols del front es foraden amb la plantilla de l'aparell (l'app no hi fa res).
+    return []
   } else if (furnitureHinges(a)) {
     for (const k of [-1, 0, 1]) front.holes.push(hole(L / 2 + k * (P.guidePitch ?? 32), W - (P.guideEdge ?? 40), s))
   } else {

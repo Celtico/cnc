@@ -333,14 +333,31 @@ la placa triangular de l'AXILO 78 (cada cantonada en mirall).
 
 No són jocs (cap `kit`): són ferratges normals amb una regla que els posa, però es compren **per metres**. El concepte
 (un item amb `linear` i la secció, la barra i els clips als `params`; la regla en deixa trossos; la comanda en suma
-barres, clips i cantoneres) és a [`funcional/model.md`](funcional/model.md) › Ferratges per metres; els penjadors, a ›
-Carcassa › Penjadors. Valors inicials i fonts a `core/model/hangingHardware.ts`:
+barres, clips, cantoneres i unions) és a [`funcional/model.md`](funcional/model.md) › Ferratges per metres; els penjadors,
+a › Carcassa › Penjadors. Valors inicials a `core/model/hangingHardware.ts` i el fons dels penjats a
+`core/model/hungBack.ts`.
 
-| Item | Motor | Dades | Font |
+Per decisió de l'usuari (2026-10-15: «el germà no té temps per validar; fem-ho tot el més estàndard possible per si surt
+un nou client»), cap hipòtesi pendent del taller: **els valors són els de la fitxa tècnica del fabricant** del producte
+estàndard de mercat.
+
+### Decisions (estàndard)
+
+| Item | Motor | Dades (l'app) | Font |
 |---|---|---|---|
-| Penjador ocult regulable (`hanger-concealed`) | `hanger` | 4 × Ø10 × 12 a 37 de dalt i del darrere, a 32; 16 mm darrere el fons; regleta a 30 sota dalt; osca del fons 20 × 110 | Camar 807 (camar.it: 4 forats Ø10 amb espiga, 120 kg, regulació 19/22); Häfele Libra H2 290.41.910 (23T7-222: 4 forats Ø10 a 32, 150 kg/parell, 13/12 mm, 16–20 mm de servei); Häfele 290.03.935/936 (23T7-220: mín. 16 mm darrere el fons) |
-| Regleta de penjar d'acer (`wall-rail-steel`) | `wallRail` | 33,5 × 10, barra de 2000, un cargol cada 300 | Libra B3 F003290 (H33,5, 2 mm, L2000); Häfele, acer galvanitzat 2032 (23T7-231) |
-| Sòcol d'alumini 100 / 150 (`plinth-alu-100`, `-150`) | `plinthProfile` | 16 de gruix, barra de 4000, clip a la pota cada 600 (a 80 dels extrems), cantonera de 90° | sòcols de cuina d'alumini (Emuca i altres) en barres amb clips i cantoneres |
+| Penjador ocult regulable (`hanger-concealed`, v2) | `hanger` | **Libra H2** d'Italiana Ferramenta (= Häfele 290.41.910), «fixed under the cabinet top», **darrere del fons**: 4 × **Ø10 × 13** en columna a **32** al lateral (cara de dins), el primer a **37 sota la tapa**, l'eix a **5 darrere la cara de darrere del fons**; **espai de servei ≥ 15** darrere del fons; al fons, **ranura de 12 × 54,5** a **34 sota la tapa** i a **19,5** de la cara del lateral (tapeta CC1/CC4/CC5); cos 39,4 × 142,2 × 15; 75 kg per penjador, regulació 13 (alçada) / 12 (fondària). **Sense osca** al fons | Italiana Ferramenta, fitxa «Libra H2» (hranipex.com/de/api/download/55150/DOC005463), p. 5 (text: «four Ø10mm drillings with 13mm depth», 75 kg) i p. 6 («Drilling plan for Libra H2 fixed under the cabinet top»: 37 / 32 / 32 / 32, Ø10, 5, 15 min., ranura 34 / 54,5 / 12 / 19,5); Häfele UK, 23T7-222 (files.hafele.co.uk/CatalogFiles/www/23T7-222.pdf, p. 7.222: «16-20 service gap», 150 kg el parell) |
+| Fons dels mòduls penjats | — | **en ranura, retirat 20** del darrere (`HUNG_BACK_SETBACK`) als penjats nous, plantilles, catàleg i col·leccions; avís `hanging` si un moble desat no deixa 15 | Libra H2 (15 mín.); Häfele 23T7-220 (290.03.935/936: «Min. space required behind rear panel: 16 mm», muntat al terç de dalt) i 23T7-222 (16–20) |
+| Regleta de penjar d'acer (`wall-rail-steel`, v2) | `wallRail` | **Libra B3** F003290: **33,5 × 5,6**, acer de **2**, barra de **2000**; a **40 sota la tapa** (només es dibuixa: la regleta es posa a obra, on l'enganxa el penjador); un cargol i tac cada 300 (comanda orientativa: els forats de la regleta són a 52–80) | Italiana Ferramenta, plànol 2D de la Libra B3 (hranipex.com/en/api/download/55153/DOC004572: 33,5 / 5,6 / 2 / 2000, forats a 23,3 de dalt, grups a 52–80); l'alçada, del dibuix d'instal·lació de la fitxa Libra H2, p. 5 |
+| Sòcol d'alumini 100 / 150 (`plinth-alu-100`, `-150`, v2) | `plinthProfile` | **12** de gruix, barra de **3900**, **un clip a cada pota de cada tram** (`clipSpacing` 0), **cantonera de 90°** a cada cantonada i **unió lineal** a cada empalmament d'un tram més llarg que la barra; un extrem a la vista fa un retorn amb cantonera, contra la paret es talla a tope (sense tapa) | Emuca Noline (shop.emuca.com, «Noline plinth for kitchen»: alçades 60–165, barres de 2,35 i **3,9 m**, aletes de 11,2); Emuca Plasline (emuca.com: 12,5 de gruix, barres de 3,9 / 2,35 m); Häfele UK 20D4-248 (files.hafele.co.uk/CatalogFiles/www/20D4-248.pdf: perfil 713.35.401 d'11,5 de gruix, connectors lineal, de 90° i final, **clip de sòcol 713.28.540 que es fixa a la pota**; amb AXILO 78, el clip 637.38.354) |
 
-**Hipòtesis per al taller**: la plantilla de forar del penjador (posició, Ø i fondària), si cal l'osca del fons i de
-quina mida, l'alçada de la regleta, el gruix i la barra del sòcol d'alumini i quants clips per tram.
+**Per què no el Camar 807**: el 807 (Camar, «reggibase per mobili sospesi»; camar.it › sistemi 807; Peter Meier,
+*PMI Hanging System V1.4*, p. 4: 4 espigues Ø10 en rectangle de 32 × 64, placa de 60 × 80, 120 kg) és el penjador dels
+**baixos penjats** (mobles flotants) i s'enganxa a **plaques de paret 897** («All of our brackets work with the 875
+hanging rails except our 807 bracket», PMI p. 2), no a una regleta. Per als alts de cuina amb regleta, l'equivalent
+estàndard és el penjador ocult darrere del fons (Libra H2 / Häfele 290.41.910, Camar 817). Si algun dia cal un baix
+penjat molt baix (el Libra H2 fa 142 d'alt: un moble de menys de ~180 amb tapa no l'admet; avís `hardware`), el 807
+seria el candidat (un item nou de la biblioteca).
+
+**Mobles desats**: els que porten la còpia v1 del penjador (sense `behindBack`) es fan com abans (4 × Ø10 × 12 en quadre a
+37 de dalt i del darrere, l'osca del fons de 20 × 110); els que fan servir el del mòdul sense còpia, i les preferències
+(l'item inicial, en llegir: `version` 2), passen a l'estàndard.

@@ -279,21 +279,29 @@ function linearSpec(item: HardwareItem) {
 
 /**
  * Penjador de moble alt (un a cada lateral del mòdul penjat, a la cantonada de dalt i darrere): els forats del target
- * `side` (u avall des de `fromTop`, v cap al davant des de `fromBack`, a la cara de dins), l'espai que cal darrere del
- * fons per a la regleta (`gap`), on va la regleta (`railTop`, de dalt del moble al cantell de dalt de la regleta), l'osca
- * del fons per on passa el ganxo (`notchWidth` × `notchHeight`, 0 = cap) i el cos per dibuixar-lo.
+ * `side` (u avall des de `fromTop`, v cap al davant), l'espai que cal darrere del fons per a la regleta (`gap`), on va la
+ * regleta (`railTop`, fins al cantell de dalt de la regleta) i el cos per dibuixar-lo. Dues maneres:
+ * - **estàndard** (`behindBack`, v2: Libra H2): el penjador va darrere del fons; les mides verticals, des de sota la tapa
+ *   (`underTop`); l'eix dels forats a `behindBack` darrere la cara de darrere del fons; al fons, la ranura per regular-lo
+ *   (`slotWidth` × `slotLength`, a `slotTop` sota la tapa i `slotSide` del lateral);
+ * - **d'abans** (v1, les còpies desades als mòduls): des de dalt del moble i del cantell de darrere del lateral
+ *   (`fromBack`), amb l'osca del fons (`notchWidth` × `notchHeight`, 0 = cap).
  */
 export function hangerSpec(item: HardwareItem) {
   expectEngine(item, "hanger")
   const holes = resolveOps(item, "side").flatMap((o) => (o.kind === "drill" ? [{ u: o.u, v: o.v, d: o.d, depth: o.depth, tag: o.tag ?? "hanger" }] : []))
   const opt = (key: string) => (Number.isFinite(item.params[key]) ? item.params[key]! : 0)
+  const behind = Number.isFinite(item.params.behindBack)
   return {
+    underTop: opt("underTop") === 1,
     fromTop: param(item, "fromTop"),
-    fromBack: param(item, "fromBack"),
+    fromBack: behind ? 0 : param(item, "fromBack"),
+    behindBack: behind ? item.params.behindBack! : undefined,
     gap: param(item, "gap"),
     railTop: param(item, "railTop"),
     notchWidth: opt("notchWidth"),
     notchHeight: opt("notchHeight"),
+    slot: { width: opt("slotWidth"), length: opt("slotLength"), top: opt("slotTop"), side: opt("slotSide") },
     body: { width: param(item, "bodyWidth"), height: param(item, "bodyHeight"), depth: param(item, "bodyDepth") },
     holes,
   }

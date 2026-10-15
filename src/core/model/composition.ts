@@ -3,6 +3,7 @@ import { sampleProfile, toNodes } from "./polygon"
 import { aliasMaterialRefs } from "./photoUpgrade"
 import { PART_AXES as PART_AXES_C, tidyPart, type FreePart } from "./freePart"
 import { DEFAULT_LEGACY_HARDWARE, isLegacyHardware, kitFromLegacy, migrateModuleHardware, type ModuleHardware } from "./hardware"
+import { hungBack } from "./hungBack"
 import type { Base, Carcass, Front, Module, Zone } from "./moduleSchema"
 import type { Composition, CompositionKind, RefObject, Run } from "./compositionSchema"
 
@@ -287,7 +288,8 @@ export function emptyModule(id: string, name: string): Module {
 
 export function defaultModule(id: string, name: string, overrides: Partial<Carcass> = {}): Module {
   const m = cabinetToModule({ ...DEFAULT_CABINET, doors: 0, shelves: 1 }, id, name)
-  return { ...m, carcass: { ...m.carcass, ...overrides } }
+  // Un penjat, amb el fons estàndard (retirat per al penjador i la regleta: `hungBack`).
+  return { ...m, carcass: hungBack({ ...m.carcass, ...overrides }) }
 }
 
 /** Origen (mm) de cada mòdul a la composició, per id. */

@@ -27,9 +27,9 @@ import { HardwarePick } from "../HardwarePick"
 
 /** Com es munta el front, per a l'ajuda de «Front de moble». */
 function mountHelp(a: Appliance): string {
-  if (a.door === "hinges") return "Penja de les frontisses de l'aparell: es fan les cassoletes del catàleg al darrere del front."
-  if (furnitureHinges(a)) return "Penja de frontisses de moble (les del mòdul, amb les plaques al lateral) i s'uneix a la porta de l'aparell amb una guia lliscant (la posició de la guia és una hipòtesi: comprova-la amb la plantilla)."
-  return `Es cargola a la porta de l'aparell${a.door === "sliding" ? " (porta lliscant)" : ""}, sense frontisses de moble. La plantilla dels cargols ve amb l'aparell: les prebroques del darrere del front són una hipòtesi (comprova-les abans de mecanitzar).`
+  if (a.door === "hinges") return "Penja de les frontisses de l'aparell: es fan les cassoletes de la fitxa del fabricant al darrere del front."
+  if (furnitureHinges(a)) return "Penja de frontisses de moble (les del mòdul, tantes com demana l'alçada, amb les plaques al lateral) i s'uneix a la porta de l'aparell amb la guia lliscant, que es cargola amb la plantilla de l'aparell."
+  return `Es cargola a la porta de l'aparell${a.door === "sliding" ? " (porta lliscant)" : ""} amb la plantilla que porta l'aparell, sense frontisses de moble.`
 }
 
 /** Les dades del catàleg que compten, en una línia per a l'ajuda. */

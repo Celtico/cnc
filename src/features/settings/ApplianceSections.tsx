@@ -10,9 +10,9 @@ const frontText = (r: FrontRange) => `${rangeText(r)}${r.plusBase ? " + A" : ""}
 /** Com es munta el front, en una frase (el que fa l'app al moble). */
 function mountText(a: Appliance): string {
   if (!a.door) return "Sense front de moble: l'aparell queda a la vista. Al moble només es comprova el nínxol (i el retall, si el catàleg el dona)."
-  if (a.door === "hinges") return "El front de moble penja de les frontisses de l'aparell: les cassoletes del catàleg al darrere del front."
-  if (furnitureHinges(a)) return "El front de moble penja de frontisses de moble (les del mòdul) i s'uneix a la porta de l'aparell amb una guia lliscant (prebroques: hipòtesi)."
-  return `${DOOR_LABELS[a.door][0]!.toUpperCase()}${DOOR_LABELS[a.door].slice(1)}: el front de moble es cargola a la porta de l'aparell, sense frontisses de moble (prebroques: hipòtesi, comprova-les amb la plantilla de l'aparell).`
+  if (a.door === "hinges") return "El front de moble penja de les frontisses de l'aparell: les cassoletes de la fitxa del fabricant al darrere del front."
+  if (furnitureHinges(a)) return "El front de moble penja de frontisses de moble (les del mòdul) i s'uneix a la porta de l'aparell amb una guia lliscant, cargolada amb la plantilla de l'aparell (prebroques de l'app: opcionals, «Prebroques» = 1)."
+  return `${DOOR_LABELS[a.door][0]!.toUpperCase()}${DOOR_LABELS[a.door].slice(1)}: el front de moble es cargola a la porta de l'aparell amb la plantilla que porta l'aparell, sense frontisses de moble (prebroques de l'app: opcionals, «Prebroques» = 1).`
 }
 
 /**

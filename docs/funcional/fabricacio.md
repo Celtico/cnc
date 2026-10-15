@@ -201,42 +201,51 @@
   `core/import/slot.test.ts`, `meshFrame.test.ts`, `meshFrame.roundtrip.test.ts` (`HETTICH_DIR`/`BLUM_DIR`, tessel·lat
   amb `occt-import-js` al Node), `features/composition/placements.test.ts`. **Proves d'or idèntiques.**
 - **Com s'aguanta el mòdul** (v45, `build/module/mounting.ts`, capa `MountingBuilder` entre la carcassa i els llums):
-  **penjadors** dels mòduls penjats (4 × Ø10 × 12 a cada lateral, cara de dins, cantonada de dalt i darrere; osca del
-  fons a les cantonades de dalt per al ganxo; regleta de paret darrere del fons; avís `hanging` si el fons no deixa 16 mm)
-  i **sòcol** de la base «Potes» al davant, als laterals i al darrere, de fusta (a tope o a inglet) o d'alumini (ferratge
-  per metres). Detall a [`model.md`](model.md) › Carcassa › Penjadors i Base, i › Ferratges per metres.
+  **penjadors** dels mòduls penjats (l'estàndard, Libra H2: 4 × Ø10 × 13 en columna a cada lateral, cara de dins, sota la
+  tapa i darrere del fons; la ranura de 12 × 54,5 al fons per regular-los; regleta de paret darrere del fons; el fons dels
+  penjats nous, en ranura retirat 20; avís `hanging` si el fons no deixa 15 mm) i **sòcol** de la base «Potes» al davant,
+  als laterals i al darrere, de fusta (a tope o a inglet) o d'alumini (ferratge per metres: un clip a cada pota per
+  tram). Detall a [`model.md`](model.md) › Carcassa › Penjadors i Base, i › Ferratges per metres.
 - **Electrodomèstics** (v46, `build/module/appliances.ts`, capa `AppliancesBuilder` entre els calaixos i les zones; el model
-  a [`model.md`](model.md) › Electrodomèstic del compartiment; les dades i les fonts a
-  [`docs/electrodomestic/README.md`](../electrodomestic/README.md)). Tots els avisos són `appliance` i diuen la pàgina del
-  catàleg:
-  - **El nínxol**: la llum del compartiment (ample, alt i fons fins al fons o la columna) amb els rangs del catàleg; el forn
-    en columna (mòdul de 1200 o més) amb l'alçada de columna, el microones en un mòdul penjat amb la del moble penjat; la
-    campana telescòpica, el mòdul (ample, fons i alçada interior). Si el fabricant no el publica (rentadores, Teka RBF), un
-    avís ho diu.
+  a [`model.md`](model.md) › Electrodomèstic del compartiment; les dades, les fonts i les **decisions estàndard** a
+  [`docs/electrodomestic/README.md`](../electrodomestic/README.md)). Per decisió de l'usuari (2026-10-15: «fem-ho tot el
+  més estàndard possible»), **avisos** (`appliance`, amb la pàgina del catàleg) **només del que no lliga amb el
+  fabricant**; el que és com ha de ser (com es munta el front, què s'ha mecanitzat, el sòcol corregut de davant) va a la
+  **nota de la comanda** de l'aparell (Peces › Ferratges, LLEGEIX-ME: «electrodomèstic: no es fabrica · …»). Una
+  plantilla amb electrodomèstics surt sense avisos.
+  - **El nínxol**: la llum del compartiment (ample, alt i fons fins al fons o la columna) amb els rangs del catàleg o de
+    la fitxa del fabricant (rentadores BSH: ≥ 600 × ≥ 818/820 × ≥ 555/551; Teka RBF: el nínxol de 178 de la indústria);
+    el forn en columna (mòdul de 1200 o més) amb l'alçada de columna, el microones en un mòdul penjat amb la del moble
+    penjat; la campana telescòpica, el mòdul (ample, fons i alçada interior). Si el fabricant no el publica, avís. El
+    forn i el microones: **només el nínxol** (es cargolen pel marc als laterals a obra; cap mecanitzat).
   - **L'aparell** es dibuixa (`extras`, rol `hardware`: ni nesting ni «Elements sense nesting») amb la **foto** a la cara
-    vista (`Panel.photo`: la de davant o, a la placa, la de dalt) i va a la **comanda** (Peces › «Ferratges», LLEGEIX-ME) amb
-    la marca i la referència («electrodomèstic: no es fabrica»).
+    vista (`Panel.photo`: la de davant o, a la placa, la de dalt) i va a la **comanda** amb la marca i la referència.
   - **El front de moble** és un front com els altres (material dels fronts, cantells, tirador), de la mida que dona el
-    compartiment (`frontTerritory`); als aparells de terra sense peça a sota, de `plinth` cap amunt. Un combi en fa **dos**
-    (el de baix i el de dalt, junta de 4 del catàleg): el de baix tan curt com permet el seu rang perquè el de dalt hi entri;
-    les alçades BSH amb A (la base on seu l'aparell) i S (la peça de sobre). Avisos si l'alçada, el sòcol, el gruix o el
-    **pes estimat** (tauler de 700 kg/m³, hipòtesi) surten del que admet el fabricant. Muntatge **com diu el fabricant**:
-    - porta fixa, porta sobre porta i **rentaplats de porta lliscant**: el front es cargola a la porta de l'aparell, **cap
-      frontissa de moble**; 4 **prebroques** Ø2 × 10 (tag `appliance`) al darrere de cada front, **hipòtesi** (el catàleg no
-      dona la plantilla): a 50 dels costats de l'aparell, a 40 de dalt i a 60 de baix (paràmetres de l'item); l'avís diu que
-      s'han de comprovar amb la plantilla de l'aparell;
-    - **frigorífic de porta lliscant**: frontisses de moble (les del mòdul, amb la filera System 32 i les plaques al lateral
-      del costat, `addCups`) i la **guia lliscant** (3 prebroques centrades a 40 del cantell que obre, **hipòtesi**);
-    - **rentadora**: les **cassoletes** de les frontisses de l'aparell, les del catàleg (Ø35 × 12 a 21 del cantell; la
-      primera a 202 del cantell de dalt de l'aparell, la segona a +338,6), tag `hinge`.
-  - **El que cal mecanitzar al moble** (només el que dona el catàleg): la **sortida d'aire** dels frigorífics de columna
-    (≥ 200 cm²) com a retall a la peça de sobre del compartiment, de lateral a lateral menys 30 i arran del fons (tag `vent`);
-    el **retall de la placa** a la peça de sobre (560 × 490, a 50 del davant; avís si queda a menys de 40 del darrere o el
-    tauler és prim) i el del **grup filtrant** a la base del moble penjat (496 × 264 a 25 del davant, tauler de 16–19), tag
-    `appliance`. Sense la peça (taulell de pedra, mòdul sense tapa), un avís diu el retall i on fer-lo. L'**entrada d'aire**
-    pel sòcol i el **sòcol de davant** de l'aparell de terra no es fan sols: avís (preguntes obertes al taller).
-  - Res d'això toca els mobles d'abans (els electrodomèstics són opcionals): proves d'or idèntiques; la plantilla nova
-    «Cuina amb electrodomèstics» hi entra com un moble més. Tests `build/appliances.test.ts`.
+    compartiment (`frontTerritory`); als aparells de terra sense peça a sota, de `plinth` (100, el sòcol de cuina
+    estàndard) cap amunt. Un combi en fa **dos** (el de baix i el de dalt, junta de 4 del catàleg): el de baix tan curt
+    com permet el seu rang perquè el de dalt hi entri; les alçades BSH amb A (la base on seu l'aparell) i S (la peça de
+    sobre). Avisos si l'alçada, el sòcol, el gruix o el **pes estimat** surten del que admet el fabricant; el pes, amb la
+    **densitat estàndard del tauler** pel nom del material (`boardDensity`: DM/MDF i lacats 750, fusta massissa 675, la
+    resta —aglomerat— 660). Muntatge **com diu el fabricant**:
+    - porta fixa, porta sobre porta i **rentaplats de porta lliscant**: el front es cargola a la porta de l'aparell amb la
+      **plantilla de paper que porta l'aparell**, **cap frontissa de moble** i, per defecte, **cap prebroca**
+      (`pilotHoles` 0); amb `pilotHoles` 1 (paràmetre de l'item), 4 prebroques Ø2 × 10 (tag `appliance`) per front, a
+      `fixInset` dels costats de l'aparell, `fixTop` de dalt i `fixBottom` de baix;
+    - **frigorífic de porta lliscant**: frontisses de moble (les del mòdul, tantes com demana l'alçada del front, amb la
+      filera System 32 i les plaques al lateral del costat, `addCups`) i la **guia lliscant**, cargolada amb la plantilla
+      de l'aparell (prebroques només amb `pilotHoles` 1);
+    - **rentadora**: les **cassoletes** de les frontisses de l'aparell, les de la fitxa (WIW24307ES: Ø35 a 21 del cantell
+      del panell frontal de 592 de l'aparell, a 202 i +338,6 del cantell de dalt; WKD28490ES: Ø38 a 24,5, a 202 i +420;
+      ≥ 12 de fons), tag `hinge`.
+  - **El que cal mecanitzar al moble** (el que dona el catàleg): la **sortida d'aire** dels frigorífics de columna
+    (≥ 200 cm²) com a retall a la peça de sobre del compartiment, de lateral a lateral menys 30 i arran del fons (tag
+    `vent`); l'**entrada d'aire** (≥ 200 cm²) com a **reixeta al sòcol**: el retall al sòcol de fusta del mòdul, centrat
+    davant del compartiment (a l'ample del compartiment menys 60, prou alt per a l'àrea; tag `vent`) i la «Reixeta de
+    ventilació de sòcol» a la comanda (sense sòcol al mòdul —el corregut de la cuina—, la nota diu la mida; si no hi cap,
+    avís); el **retall de la placa** a la peça de sobre (560 × 490, a 50 del davant; avís si queda a menys de 40 del
+    darrere o el tauler és prim) i el del **grup filtrant** a la base del moble penjat (496 × 264 a 25 del davant, tauler
+    de 16–19), tag `appliance`. Sense la peça (taulell de pedra, mòdul sense tapa), la nota diu el retall i on fer-lo.
+  - Tests `build/appliances.test.ts`.
 - **Forats que es trobarien per dins** (`build/holeClash.ts`, `resolveHoleClashes`): System 32 a banda i banda d'un divisor
   → tots dos a (T − 1)/2; si un és d'un ferratge (placa, frontissa: `shortenFitting`), primer s'escurça l'altre, sempre amb
   avís `hole-clash` i mai per sota de 8 mm (si no, no es toca i ho diu); espiga de cantell contra un forat de cara →

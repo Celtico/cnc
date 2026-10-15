@@ -157,7 +157,7 @@ export function HardwareCard({
           <Text fontSize="xs" color="fg.muted" pb={2}>
             {item.imported
               ? "Forats passants al front, al voltant del centre del tirador (pitch = la distància entre forats, diameter = el Ø de Mides)."
-              : item.appliance ? "Al darrere del front de moble: les prebroques de la fixació a la porta de l'aparell o de la guia lliscant (on van, amb les mides de dalt: hipòtesi fins que el taller en tingui la plantilla) o les cassoletes de les frontisses de l'aparell (del catàleg)."
+              : item.appliance ? "Al darrere del front de moble: les cassoletes de les frontisses de l'aparell (de la fitxa) o, si «Prebroques» és 1, les prebroques de la fixació a la porta de l'aparell o de la guia lliscant (l'estàndard és forar-les amb la plantilla de l'aparell: 0)."
               : item.kit ? "La prebroca de cada cargol (Ø i fondària de la regla del taller, Preferències › Regles de mecanitzat › «Prebroca dels cargols»); on van, ho diu el joc («Mecanitzats del joc»)."
               : "En coordenades de la peça (u al llarg del cantell de referència, v cap a dins), amb els noms de les mides de dalt. Editar-los i afegir-ne és per a més endavant (ferratges manuals)."}
           </Text>

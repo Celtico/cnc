@@ -776,7 +776,7 @@ export const STORE_CATALOG: StoreCategory[] = [
     name: "Entrada",
     types: [
       items("entrada", "Consola", [
-        { name: "Fina", style: "Minimalista", materials: "roure xapat penjat", colors: "roure natural", use: "Consola penjada amb un calaix", audience: "rebedors estrets", price: 260, make: () => one(box("Consola", { w: 1000, h: 150, d: 300, mat: OAK, base: hung(850) }, drawers(1))) },
+        { name: "Fina", style: "Minimalista", materials: "roure xapat penjat", colors: "roure natural", use: "Consola penjada amb un calaix", audience: "rebedors estrets", price: 260, make: () => one(box("Consola", { w: 1000, h: 180, d: 300, mat: OAK, base: hung(850) }, drawers(1))) },
         { name: "Marbre", style: "Modern luxe", materials: "pedra sobre potes de ferro", colors: "marbre, negre", use: "Tauler de pedra sobre potes de ferro", audience: "entrades amples", price: 590, make: () => legTable("Consola", { w: 1200, h: 800, d: 350, mat: STONE, legs: "post", stone: true }) },
         { name: "Ona", style: "Organic modern", materials: "MDF lacat terracota a inglet", colors: "terracota, greige", use: "Consola waterfall de color", audience: "entrades amb caràcter", price: 390, make: () => waterfall("Consola", { w: 1100, h: 800, d: 320, mat: TERRA, t: 30 }) },
       ]),
