@@ -2,12 +2,13 @@ import { OPTION_ICON_IDS, type OptionControl } from "./optionTypes"
 
 /**
  * Les icones dels nodes de l'esborrany de la cascada: les de les seccions de l'inspector, les de les parts del moble
- * (interior, calaixos, tirador, frontissa, sòcol…), les de les mides, les del control de cada fila i les genèriques
- * d'opció i de tria. La UI les tradueix a `react-icons/lu` (`features/settings/cascade/cascadeIcons.ts`).
+ * (interior, base, calaixos, tirador, frontissa, sòcol, potes…), les de les mides, les del control de cada fila i les genèriques
+ * d'opció i de tria. La clau es desa als nodes on l'usuari l'ha triada: **no se'n canvia el dibuix** (`legs` va ser la
+ * fletxa a terra abans que les potes fossin `feet`). La UI les tradueix a `react-icons/lu` (`features/settings/cascade/cascadeIcons.ts`).
  */
 export const DRAFT_ICONS = [
   ...OPTION_ICON_IDS,
-  "interior", "drawers", "handle", "hinge", "light", "plinth", "back", "legs", "hanger", "flap", "grille", "edge", "drill",
+  "interior", "base", "noBase", "feet", "none", "drawers", "handle", "hinge", "light", "plinth", "back", "legs", "hanger", "flap", "grille", "edge", "drill",
   "open", "height", "width", "depth", "name",
   "fridge", "dishwasher", "oven", "cooktop", "hood", "sink",
   "list", "toggle", "number", "text", "buttons", "option", "choice",
@@ -24,6 +25,8 @@ export const CONTROL_ICON: Record<OptionControl, DraftIcon> = { choice: "list", 
  * un tirador i «Alçada dels calaixos», una alçada.
  */
 const RULES: [RegExp, DraftIcon][] = [
+  [/^sense base/, "noBase"],
+  [/^sense\b|^(cap|res|ningu)$/, "none"],
   [/tirador|pom\b|gola/, "handle"],
   [/frontiss|bisagr|cassolet/, "hinge"],
   [/guia|ferratge|corredera/, "hardware"],
@@ -41,7 +44,8 @@ const RULES: [RegExp, DraftIcon][] = [
   [/llum|\bled\b|il.?lumin/, "light"],
   [/socol|zocal/, "plinth"],
   [/\bfons\b|trasera/, "back"],
-  [/\bpota|\bpotes\b|\bpeus?\b|regulador/, "legs"],
+  [/\bterra\b/, "legs"],
+  [/\bpota|\bpotes\b|\bpeus?\b|regulador/, "feet"],
   [/penja|\brail\b/, "hanger"],
   [/cantell|cantonera/, "edge"],
   [/forat|mecanitz|cnc/, "drill"],
@@ -55,7 +59,8 @@ const RULES: [RegExp, DraftIcon][] = [
   [/electrodom/, "appliance"],
   [/unio|espiga|encaix|ferrament/, "joinery"],
   [/dividi|divisio/, "divide"],
-  [/caixa|lateral|\btapa\b|\bbase\b/, "carcass"],
+  [/\bbase\b/, "base"],
+  [/caixa|lateral|\btapa\b/, "carcass"],
   [/material|acabat|color|textura|xapa|lacat/, "materials"],
   [/\bmodul/, "module"],
   [/compartiment/, "zone"],

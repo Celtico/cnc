@@ -3,6 +3,8 @@ import {
   LuAlignCenterVertical,
   LuAnchor,
   LuArchive,
+  LuArrowDownToLine,
+  LuBan,
   LuBolt,
   LuBox,
   LuCircleDot,
@@ -36,6 +38,7 @@ import {
   LuPackageOpen,
   LuPalette,
   LuPanelBottom,
+  LuPanelBottomDashed,
   LuPanelTopOpen,
   LuPuzzle,
   LuRectangleEllipsis,
@@ -64,7 +67,7 @@ import type { DraftIcon } from "../../../core/model"
 /**
  * Icona de cada node del dibuix: les de les seccions de l'inspector (Posició, Mides, Caixa, Portes, Unió, Materials…) i
  * de l'arbre de l'Editor, les de les parts del moble i dels electrodomèstics, les de les mides, les del control de cada
- * fila i les genèriques d'opció i de tria.
+ * fila i les genèriques d'opció i de tria. **No es canvia el dibuix d'una clau**: l'usuari la tria i es desa al node.
  */
 export const CASCADE_ICONS: Record<DraftIcon, IconType> = {
   structure: LuListTree,
@@ -99,13 +102,17 @@ export const CASCADE_ICONS: Record<DraftIcon, IconType> = {
   align: LuAlignCenterVertical,
   items: LuSprout,
   interior: LuPackageOpen,
+  base: LuPanelBottom,
+  noBase: LuPanelBottomDashed,
+  feet: LuFootprints,
+  none: LuBan,
   drawers: LuInbox,
   handle: LuGripHorizontal,
   hinge: LuRotateCw,
   light: LuLightbulb,
   plinth: LuPanelBottom,
   back: LuSquareDashed,
-  legs: LuFootprints,
+  legs: LuArrowDownToLine,
   hanger: LuAnchor,
   flap: LuPanelTopOpen,
   grille: LuLayoutGrid,
