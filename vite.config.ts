@@ -108,5 +108,8 @@ export default defineConfig({
   test: {
     include: ["src/**/*.test.ts"],
     environment: "node",
+    // Els tests que construeixen tot el catàleg o centenars de mòduls aleatoris triguen uns segons; amb tots els fitxers
+    // en paral·lel (i un ordinador ocupat) passaven dels 5 s per defecte i fallaven sense cap error de veritat.
+    testTimeout: 30_000,
   },
 })
