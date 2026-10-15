@@ -279,12 +279,12 @@ export function tableModule(id: string, name: string, overrides: Partial<Carcass
 
 /**
  * Mòdul nou del + de «Mòduls» (per decisió de l'usuari, 2026-10-15: «quan crees un mòdul nou, que sigui com aquest Mòdul
- * 2»): un **buc estàndard** de cuina (600 × 720 × 560: la caixa de 72, sobre les potes del moble; «fica la mida d'un buc estàndard») amb els dos laterals, la tapa i el fons en ranura, l'interior obert sense
+ * 2»): un **buc estàndard** de cuina (600 × 720 × 580: la caixa de 72, sobre les potes del moble; «fica la mida d'un buc estàndard»; de 580 de fons, per al taulell de 600–620 i el nínxol dels rentaplats (Teka ≥ 580)) amb els dos laterals, la tapa i el fons en ranura, l'interior obert sense
  * prestatges; el suport, el del moble (`withSupport`). Es completa a la Caixa (opcions en cascada). Els materials, els
  * gruixos i les folgances, de Preferències (`applySettingsToModule`).
  */
 export function emptyModule(id: string, name: string): Module {
-  const m = defaultModule(id, name, { width: 600, height: 720, depth: 560, base: { kind: "none" }, back: "groove", top: { kind: "full" }, sides: { left: true, right: true } })
+  const m = defaultModule(id, name, { width: 600, height: 720, depth: 580, base: { kind: "none" }, back: "groove", top: { kind: "full" }, sides: { left: true, right: true } })
   return { ...m, type: "base", root: { id: `${id}-root`, shelves: { n: 0, adjustable: true } } }
 }
 

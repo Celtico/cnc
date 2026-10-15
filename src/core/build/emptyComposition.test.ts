@@ -39,9 +39,9 @@ describe("mobles i objectes amb 0 mòduls", () => {
 
 describe("mòdul nou del + de «Mòduls»", () => {
   const m = applySettingsToModule(DEFAULT_SETTINGS, emptyModule("m1", "Mòdul 1"))
-  it("és un buc estàndard (com el «Mòdul 2» de l'usuari): 600 × 720 × 560, els dos laterals, tapa, fons en ranura, obert", () => {
+  it("és un buc estàndard (com el «Mòdul 2» de l'usuari): 600 × 720 × 580, els dos laterals, tapa, fons en ranura, obert", () => {
     const c = m.carcass
-    expect([m.type, c.width, c.height, c.depth, c.base, c.back, c.top, c.sides]).toEqual(["base", 600, 720, 560, { kind: "none" }, "groove", { kind: "full" }, { left: true, right: true }])
+    expect([m.type, c.width, c.height, c.depth, c.base, c.back, c.top, c.sides]).toEqual(["base", 600, 720, 580, { kind: "none" }, "groove", { kind: "full" }, { left: true, right: true }])
     expect(m.root.front).toBeUndefined()
     expect(m.root.shelves?.n).toBe(0)
     // Material, gruix i folgances de Preferències.

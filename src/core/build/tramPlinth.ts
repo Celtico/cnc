@@ -1,4 +1,4 @@
-import { floorTrams, isTurned, moduleFrontFace, tramFacesBack, tramHeightMismatches, tramSides, type Composition, type ModulePlacement, type Panel } from "../model"
+import { floorTrams, isApplianceModule, isTurned, moduleFrontFace, tramFacesBack, tramHeightMismatches, tramSides, type Composition, type ModulePlacement, type Panel } from "../model"
 import type { LinearPiece } from "./linearOrders"
 import type { VentInlet } from "./module/types"
 import { aluPlinth, plinthPieces, woodPlinthPanels, type PlinthFrame } from "./plinth"
@@ -52,7 +52,10 @@ export function buildTramPlinths(comp: Composition, places: ModulePlacement[], m
     const x0 = Math.min(...tram.modules.map((i) => places[i]!.x))
     const x1 = Math.max(...tram.modules.map((i) => places[i]!.x + comp.modules[i]!.carcass.width))
     const zBackEdge = Math.min(...tram.modules.map((i) => places[i]!.z ?? 0))
-    const zFace = Math.max(...tram.modules.map((i) => (places[i]!.z ?? 0) + moduleFrontFace(comp.modules[i]!)))
+    // La cara dels fronts més endarrerida del tram (mòduls de fondàries diferents: el sòcol, recte, mai per davant de cap
+    // front); els electrodomèstics de terra no compten (el seu front de moble s'enrasa amb els del costat).
+    const faces = tram.modules.filter((i) => !isApplianceModule(comp.modules[i]!)).map((i) => (places[i]!.z ?? 0) + moduleFrontFace(comp.modules[i]!))
+    const zFace = Math.min(...(faces.length ? faces : tram.modules.map((i) => (places[i]!.z ?? 0) + moduleFrontFace(comp.modules[i]!))))
     const sides = tramSides(s, tram, comp)
     const ss = pl.sideSetback ?? pl.setback
     // Els fronts miren enrere (una fila de mòduls girats): el davant del sòcol és el costat de la paret.

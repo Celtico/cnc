@@ -90,9 +90,9 @@ export function setModuleAppliance(m: Module, item: HardwareItem | undefined, he
   const fit = (v: number, r: Range | undefined) => (r?.min !== undefined && v < r.min ? r.min : r?.max !== undefined && v > r.max ? r.max : v)
   const width = fit(out.carcass.width, a.niche?.w)
   // El nínxol de terra (rentaplats, rentadora, frigorífic sota taulell) va de terra fins a sota el taulell: l'alçada, la
-  // de dalt del mòdul d'ara (el suport més la caixa: un buc de 720 sobre potes de 100 fa 820), dins del que demana el
-  // fabricant.
-  const height = isFloorNiche(a) ? fit(out.carcass.base.kind === "wall" ? out.carcass.height : top, a.niche?.h) : out.carcass.height
+  // de dalt del mòdul d'ara (el suport més la caixa: un buc de 720 sobre potes de 100 fa 820), enrasat amb els del costat.
+  // Si l'aparell en demana una altra (un XXL de 865), ho diu l'avís del nínxol: no s'aixeca per sobre del taulell.
+  const height = isFloorNiche(a) && out.carcass.base.kind !== "wall" ? top : out.carcass.height
   return withType({ ...out, carcass: applianceDefaults(a, { ...out.carcass, width, height }) }, "appliance")
 }
 

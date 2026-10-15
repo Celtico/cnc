@@ -3,7 +3,7 @@ import { STRUCTURAL, UI, field, group, section } from "./optionTypes"
 
 /** L'arbre de l'esquerra de l'Editor: on s'afegeixen els elements (no són opcions; per orientar-se). */
 export const STRUCTURE = group("structure", "Estructura", { icon: "structure", code: UI.tree, note: "L'arbre de l'Editor: cada «+» afegeix un element i en seleccionar-lo surt el seu inspector." }, [
-  group("structure.modules", "Mòduls", { icon: "module", code: UI.tree, note: "+ Mòdul nou: un buc estàndard de 600 × 720 × 560 amb els dos laterals, tapa i fons en ranura (com el «Mòdul 2» de l'usuari, 2026-10-15), sobre el suport del moble. Dues files: A terra i Penjats a la paret; grups." }),
+  group("structure.modules", "Mòduls", { icon: "module", code: UI.tree, note: "+ Mòdul nou: un buc estàndard de 600 × 720 × 580 amb els dos laterals, tapa i fons en ranura (com el «Mòdul 2» de l'usuari, 2026-10-15), sobre el suport del moble. Dues files: A terra i Penjats a la paret; grups." }),
   group("structure.parts", "Peces lliures", { icon: "part", code: UI.tree, note: "+ Peça lliure nova (amb els per defecte d'aquí); grups." }),
   group("structure.refs", "Objectes de referència", { icon: "ref", code: UI.tree, note: "+ Objecte (una caixa o un de Preferències › Objectes de referència)." }),
   group("structure.models", "Models 3D", { icon: "items", code: UI.tree, note: "+ Pujar un model 3D (decoratiu)." }),

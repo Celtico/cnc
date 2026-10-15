@@ -129,7 +129,9 @@ export abstract class AppliancesBuilder extends DrawersBuilder {
     const { d } = this
     const { w, h, d: depth } = a.size
     const x0 = (rect.x0 + rect.x1) / 2 - w / 2
-    const zFront = a.kind === "hob" ? d.D - Math.max(50, (d.D - depth) / 2) : front || a.kind === "hood" ? d.D : d.frontZ
+    // Amb front de moble, 1 mm darrere del davant de la caixa: el sòcol del tram (la cara a ras del davant de la caixa)
+    // hi passa per davant sense que les dues cares es trepitgin al 3D i al render.
+    const zFront = a.kind === "hob" ? d.D - Math.max(50, (d.D - depth) / 2) : a.kind === "hood" ? d.D : front ? d.D - 1 : d.frontZ
     // La placa: el vidre 5 mm per sobre del taulell (la peça de sobre o, sense, dalt del mòdul) i el cos a sota.
     const y0 = a.kind === "hob" ? (above ? above.yTop : d.H + WORKTOP_GUESS) + 5 - h : rect.y0
     const p: Panel = {

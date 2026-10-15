@@ -54,7 +54,7 @@ Pestanyes del moble obert (`PROJECT_NAV`): **Editor · Peces · Nesting · Expor
   ni Duplicar, i enganxar-ne avisa). **Un + a cada grup** (Mòduls · Peces lliures · Objectes de referència · Models 3D; per
   decisió de l'usuari, així es veuen els tipus): demana el nom (`NameDialog`, «Mòdul 3», «Peça 2», «Objecte 1», seleccionat;
   `addElements.ts`) i crea l'element sense més opcions: **mòdul nou** (`emptyModule`, per decisió de l'usuari, 2026-10-15: «que sigui com aquest Mòdul 2»: un buc
-  estàndard de 600 × 720 × 560 amb els dos laterals, tapa i fons en ranura, obert i sense prestatges, sobre el suport del moble; materials, gruixos, folgances i ferratges de Preferències; a la Taula, `tableModule`), peça de cara, caixa de 600 × 600 × 100. L'últim mòdul també s'elimina (queda el moble buit). Res de mòduls
+  estàndard de 600 × 720 × 580 amb els dos laterals, tapa i fons en ranura, obert i sense prestatges, sobre el suport del moble; materials, gruixos, folgances i ferratges de Preferències; a la Taula, `tableModule`), peça de cara, caixa de 600 × 600 × 100. L'últim mòdul també s'elimina (queda el moble buit). Res de mòduls
   especials, passacables ni plantilles al +. **Excepcions** (per decisió de l'usuari): el + d'«Objectes de referència» obre
   un menú amb els de Preferències › Objectes de referència (els no amagats; `refFromPreset`: de paret, a la seva distància;
   de terra, estirat; sense fondària, 5 mm) i «En blanc…»; el de «Models 3D», un menú amb «Quin fitxer?»
