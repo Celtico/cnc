@@ -42,7 +42,7 @@ const type = section("module.type", "Tipus", { icon: "type", code: UI.type, hide
 
 const dims = section("module.dims", "Mides", { icon: "dims", code: UI.inspector, hideable: false, why: STRUCTURAL }, [
   field("module.dims.width", "Amplada", { code: UI.carcass, control: "number", range: { min: 100, max: 3000, step: 10, suffix: "mm" }, default: 600, defaultEditable: true, hideable: false, why: STRUCTURAL }),
-  field("module.dims.height", "Alçada", { code: UI.carcass, control: "number", range: { min: 100, max: 2800, step: 10, suffix: "mm" }, default: 100, defaultEditable: true, hideable: false, why: STRUCTURAL }),
+  field("module.dims.height", "Alçada", { code: UI.carcass, control: "number", range: { min: 100, max: 2800, step: 10, suffix: "mm" }, default: 720, defaultEditable: true, hideable: false, why: STRUCTURAL }),
   field("module.dims.depth", "Fondària", { code: UI.carcass, control: "number", range: { min: 100, max: 1200, step: 10, suffix: "mm" }, default: 560, defaultEditable: true, hideable: false, why: STRUCTURAL }),
 ])
 

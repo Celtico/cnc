@@ -88,8 +88,10 @@ describe("assistent IA: operacions", () => {
   })
 
   it("dividir, prestatges i fronts segueixen el que aguanta cada compartiment (com la UI)", () => {
-    const r = ok(blank(), "add_module", { name: "Buit", width: 600, height: 400, depth: 400, preset: "empty" })
-    const id = r.result.module_id as string
+    const added = ok(blank(), "add_module", { name: "Buit", width: 600, height: 400, depth: 400, preset: "empty" })
+    const id = added.result.module_id as string
+    // Sense laterals, tapa ni fons (el mòdul nou ja en porta).
+    const r = ok(added.comp, "set_carcass", { module: id, sides: { left: false, right: false }, top: "none", back: "none" })
     expect(err(r.comp, "split_zone", { module: id, dir: "h", n: 2 })).toMatch(/no es pot dividir/)
     expect(err(r.comp, "set_shelves", { module: id, n: 2 })).toMatch(/lateral o un divisor a cada costat/)
     expect(err(r.comp, "set_front", { module: id, kind: "drawers" })).toMatch(/quatre costats/)
