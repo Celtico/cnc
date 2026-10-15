@@ -31,3 +31,6 @@ docs/*.pdf
 
 # Fitxers temporals per esborrar a mà
 _to_delete/
+
+# Catàlegs d'electrodomèstics (Siemens, Balay, Bosch, Teka): només locals
+docs/electrodomestic/*.pdf

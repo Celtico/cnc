@@ -1,0 +1,4642 @@
+{
+ "schemaVersion": 1,
+ "units": {
+  "length": "mm",
+  "weight": "kg",
+  "area": "cm2"
+ },
+ "generated": "2026-10-15",
+ "pageConvention": "Pàgina = índex del PDF (1 = primera pàgina del fitxer); el número imprès pot diferir.",
+ "sources": {
+  "siemens": {
+   "file": "28568295_3_Catalogo_Siemens_2026_interactivo.pdf",
+   "title": "Siemens Catálogo General Otoño 2026",
+   "pages": 150
+  },
+  "balay": {
+   "file": "28659371_Catalogo_interactivo_Balay_0526_280426 (1).pdf",
+   "title": "Balay Catálogo general (05/2026, portada \"Septiembre 2026\")",
+   "pages": 177
+  },
+  "bosch": {
+   "file": "28671515_Bosch_05-2026_digital_290426.pdf",
+   "title": "Bosch catálogo 05/2026",
+   "pages": 497
+  },
+  "teka": {
+   "file": "CATALOGO-TEKA-SP-WEB-JULIO-2026.pdf",
+   "title": "Teka Catálogo Julio 2026",
+   "pages": 162
+  }
+ },
+ "families": [
+  {
+   "id": "dishwasher_60",
+   "name": "Rentaplats integrable 60 cm",
+   "category": "dishwasher",
+   "mount": "base",
+   "niche": {
+    "w": {
+     "min": 600,
+     "max": null
+    },
+    "h": {
+     "min": 815,
+     "max": 875
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "note": "Alt 81,5: nínxol 815-875. XXL 86,5: nínxol 865-925 (Siemens SX/Balay 3VH). Teka: nínxol 820-865, fons mín. 580."
+   },
+   "doorSystems": [
+    "sliding",
+    "fixed"
+   ],
+   "frontHeight": {
+    "sliding_815": {
+     "min": 655,
+     "max": 765
+    },
+    "fixed_815": {
+     "min": 655,
+     "max": 725
+    },
+    "sliding_865": {
+     "min": 705,
+     "max": 815
+    },
+    "fixed_865": {
+     "min": 705,
+     "max": 775
+    },
+    "teka_sliding": {
+     "min": null,
+     "max": 800
+    },
+    "teka_fixed": {
+     "min": null,
+     "max": 720
+    }
+   },
+   "plinthHeight": {
+    "sliding": {
+     "min": 50,
+     "max": 220
+    },
+    "fixed": {
+     "min": 90,
+     "max": 220
+    },
+    "teka": {
+     "min": 90,
+     "max": 155
+    },
+    "note": "Teka indica 90-155 (+50 amb potes allargades)."
+   },
+   "frontWeightKg": [
+    {
+     "widthMm": 450,
+     "applianceHeightMm": null,
+     "sliding": {
+      "min": 2.5,
+      "max": 7.5
+     },
+     "fixed": {
+      "min": 2.5,
+      "max": 7.5
+     }
+    },
+    {
+     "widthMm": 600,
+     "applianceHeightMm": 815,
+     "sliding": {
+      "min": 4.5,
+      "max": 11
+     },
+     "fixed": {
+      "min": 2.5,
+      "max": 8.5
+     }
+    },
+    {
+     "widthMm": 600,
+     "applianceHeightMm": 865,
+     "sliding": {
+      "min": 4.5,
+      "max": 11
+     },
+     "fixed": {
+      "min": 3,
+      "max": 10
+     }
+    }
+   ],
+   "frontWeightNote": "Porta fixa: accessori del servei tècnic per a fronts fins a 11,5 kg (BSH). Teka: 5-10 kg (sliding) / 5-7 kg (fixa).",
+   "sources": [
+    {
+     "source": "bosch",
+     "page": 345,
+     "what": "dibuix SMH6YCX02E porta lliscant"
+    },
+    {
+     "source": "bosch",
+     "page": 348,
+     "what": "dibuix SMV6ZCX10E porta fixa"
+    },
+    {
+     "source": "bosch",
+     "page": 378,
+     "what": "taula pes màxim de porta"
+    },
+    {
+     "source": "balay",
+     "page": 147,
+     "what": "taula pes màxim de porta + TimeLight"
+    },
+    {
+     "source": "siemens",
+     "page": 108,
+     "what": "dibuixos SN75/SX65"
+    },
+    {
+     "source": "teka",
+     "page": 144,
+     "what": "dibuixos d'encastre DFI"
+    },
+    {
+     "source": "teka",
+     "page": 85,
+     "what": "sliding door: fronts fins a 800 mm"
+    }
+   ]
+  },
+  {
+   "id": "dishwasher_45",
+   "name": "Rentaplats integrable 45 cm",
+   "category": "dishwasher",
+   "mount": "base",
+   "niche": {
+    "w": {
+     "min": 450,
+     "max": null
+    },
+    "h": {
+     "min": 815,
+     "max": 875
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "note": "Teka: nínxol 820-865 (DW8 40 FI 820-870), fons mín. 580."
+   },
+   "doorSystems": [
+    "sliding",
+    "fixed"
+   ],
+   "frontHeight": {
+    "sliding_815": {
+     "min": 655,
+     "max": 765
+    },
+    "fixed_815": {
+     "min": 655,
+     "max": 725
+    },
+    "teka_sliding": {
+     "min": null,
+     "max": 800
+    },
+    "teka_fixed": {
+     "min": null,
+     "max": 720
+    }
+   },
+   "plinthHeight": {
+    "sliding": {
+     "min": 50,
+     "max": 220
+    },
+    "fixed": {
+     "min": 90,
+     "max": 220
+    },
+    "teka": {
+     "min": 90,
+     "max": 155
+    }
+   },
+   "frontWeightKg": [
+    {
+     "widthMm": 450,
+     "applianceHeightMm": null,
+     "sliding": {
+      "min": 2.5,
+      "max": 7.5
+     },
+     "fixed": {
+      "min": 2.5,
+      "max": 7.5
+     }
+    }
+   ],
+   "frontWeightNote": "Teka: 4-8 kg (sliding) / 3,5-5 kg (fixa).",
+   "sources": [
+    {
+     "source": "balay",
+     "page": 141
+    },
+    {
+     "source": "bosch",
+     "page": 360
+    },
+    {
+     "source": "bosch",
+     "page": 378
+    },
+    {
+     "source": "teka",
+     "page": 144
+    }
+   ]
+  },
+  {
+   "id": "fridge_column",
+   "name": "Frigorífic / combi / congelador integrable de columna",
+   "category": "fridge",
+   "mount": "tall",
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": null
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "heights": [
+     1775,
+     1940,
+     1225,
+     880,
+     720
+    ],
+    "note": "Nínxols BSH (alt x ample x fons, cm): 177,5x56x55 (combi i 1 porta), 194x56x55 (combi XL), 194x71x56 (combi XXL ample 75 cm), 122,5x56x55, 88x56x55, 72x56x55. Tolerància d'alçada al dibuix: 1772 +8, 1221 +7, 712 +7. Fons recomanat 560 (mín. 550). Teka només dona mides de l'aparell (sense nínxol)."
+   },
+   "doorSystems": [
+    "fixed",
+    "sliding"
+   ],
+   "ventilation": {
+    "inletCm2": 200,
+    "outletCm2": 200,
+    "note": "Entrada d'aire ≥200 cm² per reixeta al sòcol o sòcol retranquejat; sortida ≥200 cm² per la part superior posterior (retall o reixeta si el moble arriba al sostre). Alçada màx. del moble 2200."
+   },
+   "fixedDoorGapTable": {
+    "note": "F=gruix del front, R=radi de l'aresta del front, X=joc mínim al costat de la frontissa entre el front i el moble/front veí. Dibuix: 2 mm entre front i cantell del moble.",
+    "rows": [
+     {
+      "F": "16-19",
+      "R": "0-3",
+      "X": 2.5
+     },
+     {
+      "F": "20",
+      "R": "0-1",
+      "X": 3
+     },
+     {
+      "F": "20",
+      "R": "2-3",
+      "X": 2.5
+     },
+     {
+      "F": "21",
+      "R": "0-1",
+      "X": 3
+     },
+     {
+      "F": "21",
+      "R": "2-3",
+      "X": 2.5
+     },
+     {
+      "F": "22",
+      "R": "0",
+      "X": 4
+     },
+     {
+      "F": "22",
+      "R": "1",
+      "X": 3.5
+     },
+     {
+      "F": "22",
+      "R": "2-3",
+      "X": 3
+     }
+    ]
+   },
+   "frontJointMm": 4,
+   "pairDistanceMm": 150,
+   "sources": [
+    {
+     "source": "bosch",
+     "page": 404,
+     "what": "sistemes porta fixa / lliscant"
+    },
+    {
+     "source": "balay",
+     "page": 105,
+     "what": "sistemes i ventilació"
+    },
+    {
+     "source": "bosch",
+     "page": 414
+    },
+    {
+     "source": "bosch",
+     "page": 417
+    },
+    {
+     "source": "bosch",
+     "page": 427,
+     "what": "taula F/R/X"
+    },
+    {
+     "source": "bosch",
+     "page": 429,
+     "what": "combinacions"
+    },
+    {
+     "source": "siemens",
+     "page": 130
+    },
+    {
+     "source": "siemens",
+     "page": 131
+    },
+    {
+     "source": "teka",
+     "page": 80
+    },
+    {
+     "source": "teka",
+     "page": 149
+    }
+   ]
+  },
+  {
+   "id": "fridge_undercounter",
+   "name": "Frigorífic / congelador sota taulell",
+   "category": "fridge",
+   "mount": "base",
+   "niche": {
+    "w": {
+     "min": 600,
+     "max": null
+    },
+    "h": {
+     "min": 820,
+     "max": 900
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "note": "BSH: encastre 82x60x55 cm, alçada de subestructura 820-900. Teka RSL41150/RSF41160: amplada 600, fons 550, alçada 820-870, sòcol 100-150."
+   },
+   "doorSystems": [
+    "fixed",
+    "door_on_door"
+   ],
+   "ventilation": {
+    "inletCm2": 200,
+    "note": "Bosch KUL22VFD0: entrada d'aire ≥200 cm² pel sòcol; sòcol 100-180."
+   },
+   "sources": [
+    {
+     "source": "bosch",
+     "page": 426
+    },
+    {
+     "source": "teka",
+     "page": 80
+    },
+    {
+     "source": "teka",
+     "page": 149
+    }
+   ]
+  },
+  {
+   "id": "oven_60",
+   "name": "Forn 60 cm",
+   "category": "oven",
+   "mount": "base_or_tall",
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": 568
+    },
+    "h": {
+     "min": 600,
+     "max": 604
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "tallH": {
+     "min": 585,
+     "max": 595
+    },
+    "note": "BSH: sota taulell alçada mín. 600 (+4), columna 585 (+10), amplada 560 (+8), fons ≥550. Teka: amplada 560-568, alçada mín. 590, moble mín. 580 de fons."
+   },
+   "ventilation": {
+    "note": "BSH: obertura posterior ≥20 (columna, dalt i darrere), espai de connexió 320x115; sota taulell, retall de 180 a la base posterior i ≥20. Teka: obertura 60-100 a dalt i 490 al fons del nínxol, excepte forns pirolítics (NO fer-les)."
+   },
+   "sources": [
+    {
+     "source": "balay",
+     "page": 29
+    },
+    {
+     "source": "bosch",
+     "page": 48
+    },
+    {
+     "source": "teka",
+     "page": 135
+    }
+   ]
+  },
+  {
+   "id": "compact_45",
+   "name": "Forn compacte / microones combinat 45 cm",
+   "category": "oven",
+   "mount": "tall",
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": 568
+    },
+    "h": {
+     "min": 450,
+     "max": 452
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "note": "BSH columna 450 (+2), sota taulell mín. 460. Teka mín. 450."
+   },
+   "ventilation": {
+    "note": "BSH: ventilació de sòcol ≥200 cm² (en columna); separació posterior ≥35."
+   },
+   "sources": [
+    {
+     "source": "bosch",
+     "page": 54
+    },
+    {
+     "source": "bosch",
+     "page": 57
+    },
+    {
+     "source": "teka",
+     "page": 135
+    }
+   ]
+  },
+  {
+   "id": "microwave_38",
+   "name": "Microones integrable 38 cm",
+   "category": "microwave",
+   "mount": "tall_or_wall",
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": 568
+    },
+    "h": {
+     "min": 380,
+     "max": 382
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "wallH": {
+     "min": 362,
+     "max": 365
+    },
+    "wallD": {
+     "min": 300,
+     "max": null
+    },
+    "note": "Columna: 380 (+2) x 560 (+8), fons ≥550. Moble alt (penjat): nínxol 362-365, fons ≥300, paret posterior oberta, laterals ≥16. Teka ML 82: penjat mín. 370 x mín. 568, fons mín. 320; columna mín. 380, fons mín. 550."
+   },
+   "sources": [
+    {
+     "source": "bosch",
+     "page": 60
+    },
+    {
+     "source": "teka",
+     "page": 135
+    }
+   ]
+  },
+  {
+   "id": "hob",
+   "name": "Placa de cocció (inducció 60)",
+   "category": "hob",
+   "mount": "worktop",
+   "cutout": {
+    "w": {
+     "min": 560,
+     "max": 562
+    },
+    "d": {
+     "min": 490,
+     "max": 502
+    },
+    "note": "Bosch PIE631HC1E: 560 (+2) x 490-500 (+2). Teka IBC63010: 560 x 490."
+   },
+   "rules": {
+    "worktopMinThickness": 16,
+    "minToWallBehind": 40,
+    "frontEdgeByWorktopDepth": [
+     {
+      "worktopDepth": "585-600",
+      "front": 50,
+      "side": 35
+     },
+     {
+      "worktopDepth": ">600",
+      "front": 50,
+      "side": 50
+     }
+    ],
+    "drawerBelow": "mín. 65 entre taulell i calaix; ventilació posterior mín. 20",
+    "ovenBelow": "ventilació 20 entre forn i paret; 30 lliures entre taulell i part superior del forn"
+   },
+   "sources": [
+    {
+     "source": "bosch",
+     "page": 141
+    },
+    {
+     "source": "bosch",
+     "page": 144
+    },
+    {
+     "source": "teka",
+     "page": 138
+    }
+   ]
+  },
+  {
+   "id": "hood_telescopic",
+   "name": "Campana telescòpica (dins moble alt)",
+   "category": "hood",
+   "mount": "wall_cabinet",
+   "cabinet": {
+    "w": 600,
+    "d": {
+     "min": 300,
+     "max": null
+    },
+    "dRecommended": 320,
+    "h": {
+     "min": 420,
+     "max": null
+    }
+   },
+   "sources": [
+    {
+     "source": "bosch",
+     "page": 213
+    }
+   ]
+  },
+  {
+   "id": "hood_integrated",
+   "name": "Grup filtrant / mòdul d'integració",
+   "category": "hood",
+   "mount": "wall_cabinet",
+   "cutout": {
+    "note": "Bosch DLN57PC60: retall 496 x 264 a la base del moble (16-19 de gruix), ≥25 del cantell frontal. Teka GFI63030: cos 538x305, ala 592x320; retall no acotat explícitament."
+   },
+   "heightAboveHob": {
+    "electric": 500,
+    "gas": 650
+   },
+   "sources": [
+    {
+     "source": "bosch",
+     "page": 218
+    },
+    {
+     "source": "teka",
+     "page": 143
+    }
+   ]
+  },
+  {
+   "id": "washer_integrated",
+   "name": "Rentadora / rentadora-assecadora integrable",
+   "category": "laundry",
+   "mount": "base",
+   "note": "El front de moble va penjat amb frontisses (cassoleta 35) que es munten a l'aparell; el catàleg no dona el nínxol.",
+   "sources": [
+    {
+     "source": "bosch",
+     "page": 301
+    },
+    {
+     "source": "bosch",
+     "page": 302
+    }
+   ]
+  }
+ ],
+ "models": [
+  {
+   "brand": "bosch",
+   "ref": "SMH6YCX02E",
+   "family": "dishwasher_60",
+   "name": "Lavavajillas totalmente integrable 60 cm, Serie 6",
+   "pdfPage": 345,
+   "doorSystem": "sliding",
+   "appliance": {
+    "w": 598,
+    "h": {
+     "min": 815,
+     "max": 875
+    },
+    "d": 550
+   },
+   "niche": {
+    "w": {
+     "min": 600,
+     "max": null
+    },
+    "h": {
+     "min": 815,
+     "max": 875
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    }
+   },
+   "front": {
+    "height": {
+     "min": 655,
+     "max": 765
+    },
+    "weightKg": {
+     "min": 4.5,
+     "max": 11
+    }
+   },
+   "plinth": {
+    "h": {
+     "min": 50,
+     "max": 220
+    }
+   },
+   "drawingDims": {
+    "89": "cota 89 (sense etiqueta)",
+    "53": "cota 53 (sense etiqueta)",
+    "100": "cota 100 (sense etiqueta)"
+   },
+   "image": "appliances/bosch-smh6ycx02e.webp",
+   "source": {
+    "source": "bosch",
+    "page": 345
+   }
+  },
+  {
+   "brand": "bosch",
+   "ref": "SMV6ZCX10E",
+   "family": "dishwasher_60",
+   "name": "Lavavajillas totalmente integrable 60 cm, Serie 6 (TimeLight)",
+   "pdfPage": 348,
+   "doorSystem": "fixed",
+   "appliance": {
+    "w": 598,
+    "h": {
+     "min": 815,
+     "max": 875
+    },
+    "d": 550
+   },
+   "niche": {
+    "w": {
+     "min": 600,
+     "max": null
+    },
+    "h": {
+     "min": 815,
+     "max": 875
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    }
+   },
+   "front": {
+    "height": {
+     "min": 655,
+     "max": 725
+    },
+    "weightKg": {
+     "min": 2.5,
+     "max": 8.5
+    }
+   },
+   "plinth": {
+    "h": {
+     "min": 90,
+     "max": 220
+    }
+   },
+   "image": "appliances/bosch-smv6zcx10e.webp",
+   "source": {
+    "source": "bosch",
+    "page": 348
+   }
+  },
+  {
+   "brand": "siemens",
+   "ref": "SN75ZX17CE",
+   "family": "dishwasher_60",
+   "name": "Lavavajillas integrable 60 cm puerta deslizante iQ500",
+   "pdfPage": 108,
+   "doorSystem": "sliding",
+   "appliance": {
+    "w": 598,
+    "h": {
+     "min": 815,
+     "max": 875
+    },
+    "d": 550
+   },
+   "niche": {
+    "w": {
+     "min": 600,
+     "max": null
+    },
+    "h": {
+     "min": 815,
+     "max": 875
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    }
+   },
+   "front": {
+    "height": {
+     "min": 655,
+     "max": 765
+    },
+    "weightKg": {
+     "min": 4.5,
+     "max": 11
+    }
+   },
+   "plinth": {
+    "h": {
+     "min": 50,
+     "max": 220
+    }
+   },
+   "image": "appliances/siemens-sn75zx17ce.webp",
+   "source": {
+    "source": "siemens",
+    "page": 108
+   }
+  },
+  {
+   "brand": "siemens",
+   "ref": "SX65ZX17CE",
+   "family": "dishwasher_60",
+   "name": "Lavavajillas integrable 60 cm XXL (86,5) puerta fija iQ500",
+   "pdfPage": 108,
+   "doorSystem": "fixed",
+   "appliance": {
+    "w": 598,
+    "h": {
+     "min": 865,
+     "max": 925
+    },
+    "d": 550
+   },
+   "niche": {
+    "w": {
+     "min": 600,
+     "max": null
+    },
+    "h": {
+     "min": 865,
+     "max": 925
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    }
+   },
+   "front": {
+    "height": {
+     "min": 705,
+     "max": 775
+    },
+    "weightKg": {
+     "min": 3,
+     "max": 10
+    }
+   },
+   "plinth": {
+    "h": {
+     "min": 90,
+     "max": 220
+    }
+   },
+   "notes": "Pes de front de la taula BSH per a 86,5 cm (Bosch p378 / Balay p147).",
+   "image": "appliances/siemens-sx65zx17ce.webp",
+   "source": {
+    "source": "siemens",
+    "page": 108
+   }
+  },
+  {
+   "brand": "balay",
+   "ref": "3VF6331SA",
+   "family": "dishwasher_60",
+   "name": "Lavavajillas integrable 60 cm, alto 81,5, puerta fija",
+   "pdfPage": 140,
+   "doorSystem": "fixed",
+   "appliance": {
+    "w": 598,
+    "h": {
+     "min": 815,
+     "max": 875
+    },
+    "d": 550
+   },
+   "niche": {
+    "w": {
+     "min": 600,
+     "max": null
+    },
+    "h": {
+     "min": 815,
+     "max": 875
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    }
+   },
+   "front": {
+    "height": {
+     "min": 655,
+     "max": 725
+    },
+    "weightKg": {
+     "min": 2.5,
+     "max": 8.5
+    }
+   },
+   "plinth": {
+    "h": {
+     "min": 90,
+     "max": 220
+    }
+   },
+   "image": "appliances/balay-3vf6331sa.webp",
+   "source": {
+    "source": "balay",
+    "page": 140
+   }
+  },
+  {
+   "brand": "teka",
+   "ref": "DFI76960",
+   "family": "dishwasher_60",
+   "name": "MAESTRO DFI 76960 (Sliding door)",
+   "pdfPage": 87,
+   "drawingPage": 144,
+   "doorSystem": "sliding",
+   "appliance": {
+    "w": 598,
+    "h": {
+     "min": 815,
+     "max": 865
+    },
+    "d": 550
+   },
+   "niche": {
+    "w": {
+     "min": 600,
+     "max": null
+    },
+    "h": {
+     "min": 820,
+     "max": 865
+    },
+    "d": {
+     "min": 580,
+     "max": null
+    }
+   },
+   "front": {
+    "height": {
+     "min": null,
+     "max": 800
+    },
+    "weightKg": {
+     "min": 5,
+     "max": 10
+    }
+   },
+   "plinth": {
+    "h": {
+     "min": 90,
+     "max": 155
+    }
+   },
+   "notes": "815(+50) i 90-155(+50): valors amb potes allargades. Cotes 110, 48 i 115(+50) al dibuix sense etiqueta.",
+   "image": "appliances/teka-dfi76960.webp",
+   "source": {
+    "source": "teka",
+    "page": 87
+   }
+  },
+  {
+   "brand": "teka",
+   "ref": "DFI46740",
+   "family": "dishwasher_60",
+   "name": "TOTAL DFI 46740 (puerta fija)",
+   "pdfPage": 87,
+   "drawingPage": 144,
+   "doorSystem": "fixed",
+   "appliance": {
+    "w": 598,
+    "h": {
+     "min": 815,
+     "max": 865
+    },
+    "d": 550
+   },
+   "niche": {
+    "w": {
+     "min": 600,
+     "max": null
+    },
+    "h": {
+     "min": 820,
+     "max": 865
+    },
+    "d": {
+     "min": 580,
+     "max": null
+    }
+   },
+   "front": {
+    "height": {
+     "min": null,
+     "max": 720
+    },
+    "weightKg": {
+     "min": 5,
+     "max": 7
+    }
+   },
+   "plinth": {
+    "h": {
+     "min": 90,
+     "max": 155
+    }
+   },
+   "notes": "Al catàleg no diu \"Sliding door\"; el dibuix dona front màx. 720 i 5-7 kg (com els de porta fixa).",
+   "image": "appliances/teka-dfi46740.webp",
+   "source": {
+    "source": "teka",
+    "page": 87
+   }
+  },
+  {
+   "brand": "bosch",
+   "ref": "SPV4EMX17E",
+   "family": "dishwasher_45",
+   "name": "Lavavajillas totalmente integrable 45 cm, Serie 4",
+   "pdfPage": 360,
+   "doorSystem": "fixed",
+   "appliance": {
+    "w": 448,
+    "h": {
+     "min": 815,
+     "max": 875
+    },
+    "d": 550
+   },
+   "niche": {
+    "w": {
+     "min": 450,
+     "max": null
+    },
+    "h": {
+     "min": 815,
+     "max": 875
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    }
+   },
+   "front": {
+    "height": {
+     "min": 655,
+     "max": 725
+    },
+    "weightKg": {
+     "min": 2.5,
+     "max": 7.5
+    }
+   },
+   "plinth": {
+    "h": {
+     "min": 90,
+     "max": 220
+    }
+   },
+   "image": "appliances/bosch-spv4emx17e.webp",
+   "source": {
+    "source": "bosch",
+    "page": 360
+   }
+  },
+  {
+   "brand": "balay",
+   "ref": "3VT5332DA",
+   "family": "dishwasher_45",
+   "name": "Lavavajillas integrable 45 cm, puerta deslizante",
+   "pdfPage": 141,
+   "doorSystem": "sliding",
+   "appliance": {
+    "w": 448,
+    "h": {
+     "min": 815,
+     "max": 875
+    },
+    "d": 550
+   },
+   "niche": {
+    "w": {
+     "min": 450,
+     "max": null
+    },
+    "h": {
+     "min": 815,
+     "max": 875
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    }
+   },
+   "front": {
+    "height": {
+     "min": 655,
+     "max": 765
+    },
+    "weightKg": {
+     "min": 2.5,
+     "max": 7.5
+    }
+   },
+   "plinth": {
+    "h": {
+     "min": 50,
+     "max": 220
+    }
+   },
+   "image": "appliances/balay-3vt5332da.webp",
+   "source": {
+    "source": "balay",
+    "page": 141
+   }
+  },
+  {
+   "brand": "teka",
+   "ref": "DFI74860",
+   "family": "dishwasher_45",
+   "name": "MAESTRO DFI 74860 (Sliding door)",
+   "pdfPage": 87,
+   "drawingPage": 144,
+   "doorSystem": "sliding",
+   "appliance": {
+    "w": 448,
+    "h": {
+     "min": 815,
+     "max": 865
+    },
+    "d": 550
+   },
+   "niche": {
+    "w": {
+     "min": 450,
+     "max": null
+    },
+    "h": {
+     "min": 820,
+     "max": 865
+    },
+    "d": {
+     "min": 580,
+     "max": null
+    }
+   },
+   "front": {
+    "height": {
+     "min": null,
+     "max": 800
+    },
+    "weightKg": {
+     "min": 4,
+     "max": 8
+    }
+   },
+   "plinth": {
+    "h": {
+     "min": 90,
+     "max": 155
+    }
+   },
+   "image": "appliances/teka-dfi74860.webp",
+   "source": {
+    "source": "teka",
+    "page": 87
+   }
+  },
+  {
+   "brand": "teka",
+   "ref": "DFI44800",
+   "family": "dishwasher_45",
+   "name": "TOTAL DFI 44800",
+   "pdfPage": 87,
+   "drawingPage": 144,
+   "doorSystem": "fixed",
+   "appliance": {
+    "w": 448,
+    "h": {
+     "min": 815,
+     "max": 865
+    },
+    "d": 550
+   },
+   "niche": {
+    "w": {
+     "min": 450,
+     "max": null
+    },
+    "h": {
+     "min": 820,
+     "max": 865
+    },
+    "d": {
+     "min": 580,
+     "max": null
+    }
+   },
+   "front": {
+    "height": {
+     "min": null,
+     "max": 720
+    },
+    "weightKg": {
+     "min": 3.5,
+     "max": 5
+    }
+   },
+   "plinth": {
+    "h": {
+     "min": 90,
+     "max": 155
+    }
+   },
+   "image": "appliances/teka-dfi44800.webp",
+   "source": {
+    "source": "teka",
+    "page": 87
+   }
+  },
+  {
+   "brand": "bosch",
+   "ref": "KIN86ADD0",
+   "family": "fridge_column",
+   "name": "Combi integrable No Frost, Serie 6",
+   "pdfPage": 414,
+   "doorSystem": "fixed",
+   "appliance": {
+    "w": 558,
+    "h": 1772,
+    "d": 548
+   },
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": null
+    },
+    "h": {
+     "min": 1772,
+     "max": 1780
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "dRecommended": 560
+   },
+   "front": {
+    "upper": {
+     "height": {
+      "min": "1041+S",
+      "max": "1065+S"
+     }
+    },
+    "lower": {
+     "height": {
+      "min": "703+A",
+      "max": "727+A"
+     }
+    },
+    "jointMm": 4,
+    "weightKg": {
+     "A1": 15,
+     "A2": 15,
+     "note": "+5 kg amb l'accessori KSZB0S00"
+    }
+   },
+   "notes": "S = gruix/alçada de la part superior del moble; A = gruix de la base inferior del moble (a sobre la qual seu l'aparell).",
+   "image": "appliances/bosch-kin86add0.webp",
+   "source": {
+    "source": "bosch",
+    "page": 414
+   }
+  },
+  {
+   "brand": "bosch",
+   "ref": "KIN86VSE0",
+   "family": "fridge_column",
+   "name": "Combi integrable No Frost, Serie 4",
+   "pdfPage": 417,
+   "doorSystem": "sliding",
+   "appliance": {
+    "w": 541,
+    "h": 1772,
+    "d": 548
+   },
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": null
+    },
+    "h": {
+     "min": 1772,
+     "max": 1780
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "dRecommended": 560
+   },
+   "front": {
+    "upper": {
+     "height": {
+      "min": "1012+S",
+      "max": "1091+S"
+     }
+    },
+    "lower": {
+     "height": {
+      "min": "677+A",
+      "max": "756+A"
+     }
+    },
+    "jointMm": 4,
+    "weightKg": null
+   },
+   "notes": "Porta lliscant: el front penja de frontisses de moble i s'uneix a la porta de l'aparell amb guies lliscants. Pes de front no indicat.",
+   "image": "appliances/bosch-kin86vse0.webp",
+   "source": {
+    "source": "bosch",
+    "page": 417
+   }
+  },
+  {
+   "brand": "balay",
+   "ref": "3KID767F",
+   "family": "fridge_column",
+   "name": "Combinado integrable NoFrost, puerta fija",
+   "pdfPage": 115,
+   "doorSystem": "fixed",
+   "appliance": {
+    "w": 558,
+    "h": 1772,
+    "d": 548
+   },
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": null
+    },
+    "h": {
+     "min": 1772,
+     "max": 1780
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "dRecommended": 560
+   },
+   "front": {
+    "upper": {
+     "height": {
+      "min": "1041+S",
+      "max": "1065+S"
+     }
+    },
+    "lower": {
+     "height": {
+      "min": "703+A",
+      "max": "727+A"
+     }
+    },
+    "jointMm": 4,
+    "weightTable": [
+     {
+      "doorHeight": "1500-1750",
+      "nonDampedKg": 22,
+      "dampedKg": 22
+     },
+     {
+      "doorHeight": "720-1400",
+      "nonDampedKg": 19,
+      "dampedKg": 19
+     },
+     {
+      "doorHeight": "A1 (combi, porta superior)",
+      "nonDampedKg": 15,
+      "dampedKg": 19
+     },
+     {
+      "doorHeight": "A2 (combi, porta inferior)",
+      "nonDampedKg": 15,
+      "dampedKg": 19
+     }
+    ]
+   },
+   "image": "appliances/balay-3kid767f.webp",
+   "source": {
+    "source": "balay",
+    "page": 115
+   }
+  },
+  {
+   "brand": "balay",
+   "ref": "3KIE734F",
+   "family": "fridge_column",
+   "name": "Combinado integrable NoFrost, puerta deslizante",
+   "pdfPage": 115,
+   "doorSystem": "sliding",
+   "appliance": {
+    "w": 541,
+    "h": 1772,
+    "d": 548
+   },
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": null
+    },
+    "h": {
+     "min": 1772,
+     "max": 1780
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "dRecommended": 560
+   },
+   "front": {
+    "upper": {
+     "height": {
+      "min": "1012+S",
+      "max": "1091+S"
+     }
+    },
+    "lower": {
+     "height": {
+      "min": "677+A",
+      "max": "756+A"
+     }
+    },
+    "jointMm": 4,
+    "weightKg": null
+   },
+   "image": "appliances/balay-3kie734f.webp",
+   "source": {
+    "source": "balay",
+    "page": 115
+   }
+  },
+  {
+   "brand": "siemens",
+   "ref": "KI81RADD0",
+   "family": "fridge_column",
+   "name": "Frigorífico 1 puerta integrable iQ500",
+   "pdfPage": 130,
+   "doorSystem": "fixed",
+   "appliance": {
+    "w": 558,
+    "h": 1772,
+    "d": 545
+   },
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": null
+    },
+    "h": {
+     "min": 1772,
+     "max": 1780
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "dRecommended": 560
+   },
+   "front": {
+    "single": {
+     "height": {
+      "min": null,
+      "max": "1772+A+S"
+     }
+    },
+    "weightTable": [
+     {
+      "doorHeight": "1500-1750",
+      "nonDampedKg": 22,
+      "dampedKg": 22
+     },
+     {
+      "doorHeight": "720-1400",
+      "nonDampedKg": 19,
+      "dampedKg": 19
+     }
+    ]
+   },
+   "notes": "Dimensions aparell 177,2 x 55,8 x 54,5 cm; encastre 177,5 x 56 x 55 cm. Suport de frontisses KS0BZS00 per a fronts més pesants.",
+   "image": "appliances/siemens-ki81radd0.webp",
+   "source": {
+    "source": "siemens",
+    "page": 130
+   }
+  },
+  {
+   "brand": "bosch",
+   "ref": "KIR41VFE0",
+   "family": "fridge_column",
+   "name": "Frigorífico de 1 puerta integrable, Serie 4",
+   "pdfPage": 427,
+   "doorSystem": "fixed",
+   "appliance": {
+    "w": 541,
+    "h": 1221,
+    "d": 548
+   },
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": null
+    },
+    "h": {
+     "min": 1221,
+     "max": 1228
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "dRecommended": 560
+   },
+   "front": {
+    "single": {
+     "height": {
+      "min": null,
+      "max": "1221+A+S"
+     }
+    },
+    "weightTable": [
+     {
+      "doorHeight": "720-1400",
+      "nonDampedKg": 19,
+      "dampedKg": 19
+     }
+    ]
+   },
+   "notes": "Encastre 122,5 x 56 x 55 cm. Combinable a sota amb GIV11AFE0 (cal una base intermèdia).",
+   "image": "appliances/bosch-kir41vfe0.webp",
+   "source": {
+    "source": "bosch",
+    "page": 427
+   }
+  },
+  {
+   "brand": "siemens",
+   "ref": "GI21VAFE0",
+   "family": "fridge_column",
+   "name": "Congelador integrable 88 cm",
+   "pdfPage": 131,
+   "doorSystem": "fixed",
+   "image": null,
+   "appliance": {
+    "w": 558,
+    "h": 874,
+    "d": 545
+   },
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": null
+    },
+    "h": {
+     "min": 880,
+     "max": null
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    }
+   },
+   "notes": "Només text: aparell 87,4 x 55,8 x 54,5 cm, encastre 88 x 56 x 55 cm. Sense foto extreta.",
+   "source": {
+    "source": "siemens",
+    "page": 131
+   }
+  },
+  {
+   "brand": "bosch",
+   "ref": "GIV11AFE0",
+   "family": "fridge_column",
+   "name": "Congelador de 1 puerta integrable, Serie 4",
+   "pdfPage": 428,
+   "doorSystem": "fixed",
+   "appliance": {
+    "w": 558,
+    "h": 712,
+    "d": 545
+   },
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": null
+    },
+    "h": {
+     "min": 712,
+     "max": 719
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "dRecommended": 560
+   },
+   "front": {
+    "single": {
+     "height": {
+      "min": null,
+      "max": "712+A+S"
+     }
+    },
+    "weightTable": [
+     {
+      "doorHeight": "720-1400",
+      "nonDampedKg": 19,
+      "dampedKg": 19
+     }
+    ]
+   },
+   "notes": "Encastre 72 x 56 x 55 cm. Taula de pes del full (720-1400: 19/19 kg).",
+   "image": "appliances/bosch-giv11afe0.webp",
+   "source": {
+    "source": "bosch",
+    "page": 428
+   }
+  },
+  {
+   "brand": "teka",
+   "ref": "RBF73355FI",
+   "family": "fridge_column",
+   "name": "MAESTRO RBF 73355 FI",
+   "pdfPage": 80,
+   "drawingPage": 149,
+   "doorSystem": "sliding",
+   "appliance": {
+    "w": 540,
+    "h": 1785,
+    "d": 545
+   },
+   "niche": null,
+   "front": null,
+   "notes": "\"Sistema de integración por guía deslizante\". Teka no publica nínxol ni pes de front. Dibuix: 1775 i 510 (sense etiqueta).",
+   "image": "appliances/teka-rbf73355fi.webp",
+   "source": {
+    "source": "teka",
+    "page": 80
+   }
+  },
+  {
+   "brand": "bosch",
+   "ref": "KUL22VFD0",
+   "family": "fridge_undercounter",
+   "name": "Frigorífico de 1 puerta integrable bajo encimera, Serie 4",
+   "pdfPage": 426,
+   "doorSystem": "fixed",
+   "appliance": {
+    "w": 598,
+    "h": {
+     "min": 820,
+     "max": 900
+    },
+    "d": 548
+   },
+   "niche": {
+    "w": {
+     "min": 600,
+     "max": null
+    },
+    "h": {
+     "min": 820,
+     "max": 900
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "dRecommended": 560
+   },
+   "front": {
+    "weightKg": {
+     "min": null,
+     "max": 12
+    }
+   },
+   "plinth": {
+    "h": {
+     "min": 100,
+     "max": 180
+    }
+   },
+   "ventilation": {
+    "inletCm2": 200
+   },
+   "notes": "Encastre 82 x 60 x 55 cm.",
+   "image": "appliances/bosch-kul22vfd0.webp",
+   "source": {
+    "source": "bosch",
+    "page": 426
+   }
+  },
+  {
+   "brand": "teka",
+   "ref": "RSF41160BU",
+   "family": "fridge_undercounter",
+   "name": "TOTAL RSF 41160 BU (congelador bajo encimera)",
+   "pdfPage": 80,
+   "drawingPage": 149,
+   "doorSystem": "door_on_door",
+   "appliance": {
+    "w": 598,
+    "h": {
+     "min": 820,
+     "max": 870
+    },
+    "d": 545
+   },
+   "niche": {
+    "w": {
+     "min": 600,
+     "max": null
+    },
+    "h": {
+     "min": 820,
+     "max": 870
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    }
+   },
+   "plinth": {
+    "h": {
+     "min": 100,
+     "max": 150
+    }
+   },
+   "notes": "\"Sistema integración Door to Door\". Aparell 818 x 595 x 545 al text; 598 al dibuix.",
+   "image": "appliances/teka-rsf41160bu.webp",
+   "source": {
+    "source": "teka",
+    "page": 80
+   }
+  },
+  {
+   "brand": "bosch",
+   "ref": "HBA514ES4",
+   "family": "oven_60",
+   "name": "Horno multifunción Serie 4",
+   "pdfPage": 48,
+   "appliance": {
+    "w": 594,
+    "h": 595,
+    "d": 548,
+    "frontThickness": 19.5,
+    "bodyH": 570,
+    "bodyD": 535
+   },
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": 568
+    },
+    "h": {
+     "min": 600,
+     "max": 604
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "tallH": {
+     "min": 585,
+     "max": 595
+    }
+   },
+   "notes": "Espai de connexió 320x115. Columna: obertura ≥20 posterior. Sota taulell: cota 180 a la base i mín. 20.",
+   "image": "appliances/bosch-hba514es4.webp",
+   "source": {
+    "source": "bosch",
+    "page": 48
+   }
+  },
+  {
+   "brand": "balay",
+   "ref": "3HB5821N3",
+   "family": "oven_60",
+   "name": "Horno Serie Cristal pirólisis",
+   "pdfPage": 29,
+   "appliance": {
+    "w": 594,
+    "h": 595,
+    "d": 548,
+    "frontThickness": 19.5,
+    "bodyH": 570,
+    "bodyD": 535
+   },
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": 568
+    },
+    "h": {
+     "min": 600,
+     "max": 604
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "tallH": {
+     "min": 585,
+     "max": 595
+    }
+   },
+   "image": "appliances/balay-3hb5821n3.webp",
+   "source": {
+    "source": "balay",
+    "page": 29
+   }
+  },
+  {
+   "brand": "teka",
+   "ref": "HSB6250P",
+   "family": "oven_60",
+   "name": "TOTAL NEO HSB 6250 P (pirolítico)",
+   "pdfPage": 16,
+   "drawingPage": 135,
+   "appliance": {
+    "w": 595,
+    "h": 595,
+    "d": 559,
+    "frontThickness": 22,
+    "bodyH": 570,
+    "bodyD": 537
+   },
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": 568
+    },
+    "h": {
+     "min": 590,
+     "max": null
+    },
+    "d": {
+     "min": 580,
+     "max": null
+    }
+   },
+   "notes": "Profunditat = 537 cos + 22 front. Pirolític: NO fer les obertures de ventilació (60-100 i 490).",
+   "image": "appliances/teka-hsb6250p.webp",
+   "source": {
+    "source": "teka",
+    "page": 16
+   }
+  },
+  {
+   "brand": "bosch",
+   "ref": "CBG7341B1",
+   "family": "compact_45",
+   "name": "Horno compacto multifunción Serie 8",
+   "pdfPage": 54,
+   "appliance": {
+    "w": 594,
+    "h": 455,
+    "d": 548,
+    "frontThickness": 19.5,
+    "bodyH": 442,
+    "bodyD": 535
+   },
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": 568
+    },
+    "h": {
+     "min": 450,
+     "max": 452
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    }
+   },
+   "notes": "Sota taulell: nínxol mín. 460.",
+   "image": "appliances/bosch-cbg7341b1.webp",
+   "source": {
+    "source": "bosch",
+    "page": 54
+   }
+  },
+  {
+   "brand": "bosch",
+   "ref": "CEG732XB1",
+   "family": "compact_45",
+   "name": "Microondas 45 cm sin plato, Serie 8",
+   "pdfPage": 57,
+   "appliance": {
+    "w": 594,
+    "h": 455,
+    "d": 545,
+    "frontThickness": 19.5
+   },
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": 568
+    },
+    "h": {
+     "min": 450,
+     "max": 452
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    }
+   },
+   "notes": "Espai de connexió 300x200; ventilació de sòcol ≥50 cm². La foto del catàleg és la mateixa que la de CBG7341B1.",
+   "image": "appliances/bosch-ceg732xb1.webp",
+   "source": {
+    "source": "bosch",
+    "page": 57
+   }
+  },
+  {
+   "brand": "teka",
+   "ref": "HLC8440C",
+   "family": "compact_45",
+   "name": "MAESTRO HLC 8440 C (horno compacto con microondas)",
+   "pdfPage": 23,
+   "drawingPage": 135,
+   "appliance": {
+    "w": 595,
+    "h": 455,
+    "d": 559,
+    "frontThickness": 22,
+    "bodyH": 430,
+    "bodyD": 537
+   },
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": 568
+    },
+    "h": {
+     "min": 450,
+     "max": null
+    },
+    "d": {
+     "min": 580,
+     "max": null
+    }
+   },
+   "image": "appliances/teka-hlc8440c.webp",
+   "source": {
+    "source": "teka",
+    "page": 23
+   }
+  },
+  {
+   "brand": "bosch",
+   "ref": "BFL7221B1",
+   "family": "microwave_38",
+   "name": "Microondas sin plato 38 cm, apertura izquierda, Serie 8",
+   "pdfPage": 60,
+   "appliance": {
+    "w": 594,
+    "h": 382,
+    "d": null,
+    "frontThickness": 19.5,
+    "bodyD": 299
+   },
+   "niche": {
+    "w": {
+     "min": 560,
+     "max": 568
+    },
+    "h": {
+     "min": 380,
+     "max": 382
+    },
+    "d": {
+     "min": 550,
+     "max": null
+    },
+    "wallH": {
+     "min": 362,
+     "max": 365
+    },
+    "wallD": {
+     "min": 300,
+     "max": null
+    }
+   },
+   "notes": "Al moble penjat: paret posterior oberta, laterals ≥16; ressalt superior 6 mm (nínxol 362) o 3 mm (365), inferior 14 mm.",
+   "image": "appliances/bosch-bfl7221b1.webp",
+   "source": {
+    "source": "bosch",
+    "page": 60
+   }
+  },
+  {
+   "brand": "bosch",
+   "ref": "PIE631HC1E",
+   "family": "hob",
+   "name": "Placa de inducción 60 cm, Serie 6",
+   "pdfPage": 141,
+   "appliance": {
+    "w": 592,
+    "h": 51,
+    "d": 522
+   },
+   "cutout": {
+    "w": {
+     "min": 560,
+     "max": 562
+    },
+    "d": {
+     "min": 490,
+     "max": 502
+    }
+   },
+   "notes": "Taulell ≥16 de gruix, ≥40 a la paret.",
+   "image": "appliances/bosch-pie631hc1e.webp",
+   "source": {
+    "source": "bosch",
+    "page": 141
+   }
+  },
+  {
+   "brand": "teka",
+   "ref": "IBC63010MSS",
+   "family": "hob",
+   "name": "EASY IBC 63010 MSS",
+   "pdfPage": 43,
+   "drawingPage": 138,
+   "appliance": {
+    "w": 600,
+    "h": 54,
+    "d": 510
+   },
+   "cutout": {
+    "w": {
+     "min": 560,
+     "max": 560
+    },
+    "d": {
+     "min": 490,
+     "max": 490
+    }
+   },
+   "notes": "Sense toleràncies al dibuix.",
+   "image": "appliances/teka-ibc63010mss.webp",
+   "source": {
+    "source": "teka",
+    "page": 43
+   }
+  },
+  {
+   "brand": "bosch",
+   "ref": "DFS067A51",
+   "family": "hood_telescopic",
+   "name": "Campana telescópica 60 cm, Serie 4",
+   "pdfPage": 213,
+   "appliance": {
+    "w": 598,
+    "h": null,
+    "d": {
+     "min": 290,
+     "max": 455
+    }
+   },
+   "cabinet": {
+    "w": 600,
+    "d": {
+     "min": 300,
+     "max": null
+    },
+    "dRecommended": 320,
+    "h": {
+     "min": 420,
+     "max": null
+    }
+   },
+   "notes": "Visera 21 de gruix. Accessori DSZ4660 per ocultar la campana.",
+   "image": "appliances/bosch-dfs067a51.webp",
+   "source": {
+    "source": "bosch",
+    "page": 213
+   }
+  },
+  {
+   "brand": "bosch",
+   "ref": "DLN57PC60",
+   "family": "hood_integrated",
+   "name": "Módulo de integración 52 cm, Serie 8",
+   "pdfPage": 218,
+   "appliance": {
+    "w": 520,
+    "h": 345,
+    "d": 282
+   },
+   "cutout": {
+    "w": 496,
+    "d": 264,
+    "boardThickness": {
+     "min": 16,
+     "max": 19
+    },
+    "minFromFront": 25
+   },
+   "heightAboveHob": {
+    "electric": 500,
+    "gas": 650
+   },
+   "image": "appliances/bosch-dln57pc60.webp",
+   "source": {
+    "source": "bosch",
+    "page": 218
+   }
+  },
+  {
+   "brand": "teka",
+   "ref": "GFI63030",
+   "family": "hood_integrated",
+   "name": "EASY INTEGRA GFI 63030",
+   "pdfPage": 62,
+   "drawingPage": 143,
+   "appliance": {
+    "w": 592,
+    "h": 176,
+    "d": 320
+   },
+   "cutout": null,
+   "notes": "Ala 592x320 (51 d'alt), cos 538x305 (125 d'alt). Retall no acotat.",
+   "image": "appliances/teka-gfi63030.webp",
+   "source": {
+    "source": "teka",
+    "page": 62
+   }
+  },
+  {
+   "brand": "bosch",
+   "ref": "WIW24307ES",
+   "family": "washer_integrated",
+   "name": "Lavadora totalmente integrable 8 kg, Serie 6",
+   "pdfPage": 301,
+   "appliance": {
+    "w": 596,
+    "h": "818+12",
+    "d": 544,
+    "dWithHinge": 555,
+    "dWithHingeAndFront": 574
+   },
+   "front": {
+    "hinges": {
+     "cupDiameter": 35,
+     "cupMinDepth": 12,
+     "cupEdgeDistance": 21,
+     "topToFirstHinge": 202,
+     "hingeSpacing": 338.6
+    },
+    "note": "El front es pot obrir a dreta o esquerra. Al dibuix: 138,5 sota la 2a frontissa i 15 (+12) de sòcol."
+   },
+   "image": "appliances/bosch-wiw24307es.webp",
+   "source": {
+    "source": "bosch",
+    "page": 301
+   }
+  },
+  {
+   "brand": "bosch",
+   "ref": "WKD28490ES",
+   "family": "washer_integrated",
+   "name": "Lavadora-secadora totalmente integrable, Serie 6",
+   "pdfPage": 302,
+   "appliance": {
+    "w": 596,
+    "h": "820+12",
+    "d": 540
+   },
+   "front": {
+    "thickness": {
+     "min": 19,
+     "max": 21
+    },
+    "hinges": {
+     "cupDiameter": 35,
+     "cupMinDepth": 12,
+     "topToFirstHinge": 202
+    },
+    "note": "Panell frontal 590 (carcassa 596); cotes 420, 148, 130 al dibuix."
+   },
+   "image": "appliances/bosch-wkd28490es.webp",
+   "source": {
+    "source": "bosch",
+    "page": 302
+   }
+  }
+ ],
+ "tables": {
+  "dishwasherRaisedGap": {
+   "description": "Separació D (mm) entre el front del rentaplats i el calaix inferior quan s'instal·la en alt, segons alçada del nínxol A, gruix del front B i alçada de sòcol C. Cel·la absent = combinació no permesa.",
+   "sources": [
+    {
+     "source": "balay",
+     "page": 146
+    },
+    {
+     "source": "siemens",
+     "page": 115
+    },
+    {
+     "source": "bosch",
+     "page": 380,
+     "what": "només porta lliscant"
+    }
+   ],
+   "variants": {
+    "chamfer_fixed": {
+     "chamfer": true,
+     "doorSystem": "fixed",
+     "plinthHeights": [
+      90,
+      100,
+      110,
+      120,
+      130,
+      140,
+      150,
+      160,
+      170
+     ],
+     "rows": {
+      "815": {
+       "16": {
+        "90": 6.5,
+        "100": 6.5,
+        "110": 7.0,
+        "120": 7.5,
+        "130": 8.0,
+        "140": 9.0,
+        "150": 12.0,
+        "160": 15.5
+       },
+       "19": {
+        "90": 7.0,
+        "100": 7.5,
+        "110": 8.0,
+        "120": 8.5,
+        "130": 9.5,
+        "140": 11.0,
+        "150": 13.0,
+        "160": 17.0
+       },
+       "22": {
+        "90": 7.5,
+        "100": 7.5,
+        "110": 8.0,
+        "120": 9.0,
+        "130": 9.5,
+        "140": 11.5,
+        "150": 14.0,
+        "160": 18.0
+       }
+      },
+      "825": {
+       "16": {
+        "100": 6.5,
+        "110": 6.5,
+        "120": 7.0,
+        "130": 7.5,
+        "140": 8.0,
+        "150": 9.0,
+        "160": 12.0,
+        "170": 15.5
+       },
+       "19": {
+        "100": 7.0,
+        "110": 7.5,
+        "120": 8.0,
+        "130": 8.5,
+        "140": 9.5,
+        "150": 11.0,
+        "160": 13.0,
+        "170": 17.0
+       },
+       "22": {
+        "100": 7.5,
+        "110": 7.5,
+        "120": 8.0,
+        "130": 9.0,
+        "140": 9.5,
+        "150": 11.5,
+        "160": 14.0,
+        "170": 18.0
+       }
+      },
+      "835": {
+       "16": {
+        "110": 6.5,
+        "120": 6.5,
+        "130": 7.0,
+        "140": 7.5,
+        "150": 8.0,
+        "160": 9.0,
+        "170": 12.0
+       },
+       "19": {
+        "110": 7.0,
+        "120": 7.5,
+        "130": 8.0,
+        "140": 8.5,
+        "150": 9.5,
+        "160": 11.0,
+        "170": 13.0
+       },
+       "22": {
+        "110": 7.5,
+        "120": 7.5,
+        "130": 8.0,
+        "140": 9.0,
+        "150": 9.5,
+        "160": 11.5,
+        "170": 14.0
+       }
+      },
+      "845": {
+       "16": {
+        "120": 6.5,
+        "130": 6.5,
+        "140": 7.0,
+        "150": 7.5,
+        "160": 8.0,
+        "170": 9.0
+       },
+       "19": {
+        "120": 7.0,
+        "130": 7.5,
+        "140": 8.0,
+        "150": 8.5,
+        "160": 9.5,
+        "170": 11.0
+       },
+       "22": {
+        "120": 7.5,
+        "130": 7.5,
+        "140": 8.0,
+        "150": 9.0,
+        "160": 9.5,
+        "170": 11.5
+       }
+      },
+      "855": {
+       "16": {
+        "130": 6.5,
+        "140": 6.5,
+        "150": 7.0,
+        "160": 7.5,
+        "170": 8.0
+       },
+       "19": {
+        "130": 7.0,
+        "140": 7.5,
+        "150": 8.0,
+        "160": 8.5,
+        "170": 9.5
+       },
+       "22": {
+        "130": 7.5,
+        "140": 7.5,
+        "150": 8.0,
+        "160": 9.0,
+        "170": 9.5
+       }
+      },
+      "865": {
+       "16": {
+        "90": 6.5,
+        "100": 6.5,
+        "110": 7.0,
+        "120": 7.5,
+        "130": 8.0,
+        "140": 9.0,
+        "150": 12.0,
+        "160": 15.5
+       },
+       "19": {
+        "90": 7.0,
+        "100": 7.5,
+        "110": 8.0,
+        "120": 8.5,
+        "130": 9.5,
+        "140": 11.0,
+        "150": 13.0,
+        "160": 17.0
+       },
+       "22": {
+        "90": 7.5,
+        "100": 7.5,
+        "110": 8.0,
+        "120": 9.0,
+        "130": 9.5,
+        "140": 11.5,
+        "150": 14.0,
+        "160": 18.0
+       }
+      },
+      "875": {
+       "16": {
+        "100": 6.5,
+        "110": 6.5,
+        "120": 7.0,
+        "130": 7.5,
+        "140": 8.0,
+        "150": 9.0,
+        "160": 12.0,
+        "170": 15.5
+       },
+       "19": {
+        "100": 7.0,
+        "110": 7.5,
+        "120": 8.0,
+        "130": 8.5,
+        "140": 9.5,
+        "150": 11.0,
+        "160": 13.0,
+        "170": 17.0
+       },
+       "22": {
+        "100": 7.5,
+        "110": 7.5,
+        "120": 8.0,
+        "130": 9.0,
+        "140": 9.5,
+        "150": 11.5,
+        "160": 14.0,
+        "170": 18.0
+       }
+      },
+      "885": {
+       "16": {
+        "110": 6.5,
+        "120": 6.5,
+        "130": 7.0,
+        "140": 7.5,
+        "150": 8.0,
+        "160": 9.0,
+        "170": 12.0
+       },
+       "19": {
+        "110": 7.0,
+        "120": 7.5,
+        "130": 8.0,
+        "140": 8.5,
+        "150": 9.5,
+        "160": 11.0,
+        "170": 13.0
+       },
+       "22": {
+        "110": 7.5,
+        "120": 7.5,
+        "130": 8.0,
+        "140": 9.0,
+        "150": 9.5,
+        "160": 11.5,
+        "170": 14.0
+       }
+      },
+      "895": {
+       "16": {
+        "120": 6.5,
+        "130": 6.5,
+        "140": 7.0,
+        "150": 7.5,
+        "160": 8.0,
+        "170": 9.0
+       },
+       "19": {
+        "120": 7.0,
+        "130": 7.5,
+        "140": 8.0,
+        "150": 8.5,
+        "160": 9.5,
+        "170": 11.0
+       },
+       "22": {
+        "120": 7.5,
+        "130": 7.5,
+        "140": 8.0,
+        "150": 9.0,
+        "160": 9.5,
+        "170": 11.5
+       }
+      },
+      "905": {
+       "16": {
+        "130": 6.5,
+        "140": 6.5,
+        "150": 7.0,
+        "160": 7.5,
+        "170": 8.0
+       },
+       "19": {
+        "130": 7.0,
+        "140": 7.5,
+        "150": 8.0,
+        "160": 8.5,
+        "170": 9.5
+       },
+       "22": {
+        "130": 7.5,
+        "140": 7.5,
+        "150": 8.0,
+        "160": 9.0,
+        "170": 9.5
+       }
+      },
+      "915": {
+       "16": {
+        "140": 6.5,
+        "150": 6.5,
+        "160": 7.0,
+        "170": 7.5
+       },
+       "19": {
+        "140": 7.0,
+        "150": 7.5,
+        "160": 8.0,
+        "170": 8.5
+       },
+       "22": {
+        "140": 7.5,
+        "150": 7.5,
+        "160": 8.0,
+        "170": 9.0
+       }
+      },
+      "925": {
+       "16": {
+        "150": 6.5,
+        "160": 6.5,
+        "170": 7.0
+       },
+       "19": {
+        "150": 7.0,
+        "160": 7.5,
+        "170": 8.0
+       },
+       "22": {
+        "150": 7.5,
+        "160": 7.5,
+        "170": 8.0
+       }
+      }
+     }
+    },
+    "chamfer_sliding": {
+     "chamfer": true,
+     "doorSystem": "sliding",
+     "plinthHeights": [
+      50,
+      55,
+      60,
+      65,
+      70,
+      75,
+      80,
+      85,
+      90,
+      95,
+      100,
+      105,
+      110,
+      115,
+      120,
+      125,
+      130,
+      135,
+      140,
+      145,
+      150,
+      155,
+      160,
+      165,
+      170
+     ],
+     "rows": {
+      "815": {
+       "16": {
+        "50": 2.5,
+        "55": 2.5,
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.5,
+        "140": 6.0
+       },
+       "19": {
+        "50": 2.5,
+        "55": 2.5,
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.5,
+        "135": 4.0,
+        "140": 8.0
+       },
+       "22": {
+        "50": 2.5,
+        "55": 2.5,
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 3.0,
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.5,
+        "130": 3.5,
+        "135": 5.0,
+        "140": 11.0
+       }
+      },
+      "820": {
+       "16": {
+        "55": 2.5,
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.5,
+        "145": 6.0
+       },
+       "19": {
+        "55": 2.5,
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.5,
+        "140": 4.0,
+        "145": 8.0
+       },
+       "22": {
+        "55": 2.5,
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.5,
+        "135": 3.5,
+        "140": 5.0,
+        "145": 11.0
+       }
+      },
+      "825": {
+       "16": {
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 2.5,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.0,
+        "145": 3.5,
+        "150": 6.0
+       },
+       "19": {
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.5,
+        "145": 4.0,
+        "150": 8.0
+       },
+       "22": {
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.5,
+        "140": 3.5,
+        "145": 5.0,
+        "150": 11.0
+       }
+      },
+      "830": {
+       "16": {
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 2.5,
+        "130": 2.5,
+        "135": 3.0,
+        "140": 3.0,
+        "145": 3.0,
+        "150": 3.5,
+        "155": 6.0
+       },
+       "19": {
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.0,
+        "145": 3.5,
+        "150": 4.0,
+        "155": 8.0
+       },
+       "22": {
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 3.0,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.5,
+        "145": 3.5,
+        "150": 5.0,
+        "155": 11.0
+       }
+      },
+      "835": {
+       "16": {
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 2.5,
+        "130": 2.5,
+        "135": 2.5,
+        "140": 3.0,
+        "145": 3.0,
+        "150": 3.0,
+        "155": 3.5,
+        "160": 6.0
+       },
+       "19": {
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.0,
+        "145": 3.0,
+        "150": 3.5,
+        "155": 4.0,
+        "160": 8.0
+       },
+       "22": {
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.0,
+        "145": 3.5,
+        "150": 3.5,
+        "155": 5.0,
+        "160": 11.0
+       }
+      },
+      "840": {
+       "16": {
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 2.5,
+        "130": 2.5,
+        "135": 2.5,
+        "140": 2.5,
+        "145": 3.0,
+        "150": 3.0,
+        "155": 3.0,
+        "160": 3.5,
+        "165": 6.0
+       },
+       "19": {
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 2.5,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.0,
+        "145": 3.0,
+        "150": 3.0,
+        "155": 3.5,
+        "160": 4.0,
+        "165": 8.0
+       },
+       "22": {
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.0,
+        "145": 3.0,
+        "150": 3.5,
+        "155": 3.5,
+        "160": 5.0,
+        "165": 11.0
+       }
+      },
+      "845": {
+       "16": {
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 2.5,
+        "130": 2.5,
+        "135": 2.5,
+        "140": 2.5,
+        "145": 2.5,
+        "150": 3.0,
+        "155": 3.0,
+        "160": 3.0,
+        "165": 3.5,
+        "170": 6.0
+       },
+       "19": {
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 2.5,
+        "130": 2.5,
+        "135": 3.0,
+        "140": 3.0,
+        "145": 3.0,
+        "150": 3.0,
+        "155": 3.0,
+        "160": 3.5,
+        "165": 4.0,
+        "170": 8.0
+       },
+       "22": {
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.0,
+        "145": 3.0,
+        "150": 3.0,
+        "155": 3.5,
+        "160": 3.5,
+        "165": 5.0,
+        "170": 11.0
+       }
+      },
+      "850": {
+       "16": {
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 2.5,
+        "130": 2.5,
+        "135": 2.5,
+        "140": 2.5,
+        "145": 2.5,
+        "150": 2.5,
+        "155": 3.0,
+        "160": 3.0,
+        "165": 3.0,
+        "170": 3.5
+       },
+       "19": {
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 2.5,
+        "130": 2.5,
+        "135": 2.5,
+        "140": 3.0,
+        "145": 3.0,
+        "150": 3.0,
+        "155": 3.0,
+        "160": 3.0,
+        "165": 3.5,
+        "170": 4.0
+       },
+       "22": {
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.0,
+        "145": 3.0,
+        "150": 3.0,
+        "155": 3.0,
+        "160": 3.5,
+        "165": 3.5,
+        "170": 5.0
+       }
+      },
+      "855": {
+       "16": {
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 2.5,
+        "130": 2.5,
+        "135": 2.5,
+        "140": 2.5,
+        "145": 2.5,
+        "150": 2.5,
+        "155": 2.5,
+        "160": 3.0,
+        "165": 3.0,
+        "170": 3.0
+       },
+       "19": {
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 2.5,
+        "130": 2.5,
+        "135": 2.5,
+        "140": 2.5,
+        "145": 3.0,
+        "150": 3.0,
+        "155": 3.0,
+        "160": 3.0,
+        "165": 3.0,
+        "170": 3.5
+       },
+       "22": {
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.0,
+        "145": 3.0,
+        "150": 3.0,
+        "155": 3.0,
+        "160": 3.0,
+        "165": 3.5,
+        "170": 3.5
+       }
+      },
+      "860": {
+       "16": {
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 2.5,
+        "130": 2.5,
+        "135": 2.5,
+        "140": 2.5,
+        "145": 2.5,
+        "150": 2.5,
+        "155": 2.5,
+        "160": 2.5,
+        "165": 3.0,
+        "170": 3.0
+       },
+       "19": {
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 2.5,
+        "130": 2.5,
+        "135": 2.5,
+        "140": 2.5,
+        "145": 2.5,
+        "150": 3.0,
+        "155": 3.0,
+        "160": 3.0,
+        "165": 3.0,
+        "170": 3.0
+       },
+       "22": {
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 2.5,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.0,
+        "145": 3.0,
+        "150": 3.0,
+        "155": 3.0,
+        "160": 3.0,
+        "165": 3.0,
+        "170": 3.5
+       }
+      },
+      "865": {
+       "16": {
+        "50": 2.5,
+        "55": 2.5,
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.5,
+        "140": 6.0
+       },
+       "19": {
+        "50": 2.5,
+        "55": 2.5,
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.5,
+        "135": 4.0,
+        "140": 8.0
+       },
+       "22": {
+        "50": 2.5,
+        "55": 2.5,
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 3.0,
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.5,
+        "130": 3.5,
+        "135": 5.0,
+        "140": 11.0
+       }
+      },
+      "870": {
+       "16": {
+        "55": 2.5,
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.5,
+        "145": 6.0
+       },
+       "19": {
+        "55": 2.5,
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.5,
+        "140": 4.0,
+        "145": 8.0
+       },
+       "22": {
+        "55": 2.5,
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.5,
+        "135": 3.5,
+        "140": 5.0,
+        "145": 11.0
+       }
+      },
+      "875": {
+       "16": {
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 2.5,
+        "120": 2.5,
+        "125": 2.5,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.0,
+        "145": 3.5,
+        "150": 6.0
+       },
+       "19": {
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 2.5,
+        "100": 2.5,
+        "105": 2.5,
+        "110": 2.5,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.5,
+        "145": 4.0,
+        "150": 8.0
+       },
+       "22": {
+        "60": 2.5,
+        "65": 2.5,
+        "70": 2.5,
+        "75": 2.5,
+        "80": 2.5,
+        "85": 2.5,
+        "90": 2.5,
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.5,
+        "140": 3.5,
+        "145": 5.0,
+        "150": 11.0
+       }
+      }
+     }
+    },
+    "nochamfer_fixed": {
+     "chamfer": false,
+     "doorSystem": "fixed",
+     "plinthHeights": [
+      90,
+      100,
+      110,
+      120,
+      130,
+      140,
+      150,
+      160,
+      170
+     ],
+     "rows": {
+      "815": {
+       "16": {
+        "90": 10.5,
+        "100": 11.0,
+        "110": 12.0,
+        "120": 13.0,
+        "130": 14.5,
+        "140": 16.5,
+        "150": 19.0,
+        "160": 22.5
+       },
+       "19": {
+        "90": 12.0,
+        "100": 12.5,
+        "110": 13.5,
+        "120": 15.0,
+        "130": 16.5,
+        "140": 18.5,
+        "150": 22.0,
+        "160": 25.5
+       },
+       "22": {
+        "90": 13.5,
+        "100": 14.5,
+        "110": 15.5,
+        "120": 16.5,
+        "130": 18.5,
+        "140": 21.0,
+        "150": 24.5,
+        "160": 28.5
+       }
+      },
+      "825": {
+       "16": {
+        "100": 10.5,
+        "110": 11.0,
+        "120": 12.0,
+        "130": 13.0,
+        "140": 14.5,
+        "150": 16.5,
+        "160": 19.0,
+        "170": 22.5
+       },
+       "19": {
+        "100": 12.0,
+        "110": 12.5,
+        "120": 13.5,
+        "130": 15.0,
+        "140": 16.5,
+        "150": 18.5,
+        "160": 22.0,
+        "170": 25.5
+       },
+       "22": {
+        "100": 13.5,
+        "110": 14.5,
+        "120": 15.5,
+        "130": 16.5,
+        "140": 18.5,
+        "150": 21.0,
+        "160": 24.5,
+        "170": 28.5
+       }
+      },
+      "835": {
+       "16": {
+        "110": 10.5,
+        "120": 11.0,
+        "130": 12.0,
+        "140": 13.0,
+        "150": 14.5,
+        "160": 16.5,
+        "170": 19.0
+       },
+       "19": {
+        "110": 12.0,
+        "120": 12.5,
+        "130": 13.5,
+        "140": 15.0,
+        "150": 16.5,
+        "160": 18.5,
+        "170": 22.0
+       },
+       "22": {
+        "110": 13.5,
+        "120": 14.5,
+        "130": 15.5,
+        "140": 16.5,
+        "150": 18.5,
+        "160": 21.0,
+        "170": 24.5
+       }
+      },
+      "845": {
+       "16": {
+        "120": 10.5,
+        "130": 11.0,
+        "140": 12.0,
+        "150": 13.0,
+        "160": 14.5,
+        "170": 16.5
+       },
+       "19": {
+        "120": 12.0,
+        "130": 12.5,
+        "140": 13.5,
+        "150": 15.0,
+        "160": 16.5,
+        "170": 18.5
+       },
+       "22": {
+        "120": 13.5,
+        "130": 14.5,
+        "140": 15.5,
+        "150": 16.5,
+        "160": 18.5,
+        "170": 21.0
+       }
+      },
+      "855": {
+       "16": {
+        "130": 10.5,
+        "140": 11.0,
+        "150": 12.0,
+        "160": 13.0,
+        "170": 14.5
+       },
+       "19": {
+        "130": 12.0,
+        "140": 12.5,
+        "150": 13.5,
+        "160": 15.0,
+        "170": 16.5
+       },
+       "22": {
+        "130": 13.5,
+        "140": 14.5,
+        "150": 15.5,
+        "160": 16.5,
+        "170": 18.5
+       }
+      },
+      "865": {
+       "16": {
+        "90": 10.5,
+        "100": 11.0,
+        "110": 12.0,
+        "120": 13.0,
+        "130": 14.5,
+        "140": 16.5,
+        "150": 19.0,
+        "160": 22.5
+       },
+       "19": {
+        "90": 12.0,
+        "100": 12.5,
+        "110": 13.5,
+        "120": 15.0,
+        "130": 16.5,
+        "140": 18.5,
+        "150": 22.0,
+        "160": 25.5
+       },
+       "22": {
+        "90": 13.5,
+        "100": 14.5,
+        "110": 15.5,
+        "120": 16.5,
+        "130": 18.5,
+        "140": 21.0,
+        "150": 24.5,
+        "160": 28.5
+       }
+      },
+      "875": {
+       "16": {
+        "100": 10.5,
+        "110": 11.0,
+        "120": 12.0,
+        "130": 13.0,
+        "140": 14.5,
+        "150": 16.5,
+        "160": 19.0,
+        "170": 22.5
+       },
+       "19": {
+        "100": 12.0,
+        "110": 12.5,
+        "120": 13.5,
+        "130": 15.0,
+        "140": 16.5,
+        "150": 18.5,
+        "160": 22.0,
+        "170": 25.5
+       },
+       "22": {
+        "100": 13.5,
+        "110": 14.5,
+        "120": 15.5,
+        "130": 16.5,
+        "140": 18.5,
+        "150": 21.0,
+        "160": 24.5,
+        "170": 28.5
+       }
+      },
+      "885": {
+       "16": {
+        "110": 10.5,
+        "120": 11.0,
+        "130": 12.0,
+        "140": 13.0,
+        "150": 14.5,
+        "160": 16.5,
+        "170": 19.0
+       },
+       "19": {
+        "110": 12.0,
+        "120": 12.5,
+        "130": 13.5,
+        "140": 15.0,
+        "150": 16.5,
+        "160": 18.5,
+        "170": 22.0
+       },
+       "22": {
+        "110": 13.5,
+        "120": 14.5,
+        "130": 15.5,
+        "140": 16.5,
+        "150": 18.5,
+        "160": 21.0,
+        "170": 24.5
+       }
+      },
+      "895": {
+       "16": {
+        "120": 10.5,
+        "130": 11.0,
+        "140": 12.0,
+        "150": 13.0,
+        "160": 14.5,
+        "170": 16.5
+       },
+       "19": {
+        "120": 12.0,
+        "130": 12.5,
+        "140": 13.5,
+        "150": 15.0,
+        "160": 16.5,
+        "170": 18.5
+       },
+       "22": {
+        "120": 13.5,
+        "130": 14.5,
+        "140": 15.5,
+        "150": 16.5,
+        "160": 18.5,
+        "170": 21.0
+       }
+      },
+      "905": {
+       "16": {
+        "130": 10.5,
+        "140": 11.0,
+        "150": 12.0,
+        "160": 13.0,
+        "170": 14.5
+       },
+       "19": {
+        "130": 12.0,
+        "140": 12.5,
+        "150": 13.5,
+        "160": 15.0,
+        "170": 16.5
+       },
+       "22": {
+        "130": 13.5,
+        "140": 14.5,
+        "150": 15.5,
+        "160": 16.5,
+        "170": 18.5
+       }
+      },
+      "915": {
+       "16": {
+        "140": 10.5,
+        "150": 11.0,
+        "160": 12.0,
+        "170": 13.0
+       },
+       "19": {
+        "140": 12.0,
+        "150": 12.5,
+        "160": 13.5,
+        "170": 15.0
+       },
+       "22": {
+        "140": 13.5,
+        "150": 14.5,
+        "160": 15.5,
+        "170": 16.5
+       }
+      },
+      "925": {
+       "16": {
+        "150": 10.5,
+        "160": 11.0,
+        "170": 12.0
+       },
+       "19": {
+        "150": 12.0,
+        "160": 12.5,
+        "170": 13.5
+       },
+       "22": {
+        "150": 13.5,
+        "160": 14.5,
+        "170": 15.5
+       }
+      }
+     }
+    },
+    "nochamfer_sliding": {
+     "chamfer": false,
+     "doorSystem": "sliding",
+     "plinthHeights": [
+      50,
+      55,
+      60,
+      65,
+      70,
+      75,
+      80,
+      85,
+      90,
+      95,
+      100,
+      105,
+      110,
+      115,
+      120,
+      125,
+      130,
+      135,
+      140,
+      145,
+      150,
+      155,
+      160,
+      165,
+      170
+     ],
+     "rows": {
+      "815": {
+       "16": {
+        "50": 3.0,
+        "55": 3.0,
+        "60": 3.0,
+        "65": 3.0,
+        "70": 3.0,
+        "75": 3.0,
+        "80": 3.0,
+        "85": 3.0,
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.5,
+        "105": 3.5,
+        "110": 3.5,
+        "115": 3.5,
+        "120": 3.5,
+        "125": 4.0,
+        "130": 4.0,
+        "135": 4.0,
+        "140": 6.0
+       },
+       "19": {
+        "50": 3.0,
+        "55": 3.0,
+        "60": 3.5,
+        "65": 3.5,
+        "70": 3.5,
+        "75": 3.5,
+        "80": 3.5,
+        "85": 3.5,
+        "90": 3.5,
+        "95": 4.0,
+        "100": 4.0,
+        "105": 4.0,
+        "110": 4.0,
+        "115": 4.5,
+        "120": 4.5,
+        "125": 4.5,
+        "130": 5.0,
+        "135": 5.0,
+        "140": 8.0
+       },
+       "22": {
+        "50": 3.5,
+        "55": 3.5,
+        "60": 3.5,
+        "65": 4.0,
+        "70": 4.0,
+        "75": 4.0,
+        "80": 4.0,
+        "85": 4.0,
+        "90": 4.5,
+        "95": 4.5,
+        "100": 4.5,
+        "105": 4.5,
+        "110": 5.0,
+        "115": 5.0,
+        "120": 5.5,
+        "125": 5.5,
+        "130": 6.0,
+        "135": 6.5,
+        "140": 11.0
+       }
+      },
+      "820": {
+       "16": {
+        "55": 3.0,
+        "60": 3.0,
+        "65": 3.0,
+        "70": 3.0,
+        "75": 3.0,
+        "80": 3.0,
+        "85": 3.0,
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.5,
+        "110": 3.5,
+        "115": 3.5,
+        "120": 3.5,
+        "125": 3.5,
+        "130": 4.0,
+        "135": 4.0,
+        "140": 4.0,
+        "145": 6.0
+       },
+       "19": {
+        "55": 3.0,
+        "60": 3.0,
+        "65": 3.5,
+        "70": 3.5,
+        "75": 3.5,
+        "80": 3.5,
+        "85": 3.5,
+        "90": 3.5,
+        "95": 3.5,
+        "100": 4.0,
+        "105": 4.0,
+        "110": 4.0,
+        "115": 4.0,
+        "120": 4.5,
+        "125": 4.5,
+        "130": 4.5,
+        "135": 5.0,
+        "140": 5.0,
+        "145": 8.0
+       },
+       "22": {
+        "55": 3.5,
+        "60": 3.5,
+        "65": 3.5,
+        "70": 4.0,
+        "75": 4.0,
+        "80": 4.0,
+        "85": 4.0,
+        "90": 4.0,
+        "95": 4.5,
+        "100": 4.5,
+        "105": 4.5,
+        "110": 4.5,
+        "115": 5.0,
+        "120": 5.0,
+        "125": 5.5,
+        "130": 5.5,
+        "135": 6.0,
+        "140": 6.5,
+        "145": 11.0
+       }
+      },
+      "825": {
+       "16": {
+        "60": 3.0,
+        "65": 3.0,
+        "70": 3.0,
+        "75": 3.0,
+        "80": 3.0,
+        "85": 3.0,
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.0,
+        "110": 3.5,
+        "115": 3.5,
+        "120": 3.5,
+        "125": 3.5,
+        "130": 3.5,
+        "135": 4.0,
+        "140": 4.0,
+        "145": 4.0,
+        "150": 6.0
+       },
+       "19": {
+        "60": 3.0,
+        "65": 3.0,
+        "70": 3.5,
+        "75": 3.5,
+        "80": 3.5,
+        "85": 3.5,
+        "90": 3.5,
+        "95": 3.5,
+        "100": 3.5,
+        "105": 4.0,
+        "110": 4.0,
+        "115": 4.0,
+        "120": 4.0,
+        "125": 4.5,
+        "130": 4.5,
+        "135": 4.5,
+        "140": 5.0,
+        "145": 5.0,
+        "150": 8.0
+       },
+       "22": {
+        "60": 3.5,
+        "65": 3.5,
+        "70": 3.5,
+        "75": 4.0,
+        "80": 4.0,
+        "85": 4.0,
+        "90": 4.0,
+        "95": 4.0,
+        "100": 4.5,
+        "105": 4.5,
+        "110": 4.5,
+        "115": 4.5,
+        "120": 5.0,
+        "125": 5.0,
+        "130": 5.5,
+        "135": 5.5,
+        "140": 6.0,
+        "145": 6.5,
+        "150": 11.0
+       }
+      },
+      "830": {
+       "16": {
+        "65": 3.0,
+        "70": 3.0,
+        "75": 3.0,
+        "80": 3.0,
+        "85": 3.0,
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.5,
+        "120": 3.5,
+        "125": 3.5,
+        "130": 3.5,
+        "135": 3.5,
+        "140": 4.0,
+        "145": 4.0,
+        "150": 4.0,
+        "155": 6.0
+       },
+       "19": {
+        "65": 3.0,
+        "70": 3.0,
+        "75": 3.5,
+        "80": 3.5,
+        "85": 3.5,
+        "90": 3.5,
+        "95": 3.5,
+        "100": 3.5,
+        "105": 3.5,
+        "110": 4.0,
+        "115": 4.0,
+        "120": 4.0,
+        "125": 4.0,
+        "130": 4.5,
+        "135": 4.5,
+        "140": 4.5,
+        "145": 5.0,
+        "150": 5.0,
+        "155": 8.0
+       },
+       "22": {
+        "65": 3.5,
+        "70": 3.5,
+        "75": 3.5,
+        "80": 4.0,
+        "85": 4.0,
+        "90": 4.0,
+        "95": 4.0,
+        "100": 4.0,
+        "105": 4.5,
+        "110": 4.5,
+        "115": 4.5,
+        "120": 4.5,
+        "125": 5.0,
+        "130": 5.0,
+        "135": 5.5,
+        "140": 5.5,
+        "145": 6.0,
+        "150": 6.5,
+        "155": 11.0
+       }
+      },
+      "835": {
+       "16": {
+        "70": 3.0,
+        "75": 3.0,
+        "80": 3.0,
+        "85": 3.0,
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.5,
+        "125": 3.5,
+        "130": 3.5,
+        "135": 3.5,
+        "140": 3.5,
+        "145": 4.0,
+        "150": 4.0,
+        "155": 4.0,
+        "160": 6.0
+       },
+       "19": {
+        "70": 3.0,
+        "75": 3.0,
+        "80": 3.5,
+        "85": 3.5,
+        "90": 3.5,
+        "95": 3.5,
+        "100": 3.5,
+        "105": 3.5,
+        "110": 3.5,
+        "115": 4.0,
+        "120": 4.0,
+        "125": 4.0,
+        "130": 4.0,
+        "135": 4.5,
+        "140": 4.5,
+        "145": 4.5,
+        "150": 5.0,
+        "155": 5.0,
+        "160": 8.0
+       },
+       "22": {
+        "70": 3.5,
+        "75": 3.5,
+        "80": 3.5,
+        "85": 4.0,
+        "90": 4.0,
+        "95": 4.0,
+        "100": 4.0,
+        "105": 4.0,
+        "110": 4.5,
+        "115": 4.5,
+        "120": 4.5,
+        "125": 4.5,
+        "130": 5.0,
+        "135": 5.0,
+        "140": 5.5,
+        "145": 5.5,
+        "150": 6.0,
+        "155": 6.5,
+        "160": 11.0
+       }
+      },
+      "840": {
+       "16": {
+        "75": 3.0,
+        "80": 3.0,
+        "85": 3.0,
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.5,
+        "130": 3.5,
+        "135": 3.5,
+        "140": 3.5,
+        "145": 3.5,
+        "150": 4.0,
+        "155": 4.0,
+        "160": 4.0,
+        "165": 6.0
+       },
+       "19": {
+        "75": 3.0,
+        "80": 3.0,
+        "85": 3.5,
+        "90": 3.5,
+        "95": 3.5,
+        "100": 3.5,
+        "105": 3.5,
+        "110": 3.5,
+        "115": 3.5,
+        "120": 4.0,
+        "125": 4.0,
+        "130": 4.0,
+        "135": 4.0,
+        "140": 4.5,
+        "145": 4.5,
+        "150": 4.5,
+        "155": 5.0,
+        "160": 5.0,
+        "165": 8.0
+       },
+       "22": {
+        "75": 3.5,
+        "80": 3.5,
+        "85": 3.5,
+        "90": 4.0,
+        "95": 4.0,
+        "100": 4.0,
+        "105": 4.0,
+        "110": 4.0,
+        "115": 4.5,
+        "120": 4.5,
+        "125": 4.5,
+        "130": 4.5,
+        "135": 5.0,
+        "140": 5.0,
+        "145": 5.5,
+        "150": 5.5,
+        "155": 6.0,
+        "160": 6.5,
+        "165": 11.0
+       }
+      },
+      "845": {
+       "16": {
+        "80": 3.0,
+        "85": 3.0,
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.5,
+        "135": 3.5,
+        "140": 3.5,
+        "145": 3.5,
+        "150": 3.5,
+        "155": 4.0,
+        "160": 4.0,
+        "165": 4.0,
+        "170": 6.0
+       },
+       "19": {
+        "80": 3.0,
+        "85": 3.0,
+        "90": 3.5,
+        "95": 3.5,
+        "100": 3.5,
+        "105": 3.5,
+        "110": 3.5,
+        "115": 3.5,
+        "120": 3.5,
+        "125": 4.0,
+        "130": 4.0,
+        "135": 4.0,
+        "140": 4.0,
+        "145": 4.5,
+        "150": 4.5,
+        "155": 4.5,
+        "160": 5.0,
+        "165": 5.0,
+        "170": 8.0
+       },
+       "22": {
+        "80": 3.5,
+        "85": 3.5,
+        "90": 3.5,
+        "95": 4.0,
+        "100": 4.0,
+        "105": 4.0,
+        "110": 4.0,
+        "115": 4.0,
+        "120": 4.5,
+        "125": 4.5,
+        "130": 4.5,
+        "135": 4.5,
+        "140": 5.0,
+        "145": 5.0,
+        "150": 5.5,
+        "155": 5.5,
+        "160": 6.0,
+        "165": 6.5,
+        "170": 11.0
+       }
+      },
+      "850": {
+       "16": {
+        "85": 3.0,
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.5,
+        "140": 3.5,
+        "145": 3.5,
+        "150": 3.5,
+        "155": 3.5,
+        "160": 4.0,
+        "165": 4.0,
+        "170": 4.0
+       },
+       "19": {
+        "85": 3.0,
+        "90": 3.0,
+        "95": 3.5,
+        "100": 3.5,
+        "105": 3.5,
+        "110": 3.5,
+        "115": 3.5,
+        "120": 3.5,
+        "125": 3.5,
+        "130": 4.0,
+        "135": 4.0,
+        "140": 4.0,
+        "145": 4.0,
+        "150": 4.5,
+        "155": 4.5,
+        "160": 4.5,
+        "165": 5.0,
+        "170": 5.0
+       },
+       "22": {
+        "85": 3.5,
+        "90": 3.5,
+        "95": 3.5,
+        "100": 4.0,
+        "105": 4.0,
+        "110": 4.0,
+        "115": 4.0,
+        "120": 4.0,
+        "125": 4.5,
+        "130": 4.5,
+        "135": 4.5,
+        "140": 4.5,
+        "145": 5.0,
+        "150": 5.0,
+        "155": 5.5,
+        "160": 5.5,
+        "165": 6.0,
+        "170": 6.5
+       }
+      },
+      "855": {
+       "16": {
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.5,
+        "145": 3.5,
+        "150": 3.5,
+        "155": 3.5,
+        "160": 3.5,
+        "165": 4.0,
+        "170": 4.0
+       },
+       "19": {
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.5,
+        "105": 3.5,
+        "110": 3.5,
+        "115": 3.5,
+        "120": 3.5,
+        "125": 3.5,
+        "130": 3.5,
+        "135": 4.0,
+        "140": 4.0,
+        "145": 4.0,
+        "150": 4.0,
+        "155": 4.5,
+        "160": 4.5,
+        "165": 4.5,
+        "170": 5.0
+       },
+       "22": {
+        "90": 3.5,
+        "95": 3.5,
+        "100": 3.5,
+        "105": 4.0,
+        "110": 4.0,
+        "115": 4.0,
+        "120": 4.0,
+        "125": 4.0,
+        "130": 4.5,
+        "135": 4.5,
+        "140": 4.5,
+        "145": 4.5,
+        "150": 5.0,
+        "155": 5.0,
+        "160": 5.5,
+        "165": 5.5,
+        "170": 6.0
+       }
+      },
+      "860": {
+       "16": {
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.0,
+        "110": 3.0,
+        "115": 3.0,
+        "120": 3.0,
+        "125": 3.0,
+        "130": 3.0,
+        "135": 3.0,
+        "140": 3.0,
+        "145": 3.5,
+        "150": 3.5,
+        "155": 3.5,
+        "160": 3.5,
+        "165": 3.5,
+        "170": 4.0
+       },
+       "19": {
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.5,
+        "110": 3.5,
+        "115": 3.5,
+        "120": 3.5,
+        "125": 3.5,
+        "130": 3.5,
+        "135": 3.5,
+        "140": 4.0,
+        "145": 4.0,
+        "150": 4.0,
+        "155": 4.0,
+        "160": 4.5,
+        "165": 4.5,
+        "170": 4.5
+       },
+       "22": {
+        "95": 3.5,
+        "100": 3.5,
+        "105": 3.5,
+        "110": 4.0,
+        "115": 4.0,
+        "120": 4.0,
+        "125": 4.0,
+        "130": 4.0,
+        "135": 4.5,
+        "140": 4.5,
+        "145": 4.5,
+        "150": 4.5,
+        "155": 5.0,
+        "160": 5.0,
+        "165": 5.5,
+        "170": 5.5
+       }
+      },
+      "865": {
+       "16": {
+        "50": 3.0,
+        "55": 3.0,
+        "60": 3.0,
+        "65": 3.0,
+        "70": 3.0,
+        "75": 3.0,
+        "80": 3.0,
+        "85": 3.0,
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.5,
+        "105": 3.5,
+        "110": 3.5,
+        "115": 3.5,
+        "120": 3.5,
+        "125": 4.0,
+        "130": 4.0,
+        "135": 4.0,
+        "140": 6.0
+       },
+       "19": {
+        "50": 3.0,
+        "55": 3.0,
+        "60": 3.5,
+        "65": 3.5,
+        "70": 3.5,
+        "75": 3.5,
+        "80": 3.5,
+        "85": 3.5,
+        "90": 3.5,
+        "95": 4.0,
+        "100": 4.0,
+        "105": 4.0,
+        "110": 4.0,
+        "115": 4.5,
+        "120": 4.5,
+        "125": 4.5,
+        "130": 5.0,
+        "135": 5.0,
+        "140": 8.0
+       },
+       "22": {
+        "50": 3.5,
+        "55": 3.5,
+        "60": 3.5,
+        "65": 4.0,
+        "70": 4.0,
+        "75": 4.0,
+        "80": 4.0,
+        "85": 4.0,
+        "90": 4.5,
+        "95": 4.5,
+        "100": 4.5,
+        "105": 4.5,
+        "110": 5.0,
+        "115": 5.0,
+        "120": 5.5,
+        "125": 5.5,
+        "130": 6.0,
+        "135": 6.5,
+        "140": 11.0
+       }
+      },
+      "870": {
+       "16": {
+        "55": 3.0,
+        "60": 3.0,
+        "65": 3.0,
+        "70": 3.0,
+        "75": 3.0,
+        "80": 3.0,
+        "85": 3.0,
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.5,
+        "110": 3.5,
+        "115": 3.5,
+        "120": 3.5,
+        "125": 3.5,
+        "130": 4.0,
+        "135": 4.0,
+        "140": 4.0,
+        "145": 6.0
+       },
+       "19": {
+        "55": 3.0,
+        "60": 3.0,
+        "65": 3.5,
+        "70": 3.5,
+        "75": 3.5,
+        "80": 3.5,
+        "85": 3.5,
+        "90": 3.5,
+        "95": 3.5,
+        "100": 4.0,
+        "105": 4.0,
+        "110": 4.0,
+        "115": 4.0,
+        "120": 4.5,
+        "125": 4.5,
+        "130": 4.5,
+        "135": 5.0,
+        "140": 5.0,
+        "145": 8.0
+       },
+       "22": {
+        "55": 3.5,
+        "60": 3.5,
+        "65": 3.5,
+        "70": 4.0,
+        "75": 4.0,
+        "80": 4.0,
+        "85": 4.0,
+        "90": 4.0,
+        "95": 4.5,
+        "100": 4.5,
+        "105": 4.5,
+        "110": 4.5,
+        "115": 5.0,
+        "120": 5.0,
+        "125": 5.5,
+        "130": 5.5,
+        "135": 6.0,
+        "140": 6.5,
+        "145": 11.0
+       }
+      },
+      "875": {
+       "16": {
+        "60": 3.0,
+        "65": 3.0,
+        "70": 3.0,
+        "75": 3.0,
+        "80": 3.0,
+        "85": 3.0,
+        "90": 3.0,
+        "95": 3.0,
+        "100": 3.0,
+        "105": 3.0,
+        "110": 3.5,
+        "115": 3.5,
+        "120": 3.5,
+        "125": 3.5,
+        "130": 3.5,
+        "135": 4.0,
+        "140": 4.0,
+        "145": 4.0,
+        "150": 6.0
+       },
+       "19": {
+        "60": 3.0,
+        "65": 3.0,
+        "70": 3.5,
+        "75": 3.5,
+        "80": 3.5,
+        "85": 3.5,
+        "90": 3.5,
+        "95": 3.5,
+        "100": 3.5,
+        "105": 4.0,
+        "110": 4.0,
+        "115": 4.0,
+        "120": 4.0,
+        "125": 4.5,
+        "130": 4.5,
+        "135": 4.5,
+        "140": 5.0,
+        "145": 5.0,
+        "150": 8.0
+       },
+       "22": {
+        "60": 3.5,
+        "65": 3.5,
+        "70": 3.5,
+        "75": 4.0,
+        "80": 4.0,
+        "85": 4.0,
+        "90": 4.0,
+        "95": 4.0,
+        "100": 4.5,
+        "105": 4.5,
+        "110": 4.5,
+        "115": 4.5,
+        "120": 5.0,
+        "125": 5.0,
+        "130": 5.5,
+        "135": 5.5,
+        "140": 6.0,
+        "145": 6.5,
+        "150": 11.0
+       }
+      }
+     }
+    }
+   },
+   "chamferNote": "\"Amb aixamfranat\": l'interior del front del calaix inferior es bisella a 35° (dibuix) amb 5 mm de cantell."
+  }
+ }
+}
