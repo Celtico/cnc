@@ -19,11 +19,13 @@ export type OptionKind = "group" | "section" | "field"
 export type OptionControl = "choice" | "switch" | "number" | "material" | "hardware" | "text" | "buttons"
 
 /** Icones de les seccions (les de l'inspector; la UI les tradueix a `react-icons/lu`). */
-export type OptionIcon =
-  | "structure" | "moble" | "module" | "zone" | "part" | "ref" | "multi"
-  | "summary" | "joinery" | "scene" | "materials" | "position" | "dims" | "appliance" | "carcass" | "doors" | "joint"
-  | "front" | "shelves" | "divide" | "split" | "subsection" | "effect" | "orient" | "shape" | "cnc" | "group" | "attach"
-  | "hardware" | "align" | "items"
+export const OPTION_ICON_IDS = [
+  "structure", "moble", "module", "zone", "part", "ref", "multi",
+  "summary", "joinery", "scene", "materials", "position", "dims", "appliance", "carcass", "doors", "joint",
+  "front", "shelves", "divide", "split", "subsection", "effect", "orient", "shape", "cnc", "group", "attach",
+  "hardware", "align", "items",
+] as const
+export type OptionIcon = (typeof OPTION_ICON_IDS)[number]
 
 export interface OptionChoice {
   value: string

@@ -1,12 +1,14 @@
-import { Badge, Box, Button, HStack, Input, Stack, Text, Textarea } from "@chakra-ui/react"
+import { Badge, Box, Button, HStack, IconButton, Input, Popover, Portal, SimpleGrid, Stack, Text, Textarea } from "@chakra-ui/react"
 import type { ReactNode } from "react"
-import { LuArrowRight, LuPlus, LuRotateCcw, LuTrash2, LuTriangleAlert } from "react-icons/lu"
+import { LuArrowRight, LuChevronDown, LuPlus, LuRotateCcw, LuTrash2, LuTriangleAlert } from "react-icons/lu"
 import { ChoiceChips, FormRow } from "../../../components/FormRow"
 import { SectionLabel } from "../../../components/SectionLabel"
 import {
   DRAFT_EDGE_LABEL,
+  DRAFT_ICONS,
   DRAFT_KIND_LABEL,
   appCascade,
+  draftIcon,
   optionNode,
   registryRef,
   type CascadeDraft,
@@ -17,6 +19,7 @@ import {
   type DraftNodeChange,
   type DraftNodeKind,
 } from "../../../core/model"
+import { CASCADE_ICONS } from "./cascadeIcons"
 
 const KINDS = (Object.keys(DRAFT_KIND_LABEL) as DraftNodeKind[]).map((id) => ({ id, label: DRAFT_KIND_LABEL[id] }))
 const EDGE_KINDS = (Object.keys(DRAFT_EDGE_LABEL) as DraftEdgeKind[]).map((id) => ({ id, label: DRAFT_EDGE_LABEL[id] }))
@@ -68,6 +71,9 @@ function NodeDetail({ node, diff, actions }: { node: DraftNode; diff: DraftDiff;
       <FormRow label="Nom">
         <Input size="sm" value={node.label} onChange={(e) => set({ label: e.target.value }, "label")} />
       </FormRow>
+      <FormRow label="Icona" help="Només per al dibuix: no compta com a diferència.">
+        <IconPick node={node} onPick={(icon) => actions.updateNode(node.id, { icon })} />
+      </FormRow>
       <FormRow label="Tipus">
         <ChoiceChips label="Tipus" value={node.kind} options={KINDS} onChange={(kind) => actions.updateNode(node.id, { kind })} />
       </FormRow>
@@ -90,6 +96,43 @@ function NodeDetail({ node, diff, actions }: { node: DraftNode; diff: DraftDiff;
       </HStack>
       {!added && <AppInfo node={node} changed={changed} onRevert={() => changed && actions.updateNode(node.id, changed.before)} />}
     </Stack>
+  )
+}
+
+/** Les icones que es poden triar (sense repetir: Moble i Resum, per exemple, fan servir la mateixa). */
+const PICKS = DRAFT_ICONS.filter((id, i) => DRAFT_ICONS.findIndex((o) => CASCADE_ICONS[o] === CASCADE_ICONS[id]) === i)
+
+/** La icona del node: un botó amb l'actual que obre la graella de totes. */
+function IconPick({ node, onPick }: { node: DraftNode; onPick: (icon: string) => void }) {
+  const Current = CASCADE_ICONS[draftIcon(node)]
+  return (
+    <Popover.Root positioning={{ placement: "bottom-start" }} lazyMount unmountOnExit>
+      <Popover.Trigger asChild>
+        <Button size="sm" variant="outline" aria-label="Canviar la icona">
+          <Current /> <LuChevronDown />
+        </Button>
+      </Popover.Trigger>
+      <Portal>
+        <Popover.Positioner>
+          <Popover.Content w="auto">
+            <Popover.Body p={2}>
+              <SimpleGrid columns={8} gap={1}>
+                {PICKS.map((id) => {
+                  const I = CASCADE_ICONS[id]
+                  return (
+                    <Popover.CloseTrigger key={id} asChild>
+                      <IconButton size="sm" aria-label={id} title={id} variant={I === Current ? "solid" : "ghost"} colorPalette="wood" onClick={() => onPick(id)}>
+                        <I />
+                      </IconButton>
+                    </Popover.CloseTrigger>
+                  )
+                })}
+              </SimpleGrid>
+            </Popover.Body>
+          </Popover.Content>
+        </Popover.Positioner>
+      </Portal>
+    </Popover.Root>
   )
 }
 

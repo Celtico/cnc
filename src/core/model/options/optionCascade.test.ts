@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest"
 import { DEFAULT_SETTINGS, parseSettings } from ".."
 import { OPTION_NODES } from "./optionCascade"
 import {
+  DRAFT_ICONS,
+  draftIcon,
   addDraftNode,
   appCascade,
   clearDraftPositions,
@@ -175,5 +177,22 @@ describe("esborrany: plegar i disposició", () => {
     expect(pos.get("a")).toEqual({ x: 1000, y: 500 })
     expect(pos.get("a1")).toEqual({ x: 1000 + auto.get("a1")!.x - auto.get("a")!.x, y: 500 + auto.get("a1")!.y - auto.get("a")!.y })
     expect(pos.get("b")).toEqual(auto.get("b"))
+  })
+})
+
+describe("esborrany: icones", () => {
+  it("cada node de la llavor en porta una de coneguda; les seccions, la de l'inspector", () => {
+    const app = appCascade()
+    for (const n of app.nodes) expect(DRAFT_ICONS).toContain(n.icon)
+    expect(app.nodes.find((n) => n.id === "module.carcass")?.icon).toBe("carcass")
+    expect(app.nodes.find((n) => n.kind === "choice")?.icon).toBe("choice")
+  })
+  it("un node desat sense icona (o amb una de desconeguda) agafa la de l'app i, si no, la del tipus; no és diferència", () => {
+    expect(draftIcon({ id: "module.carcass", kind: "section", label: "Caixa" })).toBe("carcass")
+    expect(draftIcon({ id: "nou", kind: "option", label: "Nova", icon: "???" })).toBe("option")
+    const app = appCascade()
+    const edited = { ...app, nodes: app.nodes.map((n) => (n.id === "module.carcass" ? { ...n, icon: "cnc" } : n)) }
+    expect(draftIcon(edited.nodes.find((n) => n.id === "module.carcass")!)).toBe("cnc")
+    expect(diffDraft(edited).count).toBe(0)
   })
 })

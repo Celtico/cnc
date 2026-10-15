@@ -1,8 +1,9 @@
-import { Box, Button, Text } from "@chakra-ui/react"
+import { Box, Button, HStack, Icon, Text } from "@chakra-ui/react"
 import { Handle, Position, type NodeProps } from "@xyflow/react"
 import { memo } from "react"
 import { LuChevronDown, LuChevronRight } from "react-icons/lu"
-import { DRAFT_KIND_LABEL } from "../../../core/model"
+import { DRAFT_KIND_LABEL, draftIcon } from "../../../core/model"
+import { CASCADE_ICONS } from "./cascadeIcons"
 import { NODE_W, type CascadeFlowNode } from "./cascadeFlow"
 
 /** La vora segons el tipus: secció (gruixuda), opció (fina), tria (a ratlles). */
@@ -20,7 +21,7 @@ function Dot({ color, side, title }: { color: string; side: "left" | "right"; ti
 }
 
 /**
- * Un node del dibuix, senzill com el de l'usuari: una capsa arrodonida amb el nom al mig i una nansa a dalt (entra el
+ * Un node del dibuix, senzill com el de l'usuari: una capsa arrodonida amb la icona i el nom al mig i una nansa a dalt (entra el
  * pare) i a sota (surten els fills). El tipus es veu a la vora; les diferències amb l'app i les incoherències, amb un
  * puntet; triat, la vora del color principal. A sota a la dreta, petit, plegar o desplegar la branca (també amb doble clic).
  */
@@ -28,6 +29,7 @@ function CascadeNodeView({ id, data, selected }: NodeProps<CascadeFlowNode>) {
   const { node, status, inside, collapsed, match, dropTarget } = data
   const k = KIND_BORDER[node.kind]
   const hot = selected || dropTarget
+  const NodeIcon = CASCADE_ICONS[draftIcon(node)]
   return (
     <Box
       position="relative"
@@ -50,9 +52,12 @@ function CascadeNodeView({ id, data, selected }: NodeProps<CascadeFlowNode>) {
       <Handle type="target" position={Position.Top} />
       {status && <Dot color={DOT[status]} side="left" title={status === "added" ? "Nou (no és a l'app)" : "Canviat respecte de l'app"} />}
       {node.issue && <Dot color="orange.solid" side="right" title={`Revisar: ${node.issue}`} />}
-      <Text lineClamp={2} lineHeight="20px" fontWeight={node.kind === "section" ? "semibold" : "normal"}>
-        {node.label || "(sense nom)"}
-      </Text>
+      <HStack gap={1.5} justify="center">
+        <Icon as={NodeIcon} boxSize={node.kind === "choice" ? 3 : 4} flexShrink={0} color={node.kind === "section" ? "wood.fg" : "fg.muted"} />
+        <Text lineClamp={2} lineHeight="20px" minW={0} fontWeight={node.kind === "section" ? "semibold" : "normal"}>
+          {node.label || "(sense nom)"}
+        </Text>
+      </HStack>
       {inside > 0 && (
         <Button
           className="nodrag nopan"

@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { OPTION_CASCADE } from "./optionCascade"
-import type { OptionNode } from "./optionTypes"
+import { OPTION_ICON_IDS, type OptionControl, type OptionNode } from "./optionTypes"
 
 /**
  * L'**esborrany de la cascada d'opcions** (Preferències › Opcions en cascada; per decisió de l'usuari, 2026-10-15: «amb
@@ -16,10 +16,24 @@ export type DraftEdgeKind = "contains" | "reveals" | "hides"
 export const DRAFT_KIND_LABEL: Record<DraftNodeKind, string> = { section: "Secció", option: "Opció", choice: "Tria" }
 export const DRAFT_EDGE_LABEL: Record<DraftEdgeKind, string> = { contains: "A dins de", reveals: "Fa aparèixer", hides: "Fa desaparèixer" }
 
+/**
+ * Les icones dels nodes: les de les seccions de l'inspector, les del control de cada fila (llista, interruptor, número,
+ * text, botons) i les genèriques d'opció i de tria. La UI les tradueix a `react-icons/lu` (`cascadeIcons.ts`).
+ */
+export const DRAFT_ICONS = [...OPTION_ICON_IDS, "list", "toggle", "number", "text", "buttons", "option", "choice"] as const
+export type DraftIcon = (typeof DRAFT_ICONS)[number]
+const ICON_SET = new Set<string>(DRAFT_ICONS)
+
+/** La icona d'una fila segons el seu control. */
+const CONTROL_ICON: Record<OptionControl, DraftIcon> = { choice: "list", switch: "toggle", number: "number", material: "materials", hardware: "hardware", text: "text", buttons: "buttons" }
+const KIND_ICON: Record<DraftNodeKind, DraftIcon> = { section: "subsection", option: "option", choice: "choice" }
+
 const DraftNodeSchema = z.object({
   id: z.string().min(1),
   kind: z.enum(["section", "option", "choice"]),
   label: z.string(),
+  /** Icona (`DRAFT_ICONS`; una de desconeguda o cap: la de l'app o la del tipus). No compta com a diferència. */
+  icon: z.string().optional(),
   /** «Surt quan»: la condició en paraules. */
   when: z.string().optional(),
   /** Nota lliure de l'usuari (no compta com a diferència). */
@@ -66,17 +80,19 @@ function seed(): CascadeDraft {
     const id = edgeId(kind, source, target)
     if (source !== target && !edges.has(id)) edges.set(id, { id, source, target, kind })
   }
-  const visit = (n: OptionNode, parent?: string) => {
-    nodes.push({ id: n.id, kind: n.kind === "field" ? "option" : "section", label: n.label, ...(n.showIf ? { when: n.showIf } : {}), ...(n.issue ? { issue: n.issue } : {}) })
+  const visit = (n: OptionNode, parent?: string, sectionIcon?: DraftIcon) => {
+    const own: DraftIcon | undefined = n.icon ?? (n.kind === "field" ? (n.control ? CONTROL_ICON[n.control] : "option") : sectionIcon)
+    const icon = own ?? KIND_ICON.section
+    nodes.push({ id: n.id, kind: n.kind === "field" ? "option" : "section", label: n.label, icon, ...(n.showIf ? { when: n.showIf } : {}), ...(n.issue ? { issue: n.issue } : {}) })
     if (parent) edge("contains", parent, n.id)
     for (const c of n.choices ?? []) {
       const id = choiceId(n.id, c.value)
-      nodes.push({ id, kind: "choice", label: c.label })
+      nodes.push({ id, kind: "choice", label: c.label, icon: "choice" })
       edge("contains", n.id, id)
       for (const r of c.reveals ?? []) edge("reveals", id, r)
       for (const h of c.hides ?? []) edge("hides", id, h)
     }
-    for (const c of n.children ?? []) visit(c, n.id)
+    for (const c of n.children ?? []) visit(c, n.id, n.kind === "field" ? sectionIcon : icon)
   }
   for (const n of OPTION_CASCADE) visit(n)
   return { nodes, edges: [...edges.values()] }
@@ -87,6 +103,14 @@ let app: CascadeDraft | undefined
 export function appCascade(): CascadeDraft {
   app ??= seed()
   return app
+}
+
+let appIcons: Map<string, string> | undefined
+/** La icona d'un node: la triada, si no la de l'app (un esborrany desat abans de les icones) i si no la del tipus. */
+export function draftIcon(n: DraftNode): DraftIcon {
+  appIcons ??= new Map(appCascade().nodes.flatMap((a) => (a.icon ? [[a.id, a.icon] as const] : [])))
+  for (const icon of [n.icon, appIcons.get(n.id)]) if (icon && ICON_SET.has(icon)) return icon as DraftIcon
+  return KIND_ICON[n.kind]
 }
 
 // --- Canvis ------------------------------------------------------------------------------------------------------------
