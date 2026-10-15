@@ -34,7 +34,17 @@ const DraftEdgeSchema = z.object({
   target: z.string().min(1),
   kind: z.enum(["contains", "reveals", "hides"]),
 })
-const CascadeDraftSchema = z.object({ nodes: z.array(DraftNodeSchema), edges: z.array(DraftEdgeSchema) })
+const PointSchema = z.object({ x: z.number(), y: z.number() })
+const CascadeDraftSchema = z.object({
+  nodes: z.array(DraftNodeSchema),
+  edges: z.array(DraftEdgeSchema),
+  /**
+   * On l'ha deixat l'usuari (arrossegant). Un node sense posició va sol: sota el seu pare, com a la disposició automàtica
+   * (`effectivePositions`); «Reordenar automàticament» les treu totes. No compta com a diferència.
+   */
+  positions: z.record(z.string(), PointSchema).optional(),
+})
+export type DraftPoint = z.infer<typeof PointSchema>
 
 export type DraftNode = z.infer<typeof DraftNodeSchema>
 export type DraftEdge = z.infer<typeof DraftEdgeSchema>
@@ -106,7 +116,7 @@ function subtreeIds(draft: CascadeDraft, ids: Iterable<string>): Set<string> {
 /** Un node nou (a dins de `parent`, si n'hi ha). */
 export function addDraftNode(draft: CascadeDraft, node: DraftNode, parent?: string): CascadeDraft {
   const edges = parent && draft.nodes.some((n) => n.id === parent) ? [...draft.edges, { id: edgeId("contains", parent, node.id), source: parent, target: node.id, kind: "contains" as const }] : draft.edges
-  return { nodes: [...draft.nodes, node], edges }
+  return { ...draft, nodes: [...draft.nodes, node], edges }
 }
 
 /** Treu nodes (amb tot el que tenen a dins) i fletxes; les fletxes que toquen un node tret també se'n van. */
@@ -114,10 +124,34 @@ export function removeFromDraft(draft: CascadeDraft, nodeIds: Iterable<string>, 
   const gone = subtreeIds(draft, nodeIds)
   const goneEdges = new Set(edgeIds)
   if (!gone.size && !goneEdges.size) return draft
-  return {
-    nodes: draft.nodes.filter((n) => !gone.has(n.id)),
-    edges: draft.edges.filter((e) => !goneEdges.has(e.id) && !gone.has(e.source) && !gone.has(e.target)),
+  return withPositions(
+    {
+      nodes: draft.nodes.filter((n) => !gone.has(n.id)),
+      edges: draft.edges.filter((e) => !goneEdges.has(e.id) && !gone.has(e.source) && !gone.has(e.target)),
+    },
+    draft.positions && Object.fromEntries(Object.entries(draft.positions).filter(([id]) => !gone.has(id))),
+  )
+}
+
+/** L'esborrany amb aquestes posicions (sense cap, sense el camp). */
+function withPositions(d: CascadeDraft, positions: Record<string, DraftPoint> | undefined): CascadeDraft {
+  const { positions: _old, ...rest } = d
+  return positions && Object.keys(positions).length ? { ...rest, positions } : rest
+}
+
+/** Desa on l'usuari ha deixat uns nodes (`null`: que tornin a anar sols). */
+export function moveDraftNodes(draft: CascadeDraft, moves: Record<string, DraftPoint | null>): CascadeDraft {
+  const next = { ...draft.positions }
+  for (const [id, p] of Object.entries(moves)) {
+    if (p) next[id] = { x: Math.round(p.x), y: Math.round(p.y) }
+    else delete next[id]
   }
+  return withPositions(draft, next)
+}
+
+/** «Reordenar automàticament»: tots els nodes tornen a anar sols (arbre de dalt a baix). */
+export function clearDraftPositions(draft: CascadeDraft): CascadeDraft {
+  return withPositions(draft, undefined)
 }
 
 /** `node` és a dins de `of` (o és ell mateix): una fletxa «a dins de» de `node` cap a `of` faria un cercle. */
@@ -126,16 +160,17 @@ function inside(draft: CascadeDraft, node: string, of: string): boolean {
 }
 
 /**
- * Uneix dos nodes (arrossegar d'una nansa a l'altra): «`target` surt quan `source`». Si `target` encara no és a dins de
- * res (un node nou), hi queda a dins; si no, `source` el fa aparèixer. Res si és el mateix node o ja hi són units així.
+ * Posa `child` a dins de `parent` (arrossegar de la nansa de sota d'un node a la de dalt d'un altre, o deixar-lo a sobre):
+ * la fletxa «a dins de» que tenia es canvia per la nova. Res si és el mateix node o si `parent` és a dins de `child`
+ * (faria un cercle).
  */
-export function connectDraft(draft: CascadeDraft, source: string, target: string): CascadeDraft {
-  if (source === target) return draft
-  const free = !containsParent(draft).has(target) && !inside(draft, source, target)
-  const kind: DraftEdgeKind = free ? "contains" : "reveals"
-  const id = edgeId(kind, source, target)
-  if (draft.edges.some((e) => e.id === id)) return draft
-  return { ...draft, edges: [...draft.edges, { id, source, target, kind }] }
+export function reparentDraft(draft: CascadeDraft, child: string, parent: string): CascadeDraft {
+  if (child === parent || inside(draft, parent, child)) return draft
+  const id = edgeId("contains", parent, child)
+  const old = containsParent(draft).get(child)
+  if (old === parent) return draft
+  const edges = draft.edges.filter((e) => !(e.kind === "contains" && e.target === child) && e.id !== id)
+  return { ...draft, edges: [...edges, { id, source: parent, target: child, kind: "contains" }] }
 }
 
 /** Canvia el tipus d'una fletxa (si n'hi ha una d'igual, només en queda una; una «a dins de» que faria un cercle, no). */
@@ -169,7 +204,7 @@ export function restoreAppNode(draft: CascadeDraft, id: string): CascadeDraft {
   const have = new Set([...draft.nodes.map((n) => n.id), id])
   const known = new Set(draft.edges.map((e) => e.id))
   const edges = base.edges.filter((e) => (e.source === id || e.target === id) && have.has(e.source) && have.has(e.target) && !known.has(e.id))
-  return { nodes: [...draft.nodes, node], edges: [...draft.edges, ...edges] }
+  return { ...draft, nodes: [...draft.nodes, node], edges: [...draft.edges, ...edges] }
 }
 
 /** Torna a posar una fletxa de l'app que s'havia tret (si els dos nodes hi són). */
@@ -251,7 +286,8 @@ function clean(d: CascadeDraft): CascadeDraft {
   const edges = d.edges
     .map((e) => ({ ...e, id: edgeId(e.kind, e.source, e.target) }))
     .filter((e) => seen.has(e.source) && seen.has(e.target) && e.source !== e.target && !edgeSeen.has(e.id) && !!edgeSeen.add(e.id))
-  return { nodes, edges }
+  const positions = d.positions && Object.fromEntries(Object.entries(d.positions).filter(([id]) => seen.has(id)))
+  return withPositions({ nodes, edges }, positions)
 }
 
 /** Llegeix un fitxer exportat (o només l'esborrany). Llança un error en català si no ho és. */

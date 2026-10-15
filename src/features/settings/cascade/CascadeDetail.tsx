@@ -171,8 +171,9 @@ function DiffSummary({ draft, diff, actions }: { draft: CascadeDraft; diff: Draf
           s'exporten per fer-les després al codi.
         </Text>
         <Text>
-          Doble clic a un node: plegar o desplegar. Doble clic al buit: un node nou. Arrossega d'una nansa a una altra per dir
-          «surt quan». Supr o ⌫ esborra el que has triat.
+          Arrossega els nodes per organitzar-los (Maj + arrossegar al buit en tria uns quants). Per canviar un node de pare:
+          deixa'l a sobre del nou pare, o uneix de la nansa de sota del pare a la de dalt del node. Una fletxa triada + Supr la
+          treu. Doble clic al buit: un node nou; a un node: plegar o desplegar.
         </Text>
       </Stack>
       <SectionLabel>Diferències amb l'app ({diff.count})</SectionLabel>

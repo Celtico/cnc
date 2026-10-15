@@ -4,21 +4,23 @@ import { OPTION_NODES } from "./optionCascade"
 import {
   addDraftNode,
   appCascade,
+  clearDraftPositions,
   choiceId,
-  connectDraft,
   diffDraft,
   draftToJson,
   edgeId,
+  moveDraftNodes,
   parseDraftJson,
   parseStoredDraft,
   removeFromDraft,
+  reparentDraft,
   restoreAppEdge,
   restoreAppNode,
   setDraftEdgeKind,
   updateDraftNode,
   type CascadeDraft,
 } from "./cascadeDraft"
-import { ancestorIds, descendantCount, draftTree, layoutDraft, visibleIds } from "./cascadeLayout"
+import { ancestorIds, descendantCount, draftTree, effectivePositions, layoutDraft, visibleIds } from "./cascadeLayout"
 
 describe("registre de les opcions en cascada", () => {
   const nodes = [...OPTION_NODES.values()]
@@ -73,14 +75,15 @@ describe("esborrany: editar i diferències", () => {
     let d: CascadeDraft = addDraftNode(app, { id: "n1", kind: "option", label: "Opció nova" }, "module.carcass")
     d = updateDraftNode(d, "module.carcass.back", { label: "Fons de l'armari", note: "provar", when: "  " })
     d = removeFromDraft(d, ["module.position"])
-    d = connectDraft(d, choiceId("module.carcass.back", "groove"), "n1")
+    d = setDraftEdgeKind(reparentDraft(d, "n1", choiceId("module.carcass.back", "groove")), edgeId("contains", choiceId("module.carcass.back", "groove"), "n1"), "reveals")
+    d = reparentDraft(d, "n1", "module.carcass")
     const diff = diffDraft(d)
     expect([...diff.added]).toEqual(["n1"])
     expect(diff.changed.get("module.carcass.back")?.after.label).toBe("Fons de l'armari")
     // Treure una secció en treu tot el que té a dins.
     expect(diff.removed.map((n) => n.id)).toContain("module.position.mount")
     expect(diff.removed.map((n) => n.id)).toContain(choiceId("module.position.mount", "hung"))
-    // n1 ja és a dins de la Caixa: la nova fletxa és «fa aparèixer».
+    // Unir d'una nansa a l'altra el posa a dins; la fletxa es pot canviar a «fa aparèixer».
     expect(diff.addedEdges.has(edgeId("reveals", choiceId("module.carcass.back", "groove"), "n1"))).toBe(true)
     expect(diff.addedEdges.has(edgeId("contains", "module.carcass", "n1"))).toBe(true)
     // El text buit es treu.
@@ -89,16 +92,27 @@ describe("esborrany: editar i diferències", () => {
   it("la nota no és una diferència", () => {
     expect(diffDraft(updateDraftNode(app, "module.carcass.back", { note: "mirar-ho" })).count).toBe(0)
   })
-  it("un node sense pare queda a dins del primer que s'hi uneix; res de cercles", () => {
+  it("unir o deixar a sobre canvia el pare; res de cercles", () => {
     let d = addDraftNode(app, { id: "free", kind: "section", label: "Lliure" })
-    d = connectDraft(d, "module", "free")
-    expect(d.edges.at(-1)?.kind).toBe("contains")
-    expect(connectDraft(d, "free", "free")).toBe(d)
-    // «module» a dins de «free» faria un cercle: és «fa aparèixer».
-    const c = connectDraft(d, "free", "module")
-    expect(c.edges.at(-1)?.kind).toBe("reveals")
-    expect(setDraftEdgeKind(c, c.edges.at(-1)!.id, "contains")).toBe(c)
-    expect(setDraftEdgeKind(c, c.edges.at(-1)!.id, "hides").edges.at(-1)?.kind).toBe("hides")
+    d = reparentDraft(d, "free", "module")
+    expect(d.edges.at(-1)?.id).toBe(edgeId("contains", "module", "free"))
+    expect(reparentDraft(d, "free", "free")).toBe(d)
+    // Canviar de pare: la fletxa d'abans se'n va.
+    const moved = reparentDraft(d, "free", "zone")
+    expect(moved.edges.filter((e) => e.kind === "contains" && e.target === "free").map((e) => e.source)).toEqual(["zone"])
+    // «module» a dins de «free» faria un cercle: res.
+    expect(reparentDraft(d, "module", "free")).toBe(d)
+    const c = { ...d, edges: [...d.edges, { id: edgeId("reveals", "free", "zone"), source: "free", target: "zone", kind: "reveals" as const }] }
+    expect(setDraftEdgeKind(c, edgeId("reveals", "free", "zone"), "hides").edges.at(-1)?.kind).toBe("hides")
+  })
+  it("posicions: moure, tornar a anar sol i reordenar; no són una diferència", () => {
+    let d = moveDraftNodes(app, { module: { x: 10.4, y: 20.6 } })
+    expect(d.positions).toEqual({ module: { x: 10, y: 21 } })
+    expect(diffDraft(d).count).toBe(0)
+    expect(moveDraftNodes(d, { module: null })).not.toHaveProperty("positions")
+    d = removeFromDraft(d, ["module"])
+    expect(d).not.toHaveProperty("positions")
+    expect(clearDraftPositions(moveDraftNodes(app, { zone: { x: 1, y: 1 } }))).toEqual(app)
   })
   it("recuperar un node o una fletxa de l'app", () => {
     const d = removeFromDraft(app, ["module.carcass.back"])
@@ -153,5 +167,13 @@ describe("esborrany: plegar i disposició", () => {
     const tb = layoutDraft(tree, new Set(["a"]), () => ({ w: 100, h: 20 }), "TB")
     expect(tb.has("a1")).toBe(false)
     expect(tb.get("a")!.y).toBe(tb.get("b")!.y)
+  })
+  it("un node que l'usuari ha mogut es queda on és i els seus fills sense posició el segueixen", () => {
+    const size = () => ({ w: 100, h: 20 })
+    const auto = layoutDraft(tree, new Set(), size, "TB")
+    const pos = effectivePositions({ ...d, positions: { a: { x: 1000, y: 500 } } }, tree, new Set(), size)
+    expect(pos.get("a")).toEqual({ x: 1000, y: 500 })
+    expect(pos.get("a1")).toEqual({ x: 1000 + auto.get("a1")!.x - auto.get("a")!.x, y: 500 + auto.get("a1")!.y - auto.get("a")!.y })
+    expect(pos.get("b")).toEqual(auto.get("b"))
   })
 })

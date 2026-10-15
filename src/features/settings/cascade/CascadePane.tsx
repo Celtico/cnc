@@ -1,7 +1,7 @@
 import { Box, Button, Dialog, HStack, IconButton, Menu, Portal, Spinner, Splitter, Stack, Switch, Text } from "@chakra-ui/react"
 import { ReactFlowProvider } from "@xyflow/react"
 import { useContext, useRef, useState } from "react"
-import { LuArrowDown, LuArrowRight, LuChevronsDownUp, LuChevronsUpDown, LuDownload, LuEllipsis, LuRefreshCw, LuTrash2, LuUpload } from "react-icons/lu"
+import { LuChevronsDownUp, LuChevronsUpDown, LuDownload, LuEllipsis, LuRefreshCw, LuTrash2, LuUpload, LuWorkflow } from "react-icons/lu"
 import { PanelSplit, SplitHandle } from "../../../components/PanelSplit"
 import { SearchBar } from "../../../components/SearchBar"
 import { UndoRedo } from "../../../components/UndoRedo"
@@ -19,8 +19,8 @@ import { useCascadeEditor } from "./useCascadeEditor"
 /**
  * Preferències › **Opcions en cascada** (per decisió de l'usuari, 2026-10-15): un **esborrany** de la cascada d'opcions de
  * l'Editor dibuixat amb React Flow, per pensar-la abans de canviar-la. Surt del registre (`core/model/options`, al dia amb
- * el codi pel test `src/optionCascade.test.ts`); s'hi poden afegir, treure, unir i editar nodes, plegar i desplegar
- * branques, i es marquen les diferències amb l'app (Exportar JSON). Es desa sol a IndexedDB. **No s'aplica a l'Editor.**
+ * el codi pel test `src/optionCascade.test.ts`); s'organitza a mà (moure nodes, canviar-los de pare, afegir, treure i
+ * editar), es pleguen branques, i es marquen les diferències amb l'app (Exportar JSON). Es desa sol a IndexedDB. **No s'aplica a l'Editor.**
  */
 export function CascadePane() {
   return (
@@ -76,10 +76,10 @@ function CascadeEditor() {
           <Button size="sm" variant="outline" onClick={ed.expandAll}>
             <LuChevronsUpDown /> Desplegar tot
           </Button>
-          <Tooltip content={view.tb ? "De dalt a baix (canviar a d'esquerra a dreta)" : "D'esquerra a dreta (canviar a de dalt a baix)"}>
-            <IconButton aria-label="Direcció de l'arbre" size="sm" variant="ghost" onClick={() => view.setTb(!view.tb)}>
-              {view.tb ? <LuArrowDown /> : <LuArrowRight />}
-            </IconButton>
+          <Tooltip content="Torna a posar tots els nodes en arbre, de dalt a baix (es pot desfer)">
+            <Button size="sm" variant="outline" onClick={ed.relayout}>
+              <LuWorkflow /> Reordenar automàticament
+            </Button>
           </Tooltip>
           <Menu.Root positioning={{ placement: "bottom-end" }}>
             <Menu.Trigger asChild>

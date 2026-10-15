@@ -4,8 +4,6 @@ import type { OptionNode } from "./optionTypes"
 import { MOBLE, MULTI, PART, REF, STRUCTURE } from "./otherOptions"
 import { ZONE } from "./zoneOptions"
 
-export type { OptionIcon } from "./optionTypes"
-
 /**
  * Tota la cascada d'opcions de l'Editor tal com és al codi: l'Estructura i els inspectors del moble, el mòdul, el
  * compartiment, la peça lliure, l'objecte de referència i la selecció múltiple. És la llavor de l'esborrany de

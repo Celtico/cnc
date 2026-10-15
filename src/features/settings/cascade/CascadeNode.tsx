@@ -1,93 +1,86 @@
-import { Badge, Box, Button, HStack, Text } from "@chakra-ui/react"
-import { Handle, type NodeProps } from "@xyflow/react"
-import { createElement, memo } from "react"
-import { LuChevronDown, LuChevronRight, LuStickyNote, LuTriangleAlert } from "react-icons/lu"
+import { Box, Button, Text } from "@chakra-ui/react"
+import { Handle, Position, type NodeProps } from "@xyflow/react"
+import { memo } from "react"
+import { LuChevronDown, LuChevronRight } from "react-icons/lu"
 import { DRAFT_KIND_LABEL } from "../../../core/model"
-import { NODE_W, nodeIcon, type CascadeFlowNode } from "./cascadeFlow"
+import { NODE_W, type CascadeFlowNode } from "./cascadeFlow"
 
-const STATUS = {
-  added: { label: "Nou", palette: "green", border: "green.solid" },
-  changed: { label: "Canviat", palette: "purple", border: "purple.solid" },
+/** La vora segons el tipus: secció (gruixuda), opció (fina), tria (a ratlles). */
+const KIND_BORDER = {
+  section: { width: "2px", style: "solid", color: "fg.muted" },
+  option: { width: "1px", style: "solid", color: "border.emphasized" },
+  choice: { width: "1px", style: "dashed", color: "border.emphasized" },
 } as const
 
+const DOT = { added: "green.solid", changed: "purple.solid" } as const
+
+/** Un puntet a la cantonada (diferència amb l'app, possible incoherència). */
+function Dot({ color, side, title }: { color: string; side: "left" | "right"; title: string }) {
+  return <Box position="absolute" top="-4px" {...{ [side]: "-4px" }} w="10px" h="10px" rounded="full" bg={color} borderWidth="2px" borderColor="bg.panel" title={title} />
+}
+
 /**
- * Un node del dibuix de la cascada: icona, tipus (Secció · Opció · Tria), nom i «Surt quan». Les marques: «Nou» /
- * «Canviat» (diferent de l'app), la possible incoherència (taronja) i la nota. El botó de la dreta plega o desplega la
- * branca i diu quants en té a dins (també amb doble clic al node).
+ * Un node del dibuix, senzill com el de l'usuari: una capsa arrodonida amb el nom al mig i una nansa a dalt (entra el
+ * pare) i a sota (surten els fills). El tipus es veu a la vora; les diferències amb l'app i les incoherències, amb un
+ * puntet; triat, la vora del color principal. A sota a la dreta, petit, plegar o desplegar la branca (també amb doble clic).
  */
-function CascadeNodeView({ id, data, selected, sourcePosition, targetPosition }: NodeProps<CascadeFlowNode>) {
-  const { node, status, inside, collapsed, match } = data
-  const st = status ? STATUS[status] : undefined
+function CascadeNodeView({ id, data, selected }: NodeProps<CascadeFlowNode>) {
+  const { node, status, inside, collapsed, match, dropTarget } = data
+  const k = KIND_BORDER[node.kind]
+  const hot = selected || dropTarget
   return (
     <Box
+      position="relative"
       w={`${NODE_W}px`}
-      bg={node.kind === "choice" ? "bg.subtle" : "bg.panel"}
+      bg={dropTarget ? "wood.subtle" : "bg.panel"}
       color="fg"
-      borderWidth={selected || st ? "2px" : "1px"}
-      borderStyle={node.kind === "choice" ? "dashed" : "solid"}
-      borderColor={selected ? "wood.solid" : (st?.border ?? (match ? "wood.emphasized" : "border.emphasized"))}
-      rounded={node.kind === "choice" ? "xl" : "md"}
+      borderWidth={hot ? "2px" : k.width}
+      borderStyle={hot ? "solid" : k.style}
+      borderColor={hot ? "wood.solid" : k.color}
+      rounded="lg"
       shadow={selected ? "md" : "xs"}
       outline={match ? "3px solid" : undefined}
       outlineColor={match ? "wood.muted" : undefined}
-      px={node.kind === "choice" ? 3.5 : 2.5}
+      px={5}
       py={2}
+      textAlign="center"
       fontSize="sm"
+      title={`${DRAFT_KIND_LABEL[node.kind]}: ${node.label}`}
     >
-      <Handle type="target" position={targetPosition!} />
-      <HStack gap={1.5} minH="22px">
-        <Box color="wood.fg" display="inline-flex" flexShrink={0}>
-          {createElement(nodeIcon(node))}
-        </Box>
-        <Text fontSize="2xs" textTransform="uppercase" letterSpacing="wide" color="fg.muted" flexShrink={0}>
-          {DRAFT_KIND_LABEL[node.kind]}
-        </Text>
-        {st && (
-          <Badge size="xs" colorPalette={st.palette} variant="solid">
-            {st.label}
-          </Badge>
-        )}
-        {node.issue && (
-          <Badge size="xs" colorPalette="orange" variant="solid" title={node.issue}>
-            <LuTriangleAlert /> Revisar
-          </Badge>
-        )}
-        {node.note && (
-          <Box color="fg.muted" display="inline-flex" title={node.note}>
-            <LuStickyNote />
-          </Box>
-        )}
-        <Box flex={1} />
-        {inside > 0 && (
-          <Button
-            className="nodrag nopan"
-            size="2xs"
-            variant={collapsed ? "subtle" : "ghost"}
-            colorPalette="wood"
-            px={1}
-            minW={0}
-            aria-label={collapsed ? `Desplegar (${inside} a dins)` : "Plegar"}
-            title={collapsed ? `Desplegar (${inside} a dins)` : "Plegar"}
-            aria-expanded={!collapsed}
-            onClick={(e) => {
-              e.stopPropagation()
-              data.onToggle(id)
-            }}
-          >
-            {collapsed ? <LuChevronRight /> : <LuChevronDown />}
-            {collapsed && <Text as="span">{inside}</Text>}
-          </Button>
-        )}
-      </HStack>
-      <Text fontWeight="medium" lineClamp={2} lineHeight="20px">
+      <Handle type="target" position={Position.Top} />
+      {status && <Dot color={DOT[status]} side="left" title={status === "added" ? "Nou (no és a l'app)" : "Canviat respecte de l'app"} />}
+      {node.issue && <Dot color="orange.solid" side="right" title={`Revisar: ${node.issue}`} />}
+      <Text lineClamp={2} lineHeight="20px" fontWeight={node.kind === "section" ? "semibold" : "normal"}>
         {node.label || "(sense nom)"}
       </Text>
-      {node.when && (
-        <Text fontSize="xs" color="fg.muted" lineClamp={3} lineHeight="16px">
-          Surt quan: {node.when}
-        </Text>
+      {inside > 0 && (
+        <Button
+          className="nodrag nopan"
+          position="absolute"
+          right="2px"
+          bottom="2px"
+          size="2xs"
+          h="16px"
+          minW="16px"
+          px={collapsed ? 1 : 0}
+          variant="ghost"
+          colorPalette="wood"
+          color={collapsed ? "wood.fg" : "fg.subtle"}
+          fontSize="2xs"
+          gap={0.5}
+          aria-label={collapsed ? `Desplegar (${inside} a dins)` : "Plegar"}
+          title={collapsed ? `Desplegar (${inside} a dins)` : "Plegar"}
+          aria-expanded={!collapsed}
+          onClick={(e) => {
+            e.stopPropagation()
+            data.onToggle(id)
+          }}
+        >
+          {collapsed ? <LuChevronRight /> : <LuChevronDown />}
+          {collapsed && inside}
+        </Button>
       )}
-      <Handle type="source" position={sourcePosition!} />
+      <Handle type="source" position={Position.Bottom} />
     </Box>
   )
 }

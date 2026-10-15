@@ -64,7 +64,7 @@ export function ancestorIds(tree: DraftTree, id: string): string[] {
   return out
 }
 
-export type LayoutDir = "LR" | "TB"
+type LayoutDir = "LR" | "TB"
 
 /**
  * On va cada node que es veu (la cantonada de dalt a l'esquerra): els fills en fila i el pare al mig dels seus fills;
@@ -113,5 +113,39 @@ export function layoutDraft(
   }
   let cursor = 0
   for (const r of tree.roots) cursor = place(r, 0, cursor) + gap.tree
+  return out
+}
+
+/**
+ * On es dibuixa cada node que es veu: on l'ha deixat l'usuari (`draft.positions`) o, si no, sol, de dalt a baix: la
+ * disposició automàtica relativa al seu pare (un node que no s'ha mogut segueix el pare quan aquest es mou). Les arrels
+ * sense posició, on les posa la disposició automàtica.
+ */
+export function effectivePositions(
+  draft: CascadeDraft,
+  tree: DraftTree,
+  collapsed: ReadonlySet<string>,
+  size: (id: string) => { w: number; h: number },
+  gap?: { level: number; sibling: number; tree: number },
+): Map<string, { x: number; y: number }> {
+  const auto = layoutDraft(tree, collapsed, size, "TB", gap)
+  const stored = draft.positions ?? {}
+  const out = new Map<string, { x: number; y: number }>()
+  const place = (id: string): { x: number; y: number } | undefined => {
+    const done = out.get(id)
+    if (done) return done
+    const a = auto.get(id)
+    if (!a) return undefined
+    let p = stored[id]
+    if (!p) {
+      const parent = tree.parent.get(id)
+      const pp = parent === undefined ? undefined : place(parent)
+      const pa = parent === undefined ? undefined : auto.get(parent)
+      p = pp && pa ? { x: pp.x + a.x - pa.x, y: pp.y + a.y - pa.y } : a
+    }
+    out.set(id, p)
+    return p
+  }
+  for (const id of auto.keys()) place(id)
   return out
 }

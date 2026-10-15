@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react"
-import { Background, Controls, MiniMap, ReactFlow, type Edge, type EdgeChange, type NodeChange, type OnConnect, type OnDelete } from "@xyflow/react"
+import { Background, Controls, MiniMap, ReactFlow, type Edge, type EdgeChange, type NodeChange, type OnConnect, type OnDelete, type OnNodeDrag } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
 import { useColorMode } from "../../../components/ui/color-mode"
 import { CascadeNode } from "./CascadeNode"
@@ -55,9 +55,10 @@ const THEME = {
 }
 
 /**
- * El llenç de l'esborrany (React Flow): desplaçar i fer zoom (també amb els dits), el minimapa, «Encaixar» als controls,
- * unir nodes arrossegant d'una nansa a l'altra i esborrar amb Supr o ⌫. Els nodes no s'arrosseguen: es col·loquen sols
- * (`layoutDraft`). Doble clic a un node: plegar o desplegar; al buit: un node nou.
+ * El llenç de l'esborrany (React Flow): desplaçar i fer zoom (també amb els dits), el minimapa, «Encaixar» als controls.
+ * Per organitzar: arrossegar nodes (amb Maj, triar-ne uns quants amb un requadre i moure'ls junts), unir de la nansa de
+ * sota a la de dalt (fill), deixar un node a sobre d'un altre (fill) i esborrar amb Supr o ⌫. Doble clic a un node:
+ * plegar o desplegar; al buit: un node nou.
  */
 export function CascadeCanvas({
   nodes,
@@ -66,6 +67,8 @@ export function CascadeCanvas({
   onEdgesChange,
   onConnect,
   onDelete,
+  onNodeDrag,
+  onNodeDragStop,
   onNodeDoubleClick,
   onPaneDoubleClick,
 }: {
@@ -75,8 +78,10 @@ export function CascadeCanvas({
   onEdgesChange: (changes: EdgeChange[]) => void
   onConnect: OnConnect
   onDelete: OnDelete<CascadeFlowNode, Edge>
+  onNodeDrag: OnNodeDrag<CascadeFlowNode>
+  onNodeDragStop: OnNodeDrag<CascadeFlowNode>
   onNodeDoubleClick: (id: string) => void
-  onPaneDoubleClick: () => void
+  onPaneDoubleClick: (client: { x: number; y: number }) => void
 }) {
   const { colorMode } = useColorMode()
   return (
@@ -85,7 +90,7 @@ export function CascadeCanvas({
       w="full"
       css={THEME}
       onDoubleClick={(e) => {
-        if ((e.target as Element).classList.contains("react-flow__pane")) onPaneDoubleClick()
+        if ((e.target as Element).classList.contains("react-flow__pane")) onPaneDoubleClick({ x: e.clientX, y: e.clientY })
       }}
     >
       <ReactFlow<CascadeFlowNode, Edge>
@@ -96,9 +101,10 @@ export function CascadeCanvas({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onDelete={onDelete}
+        onNodeDrag={onNodeDrag}
+        onNodeDragStop={onNodeDragStop}
         onNodeDoubleClick={(_, n) => onNodeDoubleClick(n.id)}
         colorMode={colorMode === "dark" ? "dark" : "light"}
-        nodesDraggable={false}
         zoomOnDoubleClick={false}
         deleteKeyCode={["Delete", "Backspace"]}
         minZoom={0.1}

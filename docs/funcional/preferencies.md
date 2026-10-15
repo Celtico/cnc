@@ -182,23 +182,28 @@
   són obrir i tancar»; `settings/cascade/`, `LuListTree`, apartat **Editor**, pàgina ampla, carregada a demanda: React Flow
   no és al bloc d'entrada). Substitueix l'arbre amb «Amagar» i «Per defecte als nous» del mateix dia (v48), que es va treure:
   **res d'aquesta pàgina canvia l'Editor** ni els mòduls nous.
-  - **El dibuix** (`CascadeCanvas`, `@xyflow/react` 12.12.0, aprovat per l'usuari): nodes de **secció**, **opció** i
-    **tria** (la tria, vora a ratlles i cantonades rodones) amb la icona de la secció de l'inspector
-    (`settings/optionIcons.ts`), el tipus, el nom i «Surt quan: …»; insígnia **taronja «Revisar»** si té una possible
-    incoherència (les de l'auditoria del registre, `issue`) i una icona si té nota. Fletxes: **a dins de** (contínua, fa
-    l'arbre), **fa aparèixer** (a ratlles, color principal) i **fa desaparèixer** (a ratlles, vermella); l'interruptor
-    «Fa aparèixer / desaparèixer» amaga aquestes dues. Disposició **automàtica en arbre** (`core/model/options/cascadeLayout.ts`,
-    sense dependència: els fills en fila, el pare al mig, cada nivell a la mateixa distància; d'esquerra a dreta o de dalt a
-    baix amb el botó de la fletxa, es recorda al navegador); els nodes no s'arrosseguen. Desplaçar i zoom (també amb els
-    dits), minimapa, controls amb «Encaixar-ho tot» (textos de React Flow en català, `ariaLabelConfig`). Tema clar/fosc i
-    paleta `wood`: les variables `--xy-*` apunten als tokens de Chakra.
-  - **Plegar i desplegar** (el que més es fa): el botó del node (fletxa; plegat, diu quants en té a dins) o **doble clic al
-    node**; el node no es mou de la pantalla (la vista es desplaça el que s'ha mogut). «Plegar tot» / «Desplegar tot»
-    (encaixa). D'entrada, obertes les arrels (els inspectors) i la resta plegat.
+  - **El dibuix** (`CascadeCanvas`, `@xyflow/react` 12.12.0, aprovat per l'usuari), **senzill com el dibuix de l'usuari**
+    (2026-10-15: «que pugui organitzar i no activar i desactivar»): capses arrodonides amb **només el nom al mig**, una
+    nansa a dalt i una a sota; fletxes corbes grises del pare (nansa de sota) a cada fill (nansa de dalt); **de dalt a
+    baix**. El tipus es veu a la vora (secció gruixuda, opció fina, tria a ratlles); un **puntet** verd (nou) o lila
+    (canviat) a l'esquerra i taronja (possible incoherència, `issue`) a la dreta; el triat, vora del color principal. Els
+    detalls (Surt quan, nota, a l'app ara) només al panell. Les fletxes «fa aparèixer» (color principal) i «fa
+    desaparèixer» (vermella), a ratlles, **amagades d'entrada** (interruptor). Desplaçar i zoom (també amb els dits),
+    minimapa, controls amb «Encaixar-ho tot» (textos de React Flow en català, `ariaLabelConfig`). Tema clar/fosc i paleta
+    `wood`: les variables `--xy-*` apunten als tokens de Chakra.
+  - **Organitzar** (el principal): **arrossegar** nodes (Maj + arrossegar al buit en tria uns quants i es mouen junts; Maj o
+    ⌘ + clic, també); on els deixes es desa (`draft.positions`, `moveDraftNodes`). Un node que no s'ha mogut va sol sota el
+    seu pare i el segueix (`effectivePositions`: la disposició automàtica en arbre, `core/model/options/cascadeLayout.ts`,
+    sense dependència, relativa al pare); la llavor de l'app no porta cap posició. **«Reordenar automàticament»** les treu
+    totes (es pot desfer). **Canviar de pare**: unir de la nansa de sota del nou pare a la de dalt del node, o **deixar el
+    node a sobre** d'un altre (s'il·lumina mentre s'arrossega; després va sol sota el nou pare); la fletxa «a dins de»
+    d'abans se'n va (`reparentDraft`; res de cercles). Triar una fletxa + Supr / ⌫ la treu (el fill es queda on és, solt).
+  - **Plegar i desplegar** (secundari): la fletxeta petita a baix a la dreta del node (plegat, diu quants en té a dins) o
+    **doble clic al node**; el node no es mou de la pantalla. «Plegar tot» / «Desplegar tot» (encaixa). D'entrada, obertes
+    les arrels (els inspectors) i la resta plegat.
   - **Editar**: «Afegir» (`SearchBar`: un node a dins del triat —una tria si és una opció— o, sense res triat, una secció
-    solta; també **doble clic al buit**), esborrar amb **Supr / ⌫** o el botó (un node s'emporta el que té a dins), **unir**
-    arrossegant d'una nansa a una altra («aquest surt quan aquell»: si el de destí no és a dins de res hi queda a dins; si
-    no, «fa aparèixer»; res de cercles), desfer/refer (`useHistory`, ⌘Z). El **panell del costat** (`CascadeDetail`,
+    solta; **doble clic al buit**: un node solt allà), esborrar amb **Supr / ⌫** o el botó (un node s'emporta el que té a
+    dins), desfer/refer (`useHistory`, ⌘Z; moure és un sol pas en deixar-lo). El **panell del costat** (`CascadeDetail`,
     `PanelSplit`, amplada recordada; al mòbil, a sota): del node triat, Nom, Tipus (`ChoiceChips`), Surt quan, Nota (per a
     tu) i Revisar (la incoherència; buida = resolta), «Afegir a dins», «Esborrar» i **«A l'app ara»** (com és al codi: el
     nom, la condició, el fitxer de la UI, el per defecte, «Com a l'app»); de la fletxa triada, què fa (A dins de · Fa
@@ -214,8 +219,8 @@
     registre = un node amb el seu id; cada tria = un node `opció=valor`; `reveals`/`hides` = fletxes), sempre al dia amb el
     codi: cada fila i secció dels inspectors en porta l'id (`optionId`) i el test `src/optionCascade.test.ts` falla si en
     falta un o si un id del registre no és a la UI.
-  - **Es desa sol** a IndexedDB (`db.drafts`, fila `option-cascade`, Dexie v8, `db/cascadeDraftStore.ts`): l'esborrany i
-    les branques plegades; sobreviu a recarregar. Un desat que no es pot llegir torna a començar de l'app. No va amb
+  - **Es desa sol** a IndexedDB (`db.drafts`, fila `option-cascade`, Dexie v8, `db/cascadeDraftStore.ts`): l'esborrany
+    (amb les posicions) i les branques plegades; sobreviu a recarregar. Un desat que no es pot llegir torna a començar de l'app. No va amb
     l'export de les preferències.
 - **Objectes de referència inicials** (`BUILTIN_REFERENCES`): genèrics (A4, rajoles, portes, **una sola tele** de 55″,
   radiador, endoll; per decisió de l'usuari, no una llista de teles). Les teles antigues es treuen (`RETIRED_REFERENCES`,
